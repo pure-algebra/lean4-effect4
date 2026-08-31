@@ -1,6 +1,6 @@
-name = "lean4-effect4"
+name = "effect4"
 version = "0.1.0"
-defaultTargets = ["Lean4Effect4"]
+defaultTargets = ["Effect4"]
 
 [[lean_lib]]
-name = "Lean4Effect4"
+name = "Effect4"

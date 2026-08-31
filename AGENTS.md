@@ -1,0 +1,96 @@
+# Effect4 — agent operating rules
+
+This file is the always-loaded router for work in this repository. Read it in
+full, then open only the authority documents named for the current task.
+
+## Authority map
+
+| Path | Owns |
+| --- | --- |
+| `PLAN.md` | extraction phases, entry and exit gates, current phase |
+| `docs/ARCHITECTURE.md` | module boundaries, dependency direction, public API policy |
+| `PORT-MANIFEST.md` | exact Foldlab source declarations, tests, pins, and destination dispositions |
+| `test/contracts/` | breaker-authored algebraic contracts and executable falsifiers |
+| `test/counterexamples/` | central counterexample register and durable witnesses |
+| `Effect4/` | library declarations and proofs |
+| `Effect4Test/` | Lean tests, attacks, examples, and proof receipts |
+| `harness/` | host conformance, TypeScript, runtime, and language-service checks |
+| `generated/` | deterministic projections only; never hand-edited |
+
+If two files appear to own the same fact, stop and repair the ownership map.
+
+## Development order
+
+1. Freeze the public declaration and existing-type disposition.
+2. A breaker, in a separate process, commits the contract and red battery.
+3. The builder implements without editing that packet or battery.
+4. Run the narrow test, the package build, axiom inspection, and the relevant
+   host gate.
+5. An independent reviewer checks model intent, proof trust, compatibility,
+   and claim scope.
+6. Close the per-type proof graph. No category or full cutover may hide an
+   open required edge.
+
+Breadth precedes depth: every major category receives a frozen representative
+contract before one category is developed far beyond the others.
+
+## Representation rules
+
+- Canonical program content is first-order data. Lean functions, `Expr`, host
+  closures, promises, and runtime objects are not stored program syntax.
+- Raw Lean `Expr` is allowed only at the metaprogramming boundary. Elaborated
+  declarations must emit checked first-order rows before entering semantics.
+- Fuel exhaustion and unanswered choices are live frontiers, never typed
+  errors, causes, or refusals.
+- Full meaning is relational over explicit decisions. Determinism is claimed
+  only after fixing a complete compatible decision tape or proving a fragment
+  contains no decision source.
+- Fixed-fuel execution is not assigned a general bind law. Composition is
+  proved at the big-step/interpreter face.
+- State produced before failure remains available to finalization. Resource
+  laws must not be encoded with a carrier that discards that state.
+- Schema, Context/Service, Layer, Runtime, ManagedRuntime, Scope, Fiber,
+  Channel/Stream, Schedule, and transactions are distinct calculi or layers
+  with explicit embeddings; type mention alone does not make a primitive.
+- Effect TypeScript is one target profile, not the identity or semantic owner.
+
+## Reuse and compatibility
+
+- This repository must not depend on Foldlab.
+- Foldlab compatibility adapters depend on Effect4, never conversely.
+- A moved declaration keeps a source digest and compatibility theorem before
+  its Foldlab owner can be retired.
+- Existing Foldlab CAS identity, bytes, refusal classification, and program
+  spellings remain Foldlab-owned until their rows are explicitly closed.
+- Experimental carriers that do not compose are evidence, not port sources.
+
+## Counterexamples and claims
+
+All counterexamples that can change a declaration or cutover decision have a
+stable ID in `test/counterexamples/REGISTER.md`. Proof sources remain beside
+the attacked code and are linked, not copied into prose.
+
+Do not say “sound”, “equivalent”, “preserves”, “fully reified”, or “complete”
+without naming the exact judgment, observation, theorem or gate, assumptions,
+and remaining host boundary. A compiling finite probe is reported as a finite
+probe.
+
+## Generated facts and long-run continuity
+
+Authored routers such as this file are never generated. Machine status,
+surface rows, declaration digests, obligation graphs, and proof receipts are
+generated from canonical inputs and checked for drift. A fresh session resumes
+by reading, in order:
+
+1. `PLAN.md` current-phase row;
+2. `PORT-MANIFEST.md` source pin and open dispositions;
+3. the current contract packet and counterexample rows;
+4. the per-type closure row;
+5. the narrow verification command recorded by that row; and
+6. `git status --short --branch` to attribute local changes.
+
+## Handoff
+
+Every handoff records base and head commits, file fence, changed files, exact
+commands and results, public declarations, axiom output, open proof edges,
+counterexamples exercised, and whether any evidence is bounded or host-only.
