@@ -5,10 +5,12 @@ import Effect4
 /-!
 # Effect4 axiom allowlist gate
 
-This command inspects every declaration compiled from an `Effect4` module,
-including definitions, instances, generated declarations, and private helper
-declarations. The build fails if any declaration reaches an axiom outside the
-library's current ceiling: propositional extensionality and quotient soundness.
+This command parses every authored `Effect4` source and inspects every
+declaration compiled from it, including definitions, instances, generated
+declarations, and private helper declarations. The build fails on authored
+`unsafe` or `partial` declaration modifiers, or if any declaration reaches an
+axiom outside the library's current ceiling: propositional extensionality and
+quotient soundness.
 
 The gate is intentionally exhaustive over the compiled namespace rather than
 maintaining a hand-written theorem list. The separate axiom report remains a
@@ -35,13 +37,38 @@ private def moduleOf? (environment : Environment) (declaration : Name) : Option 
 private def belongsToAuditedTree (moduleName : Name) : Bool :=
   (`Effect4).isPrefixOf moduleName || (`Effect4Test).isPrefixOf moduleName
 
-private def isGeneratedUnsafeRecursor (environment : Environment) (name : Name) : Bool :=
+private def isGeneratedSafeRecursor (environment : Environment) (name : Name) : Bool :=
   match Lean.Compiler.isUnsafeRecName? name with
   | none => false
   | some sourceName =>
       match environment.find? sourceName with
-      | some sourceInfo => !sourceInfo.isUnsafe && !sourceInfo.isPartial
+      | some (.defnInfo sourceInfo) => sourceInfo.safety == .safe
       | none => false
+      | _ => false
+
+private def forbiddenTrustModifier? (stx : Syntax) : Option String := do
+  guard <| stx.isOfKind ``Parser.Command.declModifiers
+  if !stx[5].isNone then
+    return "unsafe"
+  if !stx[6].isNone && stx[6][0].isOfKind ``Parser.Command.partial then
+    return "partial"
+  none
+
+private def findForbiddenTrustModifier? (stx : Syntax) : Option String := do
+  let stack ← stx.findStack?
+    (fun _ => true)
+    (fun node => (forbiddenTrustModifier? node).isSome)
+  let (modifierSyntax, _) ← stack.head?
+  forbiddenTrustModifier? modifierSyntax
+
+private def auditSourceTrustModifiers
+    (environment : Environment)
+    (sources : Array System.FilePath) : IO Unit := do
+  for source in sources do
+    let moduleSyntax ← Parser.testParseFile environment source
+    if let some modifier := findForbiddenTrustModifier? moduleSyntax then
+      throw <| IO.userError
+        s!"Effect4 source trust gate: {source} contains an authored `{modifier}` declaration modifier"
 
 private def findProjectRoot (directory : System.FilePath) : IO System.FilePath := do
   let mut current := directory
@@ -76,11 +103,13 @@ elab "#effect4_axiom_gate" : command => do
       throwError
         "Effect4 module-closure gate: {source} is not reachable from the Effect4Test audit root"
 
+  liftIO <| auditSourceTrustModifiers environment sources
+
   let mut declarations : Array Name := #[]
   for (name, info) in environment.constants.toList do
     if let some moduleName := moduleOf? environment name then
       if belongsToAuditedTree moduleName then
-        if !isGeneratedUnsafeRecursor environment name then
+        if !isGeneratedSafeRecursor environment name then
           if info.isUnsafe then
             throwError "Effect4 trust gate: declaration {name} is unsafe"
           if info.isPartial then

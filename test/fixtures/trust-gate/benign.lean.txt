@@ -1,0 +1,2 @@
+-- Trust-policy prose may mention `partial def` and `unsafe def`.
+private def plantedTrustVocabulary : String := "partial unsafe"

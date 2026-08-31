@@ -14,3 +14,5 @@ jobs:
       - name: Check sealed Foldlab evidence vendor
         run: ./scripts/test-vendor-foldlab.sh
       - uses: leanprover/lean-action@v1
+      - name: Self-test Effect4 trust gate
+        run: ./scripts/test-trust-gate.sh

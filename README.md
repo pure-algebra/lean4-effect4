@@ -9,11 +9,11 @@ unchanged while shared algebra is moved here and related by explicit
 compatibility theorems. The extraction does not copy the incompatible
 workshop carriers from Foldlab's Effect Core experiments.
 
-Current state: the generic signature/program/handler algebra is admitted and
-kernel-checked. The first-order flow, Schema, environment, layer, runtime,
-fiber, target, and Foldlab adapter modules are breadth stubs whose declarations
-open only behind their breaker packets. No full-effect or cutover claim is
-available yet.
+Current state: the generic signature/program/handler algebra is implemented
+and kernel-checked. The first-order Flow admission contract is frozen and red;
+Schema, environment, layer, runtime, fiber, target, and Foldlab adapter modules
+remain breadth stubs whose declarations open only behind their breaker
+packets. No full-effect or cutover claim is available yet.
 
 The build is pinned by `lean-toolchain`:
 
@@ -23,8 +23,9 @@ lake clean && lake build
 
 The default build enumerates every `Effect4.*` and `Effect4Test.*` module,
 rejects source files not reachable from the roots, checks exact algebra
-signatures, executes the counterexample battery, and rejects semantic or test
-declarations that are unsafe, partial, or outside the current axiom ceiling.
+signatures, executes the counterexample battery, rejects authored `unsafe` and
+`partial` declaration modifiers, distinguishes safe structural recursion from
+compiled partial definitions, and enforces the current axiom ceiling.
 The host harness will add direct Effect rc.112 type, diagnostic, runtime,
 mutation, and replay gates without replacing the Lean judgments.
 
