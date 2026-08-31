@@ -85,9 +85,9 @@ or cleanup meaning.
 | `FIBER-L2-STEP` | `Scheduler.lean` and `Interrupt.lean` | exact relational one-decision semantics with explicit refusal and `InterruptBoundary τ` |
 | `FIBER-L3-RUNS` | `Effect4/Concurrency/Scheduler.lean` | total admitted finite replay recursively tied to `Step`, with distinct finished/refused/frontier arms |
 | `FIBER-L4-DETERMINISM` | `Effect4/Concurrency/Scheduler.lean` | fixed-tape uniqueness only |
-| `FIBER-L4-JOIN` | `Effect4/Concurrency/Fiber.lean` | blocking before `.done`; repeatable, cleanup-free observation only after cleanup |
-| `FIBER-L4-INTERRUPT` | `Effect4/Concurrency/Interrupt.lean` | immediate delivery when unmasked, deferral when masked, delivery on unmask, and no completion that erases a pending request |
-| `FIBER-L4-CLEANUP` | `Effect4/Concurrency/Interrupt.lean` | at-most-once, terminal preservation, and cleanup on a finished run |
+| `FIBER-L4-JOIN` | `Effect4/Concurrency/Scheduler.lean` | operational laws over `Step`: blocking before `.done`; repeatable, cleanup-free observation only after cleanup |
+| `FIBER-L4-INTERRUPT` | `Effect4/Concurrency/Scheduler.lean` | operational laws over `Step`: immediate delivery when unmasked, deferral when masked, delivery on unmask, and no completion that erases a pending request |
+| `FIBER-L4-CLEANUP` | `Effect4/Concurrency/Scheduler.lean` | operational laws over `Step`/`Runs`: at-most-once, terminal preservation, and cleanup on a finished run |
 | `FIBER-L5-COUNTEREXAMPLES` | `Effect4Test/Counterexamples/Concurrency/FiberRepresentative.lean` | six proved finite witnesses and axiom report |
 | `FIBER-L6-HOST-EVIDENCE` | later Effect TypeScript conformance packet | direct runtime/type receipts plus auxiliary language-service diagnostics |
 

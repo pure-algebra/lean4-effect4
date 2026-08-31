@@ -419,6 +419,17 @@ section OperationalLaws
           { waiterState with status := FiberStatus.running }
           [Event.joinObserved waiter target result]))
 
+#check (@stepEval_join_done_missing_terminal :
+  forall {τ : Type u} {boundary : InterruptBoundary τ}
+      {before waiter target waiterState targetState},
+    before.fiber waiter = some waiterState ->
+    before.fiber target = some targetState ->
+    waiter ≠ target ->
+    targetState.status = FiberStatus.done ->
+    before.terminal target = none ->
+    stepEval boundary before (SchedulerDecision.join waiter target) =
+      StepResult.refused (SchedulerRefusal.invalidLifecycle target) before)
+
 #check (@stepEval_join_waiting :
   forall {τ : Type u} {boundary : InterruptBoundary τ}
       {before waiter target waiterState targetState},

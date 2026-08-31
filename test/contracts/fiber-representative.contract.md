@@ -331,7 +331,10 @@ and chronological trace suffix through `Machine.transition`; each refusal
 clause fixes the refusal and unchanged machine. Scheduling covers missing,
 runnable, and invalid fibers. Join covers missing/self/invalid inputs,
 blocking a running waiter on any target not yet `.done`, including a target in
-finalization, and observing only a `.done` target after cleanup.
+finalization, and observing only a `.done` target after cleanup. A malformed
+raw `.done` target with no stored terminal observation has its own exact
+`.invalidLifecycle` refusal equation; admission makes that branch unreachable
+for a well-formed machine.
 Interrupt requests cover missing, every active status including waiting, both
 mask states, and inactive refusal. Mask entry/exit, completion, and atomic
 pending-to-done cleanup have similarly exhaustive equations. Completion is
@@ -490,15 +493,16 @@ cleanup or fairness.
 `interrupt_complete_order_distinct` supplies one admitted ground machine and
 the two exact nonempty tapes. Under the frozen policy, the first decision moves
 the target to finalizing; the second is then refused without altering that
-machine. The two replay results therefore preserve different terminal
-observations and are unequal.
+machine. The two replay results therefore preserve different terminal or
+trace observations and are unequal. The theorem requires no inequality in
+`τ`; for a singleton terminal alphabet, the trace still distinguishes order.
 
 ## Counterexample obligations
 
 | ID | Frozen attack | Forced repair |
 | --- | --- | --- |
 | `E4-CONC-CE-001` | untaped race admits two different next traces | put scheduler choice in the tape; claim determinism only for a fixed tape |
-| `E4-CONC-CE-002` | interrupt-before-complete and complete-before-interrupt enter different finalizing observations and leave different traces before the second action refuses | tape and trace the order; prove `interrupt_complete_order_distinct` on admitted runs |
+| `E4-CONC-CE-002` | interrupt-before-complete and complete-before-interrupt leave different traces before the second action refuses; terminal values may coincide for a singleton `τ` | tape and trace the order; prove unequal replay results with `interrupt_complete_order_distinct` on admitted runs |
 | `E4-CONC-CE-003` | masked interruption cannot be reported immediately as terminal interruption | retain pending request; deliver at unmask before another body action |
 | `E4-CONC-CE-004` | projecting only the terminal outcome erases whether cleanup ran | retain machine state and trace outside terminal/error arms |
 | `E4-CONC-CE-005` | a second join must not rerun cleanup or consume the terminal result | make join a repeatable read-only observation |

@@ -18,10 +18,10 @@ live in
 
 - **BROKE:** interruption and completion commute, or their ordering may be
   omitted from replay evidence.
-- **WITNESS:** interrupt-first enters finalizing with interruption; completion-
-  first enters finalizing with success. In each exact two-decision tape the
-  second action refuses without changing that stopped machine, so both the
-  terminal observation and trace differ.
+- **WITNESS:** interrupt-first records delivery; completion-first records
+  completion. In each exact two-decision tape the second action refuses
+  without changing that stopped machine, so the traces and replay results
+  differ even when the terminal alphabet has only one value.
 - **CLASS:** ordering ambiguity.
 - **FIXED-BY:** both actions are first-order decisions, their order is retained
   by tape and trace, and `interrupt_complete_order_distinct` supplies the
