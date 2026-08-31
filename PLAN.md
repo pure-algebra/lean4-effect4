@@ -74,15 +74,15 @@ ideas are credited even when their implementation is not imported.
 
 ## Current phase
 
-P0 and the P2 organizational scaffold are complete. The repository is an
-independent Lean 4.33.1 package, all planned category modules exist, every
+P0, P2, and the native P3 algebra substrate are complete. The repository is
+an independent Lean 4.33.1 package, all planned category modules exist, every
 module is reached by the default build, and breadth stubs contain no semantic
-declarations. The generic algebra is implemented and its module/axiom gates
-are active, but P3 is not closed: independent review found retained Foldlab
-declarations that still need an explicit port, derivation, compatibility
-wrapper, or retirement disposition. Exact declaration snapshots and the
-well-founded-versus-finite counterexample are being added to the breaker
-packet.
+declarations. The retained algebra declarations now have exact signature
+checks, kernel-checked proofs, exhaustive module and axiom gates, and an
+independent assurance review. That review found no duplicate generic carrier
+and approved the native algebra proof graph. Foldlab compatibility spellings,
+adapters, and interpretation-preservation results remain P12 obligations; they
+do not keep the independent P3 substrate open.
 
 P1 remains open as a recurring exhaustiveness gate rather than a prose-only
 inventory. The current manifest pins Foldlab, Effect rc.112, the resolved npm
@@ -92,7 +92,8 @@ declaration/source-disposition join; missing rows fail cutover.
 
 The broad sweep now proceeds in this order:
 
-1. close or explicitly disposition every algebra extraction row;
+1. keep the closed algebra declarations frozen while recording downstream
+   compatibility rows separately;
 2. freeze one checked Flow/admission representative and its refusal/frontier
    counterexamples;
 3. freeze the 22-case Schema representation and four-index directional codec
