@@ -1,6 +1,9 @@
 name = "effect4"
 version = "0.1.0"
-defaultTargets = ["Effect4"]
+defaultTargets = ["Effect4", "Effect4Test"]
 
 [[lean_lib]]
 name = "Effect4"
+
+[[lean_lib]]
+name = "Effect4Test"
