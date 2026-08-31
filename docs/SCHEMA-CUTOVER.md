@@ -7,8 +7,11 @@ Status: frozen design input; declarations remain unopened, 2026-08-31.
 Effect4 will not extract Foldlab's `Cas.Schema.Ast`, `Cas.Schema.El`, or pure
 `Cas.Schema.Codec` as its Schema foundation. Effect4 will own one portable,
 first-order representation family modeled on Effect's persisted
-`SchemaRepresentation.Document`, one dependent interpretation, and one
-directional four-index codec calculus using the common checked Flow carrier.
+`SchemaRepresentation.Document`, one document-relative relational
+interpretation, and one directional four-index codec calculus. Its proof-level
+Getter semantics reuse the existing `Signature` and `Program`; a later,
+separate face reifies the admitted first-order fragment as `CheckedFlow` and
+elaborates it back to that proof semantics.
 
 Foldlab retains its CAS envelope, profile, identities, canonical bytes,
 content addresses, store operations, and `IngestRefusal`. Its current Schema
@@ -16,7 +19,7 @@ types become checked profile or compatibility views. A Foldlab type may be
 retired only after its own embedding, retraction, semantic agreement, refusal
 mapping, and byte-compatibility edges close.
 
-This ruling prevents three duplicate carriers:
+This ruling prevents duplicate carriers:
 
 - Effect's runtime `SchemaAST.AST` is not persisted Schema content because its
   declarations and checks contain executable functions.
@@ -24,6 +27,10 @@ This ruling prevents three duplicate carriers:
 - A partial function `Representation -> Type` is not the denotation; several
   existing cases currently map to `Empty` because their meaning depends on a
   document, registry, or relational choice.
+- Schema introduces no additional type-code or service-code carrier beside the
+  existing effect algebra. Decoded and encoded values are indexed by ordinary
+  Lean types; service operations and their answer types are already expressed
+  by `Signature.Op` and `Signature.Answer`.
 
 ## Exact authority state
 
@@ -93,27 +100,84 @@ Checked profile Representation
 Canonical wire Representation
 ```
 
+#### Frozen rc.112 persisted census
+
+The source census is the following exact, case-sensitive 22-tag set. It is a
+membership census, not a claim that this source order is parser precedence:
+
+| # | Tag | Persisted fields beyond `_tag` |
+| ---: | --- | --- |
+| 1 | `Declaration` | required `representation`; optional persisted `annotations`; ordered `typeParameters`; ordered `checks` |
+| 2 | `Reference` | non-empty `$ref` |
+| 3 | `Suspend` | optional persisted `annotations`; exactly empty `checks`; `thunk` |
+| 4 | `Null` | optional persisted `annotations`; ordered `checks` |
+| 5 | `Undefined` | optional persisted `annotations`; ordered `checks` |
+| 6 | `Void` | optional persisted `annotations`; ordered `checks` |
+| 7 | `Never` | optional persisted `annotations`; ordered `checks` |
+| 8 | `Unknown` | optional persisted `annotations`; ordered `checks` |
+| 9 | `Any` | optional persisted `annotations`; ordered `checks` |
+| 10 | `String` | optional persisted `annotations`; ordered `checks` |
+| 11 | `Number` | optional persisted `annotations`; ordered `checks` |
+| 12 | `Boolean` | optional persisted `annotations`; ordered `checks` |
+| 13 | `BigInt` | optional persisted `annotations`; ordered `checks` |
+| 14 | `Symbol` | optional persisted `annotations`; ordered `checks` |
+| 15 | `Literal` | keyword fields plus one tagged string, finite-number, bigint, or boolean literal; never `null` |
+| 16 | `UniqueSymbol` | keyword fields plus a persistable global symbol |
+| 17 | `ObjectKeyword` | optional persisted `annotations`; ordered `checks` |
+| 18 | `Enum` | keyword fields plus ordered `[name, value]` entries; values are tagged strings or numbers and aliases are permitted |
+| 19 | `TemplateLiteral` | keyword fields plus ordered `parts` |
+| 20 | `Arrays` | keyword fields plus ordered `elements` and arbitrary ordered `rest` representations |
+| 21 | `Objects` | keyword fields plus property-signature and index-signature collections |
+| 22 | `Union` | keyword fields plus ordered `types` and mode `anyOf` or `oneOf` |
+
+These cross-tag persisted field constraints are frozen with the census:
+
+- A representation annotation is a non-empty stable `id` plus JSON `payload`.
+  `Declaration.representation` is optional in the live interface but required
+  by the persisted rc.112 codec.
+- `Check` is exactly `Filter | FilterGroup`. A persisted `Filter` has a
+  required representation annotation (optionally with ordered referenced
+  schemas), optional persisted annotations, and `aborted : Bool`.
+  `FilterGroup.representation` is optional and its ordered `checks` are
+  non-empty.
+- Persisted annotations contain only JSON-valued entries; unsupported entries
+  are pruned and an empty result is omitted.
+- An array element records `isOptional`, its representation, and optional
+  persisted annotations. Both `elements` and `rest` are arrays; the model must
+  not collapse `rest` to a single optional node.
+- An object property records a string, number, or global-symbol key, its
+  representation, `isOptional`, `isMutable`, and optional persisted
+  annotations. An index signature records a parameter representation and a
+  value representation. Local symbols are live-only and fail portable
+  lowering.
+- A `Document` has one root representation and a keyed references table. A
+  `MultiDocument` has a non-empty ordered root list and the same kind of keyed
+  references table. Duplicate JSON keys are rejected before either table is
+  constructed.
+- Union members, tuple `elements`/`rest`, checks, enum entries, index
+  signatures, reference occurrences, and multi-document roots retain order.
+  Object property declaration order is normalized as a keyed structural
+  collection only after representation admission establishes unique property
+  keys. References-table entry order is likewise not semantic after raw JSON
+  duplicate-key rejection. Any theorem about operational issue order is a
+  separate parsing theorem.
+
 ### 2. Dependent interpretation
 
-Semantic types and service answers are supplied by universes external to the
-first-order representation:
+Schema introduces no type-code or service-code universe. A decoded index `T`
+and encoded index `E` are ordinary Lean types in the existing algebra's answer
+universe. When meaning requires services, choose an existing `S : Signature`;
+its operation family is `S.Op` and the answer to an operation is
+`S.Answer op`.
+The required finite subset is a canonical `Effect4.Data.Row S.Op`; Context may
+interpret that row against an environment, but it does not own a second row
+carrier or row union.
 
-```lean
-structure TypeUniverse.{uCode, uAns} where
-  Code : Type uCode
-  El : Code -> Type uAns
-
-structure ServiceUniverse.{uKey, uAns} where
-  Key : Type uKey
-  El : Key -> Type uAns
-```
-
-These declarations are proposed signatures, not implemented code. Values and
-service answers deliberately share the algebra's answer universe. Meaning is
-given by judgments, not by a partial closed type function:
+Meaning is given by document-relative judgments, not by a partial closed type
+function or an `El` field:
 
 ```text
-Gamma |- representation represents typeCode
+Gamma |- representation represents T
 Gamma |- representation accepts value
 rho |- codec.decode encodedValue ⇓ outcome
 rho |- codec.encode decodedValue ⇓ outcome
@@ -125,8 +189,24 @@ declarations are not faithfully modeled by one total function.
 
 ### 3. Directional transformations
 
-Schema reuses the common checked first-order Flow. It does not define a
-Schema-specific effect monad or another free program carrier.
+Schema defines no effect monad and no free-program carrier. It has two related
+program faces, in this order:
+
+1. **Proof semantics.** Before full Flow semantics closes, a Getter can denote
+   a function of the Effect shape
+   `Option E × ParseOptions → Effect (Option T) Issue R` using the existing
+   `Program`. Its Lean semantic shape is
+   `Option E × ParseOptions → Program (SchemaIssueSig ⊕ₛ S) (Option T)`, where
+   services use `S.Op`/`S.Answer`, `SchemaIssueSig.Answer _ = Empty`, and
+   `R : Data.Row S.Op` plus an operation-membership judgment certifies the
+   permitted service operations. This higher-order function is a proof carrier
+   and is not serialized as canonical program content.
+2. **First-order reification.** After checked Flow has its relational
+   semantics, the admitted Getter language stores blocks as `CheckedFlow`.
+   Elaboration interprets that checked graph into the proof-level Getter
+   semantics. The inverse is required only for the selected generated Getter
+   syntax; Effect4 does not claim to serialize an arbitrary Lean function or
+   arbitrary `Program` continuation.
 
 The public indices are:
 
@@ -136,10 +216,11 @@ Transformation decoded encoded decodeRequirements encodeRequirements
 Codec          decoded encoded decodeRequirements encodeRequirements
 ```
 
-A getter denotes a checked flow from an optional encoded value and explicit
-parse options to an optional decoded value. Its operation alphabet includes
-typed service lookup and a schema issue exit; the semantic function is an
-interpretation, not stored content.
+A getter denotes the shape above from an optional encoded value and explicit
+parse options to an optional decoded value. Its operation signature includes
+typed service lookup and schema issue exit; first the semantic function is a
+`Program` interpretation, and later its canonical stored content is a checked
+first-order Flow.
 
 A transformation is a directional pair:
 
@@ -171,8 +252,9 @@ encodeRequirements = TRE union FRE union RE
 ```
 
 The decode path is `FE -> FT -> TE -> TT`; the encode path is
-`TT -> TE -> FT -> FE`. Requirement rows come from the sole
-`Effect4.Data.Row`/Context owner. Empty requirements lower to TypeScript
+`TT -> TE -> FT -> FE`. Requirement rows and their normalization/union laws
+come solely from `Effect4.Data.Row`. Context owns key interpretation and
+environments, not the row carrier. Empty requirements lower to TypeScript
 `never`; row union lowers to a TypeScript union.
 
 Effect's erased convenience views do not become additional carriers:
@@ -225,11 +307,15 @@ Required wire results are:
 decode (encode canonicalDocument) = canonicalDocument
 encode (decode acceptedBytes) = canonicalize acceptedBytes
 normalization is idempotent
-normalization preserves the stated denotation
 canonical encoding is injective on canonical documents
 the decoder accepts only source-census tags
 duplicate keys are rejected before map construction
 ```
+
+`normalization_preserves_denotation` remains an open obligation. It is not a
+well-formed theorem statement until the document-relative denotation judgment
+and its observations are frozen. Normalization may be implemented and proved
+idempotent first, but no semantic-preservation claim follows from that result.
 
 ## Operational semantic rulings
 
@@ -298,9 +384,10 @@ outside a selected profile. An asserted status cannot close an edge.
 ```text
 SC-SRC-01 exact upstream and resolved-package pins
 SC-SRC-02 generated 22-tag source census
-  -> SC-REP-01 declaration snapshot
+  -> SC-REP-01 declaration and persisted-field snapshot
   -> SC-REP-02 tag Nodup and source completeness
   -> SC-REP-03 structural equality and recursors
+  -> SC-REP-04 field admission matches the frozen rc.112 constraints
 
 SC-REP
   -> SC-WIRE-01 duplicate-preserving raw JSON
@@ -321,8 +408,11 @@ SC-REP
   -> SC-DOC-04 memoized checker equivalence
   -> SC-DOC-05 retained complexity counterexample
 
-SC-UNI-01 type/service universe snapshot
-SC-ROW-01 row union associativity, commutativity, and idempotence
+DATA-ROW-01 canonical row declaration and normalization
+  -> DATA-ROW-02 row union associativity, commutativity, and idempotence
+  -> DATA-ROW-03 membership and requirement weakening
+
+SC-REP-CLOSED + SC-DOC-CLOSED + SC-REG-01 + SC-REG-02
   -> SC-DEN-01 representation/type/value judgments
   -> SC-DEN-02 primitive/product/array/object semantics
   -> SC-DEN-03 ordered anyOf theorem
@@ -332,12 +422,14 @@ SC-ROW-01 row union associativity, commutativity, and idempotence
   -> SC-DEN-07 recursive evaluator soundness
   -> SC-DEN-08 evaluator completeness for the named guarded profile
 
-P4-FLOW-CLOSED
-  -> SC-GET-01 getter declaration and denotation
-  -> SC-GET-02 identity
-  -> SC-GET-03 associative composition
-  -> SC-GET-04 requirement weakening and union
-  -> SC-GET-05 fixed-decision determinism
+SC-DEN-01 + SC-WIRE-04
+  -> SC-WIRE-06 normalization_preserves_denotation [OPEN until SC-DEN-01 freezes]
+
+P3-ALGEBRA-CLOSED + DATA-ROW-01/02/03 + SC-ISSUE-01 typed issue exit
+  -> SC-GET-P-01 Program-based getter declaration and denotation
+  -> SC-GET-P-02 identity
+  -> SC-GET-P-03 associative composition
+  -> SC-GET-P-04 requirement weakening and row union
   -> SC-TR-01 transformation declaration
   -> SC-TR-02 flip involution
   -> SC-TR-03 reversed encoding composition
@@ -351,6 +443,15 @@ P4-FLOW-CLOSED
   -> SC-CODEC-07 law-grade classifier and witnesses
   -> SC-CODEC-08 existential views
 
+P4-FLOW-SEMANTICS-CLOSED + SC-GET-P-01
+  -> SC-GET-F-01 first-order Getter Flow alphabet and payloads
+  -> SC-GET-F-02 checked Getter admission
+  -> SC-GET-F-03 CheckedFlow-to-Program elaboration
+  -> SC-GET-F-04 elaboration preserves Getter denotation
+  -> SC-GET-F-05 reify/elaborate round trip for the selected generated syntax
+  -> SC-GET-F-06 fixed-compatible-tape determinism
+  -> SC-GET-F-07 arbitrary Program reification explicitly not claimed
+
 SC-REG-01 first-order declaration/check registry
   -> SC-REG-02 uniqueness, arity, payload admission
   -> SC-REG-03 denotation lookup agreement
@@ -360,7 +461,10 @@ SC-REG-01 first-order declaration/check registry
   -> SC-HOST-04 runtime differential vectors
   -> SC-HOST-05 source/profile drift gate
 
-SC-CAS-01 Foldlab profile embedding
+SC-REP-CLOSED + SC-WIRE-CLOSED + SC-PROFILE-CLOSED
++ SC-DOC-CLOSED + SC-DEN-CLOSED + DATA-ROW-CLOSED
++ SC-CODEC-CLOSED + SC-GET-F-CLOSED + SC-REG-CLOSED + SC-HOST-CLOSED
+  -> SC-CAS-01 Foldlab profile embedding
   -> SC-CAS-02 injective on existing well-formed values
   -> SC-CAS-03 profile retraction
   -> SC-CAS-04 refusal mapping
@@ -369,28 +473,33 @@ SC-CAS-01 Foldlab profile embedding
   -> SC-CUTOVER
 ```
 
+Each `*-CLOSED` name is the generated conjunction of every required node in
+that family, including retained counterexamples and axiom receipts. It is not
+a manually assignable status. In particular, the open `SC-WIRE-06` edge keeps
+`SC-WIRE-CLOSED` and therefore full Schema cutover open.
+
 ## Required counterexamples
 
 The breaker packet must allocate these stable IDs in the central register and
 retain executable or immutable witnesses:
 
 ```text
-SCHEMA-CE-001 overlapping anyOf chooses first success
-SCHEMA-CE-002 overlapping oneOf rejects multiple successes
-SCHEMA-CE-003 enum aliases defeat encode injectivity
-SCHEMA-CE-004 optional tuple member before a required member
-SCHEMA-CE-005 trim refutes universal round trip
-SCHEMA-CE-006 decode-only service does not leak into encode requirements
-SCHEMA-CE-007 encoding composition is reversed
-SCHEMA-CE-008 missing declaration reviver
-SCHEMA-CE-009 duplicate reviver identity
-SCHEMA-CE-010 local symbol cannot enter portable wire data
-SCHEMA-CE-011 non-JSON annotation pruning
-SCHEMA-CE-012 duplicate key becomes invisible after map parsing
-SCHEMA-CE-013 bare self-reference cycle
-SCHEMA-CE-014 guarded recursive reference
-SCHEMA-CE-015 exponential naive guardedness fan graph
-SCHEMA-CE-016 middleware is not a value getter
+E4-SCHEMA-CE-001 overlapping anyOf chooses first success
+E4-SCHEMA-CE-002 overlapping oneOf rejects multiple successes
+E4-SCHEMA-CE-003 enum aliases defeat encode injectivity
+E4-SCHEMA-CE-004 optional tuple member before a required member
+E4-SCHEMA-CE-005 trim refutes universal round trip
+E4-SCHEMA-CE-006 decode-only service does not leak into encode requirements
+E4-SCHEMA-CE-007 encoding composition is reversed
+E4-SCHEMA-CE-008 missing declaration reviver
+E4-SCHEMA-CE-009 duplicate reviver identity
+E4-SCHEMA-CE-010 local symbol cannot enter portable wire data
+E4-SCHEMA-CE-011 non-JSON annotation pruning
+E4-SCHEMA-CE-012 duplicate key becomes invisible after map parsing
+E4-SCHEMA-CE-013 bare self-reference cycle
+E4-SCHEMA-CE-014 guarded recursive reference
+E4-SCHEMA-CE-015 exponential naive guardedness fan graph
+E4-SCHEMA-CE-016 middleware is not a value getter
 ```
 
 CAS address, revision, content-binding, and exact refusal-precedence witnesses
@@ -423,13 +532,19 @@ compatibility gates.
 
 No declaration enters the Schema stubs until the breaker freezes:
 
-1. the 22-tag representation snapshot;
-2. the type and service universe roles;
-3. the four-index getter/transformation/codec signatures;
-4. the directional composition equations;
+1. the exact 22-tag representation and persisted-field snapshot above;
+2. ordinary decoded/encoded Lean indices, reuse of
+   `Signature.Op`/`Signature.Answer`, and sole `Data.Row` ownership of
+   requirements;
+3. the Program-based Getter semantics and the later CheckedFlow
+   reification/elaboration boundary;
+4. the four-index getter/transformation/codec signatures and directional
+   composition equations;
 5. the refusal boundaries above; and
-6. the sixteen central counterexamples.
+6. the sixteen `E4-SCHEMA-CE-*` central counterexamples.
 
 The first implementation slice is structural representation and source census.
-Directional codecs wait for the checked Flow carrier rather than minting a
-temporary effect type.
+The proof-level Getter, Transformation, and Codec laws may proceed over the
+existing `Program` after `Data.Row` and schema issue exit are frozen. Their
+first-order storage, generation, and reify/elaborate proofs wait for checked
+Flow semantics; neither lane may mint a temporary effect type.

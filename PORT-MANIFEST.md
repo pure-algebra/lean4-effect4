@@ -185,9 +185,11 @@ Effect4 will own one first-order representation with all 22 rc.112 persisted
 tags, one document-relative relational denotation, one open first-order
 reviver registry, one versioned rc.112 wire profile, and one four-index
 `Codec decoded encoded decodeRequirements encodeRequirements`. `Getter` and
-`Transformation` reuse checked Flow; no Schema-specific effect monad is
-admitted. `Schema`, `Decoder`, `Encoder`, and `Top` are existential views of
-that codec rather than new carriers.
+`Transformation` first reuse the existing `Program` as their proof-level
+semantics. Their later serializable face uses the one common checked Flow and
+an elaboration theorem back to that semantics; no Schema-specific effect
+monad or program carrier is admitted. `Schema`, `Decoder`, `Encoder`, and
+`Top` are existential views of that codec rather than new carriers.
 
 Decode and encode requirements remain distinct, and transformation encoding
 composition runs in reverse order. No universal round-trip law is assigned to
