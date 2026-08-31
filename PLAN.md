@@ -11,7 +11,10 @@ arbitrary control flow, classification, and checked TypeScript generation.
 
 The cutover is additive. Foldlab remains buildable throughout and adopts
 Effect4 through downstream compatibility modules only after each moved type's
-proof graph is closed.
+declared assurance route is closed. Semantic or cutover-bearing types require
+a proof graph; passive finite leaf declarations close with their exact local
+receipts and any named parent-graph edge. Trivial leaves do not receive empty
+ceremonial graphs.
 
 ## Non-negotiable semantic boundaries
 
@@ -35,7 +38,7 @@ proof graph is closed.
 | --- | --- | --- |
 | P0 — bootstrap | independent Lake package, exact toolchain, root routing, source pin | clean `lake build`; no Foldlab dependency |
 | P1 — inventory | mechanical declaration/test/surface manifest and source-to-destination dispositions | every source row classified; incompatible workshop carriers excluded |
-| P2 — breadth scaffold | empty modules for every major category, central contracts/counterexamples, generated closure schema | no semantic declarations; scaffold build and declaration scan green |
+| P2 — breadth scaffold | empty modules for every major category, central contracts/counterexamples, generated assurance schema | no semantic declarations; scaffold build and declaration scan green |
 | P3 — algebra substrate | signature, program, handler, interpretation, lawful composition, universe policy | breaker battery green; monad/handler laws proved; axiom receipts recorded |
 | P4 — first-order flow | checked finite graph around sequential bodies, explicit decisions/frontiers, relational runs | checker soundness and relative completeness; incompatible S2 designs resolved |
 | P5 — effect data | rows, cause/exit, Schema codecs/refinements/transforms, portable protocol identities | round trips and normalization proved; identity owners unique |
@@ -46,7 +49,7 @@ proof graph is closed.
 | P10 — targets | typed TypeScript IR, lowering, render/decode, Effect v4 profile | typing and simulation proofs; deterministic bytes; exact source coverage |
 | P11 — host evidence | Effect runtime/replay and `@effect/tsgo` language-service harnesses | positive, negative, mutation, coverage, and drift gates green at exact pins |
 | P12 — integration | Foldlab compatibility adapter and staged retirement of duplicated generic code | both repositories build; per-type compatibility proofs; no semantic drift |
-| P13 — cutover | generated type-closure and cutover decision | every required row closed; no manual completeness override |
+| P13 — cutover | generated declaration-assurance and cutover decision | every required graph edge and leaf receipt closed; no manual completeness override |
 
 ## Broad-before-deep representatives
 

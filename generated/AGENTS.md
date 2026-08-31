@@ -11,7 +11,8 @@ exclude every `AGENTS.md`; they may neither create nor replace instructions.
 
 - declaration and public-signature snapshots;
 - existing-type and source-disposition snapshots;
-- per-type obligation ledgers and closure snapshots;
+- graph-bearing owner obligation ledgers, leaf receipt indexes, and
+  per-declaration assurance snapshots;
 - theorem and axiom receipt indexes;
 - counterexample coverage indexes; and
 - target export, overload, profile, and refusal coverage.
@@ -23,6 +24,6 @@ unchanged input drift.
 
 Never hand-edit a generated projection. Repair its authored input or generator,
 regenerate into a clean tree, and run the byte-for-byte drift gate. A generator
-may report an open proof edge or missing annotation, but it may not supply a
-manual completion override, invent a source disposition, or generate an
-instruction file.
+may report an open proof edge, open leaf receipt, or missing annotation, but it
+may not supply a manual completion override, invent a source disposition, or
+generate an instruction file.

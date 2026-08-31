@@ -21,15 +21,26 @@ If two files appear to own the same fact, stop and repair the ownership map.
 
 ## Development order
 
-1. Freeze the public declaration and existing-type disposition.
+1. Freeze the public declaration record, existing-type disposition, and
+   assurance route.
 2. A breaker, in a separate process, commits the contract and red battery.
 3. The builder implements without editing that packet or battery.
 4. Run the narrow test, the package build, axiom inspection, and the relevant
    host gate.
 5. An independent reviewer checks model intent, proof trust, compatibility,
    and claim scope.
-6. Close the per-type proof graph. No category or full cutover may hide an
-   open required edge.
+6. Close the required assurance route: a proof graph for semantic or
+   cutover-bearing work, or local signature and theorem receipts for a trivial
+   finite leaf. No category or full cutover may hide an open graph edge or
+   leaf receipt.
+
+Every exported declaration still receives a lightweight ownership,
+disposition, and duplicate-prevention record. A proof graph is mandatory only
+for admission or refusal, judgments or denotations, interpreters or handlers,
+reification or generated-code relations, nontrivial composition or recursive
+invariants, external semantic equivalence, and declarations that directly
+gate cutover. Empty stubs have no declaration to record and need no graph.
+`docs/AGENT-ROUTING.md` owns the full threshold and Schema examples.
 
 Breadth precedes depth: every major category receives a frozen representative
 contract before one category is developed far beyond the others.
@@ -78,19 +89,20 @@ probe.
 ## Generated facts and long-run continuity
 
 Authored routers such as this file are never generated. Machine status,
-surface rows, declaration digests, obligation graphs, and proof receipts are
-generated from canonical inputs and checked for drift. A fresh session resumes
-by reading, in order:
+surface rows, declaration digests, conditional obligation graphs, leaf receipts,
+and proof receipts are generated from canonical inputs and checked for drift.
+A fresh session resumes by reading, in order:
 
 1. `PLAN.md` current-phase row;
 2. `PORT-MANIFEST.md` source pin and open dispositions;
 3. the current contract packet and counterexample rows;
-4. the per-type closure row;
+4. the per-declaration assurance row;
 5. the narrow verification command recorded by that row; and
 6. `git status --short --branch` to attribute local changes.
 
 ## Handoff
 
 Every handoff records base and head commits, file fence, changed files, exact
-commands and results, public declarations, axiom output, open proof edges,
-counterexamples exercised, and whether any evidence is bounded or host-only.
+commands and results, public declarations, axiom output, open proof edges or
+leaf receipts, counterexamples exercised, and whether any evidence is bounded
+or host-only.

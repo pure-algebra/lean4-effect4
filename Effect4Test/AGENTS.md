@@ -2,7 +2,7 @@
 
 This boundary contains executable Lean attacks, examples, compatibility
 checks, and proof receipts. The repository root rules remain in force;
-`docs/AGENT-ROUTING.md` defines the shared type-closure and counterexample
+`docs/AGENT-ROUTING.md` defines the shared type-assurance and counterexample
 route.
 
 ## Breaker ownership
@@ -26,10 +26,13 @@ compile-time rejection records the exact rejected declaration or term rather
 than relying on an error-message substring unless the diagnostic text itself
 is the contract.
 
-Axiom reports cover every exported theorem named by the type's trust edge and
-record the actual dependencies. Compatibility tests name both observations
-being compared and any loss admitted by the bridge.
+Axiom reports cover every exported theorem named by a graph trust edge or leaf
+receipt set and record the actual dependencies. Compatibility tests name both
+observations being compared and any loss admitted by the bridge. Creating a
+test does not by itself force a proof graph: passive finite alphabets and value
+records remain on the leaf-receipt route unless they acquire a semantic or
+cutover-bearing claim.
 
 Before handoff, run the narrow file directly and the default Lake build. Link
-the exact command and result to the affected proof-graph edge; do not mark the
-whole type closed from one green test.
+the exact command and result to the affected proof-graph edge or leaf receipt;
+do not mark the whole type closed from one green test.
