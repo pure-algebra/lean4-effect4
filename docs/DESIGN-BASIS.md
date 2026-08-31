@@ -10,6 +10,41 @@ Status: adopted architecture, 2026-08-31. The generic algebra is implemented.
 The first-order flow, recursive semantics, logic, resource machine, target
 lowering, and Foldlab compatibility theorems remain proof obligations.
 
+## Re-review ruling
+
+A fresh review of EffHOL, the current Lean reference pages, and the pinned
+Lean 4.33.1 sources does not justify replacing the architecture above with a
+larger foundational carrier. It does justify the extraction from Foldlab and
+four library-level refinements that are now requirements:
+
+1. The algebra is universe-polymorphic and exposes first-class model
+   morphisms, rather than retaining CAS-specific `Type`-only declarations or
+   a second morphism predicate.
+2. EffHOL separates kinds, types, programs, logical indices, expressions, and
+   specifications. Effect4 follows that organization: its program semantics
+   precede its logic, while `wlp`, totality, and realizability live in the
+   logic/classification layer rather than in `Program` or `Flow`.
+3. Lean `Expr` and environment state remain metaprogramming inputs. Persistent
+   entries are sorted, serializable first-order rows, and the generated
+   declaration/type closure is checked after elaboration. No elaborator
+   closure becomes semantic data.
+4. The runtime uses an error-and-state result that retains final state.
+   Backtracking or rollback is requested explicitly; it is not an accidental
+   consequence of transformer order or exception handling.
+
+The online Lean API pages currently describe a newer documentation build than
+the project toolchain. API shapes were therefore checked again in the local
+4.33.1 sources. The reviewed source digests are:
+
+| Pinned Lean source | SHA-256 | Consequence |
+| --- | --- | --- |
+| `Lean/Util/CollectAxioms.lean` | `64f340d42f18c51ee83527f03fa69cc26415dd71dcf7fe71031b7760be90007d` | imported declarations use precomputed transitive receipts; the audit still checks every Effect4 declaration directly |
+| `Lean/Environment.lean` | `ee364e4788ce0560c87f621eeb3c4c3dfec62e8db4e15e099fd80e6adc533b86` | persistent and asynchronous extension state is an implementation concern; canonical export order is owned by Effect4 |
+| `Lean/Expr.lean` | `b9a91d9d170201c2a3622b9c55d694466f54e0e1b8f6068a2d296ff98650169c` | metavariables and elaborator expressions stop at the meta boundary |
+
+This is a refinement ruling, not a completed semantic claim. The first-order
+Flow, logic, runtime, target, and compatibility rows below remain open.
+
 ## Semantic decomposition
 
 Effect4 keeps four observations of a program distinct.

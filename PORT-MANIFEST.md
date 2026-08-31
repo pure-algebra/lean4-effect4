@@ -103,15 +103,31 @@ required dispositions are now explicit:
 No row is closed merely because the missing result is likely derivable. The
 derivation theorem and its axiom receipt are the closure evidence.
 
+The retained closure packet is now implemented:
+
+- `4385457` freezes the exact retained declarations, including their binder
+  order and universe levels, and is red only on those missing declarations;
+- `47575b1` supplies interpreter separation, the named `vis` and sharp
+  operation equations, one `ModelMorphism` wrapper around the existing law
+  predicate, equality-form initiality, and strength-qualified injection
+  theorems; and
+- a clean default build checks 102 modules and 317 declarations. The new
+  theorem receipts contain only `propext` and `Quot.sound`; several are
+  axiom-free.
+
+This closes the native retained algebra implementation, subject to its
+independent assurance pass. The two Foldlab-only compatibility aliases remain
+downstream work and do not enter Effect4's public vocabulary.
+
 ## Existing Foldlab effect-core material
 
 | Source set | Observed state | Disposition |
 | --- | --- | --- |
 | `formal/effect-core-v1/EffectCore/**` | 57 empty modules; no semantic declarations | `evidenceOnly`; module breadth informs Effect4 stubs but no code is ported |
 | `.staging/effect-core-v1/workshop/EffectCoreProbe.lean` | self-contained finite probe | `evidenceOnly`; eligible as a later first-order-flow regression fixture |
-| S1 workshop | 26 compiling files, 13 incompatible local carriers, no production declarations | `evidenceOnly`; keep surviving closure and census obligations, reject every local carrier |
-| S2 workshop | eight incompatible raw/admission/program carriers and no composable checker | `evidenceOnly`; one ruled raw/checked flow must replace them |
-| Layer workshop | 67 receipts over `Program`, `Handler`, sums, and state-outside-failure | `evidenceOnly`; reuse the algebraic laws and counterexamples, not its `String -> Addr32` service environment or unstratified floor |
+| S1 workshop | 39 Lean files: 13 scouts, 13 local implementations, 13 attacks; 13 incompatible carrier families; no production declaration | `evidenceOnly`; keep surviving closure and census obligations, reject every local carrier |
+| S2 workshop | 24 Lean files: eight scouts, eight local implementations, eight attacks; seven raw carriers, six incompatible `AER`s, eight incompatible `ProgramWF`s | `evidenceOnly`; one ruled raw/checked flow replaces them all |
+| Layer workshop | 16 Lean files plus three research documents; semantic Layer uses existing `Program`, `Handler`, sums, and state-outside-failure | `evidenceOnly`; reuse proved law shapes and counterexamples, not its `String -> Addr32` service environment or unstratified floor |
 | `library/effects/archive/lean-model-0.3/**` | older conformance, replay, remote, and mutation estate | `evidenceOnly`; mine proof and test shapes, never revive its carriers wholesale |
 
 The Layer result is adopted with two corrections. A semantic Layer is a
@@ -119,6 +135,37 @@ program whose result is a service handler, and Scope is a separate signature
 summand. The rc.112 target has no public `Layer.scoped`; `Layer.effect`
 already excludes `Scope` in its result. Effect4 therefore creates no
 `Layer.scoped` row or duplicate scoped-layer carrier.
+
+The completed late batch is retained as a byte-pinned evidence set, not
+silently promoted. A fresh rerun against Foldlab's pinned toolchain elaborated
+all 79 Lean files, exercised 2,246 axiom-print commands, and found zero errors
+and zero `sorryAx`; one unused-`simp` warning is non-semantic. The final report
+digests are S1
+`d870f81454df29c32f3fb16926010c91df9e0aaf6f86cb8fe252ed08f230e3a2`,
+S2 `2324ad78f58504263531eae170ffd57cb9b439532ea700e54803924fafe9f35d`,
+and Layer
+`7338063c1d1277a7dfa52129a4ab69af153affee158dd203bcc0722abcd9e3ec`.
+Those results establish that the individual probes elaborate. They close zero
+production rows because Foldlab's 57 formal Effect Core modules still contain
+no semantic declarations.
+
+The batch sharpens the next contracts:
+
+- Flow admission owns payload-bearing diagnostics and a fixed `(clause, table
+  index)` priority; foreign registry checks are environment-relative; all
+  referenced content, including unreachable blocks, must be structurally
+  closed; and static error rows are not claimed to overapproximate Foldlab's
+  table-walker refusals.
+- `Layer.provideMerge` carries the associative composition laws, while
+  `Layer.provide` is explicitly non-associative. Overlapping service rows need
+  a keyed merge, not `Handler.sum`.
+- Foldlab's current residual row keeps the inner duplicate service while its
+  handler meaning lets the outer clause win. This is a registered design
+  counterexample to resolve before a Layer representation is frozen, not a
+  behavior Effect4 copies.
+- Content-plane graph sharing, runtime Layer memoization, first-order release
+  identity, failed finalizers, interruption, and parallel scope remain
+  separate obligations.
 
 ## Schema extraction ruling
 
