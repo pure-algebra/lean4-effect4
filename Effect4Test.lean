@@ -3,6 +3,7 @@ import Effect4Test.Algebra.RetainedClosureContract
 import Effect4Test.Algebra.AxiomReport
 import Effect4Test.Flow.AdmissionContract
 import Effect4Test.Flow.AxiomReport
+import Effect4Test.Flow.PrivacyContract
 import Effect4Test.Audit.AxiomGate
 
 /-!

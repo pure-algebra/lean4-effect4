@@ -64,6 +64,16 @@ table and admission fails. This pair separates the intended rules: unreachable
 declared content is allowed, cycles are allowed, but reference closure is
 whole-document rather than root-reachable-only.
 
+## Checked constructor escape — `E4-FLOW-CE-015`
+
+`CheckedFlow.raw` and `CheckedFlow.wf` are public observations, not an external
+construction license. The paired compile-negatives in
+`Effect4Test/Flow/PrivacyContract.lean` ask Lean to resolve
+`CheckedFlow.mk` and to build the record from a separate importing module.
+Both forms must remain unavailable, so callers can obtain a checked value only
+through `admit`. Making the constructor public removes both expected
+elaboration errors and fails the default-root gate.
+
 ## Deferred attacks
 
 `E4-FLOW-CE-006` and the fuel, live-frontier, nondeterminism, divergence,

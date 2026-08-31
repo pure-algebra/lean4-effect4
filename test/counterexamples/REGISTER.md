@@ -24,6 +24,7 @@ provenance pin for its Effect4 witness has yet been recorded.
 | `E4-FLOW-CE-007` | SEEDED | Soundness/completeness pins which of several defects is reported | `Effect4Test/Flow/AdmissionContract.lean`, `firstDiagnosticFlow` | freeze packet-owned clause order and prove the returned diagnostic is the first condemning clause |
 | `E4-FLOW-CE-013` | SEEDED | A raw first-order branch may store a Lean continuation | compile-negative in `Effect4Test/Flow/AdmissionContract.lean` | require nominal child `BlockId`s only; keep host functions outside canonical content |
 | `E4-FLOW-CE-014` | SEEDED | Reference closure may ignore unreachable blocks, or admission may require every block reachable and acyclic | `Effect4Test/Flow/AdmissionContract.lean`, `unreachableClosedCycleFlow` and `unreachableDanglingFlow` | allow unreachable closed cycles but reject every dangling successor in the whole raw document |
+| `E4-FLOW-CE-015` | SEEDED | Public proof projections are enough reason to expose an unchecked `CheckedFlow` constructor | direct-name and record-literal compile-negatives in `Effect4Test/Flow/PrivacyContract.lean`, reachable from `Effect4Test.lean` | keep `CheckedFlow.mk` module-private and require every external checked value to cross `admit` |
 
 Area-specific attack shapes are in
 [`algebra/ATTACKS.md`](algebra/ATTACKS.md) and
