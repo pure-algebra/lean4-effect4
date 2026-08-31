@@ -1,8 +1,9 @@
+import Effect4.Flow.Admission
+
 /-!
-# Flow.Checked.lean
+# Admitted first-order flows
 
-Owner: Admitted first-order effect flow and erasure.
-
-This breadth stub intentionally declares no semantic object. Its public
-surface is frozen only after the owning contract and counterexample packet.
+This facade exposes the proof-carrying result of `Effect4.Flow.Admission` under
+the expected checked-flow module path. The carrier and `admit` are co-located
+there because Lean private constructors are compilation-unit private.
 -/
