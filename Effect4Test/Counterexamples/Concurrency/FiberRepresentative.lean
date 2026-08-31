@@ -36,10 +36,17 @@ inductive Mask where
   | masked
   deriving DecidableEq, Repr
 
+inductive CleanupPhase where
+  | notStarted
+  | pending
+  | done
+  deriving DecidableEq, Repr
+
 structure MiniFiber where
   status : Status
   mask : Mask
   interruptPending : Bool
+  cleanup : CleanupPhase
   cleanupRuns : Nat
   deriving DecidableEq, Repr
 
@@ -63,6 +70,7 @@ def baseFiber : MiniFiber :=
   { status := .runnable
     mask := .unmasked
     interruptPending := false
+    cleanup := .notStarted
     cleanupRuns := 0 }
 
 def raceStart : MiniMachine :=
@@ -156,6 +164,7 @@ def cleanupLost : MiniMachine :=
     workerState :=
       { baseFiber with
         status := .done .interrupted
+        cleanup := .notStarted
         cleanupRuns := 0 }
     trace := [.completed worker .interrupted] }
 
@@ -164,6 +173,7 @@ def cleanupRetained : MiniMachine :=
     workerState :=
       { baseFiber with
         status := .done .interrupted
+        cleanup := .done
         cleanupRuns := 1 }
     trace := [.completed worker .interrupted, .cleanup worker] }
 
@@ -204,6 +214,7 @@ def joinedReady : MiniMachine :=
     workerState :=
       { baseFiber with
         status := .done .success
+        cleanup := .done
         cleanupRuns := 1 }
     waiterState := { baseFiber with status := .waiting worker }
     trace := [.completed worker .success, .cleanup worker] }
@@ -237,6 +248,61 @@ theorem double_join_counterexample :
      second_join_result,
      first_join_cleanup_count,
      second_join_cleanup_count⟩
+
+/-!
+E4-CONC-CE-007: a cleanup counter bounded by one does not constrain the
+observable trace. This is the smallest raw state accepted by count-only
+admission while recording the same cleanup twice.
+-/
+
+def duplicateCleanupTrace : MiniMachine :=
+  { raceStart with
+    workerState :=
+      { baseFiber with
+        status := .done .success
+        cleanup := .done
+        cleanupRuns := 1 }
+    trace := [.cleanup worker, .cleanup worker] }
+
+def cleanupEventId? : Event -> Option FiberId
+  | .cleanup id => some id
+  | _ => none
+
+def cleanupEventIds (machine : MiniMachine) : List FiberId :=
+  machine.trace.filterMap cleanupEventId?
+
+def Status.active : Status -> Bool
+  | .runnable | .running | .waiting _ => true
+  | .finalizing _ | .done _ => false
+
+def PreRepairFiberAdmitted (fiber : MiniFiber) : Bool :=
+  decide (fiber.cleanupRuns <= 1) &&
+  (match fiber.status with
+    | .runnable | .running | .waiting _ =>
+        decide (fiber.cleanup = .notStarted) && decide (fiber.cleanupRuns = 0)
+    | .finalizing _ =>
+        decide (fiber.cleanup = .pending) && decide (fiber.cleanupRuns = 0)
+    | .done _ =>
+        decide (fiber.cleanup = .done) && decide (fiber.cleanupRuns = 1)) &&
+  (!fiber.interruptPending ||
+    (decide (fiber.mask = .masked) && fiber.status.active))
+
+def waitingTargetClosed : Status -> Bool
+  | .waiting target => decide (target = worker \/ target = waiter)
+  | _ => true
+
+/-- The six pre-repair admission fields, specialized to two fixed unique IDs. -/
+def PreRepairWellFormed (machine : MiniMachine) : Bool :=
+  PreRepairFiberAdmitted machine.workerState &&
+  PreRepairFiberAdmitted machine.waiterState &&
+  waitingTargetClosed machine.workerState.status &&
+  waitingTargetClosed machine.waiterState.status
+
+theorem duplicate_cleanup_trace_counterexample :
+    PreRepairWellFormed duplicateCleanupTrace = true /\
+    cleanupEventIds duplicateCleanupTrace = [worker, worker] /\
+    ¬ (cleanupEventIds duplicateCleanupTrace).Nodup := by
+  decide
 
 theorem terminal_alphabet_receipt (result : Terminal) :
     result = .success ∨ result = .failure ∨ result = .defect ∨
@@ -322,6 +388,7 @@ theorem empty_relations_satisfy_every_implication_only_spine
 #print axioms first_join_cleanup_count
 #print axioms second_join_cleanup_count
 #print axioms double_join_counterexample
+#print axioms duplicate_cleanup_trace_counterexample
 #print axioms terminal_alphabet_receipt
 #print axioms empty_relations_satisfy_every_implication_only_spine
 

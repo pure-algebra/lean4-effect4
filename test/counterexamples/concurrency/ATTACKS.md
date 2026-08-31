@@ -71,7 +71,19 @@ live in
   decision constructor, exact nil-tape classification, and one nonempty finite
   finished run.
 
+## E4-CONC-CE-007 — duplicate cleanup history
+
+- **BROKE:** a cleanup counter bounded by one proves observable at-most-once
+  cleanup.
+- **WITNESS:** a raw machine satisfies the pre-repair lifecycle and count
+  admission but records the same cleanup identity twice.
+- **CLASS:** trace/state incoherence.
+- **FIXED-BY:** `Event.cleanupId?`, `Machine.cleanupEventIds`, the exact
+  transition equation, and finite admission fields requiring cleanup event
+  identities to be unique, closed over fibers, and equivalent to count one;
+  `cleanup_events_at_most_once` exposes the run-level guarantee.
+
 ## Claim limit
 
-All six witnesses are finite. They do not prove a production implementation,
+All seven witnesses are finite. They do not prove a production implementation,
 an exhaustive scheduler model, fairness, liveness, or Effect compatibility.

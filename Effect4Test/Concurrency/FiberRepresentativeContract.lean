@@ -113,6 +113,10 @@ example (τ : Type u) : DecisionTape τ = List (SchedulerDecision τ) := rfl
 #check (@Event.maskExited : forall {τ : Type u}, FiberId -> Event τ)
 #check (@Event.completed : forall {τ : Type u}, FiberId -> τ -> Event τ)
 #check (@Event.cleanupFinished : forall {τ : Type u}, FiberId -> Event τ)
+#check (@Event.cleanupId? : forall {τ : Type u}, Event τ -> Option FiberId)
+#check (@Event.cleanupId_eq_some : forall {τ : Type u}
+    (event : Event τ) (id : FiberId),
+  Event.cleanupId? event = some id <-> event = Event.cleanupFinished id)
 #check (@Trace : Type u -> Type u)
 example (τ : Type u) : Trace τ = List (Event τ) := rfl
 
@@ -134,6 +138,8 @@ example (τ : Type u) : Trace τ = List (Event τ) := rfl
   Machine τ -> FiberId -> Option CleanupState)
 #check (@Machine.cleanupCount : forall {τ : Type u},
   Machine τ -> FiberId -> Nat)
+#check (@Machine.cleanupEventIds : forall {τ : Type u},
+  Machine τ -> List FiberId)
 #check (@Machine.fiber_eq_find : forall {τ : Type u}
     (machine : Machine τ) (id : FiberId),
   machine.fiber id =
@@ -155,6 +161,9 @@ example (τ : Type u) : Trace τ = List (Event τ) := rfl
     (machine : Machine τ) (id : FiberId),
   machine.cleanupCount id =
     ((machine.fiber id).map FiberState.cleanupCount).getD 0)
+#check (@Machine.cleanupEventIds_eq : forall {τ : Type u}
+    (machine : Machine τ),
+  machine.cleanupEventIds = machine.trace.filterMap Event.cleanupId?)
 #check (@Machine.transition : forall {τ : Type u},
   Machine τ -> FiberState τ -> List (Event τ) -> Machine τ)
 #check (@Machine.transition_fibers : forall {τ : Type u}
@@ -168,6 +177,11 @@ example (τ : Type u) : Trace τ = List (Event τ) := rfl
     (events : List (Event τ)),
     (Machine.transition before replacement events).trace =
       before.trace ++ events)
+#check (@Machine.transition_cleanupEventIds : forall {τ : Type u}
+    (before : Machine τ) (replacement : FiberState τ)
+    (events : List (Event τ)),
+  (Machine.transition before replacement events).cleanupEventIds =
+    before.cleanupEventIds ++ events.filterMap Event.cleanupId?)
 #check (@Machine.transition_fiber_other : forall {τ : Type u}
     (before : Machine τ) (replacement : FiberState τ)
     (events : List (Event τ)) (id : FiberId),
@@ -178,6 +192,11 @@ example (τ : Type u) : Trace τ = List (Event τ) := rfl
 #check (@Machine.WellFormed.mk : forall {τ : Type u} {machine : Machine τ},
   (machine.fibers.map FiberState.id).Nodup ->
   (forall fiber, fiber ∈ machine.fibers -> fiber.cleanupCount <= 1) ->
+  machine.cleanupEventIds.Nodup ->
+  (forall id, id ∈ machine.cleanupEventIds ->
+    exists fiber, fiber ∈ machine.fibers /\ fiber.id = id) ->
+  (forall fiber, fiber ∈ machine.fibers ->
+    (fiber.id ∈ machine.cleanupEventIds <-> fiber.cleanupCount = 1)) ->
   (forall fiber, fiber ∈ machine.fibers -> FiberStatus.Active fiber.status ->
     fiber.terminal = none /\ fiber.cleanup = CleanupState.notStarted /\
       fiber.cleanupCount = 0) ->
@@ -204,6 +223,19 @@ example (τ : Type u) : Trace τ = List (Event τ) := rfl
   forall {τ : Type u} {machine : Machine τ},
   Machine.WellFormed machine -> forall fiber, fiber ∈ machine.fibers ->
     fiber.cleanupCount <= 1)
+#check (@Machine.WellFormed.cleanupEventsUnique :
+  forall {τ : Type u} {machine : Machine τ},
+  Machine.WellFormed machine -> machine.cleanupEventIds.Nodup)
+#check (@Machine.WellFormed.cleanupEventsClosed :
+  forall {τ : Type u} {machine : Machine τ},
+  Machine.WellFormed machine -> forall id,
+    id ∈ machine.cleanupEventIds ->
+      exists fiber, fiber ∈ machine.fibers /\ fiber.id = id)
+#check (@Machine.WellFormed.cleanupEventAgreement :
+  forall {τ : Type u} {machine : Machine τ},
+  Machine.WellFormed machine -> forall fiber,
+    fiber ∈ machine.fibers ->
+      (fiber.id ∈ machine.cleanupEventIds <-> fiber.cleanupCount = 1))
 #check (@Machine.WellFormed.activeCleanup :
   forall {τ : Type u} {machine : Machine τ},
   Machine.WellFormed machine -> forall fiber,
@@ -991,6 +1023,18 @@ section OperationalLaws
   Machine.WellFormed initial -> Runs boundary initial tape result ->
     result.machine.cleanupCount id <= 1)
 
+#check (@cleanup_events_at_most_once : forall {τ : Type u}
+    {boundary : InterruptBoundary τ} {initial tape result},
+  Machine.WellFormed initial -> Runs boundary initial tape result ->
+    result.machine.cleanupEventIds.Nodup)
+
+#check (@cleanup_events_agree : forall {τ : Type u}
+    {boundary : InterruptBoundary τ} {initial tape result},
+  Machine.WellFormed initial -> Runs boundary initial tape result ->
+    forall fiber, fiber ∈ result.machine.fibers ->
+      (fiber.id ∈ result.machine.cleanupEventIds <->
+        fiber.cleanupCount = 1))
+
 #check (@cleanup_preserves_terminal :
   forall {τ : Type u} {boundary : InterruptBoundary τ}
       {before after id fiber terminal},
@@ -1036,6 +1080,9 @@ section OperationalLaws
 #print axioms Machine.interruptPending_eq
 #print axioms Machine.cleanupState_eq
 #print axioms Machine.cleanupCount_eq
+#print axioms Event.cleanupId_eq_some
+#print axioms Machine.cleanupEventIds_eq
+#print axioms Machine.transition_cleanupEventIds
 #print axioms StepResult.machine_advanced
 #print axioms StepResult.machine_refused
 #print axioms ReplayResult.machine_finished
@@ -1071,6 +1118,8 @@ section OperationalLaws
 #print axioms unmask_delivers_pending
 #print axioms cleanup_count_monotone
 #print axioms cleanup_at_most_once
+#print axioms cleanup_events_at_most_once
+#print axioms cleanup_events_agree
 #print axioms cleanup_preserves_terminal
 #print axioms cleanup_safe_on_finish
 #print axioms interrupt_complete_order_distinct

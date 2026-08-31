@@ -10,8 +10,9 @@ graph.
 
 ## Scope
 
-The representative contains only the first-order information needed to state
-and test forked-fiber lifecycle observations:
+The representative contains only the polynomial information needed to state
+and test forked-fiber lifecycle observations, relative to an externally
+admitted terminal alphabet `τ`:
 
 - nominal `FiberId` values;
 - fiber lifecycle status parameterized by an externally owned terminal
@@ -23,10 +24,15 @@ and test forked-fiber lifecycle observations:
 - one explicit `Machine.WellFormed` admission predicate over raw machines;
 - a one-decision transition relation and finite taped runs.
 
-The representative has no effect syntax, callback, Promise, host task,
+The concurrency layer adds no effect syntax, callback, Promise, host task,
 continuation, clock, priority, work stealing, daemon policy, structured scope,
 supervision tree, result payload, or fairness premise. `Race.lean` and
 `Supervision.lean` remain empty breadth stubs.
+
+This does not claim that arbitrary `τ` is first-order: `τ := Nat -> Nat` is a
+legal Lean instantiation. Full reification is discharged later by the terminal
+alphabet's `Semantics.Exit` and codec admission, without minting a second
+terminal carrier here.
 
 ## Required semantic separations
 
@@ -80,15 +86,15 @@ or cleanup meaning.
 | `FIBER-L0-ID` | `Effect4/Concurrency/Fiber.lean` | exact structure and `DecidableEq` |
 | `FIBER-L0-PASSIVE-ALPHABETS` | `Fiber.lean`, `Interrupt.lean`, `Scheduler.lean` | constructor census and exhaustive cases |
 | `FIBER-L1-STATE` | `Effect4/Concurrency/Fiber.lean` | first-order fields parameterized by `τ`; terminal, mask, pending-request, cleanup projections |
-| `FIBER-L1-ADMISSION` | `Effect4/Concurrency/Scheduler.lean` | unique IDs, cleanup bound, done/finalizing coherence, closed waiting targets |
+| `FIBER-L1-ADMISSION` | `Effect4/Concurrency/Scheduler.lean` | unique IDs; unique, closed cleanup-event history agreeing with per-fiber counts; lifecycle coherence; closed waiting targets |
 | `FIBER-L1-DECISION-TAPE` | `Effect4/Concurrency/Scheduler.lean` | every scheduler choice is explicit data |
 | `FIBER-L2-STEP` | `Scheduler.lean` and `Interrupt.lean` | exact relational one-decision semantics with explicit refusal and `InterruptBoundary τ` |
 | `FIBER-L3-RUNS` | `Effect4/Concurrency/Scheduler.lean` | total admitted finite replay recursively tied to `Step`, with distinct finished/refused/frontier arms |
 | `FIBER-L4-DETERMINISM` | `Effect4/Concurrency/Scheduler.lean` | fixed-tape uniqueness only |
 | `FIBER-L4-JOIN` | `Effect4/Concurrency/Scheduler.lean` | operational laws over `Step`: blocking before `.done`; repeatable, cleanup-free observation only after cleanup |
 | `FIBER-L4-INTERRUPT` | `Effect4/Concurrency/Scheduler.lean` | operational laws over `Step`: immediate delivery when unmasked, deferral when masked, delivery on unmask, and no completion that erases a pending request |
-| `FIBER-L4-CLEANUP` | `Effect4/Concurrency/Scheduler.lean` | operational laws over `Step`/`Runs`: at-most-once, terminal preservation, and cleanup on a finished run |
-| `FIBER-L5-COUNTEREXAMPLES` | `Effect4Test/Counterexamples/Concurrency/FiberRepresentative.lean` | six proved finite witnesses and axiom report |
+| `FIBER-L4-CLEANUP` | `Effect4/Concurrency/Scheduler.lean` | operational laws over `Step`/`Runs`: count monotonicity, unique observable cleanup events, trace/count agreement, terminal preservation, and cleanup on a finished run |
+| `FIBER-L5-COUNTEREXAMPLES` | `Effect4Test/Counterexamples/Concurrency/FiberRepresentative.lean` | seven proved finite witnesses and axiom report |
 | `FIBER-L6-HOST-EVIDENCE` | later Effect TypeScript conformance packet | direct runtime/type receipts plus auxiliary language-service diagnostics |
 
 ## Graph-edge ledger
@@ -103,7 +109,7 @@ this graph; they do not receive duplicate graphs.
 | semantics | `required-open` | admitted-total `Step`, exact `stepEval` clauses and trace deltas, `Runs` recursion through `Step`, projection equations, positive decision-clause coverage, and distinct replay arms |
 | laws | `required-open` | the fixed-tape, join, interruption/mask, and cleanup theorem spine |
 | representation | `not-applicable` | this representative claims no serialization, normalization, or round trip |
-| counterexamples | `required-open` | all six witnesses exist, but their repairs cannot close before implementation |
+| counterexamples | `required-open` | all seven witnesses exist, but their repairs cannot close before implementation |
 | bridges | `not-applicable` | no embedding or compatibility bridge is claimed in this packet |
 | targets | `not-applicable` | TypeScript/runtime/language-service evidence is deliberately a later graph node |
 | trust | `required-open` | public theorem `#print axioms` receipts after implementation |
@@ -128,9 +134,10 @@ same revision:
 8. join-before-done blocking, including finalization, plus post-cleanup join
    agreement and repeat observation are kernel checked;
 9. all three interruption/mask laws are kernel checked;
-10. atomic cleanup, stepwise cleanup-count monotonicity, at-most-once,
-    terminal preservation, and finished-run safety are kernel checked;
-11. all six registered attacks remain executable and rejected by the repaired
+10. atomic cleanup, the `transition_cleanupEventIds` equation, stepwise
+    cleanup-count monotonicity, unique/closed cleanup history, trace/count
+    agreement, terminal preservation, and finished-run safety are kernel checked;
+11. all seven registered attacks remain executable and rejected by the repaired
    laws;
 12. `#print axioms` is recorded for every public law;
 13. the complete project test suite passes with no `sorry` or `admit`.

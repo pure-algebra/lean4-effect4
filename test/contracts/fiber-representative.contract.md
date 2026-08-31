@@ -8,7 +8,7 @@ Implementation fence:
 Lean battery:
 `Effect4Test/Concurrency/FiberRepresentativeContract.lean`
 
-Counterexamples: `E4-CONC-CE-001` through `E4-CONC-CE-006` in
+Counterexamples: `E4-CONC-CE-001` through `E4-CONC-CE-007` in
 `test/counterexamples/REGISTER.md`
 
 Red verifier: `scripts/check-fiber-representative-red.sh`
@@ -34,15 +34,17 @@ generation claim.
   scheduler tape;
 - `algebraic-laws` — fixed-tape uniqueness, join agreement, interruption/mask
   behavior, and cleanup safety;
-- `counterexamples` — six finite proved witnesses force the representation;
+- `counterexamples` — seven finite proved witnesses force the representation;
 - `claim-scope` — safety is separated from fairness and finite frontier from
   every terminal or refusal arm.
 
 ## REQUIRES
 
 1. Lean core and Std at the repository's pinned toolchain.
-2. Every fiber and scheduler decision is first-order data. No host function,
-   continuation, Promise, task, or callback enters canonical content.
+2. Every fiber and scheduler decision is polynomial data relative to an
+   externally admitted terminal alphabet `τ`. The concurrency layer adds no
+   host function, continuation, Promise, task, or callback; full reification
+   later requires the terminal alphabet's separate codec/admission witness.
 3. Raw initial machines cross `Machine.WellFormed` before any replay theorem is
    available. Admission requires unique fiber IDs, cleanup counts at most one,
    and the lifecycle coherence used by the cleanup and join laws.
@@ -160,13 +162,17 @@ Machine.mask : Machine τ -> FiberId -> Option InterruptMask
 Machine.interruptPending : Machine τ -> FiberId -> Option Bool
 Machine.cleanupState : Machine τ -> FiberId -> Option CleanupState
 Machine.cleanupCount : Machine τ -> FiberId -> Nat
+Event.cleanupId? : Event τ -> Option FiberId
+Machine.cleanupEventIds : Machine τ -> List FiberId
 ```
 
 The Lean battery freezes the projection equations: `fiber` is the first list
 entry with the requested ID; `terminal` reads the fiber's explicit optional
 terminal observation;
 mask, pending interruption, and cleanup state map the resolved fiber; and a
-missing cleanup count is zero. These equations prevent the operational laws
+missing cleanup count is zero. `Event.cleanupId?` recognizes exactly
+`cleanupFinished`, and `Machine.cleanupEventIds` is exactly the trace's
+filtered cleanup identities. These equations prevent the operational laws
 from being satisfied by unrelated fixture projections. It also freezes the
 machine projection of every `StepResult` and `ReplayResult` constructor.
 
@@ -179,6 +185,11 @@ structure Machine.WellFormed (machine : Machine τ) : Prop where
   idsUnique : (machine.fibers.map FiberState.id).Nodup
   cleanupBounded : forall fiber, fiber ∈ machine.fibers ->
     fiber.cleanupCount <= 1
+  cleanupEventsUnique : machine.cleanupEventIds.Nodup
+  cleanupEventsClosed : forall id, id ∈ machine.cleanupEventIds ->
+    exists fiber, fiber ∈ machine.fibers /\ fiber.id = id
+  cleanupEventAgreement : forall fiber, fiber ∈ machine.fibers ->
+    (fiber.id ∈ machine.cleanupEventIds <-> fiber.cleanupCount = 1)
   activeCleanup : forall fiber, fiber ∈ machine.fibers ->
     fiber.status.Active -> fiber.terminal = none /\
       fiber.cleanup = .notStarted /\ fiber.cleanupCount = 0
@@ -208,9 +219,10 @@ def Machine.Finished (machine : Machine τ) : Prop :=
 
 The exact `Machine.finished_iff` theorem in the Lean battery freezes that
 definition. Admission rules out a raw initial cleanup count above one,
-prevents a done fiber from being reset into an active cleanup lifecycle, makes
-waiting targets closed, and states only the coherence used here. It imposes
-no fairness or scheduler policy.
+duplicate or orphan cleanup events, and disagreement between retained cleanup
+history and the per-fiber count. It prevents a done fiber from being reset
+into an active cleanup lifecycle, makes waiting targets closed, and states
+only the coherence used here. It imposes no fairness or scheduler policy.
 
 ### D2 — decisions and observable trace
 
@@ -461,6 +473,16 @@ cleanup_at_most_once :
   initial.WellFormed -> Runs boundary initial tape result ->
     result.machine.cleanupCount id <= 1
 
+cleanup_events_at_most_once :
+  initial.WellFormed -> Runs boundary initial tape result ->
+    result.machine.cleanupEventIds.Nodup
+
+cleanup_events_agree :
+  initial.WellFormed -> Runs boundary initial tape result ->
+  forall fiber, fiber ∈ result.machine.fibers ->
+    (fiber.id ∈ result.machine.cleanupEventIds <->
+      fiber.cleanupCount = 1)
+
 cleanup_count_monotone :
   before.WellFormed -> Step boundary before decision result ->
     before.cleanupCount id <= result.machine.cleanupCount id
@@ -485,10 +507,12 @@ cleanup_safe_on_finish :
 ```
 
 Cleanup is one atomic `pending -> done` transition and appends exactly one
-`cleanupFinished` event. Stepwise count monotonicity plus admission prevents a
-`1 -> 0 -> 1` reset from satisfying only the final bound. The final law is a
-safety statement about runs already classified as finished, not eventual
-cleanup or fairness.
+`cleanupFinished` event. The structural `transition_cleanupEventIds` equation
+ties appended events to retained history. Stepwise count monotonicity plus
+admission prevents a `1 -> 0 -> 1` reset from satisfying only the final bound;
+event uniqueness and count agreement rule out duplicate cleanup observations.
+The final law is a safety statement about runs already classified as finished,
+not eventual cleanup or fairness.
 
 `interrupt_complete_order_distinct` supplies one admitted ground machine and
 the two exact nonempty tapes. Under the frozen policy, the first decision moves
@@ -507,8 +531,9 @@ trace observations and are unequal. The theorem requires no inequality in
 | `E4-CONC-CE-004` | projecting only the terminal outcome erases whether cleanup ran | retain machine state and trace outside terminal/error arms |
 | `E4-CONC-CE-005` | a second join must not rerun cleanup or consume the terminal result | make join a repeatable read-only observation |
 | `E4-CONC-CE-006` | empty `Step` and `Runs` satisfy every implication-only old law | require admission, total `Step`, exhaustive `stepEval` equations and trace deltas, total finite replay, exact `Runs` recursion through `Step`, projection equations, positive clause coverage, exact nil classification, and a finite finished witness |
+| `E4-CONC-CE-007` | a count bounded by one admits a trace that records the same cleanup twice | extract cleanup event identities and admit only unique, closed histories that agree with per-fiber counts |
 
-The witnesses are finite self-contained breaker models. They prove the attacks,
+The seven witnesses are finite self-contained breaker models. They prove the attacks,
 not the eventual production laws.
 
 ## Trust and acceptance

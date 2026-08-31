@@ -41,7 +41,7 @@ if grep -Eq '\b(FiberTerminal|joinBeforeDone|cleanupStarted)\b|Frontier\.tapeExh
   exit 1
 fi
 
-for suffix in 001 002 003 004 005 006; do
+for suffix in 001 002 003 004 005 006 007; do
   id="E4-CONC-CE-${suffix}"
   if [[ "$(grep -c "$id" "$register_file")" -ne 1 ]]; then
     echo "fiber representative register must contain $id exactly once" >&2

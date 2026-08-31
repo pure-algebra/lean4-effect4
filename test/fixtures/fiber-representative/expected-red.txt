@@ -14,3 +14,7 @@ interrupt_complete_order_distinct
 cleanup_count_monotone
 exists_representative_finished_run
 cleanup_safe_on_finish
+cleanupEventIds
+cleanupEventsUnique
+transition_cleanupEventIds
+cleanup_events_at_most_once
