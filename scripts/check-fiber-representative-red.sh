@@ -58,7 +58,7 @@ while IFS= read -r sentinel; do
   fi
 done < "$sentinel_file"
 
-if grep -Eq 'unknown module|invalid import|unexpected token|declaration uses .sorry' \
+if grep -Eq 'unknown module|Unknown identifier|invalid import|unexpected token|declaration uses .sorry' \
     "$contract_log"; then
   echo "fiber representative contract failed for an unrelated reason" >&2
   cat "$contract_log" >&2

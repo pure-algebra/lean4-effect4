@@ -97,7 +97,7 @@ section SurfaceSnapshot
 #check (@SchedulerDecision.cleanup :
   forall {τ : Type u}, FiberId -> SchedulerDecision τ)
 #check (@DecisionTape : Type u -> Type u)
-#check (rfl : DecisionTape τ = List (SchedulerDecision τ))
+example (τ : Type u) : DecisionTape τ = List (SchedulerDecision τ) := rfl
 
 #check (@Event : Type u -> Type u)
 #check (@Event.scheduled : forall {τ : Type u}, FiberId -> Event τ)
@@ -114,7 +114,7 @@ section SurfaceSnapshot
 #check (@Event.completed : forall {τ : Type u}, FiberId -> τ -> Event τ)
 #check (@Event.cleanupFinished : forall {τ : Type u}, FiberId -> Event τ)
 #check (@Trace : Type u -> Type u)
-#check (rfl : Trace τ = List (Event τ))
+example (τ : Type u) : Trace τ = List (Event τ) := rfl
 
 #check (@Machine : Type u -> Type u)
 #check (@Machine.mk : forall {τ : Type u},
