@@ -2,9 +2,11 @@
 # Kernel-environment gate for the contracted Schema payload declaration surface.
 #
 # This gate has no source override.  It checks the repository's fixed Lean
-# module, then checks that D2–D3 elaborate from `Effect4.Schema.Payload` alone
-# and that the required downward ownership chain is present in imported module
-# metadata.  It does not establish payload admission or wire semantics.
+# module, then checks that D2–D3 elaborate from `Effect4.Schema.Payload` alone,
+# that this module owns exactly the allocated public carrier/alias set, that no
+# D7 declaration leaks through that boundary, and that every frozen D7 public
+# declaration remains owned by `Effect4.Schema.Check`.  It does not establish
+# payload admission or wire semantics.
 set -euo pipefail
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -62,10 +64,12 @@ printf 'PASS elaborated payload carrier shapes match the contracted declaration 
 
 run_fixed_module Effect4.Schema.Payload
 run_fixed_source "$payload_boundary"
-printf 'PASS D2-D3 elaborate from Effect4.Schema.Payload alone with no higher-layer leakage\n'
+printf 'PASS D2-D3 elaborate from Effect4.Schema.Payload alone with an exact public carrier/alias census\n'
+printf 'PASS every frozen D7 public declaration is unreachable through the Payload-only boundary\n'
 
 run_fixed_module Effect4.Schema.Check
 run_fixed_source "$ownership_test"
 printf 'PASS declaration owners follow Check -> Document -> Representation -> Payload -> Data.Json\n'
+printf 'PASS every frozen D7 public declaration is owned by Effect4.Schema.Check\n'
 
 printf 'PASS schema payload surface gate\n'

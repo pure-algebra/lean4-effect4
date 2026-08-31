@@ -38,6 +38,12 @@ syntax (name := effect4CheckAbbrevSurface)
   "#effect4_check_abbrev_surface " ident
   " levels " num " := " term : command
 
+syntax (name := effect4CheckDeclarationOwners)
+  "#effect4_check_declaration_owners " ident " [" ident,* "]" : command
+
+syntax (name := effect4CheckPublicTypeSurface)
+  "#effect4_check_public_type_surface " ident " [" ident,* "]" : command
+
 private structure ExpectedEntry where
   name : Name
   typeSyntax : Syntax
@@ -53,6 +59,55 @@ private def parseEntries (entries : Array Syntax) : CommandElabM (Array Expected
 
 private def failSurface (subject : Name) (detail : MessageData) : MetaM α :=
   throwError m!"schema payload surface mismatch for {subject}: {detail}"
+
+private def declarationModule (env : Environment) (name : Name) : MetaM Name := do
+  let some moduleIndex := env.getModuleIdxFor? name
+    | failSurface name "declaration is absent or local"
+  let some moduleName := env.header.moduleNames[moduleIndex]?
+    | failSurface name m!"invalid declaration module index {moduleIndex}"
+  pure moduleName
+
+private def checkDeclarationOwners (expectedModule : Name)
+    (names : List Name) : MetaM Unit := do
+  let env ← getEnv
+  for name in names do
+    let actualModule ← declarationModule env name
+    unless actualModule == expectedModule do
+      failSurface name m!"owner: expected {expectedModule}, found {actualModule}"
+
+private def isGeneratedTypeCompanion (expected : List Name) (name : Name) : Bool :=
+  match name with
+  | .str parent suffix =>
+      (suffix == "noConfusionType" || suffix == "ctorElimType") &&
+        expected.contains parent
+  | _ => false
+
+private def isPublicTypeDeclaration (expected : List Name)
+    (name : Name) (info : ConstantInfo) : MetaM Bool := do
+  if name.isInternal then
+    return false
+  match info with
+  | .inductInfo _ => return true
+  | .defnInfo definition =>
+      match definition.hints with
+      | .abbrev =>
+          if isGeneratedTypeCompanion expected name then
+            return false
+          forallTelescopeReducing info.type fun _ result => do
+            return (← whnf result).isSort
+      | _ => return false
+  | _ => return false
+
+private def checkPublicTypeSurface (namePrefix : Name) (expected : List Name) : MetaM Unit := do
+  let env ← getEnv
+  let mut actual : List Name := []
+  for (name, info) in env.constants.toList do
+    if namePrefix.isPrefixOf name && (← isPublicTypeDeclaration expected name info) then
+      actual := name :: actual
+  let unexpected := actual.filter fun name => !expected.contains name
+  let missing := expected.filter fun name => !actual.contains name
+  unless unexpected.isEmpty && missing.isEmpty do
+    failSurface namePrefix m!"public type census: unexpected {unexpected.reverse}; missing {missing}"
 
 private def checkNat (subject : Name) (label : String) (actual expected : Nat) : MetaM Unit :=
   unless actual == expected do
@@ -182,6 +237,16 @@ elab_rules : command
 elab_rules : command
   | `(#effect4_check_abbrev_surface $name:ident levels $levelCount:num := $expected:term) =>
       liftTermElabM <| checkAbbrevSurface name.getId levelCount.getNat expected
+
+elab_rules : command
+  | `(#effect4_check_declaration_owners $expectedModule:ident [$names:ident,*]) =>
+      liftTermElabM <| checkDeclarationOwners expectedModule.getId
+        (names.getElems.map Syntax.getId).toList
+
+elab_rules : command
+  | `(#effect4_check_public_type_surface $namePrefix:ident [$names:ident,*]) =>
+      liftTermElabM <| checkPublicTypeSurface namePrefix.getId
+        (names.getElems.map Syntax.getId).toList
 
 /-! ## D0–D1: binary64 datum and raw JSON -/
 

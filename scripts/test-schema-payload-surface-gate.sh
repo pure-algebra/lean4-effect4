@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Bounded reaction test for the elaborated Schema payload surface checker.
-# Exactly four declaration-shape mutants are exercised.  Each source is valid
-# Lean through its mutant declaration and must be rejected by the shared Meta
-# checker, not by a source proof or lexical scrape.
+# Bounded reaction test for the elaborated Schema payload surface and ownership
+# checkers. Each source is valid Lean through its mutant declaration and must
+# be rejected by the shared Meta checker, not by a source proof or lexical
+# scrape.
 set -euo pipefail
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -87,6 +87,31 @@ expect_surface_reject \
   "$fixture_root/FieldTypeDrift.lean" \
   'type: expected'
 
+expect_surface_reject \
+  duplicate-public-payload-alias \
+  "$fixture_root/DuplicatePublicAlias.lean" \
+  'public type census: unexpected'
+
+expect_surface_reject \
+  d7-judgment-owner-drift \
+  "$fixture_root/D7JudgmentOwnerDrift.lean" \
+  'Effect4.PayloadSurfaceMutation.FieldAdmissible'
+
+expect_surface_reject \
+  d7-boolean-owner-drift \
+  "$fixture_root/D7BooleanOwnerDrift.lean" \
+  'Effect4.PayloadSurfaceMutation.fieldAdmissible'
+
+expect_surface_reject \
+  d7-reflection-owner-drift \
+  "$fixture_root/D7ReflectionOwnerDrift.lean" \
+  'Effect4.PayloadSurfaceMutation.fieldAdmissible_iff'
+
+expect_surface_reject \
+  d7-constructor-equation-owner-drift \
+  "$fixture_root/D7EquationOwnerDrift.lean" \
+  'Effect4.PayloadSurfaceMutation.fieldAdmissible_reference_iff'
+
 # Import-boundary reaction: `Schema.Value` is a declaration-free breadth stub,
 # so declaration lookup cannot see this edge.  The mutant is killed only by
 # inspecting the environment's imported-module list.
@@ -142,6 +167,8 @@ grep -Fq 'rejects source override variable' "$tmp_root/env-override.log" || {
 printf 'PASS production source is not environment-overridable\n'
 
 printf 'PASS schema payload surface checker kills exactly 4/4 specified shape mutants\n'
+printf 'PASS payload public-type census kills 1/1 duplicate carrier/alias mutant\n'
+printf 'PASS D7 owner checker kills 4/4 judgment/Boolean/reflection/equation drift mutants\n'
 printf 'PASS payload import-boundary checker kills 1/1 declaration-free module mutant\n'
 printf 'PASS production gate enforces 2/2 source-override refusals\n'
 printf 'NOTE declaration-surface receipt only; no admission or wire-semantic claim\n'
