@@ -1,5 +1,6 @@
 import Effect4Test.Algebra.ExtractionContract
 import Effect4Test.Algebra.AxiomReport
+import Effect4Test.Audit.AxiomGate
 
 /-!
 # Effect4 test battery

@@ -7,6 +7,10 @@ Fresh kernel dependency report for the algebra extraction slice.
 #print axioms Effect4.Program.bind_pure_right
 #print axioms Effect4.Program.bind_assoc
 #print axioms Effect4.Program.perform_bind
+#print axioms Effect4.Handler.ext
+#print axioms Effect4.leftUnit_of_lawful
+#print axioms Effect4.rightUnit_of_lawful
+#print axioms Effect4.bindAssoc_of_lawful
 #print axioms Effect4.interpret_pure
 #print axioms Effect4.interpret_perform
 #print axioms Effect4.interpret_bind
@@ -19,10 +23,15 @@ Fresh kernel dependency report for the algebra extraction slice.
 #print axioms Effect4.interpret_inr
 #print axioms Effect4.Program.inl_bind
 #print axioms Effect4.Program.inr_bind
+#print axioms Effect4.Program.inl_pure
+#print axioms Effect4.Program.inr_pure
 #print axioms Effect4.Program.inl_injective
 #print axioms Effect4.Program.inr_injective
 #print axioms Effect4.Program.inl_unique
 #print axioms Effect4.Program.inr_unique
+#print axioms Effect4.interpret_leftInjectionHandler
+#print axioms Effect4.interpret_rightInjectionHandler
+#print axioms Effect4.injectionHandlers_sum
 #print axioms Effect4.interpret_isMonadMorphism
 #print axioms Effect4.interpret_of_isMonadMorphism
 #print axioms Effect4.exists_handler_of_isMonadMorphism
@@ -32,6 +41,7 @@ Fresh kernel dependency report for the algebra extraction slice.
 #print axioms Effect4.program_is_initial_in_models
 #print axioms Effect4.interpret_pinned
 #print axioms Effect4.interpret_through
+#print axioms Effect4.interpret_through_of_equations
 #print axioms Effect4.Handler.through_assoc
 #print axioms Effect4.Handler.through_identity_right
 #print axioms Effect4.Handler.through_identity_left

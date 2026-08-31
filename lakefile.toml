@@ -4,6 +4,8 @@ defaultTargets = ["Effect4", "Effect4Test"]
 
 [[lean_lib]]
 name = "Effect4"
+globs = ["Effect4.*"]
 
 [[lean_lib]]
 name = "Effect4Test"
+globs = ["Effect4Test.*"]
