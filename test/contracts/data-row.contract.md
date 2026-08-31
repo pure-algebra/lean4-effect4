@@ -241,7 +241,13 @@ lake env lean -DmaxErrors=10000 --json Effect4Test/Data/RowContract.lean
 ```
 
 The frozen battery SHA-256 is
-`e94fa648ddd981c6df2ad22724a49e519d5058f57762aee13f0fa1f57435cb10`.
+`862bbc904c0c9150c5e9d722015797e5dcdaaa3a98baabccb9f2bb76a29d67ff`.
+This supersedes the breaker-phase hash
+`e94fa648ddd981c6df2ad22724a49e519d5058f57762aee13f0fa1f57435cb10`:
+the coordinator replaced only the test-local reverse-order instance's appeal
+to a class-projected law with the axiom-free equivalent
+`Nat.lt_iff_le_and_not_ge`. No public declaration, proposition, reduction, or
+error census changed.
 It exits 1 with 118 errors, all
 `lean.unknownIdentifier._namedError`, zero other error kinds, naming 34 distinct
 frozen declarations through the final positive reduction. The standard order

@@ -382,7 +382,7 @@ instance : Std.IsLinearOrder ReverseNat where
 instance : Std.LawfulOrderLT ReverseNat where
   lt_iff a b := by
     change b.value < a.value ↔ b.value ≤ a.value ∧ ¬ a.value ≤ b.value
-    exact Std.LawfulOrderLT.lt_iff b.value a.value
+    exact Nat.lt_iff_le_and_not_ge
 
 example :
     ((Effect4.Row.normalize
