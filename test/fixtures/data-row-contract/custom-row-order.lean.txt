@@ -1,0 +1,7 @@
+
+namespace Effect4
+
+class RowOrder (α : Type u) where
+  marker : Unit
+
+end Effect4
