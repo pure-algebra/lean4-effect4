@@ -35,7 +35,8 @@ live in
   changes it to finalizing interruption and clears the pending bit.
 - **CLASS:** lifecycle collapse.
 - **FIXED-BY:** explicit mask and pending-request state plus deferral and
-  delivery-on-unmask laws.
+  delivery-on-unmask laws; completion is admitted only after the mask is
+  restored with no pending interruption.
 
 ## E4-CONC-CE-004 — lost finalizer
 

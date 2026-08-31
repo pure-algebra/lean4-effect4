@@ -607,7 +607,10 @@ section OperationalLaws
 
 #check (@stepEval_complete_running : forall {τ : Type u}
     {boundary : InterruptBoundary τ} {before id fiber result},
-  before.fiber id = some fiber -> fiber.status = FiberStatus.running ->
+  before.fiber id = some fiber ->
+  fiber.status = FiberStatus.running ->
+  fiber.mask = InterruptMask.unmasked ->
+  fiber.interruptPending = false ->
   stepEval boundary before (SchedulerDecision.complete id result) =
     StepResult.advanced
       (Machine.transition before
@@ -621,7 +624,10 @@ section OperationalLaws
 
 #check (@stepEval_complete_invalid : forall {τ : Type u}
     {boundary : InterruptBoundary τ} {before id fiber result},
-  before.fiber id = some fiber -> fiber.status ≠ FiberStatus.running ->
+  before.fiber id = some fiber ->
+  Not (fiber.status = FiberStatus.running /\
+    fiber.mask = InterruptMask.unmasked /\
+    fiber.interruptPending = false) ->
   stepEval boundary before (SchedulerDecision.complete id result) =
     StepResult.refused (SchedulerRefusal.invalidLifecycle id) before)
 
@@ -777,7 +783,10 @@ section OperationalLaws
 #check (@completion_exists : forall {τ : Type u}
     (boundary : InterruptBoundary τ) {before id fiber result},
   Machine.WellFormed before ->
-  before.fiber id = some fiber -> fiber.status = FiberStatus.running ->
+  before.fiber id = some fiber ->
+  fiber.status = FiberStatus.running ->
+  fiber.mask = InterruptMask.unmasked ->
+  fiber.interruptPending = false ->
   exists after,
     Step boundary before (SchedulerDecision.complete id result)
       (StepResult.advanced after) /\
@@ -810,7 +819,10 @@ section OperationalLaws
 #check (@invalid_completion_refuses : forall {τ : Type u}
     (boundary : InterruptBoundary τ) {before id fiber result},
   Machine.WellFormed before ->
-  before.fiber id = some fiber -> fiber.status ≠ FiberStatus.running ->
+  before.fiber id = some fiber ->
+  Not (fiber.status = FiberStatus.running /\
+    fiber.mask = InterruptMask.unmasked /\
+    fiber.interruptPending = false) ->
   Step boundary before (SchedulerDecision.complete id result)
     (StepResult.refused (SchedulerRefusal.invalidLifecycle id) before))
 
@@ -860,7 +872,9 @@ section OperationalLaws
     fiber.interruptPending = false) /\
   (exists before id fiber,
     Machine.WellFormed before /\ before.fiber id = some fiber /\
-      fiber.status = FiberStatus.running) /\
+      fiber.status = FiberStatus.running /\
+      fiber.mask = InterruptMask.unmasked /\
+      fiber.interruptPending = false) /\
   (exists before id fiber result,
     Machine.WellFormed before /\ before.fiber id = some fiber /\
     fiber.status = FiberStatus.finalizing /\

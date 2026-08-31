@@ -334,9 +334,10 @@ blocking a running waiter on any target not yet `.done`, including a target in
 finalization, and observing only a `.done` target after cleanup.
 Interrupt requests cover missing, every active status including waiting, both
 mask states, and inactive refusal. Mask entry/exit, completion, and atomic
-pending-to-done cleanup have similarly exhaustive equations.
-Completion records the supplied terminal observation and clears any masked
-pending request before finalization, preserving the admitted lifecycle.
+pending-to-done cleanup have similarly exhaustive equations. Completion is
+admitted only from a running, unmasked fiber with no pending interruption.
+A masked fiber must first execute `exitMask`; when an interruption is pending,
+that step delivers interruption instead of allowing completion to erase it.
 
 ### Required positive operational cases
 
@@ -364,8 +365,9 @@ exists_representative_finished_run
 Respectively, these cover every decision constructor in admitted valid states.
 The exact schedule equation covers scheduling; the inhabited cases cover
 blocking join, done join, masked and unmasked interrupt requests,
-mask entry, unmask with and without a pending request, completion, and atomic
-cleanup. They also require exact `.unknownFiber` and `.invalidLifecycle`
+mask entry, unmask with and without a pending request, unmasked completion with
+no pending interruption, and atomic cleanup. They also require exact
+`.unknownFiber` and `.invalidLifecycle`
 refusals, so every refusal constructor has an operational call site. The
 requester and target must exist, and every interrupt or mask transition names
 an active lifecycle. Inhabited admitted preconditions make those clauses
