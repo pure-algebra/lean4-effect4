@@ -160,6 +160,135 @@ theorem lt_trichotomy (a b : ServiceKey) : a < b ∨ a = b ∨ b < a := by
     · exact Or.inr (Or.inr (Or.inr ⟨rfl, serviceGt⟩))
   · exact Or.inr (Or.inr (Or.inl nameGt))
 
+/-!
+### Standard non-strict order bridge
+
+Everything in this section is derived from `ServiceKey.Lt` above and from
+equality of keys. Nothing here introduces a second comparison.
+-/
+
+/--
+The non-strict key order: strictly below, or equal.
+
+`Std`'s order hierarchy is stated over `LE`, not over `LT`. `Std.IsPreorder`,
+`Std.IsPartialOrder`, and `Std.IsLinearOrder` all quantify over `≤`, and
+`Std.LawfulOrderLT` exists precisely to demand that a supplied `<` agrees with
+that `≤`. `test/contracts/data-row.contract.md` quantifies every row operation
+over `Std.IsLinearOrder` and `Std.LawfulOrderLT`, so a canonical row over keys
+cannot be spelled from `DecidableEq` and `LT` alone. That packet assigns the
+missing instances to this node rather than to the row.
+
+This is **not** a second canonical order. `PORT-MANIFEST.md`, "Canonical row
+extraction", records that Effect4 gains no second canonical order notion, so
+`Le` is defined from `ServiceKey.Lt` and equality and from nothing else. The
+agreement of the two is proved by `ServiceKey.lt_iff_le_not_le` and installed
+as the `Std.LawfulOrderLT` instance; it is not asserted, and a consumer that
+reads `≤` back through `Std.LawfulOrderLT.lt_iff` recovers exactly the
+name-major relation of `lt_iff`.
+-/
+protected def Le (a b : ServiceKey) : Prop :=
+  a < b ∨ a = b
+
+/--
+The `LE` instance the hierarchy above is stated over.
+
+This and the five instances below are declared inside the `ServiceKey`
+namespace, so every name this section allocates is prefixed by
+`Effect4.ServiceKey`.
+-/
+instance instLE : LE ServiceKey where
+  le := ServiceKey.Le
+
+/-- The non-strict key order is exactly the strict key order or equality. -/
+theorem le_iff (a b : ServiceKey) : a ≤ b ↔ (a < b ∨ a = b) :=
+  Iff.rfl
+
+/--
+The non-strict key order is decided by the strict order and the derived
+`DecidableEq ServiceKey`.
+
+Built with `inferInstanceAs` over the spelled-out disjunction for the reason
+`instDecidableLtServiceKey` gives: only an instance that resolves to computing
+core instances reduces in the kernel, which is what lets a ground `≤`
+comparison close under `decide`.
+-/
+instance instDecidableLE (a b : ServiceKey) : Decidable (a ≤ b) :=
+  inferInstanceAs (Decidable (a < b ∨ a = b))
+
+/-- The key order is asymmetric: `lt_irrefl` and `lt_trans` taken together. -/
+theorem lt_asymm {a b : ServiceKey} (h : a < b) : ¬ b < a :=
+  fun reverse => lt_irrefl a (lt_trans h reverse)
+
+/-- The non-strict key order is reflexive. -/
+theorem le_refl (a : ServiceKey) : a ≤ a :=
+  (le_iff a a).mpr (Or.inr rfl)
+
+/-- The non-strict key order is transitive. -/
+theorem le_trans {a b c : ServiceKey} (hab : a ≤ b) (hbc : b ≤ c) : a ≤ c := by
+  refine (le_iff a c).mpr ?_
+  rcases (le_iff a b).mp hab with ltAB | eqAB
+  · rcases (le_iff b c).mp hbc with ltBC | eqBC
+    · exact Or.inl (lt_trans ltAB ltBC)
+    · exact Or.inl (eqBC ▸ ltAB)
+  · exact eqAB ▸ (le_iff b c).mp hbc
+
+/-- The non-strict key order is antisymmetric. -/
+theorem le_antisymm {a b : ServiceKey} (hab : a ≤ b) (hba : b ≤ a) : a = b := by
+  rcases (le_iff a b).mp hab with ltAB | eqAB
+  · rcases (le_iff b a).mp hba with ltBA | eqBA
+    · exact absurd ltBA (lt_asymm ltAB)
+    · exact eqBA.symm
+  · exact eqAB
+
+/-- The non-strict key order is total; this is `lt_trichotomy` reread over `≤`. -/
+theorem le_total (a b : ServiceKey) : a ≤ b ∨ b ≤ a := by
+  rcases lt_trichotomy a b with ltAB | eqAB | ltBA
+  · exact Or.inl ((le_iff a b).mpr (Or.inl ltAB))
+  · exact Or.inl ((le_iff a b).mpr (Or.inr eqAB))
+  · exact Or.inr ((le_iff b a).mpr (Or.inl ltBA))
+
+/--
+The strict and non-strict key orders agree in exactly `Std`'s sense.
+
+This is the obligation `Std.LawfulOrderLT` states, and proving it is what makes
+the added `≤` a reading of the frozen `<` rather than an independent notion.
+-/
+theorem lt_iff_le_not_le (a b : ServiceKey) : a < b ↔ a ≤ b ∧ ¬ b ≤ a := by
+  constructor
+  · intro ltAB
+    refine ⟨(le_iff a b).mpr (Or.inl ltAB), ?_⟩
+    intro hba
+    rcases (le_iff b a).mp hba with ltBA | eqBA
+    · exact lt_asymm ltAB ltBA
+    · exact lt_irrefl a (eqBA ▸ ltAB)
+  · intro both
+    rcases (le_iff a b).mp both.left with ltAB | eqAB
+    · exact ltAB
+    · exact absurd ((le_iff b a).mpr (Or.inr eqAB.symm)) both.right
+
+/-- Reflexivity and transitivity of `≤`, which is `Std.IsPreorder`. -/
+instance instIsPreorder : Std.IsPreorder ServiceKey where
+  le_refl := ServiceKey.le_refl
+  le_trans _ _ _ := ServiceKey.le_trans
+
+/-- Antisymmetry of `≤` on top of the preorder, which is `Std.IsPartialOrder`. -/
+instance instIsPartialOrder : Std.IsPartialOrder ServiceKey where
+  le_antisymm _ _ := ServiceKey.le_antisymm
+
+/--
+Totality of `≤` on top of the partial order, which is `Std.IsLinearOrder`.
+
+`Std.IsLinearOrder` also lists `Std.IsLinearPreorder` as a parent, but its
+constructor takes only the partial order and totality; the linear preorder is
+recovered from those, so no further instance is owed.
+-/
+instance instIsLinearOrder : Std.IsLinearOrder ServiceKey where
+  le_total := ServiceKey.le_total
+
+/-- The frozen `<` is the strict order of the `≤` above. -/
+instance instLawfulOrderLT : Std.LawfulOrderLT ServiceKey where
+  lt_iff := ServiceKey.lt_iff_le_not_le
+
 /--
 Two keys are in nominal conflict when they share a name and differ in code.
 

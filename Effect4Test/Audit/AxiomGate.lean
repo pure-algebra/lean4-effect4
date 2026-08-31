@@ -41,7 +41,10 @@ The list is checked for staleness below. A module named here that no longer
 needs the exemption fails the gate, so an entry cannot outlive its reason.
 -/
 private def auditImplementationModules : List Name :=
-  [`Effect4Test.Audit.AxiomGate, `Effect4Test.Schema.PayloadSurface]
+  [ `Effect4Test.Audit.AxiomGate
+  , `Effect4Test.Schema.PayloadSurface
+  , `Effect4Test.Environment.ContextKeyAssurance
+  ]
 
 private def forbiddenAxioms : List Name :=
   [``sorryAx, ``Lean.ofReduceBool, ``Lean.ofReduceNat, ``Lean.trustCompiler]

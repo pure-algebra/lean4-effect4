@@ -19,6 +19,7 @@ import Effect4Test.Schema.PayloadSurface
 import Effect4Test.Data.RowContract
 import Effect4Test.Environment.ContextKeyContract
 import Effect4Test.Environment.AxiomReport
+import Effect4Test.Environment.ContextKeyAssurance
 import Effect4Test.Audit.AxiomGate
 
 /-!

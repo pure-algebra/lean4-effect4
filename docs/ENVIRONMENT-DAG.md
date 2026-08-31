@@ -13,10 +13,20 @@ names the declarations that cross it.**
 ## Node status
 
 `Context/Key.lean` is implemented. Its frozen battery, absence guards, full
-build, trust gate, and axiom receipt are green; its leaf closure remains open
-until the generated declaration/owner/receipt join exists. `Data/Row.lean` and
-the other thirteen environment, layer, and runtime modules remain empty
-breadth stubs.
+build, trust gate, and axiom receipt are green. Its exact generated 97-name
+owned-declaration census, separate 25-name frozen API, owner/theorem/axiom
+join, and five detector reactions close `ENV-LEAF-KEY-IDENTITY`. The separate
+14-name Std bridge API has exact synthesis, relation, computation, and axiom
+receipts, so its local `ENV-LEAF-KEY-ORDER-BRIDGE` receipt is also closed. The
+authored manifest supplies only allocations and routes; the generated check
+derives both local results. The bridge attaches only to open
+`DATA-PG-ROW/ORDER`; `ServiceUniverse` alone remains attached to the open
+`ENV-KEY-INTERP` semantic edge of the shared Context graph. Neither local
+receipt creates a proof graph.
+`Data/Row.lean` is implemented and green against its fixed battery, while its
+generated `DATA-PG-ROW` declaration/owner/axiom/counterexample/edge join is
+still open. The other thirteen environment, layer, and runtime modules remain
+empty breadth stubs.
 
 ## The DAG
 
@@ -25,9 +35,9 @@ node it points from is green.
 
 ```text
    Data/Row.lean                         Context/Key.lean
-   (EMPTY STUB, F-ROW)                   (IMPLEMENTED, receipts green,
-   DATA-ROW-01/02/03 OPEN,                generated leaf join OPEN)
-   no contract frozen                            │
+   (IMPLEMENTED, battery GREEN,          (IMPLEMENTED, local receipts CLOSED,
+   DATA-PG-ROW assurance OPEN,             DATA-PG-ROW/ORDER +
+   contract frozen)                       ENV-KEY-INTERP OPEN)
           │                              ┌───────┴───────┐
           │  edge NOT yet available      │               │
           └──────────────┐               │               │
@@ -202,6 +212,48 @@ found `Effect4/Context/Key.lean` needs no row at all — it imports only `Std`.
 **FIXED-BY.** `Data/Row` is now a node in L0 with its own fence `F-ROW`, and
 `Context/Requirement` in L1 is blocked on it. **L1 may not be dispatched until
 a `DATA-ROW` breaker has frozen that contract.**
+
+**Third correction — the same edge, under-specified again.** The
+`Context/Key → Context/Requirement` edge was corrected once already, from
+`DecidableEq` to "a decidable strict linear order". That was still not what
+the consumer needs. The landed `DATA-ROW` packet quantifies rows over
+`Std.IsLinearOrder` and `Std.LawfulOrderLT`, which require `LE α`, and
+`#synth LE Effect4.ServiceKey` fails outright on the closed L0 module. The
+edge is therefore not traversable as written, for the second time.
+
+**LAW.** Naming the *mathematical content* an edge carries is not enough. An
+edge must name the **instances the consumer will actually synthesize**, since
+that is what fails at elaboration. "A decidable strict linear order" and
+`Std.IsLinearOrder` are the same idea and different facts.
+
+**WITNESS.** Two `DATA-ROW` breakers ran concurrently and produced mutually
+exclusive packets — one over a local `RowOrder` mixin on `[LT α]` that works
+against the frozen key today, one over Std's hierarchy that does not. The
+collision is what exposed the gap; neither packet was wrong about rows.
+
+**CLASS.** Edge specified by content rather than by resolvable instance.
+
+**FIXED-BY.** The landed Std-based packet is kept. Minting a local `RowOrder`
+class would introduce a second order API alongside Std's, and
+`PORT-MANIFEST.md` "Canonical row extraction" forbids a second canonical-order
+notion; Std is also the deeper abstraction the dependency policy prefers. The
+gap is closed **additively at the key** — an `LE` instance and the
+`Std.IsLinearOrder` / `Std.LawfulOrderLT` instances derived from the existing
+`ServiceKey.Lt`, adding no new comparison. The frozen L0 contract's ENSURES
+list is unchanged and its battery must stay green, so this is an extension of
+a closed leaf rather than an amendment of it.
+
+The extension owns exactly 14 authored declarations:
+`ServiceKey.Le`, `ServiceKey.instLE`, `ServiceKey.le_iff`,
+`ServiceKey.instDecidableLE`, `ServiceKey.lt_asymm`, `ServiceKey.le_refl`,
+`ServiceKey.le_trans`, `ServiceKey.le_antisymm`, `ServiceKey.le_total`,
+`ServiceKey.lt_iff_le_not_le`, `ServiceKey.instIsPreorder`,
+`ServiceKey.instIsPartialOrder`, `ServiceKey.instIsLinearOrder`, and
+`ServiceKey.instLawfulOrderLT`. The generated environment census separately
+owns compiler-generated structural companions but keeps them outside the
+authored API count. The 14 bridge names belong to local receipt
+`ENV-LEAF-KEY-ORDER-BRIDGE`, whose parent route is the still-open
+`DATA-PG-ROW/ORDER`; they do not attach to or close `ENV-KEY-INTERP`.
 
 **Second correction.** The `Context/Key → Context/Service` edge was written as
 "key identity only". The frozen L0 packet puts the interpretation triple on it
