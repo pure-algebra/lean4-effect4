@@ -98,3 +98,19 @@ continuations with no decidable structural equality or canonical bytes. No
 hash, `DecidableEq`, or serializer may be derived for `Program`; the later
 first-order flow is a separate representation related by named embedding and
 adequacy theorems.
+
+## Global-finiteness overclaim — `E4-ALG-CE-008`
+
+`Program` is an inductive, well-founded higher-order W-tree. Inductiveness
+does not imply finite branching or a uniform finite depth bound. The Lean
+battery uses one operation whose answer type is `Nat` and forms this tree:
+
+```text
+vis choose (fun n => a finite spine of depth n)
+```
+
+The continuation is injective, so the root has infinitely many distinct
+children. Every selected child is structurally finite, but for every proposed
+depth bound the child selected by `bound + 1` exceeds it. The witness refutes
+“globally finite tree” without adding a loop constructor or changing any
+algebraic theorem.

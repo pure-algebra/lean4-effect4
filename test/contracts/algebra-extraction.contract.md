@@ -7,7 +7,7 @@ Implementation fence: `Effect4/Algebra/**`
 Battery: `Effect4Test/Algebra/ExtractionContract.lean`
 
 Counterexamples: `test/counterexamples/REGISTER.md`, rows `E4-ALG-CE-001`
-through `E4-ALG-CE-007`
+through `E4-ALG-CE-008`
 
 ## Degree and claim boundary
 
@@ -40,7 +40,7 @@ The paths below are evidence inputs only. Effect4 must not import Foldlab.
 | Source | Exact retained span | Effect4 disposition | SHA-256 of whole source file |
 | --- | ---: | --- | --- |
 | `library/cas/Cas/Lang/Sig.lean` | 1–27 | `Effect4/Algebra/Signature.lean`; generic declaration and sum | `91e9d984fead2a36c4503bb8db979e8f085123db754a655846888aac41e87cd6` |
-| `library/cas/Cas/Lang/Prog.lean` | 1–54 | `Effect4/Algebra/Program.lean`; finite higher-order proof carrier | `a8ac15632d155f9558db1969f2a25faf548e337c35b584f54316d5aba0f958aa` |
+| `library/cas/Cas/Lang/Prog.lean` | 1–54 | `Effect4/Algebra/Program.lean`; well-founded higher-order W-tree proof carrier | `a8ac15632d155f9558db1969f2a25faf548e337c35b584f54316d5aba0f958aa` |
 | `library/cas/Cas/Lang/Handler.lean` | 39–67 | `Effect4/Algebra/Handler.lean`; handler, interpretation, bind law, sum | `7170bd9c6de8743d10fff712644fa1d6ce59100e5dc33e0458b17897de933bf9` |
 | `library/cas/Cas/Lang/Representation.lean` | 35–118 | `Effect4/Algebra/Laws.lean`; lawful monad, identity interpretation, operation equations | `5ca0f4cfeeb396c0f084d547a72825ddbe8a6c6a37e0786dbed9e94d68b652a8` |
 | `library/cas/Cas/Lang/Representation.lean` | 119–128 | deferred to `Effect4/Semantics/Equivalence.lean`; not part of this implementation fence | `5ca0f4cfeeb396c0f084d547a72825ddbe8a6c6a37e0786dbed9e94d68b652a8` |
@@ -84,8 +84,11 @@ generic semantic carrier. Foldlab keeps CAS operations, answer definitions,
 refusals, words, reference handlers, and canonical bytes until their own
 closure rows are complete.
 
-`Program` remains the finite higher-order proof carrier: its continuation is a
-Lean function from the operation's answer. First-order graph/program content
+`Program` remains the well-founded higher-order W-tree proof carrier: its
+continuation is a Lean function from the operation's answer. Every selected
+branch is structurally well-founded, but an infinite answer type permits
+infinitely many immediate children and a continuation family whose selected
+branches have no uniform finite depth bound. First-order graph/program content
 is a separate later type with an explicit embedding. No `Serialize`,
 `DecidableEq`, hash identity, or raw `Lean.Expr` field belongs on `Program`.
 
@@ -349,6 +352,13 @@ theorem Handler.through_endomorphism_monoid
   identityHandler.through first = first
 ```
 
+The Lean battery repeats every declaration above as an exact type ascription.
+The ascriptions fix signature universes, argument roles, binder types, result
+types, and complete theorem propositions. Bare name checks are insufficient:
+they still elaborate after a theorem acquires an unrelated conjunct. Separate
+definitional-equality witnesses pin the bodies of `LeftUnit`, `RightUnit`, and
+`BindAssoc`, whose constant types alone are only `Prop`.
+
 The main ergonomic theorems use `[LawfulMonad M]`. Sharp companion theorems
 may accept only the equations they consume (`LeftUnit`, `RightUnit`, and
 `BindAssoc`). The weaker forms are not permission to call every bare `Monad`
@@ -433,6 +443,9 @@ Each law has a stable ID used by the falsifier table.
   their laws recurse structurally on the input `Program`.
 - No fuel participates in these definitions. There is no loop constructor in
   this slice.
+- Structural recursion proves well-foundedness, not global finiteness. The
+  `E4-ALG-CE-008` witness has infinitely many distinct root children with
+  unbounded finite depths.
 - `Handler.sum` and `Handler.through` are non-recursive.
 - Any implementation whose recursion is hidden behind a dependency must
   expose an eliminator/fold with the same structural termination argument.
@@ -472,6 +485,11 @@ Each law has a stable ID used by the falsifier table.
 | L16 | typed `upper,middle,lower` with unequal associations or failed identity | category theorem snapshots |
 | L17 | a cross-signature pair for which the alleged monoid binary operation is ill-typed | `E4-ALG-CE-004` |
 | L18 | `Small : Signature.{0,0}` and `Program Small Type` elaborates | guarded elaboration rejection; `E4-ALG-CE-005` |
+
+`E4-ALG-CE-008` is a claim-scope attack rather than a new algebraic law. Its
+executable `Nat`-answer witness rejects any description of `Program` as
+globally finite while preserving the inductive W-tree carrier and every
+theorem above.
 
 Battery red command, before implementation:
 
