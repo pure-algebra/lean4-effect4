@@ -21,7 +21,8 @@ edge.  The later additive bridge to Lean's standard lawful-order classes is
 reported separately from the frozen 25-name Context Key API; it derives from
 the same `ServiceKey.Lt` and creates neither a carrier nor another order.  Its
 exact instance, relation, and kernel-computation receipts attach only to the
-still-open `DATA-PG-ROW/ORDER` edge.
+`DATA-PG-ROW/ORDER` route.  This module records the route but does not own that
+edge's closure status; `Effect4Test.Data.RowAssurance` does.
 
 The generic commands are exposed only so the bounded reaction fixtures can
 exercise the same detector against extra, missing, and owner-drifted

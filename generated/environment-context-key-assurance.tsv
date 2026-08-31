@@ -1,11 +1,11 @@
 format	effect4-context-key-assurance-v1
-generator	scripts/generate-environment-context-key-evidence.sh	sha256=efd7a77e131909d6ac57a6f35cc79f1e79485c780171bea5ca69513672ac0a90
+generator	scripts/generate-environment-context-key-evidence.sh	sha256=485b13c8530a7b2a8999f6993c50eb81d01b3439c41790bcfd580833b9506656
 regenerate	./scripts/generate-environment-context-key-evidence.sh > generated/environment-context-key-assurance.tsv
 input	Effect4/Context/Key.lean	sha256=596944f9915d193f083a0e0d3def4babf8e8b69fcbab109ba17308c99eeaee4e
 input	Effect4Test/Environment/ContextKeyContract.lean	sha256=ba88caa682296d0c4ee0cb08d14a63b62c3fa75d1daa64ceb5459a77c7bc0e74
 input	Effect4Test/Environment/AxiomReport.lean	sha256=8f911f3cbaf0e0b4142b5f550cebd05ea9fdf896151a02c459e2e2d628d200af
 input	test/contracts/environment-context-key.contract.md	sha256=19103e5a9eae19c905ab1f02af7bfe834ee25e030a2cca15423884a414e21fc0
-input	Effect4Test/Environment/ContextKeyAssurance.lean	sha256=05d3a067687407f8f3c6c54bdb0efb31335ab48fb4155616c54f8e8ffa8b79ea
+input	Effect4Test/Environment/ContextKeyAssurance.lean	sha256=f914d1b0573edfb2934d4cdb3daecabf3974ff68f20675eae29e8f8aac8f2827
 input	test/counterexamples/REGISTER.md#E4-ENV-CE-001--006	sha256=582d7a6bbfe6661282b173f4c4924aee64b9a9f8eff50c37baca0cd18bdcc7d6
 input	test/counterexamples/environment/ATTACKS.md	sha256=0fbf6e3bbff23b9b3d0d5334b9d4537ca7ef34c293f926553cf32a677bba2de7
 input	PORT-MANIFEST.md#environment-key-declaration-dispositions	sha256=8ed917b4dc53eeb0b64c560dda6e6ab7f99d84a674e4bce5d36377c381d36879
@@ -25,7 +25,7 @@ leaf	ENV-LEAF-KEY-ORDER-BRIDGE	derived-std-order-local-receipts	required-closed
 axiom-receipt	ENV-AX-KEY	Effect4Test/Environment/AxiomReport.lean	required-closed
 graph-attachment	ENV-PG-CONTEXT	ENV-KEY-INTERP	Effect4.ServiceUniverse	required-open
 parent-link	ENV-LEAF-KEY-IDENTITY	ENV-PG-CONTEXT/identity	Effect4.ServiceKey	required-closed
-parent-link	ENV-LEAF-KEY-ORDER-BRIDGE	DATA-PG-ROW/ORDER	Effect4.ServiceKey	required-open
+parent-link	ENV-LEAF-KEY-ORDER-BRIDGE	DATA-PG-ROW/ORDER	Effect4.ServiceKey	delegated
 type	E4-TYPE-ENV-SERVICE-NAME	Effect4.ServiceName	Effect4.Context.Key	ENV-LEAF-KEY-IDENTITY	required-closed
 type	E4-TYPE-ENV-SERVICE-TYPE-CODE	Effect4.ServiceTypeCode	Effect4.Context.Key	ENV-LEAF-KEY-IDENTITY	required-closed
 type	E4-TYPE-ENV-SERVICE-KEY	Effect4.ServiceKey	Effect4.Context.Key	ENV-LEAF-KEY-IDENTITY	required-closed

@@ -19,14 +19,14 @@ join, and five detector reactions close `ENV-LEAF-KEY-IDENTITY`. The separate
 14-name Std bridge API has exact synthesis, relation, computation, and axiom
 receipts, so its local `ENV-LEAF-KEY-ORDER-BRIDGE` receipt is also closed. The
 authored manifest supplies only allocations and routes; the generated check
-derives both local results. The bridge attaches only to open
-`DATA-PG-ROW/ORDER`; `ServiceUniverse` alone remains attached to the open
-`ENV-KEY-INTERP` semantic edge of the shared Context graph. Neither local
-receipt creates a proof graph.
-`Data/Row.lean` is implemented and green against its fixed battery, while its
-generated `DATA-PG-ROW` declaration/owner/axiom/counterexample/edge join is
-still open. The other thirteen environment, layer, and runtime modules remain
-empty breadth stubs.
+derives both local results. The bridge's parent link is route-only; Data.Row
+alone owns the status of `DATA-PG-ROW/ORDER`. `ServiceUniverse` alone remains
+attached to the open `ENV-KEY-INTERP` semantic edge of the shared Context
+graph. Neither local receipt creates a proof graph. `Data/Row.lean` is
+implemented and its generated join closes all ten `DATA-PG-ROW` edges from
+the exact declaration, API,
+hypothesis, theorem, axiom, counterexample, and mutation receipts. The other
+thirteen environment, layer, and runtime modules remain empty breadth stubs.
 
 ## The DAG
 
@@ -35,11 +35,11 @@ node it points from is green.
 
 ```text
    Data/Row.lean                         Context/Key.lean
-   (IMPLEMENTED, battery GREEN,          (IMPLEMENTED, local receipts CLOSED,
-   DATA-PG-ROW assurance OPEN,             DATA-PG-ROW/ORDER +
-   contract frozen)                       ENV-KEY-INTERP OPEN)
+   (IMPLEMENTED, DATA-PG-ROW CLOSED,     (IMPLEMENTED, local receipts CLOSED,
+   contract frozen)                       delegated ORDER route +
+                                            ENV-KEY-INTERP OPEN)
           │                              ┌───────┴───────┐
-          │  edge NOT yet available      │               │
+          │  row edge available          │               │
           └──────────────┐               │               │
                          ▼               ▼               ▼
                     Context/Requirement        Context/Service
@@ -252,8 +252,9 @@ The extension owns exactly 14 authored declarations:
 `ServiceKey.instLawfulOrderLT`. The generated environment census separately
 owns compiler-generated structural companions but keeps them outside the
 authored API count. The 14 bridge names belong to local receipt
-`ENV-LEAF-KEY-ORDER-BRIDGE`, whose parent route is the still-open
-`DATA-PG-ROW/ORDER`; they do not attach to or close `ENV-KEY-INTERP`.
+`ENV-LEAF-KEY-ORDER-BRIDGE`, whose delegated parent route is the now-closed
+`DATA-PG-ROW/ORDER`; Data.Row alone owns that edge status. They do not attach
+to or close `ENV-KEY-INTERP`.
 
 **Second correction.** The `Context/Key → Context/Service` edge was written as
 "key identity only". The frozen L0 packet puts the interpretation triple on it
@@ -271,9 +272,9 @@ edge; the packet is right.
    not an assertion — that distinct codes may read as the same type, so type
    identity never recovers code identity.
 2. Does `Requirement` reuse `Effect4.Data.Row` directly, or a named view of it?
-   The row carrier is still open. A quotient or copied carrier would need a
-   distinct role and its own graph; the current recommendation is an alias or
-   view over the one canonical row.
+   The row carrier and graph are closed. A quotient or copied carrier would
+   duplicate that role and is disallowed; the remaining choice is an alias or
+   named view over the one canonical row.
 3. Does a scope's finalization order need to be observable, or only its
    effect? `PLAN.md` requires that state produced before failure remains
    available to finalization, which constrains the carrier but not yet the

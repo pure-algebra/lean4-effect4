@@ -61,5 +61,5 @@ if [[ "$mode" == "dry-run" ]]; then
 else
   printf 'PASS generated Context Key owned-declaration/API/owner/theorem/axiom join is current\n'
   printf 'PASS ENV-LEAF-KEY-IDENTITY and local ENV-LEAF-KEY-ORDER-BRIDGE receipts are closed\n'
-  printf 'PASS ENV-PG-CONTEXT/ENV-KEY-INTERP and DATA-PG-ROW/ORDER attachments remain open\n'
+  printf 'PASS DATA-PG-ROW/ORDER is a delegated route; ENV-PG-CONTEXT/ENV-KEY-INTERP remains open\n'
 fi

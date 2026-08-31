@@ -118,12 +118,14 @@ The broad sweep proceeds in this order. Items 1 and 2 are closed. Items 3 and
    owned-declaration/API/owner/theorem/axiom join and five mutation reactions
    are green, so `ENV-LEAF-KEY-IDENTITY` is closed. The additive Std order
    bridge has its own green local receipt, `ENV-LEAF-KEY-ORDER-BRIDGE`, and is
-   attached only to the open `DATA-PG-ROW/ORDER` edge; it creates no carrier or
-   proof graph. `ENV-KEY-INTERP` remains the one open semantic attachment to
-   the shared Context graph. Its sibling L0 node `Data/Row` is implemented and
-   its fixed battery is green; the generated `DATA-PG-ROW` assurance join is
-   still open and blocks all of L1.
-5. freeze one Fiber/scheduler/interruption representative; and
+   routed only to `DATA-PG-ROW/ORDER`; it creates no carrier, proof graph, or
+   competing edge status. The mechanically generated Data.Row join closes all
+   ten `DATA-PG-ROW` edges from an exact 60-declaration census, separate
+   34-name authored API, 23 theorem and axiom receipts, nine counterexamples,
+   and five detector reactions. `ENV-KEY-INTERP` remains the one open semantic
+   attachment to the shared Context graph, so L1 may now begin without
+   claiming Context interpretation closure.
+5. implement the frozen Fiber/scheduler/interruption representative; and
 6. introduce declarations only after each owning breaker packet is green
    against the empty stub and red against its rejected mutations.
 
@@ -138,16 +140,16 @@ cutover decision.
 | ---: | --- | --- | --- |
 | 0 | Schema payload surface | gate repair, not a new proof graph | Reject unallocated public aliases, check every D7 name is absent at the Payload-only boundary, inspect every D7 owner, and kill duplicate-declaration and owner-drift mutants. The current Lean payload equations are green, but independent assurance showed the existing surface gate accepts both defect classes. |
 | 1 | `SCHEMA-PG-PAYLOAD` and `SCHEMA-PG-FIELD-ADMISSION` | two existing graphs plus attached leaf receipts | Join the exact declaration census, theorem receipts, axiom receipts, counterexample witnesses, and repaired surface evidence mechanically. Recursive JSON/payload equality and recursive field admission carry the graphs. `Float64`, scalar sums, plain records, and document containers retain local receipts. No denotation, wire, or host-equivalence claim is part of this closure. |
-| 2 | `Effect4.ServiceName`, `ServiceTypeCode`, `ServiceKey`, and `ServiceUniverse` | local key-family and Std-order-bridge receipts; `ENV-KEY-INTERP` alone attaches to the Context graph | `ENV-LEAF-KEY-IDENTITY` and the local `ENV-LEAF-KEY-ORDER-BRIDGE` receipt are generated from the exact 97-name module-owned census (including compiler-generated companions), the separate 25-name frozen Context Key API, the separate 14-name Std bridge API, eight original and seven bridge theorem receipts, 37 axiom receipts, and eight exact bridge synthesis/relation/computation receipts. The join also checks four manifest allocations, six registered counterexample IDs, and five extra/missing/owner/stale/manual-closure reactions. The authored manifest supplies allocation and routes, never a manual closure value. The bridge derives `LE`, `Std.IsLinearOrder`, and `Std.LawfulOrderLT` from the frozen `<`, creates no order carrier, and attaches only to the open `DATA-PG-ROW/ORDER` edge. `ServiceUniverse` remains the sole Context semantic graph attachment, and `ENV-KEY-INTERP` stays open until its consumers prove universe agreement. |
-| 3 | `Effect4.Data.Row` | `DATA-PG-ROW`, required graph | The generic carrier, raw-list boundary, sorted insertion, normalization, canonical extensionality, union algebra, subset, and weakening theorem spine are implemented and green against the fixed battery. The remaining work is the generated declaration/owner/axiom/counterexample/edge join that closes `DATA-PG-ROW` without a manual status flag. The executable counterexamples still establish that order-preserving dedup is not normalization, raw member equality does not imply raw-list equality, and normalization erases multiplicity and therefore proves no denotational preservation by itself. |
+| 2 | `Effect4.ServiceName`, `ServiceTypeCode`, `ServiceKey`, and `ServiceUniverse` | local key-family and Std-order-bridge receipts; `ENV-KEY-INTERP` alone attaches to the Context graph | **Closed locally.** `ENV-LEAF-KEY-IDENTITY` and `ENV-LEAF-KEY-ORDER-BRIDGE` are generated from the exact 97-name module census, separate 25-name Key API, separate 14-name Std bridge API, theorem/axiom receipts, and five detector reactions. The bridge is a delegated route into the now-closed `DATA-PG-ROW/ORDER`; only Data.Row assigns that parent edge's status. `ServiceUniverse` remains the sole open Context semantic attachment at `ENV-KEY-INTERP`. |
+| 3 | `Effect4.Data.Row` | `DATA-PG-ROW`, required graph | **Closed.** The fixed battery and generated join cover the sole proof-carrying carrier, raw-list normalization boundary, sorted insertion, canonical extensionality, union algebra, subset/weakening, exact owners and hypotheses, 23 theorem/axiom receipts with no choice, eight duplicate-name exclusions, nine counterexamples, all ten graph edges, and five detector reactions. This closes the reusable row algebra only; it deliberately proves no downstream denotational preservation. |
 | 4 | `Context.Service` and `Context.Requirement` | local carrier receipts plus nodes in `ENV-PG-CONTEXT` | Reuse `ServiceKey`, `Program`, `Signature`, and `Data.Row`; no second key, row, program, type-code, or order carrier. Prefer a derived `ServiceSignature U` and `request = Program.perform` over a duplicate service program. Make `Requirement` an alias or named view of `Row ServiceKey`. The graph-bearing part is `Program.UsesOnly`: prove its pure, visit, perform, bind-by-union, and weakening laws. Do not claim a finite `Program.requirements` function for arbitrary higher-order continuations; synthesis belongs to checked first-order Flow. |
 | 5 | `Context.Environment` | shared `ENV-PG-CONTEXT`, required graph | Freeze environment lookup, right-biased provision/merge, requirement satisfaction, and service discharge relative to one supplied universe. Prove pointwise extensionality, lookup at the same and distinct keys, merge associativity and identities, shadowing, satisfaction for empty/singleton/union, weakening, handler agreement, and total interpretation for `UsesOnly` programs under a satisfying environment. Counterexamples must cover nominal collision, carrier collision, mixed universes, missing lookups, right-biased noncommutativity, hidden defaults, and proof-free casts. |
 | 6 | `Layer.Description` plus `Runtime.Scope` representative | separate graph-bearing owners when composition/resource meaning appears | Freeze only after the environment graph closes. Layer then owes identity and associative composition at its declared merge operation, requirement/output accounting, and later memo agreement. Scope then owes acquisition/finalization order and the law that finalization observes state produced before failure. These are graphs; the passive identifier and record leaves beneath them are not. |
 
-### `DATA-PG-ROW` proposed theorem spine
+### `DATA-PG-ROW` closed theorem spine
 
-Names remain provisional until the breaker freezes their exact signatures, but
-the dependency order is fixed:
+The breaker froze the exact signatures and the generated assurance join now
+closes this dependency order:
 
 ```text
 strict-order bridge

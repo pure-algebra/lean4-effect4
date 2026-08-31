@@ -1,0 +1,219 @@
+format	effect4-data-row-assurance-v1
+generator	scripts/generate-data-row-assurance.sh	sha256=cbb731087b953f97f92d8d304f968daa0363501631de8dabb7d6c963f6a35729
+regenerate	./scripts/generate-data-row-assurance.sh > generated/data-row-assurance.tsv
+input	Effect4/Data/Row.lean	sha256=538aa461595e879502d66708e30ed7767c7c13a1c5720a363e60226490c9468f
+input	test/contracts/data-row.contract.md	sha256=7b3b397714267c376e6b5ef613fdbf0cf2266da9c1016e2d075e95794c335662
+input	Effect4Test/Data/RowContract.lean	sha256=862bbc904c0c9150c5e9d722015797e5dcdaaa3a98baabccb9f2bb76a29d67ff
+input	Effect4Test/Data/AxiomReport.lean	sha256=e2becffdd30321adc1340e16c5ebff30a116aa50658c84f6f5e12e82f64cfa7a
+input	Effect4Test/Data/RowAssurance.lean	sha256=f47bd9c0c586231da679f09ba842966cb95d618837101bbf7e2437efbcbbbefd
+input	test/counterexamples/REGISTER.md#E4-DATA-CE-001--009	sha256=5209f7f8d14b510c621c625a2d7ec17beaec1703ecc3cf59a2950547c66d48c0
+input	test/counterexamples/data/ATTACKS.md	sha256=1111f209bbc5351fa12e0a187f8dddafccee22710a24539ef9bc80e1f342d8bd
+input	generated/environment-context-key-assurance.tsv#ENV-LEAF-KEY-ORDER-BRIDGE	sha256=4c9966f19e9689f93cc729eca6cfb1f9db3322364467f973debc5ec9d56e2d0b
+contract	DATA-EV-ROW-CONTRACT	test/contracts/data-row.contract.md	required-closed
+battery	DATA-ROW-FROZEN-BATTERY	Effect4Test/Data/RowContract.lean	sha256=862bbc904c0c9150c5e9d722015797e5dcdaaa3a98baabccb9f2bb76a29d67ff	required-closed
+type	E4-TYPE-DATA-ROW	Effect4.Row	Effect4.Data.Row	DATA-PG-ROW	required-closed
+type	E4-TYPE-DATA-ASCENDING	Effect4.Ascending	Effect4.Data.Row	DATA-PG-ROW/IDENTITY	required-closed
+dependency	ENV-LEAF-KEY-ORDER-BRIDGE	generated/environment-context-key-assurance.tsv	DATA-PG-ROW/ORDER	required-closed
+authority	DATA-PG-ROW/ORDER	generated/data-row-assurance.tsv	derived-not-mirrored
+external-open	ENV-PG-CONTEXT/ENV-KEY-INTERP	Effect4.ServiceUniverse	required-open
+counterexample	E4-DATA-CE-001	SEEDED	test/counterexamples/REGISTER.md	Effect4Test/Data/RowContract.lean	required-closed
+counterexample	E4-DATA-CE-002	SEEDED	test/counterexamples/REGISTER.md	Effect4Test/Data/RowContract.lean	required-closed
+counterexample	E4-DATA-CE-003	SEEDED	test/counterexamples/REGISTER.md	Effect4Test/Data/RowContract.lean	required-closed
+counterexample	E4-DATA-CE-004	SEEDED	test/counterexamples/REGISTER.md	Effect4Test/Data/RowContract.lean	required-closed
+counterexample	E4-DATA-CE-005	SEEDED	test/counterexamples/REGISTER.md	Effect4Test/Data/RowContract.lean	required-closed
+counterexample	E4-DATA-CE-006	SEEDED	test/counterexamples/REGISTER.md	Effect4Test/Data/RowContract.lean	required-closed
+counterexample	E4-DATA-CE-007	SEEDED	test/counterexamples/REGISTER.md	Effect4Test/Data/RowContract.lean	required-closed
+counterexample	E4-DATA-CE-008	SEEDED	test/counterexamples/REGISTER.md	Effect4Test/Data/RowContract.lean	required-closed
+counterexample	E4-DATA-CE-009	SEEDED	test/counterexamples/REGISTER.md	Effect4Test/Data/RowContract.lean	required-closed
+owned-declaration	Effect4.Ascending	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.Subset	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.ascending	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.ascending_insert	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.ascending_normalize	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.casesOn	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.ctorIdx	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.elems	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.empty	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.empty.eq_1	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.eq_of_mem_iff	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.insert	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.insert.congr_simp	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.instDecidableMemOfDecidableEq	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.instDecidableSubsetOfDecidableEq	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.instMembership	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.mem_def	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.mem_insert	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.mem_normalize	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.mem_singleton	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.mem_union	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.mk	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.mk.congr_simp	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.mk.inj	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.mk.injEq	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.mk.noConfusion	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.mk.sizeOf_spec	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.noConfusion	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.noConfusionType	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.normalize	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.normalize.congr_simp	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.normalize.eq_1	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.normalize.eq_2	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.normalize.eq_def	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.normalize_duplicate	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.normalize_idempotent	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.normalize_of_ascending	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.not_mem_empty	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.rec	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.recOn	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.singleton	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.singleton.eq_1	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.subset_iff	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.subset_refl	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.subset_trans	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.subset_union_left	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.subset_union_right	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.union	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.union.congr_simp	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.union.eq_1	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.union_assoc	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.union_comm	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.union_empty_left	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.union_empty_right	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.Row.union_idem	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.ascending_iff	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.instDecidableEqRow	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.instDecidableEqRow.decEq	Effect4.Data.Row	E4-TYPE-DATA-ROW
+owned-declaration	Effect4.instDecidableEqRow.decEq.match_1	Effect4.Data.Row	E4-TYPE-DATA-ROW
+api	Effect4.Ascending	Effect4.Data.Row	DATA-PG-ROW/IDENTITY
+api	Effect4.ascending_iff	Effect4.Data.Row	DATA-PG-ROW/IDENTITY
+api	Effect4.Row	Effect4.Data.Row	DATA-PG-ROW/IDENTITY
+api	Effect4.Row.mk	Effect4.Data.Row	DATA-PG-ROW/IDENTITY
+api	Effect4.Row.elems	Effect4.Data.Row	DATA-PG-ROW/IDENTITY
+api	Effect4.Row.ascending	Effect4.Data.Row	DATA-PG-ROW/IDENTITY
+api	Effect4.Row.mem_def	Effect4.Data.Row	DATA-PG-ROW/IDENTITY
+api	Effect4.Row.insert	Effect4.Data.Row	DATA-PG-ROW/INSERT
+api	Effect4.Row.mem_insert	Effect4.Data.Row	DATA-PG-ROW/INSERT
+api	Effect4.Row.ascending_insert	Effect4.Data.Row	DATA-PG-ROW/INSERT
+api	Effect4.Row.normalize	Effect4.Data.Row	DATA-PG-ROW/NORMALIZE
+api	Effect4.Row.mem_normalize	Effect4.Data.Row	DATA-PG-ROW/NORMALIZE
+api	Effect4.Row.ascending_normalize	Effect4.Data.Row	DATA-PG-ROW/NORMALIZE
+api	Effect4.Row.eq_of_mem_iff	Effect4.Data.Row	DATA-PG-ROW/EXTENSIONALITY
+api	Effect4.Row.normalize_of_ascending	Effect4.Data.Row	DATA-PG-ROW/NORMALIZE
+api	Effect4.Row.normalize_idempotent	Effect4.Data.Row	DATA-PG-ROW/NORMALIZE
+api	Effect4.Row.normalize_duplicate	Effect4.Data.Row	DATA-PG-ROW/NORMALIZE
+api	Effect4.Row.empty	Effect4.Data.Row	DATA-PG-ROW/UNION
+api	Effect4.Row.not_mem_empty	Effect4.Data.Row	DATA-PG-ROW/UNION
+api	Effect4.Row.singleton	Effect4.Data.Row	DATA-PG-ROW/UNION
+api	Effect4.Row.mem_singleton	Effect4.Data.Row	DATA-PG-ROW/UNION
+api	Effect4.Row.union	Effect4.Data.Row	DATA-PG-ROW/UNION
+api	Effect4.Row.mem_union	Effect4.Data.Row	DATA-PG-ROW/UNION
+api	Effect4.Row.union_assoc	Effect4.Data.Row	DATA-PG-ROW/UNION
+api	Effect4.Row.union_comm	Effect4.Data.Row	DATA-PG-ROW/UNION
+api	Effect4.Row.union_idem	Effect4.Data.Row	DATA-PG-ROW/UNION
+api	Effect4.Row.union_empty_left	Effect4.Data.Row	DATA-PG-ROW/UNION
+api	Effect4.Row.union_empty_right	Effect4.Data.Row	DATA-PG-ROW/UNION
+api	Effect4.Row.Subset	Effect4.Data.Row	DATA-PG-ROW/WEAKENING
+api	Effect4.Row.subset_iff	Effect4.Data.Row	DATA-PG-ROW/WEAKENING
+api	Effect4.Row.subset_refl	Effect4.Data.Row	DATA-PG-ROW/WEAKENING
+api	Effect4.Row.subset_trans	Effect4.Data.Row	DATA-PG-ROW/WEAKENING
+api	Effect4.Row.subset_union_left	Effect4.Data.Row	DATA-PG-ROW/WEAKENING
+api	Effect4.Row.subset_union_right	Effect4.Data.Row	DATA-PG-ROW/WEAKENING
+hypotheses	Effect4.Ascending	LT	exact
+hypotheses	Effect4.ascending_iff	LT	exact
+hypotheses	Effect4.Row	LT	exact
+hypotheses	Effect4.Row.mk	LT	exact
+hypotheses	Effect4.Row.elems	LT	exact
+hypotheses	Effect4.Row.ascending	LT	exact
+hypotheses	Effect4.Row.mem_def	LT	exact
+hypotheses	Effect4.Row.insert	LE,LT,DecidableEq,DecidableLT,Std.IsLinearOrder,Std.LawfulOrderLT	exact
+hypotheses	Effect4.Row.mem_insert	LE,LT,DecidableEq,DecidableLT,Std.IsLinearOrder,Std.LawfulOrderLT	exact
+hypotheses	Effect4.Row.ascending_insert	LE,LT,DecidableEq,DecidableLT,Std.IsLinearOrder,Std.LawfulOrderLT	exact
+hypotheses	Effect4.Row.normalize	LE,LT,DecidableEq,DecidableLT,Std.IsLinearOrder,Std.LawfulOrderLT	exact
+hypotheses	Effect4.Row.mem_normalize	LE,LT,DecidableEq,DecidableLT,Std.IsLinearOrder,Std.LawfulOrderLT	exact
+hypotheses	Effect4.Row.ascending_normalize	LE,LT,DecidableEq,DecidableLT,Std.IsLinearOrder,Std.LawfulOrderLT	exact
+hypotheses	Effect4.Row.eq_of_mem_iff	LE,LT,Std.IsLinearOrder,Std.LawfulOrderLT	exact
+hypotheses	Effect4.Row.normalize_of_ascending	LE,LT,DecidableEq,DecidableLT,Std.IsLinearOrder,Std.LawfulOrderLT	exact
+hypotheses	Effect4.Row.normalize_idempotent	LE,LT,DecidableEq,DecidableLT,Std.IsLinearOrder,Std.LawfulOrderLT	exact
+hypotheses	Effect4.Row.normalize_duplicate	LE,LT,DecidableEq,DecidableLT,Std.IsLinearOrder,Std.LawfulOrderLT	exact
+hypotheses	Effect4.Row.empty	LT	exact
+hypotheses	Effect4.Row.not_mem_empty	LT	exact
+hypotheses	Effect4.Row.singleton	LT	exact
+hypotheses	Effect4.Row.mem_singleton	LT	exact
+hypotheses	Effect4.Row.union	LE,LT,DecidableEq,DecidableLT,Std.IsLinearOrder,Std.LawfulOrderLT	exact
+hypotheses	Effect4.Row.mem_union	LE,LT,DecidableEq,DecidableLT,Std.IsLinearOrder,Std.LawfulOrderLT	exact
+hypotheses	Effect4.Row.union_assoc	LE,LT,DecidableEq,DecidableLT,Std.IsLinearOrder,Std.LawfulOrderLT	exact
+hypotheses	Effect4.Row.union_comm	LE,LT,DecidableEq,DecidableLT,Std.IsLinearOrder,Std.LawfulOrderLT	exact
+hypotheses	Effect4.Row.union_idem	LE,LT,DecidableEq,DecidableLT,Std.IsLinearOrder,Std.LawfulOrderLT	exact
+hypotheses	Effect4.Row.union_empty_left	LE,LT,DecidableEq,DecidableLT,Std.IsLinearOrder,Std.LawfulOrderLT	exact
+hypotheses	Effect4.Row.union_empty_right	LE,LT,DecidableEq,DecidableLT,Std.IsLinearOrder,Std.LawfulOrderLT	exact
+hypotheses	Effect4.Row.Subset	LT	exact
+hypotheses	Effect4.Row.subset_iff	LT	exact
+hypotheses	Effect4.Row.subset_refl	LT	exact
+hypotheses	Effect4.Row.subset_trans	LT	exact
+hypotheses	Effect4.Row.subset_union_left	LE,LT,DecidableEq,DecidableLT,Std.IsLinearOrder,Std.LawfulOrderLT	exact
+hypotheses	Effect4.Row.subset_union_right	LE,LT,DecidableEq,DecidableLT,Std.IsLinearOrder,Std.LawfulOrderLT	exact
+theorem	Effect4.ascending_iff	DATA-PG-ROW/IDENTITY
+theorem	Effect4.Row.mem_def	DATA-PG-ROW/IDENTITY
+theorem	Effect4.Row.mem_insert	DATA-PG-ROW/INSERT
+theorem	Effect4.Row.ascending_insert	DATA-PG-ROW/INSERT
+theorem	Effect4.Row.mem_normalize	DATA-PG-ROW/NORMALIZE
+theorem	Effect4.Row.ascending_normalize	DATA-PG-ROW/NORMALIZE
+theorem	Effect4.Row.eq_of_mem_iff	DATA-PG-ROW/EXTENSIONALITY
+theorem	Effect4.Row.normalize_of_ascending	DATA-PG-ROW/NORMALIZE
+theorem	Effect4.Row.normalize_idempotent	DATA-PG-ROW/NORMALIZE
+theorem	Effect4.Row.normalize_duplicate	DATA-PG-ROW/NORMALIZE
+theorem	Effect4.Row.not_mem_empty	DATA-PG-ROW/UNION
+theorem	Effect4.Row.mem_singleton	DATA-PG-ROW/UNION
+theorem	Effect4.Row.mem_union	DATA-PG-ROW/UNION
+theorem	Effect4.Row.union_assoc	DATA-PG-ROW/UNION
+theorem	Effect4.Row.union_comm	DATA-PG-ROW/UNION
+theorem	Effect4.Row.union_idem	DATA-PG-ROW/UNION
+theorem	Effect4.Row.union_empty_left	DATA-PG-ROW/UNION
+theorem	Effect4.Row.union_empty_right	DATA-PG-ROW/UNION
+theorem	Effect4.Row.subset_iff	DATA-PG-ROW/WEAKENING
+theorem	Effect4.Row.subset_refl	DATA-PG-ROW/WEAKENING
+theorem	Effect4.Row.subset_trans	DATA-PG-ROW/WEAKENING
+theorem	Effect4.Row.subset_union_left	DATA-PG-ROW/WEAKENING
+theorem	Effect4.Row.subset_union_right	DATA-PG-ROW/WEAKENING
+axiom	Effect4.ascending_iff	none	DATA-AX-ROW
+axiom	Effect4.Row.mem_def	none	DATA-AX-ROW
+axiom	Effect4.Row.mem_insert	propext,Quot.sound	DATA-AX-ROW
+axiom	Effect4.Row.ascending_insert	propext,Quot.sound	DATA-AX-ROW
+axiom	Effect4.Row.mem_normalize	propext,Quot.sound	DATA-AX-ROW
+axiom	Effect4.Row.ascending_normalize	propext,Quot.sound	DATA-AX-ROW
+axiom	Effect4.Row.eq_of_mem_iff	propext	DATA-AX-ROW
+axiom	Effect4.Row.normalize_of_ascending	propext,Quot.sound	DATA-AX-ROW
+axiom	Effect4.Row.normalize_idempotent	propext,Quot.sound	DATA-AX-ROW
+axiom	Effect4.Row.normalize_duplicate	propext,Quot.sound	DATA-AX-ROW
+axiom	Effect4.Row.not_mem_empty	propext	DATA-AX-ROW
+axiom	Effect4.Row.mem_singleton	propext,Quot.sound	DATA-AX-ROW
+axiom	Effect4.Row.mem_union	propext,Quot.sound	DATA-AX-ROW
+axiom	Effect4.Row.union_assoc	propext,Quot.sound	DATA-AX-ROW
+axiom	Effect4.Row.union_comm	propext,Quot.sound	DATA-AX-ROW
+axiom	Effect4.Row.union_idem	propext,Quot.sound	DATA-AX-ROW
+axiom	Effect4.Row.union_empty_left	propext,Quot.sound	DATA-AX-ROW
+axiom	Effect4.Row.union_empty_right	propext,Quot.sound	DATA-AX-ROW
+axiom	Effect4.Row.subset_iff	none	DATA-AX-ROW
+axiom	Effect4.Row.subset_refl	none	DATA-AX-ROW
+axiom	Effect4.Row.subset_trans	none	DATA-AX-ROW
+axiom	Effect4.Row.subset_union_left	propext,Quot.sound	DATA-AX-ROW
+axiom	Effect4.Row.subset_union_right	propext,Quot.sound	DATA-AX-ROW
+absent	Effect4.RowOrder	duplicate-order	checked
+absent	Effect4.Row.Comparator	duplicate-order	checked
+absent	Effect4.RawRow	duplicate-carrier	checked
+absent	Effect4.CheckedRow	duplicate-carrier	checked
+absent	Effect4.CanonicalRow	duplicate-carrier	checked
+absent	Effect4.Row.ofList	unchecked-carrier-route	checked
+absent	Effect4.Row.append	noncanonical-union-route	checked
+absent	Effect4.Row.normalization_preserves_denotation	unowned-semantics	checked
+graph-edge	DATA-PG-ROW/IDENTITY	DATA-ROW-IDENTITY	required-closed
+graph-edge	DATA-PG-ROW/ORDER	DATA-ROW-ORDER	required-closed
+graph-edge	DATA-PG-ROW/INSERT	DATA-ROW-INSERT	required-closed
+graph-edge	DATA-PG-ROW/NORMALIZE	DATA-ROW-NORMALIZE	required-closed
+graph-edge	DATA-PG-ROW/EXTENSIONALITY	DATA-ROW-EXTENSIONALITY	required-closed
+graph-edge	DATA-PG-ROW/UNION	DATA-ROW-UNION	required-closed
+graph-edge	DATA-PG-ROW/WEAKENING	DATA-ROW-WEAKENING	required-closed
+graph-edge	DATA-PG-ROW/COUNTEREXAMPLES	DATA-ROW-COUNTEREXAMPLES	required-closed
+graph-edge	DATA-PG-ROW/TRUST	DATA-ROW-TRUST	required-closed
+graph-edge	DATA-PG-ROW/COVERAGE	DATA-ROW-COVERAGE	required-closed

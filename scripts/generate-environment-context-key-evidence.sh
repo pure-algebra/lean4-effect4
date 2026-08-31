@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Deterministic generated-evidence projection for the environment Context Key
 # leaf and its additive Std order bridge.  The semantic edge ENV-KEY-INTERP
-# and the bridge's DATA-PG-ROW/ORDER attachment are recorded as open; this
-# generator closes only declaration ownership and the local Lean receipts.
+# remains open.  The bridge's DATA-PG-ROW/ORDER attachment is route-only: this
+# generator closes declaration ownership and the local Lean receipts, while
+# the Data.Row assurance generator alone owns the parent edge's status.
 set -euo pipefail
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -370,7 +371,7 @@ printf 'leaf\tENV-LEAF-KEY-ORDER-BRIDGE\tderived-std-order-local-receipts\trequi
 printf 'axiom-receipt\tENV-AX-KEY\t%s\trequired-closed\n' "$axiom_report_rel"
 printf 'graph-attachment\tENV-PG-CONTEXT\tENV-KEY-INTERP\tEffect4.ServiceUniverse\trequired-open\n'
 printf 'parent-link\tENV-LEAF-KEY-IDENTITY\tENV-PG-CONTEXT/identity\tEffect4.ServiceKey\trequired-closed\n'
-printf 'parent-link\tENV-LEAF-KEY-ORDER-BRIDGE\tDATA-PG-ROW/ORDER\tEffect4.ServiceKey\trequired-open\n'
+printf 'parent-link\tENV-LEAF-KEY-ORDER-BRIDGE\tDATA-PG-ROW/ORDER\tEffect4.ServiceKey\tdelegated\n'
 printf 'type\tE4-TYPE-ENV-SERVICE-NAME\tEffect4.ServiceName\tEffect4.Context.Key\tENV-LEAF-KEY-IDENTITY\trequired-closed\n'
 printf 'type\tE4-TYPE-ENV-SERVICE-TYPE-CODE\tEffect4.ServiceTypeCode\tEffect4.Context.Key\tENV-LEAF-KEY-IDENTITY\trequired-closed\n'
 printf 'type\tE4-TYPE-ENV-SERVICE-KEY\tEffect4.ServiceKey\tEffect4.Context.Key\tENV-LEAF-KEY-IDENTITY\trequired-closed\n'
