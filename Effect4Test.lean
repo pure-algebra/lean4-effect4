@@ -4,6 +4,7 @@ import Effect4Test.Algebra.AxiomReport
 import Effect4Test.Flow.AdmissionContract
 import Effect4Test.Flow.DiagnosticPrecisionContract
 import Effect4Test.Flow.AxiomReport
+import Effect4Test.Schema.AxiomReport
 import Effect4Test.Flow.PrivacyContract
 import Effect4Test.Counterexamples.Schema.CensusCoverage
 import Effect4Test.Counterexamples.Schema.KindAlphabetSeparation

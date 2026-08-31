@@ -1,8 +1,8 @@
 # Schema cutover ruling
 
-Status: frozen design input; six tag declaration dispositions are allocated,
-but their evidence records and the payload carrier remain cutover-open,
-2026-08-31.
+Status: frozen design input; the six tag declarations and their local proof
+receipts are implemented, but their generated assurance join and the payload
+carrier remain cutover-open, 2026-08-31.
 
 ## Decision
 
@@ -681,18 +681,19 @@ codec calculus. They do not gate the tag alphabet, which mentions no index,
 row, requirement, getter, or refusal.
 
 The first implementation slice is structural representation and source census.
-Its pre-implementation boundary is split as follows:
+Its current boundary is split as follows:
 
-- **Tag declarations — dispositions allocated, closure open.** The six exact
-  type rows, their one-parent-graph/five-leaf allocation, and their native
-  contract origins are recorded in `PORT-MANIFEST.md`.
+- **Tag declarations — implemented with local receipts; cutover closure
+  open.** The six exact type rows, their one-parent-graph/five-leaf allocation,
+  and their native contract origins are recorded in `PORT-MANIFEST.md`.
   `test/contracts/schema-representation.contract.md` and
-  `test/contracts/schema-subalphabets.contract.md` are the intended breaker
-  packets, with counterexamples `E4-SCHEMA-CE-017` through
-  `E4-SCHEMA-CE-022`. These rows remain open until the breaker packet is
-  preserved as a separate red boundary and the later implementation evidence
-  is joined mechanically; this document does not discharge `SC-REP-02` or
-  `SC-REP-03`.
+  `test/contracts/schema-subalphabets.contract.md` are the frozen breaker
+  packets, preserved separately in commit `f487774`, with counterexamples
+  `E4-SCHEMA-CE-017` through `E4-SCHEMA-CE-022`. The implementation, axiom
+  report, lexical source evidence, and bounded mutation receipt are present.
+  The six rows and required parent-graph edges remain open until those inputs
+  are joined mechanically by the generated assurance check; this document
+  does not discharge `SC-REP-02` or `SC-REP-03`.
 - **Payload carrier — unopened.** `SC-REP-01`, `SC-REP-04`, `Check`,
   annotations, `Document`, and `MultiDocument` still require conditions 1
   through 6 in full, including all sixteen reserved `E4-SCHEMA-CE-*` rows.

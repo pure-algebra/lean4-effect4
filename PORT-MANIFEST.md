@@ -265,11 +265,11 @@ monad or program carrier is admitted. `Schema`, `Decoder`, `Encoder`, and
 
 ### Schema tag declaration dispositions
 
-These rows are the pre-implementation identity boundary for the six proposed
-public types. They allocate one owner and one canonical role before any
-implementation is accepted. Every row is `required-open` until its frozen
-signature, counterexamples, theorem receipt, and evidence ID are joined by a
-generated assurance check; this prose assigns work but closes no row.
+These rows are the identity boundary for the six implemented public types.
+They allocate one owner and one canonical role. Every row remains
+`required-open` until its frozen signature, counterexamples, theorem receipt,
+and evidence ID are joined by a generated assurance check; implementation and
+local receipts alone close no cutover row.
 
 | Stable type row | Exact Lean declaration and owner | Canonical role | Native origin and source disposition | Duplicate-prevention relation | Assurance allocation |
 | --- | --- | --- | --- | --- | --- |
@@ -506,7 +506,7 @@ first-order `Flow`.
 | Gate | Command | Current scope |
 | --- | --- | --- |
 | Default Lean gate | `lake clean && lake build` | all `Effect4.*` and `Effect4Test.*` source files through Lake globs; root-reachability and axiom allowlist enforced |
-| Exhaustive module/axiom gate | default build, invoked by `Effect4Test.lean` | the gate prints its own census rather than trusting this row; the last committed pre-Schema observation was 105 modules and 1190 declarations on 2026-08-31; semantic/test ceiling `propext`, `Quot.sound`; the audit implementation alone also permits `Classical.choice` |
+| Exhaustive module/axiom gate | default build, invoked by `Effect4Test.lean` | the gate prints its own census rather than trusting this row; the current Schema-alphabet build observed 115 modules and 1756 declarations on 2026-08-31; semantic/test ceiling `propext`, `Quot.sound`; the audit implementation alone also permits `Classical.choice` |
 | Narrow algebra gate | `lake env lean Effect4Test/Algebra/ExtractionContract.lean` | frozen public algebra signatures and the `E4-ALG-CE-*` counterexamples |
 | Narrow retained-closure gate | `lake env lean Effect4Test/Algebra/RetainedClosureContract.lean` | exact retained Foldlab declaration signatures, binder order, universes, and their closure theorems |
 | Narrow flow admission gate | `lake env lean Effect4Test/Flow/AdmissionContract.lean` | frozen Flow declarations plus `E4-FLOW-CE-001`-`005`, `007`, `013`, and `014` |
@@ -515,8 +515,9 @@ first-order `Flow`.
 | Narrow schema sub-alphabet gate | `lake env lean Effect4Test/Schema/SubAlphabetContract.lean` | the union-mode, check-tag, literal-kind, enum-value, and property-key alphabets, plus `E4-SCHEMA-CE-020`-`022` |
 | Schema census drift gate | `./scripts/check-schema-census.sh <SchemaRepresentation.ts>` | lexically extracts the closed type-union and codec-call spelling sets and compares them with Lean `tagName`; refuses off-pin bytes unless `--dry-run`; reports pin-matched spelling evidence but does not assign cutover closure or semantic faithfulness |
 | Schema census gate reaction test | `./scripts/test-schema-census-gate.sh` | exercises ten specified lexical defects, including union-only and union-plus-codec additions and a tag copied across the representation/check family boundary; runs against a synthetic fixture, so it tests detector reaction and not the real census, payloads, or semantics |
+| Schema alphabet mutation gate | `./scripts/test-schema-alphabet-mutations.sh` | four bounded local mutants exercise constructor order, duplicate-carrier rejection, and coordinated spelling drift; the local receipt feeds the parent graph and attached leaves but is neither itself a proof graph nor an exhaustive completeness claim |
 | Flow admission mutation gate | `./scripts/test-flow-admission-mutations.sh` | four specified mutants (swapped scan order, weakened dangling jump, dropped `perform` answer equality, and substituted unrelated diagnostic witness) must each stay buildable and be killed by the matching frozen battery; Flow source and both batteries are verified byte-unchanged |
-| Human-readable axiom receipts | `lake env lean Effect4Test/Algebra/AxiomReport.lean`; `lake env lean Effect4Test/Flow/AxiomReport.lean` | every currently exported algebra and flow theorem, with its axiom dependencies printed |
+| Human-readable axiom receipts | `lake env lean Effect4Test/Algebra/AxiomReport.lean`; `lake env lean Effect4Test/Flow/AxiomReport.lean`; `lake env lean Effect4Test/Schema/AxiomReport.lean` | every currently exported algebra, flow, and Schema-alphabet theorem, with its axiom dependencies printed |
 | Source trust gate | `./scripts/test-trust-gate.sh` | planted `unsafe` and `partial` declarations are rejected; the same vocabulary inside comments and strings is not |
 | Foldlab evidence gate | `./scripts/check-vendor-foldlab.sh`; `./scripts/test-vendor-foldlab.sh` | closed inventory of 911 files and 11,940,983 bytes at pin `feb29321fd50204aa338209d313e84a3f8b71c66`; one omission, one extra file, and one byte mutation are each rejected |
 | Diff hygiene | `git diff --check` | Authored source formatting |
