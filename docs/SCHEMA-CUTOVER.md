@@ -56,6 +56,9 @@ described as byte-identical. In particular:
 | `SchemaParser.ts` | `492dfbb294e24b2f3ebd949abbb9ba73cc19a71b4c35f290fd0137d52f8aaaaa` | same | byte match |
 | `SchemaIssue.ts` | `b4cb0ada18aef01083f9179dd827fb46aea4c625c2c63308d43cae5d3a86328e` | same | byte match |
 | `SchemaGetter.ts` | `a2f2c85c41eceb1e8092ca15fd6ded1ac90c23a4c44be610200d3feefe1d6682` | same | byte match |
+| `internal/schema/toRepresentation.ts` | not asserted | `677449c734ac6373598a81207ba0573f86fb8bd2c9fb25d1369aa1e710d614a2` | independently pinned installed-package evidence; not an upstream byte-match claim |
+| `internal/schema/fromRepresentation.ts` | not asserted | `0b95c360800d3c1dfe3e6c5683f79265fa7217494c8ce9cedb5c6dcbf936d82e` | independently pinned installed-package evidence; not an upstream byte-match claim |
+| `internal/schema/annotations.ts` | not asserted | `4b3bedcae279fcb3a1dff4e8eb718d42f450d59c8b45912070a586adcdcb077c` | independently pinned installed-package evidence; not an upstream byte-match claim |
 
 Installed declaration digests are also pinned independently:
 
@@ -127,9 +130,10 @@ Schema tag cutover boundary. `Effect4.UnionMode`, `Effect4.CheckTag`,
 `Effect4.PropertyKeyKind` receive named `leafReceipt`, theorem-receipt, and evidence
 IDs under that parent, with no standalone graph. The parent graph owns
 `SCHEMA-REL-ENUM-TO-LITERAL-KIND`: an injective **kind-level** relation and an
-explicit non-claim of a value-level numeric embedding. If a leaf later gains a
-nonlocal obligation, its disposition must be promoted before that declaration
-changes.
+explicit separation from the total injective raw value embedding and from the
+D7 field-admission judgment. The kind relation alone decides neither value
+admission nor persistence. If a leaf later gains a nonlocal obligation, its
+disposition must be promoted before that declaration changes.
 
 #### Frozen rc.112 persisted census
 
@@ -206,10 +210,19 @@ These cross-tag persisted field constraints are frozen with the census:
 
 #### Verified persisted-field snapshot
 
-The field constraints above were frozen from the source census and checked
-line by line against the pinned bytes
-(`SchemaRepresentation.ts`, SHA-256
+The field constraints above were frozen from the source census by reading the
+pinned bytes (`SchemaRepresentation.ts`, SHA-256
 `a0a7a1537cfe3a9159a80210e3de92342cc9e98651f0e8273a75ccdcccae69bc`).
+
+Two claims are made here and they have different strength. **Field content** —
+the field names, their order within each codec, requiredness, and the codec
+constructor each field is given — was read off the pinned bytes and has since
+been re-derived independently. **Line numbers** are a navigation aid whose
+citations were re-derived, one binding at a time, on 2026-08-31, after eight of
+the twenty-three were found wrong; see the fired finding below. Neither claim is
+mechanically checked: no script in this repository compares this block against
+the pin, so a later edit to either column can drift silently.
+
 This is pinned source-reading evidence for the cited field names and codec
 shapes. It is not a Lean theorem, a decoder result, or a claim of semantic
 faithfulness for the future carrier.
@@ -228,34 +241,43 @@ KeywordFields                 :952  { annotations, checks }
 Filter        :956  { _tag, representation (REQUIRED), annotations, aborted : Boolean }
 FilterGroup   :962  { _tag, representation?, annotations, checks : NonEmptyArray }
 
-Declaration   :976  { _tag, representation (REQUIRED), annotations,
+Declaration   :977  { _tag, representation (REQUIRED), annotations,
                       typeParameters : Representation[], checks }
-Suspend       :985  { _tag, annotations, checks : Tuple([]), thunk : Representation }
-Reference    :1065  { _tag, $ref : NonEmptyString }
+Suspend       :984  { _tag, annotations, checks : Tuple([]), thunk : Representation }
+Reference    :1066  { _tag, $ref : NonEmptyString }
 Literal      :1000  KeywordFields + literal : String | Finite | BigInt | Boolean
 UniqueSymbol :1010  KeywordFields + symbol : Symbol
 Enum         :1015  KeywordFields + enums : Array(Tuple([String, String | Number]))
 TemplateLit  :1023  KeywordFields + parts : Representation[]
 Element      :1028  { isOptional : Boolean, type : Representation, annotations }
 Arrays       :1033  KeywordFields + elements : Array(Element), rest : Representation[]
-PropertySig  :1040  { name : String | Number | Symbol, type, isOptional, isMutable,
+PropertySig  :1039  { name : String | Number | Symbol, type, isOptional, isMutable,
                       annotations }
 IndexSig     :1050  { parameter : Representation, type : Representation }
 Objects      :1054  KeywordFields + propertySignatures, indexSignatures
 Union        :1060  KeywordFields + types : Representation[], mode : "anyOf" | "oneOf"
-keyword tags  :969  { _tag } + KeywordFields          -- 12 tags share this shape
+keyword tags  :970  { _tag } + KeywordFields          -- 12 tags share this shape
 
-References   :1093  Record(String, Representation)
-Document     :1095  { representation : Representation, references : References }
-MultiDocument:1103  { representations : NonEmptyArray, references : References }
+References   :1096  Record(String, Representation)
+Document     :1098  { representation : Representation, references : References }
+MultiDocument:1105  { representations : NonEmptyArray, references : References }
 ```
+
+Each number is the line of the **binding that introduces the named codec** —
+`const <Name>Schema = Schema.Struct({`, or the `function` line for
+`makeKeywordSchema`. Field lines follow it. `Document` and `MultiDocument`
+name `DocumentFromJson` (`:1098`) and `MultiDocumentFromJson` (`:1105`); their
+`Schema.Struct` field bodies are at `:1099-1102` and `:1106-1109`.
 
 Six facts a paraphrase of the table would lose, all pinned:
 
 1. `Reference` is the only representation with **no** `annotations` and **no**
    `checks`. It is exactly `_tag` and `$ref`.
-2. `Filter` has **no** `checks` field; it is a leaf. Only `FilterGroup`
-   recurses, and its `checks` is a non-empty array.
+2. `Filter` has **no** direct `checks` field, but it is not a leaf. Checks have
+   two recursive field forms and three constructor routes:
+   `Filter.representation.schemas`, optional
+   `FilterGroup.representation.schemas`, and `FilterGroup.checks`. Field
+   admission and traversal must enumerate all three.
 3. `Declaration.representation` and `Filter.representation` are **required in
    the codec** while the live TypeScript interfaces mark them optional. A
    model that reads optionality off the interfaces admits two document shapes
@@ -264,8 +286,13 @@ Six facts a paraphrase of the table would lose, all pinned:
    `type`. Array elements and property signatures do carry them.
 5. `MultiDocument`'s root field is named `representations` (plural), not
    `representation`. The two document shapes are not distinguished by a tag.
-6. The `number` spelling is two different domains: `Literal` uses `Finite`
-   while `Enum` and property names use `Number`. See `E4-SCHEMA-CE-023`.
+6. Numeric data occurs in four source positions with directional policies:
+   `Literal` uses `Finite`; `Enum` and property names use `Number` and encode
+   non-finites through three string escapes; representation/check annotation
+   payloads are retained JSON and reject non-finite leaves on decode; retained
+   ordinary annotation bags have the same decode-side finite-JSON condition,
+   while encode from wider live values prunes unsupported entries. See
+   `E4-SCHEMA-CE-023` and `E4-SCHEMA-CE-028`.
 
 `Element` and `PropertySignature` name the child field `type`, not
 `representation`. `Suspend` names it `thunk`, and it is a nested
@@ -408,9 +435,10 @@ The stable `Effect4Rc112` profile identity belongs to
 belong to `Effect4.Protocol.Admission`. The future Schema wire adapter under
 that identity owns the 22-tag JSON shape, document envelopes, annotation
 pruning, global-symbol encoding, normalization, source coverage, and wire
-round trips. Future `Effect4.Schema.Check` consumes the Protocol profile and
-owns only Schema-specific structural classification and diagnostics; it does
-not own `SC-PROFILE` identity or mint a second profile carrier. None of these
+round trips. `Effect4.Schema.Check` owns Schema-specific structural predicates.
+No issue or diagnostic API is precommitted merely because a predicate can
+fail; a later public classification boundary needs its own contract.
+`Schema.Check` does not own `SC-PROFILE` identity or mint a second profile carrier. None of these
 owners absorbs Foldlab's schema kind, revision, content address, node bytes, or
 store operations.
 
@@ -493,13 +521,48 @@ Foldlab currently has six, not five, Schema ingest refusal constructors:
 `notASchema`, `illFormed`, `wrongRevision`, `nonEmptyReferences`,
 `unguardedCycle`, and `unknownDeclaration`. Effect4 does not duplicate them.
 
+`¬ FieldAdmissible value` is a failed structural predicate, not a refusal
+value. A later checked boundary may classify that failure as a profile issue,
+but the issue carrier and its scan order are separate declarations.
+Property-key uniqueness is a future Effect4 profile narrowing, deferred until
+the key-equivalence relation decides `+0`/`-0` and NaN payload cases.
+Reference-key uniqueness for both `Document` and `MultiDocument` is instead a
+future `Protocol.Bytes` raw-wire condition, before either references table is
+constructed. Host `SchemaError` and `RangeError` results remain observations
+of named host calls and do not become Effect4 refusal constructors.
+Unknown-profile behavior belongs to `Protocol.Admission`; a profile identity
+is passive data.
+
 ## Proof graph
 
 This is the category graph for nonlocal Schema obligations, not a demand for
-one standalone graph per finite helper enum. The conditional allocation rule
-above applies: `SCHEMA-PG-REPRESENTATION-TAG` carries the tag cutover and the
-five auxiliary alphabets attach as `leafReceipt` records. Every graph node
-below is required unless a later contract explicitly marks it outside a
+one standalone graph per finite helper enum or record. The allocation is
+conditional and explicit:
+
+- `SCHEMA-PG-REPRESENTATION-TAG` exists because exact tag coverage is itself a
+  cutover condition. Its five passive auxiliary alphabets attach as leaf
+  receipts.
+- `SCHEMA-PG-PAYLOAD` owns the mutually recursive `Representation`/`Check`
+  family, its exact constructor coverage, tag projection, and structural
+  equality. Passive wrappers, nonrecursive scalar sums, and plain record
+  children attach as leaf receipts. Recursive JSON finiteness is a node in
+  this graph, not a new standalone graph.
+- `SCHEMA-PG-FIELD-ADMISSION` owns the recursive persisted/decode-side field
+  predicate, including finite retained annotation bags. It is required because
+  this judgment decides a structural condition and recurses through the
+  payload. Property-key uniqueness is not yet a node.
+- `SCHEMA-PG-DOCUMENT` owns reference interpretation, reachability,
+  guardedness, and productivity. The plain `Document` and `MultiDocument`
+  record declarations are leaves until those meanings are attached.
+- `SCHEMA-PG-WIRE` owns duplicate-preserving raw data, decoding,
+  canonicalization, and encoding. Finite host fixtures attach as receipts;
+  they do not receive graphs.
+- A versioned profile identity is passive data and receives a leaf receipt.
+  `Protocol.Admission` crosses the graph threshold when it classifies an
+  unknown profile or an out-of-profile value.
+
+Empty breadth stubs receive neither a graph nor a leaf receipt. Every graph
+node below is required unless a later contract explicitly marks it outside a
 selected profile. An asserted status cannot close an edge, and a local leaf
 receipt cannot close a denotation, bridge, target, or host edge.
 
@@ -512,15 +575,26 @@ SCHEMA-PG-REPRESENTATION-TAG
   -> SCHEMA-LEAF-PROPERTY-KEY-KIND
   -> SCHEMA-REL-ENUM-TO-LITERAL-KIND
 
+SCHEMA-PG-PAYLOAD
+  -> SCHEMA-LEAF-FLOAT64-BITS
+  -> SCHEMA-NODE-JSON-FINITENESS
+  -> SCHEMA-LEAF-PAYLOAD-SCALARS
+  -> SCHEMA-LEAF-PAYLOAD-RECORDS
+  -> SC-REP-01 payload declaration and constructor coverage
+  -> SC-REP-03 structural equality, elimination, and tag projection
+
+SCHEMA-PG-FIELD-ADMISSION
+  -> SC-REP-04 recursive field admission matches the frozen rc.112 constraints
+
 SC-SRC-01 exact upstream and resolved-package pins
 SC-SRC-02 generated 22-tag source census
-  -> SC-REP-01 declaration and persisted-field snapshot
+  -> SCHEMA-PG-REPRESENTATION-TAG
+  -> SCHEMA-PG-PAYLOAD
   -> SC-REP-02 tag Nodup and source completeness
-  -> SC-REP-03 structural equality and recursors
-  -> SC-REP-04 field admission matches the frozen rc.112 constraints
   -> SC-REP-CENSUS-PIN census re-derived from the pinned rc.112 bytes
 
-SC-REP
+SCHEMA-PG-WIRE
+  -> SC-WIRE-REFERENCE-KEY-UNIQUE for Document and MultiDocument
   -> SC-WIRE-01 duplicate-preserving raw JSON
   -> SC-WIRE-02 decoder soundness
   -> SC-WIRE-03 encoder/decoder round trip
@@ -532,7 +606,7 @@ SC-REP
   -> SC-PROFILE-02 Boolean classifier iff propositional admission
   -> SC-PROFILE-03 source-census exhaustiveness
 
-SC-REP
+SCHEMA-PG-DOCUMENT
   -> SC-DOC-01 reference graph
   -> SC-DOC-02 guarded checker soundness
   -> SC-DOC-03 guarded checker completeness
@@ -676,9 +750,14 @@ No declaration enters the Schema stubs until the breaker freezes:
 5. the refusal boundaries above; and
 6. the sixteen `E4-SCHEMA-CE-*` central counterexamples.
 
-Conditions 2 through 5 gate the payload carrier, the denotation, and the
-codec calculus. They do not gate the tag alphabet, which mentions no index,
-row, requirement, getter, or refusal.
+Conditions 2 through 5 gate the denotation, getter, transformation, codec, and
+checked refusal boundaries. They do not gate the tag alphabet or passive
+payload data merely because those declarations will later be consumed there.
+The structural payload slice may begin once its D0-D6 breaker freezes exact
+bits, constructors, recursive edges, equality, and document container shapes.
+The D7 field-admission slice may begin only after its breaker freezes the
+recursive characterization above and keeps structural failure, profile
+narrowing, wire duplication, and host errors distinct.
 
 The first implementation slice is structural representation and source census.
 Its current boundary is split as follows:
@@ -694,12 +773,29 @@ Its current boundary is split as follows:
   The six rows and required parent-graph edges remain open until those inputs
   are joined mechanically by the generated assurance check; this document
   does not discharge `SC-REP-02` or `SC-REP-03`.
-- **Payload carrier — unopened.** `SC-REP-01`, `SC-REP-04`, `Check`,
-  annotations, `Document`, and `MultiDocument` still require conditions 1
-  through 6 in full, including all sixteen reserved `E4-SCHEMA-CE-*` rows.
-  Those sixteen are recorded as reserved in
-  `test/counterexamples/schema/ATTACKS.md`; a reservation is not an executable
-  witness or a discharged obligation.
+- **Payload and field admission — Pass-B frozen; implementation
+  required-blocked.** The frozen
+  D0-D6 structural slice and D7 recursive-admission slice are intentionally
+  the only two graph-bearing families in this packet. The module DAG is
+  `Data.Json` (D0-D1) -> `Schema.Payload` (D2-D3) ->
+  `Schema.Representation` (D4-D5) -> `Schema.Document` (D6) ->
+  `Schema.Check` (D7); `Schema.Value` owns later denotation only. The clean-red
+  diagnostic receipt and the mechanical reaction gate are present. The latter
+  kills an ordinary extra constructor, an uninhabited extra constructor, a
+  constructor permutation, a field-type drift, and a declaration-free upward
+  `Schema.Value` import. Its fixed production half also materializes
+  the packet's `payloadBoundaryImportProbe` from an isolated module whose only
+  library import is `Effect4.Schema.Payload`: D0-D3 must resolve, D4-D7 must
+  remain unreachable, ownership inspection must assign D0-D1 to
+  `Effect4.Data.Json` and D2-D3 to `Effect4.Schema.Payload`, and an upward
+  Payload import must be rejected. That production half remains intentionally
+  red until the builder creates `Schema.Payload` and moves D2-D3 into it; it is
+  the exact implementation-admission blocker. This is a finite
+  surface/ownership receipt, not a third proof graph. Cutover and semantic
+  closure remain open. Reserved
+  `E4-SCHEMA-CE-*` rows remain reservations until the owning packet supplies
+  the exact executable or immutable witness; a reservation is not a
+  discharged obligation.
 
 The pinned bytes needed by `SC-REP-CENSUS-PIN` are on the build host at
 `library/effects/node_modules/effect/src/SchemaRepresentation.ts` in the
@@ -717,18 +813,37 @@ refuses other bytes unless `--dry-run` is passed.
 
 It takes two independent extractions from the source and refuses to report
 agreement unless they match each other: the closed `export type Representation`
-and `export type Check` unions, which are single-site and exhaustive, and the
-`Schema.tag` / `makeKeywordSchema` codec call sites. An earlier version used
-only the call sites, and an independent reviewer showed that a 23rd tag could
-be added past it; the union route rejects that mutation.
+and `export type Check` unions, and the `Schema.tag` / `makeKeywordSchema`
+codec call sites. An earlier version used only the call sites, and an
+independent reviewer showed that a 23rd tag could be added past it.
+
+The **source shape** is what makes the union route worth having: at the pin,
+`export type Representation =` occurs exactly once (`:406`) and
+`export type Check =` exactly once (`:436`), so each family has one declaration
+site to read, and the 22 members are listed there with no comments interleaved.
+That is a statement about the pinned bytes, and it is checked.
+
+What the **detector** rejects is a separate question, answered only by the
+enumerated reaction-test mutants below. It is not answered by the shape of the
+source. An earlier wording here said the union route "rejects that mutation";
+that was falsified by execution against a copy of the real pinned bytes and is
+recorded as a fired finding.
 
 `./scripts/test-schema-census-gate.sh` is a finite reaction suite. It shows
-that the detector rejects ten specified defects: a renamed, added, or deleted
-codec tag; a 23rd member in the union alone; a 23rd member in **both** the
-union and the codec; a check tag copied into the representation family; a
-broken call-site pattern; a renamed union declaration; off-pin bytes without
-`--dry-run`; and a missing source. It is not exhaustive over every possible
-detector defect.
+that the detector rejects fourteen specified defects: a renamed, added, or
+deleted codec tag; a 23rd member in the union alone; a 23rd member in **both**
+the union and the codec; a check tag copied into the representation family; a
+23rd union member hidden behind a comment inside the union; the same with a
+single-quoted codec tag; a Lean spelling hidden behind a trailing Lean comment;
+`--lean-source` without `--dry-run`; a broken call-site pattern; a renamed
+union declaration; off-pin bytes without `--dry-run`; and a missing source. The
+last run recorded here reported `14/14` on 2026-08-31.
+
+The detector's demonstrated coverage is exactly those fourteen mutants and
+nothing broader. Three of them exist because the corresponding hole was found
+by execution, not by review, after this document had already asserted that the
+union route rejected an added tag. Treat any further strength claim as
+unmade.
 
 Two limits on this evidence are recorded rather than glossed.
 
@@ -774,28 +889,84 @@ worded as any. Deciding productivity needs a separate relation over head
 positions, tracking what a name reaches through `Suspend` wrappers alone
 before any constructor builds anything; `Union` builds nothing either.
 
+rc.112 implements exactly that separation, and its own source names the hazard.
+`ReferenceSlot` (`internal/schema/fromRepresentation.ts`, SHA-256
+`0b95c360800d3c1dfe3e6c5683f79265fa7217494c8ce9cedb5c6dcbf936d82e`, `:19-31`)
+returns a `Schema.suspend` wrapper whenever revival re-enters a slot still
+marked `resolving` (`:76-77`), so an alias cycle **constructs**. The wrapper's
+body then throws `Reference ${key} was evaluated before it was resolved`
+(`:27`) if anything reaches it before a body exists. Construction is decided by
+guardedness; whether a value ever appears is not decided at all. A bounded
+host-local probe agrees: on the resolved-package pin, `A -> A` and
+`A -> B -> A` both revive successfully through `fromRepresentation` and then
+fail to terminate under `Schema.decodeUnknownSync` within a 25-second bound,
+raising no error. That is a finite probe on a timeout, not a proof of
+divergence, and it carries the same non-reproducibility caveat as the sealed
+pin below: `harness/` has no runner, so nothing in this checkout re-runs it.
+
 `SC-DOC-07` canonical emission order for unions. Union member order is
 identity. A generator that does not fix a canonical order makes a generated
 document's content address depend on source arrangement.
 
 ## Effect4 admission is strictly stricter than the host
 
-A first-party executable pin against rc.112, sealed in the evidence vendor at
-`vendor/foldlab/pinned/tree/library/effects/test/SchemaReferencesPin.test.ts`
-(SHA-256 `73b28e60505f219903cbdcb5e390e1a201df469a5b91f17269f45a19064106cb`),
-establishes that rc.112 **accepts** every one of these:
+This section covers `E4-SCHEMA-CE-024`, `E4-SCHEMA-CE-025`, and the layer split
+`E4-SCHEMA-CE-040` forced on the latter.
 
-- a `$ref` naming no table entry;
-- a self alias, `A -> A`, which resolves to no node;
-- a two-step alias cycle, `A -> B -> A`;
-- a structural cycle with no `Suspend` anywhere on the path; and
-- a dead table entry nothing points at.
+A first-party executable pin against rc.112 is sealed in the evidence vendor at
+`vendor/foldlab/pinned/tree/library/effects/test/SchemaReferencesPin.test.ts`
+(SHA-256 `73b28e60505f219903cbdcb5e390e1a201df469a5b91f17269f45a19064106cb`).
+
+**What "accepts" means here has a layer, and the two layers disagree.** The
+sealed pin's own predicate is
+`readsBack = (json) => { try { SchemaRepresentation.fromJson(json); return true } catch { return false } }`
+(`:67-75`), under its own comment "Does Effect's own codec read this document
+back?". It exercises the **document codec** — parsing persisted JSON into a
+`Representation` — and nothing else. Revival, `fromRepresentation`, is a
+different function with different answers. So:
+
+| Shape | `fromJson` | `fromRepresentation` |
+| --- | --- | --- |
+| a `$ref` naming no table entry | accepts | **refuses**: `Invalid reference <key>` |
+| a self alias, `A -> A`, which resolves to no node | accepts | accepts |
+| a two-step alias cycle, `A -> B -> A` | accepts | accepts |
+| a structural cycle with no `Suspend` anywhere on the path | accepts | accepts |
+| a dead table entry nothing points at | accepts | accepts |
+
+The refusal is `resolveReference` in
+`internal/schema/fromRepresentation.ts` (SHA-256
+`0b95c360800d3c1dfe3e6c5683f79265fa7217494c8ce9cedb5c6dcbf936d82e`), which
+throws `Invalid reference ${key}` at `:67-68` when the key is absent from the
+table. The four cycle and dead-entry rows survive revival for a specific
+mechanical reason: `ReferenceSlot` (`:19-31`) holds a `Schema.suspend` wrapper,
+and re-entering a slot still marked `resolving` returns that wrapper rather
+than recursing (`:76-77`). **Non-termination is deferred to use, not raised at
+construction.** The wrapper's own body carries the host's admission of the
+hazard — `Reference ${key} was evaluated before it was resolved` (`:27`).
+
+Any sentence in this repository that says rc.112 "accepts" one of these five
+must therefore name the layer. Unqualified, the dangling-`$ref` row is false.
 
 The same pin confirms two positive spellings: `Suspend` has exactly the keys
 `_tag`, `checks`, `thunk`, its `checks` is always empty and a `Suspend`
 carrying a check is refused by Effect itself; and a `Document` has exactly the
 keys `representation` and `references`. Recursive documents survive Effect's
 own JSON round trip.
+
+**This evidence is not reproducible from this checkout.** The same caveat the
+census gate carries above applies here, and for a sharper reason: `harness/`
+holds only `README.md` and `AGENTS.md`, so there is no runner, no
+`effect@4.0.0-rc.112` install, and no TypeScript toolchain in this repository
+that could execute `SchemaReferencesPin.test.ts`. `vendor/foldlab/pinned/` is
+read-only evidence and this repository must not depend on Foldlab, so the file
+is here as **bytes that assert these results**, verified by digest, executed
+elsewhere. The `fromRepresentation` column above was likewise obtained on this
+host by running the five shapes through the installed
+`effect@4.0.0-rc.112` package — the resolved-package pin of the authority
+table, whose `src/SchemaRepresentation.ts` is byte-identical to the semantic
+pin — not by any command this checkout can re-run. Reproducing either needs a
+local install with the path supplied by hand. Until `harness/` acquires a
+runner, no `SC-HOST-*` edge may be closed by citing this section.
 
 The consequence is a standing claim-scope rule. Effect4's reference closure,
 guardedness, and dead-entry rules are **narrower than rc.112**. A document
@@ -814,3 +985,125 @@ The proof-level Getter, Transformation, and Codec laws may proceed over the
 existing `Program` after `Data.Row` and schema issue exit are frozen. Their
 first-order storage, generation, and reify/elaborate proofs wait for checked
 Flow semantics; neither lane may mint a temporary effect type.
+
+## Fired findings
+
+This ruling is frozen design input. A finding against it is recorded here, in
+the `BROKE / LAW / WITNESS / CLASS / FIXED-BY` form the contract packets use,
+rather than repaired silently in the prose.
+
+### The persisted-field snapshot mis-cited eight of its own twenty-three lines
+
+BROKE: the header of §Verified persisted-field snapshot, which said the field
+constraints were "checked line by line against the pinned bytes", and eight
+line citations inside the block it introduces.
+
+LAW: every citation in the block was re-derived from the pinned
+`SchemaRepresentation.ts` (SHA-256 `a0a7…e69bc`) by locating each named
+binding, independently of the block. Fifteen agreed. Eight did not:
+
+| Cited | Subject | Actual | What sat at the cited line |
+| --- | --- | ---: | --- |
+| `:969` | keyword tags | 970 | blank |
+| `:976` | `Declaration` | 977 | blank |
+| `:985` | `Suspend` | 984 | `_tag: Schema.tag("Suspend"),` |
+| `:1040` | `PropertySignature` | 1039 | `name: Schema.Union([` |
+| `:1065` | `Reference` | 1066 | `})` closing `UnionSchema` |
+| `:1093` | `References` | 1096 | `UnionSchema` inside `RepresentationUnion` |
+| `:1095` | `Document` | 1098 | blank |
+| `:1103` | `MultiDocument` | 1105 | `)` closing `DocumentFromJson` |
+
+WITNESS: the offsets are -1, +1, -1, +1, -1, -3, -3, -2. No numbering base,
+zero-indexing convention, or uniform shift produces that spread, so these are
+independent errors, not one systematic one. Four of the eight point at a blank
+line or a closing bracket — text that cannot be mistaken for the cited subject
+by a reader who opened the file.
+
+CLASS: claim scope, plus fact. The field content of the block was correct and
+has been independently re-verified; the failure was entirely in the navigation
+column and in a header that asserted a stronger verification procedure than had
+been performed. "Checked line by line" is falsified by its own block: a
+line-by-line check is exactly the procedure that would have caught eight wrong
+lines, and none were caught.
+
+FIXED-BY: the eight citations corrected to the binding lines above; the block
+now states the convention it uses (the `const <Name>Schema = Schema.Struct({`
+line, or the `function` line for `makeKeywordSchema`), which is what made the
+errors visible; and the header now separates the two claims by strength —
+field content re-derived, line numbers a navigation aid re-derived on
+2026-08-31 — and records that no script in this repository compares the block
+against the pin, so either column can still drift silently. Three citations
+outside the block (`:162`, `:987`, `:988` under §`Suspend` is resolved, and
+`:1005`, `:999`, `:1020`, `:1042` under the `number` ruling) were re-derived in
+the same pass and were already correct.
+
+### "the union route rejects that mutation" was a claim about the detector
+
+BROKE: the §Entry gate sentence describing the census gate's two extraction
+routes, which said the closed unions "are single-site and exhaustive" and that
+"the union route rejects that mutation" — the mutation being a 23rd tag added
+past the call-site-only extractor.
+
+LAW: falsified by execution against a copy of the real pinned bytes.
+`scripts/check-schema-census.sh`'s union extractor terminated on the first line
+without a leading `|`, so a single `//` comment inside the union truncated the
+extraction and a 23rd member hid behind it. The codec route did not catch it
+either: its pattern matched double-quoted tag literals only, so
+`Schema.tag('Newthing')` went uncounted. On that source the old gate printed
+`PASS both lexical source routes agree by family: 24 spellings (22
+representation, 2 check)` and exited 0. A third hole in the same family: the
+Lean scrape took the first quoted string on a `|` line, so a comment carrying
+the pinned spelling with a different value on the next line passed.
+
+WITNESS: the three holes are now regression mutants in
+`./scripts/test-schema-census-gate.sh` — "comment-hidden 23rd union member",
+"comment-hidden member with single-quoted codec tag", and "Lean spelling hidden
+behind a trailing comment". The suite reports `14/14`.
+
+CLASS: claim scope. Two different propositions were fused into one sentence.
+*The pinned source declares each union at one site* is true and checkable —
+`export type Representation =` at `:406` and `export type Check =` at `:436`,
+once each. *The detector reads that union correctly* is a claim about a shell
+script, and does not follow from the source's shape. The document asserted the
+second on the strength of the first.
+
+FIXED-BY: the passage now states the source-shape fact and the detector's
+coverage separately, names the detector's coverage as exactly the fourteen
+enumerated mutants and nothing broader, and records that three of those mutants
+exist because execution found the hole after this document had already
+asserted that the union route rejected an added tag.
+
+### `E4-SCHEMA-CE-025` stated an acceptance without naming its layer
+
+BROKE: §Effect4 admission is strictly stricter than the host, which said the
+sealed vendor pin "establishes that rc.112 **accepts**" five shapes, listing a
+dangling `$ref` first.
+
+LAW: the sealed test's own predicate is `readsBack` (`:67-75`), which calls
+`SchemaRepresentation.fromJson` and nothing else, under the comment "Does
+Effect's own codec read this document back?". At revival, `resolveReference`
+(`internal/schema/fromRepresentation.ts`, SHA-256 `0b95c360…36d82e`) throws
+`Invalid reference ${key}` at `:67-68`. Re-run on this host against the
+resolved-package pin, the dangling `$ref` is accepted by `fromJson` and refused
+by `fromRepresentation`; the other four are accepted at both.
+
+WITNESS: `E4-SCHEMA-CE-040` in `test/counterexamples/REGISTER.md`.
+
+CLASS: claim scope. "rc.112 accepts" named a system where the evidence named a
+function. One of the five rows is false at the layer a reader would most likely
+assume — the one that turns a persisted document into a usable schema.
+Separately, the section asserted an executable result with no note that
+`harness/` contains only `README.md` and `AGENTS.md`, so the sealed test cannot
+run in this checkout at all; the census gate two sections earlier already
+carried exactly that caveat.
+
+FIXED-BY: the five acceptances are now a per-layer table naming `fromJson` and
+`fromRepresentation` separately, with the refusal's source line; the mechanism
+that saves the four cycle and dead-entry rows at revival — `ReferenceSlot`'s
+`Schema.suspend` wrapper on `resolving` re-entry (`:19-31`, `:76-77`) — is
+recorded, along with the host's own guard string at `:27`; and the section now
+carries the non-reproducibility caveat, stating that both the sealed pin and
+the `fromRepresentation` column are host-local and that no `SC-HOST-*` edge may
+be closed by citing them. `SC-DOC-06` gained that same mechanism as its
+host-side statement of the hazard, with a bounded, non-reproducible probe
+attached and reported as a probe.

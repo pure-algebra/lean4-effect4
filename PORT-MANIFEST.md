@@ -24,6 +24,20 @@ semantic owners, and exact leaf receipts for passive finite declarations.
 | Language-service research clone | commit `5e4d380b6fcd20f048dd8d41515bcd9ea47ffda4`; Effect v4 harness at `4.0.0-beta.107` | Diagnostic designs and negative fixtures, version-indexed |
 | PolyFun acceptance probe | commit `3937f7ff0830cca33d6b35a24aef55bcbe3b6bc9`; Lean `v4.33.1`; Mathlib `v4.33.1`; cslib `v4.33.1` | Prior-art API and optional comparison source; not an Effect4 dependency |
 
+Three `internal/schema/` files are cited by module annotations and by the
+payload contract but appeared in no authority table. They are recorded here at
+first use, against the installed package bytes:
+
+| Cited host file | SHA-256 |
+| --- | --- |
+| `internal/schema/toRepresentation.ts` | `677449c734ac6373598a81207ba0573f86fb8bd2c9fb25d1369aa1e710d614a2` |
+| `internal/schema/fromRepresentation.ts` | `0b95c360800d3c1dfe3e6c5683f79265fa7217494c8ce9cedb5c6dcbf936d82e` |
+| `internal/schema/annotations.ts` | `4b3bedcae279fcb3a1dff4e8eb718d42f450d59c8b45912070a586adcdcb077c` |
+
+`toRepresentation.ts` is the one that matters most: it is the sole
+implementation of the live-AST-to-persisted-representation arrow the cutover
+depends on, and it was unpinned while being cited as evidence.
+
 The Effect npm version and upstream revision come from Foldlab's
 `.reference/provenance/sources.lock.json` runtime row. The installed package
 bytes remain a separate pin because an upstream tag does not prove what a
@@ -39,6 +53,21 @@ The exact matching and differing source/declaration digests are recorded in
 
 Every source row receives one of these dispositions. A refusal explains why
 the row is outside a profile; it is not an additional disposition.
+
+**This is a rule, and it is not yet satisfied on the Effect side.** A survey of
+the `Schema.ts` public surface at the pin (`docs/SCHEMA-SURFACE-SURVEY.md`)
+found 348 exports carrying a runtime value, established by two routes — a
+declaration-site count and `Object.keys` over the shipped `dist/Schema.js`,
+which agree. Six whole faces of that surface appear in neither this file nor
+`docs/SCHEMA-CUTOVER.md`: `Optic`, `Bottom`, `TemplateLiteralParser`,
+`StandardSchema`, `JsonSchema`, and `Formatter`, covering roughly 31 exported
+names including the optics and `Iso` face, Arbitrary, Equivalence, JSON Schema,
+Standard Schema V1, and JSON Patch/XML. A `grep -ic` for each returns zero in
+both documents.
+
+Those rows are therefore undisposed, not refused. The rule above states the
+requirement; it does not report the current state, and no gate checks the two
+against each other.
 
 | Disposition | Meaning |
 | --- | --- |
@@ -263,6 +292,49 @@ an elaboration theorem back to that semantics; no Schema-specific effect
 monad or program carrier is admitted. `Schema`, `Decoder`, `Encoder`, and
 `Top` are existential views of that codec rather than new carriers.
 
+That list is this repository's modelling choice and is narrower than the pin
+in two ways worth recording before `SC-CODEC-08` freezes. rc.112 exports more
+carrier and view types than the four named here, and it spells them as
+widenings to `unknown` — `Encoder<E, RE> extends Schema<unknown>` — rather
+than as existential quantification, so the existential reading is a choice and
+should be labelled as one. And the underlying `Bottom` (`Schema.ts:283`)
+carries **15** type parameters, of which the four-index `Codec` names four;
+at least `TypeParameters`, `Type`/`EncodedOptionality`, and
+`Type`/`EncodedMutability` have persisted consequences. Neither point
+invalidates the four-index model, and both bound what "view" may be claimed to
+mean.
+
+### Where an authored schema can be refused
+
+Two facts bound every coverage claim about the Effect authoring surface, both
+read off the pin and one of them checkable in a line.
+
+**The projection into the tag alphabet is total.**
+`internal/schema/toRepresentation.ts` (361 lines, SHA-256
+`677449c734ac6373598a81207ba0573f86fb8bd2c9fb25d1369aa1e710d614a2`) contains
+**no throw site and no default case** — `grep -n 'throw\|errorWithPath\|Error('`
+returns nothing. It maps the 21-member live `SchemaAST.AST` sum into the
+22-tag alphabet without refusing. The consequence is worth stating because it
+supports the census closure from the authoring side: no combinator in
+`Schema.ts` can mint a 23rd persisted tag, because the only function that
+produces tags cannot fail and has no case that emits an unnamed one. Every
+refusal an author actually sees comes later, from `toJson`.
+
+**Five first-party exports are nevertheless unpersistable.** The BigDecimal
+comparison family — `isGreaterThanBigDecimal` (`Schema.ts:8793`),
+`isGreaterThanOrEqualToBigDecimal` (`:8805`), `isLessThanBigDecimal`
+(`:8816`), `isLessThanOrEqualToBigDecimal` (`:8828`), and
+`isBetweenBigDecimal` (`:8844`) — omit the optional `annotate` argument
+(`:7733`), so a schema carrying one throws at `toJson` with `Missing key at
+["representation"]["checks"][0]["representation"]`. This is the same shape as
+`E4-SCHEMA-CE-042`: an rc.112 value its own codec refuses.
+
+No coverage wording in this repository may treat the authoring surface as
+uniformly persistable. Some of it is not, in shipped first-party code, and
+that is a property of rc.112 rather than of any Effect4 narrowing. Evidence
+and counts are in `docs/SCHEMA-SURFACE-SURVEY.md`; the executed part is a
+finite probe on one host and is not reproducible from this checkout alone.
+
 ### Schema tag declaration dispositions
 
 These rows are the identity boundary for the six implemented public types.
@@ -277,11 +349,61 @@ local receipts alone close no cutover row.
 | `E4-TYPE-SCHEMA-UNION-MODE` | `Effect4.UnionMode`; Lean module `Effect4.Schema.Representation`; file `Effect4/Schema/Representation.lean` | sole canonical finite selector for persisted `anyOf` versus `oneOf`; operational branch meaning remains in the later denotation; content identity: none | native contract `test/contracts/schema-subalphabets.contract.md`; `owned`; exact spellings are source evidence delegated to the parent graph | separate from representation tags and from union payloads; no duplicate mode carrier | `leafReceiptId = SCHEMA-LEAF-UNION-MODE`; `receiptId = SCHEMA-AX-UNION-MODE`; `evidenceId = SCHEMA-EV-UNION-MODE-CENSUS`; `parentGraphEdge = SCHEMA-PG-REPRESENTATION-TAG/representation`; `required-open` |
 | `E4-TYPE-SCHEMA-CHECK-TAG` | `Effect4.CheckTag`; Lean module `Effect4.Schema.Representation`; file `Effect4/Schema/Representation.lean` | sole canonical finite tag carrier for persisted `Filter | FilterGroup`; it is not the future `Check` payload; content identity: none | native contract `test/contracts/schema-subalphabets.contract.md`; `owned`; exact spellings are source evidence delegated to the parent graph | intentionally separate from `Effect4.RepresentationTag`; no second `CheckTag` may be minted by `Schema.Check` | `leafReceiptId = SCHEMA-LEAF-CHECK-TAG`; `receiptId = SCHEMA-AX-CHECK-TAG`; `evidenceId = SCHEMA-EV-CHECK-TAG-CENSUS`; `parentGraphEdge = SCHEMA-PG-REPRESENTATION-TAG/representation`; `required-open` |
 | `E4-TYPE-SCHEMA-LITERAL-KIND` | `Effect4.LiteralKind`; Lean module `Effect4.Schema.Representation`; file `Effect4/Schema/Representation.lean` | sole canonical finite classifier for literal payload kinds; it is not a literal value carrier; content identity: none | native contract `test/contracts/schema-subalphabets.contract.md`; `owned`; the ruling invents no independent wire spelling | distinct from the `RepresentationTag.literal` node and from `EnumValueKind`; absence of `null` is part of this alphabet | `leafReceiptId = SCHEMA-LEAF-LITERAL-KIND`; `receiptId = SCHEMA-AX-LITERAL-KIND`; `evidenceId = SCHEMA-EV-LITERAL-KIND-CENSUS`; `parentGraphEdge = SCHEMA-PG-REPRESENTATION-TAG/representation`; `required-open` |
-| `E4-TYPE-SCHEMA-ENUM-VALUE-KIND` | `Effect4.EnumValueKind`; Lean module `Effect4.Schema.Representation`; file `Effect4/Schema/Representation.lean` | sole canonical finite classifier for enum-entry value kinds; it is not an enum value carrier; content identity: none | native contract `test/contracts/schema-subalphabets.contract.md`; `owned`; the ruling invents no independent wire spelling | narrower than `LiteralKind`; `SCHEMA-REL-ENUM-TO-LITERAL-KIND` in the parent graph records the injective kind map and the explicit non-claim of a value-level numeric embedding | `leafReceiptId = SCHEMA-LEAF-ENUM-VALUE-KIND`; `receiptId = SCHEMA-AX-ENUM-VALUE-KIND`; `evidenceId = SCHEMA-EV-ENUM-VALUE-KIND-CENSUS`; `parentGraphEdge = SCHEMA-PG-REPRESENTATION-TAG/representation`; `required-open` |
+| `E4-TYPE-SCHEMA-ENUM-VALUE-KIND` | `Effect4.EnumValueKind`; Lean module `Effect4.Schema.Representation`; file `Effect4/Schema/Representation.lean` | sole canonical finite classifier for enum-entry value kinds; it is not an enum value carrier; content identity: none | native contract `test/contracts/schema-subalphabets.contract.md`; `owned`; the ruling invents no independent wire spelling | narrower than `LiteralKind`; `SCHEMA-REL-ENUM-TO-LITERAL-KIND` records the injective kind map but does not decide either the separately frozen total raw value embedding or D7 field admission | `leafReceiptId = SCHEMA-LEAF-ENUM-VALUE-KIND`; `receiptId = SCHEMA-AX-ENUM-VALUE-KIND`; `evidenceId = SCHEMA-EV-ENUM-VALUE-KIND-CENSUS`; `parentGraphEdge = SCHEMA-PG-REPRESENTATION-TAG/representation`; `required-open` |
 | `E4-TYPE-SCHEMA-PROPERTY-KEY-KIND` | `Effect4.PropertyKeyKind`; Lean module `Effect4.Schema.Representation`; file `Effect4/Schema/Representation.lean` | sole canonical finite classifier for portable property-key kinds; it is not a property-key value carrier; content identity: none | native contract `test/contracts/schema-subalphabets.contract.md`; `owned`; the ruling invents no independent wire spelling | separate from literal and enum kinds; absence of a local-symbol constructor prevents a duplicate portable identity for a host-local symbol | `leafReceiptId = SCHEMA-LEAF-PROPERTY-KEY-KIND`; `receiptId = SCHEMA-AX-PROPERTY-KEY-KIND`; `evidenceId = SCHEMA-EV-PROPERTY-KEY-KIND-CENSUS`; `parentGraphEdge = SCHEMA-PG-REPRESENTATION-TAG/representation`; `required-open` |
 
-`SCHEMA-PG-REPRESENTATION-TAG` is the one standalone proof graph in this
-packet because `RepresentationTag` is source-facing and carries the Schema tag
+### Schema payload frozen ownership and assurance allocation
+
+These rows allocate names before implementation under the Pass-B frozen
+packet. `required-blocked` means the owner and route are decided, but
+implementation admission remains blocked until the fixed production
+payload-surface and ownership gate is green. Cutover and semantic closure stay
+open. A leaf is promoted only if it later acquires an independent semantic,
+admission, bridge, target, or cutover claim.
+
+| Stable type row | Exact future declaration and owner | Canonical role and duplicate prevention | Assurance allocation |
+| --- | --- | --- | --- |
+| `E4-TYPE-SCHEMA-FLOAT64` | `Effect4.Float64`; `Effect4.Data.Json` | nominal 64-bit IEEE payload datum; not Lean `Float`, host equality, or a five-value classification | `leafReceiptId = SCHEMA-LEAF-FLOAT64-BITS`; parent `SCHEMA-PG-PAYLOAD`; `required-blocked` |
+| `E4-TYPE-SCHEMA-JSON` | `Effect4.Json`; `Effect4.Data.Json` | recursive JSON payload with ordered object-entry lists so duplicate keys remain representable; not map-like `Lean.Json` | `nodeId = SCHEMA-NODE-JSON-FINITENESS`; parent `SCHEMA-PG-PAYLOAD`; `required-blocked` |
+| `E4-TYPE-SCHEMA-REFERENCE-KEY` | `Effect4.ReferenceKey`; `Effect4.Schema.Payload` | raw reference spelling; non-emptiness is admission, not hidden construction | `leafReceiptId = SCHEMA-LEAF-PAYLOAD-SCALARS`; parent `SCHEMA-PG-PAYLOAD`; `required-blocked` |
+| `E4-TYPE-SCHEMA-GLOBAL-SYMBOL-KEY` | `Effect4.GlobalSymbolKey`; `Effect4.Schema.Payload` | portable global-symbol identity only; local symbols have no constructor | same scalar leaf receipt; `required-blocked` |
+| `E4-TYPE-SCHEMA-ANNOTATION-ENTRY` | `Effect4.AnnotationEntry`; `Effect4.Schema.Payload` | one retained JSON annotation entry; encode-side pruning remains a wire policy | same scalar leaf receipt; `required-blocked` |
+| `E4-TYPE-SCHEMA-ANNOTATIONS` | `Effect4.Annotations`; `Effect4.Schema.Payload` | exact alias `Option (List AnnotationEntry)` preserving absent versus present-empty | same scalar leaf receipt; `required-blocked` |
+| `E4-TYPE-SCHEMA-LITERAL-VALUE` | `Effect4.LiteralValue`; `Effect4.Schema.Payload` | four-constructor decoded literal value; no null or symbol constructor | same scalar leaf receipt plus constructor-cap receipt; `required-blocked` |
+| `E4-TYPE-SCHEMA-ENUM-VALUE` | `Effect4.EnumValue`; `Effect4.Schema.Payload` | two-constructor enum value; `EnumValue.toLiteralValue : EnumValue -> LiteralValue` is the sole total injective raw embedding and preserves every binary64 payload, while literal finiteness is owned separately by `SCHEMA-PG-FIELD-ADMISSION` | same scalar leaf receipt plus `SCHEMA-REL-ENUM-TO-LITERAL-VALUE`; `required-blocked` |
+| `E4-TYPE-SCHEMA-ENUM-ENTRY` | `Effect4.EnumEntry`; `Effect4.Schema.Payload` | enum name/value pair; duplicate names and aliases remain representable | same scalar leaf receipt; `required-blocked` |
+| `E4-TYPE-SCHEMA-PROPERTY-KEY` | `Effect4.PropertyKey`; `Effect4.Schema.Payload` | string, number, or global-symbol portable key; no local-symbol constructor | same scalar leaf receipt plus constructor-cap receipt; `required-blocked` |
+| `E4-TYPE-SCHEMA-REPRESENTATION-ANNOTATION` | `Effect4.RepresentationAnnotation`; `Effect4.Schema.Payload` | required `id`/`payload` record; intentionally has no `schemas` field | `leafReceiptId = SCHEMA-LEAF-PAYLOAD-RECORDS`; parent `SCHEMA-PG-PAYLOAD`; `required-blocked` |
+| `E4-TYPE-SCHEMA-CHECK-REPRESENTATION-ANNOTATION` | `Effect4.CheckRepresentationAnnotationOf`; `Effect4.Schema.Payload` | parameterized check annotation with optional referenced schemas; not merged with `RepresentationAnnotation` | same record leaf receipt; `required-blocked` |
+| `E4-TYPE-SCHEMA-ELEMENT` | `Effect4.ElementOf`; `Effect4.Schema.Payload` | parameterized array-element record; applied alias `Element` adds no carrier | same record leaf receipt; `required-blocked` |
+| `E4-TYPE-SCHEMA-PROPERTY-SIGNATURE` | `Effect4.PropertySignatureOf`; `Effect4.Schema.Payload` | parameterized property record; applied alias adds no carrier | same record leaf receipt; `required-blocked` |
+| `E4-TYPE-SCHEMA-INDEX-SIGNATURE` | `Effect4.IndexSignatureOf`; `Effect4.Schema.Payload` | exactly parameter and result type; applied alias adds no carrier or annotations field | same record leaf receipt; `required-blocked` |
+| `E4-TYPE-SCHEMA-REPRESENTATION` | mutually recursive `Effect4.Representation` and `Effect4.Check`; `Effect4.Schema.Representation` | sole 22-constructor payload and two-constructor check family; reuses existing tag/kind alphabets and mints no second `Check` in `Schema.Check` | `proofGraphId = SCHEMA-PG-PAYLOAD`; `required-blocked` |
+| `E4-TYPE-SCHEMA-REFERENCE-ENTRY` | `Effect4.ReferenceEntry`; `Effect4.Schema.Document` | ordered raw reference-table entry; duplicates remain representable for the wire boundary | `leafReceiptId = SCHEMA-LEAF-DOCUMENT-CONTAINERS`; parent `SCHEMA-PG-PAYLOAD`; `required-blocked` |
+| `E4-TYPE-SCHEMA-DOCUMENT` | `Effect4.Document`; `Effect4.Schema.Document` | one-root container, nominally distinct from a multi-document | same document-container leaf; later semantics move to `SCHEMA-PG-DOCUMENT`; `required-blocked` |
+| `E4-TYPE-SCHEMA-MULTI-DOCUMENT` | `Effect4.MultiDocument`; `Effect4.Schema.Document` | multi-root container; non-emptiness is field admission rather than hidden construction | same document-container leaf; later semantics move to `SCHEMA-PG-DOCUMENT`; `required-blocked` |
+| `E4-JUDGMENT-SCHEMA-FIELD-ADMISSIBLE` | `Annotations.FieldAdmissible`, `Representation.FieldAdmissible`, `Check.FieldAdmissible`, `Document.FieldAdmissible`, `MultiDocument.FieldAdmissible`; `Effect4.Schema.Check` | one recursive persisted/decode-side structural judgment family with Boolean reflection; retained ordinary bags require finite JSON; failed judgment is not an issue or refusal value | `proofGraphId = SCHEMA-PG-FIELD-ADMISSION`; `required-blocked` |
+| `E4-JUDGMENT-SCHEMA-PROPERTY-KEYS-UNIQUE` | future owner after `PropertyKey` equivalence freezes | profile narrowing; no declaration in this packet because structural binary64 equality would silently decide `+0`/`-0` and NaN key cases | future node, graph allocation deferred with key equivalence; `required-blocked` |
+| `E4-JUDGMENT-SCHEMA-REFERENCE-KEYS-UNIQUE` | future predicates for both `Document` and `MultiDocument`; `Effect4.Protocol.Bytes` | raw-wire duplicate-key condition before either ordered table becomes a map; no declaration in this packet | node `SC-WIRE-REFERENCE-KEY-UNIQUE` in `SCHEMA-PG-WIRE`; `required-blocked` |
+
+The frozen payload packet has exactly two graph-bearing families:
+`SCHEMA-PG-PAYLOAD` for recursive `Json` and `Representation`/`Check`, and
+`SCHEMA-PG-FIELD-ADMISSION` for the recursive persisted/decode-side judgment.
+Float64, scalar sums, parameterized records, and passive document containers
+attach as leaf receipts. `Effect4.Schema.Value` remains denotation-only.
+
+The isolated pre-implementation reconstruction receipt used `lake env lean -DmaxErrors=10000 --json Effect4Test/Schema/PayloadContract.lean` against battery SHA-256
+`e80d4be2f6385228aa87766d61ad4056fef68f947d0347cc15e1ac9279c6d27f`:
+all 909 of 909 error records were `lean.unknownIdentifier._namedError`, with
+no other diagnostic class, exit 1, and the sweep reached the last positive
+obligation at source line 1173. The earlier 907/907 receipt through line 1080
+is superseded. Lean's default 100-diagnostic cap is insufficient evidence for
+this packet. Independent Pass-B re-review accepted the packet after the
+declaration-free upward-import mutant was killed. The clean-red receipt freezes
+the breaker; it does not admit implementation or close semantics.
+
+`SCHEMA-PG-REPRESENTATION-TAG` is the one standalone proof graph in the earlier
+tag packet because `RepresentationTag` is source-facing and carries the Schema tag
 cutover boundary. It owns the source pin and extracted spelling-set edge, the
 exact declaration signature and constructor order, nominal separation,
 registered counterexamples, axiom receipt, and export coverage. The five
@@ -311,13 +433,14 @@ Every `required-open` edge remains open until its evidence is mechanically
 joined. A later semantic, bridge, or target claim must first change the
 corresponding `not-applicable` row through a new breaker packet.
 
-The native packets are `test/contracts/schema-representation.contract.md` and
+The native tag packets are `test/contracts/schema-representation.contract.md` and
 `test/contracts/schema-subalphabets.contract.md`; their declaration-changing
-attacks use `E4-SCHEMA-CE-017` through `E4-SCHEMA-CE-022`. The payload carrier
-— `SC-REP-01`, `SC-REP-04`, `Check` payloads, annotations, `Document`, and
-`MultiDocument` — remains unopened behind the sixteen reserved payload and
-semantic counterexamples. No tag declaration, theorem count, or source gate
-result in the working tree is a whole-slice closure claim.
+attacks use `E4-SCHEMA-CE-017` through `E4-SCHEMA-CE-022`. The payload and
+field-admission breaker is Pass-B frozen and every allocated row above is
+`required-blocked` until the fixed production ownership gate turns green; the
+table supplies ownership, not closure. No tag
+declaration, theorem count, source gate, host probe, or reserved
+counterexample in the working tree is a whole-slice closure claim.
 
 The exact rc.112 bytes are present in the Foldlab checkout at SHA-256
 `a0a7a1537cfe3a9159a80210e3de92342cc9e98651f0e8273a75ccdcccae69bc`.
@@ -329,11 +452,11 @@ whole-host faithfulness.
 
 Profile ownership is settled before those stubs open. `Effect4.Protocol.Profile`
 owns versioned profile identity, and `Effect4.Protocol.Admission` owns generic
-profile membership and admission policy. Future `Effect4.Schema.Check` owns
-only Schema-specific structural classification and diagnostics as a consumer
-of those Protocol facilities; it does not own `SC-PROFILE` identity or mint a
-second profile carrier. Ownership of `SC-ISSUE-01` typed issue exit remains
-open.
+profile membership and admission policy. `Effect4.Schema.Check` owns only
+Schema-specific structural predicates as a consumer of those Protocol
+facilities; predicate failure alone precommits no diagnostic or issue API. It
+does not own `SC-PROFILE` identity or mint a second profile carrier. Ownership
+of `SC-ISSUE-01` typed issue exit remains open.
 
 ### Authored usage profile
 
@@ -514,12 +637,17 @@ first-order `Flow`.
 | Narrow schema census gate | `lake env lean Effect4Test/Schema/RepresentationContract.lean` | the 22-member rc.112 tag alphabet, its census listing and exact wire spellings, plus `E4-SCHEMA-CE-017`-`019` |
 | Narrow schema sub-alphabet gate | `lake env lean Effect4Test/Schema/SubAlphabetContract.lean` | the union-mode, check-tag, literal-kind, enum-value, and property-key alphabets, plus `E4-SCHEMA-CE-020`-`022` |
 | Schema census drift gate | `./scripts/check-schema-census.sh <SchemaRepresentation.ts>` | lexically extracts the closed type-union and codec-call spelling sets and compares them with Lean `tagName`; refuses off-pin bytes unless `--dry-run`; reports pin-matched spelling evidence but does not assign cutover closure or semantic faithfulness |
-| Schema census gate reaction test | `./scripts/test-schema-census-gate.sh` | exercises ten specified lexical defects, including union-only and union-plus-codec additions and a tag copied across the representation/check family boundary; runs against a synthetic fixture, so it tests detector reaction and not the real census, payloads, or semantics |
-| Schema alphabet mutation gate | `./scripts/test-schema-alphabet-mutations.sh` | four bounded local mutants exercise constructor order, duplicate-carrier rejection, and coordinated spelling drift; the local receipt feeds the parent graph and attached leaves but is neither itself a proof graph nor an exhaustive completeness claim |
+| Schema census gate reaction test | `./scripts/test-schema-census-gate.sh` | exercises fourteen specified lexical defects, including union-only and union-plus-codec additions, a tag copied across the representation/check family boundary, a 23rd member hidden behind a comment inside the closed union, a single-quoted codec tag literal, and a Lean spelling hidden behind a trailing comment; the last three were confirmed to pass the previous extractors on real pinned bytes and are now regression mutants; runs against a synthetic fixture, so it tests detector reaction and not the real census, payloads, or semantics |
+| Schema field drift gate | `./scripts/check-schema-fields.sh <SchemaRepresentation.ts>` | extracts 22 structural field routes from the pinned source: 21 `Schema.Struct` shapes, including both helper-created shapes, plus the shared `KeywordFields` fragment; compares them with a frozen table and covers drift a tag census cannot see; refuses off-pin bytes unless `--dry-run`, and refuses `--expect` without it; single-route extraction only, because no Lean-side field carrier exists yet to cross-check against, so it assigns no cutover closure and no semantic faithfulness |
+| Schema field gate reaction test | `./scripts/test-schema-fields-gate.sh` | exercises twelve specified source mutations, including the keyword helper, scalar envelope, and a quoted key, plus three invocation-safety refusals; runs against a synthetic fixture, so it tests detector reaction and not the real field set, payload types, or optionality |
+| Schema payload declaration-surface and import-ownership gate | `./scripts/check-schema-payload-surface.sh`; `./scripts/test-schema-payload-surface-gate.sh` | the elaborated surface checker covers 24 carrier/alias surfaces and 67 constructor/field entries; its reaction test kills the four specified mutations and rejects two source-override routes. The production gate also materializes the contract's Payload-only import boundary, proves D0-D3 reachability and D4-D7 non-leakage there, and inspects declaration owners along `Check -> Document -> Representation -> Payload -> Data.Json`. The reaction receipt is green; the fixed production command is intentionally red until the builder creates `Effect4.Schema.Payload` and moves D2-D3 into it. This is a finite declaration/ownership receipt, not a proof graph or semantic claim |
+| Schema alphabet mutation gate | `./scripts/test-schema-alphabet-mutations.sh` | five bounded local mutants exercise constructor order, duplicate-carrier rejection, coordinated spelling drift, and a coordinated spelling permutation with a matching census reorder; the permutation mutant was confirmed to SURVIVE the pre-repair packet and to be killed by the pointwise spelling obligations added after it, so the kill is attributable to the repair rather than to a pre-existing check; the local receipt feeds the parent graph and attached leaves but is neither itself a proof graph nor an exhaustive completeness claim |
 | Flow admission mutation gate | `./scripts/test-flow-admission-mutations.sh` | four specified mutants (swapped scan order, weakened dangling jump, dropped `perform` answer equality, and substituted unrelated diagnostic witness) must each stay buildable and be killed by the matching frozen battery; Flow source and both batteries are verified byte-unchanged |
 | Human-readable axiom receipts | `lake env lean Effect4Test/Algebra/AxiomReport.lean`; `lake env lean Effect4Test/Flow/AxiomReport.lean`; `lake env lean Effect4Test/Schema/AxiomReport.lean` | every currently exported algebra, flow, and Schema-alphabet theorem, with its axiom dependencies printed |
-| Source trust gate | `./scripts/test-trust-gate.sh` | planted `unsafe` and `partial` declarations are rejected; the same vocabulary inside comments and strings is not |
+| Source trust gate | `./scripts/test-trust-gate.sh` | planted `unsafe` and `partial` declarations are rejected; the same vocabulary inside comments and strings is not. The detector is an elaboration-time check in the root aggregator, which Lake builds last, so any earlier module failure previously meant the detector never ran at all — verified by planting a `partial` during a red battery phase and observing the module build clean with no diagnostic emitted. The gate therefore EXCISES the modules declared in `test/fixtures/trust-gate/known-red.txt` from its throwaway probe copy and asserts against a genuinely green tree. That declared set is self-checking in both directions, each verified by perturbation: an undeclared failing target is rejected by name, and a declared module that is actually green is also rejected by name, so an entry cannot outlive its red phase. The gate reports which modules it excised and states that the trust property is unverified for exactly those |
 | Foldlab evidence gate | `./scripts/check-vendor-foldlab.sh`; `./scripts/test-vendor-foldlab.sh` | closed inventory of 911 files and 11,940,983 bytes at pin `feb29321fd50204aa338209d313e84a3f8b71c66`; one omission, one extra file, and one byte mutation are each rejected |
+| Internal citation gate | `./scripts/check-internal-citations.sh` | rejects every `<doc>:<line>` or `<doc>:<line>-<line>` citation naming `docs/SCHEMA-CUTOVER.md`, `PLAN.md`, `AGENTS.md`, `docs/ARCHITECTURE.md`, or `PORT-MANIFEST.md` anywhere under `Effect4/`, `Effect4Test/`, `docs/`, `test/`, or `scripts/`, because those documents are authored and edited continuously so a line number silently retargets; line citations into the pinned host sources, into `vendor/foldlab/`, and into `.lean` sources are examined and deliberately accepted; a lexical scan only, so it resolves no anchor, does not check that a cited section still says what the citing sentence claims, and assigns no cutover status |
+| Internal citation gate reaction test | `./scripts/test-internal-citations-gate.sh` | seventeen specified cases — eleven refusals covering one violation per protected document including `docs/AGENT-ROUTING.md`, bare-basename, `./`-prefixed and `.lean`-hosted variants, total extraction failure, empty root, and a stray argument; and six acceptances covering pinned host sources, `vendor/foldlab/`, `.lean` sources, near-miss basenames, and the anchored spelling. Runs against a synthetic tree, never the live one, so it tests detector reaction and not whether any real citation resolves to the claim citing it |
 | Diff hygiene | `git diff --check` | Authored source formatting |
 | Effect target gate | pending P11 | rc.112 typecheck, installed tsgo, direct runtime vectors, negatives, and mutations |
 | Foldlab compatibility gate | pending P12 | Both builds plus per-type round trips and interpretation agreement |

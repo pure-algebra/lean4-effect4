@@ -14,6 +14,7 @@ import Effect4Test.Counterexamples.Schema.SemanticTagSeparation
 import Effect4Test.Counterexamples.Schema.WireSpellingDrift
 import Effect4Test.Schema.RepresentationContract
 import Effect4Test.Schema.SubAlphabetContract
+import Effect4Test.Schema.PayloadContract
 import Effect4Test.Audit.AxiomGate
 
 /-!
