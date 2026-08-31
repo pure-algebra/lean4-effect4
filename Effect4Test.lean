@@ -9,3 +9,5 @@ The default Lake build imports every admitted contract, attack, and kernel
 dependency report through this root. A test file not reachable here is not a
 passing gate.
 -/
+
+#effect4_axiom_gate
