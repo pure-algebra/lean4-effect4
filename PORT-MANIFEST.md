@@ -268,6 +268,22 @@ enter it before a breaker freezes the `DATA-ROW` contract and its
 counterexample rows. This section supplies that breaker's source material; it
 closes no row and asserts no Effect4 theorem.
 
+## Environment key declaration dispositions
+
+The L0 key implementation is native Effect4 work; no Foldlab type is ported.
+These rows make the existing public types explicit and prevent a later
+Context, Layer, target, or Foldlab adapter from minting a second key or service
+type-code carrier. Local signatures and axiom receipts are green, but every
+row remains `required-open` until the generated declaration/owner/receipt join
+exists. `ENV-KEY-INTERP` remains an open edge of the shared Context graph.
+
+| Stable type row | Exact Lean declaration and owner | Canonical role | Native origin and source disposition | Duplicate-prevention relation | Assurance allocation |
+| --- | --- | --- | --- | --- | --- |
+| `E4-TYPE-ENV-SERVICE-NAME` | `Effect4.ServiceName`; `Effect4.Context.Key` | sole native nominal service identity; first-order `Nat` wrapper; no wire spelling | native contract `test/contracts/environment-context-key.contract.md`; `owned`; no Foldlab declaration ported | distinct from `ServiceTypeCode`; a later Effect string tag is a target/profile spelling, not another native identity | `leafReceiptId = ENV-LEAF-KEY-IDENTITY`; `receiptId = ENV-AX-KEY`; `evidenceId = ENV-EV-KEY-CONTRACT`; `required-open` |
+| `E4-TYPE-ENV-SERVICE-TYPE-CODE` | `Effect4.ServiceTypeCode`; `Effect4.Context.Key` | sole native first-order code selecting a service carrier relative to a supplied universe | same native contract and disposition | distinct from `ServiceName`; neither a Lean `Type`, an inverse of one, nor a second operation/answer alphabet | same key-identity leaf; `required-open` |
+| `E4-TYPE-ENV-SERVICE-KEY` | `Effect4.ServiceKey`; `Effect4.Context.Key` | sole native context-key identity, the ordered pair `(name, service)` with the frozen name-major order | same native contract and disposition | not type-indexed and not Effect's later string-only `Context.Tag` target view; no second Context or Requirement key carrier | same key-identity leaf; `parentGraphEdge = ENV-PG-CONTEXT/identity`; `required-open` |
+| `E4-TYPE-ENV-SERVICE-UNIVERSE` | `Effect4.ServiceUniverse`; `Effect4.Context.Key` | supplied semantic boundary reading codes as Lean types; never canonical content, persisted data, or a source of code identity | same native contract; `foreignBoundary`; no Foldlab declaration ported | one shared Context interpretation boundary; no universe field on `ServiceKey`, no inverse `Type -> ServiceTypeCode`, and no per-service duplicate universe | `proofGraphId = ENV-PG-CONTEXT`; `nodeId = ENV-KEY-INTERP`; `receiptId = ENV-AX-KEY`; `required-open` |
+
 ## Schema extraction ruling
 
 The complete ruling and proof graph are in `docs/SCHEMA-CUTOVER.md`. The

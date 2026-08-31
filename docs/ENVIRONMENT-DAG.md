@@ -12,16 +12,11 @@ names the declarations that cross it.**
 
 ## Node status
 
-All fourteen modules in this slice are empty breadth stubs today. None
-declares anything.
-
-```text
-Context/Key.lean          Context/Service.lean      Context/Environment.lean
-Context/Requirement.lean  Layer/Description.lean    Layer/Build.lean
-Layer/Provision.lean      Layer/Memo.lean           Layer/Laws.lean
-Runtime/Scope.lean        Runtime/Resource.lean     Runtime/Lifecycle.lean
-Runtime/Runtime.lean      Runtime/ManagedRuntime.lean
-```
+`Context/Key.lean` is implemented. Its frozen battery, absence guards, full
+build, trust gate, and axiom receipt are green; its leaf closure remains open
+until the generated declaration/owner/receipt join exists. `Data/Row.lean` and
+the other thirteen environment, layer, and runtime modules remain empty
+breadth stubs.
 
 ## The DAG
 
@@ -30,8 +25,8 @@ node it points from is green.
 
 ```text
    Data/Row.lean                         Context/Key.lean
-   (EMPTY STUB, F-ROW)                   (F-KEY, imports only Std —
-   DATA-ROW-01/02/03 OPEN,                no inbound edge at all)
+   (EMPTY STUB, F-ROW)                   (IMPLEMENTED, receipts green,
+   DATA-ROW-01/02/03 OPEN,                generated leaf join OPEN)
    no contract frozen                            │
           │                              ┌───────┴───────┐
           │  edge NOT yet available      │               │
@@ -223,9 +218,10 @@ edge; the packet is right.
    `test/contracts/environment-context-key.contract.md`, including a proof —
    not an assertion — that distinct codes may read as the same type, so type
    identity never recovers code identity.
-2. Does `Requirement` reuse `Effect4.Data.Row` directly, or a quotient of it?
-   The row carrier is closed; a quotient would be a new carrier needing its
-   own graph.
+2. Does `Requirement` reuse `Effect4.Data.Row` directly, or a named view of it?
+   The row carrier is still open. A quotient or copied carrier would need a
+   distinct role and its own graph; the current recommendation is an alias or
+   view over the one canonical row.
 3. Does a scope's finalization order need to be observable, or only its
    effect? `PLAN.md` requires that state produced before failure remains
    available to finalization, which constrains the carrier but not yet the

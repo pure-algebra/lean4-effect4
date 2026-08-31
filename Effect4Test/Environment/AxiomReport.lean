@@ -11,8 +11,10 @@ orphaned at a seam no fence covered. Receipts here are appended by the
 coordinator after each layer closes, from the `#print axioms` output the layer's
 builder reports.
 
-Layer L0, node `F-KEY`, closed 2026-08-31. Every frozen declaration is
-axiom-free — neither `propext` nor `Quot.sound` is reached.
+Layer L0, node `F-KEY`, implementation receipts green 2026-08-31. Every frozen
+declaration is axiom-free — neither `propext` nor `Quot.sound` is reached. The
+leaf remains closure-open until its generated declaration/owner/receipt join
+exists; this report supplies only the axiom component of that join.
 -/
 
 -- D0: the two nominal carriers.
