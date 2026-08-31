@@ -4,7 +4,7 @@ import Effect4.Algebra.Program
 # Handlers and interpretation
 
 A handler assigns a target-monad action to every operation. Interpretation
-is structural recursion over the finite proof carrier.
+is structural recursion over the well-founded proof carrier.
 -/
 
 namespace Effect4

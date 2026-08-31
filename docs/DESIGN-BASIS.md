@@ -341,7 +341,7 @@ silently stand in for an earlier edge.
 | TypeScript target | typed lowering, deterministic rendering, decode round trips, direct rc.112 type/runtime vectors, diagnostic negatives, and simulation for each admitted fragment | Pending |
 | Foldlab adapter | source digest, conversions in both directions, round trips, interpretation agreement, counterexample coverage, and axiom receipt for each moved type | Pending |
 
-The strongest present claim is that the implemented finite algebra compiles
+The strongest present claim is that the implemented well-founded algebra compiles
 and has a dedicated proof and counterexample battery. The document makes no
 claim that the pending flow, runtime, target, or compatibility edges are
 proved.
