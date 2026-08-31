@@ -1,8 +1,259 @@
+import Std
+
 /-!
-# Context.Key.lean
+# First-order context keys
 
-Owner: Stable typed service keys.
+Owner: the environment slice's `L0` identity node, fence `F-KEY` in
+`docs/ENVIRONMENT-DAG.md`. Its contract packet is
+`test/contracts/environment-context-key.contract.md` and its red battery is
+`Effect4Test/Environment/ContextKeyContract.lean`.
 
-This breadth stub intentionally declares no semantic object. Its public
-surface is frozen only after the owning contract and counterexample packet.
+A context key is **first-order data**. `ServiceKey` is a `Type` at universe
+zero: the ordered pair of a nominal `ServiceName` and a first-order
+`ServiceTypeCode`, both single-field carriers over `Nat`, following the flow
+slice's `BlockId`/`OperationId`/`AlphabetId`/`DecisionId` convention. No field
+of a key is a Lean `Type` and no field is a Lean function, so a key satisfies
+the `AGENTS.md` "Representation rules" requirement that canonical program
+content be first-order data.
+
+Reading a code as a Lean type is a separate supplied `ServiceUniverse`, in
+exactly the position `Effect4.FlowAlphabet` occupies for the flow slice: a
+trusted boundary object, never canonical content. This module enforces only
+that the *key* carries no universe; keeping a universe out of a downstream
+carrier is each downstream packet's own obligation.
+
+What the first-order answer gives up is priced here rather than asserted:
+`ServiceUniverse.exists_carrier_collision` proves that two distinct codes may
+read as the same Lean type, so type identity never recovers code identity and
+no inverse interpretation exists.
+
+This module imports `Std` and nothing else. It states no requirement row law,
+no environment admission rule, and no persisted or wire spelling of a key. A
+key is an identity plus a code; it is not a service, not a value, and not a
+requirement.
+
+The edge `ENV-KEY-INTERP` is left open: every downstream typing statement about
+a service value is relative to a supplied `ServiceUniverse`, and nothing here
+consumes one. `Context/Service` and `Context/Environment` are the first nodes
+that can state what agreement between two universes buys.
 -/
+
+namespace Effect4
+
+/--
+The nominal identity of a service key.
+
+`Nat` rather than `String` is an ordering decision, not a spelling decision: a
+`String` name would require irreflexivity, transitivity, and trichotomy for
+`String.lt` from core alone, with no consumer at `L0`, and would import a
+persisted spelling question this slice does not own. A wire profile owns tag
+strings later.
+-/
+structure ServiceName where
+  value : Nat
+deriving DecidableEq, Repr
+
+/--
+The first-order code of a service's type.
+
+Nominally distinct from `ServiceName`: a name is not a code, and the two are
+never interchangeable at `ServiceKey.mk`. A code is a `Nat`, never a Lean
+`Type`, and there is no `ServiceTypeCode.ofType` — codes are not minted from
+Lean types.
+-/
+structure ServiceTypeCode where
+  value : Nat
+deriving DecidableEq, Repr
+
+/--
+A context key: a nominal name paired with a first-order service type code.
+
+The identity is the **pair**, not the name. Two keys may share a name and
+differ in code; `ServiceKey.Conflict` names that situation and decides it.
+Effect's `Context.Tag` identity is the tag string alone and cannot express the
+colliding pair, so no compatibility with it is claimed here.
+
+Field order is `name` before `service` and is frozen by the battery's
+`ServiceKey.rec` snapshot.
+-/
+structure ServiceKey where
+  name : ServiceName
+  service : ServiceTypeCode
+deriving DecidableEq, Repr
+
+namespace ServiceKey
+
+/--
+The underlying name-major lexicographic strict order relation on keys.
+
+Name-major is chosen so that nominally equal keys are contiguous in an
+ascending row, which is the shape `ServiceKey.Conflict` will be read against at
+`Context/Environment`. That is the reason for the choice, not a theorem: no
+adjacency result is stated at `L0`.
+
+The order itself is load-bearing and not merely a convenience. `PORT-MANIFEST.md`,
+"Canonical row extraction", freezes canonicality as strictly ascending
+`List.Pairwise (· < ·)` and records that "Effect4 gains no second canonical
+order notion", so a canonical row over keys must cite exactly this relation.
+Three order laws alone would not fix it: a service-major or hash-derived order
+satisfies them and spells a different ascending row for the same key set.
+-/
+protected def Lt (a b : ServiceKey) : Prop :=
+  a.name.value < b.name.value ∨
+    (a.name = b.name ∧ a.service.value < b.service.value)
+
+end ServiceKey
+
+instance : LT ServiceKey where
+  lt := ServiceKey.Lt
+
+/--
+The key order is decided by structural comparison of two `Nat` fields.
+
+The instance is built from `Nat.decLt` and the derived `DecidableEq
+ServiceName`, so it reduces in the kernel; a classically obtained instance
+would satisfy the `Decidable` signature while computing nothing.
+-/
+instance instDecidableLtServiceKey (a b : ServiceKey) : Decidable (a < b) :=
+  inferInstanceAs (Decidable (a.name.value < b.name.value ∨
+    (a.name = b.name ∧ a.service.value < b.service.value)))
+
+namespace ServiceKey
+
+/-- The key order is exactly name-major lexicographic on the two `Nat` fields. -/
+theorem lt_iff (a b : ServiceKey) :
+    a < b ↔ (a.name.value < b.name.value ∨
+      (a.name = b.name ∧ a.service.value < b.service.value)) :=
+  Iff.rfl
+
+/-- The key order is irreflexive. -/
+theorem lt_irrefl (a : ServiceKey) : ¬ a < a := by
+  intro contra
+  rcases (lt_iff a a).mp contra with nameLt | ⟨_, serviceLt⟩
+  · exact Nat.lt_irrefl _ nameLt
+  · exact Nat.lt_irrefl _ serviceLt
+
+/-- The key order is transitive. -/
+theorem lt_trans {a b c : ServiceKey} : a < b → b < c → a < c := by
+  intro hab hbc
+  refine (lt_iff a c).mpr ?_
+  rcases (lt_iff a b).mp hab with nameLt | ⟨nameEq, serviceLt⟩ <;>
+    rcases (lt_iff b c).mp hbc with nameLt' | ⟨nameEq', serviceLt'⟩
+  · exact Or.inl (Nat.lt_trans nameLt nameLt')
+  · have step : b.name.value = c.name.value := congrArg ServiceName.value nameEq'
+    exact Or.inl (Nat.lt_of_lt_of_le nameLt (Nat.le_of_eq step))
+  · have step : a.name.value = b.name.value := congrArg ServiceName.value nameEq
+    exact Or.inl (Nat.lt_of_le_of_lt (Nat.le_of_eq step) nameLt')
+  · exact Or.inr ⟨Eq.trans nameEq nameEq', Nat.lt_trans serviceLt serviceLt'⟩
+
+/-- The key order is trichotomous, so it is a strict linear order. -/
+theorem lt_trichotomy (a b : ServiceKey) : a < b ∨ a = b ∨ b < a := by
+  obtain ⟨⟨aName⟩, ⟨aService⟩⟩ := a
+  obtain ⟨⟨bName⟩, ⟨bService⟩⟩ := b
+  rcases Nat.lt_trichotomy aName bName with nameLt | nameEq | nameGt
+  · exact Or.inl (Or.inl nameLt)
+  · subst nameEq
+    rcases Nat.lt_trichotomy aService bService with serviceLt | serviceEq | serviceGt
+    · exact Or.inl (Or.inr ⟨rfl, serviceLt⟩)
+    · subst serviceEq
+      exact Or.inr (Or.inl rfl)
+    · exact Or.inr (Or.inr (Or.inr ⟨rfl, serviceGt⟩))
+  · exact Or.inr (Or.inr (Or.inl nameGt))
+
+/--
+Two keys are in nominal conflict when they share a name and differ in code.
+
+This is representable and decidable at `L0` so `Context/Environment` has a
+vocabulary it does not have to mint, and so a later admission clause stays
+executable. Whether an environment may *hold* a conflicting pair is that
+node's ruling, not this one's.
+-/
+def Conflict (a b : ServiceKey) : Prop :=
+  a.name = b.name ∧ a.service ≠ b.service
+
+/-- Nominal conflict is decided by the two derived `DecidableEq` instances. -/
+instance instDecidableConflict (a b : ServiceKey) : Decidable (Conflict a b) :=
+  inferInstanceAs (Decidable (a.name = b.name ∧ a.service ≠ b.service))
+
+/-- Nominal conflict is exactly name agreement together with code disagreement. -/
+theorem conflict_iff (a b : ServiceKey) :
+    Conflict a b ↔ (a.name = b.name ∧ a.service ≠ b.service) :=
+  Iff.rfl
+
+end ServiceKey
+
+/--
+A supplied reading of first-order service type codes as Lean types.
+
+This is a trusted boundary object of exactly the kind `Effect4.FlowAlphabet`
+already is in `Effect4/Flow/Block.lean`, whose docstring records that executable
+lookup stays in the trusted semantic environment "so no host function enters
+canonical flow content". The same sentence applies here: a universe is a Lean
+function, it is deliberately outside the first-order frame, and it may not be
+stored as canonical content by any consumer.
+
+There is no canonical universe. "The type of a service" is defined only
+relative to a supplied `U`, and nothing here forces two callers to agree on
+one; that agreement is the open `ENV-KEY-INTERP` edge. There is also no
+`ServiceUniverse.code`: `ServiceUniverse.exists_carrier_collision` shows no
+faithful inverse can exist.
+-/
+structure ServiceUniverse.{u} where
+  Carrier : ServiceTypeCode → Type u
+
+namespace ServiceKey
+
+/--
+The Lean type a key's service value inhabits, relative to a supplied universe.
+
+Selection is by the **code**, never by the nominal name. A name-keyed
+interpretation is the shape reached for when trying to make `ServiceName`
+behave like Effect's tag, and it is excluded here and by `carrier_def`.
+-/
+def Carrier.{u} (U : ServiceUniverse.{u}) (k : ServiceKey) : Type u :=
+  U.Carrier k.service
+
+/-- A key's carrier is selected by its service code. -/
+theorem carrier_def.{u} (U : ServiceUniverse.{u}) (k : ServiceKey) :
+    Carrier U k = U.Carrier k.service :=
+  rfl
+
+/--
+The only transport this node supplies between key carriers.
+
+The equality of codes is an explicit argument, so no service value crosses
+codes without a proof, and there is no `ServiceKey.cast`. The signature takes
+no instance argument, so a default value cannot be produced in place of the
+transported one.
+-/
+def transport.{u} (U : ServiceUniverse.{u}) {a b : ServiceKey}
+    (h : a.service = b.service) (v : Carrier U a) : Carrier U b :=
+  Eq.mp (congrArg U.Carrier h) v
+
+/-- Transport along reflexivity is the identity. -/
+theorem transport_rfl.{u} (U : ServiceUniverse.{u}) (k : ServiceKey)
+    (v : Carrier U k) :
+    transport U (rfl : k.service = k.service) v = v :=
+  rfl
+
+end ServiceKey
+
+/--
+Distinct service type codes may read as the same Lean type.
+
+This is the price of the first-order answer, stated as a theorem rather than as
+prose: type identity never recovers code identity, so no inverse interpretation
+`Type → ServiceTypeCode` exists and every consumer must route through the code.
+A `ServiceUniverse` constrained to an injective `Carrier` would refute this, and
+that constrained design is exactly the one under which a consumer could recover
+a code from a type.
+
+The witness is deliberately trivial — a constant carrier — because triviality is
+the point: nothing in the design constrains a universe to be injective.
+-/
+theorem ServiceUniverse.exists_carrier_collision :
+    ∃ (U : ServiceUniverse.{0}) (a b : ServiceTypeCode),
+      a ≠ b ∧ U.Carrier a = U.Carrier b :=
+  ⟨⟨fun _ => Unit⟩, ⟨0⟩, ⟨1⟩, by decide, rfl⟩
+
+end Effect4
