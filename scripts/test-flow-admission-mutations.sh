@@ -31,6 +31,7 @@ snapshot_checkout() {
     done < <(find \
       Effect4/Flow \
       Effect4Test/Flow/AdmissionContract.lean \
+      Effect4Test/Flow/DiagnosticPrecisionContract.lean \
       scripts/test-flow-admission-mutations.sh \
       \( -type f -o -type l \) -print0)
   ) | LC_ALL=C sort >"$output"
@@ -94,8 +95,30 @@ run_contract_pass() {
   local project="$1"
   local log="$2"
   if ! (cd -- "$project" && \
-      lake env lean Effect4Test/Flow/AdmissionContract.lean) >"$log" 2>&1; then
-    printf 'FAIL unmodified frozen Flow battery did not pass\n' >&2
+      lake env lean Effect4Test/Flow/AdmissionContract.lean && \
+      lake env lean Effect4Test/Flow/DiagnosticPrecisionContract.lean) \
+      >"$log" 2>&1; then
+    printf 'FAIL unmodified frozen Flow batteries did not pass\n' >&2
+    tail -100 "$log" >&2
+    exit 1
+  fi
+}
+
+run_precision_contract_killed() {
+  local project="$1"
+  local log="$2"
+  local status
+  set +e
+  (cd -- "$project" && \
+    lake env lean Effect4Test/Flow/DiagnosticPrecisionContract.lean) \
+    >"$log" 2>&1
+  status=$?
+  set -e
+  if [[ "$status" -eq 0 ]]; then
+    fail "mutant survived the frozen Flow diagnostic-precision battery"
+  fi
+  if ! grep -Fq -- 'did not evaluate to `true`' "$log"; then
+    printf 'FAIL precision battery rejected mutant without the expected observational guard\n' >&2
     tail -100 "$log" >&2
     exit 1
   fi
@@ -231,6 +254,12 @@ diff --git a/Effect4/Flow/Raw.lean b/Effect4/Flow/Raw.lean
 diff --git a/Effect4/Flow/Admission.lean b/Effect4/Flow/Admission.lean
 --- a/Effect4/Flow/Admission.lean
 +++ b/Effect4/Flow/Admission.lean
+@@ -83,3 +83,4 @@ inductive TermFailureValid
+       (term : block.term = .jump target)
+-      (missing : lookupBlock raw target = none) :
++      (missing : lookupBlock raw target = none)
++      (impossible : False) :
+       TermFailureValid alphabet raw block (.block target)
 @@ -86,7 +86,7 @@ private def localTermWF
    | .ret => block.inputTy = raw.resultTy
    | .jump target =>
@@ -249,6 +278,22 @@ diff --git a/Effect4/Flow/Admission.lean b/Effect4/Flow/Admission.lean
        | some targetBlock =>
            if targetBlock.inputTy = block.inputTy then none
            else some (.typeMismatch block.inputTy targetBlock.inputTy)
+@@ -905,6 +905,4 @@ private theorem termFailure?_eq_some_iff [DecidableEq Ty]
+         | none =>
+             simp [termFailure?, termEq, targetEq] at failure
+-            subst payload
+-            exact .jumpMissing termEq targetEq
+         | some targetBlock =>
+             by_cases typed : targetBlock.inputTy = block.inputTy
+@@ -972,6 +970,6 @@ private theorem termFailure?_eq_some_iff [DecidableEq Ty]
+     | retTypeMismatch term mismatch =>
+         simp [termFailure?, term, mismatch]
+-    | jumpMissing term missing =>
+-        simp [termFailure?, term, missing]
++    | jumpMissing term missing impossible =>
++        contradiction
+     | jumpTypeMismatch term found mismatch =>
+         simp [termFailure?, term, found, mismatch]
 PATCH
       ;;
     perform-answer)
@@ -271,6 +316,14 @@ diff --git a/Effect4/Flow/Raw.lean b/Effect4/Flow/Raw.lean
 diff --git a/Effect4/Flow/Admission.lean b/Effect4/Flow/Admission.lean
 --- a/Effect4/Flow/Admission.lean
 +++ b/Effect4/Flow/Admission.lean
+@@ -112,5 +112,6 @@ inductive TermFailureValid
+       (found : lookupBlock raw target = some targetBlock)
+       (request : block.inputTy = alphabet.requestTy operationDef)
+-      (mismatch : targetBlock.inputTy ≠ alphabet.answerTy operationDef) :
++      (mismatch : targetBlock.inputTy ≠ alphabet.answerTy operationDef)
++      (impossible : False) :
+       TermFailureValid alphabet raw block
+         (.typeMismatch (alphabet.answerTy operationDef) targetBlock.inputTy)
 @@ -90,9 +90,8 @@ private def localTermWF
        | some targetBlock => targetBlock.inputTy = block.inputTy
    | .perform operation target =>
@@ -297,6 +350,46 @@ diff --git a/Effect4/Flow/Admission.lean b/Effect4/Flow/Admission.lean
            else
              some (.typeMismatch
                (alphabet.requestTy operation) block.inputTy)
+@@ -929,10 +926,7 @@ private theorem termFailure?_eq_some_iff [DecidableEq Ty]
+                       targetBlock.inputTy = alphabet.answerTy operationDef
+                   · simp [termFailure?, termEq, operationEq, targetEq,
+                       requestTyped, answerTyped] at failure
+                   · simp [termFailure?, termEq, operationEq, targetEq,
+                       requestTyped, answerTyped] at failure
+-                    subst payload
+-                    exact .performAnswerTypeMismatch termEq operationEq
+-                      targetEq requestTyped answerTyped
+                 · simp [termFailure?, termEq, operationEq, targetEq,
+                     requestTyped] at failure
+@@ -981,6 +974,6 @@ private theorem termFailure?_eq_some_iff [DecidableEq Ty]
+     | performRequestTypeMismatch term known found mismatch =>
+         simp [termFailure?, term, known, found, mismatch]
+-    | performAnswerTypeMismatch term known found request mismatch =>
+-        simp [termFailure?, term, known, found, request, mismatch]
++    | performAnswerTypeMismatch term known found request mismatch impossible =>
++        contradiction
+     | chooseMissingLeft term missing =>
+         simp [termFailure?, term, missing]
+PATCH
+      ;;
+    diagnostic-precision)
+      # The temporary hole bypasses the proof-carrying boundary so the
+      # observational battery, not the kernel, must reject this counterfactual
+      # bad witness. The repository trust gate separately forbids such holes
+      # in the real source tree.
+      cat >"$patch_file" <<'PATCH'
+diff --git a/Effect4/Flow/Admission.lean b/Effect4/Flow/Admission.lean
+--- a/Effect4/Flow/Admission.lean
++++ b/Effect4/Flow/Admission.lean
+@@ -1089,7 +1089,6 @@ private def preciseFailure [DecidableEq Ty]
+           have first := firstFailure?_eq_some_valid
+             (duplicateDecisionFailure?_eq_some_iff raw) found
+-          exact ⟨.decision block.id, .decision decision,
+-            .duplicateDecisionId first⟩
++          exact ⟨.flow, .none, by sorry⟩
+   | nonCanonicalBlockOrder =>
+       cases found : firstFailure? raw.blocks
+           (orderFailure? raw.blocks
 PATCH
       ;;
     *) fail "unknown mutant: $name" ;;
@@ -329,7 +422,7 @@ run_build "$mutant_root" "$tmp_root/scan-order-build.log"
 run_contract_killed "$mutant_root" "$tmp_root/scan-order-contract.log" \
   'AdmissionContract.lean:182:0: error' \
   'AdmissionContract.lean:548:0: error'
-printf 'PASS mutant 1/3 killed: swapped first-error scan order\n'
+printf 'PASS mutant 1/4 killed: swapped first-error scan order\n'
 
 reset_mutant
 apply_mutant dangling-successor
@@ -337,14 +430,21 @@ run_build "$mutant_root" "$tmp_root/dangling-successor-build.log"
 run_contract_killed "$mutant_root" "$tmp_root/dangling-successor-contract.log" \
   'AdmissionContract.lean:474:0: error' \
   'AdmissionContract.lean:580:0: error'
-printf 'PASS mutant 2/3 killed: weakened dangling-jump admission\n'
+printf 'PASS mutant 2/4 killed: weakened dangling-jump admission\n'
 
 reset_mutant
 apply_mutant perform-answer
 run_build "$mutant_root" "$tmp_root/perform-answer-build.log"
 run_contract_killed "$mutant_root" "$tmp_root/perform-answer-contract.log" \
   'AdmissionContract.lean:508:0: error'
-printf 'PASS mutant 3/3 killed: removed perform answer-target equality\n'
+printf 'PASS mutant 3/4 killed: removed perform answer-target equality\n'
+
+reset_mutant
+apply_mutant diagnostic-precision
+run_build "$mutant_root" "$tmp_root/diagnostic-precision-build.log"
+run_precision_contract_killed "$mutant_root" \
+  "$tmp_root/diagnostic-precision-contract.log"
+printf 'PASS mutant 4/4 killed: substituted unrelated diagnostic witness\n'
 
 verify_checkout_unchanged
-printf 'PASS finite Flow-admission mutation coverage: 3/3 specified mutants killed\n'
+printf 'PASS finite Flow-admission mutation coverage: 4/4 specified mutants killed\n'
