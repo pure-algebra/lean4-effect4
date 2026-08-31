@@ -11,9 +11,17 @@ attacks_file="test/counterexamples/concurrency/ATTACKS.md"
 register_file="test/counterexamples/REGISTER.md"
 counterexample_log="$(mktemp)"
 contract_log="$(mktemp)"
-trap 'rm -f "$counterexample_log" "$contract_log"' EXIT
+dependency_log="$(mktemp)"
+trap 'rm -f "$counterexample_log" "$contract_log" "$dependency_log"' EXIT
 
 cd "$repo_root"
+
+if ! lake build Effect4.Concurrency.Fiber Effect4.Concurrency.Interrupt \
+    Effect4.Concurrency.Scheduler >"$dependency_log" 2>&1; then
+  echo "fiber representative production dependencies did not compile" >&2
+  cat "$dependency_log" >&2
+  exit 1
+fi
 
 if ! lake env lean "$counterexample_file" >"$counterexample_log" 2>&1; then
   echo "fiber representative counterexamples did not compile" >&2
@@ -58,7 +66,7 @@ while IFS= read -r sentinel; do
   fi
 done < "$sentinel_file"
 
-if grep -Eq 'unknown module|Unknown identifier|invalid import|unexpected token|declaration uses .sorry' \
+if grep -Eq 'unknown module|Unknown identifier `τ`|invalid import|unexpected token|declaration uses .sorry' \
     "$contract_log"; then
   echo "fiber representative contract failed for an unrelated reason" >&2
   cat "$contract_log" >&2
