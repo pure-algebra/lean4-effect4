@@ -4,7 +4,9 @@ Stable IDs in this file are never reused. A row closes only when its witness
 is retained and the repaired declaration or theorem mechanically rejects the
 attack. `PINNED` means the witness already exists at the named immutable source
 revision; `SEEDED` means the packet has frozen the attack but no immutable
-provenance pin for its Effect4 witness has yet been recorded.
+provenance pin for its Effect4 witness has yet been recorded. `RESERVED` means
+the stable row and forced repair are frozen now, while the executable witness
+belongs to a later packet whose declarations are not open yet.
 
 | ID | Status | Attacked statement | Witness / evidence | Forced repair |
 | --- | --- | --- | --- | --- |
@@ -26,9 +28,35 @@ provenance pin for its Effect4 witness has yet been recorded.
 | `E4-FLOW-CE-014` | SEEDED | Reference closure may ignore unreachable blocks, or admission may require every block reachable and acyclic | `Effect4Test/Flow/AdmissionContract.lean`, `unreachableClosedCycleFlow` and `unreachableDanglingFlow` | allow unreachable closed cycles but reject every dangling successor in the whole raw document |
 | `E4-FLOW-CE-015` | SEEDED | Public proof projections are enough reason to expose an unchecked `CheckedFlow` constructor | direct-name and record-literal compile-negatives in `Effect4Test/Flow/PrivacyContract.lean`, reachable from `Effect4Test.lean` | keep `CheckedFlow.mk` module-private and require every external checked value to cross `admit` |
 | `E4-FLOW-CE-016` | SEEDED | A failed clause licenses any site/payload, or only clause-level firstness needs proof | `Effect4Test/Flow/DiagnosticPrecisionContract.lean`, exact duplicate-decision and nested source-order guards plus the rejected `.flow/.none` witness | require `Diagnostic.Valid`, prove source-index and nested-order precision for every returned diagnostic, and expose `admit_error_valid` as the observational no-fallback law |
+| `E4-SCHEMA-CE-001` | RESERVED | Overlapping `anyOf` members may be treated as unordered success | `schema/ATTACKS.md`; executable overlap witness assigned to the denotation packet | retain source member order and define `anyOf` observation as the first successful member |
+| `E4-SCHEMA-CE-002` | RESERVED | `oneOf` may accept the first success even when another member succeeds | `schema/ATTACKS.md`; executable overlap witness assigned to the denotation packet | reject multiple successes and distinguish zero, one, and many successful members |
+| `E4-SCHEMA-CE-003` | RESERVED | Enum encode is injective even when distinct names alias one value | `schema/ATTACKS.md`; alias witness assigned to the codec packet | qualify injectivity by a uniqueness condition or define an explicit canonical-name policy |
+| `E4-SCHEMA-CE-004` | RESERVED | Any tuple ordering with optional and required members is admissible | `schema/ATTACKS.md`; malformed tuple assigned to the payload admission packet | reject an optional tuple member followed by a required member |
+| `E4-SCHEMA-CE-005` | RESERVED | Every transformation has an unqualified encode/decode round trip | `schema/ATTACKS.md`; trim witness assigned to the transformation packet | state directional or normalized round-trip laws with their exact domain assumptions |
+| `E4-SCHEMA-CE-006` | RESERVED | Decode-only service requirements also constrain encoding | `schema/ATTACKS.md`; split-environment witness assigned to the transformation packet | track decode and encode requirements separately and join only where both are used |
+| `E4-SCHEMA-CE-007` | RESERVED | Transformation encodings compose in decoder order | `schema/ATTACKS.md`; non-commuting pair assigned to the transformation packet | freeze encoding composition direction with a theorem over an order-sensitive witness |
+| `E4-SCHEMA-CE-008` | RESERVED | A declaration reference may decode without a registered reviver | `schema/ATTACKS.md`; missing-identity witness assigned to the registry packet | refuse an unresolved declaration identity at the checked registry boundary |
+| `E4-SCHEMA-CE-009` | RESERVED | Duplicate reviver identities may use first- or last-row lookup | `schema/ATTACKS.md`; duplicate-identity witness assigned to the registry packet | reject duplicate identities before lookup so revival has one meaning |
+| `E4-SCHEMA-CE-010` | RESERVED | A live-only local symbol may enter portable wire data | `schema/ATTACKS.md`; host-symbol witness assigned to payload and codec packets | exclude local symbols from checked portable keys and prove lowering cannot reintroduce them |
+| `E4-SCHEMA-CE-011` | RESERVED | All host annotations survive portable serialization | `schema/ATTACKS.md`; non-JSON annotation witness assigned to the codec packet | specify and test the exact pruning or refusal policy for non-portable annotations |
+| `E4-SCHEMA-CE-012` | RESERVED | Parsing object entries into a map preserves duplicate-key evidence | `schema/ATTACKS.md`; duplicate-key witness assigned to the document packet | retain ordered raw entries until duplicate detection, then construct a checked map |
+| `E4-SCHEMA-CE-013` | RESERVED | A bare self-reference is a guarded recursive representation | `schema/ATTACKS.md`; self-cycle witness assigned to reference admission | reject reference cycles with no `Suspend` guard on the cycle path |
+| `E4-SCHEMA-CE-014` | RESERVED | Every recursive reference cycle must be rejected | `schema/ATTACKS.md`; guarded-cycle witness assigned to reference admission | admit a closed cycle when every recursive path crosses the required `Suspend` guard |
+| `E4-SCHEMA-CE-015` | RESERVED | One bounded fan-graph probe proves acceptable guardedness complexity | `schema/ATTACKS.md`; adversarial family assigned to reference admission | require memoized graph analysis and report only measured finite bounds until a complexity theorem exists |
+| `E4-SCHEMA-CE-016` | RESERVED | Middleware and value getters are one declaration shape | `schema/ATTACKS.md`; signature witness assigned to the getter packet | keep middleware composition and value projection as distinct typed interfaces |
+| `E4-SCHEMA-CE-017` | SEEDED | Identical persisted field shapes permit semantic collapse; or the flat API follows as a theorem from field shape | `Effect4Test/Counterexamples/Schema/SemanticTagSeparation.lean`, plus the exact recursor snapshot in `Effect4Test/Schema/RepresentationContract.lean` | preserve all 22 nominal values; independently freeze the flat carrier as a native minimality/API ruling without minting a duplicate `KeywordKind` alphabet |
+| `E4-SCHEMA-CE-018` | SEEDED | A Lean constructor name determines the persisted `_tag` spelling | `Effect4Test/Counterexamples/Schema/WireSpellingDrift.lean` | pin the case-sensitive wire string per tag and prove injectivity plus a partial inverse |
+| `E4-SCHEMA-CE-019` | SEEDED | `census.length = 22` establishes the census | `Effect4Test/Counterexamples/Schema/CensusCoverage.lean`, `decoyCensus` with 22 entries, one repeat, one omission | require length, duplicate freedom, and coverage as three separate theorems, coverage by case analysis |
+| `E4-SCHEMA-CE-020` | SEEDED | Enum member values and literal payloads may share one kind alphabet | `Effect4Test/Counterexamples/Schema/KindAlphabetSeparation.lean` | keep `EnumValueKind` and `LiteralKind` separate and relate them by an explicit non-surjective kind-level embedding |
+| `E4-SCHEMA-CE-021` | SEEDED | `null` is a persisted literal payload kind | compile-negative in `Effect4Test/Counterexamples/Schema/NoNullLiteralKind.lean`, plus the 4-entry census | enforce the exclusion by absent constructor, not by a later admission rule; keep the `Null` representation tag distinct |
+| `E4-SCHEMA-CE-022` | SEEDED | Object property keys may include live-only local symbols | compile-negative in `Effect4Test/Counterexamples/Schema/NoLocalSymbolPropertyKey.lean`, plus the 3-entry census | admit only string, number, and global-symbol keys; necessary condition for reserved `E4-SCHEMA-CE-010`, not a discharge |
+| `E4-SCHEMA-CE-023` | PINNED | The `number` spelling denotes one numeric domain across `Literal`, `Enum`, and property keys | pinned rc.112 `SchemaRepresentation.ts` (SHA-256 `a0a7a153...ae69bc`): `Literal` uses `Schema.Finite` at `:1005`, `Enum` uses `Schema.Number` at `:999`/`:1020` | keep kind-level maps free of value-domain claims; the payload packet must carry the finite/unrestricted distinction explicitly |
+| `E4-SCHEMA-CE-024` | PINNED | A non-empty references table means the document is recursive | sealed rc.112 pin `SchemaReferencesPin.test.ts` (SHA-256 `73b28e60...4106cb`): a shared non-recursive name allocates a table entry with zero `Suspend` nodes | never infer recursion from table non-emptiness; recursion is a `Suspend` on a reference path, not a populated table |
+| `E4-SCHEMA-CE-025` | PINNED | An Effect4 admission refusal is an rc.112 refusal | same sealed pin: rc.112 accepts a dangling `$ref`, a self alias, a two-step alias cycle, an unguarded structural cycle, and a dead table entry | state `SC-CAS-*` compatibility directionally; Effect4-admitted implies host-accepted, never the converse |
 
 Area-specific attack shapes are in
-[`algebra/ATTACKS.md`](algebra/ATTACKS.md) and
-[`flow/ATTACKS.md`](flow/ATTACKS.md). Fired implementation attacks add a
+[`algebra/ATTACKS.md`](algebra/ATTACKS.md),
+[`flow/ATTACKS.md`](flow/ATTACKS.md), and
+[`schema/ATTACKS.md`](schema/ATTACKS.md). Fired implementation attacks add a
 `BROKE / LAW / WITNESS / CLASS / FIXED-BY` record to the owning contract packet
 without deleting the stable row.

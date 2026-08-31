@@ -5,6 +5,14 @@ import Effect4Test.Flow.AdmissionContract
 import Effect4Test.Flow.DiagnosticPrecisionContract
 import Effect4Test.Flow.AxiomReport
 import Effect4Test.Flow.PrivacyContract
+import Effect4Test.Counterexamples.Schema.CensusCoverage
+import Effect4Test.Counterexamples.Schema.KindAlphabetSeparation
+import Effect4Test.Counterexamples.Schema.NoLocalSymbolPropertyKey
+import Effect4Test.Counterexamples.Schema.NoNullLiteralKind
+import Effect4Test.Counterexamples.Schema.SemanticTagSeparation
+import Effect4Test.Counterexamples.Schema.WireSpellingDrift
+import Effect4Test.Schema.RepresentationContract
+import Effect4Test.Schema.SubAlphabetContract
 import Effect4Test.Audit.AxiomGate
 
 /-!

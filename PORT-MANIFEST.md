@@ -8,7 +8,8 @@ Status: P1/P3 closure active, 2026-08-31. The generic algebra is implemented
 and its current breaker battery is green, but independent review found
 retained source declarations that still require row-level dispositions.
 Schema, flow, runtime, concurrency, target, and Foldlab compatibility rows
-remain open until their own proof graphs close.
+remain open until their declared assurance routes close: proof graphs for
+semantic owners, and exact leaf receipts for passive finite declarations.
 
 ## Authority pins
 
@@ -262,6 +263,174 @@ an elaboration theorem back to that semantics; no Schema-specific effect
 monad or program carrier is admitted. `Schema`, `Decoder`, `Encoder`, and
 `Top` are existential views of that codec rather than new carriers.
 
+### Schema tag declaration dispositions
+
+These rows are the pre-implementation identity boundary for the six proposed
+public types. They allocate one owner and one canonical role before any
+implementation is accepted. Every row is `required-open` until its frozen
+signature, counterexamples, theorem receipt, and evidence ID are joined by a
+generated assurance check; this prose assigns work but closes no row.
+
+| Stable type row | Exact Lean declaration and owner | Canonical role | Native origin and source disposition | Duplicate-prevention relation | Assurance allocation |
+| --- | --- | --- | --- | --- | --- |
+| `E4-TYPE-SCHEMA-REPRESENTATION-TAG` | `Effect4.RepresentationTag`; Lean module `Effect4.Schema.Representation`; file `Effect4/Schema/Representation.lean` | sole canonical carrier for the 22 persisted representation-node identities; it is neither the future payload `Representation` nor its denotation; content identity: none | native contract `test/contracts/schema-representation.contract.md`; `owned`; constrained by the pinned rc.112 source census, with no Foldlab carrier ported | intentionally separate from `Effect4.CheckTag`; equal payload shapes never merge nominal tags or justify a second parameterized keyword alphabet | `proofGraphId = SCHEMA-PG-REPRESENTATION-TAG`; `receiptId = SCHEMA-AX-REPRESENTATION-TAG`; `evidenceId = SCHEMA-EV-REPRESENTATION-TAG-CENSUS`; `required-open` |
+| `E4-TYPE-SCHEMA-UNION-MODE` | `Effect4.UnionMode`; Lean module `Effect4.Schema.Representation`; file `Effect4/Schema/Representation.lean` | sole canonical finite selector for persisted `anyOf` versus `oneOf`; operational branch meaning remains in the later denotation; content identity: none | native contract `test/contracts/schema-subalphabets.contract.md`; `owned`; exact spellings are source evidence delegated to the parent graph | separate from representation tags and from union payloads; no duplicate mode carrier | `leafReceiptId = SCHEMA-LEAF-UNION-MODE`; `receiptId = SCHEMA-AX-UNION-MODE`; `evidenceId = SCHEMA-EV-UNION-MODE-CENSUS`; `parentGraphEdge = SCHEMA-PG-REPRESENTATION-TAG/representation`; `required-open` |
+| `E4-TYPE-SCHEMA-CHECK-TAG` | `Effect4.CheckTag`; Lean module `Effect4.Schema.Representation`; file `Effect4/Schema/Representation.lean` | sole canonical finite tag carrier for persisted `Filter | FilterGroup`; it is not the future `Check` payload; content identity: none | native contract `test/contracts/schema-subalphabets.contract.md`; `owned`; exact spellings are source evidence delegated to the parent graph | intentionally separate from `Effect4.RepresentationTag`; no second `CheckTag` may be minted by `Schema.Check` | `leafReceiptId = SCHEMA-LEAF-CHECK-TAG`; `receiptId = SCHEMA-AX-CHECK-TAG`; `evidenceId = SCHEMA-EV-CHECK-TAG-CENSUS`; `parentGraphEdge = SCHEMA-PG-REPRESENTATION-TAG/representation`; `required-open` |
+| `E4-TYPE-SCHEMA-LITERAL-KIND` | `Effect4.LiteralKind`; Lean module `Effect4.Schema.Representation`; file `Effect4/Schema/Representation.lean` | sole canonical finite classifier for literal payload kinds; it is not a literal value carrier; content identity: none | native contract `test/contracts/schema-subalphabets.contract.md`; `owned`; the ruling invents no independent wire spelling | distinct from the `RepresentationTag.literal` node and from `EnumValueKind`; absence of `null` is part of this alphabet | `leafReceiptId = SCHEMA-LEAF-LITERAL-KIND`; `receiptId = SCHEMA-AX-LITERAL-KIND`; `evidenceId = SCHEMA-EV-LITERAL-KIND-CENSUS`; `parentGraphEdge = SCHEMA-PG-REPRESENTATION-TAG/representation`; `required-open` |
+| `E4-TYPE-SCHEMA-ENUM-VALUE-KIND` | `Effect4.EnumValueKind`; Lean module `Effect4.Schema.Representation`; file `Effect4/Schema/Representation.lean` | sole canonical finite classifier for enum-entry value kinds; it is not an enum value carrier; content identity: none | native contract `test/contracts/schema-subalphabets.contract.md`; `owned`; the ruling invents no independent wire spelling | narrower than `LiteralKind`; `SCHEMA-REL-ENUM-TO-LITERAL-KIND` in the parent graph records the injective kind map and the explicit non-claim of a value-level numeric embedding | `leafReceiptId = SCHEMA-LEAF-ENUM-VALUE-KIND`; `receiptId = SCHEMA-AX-ENUM-VALUE-KIND`; `evidenceId = SCHEMA-EV-ENUM-VALUE-KIND-CENSUS`; `parentGraphEdge = SCHEMA-PG-REPRESENTATION-TAG/representation`; `required-open` |
+| `E4-TYPE-SCHEMA-PROPERTY-KEY-KIND` | `Effect4.PropertyKeyKind`; Lean module `Effect4.Schema.Representation`; file `Effect4/Schema/Representation.lean` | sole canonical finite classifier for portable property-key kinds; it is not a property-key value carrier; content identity: none | native contract `test/contracts/schema-subalphabets.contract.md`; `owned`; the ruling invents no independent wire spelling | separate from literal and enum kinds; absence of a local-symbol constructor prevents a duplicate portable identity for a host-local symbol | `leafReceiptId = SCHEMA-LEAF-PROPERTY-KEY-KIND`; `receiptId = SCHEMA-AX-PROPERTY-KEY-KIND`; `evidenceId = SCHEMA-EV-PROPERTY-KEY-KIND-CENSUS`; `parentGraphEdge = SCHEMA-PG-REPRESENTATION-TAG/representation`; `required-open` |
+
+`SCHEMA-PG-REPRESENTATION-TAG` is the one standalone proof graph in this
+packet because `RepresentationTag` is source-facing and carries the Schema tag
+cutover boundary. It owns the source pin and extracted spelling-set edge, the
+exact declaration signature and constructor order, nominal separation,
+registered counterexamples, axiom receipt, and export coverage. The five
+auxiliary enums are finite leaves: their constructors, census, local spelling
+laws where applicable, counterexamples, and axiom receipts fit in their named
+`leafReceipt` records. A leaf must be promoted to its own graph if it later
+acquires independent admission, denotation, bridge, target, compatibility, or
+host-boundary obligations.
+
+The parent graph has no implicit fourth state. Its ten standard edges are
+allocated before implementation as follows:
+
+| `SCHEMA-PG-REPRESENTATION-TAG` edge | Initial state | Exact scope |
+| --- | --- | --- |
+| `identity` | `required-open` | unique owner, stable Lean name/module, native-contract origin, and pinned source disposition |
+| `construction` | `required-open` | exact 22 constructors, dependent recursor order, census length, duplicate freedom, and coverage |
+| `semantics` | `not-applicable` | this tag-only carrier owns no denotation, judgment, admission, or observation |
+| `laws` | `not-applicable` | no composition or operational law is claimed; spelling laws are classified under `representation` |
+| `representation` | `required-open` | exact tag spellings, partial inverse, nominal separation, lexical pin evidence, five attached leaf receipts, and `SCHEMA-REL-ENUM-TO-LITERAL-KIND` |
+| `counterexamples` | `required-open` | durable `E4-SCHEMA-CE-017` through `E4-SCHEMA-CE-022` witnesses and reserved later-layer rows retained centrally |
+| `bridges` | `not-applicable` | no alternate Lean, Foldlab, or host carrier is related by this packet |
+| `targets` | `not-applicable` | this packet defines no TypeScript lowering, generated bytes, or host execution claim |
+| `trust` | `required-open` | complete exported-theorem axiom receipt under the repository ceiling |
+| `coverage` | `required-open` | exact public declaration/constructor export snapshot and pinned lexical source census |
+
+Every `required-open` edge remains open until its evidence is mechanically
+joined. A later semantic, bridge, or target claim must first change the
+corresponding `not-applicable` row through a new breaker packet.
+
+The native packets are `test/contracts/schema-representation.contract.md` and
+`test/contracts/schema-subalphabets.contract.md`; their declaration-changing
+attacks use `E4-SCHEMA-CE-017` through `E4-SCHEMA-CE-022`. The payload carrier
+— `SC-REP-01`, `SC-REP-04`, `Check` payloads, annotations, `Document`, and
+`MultiDocument` — remains unopened behind the sixteen reserved payload and
+semantic counterexamples. No tag declaration, theorem count, or source gate
+result in the working tree is a whole-slice closure claim.
+
+The exact rc.112 bytes are present in the Foldlab checkout at SHA-256
+`a0a7a1537cfe3a9159a80210e3de92342cc9e98651f0e8273a75ccdcccae69bc`.
+`./scripts/check-schema-census.sh` compares two lexical source extractions
+against the Lean tag-name extraction and, on those pinned bytes, reports exact
+set agreement for 22 representation spellings and 2 check spellings. This is
+source-spelling evidence only: it is not payload, decoder, denotational, or
+whole-host faithfulness.
+
+Profile ownership is settled before those stubs open. `Effect4.Protocol.Profile`
+owns versioned profile identity, and `Effect4.Protocol.Admission` owns generic
+profile membership and admission policy. Future `Effect4.Schema.Check` owns
+only Schema-specific structural classification and diagnostics as a consumer
+of those Protocol facilities; it does not own `SC-PROFILE` identity or mint a
+second profile carrier. Ownership of `SC-ISSUE-01` typed issue exit remains
+open.
+
+### Authored usage profile
+
+A read-only survey of authored Effect code on the build host counted 77,010
+Schema member accesses across 3,318 files in 76 projects, excluding library
+clones and vendored Effect sources. About half the estate is on Effect 4, and
+`foldlab` pins `4.0.0-rc.112` — the exact revision this census is frozen
+against.
+
+This is dated machine evidence, not a sealed corpus: it is re-derivable but
+carries no digest pin, and it is authority for **what people write**, never
+for what rc.112 admits.
+
+Eleven tags cover more than 99.4% of authored nodes: `String`, `Objects`,
+`Number`, `Union`, `Arrays`, `Literal`, `Boolean`, `Unknown`, `Declaration`,
+`Null`, and `Suspend`.
+
+Four census tags were never used in any domain model. `Enum`, `Symbol`,
+`UniqueSymbol`, and `ObjectKeyword` account for 24 occurrences in total, all
+in test fixtures, two of which are *negative* refusal fixtures. `Reference` is
+never authored at all — it is encoder-only output.
+
+No symbol property key exists anywhere in the surveyed estate. All 503 index
+signatures are `Schema.String`-keyed, plus two `TemplateLiteral`.
+
+This survey is a *prioritisation* input for the future work named
+`SC-PROFILE-01` through `SC-PROFILE-03`; it closes none of those edges. It
+supports starting with a narrow profile, while the carrier still models all
+22 tags: a profile is a checked subset of the full alphabet, never a smaller
+alphabet.
+
+Three findings bear on specific obligations:
+
+- **Recursion is used**: 58 occurrences across 19 projects, including mutual
+  recursion and recursion across a class boundary. `SC-DOC-*` is not
+  hypothetical work.
+- **`declare` is used**: 48 occurrences across 11 projects, in three distinct
+  shapes — opaque pass-through, real `instanceof` guards, and content-address
+  carriers. That is the `foreignBoundary` surface, and it is load-bearing.
+- **Lossy transformations are real and estate-wide**, which is why no
+  universal round-trip law may be assigned to all codecs. Witnesses include a
+  decode that lowercases against an identity encode, a case-folding decode
+  against a passthrough encode, an estate-wide `SchemaTransformation.trim()`,
+  a canonicalising encode, and an `encodeURIComponent`/`decodeURIComponent`
+  pair underpinning one service's whole route-param layer. These are the
+  real-world form of `E4-SCHEMA-CE-005`.
+
+### Guarded document prior art
+
+The Foldlab tree carries substantial, directly reusable evidence for the
+`SC-DOC-*` family, and almost none for `SC-REP-01`/`SC-REP-04`. All rows are
+`evidenceOnly`; proof shapes are re-proved natively, carriers are not imported.
+
+| Foldlab source | Effect4 obligation | What transfers |
+| --- | --- | --- |
+| `Cas/Schema/Guarded.lean:191-193` `Document.settles` | `SC-DOC-05` | bounded cost evidence only: an independent breaker measured 302,915 ms on one 25-entry acyclic fan table; an asymptotic exponential theorem remains open |
+| `Cas/Schema/Guarded.lean:449-462` `settleAll` | `SC-DOC-04` | the memoised checker. Two decisive properties: the memo is fuel-free, and a name enters it only on the way back out, so a cycle never enters the memo |
+| `Cas/Schema/Guarded.lean:708-722` `guardedMemo_eq_guarded` | `SC-DOC-04` | the memo changed the schedule and not the answer — this is `SC-DOC-04` verbatim |
+| `Cas/Schema/Guarded.lean:734-748` `fanOutTable` | `E4-SCHEMA-CE-015` | the library-resident family used by the bounded fan-out cost witness; the observed 25-entry run is not an asymptotic proof |
+| `Cas/Schema/Ingest.lean:881-891` `aliasCycle`, `bareStructCycle` | `E4-SCHEMA-CE-013` | bare self-reference, with cyclicity exhibited as explicit reachability derivations rather than asserted |
+| `Cas/Schema/Ingest.lean:871-875` `guardedList` | `E4-SCHEMA-CE-014` | the guarded recursive control, which decodes in about a millisecond on the same path |
+
+Two obligations were added to the Schema graph from this evidence and remain
+owed before `SC-DOC` or `SC-DEN` can close:
+
+- **Guardedness decides constructibility, not productivity.** `Ast.susp` is a
+  delay, not a constructor: putting a recursive occurrence under one defers
+  the loop rather than breaking it. Foldlab records three documents that are
+  `Guarded`, admitted by both of its doors, and still have no value — Effect's
+  own validator runs forever on `{"A": susp (reference "A")}`, overflows the
+  stack on `{"A": susp (union [reference "A", null])}`, and knots at one
+  remove on `{"A": susp (reference "B"), "B": reference "A"}`
+  (`Cas/Schema/Guarded.lean:29-50`). Effect4 must not read `SC-DEN-07` or
+  `SC-DEN-08` as termination claims. Deciding productivity needs a second
+  relation over head positions — what a name reaches through `susp` wrappers
+  alone, before any constructor builds anything — and `union` builds nothing
+  either.
+- **A generator must fix a canonical union member order.** Order is identity
+  for unions, so without a canonical emission order a generated document's
+  address depends on source arrangement
+  (`library/cas/UNION-DESIGN.md:100-106`).
+
+`Cas/Schema/El.lean:187-192` confirms and sharpens the ruling's rejection of
+`El` as a denotation: six of its fourteen constructors map to `Empty` —
+`.decl` (registry), `.union` when undiscriminated (order-dependent), `.enum`
+(aliasing), `.tuple` (optionals shorten arrays), and `.reference` and `.susp`
+(table-relative). Those are not gaps to fill in place; they are exactly the
+cases the ruling says need a document-relative relational denotation.
+
+Foldlab supplies no payload-carrier prior art for `Check`, annotations, or
+`MultiDocument`. It has no `Filter`/`FilterGroup` type at all, emits
+`("checks", .arr [])` literally, refuses inline representation annotations to
+a sidecar CAS kind, and its `Document` is single-root. Effect4 must therefore
+take two designs Foldlab explicitly refused — tuple `rest` as an array, and
+inline annotations — and rebuild the injectivity and cost arguments that
+Foldlab's refusals were resting on.
+
 Decode and encode requirements remain distinct, and transformation encoding
 composition runs in reverse order. No universal round-trip law is assigned to
 all codecs because lossy transforms are part of the source surface. Schema
@@ -337,11 +506,15 @@ first-order `Flow`.
 | Gate | Command | Current scope |
 | --- | --- | --- |
 | Default Lean gate | `lake clean && lake build` | all `Effect4.*` and `Effect4Test.*` source files through Lake globs; root-reachability and axiom allowlist enforced |
-| Exhaustive module/axiom gate | default build, invoked by `Effect4Test.lean` | the gate prints its own census rather than trusting this row; observed 105 modules and 1190 declarations on 2026-08-31; semantic/test ceiling `propext`, `Quot.sound`; the audit implementation alone also permits `Classical.choice` |
+| Exhaustive module/axiom gate | default build, invoked by `Effect4Test.lean` | the gate prints its own census rather than trusting this row; the last committed pre-Schema observation was 105 modules and 1190 declarations on 2026-08-31; semantic/test ceiling `propext`, `Quot.sound`; the audit implementation alone also permits `Classical.choice` |
 | Narrow algebra gate | `lake env lean Effect4Test/Algebra/ExtractionContract.lean` | frozen public algebra signatures and the `E4-ALG-CE-*` counterexamples |
 | Narrow retained-closure gate | `lake env lean Effect4Test/Algebra/RetainedClosureContract.lean` | exact retained Foldlab declaration signatures, binder order, universes, and their closure theorems |
 | Narrow flow admission gate | `lake env lean Effect4Test/Flow/AdmissionContract.lean` | frozen Flow declarations plus `E4-FLOW-CE-001`-`005`, `007`, `013`, and `014` |
 | Narrow flow privacy gate | `lake env lean Effect4Test/Flow/PrivacyContract.lean` | `E4-FLOW-CE-015`; both unchecked `CheckedFlow` construction paths must stay unresolvable from an importing module |
+| Narrow schema census gate | `lake env lean Effect4Test/Schema/RepresentationContract.lean` | the 22-member rc.112 tag alphabet, its census listing and exact wire spellings, plus `E4-SCHEMA-CE-017`-`019` |
+| Narrow schema sub-alphabet gate | `lake env lean Effect4Test/Schema/SubAlphabetContract.lean` | the union-mode, check-tag, literal-kind, enum-value, and property-key alphabets, plus `E4-SCHEMA-CE-020`-`022` |
+| Schema census drift gate | `./scripts/check-schema-census.sh <SchemaRepresentation.ts>` | lexically extracts the closed type-union and codec-call spelling sets and compares them with Lean `tagName`; refuses off-pin bytes unless `--dry-run`; reports pin-matched spelling evidence but does not assign cutover closure or semantic faithfulness |
+| Schema census gate reaction test | `./scripts/test-schema-census-gate.sh` | exercises ten specified lexical defects, including union-only and union-plus-codec additions and a tag copied across the representation/check family boundary; runs against a synthetic fixture, so it tests detector reaction and not the real census, payloads, or semantics |
 | Flow admission mutation gate | `./scripts/test-flow-admission-mutations.sh` | four specified mutants (swapped scan order, weakened dangling jump, dropped `perform` answer equality, and substituted unrelated diagnostic witness) must each stay buildable and be killed by the matching frozen battery; Flow source and both batteries are verified byte-unchanged |
 | Human-readable axiom receipts | `lake env lean Effect4Test/Algebra/AxiomReport.lean`; `lake env lean Effect4Test/Flow/AxiomReport.lean` | every currently exported algebra and flow theorem, with its axiom dependencies printed |
 | Source trust gate | `./scripts/test-trust-gate.sh` | planted `unsafe` and `partial` declarations are rejected; the same vocabulary inside comments and strings is not |
