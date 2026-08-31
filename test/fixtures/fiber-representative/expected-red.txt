@@ -1,0 +1,16 @@
+FiberId
+InterruptBoundary
+SchedulerDecision
+Runs
+Machine.WellFormed
+stepEval
+fixedTape_deterministic
+finite_replay_total
+step_total
+runs_cons_iff
+representative_inputs_exist
+waiting_join_exists
+interrupt_complete_order_distinct
+cleanup_count_monotone
+exists_representative_finished_run
+cleanup_safe_on_finish
