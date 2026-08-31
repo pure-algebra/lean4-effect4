@@ -1,16 +1,18 @@
 import Effect4.Algebra.Signature
 
 /-!
-# Finite effect programs
+# Well-founded effect programs
 
 `Program` is the higher-order proof carrier: continuations are Lean
-functions. It is finite and structurally recursive, but intentionally has no
+functions. It is an inductive, well-founded tree and supports structural
+recursion, but it need not have finitely many nodes or a uniform depth bound
+when an operation has infinitely many answers. It intentionally has no
 decidable equality, serialization, or content identity.
 -/
 
 namespace Effect4
 
-/-- A finite free operation tree over `signature`. -/
+/-- A well-founded free operation tree over `signature`. -/
 inductive Program
     (signature : Signature.{uOp, uAns})
     (A : Type uAns) : Type (max uOp uAns) where
@@ -20,7 +22,7 @@ inductive Program
 
 namespace Program
 
-/-- Sequence two finite programs. -/
+/-- Sequence two well-founded programs. -/
 def bind : Program S A → (A → Program S B) → Program S B
   | .pure value, next => next value
   | .vis operation rest, next =>

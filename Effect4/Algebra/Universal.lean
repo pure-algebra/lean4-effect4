@@ -1,7 +1,7 @@
 import Effect4.Algebra.Sum
 
 /-!
-# Universal property of finite programs
+# Universal property of well-founded programs
 -/
 
 namespace Effect4
