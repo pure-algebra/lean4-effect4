@@ -148,6 +148,42 @@ example : RepresentationTag.ofTagName "FilterGroup" = none := by decide
 
 end PinnedSpellings
 
+section PointwiseSpellings
+
+/-!
+The two ordered examples above pin each spelling *list*, not each spelling
+*map*: `census.map modeName = ["anyOf", "oneOf"]` stays true when one
+permutation is applied to `census` and the same permutation to `modeName`, so
+on its own it lets a mode carry the other mode's persisted string. The
+obligations below pin both spelled alphabets pointwise, in both directions.
+With the ordered examples and the injectivity theorems they also pin the two
+census listings.
+-/
+
+example : UnionMode.modeName .anyOf = "anyOf" := by decide
+example : UnionMode.modeName .oneOf = "oneOf" := by decide
+example : UnionMode.ofModeName "anyOf" = some .anyOf := by decide
+example : UnionMode.ofModeName "oneOf" = some .oneOf := by decide
+
+example : CheckTag.tagName .filter = "Filter" := by decide
+example : CheckTag.tagName .filterGroup = "FilterGroup" := by decide
+example : CheckTag.ofTagName "Filter" = some .filter := by decide
+example : CheckTag.ofTagName "FilterGroup" = some .filterGroup := by decide
+
+/-!
+The three unspelled alphabets have no wire string to pin per member, so the
+analogous obligation is the exact census listing. Their `census_length`,
+`census_nodup`, and `mem_census` obligations are all permutation-invariant, and
+the recursor snapshots freeze constructor order rather than listing order, so
+without these the listings were free to permute.
+-/
+
+example : LiteralKind.census = [.string, .number, .bigint, .boolean] := by decide
+example : EnumValueKind.census = [.string, .number] := by decide
+example : PropertyKeyKind.census = [.string, .number, .globalSymbol] := by decide
+
+end PointwiseSpellings
+
 /-!
 Constructor order is contractual for each leaf alphabet and is frozen by the
 dependent recursor signatures above. The durable executable attacks are

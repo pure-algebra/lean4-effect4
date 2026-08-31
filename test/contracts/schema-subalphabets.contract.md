@@ -1,7 +1,7 @@
 # Schema closed sub-alphabet contract
 
 Status: FROZEN breaker packet, 2026-08-31; its pre-implementation revision is
-required to be RED, and one claim-scope finding is recorded below
+required to be RED, and fired findings are recorded below
 
 Ruling input: `docs/SCHEMA-CUTOVER.md`, "Frozen rc.112 persisted census"
 
@@ -119,6 +119,25 @@ For `EnumValueKind`, additionally:
 8. `toLiteralKind_ne_bigint` and `toLiteralKind_ne_boolean`, which state that
    the embedding misses exactly the two literal kinds an enum cannot carry.
 
+Obligation 4 is **not** independent of obligation 5. For both spelled
+alphabets, injectivity follows from the round-trip law in three lines: rewrite
+`a.name = b.name` inside `ofName a.name = some a` and read `a = b` off the
+resulting `some b = some a`. `Effect4/Schema/Representation.lean` derives
+`UnionMode.modeName_injective` and `CheckTag.tagName_injective` exactly that
+way. Obligation 4 is listed separately because it is the statement a consumer
+of a spelling cites and because it survives a later reformulation of
+recognition, not because it carries content obligation 5 lacks.
+`EnumValueKind.toLiteralKind_injective` is different: it has no round-trip law
+to lean on and is proved by exhaustive case analysis.
+
+Obligations 1 through 8 are all invariant under permuting a census, and the
+recursor snapshots freeze constructor order rather than listing order.
+Beyond them, therefore, and per member rather than per position, the battery
+pins: the spelling of each `UnionMode` and `CheckTag` member in both
+directions, and the exact census listing of `LiteralKind`, `EnumValueKind`, and
+`PropertyKeyKind`. These are ground equations rather than quantified laws, so
+they add no exported declaration.
+
 ## Enforcement by absence
 
 Two of the ruling's exclusions are enforced by having no constructor rather
@@ -152,14 +171,18 @@ lake clean && lake build
 ```
 
 
-## Fired finding — claim scope on `toLiteralKind`
+## Fired findings
+
+### Claim scope on `toLiteralKind`
 
 BROKE: the original doc comment read "Every enum value kind is also a literal
 kind", which invites a value-level reading.
 
 LAW: at the pin, `Literal`'s number leg is `Schema.Finite`
 (`SchemaRepresentation.ts:1005`) and `Enum`'s is `Schema.Number` (`:999`,
-used at `:1020`). A non-finite enum number has no literal spelling.
+used at `:1020`). The later payload carrier may copy a non-finite enum number
+into a raw `LiteralValue.number`, but that result is not field-admissible at a
+`Literal` use-site. The kind map alone decides neither fact.
 
 WITNESS: `E4-SCHEMA-CE-023`, read directly from the pinned rc.112 bytes at
 SHA-256 `a0a7a1537cfe3a9159a80210e3de92342cc9e98651f0e8273a75ccdcccae69bc`.
@@ -169,5 +192,54 @@ and every proved statement about it was already kind-level; only the prose
 overreached.
 
 FIXED-BY: the doc comment now states the kind-level scope and the explicit
-non-claim. Relating the two numeric value domains is assigned to the payload
-packet. The frozen declaration set and every ENSURES row are unchanged.
+non-claim. The payload packet separately freezes the total raw value embedding
+and the literal-use finiteness theorem. The frozen declaration set and every
+ENSURES row here are unchanged.
+
+### Spellings and census listings were pinned per position, not per member
+
+BROKE: this packet's ENSURES list carried no per-member obligation. The only
+statements tying a spelling to a member were the two ordered battery examples
+`census.map modeName = ["anyOf", "oneOf"]` and
+`census.map tagName = ["Filter", "FilterGroup"]`, and the three unspelled
+alphabets had no listing obligation at all.
+
+LAW: an ordered `census.map name = …` equation is invariant under applying one
+permutation to `census` and the same permutation to `name`, so on its own it
+leaves each member free to carry another member's persisted string. The
+companion packet's fired finding records the executed 22-tag version of this,
+where the coordinated permutation passed every battery and counterexample
+module at exit 0. Here the same hole is smaller — two members each — but it is
+the same hole. For `LiteralKind`, `EnumValueKind`, and `PropertyKeyKind` the
+census listing was unconstrained outright: `census_length`, `census_nodup`, and
+`mem_census` are all permutation-invariant, and the recursor snapshots freeze
+constructor order, not listing order.
+
+CLASS: specification design. Every ENSURES proposition held; they collectively
+stated less than the packet's claim boundary promised.
+
+FIXED-BY: a new paragraph after the ENSURES list states the per-member scope.
+`Effect4Test/Schema/SubAlphabetContract.lean` gains eight pointwise spelling
+examples for `UnionMode` and `CheckTag` and three exact census listings for the
+unspelled alphabets. No implementation declaration changed: every pointwise
+obligation was already true of `Effect4/Schema/Representation.lean`.
+
+### Injectivity non-independence was left unstated
+
+BROKE: obligations 4 and 5 stood side by side with no relation stated, as
+though injectivity of a spelling were separate content. This packet already
+cites `E4-SCHEMA-CE-019` for the analogous correction on obligations 1 to 3.
+
+LAW: `UnionMode.modeName_injective` and `CheckTag.tagName_injective` are each
+derived from their round-trip law in three lines in
+`Effect4/Schema/Representation.lean`, not proved by pairwise comparison.
+`EnumValueKind.toLiteralKind_injective` is genuinely separate — it has no
+round-trip law and is proved by exhaustive case analysis.
+
+CLASS: claim scope. No theorem is wrong and no receipt changes.
+
+FIXED-BY: the paragraph after the ENSURES list, which also records the
+`toLiteralKind_injective` exception. The declaration set and every ENSURES
+proposition are unchanged. The `propext` receipt covering
+`UnionMode.modeName_ofModeName` and `CheckTag.tagName_ofTagName` is recorded in
+the companion packet's trust section.

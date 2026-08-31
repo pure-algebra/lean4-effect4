@@ -134,6 +134,66 @@ example : expectedTagNames.all (fun s => (RepresentationTag.ofTagName s).isSome)
 
 end SourceCensus
 
+section PointwiseSpellings
+
+/-!
+The ordered example above pins the spelling *list*, not the spelling *map*.
+`census.map tagName = expectedTagNames` is invariant under applying one
+permutation to `census` and the same permutation to `tagName`, so on its own it
+leaves every tag free to carry another tag's persisted `_tag` string. The
+obligations below pin the map pointwise, per tag, in both directions. Together
+with `census.map tagName = expectedTagNames` and `tagName_injective` they also
+pin the census listing itself.
+-/
+
+example : RepresentationTag.tagName .declaration = "Declaration" := by decide
+example : RepresentationTag.tagName .reference = "Reference" := by decide
+example : RepresentationTag.tagName .suspend = "Suspend" := by decide
+example : RepresentationTag.tagName .null = "Null" := by decide
+example : RepresentationTag.tagName .undefined = "Undefined" := by decide
+example : RepresentationTag.tagName .void = "Void" := by decide
+example : RepresentationTag.tagName .never = "Never" := by decide
+example : RepresentationTag.tagName .unknown = "Unknown" := by decide
+example : RepresentationTag.tagName .any = "Any" := by decide
+example : RepresentationTag.tagName .string = "String" := by decide
+example : RepresentationTag.tagName .number = "Number" := by decide
+example : RepresentationTag.tagName .boolean = "Boolean" := by decide
+example : RepresentationTag.tagName .bigint = "BigInt" := by decide
+example : RepresentationTag.tagName .symbol = "Symbol" := by decide
+example : RepresentationTag.tagName .literal = "Literal" := by decide
+example : RepresentationTag.tagName .uniqueSymbol = "UniqueSymbol" := by decide
+example : RepresentationTag.tagName .objectKeyword = "ObjectKeyword" := by decide
+example : RepresentationTag.tagName .enum = "Enum" := by decide
+example : RepresentationTag.tagName .templateLiteral = "TemplateLiteral" := by decide
+example : RepresentationTag.tagName .arrays = "Arrays" := by decide
+example : RepresentationTag.tagName .objects = "Objects" := by decide
+example : RepresentationTag.tagName .union = "Union" := by decide
+
+example : RepresentationTag.ofTagName "Declaration" = some .declaration := by decide
+example : RepresentationTag.ofTagName "Reference" = some .reference := by decide
+example : RepresentationTag.ofTagName "Suspend" = some .suspend := by decide
+example : RepresentationTag.ofTagName "Null" = some .null := by decide
+example : RepresentationTag.ofTagName "Undefined" = some .undefined := by decide
+example : RepresentationTag.ofTagName "Void" = some .void := by decide
+example : RepresentationTag.ofTagName "Never" = some .never := by decide
+example : RepresentationTag.ofTagName "Unknown" = some .unknown := by decide
+example : RepresentationTag.ofTagName "Any" = some .any := by decide
+example : RepresentationTag.ofTagName "String" = some .string := by decide
+example : RepresentationTag.ofTagName "Number" = some .number := by decide
+example : RepresentationTag.ofTagName "Boolean" = some .boolean := by decide
+example : RepresentationTag.ofTagName "BigInt" = some .bigint := by decide
+example : RepresentationTag.ofTagName "Symbol" = some .symbol := by decide
+example : RepresentationTag.ofTagName "Literal" = some .literal := by decide
+example : RepresentationTag.ofTagName "UniqueSymbol" = some .uniqueSymbol := by decide
+example : RepresentationTag.ofTagName "ObjectKeyword" = some .objectKeyword := by decide
+example : RepresentationTag.ofTagName "Enum" = some .enum := by decide
+example : RepresentationTag.ofTagName "TemplateLiteral" = some .templateLiteral := by decide
+example : RepresentationTag.ofTagName "Arrays" = some .arrays := by decide
+example : RepresentationTag.ofTagName "Objects" = some .objects := by decide
+example : RepresentationTag.ofTagName "Union" = some .union := by decide
+
+end PointwiseSpellings
+
 /-!
 The durable executable attacks are separate modules under
 `Effect4Test/Counterexamples/Schema/` and are imported by `Effect4Test.lean`.

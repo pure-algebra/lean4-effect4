@@ -223,6 +223,34 @@ diff --git a/Effect4/Schema/Representation.lean b/Effect4/Schema/Representation.
    | "Arrays" => some .arrays
 PATCH
       ;;
+    spelling-permutation)
+      cat >"$patch_file" <<'PATCH'
+diff --git a/Effect4/Schema/Representation.lean b/Effect4/Schema/Representation.lean
+--- a/Effect4/Schema/Representation.lean
++++ b/Effect4/Schema/Representation.lean
+@@ -92,5 +92,5 @@
+ -/
+ def census : List RepresentationTag :=
+-  [.declaration, .reference, .suspend,
++  [.reference, .declaration, .suspend,
+    .null, .undefined, .void, .never, .unknown, .any,
+    .string, .number, .boolean, .bigint, .symbol,
+@@ -108,4 +108,4 @@
+ def tagName : RepresentationTag → String
+-  | .declaration => "Declaration"
+-  | .reference => "Reference"
++  | .declaration => "Reference"
++  | .reference => "Declaration"
+   | .suspend => "Suspend"
+@@ -140,4 +140,4 @@
+ def ofTagName : String → Option RepresentationTag
+-  | "Declaration" => some .declaration
+-  | "Reference" => some .reference
++  | "Declaration" => some .reference
++  | "Reference" => some .declaration
+   | "Suspend" => some .suspend
+PATCH
+      ;;
     *) fail "unknown Schema alphabet mutant: $name" ;;
   esac
   (cd -- "$mutant_root" && git apply --check "$patch_file") || \
@@ -266,7 +294,7 @@ run_lean_killed "$mutant_root" \
   "$tmp_root/representation-order-contract.log" \
   'RepresentationContract.lean:' \
   'RepresentationTag.rec'
-printf 'PASS mutant 1/4 killed: RepresentationTag constructor-order swap\n'
+printf 'PASS mutant 1/5 killed: RepresentationTag constructor-order swap\n'
 
 reset_mutant
 apply_mutant literal-order
@@ -276,7 +304,7 @@ run_lean_killed "$mutant_root" \
   "$tmp_root/literal-order-contract.log" \
   'SubAlphabetContract.lean:' \
   'LiteralKind.rec'
-printf 'PASS mutant 2/4 killed: LiteralKind constructor-order swap\n'
+printf 'PASS mutant 2/5 killed: LiteralKind constructor-order swap\n'
 
 reset_mutant
 apply_mutant duplicate-keyword-kind
@@ -286,7 +314,7 @@ run_lean_killed "$mutant_root" \
   "$tmp_root/duplicate-keyword-kind-witness.log" \
   'SemanticTagSeparation.lean:' \
   'Effect4.KeywordKind'
-printf 'PASS mutant 3/4 killed: parallel Effect4.KeywordKind duplicate\n'
+printf 'PASS mutant 3/5 killed: parallel Effect4.KeywordKind duplicate\n'
 
 reset_mutant
 apply_mutant spelling-drift
@@ -299,9 +327,20 @@ run_lean_killed "$mutant_root" \
   Effect4Test/Counterexamples/Schema/WireSpellingDrift.lean \
   "$tmp_root/spelling-drift-witness.log" \
   'WireSpellingDrift.lean:'
-printf 'PASS mutant 4/4 killed: coordinated ObjectKeyword spelling drift\n'
+printf 'PASS mutant 4/5 killed: coordinated ObjectKeyword spelling drift\n'
+
+reset_mutant
+apply_mutant spelling-permutation
+run_source_build "$mutant_root" "$tmp_root/spelling-permutation-build.log"
+run_lean_killed "$mutant_root" \
+  Effect4Test/Schema/RepresentationContract.lean \
+  "$tmp_root/spelling-permutation-contract.log" \
+  'RepresentationContract.lean:' \
+  'RepresentationTag.declaration.tagName = "Declaration"' \
+  'RepresentationTag.ofTagName "Declaration" = some RepresentationTag.declaration'
+printf 'PASS mutant 5/5 killed: Declaration/Reference spelling permutation with matching census reorder\n'
 
 verify_checkout_unchanged
 printf '%s\n' \
-  'PASS finite Schema alphabet mutation coverage: 4/4 specified mutants killed' \
+  'PASS finite Schema alphabet mutation coverage: 5/5 specified mutants killed' \
   'NOTE bounded local receipt feeding the parent graph and attached leaves; not itself a proof graph or an exhaustive completeness claim'

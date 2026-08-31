@@ -9,12 +9,16 @@
 #
 #   union route  the closed `export type Representation = | A | B | ...` and
 #                `export type Check = A | B` declarations. These are single
-#                site and exhaustive: a 23rd member cannot exist without
-#                appearing here.
-#   codec route  the `Schema.tag("X")` and `makeKeywordSchema("X")` call
-#                sites that build the persisted codec. Check tags are scoped
-#                to the `FilterSchema`..`CheckUnion` block; the remaining
-#                literal call sites are representation tags.
+#                site in the pinned source, so a 23rd member cannot be added
+#                to the type surface without appearing here. Blank lines and
+#                `//` / `/* */` comments inside the union are skipped rather
+#                than treated as terminators: treating a comment as the end of
+#                the union silently truncated the extraction and let a 23rd
+#                member hide behind one doc comment.
+#   codec route  the `Schema.tag(...)` and `makeKeywordSchema(...)` call sites
+#                that build the persisted codec, in either quote style. Check
+#                tags are scoped to the `FilterSchema`..`CheckUnion` block;
+#                the remaining literal call sites are representation tags.
 #
 # The union route is authoritative for the source spelling set. The codec
 # route is a cross-check: if the two disagree, the file's type surface and its
@@ -46,9 +50,15 @@ sha256_file() {
 
 dry_run=0
 source_file=""
+lean_override=""
+expect_lean_override=0
 for argument in "$@"; do
+  if [[ "$expect_lean_override" -eq 1 ]]; then
+    lean_override="$argument"; expect_lean_override=0; continue
+  fi
   case "$argument" in
     --dry-run) dry_run=1 ;;
+    --lean-source) expect_lean_override=1 ;;
     -*) printf 'FAIL unknown option: %s\n' "$argument" >&2; exit 2 ;;
     *)
       if [[ -n "$source_file" ]]; then
@@ -63,12 +73,31 @@ done
 
 usage() {
   cat >&2 <<'USAGE'
-usage: check-schema-census.sh [--dry-run] <path/to/SchemaRepresentation.ts>
+usage: check-schema-census.sh [--dry-run] [--lean-source <file>] <path/to/SchemaRepresentation.ts>
 
 Without --dry-run the file must be the pinned rc.112 bytes.
 With --dry-run any Effect source is accepted, and the result closes nothing.
+
+--lean-source <file> replaces Effect4/Schema/Representation.lean as the Lean
+side of the comparison. It exists only so the reaction test can attack the
+Lean scrape, it requires --dry-run, and it closes nothing.
 USAGE
 }
+
+if [[ "$expect_lean_override" -eq 1 ]]; then
+  printf 'FAIL --lean-source needs a file argument\n' >&2
+  exit 2
+fi
+
+if [[ -n "$lean_override" ]]; then
+  if [[ "$dry_run" -ne 1 ]]; then
+    printf 'FAIL --lean-source requires --dry-run; the Lean side is not overridable on-pin\n' >&2
+    exit 2
+  fi
+  [[ -f "$lean_override" ]] || {
+    printf 'FAIL --lean-source file is absent: %s\n' "$lean_override" >&2; exit 2; }
+  lean_source="$lean_override"
+fi
 
 if [[ -z "$source_file" ]]; then
   printf 'FAIL no SchemaRepresentation.ts supplied\n' >&2
@@ -97,7 +126,7 @@ fi
 extract_union() {
   local declaration="$1"
   awk -v decl="$declaration" '
-    BEGIN { collecting = 0 }
+    BEGIN { collecting = 0; inblock = 0 }
     {
       if (collecting == 0) {
         if ($0 ~ "^export type " decl " =") {
@@ -108,10 +137,21 @@ extract_union() {
           next
         }
       } else {
-        # a continuation line must introduce members with a leading bar
-        if ($0 !~ /^[ \t]*\|/) { exit }
+        t = $0
+        sub(/^[ \t]+/, "", t)
+        # A comment or a blank line inside the union is not a terminator.
+        # Treating it as one silently truncated the extraction and let a
+        # 23rd member hide behind a doc comment.
+        if (inblock) { if (t ~ /\*\//) inblock = 0; next }
+        if (t == "") next
+        if (t ~ /^\/\//) next
+        if (t ~ /^\/\*/) { if (t !~ /\*\//) inblock = 1; next }
+        if (t ~ /^\*/) next
+        # Only a real declaration line ends the union.
+        if (t !~ /^\|/) { exit }
         line = $0
       }
+      sub(/\/\/.*$/, "", line)
       n = split(line, parts, /\|/)
       for (i = 1; i <= n; i++) {
         gsub(/[ \t\r]/, "", parts[i])
@@ -143,15 +183,27 @@ source_union_overlap="$(comm -12 \
 }
 
 # --- source, codec route (cross-check by family) ------------------------
-all_codec_tags="$( {
-    grep -oE 'Schema\.tag\("[^"]+"\)' "$source_file" || true
-    grep -oE 'makeKeywordSchema\("[^"]+"\)' "$source_file" || true
-  } | sed -E 's/.*"(.*)".*/\1/' | LC_ALL=C sort -u )"
+codec_tags_in() {
+  # Accepts both quote styles. A single-quoted Schema.tag('X') previously
+  # evaded the double-quote-only pattern and went uncounted.
+  awk '
+    {
+      s = $0
+      while (match(s, /(Schema\.tag|makeKeywordSchema)\([\047"][^\047"]+[\047"]\)/)) {
+        st = RSTART; ln = RLENGTH
+        tok = substr(s, st, ln)
+        if (match(tok, /[\047"][^\047"]+[\047"]/)) print substr(tok, RSTART + 1, RLENGTH - 2)
+        s = substr(s, st + ln)
+      }
+    }
+  '
+}
+
+all_codec_tags="$( codec_tags_in <"$source_file" | LC_ALL=C sort -u )"
 
 check_codec="$(
   sed -n '/^const FilterSchema =/,/^const CheckUnion =/p' "$source_file" \
-    | grep -oE 'Schema\.tag\("[^"]+"\)' \
-    | sed -E 's/.*"(.*)".*/\1/' \
+    | codec_tags_in \
     | LC_ALL=C sort -u \
     || true
 )"
@@ -166,23 +218,36 @@ representation_codec="$(comm -23 \
 extract_lean_tags() {
   local namespace_name="$1"
   awk -v namespace_name="$namespace_name" '
+    # Strip a Lean line comment, but only when it starts before any string
+    # literal, so a tag spelling containing "--" survives while a comment
+    # carrying the pinned spelling cannot be mistaken for the value.
+    function decomment(x,   qi, ci) {
+      qi = index(x, "\"")
+      ci = index(x, "--")
+      if (ci > 0 && (qi == 0 || ci < qi)) sub(/--.*$/, "", x)
+      return x
+    }
     $0 == "namespace " namespace_name { in_namespace = 1; next }
     in_namespace && $0 == "end " namespace_name {
-      in_namespace = 0
-      inside = 0
-      next
+      in_namespace = 0; inside = 0; pending = 0; next
     }
     in_namespace && /^def tagName/ { inside = 1; next }
     in_namespace && inside {
+      t = decomment($0)
       if ($0 ~ /^[ \t]*\|/) {
-        if (match($0, /"[^"]*"/)) print substr($0, RSTART + 1, RLENGTH - 2)
+        if (match(t, /"[^"]*"/)) { print substr(t, RSTART + 1, RLENGTH - 2); pending = 0 }
+        else { pending = 1 }
         next
       }
       if ($0 ~ /^[ \t]*$/) next
+      if (pending) {
+        if (match(t, /"[^"]*"/)) { print substr(t, RSTART + 1, RLENGTH - 2); pending = 0; next }
+      }
       inside = 0
     }
   ' "$lean_source" | LC_ALL=C sort -u
 }
+
 lean_representation_tags="$(extract_lean_tags "RepresentationTag")"
 lean_check_tags="$(extract_lean_tags "CheckTag")"
 

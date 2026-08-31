@@ -153,6 +153,15 @@ TemplateLiteral Arrays Objects Union
 
 `ofTagName` recognises exactly those strings and nothing else.
 
+The list above is read **positionally against the census only as a
+presentation convenience**. What this packet freezes is the tag-to-spelling
+*map*, member by member. An ordered `census.map tagName = …` equation does not
+freeze that map: it is invariant under applying one permutation to `census`
+and the same permutation to `tagName`, which leaves the equation true while
+every persisted `_tag` string moves to a different constructor. The battery
+therefore pins each of the 22 tags pointwise, in both directions, and the
+ordered equation is retained only to pin the census listing on top of that.
+
 ## ENSURES
 
 The builder must prove these exact edges without `sorry`, `admit`, custom
@@ -164,6 +173,12 @@ axioms, unsafe declarations, partial declarations, or `Classical.choice`:
 4. `tagName_injective` — equal wire spellings force equal tags.
 5. `ofTagName_tagName` — `ofTagName t.tagName = some t` for every tag.
 6. `tagName_ofTagName` — `ofTagName s = some t` implies `t.tagName = s`.
+7. per-tag wire spelling — for each of the 22 tags *individually*, `tagName`
+   returns the exact string listed in D2 for that tag, and `ofTagName` returns
+   that tag from that string. This is 44 ground equations rather than a
+   quantified law, so it adds no exported declaration and is discharged by the
+   battery. Obligations 1 through 6 and the ordered census equation are all
+   satisfiable by a permuted spelling map; this one is not.
 
 Obligations 1, 2, and 3 are stated separately because deriving any one from
 the other two needs a cardinality argument this packet deliberately does not
@@ -171,6 +186,16 @@ import. They are **not** logically independent: length plus duplicate freedom
 implies coverage by pigeonhole, and duplicate freedom plus coverage forces the
 length. What `E4-SCHEMA-CE-019` refutes is the weaker belief that
 `census_length = 22` alone establishes the census.
+
+Obligation 4 is likewise **not** independent of obligation 5. Given
+`ofTagName_tagName`, injectivity follows in three lines: rewrite
+`a.tagName = b.tagName` inside `ofTagName a.tagName = some a` and read `a = b`
+off the resulting `some b = some a`. `Effect4/Schema/Representation.lean`
+proves it exactly that way and its docstring says so. Obligation 4 is listed
+separately because it is the statement a consumer of the wire layer cites, and
+because it survives a later reformulation of recognition; it is not listed
+because it carries content the round-trip law lacks. No pairwise comparison of
+the 484 tag pairs is performed or required.
 
 Obligations 5 and 6 together state that `ofTagName` is a partial inverse of
 `tagName` on its domain. Neither states that `ofTagName` is total, and neither
@@ -201,9 +226,26 @@ finite list recursion. Nothing mutates state, invokes a handler, executes a
 host callback, or allocates a resource. The frame is the tag value alone.
 
 The public proof ceiling is Lean's kernel plus the repository allowlist
-`[propext, Quot.sound]`. Finite list-membership proofs may elaborate through
-`propext`; no custom axiom or `Classical.choice` is permitted. The builder
-records the actual receipt for every exported theorem.
+`[propext, Quot.sound]`. No custom axiom or `Classical.choice` is permitted,
+and `Quot.sound` is not reached. The builder records the actual receipt for
+every exported theorem.
+
+Exactly nine exported theorems across this packet and its companion elaborate
+through `propext`, and they are of two kinds, not one:
+
+- the six `mem_census` coverage proofs — `RepresentationTag`, `UnionMode`,
+  `CheckTag`, `LiteralKind`, `EnumValueKind`, and `PropertyKeyKind` — which are
+  finite list-membership decisions; and
+- the three partial-inverse proofs `RepresentationTag.tagName_ofTagName`,
+  `UnionMode.modeName_ofModeName`, and `CheckTag.tagName_ofTagName`, which are
+  not membership proofs at all. They reach `propext` through the `simp` call
+  that discharges the `none` branch of a `split` over the recogniser, not
+  through any list.
+
+Every other exported theorem in both packets depends on no axiom. An earlier
+revision of this section described the `propext` surface as list-membership
+proofs alone; the allowlist always covered the three partial inverses, but the
+prose named a narrower set than the receipt.
 
 ## Source-extraction evidence obligation
 
@@ -299,3 +341,81 @@ here.
 
 FIXED-BY: this entry. The declaration DAG and every ENSURES row were unchanged
 by that rewrite.
+
+### Wire spellings were pinned per census position, not per tag
+
+BROKE: the ENSURES list carried no per-tag spelling obligation. The only
+statement tying any spelling to any tag was the single battery example
+`census.map tagName = expectedTagNames`.
+
+LAW: that equation is invariant under applying one permutation to `census` and
+the same permutation to `tagName`. Executed against the frozen packet:
+swapping the `Declaration` and `Reference` spellings in both `tagName` and
+`ofTagName`, and reordering `census` to match, left `lake build
+Effect4.Schema.Representation`, `RepresentationContract.lean`,
+`SubAlphabetContract.lean`, `WireSpellingDrift.lean`,
+`SemanticTagSeparation.lean`, and `CensusCoverage.lean` all at exit 0. Only
+five constructors were incidentally pinned elsewhere — `objectKeyword`,
+`uniqueSymbol`, `templateLiteral`, and `bigint` in `WireSpellingDrift.lean`,
+and `null` in `NoNullLiteralKind.lean` — leaving the other seventeen free to
+permute. Roughly 3.6e14 spelling maps satisfied the entire packet, and every
+one of them but the intended map emits a wrong persisted `_tag`.
+
+WITNESS: the `spelling-permutation` mutant of
+`scripts/test-schema-alphabet-mutations.sh`. It remains source-buildable, it
+was verified to pass the pre-repair battery and every counterexample module,
+and it is killed by the repaired battery.
+
+CLASS: specification design. This is the defect `E4-SCHEMA-CE-018` already
+names — pin the case-sensitive wire string *per tag*. The row's claim was
+correct; the discharge was implemented per census position instead, which is a
+strictly weaker statement.
+
+FIXED-BY: ENSURES obligation 7 and a new paragraph under D2 state the per-tag
+scope and why the ordered equation cannot carry it.
+`Effect4Test/Schema/RepresentationContract.lean` gains 22 pointwise `tagName`
+examples and 22 pointwise `ofTagName` examples. The companion packet's battery
+gains the same treatment for its spelled alphabets. The mutation gate carries
+the permutation as its fifth specified mutant. No implementation declaration
+changed: every pointwise obligation was already true of
+`Effect4/Schema/Representation.lean`, so no wire-format defect was live.
+
+### `tagName_injective` non-independence was left unstated
+
+BROKE: the ENSURES list corrected exactly this class of overclaim for
+obligations 1, 2, and 3 in the `E4-SCHEMA-CE-019` finding above, then one
+paragraph later left obligations 4 and 5 side by side with no relation stated,
+implying that injectivity is separate content.
+
+LAW: `tagName_injective` follows from `ofTagName_tagName` in three lines, and
+`Effect4/Schema/Representation.lean` proves it that way and says so in its
+docstring. The companion packet's `UnionMode.modeName_injective` and
+`CheckTag.tagName_injective` are derived identically.
+
+CLASS: claim scope. No theorem is wrong and no receipt changes; the ENSURES
+list presented six independent edges where there are five and a corollary.
+
+FIXED-BY: a paragraph after the ENSURES list stating the derivation and why
+the corollary is still listed separately, and the equivalent paragraph in the
+companion packet. The declaration set and every ENSURES proposition are
+unchanged.
+
+### The `propext` surface was described more narrowly than the receipt
+
+BROKE: "Finite list-membership proofs may elaborate through `propext`", which
+names one kind of proof.
+
+LAW: `#print axioms` over the exported theorems of this packet and its
+companion returns `[propext]` for nine of them — the six `mem_census` proofs,
+plus `RepresentationTag.tagName_ofTagName`, `UnionMode.modeName_ofModeName`,
+and `CheckTag.tagName_ofTagName`. Those last three are partial-inverse proofs
+by `unfold`, `split`, and `simp at h`; no list occurs in them. Every other
+exported theorem depends on no axiom, and `Quot.sound` is never reached.
+
+CLASS: claim scope. Not a trust violation: the allowlist `[propext,
+Quot.sound]` covers all nine, and the sentence was permissive rather than
+prohibitive. The prose simply named a smaller `propext` surface than the
+receipt shows.
+
+FIXED-BY: the trust section now names the actual nine and separates the two
+kinds. No proof, allowlist entry, or receipt changed.

@@ -51,6 +51,22 @@ expect_reject() {
   printf 'PASS rejected: %s\n' "$name"
 }
 
+expect_reject_lean() {
+  local name="$1" lean_candidate="$2" signal="$3"
+  local log="$tmp_root/$name.log"
+  if "$gate" --dry-run --lean-source "$lean_candidate" "$fixture" >"$log" 2>&1; then
+    printf 'FAIL gate accepted a Lean-side mutant it must reject: %s\n' "$name" >&2
+    cat "$log" >&2
+    exit 1
+  fi
+  if ! grep -Fq -- "$signal" "$log"; then
+    printf 'FAIL %s was rejected, but the expected signal was absent: %s\n' "$name" "$signal" >&2
+    cat "$log" >&2
+    exit 1
+  fi
+  printf 'PASS rejected: %s\n' "$name"
+}
+
 baseline="$tmp_root/baseline.ts"
 cp -- "$fixture" "$baseline"
 if ! "$gate" --dry-run "$baseline" >"$tmp_root/baseline.log" 2>&1; then
@@ -95,6 +111,47 @@ sed 's/^  | Union$/  | Union\n  | Filter/' "$fixture" >"$tmp_root/m3d.ts"
 expect_reject "check tag copied into representation family" "$tmp_root/m3d.ts" \
   'source union families overlap'
 
+# 3e. a 23rd member hidden behind a comment inside the closed union.
+# The union extractor used to stop at the first line without a leading bar,
+# so one doc comment truncated the extraction and this passed.
+awk '{ print } /^  \| Union$/ && !done { print "  // rc.113 addition"; print "  | Newthing"; done = 1 }' \
+  "$fixture" >"$tmp_root/m3e.ts"
+expect_reject "comment-hidden 23rd union member" "$tmp_root/m3e.ts" \
+  'the type union and the codec disagree'
+
+# 3f. the same, plus a single-quoted codec tag. The codec pattern used to
+# match double quotes only, so the codec route did not see it either.
+awk '{ print } /^const UnionSchema/ && !done { print "const NewthingSchema = Schema.Struct({ _tag: Schema.tag('"'"'Newthing'"'"') })"; done = 1 }' \
+  "$tmp_root/m3e.ts" >"$tmp_root/m3f.ts"
+expect_reject "comment-hidden member with single-quoted codec tag" "$tmp_root/m3f.ts" \
+  'tag census drift'
+
+# 3g. the Lean scrape must read the returned spelling, not a comment on the
+# same line. The old scrape printed the first quoted string on a bar line.
+python3 - "$repo_root/Effect4/Schema/Representation.lean" "$tmp_root/lean-comment.lean" <<'LEANMUT'
+import pathlib, sys
+src = pathlib.Path(sys.argv[1]).read_text()
+old = '  | .union => "Union"'
+if old not in src:
+    raise SystemExit("FAIL Lean mutant anchor is absent: " + old)
+pathlib.Path(sys.argv[2]).write_text(
+    src.replace(old, '  | .union => -- pinned spelling is "Union"\n      "Unionn"', 1))
+LEANMUT
+expect_reject_lean "Lean spelling hidden behind a trailing comment" \
+  "$tmp_root/lean-comment.lean" 'tag census drift'
+
+# 3h. the Lean side must not be overridable on-pin
+if "$gate" --lean-source "$repo_root/Effect4/Schema/Representation.lean" "$baseline" \
+    >"$tmp_root/m3h.log" 2>&1; then
+  printf 'FAIL gate allowed --lean-source without --dry-run\n' >&2
+  exit 1
+fi
+grep -Fq 'requires --dry-run' "$tmp_root/m3h.log" || {
+  printf 'FAIL --lean-source refusal did not name its reason\n' >&2
+  exit 1
+}
+printf 'PASS rejected: --lean-source without --dry-run\n'
+
 # 4. the extraction pattern stops matching — the silent-failure mode
 sed 's/Schema\.tag(/Schema.renamedTag(/g; s/makeKeywordSchema(/renamedKeyword(/g' \
   "$fixture" >"$tmp_root/m4.ts"
@@ -126,4 +183,4 @@ grep -Fq 'SC-REP-CENSUS-PIN cannot be confirmed' "$tmp_root/m6.log" || {
 }
 printf 'PASS rejected: no source supplied\n'
 
-printf 'PASS schema census gate reacts to 10/10 specified lexical defects\n'
+printf 'PASS schema census gate reacts to 14/14 specified lexical defects\n'
