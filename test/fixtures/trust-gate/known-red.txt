@@ -21,8 +21,7 @@
 # packet test/contracts/environment-context-key.contract.md, was declared here
 # during its red phase and removed when the builder turned it green.
 
-# Active: DATA-PG-ROW breaker battery for data-slice node L0, fence
-# F-ROW (Effect4/Data/Row.lean), packet test/contracts/data-row.contract.md.
-# Remove this entry when the builder turns the fixed battery green; the trust
-# gate rejects the stale declaration automatically.
-Effect4Test.Data.RowContract
+# Active: FIBER-PG-REPRESENTATIVE breaker battery for the bounded
+# Fiber/scheduler/interruption slice. Remove this entry when its separate
+# builder turns the fixed battery green; the trust gate rejects stale entries.
+Effect4Test.Concurrency.FiberRepresentativeContract
