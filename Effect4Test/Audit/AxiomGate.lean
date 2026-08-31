@@ -35,12 +35,23 @@ private def moduleOf? (environment : Environment) (declaration : Name) : Option 
 private def belongsToAuditedTree (moduleName : Name) : Bool :=
   (`Effect4).isPrefixOf moduleName || (`Effect4Test).isPrefixOf moduleName
 
-private partial def findProjectRoot (directory : System.FilePath) : IO System.FilePath := do
-  if ← (directory / "Effect4.lean").pathExists then
-    return directory
-  match directory.parent with
-  | some parent => findProjectRoot parent
-  | none => throw <| IO.userError "Effect4 axiom gate: could not locate the project root"
+private def isGeneratedUnsafeRecursor (environment : Environment) (name : Name) : Bool :=
+  match Lean.Compiler.isUnsafeRecName? name with
+  | none => false
+  | some sourceName =>
+      match environment.find? sourceName with
+      | some sourceInfo => !sourceInfo.isUnsafe && !sourceInfo.isPartial
+      | none => false
+
+private def findProjectRoot (directory : System.FilePath) : IO System.FilePath := do
+  let mut current := directory
+  for _ in [0:64] do
+    if ← (current / "Effect4.lean").pathExists then
+      return current
+    match current.parent with
+    | some parent => current := parent
+    | none => throw <| IO.userError "Effect4 axiom gate: could not locate the project root"
+  throw <| IO.userError "Effect4 axiom gate: project-root search exceeded 64 parents"
 
 private def auditedSources (projectRoot : System.FilePath) : IO (Array System.FilePath) := do
   let effect4 ← (projectRoot / "Effect4").walkDir
@@ -66,9 +77,14 @@ elab "#effect4_axiom_gate" : command => do
         "Effect4 module-closure gate: {source} is not reachable from the Effect4Test audit root"
 
   let mut declarations : Array Name := #[]
-  for (name, _) in environment.constants.toList do
+  for (name, info) in environment.constants.toList do
     if let some moduleName := moduleOf? environment name then
       if belongsToAuditedTree moduleName then
+        if !isGeneratedUnsafeRecursor environment name then
+          if info.isUnsafe then
+            throwError "Effect4 trust gate: declaration {name} is unsafe"
+          if info.isPartial then
+            throwError "Effect4 trust gate: declaration {name} is partial"
         declarations := declarations.push name
 
   for declaration in declarations do
