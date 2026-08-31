@@ -1,0 +1,8 @@
+library/cas
+library/effects
+library/effect-protocol
+.staging/effect-core-v1
+formal/effect-core-v1
+docs/effect-typescript-semantics
+docs/effect-replay
+LICENSE

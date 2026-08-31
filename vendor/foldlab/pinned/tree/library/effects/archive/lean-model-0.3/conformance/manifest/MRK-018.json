@@ -1,0 +1,63 @@
+{
+  "family": "MRK-018",
+  "meaning": "Blob-manifest contents parse fail-closed and exactly: the canonical sixteen-byte payload commits the recipe identity, the total byte length, and the leaf count; truncation, trailing content, and UNKNOWN RECIPE IDENTIFIERS are all rejected at decode, so a reader selects semantics from the registered recipe id and never guesses, and changing any identity-affecting recipe parameter changes the manifest identity.",
+  "model": "effects-model@0.3.0",
+  "oracle": "Addresses are 32-byte toy digests (the declared 32-lane byte fold, not cryptographic) over structural pre-image encodings — a tag byte for leaf or parent, the leaf's absolute index and bytes, the parent's two child addresses — so domain separation and position binding live in the pre-image exactly as the model states them; the tie to a production hash arrives with the implementation slice.",
+  "rows": [
+    {
+      "case": "canonical-manifest-decodes-000",
+      "expect": {
+        "_tag": "Decoded",
+        "manifest": {
+          "leafCount": 3,
+          "recipeId": 1,
+          "totalBytes": 5
+        }
+      },
+      "input": {
+        "bytes": [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 3]
+      }
+    },
+    {
+      "case": "inline-recipe-decodes-001",
+      "expect": {
+        "_tag": "Decoded",
+        "manifest": {
+          "leafCount": 1,
+          "recipeId": 0,
+          "totalBytes": 2
+        }
+      },
+      "input": {
+        "bytes": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1]
+      }
+    },
+    {
+      "case": "trailing-rejected-004",
+      "expect": {
+        "_tag": "Rejected"
+      },
+      "input": {
+        "bytes": [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 3, 0]
+      }
+    },
+    {
+      "case": "truncated-rejected-003",
+      "expect": {
+        "_tag": "Rejected"
+      },
+      "input": {
+        "bytes": [0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
+      }
+    },
+    {
+      "case": "unknown-recipe-rejected-002",
+      "expect": {
+        "_tag": "Rejected"
+      },
+      "input": {
+        "bytes": [0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 3]
+      }
+    }
+  ]
+}

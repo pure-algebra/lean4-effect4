@@ -1,0 +1,52 @@
+{
+  "digest": "sha256-scheme0",
+  "emitted": {
+    "emitter": "schemas",
+    "module": "library/cas/tools/Schemas.lean",
+    "schemaVersion": 1,
+    "toolchain": "4.33.1"
+  },
+  "kindTag": 83,
+  "schemas": [
+    {
+      "address": "cf674c2dfdbd3582661e2f96a026969d31956880a8912f7c1ddd1bb613ad968c",
+      "name": "vector-document"
+    },
+    {
+      "address": "a5445fde1908dedd1f115104b3853c8fe4146ecac58a0105009c2fb9fafb31f1",
+      "name": "vector-index"
+    },
+    {
+      "address": "0ee1758ef14781a52a56e9e2d7951555d5af19a9eb7cb9238808ed39d782219e",
+      "name": "pin-sample"
+    },
+    {
+      "address": "5461f66ed3a0eeade4cd058d438d24c86c32b28ce1756b4af8297434103f0c04",
+      "name": "literal-pin"
+    },
+    {
+      "address": "89e7f571f3dbc8f49565b2f531f7fce74e24081671399391d1e02d183b6a601a",
+      "name": "annotation"
+    },
+    {
+      "address": "98e36f2243f0269fc3165110660f7b8f08a43aaffc450be7b87ca1f4f6005819",
+      "name": "union-pin"
+    },
+    {
+      "address": "90208f8ffb27351f48346c096e93869c633ec58840c91456b7b533f70c65c8d9",
+      "name": "tagged-pin"
+    },
+    {
+      "address": "845c3cfccb9fe60e6bdc4976e3e7e111ec57f2f88ee3bbfb47a7ae447490f15e",
+      "name": "enum-pin"
+    },
+    {
+      "address": "5f281a876efdf63c43a61c07a1422bf4311ed68efb65806a160db7bc80c5e942",
+      "name": "tuple-pin"
+    },
+    {
+      "address": "80f7a642c632bf435bd1a30de1466624abd1c3b69cfc1d96ef75d2bff752daf4",
+      "name": "exchange"
+    }
+  ]
+}

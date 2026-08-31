@@ -1,0 +1,980 @@
+{
+  "checks": [
+    {
+      "check": "floor-purity",
+      "statement": "No module of a floor library imports an in-package module outside that library's own globs. The mechanical form of \"imports nothing from Cas\", which every floor block claims in prose.",
+      "verdict": "ok",
+      "violations": []
+    },
+    {
+      "check": "floor-independence",
+      "statement": "No floor library's module imports another floor library's module. The seed draws four parallel boxes; this is the claim that they are parallel.",
+      "verdict": "ok",
+      "violations": []
+    },
+    {
+      "check": "direction",
+      "statement": "No module of a lower stratum imports a module of a higher one, and no module imports a leaf library from outside it. THE RULE at the head of lakefile.toml.",
+      "verdict": "known",
+      "violations": [
+        {
+          "check": "direction",
+          "imports": "Cas.Backend.HttpProfile",
+          "importsLib": "CasBackend",
+          "lib": "Cas",
+          "module": "Cas",
+          "status": "known",
+          "why": "The wire face `cas-http/0` is filed under Cas/Backend/, so the CasBackend glob `Cas.Backend.+` claims it, while the library root imports it — the profile is a peer of the language rather than a thing the language emits, and the root's own front page already names it as the one Backend/ module it imports. Settled by a move (a stratum of its own, or into the Cas subtree beside what it consumes), which is a rename across the surface ledger's import set and a slice of its own."
+        }
+      ]
+    },
+    {
+      "check": "declared-misfile-accounting",
+      "stale": [],
+      "statement": "Every row of the KNOWN MISFILES block matches a violation that actually occurs. A row nothing matches is a stale exception — the tree moved and the block did not — and refuses the same way a declared path that vanished does.",
+      "verdict": "ok",
+      "violations": []
+    }
+  ],
+  "convention": "THE RULE: lower never imports higher, and a leaf is imported by nothing outside itself. MEMBERSHIP is lakefile.toml's — each library's declared `globs`, then Lake's default `roots` (the library's own name), expanded by the toolchain's own Lake.Glob; the `Cas` stratum is the REMAINDER of the `Cas.` subtree after the explicit globs carve it up. ORDER is declared in tools/Strata.lean, mirroring the seed at the head of lakefile.toml. EDGES are the compiled environment's ModuleData imports, and only the IN-PACKAGE ones are transcribed: an import that no library claims is an external dependency and not this gate's subject. The CasMeta stratum is not walked — each executable root declares `main`, so two of them cannot share an environment — and what is checked about it is that nothing below it imports it, which the direction rule already says. A violation carrying a KNOWN MISFILES row is `known` and nonfatal; anything else is `fatal`.",
+  "counters": {
+    "edges": 247,
+    "fatal": 0,
+    "known": 1,
+    "knownMisfiles": 1,
+    "modules": 138,
+    "stale": 0,
+    "strata": 9,
+    "violations": 1,
+    "walked": 111
+  },
+  "emitted": {
+    "emitter": "strata",
+    "module": "library/cas/tools/Strata.lean",
+    "schemaVersion": 1,
+    "toolchain": "4.33.1"
+  },
+  "gate": "strata",
+  "knownMisfiles": [
+    {
+      "check": "direction",
+      "imports": "Cas.Backend.HttpProfile",
+      "module": "Cas",
+      "why": "The wire face `cas-http/0` is filed under Cas/Backend/, so the CasBackend glob `Cas.Backend.+` claims it, while the library root imports it — the profile is a peer of the language rather than a thing the language emits, and the root's own front page already names it as the one Backend/ module it imports. Settled by a move (a stratum of its own, or into the Cas subtree beside what it consumes), which is a rename across the surface ledger's import set and a slice of its own."
+    }
+  ],
+  "modules": [
+    {
+      "lib": "Gate",
+      "module": "AdmissionMap",
+      "source": "library/cas/tools/AdmissionMap.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "Axioms",
+      "source": "library/cas/tools/Axioms.lean"
+    },
+    {
+      "imports": ["Cas.Architecture", "Cas.Backend.HttpProfile", "Cas.Codec.Bytes", "Cas.Codec.Hex", "Cas.Codec.Nat32", "Cas.Codec.NodeCodec", "Cas.Codec.Separation", "Cas.Codec.Sha256", "Cas.Core.Address", "Cas.Core.Admission", "Cas.Core.Canonical", "Cas.Core.Canonicalize", "Cas.Core.Canonicalize.Json", "Cas.Core.Node", "Cas.Core.Refs", "Cas.Core.Store", "Cas.Grammar.Grammar", "Cas.IR.Column", "Cas.IR.Join", "Cas.IR.Query", "Cas.IR.Reach", "Cas.IR.View", "Cas.IR.Word", "Cas.Lang.Lang", "Cas.Lang.RefusalMap", "Cas.Lift.Decode", "Cas.Lift.Manifest", "Cas.Llm", "Cas.Schema.Schema", "Cas.Values", "Cas.Vectors.Vectors"],
+      "lib": "Cas",
+      "module": "Cas",
+      "source": "library/cas/Cas.lean"
+    },
+    {
+      "imports": ["Cas.Values.Json"],
+      "lib": "Cas",
+      "module": "Cas.Architecture",
+      "source": "library/cas/Cas/Architecture.lean"
+    },
+    {
+      "imports": ["Cas.Backend.Ts", "Cas.Schema.Ingest"],
+      "lib": "CasBackend",
+      "module": "Cas.Backend.Admission",
+      "source": "library/cas/Cas/Backend/Admission.lean"
+    },
+    {
+      "imports": ["Cas.Backend.EmitLayer"],
+      "lib": "CasBackend",
+      "module": "Cas.Backend.Canon",
+      "source": "library/cas/Cas/Backend/Canon.lean"
+    },
+    {
+      "imports": ["Cas.Backend.Ts", "Cas.Schema.SelfCodec"],
+      "lib": "CasBackend",
+      "module": "Cas.Backend.EmitAst",
+      "source": "library/cas/Cas/Backend/EmitAst.lean"
+    },
+    {
+      "imports": ["Cas.Backend.Target", "Cas.Backend.Ts", "Cas.Codec.Hex", "Cas.Codec.NodeCodec", "Cas.Codec.Sha256", "Cas.Grammar.Syntax", "Cas.Schema.System"],
+      "lib": "CasBackend",
+      "module": "Cas.Backend.EmitLayer",
+      "source": "library/cas/Cas/Backend/EmitLayer.lean"
+    },
+    {
+      "imports": ["Cas.Backend.Ts", "Cas.Codec.Hex", "Cas.Grammar.Tree", "Cas.Lift.Decode"],
+      "lib": "CasBackend",
+      "module": "Cas.Backend.EmitProg",
+      "source": "library/cas/Cas/Backend/EmitProg.lean"
+    },
+    {
+      "imports": ["Cas.Core.Node", "Cas.Grammar.Sorts"],
+      "lib": "CasBackend",
+      "module": "Cas.Backend.HttpProfile",
+      "source": "library/cas/Cas/Backend/HttpProfile.lean"
+    },
+    {
+      "imports": ["Cas.Codec.Hex", "Cas.Lang.Defun", "Cas.Schema.Notation", "Cas.Vectors.Schema"],
+      "lib": "CasBackend",
+      "module": "Cas.Backend.Mcp",
+      "source": "library/cas/Cas/Backend/Mcp.lean"
+    },
+    {
+      "imports": ["Cas.Codec.Hex", "Cas.Grammar.Manifest", "Cas.Lang.Defun"],
+      "lib": "CasBackend",
+      "module": "Cas.Backend.ProgProse",
+      "source": "library/cas/Cas/Backend/ProgProse.lean"
+    },
+    {
+      "imports": ["Cas.Lang.Lang"],
+      "lib": "CasBackend",
+      "module": "Cas.Backend.SumAlgebra",
+      "source": "library/cas/Cas/Backend/SumAlgebra.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Foreign"],
+      "lib": "CasBackend",
+      "module": "Cas.Backend.Target",
+      "source": "library/cas/Cas/Backend/Target.lean"
+    },
+    {
+      "imports": ["Cas.Backend.EmitProg", "Cas.Backend.ProgProse", "Cas.Codec.Sha256", "Cas.Lang.TreeProg", "Cas.Lang.Wp", "Cas.Vectors.Registry"],
+      "lib": "CasBackend",
+      "module": "Cas.Backend.TreeProgCorrect",
+      "source": "library/cas/Cas/Backend/TreeProgCorrect.lean"
+    },
+    {
+      "imports": [],
+      "lib": "CasBackend",
+      "module": "Cas.Backend.Ts",
+      "source": "library/cas/Cas/Backend/Ts.lean"
+    },
+    {
+      "imports": ["Cas.Lang.Representation", "Cas.Lang.Wp"],
+      "lib": "CasBackend",
+      "module": "Cas.Backend.Universal",
+      "source": "library/cas/Cas/Backend/Universal.lean"
+    },
+    {
+      "imports": ["Cas.Codec.Nat32"],
+      "lib": "CasBytes",
+      "module": "Cas.Codec.Bytes",
+      "source": "library/cas/Cas/Codec/Bytes.lean"
+    },
+    {
+      "imports": ["Cas.Codec.Bytes"],
+      "lib": "CasBytes",
+      "module": "Cas.Codec.Hex",
+      "source": "library/cas/Cas/Codec/Hex.lean"
+    },
+    {
+      "imports": [],
+      "lib": "CasBytes",
+      "module": "Cas.Codec.Nat32",
+      "source": "library/cas/Cas/Codec/Nat32.lean"
+    },
+    {
+      "imports": ["Cas.Codec.Nat32", "Cas.Core.Node"],
+      "lib": "Cas",
+      "module": "Cas.Codec.NodeCodec",
+      "source": "library/cas/Cas/Codec/NodeCodec.lean"
+    },
+    {
+      "imports": ["Cas.Codec.NodeCodec"],
+      "lib": "Cas",
+      "module": "Cas.Codec.Separation",
+      "source": "library/cas/Cas/Codec/Separation.lean"
+    },
+    {
+      "imports": ["Cas.Codec.Nat32", "Cas.Core.Node"],
+      "lib": "Cas",
+      "module": "Cas.Codec.Sha256",
+      "source": "library/cas/Cas/Codec/Sha256.lean"
+    },
+    {
+      "imports": ["Cas.Codec.NodeCodec"],
+      "lib": "Cas",
+      "module": "Cas.Core.Address",
+      "source": "library/cas/Cas/Core/Address.lean"
+    },
+    {
+      "imports": ["Cas.Core.Address", "Cas.Core.Store"],
+      "lib": "Cas",
+      "module": "Cas.Core.Admission",
+      "source": "library/cas/Cas/Core/Admission.lean"
+    },
+    {
+      "imports": ["Cas.Codec.NodeCodec"],
+      "lib": "Cas",
+      "module": "Cas.Core.Canonical",
+      "source": "library/cas/Cas/Core/Canonical.lean"
+    },
+    {
+      "imports": ["Cas.Core.Canonical"],
+      "lib": "Cas",
+      "module": "Cas.Core.Canonicalize",
+      "source": "library/cas/Cas/Core/Canonicalize.lean"
+    },
+    {
+      "imports": ["Cas.Core.Canonicalize", "Cas.Values.Json"],
+      "lib": "Cas",
+      "module": "Cas.Core.Canonicalize.Json",
+      "source": "library/cas/Cas/Core/Canonicalize/Json.lean"
+    },
+    {
+      "imports": ["Cas.Codec.Bytes"],
+      "lib": "Cas",
+      "module": "Cas.Core.Node",
+      "source": "library/cas/Cas/Core/Node.lean"
+    },
+    {
+      "imports": ["Cas.Core.Canonicalize.Json", "Cas.Core.Node", "Cas.Core.Store"],
+      "lib": "Cas",
+      "module": "Cas.Core.Refs",
+      "source": "library/cas/Cas/Core/Refs.lean"
+    },
+    {
+      "imports": ["Cas.Core.Node"],
+      "lib": "Cas",
+      "module": "Cas.Core.Store",
+      "source": "library/cas/Cas/Core/Store.lean"
+    },
+    {
+      "imports": ["Cas.Grammar.Manifest", "Cas.Grammar.Sorts", "Cas.Grammar.Syntax", "Cas.Grammar.Tree"],
+      "lib": "Cas",
+      "module": "Cas.Grammar.Grammar",
+      "source": "library/cas/Cas/Grammar/Grammar.lean"
+    },
+    {
+      "imports": ["Cas.Codec.Hex", "Cas.Grammar.Tree", "Cas.Values.Json", "Cas.Values.Markdown"],
+      "lib": "Cas",
+      "module": "Cas.Grammar.Manifest",
+      "source": "library/cas/Cas/Grammar/Manifest.lean"
+    },
+    {
+      "imports": [],
+      "lib": "Cas",
+      "module": "Cas.Grammar.Sorts",
+      "source": "library/cas/Cas/Grammar/Sorts.lean"
+    },
+    {
+      "imports": ["Cas.Grammar.Tree"],
+      "lib": "Cas",
+      "module": "Cas.Grammar.Syntax",
+      "source": "library/cas/Cas/Grammar/Syntax.lean"
+    },
+    {
+      "imports": ["Cas.Codec.NodeCodec", "Cas.Core.Canonical", "Cas.Grammar.Sorts", "Cas.IR.Word"],
+      "lib": "Cas",
+      "module": "Cas.Grammar.Tree",
+      "source": "library/cas/Cas/Grammar/Tree.lean"
+    },
+    {
+      "imports": ["Cas.Grammar.Sorts", "Cas.IR.Word"],
+      "lib": "Cas",
+      "module": "Cas.IR.Column",
+      "source": "library/cas/Cas/IR/Column.lean"
+    },
+    {
+      "imports": ["Cas.Core.Admission", "Cas.Grammar.Tree", "Cas.IR.Word"],
+      "lib": "Cas",
+      "module": "Cas.IR.Join",
+      "source": "library/cas/Cas/IR/Join.lean"
+    },
+    {
+      "imports": ["Cas.IR.View"],
+      "lib": "Cas",
+      "module": "Cas.IR.Query",
+      "source": "library/cas/Cas/IR/Query.lean"
+    },
+    {
+      "imports": ["Cas.IR.Word"],
+      "lib": "Cas",
+      "module": "Cas.IR.Reach",
+      "source": "library/cas/Cas/IR/Reach.lean"
+    },
+    {
+      "imports": ["Cas.IR.Column"],
+      "lib": "Cas",
+      "module": "Cas.IR.View",
+      "source": "library/cas/Cas/IR/View.lean"
+    },
+    {
+      "imports": ["Cas.Core.Store"],
+      "lib": "Cas",
+      "module": "Cas.IR.Word",
+      "source": "library/cas/Cas/IR/Word.lean"
+    },
+    {
+      "imports": ["Cas.Lang.Handler"],
+      "lib": "Cas",
+      "module": "Cas.Lang.Auth",
+      "source": "library/cas/Cas/Lang/Auth.lean"
+    },
+    {
+      "imports": ["Cas.Grammar.Sorts", "Cas.Lang.Representation"],
+      "lib": "Cas",
+      "module": "Cas.Lang.Defun",
+      "source": "library/cas/Cas/Lang/Defun.lean"
+    },
+    {
+      "imports": ["Cas.Lang.Defun"],
+      "lib": "Cas",
+      "module": "Cas.Lang.Fragments",
+      "source": "library/cas/Cas/Lang/Fragments.lean"
+    },
+    {
+      "imports": ["Cas.Lang.Interp"],
+      "lib": "Cas",
+      "module": "Cas.Lang.Handler",
+      "source": "library/cas/Cas/Lang/Handler.lean"
+    },
+    {
+      "imports": ["Cas.Core.Admission", "Cas.IR.Word", "Cas.Lang.Ops"],
+      "lib": "Cas",
+      "module": "Cas.Lang.Interp",
+      "source": "library/cas/Cas/Lang/Interp.lean"
+    },
+    {
+      "imports": ["Cas.Lang.Auth", "Cas.Lang.Defun", "Cas.Lang.Fragments", "Cas.Lang.Handler", "Cas.Lang.Interp", "Cas.Lang.Ops", "Cas.Lang.Prog", "Cas.Lang.Representation", "Cas.Lang.Roots", "Cas.Lang.Sig", "Cas.Lang.Tower", "Cas.Lang.TreeProg", "Cas.Lang.WordWire", "Cas.Lang.Worded"],
+      "lib": "Cas",
+      "module": "Cas.Lang.Lang",
+      "source": "library/cas/Cas/Lang/Lang.lean"
+    },
+    {
+      "imports": ["Cas.Core.Node", "Cas.Lang.Prog"],
+      "lib": "Cas",
+      "module": "Cas.Lang.Ops",
+      "source": "library/cas/Cas/Lang/Ops.lean"
+    },
+    {
+      "imports": ["Cas.Lang.Sig"],
+      "lib": "CasProg",
+      "module": "Cas.Lang.Prog",
+      "source": "library/cas/Cas/Lang/Prog.lean"
+    },
+    {
+      "imports": ["Cas.Lang.Interp"],
+      "lib": "Cas",
+      "module": "Cas.Lang.RefusalMap",
+      "source": "library/cas/Cas/Lang/RefusalMap.lean"
+    },
+    {
+      "imports": ["Cas.Lang.Tower"],
+      "lib": "Cas",
+      "module": "Cas.Lang.Representation",
+      "source": "library/cas/Cas/Lang/Representation.lean"
+    },
+    {
+      "imports": ["Cas.Lang.Interp"],
+      "lib": "Cas",
+      "module": "Cas.Lang.Roots",
+      "source": "library/cas/Cas/Lang/Roots.lean"
+    },
+    {
+      "imports": [],
+      "lib": "CasProg",
+      "module": "Cas.Lang.Sig",
+      "source": "library/cas/Cas/Lang/Sig.lean"
+    },
+    {
+      "imports": ["Cas.Codec.NodeCodec", "Cas.Lang.Handler"],
+      "lib": "Cas",
+      "module": "Cas.Lang.Tower",
+      "source": "library/cas/Cas/Lang/Tower.lean"
+    },
+    {
+      "imports": ["Cas.Grammar.Tree", "Cas.Lang.Interp"],
+      "lib": "Cas",
+      "module": "Cas.Lang.TreeProg",
+      "source": "library/cas/Cas/Lang/TreeProg.lean"
+    },
+    {
+      "imports": ["Cas.Lang.Worded", "Cas.Schema.Ast"],
+      "lib": "Cas",
+      "module": "Cas.Lang.WordWire",
+      "source": "library/cas/Cas/Lang/WordWire.lean"
+    },
+    {
+      "imports": ["Cas.Lang.Roots"],
+      "lib": "Cas",
+      "module": "Cas.Lang.Worded",
+      "source": "library/cas/Cas/Lang/Worded.lean"
+    },
+    {
+      "imports": ["Cas.Codec.Sha256", "Cas.Lang.Defun"],
+      "lib": "CasWp",
+      "module": "Cas.Lang.Wp",
+      "source": "library/cas/Cas/Lang/Wp.lean"
+    },
+    {
+      "imports": ["Cas.Codec.Hex", "Cas.Lang.Defun", "Cas.Values.JsonParse"],
+      "lib": "Cas",
+      "module": "Cas.Lift.Decode",
+      "source": "library/cas/Cas/Lift/Decode.lean"
+    },
+    {
+      "imports": ["Cas.Lift.Taxonomy", "Cas.Values.Markdown"],
+      "lib": "Cas",
+      "module": "Cas.Lift.Manifest",
+      "source": "library/cas/Cas/Lift/Manifest.lean"
+    },
+    {
+      "imports": ["Cas.Values.Json"],
+      "lib": "Cas",
+      "module": "Cas.Lift.Taxonomy",
+      "source": "library/cas/Cas/Lift/Taxonomy.lean"
+    },
+    {
+      "imports": ["Cas.Llm.Judge", "Cas.Llm.JudgeRate", "Cas.Llm.Rewriter"],
+      "lib": "CasLlm",
+      "module": "Cas.Llm",
+      "source": "library/cas/Cas/Llm.lean"
+    },
+    {
+      "imports": [],
+      "lib": "CasLlm",
+      "module": "Cas.Llm.Judge",
+      "source": "library/cas/Cas/Llm/Judge.lean"
+    },
+    {
+      "imports": ["Cas.Llm.Judge"],
+      "lib": "CasLlm",
+      "module": "Cas.Llm.JudgeRate",
+      "source": "library/cas/Cas/Llm/JudgeRate.lean"
+    },
+    {
+      "imports": [],
+      "lib": "CasLlm",
+      "module": "Cas.Llm.Rewriter",
+      "source": "library/cas/Cas/Llm/Rewriter.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Ingest"],
+      "lib": "Cas",
+      "module": "Cas.Schema.AdmissionMap",
+      "source": "library/cas/Cas/Schema/AdmissionMap.lean"
+    },
+    {
+      "imports": ["Cas.Grammar.Sorts", "Cas.Schema.Exchange", "Cas.Schema.Notation", "Cas.Schema.Projection", "Cas.Schema.System"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Annotation",
+      "source": "library/cas/Cas/Schema/Annotation.lean"
+    },
+    {
+      "imports": ["Cas.Core.Node", "Cas.Schema.Declarations", "Cas.Schema.Union", "Cas.Values.Json"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Ast",
+      "source": "library/cas/Cas/Schema/Ast.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Discriminated", "Cas.Schema.Ingest"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Basis",
+      "source": "library/cas/Cas/Schema/Basis.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Codec.Laws"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Codec",
+      "source": "library/cas/Cas/Schema/Codec.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Codec.References", "Cas.Schema.Codec.Scalars"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Codec.Core",
+      "source": "library/cas/Cas/Schema/Codec/Core.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Codec.Laws.Mutual", "Cas.Schema.Codec.Laws.Render"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Codec.Laws",
+      "source": "library/cas/Cas/Schema/Codec/Laws.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Codec.Core"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Codec.Laws.Mutual",
+      "source": "library/cas/Cas/Schema/Codec/Laws/Mutual.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Codec.Core"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Codec.Laws.Render",
+      "source": "library/cas/Cas/Schema/Codec/Laws/Render.lean"
+    },
+    {
+      "imports": ["Cas.Codec.Hex", "Cas.Schema.El"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Codec.References",
+      "source": "library/cas/Cas/Schema/Codec/References.lean"
+    },
+    {
+      "imports": ["Cas.Schema.El"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Codec.Scalars",
+      "source": "library/cas/Cas/Schema/Codec/Scalars.lean"
+    },
+    {
+      "imports": ["Cas.Values.Json"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Declarations",
+      "source": "library/cas/Cas/Schema/Declarations.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Deriving.Handler"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Deriving",
+      "source": "library/cas/Cas/Schema/Deriving.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Deriving.Util"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Deriving.Handler",
+      "source": "library/cas/Cas/Schema/Deriving/Handler.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Described"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Deriving.Util",
+      "source": "library/cas/Cas/Schema/Deriving/Util.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Described.Instances"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Described",
+      "source": "library/cas/Cas/Schema/Described.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Codec"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Described.Core",
+      "source": "library/cas/Cas/Schema/Described/Core.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Described.Core"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Described.Instances",
+      "source": "library/cas/Cas/Schema/Described/Instances.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Ast"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Discriminated",
+      "source": "library/cas/Cas/Schema/Discriminated.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Discriminated"],
+      "lib": "Cas",
+      "module": "Cas.Schema.El",
+      "source": "library/cas/Cas/Schema/El.lean"
+    },
+    {
+      "imports": ["Cas.Grammar.Sorts", "Cas.Schema.Notation", "Cas.Schema.Projection"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Exchange",
+      "source": "library/cas/Cas/Schema/Exchange.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Described"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Foreign",
+      "source": "library/cas/Cas/Schema/Foreign.lean"
+    },
+    {
+      "imports": ["Cas.Schema.SelfCodec"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Guarded",
+      "source": "library/cas/Cas/Schema/Guarded.lean"
+    },
+    {
+      "imports": ["Cas.Core.Canonicalize.Json", "Cas.Schema.Guarded", "Cas.Schema.PayloadInj", "Cas.Schema.SelfCodec"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Ingest",
+      "source": "library/cas/Cas/Schema/Ingest.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Deriving", "Cas.Schema.SelfCodec"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Notation",
+      "source": "library/cas/Cas/Schema/Notation.lean"
+    },
+    {
+      "imports": ["Cas.Schema.SelfCodec", "Cas.Values.JsonParse"],
+      "lib": "Cas",
+      "module": "Cas.Schema.PayloadInj",
+      "source": "library/cas/Cas/Schema/PayloadInj.lean"
+    },
+    {
+      "imports": ["Cas.Core.Refs", "Cas.Schema.Codec", "Cas.Schema.Described"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Projection",
+      "source": "library/cas/Cas/Schema/Projection.lean"
+    },
+    {
+      "imports": ["Cas.Schema.AdmissionMap", "Cas.Schema.Ast", "Cas.Schema.Basis", "Cas.Schema.Codec", "Cas.Schema.Declarations", "Cas.Schema.Described", "Cas.Schema.El", "Cas.Schema.Foreign", "Cas.Schema.Ingest", "Cas.Schema.PayloadInj", "Cas.Schema.Projection", "Cas.Schema.SelfCodec"],
+      "lib": "Cas",
+      "module": "Cas.Schema.Schema",
+      "source": "library/cas/Cas/Schema/Schema.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Ast", "Cas.Values.Json"],
+      "lib": "Cas",
+      "module": "Cas.Schema.SelfCodec",
+      "source": "library/cas/Cas/Schema/SelfCodec.lean"
+    },
+    {
+      "imports": ["Cas.Grammar.Sorts", "Cas.Schema.Notation", "Cas.Schema.Projection"],
+      "lib": "Cas",
+      "module": "Cas.Schema.System",
+      "source": "library/cas/Cas/Schema/System.lean"
+    },
+    {
+      "imports": [],
+      "lib": "Cas",
+      "module": "Cas.Schema.Union",
+      "source": "library/cas/Cas/Schema/Union.lean"
+    },
+    {
+      "imports": ["Cas.Values.Cut", "Cas.Values.Digits", "Cas.Values.Json", "Cas.Values.JsonInj", "Cas.Values.JsonParse", "Cas.Values.Markdown"],
+      "lib": "CasValues",
+      "module": "Cas.Values",
+      "source": "library/cas/Cas/Values.lean"
+    },
+    {
+      "imports": [],
+      "lib": "CasValues",
+      "module": "Cas.Values.Cut",
+      "source": "library/cas/Cas/Values/Cut.lean"
+    },
+    {
+      "imports": [],
+      "lib": "CasValues",
+      "module": "Cas.Values.Digits",
+      "source": "library/cas/Cas/Values/Digits.lean"
+    },
+    {
+      "imports": [],
+      "lib": "CasValues",
+      "module": "Cas.Values.Json",
+      "source": "library/cas/Cas/Values/Json.lean"
+    },
+    {
+      "imports": ["Cas.Values.Json"],
+      "lib": "CasValues",
+      "module": "Cas.Values.JsonInj",
+      "source": "library/cas/Cas/Values/JsonInj.lean"
+    },
+    {
+      "imports": ["Cas.Values.Digits", "Cas.Values.JsonInj"],
+      "lib": "CasValues",
+      "module": "Cas.Values.JsonParse",
+      "source": "library/cas/Cas/Values/JsonParse.lean"
+    },
+    {
+      "imports": [],
+      "lib": "CasValues",
+      "module": "Cas.Values.Markdown",
+      "source": "library/cas/Cas/Values/Markdown.lean"
+    },
+    {
+      "imports": ["Cas", "Cas.Vectors.Schema", "Cas.Vectors.Vectors"],
+      "lib": "Cas",
+      "module": "Cas.Vectors.Registry",
+      "source": "library/cas/Cas/Vectors/Registry.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Deriving", "Cas.Schema.Foreign", "Cas.Vectors.Vectors"],
+      "lib": "Cas",
+      "module": "Cas.Vectors.Schema",
+      "source": "library/cas/Cas/Vectors/Schema.lean"
+    },
+    {
+      "imports": ["Cas.Codec.Hex", "Cas.IR.Word", "Cas.Schema.Ast"],
+      "lib": "Cas",
+      "module": "Cas.Vectors.Vectors",
+      "source": "library/cas/Cas/Vectors/Vectors.lean"
+    },
+    {
+      "imports": ["CasExamples.AgentStep", "CasExamples.ForeignRepresentation", "CasExamples.PutTree", "CasExamples.Roots", "CasExamples.SchemaDeriving"],
+      "lib": "CasExamples",
+      "module": "CasExamples",
+      "source": "library/cas/examples/CasExamples.lean"
+    },
+    {
+      "imports": ["Cas"],
+      "lib": "CasExamples",
+      "module": "CasExamples.AgentStep",
+      "source": "library/cas/examples/CasExamples/AgentStep.lean"
+    },
+    {
+      "imports": ["Cas.Vectors.Schema"],
+      "lib": "CasExamples",
+      "module": "CasExamples.ForeignRepresentation",
+      "source": "library/cas/examples/CasExamples/ForeignRepresentation.lean"
+    },
+    {
+      "imports": ["Cas"],
+      "lib": "CasExamples",
+      "module": "CasExamples.PutTree",
+      "source": "library/cas/examples/CasExamples/PutTree.lean"
+    },
+    {
+      "imports": ["Cas"],
+      "lib": "CasExamples",
+      "module": "CasExamples.Roots",
+      "source": "library/cas/examples/CasExamples/Roots.lean"
+    },
+    {
+      "imports": ["Cas.Schema.Deriving"],
+      "lib": "CasExamples",
+      "module": "CasExamples.SchemaDeriving",
+      "source": "library/cas/examples/CasExamples/SchemaDeriving.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "Debts",
+      "source": "library/cas/tools/Debts.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "EmitArchitecture",
+      "source": "library/cas/tools/EmitArchitecture.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "EmitGate",
+      "source": "library/cas/tools/EmitGate.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "EmitGrammar",
+      "source": "library/cas/tools/EmitGrammar.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "EmitLayers",
+      "source": "library/cas/tools/EmitLayers.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "EmitLift",
+      "source": "library/cas/tools/EmitLift.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "EmitMcp",
+      "source": "library/cas/tools/EmitMcp.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "EmitPrograms",
+      "source": "library/cas/tools/EmitPrograms.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "EmitWire",
+      "source": "library/cas/tools/EmitWire.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "EmitWord",
+      "source": "library/cas/tools/EmitWord.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "EnvLedger",
+      "source": "library/cas/tools/EnvLedger.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "Gate",
+      "source": "library/cas/tools/Gate.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "Law",
+      "source": "library/cas/tools/Law.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "Laws",
+      "source": "library/cas/tools/Laws.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "Materialize",
+      "source": "library/cas/tools/Materialize.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "MetaShapes",
+      "source": "library/cas/tools/MetaShapes.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "Obl",
+      "source": "library/cas/tools/Obl.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "Obligations",
+      "source": "library/cas/tools/Obligations.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "Schemas",
+      "source": "library/cas/tools/Schemas.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "Strata",
+      "source": "library/cas/tools/Strata.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "Surface",
+      "source": "library/cas/tools/Surface.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "TrustCensus",
+      "source": "library/cas/tools/TrustCensus.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "Vectors",
+      "source": "library/cas/tools/Vectors.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "Verdicts",
+      "source": "library/cas/tools/Verdicts.lean"
+    },
+    {
+      "lib": "Gate",
+      "module": "Walk",
+      "source": "library/cas/tools/Walk.lean"
+    }
+  ],
+  "package": "library/cas",
+  "strata": [
+    {
+      "declared": "CasValues",
+      "globs": ["Cas.Values", "Cas.Values.Cut", "Cas.Values.Digits", "Cas.Values.Json", "Cas.Values.JsonInj", "Cas.Values.JsonParse", "Cas.Values.Markdown"],
+      "leaf": false,
+      "lib": "CasValues",
+      "modules": ["Cas.Values", "Cas.Values.Cut", "Cas.Values.Digits", "Cas.Values.Json", "Cas.Values.JsonInj", "Cas.Values.JsonParse", "Cas.Values.Markdown"],
+      "rank": 0,
+      "role": "The substrate. Canonical JSON, its two printers, its parser, and the injectivity that makes an address mean one value.",
+      "roots": ["CasValues"],
+      "srcDir": ".",
+      "walked": true
+    },
+    {
+      "declared": "CasLlm",
+      "globs": ["Cas.Llm", "Cas.Llm.Judge", "Cas.Llm.JudgeRate", "Cas.Llm.Rewriter"],
+      "leaf": false,
+      "lib": "CasLlm",
+      "modules": ["Cas.Llm", "Cas.Llm.Judge", "Cas.Llm.JudgeRate", "Cas.Llm.Rewriter"],
+      "rank": 0,
+      "role": "The frozen completion call as a mathematical object, split by kind: LLMs as functions and LLMs as decision points.",
+      "roots": ["CasLlm"],
+      "srcDir": ".",
+      "walked": true
+    },
+    {
+      "declared": "CasBytes",
+      "globs": ["Cas.Codec.Nat32", "Cas.Codec.Bytes", "Cas.Codec.Hex"],
+      "leaf": false,
+      "lib": "CasBytes",
+      "modules": ["Cas.Codec.Bytes", "Cas.Codec.Hex", "Cas.Codec.Nat32"],
+      "rank": 0,
+      "role": "The byte codecs, a chain three deep: the four-byte big-endian scalar, the framed primitives, the lowercase byte/text spelling addresses travel in.",
+      "roots": ["CasBytes"],
+      "srcDir": ".",
+      "walked": true
+    },
+    {
+      "declared": "CasProg",
+      "globs": ["Cas.Lang.Sig", "Cas.Lang.Prog"],
+      "leaf": false,
+      "lib": "CasProg",
+      "modules": ["Cas.Lang.Prog", "Cas.Lang.Sig"],
+      "rank": 0,
+      "role": "The free-monad core, store-free: a signature is data and a program is an operation tree over one.",
+      "roots": ["CasProg"],
+      "srcDir": ".",
+      "walked": true
+    },
+    {
+      "declared": "Cas",
+      "globs": ["Cas"],
+      "leaf": false,
+      "lib": "Cas",
+      "modules": ["Cas", "Cas.Architecture", "Cas.Codec.NodeCodec", "Cas.Codec.Separation", "Cas.Codec.Sha256", "Cas.Core.Address", "Cas.Core.Admission", "Cas.Core.Canonical", "Cas.Core.Canonicalize", "Cas.Core.Canonicalize.Json", "Cas.Core.Node", "Cas.Core.Refs", "Cas.Core.Store", "Cas.Grammar.Grammar", "Cas.Grammar.Manifest", "Cas.Grammar.Sorts", "Cas.Grammar.Syntax", "Cas.Grammar.Tree", "Cas.IR.Column", "Cas.IR.Join", "Cas.IR.Query", "Cas.IR.Reach", "Cas.IR.View", "Cas.IR.Word", "Cas.Lang.Auth", "Cas.Lang.Defun", "Cas.Lang.Fragments", "Cas.Lang.Handler", "Cas.Lang.Interp", "Cas.Lang.Lang", "Cas.Lang.Ops", "Cas.Lang.RefusalMap", "Cas.Lang.Representation", "Cas.Lang.Roots", "Cas.Lang.Tower", "Cas.Lang.TreeProg", "Cas.Lang.WordWire", "Cas.Lang.Worded", "Cas.Lift.Decode", "Cas.Lift.Manifest", "Cas.Lift.Taxonomy", "Cas.Schema.AdmissionMap", "Cas.Schema.Annotation", "Cas.Schema.Ast", "Cas.Schema.Basis", "Cas.Schema.Codec", "Cas.Schema.Codec.Core", "Cas.Schema.Codec.Laws", "Cas.Schema.Codec.Laws.Mutual", "Cas.Schema.Codec.Laws.Render", "Cas.Schema.Codec.References", "Cas.Schema.Codec.Scalars", "Cas.Schema.Declarations", "Cas.Schema.Deriving", "Cas.Schema.Deriving.Handler", "Cas.Schema.Deriving.Util", "Cas.Schema.Described", "Cas.Schema.Described.Core", "Cas.Schema.Described.Instances", "Cas.Schema.Discriminated", "Cas.Schema.El", "Cas.Schema.Exchange", "Cas.Schema.Foreign", "Cas.Schema.Guarded", "Cas.Schema.Ingest", "Cas.Schema.Notation", "Cas.Schema.PayloadInj", "Cas.Schema.Projection", "Cas.Schema.Schema", "Cas.Schema.SelfCodec", "Cas.Schema.System", "Cas.Schema.Union", "Cas.Vectors.Registry", "Cas.Vectors.Schema", "Cas.Vectors.Vectors"],
+      "rank": 1,
+      "role": "The language proper. Nodes, the store, addresses, the admission judgment, schemas, the data grammar, the program grammar.",
+      "roots": ["Cas"],
+      "srcDir": ".",
+      "walked": true
+    },
+    {
+      "declared": "CasWp",
+      "globs": ["Cas.Lang.Wp"],
+      "leaf": false,
+      "lib": "CasWp",
+      "modules": ["Cas.Lang.Wp"],
+      "rank": 2,
+      "role": "The proof-stratum statement apparatus: the weakest-precondition transformer over the defunctionalized table. Above the language and below the target plane, whose correctness proofs import it.",
+      "roots": ["CasWp"],
+      "srcDir": ".",
+      "walked": true
+    },
+    {
+      "declared": "CasBackend",
+      "globs": ["Cas.Backend.+"],
+      "leaf": false,
+      "lib": "CasBackend",
+      "modules": ["Cas.Backend.Admission", "Cas.Backend.Canon", "Cas.Backend.EmitAst", "Cas.Backend.EmitLayer", "Cas.Backend.EmitProg", "Cas.Backend.HttpProfile", "Cas.Backend.Mcp", "Cas.Backend.ProgProse", "Cas.Backend.SumAlgebra", "Cas.Backend.Target", "Cas.Backend.TreeProgCorrect", "Cas.Backend.Ts", "Cas.Backend.Universal"],
+      "rank": 3,
+      "role": "The TypeScript target plane: what the model emits, and the profile it emits against.",
+      "roots": ["CasBackend"],
+      "srcDir": ".",
+      "walked": true
+    },
+    {
+      "declared": "CasExamples",
+      "globs": ["CasExamples"],
+      "leaf": true,
+      "lib": "CasExamples",
+      "modules": ["CasExamples", "CasExamples.AgentStep", "CasExamples.ForeignRepresentation", "CasExamples.PutTree", "CasExamples.Roots", "CasExamples.SchemaDeriving"],
+      "rank": 4,
+      "role": "The language used, never part of it. A leaf.",
+      "roots": ["CasExamples"],
+      "srcDir": "examples",
+      "walked": true
+    },
+    {
+      "declared": "CasMeta",
+      "globs": ["Gate", "Walk", "Obl", "Law"],
+      "leaf": false,
+      "lib": "Gate",
+      "modules": ["AdmissionMap", "Axioms", "Debts", "EmitArchitecture", "EmitGate", "EmitGrammar", "EmitLayers", "EmitLift", "EmitMcp", "EmitPrograms", "EmitWire", "EmitWord", "EnvLedger", "Gate", "Law", "Laws", "Materialize", "MetaShapes", "Obl", "Obligations", "Schemas", "Strata", "Surface", "TrustCensus", "Vectors", "Verdicts", "Walk"],
+      "rank": 5,
+      "role": "The projections that read the compiled library back — the environment walk and the ledgers over it. Not yet a lib: these modules live in tools/ under Gate and one exe root per tool.",
+      "roots": ["Gate"],
+      "srcDir": "tools",
+      "walked": false
+    }
+  ]
+}

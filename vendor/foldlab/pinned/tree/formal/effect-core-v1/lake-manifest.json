@@ -1,0 +1,13 @@
+{"version": "1.2.0",
+ "packagesDir": ".lake/packages",
+ "packages":
+ [{"type": "path",
+   "scope": "",
+   "name": "cas",
+   "manifestFile": "lake-manifest.json",
+   "inherited": false,
+   "dir": "../../library/cas",
+   "configFile": "lakefile.toml"}],
+ "name": "«effect-core-v1»",
+ "lakeDir": ".lake",
+ "fixedToolchain": false}

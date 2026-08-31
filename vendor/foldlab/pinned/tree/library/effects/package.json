@@ -1,0 +1,78 @@
+{
+  "name": "@foldlab/cas",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A content-addressed store as a data structure — memory, file, or any static host below one seam; servable over cas-http/0",
+  "license": "Apache-2.0",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "cas": "./bin/cas.cjs"
+  },
+  "engines": {
+    "bun": ">=1.4.0",
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mepuka/foldlab.git",
+    "directory": "library/effects"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "files": [
+    "dist",
+    "src",
+    "bin",
+    "mcp",
+    "README.md",
+    "BACKEND.md",
+    "PACKAGING.md",
+    "RELEASING.md",
+    "PROFILE-CAS-HTTP-0.md",
+    "SERVING.md",
+    "VOCABULARY.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "bun scripts/clean-dist.ts && tsc -p tsconfig.build.json && bun scripts/rewrite-declaration-imports.ts && bun scripts/copy-mcp-manifest.ts",
+    "prepack": "bun run build",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "lint": "oxlint --config oxlint.config.ts src bin scratch lint",
+    "test": "bun --bun vitest run",
+    "prepare": "bun scripts/patch-toolchain.ts"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "4.0.0-rc.112",
+    "@effect/sql-sqlite-bun": "4.0.0-rc.112",
+    "effect": "4.0.0-rc.112"
+  },
+  "devDependencies": {
+    "@effect/tsgo": "0.38.0",
+    "@effect/vitest": "4.0.0-rc.112",
+    "@types/bun": "1.4.0",
+    "effect-oxlint": "0.3.4",
+    "oxlint": "1.80.0",
+    "oxlint-plugin-effect": "0.11.0",
+    "oxlint-tsgolint": "7.0.2001",
+    "typescript": "7.0.2",
+    "vitest": "4.1.11"
+  },
+  "foldlab": {
+    "effectProvenance": {
+      "commit": "2600f62f4532026928454dcea8d1c48557b3f942",
+      "lockRow": "effect-runtime",
+      "lock": "../../.reference/provenance/sources.lock.json"
+    }
+  }
+}

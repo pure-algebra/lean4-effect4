@@ -1,0 +1,7 @@
+# The Lean emitter writes LF. Checking these out as CRLF makes every
+# regeneration report a phantom modification on the generated surfaces,
+# so the byte-equality gate cannot be read. One line ending in the tree.
+*.lean text eol=lf
+*.json text eol=lf
+*.ts   text eol=lf
+*.md   text eol=lf

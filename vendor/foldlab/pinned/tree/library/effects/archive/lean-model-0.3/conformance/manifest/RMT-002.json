@@ -1,0 +1,226 @@
+{
+  "family": "RMT-002",
+  "meaning": "When a declaration exceeds the declared budgets — a fresh upload whose content size is over the byte budget, or a load response whose declared length is — the step rejects with the typed budget rejection, the cache is unchanged, and no verification, cache, or return decision occurs: at the model's altitude nothing over budget proceeds toward admission, and the shell obligation that an oversized declared body is never read or buffered arrives with the R2 streaming byte counter.",
+  "model": "effects-model@0.3.0",
+  "oracle": "Keys are 32-byte addresses computed by a declared toy digest (a 32-lane byte fold, not cryptographic) over canonical admitted-node encodings from the ratified CAS codec; verification recomputes the digest over received bytes. The full pre-image discipline and the tie to CAS admission arrive with the R2 semantic adapter.",
+  "rows": [
+    {
+      "case": "load-declared-over-budget-001",
+      "expect": {
+        "commands": [
+          {
+            "command": {
+              "_tag": "Load",
+              "key": [36, 44, 52, 60, 68, 76, 84, 92, 100, 108, 116, 124, 132, 140, 148, 156, 164, 172, 180, 188, 196, 204, 212, 220, 228, 236, 244, 252, 4, 12, 20, 28]
+            },
+            "op": 1
+          }
+        ],
+        "decisions": [
+          {
+            "decision": {
+              "_tag": "Issued",
+              "command": {
+                "_tag": "Load",
+                "key": [36, 44, 52, 60, 68, 76, 84, 92, 100, 108, 116, 124, 132, 140, 148, 156, 164, 172, 180, 188, 196, 204, 212, 220, 228, 236, 244, 252, 4, 12, 20, 28]
+              }
+            },
+            "op": 1
+          },
+          {
+            "decision": {
+              "_tag": "BudgetRejected",
+              "key": [36, 44, 52, 60, 68, 76, 84, 92, 100, 108, 116, 124, 132, 140, 148, 156, 164, 172, 180, 188, 196, 204, 212, 220, 228, 236, 244, 252, 4, 12, 20, 28]
+            },
+            "op": 1
+          },
+          {
+            "decision": {
+              "_tag": "GaveUp",
+              "key": [36, 44, 52, 60, 68, 76, 84, 92, 100, 108, 116, 124, 132, 140, 148, 156, 164, 172, 180, 188, 196, 204, 212, 220, 228, 236, 244, 252, 4, 12, 20, 28]
+            },
+            "op": 1
+          }
+        ],
+        "results": [
+          {
+            "_tag": "Commanded"
+          },
+          {
+            "_tag": "BudgetRejected",
+            "key": [36, 44, 52, 60, 68, 76, 84, 92, 100, 108, 116, 124, 132, 140, 148, 156, 164, 172, 180, 188, 196, 204, 212, 220, 228, 236, 244, 252, 4, 12, 20, 28]
+          }
+        ],
+        "state": {
+          "cacheSize": 0,
+          "inFlightSize": 0,
+          "rejectedSize": 0
+        }
+      },
+      "input": {
+        "ops": [
+          {
+            "id": 1,
+            "op": {
+              "_tag": "Load",
+              "key": [36, 44, 52, 60, 68, 76, 84, 92, 100, 108, 116, 124, 132, 140, 148, 156, 164, 172, 180, 188, 196, 204, 212, 220, 228, 236, 244, 252, 4, 12, 20, 28]
+            }
+          }
+        ],
+        "schedule": [
+          {
+            "answers": 1,
+            "event": {
+              "_tag": "Ok",
+              "bytes": [0, 3, 0, 0, 0, 5, 1, 2, 3, 250, 255, 0, 0, 0, 0],
+              "declared": 41
+            }
+          }
+        ],
+        "sequence": [
+          {
+            "_tag": "OpRef",
+            "index": 0
+          },
+          {
+            "_tag": "EventRef",
+            "index": 0
+          }
+        ]
+      }
+    },
+    {
+      "case": "upload-over-budget-000",
+      "expect": {
+        "commands": [],
+        "decisions": [
+          {
+            "decision": {
+              "_tag": "BudgetRejected",
+              "key": [94, 186, 22, 114, 206, 42, 134, 226, 62, 154, 246, 82, 174, 10, 102, 194, 30, 122, 214, 50, 142, 234, 70, 162, 254, 90, 182, 18, 110, 202, 38, 130]
+            },
+            "op": 1
+          }
+        ],
+        "results": [
+          {
+            "_tag": "BudgetRejected",
+            "key": [94, 186, 22, 114, 206, 42, 134, 226, 62, 154, 246, 82, 174, 10, 102, 194, 30, 122, 214, 50, 142, 234, 70, 162, 254, 90, 182, 18, 110, 202, 38, 130]
+          }
+        ],
+        "state": {
+          "cacheSize": 0,
+          "inFlightSize": 0,
+          "rejectedSize": 0
+        }
+      },
+      "input": {
+        "ops": [
+          {
+            "id": 1,
+            "op": {
+              "_tag": "Upload",
+              "bytes": [0, 3, 0, 0, 0, 1, 9, 0, 0, 0, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+              "key": [94, 186, 22, 114, 206, 42, 134, 226, 62, 154, 246, 82, 174, 10, 102, 194, 30, 122, 214, 50, 142, 234, 70, 162, 254, 90, 182, 18, 110, 202, 38, 130]
+            }
+          }
+        ],
+        "schedule": [],
+        "sequence": [
+          {
+            "_tag": "OpRef",
+            "index": 0
+          }
+        ]
+      }
+    },
+    {
+      "case": "upload-within-budget-002",
+      "expect": {
+        "commands": [
+          {
+            "command": {
+              "_tag": "Upload",
+              "bytes": [0, 3, 0, 0, 0, 5, 1, 2, 3, 250, 255, 0, 0, 0, 0],
+              "key": [36, 44, 52, 60, 68, 76, 84, 92, 100, 108, 116, 124, 132, 140, 148, 156, 164, 172, 180, 188, 196, 204, 212, 220, 228, 236, 244, 252, 4, 12, 20, 28]
+            },
+            "op": 1
+          }
+        ],
+        "decisions": [
+          {
+            "decision": {
+              "_tag": "Verified",
+              "key": [36, 44, 52, 60, 68, 76, 84, 92, 100, 108, 116, 124, 132, 140, 148, 156, 164, 172, 180, 188, 196, 204, 212, 220, 228, 236, 244, 252, 4, 12, 20, 28]
+            },
+            "op": 1
+          },
+          {
+            "decision": {
+              "_tag": "Issued",
+              "command": {
+                "_tag": "Upload",
+                "bytes": [0, 3, 0, 0, 0, 5, 1, 2, 3, 250, 255, 0, 0, 0, 0],
+                "key": [36, 44, 52, 60, 68, 76, 84, 92, 100, 108, 116, 124, 132, 140, 148, 156, 164, 172, 180, 188, 196, 204, 212, 220, 228, 236, 244, 252, 4, 12, 20, 28]
+              }
+            },
+            "op": 1
+          },
+          {
+            "decision": {
+              "_tag": "Cached",
+              "key": [36, 44, 52, 60, 68, 76, 84, 92, 100, 108, 116, 124, 132, 140, 148, 156, 164, 172, 180, 188, 196, 204, 212, 220, 228, 236, 244, 252, 4, 12, 20, 28]
+            },
+            "op": 1
+          }
+        ],
+        "results": [
+          {
+            "_tag": "Commanded"
+          },
+          {
+            "_tag": "Uploaded",
+            "key": [36, 44, 52, 60, 68, 76, 84, 92, 100, 108, 116, 124, 132, 140, 148, 156, 164, 172, 180, 188, 196, 204, 212, 220, 228, 236, 244, 252, 4, 12, 20, 28]
+          }
+        ],
+        "state": {
+          "cacheSize": 1,
+          "inFlightSize": 0,
+          "rejectedSize": 0
+        }
+      },
+      "input": {
+        "ops": [
+          {
+            "id": 1,
+            "op": {
+              "_tag": "Upload",
+              "bytes": [0, 3, 0, 0, 0, 5, 1, 2, 3, 250, 255, 0, 0, 0, 0],
+              "key": [36, 44, 52, 60, 68, 76, 84, 92, 100, 108, 116, 124, 132, 140, 148, 156, 164, 172, 180, 188, 196, 204, 212, 220, 228, 236, 244, 252, 4, 12, 20, 28]
+            }
+          }
+        ],
+        "schedule": [
+          {
+            "answers": 1,
+            "event": {
+              "_tag": "Ok",
+              "bytes": [],
+              "declared": 0
+            }
+          }
+        ],
+        "sequence": [
+          {
+            "_tag": "OpRef",
+            "index": 0
+          },
+          {
+            "_tag": "EventRef",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ]
+}

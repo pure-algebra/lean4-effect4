@@ -1,0 +1,443 @@
+{
+  "convention": "owed(<id>): <text> names a debt in a docstring and discharges(<id>): <text> settles it; an UNBOUND registry row is a ruling no declaration enforces yet",
+  "counters": {
+    "debts": 55,
+    "docstrings": 27,
+    "named": 7,
+    "owed": 21,
+    "parked": 5,
+    "pinPending": 1,
+    "settled": 0,
+    "unboundRulings": 28
+  },
+  "debts": [
+    {
+      "excerpt": "…ted rather than asserted. What is still owed there is registry, not proof: wire tags 14 and 15 (`step`,…",
+      "file": "library/cas/Cas.lean",
+      "keyword": "owed",
+      "line": 33,
+      "module": "Cas",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "excerpt": "…rtifact channel is a backend increment, owed when a consumer wants the named `enum` declaration itself (…",
+      "file": "library/cas/Cas/Backend/EmitAst.lean",
+      "keyword": "owed",
+      "line": 272,
+      "module": "Cas.Backend.EmitAst",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "excerpt": "…authority and this is a reading of it. owed(http-profile-emitter): the emitter that prints this manifes…",
+      "file": "library/cas/Cas/Backend/HttpProfile.lean",
+      "id": "http-profile-emitter",
+      "keyword": "owed",
+      "line": 4,
+      "module": "Cas.Backend.HttpProfile",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "excerpt": "…itgrammar` prints the grammar manifest. owed(http-profile-gate): the byte gate that holds `Protocol.ts`'…",
+      "file": "library/cas/Cas/Backend/HttpProfile.lean",
+      "id": "http-profile-gate",
+      "keyword": "owed",
+      "line": 4,
+      "module": "Cas.Backend.HttpProfile",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "excerpt": "…ration into a mirror that cannot drift. owed(http-profile-semantics): the exchange relation. Until it ex…",
+      "file": "library/cas/Cas/Backend/HttpProfile.lean",
+      "id": "http-profile-semantics",
+      "keyword": "owed",
+      "line": 4,
+      "module": "Cas.Backend.HttpProfile",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "excerpt": "…opological sort\" read computationally. owed(reach-search-memoized): `reachIn` re-explores shared subgra…",
+      "file": "library/cas/Cas/IR/Reach.lean",
+      "id": "reach-search-memoized",
+      "keyword": "owed",
+      "line": 3,
+      "module": "Cas.IR.Reach",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "excerpt": "…act`, `decodeLine_exact` — EXACTNESS (owed item, discharged 2026-08-29): the decoder accepts nothing…",
+      "file": "library/cas/Cas/Lang/Defun.lean",
+      "keyword": "owed",
+      "line": 4,
+      "module": "Cas.Lang.Defun",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "excerpt": "…; three-stage exhausts the kernel\". The parked proofs rewrote the byte primitives straight into the CONCRE…",
+      "file": "library/cas/Cas/Lang/Defun.lean",
+      "keyword": "parked",
+      "line": 452,
+      "module": "Cas.Lang.Defun",
+      "source": "docstring",
+      "state": "parked"
+    },
+    {
+      "excerpt": "…counted refs, trailing-empty), and the parked proof drove all four stages simultaneously through the conc…",
+      "file": "library/cas/Cas/Lang/Defun.lean",
+      "keyword": "parked",
+      "line": 585,
+      "module": "Cas.Lang.Defun",
+      "source": "docstring",
+      "state": "parked"
+    },
+    {
+      "excerpt": "…racled away in `handleLlm`'s shape, and owed `(out, deps, recipe)` from `Persistable`. The two regimes a…",
+      "file": "library/cas/Cas/Lang/Defun.lean",
+      "keyword": "owed",
+      "line": 2159,
+      "module": "Cas.Lang.Defun",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "excerpt": "…VED, not assumed; one is proved, one is owed, and the note says which. ### L-A — the table (applicative…",
+      "file": "library/cas/Cas/Lang/Fragments.lean",
+      "keyword": "owed",
+      "line": 3,
+      "module": "Cas.Lang.Fragments",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "excerpt": "…form and free construction. **CORPUS PIN PENDING** — SAF is not yet G0-pinned in `.reference/provenance/pa…",
+      "file": "library/cas/Cas/Lang/Fragments.lean",
+      "keyword": "PIN PENDING",
+      "line": 3,
+      "module": "Cas.Lang.Fragments",
+      "source": "docstring",
+      "state": "pin-pending"
+    },
+    {
+      "excerpt": "…byte gate would then hold `Node.ts` to. owed(refusal-join-emitter): the emitter that prints this join as…",
+      "file": "library/cas/Cas/Lang/RefusalMap.lean",
+      "id": "refusal-join-emitter",
+      "keyword": "owed",
+      "line": 3,
+      "module": "Cas.Lang.RefusalMap",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "excerpt": "…as the generated interchange document. owed(refusal-join-gate): the byte gate that holds the TypeScript…",
+      "file": "library/cas/Cas/Lang/RefusalMap.lean",
+      "id": "refusal-join-gate",
+      "keyword": "owed",
+      "line": 3,
+      "module": "Cas.Lang.RefusalMap",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "excerpt": "…aller carries a spelling hypothesis. Owed, and named rather than assumed: - the door's answer is onl…",
+      "file": "library/cas/Cas/Lift/Decode.lean",
+      "keyword": "Owed",
+      "line": 5,
+      "module": "Cas.Lift.Decode",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "excerpt": "…s earned. - **Level 3 — LIMIT-STABLE** (owed(judge-limit-stable): definition): acceptance survives the…",
+      "file": "library/cas/Cas/Llm/Judge.lean",
+      "id": "judge-limit-stable",
+      "keyword": "owed",
+      "line": 1,
+      "module": "Cas.Llm.Judge",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "excerpt": "…3) is NOT defined here; that rung stays owed at the ladder in `Judge`, and nothing below reaches it. Th…",
+      "file": "library/cas/Cas/Llm/JudgeRate.lean",
+      "keyword": "owed",
+      "line": 3,
+      "module": "Cas.Llm.JudgeRate",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "excerpt": "…its consumer can live with. Owed only when a consumer demands it. ## T…",
+      "file": "library/cas/Cas/Schema/El.lean",
+      "keyword": "Owed",
+      "line": 22,
+      "module": "Cas.Schema.El",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "excerpt": "…codes' denotation — REFUSED for v1, not parked `El (.reference _) = Empty` and `El (.susp _) = Empty`, an…",
+      "file": "library/cas/Cas/Schema/El.lean",
+      "keyword": "parked",
+      "line": 22,
+      "module": "Cas.Schema.El",
+      "source": "docstring",
+      "state": "parked"
+    },
+    {
+      "excerpt": "…so it is a ruling and not a line. It is owed, not claimed. The witnesses are `contracts/attacks/PDD-3/At…",
+      "file": "library/cas/Cas/Schema/Guarded.lean",
+      "keyword": "owed",
+      "line": 3,
+      "module": "Cas.Schema.Guarded",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "excerpt": "…order alone, so no third collapse is owed. - **Union, stage 2 — denotation, discriminated first** — L…",
+      "file": "library/cas/Cas/Schema/Schema.lean",
+      "keyword": "owed",
+      "line": 14,
+      "module": "Cas.Schema.Schema",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "excerpt": "…lapse. Named obligation, deliberately parked: the general declaration's DENOTATION. `El` of a `.decl`…",
+      "file": "library/cas/Cas/Schema/Schema.lean",
+      "keyword": "parked",
+      "line": 14,
+      "module": "Cas.Schema.Schema",
+      "source": "docstring",
+      "state": "parked"
+    },
+    {
+      "excerpt": "…re_ne_casRef` shows why nothing more is owed — the general code cannot spell row zero (`foldlab/cas/ref`…",
+      "file": "library/cas/Cas/Schema/SelfCodec.lean",
+      "keyword": "owed",
+      "line": 719,
+      "module": "Cas.Schema.SelfCodec",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "excerpt": "…a bijection onto. The obligation stood parked because the proof was looked for in the wrong place. Lean 4…",
+      "file": "library/cas/Cas/Schema/SelfCodec.lean",
+      "keyword": "parked",
+      "line": 1700,
+      "module": "Cas.Schema.SelfCodec",
+      "source": "docstring",
+      "state": "parked"
+    },
+    {
+      "declaration": "Cas.Lang.decodeProg_encodeProg",
+      "excerpt": "…HE PROGRAM IS RECOVERABLE FROM CONTENT (owed item, discharged): the word `encodeProg` lays down reads ba…",
+      "file": "library/cas/Cas/Lang/Defun.lean",
+      "keyword": "owed",
+      "line": 993,
+      "module": "Cas.Lang.Defun",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "declaration": "Cas.Lang.readLine_exact",
+      "excerpt": "READLINE EXACTNESS (owed item, discharged): a successful line read proves its input…",
+      "file": "library/cas/Cas/Lang/Defun.lean",
+      "keyword": "owed",
+      "line": 761,
+      "module": "Cas.Lang.Defun",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "declaration": "Cas.Schema.references_guarded_decidable",
+      "excerpt": "…atus lie the law index exists to catch. OWED: the registry row, after which this docstring gains its cla…",
+      "file": "library/cas/Cas/Schema/Guarded.lean",
+      "keyword": "OWED",
+      "line": 361,
+      "module": "Cas.Schema.Guarded",
+      "source": "docstring",
+      "state": "owed"
+    },
+    {
+      "id": "SM-1",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "the admitted subset is the ratified construct table, not the whole of Effect Schema"
+    },
+    {
+      "id": "SM-2",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "a reference names its target by that target's content address, and the references table is assembled at materialization"
+    },
+    {
+      "id": "SM-3",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "the rev-0/rev-1 Integer disagreement is a spelling question only, the safe-integer bound being carried on both sides"
+    },
+    {
+      "id": "SM-4",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "nominally distinct brands collapse to one address unless brand is minted as an identity-bearing check"
+    },
+    {
+      "id": "SM-5",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "variance defect D1 is decided before the first libfree corpus run rather than before this lane"
+    },
+    {
+      "id": "SM-8",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "whether the store-reference code is sugar for declaration row zero is kept open by construction"
+    },
+    {
+      "id": "SM-9",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "a kind whose own code spells its tag cannot leave that tag to callers, because the tag is then part of the address"
+    },
+    {
+      "id": "SM-10",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "the TypeScript door does not yet admit declaration-carrying schemas, a root asymmetry rather than a defect"
+    },
+    {
+      "id": "SM-12",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "the declaration registry's wire-identity table lives in its own module's docstring and not in REGISTRY.md"
+    },
+    {
+      "id": "SM-13",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "Effect's generated text collapses an all-bare-literal union and loses its oneOf mode"
+    },
+    {
+      "id": "SM-16",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "the tree-sitter materializer lane stays blocked on recursion and named references, union having landed"
+    },
+    {
+      "id": "SM-17",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "materialized source is committed and therefore typechecked, so a stale snapshot is a red suite"
+    },
+    {
+      "id": "SM-18",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "the estate-native register prints each committed payload back through the ingestion door"
+    },
+    {
+      "id": "SM-20",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "Effect's empty struct admits excess properties where the Lean decoder refuses them"
+    },
+    {
+      "id": "SM-21",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "a Declaration's annotation bag is read tolerantly, with the registry's own keys consumed as required"
+    },
+    {
+      "id": "SM-23",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "the program emitter routes through the defunctionalized table rather than lowering trees straight to source"
+    },
+    {
+      "id": "SM-24",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "the surface ledger walks the backend modules as well as the library root"
+    },
+    {
+      "id": "SM-25",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "the dormant effect-replay vocabulary is reactivated by ruling before any utterance slice, not during one"
+    },
+    {
+      "id": "SM-27",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "the estate's Effect lock and the front-end lanes' pin are one decision with one owner"
+    },
+    {
+      "id": "SM-29",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "the put verb takes the described canonical node document, not bytes and a tag"
+    },
+    {
+      "id": "SM-30",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "every command-line verb carries a machine-readable second register"
+    },
+    {
+      "id": "SM-31",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "the architecture capability matrix carries a row for every shipped adapter"
+    },
+    {
+      "id": "SM-32",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "Effect's MCP pin emits an output schema only for object-typed results"
+    },
+    {
+      "id": "SM-33",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "every ruling has an enforcing declaration, and the index fails in both directions"
+    },
+    {
+      "id": "SM-34",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "a derived union orders its members by ascending tag string, so shuffling constructors does not move an address"
+    },
+    {
+      "id": "SM-35",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "the constructor-alternative deriving path refuses parametric and indexed types by name"
+    },
+    {
+      "id": "SM-36",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "the discriminant field name is reserved in every derived member and bounds the member field names below it"
+    },
+    {
+      "id": "SM-37",
+      "source": "ruling",
+      "state": "unbound",
+      "statement": "the hand mirror of a derived union spells the union constructor with an explicit oneOf mode"
+    }
+  ],
+  "emitted": {
+    "emitter": "debts",
+    "module": "library/cas/tools/Debts.lean",
+    "schemaVersion": 1,
+    "toolchain": "4.33.1"
+  },
+  "library": "Cas"
+}

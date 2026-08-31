@@ -1,0 +1,274 @@
+{
+  "census": "trust",
+  "convention": "stratum assignment is v0-COARSE and the strata are ORDERED — a file lands in the first one that claims it. `emitted` is a `generated` path segment or a GENERATED marker in the file's first 400 bytes. `model-gated` is CURATED DATA: a hand-written list at library/cas/meta/in/model-gated.META.json, one gate label per row, carrying a row in meta/MANIFEST.META.json's `inputs` and read from there — a declared input that vanishes is a red build, not a silent default. `tested` is a DIRECT import from a file under library/effects/test — a module reached only through another module's re-export is not tested by this rule, and a binary a test SPAWNS rather than imports is not either. `bare` is the remainder. A row says what the census can see, not what the file is worth.",
+  "counters": {
+    "bare": 8,
+    "emitted": 10,
+    "files": 60,
+    "modelGated": 12,
+    "tested": 30
+  },
+  "emitted": {
+    "emitter": "trust",
+    "module": "library/cas/tools/TrustCensus.lean",
+    "schemaVersion": 1,
+    "toolchain": "4.33.1"
+  },
+  "excluded": ["library/effects/test — the census's INPUT, never its subject: a test file is evidence about another file's stratum, not a file this document rates", "node_modules — vendored dependencies are somebody else's surface", "every file that is not `.ts`"],
+  "files": [
+    {
+      "path": "bin/cas.ts",
+      "stratum": "bare"
+    },
+    {
+      "path": "bin/cli/commands.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "bin/cli/daemon.ts",
+      "stratum": "bare"
+    },
+    {
+      "path": "bin/cli/entry.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "bin/cli/history.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "bin/cli/ledgers.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "bin/cli/naming.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "bin/cli/render.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "bin/cli/store.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "bin/cli/tree.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "bin/cli/vocabulary.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "bin/mcp/handlers.ts",
+      "stratum": "bare"
+    },
+    {
+      "path": "bin/mcp/http.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "bin/mcp/manifest.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "bin/mcp/server.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "bin/mcp/telemetry.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "bin/mcp/tools.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "src/Cas.ts",
+      "stratum": "bare"
+    },
+    {
+      "path": "src/Server.ts",
+      "stratum": "bare"
+    },
+    {
+      "path": "src/cas/Annotations.ts",
+      "stratum": "bare"
+    },
+    {
+      "path": "src/cas/Architecture.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "src/cas/Backend.ts",
+      "stratum": "tested"
+    },
+    {
+      "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)",
+      "path": "src/cas/Blob.ts",
+      "stratum": "model-gated"
+    },
+    {
+      "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)",
+      "path": "src/cas/CanonicalSchema.ts",
+      "stratum": "model-gated"
+    },
+    {
+      "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)",
+      "path": "src/cas/ConformanceVector.ts",
+      "stratum": "model-gated"
+    },
+    {
+      "path": "src/cas/Exchanges.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "src/cas/FileBackend.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "src/cas/Graph.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "src/cas/KvsBackend.ts",
+      "stratum": "tested"
+    },
+    {
+      "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)",
+      "path": "src/cas/Materialize.ts",
+      "stratum": "model-gated"
+    },
+    {
+      "path": "src/cas/MetaSchema.ts",
+      "stratum": "tested"
+    },
+    {
+      "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)",
+      "path": "src/cas/Node.ts",
+      "stratum": "model-gated"
+    },
+    {
+      "path": "src/cas/PathReader.ts",
+      "stratum": "tested"
+    },
+    {
+      "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)",
+      "path": "src/cas/Programs.ts",
+      "stratum": "model-gated"
+    },
+    {
+      "path": "src/cas/SqlRootStore.ts",
+      "stratum": "bare"
+    },
+    {
+      "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)",
+      "path": "src/cas/Store.ts",
+      "stratum": "model-gated"
+    },
+    {
+      "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)",
+      "path": "src/cas/Value.ts",
+      "stratum": "model-gated"
+    },
+    {
+      "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)",
+      "path": "src/cas/WordLog.ts",
+      "stratum": "model-gated"
+    },
+    {
+      "path": "src/cas/generated/ConformanceVectorSchema.ts",
+      "stratum": "emitted"
+    },
+    {
+      "path": "src/cas/generated/McpToolCodes.ts",
+      "stratum": "emitted"
+    },
+    {
+      "path": "src/cas/generated/SchemaAdmission.ts",
+      "stratum": "emitted"
+    },
+    {
+      "path": "src/cas/generated/StoreKindSchema.ts",
+      "stratum": "emitted"
+    },
+    {
+      "path": "src/cas/generated/WordLogSchema.ts",
+      "stratum": "emitted"
+    },
+    {
+      "path": "src/cas/generated/annotationPlane.ts",
+      "stratum": "emitted"
+    },
+    {
+      "path": "src/cas/generated/architecture.ts",
+      "stratum": "emitted"
+    },
+    {
+      "path": "src/cas/generated/grammar/kindTags.ts",
+      "stratum": "emitted"
+    },
+    {
+      "path": "src/cas/generated/grammar/refMarkers.ts",
+      "stratum": "emitted"
+    },
+    {
+      "path": "src/cas/generated/meta/metaSchemaAst.META.ts",
+      "stratum": "emitted"
+    },
+    {
+      "path": "src/index.ts",
+      "stratum": "tested"
+    },
+    {
+      "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)",
+      "path": "src/internal/admission.ts",
+      "stratum": "model-gated"
+    },
+    {
+      "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)",
+      "path": "src/internal/blobGraph.ts",
+      "stratum": "model-gated"
+    },
+    {
+      "path": "src/internal/bytes.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "src/internal/canonicalJson.ts",
+      "stratum": "tested"
+    },
+    {
+      "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)",
+      "path": "src/internal/casCodec.ts",
+      "stratum": "model-gated"
+    },
+    {
+      "path": "src/internal/kindTags.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "src/internal/refMarkers.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "src/internal/wire.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "src/server/Core.ts",
+      "stratum": "tested"
+    },
+    {
+      "path": "src/server/HttpApp.ts",
+      "stratum": "bare"
+    },
+    {
+      "path": "src/server/Protocol.ts",
+      "stratum": "tested"
+    }
+  ],
+  "package": "library/effects",
+  "roots": ["bin", "src"]
+}

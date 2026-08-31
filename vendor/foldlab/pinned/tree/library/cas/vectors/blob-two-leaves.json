@@ -1,0 +1,86 @@
+{
+  "description": "a two-leaf blob: chunk, leaf, parent, manifest",
+  "digest": "sha256-scheme0",
+  "name": "blob-two-leaves",
+  "schemaVersion": 1,
+  "word": [
+    {
+      "address": "45128d1285669e8373a22dbffe99ea2584a991cbecb88a9dd53efb0eafce7cc1",
+      "node": {
+        "payload": "30313233343536373839616263646566",
+        "refs": [],
+        "tag": 8,
+        "version": 0
+      }
+    },
+    {
+      "address": "1f93c68aa00badbb2b979f6170fa078d157a199d52105ee4e724934820470fbf",
+      "node": {
+        "payload": "0000000000000010",
+        "refs": [
+          {
+            "expectedTag": 8,
+            "id": "45128d1285669e8373a22dbffe99ea2584a991cbecb88a9dd53efb0eafce7cc1"
+          }
+        ],
+        "tag": 9,
+        "version": 0
+      }
+    },
+    {
+      "address": "9ef8c524997f0c82916ca244de8eb45afb73caec14f3106eee8b57ddf2947ad0",
+      "node": {
+        "payload": "6768696a6b6c6d6e6f70717273747576",
+        "refs": [],
+        "tag": 8,
+        "version": 0
+      }
+    },
+    {
+      "address": "1d7ff86b90f6a8e9866b13759c774c353512ef6996461706ea0d46614a9e8640",
+      "node": {
+        "payload": "0000000100000010",
+        "refs": [
+          {
+            "expectedTag": 8,
+            "id": "9ef8c524997f0c82916ca244de8eb45afb73caec14f3106eee8b57ddf2947ad0"
+          }
+        ],
+        "tag": 9,
+        "version": 0
+      }
+    },
+    {
+      "address": "e346ea19f652302ee5fd39122d26acefbe88842427815aebb04295990f9ad7f1",
+      "node": {
+        "payload": "",
+        "refs": [
+          {
+            "expectedTag": 9,
+            "id": "1f93c68aa00badbb2b979f6170fa078d157a199d52105ee4e724934820470fbf"
+          },
+          {
+            "expectedTag": 9,
+            "id": "1d7ff86b90f6a8e9866b13759c774c353512ef6996461706ea0d46614a9e8640"
+          }
+        ],
+        "tag": 9,
+        "version": 0
+      }
+    },
+    {
+      "address": "a0acf436fccafac85affe7eb898c08f42b40184e9fdc54d0338b82d891f12339",
+      "node": {
+        "payload": "00000001000000000000002000000002",
+        "refs": [
+          {
+            "expectedTag": 9,
+            "id": "e346ea19f652302ee5fd39122d26acefbe88842427815aebb04295990f9ad7f1"
+          }
+        ],
+        "tag": 10,
+        "version": 0
+      }
+    }
+  ]
+}

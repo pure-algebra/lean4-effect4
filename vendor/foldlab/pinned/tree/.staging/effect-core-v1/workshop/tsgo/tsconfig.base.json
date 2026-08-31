@@ -1,0 +1,55 @@
+{
+  "$schema": "../../../../library/effects/node_modules/@effect/tsgo/schema.json",
+  "compilerOptions": {
+    "paths": {
+      "effect": ["../../../../library/effects/node_modules/effect/dist/index.d.ts"],
+      "effect/*": ["../../../../library/effects/node_modules/effect/dist/*.d.ts"]
+    },
+    "strict": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext", "DOM"],
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        "diagnosticSeverity": {
+          "floatingEffect": "error",
+          "missingEffectError": "error",
+          "missingEffectContext": "error",
+          "promiseInEffectSuccess": "warning",
+          "lazyPromiseInEffectSync": "warning",
+          "schemaStructWithTag": "off",
+          "schemaNumber": "off",
+          "preferTypedSchemaDecoder": "off",
+          "schemaSyncInEffect": "off",
+          "catchToIgnore": "off",
+          "asyncFunction": "off",
+          "cryptoRandomUUID": "off",
+          "cryptoRandomUUIDInEffect": "off",
+          "globalConsole": "off",
+          "globalConsoleInEffect": "off",
+          "globalDate": "off",
+          "globalDateInEffect": "off",
+          "globalFetch": "off",
+          "globalFetchInEffect": "off",
+          "globalRandom": "off",
+          "globalRandomInEffect": "off",
+          "globalTimers": "off",
+          "globalTimersInEffect": "off",
+          "newPromise": "off",
+          "nodeBuiltinImport": "off",
+          "preferSchemaOverJson": "off",
+          "processEnv": "off",
+          "processEnvInEffect": "off",
+          "tryCatchInEffectGen": "off"
+        }
+      }
+    ]
+  }
+}

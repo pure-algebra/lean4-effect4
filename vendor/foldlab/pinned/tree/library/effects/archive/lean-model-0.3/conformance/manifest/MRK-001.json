@@ -1,0 +1,50 @@
+{
+  "family": "MRK-001",
+  "meaning": "Chunking under the declared recipe is a lossless partition: rejoining the chunks restores the bytes exactly, two different contents never chunk alike, and the checked inverse accepts exactly the lists chunking produces — the recipe is declared, never inferred, so one root exists per recipe and content and no rechunk can mint a second identity.",
+  "model": "effects-model@0.3.0",
+  "oracle": "Addresses are 32-byte toy digests (the declared 32-lane byte fold, not cryptographic) over structural pre-image encodings — a tag byte for leaf or parent, the leaf's absolute index and bytes, the parent's two child addresses — so domain separation and position binding live in the pre-image exactly as the model states them; the tie to a production hash arrives with the implementation slice.",
+  "rows": [
+    {
+      "case": "empty-input-one-empty-chunk-000",
+      "expect": {
+        "chunks": [
+          []
+        ],
+        "root": [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36]
+      },
+      "input": {
+        "bytes": [],
+        "chunkSize": 4
+      }
+    },
+    {
+      "case": "exact-multiple-001",
+      "expect": {
+        "chunks": [
+          [1, 2, 3, 4],
+          [5, 6, 7, 8]
+        ],
+        "root": [84, 6, 184, 106, 28, 206, 128, 50, 228, 150, 72, 250, 172, 94, 16, 194, 116, 38, 216, 138, 60, 238, 160, 82, 4, 182, 104, 26, 204, 126, 48, 226]
+      },
+      "input": {
+        "bytes": [1, 2, 3, 4, 5, 6, 7, 8],
+        "chunkSize": 4
+      }
+    },
+    {
+      "case": "ragged-tail-002",
+      "expect": {
+        "chunks": [
+          [1, 2, 3, 4],
+          [5, 6, 7, 8],
+          [9]
+        ],
+        "root": [196, 70, 200, 74, 204, 78, 208, 82, 212, 86, 216, 90, 220, 94, 224, 98, 228, 102, 232, 106, 236, 110, 240, 114, 244, 118, 248, 122, 252, 126, 0, 130]
+      },
+      "input": {
+        "bytes": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+        "chunkSize": 4
+      }
+    }
+  ]
+}

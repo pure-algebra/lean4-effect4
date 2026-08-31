@@ -1,0 +1,72 @@
+{
+  "description": "a blob whose two leaves share one chunk — the word carries a duplicate binding that replays as a dedup",
+  "digest": "sha256-scheme0",
+  "name": "shared-chunk",
+  "schemaVersion": 1,
+  "word": [
+    {
+      "address": "a3eb814a7951d622a8a2e541c349a58b937d0fa97a9d241f5c0bde7c4825307a",
+      "node": {
+        "payload": "6f6e65206368756e6b2c207477696365",
+        "refs": [],
+        "tag": 8,
+        "version": 0
+      }
+    },
+    {
+      "address": "58bd5b00a2d82c42984bb6f106c85e1f3446f37bcad8150c7f5f4187637ffb59",
+      "node": {
+        "payload": "0000000000000010",
+        "refs": [
+          {
+            "expectedTag": 8,
+            "id": "a3eb814a7951d622a8a2e541c349a58b937d0fa97a9d241f5c0bde7c4825307a"
+          }
+        ],
+        "tag": 9,
+        "version": 0
+      }
+    },
+    {
+      "address": "a3eb814a7951d622a8a2e541c349a58b937d0fa97a9d241f5c0bde7c4825307a",
+      "node": {
+        "payload": "6f6e65206368756e6b2c207477696365",
+        "refs": [],
+        "tag": 8,
+        "version": 0
+      }
+    },
+    {
+      "address": "c752c6fe1e0c2ca7ebbdee2c35f5e39362ae230eb8630b8d6ffd5058fbaa9c87",
+      "node": {
+        "payload": "0000000100000010",
+        "refs": [
+          {
+            "expectedTag": 8,
+            "id": "a3eb814a7951d622a8a2e541c349a58b937d0fa97a9d241f5c0bde7c4825307a"
+          }
+        ],
+        "tag": 9,
+        "version": 0
+      }
+    },
+    {
+      "address": "aa3af12c48920440ff25c0d7bd6863ca8b76ec7cb03b50c3603a75bf55a18924",
+      "node": {
+        "payload": "",
+        "refs": [
+          {
+            "expectedTag": 9,
+            "id": "58bd5b00a2d82c42984bb6f106c85e1f3446f37bcad8150c7f5f4187637ffb59"
+          },
+          {
+            "expectedTag": 9,
+            "id": "c752c6fe1e0c2ca7ebbdee2c35f5e39362ae230eb8630b8d6ffd5058fbaa9c87"
+          }
+        ],
+        "tag": 9,
+        "version": 0
+      }
+    }
+  ]
+}

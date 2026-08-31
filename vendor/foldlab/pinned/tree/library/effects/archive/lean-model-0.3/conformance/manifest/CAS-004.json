@@ -1,0 +1,96 @@
+{
+  "family": "CAS-004",
+  "meaning": "A value's canonical encoding is the UTF-8 bytes of its compact JSON rendering — codepoint-sorted keys, integers only, JSON short-escape strings — one encoding per structure, language-neutral.",
+  "model": "effects-model@0.3.0",
+  "rows": [
+    {
+      "case": "astral-key-after-private-use-005",
+      "expect": {
+        "bytes": [123, 34, 238, 128, 128, 34, 58, 50, 44, 34, 240, 144, 128, 128, 34, 58, 49, 125]
+      },
+      "input": {
+        "value": {
+          "": 2,
+          "𐀀": 1
+        }
+      }
+    },
+    {
+      "case": "booleans-001",
+      "expect": {
+        "bytes": [91, 116, 114, 117, 101, 44, 102, 97, 108, 115, 101, 93]
+      },
+      "input": {
+        "value": [true, false]
+      }
+    },
+    {
+      "case": "integers-at-safe-bounds-002",
+      "expect": {
+        "bytes": [91, 48, 44, 45, 49, 44, 52, 50, 44, 45, 57, 48, 48, 55, 49, 57, 57, 50, 53, 52, 55, 52, 48, 57, 57, 49, 44, 57, 48, 48, 55, 49, 57, 57, 50, 53, 52, 55, 52, 48, 57, 57, 49, 93]
+      },
+      "input": {
+        "value": [0, -1, 42, -9007199254740991, 9007199254740991]
+      }
+    },
+    {
+      "case": "key-sort-by-codepoint-004",
+      "expect": {
+        "bytes": [123, 34, 34, 58, 53, 44, 34, 66, 34, 58, 52, 44, 34, 97, 34, 58, 50, 44, 34, 97, 97, 34, 58, 51, 44, 34, 98, 34, 58, 49, 125]
+      },
+      "input": {
+        "value": {
+          "": 5,
+          "B": 4,
+          "a": 2,
+          "aa": 3,
+          "b": 1
+        }
+      }
+    },
+    {
+      "case": "nested-composites-006",
+      "expect": {
+        "bytes": [123, 34, 101, 109, 112, 116, 121, 34, 58, 123, 125, 44, 34, 108, 105, 115, 116, 34, 58, 91, 123, 34, 107, 34, 58, 110, 117, 108, 108, 125, 44, 91, 93, 93, 125]
+      },
+      "input": {
+        "value": {
+          "empty": {},
+          "list": [
+            {
+              "k": null
+            },
+            []
+          ]
+        }
+      }
+    },
+    {
+      "case": "null-000",
+      "expect": {
+        "bytes": [110, 117, 108, 108]
+      },
+      "input": {
+        "value": null
+      }
+    },
+    {
+      "case": "string-escape-set-003",
+      "expect": {
+        "bytes": [34, 113, 58, 92, 34, 32, 98, 58, 92, 92, 32, 116, 58, 92, 116, 32, 110, 58, 92, 110, 32, 114, 58, 92, 114, 32, 98, 115, 58, 92, 98, 32, 102, 102, 58, 92, 102, 32, 99, 49, 58, 92, 117, 48, 48, 48, 49, 32, 195, 169, 32, 228, 189, 160, 32, 240, 144, 128, 128, 34]
+      },
+      "input": {
+        "value": "q:\" b:\\ t:\u0009 n:\u000a r:\u000d bs:\u0008 ff:\u000c c1:\u0001 é 你 𐀀"
+      }
+    },
+    {
+      "case": "top-level-integer-007",
+      "expect": {
+        "bytes": [55]
+      },
+      "input": {
+        "value": 7
+      }
+    }
+  ]
+}

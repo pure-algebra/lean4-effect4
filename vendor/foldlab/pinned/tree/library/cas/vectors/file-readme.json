@@ -1,0 +1,59 @@
+{
+  "description": "a named file over a one-chunk blob manifest",
+  "digest": "sha256-scheme0",
+  "name": "file-readme",
+  "schemaVersion": 1,
+  "word": [
+    {
+      "address": "38772feade7148f0fcca2fe840f9359d17849a8018404b73d368ebbb378d6060",
+      "node": {
+        "payload": "23207468652073746f726520776f7264",
+        "refs": [],
+        "tag": 8,
+        "version": 0
+      }
+    },
+    {
+      "address": "a3222e68ffa03ea9dcea60335283e0bf96e42cd5690dfb530ab42f63404d8b3f",
+      "node": {
+        "payload": "0000000000000010",
+        "refs": [
+          {
+            "expectedTag": 8,
+            "id": "38772feade7148f0fcca2fe840f9359d17849a8018404b73d368ebbb378d6060"
+          }
+        ],
+        "tag": 9,
+        "version": 0
+      }
+    },
+    {
+      "address": "b99e51ccdb106fbfc8c576f509d667740c003c27a8b04b2dfd25aee071063973",
+      "node": {
+        "payload": "00000001000000000000001000000001",
+        "refs": [
+          {
+            "expectedTag": 9,
+            "id": "a3222e68ffa03ea9dcea60335283e0bf96e42cd5690dfb530ab42f63404d8b3f"
+          }
+        ],
+        "tag": 10,
+        "version": 0
+      }
+    },
+    {
+      "address": "7b59a9e8853aa88aeaa237413bacfab3d4e6a30aff4e706258602372b2d7c5e6",
+      "node": {
+        "payload": "00000009726561646d652e6d640000000a746578742f706c61696e",
+        "refs": [
+          {
+            "expectedTag": 10,
+            "id": "b99e51ccdb106fbfc8c576f509d667740c003c27a8b04b2dfd25aee071063973"
+          }
+        ],
+        "tag": 11,
+        "version": 0
+      }
+    }
+  ]
+}

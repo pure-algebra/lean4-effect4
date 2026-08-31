@@ -11,4 +11,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+      - name: Check sealed Foldlab evidence vendor
+        run: ./scripts/test-vendor-foldlab.sh
       - uses: leanprover/lean-action@v1

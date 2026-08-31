@@ -1,0 +1,7 @@
+/.lake
+/node_modules
+/research/docs/*.pdf
+/dist
+# Build-materialized copy of library/cas/mcp/cas-tools.json (see
+# scripts/copy-mcp-manifest.ts): shipped in the tarball, never committed.
+/mcp

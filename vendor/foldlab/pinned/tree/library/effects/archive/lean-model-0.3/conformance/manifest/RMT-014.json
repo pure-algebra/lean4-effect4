@@ -1,0 +1,61 @@
+{
+  "family": "RMT-014",
+  "meaning": "When capability-document bytes are not the canonical encoding of representable limits, the closed decoder returns nothing — truncation, oversize fields, and trailing bytes are all rejected with the same fail-closed posture as node bytes, and a successful decode's input is exactly the canonical encoding of its result.",
+  "model": "effects-model@0.3.0",
+  "oracle": "Capability documents are eight canonical bytes — two big-endian 32-bit naturals, the key-count limit then the blob-byte limit — parsed by a closed decoder that rejects truncation and trailing content; a successful decode's input is exactly the canonical encoding of its result.",
+  "rows": [
+    {
+      "case": "canonical-decodes-000",
+      "expect": {
+        "_tag": "Decoded",
+        "limits": {
+          "maxBatchKeys": 4,
+          "maxBlobBytes": 40
+        }
+      },
+      "input": {
+        "bytes": [0, 0, 0, 4, 0, 0, 0, 40]
+      }
+    },
+    {
+      "case": "empty-rejected-003",
+      "expect": {
+        "_tag": "Rejected"
+      },
+      "input": {
+        "bytes": []
+      }
+    },
+    {
+      "case": "max-fields-decode-004",
+      "expect": {
+        "_tag": "Decoded",
+        "limits": {
+          "maxBatchKeys": 4294967295,
+          "maxBlobBytes": 4294967295
+        }
+      },
+      "input": {
+        "bytes": [255, 255, 255, 255, 255, 255, 255, 255]
+      }
+    },
+    {
+      "case": "trailing-rejected-002",
+      "expect": {
+        "_tag": "Rejected"
+      },
+      "input": {
+        "bytes": [0, 0, 0, 4, 0, 0, 0, 40, 0]
+      }
+    },
+    {
+      "case": "truncated-rejected-001",
+      "expect": {
+        "_tag": "Rejected"
+      },
+      "input": {
+        "bytes": [0, 0, 0, 4, 0]
+      }
+    }
+  ]
+}

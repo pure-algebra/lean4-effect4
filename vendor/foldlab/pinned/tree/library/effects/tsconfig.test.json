@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["bun"],
+    // The Effect-native register's materialized snapshots
+    // (`test/generated/materialized/effect/`) are committed verbatim,
+    // and Effect's `toCodeDocument` spells this package's own
+    // declaration import by package name. Inside this package that
+    // specifier IS `src/index.ts`; `vitest.config.ts` carries the same
+    // mapping for the runtime. Scoped here — nothing under `src`
+    // imports the package by its own name.
+    "paths": { "@foldlab/cas": ["./src/index.ts"] },
+    // The effect rc line ships unstable/cli declarations referencing
+    // an internal Param.getParamMetadata absent from the emitted
+    // Param.d.ts — an upstream packaging defect only surfaced by
+    // importing the cli module. First seen at rc.111; re-probed
+    // 2026-08-29 at rc.112 and still present (command.d.ts:66).
+    // Scoped here; the src-only tsconfig stays lib-checked.
+    "skipLibCheck": true
+  },
+  "include": ["src", "test", "scripts", "bin", "vitest.config.ts"]
+}

@@ -1,0 +1,152 @@
+{
+  "candidateDepthMax": 64,
+  "details": {
+    "natNotCanonical": "{role} is not canonical decimal",
+    "natNotLiteral": "{role} is not a numeric literal",
+    "natOutOfRange": "{role} does not fit {bits} bits",
+    "optionalChain": "optional chain in the spine",
+    "payloadHexDomain": "payload hex is not lowercase even-length",
+    "payloadNotHexCall": "payload is not hex(\"…\")",
+    "payloadNotStringLiteral": "payload argument is not a plain string literal"
+  },
+  "elements": [
+    {
+      "description": "A store program: an exported constant holding an Effect generator over its capabilities — in v0, exactly one, the store. Everything the program does is listed in its body, one step per line.",
+      "name": "program-frame",
+      "spelling": "export const p = (store) => E.gen(function* () { … })"
+    },
+    {
+      "description": "The store capability, bound as the program's parameter. In v0 it is the only capability the grammar recognizes — a staging choice, not language law: the model composes effect signatures by sum, and multi-capability frames are the manifest's largest planned growth (the wild census's top refusal bucket).",
+      "name": "store-binder",
+      "spelling": "(store)"
+    },
+    {
+      "description": "One program step: perform a store operation and bind its answer to a name. Steps run top to bottom.",
+      "name": "binding",
+      "spelling": "const a = yield* store.put(node)"
+    },
+    {
+      "description": "Admit one node into the store. The answer is the node's content address; admitting the same node twice answers the same address.",
+      "name": "put-op",
+      "spelling": "store.put(node)"
+    },
+    {
+      "description": "The node being admitted: what kind it is, its opaque payload bytes, and its references to nodes admitted earlier.",
+      "name": "node-literal",
+      "spelling": "{ kind, payload, refs }"
+    },
+    {
+      "description": "The kind's schema version — a canonical decimal natural that fits 32 bits.",
+      "name": "kind-version",
+      "spelling": "version: 0"
+    },
+    {
+      "description": "The kind's wire tag — which sort of node this is — a canonical decimal natural that fits 32 bits.",
+      "name": "kind-tag",
+      "spelling": "tag: 71"
+    },
+    {
+      "description": "The payload bytes, spelled in lowercase even-length hex. The program never interprets them.",
+      "name": "payload-hex",
+      "spelling": "payload: hex(\"ff\")"
+    },
+    {
+      "description": "A reference to an earlier answer by its bound name, carrying the kind tag the referenced node is expected to have.",
+      "name": "ref",
+      "spelling": "{ id: a, expectedTag: 71 }"
+    },
+    {
+      "description": "The program's result: exactly the bound answers, in order. This is the run's word — the observation every realization is judged by.",
+      "name": "return-word",
+      "spelling": "return [a, b]"
+    }
+  ],
+  "emitted": {
+    "emitter": "emitlift",
+    "module": "library/cas/tools/EmitLift.lean",
+    "schemaVersion": 0,
+    "toolchain": "4.33.1"
+  },
+  "language": "cas-libfree",
+  "manifestVersion": 0,
+  "natBits": 32,
+  "natLiteralPattern": "^(0|[1-9][0-9]*)$",
+  "payloadHexPattern": "^([0-9a-f]{2})*$",
+  "pins": {
+    "compilerLeg": "typescript@5.9.2",
+    "effect": "4.0.0-rc.112 (rule-authoring dependency; recognition is version-neutral by import resolution)",
+    "oxcLeg": "oxlint@1.80.0 + effect-oxlint@0.3.4 (mpsuesser/effect-oxlint @ d8c892f4)"
+  },
+  "rules": [
+    {
+      "description": "Recognize a candidate store-program declaration (the program frame).",
+      "enabled": true,
+      "name": "program-decl",
+      "register": "R-GEN",
+      "scope": "declaration"
+    },
+    {
+      "description": "Recognize one binding step: const answer = yield* store.put(node).",
+      "enabled": true,
+      "name": "const-yield-put",
+      "register": "R-GEN",
+      "scope": "statement"
+    },
+    {
+      "description": "Recognize the closed node-literal shape of a put argument.",
+      "enabled": true,
+      "name": "node-literal",
+      "register": "R-GEN",
+      "scope": "expression"
+    },
+    {
+      "description": "Resolve each ref name to the index of an earlier answer.",
+      "enabled": true,
+      "name": "answer-ref",
+      "register": "R-GEN",
+      "scope": "expression"
+    },
+    {
+      "description": "Recognize the final return as the dense, ordered answer array.",
+      "enabled": true,
+      "name": "return-word",
+      "register": "R-GEN",
+      "scope": "statement"
+    },
+    {
+      "description": "Pin the in-file hex helper (disabled in v0: lifts carry helperUnpinned instead).",
+      "enabled": false,
+      "name": "hex-helper",
+      "register": "R-GEN",
+      "scope": "declaration"
+    },
+    {
+      "description": "Recognize a load binding (disabled: load is not yet documented).",
+      "enabled": false,
+      "name": "const-yield-load",
+      "register": "R-GEN",
+      "scope": "statement"
+    },
+    {
+      "description": "Partition the generator body into binding steps and the final return.",
+      "enabled": true,
+      "name": "body-partition",
+      "register": "R-GEN",
+      "scope": "body"
+    }
+  ],
+  "unreachableV0": [
+    {
+      "code": "E-REF-FORWARD",
+      "revival": "a two-pass binder walk (v0 resolves refs against earlier binders only)"
+    },
+    {
+      "code": "E-IMPORT-OPAQUE",
+      "revival": "import-form rules (v0 admits every effect-module binding form alike)"
+    },
+    {
+      "code": "E-HELPER-UNPINNED",
+      "revival": "Rule 7 landing (hex pinning is disabled; the Lift carries a boolean instead)"
+    }
+  ]
+}

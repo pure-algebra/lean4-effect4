@@ -1,0 +1,19 @@
+{
+  "input": "model-gated",
+  "note": "CURATED DATA, and the meta plane's first declared input. A row says: this shipped TypeScript file of library/effects is held to the Lean model by the named conformance artifact, so a drift between the two is a red gate rather than a silent divergence. Nothing derives these rows - that is the point of writing them down - and a row naming a file that is no longer under the census's scanned roots REFUSES the census rather than dropping out of it. Hand-edited; this file carries no emitted header because nothing emits it.",
+  "reader": "trust",
+  "rows": [
+    { "path": "src/cas/Store.ts", "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)" },
+    { "path": "src/cas/Node.ts", "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)" },
+    { "path": "src/cas/Programs.ts", "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)" },
+    { "path": "src/cas/Value.ts", "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)" },
+    { "path": "src/cas/Blob.ts", "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)" },
+    { "path": "src/cas/CanonicalSchema.ts", "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)" },
+    { "path": "src/cas/Materialize.ts", "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)" },
+    { "path": "src/cas/ConformanceVector.ts", "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)" },
+    { "path": "src/cas/WordLog.ts", "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)" },
+    { "path": "src/internal/casCodec.ts", "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)" },
+    { "path": "src/internal/admission.ts", "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)" },
+    { "path": "src/internal/blobGraph.ts", "gate": "conformance suite (Lean-emitted vectors, byte gates, generated fixtures, fast-check)" }
+  ]
+}

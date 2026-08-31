@@ -1,0 +1,127 @@
+{
+  "family": "SES-002",
+  "meaning": "On every input, one reducer step from a well-formed session state yields a well-formed session state — the cursor stays inside the history, and record mode keeps it pinned to the history length.",
+  "model": "effects-model@0.3.0",
+  "rows": [
+    {
+      "case": "wf-preserved-record-000",
+      "expect": {
+        "decisions": [
+          {
+            "_tag": "LiveDelegation",
+            "at": 0,
+            "operation": "acme/Rates/get"
+          },
+          {
+            "_tag": "OccurrenceAppended",
+            "at": 0,
+            "operation": "acme/Rates/get"
+          }
+        ],
+        "results": [
+          {
+            "_tag": "Delegated"
+          },
+          {
+            "_tag": "Appended"
+          }
+        ],
+        "state": {
+          "cursor": 1,
+          "historyLength": 1,
+          "status": "active",
+          "wellFormed": true
+        }
+      },
+      "input": {
+        "inputs": [
+          {
+            "_tag": "Invoke",
+            "invocation": {
+              "op": "acme/Rates/get",
+              "request": "req-0",
+              "revision": 1
+            }
+          },
+          {
+            "_tag": "Recorded",
+            "invocation": {
+              "op": "acme/Rates/get",
+              "request": "req-0",
+              "revision": 1
+            },
+            "outcome": {
+              "_tag": "Success",
+              "value": "ok-0"
+            }
+          }
+        ],
+        "state": {
+          "cursor": 0,
+          "history": [],
+          "mode": "record",
+          "status": "active"
+        }
+      }
+    },
+    {
+      "case": "wf-preserved-replay-001",
+      "expect": {
+        "decisions": [
+          {
+            "_tag": "RecordedSubstitution",
+            "at": 0,
+            "operation": "acme/Rates/get"
+          },
+          {
+            "_tag": "HistoryConsumed",
+            "at": 0
+          }
+        ],
+        "results": [
+          {
+            "_tag": "Substituted",
+            "outcome": {
+              "_tag": "Success",
+              "value": "ok-0"
+            }
+          }
+        ],
+        "state": {
+          "cursor": 1,
+          "historyLength": 1,
+          "status": "active",
+          "wellFormed": true
+        }
+      },
+      "input": {
+        "inputs": [
+          {
+            "_tag": "Invoke",
+            "invocation": {
+              "op": "acme/Rates/get",
+              "request": "req-0",
+              "revision": 1
+            }
+          }
+        ],
+        "state": {
+          "cursor": 0,
+          "history": [
+            {
+              "op": "acme/Rates/get",
+              "outcome": {
+                "_tag": "Success",
+                "value": "ok-0"
+              },
+              "request": "req-0",
+              "revision": 1
+            }
+          ],
+          "mode": "replay",
+          "status": "active"
+        }
+      }
+    }
+  ]
+}

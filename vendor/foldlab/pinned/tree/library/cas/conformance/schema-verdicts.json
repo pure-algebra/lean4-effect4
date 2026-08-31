@@ -1,0 +1,1676 @@
+{
+  "cases": [
+    {
+      "denotes": true,
+      "name": "null",
+      "note": "the null keyword",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Null\",\"checks\":[]}}}",
+      "values": [
+        {
+          "label": "null",
+          "value": null,
+          "verdict": "accept"
+        },
+        {
+          "label": "false",
+          "value": false,
+          "verdict": "refuse"
+        },
+        {
+          "label": "zero",
+          "value": 0,
+          "verdict": "refuse"
+        },
+        {
+          "label": "empty-string",
+          "value": "",
+          "verdict": "refuse"
+        },
+        {
+          "label": "empty-object",
+          "value": {},
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "bool",
+      "note": "the boolean keyword",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Boolean\",\"checks\":[]}}}",
+      "values": [
+        {
+          "label": "true",
+          "value": true,
+          "verdict": "accept"
+        },
+        {
+          "label": "false",
+          "value": false,
+          "verdict": "accept"
+        },
+        {
+          "label": "string-true",
+          "value": "true",
+          "verdict": "refuse"
+        },
+        {
+          "label": "zero",
+          "value": 0,
+          "verdict": "refuse"
+        },
+        {
+          "label": "null",
+          "value": null,
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "int",
+      "note": "the integer keyword — Number + effect/schema/isInt, gated Lean-side by the safe-integer bound (SafeInt)",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Number\",\"checks\":[{\"_tag\":\"Filter\",\"aborted\":false,\"annotations\":{\"arbitrary\":{\"constraint\":{\"integer\":true}},\"expected\":\"an integer\"},\"representation\":{\"id\":\"effect/schema/isInt\",\"payload\":null}}]}}}",
+      "values": [
+        {
+          "label": "zero",
+          "value": 0,
+          "verdict": "accept"
+        },
+        {
+          "label": "positive",
+          "value": 42,
+          "verdict": "accept"
+        },
+        {
+          "label": "negative",
+          "value": -7,
+          "verdict": "accept"
+        },
+        {
+          "label": "max-safe",
+          "value": 9007199254740991,
+          "verdict": "accept"
+        },
+        {
+          "label": "above-max-safe",
+          "value": 9007199254740992,
+          "verdict": "refuse"
+        },
+        {
+          "label": "below-min-safe",
+          "value": -9007199254740992,
+          "verdict": "refuse"
+        },
+        {
+          "label": "string",
+          "value": "7",
+          "verdict": "refuse"
+        },
+        {
+          "label": "bool",
+          "value": true,
+          "verdict": "refuse"
+        },
+        {
+          "label": "null",
+          "value": null,
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "str",
+      "note": "the string keyword",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"String\",\"checks\":[]}}}",
+      "values": [
+        {
+          "label": "hello",
+          "value": "hello",
+          "verdict": "accept"
+        },
+        {
+          "label": "empty",
+          "value": "",
+          "verdict": "accept"
+        },
+        {
+          "label": "escapes",
+          "value": "line\u000abreak \"quoted\" \\ backslash",
+          "verdict": "accept"
+        },
+        {
+          "label": "number",
+          "value": 7,
+          "verdict": "refuse"
+        },
+        {
+          "label": "null",
+          "value": null,
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "lit-bool",
+      "note": "the boolean literal `true`",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"boolean\",\"value\":true}}}}",
+      "values": [
+        {
+          "label": "true",
+          "value": true,
+          "verdict": "accept"
+        },
+        {
+          "label": "false",
+          "value": false,
+          "verdict": "refuse"
+        },
+        {
+          "label": "string-true",
+          "value": "true",
+          "verdict": "refuse"
+        },
+        {
+          "label": "null",
+          "value": null,
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "lit-int",
+      "note": "the integer literal `-7`",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"number\",\"value\":-7}}}}",
+      "values": [
+        {
+          "label": "exact",
+          "value": -7,
+          "verdict": "accept"
+        },
+        {
+          "label": "other",
+          "value": 7,
+          "verdict": "refuse"
+        },
+        {
+          "label": "string",
+          "value": "-7",
+          "verdict": "refuse"
+        },
+        {
+          "label": "null",
+          "value": null,
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "lit-str",
+      "note": "the string literal `pinned`",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"pinned\"}}}}",
+      "values": [
+        {
+          "label": "exact",
+          "value": "pinned",
+          "verdict": "accept"
+        },
+        {
+          "label": "other",
+          "value": "unpinned",
+          "verdict": "refuse"
+        },
+        {
+          "label": "null",
+          "value": null,
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "lit-null",
+      "note": "the null literal — projects onto the Null keyword (register R13, the one collapse revision 1 makes)",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Null\",\"checks\":[]}}}",
+      "values": [
+        {
+          "label": "null",
+          "value": null,
+          "verdict": "accept"
+        },
+        {
+          "label": "false",
+          "value": false,
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "arr-str",
+      "note": "an array of strings",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Arrays\",\"checks\":[],\"elements\":[],\"rest\":[{\"_tag\":\"String\",\"checks\":[]}]}}}",
+      "values": [
+        {
+          "label": "empty",
+          "value": [],
+          "verdict": "accept"
+        },
+        {
+          "label": "two",
+          "value": ["a", "b"],
+          "verdict": "accept"
+        },
+        {
+          "label": "mixed",
+          "value": ["a", 1],
+          "verdict": "refuse"
+        },
+        {
+          "label": "scalar",
+          "value": "a",
+          "verdict": "refuse"
+        },
+        {
+          "label": "object",
+          "value": {},
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "arr-arr-int",
+      "note": "a nested array of integer arrays",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Arrays\",\"checks\":[],\"elements\":[],\"rest\":[{\"_tag\":\"Arrays\",\"checks\":[],\"elements\":[],\"rest\":[{\"_tag\":\"Number\",\"checks\":[{\"_tag\":\"Filter\",\"aborted\":false,\"annotations\":{\"arbitrary\":{\"constraint\":{\"integer\":true}},\"expected\":\"an integer\"},\"representation\":{\"id\":\"effect/schema/isInt\",\"payload\":null}}]}]}]}}}",
+      "values": [
+        {
+          "label": "nested",
+          "value": [
+            [1],
+            []
+          ],
+          "verdict": "accept"
+        },
+        {
+          "label": "flat",
+          "value": [1],
+          "verdict": "refuse"
+        },
+        {
+          "label": "wrong-leaf",
+          "value": [
+            [true]
+          ],
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "struct",
+      "note": "a struct with one required and one optional field, sorted",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"a\"},\"type\":{\"_tag\":\"Number\",\"checks\":[{\"_tag\":\"Filter\",\"aborted\":false,\"annotations\":{\"arbitrary\":{\"constraint\":{\"integer\":true}},\"expected\":\"an integer\"},\"representation\":{\"id\":\"effect/schema/isInt\",\"payload\":null}}]}},{\"isMutable\":false,\"isOptional\":true,\"name\":{\"type\":\"string\",\"value\":\"b\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}}]}}}",
+      "values": [
+        {
+          "label": "both",
+          "value": {
+            "a": 1,
+            "b": "x"
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "optional-absent",
+          "value": {
+            "a": 1
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "required-absent",
+          "value": {
+            "b": "x"
+          },
+          "verdict": "refuse"
+        },
+        {
+          "label": "wrong-type",
+          "value": {
+            "a": 1,
+            "b": 2
+          },
+          "verdict": "refuse"
+        },
+        {
+          "label": "excess",
+          "value": {
+            "a": 1,
+            "b": "x",
+            "c": true
+          },
+          "verdict": "refuse"
+        },
+        {
+          "label": "empty",
+          "value": {},
+          "verdict": "refuse"
+        },
+        {
+          "label": "array",
+          "value": [],
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "struct-empty",
+      "note": "the empty struct",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[]}}}",
+      "values": [
+        {
+          "label": "empty",
+          "value": {},
+          "verdict": "accept"
+        },
+        {
+          "label": "excess",
+          "value": {
+            "a": 1
+          },
+          "verdict": "refuse"
+        },
+        {
+          "label": "null",
+          "value": null,
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "struct-nested",
+      "note": "a struct carrying a struct and an array",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"inner\"},\"type\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"k\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}}]}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"items\"},\"type\":{\"_tag\":\"Arrays\",\"checks\":[],\"elements\":[],\"rest\":[{\"_tag\":\"Boolean\",\"checks\":[]}]}}]}}}",
+      "values": [
+        {
+          "label": "ok",
+          "value": {
+            "inner": {
+              "k": "v"
+            },
+            "items": [true]
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "inner-wrong",
+          "value": {
+            "inner": {
+              "k": 1
+            },
+            "items": []
+          },
+          "verdict": "refuse"
+        },
+        {
+          "label": "inner-missing",
+          "value": {
+            "items": []
+          },
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "ref",
+      "note": "a typed store reference at kind tag 9",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":9},\"typeParameters\":[]}}}",
+      "values": [
+        {
+          "label": "sentinel",
+          "value": {
+            "$link": {
+              "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+              "tag": 9
+            }
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "wrong-tag",
+          "value": {
+            "$link": {
+              "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+              "tag": 10
+            }
+          },
+          "verdict": "refuse"
+        },
+        {
+          "label": "short-id",
+          "value": {
+            "$link": {
+              "id": "00ff",
+              "tag": 9
+            }
+          },
+          "verdict": "refuse"
+        },
+        {
+          "label": "non-hex-id",
+          "value": {
+            "$link": {
+              "id": "zz112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+              "tag": 9
+            }
+          },
+          "verdict": "refuse"
+        },
+        {
+          "label": "bare-string",
+          "value": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+          "verdict": "refuse"
+        },
+        {
+          "label": "null",
+          "value": null,
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "ref-schema",
+      "note": "a typed store reference at the schema kind tag (0x53) — the annotation subject's code",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":83},\"typeParameters\":[]}}}",
+      "values": [
+        {
+          "label": "sentinel",
+          "value": {
+            "$link": {
+              "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+              "tag": 83
+            }
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "wrong-tag",
+          "value": {
+            "$link": {
+              "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+              "tag": 9
+            }
+          },
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "union-discriminated-oneof",
+      "note": "a discriminated union in oneOf mode: three tagged members, tags distinct",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Union\",\"checks\":[],\"mode\":\"oneOf\",\"types\":[{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"move\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"dx\"},\"type\":{\"_tag\":\"Number\",\"checks\":[{\"_tag\":\"Filter\",\"aborted\":false,\"annotations\":{\"arbitrary\":{\"constraint\":{\"integer\":true}},\"expected\":\"an integer\"},\"representation\":{\"id\":\"effect/schema/isInt\",\"payload\":null}}]}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"dy\"},\"type\":{\"_tag\":\"Number\",\"checks\":[{\"_tag\":\"Filter\",\"aborted\":false,\"annotations\":{\"arbitrary\":{\"constraint\":{\"integer\":true}},\"expected\":\"an integer\"},\"representation\":{\"id\":\"effect/schema/isInt\",\"payload\":null}}]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"say\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"body\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}},{\"isMutable\":false,\"isOptional\":true,\"name\":{\"type\":\"string\",\"value\":\"note\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"stop\"}}}]}]}}}",
+      "values": [
+        {
+          "label": "move",
+          "value": {
+            "_tag": "move",
+            "dx": 1,
+            "dy": -2
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "say-full",
+          "value": {
+            "_tag": "say",
+            "body": "hi",
+            "note": "n"
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "say-optional-absent",
+          "value": {
+            "_tag": "say",
+            "body": "hi"
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "stop",
+          "value": {
+            "_tag": "stop"
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "unknown-tag",
+          "value": {
+            "_tag": "jump"
+          },
+          "verdict": "refuse"
+        },
+        {
+          "label": "no-tag",
+          "value": {
+            "body": "hi"
+          },
+          "verdict": "refuse"
+        },
+        {
+          "label": "member-wrong-type",
+          "value": {
+            "_tag": "move",
+            "dx": "1",
+            "dy": 2
+          },
+          "verdict": "refuse"
+        },
+        {
+          "label": "scalar",
+          "value": "move",
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "union-discriminated-anyof",
+      "note": "the same discriminated members in anyOf mode — the mode is identity in the carrier and is not consulted by the denotation",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Union\",\"checks\":[],\"mode\":\"anyOf\",\"types\":[{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"move\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"dx\"},\"type\":{\"_tag\":\"Number\",\"checks\":[{\"_tag\":\"Filter\",\"aborted\":false,\"annotations\":{\"arbitrary\":{\"constraint\":{\"integer\":true}},\"expected\":\"an integer\"},\"representation\":{\"id\":\"effect/schema/isInt\",\"payload\":null}}]}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"dy\"},\"type\":{\"_tag\":\"Number\",\"checks\":[{\"_tag\":\"Filter\",\"aborted\":false,\"annotations\":{\"arbitrary\":{\"constraint\":{\"integer\":true}},\"expected\":\"an integer\"},\"representation\":{\"id\":\"effect/schema/isInt\",\"payload\":null}}]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"say\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"body\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}},{\"isMutable\":false,\"isOptional\":true,\"name\":{\"type\":\"string\",\"value\":\"note\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"stop\"}}}]}]}}}",
+      "values": [
+        {
+          "label": "move",
+          "value": {
+            "_tag": "move",
+            "dx": 1,
+            "dy": -2
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "stop",
+          "value": {
+            "_tag": "stop"
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "unknown-tag",
+          "value": {
+            "_tag": "jump"
+          },
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "union-discriminated-singleton",
+      "note": "a one-member discriminated union — the bare (unwrapped) arm of ElMembers",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Union\",\"checks\":[],\"mode\":\"oneOf\",\"types\":[{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"stop\"}}}]}]}}}",
+      "values": [
+        {
+          "label": "stop",
+          "value": {
+            "_tag": "stop"
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "other-tag",
+          "value": {
+            "_tag": "move"
+          },
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "struct-with-union",
+      "note": "a discriminated union under a struct field — the denotation composes",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"event\"},\"type\":{\"_tag\":\"Union\",\"checks\":[],\"mode\":\"oneOf\",\"types\":[{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"move\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"dx\"},\"type\":{\"_tag\":\"Number\",\"checks\":[{\"_tag\":\"Filter\",\"aborted\":false,\"annotations\":{\"arbitrary\":{\"constraint\":{\"integer\":true}},\"expected\":\"an integer\"},\"representation\":{\"id\":\"effect/schema/isInt\",\"payload\":null}}]}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"dy\"},\"type\":{\"_tag\":\"Number\",\"checks\":[{\"_tag\":\"Filter\",\"aborted\":false,\"annotations\":{\"arbitrary\":{\"constraint\":{\"integer\":true}},\"expected\":\"an integer\"},\"representation\":{\"id\":\"effect/schema/isInt\",\"payload\":null}}]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"say\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"body\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}},{\"isMutable\":false,\"isOptional\":true,\"name\":{\"type\":\"string\",\"value\":\"note\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"stop\"}}}]}]}}]}}}",
+      "values": [
+        {
+          "label": "ok",
+          "value": {
+            "event": {
+              "_tag": "move",
+              "dx": 1,
+              "dy": -2
+            }
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "unknown-tag",
+          "value": {
+            "event": {
+              "_tag": "jump"
+            }
+          },
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "union-undiscriminated-anyof",
+      "note": "an undiscriminated anyOf union over keywords — admitted as content, El is Empty, so no value triples exist (corpus restriction 3)",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Union\",\"checks\":[],\"mode\":\"anyOf\",\"types\":[{\"_tag\":\"String\",\"checks\":[]},{\"_tag\":\"Boolean\",\"checks\":[]},{\"_tag\":\"Number\",\"checks\":[{\"_tag\":\"Filter\",\"aborted\":false,\"annotations\":{\"arbitrary\":{\"constraint\":{\"integer\":true}},\"expected\":\"an integer\"},\"representation\":{\"id\":\"effect/schema/isInt\",\"payload\":null}}]}]}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "union-undiscriminated-oneof",
+      "note": "an undiscriminated oneOf union over two string literals, spelled zebra before alpha — order is identity",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Union\",\"checks\":[],\"mode\":\"oneOf\",\"types\":[{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"zebra\"}},{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"alpha\"}}]}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "union-nested",
+      "note": "a union whose second member is a union — the no-flattening rule, admitted",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Union\",\"checks\":[],\"mode\":\"anyOf\",\"types\":[{\"_tag\":\"Null\",\"checks\":[]},{\"_tag\":\"Union\",\"checks\":[],\"mode\":\"oneOf\",\"types\":[{\"_tag\":\"Arrays\",\"checks\":[],\"elements\":[],\"rest\":[{\"_tag\":\"String\",\"checks\":[]}]},{\"_tag\":\"Boolean\",\"checks\":[]}]}]}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "tuple-pair",
+      "note": "a two-element tuple — admitted as content, El is Empty (corpus restriction 7), and position is identity",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Arrays\",\"checks\":[],\"elements\":[{\"isOptional\":false,\"type\":{\"_tag\":\"String\",\"checks\":[]}},{\"isOptional\":false,\"type\":{\"_tag\":\"Number\",\"checks\":[{\"_tag\":\"Filter\",\"aborted\":false,\"annotations\":{\"arbitrary\":{\"constraint\":{\"integer\":true}},\"expected\":\"an integer\"},\"representation\":{\"id\":\"effect/schema/isInt\",\"payload\":null}}]}}],\"rest\":[]}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "tuple-pair-swapped",
+      "note": "the same two element types in the other order — a DIFFERENT code at a different address",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Arrays\",\"checks\":[],\"elements\":[{\"isOptional\":false,\"type\":{\"_tag\":\"Number\",\"checks\":[{\"_tag\":\"Filter\",\"aborted\":false,\"annotations\":{\"arbitrary\":{\"constraint\":{\"integer\":true}},\"expected\":\"an integer\"},\"representation\":{\"id\":\"effect/schema/isInt\",\"payload\":null}}]}},{\"isOptional\":false,\"type\":{\"_tag\":\"String\",\"checks\":[]}}],\"rest\":[]}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "tuple-optional-element",
+      "note": "a trailing optional element — the optionality bit is carried, never collapsed; whether an optional element may sit anywhere but last is a DENOTATION question, not an admission one",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Arrays\",\"checks\":[],\"elements\":[{\"isOptional\":false,\"type\":{\"_tag\":\"Number\",\"checks\":[{\"_tag\":\"Filter\",\"aborted\":false,\"annotations\":{\"arbitrary\":{\"constraint\":{\"integer\":true}},\"expected\":\"an integer\"},\"representation\":{\"id\":\"effect/schema/isInt\",\"payload\":null}}]}},{\"isOptional\":true,\"type\":{\"_tag\":\"String\",\"checks\":[]}}],\"rest\":[]}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "tuple-with-rest",
+      "note": "Schema.TupleWithRest: one element and a rest type — the rest is an Option in the carrier, so at most one is structural",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Arrays\",\"checks\":[],\"elements\":[{\"isOptional\":false,\"type\":{\"_tag\":\"String\",\"checks\":[]}}],\"rest\":[{\"_tag\":\"Number\",\"checks\":[{\"_tag\":\"Filter\",\"aborted\":false,\"annotations\":{\"arbitrary\":{\"constraint\":{\"integer\":true}},\"expected\":\"an integer\"},\"representation\":{\"id\":\"effect/schema/isInt\",\"payload\":null}}]}]}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "tuple-nested",
+      "note": "a tuple inside an array inside a tuple — nesting like any other code",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Arrays\",\"checks\":[],\"elements\":[{\"isOptional\":false,\"type\":{\"_tag\":\"Arrays\",\"checks\":[],\"elements\":[],\"rest\":[{\"_tag\":\"Arrays\",\"checks\":[],\"elements\":[{\"isOptional\":false,\"type\":{\"_tag\":\"String\",\"checks\":[]}}],\"rest\":[]}]}},{\"isOptional\":false,\"type\":{\"_tag\":\"Null\",\"checks\":[]}}],\"rest\":[]}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "array-plain-still-array",
+      "note": "the plain array, unchanged by the Arrays completion: {elements:[], rest:[t]} has NO tuple spelling, because Ast.tuple takes a first element — which is what keeps the revision-1 projection injective with no second collapse",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Arrays\",\"checks\":[],\"elements\":[],\"rest\":[{\"_tag\":\"String\",\"checks\":[]}]}}}",
+      "values": [
+        {
+          "label": "empty",
+          "value": [],
+          "verdict": "accept"
+        },
+        {
+          "label": "strings",
+          "value": ["a", "b"],
+          "verdict": "accept"
+        },
+        {
+          "label": "wrong-item",
+          "value": [1],
+          "verdict": "refuse"
+        },
+        {
+          "label": "not-an-array",
+          "value": "a",
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "enum-string",
+      "note": "a string enum spelled Up before Down — admitted as content, El is Empty (corpus restriction 6), and the order is Object.keys order, which is source order",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Enum\",\"checks\":[],\"enums\":[[\"Up\",{\"type\":\"string\",\"value\":\"Up\"}],[\"Down\",{\"type\":\"string\",\"value\":\"Down\"}]]}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "enum-string-reversed",
+      "note": "the same two members in the other order — a DIFFERENT code at a different address: order is identity for enums as it is for unions",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Enum\",\"checks\":[],\"enums\":[[\"Down\",{\"type\":\"string\",\"value\":\"Down\"}],[\"Up\",{\"type\":\"string\",\"value\":\"Up\"}]]}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "enum-number-alias",
+      "note": "a numeric enum with a negative member and an ALIAS (two names at one value) — admitted, because the NAME is the member's identity and TypeScript spells aliases",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Enum\",\"checks\":[],\"enums\":[[\"Debug\",{\"type\":\"number\",\"value\":-1}],[\"Warn\",{\"type\":\"number\",\"value\":1}],[\"Warning\",{\"type\":\"number\",\"value\":1}]]}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "struct-with-enum",
+      "note": "an enum under a struct field: the struct's own El is uninhabited too, so it carries no value triples",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"dir\"},\"type\":{\"_tag\":\"Enum\",\"checks\":[],\"enums\":[[\"Up\",{\"type\":\"string\",\"value\":\"Up\"}]]}}]}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "decl-date",
+      "note": "effect/schema/Date, arity 0, null payload — admitted as content; El is Empty, so no value triples exist (corpus restriction 4)",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"effect/schema/Date\",\"payload\":null},\"typeParameters\":[]}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "decl-url",
+      "note": "effect/schema/URL, arity 0, null payload",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"effect/schema/URL\",\"payload\":null},\"typeParameters\":[]}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "decl-option-str",
+      "note": "effect/schema/Option at arity 1 over String — the one arity-1 row",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"effect/schema/Option\",\"payload\":null},\"typeParameters\":[{\"_tag\":\"String\",\"checks\":[]}]}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "decl-option-nested",
+      "note": "Option over a struct — the type parameter is a code like any other",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"effect/schema/Option\",\"payload\":null},\"typeParameters\":[{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"a\"},\"type\":{\"_tag\":\"Number\",\"checks\":[{\"_tag\":\"Filter\",\"aborted\":false,\"annotations\":{\"arbitrary\":{\"constraint\":{\"integer\":true}},\"expected\":\"an integer\"},\"representation\":{\"id\":\"effect/schema/isInt\",\"payload\":null}}]}}]}]}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "struct-with-decl",
+      "note": "a declaration under a struct field: the struct's own El is uninhabited too, so it carries no value triples",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"at\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"effect/schema/Date\",\"payload\":null},\"typeParameters\":[]}}]}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "annotation",
+      "note": "the sidecar annotation kind: key, a subject union over the thirteen addressable planes — the meta and agent five (0x53 schema, 0x54 system, 0x58 exchange, 0x0F program, 0x47 git), the content four decision 40's rider CA-1 admitted (0x01 value, 0x08 chunk, 0x0B file, 0x0D context), and that decision's own four sorts (0x41 annotation, 0x49 agent, 0x51 query, 0x52 result) — and a value that is either text or a typed reference",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"key\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"subject\"},\"type\":{\"_tag\":\"Union\",\"checks\":[],\"mode\":\"oneOf\",\"types\":[{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"agent\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":73},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"annotation\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":65},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"chunk\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":8},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"context\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":13},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"exchange\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":88},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"file\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":11},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"git\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":71},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"program\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":15},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"query\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":81},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"result\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":82},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"schema\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":83},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"system\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":84},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"value\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":1},\"typeParameters\":[]}}]}]}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"value\"},\"type\":{\"_tag\":\"Union\",\"checks\":[],\"mode\":\"oneOf\",\"types\":[{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"ref\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Union\",\"checks\":[],\"mode\":\"oneOf\",\"types\":[{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"agent\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":73},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"annotation\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":65},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"chunk\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":8},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"context\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":13},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"exchange\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":88},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"file\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":11},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"git\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":71},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"program\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":15},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"query\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":81},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"result\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":82},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"schema\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":83},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"system\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":84},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"value\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":1},\"typeParameters\":[]}}]}]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"text\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"text\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}}]}]}}]}}}",
+      "values": [
+        {
+          "label": "on-schema-text",
+          "value": {
+            "key": "foldlab/schema/title",
+            "subject": {
+              "_tag": "schema",
+              "address": {
+                "$link": {
+                  "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                  "tag": 83
+                }
+              }
+            },
+            "value": {
+              "_tag": "text",
+              "text": "the vector document"
+            }
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "name-on-system",
+          "value": {
+            "key": "foldlab/name",
+            "subject": {
+              "_tag": "system",
+              "address": {
+                "$link": {
+                  "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                  "tag": 84
+                }
+              }
+            },
+            "value": {
+              "_tag": "text",
+              "text": "casSystem"
+            }
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "name-on-program",
+          "value": {
+            "key": "foldlab/name",
+            "subject": {
+              "_tag": "program",
+              "address": {
+                "$link": {
+                  "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                  "tag": 15
+                }
+              }
+            },
+            "value": {
+              "_tag": "text",
+              "text": "put a tree"
+            }
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "ref-value",
+          "value": {
+            "key": "foldlab/view",
+            "subject": {
+              "_tag": "program",
+              "address": {
+                "$link": {
+                  "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                  "tag": 15
+                }
+              }
+            },
+            "value": {
+              "_tag": "ref",
+              "address": {
+                "_tag": "system",
+                "address": {
+                  "$link": {
+                    "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                    "tag": 84
+                  }
+                }
+              }
+            }
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "on-git",
+          "value": {
+            "key": "foldlab/note",
+            "subject": {
+              "_tag": "git",
+              "address": {
+                "$link": {
+                  "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                  "tag": 71
+                }
+              }
+            },
+            "value": {
+              "_tag": "text",
+              "text": "the commit this describes"
+            }
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "on-exchange",
+          "value": {
+            "key": "foldlab/note",
+            "subject": {
+              "_tag": "exchange",
+              "address": {
+                "$link": {
+                  "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                  "tag": 88
+                }
+              }
+            },
+            "value": {
+              "_tag": "text",
+              "text": "the turn this describes"
+            }
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "tombstone-on-annotation",
+          "value": {
+            "key": "foldlab/tombstone",
+            "subject": {
+              "_tag": "annotation",
+              "address": {
+                "$link": {
+                  "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                  "tag": 65
+                }
+              }
+            },
+            "value": {
+              "_tag": "text",
+              "text": "superseded"
+            }
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "embedding-on-value",
+          "value": {
+            "key": "foldlab/embedding",
+            "subject": {
+              "_tag": "value",
+              "address": {
+                "$link": {
+                  "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                  "tag": 1
+                }
+              }
+            },
+            "value": {
+              "_tag": "ref",
+              "address": {
+                "_tag": "chunk",
+                "address": {
+                  "$link": {
+                    "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                    "tag": 8
+                  }
+                }
+              }
+            }
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "related-query-to-query",
+          "value": {
+            "key": "foldlab/related",
+            "subject": {
+              "_tag": "query",
+              "address": {
+                "$link": {
+                  "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                  "tag": 81
+                }
+              }
+            },
+            "value": {
+              "_tag": "ref",
+              "address": {
+                "_tag": "query",
+                "address": {
+                  "$link": {
+                    "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                    "tag": 81
+                  }
+                }
+              }
+            }
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "subject-refused-text-arm",
+          "value": {
+            "key": "foldlab/name",
+            "subject": {
+              "_tag": "text",
+              "address": {
+                "$link": {
+                  "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                  "tag": 1
+                }
+              }
+            },
+            "value": {
+              "_tag": "text",
+              "text": "no run sort"
+            }
+          },
+          "verdict": "refuse"
+        },
+        {
+          "label": "subject-arm-tag-swapped",
+          "value": {
+            "key": "foldlab/name",
+            "subject": {
+              "_tag": "system",
+              "address": {
+                "$link": {
+                  "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                  "tag": 83
+                }
+              }
+            },
+            "value": {
+              "_tag": "text",
+              "text": "wrong plane"
+            }
+          },
+          "verdict": "refuse"
+        },
+        {
+          "label": "subject-unknown-arm",
+          "value": {
+            "key": "foldlab/name",
+            "subject": {
+              "_tag": "projection",
+              "address": {
+                "$link": {
+                  "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                  "tag": 83
+                }
+              }
+            },
+            "value": {
+              "_tag": "text",
+              "text": "no such plane"
+            }
+          },
+          "verdict": "refuse"
+        },
+        {
+          "label": "subject-untagged",
+          "value": {
+            "key": "foldlab/schema/title",
+            "subject": {
+              "$link": {
+                "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                "tag": 83
+              }
+            },
+            "value": {
+              "_tag": "text",
+              "text": "the vector document"
+            }
+          },
+          "verdict": "refuse"
+        },
+        {
+          "label": "value-bare-string",
+          "value": {
+            "key": "foldlab/schema/title",
+            "subject": {
+              "_tag": "schema",
+              "address": {
+                "$link": {
+                  "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                  "tag": 83
+                }
+              }
+            },
+            "value": "the vector document"
+          },
+          "verdict": "refuse"
+        },
+        {
+          "label": "key-missing",
+          "value": {
+            "subject": {
+              "_tag": "schema",
+              "address": {
+                "$link": {
+                  "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                  "tag": 83
+                }
+              }
+            },
+            "value": {
+              "_tag": "text",
+              "text": "v"
+            }
+          },
+          "verdict": "refuse"
+        },
+        {
+          "label": "excess",
+          "value": {
+            "key": "k",
+            "subject": {
+              "_tag": "schema",
+              "address": {
+                "$link": {
+                  "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                  "tag": 83
+                }
+              }
+            },
+            "value": {
+              "_tag": "text",
+              "text": "v"
+            },
+            "zextra": true
+          },
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "exchange",
+      "note": "the exchange kind: prompt, answer, and a subject union whose arms address the schema plane (0x53) and the exchange plane (0x58)",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"answer\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"prompt\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"subject\"},\"type\":{\"_tag\":\"Union\",\"checks\":[],\"mode\":\"oneOf\",\"types\":[{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"exchange\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":88},\"typeParameters\":[]}}]},{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"_tag\"},\"type\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"string\",\"value\":\"schema\"}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"address\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"foldlab/cas/ref\",\"payload\":83},\"typeParameters\":[]}}]}]}}]}}}",
+      "values": [
+        {
+          "label": "on-schema",
+          "value": {
+            "answer": "a struct of three fields",
+            "prompt": "what does this schema describe?",
+            "subject": {
+              "_tag": "schema",
+              "address": {
+                "$link": {
+                  "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                  "tag": 83
+                }
+              }
+            }
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "on-exchange",
+          "value": {
+            "answer": "because the seam is symmetric",
+            "prompt": "why?",
+            "subject": {
+              "_tag": "exchange",
+              "address": {
+                "$link": {
+                  "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                  "tag": 88
+                }
+              }
+            }
+          },
+          "verdict": "accept"
+        },
+        {
+          "label": "subject-arm-tag-swapped",
+          "value": {
+            "answer": "a",
+            "prompt": "p",
+            "subject": {
+              "_tag": "schema",
+              "address": {
+                "$link": {
+                  "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                  "tag": 88
+                }
+              }
+            }
+          },
+          "verdict": "refuse"
+        },
+        {
+          "label": "subject-unknown-arm",
+          "value": {
+            "answer": "a",
+            "prompt": "p",
+            "subject": {
+              "_tag": "program",
+              "address": {
+                "$link": {
+                  "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                  "tag": 83
+                }
+              }
+            }
+          },
+          "verdict": "refuse"
+        },
+        {
+          "label": "subject-untagged",
+          "value": {
+            "answer": "a",
+            "prompt": "p",
+            "subject": {
+              "$link": {
+                "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                "tag": 83
+              }
+            }
+          },
+          "verdict": "refuse"
+        },
+        {
+          "label": "answer-missing",
+          "value": {
+            "prompt": "p",
+            "subject": {
+              "_tag": "schema",
+              "address": {
+                "$link": {
+                  "id": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+                  "tag": 83
+                }
+              }
+            }
+          },
+          "verdict": "refuse"
+        }
+      ],
+      "verdict": "admit"
+    },
+    {
+      "denotes": true,
+      "name": "refuse-struct-unsorted",
+      "note": "struct fields out of strict name order — the sortedness clause of Ast.wf",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"b\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"a\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}}]}}}",
+      "refusal": "illFormed",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": true,
+      "name": "refuse-struct-duplicate",
+      "note": "a struct declaring the same field name twice — strict order subsumes no-duplicates",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"a\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"a\"},\"type\":{\"_tag\":\"Number\",\"checks\":[{\"_tag\":\"Filter\",\"aborted\":false,\"annotations\":{\"arbitrary\":{\"constraint\":{\"integer\":true}},\"expected\":\"an integer\"},\"representation\":{\"id\":\"effect/schema/isInt\",\"payload\":null}}]}}]}}}",
+      "refusal": "illFormed",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": true,
+      "name": "refuse-struct-unsorted-nested",
+      "note": "the sortedness clause failing inside a nested struct",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"a\"},\"type\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"z\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"b\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}}]}}]}}}",
+      "refusal": "illFormed",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": true,
+      "name": "refuse-union-empty",
+      "note": "the empty union — that is Never, and Never is not admitted",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Union\",\"checks\":[],\"mode\":\"anyOf\",\"types\":[]}}}",
+      "refusal": "illFormed",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": true,
+      "name": "refuse-union-empty-nested",
+      "note": "the empty union under a struct field",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"u\"},\"type\":{\"_tag\":\"Union\",\"checks\":[],\"mode\":\"oneOf\",\"types\":[]}}]}}}",
+      "refusal": "illFormed",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-union-empty-member",
+      "note": "an empty union as a member of a well-formed union",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Union\",\"checks\":[],\"mode\":\"anyOf\",\"types\":[{\"_tag\":\"String\",\"checks\":[]},{\"_tag\":\"Union\",\"checks\":[],\"mode\":\"anyOf\",\"types\":[]}]}}}",
+      "refusal": "illFormed",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-enum-empty",
+      "note": "the empty enum — like the empty union it admits nothing, which is Never, and Never is not admitted",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Enum\",\"checks\":[],\"enums\":[]}}}",
+      "refusal": "illFormed",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-enum-duplicate-name",
+      "note": "an enum declaring the same member name twice — the name IS the member's identity, so it cannot repeat (values may, and do: see enum-number-alias)",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Enum\",\"checks\":[],\"enums\":[[\"A\",{\"type\":\"string\",\"value\":\"x\"}],[\"A\",{\"type\":\"string\",\"value\":\"y\"}]]}}}",
+      "refusal": "illFormed",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-enum-empty-nested",
+      "note": "the empty enum under a struct field",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"e\"},\"type\":{\"_tag\":\"Enum\",\"checks\":[],\"enums\":[]}}]}}}",
+      "refusal": "illFormed",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-decl-payload",
+      "note": "effect/schema/Date carrying a string payload — the row admits null only",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"effect/schema/Date\",\"payload\":\"not a null payload\"},\"typeParameters\":[]}}}",
+      "refusal": "illFormed",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-decl-arity-short",
+      "note": "effect/schema/Option with no type parameter — arity 1 is the row's discipline",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"effect/schema/Option\",\"payload\":null},\"typeParameters\":[]}}}",
+      "refusal": "illFormed",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-decl-arity-long",
+      "note": "effect/schema/Date with a type parameter — arity 0 is the row's discipline",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"effect/schema/Date\",\"payload\":null},\"typeParameters\":[{\"_tag\":\"String\",\"checks\":[]}]}}}",
+      "refusal": "illFormed",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-decl-param-illformed",
+      "note": "an admitted declaration whose type parameter is an ill-formed code",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"effect/schema/Option\",\"payload\":null},\"typeParameters\":[{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"b\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"a\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}}]}]}}}",
+      "refusal": "illFormed",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-unknown-declaration",
+      "note": "effect/schema/Duration: a declaration shipping Effect's whole contract and no registry row — the allowlist is the admission rule (PLAN P4)",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"effect/schema/Duration\",\"payload\":null},\"typeParameters\":[]}}}",
+      "refusal": "unknownDeclaration",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-unknown-declaration-nested",
+      "note": "the same unadmitted id under a struct property",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"d\"},\"type\":{\"_tag\":\"Declaration\",\"checks\":[],\"representation\":{\"id\":\"effect/schema/Duration\",\"payload\":null},\"typeParameters\":[]}}]}}}",
+      "refusal": "unknownDeclaration",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "admit-references-table",
+      "note": "a revision-1 document allocating a reference table of non-recursive named entries — the shape Effect emits whenever one named schema is used twice",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{\"Node\":{\"_tag\":\"String\",\"checks\":[]}},\"representation\":{\"_tag\":\"String\",\"checks\":[]}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "admit-guarded-recursion",
+      "note": "the linked list exactly as Effect emits it: the root references the table and the recursive knot sits under a Suspend, so the cycle passes through a guard and resolution terminates",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{\"Node\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"next\"},\"type\":{\"_tag\":\"Suspend\",\"checks\":[],\"thunk\":{\"_tag\":\"Union\",\"checks\":[],\"mode\":\"anyOf\",\"types\":[{\"$ref\":\"Node\",\"_tag\":\"Reference\"},{\"_tag\":\"Null\",\"checks\":[]}]}}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"value\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}}]}},\"representation\":{\"$ref\":\"Node\",\"_tag\":\"Reference\"}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-unguarded-alias-cycle",
+      "note": "A is B and B is A, with no Suspend anywhere: resolving it never reaches a node. Effect's own codec reads this back without complaint, so the refusal is this door's alone",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{\"A\":{\"$ref\":\"B\",\"_tag\":\"Reference\"},\"B\":{\"$ref\":\"A\",\"_tag\":\"Reference\"}},\"representation\":{\"$ref\":\"A\",\"_tag\":\"Reference\"}}}",
+      "refusal": "unguardedCycle",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-unguarded-struct-cycle",
+      "note": "A = {next: A} spelled with a bare reference where Effect would have written a Suspend — a shape Effect never emits and the representation can still spell",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{\"A\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"next\"},\"type\":{\"$ref\":\"A\",\"_tag\":\"Reference\"}}]}},\"representation\":{\"$ref\":\"A\",\"_tag\":\"Reference\"}}}",
+      "refusal": "unguardedCycle",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "admit-reference-chain",
+      "note": "one acyclic edge: A names B and B is a code. The first admitted row whose bare-edge relation is not empty — a door that never follows an edge refuses it, and the whole corpus used to let one pass",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{\"A\":{\"$ref\":\"B\",\"_tag\":\"Reference\"},\"B\":{\"_tag\":\"String\",\"checks\":[]}},\"representation\":{\"$ref\":\"A\",\"_tag\":\"Reference\"}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "admit-reference-chain-two",
+      "note": "two edges, so the guardedness search recurses more than once before it settles the root",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{\"A\":{\"$ref\":\"B\",\"_tag\":\"Reference\"},\"B\":{\"$ref\":\"C\",\"_tag\":\"Reference\"},\"C\":{\"_tag\":\"String\",\"checks\":[]}},\"representation\":{\"$ref\":\"A\",\"_tag\":\"Reference\"}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-unguarded-and-illformed",
+      "note": "a table entry that is BOTH on a bare cycle and out of field order — two defects, one name. The door names the cycle, and the TypeScript gate mirrors that order rather than naming whichever defect its own walk reached first",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{\"A\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"b\"},\"type\":{\"$ref\":\"A\",\"_tag\":\"Reference\"}},{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"a\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}}]}},\"representation\":{\"$ref\":\"A\",\"_tag\":\"Reference\"}}}",
+      "refusal": "unguardedCycle",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-duplicate-reference-key",
+      "note": "a references table naming A twice, the reference FIRST: Lean's parser keeps both pairs and takes the first, so the table cycles, and JSON.parse keeps the last, so it does not. Refused for the spelling before either reader decides anything",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{\"A\":{\"$ref\":\"A\",\"_tag\":\"Reference\"},\"A\":{\"_tag\":\"String\",\"checks\":[]}},\"representation\":{\"_tag\":\"String\",\"checks\":[]}}}",
+      "refusal": "illFormed",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-duplicate-reference-key-last",
+      "note": "the same duplicate with the pairs swapped, which reverses which reader sees the cycle — the other direction of the split, and the same refusal",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{\"A\":{\"_tag\":\"String\",\"checks\":[]},\"A\":{\"$ref\":\"A\",\"_tag\":\"Reference\"}},\"representation\":{\"_tag\":\"String\",\"checks\":[]}}}",
+      "refusal": "illFormed",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "admit-guarded-chain",
+      "note": "a GUARDED cycle whose bare relation is not empty: A names B bare and B reaches A again under a Suspend, so the search must follow a real edge AND stop at the guard. A door that does only one of the two passes every earlier admitted row and fails here",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{\"A\":{\"$ref\":\"B\",\"_tag\":\"Reference\"},\"B\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":false,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"a\"},\"type\":{\"_tag\":\"Suspend\",\"checks\":[],\"thunk\":{\"$ref\":\"A\",\"_tag\":\"Reference\"}}}]}},\"representation\":{\"$ref\":\"A\",\"_tag\":\"Reference\"}}}",
+      "values": [],
+      "verdict": "admit"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-partly-guarded-cycle",
+      "note": "one pair of names joined BOTH ways — A reaches B bare and again under a guard, B reaches A. The guarded path does not excuse the bare one: some-path-is-guarded is not the predicate, and a door that reads it that way admits a table whose resolution never finishes",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{\"A\":{\"_tag\":\"Union\",\"checks\":[],\"mode\":\"anyOf\",\"types\":[{\"$ref\":\"B\",\"_tag\":\"Reference\"},{\"_tag\":\"Suspend\",\"checks\":[],\"thunk\":{\"$ref\":\"B\",\"_tag\":\"Reference\"}}]},\"B\":{\"$ref\":\"A\",\"_tag\":\"Reference\"}},\"representation\":{\"$ref\":\"A\",\"_tag\":\"Reference\"}}}",
+      "refusal": "unguardedCycle",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-dead-unguarded-entry",
+      "note": "an unguarded cycle among entries the ROOT NEVER REACHES. Guardedness is a property of the table, not of the part of it the representation uses, so a door that walks from the root inward admits this. It is also where a dead entry stops being harmless: a dead well-formed entry is admitted, a dead cyclic one is not",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{\"A\":{\"_tag\":\"String\",\"checks\":[]},\"B\":{\"$ref\":\"C\",\"_tag\":\"Reference\"},\"C\":{\"$ref\":\"B\",\"_tag\":\"Reference\"}},\"representation\":{\"$ref\":\"A\",\"_tag\":\"Reference\"}}}",
+      "refusal": "unguardedCycle",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-wrong-revision",
+      "note": "a schema-node envelope at a revision no door speaks",
+      "payload": "{\"revision\":7,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"String\",\"checks\":[]}}}",
+      "refusal": "wrongRevision",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-unadmitted-node",
+      "note": "Effect's BigInt node — a first-order representation node the admitted subset defers",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"BigInt\",\"checks\":[]}}}",
+      "refusal": "notASchema",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-union-mode",
+      "note": "a union at a mode outside the table — not a union spelling at all",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Union\",\"checks\":[],\"mode\":\"allOf\",\"types\":[{\"_tag\":\"String\",\"checks\":[]}]}}}",
+      "refusal": "notASchema",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-number-unchecked",
+      "note": "a bare Number with no isInt check — Effect's float-capable number, which the value plane has no term for (ruling 15, the float ceiling)",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Number\",\"checks\":[]}}}",
+      "refusal": "notASchema",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-number-check-alien",
+      "note": "a Number carrying effect/schema/isBetween — a check id the admitted subset does not reach (the checks layer is Slice C5)",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Number\",\"checks\":[{\"_tag\":\"Filter\",\"aborted\":false,\"annotations\":{\"expected\":\"a value between 0 and 9\"},\"representation\":{\"id\":\"effect/schema/isBetween\",\"payload\":{\"maximum\":9,\"minimum\":0}}}]}}}",
+      "refusal": "notASchema",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-number-check-drift",
+      "note": "a Number whose isInt check is spelled with different annotations — the admitted subset pins ONE spelling of the one admitted check, so drift is not a schema",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Number\",\"checks\":[{\"_tag\":\"Filter\",\"aborted\":false,\"annotations\":{\"expected\":\"an int\"},\"representation\":{\"id\":\"effect/schema/isInt\",\"payload\":null}}]}}}",
+      "refusal": "notASchema",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-string-checked",
+      "note": "a String carrying a filter — every admitted node but Number has an EMPTY checks list",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"String\",\"checks\":[{\"_tag\":\"Filter\",\"aborted\":false,\"annotations\":{\"expected\":\"a value with a length of at least 2\"},\"representation\":{\"id\":\"effect/schema/isMinLength\",\"payload\":{\"minLength\":2}}}]}}}",
+      "refusal": "notASchema",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-tuple-empty",
+      "note": "the EMPTY tuple, {elements:[], rest:[]} — Schema.Tuple([]) has no spelling in the carrier and had none before the Arrays completion either, so nothing is retired by refusing it",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Arrays\",\"checks\":[],\"elements\":[],\"rest\":[]}}}",
+      "refusal": "notASchema",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-tuple-rest-two",
+      "note": "an Arrays node with TWO rest types — the trailing-rest semantics the admission map defers; the carrier holds an Option, so the refusal is structural rather than a clause that could drift",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Arrays\",\"checks\":[],\"elements\":[{\"isOptional\":false,\"type\":{\"_tag\":\"String\",\"checks\":[]}}],\"rest\":[{\"_tag\":\"Number\",\"checks\":[{\"_tag\":\"Filter\",\"aborted\":false,\"annotations\":{\"arbitrary\":{\"constraint\":{\"integer\":true}},\"expected\":\"an integer\"},\"representation\":{\"id\":\"effect/schema/isInt\",\"payload\":null}}]},{\"_tag\":\"Boolean\",\"checks\":[]}]}}}",
+      "refusal": "notASchema",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-tuple-element-annotated",
+      "note": "an element carrying an annotation bag — annotations are GROW(C-ann), on elements as everywhere else",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Arrays\",\"checks\":[],\"elements\":[{\"annotations\":{\"title\":\"first\"},\"isOptional\":false,\"type\":{\"_tag\":\"String\",\"checks\":[]}}],\"rest\":[]}}}",
+      "refusal": "notASchema",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-enum-boolean-member",
+      "note": "an Enum whose member value is a boolean — Effect's Enum persists string and number values only, so this is not an enum spelling at all",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Enum\",\"checks\":[],\"enums\":[[\"A\",{\"type\":\"boolean\",\"value\":true}]]}}}",
+      "refusal": "notASchema",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-index-signature",
+      "note": "an Objects node with an index signature — records are Slice C3, not admitted yet",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[{\"parameter\":{\"_tag\":\"String\",\"checks\":[]},\"type\":{\"_tag\":\"String\",\"checks\":[]}}],\"propertySignatures\":[]}}}",
+      "refusal": "notASchema",
+      "values": [],
+      "verdict": "refuse"
+    },
+    {
+      "denotes": false,
+      "name": "refuse-mutable-property",
+      "note": "a property signature declaring isMutable — the mutability bit is not collapsed and only the immutable reading is admitted",
+      "payload": "{\"revision\":1,\"value\":{\"references\":{},\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"indexSignatures\":[],\"propertySignatures\":[{\"isMutable\":true,\"isOptional\":false,\"name\":{\"type\":\"string\",\"value\":\"a\"},\"type\":{\"_tag\":\"String\",\"checks\":[]}}]}}}",
+      "refusal": "notASchema",
+      "values": [],
+      "verdict": "refuse"
+    }
+  ],
+  "counts": {
+    "acceptValues": 44,
+    "admittedCodes": 44,
+    "codes": 79,
+    "refuseValues": 63,
+    "refusedCodes": 35,
+    "values": 107
+  },
+  "emitted": {
+    "emitter": "verdicts",
+    "module": "library/cas/tools/Verdicts.lean",
+    "schemaVersion": 1,
+    "toolchain": "4.33.1"
+  },
+  "restrictions": ["non-recursive: Ast has no Suspend/Reference constructor; a non-empty references table is a refusal case, never an admitted one (survey B3, ruling 2)", "non-float: Cas.Json.Value has no float, so no float triple is writable at all (ruling 15, the float ceiling)", "no undiscriminated-union values: El of an undiscriminated union is Empty, so Lean has no verdict for such a value; those codes carry admission verdicts only", "no declaration values: El of a general declaration is Empty (the named declEl obligation); Date/URL/Option carry admission verdicts only", "values are canonically spelled: every candidate is canonValue-normalized before its verdict is computed, so object key order is never the thing under test", "no enum values: El of an enum is Empty (the named enumEl obligation) — WF admits alias members, so the index a value carries would be a function of member order rather than of the value; enums carry admission verdicts only", "no tuple values: El of a tuple is Empty (the named tupleEl obligation) — an absent optional element shortens a JSON array rather than leaving a hole, so a non-trailing optional has no positional encoding at all; tuples carry admission verdicts only"],
+  "revision": 1
+}

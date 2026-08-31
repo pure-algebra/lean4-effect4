@@ -1,0 +1,110 @@
+{
+  "family": "MRK-012",
+  "meaning": "Range-stream documents parse fail-closed and exactly over the decoder's input alphabet: a twelve-byte header — the declared total and the requested range, echoed so a client fails closed on disagreement — then tagged items, a bare skip, a length-prefixed chunk, or a parent's two child addresses; unknown tags and truncated items are rejected, the framing is self-delimiting, and a successful decode's input is exactly the canonical encoding of its result.",
+  "model": "effects-model@0.3.0",
+  "oracle": "Addresses are 32-byte toy digests (the declared 32-lane byte fold, not cryptographic) over structural pre-image encodings — a tag byte for leaf or parent, the leaf's absolute index and bytes, the parent's two child addresses — so domain separation and position binding live in the pre-image exactly as the model states them; the tie to a production hash arrives with the implementation slice.",
+  "rows": [
+    {
+      "case": "canonical-stream-decodes-000",
+      "expect": {
+        "_tag": "Decoded",
+        "header": {
+          "hi": 2,
+          "lo": 1,
+          "total": 3
+        },
+        "items": [
+          {
+            "_tag": "ParentNode",
+            "left": [36, 198, 104, 10, 172, 78, 240, 146, 52, 214, 120, 26, 188, 94, 0, 162, 68, 230, 136, 42, 204, 110, 16, 178, 84, 246, 152, 58, 220, 126, 32, 194],
+            "right": [21, 27, 33, 39, 45, 51, 57, 63, 69, 75, 81, 87, 93, 99, 105, 111, 117, 123, 129, 135, 141, 147, 153, 159, 165, 171, 177, 183, 189, 195, 201, 207]
+          },
+          {
+            "_tag": "ParentNode",
+            "left": [9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67, 69, 71],
+            "right": [15, 19, 23, 27, 31, 35, 39, 43, 47, 51, 55, 59, 63, 67, 71, 75, 79, 83, 87, 91, 95, 99, 103, 107, 111, 115, 119, 123, 127, 131, 135, 139]
+          },
+          {
+            "_tag": "SkipNode"
+          },
+          {
+            "_tag": "ChunkNode",
+            "bytes": [2]
+          },
+          {
+            "_tag": "SkipNode"
+          }
+        ]
+      },
+      "input": {
+        "bytes": [0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 2, 2, 36, 198, 104, 10, 172, 78, 240, 146, 52, 214, 120, 26, 188, 94, 0, 162, 68, 230, 136, 42, 204, 110, 16, 178, 84, 246, 152, 58, 220, 126, 32, 194, 21, 27, 33, 39, 45, 51, 57, 63, 69, 75, 81, 87, 93, 99, 105, 111, 117, 123, 129, 135, 141, 147, 153, 159, 165, 171, 177, 183, 189, 195, 201, 207, 2, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67, 69, 71, 15, 19, 23, 27, 31, 35, 39, 43, 47, 51, 55, 59, 63, 67, 71, 75, 79, 83, 87, 91, 95, 99, 103, 107, 111, 115, 119, 123, 127, 131, 135, 139, 0, 1, 0, 0, 0, 1, 2, 0]
+      }
+    },
+    {
+      "case": "trailing-skip-extends-items-004",
+      "expect": {
+        "_tag": "Decoded",
+        "header": {
+          "hi": 2,
+          "lo": 1,
+          "total": 3
+        },
+        "items": [
+          {
+            "_tag": "ParentNode",
+            "left": [36, 198, 104, 10, 172, 78, 240, 146, 52, 214, 120, 26, 188, 94, 0, 162, 68, 230, 136, 42, 204, 110, 16, 178, 84, 246, 152, 58, 220, 126, 32, 194],
+            "right": [21, 27, 33, 39, 45, 51, 57, 63, 69, 75, 81, 87, 93, 99, 105, 111, 117, 123, 129, 135, 141, 147, 153, 159, 165, 171, 177, 183, 189, 195, 201, 207]
+          },
+          {
+            "_tag": "ParentNode",
+            "left": [9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67, 69, 71],
+            "right": [15, 19, 23, 27, 31, 35, 39, 43, 47, 51, 55, 59, 63, 67, 71, 75, 79, 83, 87, 91, 95, 99, 103, 107, 111, 115, 119, 123, 127, 131, 135, 139]
+          },
+          {
+            "_tag": "SkipNode"
+          },
+          {
+            "_tag": "ChunkNode",
+            "bytes": [2]
+          },
+          {
+            "_tag": "SkipNode"
+          },
+          {
+            "_tag": "SkipNode"
+          }
+        ]
+      },
+      "input": {
+        "bytes": [0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 2, 2, 36, 198, 104, 10, 172, 78, 240, 146, 52, 214, 120, 26, 188, 94, 0, 162, 68, 230, 136, 42, 204, 110, 16, 178, 84, 246, 152, 58, 220, 126, 32, 194, 21, 27, 33, 39, 45, 51, 57, 63, 69, 75, 81, 87, 93, 99, 105, 111, 117, 123, 129, 135, 141, 147, 153, 159, 165, 171, 177, 183, 189, 195, 201, 207, 2, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67, 69, 71, 15, 19, 23, 27, 31, 35, 39, 43, 47, 51, 55, 59, 63, 67, 71, 75, 79, 83, 87, 91, 95, 99, 103, 107, 111, 115, 119, 123, 127, 131, 135, 139, 0, 1, 0, 0, 0, 1, 2, 0, 0]
+      }
+    },
+    {
+      "case": "truncated-chunk-item-rejected-003",
+      "expect": {
+        "_tag": "Rejected"
+      },
+      "input": {
+        "bytes": [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 5, 9]
+      }
+    },
+    {
+      "case": "truncated-header-rejected-001",
+      "expect": {
+        "_tag": "Rejected"
+      },
+      "input": {
+        "bytes": [0, 0, 0, 3, 0, 0, 0, 1]
+      }
+    },
+    {
+      "case": "unknown-tag-rejected-002",
+      "expect": {
+        "_tag": "Rejected"
+      },
+      "input": {
+        "bytes": [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 3]
+      }
+    }
+  ]
+}

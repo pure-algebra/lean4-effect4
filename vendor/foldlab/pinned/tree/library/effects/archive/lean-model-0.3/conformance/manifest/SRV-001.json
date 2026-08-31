@@ -1,0 +1,273 @@
+{
+  "family": "SRV-001",
+  "meaning": "The server's semantic core is the interpretation of the model's finite request trees over the storage seam: for every scripted session, the implementation returns the model's outcomes and issues exactly the model's storage events, in order — the transcript is law, so a skipped check, an extra load, or a reordered negotiation is a red row, not a benchmark.",
+  "model": "effects-model@0.3.0",
+  "rows": [
+    {
+      "case": "capabilities-and-empty-reads-000",
+      "expect": {
+        "events": [
+          {
+            "_tag": "LoadBytes",
+            "address": "242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c",
+            "answer": null
+          },
+          {
+            "_tag": "Presence",
+            "addresses": ["242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c", "6b8197adc3d9ef051b31475d73899fb5cbe1f70d23394f657b91a7bdd3e9ff15"],
+            "answer": ["missing", "missing"]
+          }
+        ],
+        "outcomes": [
+          {
+            "_tag": "Capabilities",
+            "maxBatchKeys": 4,
+            "maxNodeBytes": 128
+          },
+          {
+            "_tag": "NodeAbsent"
+          },
+          {
+            "_tag": "Presence",
+            "statuses": ["missing", "missing"]
+          }
+        ]
+      },
+      "input": {
+        "requests": [
+          {
+            "_tag": "ReadCapabilities"
+          },
+          {
+            "_tag": "LoadNode",
+            "id": "242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c"
+          },
+          {
+            "_tag": "QueryPresence",
+            "keys": ["242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c", "6b8197adc3d9ef051b31475d73899fb5cbe1f70d23394f657b91a7bdd3e9ff15"]
+          }
+        ]
+      }
+    },
+    {
+      "case": "dangling-then-ordered-publish-002",
+      "expect": {
+        "events": [
+          {
+            "_tag": "LoadBytes",
+            "address": "242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c",
+            "answer": null
+          },
+          {
+            "_tag": "LoadBytes",
+            "address": "6b8197adc3d9ef051b31475d73899fb5cbe1f70d23394f657b91a7bdd3e9ff15",
+            "answer": null
+          },
+          {
+            "_tag": "LoadBytes",
+            "address": "242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c",
+            "answer": null
+          },
+          {
+            "_tag": "PutBytes",
+            "address": "242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c",
+            "bytes": "000300000005010203faff00000000"
+          },
+          {
+            "_tag": "LoadBytes",
+            "address": "242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c",
+            "answer": "000300000005010203faff00000000"
+          },
+          {
+            "_tag": "LoadBytes",
+            "address": "6b8197adc3d9ef051b31475d73899fb5cbe1f70d23394f657b91a7bdd3e9ff15",
+            "answer": null
+          },
+          {
+            "_tag": "PutBytes",
+            "address": "6b8197adc3d9ef051b31475d73899fb5cbe1f70d23394f657b91a7bdd3e9ff15",
+            "bytes": "000700000001090000000103242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c"
+          },
+          {
+            "_tag": "Presence",
+            "addresses": ["6b8197adc3d9ef051b31475d73899fb5cbe1f70d23394f657b91a7bdd3e9ff15", "242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c"],
+            "answer": ["present", "present"]
+          },
+          {
+            "_tag": "PublishRoot",
+            "root": "6b8197adc3d9ef051b31475d73899fb5cbe1f70d23394f657b91a7bdd3e9ff15"
+          },
+          {
+            "_tag": "Presence",
+            "addresses": ["6b8197adc3d9ef051b31475d73899fb5cbe1f70d23394f657b91a7bdd3e9ff15", "242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c"],
+            "answer": ["present", "present"]
+          },
+          {
+            "_tag": "PublishRoot",
+            "root": "6b8197adc3d9ef051b31475d73899fb5cbe1f70d23394f657b91a7bdd3e9ff15"
+          }
+        ],
+        "outcomes": [
+          {
+            "_tag": "AdmissionRefused"
+          },
+          {
+            "_tag": "Admitted"
+          },
+          {
+            "_tag": "Admitted"
+          },
+          {
+            "_tag": "Published"
+          },
+          {
+            "_tag": "Published"
+          }
+        ]
+      },
+      "input": {
+        "requests": [
+          {
+            "_tag": "UploadNode",
+            "bytes": "000700000001090000000103242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c",
+            "id": "6b8197adc3d9ef051b31475d73899fb5cbe1f70d23394f657b91a7bdd3e9ff15"
+          },
+          {
+            "_tag": "UploadNode",
+            "bytes": "000300000005010203faff00000000",
+            "id": "242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c"
+          },
+          {
+            "_tag": "UploadNode",
+            "bytes": "000700000001090000000103242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c",
+            "id": "6b8197adc3d9ef051b31475d73899fb5cbe1f70d23394f657b91a7bdd3e9ff15"
+          },
+          {
+            "_tag": "PublishRoot",
+            "closure": ["242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c"],
+            "root": "6b8197adc3d9ef051b31475d73899fb5cbe1f70d23394f657b91a7bdd3e9ff15"
+          },
+          {
+            "_tag": "PublishRoot",
+            "closure": ["242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c"],
+            "root": "6b8197adc3d9ef051b31475d73899fb5cbe1f70d23394f657b91a7bdd3e9ff15"
+          }
+        ]
+      }
+    },
+    {
+      "case": "refusals-are-typed-003",
+      "expect": {
+        "events": [
+          {
+            "_tag": "Presence",
+            "addresses": ["242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c"],
+            "answer": ["missing"]
+          }
+        ],
+        "outcomes": [
+          {
+            "_tag": "DigestMismatch"
+          },
+          {
+            "_tag": "AdmissionRefused"
+          },
+          {
+            "_tag": "NodeBudgetExceeded"
+          },
+          {
+            "_tag": "BatchBudgetExceeded"
+          },
+          {
+            "_tag": "ClosureUnverified"
+          }
+        ]
+      },
+      "input": {
+        "requests": [
+          {
+            "_tag": "UploadNode",
+            "bytes": "000700000001090000000103242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c",
+            "id": "242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c"
+          },
+          {
+            "_tag": "UploadNode",
+            "bytes": "010203",
+            "id": "151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7ee"
+          },
+          {
+            "_tag": "UploadNode",
+            "bytes": "0003000000820000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+            "id": "1ba127ad33b93fc54bd157dd63e96ff57b01870d93199f25ab31b73dc349cf55"
+          },
+          {
+            "_tag": "QueryPresence",
+            "keys": ["242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c", "6b8197adc3d9ef051b31475d73899fb5cbe1f70d23394f657b91a7bdd3e9ff15", "151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7ee", "1ba127ad33b93fc54bd157dd63e96ff57b01870d93199f25ab31b73dc349cf55", "242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c"]
+          },
+          {
+            "_tag": "PublishRoot",
+            "closure": [],
+            "root": "242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c"
+          }
+        ]
+      }
+    },
+    {
+      "case": "upload-roundtrip-idempotent-001",
+      "expect": {
+        "events": [
+          {
+            "_tag": "LoadBytes",
+            "address": "242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c",
+            "answer": null
+          },
+          {
+            "_tag": "PutBytes",
+            "address": "242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c",
+            "bytes": "000300000005010203faff00000000"
+          },
+          {
+            "_tag": "LoadBytes",
+            "address": "242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c",
+            "answer": "000300000005010203faff00000000"
+          },
+          {
+            "_tag": "LoadBytes",
+            "address": "242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c",
+            "answer": "000300000005010203faff00000000"
+          }
+        ],
+        "outcomes": [
+          {
+            "_tag": "Admitted"
+          },
+          {
+            "_tag": "AlreadyAdmitted"
+          },
+          {
+            "_tag": "NodeBytes",
+            "bytes": "000300000005010203faff00000000"
+          }
+        ]
+      },
+      "input": {
+        "requests": [
+          {
+            "_tag": "UploadNode",
+            "bytes": "000300000005010203faff00000000",
+            "id": "242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c"
+          },
+          {
+            "_tag": "UploadNode",
+            "bytes": "000300000005010203faff00000000",
+            "id": "242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c"
+          },
+          {
+            "_tag": "LoadNode",
+            "id": "242c343c444c545c646c747c848c949ca4acb4bcc4ccd4dce4ecf4fc040c141c"
+          }
+        ]
+      }
+    }
+  ]
+}

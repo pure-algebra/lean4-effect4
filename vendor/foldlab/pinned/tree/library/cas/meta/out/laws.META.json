@@ -1,0 +1,305 @@
+{
+  "convention": "LAW <id>: <one clause> at the head of the enforcing declaration's docstring",
+  "counters": {
+    "bound": 9,
+    "claimingDeclarations": 10,
+    "claims": 10,
+    "owed": 28,
+    "rulings": 37,
+    "superseded": 0,
+    "unbound": 28,
+    "unregistered": 0
+  },
+  "emitted": {
+    "emitter": "laws",
+    "module": "library/cas/tools/Laws.lean",
+    "schemaVersion": 1,
+    "toolchain": "4.33.1"
+  },
+  "library": "Cas",
+  "rulings": [
+    {
+      "bindings": [],
+      "id": "SM-1",
+      "statement": "the admitted subset is the ratified construct table, not the whole of Effect Schema",
+      "status": "owed"
+    },
+    {
+      "bindings": [],
+      "id": "SM-2",
+      "statement": "a reference names its target by that target's content address, and the references table is assembled at materialization",
+      "status": "owed"
+    },
+    {
+      "bindings": [],
+      "id": "SM-3",
+      "statement": "the rev-0/rev-1 Integer disagreement is a spelling question only, the safe-integer bound being carried on both sides",
+      "status": "owed"
+    },
+    {
+      "bindings": [],
+      "id": "SM-4",
+      "statement": "nominally distinct brands collapse to one address unless brand is minted as an identity-bearing check",
+      "status": "owed"
+    },
+    {
+      "bindings": [],
+      "id": "SM-5",
+      "statement": "variance defect D1 is decided before the first libfree corpus run rather than before this lane",
+      "status": "owed"
+    },
+    {
+      "bindings": [
+        {
+          "clause": "both modes are carried and admitted, and a union's",
+          "declaration": "Cas.Schema.UnionMode",
+          "module": "Cas.Schema.Union"
+        }
+      ],
+      "id": "SM-6",
+      "statement": "a union carries both modes and its member order is its identity",
+      "status": "bound"
+    },
+    {
+      "bindings": [
+        {
+          "clause": "the adopted Effect rows are taken verbatim and mint no",
+          "declaration": "Cas.Schema.DeclarationId",
+          "module": "Cas.Schema.Declarations"
+        }
+      ],
+      "id": "SM-7",
+      "statement": "the adopted Effect declaration rows are taken verbatim and mint no estate identity",
+      "status": "bound"
+    },
+    {
+      "bindings": [],
+      "id": "SM-8",
+      "statement": "whether the store-reference code is sugar for declaration row zero is kept open by construction",
+      "status": "owed"
+    },
+    {
+      "bindings": [],
+      "id": "SM-9",
+      "statement": "a kind whose own code spells its tag cannot leave that tag to callers, because the tag is then part of the address",
+      "status": "owed"
+    },
+    {
+      "bindings": [],
+      "id": "SM-10",
+      "statement": "the TypeScript door does not yet admit declaration-carrying schemas, a root asymmetry rather than a defect",
+      "status": "owed"
+    },
+    {
+      "bindings": [
+        {
+          "clause": "the canonical rendering is injective, proved rather",
+          "declaration": "Cas.Json.renderPlain_injective",
+          "module": "Cas.Values.JsonParse"
+        }
+      ],
+      "id": "SM-11",
+      "statement": "the canonical rendering is injective, discharged by the Lean-side strict parser rather than assumed",
+      "status": "bound"
+    },
+    {
+      "bindings": [],
+      "id": "SM-12",
+      "statement": "the declaration registry's wire-identity table lives in its own module's docstring and not in REGISTRY.md",
+      "status": "owed"
+    },
+    {
+      "bindings": [],
+      "id": "SM-13",
+      "statement": "Effect's generated text collapses an all-bare-literal union and loses its oneOf mode",
+      "status": "owed"
+    },
+    {
+      "bindings": [
+        {
+          "clause": "these five names are the refusal taxonomy, so an empty",
+          "declaration": "Cas.Schema.IngestRefusal",
+          "module": "Cas.Schema.Ingest"
+        }
+      ],
+      "id": "SM-14",
+      "statement": "an empty union refuses illFormed and an unknown mode refuses notASchema, with no separate empty-union name",
+      "status": "bound"
+    },
+    {
+      "bindings": [
+        {
+          "clause": "the number row is bounded because the value plane has",
+          "declaration": "Cas.Schema.EnumValue",
+          "module": "Cas.Schema.Ast"
+        },
+        {
+          "clause": "the value plane has no float term, which is the ceiling",
+          "declaration": "Cas.Json.Value",
+          "module": "Cas.Values.Json"
+        }
+      ],
+      "id": "SM-15",
+      "statement": "the value plane has no float, so a float-carrying schema is refused rather than collapsed",
+      "status": "bound"
+    },
+    {
+      "bindings": [],
+      "id": "SM-16",
+      "statement": "the tree-sitter materializer lane stays blocked on recursion and named references, union having landed",
+      "status": "owed"
+    },
+    {
+      "bindings": [],
+      "id": "SM-17",
+      "statement": "materialized source is committed and therefore typechecked, so a stale snapshot is a red suite",
+      "status": "owed"
+    },
+    {
+      "bindings": [],
+      "id": "SM-18",
+      "statement": "the estate-native register prints each committed payload back through the ingestion door",
+      "status": "owed"
+    },
+    {
+      "bindings": [
+        {
+          "clause": "the two doors are held in agreement by this table,",
+          "declaration": "Cas.Backend.Admission.clauses",
+          "module": "Cas.Backend.Admission"
+        }
+      ],
+      "id": "SM-19",
+      "statement": "the two doors are held in agreement by a generated admission gate and a committed disagreement corpus",
+      "status": "bound"
+    },
+    {
+      "bindings": [],
+      "id": "SM-20",
+      "statement": "Effect's empty struct admits excess properties where the Lean decoder refuses them",
+      "status": "owed"
+    },
+    {
+      "bindings": [],
+      "id": "SM-21",
+      "statement": "a Declaration's annotation bag is read tolerantly, with the registry's own keys consumed as required",
+      "status": "owed"
+    },
+    {
+      "bindings": [
+        {
+          "clause": "this spells the WHOLE program table — literal-address",
+          "declaration": "Cas.Backend.Mcp.RunParams",
+          "module": "Cas.Backend.Mcp"
+        }
+      ],
+      "id": "SM-22",
+      "statement": "the run manifest spells the whole program table — literal-address operands and loads included — so a stored program can be named by the document that runs it",
+      "status": "bound"
+    },
+    {
+      "bindings": [],
+      "id": "SM-23",
+      "statement": "the program emitter routes through the defunctionalized table rather than lowering trees straight to source",
+      "status": "owed"
+    },
+    {
+      "bindings": [],
+      "id": "SM-24",
+      "statement": "the surface ledger walks the backend modules as well as the library root",
+      "status": "owed"
+    },
+    {
+      "bindings": [],
+      "id": "SM-25",
+      "statement": "the dormant effect-replay vocabulary is reactivated by ruling before any utterance slice, not during one",
+      "status": "owed"
+    },
+    {
+      "bindings": [
+        {
+          "clause": "the human kind-tag registry is this value's Markdown",
+          "declaration": "Cas.Grammar.manifestV0",
+          "module": "Cas.Grammar.Manifest"
+        }
+      ],
+      "id": "SM-26",
+      "statement": "the human kind-tag registry is the Markdown projection of the grammar manifest, and every sort has a row",
+      "status": "bound"
+    },
+    {
+      "bindings": [],
+      "id": "SM-27",
+      "statement": "the estate's Effect lock and the front-end lanes' pin are one decision with one owner",
+      "status": "owed"
+    },
+    {
+      "bindings": [
+        {
+          "clause": "a form's layout is read off its witness term, never",
+          "declaration": "Cas.Grammar.Form",
+          "module": "Cas.Grammar.Manifest"
+        }
+      ],
+      "id": "SM-28",
+      "statement": "every grammar form's layout is read off a witness term rather than transcribed",
+      "status": "bound"
+    },
+    {
+      "bindings": [],
+      "id": "SM-29",
+      "statement": "the put verb takes the described canonical node document, not bytes and a tag",
+      "status": "owed"
+    },
+    {
+      "bindings": [],
+      "id": "SM-30",
+      "statement": "every command-line verb carries a machine-readable second register",
+      "status": "owed"
+    },
+    {
+      "bindings": [],
+      "id": "SM-31",
+      "statement": "the architecture capability matrix carries a row for every shipped adapter",
+      "status": "owed"
+    },
+    {
+      "bindings": [],
+      "id": "SM-32",
+      "statement": "Effect's MCP pin emits an output schema only for object-typed results",
+      "status": "owed"
+    },
+    {
+      "bindings": [],
+      "id": "SM-33",
+      "statement": "every ruling has an enforcing declaration, and the index fails in both directions",
+      "status": "owed"
+    },
+    {
+      "bindings": [],
+      "id": "SM-34",
+      "statement": "a derived union orders its members by ascending tag string, so shuffling constructors does not move an address",
+      "status": "owed"
+    },
+    {
+      "bindings": [],
+      "id": "SM-35",
+      "statement": "the constructor-alternative deriving path refuses parametric and indexed types by name",
+      "status": "owed"
+    },
+    {
+      "bindings": [],
+      "id": "SM-36",
+      "statement": "the discriminant field name is reserved in every derived member and bounds the member field names below it",
+      "status": "owed"
+    },
+    {
+      "bindings": [],
+      "id": "SM-37",
+      "statement": "the hand mirror of a derived union spells the union constructor with an explicit oneOf mode",
+      "status": "owed"
+    }
+  ],
+  "unbound": ["SM-1", "SM-2", "SM-3", "SM-4", "SM-5", "SM-8", "SM-9", "SM-10", "SM-12", "SM-13", "SM-16", "SM-17", "SM-18", "SM-20", "SM-21", "SM-23", "SM-24", "SM-25", "SM-27", "SM-29", "SM-30", "SM-31", "SM-32", "SM-33", "SM-34", "SM-35", "SM-36", "SM-37"],
+  "unregistered": []
+}

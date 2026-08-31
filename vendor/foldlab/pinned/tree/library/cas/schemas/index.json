@@ -1,0 +1,61 @@
+{
+  "emitted": {
+    "emitter": "schemas",
+    "module": "library/cas/tools/Schemas.lean",
+    "schemaVersion": 1,
+    "toolchain": "4.33.1"
+  },
+  "revision": 1,
+  "schemas": [
+    {
+      "byteLength": 2539,
+      "file": "vector-document.json",
+      "name": "vector-document"
+    },
+    {
+      "byteLength": 1454,
+      "file": "vector-index.json",
+      "name": "vector-index"
+    },
+    {
+      "byteLength": 1255,
+      "file": "pin-sample.json",
+      "name": "pin-sample"
+    },
+    {
+      "byteLength": 710,
+      "file": "literal-pin.json",
+      "name": "literal-pin"
+    },
+    {
+      "byteLength": 12589,
+      "file": "annotation.json",
+      "name": "annotation"
+    },
+    {
+      "byteLength": 1171,
+      "file": "union-pin.json",
+      "name": "union-pin"
+    },
+    {
+      "byteLength": 1630,
+      "file": "tagged-pin.json",
+      "name": "tagged-pin"
+    },
+    {
+      "byteLength": 785,
+      "file": "enum-pin.json",
+      "name": "enum-pin"
+    },
+    {
+      "byteLength": 1971,
+      "file": "tuple-pin.json",
+      "name": "tuple-pin"
+    },
+    {
+      "byteLength": 1385,
+      "file": "exchange.json",
+      "name": "exchange"
+    }
+  ]
+}

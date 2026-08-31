@@ -1,0 +1,146 @@
+{
+  "family": "RPL-005",
+  "meaning": "When completion arrives before the cursor reaches the history length, the step rejects with the unconsumed-suffix category and the cursor is unchanged — the rejection carries the program's terminal so far, so a same-looking final value cannot hide a recorded action that was never re-emitted.",
+  "model": "effects-model@0.3.0",
+  "rows": [
+    {
+      "case": "complete-at-end-001",
+      "expect": {
+        "decisions": [
+          {
+            "_tag": "RecordedSubstitution",
+            "at": 0,
+            "operation": "acme/Rates/get"
+          },
+          {
+            "_tag": "HistoryConsumed",
+            "at": 0
+          },
+          {
+            "_tag": "Completed",
+            "consumed": 1
+          }
+        ],
+        "results": [
+          {
+            "_tag": "Substituted",
+            "outcome": {
+              "_tag": "Success",
+              "value": "ok-0"
+            }
+          },
+          {
+            "_tag": "SessionOutcome",
+            "outcome": {
+              "_tag": "Completed",
+              "terminal": {
+                "_tag": "Succeeded",
+                "value": "final"
+              }
+            }
+          }
+        ],
+        "state": {
+          "cursor": 1,
+          "historyLength": 1,
+          "status": "active",
+          "wellFormed": true
+        }
+      },
+      "input": {
+        "inputs": [
+          {
+            "_tag": "Invoke",
+            "invocation": {
+              "op": "acme/Rates/get",
+              "request": "req-0",
+              "revision": 1
+            }
+          },
+          {
+            "_tag": "Complete",
+            "terminal": {
+              "_tag": "Succeeded",
+              "value": "final"
+            }
+          }
+        ],
+        "state": {
+          "cursor": 0,
+          "history": [
+            {
+              "op": "acme/Rates/get",
+              "outcome": {
+                "_tag": "Success",
+                "value": "ok-0"
+              },
+              "request": "req-0",
+              "revision": 1
+            }
+          ],
+          "mode": "replay",
+          "status": "active"
+        }
+      }
+    },
+    {
+      "case": "suffix-rejected-with-terminal-000",
+      "expect": {
+        "decisions": [
+          {
+            "_tag": "TypedRejection",
+            "at": 0,
+            "category": "UnconsumedSuffix"
+          }
+        ],
+        "results": [
+          {
+            "_tag": "SessionOutcome",
+            "outcome": {
+              "_tag": "Rejected",
+              "at": 0,
+              "category": "UnconsumedSuffix",
+              "terminalSoFar": {
+                "_tag": "Succeeded",
+                "value": "final"
+              }
+            }
+          }
+        ],
+        "state": {
+          "cursor": 0,
+          "historyLength": 1,
+          "status": "aborted",
+          "wellFormed": true
+        }
+      },
+      "input": {
+        "inputs": [
+          {
+            "_tag": "Complete",
+            "terminal": {
+              "_tag": "Succeeded",
+              "value": "final"
+            }
+          }
+        ],
+        "state": {
+          "cursor": 0,
+          "history": [
+            {
+              "op": "acme/Rates/get",
+              "outcome": {
+                "_tag": "Success",
+                "value": "ok-0"
+              },
+              "request": "req-0",
+              "revision": 1
+            }
+          ],
+          "mode": "replay",
+          "status": "active"
+        }
+      }
+    }
+  ]
+}

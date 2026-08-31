@@ -1,0 +1,17 @@
+{
+  "description": "one opaque value node, no references",
+  "digest": "sha256-scheme0",
+  "name": "value-single",
+  "schemaVersion": 1,
+  "word": [
+    {
+      "address": "19d41f1156c974ac72ef94d36d8254c07de96dfd00e0f115735aad3d1528f5ca",
+      "node": {
+        "payload": "68656c6c6f2c20636173",
+        "refs": [],
+        "tag": 1,
+        "version": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,155 @@
+{
+  "family": "MRK-005",
+  "meaning": "On nonempty chunk lists and any requested range, the slice decode over the range extractor's stream and the whole decode filtered to the range agree at their emission lists — a slice emits exactly the bytes the whole decode would emit at those offsets, never more, so slice and encoding carriers stay transport while roots and decoded bytes stay the identity.",
+  "model": "effects-model@0.3.0",
+  "oracle": "Addresses are 32-byte toy digests (the declared 32-lane byte fold, not cryptographic) over structural pre-image encodings — a tag byte for leaf or parent, the leaf's absolute index and bytes, the parent's two child addresses — so domain separation and position binding live in the pre-image exactly as the model states them; the tie to a production hash arrives with the implementation slice.",
+  "rows": [
+    {
+      "case": "slice-middle-chunk-000",
+      "expect": {
+        "decisions": [
+          {
+            "_tag": "Emitted",
+            "bytes": [2],
+            "index": 1
+          }
+        ],
+        "status": "done"
+      },
+      "input": {
+        "hi": 2,
+        "inputs": [
+          {
+            "_tag": "ParentNode",
+            "left": [36, 198, 104, 10, 172, 78, 240, 146, 52, 214, 120, 26, 188, 94, 0, 162, 68, 230, 136, 42, 204, 110, 16, 178, 84, 246, 152, 58, 220, 126, 32, 194],
+            "right": [21, 27, 33, 39, 45, 51, 57, 63, 69, 75, 81, 87, 93, 99, 105, 111, 117, 123, 129, 135, 141, 147, 153, 159, 165, 171, 177, 183, 189, 195, 201, 207]
+          },
+          {
+            "_tag": "ParentNode",
+            "left": [9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67, 69, 71],
+            "right": [15, 19, 23, 27, 31, 35, 39, 43, 47, 51, 55, 59, 63, 67, 71, 75, 79, 83, 87, 91, 95, 99, 103, 107, 111, 115, 119, 123, 127, 131, 135, 139]
+          },
+          {
+            "_tag": "SkipNode"
+          },
+          {
+            "_tag": "ChunkNode",
+            "bytes": [2]
+          },
+          {
+            "_tag": "SkipNode"
+          }
+        ],
+        "lo": 1,
+        "root": [36, 198, 104, 10, 172, 78, 240, 146, 52, 214, 120, 26, 188, 94, 0, 162, 68, 230, 136, 42, 204, 110, 16, 178, 84, 246, 152, 58, 220, 126, 32, 194],
+        "total": 3
+      }
+    },
+    {
+      "case": "slice-suffix-001",
+      "expect": {
+        "decisions": [
+          {
+            "_tag": "Emitted",
+            "bytes": [2],
+            "index": 1
+          },
+          {
+            "_tag": "Emitted",
+            "bytes": [3],
+            "index": 2
+          },
+          {
+            "_tag": "LengthValidated"
+          }
+        ],
+        "status": "done"
+      },
+      "input": {
+        "hi": 3,
+        "inputs": [
+          {
+            "_tag": "ParentNode",
+            "left": [36, 198, 104, 10, 172, 78, 240, 146, 52, 214, 120, 26, 188, 94, 0, 162, 68, 230, 136, 42, 204, 110, 16, 178, 84, 246, 152, 58, 220, 126, 32, 194],
+            "right": [21, 27, 33, 39, 45, 51, 57, 63, 69, 75, 81, 87, 93, 99, 105, 111, 117, 123, 129, 135, 141, 147, 153, 159, 165, 171, 177, 183, 189, 195, 201, 207]
+          },
+          {
+            "_tag": "ParentNode",
+            "left": [9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67, 69, 71],
+            "right": [15, 19, 23, 27, 31, 35, 39, 43, 47, 51, 55, 59, 63, 67, 71, 75, 79, 83, 87, 91, 95, 99, 103, 107, 111, 115, 119, 123, 127, 131, 135, 139]
+          },
+          {
+            "_tag": "SkipNode"
+          },
+          {
+            "_tag": "ChunkNode",
+            "bytes": [2]
+          },
+          {
+            "_tag": "ChunkNode",
+            "bytes": [3]
+          }
+        ],
+        "lo": 1,
+        "root": [36, 198, 104, 10, 172, 78, 240, 146, 52, 214, 120, 26, 188, 94, 0, 162, 68, 230, 136, 42, 204, 110, 16, 178, 84, 246, 152, 58, 220, 126, 32, 194],
+        "total": 3
+      }
+    },
+    {
+      "case": "whole-as-full-range-002",
+      "expect": {
+        "decisions": [
+          {
+            "_tag": "Emitted",
+            "bytes": [1],
+            "index": 0
+          },
+          {
+            "_tag": "Emitted",
+            "bytes": [2],
+            "index": 1
+          },
+          {
+            "_tag": "Emitted",
+            "bytes": [3],
+            "index": 2
+          },
+          {
+            "_tag": "LengthValidated"
+          }
+        ],
+        "status": "done"
+      },
+      "input": {
+        "hi": 3,
+        "inputs": [
+          {
+            "_tag": "ParentNode",
+            "left": [36, 198, 104, 10, 172, 78, 240, 146, 52, 214, 120, 26, 188, 94, 0, 162, 68, 230, 136, 42, 204, 110, 16, 178, 84, 246, 152, 58, 220, 126, 32, 194],
+            "right": [21, 27, 33, 39, 45, 51, 57, 63, 69, 75, 81, 87, 93, 99, 105, 111, 117, 123, 129, 135, 141, 147, 153, 159, 165, 171, 177, 183, 189, 195, 201, 207]
+          },
+          {
+            "_tag": "ParentNode",
+            "left": [9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67, 69, 71],
+            "right": [15, 19, 23, 27, 31, 35, 39, 43, 47, 51, 55, 59, 63, 67, 71, 75, 79, 83, 87, 91, 95, 99, 103, 107, 111, 115, 119, 123, 127, 131, 135, 139]
+          },
+          {
+            "_tag": "ChunkNode",
+            "bytes": [1]
+          },
+          {
+            "_tag": "ChunkNode",
+            "bytes": [2]
+          },
+          {
+            "_tag": "ChunkNode",
+            "bytes": [3]
+          }
+        ],
+        "lo": 0,
+        "root": [36, 198, 104, 10, 172, 78, 240, 146, 52, 214, 120, 26, 188, 94, 0, 162, 68, 230, 136, 42, 204, 110, 16, 178, 84, 246, 152, 58, 220, 126, 32, 194],
+        "total": 3
+      }
+    }
+  ]
+}

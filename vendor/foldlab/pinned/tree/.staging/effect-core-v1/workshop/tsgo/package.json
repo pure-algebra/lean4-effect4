@@ -1,0 +1,11 @@
+{
+  "name": "effect-core-v1-tsgo-probes",
+  "private": true,
+  "dependencies": {
+    "effect": "4.0.0-rc.112"
+  },
+  "devDependencies": {
+    "@effect/tsgo": "0.38.0",
+    "typescript": "7.0.2"
+  }
+}

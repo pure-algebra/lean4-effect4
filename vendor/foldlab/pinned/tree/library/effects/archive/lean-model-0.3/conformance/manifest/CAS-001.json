@@ -1,0 +1,70 @@
+{
+  "family": "CAS-001",
+  "meaning": "Canonicalization is idempotent, canonical values round-trip, and the encoding is injective on canonical forms — every admitted CAS node has exactly one byte representation: canonicalization is the identity on the admitted-node carrier, the decoder accepts nothing outside the encoder image, and trailing bytes are rejected.",
+  "model": "effects-model@0.3.0",
+  "rows": [
+    {
+      "case": "reject-trailing-byte-001",
+      "expect": {
+        "decoded": null
+      },
+      "input": {
+        "bytes": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+      }
+    },
+    {
+      "case": "roundtrip-multi-ref-003",
+      "expect": {
+        "bytes": [0, 3, 0, 0, 0, 1, 9, 0, 0, 0, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+        "roundtrip": true
+      },
+      "input": {
+        "node": {
+          "payload": [9],
+          "refs": [
+            {
+              "addr": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+              "expectedTag": 5
+            },
+            {
+              "addr": [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+              "expectedTag": 7
+            }
+          ],
+          "tag": 3,
+          "version": 0
+        }
+      }
+    },
+    {
+      "case": "roundtrip-payload-002",
+      "expect": {
+        "bytes": [0, 3, 0, 0, 0, 5, 1, 2, 3, 250, 255, 0, 0, 0, 0],
+        "roundtrip": true
+      },
+      "input": {
+        "node": {
+          "payload": [1, 2, 3, 250, 255],
+          "refs": [],
+          "tag": 3,
+          "version": 0
+        }
+      }
+    },
+    {
+      "case": "roundtrip-smallest-000",
+      "expect": {
+        "bytes": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "roundtrip": true
+      },
+      "input": {
+        "node": {
+          "payload": [],
+          "refs": [],
+          "tag": 0,
+          "version": 0
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,360 @@
+{
+  "family": "SES-003",
+  "meaning": "When record-mode delegation is not solicited — an invocation while one is outstanding, or a recorded outcome without or beside its outstanding invocation — the step rejects with a typed category and the history length is unchanged; delegation is exclusive, outcomes append only as solicited, and lawful record runs append in invocation order.",
+  "model": "effects-model@0.3.0",
+  "rows": [
+    {
+      "case": "interleaved-invoke-rejected-001",
+      "expect": {
+        "decisions": [
+          {
+            "_tag": "LiveDelegation",
+            "at": 0,
+            "operation": "acme/Rates/get"
+          },
+          {
+            "_tag": "TypedRejection",
+            "at": 0,
+            "category": "DelegationOutstanding"
+          }
+        ],
+        "results": [
+          {
+            "_tag": "Delegated"
+          },
+          {
+            "_tag": "Rejected",
+            "at": 0,
+            "category": "DelegationOutstanding"
+          }
+        ],
+        "state": {
+          "cursor": 0,
+          "historyLength": 0,
+          "status": "aborted",
+          "wellFormed": true
+        }
+      },
+      "input": {
+        "inputs": [
+          {
+            "_tag": "Invoke",
+            "invocation": {
+              "op": "acme/Rates/get",
+              "request": "req-0",
+              "revision": 1
+            }
+          },
+          {
+            "_tag": "Invoke",
+            "invocation": {
+              "op": "acme/Fx/list",
+              "request": "req-0",
+              "revision": 1
+            }
+          }
+        ],
+        "state": {
+          "cursor": 0,
+          "history": [],
+          "mode": "record",
+          "status": "active"
+        }
+      }
+    },
+    {
+      "case": "lawful-protocol-appends-in-order-000",
+      "expect": {
+        "decisions": [
+          {
+            "_tag": "LiveDelegation",
+            "at": 0,
+            "operation": "acme/Rates/get"
+          },
+          {
+            "_tag": "OccurrenceAppended",
+            "at": 0,
+            "operation": "acme/Rates/get"
+          },
+          {
+            "_tag": "LiveDelegation",
+            "at": 1,
+            "operation": "acme/Fx/list"
+          },
+          {
+            "_tag": "OccurrenceAppended",
+            "at": 1,
+            "operation": "acme/Fx/list"
+          },
+          {
+            "_tag": "Completed",
+            "consumed": 2
+          }
+        ],
+        "results": [
+          {
+            "_tag": "Delegated"
+          },
+          {
+            "_tag": "Appended"
+          },
+          {
+            "_tag": "Delegated"
+          },
+          {
+            "_tag": "Appended"
+          },
+          {
+            "_tag": "SessionOutcome",
+            "outcome": {
+              "_tag": "Completed",
+              "terminal": {
+                "_tag": "Succeeded",
+                "value": "final"
+              }
+            }
+          }
+        ],
+        "state": {
+          "cursor": 2,
+          "historyLength": 2,
+          "status": "active",
+          "wellFormed": true
+        }
+      },
+      "input": {
+        "inputs": [
+          {
+            "_tag": "Invoke",
+            "invocation": {
+              "op": "acme/Rates/get",
+              "request": "req-0",
+              "revision": 1
+            }
+          },
+          {
+            "_tag": "Recorded",
+            "invocation": {
+              "op": "acme/Rates/get",
+              "request": "req-0",
+              "revision": 1
+            },
+            "outcome": {
+              "_tag": "Success",
+              "value": "ok-0"
+            }
+          },
+          {
+            "_tag": "Invoke",
+            "invocation": {
+              "op": "acme/Fx/list",
+              "request": "req-0",
+              "revision": 1
+            }
+          },
+          {
+            "_tag": "Recorded",
+            "invocation": {
+              "op": "acme/Fx/list",
+              "request": "req-0",
+              "revision": 1
+            },
+            "outcome": {
+              "_tag": "Success",
+              "value": "ok-1"
+            }
+          },
+          {
+            "_tag": "Complete",
+            "terminal": {
+              "_tag": "Succeeded",
+              "value": "final"
+            }
+          }
+        ],
+        "state": {
+          "cursor": 0,
+          "history": [],
+          "mode": "record",
+          "status": "active"
+        }
+      }
+    },
+    {
+      "case": "mismatched-outcome-rejected-003",
+      "expect": {
+        "decisions": [
+          {
+            "_tag": "LiveDelegation",
+            "at": 0,
+            "operation": "acme/Rates/get"
+          },
+          {
+            "_tag": "TypedRejection",
+            "at": 0,
+            "category": "UnsolicitedOutcome"
+          }
+        ],
+        "results": [
+          {
+            "_tag": "Delegated"
+          },
+          {
+            "_tag": "Rejected",
+            "at": 0,
+            "category": "UnsolicitedOutcome"
+          }
+        ],
+        "state": {
+          "cursor": 0,
+          "historyLength": 0,
+          "status": "aborted",
+          "wellFormed": true
+        }
+      },
+      "input": {
+        "inputs": [
+          {
+            "_tag": "Invoke",
+            "invocation": {
+              "op": "acme/Rates/get",
+              "request": "req-0",
+              "revision": 1
+            }
+          },
+          {
+            "_tag": "Recorded",
+            "invocation": {
+              "op": "acme/Fx/list",
+              "request": "req-0",
+              "revision": 1
+            },
+            "outcome": {
+              "_tag": "Success",
+              "value": "ok-1"
+            }
+          }
+        ],
+        "state": {
+          "cursor": 0,
+          "history": [],
+          "mode": "record",
+          "status": "active"
+        }
+      }
+    },
+    {
+      "case": "pending-clears-after-append-004",
+      "expect": {
+        "decisions": [
+          {
+            "_tag": "OccurrenceAppended",
+            "at": 0,
+            "operation": "acme/Rates/get"
+          },
+          {
+            "_tag": "LiveDelegation",
+            "at": 1,
+            "operation": "acme/Fx/list"
+          }
+        ],
+        "results": [
+          {
+            "_tag": "Appended"
+          },
+          {
+            "_tag": "Delegated"
+          }
+        ],
+        "state": {
+          "cursor": 1,
+          "historyLength": 1,
+          "status": "active",
+          "wellFormed": true
+        }
+      },
+      "input": {
+        "inputs": [
+          {
+            "_tag": "Recorded",
+            "invocation": {
+              "op": "acme/Rates/get",
+              "request": "req-0",
+              "revision": 1
+            },
+            "outcome": {
+              "_tag": "Success",
+              "value": "ok-0"
+            }
+          },
+          {
+            "_tag": "Invoke",
+            "invocation": {
+              "op": "acme/Fx/list",
+              "request": "req-0",
+              "revision": 1
+            }
+          }
+        ],
+        "state": {
+          "cursor": 0,
+          "history": [],
+          "mode": "record",
+          "pending": {
+            "op": "acme/Rates/get",
+            "request": "req-0",
+            "revision": 1
+          },
+          "status": "active"
+        }
+      }
+    },
+    {
+      "case": "unsolicited-outcome-rejected-002",
+      "expect": {
+        "decisions": [
+          {
+            "_tag": "TypedRejection",
+            "at": 0,
+            "category": "UnsolicitedOutcome"
+          }
+        ],
+        "results": [
+          {
+            "_tag": "Rejected",
+            "at": 0,
+            "category": "UnsolicitedOutcome"
+          }
+        ],
+        "state": {
+          "cursor": 0,
+          "historyLength": 0,
+          "status": "aborted",
+          "wellFormed": true
+        }
+      },
+      "input": {
+        "inputs": [
+          {
+            "_tag": "Recorded",
+            "invocation": {
+              "op": "acme/Rates/get",
+              "request": "req-0",
+              "revision": 1
+            },
+            "outcome": {
+              "_tag": "Success",
+              "value": "ok-0"
+            }
+          }
+        ],
+        "state": {
+          "cursor": 0,
+          "history": [],
+          "mode": "record",
+          "status": "active"
+        }
+      }
+    }
+  ]
+}

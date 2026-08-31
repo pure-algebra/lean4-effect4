@@ -1,0 +1,200 @@
+{
+  "family": "RPL-003",
+  "meaning": "When the emitted invocation matches the entry at the cursor, one reducer step advances the cursor by exactly one — a matching request consumes exactly the permitted occurrence: never zero, never two.",
+  "model": "effects-model@0.3.0",
+  "rows": [
+    {
+      "case": "exact-match-consumes-one-000",
+      "expect": {
+        "decisions": [
+          {
+            "_tag": "RecordedSubstitution",
+            "at": 0,
+            "operation": "acme/Rates/get"
+          },
+          {
+            "_tag": "HistoryConsumed",
+            "at": 0
+          },
+          {
+            "_tag": "Completed",
+            "consumed": 1
+          }
+        ],
+        "results": [
+          {
+            "_tag": "Substituted",
+            "outcome": {
+              "_tag": "Success",
+              "value": "ok-0"
+            }
+          },
+          {
+            "_tag": "SessionOutcome",
+            "outcome": {
+              "_tag": "Completed",
+              "terminal": {
+                "_tag": "Succeeded",
+                "value": "final"
+              }
+            }
+          }
+        ],
+        "state": {
+          "cursor": 1,
+          "historyLength": 1,
+          "status": "active",
+          "wellFormed": true
+        }
+      },
+      "input": {
+        "inputs": [
+          {
+            "_tag": "Invoke",
+            "invocation": {
+              "op": "acme/Rates/get",
+              "request": "req-0",
+              "revision": 1
+            }
+          },
+          {
+            "_tag": "Complete",
+            "terminal": {
+              "_tag": "Succeeded",
+              "value": "final"
+            }
+          }
+        ],
+        "state": {
+          "cursor": 0,
+          "history": [
+            {
+              "op": "acme/Rates/get",
+              "outcome": {
+                "_tag": "Success",
+                "value": "ok-0"
+              },
+              "request": "req-0",
+              "revision": 1
+            }
+          ],
+          "mode": "replay",
+          "status": "active"
+        }
+      }
+    },
+    {
+      "case": "recovery-after-replayed-failure-001",
+      "expect": {
+        "decisions": [
+          {
+            "_tag": "RecordedSubstitution",
+            "at": 0,
+            "operation": "acme/Rates/get"
+          },
+          {
+            "_tag": "HistoryConsumed",
+            "at": 0
+          },
+          {
+            "_tag": "RecordedSubstitution",
+            "at": 1,
+            "operation": "acme/Rates/get"
+          },
+          {
+            "_tag": "HistoryConsumed",
+            "at": 1
+          },
+          {
+            "_tag": "Completed",
+            "consumed": 2
+          }
+        ],
+        "results": [
+          {
+            "_tag": "Substituted",
+            "outcome": {
+              "_tag": "Failure",
+              "error": "err-0"
+            }
+          },
+          {
+            "_tag": "Substituted",
+            "outcome": {
+              "_tag": "Success",
+              "value": "ok-0"
+            }
+          },
+          {
+            "_tag": "SessionOutcome",
+            "outcome": {
+              "_tag": "Completed",
+              "terminal": {
+                "_tag": "Succeeded",
+                "value": "final"
+              }
+            }
+          }
+        ],
+        "state": {
+          "cursor": 2,
+          "historyLength": 2,
+          "status": "active",
+          "wellFormed": true
+        }
+      },
+      "input": {
+        "inputs": [
+          {
+            "_tag": "Invoke",
+            "invocation": {
+              "op": "acme/Rates/get",
+              "request": "req-0",
+              "revision": 1
+            }
+          },
+          {
+            "_tag": "Invoke",
+            "invocation": {
+              "op": "acme/Rates/get",
+              "request": "req-0",
+              "revision": 1
+            }
+          },
+          {
+            "_tag": "Complete",
+            "terminal": {
+              "_tag": "Succeeded",
+              "value": "final"
+            }
+          }
+        ],
+        "state": {
+          "cursor": 0,
+          "history": [
+            {
+              "op": "acme/Rates/get",
+              "outcome": {
+                "_tag": "Failure",
+                "error": "err-0"
+              },
+              "request": "req-0",
+              "revision": 1
+            },
+            {
+              "op": "acme/Rates/get",
+              "outcome": {
+                "_tag": "Success",
+                "value": "ok-0"
+              },
+              "request": "req-0",
+              "revision": 1
+            }
+          ],
+          "mode": "replay",
+          "status": "active"
+        }
+      }
+    }
+  ]
+}

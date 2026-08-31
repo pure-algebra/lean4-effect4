@@ -1,0 +1,74 @@
+{
+  "counters": {
+    "awaiting": 4,
+    "described": 5,
+    "inputs": 1,
+    "outputs": 9
+  },
+  "emitted": {
+    "emitter": "emitmeta",
+    "module": "library/cas/tools/MetaShapes.lean",
+    "schemaVersion": 1,
+    "toolchain": "4.33.1"
+  },
+  "home": "library/cas/meta",
+  "inputs": {
+    "convention": "An emitter may read only files with a row in this manifest's `inputs`: inputs are declared or they are refused, and there is no ambient read. This is what makes hydration provenance enumerable — generated data is the Lean environment, plus store content, plus these rows, and nothing else.",
+    "rows": [
+      {
+        "authority": "hand-curated — nothing derives these rows, which is the point of writing them down",
+        "path": "library/cas/meta/in/model-gated.META.json",
+        "reader": "trust",
+        "role": "the trust census's `model-gated` stratum: which TypeScript files the effects package ships are held to the Lean model, and by which conformance artifact, one gate label per row"
+      }
+    ]
+  },
+  "manifest": "meta",
+  "outputs": [
+    {
+      "emitter": "emitmeta",
+      "path": "library/cas/meta/MANIFEST.META.json",
+      "schema": "library/effects/src/cas/generated/meta/manifest.META.schema.json"
+    },
+    {
+      "emitter": "axioms",
+      "path": "library/cas/meta/out/axioms.META.json",
+      "schema": "library/effects/src/cas/generated/meta/cas-axioms.META.schema.json"
+    },
+    {
+      "emitter": "debts",
+      "path": "library/cas/meta/out/debts.META.json",
+      "schema": "library/effects/src/cas/generated/meta/cas-debts.META.schema.json"
+    },
+    {
+      "awaiting": "the configuration-plane ledger; no MetaSchema declared yet",
+      "emitter": "envledger",
+      "path": "library/cas/meta/out/environment.META.json"
+    },
+    {
+      "awaiting": "the ruling/LAW-line join; no MetaSchema declared yet",
+      "emitter": "laws",
+      "path": "library/cas/meta/out/laws.META.json"
+    },
+    {
+      "awaiting": "the named-obligation ledger; no MetaSchema declared yet",
+      "emitter": "obligations",
+      "path": "library/cas/meta/out/obligations.META.json"
+    },
+    {
+      "emitter": "strata",
+      "path": "library/cas/meta/out/strata.META.json",
+      "schema": "library/effects/src/cas/generated/meta/cas-strata.META.schema.json"
+    },
+    {
+      "awaiting": "the per-declaration signature ledger; no MetaSchema declared yet",
+      "emitter": "surface",
+      "path": "library/cas/meta/out/surface.META.json"
+    },
+    {
+      "emitter": "trust",
+      "path": "library/cas/meta/out/trust.META.json",
+      "schema": "library/effects/src/cas/generated/meta/cas-trust.META.schema.json"
+    }
+  ]
+}

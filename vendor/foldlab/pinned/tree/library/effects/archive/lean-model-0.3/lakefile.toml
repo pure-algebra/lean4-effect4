@@ -1,0 +1,25 @@
+name = "effects"
+defaultTargets = ["Effects", "conformance_ledger", "conformance_brief", "conformance_manifest", "conformance_mutation", "axiom_gate"]
+
+[[lean_lib]]
+name = "Effects"
+
+[[lean_exe]]
+name = "conformance_ledger"
+root = "LedgerMain"
+
+[[lean_exe]]
+name = "conformance_brief"
+root = "BriefingMain"
+
+[[lean_exe]]
+name = "conformance_manifest"
+root = "ManifestMain"
+
+[[lean_exe]]
+name = "conformance_mutation"
+root = "MutationMain"
+
+[[lean_exe]]
+name = "axiom_gate"
+root = "AxiomGateMain"

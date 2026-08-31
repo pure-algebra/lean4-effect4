@@ -1,0 +1,10 @@
+name = "effect-core-v1"
+version = "0.0.0"
+defaultTargets = ["EffectCore"]
+
+[[require]]
+name = "cas"
+path = "../../library/cas"
+
+[[lean_lib]]
+name = "EffectCore"
