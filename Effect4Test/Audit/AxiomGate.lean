@@ -27,6 +27,22 @@ private def allowedAxioms : List Name :=
 private def auditImplementationAxioms : List Name :=
   [``propext, ``Quot.sound, ``Classical.choice]
 
+/--
+Modules whose declarations are audit *implementation* — metaprogramming that
+inspects the environment — rather than semantic or test content.
+
+`Classical.choice` is unavoidable in `MetaM`, so these modules are bound by
+`auditImplementationAxioms` instead of `allowedAxioms`. The list is explicit
+rather than a namespace prefix on purpose: a prefix would let any file dropped
+into the audit tree silently acquire `Classical.choice`, which is the trust
+boundary this gate exists to hold.
+
+The list is checked for staleness below. A module named here that no longer
+needs the exemption fails the gate, so an entry cannot outlive its reason.
+-/
+private def auditImplementationModules : List Name :=
+  [`Effect4Test.Audit.AxiomGate, `Effect4Test.Schema.PayloadSurface]
+
 private def forbiddenAxioms : List Name :=
   [``sorryAx, ``Lean.ofReduceBool, ``Lean.ofReduceNat, ``Lean.trustCompiler]
 
@@ -119,7 +135,7 @@ elab "#effect4_axiom_gate" : command => do
   for declaration in declarations do
     let axioms ← collectAxioms declaration
     let bound :=
-      if moduleOf? environment declaration == some `Effect4Test.Audit.AxiomGate then
+      if (moduleOf? environment declaration).any auditImplementationModules.contains then
         auditImplementationAxioms
       else
         allowedAxioms
@@ -131,7 +147,20 @@ elab "#effect4_axiom_gate" : command => do
         throwError
           "Effect4 axiom gate: declaration {declaration} reaches unexpected axiom {axiomName}; allowed axioms are {bound}"
 
+  -- The exemption list must not outlive its reason. A module listed as audit
+  -- implementation that no longer reaches `Classical.choice` is a stale entry
+  -- and widens the trust boundary for nothing, so it fails the gate.
+  for exempted in auditImplementationModules do
+    let mut used := false
+    for declaration in declarations do
+      if moduleOf? environment declaration == some exempted then
+        if (← collectAxioms declaration).contains ``Classical.choice then
+          used := true
+    if !used then
+      throwError
+        "Effect4 axiom gate: stale audit-implementation exemption for {exempted}; no declaration in it reaches Classical.choice, so remove it from auditImplementationModules"
+
   logInfo
-    m!"Effect4 module and axiom gate: checked {sources.size} modules and {declarations.size} declarations; semantic/test axioms are {allowedAxioms}; audit implementation additionally allows Classical.choice"
+    m!"Effect4 module and axiom gate: checked {sources.size} modules and {declarations.size} declarations; semantic/test axioms are {allowedAxioms}; audit implementation ({auditImplementationModules.length} module(s)) additionally allows Classical.choice"
 
 end Effect4Test.Audit

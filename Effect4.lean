@@ -10,6 +10,7 @@ import Effect4.Algebra.Handler.Category
 import Effect4.Data.Identifier
 import Effect4.Data.Row
 import Effect4.Data.Canonical
+import Effect4.Data.Json
 import Effect4.Flow.Raw
 import Effect4.Flow.Checked
 import Effect4.Flow.Block
@@ -26,6 +27,7 @@ import Effect4.Semantics.Approximation
 import Effect4.Semantics.Observation
 import Effect4.Semantics.Equivalence
 import Effect4.Semantics.Logic
+import Effect4.Schema.Payload
 import Effect4.Schema.Representation
 import Effect4.Schema.Document
 import Effect4.Schema.Check
