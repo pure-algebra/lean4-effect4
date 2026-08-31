@@ -1,4 +1,5 @@
 import Effect4Test.Algebra.ExtractionContract
+import Effect4Test.Algebra.RetainedClosureContract
 import Effect4Test.Algebra.AxiomReport
 import Effect4Test.Audit.AxiomGate
 
