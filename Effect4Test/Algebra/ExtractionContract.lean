@@ -118,22 +118,23 @@ def rightHandler : Handler RightSignature CounterM where
     | .jump => fun state => (state + 100, state + 10)
 
 def oneLeft : Program LeftSignature Nat :=
-  Program.perform .tick
+  Program.perform (S := LeftSignature) .tick
 
 def twoLeft : Program LeftSignature (Nat × Nat) := do
-  let first ← Program.perform .tick
-  let second ← Program.perform .tick
+  let first ← Program.perform (S := LeftSignature) .tick
+  let second ← Program.perform (S := LeftSignature) .tick
   pure (first, second)
 
 def translatedLeft : Handler LeftSignature (Program RightSignature) where
   handle
-    | .tick => Program.perform .jump
+    | .tick => Program.perform (S := RightSignature) .jump
 
 -- Constructor and interpreter equations, not sampled host behavior.
 example :
     Program.bind (Program.perform (S := LeftSignature) .tick)
-        (fun answer => Program.pure (answer + 1))
-      = Program.vis .tick (fun answer => Program.pure (answer + 1)) :=
+        (fun (answer : Nat) => Program.pure (answer + 1))
+      = Program.vis (signature := LeftSignature) .tick
+          (fun (answer : Nat) => Program.pure (answer + 1)) :=
   Program.perform_bind _ _
 
 example : interpret leftHandler oneLeft 0 = (0, 1) := by
@@ -156,13 +157,16 @@ def swappedSum : Handler (LeftSignature.sum RightSignature) CounterM where
     | .inr .jump => leftHandler.handle .tick
 
 example :
-    swappedSum.handle (.inl .tick) 0 ≠
-      (leftHandler.sum rightHandler).handle (.inl .tick) 0 := by
+    -- Observe the concrete state component. The dependent answer type is
+    -- intentionally opaque outside `LeftSignature` and need not expose a
+    -- `DecidableEq` instance for this mutation to be executable.
+    (swappedSum.handle (.inl .tick) 0).2 ≠
+      ((leftHandler.sum rightHandler).handle (.inl .tick) 0).2 := by
   decide
 
 example :
-    swappedSum.handle (.inr .jump) 0 ≠
-      (leftHandler.sum rightHandler).handle (.inr .jump) 0 := by
+    (swappedSum.handle (.inr .jump) 0).2 ≠
+      ((leftHandler.sum rightHandler).handle (.inr .jump) 0).2 := by
   decide
 
 -- The tower collapse is checked on a nontrivial state-changing handler and
@@ -170,7 +174,7 @@ example :
 example :
     interpret rightHandler (interpret translatedLeft twoLeft) 0
       = interpret (translatedLeft.through rightHandler) twoLeft 0 := by
-  exact interpret_through translatedLeft rightHandler twoLeft
+  exact congrFun (interpret_through translatedLeft rightHandler twoLeft) 0
 
 section LawShapes
 
