@@ -167,6 +167,77 @@ The batch sharpens the next contracts:
   identity, failed finalizers, interruption, and parallel scope remain
   separate obligations.
 
+## Canonical row extraction
+
+The S2 row above disposes of that workshop's *flow* carriers. It does not
+dispose of its *row* material, which has a different Effect4 owner:
+`Effect4/Data/Row.lean`. `docs/SCHEMA-CUTOVER.md` makes that module the sole
+requirement carrier for the Schema getter lane (`DATA-ROW-01`, `DATA-ROW-02`,
+`DATA-ROW-03`) and forbids Context from minting a second row carrier, so the
+row lane needs its own dispositions before either family opens.
+
+All rows below are late evidence with no Git blob identity. They are cited by
+the SHA-256 recorded in `vendor/foldlab/LATE-MANIFEST.tsv`.
+
+| Foldlab late evidence | SHA-256 | Disposition |
+| --- | --- | --- |
+| `s2/T016.lean` canonical-row kit | `a9c0ab063152c20bbf9652769abc610c73ce74a8707fe50c4985ae61d52a1394` | `evidenceOnly`; adopt the proof shapes named below, not the `RawProgram`/`AER` carrier |
+| `s2/T017.lean` least-fixpoint row synthesis | `97e08c766717a09c9580c624dfb8a22a7bcdac3e219f45175f29e67f7fc2aa61` | `evidenceOnly`; reserved for a later requirement-synthesis packet, not for `DATA-ROW-01`-`03` |
+| `s2/attack-EC1-T012.lean` row-spelling attacks | `414aef9a43de48359801d74282a8b2072db3416852b9325c631ccdefa3606b93` | `evidenceOnly`; supplies rejected-design witnesses |
+| `s2/attack-EC1-T011.lean` normalization attack | `19ea91a8c0d6d9c35a39177d64a273c527c301b440c4874991f4d234c1433cf2` | `evidenceOnly`; supplies the normalization/denotation witness |
+
+### Adopted proof shapes
+
+These are shapes to re-prove natively over Effect4's own carrier. No Foldlab
+declaration is imported, aliased, or copied.
+
+- Canonicality is *strictly ascending*, spelled `List.Pairwise (· < ·)`
+  (`T016:165 Ascending`). It entails `Nodup` rather than requiring a separate
+  clause, and it already matches the convention `FlowWF` uses for `IdsWF` and
+  `RootsWF`, so Effect4 gains no second canonical-order notion.
+- Normalization is sorted insertion folded over the list (`T016:200
+  ascending_ins`, `T016:230 ascending_canon`), hand-rolled so it reduces in
+  the kernel. Effect4 has the same constraint Foldlab records at `T017:192`:
+  Lean core and Std only, no Mathlib `List.dedup`.
+- `T016:238 ascending_ext` is the load-bearing lemma: two ascending lists with
+  the same members are equal. Union associativity, commutativity, and
+  idempotence (`DATA-ROW-02`) reduce to membership rewriting through it, and
+  membership plus requirement weakening (`DATA-ROW-03`) reads off the same
+  extensionality. `T016:274 canon_of_ascending` is the matching idempotence.
+
+### Rejected designs and their Foldlab witnesses
+
+Each rejection below is condemned by an elaborated Foldlab probe, not by
+assertion. The witnesses are evidence for an Effect4 counterexample row; they
+are not themselves Effect4 gates.
+
+- **Order-preserving dedup is not normalization.** `T012:498 dedupTags` drops
+  repeats while preserving table order, and `attack-EC1-T012:679
+  synth_row_not_ascending` shows its output fails `T016:290 RowsWF`. Effect4's
+  row normalization must sort, not merely deduplicate.
+- **A row is not determined by its members alone.** `attack-EC1-T012:610
+  row_spelling_decides_admission` shows admission turning on spelling, and
+  `attack-EC1-T012:806 row_does_not_pin_the_payload` shows membership failing
+  to fix the payload. Single-valuedness has to come from canonical spelling
+  against a canonical alphabet, which is exactly what `ascending_ext` buys.
+- **Canonicality is an independent clause, not a derived one.** `T016:542
+  declPerm` satisfies the agreement clause with a permuted declared row, and
+  `T016:550 declShort` satisfies canonicality with a short one. Neither clause
+  implies the other.
+- **Normalization erases multiplicity.** `attack-EC1-T011:1031
+  synthAER_hides_the_duplicate` exhibits normalization collapsing a duplicated
+  contribution. This is the same hazard as the open `SC-WIRE-06`
+  `normalization_preserves_denotation` edge in `docs/SCHEMA-CUTOVER.md`:
+  idempotence of normalization licenses no semantic-preservation claim, and
+  the two must not be reported as one result.
+
+### Open
+
+`Effect4/Data/Row.lean` is still an empty breadth stub, and no declaration may
+enter it before a breaker freezes the `DATA-ROW` contract and its
+counterexample rows. This section supplies that breaker's source material; it
+closes no row and asserts no Effect4 theorem.
+
 ## Schema extraction ruling
 
 The complete ruling and proof graph are in `docs/SCHEMA-CUTOVER.md`. The
@@ -266,9 +337,15 @@ first-order `Flow`.
 | Gate | Command | Current scope |
 | --- | --- | --- |
 | Default Lean gate | `lake clean && lake build` | all `Effect4.*` and `Effect4Test.*` source files through Lake globs; root-reachability and axiom allowlist enforced |
-| Narrow algebra gate | `lake env lean Effect4Test/Algebra/ExtractionContract.lean` | Frozen public signatures and algebra counterexamples |
-| Exhaustive module/axiom gate | default build, invoked by `Effect4Test.lean` | currently 101 source files and 240 declarations; semantic/test ceiling `propext`, `Quot.sound`; audit implementation alone also permits `Classical.choice` |
-| Human-readable axiom receipt | `lake env lean Effect4Test/Algebra/AxiomReport.lean` | every currently exported algebra theorem, with dependencies printed |
+| Exhaustive module/axiom gate | default build, invoked by `Effect4Test.lean` | the gate prints its own census rather than trusting this row; observed 105 modules and 1190 declarations on 2026-08-31; semantic/test ceiling `propext`, `Quot.sound`; the audit implementation alone also permits `Classical.choice` |
+| Narrow algebra gate | `lake env lean Effect4Test/Algebra/ExtractionContract.lean` | frozen public algebra signatures and the `E4-ALG-CE-*` counterexamples |
+| Narrow retained-closure gate | `lake env lean Effect4Test/Algebra/RetainedClosureContract.lean` | exact retained Foldlab declaration signatures, binder order, universes, and their closure theorems |
+| Narrow flow admission gate | `lake env lean Effect4Test/Flow/AdmissionContract.lean` | frozen Flow declarations plus `E4-FLOW-CE-001`-`005`, `007`, `013`, and `014` |
+| Narrow flow privacy gate | `lake env lean Effect4Test/Flow/PrivacyContract.lean` | `E4-FLOW-CE-015`; both unchecked `CheckedFlow` construction paths must stay unresolvable from an importing module |
+| Flow admission mutation gate | `./scripts/test-flow-admission-mutations.sh` | three specified mutants (swapped scan order, weakened dangling jump, dropped `perform` answer equality) must each stay buildable and be killed by the frozen battery; Flow source and battery are verified byte-unchanged |
+| Human-readable axiom receipts | `lake env lean Effect4Test/Algebra/AxiomReport.lean`; `lake env lean Effect4Test/Flow/AxiomReport.lean` | every currently exported algebra and flow theorem, with its axiom dependencies printed |
+| Source trust gate | `./scripts/test-trust-gate.sh` | planted `unsafe` and `partial` declarations are rejected; the same vocabulary inside comments and strings is not |
+| Foldlab evidence gate | `./scripts/check-vendor-foldlab.sh`; `./scripts/test-vendor-foldlab.sh` | closed inventory of 911 files and 11,940,983 bytes at pin `feb29321fd50204aa338209d313e84a3f8b71c66`; one omission, one extra file, and one byte mutation are each rejected |
 | Diff hygiene | `git diff --check` | Authored source formatting |
 | Effect target gate | pending P11 | rc.112 typecheck, installed tsgo, direct runtime vectors, negatives, and mutations |
 | Foldlab compatibility gate | pending P12 | Both builds plus per-type round trips and interpretation agreement |
