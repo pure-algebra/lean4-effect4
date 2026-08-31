@@ -1,0 +1,223 @@
+runtime effect@4.0.0-rc.112
+--- 4a.string  (control) :: EMITTED
+{"representation":{"_tag":"String","annotations":{"probeString":"kept"},"checks":[]},"references":{}}
+--- 4a.string  (control) :: annotations key present
+true
+--- 4a.string  (control) :: surviving annotation keys
+["probeString"]
+--- 4a.number  (control) :: EMITTED
+{"representation":{"_tag":"String","annotations":{"probeNumber":1.5},"checks":[]},"references":{}}
+--- 4a.number  (control) :: annotations key present
+true
+--- 4a.number  (control) :: surviving annotation keys
+["probeNumber"]
+--- 4a.boolean (control) :: EMITTED
+{"representation":{"_tag":"String","annotations":{"probeBoolean":true},"checks":[]},"references":{}}
+--- 4a.boolean (control) :: annotations key present
+true
+--- 4a.boolean (control) :: surviving annotation keys
+["probeBoolean"]
+--- 4a.null    (control) :: EMITTED
+{"representation":{"_tag":"String","annotations":{"probeNull":null},"checks":[]},"references":{}}
+--- 4a.null    (control) :: annotations key present
+true
+--- 4a.null    (control) :: surviving annotation keys
+["probeNull"]
+--- 4a.array   (control) :: EMITTED
+{"representation":{"_tag":"String","annotations":{"probeArray":[1,"a",null,{"b":true}]},"checks":[]},"references":{}}
+--- 4a.array   (control) :: annotations key present
+true
+--- 4a.array   (control) :: surviving annotation keys
+["probeArray"]
+--- 4a.object  (control) :: EMITTED
+{"representation":{"_tag":"String","annotations":{"probeObject":{"a":1,"b":[2]}},"checks":[]},"references":{}}
+--- 4a.object  (control) :: annotations key present
+true
+--- 4a.object  (control) :: surviving annotation keys
+["probeObject"]
+--- 4a.function :: EMITTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- 4a.function :: annotations key present
+false
+--- 4a.function :: surviving annotation keys
+null
+--- 4a.symbol :: EMITTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- 4a.symbol :: annotations key present
+false
+--- 4a.symbol :: surviving annotation keys
+null
+--- 4a.local symbol :: EMITTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- 4a.local symbol :: annotations key present
+false
+--- 4a.local symbol :: surviving annotation keys
+null
+--- 4a.Date :: EMITTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- 4a.Date :: annotations key present
+false
+--- 4a.Date :: surviving annotation keys
+null
+--- 4a.BigInt :: EMITTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- 4a.BigInt :: annotations key present
+false
+--- 4a.BigInt :: surviving annotation keys
+null
+--- 4a.undefined :: EMITTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- 4a.undefined :: annotations key present
+false
+--- 4a.undefined :: surviving annotation keys
+null
+--- 4a.NaN :: EMITTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- 4a.NaN :: annotations key present
+false
+--- 4a.NaN :: surviving annotation keys
+null
+--- 4a.Infinity :: EMITTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- 4a.Infinity :: annotations key present
+false
+--- 4a.Infinity :: surviving annotation keys
+null
+--- 4a.-0 :: EMITTED
+{"representation":{"_tag":"String","annotations":{"probeNegZero":0},"checks":[]},"references":{}}
+--- 4a.-0 :: annotations key present
+true
+--- 4a.-0 :: surviving annotation keys
+["probeNegZero"]
+--- 4a.Map :: EMITTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- 4a.Map :: annotations key present
+false
+--- 4a.Map :: surviving annotation keys
+null
+--- 4a.Set :: EMITTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- 4a.Set :: annotations key present
+false
+--- 4a.Set :: surviving annotation keys
+null
+--- 4a.RegExp :: EMITTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- 4a.RegExp :: annotations key present
+false
+--- 4a.RegExp :: surviving annotation keys
+null
+--- 4a.Error :: EMITTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- 4a.Error :: annotations key present
+false
+--- 4a.Error :: surviving annotation keys
+null
+--- 4a.class instance :: EMITTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- 4a.class instance :: annotations key present
+false
+--- 4a.class instance :: surviving annotation keys
+null
+--- 4a.Object.create(null) :: EMITTED
+{"representation":{"_tag":"String","annotations":{"probeNullProto":{"a":1}},"checks":[]},"references":{}}
+--- 4a.Object.create(null) :: annotations key present
+true
+--- 4a.Object.create(null) :: surviving annotation keys
+["probeNullProto"]
+--- 4a.Uint8Array :: EMITTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- 4a.Uint8Array :: annotations key present
+false
+--- 4a.Uint8Array :: surviving annotation keys
+null
+--- 4b.object with a nested function :: EMITTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- 4b.object with a nested function :: annotations key present
+false
+--- 4b.object with a nested function :: surviving annotation keys
+null
+--- 4b.object with a nested NaN :: EMITTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- 4b.object with a nested NaN :: annotations key present
+false
+--- 4b.object with a nested NaN :: surviving annotation keys
+null
+--- 4b.array with a nested undefined :: EMITTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- 4b.array with a nested undefined :: annotations key present
+false
+--- 4b.array with a nested undefined :: surviving annotation keys
+null
+--- 4b.cyclic object :: EMITTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- 4b.cyclic object :: annotations key present
+false
+--- 4b.cyclic object :: surviving annotation keys
+null
+--- 4b.shared sub-object (DAG, not a cycle) :: EMITTED
+{"representation":{"_tag":"String","annotations":{"probeDag":{"l":{"s":1},"r":{"s":1}}},"checks":[]},"references":{}}
+--- 4b.shared sub-object (DAG, not a cycle) :: annotations key present
+true
+--- 4b.shared sub-object (DAG, not a cycle) :: surviving annotation keys
+["probeDag"]
+--- 4c.mixed: one good, one bad :: EMITTED
+{"representation":{"_tag":"String","annotations":{"keepMe":"yes"},"checks":[]},"references":{}}
+--- 4c.mixed: one good, one bad :: annotations key present
+true
+--- 4c.mixed: one good, one bad :: surviving annotation keys
+["keepMe"]
+--- 4c.all bad -> is the whole `annotations` key omitted? :: EMITTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- 4c.all bad -> is the whole `annotations` key omitted? :: annotations key present
+false
+--- 4c.all bad -> is the whole `annotations` key omitted? :: surviving annotation keys
+null
+--- 4c.empty bag :: EMITTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- 4c.empty bag :: annotations key present
+false
+--- 4c.empty bag :: surviving annotation keys
+null
+--- 4d.key order z,a,m :: EMITTED
+{"representation":{"_tag":"String","annotations":{"z":1,"a":2,"m":3},"checks":[]},"references":{}}
+--- 4d.key order z,a,m :: annotations key present
+true
+--- 4d.key order z,a,m :: surviving annotation keys
+["z","a","m"]
+--- 4d.key order a,m,z :: EMITTED
+{"representation":{"_tag":"String","annotations":{"a":2,"m":3,"z":1},"checks":[]},"references":{}}
+--- 4d.key order a,m,z :: annotations key present
+true
+--- 4d.key order a,m,z :: surviving annotation keys
+["a","m","z"]
+--- 4d.integer-like keys 10,2,zed :: EMITTED
+{"representation":{"_tag":"String","annotations":{"2":2,"10":1,"zed":3},"checks":[]},"references":{}}
+--- 4d.integer-like keys 10,2,zed :: annotations key present
+true
+--- 4d.integer-like keys 10,2,zed :: surviving annotation keys
+["2","10","zed"]
+--- 4e.Declaration representation.payload = null (control) :: ACCEPTED
+{"representation":{"_tag":"Declaration","representation":{"id":"probe/decl","payload":null},"typeParameters":[],"checks":[]},"references":{}}
+--- 4e.Declaration representation.payload = {a:1} (control) :: ACCEPTED
+{"representation":{"_tag":"Declaration","representation":{"id":"probe/decl","payload":{"a":1}},"typeParameters":[],"checks":[]},"references":{}}
+--- 4e.Declaration representation.payload = NaN :: THREW SchemaError
+Expected JSON value
+  at ["representation"]["representation"]["payload"]
+--- 4e.Declaration representation.payload = Infinity :: THREW SchemaError
+Expected JSON value
+  at ["representation"]["representation"]["payload"]
+--- 4e.Declaration representation.payload = undefined :: THREW SchemaError
+Expected JSON value
+  at ["representation"]["representation"]["payload"]
+--- 4e.Declaration representation.payload = a function :: THREW SchemaError
+Expected JSON value
+  at ["representation"]["representation"]["payload"]
+--- 4e.Declaration representation.payload = a Date :: THREW SchemaError
+Expected JSON value
+  at ["representation"]["representation"]["payload"]
+--- 4f.Declaration representation.id = empty string :: THREW SchemaError
+Expected a value with a length of at least 1
+  at ["representation"]["representation"]["id"]
+--- 4f.Declaration representation.id = ok :: ACCEPTED
+{"representation":{"_tag":"Declaration","representation":{"id":"probe/decl","payload":null},"typeParameters":[],"checks":[]},"references":{}}

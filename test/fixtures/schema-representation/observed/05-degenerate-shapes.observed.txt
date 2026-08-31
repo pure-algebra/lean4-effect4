@@ -1,0 +1,160 @@
+runtime effect@4.0.0-rc.112
+--- BUILD Schema.Union([]) :: EMITTED
+{"representation":{"_tag":"Union","checks":[],"types":[],"mode":"anyOf"},"references":{}}
+--- WIRE  Union with types: [] and mode anyOf :: ACCEPTED
+{"representation":{"_tag":"Union","checks":[],"types":[],"mode":"anyOf"},"references":{}}
+--- WIRE  Union with types: [] and mode anyOf :: bytes identical
+true
+--- WIRE  Union with types: [] and mode oneOf :: ACCEPTED
+{"representation":{"_tag":"Union","checks":[],"types":[],"mode":"oneOf"},"references":{}}
+--- WIRE  Union with types: [] and mode oneOf :: bytes identical
+true
+--- WIRE  Union with a bogus mode :: THREW SchemaError
+Expected "anyOf" | "oneOf"
+  at ["representation"]["mode"]
+--- WIRE  Union with no mode key :: THREW SchemaError
+Missing key
+  at ["representation"]["mode"]
+--- BUILD Schema.Struct({}) :: EMITTED
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[],"indexSignatures":[]},"references":{}}
+--- WIRE  Objects with both collections empty :: ACCEPTED
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[],"indexSignatures":[]},"references":{}}
+--- WIRE  Objects with both collections empty :: bytes identical
+true
+--- WIRE  Objects with DUPLICATE property keys :: ACCEPTED
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"string","value":"a"},"type":{"_tag":"String","checks":[]},"isOptional":false,"isMutable":false},{"name":{"type":"string","value":"a"},"type":{"_tag":"Number","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
+--- WIRE  Objects with DUPLICATE property keys :: bytes identical
+false
+--- BUILD Schema.Tuple([]) :: EMITTED
+{"representation":{"_tag":"Arrays","checks":[],"elements":[],"rest":[]},"references":{}}
+--- WIRE  Arrays with elements: [] and rest: [] :: ACCEPTED
+{"representation":{"_tag":"Arrays","checks":[],"elements":[],"rest":[]},"references":{}}
+--- WIRE  Arrays with elements: [] and rest: [] :: bytes identical
+true
+--- WIRE  Arrays with an optional element BEFORE a required one (E4-SCHEMA-CE-004 shape) :: ACCEPTED
+{"representation":{"_tag":"Arrays","checks":[],"elements":[{"isOptional":true,"type":{"_tag":"String","checks":[]}},{"isOptional":false,"type":{"_tag":"Number","checks":[]}}],"rest":[]},"references":{}}
+--- WIRE  Arrays with an optional element BEFORE a required one (E4-SCHEMA-CE-004 shape) :: bytes identical
+false
+--- BUILD Schema.Enum({}) :: EMITTED
+{"representation":{"_tag":"Enum","checks":[],"enums":[]},"references":{}}
+--- WIRE  Enum with enums: [] :: ACCEPTED
+{"representation":{"_tag":"Enum","checks":[],"enums":[]},"references":{}}
+--- WIRE  Enum with enums: [] :: bytes identical
+true
+--- WIRE  Enum with ALIASES (two names, one value) — E4-SCHEMA-CE-003 shape :: ACCEPTED
+{"representation":{"_tag":"Enum","checks":[],"enums":[["A",{"type":"number","value":1}],["B",{"type":"number","value":1}]]},"references":{}}
+--- WIRE  Enum with ALIASES (two names, one value) — E4-SCHEMA-CE-003 shape :: bytes identical
+true
+--- WIRE  Enum with a DUPLICATE name :: ACCEPTED
+{"representation":{"_tag":"Enum","checks":[],"enums":[["A",{"type":"number","value":1}],["A",{"type":"number","value":2}]]},"references":{}}
+--- WIRE  Enum with a DUPLICATE name :: bytes identical
+true
+--- WIRE  TemplateLiteral with parts: [] :: ACCEPTED
+{"representation":{"_tag":"TemplateLiteral","checks":[],"parts":[]},"references":{}}
+--- WIRE  TemplateLiteral with parts: [] :: bytes identical
+true
+--- WIRE  empty references table (control) :: ACCEPTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- WIRE  empty references table (control) :: bytes identical
+true
+--- WIRE  references table with an EMPTY-STRING key, unreferenced :: ACCEPTED
+{"representation":{"_tag":"String","checks":[]},"references":{"":{"_tag":"Number","checks":[]}}}
+--- WIRE  references table with an EMPTY-STRING key, unreferenced :: bytes identical
+true
+--- WIRE  Reference with an EMPTY $ref :: THREW SchemaError
+Expected a value with a length of at least 1
+  at ["representation"]["$ref"]
+--- WIRE  references table entry that is itself an empty Union :: ACCEPTED
+{"representation":{"_tag":"Reference","$ref":"E"},"references":{"E":{"_tag":"Union","checks":[],"types":[],"mode":"anyOf"}}}
+--- WIRE  references table entry that is itself an empty Union :: bytes identical
+true
+--- WIRE  FilterGroup with checks: [] (zero members) :: THREW SchemaError
+Missing key
+  at ["representation"]["checks"][0]["checks"][0]
+--- WIRE  FilterGroup with exactly one check (control) :: ACCEPTED
+{"representation":{"_tag":"String","checks":[{"_tag":"FilterGroup","checks":[{"_tag":"Filter","representation":{"id":"x","payload":null},"aborted":false}]}]},"references":{}}
+--- WIRE  FilterGroup with exactly one check (control) :: bytes identical
+true
+--- WIRE  FilterGroup nested inside a FilterGroup :: ACCEPTED
+{"representation":{"_tag":"String","checks":[{"_tag":"FilterGroup","checks":[{"_tag":"FilterGroup","checks":[{"_tag":"Filter","representation":{"id":"x","payload":null},"aborted":false}]}]}]},"references":{}}
+--- WIRE  FilterGroup nested inside a FilterGroup :: bytes identical
+true
+--- WIRE  Filter WITHOUT a representation (required by the codec) :: THREW SchemaError
+Missing key
+  at ["representation"]["checks"][0]["representation"]
+--- BUILD Schema.Literal("") :: EMITTED
+{"representation":{"_tag":"Literal","checks":[],"literal":{"type":"string","value":""}},"references":{}}
+--- WIRE  Literal with an empty string value :: ACCEPTED
+{"representation":{"_tag":"Literal","checks":[],"literal":{"type":"string","value":""}},"references":{}}
+--- WIRE  Literal with an empty string value :: bytes identical
+true
+--- WIRE  MultiDocument with representations: [] (empty root list) :: THREW SchemaError
+Missing key
+  at ["representations"][0]
+--- WIRE  MultiDocument with one root :: ACCEPTED
+{"representations":[{"_tag":"String","checks":[]}],"references":{}}
+--- WIRE  MultiDocument with one root :: bytes identical
+true
+--- WIRE  MultiDocument with three roots :: ACCEPTED
+{"representations":[{"_tag":"String","checks":[]},{"_tag":"Number","checks":[]},{"_tag":"Boolean","checks":[]}],"references":{}}
+--- WIRE  MultiDocument with three roots :: bytes identical
+true
+--- WIRE  MultiDocument shape fed to the SINGLE-document decoder :: THREW SchemaError
+Missing key
+  at ["representation"]
+--- WIRE  Document shape fed to the MULTI-document decoder :: THREW SchemaError
+Missing key
+  at ["representations"]
+--- WIRE  document with NO references key at all :: THREW SchemaError
+Missing key
+  at ["references"]
+--- WIRE  document with an EXCESS key :: ACCEPTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- WIRE  document with an EXCESS key :: bytes identical
+false
+--- WIRE  document that is just a bare representation :: THREW SchemaError
+Missing key
+  at ["representation"]
+--- WIRE  representation NODE with an excess key :: ACCEPTED
+{"representation":{"_tag":"String","checks":[]},"references":{}}
+--- WIRE  representation NODE with an excess key :: bytes identical
+false
+--- WIRE  property signature with an excess key :: ACCEPTED
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"string","value":"a"},"type":{"_tag":"String","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
+--- WIRE  property signature with an excess key :: bytes identical
+false
+--- WIRE  index signature with an excess key :: ACCEPTED
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[],"indexSignatures":[{"parameter":{"_tag":"String","checks":[]},"type":{"_tag":"Number","checks":[]}}]},"references":{}}
+--- WIRE  index signature with an excess key :: bytes identical
+false
+--- WIRE  Reference with an excess key :: ACCEPTED
+{"representation":{"_tag":"Reference","$ref":"A"},"references":{"A":{"_tag":"String","checks":[]}}}
+--- WIRE  Reference with an excess key :: bytes identical
+false
+--- WIRE  Suspend with an excess key :: ACCEPTED
+{"representation":{"_tag":"Suspend","checks":[],"thunk":{"_tag":"String","checks":[]}},"references":{}}
+--- WIRE  Suspend with an excess key :: bytes identical
+false
+--- WIRE  unknown _tag :: THREW SchemaError
+Expected { readonly "_tag": "Declaration", ... } | { readonly "_tag": "Reference", ... } | { readonly "_tag": "Suspend", ... } | { readonly "_tag": "Null", ... } | { readonly "_tag": "Undefined", ... } | { readonly "_tag": "Void", ... } | { readonly "_tag": "Never", ... } | { readonly "_tag": "Unknown", ... } | { readonly "_tag": "Any", ... } | { readonly "_tag": "String", ... } | { readonly "_tag": "Number", ... } | { readonly "_tag": "Boolean", ... } | { readonly "_tag": "BigInt", ... } | { readonly "_tag": "Symbol", ... } | { readonly "_tag": "ObjectKeyword", ... } | { readonly "_tag": "Literal", ... } | { readonly "_tag": "UniqueSymbol", ... } | { readonly "_tag": "Enum", ... } | { readonly "_tag": "TemplateLiteral", ... } | { readonly "_tag": "Arrays", ... } | { readonly "_tag": "Objects", ... } | { readonly "_tag": "Union", ... }
+  at ["representation"]
+--- WIRE  lower-case tag spelling :: THREW SchemaError
+Expected { readonly "_tag": "Declaration", ... } | { readonly "_tag": "Reference", ... } | { readonly "_tag": "Suspend", ... } | { readonly "_tag": "Null", ... } | { readonly "_tag": "Undefined", ... } | { readonly "_tag": "Void", ... } | { readonly "_tag": "Never", ... } | { readonly "_tag": "Unknown", ... } | { readonly "_tag": "Any", ... } | { readonly "_tag": "String", ... } | { readonly "_tag": "Number", ... } | { readonly "_tag": "Boolean", ... } | { readonly "_tag": "BigInt", ... } | { readonly "_tag": "Symbol", ... } | { readonly "_tag": "ObjectKeyword", ... } | { readonly "_tag": "Literal", ... } | { readonly "_tag": "UniqueSymbol", ... } | { readonly "_tag": "Enum", ... } | { readonly "_tag": "TemplateLiteral", ... } | { readonly "_tag": "Arrays", ... } | { readonly "_tag": "Objects", ... } | { readonly "_tag": "Union", ... }
+  at ["representation"]
+--- WIRE  keyword node with NO checks key :: THREW SchemaError
+Missing key
+  at ["representation"]["checks"]
+--- WIRE  Suspend carrying a check (checks is Schema.Tuple([])) :: THREW SchemaError
+Expected no excess property
+  at ["representation"]["checks"][0]
+--- WIRE  Suspend with checks: [] (control) :: ACCEPTED
+{"representation":{"_tag":"Suspend","checks":[],"thunk":{"_tag":"String","checks":[]}},"references":{}}
+--- WIRE  Suspend with checks: [] (control) :: bytes identical
+true
+--- WIRE  Declaration WITHOUT representation (required by the codec) :: THREW SchemaError
+Missing key
+  at ["representation"]["representation"]
+--- WIRE  Declaration WITH representation (control) :: ACCEPTED
+{"representation":{"_tag":"Declaration","representation":{"id":"probe/decl","payload":null},"typeParameters":[],"checks":[]},"references":{}}
+--- WIRE  Declaration WITH representation (control) :: bytes identical
+true

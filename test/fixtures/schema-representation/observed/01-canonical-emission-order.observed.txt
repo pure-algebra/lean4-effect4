@@ -1,0 +1,93 @@
+runtime effect@4.0.0-rc.112
+--- 1a.union-source-order-A [String, Number, Boolean]
+{"representation":{"_tag":"Union","checks":[],"types":[{"_tag":"String","checks":[]},{"_tag":"Number","checks":[]},{"_tag":"Boolean","checks":[]}],"mode":"anyOf"},"references":{}}
+--- 1a.union-source-order-B [Boolean, Number, String]
+{"representation":{"_tag":"Union","checks":[],"types":[{"_tag":"Boolean","checks":[]},{"_tag":"Number","checks":[]},{"_tag":"String","checks":[]}],"mode":"anyOf"},"references":{}}
+--- 1a.A-bytes-equal-B
+false
+--- 1a.union-with-BigInt-in-middle
+{"representation":{"_tag":"Union","checks":[],"types":[{"_tag":"String","checks":[]},{"_tag":"BigInt","checks":[]},{"_tag":"Number","checks":[]}],"mode":"anyOf"},"references":{}}
+--- 1a.union-with-BigInt member tags in emission order
+["String","BigInt","Number"]
+--- 1a.union-oneOf
+{"representation":{"_tag":"Union","checks":[],"types":[{"_tag":"String","checks":[]},{"_tag":"Number","checks":[]}],"mode":"oneOf"},"references":{}}
+--- 1b.struct-source-order-{b,a}
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"string","value":"b"},"type":{"_tag":"String","checks":[]},"isOptional":false,"isMutable":false},{"name":{"type":"string","value":"a"},"type":{"_tag":"Number","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
+--- 1b.struct-source-order-{a,b}
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"string","value":"a"},"type":{"_tag":"Number","checks":[]},"isOptional":false,"isMutable":false},{"name":{"type":"string","value":"b"},"type":{"_tag":"String","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
+--- 1b.struct-A-bytes-equal-B
+false
+--- 1b.struct-{b,a} emitted property names
+[{"type":"string","value":"b"},{"type":"string","value":"a"}]
+--- 1c.references-keys-source-order-{z,a,m}
+["Zed","Alpha","Mid"]
+--- 1c.references-keys-source-order-{a,m,z}
+["Alpha","Mid","Zed"]
+--- 1c.references-table-A-bytes
+{"Zed":{"_tag":"String","annotations":{"identifier":"Zed"},"checks":[]},"Alpha":{"_tag":"String","annotations":{"identifier":"Alpha"},"checks":[]},"Mid":{"_tag":"String","annotations":{"identifier":"Mid"},"checks":[]}}
+--- 1c.references-table-B-bytes
+{"Alpha":{"_tag":"String","annotations":{"identifier":"Alpha"},"checks":[]},"Mid":{"_tag":"String","annotations":{"identifier":"Mid"},"checks":[]},"Zed":{"_tag":"String","annotations":{"identifier":"Zed"},"checks":[]}}
+--- 1d.NullOr(String)
+{"representation":{"_tag":"Union","checks":[],"types":[{"_tag":"String","checks":[]},{"_tag":"Null","checks":[]}],"mode":"anyOf"},"references":{}}
+--- 1d.Union([String, Null])
+{"representation":{"_tag":"Union","checks":[],"types":[{"_tag":"String","checks":[]},{"_tag":"Null","checks":[]}],"mode":"anyOf"},"references":{}}
+--- 1d.NullOr-equals-Union
+true
+--- 1d.Literals([a,b])
+{"representation":{"_tag":"Union","checks":[],"types":[{"_tag":"Literal","checks":[],"literal":{"type":"string","value":"a"}},{"_tag":"Literal","checks":[],"literal":{"type":"string","value":"b"}}],"mode":"anyOf"},"references":{}}
+--- 1d.Union([Literal a, Literal b])
+{"representation":{"_tag":"Union","checks":[],"types":[{"_tag":"Literal","checks":[],"literal":{"type":"string","value":"a"}},{"_tag":"Literal","checks":[],"literal":{"type":"string","value":"b"}}],"mode":"anyOf"},"references":{}}
+--- 1d.Literals-equals-Union
+true
+--- 1d.Struct{x: optional(String)}
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"string","value":"x"},"type":{"_tag":"Union","checks":[],"types":[{"_tag":"String","checks":[]},{"_tag":"Undefined","checks":[]}],"mode":"anyOf"},"isOptional":true,"isMutable":false}],"indexSignatures":[]},"references":{}}
+--- 1d.Struct{x: UndefinedOr(String)}
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"string","value":"x"},"type":{"_tag":"Union","checks":[],"types":[{"_tag":"String","checks":[]},{"_tag":"Undefined","checks":[]}],"mode":"anyOf"},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
+--- 1d.optional-equals-UndefinedOr
+false
+--- 1e.roundtrip-byte-identical:U1
+true
+--- 1e.roundtrip-byte-identical:U3
+true
+--- 1e.roundtrip-byte-identical:S1
+true
+--- 1e.roundtrip-byte-identical:R1
+true
+--- 1e.hand-table-in
+{"representation":{"_tag":"Reference","$ref":"Zed"},"references":{"Zed":{"_tag":"String","checks":[]},"Alpha":{"_tag":"Number","checks":[]},"Mid":{"_tag":"Boolean","checks":[]}}}
+--- 1e.hand-table-out
+{"representation":{"_tag":"Reference","$ref":"Zed"},"references":{"Zed":{"_tag":"String","checks":[]},"Alpha":{"_tag":"Number","checks":[]},"Mid":{"_tag":"Boolean","checks":[]}}}
+--- 1f.numeric-table-in-source-key-order
+["Zed","10","2","Alpha"]
+--- 1f.numeric-table-in-bytes
+{"representation":{"_tag":"Reference","$ref":"10"},"references":{"2":{"_tag":"Boolean","checks":[]},"10":{"_tag":"Number","checks":[]},"Zed":{"_tag":"String","checks":[]},"Alpha":{"_tag":"Null","checks":[]}}}
+--- 1f.numeric-table-out-bytes
+{"representation":{"_tag":"Reference","$ref":"10"},"references":{"2":{"_tag":"Boolean","checks":[]},"10":{"_tag":"Number","checks":[]},"Zed":{"_tag":"String","checks":[]},"Alpha":{"_tag":"Null","checks":[]}}}
+--- 1f.numeric-table-out-keys
+["2","10","Zed","Alpha"]
+--- 1g.same-schema-twice-identical
+true
+--- 1g.independently-built-identical-source-identical-bytes
+true
+--- 1h.identifier-collision-bytes
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"string","value":"p"},"type":{"_tag":"Reference","$ref":"N"},"isOptional":false,"isMutable":false},{"name":{"type":"string","value":"q"},"type":{"_tag":"Reference","$ref":"N_1"},"isOptional":false,"isMutable":false},{"name":{"type":"string","value":"r"},"type":{"_tag":"Reference","$ref":"N"},"isOptional":false,"isMutable":false},{"name":{"type":"string","value":"s"},"type":{"_tag":"Reference","$ref":"N_1"},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{"N":{"_tag":"String","annotations":{"identifier":"N"},"checks":[]},"N_1":{"_tag":"Number","annotations":{"identifier":"N_1"},"checks":[]}}}
+--- 1h.identifier-collision-table-keys
+["N","N_1"]
+--- 1i.authored-wire-bytes
+{"representation":{"_tag":"Reference","$ref":"Zed"},"references":{"Zed":{"_tag":"String","checks":[]},"10":{"_tag":"Number","checks":[]},"2":{"_tag":"Boolean","checks":[]}}}
+--- 1i.reemitted-wire-bytes
+{"representation":{"_tag":"Reference","$ref":"Zed"},"references":{"2":{"_tag":"Boolean","checks":[]},"10":{"_tag":"Number","checks":[]},"Zed":{"_tag":"String","checks":[]}}}
+--- 1i.wire-bytes-identical
+false
+--- 1i.duplicate-key-authored
+{"representation":{"_tag":"String","checks":[]},"references":{"A":{"_tag":"String","checks":[]},"A":{"_tag":"Number","checks":[]}}}
+--- 1i.duplicate-key-reemitted
+{"representation":{"_tag":"String","checks":[]},"references":{"A":{"_tag":"Number","checks":[]}}}
+--- 1j.scrambled-node-key-order-in
+{"references":{},"representation":{"indexSignatures":[],"checks":[],"propertySignatures":[{"isMutable":false,"type":{"checks":[],"_tag":"String"},"name":{"value":"a","type":"string"},"isOptional":false}],"_tag":"Objects"}}
+--- 1j.reemitted
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"string","value":"a"},"type":{"_tag":"String","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
+--- 1j.node-key-order-normalised
+true
+--- 1j.reemitted-is-idempotent
+true

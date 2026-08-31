@@ -1,0 +1,128 @@
+--- 2a.Schema.Literal(NaN).ast._tag :: THREW Error
+A numeric literal must be finite, got NaN
+--- 2a.toJson(Schema.Literal(NaN)) :: THREW Error
+A numeric literal must be finite, got NaN
+--- 2a.toJson(Schema.Literal(Infinity)) :: THREW Error
+A numeric literal must be finite, got Infinity
+--- 2a.toJson(Schema.Literal(1.5))  control :: RETURNED
+{"representation":{"_tag":"Literal","checks":[],"literal":{"type":"number","value":1.5}},"references":{}}
+--- 2a.toJson(Schema.Literal(1.5))  control :: JSON.stringify
+{"representation":{"_tag":"Literal","checks":[],"literal":{"type":"number","value":1.5}},"references":{}}
+--- 2a.fromJson Literal{type:number,value:NaN} :: THREW SchemaError
+Expected a finite number
+  at ["representation"]["literal"]["value"]
+--- 2a.fromJson Literal{type:number,value:Infinity} :: THREW SchemaError
+Expected a finite number
+  at ["representation"]["literal"]["value"]
+--- 2a.fromJson Literal{type:number,value:"NaN"} :: THREW SchemaError
+Expected number
+  at ["representation"]["literal"]["value"]
+--- 2b.fromJson Enum value NaN (live JS NaN) :: THREW SchemaError
+Expected a finite number
+  at ["representation"]["enums"][0][1]["value"]
+--- 2b.fromJson Enum value "NaN" (wire string) :: RETURNED
+{"representation":{"_tag":"Enum","checks":[],"enums":[["NOT_A_NUMBER",null]]},"references":{}}
+--- 2b.fromJson Enum value "NaN" (wire string) :: JSON.stringify
+{"representation":{"_tag":"Enum","checks":[],"enums":[["NOT_A_NUMBER",null]]},"references":{}}
+--- 2b.fromJson Enum value "Infinity" (wire string) :: RETURNED
+{"representation":{"_tag":"Enum","checks":[],"enums":[["NOT_A_NUMBER",null]]},"references":{}}
+--- 2b.fromJson Enum value "Infinity" (wire string) :: JSON.stringify
+{"representation":{"_tag":"Enum","checks":[],"enums":[["NOT_A_NUMBER",null]]},"references":{}}
+--- 2b.fromJson Enum value "-Infinity" (wire string) :: RETURNED
+{"representation":{"_tag":"Enum","checks":[],"enums":[["NOT_A_NUMBER",null]]},"references":{}}
+--- 2b.fromJson Enum value "-Infinity" (wire string) :: JSON.stringify
+{"representation":{"_tag":"Enum","checks":[],"enums":[["NOT_A_NUMBER",null]]},"references":{}}
+--- 2b.fromJson Enum value 42 (control) :: RETURNED
+{"representation":{"_tag":"Enum","checks":[],"enums":[["NOT_A_NUMBER",42]]},"references":{}}
+--- 2b.fromJson Enum value 42 (control) :: JSON.stringify
+{"representation":{"_tag":"Enum","checks":[],"enums":[["NOT_A_NUMBER",42]]},"references":{}}
+--- 2b.roundtrip Enum "NaN" -> live -> json :: RETURNED
+{"representation":{"_tag":"Enum","checks":[],"enums":[["NOT_A_NUMBER",{"type":"number","value":"NaN"}]]},"references":{}}
+--- 2b.roundtrip Enum "NaN" -> live -> json :: JSON.stringify
+{"representation":{"_tag":"Enum","checks":[],"enums":[["NOT_A_NUMBER",{"type":"number","value":"NaN"}]]},"references":{}}
+--- 2b.roundtrip Enum "Infinity" -> live -> json :: RETURNED
+{"representation":{"_tag":"Enum","checks":[],"enums":[["NOT_A_NUMBER",{"type":"number","value":"Infinity"}]]},"references":{}}
+--- 2b.roundtrip Enum "Infinity" -> live -> json :: JSON.stringify
+{"representation":{"_tag":"Enum","checks":[],"enums":[["NOT_A_NUMBER",{"type":"number","value":"Infinity"}]]},"references":{}}
+--- 2b.toJson of live Enum holding real NaN :: RETURNED
+{"representation":{"_tag":"Enum","checks":[],"enums":[["NOT_A_NUMBER",{"type":"number","value":"NaN"}]]},"references":{}}
+--- 2b.toJson of live Enum holding real NaN :: JSON.stringify
+{"representation":{"_tag":"Enum","checks":[],"enums":[["NOT_A_NUMBER",{"type":"number","value":"NaN"}]]},"references":{}}
+--- 2b.toJson of live Enum holding real Infinity :: RETURNED
+{"representation":{"_tag":"Enum","checks":[],"enums":[["INF",{"type":"number","value":"Infinity"}]]},"references":{}}
+--- 2b.toJson of live Enum holding real Infinity :: JSON.stringify
+{"representation":{"_tag":"Enum","checks":[],"enums":[["INF",{"type":"number","value":"Infinity"}]]},"references":{}}
+--- 2b.toJson of live Enum holding 42 (control) :: RETURNED
+{"representation":{"_tag":"Enum","checks":[],"enums":[["FORTY_TWO",{"type":"number","value":42}]]},"references":{}}
+--- 2b.toJson of live Enum holding 42 (control) :: JSON.stringify
+{"representation":{"_tag":"Enum","checks":[],"enums":[["FORTY_TWO",{"type":"number","value":42}]]},"references":{}}
+--- 2c.fromJson property key {type:number,value:NaN} :: THREW SchemaError
+Expected a finite number
+  at ["representation"]["propertySignatures"][0]["name"]["value"]
+--- 2c.fromJson property key {type:number,value:"NaN"} :: RETURNED
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":null,"type":{"_tag":"String","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
+--- 2c.fromJson property key {type:number,value:"NaN"} :: JSON.stringify
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":null,"type":{"_tag":"String","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
+--- 2c.fromJson property key {type:number,value:"Infinity"} :: RETURNED
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":null,"type":{"_tag":"String","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
+--- 2c.fromJson property key {type:number,value:"Infinity"} :: JSON.stringify
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":null,"type":{"_tag":"String","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
+--- 2c.fromJson property key {type:number,value:7} (control) :: RETURNED
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":7,"type":{"_tag":"String","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
+--- 2c.fromJson property key {type:number,value:7} (control) :: JSON.stringify
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":7,"type":{"_tag":"String","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
+--- 2c.roundtrip property key "NaN" -> live -> json :: RETURNED
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"number","value":"NaN"},"type":{"_tag":"String","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
+--- 2c.roundtrip property key "NaN" -> live -> json :: JSON.stringify
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"number","value":"NaN"},"type":{"_tag":"String","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
+--- 2c.toJson of live property key holding real NaN :: RETURNED
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"number","value":"NaN"},"type":{"_tag":"String","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
+--- 2c.toJson of live property key holding real NaN :: JSON.stringify
+{"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"number","value":"NaN"},"type":{"_tag":"String","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
+--- 2d.JSON.stringify of the NaN-enum document
+{"representation":{"_tag":"Enum","checks":[],"enums":[["NOT_A_NUMBER",{"type":"number","value":"NaN"}]]},"references":{}}
+--- 2d.JSON.parse(JSON.stringify(..)) reads back
+{"representation":{"_tag":"Enum","checks":[],"enums":[["NOT_A_NUMBER",{"type":"number","value":"NaN"}]]},"references":{}}
+--- 2d.JSON.stringify(NaN)
+null
+--- 2d.fromJson Enum value null :: THREW SchemaError
+Expected number | "Infinity" | "-Infinity" | "NaN"
+  at ["representation"]["enums"][0][1]["value"]
+--- 2e.Enum number-leg accepts "NaN" :: RETURNED
+{"liveValue":"NaN","liveTypeof":"number","reencoded":{"type":"number","value":"NaN"}}
+--- 2e.Enum number-leg accepts "NaN" :: JSON.stringify
+{"liveValue":"NaN","liveTypeof":"number","reencoded":{"type":"number","value":"NaN"}}
+--- 2e.Enum number-leg accepts "Infinity" :: RETURNED
+{"liveValue":"Infinity","liveTypeof":"number","reencoded":{"type":"number","value":"Infinity"}}
+--- 2e.Enum number-leg accepts "Infinity" :: JSON.stringify
+{"liveValue":"Infinity","liveTypeof":"number","reencoded":{"type":"number","value":"Infinity"}}
+--- 2e.Enum number-leg accepts "-Infinity" :: RETURNED
+{"liveValue":"-Infinity","liveTypeof":"number","reencoded":{"type":"number","value":"-Infinity"}}
+--- 2e.Enum number-leg accepts "-Infinity" :: JSON.stringify
+{"liveValue":"-Infinity","liveTypeof":"number","reencoded":{"type":"number","value":"-Infinity"}}
+--- 2e.Enum number-leg accepts "+Infinity" :: THREW SchemaError
+Expected "Infinity" | "-Infinity" | "NaN"
+  at ["representation"]["enums"][0][1]["value"]
+--- 2e.Enum number-leg accepts "nan" :: THREW SchemaError
+Expected "Infinity" | "-Infinity" | "NaN"
+  at ["representation"]["enums"][0][1]["value"]
+--- 2e.Enum number-leg accepts "INFINITY" :: THREW SchemaError
+Expected "Infinity" | "-Infinity" | "NaN"
+  at ["representation"]["enums"][0][1]["value"]
+--- 2e.Enum number-leg accepts "1.5" :: THREW SchemaError
+Expected "Infinity" | "-Infinity" | "NaN"
+  at ["representation"]["enums"][0][1]["value"]
+--- 2e.Enum number-leg accepts "" :: THREW SchemaError
+Expected "Infinity" | "-Infinity" | "NaN"
+  at ["representation"]["enums"][0][1]["value"]
+--- 2e.Enum number-leg accepts "1e999" :: THREW SchemaError
+Expected "Infinity" | "-Infinity" | "NaN"
+  at ["representation"]["enums"][0][1]["value"]
+--- 2e.string-tagged "NaN" enum value :: RETURNED
+{"representation":{"_tag":"Enum","checks":[],"enums":[["K",{"type":"string","value":"NaN"}]]},"references":{}}
+--- 2e.string-tagged "NaN" enum value :: JSON.stringify
+{"representation":{"_tag":"Enum","checks":[],"enums":[["K",{"type":"string","value":"NaN"}]]},"references":{}}
+--- 2e.Enum value -0 :: RETURNED
+{"isNegativeZero":true,"reencoded":{"type":"number","value":0},"stringified":"{\"representation\":{\"_tag\":\"Enum\",\"checks\":[],\"enums\":[[\"NOT_A_NUMBER\",{\"type\":\"number\",\"value\":0}]]},\"references\":{}}"}
+--- 2e.Enum value -0 :: JSON.stringify
+{"isNegativeZero":true,"reencoded":{"type":"number","value":0},"stringified":"{\"representation\":{\"_tag\":\"Enum\",\"checks\":[],\"enums\":[[\"NOT_A_NUMBER\",{\"type\":\"number\",\"value\":0}]]},\"references\":{}}"}

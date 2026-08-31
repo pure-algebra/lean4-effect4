@@ -1,0 +1,128 @@
+{
+  "runtime": {
+    "package": "effect",
+    "version": "4.0.0-rc.112",
+    "execution": "Bun direct TypeScript; no independent typecheck",
+    "sourceDigest": {
+      "src/SchemaRepresentation.ts": "a0a7a1537cfe3a9159a80210e3de92342cc9e98651f0e8273a75ccdcccae69bc",
+      "src/Schema.ts": "9358710e2c0d613371d8feeeccb3716fe98a43f67e6aa1076b00d4079a258784"
+    },
+    "note": "the fail-closed runner gates the complete retained source/dist closure before execution"
+  },
+  "SC-DOC-07.union-member-order-is-source-order": {
+    "question": "is emitted union member order canonical, or the source arrangement?",
+    "inputA": "Schema.Union([Schema.String, Schema.Number, Schema.Boolean])",
+    "inputB": "Schema.Union([Schema.Boolean, Schema.Number, Schema.String])",
+    "observedA": "{\"representation\":{\"_tag\":\"Union\",\"checks\":[],\"types\":[{\"_tag\":\"String\",\"checks\":[]},{\"_tag\":\"Number\",\"checks\":[]},{\"_tag\":\"Boolean\",\"checks\":[]}],\"mode\":\"anyOf\"},\"references\":{}}",
+    "observedB": "{\"representation\":{\"_tag\":\"Union\",\"checks\":[],\"types\":[{\"_tag\":\"Boolean\",\"checks\":[]},{\"_tag\":\"Number\",\"checks\":[]},{\"_tag\":\"String\",\"checks\":[]}],\"mode\":\"anyOf\"},\"references\":{}}",
+    "observedBytesEqual": false,
+    "verdict": "member order is the SOURCE order; the same member SET emits different bytes"
+  },
+  "SC-DOC-07.object-property-order-is-source-order": {
+    "inputA": "Schema.Struct({ b: String, a: Number })",
+    "inputB": "Schema.Struct({ a: Number, b: String })",
+    "observedA": "{\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"propertySignatures\":[{\"name\":{\"type\":\"string\",\"value\":\"b\"},\"type\":{\"_tag\":\"String\",\"checks\":[]},\"isOptional\":false,\"isMutable\":false},{\"name\":{\"type\":\"string\",\"value\":\"a\"},\"type\":{\"_tag\":\"Number\",\"checks\":[]},\"isOptional\":false,\"isMutable\":false}],\"indexSignatures\":[]},\"references\":{}}",
+    "observedB": "{\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"propertySignatures\":[{\"name\":{\"type\":\"string\",\"value\":\"a\"},\"type\":{\"_tag\":\"Number\",\"checks\":[]},\"isOptional\":false,\"isMutable\":false},{\"name\":{\"type\":\"string\",\"value\":\"b\"},\"type\":{\"_tag\":\"String\",\"checks\":[]},\"isOptional\":false,\"isMutable\":false}],\"indexSignatures\":[]},\"references\":{}}",
+    "observedBytesEqual": false,
+    "verdict": "propertySignatures order is the SOURCE order"
+  },
+  "SC-DOC-07.node-key-order-IS-normalised": {
+    "question": "is the KEY order inside one representation node normalised?",
+    "input": "{\"references\":{},\"representation\":{\"indexSignatures\":[],\"checks\":[],\"propertySignatures\":[],\"_tag\":\"Objects\"}}",
+    "observed": "{\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"propertySignatures\":[],\"indexSignatures\":[]},\"references\":{}}",
+    "verdict": "YES — node key order follows the codec struct field order, not the input"
+  },
+  "SC-DOC-07.references-table-key-order-is-NOT-canonical": {
+    "question": "does the references table preserve authored key order?",
+    "inputWireText": "{\"representation\":{\"_tag\":\"Reference\",\"$ref\":\"Zed\"},\"references\":{\"Zed\":{\"_tag\":\"String\",\"checks\":[]},\"10\":{\"_tag\":\"Number\",\"checks\":[]},\"2\":{\"_tag\":\"Boolean\",\"checks\":[]}}}",
+    "observedWireText": "{\"representation\":{\"_tag\":\"Reference\",\"$ref\":\"Zed\"},\"references\":{\"2\":{\"_tag\":\"Boolean\",\"checks\":[]},\"10\":{\"_tag\":\"Number\",\"checks\":[]},\"Zed\":{\"_tag\":\"String\",\"checks\":[]}}}",
+    "observedBytesEqual": false,
+    "verdict": "NO — the table is a JS object, so integer-like keys sort numerically ahead of insertion order. encode(decode(bytes)) != bytes."
+  },
+  "E4-SCHEMA-CE-012.duplicate-references-key-silently-collapses": {
+    "inputWireText": "{\"representation\":{\"_tag\":\"String\",\"checks\":[]},\"references\":{\"A\":{\"_tag\":\"String\",\"checks\":[]},\"A\":{\"_tag\":\"Number\",\"checks\":[]}}}",
+    "observedWireText": "{\"representation\":{\"_tag\":\"String\",\"checks\":[]},\"references\":{\"A\":{\"_tag\":\"Number\",\"checks\":[]}}}",
+    "verdict": "last duplicate wins, silently, at JSON.parse — before Effect sees the value"
+  },
+  "E4-SCHEMA-CE-023.literal-number-leg-refuses-non-finite": {
+    "buildAttempt": "Schema.Literal(NaN)",
+    "observedBuild": "THREW Error: A numeric literal must be finite, got NaN",
+    "wireAttemptLiveNaN": "{\"literal\":{\"type\":\"number\",\"value\":\"<live NaN>\"}}",
+    "observedWireLiveNaN": "THREW SchemaError: Expected a finite number |   at [\"representation\"][\"literal\"][\"value\"]",
+    "wireAttemptStringNaN": "{\"representation\":{\"_tag\":\"Literal\",\"checks\":[],\"literal\":{\"type\":\"number\",\"value\":\"NaN\"}},\"references\":{}}",
+    "observedWireStringNaN": "THREW SchemaError: Expected number",
+    "verdict": "the Literal number leg is Finite; NaN is refused at BUILD and at the WIRE, and the string escape hatch is NOT accepted there"
+  },
+  "E4-SCHEMA-CE-023.enum-value-DOES-carry-non-finite": {
+    "inputWireText": "{\"representation\":{\"_tag\":\"Enum\",\"checks\":[],\"enums\":[[\"NOT_A_NUMBER\",{\"type\":\"number\",\"value\":\"NaN\"}]]},\"references\":{}}",
+    "observedWireText": "{\"representation\":{\"_tag\":\"Enum\",\"checks\":[],\"enums\":[[\"NOT_A_NUMBER\",{\"type\":\"number\",\"value\":\"NaN\"}]]},\"references\":{}}",
+    "observedBytesEqual": true,
+    "observedDecodedTypeof": "number",
+    "observedDecodedIsNaN": true,
+    "acceptedNonFiniteSpellings": [
+      "Infinity",
+      "-Infinity",
+      "NaN"
+    ],
+    "rejectedSpellingsProbed": [
+      "+Infinity",
+      "nan",
+      "INFINITY",
+      "1.5",
+      "",
+      "1e999",
+      null
+    ],
+    "verdict": "YES — a non-finite number reaches a persisted enum value, encoded as one of exactly three tagged STRINGS under type \"number\". `Schema.Json` does not block it."
+  },
+  "E4-SCHEMA-CE-023.property-key-DOES-carry-non-finite": {
+    "inputWireText": "{\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"propertySignatures\":[{\"name\":{\"type\":\"number\",\"value\":\"NaN\"},\"type\":{\"_tag\":\"String\",\"checks\":[]},\"isOptional\":false,\"isMutable\":false}],\"indexSignatures\":[]},\"references\":{}}",
+    "observedWireText": "{\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"propertySignatures\":[{\"name\":{\"type\":\"number\",\"value\":\"NaN\"},\"type\":{\"_tag\":\"String\",\"checks\":[]},\"isOptional\":false,\"isMutable\":false}],\"indexSignatures\":[]},\"references\":{}}",
+    "observedBytesEqual": true,
+    "observedDecodedIsNaN": true,
+    "verdict": "YES — a persisted property key can be NaN, via the same three-string escape"
+  },
+  "E4-SCHEMA-CE-023.third-numeric-domain-check-payload": {
+    "attempt": "Schema.Number.check(Schema.isBetween({ minimum: 1, maximum: Infinity }))",
+    "observed": "THREW RangeError: Expected a finite number, got Infinity",
+    "verdict": "a THIRD numeric domain the ruling does not name: a check payload number must be finite, enforced by a host RangeError, not a SchemaError"
+  },
+  "E4-SCHEMA-CE-023.negative-zero-does-not-survive-JSON-text": {
+    "observedLivePreservesNegativeZero": true,
+    "observedWireText": "{\"representation\":{\"_tag\":\"Enum\",\"checks\":[],\"enums\":[[\"Z\",{\"type\":\"number\",\"value\":0}]]},\"references\":{}}",
+    "verdict": "-0 survives the live document but JSON.stringify writes 0, so the sign is lost at the byte face"
+  },
+  "E4-SCHEMA-CE-011.annotation-pruning": {
+    "control": "{\"representation\":{\"_tag\":\"String\",\"annotations\":{\"keep\":\"yes\"},\"checks\":[]},\"references\":{}}",
+    "functionValue": "{\"representation\":{\"_tag\":\"String\",\"checks\":[]},\"references\":{}}",
+    "mixed": "{\"representation\":{\"_tag\":\"String\",\"annotations\":{\"keep\":\"yes\"},\"checks\":[]},\"references\":{}}",
+    "allNonJson": "{\"representation\":{\"_tag\":\"String\",\"checks\":[]},\"references\":{}}",
+    "emptyBag": "{\"representation\":{\"_tag\":\"String\",\"checks\":[]},\"references\":{}}",
+    "nestedBadLeaf": "{\"representation\":{\"_tag\":\"String\",\"checks\":[]},\"references\":{}}",
+    "nestedNaN": "{\"representation\":{\"_tag\":\"String\",\"checks\":[]},\"references\":{}}",
+    "nullPrototypeObject": "{\"representation\":{\"_tag\":\"String\",\"annotations\":{\"np\":{\"a\":1}},\"checks\":[]},\"references\":{}}",
+    "verdict": "pruning is per-ENTRY and whole-tree: one non-JSON leaf drops the whole entry, silently, with no issue; when nothing survives the `annotations` key is omitted, never emitted as {}"
+  },
+  "E4-SCHEMA-CE-010.local-symbol-fails-at-lowering-not-at-build": {
+    "observedBuild": "BUILT, ast._tag=UniqueSymbol",
+    "observedEmit": "THREW SchemaError: cannot serialize to string, Symbol is not registered",
+    "observedGlobalSymbolEmit": "{\"representation\":{\"_tag\":\"UniqueSymbol\",\"checks\":[],\"symbol\":\"Symbol(effect4/probe)\"},\"references\":{}}",
+    "verdict": "a local symbol builds a live schema and fails only at lowering; the refusal is a SchemaError, not a type error"
+  },
+  "degenerate.verdicts": {
+    "Schema.Union([]) emits": "{\"representation\":{\"_tag\":\"Union\",\"checks\":[],\"types\":[],\"mode\":\"anyOf\"},\"references\":{}}",
+    "Schema.Struct({}) emits": "{\"representation\":{\"_tag\":\"Objects\",\"checks\":[],\"propertySignatures\":[],\"indexSignatures\":[]},\"references\":{}}",
+    "Schema.Tuple([]) emits": "{\"representation\":{\"_tag\":\"Arrays\",\"checks\":[],\"elements\":[],\"rest\":[]},\"references\":{}}",
+    "Schema.Enum({}) emits": "{\"representation\":{\"_tag\":\"Enum\",\"checks\":[],\"enums\":[]},\"references\":{}}",
+    "zero-member FilterGroup": "THREW SchemaError: Missing key",
+    "Suspend carrying a check": "THREW SchemaError: Expected no excess property",
+    "Declaration without representation": "THREW SchemaError: Missing key",
+    "Filter without representation": "THREW SchemaError: Missing key",
+    "MultiDocument with empty root list": "THREW SchemaError: Missing key",
+    "empty-string references-table key, unreferenced": "{\"representation\":{\"_tag\":\"String\",\"checks\":[]},\"references\":{\"\":{\"_tag\":\"Number\",\"checks\":[]}}}",
+    "empty $ref": "THREW SchemaError: Expected a value with a length of at least 1",
+    "excess key on the document envelope": "{\"representation\":{\"_tag\":\"String\",\"checks\":[]},\"references\":{}}",
+    "excess key on a representation node": "{\"representation\":{\"_tag\":\"String\",\"checks\":[]},\"references\":{}}",
+    "verdict": "empty union / object / tuple / enum / template-literal parts / references table are all ACCEPTED and emit an empty collection; a zero-member FilterGroup, an empty $ref, a Suspend with a check, a Declaration or Filter without `representation`, and an empty MultiDocument root list are all REFUSED; excess keys are dropped silently"
+  }
+}

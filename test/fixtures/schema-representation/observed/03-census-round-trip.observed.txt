@@ -1,0 +1,307 @@
+runtime effect@4.0.0-rc.112
+
+### Null  <=  Schema.Null
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Null","checks":[]},"references":{}}
+round trip == bytes: true
+
+### Undefined  <=  Schema.Undefined
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Undefined","checks":[]},"references":{}}
+round trip == bytes: true
+
+### Void  <=  Schema.Void
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Void","checks":[]},"references":{}}
+round trip == bytes: true
+
+### Never  <=  Schema.Never
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Never","checks":[]},"references":{}}
+round trip == bytes: true
+
+### Unknown  <=  Schema.Unknown
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Unknown","checks":[]},"references":{}}
+round trip == bytes: true
+
+### Any  <=  Schema.Any
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Any","checks":[]},"references":{}}
+round trip == bytes: true
+
+### String  <=  Schema.String
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"String","checks":[]},"references":{}}
+round trip == bytes: true
+
+### Number  <=  Schema.Number
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Number","checks":[]},"references":{}}
+round trip == bytes: true
+
+### Boolean  <=  Schema.Boolean
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Boolean","checks":[]},"references":{}}
+round trip == bytes: true
+
+### BigInt  <=  Schema.BigInt
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"BigInt","checks":[]},"references":{}}
+round trip == bytes: true
+
+### Symbol  <=  Schema.Symbol
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Symbol","checks":[]},"references":{}}
+round trip == bytes: true
+
+### ObjectKeyword  <=  Schema.ObjectKeyword
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"ObjectKeyword","checks":[]},"references":{}}
+round trip == bytes: true
+
+### Literal  <=  Schema.Literal("a")
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Literal","checks":[],"literal":{"type":"string","value":"a"}},"references":{}}
+round trip == bytes: true
+
+### Literal  <=  Schema.Literal(1)
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Literal","checks":[],"literal":{"type":"number","value":1}},"references":{}}
+round trip == bytes: true
+
+### Literal  <=  Schema.Literal(1n)
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Literal","checks":[],"literal":{"type":"bigint","value":"1"}},"references":{}}
+round trip == bytes: true
+
+### Literal  <=  Schema.Literal(true)
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Literal","checks":[],"literal":{"type":"boolean","value":true}},"references":{}}
+round trip == bytes: true
+
+### UniqueSymbol  <=  Schema.UniqueSymbol(Symbol.for("effect4/probe"))
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"UniqueSymbol","checks":[],"symbol":"Symbol(effect4/probe)"},"references":{}}
+round trip == bytes: true
+
+### UniqueSymbol  <=  Schema.UniqueSymbol(Symbol("local"))  [LOCAL symbol]
+constructed        : true
+tag present in doc : n/a
+emitted            :
+round trip == bytes: false
+round trip out     :
+note               : schema BUILT, ast._tag = UniqueSymbol; emission: THREW SchemaError: cannot serialize to string, Symbol is not registered
+
+### Enum  <=  Schema.Enum({ A: "a", B: 2 })
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Enum","checks":[],"enums":[["A",{"type":"string","value":"a"}],["B",{"type":"number","value":2}]]},"references":{}}
+round trip == bytes: true
+
+### TemplateLiteral  <=  Schema.TemplateLiteral(["id-", Schema.String])
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"TemplateLiteral","checks":[],"parts":[{"_tag":"Literal","checks":[],"literal":{"type":"string","value":"id-"}},{"_tag":"String","checks":[]}]},"references":{}}
+round trip == bytes: true
+
+### Arrays  <=  Schema.Array(Schema.String)
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Arrays","checks":[],"elements":[],"rest":[{"_tag":"String","checks":[]}]},"references":{}}
+round trip == bytes: true
+
+### Arrays  <=  Schema.Tuple([Schema.String, Schema.Number])
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Arrays","checks":[],"elements":[{"isOptional":false,"type":{"_tag":"String","checks":[]}},{"isOptional":false,"type":{"_tag":"Number","checks":[]}}],"rest":[]},"references":{}}
+round trip == bytes: true
+
+### Arrays  <=  Schema.TupleWithRest(Schema.Tuple([Schema.String]), [Schema.Number])
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Arrays","checks":[],"elements":[{"isOptional":false,"type":{"_tag":"String","checks":[]}}],"rest":[{"_tag":"Number","checks":[]}]},"references":{}}
+round trip == bytes: true
+
+### Objects  <=  Schema.Struct({ a: Schema.String })
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"string","value":"a"},"type":{"_tag":"String","checks":[]},"isOptional":false,"isMutable":false}],"indexSignatures":[]},"references":{}}
+round trip == bytes: true
+
+### Objects  <=  Schema.Record(Schema.String, Schema.Number)  [index signature]
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Objects","checks":[],"propertySignatures":[],"indexSignatures":[{"parameter":{"_tag":"String","checks":[]},"type":{"_tag":"Number","checks":[]}}]},"references":{}}
+round trip == bytes: true
+
+### Union  <=  Schema.Union([Schema.String, Schema.Number])
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Union","checks":[],"types":[{"_tag":"String","checks":[]},{"_tag":"Number","checks":[]}],"mode":"anyOf"},"references":{}}
+round trip == bytes: true
+
+### Union  <=  Schema.Union([...], { mode: "oneOf" })
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Union","checks":[],"types":[{"_tag":"String","checks":[]},{"_tag":"Number","checks":[]}],"mode":"oneOf"},"references":{}}
+round trip == bytes: true
+
+### Suspend  <=  Schema.suspend(() => Schema.String)
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Suspend","checks":[],"thunk":{"_tag":"String","checks":[]}},"references":{}}
+round trip == bytes: true
+
+### Reference  <=  recursive Struct with Schema.suspend
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Reference","$ref":"Objects_"},"references":{"Objects_":{"_tag":"Objects","checks":[],"propertySignatures":[{"name":{"type":"string","value":"v"},"type":{"_tag":"String","checks":[]},"isOptional":false,"isMutable":false},{"name":{"type":"string","value":"next"},"type":{"_tag":"Suspend","checks":[],"thunk":{"_tag":"Union","checks":[],"types":[{"_tag":"Reference","$ref":"Objects_"},{"_tag":"Null","checks":[]}],"mode":"anyOf"}},"isOptional":false,"isMutable":false}],"indexSignatures":[]}}}
+round trip == bytes: true
+
+### Declaration  <=  Schema.Date
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Declaration","representation":{"id":"effect/schema/Date","payload":null},"annotations":{"expected":"a valid Date"},"typeParameters":[],"checks":[]},"references":{}}
+round trip == bytes: true
+
+### Declaration  <=  Schema.Option(Schema.String)
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Declaration","representation":{"id":"effect/schema/Option","payload":null},"annotations":{"expected":"Option"},"typeParameters":[{"_tag":"String","checks":[]}],"checks":[]},"references":{}}
+round trip == bytes: true
+
+### Declaration  <=  Schema.URL
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Declaration","representation":{"id":"effect/schema/URL","payload":null},"annotations":{"expected":"URL"},"typeParameters":[],"checks":[]},"references":{}}
+round trip == bytes: true
+
+### Declaration  <=  Schema.Json
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Declaration","representation":{"id":"effect/schema/Json","payload":null},"annotations":{"expected":"JSON value"},"typeParameters":[],"checks":[]},"references":{}}
+round trip == bytes: true
+
+### Declaration  <=  Schema.Uint8Array
+constructed        : true
+tag present in doc : true
+emitted            : {"representation":{"_tag":"Declaration","representation":{"id":"effect/schema/Uint8Array","payload":null},"annotations":{"expected":"Uint8Array"},"typeParameters":[],"checks":[]},"references":{}}
+round trip == bytes: true
+
+### Filter (check)  <=  Schema.String.check(Schema.isMinLength(3))
+constructed        : true
+tag present in doc : false
+emitted            : {"representation":{"_tag":"String","checks":[{"_tag":"Filter","representation":{"id":"effect/schema/isMinLength","payload":{"minLength":3}},"annotations":{"expected":"a value with a length of at least 3","~structural":true,"arbitrary":{"constraint":{"minLength":3}}},"aborted":false}]},"references":{}}
+round trip == bytes: true
+
+### Filter (check)  <=  Schema.Number.check(Schema.isInt())
+constructed        : true
+tag present in doc : false
+emitted            : {"representation":{"_tag":"Number","checks":[{"_tag":"Filter","representation":{"id":"effect/schema/isInt","payload":null},"annotations":{"expected":"an integer","arbitrary":{"constraint":{"integer":true}}},"aborted":false}]},"references":{}}
+round trip == bytes: true
+
+### Filter (check)  <=  Schema.String.check(Schema.isUUID())
+constructed        : true
+tag present in doc : false
+emitted            : {"representation":{"_tag":"String","checks":[{"_tag":"Filter","representation":{"id":"effect/schema/isUUID","payload":{"version":null}},"annotations":{"expected":"a UUID","arbitrary":{"constraint":{"patterns":["^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$"]}}},"aborted":false}]},"references":{}}
+round trip == bytes: true
+
+### Filter (check)  <=  Schema.Number.check(Schema.isBetween({minimum:1,maximum:5}))
+constructed        : true
+tag present in doc : false
+emitted            : {"representation":{"_tag":"Number","checks":[{"_tag":"Filter","representation":{"id":"effect/schema/isBetween","payload":{"minimum":1,"maximum":5}},"annotations":{"expected":"a value between 1 and 5"},"aborted":false}]},"references":{}}
+round trip == bytes: true
+
+### FilterGroup (check)  <=  Schema.String.check(Schema.makeFilterGroup([isMinLength(2), isMaxLength(5)]))
+constructed        : true
+tag present in doc : false
+emitted            : {"representation":{"_tag":"String","checks":[{"_tag":"FilterGroup","checks":[{"_tag":"Filter","representation":{"id":"effect/schema/isMinLength","payload":{"minLength":2}},"annotations":{"expected":"a value with a length of at least 2","~structural":true,"arbitrary":{"constraint":{"minLength":2}}},"aborted":false},{"_tag":"Filter","representation":{"id":"effect/schema/isMaxLength","payload":{"maxLength":5}},"annotations":{"expected":"a value with a length of at most 5","~structural":true,"arbitrary":{"constraint":{"maxLength":5}}},"aborted":false}]}]},"references":{}}
+round trip == bytes: true
+note               : the ONLY route found to a FilterGroup; note the emitted FilterGroup carries NO `representation`
+
+### Filter (check)  <=  Schema.isBetween({minimum:1,maximum:Infinity})
+constructed        : false
+tag present in doc : n/a
+emitted            :
+round trip == bytes: false
+round trip out     :
+note               : THREW RangeError: Expected a finite number, got Infinity
+
+### Never  <=  hand-written Never with a check
+constructed        : false
+tag present in doc : n/a
+emitted            : {"representation":{"_tag":"Never","checks":[{"_tag":"Filter","representation":{"id":"x","payload":null},"aborted":false}]},"references":{}}
+round trip == bytes: true
+note               : does a Never node accept a check?
+
+### Reference  <=  hand-written dangling $ref
+constructed        : false
+tag present in doc : n/a
+emitted            : {"representation":{"_tag":"Reference","$ref":"Nope"},"references":{}}
+round trip == bytes: true
+note               : dangling reference, per E4-SCHEMA-CE-025
+
+### Declaration  <=  hand-written minimal Declaration
+constructed        : false
+tag present in doc : n/a
+emitted            : {"representation":{"_tag":"Declaration","representation":{"id":"probe/decl","payload":null},"typeParameters":[],"checks":[]},"references":{}}
+round trip == bytes: true
+note               : minimal Declaration with required representation
+
+### Declaration  <=  hand-written Declaration WITHOUT representation
+constructed        : false
+tag present in doc : n/a
+emitted            : {"representation":{"_tag":"Declaration","typeParameters":[],"checks":[]},"references":{}}
+round trip == bytes: false
+round trip out     : THREW SchemaError: Missing key
+note               : the codec requires `representation` even though the interface marks it optional
+
+### Suspend  <=  hand-written Suspend with a non-empty checks
+constructed        : false
+tag present in doc : n/a
+emitted            : {"representation":{"_tag":"Suspend","checks":[{"_tag":"Filter","representation":{"id":"x","payload":null},"aborted":false}],"thunk":{"_tag":"String","checks":[]}},"references":{}}
+round trip == bytes: false
+round trip out     : THREW SchemaError: Expected no excess property
+note               : Suspend.checks is Tuple([])
+
+### census coverage from the public Schema API
+Declaration        reachable-from-public-API: true
+Reference          reachable-from-public-API: true
+Suspend            reachable-from-public-API: true
+Null               reachable-from-public-API: true
+Undefined          reachable-from-public-API: true
+Void               reachable-from-public-API: true
+Never              reachable-from-public-API: true
+Unknown            reachable-from-public-API: true
+Any                reachable-from-public-API: true
+String             reachable-from-public-API: true
+Number             reachable-from-public-API: true
+Boolean            reachable-from-public-API: true
+BigInt             reachable-from-public-API: true
+Symbol             reachable-from-public-API: true
+Literal            reachable-from-public-API: true
+UniqueSymbol       reachable-from-public-API: true
+ObjectKeyword      reachable-from-public-API: true
+Enum               reachable-from-public-API: true
+TemplateLiteral    reachable-from-public-API: true
+Arrays             reachable-from-public-API: true
+Objects            reachable-from-public-API: true
+Union              reachable-from-public-API: true
