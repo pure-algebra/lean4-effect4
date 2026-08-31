@@ -74,6 +74,18 @@ Both forms must remain unavailable, so callers can obtain a checked value only
 through `admit`. Making the constructor public removes both expected
 elaboration errors and fails the default-root gate.
 
+## Unrelated diagnostic witness — `E4-FLOW-CE-016`
+
+Clause-level soundness does not establish that a diagnostic's location or
+payload witnesses that clause. The retained mutation replaces the precise
+duplicate-decision result with the same clause paired with `.flow/.none`; the
+old `FirstDiagnostic.condemns` shape alone cannot express why that pair is
+wrong. `Diagnostic.Valid` indexes each clause by its exact first source
+witness, including nested block-then-successor and block-then-term order. The
+battery proves that the mutated value cannot inhabit that relation and requires
+`admit_error_valid`, an observational theorem over `admit` that never names a
+private fallback helper.
+
 ## Deferred attacks
 
 `E4-FLOW-CE-006` and the fuel, live-frontier, nondeterminism, divergence,
