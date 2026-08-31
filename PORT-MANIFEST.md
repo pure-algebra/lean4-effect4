@@ -4,9 +4,11 @@ Effect4 now has one independent algebra carrier and a mechanically bounded
 cutover inventory. Foldlab remains the downstream compatibility target; no
 Foldlab module is an Effect4 dependency.
 
-Status: P1 active, 2026-08-31. The generic algebra is implemented and its
-breaker battery is green. Schema, flow, runtime, concurrency, target, and
-Foldlab compatibility rows remain open until their own proof graphs close.
+Status: P1/P3 closure active, 2026-08-31. The generic algebra is implemented
+and its current breaker battery is green, but independent review found
+retained source declarations that still require row-level dispositions.
+Schema, flow, runtime, concurrency, target, and Foldlab compatibility rows
+remain open until their own proof graphs close.
 
 ## Authority pins
 
@@ -24,7 +26,13 @@ Foldlab compatibility rows remain open until their own proof graphs close.
 The Effect npm version and upstream revision come from Foldlab's
 `.reference/provenance/sources.lock.json` runtime row. The installed package
 bytes remain a separate pin because an upstream tag does not prove what a
-package manager placed on disk.
+package manager placed on disk. This distinction is material for Schema:
+installed `Schema.ts` has SHA-256
+`9358710e2c0d613371d8feeeccb3716fe98a43f67e6aa1076b00d4079a258784`,
+while the pinned upstream file has
+`f0ecfa4511a62c2eb7ed820449d12653a2bbb8ef82ead842189a56b503d0de2f`.
+The exact matching and differing source/declaration digests are recorded in
+`docs/SCHEMA-CUTOVER.md`.
 
 ## Dispositions
 
@@ -52,7 +60,7 @@ The source files below were hashed at the Foldlab pin. The Effect4 contract is
 | Foldlab source | Retained span | SHA-256 | Effect4 owner | Disposition |
 | --- | ---: | --- | --- | --- |
 | `library/cas/Cas/Lang/Sig.lean` | 1-27 | `91e9d984fead2a36c4503bb8db979e8f085123db754a655846888aac41e87cd6` | `Effect4/Algebra/Signature.lean` | `owned`; operation and answer universes generalized |
-| `library/cas/Cas/Lang/Prog.lean` | 1-54 | `a8ac15632d155f9558db1969f2a25faf548e337c35b584f54316d5aba0f958aa` | `Effect4/Algebra/Program.lean` | `owned`; finite higher-order proof carrier only |
+| `library/cas/Cas/Lang/Prog.lean` | 1-54 | `a8ac15632d155f9558db1969f2a25faf548e337c35b584f54316d5aba0f958aa` | `Effect4/Algebra/Program.lean` | `owned`; well-founded higher-order proof carrier only |
 | `library/cas/Cas/Lang/Handler.lean` | 39-67 | `7170bd9c6de8743d10fff712644fa1d6ce59100e5dc33e0458b17897de933bf9` | `Effect4/Algebra/Handler.lean` | `split`; generic handler moved, CAS reference handler retained |
 | `library/cas/Cas/Lang/Representation.lean` | 35-118 | `5ca0f4cfeeb396c0f084d547a72825ddbe8a6c6a37e0786dbed9e94d68b652a8` | `Effect4/Algebra/Laws.lean` | `split`; generic laws moved, CAS observation retained |
 | `library/cas/Cas/Lang/Representation.lean` | 119-128 | same file digest | `Effect4/Semantics/Equivalence.lean` | open `downstreamAdapter` |
@@ -76,6 +84,25 @@ The algebra landed in three commits with separate roles:
 - `fb6f64571a42f12cc342582f72c917b016093a5b` implemented the algebra and
   made the contract and axiom report part of the default Lake build.
 
+Independent review found that the file-span rows above were broader than the
+public declarations actually extracted. The implementation satisfies the
+frozen native proposal, but those source rows are not cutover-closed. Their
+required dispositions are now explicit:
+
+| Retained Foldlab declaration | Effect4 decision | Closure requirement |
+| --- | --- | --- |
+| `Representation.eq_of_forall_interpret` | port as generic interpreter-separation theorem | exact statement, proof, axiom receipt |
+| `interpret_vis` | port as the named handler beta equation | exact minimal assumptions and receipt |
+| `interpret_op_of_rightUnit` | expose the existing private sharp helper as public API | right-unit-only statement and receipt |
+| `interpret_isMonadMorphism_of_equations` | port | left-unit/bind-associativity statement and receipt |
+| `interpret_inhabits_the_pin` | port | anti-vacuity companion at the same equation boundary as the pin |
+| `IsMorphE`, conversions, function-equality initiality | supersede with a first-class `ModelMorphism` API | conversions to the existing predicate plus initial-object uniqueness theorem |
+| `syntactic_hyp_iff*` and wide `Prog.inl_unique`/`inr_unique` | port with native names distinguishing one-target strength from all-model corollaries | both directions and adapter aliases proved |
+| `existsUnique_handler`, `interpret_satisfies_the_property` | downstream compatibility aliases | aliases resolve to the native freeness and anti-vacuity theorems without a second proof carrier |
+
+No row is closed merely because the missing result is likely derivable. The
+derivation theorem and its axiom receipt are the closure evidence.
+
 ## Existing Foldlab effect-core material
 
 | Source set | Observed state | Disposition |
@@ -92,6 +119,34 @@ program whose result is a service handler, and Scope is a separate signature
 summand. The rc.112 target has no public `Layer.scoped`; `Layer.effect`
 already excludes `Scope` in its result. Effect4 therefore creates no
 `Layer.scoped` row or duplicate scoped-layer carrier.
+
+## Schema extraction ruling
+
+The complete ruling and proof graph are in `docs/SCHEMA-CUTOVER.md`. The
+source audit rejects a directory copy:
+
+| Foldlab source family | Effect4 disposition |
+| --- | --- |
+| `Cas.Schema.Ast` | `downstreamAdapter`; an admitted CAS subset/view over the native representation, not a base carrier |
+| `Cas.Schema.El` | `evidenceOnly`; its `Empty` branches make it an incomplete denotation |
+| pure `Cas.Schema.Codec` | downstream CAS codec; not Effect's directional, effectful four-index calculus |
+| generic union/guardedness/discrimination algorithms | `split`; refactor over the native representation and retain their proof patterns |
+| deriving handlers | metaprogramming technique only; `Lean.Expr` remains input and checked rows are output |
+| CAS declaration rows, admission, refusals, bytes, projections, and store bridges | Foldlab-owned until per-type compatibility closure |
+
+Effect4 will own one first-order representation with all 22 rc.112 persisted
+tags, one document-relative relational denotation, one open first-order
+reviver registry, one versioned rc.112 wire profile, and one four-index
+`Codec decoded encoded decodeRequirements encodeRequirements`. `Getter` and
+`Transformation` reuse checked Flow; no Schema-specific effect monad is
+admitted. `Schema`, `Decoder`, `Encoder`, and `Top` are existential views of
+that codec rather than new carriers.
+
+Decode and encode requirements remain distinct, and transformation encoding
+composition runs in reverse order. No universal round-trip law is assigned to
+all codecs because lossy transforms are part of the source surface. Schema
+issue, wire issue, profile issue, Foldlab `IngestRefusal`, general Cause/Exit,
+cutover refusal, and live frontier are separate classifications.
 
 ## Effect TypeScript family defaults
 
@@ -161,9 +216,10 @@ first-order `Flow`.
 
 | Gate | Command | Current scope |
 | --- | --- | --- |
-| Default Lean gate | `lake clean && lake build` | Library root, algebra contract, executable attacks, and axiom report |
+| Default Lean gate | `lake clean && lake build` | all `Effect4.*` and `Effect4Test.*` source files through Lake globs; root-reachability and axiom allowlist enforced |
 | Narrow algebra gate | `lake env lean Effect4Test/Algebra/ExtractionContract.lean` | Frozen public signatures and algebra counterexamples |
-| Fresh axiom gate | `lake env lean Effect4Test/Algebra/AxiomReport.lean` | Every exported algebra theorem; accepted dependencies are `propext` and `Quot.sound` only |
+| Exhaustive module/axiom gate | default build, invoked by `Effect4Test.lean` | currently 101 source files and 240 declarations; semantic/test ceiling `propext`, `Quot.sound`; audit implementation alone also permits `Classical.choice` |
+| Human-readable axiom receipt | `lake env lean Effect4Test/Algebra/AxiomReport.lean` | every currently exported algebra theorem, with dependencies printed |
 | Diff hygiene | `git diff --check` | Authored source formatting |
 | Effect target gate | pending P11 | rc.112 typecheck, installed tsgo, direct runtime vectors, negatives, and mutations |
 | Foldlab compatibility gate | pending P12 | Both builds plus per-type round trips and interpretation agreement |
@@ -172,23 +228,27 @@ first-order `Flow`.
 
 No full cutover claim is available while any row below is open.
 
-1. The algebra assurance review must confirm statement fidelity, proof trust,
-   and default-test reachability.
-2. Signature-map and explicit universe-lift bridges need their own breaker
+1. The algebra assurance review must close the exact retained-span omissions
+   listed above; current proofs and gates do not by themselves close Foldlab
+   compatibility.
+2. Exact type ascriptions must replace existence-only declaration checks, and
+   the well-founded-but-not-globally-finite `Program` witness must remain in
+   the breaker battery.
+3. Signature-map and explicit universe-lift bridges need their own breaker
    packet; no implicit lift is admitted.
-3. One raw/checked first-order Flow carrier must replace all S2 workshop
+4. One raw/checked first-order Flow carrier must replace all S2 workshop
    variants and relate finite sequential bodies to `Program`.
-4. Refusal, frontier, Cause, Exit, relational runs, nondeterminism, and
+5. Refusal, frontier, Cause, Exit, relational runs, nondeterminism, and
    divergence need separate observations and counterexamples.
-5. The Schema representation and directional Codec calculus need a frozen
+6. The Schema representation and directional Codec calculus need a frozen
    public declaration graph before porting Foldlab proofs.
-6. Context, Service, Layer, Scope, Resource, Runtime, ManagedRuntime, Fiber,
+7. Context, Service, Layer, Scope, Resource, Runtime, ManagedRuntime, Fiber,
    scheduling, and interruption each need a representative contract before
    any one family is developed deeply.
-7. The recursive rc.112 export and overload census must generate a closed
+8. The recursive rc.112 export and overload census must generate a closed
    surface ledger with no manual completeness override.
-8. Generated TypeScript needs typed lowering, deterministic bytes,
+9. Generated TypeScript needs typed lowering, deterministic bytes,
    independent decoding/typechecking, simulation, and direct runtime tests.
-9. Foldlab may cut over a type only after conversion round trips,
+10. Foldlab may cut over a type only after conversion round trips,
    interpretation agreement, source digest, counterexample coverage, and
    axiom receipt all close for that type.

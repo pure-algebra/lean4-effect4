@@ -74,8 +74,30 @@ ideas are credited even when their implementation is not imported.
 
 ## Current phase
 
-P0 is in progress. The generated Lake project builds at Lean 4.33.1. The next
-actions are to freeze the Foldlab source pin, land the mechanical port manifest,
-replace the generated example module with the empty breadth scaffold, and have
-an independent breaker commit the first algebra compatibility packet before
-any carrier is implemented.
+P0 and the P2 organizational scaffold are complete. The repository is an
+independent Lean 4.33.1 package, all planned category modules exist, every
+module is reached by the default build, and breadth stubs contain no semantic
+declarations. The generic algebra is implemented and its module/axiom gates
+are active, but P3 is not closed: independent review found retained Foldlab
+declarations that still need an explicit port, derivation, compatibility
+wrapper, or retirement disposition. Exact declaration snapshots and the
+well-founded-versus-finite counterexample are being added to the breaker
+packet.
+
+P1 remains open as a recurring exhaustiveness gate rather than a prose-only
+inventory. The current manifest pins Foldlab, Effect rc.112, the resolved npm
+package, TypeScript, tsgo, the language-service clone, the sampled wild-type
+corpus, and PolyFun prior art. The next inventory deliverable is a generated
+declaration/source-disposition join; missing rows fail cutover.
+
+The broad sweep now proceeds in this order:
+
+1. close or explicitly disposition every algebra extraction row;
+2. freeze one checked Flow/admission representative and its refusal/frontier
+   counterexamples;
+3. freeze the 22-case Schema representation and four-index directional codec
+   packet without introducing a temporary Schema effect carrier;
+4. freeze one Context/Service/Layer/Scope/ManagedRuntime representative;
+5. freeze one Fiber/scheduler/interruption representative; and
+6. introduce declarations only after each owning breaker packet is green
+   against the empty stub and red against its rejected mutations.

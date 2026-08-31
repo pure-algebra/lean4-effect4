@@ -1,6 +1,6 @@
 # Effect4 design basis
 
-Effect4 adopts one finite algebraic proof carrier, one checked first-order
+Effect4 adopts one well-founded algebraic proof carrier, one checked first-order
 reification, relational semantics for open effect flow, and separately gated
 host targets. This separation is the basis for the library; the cited
 literature motivates its interfaces but does not prove that Effect4 models
@@ -16,7 +16,7 @@ Effect4 keeps four observations of a program distinct.
 
 | Face | Purpose | Identity and evidence |
 | --- | --- | --- |
-| `Program` | Finite induction, algebraic laws, handler construction, and proof-local composition | Lean term identity only; no serialization or decidable content identity |
+| `Program` | Structural induction, algebraic laws, handler construction, and proof-local composition | Lean term identity only; no serialization or decidable content identity |
 | checked `Flow` | Stable program identity, sharing, cycles, block references, admission, and generation | First-order canonical data with checked references and profile membership |
 | relational semantics | Nondeterminism, divergence, interruption, scheduling, scope, and observable outcomes | Judgments over checked flow, configurations, decisions, and traces |
 | bounded runner and host harness | Evaluation, counterexamples, generated TypeScript checks, and regression evidence | Fuel-indexed approximations and versioned host observations |
@@ -28,7 +28,7 @@ program data.
 
 ## Adopted decisions
 
-### DB-01 — `Program` is the finite higher-order proof carrier
+### DB-01 — `Program` is the well-founded higher-order proof carrier
 
 The implemented algebra has the following shape:
 
@@ -43,10 +43,14 @@ Handler S M = (op : S.Op) -> M (S.Answer op)
 ```
 
 `Program` is higher-order as a representation because `vis` stores a Lean
-continuation. It is finite, structurally recursive, and suited to monad laws,
-interpreter laws, signature sums, handler composition, freeness, and
-initiality arguments. It is not serializable syntax and receives no content
-hash, `DecidableEq`, or generated TypeScript encoding.
+continuation. It is an inductive, well-founded operation tree suited to monad
+laws, interpreter laws, signature sums, handler composition, freeness, and
+initiality arguments. It is not necessarily a finite node set or a uniformly
+bounded-depth tree: an infinite answer type can index infinitely many distinct
+continuation branches whose finite depths are unbounded. Every selected branch
+is well-founded, which is the property structural recursion uses. `Program` is
+not serializable syntax and receives no content hash, `DecidableEq`, or
+generated TypeScript encoding.
 
 This follows the free-model and induced-homomorphism organization in
 [Plotkin and Pretnar](https://arxiv.org/abs/1312.1399) and the programming
@@ -328,7 +332,7 @@ silently stand in for an earlier edge.
 | --- | --- | --- |
 | Algebra | monad equations; interpretation of `pure`, `bind`, and `perform`; sum laws; handler composition; freeness and initiality; axiom receipt | Implemented; independent assurance review remains separate |
 | Admission | raw reference resolution, index well-formedness, type preservation, checked erasure, decidability, and stable refusal classification | Pending |
-| `Program`/`Flow` bridge | sequential quotation, elaboration preservation, interpretation agreement, and the exact boundary where cycles cease to be finite `Program` values | Pending |
+| `Program`/`Flow` bridge | sequential quotation, elaboration preservation, interpretation agreement, and the exact boundary where cyclic or unbounded recursive unfolding ceases to be an inductive `Program` value | Pending |
 | Operational semantics | step preservation, terminal exclusivity, tape compatibility, per-tape determinism where applicable, and explicit scheduler assumptions | Pending |
 | Recursive meaning | approximation monotonicity, coherence, finite adequacy, divergence adequacy, and no completion-to-failure regression | Pending |
 | Logic | `wlp` laws, totality, `wp <-> wlp /\ total`, consequence, bind at the semantic face, and classification transfer soundness | Pending |
