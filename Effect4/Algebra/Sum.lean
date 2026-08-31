@@ -192,4 +192,166 @@ theorem Program.inr_unique
     interpret_rightInjectionHandler] at equation
   exact equation
 
+/-- At the syntactic target, the left-injection square is equivalent to
+pointwise equality with the canonical injection. -/
+theorem Program.inl_one_target_iff
+    {S : Signature.{uS, uAns}} {T : Signature.{uT, uAns}}
+    (candidate : {A : Type uAns} → Program S A →
+      Program (Signature.sum S T) A)
+    {A : Type uAns}
+    (program : Program S A) :
+    (interpret (leftInjectionHandler.sum rightInjectionHandler)
+        (candidate program) =
+      interpret leftInjectionHandler program) ↔
+    candidate program = Program.inl program := by
+  rw [injectionHandlers_sum, interpret_identity,
+    interpret_leftInjectionHandler]
+
+/-- Right-injection mirror of `Program.inl_one_target_iff`. -/
+theorem Program.inr_one_target_iff
+    {S : Signature.{uS, uAns}} {T : Signature.{uT, uAns}}
+    (candidate : {A : Type uAns} → Program T A →
+      Program (Signature.sum S T) A)
+    {A : Type uAns}
+    (program : Program T A) :
+    (interpret (leftInjectionHandler.sum rightInjectionHandler)
+        (candidate program) =
+      interpret rightInjectionHandler program) ↔
+    candidate program = Program.inr program := by
+  rw [injectionHandlers_sum, interpret_identity,
+    interpret_rightInjectionHandler]
+
+/-- One syntactic model already pins the left program injection. -/
+theorem Program.inl_unique_one_target
+    {S : Signature.{uS, uAns}} {T : Signature.{uT, uAns}}
+    (candidate : {A : Type uAns} → Program S A →
+      Program (Signature.sum S T) A)
+    (square : ∀ {A : Type uAns} (program : Program S A),
+      interpret (leftInjectionHandler.sum rightInjectionHandler)
+          (candidate program) =
+        interpret leftInjectionHandler program)
+    {A : Type uAns}
+    (program : Program S A) :
+    candidate program = Program.inl program :=
+  (Program.inl_one_target_iff candidate program).mp (square program)
+
+/-- One syntactic model already pins the right program injection. -/
+theorem Program.inr_unique_one_target
+    {S : Signature.{uS, uAns}} {T : Signature.{uT, uAns}}
+    (candidate : {A : Type uAns} → Program T A →
+      Program (Signature.sum S T) A)
+    (square : ∀ {A : Type uAns} (program : Program T A),
+      interpret (leftInjectionHandler.sum rightInjectionHandler)
+          (candidate program) =
+        interpret rightInjectionHandler program)
+    {A : Type uAns}
+    (program : Program T A) :
+    candidate program = Program.inr program :=
+  (Program.inr_one_target_iff candidate program).mp (square program)
+
+/-- Agreement with the left injection in every lawful model is equivalent to
+agreement with it in the separating syntactic model. -/
+theorem Program.inl_all_models_iff
+    {S : Signature.{uS, uAns}} {T : Signature.{uT, uAns}}
+    (candidate : {A : Type uAns} → Program S A →
+      Program (Signature.sum S T) A)
+    {A : Type uAns}
+    (program : Program S A) :
+    (∀ (M : Type uAns → Type (max (max uS uT) uAns))
+        [Monad M] [LawfulMonad M]
+        (left : Handler S M) (right : Handler T M),
+      interpret (left.sum right) (candidate program) =
+        interpret left program) ↔
+    candidate program = Program.inl program := by
+  constructor
+  · intro square
+    apply (Program.inl_one_target_iff candidate program).mp
+    let M : Type uAns → Type (max (max uS uT) uAns) :=
+      @Program.{uAns, max uS uT} (@Signature.sum.{uAns, uS, uT} S T)
+    let left : Handler S M :=
+      leftInjectionHandler (S := S) (T := T)
+    let right : Handler T M :=
+      rightInjectionHandler (S := S) (T := T)
+    simpa [M, left, right] using square M left right
+  · intro equal M _ _ left right
+    rw [equal]
+    exact interpret_inl left right program
+
+/-- Right-injection mirror of `Program.inl_all_models_iff`. -/
+theorem Program.inr_all_models_iff
+    {S : Signature.{uS, uAns}} {T : Signature.{uT, uAns}}
+    (candidate : {A : Type uAns} → Program T A →
+      Program (Signature.sum S T) A)
+    {A : Type uAns}
+    (program : Program T A) :
+    (∀ (M : Type uAns → Type (max (max uS uT) uAns))
+        [Monad M] [LawfulMonad M]
+        (left : Handler S M) (right : Handler T M),
+      interpret (left.sum right) (candidate program) =
+        interpret right program) ↔
+    candidate program = Program.inr program := by
+  constructor
+  · intro square
+    apply (Program.inr_one_target_iff candidate program).mp
+    let M : Type uAns → Type (max (max uS uT) uAns) :=
+      @Program.{uAns, max uS uT} (@Signature.sum.{uAns, uS, uT} S T)
+    let left : Handler S M :=
+      leftInjectionHandler (S := S) (T := T)
+    let right : Handler T M :=
+      rightInjectionHandler (S := S) (T := T)
+    simpa [M, left, right] using square M left right
+  · intro equal M _ _ left right
+    rw [equal]
+    exact interpret_inr left right program
+
+/-- The all-model left square pins the canonical injection pointwise. -/
+theorem Program.inl_unique_all_models
+    {S : Signature.{uS, uAns}} {T : Signature.{uT, uAns}}
+    (candidate : {A : Type uAns} → Program S A →
+      Program (Signature.sum S T) A)
+    (square : ∀ (M : Type uAns → Type (max (max uS uT) uAns))
+        [Monad M] [LawfulMonad M]
+        (left : Handler S M) (right : Handler T M)
+        {A : Type uAns} (program : Program S A),
+      interpret (left.sum right) (candidate program) =
+        interpret left program)
+    {A : Type uAns}
+    (program : Program S A) :
+    candidate program = Program.inl program :=
+  Program.inl_unique_one_target candidate
+    (fun program =>
+      let M : Type uAns → Type (max (max uS uT) uAns) :=
+        @Program.{uAns, max uS uT} (@Signature.sum.{uAns, uS, uT} S T)
+      let left : Handler S M :=
+        leftInjectionHandler (S := S) (T := T)
+      let right : Handler T M :=
+        rightInjectionHandler (S := S) (T := T)
+      square M left right program)
+    program
+
+/-- The all-model right square pins the canonical injection pointwise. -/
+theorem Program.inr_unique_all_models
+    {S : Signature.{uS, uAns}} {T : Signature.{uT, uAns}}
+    (candidate : {A : Type uAns} → Program T A →
+      Program (Signature.sum S T) A)
+    (square : ∀ (M : Type uAns → Type (max (max uS uT) uAns))
+        [Monad M] [LawfulMonad M]
+        (left : Handler S M) (right : Handler T M)
+        {A : Type uAns} (program : Program T A),
+      interpret (left.sum right) (candidate program) =
+        interpret right program)
+    {A : Type uAns}
+    (program : Program T A) :
+    candidate program = Program.inr program :=
+  Program.inr_unique_one_target candidate
+    (fun program =>
+      let M : Type uAns → Type (max (max uS uT) uAns) :=
+        @Program.{uAns, max uS uT} (@Signature.sum.{uAns, uS, uT} S T)
+      let left : Handler S M :=
+        leftInjectionHandler (S := S) (T := T)
+      let right : Handler T M :=
+        rightInjectionHandler (S := S) (T := T)
+      square M left right program)
+    program
+
 end Effect4

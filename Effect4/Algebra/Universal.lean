@@ -22,6 +22,15 @@ theorem interpret_isMonadMorphism [Monad M] [LawfulMonad M]
   pure_law value := interpret_pure handler value
   bind_law program next := interpret_bind handler program next
 
+/-- Interpretation preserves `pure` and `bind` using exactly left unit and
+associativity of the target bind. -/
+theorem interpret_isMonadMorphism_of_equations [Monad M]
+    (leftUnit : LeftUnit M) (assoc : BindAssoc M) (handler : Handler S M) :
+    IsMonadMorphism S (fun {_A} program => interpret handler program) where
+  pure_law value := interpret_pure handler value
+  bind_law program next :=
+    interpret_bind_of_equations leftUnit assoc handler program next
+
 theorem interpret_of_isMonadMorphism [Monad M]
     (map : {A : Type uAns} → Program S A → M A)
     (laws : IsMonadMorphism S map) (program : Program S A) :
@@ -44,7 +53,8 @@ theorem exists_handler_of_isMonadMorphism [Monad M]
   ⟨⟨fun operation => map (Program.perform operation)⟩,
     fun program => interpret_of_isMonadMorphism map laws program⟩
 
-private theorem interpret_perform_of_rightUnit [Monad M]
+/-- Interpreting one operation needs only the target monad's right-unit law. -/
+theorem interpret_perform_of_rightUnit [Monad M]
     (rightUnit : RightUnit M) (handler : Handler S M) (operation : S.Op) :
     interpret handler (Program.perform operation) = handler.handle operation :=
   rightUnit _
@@ -119,6 +129,100 @@ theorem program_is_initial_in_models [Monad M]
       Handler.ext operations
     rw [handlerEq]
 
+/-- A first-class morphism from the free `S`-program model into `M`.  The
+explicit result type makes morphisms values that can be quantified and
+compared without introducing a second law predicate. -/
+structure ModelMorphism
+    (S : Signature.{uS, uAns}) (M : Type uAns → Type v) [Monad M] where
+  map : (A : Type uAns) → Program S A → M A
+  laws : IsMonadMorphism S (fun {A} program => map A program)
+
+namespace ModelMorphism
+
+/-- Package the implicit-result-type spelling of a monad morphism. -/
+def ofIsMonadMorphism
+    {S : Signature.{uS, uAns}} {M : Type uAns → Type v} [Monad M]
+    (map : {A : Type uAns} → Program S A → M A)
+    (laws : IsMonadMorphism S map) : ModelMorphism S M :=
+  ⟨fun _ program => map program, laws⟩
+
+/-- Forget the value wrapper and recover the existing law predicate. -/
+theorem toIsMonadMorphism
+    {S : Signature.{uS, uAns}} {M : Type uAns → Type v} [Monad M]
+    (morphism : ModelMorphism S M) :
+    IsMonadMorphism S (fun {A} program => morphism.map A program) :=
+  morphism.laws
+
+/-- Model morphisms are equal when their polymorphic maps are equal. -/
+@[ext]
+theorem ext
+    {S : Signature.{uS, uAns}} {M : Type uAns → Type v} [Monad M]
+    {left right : ModelMorphism S M}
+    (equal : ∀ (A : Type uAns) (program : Program S A),
+      left.map A program = right.map A program) :
+    left = right := by
+  cases left with
+  | mk leftMap leftLaws =>
+      cases right with
+      | mk rightMap rightLaws =>
+          have mapsEqual : leftMap = rightMap := by
+            funext A program
+            exact equal A program
+          subst mapsEqual
+          rfl
+
+/-- Packaging a morphism does not change its map. -/
+theorem ofIsMonadMorphism_map
+    {S : Signature.{uS, uAns}} {M : Type uAns → Type v} [Monad M]
+    (map : {A : Type uAns} → Program S A → M A)
+    (laws : IsMonadMorphism S map) {A : Type uAns}
+    (program : Program S A) :
+    (ofIsMonadMorphism map laws).map A program = map program :=
+  rfl
+
+/-- Unpackaging and repackaging a model morphism is the identity. -/
+theorem ofIsMonadMorphism_toIsMonadMorphism
+    {S : Signature.{uS, uAns}} {M : Type uAns → Type v} [Monad M]
+    (morphism : ModelMorphism S M) :
+    ofIsMonadMorphism
+        (fun {A} program => morphism.map A program)
+        morphism.toIsMonadMorphism =
+      morphism := by
+  apply ext
+  intro A program
+  rfl
+
+end ModelMorphism
+
+/-- `Program S` is initial among monads equipped with an `S`-handler. -/
+theorem program_is_initial_in_models_eq [Monad M]
+    (leftUnit : LeftUnit M) (assoc : BindAssoc M)
+    (rightUnit : RightUnit M) (handler : Handler S M) :
+    ∃ morphism : ModelMorphism S M,
+      (∀ operation : S.Op,
+        morphism.map _ (Program.perform operation) = handler.handle operation) ∧
+      ∀ other : ModelMorphism S M,
+        (∀ operation : S.Op,
+          other.map _ (Program.perform operation) = handler.handle operation) →
+        other = morphism := by
+  let morphism : ModelMorphism S M :=
+    ⟨fun _ program => interpret handler program,
+      interpret_isMonadMorphism_of_equations leftUnit assoc handler⟩
+  refine ⟨morphism, ?_, ?_⟩
+  · intro operation
+    exact interpret_perform_of_rightUnit rightUnit handler operation
+  · intro other operations
+    apply ModelMorphism.ext
+    intro A program
+    rw [interpret_of_isMonadMorphism
+      (fun {A} value => other.map A value)
+      other.toIsMonadMorphism program]
+    have handlerEqual :
+        (⟨fun operation => other.map _ (Program.perform operation)⟩ :
+          Handler S M) = handler :=
+      Handler.ext operations
+    rw [handlerEqual]
+
 theorem interpret_pinned [Monad M]
     (candidate : Handler S M → {A : Type uAns} → Program S A → M A)
     (morphism : ∀ handler,
@@ -134,5 +238,19 @@ theorem interpret_pinned [Monad M]
         Handler S M) = handler :=
     Handler.ext (operations handler)
   rw [handlerEq]
+
+/-- At any target satisfying the three monad equations, ordinary
+interpretation inhabits both premises of the adequacy pin. -/
+theorem interpret_inhabits_the_pin [Monad M]
+    (leftUnit : LeftUnit M) (assoc : BindAssoc M)
+    (rightUnit : RightUnit M) :
+    (∀ handler : Handler S M,
+      IsMonadMorphism S (fun {_A} program => interpret handler program)) ∧
+    ∀ (handler : Handler S M) (operation : S.Op),
+      interpret handler (Program.perform operation) = handler.handle operation :=
+  ⟨fun handler =>
+      interpret_isMonadMorphism_of_equations leftUnit assoc handler,
+    fun handler operation =>
+      interpret_perform_of_rightUnit rightUnit handler operation⟩
 
 end Effect4

@@ -40,6 +40,13 @@ theorem interpret_pure [Monad M] (handler : Handler S M) (value : A) :
     interpret handler (Program.pure value) = pure value :=
   rfl
 
+/-- The defining equation for interpreting one visible operation node. -/
+theorem interpret_vis [Monad M] (handler : Handler S M) (operation : S.Op)
+    (next : S.Answer operation → Program S A) :
+    interpret handler (Program.vis operation next) =
+      handler.handle operation >>= fun answer => interpret handler (next answer) :=
+  rfl
+
 theorem interpret_perform [Monad M] [LawfulMonad M]
     (handler : Handler S M) (operation : S.Op) :
     interpret handler (Program.perform operation) = handler.handle operation := by
@@ -86,5 +93,18 @@ theorem interpret_identity (program : Program S A) :
       show Program.bind (Program.perform operation) _ = _
       rw [Program.perform_bind]
       exact congrArg (Program.vis operation) (funext fun answer => ih answer)
+
+/-- The syntactic model separates programs: agreement in every lawful model
+already includes agreement in the identity model. -/
+theorem Program.eq_of_all_interpretations
+    {S : Signature.{uS, uAns}} {A : Type uAns}
+    {left right : Program S A}
+    (equal :
+      ∀ (M : Type uAns → Type (max uS uAns))
+          [Monad M] [LawfulMonad M] (handler : Handler S M),
+        interpret handler left = interpret handler right) :
+    left = right := by
+  have equation := equal (Program S) identityHandler
+  simpa only [interpret_identity] using equation
 
 end Effect4
