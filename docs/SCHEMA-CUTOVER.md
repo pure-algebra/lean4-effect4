@@ -762,44 +762,45 @@ narrowing, wire duplication, and host errors distinct.
 The first implementation slice is structural representation and source census.
 Its current boundary is split as follows:
 
-- **Tag declarations — implemented with local receipts; cutover closure
-  open.** The six exact type rows, their one-parent-graph/five-leaf allocation,
-  and their native contract origins are recorded in `PORT-MANIFEST.md`.
+- **Tag declarations — structurally closed.** The six exact type rows, their
+  one-parent-graph/five-leaf allocation, and their native contract origins are
+  recorded in `PORT-MANIFEST.md`.
   `test/contracts/schema-representation.contract.md` and
   `test/contracts/schema-subalphabets.contract.md` are the frozen breaker
   packets, preserved separately in commit `f487774`, with counterexamples
   `E4-SCHEMA-CE-017` through `E4-SCHEMA-CE-022`. The implementation, axiom
   report, lexical source evidence, and bounded mutation receipt are present.
-  The six rows and required parent-graph edges remain open until those inputs
-  are joined mechanically by the generated assurance check; this document
-  does not discharge `SC-REP-02` or `SC-REP-03`.
-- **Payload and field admission — Pass-B frozen; implementation
-  required-blocked.** The frozen
+  `generated/schema-structural-assurance.tsv` now joins those inputs against
+  the complete owned-declaration census, so every applicable edge of
+  `SCHEMA-PG-REPRESENTATION-TAG` and the tag/source share of `SC-REP-02` are
+  closed. Its semantics, laws, bridges, and targets remain the four frozen
+  `not-applicable` edges of this tag-only graph.
+- **Payload and field admission — structurally implemented and joined.** The frozen
   D0-D6 structural slice and D7 recursive-admission slice are intentionally
   the only two graph-bearing families in this packet. The module DAG is
   `Data.Json` (D0-D1) -> `Schema.Payload` (D2-D3) ->
   `Schema.Representation` (D4-D5) -> `Schema.Document` (D6) ->
-  `Schema.Check` (D7); `Schema.Value` owns later denotation only. The clean-red
-  diagnostic receipt and the mechanical reaction gate are present. The latter
-  kills an ordinary extra constructor, an uninhabited extra constructor, a
-  constructor permutation, a field-type drift, and a declaration-free upward
-  `Schema.Value` import. Its fixed production half also materializes
+  `Schema.Check` (D7); `Schema.Value` owns later denotation only. The repaired
+  mechanical reaction gate kills an ordinary extra constructor, an
+  uninhabited extra constructor, a constructor permutation, a field-type
+  drift, an unallocated alias, an ordinary public type-valued definition, four
+  D7 owner drifts, a declaration-free upward `Schema.Value` import, and two
+  source overrides. Its fixed production half also materializes
   the packet's `payloadBoundaryImportProbe` from an isolated module whose only
   library import is `Effect4.Schema.Payload`: D0-D3 must resolve, D4-D7 must
   remain unreachable, ownership inspection must assign D0-D1 to
   `Effect4.Data.Json` and D2-D3 to `Effect4.Schema.Payload`, and an upward
-  Payload import must be rejected. That production half remains intentionally
-  red until the builder creates `Schema.Payload` and moves D2-D3 into it; it is
-  the exact implementation-admission blocker. This is a finite
-  surface/ownership receipt, not a third proof graph. Cutover and semantic
-  closure remain open. Reserved
-  `E4-SCHEMA-CE-*` rows remain reservations until the owning packet supplies
-  the exact executable or immutable witness; a reservation is not a
-  discharged obligation.
+  Payload import must be rejected. The production half and all 13 reactions
+  are green. The generated join covers all 1,092 declarations owned by these
+  five modules, all 418 theorem and axiom receipts, 26 counterexamples, nine
+  duplicate-prevention names, and all leaf routes. It closes
+  `SCHEMA-PG-FIELD-ADMISSION`, `SC-REP-01`, and the structural equality and
+  tag-projection share of `SC-REP-03`. The broader general-recursor share of
+  `SC-REP-03` remains explicitly open; denotation, document interpretation,
+  wire form, and host conformance remain their separate later graphs.
 
-The pinned bytes needed by `SC-REP-CENSUS-PIN` are on the build host at
-`library/effects/node_modules/effect/src/SchemaRepresentation.ts` in the
-Foldlab checkout, verified at SHA-256
+The pinned bytes needed by `SC-REP-CENSUS-PIN` are now local to this library at
+`vendor/effect-4.0.0-rc.112/src/SchemaRepresentation.ts`, verified at SHA-256
 `a0a7a1537cfe3a9159a80210e3de92342cc9e98651f0e8273a75ccdcccae69bc`.
 `./scripts/check-schema-census.sh` lexically extracts the closed source unions
 and the `Schema.tag(...)` / `makeKeywordSchema(...)` call-site spellings, then
@@ -847,12 +848,11 @@ unmade.
 
 Two limits on this evidence are recorded rather than glossed.
 
-**It is host-local.** The pinned file is not vendored into this repository and
-`lake build` does not invoke the gate. Re-verifying needs a local
-`effect@4.0.0-rc.112` install with the path passed by hand. This is not a
-Foldlab dependency — the evidence is a third-party npm package identified by
-digest that happens to sit under a Foldlab checkout on this host — but it is
-not reproducible from this checkout alone.
+**It is reproducible from this checkout.** The exact third-party source file
+and its package license are vendored as evidence-only inputs. The generated
+Schema assurance gate invokes both source extractors on that fixed path and
+refuses a digest mismatch or input override. Effect4 never imports or executes
+the vendored TypeScript.
 
 **It is an extraction, not a proof about the runtime.** The assumption is that
 the closed type unions are the persisted alphabet. That assumption is named

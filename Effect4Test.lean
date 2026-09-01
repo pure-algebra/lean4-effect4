@@ -22,6 +22,7 @@ import Effect4Test.Schema.RepresentationContract
 import Effect4Test.Schema.SubAlphabetContract
 import Effect4Test.Schema.PayloadContract
 import Effect4Test.Schema.PayloadSurface
+import Effect4Test.Schema.StructuralAssurance
 import Effect4Test.Data.RowContract
 import Effect4Test.Data.RowAssurance
 import Effect4Test.Data.AxiomReport

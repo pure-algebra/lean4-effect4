@@ -101,15 +101,18 @@ its independent builder.
    compatibility rows are recorded separately.
 2. **Closed.** One checked Flow/admission representative and its
    refusal/frontier counterexamples are frozen, with a mutation gate.
-3. **In progress.** The Schema representation slice. The 22-tag census alphabet and
-   its five sub-alphabets are frozen and implemented; the payload carrier —
-   the mutually recursive `Representation`/`Check` tree, the document
-   envelopes, and the field-admission surface — is implemented against a
-   frozen breaker packet whose theorem battery is green. No temporary Schema
-   effect carrier was introduced. Independent assurance found that the
-   payload-surface gate still accepts an unallocated public alias and a D7
-   owner drift, and the generated proof/receipt join does not exist. Those two
-   blockers keep both payload graphs and Schema cutover open.
+3. **Structurally closed; denotation remains next.** The Schema representation
+   slice now has a generated declaration/proof join over all 1,092 declarations
+   owned by its five source modules, all 418 theorem and kernel-dependency
+   receipts, 26 registered counterexamples, nine duplicate-prevention names,
+   the exact rc.112 tag and field pins, and the repaired 13-case payload-surface
+   detector. This closes every applicable edge of
+   `SCHEMA-PG-REPRESENTATION-TAG`, all of
+   `SCHEMA-PG-FIELD-ADMISSION`, and the declaration, equality, tag-projection,
+   and leaf shares of `SCHEMA-PG-PAYLOAD`. The one deliberately open payload
+   edge is the broader `SC-REP-03` general recursor. Document interpretation,
+   wire semantics, codecs, and host conformance remain their separately owned
+   graphs; no temporary Schema effect carrier was introduced.
 4. **In progress.** One Context/Service/Layer/Scope/ManagedRuntime
    representative. `docs/ENVIRONMENT-DAG.md` owns the build order, its fences,
    and what crosses each edge. Layer L0 node `Context/Key` is implemented with
@@ -155,8 +158,8 @@ cutover decision.
 
 | Order | Owner | Assurance route | Required work before advancing |
 | ---: | --- | --- | --- |
-| 0 | Schema payload surface | gate repair, not a new proof graph | Reject unallocated public aliases, check every D7 name is absent at the Payload-only boundary, inspect every D7 owner, and kill duplicate-declaration and owner-drift mutants. The current Lean payload equations are green, but independent assurance showed the existing surface gate accepts both defect classes. |
-| 1 | `SCHEMA-PG-PAYLOAD` and `SCHEMA-PG-FIELD-ADMISSION` | two existing graphs plus attached leaf receipts | Join the exact declaration census, theorem receipts, axiom receipts, counterexample witnesses, and repaired surface evidence mechanically. Recursive JSON/payload equality and recursive field admission carry the graphs. `Float64`, scalar sums, plain records, and document containers retain local receipts. No denotation, wire, or host-equivalence claim is part of this closure. |
+| 0 | Schema payload surface | gate repair, not a new proof graph | **Closed.** The gate rejects aliases and ordinary type-valued definitions, proves the Payload-only D0-D3/D4-D7 boundary, checks every D7 owner, and kills all 13 specified shape, duplication, owner, import, and override defects. |
+| 1 | `SCHEMA-PG-PAYLOAD` and `SCHEMA-PG-FIELD-ADMISSION` | two existing graphs plus attached leaf receipts | **Closed except the explicitly separate general-recursor edge.** The generated join covers 1,092 owned declarations, 418 theorem/axiom receipts, 26 counterexamples, exact source pins, and all leaf routes. `SCHEMA-PG-FIELD-ADMISSION` is closed. Payload declaration coverage, structural equality, and tag projection are closed; `SC-REP-03-RECURSOR` remains open. No denotation, wire, or host-equivalence claim is part of this closure. |
 | 2 | `Effect4.ServiceName`, `ServiceTypeCode`, `ServiceKey`, and `ServiceUniverse` | local key-family and Std-order-bridge receipts; `ENV-KEY-INTERP` alone attaches to the Context graph | **Closed locally.** `ENV-LEAF-KEY-IDENTITY` and `ENV-LEAF-KEY-ORDER-BRIDGE` are generated from the exact 97-name module census, separate 25-name Key API, separate 14-name Std bridge API, theorem/axiom receipts, and five detector reactions. The bridge is a delegated route into the now-closed `DATA-PG-ROW/ORDER`; only Data.Row assigns that parent edge's status. `ServiceUniverse` remains the sole open Context semantic attachment at `ENV-KEY-INTERP`. |
 | 3 | `Effect4.Data.Row` | `DATA-PG-ROW`, required graph | **Closed.** The fixed battery and generated join cover the sole proof-carrying carrier, raw-list normalization boundary, sorted insertion, canonical extensionality, union algebra, subset/weakening, exact owners and hypotheses, 23 theorem/axiom receipts with no choice, eight duplicate-name exclusions, nine counterexamples, all ten graph edges, and five detector reactions. This closes the reusable row algebra only; it deliberately proves no downstream denotational preservation. |
 | 4 | `Context.Service` and `Context.Requirement` | local carrier receipts plus nodes in `ENV-PG-CONTEXT` | Reuse `ServiceKey`, `Program`, `Signature`, and `Data.Row`; no second key, row, program, type-code, or order carrier. Prefer a derived `ServiceSignature U` and `request = Program.perform` over a duplicate service program. Make `Requirement` an alias or named view of `Row ServiceKey`. The graph-bearing part is `Program.UsesOnly`: prove its pure, visit, perform, bind-by-union, and weakening laws. Do not claim a finite `Program.requirements` function for arbitrary higher-order continuations; synthesis belongs to checked first-order Flow. |

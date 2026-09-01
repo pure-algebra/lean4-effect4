@@ -16,3 +16,5 @@ jobs:
       - uses: leanprover/lean-action@v1
       - name: Self-test Effect4 trust gate
         run: ./scripts/test-trust-gate.sh
+      - name: Verify Schema structural assurance join
+        run: ./scripts/test-schema-structural-assurance-gate.sh
