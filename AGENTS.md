@@ -7,6 +7,7 @@ full, then open only the authority documents named for the current task.
 
 | Path | Owns |
 | --- | --- |
+| `COORDINATION.md` | live claims between concurrent agents, and what past collisions cost |
 | `PLAN.md` | extraction phases, entry and exit gates, current phase |
 | `docs/ARCHITECTURE.md` | module boundaries, dependency direction, public API policy |
 | `PORT-MANIFEST.md` | exact Foldlab source declarations, tests, pins, and destination dispositions |
@@ -18,6 +19,11 @@ full, then open only the authority documents named for the current task.
 | `generated/` | deterministic projections only; never hand-edited |
 
 If two files appear to own the same fact, stop and repair the ownership map.
+
+More than one agent may edit this worktree at once. Direct messaging is not a
+durable ownership record, so every agent reads `COORDINATION.md` before
+writing and records a file claim there before freezing a packet or changing a
+shared surface.
 
 ## Development order
 

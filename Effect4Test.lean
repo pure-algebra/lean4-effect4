@@ -26,7 +26,9 @@ import Effect4Test.Counterexamples.Schema.WireSpellingDrift
 import Effect4Test.Counterexamples.Schema.AnnotationDataPlane
 import Effect4Test.Counterexamples.Schema.EffectfulField
 import Effect4Test.Counterexamples.Schema.EffectfulFieldProperties
+import Effect4Test.Counterexamples.Schema.RecursiveElimination
 import Effect4Test.Schema.RepresentationContract
+import Effect4Test.Schema.RepresentationFoldContract
 import Effect4Test.Schema.SubAlphabetContract
 import Effect4Test.Schema.PayloadContract
 import Effect4Test.Schema.PayloadSurface

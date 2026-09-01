@@ -14,6 +14,10 @@ jobs:
       - name: Check sealed Foldlab evidence vendor
         run: ./scripts/test-vendor-foldlab.sh
       - uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+      - name: Build production library
+        run: lake build Effect4
       - name: Self-test Effect4 trust gate
         run: ./scripts/test-trust-gate.sh
       - name: Verify Schema structural assurance join

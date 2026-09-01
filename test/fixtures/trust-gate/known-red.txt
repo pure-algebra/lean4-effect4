@@ -21,5 +21,11 @@
 # packet test/contracts/environment-context-key.contract.md, was declared here
 # during its red phase and removed when the builder turned it green.
 
-# Binary raceFirst representative; production Race.lean remains an empty stub.
+# W0 byte parser breaker; the frozen battery is retained while the production
+# parser and exact numeric conversion are still unimplemented.
+Effect4Test.Protocol.ByteParserContract
+
+# Binary race theorem-closure packet. The executable core is implemented, but
+# the remaining preservation, framing, cleanup, and existence theorems named
+# by this contract have not landed yet.
 Effect4Test.Concurrency.RaceRepresentativeContract
