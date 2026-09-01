@@ -1,9 +1,9 @@
-# Fiber representative attacks
+# Concurrency representative attacks
 
-These attacks belong to the bounded Fiber/scheduler/interruption
-representative. Stable IDs live in `../REGISTER.md`; executable Lean witnesses
-live in
-`Effect4Test/Counterexamples/Concurrency/FiberRepresentative.lean`.
+These attacks belong to the bounded Fiber/scheduler/interruption and binary
+`raceFirst` representatives. Stable IDs live in `../REGISTER.md`; executable
+Lean witnesses live beside their owning representative under
+`Effect4Test/Counterexamples/Concurrency/`.
 
 ## E4-CONC-CE-001 — untaped race
 
@@ -83,7 +83,49 @@ live in
   identities to be unique, closed over fibers, and equivalent to count one;
   `cleanup_events_at_most_once` exposes the run-level guarantee.
 
+## E4-CONC-CE-008 — erased winner choice
+
+- **BROKE:** scheduler state and scheduler decisions determine the binary race
+  winner without an explicit race choice.
+- **WITNESS:** one tied machine paired with the left winner and the same
+  machine paired with the right winner has identical scheduler projection but
+  distinct winner projection.
+- **CLASS:** nondeterminism erasure.
+- **FIXED-BY:** `RaceDecision.selectWinner`, `RaceState.winner`, and distinct
+  fixed tapes for the two tie resolutions.
+
+## E4-CONC-CE-009 — first completion collapsed into first success
+
+- **BROKE:** first-completion and first-success racing are interchangeable.
+- **WITNESS:** on the two-entry probe `[failed, succeeded]`, first completion
+  observes the failed entry while first success observes the later successful
+  entry.
+- **CLASS:** semantic conflation.
+- **FIXED-BY:** the representative is explicitly binary first completion over
+  opaque `τ`; it contains no success predicate.  First-success semantics waits
+  for the owning result classification.
+
+## E4-CONC-CE-010 — early return before loser cleanup
+
+- **BROKE:** the selected winner's terminal observation is enough to settle a
+  race.
+- **WITNESS:** the winner is done with a retained terminal value while the
+  loser is finalizing, has cleanup count zero, and has no cleanup event.
+- **CLASS:** resource-lifecycle truncation.
+- **FIXED-BY:** `RaceState.Settled` requires both contenders done with cleanup
+  done, and the settlement laws recover count-one and cleanup-event evidence.
+
+## E4-CONC-CE-011 — masked loser misclassified
+
+- **BROKE:** a selected masked loser with a pending interruption is settled or
+  refused when the finite tape is depleted.
+- **WITNESS:** the existing scheduler accepts `exitMask loser`, advances the
+  loser to interruption finalization, and leaves cleanup pending.
+- **CLASS:** frontier/refusal collapse.
+- **FIXED-BY:** `RaceReplayResult.frontier`, post-selection loser-only unmask
+  and cleanup decisions, and the masked-loser empty-tape frontier theorem.
+
 ## Claim limit
 
-All seven witnesses are finite. They do not prove a production implementation,
+All eleven witnesses are finite. They do not prove a production implementation,
 an exhaustive scheduler model, fairness, liveness, or Effect compatibility.

@@ -20,3 +20,6 @@
 # battery for environment-slice node L0, fence F-KEY (Effect4/Context/Key.lean),
 # packet test/contracts/environment-context-key.contract.md, was declared here
 # during its red phase and removed when the builder turned it green.
+
+# Binary raceFirst representative; production Race.lean remains an empty stub.
+Effect4Test.Concurrency.RaceRepresentativeContract

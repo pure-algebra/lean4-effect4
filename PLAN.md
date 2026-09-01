@@ -94,7 +94,8 @@ corpus, and PolyFun prior art. The next inventory deliverable is a generated
 declaration/source-disposition join; missing rows fail cutover.
 
 The broad sweep proceeds in this order. Items 1, 2, and 5 are closed. Items 3
-and 4 are in progress on disjoint owners.
+and 4 are in progress on disjoint owners. Item 6 is frozen and clean red for
+its independent builder.
 
 1. **Closed.** The algebra declarations stay frozen and downstream
    compatibility rows are recorded separately.
@@ -135,7 +136,14 @@ and 4 are in progress on disjoint owners.
    three authored `not-applicable` edges for this bounded representative. This
    closes the representative only, not the full concurrency category or host
    cutover; and
-6. introduce declarations only after each owning breaker packet is green
+6. **Frozen / RED.** The binary `raceFirst` representative. Its breaker reuses
+   the closed Fiber machine and scheduler, adds only an explicit winner choice
+   and race-level result envelopes, and keeps first-success racing outside the
+   packet until terminal-result classification exists. Four executable attacks
+   force winner-choice reification, first-completion separation, loser cleanup,
+   and live masked-frontier handling. The builder must close
+   `RACE-PG-BINARY-FIRST-COMPLETION`; and
+7. introduce declarations only after each owning breaker packet is green
    against the empty stub and red against its rejected mutations.
 
 ## Near-term proof burden
