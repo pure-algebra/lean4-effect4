@@ -45,6 +45,7 @@ private def auditImplementationModules : List Name :=
   , `Effect4Test.Schema.PayloadSurface
   , `Effect4Test.Data.RowAssurance
   , `Effect4Test.Environment.ContextKeyAssurance
+  , `Effect4Test.Concurrency.FiberAssurance
   ]
 
 private def forbiddenAxioms : List Name :=

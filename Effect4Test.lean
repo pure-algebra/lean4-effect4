@@ -7,6 +7,8 @@ import Effect4Test.Flow.AxiomReport
 import Effect4Test.Schema.AxiomReport
 import Effect4Test.Flow.PrivacyContract
 import Effect4Test.Concurrency.FiberRepresentativeContract
+import Effect4Test.Concurrency.FiberAssurance
+import Effect4Test.Concurrency.FiberAxiomReport
 import Effect4Test.Counterexamples.Concurrency.FiberRepresentative
 import Effect4Test.Counterexamples.Schema.CensusCoverage
 import Effect4Test.Counterexamples.Schema.KindAlphabetSeparation

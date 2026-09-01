@@ -93,8 +93,8 @@ package, TypeScript, tsgo, the language-service clone, the sampled wild-type
 corpus, and PolyFun prior art. The next inventory deliverable is a generated
 declaration/source-disposition join; missing rows fail cutover.
 
-The broad sweep proceeds in this order. Items 1 and 2 are closed. Items 3 and
-4 are in progress on disjoint owners.
+The broad sweep proceeds in this order. Items 1, 2, and 5 are closed. Items 3
+and 4 are in progress on disjoint owners.
 
 1. **Closed.** The algebra declarations stay frozen and downstream
    compatibility rows are recorded separately.
@@ -125,7 +125,16 @@ The broad sweep proceeds in this order. Items 1 and 2 are closed. Items 3 and
    and five detector reactions. `ENV-KEY-INTERP` remains the one open semantic
    attachment to the shared Context graph, so L1 may now begin without
    claiming Context interpretation closure.
-5. implement the frozen Fiber/scheduler/interruption representative; and
+5. **Closed.** The Fiber/scheduler/interruption representative. Its generated
+   assurance join covers the exact 504 declarations owned by the three source
+   modules, a separate 185-name authored API, all 92 public theorem and kernel
+   dependency receipts, 16 existing-type rows, 14 passive-leaf receipts, 12
+   duplicate-prevention names, all seven registered concurrency attacks, and
+   every edge of `FIBER-PG-REPRESENTATIVE`. The seven applicable edges are
+   derived `required-closed`; representation, bridges, and targets remain the
+   three authored `not-applicable` edges for this bounded representative. This
+   closes the representative only, not the full concurrency category or host
+   cutover; and
 6. introduce declarations only after each owning breaker packet is green
    against the empty stub and red against its rejected mutations.
 
