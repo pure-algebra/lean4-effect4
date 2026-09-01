@@ -432,6 +432,13 @@ inspects the representations reachable through either schemas route. It passes
 every other row of the payload battery. The witness is an empty `$ref` buried
 under `Filter.representation.schemas`.
 
+`harness/schema-annotations/EmitFieldAdmissionFixture.lean` generates the host
+twin and its expected result directly from the Lean witness. Effect
+`4.0.0-rc.112` refuses it at
+`["representation"]["checks"][0]["representation"]["schemas"][0]["$ref"]`;
+`./scripts/check-schema-annotations.sh` executes that assertion with the direct
+TypeScript compiler and the Effect language service.
+
 ## Silence is not absence — `E4-SCHEMA-CE-034`
 
 `FilterGroup` carries `annotations` (`:460`, codec `:965`). The ruling's census
@@ -637,3 +644,81 @@ makes the easy-to-miss routes executable.
 
 Executable witness:
 `Effect4Test/Counterexamples/Schema/RecursiveElimination.lean`.
+
+## No focus is not a focus containing none — `E4-SCHEMA-CE-044`
+
+`Annotations` already distinguishes an absent bag (`none`) from a present
+empty bag (`some []`). A plain projection `Representation -> Annotations`
+cannot also express that `Reference` has no annotations field at all: mapping
+that case to `none` makes it observationally equal to `.string none []`.
+
+`Representation.nodeAnnotations` is therefore an `Optional`. Its preview is
+`none` only for `Reference`; every other constructor returns `some annotations`,
+so a stored `none` is `some none`. Replacement on `Reference` is a no-op rather
+than an invented field.
+
+Executable witness: `Effect4Test/Counterexamples/Schema/AnnotationDataPlane.lean`.
+
+## First match is not an annotation traversal — `E4-SCHEMA-CE-045`
+
+The retained annotation bag is an optional ordered list. A first-match lookup
+observes only the first of three same-key entries. A map conversion is worse:
+it selects one value by an unstated collision rule and destroys order and
+multiplicity before a caller can inspect them.
+
+The raw `payloadsAt` traversal returns all matching payloads in source order
+and modifies each one in place. It preserves the outer `none`/`some`, every
+entry key, list length, duplicates, ordering, and unrelated entries. Typed
+keys may reject individual payloads, but they do not remove or rewrite those
+malformed same-key entries.
+
+Executable witness: `Effect4Test/Counterexamples/Schema/AnnotationDataPlane.lean`.
+
+## One codec inverse does not reconstruct raw data — `E4-SCHEMA-CE-046`
+
+A codec may satisfy `decode (encode value) = some value` while accepting
+several raw spellings for that value. The retained `canonicalUnit` witness
+decodes every JSON string to unit and always encodes unit as `"canonical"`.
+It successfully decodes the raw string `"authored-spelling"`, then changes it
+when re-encoded.
+
+That is unacceptable for an optic whose identity modification must leave raw
+Schema data exactly unchanged. `AnnotationKey.Lawful` therefore also requires
+`decode raw = some value -> encode value = raw`. The resulting
+`entry_of_decodeEntry` law is about exact `AnnotationEntry` equality, not only
+typed-value equality. No second Schema carrier or normalization layer is
+introduced.
+
+Executable witness: `Effect4Test/Counterexamples/Schema/AnnotationDataPlane.lean`.
+
+## Node annotations are not the recursive data plane — `E4-SCHEMA-CE-047`
+
+Collecting each visited representation's own annotation field misses four
+families: annotations on `Check`, schemas nested in check representation
+annotations, annotations on array elements and object properties, and the
+representation subtrees under those child records. Nested check groups make
+the same omission recursive.
+
+The nine-label witness jointly exercises all of those routes. Its shallow
+projection returns only `arrays`; the contracted traversal returns the exact
+preorder sequence through the group, group schema, filter, filter schema,
+element, object, property, and property type. This attaches to
+`E4-SCHEMA-CE-043`: that row closes the general recursor, while this row fixes
+the annotation algebra and its ordering on top of it.
+
+Executable witness: `Effect4Test/Counterexamples/Schema/AnnotationDataPlane.lean`.
+
+## Reachability is not structural annotation data — `E4-SCHEMA-CE-048`
+
+Reference resolution is semantic graph traversal. The annotation data plane
+instead inventories the raw document that will later be checked, rendered, or
+rewritten. A reachability-driven walk omits a dead reference-table entry, and
+using a map to drive it also collapses duplicate keys.
+
+The retained document has a root with no reference edges and three stored
+reference entries, two sharing one key. A reachability-shaped traversal sees
+the root only. `Document.annotationBags` sees the root and all three entries in
+stored order. `MultiDocument.annotationBags` likewise visits every root in
+order before every table entry. Neither traversal resolves a key.
+
+Executable witness: `Effect4Test/Counterexamples/Schema/AnnotationDataPlane.lean`.

@@ -5,6 +5,8 @@ import Effect4Test.Flow.AdmissionContract
 import Effect4Test.Flow.DiagnosticPrecisionContract
 import Effect4Test.Flow.AxiomReport
 import Effect4Test.Schema.AxiomReport
+import Effect4Test.Data.OpticContract
+import Effect4Test.Schema.AnnotationDataPlaneContract
 import Effect4Test.Schema.AuthoringContract
 import Effect4Test.Flow.PrivacyContract
 import Effect4Test.Concurrency.FiberRepresentativeContract
@@ -19,6 +21,7 @@ import Effect4Test.Counterexamples.Schema.NoLocalSymbolPropertyKey
 import Effect4Test.Counterexamples.Schema.NoNullLiteralKind
 import Effect4Test.Counterexamples.Schema.SemanticTagSeparation
 import Effect4Test.Counterexamples.Schema.WireSpellingDrift
+import Effect4Test.Counterexamples.Schema.AnnotationDataPlane
 import Effect4Test.Schema.RepresentationContract
 import Effect4Test.Schema.SubAlphabetContract
 import Effect4Test.Schema.PayloadContract

@@ -102,9 +102,9 @@ its independent builder.
 2. **Closed.** One checked Flow/admission representative and its
    refusal/frontier counterexamples are frozen, with a mutation gate.
 3. **Structurally closed; denotation remains next.** The Schema representation
-   slice now has a generated declaration/proof join over all 1,157 declarations
-   owned by its five source modules, all 447 theorem and kernel-dependency
-   receipts, 27 registered counterexamples, nine duplicate-prevention names,
+   slice now has a generated declaration/proof join over all 1,298 declarations
+   owned by its seven source modules, all 493 theorem and kernel-dependency
+   receipts, 32 registered counterexamples, nine duplicate-prevention names,
    the exact rc.112 tag and field pins, and the repaired 13-case payload-surface
    detector. This closes every applicable edge of
    `SCHEMA-PG-REPRESENTATION-TAG`, all of
@@ -161,7 +161,7 @@ cutover decision.
 | Order | Owner | Assurance route | Required work before advancing |
 | ---: | --- | --- | --- |
 | 0 | Schema payload surface | gate repair, not a new proof graph | **Closed.** The gate rejects aliases and ordinary type-valued definitions, proves the Payload-only D0-D3/D4-D7 boundary, checks every D7 owner, and kills all 13 specified shape, duplication, owner, import, and override defects. |
-| 1 | `SCHEMA-PG-PAYLOAD` and `SCHEMA-PG-FIELD-ADMISSION` | two existing graphs plus attached leaf receipts | **Closed.** The generated join covers 1,157 owned declarations, 447 theorem/axiom receipts, 27 counterexamples, exact source pins, all leaf routes, and the complete general recursor. `SCHEMA-PG-FIELD-ADMISSION` and every applicable payload edge are closed. No denotation, document-reference, wire, or host-equivalence claim is part of this structural closure. |
+| 1 | Schema payload, field admission, optics, and annotation data | four required graphs plus attached local receipts | **Closed.** The generated join covers 1,298 owned declarations, 493 theorem/axiom receipts, 32 counterexamples, exact source pins, all leaf routes, the complete general recursor, lawful optic composition, and exhaustive annotation traversal. The annotation host gate also checks the generated field-admission witness with TypeScript, Effect, and the Effect language service. No denotation, document-reference, wire, or host-equivalence claim is part of this structural closure. |
 | 2 | `Effect4.ServiceName`, `ServiceTypeCode`, `ServiceKey`, and `ServiceUniverse` | local key-family and Std-order-bridge receipts; `ENV-KEY-INTERP` alone attaches to the Context graph | **Closed locally.** `ENV-LEAF-KEY-IDENTITY` and `ENV-LEAF-KEY-ORDER-BRIDGE` are generated from the exact 97-name module census, separate 25-name Key API, separate 14-name Std bridge API, theorem/axiom receipts, and five detector reactions. The bridge is a delegated route into the now-closed `DATA-PG-ROW/ORDER`; only Data.Row assigns that parent edge's status. `ServiceUniverse` remains the sole open Context semantic attachment at `ENV-KEY-INTERP`. |
 | 3 | `Effect4.Data.Row` | `DATA-PG-ROW`, required graph | **Closed.** The fixed battery and generated join cover the sole proof-carrying carrier, raw-list normalization boundary, sorted insertion, canonical extensionality, union algebra, subset/weakening, exact owners and hypotheses, 23 theorem/axiom receipts with no choice, eight duplicate-name exclusions, nine counterexamples, all ten graph edges, and five detector reactions. This closes the reusable row algebra only; it deliberately proves no downstream denotational preservation. |
 | 4 | `Context.Service` and `Context.Requirement` | local carrier receipts plus nodes in `ENV-PG-CONTEXT` | Reuse `ServiceKey`, `Program`, `Signature`, and `Data.Row`; no second key, row, program, type-code, or order carrier. Prefer a derived `ServiceSignature U` and `request = Program.perform` over a duplicate service program. Make `Requirement` an alias or named view of `Row ServiceKey`. The graph-bearing part is `Program.UsesOnly`: prove its pure, visit, perform, bind-by-union, and weakening laws. Do not claim a finite `Program.requirements` function for arbitrary higher-order continuations; synthesis belongs to checked first-order Flow. |

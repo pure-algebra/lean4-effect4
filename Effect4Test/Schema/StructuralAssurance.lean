@@ -1,12 +1,14 @@
 import Lean
 import Lean.Util.CollectAxioms
+import Effect4.Data.Optic
+import Effect4.Schema.Document
 import Effect4.Schema.Check
 
 /-!
 # Schema structural declaration and proof-receipt join
 
 This test-only checker gives the implemented structural Schema slice one
-mechanical census.  Every non-internal declaration owned by the five source
+mechanical census.  Every non-internal declaration owned by the seven source
 modules is emitted with exactly one existing proof-graph or leaf-receipt route.
 Every theorem in that census is checked against the repository axiom ceiling
 and emitted with its actual kernel dependencies.
@@ -33,9 +35,11 @@ private def declarationOwner? (environment : Environment) (name : Name) : Option
     none
 
 private def sourceModules : List Name :=
-  [ `Effect4.Data.Json
+  [ `Effect4.Data.Optic
+  , `Effect4.Data.Json
   , `Effect4.Schema.Payload
   , `Effect4.Schema.Representation
+  , `Effect4.Schema.Annotations
   , `Effect4.Schema.Document
   , `Effect4.Schema.Check
   ]
@@ -53,7 +57,9 @@ private def sortedNames (names : List Name) : List Name :=
 
 private def routeFor (owner name : Name) : String :=
   let text := name.toString
-  if owner == `Effect4.Data.Json then
+  if owner == `Effect4.Data.Optic then
+    "DATA-PG-OPTIC"
+  else if owner == `Effect4.Data.Json then
     if text.startsWith "Effect4.Float64" then
       "SCHEMA-LEAF-FLOAT64-BITS"
     else if text.startsWith "Effect4.Json.NumbersFinite" ||
@@ -86,8 +92,14 @@ private def routeFor (owner name : Name) : String :=
       "SCHEMA-LEAF-PROPERTY-KEY-KIND"
     else
       "SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK"
+  else if owner == `Effect4.Schema.Annotations then
+    "SCHEMA-PG-ANNOTATION-DATA"
   else if owner == `Effect4.Schema.Document then
-    "SCHEMA-LEAF-DOCUMENT-CONTAINERS"
+    if text.startsWith "Effect4.Document.annotationBags" ||
+        text.startsWith "Effect4.MultiDocument.annotationBags" then
+      "SCHEMA-PG-ANNOTATION-DATA/DOCUMENT"
+    else
+      "SCHEMA-LEAF-DOCUMENT-CONTAINERS"
   else if owner == `Effect4.Schema.Check then
     "SCHEMA-PG-FIELD-ADMISSION"
   else
@@ -110,6 +122,30 @@ private def sameNameSet (actual expected : List Name) : Bool :=
     actual.all expected.contains && expected.all actual.contains
 
 private def allowedAxioms : List Name := [`propext, `Quot.sound]
+
+private def axiomFreeAnnotationLaws : List Name :=
+  [ `Effect4.Lens.Lawful.compose
+  , `Effect4.Lens.Lawful.toOptional
+  , `Effect4.Optional.Lawful.compose
+  , `Effect4.Optional.Lawful.toTraversal
+  , `Effect4.Traversal.Lawful.compose
+  , `Effect4.AnnotationKey.decodeEntry_entry
+  , `Effect4.AnnotationKey.entry_of_decodeEntry
+  , `Effect4.Annotations.payloadsAt_lawful
+  , `Effect4.AnnotationKey.values_lawful
+  , `Effect4.AnnotationKey.inTraversal_lawful
+  , `Effect4.Representation.nodeAnnotations_lawful
+  , `Effect4.Check.annotationsLens_lawful
+  , `Effect4.ElementOf.annotationsLens_lawful
+  , `Effect4.PropertySignatureOf.annotationsLens_lawful
+  , `Effect4.Representation.annotationBags_lawful
+  , `Effect4.Check.annotationBags_lawful
+  , `Effect4.Document.annotationBags_lawful
+  , `Effect4.MultiDocument.annotationBags_lawful
+  ]
+
+private def requiresAxiomFree (name : Name) : Bool :=
+  axiomFreeAnnotationLaws.contains name
 
 private def axiomFreeRecursorDeclarations : List Name :=
   [ `Effect4.Representation.FoldAlgebra
@@ -142,6 +178,8 @@ private def checkStructuralAssurance : CommandElabM Unit := do
         failJoin m!"declaration {name} owned by {owner} has no proof-graph or leaf route"
     for name in theoremNamesOwnedBy environment owner do
       let actual := (← collectAxioms name).toList
+      if requiresAxiomFree name && !actual.isEmpty then
+        failJoin m!"annotation/optic theorem {name} is not axiom-free: {actual}"
       let forbidden := actual.filter fun axiomName => !allowedAxioms.contains axiomName
       unless forbidden.isEmpty do
         failJoin m!"axiom receipt for {name} exceeds [propext, Quot.sound]: {forbidden}"

@@ -2,6 +2,7 @@ import Effect4.Data.Json
 import Effect4.Schema.Representation
 import Effect4.Schema.Document
 import Effect4.Schema.Check
+import Effect4.Schema.Annotations
 
 /-!
 Fresh kernel dependency report for all six Schema representation alphabets.
@@ -138,6 +139,24 @@ folds, every public constructor equation, and reconstruction.
 #print axioms Effect4.Check.fold_filterGroup
 #print axioms Effect4.Representation.fold_rebuild
 #print axioms Effect4.Check.fold_rebuild
+
+/-!
+Typed annotation dimensions, local optics, and recursive data-plane traversals.
+-/
+
+#print axioms Effect4.AnnotationKey.decodeEntry_entry
+#print axioms Effect4.AnnotationKey.entry_of_decodeEntry
+#print axioms Effect4.Annotations.payloadsAt_lawful
+#print axioms Effect4.AnnotationKey.values_lawful
+#print axioms Effect4.AnnotationKey.inTraversal_lawful
+#print axioms Effect4.Representation.nodeAnnotations_lawful
+#print axioms Effect4.Check.annotationsLens_lawful
+#print axioms Effect4.ElementOf.annotationsLens_lawful
+#print axioms Effect4.PropertySignatureOf.annotationsLens_lawful
+#print axioms Effect4.Representation.annotationBags_lawful
+#print axioms Effect4.Check.annotationBags_lawful
+#print axioms Effect4.Document.annotationBags_lawful
+#print axioms Effect4.MultiDocument.annotationBags_lawful
 
 /-!
 Payload carrier, section D6: the two document containers and the single-root

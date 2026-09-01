@@ -17,6 +17,8 @@ inside constructors here.
 
 namespace Effect4
 
+universe u
+
 /-- A raw `$ref` spelling. Persisted-field admission requires it non-empty. -/
 structure ReferenceKey where
   value : String
@@ -70,21 +72,21 @@ structure RepresentationAnnotation where
 deriving DecidableEq
 
 /-- A check annotation, parameterized so its referenced schemas do not force a mutual block. -/
-structure CheckRepresentationAnnotationOf (α : Type) where
+structure CheckRepresentationAnnotationOf (α : Type u) where
   id : String
   payload : Json
   schemas : Option (List α)
 deriving DecidableEq
 
 /-- One ordered tuple element. -/
-structure ElementOf (α : Type) where
+structure ElementOf (α : Type u) where
   isOptional : Bool
   type : α
   annotations : Annotations
 deriving DecidableEq
 
 /-- One ordered object property signature. -/
-structure PropertySignatureOf (α : Type) where
+structure PropertySignatureOf (α : Type u) where
   name : PropertyKey
   type : α
   isOptional : Bool
@@ -93,7 +95,7 @@ structure PropertySignatureOf (α : Type) where
 deriving DecidableEq
 
 /-- One object index signature, with exactly its parameter and result types. -/
-structure IndexSignatureOf (α : Type) where
+structure IndexSignatureOf (α : Type u) where
   parameter : α
   type : α
 deriving DecidableEq

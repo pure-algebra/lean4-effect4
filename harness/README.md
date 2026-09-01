@@ -15,3 +15,11 @@ The same command also generates a second document containing one
 field-admissible representative for each of the 22 representation tags and
 both check constructors. Its source digest is pinned, and the runtime receipt
 checks that Effect revives the exact canonical tag order.
+
+`schema-annotations/` exercises annotations as a typed data plane over an
+existing Schema. Run `./scripts/check-schema-annotations.sh`; it checks
+higher-order annotation combinators, decoded-side, encoded-side, and key-side
+metadata, last-check resolution, persisted raw representation data, the
+unpatched TypeScript compiler, and strict Effect language-service diagnostics.
+The custom dimensions use `effect/Schema` module augmentation, so TypeScript
+checks their payloads without changing Schema's runtime carrier.

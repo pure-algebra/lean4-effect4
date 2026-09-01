@@ -20,6 +20,8 @@ open Lean Meta Elab Term Elab.Command
 
 namespace Effect4Test.Schema.PayloadSurface
 
+universe u
+
 declare_syntax_cat effect4SurfaceEntry
 syntax "| " ident " : " term : effect4SurfaceEntry
 
@@ -316,51 +318,51 @@ elab_rules : command
   | Effect4.RepresentationAnnotation.payload :
       Effect4.RepresentationAnnotation → Effect4.Json
 
-#effect4_check_structure_surface Effect4.CheckRepresentationAnnotationOf levels 0 params 1
+#effect4_check_structure_surface Effect4.CheckRepresentationAnnotationOf levels 1 params 1
   constructor | Effect4.CheckRepresentationAnnotationOf.mk :
-    { α : Type } → String → Effect4.Json → Option (List α) →
+    { α : Type u } → String → Effect4.Json → Option (List α) →
       Effect4.CheckRepresentationAnnotationOf α
   fields
   | Effect4.CheckRepresentationAnnotationOf.id :
-      { α : Type } → Effect4.CheckRepresentationAnnotationOf α → String
+      { α : Type u } → Effect4.CheckRepresentationAnnotationOf α → String
   | Effect4.CheckRepresentationAnnotationOf.payload :
-      { α : Type } → Effect4.CheckRepresentationAnnotationOf α → Effect4.Json
+      { α : Type u } → Effect4.CheckRepresentationAnnotationOf α → Effect4.Json
   | Effect4.CheckRepresentationAnnotationOf.schemas :
-      { α : Type } → Effect4.CheckRepresentationAnnotationOf α → Option (List α)
+      { α : Type u } → Effect4.CheckRepresentationAnnotationOf α → Option (List α)
 
-#effect4_check_structure_surface Effect4.ElementOf levels 0 params 1
+#effect4_check_structure_surface Effect4.ElementOf levels 1 params 1
   constructor | Effect4.ElementOf.mk :
-    { α : Type } → Bool → α → Effect4.Annotations → Effect4.ElementOf α
+    { α : Type u } → Bool → α → Effect4.Annotations → Effect4.ElementOf α
   fields
-  | Effect4.ElementOf.isOptional : { α : Type } → Effect4.ElementOf α → Bool
-  | Effect4.ElementOf.type : { α : Type } → Effect4.ElementOf α → α
+  | Effect4.ElementOf.isOptional : { α : Type u } → Effect4.ElementOf α → Bool
+  | Effect4.ElementOf.type : { α : Type u } → Effect4.ElementOf α → α
   | Effect4.ElementOf.annotations :
-      { α : Type } → Effect4.ElementOf α → Effect4.Annotations
+      { α : Type u } → Effect4.ElementOf α → Effect4.Annotations
 
-#effect4_check_structure_surface Effect4.PropertySignatureOf levels 0 params 1
+#effect4_check_structure_surface Effect4.PropertySignatureOf levels 1 params 1
   constructor | Effect4.PropertySignatureOf.mk :
-    { α : Type } → Effect4.PropertyKey → α → Bool → Bool →
+    { α : Type u } → Effect4.PropertyKey → α → Bool → Bool →
       Effect4.Annotations → Effect4.PropertySignatureOf α
   fields
   | Effect4.PropertySignatureOf.name :
-      { α : Type } → Effect4.PropertySignatureOf α → Effect4.PropertyKey
+      { α : Type u } → Effect4.PropertySignatureOf α → Effect4.PropertyKey
   | Effect4.PropertySignatureOf.type :
-      { α : Type } → Effect4.PropertySignatureOf α → α
+      { α : Type u } → Effect4.PropertySignatureOf α → α
   | Effect4.PropertySignatureOf.isOptional :
-      { α : Type } → Effect4.PropertySignatureOf α → Bool
+      { α : Type u } → Effect4.PropertySignatureOf α → Bool
   | Effect4.PropertySignatureOf.isMutable :
-      { α : Type } → Effect4.PropertySignatureOf α → Bool
+      { α : Type u } → Effect4.PropertySignatureOf α → Bool
   | Effect4.PropertySignatureOf.annotations :
-      { α : Type } → Effect4.PropertySignatureOf α → Effect4.Annotations
+      { α : Type u } → Effect4.PropertySignatureOf α → Effect4.Annotations
 
-#effect4_check_structure_surface Effect4.IndexSignatureOf levels 0 params 1
+#effect4_check_structure_surface Effect4.IndexSignatureOf levels 1 params 1
   constructor | Effect4.IndexSignatureOf.mk :
-    { α : Type } → α → α → Effect4.IndexSignatureOf α
+    { α : Type u } → α → α → Effect4.IndexSignatureOf α
   fields
   | Effect4.IndexSignatureOf.parameter :
-      { α : Type } → Effect4.IndexSignatureOf α → α
+      { α : Type u } → Effect4.IndexSignatureOf α → α
   | Effect4.IndexSignatureOf.type :
-      { α : Type } → Effect4.IndexSignatureOf α → α
+      { α : Type u } → Effect4.IndexSignatureOf α → α
 
 /-! ## D4: mutual representation/check carrier -/
 

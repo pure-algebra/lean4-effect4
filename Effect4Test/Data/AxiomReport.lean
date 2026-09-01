@@ -1,3 +1,4 @@
+import Effect4.Data.Optic
 import Effect4.Data.Row
 
 /-!
@@ -32,3 +33,11 @@ may reach `Classical.choice` or a project-local axiom.
 #print axioms Effect4.Row.subset_trans
 #print axioms Effect4.Row.subset_union_left
 #print axioms Effect4.Row.subset_union_right
+
+/-! Pure optic combinators used by Schema annotation data. -/
+
+#print axioms Effect4.Lens.Lawful.compose
+#print axioms Effect4.Lens.Lawful.toOptional
+#print axioms Effect4.Optional.Lawful.compose
+#print axioms Effect4.Optional.Lawful.toTraversal
+#print axioms Effect4.Traversal.Lawful.compose

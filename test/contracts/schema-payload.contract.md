@@ -664,25 +664,30 @@ for strings and finite numbers. See `E4-SCHEMA-CE-028`.
 ### D3 — parameterized record children
 
 ```lean
+universe u
+
 structure Effect4.RepresentationAnnotation where
   id : String ; payload : Json
 
-structure Effect4.CheckRepresentationAnnotationOf (α : Type) where
+structure Effect4.CheckRepresentationAnnotationOf (α : Type u) where
   id : String ; payload : Json ; schemas : Option (List α)
 
-structure Effect4.ElementOf (α : Type) where
+structure Effect4.ElementOf (α : Type u) where
   isOptional : Bool ; type : α ; annotations : Annotations
 
-structure Effect4.PropertySignatureOf (α : Type) where
+structure Effect4.PropertySignatureOf (α : Type u) where
   name : PropertyKey ; type : α ; isOptional : Bool ; isMutable : Bool
   annotations : Annotations
 
-structure Effect4.IndexSignatureOf (α : Type) where
+structure Effect4.IndexSignatureOf (α : Type u) where
   parameter : α ; type : α
 ```
 
 Parameterizing keeps them out of the mutual block, which is the main lever on
-recursor usability. Pin: `:25-28`, `:36-38` with codec `:917-925`; `Element`
+recursor usability. The parameter is universe-polymorphic so generic optics
+and effect interfaces work at the caller's universe without a second family of
+child carriers. This is an in-place generalization of the existing types, not
+a duplicate representation. Pin: `:25-28`, `:36-38` with codec `:917-925`; `Element`
 `:326-330` codec `:1028-1032`; `PropertySignature` `:359-365` codec
 `:1039-1049`; `IndexSignature` `:373-376` codec `:1050-1053`.
 

@@ -1,4 +1,4 @@
-import Effect4.Schema.Representation
+import Effect4.Schema.Annotations
 
 /-!
 # Schema.Document.lean
@@ -191,5 +191,231 @@ theorem Document.toMulti_two_roots_not_image (document : Document) :
   injection equal with rootsEqual _
   injection rootsEqual with _ tailEqual
   exact absurd tailEqual (by simp)
+
+/-! ## Structural annotation data plane
+
+These traversals are deliberately acyclic: they visit the stored document
+containers and delegate each representation subtree to
+`Representation.annotationBags`.  Reference keys are never resolved, so dead
+and duplicate entries remain visible in their original order.
+-/
+
+private def collectReferenceRepresentations : List ReferenceEntry →
+    List Representation
+  | [] => []
+  | entry :: tail => entry.representation :: collectReferenceRepresentations tail
+
+private def modifyReferenceRepresentations (f : Representation → Representation) :
+    List ReferenceEntry → List ReferenceEntry
+  | [] => []
+  | entry :: tail =>
+      { entry with representation := f entry.representation } ::
+        modifyReferenceRepresentations f tail
+
+private theorem modifyReferenceRepresentations_congr
+    {first second : Representation → Representation}
+    (pointwise : ∀ value, first value = second value)
+    (references : List ReferenceEntry) :
+    modifyReferenceRepresentations first references =
+      modifyReferenceRepresentations second references := by
+  induction references with
+  | nil => rfl
+  | cons entry tail ih =>
+      cases entry
+      simp only [modifyReferenceRepresentations]
+      rw [pointwise, ih]
+
+private theorem modifyReferenceRepresentations_id
+    (references : List ReferenceEntry) :
+    modifyReferenceRepresentations id references = references := by
+  induction references with
+  | nil => rfl
+  | cons entry tail ih =>
+      cases entry
+      simp only [modifyReferenceRepresentations, id_eq]
+      rw [ih]
+
+private theorem modifyReferenceRepresentations_comp
+    (references : List ReferenceEntry)
+    (first second : Representation → Representation) :
+    modifyReferenceRepresentations second
+        (modifyReferenceRepresentations first references) =
+      modifyReferenceRepresentations (second ∘ first) references := by
+  induction references with
+  | nil => rfl
+  | cons entry tail ih =>
+      cases entry
+      simp only [modifyReferenceRepresentations, Function.comp_apply]
+      rw [ih]
+
+private theorem collectReferenceRepresentations_modify
+    (references : List ReferenceEntry) (f : Representation → Representation) :
+    collectReferenceRepresentations (modifyReferenceRepresentations f references) =
+      (collectReferenceRepresentations references).map f := by
+  induction references with
+  | nil => rfl
+  | cons entry tail ih =>
+      cases entry
+      simp only [modifyReferenceRepresentations, collectReferenceRepresentations,
+        List.map_cons]
+      rw [ih]
+
+private theorem map_congr_exact {A B : Type} {first second : A → B}
+    (pointwise : ∀ value, first value = second value) (values : List A) :
+    values.map first = values.map second := by
+  induction values with
+  | nil => rfl
+  | cons head tail ih =>
+      simp only [List.map_cons]
+      rw [pointwise, ih]
+
+private theorem map_id_exact {A : Type} (values : List A) :
+    values.map id = values := by
+  induction values with
+  | nil => rfl
+  | cons head tail ih =>
+      simp only [List.map_cons, id_eq]
+      rw [ih]
+
+private theorem map_comp_exact {A : Type} (values : List A)
+    (first second : A → A) :
+    (values.map first).map second = values.map (second ∘ first) := by
+  induction values with
+  | nil => rfl
+  | cons head tail ih =>
+      simp only [List.map_cons, Function.comp_apply]
+      rw [ih]
+
+private theorem map_append_exact {A B : Type} (f : A → B)
+    (first second : List A) :
+    (first ++ second).map f = first.map f ++ second.map f := by
+  induction first with
+  | nil => rfl
+  | cons head tail ih =>
+      simp only [List.cons_append, List.map_cons]
+      rw [ih]
+
+namespace Document
+
+/-- The root followed by every stored reference representation, without
+resolving reference keys. -/
+private def representationSites : Traversal Document Representation where
+  collect document :=
+    document.representation :: collectReferenceRepresentations document.references
+  modifyAll f document :=
+    { representation := f document.representation
+      references := modifyReferenceRepresentations f document.references }
+
+private theorem representationSites_lawful :
+    Traversal.Lawful representationSites := by
+  constructor
+  · intro first second pointwise document
+    cases document with
+    | mk root references =>
+        change Document.mk (first root)
+            (modifyReferenceRepresentations first references) =
+          Document.mk (second root)
+            (modifyReferenceRepresentations second references)
+        rw [pointwise, modifyReferenceRepresentations_congr pointwise]
+  · intro document
+    cases document with
+    | mk root references =>
+        change Document.mk (id root)
+            (modifyReferenceRepresentations id references) =
+          Document.mk root references
+        rw [modifyReferenceRepresentations_id]
+        rfl
+  · intro document first second
+    cases document with
+    | mk root references =>
+        change Document.mk (second (first root))
+            (modifyReferenceRepresentations second
+              (modifyReferenceRepresentations first references)) =
+          Document.mk ((second ∘ first) root)
+            (modifyReferenceRepresentations (second ∘ first) references)
+        rw [modifyReferenceRepresentations_comp]
+        rfl
+  · intro document f
+    cases document with
+    | mk root references =>
+        change f root :: collectReferenceRepresentations
+            (modifyReferenceRepresentations f references) =
+          (root :: collectReferenceRepresentations references).map f
+        rw [collectReferenceRepresentations_modify]
+        rfl
+
+/-- Every annotation bag in the root and every stored reference entry, in
+structural preorder. -/
+def annotationBags : Traversal Document Annotations :=
+  representationSites.compose Representation.annotationBags
+
+/-- The document annotation data-plane traversal satisfies the four pure
+traversal equations. -/
+theorem annotationBags_lawful : Traversal.Lawful annotationBags := by
+  exact Traversal.Lawful.compose representationSites_lawful
+    Representation.annotationBags_lawful
+
+end Document
+
+namespace MultiDocument
+
+/-- Every root followed by every stored reference representation, preserving
+both source orders and without resolving reference keys. -/
+private def representationSites : Traversal MultiDocument Representation where
+  collect document :=
+    document.representations ++
+      collectReferenceRepresentations document.references
+  modifyAll f document :=
+    { representations := document.representations.map f
+      references := modifyReferenceRepresentations f document.references }
+
+private theorem representationSites_lawful :
+    Traversal.Lawful representationSites := by
+  constructor
+  · intro first second pointwise document
+    cases document with
+    | mk roots references =>
+        change MultiDocument.mk (roots.map first)
+            (modifyReferenceRepresentations first references) =
+          MultiDocument.mk (roots.map second)
+            (modifyReferenceRepresentations second references)
+        rw [map_congr_exact pointwise,
+          modifyReferenceRepresentations_congr pointwise]
+  · intro document
+    cases document with
+    | mk roots references =>
+        change MultiDocument.mk (roots.map id)
+            (modifyReferenceRepresentations id references) =
+          MultiDocument.mk roots references
+        rw [map_id_exact, modifyReferenceRepresentations_id]
+  · intro document first second
+    cases document with
+    | mk roots references =>
+        change MultiDocument.mk ((roots.map first).map second)
+            (modifyReferenceRepresentations second
+              (modifyReferenceRepresentations first references)) =
+          MultiDocument.mk (roots.map (second ∘ first))
+            (modifyReferenceRepresentations (second ∘ first) references)
+        rw [map_comp_exact, modifyReferenceRepresentations_comp]
+  · intro document f
+    cases document with
+    | mk roots references =>
+        change roots.map f ++ collectReferenceRepresentations
+            (modifyReferenceRepresentations f references) =
+          (roots ++ collectReferenceRepresentations references).map f
+        rw [collectReferenceRepresentations_modify, map_append_exact]
+
+/-- Every annotation bag in every root and stored reference entry, in
+structural preorder. -/
+def annotationBags : Traversal MultiDocument Annotations :=
+  representationSites.compose Representation.annotationBags
+
+/-- The multi-root annotation data-plane traversal satisfies the four pure
+traversal equations. -/
+theorem annotationBags_lawful : Traversal.Lawful annotationBags := by
+  exact Traversal.Lawful.compose representationSites_lawful
+    Representation.annotationBags_lawful
+
+end MultiDocument
 
 end Effect4

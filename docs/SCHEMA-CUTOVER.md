@@ -556,6 +556,12 @@ conditional and explicit:
   predicate, including finite retained annotation bags. It is required because
   this judgment decides a structural condition and recurses through the
   payload. Property-key uniqueness is not yet a node.
+- `DATA-PG-OPTIC` owns the nontrivial higher-order composition and conversion
+  laws for `Lens`, `Optional`, and `Traversal`. Carrier projections and direct
+  field lenses remain local receipts.
+- `SCHEMA-PG-ANNOTATION-DATA` owns exact typed-key reconstruction and the
+  exhaustive recursive annotation walk through representations, checks, and
+  documents. It reuses the existing Schema carriers and closed recursor.
 - `SCHEMA-PG-DOCUMENT` owns reference interpretation, reachability,
   guardedness, and productivity. The plain `Document` and `MultiDocument`
   record declarations are leaves until those meanings are attached.
@@ -594,6 +600,19 @@ SCHEMA-PG-PAYLOAD
 
 SCHEMA-PG-FIELD-ADMISSION
   -> SC-REP-04 recursive field admission matches the frozen rc.112 constraints
+
+DATA-PG-OPTIC
+  -> lawful Lens and Optional composition
+  -> lawful Lens-to-Optional and Optional-to-Traversal conversion
+  -> lawful Traversal composition
+
+SCHEMA-PG-ANNOTATION-DATA
+  -> exact typed AnnotationKey reconstruction
+  -> ordered raw and typed annotation traversal
+  -> exhaustive Representation and Check traversal
+  -> structural Document and MultiDocument traversal
+  -> E4-SCHEMA-CE-044 through E4-SCHEMA-CE-048
+  -> TypeScript, Effect runtime, and Effect language-service host gate
 
 SC-SRC-01 exact upstream and resolved-package pins
 SC-SRC-02 generated 22-tag source census
@@ -811,14 +830,21 @@ Its current boundary is split as follows:
   remain unreachable, ownership inspection must assign D0-D1 to
   `Effect4.Data.Json` and D2-D3 to `Effect4.Schema.Payload`, and an upward
   Payload import must be rejected. The production half and all 13 reactions
-  are green. The generated join covers all 1,157 declarations owned by these
-  five modules, all 447 theorem and axiom receipts, 27 counterexamples, nine
+  are green. The generated join covers all 1,298 declarations owned by the
+  seven joined modules, all 493 theorem and axiom receipts, 32 counterexamples, nine
   duplicate-prevention names, and all leaf routes. It closes
   `SCHEMA-PG-FIELD-ADMISSION`, `SC-REP-01`, and the structural equality,
   tag-projection, and general-recursor shares of `SC-REP-03`. The recursor's
   24 public equations, two rebuild identities, empty axiom receipts, and
   all-route counterexample are joined. Denotation, document interpretation,
   wire form, and host conformance remain their separate later graphs.
+- **Optics and annotation data — closed.** `DATA-PG-OPTIC` and
+  `SCHEMA-PG-ANNOTATION-DATA` join the generic composition laws, exact typed
+  annotation codecs, local field views, and exhaustive structural traversals.
+  Only those higher-order and recursive obligations receive graphs; direct
+  getters, setters, and constructor equations remain ordinary receipts. The
+  joined host gate generates the field-admission witness from Lean and checks
+  it with TypeScript, Effect rc.112, and the Effect language service.
 
 The pinned bytes needed by `SC-REP-CENSUS-PIN` are now local to this library at
 `vendor/effect-4.0.0-rc.112/src/SchemaRepresentation.ts`, verified at SHA-256
