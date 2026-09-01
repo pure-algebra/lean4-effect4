@@ -659,6 +659,46 @@ than an invented field.
 
 Executable witness: `Effect4Test/Counterexamples/Schema/AnnotationDataPlane.lean`.
 
+## Node annotations are not property annotations — `E4-SCHEMA-CE-053`
+
+Effect Schema persists key-local annotations on `PropertySignature`. A marker
+on the surrounding representation node therefore cannot select one property,
+even when the object has only one field. The retained pair flips only the
+marker location: `nodeOnly` discovers nothing, while `propertyOnly` discovers
+the marked property.
+
+Executable witness:
+`Effect4Test/Counterexamples/Schema/EffectfulFieldProperties.lean`.
+
+## A root property scan is not recursive discovery — `E4-SCHEMA-CE-054`
+
+Properties occur below every recursive Schema route, including the positions
+hidden by check annotation records, element records, property records, and
+index records. The retained declaration places fourteen marked properties
+through those routes. Its exact summary fixes the existing fold's order; a
+root-only scan returns the empty list.
+
+The collector is an algebra over `Representation.fold`, not another recursive
+Schema function. Route exhaustion remains owned by the general fold's public
+constructor equations and rebuild theorem.
+
+Executable witness:
+`Effect4Test/Counterexamples/Schema/EffectfulFieldProperties.lean`.
+
+## Property names do not identify occurrences — `E4-SCHEMA-CE-055`
+
+The payload carrier intentionally permits duplicate property keys. Collapsing
+discovery to a map or set therefore loses evidence before later admission can
+classify it. The retained witness contains two `duplicate` properties with
+different read operations and requires the ordered result `[21, 31]`.
+
+The inventory keeps the complete existing `PropertySignature` paired with its
+`EffectfulFieldSpec`, preserving type, flags, raw annotations, multiplicity,
+and order without adding a discovery carrier.
+
+Executable witness:
+`Effect4Test/Counterexamples/Schema/EffectfulFieldProperties.lean`.
+
 ## First match is not an annotation traversal — `E4-SCHEMA-CE-045`
 
 The retained annotation bag is an optional ordered list. A first-match lookup
