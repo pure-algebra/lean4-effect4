@@ -11,6 +11,7 @@ import Effect4Test.Concurrency.FiberAssurance
 import Effect4Test.Concurrency.FiberAxiomReport
 import Effect4Test.Counterexamples.Concurrency.FiberRepresentative
 import Effect4Test.Counterexamples.Concurrency.RaceRepresentative
+import Effect4Test.Counterexamples.Target.TypeScriptRender
 import Effect4Test.Counterexamples.Schema.CensusCoverage
 import Effect4Test.Counterexamples.Schema.KindAlphabetSeparation
 import Effect4Test.Counterexamples.Schema.NoLocalSymbolPropertyKey
@@ -27,6 +28,7 @@ import Effect4Test.Data.AxiomReport
 import Effect4Test.Environment.ContextKeyContract
 import Effect4Test.Environment.AxiomReport
 import Effect4Test.Environment.ContextKeyAssurance
+import Effect4Test.Target.TypeScript.ExprContract
 import Effect4Test.Audit.AxiomGate
 
 /-!

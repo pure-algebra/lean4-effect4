@@ -308,6 +308,31 @@ The additive Std bridge's authored public API is exactly 14 declarations:
 tracks the module's compiler-generated structural companions under their type
 allocations; those names are not described as authored public API.
 
+## Retained TypeScript target fragment
+
+The initial target-syntax port is governed by
+`test/contracts/typescript-target-expr.contract.md` and
+`docs/TYPESCRIPT-TARGET-DAG.md`. It moves no CAS semantics and makes no host
+typing or Effect compatibility claim.
+
+| Foldlab source | Retained span | SHA-256 | Effect4 owner | Disposition |
+| --- | ---: | --- | --- | --- |
+| `library/cas/Cas/Backend/Ts.lean` | 1-252 | `cdae7c93f5f62a2800bfee9497f4ec33c369e7be8ad71b2c1879b966741ecc15` | `Effect4/Target/TypeScript/Expr.lean`, `Effect4/Target/TypeScript/Render.lean` | `split`; generic target syntax and deterministic printer ported, CAS emitters remain downstream |
+
+| Stable type row | Exact Lean declaration and owner | Canonical role | Source disposition and duplicate prevention | Assurance allocation |
+| --- | --- | --- | --- | --- |
+| `E4-TYPE-TARGET-TS-EXPR` | `Effect4.Target.TypeScript.Expr`; `Effect4.Target.TypeScript.Expr` | canonical retained target expression syntax | `split`, pinned row above; target-only and distinct from `Effect4.Program`, checked `Effect4.Flow`, and metaprogramming `Lean.Expr` | `TS-PG-RETAINED-RENDER` |
+| `E4-TYPE-TARGET-TS-STMT` | `Effect4.Target.TypeScript.Stmt`; same owner | retained straight-line generator statement syntax | `split`; child target syntax, not a second effect-program carrier | same graph, construction edge |
+| `E4-TYPE-TARGET-TS-CONST-DECL` | `Effect4.Target.TypeScript.ConstDecl`; same owner | passive exported-constant record | `split`; contains the canonical target expression | same graph, construction edge |
+| `E4-TYPE-TARGET-TS-PROG-DECL` | `Effect4.Target.TypeScript.ProgDecl`; same owner | retained generator-declaration record | `split`; contains retained statements and is not semantic `Program` | same graph, construction edge |
+| `E4-TYPE-TARGET-TS-DECL` | `Effect4.Target.TypeScript.Decl`; same owner | retained module-declaration sum | `split`; the `raw` compatibility arm is outside checked lowering | same graph, construction and counterexample edges |
+| `E4-TYPE-TARGET-TS-IMPORT` | `Effect4.Target.TypeScript.Import`; same owner | passive import alphabet | `split`; sole target import owner | same graph, construction edge |
+| `E4-TYPE-TARGET-TS-MODULE` | `Effect4.Target.TypeScript.Module`; same owner | passive module container | `split`; contains the declaration and import owners above | same graph, construction edge |
+| `E4-TYPE-TARGET-TS-STYLE` | `Effect4.Target.TypeScript.Style`; `Effect4.Target.TypeScript.Render` | passive explicit rendering choices | `split`; no semantic, typing, or program role | `TS-LEAF-STYLE`, attached to `TS-PG-RETAINED-RENDER/representation` |
+
+The renderer is graph-bearing because it generates target bytes. The passive
+`Style` value is not: it closes through its local attached leaf receipt.
+
 ## Schema extraction ruling
 
 The complete ruling and proof graph are in `docs/SCHEMA-CUTOVER.md`. The
