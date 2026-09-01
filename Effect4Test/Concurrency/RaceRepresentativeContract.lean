@@ -150,9 +150,9 @@ section Surface
 #check (@RaceSpec.isContender_right : forall spec,
   RaceSpec.IsContender spec spec.right)
 #check (@RaceSpec.loser : RaceSpec -> FiberId -> FiberId)
-#check (@RaceSpec.loser_left : forall spec,
+#check (@RaceSpec.loser_left : forall (spec : RaceSpec),
   spec.loser spec.left = spec.right)
-#check (@RaceSpec.loser_right : forall spec,
+#check (@RaceSpec.loser_right : forall (spec : RaceSpec),
   spec.loser spec.right = spec.left)
 
 #check (@RaceSpec.ValidIn : forall {τ : Type u}, RaceSpec -> Machine τ -> Prop)

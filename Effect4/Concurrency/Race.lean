@@ -42,7 +42,7 @@ theorem isContender_iff (spec : RaceSpec) (id : FiberId) :
     IsContender spec id <-> id = spec.left \/ id = spec.right :=
   Iff.rfl
 
-def isContenderDecidable (spec : RaceSpec) (id : FiberId) :
+instance isContenderDecidable (spec : RaceSpec) (id : FiberId) :
     Decidable (IsContender spec id) := by
   unfold IsContender
   infer_instance
@@ -234,8 +234,21 @@ theorem settledResult_eq_some {spec : RaceSpec} {state : RaceState τ}
                 state.machine.cleanupState spec.right = some .done
             · simp [settledResult?, Settled, hwinner, hcontender, hterminal,
                 hcomplete]
-            · simp [settledResult?, Settled, hwinner, hcontender, hterminal,
-                hcomplete]
+            · constructor
+              · intro impossible
+                have empty : settledResult? spec state = none := by
+                  simp only [settledResult?, hwinner, hcontender, hterminal,
+                    hcomplete, reduceDIte, reduceIte]
+                rw [empty] at impossible
+                contradiction
+              · rintro ⟨selected, hselected, _hselectedContender,
+                  _hselectedTerminal, hleftDone, hrightDone,
+                  hleftCleanup, hrightCleanup⟩
+                have selected_eq : selected = winner :=
+                  Option.some.inj (hselected.symm.trans hwinner)
+                subst selected
+                exact (hcomplete
+                  ⟨hleftDone, hrightDone, hleftCleanup, hrightCleanup⟩).elim
       · simp [settledResult?, Settled, hwinner, hcontender]
 
 end RaceState
@@ -641,7 +654,7 @@ theorem raceReplayEval_settled {boundary : InterruptBoundary τ}
     {spec initial result tape}
     (hsettled : RaceState.settledResult? spec initial = some result) :
     raceReplayEval boundary spec initial tape = .settled result initial := by
-  simp [raceReplayEval, hsettled]
+  cases tape <;> simp [raceReplayEval, hsettled]
 
 theorem raceReplayEval_nil_frontier {boundary : InterruptBoundary τ}
     {spec initial} (hsettled : RaceState.settledResult? spec initial = none) :
