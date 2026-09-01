@@ -135,6 +135,171 @@ theorem rawAdmissible_iff_exists_check {annotations : Annotations} :
 
 end EffectfulFieldSpec
 
+namespace PropertySignatureOf
+
+/-- Decode the exact effectful-field marker attached to this property. -/
+def effectfulFieldSpec (property : PropertySignatureOf A) :
+    Option EffectfulFieldSpec :=
+  EffectfulFieldSpec.check property.annotations
+
+/-- Decide whether this property carries exactly one canonical marker. -/
+def hasEffectfulField (property : PropertySignatureOf A) : Bool :=
+  property.effectfulFieldSpec.isSome
+
+theorem hasEffectfulField_eq_true_iff (property : PropertySignatureOf A) :
+    property.hasEffectfulField = true <->
+      EffectfulFieldSpec.RawAdmissible property.annotations := by
+  rw [EffectfulFieldSpec.rawAdmissible_iff_exists_check]
+  unfold hasEffectfulField effectfulFieldSpec
+  cases checked : EffectfulFieldSpec.check property.annotations <;>
+    simp
+
+end PropertySignatureOf
+
+private abbrev EffectfulFieldPropertyRows :=
+  List (PropertySignature × EffectfulFieldSpec)
+
+private abbrev RepresentationWithEffectfulFields :=
+  Representation × EffectfulFieldPropertyRows
+
+private abbrev CheckWithEffectfulFields :=
+  Check × EffectfulFieldPropertyRows
+
+private def representationRows
+    (children : List RepresentationWithEffectfulFields) :
+    EffectfulFieldPropertyRows :=
+  children.flatMap Prod.snd
+
+private def checkRows (children : List CheckWithEffectfulFields) :
+    EffectfulFieldPropertyRows :=
+  children.flatMap Prod.snd
+
+private def rebuildElement
+    (element : ElementOf RepresentationWithEffectfulFields) : Element :=
+  { isOptional := element.isOptional
+    type := element.type.1
+    annotations := element.annotations }
+
+private def elementRows
+    (elements : List (ElementOf RepresentationWithEffectfulFields)) :
+    EffectfulFieldPropertyRows :=
+  elements.flatMap fun element => element.type.2
+
+private def rebuildProperty
+    (property : PropertySignatureOf RepresentationWithEffectfulFields) :
+    PropertySignature :=
+  { name := property.name
+    type := property.type.1
+    isOptional := property.isOptional
+    isMutable := property.isMutable
+    annotations := property.annotations }
+
+private def propertyRows
+    (properties : List (PropertySignatureOf RepresentationWithEffectfulFields)) :
+    EffectfulFieldPropertyRows :=
+  properties.flatMap fun property =>
+    let original := rebuildProperty property
+    match original.effectfulFieldSpec with
+    | some spec => (original, spec) :: property.type.2
+    | none => property.type.2
+
+private def rebuildIndex
+    (index : IndexSignatureOf RepresentationWithEffectfulFields) : IndexSignature :=
+  { parameter := index.parameter.1
+    type := index.type.1 }
+
+private def indexRows
+    (indexes : List (IndexSignatureOf RepresentationWithEffectfulFields)) :
+    EffectfulFieldPropertyRows :=
+  indexes.flatMap fun index => index.parameter.2 ++ index.type.2
+
+private def rebuildCheckAnnotation
+    (annotation : CheckRepresentationAnnotationOf RepresentationWithEffectfulFields) :
+    CheckRepresentationAnnotation :=
+  { id := annotation.id
+    payload := annotation.payload
+    schemas := annotation.schemas.map (List.map Prod.fst) }
+
+private def checkAnnotationRows
+    (annotation : CheckRepresentationAnnotationOf RepresentationWithEffectfulFields) :
+    EffectfulFieldPropertyRows :=
+  match annotation.schemas with
+  | none => []
+  | some schemas => representationRows schemas
+
+private def effectfulFieldPropertyAlgebra :
+    Representation.FoldAlgebra RepresentationWithEffectfulFields
+      CheckWithEffectfulFields where
+  declaration := fun representation annotations typeParameters checks =>
+    ( .declaration representation annotations (typeParameters.map Prod.fst)
+        (checks.map Prod.fst)
+    , representationRows typeParameters ++ checkRows checks )
+  reference := fun key => (.reference key, [])
+  suspend := fun annotations checks thunk =>
+    (.suspend annotations (checks.map Prod.fst) thunk.1,
+      checkRows checks ++ thunk.2)
+  null := fun annotations checks =>
+    (.null annotations (checks.map Prod.fst), checkRows checks)
+  undefined := fun annotations checks =>
+    (.undefined annotations (checks.map Prod.fst), checkRows checks)
+  void := fun annotations checks =>
+    (.void annotations (checks.map Prod.fst), checkRows checks)
+  never := fun annotations checks =>
+    (.never annotations (checks.map Prod.fst), checkRows checks)
+  unknown := fun annotations checks =>
+    (.unknown annotations (checks.map Prod.fst), checkRows checks)
+  any := fun annotations checks =>
+    (.any annotations (checks.map Prod.fst), checkRows checks)
+  string := fun annotations checks =>
+    (.string annotations (checks.map Prod.fst), checkRows checks)
+  number := fun annotations checks =>
+    (.number annotations (checks.map Prod.fst), checkRows checks)
+  boolean := fun annotations checks =>
+    (.boolean annotations (checks.map Prod.fst), checkRows checks)
+  bigint := fun annotations checks =>
+    (.bigint annotations (checks.map Prod.fst), checkRows checks)
+  symbol := fun annotations checks =>
+    (.symbol annotations (checks.map Prod.fst), checkRows checks)
+  literal := fun annotations checks value =>
+    (.literal annotations (checks.map Prod.fst) value, checkRows checks)
+  uniqueSymbol := fun annotations checks key =>
+    (.uniqueSymbol annotations (checks.map Prod.fst) key, checkRows checks)
+  objectKeyword := fun annotations checks =>
+    (.objectKeyword annotations (checks.map Prod.fst), checkRows checks)
+  enum := fun annotations checks entries =>
+    (.enum annotations (checks.map Prod.fst) entries, checkRows checks)
+  templateLiteral := fun annotations checks parts =>
+    ( .templateLiteral annotations (checks.map Prod.fst) (parts.map Prod.fst)
+    , checkRows checks ++ representationRows parts )
+  arrays := fun annotations checks elements rest =>
+    ( .arrays annotations (checks.map Prod.fst)
+        (elements.map rebuildElement) (rest.map Prod.fst)
+    , checkRows checks ++ elementRows elements ++ representationRows rest )
+  objects := fun annotations checks properties indexes =>
+    ( .objects annotations (checks.map Prod.fst)
+        (properties.map rebuildProperty) (indexes.map rebuildIndex)
+    , checkRows checks ++ propertyRows properties ++ indexRows indexes )
+  union := fun annotations checks types mode =>
+    ( .union annotations (checks.map Prod.fst) (types.map Prod.fst) mode
+    , checkRows checks ++ representationRows types )
+  filter := fun representation annotations aborted =>
+    ( .filter (rebuildCheckAnnotation representation) annotations aborted
+    , checkAnnotationRows representation )
+  filterGroup := fun representation annotations checks =>
+    let rebuilt := representation.map rebuildCheckAnnotation
+    let representationRows :=
+      match representation with
+      | none => []
+      | some value => checkAnnotationRows value
+    (.filterGroup rebuilt annotations (checks.map Prod.fst),
+      representationRows ++ checkRows checks)
+
+/-- Discover every exactly marked property through the existing exhaustive
+Schema fold, retaining structural preorder and duplicate occurrences. -/
+def Representation.effectfulFieldProperties (representation : Representation) :
+    List (PropertySignature × EffectfulFieldSpec) :=
+  (Representation.fold effectfulFieldPropertyAlgebra representation).2
+
 /-- Resolution of portable operation identities into one existing signature. -/
 structure FieldEffectOps
     (signature : Signature.{uOp, uAns}) (S A : Type uAns) where

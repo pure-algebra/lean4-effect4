@@ -48,7 +48,7 @@ private def unmarked : PropertySignatureOf Nat :=
 #guard unmarked.hasEffectfulField = false
 
 example : EffectfulFieldSpec.RawAdmissible marked.annotations := by
-  exact (PropertySignatureOf.hasEffectfulField_eq_true_iff marked).mp (by rfl)
+  exact ⟨spec, rfl⟩
 
 private def schemaProperty : PropertySignature :=
   { name := .string "count"

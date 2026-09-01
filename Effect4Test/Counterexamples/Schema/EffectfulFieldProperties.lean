@@ -118,7 +118,8 @@ private def shallow : Representation -> List (PropertySignature × EffectfulFiel
   | _ => []
 
 example : shallow recursiveWitness = [] := by rfl
-example : Representation.effectfulFieldProperties recursiveWitness != [] := by decide
+example : Representation.effectfulFieldProperties recursiveWitness != [] := by
+  native_decide
 
 /-! `E4-SCHEMA-CE-055`: duplicates are occurrences, not map entries. -/
 
