@@ -453,6 +453,19 @@ cutover claim.
 | `E4-JUDGMENT-SCHEMA-PROPERTY-KEYS-UNIQUE` | future owner after `PropertyKey` equivalence freezes | profile narrowing; no declaration in this packet because structural binary64 equality would silently decide `+0`/`-0` and NaN key cases | future node, graph allocation deferred with key equivalence; `required-blocked` |
 | `E4-JUDGMENT-SCHEMA-REFERENCE-KEYS-UNIQUE` | future predicates for both `Document` and `MultiDocument`; `Effect4.Protocol.Bytes` | raw-wire duplicate-key condition before either ordered table becomes a map; no declaration in this packet | node `SC-WIRE-REFERENCE-KEY-UNIQUE` in `SCHEMA-PG-WIRE`; `required-blocked` |
 
+### Schema authoring and TypeScript generation dispositions
+
+These APIs add no type row. Their signatures are deliberately stated in terms
+of the existing carriers above.
+
+| Stable API or judgment row | Exact declaration and owner | Existing-type role | Assurance allocation |
+| --- | --- | --- | --- |
+| `E4-API-SCHEMA-PREDICATE-COMBINATORS` | `Effect4.Schema.Predicate.*`, `Effect4.Schema.check`; `Effect4.Schema.Authoring` | higher-order functions over the existing function type `α -> Bool`; no `Predicate` carrier and no executable meaning assigned to persisted `Effect4.Check` | local reflection and composition receipts in `SchemaGenerationAxiomReport.lean`; attaches to the payload/admission graphs; no standalone graph |
+| `E4-API-SCHEMA-RAW-AUTHORING` | `Effect4.Schema` constructors and `withCheck`; `Effect4.Schema.Authoring` | convenience construction of the existing `Representation`, `Check`, and `Document` values; order and raw invalid values remain visible | exact constructor guards and refusal equations; no standalone graph |
+| `E4-JUDGMENT-SCHEMA-TYPESCRIPT-GENERATION-READY` | `Target.TypeScript.Schema.GenerationReady`; `Effect4.Target.TypeScript.Schema` | checked bridge predicate over existing `Document`, `Json`, and TypeScript syntax; rejects target-name collisions and object-entry collapse | `proofGraphId = TS-PG-SCHEMA-DOCUMENT-GENERATION`; target host edge closed by `check-schema-typescript-generation.sh`; simulation and full-constructor coverage open |
+| `E4-BRIDGE-SCHEMA-TYPESCRIPT-DOCUMENT` | `json`, `representation`, `documentExpr`, `module?`, `generate?`; `Effect4.Target.TypeScript.Schema` | recursive `derivedExpansion` into existing target syntax and `targetOnly` source bytes; no generated-schema carrier | same graph; exact fixture, direct TypeScript, pinned Effect revival, language-service diagnostics, and central `E4-TARGET-CE-004` receipt |
+| `E4-CLASS-SCHEMA-DESCRIBED` | no Effect4 declaration yet | reserved for the strongest service-free lossless codec classification; Foldlab's class is evidence only and is not an instance over raw persistence | blocked on denotation plus both inverse laws; the authoring/generation slice makes no equivalence claim |
+
 The frozen payload packet has exactly two graph-bearing families:
 `SCHEMA-PG-PAYLOAD` for recursive `Json` and `Representation`/`Check`, and
 `SCHEMA-PG-FIELD-ADMISSION` for the recursive persisted/decode-side judgment.

@@ -21,12 +21,22 @@ inductive Expr where
   | ident (name : String)
   | str (value : String)
   | int (value : Int)
+  /-- A JavaScript number reconstructed from an exact IEEE-754 binary64 bit
+  pattern. This avoids lossy decimal formatting in generated raw data. -/
+  | float64Bits (bits : UInt64)
   | bool (value : Bool)
   | jsNull
   | call (fn : Expr) (args : List Expr)
   | object (fields : List (String × Expr))
   /-- An object whose multiline layout is an explicit syntax choice. -/
   | objectML (fields : List (String × Expr))
+  /-- An object whose property names are data and are therefore always quoted. -/
+  | objectQuoted (fields : List (String × Expr))
+  /-- A quoted-key object whose multiline layout is explicit syntax. -/
+  | objectQuotedML (fields : List (String × Expr))
+  /-- A data-keyed object built from retained entries. Used when JavaScript
+  object-literal semantics would reinterpret a key such as `__proto__`. -/
+  | objectFromEntries (fields : List (String × Expr))
   | arr (items : List Expr)
   /-- A zero-parameter arrow with an optional declared result type. -/
   | arrow (returnType : Option String) (body : Expr)

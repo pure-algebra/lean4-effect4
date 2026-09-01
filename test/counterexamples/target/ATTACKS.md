@@ -28,9 +28,21 @@
 - **FIXED-BY:** retained only as a compatibility arm; the later lowering image
   must exclude it or replace it with an admitted structured helper form.
 
+## E4-TARGET-CE-004 — quoted `__proto__` treated as ordinary object data
+
+- **BROKE:** quoting an object-literal key is sufficient to preserve every JSON
+  object entry.
+- **WITNESS:** a raw JSON object with the own key `__proto__`; JavaScript
+  object-literal semantics treat that spelling specially even when quoted.
+- **CLASS:** target semantic mismatch.
+- **FIXED-BY:** the JSON lowerer uses `Object.fromEntries` for this spelling,
+  and generation rejects duplicate object keys before either representation
+  can collapse them.
+
 ## Claim limit
 
 The first two witnesses establish exact local printer behavior. They do not
 establish TypeScript grammar validity, typing, Effect v4 compatibility, or
 source-target simulation. The third attack deliberately keeps those graph
-edges open.
+edges open. The fourth is also exercised by the direct TypeScript, Effect, and
+language-service harness, but does not close general source-target simulation.

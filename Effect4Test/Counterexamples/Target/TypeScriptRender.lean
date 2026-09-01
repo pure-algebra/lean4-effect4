@@ -1,7 +1,7 @@
-import Effect4.Target.TypeScript.Render
+import Effect4.Target.TypeScript.Schema
 
 /-!
-Executable witnesses for `E4-TARGET-CE-001` through `E4-TARGET-CE-003`.
+Executable witnesses for `E4-TARGET-CE-001` through `E4-TARGET-CE-004`.
 -/
 
 namespace Effect4Test.Counterexamples.Target.TypeScriptRender
@@ -24,5 +24,9 @@ def longField : List (String × Expr) :=
 def rawEscapeHatch : Decl := .raw "arbitrary host text"
 
 #guard Render.decl house0 rawEscapeHatch = "arbitrary host text\n"
+
+#guard Effect4.Target.TypeScript.Schema.jsonSource
+    (.obj [("__proto__", .str "data")]) =
+  "Object.fromEntries([[\"__proto__\", \"data\"]])"
 
 end Effect4Test.Counterexamples.Target.TypeScriptRender

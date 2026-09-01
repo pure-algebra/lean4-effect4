@@ -48,6 +48,30 @@ private def auditImplementationModules : List Name :=
   , `Effect4Test.Concurrency.FiberAssurance
   ]
 
+/--
+Non-semantic target rendering must traverse Lean `String` values. Lean's
+standard character folds currently carry `Classical.choice` through the proof
+backing UTF-8 decoding. The renderer exemption is exact-module; the Schema
+module receives no blanket exemption below.
+-/
+private def targetImplementationModules : List Name :=
+  [ `Effect4.Target.TypeScript.Render ]
+
+private def choiceImplementationModules : List Name :=
+  auditImplementationModules ++ targetImplementationModules
+
+/-- The only Schema declarations that cross from no-choice syntax generation
+to the string renderer. All recursive lowering and admission declarations in
+the same module retain the semantic/test ceiling. -/
+private def choiceImplementationDeclarations : List Name :=
+  [ ``Effect4.Target.TypeScript.Schema.jsonSource
+  , ``Effect4.Target.TypeScript.Schema.representationSource
+  , ``Effect4.Target.TypeScript.Schema.documentSource
+  , ``Effect4.Target.TypeScript.Schema.multiDocumentSource
+  , ``Effect4.Target.TypeScript.Schema.source?
+  , ``Effect4.Target.TypeScript.Schema.generate?
+  ]
+
 private def forbiddenAxioms : List Name :=
   [``sorryAx, ``Lean.ofReduceBool, ``Lean.ofReduceNat, ``Lean.trustCompiler]
 
@@ -140,7 +164,8 @@ elab "#effect4_axiom_gate" : command => do
   for declaration in declarations do
     let axioms ← collectAxioms declaration
     let bound :=
-      if (moduleOf? environment declaration).any auditImplementationModules.contains then
+      if (moduleOf? environment declaration).any choiceImplementationModules.contains ||
+          choiceImplementationDeclarations.contains declaration then
         auditImplementationAxioms
       else
         allowedAxioms
@@ -152,10 +177,10 @@ elab "#effect4_axiom_gate" : command => do
         throwError
           "Effect4 axiom gate: declaration {declaration} reaches unexpected axiom {axiomName}; allowed axioms are {bound}"
 
-  -- The exemption list must not outlive its reason. A module listed as audit
-  -- implementation that no longer reaches `Classical.choice` is a stale entry
-  -- and widens the trust boundary for nothing, so it fails the gate.
-  for exempted in auditImplementationModules do
+  -- The exemption list must not outlive its reason. A named implementation
+  -- module that no longer reaches `Classical.choice` is a stale entry and
+  -- widens the trust boundary for nothing, so it fails the gate.
+  for exempted in choiceImplementationModules do
     let mut used := false
     for declaration in declarations do
       if moduleOf? environment declaration == some exempted then
@@ -163,9 +188,17 @@ elab "#effect4_axiom_gate" : command => do
           used := true
     if !used then
       throwError
-        "Effect4 axiom gate: stale audit-implementation exemption for {exempted}; no declaration in it reaches Classical.choice, so remove it from auditImplementationModules"
+        "Effect4 axiom gate: stale implementation exemption for {exempted}; no declaration in it reaches Classical.choice, so remove it from choiceImplementationModules"
+
+  for exempted in choiceImplementationDeclarations do
+    if !(declarations.contains exempted) then
+      throwError
+        "Effect4 axiom gate: exact implementation exemption names missing declaration {exempted}"
+    if !(← collectAxioms exempted).contains ``Classical.choice then
+      throwError
+        "Effect4 axiom gate: stale exact implementation exemption for {exempted}; it no longer reaches Classical.choice"
 
   logInfo
-    m!"Effect4 module and axiom gate: checked {sources.size} modules and {declarations.size} declarations; semantic/test axioms are {allowedAxioms}; audit implementation ({auditImplementationModules.length} module(s)) additionally allows Classical.choice"
+    m!"Effect4 module and axiom gate: checked {sources.size} modules and {declarations.size} declarations; semantic/test axioms are {allowedAxioms}; exact implementation boundary ({choiceImplementationModules.length} module(s), {choiceImplementationDeclarations.length} declaration(s)) additionally allows Classical.choice"
 
 end Effect4Test.Audit

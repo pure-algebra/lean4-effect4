@@ -7,7 +7,7 @@ Implementation: `Effect4/Target/TypeScript/Expr.lean` and
 
 Lean battery: `Effect4Test/Target/TypeScript/ExprContract.lean`
 
-Counterexamples: `E4-TARGET-CE-001` through `E4-TARGET-CE-003`
+Counterexamples: `E4-TARGET-CE-001` through `E4-TARGET-CE-004`
 
 Proof graph: `docs/TYPESCRIPT-TARGET-DAG.md`
 
@@ -43,10 +43,22 @@ or the language service. Those are later `Type`, `Lower`, `Decode`,
 
 `Style` is a trivial passive record and does not receive its own proof graph.
 
+The renderer is an exact non-semantic target module permitted to
+reach `Classical.choice`: Lean's standard UTF-8 character fold carries that
+dependency in its proof implementation. The exemption is module-specific and
+stale-checked. Semantic Schema admission and predicate laws retain the tighter
+`propext`/`Quot.sound` ceiling, while exact emitted bytes are checked by Lean
+reductions and the independent host harness.
+
 ## Frozen port surface
 
-The retained expression constructors are `ident`, `str`, `int`, `bool`,
-`jsNull`, `call`, `object`, `objectML`, `arr`, and `arrow`, in that order.
+The retained expression constructors are `ident`, `str`, `int`, `float64Bits`,
+`bool`, `jsNull`, `call`, `object`, `objectML`, `objectQuoted`,
+`objectQuotedML`, `objectFromEntries`, `arr`, and
+`arrow`, in that order. The two additive constructors are consumer-driven by
+raw Schema generation: `float64Bits` preserves an exact binary64 datum without
+trusting lossy decimal formatting, while `objectQuoted` and `objectQuotedML`
+treat property names as data rather than target identifiers.
 Statements are `constYield` and `ret`; declarations are `const`, `prog`, and
 `raw`; imports are `all`, `named`, and `types`.
 
@@ -56,6 +68,10 @@ The printer retains these equations:
   backslash, newline, carriage return, and tab;
 - ordinary objects and arrays render inline exactly when all rendered children
   are newline-free;
+- quoted objects use the same sole string-escaping owner for every key;
+- entry-built objects retain their field list in syntax while rendering
+  through `Object.fromEntries`;
+- binary64 values reconstruct from eight big-endian bytes through `DataView`;
 - `objectML` always renders one field per line when nonempty;
 - arrows render their body at the current depth;
 - module headers render blank paragraph lines without trailing whitespace;

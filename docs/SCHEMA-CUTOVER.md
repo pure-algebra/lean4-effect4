@@ -502,6 +502,11 @@ totality
 Foldlab's existing `Described` corresponds only to the strongest service-free,
 lossless-equivalence class. It is not the native codec carrier.
 
+There is therefore no Effect4 `Described` instance at the raw-authoring or
+TypeScript-generation layer. Such an instance becomes meaningful only after a
+native denotation and both inverse laws close; until then, the existing
+`Representation`, `Document`, and `Codec` families remain the only carriers.
+
 ## Refusal and failure ownership
 
 The following are distinct and must not share a constructor merely because all
@@ -557,6 +562,10 @@ conditional and explicit:
 - `SCHEMA-PG-WIRE` owns duplicate-preserving raw data, decoding,
   canonicalization, and encoding. Finite host fixtures attach as receipts;
   they do not receive graphs.
+- `TS-PG-SCHEMA-DOCUMENT-GENERATION` owns the recursive bridge from those
+  existing raw carriers to checked TypeScript module generation and the exact
+  host harness. Higher-order predicate combinators and raw constructor helpers
+  attach equations to existing Schema graphs; they do not receive a graph.
 - A versioned profile identity is passive data and receives a leaf receipt.
   `Protocol.Admission` crosses the graph threshold when it classifies an
   unknown profile or an out-of-profile value.
@@ -614,6 +623,16 @@ SCHEMA-PG-DOCUMENT
   -> SC-DOC-05 retained complexity counterexample
   -> SC-DOC-06 productivity is not guardedness [OPEN]
   -> SC-DOC-07 canonical emission order for unions [OPEN]
+
+TS-PG-SCHEMA-DOCUMENT-GENERATION
+  -> recursive Json/Representation/Check/Document lowering
+  -> target binding and duplicate-key admission
+  -> exact TypeScript source fixture
+  -> direct TypeScript compiler
+  -> pinned Effect document revival
+  -> Effect language-service diagnostics
+  -> source-target denotational simulation [OPEN]
+  -> full 22-constructor differential coverage [OPEN]
 
 DATA-ROW-01 canonical row declaration and normalization
   -> DATA-ROW-02 row union associativity, commutativity, and idempotence

@@ -5,6 +5,7 @@ import Effect4Test.Flow.AdmissionContract
 import Effect4Test.Flow.DiagnosticPrecisionContract
 import Effect4Test.Flow.AxiomReport
 import Effect4Test.Schema.AxiomReport
+import Effect4Test.Schema.AuthoringContract
 import Effect4Test.Flow.PrivacyContract
 import Effect4Test.Concurrency.FiberRepresentativeContract
 import Effect4Test.Concurrency.FiberAssurance
@@ -30,6 +31,8 @@ import Effect4Test.Environment.ContextKeyContract
 import Effect4Test.Environment.AxiomReport
 import Effect4Test.Environment.ContextKeyAssurance
 import Effect4Test.Target.TypeScript.ExprContract
+import Effect4Test.Target.TypeScript.SchemaGenerationContract
+import Effect4Test.Target.TypeScript.SchemaGenerationAxiomReport
 import Effect4Test.Audit.AxiomGate
 
 /-!

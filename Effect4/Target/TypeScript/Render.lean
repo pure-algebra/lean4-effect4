@@ -41,6 +41,21 @@ def quoted (style : Style) (s : String) : String :=
   String.singleton style.quote ++ escapeString style s ++
     String.singleton style.quote
 
+/-- One byte of a 64-bit word, counted from the least-significant end. -/
+private def byteAt (bits : UInt64) (index : Nat) : Nat :=
+  bits.toNat / (256 ^ index) % 256
+
+/-- Reconstruct a JavaScript number from its exact binary64 bytes. `DataView`
+fixes big-endian byte order explicitly, so generated values do not depend on
+the host's typed-array endianness. -/
+def float64Bits (bits : UInt64) : String :=
+  let bytes := (List.range 8).reverse.map fun index => toString (byteAt bits index)
+  "new DataView(Uint8Array.of(" ++ String.intercalate ", " bytes ++
+    ").buffer).getFloat64(0, false)"
+
+private def containsNewline (value : String) : Bool :=
+  value.toUTF8.toList.contains 10
+
 mutual
 
 /-- Fixed-layout rendering. Ordinary objects and arrays stay inline exactly
@@ -50,6 +65,7 @@ def expr (style : Style) (depth : Nat) : Expr → String
   | .ident name => name
   | .str value => quoted style value
   | .int value => toString value
+  | .float64Bits bits => float64Bits bits
   | .bool value => if value then "true" else "false"
   | .jsNull => "null"
   | .call fn args => expr style depth fn ++ "(" ++
@@ -58,7 +74,7 @@ def expr (style : Style) (depth : Nat) : Expr → String
     if fields.isEmpty then "{}"
     else
       let rendered := objectFields style (depth + 1) fields
-      if rendered.all (fun field => !field.2.any (· == '\n')) then
+      if rendered.all (fun field => !containsNewline field.2) then
         "{ " ++
           String.intercalate ", "
             (rendered.map fun (name, value) => name ++ ": " ++ value) ++
@@ -77,11 +93,39 @@ def expr (style : Style) (depth : Nat) : Expr → String
           ((objectFields style (depth + 1) fields).map fun (name, value) =>
             indentOf style (depth + 1) ++ name ++ ": " ++ value ++ ",") ++
         "\n" ++ indentOf style depth ++ "}"
+  | .objectQuoted fields =>
+    if fields.isEmpty then "{}"
+    else
+      let rendered := objectFields style (depth + 1) fields
+      if rendered.all (fun field => !containsNewline field.2) then
+        "{ " ++
+          String.intercalate ", "
+            (rendered.map fun (name, value) => quoted style name ++ ": " ++ value) ++
+          " }"
+      else
+        "{\n" ++
+          String.intercalate "\n"
+            (rendered.map fun (name, value) =>
+              indentOf style (depth + 1) ++ quoted style name ++ ": " ++ value ++ ",") ++
+          "\n" ++ indentOf style depth ++ "}"
+  | .objectQuotedML fields =>
+    if fields.isEmpty then "{}"
+    else
+      "{\n" ++
+        String.intercalate "\n"
+          ((objectFields style (depth + 1) fields).map fun (name, value) =>
+            indentOf style (depth + 1) ++ quoted style name ++ ": " ++ value ++ ",") ++
+        "\n" ++ indentOf style depth ++ "}"
+  | .objectFromEntries fields =>
+      "Object.fromEntries([" ++
+        String.intercalate ", "
+          ((objectFields style depth fields).map fun (name, value) =>
+            "[" ++ quoted style name ++ ", " ++ value ++ "]") ++ "])"
   | .arr items =>
     if items.isEmpty then "[]"
     else
       let rendered := exprs style (depth + 1) items
-      if rendered.all (fun item => !item.any (· == '\n')) then
+      if rendered.all (fun item => !containsNewline item) then
         "[" ++ String.intercalate ", " rendered ++ "]"
       else
         "[\n" ++

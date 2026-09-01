@@ -6,6 +6,11 @@ The graph-bearing owner is `TS-PG-RETAINED-RENDER`. The passive `Style` record
 uses the attached `TS-LEAF-STYLE` receipt and has no ceremonial graph of its
 own.
 
+`TS-PG-SCHEMA-DOCUMENT-GENERATION` is the first consumer bridge. It owns the
+recursive lowering from the existing Schema carriers, checked generation,
+the exact generated fixture, and the direct TypeScript/Effect/language-service
+harness. It does not close the broader effect-program lowering graph.
+
 ```text
 TS-SOURCE-PIN --> TS-SYNTAX --> TS-RENDER
                                   |   \
@@ -22,7 +27,7 @@ TS-SOURCE-PIN --> TS-SYNTAX --> TS-RENDER
 | Edge | State | Evidence or remaining work |
 | --- | --- | --- |
 | identity | `required-closed` | one pinned Foldlab source digest, Effect4 namespace, and the exact type rows in the owning contract and `PORT-MANIFEST.md` |
-| construction | `required-closed` | exact constructor and projection signatures plus the default `Expr` receipt in `ExprContract.lean` |
+| construction | `required-closed` | exact constructor and projection signatures plus the default `Expr` receipt in `ExprContract.lean`; the Schema-driven `float64Bits` and `objectQuoted` additions have exact rendering guards |
 | semantics | `not-applicable` | this packet claims target syntax and bytes, not an Effect4 denotation |
 | laws | `required-closed` | the retained recursive printer equations elaborate and the representative reductions are kernel checked |
 | representation | `required-closed` | syntax and rendering are separate modules; `Style` is the attached passive leaf; rendering accepts only the retained syntax values |
@@ -34,3 +39,15 @@ TS-SOURCE-PIN --> TS-SYNTAX --> TS-RENDER
 
 The port is usable as a target-syntax library now. It is not approved as the
 full generated Effect TypeScript cutover while any required edge remains open.
+
+## Schema document generation subgraph
+
+| Edge | State | Evidence or remaining work |
+| --- | --- | --- |
+| construction | `required-closed` | `SchemaGenerationContract.lean` checks the existing-carrier signatures and exact generated source |
+| laws | `required-closed` | recursive lowering and admission definitions elaborate under the kernel dependency report |
+| counterexamples | `required-closed` | illegal names, binding collisions, duplicate JSON keys, exact signed-zero reconstruction, and the `__proto__` object-literal hazard are executable guards |
+| bridges | `required-open` | source-target denotational simulation is not yet proved |
+| targets | `required-closed` | `check-schema-typescript-generation.sh` byte-compares Lean generation, runs the unpatched TypeScript compiler, revives with `effect@4.0.0-rc.112`, and runs `@effect/tsgo@0.38.0` language-service diagnostics |
+| trust | `required-closed` | `SchemaGenerationAxiomReport.lean` plus the repository-wide axiom gate |
+| coverage | `required-open` | one representative document is not the full 22-constructor host differential corpus |

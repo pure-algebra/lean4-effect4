@@ -31,6 +31,7 @@ import Effect4.Schema.Payload
 import Effect4.Schema.Representation
 import Effect4.Schema.Document
 import Effect4.Schema.Check
+import Effect4.Schema.Authoring
 import Effect4.Schema.Value
 import Effect4.Schema.Getter
 import Effect4.Schema.Transformation
@@ -86,6 +87,7 @@ import Effect4.Target.TypeScript.Expr
 import Effect4.Target.TypeScript.EffectV4
 import Effect4.Target.TypeScript.Lower
 import Effect4.Target.TypeScript.Render
+import Effect4.Target.TypeScript.Schema
 import Effect4.Target.TypeScript.Decode
 import Effect4.Target.TypeScript.Simulation
 import Effect4.Meta.Registry

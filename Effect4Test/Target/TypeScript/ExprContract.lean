@@ -14,11 +14,15 @@ open Effect4.Target.TypeScript
 #check (@Expr.ident : String → Expr)
 #check (@Expr.str : String → Expr)
 #check (@Expr.int : Int → Expr)
+#check (@Expr.float64Bits : UInt64 → Expr)
 #check (@Expr.bool : Bool → Expr)
 #check (Expr.jsNull : Expr)
 #check (@Expr.call : Expr → List Expr → Expr)
 #check (@Expr.object : List (String × Expr) → Expr)
 #check (@Expr.objectML : List (String × Expr) → Expr)
+#check (@Expr.objectQuoted : List (String × Expr) → Expr)
+#check (@Expr.objectQuotedML : List (String × Expr) → Expr)
+#check (@Expr.objectFromEntries : List (String × Expr) → Expr)
 #check (@Expr.arr : List Expr → Expr)
 #check (@Expr.arrow : Option String → Expr → Expr)
 #synth Inhabited Expr
@@ -54,6 +58,18 @@ open Effect4.Target.TypeScript
 
 #guard Render.quoted house0 "quote\" slash\\ line\nreturn\rtab\t café" =
   "\"quote\\\" slash\\\\ line\\nreturn\\rtab\\t café\""
+
+#guard Render.expr house0 0 (.float64Bits 0x3ff0000000000000) =
+  "new DataView(Uint8Array.of(63, 240, 0, 0, 0, 0, 0, 0).buffer).getFloat64(0, false)"
+
+#guard Render.expr house0 0 (.objectQuoted [("not an identifier", .str "value")]) =
+  "{ \"not an identifier\": \"value\" }"
+
+#guard Render.expr house0 0 (.objectQuotedML [("not an identifier", .str "value")]) =
+  "{\n  \"not an identifier\": \"value\",\n}"
+
+#guard Render.expr house0 0 (.objectFromEntries [("__proto__", .str "value")]) =
+  "Object.fromEntries([[\"__proto__\", \"value\"]])"
 
 private def longValue : String :=
   "this field deliberately exceeds any conventional formatter width"
