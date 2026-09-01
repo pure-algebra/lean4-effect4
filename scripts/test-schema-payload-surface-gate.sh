@@ -93,6 +93,11 @@ expect_surface_reject \
   'public type census: unexpected'
 
 expect_surface_reject \
+  duplicate-public-type-definition \
+  "$fixture_root/DuplicatePublicDef.lean" \
+  'public type census: unexpected'
+
+expect_surface_reject \
   d7-judgment-owner-drift \
   "$fixture_root/D7JudgmentOwnerDrift.lean" \
   'Effect4.PayloadSurfaceMutation.FieldAdmissible'
@@ -167,7 +172,7 @@ grep -Fq 'rejects source override variable' "$tmp_root/env-override.log" || {
 printf 'PASS production source is not environment-overridable\n'
 
 printf 'PASS schema payload surface checker kills exactly 4/4 specified shape mutants\n'
-printf 'PASS payload public-type census kills 1/1 duplicate carrier/alias mutant\n'
+printf 'PASS payload public-type census kills 2/2 alias/ordinary-definition mutants\n'
 printf 'PASS D7 owner checker kills 4/4 judgment/Boolean/reflection/equation drift mutants\n'
 printf 'PASS payload import-boundary checker kills 1/1 declaration-free module mutant\n'
 printf 'PASS production gate enforces 2/2 source-override refusals\n'

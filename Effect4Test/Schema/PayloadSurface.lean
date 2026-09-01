@@ -86,16 +86,13 @@ private def isPublicTypeDeclaration (expected : List Name)
     (name : Name) (info : ConstantInfo) : MetaM Bool := do
   if name.isInternal then
     return false
+  if isGeneratedTypeCompanion expected name then
+    return false
   match info with
   | .inductInfo _ => return true
-  | .defnInfo definition =>
-      match definition.hints with
-      | .abbrev =>
-          if isGeneratedTypeCompanion expected name then
-            return false
-          forallTelescopeReducing info.type fun _ result => do
-            return (← whnf result).isSort
-      | _ => return false
+  | .defnInfo _ | .opaqueInfo _ | .axiomInfo _ =>
+      forallTelescopeReducing info.type fun _ result => do
+        return (← whnf result).isSort
   | _ => return false
 
 private def checkPublicTypeSurface (namePrefix : Name) (expected : List Name) : MetaM Unit := do
