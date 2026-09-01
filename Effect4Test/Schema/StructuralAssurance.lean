@@ -12,8 +12,9 @@ Every theorem in that census is checked against the repository axiom ceiling
 and emitted with its actual kernel dependencies.
 
 The generated projection, rather than an authored Boolean, decides which
-cutover edges have enough joined evidence to close.  In particular, this file
-does not close the still-open general recursor part of `SC-REP-03`.
+cutover edges have enough joined evidence to close. The general recursor part
+of `SC-REP-03` is included in the exhaustive declaration and axiom census; its
+fixed contract battery and retained route attack are joined by the generator.
 -/
 
 open Lean Meta Elab Command
@@ -110,6 +111,13 @@ private def sameNameSet (actual expected : List Name) : Bool :=
 
 private def allowedAxioms : List Name := [`propext, `Quot.sound]
 
+private def axiomFreeRecursorDeclarations : List Name :=
+  [ `Effect4.Representation.FoldAlgebra
+  , `Effect4.Representation.fold
+  , `Effect4.Check.fold
+  , `Effect4.Representation.FoldAlgebra.rebuild
+  ]
+
 private def theoremNamesOwnedBy (environment : Environment) (owner : Name) : List Name :=
   (declarationsOwnedBy environment owner).filter fun name =>
     match environment.find? name with
@@ -140,6 +148,12 @@ private def checkStructuralAssurance : CommandElabM Unit := do
   for (name, defect) in forbiddenDuplicateDeclarations do
     if environment.contains name then
       failJoin m!"forbidden {defect} declaration is present: {name}"
+  for name in axiomFreeRecursorDeclarations do
+    unless environment.contains name do
+      failJoin m!"required recursor declaration is absent: {name}"
+    let actual := (← collectAxioms name).toList
+    unless actual.isEmpty do
+      failJoin m!"recursor declaration {name} is not axiom-free: {actual}"
 
 private def emitStructuralAssurance : CommandElabM Unit := do
   checkStructuralAssurance

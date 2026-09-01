@@ -487,6 +487,7 @@ theorem mem_census (kind : PropertyKeyKind) : kind ∈ census := by
 
 end PropertyKeyKind
 
+
 end Effect4
 
 /-!
@@ -1233,5 +1234,861 @@ theorem Representation.absent_ne_empty_annotations :
   intro equal
   injection equal with annotationsEqual _
   exact absurd annotationsEqual (by simp)
+
+/-!
+## General structural elimination
+
+The persisted Schema carrier is a mutually recursive family: representations
+contain checks, and checks may contain representations in their representation
+annotations. The two-sorted algebra below exposes one reusable, pure fold over
+that existing family without introducing a second syntax tree.
+
+Every recursive route is substituted before its handler runs. The public
+constructor equations state that route contract with ordinary `List.map` and
+`Option.map`; private helper recursions are not part of the API. The rebuild
+algebra and its identity theorems show that the fold retains the complete raw
+structure. These are structural laws only, not Schema denotation.
+-/
+
+structure Representation.FoldAlgebra (ρ κ : Type) where
+  declaration : RepresentationAnnotation → Annotations → List ρ → List κ → ρ
+  reference : ReferenceKey → ρ
+  suspend : Annotations → List κ → ρ → ρ
+  null : Annotations → List κ → ρ
+  undefined : Annotations → List κ → ρ
+  void : Annotations → List κ → ρ
+  never : Annotations → List κ → ρ
+  unknown : Annotations → List κ → ρ
+  any : Annotations → List κ → ρ
+  string : Annotations → List κ → ρ
+  number : Annotations → List κ → ρ
+  boolean : Annotations → List κ → ρ
+  bigint : Annotations → List κ → ρ
+  symbol : Annotations → List κ → ρ
+  literal : Annotations → List κ → LiteralValue → ρ
+  uniqueSymbol : Annotations → List κ → GlobalSymbolKey → ρ
+  objectKeyword : Annotations → List κ → ρ
+  enum : Annotations → List κ → List EnumEntry → ρ
+  templateLiteral : Annotations → List κ → List ρ → ρ
+  arrays : Annotations → List κ → List (ElementOf ρ) → List ρ → ρ
+  objects : Annotations → List κ → List (PropertySignatureOf ρ) →
+    List (IndexSignatureOf ρ) → ρ
+  union : Annotations → List κ → List ρ → UnionMode → ρ
+  filter : CheckRepresentationAnnotationOf ρ → Annotations → Bool → κ
+  filterGroup : Option (CheckRepresentationAnnotationOf ρ) →
+    Annotations → List κ → κ
+
+mutual
+
+def Representation.fold (algebra : Representation.FoldAlgebra ρ κ)
+    (representation : Representation) : ρ :=
+  match representation with
+  | .declaration representation annotations typeParameters checks =>
+      algebra.declaration representation annotations
+        (Representation.foldList algebra typeParameters)
+        (Check.foldList algebra checks)
+  | .reference ref => algebra.reference ref
+  | .suspend annotations checks thunk =>
+      algebra.suspend annotations (Check.foldList algebra checks)
+        (Representation.fold algebra thunk)
+  | .null annotations checks => algebra.null annotations (Check.foldList algebra checks)
+  | .undefined annotations checks =>
+      algebra.undefined annotations (Check.foldList algebra checks)
+  | .void annotations checks => algebra.void annotations (Check.foldList algebra checks)
+  | .never annotations checks => algebra.never annotations (Check.foldList algebra checks)
+  | .unknown annotations checks =>
+      algebra.unknown annotations (Check.foldList algebra checks)
+  | .any annotations checks => algebra.any annotations (Check.foldList algebra checks)
+  | .string annotations checks => algebra.string annotations (Check.foldList algebra checks)
+  | .number annotations checks => algebra.number annotations (Check.foldList algebra checks)
+  | .boolean annotations checks =>
+      algebra.boolean annotations (Check.foldList algebra checks)
+  | .bigint annotations checks => algebra.bigint annotations (Check.foldList algebra checks)
+  | .symbol annotations checks => algebra.symbol annotations (Check.foldList algebra checks)
+  | .literal annotations checks literal =>
+      algebra.literal annotations (Check.foldList algebra checks) literal
+  | .uniqueSymbol annotations checks symbol =>
+      algebra.uniqueSymbol annotations (Check.foldList algebra checks) symbol
+  | .objectKeyword annotations checks =>
+      algebra.objectKeyword annotations (Check.foldList algebra checks)
+  | .enum annotations checks enums =>
+      algebra.enum annotations (Check.foldList algebra checks) enums
+  | .templateLiteral annotations checks parts =>
+      algebra.templateLiteral annotations (Check.foldList algebra checks)
+        (Representation.foldList algebra parts)
+  | .arrays annotations checks elements rest =>
+      algebra.arrays annotations (Check.foldList algebra checks)
+        (Representation.foldElements algebra elements)
+        (Representation.foldList algebra rest)
+  | .objects annotations checks propertySignatures indexSignatures =>
+      algebra.objects annotations (Check.foldList algebra checks)
+        (Representation.foldProperties algebra propertySignatures)
+        (Representation.foldIndexes algebra indexSignatures)
+  | .union annotations checks types mode =>
+      algebra.union annotations (Check.foldList algebra checks)
+        (Representation.foldList algebra types) mode
+termination_by structural representation
+
+def Check.fold (algebra : Representation.FoldAlgebra ρ κ) (check : Check) : κ :=
+  match check with
+  | .filter representation annotations aborted =>
+      algebra.filter (Representation.foldCheckAnnotation algebra representation)
+        annotations aborted
+  | .filterGroup representation annotations checks =>
+      algebra.filterGroup
+        (Representation.foldCheckAnnotationOption algebra representation)
+        annotations (Check.foldList algebra checks)
+termination_by structural check
+
+private def Representation.foldList (algebra : Representation.FoldAlgebra ρ κ)
+    (representations : List Representation) : List ρ :=
+  match representations with
+  | [] => []
+  | head :: tail => Representation.fold algebra head ::
+      Representation.foldList algebra tail
+termination_by structural representations
+
+private def Check.foldList (algebra : Representation.FoldAlgebra ρ κ)
+    (checks : List Check) : List κ :=
+  match checks with
+  | [] => []
+  | head :: tail => Check.fold algebra head :: Check.foldList algebra tail
+termination_by structural checks
+
+private def Representation.foldElements
+    (algebra : Representation.FoldAlgebra ρ κ)
+    (elements : List (ElementOf Representation)) : List (ElementOf ρ) :=
+  match elements with
+  | [] => []
+  | element :: tail =>
+      { isOptional := element.isOptional
+        type := Representation.fold algebra element.type
+        annotations := element.annotations } ::
+      Representation.foldElements algebra tail
+termination_by structural elements
+
+private def Representation.foldProperties
+    (algebra : Representation.FoldAlgebra ρ κ)
+    (properties : List (PropertySignatureOf Representation)) :
+      List (PropertySignatureOf ρ) :=
+  match properties with
+  | [] => []
+  | property :: tail =>
+      { name := property.name
+        type := Representation.fold algebra property.type
+        isOptional := property.isOptional
+        isMutable := property.isMutable
+        annotations := property.annotations } ::
+      Representation.foldProperties algebra tail
+termination_by structural properties
+
+private def Representation.foldIndexes
+    (algebra : Representation.FoldAlgebra ρ κ)
+    (indexes : List (IndexSignatureOf Representation)) :
+      List (IndexSignatureOf ρ) :=
+  match indexes with
+  | [] => []
+  | index :: tail =>
+      { parameter := Representation.fold algebra index.parameter
+        type := Representation.fold algebra index.type } ::
+      Representation.foldIndexes algebra tail
+termination_by structural indexes
+
+private def Representation.foldSchemas
+    (algebra : Representation.FoldAlgebra ρ κ)
+    (schemas : Option (List Representation)) : Option (List ρ) :=
+  match schemas with
+  | none => none
+  | some schemas => some (Representation.foldList algebra schemas)
+termination_by structural schemas
+
+private def Representation.foldCheckAnnotation
+    (algebra : Representation.FoldAlgebra ρ κ)
+    (annotation : CheckRepresentationAnnotationOf Representation) :
+    CheckRepresentationAnnotationOf ρ :=
+  { id := annotation.id
+    payload := annotation.payload
+    schemas := Representation.foldSchemas algebra annotation.schemas }
+termination_by structural annotation
+
+private def Representation.foldCheckAnnotationOption
+    (algebra : Representation.FoldAlgebra ρ κ)
+    (annotation : Option (CheckRepresentationAnnotationOf Representation)) :
+      Option (CheckRepresentationAnnotationOf ρ) :=
+  match annotation with
+  | none => none
+  | some annotation => some (Representation.foldCheckAnnotation algebra annotation)
+termination_by structural annotation
+
+end
+
+private theorem Representation.foldList_eq_map
+    (algebra : Representation.FoldAlgebra ρ κ)
+    (representations : List Representation) :
+    Representation.foldList algebra representations =
+      representations.map (Representation.fold algebra) := by
+  cases representations with
+  | nil => rfl
+  | cons head tail =>
+      change Representation.fold algebra head ::
+          Representation.foldList algebra tail =
+        Representation.fold algebra head ::
+          tail.map (Representation.fold algebra)
+      rw [Representation.foldList_eq_map algebra tail]
+
+private theorem Check.foldList_eq_map
+    (algebra : Representation.FoldAlgebra ρ κ) (checks : List Check) :
+    Check.foldList algebra checks = checks.map (Check.fold algebra) := by
+  cases checks with
+  | nil => rfl
+  | cons head tail =>
+      change Check.fold algebra head :: Check.foldList algebra tail =
+        Check.fold algebra head :: tail.map (Check.fold algebra)
+      rw [Check.foldList_eq_map algebra tail]
+
+private theorem Representation.foldElements_eq_map
+    (algebra : Representation.FoldAlgebra ρ κ)
+    (elements : List (ElementOf Representation)) :
+    Representation.foldElements algebra elements =
+      elements.map fun element =>
+        { isOptional := element.isOptional
+          type := Representation.fold algebra element.type
+          annotations := element.annotations } := by
+  cases elements with
+  | nil => rfl
+  | cons head tail =>
+      cases head with
+      | mk isOptional type annotations =>
+          change ElementOf.mk isOptional (Representation.fold algebra type)
+              annotations :: Representation.foldElements algebra tail =
+            ElementOf.mk isOptional (Representation.fold algebra type)
+              annotations :: tail.map _
+          rw [Representation.foldElements_eq_map algebra tail]
+
+private theorem Representation.foldProperties_eq_map
+    (algebra : Representation.FoldAlgebra ρ κ)
+    (properties : List (PropertySignatureOf Representation)) :
+    Representation.foldProperties algebra properties =
+      properties.map fun property =>
+        { name := property.name
+          type := Representation.fold algebra property.type
+          isOptional := property.isOptional
+          isMutable := property.isMutable
+          annotations := property.annotations } := by
+  cases properties with
+  | nil => rfl
+  | cons head tail =>
+      cases head with
+      | mk name type isOptional isMutable annotations =>
+          change PropertySignatureOf.mk name (Representation.fold algebra type)
+              isOptional isMutable annotations ::
+                Representation.foldProperties algebra tail =
+            PropertySignatureOf.mk name (Representation.fold algebra type)
+              isOptional isMutable annotations :: tail.map _
+          rw [Representation.foldProperties_eq_map algebra tail]
+
+private theorem Representation.foldIndexes_eq_map
+    (algebra : Representation.FoldAlgebra ρ κ)
+    (indexes : List (IndexSignatureOf Representation)) :
+    Representation.foldIndexes algebra indexes =
+      indexes.map fun index =>
+        { parameter := Representation.fold algebra index.parameter
+          type := Representation.fold algebra index.type } := by
+  cases indexes with
+  | nil => rfl
+  | cons head tail =>
+      cases head with
+      | mk parameter type =>
+          change IndexSignatureOf.mk (Representation.fold algebra parameter)
+              (Representation.fold algebra type) ::
+                Representation.foldIndexes algebra tail =
+            IndexSignatureOf.mk (Representation.fold algebra parameter)
+              (Representation.fold algebra type) :: tail.map _
+          rw [Representation.foldIndexes_eq_map algebra tail]
+
+private theorem Representation.foldSchemas_eq_map
+    (algebra : Representation.FoldAlgebra ρ κ)
+    (schemas : Option (List Representation)) :
+    Representation.foldSchemas algebra schemas =
+      schemas.map (List.map (Representation.fold algebra)) := by
+  cases schemas with
+  | none => rfl
+  | some schemas =>
+      change some (Representation.foldList algebra schemas) =
+        some (schemas.map (Representation.fold algebra))
+      rw [Representation.foldList_eq_map algebra schemas]
+
+private theorem Representation.foldCheckAnnotation_eq_map
+    (algebra : Representation.FoldAlgebra ρ κ)
+    (annotation : CheckRepresentationAnnotationOf Representation) :
+    Representation.foldCheckAnnotation algebra annotation =
+      { id := annotation.id
+        payload := annotation.payload
+        schemas := annotation.schemas.map
+          (List.map (Representation.fold algebra)) } := by
+  cases annotation with
+  | mk id payload schemas =>
+      change CheckRepresentationAnnotationOf.mk id payload
+          (Representation.foldSchemas algebra schemas) =
+        CheckRepresentationAnnotationOf.mk id payload
+          (schemas.map (List.map (Representation.fold algebra)))
+      rw [Representation.foldSchemas_eq_map algebra schemas]
+
+private theorem Representation.foldCheckAnnotationOption_eq_map
+    (algebra : Representation.FoldAlgebra ρ κ)
+    (annotation : Option (CheckRepresentationAnnotationOf Representation)) :
+    Representation.foldCheckAnnotationOption algebra annotation =
+      annotation.map fun value =>
+        { id := value.id
+          payload := value.payload
+          schemas := value.schemas.map
+            (List.map (Representation.fold algebra)) } := by
+  cases annotation with
+  | none => rfl
+  | some annotation =>
+      change some (Representation.foldCheckAnnotation algebra annotation) = some _
+      rw [Representation.foldCheckAnnotation_eq_map algebra annotation]
+
+@[simp] theorem Representation.fold_declaration
+    (algebra : Representation.FoldAlgebra ρ κ)
+    (representation : RepresentationAnnotation) (annotations : Annotations)
+    (typeParameters : List Representation) (checks : List Check) :
+    Representation.fold algebra
+        (.declaration representation annotations typeParameters checks) =
+      algebra.declaration representation annotations
+        (typeParameters.map (Representation.fold algebra))
+        (checks.map (Check.fold algebra)) := by
+  change algebra.declaration representation annotations
+      (Representation.foldList algebra typeParameters)
+      (Check.foldList algebra checks) = _
+  rw [Representation.foldList_eq_map algebra typeParameters,
+    Check.foldList_eq_map algebra checks]
+
+@[simp] theorem Representation.fold_reference
+    (algebra : Representation.FoldAlgebra ρ κ) (ref : ReferenceKey) :
+    Representation.fold algebra (.reference ref) = algebra.reference ref := rfl
+
+@[simp] theorem Representation.fold_suspend
+    (algebra : Representation.FoldAlgebra ρ κ) (annotations : Annotations)
+    (checks : List Check) (thunk : Representation) :
+    Representation.fold algebra (.suspend annotations checks thunk) =
+      algebra.suspend annotations (checks.map (Check.fold algebra))
+        (Representation.fold algebra thunk) := by
+  change algebra.suspend annotations (Check.foldList algebra checks)
+      (Representation.fold algebra thunk) = _
+  rw [Check.foldList_eq_map algebra checks]
+
+@[simp] theorem Representation.fold_null
+    (algebra : Representation.FoldAlgebra ρ κ) (annotations : Annotations)
+    (checks : List Check) :
+    Representation.fold algebra (.null annotations checks) =
+      algebra.null annotations (checks.map (Check.fold algebra)) := by
+  change algebra.null annotations (Check.foldList algebra checks) = _
+  rw [Check.foldList_eq_map algebra checks]
+
+@[simp] theorem Representation.fold_undefined
+    (algebra : Representation.FoldAlgebra ρ κ) (annotations : Annotations)
+    (checks : List Check) :
+    Representation.fold algebra (.undefined annotations checks) =
+      algebra.undefined annotations (checks.map (Check.fold algebra)) := by
+  change algebra.undefined annotations (Check.foldList algebra checks) = _
+  rw [Check.foldList_eq_map algebra checks]
+
+@[simp] theorem Representation.fold_void
+    (algebra : Representation.FoldAlgebra ρ κ) (annotations : Annotations)
+    (checks : List Check) :
+    Representation.fold algebra (.void annotations checks) =
+      algebra.void annotations (checks.map (Check.fold algebra)) := by
+  change algebra.void annotations (Check.foldList algebra checks) = _
+  rw [Check.foldList_eq_map algebra checks]
+
+@[simp] theorem Representation.fold_never
+    (algebra : Representation.FoldAlgebra ρ κ) (annotations : Annotations)
+    (checks : List Check) :
+    Representation.fold algebra (.never annotations checks) =
+      algebra.never annotations (checks.map (Check.fold algebra)) := by
+  change algebra.never annotations (Check.foldList algebra checks) = _
+  rw [Check.foldList_eq_map algebra checks]
+
+@[simp] theorem Representation.fold_unknown
+    (algebra : Representation.FoldAlgebra ρ κ) (annotations : Annotations)
+    (checks : List Check) :
+    Representation.fold algebra (.unknown annotations checks) =
+      algebra.unknown annotations (checks.map (Check.fold algebra)) := by
+  change algebra.unknown annotations (Check.foldList algebra checks) = _
+  rw [Check.foldList_eq_map algebra checks]
+
+@[simp] theorem Representation.fold_any
+    (algebra : Representation.FoldAlgebra ρ κ) (annotations : Annotations)
+    (checks : List Check) :
+    Representation.fold algebra (.any annotations checks) =
+      algebra.any annotations (checks.map (Check.fold algebra)) := by
+  change algebra.any annotations (Check.foldList algebra checks) = _
+  rw [Check.foldList_eq_map algebra checks]
+
+@[simp] theorem Representation.fold_string
+    (algebra : Representation.FoldAlgebra ρ κ) (annotations : Annotations)
+    (checks : List Check) :
+    Representation.fold algebra (.string annotations checks) =
+      algebra.string annotations (checks.map (Check.fold algebra)) := by
+  change algebra.string annotations (Check.foldList algebra checks) = _
+  rw [Check.foldList_eq_map algebra checks]
+
+@[simp] theorem Representation.fold_number
+    (algebra : Representation.FoldAlgebra ρ κ) (annotations : Annotations)
+    (checks : List Check) :
+    Representation.fold algebra (.number annotations checks) =
+      algebra.number annotations (checks.map (Check.fold algebra)) := by
+  change algebra.number annotations (Check.foldList algebra checks) = _
+  rw [Check.foldList_eq_map algebra checks]
+
+@[simp] theorem Representation.fold_boolean
+    (algebra : Representation.FoldAlgebra ρ κ) (annotations : Annotations)
+    (checks : List Check) :
+    Representation.fold algebra (.boolean annotations checks) =
+      algebra.boolean annotations (checks.map (Check.fold algebra)) := by
+  change algebra.boolean annotations (Check.foldList algebra checks) = _
+  rw [Check.foldList_eq_map algebra checks]
+
+@[simp] theorem Representation.fold_bigint
+    (algebra : Representation.FoldAlgebra ρ κ) (annotations : Annotations)
+    (checks : List Check) :
+    Representation.fold algebra (.bigint annotations checks) =
+      algebra.bigint annotations (checks.map (Check.fold algebra)) := by
+  change algebra.bigint annotations (Check.foldList algebra checks) = _
+  rw [Check.foldList_eq_map algebra checks]
+
+@[simp] theorem Representation.fold_symbol
+    (algebra : Representation.FoldAlgebra ρ κ) (annotations : Annotations)
+    (checks : List Check) :
+    Representation.fold algebra (.symbol annotations checks) =
+      algebra.symbol annotations (checks.map (Check.fold algebra)) := by
+  change algebra.symbol annotations (Check.foldList algebra checks) = _
+  rw [Check.foldList_eq_map algebra checks]
+
+@[simp] theorem Representation.fold_literal
+    (algebra : Representation.FoldAlgebra ρ κ) (annotations : Annotations)
+    (checks : List Check) (value : LiteralValue) :
+    Representation.fold algebra (.literal annotations checks value) =
+      algebra.literal annotations (checks.map (Check.fold algebra)) value := by
+  change algebra.literal annotations (Check.foldList algebra checks) value = _
+  rw [Check.foldList_eq_map algebra checks]
+
+@[simp] theorem Representation.fold_uniqueSymbol
+    (algebra : Representation.FoldAlgebra ρ κ) (annotations : Annotations)
+    (checks : List Check) (key : GlobalSymbolKey) :
+    Representation.fold algebra (.uniqueSymbol annotations checks key) =
+      algebra.uniqueSymbol annotations (checks.map (Check.fold algebra)) key := by
+  change algebra.uniqueSymbol annotations (Check.foldList algebra checks) key = _
+  rw [Check.foldList_eq_map algebra checks]
+
+@[simp] theorem Representation.fold_objectKeyword
+    (algebra : Representation.FoldAlgebra ρ κ) (annotations : Annotations)
+    (checks : List Check) :
+    Representation.fold algebra (.objectKeyword annotations checks) =
+      algebra.objectKeyword annotations (checks.map (Check.fold algebra)) := by
+  change algebra.objectKeyword annotations (Check.foldList algebra checks) = _
+  rw [Check.foldList_eq_map algebra checks]
+
+@[simp] theorem Representation.fold_enum
+    (algebra : Representation.FoldAlgebra ρ κ) (annotations : Annotations)
+    (checks : List Check) (entries : List EnumEntry) :
+    Representation.fold algebra (.enum annotations checks entries) =
+      algebra.enum annotations (checks.map (Check.fold algebra)) entries := by
+  change algebra.enum annotations (Check.foldList algebra checks) entries = _
+  rw [Check.foldList_eq_map algebra checks]
+
+@[simp] theorem Representation.fold_templateLiteral
+    (algebra : Representation.FoldAlgebra ρ κ) (annotations : Annotations)
+    (checks : List Check) (parts : List Representation) :
+    Representation.fold algebra (.templateLiteral annotations checks parts) =
+      algebra.templateLiteral annotations (checks.map (Check.fold algebra))
+        (parts.map (Representation.fold algebra)) := by
+  change algebra.templateLiteral annotations (Check.foldList algebra checks)
+      (Representation.foldList algebra parts) = _
+  rw [Check.foldList_eq_map algebra checks,
+    Representation.foldList_eq_map algebra parts]
+
+@[simp] theorem Representation.fold_arrays
+    (algebra : Representation.FoldAlgebra ρ κ) (annotations : Annotations)
+    (checks : List Check) (elements : List (ElementOf Representation))
+    (rest : List Representation) :
+    Representation.fold algebra (.arrays annotations checks elements rest) =
+      algebra.arrays annotations (checks.map (Check.fold algebra))
+        (elements.map fun element =>
+          { isOptional := element.isOptional
+            type := Representation.fold algebra element.type
+            annotations := element.annotations })
+        (rest.map (Representation.fold algebra)) := by
+  change algebra.arrays annotations (Check.foldList algebra checks)
+      (Representation.foldElements algebra elements)
+      (Representation.foldList algebra rest) = _
+  rw [Check.foldList_eq_map algebra checks,
+    Representation.foldElements_eq_map algebra elements,
+    Representation.foldList_eq_map algebra rest]
+
+@[simp] theorem Representation.fold_objects
+    (algebra : Representation.FoldAlgebra ρ κ) (annotations : Annotations)
+    (checks : List Check)
+    (properties : List (PropertySignatureOf Representation))
+    (indexes : List (IndexSignatureOf Representation)) :
+    Representation.fold algebra (.objects annotations checks properties indexes) =
+      algebra.objects annotations (checks.map (Check.fold algebra))
+        (properties.map fun property =>
+          { name := property.name
+            type := Representation.fold algebra property.type
+            isOptional := property.isOptional
+            isMutable := property.isMutable
+            annotations := property.annotations })
+        (indexes.map fun index =>
+          { parameter := Representation.fold algebra index.parameter
+            type := Representation.fold algebra index.type }) := by
+  change algebra.objects annotations (Check.foldList algebra checks)
+      (Representation.foldProperties algebra properties)
+      (Representation.foldIndexes algebra indexes) = _
+  rw [Check.foldList_eq_map algebra checks,
+    Representation.foldProperties_eq_map algebra properties,
+    Representation.foldIndexes_eq_map algebra indexes]
+
+@[simp] theorem Representation.fold_union
+    (algebra : Representation.FoldAlgebra ρ κ) (annotations : Annotations)
+    (checks : List Check) (types : List Representation) (mode : UnionMode) :
+    Representation.fold algebra (.union annotations checks types mode) =
+      algebra.union annotations (checks.map (Check.fold algebra))
+        (types.map (Representation.fold algebra)) mode := by
+  change algebra.union annotations (Check.foldList algebra checks)
+      (Representation.foldList algebra types) mode = _
+  rw [Check.foldList_eq_map algebra checks,
+    Representation.foldList_eq_map algebra types]
+
+@[simp] theorem Check.fold_filter
+    (algebra : Representation.FoldAlgebra ρ κ)
+    (representation : CheckRepresentationAnnotationOf Representation)
+    (annotations : Annotations) (aborted : Bool) :
+    Check.fold algebra (.filter representation annotations aborted) =
+      algebra.filter
+        { id := representation.id
+          payload := representation.payload
+          schemas := representation.schemas.map
+            (List.map (Representation.fold algebra)) }
+        annotations aborted := by
+  change algebra.filter
+      (Representation.foldCheckAnnotation algebra representation)
+      annotations aborted = _
+  rw [Representation.foldCheckAnnotation_eq_map algebra representation]
+
+@[simp] theorem Check.fold_filterGroup
+    (algebra : Representation.FoldAlgebra ρ κ)
+    (representation : Option (CheckRepresentationAnnotationOf Representation))
+    (annotations : Annotations) (checks : List Check) :
+    Check.fold algebra (.filterGroup representation annotations checks) =
+      algebra.filterGroup
+        (representation.map fun value =>
+          { id := value.id
+            payload := value.payload
+            schemas := value.schemas.map
+              (List.map (Representation.fold algebra)) })
+        annotations (checks.map (Check.fold algebra)) := by
+  change algebra.filterGroup
+      (Representation.foldCheckAnnotationOption algebra representation)
+      annotations (Check.foldList algebra checks) = _
+  rw [Representation.foldCheckAnnotationOption_eq_map algebra representation,
+    Check.foldList_eq_map algebra checks]
+
+def Representation.FoldAlgebra.rebuild :
+    Representation.FoldAlgebra Representation Check where
+  declaration := fun representation annotations typeParameters checks =>
+    .declaration representation annotations typeParameters checks
+  reference := .reference
+  suspend := fun annotations checks thunk => .suspend annotations checks thunk
+  null := .null
+  undefined := .undefined
+  void := .void
+  never := .never
+  unknown := .unknown
+  any := .any
+  string := .string
+  number := .number
+  boolean := .boolean
+  bigint := .bigint
+  symbol := .symbol
+  literal := fun annotations checks value => .literal annotations checks value
+  uniqueSymbol := fun annotations checks key => .uniqueSymbol annotations checks key
+  objectKeyword := .objectKeyword
+  enum := fun annotations checks entries => .enum annotations checks entries
+  templateLiteral := fun annotations checks parts =>
+    .templateLiteral annotations checks parts
+  arrays := fun annotations checks elements rest =>
+    .arrays annotations checks elements rest
+  objects := fun annotations checks properties indexes =>
+    .objects annotations checks properties indexes
+  union := fun annotations checks types mode => .union annotations checks types mode
+  filter := fun representation annotations aborted =>
+    .filter representation annotations aborted
+  filterGroup := fun representation annotations checks =>
+    .filterGroup representation annotations checks
+
+mutual
+
+theorem Representation.fold_rebuild (representation : Representation) :
+    Representation.fold Representation.FoldAlgebra.rebuild representation =
+      representation := by
+  cases representation with
+  | declaration representation annotations typeParameters checks =>
+      change Representation.FoldAlgebra.rebuild.declaration representation annotations
+          (Representation.foldList Representation.FoldAlgebra.rebuild typeParameters)
+          (Check.foldList Representation.FoldAlgebra.rebuild checks) = _
+      rw [Representation.foldList_rebuild typeParameters,
+        Check.foldList_rebuild checks]
+      rfl
+  | reference ref => rfl
+  | suspend annotations checks thunk =>
+      change Representation.FoldAlgebra.rebuild.suspend annotations
+          (Check.foldList Representation.FoldAlgebra.rebuild checks)
+          (Representation.fold Representation.FoldAlgebra.rebuild thunk) = _
+      rw [Check.foldList_rebuild checks, Representation.fold_rebuild thunk]
+      rfl
+  | null annotations checks =>
+      change Representation.FoldAlgebra.rebuild.null annotations
+          (Check.foldList Representation.FoldAlgebra.rebuild checks) = _
+      rw [Check.foldList_rebuild checks]
+      rfl
+  | undefined annotations checks =>
+      change Representation.FoldAlgebra.rebuild.undefined annotations
+          (Check.foldList Representation.FoldAlgebra.rebuild checks) = _
+      rw [Check.foldList_rebuild checks]
+      rfl
+  | void annotations checks =>
+      change Representation.FoldAlgebra.rebuild.void annotations
+          (Check.foldList Representation.FoldAlgebra.rebuild checks) = _
+      rw [Check.foldList_rebuild checks]
+      rfl
+  | never annotations checks =>
+      change Representation.FoldAlgebra.rebuild.never annotations
+          (Check.foldList Representation.FoldAlgebra.rebuild checks) = _
+      rw [Check.foldList_rebuild checks]
+      rfl
+  | unknown annotations checks =>
+      change Representation.FoldAlgebra.rebuild.unknown annotations
+          (Check.foldList Representation.FoldAlgebra.rebuild checks) = _
+      rw [Check.foldList_rebuild checks]
+      rfl
+  | any annotations checks =>
+      change Representation.FoldAlgebra.rebuild.any annotations
+          (Check.foldList Representation.FoldAlgebra.rebuild checks) = _
+      rw [Check.foldList_rebuild checks]
+      rfl
+  | string annotations checks =>
+      change Representation.FoldAlgebra.rebuild.string annotations
+          (Check.foldList Representation.FoldAlgebra.rebuild checks) = _
+      rw [Check.foldList_rebuild checks]
+      rfl
+  | number annotations checks =>
+      change Representation.FoldAlgebra.rebuild.number annotations
+          (Check.foldList Representation.FoldAlgebra.rebuild checks) = _
+      rw [Check.foldList_rebuild checks]
+      rfl
+  | boolean annotations checks =>
+      change Representation.FoldAlgebra.rebuild.boolean annotations
+          (Check.foldList Representation.FoldAlgebra.rebuild checks) = _
+      rw [Check.foldList_rebuild checks]
+      rfl
+  | bigint annotations checks =>
+      change Representation.FoldAlgebra.rebuild.bigint annotations
+          (Check.foldList Representation.FoldAlgebra.rebuild checks) = _
+      rw [Check.foldList_rebuild checks]
+      rfl
+  | symbol annotations checks =>
+      change Representation.FoldAlgebra.rebuild.symbol annotations
+          (Check.foldList Representation.FoldAlgebra.rebuild checks) = _
+      rw [Check.foldList_rebuild checks]
+      rfl
+  | objectKeyword annotations checks =>
+      change Representation.FoldAlgebra.rebuild.objectKeyword annotations
+          (Check.foldList Representation.FoldAlgebra.rebuild checks) = _
+      rw [Check.foldList_rebuild checks]
+      rfl
+  | literal annotations checks value =>
+      change Representation.FoldAlgebra.rebuild.literal annotations
+          (Check.foldList Representation.FoldAlgebra.rebuild checks) value = _
+      rw [Check.foldList_rebuild checks]
+      rfl
+  | uniqueSymbol annotations checks key =>
+      change Representation.FoldAlgebra.rebuild.uniqueSymbol annotations
+          (Check.foldList Representation.FoldAlgebra.rebuild checks) key = _
+      rw [Check.foldList_rebuild checks]
+      rfl
+  | enum annotations checks entries =>
+      change Representation.FoldAlgebra.rebuild.enum annotations
+          (Check.foldList Representation.FoldAlgebra.rebuild checks) entries = _
+      rw [Check.foldList_rebuild checks]
+      rfl
+  | templateLiteral annotations checks parts =>
+      change Representation.FoldAlgebra.rebuild.templateLiteral annotations
+          (Check.foldList Representation.FoldAlgebra.rebuild checks)
+          (Representation.foldList Representation.FoldAlgebra.rebuild parts) = _
+      rw [Check.foldList_rebuild checks, Representation.foldList_rebuild parts]
+      rfl
+  | arrays annotations checks elements rest =>
+      change Representation.FoldAlgebra.rebuild.arrays annotations
+          (Check.foldList Representation.FoldAlgebra.rebuild checks)
+          (Representation.foldElements Representation.FoldAlgebra.rebuild elements)
+          (Representation.foldList Representation.FoldAlgebra.rebuild rest) = _
+      rw [Check.foldList_rebuild checks,
+        Representation.foldElements_rebuild elements,
+        Representation.foldList_rebuild rest]
+      rfl
+  | objects annotations checks properties indexes =>
+      change Representation.FoldAlgebra.rebuild.objects annotations
+          (Check.foldList Representation.FoldAlgebra.rebuild checks)
+          (Representation.foldProperties Representation.FoldAlgebra.rebuild properties)
+          (Representation.foldIndexes Representation.FoldAlgebra.rebuild indexes) = _
+      rw [Check.foldList_rebuild checks,
+        Representation.foldProperties_rebuild properties,
+        Representation.foldIndexes_rebuild indexes]
+      rfl
+  | union annotations checks types mode =>
+      change Representation.FoldAlgebra.rebuild.union annotations
+          (Check.foldList Representation.FoldAlgebra.rebuild checks)
+          (Representation.foldList Representation.FoldAlgebra.rebuild types) mode = _
+      rw [Check.foldList_rebuild checks, Representation.foldList_rebuild types]
+      rfl
+termination_by structural representation
+
+theorem Check.fold_rebuild (check : Check) :
+    Check.fold Representation.FoldAlgebra.rebuild check = check := by
+  cases check with
+  | filter representation annotations aborted =>
+      change Representation.FoldAlgebra.rebuild.filter
+          (Representation.foldCheckAnnotation
+            Representation.FoldAlgebra.rebuild representation)
+          annotations aborted = _
+      rw [Representation.foldCheckAnnotation_rebuild representation]
+      rfl
+  | filterGroup representation annotations checks =>
+      change Representation.FoldAlgebra.rebuild.filterGroup
+          (Representation.foldCheckAnnotationOption
+            Representation.FoldAlgebra.rebuild representation)
+          annotations (Check.foldList Representation.FoldAlgebra.rebuild checks) = _
+      rw [Representation.foldCheckAnnotationOption_rebuild representation,
+        Check.foldList_rebuild checks]
+      rfl
+termination_by structural check
+
+private theorem Representation.foldList_rebuild (representations : List Representation) :
+    Representation.foldList Representation.FoldAlgebra.rebuild representations =
+      representations := by
+  cases representations with
+  | nil => rfl
+  | cons head tail =>
+      change Representation.fold Representation.FoldAlgebra.rebuild head ::
+          Representation.foldList Representation.FoldAlgebra.rebuild tail =
+        head :: tail
+      rw [Representation.fold_rebuild head,
+        Representation.foldList_rebuild tail]
+termination_by structural representations
+
+private theorem Check.foldList_rebuild (checks : List Check) :
+    Check.foldList Representation.FoldAlgebra.rebuild checks = checks := by
+  cases checks with
+  | nil => rfl
+  | cons head tail =>
+      change Check.fold Representation.FoldAlgebra.rebuild head ::
+          Check.foldList Representation.FoldAlgebra.rebuild tail = head :: tail
+      rw [Check.fold_rebuild head, Check.foldList_rebuild tail]
+termination_by structural checks
+
+private theorem Representation.foldElements_rebuild
+    (elements : List (ElementOf Representation)) :
+    Representation.foldElements Representation.FoldAlgebra.rebuild elements =
+      elements := by
+  cases elements with
+  | nil => rfl
+  | cons head tail =>
+      cases head with
+      | mk isOptional type annotations =>
+          change ElementOf.mk isOptional
+              (Representation.fold Representation.FoldAlgebra.rebuild type)
+              annotations ::
+                Representation.foldElements Representation.FoldAlgebra.rebuild tail =
+            ElementOf.mk isOptional type annotations :: tail
+          rw [Representation.fold_rebuild type,
+            Representation.foldElements_rebuild tail]
+termination_by structural elements
+
+private theorem Representation.foldProperties_rebuild
+    (properties : List (PropertySignatureOf Representation)) :
+    Representation.foldProperties Representation.FoldAlgebra.rebuild properties =
+      properties := by
+  cases properties with
+  | nil => rfl
+  | cons head tail =>
+      cases head with
+      | mk name type isOptional isMutable annotations =>
+          change PropertySignatureOf.mk name
+              (Representation.fold Representation.FoldAlgebra.rebuild type)
+              isOptional isMutable annotations ::
+                Representation.foldProperties
+                  Representation.FoldAlgebra.rebuild tail =
+            PropertySignatureOf.mk name type isOptional isMutable annotations :: tail
+          rw [Representation.fold_rebuild type,
+            Representation.foldProperties_rebuild tail]
+termination_by structural properties
+
+private theorem Representation.foldIndexes_rebuild
+    (indexes : List (IndexSignatureOf Representation)) :
+    Representation.foldIndexes Representation.FoldAlgebra.rebuild indexes = indexes := by
+  cases indexes with
+  | nil => rfl
+  | cons head tail =>
+      cases head with
+      | mk parameter type =>
+          change IndexSignatureOf.mk
+              (Representation.fold Representation.FoldAlgebra.rebuild parameter)
+              (Representation.fold Representation.FoldAlgebra.rebuild type) ::
+                Representation.foldIndexes Representation.FoldAlgebra.rebuild tail =
+            IndexSignatureOf.mk parameter type :: tail
+          rw [Representation.fold_rebuild parameter,
+            Representation.fold_rebuild type,
+            Representation.foldIndexes_rebuild tail]
+termination_by structural indexes
+
+private theorem Representation.foldSchemas_rebuild
+    (schemas : Option (List Representation)) :
+    Representation.foldSchemas Representation.FoldAlgebra.rebuild schemas = schemas := by
+  cases schemas with
+  | none => rfl
+  | some values =>
+      change some (Representation.foldList Representation.FoldAlgebra.rebuild values) =
+        some values
+      rw [Representation.foldList_rebuild values]
+termination_by structural schemas
+
+private theorem Representation.foldCheckAnnotation_rebuild
+    (annotation : CheckRepresentationAnnotationOf Representation) :
+    Representation.foldCheckAnnotation Representation.FoldAlgebra.rebuild annotation =
+      annotation := by
+  cases annotation with
+  | mk id payload schemas =>
+      change CheckRepresentationAnnotationOf.mk id payload
+          (Representation.foldSchemas Representation.FoldAlgebra.rebuild schemas) =
+        CheckRepresentationAnnotationOf.mk id payload schemas
+      rw [Representation.foldSchemas_rebuild schemas]
+termination_by structural annotation
+
+private theorem Representation.foldCheckAnnotationOption_rebuild
+    (annotation : Option (CheckRepresentationAnnotationOf Representation)) :
+    Representation.foldCheckAnnotationOption Representation.FoldAlgebra.rebuild annotation =
+      annotation := by
+  cases annotation with
+  | none => rfl
+  | some value =>
+      change some (Representation.foldCheckAnnotation
+          Representation.FoldAlgebra.rebuild value) = some value
+      rw [Representation.foldCheckAnnotation_rebuild value]
+termination_by structural annotation
+
+end
+
 
 end Effect4

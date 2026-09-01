@@ -608,3 +608,32 @@ are non-`Option` fields because the *codec* requires them, while
 `FilterGroup.representation` is `Option` because the codec makes it optional.
 The consequence for prose is that no `SC-CAS-*` or bridge claim may quantify
 over rc.112 `Representation` values without excluding this case.
+
+## Recursive fields hidden behind records — `E4-SCHEMA-CE-043`
+
+`Representation` and `Check` do not recurse only through fields whose types are
+spelled directly as `Representation`, `Check`, or lists of those types. Four
+existing parameterized records also hide recursive positions:
+`CheckRepresentationAnnotationOf.schemas`, `ElementOf.type`,
+`PropertySignatureOf.type`, and both fields of `IndexSignatureOf`.
+
+The smallest witness is a `String` root carrying one `Filter`. The filter's
+required representation annotation contains one nested `Number` schema. A
+direct-child traversal returns `[String, Filter]`; the contracted general fold
+returns `[String, Filter, Number]`. This is a different obligation from, and
+attached to, `E4-SCHEMA-CE-033`: that row forces field admission to inspect all
+three Check recursion paths (required filter schemas, optional group schemas,
+and group checks), while this row forces the reusable eliminator to expose
+those paths and every record-contained route to arbitrary algebras.
+
+The retained file also builds one twelve-label tree covering declaration type
+parameters and checks, array elements and rest, object properties and both
+index positions, required and optional annotation schemas, and nested check
+groups. Every route uses a distinct label, so an omission, duplication, or
+reordering changes the exact trace. The trace is not an exhaustive proof by
+itself. Exhaustiveness comes from the fold algebra's twenty-four public
+constructor equations and both rebuild identity theorems; the finite witness
+makes the easy-to-miss routes executable.
+
+Executable witness:
+`Effect4Test/Counterexamples/Schema/RecursiveElimination.lean`.

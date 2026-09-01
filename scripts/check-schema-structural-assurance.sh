@@ -42,6 +42,5 @@ if ! cmp -s -- "$tmp_root/fresh.tsv" "$projection"; then
 fi
 
 printf 'PASS Schema structural assurance projection is current\n'
-printf 'PASS exact 1092-declaration census, 418 theorem/axiom receipts, 26 counterexamples, and graph statuses agree\n'
-printf 'PASS SCHEMA-PG-REPRESENTATION-TAG and SCHEMA-PG-FIELD-ADMISSION close; SCHEMA-PG-PAYLOAD retains only SC-REP-03 general recursor open\n'
-
+printf 'PASS exact 1157-declaration census, 447 theorem/axiom receipts, 27 counterexamples, and graph statuses agree\n'
+printf 'PASS SCHEMA-PG-REPRESENTATION-TAG, SCHEMA-PG-PAYLOAD, and SCHEMA-PG-FIELD-ADMISSION close all applicable structural edges\n'

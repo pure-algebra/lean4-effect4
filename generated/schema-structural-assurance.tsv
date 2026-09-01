@@ -1,20 +1,23 @@
 format	effect4-schema-structural-assurance-v1
-generator	scripts/generate-schema-structural-assurance.sh	sha256=f37f64d77cf585aecbba18a04a647294c52bfbb61391db9c1a5b90feae4d57ac
+generator	scripts/generate-schema-structural-assurance.sh	sha256=364b827fbf17d0219da236dc56cbed2c685818db924987326fa42b6d752bfb9d
 regenerate	./scripts/generate-schema-structural-assurance.sh > generated/schema-structural-assurance.tsv
 input	Effect4/Data/Json.lean	sha256=8714c8fbb3a3e3ba3bee94ed392bc32abe5367e9a468f5c0817e86d01926d330
 input	Effect4/Schema/Payload.lean	sha256=a6292ad42ae08a49ff2b438dc57b16c6361b6980b75286fe61657db7b07822dc
-input	Effect4/Schema/Representation.lean	sha256=05ef472aaced4a688465ac65d7ee0f9a4c349dbe896a6e494a9dbcc2713edd43
+input	Effect4/Schema/Representation.lean	sha256=66993fc8cee115e3869cc75dd66c0f337d31e4671d12cdd40e56ee44c5a52306
 input	Effect4/Schema/Document.lean	sha256=fc86b4ba9a6ce2d7b0bb912588c54429e46a7cfb509287a5fc2a650e1a20e6ad
 input	Effect4/Schema/Check.lean	sha256=98439bbd47195d266a188345dc749fbd9aa11bb1499d2944476dde78c8c2a9ef
 input	test/contracts/schema-representation.contract.md	sha256=a2b85dd7ce72a8f74abfedeccb1142d7a85fa9913820fa8412c1410489ab90ee
 input	test/contracts/schema-subalphabets.contract.md	sha256=1b3d298d732be54c47108dafe914639bb5167eecc1d6b3dd27d50591fed65555
 input	test/contracts/schema-payload.contract.md	sha256=7b70c82199c46cd45f312f62f0cf81a276a8a759ec94457c08dd99639888f274
+input	test/contracts/schema-recursor.contract.md	sha256=c70ff82cf5b55e18516e78db1f6720441920225390ad90e99e3e3c2dd115a4d3
 battery	Effect4Test/Schema/RepresentationContract.lean	sha256=fed90a2b7174a41546003dc77f248d8838935fd4ecef707e868a4705f85bcd61	required-closed
 battery	Effect4Test/Schema/SubAlphabetContract.lean	sha256=a57ed694dabe08754f28d32dc57252c49044e0c7a85ff13592eb8f968cefdf8a	required-closed
 battery	Effect4Test/Schema/PayloadContract.lean	sha256=e80d4be2f6385228aa87766d61ad4056fef68f947d0347cc15e1ac9279c6d27f	required-closed
+battery	Effect4Test/Schema/RepresentationFoldContract.lean	sha256=4de2a571131c843e83a036fcb518b45b2f1272caf3ec1467e601bc7e4510396b	required-closed
 input	Effect4Test/Schema/PayloadSurface.lean	sha256=500bb9b2e95362d14440d4a8cc5e990e52c6864548e11acb2186cc5ecc390493
-input	Effect4Test/Schema/StructuralAssurance.lean	sha256=1e30e286838436f8265743e87ed033ec731f907956a56336b6960b548b6b7bf3
-input	Effect4Test/Schema/AxiomReport.lean	sha256=39a4929fe1c0083b58340d3e0ced34e140adbfee0d08cd76c1ddbcb8981e1d6e
+counterexample-battery	Effect4Test/Counterexamples/Schema/RecursiveElimination.lean	sha256=6625927071bd376f3088f2086c50f03d6440c3921e1fac94f7968d54e20197d9	required-closed
+input	Effect4Test/Schema/StructuralAssurance.lean	sha256=ee5dafa279e60dec57440ba97eaae537e7351d303b948920e863094588f9e8a0
+input	Effect4Test/Schema/AxiomReport.lean	sha256=4caefb4c9062d9c0f1f8d04d44f6344c98220bc8fb4dc8aa284330ad5fc90cf0
 source-pin	effect@4.0.0-rc.112	vendor/effect-4.0.0-rc.112/src/SchemaRepresentation.ts	sha256=a0a7a1537cfe3a9159a80210e3de92342cc9e98651f0e8273a75ccdcccae69bc	required-closed
 gate	SC-REP-CENSUS-PIN	scripts/check-schema-census.sh	required-closed
 gate	SC-REP-FIELD-PIN	scripts/check-schema-fields.sh	required-closed
@@ -46,6 +49,7 @@ counterexample	E4-SCHEMA-CE-039	SEEDED	test/counterexamples/REGISTER.md	required
 counterexample	E4-SCHEMA-CE-040	PINNED	test/counterexamples/REGISTER.md	required-closed
 counterexample	E4-SCHEMA-CE-041	SEEDED	test/counterexamples/REGISTER.md	required-closed
 counterexample	E4-SCHEMA-CE-042	PINNED	test/counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-043	SEEDED	test/counterexamples/REGISTER.md	required-closed
 owned-declaration	Effect4.Float64	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
 owned-declaration	Effect4.Float64.bits	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
 owned-declaration	Effect4.Float64.casesOn	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
@@ -657,6 +661,10 @@ owned-declaration	Effect4.Check.filterGroup.inj	Effect4.Schema.Representation	SC
 owned-declaration	Effect4.Check.filterGroup.injEq	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
 owned-declaration	Effect4.Check.filterGroup.noConfusion	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
 owned-declaration	Effect4.Check.filterGroup.sizeOf_spec	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Check.fold	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Check.fold_filter	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Check.fold_filterGroup	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Check.fold_rebuild	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
 owned-declaration	Effect4.Check.noConfusion	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
 owned-declaration	Effect4.Check.noConfusionType	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
 owned-declaration	Effect4.Check.rec	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
@@ -795,6 +803,43 @@ owned-declaration	Effect4.PropertyKeyKind.string.sizeOf_spec	Effect4.Schema.Repr
 owned-declaration	Effect4.PropertyKeyKind.toCtorIdx	Effect4.Schema.Representation	SCHEMA-LEAF-PROPERTY-KEY-KIND
 owned-declaration	Effect4.PropertySignature	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
 owned-declaration	Effect4.Representation	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.any	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.arrays	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.bigint	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.boolean	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.casesOn	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.ctorIdx	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.declaration	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.enum	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.filter	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.filterGroup	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.literal	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.mk	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.mk.inj	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.mk.injEq	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.mk.noConfusion	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.mk.sizeOf_spec	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.never	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.noConfusion	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.noConfusionType	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.null	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.number	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.objectKeyword	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.objects	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.rebuild	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.rec	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.recOn	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.reference	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.string	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.suspend	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.symbol	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.templateLiteral	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.undefined	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.union	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.uniqueSymbol	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.unknown	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.FoldAlgebra.void	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
 owned-declaration	Effect4.Representation.absent_ne_empty_annotations	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
 owned-declaration	Effect4.Representation.any	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
 owned-declaration	Effect4.Representation.any.elim	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
@@ -885,6 +930,30 @@ owned-declaration	Effect4.Representation.enum.inj	Effect4.Schema.Representation	
 owned-declaration	Effect4.Representation.enum.injEq	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
 owned-declaration	Effect4.Representation.enum.noConfusion	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
 owned-declaration	Effect4.Representation.enum.sizeOf_spec	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_any	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_arrays	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_bigint	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_boolean	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_declaration	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_enum	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_literal	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_never	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_null	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_number	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_objectKeyword	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_objects	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_rebuild	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_reference	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_string	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_suspend	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_symbol	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_templateLiteral	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_undefined	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_union	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_uniqueSymbol	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_unknown	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+owned-declaration	Effect4.Representation.fold_void	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
 owned-declaration	Effect4.Representation.literal	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
 owned-declaration	Effect4.Representation.literal.elim	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
 owned-declaration	Effect4.Representation.literal.inj	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
@@ -1169,6 +1238,12 @@ theorem	Effect4.Check.filterGroup.injEq	Effect4.Schema.Representation	SCHEMA-PG-
 axiom	Effect4.Check.filterGroup.injEq	propext	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Check.filterGroup.sizeOf_spec	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
 axiom	Effect4.Check.filterGroup.sizeOf_spec	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Check.fold_filter	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Check.fold_filter	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Check.fold_filterGroup	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Check.fold_filterGroup	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Check.fold_rebuild	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Check.fold_rebuild	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Check.tag_surjective	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
 axiom	Effect4.Check.tag_surjective	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.CheckTag.census_length	Effect4.Schema.Representation	SCHEMA-LEAF-CHECK-TAG
@@ -1261,6 +1336,12 @@ theorem	Effect4.PropertyKeyKind.ofNat_ctorIdx	Effect4.Schema.Representation	SCHE
 axiom	Effect4.PropertyKeyKind.ofNat_ctorIdx	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.PropertyKeyKind.string.sizeOf_spec	Effect4.Schema.Representation	SCHEMA-LEAF-PROPERTY-KEY-KIND
 axiom	Effect4.PropertyKeyKind.string.sizeOf_spec	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.FoldAlgebra.mk.inj	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.FoldAlgebra.mk.inj	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.FoldAlgebra.mk.injEq	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.FoldAlgebra.mk.injEq	propext	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.FoldAlgebra.mk.sizeOf_spec	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.FoldAlgebra.mk.sizeOf_spec	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Representation.absent_ne_empty_annotations	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
 axiom	Effect4.Representation.absent_ne_empty_annotations	propext	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Representation.any.inj	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
@@ -1325,6 +1406,52 @@ theorem	Effect4.Representation.enum.injEq	Effect4.Schema.Representation	SCHEMA-P
 axiom	Effect4.Representation.enum.injEq	propext	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Representation.enum.sizeOf_spec	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
 axiom	Effect4.Representation.enum.sizeOf_spec	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_any	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_any	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_arrays	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_arrays	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_bigint	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_bigint	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_boolean	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_boolean	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_declaration	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_declaration	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_enum	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_enum	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_literal	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_literal	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_never	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_never	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_null	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_null	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_number	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_number	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_objectKeyword	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_objectKeyword	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_objects	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_objects	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_rebuild	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_rebuild	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_reference	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_reference	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_string	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_string	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_suspend	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_suspend	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_symbol	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_symbol	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_templateLiteral	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_templateLiteral	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_undefined	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_undefined	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_union	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_union	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_uniqueSymbol	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_uniqueSymbol	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_unknown	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_unknown	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.fold_void	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
+axiom	Effect4.Representation.fold_void	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Representation.literal.inj	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
 axiom	Effect4.Representation.literal.inj	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Representation.literal.injEq	Effect4.Schema.Representation	SCHEMA-PG-PAYLOAD/REPRESENTATION-CHECK
@@ -2009,10 +2136,10 @@ graph-attachment	SCHEMA-PG-PAYLOAD/SCHEMA-LEAF-PAYLOAD-RECORDS	required-closed
 graph-attachment	SCHEMA-PG-PAYLOAD/SCHEMA-LEAF-DOCUMENT-CONTAINERS	required-closed
 graph-edge	SCHEMA-PG-PAYLOAD/SC-REP-01	SCHEMA-PAYLOAD-DECLARATION-COVERAGE	required-closed
 graph-edge	SCHEMA-PG-PAYLOAD/SC-REP-03-STRUCTURAL	SCHEMA-PAYLOAD-EQUALITY-TAG-PROJECTION	required-closed
-graph-edge	SCHEMA-PG-PAYLOAD/SC-REP-03-RECURSOR	SCHEMA-PAYLOAD-GENERAL-RECURSOR	required-open
+graph-edge	SCHEMA-PG-PAYLOAD/SC-REP-03-RECURSOR	SCHEMA-PAYLOAD-GENERAL-RECURSOR	required-closed
 graph-edge	SCHEMA-PG-FIELD-ADMISSION/SC-REP-04	SCHEMA-FIELD-ADMISSION-RECURSIVE	required-closed
 graph-status	SCHEMA-PG-REPRESENTATION-TAG	all-applicable-edges-closed	required-closed
-graph-status	SCHEMA-PG-PAYLOAD	general-recursor-remains-open	required-open
+graph-status	SCHEMA-PG-PAYLOAD	all-applicable-edges-closed	required-closed
 graph-status	SCHEMA-PG-FIELD-ADMISSION	recursive-judgment-closed	required-closed
 external-open	SCHEMA-PG-DOCUMENT	reference-semantics	required-open
 external-open	SCHEMA-PG-WIRE	codec-and-canonicalization	required-open

@@ -811,12 +811,13 @@ Its current boundary is split as follows:
   remain unreachable, ownership inspection must assign D0-D1 to
   `Effect4.Data.Json` and D2-D3 to `Effect4.Schema.Payload`, and an upward
   Payload import must be rejected. The production half and all 13 reactions
-  are green. The generated join covers all 1,092 declarations owned by these
-  five modules, all 418 theorem and axiom receipts, 26 counterexamples, nine
+  are green. The generated join covers all 1,157 declarations owned by these
+  five modules, all 447 theorem and axiom receipts, 27 counterexamples, nine
   duplicate-prevention names, and all leaf routes. It closes
-  `SCHEMA-PG-FIELD-ADMISSION`, `SC-REP-01`, and the structural equality and
-  tag-projection share of `SC-REP-03`. The broader general-recursor share of
-  `SC-REP-03` remains explicitly open; denotation, document interpretation,
+  `SCHEMA-PG-FIELD-ADMISSION`, `SC-REP-01`, and the structural equality,
+  tag-projection, and general-recursor shares of `SC-REP-03`. The recursor's
+  24 public equations, two rebuild identities, empty axiom receipts, and
+  all-route counterexample are joined. Denotation, document interpretation,
   wire form, and host conformance remain their separate later graphs.
 
 The pinned bytes needed by `SC-REP-CENSUS-PIN` are now local to this library at

@@ -104,6 +104,42 @@ tag projection, and the constructor caps.
 #print axioms Effect4.Representation.absent_ne_empty_annotations
 
 /-!
+Payload carrier, general structural elimination: the two-sorted algebra, both
+folds, every public constructor equation, and reconstruction.
+-/
+
+#print axioms Effect4.Representation.FoldAlgebra
+#print axioms Effect4.Representation.fold
+#print axioms Effect4.Check.fold
+#print axioms Effect4.Representation.FoldAlgebra.rebuild
+#print axioms Effect4.Representation.fold_declaration
+#print axioms Effect4.Representation.fold_reference
+#print axioms Effect4.Representation.fold_suspend
+#print axioms Effect4.Representation.fold_null
+#print axioms Effect4.Representation.fold_undefined
+#print axioms Effect4.Representation.fold_void
+#print axioms Effect4.Representation.fold_never
+#print axioms Effect4.Representation.fold_unknown
+#print axioms Effect4.Representation.fold_any
+#print axioms Effect4.Representation.fold_string
+#print axioms Effect4.Representation.fold_number
+#print axioms Effect4.Representation.fold_boolean
+#print axioms Effect4.Representation.fold_bigint
+#print axioms Effect4.Representation.fold_symbol
+#print axioms Effect4.Representation.fold_literal
+#print axioms Effect4.Representation.fold_uniqueSymbol
+#print axioms Effect4.Representation.fold_objectKeyword
+#print axioms Effect4.Representation.fold_enum
+#print axioms Effect4.Representation.fold_templateLiteral
+#print axioms Effect4.Representation.fold_arrays
+#print axioms Effect4.Representation.fold_objects
+#print axioms Effect4.Representation.fold_union
+#print axioms Effect4.Check.fold_filter
+#print axioms Effect4.Check.fold_filterGroup
+#print axioms Effect4.Representation.fold_rebuild
+#print axioms Effect4.Check.fold_rebuild
+
+/-!
 Payload carrier, section D6: the two document containers and the single-root
 embedding.
 -/
