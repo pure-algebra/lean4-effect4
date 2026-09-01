@@ -5,6 +5,7 @@ import { tmpdir } from "node:os"
 import { fileURLToPath } from "node:url"
 
 const here = resolve(fileURLToPath(new URL(".", import.meta.url)))
+const repository = resolve(here, "../..")
 const nodeModules = resolve(
   process.env.EFFECT4_EFFECT_NODE_MODULES ??
     join(here, "../../../foldlab/library/effects/node_modules")
@@ -81,6 +82,104 @@ try {
     }
   }
 
+  const generatedDirectory = join(temporary, "lean-generated")
+  cpSync(here, generatedDirectory, { recursive: true })
+  symlinkSync(nodeModules, join(generatedDirectory, "node_modules"), "dir")
+  const generatedApi = execFileSync("lake", [
+    "env", "lean", "--run", "harness/schema-effectful-field/Generate.lean"
+  ], { cwd: repository, encoding: "utf8" })
+  writeFileSync(join(generatedDirectory, "api.ts"), generatedApi)
+  writeFileSync(join(generatedDirectory, "model.ts"), `
+export interface User {
+  readonly id: string
+  readonly email: string
+}
+export type ReadEmailError = { readonly _tag: "ReadEmailError" }
+export type WriteEmailError = { readonly _tag: "WriteEmailError" }
+`)
+  writeFileSync(join(generatedDirectory, "policy.ts"), `
+import { Context, Effect } from "effect"
+import type { ReadEmailError, User, WriteEmailError } from "./model.ts"
+
+export class UserFieldPolicy extends Context.Service<UserFieldPolicy, {
+  readonly readEmail: (source: User) => Effect.Effect<string, ReadEmailError>
+  readonly writeEmail: (
+    source: User,
+    value: string
+  ) => Effect.Effect<void, WriteEmailError>
+}>()("UserFieldPolicy") {}
+`)
+  writeFileSync(join(generatedDirectory, "fixture.ts"), `
+import { Effect } from "effect"
+import { email } from "./api.ts"
+import { UserFieldPolicy } from "./policy.ts"
+import type { User } from "./model.ts"
+
+const events: Array<string> = []
+const live: UserFieldPolicy["Service"] = {
+  readEmail: (source) => Effect.sync(() => {
+    events.push(\`read:\${source.email}\`)
+    return "fresh@example.test"
+  }),
+  writeEmail: (_source, value) => Effect.sync(() => {
+    events.push(\`write:\${value}\`)
+  })
+}
+const source: User = { id: "user-1", email: "old@example.test" }
+const changed = await Effect.runPromise(
+  email.modify((value) => value.toUpperCase(), source).pipe(
+    Effect.provideService(UserFieldPolicy, live)
+  )
+)
+if (changed.email !== "FRESH@EXAMPLE.TEST") throw new Error(changed.email)
+if (events.join("|") !==
+    "read:old@example.test|write:FRESH@EXAMPLE.TEST") {
+  throw new Error(events.join("|"))
+}
+console.log("schema effectful field: Lean-generated source passed")
+`)
+
+  const generatedDirect = spawnSync(originalCompiler, [
+    "-p", "tsconfig.json", "--pretty", "false"
+  ], { cwd: generatedDirectory, encoding: "utf8" })
+  if (generatedDirect.status !== 0 || generatedDirect.stdout !== "" ||
+      generatedDirect.stderr !== "") {
+    throw new Error(`Lean-generated TypeScript rejected\n${generatedDirect.stdout}${generatedDirect.stderr}`)
+  }
+
+  const generatedTsgo = spawnSync(join(nodeModules, ".bin/effect-tsgo"), [
+    "diagnostics", "--project", "tsconfig.json", "--format", "json",
+    "--strict", "--list-files"
+  ], { cwd: generatedDirectory, encoding: "utf8" })
+  const generatedReport = JSON.parse(generatedTsgo.stdout)
+  const generatedNames = generatedReport.diagnostics.map((entry) => entry.name)
+  const generatedFixtureReport = generatedReport.files.find((entry) =>
+    (entry.file ?? entry.path ?? "").endsWith("/fixture.ts"))
+  if (generatedTsgo.status !== 0 || generatedTsgo.stderr !== "" ||
+      generatedNames.length !== 0 ||
+      generatedFixtureReport?.detectedEffect !== "v4" ||
+      generatedFixtureReport?.supportedEffect !== "v4") {
+    throw new Error(`Lean-generated effect-tsgo rejection ${JSON.stringify({
+      status: generatedTsgo.status,
+      stderr: generatedTsgo.stderr,
+      names: generatedNames,
+      fixture: generatedFixtureReport,
+      files: generatedReport.files
+    })}`)
+  }
+
+  const generatedRuntime = spawnSync(process.execPath, [
+    "--experimental-strip-types", "fixture.ts"
+  ], {
+    cwd: generatedDirectory,
+    encoding: "utf8",
+    env: { ...process.env, NODE_NO_WARNINGS: "1" }
+  })
+  if (generatedRuntime.status !== 0 || !generatedRuntime.stdout.includes(
+      "schema effectful field: Lean-generated source passed")) {
+    throw new Error(`Lean-generated runtime failed\n${generatedRuntime.stdout}${generatedRuntime.stderr}`)
+  }
+
   const positive = join(temporary, "positive", "fixture.ts")
   const runtime = spawnSync(process.execPath, ["--experimental-strip-types", positive], {
     cwd: join(temporary, "positive"),
@@ -95,6 +194,7 @@ try {
   console.log(`schema effectful field: TypeScript ${exact.typescript} passed`)
   console.log(`schema effectful field: Effect ${exact.effect} runtime passed`)
   console.log(`schema effectful field: effect-tsgo ${exact.tsgo} diagnostics passed`)
+  console.log("schema effectful field: Lean-generated target passed")
 } finally {
   rmSync(temporary, { recursive: true, force: true })
 }

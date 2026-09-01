@@ -59,7 +59,8 @@ example (source : String)
     source.contains "Effect.Services<ReturnType<typeof email.get>>" = true /\
     source.contains "Effect.Services<ReturnType<typeof email.replace>>" = true /\
     source.contains "ReadEmailError | WriteEmailError" = true := by
-  exact EffectfulField.source_contains_directional_rows generated
+  exact EffectfulField.source_contains_directional_rows
+    "email" "ReadEmailError" "WriteEmailError" generated rfl rfl rfl
 
 /-! `E4-TARGET-CE-008`: checked lowering cannot produce the raw declaration
 escape hatch. -/

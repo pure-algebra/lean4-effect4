@@ -8,6 +8,7 @@ import Effect4Test.Schema.AxiomReport
 import Effect4Test.Data.OpticContract
 import Effect4Test.Schema.AnnotationDataPlaneContract
 import Effect4Test.Schema.EffectfulFieldContract
+import Effect4Test.Schema.EffectfulFieldPropertiesContract
 import Effect4Test.Schema.AuthoringContract
 import Effect4Test.Flow.PrivacyContract
 import Effect4Test.Concurrency.FiberRepresentativeContract
@@ -24,6 +25,7 @@ import Effect4Test.Counterexamples.Schema.SemanticTagSeparation
 import Effect4Test.Counterexamples.Schema.WireSpellingDrift
 import Effect4Test.Counterexamples.Schema.AnnotationDataPlane
 import Effect4Test.Counterexamples.Schema.EffectfulField
+import Effect4Test.Counterexamples.Schema.EffectfulFieldProperties
 import Effect4Test.Schema.RepresentationContract
 import Effect4Test.Schema.SubAlphabetContract
 import Effect4Test.Schema.PayloadContract
@@ -39,6 +41,9 @@ import Effect4Test.Target.TypeScript.ExprContract
 import Effect4Test.Target.TypeScript.SchemaGenerationContract
 import Effect4Test.Target.TypeScript.SchemaGenerationCoverage
 import Effect4Test.Target.TypeScript.SchemaGenerationAxiomReport
+import Effect4Test.Target.TypeScript.EffectfulFieldContract
+import Effect4Test.Target.TypeScript.EffectfulFieldAxiomReport
+import Effect4Test.Counterexamples.Target.EffectfulField
 import Effect4Test.Audit.AxiomGate
 
 /-!

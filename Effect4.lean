@@ -91,6 +91,7 @@ import Effect4.Target.TypeScript.EffectV4
 import Effect4.Target.TypeScript.Lower
 import Effect4.Target.TypeScript.Render
 import Effect4.Target.TypeScript.Schema
+import Effect4.Target.TypeScript.EffectfulField
 import Effect4.Target.TypeScript.Decode
 import Effect4.Target.TypeScript.Simulation
 import Effect4.Meta.Registry

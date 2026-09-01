@@ -40,7 +40,7 @@ inductive Expr where
   | arr (items : List Expr)
   /-- A zero-parameter arrow with an optional declared result type. -/
   | arrow (returnType : Option String) (body : Expr)
-  deriving Inhabited
+  deriving Inhabited, BEq
 
 /-- One statement in the retained straight-line generator fragment. -/
 inductive Stmt where
@@ -48,6 +48,7 @@ inductive Stmt where
   | constYield (name : String) (value : Expr)
   /-- `return value`. -/
   | ret (value : Expr)
+  deriving BEq
 
 /-- An exported constant declaration with an optional target type spelling. -/
 structure ConstDecl where
@@ -55,6 +56,7 @@ structure ConstDecl where
   name : String
   value : Expr
   type : Option String := none
+  deriving BEq
 
 /-- An exported straight-line Effect generator declaration. -/
 structure ProgDecl where
@@ -63,6 +65,22 @@ structure ProgDecl where
   paramName : String
   paramType : String
   stmts : List Stmt
+  deriving BEq
+
+/-- One checked effectful Schema field API. This target-only node retains all
+directional types needed by the Effect v4 renderer without storing host
+functions or falling back to raw source text. -/
+structure EffectfulFieldDecl where
+  fieldName : String
+  sourceType : String
+  fieldType : String
+  readService : String
+  readMethod : String
+  readError : String
+  writeService : String
+  writeMethod : String
+  writeError : String
+  deriving BEq
 
 /-- One declaration in a generated TypeScript module. `raw` is retained only
 as the Foldlab compatibility escape hatch for generated local helpers. It is
@@ -70,7 +88,9 @@ not admitted as checked Effect4 target syntax and receives no lowering rule. -/
 inductive Decl where
   | const (decl : ConstDecl)
   | prog (decl : ProgDecl)
+  | effectfulField (declaration : EffectfulFieldDecl)
   | raw (text : String)
+  deriving BEq
 
 /-- An import declaration in the retained target fragment. -/
 inductive Import where

@@ -176,9 +176,66 @@ def progDecl (style : Style) (declaration : ProgDecl) : String :=
     String.intercalate "\n" (declaration.stmts.map (stmt style 2)) ++ "\n" ++
     indentOf style 1 ++ "})\n"
 
+/-- Render the checked Effect v4 field combinators. Read and write retain
+their own service and error rows; `modify` composes them in effect order. -/
+def effectfulFieldDecl (style : Style) (declaration : EffectfulFieldDecl) : String :=
+  let field := declaration.fieldName
+  let source := declaration.sourceType
+  let focus := declaration.fieldType
+  let readService := declaration.readService
+  let readError := declaration.readError
+  let writeService := declaration.writeService
+  let writeError := declaration.writeError
+  "const " ++ field ++ "Lens = Optic.id<" ++ source ++ ">().key(" ++
+    quoted style field ++ ")\n\n" ++
+  "export const " ++ field ++ " = {\n" ++
+  indentOf style 1 ++ "get: (source: " ++ source ++ "): Effect.Effect<" ++
+    focus ++ ", " ++ readError ++ ", " ++ readService ++ "> =>\n" ++
+  indentOf style 2 ++ "Effect.gen(function*() {\n" ++
+  indentOf style 3 ++ "const service = yield* " ++ readService ++ "\n" ++
+  indentOf style 3 ++ "return yield* service." ++ declaration.readMethod ++
+    "(source)\n" ++
+  indentOf style 2 ++ "}),\n\n" ++
+  indentOf style 1 ++ "replace: (value: " ++ focus ++ ", source: " ++ source ++
+    "): Effect.Effect<" ++ source ++ ", " ++ writeError ++ ", " ++
+    writeService ++ "> =>\n" ++
+  indentOf style 2 ++ "Effect.gen(function*() {\n" ++
+  indentOf style 3 ++ "const service = yield* " ++ writeService ++ "\n" ++
+  indentOf style 3 ++ "yield* service." ++ declaration.writeMethod ++
+    "(source, value)\n" ++
+  indentOf style 3 ++ "return " ++ field ++ "Lens.replace(value, source)\n" ++
+  indentOf style 2 ++ "}),\n\n" ++
+  indentOf style 1 ++ "modify: (f: (value: " ++ focus ++ ") => " ++ focus ++
+    ", source: " ++ source ++ "): Effect.Effect<\n" ++
+  indentOf style 2 ++ source ++ ",\n" ++
+  indentOf style 2 ++ readError ++ " | " ++ writeError ++ ",\n" ++
+  indentOf style 2 ++ readService ++ " | " ++ writeService ++ "\n" ++
+  indentOf style 1 ++ "> => Effect.flatMap(" ++ field ++
+    ".get(source), (value) => " ++ field ++ ".replace(f(value), source))\n" ++
+  "} as const\n\n" ++
+  "export type " ++ field ++ "GetSuccess = Effect.Success<ReturnType<typeof " ++
+    field ++ ".get>>\n" ++
+  "export type " ++ field ++ "GetError = Effect.Error<ReturnType<typeof " ++
+    field ++ ".get>>\n" ++
+  "export type " ++ field ++ "GetServices = Effect.Services<ReturnType<typeof " ++
+    field ++ ".get>>\n" ++
+  "export type " ++ field ++
+    "ReplaceSuccess = Effect.Success<ReturnType<typeof " ++ field ++
+    ".replace>>\n" ++
+  "export type " ++ field ++
+    "ReplaceError = Effect.Error<ReturnType<typeof " ++ field ++ ".replace>>\n" ++
+  "export type " ++ field ++
+    "ReplaceServices = Effect.Services<ReturnType<typeof " ++ field ++
+    ".replace>>\n" ++
+  "export type " ++ field ++
+    "ModifyError = Effect.Error<ReturnType<typeof " ++ field ++ ".modify>>\n" ++
+  "export type " ++ field ++
+    "ModifyServices = Effect.Services<ReturnType<typeof " ++ field ++ ".modify>>\n"
+
 def decl (style : Style) : Decl → String
   | .const declaration => constDecl style declaration
   | .prog declaration => progDecl style declaration
+  | .effectfulField declaration => effectfulFieldDecl style declaration
   | .raw text => text ++ "\n"
 
 def import_ (style : Style) : Import → String

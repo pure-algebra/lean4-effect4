@@ -78,16 +78,18 @@ private def request : EffectfulField.Request where
 
 #guard EffectfulField.requestReady request
 
-#guard EffectfulField.decl? request = some (.effectfulField
-  { fieldName := "email"
-    sourceType := "User"
-    fieldType := "string"
-    readService := "UserFieldPolicy"
-    readMethod := "readEmail"
-    readError := "ReadEmailError"
-    writeService := "UserFieldPolicy"
-    writeMethod := "writeEmail"
-    writeError := "WriteEmailError" })
+#guard match EffectfulField.decl? request with
+  | some (.effectfulField declaration) =>
+      declaration.fieldName == "email" &&
+      declaration.sourceType == "User" &&
+      declaration.fieldType == "string" &&
+      declaration.readService == "UserFieldPolicy" &&
+      declaration.readMethod == "readEmail" &&
+      declaration.readError == "ReadEmailError" &&
+      declaration.writeService == "UserFieldPolicy" &&
+      declaration.writeMethod == "writeEmail" &&
+      declaration.writeError == "WriteEmailError"
+  | _ => false
 
 example : EffectfulField.generate? request house0 =
     EffectfulField.source? request house0 := rfl
