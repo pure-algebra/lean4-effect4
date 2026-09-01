@@ -13,7 +13,6 @@ builder reports.
 
 Layer L0, node `F-KEY`, implementation receipts green 2026-08-31. Every frozen
 declaration is axiom-free — neither `propext` nor `Quot.sound` is reached. The
-generated owned-declaration/API/owner/theorem/axiom join is now green and closes
 `ENV-LEAF-KEY-IDENTITY` plus the local receipts for
 `ENV-LEAF-KEY-ORDER-BRIDGE`; this report supplies only their axiom component.
 The bridge's `DATA-PG-ROW/ORDER` attachment and
