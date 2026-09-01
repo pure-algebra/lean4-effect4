@@ -47,7 +47,7 @@ full generated Effect TypeScript cutover while any required edge remains open.
 | construction | `required-closed` | `SchemaGenerationContract.lean` checks the existing-carrier signatures and exact generated source |
 | laws | `required-closed` | recursive lowering and admission definitions elaborate under the kernel dependency report |
 | counterexamples | `required-closed` | illegal names, binding collisions, duplicate JSON keys, exact signed-zero reconstruction, and the `__proto__` object-literal hazard are executable guards |
-| bridges | `required-open` | source-target denotational simulation is not yet proved |
+| bridges | `required-open` | raw JSON lowering has a proved left inverse; document revival and decoded-value source-target simulation remain open |
 | targets | `required-closed` | `check-schema-typescript-generation.sh` byte-compares Lean generation, runs the unpatched TypeScript compiler, revives with `effect@4.0.0-rc.112`, and runs `@effect/tsgo@0.38.0` language-service diagnostics |
 | trust | `required-closed` | `SchemaGenerationAxiomReport.lean` plus the repository-wide axiom gate |
 | coverage | `required-closed` | `SchemaGenerationCoverage.lean` proves the 22 representatives follow the canonical census and contains both check nodes; the host harness pins their generated digest and verifies the same ordered tags after Effect revival |

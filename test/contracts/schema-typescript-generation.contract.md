@@ -35,6 +35,13 @@ reconstruction. This pins the generated reconstruction instruction and does
 not by itself claim that every JavaScript engine preserves every NaN payload
 through later numeric operations.
 
+`reifyJson?` is the independent partial bridge back from retained target
+expressions to the existing raw `Json` carrier. `reifyJson?_json` proves it is
+a left inverse of `json`; consequently `json_injective` proves that lowering
+retains exact binary64 bits, object-entry order, and duplicate keys. General
+TypeScript expressions remain outside this raw-data fragment and reify to
+`none`.
+
 ## `Described`
 
 Effect4 has no `Described` instance in this slice. Foldlab's `Described`
@@ -57,15 +64,16 @@ Schema Json/Representation/Check/Document
   -> Effect language-service diagnostics
 ```
 
-The recursive lowering equations, exact source fixtures, rejection cases,
-kernel dependency report, direct compiler check, host revival, and language
-service diagnostics are required edges. The coverage corpus proves that its
+The recursive lowering equations, raw-JSON reification and injectivity,
+exact source fixtures, rejection cases, kernel dependency report, direct
+compiler check, host revival, and language service diagnostics are required
+edges. The coverage corpus proves that its
 22 top-level representatives map to the exact canonical tag census, embeds
 both persisted check constructors, pins the generated-source digest, and
-checks the same order after Effect revival. Source-target denotational
-simulation remains a later edge. The higher-order authoring helpers attach
-local equation receipts to the existing Schema graphs and do not receive a
-ceremonial graph.
+checks the same order after Effect revival. The raw-data reification edge is
+closed; document revival and decoded-value denotational simulation remain
+later edges. The higher-order authoring helpers attach local equation receipts
+to the existing Schema graphs and do not receive a ceremonial graph.
 
 The kernel receipt makes the trust split explicit. Recursive lowering and
 generation admission reach only `propext` and `Quot.sound`; final source

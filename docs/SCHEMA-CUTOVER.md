@@ -632,7 +632,8 @@ TS-PG-SCHEMA-DOCUMENT-GENERATION
   -> pinned Effect document revival
   -> Effect language-service diagnostics
   -> raw 22-representation / 2-check generation and revival coverage
-  -> source-target denotational simulation [OPEN]
+  -> raw Json target reification and lowering injectivity [CLOSED]
+  -> document revival / decoded-value denotational simulation [OPEN]
 
 DATA-ROW-01 canonical row declaration and normalization
   -> DATA-ROW-02 row union associativity, commutativity, and idempotence

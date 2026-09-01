@@ -22,6 +22,9 @@ Schema-to-TypeScript generation boundary.
 #print axioms Effect4Test.Target.TypeScript.SchemaGenerationCoverage.allRepresentations_tags
 
 #print axioms Effect4.Target.TypeScript.Schema.json
+#print axioms Effect4.Target.TypeScript.Schema.reifyJson?
+#print axioms Effect4.Target.TypeScript.Schema.reifyJson?_json
+#print axioms Effect4.Target.TypeScript.Schema.json_injective
 #print axioms Effect4.Target.TypeScript.Schema.representation
 #print axioms Effect4.Target.TypeScript.Schema.check
 #print axioms Effect4.Target.TypeScript.Schema.documentExpr

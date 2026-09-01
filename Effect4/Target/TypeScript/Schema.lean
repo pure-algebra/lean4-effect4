@@ -60,6 +60,87 @@ decreasing_by
 
 end
 
+/-! ## Raw-data reification -/
+
+mutual
+
+/-- Reify the target-data fragment back into the existing raw JSON carrier.
+
+This is deliberately partial on general TypeScript expressions. It covers the
+forms emitted by `json`, preserves field order and duplicate keys, and does not
+invent a second target-value type. -/
+def reifyJson? : Expr → Option Json
+  | .str value => some (.str value)
+  | .float64Bits bits => some (.number (Float64.ofBits bits))
+  | .bool value => some (.bool value)
+  | .jsNull => some .null
+  | .objectQuoted fields | .objectQuotedML fields | .objectFromEntries fields =>
+      return .obj (← reifyJsonFields? fields)
+  | .arr items => return .arr (← reifyJsonList? items)
+  | _ => none
+termination_by value => sizeOf value
+decreasing_by all_goals decreasing_tactic
+
+private def reifyJsonList? : List Expr → Option (List Json)
+  | [] => some []
+  | first :: rest => return (← reifyJson? first) :: (← reifyJsonList? rest)
+termination_by values => sizeOf values
+decreasing_by all_goals decreasing_tactic
+
+private def reifyJsonFields? : List (String × Expr) →
+    Option (List (String × Json))
+  | [] => some []
+  | first :: rest =>
+      return (first.1, ← reifyJson? first.2) :: (← reifyJsonFields? rest)
+termination_by fields => sizeOf fields
+decreasing_by
+  all_goals first
+    | decreasing_tactic
+    | cases first
+      simp +arith
+
+end
+
+mutual
+
+/-- Reification is a left inverse of raw JSON lowering. -/
+theorem reifyJson?_json (value : Json) : reifyJson? (json value) = some value := by
+  cases value with
+  | null => simp [json, reifyJson?]
+  | bool value => simp [json, reifyJson?]
+  | number value => simp [json, reifyJson?, Float64.ofBits]
+  | str value => simp [json, reifyJson?]
+  | arr elements => simp [json, reifyJson?, reifyJsonList?_jsonList elements]
+  | obj entries =>
+      simp [json, dataObject]
+      split <;>
+        simp_all [reifyJson?, reifyJsonFields?_jsonEntries entries]
+
+private theorem reifyJsonList?_jsonList (values : List Json) :
+    reifyJsonList? (jsonList values) = some values := by
+  cases values with
+  | nil => simp [jsonList, reifyJsonList?]
+  | cons first rest =>
+      simp [jsonList, reifyJsonList?, reifyJson?_json first,
+        reifyJsonList?_jsonList rest]
+
+private theorem reifyJsonFields?_jsonEntries (entries : List (String × Json)) :
+    reifyJsonFields? (jsonEntries entries) = some entries := by
+  cases entries with
+  | nil => simp [jsonEntries, reifyJsonFields?]
+  | cons first rest =>
+      simp [jsonEntries, reifyJsonFields?, reifyJson?_json first.2,
+        reifyJsonFields?_jsonEntries rest]
+
+end
+
+/-- Raw JSON lowering is injective: exact binary64 bits, order, and duplicate
+object keys remain recoverable from the retained target syntax. -/
+theorem json_injective : Function.Injective json := by
+  intro left right equal
+  have recovered := congrArg reifyJson? equal
+  simpa [reifyJson?_json] using recovered
+
 private def annotationFields : Annotations → List (String × Expr)
   | none => []
   | some entries =>

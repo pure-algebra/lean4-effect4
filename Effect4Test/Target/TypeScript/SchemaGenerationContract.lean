@@ -25,6 +25,13 @@ private def duplicatePrototypeReferenceDocument : Document :=
     , { key := "x", representation := Schema.boolean } ]
 
 #check (@Target.TypeScript.Schema.json : Json → Target.TypeScript.Expr)
+#check (@Target.TypeScript.Schema.reifyJson? :
+  Target.TypeScript.Expr → Option Json)
+#check (@Target.TypeScript.Schema.reifyJson?_json :
+  ∀ value, Target.TypeScript.Schema.reifyJson?
+    (Target.TypeScript.Schema.json value) = some value)
+#check (@Target.TypeScript.Schema.json_injective :
+  Function.Injective Target.TypeScript.Schema.json)
 #check (@Target.TypeScript.Schema.representation :
   Representation → Target.TypeScript.Expr)
 #check (@Target.TypeScript.Schema.documentExpr :
@@ -47,6 +54,13 @@ private def duplicatePrototypeReferenceDocument : Document :=
 #guard Target.TypeScript.Schema.jsonSource
     (.obj [("__proto__", .str "data")]) =
   "Object.fromEntries([[\"__proto__\", \"data\"]])"
+
+#guard Target.TypeScript.Schema.reifyJson?
+    (Target.TypeScript.Schema.json
+      (.obj [("x", .number Float64.negZero), ("x", .number Float64.nan)])) =
+  some (.obj [("x", .number Float64.negZero), ("x", .number Float64.nan)])
+
+#guard Target.TypeScript.Schema.reifyJson? (.ident "arbitraryCode") = none
 
 #guard Target.TypeScript.Schema.documentSource prototypeReferenceDocument =
   "{\n" ++
