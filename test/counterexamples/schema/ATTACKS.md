@@ -674,6 +674,40 @@ malformed same-key entries.
 
 Executable witness: `Effect4Test/Counterexamples/Schema/AnnotationDataPlane.lean`.
 
+## Typed success is not exact raw admission — `E4-SCHEMA-CE-049`
+
+Typed annotation lookup deliberately hides malformed same-name payloads. That
+is correct for editing and wrong for interface admission: one valid payload
+beside malformed or duplicate raw evidence could appear to be a single typed
+value. Effectful-field admission reads the complete raw `payloadsAt` list and
+requires exactly one canonical payload.
+
+Executable witness: `Effect4Test/Counterexamples/Schema/EffectfulField.lean`.
+
+## Operation numbers are local to an alphabet — `E4-SCHEMA-CE-050`
+
+Two alphabets can both contain operations numbered 11 and 12. Resolution
+therefore compares the existing alphabet identity before both operation
+identities. This layer assigns no service or refusal meaning.
+
+Executable witness: `Effect4Test/Counterexamples/Schema/EffectfulField.lean`.
+
+## Effectful modify reads the effect, not stale source data — `E4-SCHEMA-CE-051`
+
+Using `Lens.get source` to choose the new value makes the read annotation
+decorative. Correct `modify` starts with the declared read operation; the
+retained stale-source substitute starts immediately with a write.
+
+Executable witness: `Effect4Test/Counterexamples/Schema/EffectfulField.lean`.
+
+## A pure lens update erases the write effect — `E4-SCHEMA-CE-052`
+
+The desired local value alone is insufficient. The retained `set` program has
+the declared write as its root operation, while the pure lens replacement has
+no root operation. The interpreter theorem fixes the same ordering.
+
+Executable witness: `Effect4Test/Counterexamples/Schema/EffectfulField.lean`.
+
 ## One codec inverse does not reconstruct raw data — `E4-SCHEMA-CE-046`
 
 A codec may satisfy `decode (encode value) = some value` while accepting
