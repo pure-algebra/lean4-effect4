@@ -1,0 +1,52 @@
+{
+  "$schema": "./node_modules/@effect/tsgo/schema.json",
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext", "DOM"],
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        "diagnosticSeverity": {
+          "floatingEffect": "error",
+          "missingEffectError": "error",
+          "missingEffectContext": "error",
+          "schemaSyncInEffect": "error",
+          "promiseInEffectSuccess": "off",
+          "lazyPromiseInEffectSync": "off",
+          "schemaStructWithTag": "off",
+          "schemaNumber": "off",
+          "preferTypedSchemaDecoder": "off",
+          "catchToIgnore": "off",
+          "asyncFunction": "off",
+          "cryptoRandomUUID": "off",
+          "cryptoRandomUUIDInEffect": "off",
+          "globalConsole": "off",
+          "globalConsoleInEffect": "off",
+          "globalDate": "off",
+          "globalDateInEffect": "off",
+          "globalFetch": "off",
+          "globalFetchInEffect": "off",
+          "globalRandom": "off",
+          "globalRandomInEffect": "off",
+          "globalTimers": "off",
+          "globalTimersInEffect": "off",
+          "newPromise": "off",
+          "nodeBuiltinImport": "off",
+          "preferSchemaOverJson": "off",
+          "processEnv": "off",
+          "processEnvInEffect": "off",
+          "tryCatchInEffectGen": "off"
+        }
+      }
+    ]
+  },
+  "files": ["fixture.ts"]
+}

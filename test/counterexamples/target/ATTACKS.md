@@ -39,10 +39,47 @@
   and generation rejects duplicate object keys before either representation
   can collapse them.
 
+## E4-TARGET-CE-005 — typed annotation filtering at generation
+
+- **BROKE:** one decoded effectful-field marker is enough to generate a field.
+- **WITNESS:** one malformed same-name entry beside a valid entry, and two
+  valid same-name entries.
+- **CLASS:** target admission evidence loss.
+- **FIXED-BY:** reuse `EffectfulFieldSpec.check` over every raw occurrence in
+  the existing property annotation bag.
+
+## E4-TARGET-CE-006 — operation identity without alphabet identity
+
+- **BROKE:** a matching local operation number resolves a target binding.
+- **WITNESS:** read operation `11` under annotated alphabet `7` and target
+  alphabet `8`.
+- **CLASS:** cross-alphabet target misbinding.
+- **FIXED-BY:** compare the alphabet plus the directional operation identity.
+
+## E4-TARGET-CE-007 — erased directional Effect rows
+
+- **BROKE:** `get`, `replace`, and `modify` may share one error/service row, or
+  a generator may spell `Effect.Requirements`.
+- **WITNESS:** direct `Effect.Success`/`Error`/`Services` assertions and exact
+  `floatingEffect`, `missingEffectError`, and `missingEffectContext` projects
+  in `harness/schema-effectful-field/`.
+- **CLASS:** generated TypeScript type mismatch.
+- **FIXED-BY:** retain read and write rows separately and form unions only for
+  `modify`; pin the rc.112 `Effect.Services` name.
+
+## E4-TARGET-CE-008 — generated declaration through raw text
+
+- **BROKE:** checked effectful-field generation may return `Decl.raw`.
+- **WITNESS:** `EffectfulField.decl?_never_raw` over the representative request.
+- **CLASS:** unchecked target escape.
+- **FIXED-BY:** one additive first-order `Decl.effectfulField` constructor and
+  an exclusion theorem for the checked lowering image.
+
 ## Claim limit
 
 The first two witnesses establish exact local printer behavior. They do not
 establish TypeScript grammar validity, typing, Effect v4 compatibility, or
 source-target simulation. The third attack deliberately keeps those graph
-edges open. The fourth is also exercised by the direct TypeScript, Effect, and
-language-service harness, but does not close general source-target simulation.
+edges open. The fourth and effectful-field witnesses are also exercised by
+direct TypeScript, Effect, and language-service harnesses, but do not close
+general source-target simulation.
