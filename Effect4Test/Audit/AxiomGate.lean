@@ -43,6 +43,7 @@ needs the exemption fails the gate, so an entry cannot outlive its reason.
 private def auditImplementationModules : List Name :=
   [ `Effect4Test.Audit.AxiomGate
   , `Effect4Test.Schema.PayloadSurface
+  , `Effect4Test.Data.RowAssurance
   , `Effect4Test.Environment.ContextKeyAssurance
   ]
 
