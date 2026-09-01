@@ -31,6 +31,7 @@ import Effect4.Semantics.Logic
 import Effect4.Schema.Payload
 import Effect4.Schema.Representation
 import Effect4.Schema.Annotations
+import Effect4.Schema.EffectfulField
 import Effect4.Schema.Document
 import Effect4.Schema.Check
 import Effect4.Schema.Authoring

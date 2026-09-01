@@ -119,14 +119,15 @@ functions belong to authoring and proof descriptors.
 ## Effectful field interfaces
 
 An annotation may also declare that a field is read or written through the
-existing effect algebra. The next additive layer derives an effectful field
-interface from three things: a pure `Lens`, a first-order annotation payload,
-and operations from the existing closed `Signature`. The Schema tree stores
-only portable operation identity data; the resolved interface keeps Lean
-functions outside persisted content.
+existing effect algebra. `EffectfulFieldSpec` stores the alphabet plus read and
+write operation identities. `EffectfulField.resolve` combines one exact raw
+marker, a pure `Lens`, and operations from the existing closed `Signature`.
+The Schema tree stores only portable operation identity data; the resolved
+interface keeps Lean functions outside persisted content.
 
 This does not make the pure optic itself monadic and does not add another
-Schema or program carrier. `get`, `set`, and `modify` are generated programs,
+Schema or program carrier. `get`, `set`, and `modify` return existing `Program`
+values,
 so their observable operations remain available to interpreters, analyzers,
 and TypeScript generation. Duplicate or malformed same-name annotations must
 fail interface derivation rather than being hidden by first-match lookup.

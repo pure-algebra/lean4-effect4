@@ -3,6 +3,7 @@ import Effect4.Schema.Representation
 import Effect4.Schema.Document
 import Effect4.Schema.Check
 import Effect4.Schema.Annotations
+import Effect4.Schema.EffectfulField
 
 /-!
 Fresh kernel dependency report for all six Schema representation alphabets.
@@ -157,6 +158,17 @@ Typed annotation dimensions, local optics, and recursive data-plane traversals.
 #print axioms Effect4.Check.annotationBags_lawful
 #print axioms Effect4.Document.annotationBags_lawful
 #print axioms Effect4.MultiDocument.annotationBags_lawful
+
+/-!
+Exact effectful-field annotation admission and generated-program semantics.
+-/
+
+#print axioms Effect4.EffectfulFieldSpec.annotationKey_lawful
+#print axioms Effect4.EffectfulFieldSpec.check_eq_some_iff
+#print axioms Effect4.EffectfulFieldSpec.rawAdmissible_iff_exists_check
+#print axioms Effect4.EffectfulField.resolvable_iff_resolve_isSome
+#print axioms Effect4.EffectfulField.interpret_set
+#print axioms Effect4.EffectfulField.interpret_modify
 
 /-!
 Payload carrier, section D6: the two document containers and the single-root

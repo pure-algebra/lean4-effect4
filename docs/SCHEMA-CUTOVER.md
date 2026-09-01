@@ -562,6 +562,10 @@ conditional and explicit:
 - `SCHEMA-PG-ANNOTATION-DATA` owns exact typed-key reconstruction and the
   exhaustive recursive annotation walk through representations, checks, and
   documents. It reuses the existing Schema carriers and closed recursor.
+- `SCHEMA-PG-EFFECTFUL-FIELD` owns exact raw marker admission, resolution
+  against one closed signature, generated read/write/modify programs, and the
+  corresponding big-step interpreter equations. It introduces no new effect
+  or optic carrier.
 - `SCHEMA-PG-DOCUMENT` owns reference interpretation, reachability,
   guardedness, and productivity. The plain `Document` and `MultiDocument`
   record declarations are leaves until those meanings are attached.
@@ -613,6 +617,14 @@ SCHEMA-PG-ANNOTATION-DATA
   -> structural Document and MultiDocument traversal
   -> E4-SCHEMA-CE-044 through E4-SCHEMA-CE-048
   -> TypeScript, Effect runtime, and Effect language-service host gate
+
+SCHEMA-PG-EFFECTFUL-FIELD
+  -> exact first-order marker codec
+  -> exact raw occurrence admission
+  -> closed alphabet and operation identity agreement
+  -> generated get, set, and modify Program equations
+  -> interpreter preservation at interpret
+  -> E4-SCHEMA-CE-049 through E4-SCHEMA-CE-052
 
 SC-SRC-01 exact upstream and resolved-package pins
 SC-SRC-02 generated 22-tag source census
