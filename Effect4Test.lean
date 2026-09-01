@@ -32,6 +32,7 @@ import Effect4Test.Environment.AxiomReport
 import Effect4Test.Environment.ContextKeyAssurance
 import Effect4Test.Target.TypeScript.ExprContract
 import Effect4Test.Target.TypeScript.SchemaGenerationContract
+import Effect4Test.Target.TypeScript.SchemaGenerationCoverage
 import Effect4Test.Target.TypeScript.SchemaGenerationAxiomReport
 import Effect4Test.Audit.AxiomGate
 

@@ -16,5 +16,10 @@
       }
     ]
   },
-  "include": ["./Person.generated.ts", "./runtime-check.ts"]
+  "include": [
+    "./Person.generated.ts",
+    "./runtime-check.ts",
+    "./AllRepresentations.generated.ts",
+    "./coverage-runtime-check.ts"
+  ]
 }

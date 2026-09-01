@@ -8,6 +8,8 @@ Battery: `Effect4Test/Target/TypeScript/SchemaGenerationContract.lean`
 
 Host harness: `scripts/check-schema-typescript-generation.sh`
 
+Coverage corpus: `Effect4Test/Target/TypeScript/SchemaGenerationCoverage.lean`
+
 ## Boundary
 
 The generator consumes the existing `Json`, `Representation`, `Check`,
@@ -55,12 +57,15 @@ Schema Json/Representation/Check/Document
   -> Effect language-service diagnostics
 ```
 
-The recursive lowering equations, exact source fixture, rejection cases,
+The recursive lowering equations, exact source fixtures, rejection cases,
 kernel dependency report, direct compiler check, host revival, and language
-service diagnostics are required edges. Source-target denotational simulation
-and a full differential corpus remain later edges. The higher-order authoring
-helpers attach local equation receipts to the existing Schema graphs and do
-not receive a ceremonial graph.
+service diagnostics are required edges. The coverage corpus proves that its
+22 top-level representatives map to the exact canonical tag census, embeds
+both persisted check constructors, pins the generated-source digest, and
+checks the same order after Effect revival. Source-target denotational
+simulation remains a later edge. The higher-order authoring helpers attach
+local equation receipts to the existing Schema graphs and do not receive a
+ceremonial graph.
 
 The kernel receipt makes the trust split explicit. Recursive lowering and
 generation admission reach only `propext` and `Quot.sound`; final source

@@ -50,4 +50,4 @@ full generated Effect TypeScript cutover while any required edge remains open.
 | bridges | `required-open` | source-target denotational simulation is not yet proved |
 | targets | `required-closed` | `check-schema-typescript-generation.sh` byte-compares Lean generation, runs the unpatched TypeScript compiler, revives with `effect@4.0.0-rc.112`, and runs `@effect/tsgo@0.38.0` language-service diagnostics |
 | trust | `required-closed` | `SchemaGenerationAxiomReport.lean` plus the repository-wide axiom gate |
-| coverage | `required-open` | one representative document is not the full 22-constructor host differential corpus |
+| coverage | `required-closed` | `SchemaGenerationCoverage.lean` proves the 22 representatives follow the canonical census and contains both check nodes; the host harness pins their generated digest and verifies the same ordered tags after Effect revival |

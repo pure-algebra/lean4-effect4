@@ -31,9 +31,18 @@ trap 'rm -rf "$temporary_dir"' EXIT
 cd "$project_root"
 lake env lean "$harness_dir/EmitFixture.lean" > "$temporary_dir/Person.generated.ts"
 cmp "$harness_dir/Person.generated.ts" "$temporary_dir/Person.generated.ts"
+lake env lean "$harness_dir/EmitCoverageFixture.lean" > \
+  "$temporary_dir/AllRepresentations.generated.ts"
+
+expected_coverage_digest="$(<"$harness_dir/AllRepresentations.sha256")"
+actual_coverage_digest="$(shasum -a 256 \
+  "$temporary_dir/AllRepresentations.generated.ts" | awk '{print $1}')"
+[[ "$actual_coverage_digest" == "$expected_coverage_digest" ]]
 
 cp "$harness_dir/tsconfig.json" "$temporary_dir/tsconfig.json"
 cp "$harness_dir/runtime-check.ts" "$temporary_dir/runtime-check.ts"
+cp "$harness_dir/coverage-runtime-check.ts" \
+  "$temporary_dir/coverage-runtime-check.ts"
 ln -s "$node_modules" "$temporary_dir/node_modules"
 
 compiler_output="$("$host_compiler" -p "$temporary_dir/tsconfig.json" --pretty false 2>&1)"
@@ -54,7 +63,7 @@ diagnostics="$temporary_dir/effect-language-service.json"
   const fs = require("node:fs")
   const report = JSON.parse(fs.readFileSync(process.argv[1], "utf8"))
   const clean = report.summary?.errors === 0 && report.summary?.warnings === 0 &&
-    report.summary?.filesChecked === 2 && report.files?.length === 2 &&
+    report.summary?.filesChecked === 4 && report.files?.length === 4 &&
     report.files.every((file) =>
       file.detectedEffect === "v4" && file.supportedEffect === "v4")
   if (!clean) process.exit(1)
@@ -62,8 +71,11 @@ diagnostics="$temporary_dir/effect-language-service.json"
 
 NODE_NO_WARNINGS=1 "$node_bin" --experimental-strip-types \
   "$temporary_dir/runtime-check.ts"
+NODE_NO_WARNINGS=1 "$node_bin" --experimental-strip-types \
+  "$temporary_dir/coverage-runtime-check.ts"
 
 echo "schema TypeScript harness: fixture bytes match Lean generation"
+echo "schema TypeScript harness: 22-constructor corpus digest matches"
 echo "schema TypeScript harness: direct compiler $typescript_version passed"
 echo "schema TypeScript harness: effect $effect_version revived the document"
 echo "schema TypeScript harness: language service $tsgo_version passed"

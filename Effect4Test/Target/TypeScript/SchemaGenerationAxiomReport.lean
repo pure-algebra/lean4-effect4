@@ -1,5 +1,6 @@
 import Effect4.Schema.Authoring
 import Effect4.Target.TypeScript.Schema
+import Effect4Test.Target.TypeScript.SchemaGenerationCoverage
 
 /-!
 Kernel dependency receipt for the Schema authoring laws and recursive
@@ -18,6 +19,7 @@ Schema-to-TypeScript generation boundary.
 #print axioms Effect4.Schema.withCheck_reference
 #print axioms Effect4.Schema.withCheck_suspend
 #print axioms Effect4.Schema.withCheck_string
+#print axioms Effect4Test.Target.TypeScript.SchemaGenerationCoverage.allRepresentations_tags
 
 #print axioms Effect4.Target.TypeScript.Schema.json
 #print axioms Effect4.Target.TypeScript.Schema.representation

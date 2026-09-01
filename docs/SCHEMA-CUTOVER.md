@@ -631,8 +631,8 @@ TS-PG-SCHEMA-DOCUMENT-GENERATION
   -> direct TypeScript compiler
   -> pinned Effect document revival
   -> Effect language-service diagnostics
+  -> raw 22-representation / 2-check generation and revival coverage
   -> source-target denotational simulation [OPEN]
-  -> full 22-constructor differential coverage [OPEN]
 
 DATA-ROW-01 canonical row declaration and normalization
   -> DATA-ROW-02 row union associativity, commutativity, and idempotence
