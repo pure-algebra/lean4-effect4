@@ -3,6 +3,7 @@ import Lean.Util.CollectAxioms
 import Effect4.Concurrency.Scheduler
 import Effect4.Semantics.Cause
 import Effect4.Semantics.Exit
+import Effect4.Runtime.Scope
 
 /-!
 # Effect v4 fiber runtime coverage
@@ -35,7 +36,7 @@ open Lean Elab Command
 
 namespace Effect4Test.Audit.RuntimeCoverage
 
-universe u
+universe u v
 
 section StatementSnapshot
 
@@ -493,6 +494,609 @@ ascriptions of `Effect4Test/Semantics/CauseExitContract.lean`. -/
 #check (@Effect4.Exit.void_eq : forall {ε δ ι α : Type u},
   (Exit.void : Exit Unit ε δ ι α) = Exit.success ())
 
+/-! The Scope model witnesses. Statements are transcribed from the frozen
+ascriptions of `Effect4Test/Runtime/ScopeContract.lean`. -/
+
+#check (@Effect4.ScopeState.cases_receipt :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
+    (state : Effect4.ScopeState κ φ β ε δ ι α),
+    state = Effect4.ScopeState.empty \/
+      state = Effect4.ScopeState.openEmpty \/
+        (exists key finalizer, state = Effect4.ScopeState.openInline key finalizer) \/
+          (exists table, state = Effect4.ScopeState.openMap table) \/
+            (exists exit, state = Effect4.ScopeState.closed exit))
+
+#check (@Effect4.ScopeState.entries_empty :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u},
+    (Effect4.ScopeState.empty : Effect4.ScopeState κ φ β ε δ ι α).entries = [])
+
+#check (@Effect4.ScopeState.entries_openEmpty :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u},
+    (Effect4.ScopeState.openEmpty : Effect4.ScopeState κ φ β ε δ ι α).entries = [])
+
+#check (@Effect4.ScopeState.entries_openInline :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (key : κ) (finalizer : φ),
+    (Effect4.ScopeState.openInline key finalizer :
+      Effect4.ScopeState κ φ β ε δ ι α).entries = [(key, finalizer)])
+
+#check (@Effect4.ScopeState.entries_openMap :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (table : List (κ × φ)),
+    (Effect4.ScopeState.openMap table : Effect4.ScopeState κ φ β ε δ ι α).entries = table)
+
+#check (@Effect4.ScopeState.entries_closed :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (exit : Effect4.Exit β ε δ ι α),
+    (Effect4.ScopeState.closed exit : Effect4.ScopeState κ φ β ε δ ι α).entries = [])
+
+#check (@Effect4.ScopeState.isOpen_empty :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u},
+    (Effect4.ScopeState.empty : Effect4.ScopeState κ φ β ε δ ι α).isOpen = false)
+
+#check (@Effect4.ScopeState.isOpen_openEmpty :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u},
+    (Effect4.ScopeState.openEmpty : Effect4.ScopeState κ φ β ε δ ι α).isOpen = true)
+
+#check (@Effect4.ScopeState.isOpen_openInline :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (key : κ) (finalizer : φ),
+    (Effect4.ScopeState.openInline key finalizer :
+      Effect4.ScopeState κ φ β ε δ ι α).isOpen = true)
+
+#check (@Effect4.ScopeState.isOpen_openMap :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (table : List (κ × φ)),
+    (Effect4.ScopeState.openMap table : Effect4.ScopeState κ φ β ε δ ι α).isOpen = true)
+
+#check (@Effect4.ScopeState.isOpen_closed :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (exit : Effect4.Exit β ε δ ι α),
+    (Effect4.ScopeState.closed exit : Effect4.ScopeState κ φ β ε δ ι α).isOpen = false)
+
+#check (@Effect4.ScopeState.isClosed_eq :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
+    (state : Effect4.ScopeState κ φ β ε δ ι α),
+    state.isClosed = true <-> exists exit, state = Effect4.ScopeState.closed exit)
+
+#check (@Effect4.ScopeState.closingExit_closed :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (exit : Effect4.Exit β ε δ ι α),
+    (Effect4.ScopeState.closed exit : Effect4.ScopeState κ φ β ε δ ι α).closingExit? =
+      some exit)
+
+#check (@Effect4.ScopeState.closingExit_of_not_closed :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
+    (state : Effect4.ScopeState κ φ β ε δ ι α),
+    state.isClosed = false -> state.closingExit? = none)
+
+#check (@Effect4.ScopeState.openEmpty_ne_openMap_nil :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u},
+    (Effect4.ScopeState.openEmpty : Effect4.ScopeState κ φ β ε δ ι α) ≠
+      Effect4.ScopeState.openMap [])
+
+#check (@Effect4.Scope.finalizers_eq :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α),
+    self.finalizers = self.state.entries)
+
+#check (@Effect4.Scope.finalizerKeys_eq :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α),
+    self.finalizerKeys = self.finalizers.map Prod.fst)
+
+#check (@Effect4.Scope.finalizerCount_eq :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α),
+    self.finalizerCount = self.finalizers.length)
+
+#check (@Effect4.Scope.finalizerCount_not_open :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α),
+    self.isOpen = false -> self.finalizerCount = 0)
+
+#check (@Effect4.FinalizerStrategy.all_nodup : Effect4.FinalizerStrategy.all.Nodup)
+
+#check (@Effect4.FinalizerStrategy.mem_all :
+  forall strategy : Effect4.FinalizerStrategy, strategy ∈ Effect4.FinalizerStrategy.all)
+
+#check (@Effect4.Scope.make_strategy :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (strategy : Effect4.FinalizerStrategy),
+    (Effect4.Scope.make strategy : Effect4.Scope κ φ β ε δ ι α).strategy = strategy)
+
+#check (@Effect4.Scope.make_state :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (strategy : Effect4.FinalizerStrategy),
+    (Effect4.Scope.make strategy : Effect4.Scope κ φ β ε δ ι α).state =
+      Effect4.ScopeState.empty)
+
+#check (@Effect4.Scope.make_finalizers :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (strategy : Effect4.FinalizerStrategy),
+    (Effect4.Scope.make strategy : Effect4.Scope κ φ β ε δ ι α).finalizers = [])
+
+#check (@Effect4.Scope.makeDefault_eq :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u},
+    (Effect4.Scope.makeDefault : Effect4.Scope κ φ β ε δ ι α) =
+      Effect4.Scope.make Effect4.FinalizerStrategy.sequential)
+
+#check (@Effect4.Scope.makeDefault_strategy :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u},
+    (Effect4.Scope.makeDefault : Effect4.Scope κ φ β ε δ ι α).strategy =
+      Effect4.FinalizerStrategy.sequential)
+
+#check (@Effect4.Scope.key_freshness_refused :
+  forall {κ : Type u} {γ : Type u} (mint : γ -> κ) (left right : γ),
+    left = right -> mint left = mint right)
+
+#check (@Effect4.Scope.tableInsert_new : forall {κ φ : Type u} [DecidableEq κ]
+  (table : List (κ × φ)) (key : κ) (finalizer : φ),
+  key ∉ table.map Prod.fst ->
+    Effect4.Scope.tableInsert table key finalizer = table ++ [(key, finalizer)])
+
+#check (@Effect4.Scope.tableInsert_existing : forall {κ φ : Type u} [DecidableEq κ]
+  (table : List (κ × φ)) (key : κ) (finalizer : φ),
+  key ∈ table.map Prod.fst ->
+    Effect4.Scope.tableInsert table key finalizer =
+      table.map (fun entry => if entry.fst = key then (key, finalizer) else entry))
+
+#check (@Effect4.Scope.tableInsert_keys_of_mem : forall {κ φ : Type u} [DecidableEq κ]
+  (table : List (κ × φ)) (key : κ) (finalizer : φ),
+  key ∈ table.map Prod.fst ->
+    (Effect4.Scope.tableInsert table key finalizer).map Prod.fst = table.map Prod.fst)
+
+#check (@Effect4.Scope.tableInsert_nodup : forall {κ φ : Type u} [DecidableEq κ]
+  (table : List (κ × φ)) (key : κ) (finalizer : φ),
+  (table.map Prod.fst).Nodup ->
+    ((Effect4.Scope.tableInsert table key finalizer).map Prod.fst).Nodup)
+
+#check (@Effect4.Scope.addUnsafe_strategy :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ),
+    (self.addUnsafe key finalizer).strategy = self.strategy)
+
+#check (@Effect4.Scope.addUnsafe_empty :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ),
+    self.state = Effect4.ScopeState.empty ->
+      (self.addUnsafe key finalizer).state =
+        Effect4.ScopeState.openInline key finalizer)
+
+#check (@Effect4.Scope.addUnsafe_openEmpty :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ),
+    self.state = Effect4.ScopeState.openEmpty ->
+      (self.addUnsafe key finalizer).state =
+        Effect4.ScopeState.openInline key finalizer)
+
+#check (@Effect4.Scope.addUnsafe_openInline :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (self : Effect4.Scope κ φ β ε δ ι α) (existingKey key : κ) (existing finalizer : φ),
+    self.state = Effect4.ScopeState.openInline existingKey existing ->
+      (self.addUnsafe key finalizer).state =
+        Effect4.ScopeState.openMap
+          (Effect4.Scope.tableInsert [(existingKey, existing)] key finalizer))
+
+#check (@Effect4.Scope.addUnsafe_openMap :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (self : Effect4.Scope κ φ β ε δ ι α) (table : List (κ × φ)) (key : κ) (finalizer : φ),
+    self.state = Effect4.ScopeState.openMap table ->
+      (self.addUnsafe key finalizer).state =
+        Effect4.ScopeState.openMap (Effect4.Scope.tableInsert table key finalizer))
+
+#check (@Effect4.Scope.addUnsafe_promotes :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (self : Effect4.Scope κ φ β ε δ ι α) (existingKey key : κ) (existing finalizer : φ),
+    self.state = Effect4.ScopeState.openInline existingKey existing -> existingKey ≠ key ->
+      (self.addUnsafe key finalizer).finalizers =
+        [(existingKey, existing), (key, finalizer)])
+
+#check (@Effect4.Scope.addUnsafe_finalizers :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ),
+    self.isClosed = false -> key ∉ self.finalizerKeys ->
+      (self.addUnsafe key finalizer).finalizers = self.finalizers ++ [(key, finalizer)])
+
+#check (@Effect4.Scope.addUnsafe_keys_nodup :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ),
+    self.finalizerKeys.Nodup -> (self.addUnsafe key finalizer).finalizerKeys.Nodup)
+
+#check (@Effect4.Scope.addUnsafe_closed :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ),
+    self.isClosed = true -> self.addUnsafe key finalizer = self)
+
+#check (@Effect4.Scope.addExit_open :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ),
+    self.isClosed = false ->
+      Effect4.Scope.addExit run self key finalizer =
+        (self.addUnsafe key finalizer, Effect4.Exit.void))
+
+#check (@Effect4.Scope.addExit_closed :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ)
+    (exit : Effect4.Exit β ε δ ι α),
+    self.state = Effect4.ScopeState.closed exit ->
+      Effect4.Scope.addExit run self key finalizer = (self, run finalizer exit))
+
+#check (@Effect4.Scope.addExit_closed_registers_nothing :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ)
+    (exit : Effect4.Exit β ε δ ι α),
+    self.state = Effect4.ScopeState.closed exit ->
+      (Effect4.Scope.addExit run self key finalizer).fst.finalizers = [])
+
+#check (@Effect4.Scope.tableRemove_eq : forall {κ φ : Type u} [DecidableEq κ]
+  (table : List (κ × φ)) (key : κ),
+  Effect4.Scope.tableRemove table key =
+    table.filter (fun entry => decide (entry.fst ≠ key)))
+
+#check (@Effect4.Scope.tableRemove_keys : forall {κ φ : Type u} [DecidableEq κ]
+  (table : List (κ × φ)) (key : κ),
+  key ∉ (Effect4.Scope.tableRemove table key).map Prod.fst)
+
+#check (@Effect4.Scope.tableRemove_nodup : forall {κ φ : Type u} [DecidableEq κ]
+  (table : List (κ × φ)) (key : κ),
+  (table.map Prod.fst).Nodup ->
+    ((Effect4.Scope.tableRemove table key).map Prod.fst).Nodup)
+
+#check (@Effect4.Scope.removeUnsafe_strategy :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ),
+    (self.removeUnsafe key).strategy = self.strategy)
+
+#check (@Effect4.Scope.removeUnsafe_inline_hit :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ),
+    self.state = Effect4.ScopeState.openInline key finalizer ->
+      (self.removeUnsafe key).state = Effect4.ScopeState.openEmpty)
+
+#check (@Effect4.Scope.removeUnsafe_inline_miss :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (self : Effect4.Scope κ φ β ε δ ι α) (existingKey key : κ) (finalizer : φ),
+    self.state = Effect4.ScopeState.openInline existingKey finalizer -> existingKey ≠ key ->
+      self.removeUnsafe key = self)
+
+#check (@Effect4.Scope.removeUnsafe_openMap :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (self : Effect4.Scope κ φ β ε δ ι α) (table : List (κ × φ)) (key : κ),
+    self.state = Effect4.ScopeState.openMap table ->
+      (self.removeUnsafe key).state =
+        Effect4.ScopeState.openMap (Effect4.Scope.tableRemove table key))
+
+#check (@Effect4.Scope.removeUnsafe_not_open :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ),
+    self.isOpen = false -> self.removeUnsafe key = self)
+
+#check (@Effect4.Scope.removeUnsafe_keys :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ),
+    key ∉ (self.removeUnsafe key).finalizerKeys)
+
+#check (@Effect4.Scope.removeUnsafe_keys_nodup :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ),
+    self.finalizerKeys.Nodup -> (self.removeUnsafe key).finalizerKeys.Nodup)
+
+#check (@Effect4.Scope.close_eq :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
+    Effect4.Scope.close run self exit =
+      (Effect4.Scope.closeState self exit, Effect4.Scope.closeResult run self exit))
+
+#check (@Effect4.Scope.close_state_independent_of_run :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
+    (leftRun rightRun : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
+    (Effect4.Scope.close leftRun self exit).fst =
+      (Effect4.Scope.close rightRun self exit).fst)
+
+#check (@Effect4.Scope.closeState_state :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α)
+    (exit : Effect4.Exit β ε δ ι α),
+    self.isClosed = false ->
+      (Effect4.Scope.closeState self exit).state = Effect4.ScopeState.closed exit)
+
+#check (@Effect4.Scope.closeState_strategy :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α)
+    (exit : Effect4.Exit β ε δ ι α),
+    (Effect4.Scope.closeState self exit).strategy = self.strategy)
+
+#check (@Effect4.Scope.closeState_finalizers :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α)
+    (exit : Effect4.Exit β ε δ ι α),
+    (Effect4.Scope.closeState self exit).finalizers = [])
+
+#check (@Effect4.Scope.closeState_isClosed :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α)
+    (exit : Effect4.Exit β ε δ ι α),
+    (Effect4.Scope.closeState self exit).isClosed = true)
+
+#check (@Effect4.Scope.closeState_idempotent :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α)
+    (exit : Effect4.Exit β ε δ ι α),
+    self.isClosed = true -> Effect4.Scope.closeState self exit = self)
+
+#check (@Effect4.Scope.close_closingExit :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α)
+    (exit : Effect4.Exit β ε δ ι α),
+    self.isClosed = false ->
+      (Effect4.Scope.closeState self exit).closingExit? = some exit)
+
+#check (@Effect4.Scope.close_idempotent :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
+    self.isClosed = true -> Effect4.Scope.close run self exit = (self, Effect4.Exit.void))
+
+#check (@Effect4.Scope.close_twice :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (self : Effect4.Scope κ φ β ε δ ι α) (first second : Effect4.Exit β ε δ ι α),
+    Effect4.Scope.close run (Effect4.Scope.close run self first).fst second =
+      ((Effect4.Scope.close run self first).fst, Effect4.Exit.void))
+
+#check (@Effect4.Scope.close_reentrant_add :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α) (key : κ)
+    (finalizer : φ),
+    self.isClosed = false ->
+      Effect4.Scope.addExit run (Effect4.Scope.closeState self exit) key finalizer =
+        (Effect4.Scope.closeState self exit, run finalizer exit))
+
+#check (@Effect4.Scope.closeResult_closed :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
+    self.isClosed = true -> Effect4.Scope.closeResult run self exit = Effect4.Exit.void)
+
+#check (@Effect4.Scope.closeOrder_eq :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α),
+    self.closeOrder = (self.finalizers.map Prod.snd).reverse)
+
+#check (@Effect4.Scope.closeOrder_last_first :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α)
+    (table : List (κ × φ)) (key : κ) (finalizer : φ),
+    self.finalizers = table ++ [(key, finalizer)] ->
+      self.closeOrder = finalizer :: (table.map Prod.snd).reverse)
+
+#check (@Effect4.Scope.closeExits_eq :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
+    Effect4.Scope.closeExits run self exit =
+      self.closeOrder.map (fun finalizer => run finalizer exit))
+
+#check (@Effect4.Scope.closeExits_reverse :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
+    Effect4.Scope.closeExits run self exit =
+      self.finalizers.reverse.map (fun entry => run entry.snd exit))
+
+#check (@Effect4.Scope.runScoped_lifo :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (registrations : List (κ × φ)) (bodyExit : Effect4.Exit β ε δ ι α),
+    (registrations.map Prod.fst).Nodup ->
+      Effect4.Scope.closeExits run
+          ((Effect4.Scope.make Effect4.FinalizerStrategy.sequential :
+            Effect4.Scope κ φ β ε δ ι α).addAll registrations) bodyExit =
+        registrations.reverse.map (fun entry => run entry.snd bodyExit))
+
+#check (@Effect4.Scope.closeExits_length :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
+    (Effect4.Scope.closeExits run self exit).length = self.finalizers.length)
+
+#check (@Effect4.Scope.closeResult_reasons :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
+    self.isClosed = false ->
+      (Effect4.Scope.closeResult run self exit).causeReasons =
+        (Effect4.Scope.closeExits run self exit).flatMap Effect4.Exit.causeReasons)
+
+#check (@Effect4.FinalizerStrategy.cases_receipt :
+  forall strategy : Effect4.FinalizerStrategy,
+    strategy = Effect4.FinalizerStrategy.sequential \/
+      strategy = Effect4.FinalizerStrategy.parallel)
+
+#check (@Effect4.Scope.close_strategy_irrelevant :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (state : Effect4.ScopeState κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
+    (Effect4.Scope.close run
+        ({ strategy := Effect4.FinalizerStrategy.parallel, state := state } :
+          Effect4.Scope κ φ β ε δ ι α) exit).snd =
+      (Effect4.Scope.close run
+        ({ strategy := Effect4.FinalizerStrategy.sequential, state := state } :
+          Effect4.Scope κ φ β ε δ ι α) exit).snd)
+
+#check (@Effect4.Scope.closeResult_nil :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
+    self.finalizers = [] -> Effect4.Scope.closeResult run self exit = Effect4.Exit.void)
+
+#check (@Effect4.Scope.closeResult_single :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α) (key : κ)
+    (finalizer : φ),
+    self.isClosed = false -> self.finalizers = [(key, finalizer)] ->
+      Effect4.Scope.closeResult run self exit = run finalizer exit)
+
+#check (@Effect4.Scope.closeResult_many :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α)
+    (first second : Effect4.Exit Unit ε δ ι α) (rest : List (Effect4.Exit Unit ε δ ι α)),
+    self.isClosed = false ->
+      Effect4.Scope.closeExits run self exit = first :: second :: rest ->
+        Effect4.Scope.closeResult run self exit =
+          Effect4.Exit.asVoidAll (first :: second :: rest))
+
+#check (@Effect4.Scope.fork_closed_parent :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (parent : Effect4.Scope κ φ β ε δ ι α) (strategy : Effect4.FinalizerStrategy)
+    (key : κ) (closeChild detachFromParent : φ) (exit : Effect4.Exit β ε δ ι α),
+    parent.state = Effect4.ScopeState.closed exit ->
+      Effect4.Scope.fork parent strategy key closeChild detachFromParent =
+        (parent, ({ strategy := strategy, state := Effect4.ScopeState.closed exit } :
+          Effect4.Scope κ φ β ε δ ι α)))
+
+#check (@Effect4.Scope.fork_closed_parent_child_exit :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (parent : Effect4.Scope κ φ β ε δ ι α) (strategy : Effect4.FinalizerStrategy)
+    (key : κ) (closeChild detachFromParent : φ) (exit : Effect4.Exit β ε δ ι α),
+    parent.state = Effect4.ScopeState.closed exit ->
+      (Effect4.Scope.fork parent strategy key closeChild detachFromParent).snd.closingExit? =
+        some exit)
+
+#check (@Effect4.Scope.fork_open_parent :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (parent : Effect4.Scope κ φ β ε δ ι α) (strategy : Effect4.FinalizerStrategy)
+    (key : κ) (closeChild detachFromParent : φ),
+    parent.isClosed = false ->
+      Effect4.Scope.fork parent strategy key closeChild detachFromParent =
+        (parent.addUnsafe key closeChild,
+          (Effect4.Scope.make strategy :
+            Effect4.Scope κ φ β ε δ ι α).addUnsafe key detachFromParent))
+
+#check (@Effect4.Scope.fork_child_finalizers :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (parent : Effect4.Scope κ φ β ε δ ι α) (strategy : Effect4.FinalizerStrategy)
+    (key : κ) (closeChild detachFromParent : φ),
+    parent.isClosed = false ->
+      (Effect4.Scope.fork parent strategy key closeChild detachFromParent).snd.finalizers =
+        [(key, detachFromParent)])
+
+#check (@Effect4.Scope.fork_parent_finalizers :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (parent : Effect4.Scope κ φ β ε δ ι α) (strategy : Effect4.FinalizerStrategy)
+    (key : κ) (closeChild detachFromParent : φ),
+    parent.isClosed = false -> key ∉ parent.finalizerKeys ->
+      (Effect4.Scope.fork parent strategy key closeChild detachFromParent).fst.finalizers =
+        parent.finalizers ++ [(key, closeChild)])
+
+#check (@Effect4.Scope.fork_child_strategy :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (parent : Effect4.Scope κ φ β ε δ ι α) (strategy : Effect4.FinalizerStrategy)
+    (key : κ) (closeChild detachFromParent : φ),
+    (Effect4.Scope.fork parent strategy key closeChild detachFromParent).snd.strategy =
+      strategy)
+
+#check (@Effect4.Scope.fork_shared_key :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (parent : Effect4.Scope κ φ β ε δ ι α) (strategy : Effect4.FinalizerStrategy)
+    (key : κ) (closeChild detachFromParent : φ),
+    parent.isClosed = false ->
+      key ∈ (Effect4.Scope.fork parent strategy key closeChild
+          detachFromParent).fst.finalizerKeys /\
+        key ∈ (Effect4.Scope.fork parent strategy key closeChild
+          detachFromParent).snd.finalizerKeys)
+
+#check (@Effect4.Scope.fork_detach :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (parent : Effect4.Scope κ φ β ε δ ι α) (strategy : Effect4.FinalizerStrategy)
+    (key : κ) (closeChild detachFromParent : φ),
+    parent.isClosed = false -> key ∉ parent.finalizerKeys ->
+      ((Effect4.Scope.fork parent strategy key closeChild
+        detachFromParent).fst.removeUnsafe key).finalizers = parent.finalizers)
+
+#check (@Effect4.Scope.addAll_nil :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (self : Effect4.Scope κ φ β ε δ ι α), self.addAll [] = self)
+
+#check (@Effect4.Scope.addAll_cons :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (self : Effect4.Scope κ φ β ε δ ι α) (entry : κ × φ) (rest : List (κ × φ)),
+    self.addAll (entry :: rest) = (self.addUnsafe entry.fst entry.snd).addAll rest)
+
+#check (@Effect4.Scope.addAll_finalizers :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (self : Effect4.Scope κ φ β ε δ ι α) (registrations : List (κ × φ)),
+    self.isClosed = false ->
+      (self.finalizerKeys ++ registrations.map Prod.fst).Nodup ->
+        (self.addAll registrations).finalizers = self.finalizers ++ registrations)
+
+#check (@Effect4.Scope.make_addAll_finalizers :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (strategy : Effect4.FinalizerStrategy) (registrations : List (κ × φ)),
+    (registrations.map Prod.fst).Nodup ->
+      ((Effect4.Scope.make strategy :
+        Effect4.Scope κ φ β ε δ ι α).addAll registrations).finalizers = registrations)
+
+#check (@Effect4.Scope.runScoped_eq :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (registrations : List (κ × φ)) (bodyExit : Effect4.Exit β ε δ ι α),
+    Effect4.Scope.runScoped run registrations bodyExit =
+      Effect4.Scope.close run
+        ((Effect4.Scope.make Effect4.FinalizerStrategy.sequential :
+          Effect4.Scope κ φ β ε δ ι α).addAll registrations) bodyExit)
+
+#check (@Effect4.Scope.runScoped_fresh_scope :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u},
+    (Effect4.Scope.make Effect4.FinalizerStrategy.sequential :
+      Effect4.Scope κ φ β ε δ ι α) =
+      { strategy := Effect4.FinalizerStrategy.sequential,
+        state := Effect4.ScopeState.empty })
+
+#check (@Effect4.Scope.runScoped_state :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (registrations : List (κ × φ)) (bodyExit : Effect4.Exit β ε δ ι α),
+    (Effect4.Scope.runScoped run registrations bodyExit).fst.state =
+      Effect4.ScopeState.closed bodyExit)
+
+#check (@Effect4.Scope.runScoped_strategy :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (registrations : List (κ × φ)) (bodyExit : Effect4.Exit β ε δ ι α),
+    (Effect4.Scope.runScoped run registrations bodyExit).fst.strategy =
+      Effect4.FinalizerStrategy.sequential)
+
+#check (@Effect4.Scope.runScoped_empty :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (bodyExit : Effect4.Exit β ε δ ι α),
+    Effect4.Scope.runScoped run ([] : List (κ × φ)) bodyExit =
+      (({ strategy := Effect4.FinalizerStrategy.sequential,
+            state := Effect4.ScopeState.closed bodyExit } :
+          Effect4.Scope κ φ β ε δ ι α),
+        Effect4.Exit.void))
+
+#check (@Effect4.Scope.acquireRelease_failure :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (ambient : Effect4.Scope κ φ β ε δ ι α) (key : κ) (release : φ)
+    (cause : Effect4.Cause ε δ ι α),
+    Effect4.Scope.acquireRelease run ambient key release (Effect4.Exit.failure cause) =
+      (ambient, Effect4.Exit.void))
+
+#check (@Effect4.Scope.acquireRelease_success :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (ambient : Effect4.Scope κ φ β ε δ ι α) (key : κ) (release : φ) (value : β),
+    Effect4.Scope.acquireRelease run ambient key release (Effect4.Exit.success value) =
+      Effect4.Scope.addExit run ambient key release)
+
+#check (@Effect4.Scope.acquireRelease_registers :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (ambient : Effect4.Scope κ φ β ε δ ι α) (key : κ) (release : φ) (value : β),
+    ambient.isClosed = false -> key ∉ ambient.finalizerKeys ->
+      (Effect4.Scope.acquireRelease run ambient key release
+        (Effect4.Exit.success value)).fst.finalizers =
+          ambient.finalizers ++ [(key, release)])
+
+#check (@Effect4.Scope.acquireRelease_closed_ambient :
+  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
+    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
+    (ambient : Effect4.Scope κ φ β ε δ ι α) (key : κ) (release : φ) (value : β)
+    (exit : Effect4.Exit β ε δ ι α),
+    ambient.state = Effect4.ScopeState.closed exit ->
+      Effect4.Scope.acquireRelease run ambient key release (Effect4.Exit.success value) =
+        (ambient, run release exit))
+
 end StatementSnapshot
 
 /-! ## The frozen census join -/
@@ -591,25 +1195,145 @@ private def censusRows : List Row :=
   , { id := "fork.await", kind := "fork", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
   , { id := "fork.interrupt", kind := "fork", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
   , { id := "fork.interrupt-all", kind := "fork", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "scope.states", kind := "scope", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "scope.make", kind := "scope", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "scope.add-finalizer", kind := "scope", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "scope.add-after-closed", kind := "scope", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "scope.remove-finalizer", kind := "scope", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "scope.close-state-first", kind := "scope", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "scope.close-lifo", kind := "scope", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "scope.close-sequential", kind := "scope", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "scope.close-parallel", kind := "scope", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "scope.close-merge", kind := "scope", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "scope.states", kind := "scope", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.ScopeState.cases_receipt "none"
+        , w `Effect4.ScopeState.entries_empty "none"
+        , w `Effect4.ScopeState.entries_openEmpty "none"
+        , w `Effect4.ScopeState.entries_openInline "none"
+        , w `Effect4.ScopeState.entries_openMap "none"
+        , w `Effect4.ScopeState.entries_closed "none"
+        , w `Effect4.ScopeState.isOpen_empty "none"
+        , w `Effect4.ScopeState.isOpen_openEmpty "none"
+        , w `Effect4.ScopeState.isOpen_openInline "none"
+        , w `Effect4.ScopeState.isOpen_openMap "none"
+        , w `Effect4.ScopeState.isOpen_closed "none"
+        , w `Effect4.ScopeState.isClosed_eq "none"
+        , w `Effect4.ScopeState.closingExit_closed "none"
+        , w `Effect4.ScopeState.closingExit_of_not_closed "none"
+        , w `Effect4.ScopeState.openEmpty_ne_openMap_nil "none"
+        , w `Effect4.Scope.finalizers_eq "none"
+        , w `Effect4.Scope.finalizerKeys_eq "none"
+        , w `Effect4.Scope.finalizerCount_eq "none"
+        , w `Effect4.Scope.finalizerCount_not_open "none" ] }
+  , { id := "scope.make", kind := "scope", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.FinalizerStrategy.all_nodup "none"
+        , w `Effect4.FinalizerStrategy.mem_all "propext"
+        , w `Effect4.Scope.make_strategy "none"
+        , w `Effect4.Scope.make_state "none"
+        , w `Effect4.Scope.make_finalizers "none"
+        , w `Effect4.Scope.makeDefault_eq "none"
+        , w `Effect4.Scope.makeDefault_strategy "none" ] }
+  , { id := "scope.add-finalizer", kind := "scope", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Scope.key_freshness_refused "none"
+        , w `Effect4.Scope.tableInsert_new "propext,Quot.sound"
+        , w `Effect4.Scope.tableInsert_existing "propext,Quot.sound"
+        , w `Effect4.Scope.tableInsert_keys_of_mem "propext,Quot.sound"
+        , w `Effect4.Scope.tableInsert_nodup "propext,Quot.sound"
+        , w `Effect4.Scope.addUnsafe_strategy "none"
+        , w `Effect4.Scope.addUnsafe_empty "none"
+        , w `Effect4.Scope.addUnsafe_openEmpty "none"
+        , w `Effect4.Scope.addUnsafe_openInline "none"
+        , w `Effect4.Scope.addUnsafe_openMap "none"
+        , w `Effect4.Scope.addUnsafe_promotes "propext,Quot.sound"
+        , w `Effect4.Scope.addUnsafe_finalizers "propext,Quot.sound"
+        , w `Effect4.Scope.addUnsafe_keys_nodup "propext,Quot.sound" ] }
+  , { id := "scope.add-after-closed", kind := "scope", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Scope.addUnsafe_closed "none"
+        , w `Effect4.Scope.addExit_open "none"
+        , w `Effect4.Scope.addExit_closed "none"
+        , w `Effect4.Scope.addExit_closed_registers_nothing "none" ] }
+  , { id := "scope.remove-finalizer", kind := "scope", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Scope.tableRemove_eq "none"
+        , w `Effect4.Scope.tableRemove_keys "propext,Quot.sound"
+        , w `Effect4.Scope.tableRemove_nodup "propext"
+        , w `Effect4.Scope.removeUnsafe_strategy "none"
+        , w `Effect4.Scope.removeUnsafe_inline_hit "none"
+        , w `Effect4.Scope.removeUnsafe_inline_miss "none"
+        , w `Effect4.Scope.removeUnsafe_openMap "none"
+        , w `Effect4.Scope.removeUnsafe_not_open "none"
+        , w `Effect4.Scope.removeUnsafe_keys "propext,Quot.sound"
+        , w `Effect4.Scope.removeUnsafe_keys_nodup "propext" ] }
+  , { id := "scope.close-state-first", kind := "scope", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Scope.close_eq "none"
+        , w `Effect4.Scope.close_state_independent_of_run "none"
+        , w `Effect4.Scope.closeState_state "none"
+        , w `Effect4.Scope.closeState_strategy "none"
+        , w `Effect4.Scope.closeState_finalizers "none"
+        , w `Effect4.Scope.closeState_isClosed "none"
+        , w `Effect4.Scope.closeState_idempotent "none"
+        , w `Effect4.Scope.close_closingExit "none"
+        , w `Effect4.Scope.close_idempotent "none"
+        , w `Effect4.Scope.close_twice "none"
+        , w `Effect4.Scope.close_reentrant_add "none"
+        , w `Effect4.Scope.closeResult_closed "none" ] }
+  , { id := "scope.close-lifo", kind := "scope", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Scope.closeOrder_eq "none"
+        , w `Effect4.Scope.closeOrder_last_first "propext"
+        , w `Effect4.Scope.closeExits_eq "none"
+        , w `Effect4.Scope.closeExits_reverse "propext"
+        , w `Effect4.Scope.runScoped_lifo "propext,Quot.sound" ] }
+  , { id := "scope.close-sequential", kind := "scope", disposition := "separateCalculus", coverage := "partial"
+      -- missing clause: "awaits each finalizer through exit()" is temporal sequencing, a fiber-machine fact
+    , witnesses :=
+        [ w `Effect4.Scope.closeExits_eq "none"
+        , w `Effect4.Scope.closeExits_length "propext"
+        , w `Effect4.Scope.closeResult_reasons "propext" ] }
+  , { id := "scope.close-parallel", kind := "scope", disposition := "separateCalculus", coverage := "partial"
+      -- missing clause: "immediate daemon forks that inherit the closing fiber mask" is a fiber-machine fact
+    , witnesses :=
+        [ w `Effect4.FinalizerStrategy.cases_receipt "none"
+        , w `Effect4.Scope.close_strategy_irrelevant "none" ] }
+  , { id := "scope.close-merge", kind := "scope", disposition := "separateCalculus", coverage := "partial"
+      -- missing clause: "parallel finalizer fibers are awaited together" is a fiber-machine fact
+    , witnesses :=
+        [ w `Effect4.Scope.closeResult_nil "none"
+        , w `Effect4.Scope.closeResult_single "none"
+        , w `Effect4.Scope.closeResult_many "none"
+        , w `Effect4.Scope.closeResult_reasons "propext" ] }
   , { id := "scope.exit-as-void-all", kind := "scope", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Exit.asVoidAll_reasons "none"
         , w `Effect4.Exit.asVoidAll_failure "none"
         , w `Effect4.Exit.asVoidAll_all_success "propext"
         , w `Effect4.Exit.void_eq "none" ] }
-  , { id := "scope.fork-linkage", kind := "scope", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "scope.scoped", kind := "scope", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "scope.acquire-release", kind := "scope", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "scope.fork-linkage", kind := "scope", disposition := "separateCalculus", coverage := "partial"
+      -- missing clause: that the linked names are scopeClose(child, exit) and scopeRemoveFinalizerUnsafe(parent, key) needs a scope store
+    , witnesses :=
+        [ w `Effect4.Scope.fork_closed_parent "none"
+        , w `Effect4.Scope.fork_closed_parent_child_exit "none"
+        , w `Effect4.Scope.fork_open_parent "none"
+        , w `Effect4.Scope.fork_child_finalizers "none"
+        , w `Effect4.Scope.fork_parent_finalizers "propext,Quot.sound"
+        , w `Effect4.Scope.fork_child_strategy "none"
+        , w `Effect4.Scope.fork_shared_key "propext,Quot.sound"
+        , w `Effect4.Scope.fork_detach "propext,Quot.sound" ] }
+  , { id := "scope.scoped", kind := "scope", disposition := "separateCalculus", coverage := "partial"
+      -- missing clauses: "in the fiber context", "through an OnExit frame", "restoring the previous context first"
+    , witnesses :=
+        [ w `Effect4.Scope.addAll_nil "none"
+        , w `Effect4.Scope.addAll_cons "none"
+        , w `Effect4.Scope.addAll_finalizers "propext,Quot.sound"
+        , w `Effect4.Scope.make_addAll_finalizers "propext,Quot.sound"
+        , w `Effect4.Scope.runScoped_eq "none"
+        , w `Effect4.Scope.runScoped_fresh_scope "none"
+        , w `Effect4.Scope.runScoped_state "none"
+        , w `Effect4.Scope.runScoped_strategy "none"
+        , w `Effect4.Scope.runScoped_empty "none"
+        , w `Effect4.Scope.runScoped_lifo "propext,Quot.sound" ] }
+  , { id := "scope.acquire-release", kind := "scope", disposition := "separateCalculus", coverage := "partial"
+      -- missing clauses: "runs under uninterruptibleMask", the asked-for interruptibility restore, and "with the captured context"
+    , witnesses :=
+        [ w `Effect4.Scope.acquireRelease_failure "none"
+        , w `Effect4.Scope.acquireRelease_success "none"
+        , w `Effect4.Scope.acquireRelease_registers "propext,Quot.sound"
+        , w `Effect4.Scope.acquireRelease_closed_ambient "none" ] }
   , { id := "scheduler.should-yield", kind := "scheduler", disposition := "targetOnly", coverage := "absent", witnesses := [] }
   , { id := "scheduler.priority-buckets", kind := "scheduler", disposition := "targetOnly", coverage := "absent", witnesses := [] }
   , { id := "scheduler.dispatcher-arming", kind := "scheduler", disposition := "targetOnly", coverage := "absent", witnesses := [] }
@@ -712,7 +1436,13 @@ private def censusRows : List Row :=
   , { id := "rule.yield-is-overloaded", kind := "rule", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
   , { id := "rule.only-fork-child-tracks", kind := "rule", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
   , { id := "rule.children-interrupted-after-exit", kind := "rule", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "rule.scope-close-lifo-state-first", kind := "rule", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "rule.scope-close-lifo-state-first", kind := "rule", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Scope.close_state_independent_of_run "none"
+        , w `Effect4.Scope.closeState_finalizers "none"
+        , w `Effect4.Scope.close_reentrant_add "none"
+        , w `Effect4.Scope.closeOrder_last_first "propext"
+        , w `Effect4.Scope.closeExits_reverse "propext" ] }
   , { id := "rule.cause-has-no-structure", kind := "rule", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Cause.mem_combine "propext"
@@ -800,6 +1530,104 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Exit.asVoidAll_failure
   , `Effect4.Exit.asVoidAll_all_success
   , `Effect4.Exit.void_eq
+  , `Effect4.ScopeState.cases_receipt
+  , `Effect4.ScopeState.entries_empty
+  , `Effect4.ScopeState.entries_openEmpty
+  , `Effect4.ScopeState.entries_openInline
+  , `Effect4.ScopeState.entries_openMap
+  , `Effect4.ScopeState.entries_closed
+  , `Effect4.ScopeState.isOpen_empty
+  , `Effect4.ScopeState.isOpen_openEmpty
+  , `Effect4.ScopeState.isOpen_openInline
+  , `Effect4.ScopeState.isOpen_openMap
+  , `Effect4.ScopeState.isOpen_closed
+  , `Effect4.ScopeState.isClosed_eq
+  , `Effect4.ScopeState.closingExit_closed
+  , `Effect4.ScopeState.closingExit_of_not_closed
+  , `Effect4.ScopeState.openEmpty_ne_openMap_nil
+  , `Effect4.Scope.finalizers_eq
+  , `Effect4.Scope.finalizerKeys_eq
+  , `Effect4.Scope.finalizerCount_eq
+  , `Effect4.Scope.finalizerCount_not_open
+  , `Effect4.FinalizerStrategy.all_nodup
+  , `Effect4.FinalizerStrategy.mem_all
+  , `Effect4.Scope.make_strategy
+  , `Effect4.Scope.make_state
+  , `Effect4.Scope.make_finalizers
+  , `Effect4.Scope.makeDefault_eq
+  , `Effect4.Scope.makeDefault_strategy
+  , `Effect4.Scope.key_freshness_refused
+  , `Effect4.Scope.tableInsert_new
+  , `Effect4.Scope.tableInsert_existing
+  , `Effect4.Scope.tableInsert_keys_of_mem
+  , `Effect4.Scope.tableInsert_nodup
+  , `Effect4.Scope.addUnsafe_strategy
+  , `Effect4.Scope.addUnsafe_empty
+  , `Effect4.Scope.addUnsafe_openEmpty
+  , `Effect4.Scope.addUnsafe_openInline
+  , `Effect4.Scope.addUnsafe_openMap
+  , `Effect4.Scope.addUnsafe_promotes
+  , `Effect4.Scope.addUnsafe_finalizers
+  , `Effect4.Scope.addUnsafe_keys_nodup
+  , `Effect4.Scope.addUnsafe_closed
+  , `Effect4.Scope.addExit_open
+  , `Effect4.Scope.addExit_closed
+  , `Effect4.Scope.addExit_closed_registers_nothing
+  , `Effect4.Scope.tableRemove_eq
+  , `Effect4.Scope.tableRemove_keys
+  , `Effect4.Scope.tableRemove_nodup
+  , `Effect4.Scope.removeUnsafe_strategy
+  , `Effect4.Scope.removeUnsafe_inline_hit
+  , `Effect4.Scope.removeUnsafe_inline_miss
+  , `Effect4.Scope.removeUnsafe_openMap
+  , `Effect4.Scope.removeUnsafe_not_open
+  , `Effect4.Scope.removeUnsafe_keys
+  , `Effect4.Scope.removeUnsafe_keys_nodup
+  , `Effect4.Scope.close_eq
+  , `Effect4.Scope.close_state_independent_of_run
+  , `Effect4.Scope.closeState_state
+  , `Effect4.Scope.closeState_strategy
+  , `Effect4.Scope.closeState_finalizers
+  , `Effect4.Scope.closeState_isClosed
+  , `Effect4.Scope.closeState_idempotent
+  , `Effect4.Scope.close_closingExit
+  , `Effect4.Scope.close_idempotent
+  , `Effect4.Scope.close_twice
+  , `Effect4.Scope.close_reentrant_add
+  , `Effect4.Scope.closeResult_closed
+  , `Effect4.Scope.closeOrder_eq
+  , `Effect4.Scope.closeOrder_last_first
+  , `Effect4.Scope.closeExits_eq
+  , `Effect4.Scope.closeExits_reverse
+  , `Effect4.Scope.runScoped_lifo
+  , `Effect4.Scope.closeExits_length
+  , `Effect4.Scope.closeResult_reasons
+  , `Effect4.FinalizerStrategy.cases_receipt
+  , `Effect4.Scope.close_strategy_irrelevant
+  , `Effect4.Scope.closeResult_nil
+  , `Effect4.Scope.closeResult_single
+  , `Effect4.Scope.closeResult_many
+  , `Effect4.Scope.fork_closed_parent
+  , `Effect4.Scope.fork_closed_parent_child_exit
+  , `Effect4.Scope.fork_open_parent
+  , `Effect4.Scope.fork_child_finalizers
+  , `Effect4.Scope.fork_parent_finalizers
+  , `Effect4.Scope.fork_child_strategy
+  , `Effect4.Scope.fork_shared_key
+  , `Effect4.Scope.fork_detach
+  , `Effect4.Scope.addAll_nil
+  , `Effect4.Scope.addAll_cons
+  , `Effect4.Scope.addAll_finalizers
+  , `Effect4.Scope.make_addAll_finalizers
+  , `Effect4.Scope.runScoped_eq
+  , `Effect4.Scope.runScoped_fresh_scope
+  , `Effect4.Scope.runScoped_state
+  , `Effect4.Scope.runScoped_strategy
+  , `Effect4.Scope.runScoped_empty
+  , `Effect4.Scope.acquireRelease_failure
+  , `Effect4.Scope.acquireRelease_success
+  , `Effect4.Scope.acquireRelease_registers
+  , `Effect4.Scope.acquireRelease_closed_ambient
   ]
 
 private def expectedRowTotal : Nat := 99
