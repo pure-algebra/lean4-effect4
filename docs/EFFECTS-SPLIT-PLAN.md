@@ -380,7 +380,7 @@ listing, but not several listed packages.
 | `lean4-whatwg` | `whatwg` | one package, one library per standard (`WHATWG.Infra`, `WHATWG.Streams`, later `WHATWG.URL`), versioned together; grows from `lean4-WHATWG-streams` | `effects`, `hash` by exact git rev |
 | `lean4-hash` | `hash` | proved hash functions; still only on the PC, work ongoing | nothing |
 | `lean4-nlp` | `nlp` | as today | nothing |
-| `downstream` | not listed | local copies of the five with requires rewritten to sibling paths, a `repos.toml` (url, rev, critical, build options), one `lean-toolchain`, CI over every copy; the shape of `leanprover/downstream-lean4` without its nightly and bot machinery | the five |
+| `downstream` (`pure-algebra/downstream`, created 2026-09-02) | not listed | local copies of the five with requires redirected to sibling paths by `.lake/package-overrides.json`, a `repos.toml` (url, rev, critical, build options), one `lean-toolchain`, CI over every copy; the shape of `leanprover/downstream-lean4` without its nightly and bot machinery | the five |
 
 Consequences: the S4 edge (Effect4 requiring `effects` by rev) is the
 intended edge, not a stopgap; S5 becomes the first `whatwg` acceptance probe;
