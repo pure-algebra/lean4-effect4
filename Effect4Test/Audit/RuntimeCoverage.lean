@@ -5,6 +5,7 @@ import Effect4.Concurrency.Supervision
 import Effect4.Semantics.Cause
 import Effect4.Semantics.Exit
 import Effect4.Runtime.Scope
+import Effect4.Runtime.Runtime
 
 /-!
 # Effect v4 fiber runtime coverage
@@ -1510,6 +1511,1031 @@ SUPERVISION-PG-RC112; every joined runtime row is partial. -/
 #check (@Effect4.Supervision.race_two_failures :
   forall {β : Type v} {ε δ ι α : Type u}, forall (left right : Effect4.FiberId) (first second : Effect4.Cause ε δ ι α), left ≠ right -> ∃ after, Effect4.Supervision.raceReplay (Effect4.Supervision.RaceAllState.initial [left, right] : Effect4.Supervision.RaceAllState β ε δ ι α) [.beginLaunch, .finishLaunch (some (.failure first)), .beginLaunch, .finishLaunch (some (.failure second))] = .done after (.failure ⟨first.reasons ++ second.reasons⟩))
 
+/-! The frame-machine witnesses. Statements are transcribed from the frozen
+ascriptions of `Effect4Test/Runtime/FramesContract.lean`.
+
+The `Effect4.Prim` and `Effect4.FrameFiber` telescopes carry seven type
+parameters, and many of these statements quantify over all seven while naming
+only some. The binder names are part of the frozen statement, so they are
+transcribed as written rather than renamed to `_ν` to please the
+unused-variable linter; the option below is scoped to this section. -/
+
+set_option linter.unusedVariables false
+
+#check (@Effect4.Arm.all_nodup : List.Nodup Effect4.Arm.all)
+
+#check (@Effect4.Arm.mem_all : ∀ (arm : Effect4.Arm), arm ∈ Effect4.Arm.all)
+
+#check (@Effect4.Arm.cases_receipt :
+  ∀ (arm : Effect4.Arm), arm = Effect4.Arm.contA ∨ arm = Effect4.Arm.contE ∨ arm =
+  Effect4.Arm.contAll)
+
+#check (@Effect4.Arm.demandable_eq :
+  Effect4.Arm.demandable = [Effect4.Arm.contA, Effect4.Arm.contE])
+
+#check (@Effect4.Arm.contAll_not_demandable : ¬Effect4.Arm.contAll ∈ Effect4.Arm.demandable)
+
+#check (@Effect4.Prim.cases_receipt :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Prim ν σ β ε δ ι α), (∃
+  value, self = Effect4.Prim.success value) ∨ (∃ cause, self = Effect4.Prim.failure cause) ∨ (∃
+  thunk, self = Effect4.Prim.sync thunk) ∨ (∃ thunk, self = Effect4.Prim.suspend thunk) ∨ (∃
+  thunk, self = Effect4.Prim.withFiber thunk) ∨ (∃ error, self = Effect4.Prim.yieldableError
+  error) ∨ (∃ generator cursor, self = Effect4.Prim.iterator generator cursor) ∨ (∃ body
+  onValue, self = Effect4.Prim.onSuccess body onValue) ∨ (∃ body onCause, self =
+  Effect4.Prim.onFailure body onCause) ∨ (∃ body onValue onCause, self =
+  Effect4.Prim.onSuccessAndFailure body onValue onCause) ∨ (∃ body, self =
+  Effect4.Prim.exitFrame body) ∨ (∃ body finalizer flag, self = Effect4.Prim.onExit body
+  finalizer flag) ∨ (∃ flag, self = Effect4.Prim.setInterruptible flag) ∨ ∃ loop cursor, self =
+  Effect4.Prim.whileLoop loop cursor)
+
+#check (@Effect4.FrameFiber.start_eq :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (current : Effect4.Prim ν σ β ε δ ι α),
+  Effect4.FrameFiber.start current = Effect4.FrameFiber.mk current [] Bool.true Option.none
+  Bool.false)
+
+#check (@Effect4.FrameFiber.pendingCause_some :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
+  (cause : Effect4.Cause ε δ ι α), self.interruptedCause = Option.some cause →
+  Effect4.FrameFiber.pendingCause self = cause)
+
+#check (@Effect4.FrameFiber.pendingCause_none :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
+  self.interruptedCause = Option.none → Effect4.FrameFiber.pendingCause self =
+  Effect4.Cause.empty)
+
+#check (@Effect4.FrameFiber.masked_eq :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
+  Effect4.FrameFiber.masked self = !self.interruptible)
+
+#check (@Effect4.FrameFiber.interrupted_eq :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
+  Effect4.FrameFiber.interrupted self = (self.interruptible && Option.isSome
+  self.interruptedCause))
+
+#check (@Effect4.FrameEvent.poppedFrames_nil :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}, Effect4.FrameEvent.poppedFrames [] = [])
+
+#check (@Effect4.FrameEvent.poppedFrames_cons_popped :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (frame : Effect4.Prim ν σ β ε δ ι α) (rest :
+  List (Effect4.FrameEvent ν σ β ε δ ι α)), Effect4.FrameEvent.poppedFrames
+  (Effect4.FrameEvent.popped frame :: rest) = frame :: Effect4.FrameEvent.poppedFrames rest)
+
+#check (@Effect4.FrameEvent.finalizersRun_nil :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}, Effect4.FrameEvent.finalizersRun [] = [])
+
+#check (@Effect4.FrameEvent.finalizersRun_cons_ran :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (finalizer : ν) (exit : Effect4.Exit β ε δ ι
+  α) (rest : List (Effect4.FrameEvent ν σ β ε δ ι α)), Effect4.FrameEvent.finalizersRun
+  (Effect4.FrameEvent.ranFinalizer finalizer exit :: rest) = finalizer ::
+  Effect4.FrameEvent.finalizersRun rest)
+
+#check (@Effect4.FrameEvent.finalizersRun_cons_popped :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (frame : Effect4.Prim ν σ β ε δ ι α) (rest :
+  List (Effect4.FrameEvent ν σ β ε δ ι α)), Effect4.FrameEvent.finalizersRun
+  (Effect4.FrameEvent.popped frame :: rest) = Effect4.FrameEvent.finalizersRun rest)
+
+#check (@Effect4.Prim.hasArm_eq :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Prim ν σ β ε δ ι α) (arm :
+  Effect4.Arm), Effect4.Prim.hasArm self arm = List.contains (Effect4.Prim.arms self) arm)
+
+#check (@Effect4.Prim.isFrame_eq :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Prim ν σ β ε δ ι α),
+  Effect4.Prim.isFrame self = !List.isEmpty (Effect4.Prim.arms self))
+
+#check (@Effect4.Prim.isFrame_iff :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Prim ν σ β ε δ ι α),
+  Effect4.Prim.isFrame self = Bool.true ↔ Effect4.Prim.arms self ≠ [])
+
+#check (@Effect4.Prim.arms_onSuccess :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α) (onValue
+  : ν), Effect4.Prim.arms (Effect4.Prim.onSuccess body onValue) = [Effect4.Arm.contA])
+
+#check (@Effect4.Prim.arms_onFailure :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α) (onCause
+  : ν), Effect4.Prim.arms (Effect4.Prim.onFailure body onCause) = [Effect4.Arm.contE])
+
+#check (@Effect4.Prim.arms_onSuccessAndFailure :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α) (onValue
+  onCause : ν), Effect4.Prim.arms (Effect4.Prim.onSuccessAndFailure body onValue onCause) =
+  [Effect4.Arm.contA, Effect4.Arm.contE])
+
+#check (@Effect4.Prim.arms_exitFrame :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α),
+  Effect4.Prim.arms (Effect4.Prim.exitFrame body) = [Effect4.Arm.contA, Effect4.Arm.contE])
+
+#check (@Effect4.Prim.arms_onExit :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α)
+  (finalizer : ν) (flag : Bool), Effect4.Prim.arms (Effect4.Prim.onExit body finalizer flag) =
+  [Effect4.Arm.contA, Effect4.Arm.contE, Effect4.Arm.contAll])
+
+#check (@Effect4.Prim.arms_setInterruptible :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (flag : Bool), Effect4.Prim.arms
+  (Effect4.Prim.setInterruptible flag) = [Effect4.Arm.contAll])
+
+#check (@Effect4.Prim.arms_whileLoop :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (loop : ν) (cursor : β), Effect4.Prim.arms
+  (Effect4.Prim.whileLoop loop cursor) = [Effect4.Arm.contA])
+
+#check (@Effect4.Prim.arms_iterator :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (generator : ν) (cursor : β),
+  Effect4.Prim.arms (Effect4.Prim.iterator generator cursor) = [Effect4.Arm.contA])
+
+#check (@Effect4.Prim.non_frames_have_no_arms :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (value : β) (cause : Effect4.Cause ε δ ι α)
+  (thunk : σ) (error : ε), Effect4.Prim.arms (Effect4.Prim.success value) = [] ∧
+  Effect4.Prim.arms (Effect4.Prim.failure cause) = [] ∧ Effect4.Prim.arms (Effect4.Prim.sync
+  thunk) = [] ∧ Effect4.Prim.arms (Effect4.Prim.suspend thunk) = [] ∧ Effect4.Prim.arms
+  (Effect4.Prim.withFiber thunk) = [] ∧ Effect4.Prim.arms (Effect4.Prim.yieldableError error) =
+  [])
+
+#check (@Effect4.Prim.ofExit_asExit? :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (exit : Effect4.Exit β ε δ ι α),
+  Effect4.Prim.asExit? (Effect4.Prim.ofExit exit) = Option.some exit)
+
+#check (@Effect4.Prim.asExit?_success :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (value : β), Effect4.Prim.asExit?
+  (Effect4.Prim.success value) = Option.some (Effect4.Exit.success value))
+
+#check (@Effect4.Prim.asExit?_failure :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (cause : Effect4.Cause ε δ ι α),
+  Effect4.Prim.asExit? (Effect4.Prim.failure cause) = Option.some (Effect4.Exit.failure cause))
+
+#check (@Effect4.Prim.asExit?_eq_some :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Prim ν σ β ε δ ι α) (exit :
+  Effect4.Exit β ε δ ι α), Effect4.Prim.asExit? self = Option.some exit → self =
+  Effect4.Prim.ofExit exit)
+
+#check (@Effect4.Prim.ofExit_isFrame :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (exit : Effect4.Exit β ε δ ι α),
+  Effect4.Prim.isFrame (Effect4.Prim.ofExit exit) = Bool.false)
+
+#check (@Effect4.Prim.ensure_of_no_contAll :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (frame : Effect4.Prim ν σ β ε δ ι α) (fiber :
+  Effect4.FrameFiber ν σ β ε δ ι α), Effect4.Prim.hasArm frame Effect4.Arm.contAll = Bool.false
+  → Effect4.Prim.ensure frame fiber = (fiber, Option.none))
+
+#check (@Effect4.Prim.ensure_onExit_masks :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α)
+  (finalizer : ν) (fiber : Effect4.FrameFiber ν σ β ε δ ι α), fiber.interruptible = Bool.true →
+  Effect4.Prim.ensure (Effect4.Prim.onExit body finalizer Bool.false) fiber =
+  (Effect4.FrameFiber.mk fiber.current (Effect4.Prim.setInterruptible Bool.true :: fiber.stack)
+  Bool.false fiber.interruptedCause fiber.deferredInterrupt, Option.none))
+
+#check (@Effect4.Prim.ensure_onExit_told_not_to :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α)
+  (finalizer : ν) (fiber : Effect4.FrameFiber ν σ β ε δ ι α), Effect4.Prim.ensure
+  (Effect4.Prim.onExit body finalizer Bool.true) fiber = (fiber, Option.none))
+
+#check (@Effect4.Prim.ensure_onExit_already_masked :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α)
+  (finalizer : ν) (flag : Bool) (fiber : Effect4.FrameFiber ν σ β ε δ ι α), fiber.interruptible
+  = Bool.false → Effect4.Prim.ensure (Effect4.Prim.onExit body finalizer flag) fiber = (fiber,
+  Option.none))
+
+#check (@Effect4.Prim.ensure_onExit_no_replacement :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α)
+  (finalizer : ν) (flag : Bool) (fiber : Effect4.FrameFiber ν σ β ε δ ι α), (Effect4.Prim.ensure
+  (Effect4.Prim.onExit body finalizer flag) fiber).snd = Option.none)
+
+#check (@Effect4.Prim.ensure_setInterruptible_flag :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (flag : Bool) (fiber : Effect4.FrameFiber ν σ
+  β ε δ ι α), (Effect4.Prim.ensure (Effect4.Prim.setInterruptible flag) fiber).fst.interruptible
+  = flag)
+
+#check (@Effect4.Prim.ensure_setInterruptible_stack :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (flag : Bool) (fiber : Effect4.FrameFiber ν σ
+  β ε δ ι α), (Effect4.Prim.ensure (Effect4.Prim.setInterruptible flag) fiber).fst.stack =
+  fiber.stack)
+
+#check (@Effect4.Prim.ensure_setInterruptible_substitutes :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (cause : Effect4.Cause ε δ ι α) (fiber :
+  Effect4.FrameFiber ν σ β ε δ ι α), fiber.interruptedCause = Option.some cause →
+  Effect4.Prim.ensure (Effect4.Prim.setInterruptible Bool.true) fiber = (Effect4.FrameFiber.mk
+  fiber.current fiber.stack Bool.true fiber.interruptedCause fiber.deferredInterrupt,
+  Option.some (Effect4.Prim.failure cause)))
+
+#check (@Effect4.Prim.ensure_setInterruptible_false_no_replacement :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (fiber : Effect4.FrameFiber ν σ β ε δ ι α),
+  (Effect4.Prim.ensure (Effect4.Prim.setInterruptible Bool.false) fiber).snd = Option.none)
+
+#check (@Effect4.Prim.ensure_setInterruptible_no_pending :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (flag : Bool) (fiber : Effect4.FrameFiber ν σ
+  β ε δ ι α), fiber.interruptedCause = Option.none → Effect4.Prim.ensure
+  (Effect4.Prim.setInterruptible flag) fiber = (Effect4.FrameFiber.mk fiber.current fiber.stack
+  flag fiber.interruptedCause fiber.deferredInterrupt, Option.none))
+
+#check (@Effect4.Prim.answerOf_replacement :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (frame next : Effect4.Prim ν σ β ε δ ι α)
+  (demand : Effect4.Arm), Effect4.Prim.answerOf frame demand (Option.some next) = Option.some
+  (Effect4.ContAnswer.replacement next))
+
+#check (@Effect4.Prim.answerOf_arm :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (frame : Effect4.Prim ν σ β ε δ ι α) (demand
+  : Effect4.Arm), Effect4.Prim.hasArm frame demand = Bool.true → Effect4.Prim.answerOf frame
+  demand Option.none = Option.some (Effect4.ContAnswer.frame frame))
+
+#check (@Effect4.Prim.answerOf_missing :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (frame : Effect4.Prim ν σ β ε δ ι α) (demand
+  : Effect4.Arm), Effect4.Prim.hasArm frame demand = Bool.false → Effect4.Prim.answerOf frame
+  demand Option.none = Option.none)
+
+#check (@Effect4.Prim.answerOf_frame_eq :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (frame answering : Effect4.Prim ν σ β ε δ ι
+  α) (demand : Effect4.Arm) (replacement : Option (Effect4.Prim ν σ β ε δ ι α)),
+  Effect4.Prim.answerOf frame demand replacement = Option.some (Effect4.ContAnswer.frame
+  answering) → answering = frame ∧ Effect4.Prim.hasArm frame demand = Bool.true)
+
+#check (@Effect4.Prim.armA_isSome :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (frame : Effect4.Prim ν σ β ε δ ι α) (value : β) (provided : Option (Effect4.Exit β ε δ ι
+  α)), Option.isSome (Effect4.Prim.armA interp frame value provided) = Effect4.Prim.hasArm frame
+  Effect4.Arm.contA)
+
+#check (@Effect4.Prim.armE_isSome :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (frame : Effect4.Prim ν σ β ε δ ι α) (cause : Effect4.Cause ε δ ι α) (provided : Option
+  (Effect4.Exit β ε δ ι α)), Option.isSome (Effect4.Prim.armE interp frame cause provided) =
+  Effect4.Prim.hasArm frame Effect4.Arm.contE)
+
+#check (@Effect4.Prim.armA_onSuccess :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (body : Effect4.Prim ν σ β ε δ ι α) (onValue : ν) (value : β) (provided : Option
+  (Effect4.Exit β ε δ ι α)), Effect4.Prim.armA interp (Effect4.Prim.onSuccess body onValue)
+  value provided = Option.some (interp.contA onValue value, []))
+
+#check (@Effect4.Prim.armA_onSuccessAndFailure :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (body : Effect4.Prim ν σ β ε δ ι α) (onValue onCause : ν) (value : β) (provided : Option
+  (Effect4.Exit β ε δ ι α)), Effect4.Prim.armA interp (Effect4.Prim.onSuccessAndFailure body
+  onValue onCause) value provided = Option.some (interp.contA onValue value, []))
+
+#check (@Effect4.Prim.armE_onFailure :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (body : Effect4.Prim ν σ β ε δ ι α) (onCause : ν) (cause : Effect4.Cause ε δ ι α) (provided
+  : Option (Effect4.Exit β ε δ ι α)), Effect4.Prim.armE interp (Effect4.Prim.onFailure body
+  onCause) cause provided = Option.some (interp.contE onCause cause, []))
+
+#check (@Effect4.Prim.armE_onSuccessAndFailure :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (body : Effect4.Prim ν σ β ε δ ι α) (onValue onCause : ν) (cause : Effect4.Cause ε δ ι α)
+  (provided : Option (Effect4.Exit β ε δ ι α)), Effect4.Prim.armE interp
+  (Effect4.Prim.onSuccessAndFailure body onValue onCause) cause provided = Option.some
+  (interp.contE onCause cause, []))
+
+#check (@Effect4.Prim.armE_onSuccess_none :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (body : Effect4.Prim ν σ β ε δ ι α) (onValue : ν) (cause : Effect4.Cause ε δ ι α) (provided
+  : Option (Effect4.Exit β ε δ ι α)), Effect4.Prim.armE interp (Effect4.Prim.onSuccess body
+  onValue) cause provided = Option.none)
+
+#check (@Effect4.Prim.armA_onFailure_none :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (body : Effect4.Prim ν σ β ε δ ι α) (onCause : ν) (value : β) (provided : Option
+  (Effect4.Exit β ε δ ι α)), Effect4.Prim.armA interp (Effect4.Prim.onFailure body onCause)
+  value provided = Option.none)
+
+#check (@Effect4.Prim.armA_setInterruptible_none :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (flag : Bool) (value : β) (provided : Option (Effect4.Exit β ε δ ι α)), Effect4.Prim.armA
+  interp (Effect4.Prim.setInterruptible flag) value provided = Option.none)
+
+#check (@Effect4.Prim.armE_setInterruptible_none :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (flag : Bool) (cause : Effect4.Cause ε δ ι α) (provided : Option (Effect4.Exit β ε δ ι α)),
+  Effect4.Prim.armE interp (Effect4.Prim.setInterruptible flag) cause provided = Option.none)
+
+#check (@Effect4.Prim.armE_whileLoop_none :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (loop : ν) (cursor : β) (cause : Effect4.Cause ε δ ι α) (provided : Option (Effect4.Exit β
+  ε δ ι α)), Effect4.Prim.armE interp (Effect4.Prim.whileLoop loop cursor) cause provided =
+  Option.none)
+
+#check (@Effect4.Prim.armE_iterator_none :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (generator : ν) (cursor : β) (cause : Effect4.Cause ε δ ι α) (provided : Option
+  (Effect4.Exit β ε δ ι α)), Effect4.Prim.armE interp (Effect4.Prim.iterator generator cursor)
+  cause provided = Option.none)
+
+#check (@Effect4.Prim.armA_exitFrame_provided :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (body : Effect4.Prim ν σ β ε δ ι α) (value : β) (exit : Effect4.Exit β ε δ ι α),
+  Effect4.Prim.armA interp (Effect4.Prim.exitFrame body) value (Option.some exit) = Option.some
+  (Effect4.Prim.success (interp.reifyExit exit), []))
+
+#check (@Effect4.Prim.armA_exitFrame_none :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (body : Effect4.Prim ν σ β ε δ ι α) (value : β), Effect4.Prim.armA interp
+  (Effect4.Prim.exitFrame body) value Option.none = Option.some (Effect4.Prim.success
+  (interp.reifyExit (Effect4.Exit.success value)), []))
+
+#check (@Effect4.Prim.armE_exitFrame_provided :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (body : Effect4.Prim ν σ β ε δ ι α) (cause : Effect4.Cause ε δ ι α) (exit : Effect4.Exit β
+  ε δ ι α), Effect4.Prim.armE interp (Effect4.Prim.exitFrame body) cause (Option.some exit) =
+  Option.some (Effect4.Prim.success (interp.reifyExit exit), []))
+
+#check (@Effect4.Prim.armE_exitFrame_none :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (body : Effect4.Prim ν σ β ε δ ι α) (cause : Effect4.Cause ε δ ι α), Effect4.Prim.armE
+  interp (Effect4.Prim.exitFrame body) cause Option.none = Option.some (Effect4.Prim.success
+  (interp.reifyExit (Effect4.Exit.failure cause)), []))
+
+#check (@Effect4.Prim.armA_onExit :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (body : Effect4.Prim ν σ β ε δ ι α) (finalizer : ν) (flag : Bool) (value : β) (exit :
+  Effect4.Exit β ε δ ι α), Effect4.Prim.armA interp (Effect4.Prim.onExit body finalizer flag)
+  value (Option.some exit) = Option.some (Effect4.Prim.ofExit
+  (Effect4.Exit.restoreAfterFinalizer exit (interp.finalizerExit finalizer exit)), []))
+
+#check (@Effect4.Prim.armE_onExit :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (body : Effect4.Prim ν σ β ε δ ι α) (finalizer : ν) (flag : Bool) (cause : Effect4.Cause ε
+  δ ι α) (exit : Effect4.Exit β ε δ ι α), Effect4.Prim.armE interp (Effect4.Prim.onExit body
+  finalizer flag) cause (Option.some exit) = Option.some (Effect4.Prim.ofExit
+  (Effect4.Exit.restoreAfterFinalizer exit (interp.finalizerExit finalizer exit)), []))
+
+#check (@Effect4.Prim.onExit_finalizer_success_restores :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (body : Effect4.Prim ν σ β ε δ ι α) (finalizer : ν) (flag : Bool) (value : β) (exit :
+  Effect4.Exit β ε δ ι α), interp.finalizerExit finalizer exit = Effect4.Exit.success () →
+  Effect4.Prim.armA interp (Effect4.Prim.onExit body finalizer flag) value (Option.some exit) =
+  Option.some (Effect4.Prim.ofExit exit, []))
+
+#check (@Effect4.Prim.onExit_finalizer_failure_merges :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (body : Effect4.Prim ν σ β ε δ ι α) (finalizer : ν) (flag : Bool) (cause finalizerCause :
+  Effect4.Cause ε δ ι α), interp.finalizerExit finalizer (Effect4.Exit.failure cause) =
+  Effect4.Exit.failure finalizerCause → Effect4.Prim.armE interp (Effect4.Prim.onExit body
+  finalizer flag) cause (Option.some (Effect4.Exit.failure cause)) = Option.some
+  (Effect4.Prim.failure (Effect4.Cause.combine cause finalizerCause), []))
+
+#check (@Effect4.Prim.onExit_success_finalizer_failure :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (body : Effect4.Prim ν σ β ε δ ι α) (finalizer : ν) (flag : Bool) (value produced : β)
+  (finalizerCause : Effect4.Cause ε δ ι α), interp.finalizerExit finalizer (Effect4.Exit.success
+  produced) = Effect4.Exit.failure finalizerCause → Effect4.Prim.armA interp
+  (Effect4.Prim.onExit body finalizer flag) value (Option.some (Effect4.Exit.success produced))
+  = Option.some (Effect4.Prim.failure finalizerCause, []))
+
+#check (@Effect4.Prim.onExit_arm_is_per_frame :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (body other : Effect4.Prim ν σ β ε δ ι α) (finalizer : ν) (flag otherFlag : Bool) (value :
+  β) (provided : Option (Effect4.Exit β ε δ ι α)), Effect4.Prim.armA interp (Effect4.Prim.onExit
+  body finalizer flag) value provided = Effect4.Prim.armA interp (Effect4.Prim.onExit other
+  finalizer otherFlag) value provided)
+
+#check (@Effect4.Prim.onSuccess_arm_is_per_instance :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (body : Effect4.Prim ν σ β ε δ ι α) (left right : ν) (value : β) (provided : Option
+  (Effect4.Exit β ε δ ι α)), interp.contA left value ≠ interp.contA right value →
+  Effect4.Prim.armA interp (Effect4.Prim.onSuccess body left) value provided ≠ Effect4.Prim.armA
+  interp (Effect4.Prim.onSuccess body right) value provided)
+
+#check (@Effect4.Prim.onFailure_arm_is_per_instance :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (body : Effect4.Prim ν σ β ε δ ι α) (left right : ν) (cause : Effect4.Cause ε δ ι α)
+  (provided : Option (Effect4.Exit β ε δ ι α)), interp.contE left cause ≠ interp.contE right
+  cause → Effect4.Prim.armE interp (Effect4.Prim.onFailure body left) cause provided ≠
+  Effect4.Prim.armE interp (Effect4.Prim.onFailure body right) cause provided)
+
+#check (@Effect4.Prim.onSuccessAndFailure_arms_are_per_instance :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (body : Effect4.Prim ν σ β ε δ ι α) (onValue onCause : ν) (value : β) (cause :
+  Effect4.Cause ε δ ι α) (provided : Option (Effect4.Exit β ε δ ι α)), Effect4.Prim.armA interp
+  (Effect4.Prim.onSuccessAndFailure body onValue onCause) value provided = Option.some
+  (interp.contA onValue value, []) ∧ Effect4.Prim.armE interp (Effect4.Prim.onSuccessAndFailure
+  body onValue onCause) cause provided = Option.some (interp.contE onCause cause, []))
+
+#check (@Effect4.Prim.armA_whileLoop_continue :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (loop : ν) (cursor value : β) (provided : Option (Effect4.Exit β ε δ ι α)), interp.loopTest
+  loop (interp.loopStep loop value) = Bool.true → Effect4.Prim.armA interp
+  (Effect4.Prim.whileLoop loop cursor) value provided = Option.some (interp.loopBody loop
+  (interp.loopStep loop value), [Effect4.Prim.whileLoop loop (interp.loopStep loop value)]))
+
+#check (@Effect4.Prim.armA_whileLoop_stop :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (loop : ν) (cursor value : β) (provided : Option (Effect4.Exit β ε δ ι α)), interp.loopTest
+  loop (interp.loopStep loop value) = Bool.false → Effect4.Prim.armA interp
+  (Effect4.Prim.whileLoop loop cursor) value provided = Option.some (Effect4.Prim.success
+  (interp.loopDone loop), []))
+
+#check (@Effect4.Prim.armA_iterator_done :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (generator : ν) (cursor value result : β) (provided : Option (Effect4.Exit β ε δ ι α)),
+  (interp.iterNext generator value).snd = Effect4.IterStep.done result → Effect4.Prim.armA
+  interp (Effect4.Prim.iterator generator cursor) value provided = Option.some
+  (Effect4.Prim.success result, []))
+
+#check (@Effect4.Prim.armA_iterator_halt :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (generator : ν) (cursor value : β) (cause : Effect4.Cause ε δ ι α) (provided : Option
+  (Effect4.Exit β ε δ ι α)), (interp.iterNext generator value).snd = Effect4.IterStep.halt cause
+  → Effect4.Prim.armA interp (Effect4.Prim.iterator generator cursor) value provided =
+  Option.some (Effect4.Prim.failure cause, []))
+
+#check (@Effect4.Prim.armA_iterator_resume :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (generator : ν) (cursor value : β) (next : Effect4.Prim ν σ β ε δ ι α) (provided : Option
+  (Effect4.Exit β ε δ ι α)), (interp.iterNext generator value).snd = Effect4.IterStep.resume
+  next → Effect4.Prim.armA interp (Effect4.Prim.iterator generator cursor) value provided =
+  Option.some (next, [Effect4.Prim.iterator generator cursor]))
+
+#check (@Effect4.Prim.iteratorFolded_eq :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ] [DecidableEq
+  ι] [DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι α) (generator : ν) (cursor value :
+  β), Effect4.Prim.iteratorFolded interp (Effect4.Prim.iterator generator cursor) value =
+  (interp.iterNext generator value).fst)
+
+#check (@Effect4.Prim.iterator_folds_inline :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (left right : Effect4.PrimInterp ν σ β ε
+  δ ι α) (generator : ν) (cursor value : β) (provided : Option (Effect4.Exit β ε δ ι α)),
+  (left.iterNext generator value).snd = (right.iterNext generator value).snd → Effect4.Prim.armA
+  left (Effect4.Prim.iterator generator cursor) value provided = Effect4.Prim.armA right
+  (Effect4.Prim.iterator generator cursor) value provided)
+
+#check (@Effect4.Prim.finalizerEvents_onExit :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α)
+  (finalizer : ν) (flag : Bool) (exit : Effect4.Exit β ε δ ι α), Effect4.Prim.finalizerEvents
+  (Effect4.Prim.onExit body finalizer flag) exit = [Effect4.FrameEvent.ranFinalizer finalizer
+  exit])
+
+#check (@Effect4.Prim.finalizerEvents_onSuccess :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α) (onValue
+  : ν) (exit : Effect4.Exit β ε δ ι α), Effect4.Prim.finalizerEvents (Effect4.Prim.onSuccess
+  body onValue) exit = [])
+
+#check (@Effect4.Prim.finalizerEvents_onFailure :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α) (onCause
+  : ν) (exit : Effect4.Exit β ε δ ι α), Effect4.Prim.finalizerEvents (Effect4.Prim.onFailure
+  body onCause) exit = [])
+
+#check (@Effect4.FrameFiber.getCont_deferred :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
+  (demand : Effect4.Arm), self.deferredInterrupt = Bool.true → Effect4.FrameFiber.getCont self
+  demand Bool.false = Effect4.FramePop.mk (Effect4.ContAnswer.deferred
+  (Effect4.FrameFiber.pendingCause self)) [] [Effect4.FrameEvent.deferred
+  (Effect4.FrameFiber.pendingCause self)] (Effect4.FrameFiber.mk self.current self.stack
+  self.interruptible self.interruptedCause Bool.false))
+
+#check (@Effect4.FrameFiber.getCont_deferred_pops_nothing :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
+  (demand : Effect4.Arm), self.deferredInterrupt = Bool.true → (Effect4.FrameFiber.getCont self
+  demand Bool.false).popped = [])
+
+#check (@Effect4.FrameFiber.getCont_eq_popFrom :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
+  (demand : Effect4.Arm) (skip : Bool), self.deferredInterrupt = Bool.false →
+  Effect4.FrameFiber.getCont self demand skip = Effect4.FrameFiber.popFrom demand skip
+  self.stack (Effect4.FrameFiber.mk self.current [] self.interruptible self.interruptedCause
+  Bool.false))
+
+#check (@Effect4.FrameFiber.getCont_skip_clears_deferred :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
+  (demand : Effect4.Arm), Effect4.FrameFiber.getCont self demand Bool.true =
+  Effect4.FrameFiber.popFrom demand Bool.true self.stack (Effect4.FrameFiber.mk self.current []
+  self.interruptible self.interruptedCause Bool.false))
+
+#check (@Effect4.FrameFiber.getCont_empty_stack :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
+  (demand : Effect4.Arm) (skip : Bool), self.deferredInterrupt = Bool.false → self.stack = [] →
+  Effect4.FrameFiber.getCont self demand skip = Effect4.FramePop.mk Effect4.ContAnswer.empty []
+  [] (Effect4.FrameFiber.mk self.current [] self.interruptible self.interruptedCause
+  Bool.false))
+
+#check (@Effect4.FrameFiber.popFrom_nil :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (fiber :
+  Effect4.FrameFiber ν σ β ε δ ι α), Effect4.FrameFiber.popFrom demand skip [] fiber =
+  Effect4.FramePop.mk Effect4.ContAnswer.empty [] [] fiber)
+
+#check (@Effect4.FrameFiber.popFrom_answer_answer :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frame :
+  Effect4.Prim ν σ β ε δ ι α) (rest : List (Effect4.Prim ν σ β ε δ ι α)) (fiber :
+  Effect4.FrameFiber ν σ β ε δ ι α) (answer : Effect4.ContAnswer ν σ β ε δ ι α),
+  Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure frame fiber).snd = Option.some answer
+  → (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure frame fiber).fst) = Bool.false
+  → (Effect4.FrameFiber.popFrom demand skip (frame :: rest) fiber).answer = answer)
+
+#check (@Effect4.FrameFiber.popFrom_answer_popped :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frame :
+  Effect4.Prim ν σ β ε δ ι α) (rest : List (Effect4.Prim ν σ β ε δ ι α)) (fiber :
+  Effect4.FrameFiber ν σ β ε δ ι α) (answer : Effect4.ContAnswer ν σ β ε δ ι α),
+  Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure frame fiber).snd = Option.some answer
+  → (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure frame fiber).fst) = Bool.false
+  → (Effect4.FrameFiber.popFrom demand skip (frame :: rest) fiber).popped = [frame])
+
+#check (@Effect4.FrameFiber.popFrom_answer_events :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frame :
+  Effect4.Prim ν σ β ε δ ι α) (rest : List (Effect4.Prim ν σ β ε δ ι α)) (fiber :
+  Effect4.FrameFiber ν σ β ε δ ι α) (answer : Effect4.ContAnswer ν σ β ε δ ι α),
+  Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure frame fiber).snd = Option.some answer
+  → (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure frame fiber).fst) = Bool.false
+  → (Effect4.FrameFiber.popFrom demand skip (frame :: rest) fiber).events =
+  Effect4.Prim.passEvents frame (Effect4.Prim.ensure frame fiber).snd)
+
+#check (@Effect4.FrameFiber.popFrom_answer_fiber :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frame :
+  Effect4.Prim ν σ β ε δ ι α) (rest : List (Effect4.Prim ν σ β ε δ ι α)) (fiber :
+  Effect4.FrameFiber ν σ β ε δ ι α) (answer : Effect4.ContAnswer ν σ β ε δ ι α),
+  Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure frame fiber).snd = Option.some answer
+  → (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure frame fiber).fst) = Bool.false
+  → (Effect4.FrameFiber.popFrom demand skip (frame :: rest) fiber).fiber = have __src :=
+  (Effect4.Prim.ensure frame fiber).fst; Effect4.FrameFiber.mk __src.current
+  ((Effect4.Prim.ensure frame fiber).fst.stack ++ rest) __src.interruptible
+  __src.interruptedCause __src.deferredInterrupt)
+
+#check (@Effect4.FrameFiber.popFrom_continue_answer :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frame :
+  Effect4.Prim ν σ β ε δ ι α) (rest : List (Effect4.Prim ν σ β ε δ ι α)) (fiber :
+  Effect4.FrameFiber ν σ β ε δ ι α), Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure
+  frame fiber).snd = Option.none ∨ (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure
+  frame fiber).fst) = Bool.true → (Effect4.FrameFiber.popFrom demand skip (frame :: rest)
+  fiber).answer = (Effect4.FrameFiber.popFrom demand skip rest (Effect4.Prim.ensure frame
+  fiber).fst).answer)
+
+#check (@Effect4.FrameFiber.popFrom_continue_popped :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frame :
+  Effect4.Prim ν σ β ε δ ι α) (rest : List (Effect4.Prim ν σ β ε δ ι α)) (fiber :
+  Effect4.FrameFiber ν σ β ε δ ι α), Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure
+  frame fiber).snd = Option.none ∨ (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure
+  frame fiber).fst) = Bool.true → (Effect4.FrameFiber.popFrom demand skip (frame :: rest)
+  fiber).popped = frame :: (Effect4.FrameFiber.popFrom demand skip rest (Effect4.Prim.ensure
+  frame fiber).fst).popped)
+
+#check (@Effect4.FrameFiber.popFrom_continue_events :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frame :
+  Effect4.Prim ν σ β ε δ ι α) (rest : List (Effect4.Prim ν σ β ε δ ι α)) (fiber :
+  Effect4.FrameFiber ν σ β ε δ ι α), Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure
+  frame fiber).snd = Option.none ∨ (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure
+  frame fiber).fst) = Bool.true → (Effect4.FrameFiber.popFrom demand skip (frame :: rest)
+  fiber).events = Effect4.Prim.passEvents frame (Effect4.Prim.ensure frame fiber).snd ++
+  (Effect4.FrameFiber.popFrom demand skip rest (Effect4.Prim.ensure frame fiber).fst).events)
+
+#check (@Effect4.FrameFiber.popFrom_continue_fiber :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frame :
+  Effect4.Prim ν σ β ε δ ι α) (rest : List (Effect4.Prim ν σ β ε δ ι α)) (fiber :
+  Effect4.FrameFiber ν σ β ε δ ι α), Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure
+  frame fiber).snd = Option.none ∨ (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure
+  frame fiber).fst) = Bool.true → (Effect4.FrameFiber.popFrom demand skip (frame :: rest)
+  fiber).fiber = (Effect4.FrameFiber.popFrom demand skip rest (Effect4.Prim.ensure frame
+  fiber).fst).fiber)
+
+#check (@Effect4.FrameFiber.popFrom_answer_hasArm :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frames
+  : List (Effect4.Prim ν σ β ε δ ι α)) (fiber : Effect4.FrameFiber ν σ β ε δ ι α) (frame :
+  Effect4.Prim ν σ β ε δ ι α), (Effect4.FrameFiber.popFrom demand skip frames fiber).answer =
+  Effect4.ContAnswer.frame frame → Effect4.Prim.hasArm frame demand = Bool.true)
+
+#check (@Effect4.FrameFiber.getCont_answer_hasArm :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
+  (demand : Effect4.Arm) (skip : Bool) (frame : Effect4.Prim ν σ β ε δ ι α),
+  (Effect4.FrameFiber.getCont self demand skip).answer = Effect4.ContAnswer.frame frame →
+  Effect4.Prim.hasArm frame demand = Bool.true)
+
+#check (@Effect4.FrameFiber.passEvents_ranContAll :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (frame : Effect4.Prim ν σ β ε δ ι α)
+  (replacement : Option (Effect4.Prim ν σ β ε δ ι α)), Effect4.Prim.hasArm frame
+  Effect4.Arm.contAll = Bool.true → Effect4.FrameEvent.ranContAll frame ∈
+  Effect4.Prim.passEvents frame replacement)
+
+#check (@Effect4.FrameFiber.passEvents_poppedFrames :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (frame : Effect4.Prim ν σ β ε δ ι α)
+  (replacement : Option (Effect4.Prim ν σ β ε δ ι α)), Effect4.FrameEvent.poppedFrames
+  (Effect4.Prim.passEvents frame replacement) = [frame])
+
+#check (@Effect4.FrameFiber.popFrom_popped_eq_events :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frames
+  : List (Effect4.Prim ν σ β ε δ ι α)) (fiber : Effect4.FrameFiber ν σ β ε δ ι α),
+  (Effect4.FrameFiber.popFrom demand skip frames fiber).popped = Effect4.FrameEvent.poppedFrames
+  (Effect4.FrameFiber.popFrom demand skip frames fiber).events)
+
+#check (@Effect4.FrameFiber.popFrom_ranContAll :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frames
+  : List (Effect4.Prim ν σ β ε δ ι α)) (fiber : Effect4.FrameFiber ν σ β ε δ ι α) (frame :
+  Effect4.Prim ν σ β ε δ ι α), Effect4.Prim.hasArm frame Effect4.Arm.contAll = Bool.true → frame
+  ∈ (Effect4.FrameFiber.popFrom demand skip frames fiber).popped → Effect4.FrameEvent.ranContAll
+  frame ∈ (Effect4.FrameFiber.popFrom demand skip frames fiber).events)
+
+#check (@Effect4.FrameFiber.getCont_ranContAll :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
+  (demand : Effect4.Arm) (skip : Bool) (frame : Effect4.Prim ν σ β ε δ ι α),
+  self.deferredInterrupt = Bool.false → Effect4.Prim.hasArm frame Effect4.Arm.contAll =
+  Bool.true → frame ∈ (Effect4.FrameFiber.getCont self demand skip).popped →
+  Effect4.FrameEvent.ranContAll frame ∈ (Effect4.FrameFiber.getCont self demand skip).events)
+
+#check (@Effect4.FrameFiber.getCont_skip_of_no_pending_cause :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
+  (demand : Effect4.Arm), self.deferredInterrupt = Bool.false → self.interruptedCause =
+  Option.none → Effect4.FrameFiber.getCont self demand Bool.true = Effect4.FrameFiber.getCont
+  self demand Bool.false)
+
+#check (@Effect4.FrameFiber.interrupt_skips_every_handler :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
+  (demand : Effect4.Arm) (cause : Effect4.Cause ε δ ι α), self.interruptible = Bool.true →
+  self.interruptedCause = Option.some cause → (∀ (frame : Effect4.Prim ν σ β ε δ ι α), frame ∈
+  self.stack → Effect4.Prim.hasArm frame Effect4.Arm.contAll = Bool.false) →
+  (Effect4.FrameFiber.getCont self demand Bool.true).answer = Effect4.ContAnswer.empty)
+
+#check (@Effect4.FrameFiber.getCont_mask_stops_skip :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
+  (skip : Bool) (rest : List (Effect4.Prim ν σ β ε δ ι α)), self.deferredInterrupt = Bool.false
+  → self.stack = Effect4.Prim.setInterruptible Bool.false :: rest → (Effect4.FrameFiber.getCont
+  self Effect4.Arm.contE skip).answer = (Effect4.FrameFiber.getCont (Effect4.FrameFiber.mk
+  self.current rest Bool.false self.interruptedCause Bool.false) Effect4.Arm.contE skip).answer)
+
+#check (@Effect4.FrameFiber.resumeValue_empty :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (value : β) (provided : Option (Effect4.Exit β ε
+  δ ι α)), (Effect4.FrameFiber.getCont self Effect4.Arm.contA Bool.false).answer =
+  Effect4.ContAnswer.empty → Effect4.FrameFiber.resumeValue interp self value provided =
+  (Effect4.FrameStep.finished (Option.getD provided (Effect4.Exit.success value)),
+  (Effect4.FrameFiber.getCont self Effect4.Arm.contA Bool.false).events ++
+  [Effect4.FrameEvent.yielded (Option.getD provided (Effect4.Exit.success value))]))
+
+#check (@Effect4.FrameFiber.resumeValue_deferred :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (value : β) (provided : Option (Effect4.Exit β ε
+  δ ι α)) (cause : Effect4.Cause ε δ ι α), (Effect4.FrameFiber.getCont self Effect4.Arm.contA
+  Bool.false).answer = Effect4.ContAnswer.deferred cause → Effect4.FrameFiber.resumeValue interp
+  self value provided = (Effect4.FrameStep.running (have __src := (Effect4.FrameFiber.getCont
+  self Effect4.Arm.contA Bool.false).fiber; Effect4.FrameFiber.mk (Effect4.Prim.failure cause)
+  __src.stack __src.interruptible __src.interruptedCause __src.deferredInterrupt),
+  (Effect4.FrameFiber.getCont self Effect4.Arm.contA Bool.false).events))
+
+#check (@Effect4.FrameFiber.resumeValue_replacement :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (value : β) (provided : Option (Effect4.Exit β ε
+  δ ι α)) (next : Effect4.Prim ν σ β ε δ ι α), (Effect4.FrameFiber.getCont self
+  Effect4.Arm.contA Bool.false).answer = Effect4.ContAnswer.replacement next →
+  Effect4.FrameFiber.resumeValue interp self value provided = (Effect4.FrameStep.running (have
+  __src := (Effect4.FrameFiber.getCont self Effect4.Arm.contA Bool.false).fiber;
+  Effect4.FrameFiber.mk next __src.stack __src.interruptible __src.interruptedCause
+  __src.deferredInterrupt), (Effect4.FrameFiber.getCont self Effect4.Arm.contA
+  Bool.false).events))
+
+#check (@Effect4.FrameFiber.resumeValue_frame :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (value : β) (provided : Option (Effect4.Exit β ε
+  δ ι α)) (frame next : Effect4.Prim ν σ β ε δ ι α) (pushed : List (Effect4.Prim ν σ β ε δ ι
+  α)), (Effect4.FrameFiber.getCont self Effect4.Arm.contA Bool.false).answer =
+  Effect4.ContAnswer.frame frame → Effect4.Prim.armA interp frame value provided = Option.some
+  (next, pushed) → Effect4.FrameFiber.resumeValue interp self value provided =
+  (Effect4.FrameStep.running (have __src := (Effect4.FrameFiber.getCont self Effect4.Arm.contA
+  Bool.false).fiber; Effect4.FrameFiber.mk next (pushed ++ (Effect4.FrameFiber.getCont self
+  Effect4.Arm.contA Bool.false).fiber.stack) __src.interruptible __src.interruptedCause
+  __src.deferredInterrupt), (Effect4.FrameFiber.getCont self Effect4.Arm.contA
+  Bool.false).events ++ Effect4.Prim.finalizerEvents frame (Option.getD provided
+  (Effect4.Exit.success value)) ++ List.map Effect4.FrameEvent.pushed pushed))
+
+#check (@Effect4.FrameFiber.resumeCause_empty :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (cause : Effect4.Cause ε δ ι α) (provided :
+  Option (Effect4.Exit β ε δ ι α)), (Effect4.FrameFiber.getCont self Effect4.Arm.contE
+  Bool.true).answer = Effect4.ContAnswer.empty → Effect4.FrameFiber.resumeCause interp self
+  cause provided = (Effect4.FrameStep.finished (Option.getD provided (Effect4.Exit.failure
+  cause)), (Effect4.FrameFiber.getCont self Effect4.Arm.contE Bool.true).events ++
+  [Effect4.FrameEvent.yielded (Option.getD provided (Effect4.Exit.failure cause))]))
+
+#check (@Effect4.FrameFiber.resumeCause_deferred :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (cause deferredCause : Effect4.Cause ε δ ι α)
+  (provided : Option (Effect4.Exit β ε δ ι α)), (Effect4.FrameFiber.getCont self
+  Effect4.Arm.contE Bool.true).answer = Effect4.ContAnswer.deferred deferredCause →
+  Effect4.FrameFiber.resumeCause interp self cause provided = (Effect4.FrameStep.running (have
+  __src := (Effect4.FrameFiber.getCont self Effect4.Arm.contE Bool.true).fiber;
+  Effect4.FrameFiber.mk (Effect4.Prim.failure deferredCause) __src.stack __src.interruptible
+  __src.interruptedCause __src.deferredInterrupt), (Effect4.FrameFiber.getCont self
+  Effect4.Arm.contE Bool.true).events))
+
+#check (@Effect4.FrameFiber.resumeCause_replacement :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (cause : Effect4.Cause ε δ ι α) (provided :
+  Option (Effect4.Exit β ε δ ι α)) (next : Effect4.Prim ν σ β ε δ ι α),
+  (Effect4.FrameFiber.getCont self Effect4.Arm.contE Bool.true).answer =
+  Effect4.ContAnswer.replacement next → Effect4.FrameFiber.resumeCause interp self cause
+  provided = (Effect4.FrameStep.running (have __src := (Effect4.FrameFiber.getCont self
+  Effect4.Arm.contE Bool.true).fiber; Effect4.FrameFiber.mk next __src.stack __src.interruptible
+  __src.interruptedCause __src.deferredInterrupt), (Effect4.FrameFiber.getCont self
+  Effect4.Arm.contE Bool.true).events))
+
+#check (@Effect4.FrameFiber.resumeCause_frame :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (cause : Effect4.Cause ε δ ι α) (provided :
+  Option (Effect4.Exit β ε δ ι α)) (frame next : Effect4.Prim ν σ β ε δ ι α) (pushed : List
+  (Effect4.Prim ν σ β ε δ ι α)), (Effect4.FrameFiber.getCont self Effect4.Arm.contE
+  Bool.true).answer = Effect4.ContAnswer.frame frame → Effect4.Prim.armE interp frame cause
+  provided = Option.some (next, pushed) → Effect4.FrameFiber.resumeCause interp self cause
+  provided = (Effect4.FrameStep.running (have __src := (Effect4.FrameFiber.getCont self
+  Effect4.Arm.contE Bool.true).fiber; Effect4.FrameFiber.mk next (pushed ++
+  (Effect4.FrameFiber.getCont self Effect4.Arm.contE Bool.true).fiber.stack) __src.interruptible
+  __src.interruptedCause __src.deferredInterrupt), (Effect4.FrameFiber.getCont self
+  Effect4.Arm.contE Bool.true).events ++ Effect4.Prim.finalizerEvents frame (Option.getD
+  provided (Effect4.Exit.failure cause)) ++ List.map Effect4.FrameEvent.pushed pushed))
+
+#check (@Effect4.FrameFiber.step_success :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (value : β), Effect4.FrameFiber.step interp
+  (Effect4.FrameFiber.mk (Effect4.Prim.success value) self.stack self.interruptible
+  self.interruptedCause self.deferredInterrupt) = Effect4.FrameFiber.resumeValue interp
+  (Effect4.FrameFiber.mk (Effect4.Prim.success value) self.stack self.interruptible
+  self.interruptedCause self.deferredInterrupt) value (Option.some (Effect4.Exit.success
+  value)))
+
+#check (@Effect4.FrameFiber.step_failure :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (cause : Effect4.Cause ε δ ι α),
+  Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk (Effect4.Prim.failure cause) self.stack
+  self.interruptible self.interruptedCause self.deferredInterrupt) =
+  Effect4.FrameFiber.resumeCause interp (Effect4.FrameFiber.mk (Effect4.Prim.failure cause)
+  self.stack self.interruptible self.interruptedCause self.deferredInterrupt) cause (Option.some
+  (Effect4.Exit.failure cause)))
+
+#check (@Effect4.FrameFiber.step_sync :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (thunk : σ), Effect4.FrameFiber.step interp
+  (Effect4.FrameFiber.mk (Effect4.Prim.sync thunk) self.stack self.interruptible
+  self.interruptedCause self.deferredInterrupt) = Effect4.FrameFiber.resumeValue interp
+  (Effect4.FrameFiber.mk (Effect4.Prim.sync thunk) self.stack self.interruptible
+  self.interruptedCause self.deferredInterrupt) (interp.syncValue thunk) Option.none)
+
+#check (@Effect4.FrameFiber.step_suspend :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (thunk : σ), Effect4.FrameFiber.step interp
+  (Effect4.FrameFiber.mk (Effect4.Prim.suspend thunk) self.stack self.interruptible
+  self.interruptedCause self.deferredInterrupt) = (Effect4.FrameStep.running
+  (Effect4.FrameFiber.mk (interp.suspendBody thunk) self.stack self.interruptible
+  self.interruptedCause self.deferredInterrupt), []))
+
+#check (@Effect4.FrameFiber.step_withFiber :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (thunk : σ), Effect4.FrameFiber.step interp
+  (Effect4.FrameFiber.mk (Effect4.Prim.withFiber thunk) self.stack self.interruptible
+  self.interruptedCause self.deferredInterrupt) = (Effect4.FrameStep.running
+  (Effect4.FrameFiber.mk (interp.suspendBody thunk) self.stack self.interruptible
+  self.interruptedCause self.deferredInterrupt), []))
+
+#check (@Effect4.FrameFiber.step_yieldableError :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (error : ε), Effect4.FrameFiber.step interp
+  (Effect4.FrameFiber.mk (Effect4.Prim.yieldableError error) self.stack self.interruptible
+  self.interruptedCause self.deferredInterrupt) = (Effect4.FrameStep.running
+  (Effect4.FrameFiber.mk (Effect4.Prim.failure (Effect4.Cause.fail error)) self.stack
+  self.interruptible self.interruptedCause self.deferredInterrupt), []))
+
+#check (@Effect4.FrameFiber.step_onSuccess :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (body : Effect4.Prim ν σ β ε δ ι α) (onValue :
+  ν), Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk (Effect4.Prim.onSuccess body
+  onValue) self.stack self.interruptible self.interruptedCause self.deferredInterrupt) =
+  (Effect4.FrameStep.running (Effect4.FrameFiber.mk body (Effect4.Prim.onSuccess body onValue ::
+  self.stack) self.interruptible self.interruptedCause self.deferredInterrupt),
+  [Effect4.FrameEvent.pushed (Effect4.Prim.onSuccess body onValue)]))
+
+#check (@Effect4.FrameFiber.step_onFailure :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (body : Effect4.Prim ν σ β ε δ ι α) (onCause :
+  ν), Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk (Effect4.Prim.onFailure body
+  onCause) self.stack self.interruptible self.interruptedCause self.deferredInterrupt) =
+  (Effect4.FrameStep.running (Effect4.FrameFiber.mk body (Effect4.Prim.onFailure body onCause ::
+  self.stack) self.interruptible self.interruptedCause self.deferredInterrupt),
+  [Effect4.FrameEvent.pushed (Effect4.Prim.onFailure body onCause)]))
+
+#check (@Effect4.FrameFiber.step_onSuccessAndFailure :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (body : Effect4.Prim ν σ β ε δ ι α) (onValue
+  onCause : ν), Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk
+  (Effect4.Prim.onSuccessAndFailure body onValue onCause) self.stack self.interruptible
+  self.interruptedCause self.deferredInterrupt) = (Effect4.FrameStep.running
+  (Effect4.FrameFiber.mk body (Effect4.Prim.onSuccessAndFailure body onValue onCause ::
+  self.stack) self.interruptible self.interruptedCause self.deferredInterrupt),
+  [Effect4.FrameEvent.pushed (Effect4.Prim.onSuccessAndFailure body onValue onCause)]))
+
+#check (@Effect4.FrameFiber.step_exitFrame :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (body : Effect4.Prim ν σ β ε δ ι α),
+  Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk (Effect4.Prim.exitFrame body) self.stack
+  self.interruptible self.interruptedCause self.deferredInterrupt) = (Effect4.FrameStep.running
+  (Effect4.FrameFiber.mk body (Effect4.Prim.exitFrame body :: self.stack) self.interruptible
+  self.interruptedCause self.deferredInterrupt), [Effect4.FrameEvent.pushed
+  (Effect4.Prim.exitFrame body)]))
+
+#check (@Effect4.FrameFiber.step_onExit :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (body : Effect4.Prim ν σ β ε δ ι α) (finalizer :
+  ν) (flag : Bool), Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk (Effect4.Prim.onExit
+  body finalizer flag) self.stack self.interruptible self.interruptedCause
+  self.deferredInterrupt) = (Effect4.FrameStep.running (Effect4.FrameFiber.mk body
+  (Effect4.Prim.onExit body finalizer flag :: self.stack) self.interruptible
+  self.interruptedCause self.deferredInterrupt), [Effect4.FrameEvent.pushed (Effect4.Prim.onExit
+  body finalizer flag)]))
+
+#check (@Effect4.FrameFiber.step_setInterruptible_not_evaluable :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (flag : Bool), Effect4.FrameFiber.step interp
+  (Effect4.FrameFiber.mk (Effect4.Prim.setInterruptible flag) self.stack self.interruptible
+  self.interruptedCause self.deferredInterrupt) = (Effect4.FrameStep.running
+  (Effect4.FrameFiber.mk (Effect4.Prim.failure (Effect4.Cause.die interp.notImplemented))
+  self.stack self.interruptible self.interruptedCause self.deferredInterrupt), []))
+
+#check (@Effect4.FrameFiber.step_whileLoop_true :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (loop : ν) (cursor : β), interp.loopTest loop
+  cursor = Bool.true → Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk
+  (Effect4.Prim.whileLoop loop cursor) self.stack self.interruptible self.interruptedCause
+  self.deferredInterrupt) = (Effect4.FrameStep.running (Effect4.FrameFiber.mk (interp.loopBody
+  loop cursor) (Effect4.Prim.whileLoop loop cursor :: self.stack) self.interruptible
+  self.interruptedCause self.deferredInterrupt), [Effect4.FrameEvent.pushed
+  (Effect4.Prim.whileLoop loop cursor)]))
+
+#check (@Effect4.FrameFiber.step_whileLoop_false :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (loop : ν) (cursor : β), interp.loopTest loop
+  cursor = Bool.false → Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk
+  (Effect4.Prim.whileLoop loop cursor) self.stack self.interruptible self.interruptedCause
+  self.deferredInterrupt) = (Effect4.FrameStep.running (Effect4.FrameFiber.mk
+  (Effect4.Prim.success (interp.loopDone loop)) self.stack self.interruptible
+  self.interruptedCause self.deferredInterrupt), []))
+
+#check (@Effect4.FrameFiber.step_iterator :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (generator : ν) (cursor : β) (next : Effect4.Prim
+  ν σ β ε δ ι α) (pushed : List (Effect4.Prim ν σ β ε δ ι α)), Effect4.Prim.armA interp
+  (Effect4.Prim.iterator generator cursor) cursor Option.none = Option.some (next, pushed) →
+  Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk (Effect4.Prim.iterator generator cursor)
+  self.stack self.interruptible self.interruptedCause self.deferredInterrupt) =
+  (Effect4.FrameStep.running (Effect4.FrameFiber.mk next (pushed ++ self.stack)
+  self.interruptible self.interruptedCause self.deferredInterrupt), List.map
+  Effect4.FrameEvent.pushed pushed))
+
+#check (@Effect4.FrameFiber.step_ofExit_finishes :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (exit : Effect4.Exit β ε δ ι α), Effect4.FrameFiber.step interp (Effect4.FrameFiber.start
+  (Effect4.Prim.ofExit exit)) = (Effect4.FrameStep.finished exit, [Effect4.FrameEvent.yielded
+  exit]))
+
+#check (@Effect4.FrameFiber.run_zero :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α), Effect4.FrameFiber.run interp 0 self =
+  (Effect4.FrameStep.running self, []))
+
+#check (@Effect4.FrameFiber.run_succ_finished :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (fuel : Nat) (exit : Effect4.Exit β ε δ ι α)
+  (events : List (Effect4.FrameEvent ν σ β ε δ ι α)), Effect4.FrameFiber.step interp self =
+  (Effect4.FrameStep.finished exit, events) → Effect4.FrameFiber.run interp (fuel + 1) self =
+  (Effect4.FrameStep.finished exit, events))
+
+#check (@Effect4.FrameFiber.run_succ_running :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self next : Effect4.FrameFiber ν σ β ε δ ι α) (fuel : Nat) (events : List
+  (Effect4.FrameEvent ν σ β ε δ ι α)), Effect4.FrameFiber.step interp self =
+  (Effect4.FrameStep.running next, events) → Effect4.FrameFiber.run interp (fuel + 1) self =
+  ((Effect4.FrameFiber.run interp fuel next).fst, events ++ (Effect4.FrameFiber.run interp fuel
+  next).snd))
+
+#check (@Effect4.FrameFiber.uninterruptible_already_masked :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
+  self.interruptible = Bool.false → Effect4.FrameFiber.uninterruptible self = self)
+
+#check (@Effect4.FrameFiber.uninterruptible_masks :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
+  self.interruptible = Bool.true → Effect4.FrameFiber.uninterruptible self =
+  Effect4.FrameFiber.mk self.current (Effect4.Prim.setInterruptible Bool.true :: self.stack)
+  Bool.false self.interruptedCause self.deferredInterrupt)
+
+#check (@Effect4.FrameFiber.uninterruptibleMask_eq :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
+  Effect4.FrameFiber.uninterruptibleMask self = Effect4.FrameFiber.uninterruptible self)
+
+#check (@Effect4.FrameFiber.setFiberInterruptible_flag :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
+  (Effect4.FrameFiber.setFiberInterruptible self).fst.interruptible = Bool.true)
+
+#check (@Effect4.FrameFiber.setFiberInterruptible_pushes :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
+  (Effect4.FrameFiber.setFiberInterruptible self).fst.stack = Effect4.Prim.setInterruptible
+  Bool.false :: self.stack)
+
+#check (@Effect4.FrameFiber.setFiberInterruptible_immediate_failure :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
+  (cause : Effect4.Cause ε δ ι α), self.interruptedCause = Option.some cause →
+  (Effect4.FrameFiber.setFiberInterruptible self).snd = Option.some (Effect4.Prim.failure
+  cause))
+
+#check (@Effect4.FrameFiber.setFiberInterruptible_no_pending :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
+  self.interruptedCause = Option.none → (Effect4.FrameFiber.setFiberInterruptible self).snd =
+  Option.none)
+
+#check (@Effect4.FrameFiber.interruptibleRegion_already :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
+  self.interruptible = Bool.true → Effect4.FrameFiber.interruptibleRegion self = (self,
+  Option.none))
+
+#check (@Effect4.FrameFiber.interruptibleRegion_masked :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
+  self.interruptible = Bool.false → Effect4.FrameFiber.interruptibleRegion self =
+  Effect4.FrameFiber.setFiberInterruptible self)
+
+#check (@Effect4.FrameFiber.restoreAcquire_asked :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
+  Effect4.FrameFiber.restoreAcquire self Bool.true = Effect4.FrameFiber.interruptibleRegion
+  self)
+
+#check (@Effect4.FrameFiber.restoreAcquire_not_asked :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
+  Effect4.FrameFiber.restoreAcquire self Bool.false = (self, Option.none))
+
+#check (@Effect4.Prim.scopedFrame_eq :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ] [DecidableEq
+  ι] [DecidableEq α] (body : Effect4.Prim ν σ β ε δ ι α) (closeScope : ν),
+  Effect4.Prim.scopedFrame body closeScope = Effect4.Prim.onExit body closeScope Bool.false)
+
+#check (@Effect4.Prim.scopedFrame_finalizer_masked :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ] [DecidableEq
+  ι] [DecidableEq α] (body : Effect4.Prim ν σ β ε δ ι α) (closeScope : ν) (fiber :
+  Effect4.FrameFiber ν σ β ε δ ι α), fiber.interruptible = Bool.true → Effect4.Prim.ensure
+  (Effect4.Prim.scopedFrame body closeScope) fiber = (Effect4.FrameFiber.mk fiber.current
+  (Effect4.Prim.setInterruptible Bool.true :: fiber.stack) Bool.false fiber.interruptedCause
+  fiber.deferredInterrupt, Option.none))
+
+#check (@Effect4.FrameFiber.step_scopedFrame :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (body : Effect4.Prim ν σ β ε δ ι α) (closeScope :
+  ν), Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk (Effect4.Prim.scopedFrame body
+  closeScope) self.stack self.interruptible self.interruptedCause self.deferredInterrupt) =
+  (Effect4.FrameStep.running (Effect4.FrameFiber.mk body (Effect4.Prim.onExit body closeScope
+  Bool.false :: self.stack) self.interruptible self.interruptedCause self.deferredInterrupt),
+  [Effect4.FrameEvent.pushed (Effect4.Prim.onExit body closeScope Bool.false)]))
+
+#check (@Effect4.Prim.withFiber_refused :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ] [DecidableEq
+  ι] [DecidableEq α] {ϑ : Type u} (resolve : Effect4.FrameFiber ν σ β ε δ ι α → ϑ) (left right :
+  Effect4.FrameFiber ν σ β ε δ ι α), left = right → resolve left = resolve right)
+
+#check (@Effect4.Prim.yieldableError_host_class_refused :
+  ∀ {ε : Type u} [DecidableEq ε] {ϑ : Type u} (host : ε → ϑ) (left right : ε), left = right →
+  host left = host right)
+
 end StatementSnapshot
 
 /-! ## The frozen census join -/
@@ -1545,48 +2571,187 @@ private def knownKinds : List String :=
 private def knownCoverage : List String := ["green", "partial", "absent"]
 
 private def censusRows : List Row :=
-  [ { id := "op.Success", kind := "op", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "op.Failure", kind := "op", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "op.WithFiber", kind := "op", disposition := "foreignBoundary", coverage := "absent", witnesses := [] }
-  , { id := "op.YieldableError", kind := "op", disposition := "foreignBoundary", coverage := "absent", witnesses := [] }
-  , { id := "op.Sync", kind := "op", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "op.Suspend", kind := "op", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  [ { id := "op.Success", kind := "op", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.FrameFiber.getCont_empty_stack "propext"
+        , w `Effect4.FrameFiber.resumeValue_empty "propext"
+        , w `Effect4.FrameFiber.resumeValue_frame "propext"
+        , w `Effect4.FrameFiber.step_success "propext"
+        , w `Effect4.FrameFiber.step_ofExit_finishes "propext" ] }
+  , { id := "op.Failure", kind := "op", disposition := "separateCalculus", coverage := "partial"
+      -- missing clause: "annotates the cause with the current stack frame" needs a fiber Context and a StackTrace service key
+    , witnesses :=
+        [ w `Effect4.FrameFiber.interrupt_skips_every_handler "propext"
+        , w `Effect4.FrameFiber.resumeCause_empty "propext"
+        , w `Effect4.FrameFiber.resumeCause_frame "propext"
+        , w `Effect4.FrameFiber.step_failure "propext" ] }
+  , { id := "op.WithFiber", kind := "op", disposition := "foreignBoundary", coverage := "green"
+      -- the raw FiberImpl host-identity clause is closed by refusal, not by a model
+    , witnesses :=
+        [ w `Effect4.FrameFiber.step_withFiber "propext"
+        , w `Effect4.Prim.withFiber_refused "none" ] }
+  , { id := "op.YieldableError", kind := "op", disposition := "foreignBoundary", coverage := "green"
+      -- the host Error subclass identity clause is closed by refusal, not by a model
+    , witnesses :=
+        [ w `Effect4.FrameFiber.step_yieldableError "propext"
+        , w `Effect4.Prim.yieldableError_host_class_refused "none" ] }
+  , { id := "op.Sync", kind := "op", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.FrameFiber.step_sync "propext" ] }
+  , { id := "op.Suspend", kind := "op", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.FrameFiber.step_suspend "propext" ] }
   , { id := "op.Yield", kind := "op", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
   , { id := "op.Async", kind := "op", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
   , { id := "op.AsyncFinalizer", kind := "op", disposition := "excludedInternal", coverage := "absent", witnesses := [] }
-  , { id := "op.Iterator", kind := "op", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "op.OnSuccess", kind := "op", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "op.OnFailure", kind := "op", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "op.OnSuccessAndFailure", kind := "op", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "op.Exit", kind := "op", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "op.OnExit", kind := "op", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "op.SetInterruptible", kind := "op", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "op.While", kind := "op", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "frame-arm.OnSuccess", kind := "frame-arm", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "frame-arm.OnFailure", kind := "frame-arm", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "frame-arm.OnSuccessAndFailure", kind := "frame-arm", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "frame-arm.Exit", kind := "frame-arm", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "frame-arm.OnExit", kind := "frame-arm", disposition := "owned", coverage := "partial"
+  , { id := "op.Iterator", kind := "op", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Prim.armA_iterator_done "propext"
+        , w `Effect4.Prim.armA_iterator_halt "propext"
+        , w `Effect4.Prim.armA_iterator_resume "propext"
+        , w `Effect4.Prim.iteratorFolded_eq "none"
+        , w `Effect4.Prim.iterator_folds_inline "propext"
+        , w `Effect4.FrameFiber.step_iterator "propext" ] }
+  , { id := "op.OnSuccess", kind := "op", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Prim.armA_onSuccess "none"
+        , w `Effect4.Prim.onSuccess_arm_is_per_instance "none"
+        , w `Effect4.FrameFiber.step_onSuccess "propext" ] }
+  , { id := "op.OnFailure", kind := "op", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Prim.armE_onFailure "none"
+        , w `Effect4.Prim.onFailure_arm_is_per_instance "none"
+        , w `Effect4.FrameFiber.step_onFailure "propext" ] }
+  , { id := "op.OnSuccessAndFailure", kind := "op", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Prim.armA_onSuccessAndFailure "none"
+        , w `Effect4.Prim.armE_onSuccessAndFailure "none"
+        , w `Effect4.Prim.onSuccessAndFailure_arms_are_per_instance "none"
+        , w `Effect4.FrameFiber.step_onSuccessAndFailure "propext" ] }
+  , { id := "op.Exit", kind := "op", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Prim.armA_exitFrame_provided "none"
+        , w `Effect4.Prim.armA_exitFrame_none "none"
+        , w `Effect4.Prim.armE_exitFrame_provided "none"
+        , w `Effect4.Prim.armE_exitFrame_none "none"
+        , w `Effect4.FrameFiber.step_exitFrame "propext" ] }
+  , { id := "op.OnExit", kind := "op", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Prim.ensure_onExit_masks "propext"
+        , w `Effect4.Prim.ensure_onExit_told_not_to "propext"
+        , w `Effect4.Prim.ensure_onExit_already_masked "propext"
+        , w `Effect4.Prim.armA_onExit "none"
+        , w `Effect4.Prim.armE_onExit "none"
+        , w `Effect4.Prim.onExit_finalizer_success_restores "none"
+        , w `Effect4.Prim.onExit_finalizer_failure_merges "none"
+        , w `Effect4.Prim.onExit_success_finalizer_failure "none"
+        , w `Effect4.Prim.finalizerEvents_onExit "none"
+        , w `Effect4.Prim.finalizerEvents_onSuccess "none"
+        , w `Effect4.Prim.finalizerEvents_onFailure "none"
+        , w `Effect4.FrameFiber.step_onExit "propext" ] }
+  , { id := "op.SetInterruptible", kind := "op", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Prim.arms_setInterruptible "none"
+        , w `Effect4.Prim.ensure_setInterruptible_flag "propext"
+        , w `Effect4.Prim.ensure_setInterruptible_stack "propext"
+        , w `Effect4.Prim.ensure_setInterruptible_substitutes "propext"
+        , w `Effect4.Prim.ensure_setInterruptible_false_no_replacement "propext"
+        , w `Effect4.Prim.ensure_setInterruptible_no_pending "propext"
+        , w `Effect4.Prim.armA_setInterruptible_none "none"
+        , w `Effect4.Prim.armE_setInterruptible_none "none"
+        , w `Effect4.FrameFiber.step_setInterruptible_not_evaluable "propext" ] }
+  , { id := "op.While", kind := "op", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Prim.armA_whileLoop_continue "propext"
+        , w `Effect4.Prim.armA_whileLoop_stop "propext"
+        , w `Effect4.FrameFiber.step_whileLoop_true "propext"
+        , w `Effect4.FrameFiber.step_whileLoop_false "propext" ] }
+  , { id := "frame-arm.OnSuccess", kind := "frame-arm", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Prim.arms_onSuccess "none"
+        , w `Effect4.Prim.armA_isSome "propext"
+        , w `Effect4.Prim.armE_isSome "none"
+        , w `Effect4.Prim.armE_onSuccess_none "none"
+        , w `Effect4.Prim.onSuccess_arm_is_per_instance "none" ] }
+  , { id := "frame-arm.OnFailure", kind := "frame-arm", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Prim.arms_onFailure "none"
+        , w `Effect4.Prim.armA_onFailure_none "none"
+        , w `Effect4.Prim.onFailure_arm_is_per_instance "none" ] }
+  , { id := "frame-arm.OnSuccessAndFailure", kind := "frame-arm", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Prim.arms_onSuccessAndFailure "none"
+        , w `Effect4.Prim.onSuccessAndFailure_arms_are_per_instance "none" ] }
+  , { id := "frame-arm.Exit", kind := "frame-arm", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Prim.arms_exitFrame "none"
+        , w `Effect4.Prim.ensure_of_no_contAll "none" ] }
+  , { id := "frame-arm.OnExit", kind := "frame-arm", disposition := "owned", coverage := "green"
     , witnesses :=
         [ w `Effect4.cleanup_preserves_terminal "propext"
         , w `Effect4.cleanup_at_most_once "propext,Quot.sound"
         , w `Effect4.cleanup_events_at_most_once "propext,Quot.sound"
         , w `Effect4.cleanup_count_monotone "propext,Quot.sound"
-        , w `Effect4.cleanup_safe_on_finish "propext,Quot.sound" ] }
-  , { id := "frame-arm.SetInterruptible", kind := "frame-arm", disposition := "owned", coverage := "partial"
-    , witnesses := [ w `Effect4.enter_mask_exists "propext" ] }
+        , w `Effect4.cleanup_safe_on_finish "propext,Quot.sound"
+        , w `Effect4.Prim.arms_onExit "none"
+        , w `Effect4.Prim.ensure_onExit_masks "propext"
+        , w `Effect4.Prim.ensure_onExit_told_not_to "propext"
+        , w `Effect4.Prim.ensure_onExit_already_masked "propext"
+        , w `Effect4.Prim.ensure_onExit_no_replacement "propext"
+        , w `Effect4.Prim.onExit_arm_is_per_frame "none" ] }
+  , { id := "frame-arm.SetInterruptible", kind := "frame-arm", disposition := "owned", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.enter_mask_exists "propext"
+        , w `Effect4.Prim.arms_setInterruptible "none"
+        , w `Effect4.Prim.ensure_setInterruptible_substitutes "propext"
+        , w `Effect4.Prim.answerOf_replacement "none"
+        , w `Effect4.Prim.armA_setInterruptible_none "none"
+        , w `Effect4.Prim.armE_setInterruptible_none "none"
+        , w `Effect4.FrameFiber.resumeValue_replacement "propext"
+        , w `Effect4.FrameFiber.resumeCause_replacement "propext" ] }
   , { id := "frame-arm.AsyncFinalizer", kind := "frame-arm", disposition := "excludedInternal", coverage := "absent", witnesses := [] }
-  , { id := "frame-arm.While", kind := "frame-arm", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "frame-arm.Iterator", kind := "frame-arm", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "frame-arm.While", kind := "frame-arm", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Prim.arms_whileLoop "none"
+        , w `Effect4.Prim.armE_whileLoop_none "none"
+        , w `Effect4.FrameFiber.step_whileLoop_true "propext" ] }
+  , { id := "frame-arm.Iterator", kind := "frame-arm", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Prim.arms_iterator "none"
+        , w `Effect4.Prim.armE_iterator_none "none"
+        , w `Effect4.FrameFiber.step_iterator "propext" ] }
   , { id := "checkpoint.runloop-top", kind := "checkpoint", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "checkpoint.getcont-deferred", kind := "checkpoint", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "checkpoint.getcont-deferred", kind := "checkpoint", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.FrameFiber.pendingCause_some "none"
+        , w `Effect4.FrameFiber.pendingCause_none "none"
+        , w `Effect4.FrameFiber.getCont_deferred "propext"
+        , w `Effect4.FrameFiber.getCont_deferred_pops_nothing "propext"
+        , w `Effect4.FrameFiber.getCont_skip_clears_deferred "propext"
+        , w `Effect4.FrameFiber.resumeValue_deferred "propext"
+        , w `Effect4.FrameFiber.resumeCause_deferred "propext" ] }
   , { id := "checkpoint.post-yield-cancel", kind := "checkpoint", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "checkpoint.exit-failcause-skip", kind := "checkpoint", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "checkpoint.set-fiber-interruptible", kind := "checkpoint", disposition := "owned", coverage := "partial"
+  , { id := "checkpoint.exit-failcause-skip", kind := "checkpoint", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.FrameFiber.popFrom_continue_answer "propext"
+        , w `Effect4.FrameFiber.getCont_skip_of_no_pending_cause "propext"
+        , w `Effect4.FrameFiber.interrupt_skips_every_handler "propext" ] }
+  , { id := "checkpoint.set-fiber-interruptible", kind := "checkpoint", disposition := "owned", coverage := "green"
     , witnesses :=
         [ w `Effect4.pending_unmask_exists "propext"
-        , w `Effect4.unmask_without_pending_exists "propext" ] }
-  , { id := "checkpoint.set-interruptible-contall", kind := "checkpoint", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+        , w `Effect4.unmask_without_pending_exists "propext"
+        , w `Effect4.FrameFiber.setFiberInterruptible_flag "none"
+        , w `Effect4.FrameFiber.setFiberInterruptible_pushes "none"
+        , w `Effect4.FrameFiber.setFiberInterruptible_immediate_failure "propext"
+        , w `Effect4.FrameFiber.setFiberInterruptible_no_pending "propext"
+        , w `Effect4.FrameFiber.interruptibleRegion_already "propext"
+        , w `Effect4.FrameFiber.interruptibleRegion_masked "propext" ] }
+  , { id := "checkpoint.set-interruptible-contall", kind := "checkpoint", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Prim.ensure_setInterruptible_substitutes "propext"
+        , w `Effect4.Prim.answerOf_replacement "none"
+        , w `Effect4.FrameFiber.resumeValue_replacement "propext"
+        , w `Effect4.FrameFiber.resumeCause_replacement "propext" ] }
   , { id := "interrupt.unsafe-entry", kind := "interrupt", disposition := "owned", coverage := "partial"
     , witnesses :=
         [ w `Effect4.unmasked_interrupt_delivers "propext"
@@ -1939,7 +3104,7 @@ private def censusRows : List Row :=
         , w `Effect4.Scope.fork_shared_key "propext,Quot.sound"
         , w `Effect4.Scope.fork_detach "propext,Quot.sound" ] }
   , { id := "scope.scoped", kind := "scope", disposition := "separateCalculus", coverage := "partial"
-      -- missing clauses: "in the fiber context", "through an OnExit frame", "restoring the previous context first"
+      -- missing clauses: "installs a fresh scope in the fiber context" and "restoring the previous context first"
     , witnesses :=
         [ w `Effect4.Scope.addAll_nil "none"
         , w `Effect4.Scope.addAll_cons "none"
@@ -1950,14 +3115,24 @@ private def censusRows : List Row :=
         , w `Effect4.Scope.runScoped_state "none"
         , w `Effect4.Scope.runScoped_strategy "none"
         , w `Effect4.Scope.runScoped_empty "none"
-        , w `Effect4.Scope.runScoped_lifo "propext,Quot.sound" ] }
+        , w `Effect4.Scope.runScoped_lifo "propext,Quot.sound"
+        , w `Effect4.Prim.scopedFrame_eq "none"
+        , w `Effect4.Prim.scopedFrame_finalizer_masked "propext"
+        , w `Effect4.FrameFiber.step_scopedFrame "propext" ] }
   , { id := "scope.acquire-release", kind := "scope", disposition := "separateCalculus", coverage := "partial"
-      -- missing clauses: "runs under uninterruptibleMask", the asked-for interruptibility restore, and "with the captured context"
+      -- missing clause: "with the captured context" needs a Context carrier
     , witnesses :=
         [ w `Effect4.Scope.acquireRelease_failure "none"
         , w `Effect4.Scope.acquireRelease_success "none"
         , w `Effect4.Scope.acquireRelease_registers "propext,Quot.sound"
-        , w `Effect4.Scope.acquireRelease_closed_ambient "none" ] }
+        , w `Effect4.Scope.acquireRelease_closed_ambient "none"
+        , w `Effect4.FrameFiber.uninterruptible_already_masked "propext"
+        , w `Effect4.FrameFiber.uninterruptible_masks "propext"
+        , w `Effect4.FrameFiber.uninterruptibleMask_eq "none"
+        , w `Effect4.FrameFiber.interruptibleRegion_already "propext"
+        , w `Effect4.FrameFiber.interruptibleRegion_masked "propext"
+        , w `Effect4.FrameFiber.restoreAcquire_asked "none"
+        , w `Effect4.FrameFiber.restoreAcquire_not_asked "none" ] }
   , { id := "scheduler.should-yield", kind := "scheduler", disposition := "targetOnly", coverage := "absent", witnesses := [] }
   , { id := "scheduler.priority-buckets", kind := "scheduler", disposition := "targetOnly", coverage := "absent", witnesses := [] }
   , { id := "scheduler.dispatcher-arming", kind := "scheduler", disposition := "targetOnly", coverage := "absent", witnesses := [] }
@@ -1970,14 +3145,22 @@ private def censusRows : List Row :=
   , { id := "scheduler.max-ops-default", kind := "scheduler", disposition := "targetOnly", coverage := "absent", witnesses := [] }
   , { id := "scheduler.prevent-yield-default", kind := "scheduler", disposition := "targetOnly", coverage := "absent", witnesses := [] }
   , { id := "scheduler.host-loop", kind := "scheduler", disposition := "targetOnly", coverage := "absent", witnesses := [] }
-  , { id := "exit.success-failure", kind := "exit", disposition := "separateCalculus", coverage := "partial"
-      -- missing clause: "each is itself a primitive that can be stepped" needs the continuation-machine calculus
+  , { id := "exit.success-failure", kind := "exit", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Exit.cases_receipt "none"
         , w `Effect4.Exit.success_ne_failure "none"
         , w `Effect4.Exit.success_inj "none"
         , w `Effect4.Exit.failure_inj "none"
-        , w `Effect4.Exit.cause_failure "none" ] }
+        , w `Effect4.Exit.cause_failure "none"
+        , w `Effect4.Prim.ofExit_asExit? "none"
+        , w `Effect4.Prim.asExit?_success "none"
+        , w `Effect4.Prim.asExit?_failure "none"
+        , w `Effect4.Prim.asExit?_eq_some "propext"
+        , w `Effect4.Prim.ofExit_isFrame "none"
+        , w `Effect4.FrameFiber.step_ofExit_finishes "propext"
+        , w `Effect4.FrameFiber.run_zero "propext"
+        , w `Effect4.FrameFiber.run_succ_finished "propext"
+        , w `Effect4.FrameFiber.run_succ_running "propext" ] }
   , { id := "exit.reason-alphabet", kind := "exit", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.ReasonTag.all_nodup "none"
@@ -2055,8 +3238,56 @@ private def censusRows : List Row :=
   , { id := "entry.run-sync-exit-with", kind := "entry", disposition := "targetOnly", coverage := "absent", witnesses := [] }
   , { id := "entry.async-fiber-error", kind := "entry", disposition := "targetOnly", coverage := "absent", witnesses := [] }
   , { id := "entry.with-error-reporting", kind := "entry", disposition := "targetOnly", coverage := "absent", witnesses := [] }
-  , { id := "rule.frames-are-primitives", kind := "rule", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "rule.interrupt-bypasses-handlers", kind := "rule", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "rule.frames-are-primitives", kind := "rule", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Arm.all_nodup "none"
+        , w `Effect4.Arm.mem_all "propext"
+        , w `Effect4.Arm.cases_receipt "none"
+        , w `Effect4.Arm.demandable_eq "none"
+        , w `Effect4.Arm.contAll_not_demandable "propext"
+        , w `Effect4.Prim.cases_receipt "none"
+        , w `Effect4.FrameFiber.start_eq "none"
+        , w `Effect4.FrameFiber.masked_eq "none"
+        , w `Effect4.FrameFiber.interrupted_eq "none"
+        , w `Effect4.FrameEvent.poppedFrames_nil "none"
+        , w `Effect4.FrameEvent.poppedFrames_cons_popped "none"
+        , w `Effect4.FrameEvent.finalizersRun_nil "none"
+        , w `Effect4.FrameEvent.finalizersRun_cons_ran "none"
+        , w `Effect4.FrameEvent.finalizersRun_cons_popped "none"
+        , w `Effect4.Prim.hasArm_eq "none"
+        , w `Effect4.Prim.isFrame_eq "none"
+        , w `Effect4.Prim.isFrame_iff "propext"
+        , w `Effect4.Prim.non_frames_have_no_arms "none"
+        , w `Effect4.Prim.answerOf_replacement "none"
+        , w `Effect4.Prim.answerOf_arm "propext"
+        , w `Effect4.Prim.answerOf_missing "propext"
+        , w `Effect4.Prim.answerOf_frame_eq "propext"
+        , w `Effect4.Prim.armA_isSome "propext"
+        , w `Effect4.Prim.armE_isSome "none"
+        , w `Effect4.FrameFiber.getCont_eq_popFrom "propext"
+        , w `Effect4.FrameFiber.getCont_empty_stack "propext"
+        , w `Effect4.FrameFiber.popFrom_nil "propext"
+        , w `Effect4.FrameFiber.popFrom_answer_answer "propext"
+        , w `Effect4.FrameFiber.popFrom_answer_popped "propext"
+        , w `Effect4.FrameFiber.popFrom_answer_events "propext"
+        , w `Effect4.FrameFiber.popFrom_answer_fiber "propext"
+        , w `Effect4.FrameFiber.popFrom_continue_answer "propext"
+        , w `Effect4.FrameFiber.popFrom_continue_popped "propext"
+        , w `Effect4.FrameFiber.popFrom_continue_events "propext"
+        , w `Effect4.FrameFiber.popFrom_continue_fiber "propext"
+        , w `Effect4.FrameFiber.popFrom_answer_hasArm "propext"
+        , w `Effect4.FrameFiber.getCont_answer_hasArm "propext"
+        , w `Effect4.FrameFiber.passEvents_ranContAll "propext"
+        , w `Effect4.FrameFiber.passEvents_poppedFrames "propext,Quot.sound"
+        , w `Effect4.FrameFiber.popFrom_popped_eq_events "propext,Quot.sound"
+        , w `Effect4.FrameFiber.popFrom_ranContAll "propext"
+        , w `Effect4.FrameFiber.getCont_ranContAll "propext" ] }
+  , { id := "rule.interrupt-bypasses-handlers", kind := "rule", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Prim.ensure_setInterruptible_flag "propext"
+        , w `Effect4.FrameFiber.interrupt_skips_every_handler "propext"
+        , w `Effect4.FrameFiber.getCont_mask_stops_skip "propext"
+        , w `Effect4.FrameFiber.step_failure "propext" ] }
   , { id := "rule.yield-is-overloaded", kind := "rule", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
   -- Remaining source clause: Correspondence of all source fork call sites/options to the observed
   -- controller inputs. See SUPERVISION-PG-RC112.
@@ -2433,6 +3664,155 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Supervision.race_empty_frontier
   , `Effect4.Supervision.race_single_success
   , `Effect4.Supervision.race_two_failures
+  , `Effect4.Arm.all_nodup
+  , `Effect4.Arm.mem_all
+  , `Effect4.Arm.cases_receipt
+  , `Effect4.Arm.demandable_eq
+  , `Effect4.Arm.contAll_not_demandable
+  , `Effect4.Prim.cases_receipt
+  , `Effect4.FrameFiber.start_eq
+  , `Effect4.FrameFiber.pendingCause_some
+  , `Effect4.FrameFiber.pendingCause_none
+  , `Effect4.FrameFiber.masked_eq
+  , `Effect4.FrameFiber.interrupted_eq
+  , `Effect4.FrameEvent.poppedFrames_nil
+  , `Effect4.FrameEvent.poppedFrames_cons_popped
+  , `Effect4.FrameEvent.finalizersRun_nil
+  , `Effect4.FrameEvent.finalizersRun_cons_ran
+  , `Effect4.FrameEvent.finalizersRun_cons_popped
+  , `Effect4.Prim.hasArm_eq
+  , `Effect4.Prim.isFrame_eq
+  , `Effect4.Prim.isFrame_iff
+  , `Effect4.Prim.arms_onSuccess
+  , `Effect4.Prim.arms_onFailure
+  , `Effect4.Prim.arms_onSuccessAndFailure
+  , `Effect4.Prim.arms_exitFrame
+  , `Effect4.Prim.arms_onExit
+  , `Effect4.Prim.arms_setInterruptible
+  , `Effect4.Prim.arms_whileLoop
+  , `Effect4.Prim.arms_iterator
+  , `Effect4.Prim.non_frames_have_no_arms
+  , `Effect4.Prim.ofExit_asExit?
+  , `Effect4.Prim.asExit?_success
+  , `Effect4.Prim.asExit?_failure
+  , `Effect4.Prim.asExit?_eq_some
+  , `Effect4.Prim.ofExit_isFrame
+  , `Effect4.Prim.ensure_of_no_contAll
+  , `Effect4.Prim.ensure_onExit_masks
+  , `Effect4.Prim.ensure_onExit_told_not_to
+  , `Effect4.Prim.ensure_onExit_already_masked
+  , `Effect4.Prim.ensure_onExit_no_replacement
+  , `Effect4.Prim.ensure_setInterruptible_flag
+  , `Effect4.Prim.ensure_setInterruptible_stack
+  , `Effect4.Prim.ensure_setInterruptible_substitutes
+  , `Effect4.Prim.ensure_setInterruptible_false_no_replacement
+  , `Effect4.Prim.ensure_setInterruptible_no_pending
+  , `Effect4.Prim.answerOf_replacement
+  , `Effect4.Prim.answerOf_arm
+  , `Effect4.Prim.answerOf_missing
+  , `Effect4.Prim.answerOf_frame_eq
+  , `Effect4.Prim.armA_isSome
+  , `Effect4.Prim.armE_isSome
+  , `Effect4.Prim.armA_onSuccess
+  , `Effect4.Prim.armA_onSuccessAndFailure
+  , `Effect4.Prim.armE_onFailure
+  , `Effect4.Prim.armE_onSuccessAndFailure
+  , `Effect4.Prim.armE_onSuccess_none
+  , `Effect4.Prim.armA_onFailure_none
+  , `Effect4.Prim.armA_setInterruptible_none
+  , `Effect4.Prim.armE_setInterruptible_none
+  , `Effect4.Prim.armE_whileLoop_none
+  , `Effect4.Prim.armE_iterator_none
+  , `Effect4.Prim.armA_exitFrame_provided
+  , `Effect4.Prim.armA_exitFrame_none
+  , `Effect4.Prim.armE_exitFrame_provided
+  , `Effect4.Prim.armE_exitFrame_none
+  , `Effect4.Prim.armA_onExit
+  , `Effect4.Prim.armE_onExit
+  , `Effect4.Prim.onExit_finalizer_success_restores
+  , `Effect4.Prim.onExit_finalizer_failure_merges
+  , `Effect4.Prim.onExit_success_finalizer_failure
+  , `Effect4.Prim.onExit_arm_is_per_frame
+  , `Effect4.Prim.onSuccess_arm_is_per_instance
+  , `Effect4.Prim.onFailure_arm_is_per_instance
+  , `Effect4.Prim.onSuccessAndFailure_arms_are_per_instance
+  , `Effect4.Prim.armA_whileLoop_continue
+  , `Effect4.Prim.armA_whileLoop_stop
+  , `Effect4.Prim.armA_iterator_done
+  , `Effect4.Prim.armA_iterator_halt
+  , `Effect4.Prim.armA_iterator_resume
+  , `Effect4.Prim.iteratorFolded_eq
+  , `Effect4.Prim.iterator_folds_inline
+  , `Effect4.Prim.finalizerEvents_onExit
+  , `Effect4.Prim.finalizerEvents_onSuccess
+  , `Effect4.Prim.finalizerEvents_onFailure
+  , `Effect4.FrameFiber.getCont_deferred
+  , `Effect4.FrameFiber.getCont_deferred_pops_nothing
+  , `Effect4.FrameFiber.getCont_eq_popFrom
+  , `Effect4.FrameFiber.getCont_skip_clears_deferred
+  , `Effect4.FrameFiber.getCont_empty_stack
+  , `Effect4.FrameFiber.popFrom_nil
+  , `Effect4.FrameFiber.popFrom_answer_answer
+  , `Effect4.FrameFiber.popFrom_answer_popped
+  , `Effect4.FrameFiber.popFrom_answer_events
+  , `Effect4.FrameFiber.popFrom_answer_fiber
+  , `Effect4.FrameFiber.popFrom_continue_answer
+  , `Effect4.FrameFiber.popFrom_continue_popped
+  , `Effect4.FrameFiber.popFrom_continue_events
+  , `Effect4.FrameFiber.popFrom_continue_fiber
+  , `Effect4.FrameFiber.popFrom_answer_hasArm
+  , `Effect4.FrameFiber.getCont_answer_hasArm
+  , `Effect4.FrameFiber.passEvents_ranContAll
+  , `Effect4.FrameFiber.passEvents_poppedFrames
+  , `Effect4.FrameFiber.popFrom_popped_eq_events
+  , `Effect4.FrameFiber.popFrom_ranContAll
+  , `Effect4.FrameFiber.getCont_ranContAll
+  , `Effect4.FrameFiber.getCont_skip_of_no_pending_cause
+  , `Effect4.FrameFiber.interrupt_skips_every_handler
+  , `Effect4.FrameFiber.getCont_mask_stops_skip
+  , `Effect4.FrameFiber.resumeValue_empty
+  , `Effect4.FrameFiber.resumeValue_deferred
+  , `Effect4.FrameFiber.resumeValue_replacement
+  , `Effect4.FrameFiber.resumeValue_frame
+  , `Effect4.FrameFiber.resumeCause_empty
+  , `Effect4.FrameFiber.resumeCause_deferred
+  , `Effect4.FrameFiber.resumeCause_replacement
+  , `Effect4.FrameFiber.resumeCause_frame
+  , `Effect4.FrameFiber.step_success
+  , `Effect4.FrameFiber.step_failure
+  , `Effect4.FrameFiber.step_sync
+  , `Effect4.FrameFiber.step_suspend
+  , `Effect4.FrameFiber.step_withFiber
+  , `Effect4.FrameFiber.step_yieldableError
+  , `Effect4.FrameFiber.step_onSuccess
+  , `Effect4.FrameFiber.step_onFailure
+  , `Effect4.FrameFiber.step_onSuccessAndFailure
+  , `Effect4.FrameFiber.step_exitFrame
+  , `Effect4.FrameFiber.step_onExit
+  , `Effect4.FrameFiber.step_setInterruptible_not_evaluable
+  , `Effect4.FrameFiber.step_whileLoop_true
+  , `Effect4.FrameFiber.step_whileLoop_false
+  , `Effect4.FrameFiber.step_iterator
+  , `Effect4.FrameFiber.step_ofExit_finishes
+  , `Effect4.FrameFiber.run_zero
+  , `Effect4.FrameFiber.run_succ_finished
+  , `Effect4.FrameFiber.run_succ_running
+  , `Effect4.FrameFiber.uninterruptible_already_masked
+  , `Effect4.FrameFiber.uninterruptible_masks
+  , `Effect4.FrameFiber.uninterruptibleMask_eq
+  , `Effect4.FrameFiber.setFiberInterruptible_flag
+  , `Effect4.FrameFiber.setFiberInterruptible_pushes
+  , `Effect4.FrameFiber.setFiberInterruptible_immediate_failure
+  , `Effect4.FrameFiber.setFiberInterruptible_no_pending
+  , `Effect4.FrameFiber.interruptibleRegion_already
+  , `Effect4.FrameFiber.interruptibleRegion_masked
+  , `Effect4.FrameFiber.restoreAcquire_asked
+  , `Effect4.FrameFiber.restoreAcquire_not_asked
+  , `Effect4.Prim.scopedFrame_eq
+  , `Effect4.Prim.scopedFrame_finalizer_masked
+  , `Effect4.FrameFiber.step_scopedFrame
+  , `Effect4.Prim.withFiber_refused
+  , `Effect4.Prim.yieldableError_host_class_refused
   ]
 
 private def expectedRowTotal : Nat := 99
