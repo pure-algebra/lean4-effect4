@@ -73,6 +73,7 @@ row is unclaimed.
 | `test/counterexamples/REGISTER.md` (`E4-RUN-CE-001`..`009` only), `Effect4Test.lean` (Scope import lines only), `test/fixtures/trust-gate/known-red.txt` (Scope entries only) | Claude | Scope runtime packet wiring, append-only |
 | `generated/fiber-assurance.tsv` | Claude | regenerated in the Scope breaker commit because `test/counterexamples/REGISTER.md` is a pinned input; no other change |
 | `Effect4/Runtime/Scope.lean` | Claude (builder) | **built, green**: the frozen surface is implemented and the battery, axiom report, and counterexample module all build. All 98 public theorems stay within `propext`/`Quot.sound`, and both Scope entries were removed from `test/fixtures/trust-gate/known-red.txt`. The packet and battery were not edited. The `SCOPE-L7` coverage join in `Effect4Test/Audit/RuntimeCoverage.lean` remains a separate, unclaimed packet |
+| `Effect4/Runtime/Runtime.lean` | Claude (builder) | **built, green**: the frozen frame-machine surface is implemented and the battery, axiom report, and counterexample module all build. All 149 public theorems stay within `propext`/`Quot.sound`, and both `Effect4Test.Runtime.Frames*` entries were removed from `test/fixtures/trust-gate/known-red.txt`. The packet, battery, and axiom report were not edited. The `FRAME-L8` coverage join in `Effect4Test/Audit/RuntimeCoverage.lean` remains a separate, unclaimed packet |
 
 ## What collisions have already cost
 
@@ -246,12 +247,13 @@ section of `test/counterexamples/runtime/ATTACKS.md`, and the three new import
 lines in `Effect4Test.lean`. The implementation fence is
 `Effect4/Runtime/Runtime.lean`, whose stub docstring is updated and which
 remains declaration-free; `Effect4/Runtime/Lifecycle.lean` is untouched.
-The builder of that fence is unclaimed.
+The builder of that fence is claimed and closed below.
 
-Two working-tree edits are deliberately left unstaged for the reviewer to commit
-after the concurrent fiber-assurance lane lands: the two
+Two working-tree edits were deliberately left unstaged by the breaker for the
+reviewer to commit after the concurrent fiber-assurance lane landed: the two
 `Effect4Test.Runtime.Frames*` entries appended to
-`test/fixtures/trust-gate/known-red.txt`, and this note. Appending to
+`test/fixtures/trust-gate/known-red.txt`, and this note. The builder commit
+removes those two entries again, because the packet is now green. Appending to
 `REGISTER.md` and `runtime/ATTACKS.md` changes an input digest pinned by
 `generated/fiber-assurance.tsv`, which this packet does **not** regenerate
 because the other lane owns `scripts/generate-fiber-assurance.sh`;
