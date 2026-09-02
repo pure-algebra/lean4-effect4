@@ -68,6 +68,11 @@ row is unclaimed.
 | `Effect4/Semantics/**` (all ten) | Claude | annotation only, no declarations |
 | `Effect4/Semantics/Cause.lean`, `Effect4/Semantics/Exit.lean`, `test/contracts/cause-exit.contract.md`, `docs/CAUSE-DAG.md`, `Effect4Test/Semantics/CauseExitContract.lean`, `Effect4Test/Semantics/CauseExitAxiomReport.lean`, `Effect4Test/Counterexamples/Semantics/CauseExit.lean`, `test/counterexamples/semantics/ATTACKS.md`, `test/counterexamples/REGISTER.md` (`E4-SEM-CE-001`..`007` only), `Effect4Test.lean` (Cause/Exit import lines only), `test/fixtures/trust-gate/known-red.txt` (Cause/Exit entries only) | Claude | Cause/Exit packet implemented and green; coverage join in progress |
 | `scripts/*effect-runtime-census*`, `generated/effect-runtime-census.tsv`, `Effect4Test/Audit/RuntimeCoverage.lean`, `vendor/effect-4.0.0-rc.112/src/{internal/**,Scheduler.ts,Scope.ts,Exit.ts,Cause.ts}`, `vendor/effect-4.0.0-rc.112/README.md`, `docs/effect-rc112-fiber-runtime.html` | Claude | Effect runtime coverage slice: behaviour census joined to Lean witnesses; additive, reads pinned bytes only |
+| `Effect4/Semantics/Observation.lean`, `Effect4/Semantics/Runs.lean`, `Effect4/Semantics/Frontier.lean`, `Effect4/Flow/Decision.lean` | Claude (trace lane) | trace alphabet consumer, Flow runner and tape; plan `~/.claude/plans/misty-frolicking-naur.md` P-T1b, P-T2 |
+| `Effect4/Meta/Derive.lean`, `Effect4/Target/TypeScript/{EffectV4,Lower,Trace,Simulation}.lean`, `Effect4Test/Semantics/ObservationContract.lean`, `Effect4Test/Target/TypeScript/LoweringCoverage.lean`, `Effect4Test/Audit/AxiomGate.lean` (Derive and trace-renderer exemption entries only) | Claude (trace lane) | Effect v4 profile, rule ids, trace rendering, lowering; light ceremony by operator ruling D2 |
+| `harness/trace/**`, `harness/effect-v4-family/**`, `generated/traces/**`, `generated/lowering-*.tsv`, `scripts/*trace*`, `scripts/*lowering*`, `docs/TRACE-DAG.md`, `docs/LOWERING-COVERAGE.md` | Claude (trace lane) | host tracer, goldens, coverage ledger and their gates |
+| `test/counterexamples/REGISTER.md`, `test/counterexamples/{semantics,target,flow}/ATTACKS.md`, `Effect4Test/Counterexamples/{Semantics,Target}/Trace*.lean` (next free `E4-SEM-CE-`, `E4-TARGET-CE-`, `E4-FLOW-CE-` ids only, append-only) | Claude (trace lane) | trace and lowering attack rows |
+| `Effect4.lean`, `Effect4Test.lean` (Semantics/Observation, Runs, Frontier, Flow/Decision, Target/Trace, LoweringCoverage import lines only) | Claude (trace lane) | root wiring for the packets above |
 | `Effect4Test.lean` (RuntimeCoverage import line only), `Effect4Test/Audit/AxiomGate.lean` (RuntimeCoverage exemption entry only), `.github/workflows/lean_action_ci.yml` (runtime census step only) | Claude | Effect runtime coverage slice wiring |
 | `docs/SCOPE-DAG.md`, `test/contracts/scope.contract.md`, `Effect4Test/Runtime/ScopeContract.lean`, `Effect4Test/Runtime/ScopeAxiomReport.lean`, `Effect4Test/Counterexamples/Runtime/Scope.lean`, `test/counterexamples/runtime/ATTACKS.md` | Claude | Scope runtime packet frozen, RED; breaker-owned, do not edit while implementing |
 | `test/counterexamples/REGISTER.md` (`E4-RUN-CE-001`..`009` only), `Effect4Test.lean` (Scope import lines only), `test/fixtures/trust-gate/known-red.txt` (Scope entries only) | Claude | Scope runtime packet wiring, append-only |
@@ -303,3 +308,52 @@ the first pass. Both algebra batteries and all 60 named axiom receipts pass;
 local links, source hashes, the citation gate, and diff checks pass. This is
 research, not extraction or cutover. The two copied plans and their hold are
 unchanged. The two review-file claims are released.
+
+## Shared semantics research claim, 2026-09-02
+
+Codex claims `docs/research/2026-09-02-shared-semantics/` and
+`output/pdf/effect4-web-standards-semantics.pdf` for the operator-requested
+research on the ten supplied questions. The fence contains research evidence
+and a report only. Existing library code, contracts, generated assurance,
+package pins, and design rulings remain outside the fence. Source review in
+Effects, WHATWG, TypeScript, and Foldlab is read-only. This claim is released
+by the completion note after source, measurement, and document verification.
+
+## Shared semantics research completed, 2026-09-02
+
+Codex completed the ten-question study in
+`docs/research/2026-09-02-shared-semantics/` and the 15-page report at
+`output/pdf/effect4-web-standards-semantics.pdf`. The evidence includes 30
+primary-source URLs, 46 local source hashes, an import-aware scan of 24,401
+files from 30 pinned repositories, finite row measurements, nine exploratory
+Lean witnesses and six host cases. Narrow frame/scope checks passed; all 149
+frame axiom receipts stayed within `propext` and `Quot.sound`. The local
+dependency-manifest warning remains part of the verification boundary.
+All PDF pages passed text/link/margin checks; seven pages received visual
+inspection. The internal-citation gate and diff check passed. This closes the
+research delivery, not any proposed semantic proof or cutover route. The file
+claims above are released.
+
+## Web standards source downloads completed, 2026-09-02
+
+Codex downloaded the 21 papers and Web IDL reference named on the operator's
+attached reading map into `docs/research/2026-09-02-web-standards-sources/`.
+The index records the retrieved editions and links to originals and searchable
+text copies. `verify.py` passed for all 22 sources, including extraction of all
+568 PDF pages, title checks, independent PDF page-count checks, the Web IDL
+exceptions anchor, and recorded file sizes and hashes. All 48 local index links
+resolve; `shasum -a 256 -c SHA256SUMS` passed for the downloaded sources and
+saved attachment. The manifest retains retrieval provenance and the verification
+record retains upstream PDF parser warnings. No requested source is missing.
+The download-folder claim is released.
+
+## Trace lane opened, 2026-09-02
+
+Claude opened the trace-driven lowering lane per the operator-approved plan
+(`~/.claude/plans/misty-frolicking-naur.md`, rulings R1–R9, decisions D1–D3).
+P-T0 landed: `Effect4.Meta.Derive` admitted as an exact target-implementation
+module in the axiom gate; lean4-effects v0.2.0 and lean4-typescript v0.1.1 are on
+GitHub under pure-algebra and both manifests resolve them; the path overrides are
+retired; the trace probe moved to `harness/trace/tracer.ts`. Ceremony is light
+(builder writes contract, battery and code together) for every packet except the
+Flow v2 re-freeze in lean4-effects, which keeps the separate breaker process.

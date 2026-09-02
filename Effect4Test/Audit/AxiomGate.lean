@@ -57,7 +57,14 @@ backing UTF-8 decoding. The renderer exemption is exact-module; the Schema
 module receives no blanket exemption below.
 -/
 private def targetImplementationModules : List Name :=
-  []  -- the renderer now lives in the `typescript` package, outside this tree
+  -- The syntax renderer lives in the `typescript` package, outside this tree.
+  -- Two Effect4 modules are admitted exactly: the family DSL (`CommandElabM`
+  -- reaches `Classical.choice`; it declares no theorem) and the Effect v4
+  -- profile, whose service-class, method-type and LLM-sheet renderers traverse
+  -- strings. Neither carries a semantic law; the trace and lowering laws live
+  -- in `String`-free modules.
+  [ `Effect4.Meta.Derive
+  , `Effect4.Target.TypeScript.EffectV4 ]
 
 private def choiceImplementationModules : List Name :=
   auditImplementationModules ++ targetImplementationModules

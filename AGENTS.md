@@ -18,6 +18,8 @@ full, then open only the authority documents named for the current task.
 | `harness/` | host conformance, TypeScript, runtime, and language-service checks |
 | `generated/` | deterministic projections only; never hand-edited |
 | `docs/RUNTIME-COVERAGE.md` | definition, vocabulary, and the one report format of Effect runtime coverage |
+| `docs/TRACE-DAG.md` | the trace-agreement proof graph: the shared service-level alphabet, its masks, and which edges are evidence versus theorem |
+| `docs/LOWERING-COVERAGE.md` | the lowering coverage ledger vocabulary: rule ids, evidence classes, states, and what agreement does not establish |
 
 If two files appear to own the same fact, stop and repair the ownership map.
 

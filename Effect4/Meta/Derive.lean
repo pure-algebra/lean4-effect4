@@ -54,7 +54,13 @@ syntax "effect_program " ident "(" ident " : " term ")" " over " ident " : " ter
 
 /-! ## Stratum V spellings, syntax directed -/
 
-private partial def tsOfType (stx : Term) : CommandElabM String := do
+/-- Type syntax nesting is bounded by this fuel; the DSL admits only the
+Stratum V spellings, all of depth two at most. -/
+private def typeFuel : Nat := 16
+
+private def tsOfTypeFuel : Nat → Term → CommandElabM String
+  | 0, stx => throwErrorAt stx "effect_signature: type syntax nested too deeply"
+  | fuel + 1, stx => do
   if stx.raw.isIdent then
     match stx.raw.getId.eraseMacroScopes with
     | `Nat | `Int => return "number"
@@ -64,12 +70,15 @@ private partial def tsOfType (stx : Term) : CommandElabM String := do
     | other => throwErrorAt stx "effect_signature: no TypeScript spelling for `{other}`; add a Stratum V row first"
   match stx with
   | `($f:ident $arg:term) =>
-      let inner ← tsOfType arg
+      let inner ← tsOfTypeFuel fuel arg
       match f.getId.eraseMacroScopes with
       | `Option => return s!"Option.Option<{inner}>"
       | `List => return s!"ReadonlyArray<{inner}>"
       | other => throwErrorAt stx "effect_signature: no TypeScript spelling for `{other}`"
   | _ => throwErrorAt stx "effect_signature: unsupported type syntax"
+
+private def tsOfType (stx : Term) : CommandElabM String :=
+  tsOfTypeFuel typeFuel stx
 
 private def strLit (s : String) : Term := ⟨(Syntax.mkStrLit s).raw⟩
 private def natLit (n : Nat) : Term := ⟨(Syntax.mkNumLit (toString n)).raw⟩
@@ -151,9 +160,11 @@ elab_rules : command
 
 /-! ## `effect_program` -/
 
-private partial def pureOfTerm (stx : Term) : CommandElabM (Term × Term) := do
+private def pureOfTermFuel : Nat → Term → CommandElabM (Term × Term)
+  | 0, stx => throwErrorAt stx "effect_program: pure term nested too deeply"
+  | fuel + 1, stx => do
   match stx with
-  | `(($inner)) => pureOfTerm inner
+  | `(($inner)) => pureOfTermFuel fuel inner
   | _ =>
     if stx.raw.isIdent then
       return (stx, ← `(Effect4.Target.EffectV4.PureTerm.var $(strLit stx.raw.getId.eraseMacroScopes.toString)))
@@ -163,9 +174,12 @@ private partial def pureOfTerm (stx : Term) : CommandElabM (Term × Term) := do
       return (stx, ← `(Effect4.Target.EffectV4.PureTerm.str $(strLit s)))
     match stx with
     | `($f:ident $args*) =>
-        let rows ← args.mapM fun a => do pure (← pureOfTerm a).2
+        let rows ← args.mapM fun a => do pure (← pureOfTermFuel fuel a).2
         return (stx, ← `(Effect4.Target.EffectV4.PureTerm.app $(strLit f.getId.eraseMacroScopes.toString) $(← listLit rows)))
     | _ => throwErrorAt stx "effect_program: pure fragment not admitted at the lowering face: {stx}"
+
+private def pureOfTerm (stx : Term) : CommandElabM (Term × Term) :=
+  pureOfTermFuel typeFuel stx
 
 elab_rules : command
   | `(effect_program $name:ident ($param:ident : $paramTy:term) over $famId:ident : $result:term := $steps:effectStep*) => do

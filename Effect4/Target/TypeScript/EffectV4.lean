@@ -122,7 +122,46 @@ inductive PureTerm where
   | nat (value : Nat)
   | str (value : String)
   | app (atom : String) (args : List PureTerm)
-  deriving Repr, BEq, Inhabited
+  deriving Inhabited
+
+-- `PureTerm` is a nested inductive; Lean's `BEq` and `Repr` deriving handlers
+-- use a partial helper for it, which the source trust gate refuses. These
+-- structural recursions keep both instances total.
+mutual
+  def instBEqPureTerm.beq (self other : PureTerm) : Bool :=
+    match self, other with
+    | .var a, .var b | .str a, .str b => a == b
+    | .nat a, .nat b => a == b
+    | .app f xs, .app g ys => f == g && beqPureTermList xs ys
+    | _, _ => false
+  termination_by structural self
+
+  private def beqPureTermList (self other : List PureTerm) : Bool :=
+    match self, other with
+    | [], [] => true
+    | a :: xs, b :: ys => instBEqPureTerm.beq a b && beqPureTermList xs ys
+    | _, _ => false
+  termination_by structural self
+end
+
+instance instBEqPureTerm : BEq PureTerm := ⟨instBEqPureTerm.beq⟩
+
+mutual
+  def PureTerm.render : PureTerm → String
+    | .var name => name
+    | .nat value => toString value
+    | .str value => "\"" ++ value ++ "\""
+    | .app atom args => atom ++ "(" ++ PureTerm.renderList args ++ ")"
+  termination_by structural t => t
+
+  def PureTerm.renderList : List PureTerm → String
+    | [] => ""
+    | [one] => PureTerm.render one
+    | first :: rest => PureTerm.render first ++ ", " ++ PureTerm.renderList rest
+  termination_by structural ts => ts
+end
+
+instance : Repr PureTerm := ⟨fun term _ => Std.Format.text term.render⟩
 
 namespace PureTerm
 

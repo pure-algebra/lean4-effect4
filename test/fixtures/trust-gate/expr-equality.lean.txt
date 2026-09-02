@@ -1,8 +1,8 @@
 import Lean
-import Effect4.Target.TypeScript.Expr
+import TypeScript.Syntax
 
 open Lean hiding Expr
-open Effect4.Target.TypeScript
+open TypeScript
 
 namespace ExprEqualityTrustRegression
 
@@ -21,10 +21,11 @@ private def samples : List Expr := [
   .objectQuotedML [("key", .objectQuoted [])],
   .objectFromEntries [("__proto__", .objectML [])],
   .arr [.objectFromEntries [("key", .str "value")]],
-  .arrow (some "Result") (.arrow none (.ident "body"))
+  .arrow (some "Result") (.arrow none (.ident "body")),
+  .generic (.ident "Context.Service") ["Cell", "{ readonly get: Effect.Effect<number> }"]
 ]
 
-#guard samples.length == 14
+#guard samples.length == 15
 #guard samples.all fun value => value == value
 #guard samples.zipIdx |>.all fun (left, leftIndex) =>
   samples.zipIdx |>.all fun (right, rightIndex) =>
@@ -48,7 +49,10 @@ private def scalarAndRecursiveDifferences : List (Expr × Expr) := [
   (.arrow (some "Left") .jsNull, .arrow (some "Right") .jsNull),
   (.arrow none (.ident "left"), .arrow none (.ident "right")),
   (.arrow none (.arrow none (.arr [.int 1])),
-    .arrow none (.arrow none (.arr [.int 2])))
+    .arrow none (.arrow none (.arr [.int 2]))),
+  (.generic (.ident "A") ["T"], .generic (.ident "A") ["U"]),
+  (.generic (.ident "A") ["T"], .generic (.ident "B") ["T"]),
+  (.generic (.ident "A") [], .generic (.ident "A") ["T"])
 ]
 
 #guard scalarAndRecursiveDifferences.all fun (left, right) =>
@@ -74,9 +78,9 @@ run_elab do
 run_elab do
   let environment ← Lean.getEnv
   let mut failures : Array String := #[]
-  unless environment.contains ``Effect4.Target.TypeScript.instBEqExpr do
+  unless environment.contains ``TypeScript.instBEqExpr do
     failures := failures.push "missing public instBEqExpr"
-  match environment.find? ``Effect4.Target.TypeScript.instBEqExpr.beq with
+  match environment.find? ``TypeScript.instBEqExpr.beq with
   | some (.defnInfo definition) =>
       unless definition.safety == .safe do
         failures := failures.push "instBEqExpr.beq is not a safe definition"
@@ -84,7 +88,7 @@ run_elab do
   for (name, information) in environment.constants.toList do
     let some moduleIndex := environment.getModuleIdxFor? name | continue
     if environment.header.moduleNames[moduleIndex.toNat]? !=
-        some `Effect4.Target.TypeScript.Expr then
+        some `TypeScript.Syntax then
       continue
     let safeCompilerCompanion := match Lean.Compiler.isUnsafeRecName? name with
       | some sourceName => match environment.find? sourceName with
