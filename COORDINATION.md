@@ -61,6 +61,8 @@ row is unclaimed.
 | `Effect4Test/Environment/AxiomReport.lean` | Claude (coordinator) | receipts only |
 | `docs/CLASSIFICATION-DAG.md`, `Effect4/Classification/**` + its packet | Claude | DAG laid, C0 breaker in flight |
 | `Effect4/Semantics/**` (all ten) | Claude | annotation only, no declarations |
+| `scripts/*effect-runtime-census*`, `generated/effect-runtime-census.tsv`, `Effect4Test/Audit/RuntimeCoverage.lean`, `vendor/effect-4.0.0-rc.112/src/{internal/**,Scheduler.ts,Scope.ts,Exit.ts,Cause.ts}`, `vendor/effect-4.0.0-rc.112/README.md`, `docs/effect-rc112-fiber-runtime.html` | Claude | Effect runtime coverage slice: behaviour census joined to Lean witnesses; additive, reads pinned bytes only |
+| `Effect4Test.lean` (RuntimeCoverage import line only), `Effect4Test/Audit/AxiomGate.lean` (RuntimeCoverage exemption entry only), `.github/workflows/lean_action_ci.yml` (runtime census step only) | Claude | Effect runtime coverage slice wiring |
 
 ## What collisions have already cost
 

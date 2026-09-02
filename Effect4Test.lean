@@ -46,6 +46,7 @@ import Effect4Test.Target.TypeScript.SchemaGenerationAxiomReport
 import Effect4Test.Target.TypeScript.EffectfulFieldContract
 import Effect4Test.Target.TypeScript.EffectfulFieldAxiomReport
 import Effect4Test.Counterexamples.Target.EffectfulField
+import Effect4Test.Audit.RuntimeCoverage
 import Effect4Test.Audit.AxiomGate
 
 /-!

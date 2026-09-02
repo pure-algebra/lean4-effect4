@@ -22,3 +22,5 @@ jobs:
         run: ./scripts/test-trust-gate.sh
       - name: Verify Schema structural assurance join
         run: ./scripts/test-schema-structural-assurance-gate.sh
+      - name: Verify Effect runtime census join
+        run: ./scripts/check-effect-runtime-census.sh
