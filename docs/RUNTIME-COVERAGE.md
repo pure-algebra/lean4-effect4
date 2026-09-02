@@ -116,7 +116,7 @@ census v1 and the model that closes each:
 
 | Family | Rows | Model that closes them |
 | --- | ---: | --- |
-| `cause.*`, `exit.*`, `rule.cause-has-no-structure` | 11 | `Effect4/Semantics/Cause.lean`, `Exit.lean`: flat reasons, union combine, squash, finalizer merge |
+| `cause.*`, `exit.*`, `rule.cause-has-no-structure` | 13 | `Effect4/Semantics/Cause.lean`, `Exit.lean`: flat reasons, union combine, squash, finalizer merge |
 | `scope.*`, `rule.scope-close-lifo-state-first` | 15 | `Effect4/Runtime/Scope.lean`: state machine, LIFO close, sequential and parallel close, fork linkage |
 | `fork.*`, `interrupt.accumulate`, the two fork rules | 14 | `Effect4/Concurrency/Supervision.lean` and `Race.lean`: tracked versus daemon children, parent-exit interruption, scope-bound fibers, live-join resumption |
 | continuation-machine `op.*`, `frame-arm.*`, `checkpoint.*`, and the stack rules | 30 | a new continuation-stack calculus: frames with three arms, `getCont` with the ensure hook, deferred-interrupt flag, handler skipping, yield versus park |

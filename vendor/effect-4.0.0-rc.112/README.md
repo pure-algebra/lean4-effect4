@@ -26,5 +26,6 @@ Read by `scripts/generate-effect-runtime-census.sh`; joined to Lean witnesses by
 | `src/Scope.ts` | `d1f31095954a8348853620ac102ae665acb86afbac54189d99e57c37757ddf18` |
 | `src/Exit.ts` | `f9e4baea6718bd6617069563028710cfaee3ba7b432826f87c405e0ca3513818` |
 | `src/Cause.ts` | `4b39e7f578b9bceba6712fdf0f53410963006cb335a94f3c5bbd8c49cfe9962b` |
+| `src/Array.ts` | `ccc7dfbb44f0a93d4911af0d1db187925cfe7e765804bb3b9bdff2b7e1fc3936` |
 
 The included `LICENSE` is the package license.

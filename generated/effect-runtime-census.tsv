@@ -1,5 +1,5 @@
 format	effect4-effect-runtime-census-v1
-generator	scripts/generate-effect-runtime-census.sh	sha256=11340ccb45b8319076f2ca44a86a15d47f766bfc54f8e177bb426de0b6f51eed
+generator	scripts/generate-effect-runtime-census.sh	sha256=315f567b54c7836b262a8968e47d92c7f7383b35464234438077deec4da53d42
 regenerate	./scripts/generate-effect-runtime-census.sh > generated/effect-runtime-census.tsv
 pin	effect	4.0.0-rc.112	upstream=2600f62f4532026928454dcea8d1c48557b3f942
 input	vendor/effect-4.0.0-rc.112/src/internal/effect.ts	sha256=0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0
@@ -8,6 +8,7 @@ input	vendor/effect-4.0.0-rc.112/src/Scheduler.ts	sha256=e4c35925d7586a82f939753
 input	vendor/effect-4.0.0-rc.112/src/Scope.ts	sha256=d1f31095954a8348853620ac102ae665acb86afbac54189d99e57c37757ddf18
 input	vendor/effect-4.0.0-rc.112/src/Exit.ts	sha256=f9e4baea6718bd6617069563028710cfaee3ba7b432826f87c405e0ca3513818
 input	vendor/effect-4.0.0-rc.112/src/Cause.ts	sha256=4b39e7f578b9bceba6712fdf0f53410963006cb335a94f3c5bbd8c49cfe9962b
+input	vendor/effect-4.0.0-rc.112/src/Array.ts	sha256=ccc7dfbb44f0a93d4911af0d1db187925cfe7e765804bb3b9bdff2b7e1fc3936
 columns	mechanism	kind	id	file	lines	span-sha256	summary
 mechanism	op	op.Success	internal/core.ts	508-516	sha256=2408a5c6160ec5874477cdc82f6dd67282ae731bd587804a6a9e5106cb1b15b7	Success pops a contA frame and calls it with the value; with an empty stack it yields itself as the Exit.
 mechanism	op	op.Failure	internal/core.ts	528-547	sha256=754b34372a31319fe776e8644aa0bd0ba8ceb8bcf4574330f8759464e4e2cbfe	Failure annotates the cause with the current stack frame, pops contE frames skipping every one while the fiber is interrupted and interruptible, and yields the Exit when none answers.
@@ -86,7 +87,9 @@ mechanism	cause	cause.reason-die	internal/core.ts	288-322	sha256=cf49585f403151a
 mechanism	cause	cause.reason-interrupt	internal/effect.ts	106-145	sha256=0bda2e0222cb6da4e7f00abd86ab2457e0495d98265013fd8adb7397d7e9fa1e	An Interrupt reason carries an optional interruptor fiber id, and equality compares that id together with the annotations.
 mechanism	cause	cause.combine-union	internal/effect.ts	241-258	sha256=05ba217ac1bb771788f8022bc9af3c35b50995b1504cbbeb8ac01ba13f79e062	causeCombine treats the empty cause as an identity and otherwise takes the set union of reasons, returning the original when the result is structurally equal.
 mechanism	cause	cause.finalizer-merge	internal/effect.ts	3800-3804	sha256=00d4eaf9f536a0c2e59834fed53e92a42eda28dcb8c26ea2e9b56aef235196a2	A finalizer failure under a failed exit is merged into the exit cause by causeCombine; under a successful exit the finalizer failure stands alone.
-mechanism	cause	cause.squash	internal/effect.ts	298-309	sha256=44b6f20bec8d07dcd34afa2cf3039c3259a99401467787308790cb327a14b4eb	causeSquash returns the first Fail error, else the first Die defect, else an Error naming interruption without error.
+mechanism	cause	cause.squash	internal/effect.ts	298-309	sha256=44b6f20bec8d07dcd34afa2cf3039c3259a99401467787308790cb327a14b4eb	causeSquash partitions the reasons and returns the first Fail error, else the first Die defect, else an Error naming interruption without error, else an Error naming the empty cause.
+mechanism	cause	cause.union-first-occurrence	Array.ts	7009-7016	sha256=b8e9ec9f634bdc05b919de3bad0e810dba23b204860a7fccf7c6d881741a436b	b8e9ec9f634bdc05b919de3bad0e810dba23b204860a7fccf7c6d881741a436b|Arr.union returns the other operand when one side is empty and otherwise dedupes the concatenation self ++ that, so the union of two causes keeps first occurrences across both sides.
+mechanism	cause	cause.dedupe-first-occurrence	Array.ts	9242-9255	sha256=35c69cab2b77edcdb220cf1436e436ed0708c0f10bbecefab021a2378a7221a2	dedupeWith keeps the first element and then each later element not equivalent to any element already kept, so order is the order of first occurrence.
 mechanism	cause	cause.annotations	internal/core.ts	178-239	sha256=b5fe124fb1f47310b5433917441d19602b0432ad9052607fbae0b26f9f019a89	Reason annotations are a per-reason string map, remembered per original error object in a WeakMap and merged on construction, and annotate never overwrites an existing key unless asked.
 mechanism	entry	entry.run-fork-with	internal/effect.ts	5412-5438	sha256=804b61fdfcf77e47c1bcfc30044db62a81118dfdf089e5b32638330d1aa7bff9	runForkWith builds one FiberImpl over the caller context and evaluates it synchronously on the caller stack; there is no root scope and no root parent.
 mechanism	entry	entry.abort-signal	internal/effect.ts	5425-5433	sha256=0b90364948b4274cbab6157407e0e6f92dd4bfe220afb391d96775f98ab90c77	An aborted signal interrupts with no interruptor id, and the listener is removed by an observer on the fiber exit.

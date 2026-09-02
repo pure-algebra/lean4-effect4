@@ -101,6 +101,7 @@ Scheduler.ts|e4c35925d7586a82f93975390f08a67bfff4261d35d8382db7c18c9acc349680
 Scope.ts|d1f31095954a8348853620ac102ae665acb86afbac54189d99e57c37757ddf18
 Exit.ts|f9e4baea6718bd6617069563028710cfaee3ba7b432826f87c405e0ca3513818
 Cause.ts|4b39e7f578b9bceba6712fdf0f53410963006cb335a94f3c5bbd8c49cfe9962b
+Array.ts|ccc7dfbb44f0a93d4911af0d1db187925cfe7e765804bb3b9bdff2b7e1fc3936
 INPUTS
 }
 
@@ -221,7 +222,9 @@ cause|cause.reason-die|internal/core.ts|export class Die extends ReasonBase<"Die
 cause|cause.reason-interrupt|internal/effect.ts|export class Interrupt extends ReasonBase<"Interrupt"> implements Cause.Interrupt {|-1|38|0bda2e0222cb6da4e7f00abd86ab2457e0495d98265013fd8adb7397d7e9fa1e|An Interrupt reason carries an optional interruptor fiber id, and equality compares that id together with the annotations.
 cause|cause.combine-union|internal/effect.ts|export const causeCombine: {|-1|16|05ba217ac1bb771788f8022bc9af3c35b50995b1504cbbeb8ac01ba13f79e062|causeCombine treats the empty cause as an identity and otherwise takes the set union of reasons, returning the original when the result is structurally equal.
 cause|cause.finalizer-merge|internal/effect.ts|const combineFinalizerCause = <A, E, XE, XR>(|0|4|00d4eaf9f536a0c2e59834fed53e92a42eda28dcb8c26ea2e9b56aef235196a2|A finalizer failure under a failed exit is merged into the exit cause by causeCombine; under a successful exit the finalizer failure stands alone.
-cause|cause.squash|internal/effect.ts|export const causeSquash = <E>(self: Cause.Cause<E>): unknown => {|-1|10|44b6f20bec8d07dcd34afa2cf3039c3259a99401467787308790cb327a14b4eb|causeSquash returns the first Fail error, else the first Die defect, else an Error naming interruption without error.
+cause|cause.squash|internal/effect.ts|export const causeSquash = <E>(self: Cause.Cause<E>): unknown => {|-1|10|44b6f20bec8d07dcd34afa2cf3039c3259a99401467787308790cb327a14b4eb|causeSquash partitions the reasons and returns the first Fail error, else the first Die defect, else an Error naming interruption without error, else an Error naming the empty cause.
+cause|cause.union-first-occurrence|Array.ts|      return isReadonlyArrayNonEmpty(b) ? dedupe(appendAll(a, b)) : a|-4|3|b8e9ec9f634bdc05b919de3bad0e810dba23b204860a7fccf7c6d881741a436b|b8e9ec9f634bdc05b919de3bad0e810dba23b204860a7fccf7c6d881741a436b|Arr.union returns the other operand when one side is empty and otherwise dedupes the concatenation self ++ that, so the union of two causes keeps first occurrences across both sides.
+cause|cause.dedupe-first-occurrence|Array.ts|      const out: NonEmptyArray<A> = [headNonEmpty(input)]|-3|10|35c69cab2b77edcdb220cf1436e436ed0708c0f10bbecefab021a2378a7221a2|dedupeWith keeps the first element and then each later element not equivalent to any element already kept, so order is the order of first occurrence.
 cause|cause.annotations|internal/core.ts|const annotationsMap = new WeakMap<object, ReadonlyMap<string, unknown>>()|0|61|b5fe124fb1f47310b5433917441d19602b0432ad9052607fbae0b26f9f019a89|Reason annotations are a per-reason string map, remembered per original error object in a WeakMap and merged on construction, and annotate never overwrites an existing key unless asked.
 entry|entry.run-fork-with|internal/effect.ts|export const runForkWith = <R>(context: Context.Context<R>) =>|-1|25|804b61fdfcf77e47c1bcfc30044db62a81118dfdf089e5b32638330d1aa7bff9|runForkWith builds one FiberImpl over the caller context and evaluates it synchronously on the caller stack; there is no root scope and no root parent.
 entry|entry.abort-signal|internal/effect.ts|  if (options?.signal) {|0|8|0b90364948b4274cbab6157407e0e6f92dd4bfe220afb391d96775f98ab90c77|An aborted signal interrupts with no interruptor id, and the listener is removed by an observer on the fiber exit.
@@ -254,13 +257,13 @@ fork|12
 scope|14
 scheduler|9
 exit|2
-cause|8
+cause|10
 entry|8
 rule|10
 COUNTS
 }
 
-expected_row_total=97
+expected_row_total=99
 
 tmp_parent="${TMPDIR:-/tmp}"
 tmp_parent="${tmp_parent%/}"

@@ -362,6 +362,8 @@ private def censusRows : List Row :=
   , { id := "cause.combine-union", kind := "cause", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
   , { id := "cause.finalizer-merge", kind := "cause", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
   , { id := "cause.squash", kind := "cause", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "cause.union-first-occurrence", kind := "cause", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "cause.dedupe-first-occurrence", kind := "cause", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
   , { id := "cause.annotations", kind := "cause", disposition := "foreignBoundary", coverage := "absent", witnesses := [] }
   , { id := "entry.run-fork-with", kind := "entry", disposition := "targetOnly", coverage := "absent", witnesses := [] }
   , { id := "entry.abort-signal", kind := "entry", disposition := "targetOnly", coverage := "absent", witnesses := [] }
@@ -409,8 +411,8 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.fixedTape_deterministic
   ]
 
-private def expectedRowTotal : Nat := 97
-private def expectedDenominator : Nat := 77
+private def expectedRowTotal : Nat := 99
+private def expectedDenominator : Nat := 79
 
 /-! ## Checks -/
 
