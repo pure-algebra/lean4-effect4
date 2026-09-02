@@ -13,6 +13,13 @@ Last updated: 2026-08-31.
 > silently cleared. The Claude rows have not been independently released.
 > Reconfirm a row with its named owner before treating the path as available.
 
+> Operator continuation, 2026-09-01: the latest handoff reports the Scope join
+> complete at `f4f55fa` and authorizes Codex to implement fork and supervision.
+> The specific `Codex fork/supervision` fences below supersede the old
+> direct-child reservation and the overlapping portions of retained broad
+> claims. All other portions remain reserved. The independent breaker and
+> reviewer use this same packet; there is no parallel supervision design.
+
 ## Who is active
 
 | Agent | Working on |
@@ -51,8 +58,11 @@ row is unclaimed.
 | `Effect4/Target/TypeScript/Expr.lean`, `Effect4/Target/TypeScript/Render.lean`, `Effect4Test/Target/TypeScript/ExprContract.lean`, `test/contracts/typescript-target-expr.contract.md`, `docs/TYPESCRIPT-TARGET-DAG.md` | Codex | additive exact-binary64 and quoted-object target syntax for Schema generation |
 | `Effect4.lean`, `Effect4Test.lean` | Codex | Schema authoring/generation import lines only |
 | `Effect4Test/Audit/AxiomGate.lean` | Codex | exact target-renderer `Classical.choice` boundary only |
-| `Effect4/Concurrency/Supervision.lean`, `test/contracts/fiber-supervision.contract.md`, `Effect4Test/Concurrency/FiberSupervisionContract.lean`, `Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean`, `Effect4Test/Concurrency/FiberSupervisionAxiomReport.lean` | Codex fiber subagent | direct-child supervision packet, breaker then builder |
-| `test/counterexamples/REGISTER.md`, `test/counterexamples/concurrency/ATTACKS.md` (`E4-CONC-CE-012` only) | Codex fiber subagent | append-only supervision attack |
+| `Effect4/Concurrency/Supervision.lean`, `test/contracts/fiber-supervision.contract.md`, `docs/SUPERVISION-DAG.md`, `Effect4Test/Concurrency/FiberSupervisionContract.lean`, `Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean`, `Effect4Test/Concurrency/FiberSupervisionAxiomReport.lean` | Codex fork/supervision | Operator-authorized continuation at `f4f55fa`; the prior direct-child reservation had no landed contract, battery, or implementation. One resumed packet, with an independent breaker before implementation. |
+| `test/counterexamples/REGISTER.md`, `test/counterexamples/concurrency/ATTACKS.md` (`E4-CONC-CE-012` onward, supervision only) | Codex fork/supervision breaker | Append-only supervision attacks; preserve every existing row. |
+| `Effect4Test/Concurrency/FiberAssurance.lean`, `scripts/generate-fiber-assurance.sh`, `scripts/check-fiber-assurance.sh`, `scripts/test-fiber-assurance-gate.sh` (supervision checks only), `generated/fiber-assurance.tsv`, `Effect4Test.lean` (supervision imports only), `test/fixtures/trust-gate/known-red.txt` (supervision entries only), `PORT-MANIFEST.md` (supervision rows only), `PLAN.md` (supervision progress only), `docs/SUPERVISION-IMPLEMENTATION.md` | Codex fork/supervision integration | Exact supervision declaration and proof join; preserve the original representative packet and receipts. |
+| `Effect4Test/Audit/RuntimeCoverage.lean` (fork/supervision rows and their snapshots only), `scripts/generate-effect-runtime-census.sh` (`fork.race-all` summary only if the pinned early-success branch requires correction), `generated/effect-runtime-census.tsv` (generator output only) | Codex fork/supervision integration | Follow-on to the completed Scope join reported by the operator at `f4f55fa`; other runtime rows and pinned source bytes remain with their existing owners. |
+| `harness/fiber-supervision/**`, `scripts/check-fiber-supervision-host.sh` | Codex fork/supervision integration | Finite pinned-host witnesses for launch order, parent cleanup, daemon separation, and await/join observations; not a simulation theorem. |
 | `test/counterexamples/REGISTER.md`, `test/counterexamples/target/ATTACKS.md`, `Effect4Test/Counterexamples/Target/TypeScriptRender.lean` | Codex | `E4-TARGET-CE-004` only |
 | `Effect4/Context/Key.lean` | Claude | **closed, green, do not edit** |
 | `Effect4/Context/Service.lean` + its packet | Claude | breaker in flight |

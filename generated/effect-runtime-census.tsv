@@ -1,5 +1,5 @@
 format	effect4-effect-runtime-census-v1
-generator	scripts/generate-effect-runtime-census.sh	sha256=315f567b54c7836b262a8968e47d92c7f7383b35464234438077deec4da53d42
+generator	scripts/generate-effect-runtime-census.sh	sha256=b0c796836cd7ecc83ae8d942922dbc5320bcd87155b6892897c1f95a66d6c679
 regenerate	./scripts/generate-effect-runtime-census.sh > generated/effect-runtime-census.tsv
 pin	effect	4.0.0-rc.112	upstream=2600f62f4532026928454dcea8d1c48557b3f942
 input	vendor/effect-4.0.0-rc.112/src/internal/effect.ts	sha256=0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0
@@ -49,7 +49,7 @@ mechanism	fork	fork.child	internal/effect.ts	5227-5261	sha256=780ef2f435854200ca
 mechanism	fork	fork.detach	internal/effect.ts	5286-5311	sha256=8a5546fcb8f589d7c454a29c50efbe9035381c77bb45b49035aa674999dc92b6	forkDetach forks a daemon: no registration, no middleware, and nothing interrupts it on the parent exit.
 mechanism	fork	fork.in	internal/effect.ts	5336-5379	sha256=7ae510972afb5bc0a08b7c3604cd29baca07a186b9653f23fddc91bf648d9cc5	forkIn forks a daemon and links it to a scope by a shared key: a scope finalizer interrupts it unless the interruptor is the child itself, the child observer removes the finalizer, and an already-Closed scope interrupts immediately.
 mechanism	fork	fork.scoped	internal/effect.ts	5381-5406	sha256=3b9a27f7d169af398c4d2fe36ed367107128b365104e303e3c3fa6e4d4b931bb	forkScoped is forkIn applied to the ambient Scope service.
-mechanism	fork	fork.race-all	internal/effect.ts	1476-1532	sha256=e1bfade75a179fe549bd6d2c2f8240e520afb9ec0cfaee109e3229314bc0627d	raceAll forks every entrant as an immediate daemon, resumes with the first success after interrupting the remaining fibers uninterruptibly, and concatenates every loser reason into one cause when all fail.
+mechanism	fork	fork.race-all	internal/effect.ts	1476-1532	sha256=e1bfade75a179fe549bd6d2c2f8240e520afb9ec0cfaee109e3229314bc0627d	raceAll starts entrants in order as immediate daemons until observed success stops the start loop; the winning callback bypasses cleanup when its tracked set is empty, otherwise deferred uninterruptible interruption and waiting use that mutable set; all-failure reasons concatenate in completion order.
 mechanism	fork	fork.await-all-children	internal/effect.ts	5313-5334	sha256=071aab49546add6f6f716a8648be7ecb76aecfa6c5766812423b651c48b6034d	awaitAllChildren snapshots the children before running and, on exit, awaits only those added during the run.
 mechanism	fork	fork.fiber-run-in	internal/effect.ts	5440-5461	sha256=f3976f469e8e80190f8e96aff8913afaff75acd039ef08871e06d2133bdb8916	fiberRunIn binds an existing fiber to a scope with a keyed finalizer, interrupting immediately when the scope is already Closed.
 mechanism	fork	fork.join	internal/effect.ts	813-821	sha256=a6722115119e10cf39c7b2865fbebc2739492ed92c4b85864c4bb90796b7e6fa	join returns the stored Exit directly when the fiber is done and otherwise registers an observer; the Exit itself is the resumed effect.

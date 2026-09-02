@@ -14,6 +14,9 @@ import Effect4Test.Flow.PrivacyContract
 import Effect4Test.Concurrency.FiberRepresentativeContract
 import Effect4Test.Concurrency.FiberAssurance
 import Effect4Test.Concurrency.FiberAxiomReport
+import Effect4Test.Concurrency.FiberSupervisionContract
+import Effect4Test.Concurrency.FiberSupervisionAxiomReport
+import Effect4Test.Counterexamples.Concurrency.FiberSupervision
 import Effect4Test.Counterexamples.Concurrency.FiberRepresentative
 import Effect4Test.Counterexamples.Concurrency.RaceRepresentative
 import Effect4Test.Counterexamples.Target.TypeScriptRender

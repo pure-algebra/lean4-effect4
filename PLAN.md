@@ -104,6 +104,17 @@ and assurance join and direct host evidence remain open. Treating Exit itself
 as an executable primitive still needs the continuation-machine calculus.
 This records progress within P5, not closure of P5, the graph, or cutover.
 
+The fork/supervision continuation of P9 has a frozen independent breaker
+packet in `docs/SUPERVISION-DAG.md`: 294 exact declaration checks, including
+136 public theorem obligations, and 15 registered finite counterexamples
+(`E4-CONC-CE-012` through `E4-CONC-CE-026`). The production battery is red only
+for the requested missing declarations; every counterexample is green.
+`PORT-MANIFEST.md` mirrors all 27 type and judgment dispositions. The builder
+will implement the single resumed supervision packet. Its required source and
+continuation bridges stay open, and the separate binary race packet remains
+unchanged. The finite pinned-host harness records reentrant launch and parent
+interruption behavior without asserting a general interpretation theorem.
+
 The broad sweep proceeds in this order. Items 1, 2, and 5 are closed. Items 3
 and 4 are in progress on disjoint owners. Item 6 is frozen and clean red for
 its independent builder.

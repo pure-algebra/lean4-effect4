@@ -29,3 +29,8 @@ Effect4Test.Protocol.ByteParserContract
 # the remaining preservation, framing, cleanup, and existence theorems named
 # by this contract have not landed yet.
 Effect4Test.Concurrency.RaceRepresentativeContract
+
+# Fork/supervision breaker; exact boundary-controller statements are frozen
+# before the Supervision implementation. Remove both when their checks pass.
+Effect4Test.Concurrency.FiberSupervisionContract
+Effect4Test.Concurrency.FiberSupervisionAxiomReport

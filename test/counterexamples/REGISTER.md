@@ -148,3 +148,27 @@ Area-specific attack shapes are in
 [`data/ATTACKS.md`](data/ATTACKS.md). Fired implementation attacks
 add a `BROKE / LAW / WITNESS / CLASS / FIXED-BY` record to the owning contract
 packet without deleting the stable row.
+
+
+## Fork and supervision runtime boundary
+
+The following source-informed witnesses belong to the resumed supervision
+packet. They leave the earlier bounded Fiber and binary Race contracts intact.
+
+| ID | Status | Attacked claim | Durable witness | Required repair or boundary |
+| --- | --- | --- | --- | --- |
+| `E4-CONC-CE-012` | SEEDED | Registering before immediate execution is observationally equivalent to registering afterward | `Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean`, `immediate_completion_not_tracked` | `forkUnsafe_immediate`, `commitFork_done_untracked` |
+| `E4-CONC-CE-013` | SEEDED | Installing the global middleware makes daemon fibers direct children | `Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean`, `daemon_parent_exit_distinction` | `forkChild_eq`, `forkDetach_eq`, `commitFork_daemon_untracked`, `beginParentExit_eq` |
+| `E4-CONC-CE-014` | SEEDED | An immediate child observation can reuse the pre-start parent and globals | `Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean`, `post_start_state_not_pre_state` | `StartObservation.immediate` carries post-globals, post-parent, and post-child; `forkUnsafe_immediate` and `Globals.Extends` admit them explicitly |
+| `E4-CONC-CE-015` | SEEDED | A stored local body Exit is already available to join | `Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean`, `unpublished_body_exit` | `Fiber.published_iff`, `parentExitView_not_published_while_waiting`, `parentExitView_publication_requires_children` |
+| `E4-CONC-CE-016` | SEEDED | Await and join have the same failure observation | `Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean`, `await_failure_as_value` | `observation_await`, `observation_join`, `observation_value_ne_effect` |
+| `E4-CONC-CE-017` | SEEDED | Interrupting and awaiting each child in sequence implements interruptAll | `Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean`, `request_all_before_wait` | `interruptAllRequests_eq`, `interruptAllWait_eq`, and actual-publication WaitState laws |
+| `E4-CONC-CE-018` | SEEDED | forkIn and fiberRunIn share the same finalizer and closed-scope interruptor | `Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean`, `scope_binding_asymmetry` | `bindScope_closed`, `scopeFinalizerInterruptor_eq`, `scopeFinalizer_self_guard` |
+| `E4-CONC-CE-019` | SEEDED | The child observer can remove a fresh or unrelated key | `Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean`, `shared_scope_key_required` | `bindScope_open`, `scopeObserver_eq`, `scopeObserver_key_membership` |
+| `E4-CONC-CE-020` | SEEDED | awaitAllChildren waits for every child ever seen | `Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean`, `only_new_children_awaited` | `newChildren_membership`, `awaitAllChildren_eq` |
+| `E4-CONC-CE-021` | SEEDED | A later interruption can overwrite the prior cause | `Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean`, `interruptors_accumulate` | `interruptCause_eq`, `Fiber.recordInterrupt_live`, `Fiber.recordInterrupt_done` |
+| `E4-CONC-CE-022` | SEEDED | All-failure race reasons form a deduplicated set or use entrant order | `Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean`, `race_failure_order_and_duplicates` | `raceComplete_failure_last`, `raceComplete_failure_pending`, `race_two_failures` |
+| `E4-CONC-CE-023` | SEEDED | An empty race or a selected winner with pending cleanup has finished | `Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean`, `race_empty_and_cleanup_frontiers` | `race_empty_frontier`, `race_cleanup_result_requires_publications`, exact replay nil clauses |
+| `E4-CONC-CE-024` | SEEDED | Every launched race loser is cleaned, or cleanup freezes a winner-time target snapshot | `Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean`, `race_reentrant_launch_branch`; independent pinned host: `harness/fiber-supervision/runtime-check.ts` | Split `beginLaunch`/`finishLaunch`, branch-only `cleanupNeeded`, `raceStep_beginCleanup`, `race_result_requires_start_finished` |
+| `E4-CONC-CE-025` | SEEDED | The local body Exit remains the eventual parent result under any later interruption | `Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean`, `parent_interruption_replaces_exit`; independent pinned host: `harness/fiber-supervision/runtime-check.ts` | Restrict `beginParentExit`/`parentExitView` to the successful wait continuation with no intervening parent evaluation; keep the continuation bridge open |
+| `E4-CONC-CE-026` | SEEDED | Post-parent allocation ownership alone admits the entire immediate observation | `Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean`, `post_start_child_ownership_required` | `Globals.OwnsChildren postGlobals after`, `forkUnsafe_invalid_child_ownership`, and the matching positive `forkUnsafe_immediate` premise |

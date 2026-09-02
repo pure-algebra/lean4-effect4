@@ -339,6 +339,49 @@ the direct host evidence required by the DAG. `Effect4.Annotations` remains
 Schema-owned; `ReasonAnnotations` has its own key domain, payload alphabet,
 and insertion-order contract.
 
+## Fork and supervision declaration dispositions
+
+These 27 native type and judgment rows mirror `docs/SUPERVISION-DAG.md`
+"Complete type and judgment disposition". The frozen contract is
+`test/contracts/fiber-supervision.contract.md`; the DAG owns shapes and the
+`SUPERVISION-PG-RC112` obligations. The owner below is relative to `Effect4/`.
+The source profile is Effect rc.112 at the runtime pin above, specifically
+`src/internal/effect.ts`, SHA-256
+`0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0`.
+No declaration is moved from Foldlab. Canonical FiberId, FiberState, Cause,
+Exit, and Scope retain their existing owners. These rows allocate assurance;
+they do not close the continuation or host interpretation boundaries.
+
+| Public type or judgment | Owning module | Disposition | Relationship and duplicate prevention | Assurance route |
+| --- | --- | --- | --- | --- |
+| `Effect4.Supervision.MaskMode` | `Concurrency/Supervision.lean` | native finite leaf | Selects existing InterruptMask; not a second mask carrier | `SUP-L-MASK` |
+| `Effect4.Supervision.ForkOptions` | `Concurrency/Supervision.lean` | native options data | Immediate/daemon/mask inputs to fork boundary; not host closure storage | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.Globals` | `Concurrency/Supervision.lean` | native global view | Allocated canonical FiberIds and one shared middleware flag; not per-parent middleware | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.ObserverMode` | `Concurrency/Supervision.lean` | native finite leaf | Distinct await-value versus join-effect observations | `SUP-L-OBSERVER` |
+| `Effect4.Supervision.Subscription` | `Concurrency/Supervision.lean` | native observer handle | Named cancellation key and ObserverMode; no callback payload | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.Fiber` | `Concurrency/Supervision.lean` | native related view | Contains canonical FiberState Exit; exact toFiberState projection, adds boundary metadata | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.Observation` | `Concurrency/Supervision.lean` | native result observation | Canonical Exit returned as value or resumed effect; waiting is a keyed frontier | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.StartObservation` | `Concurrency/Supervision.lean` | native external decision data | Deferred or full observed Globals/parent/child after immediate execution | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.ForkEvent` | `Concurrency/Supervision.lean` | native boundary trace | Scheduled/evaluated/registered order; not Scheduler.Event replacement | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.ForkResult` | `Concurrency/Supervision.lean` | native result data | Initial and observed child kept separately with post-world and exact parent link | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.InterruptAction` | `Concurrency/Supervision.lean` | native call-plan alphabet | Request versus explicit await; no completion or source execution claim | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.Refusal` | `Concurrency/Supervision.lean` | native controller refusal | Invalid views/decisions only; never effect Cause or finite-tape exhaustion | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.WaitState` | `Concurrency/Supervision.lean` | native shared controller | Targets, actual publications, stored continuation datum; result field is not return | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.ReplayResult` | `Concurrency/Supervision.lean` | native controller outcome | Distinct done/frontier/refused over observed state; not Scheduler.ReplayResult alias | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.ScopeMode` | `Concurrency/Supervision.lean` | native finite leaf | Source forkIn versus fiberRunIn policies over the canonical Scope owner | `SUP-L-SCOPE` |
+| `Effect4.Supervision.ScopeFinalizer` | `Concurrency/Supervision.lean` | native first-order instruction | Child identity plus self guard; canonical Scope stores lifted data, never a function | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.ScopeBinding` | `Concurrency/Supervision.lean` | native related result | Canonical Scope with standard ULift keys/instructions, exact observer key and interruptor | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.RaceAllState` | `Concurrency/Supervision.lean` | native controller state | First-success rc.112 bookkeeping; distinct from bounded binary first-completion RaceState | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.RaceAllDecision` | `Concurrency/Supervision.lean` | native decision alphabet | Split launch, callback, cleanup selection, request; no hidden callback choice | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.Globals.Valid` | `Concurrency/Supervision.lean` | native Prop judgment | Allocation uniqueness only; exact valid_iff | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.Globals.Extends` | `Concurrency/Supervision.lean` | native Prop judgment | Allocation prefix, monotone global middleware, unique post IDs | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.Globals.OwnsChildren` | `Concurrency/Supervision.lean` | native Prop judgment | Observed fiber and each direct child allocated in the observed global view | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.Fiber.Valid` | `Concurrency/Supervision.lean` | native Prop judgment | Local lifecycle and key/child uniqueness; does not assert Machine.WellFormed | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.WaitStep` | `Concurrency/Supervision.lean` | native Prop judgment | Exactly successful WaitState.observe for an actual publication decision | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.WaitRuns` | `Concurrency/Supervision.lean` | native Prop judgment | Exactly total finite waitReplay on a fixed publication tape | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.RaceStep` | `Concurrency/Supervision.lean` | native Prop judgment | Exactly successful raceStep on the explicit decision | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.RaceRuns` | `Concurrency/Supervision.lean` | native Prop judgment | Exactly total finite raceReplay on a fixed race decision tape | `SUPERVISION-PG-RC112` |
+
 ## Retained TypeScript target fragment
 
 The initial target-syntax port is governed by

@@ -129,3 +129,130 @@ Lean witnesses live beside their owning representative under
 
 All eleven witnesses are finite. They do not prove a production implementation,
 an exhaustive scheduler model, fairness, liveness, or Effect compatibility.
+
+
+## Fork and supervision packet
+
+CE-012 through CE-026 belong to
+`test/contracts/fiber-supervision.contract.md`. Their Lean source is
+`Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean`, namespace
+`Effect4Test.Counterexamples.Concurrency.FiberSupervision`. All are finite
+kernel-checked witnesses independent of the missing production module.
+The preceding representative and binary-race attack meanings are unchanged.
+
+### E4-CONC-CE-012 — post-start registration
+
+- **BROKE:** Registering before immediate execution is observationally equivalent to registering afterward.
+- **WITNESS:** `immediate_completion_not_tracked`. An already completed child is absent from the parent set; the same unpublished child is registered.
+- **CLASS:** post-start registration.
+- **FIXED-BY:** `forkUnsafe_immediate`, `commitFork_done_untracked`.
+
+### E4-CONC-CE-013 — global versus local ownership
+
+- **BROKE:** Installing the global middleware makes daemon fibers direct children.
+- **WITNESS:** `daemon_parent_exit_distinction`. A live daemon is untracked even when middleware was installed earlier; only registered children enter parent waiting.
+- **CLASS:** global versus local ownership.
+- **FIXED-BY:** `forkChild_eq`, `forkDetach_eq`, `commitFork_daemon_untracked`, `beginParentExit_eq`.
+
+### E4-CONC-CE-014 — incomplete observed world
+
+- **BROKE:** An immediate child observation can reuse the pre-start parent and globals.
+- **WITNESS:** `post_start_state_not_pre_state`. Startup may remove a sibling, allocate a nested fiber, and install middleware. Reusing pre-state resurrects or loses those observations.
+- **CLASS:** incomplete observed world.
+- **FIXED-BY:** `StartObservation.immediate` carries post-globals, post-parent, and post-child; `forkUnsafe_immediate` and `Globals.Extends` admit them explicitly.
+
+### E4-CONC-CE-015 — publication before cleanup
+
+- **BROKE:** A stored local body Exit is already available to join.
+- **WITNESS:** `unpublished_body_exit`. A finalizing fiber holds Success 7 but has no published Exit; the done view exposes it.
+- **CLASS:** publication before cleanup.
+- **FIXED-BY:** `Fiber.published_iff`, `parentExitView_not_published_while_waiting`, `parentExitView_publication_requires_children`.
+
+### E4-CONC-CE-016 — observation conflation
+
+- **BROKE:** Await and join have the same failure observation.
+- **WITNESS:** `await_failure_as_value`. Await succeeds with a failed Exit as its value; join resumes that same failed Exit as an effect.
+- **CLASS:** observation conflation.
+- **FIXED-BY:** `observation_await`, `observation_join`, `observation_value_ne_effect`.
+
+### E4-CONC-CE-017 — call-order collapse
+
+- **BROKE:** Interrupting and awaiting each child in sequence implements interruptAll.
+- **WITNESS:** `request_all_before_wait`. An await inserted before the second request can block that request forever. Publications during a request remain allowed.
+- **CLASS:** call-order collapse.
+- **FIXED-BY:** `interruptAllRequests_eq`, `interruptAllWait_eq`, and actual-publication WaitState laws.
+
+### E4-CONC-CE-018 — scope-policy conflation
+
+- **BROKE:** forkIn and fiberRunIn share the same finalizer and closed-scope interruptor.
+- **WITNESS:** `scope_binding_asymmetry`. forkIn skips self-interruption and uses the parent when already closed; fiberRunIn does not skip self and uses the child.
+- **CLASS:** scope-policy conflation.
+- **FIXED-BY:** `bindScope_closed`, `scopeFinalizerInterruptor_eq`, `scopeFinalizer_self_guard`.
+
+### E4-CONC-CE-019 — observer-key drift
+
+- **BROKE:** The child observer can remove a fresh or unrelated key.
+- **WITNESS:** `shared_scope_key_required`. Removing key 37 leaves the linked finalizer at key 1; removing key 1 retains only the other slot.
+- **CLASS:** observer-key drift.
+- **FIXED-BY:** `bindScope_open`, `scopeObserver_eq`, `scopeObserver_key_membership`.
+
+### E4-CONC-CE-020 — snapshot boundary loss
+
+- **BROKE:** awaitAllChildren waits for every child ever seen.
+- **WITNESS:** `only_new_children_awaited`. The current child set minus the initial snapshot excludes old siblings and does not resurrect finished children.
+- **CLASS:** snapshot boundary loss.
+- **FIXED-BY:** `newChildren_membership`, `awaitAllChildren_eq`.
+
+### E4-CONC-CE-021 — cause erasure
+
+- **BROKE:** A later interruption can overwrite the prior cause.
+- **WITNESS:** `interruptors_accumulate`. Canonical Cause.combine retains two interruptor reasons where overwrite retains only the last.
+- **CLASS:** cause erasure.
+- **FIXED-BY:** `interruptCause_eq`, `Fiber.recordInterrupt_live`, `Fiber.recordInterrupt_done`.
+
+### E4-CONC-CE-022 — failure observation loss
+
+- **BROKE:** All-failure race reasons form a deduplicated set or use entrant order.
+- **WITNESS:** `race_failure_order_and_duplicates`. Swapping callback arrival order changes the failure; duplicate reasons remain; all-empty causes still return Failure.
+- **CLASS:** failure observation loss.
+- **FIXED-BY:** `raceComplete_failure_last`, `raceComplete_failure_pending`, `race_two_failures`.
+
+### E4-CONC-CE-023 — frontier collapse
+
+- **BROKE:** An empty race or a selected winner with pending cleanup has finished.
+- **WITNESS:** `race_empty_and_cleanup_frontiers`. Empty input stays pending; a winner waiting on a live masked child cannot return until actual publication.
+- **CLASS:** frontier collapse.
+- **FIXED-BY:** `race_empty_frontier`, `race_cleanup_result_requires_publications`, exact replay nil clauses.
+
+### E4-CONC-CE-024 — reentrant branch timing
+
+- **BROKE:** Every launched race loser is cleaned, or cleanup freezes a winner-time target snapshot.
+- **WITNESS:** `race_reentrant_launch_branch`. A winner during entrant startup sees only already registered fibers. An empty set bypasses the late entrant; a nonempty branch reads the mutable set later and includes it.
+- **CLASS:** reentrant branch timing.
+- **FIXED-BY:** Split `beginLaunch`/`finishLaunch`, branch-only `cleanupNeeded`, `raceStep_beginCleanup`, `race_result_requires_start_finished`.
+- **HOST WITNESS:** `harness/fiber-supervision/runtime-check.ts`, run against the exact pinned rc.112 runtime. This finite trace supplements the Lean countermodel and does not close host equivalence.
+
+### E4-CONC-CE-025 — continuation profile overclaim
+
+- **BROKE:** The local body Exit remains the eventual parent result under any later interruption.
+- **WITNESS:** `parent_interruption_replaces_exit`. A body Success 7 survives a successful wait but a later parent interruption makes the wait fail and replaces it with Interrupt 99.
+- **CLASS:** continuation profile overclaim.
+- **FIXED-BY:** Restrict `beginParentExit`/`parentExitView` to the successful wait continuation with no intervening parent evaluation; keep the continuation bridge open.
+- **HOST WITNESS:** `harness/fiber-supervision/runtime-check.ts`, run against the exact pinned rc.112 runtime. This finite trace supplements the Lean countermodel and does not close host equivalence.
+
+### E4-CONC-CE-026 — dangling global identity
+
+- **BROKE:** Post-parent allocation ownership alone admits the entire immediate observation.
+- **WITNESS:** `post_start_child_ownership_required`. A valid post-parent can own no children while a valid new child owns ID 99 absent from post-globals; later fresh allocation can reuse it.
+- **CLASS:** dangling global identity.
+- **FIXED-BY:** `Globals.OwnsChildren postGlobals after`, `forkUnsafe_invalid_child_ownership`, and the matching positive `forkUnsafe_immediate` premise.
+
+### Supervision claim limit
+
+These 15 witnesses refute specific information losses or stronger claims.
+They do not prove a production implementation, full continuation or scheduler
+semantics, liveness, or host equivalence. In particular, Fiber.publish is a
+terminal-view constructor given an externally justified actual publication;
+none of these rows licenses arbitrary repeat publication as a runtime step.
+The graph and clause ledger in `docs/SUPERVISION-DAG.md` retain the necessary
+source interpretation and continuation obligations.
