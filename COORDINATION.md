@@ -273,3 +273,5 @@ Operational facts worth not rediscovering, from this packet:
 - A pop loop over a continuation stack must recurse on the frame *list*, never
   on the fiber's `stack` field, because `contAll` can push and the stack
   therefore does not decrease.
+
+| `docs/REIFICATION-STRATEGY.md`, `docs/ALGEBRA-PACKAGE-PLAN.md` | Claude (foldlab/streams coordinator) | added 2026-09-02, copied from lean4-WHATWG-streams ed65fe0 at the operator's request; RS-D1 proposes extracting `Effect4/Algebra` into a standalone package and is HELD until the operator's incoming Mac work lands; no other file claimed |
