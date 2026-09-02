@@ -29,3 +29,12 @@ Effect4Test.Protocol.ByteParserContract
 # the remaining preservation, framing, cleanup, and existence theorems named
 # by this contract have not landed yet.
 Effect4Test.Concurrency.RaceRepresentativeContract
+
+# Cause/Exit first-order data breaker packet, fence
+# Effect4/Semantics/{Cause,Exit}.lean, contract
+# test/contracts/cause-exit.contract.md. Both modules are red only on
+# unknown-identifier diagnostics for the fenced `Effect4.*` names; the
+# counterexample module Effect4Test.Counterexamples.Semantics.CauseExit is
+# self-contained and stays green, so it is deliberately not listed here.
+Effect4Test.Semantics.CauseExitContract
+Effect4Test.Semantics.CauseExitAxiomReport
