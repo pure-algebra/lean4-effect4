@@ -55,6 +55,9 @@ import Effect4Test.Counterexamples.Semantics.CauseExit
 import Effect4Test.Runtime.ScopeContract
 import Effect4Test.Runtime.ScopeAxiomReport
 import Effect4Test.Counterexamples.Runtime.Scope
+import Effect4Test.Runtime.FramesContract
+import Effect4Test.Runtime.FramesAxiomReport
+import Effect4Test.Counterexamples.Runtime.Frames
 import Effect4Test.Audit.RuntimeCoverage
 import Effect4Test.Audit.AxiomGate
 
