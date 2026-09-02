@@ -108,7 +108,8 @@ private def noncanonicalEntry : AnnotationEntry :=
 theorem canonicalUnit_not_lawful : ¬ canonicalUnit.Lawful := by
   intro law
   have exactRaw := law.encode_decode (.str "authored-spelling") () (by rfl)
-  simp [canonicalUnit] at exactRaw
+  exact (by decide : ("canonical" : String) ≠ "authored-spelling")
+    (Json.str.inj exactRaw)
 
 /-! `E4-SCHEMA-CE-047`: shallow node fields omit recursive annotation routes. -/
 

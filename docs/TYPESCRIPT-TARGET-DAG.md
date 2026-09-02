@@ -40,6 +40,53 @@ TS-SOURCE-PIN --> TS-SYNTAX --> TS-RENDER
 The port is usable as a target-syntax library now. It is not approved as the
 full generated Effect TypeScript cutover while any required edge remains open.
 
+### Expression equality trust receipt
+
+`Effect4.Target.TypeScript.instBEqExpr` and `instBEqExpr.beq` retain their
+existing names and types. The equality implementation uses total structural
+recursion over `Expr`, expression lists, and ordered field lists. This replaces
+Lean's generated partial helper for the nested inductive; it adds no trust-gate
+exemption. The declarations remain allocated to this graph's construction and
+trust edges under the existing `Expr` type row.
+Their `#print axioms` receipts contain only `propext`.
+
+`test/fixtures/trust-gate/expr-equality.lean.txt` checks the total definition
+body and the compiled safety of every declaration in the owning module. Its
+executable comparisons cover all fourteen constructors and nested payload,
+order, length, and tag differences. These comparisons are finite regression
+evidence, not a general equality theorem. `scripts/test-trust-gate.sh` runs
+the fixture after its acceptance and planted-declaration checks.
+
+### Exact output-text trust boundary
+
+The field renderer has four explicit implementation admissions for
+`Classical.choice`: `EffectfulField.source?`, `EffectfulField.generate?`,
+`EffectfulField.directionalRowsPresent` (private), and
+`EffectfulField.source_contains_directional_rows`. All four belong to
+`Effect4.Target.TypeScript.EffectfulField`. They inspect or produce rendered
+text through the already admitted `Render.module` and Lean's `String.contains`.
+The directional-row theorem's statement itself includes those operations;
+its admission covers an output-text receipt, not a semantic correctness law.
+
+The whole module is not admitted. `requestReady`, `RequestReady`,
+`requestReady_iff`, `decl?`, `module?`, and `decl?_never_raw` retain the
+`propext`/`Quot.sound` ceiling. The private guard is resolved by exact owning
+module and original declaration name, with exactly one match required. The
+gate rejects missing or ambiguous matches and any admission whose declaration
+no longer reaches `Classical.choice`.
+
+Separately, `Effect4Test.Schema.StructuralAssurance` is admitted as one exact
+audit-implementation module. It inspects the Lean environment, checks proof
+dependencies, and emits the structural assurance join. Its use of `MetaM`
+belongs to the same implementation boundary as the other named assurance
+checkers; it supplies no semantic library declaration.
+
+`scripts/test-trust-boundaries.sh` checks those exact boundaries and their
+dependency receipts. The full trust self-test also plants an unadmitted
+choice-dependent definition in the field-renderer module and requires the
+actual axiom gate to reject it. These admissions leave the open target,
+bridge, and cutover obligations unchanged.
+
 ## Schema document generation subgraph
 
 | Edge | State | Evidence or remaining work |

@@ -308,6 +308,37 @@ The additive Std bridge's authored public API is exactly 14 declarations:
 tracks the module's compiler-generated structural companions under their type
 allocations; those names are not described as authored public API.
 
+## Cause and Exit declaration dispositions
+
+These six native existing-type rows mirror the frozen allocations in
+`docs/CAUSE-DAG.md` "Existing-type rows". This manifest records their source
+dispositions and duplicate-prevention relations; the DAG owns `CAUSE-PG-FLAT`,
+its proof obligations, and the three `CAUSE-FB-*` host boundaries. `CAUSE-PG`
+in the table abbreviates `CAUSE-PG-FLAT`. The owning modules are under
+`Effect4/`, and source pins are relative to
+`vendor/effect-4.0.0-rc.112/src/` at the Effect runtime pin above.
+
+The native contract is `test/contracts/cause-exit.contract.md`. None of these
+types copies or renames a Foldlab or Effect TypeScript carrier. All inherit
+the "Cause and Exit" family disposition below: pure first-order data outside
+`Program`. The rows allocate assurance routes; they do not close the graph or
+approve Foldlab retirement.
+
+| Stable public type | Owning module | Kind | Relationship | Pin | Assurance route |
+| --- | --- | --- | --- | --- | --- |
+| `Effect4.ReasonAnnotations` | `Semantics/Cause.lean` | canonical carrier | canonical finite key-to-value map for reason annotations; **not** a view, adapter, or second spelling of `Effect4.Data.Row`, which is the canonical finite *set* and stores no values | `internal/core.ts:178-239` (`annotationsMap`, `ReasonBase`, `annotate`) | leaf receipts linked to `CAUSE-PG.construction` |
+| `Effect4.ReasonTag` | `Semantics/Cause.lean` | canonical finite alphabet | the closed rc.112 reason discriminator; no other tag alphabet claims this role | `Cause.ts:144` (`Reason<E> = Fail<E> \| Die \| Interrupt`) | leaf receipts linked to `CAUSE-PG.construction` |
+| `Effect4.Reason` | `Semantics/Cause.lean` | canonical carrier | canonical failure-reason carrier; the concurrency representative's `τ` terminal alphabet is a *parameter* it may later be instantiated at, not a duplicate of it | `internal/core.ts:245-275` (Fail), `288-319` (Die), `internal/effect.ts:107-145` (Interrupt) | `CAUSE-PG` |
+| `Effect4.Cause` | `Semantics/Cause.lean` | canonical carrier | canonical flat cause; explicitly *separate* from `Effect4.Data.Row` (order-retaining, duplicate-retaining) and from any tree-shaped cause, which `E4-SEM-CE-001` rejects | `internal/core.ts:138-176` (`CauseImpl`) | `CAUSE-PG` |
+| `Effect4.Squashed` | `Semantics/Cause.lean` | derived observation alphabet | lossy projection of `Cause`; no inverse is claimed and it carries no annotations | `internal/effect.ts:298-309` (`causeSquash`) | leaf receipts linked to `CAUSE-PG.semantics` |
+| `Effect4.Exit` | `Semantics/Exit.lean` | canonical carrier | canonical success/failure observation; separate calculus from `Effect4.Flow` diagnostics, from `SchedulerRefusal`, and from any frontier arm | `Exit.ts:118-157` | `CAUSE-PG` |
+
+The declaration and assurance snapshot remains a separate obligation. A green
+contract and axiom report do not replace the generated per-declaration join or
+the direct host evidence required by the DAG. `Effect4.Annotations` remains
+Schema-owned; `ReasonAnnotations` has its own key domain, payload alphabet,
+and insertion-order contract.
+
 ## Retained TypeScript target fragment
 
 The initial target-syntax port is governed by

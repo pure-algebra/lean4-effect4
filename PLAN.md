@@ -93,6 +93,17 @@ package, TypeScript, tsgo, the language-service clone, the sampled wild-type
 corpus, and PolyFun prior art. The next inventory deliverable is a generated
 declaration/source-disposition join; missing rows fail cutover.
 
+The P5 Cause/Exit data packet is implemented. Its frozen contract, seven
+registered counterexamples (`E4-SEM-CE-001` through `E4-SEM-CE-007`), and public
+theorem axiom report are green. `PORT-MANIFEST.md` "Cause and Exit declaration
+dispositions" now mirrors the six native type allocations from
+`docs/CAUSE-DAG.md`; that DAG remains the owner of `CAUSE-PG-FLAT` and its
+host-boundary obligations. The runtime witness wiring has landed separately in
+`Effect4Test/Audit/RuntimeCoverage.lean`. The generated Cause/Exit declaration
+and assurance join and direct host evidence remain open. Treating Exit itself
+as an executable primitive still needs the continuation-machine calculus.
+This records progress within P5, not closure of P5, the graph, or cutover.
+
 The broad sweep proceeds in this order. Items 1, 2, and 5 are closed. Items 3
 and 4 are in progress on disjoint owners. Item 6 is frozen and clean red for
 its independent builder.

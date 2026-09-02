@@ -140,6 +140,38 @@ that will catch the next one.
    being detected — that gate's detector runs last and never executes if an
    earlier module fails to build.
 
+## Completed trust-gate repair, 2026-09-01
+
+The six Cause/Exit existing-type rows are mirrored exactly from
+`docs/CAUSE-DAG.md` into `PORT-MANIFEST.md`, and `PLAN.md` records the implemented
+packet with its declaration-assurance and host obligations still open. The
+Cause/Exit contract, counterexample file, and axiom report each passed a direct
+`lake env lean` run; all 92 declared theorem receipts stayed within
+`propext`/`Quot.sound`.
+
+`scripts/test-trust-gate.sh` exited zero after the projection-tokenizer repair,
+total replacement of the existing target-expression equality, removal of the
+annotation counterexample's avoidable choice dependency, and the exact audit
+and output-text admissions documented in `docs/TYPESCRIPT-TARGET-DAG.md`.
+Its restored-tree audit checked 159 modules and 8,118 declarations. It rejected
+planted `partial`, `unsafe`, and unadmitted `Classical.choice` declarations;
+all tokenizer, exact-boundary, and finite expression-equality regressions
+passed. Independent review found no remaining issues in these changes.
+
+`scripts/check-schema-typescript-generation.sh` also exited zero: generated
+bytes and the corpus digest matched, TypeScript 7.0.2 checked the output,
+Effect rc.112 ran it, and language service 0.38.0 passed. The existing target
+contract built, and both public equality receipts contain only `propext`.
+`canonicalUnit_not_lawful` retains its statement and witness with a `propext`
+receipt. Citation and diff checks passed.
+
+The default `lake build` remains red for the already declared byte-parser and
+race contracts, with the consequential root failure. The trust self-test
+verified that exact declared set and removed those two modules only from its
+temporary copy; compiled trust remains unverified for those two modules.
+These repair-specific claims are released. Older lane claims above are not
+released by this note.
+
 ## Open items either agent may take
 
 - `Effect4/Protocol/Bytes.lean` — the byte carrier and JSON parser. Breaker in

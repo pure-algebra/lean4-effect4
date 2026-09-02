@@ -1,2 +1,22 @@
 -- Trust-policy prose may mention `partial def` and `unsafe def`.
+/- Nested comments: /- partial unsafe -/ remain prose. -/
+/-- Documentation may mention `partial` and `unsafe`. -/
 private def plantedTrustVocabulary : String := "partial unsafe"
+/-! Module documentation may also mention `partial` and `unsafe`. -/
+private def plantedRawTrustVocabulary : String := r#"partial "unsafe""#
+private def plantedInterpolatedTrustVocabulary : String := s!"partial unsafe {1}"
+private def plantedTrustCharacter : Char := 'u'
+private def «unsafe» : Nat := 0
+private def «partial» : Nat := 0
+
+private theorem plantedProjection (a b c : Nat)
+    (h : True ∧ a = b) (step : b = c) : a = c := h.2.trans step
+
+private theorem plantedNestedProjection (a b c : Nat)
+    (h : (True ∧ a = b) ∧ True) (step : b = c) : a = c := h.1.2.trans step
+
+private theorem plantedPipeProjection (a b c : Nat)
+    (h : True ∧ a = b) (step : b = c) : a = c := h |>.2.trans step
+
+private def plantedDecimal : Float := 1.25
+private def plantedScientific : Float := 1.25e3

@@ -40,7 +40,48 @@ inductive Expr where
   | arr (items : List Expr)
   /-- A zero-parameter arrow with an optional declared result type. -/
   | arrow (returnType : Option String) (body : Expr)
-  deriving Inhabited, BEq
+  deriving Inhabited
+
+-- Keep the existing equality API total. Lean's BEq deriving handler uses a
+-- partial helper for nested inductives; these four structural recursions
+-- traverse the expression and its nested lists without that trust boundary.
+mutual
+  def instBEqExpr.beq (self other : Expr) : Bool :=
+    match self, other with
+    | .ident a, .ident b | .str a, .str b => a == b
+    | .int a, .int b => a == b
+    | .float64Bits a, .float64Bits b => a == b
+    | .bool a, .bool b => a == b
+    | .jsNull, .jsNull => true
+    | .call f xs, .call g ys => instBEqExpr.beq f g && beqExprList xs ys
+    | .object xs, .object ys | .objectML xs, .objectML ys
+    | .objectQuoted xs, .objectQuoted ys | .objectQuotedML xs, .objectQuotedML ys
+    | .objectFromEntries xs, .objectFromEntries ys => beqExprFields xs ys
+    | .arr xs, .arr ys => beqExprList xs ys
+    | .arrow ty a, .arrow ty' b => ty == ty' && instBEqExpr.beq a b
+    | _, _ => false
+  termination_by structural self
+
+  private def beqExprList (self other : List Expr) : Bool :=
+    match self, other with
+    | [], [] => true
+    | a :: xs, b :: ys => instBEqExpr.beq a b && beqExprList xs ys
+    | _, _ => false
+  termination_by structural self
+
+  private def beqExprFields (self other : List (String × Expr)) : Bool :=
+    match self, other with
+    | [], [] => true
+    | a :: xs, b :: ys => beqExprField a b && beqExprFields xs ys
+    | _, _ => false
+  termination_by structural self
+
+  private def beqExprField (self other : String × Expr) : Bool :=
+    self.1 == other.1 && instBEqExpr.beq self.2 other.2
+  termination_by structural self
+end
+
+instance instBEqExpr : BEq Expr := ⟨instBEqExpr.beq⟩
 
 /-- One statement in the retained straight-line generator fragment. -/
 inductive Stmt where

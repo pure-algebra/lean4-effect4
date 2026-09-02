@@ -1,0 +1,100 @@
+import Lean
+import Effect4.Target.TypeScript.Expr
+
+open Lean hiding Expr
+open Effect4.Target.TypeScript
+
+namespace ExprEqualityTrustRegression
+
+-- These are finite behavioral checks of the existing public equality.
+private def samples : List Expr := [
+  .ident "name",
+  .str "value",
+  .int (-7),
+  .float64Bits 0x7ff8000000000001,
+  .bool true,
+  .jsNull,
+  .call (.ident "fn") [.arr [.str "argument", .jsNull]],
+  .object [("key", .call (.ident "fn") [.int 1])],
+  .objectML [("key", .arr [.bool false])],
+  .objectQuoted [("key", .object [])],
+  .objectQuotedML [("key", .objectQuoted [])],
+  .objectFromEntries [("__proto__", .objectML [])],
+  .arr [.objectFromEntries [("key", .str "value")]],
+  .arrow (some "Result") (.arrow none (.ident "body"))
+]
+
+#guard samples.length == 14
+#guard samples.all fun value => value == value
+#guard samples.zipIdx |>.all fun (left, leftIndex) =>
+  samples.zipIdx |>.all fun (right, rightIndex) =>
+    (left == right) == (leftIndex == rightIndex)
+
+private def scalarAndRecursiveDifferences : List (Expr × Expr) := [
+  (.ident "left", .ident "right"),
+  (.str "left", .str "right"),
+  (.int (-1), .int 1),
+  (.float64Bits 0, .float64Bits 0x8000000000000000),
+  (.float64Bits 0x7ff8000000000001, .float64Bits 0x7ff8000000000002),
+  (.bool true, .bool false),
+  (.call (.ident "left") [], .call (.ident "right") []),
+  (.call (.ident "fn") [.int 1], .call (.ident "fn") [.int 2]),
+  (.call (.ident "fn") [], .call (.ident "fn") [.jsNull]),
+  (.call (.ident "fn") [.int 1, .int 2], .call (.ident "fn") [.int 2, .int 1]),
+  (.arr [], .arr [.jsNull]),
+  (.arr [.int 1, .int 2], .arr [.int 2, .int 1]),
+  (.arr [.arr [.str "left"]], .arr [.arr [.str "right"]]),
+  (.arrow none .jsNull, .arrow (some "Result") .jsNull),
+  (.arrow (some "Left") .jsNull, .arrow (some "Right") .jsNull),
+  (.arrow none (.ident "left"), .arrow none (.ident "right")),
+  (.arrow none (.arrow none (.arr [.int 1])),
+    .arrow none (.arrow none (.arr [.int 2])))
+]
+
+#guard scalarAndRecursiveDifferences.all fun (left, right) =>
+  !(left == right) && !(right == left)
+
+private def fieldConstructors : List (List (String × Expr) → Expr) :=
+  [.object, .objectML, .objectQuoted, .objectQuotedML, .objectFromEntries]
+
+#guard fieldConstructors.all fun make =>
+  make [] == make [] &&
+  make [("key", .arr [.int 1])] == make [("key", .arr [.int 1])] &&
+  !(make [] == make [("key", .jsNull)]) &&
+  !(make [("left", .jsNull)] == make [("right", .jsNull)]) &&
+  !(make [("key", .arr [.int 1])] == make [("key", .arr [.int 2])]) &&
+  !(make [("first", .int 1), ("second", .int 2)] ==
+    make [("second", .int 2), ("first", .int 1)])
+
+run_elab do
+  logInfo "PASS finite Expr equality probes: all constructors, nested values, field order, and float bits"
+
+-- The public instance and its helper retain their existing names. The helper
+-- must have a total body available to Lean; an opaque implementation fails.
+run_elab do
+  let environment ← Lean.getEnv
+  let mut failures : Array String := #[]
+  unless environment.contains ``Effect4.Target.TypeScript.instBEqExpr do
+    failures := failures.push "missing public instBEqExpr"
+  match environment.find? ``Effect4.Target.TypeScript.instBEqExpr.beq with
+  | some (.defnInfo definition) =>
+      unless definition.safety == .safe do
+        failures := failures.push "instBEqExpr.beq is not a safe definition"
+  | _ => failures := failures.push "instBEqExpr.beq has no total definition body"
+  for (name, information) in environment.constants.toList do
+    let some moduleIndex := environment.getModuleIdxFor? name | continue
+    if environment.header.moduleNames[moduleIndex.toNat]? !=
+        some `Effect4.Target.TypeScript.Expr then
+      continue
+    let safeCompilerCompanion := match Lean.Compiler.isUnsafeRecName? name with
+      | some sourceName => match environment.find? sourceName with
+        | some (.defnInfo sourceInfo) => sourceInfo.safety == .safe
+        | _ => false
+      | none => false
+    if !safeCompilerCompanion && (information.isPartial || information.isUnsafe) then
+      failures := failures.push s!"non-total Expr declaration: {name}"
+  unless failures.isEmpty do
+    throwError "Expr equality trust regression(s):\n{String.intercalate "\n" failures.toList}"
+  logInfo "PASS Expr module declarations have total safe definitions or compiler companions of them"
+
+end ExprEqualityTrustRegression

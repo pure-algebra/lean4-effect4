@@ -128,7 +128,7 @@ expect_acceptance "the unmodified source tree"
 cp "$audit_original" "$audit_source"
 printf '''\n''' >>"$audit_source"
 sed -n '''1,$p''' "$repo_root/test/fixtures/trust-gate/benign.lean.txt" >>"$audit_source"
-expect_acceptance "comment and string trust vocabulary"
+expect_acceptance "comments, strings, and numeric projections"
 
 expect_rejection "$repo_root/test/fixtures/trust-gate/partial.lean.txt" partial \
   "partial declaration"
@@ -136,7 +136,29 @@ expect_rejection "$repo_root/test/fixtures/trust-gate/unsafe.lean.txt" unsafe \
   "unsafe declaration"
 
 cp "$audit_original" "$audit_source"
+field_source="$project_root/Effect4/Target/TypeScript/EffectfulField.lean"
+cp "$field_source" "$tmp_root/EffectfulField.lean"
+printf '\n' >>"$field_source"
+cat "$repo_root/test/fixtures/trust-gate/unadmitted-choice.lean.txt" >>"$field_source"
+if (cd "$project_root" && lake build) >"$build_log" 2>&1; then
+  echo "trust-gate self-test unexpectedly accepted an unadmitted choice dependency" >&2
+  exit 1
+fi
+if ! grep -Fq 'declaration Effect4.Target.TypeScript.EffectfulField.plantedUnadmittedChoice reaches unexpected axiom Classical.choice' "$build_log"; then
+  echo "trust-gate self-test rejected the choice dependency for an unexpected reason" >&2
+  tail -80 "$build_log" >&2
+  exit 1
+fi
+echo "PASS unadmitted choice dependency in the field-renderer module rejected"
+cp "$tmp_root/EffectfulField.lean" "$field_source"
 expect_acceptance "restored source tree"
+
+# Reuse the built probe project for lexical failures that Lean compilation
+# would otherwise reject before the source detector gets to inspect them.
+"$repo_root/scripts/test-source-trust-tokenizer.sh" "$project_root"
+"$repo_root/scripts/test-trust-boundaries.sh" "$project_root"
+(cd "$project_root" && lake env lean \
+  "$repo_root/test/fixtures/trust-gate/expr-equality.lean.txt")
 
 if [[ "$excised" -gt 0 ]]; then
   echo "NOTE $excised declared red module(s) were excised before testing; the trust"

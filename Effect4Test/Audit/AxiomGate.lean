@@ -5,7 +5,7 @@ import Effect4
 /-!
 # Effect4 axiom allowlist gate
 
-This command parses every authored `Effect4` source and inspects every
+This command tokenizes every authored `Effect4` source and inspects every
 declaration compiled from it, including definitions, instances, generated
 declarations, and private helper declarations. The build fails on authored
 `unsafe` or `partial` declaration modifiers, or if any declaration reaches an
@@ -43,6 +43,7 @@ needs the exemption fails the gate, so an entry cannot outlive its reason.
 private def auditImplementationModules : List Name :=
   [ `Effect4Test.Audit.AxiomGate
   , `Effect4Test.Schema.PayloadSurface
+  , `Effect4Test.Schema.StructuralAssurance
   , `Effect4Test.Data.RowAssurance
   , `Effect4Test.Environment.ContextKeyAssurance
   , `Effect4Test.Concurrency.FiberAssurance
@@ -61,9 +62,11 @@ private def targetImplementationModules : List Name :=
 private def choiceImplementationModules : List Name :=
   auditImplementationModules ++ targetImplementationModules
 
-/-- The only Schema declarations that cross from no-choice syntax generation
-to the string renderer. All recursive lowering and admission declarations in
-the same module retain the semantic/test ceiling. -/
+/-- Exact crossings from no-choice syntax generation to string rendering and
+its output-text receipt. Admission and structured lowering in these modules
+retain the semantic/test ceiling. The field receipt's statement itself uses
+the renderer and `String.contains`; it is not a semantic admission theorem.
+`docs/TYPESCRIPT-TARGET-DAG.md` records this implementation boundary. -/
 private def choiceImplementationDeclarations : List Name :=
   [ ``Effect4.Target.TypeScript.Schema.jsonSource
   , ``Effect4.Target.TypeScript.Schema.representationSource
@@ -71,7 +74,16 @@ private def choiceImplementationDeclarations : List Name :=
   , ``Effect4.Target.TypeScript.Schema.multiDocumentSource
   , ``Effect4.Target.TypeScript.Schema.source?
   , ``Effect4.Target.TypeScript.Schema.generate?
+  , ``Effect4.Target.TypeScript.EffectfulField.source?
+  , ``Effect4.Target.TypeScript.EffectfulField.generate?
+  , ``Effect4.Target.TypeScript.EffectfulField.source_contains_directional_rows
   ]
+
+/-- Private rendering helpers are identified by exact owner and original name,
+never a namespace prefix or Lean's unstable private-name counter. -/
+private def choiceImplementationPrivateDeclarations : List (Name × Name) :=
+  [ (`Effect4.Target.TypeScript.EffectfulField,
+      `Effect4.Target.TypeScript.EffectfulField.directionalRowsPresent) ]
 
 private def forbiddenAxioms : List Name :=
   [``sorryAx, ``Lean.ofReduceBool, ``Lean.ofReduceNat, ``Lean.trustCompiler]
@@ -79,6 +91,18 @@ private def forbiddenAxioms : List Name :=
 private def moduleOf? (environment : Environment) (declaration : Name) : Option Name := do
   let index ← environment.getModuleIdxFor? declaration
   environment.header.moduleNames[index.toNat]?
+
+private def resolveChoiceImplementationDeclarations
+    (environment : Environment) (declarations : Array Name) : Except String (List Name) := do
+  let mut resolved := choiceImplementationDeclarations
+  for (owner, originalName) in choiceImplementationPrivateDeclarations do
+    let privateCandidates := declarations.toList.filter fun declaration =>
+      moduleOf? environment declaration == some owner &&
+        privateToUserName? declaration == some originalName
+    match privateCandidates with
+    | [declaration] => resolved := resolved ++ [declaration]
+    | _ => throw s!"Effect4 axiom gate: private implementation exemption {owner}/{originalName} matched {privateCandidates.length} declarations; expected exactly one"
+  return resolved
 
 private def belongsToAuditedTree (moduleName : Name) : Bool :=
   (`Effect4).isPrefixOf moduleName || (`Effect4Test).isPrefixOf moduleName
@@ -92,27 +116,75 @@ private def isGeneratedSafeRecursor (environment : Environment) (name : Name) : 
       | none => false
       | _ => false
 
-private def forbiddenTrustModifier? (stx : Syntax) : Option String := do
-  guard <| stx.isOfKind ``Parser.Command.declModifiers
-  if !stx[5].isNone then
-    return "unsafe"
-  if !stx[6].isNone && stx[6][0].isOfKind ``Parser.Command.partial then
-    return "partial"
-  none
-
-private def findForbiddenTrustModifier? (stx : Syntax) : Option String := do
-  let stack ← stx.findStack?
-    (fun _ => true)
-    (fun node => (forbiddenTrustModifier? node).isSome)
-  let (modifierSyntax, _) ← stack.head?
-  forbiddenTrustModifier? modifierSyntax
+/-
+`Parser.testParseFile` cannot replay an already-compiled source against the
+final project environment: syntax introduced by a later-imported test module
+can turn an earlier ordinary identifier into a keyword. Tokenization is the
+right level for this source check. Lean's own tokenizer skips comments and
+handles ordinary, character, interpolated, and raw string literals, while the
+compiled-environment pass below independently confirms declaration safety.
+-/
+private def forbiddenTrustToken?
+    (environment : Environment)
+    (source : System.FilePath) : IO (Option String) := do
+  let input ← IO.FS.readFile source
+  let inputContext := Parser.mkInputContext input source.toString
+  let parserContext : Parser.ParserModuleContext :=
+    { env := environment, options := {} }
+  let tokenTable := Parser.Module.updateTokens (Parser.getTokenTable environment)
+  let mut state := Parser.mkParserState input
+  let mut projectionEnd : Option String.Pos.Raw := none
+  while !inputContext.atEnd state.pos do
+    let skipped := Parser.whitespace.run inputContext parserContext tokenTable state
+    if let some error := skipped.errorMsg then
+      throw <| IO.userError
+        s!"Effect4 source trust gate: tokenization failed in {source}: {error}"
+    state := skipped
+    if inputContext.atEnd state.pos then
+      return none
+    -- Documentation comments are syntax nodes rather than whitespace. Consume
+    -- them with Lean's own parsers so their prose never becomes audit tokens.
+    let docComment := Parser.Command.docComment.fn.run
+      inputContext parserContext tokenTable state
+    if docComment.errorMsg.isNone then
+      state := docComment.popSyntax
+      projectionEnd := none
+      continue
+    let moduleDoc := Parser.Command.moduleDoc.fn.run
+      inputContext parserContext tokenTable state
+    if moduleDoc.errorMsg.isNone then
+      state := moduleDoc.popSyntax
+      projectionEnd := none
+      continue
+    -- Lean parses the index in `h.2.trans` and `h |>.2.trans` with
+    -- `fieldIdxFn`: the ordinary number tokenizer mistakes `2.trans` for a
+    -- decimal. Use the same parser only immediately after a projection dot;
+    -- ordinary numerals and every tokenization error retain their usual path.
+    let tokenParser :=
+      if projectionEnd == some state.pos && (inputContext.get state.pos).isDigit then
+        Parser.fieldIdxFn
+      else
+        Parser.tokenFn []
+    let next := tokenParser.run inputContext parserContext tokenTable state
+    if let some error := next.errorMsg then
+      let position := inputContext.fileMap.toPosition state.pos
+      throw <| IO.userError
+        s!"Effect4 source trust gate: tokenization failed in {source}:{position.line}:{position.column + 1}: {error}"
+    let token := next.stxStack.back
+    if token.isToken "unsafe" then
+      return some "unsafe"
+    if token.isToken "partial" then
+      return some "partial"
+    projectionEnd :=
+      if token.isToken "." || token.isToken "|>." then token.getTailPos? else none
+    state := next.popSyntax
+  return none
 
 private def auditSourceTrustModifiers
     (environment : Environment)
     (sources : Array System.FilePath) : IO Unit := do
   for source in sources do
-    let moduleSyntax ← Parser.testParseFile environment source
-    if let some modifier := findForbiddenTrustModifier? moduleSyntax then
+    if let some modifier ← forbiddenTrustToken? environment source then
       throw <| IO.userError
         s!"Effect4 source trust gate: {source} contains an authored `{modifier}` declaration modifier"
 
@@ -162,11 +234,16 @@ elab "#effect4_axiom_gate" : command => do
             throwError "Effect4 trust gate: declaration {name} is partial"
         declarations := declarations.push name
 
+  let exactImplementationDeclarations ←
+    match resolveChoiceImplementationDeclarations environment declarations with
+    | .ok resolved => pure resolved
+    | .error message => throwError "{message}"
+
   for declaration in declarations do
     let axioms ← collectAxioms declaration
     let bound :=
       if (moduleOf? environment declaration).any choiceImplementationModules.contains ||
-          choiceImplementationDeclarations.contains declaration then
+          exactImplementationDeclarations.contains declaration then
         auditImplementationAxioms
       else
         allowedAxioms
@@ -191,7 +268,7 @@ elab "#effect4_axiom_gate" : command => do
       throwError
         "Effect4 axiom gate: stale implementation exemption for {exempted}; no declaration in it reaches Classical.choice, so remove it from choiceImplementationModules"
 
-  for exempted in choiceImplementationDeclarations do
+  for exempted in exactImplementationDeclarations do
     if !(declarations.contains exempted) then
       throwError
         "Effect4 axiom gate: exact implementation exemption names missing declaration {exempted}"
@@ -200,6 +277,6 @@ elab "#effect4_axiom_gate" : command => do
         "Effect4 axiom gate: stale exact implementation exemption for {exempted}; it no longer reaches Classical.choice"
 
   logInfo
-    m!"Effect4 module and axiom gate: checked {sources.size} modules and {declarations.size} declarations; semantic/test axioms are {allowedAxioms}; exact implementation boundary ({choiceImplementationModules.length} module(s), {choiceImplementationDeclarations.length} declaration(s)) additionally allows Classical.choice"
+    m!"Effect4 module and axiom gate: checked {sources.size} modules and {declarations.size} declarations; semantic/test axioms are {allowedAxioms}; exact implementation boundary ({choiceImplementationModules.length} module(s), {exactImplementationDeclarations.length} declaration(s)) additionally allows Classical.choice"
 
 end Effect4Test.Audit
