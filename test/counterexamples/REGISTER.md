@@ -126,6 +126,16 @@ belongs to a later packet whose declarations are not open yet.
 | `E4-SEM-CE-006` | SEEDED | `exitAsVoidAll` fails whenever any input exit is a `Failure` | `Effect4Test/Counterexamples/Semantics/CauseExit.lean`, `empty_cause_failure_joins_to_success` and `join_is_not_combine` | test the concatenated reasons, not the exits: `Exit.asVoidAll_reasons`, `asVoidAll_empty_cause`, `asVoidAll_keeps_duplicates` |
 | `E4-SEM-CE-007` | SEEDED | `Effect4.Data.Row`, the canonical finite-set carrier, can carry a cause | `Effect4Test/Counterexamples/Semantics/CauseExit.lean`, `union_is_not_commutative` and `order_changes_squash` | retain an ordered `List`; state `Cause.combine_order` as an operand-order-preserving union and record the `Row` separation in `docs/CAUSE-DAG.md` |
 
+| `E4-RUN-CE-001` | SEEDED | Scope close may run its finalizers and then write the `Closed` state | `Effect4Test/Counterexamples/Runtime/Scope.lean`, `close_must_write_state_first` and `close_state_is_independent_of_finalizers` | write the state first; `Scope.closeState` takes no `run` argument, `Scope.close_state_independent_of_run` holds by construction, and `Scope.close_reentrant_add` states what a re-entrant finalizer observes |
+| `E4-RUN-CE-002` | SEEDED | Scope finalizers run in registration order | `Effect4Test/Counterexamples/Runtime/Scope.lean`, `close_order_is_lifo` and `close_order_changes_the_cause` | reverse the materialised list; `Scope.closeOrder_eq`, `Scope.closeOrder_last_first`, `Scope.closeExits_reverse` |
+| `E4-RUN-CE-003` | SEEDED | Closing a scope twice re-runs its finalizers, or overwrites the stored closing exit | `Effect4Test/Counterexamples/Runtime/Scope.lean`, `close_is_idempotent` and `close_guard_prevents_double_run` | guard on `Closed` first; `Scope.close_idempotent`, `Scope.close_twice`, `Scope.closeState_idempotent`, `Scope.closeResult_closed` |
+| `E4-RUN-CE-004` | SEEDED | Adding a finalizer to a `Closed` scope registers it, or silently drops it | `Effect4Test/Counterexamples/Runtime/Scope.lean`, `add_after_closed_runs_now` and `add_after_closed_registers_nothing` | run it now with the stored closing exit and register nothing; `Scope.addExit_closed`, `Scope.addExit_closed_registers_nothing`, `Scope.addUnsafe_closed` |
+| `E4-RUN-CE-005` | SEEDED | Finalizer removal may normalise every scope into a keyed map, and a cleared inline slot is just the empty map | `Effect4Test/Counterexamples/Runtime/Scope.lean`, `remove_leaves_non_open_untouched`, `cleared_inline_slot_is_its_own_state`, `remove_inline_miss_is_a_no_op` | leave a non-`Open` scope untouched and keep `empty`, `openEmpty`, and `openMap []` three distinct states; `Scope.removeUnsafe_not_open`, `ScopeState.openEmpty_ne_openMap_nil`, `Scope.addUnsafe_openEmpty` |
+| `E4-RUN-CE-006` | SEEDED | A child scope forked from a `Closed` parent is a fresh `Empty` scope | `Effect4Test/Counterexamples/Runtime/Scope.lean`, `fork_of_closed_parent_is_born_closed` | born `Closed` carrying the parent's exit; `Scope.fork_closed_parent`, `Scope.fork_closed_parent_child_exit` |
+| `E4-RUN-CE-007` | SEEDED | The parent-side and child-side fork finalizers may each mint their own key | `Effect4Test/Counterexamples/Runtime/Scope.lean`, `fork_link_needs_one_shared_key` and `fork_registers_the_same_key_on_both_sides` | one shared key on both sides so the child's finalizer detaches the parent exactly; `Scope.fork_shared_key`, `Scope.fork_detach` |
+| `E4-RUN-CE-008` | SEEDED | A failing finalizer aborts the sequential scope close | `Effect4Test/Counterexamples/Runtime/Scope.lean`, `sequential_close_captures_failures` and `short_circuit_loses_a_reason` | capture each finalizer's exit and keep going; `Scope.closeExits_length`, `Scope.closeResult_reasons` |
+| `E4-RUN-CE-009` | SEEDED | Scope close always merges its finalizer exits through `exitAsVoidAll` | `Effect4Test/Counterexamples/Runtime/Scope.lean`, `single_finalizer_is_not_merged`, `many_finalizers_are_merged_flat`, `merge_is_concatenation_not_union` | keep three result arms: nothing, the single finalizer's own exit, and the merge; `Scope.closeResult_nil`, `Scope.closeResult_single`, `Scope.closeResult_many` |
+
 Area-specific attack shapes are in
 [`algebra/ATTACKS.md`](algebra/ATTACKS.md),
 [`flow/ATTACKS.md`](flow/ATTACKS.md),
@@ -133,6 +143,7 @@ Area-specific attack shapes are in
 [`environment/ATTACKS.md`](environment/ATTACKS.md),
 [`concurrency/ATTACKS.md`](concurrency/ATTACKS.md),
 [`semantics/ATTACKS.md`](semantics/ATTACKS.md),
+[`runtime/ATTACKS.md`](runtime/ATTACKS.md),
 [`target/ATTACKS.md`](target/ATTACKS.md), and
 [`data/ATTACKS.md`](data/ATTACKS.md). Fired implementation attacks
 add a `BROKE / LAW / WITNESS / CLASS / FIXED-BY` record to the owning contract

@@ -49,6 +49,9 @@ import Effect4Test.Counterexamples.Target.EffectfulField
 import Effect4Test.Semantics.CauseExitContract
 import Effect4Test.Semantics.CauseExitAxiomReport
 import Effect4Test.Counterexamples.Semantics.CauseExit
+import Effect4Test.Runtime.ScopeContract
+import Effect4Test.Runtime.ScopeAxiomReport
+import Effect4Test.Counterexamples.Runtime.Scope
 import Effect4Test.Audit.RuntimeCoverage
 import Effect4Test.Audit.AxiomGate
 
