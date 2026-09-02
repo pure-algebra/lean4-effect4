@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reification counterexamples"
+  short_description: "Find counterexamples and false acceptance paths"
+  default_prompt: "Use $lean-reification-breaker to challenge this claim with small counterexamples and meaningful positive controls."

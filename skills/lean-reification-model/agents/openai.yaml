@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reification model"
+  short_description: "Model inspectable programs and effect semantics"
+  default_prompt: "Use $lean-reification-model to assess the program representation and the semantic connections it must support."
