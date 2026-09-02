@@ -830,7 +830,7 @@ private theorem unknownOperationFailure?_eq_some_iff
           · intro failure
             simp [unknownOperationFailure?, termEq, found] at failure
             subst reported
-            exact ⟨target, by simp [termEq], found⟩
+            exact ⟨target, by simp, found⟩
           · rintro ⟨otherTarget, sameTerm, unknown⟩
             have same : reported = operation := by
               injection sameTerm with operationEq targetEq
