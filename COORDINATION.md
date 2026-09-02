@@ -67,7 +67,7 @@ row is unclaimed.
 | `docs/SCOPE-DAG.md`, `test/contracts/scope.contract.md`, `Effect4Test/Runtime/ScopeContract.lean`, `Effect4Test/Runtime/ScopeAxiomReport.lean`, `Effect4Test/Counterexamples/Runtime/Scope.lean`, `test/counterexamples/runtime/ATTACKS.md` | Claude | Scope runtime packet frozen, RED; breaker-owned, do not edit while implementing |
 | `test/counterexamples/REGISTER.md` (`E4-RUN-CE-001`..`009` only), `Effect4Test.lean` (Scope import lines only), `test/fixtures/trust-gate/known-red.txt` (Scope entries only) | Claude | Scope runtime packet wiring, append-only |
 | `generated/fiber-assurance.tsv` | Claude | regenerated in the Scope breaker commit because `test/counterexamples/REGISTER.md` is a pinned input; no other change |
-| `Effect4/Runtime/Scope.lean` | Claude (breaker) | **reserved for the Scope builder**; annotation-only stub today. The builder implements it and must not edit the packet or battery above |
+| `Effect4/Runtime/Scope.lean` | Claude (builder) | **built, green**: the frozen surface is implemented and the battery, axiom report, and counterexample module all build. All 98 public theorems stay within `propext`/`Quot.sound`, and both Scope entries were removed from `test/fixtures/trust-gate/known-red.txt`. The packet and battery were not edited. The `SCOPE-L7` coverage join in `Effect4Test/Audit/RuntimeCoverage.lean` remains a separate, unclaimed packet |
 
 ## What collisions have already cost
 

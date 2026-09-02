@@ -29,10 +29,3 @@ Effect4Test.Protocol.ByteParserContract
 # the remaining preservation, framing, cleanup, and existence theorems named
 # by this contract have not landed yet.
 Effect4Test.Concurrency.RaceRepresentativeContract
-
-# Scope runtime breaker packet. The frozen battery and its axiom report name
-# the public surface of Effect4/Runtime/Scope.lean, which is still an
-# annotation-only stub. Packet: test/contracts/scope.contract.md,
-# docs/SCOPE-DAG.md. Remove both entries when the builder turns them green.
-Effect4Test.Runtime.ScopeContract
-Effect4Test.Runtime.ScopeAxiomReport
