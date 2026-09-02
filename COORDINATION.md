@@ -234,3 +234,42 @@ remain with their existing owners.
 - `SC-ISSUE-01` has no owning module. `docs/SCHEMA-ISSUE-SURVEY.md` proposes
   one; the ruling has not been made.
 - `SC-CAS-01`..`06` are assigned to no module.
+
+## Frame-machine breaker claim, 2026-09-02
+
+Claude claims, as breaker only: `docs/FRAMES-DAG.md`,
+`test/contracts/frames.contract.md`, `Effect4Test/Runtime/FramesContract.lean`,
+`Effect4Test/Runtime/FramesAxiomReport.lean`,
+`Effect4Test/Counterexamples/Runtime/Frames.lean`, the `E4-RUN-CE-010` through
+`E4-RUN-CE-021` rows of `test/counterexamples/REGISTER.md`, the frame-machine
+section of `test/counterexamples/runtime/ATTACKS.md`, and the three new import
+lines in `Effect4Test.lean`. The implementation fence is
+`Effect4/Runtime/Runtime.lean`, whose stub docstring is updated and which
+remains declaration-free; `Effect4/Runtime/Lifecycle.lean` is untouched.
+The builder of that fence is unclaimed.
+
+Two working-tree edits are deliberately left unstaged for the reviewer to commit
+after the concurrent fiber-assurance lane lands: the two
+`Effect4Test.Runtime.Frames*` entries appended to
+`test/fixtures/trust-gate/known-red.txt`, and this note. Appending to
+`REGISTER.md` and `runtime/ATTACKS.md` changes an input digest pinned by
+`generated/fiber-assurance.tsv`, which this packet does **not** regenerate
+because the other lane owns `scripts/generate-fiber-assurance.sh`;
+`./scripts/check-fiber-assurance.sh` reports a stale projection until that lane
+lands and the generator is run once.
+
+Operational facts worth not rediscovering, from this packet:
+
+- A Lean structure instance whose fields are split across lines must have every
+  field at the same column. `{ self with current := x,` followed by a
+  differently indented `stack := y }` is a parse error reported as
+  "unexpected identifier; expected '}'", not a layout preference. It bites
+  hardest when transcribing pretty-printer output into a battery; setting
+  `pp.structureInstances false` and `pp.fieldNotation.generalized false` before
+  `#check` produces output that always re-parses.
+- `set_option format.width` does not narrow `#check` message output; the
+  messages are formatted at the default width, so a generated battery has to be
+  re-wrapped by hand or by script.
+- A pop loop over a continuation stack must recurse on the frame *list*, never
+  on the fiber's `stack` field, because `contAll` can push and the stack
+  therefore does not decrease.

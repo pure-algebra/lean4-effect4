@@ -29,3 +29,9 @@ Effect4Test.Protocol.ByteParserContract
 # the remaining preservation, framing, cleanup, and existence theorems named
 # by this contract have not landed yet.
 Effect4Test.Concurrency.RaceRepresentativeContract
+
+# Frame-machine breaker packet, fence Effect4/Runtime/Runtime.lean, packet
+# test/contracts/frames.contract.md. Red until the builder declares the frozen
+# surface; both modules must be removed the moment they go green.
+Effect4Test.Runtime.FramesContract
+Effect4Test.Runtime.FramesAxiomReport
