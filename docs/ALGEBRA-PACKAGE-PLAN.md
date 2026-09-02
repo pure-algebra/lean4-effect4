@@ -1,3 +1,5 @@
+> Effect4-side status, 2026-09-02: the living Effect4 plan for this extraction is now [EFFECTS-SPLIT-PLAN](EFFECTS-SPLIT-PLAN.md), which names the package `Effects` and cuts the work into slices S0–S6. This copy is retained for the streams-side record and is not executed here.
+
 > Copied from mepuka/lean4-WHATWG-streams at commit ed65fe0 on 2026-09-02 for the Effect4 side of the RS-D1 discussion. The streams repository holds the living copy; refine there or here, but say which is canonical when you do.
 
 # Plan: extracting `Effect4.Algebra` into a standalone package (RS-D1)
