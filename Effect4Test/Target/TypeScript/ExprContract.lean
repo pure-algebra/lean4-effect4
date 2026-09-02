@@ -1,4 +1,4 @@
-import Effect4.Target.TypeScript.Render
+import TypeScript
 
 /-!
 Contract packet: `test/contracts/typescript-target-expr.contract.md`
@@ -7,9 +7,10 @@ This battery freezes the retained Foldlab syntax surface and representative
 fixed-layout bytes. It makes no target-typing or simulation claim.
 -/
 
+open TypeScript
+
 namespace Effect4Test.Target.TypeScript.ExprContract
 
-open Effect4.Target.TypeScript
 
 #check (@Expr.ident : String → Expr)
 #check (@Expr.str : String → Expr)

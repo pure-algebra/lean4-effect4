@@ -4,6 +4,8 @@ import Effect4.Target.TypeScript.EffectfulField
 Executable witnesses for `E4-TARGET-CE-005` through `E4-TARGET-CE-008`.
 -/
 
+open TypeScript
+
 namespace Effect4Test.Counterexamples.Target.EffectfulField
 
 open Effect4

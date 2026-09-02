@@ -2,6 +2,8 @@ import Effect4.Target.TypeScript.Schema
 
 /-! Representative raw Schema and containing-data generation receipts. -/
 
+open TypeScript
+
 namespace Effect4Test.Target.TypeScript.SchemaGenerationContract
 
 open Effect4
@@ -24,30 +26,30 @@ private def duplicatePrototypeReferenceDocument : Document :=
     , { key := "x", representation := Schema.string }
     , { key := "x", representation := Schema.boolean } ]
 
-#check (@Target.TypeScript.Schema.json : Json → Target.TypeScript.Expr)
+#check (@Target.TypeScript.Schema.json : Json → TypeScript.Expr)
 #check (@Target.TypeScript.Schema.reifyJson? :
-  Target.TypeScript.Expr → Option Json)
+  TypeScript.Expr → Option Json)
 #check (@Target.TypeScript.Schema.reifyJson?_json :
   ∀ value, Target.TypeScript.Schema.reifyJson?
     (Target.TypeScript.Schema.json value) = some value)
 #check (@Target.TypeScript.Schema.json_injective :
   Function.Injective Target.TypeScript.Schema.json)
 #check (@Target.TypeScript.Schema.representation :
-  Representation → Target.TypeScript.Expr)
+  Representation → TypeScript.Expr)
 #check (@Target.TypeScript.Schema.documentExpr :
-  Document → Target.TypeScript.Expr)
+  Document → TypeScript.Expr)
 #check (@Target.TypeScript.Schema.moduleSyntax :
-  String → Document → List (String × Json) → Target.TypeScript.Module)
+  String → Document → List (String × Json) → TypeScript.Module)
 #check (@Target.TypeScript.Schema.module? :
-  String → Document → List (String × Json) → Option Target.TypeScript.Module)
+  String → Document → List (String × Json) → Option TypeScript.Module)
 #check (@Target.TypeScript.Schema.source? :
   String → Document → List (String × Json) →
-    Target.TypeScript.Style → Option String)
+    TypeScript.Style → Option String)
 #check (@Target.TypeScript.Schema.generate? :
   String → Document → List (String × Json) →
-    Target.TypeScript.Style → Option String)
+    TypeScript.Style → Option String)
 
-#guard Target.TypeScript.Render.expr Target.TypeScript.house0 0
+#guard TypeScript.Render.expr TypeScript.house0 0
     (Target.TypeScript.Schema.json (.number Float64.negZero)) =
   "new DataView(Uint8Array.of(128, 0, 0, 0, 0, 0, 0, 0).buffer).getFloat64(0, false)"
 

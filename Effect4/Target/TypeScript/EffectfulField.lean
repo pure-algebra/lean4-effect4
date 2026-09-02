@@ -9,9 +9,11 @@ This module resolves one admitted property marker to the structured
 uses `Decl.raw`.
 -/
 
+open TypeScript
+
 namespace Effect4.Target.TypeScript.EffectfulField
 
-open Effect4
+open Effect4 Effects
 
 /-- Target spellings associated with one retained portable operation. -/
 structure OperationBinding where

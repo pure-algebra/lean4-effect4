@@ -5,6 +5,8 @@ Mechanically complete raw-generation corpus for all 22 representation tags
 and both persisted check constructors.
 -/
 
+open TypeScript
+
 namespace Effect4Test.Target.TypeScript.SchemaGenerationCoverage
 
 open Effect4

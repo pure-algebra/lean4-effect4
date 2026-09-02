@@ -5,11 +5,11 @@ Breaker-owned red battery. The implementation phase must not edit this file.
 It is red until precise witness-validity declarations and proofs exist.
 -/
 
-import Effect4.Flow.Admission
+import Effects.Flow.Admission
 
 namespace Effect4Test.Flow.DiagnosticPrecisionContract
 
-open Effect4
+open Effects
 
 universe uA uB uTy uOp
 

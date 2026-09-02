@@ -39,10 +39,10 @@ Schema-to-TypeScript generation boundary.
 #print axioms Effect4.Target.TypeScript.Schema.generationReady_iff
 #print axioms Effect4.Target.TypeScript.Schema.moduleSyntax
 #print axioms Effect4.Target.TypeScript.Schema.module?
-#print axioms Effect4.Target.TypeScript.Render.escapeString
-#print axioms Effect4.Target.TypeScript.Render.quoted
-#print axioms Effect4.Target.TypeScript.Render.float64Bits
-#print axioms Effect4.Target.TypeScript.Render.expr
-#print axioms Effect4.Target.TypeScript.Render.module
+#print axioms TypeScript.Render.escapeString
+#print axioms TypeScript.Render.quoted
+#print axioms TypeScript.Render.float64Bits
+#print axioms TypeScript.Render.expr
+#print axioms TypeScript.Render.module
 #print axioms Effect4.Target.TypeScript.Schema.source?
 #print axioms Effect4.Target.TypeScript.Schema.generate?

@@ -1,4 +1,4 @@
-import Effect4.Flow.Checked
+import Effects.Flow.Checked
 
 /-!
 # Checked Flow constructor privacy
@@ -10,7 +10,7 @@ only public constructor boundary.
 
 namespace Effect4Test.Flow.PrivacyContract
 
-open Effect4
+open Effects
 
 /-!
 E4-FLOW-CE-015: the generated-looking constructor name must remain

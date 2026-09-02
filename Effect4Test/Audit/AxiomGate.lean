@@ -57,7 +57,7 @@ backing UTF-8 decoding. The renderer exemption is exact-module; the Schema
 module receives no blanket exemption below.
 -/
 private def targetImplementationModules : List Name :=
-  [ `Effect4.Target.TypeScript.Render ]
+  []  -- the renderer now lives in the `typescript` package, outside this tree
 
 private def choiceImplementationModules : List Name :=
   auditImplementationModules ++ targetImplementationModules

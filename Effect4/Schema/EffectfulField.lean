@@ -1,6 +1,6 @@
 import Effect4.Schema.Annotations
 import Effects.Algebra.Laws
-import Effect4.Flow.Block
+import Effects.Flow.Block
 
 /-!
 # Effectful Schema fields

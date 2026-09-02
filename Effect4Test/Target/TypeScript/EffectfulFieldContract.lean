@@ -4,10 +4,12 @@ import Effect4.Target.TypeScript.EffectfulField
 Frozen public surface for the checked effectful-field TypeScript target.
 -/
 
+open TypeScript
+
 namespace Effect4Test.Target.TypeScript.EffectfulFieldContract
 
 open Effect4
-open Effect4.Target.TypeScript
+open Effect4.Target.TypeScript Effects
 
 #check (@EffectfulFieldDecl : Type)
 #check (@EffectfulFieldDecl.mk :

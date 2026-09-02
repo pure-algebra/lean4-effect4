@@ -4,6 +4,8 @@ import Effect4.Target.TypeScript.Schema
 Executable witnesses for `E4-TARGET-CE-001` through `E4-TARGET-CE-004`.
 -/
 
+open TypeScript
+
 namespace Effect4Test.Counterexamples.Target.TypeScriptRender
 
 open Effect4.Target.TypeScript

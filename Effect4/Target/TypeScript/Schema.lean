@@ -1,5 +1,5 @@
 import Effect4.Schema.Authoring
-import Effect4.Target.TypeScript.Render
+import TypeScript
 
 /-!
 # Raw Schema TypeScript generation
@@ -11,6 +11,8 @@ final convenience boundary that applies the deterministic renderer.
 This is a raw persisted-document generator. It does not claim a live Schema
 reviver, decoded-value denotation, codec law, or `Described` instance.
 -/
+
+open TypeScript
 
 namespace Effect4.Target.TypeScript.Schema
 
@@ -418,6 +420,7 @@ private def exprKeysUnique : Expr → Bool
       fieldNamesUnique fields && exprFieldsKeysUnique fields
   | .arr items => exprListKeysUnique items
   | .arrow _ body => exprKeysUnique body
+  | .generic fn _ => exprKeysUnique fn
 termination_by value => sizeOf value
 decreasing_by all_goals decreasing_tactic
 
@@ -437,33 +440,8 @@ decreasing_by
     | exact Nat.lt_trans (exprFieldValue_sizeOf_lt _) (by simp +arith)
 end
 
-private def reservedIdentifiers : List String :=
-  [ "await", "break", "case", "catch", "class", "const", "continue"
-  , "debugger", "default", "delete", "do", "else", "enum", "export"
-  , "extends", "false", "finally", "for", "function", "if", "import"
-  , "in", "instanceof", "let", "new", "null", "return", "super"
-  , "switch", "this", "throw", "true", "try", "typeof", "var", "void"
-  , "while", "with", "yield", "interface", "implements", "package"
-  , "private", "protected", "public", "static" ]
-
-private def asciiBetween (lower upper character : UInt8) : Bool :=
-  lower <= character && character <= upper
-
-private def identifierStart (character : UInt8) : Bool :=
-  asciiBetween 65 90 character || asciiBetween 97 122 character ||
-    character == 95 || character == 36
-
-private def identifierContinue (character : UInt8) : Bool :=
-  identifierStart character || asciiBetween 48 57 character
-
-/-- The deliberately narrow generated-binding profile: ECMAScript identifier
-characters accepted by the compiler and no reserved word. -/
-def targetIdentifier (name : String) : Bool :=
-  match name.toUTF8.toList with
-  | [] => false
-  | first :: rest =>
-      identifierStart first && rest.all identifierContinue &&
-        !(reservedIdentifiers.contains name)
+/-- The generated-binding profile, owned by the `typescript` package. -/
+abbrev targetIdentifier (name : String) : Bool := TypeScript.targetIdentifier name
 
 /-- A document can enter the convenience generator when its existing field
 admission holds and every object expression produced from it has unique keys.

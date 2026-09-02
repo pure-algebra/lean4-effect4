@@ -5,17 +5,17 @@ Breaker-owned red battery. The implementation phase must not edit this file.
 It is red until the first-order Flow admission declarations exist.
 -/
 
-import Effect4.Flow.Admission
-import Effect4.Flow.Block
-import Effect4.Flow.Checked
-import Effect4.Flow.Raw
+import Effects.Flow.Admission
+import Effects.Flow.Block
+import Effects.Flow.Checked
+import Effects.Flow.Raw
 
 namespace Effect4
 end Effect4
 
 namespace Effect4Test.Flow.AdmissionContract
 
-open Effect4
+open Effects
 
 universe uTy uOp
 
