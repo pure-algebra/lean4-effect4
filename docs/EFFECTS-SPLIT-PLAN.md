@@ -364,6 +364,33 @@ a consumer and may never open.
 - Nothing from Effect4's Flow, Schema, Data, Semantics, Runtime, or Target
   moves in this plan (EP-9).
 
+## 7. Family layout (ruled 2026-09-02, after S4)
+
+The operator ruled the shape of the whole Lean family once the split showed
+the dependency graph. The governing fact is Reservoir's inclusion rule: a
+repository is indexed once, as the package whose `lake-manifest.json` sits
+at its top level. Anything that should be listed on its own therefore gets
+its own repository; a repository may hold several Lake libraries under one
+listing, but not several listed packages.
+
+| Repository | Listed as | Contents | Depends on |
+| --- | --- | --- | --- |
+| `lean4-effects` | `effects` | the umbrella: `Effects.Algebra` now, further general effect libraries as more `lean_lib`s in the same package | nothing |
+| `lean4-effect4` | `effect4` | the Effect TypeScript reification | `effects` by exact git rev |
+| `lean4-whatwg` | `whatwg` | one package, one library per standard (`WHATWG.Infra`, `WHATWG.Streams`, later `WHATWG.URL`), versioned together; grows from `lean4-WHATWG-streams` | `effects`, `hash` by exact git rev |
+| `lean4-hash` | `hash` | proved hash functions; still only on the PC, work ongoing | nothing |
+| `lean4-nlp` | `nlp` | as today | nothing |
+| `downstream` | not listed | local copies of the five with requires rewritten to sibling paths, a `repos.toml` (url, rev, critical, build options), one `lean-toolchain`, CI over every copy; the shape of `leanprover/downstream-lean4` without its nightly and bot machinery | the five |
+
+Consequences: the S4 edge (Effect4 requiring `effects` by rev) is the
+intended edge, not a stopgap; S5 becomes the first `whatwg` acceptance probe;
+cross-package changes are tested in `downstream` and released as per-repo
+tags. All repositories move under the operator's organization (display name
+"The Fold Lab"; slug still `pure-logic-industrial` at the time of ruling)
+and carry the MIT license (EP-7 revised). Reservoir also requires at least
+two stars per repository and an OSI license it can detect; `lean4-effect4`'s
+default branch is `main` from 2026-09-02 so Reservoir builds the cutover.
+
 ## 6. Verification ledger
 
 Filled in as slices close.
