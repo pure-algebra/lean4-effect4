@@ -17,6 +17,9 @@ export class Cell extends Context.Service<Cell, {
   readonly put: (n: number) => Effect.Effect<void>
 }>()("Cell") {}
 
+/** Operation rows of `Cell`, for the trace harness. */
+export const CellRows = { "get": { params: 0 }, "put": { params: 1 } }
+
 /** Lowered from `incr` over `Cell`. */
 export const incr = (n: number) =>
   Effect.gen(function* () {

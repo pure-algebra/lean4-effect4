@@ -48,6 +48,10 @@ structure OpRow where
   answer : String
   tsAnswer : String
   cues : List String := []
+  /-- A pure atom: lowered as a plain call, excluded from traces by mask. -/
+  pure : Bool := false
+  /-- The aborting error reading: Lean and TypeScript spellings of `E`. -/
+  error : Option (String × String) := none
   deriving Repr, BEq, Inhabited
 
 /-- One family as data. The Lean name is the Effect service class name. -/
@@ -88,6 +92,15 @@ def classDecl (rows : ServiceRow) : Decl :=
       name := rows.name
       heritage := some (.call (.call (.generic (.ident "Context.Service")
         [rows.name, rows.shapeType]) []) [.str rows.name]) }
+
+/-- `export const XRows = { "get": { params: 0 }, "put": { params: 1 } }`: the
+operation rows as data, read by the trace harness for arities. -/
+def rowsDecl (rows : ServiceRow) : Decl :=
+  .const
+    { doc := ["Operation rows of `" ++ rows.name ++ "`, for the trace harness."]
+      name := rows.name ++ "Rows"
+      value := .objectQuoted (rows.ops.map fun row =>
+        (row.name, .object [("params", .int row.params.length)])) }
 
 /-- What an LLM is told, rendered from the rows it will be checked against. -/
 def sheet (rows : ServiceRow) : String :=
@@ -163,13 +176,62 @@ end
 
 instance : Repr PureTerm := ⟨fun term _ => Std.Format.text term.render⟩
 
+/-! ## Lowering rules
+
+One definition per rule, each tagged `lowering: rule.<name>` in its docstring.
+`docs/LOWERING-COVERAGE.md` owns the vocabulary; the ledger joins evidence to
+these tags, so a rule is exactly the code below its tag. -/
+
+namespace Lowering
+
+/-- Acquire the service once at the top of the generator:
+`const cell = yield* Cell`. lowering: rule.service-acquire -/
+def serviceAcquire (rows : ServiceRow) : Stmt :=
+  .constYield rows.receiver (.ident rows.name)
+
+/-- A pure atom applied to lowered arguments: `succ(x)`.
+lowering: rule.atom-call -/
+def atomCall (atom : String) (args : List Expr) : Expr :=
+  .call (.ident atom) args
+
+/-- A nullary operation is an Effect value, `cell.get`, not a call.
+lowering: rule.nullary-value -/
+def nullaryValue (recv op : String) : Expr :=
+  .ident (recv ++ "." ++ op)
+
+/-- An operation with arguments is a method call, `cell.put(n)`.
+lowering: rule.perform-call -/
+def performCall (recv op : String) (args : List Expr) : Expr :=
+  .call (.ident (recv ++ "." ++ op)) args
+
+/-- Bind an operation's answer: `const x = yield* cell.get`.
+lowering: rule.perform-bind -/
+def performBind (bind : String) (call : Expr) : Stmt :=
+  .constYield bind call
+
+/-- Discard an operation's answer: `yield* cell.put(n)`.
+lowering: rule.perform-discard -/
+def performDiscard (call : Expr) : Stmt :=
+  .yieldDiscard call
+
+/-- Return the program's value: `return y`. lowering: rule.ret -/
+def ret (value : Expr) : Stmt :=
+  .ret value
+
+end Lowering
+
 namespace PureTerm
+
+/-- Whether a pure term applies an atom anywhere. -/
+def hasApp : PureTerm → Bool
+  | .app .. => true
+  | _ => false
 
 def lower : PureTerm → Expr
   | .var name => .ident name
   | .nat value => .int value
   | .str value => .str value
-  | .app atom args => .call (.ident atom) (lowerAll args)
+  | .app atom args => Lowering.atomCall atom (lowerAll args)
 where
   lowerAll : List PureTerm → List Expr
     | [] => []
@@ -200,23 +262,40 @@ with a leading underscore discards its answer. -/
 def lower (rows : ServiceRow) (script : Script) : Option ProgDecl := do
   guard (script.family == rows.name)
   let recv := rows.receiver
-  let mut stmts : List Stmt := [.constYield recv (.ident rows.name)]
+  let mut stmts : List Stmt := [Lowering.serviceAcquire rows]
   for step in script.steps do
     match step with
     | .perform bind op args =>
         let row ← rows.row? op
         guard (row.params.length == args.length)
         let call : Expr :=
-          if row.params.isEmpty then .ident (recv ++ "." ++ op)
-          else .call (.ident (recv ++ "." ++ op)) (args.map PureTerm.lower)
-        stmts := stmts ++ [if bind.startsWith "_" then .yieldDiscard call else .constYield bind call]
+          if row.params.isEmpty then Lowering.nullaryValue recv op
+          else Lowering.performCall recv op (args.map PureTerm.lower)
+        stmts := stmts ++
+          [if bind.startsWith "_" then Lowering.performDiscard call else Lowering.performBind bind call]
     | .ret value =>
-        stmts := stmts ++ [.ret value.lower]
+        stmts := stmts ++ [Lowering.ret value.lower]
   pure { doc := ["Lowered from `" ++ script.name ++ "` over `" ++ script.family ++ "`."]
          name := script.name
          paramName := script.param.1
          paramType := script.param.2
          stmts }
+
+/-- The lowering rule ids a script exercises, in first-use order. The ledger
+(`docs/LOWERING-COVERAGE.md`) joins goldens to rules through this list. -/
+def rules (rows : ServiceRow) (script : Script) : List String :=
+  let step (acc : List String) (id : String) : List String :=
+    if acc.contains id then acc else acc ++ [id]
+  let atoms (acc : List String) (term : PureTerm) : List String :=
+    if term.hasApp then step acc "atom-call" else acc
+  script.steps.foldl (init := ["service-acquire"]) fun acc s =>
+    match s with
+    | .perform bind op args =>
+        let nullary := (rows.row? op).map (·.params.isEmpty) |>.getD false
+        let acc := step acc (if nullary then "nullary-value" else "perform-call")
+        let acc := step acc (if bind.startsWith "_" then "perform-discard" else "perform-bind")
+        args.foldl atoms acc
+    | .ret value => atoms (step acc "ret") value
 
 end Script
 
@@ -229,7 +308,7 @@ def module (rows : ServiceRow) (programs : List ProgDecl)
   { header := ["Generated by Effect4 (Effect v4 profile).", ""] ++ hostPin.headerLines ++
       ["", "Do not edit."]
     imports := .named ["Context", "Effect"] "effect" :: atoms
-    decls := rows.classDecl :: programs.map Decl.prog }
+    decls := rows.classDecl :: rows.rowsDecl :: programs.map Decl.prog }
 
 /-- Lower every script; `none` if any script is refused. `atoms` imports the
 named pure atoms the scripts call. -/

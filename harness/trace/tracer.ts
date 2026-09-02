@@ -1,44 +1,215 @@
-import { Context, Effect, Layer, Ref, Scheduler } from "effect"
-import { Cell, incr } from "./fixture.ts"
+/**
+ * The host emitter of the shared trace alphabet (`Effects/Trace.lean`).
+ *
+ * Service-level events come from `traceService`, which wraps every method of a
+ * service implementation; decisions come from `decisionsFromTape`; the outcome
+ * and frontier come from `runTraced`. The frame-level stream (`frames`) is a
+ * second channel recorded through `Tracer.context`; it is never compared.
+ *
+ * Wire form matches `Effect4/Target/TypeScript/Trace.lean` byte for byte:
+ * unit `[]`, integers, booleans, JSON strings, pairs `[a, b]`, `{"none":true}`,
+ * `{"some":v}`; outcomes `{"success":v}` / `{"failure":e}` / `{"interrupted":true}`.
+ */
+import { Context, Effect, Scheduler, Tracer } from "effect"
 
-// 1. Every service call is an observable event: wrap the implementation.
-type Event = { kind: "op"; op: string; args: unknown[]; stack: string[] } |
-             { kind: "answer"; op: string; value: unknown } |
-             { kind: "schedule"; priority: number } |
-             { kind: "finalizer"; exit: string }
-const trace: Event[] = []
+export type Wire = string
 
-// 2. The frame stack is a plain array on the fiber; `withFiber` hands us the fiber.
-const frames = (fiber: any): string[] => fiber._stack.map((p: any) => p["~effect/Effect/identifier"] ?? Object.getPrototypeOf(p)?._tag ?? "?")
+export type Event =
+  | { kind: "op"; name: string; request: Wire }
+  | { kind: "answer"; name: string; value: Wire }
+  | { kind: "failed"; name: string; error: Wire }
+  | { kind: "decide"; site: number; branch: boolean }
+  | { kind: "enter"; region: number }
+  | { kind: "leave"; region: number; outcome: Wire }
+  | { kind: "finalizer"; region: number; outcome: Wire }
+  | { kind: "done"; outcome: Wire }
+  | { kind: "frontier" }
+  | { kind: "phase"; phase: "build" | "run" | "teardown" }
 
-const traced = <A, E, R>(op: string, args: unknown[], eff: Effect.Effect<A, E, R>) =>
-  Effect.withFiber((fiber) => {
-    trace.push({ kind: "op", op, args, stack: frames(fiber) })
-    return eff.pipe(Effect.tap((value) => { trace.push({ kind: "answer", op, value }); return Effect.void }))
+export type Rows = Record<string, { params: number }>
+
+export class TracerDefect extends Error {}
+
+/** Encode one host value in the wire form of `Effects.Trace.Val`. */
+export const wire = (value: unknown): Wire => {
+  if (value === undefined || value === null) return "[]"
+  if (typeof value === "number") {
+    if (!Number.isInteger(value)) throw new TracerDefect(`non-integer number ${value}`)
+    return String(value)
+  }
+  if (typeof value === "boolean") return value ? "true" : "false"
+  if (typeof value === "string") return JSON.stringify(value)
+  if (Array.isArray(value)) {
+    // A list is right-nested pairs closed by unit.
+    return value.reduceRight<Wire>((acc, item) => `[${wire(item)}, ${acc}]`, "[]")
+  }
+  if (typeof value === "object") {
+    const tag = (value as { _tag?: unknown })._tag
+    if (tag === "Some") return `{"some":${wire((value as { value: unknown }).value)}}`
+    if (tag === "None") return `{"none":true}`
+    if (tag === "Right") return `[true, ${wire((value as { right: unknown }).right)}]`
+    if (tag === "Left") return `[false, ${wire((value as { left: unknown }).left)}]`
+  }
+  throw new TracerDefect(`no wire form for ${JSON.stringify(value)}`)
+}
+
+/** Arguments encode as the Lean parameter product: unit, the value, or a
+ * right-nested pair (not closed by unit). */
+export const wireArgs = (args: ReadonlyArray<unknown>): Wire => {
+  if (args.length === 0) return "[]"
+  if (args.length === 1) return wire(args[0])
+  return args.slice(0, -1).reduceRight<Wire>((acc, item) => `[${wire(item)}, ${acc}]`, wire(args[args.length - 1]))
+}
+
+export const outcomeWire = (exit: { _tag: string; value?: unknown; cause?: unknown }): Wire => {
+  if (exit._tag === "Success") return `{"success":${wire(exit.value)}}`
+  const cause = exit.cause as { reasons?: ReadonlyArray<{ _tag: string; error?: unknown }> } | undefined
+  const reasons = cause?.reasons ?? []
+  if (reasons.some((r) => r._tag === "Interrupt") && !reasons.some((r) => r._tag === "Fail")) return `{"interrupted":true}`
+  const fail = reasons.find((r) => r._tag === "Fail")
+  return `{"failure":${wire(fail?.error)}}`
+}
+
+/** Wrap every method named in `rows` so its request and answer are recorded.
+ * A nullary operation is an Effect value; others are functions. */
+export const traceService = <S extends object>(rows: Rows, impl: S, sink: Event[]): S => {
+  const wrapped: Record<string, unknown> = {}
+  for (const [name, row] of Object.entries(rows)) {
+    const method = (impl as Record<string, unknown>)[name]
+    const around = (args: ReadonlyArray<unknown>, effect: Effect.Effect<unknown, unknown, unknown>) =>
+      Effect.suspend(() => {
+        sink.push({ kind: "op", name, request: wireArgs(args) })
+        return effect.pipe(
+          Effect.tap((value) => Effect.sync(() => { sink.push({ kind: "answer", name, value: wire(value) }) })),
+          Effect.tapError((error) => Effect.sync(() => { sink.push({ kind: "failed", name, error: wire(error) }) }))
+        )
+      })
+    wrapped[name] = row.params === 0
+      ? around([], method as Effect.Effect<unknown, unknown, unknown>)
+      : (...args: unknown[]) => around(args, (method as (...a: unknown[]) => Effect.Effect<unknown, unknown, unknown>)(...args))
+  }
+  return wrapped as S
+}
+
+/** The decisions family: every `choose` site answered from a tape. */
+export class Decisions extends Context.Service<Decisions, {
+  readonly choose: (site: number) => Effect.Effect<boolean>
+}>()("Decisions") {}
+
+export class TapeExhausted extends Error { readonly _tag = "TAPE_EXHAUSTED" }
+export class TapeSiteMismatch extends Error { readonly _tag = "TAPE_SITE_MISMATCH" }
+
+export const decisionsFromTape = (tape: ReadonlyArray<readonly [number, boolean]>, sink: Event[]) => {
+  let cursor = 0
+  const choose = (site: number) => Effect.suspend(() => {
+    const entry = tape[cursor]
+    if (entry === undefined) return Effect.die(new TapeExhausted(`site ${site} at position ${cursor}`))
+    if (entry[0] !== site) return Effect.die(new TapeSiteMismatch(`wanted ${site}, tape has ${entry[0]} at ${cursor}`))
+    cursor += 1
+    sink.push({ kind: "decide", site, branch: entry[1] })
+    return Effect.succeed(entry[1])
+  })
+  return { choose, consumed: () => cursor }
+}
+
+export interface FrameSnapshot { op: string; depth: number }
+
+export interface RunOptions {
+  readonly budget: number
+  readonly maxOpsBeforeYield: number
+}
+
+export interface RunReport {
+  readonly events: Event[]
+  readonly frames: FrameSnapshot[]
+  readonly exitTag: string
+  readonly primitives: number
+  readonly yields: number
+  readonly scheduled: number[]
+  readonly tracerDefect: string | null
+}
+
+/** Run one program under the tracer, the tape scheduler and the op budget.
+ * The caller pushes `phase` sentinels into `sink` around the compared window. */
+export const runTraced = async <A, E>(
+  program: Effect.Effect<A, E, never>,
+  sink: Event[],
+  options: RunOptions
+): Promise<RunReport> => {
+  const frames: FrameSnapshot[] = []
+  const scheduled: number[] = []
+  let primitives = 0
+  let yields = 0
+  let tracerDefect: string | null = null
+
+  class TapeScheduler extends Scheduler.MixedScheduler {
+    override scheduleTask(task: () => void, priority: number): void {
+      scheduled.push(priority)
+      super.scheduleTask(task, priority)
+    }
+    override shouldYield(fiber: any): boolean {
+      const decision = super.shouldYield(fiber)
+      if (decision) yields += 1
+      return decision
+    }
+  }
+
+  const traced = Effect.gen(function* () {
+    const base = yield* Tracer.Tracer
+    const tracer = {
+      ...base,
+      context: (primitive: any, fiber: any) => {
+        try {
+          primitives += 1
+          frames.push({ op: primitive["~effect/Effect/identifier"] ?? "?", depth: fiber._stack.length })
+          if (primitives > options.budget) {
+            sink.push({ kind: "frontier" })
+            fiber.interruptUnsafe()
+          }
+        } catch (error) {
+          tracerDefect = String(error)
+        }
+        return primitive["~effect/Effect/evaluate"](fiber)
+      }
+    }
+    return yield* program.pipe(
+      Effect.provideService(Tracer.Tracer, tracer),
+      Effect.provideService(Scheduler.MaxOpsBeforeYield, options.maxOpsBeforeYield)
+    )
   })
 
-// 3. Handler with a Ref, every method routed through the tracer.
-const CellLive = (initial: number): Layer.Layer<Cell> =>
-  Layer.effect(Cell, Effect.gen(function* () {
-    const ref = yield* Ref.make(initial)
-    return {
-      get: traced("get", [], Ref.get(ref)),
-      put: (n: number) => traced("put", [n], Ref.set(ref, n))
-    }
-  }))
+  const fiber = Effect.runFork(traced, { scheduler: new TapeScheduler() })
+  const exit: any = await new Promise((resolve) => (fiber as any).addObserver(resolve))
+  const budgetHit = sink.some((e) => e.kind === "frontier")
+  if (!budgetHit) sink.push({ kind: "done", outcome: outcomeWire(exit) })
+  return { events: sink, frames, exitTag: exit._tag, primitives, yields, scheduled, tracerDefect }
+}
 
-// 4. The scheduler is pluggable: every scheduled task is a visible, controllable decision.
-class TapeScheduler extends Scheduler.MixedScheduler {
-  override scheduleTask(task: () => void, priority: number): void {
-    trace.push({ kind: "schedule", priority })
-    super.scheduleTask(task, priority)
+/** One event as the tab-separated wire row (identical to the Lean renderer). */
+export const row = (event: Event): string | null => {
+  switch (event.kind) {
+    case "op": return `op\t${event.name}\t${event.request}`
+    case "answer": return `answer\t${event.name}\t${event.value}`
+    case "failed": return `failed\t${event.name}\t${event.error}`
+    case "decide": return `decide\t${event.site}\t${event.branch ? "true" : "false"}`
+    case "enter": return `enter\t${event.region}`
+    case "leave": return `leave\t${event.region}\t${event.outcome}`
+    case "finalizer": return `finalizer\t${event.region}\t${event.outcome}`
+    case "done": return `done\t${event.outcome}`
+    case "frontier": return "frontier"
+    case "phase": return null
   }
 }
 
-const program = incr(0).pipe(
-  Effect.provide(CellLive(41)),
-  Effect.onExit((exit) => Effect.sync(() => { trace.push({ kind: "finalizer", exit: exit._tag }) })))
-
-const fiber = Effect.runFork(program, { scheduler: new TapeScheduler() })
-const exit = await new Promise((resolve) => (fiber as any).addObserver(resolve))
-console.log(JSON.stringify({ exit, trace }, null, 1))
+/** The rows of the compared window: events between the `run` phase sentinel and
+ * the next sentinel (or the end). */
+export const windowRows = (events: ReadonlyArray<Event>): string[] => {
+  const start = events.findIndex((e) => e.kind === "phase" && e.phase === "run")
+  const rows: string[] = []
+  for (const event of events.slice(start + 1)) {
+    if (event.kind === "phase") break
+    const r = row(event)
+    if (r !== null) rows.push(r)
+  }
+  return rows
+}

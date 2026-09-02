@@ -74,6 +74,7 @@ import Effect4.Foreign.Registry
 import Effect4.Foreign.Replay
 import Effect4.Target.TypeScript.Type
 import Effect4.Target.TypeScript.EffectV4
+import Effect4.Target.TypeScript.Trace
 import Effect4.Target.TypeScript.Lower
 import Effect4.Target.TypeScript.Schema
 import Effect4.Target.TypeScript.EffectfulField

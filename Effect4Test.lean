@@ -47,6 +47,7 @@ import Effect4Test.Target.TypeScript.EffectfulFieldContract
 import Effect4Test.Target.TypeScript.EffectfulFieldAxiomReport
 import Effect4Test.Counterexamples.Target.EffectfulField
 import Effect4Test.Semantics.CauseExitContract
+import Effect4Test.Semantics.ObservationContract
 import Effect4Test.Semantics.CauseExitAxiomReport
 import Effect4Test.Counterexamples.Semantics.CauseExit
 import Effect4Test.Runtime.ScopeContract

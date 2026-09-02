@@ -64,7 +64,8 @@ private def targetImplementationModules : List Name :=
   -- strings. Neither carries a semantic law; the trace and lowering laws live
   -- in `String`-free modules.
   [ `Effect4.Meta.Derive
-  , `Effect4.Target.TypeScript.EffectV4 ]
+  , `Effect4.Target.TypeScript.EffectV4
+  , `Effect4.Target.TypeScript.Trace ]
 
 private def choiceImplementationModules : List Name :=
   auditImplementationModules ++ targetImplementationModules

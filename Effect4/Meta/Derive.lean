@@ -1,5 +1,7 @@
 import Lean
 import Effects.Family
+import Effects.Trace
+import Effect4.Semantics.Observation
 import Effect4.Target.TypeScript.EffectV4
 
 /-!
@@ -18,7 +20,9 @@ effect_signature Cell where
 emits `Cell.Name` (inductive), `Cell.Param` and `Cell.Answer` (abbrevs by
 match), `Cell : Effects.Family`, `Cell.Sig : Effects.Signature`, one smart
 constructor per operation (`Cell.put : Nat → Effects.Program Cell.Sig Unit`),
-and `Cell.rows : ServiceRow`. A handler is a `Cell.Service M`.
+`Cell.rows : ServiceRow`, and the trace face `Cell.Name.spelling`,
+`Cell.encodeParam`, `Cell.encodeAnswer`, `Cell.traced`. A handler is a
+`Cell.Service M`; `Cell.traced handler` logs every operation.
 
 ```lean
 effect_program incr (n : Nat) over Cell : Nat :=
@@ -117,6 +121,9 @@ elab_rules : command
     let mut answerAlts : Array (TSyntax ``Lean.Parser.Term.matchAlt) := #[]
     let mut rowTerms : Array Term := #[]
     let mut smart : Array (TSyntax `command) := #[]
+    let mut spellingAlts : Array (TSyntax ``Lean.Parser.Term.matchAlt) := #[]
+    let mut encodeParamAlts : Array (TSyntax ``Lean.Parser.Term.matchAlt) := #[]
+    let mut encodeAnswerAlts : Array (TSyntax ``Lean.Parser.Term.matchAlt) := #[]
     let mut index := 0
     for op in ops do
       match op with
@@ -143,6 +150,10 @@ elab_rules : command
           paramAlts := paramAlts.push (← `(Lean.Parser.Term.matchAltExpr| | $ctorName => $(← productOf types)))
           answerAlts := answerAlts.push (← `(Lean.Parser.Term.matchAltExpr| | $ctorName => $answer))
           let packed ← tupleOf args
+          let paramTy ← productOf types
+          spellingAlts := spellingAlts.push (← `(Lean.Parser.Term.matchAltExpr| | $ctorName => $(strLit opName.getId.toString)))
+          encodeParamAlts := encodeParamAlts.push (← `(Lean.Parser.Term.matchAltExpr| | $ctorName => fun (p : $paramTy) => Effects.Trace.ToVal.toVal p))
+          encodeAnswerAlts := encodeAnswerAlts.push (← `(Lean.Parser.Term.matchAltExpr| | $ctorName => fun (a : $answer) => Effects.Trace.ToVal.toVal a))
           smart := smart.push (← `(def $smartName:ident $binders:bracketedBinder* : Effects.Program $sigName $answer :=
             Effects.Family.perform $name $ctorName $packed))
           let cueTerms : Array Term := cues.getElems.map fun c => (⟨c.raw⟩ : Term)
@@ -157,6 +168,17 @@ elab_rules : command
     for command in smart do elabCommand command
     let rowsName := mkIdent (famName ++ `rows)
     elabCommand (← `(def $rowsName : Effect4.Target.EffectV4.ServiceRow := { name := $(strLit famName.toString), ops := $(← listLit rowTerms) }))
+    -- The trace face: spellings, wire encoders, and the traced service.
+    let spellingName := mkIdent (famName ++ `Name ++ `spelling)
+    let encodeParamName := mkIdent (famName ++ `encodeParam)
+    let encodeAnswerName := mkIdent (famName ++ `encodeAnswer)
+    let tracedName := mkIdent (famName ++ `traced)
+    elabCommand (← `(def $spellingName : $nameTy → String := fun name => match name with $spellingAlts:matchAlt*))
+    elabCommand (← `(def $encodeParamName : (name : $nameTy) → $paramFn name → Effects.Trace.Val := fun name => match name with $encodeParamAlts:matchAlt*))
+    elabCommand (← `(def $encodeAnswerName : (name : $nameTy) → $answerFn name → Effects.Trace.Val := fun name => match name with $encodeAnswerAlts:matchAlt*))
+    elabCommand (← `(def $tracedName {M : Type → Type} [Monad M] (service : Effects.Family.Service $name M) :
+        Effects.Family.Service $name (StateT Effect4.Trace.Log M) :=
+      Effects.Family.Service.traced (δ := Nat) (ρ := Nat) $spellingName $encodeParamName $encodeAnswerName service))
 
 /-! ## `effect_program` -/
 
