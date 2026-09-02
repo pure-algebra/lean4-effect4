@@ -1,7 +1,7 @@
 {"version": "1.2.0",
  "packagesDir": ".lake/packages",
  "packages":
- [{"url": "https://github.com/mepuka/lean4-effects",
+ [{"url": "https://github.com/pure-algebra/lean4-effects",
    "type": "git",
    "subDir": null,
    "scope": "",

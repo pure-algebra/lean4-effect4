@@ -14,5 +14,5 @@ globs = ["Effect4Test.*"]
 # docs/EFFECTS-SPLIT-PLAN.md records the split and its parity receipt.
 [[require]]
 name = "effects"
-git = "https://github.com/mepuka/lean4-effects"
+git = "https://github.com/pure-algebra/lean4-effects"
 rev = "5611c3a3cd4cd4b830c76d6c25c7dba6034c973a"

@@ -18,7 +18,7 @@ them at slice S0 before any step runs.
 
 | Object | Name | Rationale |
 | --- | --- | --- |
-| New repository | `mepuka/lean4-effects` | sibling of `lean4-effect4`; ruling EP-1 |
+| New repository | `pure-algebra/lean4-effects` | sibling of `lean4-effect4`; ruling EP-1 |
 | Lake package | `effects` | lower-case package id, matching `effect4` |
 | Production library and declaration namespace | `Effects` | the generic algebra; not wedded to Effect TypeScript |
 | Test library | `EffectsTest` | mirrors `Effect4Test` |
@@ -97,7 +97,7 @@ executes.
 
 | Id | Question | Ruling | Cost of the alternative |
 | --- | --- | --- | --- |
-| EP-1 | Repository, package, library, namespace | **RULED (default):** `mepuka/lean4-effects`, `effects`, `Effects`, `Effects` | none material; a different repo name only changes the `[[require]]` |
+| EP-1 | Repository, package, library, namespace | **RULED (default):** `pure-algebra/lean4-effects`, `effects`, `Effects`, `Effects` | none material; a different repo name only changes the `[[require]]` |
 | EP-2 | Module layout | **RULED: option 1.** Module paths under `Effects/Algebra/`; declaration namespace `Effects` | flat paths would have to move once the umbrella gains a sibling area; namespacing declarations under `Effects.Algebra` lengthens every theorem name for nothing |
 | EP-3 | Compatibility shim in Effect4 | **RULED (default):** **none**; every consumer is in-tree and is rewritten in the S4 commit | an `export`-based alias shim needs one alias per public declaration (about 80), its own parity test, and a removal release; it buys nothing while Foldlab's P12 adapter is unwritten |
 | EP-4 | History | **RULED (default):** `git filter-repo` with `--path-rename`, so `git log --follow` and blame survive | fresh copy with a provenance pin is faster and loses blame; `git-filter-repo` is not installed on this Mac (`brew install git-filter-repo`) |
@@ -279,7 +279,7 @@ one commit so the tree is never half-cut.
 Work:
 
 1. `lakefile.toml`: `[[require]] name = "effects"`, `git =
-   "https://github.com/mepuka/lean4-effects"`, `rev = "<tag commit>"`.
+   "https://github.com/pure-algebra/lean4-effects"`, `rev = "<tag commit>"`.
    `lake update effects` writes the single manifest entry.
 2. Delete the nine modules and the three test modules. Remove their import
    lines from both roots.
@@ -385,8 +385,8 @@ listing, but not several listed packages.
 Consequences: the S4 edge (Effect4 requiring `effects` by rev) is the
 intended edge, not a stopgap; S5 becomes the first `whatwg` acceptance probe;
 cross-package changes are tested in `downstream` and released as per-repo
-tags. All repositories move under the operator's organization (display name
-"The Fold Lab"; slug still `pure-logic-industrial` at the time of ruling)
+tags. All repositories moved 2026-09-02 under the operator's organization
+`pure-algebra` (display name "Pure Algebra"; it was `pure-logic-industrial`, display "The Fold Lab", when this was ruled)
 and carry the MIT license (EP-7 revised). Reservoir also requires at least
 two stars per repository and an OSI license it can detect; `lean4-effect4`'s
 default branch is `main` from 2026-09-02 so Reservoir builds the cutover.
