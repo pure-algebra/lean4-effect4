@@ -14,7 +14,9 @@ exclude every `AGENTS.md`; they may neither create nor replace instructions.
 - graph-bearing owner obligation ledgers, leaf receipt indexes, and
   per-declaration assurance snapshots;
 - theorem and axiom receipt indexes;
-- counterexample coverage indexes; and
+- counterexample coverage indexes;
+- host runtime mechanism censuses keyed by observed behaviour, anchored to
+  vendored pinned source spans by digest; and
 - target export, overload, profile, and refusal coverage.
 
 Each projection records its canonical inputs, generator identity, format

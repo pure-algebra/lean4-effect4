@@ -52,6 +52,14 @@ receipts. New axioms or opaque trust boundaries require an explicit authored
 admission and an axiom receipt. Compilation alone closes no semantic edge or
 leaf theorem receipt.
 
+A theorem written to witness an Effect runtime behaviour names the census row
+id from `generated/effect-runtime-census.tsv` in its docstring and is joined
+test-side in `Effect4Test/Audit/RuntimeCoverage.lean`; the theorem alone moves
+no coverage number. A public declaration added under `Effect4/Concurrency/`
+also moves the frozen surface census in
+`Effect4Test/Concurrency/FiberAssurance.lean` and its generator counts, so
+plan both edits in one packet. `docs/RUNTIME-COVERAGE.md` owns the rules.
+
 The narrow test, default Lake build, axiom inspection, and relevant generated
 drift gate must run before a source handoff. Report open graph edges and leaf
 receipts without rounding them up to category completion.

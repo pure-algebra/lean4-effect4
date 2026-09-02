@@ -17,6 +17,7 @@ full, then open only the authority documents named for the current task.
 | `Effect4Test/` | Lean tests, attacks, examples, and proof receipts |
 | `harness/` | host conformance, TypeScript, runtime, and language-service checks |
 | `generated/` | deterministic projections only; never hand-edited |
+| `docs/RUNTIME-COVERAGE.md` | definition, vocabulary, and the one report format of Effect runtime coverage |
 
 If two files appear to own the same fact, stop and repair the ownership map.
 
@@ -91,6 +92,12 @@ Do not say “sound”, “equivalent”, “preserves”, “fully reified”, 
 without naming the exact judgment, observation, theorem or gate, assumptions,
 and remaining host boundary. A compiling finite probe is reported as a finite
 probe.
+
+Coverage of the Effect runtime is stated only in the block printed by
+`scripts/report-effect-runtime-coverage.sh`, pasted verbatim with its commit,
+after `scripts/check-effect-runtime-census.sh` passes. `docs/RUNTIME-COVERAGE.md`
+defines the rows, the green criterion, and how the number may move; the
+`runtime-coverage` skill is the procedure. No percentage is computed by hand.
 
 ## Generated facts and long-run continuity
 

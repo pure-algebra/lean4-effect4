@@ -33,6 +33,18 @@ test does not by itself force a proof graph: passive finite alphabets and value
 records remain on the leaf-receipt route unless they acquire a semantic or
 cutover-bearing claim.
 
+## Runtime coverage witnesses
+
+`Effect4Test/Audit/RuntimeCoverage.lean` is the numerator of the Effect
+runtime coverage metric: one frozen row per census behaviour, its disposition,
+coverage state, witnesses with axiom receipts, and every witness statement
+frozen by `#check (@name : proposition)` ascription. A witness is a `theorem`
+whose receipt stays inside `propext`/`Quot.sound`; a row is `green` only when
+every clause of its census summary is a named theorem. Add witnesses, update
+`snapshotWitnesses` in the same order, keep the totals true, and run
+`scripts/check-effect-runtime-census.sh`. `docs/RUNTIME-COVERAGE.md` owns the
+rules; the `runtime-coverage` skill is the checklist.
+
 Before handoff, run the narrow file directly and the default Lake build. Link
 the exact command and result to the affected proof-graph edge or leaf receipt;
 do not mark the whole type closed from one green test.

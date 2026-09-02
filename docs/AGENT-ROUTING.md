@@ -38,6 +38,7 @@ make those decisions inspectable and detect drift; they do not decide policy.
 | contracts and declared proof obligations | graph obligations and leaf-receipt ledger |
 | theorem names, axiom receipts, counterexample rows, and leaf receipts | per-declaration assurance snapshot |
 | target profile and export census inputs | surface-coverage snapshot |
+| vendored pinned Effect runtime source and authored row anchors | runtime mechanism census, joined to test-side witness rows (`docs/RUNTIME-COVERAGE.md`) |
 
 The projections live under `generated/`. Their generator, canonical inputs,
 and exact regeneration command must be recorded before the output becomes a
