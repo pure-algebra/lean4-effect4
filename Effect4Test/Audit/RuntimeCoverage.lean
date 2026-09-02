@@ -1,6 +1,7 @@
 import Lean
 import Lean.Util.CollectAxioms
 import Effect4.Concurrency.Scheduler
+import Effect4.Concurrency.Supervision
 import Effect4.Semantics.Cause
 import Effect4.Semantics.Exit
 import Effect4.Runtime.Scope
@@ -1097,6 +1098,418 @@ ascriptions of `Effect4Test/Runtime/ScopeContract.lean`. -/
       Effect4.Scope.acquireRelease run ambient key release (Effect4.Exit.success value) =
         (ambient, run release exit))
 
+
+/-! Supervision controller receipts. Source interpretation remains open in
+SUPERVISION-PG-RC112; every joined runtime row is partial. -/
+
+#check (@Effect4.Supervision.MaskMode.select_interruptible :
+  forall mask, Effect4.Supervision.MaskMode.select .interruptible mask = .unmasked)
+
+#check (@Effect4.Supervision.MaskMode.select_uninterruptible :
+  forall mask, Effect4.Supervision.MaskMode.select .uninterruptible mask = .masked)
+
+#check (@Effect4.Supervision.MaskMode.select_inherit :
+  forall mask, Effect4.Supervision.MaskMode.select .inherit mask = mask)
+
+#check (@Effect4.Supervision.MaskMode.cases_receipt :
+  forall mode : Effect4.Supervision.MaskMode, mode = .interruptible ∨ mode = .uninterruptible ∨ mode = .inherit)
+
+#check (@Effect4.Supervision.ObserverMode.cases_receipt :
+  forall mode : Effect4.Supervision.ObserverMode, mode = .awaitValue ∨ mode = .joinEffect)
+
+#check (@Effect4.Supervision.ScopeMode.cases_receipt :
+  forall mode : Effect4.Supervision.ScopeMode, mode = .forkIn ∨ mode = .fiberRunIn)
+
+#check (@Effect4.Supervision.Globals.install_eq :
+  forall g : Effect4.Supervision.Globals, Effect4.Supervision.Globals.install g = {g with middlewareInstalled := true})
+
+#check (@Effect4.Supervision.Globals.valid_iff :
+  forall g : Effect4.Supervision.Globals, Effect4.Supervision.Globals.Valid g ↔ g.allocated.Nodup)
+
+#check (@Effect4.Supervision.Globals.ownsChildren_iff :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (f : Effect4.Supervision.Fiber χ β ε δ ι α), Effect4.Supervision.Globals.OwnsChildren g f ↔ f.core.id ∈ g.allocated ∧ (∀ child, child ∈ f.children -> child ∈ g.allocated))
+
+#check (@Effect4.Supervision.Fiber.valid_iff :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall f : Effect4.Supervision.Fiber χ β ε δ ι α, Effect4.Supervision.Fiber.Valid f ↔ f.children.Nodup ∧ (f.subscriptions.map Effect4.Supervision.Subscription.key).Nodup ∧ (Effect4.FiberStatus.Active f.core.status -> f.core.terminal = none ∧ f.core.cleanup = .notStarted ∧ f.core.cleanupCount = 0) ∧ (f.core.status = .finalizing -> f.core.terminal.isSome = true ∧ f.core.cleanup = .pending ∧ f.core.cleanupCount = 0) ∧ (f.core.status = .done -> f.core.terminal.isSome = true ∧ f.core.cleanup = .done ∧ f.core.cleanupCount = 1))
+
+#check (@Effect4.Supervision.Fiber.valid?_iff :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall f : Effect4.Supervision.Fiber χ β ε δ ι α, Effect4.Supervision.Fiber.valid? f = true ↔ Effect4.Supervision.Fiber.Valid f)
+
+#check (@Effect4.Supervision.Fiber.toFiberState_eq :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall f : Effect4.Supervision.Fiber χ β ε δ ι α, Effect4.Supervision.Fiber.toFiberState f = f.core)
+
+#check (@Effect4.Supervision.Fiber.published_iff :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (f : Effect4.Supervision.Fiber χ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α), Effect4.Supervision.Fiber.published? f = some exit ↔ f.core.status = .done ∧ f.core.terminal = some exit)
+
+#check (@Effect4.Supervision.Fiber.published_eq :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall f : Effect4.Supervision.Fiber χ β ε δ ι α, Effect4.Supervision.Fiber.published? f = if f.core.status = .done then f.core.terminal else none)
+
+#check (@Effect4.Supervision.Fiber.addChild_eq :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (f : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId), Effect4.Supervision.Fiber.addChild f child = {f with children := if child ∈ f.children then f.children else f.children ++ [child]})
+
+#check (@Effect4.Supervision.Fiber.removeChild_eq :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (f : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId), Effect4.Supervision.Fiber.removeChild f child = {f with children := f.children.filter (fun id => decide (id ≠ child))})
+
+#check (@Effect4.Supervision.Fiber.addChild_nodup :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (f : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId), f.children.Nodup -> (Effect4.Supervision.Fiber.addChild f child).children.Nodup)
+
+#check (@Effect4.Supervision.Fiber.removeChild_membership :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (f : Effect4.Supervision.Fiber χ β ε δ ι α) (child other : Effect4.FiberId), other ∈ (Effect4.Supervision.Fiber.removeChild f child).children ↔ other ∈ f.children ∧ other ≠ child)
+
+#check (@Effect4.Supervision.observation_await :
+  forall {β : Type v} {ε δ ι α : Type u}, forall exit : Effect4.Exit β ε δ ι α, Effect4.Supervision.observation .awaitValue exit = .value exit)
+
+#check (@Effect4.Supervision.observation_join :
+  forall {β : Type v} {ε δ ι α : Type u}, forall exit : Effect4.Exit β ε δ ι α, Effect4.Supervision.observation .joinEffect exit = .effect exit)
+
+#check (@Effect4.Supervision.observation_value_ne_effect :
+  forall {β : Type v} {ε δ ι α : Type u}, forall exit : Effect4.Exit β ε δ ι α, (Effect4.Supervision.Observation.value exit : Effect4.Supervision.Observation β ε δ ι α) ≠ .effect exit)
+
+#check (@Effect4.Supervision.Fiber.observe_invalid :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (f : Effect4.Supervision.Fiber χ β ε δ ι α) (subscription : Effect4.Supervision.Subscription), Effect4.Supervision.Fiber.valid? f = false -> Effect4.Supervision.Fiber.observe f subscription = .error (.invalidFiber f.core.id))
+
+#check (@Effect4.Supervision.Fiber.observe_done :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (f : Effect4.Supervision.Fiber χ β ε δ ι α) (subscription : Effect4.Supervision.Subscription) (exit : Effect4.Exit β ε δ ι α), Effect4.Supervision.Fiber.Valid f -> Effect4.Supervision.Fiber.published? f = some exit -> Effect4.Supervision.Fiber.observe f subscription = .ok (f, Effect4.Supervision.observation subscription.mode exit))
+
+#check (@Effect4.Supervision.Fiber.observe_live :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (f : Effect4.Supervision.Fiber χ β ε δ ι α) (subscription : Effect4.Supervision.Subscription), Effect4.Supervision.Fiber.Valid f -> Effect4.Supervision.Fiber.published? f = none -> subscription.key ∉ f.subscriptions.map Effect4.Supervision.Subscription.key -> Effect4.Supervision.Fiber.observe f subscription = .ok ({f with subscriptions := f.subscriptions ++ [subscription]}, .waiting subscription.key))
+
+#check (@Effect4.Supervision.Fiber.observe_duplicate :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (f : Effect4.Supervision.Fiber χ β ε δ ι α) (subscription : Effect4.Supervision.Subscription), Effect4.Supervision.Fiber.Valid f -> Effect4.Supervision.Fiber.published? f = none -> subscription.key ∈ f.subscriptions.map Effect4.Supervision.Subscription.key -> Effect4.Supervision.Fiber.observe f subscription = .error (.duplicateSubscription subscription.key))
+
+#check (@Effect4.Supervision.Fiber.cancel_eq :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (f : Effect4.Supervision.Fiber χ β ε δ ι α) (key : Nat), Effect4.Supervision.Fiber.cancel f key = {f with subscriptions := f.subscriptions.filter (fun subscription => decide (subscription.key ≠ key))})
+
+#check (@Effect4.Supervision.Fiber.cancel_membership :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (f : Effect4.Supervision.Fiber χ β ε δ ι α) (key : Nat) (subscription : Effect4.Supervision.Subscription), subscription ∈ (Effect4.Supervision.Fiber.cancel f key).subscriptions ↔ subscription ∈ f.subscriptions ∧ subscription.key ≠ key)
+
+#check (@Effect4.Supervision.Fiber.publish_eq :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (f : Effect4.Supervision.Fiber χ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α), Effect4.Supervision.Fiber.publish f exit = ({f with core := {f.core with status := .done, terminal := some exit, interruptPending := false, cleanup := .done, cleanupCount := 1}, children := [], subscriptions := []}, f.subscriptions.map (fun subscription => (subscription.key, Effect4.Supervision.observation subscription.mode exit))))
+
+#check (@Effect4.Supervision.Fiber.publish_valid :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (f : Effect4.Supervision.Fiber χ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α), Effect4.Supervision.Fiber.Valid (Effect4.Supervision.Fiber.publish f exit).1)
+
+#check (@Effect4.Supervision.interruptCause_eq :
+  forall {ε δ ι α : Type u} (encode : Effect4.FiberId -> ι) (requester : Option Effect4.FiberId) (annotations : Effect4.ReasonAnnotations α), (Effect4.Supervision.interruptCause encode requester annotations : Effect4.Cause ε δ ι α) = Effect4.Cause.annotate (Effect4.Cause.interrupt (requester.map encode)) annotations false)
+
+#check (@Effect4.Supervision.Fiber.recordInterrupt_done :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, [DecidableEq ε] -> [DecidableEq δ] -> [DecidableEq ι] -> [DecidableEq α] -> forall (encode : Effect4.FiberId -> ι) (requester : Option Effect4.FiberId) (annotations : Effect4.ReasonAnnotations α) (f : Effect4.Supervision.Fiber χ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α), Effect4.Supervision.Fiber.published? f = some exit -> Effect4.Supervision.Fiber.recordInterrupt encode requester annotations f = f)
+
+#check (@Effect4.Supervision.Fiber.recordInterrupt_live :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, [DecidableEq ε] -> [DecidableEq δ] -> [DecidableEq ι] -> [DecidableEq α] -> forall (encode : Effect4.FiberId -> ι) (requester : Option Effect4.FiberId) (annotations : Effect4.ReasonAnnotations α) (f : Effect4.Supervision.Fiber χ β ε δ ι α), Effect4.Supervision.Fiber.published? f = none -> Effect4.Supervision.Fiber.recordInterrupt encode requester annotations f = {f with interrupted := some (match f.interrupted with | none => Effect4.Supervision.interruptCause encode requester annotations | some previous => Effect4.Cause.combine previous (Effect4.Supervision.interruptCause encode requester annotations))})
+
+#check (@Effect4.Supervision.Fiber.recordInterrupt_core :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, [DecidableEq ε] -> [DecidableEq δ] -> [DecidableEq ι] -> [DecidableEq α] -> forall (encode : Effect4.FiberId -> ι) (requester : Option Effect4.FiberId) (annotations : Effect4.ReasonAnnotations α) (f : Effect4.Supervision.Fiber χ β ε δ ι α), (Effect4.Supervision.Fiber.recordInterrupt encode requester annotations f).core = f.core)
+
+#check (@Effect4.Supervision.initialFiber_eq :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId) (mode : Effect4.Supervision.MaskMode), Effect4.Supervision.initialFiber parent child mode = { core := {id := child, status := .runnable, terminal := none, mask := Effect4.Supervision.MaskMode.select mode parent.core.mask, interruptPending := false, cleanup := .notStarted, cleanupCount := 0}, context := parent.context, children := [], subscriptions := [], interrupted := none })
+
+#check (@Effect4.Supervision.initialFiber_valid :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId) (mode : Effect4.Supervision.MaskMode), Effect4.Supervision.Fiber.Valid (Effect4.Supervision.initialFiber parent child mode))
+
+#check (@Effect4.Supervision.commitFork_eq :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent initial child : Effect4.Supervision.Fiber χ β ε δ ι α) (daemon : Bool) (events : List Effect4.Supervision.ForkEvent), Effect4.Supervision.commitFork g parent initial child daemon events = { globals := g, parent := if daemon = false ∧ Effect4.Supervision.Fiber.published? child = none then Effect4.Supervision.Fiber.addChild parent child.core.id else parent, initial := initial, child := child, events := events ++ (if daemon = false ∧ Effect4.Supervision.Fiber.published? child = none then [.registered parent.core.id child.core.id] else []), removeFromParent := if daemon = false ∧ Effect4.Supervision.Fiber.published? child = none then some parent.core.id else none })
+
+#check (@Effect4.Supervision.forkUnsafe_duplicate :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId) (options : Effect4.Supervision.ForkOptions) (start : Effect4.Supervision.StartObservation χ β ε δ ι α), child ∈ g.allocated -> Effect4.Supervision.forkUnsafe g parent child options start = .error (.duplicateFiber child))
+
+#check (@Effect4.Supervision.forkUnsafe_deferred :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId) (options : Effect4.Supervision.ForkOptions) , child ∉ g.allocated -> options.startImmediately = false -> Effect4.Supervision.forkUnsafe g parent child options .deferred = .ok (Effect4.Supervision.commitFork (Effect4.Supervision.Globals.allocate g child) parent (Effect4.Supervision.initialFiber parent child options.maskMode) (Effect4.Supervision.initialFiber parent child options.maskMode) options.daemon [.scheduled child 0]))
+
+#check (@Effect4.Supervision.forkUnsafe_wrong_deferred :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId) (options : Effect4.Supervision.ForkOptions) , child ∉ g.allocated -> options.startImmediately = true -> Effect4.Supervision.forkUnsafe g parent child options .deferred = .error .wrongStartMode)
+
+#check (@Effect4.Supervision.forkUnsafe_wrong_immediate :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId) (options : Effect4.Supervision.ForkOptions) (postGlobals : Effect4.Supervision.Globals) (postParent after : Effect4.Supervision.Fiber χ β ε δ ι α), child ∉ g.allocated -> options.startImmediately = false -> Effect4.Supervision.forkUnsafe g parent child options (.immediate postGlobals postParent after) = .error .wrongStartMode)
+
+#check (@Effect4.Supervision.forkUnsafe_wrong_identity :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId) (options : Effect4.Supervision.ForkOptions) (postGlobals : Effect4.Supervision.Globals) (postParent after : Effect4.Supervision.Fiber χ β ε δ ι α), child ∉ g.allocated -> options.startImmediately = true -> after.core.id ≠ child -> Effect4.Supervision.forkUnsafe g parent child options (.immediate postGlobals postParent after) = .error .wrongChildIdentity)
+
+#check (@Effect4.Supervision.forkUnsafe_wrong_parent :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId) (options : Effect4.Supervision.ForkOptions) (postGlobals : Effect4.Supervision.Globals) (postParent after : Effect4.Supervision.Fiber χ β ε δ ι α), child ∉ g.allocated -> options.startImmediately = true -> after.core.id = child -> postParent.core.id ≠ parent.core.id -> Effect4.Supervision.forkUnsafe g parent child options (.immediate postGlobals postParent after) = .error .wrongParentIdentity)
+
+#check (@Effect4.Supervision.forkUnsafe_invalid_child :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId) (options : Effect4.Supervision.ForkOptions) (postGlobals : Effect4.Supervision.Globals) (postParent after : Effect4.Supervision.Fiber χ β ε δ ι α), child ∉ g.allocated -> options.startImmediately = true -> after.core.id = child -> postParent.core.id = parent.core.id -> Effect4.Supervision.Fiber.valid? after = false -> Effect4.Supervision.forkUnsafe g parent child options (.immediate postGlobals postParent after) = .error (.invalidFiber child))
+
+#check (@Effect4.Supervision.forkUnsafe_invalid_parent :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId) (options : Effect4.Supervision.ForkOptions) (postGlobals : Effect4.Supervision.Globals) (postParent after : Effect4.Supervision.Fiber χ β ε δ ι α), child ∉ g.allocated -> options.startImmediately = true -> after.core.id = child -> postParent.core.id = parent.core.id -> Effect4.Supervision.Fiber.Valid after -> Effect4.Supervision.Fiber.valid? postParent = false -> Effect4.Supervision.forkUnsafe g parent child options (.immediate postGlobals postParent after) = .error (.invalidFiber parent.core.id))
+
+#check (@Effect4.Supervision.forkUnsafe_invalid_globals :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId) (options : Effect4.Supervision.ForkOptions) (postGlobals : Effect4.Supervision.Globals) (postParent after : Effect4.Supervision.Fiber χ β ε δ ι α), child ∉ g.allocated -> options.startImmediately = true -> after.core.id = child -> postParent.core.id = parent.core.id -> Effect4.Supervision.Fiber.Valid after -> Effect4.Supervision.Fiber.Valid postParent -> Effect4.Supervision.Globals.extends? (Effect4.Supervision.Globals.allocate g child) postGlobals = false -> Effect4.Supervision.forkUnsafe g parent child options (.immediate postGlobals postParent after) = .error .invalidStartGlobals)
+
+#check (@Effect4.Supervision.forkUnsafe_invalid_ownership :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId) (options : Effect4.Supervision.ForkOptions) (postGlobals : Effect4.Supervision.Globals) (postParent after : Effect4.Supervision.Fiber χ β ε δ ι α), child ∉ g.allocated -> options.startImmediately = true -> after.core.id = child -> postParent.core.id = parent.core.id -> Effect4.Supervision.Fiber.Valid after -> Effect4.Supervision.Fiber.Valid postParent -> Effect4.Supervision.Globals.Extends (Effect4.Supervision.Globals.allocate g child) postGlobals -> Effect4.Supervision.Globals.ownsChildren? postGlobals postParent = false -> Effect4.Supervision.forkUnsafe g parent child options (.immediate postGlobals postParent after) = .error .invalidParentOwnership)
+
+#check (@Effect4.Supervision.forkUnsafe_invalid_child_ownership :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId) (options : Effect4.Supervision.ForkOptions) (postGlobals : Effect4.Supervision.Globals) (postParent after : Effect4.Supervision.Fiber χ β ε δ ι α), child ∉ g.allocated -> options.startImmediately = true -> after.core.id = child -> postParent.core.id = parent.core.id -> Effect4.Supervision.Fiber.Valid after -> Effect4.Supervision.Fiber.Valid postParent -> Effect4.Supervision.Globals.Extends (Effect4.Supervision.Globals.allocate g child) postGlobals -> Effect4.Supervision.Globals.OwnsChildren postGlobals postParent -> Effect4.Supervision.Globals.ownsChildren? postGlobals after = false -> Effect4.Supervision.forkUnsafe g parent child options (.immediate postGlobals postParent after) = .error .invalidChildOwnership)
+
+#check (@Effect4.Supervision.forkUnsafe_immediate :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId) (options : Effect4.Supervision.ForkOptions) (postGlobals : Effect4.Supervision.Globals) (postParent after : Effect4.Supervision.Fiber χ β ε δ ι α), child ∉ g.allocated -> options.startImmediately = true -> after.core.id = child -> postParent.core.id = parent.core.id -> Effect4.Supervision.Fiber.Valid after -> Effect4.Supervision.Fiber.Valid postParent -> Effect4.Supervision.Globals.Extends (Effect4.Supervision.Globals.allocate g child) postGlobals -> Effect4.Supervision.Globals.OwnsChildren postGlobals postParent -> Effect4.Supervision.Globals.OwnsChildren postGlobals after -> Effect4.Supervision.forkUnsafe g parent child options (.immediate postGlobals postParent after) = .ok (Effect4.Supervision.commitFork postGlobals postParent (Effect4.Supervision.initialFiber parent child options.maskMode) after options.daemon [.evaluated child]))
+
+#check (@Effect4.Supervision.forkUnsafe_fresh :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId) (options : Effect4.Supervision.ForkOptions) (start : Effect4.Supervision.StartObservation χ β ε δ ι α) (result : Effect4.Supervision.ForkResult χ β ε δ ι α), Effect4.Supervision.forkUnsafe g parent child options start = .ok result -> child ∉ g.allocated)
+
+#check (@Effect4.Supervision.forkUnsafe_allocated_nodup :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId) (options : Effect4.Supervision.ForkOptions) (start : Effect4.Supervision.StartObservation χ β ε δ ι α) (result : Effect4.Supervision.ForkResult χ β ε δ ι α), Effect4.Supervision.Globals.Valid g -> Effect4.Supervision.forkUnsafe g parent child options start = .ok result -> Effect4.Supervision.Globals.Valid result.globals)
+
+#check (@Effect4.Supervision.forkUnsafe_child_valid :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId) (options : Effect4.Supervision.ForkOptions) (start : Effect4.Supervision.StartObservation χ β ε δ ι α) (result : Effect4.Supervision.ForkResult χ β ε δ ι α), Effect4.Supervision.forkUnsafe g parent child options start = .ok result -> Effect4.Supervision.Fiber.Valid result.child)
+
+#check (@Effect4.Supervision.forkUnsafe_parent_children_nodup :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId) (options : Effect4.Supervision.ForkOptions) (start : Effect4.Supervision.StartObservation χ β ε δ ι α) (result : Effect4.Supervision.ForkResult χ β ε δ ι α), parent.children.Nodup -> Effect4.Supervision.forkUnsafe g parent child options start = .ok result -> result.parent.children.Nodup)
+
+#check (@Effect4.Supervision.forkChild_eq :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId) (options : Effect4.Supervision.ForkOptions) (start : Effect4.Supervision.StartObservation χ β ε δ ι α), Effect4.Supervision.forkChild g parent child options start = Effect4.Supervision.forkUnsafe (Effect4.Supervision.Globals.install g) parent child {options with daemon := false} start)
+
+#check (@Effect4.Supervision.forkDetach_eq :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (child : Effect4.FiberId) (options : Effect4.Supervision.ForkOptions) (start : Effect4.Supervision.StartObservation χ β ε δ ι α), Effect4.Supervision.forkDetach g parent child options start = Effect4.Supervision.forkUnsafe g parent child {options with daemon := true} start)
+
+#check (@Effect4.Supervision.commitFork_done_untracked :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent initial child : Effect4.Supervision.Fiber χ β ε δ ι α) (daemon : Bool) (events : List Effect4.Supervision.ForkEvent) (exit : Effect4.Exit β ε δ ι α), Effect4.Supervision.Fiber.published? child = some exit -> (Effect4.Supervision.commitFork g parent initial child daemon events).parent = parent ∧ (Effect4.Supervision.commitFork g parent initial child daemon events).removeFromParent = none ∧ (Effect4.Supervision.commitFork g parent initial child daemon events).events = events)
+
+#check (@Effect4.Supervision.commitFork_daemon_untracked :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent initial child : Effect4.Supervision.Fiber χ β ε δ ι α) (events : List Effect4.Supervision.ForkEvent), (Effect4.Supervision.commitFork g parent initial child true events).parent = parent ∧ (Effect4.Supervision.commitFork g parent initial child true events).removeFromParent = none ∧ (Effect4.Supervision.commitFork g parent initial child true events).events = events)
+
+#check (@Effect4.Supervision.Globals.allocate_eq :
+  forall (g : Effect4.Supervision.Globals) (child : Effect4.FiberId), Effect4.Supervision.Globals.allocate g child = {g with allocated := g.allocated ++ [child]})
+
+#check (@Effect4.Supervision.Globals.extends_iff :
+  forall before after : Effect4.Supervision.Globals, Effect4.Supervision.Globals.Extends before after ↔ after.allocated.take before.allocated.length = before.allocated ∧ (before.middlewareInstalled = true -> after.middlewareInstalled = true) ∧ after.allocated.Nodup)
+
+#check (@Effect4.Supervision.Globals.extends?_iff :
+  forall before after : Effect4.Supervision.Globals, Effect4.Supervision.Globals.extends? before after = true ↔ Effect4.Supervision.Globals.Extends before after)
+
+#check (@Effect4.Supervision.Globals.ownsChildren?_iff :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (f : Effect4.Supervision.Fiber χ β ε δ ι α), Effect4.Supervision.Globals.ownsChildren? g f = true ↔ Effect4.Supervision.Globals.OwnsChildren g f)
+
+#check (@Effect4.Supervision.WaitState.begin_eq :
+  forall {τ : Type u}, forall (targets : List Effect4.FiberId) (result : τ), Effect4.Supervision.WaitState.begin targets result = {targets := targets, published := [], result := result})
+
+#check (@Effect4.Supervision.WaitState.pending_eq :
+  forall {τ : Type u}, forall s : Effect4.Supervision.WaitState τ, Effect4.Supervision.WaitState.pending s = s.targets.filter (fun id => decide (id ∉ s.published)))
+
+#check (@Effect4.Supervision.WaitState.ready_iff :
+  forall {τ : Type u}, forall (s : Effect4.Supervision.WaitState τ) (result : τ), Effect4.Supervision.WaitState.ready? s = some result ↔ Effect4.Supervision.WaitState.pending s = [] ∧ s.result = result)
+
+#check (@Effect4.Supervision.WaitState.ready_publications :
+  forall {τ : Type u}, forall (s : Effect4.Supervision.WaitState τ) (result : τ), Effect4.Supervision.WaitState.ready? s = some result -> ∀ child, child ∈ s.targets -> child ∈ s.published)
+
+#check (@Effect4.Supervision.WaitState.observe_pending :
+  forall {τ : Type u}, forall (s : Effect4.Supervision.WaitState τ) (child : Effect4.FiberId), child ∈ Effect4.Supervision.WaitState.pending s -> Effect4.Supervision.WaitState.observe s child = .ok {s with published := s.published ++ [child]})
+
+#check (@Effect4.Supervision.WaitState.observe_unknown :
+  forall {τ : Type u}, forall (s : Effect4.Supervision.WaitState τ) (child : Effect4.FiberId), child ∉ Effect4.Supervision.WaitState.pending s -> Effect4.Supervision.WaitState.observe s child = .error (.unknownPublication child))
+
+#check (@Effect4.Supervision.WaitState.observe_pending_membership :
+  forall {τ : Type u}, forall (s after : Effect4.Supervision.WaitState τ) (child other : Effect4.FiberId), Effect4.Supervision.WaitState.observe s child = .ok after -> (other ∈ Effect4.Supervision.WaitState.pending after ↔ other ∈ Effect4.Supervision.WaitState.pending s ∧ other ≠ child))
+
+#check (@Effect4.Supervision.waitStep_iff :
+  forall {τ : Type u}, forall (before after : Effect4.Supervision.WaitState τ) (child : Effect4.FiberId), Effect4.Supervision.WaitStep before child after ↔ Effect4.Supervision.WaitState.observe before child = .ok after)
+
+#check (@Effect4.Supervision.waitRuns_iff :
+  forall {τ : Type u}, forall (initial : Effect4.Supervision.WaitState τ) (tape : List Effect4.FiberId) (result : Effect4.Supervision.ReplayResult (Effect4.Supervision.WaitState τ) τ), Effect4.Supervision.WaitRuns initial tape result ↔ result = Effect4.Supervision.waitReplay initial tape)
+
+#check (@Effect4.Supervision.ReplayResult.state_done :
+  forall {σ : Type u} {τ : Type v} (state : σ) (result : τ), Effect4.Supervision.ReplayResult.state (Effect4.Supervision.ReplayResult.done state result) = state)
+
+#check (@Effect4.Supervision.ReplayResult.state_frontier :
+  forall {σ : Type u} {τ : Type v} (state : σ), Effect4.Supervision.ReplayResult.state (Effect4.Supervision.ReplayResult.frontier state : Effect4.Supervision.ReplayResult σ τ) = state)
+
+#check (@Effect4.Supervision.ReplayResult.state_refused :
+  forall {σ : Type u} {τ : Type v} (state : σ) (reason : Effect4.Supervision.Refusal), Effect4.Supervision.ReplayResult.state (Effect4.Supervision.ReplayResult.refused state reason : Effect4.Supervision.ReplayResult σ τ) = state)
+
+#check (@Effect4.Supervision.waitReplay_ready :
+  forall {τ : Type u}, forall (s : Effect4.Supervision.WaitState τ) (result : τ) (tape : List Effect4.FiberId), Effect4.Supervision.WaitState.ready? s = some result -> Effect4.Supervision.waitReplay s tape = .done s result)
+
+#check (@Effect4.Supervision.waitReplay_frontier :
+  forall {τ : Type u}, forall s : Effect4.Supervision.WaitState τ, Effect4.Supervision.WaitState.ready? s = none -> Effect4.Supervision.waitReplay s [] = .frontier s)
+
+#check (@Effect4.Supervision.waitReplay_cons_ok :
+  forall {τ : Type u}, forall (s after : Effect4.Supervision.WaitState τ) (child : Effect4.FiberId) (tape : List Effect4.FiberId), Effect4.Supervision.WaitState.ready? s = none -> Effect4.Supervision.WaitState.observe s child = .ok after -> Effect4.Supervision.waitReplay s (child :: tape) = Effect4.Supervision.waitReplay after tape)
+
+#check (@Effect4.Supervision.waitReplay_cons_error :
+  forall {τ : Type u}, forall (s : Effect4.Supervision.WaitState τ) (child : Effect4.FiberId) (tape : List Effect4.FiberId) (reason : Effect4.Supervision.Refusal), Effect4.Supervision.WaitState.ready? s = none -> Effect4.Supervision.WaitState.observe s child = .error reason -> Effect4.Supervision.waitReplay s (child :: tape) = .refused s reason)
+
+#check (@Effect4.Supervision.wait_fixedTape_deterministic :
+  forall {τ : Type u}, forall (s : Effect4.Supervision.WaitState τ) (tape : List Effect4.FiberId) (left right : Effect4.Supervision.ReplayResult (Effect4.Supervision.WaitState τ) τ), Effect4.Supervision.WaitRuns s tape left -> Effect4.Supervision.WaitRuns s tape right -> left = right)
+
+#check (@Effect4.Supervision.waitReplay_done_ready :
+  forall {τ : Type u}, forall (s after : Effect4.Supervision.WaitState τ) (tape : List Effect4.FiberId) (result : τ), Effect4.Supervision.waitReplay s tape = .done after result -> Effect4.Supervision.WaitState.ready? after = some result)
+
+#check (@Effect4.Supervision.waitReplay_frame :
+  forall {τ : Type u}, forall (s : Effect4.Supervision.WaitState τ) (tape : List Effect4.FiberId), let after := Effect4.Supervision.ReplayResult.state (Effect4.Supervision.waitReplay s tape); after.targets = s.targets ∧ after.result = s.result ∧ (∀ child, child ∈ after.published -> child ∈ s.published ++ tape))
+
+#check (@Effect4.Supervision.wait_two_publications :
+  forall {τ : Type u}, forall (left right : Effect4.FiberId) (result : τ), left ≠ right -> Effect4.Supervision.waitReplay (Effect4.Supervision.WaitState.begin [left, right] result) [left, right] = .done {targets := [left, right], published := [left, right], result := result} result)
+
+#check (@Effect4.Supervision.beginParentExit_eq :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (g : Effect4.Supervision.Globals) (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α), Effect4.Supervision.beginParentExit g parent exit = Effect4.Supervision.WaitState.begin (if g.middlewareInstalled then parent.children else []) exit)
+
+#check (@Effect4.Supervision.parentExitView_waiting :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (wait : Effect4.Supervision.WaitState (Effect4.Exit β ε δ ι α)), Effect4.Supervision.WaitState.ready? wait = none -> Effect4.Supervision.parentExitView parent wait = {parent with core := {parent.core with status := .finalizing, terminal := some wait.result, interruptPending := false, cleanup := .pending, cleanupCount := 0}, children := Effect4.Supervision.WaitState.pending wait})
+
+#check (@Effect4.Supervision.parentExitView_ready :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (wait : Effect4.Supervision.WaitState (Effect4.Exit β ε δ ι α)) (exit : Effect4.Exit β ε δ ι α), Effect4.Supervision.WaitState.ready? wait = some exit -> Effect4.Supervision.parentExitView parent wait = (Effect4.Supervision.Fiber.publish parent exit).1)
+
+#check (@Effect4.Supervision.parentExitView_not_published_while_waiting :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (wait : Effect4.Supervision.WaitState (Effect4.Exit β ε δ ι α)), Effect4.Supervision.WaitState.ready? wait = none -> Effect4.Supervision.Fiber.published? (Effect4.Supervision.parentExitView parent wait) = none)
+
+#check (@Effect4.Supervision.parentExitView_publication_requires_children :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (parent : Effect4.Supervision.Fiber χ β ε δ ι α) (wait : Effect4.Supervision.WaitState (Effect4.Exit β ε δ ι α)) (exit : Effect4.Exit β ε δ ι α), Effect4.Supervision.Fiber.published? (Effect4.Supervision.parentExitView parent wait) = some exit -> ∀ child, child ∈ wait.targets -> child ∈ wait.published)
+
+#check (@Effect4.Supervision.newChildren_eq :
+  forall initial current : List Effect4.FiberId, Effect4.Supervision.newChildren initial current = current.filter (fun child => decide (child ∉ initial)))
+
+#check (@Effect4.Supervision.newChildren_membership :
+  forall (initial current : List Effect4.FiberId) (child : Effect4.FiberId), child ∈ Effect4.Supervision.newChildren initial current ↔ child ∈ current ∧ child ∉ initial)
+
+#check (@Effect4.Supervision.awaitAllChildren_eq :
+  forall initial current : List Effect4.FiberId, Effect4.Supervision.awaitAllChildren initial current = Effect4.Supervision.WaitState.begin (Effect4.Supervision.newChildren initial current) ())
+
+#check (@Effect4.Supervision.interruptAllRequests_eq :
+  forall targets : List Effect4.FiberId, Effect4.Supervision.interruptAllRequests targets = targets.map Effect4.Supervision.InterruptAction.request ++ [.awaitAll targets])
+
+#check (@Effect4.Supervision.interruptAllWait_eq :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall fibers : List (Effect4.Supervision.Fiber χ β ε δ ι α), Effect4.Supervision.interruptAllWait fibers = {targets := fibers.map (fun f => f.core.id), published := (fibers.filter (fun f => (Effect4.Supervision.Fiber.published? f).isSome)).map (fun f => f.core.id), result := ()})
+
+#check (@Effect4.Supervision.bindScope_invalid :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (mode : Effect4.Supervision.ScopeMode) (parent : Effect4.FiberId) (child : Effect4.Supervision.Fiber χ β ε δ ι α) (scope : Effect4.Scope (ULift.{u} Nat) (ULift.{u} Effect4.Supervision.ScopeFinalizer) β ε δ ι α) (key : Nat) , Effect4.Supervision.Fiber.valid? child = false -> Effect4.Supervision.bindScope mode parent child scope key = .error (.invalidFiber child.core.id))
+
+#check (@Effect4.Supervision.bindScope_done :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (mode : Effect4.Supervision.ScopeMode) (parent : Effect4.FiberId) (child : Effect4.Supervision.Fiber χ β ε δ ι α) (scope : Effect4.Scope (ULift.{u} Nat) (ULift.{u} Effect4.Supervision.ScopeFinalizer) β ε δ ι α) (key : Nat) (exit : Effect4.Exit β ε δ ι α), Effect4.Supervision.Fiber.Valid child -> Effect4.Supervision.Fiber.published? child = some exit -> Effect4.Supervision.bindScope mode parent child scope key = .ok {scope := scope, observerKey := none, interruptor := none})
+
+#check (@Effect4.Supervision.bindScope_closed :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (mode : Effect4.Supervision.ScopeMode) (parent : Effect4.FiberId) (child : Effect4.Supervision.Fiber χ β ε δ ι α) (scope : Effect4.Scope (ULift.{u} Nat) (ULift.{u} Effect4.Supervision.ScopeFinalizer) β ε δ ι α) (key : Nat) , Effect4.Supervision.Fiber.Valid child -> Effect4.Supervision.Fiber.published? child = none -> scope.isClosed = true -> Effect4.Supervision.bindScope mode parent child scope key = .ok {scope := scope, observerKey := none, interruptor := some (if mode = .forkIn then parent else child.core.id)})
+
+#check (@Effect4.Supervision.bindScope_duplicate_key :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (mode : Effect4.Supervision.ScopeMode) (parent : Effect4.FiberId) (child : Effect4.Supervision.Fiber χ β ε δ ι α) (scope : Effect4.Scope (ULift.{u} Nat) (ULift.{u} Effect4.Supervision.ScopeFinalizer) β ε δ ι α) (key : Nat) , Effect4.Supervision.Fiber.Valid child -> Effect4.Supervision.Fiber.published? child = none -> scope.isClosed = false -> (ULift.up key : ULift.{u} Nat) ∈ scope.finalizerKeys -> Effect4.Supervision.bindScope mode parent child scope key = .error (.duplicateScopeKey key))
+
+#check (@Effect4.Supervision.bindScope_open :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (mode : Effect4.Supervision.ScopeMode) (parent : Effect4.FiberId) (child : Effect4.Supervision.Fiber χ β ε δ ι α) (scope : Effect4.Scope (ULift.{u} Nat) (ULift.{u} Effect4.Supervision.ScopeFinalizer) β ε δ ι α) (key : Nat) , Effect4.Supervision.Fiber.Valid child -> Effect4.Supervision.Fiber.published? child = none -> scope.isClosed = false -> (ULift.up key : ULift.{u} Nat) ∉ scope.finalizerKeys -> Effect4.Supervision.bindScope mode parent child scope key = .ok {scope := scope.addUnsafe (ULift.up key) (ULift.up {child := child.core.id, skipSelf := decide (mode = .forkIn)}), observerKey := some key, interruptor := none})
+
+#check (@Effect4.Supervision.forkScopedBinding_eq :
+  forall {χ : Type u} {β : Type v} {ε δ ι α : Type u}, forall (parent : Effect4.FiberId) (child : Effect4.Supervision.Fiber χ β ε δ ι α) (scope : Effect4.Scope (ULift.{u} Nat) (ULift.{u} Effect4.Supervision.ScopeFinalizer) β ε δ ι α) (key : Nat), Effect4.Supervision.forkScopedBinding parent child scope key = Effect4.Supervision.bindScope .forkIn parent child scope key)
+
+#check (@Effect4.Supervision.scopeFinalizerInterruptor_eq :
+  forall (finalizer : Effect4.Supervision.ScopeFinalizer) (current : Effect4.FiberId), Effect4.Supervision.scopeFinalizerInterruptor finalizer current = if finalizer.skipSelf = true ∧ current = finalizer.child then none else some current)
+
+#check (@Effect4.Supervision.scopeFinalizer_self_guard :
+  forall child : Effect4.FiberId, Effect4.Supervision.scopeFinalizerInterruptor {child := child, skipSelf := true} child = none ∧ Effect4.Supervision.scopeFinalizerInterruptor {child := child, skipSelf := false} child = some child)
+
+#check (@Effect4.Supervision.scopeObserver_eq :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (scope : Effect4.Scope (ULift.{u} Nat) (ULift.{u} Effect4.Supervision.ScopeFinalizer) β ε δ ι α) (key : Nat), Effect4.Supervision.scopeObserver scope key = scope.removeUnsafe (ULift.up key))
+
+#check (@Effect4.Supervision.scopeObserver_key_membership :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (scope : Effect4.Scope (ULift.{u} Nat) (ULift.{u} Effect4.Supervision.ScopeFinalizer) β ε δ ι α) (key other : Nat), (ULift.up other : ULift.{u} Nat) ∈ (Effect4.Supervision.scopeObserver scope key).finalizerKeys ↔ (ULift.up other : ULift.{u} Nat) ∈ scope.finalizerKeys ∧ other ≠ key)
+
+#check (@Effect4.Supervision.raceForkOptions_eq :
+  Effect4.Supervision.raceForkOptions = {startImmediately := true, daemon := true, maskMode := .interruptible})
+
+#check (@Effect4.Supervision.raceCleanupMask_eq :
+  Effect4.Supervision.raceCleanupMask = Effect4.InterruptMask.masked)
+
+#check (@Effect4.Supervision.RaceAllState.initial_eq :
+  forall {β : Type v} {ε δ ι α : Type u}, forall entrants : List Effect4.FiberId, (Effect4.Supervision.RaceAllState.initial entrants : Effect4.Supervision.RaceAllState β ε δ ι α) = {unstarted := entrants, starting := none, live := [], remaining := entrants.length, failures := [], winner := none, accepted := none, cleanupNeeded := false, requests := [], cleanup := none, cleanupRequested := false})
+
+#check (@Effect4.Supervision.raceAllAdmit_eq :
+  forall {β : Type v} {ε δ ι α : Type u}, forall entrants : List Effect4.FiberId, (Effect4.Supervision.raceAllAdmit entrants : Except Effect4.Supervision.Refusal (Effect4.Supervision.RaceAllState β ε δ ι α)) = if entrants.Nodup then .ok (Effect4.Supervision.RaceAllState.initial entrants) else .error .duplicateEntrant)
+
+#check (@Effect4.Supervision.RaceAllState.result_eq :
+  forall {β : Type v} {ε δ ι α : Type u}, forall s : Effect4.Supervision.RaceAllState β ε δ ι α, Effect4.Supervision.RaceAllState.result? s = if s.starting.isSome then none else if s.cleanupNeeded = false then s.accepted else if s.cleanupRequested = true ∧ (s.cleanup.bind Effect4.Supervision.WaitState.ready?).isSome = true then s.accepted else none)
+
+#check (@Effect4.Supervision.raceComplete_unknown :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (child : Effect4.FiberId) (exit : Effect4.Exit β ε δ ι α), child ∉ s.live -> Effect4.Supervision.raceComplete s child exit = s)
+
+#check (@Effect4.Supervision.raceComplete_after_accepted :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (child : Effect4.FiberId) (exit accepted : Effect4.Exit β ε δ ι α), child ∈ s.live -> s.accepted = some accepted -> Effect4.Supervision.raceComplete s child exit = {s with live := s.live.filter (fun id => decide (id ≠ child)), remaining := s.remaining - 1, failures := s.failures ++ exit.causeReasons, cleanup := s.cleanup.map (fun wait => if child ∈ Effect4.Supervision.WaitState.pending wait then {wait with published := wait.published ++ [child]} else wait)})
+
+#check (@Effect4.Supervision.raceComplete_success :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (child : Effect4.FiberId) (value : β), child ∈ s.live -> s.accepted = none -> Effect4.Supervision.raceComplete s child (.success value) = {s with live := s.live.filter (fun id => decide (id ≠ child)), remaining := s.remaining - 1, winner := some (child, value), accepted := some (.success value), cleanupNeeded := !(s.live.filter (fun id => decide (id ≠ child))).isEmpty, requests := [], cleanup := none, cleanupRequested := false})
+
+#check (@Effect4.Supervision.raceComplete_failure_last :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (child : Effect4.FiberId) (cause : Effect4.Cause ε δ ι α), child ∈ s.live -> s.accepted = none -> s.remaining ≤ 1 -> Effect4.Supervision.raceComplete s child (.failure cause) = {s with live := s.live.filter (fun id => decide (id ≠ child)), remaining := s.remaining - 1, failures := s.failures ++ cause.reasons, accepted := some (.failure ⟨s.failures ++ cause.reasons⟩), cleanupNeeded := false, requests := [], cleanup := none, cleanupRequested := false})
+
+#check (@Effect4.Supervision.raceComplete_failure_pending :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (child : Effect4.FiberId) (cause : Effect4.Cause ε δ ι α), child ∈ s.live -> s.accepted = none -> 1 < s.remaining -> Effect4.Supervision.raceComplete s child (.failure cause) = {s with live := s.live.filter (fun id => decide (id ≠ child)), remaining := s.remaining - 1, failures := s.failures ++ cause.reasons})
+
+#check (@Effect4.Supervision.raceStep_begin_blocked :
+  forall {β : Type v} {ε δ ι α : Type u}, forall s : Effect4.Supervision.RaceAllState β ε δ ι α, s.accepted.isSome = true ∨ s.starting.isSome = true -> Effect4.Supervision.raceStep s .beginLaunch = .error .wrongRacePhase)
+
+#check (@Effect4.Supervision.raceStep_begin_empty :
+  forall {β : Type v} {ε δ ι α : Type u}, forall s : Effect4.Supervision.RaceAllState β ε δ ι α, s.accepted = none -> s.starting = none -> s.unstarted = [] -> Effect4.Supervision.raceStep s .beginLaunch = .error .noEntrant)
+
+#check (@Effect4.Supervision.raceStep_begin :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (child : Effect4.FiberId) (rest : List Effect4.FiberId), s.accepted = none -> s.starting = none -> s.unstarted = child :: rest -> Effect4.Supervision.raceStep s .beginLaunch = .ok {s with unstarted := rest, starting := some child})
+
+#check (@Effect4.Supervision.raceStep_finish_missing :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (exit : Option (Effect4.Exit β ε δ ι α)), s.starting = none -> Effect4.Supervision.raceStep s (.finishLaunch exit) = .error .wrongRacePhase)
+
+#check (@Effect4.Supervision.raceStep_finish_duplicate :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (child : Effect4.FiberId) (exit : Option (Effect4.Exit β ε δ ι α)), s.starting = some child -> child ∈ s.live -> Effect4.Supervision.raceStep s (.finishLaunch exit) = .error .duplicateEntrant)
+
+#check (@Effect4.Supervision.raceStep_finish_live :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (child : Effect4.FiberId), s.starting = some child -> child ∉ s.live -> Effect4.Supervision.raceStep s (.finishLaunch none) = .ok {s with starting := none, live := s.live ++ [child]})
+
+#check (@Effect4.Supervision.raceStep_finish_done :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (child : Effect4.FiberId) (exit : Effect4.Exit β ε δ ι α), s.starting = some child -> child ∉ s.live -> Effect4.Supervision.raceStep s (.finishLaunch (some exit)) = .ok (Effect4.Supervision.raceComplete {s with starting := none, live := s.live ++ [child]} child exit))
+
+#check (@Effect4.Supervision.raceStep_complete :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (child : Effect4.FiberId) (exit : Effect4.Exit β ε δ ι α), child ∈ s.live -> Effect4.Supervision.raceStep s (.complete child exit) = .ok (Effect4.Supervision.raceComplete s child exit))
+
+#check (@Effect4.Supervision.raceStep_complete_unknown :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (child : Effect4.FiberId) (exit : Effect4.Exit β ε δ ι α), child ∉ s.live -> Effect4.Supervision.raceStep s (.complete child exit) = .error (.unknownEntrant child))
+
+#check (@Effect4.Supervision.raceStep_beginCleanup :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (exit : Effect4.Exit β ε δ ι α), s.starting = none -> s.accepted = some exit -> s.cleanupNeeded = true -> s.cleanup = none -> Effect4.Supervision.raceStep s .beginCleanup = .ok {s with requests := s.live, cleanup := some (Effect4.Supervision.WaitState.begin s.live exit), cleanupRequested := s.live.isEmpty})
+
+#check (@Effect4.Supervision.raceStep_beginCleanup_blocked :
+  forall {β : Type v} {ε δ ι α : Type u}, forall s : Effect4.Supervision.RaceAllState β ε δ ι α, s.starting.isSome = true ∨ s.accepted = none ∨ s.cleanupNeeded = false ∨ s.cleanup.isSome = true -> Effect4.Supervision.raceStep s .beginCleanup = .error .wrongRacePhase)
+
+#check (@Effect4.Supervision.raceStep_requestNext :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (child : Effect4.FiberId) (rest : List Effect4.FiberId) (wait : Effect4.Supervision.WaitState (Effect4.Exit β ε δ ι α)), s.cleanup = some wait -> s.cleanupRequested = false -> s.requests = child :: rest -> Effect4.Supervision.raceStep s .requestNext = .ok {s with requests := rest, cleanupRequested := rest.isEmpty})
+
+#check (@Effect4.Supervision.raceStep_requestNext_blocked :
+  forall {β : Type v} {ε δ ι α : Type u}, forall s : Effect4.Supervision.RaceAllState β ε δ ι α, s.cleanup = none ∨ s.cleanupRequested = true ∨ s.requests = [] -> Effect4.Supervision.raceStep s .requestNext = .error .wrongRacePhase)
+
+#check (@Effect4.Supervision.raceStep_iff :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (before after : Effect4.Supervision.RaceAllState β ε δ ι α) (decision : Effect4.Supervision.RaceAllDecision β ε δ ι α), Effect4.Supervision.RaceStep before decision after ↔ Effect4.Supervision.raceStep before decision = .ok after)
+
+#check (@Effect4.Supervision.raceRuns_iff :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (initial : Effect4.Supervision.RaceAllState β ε δ ι α) (tape : List (Effect4.Supervision.RaceAllDecision β ε δ ι α)) (result : Effect4.Supervision.ReplayResult (Effect4.Supervision.RaceAllState β ε δ ι α) (Effect4.Exit β ε δ ι α)), Effect4.Supervision.RaceRuns initial tape result ↔ result = Effect4.Supervision.raceReplay initial tape)
+
+#check (@Effect4.Supervision.raceReplay_ready :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (exit : Effect4.Exit β ε δ ι α) (tape : List (Effect4.Supervision.RaceAllDecision β ε δ ι α)), Effect4.Supervision.RaceAllState.result? s = some exit -> Effect4.Supervision.raceReplay s tape = .done s exit)
+
+#check (@Effect4.Supervision.raceReplay_frontier :
+  forall {β : Type v} {ε δ ι α : Type u}, forall s : Effect4.Supervision.RaceAllState β ε δ ι α, Effect4.Supervision.RaceAllState.result? s = none -> Effect4.Supervision.raceReplay s [] = .frontier s)
+
+#check (@Effect4.Supervision.raceReplay_cons_ok :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s after : Effect4.Supervision.RaceAllState β ε δ ι α) (decision : Effect4.Supervision.RaceAllDecision β ε δ ι α) (tape : List (Effect4.Supervision.RaceAllDecision β ε δ ι α)), Effect4.Supervision.RaceAllState.result? s = none -> Effect4.Supervision.raceStep s decision = .ok after -> Effect4.Supervision.raceReplay s (decision :: tape) = Effect4.Supervision.raceReplay after tape)
+
+#check (@Effect4.Supervision.raceReplay_cons_error :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (decision : Effect4.Supervision.RaceAllDecision β ε δ ι α) (tape : List (Effect4.Supervision.RaceAllDecision β ε δ ι α)) (reason : Effect4.Supervision.Refusal), Effect4.Supervision.RaceAllState.result? s = none -> Effect4.Supervision.raceStep s decision = .error reason -> Effect4.Supervision.raceReplay s (decision :: tape) = .refused s reason)
+
+#check (@Effect4.Supervision.race_fixedTape_deterministic :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (tape : List (Effect4.Supervision.RaceAllDecision β ε δ ι α)) (left right : Effect4.Supervision.ReplayResult (Effect4.Supervision.RaceAllState β ε δ ι α) (Effect4.Exit β ε δ ι α)), Effect4.Supervision.RaceRuns s tape left -> Effect4.Supervision.RaceRuns s tape right -> left = right)
+
+#check (@Effect4.Supervision.race_first_accepted_stable :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s after : Effect4.Supervision.RaceAllState β ε δ ι α) (decision : Effect4.Supervision.RaceAllDecision β ε δ ι α) (exit : Effect4.Exit β ε δ ι α), s.accepted = some exit -> Effect4.Supervision.raceStep s decision = .ok after -> after.accepted = some exit)
+
+#check (@Effect4.Supervision.race_result_requires_start_finished :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (exit : Effect4.Exit β ε δ ι α), Effect4.Supervision.RaceAllState.result? s = some exit -> s.starting = none ∧ s.accepted = some exit)
+
+#check (@Effect4.Supervision.race_cleanup_result_requires_publications :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (exit : Effect4.Exit β ε δ ι α), Effect4.Supervision.RaceAllState.result? s = some exit -> s.cleanupNeeded = true -> s.cleanupRequested = true ∧ ∃ wait, s.cleanup = some wait ∧ ∀ child, child ∈ wait.targets -> child ∈ wait.published)
+
+#check (@Effect4.Supervision.race_empty_frontier :
+  forall {β : Type v} {ε δ ι α : Type u}, Effect4.Supervision.raceReplay (Effect4.Supervision.RaceAllState.initial [] : Effect4.Supervision.RaceAllState β ε δ ι α) [] = .frontier (Effect4.Supervision.RaceAllState.initial []))
+
+#check (@Effect4.Supervision.race_single_success :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (child : Effect4.FiberId) (value : β), ∃ after, Effect4.Supervision.raceReplay (Effect4.Supervision.RaceAllState.initial [child] : Effect4.Supervision.RaceAllState β ε δ ι α) [.beginLaunch, .finishLaunch (some (.success value))] = .done after (.success value))
+
+#check (@Effect4.Supervision.race_two_failures :
+  forall {β : Type v} {ε δ ι α : Type u}, forall (left right : Effect4.FiberId) (first second : Effect4.Cause ε δ ι α), left ≠ right -> ∃ after, Effect4.Supervision.raceReplay (Effect4.Supervision.RaceAllState.initial [left, right] : Effect4.Supervision.RaceAllState β ε δ ι α) [.beginLaunch, .finishLaunch (some (.failure first)), .beginLaunch, .finishLaunch (some (.failure second))] = .done after (.failure ⟨first.reasons ++ second.reasons⟩))
+
 end StatementSnapshot
 
 /-! ## The frozen census join -/
@@ -1179,22 +1592,233 @@ private def censusRows : List Row :=
         [ w `Effect4.unmasked_interrupt_delivers "propext"
         , w `Effect4.unmasked_request_exists "propext"
         , w `Effect4.masked_request_exists "propext" ] }
-  , { id := "interrupt.accumulate", kind := "interrupt", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "fork.unsafe", kind := "fork", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "fork.child", kind := "fork", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "fork.detach", kind := "fork", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "fork.in", kind := "fork", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "fork.scoped", kind := "fork", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "fork.race-all", kind := "fork", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "fork.await-all-children", kind := "fork", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "fork.fiber-run-in", kind := "fork", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  -- Remaining source clause: Actual FiberId/annotation interpretation and integration of the
+  -- recording facet with delivery. See SUPERVISION-PG-RC112.
+  , { id := "interrupt.accumulate", kind := "interrupt", disposition := "separateCalculus", coverage := "partial"
+    , witnesses :=
+        [ w `Effect4.Supervision.interruptCause_eq "propext,Quot.sound"
+        , w `Effect4.Supervision.Fiber.recordInterrupt_done "propext,Quot.sound"
+        , w `Effect4.Supervision.Fiber.recordInterrupt_live "propext,Quot.sound"
+        , w `Effect4.Supervision.Fiber.recordInterrupt_core "propext,Quot.sound" ] }
+  , { id := "fork.unsafe", kind := "fork", disposition := "separateCalculus", coverage := "partial"
+    , witnesses :=
+        [ w `Effect4.Supervision.MaskMode.select_interruptible "none"
+        , w `Effect4.Supervision.MaskMode.select_uninterruptible "none"
+        , w `Effect4.Supervision.MaskMode.select_inherit "none"
+        , w `Effect4.Supervision.MaskMode.cases_receipt "propext"
+        , w `Effect4.Supervision.Globals.valid_iff "none"
+        , w `Effect4.Supervision.Globals.ownsChildren_iff "none"
+        , w `Effect4.Supervision.Fiber.valid_iff "none"
+        , w `Effect4.Supervision.Fiber.valid?_iff "propext"
+        , w `Effect4.Supervision.Fiber.toFiberState_eq "none"
+        , w `Effect4.Supervision.initialFiber_eq "none"
+        , w `Effect4.Supervision.initialFiber_valid "propext"
+        , w `Effect4.Supervision.commitFork_eq "propext"
+        , w `Effect4.Supervision.forkUnsafe_duplicate "propext"
+        , w `Effect4.Supervision.forkUnsafe_deferred "propext"
+        , w `Effect4.Supervision.forkUnsafe_wrong_deferred "propext"
+        , w `Effect4.Supervision.forkUnsafe_wrong_immediate "propext"
+        , w `Effect4.Supervision.forkUnsafe_wrong_identity "propext"
+        , w `Effect4.Supervision.forkUnsafe_wrong_parent "propext"
+        , w `Effect4.Supervision.forkUnsafe_invalid_child "propext"
+        , w `Effect4.Supervision.forkUnsafe_invalid_parent "propext"
+        , w `Effect4.Supervision.forkUnsafe_invalid_globals "propext"
+        , w `Effect4.Supervision.forkUnsafe_invalid_ownership "propext"
+        , w `Effect4.Supervision.forkUnsafe_invalid_child_ownership "propext,Quot.sound"
+        , w `Effect4.Supervision.forkUnsafe_immediate "propext,Quot.sound"
+        , w `Effect4.Supervision.forkUnsafe_fresh "propext"
+        , w `Effect4.Supervision.forkUnsafe_allocated_nodup "propext,Quot.sound"
+        , w `Effect4.Supervision.forkUnsafe_child_valid "propext"
+        , w `Effect4.Supervision.commitFork_done_untracked "propext"
+        , w `Effect4.Supervision.Globals.allocate_eq "none"
+        , w `Effect4.Supervision.Globals.extends_iff "none"
+        , w `Effect4.Supervision.Globals.extends?_iff "propext"
+        , w `Effect4.Supervision.Globals.ownsChildren?_iff "propext,Quot.sound" ] }
+  -- Remaining source clause: Installing the real global middleware; child completion invoking its
+  -- parent observer. See SUPERVISION-PG-RC112.
+  , { id := "fork.child", kind := "fork", disposition := "separateCalculus", coverage := "partial"
+    , witnesses :=
+        [ w `Effect4.Supervision.Globals.install_eq "none"
+        , w `Effect4.Supervision.Fiber.removeChild_eq "none"
+        , w `Effect4.Supervision.Fiber.addChild_nodup "propext,Quot.sound"
+        , w `Effect4.Supervision.Fiber.removeChild_membership "propext,Quot.sound"
+        , w `Effect4.Supervision.forkUnsafe_parent_children_nodup "propext,Quot.sound"
+        , w `Effect4.Supervision.forkChild_eq "propext"
+        , w `Effect4.Supervision.commitFork_done_untracked "propext"
+        , w `Effect4.Supervision.Globals.extends_iff "none"
+        , w `Effect4.Supervision.Globals.extends?_iff "propext"
+        , w `Effect4.Supervision.Globals.ownsChildren?_iff "propext,Quot.sound"
+        , w `Effect4.Supervision.beginParentExit_eq "none" ] }
+  -- Remaining source clause: Actual daemon execution and independent lifetime. See SUPERVISION-PG-
+  -- RC112.
+  , { id := "fork.detach", kind := "fork", disposition := "separateCalculus", coverage := "partial"
+    , witnesses :=
+        [ w `Effect4.Supervision.forkDetach_eq "propext"
+        , w `Effect4.Supervision.commitFork_daemon_untracked "propext" ] }
+  -- Remaining source clause: Supplied post-start scope denotes the same mutable host scope;
+  -- finalizer execution. See SUPERVISION-PG-RC112.
+  , { id := "fork.in", kind := "fork", disposition := "separateCalculus", coverage := "partial"
+    , witnesses :=
+        [ w `Effect4.Supervision.ScopeMode.cases_receipt "propext"
+        , w `Effect4.Supervision.bindScope_invalid "propext"
+        , w `Effect4.Supervision.bindScope_done "propext"
+        , w `Effect4.Supervision.bindScope_closed "propext"
+        , w `Effect4.Supervision.bindScope_duplicate_key "propext"
+        , w `Effect4.Supervision.bindScope_open "propext"
+        , w `Effect4.Supervision.scopeFinalizerInterruptor_eq "none"
+        , w `Effect4.Supervision.scopeFinalizer_self_guard "propext"
+        , w `Effect4.Supervision.scopeObserver_eq "none"
+        , w `Effect4.Supervision.scopeObserver_key_membership "propext,Quot.sound" ] }
+  -- Remaining source clause: Ambient Scope service resolution and composition with fork startup.
+  -- See SUPERVISION-PG-RC112.
+  , { id := "fork.scoped", kind := "fork", disposition := "separateCalculus", coverage := "partial"
+    , witnesses :=
+        [ w `Effect4.Supervision.forkScopedBinding_eq "propext" ] }
+  -- Remaining source clause: Actual first accepted callback resumption, request delivery, dynamic
+  -- shared-set interpretation, uninterruptible continuation execution. See SUPERVISION-PG-RC112.
+  , { id := "fork.race-all", kind := "fork", disposition := "separateCalculus", coverage := "partial"
+    , witnesses :=
+        [ w `Effect4.Supervision.WaitState.begin_eq "none"
+        , w `Effect4.Supervision.WaitState.pending_eq "propext"
+        , w `Effect4.Supervision.WaitState.ready_iff "propext"
+        , w `Effect4.Supervision.WaitState.ready_publications "propext,Quot.sound"
+        , w `Effect4.Supervision.WaitState.observe_pending "propext"
+        , w `Effect4.Supervision.WaitState.observe_unknown "propext"
+        , w `Effect4.Supervision.WaitState.observe_pending_membership "propext,Quot.sound"
+        , w `Effect4.Supervision.waitStep_iff "propext"
+        , w `Effect4.Supervision.waitRuns_iff "propext"
+        , w `Effect4.Supervision.ReplayResult.state_done "none"
+        , w `Effect4.Supervision.ReplayResult.state_frontier "none"
+        , w `Effect4.Supervision.ReplayResult.state_refused "none"
+        , w `Effect4.Supervision.waitReplay_ready "propext"
+        , w `Effect4.Supervision.waitReplay_frontier "propext"
+        , w `Effect4.Supervision.waitReplay_cons_ok "propext"
+        , w `Effect4.Supervision.waitReplay_cons_error "propext"
+        , w `Effect4.Supervision.wait_fixedTape_deterministic "propext"
+        , w `Effect4.Supervision.waitReplay_done_ready "propext"
+        , w `Effect4.Supervision.waitReplay_frame "propext,Quot.sound"
+        , w `Effect4.Supervision.wait_two_publications "propext,Quot.sound"
+        , w `Effect4.Supervision.raceForkOptions_eq "none"
+        , w `Effect4.Supervision.raceCleanupMask_eq "none"
+        , w `Effect4.Supervision.RaceAllState.initial_eq "none"
+        , w `Effect4.Supervision.raceAllAdmit_eq "none"
+        , w `Effect4.Supervision.RaceAllState.result_eq "propext"
+        , w `Effect4.Supervision.raceComplete_unknown "propext"
+        , w `Effect4.Supervision.raceComplete_after_accepted "propext,Quot.sound"
+        , w `Effect4.Supervision.raceComplete_success "propext,Quot.sound"
+        , w `Effect4.Supervision.raceComplete_failure_last "propext,Quot.sound"
+        , w `Effect4.Supervision.raceComplete_failure_pending "propext,Quot.sound"
+        , w `Effect4.Supervision.raceStep_begin_blocked "propext"
+        , w `Effect4.Supervision.raceStep_begin_empty "propext"
+        , w `Effect4.Supervision.raceStep_begin "propext"
+        , w `Effect4.Supervision.raceStep_finish_missing "propext"
+        , w `Effect4.Supervision.raceStep_finish_duplicate "propext"
+        , w `Effect4.Supervision.raceStep_finish_live "propext"
+        , w `Effect4.Supervision.raceStep_finish_done "propext"
+        , w `Effect4.Supervision.raceStep_complete "propext"
+        , w `Effect4.Supervision.raceStep_complete_unknown "propext"
+        , w `Effect4.Supervision.raceStep_beginCleanup "propext"
+        , w `Effect4.Supervision.raceStep_beginCleanup_blocked "propext"
+        , w `Effect4.Supervision.raceStep_requestNext "propext"
+        , w `Effect4.Supervision.raceStep_requestNext_blocked "propext"
+        , w `Effect4.Supervision.raceStep_iff "propext"
+        , w `Effect4.Supervision.raceRuns_iff "propext"
+        , w `Effect4.Supervision.raceReplay_ready "propext"
+        , w `Effect4.Supervision.raceReplay_frontier "propext"
+        , w `Effect4.Supervision.raceReplay_cons_ok "propext"
+        , w `Effect4.Supervision.raceReplay_cons_error "propext"
+        , w `Effect4.Supervision.race_fixedTape_deterministic "propext"
+        , w `Effect4.Supervision.race_first_accepted_stable "propext,Quot.sound"
+        , w `Effect4.Supervision.race_result_requires_start_finished "propext"
+        , w `Effect4.Supervision.race_cleanup_result_requires_publications "propext,Quot.sound"
+        , w `Effect4.Supervision.race_empty_frontier "propext"
+        , w `Effect4.Supervision.race_single_success "propext,Quot.sound"
+        , w `Effect4.Supervision.race_two_failures "propext,Quot.sound" ] }
+  , { id := "fork.await-all-children", kind := "fork", disposition := "separateCalculus", coverage := "partial"
+    , witnesses :=
+        [ w `Effect4.Supervision.newChildren_eq "propext"
+        , w `Effect4.Supervision.newChildren_membership "propext,Quot.sound"
+        , w `Effect4.Supervision.awaitAllChildren_eq "propext" ] }
+  , { id := "fork.fiber-run-in", kind := "fork", disposition := "separateCalculus", coverage := "partial"
+    , witnesses :=
+        [ w `Effect4.Supervision.ScopeMode.cases_receipt "propext"
+        , w `Effect4.Supervision.bindScope_invalid "propext"
+        , w `Effect4.Supervision.bindScope_done "propext"
+        , w `Effect4.Supervision.bindScope_closed "propext"
+        , w `Effect4.Supervision.bindScope_duplicate_key "propext"
+        , w `Effect4.Supervision.bindScope_open "propext"
+        , w `Effect4.Supervision.scopeFinalizerInterruptor_eq "none"
+        , w `Effect4.Supervision.scopeFinalizer_self_guard "propext"
+        , w `Effect4.Supervision.scopeObserver_eq "none"
+        , w `Effect4.Supervision.scopeObserver_key_membership "propext,Quot.sound" ] }
   , { id := "fork.join", kind := "fork", disposition := "owned", coverage := "partial"
     , witnesses :=
         [ w `Effect4.join_agreement "propext"
-        , w `Effect4.double_join_agreement "propext" ] }
-  , { id := "fork.await", kind := "fork", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "fork.interrupt", kind := "fork", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "fork.interrupt-all", kind := "fork", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+        , w `Effect4.double_join_agreement "propext"
+        , w `Effect4.Supervision.ObserverMode.cases_receipt "propext"
+        , w `Effect4.Supervision.Fiber.valid_iff "none"
+        , w `Effect4.Supervision.Fiber.valid?_iff "propext"
+        , w `Effect4.Supervision.Fiber.toFiberState_eq "none"
+        , w `Effect4.Supervision.Fiber.published_iff "propext"
+        , w `Effect4.Supervision.Fiber.published_eq "none"
+        , w `Effect4.Supervision.observation_join "none"
+        , w `Effect4.Supervision.observation_value_ne_effect "none"
+        , w `Effect4.Supervision.Fiber.observe_invalid "propext,Quot.sound"
+        , w `Effect4.Supervision.Fiber.observe_done "propext,Quot.sound"
+        , w `Effect4.Supervision.Fiber.observe_live "propext,Quot.sound"
+        , w `Effect4.Supervision.Fiber.observe_duplicate "propext,Quot.sound"
+        , w `Effect4.Supervision.Fiber.cancel_eq "none"
+        , w `Effect4.Supervision.Fiber.cancel_membership "propext,Quot.sound"
+        , w `Effect4.Supervision.Fiber.publish_eq "none"
+        , w `Effect4.Supervision.Fiber.publish_valid "propext" ] }
+  , { id := "fork.await", kind := "fork", disposition := "separateCalculus", coverage := "partial"
+    , witnesses :=
+        [ w `Effect4.Supervision.ObserverMode.cases_receipt "propext"
+        , w `Effect4.Supervision.Fiber.published_iff "propext"
+        , w `Effect4.Supervision.Fiber.published_eq "none"
+        , w `Effect4.Supervision.observation_await "none"
+        , w `Effect4.Supervision.observation_value_ne_effect "none"
+        , w `Effect4.Supervision.Fiber.observe_invalid "propext,Quot.sound"
+        , w `Effect4.Supervision.Fiber.observe_done "propext,Quot.sound"
+        , w `Effect4.Supervision.Fiber.observe_live "propext,Quot.sound"
+        , w `Effect4.Supervision.Fiber.observe_duplicate "propext,Quot.sound"
+        , w `Effect4.Supervision.Fiber.cancel_eq "none"
+        , w `Effect4.Supervision.Fiber.cancel_membership "propext,Quot.sound"
+        , w `Effect4.Supervision.Fiber.publish_eq "none"
+        , w `Effect4.Supervision.Fiber.publish_valid "propext" ] }
+  -- Remaining source clause: Request delivery, synchronous execution, and interruption followed by
+  -- actual await. See SUPERVISION-PG-RC112.
+  , { id := "fork.interrupt", kind := "fork", disposition := "separateCalculus", coverage := "partial"
+    , witnesses :=
+        [ w `Effect4.Supervision.interruptCause_eq "propext,Quot.sound"
+        , w `Effect4.Supervision.Fiber.recordInterrupt_done "propext,Quot.sound"
+        , w `Effect4.Supervision.Fiber.recordInterrupt_live "propext,Quot.sound"
+        , w `Effect4.Supervision.Fiber.recordInterrupt_core "propext,Quot.sound"
+        , w `Effect4.Supervision.interruptAllRequests_eq "none"
+        , w `Effect4.Supervision.interruptAllWait_eq "none" ] }
+  -- Remaining source clause: Executing request calls in order before explicit await; observations
+  -- may arrive during calls. See SUPERVISION-PG-RC112.
+  , { id := "fork.interrupt-all", kind := "fork", disposition := "separateCalculus", coverage := "partial"
+    , witnesses :=
+        [ w `Effect4.Supervision.WaitState.begin_eq "none"
+        , w `Effect4.Supervision.WaitState.pending_eq "propext"
+        , w `Effect4.Supervision.WaitState.ready_iff "propext"
+        , w `Effect4.Supervision.WaitState.ready_publications "propext,Quot.sound"
+        , w `Effect4.Supervision.WaitState.observe_pending "propext"
+        , w `Effect4.Supervision.WaitState.observe_unknown "propext"
+        , w `Effect4.Supervision.WaitState.observe_pending_membership "propext,Quot.sound"
+        , w `Effect4.Supervision.waitStep_iff "propext"
+        , w `Effect4.Supervision.waitRuns_iff "propext"
+        , w `Effect4.Supervision.waitReplay_ready "propext"
+        , w `Effect4.Supervision.waitReplay_frontier "propext"
+        , w `Effect4.Supervision.waitReplay_cons_ok "propext"
+        , w `Effect4.Supervision.waitReplay_cons_error "propext"
+        , w `Effect4.Supervision.wait_fixedTape_deterministic "propext"
+        , w `Effect4.Supervision.waitReplay_done_ready "propext"
+        , w `Effect4.Supervision.waitReplay_frame "propext,Quot.sound"
+        , w `Effect4.Supervision.wait_two_publications "propext,Quot.sound"
+        , w `Effect4.Supervision.interruptAllRequests_eq "none"
+        , w `Effect4.Supervision.interruptAllWait_eq "none" ] }
   , { id := "scope.states", kind := "scope", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.ScopeState.cases_receipt "none"
@@ -1434,8 +2058,53 @@ private def censusRows : List Row :=
   , { id := "rule.frames-are-primitives", kind := "rule", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
   , { id := "rule.interrupt-bypasses-handlers", kind := "rule", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
   , { id := "rule.yield-is-overloaded", kind := "rule", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "rule.only-fork-child-tracks", kind := "rule", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "rule.children-interrupted-after-exit", kind := "rule", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  -- Remaining source clause: Correspondence of all source fork call sites/options to the observed
+  -- controller inputs. See SUPERVISION-PG-RC112.
+  , { id := "rule.only-fork-child-tracks", kind := "rule", disposition := "separateCalculus", coverage := "partial"
+    , witnesses :=
+        [ w `Effect4.Supervision.Globals.ownsChildren_iff "none"
+        , w `Effect4.Supervision.Fiber.addChild_eq "propext"
+        , w `Effect4.Supervision.Fiber.removeChild_eq "none"
+        , w `Effect4.Supervision.Fiber.addChild_nodup "propext,Quot.sound"
+        , w `Effect4.Supervision.Fiber.removeChild_membership "propext,Quot.sound"
+        , w `Effect4.Supervision.commitFork_eq "propext"
+        , w `Effect4.Supervision.forkUnsafe_parent_children_nodup "propext,Quot.sound"
+        , w `Effect4.Supervision.forkDetach_eq "propext"
+        , w `Effect4.Supervision.commitFork_daemon_untracked "propext"
+        , w `Effect4.Supervision.raceForkOptions_eq "none" ] }
+  -- Remaining source clause: Parent continuation after a successful child wait; intervening
+  -- interruption can replace the local body Exit. See SUPERVISION-PG-RC112.
+  , { id := "rule.children-interrupted-after-exit", kind := "rule", disposition := "separateCalculus", coverage := "partial"
+    , witnesses :=
+        [ w `Effect4.Supervision.Globals.install_eq "none"
+        , w `Effect4.Supervision.Fiber.published_iff "propext"
+        , w `Effect4.Supervision.Fiber.publish_eq "none"
+        , w `Effect4.Supervision.forkChild_eq "propext"
+        , w `Effect4.Supervision.WaitState.begin_eq "none"
+        , w `Effect4.Supervision.WaitState.pending_eq "propext"
+        , w `Effect4.Supervision.WaitState.ready_iff "propext"
+        , w `Effect4.Supervision.WaitState.ready_publications "propext,Quot.sound"
+        , w `Effect4.Supervision.WaitState.observe_pending "propext"
+        , w `Effect4.Supervision.WaitState.observe_unknown "propext"
+        , w `Effect4.Supervision.WaitState.observe_pending_membership "propext,Quot.sound"
+        , w `Effect4.Supervision.waitStep_iff "propext"
+        , w `Effect4.Supervision.waitRuns_iff "propext"
+        , w `Effect4.Supervision.ReplayResult.state_done "none"
+        , w `Effect4.Supervision.ReplayResult.state_frontier "none"
+        , w `Effect4.Supervision.ReplayResult.state_refused "none"
+        , w `Effect4.Supervision.waitReplay_ready "propext"
+        , w `Effect4.Supervision.waitReplay_frontier "propext"
+        , w `Effect4.Supervision.waitReplay_cons_ok "propext"
+        , w `Effect4.Supervision.waitReplay_cons_error "propext"
+        , w `Effect4.Supervision.wait_fixedTape_deterministic "propext"
+        , w `Effect4.Supervision.waitReplay_done_ready "propext"
+        , w `Effect4.Supervision.waitReplay_frame "propext,Quot.sound"
+        , w `Effect4.Supervision.wait_two_publications "propext,Quot.sound"
+        , w `Effect4.Supervision.beginParentExit_eq "none"
+        , w `Effect4.Supervision.parentExitView_waiting "propext"
+        , w `Effect4.Supervision.parentExitView_ready "propext"
+        , w `Effect4.Supervision.parentExitView_not_published_while_waiting "propext"
+        , w `Effect4.Supervision.parentExitView_publication_requires_children "propext,Quot.sound" ] }
   , { id := "rule.scope-close-lifo-state-first", kind := "rule", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Scope.close_state_independent_of_run "none"
@@ -1628,6 +2297,142 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Scope.acquireRelease_success
   , `Effect4.Scope.acquireRelease_registers
   , `Effect4.Scope.acquireRelease_closed_ambient
+  , `Effect4.Supervision.MaskMode.select_interruptible
+  , `Effect4.Supervision.MaskMode.select_uninterruptible
+  , `Effect4.Supervision.MaskMode.select_inherit
+  , `Effect4.Supervision.MaskMode.cases_receipt
+  , `Effect4.Supervision.ObserverMode.cases_receipt
+  , `Effect4.Supervision.ScopeMode.cases_receipt
+  , `Effect4.Supervision.Globals.install_eq
+  , `Effect4.Supervision.Globals.valid_iff
+  , `Effect4.Supervision.Globals.ownsChildren_iff
+  , `Effect4.Supervision.Fiber.valid_iff
+  , `Effect4.Supervision.Fiber.valid?_iff
+  , `Effect4.Supervision.Fiber.toFiberState_eq
+  , `Effect4.Supervision.Fiber.published_iff
+  , `Effect4.Supervision.Fiber.published_eq
+  , `Effect4.Supervision.Fiber.addChild_eq
+  , `Effect4.Supervision.Fiber.removeChild_eq
+  , `Effect4.Supervision.Fiber.addChild_nodup
+  , `Effect4.Supervision.Fiber.removeChild_membership
+  , `Effect4.Supervision.observation_await
+  , `Effect4.Supervision.observation_join
+  , `Effect4.Supervision.observation_value_ne_effect
+  , `Effect4.Supervision.Fiber.observe_invalid
+  , `Effect4.Supervision.Fiber.observe_done
+  , `Effect4.Supervision.Fiber.observe_live
+  , `Effect4.Supervision.Fiber.observe_duplicate
+  , `Effect4.Supervision.Fiber.cancel_eq
+  , `Effect4.Supervision.Fiber.cancel_membership
+  , `Effect4.Supervision.Fiber.publish_eq
+  , `Effect4.Supervision.Fiber.publish_valid
+  , `Effect4.Supervision.interruptCause_eq
+  , `Effect4.Supervision.Fiber.recordInterrupt_done
+  , `Effect4.Supervision.Fiber.recordInterrupt_live
+  , `Effect4.Supervision.Fiber.recordInterrupt_core
+  , `Effect4.Supervision.initialFiber_eq
+  , `Effect4.Supervision.initialFiber_valid
+  , `Effect4.Supervision.commitFork_eq
+  , `Effect4.Supervision.forkUnsafe_duplicate
+  , `Effect4.Supervision.forkUnsafe_deferred
+  , `Effect4.Supervision.forkUnsafe_wrong_deferred
+  , `Effect4.Supervision.forkUnsafe_wrong_immediate
+  , `Effect4.Supervision.forkUnsafe_wrong_identity
+  , `Effect4.Supervision.forkUnsafe_wrong_parent
+  , `Effect4.Supervision.forkUnsafe_invalid_child
+  , `Effect4.Supervision.forkUnsafe_invalid_parent
+  , `Effect4.Supervision.forkUnsafe_invalid_globals
+  , `Effect4.Supervision.forkUnsafe_invalid_ownership
+  , `Effect4.Supervision.forkUnsafe_invalid_child_ownership
+  , `Effect4.Supervision.forkUnsafe_immediate
+  , `Effect4.Supervision.forkUnsafe_fresh
+  , `Effect4.Supervision.forkUnsafe_allocated_nodup
+  , `Effect4.Supervision.forkUnsafe_child_valid
+  , `Effect4.Supervision.forkUnsafe_parent_children_nodup
+  , `Effect4.Supervision.forkChild_eq
+  , `Effect4.Supervision.forkDetach_eq
+  , `Effect4.Supervision.commitFork_done_untracked
+  , `Effect4.Supervision.commitFork_daemon_untracked
+  , `Effect4.Supervision.Globals.allocate_eq
+  , `Effect4.Supervision.Globals.extends_iff
+  , `Effect4.Supervision.Globals.extends?_iff
+  , `Effect4.Supervision.Globals.ownsChildren?_iff
+  , `Effect4.Supervision.WaitState.begin_eq
+  , `Effect4.Supervision.WaitState.pending_eq
+  , `Effect4.Supervision.WaitState.ready_iff
+  , `Effect4.Supervision.WaitState.ready_publications
+  , `Effect4.Supervision.WaitState.observe_pending
+  , `Effect4.Supervision.WaitState.observe_unknown
+  , `Effect4.Supervision.WaitState.observe_pending_membership
+  , `Effect4.Supervision.waitStep_iff
+  , `Effect4.Supervision.waitRuns_iff
+  , `Effect4.Supervision.ReplayResult.state_done
+  , `Effect4.Supervision.ReplayResult.state_frontier
+  , `Effect4.Supervision.ReplayResult.state_refused
+  , `Effect4.Supervision.waitReplay_ready
+  , `Effect4.Supervision.waitReplay_frontier
+  , `Effect4.Supervision.waitReplay_cons_ok
+  , `Effect4.Supervision.waitReplay_cons_error
+  , `Effect4.Supervision.wait_fixedTape_deterministic
+  , `Effect4.Supervision.waitReplay_done_ready
+  , `Effect4.Supervision.waitReplay_frame
+  , `Effect4.Supervision.wait_two_publications
+  , `Effect4.Supervision.beginParentExit_eq
+  , `Effect4.Supervision.parentExitView_waiting
+  , `Effect4.Supervision.parentExitView_ready
+  , `Effect4.Supervision.parentExitView_not_published_while_waiting
+  , `Effect4.Supervision.parentExitView_publication_requires_children
+  , `Effect4.Supervision.newChildren_eq
+  , `Effect4.Supervision.newChildren_membership
+  , `Effect4.Supervision.awaitAllChildren_eq
+  , `Effect4.Supervision.interruptAllRequests_eq
+  , `Effect4.Supervision.interruptAllWait_eq
+  , `Effect4.Supervision.bindScope_invalid
+  , `Effect4.Supervision.bindScope_done
+  , `Effect4.Supervision.bindScope_closed
+  , `Effect4.Supervision.bindScope_duplicate_key
+  , `Effect4.Supervision.bindScope_open
+  , `Effect4.Supervision.forkScopedBinding_eq
+  , `Effect4.Supervision.scopeFinalizerInterruptor_eq
+  , `Effect4.Supervision.scopeFinalizer_self_guard
+  , `Effect4.Supervision.scopeObserver_eq
+  , `Effect4.Supervision.scopeObserver_key_membership
+  , `Effect4.Supervision.raceForkOptions_eq
+  , `Effect4.Supervision.raceCleanupMask_eq
+  , `Effect4.Supervision.RaceAllState.initial_eq
+  , `Effect4.Supervision.raceAllAdmit_eq
+  , `Effect4.Supervision.RaceAllState.result_eq
+  , `Effect4.Supervision.raceComplete_unknown
+  , `Effect4.Supervision.raceComplete_after_accepted
+  , `Effect4.Supervision.raceComplete_success
+  , `Effect4.Supervision.raceComplete_failure_last
+  , `Effect4.Supervision.raceComplete_failure_pending
+  , `Effect4.Supervision.raceStep_begin_blocked
+  , `Effect4.Supervision.raceStep_begin_empty
+  , `Effect4.Supervision.raceStep_begin
+  , `Effect4.Supervision.raceStep_finish_missing
+  , `Effect4.Supervision.raceStep_finish_duplicate
+  , `Effect4.Supervision.raceStep_finish_live
+  , `Effect4.Supervision.raceStep_finish_done
+  , `Effect4.Supervision.raceStep_complete
+  , `Effect4.Supervision.raceStep_complete_unknown
+  , `Effect4.Supervision.raceStep_beginCleanup
+  , `Effect4.Supervision.raceStep_beginCleanup_blocked
+  , `Effect4.Supervision.raceStep_requestNext
+  , `Effect4.Supervision.raceStep_requestNext_blocked
+  , `Effect4.Supervision.raceStep_iff
+  , `Effect4.Supervision.raceRuns_iff
+  , `Effect4.Supervision.raceReplay_ready
+  , `Effect4.Supervision.raceReplay_frontier
+  , `Effect4.Supervision.raceReplay_cons_ok
+  , `Effect4.Supervision.raceReplay_cons_error
+  , `Effect4.Supervision.race_fixedTape_deterministic
+  , `Effect4.Supervision.race_first_accepted_stable
+  , `Effect4.Supervision.race_result_requires_start_finished
+  , `Effect4.Supervision.race_cleanup_result_requires_publications
+  , `Effect4.Supervision.race_empty_frontier
+  , `Effect4.Supervision.race_single_success
+  , `Effect4.Supervision.race_two_failures
   ]
 
 private def expectedRowTotal : Nat := 99

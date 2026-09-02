@@ -58,11 +58,6 @@ row is unclaimed.
 | `Effect4/Target/TypeScript/Expr.lean`, `Effect4/Target/TypeScript/Render.lean`, `Effect4Test/Target/TypeScript/ExprContract.lean`, `test/contracts/typescript-target-expr.contract.md`, `docs/TYPESCRIPT-TARGET-DAG.md` | Codex | additive exact-binary64 and quoted-object target syntax for Schema generation |
 | `Effect4.lean`, `Effect4Test.lean` | Codex | Schema authoring/generation import lines only |
 | `Effect4Test/Audit/AxiomGate.lean` | Codex | exact target-renderer `Classical.choice` boundary only |
-| `Effect4/Concurrency/Supervision.lean`, `test/contracts/fiber-supervision.contract.md`, `docs/SUPERVISION-DAG.md`, `Effect4Test/Concurrency/FiberSupervisionContract.lean`, `Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean`, `Effect4Test/Concurrency/FiberSupervisionAxiomReport.lean` | Codex fork/supervision | Operator-authorized continuation at `f4f55fa`; the prior direct-child reservation had no landed contract, battery, or implementation. One resumed packet, with an independent breaker before implementation. |
-| `test/counterexamples/REGISTER.md`, `test/counterexamples/concurrency/ATTACKS.md` (`E4-CONC-CE-012` onward, supervision only) | Codex fork/supervision breaker | Append-only supervision attacks; preserve every existing row. |
-| `Effect4Test/Concurrency/FiberAssurance.lean`, `scripts/generate-fiber-assurance.sh`, `scripts/check-fiber-assurance.sh`, `scripts/test-fiber-assurance-gate.sh` (supervision checks only), `generated/fiber-assurance.tsv`, `Effect4Test.lean` (supervision imports only), `test/fixtures/trust-gate/known-red.txt` (supervision entries only), `PORT-MANIFEST.md` (supervision rows only), `PLAN.md` (supervision progress only), `docs/SUPERVISION-IMPLEMENTATION.md` | Codex fork/supervision integration | Exact supervision declaration and proof join; preserve the original representative packet and receipts. |
-| `Effect4Test/Audit/RuntimeCoverage.lean` (fork/supervision rows and their snapshots only), `scripts/generate-effect-runtime-census.sh` (`fork.race-all` summary only if the pinned early-success branch requires correction), `generated/effect-runtime-census.tsv` (generator output only) | Codex fork/supervision integration | Follow-on to the completed Scope join reported by the operator at `f4f55fa`; other runtime rows and pinned source bytes remain with their existing owners. |
-| `harness/fiber-supervision/**`, `scripts/check-fiber-supervision-host.sh` | Codex fork/supervision integration | Finite pinned-host witnesses for launch order, parent cleanup, daemon separation, and await/join observations; not a simulation theorem. |
 | `test/counterexamples/REGISTER.md`, `test/counterexamples/target/ATTACKS.md`, `Effect4Test/Counterexamples/Target/TypeScriptRender.lean` | Codex | `E4-TARGET-CE-004` only |
 | `Effect4/Context/Key.lean` | Claude | **closed, green, do not edit** |
 | `Effect4/Context/Service.lean` + its packet | Claude | breaker in flight |
@@ -185,6 +180,43 @@ verified that exact declared set and removed those two modules only from its
 temporary copy; compiled trust remains unverified for those two modules.
 These repair-specific claims are released. Older lane claims above are not
 released by this note.
+
+## Completed fork/supervision continuation, 2026-09-02
+
+The operator-authorized continuation from `f4f55fa` uses the single independent
+breaker packet committed at `5568f00`. The implementation, assurance join, and
+verification receipt are in the commit containing this note; see
+`docs/SUPERVISION-IMPLEMENTATION.md`. All 294 frozen declaration checks, 136
+public theorem obligations, and fifteen independent counterexamples pass.
+The contract, battery, DAG, and proof-report bytes remain at the breaker
+checkpoint. The only changed library module is
+`Effect4/Concurrency/Supervision.lean`.
+
+The Fiber join retains its original receipts and adds 705 compiler-owned
+supervision declarations, 19 exact shapes, and three finite leaves. All 136
+public theorem receipts stay inside `propext`/`Quot.sound`; no new trust
+exemption is introduced. Six local graph edges are closed, while the source
+bridge, target interpretation, and binding a fresh repository trust receipt
+remain required-open. The host evidence is ten finite cases, not a general
+source interpretation.
+
+The narrow Lean checks, generated assurance gate, all ten assurance reaction
+controls, pinned host gate, trust self-test, runtime census gate, citation
+check, and diff check pass. The census name extractor was extended only to
+recognize `?` in three frozen supervision theorem names; its exact comparison
+is unchanged. The default `lake build` still fails only for the previously
+declared byte-parser and binary race packets and their consequential root
+closure check. The trust self-test verifies that exact red set and excludes
+those two modules only in its probe copy.
+
+The seven researched reification skills are committed separately at `d25cd82`,
+including the original evaluation input hashes and an explicitly recorded
+packaging-only newline cleanup. All seven packages validate and match their
+installed copies. Existing README edits and `.claude/launch.json` are excluded;
+no push or PC synchronization was requested for this continuation.
+
+The six task-specific claims are released. Older broad lane claims above
+remain with their existing owners.
 
 ## Open items either agent may take
 

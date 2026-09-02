@@ -109,7 +109,7 @@ fi
 # 5. Every witness must have a frozen statement ascription in the module
 #    source, in the same order as the emitted snapshot list. This is what stops
 #    a witness from silently losing its exact statement.
-awk 'match($0, /^#check \(@[A-Za-z0-9_.]+ :/) {
+awk 'match($0, /^#check \(@[A-Za-z0-9_.?]+ :/) {
   line = substr($0, RSTART + 9)
   sub(/ :.*$/, "", line)
   print line

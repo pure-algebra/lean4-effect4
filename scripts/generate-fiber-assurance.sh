@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deterministic mechanical join for FIBER-PG-REPRESENTATIVE.
+# Deterministic joins for FIBER-PG-REPRESENTATIVE and SUPERVISION-PG-RC112.
 set -euo pipefail
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -22,6 +22,13 @@ expected_dag_sha="75959e24cc35eb69fe8ebbc08df81bcc998d71d6d2949ba6fa472d0c29e7c1
 
 contract_source="$repo_root/$contract_rel"
 dag_source="$repo_root/$dag_rel"
+supervision_rel="Effect4/Concurrency/Supervision.lean"
+supervision_contract_rel="test/contracts/fiber-supervision.contract.md"
+supervision_battery_rel="Effect4Test/Concurrency/FiberSupervisionContract.lean"
+supervision_axioms_rel="Effect4Test/Concurrency/FiberSupervisionAxiomReport.lean"
+supervision_counterexample_rel="Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean"
+supervision_dag_rel="docs/SUPERVISION-DAG.md"
+supervision_dag_source="$repo_root/$supervision_dag_rel"
 generation_mode="production"
 if [[ $# -gt 0 ]]; then
   if [[ $# -eq 2 && "$1" == "--dry-run-contract" ]]; then
@@ -30,8 +37,11 @@ if [[ $# -gt 0 ]]; then
   elif [[ $# -eq 2 && "$1" == "--dry-run-dag" ]]; then
     generation_mode="dry-run-dag"
     dag_source="$2"
+  elif [[ $# -eq 2 && "$1" == "--dry-run-supervision-dag" ]]; then
+    generation_mode="dry-run-supervision-dag"
+    supervision_dag_source="$2"
   else
-    printf 'usage: generate-fiber-assurance.sh [--dry-run-contract <contract.md> | --dry-run-dag <FIBER-DAG.md>]\n' >&2
+    printf 'usage: generate-fiber-assurance.sh [--dry-run-contract <contract.md> | --dry-run-dag <FIBER-DAG.md> | --dry-run-supervision-dag <SUPERVISION-DAG.md>]\n' >&2
     exit 2
   fi
 fi
@@ -41,7 +51,10 @@ for override_name in \
     EFFECT4_FIBER_CONTRACT \
     EFFECT4_FIBER_BATTERY \
     EFFECT4_FIBER_ASSURANCE_DRIVER \
-    EFFECT4_FIBER_AXIOM_REPORT; do
+    EFFECT4_FIBER_AXIOM_REPORT \
+    EFFECT4_SUPERVISION_SOURCE \
+    EFFECT4_SUPERVISION_DAG \
+    EFFECT4_SUPERVISION_BATTERY; do
   if [[ -n "${!override_name-}" ]]; then
     printf 'FAIL Fiber assurance generator rejects source override variable %s\n' \
       "$override_name" >&2
@@ -61,7 +74,15 @@ for required in \
     "$dag_source" \
     "$repo_root/$register_rel" \
     "$repo_root/$attacks_rel" \
-    "$contract_source"; do
+    "$contract_source" \
+    "$repo_root/$supervision_rel" \
+    "$repo_root/$supervision_contract_rel" \
+    "$repo_root/$supervision_battery_rel" \
+    "$repo_root/$supervision_axioms_rel" \
+    "$repo_root/$supervision_counterexample_rel" \
+    "$supervision_dag_source" \
+    "$repo_root/PORT-MANIFEST.md" \
+    "$repo_root/scripts/check-supervision-evidence.py"; do
   [[ -f "$required" && ! -L "$required" ]] || {
     printf 'FAIL required Fiber assurance input is absent, not regular, or a symlink: %s\n' \
       "$required" >&2
@@ -110,6 +131,57 @@ require_text() {
     exit 1
   }
 }
+
+# The controller join cannot turn the required source interpretation into a
+# completed or inapplicable edge. Frozen hashes also preserve the red packet.
+if grep -Fq -- '`required-closed`' "$supervision_dag_source"; then
+  printf 'FAIL Supervision authored graph carries a manual required-closed override\n' >&2
+  exit 1
+fi
+while IFS=$'\t' read -r input_rel expected_sha; do
+  input_file="$repo_root/$input_rel"
+  [[ "$input_rel" != "$supervision_dag_rel" ]] || input_file="$supervision_dag_source"
+  actual_sha="$(sha256_file "$input_file")"
+  [[ "$actual_sha" == "$expected_sha" ]] || {
+    printf 'FAIL frozen Supervision packet hash drifted: %s\n' "$input_rel" >&2
+    exit 1
+  }
+done <<'SUPERVISION_FROZEN'
+test/contracts/fiber-supervision.contract.md	abad19a1e90110dcd7dbfc2d5597865890b525c3475cea6bd18a256b6d48b9c6
+docs/SUPERVISION-DAG.md	acee8b741e2119b8830a09af969b033cd644ea68514a7d36b30ca525a859c30d
+Effect4Test/Concurrency/FiberSupervisionContract.lean	a42de6350616a0fbbe94bfcde471cc607e0c5a84fe601704a4911cc1eff61651
+Effect4Test/Concurrency/FiberSupervisionAxiomReport.lean	9bdfe6d385b65ae0a1d2487c6a7b87e75b0df7eecf58feacb75cffa018047c2c
+Effect4Test/Counterexamples/Concurrency/FiberSupervision.lean	52980b4e901f52f19528e2dbf71853c7ac0fa05549680306a1ef418d4a2428b7
+SUPERVISION_FROZEN
+
+python3 - "$supervision_dag_source" "$repo_root/PORT-MANIFEST.md" <<'SUPERVISION_MIRROR'
+from pathlib import Path
+import sys
+
+def rows(text, heading, end):
+    section = text.split(heading, 1)[1].split(end, 1)[0]
+    return [[cell.strip() for cell in line.strip('|').split('|')]
+            for line in section.splitlines() if line.startswith('| `')]
+
+dag = rows(Path(sys.argv[1]).read_text(), '## Complete type and judgment disposition',
+           '`Fiber.toFiberState_eq`')
+manifest = rows(Path(sys.argv[2]).read_text(), '## Fork and supervision declaration dispositions',
+                '## Retained TypeScript target fragment')
+expected = []
+for name, disposition, relation, route in dag:
+    expected.append(['`Effect4.Supervision.' + name.strip('`') + '`',
+                     '`Concurrency/Supervision.lean`', disposition, relation, route])
+if len(expected) != 27 or manifest != expected:
+    raise SystemExit('FAIL Supervision manifest dispositions differ from the frozen DAG')
+SUPERVISION_MIRROR
+
+for suffix in 012 013 014 015 016 017 018 019 020 021 022 023 024 025 026; do
+  id="E4-CONC-CE-$suffix"
+  count="$(grep -Fc -- "| \`$id\` |" "$repo_root/$register_rel" || true)"
+  [[ "$count" == 1 ]] || { printf 'FAIL Supervision counterexample row %s count=%s\n' "$id" "$count" >&2; exit 1; }
+  require_text "$repo_root/$attacks_rel" "## $id — "
+  require_text "$repo_root/$supervision_counterexample_rel" "$id"
+done
 
 # Closure is derived by this join. The frozen breaker contract cannot close
 # its own graph.
@@ -205,6 +277,9 @@ done
   "$lake_bin" env lean "$lean_contract_rel" >"$tmp_root/contract.log" 2>&1
   "$lake_bin" env lean "$counterexample_rel" >"$tmp_root/counterexamples.log" 2>&1
   "$lake_bin" env lean "$axiom_report_rel" >"$tmp_root/axioms.log" 2>&1
+  "$lake_bin" env lean -DmaxErrors=10000 "$supervision_battery_rel" >"$tmp_root/supervision-contract.log" 2>&1
+  "$lake_bin" env lean "$supervision_counterexample_rel" >"$tmp_root/supervision-counterexamples.log" 2>&1
+  "$lake_bin" env lean "$supervision_axioms_rel" >"$tmp_root/supervision-axioms.log" 2>&1
   "$lake_bin" env lean "$assurance_rel" >"$tmp_root/driver.log" 2>&1
 )
 
@@ -320,6 +395,15 @@ for leaf in \
   }
 done
 
+grep $'^E4SUP\t' "$tmp_root/driver.log" >"$tmp_root/supervision.rows" || {
+  printf 'FAIL Supervision assurance driver emitted no evidence rows\n' >&2
+  exit 1
+}
+sed 's/^E4SUP\t//' "$tmp_root/supervision.rows" >"$tmp_root/supervision.tsv"
+python3 "$repo_root/scripts/check-supervision-evidence.py" \
+  "$tmp_root/supervision.tsv" "$repo_root/$supervision_battery_rel" \
+  "$repo_root/$supervision_axioms_rel" "$supervision_dag_source"
+
 printf 'format\teffect4-fiber-assurance-v1\n'
 printf 'generator\t%s\tsha256=%s\n' "$generator_rel" "$(sha256_file "$repo_root/$generator_rel")"
 printf 'regenerate\t./scripts/generate-fiber-assurance.sh > generated/fiber-assurance.tsv\n'
@@ -350,3 +434,26 @@ awk -F '\t' 'BEGIN { OFS="\t" }
   }
   { print }
 ' "$tmp_root/evidence.tsv"
+
+# Supervision retains its open host route. Only six local edges close after
+# the fixed packet, exact driver, counterexample, and axiom checks above.
+for input_rel in \
+    "$supervision_rel" "$supervision_contract_rel" "$supervision_battery_rel" \
+    "$supervision_axioms_rel" "$supervision_counterexample_rel" "$supervision_dag_rel" \
+    PORT-MANIFEST.md scripts/check-supervision-evidence.py \
+    harness/fiber-supervision/host-pin.json \
+    harness/fiber-supervision/runtime-check.ts scripts/check-fiber-supervision-host.sh; do
+  printf 'input\t%s\tsha256=%s\n' "$input_rel" "$(sha256_file "$repo_root/$input_rel")"
+done
+printf 'contract\tSUPERVISION-FROZEN-CONTRACT\t%s\trequired-closed\n' "$supervision_contract_rel"
+printf 'battery\tSUPERVISION-FROZEN-BATTERY\t%s\trequired-closed\n' "$supervision_battery_rel"
+printf 'graph-owner\tSUPERVISION-PG-RC112\tEffect4.Supervision.WaitRuns+Effect4.Supervision.RaceRuns\tgraph\trequired-open\n'
+for suffix in 012 013 014 015 016 017 018 019 020 021 022 023 024 025 026; do
+  printf 'counterexample\tE4-CONC-CE-%s\tSEEDED\t%s\t%s\trequired-closed\n'     "$suffix" "$register_rel" "$supervision_counterexample_rel"
+done
+awk -F '\t' 'BEGIN { OFS="\t" }
+  $1 == "graph-edge" && $4 == "required-local" {
+    print $1, $2, $3, "required-closed"; next
+  }
+  { print }
+' "$tmp_root/supervision.tsv"

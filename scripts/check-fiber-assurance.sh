@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Byte-for-byte drift gate for FIBER-PG-REPRESENTATIVE assurance.
+# Byte-for-byte drift gate for the representative and supervision assurance joins.
 set -euo pipefail
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -64,4 +64,6 @@ if [[ "$mode" == "dry-run" ]]; then
 else
   printf 'PASS generated Fiber 504-owner/185-API/92-theorem/92-axiom join is current\n'
   printf 'PASS all 7 required FIBER-PG-REPRESENTATIVE edges are mechanically closed; 3 edges remain declared not-applicable\n'
+  printf 'PASS generated Supervision 705-owner/294-API/136-theorem/136-axiom join and 19 shapes are current\n'
+  printf 'PASS SUPERVISION-PG-RC112: 6 local edges closed; source bridges, targets, and binding the trust receipt remain required-open; representation not applicable\n'
 fi
