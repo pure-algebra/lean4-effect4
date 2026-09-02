@@ -165,7 +165,7 @@ private theorem find?_map_other (xs : List (FiberState τ))
       · have hcurrent : current.id ≠ id := by
           intro heq
           exact hne (hreplace.symm.trans heq)
-        simp [hreplace, hcurrent, hne, ih]
+        simp [hreplace, hne, ih]
       · simp [hreplace]
         by_cases hcurrent : current.id = id
         · simp [hcurrent]
@@ -251,7 +251,7 @@ private def decidableExistsMem (xs : List α) (P : α -> Prop)
 private def terminalExistsDecidable [DecidableEq τ] (current : FiberState τ) :
     Decidable (exists result, current.terminal = some result) :=
   match h : current.terminal with
-  | none => isFalse (by simp [h])
+  | none => isFalse (by simp)
   | some result => isTrue ⟨result, rfl⟩
 
 private def targetExistsDecidable (fibers : List (FiberState τ))
@@ -259,7 +259,7 @@ private def targetExistsDecidable (fibers : List (FiberState τ))
     Decidable (exists targetFiber, targetFiber ∈ fibers /\
       targetFiber.id = target) :=
   decidableExistsMem fibers (fun current => current.id = target)
-    (fun current => inferInstance)
+    (fun _ => inferInstance)
 
 private def waitingClosedForDecidable (fibers : List (FiberState τ))
     (current : FiberState τ) :
@@ -269,7 +269,7 @@ private def waitingClosedForDecidable (fibers : List (FiberState τ))
   | runnable | running | finalizing | done =>
       exact isTrue (by
         intro target impossible
-        simp [hstatus] at impossible)
+        simp at impossible)
   | waiting actual =>
       match targetExistsDecidable fibers actual with
       | isTrue hexists => exact isTrue (by
@@ -279,7 +279,7 @@ private def waitingClosedForDecidable (fibers : List (FiberState τ))
           exact hexists)
       | isFalse hmissing => exact isFalse (by
           intro hall
-          exact hmissing (hall actual (by simp [hstatus])))
+          exact hmissing (hall actual (by simp)))
 
 /-- Admission is decidable for a terminal alphabet with decidable equality. -/
 def wellFormedDecidable [DecidableEq τ] (machine : Machine τ) :
@@ -905,7 +905,7 @@ theorem stepEval_cleanup_invalid {boundary : InterruptBoundary τ}
         current.cleanup = .pending)) :
     stepEval boundary before (.cleanup id) =
       .refused (.invalidLifecycle id) before := by
-  simp only [stepEval, hfound, Option.bind_eq_bind, ↓reduceIte]
+  simp only [stepEval, hfound]
   by_cases hstatus : current.status = .finalizing
   · simp [hstatus]
     cases hterminal : current.terminal with
@@ -914,8 +914,269 @@ theorem stepEval_cleanup_invalid {boundary : InterruptBoundary τ}
         have hcleanup : current.cleanup ≠ .pending := by
           intro hc
           exact hinvalid ⟨result, hstatus, hterminal, hc⟩
-        simp [hterminal, hcleanup]
+        simp [hcleanup]
   · simp [hstatus]
+
+/-! ## Step inversion
+
+Every advanced step rewrites exactly one fiber. `Advance` enumerates the ten
+ways that can happen: which fiber was found, what replaced it, and which events
+were appended. `step_shape` proves that an interpreted decision is either a
+refusal that leaves the machine untouched or one of those ten advances, so the
+safety theorems below case on `Advance` instead of re-walking `stepEval`.
+The shape vocabulary is private: the exported interface stays the exact
+interpreter equations above and the safety theorems below. -/
+
+private inductive Advance (boundary : InterruptBoundary τ) (before : Machine τ) :
+    SchedulerDecision τ -> FiberState τ -> FiberState τ -> List (Event τ) -> Prop
+  | schedule {id current}
+      (hfound : before.fiber id = some current)
+      (hstatus : current.status = .runnable) :
+      Advance boundary before (.schedule id) current
+        { current with status := .running } [.scheduled id]
+  | joinDone {waiter target waiterState targetState result}
+      (hwaiter : before.fiber waiter = some waiterState)
+      (htarget : before.fiber target = some targetState)
+      (hne : waiter ≠ target)
+      (hwaiterStatus : waiterState.status = .running \/
+        waiterState.status = .waiting target)
+      (htargetStatus : targetState.status = .done)
+      (hterminal : before.terminal target = some result) :
+      Advance boundary before (.join waiter target) waiterState
+        { waiterState with status := .running }
+        [.joinObserved waiter target result]
+  | joinWaiting {waiter target waiterState targetState}
+      (hwaiter : before.fiber waiter = some waiterState)
+      (htarget : before.fiber target = some targetState)
+      (hne : waiter ≠ target)
+      (htargetStatus : targetState.status ≠ .done)
+      (hwaiterStatus : waiterState.status = .running) :
+      Advance boundary before (.join waiter target) waiterState
+        { waiterState with status := .waiting target }
+        [.joinWaiting waiter target]
+  | interruptMasked {requester target requesterState targetState}
+      (hrequester : before.fiber requester = some requesterState)
+      (htarget : before.fiber target = some targetState)
+      (hactive : FiberStatus.Active targetState.status)
+      (hmask : targetState.mask = .masked) :
+      Advance boundary before (.requestInterrupt requester target) targetState
+        { targetState with interruptPending := true }
+        [.interruptRequested requester target, .interruptDeferred target]
+  | interruptUnmasked {requester target requesterState targetState}
+      (hrequester : before.fiber requester = some requesterState)
+      (htarget : before.fiber target = some targetState)
+      (hactive : FiberStatus.Active targetState.status)
+      (hmask : targetState.mask = .unmasked) :
+      Advance boundary before (.requestInterrupt requester target) targetState
+        { targetState with status := FiberStatus.finalizing, terminal := some boundary.interrupted, interruptPending := false, cleanup := CleanupState.pending, cleanupCount := 0 }
+        [.interruptRequested requester target, .interruptDelivered target]
+  | enterMask {id current}
+      (hfound : before.fiber id = some current)
+      (hactive : FiberStatus.Active current.status)
+      (hmask : current.mask = .unmasked) :
+      Advance boundary before (.enterMask id) current
+        { current with mask := .masked } [.maskEntered id]
+  | exitMaskPending {id current}
+      (hfound : before.fiber id = some current)
+      (hactive : FiberStatus.Active current.status)
+      (hmask : current.mask = .masked)
+      (hpending : current.interruptPending = true) :
+      Advance boundary before (.exitMask id) current
+        { current with status := FiberStatus.finalizing, terminal := some boundary.interrupted, mask := InterruptMask.unmasked, interruptPending := false, cleanup := CleanupState.pending, cleanupCount := 0 }
+        [.maskExited id, .interruptDelivered id]
+  | exitMaskClear {id current}
+      (hfound : before.fiber id = some current)
+      (hactive : FiberStatus.Active current.status)
+      (hmask : current.mask = .masked)
+      (hpending : current.interruptPending = false) :
+      Advance boundary before (.exitMask id) current
+        { current with mask := .unmasked } [.maskExited id]
+  | complete {id current result}
+      (hfound : before.fiber id = some current)
+      (hstatus : current.status = .running)
+      (hmask : current.mask = .unmasked)
+      (hpending : current.interruptPending = false) :
+      Advance boundary before (.complete id result) current
+        { current with status := FiberStatus.finalizing, terminal := some result, interruptPending := false, cleanup := CleanupState.pending, cleanupCount := 0 }
+        [.completed id result]
+  | cleanup {id current result}
+      (hfound : before.fiber id = some current)
+      (hstatus : current.status = .finalizing)
+      (hterminal : current.terminal = some result)
+      (hcleanup : current.cleanup = .pending) :
+      Advance boundary before (.cleanup id) current
+        { current with status := FiberStatus.done, cleanup := CleanupState.done, cleanupCount := 1 }
+        [.cleanupFinished id]
+
+/-- One interpreted decision is a refusal at the unchanged machine or exactly
+one `Advance`. This is the only place the safety proofs walk `stepEval`. -/
+private theorem step_shape {boundary : InterruptBoundary τ} {before decision result}
+    (hstep : Step boundary before decision result) :
+    (exists reason, result = .refused reason before) \/
+    (exists current replacement events,
+      Advance boundary before decision current replacement events /\
+      result = .advanced (Machine.transition before replacement events)) := by
+  cases decision with
+  | schedule id =>
+      cases hfound : before.fiber id with
+      | none => exact .inl ⟨_, hstep.trans (stepEval_schedule_missing hfound)⟩
+      | some current =>
+          by_cases hstatus : current.status = .runnable
+          · exact .inr ⟨_, _, _, .schedule hfound hstatus,
+              hstep.trans (stepEval_schedule_runnable hfound hstatus)⟩
+          · exact .inl ⟨_, hstep.trans (stepEval_schedule_invalid hfound hstatus)⟩
+  | join waiter target =>
+      cases hwaiter : before.fiber waiter with
+      | none => exact .inl ⟨_, hstep.trans (stepEval_join_missing_waiter hwaiter)⟩
+      | some waiterState =>
+          cases htarget : before.fiber target with
+          | none =>
+              exact .inl ⟨_, hstep.trans (stepEval_join_missing_target hwaiter htarget)⟩
+          | some targetState =>
+              by_cases hne : waiter = target
+              · subst hne
+                exact .inl ⟨_, hstep.trans (stepEval_join_self_invalid hwaiter)⟩
+              by_cases hdone : targetState.status = .done
+              · cases hterminal : before.terminal target with
+                | none =>
+                    exact .inl ⟨_, hstep.trans (stepEval_join_done_missing_terminal
+                      hwaiter htarget hne hdone hterminal)⟩
+                | some result =>
+                    by_cases hvalid : waiterState.status = .running \/
+                        waiterState.status = .waiting target
+                    · exact .inr ⟨_, _, _,
+                        .joinDone hwaiter htarget hne hvalid hdone hterminal,
+                        hstep.trans (stepEval_join_done hwaiter htarget hne hvalid
+                          hdone hterminal)⟩
+                    · exact .inl ⟨_, hstep.trans (stepEval_join_done_invalid hwaiter
+                        htarget hne hdone hterminal (fun h => hvalid (.inl h))
+                        (fun h => hvalid (.inr h)))⟩
+              · by_cases hrunning : waiterState.status = .running
+                · exact .inr ⟨_, _, _,
+                    .joinWaiting hwaiter htarget hne hdone hrunning,
+                    hstep.trans (stepEval_join_waiting hwaiter htarget hne hdone
+                      hrunning)⟩
+                · exact .inl ⟨_, hstep.trans (stepEval_join_invalid hwaiter htarget
+                    hne hdone hrunning)⟩
+  | requestInterrupt requester target =>
+      cases hrequester : before.fiber requester with
+      | none =>
+          exact .inl ⟨_, hstep.trans (stepEval_interrupt_missing_requester hrequester)⟩
+      | some requesterState =>
+          cases htarget : before.fiber target with
+          | none =>
+              exact .inl ⟨_, hstep.trans
+                (stepEval_interrupt_missing_target hrequester htarget)⟩
+          | some targetState =>
+              by_cases hactive : FiberStatus.Active targetState.status
+              · cases hmask : targetState.mask with
+                | masked =>
+                    exact .inr ⟨_, _, _,
+                      .interruptMasked hrequester htarget hactive hmask,
+                      hstep.trans (stepEval_interrupt_masked hrequester htarget
+                        hactive hmask)⟩
+                | unmasked =>
+                    exact .inr ⟨_, _, _,
+                      .interruptUnmasked hrequester htarget hactive hmask,
+                      hstep.trans (stepEval_interrupt_unmasked hrequester htarget
+                        hactive hmask)⟩
+              · exact .inl ⟨_, hstep.trans
+                  (stepEval_interrupt_invalid hrequester htarget hactive)⟩
+  | enterMask id =>
+      cases hfound : before.fiber id with
+      | none => exact .inl ⟨_, hstep.trans (stepEval_enterMask_missing hfound)⟩
+      | some current =>
+          by_cases hactive : FiberStatus.Active current.status
+          · cases hmask : current.mask with
+            | unmasked =>
+                exact .inr ⟨_, _, _, .enterMask hfound hactive hmask,
+                  hstep.trans (stepEval_enterMask hfound hactive hmask)⟩
+            | masked =>
+                exact .inl ⟨_, hstep.trans
+                  (stepEval_enterMask_invalid hfound hactive hmask)⟩
+          · exact .inl ⟨_, hstep.trans (stepEval_enterMask_inactive hfound hactive)⟩
+  | exitMask id =>
+      cases hfound : before.fiber id with
+      | none => exact .inl ⟨_, hstep.trans (stepEval_exitMask_missing hfound)⟩
+      | some current =>
+          by_cases hactive : FiberStatus.Active current.status
+          · cases hmask : current.mask with
+            | masked =>
+                cases hpending : current.interruptPending with
+                | true =>
+                    exact .inr ⟨_, _, _,
+                      .exitMaskPending hfound hactive hmask hpending,
+                      hstep.trans (stepEval_exitMask_pending hfound hactive hmask
+                        hpending)⟩
+                | false =>
+                    exact .inr ⟨_, _, _,
+                      .exitMaskClear hfound hactive hmask hpending,
+                      hstep.trans (stepEval_exitMask_clear hfound hactive hmask
+                        hpending)⟩
+            | unmasked =>
+                exact .inl ⟨_, hstep.trans
+                  (stepEval_exitMask_invalid hfound hactive hmask)⟩
+          · exact .inl ⟨_, hstep.trans (stepEval_exitMask_inactive hfound hactive)⟩
+  | complete id result =>
+      cases hfound : before.fiber id with
+      | none => exact .inl ⟨_, hstep.trans (stepEval_complete_missing hfound)⟩
+      | some current =>
+          by_cases hvalid : current.status = .running /\
+              current.mask = .unmasked /\ current.interruptPending = false
+          · exact .inr ⟨_, _, _,
+              .complete hfound hvalid.1 hvalid.2.1 hvalid.2.2,
+              hstep.trans (stepEval_complete_running hfound hvalid.1 hvalid.2.1
+                hvalid.2.2)⟩
+          · exact .inl ⟨_, hstep.trans (stepEval_complete_invalid hfound hvalid)⟩
+  | cleanup id =>
+      cases hfound : before.fiber id with
+      | none => exact .inl ⟨_, hstep.trans (stepEval_cleanup_missing hfound)⟩
+      | some current =>
+          by_cases hstatus : current.status = .finalizing
+          · cases hterminal : current.terminal with
+            | none =>
+                refine .inl ⟨_, hstep.trans (stepEval_cleanup_invalid hfound ?_)⟩
+                rintro ⟨_, _, hsome, _⟩
+                rw [hterminal] at hsome
+                cases hsome
+            | some result =>
+                by_cases hcleanup : current.cleanup = .pending
+                · exact .inr ⟨_, _, _,
+                    .cleanup hfound hstatus hterminal hcleanup,
+                    hstep.trans (stepEval_cleanup_ready hfound hstatus hterminal
+                      hcleanup)⟩
+                · exact .inl ⟨_, hstep.trans (stepEval_cleanup_invalid hfound
+                    (fun h => h.elim fun _ hc => hcleanup hc.2.2))⟩
+          · exact .inl ⟨_, hstep.trans (stepEval_cleanup_invalid hfound
+              (fun h => h.elim fun _ hs => hstatus hs.1))⟩
+
+/-- A refused decision returns the machine it was offered. -/
+private theorem step_refused_inv {boundary : InterruptBoundary τ}
+    {before decision reason stopped}
+    (hstep : Step boundary before decision (.refused reason stopped)) :
+    stopped = before := by
+  rcases step_shape hstep with ⟨_, heq⟩ | ⟨_, _, _, _, heq⟩
+  · exact (StepResult.refused.inj heq).2
+  · cases heq
+
+/-- An advanced decision is one of the ten `Advance` shapes. -/
+private theorem step_advanced_inv {boundary : InterruptBoundary τ}
+    {before decision after}
+    (hstep : Step boundary before decision (.advanced after)) :
+    exists current replacement events,
+      Advance boundary before decision current replacement events /\
+      after = Machine.transition before replacement events := by
+  rcases step_shape hstep with ⟨_, heq⟩ | ⟨current, replacement, events, hadv, heq⟩
+  · cases heq
+  · exact ⟨current, replacement, events, hadv, StepResult.advanced.inj heq⟩
+
+/-- Two descriptions of the same advanced step agree on the next machine. -/
+private theorem step_advanced_eq {boundary : InterruptBoundary τ}
+    {before decision after next}
+    (hstep : Step boundary before decision (.advanced after))
+    (hexact : stepEval boundary before decision = .advanced next) :
+    after = next :=
+  StepResult.advanced.inj (hstep.trans hexact)
 
 /-! ## Replacement and admission lemmas -/
 
@@ -1032,12 +1293,8 @@ private theorem coherent_active {current : FiberState τ}
       current.mask = InterruptMask.masked) : FiberCoherent current where
   bounded := by simp [hcount]
   active := fun _ => ⟨hterminal, hcleanup, hcount⟩
-  finalizing := fun h => by
-    have : False := by simpa [FiberStatus.Active, h] using hactive
-    exact this.elim
-  done := fun h => by
-    have : False := by simpa [FiberStatus.Active, h] using hactive
-    exact this.elim
+  finalizing := fun h => by simp [FiberStatus.Active, h] at hactive
+  done := fun h => by simp [FiberStatus.Active, h] at hactive
   pending := fun h => ⟨hpending h, hactive⟩
 
 private theorem coherent_finalizing {current : FiberState τ} {result : τ}
@@ -1047,9 +1304,7 @@ private theorem coherent_finalizing {current : FiberState τ} {result : τ}
     (hcount : current.cleanupCount = 0)
     (hpending : current.interruptPending = false) : FiberCoherent current where
   bounded := by simp [hcount]
-  active := fun active => by
-    have : False := by simpa [FiberStatus.Active, hstatus] using active
-    exact this.elim
+  active := fun active => by simp [FiberStatus.Active, hstatus] at active
   finalizing := fun _ => ⟨⟨result, hterminal⟩, hcleanup, hcount⟩
   done := fun h => by cases hstatus.symm.trans h
   pending := fun h => by simp [hpending] at h
@@ -1061,9 +1316,7 @@ private theorem coherent_done {current : FiberState τ} {result : τ}
     (hcount : current.cleanupCount = 1)
     (hpending : current.interruptPending = false) : FiberCoherent current where
   bounded := by simp [hcount]
-  active := fun active => by
-    have : False := by simpa [FiberStatus.Active, hstatus] using active
-    exact this.elim
+  active := fun active => by simp [FiberStatus.Active, hstatus] at active
   finalizing := fun h => by cases hstatus.symm.trans h
   done := fun _ => ⟨⟨result, hterminal⟩, hcleanup, hcount⟩
   pending := fun h => by simp [hpending] at h
@@ -1249,233 +1502,137 @@ theorem step_deterministic {boundary : InterruptBoundary τ}
     (hright : Step boundary before decision right) : left = right :=
   hleft.trans hright.symm
 
+private theorem advance_preserves_wellFormed {boundary : InterruptBoundary τ}
+    {before decision current replacement events}
+    (hwf : Machine.WellFormed before)
+    (hadv : Advance boundary before decision current replacement events) :
+    Machine.WellFormed (Machine.transition before replacement events) := by
+  cases hadv with
+  | schedule hfound hstatus =>
+      have hmem := (fiber_some_mem_eq hfound).1
+      apply transition_preserves_noCleanup
+        (replacement := _) (events := _) hwf hmem <;> try rfl
+      · apply coherent_active_replacement hwf hmem
+          (by simp [hstatus, FiberStatus.Active])
+          (by simp [FiberStatus.Active]) <;> try rfl
+        intro hpending
+        exact (hwf.pendingActive _ hmem hpending).1
+      · intro target hwaiting
+        simp at hwaiting
+  | joinDone hwaiter htarget hne hvalid hdone hterminal =>
+      have hmem := (fiber_some_mem_eq hwaiter).1
+      have hactive : FiberStatus.Active current.status := by
+        rcases hvalid with running | waiting
+        · simp [running, FiberStatus.Active]
+        · simp [waiting, FiberStatus.Active]
+      apply transition_preserves_noCleanup
+        (replacement := _) (events := _) hwf hmem <;> try rfl
+      · apply coherent_active_replacement hwf hmem hactive
+          (by simp [FiberStatus.Active]) <;> try rfl
+        intro hpending
+        exact (hwf.pendingActive _ hmem hpending).1
+      · intro joined hwaiting
+        simp at hwaiting
+  | joinWaiting hwaiter htarget hne hdone hrunning =>
+      have hwaiterMem := (fiber_some_mem_eq hwaiter).1
+      apply transition_preserves_noCleanup
+        (replacement := _) (events := _) hwf hwaiterMem <;> try rfl
+      · apply coherent_active_replacement hwf hwaiterMem
+          (by simp [hrunning, FiberStatus.Active])
+          (by simp [FiberStatus.Active]) <;> try rfl
+        intro hpending
+        exact (hwf.pendingActive _ hwaiterMem hpending).1
+      · intro joined hwaiting
+        simp at hwaiting
+        subst hwaiting
+        exact ⟨_, (fiber_some_mem_eq htarget).1, (fiber_some_mem_eq htarget).2⟩
+  | interruptMasked hrequester htarget hactive hmask =>
+      have hmem := (fiber_some_mem_eq htarget).1
+      apply transition_preserves_noCleanup
+        (replacement := _) (events := _) hwf hmem <;> try rfl
+      · apply coherent_active_replacement hwf hmem hactive
+          (by simpa) <;> try rfl
+        intro _
+        exact hmask
+      · intro joined hwaiting
+        exact hwf.waitingClosed _ joined hmem (by simpa using hwaiting)
+  | interruptUnmasked hrequester htarget hactive hmask =>
+      have hmem := (fiber_some_mem_eq htarget).1
+      have hcount := (hwf.activeCleanup _ hmem hactive).2.2
+      apply transition_preserves_noCleanup
+        (replacement := _) (events := _) hwf hmem
+      · rfl
+      · simpa using hcount.symm
+      · rfl
+      · exact coherent_finalizing rfl rfl rfl rfl rfl
+      · intro joined hwaiting
+        simp at hwaiting
+  | enterMask hfound hactive hmask =>
+      have hmem := (fiber_some_mem_eq hfound).1
+      apply transition_preserves_noCleanup
+        (replacement := _) (events := _) hwf hmem <;> try rfl
+      · apply coherent_active_replacement hwf hmem hactive
+          (by simpa) <;> try rfl
+        intro _
+        rfl
+      · intro target hwaiting
+        exact hwf.waitingClosed _ target hmem (by simpa using hwaiting)
+  | exitMaskPending hfound hactive hmask hpending =>
+      have hmem := (fiber_some_mem_eq hfound).1
+      have hcount := (hwf.activeCleanup _ hmem hactive).2.2
+      apply transition_preserves_noCleanup
+        (replacement := _) (events := _) hwf hmem
+      · rfl
+      · simpa using hcount.symm
+      · rfl
+      · exact coherent_finalizing rfl rfl rfl rfl rfl
+      · intro target hwaiting
+        simp at hwaiting
+  | exitMaskClear hfound hactive hmask hpending =>
+      have hmem := (fiber_some_mem_eq hfound).1
+      apply transition_preserves_noCleanup
+        (replacement := _) (events := _) hwf hmem <;> try rfl
+      · apply coherent_active_replacement hwf hmem hactive
+          (by simpa) <;> try rfl
+        intro impossible
+        simp [hpending] at impossible
+      · intro target hwaiting
+        exact hwf.waitingClosed _ target hmem (by simpa using hwaiting)
+  | complete hfound hstatus hmask hpending =>
+      have hmem := (fiber_some_mem_eq hfound).1
+      have hactive : FiberStatus.Active current.status := by
+        simp [hstatus, FiberStatus.Active]
+      have hcount := (hwf.activeCleanup _ hmem hactive).2.2
+      apply transition_preserves_noCleanup
+        (replacement := _) (events := _) hwf hmem
+      · rfl
+      · simpa using hcount.symm
+      · rfl
+      · exact coherent_finalizing rfl rfl rfl rfl rfl
+      · intro target hwaiting
+        simp at hwaiting
+  | cleanup hfound hstatus hterminal hcleanup =>
+      have hmem := (fiber_some_mem_eq hfound).1
+      have hpending := pending_false_of_inactive hwf hmem
+        (by simp [hstatus, FiberStatus.Active])
+      have hcount := (hwf.finalizingCleanup _ hmem hstatus).2.2
+      apply transition_preserves_cleanup (replacement := _) hwf hmem
+      · exact (fiber_some_mem_eq hfound).2
+      · simpa using (fiber_some_mem_eq hfound).2
+      · exact hcount
+      · rfl
+      · exact coherent_done rfl hterminal rfl rfl (by simpa using hpending)
+      · intro target hwaiting
+        simp at hwaiting
+
 theorem step_preserves_wellFormed {boundary : InterruptBoundary τ}
     {before decision result} (hwf : Machine.WellFormed before)
     (hstep : Step boundary before decision result) :
     Machine.WellFormed result.machine := by
-  rw [step_iff] at hstep
-  subst result
-  cases decision with
-  | schedule id =>
-      cases hfound : before.fiber id with
-      | none => simpa [stepEval, hfound, StepResult.machine] using hwf
-      | some current =>
-          by_cases hstatus : current.status = FiberStatus.runnable
-          · simp only [stepEval, hfound, hstatus, if_pos, StepResult.machine]
-            have hmem := (fiber_some_mem_eq hfound).1
-            apply transition_preserves_noCleanup
-              (replacement := _) (events := _) hwf hmem <;> try rfl
-            · apply coherent_active_replacement hwf hmem
-                (by simpa [hstatus, FiberStatus.Active])
-                (by simp [FiberStatus.Active]) <;> try rfl
-              intro hpending
-              exact (hwf.pendingActive current hmem hpending).1
-            · intro target hwaiting
-              simp at hwaiting
-          · simpa [stepEval, hfound, hstatus, StepResult.machine] using hwf
-  | join waiter target =>
-      cases hwaiter : before.fiber waiter with
-      | none => simpa [stepEval, hwaiter, StepResult.machine] using hwf
-      | some waiterState =>
-          cases htarget : before.fiber target with
-          | none => simpa [stepEval, hwaiter, htarget, StepResult.machine] using hwf
-          | some targetState =>
-              by_cases hself : waiter = target
-              · simpa [stepEval, hwaiter, htarget, hself,
-                  StepResult.machine] using hwf
-              · by_cases hdone : targetState.status = FiberStatus.done
-                · cases hterminal : before.terminal target with
-                  | none =>
-                      simpa [stepEval, hwaiter, htarget, hself, hdone,
-                        hterminal, StepResult.machine] using hwf
-                  | some observed =>
-                      by_cases hvalid : waiterState.status = FiberStatus.running \/
-                          waiterState.status = FiberStatus.waiting target
-                      · simp only [stepEval, hwaiter, htarget, hself, hdone,
-                          hterminal, hvalid, if_false, if_true,
-                          StepResult.machine]
-                        have hmem := (fiber_some_mem_eq hwaiter).1
-                        have hactive : FiberStatus.Active waiterState.status := by
-                          rcases hvalid with running | waiting
-                          · simpa [running, FiberStatus.Active]
-                          · simpa [waiting, FiberStatus.Active]
-                        apply transition_preserves_noCleanup
-                          (replacement := _) (events := _) hwf hmem <;> try rfl
-                        · apply coherent_active_replacement hwf hmem hactive
-                            (by simp [FiberStatus.Active]) <;> try rfl
-                          intro hpending
-                          exact (hwf.pendingActive waiterState hmem hpending).1
-                        · intro joined hwaiting
-                          simp at hwaiting
-                      · simpa [stepEval, hwaiter, htarget, hself, hdone,
-                          hterminal, hvalid, StepResult.machine] using hwf
-                · by_cases hrunning : waiterState.status = FiberStatus.running
-                  · simp only [stepEval, hwaiter, htarget, hself, hdone,
-                      hrunning, if_false, if_true, StepResult.machine]
-                    have hwaiterMem := (fiber_some_mem_eq hwaiter).1
-                    have htargetMem := (fiber_some_mem_eq htarget).1
-                    apply transition_preserves_noCleanup
-                      (replacement := _) (events := _) hwf hwaiterMem <;>
-                        try rfl
-                    · apply coherent_active_replacement hwf hwaiterMem
-                        (by simpa [hrunning, FiberStatus.Active])
-                        (by simp [FiberStatus.Active]) <;> try rfl
-                      intro hpending
-                      exact (hwf.pendingActive waiterState hwaiterMem hpending).1
-                    · intro joined hwaiting
-                      have : joined = target := by simpa using hwaiting.symm
-                      subst joined
-                      exact ⟨targetState, htargetMem,
-                        (fiber_some_mem_eq htarget).2⟩
-                  · simpa [stepEval, hwaiter, htarget, hself, hdone,
-                      hrunning, StepResult.machine] using hwf
-  | requestInterrupt requester target =>
-      cases hrequester : before.fiber requester with
-      | none => simpa [stepEval, hrequester, StepResult.machine] using hwf
-      | some requesterState =>
-          cases htarget : before.fiber target with
-          | none => simpa [stepEval, hrequester, htarget,
-              StepResult.machine] using hwf
-          | some targetState =>
-              by_cases hactive : FiberStatus.Active targetState.status
-              · by_cases hmasked : targetState.mask = InterruptMask.masked
-                · simp only [stepEval, hrequester, htarget, hactive, hmasked,
-                    if_pos, StepResult.machine]
-                  have hmem := (fiber_some_mem_eq htarget).1
-                  apply transition_preserves_noCleanup
-                    (replacement := _) (events := _) hwf hmem <;> try rfl
-                  · apply coherent_active_replacement hwf hmem hactive
-                      (by simpa) <;> try rfl
-                    intro _
-                    rfl
-                  · intro joined hwaiting
-                    exact hwf.waitingClosed targetState joined hmem
-                      (by simpa using hwaiting)
-                · simp only [stepEval, hrequester, htarget, hactive, hmasked,
-                    if_pos, if_neg, StepResult.machine]
-                  have hmem := (fiber_some_mem_eq htarget).1
-                  have hcount :=
-                    (hwf.activeCleanup targetState hmem hactive).2.2
-                  apply transition_preserves_noCleanup
-                    (replacement := _) (events := _) hwf hmem
-                  · rfl
-                  · simpa using hcount.symm
-                  · rfl
-                  · exact coherent_finalizing rfl rfl rfl rfl rfl
-                  · intro joined hwaiting
-                    simp at hwaiting
-              · simpa [stepEval, hrequester, htarget, hactive,
-                  StepResult.machine] using hwf
-  | enterMask id =>
-      cases hfound : before.fiber id with
-      | none => simpa [stepEval, hfound, StepResult.machine] using hwf
-      | some current =>
-          by_cases hactive : FiberStatus.Active current.status
-          · by_cases hunmasked : current.mask = InterruptMask.unmasked
-            · simp only [stepEval, hfound, hactive, hunmasked, if_pos,
-                StepResult.machine]
-              have hmem := (fiber_some_mem_eq hfound).1
-              apply transition_preserves_noCleanup
-                (replacement := _) (events := _) hwf hmem <;> try rfl
-              · apply coherent_active_replacement hwf hmem hactive
-                    (by simpa) <;> try rfl
-                intro _
-                rfl
-              · intro target hwaiting
-                exact hwf.waitingClosed current target hmem
-                  (by simpa using hwaiting)
-            · simpa [stepEval, hfound, hactive, hunmasked,
-                StepResult.machine] using hwf
-          · simpa [stepEval, hfound, hactive, StepResult.machine] using hwf
-  | exitMask id =>
-      cases hfound : before.fiber id with
-      | none => simpa [stepEval, hfound, StepResult.machine] using hwf
-      | some current =>
-          by_cases hactive : FiberStatus.Active current.status
-          · by_cases hmasked : current.mask = InterruptMask.masked
-            · by_cases hpending : current.interruptPending = true
-              · simp only [stepEval, hfound, hactive, hmasked, hpending,
-                  if_pos, StepResult.machine]
-                have hmem := (fiber_some_mem_eq hfound).1
-                have hcount := (hwf.activeCleanup current hmem hactive).2.2
-                apply transition_preserves_noCleanup
-                  (replacement := _) (events := _) hwf hmem
-                · rfl
-                · simpa using hcount.symm
-                · rfl
-                · exact coherent_finalizing rfl rfl rfl rfl rfl
-                · intro target hwaiting
-                  simp at hwaiting
-              · have hclear : current.interruptPending = false := by
-                  cases hp : current.interruptPending with
-                  | false => rfl
-                  | true => exact (hpending hp).elim
-                simp only [stepEval, hfound, hactive, hmasked, hpending,
-                  if_pos, if_neg, StepResult.machine]
-                have hmem := (fiber_some_mem_eq hfound).1
-                apply transition_preserves_noCleanup
-                  (replacement := _) (events := _) hwf hmem <;> try rfl
-                · apply coherent_active_replacement hwf hmem hactive
-                      (by simpa) <;> try rfl
-                  intro impossible
-                  simp [hclear] at impossible
-                · intro target hwaiting
-                  exact hwf.waitingClosed current target hmem
-                    (by simpa using hwaiting)
-            · simpa [stepEval, hfound, hactive, hmasked,
-                StepResult.machine] using hwf
-          · simpa [stepEval, hfound, hactive, StepResult.machine] using hwf
-  | complete id terminal =>
-      cases hfound : before.fiber id with
-      | none => simpa [stepEval, hfound, StepResult.machine] using hwf
-      | some current =>
-          by_cases hvalid : current.status = FiberStatus.running /\
-              current.mask = InterruptMask.unmasked /\
-              current.interruptPending = false
-          · simp only [stepEval, hfound, hvalid, if_pos, StepResult.machine]
-            have hmem := (fiber_some_mem_eq hfound).1
-            have hactive : FiberStatus.Active current.status := by
-              simpa [hvalid.1, FiberStatus.Active]
-            have hcount := (hwf.activeCleanup current hmem hactive).2.2
-            apply transition_preserves_noCleanup
-              (replacement := _) (events := _) hwf hmem
-            · rfl
-            · simpa using hcount.symm
-            · rfl
-            · exact coherent_finalizing rfl rfl rfl rfl rfl
-            · intro target hwaiting
-              simp at hwaiting
-          · simpa [stepEval, hfound, hvalid, StepResult.machine] using hwf
-  | cleanup id =>
-      cases hfound : before.fiber id with
-      | none => simpa [stepEval, hfound, StepResult.machine] using hwf
-      | some current =>
-          by_cases hstatus : current.status = FiberStatus.finalizing
-          · cases hterminal : current.terminal with
-            | none => simpa [stepEval, hfound, hstatus, hterminal,
-                StepResult.machine] using hwf
-            | some terminal =>
-                by_cases hcleanup : current.cleanup = CleanupState.pending
-                · simp only [stepEval, hfound, hstatus, hterminal, hcleanup,
-                    if_pos, StepResult.machine]
-                  have hmem := (fiber_some_mem_eq hfound).1
-                  have hpending := pending_false_of_inactive hwf hmem
-                    (by simpa [hstatus, FiberStatus.Active])
-                  have hcount :=
-                    (hwf.finalizingCleanup current hmem hstatus).2.2
-                  apply transition_preserves_cleanup
-                    (replacement := _) hwf hmem
-                  · exact (fiber_some_mem_eq hfound).2
-                  · simpa using (fiber_some_mem_eq hfound).2
-                  · exact hcount
-                  · rfl
-                  · exact coherent_done rfl rfl rfl rfl
-                      (by simpa using hpending)
-                  · intro target hwaiting
-                    simp at hwaiting
-                · simpa [stepEval, hfound, hstatus, hterminal,
-                    hcleanup, StepResult.machine] using hwf
-          · simpa [stepEval, hfound, hstatus, StepResult.machine] using hwf
+  rcases step_shape hstep with ⟨_, rfl⟩ | ⟨_, _, _, hadv, rfl⟩
+  · simp only [StepResult.machine]
+    exact hwf
+  · exact advance_preserves_wellFormed hwf hadv
 
 /-! ## Structural finite replay -/
 
@@ -1818,36 +1975,14 @@ private theorem done_join_shape {boundary : InterruptBoundary τ}
       after = Machine.transition before
         { waiterState with status := FiberStatus.running }
         [Event.joinObserved waiter target result] := by
-  cases hwaiter : before.fiber waiter with
-  | none =>
-      have impossible := hstep.trans (stepEval_join_missing_waiter hwaiter)
-      cases impossible
-  | some waiterState =>
-      have hne : waiter ≠ target := by
-        intro hself
-        subst target
-        have impossible := hstep.trans (stepEval_join_self_invalid hwaiter)
-        cases impossible
-      have hvalid : waiterState.status = FiberStatus.running \/
-          waiterState.status = FiberStatus.waiting target := by
-        by_cases hvalid : waiterState.status = FiberStatus.running \/
-            waiterState.status = FiberStatus.waiting target
-        · exact hvalid
-        · have hnotRunning : waiterState.status ≠ FiberStatus.running :=
-            fun h => hvalid (Or.inl h)
-          have hnotWaiting : waiterState.status ≠ FiberStatus.waiting target :=
-            fun h => hvalid (Or.inr h)
-          have impossible := hstep.trans
-            (stepEval_join_done_invalid hwaiter htarget hne htargetStatus
-              hterminal hnotRunning hnotWaiting)
-          cases impossible
-      have exactStep := stepEval_join_done (boundary := boundary)
-        hwaiter htarget hne hvalid
-        htargetStatus hterminal
-      have same := hstep.trans exactStep
-      injection same with hafter
-      refine ⟨waiterState, rfl, hne, hvalid, ?_⟩
-      exact hafter
+  obtain ⟨_, _, _, hadv, rfl⟩ := step_advanced_inv hstep
+  cases hadv with
+  | joinDone hwaiter _ hne hvalid _ hterminal' =>
+      obtain rfl := Option.some.inj (hterminal'.symm.trans hterminal)
+      exact ⟨_, hwaiter, hne, hvalid, rfl⟩
+  | joinWaiting _ htarget' _ hnotDone _ =>
+      obtain rfl := Option.some.inj (htarget'.symm.trans htarget)
+      exact (hnotDone htargetStatus).elim
 
 private theorem done_join_preserves_target {boundary : InterruptBoundary τ}
     {before after waiter target targetState result}
@@ -1885,10 +2020,10 @@ theorem join_agreement {boundary : InterruptBoundary τ}
 
 theorem double_join_agreement {boundary : InterruptBoundary τ}
     {before middle after waiterOne waiterTwo target targetState result}
-    (hwf : Machine.WellFormed before)
+    (_hwf : Machine.WellFormed before)
     (htarget : before.fiber target = some targetState)
     (htargetStatus : targetState.status = FiberStatus.done)
-    (hwaiterOne : waiterOne ≠ target) (_hwaiterTwo : waiterTwo ≠ target)
+    (_hwaiterOne : waiterOne ≠ target) (_hwaiterTwo : waiterTwo ≠ target)
     (hterminal : before.terminal target = some result)
     (hfirst : Step boundary before (.join waiterOne target) (.advanced middle))
     (hsecond : Step boundary middle (.join waiterTwo target) (.advanced after)) :
@@ -1921,17 +2056,14 @@ theorem unmasked_interrupt_delivers {boundary : InterruptBoundary τ}
   let replacement := { targetState with status := FiberStatus.finalizing, terminal := some boundary.interrupted, interruptPending := false, cleanup := CleanupState.pending, cleanupCount := 0 }
   let events : List (Event τ) :=
     [.interruptRequested requester target, .interruptDelivered target]
-  have same := hstep.trans
-    (stepEval_interrupt_unmasked hrequester htarget hactive hmask)
-  injection same with hafter
-  subst after
+  obtain rfl := step_advanced_eq hstep (stepEval_interrupt_unmasked hrequester htarget hactive hmask)
   have hreplacement : replacement.id = target := (fiber_some_mem_eq htarget).2
   have hsame : (Machine.transition before replacement events).fiber target =
       some replacement := transition_fiber_same htarget hreplacement events
   dsimp [replacement, events] at hsame
-  exact ⟨by simp [Machine.terminal, hsame, replacement],
-    by simp [hsame, replacement],
-    by simp [Machine.cleanupState, hsame, replacement]⟩
+  exact ⟨by simp [Machine.terminal, hsame],
+    by simp [hsame],
+    by simp [Machine.cleanupState, hsame]⟩
 
 theorem masked_interrupt_defers {boundary : InterruptBoundary τ}
     {before after requester target requesterState targetState}
@@ -1947,17 +2079,14 @@ theorem masked_interrupt_defers {boundary : InterruptBoundary τ}
   let replacement := { targetState with interruptPending := true }
   let events : List (Event τ) :=
     [.interruptRequested requester target, .interruptDeferred target]
-  have same := hstep.trans
-    (stepEval_interrupt_masked hrequester htarget hactive hmask)
-  injection same with hafter
-  subst after
+  obtain rfl := step_advanced_eq hstep (stepEval_interrupt_masked hrequester htarget hactive hmask)
   have hreplacement : replacement.id = target := (fiber_some_mem_eq htarget).2
   have hsame : (Machine.transition before replacement events).fiber target =
       some replacement := transition_fiber_same htarget hreplacement events
   dsimp [replacement, events] at hsame
   constructor
-  · simp [Machine.interruptPending, hsame, replacement]
-  · simp [Machine.terminal, hsame, htarget, replacement]
+  · simp [Machine.interruptPending, hsame]
+  · simp [Machine.terminal, hsame, htarget]
 
 theorem unmask_delivers_pending {boundary : InterruptBoundary τ}
     {before after target current} (_hwf : Machine.WellFormed before)
@@ -1972,18 +2101,15 @@ theorem unmask_delivers_pending {boundary : InterruptBoundary τ}
     (after.fiber target).map FiberState.status = some FiberStatus.finalizing := by
   let replacement := { current with status := FiberStatus.finalizing, terminal := some boundary.interrupted, mask := InterruptMask.unmasked, interruptPending := false, cleanup := CleanupState.pending, cleanupCount := 0 }
   let events : List (Event τ) := [.maskExited target, .interruptDelivered target]
-  have same := hstep.trans
-    (stepEval_exitMask_pending hfound hactive hmask hpending)
-  injection same with hafter
-  subst after
+  obtain rfl := step_advanced_eq hstep (stepEval_exitMask_pending hfound hactive hmask hpending)
   have hreplacement : replacement.id = target := (fiber_some_mem_eq hfound).2
   have hsame : (Machine.transition before replacement events).fiber target =
       some replacement := transition_fiber_same hfound hreplacement events
   dsimp [replacement, events] at hsame
-  exact ⟨by simp [Machine.interruptPending, hsame, replacement],
-    by simp [Machine.mask, hsame, replacement],
-    by simp [Machine.terminal, hsame, replacement],
-    by simp [hsame, replacement]⟩
+  exact ⟨by simp [Machine.interruptPending, hsame],
+    by simp [Machine.mask, hsame],
+    by simp [Machine.terminal, hsame],
+    by simp [hsame]⟩
 
 theorem cleanup_preserves_terminal {boundary : InterruptBoundary τ}
     {before after id current terminal}
@@ -2000,10 +2126,7 @@ theorem cleanup_preserves_terminal {boundary : InterruptBoundary τ}
     after.trace = before.trace ++ [Event.cleanupFinished id] := by
   let replacement := { current with status := FiberStatus.done, cleanup := CleanupState.done, cleanupCount := 1 }
   let events : List (Event τ) := [.cleanupFinished id]
-  have same := hstep.trans
-    (stepEval_cleanup_ready hfound hstatus hterminal hcleanup)
-  injection same with hafter
-  subst after
+  obtain rfl := step_advanced_eq hstep (stepEval_cleanup_ready hfound hstatus hterminal hcleanup)
   have hreplacement : replacement.id = id := (fiber_some_mem_eq hfound).2
   have hsame : (Machine.transition before replacement events).fiber id =
       some replacement := transition_fiber_same hfound hreplacement events
@@ -2069,167 +2192,67 @@ private theorem transition_cleanupCount_mono {before : Machine τ}
       observed hsame
     simp [Machine.cleanupCount, hother]
 
+/-- The fiber an `Advance` rewrites is present, and the replacement keeps its id. -/
+private theorem Advance.found {boundary : InterruptBoundary τ}
+    {before decision current replacement events}
+    (hadv : Advance boundary before decision current replacement events) :
+    exists id, before.fiber id = some current /\ replacement.id = id := by
+  cases hadv with
+  | schedule hfound _ => exact ⟨_, hfound, (fiber_some_mem_eq hfound).2⟩
+  | joinDone hwaiter _ _ _ _ _ => exact ⟨_, hwaiter, (fiber_some_mem_eq hwaiter).2⟩
+  | joinWaiting hwaiter _ _ _ _ => exact ⟨_, hwaiter, (fiber_some_mem_eq hwaiter).2⟩
+  | interruptMasked _ htarget _ _ => exact ⟨_, htarget, (fiber_some_mem_eq htarget).2⟩
+  | interruptUnmasked _ htarget _ _ => exact ⟨_, htarget, (fiber_some_mem_eq htarget).2⟩
+  | enterMask hfound _ _ => exact ⟨_, hfound, (fiber_some_mem_eq hfound).2⟩
+  | exitMaskPending hfound _ _ _ => exact ⟨_, hfound, (fiber_some_mem_eq hfound).2⟩
+  | exitMaskClear hfound _ _ _ => exact ⟨_, hfound, (fiber_some_mem_eq hfound).2⟩
+  | complete hfound _ _ _ => exact ⟨_, hfound, (fiber_some_mem_eq hfound).2⟩
+  | cleanup hfound _ _ _ => exact ⟨_, hfound, (fiber_some_mem_eq hfound).2⟩
+
+/-- No `Advance` lowers the rewritten fiber's cleanup count. -/
+private theorem Advance.cleanupCount_le {boundary : InterruptBoundary τ}
+    {before decision current replacement events}
+    (hwf : Machine.WellFormed before)
+    (hadv : Advance boundary before decision current replacement events) :
+    current.cleanupCount <= replacement.cleanupCount := by
+  cases hadv with
+  | schedule _ _ => exact Nat.le_refl _
+  | joinDone _ _ _ _ _ _ => exact Nat.le_refl _
+  | joinWaiting _ _ _ _ _ => exact Nat.le_refl _
+  | interruptMasked _ _ _ _ => exact Nat.le_refl _
+  | enterMask _ _ _ => exact Nat.le_refl _
+  | exitMaskClear _ _ _ _ => exact Nat.le_refl _
+  | interruptUnmasked _ htarget hactive _ =>
+      have hzero := (hwf.activeCleanup _ (fiber_some_mem_eq htarget).1 hactive).2.2
+      simp [hzero]
+  | exitMaskPending hfound hactive _ _ =>
+      have hzero := (hwf.activeCleanup _ (fiber_some_mem_eq hfound).1 hactive).2.2
+      simp [hzero]
+  | complete hfound hstatus _ _ =>
+      have hzero := (hwf.activeCleanup _ (fiber_some_mem_eq hfound).1
+        (by simp [hstatus, FiberStatus.Active])).2.2
+      simp [hzero]
+  | cleanup hfound _ _ _ =>
+      exact hwf.cleanupBounded _ (fiber_some_mem_eq hfound).1
+
+private theorem advance_cleanupCount_mono {boundary : InterruptBoundary τ}
+    {before decision current replacement events}
+    (hwf : Machine.WellFormed before)
+    (hadv : Advance boundary before decision current replacement events)
+    (observed : FiberId) :
+    before.cleanupCount observed <=
+      (Machine.transition before replacement events).cleanupCount observed := by
+  obtain ⟨id, hfound, hid⟩ := Advance.found hadv
+  exact transition_cleanupCount_mono events hfound hid
+    (Advance.cleanupCount_le hwf hadv) observed
+
 theorem cleanup_count_monotone {boundary : InterruptBoundary τ}
     {before decision result id} (hwf : Machine.WellFormed before)
     (hstep : Step boundary before decision result) :
     before.cleanupCount id <= result.machine.cleanupCount id := by
-  rw [step_iff] at hstep
-  subst result
-  cases decision with
-  | schedule scheduled =>
-      cases hfound : before.fiber scheduled with
-      | none => simp [stepEval, hfound, StepResult.machine]
-      | some current =>
-          by_cases hstatus : current.status = FiberStatus.runnable
-          · simp only [stepEval, hfound, hstatus, if_pos, StepResult.machine]
-            exact transition_cleanupCount_mono
-              (replacement := { current with status := FiberStatus.running })
-              _ hfound (fiber_some_mem_eq hfound).2 (Nat.le_refl _) id
-          · simp [stepEval, hfound, hstatus, StepResult.machine]
-  | join waiter target =>
-      cases hwaiter : before.fiber waiter with
-      | none => simp [stepEval, hwaiter, StepResult.machine]
-      | some waiterState =>
-          cases htarget : before.fiber target with
-          | none => simp [stepEval, hwaiter, htarget, StepResult.machine]
-          | some targetState =>
-              by_cases hself : waiter = target
-              · simp [stepEval, hwaiter, htarget, hself, StepResult.machine]
-              · by_cases hdone : targetState.status = FiberStatus.done
-                · cases hterminal : before.terminal target with
-                  | none => simp [stepEval, hwaiter, htarget, hself, hdone,
-                      hterminal, StepResult.machine]
-                  | some observed =>
-                      by_cases hvalid : waiterState.status = FiberStatus.running \/
-                          waiterState.status = FiberStatus.waiting target
-                      · simp only [stepEval, hwaiter, htarget, hself, hdone,
-                          hterminal, hvalid, if_false, if_true,
-                          StepResult.machine]
-                        exact transition_cleanupCount_mono
-                          (replacement := { waiterState with status := FiberStatus.running })
-                          _ hwaiter (fiber_some_mem_eq hwaiter).2
-                          (Nat.le_refl _) id
-                      · simp [stepEval, hwaiter, htarget, hself, hdone,
-                          hterminal, hvalid, StepResult.machine]
-                · by_cases hrunning : waiterState.status = FiberStatus.running
-                  · simp only [stepEval, hwaiter, htarget, hself, hdone,
-                      hrunning, if_false, if_true, StepResult.machine]
-                    exact transition_cleanupCount_mono
-                      (replacement := { waiterState with status := FiberStatus.waiting target })
-                      _ hwaiter (fiber_some_mem_eq hwaiter).2
-                      (Nat.le_refl _) id
-                  · simp [stepEval, hwaiter, htarget, hself, hdone,
-                      hrunning, StepResult.machine]
-  | requestInterrupt requester target =>
-      cases hrequester : before.fiber requester with
-      | none => simp [stepEval, hrequester, StepResult.machine]
-      | some requesterState =>
-          cases htarget : before.fiber target with
-          | none => simp [stepEval, hrequester, htarget, StepResult.machine]
-          | some targetState =>
-              by_cases hactive : FiberStatus.Active targetState.status
-              · by_cases hmasked : targetState.mask = InterruptMask.masked
-                · simp only [stepEval, hrequester, htarget, hactive, hmasked,
-                    if_pos, StepResult.machine]
-                  have hmono := transition_cleanupCount_mono
-                    (replacement := { targetState with interruptPending := true })
-                    ([Event.interruptRequested requester target,
-                      Event.interruptDeferred target] : List (Event τ))
-                    htarget (fiber_some_mem_eq htarget).2
-                    (Nat.le_refl _) id
-                  simpa [hmasked] using hmono
-                · simp only [stepEval, hrequester, htarget, hactive, hmasked,
-                    if_pos, if_neg, StepResult.machine]
-                  have hmem := (fiber_some_mem_eq htarget).1
-                  have hzero := (hwf.activeCleanup targetState hmem hactive).2.2
-                  exact transition_cleanupCount_mono
-                    (replacement := { targetState with status := FiberStatus.finalizing, terminal := some boundary.interrupted, interruptPending := false, cleanup := CleanupState.pending, cleanupCount := 0 })
-                    _ htarget (fiber_some_mem_eq htarget).2
-                    (by simpa [hzero]) id
-              · simp [stepEval, hrequester, htarget, hactive,
-                  StepResult.machine]
-  | enterMask masked =>
-      cases hfound : before.fiber masked with
-      | none => simp [stepEval, hfound, StepResult.machine]
-      | some current =>
-          by_cases hactive : FiberStatus.Active current.status
-          · by_cases hunmasked : current.mask = InterruptMask.unmasked
-            · simp only [stepEval, hfound, hactive, hunmasked, if_pos,
-                StepResult.machine]
-              exact transition_cleanupCount_mono
-                (replacement := { current with mask := InterruptMask.masked })
-                _ hfound (fiber_some_mem_eq hfound).2 (Nat.le_refl _) id
-            · simp [stepEval, hfound, hactive, hunmasked, StepResult.machine]
-          · simp [stepEval, hfound, hactive, StepResult.machine]
-  | exitMask masked =>
-      cases hfound : before.fiber masked with
-      | none => simp [stepEval, hfound, StepResult.machine]
-      | some current =>
-          by_cases hactive : FiberStatus.Active current.status
-          · by_cases hmasked : current.mask = InterruptMask.masked
-            · by_cases hpending : current.interruptPending = true
-              · simp only [stepEval, hfound, hactive, hmasked, hpending,
-                  if_pos, StepResult.machine]
-                have hmem := (fiber_some_mem_eq hfound).1
-                have hzero := (hwf.activeCleanup current hmem hactive).2.2
-                exact transition_cleanupCount_mono
-                  (replacement := { current with status := FiberStatus.finalizing, terminal := some boundary.interrupted, mask := InterruptMask.unmasked, interruptPending := false, cleanup := CleanupState.pending, cleanupCount := 0 })
-                  _ hfound (fiber_some_mem_eq hfound).2
-                  (by simpa [hzero]) id
-              · simp only [stepEval, hfound, hactive, hmasked, hpending,
-                  if_pos, if_neg, StepResult.machine]
-                have hclear : current.interruptPending = false := by
-                  cases hp : current.interruptPending with
-                  | false => rfl
-                  | true => exact (hpending hp).elim
-                have hmono := transition_cleanupCount_mono
-                  (replacement := { current with mask := InterruptMask.unmasked })
-                  ([Event.maskExited masked] : List (Event τ))
-                  hfound (fiber_some_mem_eq hfound).2 (Nat.le_refl _) id
-                simpa [hclear] using hmono
-            · simp [stepEval, hfound, hactive, hmasked, StepResult.machine]
-          · simp [stepEval, hfound, hactive, StepResult.machine]
-  | complete completed terminal =>
-      cases hfound : before.fiber completed with
-      | none => simp [stepEval, hfound, StepResult.machine]
-      | some current =>
-          by_cases hvalid : current.status = FiberStatus.running /\
-              current.mask = InterruptMask.unmasked /\
-              current.interruptPending = false
-          · simp [stepEval, hfound, hvalid, StepResult.machine]
-            have hmem := (fiber_some_mem_eq hfound).1
-            have hactive : FiberStatus.Active current.status := by
-              simpa [hvalid.1, FiberStatus.Active]
-            have hzero := (hwf.activeCleanup current hmem hactive).2.2
-            have hmono := transition_cleanupCount_mono
-              (replacement := { current with status := FiberStatus.finalizing, terminal := some terminal, interruptPending := false, cleanup := CleanupState.pending, cleanupCount := 0 })
-              ([Event.completed completed terminal] : List (Event τ))
-              hfound (fiber_some_mem_eq hfound).2
-              (by simpa [hzero]) id
-            simpa [hvalid.2.1] using hmono
-          · simp [stepEval, hfound, hvalid, StepResult.machine]
-  | cleanup cleaned =>
-      cases hfound : before.fiber cleaned with
-      | none => simp [stepEval, hfound, StepResult.machine]
-      | some current =>
-          by_cases hstatus : current.status = FiberStatus.finalizing
-          · cases hterminal : current.terminal with
-            | none => simp [stepEval, hfound, hstatus, hterminal,
-                StepResult.machine]
-            | some terminal =>
-                by_cases hcleanup : current.cleanup = CleanupState.pending
-                · simp only [stepEval, hfound, hstatus, hterminal, hcleanup,
-                    if_pos, StepResult.machine]
-                  have hmem := (fiber_some_mem_eq hfound).1
-                  have hmono := transition_cleanupCount_mono
-                    (replacement := { current with status := FiberStatus.done, cleanup := CleanupState.done, cleanupCount := 1 })
-                    ([Event.cleanupFinished cleaned] : List (Event τ))
-                    hfound (fiber_some_mem_eq hfound).2
-                    (hwf.cleanupBounded current hmem) id
-                  simpa [hterminal] using hmono
-                · simp [stepEval, hfound, hstatus, hterminal, hcleanup,
-                    StepResult.machine]
-          · simp [stepEval, hfound, hstatus, StepResult.machine]
+  rcases step_shape hstep with ⟨_, rfl⟩ | ⟨_, _, _, hadv, rfl⟩
+  · exact Nat.le_refl _
+  · exact advance_cleanupCount_mono hwf hadv id
 
 private theorem replay_finished_implies_finished
     (boundary : InterruptBoundary τ) (initial : Machine τ)
