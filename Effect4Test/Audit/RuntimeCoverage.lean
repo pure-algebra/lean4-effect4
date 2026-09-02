@@ -1,6 +1,8 @@
 import Lean
 import Lean.Util.CollectAxioms
 import Effect4.Concurrency.Scheduler
+import Effect4.Semantics.Cause
+import Effect4.Semantics.Exit
 
 /-!
 # Effect v4 fiber runtime coverage
@@ -229,6 +231,268 @@ any statement is a `type mismatch` at the offending line. -/
     {left right : ReplayResult τ},
     Runs boundary initial tape left → Runs boundary initial tape right → left = right)
 
+/-! The Cause/Exit model witnesses. Statements are transcribed from the frozen
+ascriptions of `Effect4Test/Semantics/CauseExitContract.lean`. -/
+
+#check (@Effect4.Cause.eq_iff : forall {ε δ ι α : Type u} (left right : Cause ε δ ι α),
+  left = right <-> left.reasons = right.reasons)
+
+#check (@Effect4.Cause.ext : forall {ε δ ι α : Type u} {left right : Cause ε δ ι α},
+  left.reasons = right.reasons -> left = right)
+
+#check (@Effect4.Cause.eq_iff_pointwise :
+  forall {ε δ ι α : Type u} (left right : Cause ε δ ι α),
+    left = right <->
+      (left.reasons.length = right.reasons.length /\
+        forall index : Nat, left.reasons[index]? = right.reasons[index]?))
+
+#check (@Effect4.Cause.combine_no_new_reason : forall {ε δ ι α : Type u}
+  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (reason : Reason ε δ ι α) (self that : Cause ε δ ι α),
+  reason ∈ (Cause.combine self that).reasons ->
+    reason ∈ self.reasons \/ reason ∈ that.reasons)
+
+#check (@Effect4.Reason.error_fail : forall {ε δ ι α : Type u} (error : ε)
+  (annotations : ReasonAnnotations α),
+  (Reason.fail error annotations : Reason ε δ ι α).error? = some error)
+
+#check (@Effect4.Reason.annotations_fail : forall {ε δ ι α : Type u} (error : ε)
+  (annotations : ReasonAnnotations α),
+  (Reason.fail error annotations : Reason ε δ ι α).annotations = annotations)
+
+#check (@Effect4.Reason.fail_inj : forall {ε δ ι α : Type u} (leftError rightError : ε)
+  (leftAnnotations rightAnnotations : ReasonAnnotations α),
+  (Reason.fail leftError leftAnnotations : Reason ε δ ι α) =
+      Reason.fail rightError rightAnnotations <->
+    leftError = rightError /\ leftAnnotations = rightAnnotations)
+
+#check (@Effect4.Reason.defect_die : forall {ε δ ι α : Type u} (defect : δ)
+  (annotations : ReasonAnnotations α),
+  (Reason.die defect annotations : Reason ε δ ι α).defect? = some defect)
+
+#check (@Effect4.Reason.annotations_die : forall {ε δ ι α : Type u} (defect : δ)
+  (annotations : ReasonAnnotations α),
+  (Reason.die defect annotations : Reason ε δ ι α).annotations = annotations)
+
+#check (@Effect4.Reason.die_inj : forall {ε δ ι α : Type u} (leftDefect rightDefect : δ)
+  (leftAnnotations rightAnnotations : ReasonAnnotations α),
+  (Reason.die leftDefect leftAnnotations : Reason ε δ ι α) =
+      Reason.die rightDefect rightAnnotations <->
+    leftDefect = rightDefect /\ leftAnnotations = rightAnnotations)
+
+#check (@Effect4.Cause.interrupt_reasons : forall {ε δ ι α : Type u}
+  (interruptor : Option ι),
+  (Cause.interrupt interruptor : Cause ε δ ι α).reasons =
+    [Reason.interrupt interruptor ReasonAnnotations.empty])
+
+#check (@Effect4.Reason.annotations_interrupt : forall {ε δ ι α : Type u}
+  (interruptor : Option ι) (annotations : ReasonAnnotations α),
+  (Reason.interrupt interruptor annotations : Reason ε δ ι α).annotations =
+    annotations)
+
+#check (@Effect4.Reason.interrupt_inj : forall {ε δ ι α : Type u}
+  (leftInterruptor rightInterruptor : Option ι)
+  (leftAnnotations rightAnnotations : ReasonAnnotations α),
+  (Reason.interrupt leftInterruptor leftAnnotations : Reason ε δ ι α) =
+      Reason.interrupt rightInterruptor rightAnnotations <->
+    leftInterruptor = rightInterruptor /\
+      leftAnnotations = rightAnnotations)
+
+#check (@Effect4.Cause.combine_empty_left : forall {ε δ ι α : Type u} [DecidableEq ε]
+  [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (that : Cause ε δ ι α),
+  Cause.combine Cause.empty that = that)
+
+#check (@Effect4.Cause.combine_empty_right : forall {ε δ ι α : Type u} [DecidableEq ε]
+  [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (self : Cause ε δ ι α),
+  Cause.combine self Cause.empty = self)
+
+#check (@Effect4.Cause.combine_reasons : forall {ε δ ι α : Type u} [DecidableEq ε]
+  [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (self that : Cause ε δ ι α),
+  self.reasons ≠ [] -> that.reasons ≠ [] ->
+  (Cause.combine self that).reasons =
+    Cause.dedup (self.reasons ++ that.reasons))
+
+#check (@Effect4.Cause.mem_combine : forall {ε δ ι α : Type u} [DecidableEq ε]
+  [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (reason : Reason ε δ ι α) (self that : Cause ε δ ι α),
+  reason ∈ (Cause.combine self that).reasons <->
+    reason ∈ self.reasons \/ reason ∈ that.reasons)
+
+#check (@Effect4.Cause.combine_self : forall {ε δ ι α : Type u} [DecidableEq ε]
+  [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (self : Cause ε δ ι α),
+  self.reasons.Nodup -> Cause.combine self self = self)
+
+#check (@Effect4.Cause.combine_order : forall {ε δ ι α : Type u} [DecidableEq ε]
+  [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (self that : Cause ε δ ι α),
+  self.reasons.Nodup -> that.reasons.Nodup ->
+  (Cause.combine self that).reasons =
+    self.reasons ++
+      that.reasons.filter (fun reason => decide (reason ∉ self.reasons)))
+
+#check (@Effect4.Cause.dedup_cons : forall {ε δ ι α : Type u} [DecidableEq ε]
+  [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (reason : Reason ε δ ι α) (rest : List (Reason ε δ ι α)),
+  Cause.dedup (reason :: rest) =
+    reason :: (Cause.dedup rest).filter (fun other => decide (other ≠ reason)))
+
+#check (@Effect4.Cause.mem_dedup : forall {ε δ ι α : Type u} [DecidableEq ε]
+  [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (reason : Reason ε δ ι α) (list : List (Reason ε δ ι α)),
+  reason ∈ Cause.dedup list <-> reason ∈ list)
+
+#check (@Effect4.Cause.dedup_nodup : forall {ε δ ι α : Type u} [DecidableEq ε]
+  [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (list : List (Reason ε δ ι α)), (Cause.dedup list).Nodup)
+
+#check (@Effect4.Cause.dedup_of_nodup : forall {ε δ ι α : Type u} [DecidableEq ε]
+  [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (list : List (Reason ε δ ι α)), list.Nodup -> Cause.dedup list = list)
+
+#check (@Effect4.Exit.mergeFinalizer_failure_failure : forall {β ε δ ι α : Type u}
+  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (cause finalizerCause : Cause ε δ ι α),
+  Exit.mergeFinalizer (Exit.failure cause : Exit β ε δ ι α)
+      (Exit.failure finalizerCause) =
+    Exit.failure (Cause.combine cause finalizerCause))
+
+#check (@Effect4.Exit.restoreAfterFinalizer_failure_failure :
+  forall {β ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
+    [DecidableEq α] (cause finalizerCause : Cause ε δ ι α),
+  Exit.restoreAfterFinalizer (Exit.failure cause : Exit β ε δ ι α)
+      (Exit.failure finalizerCause) =
+    Exit.failure (Cause.combine cause finalizerCause))
+
+#check (@Effect4.Exit.mergeFinalizer_success_failure : forall {β ε δ ι α : Type u}
+  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (value : β) (finalizerCause : Cause ε δ ι α),
+  Exit.mergeFinalizer (Exit.success value) (Exit.failure finalizerCause) =
+    Exit.failure finalizerCause)
+
+#check (@Effect4.Exit.restoreAfterFinalizer_success_failure :
+  forall {β ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
+    [DecidableEq α] (value : β) (finalizerCause : Cause ε δ ι α),
+  Exit.restoreAfterFinalizer (Exit.success value : Exit β ε δ ι α)
+      (Exit.failure finalizerCause) =
+    Exit.failure finalizerCause)
+
+#check (@Effect4.Cause.squash_error : forall {ε δ ι α : Type u}
+  (self : Cause ε δ ι α) (error : ε) (rest : List ε),
+  self.reasons.filterMap Reason.error? = error :: rest ->
+    self.squash = Squashed.error error)
+
+#check (@Effect4.Cause.squash_defect : forall {ε δ ι α : Type u}
+  (self : Cause ε δ ι α) (defect : δ) (rest : List δ),
+  self.reasons.filterMap Reason.error? = [] ->
+  self.reasons.filterMap Reason.defect? = defect :: rest ->
+    self.squash = Squashed.defect defect)
+
+#check (@Effect4.Cause.squash_interrupted : forall {ε δ ι α : Type u}
+  (self : Cause ε δ ι α),
+  self.reasons.filterMap Reason.error? = [] ->
+  self.reasons.filterMap Reason.defect? = [] ->
+  self.reasons ≠ [] ->
+    self.squash = Squashed.interruptedWithoutError)
+
+#check (@Effect4.Cause.squash_emptyCause_iff : forall {ε δ ι α : Type u}
+  (self : Cause ε δ ι α),
+  self.squash = Squashed.emptyCause <-> self.reasons = [])
+
+#check (@Effect4.Cause.squash_fail_over_die : forall {ε δ ι α : Type u} (error : ε)
+  (defect : δ) (dieAnnotations failAnnotations : ReasonAnnotations α),
+  (Cause.mk [Reason.die defect dieAnnotations,
+      Reason.fail error failAnnotations] : Cause ε δ ι α).squash =
+    Squashed.error error)
+
+#check (@Effect4.ReasonAnnotations.keys_nodup : forall {α : Type u} (self : ReasonAnnotations α),
+  self.keys.Nodup)
+
+#check (@Effect4.Reason.annotate_annotations : forall {ε δ ι α : Type u}
+  (reason : Reason ε δ ι α) (extra : ReasonAnnotations α) (overwrite : Bool),
+  (reason.annotate extra overwrite).annotations =
+    reason.annotations.annotate extra overwrite)
+
+#check (@Effect4.Reason.host_memory_refused :
+  forall {ε α : Type u} (recall : ε -> ReasonAnnotations α) (left right : ε),
+    left = right -> recall left = recall right)
+
+#check (@Effect4.ReasonAnnotations.annotate_entries :
+  forall {α : Type u} (self extra : ReasonAnnotations α) (overwrite : Bool),
+    (self.annotate extra overwrite).entries =
+      self.entries.map (fun entry =>
+        if overwrite = true then
+          match extra.lookup entry.fst with
+          | some value => (entry.fst, value)
+          | none => entry
+        else entry) ++
+      extra.entries.filter (fun entry => decide (entry.fst ∉ self.keys)))
+
+#check (@Effect4.ReasonAnnotations.lookup_annotate_kept :
+  forall {α : Type u} (self extra : ReasonAnnotations α) (key : String) (value : α),
+    self.lookup key = some value ->
+    (self.annotate extra false).lookup key = some value)
+
+#check (@Effect4.ReasonAnnotations.lookup_annotate_overwrite :
+  forall {α : Type u} (self extra : ReasonAnnotations α) (key : String) (value : α),
+    extra.lookup key = some value ->
+    (self.annotate extra true).lookup key = some value)
+
+#check (@Effect4.Exit.cases_receipt : forall {β ε δ ι α : Type u}
+  (self : Exit β ε δ ι α),
+  (exists value, self = Exit.success value) \/
+  (exists cause, self = Exit.failure cause))
+
+#check (@Effect4.Exit.success_ne_failure : forall {β ε δ ι α : Type u} (value : β)
+  (cause : Cause ε δ ι α),
+  (Exit.success value : Exit β ε δ ι α) ≠ Exit.failure cause)
+
+#check (@Effect4.Exit.success_inj : forall {β ε δ ι α : Type u} (left right : β),
+  (Exit.success left : Exit β ε δ ι α) = Exit.success right <-> left = right)
+
+#check (@Effect4.Exit.failure_inj : forall {β ε δ ι α : Type u}
+  (left right : Cause ε δ ι α),
+  (Exit.failure left : Exit β ε δ ι α) = Exit.failure right <-> left = right)
+
+#check (@Effect4.Exit.cause_failure : forall {β ε δ ι α : Type u}
+  (cause : Cause ε δ ι α),
+  (Exit.failure cause : Exit β ε δ ι α).cause? = some cause)
+
+#check (@Effect4.ReasonTag.all_nodup : ReasonTag.all.Nodup)
+
+#check (@Effect4.ReasonTag.mem_all : forall tag : ReasonTag, tag ∈ ReasonTag.all)
+
+#check (@Effect4.ReasonTag.cases_receipt : forall tag : ReasonTag,
+  tag = ReasonTag.fail \/ tag = ReasonTag.die \/ tag = ReasonTag.interrupt)
+
+#check (@Effect4.Reason.cases_receipt : forall {ε δ ι α : Type u}
+  (reason : Reason ε δ ι α),
+  (exists error annotations, reason = Reason.fail error annotations) \/
+  (exists defect annotations, reason = Reason.die defect annotations) \/
+  (exists interruptor annotations,
+    reason = Reason.interrupt interruptor annotations))
+
+#check (@Effect4.Reason.tag_mem_all : forall {ε δ ι α : Type u}
+  (reason : Reason ε δ ι α), reason.tag ∈ ReasonTag.all)
+
+#check (@Effect4.Exit.asVoidAll_reasons : forall {β ε δ ι α : Type u}
+  (exits : List (Exit β ε δ ι α)),
+  (Exit.asVoidAll exits).causeReasons = exits.flatMap Exit.causeReasons)
+
+#check (@Effect4.Exit.asVoidAll_failure : forall {β ε δ ι α : Type u}
+  (exits : List (Exit β ε δ ι α)) (reason : Reason ε δ ι α)
+  (rest : List (Reason ε δ ι α)),
+  exits.flatMap Exit.causeReasons = reason :: rest ->
+    Exit.asVoidAll exits = Exit.failure (Cause.mk (reason :: rest)))
+
+#check (@Effect4.Exit.asVoidAll_all_success : forall {β ε δ ι α : Type u}
+  (exits : List (Exit β ε δ ι α)),
+  (forall exit, exit ∈ exits -> exists value, exit = Exit.success value) ->
+    Exit.asVoidAll exits = Exit.success ())
+
+#check (@Effect4.Exit.void_eq : forall {ε δ ι α : Type u},
+  (Exit.void : Exit Unit ε δ ι α) = Exit.success ())
+
 end StatementSnapshot
 
 /-! ## The frozen census join -/
@@ -337,7 +601,12 @@ private def censusRows : List Row :=
   , { id := "scope.close-sequential", kind := "scope", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
   , { id := "scope.close-parallel", kind := "scope", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
   , { id := "scope.close-merge", kind := "scope", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "scope.exit-as-void-all", kind := "scope", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "scope.exit-as-void-all", kind := "scope", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Exit.asVoidAll_reasons "none"
+        , w `Effect4.Exit.asVoidAll_failure "none"
+        , w `Effect4.Exit.asVoidAll_all_success "propext"
+        , w `Effect4.Exit.void_eq "none" ] }
   , { id := "scope.fork-linkage", kind := "scope", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
   , { id := "scope.scoped", kind := "scope", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
   , { id := "scope.acquire-release", kind := "scope", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
@@ -353,18 +622,83 @@ private def censusRows : List Row :=
   , { id := "scheduler.max-ops-default", kind := "scheduler", disposition := "targetOnly", coverage := "absent", witnesses := [] }
   , { id := "scheduler.prevent-yield-default", kind := "scheduler", disposition := "targetOnly", coverage := "absent", witnesses := [] }
   , { id := "scheduler.host-loop", kind := "scheduler", disposition := "targetOnly", coverage := "absent", witnesses := [] }
-  , { id := "exit.success-failure", kind := "exit", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "exit.reason-alphabet", kind := "exit", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "cause.flat-reasons", kind := "cause", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "cause.reason-fail", kind := "cause", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "cause.reason-die", kind := "cause", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "cause.reason-interrupt", kind := "cause", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "cause.combine-union", kind := "cause", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "cause.finalizer-merge", kind := "cause", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "cause.squash", kind := "cause", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "cause.union-first-occurrence", kind := "cause", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "cause.dedupe-first-occurrence", kind := "cause", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "cause.annotations", kind := "cause", disposition := "foreignBoundary", coverage := "absent", witnesses := [] }
+  , { id := "exit.success-failure", kind := "exit", disposition := "separateCalculus", coverage := "partial"
+      -- missing clause: "each is itself a primitive that can be stepped" needs the continuation-machine calculus
+    , witnesses :=
+        [ w `Effect4.Exit.cases_receipt "none"
+        , w `Effect4.Exit.success_ne_failure "none"
+        , w `Effect4.Exit.success_inj "none"
+        , w `Effect4.Exit.failure_inj "none"
+        , w `Effect4.Exit.cause_failure "none" ] }
+  , { id := "exit.reason-alphabet", kind := "exit", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.ReasonTag.all_nodup "none"
+        , w `Effect4.ReasonTag.mem_all "propext"
+        , w `Effect4.ReasonTag.cases_receipt "none"
+        , w `Effect4.Reason.cases_receipt "none"
+        , w `Effect4.Reason.tag_mem_all "propext" ] }
+  , { id := "cause.flat-reasons", kind := "cause", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Cause.eq_iff "none"
+        , w `Effect4.Cause.ext "none"
+        , w `Effect4.Cause.eq_iff_pointwise "propext"
+        , w `Effect4.Cause.combine_no_new_reason "propext" ] }
+  , { id := "cause.reason-fail", kind := "cause", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Reason.error_fail "none"
+        , w `Effect4.Reason.annotations_fail "none"
+        , w `Effect4.Reason.fail_inj "none" ] }
+  , { id := "cause.reason-die", kind := "cause", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Reason.defect_die "none"
+        , w `Effect4.Reason.annotations_die "none"
+        , w `Effect4.Reason.die_inj "none" ] }
+  , { id := "cause.reason-interrupt", kind := "cause", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Cause.interrupt_reasons "none"
+        , w `Effect4.Reason.annotations_interrupt "none"
+        , w `Effect4.Reason.interrupt_inj "none" ] }
+  , { id := "cause.combine-union", kind := "cause", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Cause.combine_empty_left "none"
+        , w `Effect4.Cause.combine_empty_right "none"
+        , w `Effect4.Cause.combine_reasons "none"
+        , w `Effect4.Cause.mem_combine "propext"
+        , w `Effect4.Cause.combine_self "propext,Quot.sound" ] }
+  , { id := "cause.finalizer-merge", kind := "cause", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Exit.mergeFinalizer_failure_failure "none"
+        , w `Effect4.Exit.restoreAfterFinalizer_failure_failure "none"
+        , w `Effect4.Exit.mergeFinalizer_success_failure "none"
+        , w `Effect4.Exit.restoreAfterFinalizer_success_failure "none" ] }
+  , { id := "cause.squash", kind := "cause", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Cause.squash_error "none"
+        , w `Effect4.Cause.squash_defect "none"
+        , w `Effect4.Cause.squash_interrupted "none"
+        , w `Effect4.Cause.squash_emptyCause_iff "none"
+        , w `Effect4.Cause.squash_fail_over_die "none" ] }
+  , { id := "cause.union-first-occurrence", kind := "cause", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Cause.combine_empty_left "none"
+        , w `Effect4.Cause.combine_empty_right "none"
+        , w `Effect4.Cause.combine_reasons "none"
+        , w `Effect4.Cause.combine_order "propext,Quot.sound" ] }
+  , { id := "cause.dedupe-first-occurrence", kind := "cause", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Cause.dedup_cons "none"
+        , w `Effect4.Cause.mem_dedup "propext"
+        , w `Effect4.Cause.dedup_nodup "propext"
+        , w `Effect4.Cause.dedup_of_nodup "propext,Quot.sound" ] }
+  , { id := "cause.annotations", kind := "cause", disposition := "foreignBoundary", coverage := "green"
+      -- the WeakMap host-identity clause is closed by refusal, not by a model
+    , witnesses :=
+        [ w `Effect4.ReasonAnnotations.keys_nodup "none"
+        , w `Effect4.Reason.annotate_annotations "propext,Quot.sound"
+        , w `Effect4.Reason.host_memory_refused "none"
+        , w `Effect4.ReasonAnnotations.annotate_entries "propext,Quot.sound"
+        , w `Effect4.ReasonAnnotations.lookup_annotate_kept "propext,Quot.sound"
+        , w `Effect4.ReasonAnnotations.lookup_annotate_overwrite "propext,Quot.sound" ] }
   , { id := "entry.run-fork-with", kind := "entry", disposition := "targetOnly", coverage := "absent", witnesses := [] }
   , { id := "entry.abort-signal", kind := "entry", disposition := "targetOnly", coverage := "absent", witnesses := [] }
   , { id := "entry.run-callback-with", kind := "entry", disposition := "targetOnly", coverage := "absent", witnesses := [] }
@@ -379,7 +713,12 @@ private def censusRows : List Row :=
   , { id := "rule.only-fork-child-tracks", kind := "rule", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
   , { id := "rule.children-interrupted-after-exit", kind := "rule", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
   , { id := "rule.scope-close-lifo-state-first", kind := "rule", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
-  , { id := "rule.cause-has-no-structure", kind := "rule", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "rule.cause-has-no-structure", kind := "rule", disposition := "separateCalculus", coverage := "green"
+    , witnesses :=
+        [ w `Effect4.Cause.mem_combine "propext"
+        , w `Effect4.Cause.combine_order "propext,Quot.sound"
+        , w `Effect4.Cause.combine_no_new_reason "propext"
+        , w `Effect4.Cause.ext "none" ] }
   , { id := "rule.start-is-asymmetric", kind := "rule", disposition := "targetOnly", coverage := "absent", witnesses := [] }
   , { id := "rule.record-and-apply-separate", kind := "rule", disposition := "owned", coverage := "partial"
     , witnesses :=
@@ -409,6 +748,58 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.cleanup_safe_on_finish
   , `Effect4.step_deterministic
   , `Effect4.fixedTape_deterministic
+  , `Effect4.Cause.eq_iff
+  , `Effect4.Cause.ext
+  , `Effect4.Cause.eq_iff_pointwise
+  , `Effect4.Cause.combine_no_new_reason
+  , `Effect4.Reason.error_fail
+  , `Effect4.Reason.annotations_fail
+  , `Effect4.Reason.fail_inj
+  , `Effect4.Reason.defect_die
+  , `Effect4.Reason.annotations_die
+  , `Effect4.Reason.die_inj
+  , `Effect4.Cause.interrupt_reasons
+  , `Effect4.Reason.annotations_interrupt
+  , `Effect4.Reason.interrupt_inj
+  , `Effect4.Cause.combine_empty_left
+  , `Effect4.Cause.combine_empty_right
+  , `Effect4.Cause.combine_reasons
+  , `Effect4.Cause.mem_combine
+  , `Effect4.Cause.combine_self
+  , `Effect4.Cause.combine_order
+  , `Effect4.Cause.dedup_cons
+  , `Effect4.Cause.mem_dedup
+  , `Effect4.Cause.dedup_nodup
+  , `Effect4.Cause.dedup_of_nodup
+  , `Effect4.Exit.mergeFinalizer_failure_failure
+  , `Effect4.Exit.restoreAfterFinalizer_failure_failure
+  , `Effect4.Exit.mergeFinalizer_success_failure
+  , `Effect4.Exit.restoreAfterFinalizer_success_failure
+  , `Effect4.Cause.squash_error
+  , `Effect4.Cause.squash_defect
+  , `Effect4.Cause.squash_interrupted
+  , `Effect4.Cause.squash_emptyCause_iff
+  , `Effect4.Cause.squash_fail_over_die
+  , `Effect4.ReasonAnnotations.keys_nodup
+  , `Effect4.Reason.annotate_annotations
+  , `Effect4.Reason.host_memory_refused
+  , `Effect4.ReasonAnnotations.annotate_entries
+  , `Effect4.ReasonAnnotations.lookup_annotate_kept
+  , `Effect4.ReasonAnnotations.lookup_annotate_overwrite
+  , `Effect4.Exit.cases_receipt
+  , `Effect4.Exit.success_ne_failure
+  , `Effect4.Exit.success_inj
+  , `Effect4.Exit.failure_inj
+  , `Effect4.Exit.cause_failure
+  , `Effect4.ReasonTag.all_nodup
+  , `Effect4.ReasonTag.mem_all
+  , `Effect4.ReasonTag.cases_receipt
+  , `Effect4.Reason.cases_receipt
+  , `Effect4.Reason.tag_mem_all
+  , `Effect4.Exit.asVoidAll_reasons
+  , `Effect4.Exit.asVoidAll_failure
+  , `Effect4.Exit.asVoidAll_all_success
+  , `Effect4.Exit.void_eq
   ]
 
 private def expectedRowTotal : Nat := 99
