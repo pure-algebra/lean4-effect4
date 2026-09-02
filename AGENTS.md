@@ -75,6 +75,11 @@ contract before one category is developed far beyond the others.
 ## Reuse and compatibility
 
 - This repository must not depend on Foldlab.
+- The effect algebra (`Signature`, `Program`, `Handler`, their laws) is the
+  `Effects` package, pinned by exact commit in `lakefile.toml`. Effect4
+  depends on Effects, never conversely, and never re-declares its carriers.
+  A change to the algebra goes through the Effects breaker process and a
+  version bump here.
 - Foldlab compatibility adapters depend on Effect4, never conversely.
 - A moved declaration keeps a source digest and compatibility theorem before
   its Foldlab owner can be retired.

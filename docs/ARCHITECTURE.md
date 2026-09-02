@@ -3,8 +3,9 @@
 ## Dependency direction
 
 ```text
-first-order data and rows
-  -> algebra and checked flow
+Effects (external package: signatures, programs, handlers, laws)
+  -> first-order data and rows
+  -> checked flow
   -> operational/relational semantics
   -> logic and classification
   -> portable protocol and typed targets
@@ -17,7 +18,7 @@ Runtime --------> interpretation and managed ownership
 Fiber ----------> scheduler/interruption/resource lifecycle
 ```
 
-Effect4 has no dependency on Foldlab. Foldlab's later adapter depends on the
+Effect4 depends on the `Effects` package for its algebra and on nothing else. Effect4 has no dependency on Foldlab. Foldlab's later adapter depends on the
 public Effect4 algebra and proves compatibility with its existing CAS-specific
 types and observations.
 
@@ -25,7 +26,7 @@ types and observations.
 
 | Area | Public responsibility |
 | --- | --- |
-| `Effect4/Algebra` | indexed signatures, free programs, handlers, interpreters, morphisms and laws |
+| (`Effects.Algebra`, from lean4-effects `v0.1.0` (`5611c3a`)) | indexed signatures, free programs, handlers, interpreters, morphisms and laws; consumed through the pinned `effects` dependency, never re-declared here |
 | `Effect4/Data` | finite rows, IDs, canonical forms, typed values and shared codecs |
 | `Effect4/Flow` | raw and checked first-order graphs, blocks, regions, decisions and admission |
 | `Effect4/Semantics` | cause/exit, configurations, steps, runs, approximations, observations and logic |

@@ -77,15 +77,20 @@ ideas are credited even when their implementation is not imported.
 
 ## Current phase
 
-P0, P2, and the native P3 algebra substrate are complete. The repository is
-an independent Lean 4.33.1 package, all planned category modules exist, every
-module is reached by the default build, and breadth stubs contain no semantic
-declarations. The retained algebra declarations now have exact signature
-checks, kernel-checked proofs, exhaustive module and axiom gates, and an
-independent assurance review. That review found no duplicate generic carrier
-and approved the native algebra proof graph. Foldlab compatibility spellings,
-adapters, and interpretation-preservation results remain P12 obligations; they
-do not keep the independent P3 substrate open.
+P0, P2, and the P3 algebra substrate are complete. The repository is an
+independent Lean 4.33.1 package with exactly one Lake dependency: the
+generic effect algebra, which since slice S4 of `docs/EFFECTS-SPLIT-PLAN.md`
+lives in lean4-effects `v0.1.0` (`5611c3a`) under the `Effects` namespace and is pinned by exact commit in
+`lakefile.toml`. The move preserved history and changed only the declaration
+namespace; that repository's `generated/algebra-parity.tsv` is the
+byte-identical receipt over all 215 compiled constants against Effect4 commit
+`217d3e4`, and its batteries, axiom report, counterexample register, and gate
+carry the P3 evidence. All planned category modules exist, every module is
+reached by the default build, and breadth stubs contain no semantic
+declarations. Foldlab compatibility spellings, adapters, and
+interpretation-preservation results remain P12 obligations; they do not keep
+P3 open. A change to the algebra goes through the Effects breaker process and
+a version bump here, never through an edit in this tree.
 
 P1 remains open as a recurring exhaustiveness gate rather than a prose-only
 inventory. The current manifest pins Foldlab, Effect rc.112, the resolved npm

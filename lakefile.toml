@@ -9,3 +9,10 @@ globs = ["Effect4.*"]
 [[lean_lib]]
 name = "Effect4Test"
 globs = ["Effect4Test.*"]
+
+# The generic effect algebra. Exact commit of tag v0.1.0 of mepuka/lean4-effects;
+# docs/EFFECTS-SPLIT-PLAN.md records the split and its parity receipt.
+[[require]]
+name = "effects"
+git = "https://github.com/mepuka/lean4-effects"
+rev = "5611c3a3cd4cd4b830c76d6c25c7dba6034c973a"

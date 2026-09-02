@@ -65,7 +65,7 @@ program data.
 
 ### DB-01 — `Program` is the well-founded higher-order proof carrier
 
-The implemented algebra has the following shape:
+Since 2026-09-02 the algebra is owned by lean4-effects `v0.1.0` (`5611c3a`) (`docs/EFFECTS-SPLIT-PLAN.md`); this section states the shape Effect4 builds on. The implemented algebra has the following shape:
 
 ```text
 Signature.Op     : Type uOp

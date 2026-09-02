@@ -6,7 +6,7 @@ import Effect4.Schema.EffectfulField
 
 namespace Effect4Test.Counterexamples.Schema.EffectfulField
 
-open Effect4
+open Effect4 Effects
 
 private def spec : EffectfulFieldSpec where
   alphabet := { value := 7 }

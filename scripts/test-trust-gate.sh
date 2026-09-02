@@ -33,6 +33,12 @@ cp "$repo_root/lakefile.toml" "$repo_root/lake-manifest.json" \
   "$repo_root/lean-toolchain" "$repo_root/Effect4.lean" \
   "$repo_root/Effect4Test.lean" "$project_root/"
 cp -R "$repo_root/Effect4" "$repo_root/Effect4Test" "$project_root/"
+# The probe copy must resolve the pinned `effects` dependency without a
+# network fetch; reuse the packages Lake already checked out here.
+if [[ -d "$repo_root/.lake/packages" ]]; then
+  mkdir -p "$project_root/.lake"
+  cp -R "$repo_root/.lake/packages" "$project_root/.lake/"
+fi
 
 build_log="$tmp_root/build.log"
 

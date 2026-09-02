@@ -277,3 +277,29 @@ Operational facts worth not rediscovering, from this packet:
   therefore does not decrease.
 
 | `docs/REIFICATION-STRATEGY.md`, `docs/ALGEBRA-PACKAGE-PLAN.md` | Claude (foldlab/streams coordinator) | added 2026-09-02, copied from lean4-WHATWG-streams ed65fe0 at the operator's request; RS-D1 proposes extracting `Effect4/Algebra` into a standalone package and is HELD until the operator's incoming Mac work lands; no other file claimed |
+| `docs/EFFECTS-SPLIT-PLAN.md` | Claude (operator session) | proposed 2026-09-02: the Effect4-side plan for RS-D1, naming the standalone package `Effects` and slicing the split S0–S6; rulings EP-1..EP-12 settled 2026-09-02; slices S1–S3 landed in `mepuka/lean4-effects` (tag `v0.1.0` = `5611c3a`); **S4 cutover executed here 2026-09-02 with the operator's confirmation that the tree was quiet**: `Effect4/Algebra/**` and `Effect4Test/Algebra/**` deleted, `[[require]] effects` pinned by exact commit, `Effect4/Schema/EffectfulField.lean` and the two Schema EffectfulField test files repointed (`open Effects`), algebra contracts and register rows marked MOVED, `PORT-MANIFEST.md`/`PLAN.md`/`docs/ARCHITECTURE.md`/`docs/DESIGN-BASIS.md`/`AGENTS.md`/`README.md` updated, `scripts/test-trust-gate.sh` copies `.lake/packages` into its probe, fiber and context-key projections regenerated (register and manifest are pinned inputs). Claims on those files are released with the commit |
+
+## Effects split, S4 cutover landed, 2026-09-02
+
+The generic effect algebra now lives in `mepuka/lean4-effects` (`Effects`
+namespace, tag `v0.1.0`), pinned by exact commit in `lakefile.toml`; see
+`docs/EFFECTS-SPLIT-PLAN.md` for the slices and receipts. Two gates were
+already failing at `217d3e4` before the cutover and were left as found:
+`check-schema-structural-assurance.sh` (its generator pins a hash of
+`Effect4Test/Counterexamples/Schema/AnnotationDataPlane.lean` that predates
+commit `a100daf`) and `check-data-row-assurance.sh` (its declaration census
+misses the `Lens`/`Optional`/`Traversal` `Lawful` declarations). Neither
+touches the algebra; their owners repair them. The committed
+`generated/environment-context-key-assurance.tsv` was also stale at HEAD and is
+now fresh.
+
+## Completed internal algebra package literature review, 2026-09-02
+
+Codex recorded the operator's internal review in
+`docs/research/2026-09-02-algebra-package-review.md`, with source identities and
+fresh narrow algebra receipts in `2026-09-02-algebra-package-sources.json` in
+the same directory. Six local papers and the pinned PolyFun source informed
+the first pass. Both algebra batteries and all 60 named axiom receipts pass;
+local links, source hashes, the citation gate, and diff checks pass. This is
+research, not extraction or cutover. The two copied plans and their hold are
+unchanged. The two review-file claims are released.

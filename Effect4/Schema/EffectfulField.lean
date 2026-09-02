@@ -1,5 +1,5 @@
 import Effect4.Schema.Annotations
-import Effect4.Algebra.Laws
+import Effects.Algebra.Laws
 import Effect4.Flow.Block
 
 /-!
@@ -12,6 +12,8 @@ annotation payload remains separate from the resolved functions used to build
 -/
 
 namespace Effect4
+
+open Effects
 
 universe uOp uAns uTarget
 

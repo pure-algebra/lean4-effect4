@@ -1,5 +1,5 @@
-import Effect4.Algebra.Handler.Composition
-import Effect4.Algebra.Laws
+import Effects.Algebra.Handler.Composition
+import Effects.Algebra.Laws
 import Effect4.Data.Optic
 
 /-!

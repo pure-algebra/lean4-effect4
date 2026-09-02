@@ -1,6 +1,16 @@
 {"version": "1.2.0",
  "packagesDir": ".lake/packages",
- "packages": [],
+ "packages":
+ [{"url": "https://github.com/mepuka/lean4-effects",
+   "type": "git",
+   "subDir": null,
+   "scope": "",
+   "rev": "5611c3a3cd4cd4b830c76d6c25c7dba6034c973a",
+   "name": "effects",
+   "manifestFile": "lake-manifest.json",
+   "inputRev": "5611c3a3cd4cd4b830c76d6c25c7dba6034c973a",
+   "inherited": false,
+   "configFile": "lakefile.toml"}],
  "name": "effect4",
  "lakeDir": ".lake",
  "fixedToolchain": false}

@@ -4,13 +4,9 @@ Effect4 is a standalone Lean 4 library for modeling closed-alphabet effectful
 programs, their denotational and operational semantics, and checked lowering
 to selected host profiles such as Effect TypeScript.
 
-This repository is being extracted additively from Foldlab. Foldlab remains
-unchanged while shared algebra is moved here and related by explicit
-compatibility theorems. The extraction does not copy the incompatible
-workshop carriers from Foldlab's Effect Core experiments.
-
-Current state: **pre-release development**. The generic effect algebra,
-first-order Flow admission, canonical rows, Context keys, the representative
+Current state: **pre-release development**. The generic effect algebra is
+the [Effects](https://github.com/mepuka/lean4-effects) package, pinned at
+`v0.1.0`. First-order Flow admission, canonical rows, Context keys, the representative
 fiber scheduler and binary race, the persisted Schema carrier and annotation
 data plane, raw Schema TypeScript generation, and the first annotated-field
 Effect TypeScript API are implemented with focused proof and counterexample

@@ -1,4 +1,4 @@
-import Effect4.Algebra.Program
+import Effects.Algebra.Program
 import Effect4.Schema.Annotations
 
 /-!

@@ -1,6 +1,3 @@
-import Effect4Test.Algebra.ExtractionContract
-import Effect4Test.Algebra.RetainedClosureContract
-import Effect4Test.Algebra.AxiomReport
 import Effect4Test.Flow.AdmissionContract
 import Effect4Test.Flow.DiagnosticPrecisionContract
 import Effect4Test.Flow.AxiomReport

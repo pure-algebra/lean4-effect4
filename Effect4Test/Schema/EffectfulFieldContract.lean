@@ -9,7 +9,7 @@ import Effect4.Schema.EffectfulField
 
 namespace Effect4Test.Schema.EffectfulFieldContract
 
-open Effect4
+open Effect4 Effects
 
 universe uOp uAns v
 

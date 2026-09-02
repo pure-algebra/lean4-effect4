@@ -1,12 +1,3 @@
-import Effect4.Algebra.Signature
-import Effect4.Algebra.Program
-import Effect4.Algebra.Handler
-import Effect4.Algebra.MonadLaws
-import Effect4.Algebra.Laws
-import Effect4.Algebra.Sum
-import Effect4.Algebra.Universal
-import Effect4.Algebra.Handler.Composition
-import Effect4.Algebra.Handler.Category
 import Effect4.Data.Identifier
 import Effect4.Data.Row
 import Effect4.Data.Canonical
