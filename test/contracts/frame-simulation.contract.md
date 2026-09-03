@@ -1,18 +1,21 @@
 # Frame-machine simulation of `interpret` — light contract
 
-Status: GREEN, authored and implemented together 2026-09-03 (packet D4 fence B;
-light ceremony, one new module and no change to any frozen surface)
+Status: GREEN, authored and implemented together 2026-09-03 (packet D4 fences B
+and C; light ceremony, two new modules and no change to any frozen surface)
 
-Implementation fence:
-`Effect4/Semantics/FrameSimulation.lean` (new), plus twelve appended theorems in
-`Effect4/Runtime/Runtime.lean` (packet D4 fence A, frozen in
-`Effect4Test/Runtime/FramesContract.lean` section F10)
+Implementation fences:
+`Effect4/Semantics/FrameSimulation.lean` (fence B, the value half) and
+`Effect4/Semantics/RegionSimulation.lean` (fence C, the finalizer half), plus
+twelve appended theorems in `Effect4/Runtime/Runtime.lean` (packet D4 fence A,
+frozen in `Effect4Test/Runtime/FramesContract.lean` section F10)
 
-Lean battery:
-`Effect4Test/Semantics/FrameSimulationContract.lean`
+Lean batteries:
+`Effect4Test/Semantics/FrameSimulationContract.lean`,
+`Effect4Test/Semantics/RegionSimulationContract.lean`
 
-Axiom report:
-`Effect4Test/Semantics/FrameSimulationAxiomReport.lean`
+Axiom reports:
+`Effect4Test/Semantics/FrameSimulationAxiomReport.lean`,
+`Effect4Test/Semantics/RegionSimulationAxiomReport.lean`
 
 Proof graphs: `FRAME-PG-STACK` in `docs/FRAMES-DAG.md` (the fence A section and
 the fence B section at the end); the `semantics` edge of
@@ -55,12 +58,11 @@ is the raw user error, through `run_liftFail`.
   half of the machine is *inert* on this fragment, which is not the same as
   modelling it. Interruption remains evidence-only until A1 and a two-fiber
   model.
-- **Anything about finalizers, brackets or regions.** `Program` has `pure` and
-  `vis` and no bracket former, and `Handler.handle` takes an operation and never
-  a subcomputation, so `FrameEvent.finalizersRun` has no algebra-side
-  counterpart. The finalizer half is a later fence, stated in a comment at the
-  end of `Effect4/Semantics/FrameSimulation.lean` and blocked on a ruling; see
-  "Open" below.
+- **Anything about finalizers, brackets or regions, from `compile_simulates`.**
+  `Program` has `pure` and `vis` and no bracket former, and `Handler.handle`
+  takes an operation and never a subcomputation, so `FrameEvent.finalizersRun`
+  has no algebra-side counterpart. That half is fence C, below, stated against
+  `Effect4.Flow.runRegions` instead.
 - **Any coverage number.** `docs/RUNTIME-COVERAGE.md` scores clause by clause,
   and a composite theorem is nobody's clause. **No census row turns green.**
   What changes is the *kind* of evidence for `rule.frames-are-primitives`,
@@ -93,13 +95,20 @@ is the raw user error, through `run_liftFail`.
    a function of `p`, `H` and `s0`. The battery's last `#guard` is the tightness
    receipt: one unit below `bound` the run has *not* finished, and that is a live
    DB-04 frontier and not a result.
-3. **Empty annotations are not a hypothesis here.** The research packet asks for
-   one (its section 5(b)). The risk it names is `Cause.combine` deduping
-   `Reason`s that differ only in their `ReasonAnnotations`, and `Cause.combine`
-   is reachable only through `Exit.restoreAfterFinalizer` on an `onExit` arm,
-   which this fragment never emits (`compile_inFragment`,
-   `tapeContA_inFragment`). Adding it would be a vacuous hypothesis that weakens
-   nothing. It becomes live in the finalizer fence, and is recorded there.
+3. **Empty annotations are not a hypothesis, in either fence.** The research
+   packet asks for one (its section 5(b)). In fence B the risk it names is
+   unreachable: `Cause.combine` is reached only through
+   `Exit.restoreAfterFinalizer` on an `onExit` arm, which this fragment never
+   emits (`compile_inFragment`, `tapeContA_inFragment`). In fence C, where
+   `onExit` frames are exactly what `acquire` pushes, it is reachable and still
+   not needed, and the reason is sharper than avoidance: `Cause.combine` is
+   `Cause.dedup` of the concatenation, `dedup` keeps the *first* occurrence
+   (`Effect4.Cause.dedup_cons`), and `Exit.toOutcome` reads the first `fail`
+   reason — so the head of a merged cause is the head of the body's cause
+   whatever annotations either side carries. `RegionSimulation.toOutcome_combine`
+   proves it unconditionally. Section 5(b) stays live only for a statement that
+   compares whole *causes* rather than their wire projection; neither fence
+   does.
 4. **The name alphabet is gated.** `ν := Nat` and `σ := Nat`, and two `example`s
    in the module and two in the battery assert `DecidableEq Code` and
    `DecidableEq Machine`. The trap `docs/FRAMES-DAG.md` separation 4 exists to
@@ -115,26 +124,81 @@ is the raw user error, through `run_liftFail`.
    edge is not reversed for any existing module; but if the merge prefers strict
    directory layering the module moves to `Effect4/Runtime/FrameSimulation.lean`
    unchanged. Flagged here rather than resolved unilaterally.
-6. **`Flow.Sig` is declared locally.** `Effect4.FrameSimulation.Flow.Sig` is
-   marked `-- to be unified with Denotation.lean`: a sibling packet declares the
-   same signature, and the two are merged by the coordinator, not here.
+6. **`Flow.Sig` is unified.** The local `Effect4.FrameSimulation.Flow.Sig`, once
+   marked `-- to be unified with Denotation.lean`, is gone.
+   `Effect4/Semantics/FrameSimulation.lean` imports
+   `Effect4/Semantics/Denotation.lean` and uses `Effect4.Flow.Sig`; the five
+   `variable` lines move from `Alphabet.{0,0} Ty` to `FlowAlphabet.{0,0} Ty`,
+   `Flow.Sig a` resolves through the enclosing namespace, and every theorem
+   statement is unchanged.
+7. **`enter` does not compile to `onExit`.** Fence C compiles `enter` to
+   `Prim.onSuccess body ν` and only `acquire` to `Prim.onExit`. The reason is
+   forced, not stylistic: the row `enter`/`leave` writes has **no** frame-machine
+   shadow — `FrameEvent.toTrace` sends everything but `ranFinalizer` and
+   `yielded` to `none` — so compiling `enter` to `Prim.onExit` would manufacture
+   a `finalizer` row the runner never writes, and the masked traces would differ
+   on every region. `acquire`'s `Prim.onExit … false` is rc.112's `scopedFrame`,
+   which is what `Effect.acquireRelease` lowers to, and the frames stack in
+   registration order so they pop latest-first: the order
+   `E4-TARGET-CE-012..014` pin for the host and `Frame.toScope_closeOrder`
+   proves for the runner.
+8. **The name alphabet of fence C carries the run point.** `ν := RegionName`,
+   an inductive over `Config = Nat × BlockId × Env × Tape`. That is first-order
+   data with a derived `DecidableEq`, so ruling 4's gate holds unchanged; the
+   battery re-asserts `DecidableEq Code`, `DecidableEq RegionName` and
+   `DecidableEq Config`. `Config.fuel` is a *step counter* — the runner spends
+   one unit per block — so a point is reached at most once in a run and no
+   separate occurrence index is needed. `compileRegion` recurses structurally on
+   its fuel argument rather than on `Config.fuel`, which is what keeps the
+   compiled program kernel-reducible and the fence C instances provable by
+   `rfl`.
 
 ## Open
 
-The finalizer half, against `Effect4.Flow.runRegions` through
-`FrameEvent.traceOf`. Its statement is in a comment at the end of
-`Effect4/Semantics/FrameSimulation.lean`. It is **blocked**, not merely unstarted:
-`armA` / `armE` on `onExit` compose through `Exit.restoreAfterFinalizer`, so a
-failed body with a failed finalizer yields
-`failure (Cause.combine bodyCause finalizerCause)`, while
-`Effect4.Flow.Region.closeFrame` keeps only the *first* release failure and
-reports the body's error unchanged (pinned by `E4-FLOW-CE-019`). The two models
-disagree on the failure payload on every run where a release fails under a
-failing body, and TRACE-DAG separation 3 fixes the `m1` outcome as
-`(tag, reason tags in order, fail payload)` — so the payload is exactly what a
-mask cannot erase. Either restrict the statement to runs with at most one failure
-and say so in the statement, or add the missing `Cause.combine` to the region
-runner and re-pin `E4-FLOW-CE-019`. That ruling belongs to the finalizer packet.
+**Fence C is partial, and says so.** The general `regions_simulate` is *owed*:
+its exact wording is in the header of `Effect4/Semantics/RegionSimulation.lean`,
+and no definition stands in for it. What is closed:
+
+- `unwind_failure` and `close_success`, in full generality — the machine's
+  finalizer half. A failing exit propagating through a fragment stack runs
+  exactly the finalizers that stack names, in pop order, every one against the
+  *same* exit, and then yields that exit; a closing value runs the `onExit`
+  frames above the answering `onSuccess` frame, latest-registered first, and then
+  the region frame answers with its named continuation.
+- The instances `regions_simulate_regionBothSucceed` (one region, one release),
+  `regions_simulate_regionNested` (nested regions) and
+  `regions_simulate_regionTwoFail` (two releases of one region closing on a
+  failing body), each by kernel evaluation, each with both sides pinned to a
+  literal so the equation cannot hold vacuously.
+
+The blocking divergence the fence B note recorded is **settled**, and settled by
+packet D2 rather than by weakening anything: the region runner now carries a
+merged failure list in close order (`closeFrame_failure_merge`), so the
+machine's `Cause.combine bodyCause finalizerCause` and the runner's list are
+related by the projection `failuresOfCause` — the direction that is a total
+function — with `causeOfFailures` as its section and
+`failuresOfCause_causeOfFailures` as the retraction.
+
+Two things stay open, and they are different in kind.
+
+1. **A failing release is a real divergence, not a proof gap.**
+   `closeReleases` gives every release of one close the *same* closing exit,
+   while the machine threads the exit each finalizer restores, so on a close
+   whose first release fails the two disagree on the second release's
+   `finalizer` row. Both general theorems therefore carry `hfin`: every
+   finalizer succeeds. That is exactly the hypothesis `regionReleaseFails`
+   violates, which is also why that flow has no host golden
+   (`E4-TARGET-CE-012`). Closing it means deciding which emitter is right and
+   re-pinning the neighbour of `E4-FLOW-CE-019`.
+2. **The general induction needs a second copy of the runner.** The runner's
+   `leave` continues at `row.continue_` with the fuel and decision tape it holds
+   *at the leave*, while the frame `enter` pushes is named at the *enter*.
+   Closing it needs a `leaveConfig` that walks a region body to its close under
+   the oracle, plus a proof that it agrees with the runner — its own fence.
+
+`harness/trace/Generate.lean frame-trace` prints both sides of the equation for
+every region program, so the pair can be pinned as a golden without waiting for
+either.
 
 ## Verification
 
@@ -143,6 +207,10 @@ lake build Effect4
 lake env lean Effect4/Semantics/FrameSimulation.lean
 lake env lean Effect4Test/Semantics/FrameSimulationContract.lean
 lake env lean Effect4Test/Semantics/FrameSimulationAxiomReport.lean
+lake env lean Effect4/Semantics/RegionSimulation.lean
+lake env lean Effect4Test/Semantics/RegionSimulationContract.lean
+lake env lean Effect4Test/Semantics/RegionSimulationAxiomReport.lean
+lake env lean --run harness/trace/Generate.lean frame-trace
 lake build Effect4Test
 ./scripts/test-trust-gate.sh
 ```

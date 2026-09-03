@@ -7,6 +7,7 @@ import Effect4.Target.TypeScript.FlowLower
 import Effect4.Target.TypeScript.RegionLower
 import Effect4.Target.TypeScript.StructuredLower
 import Effect4.Flow.Region
+import Effect4.Semantics.RegionSimulation
 
 /-!
 The trace harness family. `main fixture` prints the generated Effect v4 module,
@@ -661,4 +662,44 @@ def main (args : List String) : IO Unit := do
   | ["scope-types"] =>
       for entry in scopePrograms do
         IO.println (entry.name ++ "\t" ++ Script.declarationLine Scopes.rows entry.script)
-  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | admission-probe")
+  | ["frame-trace"] =>
+      -- Packet D4, the finalizer half. For each region program, the frame
+      -- machine's projected trace (`FrameEvent.traceOf` of the run of
+      -- `compileRegion`) beside the runner's log under the mask that keeps
+      -- `finalizer` and `done`. The two are equal by
+      -- `Effect4Test/Semantics/RegionSimulationContract.lean`; this arm exists
+      -- so the coordinator can pin the pair as a golden later. The oracle is
+      -- the stateless face of `rcellFamily` at the entry's initial state: the
+      -- three region programs never perform `get` or `put`.
+      for entry in regionEntries do
+        let fuel := Flow.fuelFor entry.program.flow.flow.erase []
+        let answerOf : (tableAlphabet ⟨0⟩ entry.program.table).Op → Effects.Trace.Val →
+            Except Effects.Trace.Val Effects.Trace.Val := fun op request =>
+          match (OpSpec.at entry.program.table op).kind with
+          | .lit value => .ok value
+          | .atom => .ok (cellAtom (OpSpec.at entry.program.table op).name request)
+          | .family =>
+            ((rcellFamily (OpSpec.at entry.program.table op).name request).run entry.initial).1
+        let machine := Effect4.RegionSimulation.traceOfRun
+          (Effect4.FrameFiber.run
+            (Effect4.RegionSimulation.regionInterp (tableAlphabet ⟨0⟩ entry.program.table)
+              entry.program.flow.flow
+              (Effect4.RegionSimulation.statelessOracle (tableAlphabet ⟨0⟩ entry.program.table)
+                entry.program.flow.flow answerOf))
+            (Effect4.RegionSimulation.regionBound fuel)
+            (Effect4.FrameFiber.start
+              (Effect4.RegionSimulation.compileAt (tableAlphabet ⟨0⟩ entry.program.table)
+                entry.program.flow.flow
+                ⟨fuel, entry.program.flow.flow.entry, [entry.input], []⟩))).2
+        match regionLog entry with
+        | .ok log =>
+            let runner := Effects.Trace.project
+              Effect4.RegionSimulation.finalizerAndOutcomeMask log
+            IO.println ("program\t" ++ entry.program.name)
+            for event in machine do
+              IO.println ("machine\t" ++ Effect4.Target.TypeScript.Trace.row event)
+            for event in runner do
+              IO.println ("runner\t" ++ Effect4.Target.TypeScript.Trace.row event)
+            IO.println (if machine == runner then "agree\ttrue" else "agree\tfalse")
+        | .error message => throw (IO.userError message)
+  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | admission-probe | frame-trace")

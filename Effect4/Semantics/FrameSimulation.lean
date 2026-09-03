@@ -1,6 +1,7 @@
 import Effects.Family
 import Effects.Trace
 import Effect4.Runtime.Runtime
+import Effect4.Semantics.Denotation
 
 /-!
 # Semantics.FrameSimulation
@@ -96,11 +97,6 @@ a statement about frames into a statement about Lean functions. The `example`s
 below are the gate: they fail to elaborate if the name alphabet is ever
 instantiated at a function type. -/
 
-/-- The monomorphic signature of a first-order alphabet: every request and every
-answer is `Effects.Trace.Val`. -- to be unified with Denotation.lean -/
-abbrev Flow.Sig {Ty : Type} (a : Alphabet.{0, 0} Ty) : Signature :=
-  (a.toFamily (fun _ => Val)).toSignature
-
 /-- The fragment's cause carrier: user errors are `Val`, and defects, fiber ids
 and annotations are `Unit`. -/
 abbrev Err := Effect4.Cause Val Unit Unit Unit
@@ -179,7 +175,7 @@ exit. DB-04 forbids the `forall fuel` form, so every statement below is
 def bound (tape : Tape) : Nat := 2 * tape.length + 1
 
 section
-variable {Ty : Type} {a : Alphabet.{0, 0} Ty} {St : Type}
+variable {Ty : Type} {a : FlowAlphabet.{0, 0} Ty} {St : Type}
 
 /-- The answers the handler gives along the run, in order, ending at the first
 failure. This is the second structural recursion over `p`; `interpret` is the
@@ -258,7 +254,7 @@ def inFragment : Code -> Bool
   | _ => false
 
 section
-variable {Ty : Type} {a : Alphabet.{0, 0} Ty} {St : Type}
+variable {Ty : Type} {a : FlowAlphabet.{0, 0} Ty} {St : Type}
 
 /-- The compilation lands in the fragment. -/
 theorem compile_inFragment (i : Nat) (p : Program (Flow.Sig a) Val) :
@@ -330,7 +326,7 @@ theorem step_answer (interp : Table) (i : Nat) (stack : List Code) (flag : Bool)
 /-! ## The algebra side -/
 
 section
-variable {Ty : Type} {a : Alphabet.{0, 0} Ty} {St : Type}
+variable {Ty : Type} {a : FlowAlphabet.{0, 0} Ty} {St : Type}
 
 /-- A pure program returns without touching the state. -/
 theorem interpret_pure {E : Type} (H : Handler (Flow.Sig a) (ExceptT E (StateT St Id)))
@@ -413,7 +409,7 @@ only frame the compiled program ever adds and the pop that answers it removes it
 again. -/
 
 section
-variable {Ty : Type} {a : Alphabet.{0, 0} Ty} {St : Type}
+variable {Ty : Type} {a : FlowAlphabet.{0, 0} Ty} {St : Type}
 
 theorem run_in_context (H : Handler (Flow.Sig a) (Target St))
     (root : Program (Flow.Sig a) Val) (tape : Tape) :
@@ -513,7 +509,7 @@ end
 /-! ## The `Cause.fail` specialisation -/
 
 section
-variable {Ty : Type} {a : Alphabet.{0, 0} Ty} {St : Type}
+variable {Ty : Type} {a : FlowAlphabet.{0, 0} Ty} {St : Type}
 
 /-- A handler whose error is the raw user error, lifted into a one-reason cause.
 This is the shape every existing lowering uses; the theorem is stated at `Cause`
@@ -567,37 +563,31 @@ theorem compile_simulates_fail (H : Handler (Flow.Sig a) (ExceptT Val (StateT St
 
 end
 
-/-! ## The finalizer half is a later fence
+/-! ## The finalizer half
 
-`FrameEvent.finalizersRun` has no algebra-side counterpart: `Program` has `pure`
-and `vis` and no bracket former, and `Handler.handle` takes an operation and
-never a subcomputation, so nothing above can state it. Against the region runner
-it is statable, and the statement is left here as the next fence's target rather
-than as a definition with no proof:
+It landed: `Effect4/Semantics/RegionSimulation.lean`. `Program` has `pure` and
+`vis` and no bracket former, and `Handler.handle` takes an operation and never
+a subcomputation, so nothing above can state a finalizer; against the region
+runner it is statable, and that module states it — `compileRegion` compiles an
+admitted region flow into the frame machine in the shape
+`Effect4/Target/TypeScript/RegionLower.lean` lowers to, `unwind_failure` and
+`close_success` are the machine's finalizer half, and the instances are
+`Effect4Test/Semantics/RegionSimulationContract.lean`.
 
-```text
-theorem regions_simulate ... :
-    FrameEvent.traceOf region value error defect
-        (FrameFiber.run interp fuel (FrameFiber.start (compileRegion flow))).2
-      = Effects.Trace.project finalizerAndOutcomeMask
-          (((Effect4.Flow.runRegions fuel flow service nameOf tape input).run []).2)
-```
+The divergence this note used to be blocked on is settled. Packet D2 gave the
+region runner a *merged* failure list in close order
+(`Effect4.Flow.closeFrame_failure_merge`), so a failing release under a failing
+body no longer keeps only the first failure, and the machine's
+`Cause.combine bodyCause finalizerCause` and the runner's list are related by
+the projection `RegionSimulation.failuresOfCause` rather than divergent.
 
-Do not start it before the divergence it depends on is settled. `armA` / `armE`
-on `onExit` compose through `Exit.restoreAfterFinalizer`, so a failed body with a
-failed finalizer yields `failure (Cause.combine bodyCause finalizerCause)`, while
-`Effect4.Flow.Region.closeFrame` keeps only the *first* release failure and
-reports the body's error unchanged (pinned by `E4-FLOW-CE-019`). The two models
-disagree on the failure payload on every run where a release fails under a
-failing body, and TRACE-DAG separation 3 fixes the `m1` outcome as
-`(tag, reason tags in order, fail payload)` — so the payload is exactly what a
-mask cannot erase. Either restrict the statement to runs with at most one
-failure and say so, or add the missing `Cause.combine` to the region runner and
-re-pin `E4-FLOW-CE-019`. That ruling belongs to the finalizer packet, not to this
-one. The empty-annotation hypothesis of
-`docs/research/2026-09-03-frame-simulation.md` section 5(b) becomes live at the
-same moment, because `Cause.combine` dedups `Reason`s that differ only in their
-`ReasonAnnotations`.
+The empty-annotation hypothesis of
+`docs/research/2026-09-03-frame-simulation.md` section 5(b) did **not** become
+live with it: `Cause.combine` is `Cause.dedup` of the concatenation and `dedup`
+keeps the first occurrence, so the head of a merged cause is the head of the
+body's cause whatever the annotations are, and `Exit.toOutcome` reads exactly
+that head (`RegionSimulation.toOutcome_combine`). It stays live only for a
+statement comparing whole causes rather than their wire projection.
 -/
 
 end Effect4.FrameSimulation
