@@ -54,6 +54,7 @@ import Effect4.Concurrency.Scheduler
 import Effect4.Concurrency.Interrupt
 import Effect4.Concurrency.Race
 import Effect4.Concurrency.Supervision
+import Effect4.Concurrency.FiberFamily
 import Effect4.Stateful.Ref
 import Effect4.Stateful.Deferred
 import Effect4.Stateful.Queue

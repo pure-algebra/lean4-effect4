@@ -10,6 +10,7 @@ import Effect4.Flow.Region
 import Effect4.Semantics.Approximation
 import Effect4.Semantics.RegionSimulation
 import Effect4.Semantics.RegionDenotation
+import Effect4.Concurrency.FiberFamily
 
 /-!
 The trace harness family. `main fixture` prints the generated Effect v4 module,
@@ -20,7 +21,7 @@ golden is the traced service's log plus the outcome, rendered by
 `fixture.ts` and `generated/traces/` and then runs the host.
 -/
 
-open Effects Effect4 Effect4.Meta Effect4.Target.EffectV4
+open Effects Effect4 Effect4.Meta Effect4.Target.EffectV4 Effect4.FiberFamily
 
 /-! ## Golden admission: what the host can carry exactly
 
@@ -858,4 +859,29 @@ def main (args : List String) : IO Unit := do
           IO.println s!"PASS region oracle {entry.program.name}: the runner and interpret of the denotation write the same log ({runner.1.2.length} rows)"
         else
           throw (IO.userError s!"FAIL region oracle {entry.program.name}: the runner and interpret of the denotation differ")
-  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle")
+  | ["fiber-fixture"] =>
+      -- `Fiber` and `Option` are imported as types only: the generated module
+      -- names `Fiber.Fiber<number, number>` and `Option.Option<number>` in the
+      -- service shape and never calls into either.
+      match modules? [(Fibers.rows, fiberPrograms.map (·.script))] [.types ["Fiber", "Option"] "effect"] with
+      | some source => IO.print source
+      | none => throw (IO.userError "lowering refused a fiber script")
+  | ["fiber-programs"] => IO.println (String.intercalate "\n" (fiberPrograms.map (·.name)))
+  | ["fiber-golden", name] =>
+      match fiberPrograms.find? (·.name == name) with
+      | some entry =>
+          -- A program the sequential projection refused something in has no
+          -- Lean face to compare, and its golden is not written at all.
+          -- counterexample: E4-SEM-CE-010
+          if entry.stuck then
+            throw (IO.userError
+              s!"refusing to emit golden fiber.{name}: the sequential projection has no answer for one of its operations")
+          else
+            IO.print (← admitted name entry.log
+              (Effect4.Target.TypeScript.Trace.golden ("fiber." ++ name) entry.tape
+                ((entry.script.ruleSet Fibers.rows).map Rule.id) entry.log))
+      | none => throw (IO.userError s!"unknown fiber program {name}")
+  | ["fiber-types"] =>
+      for entry in fiberPrograms do
+        IO.println (entry.name ++ "\t" ++ Script.declarationLine Fibers.rows entry.script)
+  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle | fiber-fixture | fiber-programs | fiber-golden <program> | fiber-types")

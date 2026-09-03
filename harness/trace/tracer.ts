@@ -172,6 +172,13 @@ export interface FrameSnapshot { op: string; depth: number }
 export interface RunOptions {
   readonly budget: number
   readonly maxOpsBeforeYield: number
+  /** A tape-driven yield. A multi-fiber tail arms this at a decision site and
+   * the `TapeScheduler` consumes it at the next check, so *which* fiber holds
+   * the processor is chosen by the golden's tape rather than by rc.112's op
+   * counter (`harness/trace/fiber-tail.ts`). Returning `true` both answers and
+   * consumes the arming. A single-fiber tail leaves it out and every yield is
+   * rc.112's own. */
+  readonly armed?: () => boolean
 }
 
 export interface RunReport {
@@ -204,6 +211,10 @@ export const runTraced = async <A, E>(
 
   class TapeScheduler extends Scheduler.MixedScheduler {
     override shouldYield(fiber: any): boolean {
+      // The tape first: an armed decision hands the processor over whatever
+      // rc.112's op counter would have said. Everything else is rc.112's own
+      // yield policy, unchanged.
+      if (options.armed?.() === true) { yields += 1; return true }
       const decision = super.shouldYield(fiber)
       if (decision) yields += 1
       return decision
