@@ -29,3 +29,8 @@ Effect4Test.Protocol.ByteParserContract
 # the remaining preservation, framing, cleanup, and existence theorems named
 # by this contract have not landed yet.
 Effect4Test.Concurrency.RaceRepresentativeContract
+
+# Independent additive live-stack breaker; only its declaration-free stub
+# exists until the builder implements the frozen source-order contract.
+Effect4Test.Runtime.LiveStackContract
+Effect4Test.Runtime.LiveStackAxiomReport

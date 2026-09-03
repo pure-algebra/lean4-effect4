@@ -550,3 +550,37 @@ both DAGs stay open with a statement now available. Packet:
 `test/contracts/trace-patched-host.contract.md`. The plan's packets are all
 landed; the owed theorems (`fuelFor` suffices, structured agreement) are with
 a proof agent on a worktree branch.
+
+## Independent live-stack breaker claim, 2026-09-03
+
+Codex's separate live-stack breaker claims the following packet only in this
+isolated worktree, based at `bfda8d8bd25929662f89a036efc231769adcc88d` on
+`codex/live-stack-integration`:
+
+- `test/contracts/live-stack.contract.md` and `docs/LIVE-STACK-DAG.md`;
+- `Effect4Test/Runtime/LiveStackContract.lean` and
+  `Effect4Test/Runtime/LiveStackAxiomReport.lean`;
+- `Effect4Test/Counterexamples/Runtime/LiveStack.lean`;
+- a declaration-free `Effect4/Runtime/LiveStack.lean` stub;
+- new LiveStack import lines in `Effect4.lean` and `Effect4Test.lean`;
+- new LiveStack entries in `test/fixtures/trust-gate/known-red.txt`; and
+- the new `E4-RUN-CE-022` through `E4-RUN-CE-024` rows in
+  `test/counterexamples/REGISTER.md`.
+
+The builder owns the later implementation and host harness. The frozen
+contract distinguishes whole-`FramePop` agreement with the existing pop loop
+from the source's deferred-first entry. It retains a masked deferred answer
+and records the event when an unmasked answer is discarded; compatibility
+with the old entry is guarded, while false-skip compatibility is unrestricted.
+The while-law fixes the inner-call/outer-loop relationship and event order.
+No new primitive or fiber carrier, asynchronous execution, scheduler
+simulation or default-runtime switch is admitted. `Runtime.lean`, every
+pre-existing frame packet, dependency pins and generated assurance remain
+unchanged. The main checkout is not edited by this breaker.
+
+The new stub and nine counterexample theorems build; all counterexample
+receipts are within `propext`. The contract has only the recorded missing-name
+errors and the two resulting unavailable-evaluation diagnostics; its independent
+13-case pop positive control passes. The axiom report has eight missing-name
+errors. Exact diagnostics, test counts and source hashes are frozen in
+`test/contracts/live-stack.contract.md`. The two new red modules are declared.

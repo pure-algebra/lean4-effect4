@@ -40,6 +40,7 @@ import Effect4.Layer.Laws
 import Effect4.Runtime.Scope
 import Effect4.Runtime.Resource
 import Effect4.Runtime.Runtime
+import Effect4.Runtime.LiveStack
 import Effect4.Runtime.ManagedRuntime
 import Effect4.Runtime.Lifecycle
 import Effect4.Concurrency.Fiber

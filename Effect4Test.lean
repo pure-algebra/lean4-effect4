@@ -61,6 +61,9 @@ import Effect4Test.Counterexamples.Runtime.Scope
 import Effect4Test.Runtime.FramesContract
 import Effect4Test.Runtime.FramesAxiomReport
 import Effect4Test.Counterexamples.Runtime.Frames
+import Effect4Test.Runtime.LiveStackContract
+import Effect4Test.Runtime.LiveStackAxiomReport
+import Effect4Test.Counterexamples.Runtime.LiveStack
 import Effect4Test.Audit.RuntimeCoverage
 import Effect4Test.Audit.AxiomGate
 
