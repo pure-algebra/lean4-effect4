@@ -39,18 +39,34 @@
 #   * the five targets are matched exactly, after stripping one leading `./`,
 #     so a different file with the same basename under another directory is a
 #     different target and is not flagged; and
-#   * `vendor/` is skipped wherever it appears, because that tree is read-only
-#     pinned evidence whose internal citations belong to its own repository.
+#   * `vendor/`, `node_modules/` and the `_copy/` the patched-host gate builds
+#     are skipped wherever they appear, because none of those trees is authored
+#     here: `vendor/` is read-only pinned evidence whose internal citations
+#     belong to its own repository, and the other two are an installed
+#     dependency and a transient copy of one, which `harness/AGENTS.md` already
+#     rules out as canonical evidence. They are pruned rather than filtered
+#     file by file: `harness/trace/patched/_copy/` alone holds the 2,341 files
+#     of the patched rc.112 tree, four times this repository's own text.
+#
+# ## Stamp (rule 9)
+#
+# The gate reads exactly the files it scans, so the key is those files and this
+# script, taken after the file list is built and before the scan runs. It needs
+# no Lean build and no host. `--root` reports on a supplied tree and closes
+# nothing here, so it neither reads nor writes a stamp.
 set -euo pipefail
 
 protected_docs="docs/SCHEMA-CUTOVER.md SCHEMA-CUTOVER.md PLAN.md AGENTS.md docs/ARCHITECTURE.md ARCHITECTURE.md PORT-MANIFEST.md docs/AGENT-ROUTING.md AGENT-ROUTING.md"
 scanned_trees="Effect4 Effect4Test docs test scripts harness"
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+. "$repo_root/scripts/lib/portable.sh"
+. "$repo_root/scripts/lib/stamp.sh"
 root="$repo_root"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --force) export EFFECT4_FORCE=1 ;;
     --root)
       shift
       [[ $# -gt 0 ]] || { printf 'FAIL --root needs a directory argument\n' >&2; exit 1; }
@@ -90,18 +106,37 @@ if [[ "${#scan_dirs[@]}" -eq 0 ]]; then
   exit 1
 fi
 
+# `grep -I -l -e .` names every argument that has at least one line and is not
+# binary, which is the same test the old per-file `grep -Iq .` made, in one
+# process for the whole tree rather than one process per file.
 files=()
 while IFS= read -r candidate; do
   case "$candidate" in
-    */vendor/*) continue ;;
+    */vendor/*|*/node_modules/*|*/_copy/*) continue ;;
   esac
-  grep -Iq . -- "$candidate" 2>/dev/null || continue
   files+=("$candidate")
-done < <(find "${scan_dirs[@]}" -type f -print | LC_ALL=C sort)
+done < <(find "${scan_dirs[@]}" \
+    \( -type d \( -name vendor -o -name node_modules -o -name _copy \) -prune \) -o \
+    -type f -print \
+  | LC_ALL=C sort \
+  | tr '\n' '\0' \
+  | xargs -0 grep -I -l -e . -- 2>/dev/null \
+  | LC_ALL=C sort)
 
 if [[ "${#files[@]}" -eq 0 ]]; then
   printf 'FAIL no readable text file was found under the scanned trees of %s\n' "$root" >&2
   exit 1
+fi
+
+if [[ "$root" == "$repo_root" ]]; then
+  stamped=1
+  key="$(stamp_key "$repo_root/scripts/check-internal-citations.sh" "${files[@]}")"
+  if stamp_hit internal-citations "$key"; then
+    stamp_report internal-citations "$key"
+    exit 0
+  fi
+else
+  stamped=0
 fi
 
 report="$(
@@ -150,6 +185,9 @@ if [[ "$violation_count" -gt 0 ]]; then
   exit 1
 fi
 
+summary="$(printf '%s citation tokens examined in %s files, none into the 6 protected documents' \
+  "$candidates" "${#files[@]}")"
+if [[ "$stamped" -eq 1 ]]; then stamp_write internal-citations "$key" "$summary"; fi
 printf 'PASS no line-numbered citation into the 6 protected authored documents\n'
 printf 'PASS %s citation tokens examined in %s files across %s scanned tree(s)\n' \
   "$candidates" "${#files[@]}" "${#scan_dirs[@]}"
