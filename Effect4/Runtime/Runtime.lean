@@ -2209,4 +2209,341 @@ theorem step_scopedFrame [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [Dec
 
 end FrameFiber
 
+
+/-! ## The uninterrupted fragment, and fuel additivity
+
+Fence A of packet D4 (`docs/research/2026-09-03-frame-simulation.md` section 1.3
+and "Fuel adequacy"). Nothing in this module ever *writes* `interruptedCause`:
+`FrameFiber.start` sets it to `none`, `Prim.ensure` only reads it, and
+`getCont` only clears the deferred flag. So
+`interruptedCause = none /\ deferredInterrupt = false` is an invariant of
+`step`, and under it the whole interrupt half of the machine is inert: an
+answering frame is never skipped by `popFrom`, and `getCont` never answers the
+deferred interrupt.
+
+`FRAME-FB-NONNULL` (`docs/FRAMES-DAG.md`) becomes **vacuous on that fragment**:
+the state in which `pendingCause` answers `Cause.empty` where rc.112 asserts
+`_interruptedCause!` is not reachable from `start` by `step`. The row is *not*
+retired. The invariant is a fragment fact, not a model fact: the supervision
+packet that records an interrupt breaks the hypothesis, and that row is exactly
+what states what happens then.
+
+`run_add` and `run_mono` are the fuel laws the module lacked. DB-04 forbids the
+`forall fuel` form -- exhausted fuel is a live frontier, never a result -- so
+every downstream statement is `forall fuel >= bound`, and that shape needs
+these two.
+-/
+
+namespace FrameFiber
+
+private theorem ensure_deferredInterrupt (frame : Prim ν σ β ε δ ι α)
+    (fiber : FrameFiber ν σ β ε δ ι α) :
+    (frame.ensure fiber).fst.deferredInterrupt = fiber.deferredInterrupt := by
+  cases frame with
+  | onExit _ _ _ =>
+    simp only [Prim.ensure]
+    split <;> rfl
+  | setInterruptible _ =>
+    simp only [Prim.ensure]
+    split
+    · split <;> rfl
+    · rfl
+  | success _ => rfl
+  | failure _ => rfl
+  | sync _ => rfl
+  | suspend _ => rfl
+  | withFiber _ => rfl
+  | yieldableError _ => rfl
+  | iterator _ _ => rfl
+  | onSuccess _ _ => rfl
+  | onFailure _ _ => rfl
+  | onSuccessAndFailure _ _ _ => rfl
+  | exitFrame _ => rfl
+  | whileLoop _ _ => rfl
+
+/-- A pop never records an interruption: whatever hooks it runs, the
+accumulated cause it leaves is the one it found.
+census: checkpoint.getcont-deferred -/
+theorem popFrom_interruptedCause (demand : Arm) (skip : Bool) :
+    forall (frames : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α),
+      (popFrom demand skip frames fiber).fiber.interruptedCause = fiber.interruptedCause := by
+  intro frames
+  induction frames with
+  | nil => intro fiber; rfl
+  | cons head rest ih =>
+    intro fiber
+    cases hanswer : head.answerOf demand (head.ensure fiber).snd with
+    | none =>
+      rw [popFrom_continue_fiber demand skip head rest fiber (Or.inl hanswer), ih,
+        ensure_interruptedCause]
+    | some answer =>
+      cases hskip : (skip && (head.ensure fiber).fst.interrupted) with
+      | true =>
+        rw [popFrom_continue_fiber demand skip head rest fiber (Or.inr hskip), ih,
+          ensure_interruptedCause]
+      | false =>
+        rw [popFrom_answer_fiber demand skip head rest fiber answer hanswer hskip]
+        exact ensure_interruptedCause head fiber
+
+/-- A pop never defers an interruption either: `getCont` detaches the stack
+with the flag already cleared, and no hook sets it.
+census: checkpoint.getcont-deferred -/
+theorem popFrom_deferredInterrupt (demand : Arm) (skip : Bool) :
+    forall (frames : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α),
+      (popFrom demand skip frames fiber).fiber.deferredInterrupt = fiber.deferredInterrupt := by
+  intro frames
+  induction frames with
+  | nil => intro fiber; rfl
+  | cons head rest ih =>
+    intro fiber
+    cases hanswer : head.answerOf demand (head.ensure fiber).snd with
+    | none =>
+      rw [popFrom_continue_fiber demand skip head rest fiber (Or.inl hanswer), ih,
+        ensure_deferredInterrupt]
+    | some answer =>
+      cases hskip : (skip && (head.ensure fiber).fst.interrupted) with
+      | true =>
+        rw [popFrom_continue_fiber demand skip head rest fiber (Or.inr hskip), ih,
+          ensure_deferredInterrupt]
+      | false =>
+        rw [popFrom_answer_fiber demand skip head rest fiber answer hanswer hskip]
+        exact ensure_deferredInterrupt head fiber
+
+/-- With nothing recorded and nothing deferred, a pop leaves the fiber in the
+same uninterrupted state. census: checkpoint.getcont-deferred -/
+theorem getCont_fiber_uninterrupted (self : FrameFiber ν σ β ε δ ι α) (demand : Arm)
+    (skip : Bool) (hcause : self.interruptedCause = none)
+    (hdeferred : self.deferredInterrupt = false) :
+    (self.getCont demand skip).fiber.interruptedCause = none /\
+      (self.getCont demand skip).fiber.deferredInterrupt = false := by
+  rw [getCont_eq_popFrom self demand skip hdeferred]
+  exact ⟨(popFrom_interruptedCause demand skip _ _).trans hcause,
+    popFrom_deferredInterrupt demand skip _ _⟩
+
+/-- On the uninterrupted fragment the skip guard never fires: a frame that
+declares the demanded arm answers, whatever the skip flag says. This is the
+precise sense in which `FRAME-FB-NONNULL` is harmless here.
+census: checkpoint.exit-failcause-skip -/
+theorem popFrom_never_skips (demand : Arm) (skip : Bool) (frame : Prim ν σ β ε δ ι α)
+    (rest : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α)
+    (answer : ContAnswer ν σ β ε δ ι α) (hcause : fiber.interruptedCause = none)
+    (hanswer : frame.answerOf demand (frame.ensure fiber).snd = some answer) :
+    popFrom demand skip (frame :: rest) fiber =
+      FramePop.mk answer [frame] (frame.passEvents (frame.ensure fiber).snd)
+        { (frame.ensure fiber).fst with
+          stack := (frame.ensure fiber).fst.stack ++ rest } := by
+  have hint : (skip && (frame.ensure fiber).fst.interrupted) = false := by
+    rw [interrupted_eq, ensure_interruptedCause, hcause]
+    simp
+  simp [popFrom, hanswer, hint]
+
+private theorem answerOf_ne_deferred (frame : Prim ν σ β ε δ ι α) (demand : Arm)
+    (replacement : Option (Prim ν σ β ε δ ι α)) (answer : ContAnswer ν σ β ε δ ι α)
+    (cause : Cause ε δ ι α)
+    (h : frame.answerOf demand replacement = some answer) :
+    answer ≠ ContAnswer.deferred cause := by
+  cases replacement with
+  | some next =>
+    rw [Prim.answerOf_replacement] at h
+    cases Option.some.inj h
+    exact by simp
+  | none =>
+    cases hd : frame.hasArm demand with
+    | false =>
+      rw [Prim.answerOf_missing frame demand hd] at h
+      exact absurd h (by simp)
+    | true =>
+      rw [Prim.answerOf_arm frame demand hd] at h
+      cases Option.some.inj h
+      exact by simp
+
+/-- Only `getCont`'s pre-stack branch can answer a deferred interrupt; the pop
+loop itself never produces that answer. census: checkpoint.getcont-deferred -/
+theorem popFrom_answer_ne_deferred (demand : Arm) (skip : Bool) (cause : Cause ε δ ι α) :
+    forall (frames : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α),
+      (popFrom demand skip frames fiber).answer ≠ ContAnswer.deferred cause := by
+  intro frames
+  induction frames with
+  | nil => intro fiber; simp [popFrom]
+  | cons head rest ih =>
+    intro fiber
+    cases hanswer : head.answerOf demand (head.ensure fiber).snd with
+    | none =>
+      rw [popFrom_continue_answer demand skip head rest fiber (Or.inl hanswer)]
+      exact ih (head.ensure fiber).fst
+    | some answer =>
+      cases hskip : (skip && (head.ensure fiber).fst.interrupted) with
+      | true =>
+        rw [popFrom_continue_answer demand skip head rest fiber (Or.inr hskip)]
+        exact ih (head.ensure fiber).fst
+      | false =>
+        rw [popFrom_answer_answer demand skip head rest fiber answer hanswer hskip]
+        exact answerOf_ne_deferred head demand _ answer cause hanswer
+
+/-- With nothing deferred, `getCont` never answers the deferred interrupt, so
+`pendingCause` is never read on this fragment.
+census: checkpoint.getcont-deferred -/
+theorem getCont_never_defers (self : FrameFiber ν σ β ε δ ι α) (demand : Arm) (skip : Bool)
+    (cause : Cause ε δ ι α) (hdeferred : self.deferredInterrupt = false) :
+    (self.getCont demand skip).answer ≠ ContAnswer.deferred cause := by
+  rw [getCont_eq_popFrom self demand skip hdeferred]
+  exact popFrom_answer_ne_deferred demand skip cause _ _
+
+private theorem resumeValue_uninterrupted [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
+    [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α) (self next : FrameFiber ν σ β ε δ ι α)
+    (value : β) (provided : Option (Exit β ε δ ι α))
+    (hcause : self.interruptedCause = none) (hdeferred : self.deferredInterrupt = false)
+    (h : (self.resumeValue interp value provided).fst = FrameStep.running next) :
+    next.interruptedCause = none /\ next.deferredInterrupt = false := by
+  obtain ⟨hc, hd⟩ := getCont_fiber_uninterrupted self Arm.contA false hcause hdeferred
+  unfold resumeValue at h
+  split at h
+  · exact absurd h (by simp)
+  · injection h with h'
+    subst h'
+    exact ⟨hc, hd⟩
+  · injection h with h'
+    subst h'
+    exact ⟨hc, hd⟩
+  · split at h
+    · injection h with h'
+      subst h'
+      exact ⟨hc, hd⟩
+    · exact absurd h (by simp)
+
+private theorem resumeCause_uninterrupted [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
+    [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α) (self next : FrameFiber ν σ β ε δ ι α)
+    (cause : Cause ε δ ι α) (provided : Option (Exit β ε δ ι α))
+    (hcause : self.interruptedCause = none) (hdeferred : self.deferredInterrupt = false)
+    (h : (self.resumeCause interp cause provided).fst = FrameStep.running next) :
+    next.interruptedCause = none /\ next.deferredInterrupt = false := by
+  obtain ⟨hc, hd⟩ := getCont_fiber_uninterrupted self Arm.contE true hcause hdeferred
+  unfold resumeCause at h
+  split at h
+  · exact absurd h (by simp)
+  · injection h with h'
+    subst h'
+    exact ⟨hc, hd⟩
+  · injection h with h'
+    subst h'
+    exact ⟨hc, hd⟩
+  · split at h
+    · injection h with h'
+      subst h'
+      exact ⟨hc, hd⟩
+    · exact absurd h (by simp)
+
+/-- The uninterrupted state is a `step` invariant. Nothing in this module
+writes `interruptedCause`, and `getCont` clears the deferred flag, so a fiber
+started by `FrameFiber.start` never reaches a state in which the interrupt half
+of the machine does anything. census: checkpoint.getcont-deferred -/
+theorem step_preserves_uninterrupted [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
+    [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α) (self next : FrameFiber ν σ β ε δ ι α)
+    (hcause : self.interruptedCause = none) (hdeferred : self.deferredInterrupt = false)
+    (h : (self.step interp).fst = FrameStep.running next) :
+    next.interruptedCause = none /\ next.deferredInterrupt = false := by
+  unfold step at h
+  split at h
+  all_goals
+    first
+      | exact resumeValue_uninterrupted interp self next _ _ hcause hdeferred h
+      | exact resumeCause_uninterrupted interp self next _ _ hcause hdeferred h
+      | (injection h with h'; subst h'; exact ⟨hcause, hdeferred⟩)
+      | (split at h <;> (injection h with h'; subst h'; exact ⟨hcause, hdeferred⟩))
+
+/-- A bounded run started uninterrupted stays uninterrupted.
+census: checkpoint.getcont-deferred -/
+theorem run_preserves_uninterrupted [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
+    [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α) (fuel : Nat) :
+    forall (self next : FrameFiber ν σ β ε δ ι α),
+      self.interruptedCause = none -> self.deferredInterrupt = false ->
+        (self.run interp fuel).fst = FrameStep.running next ->
+          next.interruptedCause = none /\ next.deferredInterrupt = false := by
+  induction fuel with
+  | zero =>
+    intro self next hcause hdeferred h
+    rw [run_zero] at h
+    injection h with h'
+    subst h'
+    exact ⟨hcause, hdeferred⟩
+  | succ fuel ih =>
+    intro self next hcause hdeferred h
+    cases hstep : self.step interp with
+    | mk result events =>
+      cases result with
+      | finished exit =>
+        rw [run_succ_finished interp self fuel exit events hstep] at h
+        exact absurd h (by simp)
+      | running mid =>
+        have hmid : mid.interruptedCause = none /\ mid.deferredInterrupt = false :=
+          step_preserves_uninterrupted interp self mid hcause hdeferred (by rw [hstep])
+        rw [run_succ_running interp self mid fuel events hstep] at h
+        exact ih mid next hmid.1 hmid.2 h
+
+/-- Fuel splits: running `m + n` units is running `m` and, if that has not
+finished, resuming the rest. The module had `run_zero`, `run_succ_finished` and
+`run_succ_running` and no way to compose two runs.
+census: exit.success-failure -/
+theorem run_add [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+    (interp : PrimInterp ν σ β ε δ ι α) (m n : Nat) :
+    forall (self : FrameFiber ν σ β ε δ ι α),
+      self.run interp (m + n) =
+        (match self.run interp m with
+          | (FrameStep.finished exit, events) => (FrameStep.finished exit, events)
+          | (FrameStep.running mid, events) =>
+            ((mid.run interp n).fst, events ++ (mid.run interp n).snd)) := by
+  induction m with
+  | zero =>
+    intro self
+    rw [Nat.zero_add, run_zero]
+    simp
+  | succ m ih =>
+    intro self
+    have harith : m + 1 + n = (m + n) + 1 := by omega
+    cases hstep : self.step interp with
+    | mk result events =>
+      cases result with
+      | finished exit =>
+        rw [harith, run_succ_finished interp self (m + n) exit events hstep,
+          run_succ_finished interp self m exit events hstep]
+      | running mid =>
+        rw [harith, run_succ_running interp self mid (m + n) events hstep,
+          run_succ_running interp self mid m events hstep, ih mid]
+        cases hrun : mid.run interp m with
+        | mk innerResult innerEvents =>
+          cases innerResult with
+          | finished exit => simp
+          | running deep => simp [List.append_assoc]
+
+/-- A finished run is stable: extra fuel changes neither the exit nor the
+trace. census: exit.success-failure -/
+theorem run_add_finished [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+    (interp : PrimInterp ν σ β ε δ ι α) (self : FrameFiber ν σ β ε δ ι α) (m n : Nat)
+    (exit : Exit β ε δ ι α) (events : List (FrameEvent ν σ β ε δ ι α))
+    (h : self.run interp m = (FrameStep.finished exit, events)) :
+    self.run interp (m + n) = (FrameStep.finished exit, events) := by
+  rw [run_add interp m n self, h]
+
+/-- An unfinished run resumes from the state it stopped in.
+census: exit.success-failure -/
+theorem run_add_running [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+    (interp : PrimInterp ν σ β ε δ ι α) (self mid : FrameFiber ν σ β ε δ ι α) (m n : Nat)
+    (events : List (FrameEvent ν σ β ε δ ι α))
+    (h : self.run interp m = (FrameStep.running mid, events)) :
+    self.run interp (m + n) = ((mid.run interp n).fst, events ++ (mid.run interp n).snd) := by
+  rw [run_add interp m n self, h]
+
+/-- Fuel monotonicity for a finished run. `FrameStep.running` at exhausted fuel
+stays a live frontier under DB-04; this says nothing about it.
+census: exit.success-failure -/
+theorem run_mono [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+    (interp : PrimInterp ν σ β ε δ ι α) (self : FrameFiber ν σ β ε δ ι α) (m n : Nat)
+    (exit : Exit β ε δ ι α) (events : List (FrameEvent ν σ β ε δ ι α)) (hle : m <= n)
+    (h : self.run interp m = (FrameStep.finished exit, events)) :
+    self.run interp n = (FrameStep.finished exit, events) := by
+  obtain ⟨k, hk⟩ := Nat.le.dest hle
+  rw [← hk]
+  exact run_add_finished interp self m k exit events h
+
+end FrameFiber
 end Effect4

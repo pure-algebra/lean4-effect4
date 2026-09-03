@@ -436,3 +436,35 @@ under `types/flow/`; every flow golden agrees on the host under every mask at
 both yield settings, and `generated/lowering-coverage.tsv` has all sixteen
 rules `checked`. Packet: `test/contracts/flow-dispatch-lowering.contract.md`.
 Next: P-T6, the property loop (generated flows, tapes, shrinking, mutants).
+
+## D4 fence A landed: the uninterrupted fragment and fuel additivity, 2026-09-03
+
+Claim (Claude, frame-simulation lane, worktree `agent-aa0ab582898ec636e`,
+branch `codex/effect4-cutover`): `Effect4/Runtime/Runtime.lean`
+(**additions only**, appended after `step_scopedFrame`);
+`Effect4/Semantics/FrameSimulation.lean` (new);
+`Effect4Test/Semantics/FrameSimulationContract.lean`,
+`Effect4Test/Semantics/FrameSimulationAxiomReport.lean` (new);
+`Effect4Test/Runtime/FramesContract.lean` and
+`Effect4Test/Runtime/FramesAxiomReport.lean` (**section F10 only**, appended);
+`test/contracts/frame-simulation.contract.md` (new); `docs/FRAMES-DAG.md`,
+`docs/TRACE-DAG.md`, `Effect4.lean`, `Effect4Test.lean` (appended lines only).
+Packet: `docs/research/2026-09-03-frame-simulation.md`, packet D4 of
+`docs/research/2026-09-03-reification-plan.md`.
+
+Fence A adds twelve public theorems to `Effect4/Runtime/Runtime.lean` and edits
+nothing that was already there. `step_preserves_uninterrupted` says
+`interruptedCause = none` with `deferredInterrupt = false` is a `step`
+invariant; `popFrom_never_skips` and `getCont_never_defers` are its two
+consequences (no handler is skipped, the deferred interrupt is never answered),
+so `FRAME-FB-NONNULL` is *vacuous on the fragment reachable from
+`FrameFiber.start`* and is **not** retired — see the new closing section of
+`docs/FRAMES-DAG.md`. `run_add`, `run_add_finished`, `run_add_running` and
+`run_mono` are the fuel composition and monotonicity laws the bounded runner
+lacked; DB-04's live-frontier ruling forbids the `forall fuel` form, so every
+downstream statement is `forall fuel >= bound` and needs them. All twelve are
+within `propext` / `Quot.sound`.
+
+Anyone touching `Effect4/Runtime/Runtime.lean`: the additions are at the end of
+the file inside a re-opened `namespace FrameFiber`. Nothing above line 2212 of
+the pre-D4 file was changed.
