@@ -31,7 +31,7 @@ Initial rules (straight-line scripts): `service-acquire`, `perform-bind`,
 | `golden` | pinned expected traces under `generated/traces/` that exercise the rule (paths with digests) | `harness/trace/Emit.lean` through the traced service | a host run |
 | `host` | a receipt under `harness/trace/receipts/` whose pin equals the current `harness/trace/host-pin.json` and whose comparison passed under the named mask | `effect4-trace` | a Lean theorem |
 | `property` | a batch record in `generated/lowering-property.tsv`: seed, generated, admitted, agreed, and zero surviving lowering mutants | `harness/trace/Property.lean` and `scripts/test-lowering-mutations.sh` | a golden alone |
-| `typeReceipt` | the emitted `.d.ts` from the pinned `tsc.original` byte-equal to the Lean-rendered expectation | `scripts/check-lowering-types.sh` | the skewed TypeScript 5.9.3 extractor (auxiliary only) |
+| `typeReceipt` | the declaration line the pinned `tsc.original` emits for the program (`--declaration --emitDeclarationOnly`) is byte-equal to `Script.declarationLine`, the Lean-rendered A, E and R channels; the receipt records the line and the digest of the emitted file | `scripts/check-lowering-types.sh` | the skewed TypeScript 5.9.3 extractor (auxiliary only) |
 | `proof` | a named theorem about the Lean side (traced service versus Flow runner, dispatch versus structured form) with an axiom receipt inside `propext`/`Quot.sound` | `Effect4Test/Target/TypeScript/LoweringCoverage.lean` | any host observation |
 
 ## States

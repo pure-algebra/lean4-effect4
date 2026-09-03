@@ -1,8 +1,75 @@
+import Effect4.Target.TypeScript.EffectV4
+
 /-!
-# Target.TypeScript.Lower.lean
+# Target.TypeScript.Lower
 
-Owner: Lowering from checked Effect4 content.
+Owner: the lowering rule census. `docs/LOWERING-COVERAGE.md` owns the
+vocabulary: a rule is one tagged definition in `Effect4/Target/TypeScript/`
+(`lowering: rule.<id>`), and this module is the denominator the ledger joins
+tags, goldens, host receipts, property batches, type receipts and proofs to.
+`Rule.all` and the tag set must agree in both directions; the gate checks it.
 
-This breadth stub intentionally declares no semantic object. Its public
-surface is frozen only after the owning contract and counterexample packet.
+Straight-line lowering from a `Script` lives in
+`Effect4/Target/TypeScript/EffectV4.lean` beside the rows; graph lowering from
+a checked flow arrives with the Flow v2 packets and adds its rules here.
 -/
+
+namespace Effect4.Target.EffectV4
+
+/-- The lowering rules, one per tagged definition. -/
+inductive Rule where
+  | serviceAcquire
+  | nullaryValue
+  | performCall
+  | performBind
+  | performDiscard
+  | atomCall
+  | ret
+deriving DecidableEq, Repr
+
+namespace Rule
+
+/-- The id spelled in the definition's docstring tag and in the ledger. -/
+def id : Rule → String
+  | serviceAcquire => "service-acquire"
+  | nullaryValue => "nullary-value"
+  | performCall => "perform-call"
+  | performBind => "perform-bind"
+  | performDiscard => "perform-discard"
+  | atomCall => "atom-call"
+  | ret => "ret"
+
+/-- Every rule, in ledger order. -/
+def all : List Rule :=
+  [serviceAcquire, nullaryValue, performCall, performBind, performDiscard, atomCall, ret]
+
+theorem all_nodup : all.Nodup := by decide
+
+theorem mem_all (rule : Rule) : rule ∈ all := by
+  cases rule <;> decide
+
+/-- Resolve a ledger id. -/
+def ofId? (id : String) : Option Rule :=
+  all.find? fun rule => rule.id == id
+
+theorem ofId?_id (rule : Rule) : ofId? rule.id = some rule := by
+  cases rule <;> rfl
+
+end Rule
+
+/-- The rules a straight-line script exercises, in first-use order. -/
+def Script.ruleSet (rows : ServiceRow) (script : Script) : List Rule :=
+  let step (acc : List Rule) (rule : Rule) : List Rule :=
+    if acc.contains rule then acc else acc ++ [rule]
+  let atoms (acc : List Rule) (term : PureTerm) : List Rule :=
+    if term.hasApp then step acc .atomCall else acc
+  script.steps.foldl (init := [.serviceAcquire]) fun acc s =>
+    match s with
+    | .perform bind op args =>
+        let nullary := (rows.row? op).map (·.params.isEmpty) |>.getD false
+        let acc := step acc (if nullary then .nullaryValue else .performCall)
+        let acc := step acc (if bind.startsWith "_" then .performDiscard else .performBind)
+        args.foldl atoms acc
+    | .ret value => atoms (step acc .ret) value
+
+end Effect4.Target.EffectV4

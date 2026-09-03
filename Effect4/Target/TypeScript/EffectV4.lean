@@ -253,6 +253,8 @@ structure Script where
   name : String
   /-- binder, TypeScript type spelling -/
   param : String × String
+  /-- TypeScript spelling of the result -/
+  result : String := "unknown"
   steps : List Step
   deriving Repr, BEq, Inhabited
 
@@ -283,21 +285,12 @@ def lower (rows : ServiceRow) (script : Script) : Option ProgDecl := do
          paramType := script.param.2
          stmts }
 
-/-- The lowering rule ids a script exercises, in first-use order. The ledger
-(`docs/LOWERING-COVERAGE.md`) joins goldens to rules through this list. -/
-def rules (rows : ServiceRow) (script : Script) : List String :=
-  let step (acc : List String) (id : String) : List String :=
-    if acc.contains id then acc else acc ++ [id]
-  let atoms (acc : List String) (term : PureTerm) : List String :=
-    if term.hasApp then step acc "atom-call" else acc
-  script.steps.foldl (init := ["service-acquire"]) fun acc s =>
-    match s with
-    | .perform bind op args =>
-        let nullary := (rows.row? op).map (·.params.isEmpty) |>.getD false
-        let acc := step acc (if nullary then "nullary-value" else "perform-call")
-        let acc := step acc (if bind.startsWith "_" then "perform-discard" else "perform-bind")
-        args.foldl atoms acc
-    | .ret value => atoms (step acc "ret") value
+/-- The declaration line the pinned compiler must emit for the lowered
+program: its A, E and R channels as `tsc --declaration` prints them. This is
+the type receipt a golden carries (`docs/LOWERING-COVERAGE.md`). -/
+def declarationLine (script : Script) : String :=
+  "export declare const " ++ script.name ++ ": (" ++ script.param.1 ++ ": " ++ script.param.2 ++
+    ") => Effect.Effect<" ++ script.result ++ ", never, " ++ script.family ++ ">;"
 
 end Script
 

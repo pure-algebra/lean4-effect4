@@ -238,6 +238,6 @@ elab_rules : command
       def $name ($param : $paramTy) : Effects.Program $sigName $result := $programTerm))
     let scriptName := mkIdent (name.getId ++ `script)
     let stepList ← listLit stepRows.reverse
-    elabCommand (← `(def $scriptName : Effect4.Target.EffectV4.Script := { family := $(strLit famId.getId.toString), name := $(strLit name.getId.toString), param := ($(strLit param.getId.toString), $(strLit (← tsOfType paramTy))), steps := $stepList }))
+    elabCommand (← `(def $scriptName : Effect4.Target.EffectV4.Script := { family := $(strLit famId.getId.toString), name := $(strLit name.getId.toString), param := ($(strLit param.getId.toString), $(strLit (← tsOfType paramTy))), result := $(strLit (← tsOfType result)), steps := $stepList }))
 
 end Effect4.Meta

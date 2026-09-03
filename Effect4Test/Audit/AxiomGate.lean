@@ -48,6 +48,7 @@ private def auditImplementationModules : List Name :=
   , `Effect4Test.Environment.ContextKeyAssurance
   , `Effect4Test.Concurrency.FiberAssurance
   , `Effect4Test.Audit.RuntimeCoverage
+  , `Effect4Test.Target.TypeScript.LoweringCoverage
   ]
 
 /--

@@ -1,5 +1,6 @@
 import Effect4.Meta.Derive
 import Effect4.Target.TypeScript.Trace
+import Effect4.Target.TypeScript.Lower
 
 /-!
 The trace harness family. `main fixture` prints the generated Effect v4 module,
@@ -64,7 +65,10 @@ def main (args : List String) : IO Unit := do
       match programs.find? (·.1 == name) with
       | some (_, program, initial, script) =>
           IO.print (Effect4.Target.TypeScript.Trace.golden (name ++ ".empty") []
-            (script.rules Cell.rows) (goldenLog program initial))
+            ((script.ruleSet Cell.rows).map Rule.id) (goldenLog program initial))
       | none => throw (IO.userError s!"unknown program {name}")
   | ["programs"] => IO.println (String.intercalate "\n" (programs.map (·.1)))
+  | ["types"] =>
+      for entry in programs do
+        IO.println (entry.1 ++ "\t" ++ entry.2.2.2.declarationLine)
   | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs")
