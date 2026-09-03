@@ -90,7 +90,7 @@ def skeletonPlain (table : List OpSpec) (interrupts : Bool) (blockVar : String)
 /-- The cases of every block labelled `label`, nested regions included;
 `fuel` bounds the nesting depth. -/
 def skeletonCases (rows : ServiceRow) (table : List OpSpec) (interrupts : Bool)
-    (flow : RegionFlow String) :
+    (masked : List RegionId) (flow : RegionFlow String) :
     Nat → Option RegionId → String → Option (List (Nat × List Skeleton))
   | 0, _, _ => none
   | fuel + 1, label, blockVar =>
@@ -100,10 +100,12 @@ def skeletonCases (rows : ServiceRow) (table : List OpSpec) (interrupts : Bool)
         | .plain term => skeletonPlain table interrupts blockVar block term
         | .enter region entry args => do
             let row ← flow.row? region
-            let inner ← skeletonCases rows table interrupts flow fuel (some region)
+            let inner ← skeletonCases rows table interrupts masked flow fuel (some region)
               (blockVarOf region)
+            let enter := if masked.contains region then Lowering.regionEnterMasked region
+              else Lowering.regionEnter region
             some (Skeleton.enterBlock block.id :: Lowering.paramMove block.id entry (args.map var) ++
-              Lowering.regionEnter region
+              enter
                 [ Skeleton.letBlockIndex (blockVarOf region) entry
                 , Lowering.dispatchLoopOn (blockVarOf region) inner ] ++
               [ Skeleton.assign (.param row.continue_ 0) (.region region) ] ++
@@ -162,7 +164,7 @@ def acquisitions (rows : ServiceRow) (table : List OpSpec) (interrupts : Bool)
 /-- The control skeleton of the dispatch form with nested scopes. -/
 def skeletonDispatch (rows : ServiceRow) (program : RegionProgram) : Option (List Skeleton) := do
   let flow := program.flow.flow
-  let cases ← skeletonCases rows program.table program.interrupts flow
+  let cases ← skeletonCases rows program.table program.interrupts program.masked flow
     (flow.regions.length + 1) none "block"
   pure (acquisitions rows program.table program.interrupts flow ++ declarations flow ++
     [ Skeleton.assign (.param flow.entry 0) (.input program.param.1)
@@ -190,7 +192,9 @@ def ruleSet (rows : ServiceRow) (program : RegionProgram) : List Rule :=
   Flow.ruleSet rows erased ++
     (if has (fun t => match t with | .enter .. => true | _ => false) then [Rule.regionEnter] else []) ++
     (if has (fun t => match t with | .acquire .. => true | _ => false) then [Rule.regionAcquire] else []) ++
-    (if has (fun t => match t with | .leave _ => true | _ => false) then [Rule.regionLeave] else [])
+    (if has (fun t => match t with | .leave _ => true | _ => false) then [Rule.regionLeave] else []) ++
+    (if has (fun t => match t with | .enter region .. => program.masked.contains region | _ => false)
+      then [Rule.regionMasked] else [])
 
 def errorChannel (rows : ServiceRow) (program : RegionProgram) : String :=
   let spellings := (familyOps program.table program.flow.flow).foldl (init := ([] : List String))

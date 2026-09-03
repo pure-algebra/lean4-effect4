@@ -9,7 +9,7 @@ format	effect4-trace-v1
 face	lean-flow
 program	interruptMasked
 tape	1000005:1
-rules	service-acquire,dispatch-loop,block-case,interrupt-point,param-move,flow-perform,perform-call,flow-ret,region-enter,region-acquire,region-leave
+rules	service-acquire,dispatch-loop,block-case,interrupt-point,param-move,flow-perform,perform-call,flow-ret,region-enter,region-acquire,region-leave,region-masked
 enter	1
 op	acquire	5
 answer	acquire	5
@@ -21,5 +21,4 @@ leave	1	{"success":5}
 finalizer	1	{"success":5}
 op	release	5
 answer	release	[]
-decide	1000009	false
 done	{"interrupted":true}

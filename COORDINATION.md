@@ -2162,3 +2162,25 @@ re-pinned, and `generated/live-stack-assurance.json` regenerated with
 `--write`. `node scripts/check-live-stack.mjs` reports `local-pass` against the
 pinned install (`EFFECT4_EFFECT_NODE_MODULES`, as `harness/live-stack/HOST.md`
 documents; the repo has no `node_modules`).
+
+## M2 repair landed: restoration in the runner, the mask in the lowering, 2026-09-03
+
+Against the independent amendment (`3fbf47d`, `E4-FLOW-CE-024`/`025`):
+
+- `Effect4/Flow/Interrupt.lean`: a `leave` whose remaining stack is unmasked
+  delivers a pending interrupt at once — no continuation, no fresh point, no
+  tape read — and a `ret` with a pending interrupt is delivered likewise. The
+  three guards of `InterruptMaskBoundary.lean` are green and the module leaves
+  `known-red.txt`; the historical `decide 1000009` expectations in
+  `InterruptContract.lean` and `Counterexamples/Flow/Interrupt.lean` are
+  amended as the appendix requires, and the appendix records acceptance.
+- lean4-typescript v0.4.2 (`31665ff`, tagged locally; the push to GitHub is
+  pending operator approval — the manifest already pins the commit):
+  `Stmt.scopedGenMasked` renders `Effect.uninterruptible(Effect.scoped(...))`.
+- `Skeleton.enterScopedMasked` / `Lowering.regionEnterMasked`, rule
+  `region-masked` (twenty-six rules), emitted by both forms for a region in
+  `RegionProgram.masked`; `StructureLaws` covers the new node.
+- `harness/trace/interrupt-tail.ts` no longer emulates the mask: it requests
+  the interrupt wherever the tape answers, and rc.112 defers and restores.
+  Goldens, fixtures and receipts regenerated; the host gate passes every golden
+  under every mask at both yield settings; the ledger is current.

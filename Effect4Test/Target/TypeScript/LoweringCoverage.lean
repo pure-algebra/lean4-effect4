@@ -98,6 +98,11 @@ def rows : List Row :=
   , { rule := .regionEnter, state := .checked,
       goldens := ["flow/regionNested.empty", "flow/regionTwoFail.empty", "flow/regionBothSucceed.empty"],
       host := true, property := false, typeReceipt := true, proof := none }
+  -- a masked region (packet M2 repair): `Effect.uninterruptible` around the scoped
+  -- generator; pinned on the masked interrupt golden through `interrupt-tail.ts`
+  , { rule := .regionMasked, state := .pinned,
+      goldens := ["flow/interrupt/interruptMasked"],
+      host := false, property := false, typeReceipt := false, proof := none }
   , { rule := .regionAcquire, state := .checked,
       goldens := ["flow/regionNested.empty", "flow/regionTwoFail.empty", "flow/regionBothSucceed.empty"],
       host := true, property := false, typeReceipt := true, proof := none }

@@ -89,7 +89,8 @@ The two runs below differ only in the `masked` list. -/
     , .done .interrupted ])
 
 -- Masked, the same tape does not deliver there: the `perform` runs, the region
--- closes with `success`, and the run is interrupted only at the point after it.
+-- closes with `success`, and the run is interrupted the moment the mask is
+-- restored at the leave — not at a later point (E4-FLOW-CE-024/025).
 #guard run guarded [⟨1⟩] deliverInside =
   some (.interrupted,
     [ .enter 1
@@ -100,7 +101,6 @@ The two runs below differ only in the `masked` list. -/
     , .leave 1 (.success (.nat 5))
     , .finalizer 1 (.success (.nat 5))
     , .op "release" (.nat 5), .answer "release" .unit
-    , .decide 1000009 false
     , .done .interrupted ])
 
 -- The delivered answer is not dropped by the mask: the run still ends

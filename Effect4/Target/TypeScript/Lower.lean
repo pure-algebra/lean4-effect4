@@ -42,6 +42,8 @@ inductive Rule where
   | regionEnter
   | regionAcquire
   | regionLeave
+  /-- A region whose body runs with interruption masked (packet M2). -/
+  | regionMasked
   -- the structured form (`StructuredLower.lean`)
   | structuredLoop
   | structuredMerge
@@ -74,6 +76,7 @@ def id : Rule → String
   | regionEnter => "region-enter"
   | regionAcquire => "region-acquire"
   | regionLeave => "region-leave"
+  | regionMasked => "region-masked"
   | structuredLoop => "structured-loop"
   | structuredMerge => "structured-merge"
   | structuredContinue => "structured-continue"
@@ -85,7 +88,7 @@ def all : List Rule :=
   [serviceAcquire, nullaryValue, performCall, performBind, performDiscard, atomCall, ret, errorAbort,
    dispatchLoop, blockCase, paramMove, flowPerform, flowAtom, flowLiteral, chooseIf, flowRet,
    interruptPoint,
-   regionEnter, regionAcquire, regionLeave,
+   regionEnter, regionAcquire, regionLeave, regionMasked,
    structuredLoop, structuredMerge, structuredContinue, structuredBreak, dispatchFallback]
 
 theorem all_nodup : all.Nodup := by decide

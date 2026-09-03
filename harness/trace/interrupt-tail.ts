@@ -6,15 +6,16 @@
  * interruptor. It answers the point from the interrupt tape exactly as the Lean
  * runner does (`Effect4.Flow.interruptRead`: the head entry is consumed only
  * when it names this site, and exhaustion answers "not delivered"), pushes the
- * same `decide` row, folds the answer into a pending flag, and — when the run
- * is not masked — calls `fiber.interruptUnsafe()`, the same rc.112 idiom
- * `tracer.ts` uses on the budget path.
+ * same `decide` row, and — whenever the tape answers "delivered" — calls
+ * `fiber.interruptUnsafe()`, the same rc.112 idiom `tracer.ts` uses on the
+ * budget path.
  *
- * Deferral is the tail's own bookkeeping, not rc.112's `uninterruptibleMask`:
- * the mask is a model fact of the flow (`RegionProgram.masked`), the lowering
- * emits no `Effect.uninterruptible`, and what the golden checks is that the
- * *rows* land where the Lean runner puts them. Which rc.112 primitive would
- * carry the mask is an open lowering question, recorded in docs/TRACE-DAG.md.
+ * Masking is rc.112's, not the tail's: a masked region is lowered to
+ * `Effect.uninterruptible(Effect.scoped(...))` (`Stmt.scopedGenMasked`), so a
+ * request made inside it is kept as `_interruptedCause` and delivered the
+ * moment the mask is restored — before the outside continuation, with no fresh
+ * point and no tape read — which is exactly where the Lean runner delivers it
+ * (E4-FLOW-CE-024/025).
  *
  * `EFFECT4_TAPE` carries the interrupt tape (`site:1` for delivered), taken
  * from the golden's `tape` header by the driver.
@@ -42,22 +43,16 @@ const tape: Array<readonly [number, boolean]> = (process.env.EFFECT4_TAPE ?? "")
     return [Number(site), branch === "1"] as const
   })
 
-/** The uninterruptible regions of each program, mirroring the `masked` field
- * of `interruptEntries` in `harness/trace/Generate.lean`. */
-const maskedRegions: Record<string, ReadonlyArray<number>> = {
-  interruptUnmasked: [],
-  interruptMasked: [1],
-  interruptFinalizer: []
-}
-
+/** The regions currently open, innermost last, for the `Regions` rows only.
+ * Masking is no longer emulated here: a masked region is lowered to
+ * `Effect.uninterruptible(Effect.scoped(...))` (`Stmt.scopedGenMasked`), so
+ * rc.112 itself defers a request made inside it and delivers it the moment the
+ * mask is restored — before the outside continuation, with no fresh point
+ * (E4-FLOW-CE-024/025). */
 const sink: Event[] = []
 const decisions = decisionsFromTape([], sink)
 
-/** The regions currently open, innermost last. `enter` pushes, `leave` pops;
- * an interrupt point at a region's own `leave` still sees that region open,
- * which is what `Effect4.Flow.isMasked` says of the runner's frame stack. */
 const openRegions: number[] = []
-const masked = () => openRegions.some((region) => (maskedRegions[name] ?? []).includes(region))
 
 const regions = {
   enter: (region: number) => Effect.sync(() => { openRegions.push(region); sink.push({ kind: "enter", region }) }),
@@ -73,7 +68,6 @@ const regions = {
 
 /** The interrupt tape, consumed by occurrence with a site check. */
 let cursor = 0
-let pending = false
 const readTape = (site: number): boolean => {
   const entry = tape[cursor]
   if (entry === undefined) return false
@@ -87,11 +81,9 @@ const interrupts = {
     Effect.withFiber((fiber: any) => {
       const answered = readTape(site)
       sink.push({ kind: "decide", site, branch: answered })
-      pending = pending || answered
-      if (!masked() && pending) {
-        pending = false
-        fiber.interruptUnsafe()
-      }
+      // The request is made wherever the tape answers it; under a real mask the
+      // runtime keeps it as `_interruptedCause` and delivers at restoration.
+      if (answered) fiber.interruptUnsafe()
       return Effect.void
     })
 }

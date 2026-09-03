@@ -1,17 +1,21 @@
-{"version": "1.2.0",
+{
+ "version": "1.2.0",
  "packagesDir": ".lake/packages",
- "packages":
- [{"url": "https://github.com/pure-algebra/lean4-typescript",
+ "packages": [
+  {
+   "url": "https://github.com/pure-algebra/lean4-typescript",
    "type": "git",
    "subDir": null,
    "scope": "",
-   "rev": "cc62799055b1af7ce22b083afcfb30155c1ed4d0",
+   "rev": "31665ffca361ce2ceb2e57f3ec18f8c8500abda0",
    "name": "typescript",
    "manifestFile": "lake-manifest.json",
-   "inputRev": "cc62799055b1af7ce22b083afcfb30155c1ed4d0",
+   "inputRev": "31665ffca361ce2ceb2e57f3ec18f8c8500abda0",
    "inherited": false,
-   "configFile": "lakefile.toml"},
-  {"url": "https://github.com/pure-algebra/lean4-effects",
+   "configFile": "lakefile.toml"
+  },
+  {
+   "url": "https://github.com/pure-algebra/lean4-effects",
    "type": "git",
    "subDir": null,
    "scope": "",
@@ -20,7 +24,10 @@
    "manifestFile": "lake-manifest.json",
    "inputRev": "2447edd76649f035e989914ac899831d66e7dad2",
    "inherited": false,
-   "configFile": "lakefile.toml"}],
+   "configFile": "lakefile.toml"
+  }
+ ],
  "name": "effect4",
  "lakeDir": ".lake",
- "fixedToolchain": false}
+ "fixedToolchain": false
+}

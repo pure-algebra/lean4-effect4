@@ -22,8 +22,8 @@ open TypeScript Effects Effect4.Flow Effect4.Target.EffectV4
 /-! ## The rule census -/
 
 -- Eight straight-line rules, then these eight, then `interrupt-point` (M2),
--- then the region and structured rules.
-example : Rule.all.length = 25 := by decide
+-- then the region rules (with `region-masked`) and the structured rules.
+example : Rule.all.length = 26 := by decide
 example : Rule.all.Nodup := Rule.all_nodup
 #guard ((Rule.all.map Rule.id).drop 8).take 8 =
   ["dispatch-loop", "block-case", "param-move", "flow-perform", "flow-atom", "flow-literal",

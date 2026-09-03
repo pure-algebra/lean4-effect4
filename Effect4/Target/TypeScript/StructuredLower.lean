@@ -112,7 +112,7 @@ namespace Region
 /-- The structured skeleton of a region program: each region's blocks are a
 graph of their own, entered at the region body. -/
 def skeletonStructuredBody (rows : ServiceRow) (table : List OpSpec) (interrupts : Bool)
-    (flow : RegionFlow String) :
+    (masked : List RegionId) (flow : RegionFlow String) :
     Nat → Option RegionId → BlockId → Option (List Skeleton)
   | 0, _, _ => none
   | fuel + 1, label, entry =>
@@ -133,10 +133,13 @@ def skeletonStructuredBody (rows : ServiceRow) (table : List OpSpec) (interrupts
             { id := block.id, params := block.params, term := term } move
       | .enter region entry' args => do
           let row ← flow.row? region
-          let inner ← skeletonStructuredBody rows table interrupts flow fuel (some region) entry'
+          let inner ← skeletonStructuredBody rows table interrupts masked flow fuel (some region)
+            entry'
           let rest ← move row.continue_ [.region region]
+          let enter := if masked.contains region then Lowering.regionEnterMasked region
+            else Lowering.regionEnter region
           some (Skeleton.enterBlock block.id :: Lowering.paramMove block.id entry' (args.map var) ++
-            Lowering.regionEnter region inner ++ rest)
+            enter inner ++ rest)
       | .acquire operation request release target args => do
           let region ← block.region
           let spec ← Flow.spec? table operation
@@ -156,7 +159,7 @@ def skeletonStructuredBody (rows : ServiceRow) (table : List OpSpec) (interrupts
 /-- The control skeleton of the structured form of a region program. -/
 def skeletonStructured (rows : ServiceRow) (program : RegionProgram) : Option (List Skeleton) := do
   let flow := program.flow.flow
-  let body ← skeletonStructuredBody rows program.table program.interrupts flow
+  let body ← skeletonStructuredBody rows program.table program.interrupts program.masked flow
     (flow.regions.length + 1) none flow.entry
   pure (acquisitions rows program.table program.interrupts flow ++ declarations flow ++
     [Skeleton.assign (.param flow.entry 0) (.input program.param.1)] ++ body)

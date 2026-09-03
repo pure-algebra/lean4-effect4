@@ -126,11 +126,13 @@ def run (raw : RegionFlow String) (maskedRegions : List RegionId) (itape : Tape)
     , .leave 1 .interrupted
     , .done .interrupted ])
 
--- Golden 2, masked deferral then delivery at unmask. Region 1 is
+-- Golden 2, masked deferral then delivery at restoration. Region 1 is
 -- uninterruptible: the delivered answer at site 1000003+2 is kept pending, the
 -- region's own `leave` point (1000002) is masked too and the region closes
--- cleanly with `success`, and the first point outside every region (1000009)
--- delivers the interrupt its own tape entry did not answer.
+-- cleanly with `success`; leaving it restores interruptibility, and the pending
+-- interrupt is delivered right there — before any continuation, with no fresh
+-- point and no tape read (E4-FLOW-CE-024/025; the historical `decide 1000009`
+-- row at the first outside point was the model's error, not rc.112's).
 #guard run masked [⟨1⟩] [deliverAtPerform 2] =
   some (.interrupted,
     [ .enter 1
@@ -141,7 +143,6 @@ def run (raw : RegionFlow String) (maskedRegions : List RegionId) (itape : Tape)
     , .leave 1 (.success (.nat 5))
     , .finalizer 1 (.success (.nat 5))
     , .op "release" (.nat 5), .answer "release" .unit
-    , .decide 1000009 false
     , .done .interrupted ])
 
 -- Golden 3, a finalizer seeing `interrupted`: two nested regions, each holding

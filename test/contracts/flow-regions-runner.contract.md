@@ -221,3 +221,18 @@ node ../effect4-tools/packages/harness/trace.mjs harness/trace --golden generate
 subdirectory or assert masked pending delivery. Its existing frame observations
 cannot discharge this amendment. If used for that purpose later, its exercised
 inputs and assertions must explicitly include this request/restoration path.
+
+### Acceptance, 2026-09-03 (coordinator)
+
+The runner repair landed in `Effect4/Flow/Interrupt.lean`: a `leave` that
+restores interruptibility (the rest of the stack is unmasked) delivers a
+pending interrupt immediately, before the continuation, with no fresh point and
+no tape read; a `ret` with a pending interrupt is delivered the same way. The
+three guards of `Effect4Test/Counterexamples/Flow/InterruptMaskBoundary.lean`
+are green and the module leaves the declared red set. The historical masked
+expectations (`InterruptContract` golden 2 and the `guarded` counterexample)
+are amended as this appendix requires: the `decide 1000009 false` row is gone,
+and the identification of the masked pending state with `_deferredInterrupt` is
+withdrawn — it is rc.112's `_interruptedCause` under an active mask. A failing
+close under a pending interrupt keeps the failure (`E4-RUN-CE-025`).
+

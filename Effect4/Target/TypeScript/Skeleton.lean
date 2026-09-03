@@ -156,6 +156,10 @@ inductive Skeleton where
   /-- Open a region: report it, run `body` as a nested generator in its own
   scope, and bind the value it returns to `r<region>`. -/
   | enterScoped (region : RegionId) (body : List Skeleton)
+  /-- Open a masked region: as `enterScoped`, with interruption masked for the
+  whole body (`Effect.uninterruptible`), so a pending interrupt is delivered
+  when the region's scope closes (packet M2, `RegionProgram.masked`). -/
+  | enterScopedMasked (region : RegionId) (body : List Skeleton)
   /-- Acquire a resource inside a region, registering its release. -/
   | acquire (answer : Slot) (region : RegionId) (operation : OperationId) (spec : OpSpec)
       (request : Slot) (release : OpSpec)
@@ -247,6 +251,13 @@ becomes the parameter of the region's `continue_` block.
 lowering: rule.region-enter -/
 def regionEnter (region : RegionId) (body : List Skeleton) : List Skeleton :=
   [.enterScoped region body]
+
+/-- Open a masked region: the same nested scoped generator under
+`Effect.uninterruptible`, so rc.112 defers a request made inside it and
+delivers it the moment the mask is restored — before the outside continuation
+(`Effect4.Flow.interruptLoop`'s `leave` rule). lowering: rule.region-masked -/
+def regionEnterMasked (region : RegionId) (body : List Skeleton) : List Skeleton :=
+  [.enterScopedMasked region body]
 
 /-- Acquire inside a region: `Effect.acquireRelease` registers the release in
 the enclosing scope; the release reports `finalizer` with the closing exit
@@ -344,6 +355,11 @@ def render (rows : ServiceRow) : Skeleton → List Stmt
   | .enterScoped region body =>
       [ .yieldDiscard (.call (.ident "regions.enter") [.int region.value])
       , .scopedGen (Slot.region region).name (renderList rows body)
+          (.lambda ["exit"]
+            (.call (.ident "regions.leave") [.int region.value, .ident "exit"])) ]
+  | .enterScopedMasked region body =>
+      [ .yieldDiscard (.call (.ident "regions.enter") [.int region.value])
+      , .scopedGenMasked (Slot.region region).name (renderList rows body)
           (.lambda ["exit"]
             (.call (.ident "regions.leave") [.int region.value, .ident "exit"])) ]
   | .acquire answer region _ spec request release =>

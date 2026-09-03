@@ -646,7 +646,7 @@ export const interruptMasked = (n: number) =>
         case 0: {
           b1p0 = b0p0
           yield* regions.enter(1)
-          const r1 = yield* Effect.scoped(Effect.onExit(Effect.gen(function* () {
+          const r1 = yield* Effect.uninterruptible(Effect.scoped(Effect.onExit(Effect.gen(function* () {
             let block1 = 1
             while (true) {
               switch (block1) {
@@ -672,7 +672,7 @@ export const interruptMasked = (n: number) =>
                 }
               }
             }
-          }), (exit) => regions.leave(1, exit)))
+          }), (exit) => regions.leave(1, exit))))
           b4p0 = r1
           block = 4
           continue

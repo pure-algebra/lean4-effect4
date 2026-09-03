@@ -232,9 +232,14 @@ def interruptLoop [Monad M] (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
           let raw : RawBlock Ty := { id := current.id, params := current.params, term := term }
           match plan alphabet raw env tape with
           | .stuck => stuck
-          | .ret value => do
-              emit (.done (.success value))
-              pure (.done value, tape)
+          | .ret value =>
+              -- Returning ends every mask: a pending interrupt is delivered here,
+              -- without a fresh point or tape read (rc.112 restores interruptibility
+              -- and substitutes the interrupted cause before any continuation).
+              if state.pending then deliverInterrupt service nameOf stack tape
+              else do
+                emit (.done (.success value))
+                pure (.done value, tape)
           | .jump target env' =>
               interruptLoop alphabet flow masked service nameOf fuel target env' tape state stack
           | .perform op request target env' => do
@@ -287,8 +292,14 @@ def interruptLoop [Monad M] (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
               else do
                 match ← closeFrame service nameOf frame (.success v) with
                 | [] =>
-                    interruptLoop alphabet flow masked service nameOf fuel row.continue_ [v] tape
-                      point.snd rest
+                    -- Leaving the region restores the mask it carried: a pending
+                    -- interrupt is delivered as soon as the rest of the stack is
+                    -- unmasked, before the continuation and without another point.
+                    if point.snd.pending && !isMasked masked rest then
+                      deliverInterrupt service nameOf rest tape
+                    else
+                      interruptLoop alphabet flow masked service nameOf fuel row.continue_ [v]
+                        tape point.snd rest
                 | error :: _ => failInterrupt service nameOf rest error tape
           | _, _, _ => stuck
 

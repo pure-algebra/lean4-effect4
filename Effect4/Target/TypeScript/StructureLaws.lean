@@ -75,6 +75,7 @@ def wellScoped (blocks loops : List String) (stmt : Stmt) : Bool :=
       wellScopedList blocks loops thenBranch && wellScopedList blocks loops elseBranch
   | .switch _ cases => wellScopedCases blocks loops cases
   | .scopedGen _ body _ => wellScopedList [] [] body
+  | .scopedGenMasked _ body _ => wellScopedList [] [] body
   | .breakTo (some label) => blocks.contains label
   | .continueTo (some label) => loops.contains label
   | _ => true
@@ -115,6 +116,7 @@ def wellScoped (blocks loops : List String) (node : Skeleton) : Bool :=
   | .decide _ _ onTrue onFalse =>
       wellScopedList blocks loops onTrue && wellScopedList blocks loops onFalse
   | .enterScoped _ body => wellScopedList [] [] body
+  | .enterScopedMasked _ body => wellScopedList [] [] body
   | .breakTo label => blocks.contains label
   | .continueTo label => loops.contains label
   | _ => true
@@ -703,6 +705,9 @@ theorem render_wellScoped (rows : ServiceRow) (blocks loops : List String) (node
         renderList_wellScoped rows blocks loops onTrue,
         renderList_wellScoped rows blocks loops onFalse]
   | .enterScoped region body =>
+      simp [Skeleton.render, wellScopedList, wellScoped, Skel.wellScoped,
+        renderList_wellScoped rows [] [] body]
+  | .enterScopedMasked region body =>
       simp [Skeleton.render, wellScopedList, wellScoped, Skel.wellScoped,
         renderList_wellScoped rows [] [] body]
 termination_by structural node

@@ -19,8 +19,8 @@ open TypeScript Effects Effect4.Flow Effect4.Target.EffectV4
 #check @Effect4.Target.EffectV4.regionModules?
 
 -- Eight straight-line, eight dispatch-form, `interrupt-point` (M2), these
--- three, then the structured rules (P-T9b).
-example : Rule.all.length = 25 := by decide
+-- three and `region-masked` (the M2 repair), then the structured rules (P-T9b).
+example : Rule.all.length = 26 := by decide
 #guard ((Rule.all.map Rule.id).drop 17).take 3 = ["region-enter", "region-acquire", "region-leave"]
 
 def rcellRows : ServiceRow :=
