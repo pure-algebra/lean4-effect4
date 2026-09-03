@@ -115,13 +115,15 @@ def skeletonBlockWith (table : List OpSpec) (interrupts : Bool) (block : RawBloc
       -- row, so a caught perform of either has no lowering.
       let _ ← match spec.kind with | .family => some () | _ => none
       let answer : Slot := .answer block.id
-      let toOk ← transfer target (args.map var ++ [.catchValue block.id])
-      let toError ← transfer onError (errorArgs.map var ++ [.catchError block.id])
+      let value : Slot := .catchValue block.id
+      let error : Slot := .catchError block.id
+      let toOk ← transfer target (args.map var ++ [value])
+      let toError ← transfer onError (errorArgs.map var ++ [error])
       let point : List Skeleton :=
         if interrupts then [Lowering.interruptPoint (Effect4.Flow.Point.site (.perform block.id))]
         else []
       some (entered (point ++
-        Lowering.performCatchResult answer operation spec (var request) toOk toError))
+        Lowering.performCatchResult answer value error operation spec (var request) toOk toError))
   | .branch test site onTrue onFalse args => do
       let toTrue ← transfer onTrue (args.map var)
       let toFalse ← transfer onFalse (args.map var)

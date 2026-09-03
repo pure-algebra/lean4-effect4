@@ -158,8 +158,8 @@ inductive Skeleton where
   /-- A caught family operation (Flow v3): bind the operation's `Result` and
   split on it, the value edge reading `answer.success` and the failure edge
   `answer.failure`. -/
-  | performCatch (answer : Slot) (operation : OperationId) (spec : OpSpec) (request : Slot)
-      (onOk onError : List Skeleton)
+  | performCatch (answer value error : Slot) (operation : OperationId) (spec : OpSpec)
+      (request : Slot) (onOk onError : List Skeleton)
   /-- A value branch (Flow v3): report the site to the `Decisions` service — a
   branch is a decision site whose answer the run already holds — then split on
   the test operand's own value. -/
@@ -255,9 +255,9 @@ edges are the two arms of the `Result`. The pinned `TypeScript.Stmt` has no
 string-keyed `switch`, so the `_tag` test is spelled with rc.112's own
 `Result.isSuccess` predicate; the value edge reads `a<b>.success` and the
 failure edge `a<b>.failure`. lowering: rule.perform-catch -/
-def performCatchResult (answer : Slot) (operation : OperationId) (spec : OpSpec) (request : Slot)
-    (onOk onError : List Skeleton) : List Skeleton :=
-  [.performCatch answer operation spec request onOk onError]
+def performCatchResult (answer value error : Slot) (operation : OperationId) (spec : OpSpec)
+    (request : Slot) (onOk onError : List Skeleton) : List Skeleton :=
+  [.performCatch answer value error operation spec request onOk onError]
 
 /-- A `branch` is taken by the value of its test operand and is still a decision
 site: `yield* decisions.report(7, b1p0); if (b1p0) { ... } else { ... }`. The
@@ -384,7 +384,7 @@ def render (rows : ServiceRow) : Skeleton → List Stmt
   | .decide answer site onTrue onFalse =>
       [ .constYield answer.name (.call (.ident "decisions.choose") [.int site.value])
       , .ifElse answer.expr (renderList rows onTrue) (renderList rows onFalse) ]
-  | .performCatch answer _ spec request onOk onError =>
+  | .performCatch answer _ _ _ spec request onOk onError =>
       [ .constYield answer.name
           (.call (.ident "Effect.result") [Lowering.callOf rows spec request.expr])
       , .ifElse (.call (.ident "Result.isSuccess") [answer.expr])

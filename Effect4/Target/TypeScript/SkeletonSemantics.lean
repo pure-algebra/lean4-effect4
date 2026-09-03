@@ -133,6 +133,8 @@ def size : Skeleton → Nat
   | .loop _ body => sizeList body + 2
   | .labelled _ body => sizeList body + 2
   | .decide _ _ onTrue onFalse => sizeList onTrue + sizeList onFalse + 2
+  | .performCatch _ _ _ _ _ _ onOk onError => sizeList onOk + sizeList onError + 2
+  | .branchIf _ _ onTrue onFalse => sizeList onTrue + sizeList onFalse + 2
   | .enterScoped _ body => sizeList body + 2
   | _ => 2
   termination_by structural node => node
@@ -211,6 +213,32 @@ def execControl (fuel : Nat) (m : Machine) (tape : Tape) (node : Skeleton)
               (execList fuel (m.setVal answer (.bool branch)) more
                 (if branch then onTrue else onFalse))
               (afterFell fuel rest)
+  | .performCatch _ value _ operation _ request onOk _ =>
+      -- The plain algebra has no failure channel (`FlowService.handle` answers
+      -- a `Val`), so a caught perform runs its value edge and its failure edge
+      -- is spelled and never taken, exactly as `Runs.lean`'s `step` does.
+      (match alphabet.lookup operation with
+       | none => .pure (.finished (.frontier (.stuck m.block)), tape)
+       | some op =>
+           .vis (.inl ⟨op, m.vals request⟩) fun answered : Val =>
+             Program.bind (execList fuel (m.setVal value answered) tape onOk)
+               (afterFell fuel rest))
+  | .branchIf test site onTrue onFalse =>
+      (match tape.read site with
+       | .exhausted => .pure (.finished (.frontier (.unansweredDecision site)), tape)
+       | .mismatch expected actual => .pure (.finished (.refused expected actual), tape)
+       | .answered branch more =>
+           match m.vals test with
+           | .bool value =>
+               if branch = value then
+                 .vis (.inr (site, branch)) fun _ =>
+                   Program.bind (execList fuel m more (if branch then onTrue else onFalse))
+                     (afterFell fuel rest)
+               else .pure (.finished (.refused site site), tape)
+           | _ =>
+               .vis (.inr (site, branch)) fun _ =>
+                 Program.bind (execList fuel m more (if branch then onTrue else onFalse))
+                   (afterFell fuel rest))
   | .labelled label body =>
       Program.bind (execList fuel m tape body) (afterBlock fuel label rest)
   | .loop label body =>

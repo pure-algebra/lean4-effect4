@@ -115,6 +115,10 @@ def wellScoped (blocks loops : List String) (node : Skeleton) : Bool :=
   | .dispatchLoop _ cases => wellScopedCases blocks loops cases
   | .decide _ _ onTrue onFalse =>
       wellScopedList blocks loops onTrue && wellScopedList blocks loops onFalse
+  | .performCatch _ _ _ _ _ _ onOk onError =>
+      wellScopedList blocks loops onOk && wellScopedList blocks loops onError
+  | .branchIf _ _ onTrue onFalse =>
+      wellScopedList blocks loops onTrue && wellScopedList blocks loops onFalse
   | .enterScoped _ body => wellScopedList [] [] body
   | .enterScopedMasked _ body => wellScopedList [] [] body
   | .breakTo label => blocks.contains label
@@ -546,6 +550,32 @@ theorem skeletonBlockWith_wellScoped (table : List OpSpec) (interrupts : Bool)
       rw [term] at lowered
       obtain ⟨control, moved, rfl⟩ := Option.map_eq_some_iff.mp lowered
       exact entered _ (moveScoped _ _ _ moved)
+  | performCatch operation request target args onError errorArgs =>
+      rw [term] at lowered
+      obtain ⟨spec, _, lowered⟩ := Option.bind_eq_some_iff.mp lowered
+      cases kind : spec.kind with
+      | family =>
+          rw [kind] at lowered
+          obtain ⟨_, _, lowered⟩ := Option.bind_eq_some_iff.mp lowered
+          obtain ⟨toOk, okEq, lowered⟩ := Option.bind_eq_some_iff.mp lowered
+          obtain ⟨toError, errEq, lowered⟩ := Option.bind_eq_some_iff.mp lowered
+          injection lowered with lowered
+          subst lowered
+          refine entered _ ?_
+          cases interrupts <;>
+            simp [Skel.wellScopedList, Skel.wellScoped, Lowering.performCatchResult,
+              Lowering.interruptPoint, moveScoped _ _ _ okEq, moveScoped _ _ _ errEq]
+      | atom => rw [kind] at lowered; cases lowered
+      | lit value => rw [kind] at lowered; cases lowered
+  | branch test site onTrue onFalse args =>
+      rw [term] at lowered
+      obtain ⟨toTrue, trueEq, lowered⟩ := Option.bind_eq_some_iff.mp lowered
+      obtain ⟨toFalse, falseEq, lowered⟩ := Option.bind_eq_some_iff.mp lowered
+      injection lowered with lowered
+      subst lowered
+      exact entered _ (by
+        simp [Skel.wellScopedList, Skel.wellScoped, Lowering.branchIf,
+          moveScoped _ _ _ trueEq, moveScoped _ _ _ falseEq])
   | perform operation request target args =>
       rw [term] at lowered
       obtain ⟨spec, _, lowered⟩ := Option.bind_eq_some_iff.mp lowered
@@ -701,6 +731,14 @@ theorem render_wellScoped (rows : ServiceRow) (blocks loops : List String) (node
   | .continueTo label =>
       simp [Skeleton.render, wellScopedList, wellScoped, Skel.wellScoped]
   | .decide answer site onTrue onFalse =>
+      simp [Skeleton.render, wellScopedList, wellScoped, Skel.wellScoped,
+        renderList_wellScoped rows blocks loops onTrue,
+        renderList_wellScoped rows blocks loops onFalse]
+  | .performCatch answer value error operation spec request onOk onError =>
+      simp [Skeleton.render, wellScopedList, wellScoped, Skel.wellScoped,
+        renderList_wellScoped rows blocks loops onOk,
+        renderList_wellScoped rows blocks loops onError]
+  | .branchIf test site onTrue onFalse =>
       simp [Skeleton.render, wellScopedList, wellScoped, Skel.wellScoped,
         renderList_wellScoped rows blocks loops onTrue,
         renderList_wellScoped rows blocks loops onFalse]
