@@ -9,6 +9,7 @@ import Effect4.Target.TypeScript.StructuredLower
 import Effect4.Flow.Region
 import Effect4.Semantics.Approximation
 import Effect4.Semantics.RegionSimulation
+import Effect4.Semantics.RegionDenotation
 
 /-!
 The trace harness family. `main fixture` prints the generated Effect v4 module,
@@ -836,4 +837,25 @@ def main (args : List String) : IO Unit := do
               IO.println ("runner\t" ++ Effect4.Target.TypeScript.Trace.row event)
             IO.println (if machine == runner then "agree\ttrue" else "agree\tfalse")
         | .error message => throw (IO.userError message)
-  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program>")
+  | ["region-oracle"] =>
+      -- The region half of the internal oracle. The runner of
+      -- `Effect4/Flow/Region.lean` and `interpret` of the region denotation
+      -- (`Effect4/Semantics/RegionDenotation.lean`, packet D2) are two Lean
+      -- emitters of the same alphabet; `runRegions_eq_interpret` says they
+      -- agree, and this arm computes that agreement per region program.
+      for entry in regionEntries do
+        let table := entry.program.table
+        let flow := entry.program.flow
+        let fuel := Flow.fuelFor flow.flow.erase []
+        let service := Flow.tableRegionService ⟨0⟩ table rcellFamily cellAtom
+        let named := tableNameOf ⟨0⟩ table
+        let runner : ((Flow.RunResult × Flow.Tape) × Effect4.Trace.Log) × Nat :=
+          ((Flow.runRegions fuel flow service named [] entry.input).run []).run entry.initial
+        let denoted : ((Flow.RunResult × Flow.Tape) × Effect4.Trace.Log) × Nat :=
+          (((fun outcome => outcome.1) <$> Flow.interpretRegions service named
+            (Flow.denoteRegions fuel flow [] entry.input)).run []).run entry.initial
+        if runner.1.2 = denoted.1.2 then
+          IO.println s!"PASS region oracle {entry.program.name}: the runner and interpret of the denotation write the same log ({runner.1.2.length} rows)"
+        else
+          throw (IO.userError s!"FAIL region oracle {entry.program.name}: the runner and interpret of the denotation differ")
+  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle")

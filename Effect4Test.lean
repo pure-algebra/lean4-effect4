@@ -48,6 +48,7 @@ import Effect4Test.Flow.RunnerContract
 import Effect4Test.Semantics.DenotationContract
 import Effect4Test.Semantics.ApproximationContract
 import Effect4Test.Semantics.ApproximationAxiomReport
+import Effect4Test.Semantics.RegionDenotationContract
 import Effect4Test.Flow.RegionRunnerContract
 import Effect4Test.Flow.InterruptContract
 import Effect4Test.Target.TypeScript.RegionLowerContract
@@ -61,6 +62,7 @@ import Effect4Test.Semantics.DenotationAxiomReport
 import Effect4Test.Semantics.LogicContract
 import Effect4Test.Semantics.LogicAxiomReport
 import Effect4Test.Semantics.EquivalenceAxiomReport
+import Effect4Test.Semantics.RegionDenotationAxiomReport
 import Effect4Test.Counterexamples.Flow.Runner
 import Effect4Test.Counterexamples.Flow.Interrupt
 import Effect4Test.Target.TypeScript.FlowLowerContract
