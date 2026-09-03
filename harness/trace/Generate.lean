@@ -1393,6 +1393,200 @@ def families : List (ServiceRow × List Script) :=
   [ (Cell.rows, [incr.script, twice.script]), (ECell.rows, [recover.script]), (FCell.rows, [fallible.script])
   , (Tri.rows, [probe.script]) ]
 
+/-! ## The projections, by name
+
+Each family answers one function from a projection's *name* to its text, and one
+list of the names that family projects. The `<family>-golden` commands and the
+`all` command below both read exactly these, so the two paths cannot name
+different files or render one differently: the shell that once spelled a loop
+per family now spells none (survey finding H11).
+
+The provenance prologue is not Lean's to compute -- it digests the shell
+generator itself and reads `lake-manifest.json` -- so `all` takes it as a file
+and prepends the same bytes to every projection, exactly as the shell's
+`{ provenance; run … }` group did. -/
+
+/-- The straight-line projections: one `<program>.empty.tsv` per script. -/
+def goldenText (name : String) : IO String :=
+  match programs.find? (·.name == name) with
+  | some entry =>
+      admitted name entry.log
+        (Effect4.Target.TypeScript.Trace.golden (name ++ ".empty") []
+          ((entry.script.ruleSet entry.rows).map Rule.id) entry.log)
+  | none => throw (IO.userError s!"unknown program {name}")
+
+/-- The Flow-runner projections, as `<program>` and `<tape>` name pairs: the
+flow entries with each of their tapes, then the region entries, whose one
+tape is empty. -/
+def flowProjections : List (String × String) :=
+  (flowEntries.flatMap fun entry => entry.tapes.map fun (tapeName, _) => (entry.program.name, tapeName)) ++
+  regionEntries.map fun entry => (entry.program.name, "empty")
+
+def flowGoldenText (name tapeName : String) : IO String :=
+  match flowEntries.find? (·.program.name == name) with
+  | some entry =>
+      match entry.tapes.find? (·.1 == tapeName) with
+      | some (_, tape) =>
+          let boundary := entry.boundaries.find? (·.1 == tapeName)
+          match flowLogWith entry tape (boundary.map (·.2.1)) with
+          | .ok log =>
+              admitted (name ++ "." ++ tapeName) log
+                (Effect4.Target.TypeScript.Trace.golden (name ++ "." ++ tapeName) tape.wire
+                  ((Flow.structuredRuleSet entry.rows entry.program).map Rule.id) log (face := "lean-flow")
+                  (budgets := (boundary.map (·.2.2)).getD []))
+          | .error message => throw (IO.userError message)
+      | none => throw (IO.userError s!"no tape {tapeName} for {name}")
+  | none =>
+      match regionEntries.find? (·.program.name == name) with
+      | some entry =>
+          match regionLog entry with
+          | .ok log =>
+              pure (Effect4.Target.TypeScript.Trace.golden (name ++ ".empty") []
+                ((Region.ruleSet RCell.rows entry.program).map Rule.id) log (face := "lean-flow"))
+          | .error message => throw (IO.userError message)
+      | none => throw (IO.userError s!"no flow program {name}")
+
+/-- Interruption as decisions (M2): their own subdirectory under `flow/`. -/
+def interruptGoldenText (name : String) : IO String :=
+  match interruptEntries.find? (·.program.name == name) with
+  | some entry =>
+      match interruptLog entry with
+      | .ok log =>
+          admitted name log
+            (Effect4.Target.TypeScript.Trace.golden name entry.itape.wire
+              ((Region.ruleSet RCell.rows entry.program).map Rule.id) log (face := "lean-flow"))
+      | .error message => throw (IO.userError message)
+  | none => throw (IO.userError s!"no interrupt program {name}")
+
+def scopeGoldenText (name : String) : IO String :=
+  match scopePrograms.find? (·.name == name) with
+  | some entry =>
+      admitted name entry.log
+        (Effect4.Target.TypeScript.Trace.golden ("scope." ++ name) []
+          ((entry.script.ruleSet Scopes.rows).map Rule.id) entry.log)
+  | none => throw (IO.userError s!"unknown scope program {name}")
+
+def layerGoldenText (name : String) : IO String :=
+  match layerPrograms.find? (·.name == name) with
+  | some entry =>
+      admitted name entry.log
+        (Effect4.Target.TypeScript.Trace.golden ("layer." ++ name) []
+          ((entry.script.ruleSet Layers.rows).map Rule.id) entry.log)
+  | none => throw (IO.userError s!"unknown layer program {name}")
+
+def fiberGoldenText (name : String) : IO String :=
+  match fiberPrograms.find? (·.name == name) with
+  | some entry =>
+      -- A program the sequential projection refused something in has no
+      -- Lean face to compare, and its golden is not written at all.
+      -- counterexample: E4-SEM-CE-010
+      if entry.stuck then
+        throw (IO.userError
+          s!"refusing to emit golden fiber.{name}: the sequential projection has no answer for one of its operations")
+      else
+        admitted name entry.log
+          (Effect4.Target.TypeScript.Trace.golden ("fiber." ++ name) entry.tape
+            ((entry.script.ruleSet Fibers.rows).map Rule.id) entry.log)
+  | none => throw (IO.userError s!"unknown fiber program {name}")
+
+/-- The job projections, as `<program>` and `<golden>` name pairs: four goldens
+share the `jobRunner` body and differ in their queue seed and their tapes. -/
+def jobProjections : List (String × String) :=
+  jobEntries.map fun entry => (entry.program.name, entry.golden)
+
+def jobGoldenText (name goldenName : String) : IO String :=
+  match jobEntries.find? fun entry =>
+      entry.program.name == name && entry.golden == goldenName with
+  | some entry =>
+      match jobLog entry with
+      | .ok log =>
+          -- One `tape` header carries both tapes: the choice sites the flow
+          -- author wrote are below `interruptBase` and every interrupt site
+          -- is at or above it (`Effect4.Flow.Point.site_ne_choose`), so the
+          -- tail splits the one list into its two readers by site.
+          admitted (name ++ "." ++ goldenName) log
+            (Effect4.Target.TypeScript.Trace.golden (name ++ "." ++ goldenName)
+              (entry.tape.wire ++ entry.itape.wire)
+              ((Region.ruleSet Jobs.rows entry.program).map Rule.id) log (face := "lean-flow"))
+      | .error message => throw (IO.userError message)
+  | none => throw (IO.userError s!"no job golden {name}.{goldenName}")
+
+def deferredGoldenText (name : String) : IO String :=
+  match deferredEntries.find? (·.name == name) with
+  | some entry =>
+      admitted name entry.log
+        (Effect4.Target.TypeScript.Trace.golden ("deferred." ++ name) []
+          ((entry.script.ruleSet Deferreds.rows).map Rule.id) entry.log)
+  | none => throw (IO.userError s!"unknown deferred program {name}")
+
+def refGoldenText (name : String) : IO String :=
+  match Effect4.RefFamily.refPrograms.find? (·.name == name) with
+  | some entry =>
+      admitted name entry.log
+        (Effect4.Target.TypeScript.Trace.golden ("ref." ++ name) []
+          ((entry.script.ruleSet entry.rows).map Rule.id) entry.log)
+  | none => throw (IO.userError s!"unknown ref program {name}")
+
+/-- Write every projection of every family under `dir`, each prefixed by
+`prologue`. One process writes the whole corpus; the shell no longer spawns a
+Lean elaboration per golden (survey finding H11). The subdirectories are the
+ones the host gate's globs depend on: a family with its own tail must not be
+visible to another family's glob, and each comment in
+`scripts/generate-trace-goldens.sh` that said so now says it here. -/
+def writeAll (dir prologue : String) : IO Unit := do
+  let write (path : String) (body : String) : IO Unit :=
+    IO.FS.writeFile (dir ++ "/" ++ path) (prologue ++ body)
+  IO.FS.createDirAll dir
+  write "masks.tsv" Effect4.Target.TypeScript.Trace.maskTable
+  for entry in programs do
+    write (entry.name ++ ".empty.tsv") (← goldenText entry.name)
+  -- The Flow-runner face of the same programs (the internal oracle), kept in a
+  -- subdirectory so the host gate's program glob never sees them.
+  IO.FS.createDirAll (dir ++ "/flow")
+  for (program, tapeName) in flowProjections do
+    write ("flow/" ++ program ++ "." ++ tapeName ++ ".tsv") (← flowGoldenText program tapeName)
+  -- Interruption as decisions (M2), in their own subdirectory under `flow/`, so
+  -- the flow host loop's `flow/*.tsv` glob never sees them: they need the
+  -- Interrupts service and `interrupt-tail.ts`, not `flow-tail.ts`. The `tape`
+  -- header of each is the *interrupt* tape; none of these flows chooses.
+  IO.FS.createDirAll (dir ++ "/flow/interrupt")
+  for entry in interruptEntries do
+    write ("flow/interrupt/" ++ entry.program.name ++ ".tsv") (← interruptGoldenText entry.program.name)
+  -- The `Scopes` family, likewise in a subdirectory of its own: it has its own
+  -- generated module and its own tail (`scope-tail.ts`), so the straight-line
+  -- host loop's `*.empty.tsv` glob must not see it.
+  IO.FS.createDirAll (dir ++ "/scope")
+  for entry in scopePrograms do
+    write ("scope/" ++ entry.name ++ ".tsv") (← scopeGoldenText entry.name)
+  -- The `Layers` family (packet M4): its own generated module and its own tail
+  -- (`layer-tail.ts`). Its handles are rc.112 `Ref` and `Scope` objects,
+  -- indexed by the tracer.
+  IO.FS.createDirAll (dir ++ "/layer")
+  for entry in layerPrograms do
+    write ("layer/" ++ entry.name ++ ".tsv") (← layerGoldenText entry.name)
+  -- The `Fibers` family (packet M3): its own generated module and its own tail
+  -- (`fiber-tail.ts`). Each golden carries the tape its forks are answered
+  -- from, in the `tape` header row.
+  IO.FS.createDirAll (dir ++ "/fiber")
+  for entry in fiberPrograms do
+    write ("fiber/" ++ entry.name ++ ".tsv") (← fiberGoldenText entry.name)
+  -- The job runner (the first real program): its own generated module
+  -- (`job-fixture.ts`) and its own tail (`job-tail.ts`) over a real file-backed
+  -- queue. A golden is named `<program>.<golden>`.
+  IO.FS.createDirAll (dir ++ "/job")
+  for (program, goldenName) in jobProjections do
+    write ("job/" ++ program ++ "." ++ goldenName ++ ".tsv") (← jobGoldenText program goldenName)
+  -- The `Deferreds` family, kept in a subdirectory for the same reason as the
+  -- flow goldens: they run through `deferred-tail.ts`, not `tail.ts`.
+  IO.FS.createDirAll (dir ++ "/deferred")
+  for entry in deferredEntries do
+    write ("deferred/" ++ entry.name ++ ".tsv") (← deferredGoldenText entry.name)
+  -- The `Refs` family: its own generated module and its own tail
+  -- (`ref-tail.ts`).
+  IO.FS.createDirAll (dir ++ "/ref")
+  for entry in Effect4.RefFamily.refPrograms do
+    write ("ref/" ++ entry.name ++ ".tsv") (← refGoldenText entry.name)
+
 def main (args : List String) : IO Unit := do
   match args with
   | ["fixture"] =>
@@ -1403,46 +1597,17 @@ def main (args : List String) : IO Unit := do
       | none => throw (IO.userError "lowering refused a script")
   | ["atoms"] => IO.print Atoms.source
   | ["masks"] => IO.print Effect4.Target.TypeScript.Trace.maskTable
-  | ["golden", name] =>
-      match programs.find? (·.name == name) with
-      | some entry =>
-          IO.print (← admitted name entry.log
-            (Effect4.Target.TypeScript.Trace.golden (name ++ ".empty") []
-              ((entry.script.ruleSet entry.rows).map Rule.id) entry.log))
-      | none => throw (IO.userError s!"unknown program {name}")
+  | ["golden", name] => IO.print (← goldenText name)
+  | ["all", dir] => writeAll dir ""
+  | ["all", dir, provenanceFile] => writeAll dir (← IO.FS.readFile provenanceFile)
   | ["programs"] => IO.println (String.intercalate "\n" (programs.map (·.name)))
   | ["types"] =>
       for entry in programs do
         IO.println (entry.name ++ "\t" ++ Script.declarationLine entry.rows entry.script)
   | ["flow-programs"] =>
-      for entry in flowEntries do
-        for (tapeName, _) in entry.tapes do
-          IO.println (entry.program.name ++ "\t" ++ tapeName)
-      for entry in regionEntries do
-        IO.println (entry.program.name ++ "\tempty")
-  | ["flow-golden", name, tapeName] =>
-      match flowEntries.find? (·.program.name == name) with
-      | some entry =>
-          match entry.tapes.find? (·.1 == tapeName) with
-          | some (_, tape) =>
-              let boundary := entry.boundaries.find? (·.1 == tapeName)
-              match flowLogWith entry tape (boundary.map (·.2.1)) with
-              | .ok log =>
-                  IO.print (← admitted (name ++ "." ++ tapeName) log
-                    (Effect4.Target.TypeScript.Trace.golden (name ++ "." ++ tapeName) tape.wire
-                      ((Flow.structuredRuleSet entry.rows entry.program).map Rule.id) log (face := "lean-flow")
-                      (budgets := (boundary.map (·.2.2)).getD [])))
-              | .error message => throw (IO.userError message)
-          | none => throw (IO.userError s!"no tape {tapeName} for {name}")
-      | none =>
-          match regionEntries.find? (·.program.name == name) with
-          | some entry =>
-              match regionLog entry with
-              | .ok log =>
-                  IO.print (Effect4.Target.TypeScript.Trace.golden (name ++ ".empty") [] 
-                    ((Region.ruleSet RCell.rows entry.program).map Rule.id) log (face := "lean-flow"))
-              | .error message => throw (IO.userError message)
-          | none => throw (IO.userError s!"no flow program {name}")
+      for (program, tapeName) in flowProjections do
+        IO.println (program ++ "\t" ++ tapeName)
+  | ["flow-golden", name, tapeName] => IO.print (← flowGoldenText name tapeName)
   | ["oracle"] =>
       for entry in flowEntries do
         match entry.oracle, entry.tapes with
@@ -1483,16 +1648,7 @@ def main (args : List String) : IO Unit := do
         IO.println (entry.program.name ++ "\tempty\t" ++ Region.declarationLine RCell.rows entry.program)
   | ["interrupt-programs"] =>
       IO.println (String.intercalate "\n" (interruptEntries.map (·.program.name)))
-  | ["interrupt-golden", name] =>
-      match interruptEntries.find? (·.program.name == name) with
-      | some entry =>
-          match interruptLog entry with
-          | .ok log =>
-              IO.print (← admitted name log
-                (Effect4.Target.TypeScript.Trace.golden name entry.itape.wire
-                  ((Region.ruleSet RCell.rows entry.program).map Rule.id) log (face := "lean-flow")))
-          | .error message => throw (IO.userError message)
-      | none => throw (IO.userError s!"no interrupt program {name}")
+  | ["interrupt-golden", name] => IO.print (← interruptGoldenText name)
   | ["layer-fixture"] =>
       -- `Ref` and `Scope` are imported as types only: the generated module
       -- names `Ref.Ref<number>` and `Scope.Closeable` in the service shape and
@@ -1501,13 +1657,7 @@ def main (args : List String) : IO Unit := do
       | some source => IO.print source
       | none => throw (IO.userError "lowering refused a layer script")
   | ["layer-programs"] => IO.println (String.intercalate "\n" (layerPrograms.map (·.name)))
-  | ["layer-golden", name] =>
-      match layerPrograms.find? (·.name == name) with
-      | some entry =>
-          IO.print (← admitted name entry.log
-            (Effect4.Target.TypeScript.Trace.golden ("layer." ++ name) []
-              ((entry.script.ruleSet Layers.rows).map Rule.id) entry.log))
-      | none => throw (IO.userError s!"unknown layer program {name}")
+  | ["layer-golden", name] => IO.print (← layerGoldenText name)
   | ["layer-types"] =>
       for entry in layerPrograms do
         IO.println (entry.name ++ "\t" ++ Script.declarationLine Layers.rows entry.script)
@@ -1518,13 +1668,7 @@ def main (args : List String) : IO Unit := do
       | some source => IO.print source
       | none => throw (IO.userError "lowering refused a scope script")
   | ["scope-programs"] => IO.println (String.intercalate "\n" (scopePrograms.map (·.name)))
-  | ["scope-golden", name] =>
-      match scopePrograms.find? (·.name == name) with
-      | some entry =>
-          IO.print (← admitted name entry.log
-            (Effect4.Target.TypeScript.Trace.golden ("scope." ++ name) []
-              ((entry.script.ruleSet Scopes.rows).map Rule.id) entry.log))
-      | none => throw (IO.userError s!"unknown scope program {name}")
+  | ["scope-golden", name] => IO.print (← scopeGoldenText name)
   | ["admission-probe"] =>
       -- The planted value of `scripts/test-trace-goldens-gate.sh`: no program of
       -- the corpus produces a natural the host cannot carry, so the admission
@@ -1612,20 +1756,7 @@ def main (args : List String) : IO Unit := do
       | some source => IO.print source
       | none => throw (IO.userError "lowering refused a fiber script")
   | ["fiber-programs"] => IO.println (String.intercalate "\n" (fiberPrograms.map (·.name)))
-  | ["fiber-golden", name] =>
-      match fiberPrograms.find? (·.name == name) with
-      | some entry =>
-          -- A program the sequential projection refused something in has no
-          -- Lean face to compare, and its golden is not written at all.
-          -- counterexample: E4-SEM-CE-010
-          if entry.stuck then
-            throw (IO.userError
-              s!"refusing to emit golden fiber.{name}: the sequential projection has no answer for one of its operations")
-          else
-            IO.print (← admitted name entry.log
-              (Effect4.Target.TypeScript.Trace.golden ("fiber." ++ name) entry.tape
-                ((entry.script.ruleSet Fibers.rows).map Rule.id) entry.log))
-      | none => throw (IO.userError s!"unknown fiber program {name}")
+  | ["fiber-golden", name] => IO.print (← fiberGoldenText name)
   | ["fiber-types"] =>
       for entry in fiberPrograms do
         IO.println (entry.name ++ "\t" ++ Script.declarationLine Fibers.rows entry.script)
@@ -1639,24 +1770,9 @@ def main (args : List String) : IO Unit := do
       | some source => IO.print source
       | none => throw (IO.userError "dispatch lowering refused a job flow")
   | ["job-programs"] =>
-      for entry in jobEntries do
-        IO.println (entry.program.name ++ "\t" ++ entry.golden)
-  | ["job-golden", name, goldenName] =>
-      match jobEntries.find? fun entry =>
-          entry.program.name == name && entry.golden == goldenName with
-      | some entry =>
-          match jobLog entry with
-          | .ok log =>
-              -- One `tape` header carries both tapes: the choice sites the flow
-              -- author wrote are below `interruptBase` and every interrupt site
-              -- is at or above it (`Effect4.Flow.Point.site_ne_choose`), so the
-              -- tail splits the one list into its two readers by site.
-              IO.print (← admitted (name ++ "." ++ goldenName) log
-                (Effect4.Target.TypeScript.Trace.golden (name ++ "." ++ goldenName)
-                  (entry.tape.wire ++ entry.itape.wire)
-                  ((Region.ruleSet Jobs.rows entry.program).map Rule.id) log (face := "lean-flow")))
-          | .error message => throw (IO.userError message)
-      | none => throw (IO.userError s!"no job golden {name}.{goldenName}")
+      for (program, goldenName) in jobProjections do
+        IO.println (program ++ "\t" ++ goldenName)
+  | ["job-golden", name, goldenName] => IO.print (← jobGoldenText name goldenName)
   | ["job-types"] =>
       for program in jobPrograms do
         IO.println (program.name ++ "\t" ++ Region.declarationLine Jobs.rows program)
@@ -1675,13 +1791,7 @@ def main (args : List String) : IO Unit := do
       | some source => IO.print source
       | none => throw (IO.userError "lowering refused a deferred script")
   | ["deferred-programs"] => IO.println (String.intercalate "\n" (deferredEntries.map (·.name)))
-  | ["deferred-golden", name] =>
-      match deferredEntries.find? (·.name == name) with
-      | some entry =>
-          IO.print (← admitted name entry.log
-            (Effect4.Target.TypeScript.Trace.golden ("deferred." ++ name) []
-              ((entry.script.ruleSet Deferreds.rows).map Rule.id) entry.log))
-      | none => throw (IO.userError s!"unknown deferred program {name}")
+  | ["deferred-golden", name] => IO.print (← deferredGoldenText name)
   | ["deferred-types"] =>
       for entry in deferredEntries do
         IO.println (entry.name ++ "\t" ++ Script.declarationLine Deferreds.rows entry.script)
@@ -1696,14 +1806,8 @@ def main (args : List String) : IO Unit := do
       | none => throw (IO.userError "lowering refused a ref script")
   | ["ref-programs"] =>
       IO.println (String.intercalate "\n" (Effect4.RefFamily.refPrograms.map (·.name)))
-  | ["ref-golden", name] =>
-      match Effect4.RefFamily.refPrograms.find? (·.name == name) with
-      | some entry =>
-          IO.print (← admitted name entry.log
-            (Effect4.Target.TypeScript.Trace.golden ("ref." ++ name) []
-              ((entry.script.ruleSet entry.rows).map Rule.id) entry.log))
-      | none => throw (IO.userError s!"unknown ref program {name}")
+  | ["ref-golden", name] => IO.print (← refGoldenText name)
   | ["ref-types"] =>
       for entry in Effect4.RefFamily.refPrograms do
         IO.println (entry.name ++ "\t" ++ Script.declarationLine entry.rows entry.script)
-  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle | fiber-fixture | fiber-programs | fiber-golden <program> | fiber-types | job-fixture | job-programs | job-golden <program> <golden> | job-types | job-queues | deferred-fixture | deferred-programs | deferred-golden <program> | deferred-types | ref-fixture | ref-programs | ref-golden <program> | ref-types | atoms | layer-fixture | layer-programs | layer-golden <program> | layer-types")
+  | _ => throw (IO.userError "usage: Generate.lean all <dir> [<provenance-file>] | fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle | fiber-fixture | fiber-programs | fiber-golden <program> | fiber-types | job-fixture | job-programs | job-golden <program> <golden> | job-types | job-queues | deferred-fixture | deferred-programs | deferred-golden <program> | deferred-types | ref-fixture | ref-programs | ref-golden <program> | ref-types | atoms | layer-fixture | layer-programs | layer-golden <program> | layer-types")
