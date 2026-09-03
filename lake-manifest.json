@@ -19,10 +19,10 @@
    "type": "git",
    "subDir": null,
    "scope": "",
-   "rev": "2447edd76649f035e989914ac899831d66e7dad2",
+   "rev": "a117157",
    "name": "effects",
    "manifestFile": "lake-manifest.json",
-   "inputRev": "2447edd76649f035e989914ac899831d66e7dad2",
+   "inputRev": "a117157",
    "inherited": false,
    "configFile": "lakefile.toml"
   }
