@@ -64,15 +64,17 @@ host is component `i` on the wire, and the last argument is the remaining tail
 rather than another `[0]`.
 -/
 
-#guard Lowering.tupleArgs (Expr.ident "b2p0") 1 == [Expr.ident "b2p0"]
-#guard Lowering.tupleArgs (Expr.ident "b2p0") 2 ==
+#guard Lowering.tupleArgs "b2p0" 1 == [Expr.ident "b2p0"]
+#guard Lowering.tupleArgs "b2p0" 2 ==
   [Expr.ident "b2p0[0]", Expr.ident "b2p0[1]"]
-#guard Lowering.tupleArgs (Expr.ident "b2p0") 3 ==
+#guard Lowering.tupleArgs "b2p0" 3 ==
   [Expr.ident "b2p0[0]", Expr.ident "b2p0[1][0]", Expr.ident "b2p0[1][1]"]
 
--- One argument per parameter, whatever the arity.
-#guard (Lowering.tupleArgs (Expr.ident "x") 2).length = 2
-#guard (Lowering.tupleArgs (Expr.ident "x") 3).length = 3
+-- One argument per parameter, whatever the arity. The argument is the request
+-- slot's spelling, so there is no expression shape the projection can miss
+-- (`E4-TARGET-CE-026`).
+#guard (Lowering.tupleArgs "x" 2).length = 2
+#guard (Lowering.tupleArgs "x" 3).length = 3
 
 /-! ## 3. The call and the slot
 

@@ -323,34 +323,37 @@ def structuredContinue (label : String) : Skeleton :=
 def structuredBreak (label : String) : Skeleton :=
   .breakTo label
 
-/-- The right-nested projections of a tuple slot: `x[0]`, `x[1][0]`, …, with
-the last component the remaining tail. This is the converse of the nesting
-`Effects.Trace.ToVal` builds from a parameter product, so the argument at
-position `i` on the host is the component at position `i` on the wire. -/
-private def tupleProjections (path : String) : Nat → List Expr
-  | 0 => []
-  | 1 => [.ident path]
-  | n + 1 => .ident (path ++ "[0]") :: tupleProjections (path ++ "[1]") n
-
 /-- The arguments of a call whose request slot holds a parameter tuple: the
 slot destructured at the call, `jobs.run(b4p0[0], b4p0[1])`. The flow alphabet
 has no pair constructor -- `plan` hands a service exactly one `Val` -- so an
 operation of two or more parameters is performed with one request slot holding
-the right-nested product, and the call takes it apart again.
-lowering: rule.perform-tuple -/
-def tupleArgs (request : Expr) (arity : Nat) : List Expr :=
-  match request with
-  | .ident name => tupleProjections name arity
-  | _ => [request]
+the right-nested product, and the call takes it apart again. The projections
+are right-nested (`x[0]`, `x[1][0]`, …, the last component the remaining tail),
+the converse of the nesting `Effects.Trace.ToVal` builds from the parameter
+product, so the argument at position `i` on the host is the component at
+position `i` on the wire.
 
-/-- The call of a family operation on a request expression: an Effect value
-when the operation is nullary, a method call on the request otherwise, and a
-method call on the destructured request when the operation takes two or more
-parameters. -/
-def callOf (rows : ServiceRow) (spec : OpSpec) (request : Expr) : Expr :=
+The argument is the request slot's *spelling*, not an expression: projecting
+`[0]` off an arbitrary expression is not a thing this fragment can build, and
+the version that took an `Expr` answered a single-element list for anything
+that was not a bare identifier -- a two-parameter operation called with one
+argument, which is exactly `E4-TARGET-CE-022`'s defect. Taking the path makes
+that shape unrepresentable (`E4-TARGET-CE-026`, survey finding H15).
+lowering: rule.perform-tuple -/
+def tupleArgs (request : String) : Nat → List Expr
+  | 0 => []
+  | 1 => [.ident request]
+  | n + 1 => .ident (request ++ "[0]") :: tupleArgs (request ++ "[1]") n
+
+/-- The call of a family operation on a request slot: an Effect value when the
+operation is nullary, a method call on the slot otherwise, and a method call on
+the destructured slot when the operation takes two or more parameters. The
+request is a `Slot` rather than an `Expr` so that every request has a spelling
+`tupleArgs` can project (`E4-TARGET-CE-026`). -/
+def callOf (rows : ServiceRow) (spec : OpSpec) (request : Slot) : Expr :=
   if spec.requestTy == "void" then nullaryValue rows.receiver spec.name
-  else if spec.arity == 1 then performCall rows.receiver spec.name [request]
-  else performCall rows.receiver spec.name (tupleArgs request spec.arity)
+  else if spec.arity == 1 then performCall rows.receiver spec.name [request.expr]
+  else performCall rows.receiver spec.name (tupleArgs request.name spec.arity)
 
 end Lowering
 
@@ -397,7 +400,7 @@ def render (rows : ServiceRow) : Skeleton → List Stmt
   | .breakTo label => [.breakTo (some label)]
   | .continueTo label => [.continueTo (some label)]
   | .perform answer _ spec request =>
-      [.constYield answer.name (Lowering.callOf rows spec request.expr)]
+      [.constYield answer.name (Lowering.callOf rows spec request)]
   | .atom answer _ spec request =>
       [.letInit answer.name (.call (.ident spec.name) [request.expr])]
   | .literal answer _ _ value =>
@@ -409,7 +412,7 @@ def render (rows : ServiceRow) : Skeleton → List Stmt
       , .ifElse answer.expr (renderList rows onTrue) (renderList rows onFalse) ]
   | .performCatch answer _ _ _ spec request onOk onError =>
       [ .constYield answer.name
-          (.call (.ident "Effect.result") [Lowering.callOf rows spec request.expr])
+          (.call (.ident "Effect.result") [Lowering.callOf rows spec request])
       , .ifElse (.call (.ident "Result.isSuccess") [answer.expr])
           (renderList rows onOk) (renderList rows onError) ]
   | .branchIf test site onTrue onFalse =>
@@ -430,11 +433,11 @@ def render (rows : ServiceRow) : Skeleton → List Stmt
             (.call (.ident "regions.leave") [.int region.value, .ident "exit"])) ]
   | .acquire answer region _ spec request release =>
       [ .constYield answer.name (.call (.ident "Effect.acquireRelease")
-          [ Lowering.callOf rows spec request.expr
+          [ Lowering.callOf rows spec request
           , .lambda ["a", "exit"]
               (.method (.call (.ident "regions.finalizer") [.int region.value, .ident "exit"])
                 "pipe"
-                [.call (.ident "Effect.andThen") [Lowering.callOf rows release (.ident "a")]]) ]) ]
+                [.call (.ident "Effect.andThen") [Lowering.callOf rows release (.input "a")]]) ]) ]
   | .leave value => [.ret value.expr]
   termination_by structural node => node
 
