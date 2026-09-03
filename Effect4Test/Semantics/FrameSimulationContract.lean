@@ -31,8 +31,8 @@ name; the two `DecidableEq` gates below are what stops the obvious wrong
 compilation, `ν := Σ op, (S.Answer op → Program S Val)`, which elaborates fine
 and silently drops decidable equality from the emitted `Prim`. -/
 
-#check (@Effect4.FrameSimulation.Flow.Sig :
-  {Ty : Type} → Effects.Alphabet Ty → Effects.Signature)
+#check (@Effect4.Flow.Sig :
+  {Ty : Type} → Effects.FlowAlphabet Ty → Effects.Signature)
 
 #check (@Effect4.FrameSimulation.Err : Type)
 
@@ -106,33 +106,33 @@ operation is `n` on every path. `residual` is what makes the table a table:
 name `i` continues the program left after the first `i` answers. -/
 
 #check (@Effect4.FrameSimulation.answersOf :
-  {Ty : Type} → {a : Effects.Alphabet Ty} → {St : Type} →
-  Effects.Handler (Effect4.FrameSimulation.Flow.Sig a) (Effect4.FrameSimulation.Target St) →
-  Effects.Program (Effect4.FrameSimulation.Flow.Sig a) Effects.Trace.Val → St →
+  {Ty : Type} → {a : Effects.FlowAlphabet Ty} → {St : Type} →
+  Effects.Handler (Effect4.Flow.Sig a) (Effect4.FrameSimulation.Target St) →
+  Effects.Program (Effect4.Flow.Sig a) Effects.Trace.Val → St →
   Effect4.FrameSimulation.Tape)
 
 #check (@Effect4.FrameSimulation.compile :
-  {Ty : Type} → {a : Effects.Alphabet Ty} → Nat →
-  Effects.Program (Effect4.FrameSimulation.Flow.Sig a) Effects.Trace.Val →
+  {Ty : Type} → {a : Effects.FlowAlphabet Ty} → Nat →
+  Effects.Program (Effect4.Flow.Sig a) Effects.Trace.Val →
   Effect4.FrameSimulation.Code)
 
 #check (@Effect4.FrameSimulation.residual :
-  {Ty : Type} → {a : Effects.Alphabet Ty} →
-  Effects.Program (Effect4.FrameSimulation.Flow.Sig a) Effects.Trace.Val →
+  {Ty : Type} → {a : Effects.FlowAlphabet Ty} →
+  Effects.Program (Effect4.Flow.Sig a) Effects.Trace.Val →
   Effect4.FrameSimulation.Tape →
-  Effects.Program (Effect4.FrameSimulation.Flow.Sig a) Effects.Trace.Val)
+  Effects.Program (Effect4.Flow.Sig a) Effects.Trace.Val)
 
 #check (@Effect4.FrameSimulation.tapeSyncValue :
   Effect4.FrameSimulation.Tape → Nat → Effects.Trace.Val)
 
 #check (@Effect4.FrameSimulation.tapeContA :
-  {Ty : Type} → {a : Effects.Alphabet Ty} →
-  Effects.Program (Effect4.FrameSimulation.Flow.Sig a) Effects.Trace.Val →
+  {Ty : Type} → {a : Effects.FlowAlphabet Ty} →
+  Effects.Program (Effect4.Flow.Sig a) Effects.Trace.Val →
   Effect4.FrameSimulation.Tape → Nat → Effects.Trace.Val → Effect4.FrameSimulation.Code)
 
 #check (@Effect4.FrameSimulation.tapeInterp :
-  {Ty : Type} → {a : Effects.Alphabet Ty} →
-  Effects.Program (Effect4.FrameSimulation.Flow.Sig a) Effects.Trace.Val →
+  {Ty : Type} → {a : Effects.FlowAlphabet Ty} →
+  Effects.Program (Effect4.Flow.Sig a) Effects.Trace.Val →
   Effect4.FrameSimulation.Tape → Effect4.FrameSimulation.Table)
 
 /-! F4: the fragment is closed.
@@ -148,13 +148,13 @@ than an assumption that they are not. -/
 #check (@Effect4.FrameSimulation.inFragment : Effect4.FrameSimulation.Code → Bool)
 
 #check (@Effect4.FrameSimulation.compile_inFragment :
-  ∀ {Ty : Type} {a : Effects.Alphabet Ty} (i : Nat)
-  (p : Effects.Program (Effect4.FrameSimulation.Flow.Sig a) Effects.Trace.Val),
+  ∀ {Ty : Type} {a : Effects.FlowAlphabet Ty} (i : Nat)
+  (p : Effects.Program (Effect4.Flow.Sig a) Effects.Trace.Val),
   Effect4.FrameSimulation.inFragment (Effect4.FrameSimulation.compile i p) = Bool.true)
 
 #check (@Effect4.FrameSimulation.tapeContA_inFragment :
-  ∀ {Ty : Type} {a : Effects.Alphabet Ty}
-  (root : Effects.Program (Effect4.FrameSimulation.Flow.Sig a) Effects.Trace.Val)
+  ∀ {Ty : Type} {a : Effects.FlowAlphabet Ty}
+  (root : Effects.Program (Effect4.Flow.Sig a) Effects.Trace.Val)
   (tape : Effect4.FrameSimulation.Tape) (i : Nat) (value : Effects.Trace.Val),
   Effect4.FrameSimulation.inFragment (Effect4.FrameSimulation.tapeContA root tape i value) =
   Bool.true)
@@ -191,25 +191,25 @@ answer. -/
 /-! F6: the algebra side, and the residual bookkeeping. -/
 
 #check (@Effect4.FrameSimulation.interpret_pure :
-  ∀ {Ty : Type} {a : Effects.Alphabet Ty} {St E : Type}
-  (H : Effects.Handler (Effect4.FrameSimulation.Flow.Sig a) (ExceptT E (StateT St Id)))
+  ∀ {Ty : Type} {a : Effects.FlowAlphabet Ty} {St E : Type}
+  (H : Effects.Handler (Effect4.Flow.Sig a) (ExceptT E (StateT St Id)))
   (value : Effects.Trace.Val) (s : St),
   (Effects.interpret H (Effects.Program.pure value)).run.run s = (Except.ok value, s))
 
 #check (@Effect4.FrameSimulation.interpret_vis :
-  ∀ {Ty : Type} {a : Effects.Alphabet Ty} {St E : Type}
-  (H : Effects.Handler (Effect4.FrameSimulation.Flow.Sig a) (ExceptT E (StateT St Id)))
-  (op : (Effect4.FrameSimulation.Flow.Sig a).Op)
-  (k : (Effect4.FrameSimulation.Flow.Sig a).Answer op →
-    Effects.Program (Effect4.FrameSimulation.Flow.Sig a) Effects.Trace.Val) (s : St),
+  ∀ {Ty : Type} {a : Effects.FlowAlphabet Ty} {St E : Type}
+  (H : Effects.Handler (Effect4.Flow.Sig a) (ExceptT E (StateT St Id)))
+  (op : (Effect4.Flow.Sig a).Op)
+  (k : (Effect4.Flow.Sig a).Answer op →
+    Effects.Program (Effect4.Flow.Sig a) Effects.Trace.Val) (s : St),
   (Effects.interpret H (Effects.Program.vis op k)).run.run s =
   match (H.handle op).run.run s with
   | (Except.error cause, s') => (Except.error cause, s')
   | (Except.ok value, s') => (Effects.interpret H (k value)).run.run s')
 
 #check (@Effect4.FrameSimulation.residual_append :
-  ∀ {Ty : Type} {a : Effects.Alphabet Ty}
-  (p : Effects.Program (Effect4.FrameSimulation.Flow.Sig a) Effects.Trace.Val)
+  ∀ {Ty : Type} {a : Effects.FlowAlphabet Ty}
+  (p : Effects.Program (Effect4.Flow.Sig a) Effects.Trace.Val)
   (prefix' : Effect4.FrameSimulation.Tape) (entry : Effect4.FrameSimulation.Answer),
   Effect4.FrameSimulation.residual p (prefix' ++ [entry]) =
   match Effect4.FrameSimulation.residual p prefix' with
@@ -225,11 +225,11 @@ pushes is the only frame the compiled program ever adds and the pop that answers
 it removes it again. -/
 
 #check (@Effect4.FrameSimulation.run_in_context :
-  ∀ {Ty : Type} {a : Effects.Alphabet Ty} {St : Type}
-  (H : Effects.Handler (Effect4.FrameSimulation.Flow.Sig a) (Effect4.FrameSimulation.Target St))
-  (root : Effects.Program (Effect4.FrameSimulation.Flow.Sig a) Effects.Trace.Val)
+  ∀ {Ty : Type} {a : Effects.FlowAlphabet Ty} {St : Type}
+  (H : Effects.Handler (Effect4.Flow.Sig a) (Effect4.FrameSimulation.Target St))
+  (root : Effects.Program (Effect4.Flow.Sig a) Effects.Trace.Val)
   (tape : Effect4.FrameSimulation.Tape)
-  (q : Effects.Program (Effect4.FrameSimulation.Flow.Sig a) Effects.Trace.Val) (i : Nat) (s : St)
+  (q : Effects.Program (Effect4.Flow.Sig a) Effects.Trace.Val) (i : Nat) (s : St)
   (stack : List Effect4.FrameSimulation.Code) (flag : Bool),
   Effect4.FrameSimulation.residual root (List.take i tape) = q →
   List.drop i tape = Effect4.FrameSimulation.answersOf H q s →
@@ -250,9 +250,9 @@ tape, it is the one the handler produces along this run. Quoting the theorem
 without it is misquoting it. -/
 
 #check (@Effect4.FrameSimulation.compile_simulates :
-  ∀ {Ty : Type} {a : Effects.Alphabet Ty} {St : Type}
-  (H : Effects.Handler (Effect4.FrameSimulation.Flow.Sig a) (Effect4.FrameSimulation.Target St))
-  (p : Effects.Program (Effect4.FrameSimulation.Flow.Sig a) Effects.Trace.Val) (s0 : St)
+  ∀ {Ty : Type} {a : Effects.FlowAlphabet Ty} {St : Type}
+  (H : Effects.Handler (Effect4.Flow.Sig a) (Effect4.FrameSimulation.Target St))
+  (p : Effects.Program (Effect4.Flow.Sig a) Effects.Trace.Val) (s0 : St)
   (tape : Effect4.FrameSimulation.Tape) (fuel : Nat),
   Effect4.FrameSimulation.answersOf H p s0 = tape →
   Effect4.FrameSimulation.bound tape ≤ fuel →
@@ -262,26 +262,26 @@ without it is misquoting it. -/
     (Effect4.FrameSimulation.exitOf ((Effects.interpret H p).run.run s0).fst))
 
 #check (@Effect4.FrameSimulation.liftFail :
-  {Ty : Type} → {a : Effects.Alphabet Ty} → {St : Type} →
-  Effects.Handler (Effect4.FrameSimulation.Flow.Sig a)
+  {Ty : Type} → {a : Effects.FlowAlphabet Ty} → {St : Type} →
+  Effects.Handler (Effect4.Flow.Sig a)
     (ExceptT Effects.Trace.Val (StateT St Id)) →
-  Effects.Handler (Effect4.FrameSimulation.Flow.Sig a) (Effect4.FrameSimulation.Target St))
+  Effects.Handler (Effect4.Flow.Sig a) (Effect4.FrameSimulation.Target St))
 
 #check (@Effect4.FrameSimulation.run_liftFail :
-  ∀ {Ty : Type} {a : Effects.Alphabet Ty} {St : Type}
-  (H : Effects.Handler (Effect4.FrameSimulation.Flow.Sig a)
+  ∀ {Ty : Type} {a : Effects.FlowAlphabet Ty} {St : Type}
+  (H : Effects.Handler (Effect4.Flow.Sig a)
     (ExceptT Effects.Trace.Val (StateT St Id)))
-  (p : Effects.Program (Effect4.FrameSimulation.Flow.Sig a) Effects.Trace.Val) (s : St),
+  (p : Effects.Program (Effect4.Flow.Sig a) Effects.Trace.Val) (s : St),
   (Effects.interpret (Effect4.FrameSimulation.liftFail H) p).run.run s =
   match (Effects.interpret H p).run.run s with
   | (Except.ok value, s') => (Except.ok value, s')
   | (Except.error error, s') => (Except.error (Effect4.Cause.fail error), s'))
 
 #check (@Effect4.FrameSimulation.compile_simulates_fail :
-  ∀ {Ty : Type} {a : Effects.Alphabet Ty} {St : Type}
-  (H : Effects.Handler (Effect4.FrameSimulation.Flow.Sig a)
+  ∀ {Ty : Type} {a : Effects.FlowAlphabet Ty} {St : Type}
+  (H : Effects.Handler (Effect4.Flow.Sig a)
     (ExceptT Effects.Trace.Val (StateT St Id)))
-  (p : Effects.Program (Effect4.FrameSimulation.Flow.Sig a) Effects.Trace.Val) (s0 : St)
+  (p : Effects.Program (Effect4.Flow.Sig a) Effects.Trace.Val) (s0 : St)
   (tape : Effect4.FrameSimulation.Tape) (fuel : Nat),
   Effect4.FrameSimulation.answersOf (Effect4.FrameSimulation.liftFail H) p s0 = tape →
   Effect4.FrameSimulation.bound tape ≤ fuel →
@@ -313,12 +313,26 @@ inductive Op where
   | add
 deriving DecidableEq
 
-def alphabet : Effects.Alphabet Ty where
+def alphabet : Effects.FlowAlphabet Ty where
+  id := ⟨0⟩
   Op := Op
+  operationId
+    | .get => ⟨0⟩
+    | .add => ⟨1⟩
+  lookup id := if id.value = 0 then some .get else if id.value = 1 then some .add else none
   requestTy := fun _ => Ty.nat
   answerTy := fun _ => Ty.nat
+  lookup_operationId := by intro op; cases op <;> rfl
+  operationId_of_lookup := by
+    intro id op h
+    obtain ⟨v⟩ := id
+    by_cases h0 : v = 0
+    · subst h0; simp at h; subst h; rfl
+    · by_cases h1 : v = 1
+      · subst h1; simp at h; subst h; rfl
+      · simp [h0, h1] at h
 
-abbrev Sig := Effect4.FrameSimulation.Flow.Sig alphabet
+abbrev Sig := Effect4.Flow.Sig alphabet
 
 /-- `get` reads the cell, `add n` adds and answers the new value, and `add 0`
 fails. -/
