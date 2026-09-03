@@ -64,4 +64,11 @@ mkdir -p "$out/job"
 while IFS=$'\t' read -r program golden; do
   { provenance; run job-golden "$program" "$golden"; } > "$out/job/$program.$golden.tsv"
 done < <(run job-programs)
+# The `Deferreds` family, kept in a subdirectory for the same reason as the
+# flow goldens: the host gate's `*.empty.tsv` glob must not see them, because
+# they run through `deferred-tail.ts`, not `tail.ts`.
+mkdir -p "$out/deferred"
+for program in $(run deferred-programs); do
+  { provenance; run deferred-golden "$program"; } > "$out/deferred/$program.tsv"
+done
 echo "PASS wrote $(find "$out" -name '*.tsv' | wc -l | tr -d ' ') trace projections to $out"

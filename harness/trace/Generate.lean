@@ -324,6 +324,245 @@ def scopePrograms : List ScopeEntry :=
   , { name := "closeTwice", script := scopeCloseTwice.script,
       log := scopeGoldenLog (scopeCloseTwice 0) } ]
 
+/-! ## The `Deferreds` family: rc.112's one-shot cells as a traced family
+
+`Deferred<A, E>` (`Deferred.ts`) starts empty, is completed at most once, and
+lets any number of fibers wait for that completion. Census rows `deferred.*`.
+
+The handle is `Handle "Deferred.Deferred<number, number>"`, the same device the
+`Scopes` and `Fibers` families use: the Lean carrier is an index, the wire
+value is that index, and the target prints rc.112's own type. The Lean face
+numbers cells in `make` order and `deferred-tail.ts` brands the objects so the
+tracer indexes them in first-seen order; the two agree because a cell only ever
+leaves the host as the answer of the `make` that produced it.
+
+Two decisions are recorded here.
+
+*`poll` answers `Option (Except Nat Nat)`, one operation, not two.* That is
+exactly the type of a cell of the table below — pending, completed with a
+value, completed with a failure — so the answer of `poll` and the state of the
+projection are the same first-order datum, and the wire form
+(`{"none":true}` / `{"some":[true, v]}` / `{"some":[false, e]}`) is read off
+the shared `ToVal` instances with nothing to document. It is a Stratum V
+spelling of depth two, `Option.Option<Result.Result<number, number>>`, and the
+first one to nest one namespace inside another; `Option` and `Result` reach the
+generated module as type-only imports, beside `Deferred`. The alternatives were
+refused: a pair `(Bool, Nat)` cannot separate a pending cell from a cell
+completed with the failure `0` without an encoding the reader must carry, and a
+`pollDone`/`pollValue` split would make `pollValue` on a pending cell a
+frontier the host does not have — rc.112's `poll` answers `None` there and
+never suspends.
+
+*A pending await is a frontier, not a failure.* `awaitValue`/`awaitError` are
+the aborting reading (`!! Nat`): on the host `Deferred.await` answers the value
+and fails with the error, and `Effect.flip` of it answers the error and fails
+with the value. Both are total on a *completed* cell only. On a pending cell
+rc.112 suspends the fiber until another fiber completes it; this projection has
+no other fiber, so the run stops there and the golden records a `frontier` — no
+`answer`, no `failed`, no outcome. Register rows `E4-SEM-CE-012` and
+`E4-SEM-CE-013`.
+-/
+
+/-- The handle a `Deferreds` operation takes and returns. -/
+abbrev DeferredHandle := Handle "Deferred.Deferred<number, number>"
+
+effect_signature Deferreds where
+  | make : Handle "Deferred.Deferred<number, number>"
+      ⟪ "make a one-shot cell", "the cell's handle" ⟫
+  | succeed (cell : Handle "Deferred.Deferred<number, number>") (value : Nat) : Bool
+      ⟪ "complete it with a value", "false if it was already completed" ⟫
+  | fail (cell : Handle "Deferred.Deferred<number, number>") (error : Nat) : Bool
+      ⟪ "complete it with a failure", "false if it was already completed" ⟫
+  | isDone (cell : Handle "Deferred.Deferred<number, number>") : Bool
+      ⟪ "has it completed" ⟫
+  | poll (cell : Handle "Deferred.Deferred<number, number>") : Option (Except Nat Nat)
+      ⟪ "read it without waiting", "none while pending" ⟫
+  | awaitValue (cell : Handle "Deferred.Deferred<number, number>") : Nat !! Nat
+      ⟪ "wait for its value", "its failure, resumed here" ⟫
+  | awaitError (cell : Handle "Deferred.Deferred<number, number>") : Nat !! Nat
+      ⟪ "wait for its failure", "its value, resumed here" ⟫
+
+/-- The table the sequential projection runs over: one cell per handle, in the
+order the handles were minted. `none` is pending, `some (.ok v)` completed with
+a value, `some (.error e)` completed with a failure. It is the answer type of
+`poll`. -/
+abbrev DeferredTable := List (Option (Except Nat Nat))
+
+/-- Why a run of the sequential projection stopped before its `return`.
+`failed` is the declared error channel of `awaitValue`/`awaitError`; `pending`
+is a frontier, not a failure: the projection cannot wait. -/
+inductive Stall where
+  | failed (payload : Nat)
+  | pending (cell : DeferredHandle)
+deriving DecidableEq, Repr
+
+/-- The cell a handle names; `none` for a handle no `make` minted, which this
+projection reads as pending. -/
+def deferredCell (table : DeferredTable) (cell : DeferredHandle) : Option (Except Nat Nat) :=
+  (table[cell.index]?).getD none
+
+/-- One operation of the sequential projection: its answer or its stall, and
+the table afterwards. Completion is one-shot: the second `succeed` or `fail`
+on a cell answers `false` and leaves the table alone. -/
+def deferredStep : (name : Deferreds.Name) → Deferreds.Param name → DeferredTable →
+    Except Stall (Deferreds.Answer name) × DeferredTable
+  | .make, _, table => (.ok ⟨table.length⟩, table ++ [none])
+  | .succeed, (cell, value), table =>
+      match table[cell.index]? with
+      | some none => (.ok true, table.set cell.index (some (.ok value)))
+      | _ => (.ok false, table)
+  | .fail, (cell, error), table =>
+      match table[cell.index]? with
+      | some none => (.ok true, table.set cell.index (some (.error error)))
+      | _ => (.ok false, table)
+  | .isDone, cell, table => (.ok (deferredCell table cell).isSome, table)
+  | .poll, cell, table => (.ok (deferredCell table cell), table)
+  | .awaitValue, cell, table =>
+      match deferredCell table cell with
+      | some (.ok value) => (.ok value, table)
+      | some (.error error) => (.error (.failed error), table)
+      | none => (.error (.pending cell), table)
+  | .awaitError, cell, table =>
+      match deferredCell table cell with
+      | some (.error error) => (.ok error, table)
+      | some (.ok value) => (.error (.failed value), table)
+      | none => (.error (.pending cell), table)
+
+/-- The projection's monad. The table and the log are *below* the error
+channel, so both survive a stall; `Deferreds.tracedExcept` would not do, since
+it emits a `failed` row for every abort and a pending await has no failure to
+report. -/
+abbrev DeferredM := ExceptT Stall (StateT (DeferredTable × Effect4.Trace.Log) Id)
+
+/-- The traced sequential projection. An answered operation writes `op` then
+`answer`; an aborting one writes `op` then `failed`; a pending
+`awaitValue`/`awaitError` writes `op` and nothing else, because on the host the
+method never returns. -/
+def deferredsTraced : Deferreds.Service DeferredM := fun name param => ExceptT.mk do
+  let (table, log) ← get
+  let (result, table') := deferredStep name param table
+  set (table',
+    log ++ [Effects.Trace.Event.op (Deferreds.Name.spelling name) (Deferreds.encodeParam name param)] ++
+      (match result with
+       | .ok answer =>
+           [Effects.Trace.Event.answer (Deferreds.Name.spelling name) (Deferreds.encodeAnswer name answer)]
+       | .error (.failed payload) =>
+           [Effects.Trace.Event.failed (Deferreds.Name.spelling name) (.nat payload)]
+       | .error (.pending _) => []))
+  pure result
+
+/-- The traced run of one deferred program from the empty table, with the
+outcome appended. A pending await ends the log with `frontier` and no outcome:
+a frontier is not a failure (`E4-FLOW-CE-017`, and separation 5 of
+`docs/TRACE-DAG.md`). -/
+def deferredGoldenLog (program : Program Deferreds.Sig Nat) : Effect4.Trace.Log :=
+  let result : Except Stall Nat × (DeferredTable × Effect4.Trace.Log) :=
+    (interpret deferredsTraced.toHandler program).run.run ([], [])
+  result.2.2 ++
+    (match result.1 with
+     | .ok value => [.done (.success (.nat value))]
+     | .error (.failed payload) => [.done (.failure (.nat payload))]
+     | .error (.pending _) => [.frontier])
+
+/-! ### Pure atoms of the deferred programs -/
+
+/-- `false ↦ 0`, `true ↦ 1`; `atoms.ts` carries its host body. -/
+def flagToNat (flag : Bool) : Nat := if flag then 1 else 0
+
+/-- The value a completed `poll` found; `0` while pending or failed.
+`atoms.ts` carries its host body. -/
+def pollValue (cell : Option (Except Nat Nat)) : Nat :=
+  match cell with
+  | some (.ok value) => value
+  | _ => 0
+
+/-- Addition as a named atom; `atoms.ts` carries its host body. -/
+def addNat (left right : Nat) : Nat := left + right
+
+/-! ### The deferred programs -/
+
+-- make, complete with a value, wait for it.
+effect_program deferredSucceedAwait (n : Nat) over Deferreds : Nat :=
+  let d ← Deferreds.make()
+  let _ ← Deferreds.succeed(d, n)
+  let v ← Deferreds.awaitValue(d)
+  return v
+
+-- make, complete with a failure, wait for it on the error side.
+effect_program deferredFailAwait (n : Nat) over Deferreds : Nat :=
+  let d ← Deferreds.make()
+  let _ ← Deferreds.fail(d, n)
+  let e ← Deferreds.awaitError(d)
+  return e
+
+-- Completion is one-shot: the second `succeed` answers `false` and the cell
+-- keeps the first value.
+effect_program deferredDoubleComplete (n : Nat) over Deferreds : Nat :=
+  let d ← Deferreds.make()
+  let _ ← Deferreds.succeed(d, n)
+  let again ← Deferreds.succeed(d, 9)
+  return flagToNat again
+
+-- `poll` before and after the completion: `none`, then `some (.ok n)`.
+effect_program deferredPollPending (n : Nat) over Deferreds : Nat :=
+  let d ← Deferreds.make()
+  let _ ← Deferreds.poll(d)
+  let _ ← Deferreds.succeed(d, n)
+  let after ← Deferreds.poll(d)
+  return pollValue after
+
+-- Two cells at once: handles are distinct and each completion is its own.
+effect_program deferredTwoHandles (n : Nat) over Deferreds : Nat :=
+  let a ← Deferreds.make()
+  let b ← Deferreds.make()
+  let _ ← Deferreds.succeed(a, n)
+  let _ ← Deferreds.fail(b, 3)
+  let x ← Deferreds.awaitValue(a)
+  let y ← Deferreds.awaitError(b)
+  return addNat x y
+
+-- The frontier: nothing completes the cell, so the await never answers. On
+-- rc.112 the fiber suspends; the sequential projection stops.
+effect_program deferredPendingAwait (n : Nat) over Deferreds : Nat :=
+  let d ← Deferreds.make()
+  let _ ← Deferreds.isDone(d)
+  let v ← Deferreds.awaitValue(d)
+  return v
+
+/-- One deferred program: its script, its argument, and its golden log.
+
+Owed: the packet asked for a program in which a forked child completes a cell
+the parent awaits. `effect_program` binds exactly one family per program
+(`… over <family>`), and `Fibers` and `Deferreds` are two families, so the
+program cannot be spelled even now that both exist; `Fibers` has no former for
+a child that performs operations of its own (its bodies are numbers), so a
+`Fibers`-only variant cannot express it either. `deferredPendingAwait` stands
+in for it and records the half the sequential projection can see — the parent's
+await with nothing to complete it. The other half (the child's `succeed`
+resuming that await) is register row `E4-SEM-CE-013`. -/
+structure DeferredEntry where
+  name : String
+  script : Script
+  argument : Nat
+  log : Effect4.Trace.Log
+
+def deferredEntries : List DeferredEntry :=
+  [ { name := "deferredSucceedAwait", script := deferredSucceedAwait.script, argument := 7,
+      log := deferredGoldenLog (deferredSucceedAwait 7) }
+  , { name := "deferredFailAwait", script := deferredFailAwait.script, argument := 5,
+      log := deferredGoldenLog (deferredFailAwait 5) }
+  , { name := "deferredDoubleComplete", script := deferredDoubleComplete.script, argument := 4,
+      log := deferredGoldenLog (deferredDoubleComplete 4) }
+  , { name := "deferredPollPending", script := deferredPollPending.script, argument := 6,
+      log := deferredGoldenLog (deferredPollPending 6) }
+  , { name := "deferredTwoHandles", script := deferredTwoHandles.script, argument := 8,
+      log := deferredGoldenLog (deferredTwoHandles 8) }
+  , { name := "deferredPendingAwait", script := deferredPendingAwait.script, argument := 1,
+      log := deferredGoldenLog (deferredPendingAwait 1) } ]
+
+/-- The pure atoms the deferred scripts call. -/
+def deferredAtomNames : List String := ["flagToNat", "pollValue", "addNat"]
+
 /-! ## The Flow face: the runner (internal oracle) and the dispatch lowering -/
 
 /-- The atoms the Cell scripts call, with their TypeScript types. -/
@@ -1314,4 +1553,25 @@ def main (args : List String) : IO Unit := do
       for entry in jobEntries do
         IO.println (entry.program.name ++ "." ++ entry.golden ++ "\t" ++
           toString (repr (jobQueueAfter entry)))
-  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle | fiber-fixture | fiber-programs | fiber-golden <program> | fiber-types | job-fixture | job-programs | job-golden <program> <golden> | job-types | job-queues")
+  | ["deferred-fixture"] =>
+      -- `Deferred`, `Option` and `Result` are imported as types only: the
+      -- generated module names `Deferred.Deferred<number, number>` and
+      -- `Option.Option<Result.Result<number, number>>` in the service shape and
+      -- never calls into any of them.
+      match modules? [(Deferreds.rows, deferredEntries.map (·.script))]
+          [.types ["Deferred", "Option", "Result"] "effect",
+           .named deferredAtomNames "./atoms.ts"] with
+      | some source => IO.print source
+      | none => throw (IO.userError "lowering refused a deferred script")
+  | ["deferred-programs"] => IO.println (String.intercalate "\n" (deferredEntries.map (·.name)))
+  | ["deferred-golden", name] =>
+      match deferredEntries.find? (·.name == name) with
+      | some entry =>
+          IO.print (← admitted name entry.log
+            (Effect4.Target.TypeScript.Trace.golden ("deferred." ++ name) []
+              ((entry.script.ruleSet Deferreds.rows).map Rule.id) entry.log))
+      | none => throw (IO.userError s!"unknown deferred program {name}")
+  | ["deferred-types"] =>
+      for entry in deferredEntries do
+        IO.println (entry.name ++ "\t" ++ Script.declarationLine Deferreds.rows entry.script)
+  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle | fiber-fixture | fiber-programs | fiber-golden <program> | fiber-types | job-fixture | job-programs | job-golden <program> <golden> | job-types | job-queues | deferred-fixture | deferred-programs | deferred-golden <program> | deferred-types")
