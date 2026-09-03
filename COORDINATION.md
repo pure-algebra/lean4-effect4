@@ -1006,3 +1006,27 @@ Open for the merge: `Effect4/Semantics/RegionSimulation.lean` inherits fence
 B's placement question — it imports Runtime, Flow and the trace bridge, so it
 sits above all three, and if strict directory layering wins it moves to
 `Effect4/Runtime/RegionSimulation.lean` unchanged.
+
+## DB-06 logic layer landed, 2026-09-03
+
+`Effect4/Semantics/Logic.lean` (was a breadth stub) now carries the
+weakest-precondition logic DB-06 asked for, over the semantics D1 fixed. An
+*answer specification* says which answers an operation may return; `box` is
+the weakest liberal precondition (EffHOL's angle modality, read as DB-06 reads
+it), `dia` its dual, `total` says every reached operation is answerable, `wp`
+is the total judgment. Discharged: `wp_iff_wlp_and_total` for every `Program`;
+`Flow.wp_iff` for a checked flow against a tape and input, where `total`
+excludes exactly the unanswered frontier and the refusal (fuel never appears,
+the denotation is fuel-free by T2). Soundness: `box_sound` and `dia_complete`
+against `interpret` for deterministic handlers (`DetRun`, instances for
+`StateT σ Id` and for a `StateT` layer over any deterministic monad, so the
+runner's `RunM (StateT σ Id)` is covered); `Flow.wlp_runDefault` and
+`Flow.wp_runDefault` carry that to the runner at the allotted fuel through
+T1/T2. Against a deterministic oracle the box is evaluation
+(`box_ofOracle_iff`, `Flow.wp_ofOracle_iff`), which is what the receipts in
+`Effect4Test/Semantics/LogicContract.lean` decide on `incr` and `chooser`
+(`decide` runs the fuelled denotation in the kernel). Finding pinned by a
+receipt: a specification is per operation, never per state — under the oracle
+`incr` answers `41`, not the runner's `42`, because the second `get` cannot see
+the `put`. `docs/DESIGN-BASIS.md` DB-06 no longer lists the obligation as
+pending. Axioms within the ceiling; nothing host-side is claimed.

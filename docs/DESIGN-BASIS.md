@@ -237,9 +237,14 @@ the decomposition
 wp p post <-> wlp p post /\ total p
 ```
 
-for the chosen semantics before calling a judgment `wp`. That theorem is a
-pending Effect4 obligation. The paper's constructive soundness theorem is
-evidence about EffHOL, not a proof of Effect4's future instance.
+for the chosen semantics before calling a judgment `wp`. That theorem is discharged (2026-09-03) in `Effect4/Semantics/Logic.lean`,
+over the semantics D1 fixed: `Effect4.Logic.wp_iff_wlp_and_total` for every
+`Program` relative to an answer specification, and `Effect4.Flow.wp_iff` in the
+flow reading, where the partiality `total` excludes is exactly the unanswered
+frontier and the refusal (never fuel, per DB-04). `box_sound` ties the liberal
+judgment to `interpret`, and `Flow.wlp_runDefault`/`wp_runDefault` to the runner
+through T1/T2. The paper's constructive soundness theorem is evidence about
+EffHOL, not a proof of Effect4's instance.
 
 ### DB-07 — runtime state remains observable on failure
 
