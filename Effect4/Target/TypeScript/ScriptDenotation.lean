@@ -7,8 +7,8 @@ import Effect4.Target.TypeScript.ScriptFlow
 Owner: the meaning of the straight-line script embedding (packet D5 of
 `docs/research/2026-09-03-reification-plan.md`).
 
-`Effect4/Target/TypeScript/ScriptFlow.lean` embeds a `Script` into a Flow v2
-graph. `Effect4/Semantics/Denotation.lean` gives an admitted flow an algebraic
+`Effect4/Target/TypeScript/ScriptFlow.lean` embeds a `Script` into a Flow graph
+(Flow v3, in its straight-line fragment). `Effect4/Semantics/Denotation.lean` gives an admitted flow an algebraic
 meaning. Until this module nothing related the two: the embedding was checked
 by running it (`harness/trace/Generate.lean oracle`), never by a theorem. Here
 the script gets a *direct* denotation — the program the script says, read off
@@ -544,14 +544,14 @@ theorem materialize_app_eq (atoms : AtomTable) (fuel : Nat) (b : Build) (atom : 
       (materialize atoms fuel b arg).bind fun r =>
         (atoms.find? (·.1 == atom)).bind fun a =>
           some (((r.1.addOp
-              { name := atom, kind := .atom, requestTy := a.2.1, answerTy := a.2.2 }).1.performTo
+              (OpSpec.unary atom .atom a.2.1 a.2.2)).1.performTo
                 (r.1.addOp
-                  { name := atom, kind := .atom, requestTy := a.2.1, answerTy := a.2.2 }).2
+                  (OpSpec.unary atom .atom a.2.1 a.2.2)).2
                 r.2.1 "" a.2.2),
             ((r.1.addOp
-              { name := atom, kind := .atom, requestTy := a.2.1, answerTy := a.2.2 }).1.performTo
+              (OpSpec.unary atom .atom a.2.1 a.2.2)).1.performTo
                 (r.1.addOp
-                  { name := atom, kind := .atom, requestTy := a.2.1, answerTy := a.2.2 }).2
+                  (OpSpec.unary atom .atom a.2.1 a.2.2)).2
                 r.2.1 "" a.2.2).last,
             a.2.2) := rfl
 

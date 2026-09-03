@@ -197,11 +197,11 @@ def unpairedRaw : RawFlow String :=
 
 -- And the only way to take one apart again is a unary atom, whose request is
 -- the tuple and whose answer is a component. `Atoms.snd` in
--- `harness/trace/Generate.lean` is that atom; a hand-written row is unary
--- because a table row carries no parameters at all.
+-- `harness/trace/Generate.lean` is that atom; a hand-written row says it is
+-- unary by being built with `OpSpec.unary`, rather than by leaving `params`
+-- out (survey finding H16).
 def sndRow : OpSpec :=
-  { name := "snd", kind := .atom, requestTy := "readonly [JobQueue, number]",
-    answerTy := "number" }
+  OpSpec.unary "snd" .atom "readonly [JobQueue, number]" "number"
 
 #guard sndRow.arity = 1
 #guard sndRow.params = []

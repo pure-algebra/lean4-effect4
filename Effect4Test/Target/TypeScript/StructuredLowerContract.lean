@@ -20,11 +20,16 @@ open TypeScript Effects Effect4.Flow Effect4.Target.EffectV4
 #check @Effect4.Target.EffectV4.Region.lowerStructured
 #check @Effect4.Target.EffectV4.structuredModules?
 
-example : Rule.all.length = 29 := by decide
--- The structured block is still rules 21..25; `perform-tuple` is appended after
--- it, so this window is taken rather than dropped to the end.
-#guard ((Rule.all.map Rule.id).drop 21).take 5 =
-  ["structured-loop", "structured-merge", "structured-continue", "structured-break", "dispatch-fallback"]
+-- The structured group of the census, by id. The list itself is pinned once,
+-- in `FlowLowerContract.lean`; nothing here reads a position (survey finding
+-- H9).
+#guard Rule.ofId? "structured-loop" = some .structuredLoop
+#guard Rule.ofId? "structured-merge" = some .structuredMerge
+#guard Rule.ofId? "structured-continue" = some .structuredContinue
+#guard Rule.ofId? "structured-break" = some .structuredBreak
+#guard Rule.ofId? "dispatch-fallback" = some .dispatchFallback
+#guard [Rule.structuredLoop, .structuredMerge, .structuredContinue, .structuredBreak,
+        .dispatchFallback].all (Rule.all.contains ·)
 
 def cellRows : ServiceRow :=
   { name := "Cell"
@@ -41,7 +46,7 @@ def program? (name : String) (table : List OpSpec) (raw : RawFlow String) : Opti
 /-! ## The swap loop: a merge that is a loop header -/
 
 def swapTable : List OpSpec :=
-  [{ name := "lit", kind := .lit (.nat 1), requestTy := "number", answerTy := "number" }]
+  [OpSpec.unary "lit" (.lit (.nat 1)) "number" "number"]
 
 def swapRaw : RawFlow String :=
   { alphabet := ⟨0⟩, roots := [⟨0⟩], entry := ⟨0⟩, inputTy := "number", resultTy := "number",

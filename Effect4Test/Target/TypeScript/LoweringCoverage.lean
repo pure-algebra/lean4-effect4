@@ -49,7 +49,9 @@ def derive (row : Row) : State :=
   else if !row.property then .checked
   else .covered
 
-/-- The frozen rows. Goldens are names under `generated/traces/`. -/
+/-- The frozen rows, in `Rule.all`'s order, which is the inductive's own
+(survey finding H9). `#lowering_coverage` checks that agreement, so the ledger
+never drifts from the census. Goldens are names under `generated/traces/`. -/
 def rows : List Row :=
   [ { rule := .serviceAcquire, state := .checked, goldens := ["incr.empty", "twice.empty"],
       host := true, property := false, typeReceipt := true, proof := none }
@@ -86,6 +88,18 @@ def rows : List Row :=
   , { rule := .chooseIf, state := .covered,
       goldens := ["flow/chooser.left", "flow/chooser.right", "flow/swap.once", "flow/swap.twice"],
       host := true, property := true, typeReceipt := true, proof := none }
+  , { rule := .flowRet, state := .covered,
+      goldens := ["flow/incr.empty", "flow/twice.empty", "flow/chooser.left", "flow/swap.once"],
+      host := true, property := true, typeReceipt := true, proof := none }
+  -- Flow v3 (lean4-effects v0.7.0): the caught perform and the value branch,
+  -- both exercised by the job runner's drain. Pinned like the other job rules:
+  -- the goldens run through `job-tail.ts`, whose receipts the host gate writes.
+  , { rule := .performCatch, state := .pinned,
+      goldens := ["job/jobRunner.retry", "job/jobRunner.requeue"],
+      host := false, property := false, typeReceipt := false, proof := none }
+  , { rule := .branchIf, state := .pinned,
+      goldens := ["job/jobRunner.clean", "job/jobRunner.retry", "job/jobRunner.requeue"],
+      host := false, property := false, typeReceipt := false, proof := none }
   -- interruption as decisions (Skeleton.lean, packet M2); the goldens are the
   -- three interrupt programs. No host column: the interrupt goldens run through
   -- `interrupt-tail.ts`, whose receipts live under receipts/flow/interrupt/ and
@@ -98,17 +112,17 @@ def rows : List Row :=
   , { rule := .regionEnter, state := .checked,
       goldens := ["flow/regionNested.empty", "flow/regionTwoFail.empty", "flow/regionBothSucceed.empty"],
       host := true, property := false, typeReceipt := true, proof := none }
-  -- a masked region (packet M2 repair): `Effect.uninterruptible` around the scoped
-  -- generator; pinned on the masked interrupt golden through `interrupt-tail.ts`
-  , { rule := .regionMasked, state := .pinned,
-      goldens := ["flow/interrupt/interruptMasked"],
-      host := false, property := false, typeReceipt := false, proof := none }
   , { rule := .regionAcquire, state := .checked,
       goldens := ["flow/regionNested.empty", "flow/regionTwoFail.empty", "flow/regionBothSucceed.empty"],
       host := true, property := false, typeReceipt := true, proof := none }
   , { rule := .regionLeave, state := .checked,
       goldens := ["flow/regionNested.empty", "flow/regionTwoFail.empty", "flow/regionBothSucceed.empty"],
       host := true, property := false, typeReceipt := true, proof := none }
+  -- a masked region (packet M2 repair): `Effect.uninterruptible` around the scoped
+  -- generator; pinned on the masked interrupt golden through `interrupt-tail.ts`
+  , { rule := .regionMasked, state := .pinned,
+      goldens := ["flow/interrupt/interruptMasked"],
+      host := false, property := false, typeReceipt := false, proof := none }
   -- the structured form (StructuredLower.lean); swap has a self-loop, irreducible falls back
   , { rule := .structuredLoop, state := .covered, goldens := ["flow/swap.once", "flow/swap.twice"],
       host := true, property := true, typeReceipt := true, proof := none }
@@ -120,9 +134,6 @@ def rows : List Row :=
       host := true, property := true, typeReceipt := true, proof := none }
   , { rule := .dispatchFallback, state := .checked, goldens := ["flow/irreducible.left", "flow/irreducible.right"],
       host := true, property := false, typeReceipt := true, proof := none }
-  , { rule := .flowRet, state := .covered,
-      goldens := ["flow/incr.empty", "flow/twice.empty", "flow/chooser.left", "flow/swap.once"],
-      host := true, property := true, typeReceipt := true, proof := none }
   -- a two-parameter operation performed from one request slot (Skeleton.lean);
   -- pinned on the job goldens, whose `ack`, `requeue` and `run` are the only
   -- multi-argument calls the harness lowers. No host column: the job goldens
@@ -130,15 +141,6 @@ def rows : List Row :=
   -- written by the host gate, not by this join.
   , { rule := .performTuple, state := .pinned,
       goldens := ["job/jobRunner.clean", "job/jobRunner.requeue", "job/jobPoison.poison"],
-      host := false, property := false, typeReceipt := false, proof := none }
-  -- Flow v3 (lean4-effects v0.7.0): the caught perform and the value branch,
-  -- both exercised by the job runner's drain. Pinned like the other job rules:
-  -- the goldens run through `job-tail.ts`, whose receipts the host gate writes.
-  , { rule := .performCatch, state := .pinned,
-      goldens := ["job/jobRunner.retry", "job/jobRunner.requeue"],
-      host := false, property := false, typeReceipt := false, proof := none }
-  , { rule := .branchIf, state := .pinned,
-      goldens := ["job/jobRunner.clean", "job/jobRunner.retry", "job/jobRunner.requeue"],
       host := false, property := false, typeReceipt := false, proof := none } ]
 
 private def allowedAxioms : List Name := [``propext, ``Quot.sound]
@@ -152,6 +154,10 @@ elab "#lowering_coverage" : command => do
   for row in rows do
     unless Rule.all.contains row.rule do
       throwError "lowering coverage: row names a rule outside Rule.all"
+  -- the ledger's row order is the census order, which is the inductive's
+  unless rows.map (·.rule) = Rule.all do
+    throwError "lowering coverage: the rows are not in Rule.all's order; \
+      expected {Rule.all.map Rule.id} but the rows read {(rows.map (·.rule)).map Rule.id}"
   -- derived state equals declared state
   for row in rows do
     unless derive row = row.state do

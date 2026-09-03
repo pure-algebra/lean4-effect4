@@ -19,6 +19,15 @@ denominator is `Effect4.Target.EffectV4.Rule.all` in
 `Effect4/Target/TypeScript/Lower.lean`; the tag set and the denominator must agree
 in both directions.
 
+A rule is identified by its id string and never by its position. `Rule.all` is the
+order the `Rule` inductive declares, group by group, and the whole id list is pinned
+once, in `Effect4Test/Target/TypeScript/FlowLowerContract.lean`; the other lowering
+batteries pin `Rule.ofId?` facts about their own rules and read no index.
+`Effect4Test/Target/TypeScript/LoweringCoverage.lean` carries its rows in that same
+order and `#lowering_coverage` refuses if the two lists disagree. So a new rule is
+declared where it belongs — in its group in the inductive, in `Rule.all` and in the
+ledger rows — and edits the owning battery plus its own, never the three others.
+
 Rules today (straight-line scripts): `service-acquire`, `nullary-value`,
 `perform-call`, `perform-bind`, `perform-discard`, `atom-call`, `ret`,
 `error-abort`. The data reading of an error (`Except E A` spelled
@@ -84,18 +93,16 @@ admitted Flow v2 graph. Their goldens are the Flow-runner face under
 
 ## Multi-argument operations
 
-`perform-tuple` (`Effect4/Target/TypeScript/Skeleton.lean`, `Lowering.tupleArgs`)
+`perform-tuple` (`Effect4/Target/TypeScript/SkeletonRender.lean`, `Lowering.tupleArgs`)
 is the projection an operation of two or more parameters needs. The flow
 alphabet has no pair constructor — `plan` hands a service exactly one `Val` —
 so such an operation is performed from a single request slot holding the
 right-nested product `Effects.Trace.ToVal` builds, and the call takes it apart
 again: `jobs.ack(b10p3[0], b10p3[1])` over
 `let b10p3!: readonly [JobQueue, number]`. `Lowering.callOf` selects it by
-`OpSpec.arity`, so a one-parameter operation is spelled exactly as before. The
-rule is appended last in `Rule.all`, which is why the positional pins in the
-contract batteries are windows rather than tails. Its goldens are the job
-programs under `generated/traces/job/`, whose host receipts live under
-`harness/trace/receipts/job/`.
+`OpSpec.arity`, so a one-parameter operation is spelled exactly as before. Its
+goldens are the job programs under `generated/traces/job/`, whose host receipts
+live under `harness/trace/receipts/job/`.
 
 ## The property loop
 

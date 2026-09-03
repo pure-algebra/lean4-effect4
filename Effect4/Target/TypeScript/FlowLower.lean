@@ -1,10 +1,12 @@
-import Effect4.Target.TypeScript.Skeleton
+import Effect4.Target.TypeScript.SkeletonRender
 
 /-!
 # Target.TypeScript.FlowLower
 
-Owner: dispatch-form lowering of an admitted Flow v2 graph into an Effect v4
-generator (plan packet P-T9a, ruling R7). Every admitted graph lowers to
+Owner: dispatch-form lowering of an admitted Flow graph into an Effect v4
+generator (plan packet P-T9a, ruling R7). The graph language is Flow v3
+(lean4-effects v0.7.0): `skeletonBlockWith` lowers its `performCatch` and
+`branch` terms as well as the v2 shapes. Every admitted graph lowers to
 
 ```ts
 export const incr = (n: number) =>

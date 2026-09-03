@@ -33,18 +33,30 @@ lowerings already shared, made first-order:
 
 Two consumers sit on it and nothing else does.
 
-* `render : ServiceRow → Skeleton → List Stmt` (§4) is a printer. It spells;
-  it inspects no value and takes no decision, so no claim about the generated
+* `Skeleton.render : ServiceRow → Skeleton → List Stmt`
+  (`Effect4/Target/TypeScript/SkeletonRender.lean`) is a printer. It spells; it
+  inspects no value and takes no decision, so no claim about the generated
   program's meaning passes through it. Its faithfulness to Effect v4 generator
   semantics stays a host receipt, permanently (`docs/TRACE-DAG.md` `targets`).
-* `Skeleton.exec` and `Skeleton.denote` (§6, §7) evaluate a skeleton into
-  `Program (Skel.FullSig a)` over the same signature sum
-  `Effect4/Semantics/Denotation.lean` (packet D1) is being written against.
-  Those names are declared locally in `namespace Skel`, each marked
-  `to be unified with Denotation.lean`, so the two branches merge cleanly.
+* `Skel.execList` and `Skel.execControl`
+  (`Effect4/Target/TypeScript/SkeletonSemantics.lean` §4) evaluate a skeleton
+  into `Program (Skel.FullSig a)` over the same signature sum
+  `Effect4/Semantics/Denotation.lean` denotes a checked flow into, and
+  `Skel.denoteNodes` is the entry point their agreement theorems
+  (`skeletonDispatch_denote`, `skeletonStructured_denote_dispatch`) are stated
+  over. Merging the two denotation branches is open work; neither module claims
+  it is done.
 
-Every tagged lowering rule of the three flow forms is now a shape of this IR
-(§3) rather than a shape of `Stmt`; `docs/LOWERING-COVERAGE.md` scans the whole
+Nothing here traverses a Lean `String`. Rendering does, and Lean's character
+folds carry `Classical.choice` through the proof backing UTF-8 decoding, which
+is why the printer and the two call builders it needs live in
+`SkeletonRender.lean` instead (survey findings H28, L2). The split makes the
+ceiling structural: every declaration in this module, `Structuring.emitNode_eq`
+and `Structuring.emitWith_eq` included, stays at `propext`/`Quot.sound`, and
+`Effect4Test/Audit/AxiomGate.lean` names no declaration from here.
+
+Every tagged lowering rule of the three flow forms is a shape of this IR (§3)
+rather than a shape of `Stmt`; `docs/LOWERING-COVERAGE.md` scans the whole
 `Effect4/Target/TypeScript` directory, so the census is unchanged in both
 directions. The refactor's acceptance test is byte identity:
 `harness/trace/flow-fixture.ts` and `harness/trace/structured-fixture.ts` are
@@ -52,14 +64,14 @@ regenerated and compared with `cmp`, and the three lowering contracts keep
 passing.
 
 `TypeScript.Structure.emitWith` (lean4-typescript v0.4.1) fixes its `Shapes` at
-`Stmt`. The emitter in §5 is that algorithm with the statement type as a
+`Stmt`. The emitter in §4 is that algorithm with the statement type as a
 parameter, over the *same* graph analysis (`Structure.reducible`,
 `Structure.idom`, `Structure.children`, `Structure.isMerge`,
 `Structure.isLoopHeader`, `Structure.isBackEdge`, `Structure.dominates` and the
-two label spellings), and `Structure.emitNode_eq` below pins the agreement at
-`Stmt` as a theorem rather than leaving it to the fixture bytes. Upstreaming
-the type parameter is the one lean4-typescript edit the plan schedules; this
-module does not edit the pinned package.
+two label spellings), and `emitNode_eq` below pins the agreement at `Stmt` as a
+theorem rather than leaving it to the fixture bytes. Upstreaming the type
+parameter is the one lean4-typescript edit the plan schedules; this module does
+not edit the pinned package.
 -/
 
 open TypeScript
@@ -98,27 +110,52 @@ deriving DecidableEq, Repr
 
 namespace Slot
 
-/-- The target spelling of a slot. -/
+/-- The identifier a slot lives in: a binder position spelling, and nothing
+else. The two caught edges are read out of the `Result` their block's answer
+binds, so their identifier is that answer's; the field is `member?`, not part
+of the name (survey finding H17). -/
 def name : Slot → String
   | .param block index => "b" ++ toString block.value ++ "p" ++ toString index
   | .temp index => "m" ++ toString index
   | .answer block => "a" ++ toString block.value
   | .decision block => "c" ++ toString block.value
-  | .catchValue block => "a" ++ toString block.value ++ ".success"
-  | .catchError block => "a" ++ toString block.value ++ ".failure"
+  | .catchValue block => "a" ++ toString block.value
+  | .catchError block => "a" ++ toString block.value
   | .region id => "r" ++ toString id.value
   | .input binder => binder
 
-/-- The slot as a target expression. -/
-def expr (slot : Slot) : Expr := .ident slot.name
+/-- The field a slot is read through, if it is read through one. Only the two
+Flow v3 edges are: rc.112's `Result` carries the value under `success` and the
+error under `failure`. -/
+def member? : Slot → Option String
+  | .catchValue _ => some "success"
+  | .catchError _ => some "failure"
+  | _ => none
+
+/-- The slot as a target expression: its identifier, or a member of it. Before
+`Expr.member` (lean4-typescript v0.4.3) the caught edges were handed to the
+pinned AST as the identifier `a4.success`, which renders correctly but puts a
+dot inside a name `TypeScript.targetIdentifier` is there to check. -/
+def expr (slot : Slot) : Expr :=
+  match slot.member? with
+  | none => .ident slot.name
+  | some field => .member (.ident slot.name) field
+
+/-- The slot's whole spelling: the identifier, then the field if it has one.
+This is what `Lowering.tupleArgs` projects (`E4-TARGET-CE-026`); it is the
+rendered form of `expr`, and only the renderer reads it. -/
+def path (slot : Slot) : String :=
+  match slot.member? with
+  | none => slot.name
+  | some field => slot.name ++ "." ++ field
 
 end Slot
 
 /-! ## 2. The skeleton -/
 
 /-- The control skeleton of a lowered flow: the abstract syntax the dispatch,
-structured and region forms share. Nothing here is TypeScript; §4 spells it
-and §6 evaluates it. -/
+structured and region forms share. Nothing here is TypeScript;
+`SkeletonRender.lean` spells it and `SkeletonSemantics.lean` evaluates it. -/
 inductive Skeleton where
   /-- Bind a service receiver once at the top of the generator. -/
   | acquireService (rows : ServiceRow)
@@ -323,35 +360,6 @@ def structuredContinue (label : String) : Skeleton :=
 def structuredBreak (label : String) : Skeleton :=
   .breakTo label
 
-/-- The right-nested projections of a tuple slot: `x[0]`, `x[1][0]`, …, with
-the last component the remaining tail. This is the converse of the nesting
-`Effects.Trace.ToVal` builds from a parameter product, so the argument at
-position `i` on the host is the component at position `i` on the wire. -/
-private def tupleProjections (path : String) : Nat → List Expr
-  | 0 => []
-  | 1 => [.ident path]
-  | n + 1 => .ident (path ++ "[0]") :: tupleProjections (path ++ "[1]") n
-
-/-- The arguments of a call whose request slot holds a parameter tuple: the
-slot destructured at the call, `jobs.run(b4p0[0], b4p0[1])`. The flow alphabet
-has no pair constructor -- `plan` hands a service exactly one `Val` -- so an
-operation of two or more parameters is performed with one request slot holding
-the right-nested product, and the call takes it apart again.
-lowering: rule.perform-tuple -/
-def tupleArgs (request : Expr) (arity : Nat) : List Expr :=
-  match request with
-  | .ident name => tupleProjections name arity
-  | _ => [request]
-
-/-- The call of a family operation on a request expression: an Effect value
-when the operation is nullary, a method call on the request otherwise, and a
-method call on the destructured request when the operation takes two or more
-parameters. -/
-def callOf (rows : ServiceRow) (spec : OpSpec) (request : Expr) : Expr :=
-  if spec.requestTy == "void" then nullaryValue rows.receiver spec.name
-  else if spec.arity == 1 then performCall rows.receiver spec.name [request]
-  else performCall rows.receiver spec.name (tupleArgs request spec.arity)
-
 end Lowering
 
 namespace Flow
@@ -375,86 +383,7 @@ def spec? (table : List OpSpec) (id : OperationId) : Option OpSpec :=
 
 end Flow
 
-/-! ## 4. The printer -/
-
-namespace Skeleton
-
-mutual
-
-/-- Spell one skeleton node. -/
-def render (rows : ServiceRow) : Skeleton → List Stmt
-  | .acquireService row => [Lowering.serviceAcquire row]
-  | .declare slot type => [.letDefinite slot.name type]
-  | .assign target source => [.assign target.name source.expr]
-  | .letTemp index source => [.letInit (Slot.temp index).name source.expr]
-  | .letBlockIndex var target => [.letInit var (.int target.value)]
-  | .gotoBlock var target => [.assign var (.int target.value), .continueTo none]
-  | .enterBlock _ => []
-  | .dispatchLoop var cases =>
-      [.whileTrue none [.switch (.ident var) (renderCases rows cases)]]
-  | .loop label body => [.whileTrue (some label) (renderList rows body)]
-  | .labelled label body => [.labelled label (renderList rows body)]
-  | .breakTo label => [.breakTo (some label)]
-  | .continueTo label => [.continueTo (some label)]
-  | .perform answer _ spec request =>
-      [.constYield answer.name (Lowering.callOf rows spec request.expr)]
-  | .atom answer _ spec request =>
-      [.letInit answer.name (.call (.ident spec.name) [request.expr])]
-  | .literal answer _ _ value =>
-      match Flow.literal? value with
-      | some spelling => [.letInit answer.name spelling]
-      | none => []
-  | .decide answer site onTrue onFalse =>
-      [ .constYield answer.name (.call (.ident "decisions.choose") [.int site.value])
-      , .ifElse answer.expr (renderList rows onTrue) (renderList rows onFalse) ]
-  | .performCatch answer _ _ _ spec request onOk onError =>
-      [ .constYield answer.name
-          (.call (.ident "Effect.result") [Lowering.callOf rows spec request.expr])
-      , .ifElse (.call (.ident "Result.isSuccess") [answer.expr])
-          (renderList rows onOk) (renderList rows onError) ]
-  | .branchIf test site onTrue onFalse =>
-      [ .yieldDiscard (.call (.ident "decisions.report") [.int site.value, test.expr])
-      , .ifElse test.expr (renderList rows onTrue) (renderList rows onFalse) ]
-  | .interruptPoint site =>
-      [.yieldDiscard (.call (.ident "interrupts.point") [.int site.value])]
-  | .ret value => [.ret value.expr]
-  | .enterScoped region body =>
-      [ .yieldDiscard (.call (.ident "regions.enter") [.int region.value])
-      , .scopedGen (Slot.region region).name (renderList rows body)
-          (.lambda ["exit"]
-            (.call (.ident "regions.leave") [.int region.value, .ident "exit"])) ]
-  | .enterScopedMasked region body =>
-      [ .yieldDiscard (.call (.ident "regions.enter") [.int region.value])
-      , .scopedGenMasked (Slot.region region).name (renderList rows body)
-          (.lambda ["exit"]
-            (.call (.ident "regions.leave") [.int region.value, .ident "exit"])) ]
-  | .acquire answer region _ spec request release =>
-      [ .constYield answer.name (.call (.ident "Effect.acquireRelease")
-          [ Lowering.callOf rows spec request.expr
-          , .lambda ["a", "exit"]
-              (.method (.call (.ident "regions.finalizer") [.int region.value, .ident "exit"])
-                "pipe"
-                [.call (.ident "Effect.andThen") [Lowering.callOf rows release (.ident "a")]]) ]) ]
-  | .leave value => [.ret value.expr]
-  termination_by structural node => node
-
-/-- Spell a statement list. -/
-def renderList (rows : ServiceRow) : List Skeleton → List Stmt
-  | [] => []
-  | node :: rest => render rows node ++ renderList rows rest
-  termination_by structural nodes => nodes
-
-/-- Spell the cases of a dispatch switch. -/
-def renderCases (rows : ServiceRow) : List (Nat × List Skeleton) → List (Nat × List Stmt)
-  | [] => []
-  | (index, body) :: rest => (index, renderList rows body) :: renderCases rows rest
-  termination_by structural cases => cases
-
-end
-
-end Skeleton
-
-/-! ## 5. Structuring at an arbitrary statement type
+/-! ## 4. Structuring at an arbitrary statement type
 
 `TypeScript.Structure.emitWith` fixes its shapes at `Stmt`. The three
 definitions below are that algorithm with the statement type as a parameter,

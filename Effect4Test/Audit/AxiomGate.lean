@@ -106,6 +106,13 @@ comment justifying it — "declares no theorem", "no semantic law" — was false
 emitter node for node. Those two are clean, and with the module admission gone
 the gate is what says so rather than a comment.
 
+`Skeleton.lean` has since been split (survey finding H28): the renderer and the
+two call builders it needs moved to
+`Effect4/Target/TypeScript/SkeletonRender.lean`, so the `String`-free IR and its
+two bridge theorems are a module with *no* declaration reaching
+`Classical.choice`, and the boundary is a file boundary as well as a list of
+names. The crossings kept their names, so this list did not move.
+
 The crossings are now `choiceImplementationDeclarations` below, one exact name
 each. `#effect4_print_choice_reachers` prints the list, so re-pinning it after a
 target change is one command.
@@ -173,9 +180,10 @@ private def choiceImplementationDeclarations : List Name :=
   , ``Effect4.Target.EffectV4.regionModules?
   , ``Effect4.Target.EffectV4.structuredModules?
   -- The lowering forms: dispatch, region and structured, plus the call and
-  -- acquire helpers they spell. Their *laws* live in `String`-free modules and
-  -- are absent from this list, which is the point of naming declarations
-  -- rather than the modules they sit in.
+  -- acquire helpers they spell (`Lowering.callOf` in `SkeletonRender.lean`).
+  -- Their *laws* live in `String`-free modules and are absent from this list,
+  -- which is the point of naming declarations rather than the modules they sit
+  -- in.
   , ``Effect4.Target.EffectV4.Flow.lowerBest
   , ``Effect4.Target.EffectV4.Flow.lowerBlock
   , ``Effect4.Target.EffectV4.Flow.lowerDispatch
@@ -187,10 +195,11 @@ private def choiceImplementationDeclarations : List Name :=
   , ``Effect4.Target.EffectV4.Lowering.callOf
   , ``Effect4.Target.EffectV4.Lowering.dispatchFallback
   , ``Effect4.Target.EffectV4.Lowering.serviceAcquire
-  -- The control-skeleton printer. `emitNode_eq` and `emitWith_eq`, the bridge
-  -- theorems saying Effect4's emitter is the pinned package's emitter node for
-  -- node, are deliberately NOT here: they are clean, and the gate now proves
-  -- it instead of a comment asserting it.
+  -- The control-skeleton printer, `Effect4/Target/TypeScript/SkeletonRender.lean`.
+  -- `emitNode_eq` and `emitWith_eq`, the bridge theorems saying Effect4's
+  -- emitter is the pinned package's emitter node for node, are deliberately NOT
+  -- here: they are clean, they live in `Skeleton.lean` on the other side of the
+  -- split, and the gate proves it instead of a comment asserting it.
   , ``Effect4.Target.EffectV4.Skeleton.render
   , ``Effect4.Target.EffectV4.Skeleton.renderList
   , ``Effect4.Target.EffectV4.Skeleton.renderCases

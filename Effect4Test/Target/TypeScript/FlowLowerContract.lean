@@ -19,16 +19,42 @@ open TypeScript Effects Effect4.Flow Effect4.Target.EffectV4
 #check @Effect4.Target.EffectV4.Flow.declarationLine
 #check @Effect4.Target.EffectV4.flowModules?
 
-/-! ## The rule census -/
+/-! ## The rule census
 
--- Eight straight-line rules, then these eight, then `interrupt-point` (M2),
--- then the region rules (with `region-masked`) and the structured rules.
+This battery owns the census list. `Rule.all` is pinned here once, by id and in
+full; the sibling lowering batteries (`RegionLowerContract`,
+`StructuredLowerContract`, `MultiArgContract`) pin `Rule.ofId?` facts about
+their own rules and no position at all, so a rule added to one group edits this
+file and its own (survey finding H9). The order is the inductive's: the
+straight-line group, the dispatch group, Flow v3, interruption, regions, the
+structured form, and the multi-argument perform. -/
+
+#guard Rule.all.map Rule.id =
+  [ "service-acquire", "nullary-value", "perform-call", "perform-bind", "perform-discard"
+  , "atom-call", "ret", "error-abort"
+  , "dispatch-loop", "block-case", "param-move", "flow-perform", "flow-atom", "flow-literal"
+  , "choose-if", "flow-ret"
+  , "perform-catch", "branch-if"
+  , "interrupt-point"
+  , "region-enter", "region-acquire", "region-leave", "region-masked"
+  , "structured-loop", "structured-merge", "structured-continue", "structured-break"
+  , "dispatch-fallback"
+  , "perform-tuple" ]
 example : Rule.all.length = 29 := by decide
 example : Rule.all.Nodup := Rule.all_nodup
-#guard ((Rule.all.map Rule.id).drop 8).take 8 =
-  ["dispatch-loop", "block-case", "param-move", "flow-perform", "flow-atom", "flow-literal",
-   "choose-if", "flow-ret"]
+-- Both directions of the id map, for every rule: `all` misses none, and no id
+-- resolves to a rule outside it.
+example (rule : Rule) : rule ∈ Rule.all := Rule.mem_all rule
+example (rule : Rule) : Rule.ofId? rule.id = some rule := Rule.ofId?_id rule
+-- This battery's own group, by name.
 #guard Rule.ofId? "param-move" = some .paramMove
+#guard Rule.ofId? "dispatch-loop" = some .dispatchLoop
+#guard Rule.ofId? "block-case" = some .blockCase
+#guard Rule.ofId? "flow-perform" = some .flowPerform
+#guard Rule.ofId? "flow-atom" = some .flowAtom
+#guard Rule.ofId? "flow-literal" = some .flowLiteral
+#guard Rule.ofId? "choose-if" = some .chooseIf
+#guard Rule.ofId? "flow-ret" = some .flowRet
 
 /-! ## A chooser: acquires Decisions only, one case per block -/
 
@@ -105,7 +131,7 @@ Repair: `param-move` reads every source into a temporary first on a self-edge;
 on any other edge the target's variables are distinct and no temporary is used. -/
 
 def swapTable : List OpSpec :=
-  [{ name := "lit", kind := .lit (.nat 1), requestTy := "number", answerTy := "number" }]
+  [OpSpec.unary "lit" (.lit (.nat 1)) "number" "number"]
 
 def swapRaw : RawFlow String :=
   { alphabet := ⟨0⟩, roots := [⟨0⟩], entry := ⟨0⟩, inputTy := "number", resultTy := "number",
@@ -147,7 +173,7 @@ def getRaw : RawFlow String :=
       , { id := ⟨1⟩, params := ["number"], term := .ret ⟨0⟩ } ] }
 
 def getTable : List OpSpec :=
-  [{ name := "get", kind := .family, requestTy := "number", answerTy := "number" }]
+  [OpSpec.unary "get" .family "number" "number"]
 
 def getter? : Option FlowProgram := program? "getter" getTable getRaw
 
@@ -160,5 +186,42 @@ def getter? : Option FlowProgram := program? "getter" getTable getRaw
   some [.serviceAcquire, .dispatchLoop, .blockCase, .flowPerform, .performCall, .paramMove, .flowRet]
 #guard (getter?.map (Flow.declarationLine cellRows)) =
   some "export declare const getter: (n: number) => Effect.Effect<number, never, Cell>;"
+
+/-! ## The Flow v3 slots are a member of an identifier, not an identifier
+
+`Slot.name` is a binder-position spelling and passes through
+`TypeScript.targetIdentifier` like every other generated name; the two caught
+edges of a `performCatch` are read out of the `Result` their block's answer
+binds, so their field is `Slot.member?` and the expression is
+`Expr.member` (lean4-typescript v0.4.3, survey finding H17). `Slot.path` is the
+rendered form, which is what a tuple projection needs
+(`E4-TARGET-CE-026`). -/
+
+#guard (Slot.catchValue ⟨4⟩).name = "a4"
+#guard (Slot.catchError ⟨4⟩).name = "a4"
+#guard (Slot.answer ⟨4⟩).name = "a4"
+-- Every name the profile now sees is a legal generated identifier; before the
+-- repair the two caught edges were not.
+#guard [Slot.param ⟨1⟩ 0, .temp 2, .answer ⟨4⟩, .decision ⟨4⟩, .catchValue ⟨4⟩,
+        .catchError ⟨4⟩, .region ⟨3⟩].all fun slot =>
+  _root_.TypeScript.targetIdentifier slot.name
+
+#guard (Slot.catchValue ⟨4⟩).member? = some "success"
+#guard (Slot.catchError ⟨4⟩).member? = some "failure"
+#guard (Slot.answer ⟨4⟩).member? = none
+
+#guard (Slot.catchValue ⟨4⟩).expr == _root_.TypeScript.Expr.member (.ident "a4") "success"
+#guard (Slot.catchError ⟨4⟩).expr == _root_.TypeScript.Expr.member (.ident "a4") "failure"
+#guard (Slot.answer ⟨4⟩).expr == _root_.TypeScript.Expr.ident "a4"
+
+-- The bytes are the bytes the forged identifier printed, which is why no
+-- golden moved.
+#guard _root_.TypeScript.Render.expr _root_.TypeScript.house0 0
+  (Slot.catchValue ⟨4⟩).expr = "a4.success"
+#guard _root_.TypeScript.Render.expr _root_.TypeScript.house0 0
+  (Slot.catchError ⟨4⟩).expr = "a4.failure"
+#guard (Slot.catchValue ⟨4⟩).path = "a4.success"
+#guard (Slot.catchError ⟨4⟩).path = "a4.failure"
+#guard (Slot.param ⟨1⟩ 0).path = "b1p0"
 
 end Effect4Test.Target.TypeScript.FlowLowerContract
