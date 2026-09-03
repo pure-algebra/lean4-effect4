@@ -9,6 +9,7 @@ Doc comments cannot precede `#guard`, so the receipts carry line comments.
 -/
 
 import Effect4.Semantics.Runs
+import Effect4.Semantics.Fuel
 import Effect4.Target.TypeScript.ScriptFlow
 import Effect4.Meta.Derive
 
@@ -41,6 +42,13 @@ open Effects.Trace (Val)
 #check @Effect4.Flow.plan_checked
 #check @Effect4.Flow.run_checked_not_stuck
 #check @Effect4.Flow.run_fuel_mono
+#check @Effect4.Flow.LoopBudget
+#check @Effect4.Flow.loop_budget_not_exhausted
+#check @Effect4.Flow.run_fuelFor_finishes
+#check @Effect4.Flow.runDefault_finishes
+#check @Effect4.Flow.run_fuel_ge_finishes
+#check @Effect4.Flow.run_not_failed
+#check @Effect4.Flow.run_fuelFor_answered
 #check @Effect4.Target.EffectV4.tableAlphabet
 #check @Effect4.Target.EffectV4.tableService
 #check @Effect4.Target.EffectV4.tableNameOf

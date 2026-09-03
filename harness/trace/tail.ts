@@ -4,6 +4,12 @@ import { runTraced, traceService, windowRows, type Event } from "./tracer.ts"
 
 declare const process: { readonly env: Record<string, string | undefined> }
 
+/** The patched rc.112 copy (harness/trace/patched) reports frame-level rows
+ * through this sink; an unpatched copy never calls it and the report carries
+ * an empty list. These rows are recorded, never compared (docs/TRACE-DAG.md). */
+const patchedFrames: Array<Record<string, unknown>> = []
+;(globalThis as any).__effect4Frame = (row: string, data: Record<string, unknown>) => { patchedFrames.push({ row, ...data }) }
+
 /** Which program to run comes from the harness; the tape is empty for these
  * straight-line programs. Each entry builds its service before the `run`
  * sentinel so construction is outside the compared window. */
@@ -65,5 +71,6 @@ console.log(JSON.stringify({
   tracerDefect: report.tracerDefect,
   maxOpsBeforeYield,
   expectYields: process.env.EFFECT4_EXPECT_YIELDS === "1",
+  patchedFrames,
   foreign: ["succ@./atoms.ts", "orZero@./atoms.ts"]
 }))

@@ -68,27 +68,48 @@ def rows : List Row :=
   , { rule := .errorAbort, state := .checked, goldens := ["fallible.empty"],
       host := true, property := false, typeReceipt := true, proof := none }
   -- the dispatch form (FlowLower.lean); goldens are the Flow-runner face under generated/traces/flow/
-  , { rule := .dispatchLoop, state := .checked,
+  , { rule := .dispatchLoop, state := .covered,
       goldens := ["flow/incr.empty", "flow/twice.empty", "flow/chooser.left", "flow/swap.once"],
-      host := true, property := false, typeReceipt := true, proof := none }
-  , { rule := .blockCase, state := .checked,
+      host := true, property := true, typeReceipt := true, proof := none }
+  , { rule := .blockCase, state := .covered,
       goldens := ["flow/incr.empty", "flow/twice.empty", "flow/chooser.left", "flow/swap.once"],
-      host := true, property := false, typeReceipt := true, proof := none }
-  , { rule := .paramMove, state := .checked,
+      host := true, property := true, typeReceipt := true, proof := none }
+  , { rule := .paramMove, state := .covered,
       goldens := ["flow/incr.empty", "flow/twice.empty", "flow/chooser.left", "flow/swap.once", "flow/swap.twice"],
-      host := true, property := false, typeReceipt := true, proof := none }
-  , { rule := .flowPerform, state := .checked, goldens := ["flow/incr.empty", "flow/twice.empty"],
-      host := true, property := false, typeReceipt := true, proof := none }
-  , { rule := .flowAtom, state := .checked, goldens := ["flow/incr.empty", "flow/twice.empty"],
-      host := true, property := false, typeReceipt := true, proof := none }
-  , { rule := .flowLiteral, state := .checked, goldens := ["flow/incr.empty", "flow/twice.empty", "flow/swap.once"],
-      host := true, property := false, typeReceipt := true, proof := none }
-  , { rule := .chooseIf, state := .checked,
+      host := true, property := true, typeReceipt := true, proof := none }
+  , { rule := .flowPerform, state := .covered, goldens := ["flow/incr.empty", "flow/twice.empty"],
+      host := true, property := true, typeReceipt := true, proof := none }
+  , { rule := .flowAtom, state := .covered, goldens := ["flow/incr.empty", "flow/twice.empty"],
+      host := true, property := true, typeReceipt := true, proof := none }
+  , { rule := .flowLiteral, state := .covered, goldens := ["flow/incr.empty", "flow/twice.empty", "flow/swap.once"],
+      host := true, property := true, typeReceipt := true, proof := none }
+  , { rule := .chooseIf, state := .covered,
       goldens := ["flow/chooser.left", "flow/chooser.right", "flow/swap.once", "flow/swap.twice"],
+      host := true, property := true, typeReceipt := true, proof := none }
+  -- regions (RegionLower.lean); the goldens are the region programs of the harness
+  , { rule := .regionEnter, state := .checked,
+      goldens := ["flow/regionNested.empty", "flow/regionTwoFail.empty", "flow/regionBothSucceed.empty"],
       host := true, property := false, typeReceipt := true, proof := none }
-  , { rule := .flowRet, state := .checked,
+  , { rule := .regionAcquire, state := .checked,
+      goldens := ["flow/regionNested.empty", "flow/regionTwoFail.empty", "flow/regionBothSucceed.empty"],
+      host := true, property := false, typeReceipt := true, proof := none }
+  , { rule := .regionLeave, state := .checked,
+      goldens := ["flow/regionNested.empty", "flow/regionTwoFail.empty", "flow/regionBothSucceed.empty"],
+      host := true, property := false, typeReceipt := true, proof := none }
+  -- the structured form (StructuredLower.lean); swap has a self-loop, irreducible falls back
+  , { rule := .structuredLoop, state := .covered, goldens := ["flow/swap.once", "flow/swap.twice"],
+      host := true, property := true, typeReceipt := true, proof := none }
+  , { rule := .structuredMerge, state := .covered, goldens := ["flow/swap.once", "flow/swap.twice"],
+      host := true, property := true, typeReceipt := true, proof := none }
+  , { rule := .structuredContinue, state := .covered, goldens := ["flow/swap.once", "flow/swap.twice"],
+      host := true, property := true, typeReceipt := true, proof := none }
+  , { rule := .structuredBreak, state := .covered, goldens := ["flow/swap.once", "flow/swap.twice"],
+      host := true, property := true, typeReceipt := true, proof := none }
+  , { rule := .dispatchFallback, state := .checked, goldens := ["flow/irreducible.left", "flow/irreducible.right"],
+      host := true, property := false, typeReceipt := true, proof := none }
+  , { rule := .flowRet, state := .covered,
       goldens := ["flow/incr.empty", "flow/twice.empty", "flow/chooser.left", "flow/swap.once"],
-      host := true, property := false, typeReceipt := true, proof := none } ]
+      host := true, property := true, typeReceipt := true, proof := none } ]
 
 private def allowedAxioms : List Name := [``propext, ``Quot.sound]
 

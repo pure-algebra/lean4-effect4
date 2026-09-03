@@ -1,8 +1,17 @@
 # Schema cutover ruling
 
-Status: frozen design input; the six tag declarations and their local proof
-receipts are implemented, but their generated assurance join and the payload
-carrier remain cutover-open, 2026-08-31.
+Status: frozen design input, 2026-09-02. The structural lane is closed.
+`generated/schema-structural-assurance.tsv` joins the six tag declarations,
+the payload carrier, the recursive field-admission judgment, the general
+recursor, the optic and annotation-data laws, and the effectful-field
+marker, admission, program equations, and host harness, and records
+`SCHEMA-PG-REPRESENTATION-TAG`, `SCHEMA-PG-PAYLOAD`,
+`SCHEMA-PG-FIELD-ADMISSION`, `DATA-PG-OPTIC`, `SCHEMA-PG-ANNOTATION-DATA`,
+and `SCHEMA-PG-EFFECTFUL-FIELD` as `required-closed` (`:2675-2680`). Cutover remains open for the denotation,
+getter, transformation, codec, registry, host-reviver, wire, and CAS
+compatibility lanes; the projection's own open rows are `SCHEMA-PG-DOCUMENT`
+reference semantics and `SCHEMA-PG-WIRE` codec and canonicalization
+(`:2681-2682`). The rulings below are unchanged.
 
 ## Decision
 

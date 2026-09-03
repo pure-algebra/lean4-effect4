@@ -3,6 +3,9 @@ import Effect4.Target.TypeScript.Trace
 import Effect4.Target.TypeScript.Lower
 import Effect4.Target.TypeScript.ScriptFlow
 import Effect4.Target.TypeScript.FlowLower
+import Effect4.Target.TypeScript.RegionLower
+import Effect4.Target.TypeScript.StructuredLower
+import Effect4.Flow.Region
 
 /-!
 The trace harness family. `main fixture` prints the generated Effect v4 module,
@@ -194,6 +197,16 @@ def swapRaw : RawFlow String :=
 
 def decision (site : Nat) (branch : Bool) : Flow.Decision := ⟨⟨site⟩, branch⟩
 
+/-- A cycle entered at two blocks: every cycle passes a `choose`, so it is
+admitted, but the graph is not reducible and keeps the dispatch form. -/
+def irreducibleRaw : RawFlow String :=
+  { alphabet := ⟨0⟩, roots := [⟨0⟩], entry := ⟨0⟩, inputTy := "number", resultTy := "number",
+    blocks :=
+      [ { id := ⟨0⟩, params := ["number"], term := .choose ⟨0⟩ ⟨1⟩ ⟨2⟩ [⟨0⟩] }
+      , { id := ⟨1⟩, params := ["number"], term := .choose ⟨1⟩ ⟨2⟩ ⟨3⟩ [⟨0⟩] }
+      , { id := ⟨2⟩, params := ["number"], term := .choose ⟨2⟩ ⟨1⟩ ⟨3⟩ [⟨0⟩] }
+      , { id := ⟨3⟩, params := ["number"], term := .ret ⟨0⟩ } ] }
+
 /-- The flow programs of the harness. -/
 def flowEntries : List FlowEntry :=
   (programs.filterMap fun entry =>
@@ -209,6 +222,11 @@ def flowEntries : List FlowEntry :=
     { program := program,
       tapes := [("once", [decision 1 true, decision 1 false]),
                 ("twice", [decision 1 true, decision 1 true, decision 1 false])],
+      input := .nat 5 }) ++
+  ((admit? "irreducible" [] irreducibleRaw).toList.map fun program =>
+    { program := program,
+      tapes := [("left", [decision 0 true, decision 1 true, decision 2 false]),
+                ("right", [decision 0 false, decision 2 true, decision 1 false])],
       input := .nat 5 })
 
 /-- Run a flow entry on one tape; the log the runner wrote. -/
@@ -221,9 +239,116 @@ def flowLog (entry : FlowEntry) (tape : Flow.Tape) : Except String Effect4.Trace
   | .done _ => pure result.1.2
   | other => throw s!"the flow run of {entry.program.name} did not finish: {repr other}"
 
+/-! ## Regions (P-T7): a family with resources and failures -/
+
+effect_signature RCell where
+  | get : Nat ⟪ "read the cell" ⟫
+  | put (n : Nat) : Unit ⟪ "write the cell" ⟫
+  | acquire (n : Nat) : Nat ⟪ "acquire a resource named by a number" ⟫
+  | release (n : Nat) : Unit ⟪ "release a resource" ⟫
+  | boom (n : Nat) : Nat !! String ⟪ "fail with a string" ⟫
+  | releaseBoom (n : Nat) : Unit !! String ⟪ "a release that fails" ⟫
+
+/-- `RCell` by name: resources are their numbers, `boom` and `releaseBoom` fail. -/
+def rcellFamily : String → Effects.Trace.Val → StateT Nat Id (Except Effects.Trace.Val Effects.Trace.Val)
+  | "get", _ => do let n ← get; pure (.ok (.nat n))
+  | "put", .nat n => do set n; pure (.ok .unit)
+  | "acquire", v => pure (.ok v)
+  | "release", _ => pure (.ok .unit)
+  | "boom", _ => pure (.error (.str "boom"))
+  | "releaseBoom", _ => pure (.error (.str "boom"))
+  | _, _ => pure (.ok .unit)
+
+def rcellTable : List OpSpec := familyTable RCell.rows
+
+/-- Operation positions in `rcellTable`. -/
+def opAcquire : OperationId := ⟨2⟩
+def opRelease : OperationId := ⟨3⟩
+def opBoom : OperationId := ⟨4⟩
+def opReleaseBoom : OperationId := ⟨5⟩
+
+def rblock (id : Nat) (region : Option Nat) (params : List String) (term : RegionTerm) : RegionBlock String :=
+  { id := ⟨id⟩, region := region.map RegionId.mk, params := params, term := term }
+
+def rregion (id : Nat) (parent : Option Nat) (continue_ : Nat) : RegionRow String :=
+  { id := ⟨id⟩, parent := parent.map RegionId.mk, continue_ := ⟨continue_⟩, resultTy := "number" }
+
+def regionFlow (regions : List (RegionRow String)) (blocks : List (RegionBlock String)) : RegionFlow String :=
+  { alphabet := ⟨0⟩, roots := [⟨0⟩], entry := ⟨0⟩, inputTy := "number", resultTy := "number",
+    regions := regions, blocks := blocks }
+
+def vars (n : Nat) : List Var := (List.range n).map Var.mk
+
+/-- Two nested regions, each acquiring a resource, the inner body failing:
+both close with the failure, innermost first. -/
+def regionNested : RegionFlow String := regionFlow [rregion 1 none 7, rregion 2 (some 1) 6]
+  [ rblock 0 none ["number"] (.enter ⟨1⟩ ⟨1⟩ (vars 1))
+  , rblock 1 (some 1) ["number"] (.acquire opAcquire ⟨0⟩ opRelease ⟨2⟩ (vars 1))
+  , rblock 2 (some 1) ["number", "number"] (.enter ⟨2⟩ ⟨3⟩ (vars 2))
+  , rblock 3 (some 2) ["number", "number"] (.acquire opAcquire ⟨0⟩ opRelease ⟨4⟩ (vars 2))
+  , rblock 4 (some 2) ["number", "number", "number"] (.plain (.perform opBoom ⟨0⟩ ⟨5⟩ (vars 3)))
+  , rblock 5 (some 2) ["number", "number", "number", "number"] (.leave ⟨3⟩)
+  , rblock 6 (some 1) ["number"] (.leave ⟨0⟩)
+  , rblock 7 none ["number"] (.plain (.ret ⟨0⟩)) ]
+
+/-- Two resources in one region, then a failing body: releases run latest
+first with the failure. -/
+def regionTwoFail : RegionFlow String := regionFlow [rregion 1 none 5]
+  [ rblock 0 none ["number"] (.enter ⟨1⟩ ⟨1⟩ (vars 1))
+  , rblock 1 (some 1) ["number"] (.acquire opAcquire ⟨0⟩ opRelease ⟨2⟩ (vars 1))
+  , rblock 2 (some 1) ["number", "number"] (.acquire opAcquire ⟨1⟩ opRelease ⟨3⟩ (vars 2))
+  , rblock 3 (some 1) ["number", "number", "number"] (.plain (.perform opBoom ⟨0⟩ ⟨4⟩ (vars 3)))
+  , rblock 4 (some 1) ["number", "number", "number", "number"] (.leave ⟨3⟩)
+  , rblock 5 none ["number"] (.plain (.ret ⟨0⟩)) ]
+
+/-- Two resources whose second release fails. The runner models it
+(`Effect4Test/Flow/RegionRunnerContract.lean`), but `Effect.acquireRelease`
+types a release `Effect<unknown, never, R>`, so the lowering refuses it and
+it has no host golden (E4-TARGET-CE-012). -/
+def regionReleaseFails : RegionFlow String := regionFlow [rregion 1 none 4]
+  [ rblock 0 none ["number"] (.enter ⟨1⟩ ⟨1⟩ (vars 1))
+  , rblock 1 (some 1) ["number"] (.acquire opAcquire ⟨0⟩ opRelease ⟨2⟩ (vars 1))
+  , rblock 2 (some 1) ["number", "number"] (.acquire opAcquire ⟨1⟩ opReleaseBoom ⟨3⟩ (vars 2))
+  , rblock 3 (some 1) ["number", "number", "number"] (.leave ⟨2⟩)
+  , rblock 4 none ["number"] (.plain (.ret ⟨0⟩)) ]
+
+/-- One resource, a clean leave: the release sees success and the run succeeds. -/
+def regionBothSucceed : RegionFlow String := regionFlow [rregion 1 none 3]
+  [ rblock 0 none ["number"] (.enter ⟨1⟩ ⟨1⟩ (vars 1))
+  , rblock 1 (some 1) ["number"] (.acquire opAcquire ⟨0⟩ opRelease ⟨2⟩ (vars 1))
+  , rblock 2 (some 1) ["number", "number"] (.leave ⟨1⟩)
+  , rblock 3 none ["number"] (.plain (.ret ⟨0⟩)) ]
+
+structure RegionEntry where
+  program : RegionProgram
+  input : Effects.Trace.Val := .nat 5
+  initial : Nat := 41
+
+def admitRegion? (name : String) (raw : RegionFlow String) : Option RegionProgram :=
+  match admitRegions (tableAlphabet ⟨0⟩ rcellTable) raw with
+  | .ok flow => some { name := name, param := ("n", "number"), result := "number",
+                       table := rcellTable, flow := flow }
+  | .error _ => none
+
+def regionEntries : List RegionEntry :=
+  [ ("regionNested", regionNested), ("regionTwoFail", regionTwoFail),
+    ("regionBothSucceed", regionBothSucceed) ].filterMap
+    fun (name, raw) => (admitRegion? name raw).map fun program => { program := program }
+
+/-- The runner's log of a region program; `failed` is a finished run too. -/
+def regionLog (entry : RegionEntry) : Except String Effect4.Trace.Log :=
+  let table := entry.program.table
+  let result : ((Flow.RunResult × Flow.Tape) × Effect4.Trace.Log) × Nat :=
+    ((Flow.runRegionsDefault entry.program.flow (Flow.tableRegionService ⟨0⟩ table rcellFamily cellAtom)
+      (tableNameOf ⟨0⟩ table) [] entry.input).run []).run entry.initial
+  match result.1.1.1 with
+  | .done _ => pure result.1.2
+  | .failed _ => pure result.1.2
+  | other => throw s!"the region run of {entry.program.name} did not finish: {repr other}"
+
 /-- The flow families of the dispatch-form module. -/
-def flowFamilies : List (ServiceRow × List FlowProgram) :=
-  [ (Cell.rows, flowEntries.map (·.program)) ]
+def flowFamilies : List (ServiceRow × List FlowProgram × List RegionProgram) :=
+  [ (Cell.rows, flowEntries.map (·.program), []), (RCell.rows, [], regionEntries.map (·.program)) ]
 
 /-- The families the module declares, each with its scripts. -/
 def families : List (ServiceRow × List Script) :=
@@ -247,6 +372,8 @@ def main (args : List String) : IO Unit := do
       for entry in flowEntries do
         for (tapeName, _) in entry.tapes do
           IO.println (entry.program.name ++ "\t" ++ tapeName)
+      for entry in regionEntries do
+        IO.println (entry.program.name ++ "\tempty")
   | ["flow-golden", name, tapeName] =>
       match flowEntries.find? (·.program.name == name) with
       | some entry =>
@@ -255,10 +382,18 @@ def main (args : List String) : IO Unit := do
               match flowLog entry tape with
               | .ok log =>
                   IO.print (Effect4.Target.TypeScript.Trace.golden (name ++ "." ++ tapeName) tape.wire
-                    ((Flow.ruleSet entry.rows entry.program).map Rule.id) log (face := "lean-flow"))
+                    ((Flow.structuredRuleSet entry.rows entry.program).map Rule.id) log (face := "lean-flow"))
               | .error message => throw (IO.userError message)
           | none => throw (IO.userError s!"no tape {tapeName} for {name}")
-      | none => throw (IO.userError s!"no flow program {name}")
+      | none =>
+          match regionEntries.find? (·.program.name == name) with
+          | some entry =>
+              match regionLog entry with
+              | .ok log =>
+                  IO.print (Effect4.Target.TypeScript.Trace.golden (name ++ ".empty") [] 
+                    ((Region.ruleSet RCell.rows entry.program).map Rule.id) log (face := "lean-flow"))
+              | .error message => throw (IO.userError message)
+          | none => throw (IO.userError s!"no flow program {name}")
   | ["oracle"] =>
       for entry in flowEntries do
         match entry.oracle, entry.tapes with
@@ -272,12 +407,18 @@ def main (args : List String) : IO Unit := do
             | .error message => throw (IO.userError s!"FAIL flow oracle {entry.program.name}: {message}")
         | _, _ => pure ()
   | ["flow-fixture"] =>
-      match flowModules? flowFamilies [.named ["succ"] "./atoms.ts"] with
+      match regionModules? flowFamilies [.named ["succ"] "./atoms.ts"] with
       | some source => IO.print source
       | none => throw (IO.userError "dispatch lowering refused a flow")
+  | ["structured-fixture"] =>
+      match structuredModules? flowFamilies [.named ["succ"] "./atoms.ts"] with
+      | some source => IO.print source
+      | none => throw (IO.userError "structured lowering refused a flow")
   | ["flow-types"] =>
       for entry in flowEntries do
         for (tapeName, _) in entry.tapes do
           IO.println (entry.program.name ++ "\t" ++ tapeName ++ "\t" ++
             Flow.declarationLine entry.rows entry.program)
-  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | flow-types")
+      for entry in regionEntries do
+        IO.println (entry.program.name ++ "\tempty\t" ++ Region.declarationLine RCell.rows entry.program)
+  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types")

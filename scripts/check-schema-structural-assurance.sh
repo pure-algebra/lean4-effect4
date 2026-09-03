@@ -42,5 +42,5 @@ if ! cmp -s -- "$tmp_root/fresh.tsv" "$projection"; then
 fi
 
 printf 'PASS Schema structural assurance projection is current\n'
-printf 'PASS exact 1298-declaration census, 493 theorem/axiom receipts, 32 counterexamples, and graph statuses agree\n'
-printf 'PASS structural, field-admission, optic, and annotation-data graphs close all applicable edges\n'
+printf 'PASS exact 1426-declaration census, 557 theorem/axiom receipts, 39 counterexamples, and graph statuses agree\n'
+printf 'PASS structural, field-admission, optic, annotation-data, and effectful-field graphs close all applicable edges\n'

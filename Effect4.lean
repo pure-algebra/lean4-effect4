@@ -11,6 +11,7 @@ import Effect4.Semantics.Frontier
 import Effect4.Semantics.Configuration
 import Effect4.Semantics.Step
 import Effect4.Semantics.Runs
+import Effect4.Semantics.Fuel
 import Effect4.Semantics.Approximation
 import Effect4.Semantics.Observation
 import Effect4.Semantics.Equivalence
@@ -77,6 +78,9 @@ import Effect4.Target.TypeScript.EffectV4
 import Effect4.Target.TypeScript.Trace
 import Effect4.Target.TypeScript.ScriptFlow
 import Effect4.Target.TypeScript.FlowLower
+import Effect4.Target.TypeScript.RegionLower
+import Effect4.Target.TypeScript.StructuredLower
+import Effect4.Target.TypeScript.StructureLaws
 import Effect4.Target.TypeScript.Lower
 import Effect4.Target.TypeScript.Schema
 import Effect4.Target.TypeScript.EffectfulField

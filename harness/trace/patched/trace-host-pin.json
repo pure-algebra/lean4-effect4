@@ -1,0 +1,63 @@
+{
+  "effectVersion": "4.0.0-rc.112",
+  "effectUpstreamCommit": "2600f62f4532026928454dcea8d1c48557b3f942",
+  "effectFileCount": 2341,
+  "effectTreeSha256": "aea8ac8a25b17aa82796fad7acc1371bc9a92bbd7d25ce24f2598016f9920aad",
+  "typescriptVersion": "7.0.2",
+  "diagnosticVersion": "0.38.0",
+  "patched": {
+    "manifest": "harness/trace/patched/patch-manifest.json",
+    "manifestSha256": "2e9f39f625bf2319b61802c18b3e7869492008439b98fba9442307c5b8645e2b",
+    "hunks": [
+      {
+        "id": "frame.pop",
+        "census": "frame-arm",
+        "file": "dist/internal/effect.js",
+        "before": "269e711472b84dcd04862f11e842acc1095cc5d22948af36cda76e9a9185828e",
+        "after": "4dafd26003d6e7ec330ff45103a3211425864f2a63a1ba2140206c604a300069"
+      },
+      {
+        "id": "frame.deferred-interrupt",
+        "census": "frame-arm",
+        "file": "dist/internal/effect.js",
+        "before": "4dafd26003d6e7ec330ff45103a3211425864f2a63a1ba2140206c604a300069",
+        "after": "46b4c84feabdc910233543facffcac60c03bbea1a601c1d5c8383eac55f7b078"
+      },
+      {
+        "id": "frame.exit-fail-cause.skip",
+        "census": "frame-arm",
+        "file": "dist/internal/core.js",
+        "before": "00a904f9f06154abb87daa77956475567de0f154e78fbb27f67f7cf8458123cf",
+        "after": "f21a942e21e6a75172d7d6b5405aa217edfaa85e6ec5fb6ec5a0859ec9459e87"
+      },
+      {
+        "id": "scope.close-inline",
+        "census": "scope",
+        "file": "dist/internal/effect.js",
+        "before": "46b4c84feabdc910233543facffcac60c03bbea1a601c1d5c8383eac55f7b078",
+        "after": "a534c4f482eef70337edf26984d4249dc46980043b8d7e6965f709132c92db4e"
+      },
+      {
+        "id": "scope.close-single",
+        "census": "scope",
+        "file": "dist/internal/effect.js",
+        "before": "a534c4f482eef70337edf26984d4249dc46980043b8d7e6965f709132c92db4e",
+        "after": "4c9a030763806f93abe95e8cb270c77fcbdf5c288475a61304e692f4c28ad2fe"
+      },
+      {
+        "id": "scope.close-lifo",
+        "census": "scope",
+        "file": "dist/internal/effect.js",
+        "before": "4c9a030763806f93abe95e8cb270c77fcbdf5c288475a61304e692f4c28ad2fe",
+        "after": "ee79959ac68896e7d2cfed1711075616f3cf54508f743b901c38774164731687"
+      },
+      {
+        "id": "layer.memo-build",
+        "census": "layer",
+        "file": "dist/Layer.js",
+        "before": "372aaafe9d91b822252d08d2f1aff7d092b5f8b422bd5b7c3953bf13bf8fcb7b",
+        "after": "3d16e3d86bd5a072699f0b56c0d85c055499440fdf8e48d5501932b28e6c211c"
+      }
+    ]
+  }
+}

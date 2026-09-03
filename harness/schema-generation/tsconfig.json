@@ -20,6 +20,8 @@
     "./Person.generated.ts",
     "./runtime-check.ts",
     "./AllRepresentations.generated.ts",
-    "./coverage-runtime-check.ts"
+    "./coverage-runtime-check.ts",
+    "./TwoRoots.generated.ts",
+    "./multi-runtime-check.ts"
   ]
 }

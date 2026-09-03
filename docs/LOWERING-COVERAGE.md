@@ -81,3 +81,33 @@ admitted Flow v2 graph. Their goldens are the Flow-runner face under
 `generated/traces/flow/<program>.<tape>.tsv`, their host receipts live under
 `harness/trace/receipts/flow/`, and their type receipts under
 `harness/trace/types/flow/`; the join keys are the same paths.
+
+## The property loop
+
+`scripts/check-lowering-property.sh` (P-T6, `test/contracts/lowering-property.contract.md`)
+regenerates a seeded corpus of flows by construction, admits them, builds
+tapes by policy, lowers all of them into one dispatch-form module, and runs the
+batch once on the host (`effect4-batch`). Its summary row is
+`generated/lowering-property.tsv`; a rule whose ledger row claims `property`
+needs that file, and `scripts/test-lowering-mutations.sh` keeps the corpus
+honest with three planted lowering mutants. A divergence is shrunk with a
+budget of 64 host-confirmed candidates and stored under
+`generated/lowering-property-failures/`.
+
+## Regions
+
+`region-enter`, `region-acquire` and `region-leave` (`Effect4/Target/TypeScript/RegionLower.lean`,
+P-T7) lower an admitted region flow (Effects v0.5.0) to nested scopes; their
+goldens are the region programs of the harness under `generated/traces/flow/`
+(`regionNested`, `regionTwoFail`, `regionBothSucceed`), traced on the host with
+a `Regions` service. A fallible release has no lowering (`E4-TARGET-CE-012`).
+
+## The structured form
+
+`structured-loop`, `structured-merge`, `structured-continue`, `structured-break`
+and `dispatch-fallback` (`Effect4/Target/TypeScript/StructuredLower.lean`, P-T9b)
+are the shapes `TypeScript.Structure` emits for a reducible graph, and the
+dispatch form kept for an irreducible one (`irreducible.left`/`.right`). The
+structured module (`harness/trace/structured-fixture.ts`,
+`property-structured-fixture.ts`) is checked against the same goldens as the
+dispatch module, so a rule's host and property evidence covers both forms.

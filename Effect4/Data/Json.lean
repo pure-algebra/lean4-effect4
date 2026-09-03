@@ -154,6 +154,19 @@ theorem toBits_ofBits (bits : UInt64) : toBits (ofBits bits) = bits := rfl
 is the bijection with the 2^64 binary64 patterns. -/
 theorem ofBits_toBits (value : Float64) : ofBits (toBits value) = value := rfl
 
+/-- `ofBits` is injective. This is the separation the bijection above implies:
+the 2^53 - 2 NaN payloads, and the two zeroes, are pairwise distinct data
+rather than one collapsed representative each. -/
+theorem ofBits_injective {first second : UInt64}
+    (equal : ofBits first = ofBits second) : first = second :=
+  congrArg toBits equal
+
+/-- `toBits` is injective: two data with the same stored pattern are the same
+datum. -/
+theorem toBits_injective {first second : Float64}
+    (equal : toBits first = toBits second) : first = second :=
+  congrArg ofBits equal
+
 /--
 The format's finiteness test: the biased exponent field is not all-ones.
 

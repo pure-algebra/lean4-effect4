@@ -3,12 +3,13 @@ import Lean.Util.CollectAxioms
 import Effect4.Data.Optic
 import Effect4.Schema.Document
 import Effect4.Schema.Check
+import Effect4.Schema.EffectfulField
 
 /-!
 # Schema structural declaration and proof-receipt join
 
 This test-only checker gives the implemented structural Schema slice one
-mechanical census.  Every non-internal declaration owned by the seven source
+mechanical census.  Every non-internal declaration owned by the eight source
 modules is emitted with exactly one existing proof-graph or leaf-receipt route.
 Every theorem in that census is checked against the repository axiom ceiling
 and emitted with its actual kernel dependencies.
@@ -42,6 +43,7 @@ private def sourceModules : List Name :=
   , `Effect4.Schema.Annotations
   , `Effect4.Schema.Document
   , `Effect4.Schema.Check
+  , `Effect4.Schema.EffectfulField
   ]
 
 private def declarationsOwnedBy (environment : Environment) (owner : Name) : List Name :=
@@ -102,6 +104,8 @@ private def routeFor (owner name : Name) : String :=
       "SCHEMA-LEAF-DOCUMENT-CONTAINERS"
   else if owner == `Effect4.Schema.Check then
     "SCHEMA-PG-FIELD-ADMISSION"
+  else if owner == `Effect4.Schema.EffectfulField then
+    "SCHEMA-PG-EFFECTFUL-FIELD"
   else
     "UNALLOCATED"
 

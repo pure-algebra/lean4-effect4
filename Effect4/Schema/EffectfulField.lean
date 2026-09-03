@@ -948,6 +948,15 @@ theorem modify_eq (field : EffectfulField signature S A)
       field.get source >>= fun current => field.set (f current) source :=
   rfl
 
+theorem interpret_get {signature : Signature.{uOp, uAns}}
+    {S A : Type uAns} {M : Type uAns → Type uTarget}
+    [Monad M] [LawfulMonad M] (handler : Handler signature M)
+    (field : EffectfulField signature S A) (source : S) :
+    interpret handler (field.get source) =
+      handler.handle (field.operations.read source) >>= fun answer =>
+        pure ((field.operations.read_answer source).mp answer) := by
+  rfl
+
 theorem interpret_set {signature : Signature.{uOp, uAns}}
     {S A : Type uAns} {M : Type uAns → Type uTarget}
     [Monad M] [LawfulMonad M] (handler : Handler signature M)

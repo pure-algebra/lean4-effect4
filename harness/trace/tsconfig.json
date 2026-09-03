@@ -57,6 +57,8 @@
     "tracer.ts",
     "tail.ts",
     "flow-fixture.ts",
-    "flow-tail.ts"
+    "flow-tail.ts",
+    "structured-fixture.ts",
+    "structured-tail.ts"
   ]
 }

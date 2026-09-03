@@ -1,5 +1,5 @@
 format	effect4-type-receipt-v1
 program	flow/chooser.right
 typescript	7.0.2
-flow-fixture.d.ts	sha256=c72bce1b91061f10086b1b5b5c126abf493193526e8a34d655f02be6b0871ad6
+flow-fixture.d.ts	sha256=562f911bc22b2c560bb0a08bc6b7c5ff28156f48c5b3361e5da29f198cf34aee
 line	export declare const chooser: (n: number) => Effect.Effect<number, never, Decisions>;
