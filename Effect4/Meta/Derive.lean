@@ -132,6 +132,9 @@ private def tsOfTypeFuel : Nat → Term → CommandElabM String
     | `Unit => return "void"
     | other => throwErrorAt stx "effect_signature: no TypeScript spelling for `{other}`; add a Stratum V row first"
   match stx with
+  -- A nested spelling is written parenthesized (`Option (Except Nat Nat)`);
+  -- the parentheses are syntax, not a type former.
+  | `(($inner:term)) => tsOfTypeFuel fuel inner
   | `(Handle $spelling:str) => return spelling.getString
   | `(Except $errorTy:term $valueTy:term) =>
       let error ← tsOfTypeFuel fuel errorTy

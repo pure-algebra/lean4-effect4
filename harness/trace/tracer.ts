@@ -179,6 +179,14 @@ export interface RunOptions {
    * consumes the arming. A single-fiber tail leaves it out and every yield is
    * rc.112's own. */
   readonly armed?: () => boolean
+  /** A stall deadline in milliseconds. A run that parks — every fiber
+   * suspended, nothing left to schedule, as when a program awaits a `Deferred`
+   * no other fiber completes — evaluates no further primitive, so the op
+   * budget above can never fire and the observer never resolves. When this is
+   * set and the root fiber has not settled by the deadline, the run is a
+   * frontier for the same reason a spent budget is: the trace stops where the
+   * information stops. Omit it for a run that must terminate on its own. */
+  readonly stallMs?: number
 }
 
 export interface RunReport {
@@ -247,7 +255,29 @@ export const runTraced = async <A, E>(
   })
 
   const fiber = Effect.runFork(traced, { scheduler: new TapeScheduler() })
-  const exit: any = await new Promise((resolve) => (fiber as any).addObserver(resolve))
+  const settled: Promise<unknown> = new Promise((resolve) => (fiber as any).addObserver(resolve))
+  let exit: any
+  if (options.stallMs === undefined) {
+    exit = await settled
+  } else {
+    // A parked run evaluates no primitive, so the budget above cannot fire and
+    // the observer never resolves. The deadline turns the park into the same
+    // frontier a spent budget writes: the trace stops where the information
+    // stops (`harness/trace/deferred-tail.ts`, row E4-SEM-CE-012).
+    const stalled = Symbol("stalled")
+    const deadline: Promise<unknown> = new Promise((resolve) => {
+      setTimeout(() => resolve(stalled), options.stallMs)
+    })
+    const first = await Promise.race([settled, deadline])
+    if (first === stalled) {
+      sink.push({ kind: "frontier" })
+      budgetHit = true
+      ;(fiber as any).interruptUnsafe()
+      exit = await settled
+    } else {
+      exit = first
+    }
+  }
   // A tape exhausted at a `choose` is the unanswered frontier, never an outcome
   // (Effect4.Frontier.unansweredDecision); the Decisions service dies with
   // TapeExhausted and the run ends with a `frontier` row instead of `done`.

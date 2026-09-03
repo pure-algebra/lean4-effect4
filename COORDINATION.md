@@ -2184,3 +2184,75 @@ Against the independent amendment (`3fbf47d`, `E4-FLOW-CE-024`/`025`):
   the interrupt wherever the tape answers, and rc.112 defers and restores.
   Goldens, fixtures and receipts regenerated; the host gate passes every golden
   under every mask at both yield settings; the ledger is current.
+
+## Deferreds family landed, 2026-09-03
+
+`effect_signature Deferreds` (`harness/trace/Generate.lean`) is the third
+handle-carrying family, after M1's `Scopes` and M3's `Fibers`, and the first
+whose operations may have no answer at all. Seven operations — `make`,
+`succeed`, `fail`, `isDone`, `poll`, `awaitValue`, `awaitError` — over real
+rc.112 `Deferred` objects, with six programs and six goldens under
+`generated/traces/deferred/`. Every program agrees on the host under every mask
+at both yield settings, including the rc.112 floor of 3; receipts under
+`harness/trace/receipts/deferred/`.
+
+Three things worth citing.
+
+*The handle needed nothing new.* M1's `Handle "T"` carried this family
+unchanged: `Handle "Deferred.Deferred<number, number>"`, an index in Lean, the
+index on the wire, rc.112's own type on the target, and `registerHandle` in
+`deferred-tail.ts` branding cells by `"~effect/Deferred"` so the tracer numbers
+them in the `make` order the Lean face uses. The one DSL repair this packet
+owed was a paren case in `tsOfTypeFuel`: a nested spelling is written
+`Option (Except Nat Nat)`, and the parentheses were being read as a type former
+the profile had no name for.
+
+*`poll` is one operation answering `Option (Except Nat Nat)`.* That is exactly
+the type of a cell of the projection's table — pending, completed with a value,
+completed with a failure — so the answer of `poll` and the state of the
+projection are the same first-order datum and the wire form falls out of the
+shared `ToVal` instances with no encoding to document. A `(Bool, Nat)` pair
+cannot separate a pending cell from one completed with the failure `0`; a
+`pollDone`/`pollValue` split would make `pollValue` on a pending cell a
+frontier rc.112 does not have. It is the first spelling to nest one namespace
+inside another (`Option.Option<Result.Result<number, number>>`), which is a
+question for the *value* import trigger: `usesResult` tests a prefix, and this
+spelling does not start with `Result.`, so the trigger stays false and `Option`
+and `Result` reach the generated module through the same type-only import
+`Scopes` and `Fibers` use for `Scope` and `Fiber`. `EffectV4.lean` is untouched
+and all five earlier fixtures regenerate byte-identically. A family that ever
+needs one of those namespaces as a *value* will have to widen the trigger from
+a prefix test to an occurrence test; nothing does yet.
+
+*A pending await is a frontier, not a failure.* rc.112's `Deferred.await`
+parks the fiber until another one completes the cell (`Deferred.ts` `_await`
+pushes a resume onto `self.resumes`). The sequential projection has no other
+fiber, so both faces stop there and write `frontier`: the projection because
+`deferredsTraced` writes no `failed` row for a stall — which is why it does not
+use `Family.Service.tracedExcept`, whose every abort is a `failed` row — and
+the host because the new `RunOptions.stallMs` in `harness/trace/tracer.ts`
+interrupts a run that has parked. The op budget cannot reach a parked run: it
+fires from inside `Tracer.context`, and a parked fiber evaluates no primitive.
+`stallMs` sits beside M3's `armed` and is passed by one program only; every
+other tail leaves it out and must still settle on its own.
+
+Rows `E4-SEM-CE-012` (the failure reading collapses a stalled run into a
+genuine failure under *every* mask, so no host comparison could catch it) and
+`E4-SEM-CE-013` (no function of the projection's table separates the parked run
+from the one a second fiber resumes), witnessed in
+`Effect4Test/Counterexamples/Flow/Deferreds.lean`.
+
+Owed, and handed on: the two-fiber program in which a forked child completes
+the cell the parent awaits. It is still not spellable now that `Fibers` exists.
+`effect_program` binds one family per program (`… over <family>`), and `Fibers`
+has no former for a child that performs operations of its own — its bodies are
+numbers drawn from `bodyOutcome` — so a `Fibers`-only variant cannot express it
+either. Writing it needs either a two-family program or a `Fibers` child whose
+body is a program over another family; whichever lands first should claim
+`E4-SEM-CE-013`. `deferredPendingAwait` records the half the projection can
+see. The note sits on `DeferredEntry` in `harness/trace/Generate.lean`.
+
+One gate line still open: `scripts/check-lowering-types.sh` does not read the
+`deferred-types` arm this packet added to `Generate.lean`, the way it does not
+yet read `scope-types` or `fiber-types` either. Two of the six declaration
+lines are frozen inline as `#guard`s in the contract meanwhile.
