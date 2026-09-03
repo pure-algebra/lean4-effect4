@@ -464,6 +464,8 @@ def ownedBy (block : BlockId) : Slot → Prop
   | .param owner _ => owner = block
   | .answer owner => owner = block
   | .decision owner => owner = block
+  | .catchValue owner => owner = block
+  | .catchError owner => owner = block
   | _ => False
 
 theorem ownedBy_noTemp {block : BlockId} {slot : Slot} (owned : ownedBy block slot) :
@@ -672,6 +674,39 @@ theorem execControl_decide (fuel : Nat) (m : Machine) (tape : Tape) (answer : Sl
                (execList alphabet fuel (m.setVal answer (.bool branch)) more
                  (if branch then onTrue else onFalse))
                (afterFell alphabet fuel rest)) := by
+  rw [execControl]
+
+theorem execControl_performCatch (fuel : Nat) (m : Machine) (tape : Tape)
+    (answer value error : Slot) (operation : OperationId) (spec : OpSpec) (request : Slot)
+    (onOk onError rest : List Skeleton) :
+    execControl alphabet fuel m tape
+        (.performCatch answer value error operation spec request onOk onError) rest =
+      (match alphabet.lookup operation with
+       | none => .pure (.finished (.frontier (.stuck m.block)), tape)
+       | some op =>
+           .vis (.inl ⟨op, m.vals request⟩) fun answered : Val =>
+             Program.bind (execList alphabet fuel (m.setVal value answered) tape onOk)
+               (afterFell alphabet fuel rest)) := by
+  rw [execControl]
+
+theorem execControl_branchIf (fuel : Nat) (m : Machine) (tape : Tape) (test : Slot)
+    (site : DecisionId) (onTrue onFalse rest : List Skeleton) :
+    execControl alphabet fuel m tape (.branchIf test site onTrue onFalse) rest =
+      (match tape.read site with
+       | .exhausted => .pure (.finished (.frontier (.unansweredDecision site)), tape)
+       | .mismatch expected actual => .pure (.finished (.refused expected actual), tape)
+       | .answered branch more =>
+           match m.vals test with
+           | .bool value =>
+               if branch = value then
+                 .vis (.inr (site, branch)) fun _ =>
+                   Program.bind (execList alphabet fuel m more (if branch then onTrue else onFalse))
+                     (afterFell alphabet fuel rest)
+               else .pure (.finished (.refused site site), tape)
+           | _ =>
+               .vis (.inr (site, branch)) fun _ =>
+                 Program.bind (execList alphabet fuel m more (if branch then onTrue else onFalse))
+                   (afterFell alphabet fuel rest)) := by
   rw [execControl]
 
 theorem performOp_eq (fuel : Nat) (m : Machine) (tape : Tape) (answer : Slot)
