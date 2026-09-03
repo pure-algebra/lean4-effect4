@@ -118,7 +118,10 @@ private theorem postorder_nodup (g : Structure.Graph) : (Structure.postorder g).
 theorem rpo_nodup (g : Structure.Graph) : (Structure.rpo g).Nodup := by
   exact List.pairwise_reverse.mpr ((postorder_nodup g).imp (fun h => Ne.symm h))
 
-private theorem findIdx_at_of_nodup : ∀ (xs : List Nat) (i : Nat) (hi : i < xs.length),
+/-- A position in a duplicate-free list is the index `findIdx?` returns for
+its element. Shared with `StructureDominators.lean`, which walks the same
+reverse postorder. -/
+theorem findIdx_at_of_nodup : ∀ (xs : List Nat) (i : Nat) (hi : i < xs.length),
     xs.Nodup → xs.findIdx? (· = xs[i]) = some i := by
   intro xs
   induction xs with
@@ -136,7 +139,9 @@ private theorem findIdx_at_of_nodup : ∀ (xs : List Nat) (i : Nat) (hi : i < xs
           simpa [List.findIdx?_cons, headNe] using
             ih i tailBound tailNodup
 
-private theorem index_rpo_at (g : Structure.Graph) (i : Nat) (hi : i < (Structure.rpo g).length) :
+/-- Each reverse-postorder position is its own computed index. Shared with
+`StructureDominators.lean`. -/
+theorem index_rpo_at (g : Structure.Graph) (i : Nat) (hi : i < (Structure.rpo g).length) :
     Structure.index g (Structure.rpo g)[i] = i := by
   unfold Structure.index
   rw [findIdx_at_of_nodup _ i hi (rpo_nodup g)]
@@ -163,7 +168,9 @@ private theorem mergeChildren_index_order (g : Structure.Graph) (node : Nat) :
       (fun a b => Structure.index g a < Structure.index g b) := by
   exact List.Pairwise.filter _ (children_index_order g node)
 
-private theorem forward_target_later (g : Structure.Graph) (source target : Nat)
+/-- A forward edge runs from a smaller index to a larger one, by the
+definition of a back edge. Shared with `StructureDominators.lean`. -/
+theorem forward_target_later (g : Structure.Graph) (source target : Nat)
     (forward : Structure.isBackEdge g source target = false) :
     Structure.index g source < Structure.index g target := by
   simpa [Structure.isBackEdge] using forward
@@ -458,7 +465,9 @@ private theorem skeletonBody_scoped_of_placement (table : List OpSpec) (interrup
   exact emitWith_scoped_of_placement facts (actualBody_scoped_on_edges table interrupts blocks entry)
     emitted
 
-private def SourceClosed (g : Structure.Graph) : Prop :=
+/-- Every declared edge has a source inside the node range. Shared with
+`StructureDominators.lean`. -/
+def SourceClosed (g : Structure.Graph) : Prop :=
   ∀ source target, target ∈ g.succs source → source < g.size
 
 /-- The remaining computed-dominator obligations; this record is a premise,
@@ -472,7 +481,9 @@ structure DominatorFacts (g : Structure.Graph) : Prop where
     ∃ parent, Structure.idom g target = some parent ∧
       Structure.dominates g parent source = true
 
-private theorem reachable_of_reducible {g : Structure.Graph} (reducible : Structure.reducible g = true)
+/-- Every node of a reducible graph is reached by the pinned traversal.
+Shared with `StructureDominators.lean`. -/
+theorem reachable_of_reducible {g : Structure.Graph} (reducible : Structure.reducible g = true)
     {node : Nat} (bound : node < g.size) : node ∈ Structure.rpo g := by
   have nodeChecks := List.all_eq_true.mp reducible node (List.mem_range.mpr bound)
   exact List.contains_iff_mem.mp (Bool.and_eq_true_iff.mp nodeChecks).1
@@ -522,7 +533,9 @@ private theorem placementFacts_of_reducible {g : Structure.Graph} (closed : Grap
   change decide (parent = parent) = true
   exact decide_eq_true rfl
 
-private theorem graphOf_sourceClosed (blocks : List (RawBlock String)) (entry : BlockId) :
+/-- `Flow.graphOf` only gives successors to positions that exist. Shared with
+`StructureDominators.lean`. -/
+theorem graphOf_sourceClosed (blocks : List (RawBlock String)) (entry : BlockId) :
     SourceClosed (Flow.graphOf blocks entry) := by
   intro source target member
   unfold Flow.graphOf at member ⊢
@@ -533,7 +546,9 @@ private theorem graphOf_sourceClosed (blocks : List (RawBlock String)) (entry : 
       obtain ⟨bound, _⟩ := List.getElem?_eq_some_iff.mp found
       exact bound
 
-private theorem emitWith_reducible {α : Type} (g : Structure.Graph) (shapes : Structuring.Shapes α)
+/-- Emission succeeds only on a reducible graph: `Structuring.emitWith`
+guards on `reducible`. Shared with `StructureDominators.lean`. -/
+theorem emitWith_reducible {α : Type} (g : Structure.Graph) (shapes : Structuring.Shapes α)
     (body : Nat → (Nat → Option (List α)) → Option (List α)) {out : List α}
     (emitted : Structuring.emitWith g shapes body = some out) : Structure.reducible g = true := by
   cases h : Structure.reducible g with

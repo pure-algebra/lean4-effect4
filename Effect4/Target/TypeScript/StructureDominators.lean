@@ -23,63 +23,10 @@ open TypeScript Effects Effect4.Target.EffectV4
 namespace Effect4.Target.Structured
 open TypeScript.Structure
 
-private theorem findIdx_at_of_nodup : ∀ (xs : List Nat) (i : Nat) (hi : i < xs.length),
-    xs.Nodup → xs.findIdx? (· = xs[i]) = some i := by
-  intro xs
-  induction xs with
-  | nil => intro i hi; simp at hi
-  | cons x xs ih =>
-      intro i hi nodup
-      obtain ⟨notMem, tailNodup⟩ := List.nodup_cons.mp nodup
-      cases i with
-      | zero => simp [List.findIdx?_cons]
-      | succ i =>
-          have tailBound : i < xs.length := by simpa using hi
-          have headNe : x ≠ xs[i] := by
-            intro same
-            exact notMem (same ▸ List.getElem_mem tailBound)
-          simpa [List.findIdx?_cons, headNe] using
-            ih i tailBound tailNodup
-
-private theorem index_rpo_at (g : Structure.Graph) (i : Nat) (hi : i < (Structure.rpo g).length) :
-    Structure.index g (Structure.rpo g)[i] = i := by
-  unfold Structure.index
-  rw [findIdx_at_of_nodup _ i hi (rpo_nodup g)]
-
-private theorem forward_target_later (g : Structure.Graph) (source target : Nat)
-    (forward : Structure.isBackEdge g source target = false) :
-    Structure.index g source < Structure.index g target := by
-  simpa [Structure.isBackEdge] using forward
-
-private theorem reachable_of_reducible {g : Structure.Graph} (reducible : Structure.reducible g = true)
-    {node : Nat} (bound : node < g.size) : node ∈ Structure.rpo g := by
-  have nodeChecks := List.all_eq_true.mp reducible node (List.mem_range.mpr bound)
-  exact List.contains_iff_mem.mp (Bool.and_eq_true_iff.mp nodeChecks).1
-
-private theorem graphOf_sourceClosed (blocks : List (RawBlock String)) (entry : BlockId) :
-    ∀ source target, target ∈ (Flow.graphOf blocks entry).succs source →
-      source < (Flow.graphOf blocks entry).size := by
-  intro source target member
-  unfold Flow.graphOf at member ⊢
-  dsimp only at member ⊢
-  cases found : blocks[source]? with
-  | none => rw [found] at member; simp at member
-  | some block =>
-      obtain ⟨bound, _⟩ := List.getElem?_eq_some_iff.mp found
-      exact bound
-
-private theorem emitWith_reducible {α : Type} (g : Structure.Graph) (shapes : Structuring.Shapes α)
-    (body : Nat → (Nat → Option (List α)) → Option (List α)) {out : List α}
-    (emitted : Structuring.emitWith g shapes body = some out) : Structure.reducible g = true := by
-  cases h : Structure.reducible g with
-  | false =>
-      have never : Structuring.emitWith g shapes body = none := by
-        unfold Structuring.emitWith
-        rw [h]
-        rfl
-      rw [never] at emitted
-      contradiction
-  | true => rfl
+-- `findIdx_at_of_nodup`, `index_rpo_at`, `forward_target_later`,
+-- `reachable_of_reducible`, `graphOf_sourceClosed` and `emitWith_reducible` were
+-- copied here from `StructureOrder.lean`, which this module imports, because they
+-- were `private` there. They are shared now, not duplicated (survey finding L8).
 
 private def TableBounded (n : Nat) (doms : List (Option Nat)) : Prop :=
   ∀ p, some p ∈ doms → p < n
