@@ -59,6 +59,28 @@ private theorem plainPerformEdge {alphabet : FlowAlphabet Ty} {flow : RegionFlow
   simp only [erasedBlock, RegionFlow.eraseTerm, hterm] at erased
   exact edgeNoChoose_of_plan_perform erased planned
 
+private theorem plainCatchEdge {alphabet : FlowAlphabet Ty} {flow : RegionFlow Ty}
+    {block target onError : BlockId} {current : RegionBlock Ty} {term : RawTerm}
+    {env env' errorEnv : Env} {tape : Tape} {op : alphabet.Op} {request : Val}
+    (found : flow.block? block = some current) (hterm : current.term = .plain term)
+    (planned : plan alphabet { id := current.id, params := current.params, term := term }
+      env tape = .performCatch op request target env' onError errorEnv) :
+    EdgeNoChoose flow.erase block target := by
+  have erased := foundErased found
+  simp only [erasedBlock, RegionFlow.eraseTerm, hterm] at erased
+  exact edgeNoChoose_of_plan_performCatch erased planned
+
+private theorem plainCatchErrorEdge {alphabet : FlowAlphabet Ty} {flow : RegionFlow Ty}
+    {block target onError : BlockId} {current : RegionBlock Ty} {term : RawTerm}
+    {env env' errorEnv : Env} {tape : Tape} {op : alphabet.Op} {request : Val}
+    (found : flow.block? block = some current) (hterm : current.term = .plain term)
+    (planned : plan alphabet { id := current.id, params := current.params, term := term }
+      env tape = .performCatch op request target env' onError errorEnv) :
+    EdgeNoChoose flow.erase block onError := by
+  have erased := foundErased found
+  simp only [erasedBlock, RegionFlow.eraseTerm, hterm] at erased
+  exact edgeNoChoose_of_plan_performCatch_error erased planned
+
 private theorem enterEdge {flow : RegionFlow Ty} {block body : BlockId}
     {current : RegionBlock Ty} {region : RegionId} {args : List Var}
     (found : flow.block? block = some current)
@@ -113,6 +135,11 @@ def denoteRegionsGo {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
         | .choose site branch target env' rest =>
             .vis (decideOp site branch) fun _ : Unit =>
               denoteRegionsGo flow cycles target env' rest
+        | .performCatch op request target env' onError errorEnv =>
+            .vis (performOp op request) fun result : Except Val Val =>
+              match result with
+              | .ok answer => denoteRegionsGo flow cycles target (env' ++ [answer]) tape
+              | .error error => denoteRegionsGo flow cycles onError (errorEnv ++ [error]) tape
     | .enter region body args =>
         match readArgs env args with
         | none => stuck
@@ -151,6 +178,10 @@ def denoteRegionsGo {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
     · exact Prod.Lex.right _ (reachSet_length_lt_of_edge cycles
         (plainPerformEdge found hterm planned))
     · exact Prod.Lex.left _ _ (by have := tape_length_of_plan_choose planned; omega)
+    · exact Prod.Lex.right _ (reachSet_length_lt_of_edge cycles
+        (plainCatchEdge found hterm planned))
+    · exact Prod.Lex.right _ (reachSet_length_lt_of_edge cycles
+        (plainCatchErrorEdge found hterm planned))
     · exact Prod.Lex.right _ (reachSet_length_lt_of_edge cycles (enterEdge found hterm))
     · exact Prod.Lex.right _ (reachSet_length_lt_of_edge cycles (acquireEdge found hterm))
     · exact Prod.Lex.right _ (reachSet_length_lt_of_edge cycles (leaveEdge found hterm hrow))
@@ -190,6 +221,11 @@ private theorem go_eq {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
         | .choose site branch target env' rest =>
             .vis (decideOp site branch) fun _ : Unit =>
               denoteRegionsGo flow cycles target env' rest
+        | .performCatch op request target env' onError errorEnv =>
+            .vis (performOp op request) fun result : Except Val Val =>
+              match result with
+              | .ok answer => denoteRegionsGo flow cycles target (env' ++ [answer]) tape
+              | .error error => denoteRegionsGo flow cycles onError (errorEnv ++ [error]) tape
     | .enter region body args =>
         match readArgs env args with
         | none => stuck
@@ -298,6 +334,16 @@ private theorem fuel_eq_go {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
                   refine congrArg (@Program.vis (RegionSig alphabet) ((RunResult × Tape) × Failures)
                     (decideOp site branch)) (funext fun _ => ?_)
                   exact consume target env' rest (tape_length_of_plan_choose planned)
+              | performCatch op request target env' onError errorEnv =>
+                  refine congrArg (@Program.vis (RegionSig alphabet) ((RunResult × Tape) × Failures)
+                    (performOp op request)) (funext fun result => ?_)
+                  cases result with
+                  | ok answer =>
+                      exact advance target (env' ++ [answer])
+                        (plainCatchEdge found hterm planned)
+                  | error error =>
+                      exact advance onError (errorEnv ++ [error])
+                        (plainCatchErrorEdge found hterm planned)
           | enter region body args =>
               dsimp only
               cases hargs : readArgs env args with

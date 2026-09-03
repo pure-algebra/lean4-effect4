@@ -498,6 +498,19 @@ theorem edgeNoChoose_of_plan_performCatch {alphabet : FlowAlphabet Ty} {raw : Ra
   rw [planned] at shaped
   exact ⟨current, List.mem_of_find?_eq_some found, lookupBlock_id found, shaped.1, shaped.2.1⟩
 
+/-- A `performCatch`'s *failure* edge is a declared non-`choose` edge too: a
+caught failure continues in the graph rather than ending the run. -/
+theorem edgeNoChoose_of_plan_performCatch_error {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty}
+    {block : BlockId} {current : RawBlock Ty} (found : lookupBlock raw block = some current)
+    {env : Env} {tape : Tape} {op : alphabet.Op} {request : Val} {target : BlockId} {env' : Env}
+    {onError : BlockId} {errorEnv : Env}
+    (planned : plan alphabet current env tape
+      = .performCatch op request target env' onError errorEnv) :
+    EdgeNoChoose raw block onError := by
+  have shaped := plan_shape alphabet current env tape
+  rw [planned] at shaped
+  exact ⟨current, List.mem_of_find?_eq_some found, lookupBlock_id found, shaped.1, shaped.2.2⟩
+
 /-- A `choose` consumes exactly one tape entry. -/
 theorem tape_length_of_plan_choose {alphabet : FlowAlphabet Ty} {current : RawBlock Ty}
     {env : Env} {tape : Tape} {site : DecisionId} {branch : Bool} {target : BlockId}
