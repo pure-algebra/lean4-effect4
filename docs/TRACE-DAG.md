@@ -62,6 +62,16 @@ FRAME-BRIDGE (required-open): FrameEvent.toTrace, scheduler Event.toTrace
    `frontier`; a host op budget ends it the same way. Neither is a failure.
 6. **Layer build and teardown are outside the compared window.** Host traces carry
    phase sentinels; agreement covers the `run` phase only.
+7. **Answers are recorded as typed.** The host proxy encodes an answer by the
+   operation's declared answer spelling, so a `void` answer is unit whatever the
+   host returns. Found on the first host run: rc.112's `Ref.set` returns the
+   mutable ref at runtime under a declared `Effect<void>`; the untyped encoder
+   died on it and the trace ended in `done {"failure":[]}`.
+8. **Scheduler insensitivity is checked, not assumed.** Every golden runs twice on
+   the host, at a large `MaxOpsBeforeYield` (zero yields required) and at the
+   smallest value that progresses, which on rc.112 is 3 (the op is counted before
+   the yield check and the yield wrapper costs two ops, so 1 and 2 loop forever).
+   The service-level rows must be identical; the frame stream shows the yields.
 
 ## What agreement does not establish
 

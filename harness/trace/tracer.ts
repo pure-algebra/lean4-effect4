@@ -26,7 +26,7 @@ export type Event =
   | { kind: "frontier" }
   | { kind: "phase"; phase: "build" | "run" | "teardown" }
 
-export type Rows = Record<string, { params: number }>
+export type Rows = Record<string, { params: number; answer: string }>
 
 export class TracerDefect extends Error {}
 
@@ -70,6 +70,11 @@ export const outcomeWire = (exit: { _tag: string; value?: unknown; cause?: unkno
   return `{"failure":${wire(fail?.error)}}`
 }
 
+/** An answer is recorded as typed: a `void` operation answers unit whatever
+ * the host hands back (rc.112's `Ref.set` returns the mutable ref at runtime). */
+export const wireAnswer = (row: { answer: string }, value: unknown): Wire =>
+  row.answer === "void" ? "[]" : wire(value)
+
 /** Wrap every method named in `rows` so its request and answer are recorded.
  * A nullary operation is an Effect value; others are functions. */
 export const traceService = <S extends object>(rows: Rows, impl: S, sink: Event[]): S => {
@@ -80,7 +85,7 @@ export const traceService = <S extends object>(rows: Rows, impl: S, sink: Event[
       Effect.suspend(() => {
         sink.push({ kind: "op", name, request: wireArgs(args) })
         return effect.pipe(
-          Effect.tap((value) => Effect.sync(() => { sink.push({ kind: "answer", name, value: wire(value) }) })),
+          Effect.tap((value) => Effect.sync(() => { sink.push({ kind: "answer", name, value: wireAnswer(row, value) }) })),
           Effect.tapError((error) => Effect.sync(() => { sink.push({ kind: "failed", name, error: wire(error) }) }))
         )
       })
@@ -137,16 +142,12 @@ export const runTraced = async <A, E>(
   options: RunOptions
 ): Promise<RunReport> => {
   const frames: FrameSnapshot[] = []
-  const scheduled: number[] = []
+  const scheduled: number[] = []  // priorities are recorded once the dispatcher is instrumented (P-T11)
   let primitives = 0
   let yields = 0
   let tracerDefect: string | null = null
 
   class TapeScheduler extends Scheduler.MixedScheduler {
-    override scheduleTask(task: () => void, priority: number): void {
-      scheduled.push(priority)
-      super.scheduleTask(task, priority)
-    }
     override shouldYield(fiber: any): boolean {
       const decision = super.shouldYield(fiber)
       if (decision) yields += 1

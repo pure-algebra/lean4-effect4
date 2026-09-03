@@ -93,14 +93,16 @@ def classDecl (rows : ServiceRow) : Decl :=
       heritage := some (.call (.call (.generic (.ident "Context.Service")
         [rows.name, rows.shapeType]) []) [.str rows.name]) }
 
-/-- `export const XRows = { "get": { params: 0 }, "put": { params: 1 } }`: the
-operation rows as data, read by the trace harness for arities. -/
+/-- `export const XRows = { "get": { params: 0, answer: "number" }, … }`: the
+operation rows as data. The trace harness reads arities from it and records
+answers *as typed*: a `void` answer encodes as unit whatever the host returns
+(rc.112's `Ref.set` returns the mutable ref at runtime under a `void` type). -/
 def rowsDecl (rows : ServiceRow) : Decl :=
   .const
     { doc := ["Operation rows of `" ++ rows.name ++ "`, for the trace harness."]
       name := rows.name ++ "Rows"
       value := .objectQuoted (rows.ops.map fun row =>
-        (row.name, .object [("params", .int row.params.length)])) }
+        (row.name, .object [("params", .int row.params.length), ("answer", .str row.tsAnswer)])) }
 
 /-- What an LLM is told, rendered from the rows it will be checked against. -/
 def sheet (rows : ServiceRow) : String :=

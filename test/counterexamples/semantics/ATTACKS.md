@@ -115,3 +115,28 @@ The pinned source is `effect@4.0.0-rc.112` under
   the operand-order-preserving union, and `docs/CAUSE-DAG.md` separation 2
   records that `Row` is not reused. Census rows `cause.combine-union`,
   `cause.squash`.
+
+## E4-SEM-CE-008 — a host-spelled mask table
+
+- **BROKE:** the host harness carrying its own list of masks, or comparing raw
+  traces, so that "agreement" drifts from the Lean projection.
+- **WITNESS:** `scripts/test-trace-goldens-gate.sh` mutant `removed-masks`: a
+  mask table without rows is refused as `mask table drift`;
+  `agreement_is_per_mask` in lean4-effects shows two traces equal under `m1`
+  and different raw.
+- **CLASS:** claim scope.
+- **FIXED-BY:** `generated/traces/masks.tsv` is a projection of
+  `Effect4.Trace.maskTable`; `effect4-trace` projects both sides with that
+  table and reports per mask.
+
+## E4-SEM-CE-009 — an answer encoded from its runtime value
+
+- **BROKE:** encoding a host answer from whatever value the runtime hands back.
+- **WITNESS:** the first host run of `harness/trace`: rc.112's `Ref.set`
+  returns the underlying mutable ref under a declared `Effect<void>`; the
+  untyped encoder threw inside the tracer and the trace ended in
+  `done {"failure":[]}` instead of `answer put []`.
+- **CLASS:** declared-versus-actual host type.
+- **FIXED-BY:** `ServiceRow.rowsDecl` carries each operation's answer spelling
+  and `wireAnswer` records a `void` answer as unit; `docs/TRACE-DAG.md`
+  separation 7.

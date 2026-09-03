@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Writes the Lean-expected traces of the harness family and the registered mask
+# table into generated/traces/ (or the directory given as $1). Each file carries
+# provenance rows (generator, regenerate command, inputs with digests, the
+# effects pin) followed by the rows Generate.lean prints.
+set -euo pipefail
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+out="${1:-$repo_root/generated/traces}"
+mkdir -p "$out"
+cd "$repo_root"
+lake build Effect4 >/dev/null
+sha() { shasum -a 256 "$1" | cut -d' ' -f1; }
+effects_rev="$(python3 -c "import json;m=json.load(open('lake-manifest.json'));print(next(p['rev'] for p in m['packages'] if p['name']=='effects'))")"
+provenance() {
+  printf 'format\teffect4-trace-golden-v1\n'
+  printf 'generator\tscripts/generate-trace-goldens.sh\tsha256=%s\n' "$(sha scripts/generate-trace-goldens.sh)"
+  printf 'regenerate\t./scripts/generate-trace-goldens.sh\n'
+  printf 'input\tharness/trace/Generate.lean\tsha256=%s\n' "$(sha harness/trace/Generate.lean)"
+  printf 'input\tEffect4/Meta/Derive.lean\tsha256=%s\n' "$(sha Effect4/Meta/Derive.lean)"
+  printf 'input\tEffect4/Target/TypeScript/Trace.lean\tsha256=%s\n' "$(sha Effect4/Target/TypeScript/Trace.lean)"
+  printf 'pin\teffects\t%s\n' "$effects_rev"
+}
+run() { lake env lean --run harness/trace/Generate.lean "$@" | grep -v '^warning: manifest out of date'; }
+{ provenance; run masks; } > "$out/masks.tsv"
+for program in $(run programs); do
+  { provenance; run golden "$program"; } > "$out/$program.empty.tsv"
+done
+echo "PASS wrote $(ls "$out" | wc -l | tr -d ' ') trace projections to $out"
