@@ -11,12 +11,12 @@ name = "Effect4Test"
 globs = ["Effect4Test.*"]
 
 # The generic effect algebra, morphisms, transport, families, and the generic
-# first-order Flow, and the shared trace alphabet. Exact commit of the flow-v3
-# branch of pure-algebra/lean4-effects, to be tagged v0.7.0.
+# first-order Flow, and the shared trace alphabet. Exact commit of tag v0.7.0 of
+# pure-algebra/lean4-effects (Flow v3: performCatch and value branches).
 [[require]]
 name = "effects"
 git = "https://github.com/pure-algebra/lean4-effects"
-rev = "a117157"
+rev = "a11715748b04f2369e5031e3350f30b99862a07f"
 
 # TypeScript as a target: syntax, renderer, identifier profile, host pins.
 # Exact commit of tag v0.4.2 of pure-algebra/lean4-typescript.
