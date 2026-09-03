@@ -187,4 +187,41 @@ def getter? : Option FlowProgram := program? "getter" getTable getRaw
 #guard (getter?.map (Flow.declarationLine cellRows)) =
   some "export declare const getter: (n: number) => Effect.Effect<number, never, Cell>;"
 
+/-! ## The Flow v3 slots are a member of an identifier, not an identifier
+
+`Slot.name` is a binder-position spelling and passes through
+`TypeScript.targetIdentifier` like every other generated name; the two caught
+edges of a `performCatch` are read out of the `Result` their block's answer
+binds, so their field is `Slot.member?` and the expression is
+`Expr.member` (lean4-typescript v0.4.3, survey finding H17). `Slot.path` is the
+rendered form, which is what a tuple projection needs
+(`E4-TARGET-CE-026`). -/
+
+#guard (Slot.catchValue ⟨4⟩).name = "a4"
+#guard (Slot.catchError ⟨4⟩).name = "a4"
+#guard (Slot.answer ⟨4⟩).name = "a4"
+-- Every name the profile now sees is a legal generated identifier; before the
+-- repair the two caught edges were not.
+#guard [Slot.param ⟨1⟩ 0, .temp 2, .answer ⟨4⟩, .decision ⟨4⟩, .catchValue ⟨4⟩,
+        .catchError ⟨4⟩, .region ⟨3⟩].all fun slot =>
+  _root_.TypeScript.targetIdentifier slot.name
+
+#guard (Slot.catchValue ⟨4⟩).member? = some "success"
+#guard (Slot.catchError ⟨4⟩).member? = some "failure"
+#guard (Slot.answer ⟨4⟩).member? = none
+
+#guard (Slot.catchValue ⟨4⟩).expr == _root_.TypeScript.Expr.member (.ident "a4") "success"
+#guard (Slot.catchError ⟨4⟩).expr == _root_.TypeScript.Expr.member (.ident "a4") "failure"
+#guard (Slot.answer ⟨4⟩).expr == _root_.TypeScript.Expr.ident "a4"
+
+-- The bytes are the bytes the forged identifier printed, which is why no
+-- golden moved.
+#guard _root_.TypeScript.Render.expr _root_.TypeScript.house0 0
+  (Slot.catchValue ⟨4⟩).expr = "a4.success"
+#guard _root_.TypeScript.Render.expr _root_.TypeScript.house0 0
+  (Slot.catchError ⟨4⟩).expr = "a4.failure"
+#guard (Slot.catchValue ⟨4⟩).path = "a4.success"
+#guard (Slot.catchError ⟨4⟩).path = "a4.failure"
+#guard (Slot.param ⟨1⟩ 0).path = "b1p0"
+
 end Effect4Test.Target.TypeScript.FlowLowerContract

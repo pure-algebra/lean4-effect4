@@ -423,6 +423,7 @@ private def exprKeysUnique : Expr → Bool
   | .generic fn _ => exprKeysUnique fn
   | .lambda _ body => exprKeysUnique body
   | .method target _ arguments => exprKeysUnique target && exprListKeysUnique arguments
+  | .member target _ => exprKeysUnique target
 termination_by value => sizeOf value
 decreasing_by all_goals decreasing_tactic
 

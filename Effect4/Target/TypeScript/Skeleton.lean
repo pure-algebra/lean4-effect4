@@ -98,19 +98,44 @@ deriving DecidableEq, Repr
 
 namespace Slot
 
-/-- The target spelling of a slot. -/
+/-- The identifier a slot lives in: a binder position spelling, and nothing
+else. The two caught edges are read out of the `Result` their block's answer
+binds, so their identifier is that answer's; the field is `member?`, not part
+of the name (survey finding H17). -/
 def name : Slot → String
   | .param block index => "b" ++ toString block.value ++ "p" ++ toString index
   | .temp index => "m" ++ toString index
   | .answer block => "a" ++ toString block.value
   | .decision block => "c" ++ toString block.value
-  | .catchValue block => "a" ++ toString block.value ++ ".success"
-  | .catchError block => "a" ++ toString block.value ++ ".failure"
+  | .catchValue block => "a" ++ toString block.value
+  | .catchError block => "a" ++ toString block.value
   | .region id => "r" ++ toString id.value
   | .input binder => binder
 
-/-- The slot as a target expression. -/
-def expr (slot : Slot) : Expr := .ident slot.name
+/-- The field a slot is read through, if it is read through one. Only the two
+Flow v3 edges are: rc.112's `Result` carries the value under `success` and the
+error under `failure`. -/
+def member? : Slot → Option String
+  | .catchValue _ => some "success"
+  | .catchError _ => some "failure"
+  | _ => none
+
+/-- The slot as a target expression: its identifier, or a member of it. Before
+`Expr.member` (lean4-typescript v0.4.3) the caught edges were handed to the
+pinned AST as the identifier `a4.success`, which renders correctly but puts a
+dot inside a name `TypeScript.targetIdentifier` is there to check. -/
+def expr (slot : Slot) : Expr :=
+  match slot.member? with
+  | none => .ident slot.name
+  | some field => .member (.ident slot.name) field
+
+/-- The slot's whole spelling: the identifier, then the field if it has one.
+This is what `Lowering.tupleArgs` projects (`E4-TARGET-CE-026`); it is the
+rendered form of `expr`, and only the renderer reads it. -/
+def path (slot : Slot) : String :=
+  match slot.member? with
+  | none => slot.name
+  | some field => slot.name ++ "." ++ field
 
 end Slot
 
@@ -353,7 +378,7 @@ request is a `Slot` rather than an `Expr` so that every request has a spelling
 def callOf (rows : ServiceRow) (spec : OpSpec) (request : Slot) : Expr :=
   if spec.requestTy == "void" then nullaryValue rows.receiver spec.name
   else if spec.arity == 1 then performCall rows.receiver spec.name [request.expr]
-  else performCall rows.receiver spec.name (tupleArgs request.name spec.arity)
+  else performCall rows.receiver spec.name (tupleArgs request.path spec.arity)
 
 end Lowering
 

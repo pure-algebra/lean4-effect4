@@ -18,7 +18,8 @@ one-argument call, with no refusal -- `E4-TARGET-CE-022`'s defect exactly,
 behind a fallthrough. It was unreachable only because every caller happened to
 pass `Slot.expr`, which was `.ident` for every slot; and `Slot.catchValue`
 already spelled `a4.success`, one AST repair away from not being an `.ident`
-at all.
+at all -- which is what `Expr.member` (lean4-typescript v0.4.3, survey finding
+H17) then made it, in the very next commit.
 
 The repair is not a refusal but an unrepresentable case: `tupleArgs` takes the
 request slot's *spelling*, and `callOf` takes a `Slot`, so every request has a
@@ -50,8 +51,9 @@ def retired (request : Expr) (arity : Nat) : List Expr :=
   | _ => [request]
 
 /-- A request expression that is not a bare identifier. Nothing on the path to
-`callOf` built one, which is why the defect never fired. -/
-def witness : Expr := .call (.ident "ticket") []
+`callOf` built one, which is why the defect never fired -- and `Slot.expr` of a
+caught edge is exactly this shape today. -/
+def witness : Expr := .member (.ident "a4") "success"
 
 -- One argument for a three-parameter operation, silently.
 #guard (retired witness 3).length = 1
@@ -105,7 +107,7 @@ error: Application type mismatch
 #check Lowering.callOf { name := "Jobs", ops := [] }
   (OpSpec.infallible "run" "readonly [JobQueue, number]" "number"
     [("conn", "JobQueue"), ("job", "number")])
-  (Expr.call (Expr.ident "ticket") [])
+  (Expr.member (Expr.ident "a4") "success")
 
 -- The same call on the slot itself is what the lowering writes, and it carries
 -- both arguments.
