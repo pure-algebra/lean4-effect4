@@ -59,6 +59,7 @@ import Effect4Test.Flow.RunnerAxiomReport
 import Effect4Test.Semantics.DenotationAxiomReport
 import Effect4Test.Semantics.LogicContract
 import Effect4Test.Semantics.LogicAxiomReport
+import Effect4Test.Semantics.EquivalenceAxiomReport
 import Effect4Test.Counterexamples.Flow.Runner
 import Effect4Test.Target.TypeScript.FlowLowerContract
 import Effect4Test.Target.TypeScript.LoweringCoverage

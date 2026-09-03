@@ -1030,3 +1030,16 @@ receipt: a specification is per operation, never per state — under the oracle
 `incr` answers `41`, not the runner's `42`, because the second `get` cannot see
 the `put`. `docs/DESIGN-BASIS.md` DB-06 no longer lists the obligation as
 pending. Axioms within the ceiling; nothing host-side is claimed.
+
+## Equivalence bridge landed, 2026-09-03
+
+`Effect4/Semantics/Equivalence.lean` (was a breadth stub): `Flow.Equiv` — two
+checked flows denote the same program against every tape and input — is an
+equivalence relation, and by T1/T2 it is exactly indistinguishability by the
+runner: `Equiv.runTape`/`runDefault` (result, unconsumed tape and log agree
+under every service, from every log, at any sufficient fuel), `Equiv.log`, and
+by the logic: `Equiv.wp`/`wlp`/`total`. `equiv_iff_denoteFuel` is the
+executable face (the fuelled denotations at `fuelFor` agree), and
+`equiv_of_erase_eq` says the denotation reads only the erased graph. This is
+the relation D3's T4 (structured ≡ dispatch) instantiates. Axiom report
+`Effect4Test/Semantics/EquivalenceAxiomReport.lean`; nothing host-side.
