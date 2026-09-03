@@ -2,19 +2,24 @@
 Axiom receipts for the structured form's label-scoping law
 (`test/contracts/flow-structured-lowering.contract.md`).
 
-Expected union: `propext` and `Quot.sound`, except for the two declarations
-whose *statements* name Effect4's own block lowering. `Flow.lowerBlockWith` and
-`Flow.structuredBody` spell block-local names and compare TypeScript types, so
-they already reach `Classical.choice` through Lean's UTF-8 folds; a theorem
-about their output inherits that. Both are admitted by exact declaration in
-`Effect4Test/Audit/AxiomGate.lean`. The scoping law itself, over the package's
-`emitWith`, is `String`-free and stays at the ceiling.
+Expected union: `propext` and `Quot.sound`, except for the declarations whose
+*statements* name Effect4's own block lowering or its printer.
+`Skeleton.render` spells block-local names and compares TypeScript types, so it
+already reaches `Classical.choice` through Lean's UTF-8 folds; a theorem about
+its output inherits that. Those four are admitted by exact declaration in
+`Effect4Test/Audit/AxiomGate.lean`. The scoping law itself, over
+`Structuring.emitWith`, and its discharge at the skeleton
+(`skeletonBlockWith_wellScoped`, `skeletonBody_wellScoped`) are `String`-free
+and stay at the ceiling — one crossing fewer than before packet D3.
 -/
 
 import Effect4.Target.TypeScript.StructureLaws
 
 #print axioms Effect4.Target.Structured.wellScoped
 #print axioms Effect4.Target.Structured.wellScopedList
+#print axioms Effect4.Target.Structured.Skel.wellScoped
+#print axioms Effect4.Target.Structured.Skel.wellScopedList
+#print axioms Effect4.Target.Structured.Skel.wellScopedList_append
 #print axioms Effect4.Target.Structured.wellScopedList_append
 #print axioms Effect4.Target.Structured.wellScopedList_of_forall
 #print axioms Effect4.Target.Structured.dominates_step
@@ -29,6 +34,11 @@ import Effect4.Target.TypeScript.StructureLaws
 #print axioms Effect4.Target.Structured.paramMove_wellScoped
 #print axioms Effect4.Target.Structured.graphOf_closed
 
--- The two exact crossings: their statements name the string-carrying lowering.
-#print axioms Effect4.Target.Structured.lowerBlockWith_wellScoped
+-- The exact crossings: their statements name the string-carrying lowering
+-- and the printer.
+#print axioms Effect4.Target.Structured.skeletonBlockWith_wellScoped
+#print axioms Effect4.Target.Structured.skeletonBody_wellScoped
+#print axioms Effect4.Target.Structured.render_wellScoped
+#print axioms Effect4.Target.Structured.renderList_wellScoped
+#print axioms Effect4.Target.Structured.renderCases_wellScoped
 #print axioms Effect4.Target.Structured.structuredBody_wellScoped

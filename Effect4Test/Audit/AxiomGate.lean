@@ -93,14 +93,18 @@ private def choiceImplementationDeclarations : List Name :=
   , ``Effect4.Target.TypeScript.EffectfulField.source?
   , ``Effect4.Target.TypeScript.EffectfulField.generate?
   , ``Effect4.Target.TypeScript.EffectfulField.source_contains_directional_rows
-  -- The two label-scoping laws whose *statements* name Effect4's own block
-  -- lowering. `Flow.lowerBlockWith` and `Flow.structuredBody` already cross the
-  -- boundary above (they spell `a<block>` and compare `spec.requestTy`), so a
-  -- theorem about their output inherits the crossing. The scoping law itself —
-  -- `emitNode_wellScoped`, `emitWith_wellScoped` over the package's `emitWith`
-  -- — is `String`-free and stays at the ceiling; only these two discharges of
-  -- its `BodyScoped` hypothesis are admitted, by exact declaration.
-  , ``Effect4.Target.Structured.lowerBlockWith_wellScoped
+  -- The label-scoping laws whose *statements* name Effect4's printer.
+  -- `Skeleton.render` spells `a<block>` and compares `spec.requestTy`, so it
+  -- already crosses the boundary above and a theorem about its output inherits
+  -- the crossing. The scoping law itself — `emitNode_wellScoped`,
+  -- `emitWith_wellScoped` over `Structuring.emitWith`, and its discharge for
+  -- Effect4's own lowering, `skeletonBlockWith_wellScoped` and
+  -- `skeletonBody_wellScoped` — is `String`-free at the skeleton and stays at
+  -- the ceiling; only the four transports through `render` are admitted, by
+  -- exact declaration.
+  , ``Effect4.Target.Structured.render_wellScoped
+  , ``Effect4.Target.Structured.renderList_wellScoped
+  , ``Effect4.Target.Structured.renderCases_wellScoped
   , ``Effect4.Target.Structured.structuredBody_wellScoped
   ]
 

@@ -1,5 +1,4 @@
 import Effect4.Target.TypeScript.FlowLower
-import Effect4.Flow.Region
 
 /-!
 # Target.TypeScript.RegionLower
@@ -31,6 +30,11 @@ continue
 then closes the scope, running every `acquireRelease` release latest-first
 with that same exit, each logging `finalizer` before its own operation. The
 syntax has no `try` arm, so no region ever lowers to `try/finally` (R4).
+
+Since packet D3 the lowering is `Skeleton.renderList rows ∘ skeletonDispatch`,
+and the body of a plain block inside a region is `Flow.skeletonBlockWith` with
+the region's own block variable, so the two dispatch forms share one
+definition instead of two copies.
 -/
 
 open TypeScript
@@ -63,88 +67,37 @@ def regionsRows : ServiceRow :=
                tsParams := [("region", "number"), ("exit", "Exit.Exit<unknown, unknown>")],
                answer := "Unit", tsAnswer := "void", cues := ["a release runs with the closing exit"] } ] }
 
-namespace Lowering
-
-/-- Open a region: report it, then run its blocks as a nested generator in its
-own scope whose exit `Effect.onExit` reports as `leave`; the value it returns
-becomes the parameter of the region's `continue_` block.
-lowering: rule.region-enter -/
-def regionEnter (region : RegionId) (body : List Stmt) : List Stmt :=
-  let name := "r" ++ toString region.value
-  [ .yieldDiscard (.call (.ident "regions.enter") [.int region.value])
-  , .scopedGen name body
-      (.lambda ["exit"] (.call (.ident "regions.leave") [.int region.value, .ident "exit"])) ]
-
-/-- Acquire inside a region: `Effect.acquireRelease` registers the release in
-the enclosing scope; the release reports `finalizer` with the closing exit
-before running its own operation. lowering: rule.region-acquire -/
-def regionAcquire (answer : String) (region : RegionId) (acquire : Expr) (release : Expr → Expr) :
-    Stmt :=
-  .constYield answer (.call (.ident "Effect.acquireRelease")
-    [ acquire
-    , .lambda ["a", "exit"]
-        (.method (.call (.ident "regions.finalizer") [.int region.value, .ident "exit"]) "pipe"
-          [.call (.ident "Effect.andThen") [release (.ident "a")]]) ])
-
-/-- Leave a region: the nested generator returns the value.
-lowering: rule.region-leave -/
-def regionLeave (value : Expr) : Stmt :=
-  .ret value
-
-/-- Transfer to `target` in the loop that owns `blockVar`. -/
-def gotoIn (blockVar : String) (target : BlockId) : List Stmt :=
-  [.assign blockVar (.int target.value), .continueTo none]
-
-end Lowering
-
 namespace Region
 
-/-- The call of a family operation on a request expression. -/
-def familyCall (rows : ServiceRow) (spec : OpSpec) (request : Expr) : Expr :=
-  if spec.requestTy == "void" then Lowering.nullaryValue rows.receiver spec.name
-  else Lowering.performCall rows.receiver spec.name [request]
+/-- The block variable of the loop that runs a region's blocks. -/
+def blockVarOf (region : RegionId) : String := "block" ++ toString region.value
 
-/-- The body of one plain block inside the loop that owns `blockVar`. -/
-def lowerPlain (rows : ServiceRow) (table : List OpSpec) (blockVar : String)
-    (block : RegionBlock String) (term : RawTerm) : Option (List Stmt) :=
-  let var (v : Var) : Expr := .ident (Flow.paramVar block.id v.index)
-  let transfer (target : BlockId) (values : List Expr) : List Stmt :=
-    Lowering.paramMove block.id target values ++ Lowering.gotoIn blockVar target
-  match term with
-  | .ret value => some [Lowering.flowRet (var value)]
-  | .jump target args => some (transfer target (args.map var))
-  | .perform operation request target args => do
-      let spec ← Flow.spec? table operation
-      let answer := "a" ++ toString block.id.value
-      let head ← match spec.kind with
-        | .family => some (Lowering.flowPerform answer (familyCall rows spec (var request)))
-        | .atom => some (Lowering.flowAtom answer spec.name (var request))
-        | .lit value => (Flow.literal? value).map (Lowering.flowLiteral answer)
-      some (head :: transfer target (args.map var ++ [.ident answer]))
-  | .choose decision left right args =>
-      let name := "c" ++ toString block.id.value
-      some (Lowering.chooseIf name decision
-        (transfer left (args.map var)) (transfer right (args.map var)))
+/-- The body of one plain block inside the loop that owns `blockVar`: the
+plain-flow body with the region's own transfer. -/
+def skeletonPlain (table : List OpSpec) (blockVar : String) (block : RegionBlock String)
+    (term : RawTerm) : Option (List Skeleton) :=
+  Flow.skeletonBlockWith table { id := block.id, params := block.params, term := term }
+    fun target values =>
+      some (Lowering.paramMove block.id target values ++ Lowering.gotoIn blockVar target)
 
 /-- The cases of every block labelled `label`, nested regions included;
 `fuel` bounds the nesting depth. -/
-def lowerCases (rows : ServiceRow) (table : List OpSpec) (flow : RegionFlow String) :
-    Nat → Option RegionId → String → Option (List (Nat × List Stmt))
+def skeletonCases (rows : ServiceRow) (table : List OpSpec) (flow : RegionFlow String) :
+    Nat → Option RegionId → String → Option (List (Nat × List Skeleton))
   | 0, _, _ => none
   | fuel + 1, label, blockVar =>
     (flow.blocks.filter (·.region == label)).mapM fun block => do
-      let var (v : Var) : Expr := .ident (Flow.paramVar block.id v.index)
+      let var (v : Var) : Slot := .param block.id v.index
       let body ← match block.term with
-        | .plain term => lowerPlain rows table blockVar block term
-        | .enter region body args => do
+        | .plain term => skeletonPlain table blockVar block term
+        | .enter region entry args => do
             let row ← flow.row? region
-            let inner ← lowerCases rows table flow fuel (some region) ("block" ++ toString region.value)
-            let name := "r" ++ toString region.value
-            some (Lowering.paramMove block.id body (args.map var) ++
+            let inner ← skeletonCases rows table flow fuel (some region) (blockVarOf region)
+            some (Skeleton.enterBlock block.id :: Lowering.paramMove block.id entry (args.map var) ++
               Lowering.regionEnter region
-                [ .letInit ("block" ++ toString region.value) (.int body.value)
-                , Lowering.dispatchLoopOn ("block" ++ toString region.value) inner ] ++
-              [ .assign (Flow.paramVar row.continue_ 0) (.ident name) ] ++
+                [ Skeleton.letBlockIndex (blockVarOf region) entry
+                , Lowering.dispatchLoopOn (blockVarOf region) inner ] ++
+              [ Skeleton.assign (.param row.continue_ 0) (.region region) ] ++
               Lowering.gotoIn blockVar row.continue_)
         | .acquire operation request release target args => do
             let region ← block.region
@@ -153,12 +106,12 @@ def lowerCases (rows : ServiceRow) (table : List OpSpec) (flow : RegionFlow Stri
             -- `Effect.acquireRelease` types its release `Effect<unknown, never, R>`:
             -- a release with an error row has no lowering (E4-TARGET-CE-012).
             guard (((rows.row? releaser.name).bind (·.error)).isNone)
-            let answer := "a" ++ toString block.id.value
-            some (Lowering.regionAcquire answer region (familyCall rows spec (var request))
-                (fun resource => familyCall rows releaser resource) ::
-              (Lowering.paramMove block.id target (args.map var ++ [.ident answer]) ++
+            let answer : Slot := .answer block.id
+            some (Skeleton.enterBlock block.id ::
+              Lowering.regionAcquire answer region operation spec (var request) releaser ::
+              (Lowering.paramMove block.id target (args.map var ++ [answer]) ++
                Lowering.gotoIn blockVar target))
-        | .leave value => some [Lowering.regionLeave (var value)]
+        | .leave value => some [Skeleton.enterBlock block.id, Lowering.regionLeave (var value)]
       pure (Lowering.blockCase block.id body)
 
 def familyOp? (table : List OpSpec) (id : OperationId) : Option OpSpec :=
@@ -173,28 +126,42 @@ def familyOps (table : List OpSpec) (flow : RegionFlow String) : List OpSpec :=
         (familyOp? table operation).toList ++ (familyOp? table release).toList
     | _ => []
 
+/-- Whether any plain block of a region flow chooses. -/
+def usesChoose (flow : RegionFlow String) : Bool :=
+  flow.blocks.any fun block =>
+    match block.term with | .plain term => term.isChoose | _ => false
+
+/-- The parameter declarations of every block of a region flow. -/
+def declarations (flow : RegionFlow String) : List Skeleton :=
+  flow.blocks.flatMap fun block =>
+    ((List.range block.params.length).zip block.params).map fun (index, ty) =>
+      Skeleton.declare (.param block.id index) ty
+
+/-- The services a region flow acquires at the top of its generator. -/
+def acquisitions (rows : ServiceRow) (table : List OpSpec) (flow : RegionFlow String) :
+    List Skeleton :=
+  (if (familyOps table flow).isEmpty then [] else [Skeleton.acquireService rows]) ++
+  (if usesChoose flow then [Skeleton.acquireService decisionsRows] else []) ++
+  (if flow.regions.isEmpty then [] else [Skeleton.acquireService regionsRows])
+
+/-- The control skeleton of the dispatch form with nested scopes. -/
+def skeletonDispatch (rows : ServiceRow) (program : RegionProgram) : Option (List Skeleton) := do
+  let flow := program.flow.flow
+  let cases ← skeletonCases rows program.table flow (flow.regions.length + 1) none "block"
+  pure (acquisitions rows program.table flow ++ declarations flow ++
+    [ Skeleton.assign (.param flow.entry 0) (.input program.param.1)
+    , Skeleton.letBlockIndex "block" flow.entry
+    , Lowering.dispatchLoop cases ])
+
 /-- Lower an admitted region flow to the dispatch form with nested scopes. -/
 def lowerDispatch (rows : ServiceRow) (program : RegionProgram) : Option ProgDecl := do
-  let flow := program.flow.flow
-  let cases ← lowerCases rows program.table flow (flow.regions.length + 1) none "block"
-  let declarations := flow.blocks.flatMap fun block =>
-    ((List.range block.params.length).zip block.params).map fun (index, ty) =>
-      Stmt.letDefinite (Flow.paramVar block.id index) ty
-  let usesChoose := flow.blocks.any fun block =>
-    match block.term with | .plain term => term.isChoose | _ => false
-  let acquire :=
-    (if (familyOps program.table flow).isEmpty then [] else [Lowering.serviceAcquire rows]) ++
-    (if usesChoose then [Lowering.serviceAcquire decisionsRows] else []) ++
-    (if flow.regions.isEmpty then [] else [Lowering.serviceAcquire regionsRows])
+  let body ← skeletonDispatch rows program
   pure { doc := ["Lowered from the region flow `" ++ program.name ++ "` over `" ++ rows.name ++
                  "` (dispatch form, nested scopes)."]
          name := program.name
          paramName := program.param.1
          paramType := program.param.2
-         stmts := acquire ++ declarations ++
-           [ Stmt.assign (Flow.paramVar flow.entry 0) (.ident program.param.1)
-           , Stmt.letInit "block" (.int flow.entry.value)
-           , Lowering.dispatchLoop cases ] }
+         stmts := Skeleton.renderList rows body }
 
 /-- The rules a region flow exercises: the v2 rules of its erasure, then the
 region rules it uses. -/
@@ -219,11 +186,9 @@ def errorChannel (rows : ServiceRow) (program : RegionProgram) : String :=
 
 def requirementChannel (rows : ServiceRow) (program : RegionProgram) : String :=
   let flow := program.flow.flow
-  let usesChoose := flow.blocks.any fun block =>
-    match block.term with | .plain term => term.isChoose | _ => false
   let parts :=
     (if (familyOps program.table flow).isEmpty then [] else [rows.name]) ++
-    (if usesChoose then ["Decisions"] else []) ++
+    (if usesChoose flow then ["Decisions"] else []) ++
     (if flow.regions.isEmpty then [] else ["Regions"])
   if parts.isEmpty then "never" else String.intercalate " | " parts
 
@@ -244,8 +209,7 @@ def regionModules? (families : List (ServiceRow × List FlowProgram × List Regi
     pure (rows.classDecl :: rows.rowsDecl :: (lowered ++ loweredRegions).map Decl.prog)
   let chooses := families.any fun (_, programs, regionPrograms) =>
     programs.any (fun program => Flow.usesDecisions program.flow.erase) ||
-    regionPrograms.any (fun program => program.flow.flow.blocks.any fun block =>
-      match block.term with | .plain term => term.isChoose | _ => false)
+    regionPrograms.any fun program => Region.usesChoose program.flow.flow
   let regions := families.any fun (_, _, regionPrograms) =>
     regionPrograms.any fun program => !program.flow.flow.regions.isEmpty
   let result := families.any fun (rows, _, _) => rows.usesResult

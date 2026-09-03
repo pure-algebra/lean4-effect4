@@ -21,6 +21,9 @@ open Effects Effect4.Flow Effect4.Target.EffectV4 Effect4.Target.Structured
 #check @Effect4.Target.Structured.wellScoped
 #check @Effect4.Target.Structured.wellScopedList
 #check @Effect4.Target.Structured.wellScopedCases
+#check @Effect4.Target.Structured.Skel.wellScoped
+#check @Effect4.Target.Structured.Skel.wellScopedList
+#check @Effect4.Target.Structured.Skel.wellScopedCases
 #check @Effect4.Target.Structured.GraphClosed
 #check @Effect4.Target.Structured.BodyScoped
 #check @Effect4.Target.Structured.blockLabels
@@ -28,8 +31,11 @@ open Effects Effect4.Flow Effect4.Target.EffectV4 Effect4.Target.Structured
 #check @Effect4.Target.Structured.dominates_entry
 #check @Effect4.Target.Structured.emitNode_wellScoped
 #check @Effect4.Target.Structured.emitWith_wellScoped
-#check @Effect4.Target.Structured.lowerBlockWith_wellScoped
+#check @Effect4.Target.Structured.skeletonBlockWith_wellScoped
 #check @Effect4.Target.Structured.graphOf_closed
+#check @Effect4.Target.Structured.render_wellScoped
+#check @Effect4.Target.Structured.renderList_wellScoped
+#check @Effect4.Target.Structured.skeletonBody_wellScoped
 #check @Effect4.Target.Structured.structuredBody_wellScoped
 #check (@Effect4.Target.Structured.BreakScopedStatement : Prop)
 
@@ -52,7 +58,9 @@ open Effects Effect4.Flow Effect4.Target.EffectV4 Effect4.Target.Structured
 
 /-! ## The emitted forms are well scoped, strictly
 
-`structuredBody_wellScoped` proves the `continue` half for every flow. These
+`skeletonBody_wellScoped` proves the `continue` half for every flow, and
+`structuredBody_wellScoped` carries it through `render` to the printed
+statements the receipts below inspect. These
 receipts also close the `break` half on the packet's own graphs, by running the
 strict predicate with empty initial scopes. -/
 
