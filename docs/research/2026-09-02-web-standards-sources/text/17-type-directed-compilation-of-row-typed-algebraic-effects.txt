@@ -1,0 +1,1509 @@
+--- PDF page 1 ---
+Type Directed Compilation of Row-Typed Algebraic Effects
+Daan Leijen
+Microsoft Research, USA
+daan@microsoft.com
+Abstract
+Algebraic effect handlers, are recently gaining in popularity as a
+purely functional approach to modeling effects. In this article, we
+give an end-to-end overview of practical algebraic effects in the
+context of a compiled implementation in the Koka language. In
+particular, we show how algebraic effects generalize over common
+constructs like exception handling, state, iterators and async-await.
+We give an effective type inference algorithm based on extensible
+effect rows using scoped labels, and a direct operational semantics.
+Finally, we show an efficient compilation scheme to common run-
+time platforms (such as JavaScript, the JVM, or .NET) using a type
+directed selective CPS translation.
+Categories and Subject Descriptors D.3.3 [ Programming Lan-
+guages]: Language Constructs and Features—Control structures
+General Terms Languages, Design
+Keywords Algebraic Effect Handlers, Type Inference, CPS trans-
+formation
+1. Introduction
+Algebraic effects (introduced by Plotkin and Power in 2002 [ 36])
+and algebraic effect handlers (introduced by Plotkin and Pretnar in
+2009 [35]), are recently gaining in popularity as a purely functional
+approach to modeling effects. As a restriction on general monads,
+algebraic effects come with various advantages: they can be freely
+composed, and there is a natural separation between their interface
+(as a set of operations) and their semantics (as a handler).
+At this time, implementations are usually based on libraries [18,
+20, 21, 51], or interpreted run-times [3, 16]. This is unfortunate, be-
+cause we believe that algebraic effect handlers have wide applica-
+bility and should be considered as a basic mechanism for handling
+effects and control-flow in a wide range of languages – including
+languages like JavaScript and C#, which have added various spe-
+cialized constructs over the years for concepts that are naturally ex-
+pressed using algebraic effects.
+In this article, we give an end-to-end overview of practical al-
+gebraic effects in the context of a compiled implementation in the
+Koka language. In particular:
+• In Section 2 we present a language design for algebraic effects,
+and show how algebraic effects subsume many control-flow
+constructs that are specialized in other languages, e.g. excep-
+tions, state, iterators, async-await, etc. In particular, iterators and
+async-await are complex constructs that can lead to subtle in-
+teractions with other features and require complex compilation
+mechanisms [4]. Being able to generalize over them using a sin-
+gle well-founded abstraction is a huge win.
+• Typing algebraic effects, such that we can check what effects
+functions can have, and can check that all effects are handled
+in a program, is a challenge. We show in Section 3 how we can
+leverage the row-types of Koka, based on scoped labels [ 24],
+to implement sound and complete type inference for algebraic
+effects. A problem with many effect systems is that the inferred
+types become large or difficult to understand – we have exten-
+sive experience with large effectful programs that suggests that
+the row-type approach of Koka works well in practice.
+• In Section 3.2 we show a novel approach to simplify polymor-
+phic effect types. This turns out to be beneficial for an efficient
+CPS translation too.
+• Operational semantics for algebraic effects in the literature are
+usually given in a continuation style calculus [3, 18] – this sim-
+plifies semantics and is convenient when reasoning about ef-
+fects. In contrast, we give a more direct operational semantics
+to algebraic effects using syntactical contexts [50] in Section 4
+(recent work by Lindley et al. [ 16, 30], and Kammar and Pret-
+nar [19] use a similar style of operational semantics). This style
+of semantics does not use continuations but captures the exe-
+cution context explicitly. For compilation purposes we believe
+this approach is more convenient. We also prove that well-typed
+programs cannot go ‘wrong’ under these semantics.
+• Section 5 describes efficient compilation of algebraic effects to
+common runtime platforms (like JavaScript) where we do not
+have full control over the runtime stack. We show how we can
+use a type directed selective CPS translation to compile effect
+handlers efficiently. It turns out that the standard CPS translation
+does not work for functions with polymorphic effect variables,
+and in Section 5.3.2 we show a novel technique where we use
+polymorphic code duplication to dynamically pick the correct
+runtime representation of such functions.
+There is a full implementation of algebraic effects in Koka, see [27]
+for detailed instructions on how to download it and program with
+algebraic effects.
+2. Overview
+We are going to demonstrate algebraic effects in the context of
+Koka – a call-by-value programming language with a type inference
+system that tracks effects. The type of a function has the form
+ ! ϵ  ′ signifying a function that takes an argument of type ,
+returns a result of type ′ and may have a side effectϵ. We can leave
+out the effect and write  !  ′ as a shorthand for the total function
+
+--- PDF page 2 ---
+without any side effect:  ! ⟨⟩  ′. A key observation on Moggi’s
+early work on monads [32] was that values and computations should
+be assigned a different type. Koka applies that principle where effect
+types only occur on function types; and any other type, likeint, truly
+designates an evaluated value that cannot have any effect.
+Koka has many features found in languages like ML and
+Haskell, such as type inference, algebraic data types and pattern
+matching, higher-order functions, impredicative polymorphism,
+open data types, etc. The pioneering feature of Koka is the use
+of row types with scoped labels to track effects in the type system,
+striking a balance between conciseness and simplicity. The system
+works well in practice and has been used to write significant pro-
+grams [26]. In this article we extend the original system [25] to use
+algebraic effects and handlers to define new effect types.
+In the following sections we give various examples of program-
+ming with algebraic effects, where we give particular attention to
+cases where algebraic effects subsume control-flow constructs that
+are specialized in many other languages, such as exceptions, itera-
+tors, and async-await. The interested reader may take a quick look
+ahead at Figure 4 to see the precise operational semantics of al-
+gebraic effect handlers. For the sake of concreteness, we show all
+examples in the current Koka implementation but we stress that the
+techniques shown here apply generally and can be applied in many
+other languages.
+There are various ways to understand algebraic effects and han-
+dlers. As described originally [ 35, 36], the signature of the effect
+operations forms a free algebra which gives rise to a free monad.
+Free monads provide a natural way to give semantics to effects,
+where handlers describe a fold over the algebra of operations [44].
+Using a more operational perspective, we can also view algebraic
+effects as resumable exceptions (or perhaps as a more structured
+form of delimited continuations). We therefore start our overview
+by modeling exceptional control flow.
+2.1. Exceptions as Algebraic Effects
+The exception effect exc can be defined in Koka as:
+effect exc {
+raise( s : string ) : a
+}
+This defines a new effect typeexc with a single primitive operation,
+raise with type string ! exc a for any a (Koka uses single letters
+for polymorphic type variables). The raise operation can be used
+just like any other function:
+fun safediv( x, y ) {
+if (y == 0) then raise(”divide by zero”) else x / y
+}
+Type inference will infer the type(int,int) ! exc int propagating
+the exception effect. Up to this point we have introduced the new
+effect type and the operation interface, but we have not yet defined
+what these operations mean. The semantics of an operation is given
+through an algebraic effecthandler which allows us todischarge the
+effect type. The standard way to discharge exceptions is by catching
+them, and we can write this using effect handlers as:
+fun catch(action,h) {
+handle(action) {
+raise(s) ! h(s)
+}
+}
+The handle construct for an effect takes an action to evaluate and
+a set of operation clauses. The inferred type of catch is:
+catch : ( action : () ! ⟨ exc | e⟩ a, h : string ! e a) ! e a
+The type is polymorphic in the result type a and its final effects
+e, where the action argument can have the exc effect and possibly
+more effects e. As we can see, the handle construct discharged the
+exc effect and the final result effect is just e. For example,
+fun zerodiv(x,y) {
+catch( { safediv(x,y) }, fun(s){ 0 } )
+}
+has type (int,int) ! ⟨⟩ int and is a total function. Note that the
+Koka syntax { safediv(x,y) } denotes an anonymous function that
+takes no arguments.
+Besides clauses for each operation, each handler can have a re-
+turn clause too: this is applied to the final result of the handled ac-
+tion. In the previous example, we just passed the result unchanged,
+but in general we may want to apply some transformation. For ex-
+ample, transforming exceptional computations into maybe values:
+fun to-maybe(action) {
+handle(action) {
+return x ! Just(x)
+raise(s) ! Nothing
+}}
+with the inferred type (() ! ⟨ exc | e⟩ a) ! e maybe⟨a⟩.
+The handle construct is actually syntactic sugar over the more
+primitive handler construct:
+handle(action) { ... }  (handler{ ... })( action)
+A handler just takes a set of operation clauses for an effect, and
+returns a function that discharges the effect over a given action. This
+allows us to expressto-maybe more concisely as a (function) value:
+val to-maybe = handler {
+return x ! Just(x)
+raise(s) ! Nothing
+}
+with the same type as before.
+Just like monadic programming, algebraic effects allows us to
+conveniently program with exceptions without having to explicitly
+plumb maybe values around. When using monads though we have
+to provide a Monad instance with a bind and return, and we need
+to create a separate discharge function. In contrast, with algebraic
+effects we only define the operation interface and the discharge is
+implicit in the handler definition.
+2.2. State: Resuming Operations
+The exception effect is somewhat special as it never resumes: any
+operations following the raise are never executed. Usually, opera-
+tions will resume with a specific result instead of cutting the com-
+putation short. For example, we can have an input effect:
+effect input {
+getstr() : string
+}
+where the operation getstr returns some input. We can use this as:
+fun hello() {
+val name = getstr()
+println(”Hello ” + name)
+}
+
+--- PDF page 3 ---
+An obvious implementation of getstr gets the input from the user,
+but we can just as well create a handler that takes a set of strings to
+provide as input, or always returns the same string:
+val always-there = handler {
+return x ! x
+getstr() ! resume(”there”)
+}
+Every operation clause in a handler brings an identifier resume in
+scope which takes as an argument the result of the operation and
+resumes the program at the invocation of the operation – if the
+resume occurs at the tail position (as in our example) it is much like
+a regular function call. Executingalways-there(hello) will output:
+> always-there(hello)
+Hello there
+As another example, we can define a stateful effect:
+effect state⟨s⟩ {
+get() : s
+put( x : s ) : ()
+}
+The state effect is polymorphic over the values s it stores. For
+example, in
+fun counter() {
+val i = get()
+if (i  0) then () else {
+println(”hi”)
+put(i - 1);
+counter()
+}
+}
+the type becomes () ! ⟨ state⟨int⟩,console,div | e⟩ () with the
+state instantiated to int. To define the state effect we could use the
+built-in state effect of Koka, but a cleaner way is to use parame-
+terized handlers. Such handlers take a parameter that is updated at
+every resume. Here is a possible definition for handling state:
+val state = handler(s) {
+return x ! (x,s)
+get() ! resume(s,s)
+put(s’) ! resume(s’,())
+}
+We see that the handler binds a parameter s (of the polymorphic
+type s), the current state. The return clause returns the final result
+tupled with the final state. Theresume function in a parameterized
+handler takes now multiple arguments: the first argument is the
+handler parameter used when handling the resumption , while the
+last argument is the result of the operation. Theget operation leaves
+the current state unchanged, while the put operation resumes with
+its passed-in state argument. The function returned by the handler
+construct now takes the initial state as an extra argument:
+state : ( x : s, action : () ! ⟨ state⟨s⟩ | e⟩ a) ! e (a,s)
+and we can use it as:
+> state(2,counter)
+hi
+hi
+2.3. Iterators
+Many contemporary languages, like JavaScript or C#, have spe-
+cial syntax and compilation rules for iterators and the yield state-
+ment [45]. Algebraic effects generalize over this where the yield
+effect can be defined as:
+effect yield⟨a⟩ {
+yield( item : a ) : ()
+}
+The yield effect generalizes over the values a that are yielded. For
+example, we can define an “iterator” over lists as:
+fun iterate( xs : list⟨a⟩ ) : yield⟨a⟩ () {
+match(xs) {
+Nil ! ()
+Cons(x,xx) ! { yield(x); iterate(xx) }
+}}
+and similarly for many data structures. Orthogonal to the iterators,
+we can define handlers that handle the yielded elements. For exam-
+ple, here is a generic foreach function that applies a function f to
+each element that is yielded and breaks the iteration whenf returns
+False:
+fun foreach(f : a ! e bool, act : () ! ⟨ yield⟨a⟩ | e⟩ ()) : e () {
+handle(action) {
+return x ! ()
+yield(x) ! if (f(x)) then resume(()) else ()
+}}
+Note how we can stop the iteration simply by not calling resume –
+and that we can define this behavior orthogonal to the definition of
+any particular iterator.
+2.4. Ambiguity: Multiple Resumptions
+You can enter a room once, yet leave it twice.
+— Peter Landin [22, 23]
+In the previous examples we looked at abstractions that never re-
+sume (e.g. exceptions), and abstractions that resume once (e.g. state
+and iterators). Such abstractions are common in most programming
+languages. Less common are abstractions that can resume more than
+once. Examples of this behavior can usually only be found in lan-
+guages that implement some variant of callcc [47]. A nice example
+to illustrate multiple resumptions is the ambiguity effect:
+effect amb {
+flip() : bool
+}
+where we have a flip operation that returns a boolean. As an exam-
+ple, we take the exclusive or of two flip operations:
+fun xor() : amb bool {
+val p = flip()
+val q = flip()
+((p || q) && ! ( p && q))
+}
+There are many ways we may assign semantics toflip. One handler
+just flips randomly:
+val coinflip = handler {
+flip() ! resume(random-bool())
+}
+
+--- PDF page 4 ---
+with type (action : () ! ⟨ amb,ndet | e⟩ a) ! ⟨ ndet | e⟩ a where
+random-bool induced the (built-in) non-deterministic effect ndet.
+A more interesting implementation though is to return all possible
+results, resuming twice for each flip: once with a False result, and
+once with a True result:
+val amb = handler {
+return x ! [x]
+flip() ! resume(False) + resume(True)
+}
+with type amb : ( action : () ! ⟨ amb | e⟩ a) ! e list ⟨a⟩,
+discharging the amb effect and lifting the result type a to a list⟨a⟩
+of all possible results. The return clause wraps the final result of
+the action in a list, while in the flip clause we append the results of
+both resumptions (using + ). Since each resume is handled by the
+same handler, the results of each resumption will indeed be of type
+list⟨a⟩. For example, executing amb(xor) leads to:
+> amb(xor)
+[False,True,True,False]
+Multiple resumptions should be used with care though as the com-
+position with other effects can sometimes be surprising. As an ex-
+ample, consider a program that uses both state and ambiguity:
+fun surprising() : ⟨state⟨int⟩,amb⟩ bool {
+val p = flip()
+val i = get()
+put(i + 1)
+if (i  1 && p) then xor() else False
+}
+We can use our earlier handlers to handle the state and ambiguity
+effects, but we can compose them in two ways, giving rise to two
+different semantics. First, we can handle the state outside the ambi-
+guity handler, giving rise to a “global” state that is shared between
+each ambiguous assumption.
+> state(0, { amb(surprising) })
+([False,False,True,True,False],2)
+The final result is a tuple of a list of booleans and the final state.
+Since the state is shared, only the first time (i  1 && p) is
+evaluated the result will be False (the first element of the result
+list). On the second resumption, xor() will be evaluated leading
+to the other 4 elements. If we change the order of the handler, we
+effectively make the state local to each ambiguous resumption:
+> amb( { state(0,surprising) } )
+[(False,1),(False,1)]
+and the result is now a list of tuples. and in both resumptions of the
+first flip the i will be the initial state leading to two False elements
+in the result list. Note how, in contrast to general monads, algebraic
+effects can be composed freely (since they are restricted to the free
+monad). This is quite an improvement over previous work [ 43,
+49] where composing different monads required implementing a
+combined monad by hand.
+2.5. Asynchronous Programming
+Similarly to iterators, many programming languages are adding
+support for async-await style asynchronous programming [46]. For
+example, web servers written in JavaScript using NodeJS are highly
+asynchronous and without language support the resulting programs
+are difficult to write and debug due to excessive callbacks (e.g. the
+so-called “pyramid of doom”). However, extending a language with
+async-await is non-trivial, both in terms of semantics, as well as
+compilation complexity where async methods need to be translated
+into state-machines to simulate co-routine behavior [4].
+Again, algebraic effect handlers generalize naturally over this
+pattern. In contrast to the earlier examples we can generally not
+implement this directly in our language but need to use primitives
+of the host system. For concreteness, we assume NodeJS as our host
+with a primitive to call readline:
+prim-readline : ( oninput : string ! ()) ! io ()
+which calls its argument call back on successful input. We can now
+define an asynchronous effect as:
+effect async {
+readline() : string
+}
+The handler for the asynchronous effect must effectively surround
+the entire program as it relies on the outer NodeJS event loop to
+re-invoke our callback when input is ready:
+val outer-async = handler {
+readline() ! prim-readline( resume )
+}
+We see that thereadline clause just returns and exits the program to
+the outer NodeJS event loop. However, it registered resume as the
+callback – effectively resuming with the result input when available.
+In the Koka implementation the core library defines async as an
+abstract effect with a predefined handler around themain function.
+The handled operations are more generic such that library writers
+can easily wrap any asynchronous primitives provided by the host
+system. Moreover, since it is just another effect, it composes natu-
+rally with any other algebraic effects the user defines, such as state
+and exceptions.
+Using asynchronous operations is straightforward now:
+fun ask-age() {
+println(”what is your name?”)
+val name = readline() // asynchronous!
+println(”hello ” + name)
+}
+Note that even though the previous example is now asynchronous,
+the program is written in an entirely straightforward manner where
+the type of the program signifies asynchronicity. In async-await
+style programming an async call site is signaled by an await key-
+word and each asynchronous method with an async keyword. This
+can be helpful for understanding the code. With our effect typing,
+the type signifies the effects code can have and the asynchronicity is
+immediately apparent through the inferred types of any expression.
+ask-age : () ! ⟨ async,console⟩ ()
+The previous example does not use asynchronicity in any essential
+way but in general it is used to serve multiple requests interleaved
+where no request handler will block on I/O operations. Moreover,
+the Koka core library provides primitives like async-all to start
+multiple asynchronous operations that are interleaved with each
+other.
+In future work we are planning to write highly robust asyn-
+chronous web servers using algebraic effect handlers. A similar
+technique as shown here is used in multi-core OCaml where one-
+shot algebraic effects are used to implement concurrency [11].
+
+--- PDF page 5 ---
+2.6. Domain Specific Effects: Parsing
+All the previous examples are well-known effects and are available
+in various forms in other languages too. However, we can also im-
+plement domain-specific effects. For example, in a compiler we may
+have a name-supply effect that generates fresh names, a warning
+effect for logging warnings, or an inference effect that maintains a
+typing environment. Like monads, encapsulating effects allows for
+abstraction over a particular implementation and removes the need
+to explicitly deal with environments and result values.
+As an example of such domain-specific effect, we show how
+to implement a parse effect to implement parser combinators [ 17,
+28]. In particular, the effect will abstract over the current input state,
+handling failure, and combining multiple parse results. Following
+the original example of Wu et al. [51], we first extend theamb effect
+of Section 2.4 to describe multiple parse results and failures:
+effect many {
+flip() : bool
+fail() : a
+}
+Using flip we can already describe choice between two parsers:
+fun choice(p1,p2) { if (flip()) then p1() else p2() }
+The choice combinator seems somewhat magical since it uses the
+flip operation as an oracle but we will see that this allows for
+multiple evaluation strategies. Using choice, we can define the
+many combinator for parsing a sequence of zero or morep parsers:
+fun many(p) { choice( { many1(p) }, { Nil } ) }
+fun many1(p) { Cons(p(), many(p)) }
+where many has the inferred type
+many : ( p : () ! ⟨ many,div | e⟩ a) ! ⟨ many,div | e⟩ list⟨a⟩
+A possible handler for the many effect returns all possible results:
+val solutions = handler {
+return x ! [x]
+fail() ! []
+flip() ! resume(False) + resume(True)
+}
+Another handler is eager which returns the first successful result:
+val eager = handler {
+return x ! Just(x)
+fail() ! Nothing
+flip() ! match(resume(False)) {
+Nothing ! resume(True)
+Just(x) ! Just(x)
+}}
+Here, the False branch is taken first and the result examined to
+determine whether we should explore the True branch or not. The
+types of these handlers are:
+fun solutions : (() ! ⟨ many | e⟩ a) ! e list⟨a⟩
+fun eager : (() ! ⟨ many | e⟩ a) ! e maybe⟨a⟩
+To do actual parsing, we are defining theparse effect with just one
+operation to test if the current input satisfies a predicate:
+effect parse { satisfy⟨a⟩(string ! maybe⟨(a,string)⟩) : a }
+Note that the result type a is locally quantified, e.g. the type of
+satisfy is
+satisfy : forall⟨a⟩ (string ! maybe⟨(a,string)⟩) ! parse a
+A handler for the parse effect can be defined as:
+val parse = handler(input) {
+return x ! (x,input)
+satisfy(p) ! match(p(input)) {
+Nothing ! fail()
+Just((x,rest)) ! resume(rest,x)
+}}
+In this handler, we usefail operation from themany effect to handle
+failure. The handler is parameterized with the current input string
+and the final result is tupled with any remaining input:
+parse : (string,() ! ⟨parse,many | e⟩ a) ! ⟨many | e⟩ (a,string)
+With the satisfy combinator we can create basic parsers to recog-
+nize symbols and digits:
+fun symbol(c : char) : parse char {
+satisfy( fun(input) { match(input.first) {
+Just((d,rest)) | d == c ! Just((c,rest))
+_ ! Nothing
+})
+}
+fun digit(c : char) : parse int {
+satisfy( fun(input) { match(input.first) {
+Just((d,rest)) | d.digit? ! Just((d - ’0’) .int,rest))
+_ ! Nothing
+})
+}
+We combine thedigit parser with many1 in order to parse numbers:
+fun number() {
+many1(digit).foldl(0, fun(n,d) { 10 * n + d })
+}
+With these building blocks in place, parsing simple expressions
+becomes straightforward:
+fun expr() : ⟨div,parse,many⟩ int {
+choice {
+val i : int = term()
+symbol(’+’)
+i + term()
+}
+{ term() }
+}
+fun term() { fun factor() {
+choice { choice(number) {
+val i : int = factor() symbol(’(’)
+symbol(’*’) val i = expr()
+val j = factor() symbol(’)’)
+i * j i
+} }
+{ factor() } }
+}
+Using the expression parserexpr, we can now use the thesolutions
+and parse handlers to apply the parsers to simple expressions:
+
+--- PDF page 6 ---
+Expressions e ::= e(e) application
+j val x = e; e binding
+j handlefhg(e) handler
+j v value
+Values v ::= x j c j op j x: e
+Clauses h ::= return x ! e
+j op(x) ! e; h op ̸2 h
+Types  k ::= k type variable
+j ck0 ⟨ k1
+1 ; :::; kn
+n ⟩ k0 = ( k1; :::; kn) ! k
+Kinds k ::=  j e values, effects
+j k effect constants
+j (k1; :::; kn) ! k type constructor
+Type scheme  ::= 8k:  j  
+Constants (); bool ::  unit, booleans
+(_ ! _ _) :: ( ; e; ) !  functions
+⟨⟩ :: e empty effect
+⟨_ j _⟩ :: ( k; e) ! e effect extension
+Total functions 1 ! 2
+:= 1 ! ⟨⟩ 2
+Effects ϵ :=  e
+Effect variables  := e
+Effect labels l := ck⟨1; :::; n⟩ k = ::: ! k
+Closed effects ⟨l1; :::; ln⟩ := ⟨l1; :::; ln j ⟨⟩ ⟩
+Effect extension ⟨l1; :::; ln j ϵ⟩ := ⟨l1 j ::: ⟨ln j ϵ⟩ ::: ⟩
+Figure 1. Syntax of expressions, types, and kinds
+ϵ = ϵ [eq-refl]
+ϵ1 = ϵ2
+⟨l j ϵ1⟩ = ⟨l j ϵ2⟩ [ൾඊ-ඁൾൺൽ]
+ϵ1 = ϵ2 ϵ2 = ϵ3
+ϵ1 = ϵ3
+[ൾඊ-ඍඋൺඇඌ]
+l1 ̸= l2
+⟨l1 j ⟨l2 j ϵ⟩ ⟩ = ⟨l2 j ⟨l1 j ϵ⟩ ⟩ [ൾඊ-ඌඐൺඉ]
+c ̸= c′
+c⟨1; :::; n⟩ ̸= c′⟨ ′
+1; :::; ′
+n⟩ [ඎඇൾඊ-අൺൻൾඅ]
+Figure 2. Row equivalence
+> solutions{ parse(”1+2*3”, expr) }
+[(7,””),(3,”*3”),(1,”+2*3”)]
+Changing the parsing strategy it orthogonal to the implementation
+of the parsers, and we can apply theeager handler to return the first
+successful parse result:
+> eager{ parse(”1+2*3”, expr) }
+Just((7,””))
+We hope this section gives a taste of the power of abstraction offered
+by algebraic effect handlers. In general, any free monad can be
+readily expressed with algebraic effects.
+3. Type Rules
+In this section we give a formal definition of our polymorphic row-
+based effect system for the core calculus of Koka. The calculus
+and its type system has been in use for many years now and has
+been developed from the start using effect types based on rows with
+scoped labels [24]. Originally, user-defined effects were described
+using a monadic approach [49] but it turns out that algebraic effects
+fit the original type system well with almost no changes. The new
+system based on algebraic effects is much simpler and allows for
+free composition of user defined effects.
+Figure 1 defines the syntax of types and expressions. The expres-
+sion grammar is straightforward but we distinguish values v from
+expressions e that can have effects. Values consist of variables x,
+constants c, operations op, and lambda’s. Expression include han-
+dler expressions handlefhg(e) where h is a set of operation clauses.
+The handler construct of the previous section can be seen as syn-
+tactic sugar, where:
+handlerfhg  f: handlefhg(f())
+For simplicity we assume that all operations take just one argument.
+We also use membership notation op(x) ! e 2 h to denote that h
+contains a particular operation clause. Sometimes we shorten this
+to op 2 h.
+Well-formed types are guaranteed through kinds k which we
+denote using a superscript, as in  k. We have the usual kinds for
+value types  and type constructors !, but because we use a row
+based effect system, we also have kinds for effect rows ϵ, and
+effect constants (or effect labels) k. When the kind of a type is
+immediately apparent or not relevant, we usually leave it out. For
+clarity, we use  for regular type variables, and  for effect type
+variables. Similarly, we use ϵ for effect row types, and l for effect
+constants/labels.
+Effect types are defined as a row of effect labels l. Such row is
+either empty ⟨⟩, a polymorphic effect variable , or an extension
+of an effect ϵ with a label l, written as ⟨l j ϵ⟩. Effect labels must
+start with a constant and are never polymorphic. By construction,
+effect type are either a closed effect of the form ⟨l1; :::; ln⟩, or an
+open effect of the form ⟨l1; :::; ln j ⟩.
+We cannot use direct equality on types since we would like to re-
+gard effect rows equivalent up to the order of their effect constants.
+Figure 2 defines an equivalence relation ( =) between effect rows.
+This relation is essentially the same as for the _scopedlabels record
+system [24] with the difference that we ignore the type arguments
+when comparing labels. By reusing the scoped labels approach, we
+also get a deterministic and terminating unification algorithm which
+is essential for type inference. Moreover, in contrast to other record
+calculi [14, 29, 38, 42], our approach does not require extra con-
+straints, like lacks or absence constraints, on the types which sim-
+plifies the type system significantly. The system also allows dupli-
+cate labels, where an effect ⟨exc; exc⟩ is legal and different from
+⟨exc⟩. There are some use-cases for this but in practice we have not
+found many uses for duplicate effects (nor any drawbacks).
+3.1. Type Inference
+The type rules for our calculus is given in Figure3. A type environ-
+ment   maps variables to types and can be extended using a comma:
+if  ′ equals  ; x : , then  ′(x) =  and  ′(y) =  ( y) for any
+x ̸= y. A type rule   ⊢ e :  j ϵ states that under environment  ,
+the expression e has type  with possible effects ϵ.
+The type rules are quite standard. The rule ඏ ൺඋderives the type
+of a variable x with an arbitrary effect ϵ. We may have expected to
+derive only the total effect ⟨⟩ since the evaluation of a variable has
+no effect at all. However, there is no rule that lets one upgrade the
+final effect and instead we need to pick the final effect right away.
+Another way to look at this is that since the variable evaluation has
+
+--- PDF page 7 ---
+ (x) = 
+  ⊢ x :  j ϵ [V ൺඋ]
+ ; x : 1 ⊢ e : 2 j ϵ′
+  ⊢ x: e : 1 ! ϵ′ 2 j ϵ [Lൺආ ]
+  ⊢ e1 :  j ϵ  ; x :  ⊢ e2 :  j ϵ
+  ⊢ val x = e1; e2 :  j ϵ [Lൾඍ]
+  ⊢ e1 : 2 ! ϵ j ϵ   ⊢ e2 : 2 j ϵ
+  ⊢ e1(e2) :  j ϵ [Aඉඉ]
+  ⊢ e :  j ⟨⟩  ̸2 ftv( )
+  ⊢ e : 8: j ϵ [Gൾඇ]
+  ⊢ e : 8: j ϵ
+  ⊢ e :  [ 7!  ] j ϵ [Iඇඌඍ]
+  ⊢ e :  j ⟨ljϵ⟩ (l) = fop1; :::; opng
+ ; x :  ⊢ er : r j ϵ   ⊢ opi : i ! ⟨l⟩  ′
+i j ⟨⟩
+ ; resume :  ′
+i ! ϵ r; xi : i ⊢ ei : r j ϵ
+  ⊢ handlef op1(x1) ! e1; :::; opn(xn) ! en; return x ! er g(e) : r j ϵ [Hൺඇൽඅൾ]
+Figure 3. Type rules.
+no effect, we are free to assume any arbitrary effect. We use the
+V ൺඋrule too for operations op and constants c where we assume the
+types of those are part of the initial environment.
+The අൺආ rule is similar in that it assumes any effect ϵ for the
+result since the evaluation of a lambda is a value. At this rule, we
+also see how the effect derived for the body of a lambda ϵ′ shifts
+to the derived function type 1 ! ϵ′ 2. Rule ൺඉඉ is standard and
+derives an effect ϵ requiring that its premises derive the same effect
+as the function effect.
+Rules ංඇඌඍand ඀ൾඇ instantiate and generalize types. The general-
+ization rule has an interesting twist as it requires the derived effect
+to be total. When combining our calculus with polymorphic muta-
+ble reference cells, this is required to ensure a sound semantics. This
+is the semantic equivalent to the syntactic value restriction in ML.
+In our core calculus we cannot define polymorphic reference cells
+directly so the restriction is not necessary persé but it seems good
+taste to leave it in as it is required for the full Koka language.
+Finally, the ඁൺඇൽඅൾ rule types effect handlers. We assume that
+effect declarations populate an initial environment 0 with the types
+of declared operations, and also a signature environment  that
+maps declared effect labels to the set of operations that belong to
+it. We also assume that all operations have unique names, such that
+given the operation names, we can uniquely determine to which
+effect l they belong.
+The rule ඁൺඇൽඅൾ requires that all operations in the signature(l)
+are part of the handler, and we reject handlers that do not handle all
+operations that are part of the effect l. The return clause is typed
+with x :  where  is the result type of the handled action. All
+clauses must have the same result type r and effect ϵ. For each
+operation clause opi(xi) ! ei we first look up the type of opi in
+the environment as i ! ⟨l⟩  ′
+i , and bind xi to the argument type
+of the operations, and bind resume to the function  ′
+i ! r where
+the argument type of resume is the result type of the operation. The
+derived type of the handler is a function that discharges the effect
+type l.
+3.2. Simplifying Types
+The rule ൺඉඉ is a little surprising since it requires both the effects of
+the function and the arguments to match. This only works because
+we set things up to always be able to infer the effects of functions
+that are ‘open’ – i.e. have a polymorphic in their tail. For example,
+consider the identity function:
+id = x: x
+If we assign the valid type 8:  ! ⟨⟩  to the id function, we get
+into trouble quickly. For example, the application id(raise(”hi”))
+would not type check since the effect ofid is total while the effect of
+the argument contains exc. Of course, the type inference algorithm
+always infers a most general type for id, namely 8 :  !  
+which has no such problems.
+In practice though we wish to simplify the types more and leave
+out ‘obvious’ polymorphism. In Koka we adopted two extra type
+rules to achieve this. The first rule opens closed effects of function
+types:
+  ⊢ e : 1 ! ⟨l1; :::; ln⟩ 2 j ϵ
+  ⊢ e : 1 ! ⟨l1; :::; ln j ϵ′⟩ 2 j ϵ [ඈඉൾඇ]
+With this rule, we can type the application id(raise(”hi”)) even
+with the simpler type assigned to id as we can open the effect
+type of id using the ඈඉൾඇ rule to match the effect of raise(”hi”).
+We combine this with a closing rule (which is just an instance of
+ංඇඌඍ/඀ൾඇ):
+  ⊢ e : 8: 1 ! ⟨l1; :::; ln j ⟩ 2 j ϵ
+ ̸2 ftv(1; 2; l1; :::; ln)
+  ⊢ e : 8: 1 ! ⟨l1; :::; ln⟩ 2 j ϵ [ർඅඈඌൾ]
+During inference, the rule ർඅඈඌൾ is applied (when possible) before
+assigning a type to a let-bound variable. In general, such technique
+would lead to incompleteness where some programs that were well-
+typed before, may now be rejected sinceർඅඈඌൾassigns a less general
+type. However, due to ඈඉൾඇ this is not the case: at every occurrence
+of such let-bound variable the ruleඈඉൾඇ can always be applied (pos-
+sibly surrounded by ංඇඌඍ/඀ൾඇ) to lead to the original most general
+type – i.e. even though the types are simplified, the set of typeable
+programs is unchanged.
+We have significant experience with the Koka type system in
+practice with several large programs (up to 14.000 loc) and type
+simplification works well in practice. As we will see later in Sec-
+tion 5, the ඈඉൾඇ rule actually proves essential for an efficient CPS
+translation of algebraic effects.
+3.3. Type Inference
+The type system as defined is closely related to the core type sys-
+tem originally presented for Koka [ 25], with the main differences
+that this paper uses a simpler presentation without treating isolated
+state, and we added the rule for handlers. Since the handler rule is
+straightforward and can be encoded using regular applications and
+lambdas, the results in [25] carry over directly.
+In particular, we can define syntax directed type rules that are
+sound and complete with respect to the rules in Figure 3, and there
+exists a sound and complete type inference algorithm. Due to this,
+it was straightforward to change the Koka compiler to type check
+algebraic effects and handlers as there were no changes to the core
+type inference algorithm. The main difficulties that needed to be
+overcome were found in an efficient compilation to common run-
+time platforms as described in Section 5.
+4. Operational Semantics
+In this section we define a precise semantics for our core language
+with algebraic effect handlers, and show that well-typed programs
+
+--- PDF page 8 ---
+Evaluation contexts:
+E ::= [] j E(e) j v(E) j val x = E; e j handlefhg(E)
+Xop ::= [] j Xop(e) j v(Xop) j val x = Xop; e
+j handlefhg(Xop) if op ̸2 h
+Reduction rules:
+() c(v)   ! (c; v) if (c; v) is defined
+() (x: e)(v)   ! e[x 7! v]
+(let) val x = v; e   ! e[x 7! v]
+(return) handlefhg(v)   ! e[x 7! v]
+where
+return x ! e 2 h
+(handle) handlefhg(Xop[op(v)])   ! e[x 7! v; resume 7! y: handlefhg(Xop[y])]
+where
+op(x) ! e 2 h
+Figure 4. Reduction rules and evaluation contexts
+cannot go ‘wrong’. Even though algebraic effects are originally
+conceived with a semantics in category theory, we will give a more
+regular operational semantics. The main reason to do so is that
+a direct operational semantics is more useful as a guidance for
+efficient compilation as described in Section 5. Moreover, using a
+direct operational semantics may help exposing algebraic effects to
+a wider audience and allows us to use a traditional style proof of
+soundness.
+The operational semantics of our calculus is given in Figure 4
+and consists of just five evaluation rules. We use two evaluation
+contexts: the E context is the usual one for a call-by-value lambda
+calculus. The Xop context is used for handlers. In particular, it eval-
+uates down through any handlers that do not handle the operation
+op. This is used to express concisely that the ‘nearest enclosing han-
+dler’ handles particular operations.
+The first three reduction rules, (), (), and (let) are the stan-
+dard rules of call-by-value evaluation. The final two rules evaluate
+handlers. Rule (return) applies the return clause of a handler when
+the argument is fully evaluated. Note that this evaluation rule sub-
+sumes both lambda- and let-bindings and we can define both as a
+reduction to a handler without any operations:
+(x: e1)(e2)  handlefreturn x ! e1g(e2)
+and
+val x = e1; e2  handlefreturn x ! e2g(e1)
+The next rule, (handle), is where all the action is. Here we see how
+algebraic effect handlers are closely related to delimited continua-
+tions as the evaluation rules captures a delimited ’stack’Xop[op(v)]
+under the handler h. Using a Xop context ensures by construction
+that only the innermost handler containing a clause forop, can han-
+dle the operation op(v). Evaluation continues with the expression
+ϵ but besides binding the parameter x to v, also the resume vari-
+able is bound to the continuation: y: handlefhg(Xop[y]). Apply-
+ing resumeresults in continuing evaluation atXop with the supplied
+argument as the result. Moreover, the continued evaluation occurs
+again under the handler h.
+Resuming under the same handler is important as it ensures that
+our semantics correspond to the original categorical interpretation
+of algebraic effect handlers as a fold over the effect algebra [35]. If
+the continuation is not resumed under the same handler, it behaves
+more like a case statement doing only one level of the fold. Such
+handlers are sometimes called shallow handlers [18, 30].
+For this article we do not formalize parameterized handlers as
+shown in Section 2.2. However the reduction rule is straightfor-
+ward. For example, a handler with a single parameter p is reduced
+as:
+handlefhg(p = vp)(Xop[op(v)])
+  ! f op(v) ! e 2 h g
+e[x 7! v; p 7! vp; resume 7! q y: handlefhg(p = q)(Xop[y])]
+Using the reduction rules of Figure 4 we can define the evaluation
+function (7  !), where E[e] 7  !E[e′] iff e   !e′. We also define
+the function 7  ! !as the reflexive and transitive closure of 7  !.
+4.1. Optimizing Tail-Resumptions
+From the reduction rules, we can already see some possible op-
+timizations that can be used to compiler handlers efficiently. For
+example, if a handler never resumes, we can treat it similarly to
+how exceptions are handled and do not need to capture the ex-
+ecution context. An important other optimization can apply to
+tail resumptions , i.e. a resume that occurs in the tail position of
+an operation clause. Suppose we have an operations clause h with
+op(x) ! resume(e) 2 h and resume ̸2 fv(e). In that case, we can
+derive:
+handlefhg(Xop[op(v)])
+  !
+resume(e)[x 7! v; resume 7! y: handlefhg(Xop[y])]
+  !
+(y: handlefhg(Xop[y]))(e[x 7! v])
+  ! f e[x 7! v]   ! v′ g
+(y: handlefhg(Xop[y]))(v′)
+  !
+handlefhg(Xop[v′])
+That means that in an implementation we do not need to capture and
+restore the context Xop at all but can directly evaluate the operation
+expression as if it was a regular function call. Of course, special pre-
+cautions must be taken that any operations yielded in the evaluation
+of e[x 7! v] are not handled by any handler in handlefhg(Xop[]).
+4.2. Comparison with Delimited Continuations
+Shan [41] has shown that various variants of delimited continua-
+tions can be defined in terms of each other. Following Kammar et
+al. [18], we can define a variant of Danvy and Filinski’s [ 7] shift
+and reset operators, called shift0 and reset0, as
+reset0(Xs[shift0(k: e)])   !e[k 7! x: reset0(Xs[x])]
+
+--- PDF page 9 ---
+where we write Xs for a context that does not contain a reset0.
+Therefore, the shift0 captures the continuation up to the nearest
+enclosing reset0. Just like handlers, the captured continuation is
+itself also wrapped in areset0. Unlike handlers though, the handling
+is done by the shift0 directly instead of being done by the delimiter
+reset0. From the reduction rule, we can easily see that we can
+implement delimited continuations using algebraic effect handlers,
+where shift0 is an operation and Xs  Xshift0:
+reset0(e) := handlef shift0(f) ! f(resume) g(e)
+Using this definition, we can show it is equivalent to the original
+reduction rule for delimited continuations, where we writeh for the
+handler shift0(f) ! f(resume):
+reset0(Xs[shift0(k: e)]):=
+handlefhg(Xs[shift0(k: e)])
+  !
+(f(resume))[f 7! k: e; resume 7! x: handlefhg(Xs[x])]
+  !
+(k: e)(x: handlefhg(Xs[x]))
+  !
+e[k 7! x: handlefhg(Xs[x])]:=
+e[k 7! x: reset0(Xs[x])]
+Even though we can define this equivalence in our untyped calculus,
+we cannot give a general type to theshift0 operation in our system.
+To generally type shift and reset operations a more expressive type
+system with answer types is required [1, 6]. Kammar et al. [18] also
+show that it is possible to go the other direction and implement
+handlers using delimited continuations but that solution requires
+mutable reference cells to implement a global handler stack.
+4.3. Soundness: Well Typed Effect Handlers Cannot Go
+Wrong
+Under our semantics, well-typed programs cannot go wrong:
+Theorem 1. (Semantic soundness)
+If  ⊢ e :  j ϵ then either e * or e 7  ! !v where  ⊢ v :  j ϵ.
+where we use the notation e * for a never-ending reduction. The
+proof of this theorem consists of showing two main lemmas:
+• Show that reduction in the operational semantics preserves well-
+typing, i.e. subject reduction, and,
+• Show that faulty expressions are not typeable.
+If programs are closed and well-typed we know from subject reduc-
+tion that we can only reduce to well-typed terms, which are either
+faulty, a value, or an expression containing a further redex. Since
+faulty expressions are not typeable, it must be that evaluation either
+produces a well-type value or diverges. (Often a soundness proof
+is done using progress instead of faulty expressions but we use the
+latter technique since it turns out that for proving state isolation [25]
+this technique works better).
+Subject reduction is stated more precisely as:
+Lemma 1. (Subject reduction)
+If   ⊢ e1 :  j ϵ and e1 7  !e2 then   ⊢ e2 :  j ϵ.
+To show that subject reduction holds we need to establish various
+other lemmas. Two particularly important ones are the substitution
+and replacement lemmas:
+Lemma 2. (Substitution)
+If  ; x : 8:  ⊢ e :  ′ j ϵ where x ̸2 dom( ),   ⊢ v :  j ϵ, and
+ ̸ \ ftv( ), then   ⊢ e[x 7! v] :  ′ j ϵ.
+e ::= x j c j e(e)
+j ϵx : : e
+j val x = e; e binding
+j e⟨⟩ j : e type application/abstraction
+j e⟨ ⟨ϵ⟩ ⟩ opening an effect
+j handle⟨l⟩fhg(e)
+Figure 5. Syntax of explicitly typed Koka
+Lemma 3. (Replacement)
+If D is a deduction ending in   ⊢ E[e] :  j ϵ, and D′ is a sub-
+deduction of D ending in  ′ ⊢ e :  ′ j ϵ′ and occurs at the hole of
+E, and   ⊢ e′ :  ′ j ϵ′, then we have that   ⊢ E[e′] :  j ϵ.
+The proofs of these lemmas carry over directly from [ 50]. Using
+these lemmas we can prove subject reduction. We focus on the
+interesting cases for (let), (return) and (handle):
+Proof. (Subject reduction)
+We prove by induction over the reduction rules of   !.
+case val x = v; e   !e[x 7! v]: From අൾඍ we have   ⊢ v :  j ϵ,
+and  ; x :  ⊢ e :  j ϵ, and by Lemma 2, we can derive that
+  ⊢ e[x 7! v] :  j ϵ.
+case handlefhg(v)   !e[x 7! v] with return x ! e 2 h (0): From
+ඁൺඇൽඅൾ we have   ⊢ v :  j _ (1), and  ; x :  ⊢ e : r j ϵ. Using
+(1) and lemma 2 we can derive   ⊢ e[x 7! v] : r j ϵ.
+case handlefhg(Xop[op(v)])   !e[x 7! v; resume 7! y: handle
+fhg(Xop[y])] with op(x) ! ϵ 2 h (0): Assume op 2 (l) (1).
+From ඁൺඇൽඅൾ we have   ⊢ Xop[op(v)] :  j ⟨ljϵ⟩. By (1) we can
+derive G0 ⊢ op : 1 ! ⟨l⟩ 2 j ⟨⟩, and thus from ൺඉඉ and op(v),
+we derive   ⊢ v : 1 j _ (2), and   ⊢ op(v) : 2 j _ (3). Us-
+ing (3) and lemma 3, and assuming  ⊢ y : 2 j _, it follows
+  ⊢ Xop[y] :  j ⟨ljϵ⟩. Using ඁൺඇൽඅൾ and (1), we also can de-
+rive   ⊢ handlefhg(Xop[y]) : r j ϵ, and through the rule අൺආ, we
+have   ⊢ y: handlefhg(Xop[y]) : 2 ! ϵ r j _ (4). Again from
+ඁൺඇൽඅൾ and (0) we have  ; resume : 2 ! ϵ r; x : 1 ⊢ e : r j ϵ,
+and using lemma 1 in combination with (2) and (4) we conclude
+  ⊢ e[x 7! v; resume 7! y: handlefhg(Xop[y])] □
+4.4. Faulty Expressions
+The main purpose of type checking is of course to guarantee that
+wrong expressions cannot occur. Apart from the usual errors, like
+adding a number to a string, we have one more kind of error in
+our system that we would like to avoid, namely using operations
+without a corresponding handler to give semantics:
+Lemma 4. (Faulty expressions are not typeable)
+a. If   ⊢ c(v) :  j ϵ then (c; v) is defined.
+b. If   ⊢ Xop[op(v)] :  j ϵ, with op 2 (l), then l 2 ϵ.
+The second statement is somewhat unusual since it concerns itself
+with effects only. It is a powerful lemma though as it states that
+effect types cannot be discarded (except through handlers). This
+lemma also implies effect types are meaningful, e.g. if a function
+does not have an exc effect, it will never throw an exception.
+Proof. (Lemma 4.b)
+Suppose   ⊢ Xop[op(v)] :  j ϵ with op 2 (l) (1). To be well
+typed, we must have   ⊢ op(v) : _ j ϵ′ with l 2 ϵ′ (due to (1)).
+We use induction on the structure of Xop to show that l 2 ϵ′ for
+any   ⊢ Xop[op(v)] : _ j ϵ′.
+case Xop(e′): Due to the induction hypothesis, the premise in rule
+ൺඉඉ is typed with an effect ϵ′ with l 2 ϵ′ and therefore also in the
+result effect l 2 ϵ′.
+case v(Xop): as the previous case.
+case val x = Xop; e: Similarly to the previous cases, the premise
+
+--- PDF page 10 ---
+⊢ c :  j ϵ [Cඈඇ ]
+⊢ x :  j ϵ [V ൺඋ]
+⊢ e :  j ϵ
+⊢ : e : 8:  j ϵ [TLൺආ ]
+⊢ e :  j ϵ
+⊢ ϵx : 1: e : 1 ! ϵ  j ϵ′ [Lൺආ ]
+⊢ e : 8:  j ϵ
+⊢ e⟨1⟩ : [ 7! 1] j ϵ [TAඉඉ]
+⊢ e1 : 2 ! ϵ  j ϵ ⊢ e2 : 2 j ϵ
+⊢ e1(e2) :  j ϵ [Aඉඉ]
+⊢ e : 1 ! ⟨l1; :::; ln⟩ 2 j ϵ′
+⊢ e⟨ ⟨ϵ⟩ ⟩: 1 ! ⟨l1; :::; lnjϵ⟩ 2 j ϵ′ [Oඉൾඇ]
+(l) = fop1; :::; opng ⊢ opi : i ! ⟨l⟩ ′
+i j ⟨⟩
+⊢ e : r j ⟨ljϵ⟩ ⊢ ei :  j ϵ ⊢ er :  j ϵ [ඁൺඇൽඅൾ ]
+⊢ handle⟨l⟩f op1(x : 1) ! e1; :::; opn(x : n) ! en; return x : r ! er g(e) :  j ϵ
+Figure 6. Type rules for explicitly typed Koka
+is typed with an effect ϵ′ with l 2 ϵ′ and therefore due to rule අൾඍ
+the result effect also has l 2 ϵ′
+case handlefhg(Xop) with op ̸2 h: since op ̸2 h the handler dis-
+charges some effect l′ with l ̸= l′. Using rule ඁൺඇൽඅൾ and ൺඉඉ we
+have a premise  ⊢ Xop : _ j ⟨l′; lj_⟩ and a result effect⟨lj_⟩ and
+thus l 2 ϵ′ □
+5. Compilation
+Compiling algebraic effects efficiently is not straightforward. In
+particular, as can be seen in the operational semantics of Fig-
+ure 4, the rule for handlers captures a delimited execution context
+Xop[op(v)] which in practice means we need to capture the call
+stack up to the handler.
+If we have full control over the runtime system, this can be
+done in a straightforward manner similarly how many compilers
+for Scheme and ML implement callcc. This approach does not
+work though when targeting a common runtime platform, like the
+JVM or the .NET environment. For Koka in particular, we compile
+to JavaScript to take advantage of the rich libraries and runtime
+environments (like high performance asynchronous web services
+in NodeJS).
+In these environments we cannot capture the call stack and need
+to use other mechanisms to implement effect handlers. One way to
+avoid capturing the stack, is to translate the program into continu-
+ation passing style (CPS) [ 10]. This makes the evaluation context
+explicit in the current continuation. For example, Scheme imple-
+mentations usually use this in order to implement both proper tail-
+calls, as well as callcc, when targeting JavaScript [31, 48, 52]. This
+was also used in Scala to provide first-class delimited continuations
+on the JVM platform [40].
+With a CPS translation, the evaluation context Xop essentially
+disappears since all constructs take an explicit continuation func-
+tion k as a last argument. For example, the xor function from the
+Section 2.4 would get CPS translated into:
+val xor = k: flip(p: flip(q: k( (pjjq) && !(p&&q) ) ))
+We can see that an operation call op(v) becomes op(v; k) where k
+is a function taking the result of the operation call. The reduction
+rule for handlers essentially becomes:
+handlefhg(Hop[op(v; k)])
+  ! f op(x) ! e 2 h g
+e[x 7! v; resume 7! y: handlefhg(Hop[k(y)])]
+where the context Hop is now strictly a stack of handlers. In an
+implementation it is straightforward to maintain such a ’shadow’
+stack explicitly.
+At first, we tried a full CPS translation in Koka but it turned
+out to slow down the code significantly. One of the larger programs
+written in Koka is a markdown processor called Madoko [26] (and
+this article is entirely written in Madoko!). This program runs usu-
+ally client-side in the browser and with a full CPS translation it
+started to use too much resources to run reliably. A better approach
+was needed.
+5.1. A Type-Directed Selective CPS Translation.
+It has long been recognized that one can selectively CPS transform
+only parts of the program that need it [8, 9, 39]. In our case, we only
+have to use CPS translation on those parts that may issue effectful
+operations. Moreover, since effects are tracked in the type system,
+we can use a type-directed selective CPS translation (as used by
+Scala [40] for example). We built on the translation by Nielsen [33]
+who introduces a sound selective CPS translation for the simply
+typed lambda calculus extended with callcc and throw. However,
+the translation by Nielsen applies to monomorphic effects only and
+we will see that in the presence of polymorphic effect variables the
+translation becomes more complex.
+We define the CPS translation over an explicitly typed core
+calculus, defined in Figure 5. This is the internal core calculus of
+Koka generated by type inference. It is essentially System F [ 15]
+extended with the effect annotations. In particular, lambda’s carry
+the effect of the body as ϵ. Similarly, handlers are annotated with
+the handled effect type l. Finally, there is a special construct e⟨ ⟨ϵ⟩ ⟩
+that opens the effect of e with effect ϵ – this is generated whenever
+the ඈඉൾඇ rule is applied as discussed in Section 3.2 on simplifying
+types.
+The type checking rules for the explicitly typed core calculus are
+given in Figure 6. A rule ⊢ e :  j ϵ states that a given expression
+e has type  under a given ϵ, where the effect ϵ is inherited and
+not synthesized. We can see this in rule අൺආ where the annotated
+effect determines the effect of the body. Moreover, we avoid having
+to pass around an explicit type environment in the type rules by
+annotating all variables and constants with their type – which should
+match the type of the binder by convention.
+5.1.1. Selective Translation
+For a selective translation we need a function H (for handled ef-
+fects) that determines based on the type if a CPS translation is
+needed. The handler function has the form H(; ϵ) where  is a
+set of ‘unhandled’ effect variables ():
+H(; ⟨ljϵ⟩) = H(l) _ H(; ϵ)
+H(; ⟨⟩) = false
+H(; ) =  ̸2 
+We also overload H(l) to determine if a particular effect l may
+need CPS translation. For now, we assume H(l) is always true.
+In the Koka implementation though, we distinguish built-in ef-
+fects from user defined effects through the kind system. The built-
+in effects consist of exceptions ( exn), non-termination ( div), non-
+determinism (ndet), polymorphic state (st⟨h⟩), and general I/O op-
+erations (io). All of these are usually provided directly by the target
+system (like JavaScript) and can thus be directly compiled without
+
+--- PDF page 11 ---
+Static expression e ::= e (expression)
+j  x:e (abstraction)
+j e[e] (application)
+ ⊢ c ⇝  k:k[c] [ർඈඇ ]
+ ⊢ x ⇝  k:k[x] [ඏ ൺඋ]
+ ⊢ e ⇝ e
+ ⊢ e⟨ ⟩ ⇝ e [ඍൺඉඉ]
+ ⊢ e ⇝ e
+ ⊢ : e ⇝ e [ඍඅൺආ]
+ ⊢ e ⇝ e ⊢ e : 1 ! ϵ′ 2
+H(; ϵ′) _ :H(; ϵ)
+ ⊢ e⟨ ⟨ϵ⟩ ⟩⇝ e [ඈඉൾඇ]
+ ⊢ e ⇝ e ⊢ e : 1 ! ϵ′ 2
+:H(; ϵ′) ^ H(; ϵ)
+ ⊢ e⟨ ⟨ϵ⟩ ⟩⇝  k:k[x k: e[ f:k(f(x))K [ඈඉൾඇ-ർඉඌ]
+ ⊢ e1 ⇝ e1  ⊢ e2 ⇝ e2
+ ⊢ val x = e1; e2 ⇝  k:e1[ x:val x = x; e2[k]] [ඏ ൺඅ]
+ ⊢ e ⇝ e  ⊢ er ⇝ er  ⊢ ei ⇝ ei
+ ⊢ handle⟨l⟩f opi(x : i) ! ei; return x : r ! er g(e) ⇝
+ k:handlelf opi(x) ! ei[k]; return x ! er[k] g(e[ x:x])
+[ඁൺඇൽඅൾ ]
+ ⊢ e1 ⇝ e1  ⊢ e2 ⇝ e2 ⊢ e1 : 1 ! ϵ 2 :H(; ϵ)
+ ⊢ e1(e2) ⇝  k:e1[ f:e2[ x:k[f(x)]]] [ൺඉඉ]
+ ⊢ e1 ⇝ e1  ⊢ e2 ⇝ e2 ⊢ e1 : 1 ! ϵ 2 H(; ϵ)
+ ⊢ e1(e2) ⇝  k:e1[ f:e2[ x:f(x; y: k[y])]] [ൺඉඉ-ർඉඌ]
+ ⊢ e ⇝ e :H(; ϵ) ϵ ̸= ⟨l1; :::; ln j ⟩
+ ⊢ ϵx : : e ⇝  k:k[ϵx: e[ x:x]] [අൺආ ]
+ ⊢ e ⇝ e H(; ϵ) ϵ ̸= ⟨l1; :::; ln j ⟩
+ ⊢ ϵx : : e ⇝  k:k[x k: e[ x:k(x)K [අൺආ-ർඉඌ]
+ϵ = ⟨l1; :::; ln j ⟩ /fg ⊢ e ⇝ ecps  [ fg ⊢ e ⇝ eplain
+ ⊢ ϵx : : e ⇝  k:k[x k: if k? then (ecps[ x:k(x)]) else (eplain[ x:x])] [අൺආ-ൽඎඉ ]
+Figure 7. Type directed selective CPS translation.
+needing CPS translation. This turns out to be an important optimiza-
+tion as many (leaf) functions do not use any user defined effects and
+can thus be compiled directly – and implies there is no cost for effect
+handlers for any code that does not use them.
+For any function f with a function type with effect ϵ where
+H(; ϵ) is true, f is translated in CPS style and will have an extra
+continuation parameter k at runtime. When H(; ϵ) is false, the
+function is compiled as usual without a continuation parameter.
+The last case of H for a polymorphic effect variable  is only
+false if  is an element of the set . In general we always need to
+assume a CPS translation is needed for any  as such a variable
+may get instantiated later on with a user-defined effect. However,
+as we will see, for polymorphic functions we need to generate two
+translations and the  set is used to force certain effect variables to
+be treated as needing no CPS translation.
+In the case of polymorphic functions, the simplified types of
+Section 3.2 turn out to have a performance impact as well: many
+functions that would otherwise get a type with an open polymorphic
+effect, are now closed and thus do not need a CPS translation as H
+will be false. In the Koka core library, this reduced the set of CPS
+translated functions by over 80%.
+5.1.2. Translation Rules
+Using the H function, Figure 7 defines a type directed selective
+CPS translation for our explicitly typed core calculus. Each rule of
+the form  ⊢ e ⇝ e states that expression e gets translated into a
+static expression e assuming a set of unhandled effect variables 
+(initially empty). Following Nielsen [ 33], we write the translation
+itself in a continuation passing style; to distinguish the translation
+lambda’s and applications from the ones in the program we write
+static applications as e[e] and static lambda’s as  :In a rule e ⇝ e
+the e expression is a function that takes itself a continuation function
+k, which takes expressions to cps expressions.
+The rules translate explicitly typed core into a untyped lambda
+calculus. We would have liked the target calculus to be explicitly
+typed as well, but as we will see, that would require further type
+rules to deal with variadic functions. In the actual Koka implemen-
+tation we do translate to an explicitly typed core though.
+Most rules are standard, except for theඈඉൾඇ and අൺආ rules. Rules
+ർඈඇ and ඏ ൺඋpass the value on to the continuation. The ඍൺඉඉ and
+ඍඅൺආ rules just pass on the translation of their bodies. In the ඏ ൺඅ
+rule we can see why a continuation based translation works well,
+as we can pass the binding of x as a static continuation itself.
+The ൺඉඉ rule is specialized depending on whether effect is CPS
+translated or not. The ඁൺඇൽඅൾ rule is straightforward and translates
+all its subexpressions. In practice we would need to provide a shared
+binding for k though since the rule as state might duplicate code.
+The result is an application handlel which is a handler for effect l.
+On every target platform this must be implemented as a primitive.
+That leaves theඈඉൾඇ and අൺආ rules which need more explanation.
+5.2. Opening: Non-CPS to CPS
+The ඈඉൾඇ and ඈඉൾඇ-ർඉඌ rule open an effect type. However, opening
+an effect type ⟨l1; :::; ln⟩ to ⟨l1; :::; lnjϵ⟩ may change the runtime
+representation: in particular, if l1 to ln are all built-in effects, but ϵ
+is a handled effect, the function type changes from being non-CPS
+to CPS translated! – the CPS translated result should now take a
+continuation k as its last argument. The rule ඈඉൾඇ-ർඉඌ defines this
+case and wraps the non-CPS translated function in a lambda that
+takes a continuation k and applies that k directly to the result of
+applying the translated non-CPS function. This is effectively the
+point where non-CPS functions are lifted into the CPS world at
+runtime.
+5.3. Closing: CPS to Non-CPS
+With the ඈඉൾඇ rules, the runtime representation can be changed
+directly with a small and constant cost. There is one other place
+where the runtime representation can change and that is due to type
+instantiation. Unfortunately, in this case we cannot so easily change
+
+--- PDF page 12 ---
+the term at runtime. In particular, a function type may be hidden
+inside some other type. For example, if we define a data type as:
+type hide⟨e⟩ { Hide( f : int ! e int ) }
+then we can have terms of the formHide(id) : 8: hide⟨⟩. When
+this is instantiated it is not clear how to convert such a term at
+runtime back to a non-CPS form. This is a deep problem and in other
+work on monadic effects [ 49] led to restrictions on the amount of
+polymorphism allowed in the effect system to avoid this situation.
+Here we take another approach: we are going to try tonot change
+the runtime representation of functions that are CPS translated, even
+if they are called from a non-CPS context and the continuation ar-
+gument is lacking. We assume that our target environment supports
+some form of variadic functions and that we can check at runtime if
+the k argument is present or not. This is well supported in JavaScript
+but it works well in typed environments too. For example, for the
+.NET target, first-class functions are represented by function objects
+and we can modify the Apply methods to check if the k parameter
+was present.
+5.3.1. Assume Identity?
+At first, we thought it was sufficient to default the continuation pa-
+rameter to the identity function and assume k = x:x if the argu-
+ment was not present. That approach does not work though in the
+presence of effect polymorphic higher-order functions. Consider the
+map function:
+fun map( xs : list⟨a⟩, f : a ! e b) : e list⟨b⟩ {
+match(xs) {
+Nil ! Nil
+Cons(x,xx) ! Cons(f(x),map(xx,f))
+}
+}
+which is effect polymorphic. A naïve CPS translation leads to (as-
+suming a match construct and tupling):
+val mapcps = (xs; f; k):
+match(xs) f
+Nil ! k(Nil)
+Cons(x; xx) ! f(x;  y: map(xx; f;  yy: k(Cons(y; yy)) ))
+g
+Note in particular thatf itself is called as a CPS function with a con-
+tinuation argument. If we now have a call to map where the effect
+type is immediately instantiated to the empty effect, the continu-
+ation argument k will not be present. For example, the explicitly
+typed expression,
+map⟨⟨⟩; int; int⟩([1]; inc)
+where we assume inc : int ! int, would get translated to:
+map([1]; inc)
+Even if map would detect that the k parameter is not present and
+substitute k = x:x, this would still go wrong at runtime as inc is
+called inside map with a continuation argument!
+5.3.2. Polymorphic Duplication
+The solution is to generate two translations of every function poly-
+morphic in some effect – one is the CPS translation (e.g.mapcps),
+and one is a plain translation (e.g. mapplain). We then use a wrap-
+per that chooses either implementation at runtime based on whether
+the continuation argument is present. For example, the wrapper for
+map becomes:
+val map = (xs; f; k): if k? then mapcps(xs; f; k) else mapplain(xs; f)
+where we assume k? tests if k was present. The implementation of
+the question mark operator is dependent on the particular target en-
+vironment. For example, in our JavaScript backend we can simply
+use k !== undefined.
+The duplicate translation rule is අൺආ-ൽඎඉ – here we finally use
+the  set to generate a CPS translated version of the body (using
+/fg), and non-CPS version too (using [ fg). Finally we gen-
+erate a wrapper to choose the correct version at runtime. The other
+two rules,අൺආ and අൺආ-ർඉඌ are used for non effect polymorphic func-
+tions.
+There is a performance advantage too to this translation – sim-
+ilarly to the worker-wrapper transformation [ 34] a target platform
+can usually inline most call sites. Since many of these effect poly-
+morphic functions abstract over iteration patterns (like map) this
+gives the target platform more opportunities to optimize loops since
+the plain versions will be more amenable to common loop opti-
+mizations.
+Since only the tail of an effect row can be polymorphic, there
+is no risk of exponential code duplication. Even for the Koka core
+library which contains many of these higher-order effect polymor-
+phic functions, the code size increased by a modest 20%.
+5.4. The Runtime System
+The runtime system needs to implement the handlel primitive. In
+general, the handlel function registers the operation and return
+clauses and pushes a handler frame for effectl on the handler stack.
+When an operation is performed, it searches along the handler stack
+for a handler frame and calls into the appropriate operation clause
+with the current continuation as an argument.
+In our JavaScript implementation we have refined this where
+we have a generic handler that implements a trampoline: operations
+just return to this handler loop where they are handled and resumed.
+This way we ensure the stack always gets unrolled for code that uses
+operations – this essentially implements proper tail calls (except that
+the programmer needs to call an operation every once in a while).
+6. Related Work
+Algebraic effects were described by Plotkin and Power [ 36] as an
+algebraic model of computational effects. Later Plotkin and Pret-
+nar [35] added algebraic effect handlers to describe exceptions. Var-
+ious implementations of algebraic effects exist. Kammar et al. [18]
+show an efficient implementation as a library in Template Haskell
+where they use a continuation monad to implement handlers. Us-
+ing first-class patterns, Wu et al. [51] also embed algebraic effects
+as a library in Haskell. Brady [ 5] implements algebraic effects as
+a DSL library in the dependently typed Idris language. Kiselyov
+et al. [20, 21] implement a extensible effects in Haskell using the
+‘freer’ monad.
+The language Eff [ 3] is an ML-like language designed around
+algebraic effect handlers. It also provides support for dynamic ef-
+fect resources which can be used to model polymorphic mutable
+references. There are designs for an effect type system with type
+inference for Eff [2, 37] based subtyping and a region system.
+The Links language [ 29] has recently been extended with sup-
+port for algebraic effect handlers. Just like we reused the original ef-
+fect system of Koka, Hillerström and Lindley [16] describe how the
+original Links type system can be naturally extended to handle alge-
+braic effects too. Their system is also based on row-polymorphism
+but they use instead Remy style rows [ 38] where the kind system
+is extended to record presence or absence of effects in the row. We
+believe our approach based on scoped labels [24] is simpler in prac-
+tice, but the Remy style can be more expressive as it can describe
+the absence of effects.
+Frank [30] is an experimental language based solely on effect
+handlers where there is no primitive notion of a function: its han-
+
+--- PDF page 13 ---
+dlers all the way down. Just like scoped labels, effects may occur
+multiple times in a row.
+In contrast to our work, all of the previous implementations
+have full control over the runtime stack being implemented as an
+interpreter, a library, or by using specialized runtimes like OCaml.
+Also, many other type systems use structural types for the effects
+where each effect operation (and its type) occurs in the inferred
+types. In this paper we use a nominal system where a single effect
+type implies the available operations (also used by Frank [30]). We
+believe this is better in practice to keep inferred types small and
+understandable. For example, compare the type of thestate handler
+in Section 2.2 with the type inferred in Links [16] (where _ denotes
+absence):
+sig state : (s) -> (Comp({Get:s,Put:(s) {}-> ()|e},a))
+-> Comp({Get{_},Put{_}|e},a)
+where the operations of the state effect are explicit in the type. A
+drawback of our approach is that an effect handler must handle all
+operations of a particular effect type, and cannot pick and choose
+arbitrarily.
+There are also approaches to handling effects using monads [43,
+49]. A significant drawback of these approaches is that monads do
+not naturally compose and combining different effects is difficult in
+these systems. An exception is Filinski’s work on layered monads
+which do support a similar style of composing effects [12, 13].
+7. Conclusion
+Algebraic effect handlers concisely describe many complex control-
+flow constructs in various programming languages. We hope that
+the language design, the direct operational semantics, and com-
+pilation scheme described in this article will contribute to wider
+adoption of algebraic effects. In the future we plan use algebraic
+effects to implement strongly typed asynchronous web services in
+NodeJS.
+References
+[1] Kenichi Asai, and Yukiyoshi Kameyama. “Polymorphic Delimited
+Continuations.” In APLAS’07, 239–254. 2007. doi: 10.1007/978-3-
+540-76637-7_16.
+[2] Andrej Bauer, and Matija Pretnar. “An Effect System for Algebraic
+Effects and Handlers.” Logical Methods in Computer Science 10 (4).
+2014.
+[3] Andrej Bauer, and Matija Pretnar. “Programming with Algebraic Ef-
+fects and Handlers.” J. Log. Algebr . Meth. Program. 84 (1): 108–123.
+2015. doi:10.1016/j.jlamp.2014.02.001.
+[4] Gavin Bierman, Claudio Russo, Geoffrey Mainland, Erik Meijer, and
+Mads Torgersen. “Pause ‘n’ Play: Formalizing Asynchronous C#.” In
+ECOOP 2012 – Object-Oriented Programming: 26th European Con-
+ference, Beijing, China , edited by James Noble, 233–257. Springer.
+2012. doi:10.1007/978-3-642-31057-7_12.
+[5] Edwin Brady. “Programming and Reasoning with Algebraic Ef-
+fects and Dependent Types.” In Proc. of ICFP’13 , 133–144. 2013.
+doi:10.1145/2500365.2500581.
+[6] Olivier Danvy, and Andrzej Filinski. A Functional Abstraction of
+Typed Contexts. 1989.
+[7] Olivier Danvy, and Andrzej Filinski. “Abstracting Control.” In
+Proceedings of the 1990 ACM Conference on LISP and Func-
+tional Programming , 151–160. LFP ’90. Nice, France. 1990.
+doi:10.1145/91556.91622.
+[8] Olivier Danvy, and John Hatcliff. “CPS-Transformation After Strict-
+ness Analysis.” ACM Lett. Program. Lang. Syst.1 (3). ACM: 195–212.
+Sep. 1992. doi:10.1145/151640.151641.
+[9] Olivier Danvy, Jung-taek Kim, and Kwangkeun Yi. “Assessing the
+Overhead of ML Exceptions by Selective CPS Transform.” In In Pro-
+ceedings of the 1998 ACM SIGPLAN Workshop on ML, 103–114. 1998.
+[10] Olivier Danvy, Kevin Millikin, and Lasse R. Nielsen. “On One-Pass
+CPS Transformations.” J. Funct. Program. 17 (6): 793–812. Nov.
+2007. doi:10.1017/S0956796807006387.
+[11] S Dolan, L White, Sivaramakrishnan K, Yallop J, and A Mad-
+havapeddy. “Effective Concurrency through Algebraic Effects.” In
+OCaml Workshop. Sep. 2015.
+[12] Andrzej Filinski. “Representing Layered Monads.” In Proceedings of
+the 26th ACM Symposium on Principles of Programming Languages ,
+175–188. ACM Press. 1999.
+[13] Andrzej Filinski. “Monads in Action.” In Proceedings of the 37th An-
+nual ACM SIGPLAN-SIGACT Symposium on Principles of Program-
+ming Languages, 483–494. 2010. doi:10.1145/1706299.1706354.
+[14] Ben R. Gaster, and Mark P. Jones. A Polymorphic Type System for
+Extensible Records and V ariants . NOTTCS-TR-96-3. University of
+Nottingham. 1996.
+[15] Jean-Yves Girard. “The System F of Variable Types, Fifteen Years
+Later.” TCS. 1986.
+[16] Daniel Hillerström, and Sam Lindley. “Liberating Effects
+with Rows and Handlers.” TyDe 2016. Nara, Japan. 2016.
+doi:10.1145/2976022.2976033.
+[17] Graham Hutton, and Erik Meijer. Monadic Parser Combinators .
+NOTTCS-TR-96-4. Dept. of Computer Science, University of Not-
+tingham. 1996. http://www.cs.nott.ac.uk/Dept.{}/Staff/
+gmh/monparsing.ps.
+[18] Ohad Kammar, Sam Lindley, and Nicolas Oury. “Handlers in Action.”
+In Proceedings of the 18th ACM SIGPLAN International Conference
+on Functional Programming , 145–158. ICFP ’13. ACM, New York,
+NY , USA. 2013. doi:10.1145/2500365.2500590.
+[19] Ohad Kammar, and Matija Pretnar. “No Value Restriction Is Needed
+for Algebraic Effects and Handlers.” CoRR abs/1605.06938. 2016.
+[20] Oleg Kiselyov, and Hiromi Ishii. “Freer Monads, More Extensible
+Effects.” In Proceedings of the 2015 ACM SIGPLAN Symposium
+on Haskell , 94–105. Haskell ’15. Vancouver, BC, Canada. 2015.
+doi:10.1145/2804302.2804319.
+[21] Oleg Kiselyov, Amr Sabry, and Cameron Swords. “Extensible Effects:
+An Alternative to Monad Transformers.” In Proceedings of the 2013
+ACM SIGPLAN Symposium on Haskell , 59–70. Haskell ’13. Boston,
+Massachusetts, USA. 2013. doi:10.1145/2503778.2503791.
+[22] Peter J. Landin. A Generalization of Jumps and Labels . UNIV AC
+systems programming research. 1965.
+[23] Peter J. Landin. “A Generalization of Jumps and Labels.”
+Higher-Order and Symbolic Computation 11 (2): 125–143. 1998.
+doi:10.1023/A:1010068630801. reprint from [22].
+[24] Daan Leijen. “Extensible Records with Scoped Labels.” In In: Pro-
+ceedings of the 2005 Symposium on Trends in Functional Program-
+ming, 297–312. 2005.
+[25] Daan Leijen. “Koka: Programming with Row Polymorphic Effect
+Types.” In MSFP’14, 5th Workshop on Mathematically Structured
+Functional Programming. 2014. doi:10.4204/EPTCS.153.8.
+[26] Daan Leijen. “Madoko: Scholarly Documents for the Web.” In Pro-
+ceedings of the 2015 ACM Symposium on Document Engineer-
+ing, 129–132. DocEng ’15. ACM, Lausanne, Switzerland. 2015.
+doi:10.1145/2682571.2797097.
+[27] Daan Leijen. “Koka Overview and Reference.” 2016. http://bit.
+do/kokabook.
+[28] Daan Leijen, and Erik Meijer. Parsec: Direct Style Monadic Parser
+Combinators for the Real World. UU-CS-2001-27. Dept. of Computer
+Science, Universiteit Utrecht. 2001.
+[29] Sam Lindley, and James Cheney. “Row-Based Effect Types
+for Database Integration.” In TLDI’12, 91–102. 2012.
+doi:10.1145/2103786.2103798.
+[30] Sam Lindley, Connor McBride, and Craig McLaughlin. “Do Be Do Be
+Do.” In POPL 2017. Paris, France. 2016.
+
+--- PDF page 14 ---
+[31] Florian Loitsch, Manuel Serrano, and Inria Sophia Antipolis. “Hop
+Client-Side Compilation.” In Proceedings of the 8th Symposium on
+Trends on Functional Languages. 2007.
+[32] Eugenio Moggi. “Notions of Computation and Monads.” Infor-
+mation and Computation 93 (1): 55–92. 1991. doi: 10.1016/0890-
+5401(91)90052-4.
+[33] Lasse R. Nielsen. “A Selective CPS Transformation.”Electronic Notes
+in Theoretical Comp. Sc. 45: 311–331. 2001. doi: 10.1016/S1571-
+0661(04)80969-1. MFPS 2001, 17th Conf. on the Mathematical Foun-
+dations of Prog. Semantics.
+[34] Simon L. Peyton Jones, and André L. M. Santos. “A Transformation-
+Based Optimiser for Haskell.” Science of Computer Programming 32
+(1): 3–47. 1998. doi:10.1016/S0167-6423(97)00029-4.
+[35] Gordon D. Plotkin, and Matija Pretnar. “Handling Algebraic Ef-
+fects.” In Logical Methods in Computer Science , volume 9. 4. 2013.
+doi:10.2168/LMCS-9(4:23)2013.
+[36] Gordon Plotkin, and John Power. “Algebraic Operations and Generic
+Effects.” Applied Categorical Structures 11 (1): 69–94. 2003.
+doi:10.1023/A:1023064908962.
+[37] Matija Pretnar. “Inferring Algebraic Effects.” Logical Methods in
+Computer Science 10 (3). 2014. doi:10.2168/LMCS-10(3:21)2014.
+[38] Didier Rémy. “Type Inference for Records in Natural Extension of
+ML.” In Theoretical Aspects of Object-Oriented Programming, 67–95.
+1994.
+[39] John Reppy. “Optimizing Nested Loops Using Local CPS Conver-
+sion.” Higher-Order and Symbolic Computation 15 (2): 161–180.
+2002. doi:10.1023/A:1020839128338.
+[40] Tiark Rompf, Ingo Maier, and Martin Odersky. “Implementing First-
+Class Polymorphic Delimited Continuations by a Type-Directed Se-
+lective CPS-Transform.” In . ICFP. 2009.
+[41] Chung-chieh Shan. “A Static Simulation of Dynamic Delimited Con-
+trol.” Higher-Order and Symbolic Computation20 (4): 371–401. 2007.
+doi:10.1007/s10990-007-9010-4.
+[42] Martin Sulzmann. Designing Record Systems. YALEU/DCS/RR-1128.
+Yale University. Apr. 1997.
+[43] Nikhil Swamy, Nataliya Guts, Daan Leijen, and Michael Hicks.
+“Lightweight Monadic Programming in ML.” In ICFP. 2011.
+doi:10.1145/2034773.2034778.
+[44] Wouter Swierstra. “Data Types à La Carte.” Journal of
+Functional Programming 18 (4): 423–436. Jul. 2008.
+doi:10.1017/S0956796808006758.
+[45] The EcmaScript committee. “ES6: The EcmaScript 2015 Lan-
+guage Specification.” 2015. http://www.ecma-international.
+org/ecma-262/6.0/ECMA-262.pdf.
+[46] The EcmaScript committee. “ES7: The Draft EcmaScript 2017 Lan-
+guage Specification.” 2016. https://tc39.github.io/ecma262.
+[47] Hayo Thielecke. “Using a Continuation Twice and Its Implications for
+the Expressive Power of Call/Cc.” Higher Order Symbol. Comput. 12
+(1). Kluwer Academic Publishers, Hingham, MA, USA: 47–73. Apr.
+1999. doi:10.1023/A:1010068800499.
+[48] Eric Thivierge, and Marc Feeley. “Efficient Compilation of Tail
+Calls and Continuations to JavaScript.” In Proc. of the 2012
+Annual Workshop on Scheme and Funct. Prog. , 47–57. 2012.
+doi:10.1145/2661103.2661108.
+[49] Niki Vazou, and Daan Leijen. “From Monads to Effects and Back.”
+In 18th Int. Symp. on the Practical Aspects of Declarative Languages ,
+169–186. 2016. doi:10.1007/978-3-319-28228-2_11.
+[50] Andrew K. Wright, and Matthias Felleisen. “A Syntactic Approach
+to Type Soundness.” Inf. Comput. 115 (1): 38–94. Nov. 1994.
+doi:10.1006/inco.1994.1093.
+[51] Nicolas Wu, Tom Schrijvers, and Ralf Hinze. “Effect Handlers in
+Scope.” In Proceedings of the 2014 ACM SIGPLAN Symposium
+on Haskell , 1–12. Haskell ’14. ACM, New York, NY , USA. 2014.
+doi:10.1145/2633357.2633358.
+[52] Danny Yoo, and Shriram Krishnamurthi. “Whalesong: Running Racket
+in the Browser.” In Proceedings of the 9th Symposium on Dy-
+namic Languages , 97–108. DLS ’13. ACM, Indianapolis, Indiana,
+USA. 2013. doi:10.1145/2508168.2508172.

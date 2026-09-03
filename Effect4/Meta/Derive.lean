@@ -21,8 +21,15 @@ emits `Cell.Name` (inductive), `Cell.Param` and `Cell.Answer` (abbrevs by
 match), `Cell : Effects.Family`, `Cell.Sig : Effects.Signature`, one smart
 constructor per operation (`Cell.put : Nat → Effects.Program Cell.Sig Unit`),
 `Cell.rows : ServiceRow`, and the trace face `Cell.Name.spelling`,
-`Cell.encodeParam`, `Cell.encodeAnswer`, `Cell.traced`. A handler is a
-`Cell.Service M`; `Cell.traced handler` logs every operation.
+`Cell.encodeParam`, `Cell.encodeAnswer`, `Cell.traced`, `Cell.tracedExcept`. A
+handler is a `Cell.Service M`; `Cell.traced handler` logs every operation and
+`Cell.tracedExcept` does the same for a handler into `ExceptT E M`.
+
+An aborting operation is declared `| op (p : T) : A !! E ⟪…⟫` (`!` alone would
+parse as a prefix negation applied to `E`): the family's
+answer stays `A`, the row carries the error spellings, the method type gains
+`E`, and the handler kind is `X.Service (ExceptT E M)`. A returned error is an
+ordinary answer `Except E A`, spelled `Result.Result<A, E>`.
 
 ```lean
 effect_program incr (n : Nat) over Cell : Nat :=
@@ -46,7 +53,7 @@ declare_syntax_cat effectParam
 syntax "(" ident " : " term ")" : effectParam
 
 declare_syntax_cat effectOp
-syntax "| " ident effectParam* " : " term " ⟪ " str,* " ⟫" : effectOp
+syntax "| " ident effectParam* " : " term (" !! " term)? " ⟪ " str,* " ⟫" : effectOp
 
 syntax "effect_signature " ident " where " effectOp+ : command
 
@@ -73,6 +80,10 @@ private def tsOfTypeFuel : Nat → Term → CommandElabM String
     | `Unit => return "void"
     | other => throwErrorAt stx "effect_signature: no TypeScript spelling for `{other}`; add a Stratum V row first"
   match stx with
+  | `(Except $errorTy:term $valueTy:term) =>
+      let error ← tsOfTypeFuel fuel errorTy
+      let value ← tsOfTypeFuel fuel valueTy
+      return s!"Result.Result<{value}, {error}>"
   | `($f:ident $arg:term) =>
       let inner ← tsOfTypeFuel fuel arg
       match f.getId.eraseMacroScopes with
@@ -127,7 +138,7 @@ elab_rules : command
     let mut index := 0
     for op in ops do
       match op with
-      | `(effectOp| | $opName:ident $params:effectParam* : $answer:term ⟪ $cues:str,* ⟫) => do
+      | `(effectOp| | $opName:ident $params:effectParam* : $answer:term $[!! $error:term]? ⟪ $cues:str,* ⟫) => do
           unless TypeScript.targetIdentifier opName.getId.toString do
             throwErrorAt opName "effect_signature: `{opName.getId}` is not a legal target identifier"
           let ctorName := mkIdent (famName ++ `Name ++ opName.getId)
@@ -157,7 +168,13 @@ elab_rules : command
           smart := smart.push (← `(def $smartName:ident $binders:bracketedBinder* : Effects.Program $sigName $answer :=
             Effects.Family.perform $name $ctorName $packed))
           let cueTerms : Array Term := cues.getElems.map fun c => (⟨c.raw⟩ : Term)
-          rowTerms := rowTerms.push (← `({ name := $(strLit opName.getId.toString), index := $(natLit index), params := $(← listLit paramRows), tsParams := $(← listLit tsParamRows), answer := $(strLit answer.raw.reprint.get!.trimAscii.toString), tsAnswer := $(strLit (← tsOfType answer)), cues := $(← listLit cueTerms) : Effect4.Target.EffectV4.OpRow }))
+          let errorRow : Term ← match error with
+            | some errorTy => do
+                let leanSpelling := strLit errorTy.raw.reprint.get!.trimAscii.toString
+                let tsSpelling := strLit (← tsOfType errorTy)
+                `(some ($leanSpelling, $tsSpelling))
+            | none => `(none)
+          rowTerms := rowTerms.push (← `({ name := $(strLit opName.getId.toString), index := $(natLit index), params := $(← listLit paramRows), tsParams := $(← listLit tsParamRows), answer := $(strLit answer.raw.reprint.get!.trimAscii.toString), tsAnswer := $(strLit (← tsOfType answer)), cues := $(← listLit cueTerms), error := $errorRow : Effect4.Target.EffectV4.OpRow }))
           index := index + 1
       | _ => throwUnsupportedSyntax
     elabCommand (← `(inductive $nameTy where $ctors* deriving DecidableEq, Repr))
@@ -179,6 +196,12 @@ elab_rules : command
     elabCommand (← `(def $tracedName {M : Type → Type} [Monad M] (service : Effects.Family.Service $name M) :
         Effects.Family.Service $name (StateT Effect4.Trace.Log M) :=
       Effects.Family.Service.traced (δ := Nat) (ρ := Nat) $spellingName $encodeParamName $encodeAnswerName service))
+    let tracedExceptName := mkIdent (famName ++ `tracedExcept)
+    elabCommand (← `(def $tracedExceptName {E : Type} [Effects.Trace.ToVal E] {M : Type → Type} [Monad M]
+        (service : Effects.Family.Service $name (ExceptT E M)) :
+        Effects.Family.Service $name (ExceptT E (StateT Effect4.Trace.Log M)) :=
+      Effects.Family.Service.tracedExcept (δ := Nat) (ρ := Nat) $spellingName $encodeParamName $encodeAnswerName
+        Effects.Trace.ToVal.toVal service))
 
 /-! ## `effect_program` -/
 

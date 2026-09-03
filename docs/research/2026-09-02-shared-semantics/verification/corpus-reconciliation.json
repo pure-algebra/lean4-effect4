@@ -1,0 +1,95 @@
+{
+  "groups": {
+    "Layer": {
+      "references": {
+        "sites": 9716,
+        "files": 4952,
+        "repos": 26
+      },
+      "calls": {
+        "sites": 9574,
+        "files": 4927,
+        "repos": 26
+      }
+    },
+    "Scope-module": {
+      "references": {
+        "sites": 345,
+        "files": 91,
+        "repos": 13
+      },
+      "calls": {
+        "sites": 276,
+        "files": 71,
+        "repos": 13
+      }
+    },
+    "resource": {
+      "references": {
+        "sites": 1415,
+        "files": 742,
+        "repos": 22
+      },
+      "calls": {
+        "sites": 1109,
+        "files": 633,
+        "repos": 22
+      }
+    },
+    "fork": {
+      "references": {
+        "sites": 573,
+        "files": 220,
+        "repos": 18
+      },
+      "calls": {
+        "sites": 195,
+        "files": 102,
+        "repos": 15
+      }
+    },
+    "race": {
+      "references": {
+        "sites": 31,
+        "files": 25,
+        "repos": 8
+      },
+      "calls": {
+        "sites": 31,
+        "files": 25,
+        "repos": 8
+      }
+    },
+    "catch": {
+      "references": {
+        "sites": 7741,
+        "files": 2727,
+        "repos": 26
+      },
+      "calls": {
+        "sites": 7740,
+        "files": 2726,
+        "repos": 26
+      }
+    },
+    "gen": {
+      "references": {
+        "sites": 29367,
+        "files": 6521,
+        "repos": 27
+      },
+      "calls": {
+        "sites": 29367,
+        "files": 6521,
+        "repos": 27
+      }
+    }
+  },
+  "all_match_summary": true,
+  "analysis_files": 24401,
+  "parse_error_files": 35,
+  "selected_clean_pin_matching_repositories": 30,
+  "scan_uncompressed_sha256": "755776df7b9476585096746598ae9454e3d79ebfcf7b7dc1aad9dd27302b79d9",
+  "inventory_uncompressed_sha256": "3144cda9213ead3f106910a05fa406cec81576cd9400382e6369f09ff5d220c2",
+  "source_digest": "41ceead9eccc4fac95cdd626a6fe126e92c7fe0df1273dbc4bc999126b3416ed"
+}

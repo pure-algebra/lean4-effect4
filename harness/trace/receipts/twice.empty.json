@@ -26,7 +26,8 @@
   "scheduled": []
  },
  "foreign": [
-  "succ@./atoms.ts"
+  "succ@./atoms.ts",
+  "orZero@./atoms.ts"
  ],
  "primitives": 34,
  "results": {

@@ -1,29 +1,57 @@
-import { Effect, Ref } from "effect"
-import { Cell, CellRows, incr, twice } from "./fixture.ts"
+import { Effect, Ref, Result } from "effect"
+import { Cell, CellRows, ECell, ECellRows, FCell, FCellRows, incr, twice, recover, fallible } from "./fixture.ts"
 import { runTraced, traceService, windowRows, type Event } from "./tracer.ts"
 
 declare const process: { readonly env: Record<string, string | undefined> }
 
-/** Which program to run and its argument come from the harness; the tape is
- * empty for these straight-line programs. */
+/** Which program to run comes from the harness; the tape is empty for these
+ * straight-line programs. Each entry builds its service before the `run`
+ * sentinel so construction is outside the compared window. */
 const name = process.env.EFFECT4_PROGRAM ?? "incr"
 const maxOpsBeforeYield = Number(process.env.EFFECT4_MAX_OPS ?? "1000000")
 const budget = Number(process.env.EFFECT4_BUDGET ?? "100000")
-const initial = 41
-const argument = name === "twice" ? 7 : 0
-const chosen = name === "twice" ? twice : incr
-
 const sink: Event[] = []
 
-/** `Cell.Service (StateT number Id)` as a `Ref`, every method traced. Built
- * before the `run` sentinel so construction is outside the compared window. */
-const program = Effect.gen(function* () {
-  const ref = yield* Ref.make(initial)
-  const service = traceService(CellRows, { get: Ref.get(ref), put: (n: number) => Ref.set(ref, n) }, sink)
-  sink.push({ kind: "phase", phase: "run" })
-  const result = yield* chosen(argument).pipe(Effect.provideService(Cell, service))
-  return result
-})
+const cellProgram = (body: (n: number) => Effect.Effect<number, never, Cell>, argument: number, initial: number) =>
+  Effect.gen(function* () {
+    const ref = yield* Ref.make(initial)
+    const service = traceService(CellRows, { get: Ref.get(ref), put: (n: number) => Ref.set(ref, n) }, sink)
+    sink.push({ kind: "phase", phase: "run" })
+    return yield* body(argument).pipe(Effect.provideService(Cell, service))
+  })
+
+/** `ecellLive`: the read returns a left, the write still happens. */
+const ecellProgram = (body: (n: number) => Effect.Effect<number, never, ECell>, argument: number, initial: number) =>
+  Effect.gen(function* () {
+    const ref = yield* Ref.make(initial)
+    const service = traceService(ECellRows, {
+      tryGet: Effect.succeed(Result.fail("boom") as Result.Result<number, string>),
+      put: (n: number) => Ref.set(ref, n)
+    }, sink)
+    sink.push({ kind: "phase", phase: "run" })
+    return yield* body(argument).pipe(Effect.provideService(ECell, service))
+  })
+
+/** `fcellLive`: the read aborts with a typed failure; the write before it happens. */
+const fcellProgram = (body: (n: number) => Effect.Effect<number, string, FCell>, argument: number, initial: number) =>
+  Effect.gen(function* () {
+    const ref = yield* Ref.make(initial)
+    const service = traceService(FCellRows, {
+      get: Effect.fail("boom") as Effect.Effect<number, string>,
+      put: (n: number) => Ref.set(ref, n)
+    }, sink)
+    sink.push({ kind: "phase", phase: "run" })
+    return yield* body(argument).pipe(Effect.provideService(FCell, service))
+  })
+
+const programs: Record<string, Effect.Effect<number, string, never>> = {
+  incr: cellProgram(incr, 0, 41),
+  twice: cellProgram(twice, 7, 41),
+  recover: ecellProgram(recover, 5, 41),
+  fallible: fcellProgram(fallible, 5, 41)
+}
+const program = programs[name]
+if (program === undefined) throw new Error(`unknown program ${name}`)
 
 const report = await runTraced(program, sink, { budget, maxOpsBeforeYield })
 sink.push({ kind: "phase", phase: "teardown" })
@@ -37,5 +65,5 @@ console.log(JSON.stringify({
   tracerDefect: report.tracerDefect,
   maxOpsBeforeYield,
   expectYields: process.env.EFFECT4_EXPECT_YIELDS === "1",
-  foreign: ["succ@./atoms.ts"]
+  foreign: ["succ@./atoms.ts", "orZero@./atoms.ts"]
 }))

@@ -1,0 +1,3160 @@
+{
+  "typescript": "5.9.2",
+  "sourceDigest": "41ceead9eccc4fac95cdd626a6fe126e92c7fe0df1273dbc4bc999126b3416ed",
+  "repoPinDigest": "99ae9a9ee91dea505d36114d091c4c3f55d5be81cebc2930afe01c32db34932a",
+  "files": 24401,
+  "parseErrorFiles": 35,
+  "importedFiles": 11681,
+  "groups": {
+    "Layer": {
+      "references": {
+        "sites": 9716,
+        "files": 4952,
+        "repos": 26
+      },
+      "calls": {
+        "sites": 9574,
+        "files": 4927,
+        "repos": 26
+      }
+    },
+    "Scope-module": {
+      "references": {
+        "sites": 345,
+        "files": 91,
+        "repos": 13
+      },
+      "calls": {
+        "sites": 276,
+        "files": 71,
+        "repos": 13
+      }
+    },
+    "resource": {
+      "references": {
+        "sites": 1415,
+        "files": 742,
+        "repos": 22
+      },
+      "calls": {
+        "sites": 1109,
+        "files": 633,
+        "repos": 22
+      }
+    },
+    "fork": {
+      "references": {
+        "sites": 573,
+        "files": 220,
+        "repos": 18
+      },
+      "calls": {
+        "sites": 195,
+        "files": 102,
+        "repos": 15
+      }
+    },
+    "race": {
+      "references": {
+        "sites": 31,
+        "files": 25,
+        "repos": 8
+      },
+      "calls": {
+        "sites": 31,
+        "files": 25,
+        "repos": 8
+      }
+    },
+    "catch": {
+      "references": {
+        "sites": 7741,
+        "files": 2727,
+        "repos": 26
+      },
+      "calls": {
+        "sites": 7740,
+        "files": 2726,
+        "repos": 26
+      }
+    },
+    "gen": {
+      "references": {
+        "sites": 29367,
+        "files": 6521,
+        "repos": 27
+      },
+      "calls": {
+        "sites": 29367,
+        "files": 6521,
+        "repos": 27
+      }
+    }
+  },
+  "operations": {
+    "Effect.acquireRelease": {
+      "references": {
+        "sites": 276,
+        "files": 203,
+        "repos": 16
+      },
+      "calls": {
+        "sites": 276,
+        "files": 203,
+        "repos": 16
+      }
+    },
+    "Effect.acquireUseRelease": {
+      "references": {
+        "sites": 125,
+        "files": 76,
+        "repos": 7
+      },
+      "calls": {
+        "sites": 125,
+        "files": 76,
+        "repos": 7
+      }
+    },
+    "Effect.addFinalizer": {
+      "references": {
+        "sites": 236,
+        "files": 155,
+        "repos": 11
+      },
+      "calls": {
+        "sites": 236,
+        "files": 155,
+        "repos": 11
+      }
+    },
+    "Effect.catch": {
+      "references": {
+        "sites": 894,
+        "files": 460,
+        "repos": 11
+      },
+      "calls": {
+        "sites": 894,
+        "files": 460,
+        "repos": 11
+      }
+    },
+    "Effect.catchAll": {
+      "references": {
+        "sites": 168,
+        "files": 81,
+        "repos": 11
+      },
+      "calls": {
+        "sites": 168,
+        "files": 81,
+        "repos": 11
+      }
+    },
+    "Effect.catchAllCause": {
+      "references": {
+        "sites": 17,
+        "files": 12,
+        "repos": 7
+      },
+      "calls": {
+        "sites": 17,
+        "files": 12,
+        "repos": 7
+      }
+    },
+    "Effect.catchAllDefect": {
+      "references": {
+        "sites": 5,
+        "files": 5,
+        "repos": 5
+      },
+      "calls": {
+        "sites": 5,
+        "files": 5,
+        "repos": 5
+      }
+    },
+    "Effect.catchCause": {
+      "references": {
+        "sites": 214,
+        "files": 144,
+        "repos": 9
+      },
+      "calls": {
+        "sites": 214,
+        "files": 144,
+        "repos": 9
+      }
+    },
+    "Effect.catchCauseIf": {
+      "references": {
+        "sites": 2,
+        "files": 2,
+        "repos": 1
+      },
+      "calls": {
+        "sites": 2,
+        "files": 2,
+        "repos": 1
+      }
+    },
+    "Effect.catchDefect": {
+      "references": {
+        "sites": 33,
+        "files": 25,
+        "repos": 3
+      },
+      "calls": {
+        "sites": 33,
+        "files": 25,
+        "repos": 3
+      }
+    },
+    "Effect.catchFilter": {
+      "references": {
+        "sites": 1,
+        "files": 1,
+        "repos": 1
+      },
+      "calls": {
+        "sites": 1,
+        "files": 1,
+        "repos": 1
+      }
+    },
+    "Effect.catchIf": {
+      "references": {
+        "sites": 158,
+        "files": 61,
+        "repos": 6
+      },
+      "calls": {
+        "sites": 158,
+        "files": 61,
+        "repos": 6
+      }
+    },
+    "Effect.catchNoSuchElement": {
+      "references": {
+        "sites": 1,
+        "files": 1,
+        "repos": 1
+      },
+      "calls": {
+        "sites": 0,
+        "files": 0,
+        "repos": 0
+      }
+    },
+    "Effect.catchReason": {
+      "references": {
+        "sites": 49,
+        "files": 25,
+        "repos": 2
+      },
+      "calls": {
+        "sites": 49,
+        "files": 25,
+        "repos": 2
+      }
+    },
+    "Effect.catchSome": {
+      "references": {
+        "sites": 1,
+        "files": 1,
+        "repos": 1
+      },
+      "calls": {
+        "sites": 1,
+        "files": 1,
+        "repos": 1
+      }
+    },
+    "Effect.catchTag": {
+      "references": {
+        "sites": 6165,
+        "files": 2173,
+        "repos": 18
+      },
+      "calls": {
+        "sites": 6165,
+        "files": 2173,
+        "repos": 18
+      }
+    },
+    "Effect.catchTags": {
+      "references": {
+        "sites": 33,
+        "files": 29,
+        "repos": 10
+      },
+      "calls": {
+        "sites": 33,
+        "files": 29,
+        "repos": 10
+      }
+    },
+    "Effect.ensuring": {
+      "references": {
+        "sites": 258,
+        "files": 179,
+        "repos": 13
+      },
+      "calls": {
+        "sites": 258,
+        "files": 179,
+        "repos": 13
+      }
+    },
+    "Effect.fork": {
+      "references": {
+        "sites": 16,
+        "files": 10,
+        "repos": 7
+      },
+      "calls": {
+        "sites": 9,
+        "files": 5,
+        "repos": 4
+      }
+    },
+    "Effect.forkChild": {
+      "references": {
+        "sites": 254,
+        "files": 64,
+        "repos": 7
+      },
+      "calls": {
+        "sites": 59,
+        "files": 31,
+        "repos": 6
+      }
+    },
+    "Effect.forkDaemon": {
+      "references": {
+        "sites": 4,
+        "files": 4,
+        "repos": 3
+      },
+      "calls": {
+        "sites": 4,
+        "files": 4,
+        "repos": 3
+      }
+    },
+    "Effect.forkDetach": {
+      "references": {
+        "sites": 16,
+        "files": 13,
+        "repos": 6
+      },
+      "calls": {
+        "sites": 10,
+        "files": 7,
+        "repos": 4
+      }
+    },
+    "Effect.forkIn": {
+      "references": {
+        "sites": 38,
+        "files": 23,
+        "repos": 5
+      },
+      "calls": {
+        "sites": 38,
+        "files": 23,
+        "repos": 5
+      }
+    },
+    "Effect.forkScoped": {
+      "references": {
+        "sites": 245,
+        "files": 124,
+        "repos": 14
+      },
+      "calls": {
+        "sites": 75,
+        "files": 41,
+        "repos": 10
+      }
+    },
+    "Effect.gen": {
+      "references": {
+        "sites": 29367,
+        "files": 6521,
+        "repos": 27
+      },
+      "calls": {
+        "sites": 29367,
+        "files": 6521,
+        "repos": 27
+      }
+    },
+    "Effect.onExit": {
+      "references": {
+        "sites": 41,
+        "files": 28,
+        "repos": 10
+      },
+      "calls": {
+        "sites": 41,
+        "files": 28,
+        "repos": 10
+      }
+    },
+    "Effect.onInterrupt": {
+      "references": {
+        "sites": 24,
+        "files": 15,
+        "repos": 5
+      },
+      "calls": {
+        "sites": 24,
+        "files": 15,
+        "repos": 5
+      }
+    },
+    "Effect.race": {
+      "references": {
+        "sites": 4,
+        "files": 4,
+        "repos": 2
+      },
+      "calls": {
+        "sites": 4,
+        "files": 4,
+        "repos": 2
+      }
+    },
+    "Effect.raceAll": {
+      "references": {
+        "sites": 4,
+        "files": 4,
+        "repos": 2
+      },
+      "calls": {
+        "sites": 4,
+        "files": 4,
+        "repos": 2
+      }
+    },
+    "Effect.raceAllFirst": {
+      "references": {
+        "sites": 3,
+        "files": 3,
+        "repos": 1
+      },
+      "calls": {
+        "sites": 3,
+        "files": 3,
+        "repos": 1
+      }
+    },
+    "Effect.raceFirst": {
+      "references": {
+        "sites": 20,
+        "files": 16,
+        "repos": 8
+      },
+      "calls": {
+        "sites": 20,
+        "files": 16,
+        "repos": 8
+      }
+    },
+    "Effect.scoped": {
+      "references": {
+        "sites": 455,
+        "files": 238,
+        "repos": 17
+      },
+      "calls": {
+        "sites": 149,
+        "files": 88,
+        "repos": 12
+      }
+    },
+    "Layer.CurrentMemoMap": {
+      "references": {
+        "sites": 2,
+        "files": 2,
+        "repos": 1
+      },
+      "calls": {
+        "sites": 0,
+        "files": 0,
+        "repos": 0
+      }
+    },
+    "Layer.build": {
+      "references": {
+        "sites": 80,
+        "files": 39,
+        "repos": 6
+      },
+      "calls": {
+        "sites": 67,
+        "files": 32,
+        "repos": 5
+      }
+    },
+    "Layer.buildWithMemoMap": {
+      "references": {
+        "sites": 11,
+        "files": 10,
+        "repos": 3
+      },
+      "calls": {
+        "sites": 11,
+        "files": 10,
+        "repos": 3
+      }
+    },
+    "Layer.buildWithScope": {
+      "references": {
+        "sites": 19,
+        "files": 17,
+        "repos": 5
+      },
+      "calls": {
+        "sites": 19,
+        "files": 17,
+        "repos": 5
+      }
+    },
+    "Layer.catchCause": {
+      "references": {
+        "sites": 2,
+        "files": 2,
+        "repos": 2
+      },
+      "calls": {
+        "sites": 2,
+        "files": 2,
+        "repos": 2
+      }
+    },
+    "Layer.effect": {
+      "references": {
+        "sites": 3908,
+        "files": 3557,
+        "repos": 23
+      },
+      "calls": {
+        "sites": 3908,
+        "files": 3557,
+        "repos": 23
+      }
+    },
+    "Layer.effectContext": {
+      "references": {
+        "sites": 6,
+        "files": 6,
+        "repos": 3
+      },
+      "calls": {
+        "sites": 6,
+        "files": 6,
+        "repos": 3
+      }
+    },
+    "Layer.effectDiscard": {
+      "references": {
+        "sites": 54,
+        "files": 52,
+        "repos": 10
+      },
+      "calls": {
+        "sites": 53,
+        "files": 51,
+        "repos": 10
+      }
+    },
+    "Layer.empty": {
+      "references": {
+        "sites": 82,
+        "files": 54,
+        "repos": 9
+      },
+      "calls": {
+        "sites": 0,
+        "files": 0,
+        "repos": 0
+      }
+    },
+    "Layer.forkMemoMapUnsafe": {
+      "references": {
+        "sites": 1,
+        "files": 1,
+        "repos": 1
+      },
+      "calls": {
+        "sites": 1,
+        "files": 1,
+        "repos": 1
+      }
+    },
+    "Layer.fresh": {
+      "references": {
+        "sites": 26,
+        "files": 13,
+        "repos": 3
+      },
+      "calls": {
+        "sites": 24,
+        "files": 12,
+        "repos": 3
+      }
+    },
+    "Layer.fromBuildMemo": {
+      "references": {
+        "sites": 2,
+        "files": 2,
+        "repos": 1
+      },
+      "calls": {
+        "sites": 2,
+        "files": 2,
+        "repos": 1
+      }
+    },
+    "Layer.isLayer": {
+      "references": {
+        "sites": 7,
+        "files": 3,
+        "repos": 1
+      },
+      "calls": {
+        "sites": 7,
+        "files": 3,
+        "repos": 1
+      }
+    },
+    "Layer.launch": {
+      "references": {
+        "sites": 15,
+        "files": 15,
+        "repos": 7
+      },
+      "calls": {
+        "sites": 13,
+        "files": 13,
+        "repos": 6
+      }
+    },
+    "Layer.locallyScoped": {
+      "references": {
+        "sites": 64,
+        "files": 64,
+        "repos": 1
+      },
+      "calls": {
+        "sites": 64,
+        "files": 64,
+        "repos": 1
+      }
+    },
+    "Layer.makeMemoMap": {
+      "references": {
+        "sites": 3,
+        "files": 3,
+        "repos": 3
+      },
+      "calls": {
+        "sites": 0,
+        "files": 0,
+        "repos": 0
+      }
+    },
+    "Layer.makeMemoMapUnsafe": {
+      "references": {
+        "sites": 4,
+        "files": 4,
+        "repos": 2
+      },
+      "calls": {
+        "sites": 4,
+        "files": 4,
+        "repos": 2
+      }
+    },
+    "Layer.merge": {
+      "references": {
+        "sites": 159,
+        "files": 98,
+        "repos": 15
+      },
+      "calls": {
+        "sites": 159,
+        "files": 98,
+        "repos": 15
+      }
+    },
+    "Layer.mergeAll": {
+      "references": {
+        "sites": 1348,
+        "files": 856,
+        "repos": 20
+      },
+      "calls": {
+        "sites": 1348,
+        "files": 856,
+        "repos": 20
+      }
+    },
+    "Layer.mock": {
+      "references": {
+        "sites": 48,
+        "files": 24,
+        "repos": 1
+      },
+      "calls": {
+        "sites": 48,
+        "files": 24,
+        "repos": 1
+      }
+    },
+    "Layer.orDie": {
+      "references": {
+        "sites": 28,
+        "files": 25,
+        "repos": 5
+      },
+      "calls": {
+        "sites": 0,
+        "files": 0,
+        "repos": 0
+      }
+    },
+    "Layer.provide": {
+      "references": {
+        "sites": 1048,
+        "files": 402,
+        "repos": 22
+      },
+      "calls": {
+        "sites": 1048,
+        "files": 402,
+        "repos": 22
+      }
+    },
+    "Layer.provideMerge": {
+      "references": {
+        "sites": 514,
+        "files": 201,
+        "repos": 16
+      },
+      "calls": {
+        "sites": 514,
+        "files": 201,
+        "repos": 16
+      }
+    },
+    "Layer.scoped": {
+      "references": {
+        "sites": 75,
+        "files": 74,
+        "repos": 5
+      },
+      "calls": {
+        "sites": 75,
+        "files": 74,
+        "repos": 5
+      }
+    },
+    "Layer.scopedDiscard": {
+      "references": {
+        "sites": 6,
+        "files": 6,
+        "repos": 2
+      },
+      "calls": {
+        "sites": 2,
+        "files": 2,
+        "repos": 1
+      }
+    },
+    "Layer.setClock": {
+      "references": {
+        "sites": 1,
+        "files": 1,
+        "repos": 1
+      },
+      "calls": {
+        "sites": 1,
+        "files": 1,
+        "repos": 1
+      }
+    },
+    "Layer.setConfigProvider": {
+      "references": {
+        "sites": 2,
+        "files": 2,
+        "repos": 1
+      },
+      "calls": {
+        "sites": 2,
+        "files": 2,
+        "repos": 1
+      }
+    },
+    "Layer.setTracer": {
+      "references": {
+        "sites": 1,
+        "files": 1,
+        "repos": 1
+      },
+      "calls": {
+        "sites": 0,
+        "files": 0,
+        "repos": 0
+      }
+    },
+    "Layer.setUnhandledErrorLogLevel": {
+      "references": {
+        "sites": 1,
+        "files": 1,
+        "repos": 1
+      },
+      "calls": {
+        "sites": 1,
+        "files": 1,
+        "repos": 1
+      }
+    },
+    "Layer.succeed": {
+      "references": {
+        "sites": 2063,
+        "files": 596,
+        "repos": 22
+      },
+      "calls": {
+        "sites": 2063,
+        "files": 596,
+        "repos": 22
+      }
+    },
+    "Layer.succeedContext": {
+      "references": {
+        "sites": 38,
+        "files": 14,
+        "repos": 3
+      },
+      "calls": {
+        "sites": 38,
+        "files": 14,
+        "repos": 3
+      }
+    },
+    "Layer.suspend": {
+      "references": {
+        "sites": 4,
+        "files": 1,
+        "repos": 1
+      },
+      "calls": {
+        "sites": 4,
+        "files": 1,
+        "repos": 1
+      }
+    },
+    "Layer.sync": {
+      "references": {
+        "sites": 32,
+        "files": 30,
+        "repos": 9
+      },
+      "calls": {
+        "sites": 32,
+        "files": 30,
+        "repos": 9
+      }
+    },
+    "Layer.tap": {
+      "references": {
+        "sites": 11,
+        "files": 3,
+        "repos": 2
+      },
+      "calls": {
+        "sites": 11,
+        "files": 3,
+        "repos": 2
+      }
+    },
+    "Layer.tapCause": {
+      "references": {
+        "sites": 1,
+        "files": 1,
+        "repos": 1
+      },
+      "calls": {
+        "sites": 1,
+        "files": 1,
+        "repos": 1
+      }
+    },
+    "Layer.toRuntime": {
+      "references": {
+        "sites": 1,
+        "files": 1,
+        "repos": 1
+      },
+      "calls": {
+        "sites": 1,
+        "files": 1,
+        "repos": 1
+      }
+    },
+    "Layer.unwrap": {
+      "references": {
+        "sites": 44,
+        "files": 40,
+        "repos": 5
+      },
+      "calls": {
+        "sites": 42,
+        "files": 38,
+        "repos": 5
+      }
+    },
+    "Layer.unwrapEffect": {
+      "references": {
+        "sites": 5,
+        "files": 5,
+        "repos": 3
+      },
+      "calls": {
+        "sites": 3,
+        "files": 3,
+        "repos": 3
+      }
+    },
+    "Scope.Scope": {
+      "references": {
+        "sites": 68,
+        "files": 38,
+        "repos": 5
+      },
+      "calls": {
+        "sites": 0,
+        "files": 0,
+        "repos": 0
+      }
+    },
+    "Scope.addFinalizer": {
+      "references": {
+        "sites": 9,
+        "files": 9,
+        "repos": 3
+      },
+      "calls": {
+        "sites": 9,
+        "files": 9,
+        "repos": 3
+      }
+    },
+    "Scope.close": {
+      "references": {
+        "sites": 89,
+        "files": 49,
+        "repos": 11
+      },
+      "calls": {
+        "sites": 88,
+        "files": 48,
+        "repos": 10
+      }
+    },
+    "Scope.closeUnsafe": {
+      "references": {
+        "sites": 5,
+        "files": 5,
+        "repos": 2
+      },
+      "calls": {
+        "sites": 5,
+        "files": 5,
+        "repos": 2
+      }
+    },
+    "Scope.extend": {
+      "references": {
+        "sites": 9,
+        "files": 4,
+        "repos": 3
+      },
+      "calls": {
+        "sites": 9,
+        "files": 4,
+        "repos": 3
+      }
+    },
+    "Scope.fork": {
+      "references": {
+        "sites": 15,
+        "files": 9,
+        "repos": 3
+      },
+      "calls": {
+        "sites": 15,
+        "files": 9,
+        "repos": 3
+      }
+    },
+    "Scope.make": {
+      "references": {
+        "sites": 49,
+        "files": 27,
+        "repos": 10
+      },
+      "calls": {
+        "sites": 49,
+        "files": 27,
+        "repos": 10
+      }
+    },
+    "Scope.makeUnsafe": {
+      "references": {
+        "sites": 23,
+        "files": 20,
+        "repos": 3
+      },
+      "calls": {
+        "sites": 23,
+        "files": 20,
+        "repos": 3
+      }
+    },
+    "Scope.provide": {
+      "references": {
+        "sites": 78,
+        "files": 39,
+        "repos": 6
+      },
+      "calls": {
+        "sites": 78,
+        "files": 39,
+        "repos": 6
+      }
+    }
+  },
+  "perRepo": [
+    {
+      "repo": "alchemy-run_alchemy",
+      "pin": "43d23b2dfd2bdd5518421697dd31786296fff80a",
+      "files": 11805,
+      "referencesByGroup": {
+        "Layer": 4984,
+        "gen": 15834,
+        "catch": 6612,
+        "resource": 509,
+        "Scope-module": 127,
+        "fork": 60,
+        "race": 5
+      },
+      "callsByGroup": {
+        "Layer": 4927,
+        "gen": 15834,
+        "catch": 6612,
+        "resource": 350,
+        "Scope-module": 120,
+        "fork": 33,
+        "race": 5
+      },
+      "generator": {
+        "calls": 15834,
+        "inlineBodies": 15834,
+        "withNestedGen": 3658,
+        "depths": {
+          "0": 10750,
+          "1": 4799,
+          "2": 273,
+          "3": 12
+        },
+        "directLoopBodies": 472,
+        "lexicalLoopBodies": 707,
+        "directLoops": 634,
+        "directLoopKinds": {
+          "ForStatement": 78,
+          "ForOfStatement": 515,
+          "WhileStatement": 21,
+          "DoStatement": 20
+        },
+        "directBodyWith": {
+          "ifs": 2330,
+          "switches": 22,
+          "tries": 41,
+          "finally": 35,
+          "breaks": 40,
+          "continues": 83,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 14998,
+          "throws": 7,
+          "returns": 8588,
+          "functions": 7571,
+          "loopYield": 291
+        },
+        "noDirectIfSwitchLoopTry": 13252
+      }
+    },
+    {
+      "repo": "anomalyco_opencode",
+      "pin": "df35e842f59bc115bb7c0479a8e11f017d443f2c",
+      "files": 3253,
+      "referencesByGroup": {
+        "gen": 3835,
+        "resource": 493,
+        "catch": 360,
+        "Layer": 852,
+        "fork": 284,
+        "race": 13,
+        "Scope-module": 162
+      },
+      "callsByGroup": {
+        "gen": 3835,
+        "resource": 452,
+        "catch": 360,
+        "Layer": 815,
+        "fork": 52,
+        "race": 13,
+        "Scope-module": 107
+      },
+      "generator": {
+        "calls": 3835,
+        "inlineBodies": 3835,
+        "withNestedGen": 351,
+        "depths": {
+          "0": 3349,
+          "1": 433,
+          "2": 45,
+          "3": 6,
+          "4": 2
+        },
+        "directLoopBodies": 136,
+        "lexicalLoopBodies": 224,
+        "directLoops": 193,
+        "directLoopKinds": {
+          "WhileStatement": 40,
+          "ForOfStatement": 134,
+          "ForStatement": 18,
+          "DoStatement": 1
+        },
+        "directBodyWith": {
+          "ifs": 521,
+          "switches": 3,
+          "tries": 29,
+          "finally": 25,
+          "breaks": 12,
+          "continues": 29,
+          "labeledBreaks": 0,
+          "labeledContinues": 1,
+          "yields": 3809,
+          "throws": 76,
+          "returns": 903,
+          "functions": 1804,
+          "loopYield": 114
+        },
+        "noDirectIfSwitchLoopTry": 3237
+      }
+    },
+    {
+      "repo": "brandhaug_b2b-saas-starter",
+      "pin": "752d4a23551054731adec35b30a9751698f4dff4",
+      "files": 336,
+      "referencesByGroup": {
+        "gen": 401,
+        "Layer": 130,
+        "resource": 27,
+        "catch": 6,
+        "fork": 1
+      },
+      "callsByGroup": {
+        "gen": 401,
+        "Layer": 126,
+        "resource": 26,
+        "catch": 6,
+        "fork": 1
+      },
+      "generator": {
+        "calls": 401,
+        "inlineBodies": 401,
+        "withNestedGen": 39,
+        "depths": {
+          "0": 315,
+          "1": 86
+        },
+        "directLoopBodies": 10,
+        "lexicalLoopBodies": 13,
+        "directLoops": 10,
+        "directLoopKinds": {
+          "ForOfStatement": 6,
+          "ForStatement": 4
+        },
+        "directBodyWith": {
+          "ifs": 65,
+          "switches": 0,
+          "tries": 0,
+          "finally": 0,
+          "breaks": 0,
+          "continues": 1,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 401,
+          "throws": 3,
+          "returns": 190,
+          "functions": 155,
+          "loopYield": 4
+        },
+        "noDirectIfSwitchLoopTry": 330
+      }
+    },
+    {
+      "repo": "contentlayerdev_contentlayer",
+      "pin": "27bfc5a8b98234b0380ebd33c3de06c383d932f8",
+      "files": 302,
+      "referencesByGroup": {},
+      "callsByGroup": {},
+      "generator": {
+        "calls": 0,
+        "inlineBodies": 0,
+        "withNestedGen": 0,
+        "depths": {},
+        "directLoopBodies": 0,
+        "lexicalLoopBodies": 0,
+        "directLoops": 0,
+        "directLoopKinds": {},
+        "directBodyWith": {
+          "ifs": 0,
+          "switches": 0,
+          "tries": 0,
+          "finally": 0,
+          "breaks": 0,
+          "continues": 0,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 0,
+          "throws": 0,
+          "returns": 0,
+          "functions": 0,
+          "loopYield": 0
+        },
+        "noDirectIfSwitchLoopTry": 0
+      }
+    },
+    {
+      "repo": "dearlordylord_huly-mcp",
+      "pin": "597ed31f18bf705419a5bc1404250b3de16ccb08",
+      "files": 861,
+      "referencesByGroup": {
+        "gen": 3929,
+        "resource": 49,
+        "Layer": 268,
+        "catch": 24,
+        "fork": 34,
+        "race": 3,
+        "Scope-module": 11
+      },
+      "callsByGroup": {
+        "gen": 3929,
+        "resource": 26,
+        "Layer": 268,
+        "catch": 24,
+        "race": 3,
+        "fork": 31,
+        "Scope-module": 11
+      },
+      "generator": {
+        "calls": 3929,
+        "inlineBodies": 3929,
+        "withNestedGen": 82,
+        "depths": {
+          "0": 3832,
+          "1": 92,
+          "2": 5
+        },
+        "directLoopBodies": 49,
+        "lexicalLoopBodies": 53,
+        "directLoops": 56,
+        "directLoopKinds": {
+          "ForOfStatement": 56
+        },
+        "directBodyWith": {
+          "ifs": 606,
+          "switches": 5,
+          "tries": 5,
+          "finally": 5,
+          "breaks": 1,
+          "continues": 3,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 3929,
+          "throws": 18,
+          "returns": 1055,
+          "functions": 844,
+          "loopYield": 32
+        },
+        "noDirectIfSwitchLoopTry": 3290
+      }
+    },
+    {
+      "repo": "dhravya_webpull",
+      "pin": "92cac6d569f4bc528fdecd6f6268caed5b7ca415",
+      "files": 11,
+      "referencesByGroup": {
+        "catch": 5,
+        "gen": 7
+      },
+      "callsByGroup": {
+        "catch": 5,
+        "gen": 7
+      },
+      "generator": {
+        "calls": 7,
+        "inlineBodies": 7,
+        "withNestedGen": 0,
+        "depths": {
+          "0": 7
+        },
+        "directLoopBodies": 3,
+        "lexicalLoopBodies": 3,
+        "directLoops": 10,
+        "directLoopKinds": {
+          "WhileStatement": 1,
+          "ForOfStatement": 9
+        },
+        "directBodyWith": {
+          "ifs": 7,
+          "switches": 0,
+          "tries": 2,
+          "finally": 1,
+          "breaks": 0,
+          "continues": 1,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 7,
+          "throws": 0,
+          "returns": 6,
+          "functions": 7,
+          "loopYield": 1
+        },
+        "noDirectIfSwitchLoopTry": 0
+      }
+    },
+    {
+      "repo": "effect-deprecated_otel",
+      "pin": "d423ba36cdec23233e67e582d49f4c5f9b74b0f8",
+      "files": 32,
+      "referencesByGroup": {},
+      "callsByGroup": {},
+      "generator": {
+        "calls": 0,
+        "inlineBodies": 0,
+        "withNestedGen": 0,
+        "depths": {},
+        "directLoopBodies": 0,
+        "lexicalLoopBodies": 0,
+        "directLoops": 0,
+        "directLoopKinds": {},
+        "directBodyWith": {
+          "ifs": 0,
+          "switches": 0,
+          "tries": 0,
+          "finally": 0,
+          "breaks": 0,
+          "continues": 0,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 0,
+          "throws": 0,
+          "returns": 0,
+          "functions": 0,
+          "loopYield": 0
+        },
+        "noDirectIfSwitchLoopTry": 0
+      }
+    },
+    {
+      "repo": "effect-ts_language-service",
+      "pin": "5e4d380b6fcd20f048dd8d41515bcd9ea47ffda4",
+      "files": 803,
+      "referencesByGroup": {
+        "gen": 411,
+        "Layer": 189,
+        "catch": 75,
+        "fork": 6,
+        "resource": 30,
+        "race": 3
+      },
+      "callsByGroup": {
+        "gen": 411,
+        "Layer": 186,
+        "catch": 75,
+        "resource": 26,
+        "fork": 4,
+        "race": 3
+      },
+      "generator": {
+        "calls": 411,
+        "inlineBodies": 411,
+        "withNestedGen": 18,
+        "depths": {
+          "0": 389,
+          "1": 20,
+          "2": 2
+        },
+        "directLoopBodies": 5,
+        "lexicalLoopBodies": 8,
+        "directLoops": 14,
+        "directLoopKinds": {
+          "ForOfStatement": 14
+        },
+        "directBodyWith": {
+          "ifs": 26,
+          "switches": 0,
+          "tries": 8,
+          "finally": 3,
+          "breaks": 0,
+          "continues": 1,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 278,
+          "throws": 2,
+          "returns": 317,
+          "functions": 110,
+          "loopYield": 5
+        },
+        "noDirectIfSwitchLoopTry": 378
+      }
+    },
+    {
+      "repo": "effect-ts_vscode-extension",
+      "pin": "64631d41a75770149361703581e923cf6971d5f4",
+      "files": 38,
+      "referencesByGroup": {
+        "Layer": 13,
+        "gen": 58,
+        "resource": 22,
+        "fork": 21,
+        "catch": 8,
+        "race": 1,
+        "Scope-module": 2
+      },
+      "callsByGroup": {
+        "Layer": 9,
+        "gen": 58,
+        "resource": 13,
+        "catch": 8,
+        "race": 1,
+        "fork": 3,
+        "Scope-module": 2
+      },
+      "generator": {
+        "calls": 58,
+        "inlineBodies": 58,
+        "withNestedGen": 12,
+        "depths": {
+          "0": 35,
+          "1": 22,
+          "2": 1
+        },
+        "directLoopBodies": 2,
+        "lexicalLoopBodies": 6,
+        "directLoops": 2,
+        "directLoopKinds": {
+          "ForOfStatement": 2
+        },
+        "directBodyWith": {
+          "ifs": 13,
+          "switches": 3,
+          "tries": 0,
+          "finally": 0,
+          "breaks": 1,
+          "continues": 0,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 56,
+          "throws": 0,
+          "returns": 36,
+          "functions": 38,
+          "loopYield": 1
+        },
+        "noDirectIfSwitchLoopTry": 43
+      }
+    },
+    {
+      "repo": "embedded-insurance_effect-use",
+      "pin": "8c8edecd850deeada99cbd2434aab0e669f4084b",
+      "files": 34,
+      "referencesByGroup": {
+        "Layer": 23,
+        "catch": 4,
+        "resource": 1
+      },
+      "callsByGroup": {
+        "Layer": 23,
+        "catch": 4,
+        "resource": 1
+      },
+      "generator": {
+        "calls": 0,
+        "inlineBodies": 0,
+        "withNestedGen": 0,
+        "depths": {},
+        "directLoopBodies": 0,
+        "lexicalLoopBodies": 0,
+        "directLoops": 0,
+        "directLoopKinds": {},
+        "directBodyWith": {
+          "ifs": 0,
+          "switches": 0,
+          "tries": 0,
+          "finally": 0,
+          "breaks": 0,
+          "continues": 0,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 0,
+          "throws": 0,
+          "returns": 0,
+          "functions": 0,
+          "loopYield": 0
+        },
+        "noDirectIfSwitchLoopTry": 0
+      }
+    },
+    {
+      "repo": "ethanniser_effectis",
+      "pin": "9d1a30478473b215fbf10415d4f2c212c35bee87",
+      "files": 20,
+      "referencesByGroup": {
+        "gen": 116,
+        "resource": 14,
+        "Layer": 34,
+        "fork": 10,
+        "catch": 47,
+        "Scope-module": 3
+      },
+      "callsByGroup": {
+        "gen": 116,
+        "resource": 7,
+        "Layer": 32,
+        "catch": 47,
+        "Scope-module": 3
+      },
+      "generator": {
+        "calls": 116,
+        "inlineBodies": 116,
+        "withNestedGen": 11,
+        "depths": {
+          "0": 92,
+          "1": 22,
+          "2": 2
+        },
+        "directLoopBodies": 4,
+        "lexicalLoopBodies": 6,
+        "directLoops": 4,
+        "directLoopKinds": {
+          "ForOfStatement": 3,
+          "WhileStatement": 1
+        },
+        "directBodyWith": {
+          "ifs": 24,
+          "switches": 11,
+          "tries": 0,
+          "finally": 0,
+          "breaks": 0,
+          "continues": 0,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 112,
+          "throws": 1,
+          "returns": 54,
+          "functions": 43,
+          "loopYield": 2
+        },
+        "noDirectIfSwitchLoopTry": 84
+      }
+    },
+    {
+      "repo": "floydspace_effect-aws",
+      "pin": "0dfe6cb7d6a74890b7fb5aeeaece09daa67788c1",
+      "files": 548,
+      "referencesByGroup": {
+        "resource": 68,
+        "Layer": 683,
+        "gen": 183,
+        "catch": 73,
+        "Scope-module": 3
+      },
+      "callsByGroup": {
+        "resource": 65,
+        "Layer": 680,
+        "gen": 183,
+        "catch": 73,
+        "Scope-module": 2
+      },
+      "generator": {
+        "calls": 183,
+        "inlineBodies": 183,
+        "withNestedGen": 4,
+        "depths": {
+          "0": 177,
+          "1": 6
+        },
+        "directLoopBodies": 1,
+        "lexicalLoopBodies": 1,
+        "directLoops": 1,
+        "directLoopKinds": {
+          "ForOfStatement": 1
+        },
+        "directBodyWith": {
+          "ifs": 6,
+          "switches": 0,
+          "tries": 0,
+          "finally": 0,
+          "breaks": 0,
+          "continues": 0,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 183,
+          "throws": 0,
+          "returns": 152,
+          "functions": 22,
+          "loopYield": 1
+        },
+        "noDirectIfSwitchLoopTry": 176
+      }
+    },
+    {
+      "repo": "gvasilei_autoreviewer",
+      "pin": "e985e764449a049d0934c61e22a77f3da156fb2b",
+      "files": 15,
+      "referencesByGroup": {
+        "gen": 10,
+        "Layer": 16,
+        "catch": 1
+      },
+      "callsByGroup": {
+        "gen": 10,
+        "Layer": 16,
+        "catch": 1
+      },
+      "generator": {
+        "calls": 10,
+        "inlineBodies": 10,
+        "withNestedGen": 0,
+        "depths": {
+          "0": 10
+        },
+        "directLoopBodies": 0,
+        "lexicalLoopBodies": 0,
+        "directLoops": 0,
+        "directLoopKinds": {},
+        "directBodyWith": {
+          "ifs": 0,
+          "switches": 0,
+          "tries": 0,
+          "finally": 0,
+          "breaks": 0,
+          "continues": 0,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 10,
+          "throws": 0,
+          "returns": 10,
+          "functions": 3,
+          "loopYield": 0
+        },
+        "noDirectIfSwitchLoopTry": 10
+      }
+    },
+    {
+      "repo": "jobflow-io_effect-playwright",
+      "pin": "45bb1906ad0fd6e6ed277c0ab14128e41282c41a",
+      "files": 41,
+      "referencesByGroup": {
+        "gen": 118,
+        "resource": 16,
+        "fork": 16,
+        "Layer": 10,
+        "Scope-module": 2
+      },
+      "callsByGroup": {
+        "gen": 118,
+        "resource": 12,
+        "Layer": 9,
+        "Scope-module": 2
+      },
+      "generator": {
+        "calls": 118,
+        "inlineBodies": 118,
+        "withNestedGen": 7,
+        "depths": {
+          "0": 111,
+          "1": 6,
+          "2": 1
+        },
+        "directLoopBodies": 3,
+        "lexicalLoopBodies": 4,
+        "directLoops": 15,
+        "directLoopKinds": {
+          "ForOfStatement": 13,
+          "ForStatement": 2
+        },
+        "directBodyWith": {
+          "ifs": 2,
+          "switches": 0,
+          "tries": 0,
+          "finally": 0,
+          "breaks": 1,
+          "continues": 1,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 117,
+          "throws": 0,
+          "returns": 3,
+          "functions": 61,
+          "loopYield": 2
+        },
+        "noDirectIfSwitchLoopTry": 114
+      }
+    },
+    {
+      "repo": "joelhooks_pdf-brain",
+      "pin": "8c028371076cfa7b8d2bce2965915080880c152b",
+      "files": 60,
+      "referencesByGroup": {
+        "gen": 177,
+        "Layer": 41,
+        "catch": 5,
+        "Scope-module": 3,
+        "resource": 4
+      },
+      "callsByGroup": {
+        "gen": 177,
+        "Layer": 41,
+        "catch": 5,
+        "Scope-module": 2,
+        "resource": 3
+      },
+      "generator": {
+        "calls": 177,
+        "inlineBodies": 177,
+        "withNestedGen": 16,
+        "depths": {
+          "0": 125,
+          "1": 49,
+          "2": 3
+        },
+        "directLoopBodies": 16,
+        "lexicalLoopBodies": 23,
+        "directLoops": 48,
+        "directLoopKinds": {
+          "ForOfStatement": 37,
+          "ForStatement": 10,
+          "WhileStatement": 1
+        },
+        "directBodyWith": {
+          "ifs": 43,
+          "switches": 1,
+          "tries": 1,
+          "finally": 0,
+          "breaks": 1,
+          "continues": 4,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 172,
+          "throws": 1,
+          "returns": 145,
+          "functions": 66,
+          "loopYield": 11
+        },
+        "noDirectIfSwitchLoopTry": 133
+      }
+    },
+    {
+      "repo": "keanemind_jjk",
+      "pin": "eb39531592f43ca33077c25263876268eb417a94",
+      "files": 84,
+      "referencesByGroup": {
+        "gen": 67,
+        "catch": 13,
+        "resource": 7,
+        "Scope-module": 10,
+        "fork": 4,
+        "Layer": 6
+      },
+      "callsByGroup": {
+        "gen": 67,
+        "catch": 13,
+        "resource": 7,
+        "Scope-module": 10,
+        "fork": 4,
+        "Layer": 6
+      },
+      "generator": {
+        "calls": 67,
+        "inlineBodies": 67,
+        "withNestedGen": 2,
+        "depths": {
+          "0": 64,
+          "1": 3
+        },
+        "directLoopBodies": 7,
+        "lexicalLoopBodies": 7,
+        "directLoops": 9,
+        "directLoopKinds": {
+          "ForOfStatement": 8,
+          "ForStatement": 1
+        },
+        "directBodyWith": {
+          "ifs": 33,
+          "switches": 0,
+          "tries": 2,
+          "finally": 2,
+          "breaks": 1,
+          "continues": 3,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 67,
+          "throws": 2,
+          "returns": 55,
+          "functions": 39,
+          "loopYield": 5
+        },
+        "noDirectIfSwitchLoopTry": 33
+      }
+    },
+    {
+      "repo": "kitlangton_ghui",
+      "pin": "9d66e2f5ea1c1cbe231ac0a66a1fb4928a610e67",
+      "files": 297,
+      "referencesByGroup": {
+        "gen": 92,
+        "catch": 31,
+        "Layer": 34,
+        "resource": 1
+      },
+      "callsByGroup": {
+        "gen": 92,
+        "catch": 31,
+        "Layer": 33,
+        "resource": 1
+      },
+      "generator": {
+        "calls": 92,
+        "inlineBodies": 92,
+        "withNestedGen": 2,
+        "depths": {
+          "0": 89,
+          "1": 3
+        },
+        "directLoopBodies": 5,
+        "lexicalLoopBodies": 6,
+        "directLoops": 8,
+        "directLoopKinds": {
+          "ForOfStatement": 8
+        },
+        "directBodyWith": {
+          "ifs": 30,
+          "switches": 0,
+          "tries": 0,
+          "finally": 0,
+          "breaks": 0,
+          "continues": 0,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 90,
+          "throws": 0,
+          "returns": 59,
+          "functions": 26,
+          "loopYield": 3
+        },
+        "noDirectIfSwitchLoopTry": 60
+      }
+    },
+    {
+      "repo": "kitlangton_motel",
+      "pin": "c49ab0f1bdb92fdbe27c144881f1d1e45efc864f",
+      "files": 102,
+      "referencesByGroup": {
+        "gen": 26,
+        "catch": 2,
+        "Layer": 47,
+        "resource": 2,
+        "Scope-module": 9,
+        "fork": 5
+      },
+      "callsByGroup": {
+        "gen": 26,
+        "catch": 2,
+        "Layer": 47,
+        "resource": 2,
+        "Scope-module": 5,
+        "fork": 5
+      },
+      "generator": {
+        "calls": 26,
+        "inlineBodies": 26,
+        "withNestedGen": 4,
+        "depths": {
+          "0": 21,
+          "1": 5
+        },
+        "directLoopBodies": 0,
+        "lexicalLoopBodies": 1,
+        "directLoops": 0,
+        "directLoopKinds": {},
+        "directBodyWith": {
+          "ifs": 8,
+          "switches": 0,
+          "tries": 1,
+          "finally": 0,
+          "breaks": 0,
+          "continues": 0,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 26,
+          "throws": 1,
+          "returns": 26,
+          "functions": 20,
+          "loopYield": 0
+        },
+        "noDirectIfSwitchLoopTry": 18
+      }
+    },
+    {
+      "repo": "kitlangton_tailcode",
+      "pin": "7a173b590640a0af6268b32638ed3cd316eba76b",
+      "files": 16,
+      "referencesByGroup": {
+        "gen": 6,
+        "Scope-module": 5,
+        "catch": 3,
+        "Layer": 6,
+        "resource": 4,
+        "fork": 3
+      },
+      "callsByGroup": {
+        "gen": 6,
+        "Scope-module": 5,
+        "catch": 3,
+        "Layer": 5,
+        "resource": 4,
+        "fork": 3
+      },
+      "generator": {
+        "calls": 6,
+        "inlineBodies": 6,
+        "withNestedGen": 1,
+        "depths": {
+          "0": 5,
+          "1": 1
+        },
+        "directLoopBodies": 0,
+        "lexicalLoopBodies": 1,
+        "directLoops": 0,
+        "directLoopKinds": {},
+        "directBodyWith": {
+          "ifs": 0,
+          "switches": 0,
+          "tries": 0,
+          "finally": 0,
+          "breaks": 0,
+          "continues": 0,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 6,
+          "throws": 0,
+          "returns": 4,
+          "functions": 4,
+          "loopYield": 0
+        },
+        "noDirectIfSwitchLoopTry": 6
+      }
+    },
+    {
+      "repo": "latitude-dev_latitude-llm",
+      "pin": "a1a723e8b0e1241592745bd2f6090bf0d2ac3d0e",
+      "files": 4248,
+      "referencesByGroup": {
+        "gen": 2212,
+        "Layer": 1985,
+        "catch": 300,
+        "resource": 6,
+        "fork": 1
+      },
+      "callsByGroup": {
+        "gen": 2212,
+        "Layer": 1985,
+        "catch": 300,
+        "resource": 6,
+        "fork": 1
+      },
+      "generator": {
+        "calls": 2212,
+        "inlineBodies": 2212,
+        "withNestedGen": 136,
+        "depths": {
+          "0": 1685,
+          "1": 515,
+          "2": 12
+        },
+        "directLoopBodies": 137,
+        "lexicalLoopBodies": 173,
+        "directLoops": 187,
+        "directLoopKinds": {
+          "ForOfStatement": 162,
+          "WhileStatement": 9,
+          "ForStatement": 14,
+          "DoStatement": 2
+        },
+        "directBodyWith": {
+          "ifs": 648,
+          "switches": 2,
+          "tries": 5,
+          "finally": 5,
+          "breaks": 12,
+          "continues": 43,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 2165,
+          "throws": 2,
+          "returns": 1927,
+          "functions": 1103,
+          "loopYield": 89
+        },
+        "noDirectIfSwitchLoopTry": 1532
+      }
+    },
+    {
+      "repo": "mateokruk_effect-slack",
+      "pin": "d731b47ba1076aac94a15f8e71f22e96a05a0afd",
+      "files": 69,
+      "referencesByGroup": {
+        "Layer": 21,
+        "gen": 101,
+        "catch": 7
+      },
+      "callsByGroup": {
+        "Layer": 21,
+        "gen": 101,
+        "catch": 7
+      },
+      "generator": {
+        "calls": 101,
+        "inlineBodies": 101,
+        "withNestedGen": 4,
+        "depths": {
+          "0": 97,
+          "1": 4
+        },
+        "directLoopBodies": 3,
+        "lexicalLoopBodies": 3,
+        "directLoops": 3,
+        "directLoopKinds": {
+          "ForOfStatement": 3
+        },
+        "directBodyWith": {
+          "ifs": 3,
+          "switches": 1,
+          "tries": 0,
+          "finally": 0,
+          "breaks": 0,
+          "continues": 0,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 72,
+          "throws": 0,
+          "returns": 51,
+          "functions": 44,
+          "loopYield": 1
+        },
+        "noDirectIfSwitchLoopTry": 94
+      }
+    },
+    {
+      "repo": "mcrovero_effect-nextjs",
+      "pin": "784093caf5abd1ca2e48c558ca70ea0493c07d8b",
+      "files": 47,
+      "referencesByGroup": {
+        "Layer": 70,
+        "gen": 62,
+        "catch": 11
+      },
+      "callsByGroup": {
+        "Layer": 60,
+        "gen": 62,
+        "catch": 11
+      },
+      "generator": {
+        "calls": 62,
+        "inlineBodies": 62,
+        "withNestedGen": 16,
+        "depths": {
+          "0": 40,
+          "1": 22
+        },
+        "directLoopBodies": 1,
+        "lexicalLoopBodies": 1,
+        "directLoops": 1,
+        "directLoopKinds": {
+          "ForStatement": 1
+        },
+        "directBodyWith": {
+          "ifs": 7,
+          "switches": 0,
+          "tries": 1,
+          "finally": 1,
+          "breaks": 0,
+          "continues": 0,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 62,
+          "throws": 0,
+          "returns": 34,
+          "functions": 45,
+          "loopYield": 1
+        },
+        "noDirectIfSwitchLoopTry": 53
+      }
+    },
+    {
+      "repo": "mpsuesser_effect-oxlint",
+      "pin": "d8c892f4fedc072409dca290ac44733bf5dc3e87",
+      "files": 26,
+      "referencesByGroup": {
+        "gen": 49,
+        "Layer": 1
+      },
+      "callsByGroup": {
+        "gen": 49,
+        "Layer": 1
+      },
+      "generator": {
+        "calls": 49,
+        "inlineBodies": 48,
+        "withNestedGen": 0,
+        "depths": {
+          "0": 49
+        },
+        "directLoopBodies": 0,
+        "lexicalLoopBodies": 0,
+        "directLoops": 0,
+        "directLoopKinds": {},
+        "directBodyWith": {
+          "ifs": 6,
+          "switches": 0,
+          "tries": 0,
+          "finally": 0,
+          "breaks": 0,
+          "continues": 0,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 48,
+          "throws": 0,
+          "returns": 1,
+          "functions": 10,
+          "loopYield": 0
+        },
+        "noDirectIfSwitchLoopTry": 42
+      }
+    },
+    {
+      "repo": "pauljphilp_effectpatterns",
+      "pin": "f3a0da2299717cf31d31313c5661cebd2446d5a3",
+      "files": 606,
+      "referencesByGroup": {
+        "gen": 931,
+        "catch": 101,
+        "resource": 39,
+        "Layer": 110,
+        "fork": 2
+      },
+      "callsByGroup": {
+        "gen": 931,
+        "catch": 101,
+        "Layer": 104,
+        "fork": 2,
+        "resource": 16
+      },
+      "generator": {
+        "calls": 931,
+        "inlineBodies": 931,
+        "withNestedGen": 52,
+        "depths": {
+          "0": 784,
+          "1": 142,
+          "2": 5
+        },
+        "directLoopBodies": 81,
+        "lexicalLoopBodies": 93,
+        "directLoops": 120,
+        "directLoopKinds": {
+          "ForStatement": 14,
+          "ForOfStatement": 102,
+          "WhileStatement": 4
+        },
+        "directBodyWith": {
+          "ifs": 253,
+          "switches": 0,
+          "tries": 19,
+          "finally": 5,
+          "breaks": 2,
+          "continues": 10,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 912,
+          "throws": 0,
+          "returns": 774,
+          "functions": 238,
+          "loopYield": 66
+        },
+        "noDirectIfSwitchLoopTry": 649
+      }
+    },
+    {
+      "repo": "sandromaglione_menimal",
+      "pin": "60a717fad0533a4220e8059d253dfeb3bfbaa54c",
+      "files": 15,
+      "referencesByGroup": {
+        "gen": 18,
+        "Layer": 17,
+        "catch": 1
+      },
+      "callsByGroup": {
+        "gen": 18,
+        "Layer": 17,
+        "catch": 1
+      },
+      "generator": {
+        "calls": 18,
+        "inlineBodies": 18,
+        "withNestedGen": 2,
+        "depths": {
+          "0": 16,
+          "1": 2
+        },
+        "directLoopBodies": 2,
+        "lexicalLoopBodies": 2,
+        "directLoops": 2,
+        "directLoopKinds": {
+          "ForStatement": 2
+        },
+        "directBodyWith": {
+          "ifs": 1,
+          "switches": 0,
+          "tries": 0,
+          "finally": 0,
+          "breaks": 0,
+          "continues": 0,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 17,
+          "throws": 0,
+          "returns": 12,
+          "functions": 9,
+          "loopYield": 2
+        },
+        "noDirectIfSwitchLoopTry": 16
+      }
+    },
+    {
+      "repo": "sukovanej_effect-http",
+      "pin": "f251f6cf73d0b8c81130226f9f71e597c56dfd7b",
+      "files": 114,
+      "referencesByGroup": {
+        "Layer": 18,
+        "gen": 105,
+        "resource": 8,
+        "catch": 5,
+        "fork": 4
+      },
+      "callsByGroup": {
+        "Layer": 15,
+        "gen": 105,
+        "catch": 5,
+        "resource": 1,
+        "fork": 1
+      },
+      "generator": {
+        "calls": 105,
+        "inlineBodies": 105,
+        "withNestedGen": 1,
+        "depths": {
+          "0": 104,
+          "1": 1
+        },
+        "directLoopBodies": 3,
+        "lexicalLoopBodies": 3,
+        "directLoops": 3,
+        "directLoopKinds": {
+          "ForOfStatement": 3
+        },
+        "directBodyWith": {
+          "ifs": 9,
+          "switches": 0,
+          "tries": 0,
+          "finally": 0,
+          "breaks": 0,
+          "continues": 0,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 105,
+          "throws": 0,
+          "returns": 12,
+          "functions": 68,
+          "loopYield": 2
+        },
+        "noDirectIfSwitchLoopTry": 93
+      }
+    },
+    {
+      "repo": "tim-smart_dfx",
+      "pin": "23988a4f182eb5cebc6c3bbac3f3c35fd303168f",
+      "files": 49,
+      "referencesByGroup": {
+        "gen": 21,
+        "catch": 18,
+        "Layer": 52,
+        "fork": 14,
+        "resource": 9,
+        "Scope-module": 1,
+        "race": 2
+      },
+      "callsByGroup": {
+        "gen": 21,
+        "catch": 17,
+        "Layer": 52,
+        "resource": 8,
+        "fork": 3,
+        "Scope-module": 1,
+        "race": 2
+      },
+      "generator": {
+        "calls": 21,
+        "inlineBodies": 21,
+        "withNestedGen": 2,
+        "depths": {
+          "0": 19,
+          "1": 2
+        },
+        "directLoopBodies": 2,
+        "lexicalLoopBodies": 5,
+        "directLoops": 2,
+        "directLoopKinds": {
+          "WhileStatement": 2
+        },
+        "directBodyWith": {
+          "ifs": 1,
+          "switches": 0,
+          "tries": 0,
+          "finally": 0,
+          "breaks": 1,
+          "continues": 0,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 21,
+          "throws": 0,
+          "returns": 17,
+          "functions": 18,
+          "loopYield": 2
+        },
+        "noDirectIfSwitchLoopTry": 19
+      }
+    },
+    {
+      "repo": "tim-smart_lalph",
+      "pin": "ea5f0044a8ef439597f87308067bc7bd289cac42",
+      "files": 69,
+      "referencesByGroup": {
+        "race": 3,
+        "Layer": 79,
+        "gen": 65,
+        "fork": 6,
+        "catch": 9,
+        "resource": 33
+      },
+      "callsByGroup": {
+        "race": 3,
+        "Layer": 72,
+        "gen": 65,
+        "catch": 9,
+        "resource": 11
+      },
+      "generator": {
+        "calls": 65,
+        "inlineBodies": 65,
+        "withNestedGen": 6,
+        "depths": {
+          "0": 52,
+          "1": 12,
+          "2": 1
+        },
+        "directLoopBodies": 2,
+        "lexicalLoopBodies": 3,
+        "directLoops": 2,
+        "directLoopKinds": {
+          "ForOfStatement": 2
+        },
+        "directBodyWith": {
+          "ifs": 20,
+          "switches": 0,
+          "tries": 0,
+          "finally": 0,
+          "breaks": 0,
+          "continues": 2,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 65,
+          "throws": 0,
+          "returns": 56,
+          "functions": 38,
+          "loopYield": 2
+        },
+        "noDirectIfSwitchLoopTry": 45
+      }
+    },
+    {
+      "repo": "tylors_typed-fx",
+      "pin": "023662e75259df2e67ff9b79421540113f051aec",
+      "files": 291,
+      "referencesByGroup": {
+        "fork": 15,
+        "catch": 4,
+        "gen": 15,
+        "resource": 2
+      },
+      "callsByGroup": {
+        "fork": 12,
+        "catch": 4,
+        "gen": 15,
+        "resource": 2
+      },
+      "generator": {
+        "calls": 15,
+        "inlineBodies": 14,
+        "withNestedGen": 0,
+        "depths": {
+          "0": 15
+        },
+        "directLoopBodies": 4,
+        "lexicalLoopBodies": 4,
+        "directLoops": 5,
+        "directLoopKinds": {
+          "ForStatement": 3,
+          "ForOfStatement": 2
+        },
+        "directBodyWith": {
+          "ifs": 2,
+          "switches": 0,
+          "tries": 0,
+          "finally": 0,
+          "breaks": 0,
+          "continues": 1,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 14,
+          "throws": 0,
+          "returns": 3,
+          "functions": 10,
+          "loopYield": 4
+        },
+        "noDirectIfSwitchLoopTry": 9
+      }
+    },
+    {
+      "repo": "typeonce-dev_effect-machine",
+      "pin": "68092b83e4ab0d131598a5593565e10a2ff02f04",
+      "files": 209,
+      "referencesByGroup": {
+        "Layer": 27,
+        "resource": 71,
+        "catch": 16,
+        "gen": 518,
+        "fork": 87,
+        "race": 1,
+        "Scope-module": 7
+      },
+      "callsByGroup": {
+        "Layer": 24,
+        "resource": 70,
+        "catch": 16,
+        "gen": 518,
+        "fork": 40,
+        "race": 1,
+        "Scope-module": 6
+      },
+      "generator": {
+        "calls": 518,
+        "inlineBodies": 518,
+        "withNestedGen": 30,
+        "depths": {
+          "0": 488,
+          "1": 28,
+          "2": 2
+        },
+        "directLoopBodies": 68,
+        "lexicalLoopBodies": 70,
+        "directLoops": 93,
+        "directLoopKinds": {
+          "WhileStatement": 8,
+          "ForOfStatement": 61,
+          "ForStatement": 24
+        },
+        "directBodyWith": {
+          "ifs": 79,
+          "switches": 4,
+          "tries": 4,
+          "finally": 0,
+          "breaks": 8,
+          "continues": 9,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 518,
+          "throws": 10,
+          "returns": 52,
+          "functions": 414,
+          "loopYield": 66
+        },
+        "noDirectIfSwitchLoopTry": 395
+      }
+    }
+  ],
+  "generator": {
+    "calls": 29367,
+    "inlineBodies": 29365,
+    "withNestedGen": 4456,
+    "depths": {
+      "0": 22720,
+      "1": 6275,
+      "2": 352,
+      "3": 18,
+      "4": 2
+    },
+    "directLoopBodies": 1016,
+    "lexicalLoopBodies": 1420,
+    "directLoops": 1422,
+    "directLoopKinds": {
+      "ForStatement": 171,
+      "ForOfStatement": 1141,
+      "WhileStatement": 87,
+      "DoStatement": 23
+    },
+    "directBodyWith": {
+      "ifs": 4743,
+      "switches": 52,
+      "tries": 118,
+      "finally": 82,
+      "breaks": 80,
+      "continues": 191,
+      "labeledBreaks": 0,
+      "labeledContinues": 1,
+      "yields": 28260,
+      "throws": 123,
+      "returns": 14542,
+      "functions": 12810,
+      "loopYield": 707
+    },
+    "noDirectIfSwitchLoopTry": 24111
+  },
+  "strata": {
+    "test-fixture-example-benchmark-path": {
+      "files": 6688,
+      "referencesByGroup": {
+        "Layer": 3946,
+        "gen": 21311,
+        "catch": 2298,
+        "resource": 896,
+        "fork": 395,
+        "Scope-module": 162,
+        "race": 4
+      },
+      "callsByGroup": {
+        "Layer": 3874,
+        "gen": 21311,
+        "catch": 2298,
+        "resource": 687,
+        "fork": 96,
+        "Scope-module": 130,
+        "race": 4
+      },
+      "generator": {
+        "calls": 21311,
+        "inlineBodies": 21311,
+        "withNestedGen": 3390,
+        "depths": {
+          "0": 16671,
+          "1": 4421,
+          "2": 213,
+          "3": 6
+        },
+        "directLoopBodies": 458,
+        "lexicalLoopBodies": 520,
+        "directLoops": 524,
+        "directLoopKinds": {
+          "ForStatement": 91,
+          "ForOfStatement": 400,
+          "WhileStatement": 31,
+          "DoStatement": 2
+        },
+        "directBodyWith": {
+          "ifs": 1961,
+          "switches": 20,
+          "tries": 79,
+          "finally": 71,
+          "breaks": 20,
+          "continues": 24,
+          "labeledBreaks": 0,
+          "labeledContinues": 0,
+          "yields": 20996,
+          "throws": 82,
+          "returns": 7306,
+          "functions": 7853,
+          "loopYield": 277
+        },
+        "noDirectIfSwitchLoopTry": 18946
+      }
+    },
+    "other-path": {
+      "files": 17713,
+      "referencesByGroup": {
+        "Layer": 5770,
+        "resource": 519,
+        "Scope-module": 183,
+        "fork": 178,
+        "gen": 8056,
+        "catch": 5443,
+        "race": 27
+      },
+      "callsByGroup": {
+        "Layer": 5700,
+        "resource": 422,
+        "Scope-module": 146,
+        "fork": 99,
+        "gen": 8056,
+        "catch": 5442,
+        "race": 27
+      },
+      "generator": {
+        "calls": 8056,
+        "inlineBodies": 8054,
+        "withNestedGen": 1066,
+        "depths": {
+          "0": 6049,
+          "1": 1854,
+          "2": 139,
+          "3": 12,
+          "4": 2
+        },
+        "directLoopBodies": 558,
+        "lexicalLoopBodies": 900,
+        "directLoops": 898,
+        "directLoopKinds": {
+          "WhileStatement": 56,
+          "ForOfStatement": 741,
+          "ForStatement": 80,
+          "DoStatement": 21
+        },
+        "directBodyWith": {
+          "ifs": 2782,
+          "switches": 32,
+          "tries": 39,
+          "finally": 11,
+          "breaks": 60,
+          "continues": 167,
+          "labeledBreaks": 0,
+          "labeledContinues": 1,
+          "yields": 7264,
+          "throws": 41,
+          "returns": 7236,
+          "functions": 4957,
+          "loopYield": 430
+        },
+        "noDirectIfSwitchLoopTry": 5165
+      }
+    },
+    "excluding-alchemy": {
+      "files": 12596,
+      "referencesByGroup": {
+        "gen": 13533,
+        "resource": 906,
+        "catch": 1129,
+        "Layer": 4732,
+        "fork": 513,
+        "race": 26,
+        "Scope-module": 218
+      },
+      "callsByGroup": {
+        "gen": 13533,
+        "resource": 759,
+        "catch": 1128,
+        "Layer": 4647,
+        "fork": 162,
+        "race": 26,
+        "Scope-module": 156
+      },
+      "generator": {
+        "calls": 13533,
+        "inlineBodies": 13531,
+        "withNestedGen": 798,
+        "depths": {
+          "0": 11970,
+          "1": 1476,
+          "2": 79,
+          "3": 6,
+          "4": 2
+        },
+        "directLoopBodies": 544,
+        "lexicalLoopBodies": 713,
+        "directLoops": 788,
+        "directLoopKinds": {
+          "WhileStatement": 66,
+          "ForOfStatement": 626,
+          "ForStatement": 93,
+          "DoStatement": 3
+        },
+        "directBodyWith": {
+          "ifs": 2413,
+          "switches": 30,
+          "tries": 77,
+          "finally": 47,
+          "breaks": 40,
+          "continues": 108,
+          "labeledBreaks": 0,
+          "labeledContinues": 1,
+          "yields": 13262,
+          "throws": 116,
+          "returns": 5954,
+          "functions": 5239,
+          "loopYield": 416
+        },
+        "noDirectIfSwitchLoopTry": 10859
+      }
+    }
+  },
+  "lexical": {
+    "Layer.mergeAll": 1405,
+    "Effect.gen": 30426,
+    "Effect.provide": 10319,
+    "Effect.map": 5958,
+    "Effect.succeed": 11466,
+    "Effect.sync": 3250,
+    "Effect.flatMap": 4216,
+    "Effect.retry": 3016,
+    "Effect.ignore": 493,
+    "Effect.catch": 904,
+    "Effect.Effect": 23051,
+    "Effect.fail": 5234,
+    "Effect.void": 3971,
+    "Effect.onError": 47,
+    "Effect.orDie": 1500,
+    "Effect.timeout": 189,
+    "Effect.forEach": 1196,
+    "Layer.const": 1,
+    "Effect.catchTag": 6249,
+    "Effect.fn": 10297,
+    "Effect.repeat": 684,
+    "Layer.effect": 4138,
+    "Effect.logInfo": 986,
+    "Layer.provideMerge": 545,
+    "Effect.log": 595,
+    "Effect.all": 725,
+    "Layer.provide": 1074,
+    "Effect.try": 307,
+    "Effect.logWarning": 319,
+    "Effect.asVoid": 503,
+    "Effect.mapError": 1100,
+    "Effect.tapError": 672,
+    "Effect.catchCause": 218,
+    "Effect.match": 60,
+    "Effect.tryPromise": 1339,
+    "Effect.tap": 373,
+    "Effect.scoped": 497,
+    "Effect.promise": 1869,
+    "Effect.die": 1568,
+    "Effect.filterOrFail": 107,
+    "Effect.runPromise": 3994,
+    "Layer.succeed": 2085,
+    "Effect.orElseSucceed": 165,
+    "Effect.sleep": 220,
+    "Effect.zip": 15,
+    "Layer.unwrap": 48,
+    "Effect.flip": 1924,
+    "Effect.context": 115,
+    "Effect.ensuring": 290,
+    "Layer.merge": 165,
+    "Effect.never": 175,
+    "Effect.suspend": 294,
+    "Scope.Scope": 401,
+    "Layer.Layer": 518,
+    "Layer.MemoMap": 8,
+    "Effect.runSync": 269,
+    "Layer.makeMemoMap": 3,
+    "Scope.makeUnsafe": 23,
+    "Layer.buildWithMemoMap": 13,
+    "Effect.cached": 56,
+    "Layer.forkMemoMapUnsafe": 1,
+    "Scope.close": 94,
+    "Effect.forkChild": 258,
+    "Effect.andThen": 496,
+    "Layer.sync": 33,
+    "Effect.provideService": 1445,
+    "Effect.forkDetach": 18,
+    "Effect.timeoutOption": 28,
+    "Effect.exit": 573,
+    "Effect.onExit": 45,
+    "Effect.runFork": 30,
+    "Effect.acquireRelease": 301,
+    "Effect.js": 19,
+    "Effect.result": 496,
+    "Effect.EffectIterator": 2,
+    "Effect.provideContext": 109,
+    "Effect.timeoutOrElse": 77,
+    "Effect.as": 444,
+    "Effect.logDebug": 117,
+    "Effect.matchEffect": 9,
+    "Effect.isEffect": 184,
+    "Effect.logError": 206,
+    "Effect.Success": 98,
+    "Effect.catchIf": 160,
+    "Layer.empty": 87,
+    "Effect.serviceOption": 114,
+    "Layer.orDie": 29,
+    "Effect.Data": 1,
+    "Effect.Stream": 1,
+    "Effect.catchDefect": 36,
+    "Effect.runPromiseExit": 605,
+    "Effect.ignoreCause": 6,
+    "Effect.catchTags": 41,
+    "Effect.addFinalizer": 251,
+    "Layer.CurrentMemoMap": 2,
+    "Layer.effectContext": 6,
+    "Layer.succeedContext": 38,
+    "Effect.Services": 36,
+    "Effect.Alchemy": 1,
+    "Effect.forever": 26,
+    "Effect.scope": 28,
+    "Layer.buildWithScope": 19,
+    "Scope.provide": 78,
+    "Layer.effectDiscard": 54,
+    "Layer.fromBuildMemo": 4,
+    "Effect.Error": 52,
+    "Effect.if": 3,
+    "Effect.catchAll": 209,
+    "Effect.callback": 92,
+    "Layer.Inline": 1,
+    "Effect.provideServiceEffect": 17,
+    "Effect.withSpan": 573,
+    "Effect.failCause": 48,
+    "Effect.catchReason": 49,
+    "Effect.forkScoped": 263,
+    "Layer.ts": 2,
+    "Effect.delay": 25,
+    "Layer.Services": 17,
+    "Effect.Anything": 1,
+    "Effect.acquireUseRelease": 126,
+    "Effect.filter": 5,
+    "Effect.undefined": 17,
+    "Effect.onInterrupt": 25,
+    "Layer.build": 83,
+    "Effect.tapCause": 16,
+    "Effect.matchCause": 9,
+    "Effect.raceFirst": 22,
+    "Effect.makeSemaphore": 7,
+    "Effect.scopedWith": 5,
+    "Scope.addFinalizer": 9,
+    "Effect.catchFilter": 1,
+    "Effect.Flagship": 1,
+    "Effect.succeedNone": 21,
+    "Effect.annotateCurrentSpan": 545,
+    "Scope.Closeable": 23,
+    "Effect.T": 1,
+    "Scope.fork": 16,
+    "Effect.forkIn": 41,
+    "Effect.uninterruptibleMask": 35,
+    "Effect.R": 1,
+    "Effect.zipWith": 6,
+    "Effect.raceAllFirst": 3,
+    "Layer.scoped": 82,
+    "Layer.makeMemoMapUnsafe": 5,
+    "Effect.flatten": 23,
+    "Effect.Retry": 1,
+    "Effect.Callers": 2,
+    "Effect.Fly": 1,
+    "Effect.A": 1,
+    "Effect.Yield": 2,
+    "Effect.fromOption": 21,
+    "Effect.withFiber": 12,
+    "Layer.Success": 5,
+    "Layer.Error": 4,
+    "Layer.launch": 20,
+    "Effect.interrupt": 28,
+    "Effect.Array": 1,
+    "Layer.Provide": 1,
+    "Effect.fnUntraced": 446,
+    "Effect.runSyncExit": 4,
+    "Effect.option": 69,
+    "Effect.asSome": 20,
+    "Effect.matchCauseEffect": 26,
+    "Layer.The": 1,
+    "Layer.export": 2,
+    "Effect.yieldNow": 126,
+    "Scope.make": 50,
+    "Layer.Yielding": 1,
+    "Effect.withLogSpan": 22,
+    "Effect.schedule": 5,
+    "Scope.closeUnsafe": 5,
+    "Effect.acquireDisposable": 1,
+    "Layer.isLayer": 7,
+    "Effect.Tests": 1,
+    "Effect.expect": 1,
+    "Effect.Stand": 1,
+    "Effect.raceAll": 5,
+    "Layer.Any": 9,
+    "Effect.RunOptions": 4,
+    "Effect.uninterruptible": 25,
+    "Effect.catchCauseIf": 3,
+    "Effect.runForkWith": 3,
+    "Layer.fresh": 29,
+    "Layer.tap": 11,
+    "Effect.cachedInvalidateWithTTL": 6,
+    "Effect.runPromiseWith": 12,
+    "Effect.Type": 2,
+    "Effect.annotateLogs": 48,
+    "Layer.mock": 48,
+    "Effect.cachedWithTTL": 4,
+    "Effect.race": 10,
+    "Effect.fromResult": 2,
+    "Effect.partition": 6,
+    "Effect.service": 19,
+    "Scope.export": 1,
+    "Effect.annotateLogsScoped": 45,
+    "Effect.currentParentSpan": 5,
+    "Effect.withParentSpan": 4,
+    "Scope.Server": 1,
+    "Effect.useSpan": 3,
+    "Effect.dieless": 1,
+    "Effect.dieMessage": 8,
+    "Effect.orDieWith": 1,
+    "Effect.async": 19,
+    "Effect.zipRight": 34,
+    "Effect.timeoutFail": 8,
+    "Effect.fromNullable": 8,
+    "Effect.fork": 33,
+    "Effect.either": 102,
+    "Effect.interruptible": 18,
+    "Effect.Clock": 1,
+    "Layer.suspend": 4,
+    "Effect.unit": 34,
+    "Effect.environment": 1,
+    "Layer.fromEffect": 1,
+    "Effect.serviceWithEffect": 4,
+    "Effect.environmentWith": 1,
+    "Effect.UIO": 2,
+    "Effect.serviceWith": 1,
+    "Effect.done": 2,
+    "Effect.tuplePar": 1,
+    "Effect.catchSome": 1,
+    "Effect.Service": 292,
+    "Effect.Tag": 94,
+    "Effect.Do": 17,
+    "Effect.bind": 17,
+    "Effect.let": 4,
+    "Effect.ignoreLogged": 10,
+    "Effect.tryMapPromise": 4,
+    "Effect.runtime": 16,
+    "Effect.catchAllCause": 23,
+    "Effect.catchAllDefect": 6,
+    "Effect.forkDaemon": 5,
+    "Effect.ensureErrorType": 2,
+    "Effect.satisfiesErrorType": 1,
+    "Effect.ensureSuccessType": 2,
+    "Effect.satisfiesSuccessType": 1,
+    "Effect.ensureRequirementsType": 2,
+    "Effect.satisfiesServicesType": 1,
+    "Effect.scopeWith": 4,
+    "Effect.serviceOptional": 2,
+    "Effect.tapErrorCause": 9,
+    "Effect.withFiberRuntime": 2,
+    "Effect.zipLeft": 11,
+    "Effect.orElse": 11,
+    "Effect.dieSync": 3,
+    "Effect.failSync": 3,
+    "Effect.failCauseSync": 3,
+    "Effect.whileLoop": 6,
+    "Effect.succeedSome": 11,
+    "Effect.makeLatch": 9,
+    "Effect.mapBoth": 4,
+    "Effect.filterMap": 3,
+    "Effect.filterOrElse": 3,
+    "Effect.timed": 8,
+    "Effect.when": 9,
+    "Effect.sandbox": 6,
+    "Effect.tapDefect": 2,
+    "Effect.tapErrorTag": 6,
+    "Effect.replicate": 2,
+    "Effect.replicateEffect": 3,
+    "Effect.repeatOrElse": 2,
+    "Effect.retryOrElse": 6,
+    "Effect.eventually": 2,
+    "Effect.withConcurrency": 2,
+    "Effect.scheduleFrom": 2,
+    "Effect.updateService": 3,
+    "Effect.logFatal": 8,
+    "Effect.logTrace": 15,
+    "Effect.logWithLevel": 3,
+    "Effect.annotateSpans": 2,
+    "Effect.currentSpan": 2,
+    "Effect.linkSpans": 3,
+    "Effect.makeSpan": 4,
+    "Effect.makeSpanScoped": 2,
+    "Effect.spanAnnotations": 2,
+    "Effect.spanLinks": 2,
+    "Effect.tracer": 4,
+    "Effect.withSpanScoped": 2,
+    "Effect.withTracer": 3,
+    "Effect.withTracerEnabled": 2,
+    "Effect.withTracerTiming": 2,
+    "Effect.runCallback": 9,
+    "Effect.withExecutionPlan": 2,
+    "Effect.interruptibleMask": 2,
+    "Effect.fiberId": 4,
+    "Effect.clockWith": 5,
+    "Effect.isFailure": 2,
+    "Effect.isSuccess": 2,
+    "Effect.request": 3,
+    "Effect.tryMap": 1,
+    "Layer.$": 1,
+    "Effect.$": 3,
+    "Effect.fnGen": 1,
+    "Effect.fnUntracedGen": 1,
+    "Effect.fnUntracedEager": 1,
+    "Effect.bindAll": 1,
+    "Effect.consoleWith": 1,
+    "Effect.randomWith": 3,
+    "Effect.run": 5,
+    "Effect.awaitAllChildren": 1,
+    "Effect.firstSuccessOf": 1,
+    "Effect.timeoutTo": 1,
+    "Layer.scopedDiscard": 7,
+    "Effect.EffectTypeId": 2,
+    "Effect.locally": 72,
+    "Layer.setClock": 1,
+    "Effect.provideLayer": 1,
+    "Effect.bindTo": 1,
+    "Scope.extend": 10,
+    "Scope.CloseableScope": 3,
+    "Layer.locallyScoped": 65,
+    "Layer.unwrapEffect": 5,
+    "Layer.setTracer": 1,
+    "Effect.serviceFunctionEffect": 1,
+    "Layer.setConfigProvider": 2,
+    "Effect.withConfigProvider": 3,
+    "Effect.findFirst": 1,
+    "Layer.toRuntime": 1,
+    "Effect.contextWithEffect": 24,
+    "Layer.catchCause": 2,
+    "Effect.While": 1,
+    "Effect.const": 2,
+    "Scope.Absent": 1,
+    "Effect.runPromiseExitWith": 2,
+    "Layer.setUnhandledErrorLogLevel": 1,
+    "Scope.ts": 2,
+    "Scope.findVariable": 4,
+    "Scope.findVariableUp": 5,
+    "Scope.isUsed": 3,
+    "Scope.isWritten": 4,
+    "Scope.isReadOnly": 3,
+    "Scope.getReferences": 2,
+    "Scope.getReadReferences": 2,
+    "Scope.getWriteReferences": 2,
+    "Scope.upper": 3,
+    "Scope.childScopes": 2,
+    "Scope.variables": 3,
+    "Scope.throughReferences": 2,
+    "Scope.isStrict": 3,
+    "Scope.global": 9,
+    "Effect.offload": 3,
+    "Effect.blocking": 2,
+    "Effect.Ref": 3,
+    "Effect.forEachWithConcurrency": 1,
+    "Effect.fromEither": 3,
+    "Effect.matchTag": 3,
+    "Effect.Config": 1,
+    "Effect.Metric": 1,
+    "Effect.validateAll": 2,
+    "Effect.withRequestCache": 2,
+    "Effect.withRequestCaching": 2,
+    "Effect.mapInputContext": 1,
+    "Effect.mergeAll": 1,
+    "Effect.reduce": 2,
+    "Effect.fromNullishOr": 1,
+    "Effect.catchNoSuchElement": 1,
+    "Effect.ts": 3,
+    "Layer.tapCause": 1,
+    "Effect.runPromiseEither": 4,
+    "Effect.zipParRight": 1,
+    "Effect.intoDeferred": 3,
+    "Effect.scheduleForked": 4,
+    "Effect.withParallelism": 1,
+    "Effect.withParallelismUnbounded": 1,
+    "Effect.config": 1,
+    "Effect.configProviderWith": 1,
+    "Effect.asyncEffect": 1,
+    "Effect.asyncInterrupt": 1,
+    "Effect.asyncInterruptEither": 1,
+    "Effect.asyncOption": 1,
+    "Effect.collect": 1,
+    "Effect.EffectGen": 6,
+    "Effect.interruptWith": 1,
+    "Effect.promiseInterrupt": 1,
+    "Effect.succeedLeft": 1,
+    "Effect.succeedRight": 1,
+    "Effect.tryCatch": 1,
+    "Effect.tryCatchPromise": 1,
+    "Effect.tryCatchPromiseInterrupt": 1,
+    "Effect.tryPromiseInterrupt": 1,
+    "Effect.clock": 1,
+    "Effect.contextWith": 2,
+    "Effect.contramapContext": 2,
+    "Effect.provideSomeLayer": 2,
+    "Effect.random": 1,
+    "Effect.forEachDiscard": 2,
+    "Effect.fromEitherCause": 1,
+    "Effect.fromFiber": 1,
+    "Effect.fromFiberEffect": 1,
+    "Effect.getOrFail": 1,
+    "Effect.getOrFailDiscard": 1,
+    "Effect.getOrFailWith": 1,
+    "Effect.logAnnotate": 1,
+    "Effect.logAnnotations": 1,
+    "Effect.logDebugCause": 1,
+    "Effect.logDebugCauseMessage": 1,
+    "Effect.logErrorCause": 1,
+    "Effect.logErrorCauseMessage": 1,
+    "Effect.logFatalCause": 1,
+    "Effect.logFatalCauseMessage": 1,
+    "Effect.logInfoCause": 1,
+    "Effect.logInfoCauseMessage": 1,
+    "Effect.logSpan": 1,
+    "Effect.logTraceCause": 1,
+    "Effect.logTraceCauseMessage": 1,
+    "Effect.logWarningCause": 1,
+    "Effect.logWarningCauseMessage": 1,
+    "Effect.tagged": 1,
+    "Effect.taggedWithLabelSet": 1,
+    "Effect.taggedWithLabels": 1,
+    "Effect.unsafeMakeSemaphore": 5,
+    "Effect.forEachParDiscard": 4,
+    "Effect.forEachWithIndex": 1,
+    "Effect.supervised": 1,
+    "Effect.asUnit": 1,
+    "Effect.unrefineWith": 1,
+    "Effect.allPar": 2
+  }
+}

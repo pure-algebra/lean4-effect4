@@ -1,0 +1,23 @@
+[
+  {
+    "name": "tc_256_depth2048_size1024",
+    "rep": 0,
+    "seconds": 0.461675,
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "name": "tc_256_depth2048_size1024",
+    "rep": 1,
+    "seconds": 0.332186,
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "name": "tc_256_depth2048_size1024",
+    "rep": 2,
+    "seconds": 0.332571,
+    "exit": 0,
+    "output": ""
+  }
+]

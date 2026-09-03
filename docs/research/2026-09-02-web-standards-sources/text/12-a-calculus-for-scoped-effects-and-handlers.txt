@@ -1,0 +1,2094 @@
+--- PDF page 1 ---
+Logical Methods in Computer Science
+Volume 20, Issue 4, 2024, pp. 17:1–17:50
+https://lmcs.episciences.org/
+Submitted Apr. 24, 2023
+Published Nov. 22, 2024
+A CALCULUS FOR SCOPED EFFECTS & HANDLERS
+ROGER BOSMAN∗ a, BIRTHE VAN DEN BERG∗ a, WENHAO TANG∗ b,
+AND TOM SCHRIJVERS a
+a KU Leuven, Celestijnenlaan 200A, Belgium
+e-mail address: {roger.bosman/birthe.vandenberg/tom.schrijvers}@kuleuven.be
+b The University of Edinburgh, 10 Crichton Street, United Kingdom
+e-mail address: wenhao.tang@ed.ac.uk
+Abstract. Algebraic effects & handlers have become a standard approach for side-effects
+in functional programming. Their modular composition between different effects and clean
+separation of syntax and semantics make them attractive to a wide audience. However,
+not all effects can be classified as algebraic; some need a more sophisticated handling.
+In particular, effects that have or create a delimited scope need special care, as their
+continuation consists of two parts—in and out of the scope—and their modular composition
+introduces additional complexity. These effects are called scoped and have gained attention
+by their growing applicability and adoption in popular libraries. While calculi have been
+designed with algebraic effects & handlers built in to facilitate their use, a calculus that
+supports scoped effects & handlers in a similar manner does not yet exist. This work fills
+this gap: we present λsc, a calculus with native support for both algebraic and scoped effects
+& handlers. The most novel part of λsc is the support for modular composition of different
+scoped effects & handlers by extending handlers with forwarding clauses, which make λsc
+much more expressive than existing calculi with algebraic effects & handlers. Our calculus
+is based on Eff, an existing calculus for algebraic effects, extended with Koka-style row
+polymorphism, and consists of a formal grammar, operational semantics, and a (type-safe)
+type-and-effect system. We give a prototype implementation of λsc with type inference
+and demonstrate λsc on a range of examples.
+1. Introduction
+While monads [ Mog89, Mog91, Wad95] have long been the go-to approach for modelling
+effects, algebraic effects & handlers [PP03, PP09] are steadily gaining more traction. They
+offer a more structured and modular approach to composing effects, based on an algebraic
+model. The approach consists of two parts: effects denote the syntax of operations, and
+handlers interpret them by means of structural recursion. By composing handlers that
+each interpret only a part of the syntax in the desired order, one can modularly build an
+interpretation for the entire program. Algebraic effects & handlers have been adopted in
+Key words and phrases: algebraic effects, scoped effects, calculus, operational semantics, type- and effect
+system.
+*These authors contributed equally to this work.
+LOGICAL METHODS
+lIN COMPUTER SCIENCE DOI:10.46298/LMCS-20(4:17)2024
+© R. Bosman, B. van den Berg, W. T ang, and T . Schrijvers
+CC⃝ Creative Commons
+
+--- PDF page 2 ---
+17:2 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+several libraries (e.g., fused-effects [ RTWS18], extensible-effects [ KSSF19], Eff in OCaml
+[KS18]) and languages (e.g., Eff [Pre15], Links [HL16], Koka [Lei17], Effekt [BSO20]).
+Although the modular approach of algebraic effects & handlers is desirable for every
+effectful program, it is not always applicable. In particular, those effects that have or
+introduce a delimited scope (e.g., exceptions, concurrency, local state) are not algebraic.
+Essentially, these so-called scoped effects [WSH14] split the program into two: a part in the
+scope of the effect (called the scoped computation) and a part out of the scope (called the
+continuation).
+This separation breaks algebraicity, which states that operations commute with sequenc-
+ing. Modeling scoped effects as handlers [ PP03] has been proposed as a way of encoding
+scoped effects in an algebraic framework. However, this comes at the cost of modularity
+[YPW+22] (and thus expressiveness). Wu et al. proposes to treat scoped effects as separate,
+built-in operations, and present their solution in a denotational setting. However, their
+solution of modular composition of scoped handlers is rather ad-hoc, and not a generalization
+of the algebraic case. Therefore, a treatment of scoped effects & handlers in an operational
+setting with full support for modular composition is desirable. The growing interest in
+scoped effects & handlers, evidenced by their adoption at GitHub [ TRWS22] and in Haskell
+libraries (e.g., eff [ Kin19], polysemy [Mag19], fused-effects [RTWS18]), motivates the need
+for such a calculus, all the more because they use the same ad-hoc approach of modular
+composition as suggested by Wu et al.
+This paper aims to fill this gap in the literature: we cover scoped effects & handlers,
+which in previous work has only been covered in a denotational setting, in an operational
+setting by presenting λsc, a calculus with scoped effects & handlers. Our main source of
+inspiration is Eff [BP13, BP15, Pre15], a calculus for algebraic effects & handlers, effectively
+easing programming with those features. Although Eff is an appropriate starting point, the
+extension to support scoped effects & handlers is non-trivial, for two reasons. First, scoped
+effects require polymorphic handlers, which we support by let-polymorphism and Fω-style
+type operators. Second, we need to be able to forward unknown operations in order to keep
+the desired modularity. Whereas algebraic effects & handlers have a uniform (and implicit)
+forwarding mechanism, scoped effects & handlers need explicit forwarding clauses in order
+to allow sufficient freedom in their implementation.
+In what follows, after introducing the appropriate background (Section 2) and informally
+motivating the challenges and design choices of our calculus (Section 3), we formalize λsc.
+We make the following contributions:
+• We present our solution for the modular composition of scoped handlers, called forwarding
+(Section 3.3), and generalize it later (Section 7).
+• We design formal syntax for λsc terms, types and contexts (Section 4).
+• We provide an operational semantics (Section 5).
+• We define a type-and-effect system for λsc (Section 6).
+• We formulate and prove λsc’s metatheoretical properties (Section 8).
+• We show the usability of our calculus on a range of examples (Section 9).
+• We provide an interpreter of our calculus with type inference in which we implement all
+our examples (supplementary material).
+
+--- PDF page 3 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:3
+2. Background & Motivation
+This section provides the necessary background and motivates our goal. We review algebraic
+effects & handlers as a modular approach to composing side-effects in effectful programs.
+Next, we present scoped effects & handlers : effects that have or create a delimited scope
+(such as once for nondeterminism [PSWJ18, WSH14]), and motivate the need for a calculus
+with built-in support for these scoped effects.
+2.1. Algebraic effects & handlers. Algebraic effects & handlers consist of operations,
+denoting their syntax, and handlers, denoting their semantics. This separation gives us
+modular composition, which has intrinsic value and allows controlling effect interaction.
+2.1.1. Algebraic Operations. Effects are denoted by a name (or label) and characterized by a
+signature A _ B, taking a value of type A and producing a value of type B. For example,
+choose : () _ Bool takes a unit value and produces a boolean (e.g., nondeterministically).
+Operations invoke effects, combining the op keyword, an effect to invoke, a parameter
+passed to the effect, and a continuation, containing the rest of the program. For brevity of
+presentation, we follow the syntax of Eff [ Pre15] to have an explicit continuation for every
+operation.
+cND1 = op choose () (b . if b then return 1 else return 2)
+In accordance with its signature, choose is passed (), and in the supplied contination b has
+type Bool. As a result, cND1 is a computation that returns either 1 or 2.
+Some operations commute with sequencing. For example:
+do x ← op choose () (b . if b then return 1 else return 2) ;return x 2
+≡ op choose () (b . do x ← if b then return 1 else return 2 ;return x 2)
+This equivalence is an instance of the algebraicity property, and operations are algebraic
+if they satisfy this property. Algebraicity states that the sequencing of a computation c2
+after an operation op ℓ v (y . c1) is equivalent to sequencing the same computation after the
+continuation of this operation:
+do x ← op ℓ v (y . c1) ;c2 ≡ op ℓ v (y . do x ← c1 ; c2
+2.1.2. Handlers. Handlers give meaning to operations. For example, handler hND interprets
+choose by collecting all the choices in a list:
+hND = handler {return x 7→ return [x ]
+, op choose k 7→ do xs ← k true ; do ys ← k false ; xs + +ys }
+This handler has two clauses. The first clause returns a singleton list in case a value x is
+returned. The second clause, which interprets choose, executes both branches by applying
+the continuation k to both true and false, and concatenates their resulting lists with the
+(+ +)-operator. We applyhND to cND1 to obtain both of its results:
+with hND handle cND1
+⇝∗ [1, 2]
+
+--- PDF page 4 ---
+17:4 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+The algebraicity property plays a critical role in giving semantics to algebraic effects
+and handlers. For example, consider the following program which uses hND to handle a
+computation that sequences two choose operations using the do syntax.
+cND2 = do p ← op choose () (b . return b) ;op choose () (q . return (p, q))
+In order to handle the first choose operation, the handler hND needs to get access to the
+continuation of it. Thus, we use the algebraicity property of choose to put the second
+choose operation in the explicit continuation of the first choose operation.
+with hND handle cND2
+⇝ with hND handle op choose () (b .
+do p ← return b ; op choose () (q . return (p, q)))
+⇝∗ [(true, true), (true, false), (false, true), (false, false)]
+Algebraic effects & handlers bring several interesting advantages. Most interestingly,
+their separation of syntax and semantics allows a modular composition of different effects,
+which in turn allows for altering the meaning of a program by different effect interactions.
+For those familiar with the category-theoretical backings of folds, handler application
+can be seen as a fold over an abstract syntax tree, where operations are nodes in that tree,
+and handlers are the fold algebra. The result type of the fold is the carrier of the algebra.
+2.1.3. Modular Composition. Effects can be composed by combining different primitive
+operations. For example, computation cc,g below uses get : () _ String in addition to
+choose.
+cc,g = op choose () (b . if b then return 1 else op get () (x . return x))
+Instead of having to write a handler for each combination of effects, algebraic effects &
+handlers allow us to write a handler specific for the effect get, and to compose it with the
+existing handler hND.
+hget = handler {return x 7→ return x , op get k 7→ k 2}
+When composing handlers with hND handle (with hget handle cc,g), hget is applied first,
+and handles get. Since hget does not contain a clause for choose, it leaves (we say“forwards”,
+see below) the choose operation to be handled by another handler. This forwarding behavior
+is key to the modular reuse and composition of handlers. Handler hND then takes care of
+the remaining effects.
+with hND handle (with hget handle cc,g)
+⇝∗ with hND handle cND1
+⇝∗ [1, 2]
+2.1.4. Forwarding. Critical to modular composition is the possibility to apply partial handlers,
+i.e. to apply handlers to computations where the handlers may only handle a subset of the
+effects present in the computations. As discussed in Section 2.1.2, handler application can
+be seen as a fold, where handlers form the folding algebra. Therefore, the partial algebra
+formed by partial handlers must be supplemented by a forwarding algebra that interprets
+the effects not handled by the handler such that they can be handled by another handler.
+Generally, calculi for algebraic effects require that handler clauses leave computations as
+their output. The forwarding algebra must “reinterpret” computations into computations,
+
+--- PDF page 5 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:5
+which is essentially the identity function. Therefore, for these calculi, forwarding can be and
+is done uniformly, which means handlers do not need to give specialised forwarding clauses
+for effects they do not handle. For example, choose is forwarded by hget by simply leaving
+the effect with the handled computation.
+with hget handle op choose () (b . return b)
+⇝ op choose () (b . with hget handle return b)
+In the calculus we will present we cannot forward generically, and instead utilize explicit
+forwarding clauses. This is not novel: it already shows up in the algebraic case when
+generalizing handler clauses when they may return types that are not computations. Since
+the return type of handlers corresponds to the carrier of the fold, when generalizing handler
+clauses like this we get a fold with a carrier type that is not a computation. In this case,
+we can no longer uniformly forward the unhandled operations. Instead, we must specify,
+per carrier, how to forward unhandled operations by means of an explicit forwarding clause
+[SPWJ19]. Requirement of explicit forwarding algebras for algebraic effects and handlers
+often happens in libraries, but not in languages, because languages with primitive support
+for algebraic effects and handlers always require the carriers of handlers to be computations.
+As stated, in the case of scoped effects, we are required to specify such an explicit
+forwarding clause even when the carrier is a computation. For now, we would like to observe
+that this forwarding clause is not a consequence of implementing scoped effects, but merely
+a consequence of moving away from a (very specific) instance of algebraic effects.
+2.1.5. Effect Interaction. One of the valuable features of the modular composition of algebraic
+effects & handlers is that effects can interact differently by applying their handlers in a
+different order. Consider the effect inc : () _ Int, which produces an (incremented) integer.
+The handler hinc turns computations into state-passing functions.
+hinc = handler {return x 7→ return (λs . return (x , s))
+, op inc k 7→ return (λs . do s ′ ← s + 1 ;
+do k ′ ← k s ′ ;
+k ′ s ′)}
+The state s represents the current counter value. On every occurrence of inc, the incremented
+value is passed to the continuation twice: (1) for updating the counter value and (2) for
+returning the result of the operation. The latter is for the continuation and the former for
+serving the next inc operation. We use the folowing syntactic sugar:
+runinc s c ≡ do c′ ← with hinc handle c ; c′ s
+The computation cinc combines choose and inc:
+cinc = op choose () (b . if b then op inc () (x . x + 5) else op inc () (y . y + 2))
+When handling inc first, each choose branch gets the same initial counter value 0.
+with hND handle runinc 0 cinc
+⇝∗ with hND handle op choose () (b .
+do p′ ← if b then with hinc handle (op inc () (x . x + 5))
+else with hinc handle (op inc () (y . y + 2)) ;
+p′ 0)
+⇝∗ [(6, 1), (3, 1)]
+
+--- PDF page 6 ---
+17:6 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+In contrast, when handling choose first, the counter value is threaded through the successive
+branches, showing that with algebraic effects & handlers, the manner in which effects interact
+can be controlled by the order in which handlers are applied.
+runinc 0 (with hND handle cinc)
+⇝∗ runinc 0 (do xs ← with hND handle op inc () (x . x + 5) ;
+do ys ← with hND handle op inc () (y . y + 2) ;
+return xs + +ys)
+⇝∗ ([6, 4], 2)
+2.2. Scoped effects. Not all effects are algebraic. There is a wide class of higher-order
+effects [BS24] which do not satisfy the algebraicity property including scoped effects [WSH14],
+latent effects [BSPW21], and parallel effects [ XJMP21]. In this paper, we focus on scoped
+effects. Consider extending nondeterminism with an effect that takes a computation that
+contains nondeterministic choice and returns only its first result. This is known as the once
+operation [PSWJ18]. Since effect operations syntactically already receive the continuation as
+and argument, which looks like a computation, we might be tempted to use it for this purpose,
+i.e. to use it to denote the scope of once. Subscripting ✗ to indicate an erroneous example,
+we could attempt to syntactically write this as the algebraic operation once✗ : () _ () by
+extending hND with a clause for once✗ that executes the continuation, and then takes the
+head of the result if possible. Otherwise it just returns the empty list. We then try to prune
+the first choose of cND2 by using once.
+honce✗ = handler {. . . ,op once✗ k 7→ do ts ← k () ;
+do b ← ts = [ ] ;
+if b then return [ ] else head ts }
+conce✗ = do p ← op once✗ () ( . op choose () (b . return b)) ;
+op choose () (q . return (p, q))
+We intend for with honce✗ handle conce✗ to return [( true, true), (true, false)] as the first
+choose is pruned by once✗ to only return the first alternative. The second choose is out of
+scope of once✗, so should still return both results. However, algebraicity pulls the second
+choose inside the scope of once✗:
+with honce✗ handle (do p ← op once✗ () ( . op choose () (b . return b)) ;
+op choose () (q . return (p, q)))
+⇝ with honce✗ handle once✗ () ( . do op choose () (b . return b) ;
+op choose () (q . return (p, q)))
+⇝∗ [(true, true)]
+There are many more examples of operations that have a scope; some of which we present
+in Section 9:
+• catch for catching exceptions that are raised during program execution;
+• local for creating local variables (local state);
+• call for creating a scope in a nondeterministic program, where branches can be cut using
+the algebraic cut operation;
+• depth for bounding the depth in the depth-bounded search strategy;
+
+--- PDF page 7 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:7
+Following Wu et al. [WSH14], we call them scoped operations. Plotkin and Power [PP03] have
+already realised that algebraic effects are unable to represent so-called effect deconstructors
+(e.g. scoped effects) and propose to model them as handlers. Although this solution is used
+(for example by Thompson et al. [ TRWS22]), it merges syntax and semantics at the cost
+of modularity [WSH14, YPW+22]. In Section 9 we revisit this issue, showing attempts at
+encoding scoped effects as handlers, their problems, and how λsc remedies the situation.
+The goal of this work is to implement scoped effects while maintaining a separation
+between syntax and semantics, and thus preserve modular composition and control over effect
+interaction. It follows a line of research [ PSWJ18, WSH14, YPW+22] that has developed
+denotational semantic domains, backed by categorical models. However, they did not consider
+the modular composition of scoped effects and handlers in their denotional semantics. What
+is lacking from the literature is a calculus that allows programming with both algebraic and
+scoped operations and their handlers as well as supports the modular composition between
+them.
+3. Design Decisions & Challenges
+This section informally discusses the design of λsc, a novel calculus with support for scoped
+effects & handlers as built-in features. We present the main challenges and design choices,
+and address how to forward unknown operations.
+3.1. Scoped Effects as Built-in Operations. λsc supports scoped effects as built-in
+operations, signalled by the sc keyword.
+sc once () (y . c1) (z . c2)
+Like algebraic operations, scoped operations feature a label once to identify the effect, a
+parameter, in this case (), and a continuation ( z . c2). However, unlike algebraic operations,
+scoped operations feature an additional scoped computation (y . c1). For once, the scoped
+computation entails the computation to be restricted to the first result (i.e. the computation
+in scope). The result from the scoped computation c1 is passed to the continuation c2 by
+means of argument z.
+Scoped handler clauses feature an additional argument when compared to algebraic
+handler clauses, corresponding to the scoped computation. For example, below we define a
+handler for once, which extends hND.
+honce = handler { . . . ,sc once p k 7→ do ts ← p () ;
+do b ← ts = [ ] ;
+if b then return [ ] else do t ← head ts ; k t }
+Adding scoped operations gives rise to a variant of the algebraicity property, which models
+the desired behavior of sequencing for scoped operations: scoped operations commute with
+sequencing in the continuation, but leave the scoped computation intact.
+do x ← sc ℓsc v (y . c1) (z . c2) ;c3 ≡ sc ℓsc v (y . c1) (z . do x ← c2 ; c3)
+Using once as a scoped operation correctly restrict only the first choose, as can be seen
+when applying honce to conce, which is like conce✗ defined in Section 2.2 but with the scoped
+effect once instead of the algebraic effect once✗.
+
+--- PDF page 8 ---
+17:8 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+conce = sc once () ( . op choose () (b . return b))
+(p . do q ← op choose () (b . return b) ;return (p, q))
+with honce handle conce ⇝∗ [(true, true), (true, false)]
+Signatures. Scoped effects, like algebraic effects, have signatures A _ B. Like algebraic
+effects, the left-hand side of this signature refers to the type of the value passed to the
+operation (() in the case of once). However, where the right-hand side of the signature in
+the case of algebraic effects refers to the argument of the continuation, in the case of scoped
+effects it refers to the scoped computation. Whilst this may seem strange from this point of
+view, it makes sense from the point of view of writing handler clauses: in both cases, a value
+of type A is given, and a value of type B is produced by the handler clause. The difference
+comes from what computation this produced value of type B is passed to: algebraic effect
+handler clauses pass this value to the continuation, whereas scoped effect handler clauses
+pass this value to the scoped computation (whose result is passed to the continuation).
+Therefore, the signature of once is () _ () since the handler clause calls the scoped com-
+putation with (). The scoped result type (Section 3.3) varies depending on the computation
+once is applied to, and is therefore not a part of the signature.
+3.2. Eff with Row Typing. Our calculus is based on Eff [ Pre15, BP13, BP15], an existing
+calculus for algebraic effects & handlers. However, instead of using the subtyping-based effect
+system of Eff, we use a row-based effect system in the style of Koka [ Lei17] for simplicity.
+Therefore, computations have types of shape A ! ⟨E ⟩, where A is the type of the value
+returned by the computation, and E is a collection (row) of effects that may occur during
+its evaluation. For example, ( Bool, Bool)! ⟨choose, once⟩ is the type of conce.
+Handler types, of shape A ! ⟨E ⟩ ⇒ B ! ⟨F ⟩, reflect that handlers turn one computation
+(of type A ! ⟨E ⟩) into another (of type B ! ⟨F ⟩). For example, honce handles choose and once.
+honce : (Bool, Bool) ! ⟨choose, once⟩ ⇒ List (Bool, Bool) ! ⟨⟩
+3.3. Scoped result type. As we have seen before, the two computations taken by a scoped
+operation sc ℓsc v (y . c1) (z . c2) are not just two irrelevant terms; they are connected in
+the sense that the result of the scoped computation y . c1 is passed to the continuation
+z . c2 and exactly bound as z in c2. Therefore, they must agree on the type of this result,
+which we name the scoped result type . For example, consider conce with overall type
+(Bool, Bool)! ⟨once ; choose⟩. Its scoped result type is (a singular) Bool: it is the type that
+is produced by the scoped computation, and consumed by the continuation.
+sc once () ( . op choose () (b . return b)| {z }
+()→ Bool ! ⟨once ;choose⟩
+) (p . do q ← op . . . return (p, q)| {z }
+Bool →(Bool,Bool) !⟨once ;choose⟩
+)
+Dealing with the presence of this scoped result type is the most non-trivial part for designing
+a calculus with composable scoped effects. There are two main complications. First, since
+the type does not occur in the computation’s overall type, polymorphic handlers are required
+to handle scoped effects. Second, the scoped result type describes a dependency between the
+scoped computation and continuation: if one changes its type, the other must match this.
+This makes generic forwarding impossible: it alters the type of the scoped computation, but
+does not make up for it in the continuation.
+
+--- PDF page 9 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:9
+The rest of this section covers these two complications. While understanding these
+issues is important for fully understanding the semantics presented in Section 5, it may
+be hard to fully comprehend the remainder section without having seen the type system
+presented in Section 6. We recommend the reader to skim over parts of the remainder of
+this section that are unclear, and revisit them after having seen the type system.
+3.3.1. Polymorphic Handlers. Applying a handler to a computation involves recursively
+applying the handler to the computation’s subcomputations as well. In the case of algebraic
+effects, these subcomputations always have the same type as the operation itself, as witnessed
+by the algebraicity property. This means that calculi that only support algebraic effects
+& handlers, such as Eff, allow typing handlers monomorphically, without limitations in
+expressivity.
+However, typing scoped effect handlers monomorphically does limit their implementation
+freedom: it only allows scoped operations of which the scoped result type matches the
+operation’s overall type. For example, consider the type ( Bool, Bool)! ⟨choose ; once⟩ ⇒
+List (Bool, Bool)! ⟨⟩ we previously assigned to honce. This monomorphic type requires the
+scoped result type to be ( Bool, Bool) as well, as it is the only type of computation monomor-
+phic honce can handle. This is not the case for conce: as established, its scoped result type is
+Bool. Therefore, scoped computations such as conce, cannot be handled by monomorphic
+handlers. The solution is to let handlers abstract over the value type of computations,
+allowing for the handling of scoped operations with any scoped result type. This way, honce
+can be typed as follows:
+honce : ∀ α . α! ⟨choose ; once⟩ ⇒ List α! ⟨⟩
+With this polymorphic typing in place, with honce handle conce can now be evaluated
+by polymorphic recursion. To support this, λsc features let-polymorphism, Fω-style type
+operators, and requires all handlers for scoped effects to be polymorphic.
+3.3.2. Forwarding Unknown Operations. In order to retain the modularity of composing
+different effects, as discussed in Section 2.1.4, we allow for partial handlers (i.e. handlers
+that handle only a subset of the effects they are applied to) to obtain dedicated handlers
+that interpret only their part of the syntax. This requires that all remaining operations be
+forwarded to other handlers. As established, this forwarding can, in the case for algebraic
+effects and in some specific situations, be done in a canonical way.
+One might hope to forward scoped effects in a similar way, where the inner computations
+are handled, and the effect is left as-is for future handlers to handle. For example, consider
+the following computation which uses a scoped operation catch : String _ Bool for catching
+exceptions.
+ccatch = sc catch "err" (b . if b then return 1 else return 2) (x . return x)
+with honce handle ccatch
+Applying the handler honce to it gives us
+⇝✗ sc catch "err" (b . with honce handle if b . . .) (x . with honce handle return x)
+
+--- PDF page 10 ---
+17:10 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+Unfortunately, this does not work: again, the hurdle is in the scoped result type, in
+combination with the fact that applying a handler to a computation changes its type. In
+our example, honce applies the type operator List when handling a computation, resulting in
+a handled scoped computation of type Bool → List Int ! ⟨catch⟩, and a handled continuation
+of type Int → List Int ! ⟨catch⟩.
+sc catch "err" (b . with honce handle if b then . . .| {z }
+Bool→ List Int ! ⟨catch⟩
+) (x . with honce handle return x| {z }
+Int →List Int ! ⟨catch⟩
+)
+This introduced a type mismatch, as the return type of the scoped computation has changed
+(List Int), whereas the continuation still expects the original type ( Int). In other words: the
+scoped computation and continuation no longer agree on a scoped result type. Thus, scoped
+effects cannot be forwarded uniformly. Therefore, we require that every handler is equipped
+with an explicit forwarding clause for unknown scoped operations, specific to the handler’s
+carrier (i.e. the type constructor is applied to a computation when handled). This forwarding
+clause is used to resolve the type mismatch between the result type of the handled scoped
+computation and the parameter type of continuation.
+Considering the above example, the goal of applying a function of type Int → List Int ! ⟨E ⟩
+to a value of type List Int naturally reminds us of monadic binding. Indeed, for most carriers,
+this forwarding clause is very similar to that of the monadic bind > >=. In fact, for now we
+will assume this to be the case for all effects, and introduce λsc based on these bind-like
+forwarding clauses. In Section 7 we will revisit this firstly by giving examples where bind-like
+clauses are not expressive enough, secondly by generalizing the forwarding clause, and lastly
+by showing how to desugar bind-like clauses to generalized forwarding clauses. Therefore,
+forwarding clauses are—for now—of shape bind x k , where x represents the result of the
+scoped computation, and k represents the continuation, yielding a type similar to > >=.
+What should we write for a forwarding clause? The answer depends on what we expect
+when we want to connect the results of a handler to outside. For example, consider the
+handler h Once. The x here is the list of results we get from the nondeterministic program
+in the scope after handled by honce. The k here is what remains to do for each result. The
+most intuitive way to connect x and k is to run k on every element in x and connect their
+results together. This is exactly what the concatMap function in Haskell does.
+honce = handler { . . . ,bind x k 7→ concatMap x k }
+We define concatMap in λsc as follows.
+concatMap : ∀ α β µ . List β →µ (β →µ List α) →µ List α
+concatMap [ ] f = return [ ]
+concatMap (b : bs) f = do as ← f b ; as ′ ← concatMap bs f ; as + +as ′
+Note that there is no unique correct forwarding clause for every handler; it is up to the
+programmers to decide which kind of forwarding behaviours they want. For example, for
+honce we can also use a reversed version of concatMap which does the same thing except
+for traversing the list from right to left. Alternatively, we can only pass the first element
+of x to k, or even invoke other effects like printing some information when forwarding.
+Comparing these different styles of forwarding, we prefer the original version using a left-to-
+right concatMap since we usually do not want other scoped effects to unexpectedly change
+the results of honce by discarding some results or reversing the order of results. From our
+
+--- PDF page 11 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:11
+values v ::= () | (v1, v2) | x | λx . c | h
+handlers h ::= handler {return x 7→ cr return clause
+, oprs effect clauses
+, bind x k 7→ cf } forwarding clause
+operation clauses oprs ::= · empty oprs
+| op ℓop x k 7→ c, oprs algebraic effect clauses
+| sc ℓsc x p k 7→ c, oprs scoped effect clauses
+computations c ::= return v return value
+| op ℓop v (y . c) algebraic operation
+| sc ℓsc v (y . c1) (z . c2) scoped operation
+| with v handle c handle
+| do x ← c1 ; c2 do-statement
+| v1 v2 application
+| let x = v in c let
+Figure 1: Terms of λsc.
+experience of implementing a range of examples of scoped effects in Section 9, we found that
+a simple and intuitive forwarding clause usually yields the expect semantics.
+In what follows, we put our calculus on formal footing, discussing its syntax, operational
+semantics and type-and-effect system.
+4. Term Syntax
+As stated, λsc is based on Eff [ BP13, BP15]. Before adding support for scoped effects, we
+have altered Eff from its presentation in [ BP13, BP15] in two ways. Firstly, we have made a
+number of cosmetic changes that arguably improve the readability of the calculus. Secondly,
+we adopt row-based typing in the style of Koka [ Lei17]. The row types will be introduced in
+Section 6.
+Like Eff we implement fine-grained call-by-value semantics [ LPT03]. Therefore, terms
+are split into inert values and computations that can be reduced.
+4.1. Computations. For computations, return can be used to return values. Handlers
+can be applied to values with the with and handle keywords. As seen before, computations
+may be sequenced by means of do-statements ( do x ← c1 ; c2). Applications reduce, so
+they are computations. As discussed in Section 3.3.1, to support polymorphic handlers
+we support let-polymorphism and thus let-bindings. Finally, a computation may be the
+invocation of an effect by means of an operation.
+To be able to differentiate between algebraic and scoped effects, we add the effect
+keyword sc to model scoped effects. Consequently, op now ranges over algebraic effects only.
+Furthermore, we annotate labels with either op or sc to indicate if they are the label of an
+algebraic or scoped effect, respectively. We implicitly assume any label ℓ occurs either as an
+algebraic or scoped effect label. Like their algebraic counterparts, scoped effect operations
+feature a label ℓsc, argument v and continuation (z . c2). In addition, scoped effect operations
+feature a scoped computation ( y . c1). This way, the scope of effect ℓsc is delimited: (scoped)
+computation (y . c1) is in scope, continuation ( z . c2) is not.
+
+--- PDF page 12 ---
+17:12 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+4.2. Values. Values consist of the unit value (), value pairs ( v1, v2), variables x, functions
+λx . c and handlers h. Handlers h have three kinds of clauses: one return clause, zero or
+more operation clauses, and a forwarding clause.
+The return clause return x 7→ c denotes that the result x of a computation is processed
+by computation c.
+Algebraic operation clauses op ℓop x k 7→ c specify that handling an effect with label
+ℓop, parameter x and continuation k is processed by computation c (e.g., hND, hget, hinc). For
+scoped effect clauses the extension is analogous to the operation case: we take the algebraic
+clause and add support for a scoped computation, which in the case for the clause has the
+form of parameter p.
+Finally, as motivated in Section 3.3.2, we have forwarding clauses of shape bind x k 7→ c
+that deal with forwarding unknown scoped operations with some label ℓsc. We will generalize
+these in Section 7.
+5. Operational Semantics
+Figure 2 displays the small-step operational semantics of λsc. Here, relation c ⇝ c′ denotes
+that computation c steps to computation c′, with ⇝∗ its reflexive, transitive closure. The
+highlighted rules deal with the extensions that support scoped effects. The following
+discussion of the semantics is exemplified by snippets of derivations of computations 1 used
+in Section 2. We refer to Appendix A for the full version of these derivations.
+Rules E-AppAbs and E-Let deal with function application and let-binding, respectively,
+and are standard. The rest of the rules consist of two parts: sequencing and handling.
+Sequencing. For sequencing computations do x ← c1 ; c2, we distinguish between the
+situation where c1 can take a step ( E-Do), and where c1 is in normal form ( return, op, or
+sc). First, if c1 returns a value v, we substitute v for x in c2 (E-DoRet). Second, if c1 is an
+algebraic operation, we rewrite the computation using the algebraicity property ( E-DoOp),
+bubbling up the algebraic operation to the front of the computation. Third, the new case,
+where c1 is a scoped operation, is analogous: the generalization of the algebraicity property
+(Section 3.1) is used to rewrite the computation ( E-DoSc).
+Handling. For handling computations with a handler of the form with h handle c, we
+distinguish six situations. First, if possible, c takes a step ( E-Hand); in the other cases, c
+is in normal form. If c returns a value v, we use the handler’s return clause return x 7→ cr,
+switching evaluation to cr with x replaced by v (E-HandRet).
+If computation c is an algebraic operation op ℓop v (y . c1), its label is looked up
+in the handler h. If the handler contains an algebraic clause with this label, evaluation
+switches to the clause’s computation c (E-HandOp), with v substituted for parameter x
+and continuation k replaced by a function that, given the original argument y, contains
+the already-handled2 continuation. For example, with hND handle cND1 (p. 3) reduces as
+follows.
+1Following convention, these examples may contain elements not present in our calculus, such as integers
+and if-then-else statements. These may be viewed as syntactic sugar for their Church encodings.
+2Like eff, λsc implements deep handlers, as opposed to shallow handlers.[HL18a]
+
+--- PDF page 13 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:13
+c ⇝ c′ Computation reduction
+(λx . c) v ⇝ c [v / x ] E-AppAbs let x = v in c ⇝ c [v / x ] E-Let
+c1 ⇝ c′
+1
+do x ← c1 ; c2 ⇝ do x ← c′
+1 ; c2
+E-Do do x ← return v ; c2 ⇝ c2 [v / x ] E-DoRet
+do x ← op ℓop v (y . c1) ;c2 ⇝ op ℓop v (y . do x ← c1 ; c2) E-DoOp
+do x ← sc ℓsc v (y . c1) (z . c2) ;c3 ⇝ sc ℓsc v (y . c1) (z . do x ← c2 ; c3) E-DoSc
+c ⇝ c′
+with h handle c ⇝ with h handle c′ E-Hand
+(return x 7→ cr) ∈ h
+with h handle return v ⇝ cr [v / x ] E-HandRet
+(op ℓop x k 7→ c) ∈ h
+with h handle op ℓop v (y . c1) ⇝ c [v / x , (λy . with h handle c1) / k ] E-HandOp
+(op ℓop ) /∈ h
+with h handle op ℓop v (y . c1) ⇝ op ℓop v (y . with h handle c1) E-FwdOp
+(sc ℓsc x p k 7→ c) ∈ h
+with h handle sc ℓsc v (y . c1) (z . c2) ⇝ c [v / x , (λy . with h handle c1) / p,
+(λz . with h handle c2) / k ]
+E-HandSc
+(sc ℓsc ) /∈ h (bind x k 7→ c) ∈ h
+with h handle sc ℓsc v (y . c1) (z . c2) ⇝ sc ℓsc v (y . with h handle c1) (z . c [z / x ,
+(λz . with h handle c2) / k ])
+E-Bind
+Figure 2: Operational semantics of λsc.
+with hND handle cND1
+⇝ do xs ← (λb . with hND handle if b then return 1 else return 2) true
+do ys ← (λb . with hND handle if b then return 1 else return 2) false
+xs + +ys
+⇝∗ return [1, 2]
+In case h does not contain a clause for label ℓop, the effect is forwarded ( E-FwdOp).
+Algebraic effects can be forwarded generically: we re-invoke the operation and recursively
+
+--- PDF page 14 ---
+17:14 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+apply the handler to continuation c1. For example, during the application of runinc in
+with hND handle runinc 0 cinc (p. 5), choose is forwarded:
+with hND handle runinc 0 cinc
+⇝ with hND handle do p′ ← op choose () (b . with hinc handle if b then op inc ()
+(x . x + 5) else op inc () (y . y + 2)) ;p′ 0
+⇝∗ return [(6, 1), (3, 1)]
+If computation c is a scoped operation sc ℓsc v (y . c1) (z . c2), we again distinguish two
+situations: the case where h contains a clause for ℓsc, and where it does not. If h contains a
+clause for label ℓsc, evaluation switches to the clause’s computation c (E-HandSc), with v
+substituted for parameter x. Both the scoped computation and the continuation are replaced
+by a function that contains the already-handled computations c1 and c2. For example, this
+happens for the scoped operation once in with honce handle conce (p. 7).
+with honce handle conce
+⇝ do ts ← (λ . with honce handle op choose (b . return b)) ()
+do t ← head ts
+(λp . with honce handle (do q ← op choose (b . return b) ;return (p, q))) t
+⇝∗ return [(true, true), (true, false)]
+When h does not contain a clause for label ℓsc, we must forward the effect. As we
+showed in Section 3.3.2, forwarding scoped effects cannot happen canonically, but (for now)
+rather proceeds via the handler’s forwarding clause bind x k 7→ c. Similar to the forwarding
+of algebraic effects, we recursively handle the subcomputations. However, in the case of
+bind, we set the continuation of the to-be-forwarded effect to the forwarding clause’s body
+c, substituted with the relevant arguments.
+For a computation, consider again the example described in Section 3.3.2. Even though
+we have not given any semantics to catch yet (we will do so in Section 9.1), we know honce
+does not contain a clause for catch. As described, catch must be forwarded, addressing the
+type mismatch between the handled scoped computation and handled continuation with
+concatMap.
+with honce handle ccatch
+⇝ sc catch "err" (b . with honce handle if b then return 1 else return 2)
+(x . concatMap x (λz . with honce handle return z))
+6. Type-and-Effect System
+This section presents the type-and-effect system of λsc. As before, we distinguish between
+values, computations and handlers.
+6.1. Grammar. Figure 3 displays the grammar of the types of λsc. Like terms, types are
+split: values have value types A, B, computations have computation types C, D. Value
+types consist of the unit type (), pair types ( A, B), function types A → C, handler types
+C ⇒ D, type variables α and abstraction over them λα . A, and type application M A .
+Following convention and to allow for meaningful examples, we may add base value types to
+the calculus, such as String, Int and Bool. Functions take a value of type A as argument and
+
+--- PDF page 15 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:15
+value types A, B, M ::= () | (A, B) | A → C | C ⇒ D
+| α type variable
+| λ α . A type operator abstraction
+| M A type application
+type schemes σ ::= A | ∀ µ . σ | ∀ α . σ
+computation types C, D ::= A! ⟨E ⟩
+effect rows E, F ::= · | µ | ℓ ; E
+signature contexts Σ ::= · | Σ, ℓop : A _ B | Σ, ℓsc : A _ B
+type contexts Γ ::= · | Γ, x : σ | Γ, µ | Γ, α
+Figure 3: Types of λsc.
+Γ ⊢ v : σ Value Typing
+(x : σ) ∈ Γ
+Γ ⊢ x : σ T-V ar Γ ⊢ () : () T-Unit
+Γ ⊢ v1 : A Γ ⊢ v2 : B
+Γ ⊢ (v1, v2) : (A, B) T-Pair
+Γ, x : A ⊢ c : C
+Γ ⊢ λx . c : A → C T-Abs
+Γ ⊢ v : A A ≡ B
+Γ ⊢ v : B T-EqV
+Γ ⊢ v : ∀ α . σ Γ ⊢ A
+Γ ⊢ v : [A / α] σ T-Inst
+Γ, α ⊢ v : σ α / ∈ Γ
+Γ ⊢ v : ∀ α . σ T-Gen
+Γ ⊢ v : ∀ µ . σ Γ ⊢ E
+Γ ⊢ v : [E / µ] σ T-InstEff
+Γ, µ ⊢ v : σ µ / ∈ Γ
+Γ ⊢ v : ∀ µ . σ T-GenEff
+Figure 4: Value typing.
+return a computation of type C; handlers take a computation of type C as argument and
+return a computation of type D.
+A computation type A!⟨E ⟩ consists of a value type A, representing the type of the
+value the computation evaluates to, and an effect type E, representing the effects that may
+be called during this evaluation. Different from Eff, we implement effect types as effect
+rows using row polymorphism [ Lei05] in the style of Koka [ Lei17]. Therefore, rows E are
+represented as collections of the previously discussed atomic labels ℓop and ℓsc, optionally
+terminated by a row variable µ. Finally, we can abstract over both type and row variables,
+giving rise to type schemes σ.
+6.2. Value typing. Figure 4 displays the typing rules for values. Rules T-V ar, T-Unit,
+T-Pair and T-Abs type variables, units, pairs and term abstractions, respectively, and are
+standard.
+Rule T-EqV expresses that typing holds up to equivalence of types. The full type
+equivalence relation ( A ≡ B), which also uses the equivalence of rows ( E ≡⟨⟩ F), is
+included in Appendix B. However, these relations can be described as the congruence closure
+
+--- PDF page 16 ---
+17:16 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+Γ ⊢ c : C Computation Typing
+Γ ⊢ v1 : A → C Γ ⊢ v2 : A
+Γ ⊢ v1 v2 : C T-App
+Γ ⊢ c1 : A! ⟨E ⟩ Γ, x : A ⊢ c2 : B ! ⟨E ⟩
+Γ ⊢ do x ← c1 ; c2 : B ! ⟨E ⟩ T-Do
+Γ ⊢ c : C C ≡ D
+Γ ⊢ c : D T-EqC
+Γ ⊢ v : σ Γ, x : σ ⊢ c : C
+Γ ⊢ let x = v in c : C T-Let
+Γ ⊢ v : A Γ ⊢ E
+Γ ⊢ return v : A! ⟨E ⟩ T-Ret
+Γ ⊢ v : C ⇒ D Γ ⊢ c : C
+Γ ⊢ with v handle c : D T-Hand
+(ℓop : A1 _ A2) ∈ Σ Γ ⊢ v : A1 Γ, y : A2 ⊢ c : A3 ! ⟨E ⟩ ℓop ∈ E
+Γ ⊢ op ℓop v (y . c) : A3 ! ⟨E ⟩ T-Op
+(ℓsc : A1 _ A2) ∈ Σ
+Γ ⊢ v : A1 Γ, y : A2 ⊢ c1 : A3 ! ⟨E ⟩ Γ, z : A3 ⊢ c2 : A4 ! ⟨E ⟩ ℓsc ∈ E
+Γ ⊢ sc ℓsc v (y . c1) (z . c2) : A4 ! ⟨E ⟩ T-Sc
+Figure 5: Computation typing.
+of the following two rules.
+(λ α . A) B ≡ A [B / α] Q-AppAbs
+ℓ1 ̸= ℓ2
+ℓ1 ; ℓ2 ; E ≡⟨⟩ ℓ2 ; ℓ1 ; E R-Swap
+Rule Q-AppAbs captures type application, following Fω, and R-Swap captures the insignif-
+icance of the order in effect rows, following Koka’s row typing approach.
+The final four value typing rules deal with generalization and instantiation of type
+variables and row variables. Rule T-Inst instantiates the type variables α in a type scheme
+with a value type A. Rule T-Gen is its dual, abstracting over a type variable. The rules
+for row variables are similar: T-InstEff instantiates row variable with an effect row E;
+T-GenEff abstracts over a row variable. The definition of well-scopedness for types Γ ⊢ σ
+and effect rows Γ ⊢ E is straightforward (Appendix C).
+6.3. Computation typing. Figure 5 shows the rules for computation typing. Rules T-App
+and T-Do capture application and sequencing, and are standard. Like value typing, typing
+of computations holds up to equivalence of types ( T-EqC). Rule T-Let is part of our
+extension of Eff, as scoped effects require introducing let-polymorphism.
+Rule T-Ret assigns a computation type to a return statement. This type consists of
+the value v in the return, together with a effect row E. Notice that, as in Koka, this row
+can be freely chosen.
+Rule T-Hand types handler application. The typing rules for handlers and their clauses
+are discussed in Section 6.4. A handler of type C ⇒ D denotes a handler that transforms
+computations of type C to a computation of type D.
+Rule T-Op types algebraic effects. Looking up label ℓop in Σ yields a signature A1 _ A2,
+where A1 is the type of the operation’s parameter v, and A2 is the type of argument y of
+
+--- PDF page 17 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:17
+Γ ⊢ return x 7→ cr : C Γ ⊢ oprs : C Γ ⊢ bind x k 7→ cf : C
+Handler clause typing
+Γ, x : A 7→ cr : C
+Γ ⊢ return x 7→ cr : C T-Return Γ ⊢ · : C T-Empty
+Γ ⊢ oprs : C (ℓop : A1 _ A2) ∈ Σ
+Γ, x : A1, k : A2 → C ⊢ c : C
+Γ ⊢ op ℓop x k 7→ c, oprs : C T-OprOp
+Γ ⊢ oprs : M A 1 ! ⟨E ⟩ (ℓsc : A2 _ A3) ∈ Σ
+Γ, β, x : A2, p : A3 → M β ! ⟨E ⟩, k : β → M A 1 ! ⟨E ⟩ ⊢ c : M A 1 ! ⟨E ⟩
+Γ ⊢ sc ℓsc x p k 7→ c, oprs : M A 1 ! ⟨E ⟩ T-OprSc
+Γ, α, x : M α, k : α → M A ! ⟨E ⟩ ⊢ cf : M A ! ⟨E ⟩
+Γ ⊢ bind x k 7→ cf : M A ! ⟨E ⟩ T-Bind
+Γ ⊢ h : ∀ α . α! ⟨E ⟩ ⇒ M α! ⟨F ⟩ Handler typing
+T-HandlerBind
+⟨F ⟩ ≡ ⟨⟩ ⟨labels (oprs) ;E ⟩ Γ, α ⊢ return x 7→ cr : M α! ⟨E ⟩
+Γ, α ⊢ oprs : M α! ⟨E ⟩ Γ, α ⊢ bind x k 7→ cf : M α! ⟨E ⟩
+Γ ⊢ handler {return x 7→ cr , oprs, bind x k 7→ cf } : ∀ α . α! ⟨F ⟩ ⇒ M α! ⟨E ⟩
+Figure 6: Handler typing.
+the continuation. The resulting effect row includes ℓop. Indeed, ℓ ∈ E means that there is
+some E ′ such that E ≡⟨⟩ ℓ ; E ′. Finally, the operation’s type equals that of continuation c.
+Similarly, rule T-Sc types scoped effects. Again, looking up label ℓsc in Σ yields signature
+Asc _ Bsc where Asc corresponds to the type of the operation’s parameter v. However,
+where Bop in the algebraic case refers to the continuation’s argument, Bsc now describes the
+scoped computation’s argument. This leaves the the scoped result type undescribed by the
+signature, but as discussed in Section 3.3.1, this freedom is exactly what we want. As for
+the effect rows, T-Sc requires the rows of the scoped computation to match.
+6.4. Handler typing. The typing rules for handlers and handler clauses are shown in
+Figure 6. They consist of four judgments. Judgment Γ ⊢ return x 7→ cr : M A !⟨E ⟩ types
+return clauses, Γ ⊢ oprs :M A ! ⟨E ⟩ types operation clauses, and Γ ⊢ bind x k 7→ c :M A ! ⟨E ⟩
+types forwarding clauses. Finally, Γ ⊢ h : ∀ α . α! ⟨F ⟩ ⇒ M α! ⟨E ⟩ types handlers, using the
+first three judgments.
+Return Clauses. Rule T-Return types return clauses of the form return x 7→ cr. It
+binds variable x to type A, adds it to the context, and returns the type M A ! ⟨E ⟩ of cr as
+the type of the return clause.
+
+--- PDF page 18 ---
+17:18 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+Operation Clauses. The judgment Γ ⊢ oprs : M A ! ⟨E ⟩ denotes that all operations in the
+sequence of operations oprs have type M A ! ⟨E ⟩. The base case T-Empty types the empty
+sequence. The other two cases require the head of the sequence (either op or sc) to have
+the same type as the tail.
+Rule T-OprOp types algebraic operation clauses op ℓop x k 7→ c. Looking up label ℓop
+in Σ yields signature Aop _ Bop, where Aop describes the type of parameter x, and Bop the
+type of the argument of continuation k. In order for an operation op to have type M A ! ⟨E ⟩,
+c should have the same type.
+Once again, the case for typing a scoped clause sc ℓsc x p k 7→ c (T-OprSc) is similar
+to its algebraic equivalent, extended to include the scoped computation. Notice the type of p
+and k when typing c. First, as λsc allows freedom in the scoped result type, the type variable
+β is used for this type. Second, as shown in the operational semantics (rule E-HandSc), for
+a clause sc ℓsc x p k 7→ c, computation c uses the already-handled subcomputations p and k.
+Therefore, type operator M occurs in the scoped result type as well as in the continuation’s
+result type:
+p : Bsc → M β ! ⟨E ⟩ k : β → M A ! ⟨E ⟩
+This means that, even though our focus on mitigating the type mismatch between
+scoped computation and continuation so far has been on forwarding unknown scoped effects,
+the same applies when handling known scoped effects, where computation c accounts for
+this discrepancy.
+Forwarding Clause. In accordance with Section 3.3.2, when an application of a handler to
+a scoped effect the handler does not contain a clause for is encountered, the effect must be
+forwarded. Like the algebraic case, the effect is left in-place with handled sub-computations.
+However, as described in Section 3.3.2, simply handling the sub-computations would result
+in a type mismatch. It is clear from the typing rule that bind x k 7→ cf basically deals with
+this type mismatch between the type M α of x and the parameter type α of k.
+Handler. Rule T-Handler types handlers with a polymorphic type of the form ∀ α . α !
+⟨F ⟩ ⇒ M α ! ⟨E ⟩. A handler consists of a return-clause ( T-Return), zero or more
+operation clauses ( T-Empty, T-OprOp and T-OprSc), and a forwarding clause ( T-Fwd).
+All clauses should agree on their result type M α ! ⟨E ⟩. Notice that E denotes a collection
+with at least the labels of the present algebraic and scoped operation clauses in the handler
+(computed by the labels-function).
+7. Generalized Forwarding
+In Section 3.3.2 we showed how bind can be used to forward certain scoped effects. Here
+we also noted that not all effects can be forwarded by bind, and that some require a more
+general forwarding construct. In this section we revisit this issue. First, we show how
+in some situations, we need a more expressive forwarding clause. We will then present a
+generalized forwarding clause, and show how the bind-based forwarding clauses can be
+straightforwardly desugared into generalized forwarding clauses. Finally, we will amend the
+calculus with rules for its grammar, semantics and typing.
+
+--- PDF page 19 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:19
+7.1. Inc, revisited. We introduced hinc in an algebraic setting, and have not returned to it.
+We have not yet given a forwarding clause for hinc (with carrier ( Int → (α, Int)! ⟨E ⟩)! ⟨E ⟩ for
+some effect type E). We could implement the forwarding clause of it using bind as follows.
+hinc✗ = handler {return x 7→ return (λs . return (x , s))
+, op inc k 7→ return (λs . do s ′ ← s + 1 ;do k ′ ← k s ′ ; k ′ s ′)
+, bind x k 7→ return (λs . do (y, s ′) ← x s ; k ′ ← k y ; k ′ s ′)}
+However, this implementation of forwarding would actually result in unexpected behaviours.
+Consider the derivation displayed in Figure 7. The chosen example has an occurrence of
+choose inside an occurrence of inc, both of them inside an occurrence of once. Since choose
+is in the scope of once, we would expect that the choose is pruned by the once to only keep
+the first branch. However, the derivation shows that by using the bind-based forwarding
+clause of hinc✗ the choose escapes the scope of once. As can be seen, when head (i.e. the
+embodiment of the once effect) is evaluated, choose has not even been handled yet; it is
+captured by a function in the result list.
+For the brevity of presentation, we omitted the unimportant part of terms in the
+derivation, and we inline the guard that checks for the empty list in the if statement. We
+underlined parts that will reduce in the next step(s).
+The essence of this problem comes from the fact that the carrier of hinc contain compu-
+tations. As a result, other operations in scope might be captured in these computations and
+then be carried out of the scope. The bind-based forwarding of hinc is not expressive enough
+to avoid this kind of unexpected behaviour, because it has no control over what is returned
+by the scoped computation of scoped operations. For the example above, to correctly put
+choose in the scope, we need to evaluate the result function of the scoped computation of
+once that is handled by hinc, instead of directly returning this function which unexpectedly
+captures choose. We will show how to solve this problem using a generalized version of
+forwarding clauses in the remaining of this section.
+In general, this problem shows up for any handler whose carrier suspends computations,
+such as the carrier ofhinc which is a function. The effects captured in the suspend computation
+can escape their scope without being handled. The generalized forwarding clause fixes this
+problem by providing us the flexibility to early execute the suspend computation before
+leaving the scope.
+7.2. Adding generalized forwarding clauses. Whereas in the case of bind-like forward-
+ing clauses the remittal of the unknown, to-be-forwarded scoped effect is dealt with by the
+semantics (i.e., the reinvocation of scoped effect is embedded in the rule E-Bind), in the
+case of generalized forwarding clauses, denoted by fwd, this responsibility is deferred to
+the forwarding clause. This allows generalized forwarding clauses to execute logic before
+remitting the forwarded effect, and to alter not only the continuation but also the scoped
+computation of the forwarded effect. An intuitive implementation of fwd may look like this:
+(sc ℓsc ) /∈ h (fwd′ ℓsc′ x p k 7→ cf ) ∈ h
+with h handle sc ℓsc v (y . c1) (z . c2) ⇝
+cf [ℓsc / ℓsc′, v / x ,
+(λy . with h handle c1) / p,
+(λz . with h handle c2) / k ]
+E-FwdSc’
+The forwarding clause has form fwd′ ℓsc′ x p k 7→ cf , where x , p, k represents for the param-
+eter, (deeply handled) scoped computation, and (deeply handled) continuation, respectively.
+
+--- PDF page 20 ---
+17:20 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+with honce handle
+do f ← with hinc✗ handle
+sc once () ( . op inc () ( . op choose () (b . return b))) (z . return z) ;
+f 0
+⇝∗ with honce handle
+do f ←
+sc once () ( . with hinc✗ handle (op inc () ( . op choose () (b . return b))))
+(z . . . .)
+f 0
+⇝ with honce handle
+sc once () ( . with hinc✗ handle (op inc () ( . op choose () (b . return b)))))
+(z . . . . )
+⇝∗ do ts ← with honce handle
+with hinc✗ handle (op inc () ( . op choose () (b . return b)))
+if (ts = [ ]) then return [ ] else do t ← head ts ; . . .
+⇝∗ do ts ← with honce handle
+return (λs . do s ′ ← s + 1 ;
+do k ′ ← with hinc✗ handle op choose () (b . return b) ;
+k ′ s ′)
+if (ts = [ ]) then return [ ] else do t ← head ts ; . . .
+⇝∗ do ts ← return [λs . do s ′ ← s + 1 ;
+do k ′ ← with hinc✗ handle op choose () (b . return b) ;
+k ′ s ′] ;
+if (ts = [ ]) then return [ ] else do t ← head ts ; . . .
+⇝∗ do t ← head [λs . do s ′ ← s + 1 ;
+do k ′ ← with hinc✗ handle op choose () (b . return b) ;
+k ′ s ′] ;
+. . .
+⇝∗ [(true, 1), (false, 1)]
+Figure 7: once escaping its scope when forwarded by bind
+While this would give us our desired expressivity, it requires us to extend the calculus with
+the ability to abstract and substitute operation labels.
+To avoid unnecessary complication, we opt for another design choice. Because of
+parametricity, there is only one thing a forwarding clause can do with an unknown label:
+invoke it with some (possibly altered) scoped computation and continuation. Below we
+utilize this property by, instead of supplying the forwarding clause with the label, we supply
+it with what is essentially a partial application of the sc operator to the unknown label.
+This partial application can be used by the forwarding clause in exactly the same way as
+the original label was. Therefore, this simplifies the type system, but does not affect the
+expressivity of forwarding clauses.
+
+--- PDF page 21 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:21
+(sc ℓsc ) /∈ h (fwd f p k 7→ cf ) ∈ h
+with h handle
+sc ℓsc v (y . c1) (z . c2) ⇝
+cf [(λy . with h handle c1) / p,
+(λz . with h handle c2) / k ,
+(λ(p′, k ′) . sc ℓsc v (y . p′ y) (z . k ′ z)) / f ]
+E-FwdSc
+7.3. Syntax & typing. We replace the bind syntax in handlers with fwd, and implement
+bind as syntactic sugar for fwd.
+handlers h ::= handler {. . .
+, fwd f p k 7→ cf } generalized forwarding clause
+bind x k 7→ c ≡ fwd f p k 7→ f (p, (λx . c))
+Furthermore, we add a typing rule for typing fwd clauses, and a new rule for typing handlers
+containing fwd clauses.
+Ap = α → M β ! ⟨E ⟩
+A′
+p = α → γ ! ⟨E ⟩ Ak = β → M A ! ⟨E ⟩ A′
+k = γ → δ! ⟨E ⟩
+Γ, α, β, p : Ap, k : Ak , f : ∀ γ δ . (A′
+p, A′
+k) → δ! ⟨E ⟩ ⊢ cf : M A ! ⟨E ⟩
+Γ ⊢ fwd f p k 7→ cf : M A ! ⟨E ⟩ T-Fwd
+T-Handler
+⟨F ⟩ ≡ ⟨⟩ ⟨labels (oprs) ;E ⟩ Γ, α ⊢ return x 7→ cr : M α! ⟨E ⟩
+Γ, α ⊢ oprs : M α! ⟨E ⟩ Γ, α ⊢ fwd f p k 7→ cf : M α! ⟨E ⟩
+Γ ⊢ handler {return x 7→ cr , oprs, fwd f p k 7→ cf } : ∀ α . α! ⟨F ⟩ ⇒ M α! ⟨E ⟩
+Rule E-Bind and T-HandlerBind can be derived (and are therefore superseded by) E-Fwd
+and T-Handler.
+7.4. hinc, revisited again. Using generalized forwarding clauses, we can implement the
+forwarding of hinc correctly as follows.
+hinc = handler {. . . ,fwd f p k 7→ return (λs . f (λy . do p′ ← p y ; p′ s,
+λ(z , s ′) . do k ′ ← k z ; k ′ s ′))}
+Instead of directly returning the function p′ like the bind-based forwarding clause, the
+fwd-based forwarding clause applies the initial state s to p′ to avoid the escaping of the
+choose operation captured in p′. Then, to connect the results inside the scope with outside,
+we apply the continuation k to the result z and the updated state s ′. The derivation is
+shown in Figure 8. We only get the first result of the choose operation.
+
+--- PDF page 22 ---
+17:22 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+with honce handle
+do f ← with hinc handle
+sc once () ( . op inc () ( . op choose () (b . return b))) (z . return z) ;
+f 0
+⇝∗ with honce handle
+do f ← return (λs . sc once ()
+( . do p′ ← (with hinc handle (op inc () ( . op choose () (b . return b)))) ;
+p′ s)
+(z . . . .))
+f 0
+⇝∗ with honce handle sc once ()
+( . do p′ ← (with hinc handle (op inc () ( . op choose () (b . return b)))) ;
+p′ 0)
+(z . . . .)
+⇝∗ do ts ← with honce handle (
+do p′ ← (with hinc handle (op inc () ( . op choose () (b . return b)))) ;
+p′ 0)
+if (ts = [ ]) then return [ ] else do t ← head ts ; . . .
+⇝∗ do ts ← with honce handle (
+do p′ ← return (λs . do s ′ ← s + 1 ;
+do k ′ ← with hinc handle op choose () (b . return b) ;
+k ′ s ′)
+p′ 0)
+if (ts = [ ]) then return [ ] else do t ← head ts ; . . .
+⇝∗ do ts ← with honce handle (
+do s ′ ← 0 + 1;
+do k ′ ← with hinc handle op choose () (b . return b) ;
+k ′ s ′)
+if (ts = [ ]) then return [ ] else do t ← head ts ; . . .
+⇝∗ do ts ← with honce handle (
+op choose () (b . do k ′ ← return (λs . (b, s)) ;k ′ 1)) ;
+if (ts = [ ]) then return [ ] else do t ← head ts ; . . .
+⇝∗ do ts ← with honce handle (
+op choose () (b . return (b, 1))) ;
+if (ts = [ ]) then return [ ] else do t ← head ts ; . . .
+⇝∗ do ts ← return [(true, 1), (false, 1)] ;
+if (ts = [ ]) then return [ ] else do t ← head ts ; . . .
+⇝∗ [(true, 1)]
+Figure 8: once staying in its scope forwarded by fwd
+
+--- PDF page 23 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:23
+8. Metatheory
+8.1. Syntax-directed version of λsc. Appendix D contains a syntax-directed version of
+λsc. We prove the type safety of λsc by connecting the typing judgement of the declarative
+version of λsc to those of the syntax-directed version of λsc in Appendix E. The type inference
+algorithm implemented in our interpreter is also built on this syntax-directed version. The
+syntax-directed version was obtained by the following three transformations.
+First we removed rule T-EqV, which re-types expressions to some equivalent type. This
+rule is used to make types line up exactly at the site of applications, for example by changing
+the order of the labels in effect rows. As a consequence, in the syntax directed version we
+essentially inline T-EqV wherever it is needed.
+Secondly, we removed the rules dealing with generalisation and instantiation ( T-Inst,
+T-InstEff, T-Gen and T-GenEff). Instead, whenever rules insist on some kind of
+polymorphism on some subderivation, we extend the environment with fresh type variables,
+and generalize over them locally, instead of via axillary rules.
+Finally, as dealing with higher-kinded polymorphism is orthogonal to our work (and
+real programming languages like Haskell and OCaml already have their solutions for higher-
+kinded polymorphism [ YW14]), we avoid higher-order unification by annotating handlers
+with the type operator they apply (e.g. handlerM {. . .} instead of handler {. . .}).
+8.2. Safety. The type-and-effect system of λsc is type safe, which we show by proving
+Subject Reduction and Progress. Here we briefly state the theorems; the proofs and used
+lemmas can be found in Appendix E.
+As values are inert, these theorems range over computations only. The formulation
+of Subject Reduction (Theorem 8.1) is standard. Furthermore, apart from an additional
+normal form sc ℓsc v (y . c1) (z . c2), Progress (Theorem 8.2) is standard as well. Note that
+Progess implies effect safety, which intuitively means that only operations tracked in the
+effect type can be invoked.
+Theorem 8.1 (Subject Reduction). If Γ ⊢ c : C and c ⇝ c′, then there exists a C′ such
+that C ≡ C′ and Γ ⊢ c′ : C′.
+Theorem 8.2 (Progress). If · ⊢ c : A! ⟨E ⟩, then either:
+• there exists a computation c ′ such that c ⇝ c′, or
+• c is in a normal form, which means it is in one of the following forms: (1) c = return v,
+(2) c = op ℓop v (y . c′) where ℓop ∈ E , or (3) c = sc ℓsc v (y . c1) (z . c2) where ℓsc ∈ E .
+9. Examples & Implementation
+Now that we have formalized the calculus we can cover some examples. This serves two
+purposes. First, we will highlight how the conventional encoding of scoped effects as handlers,
+the solution proposed in Plotkin and Power [ PP03], is not expressive enough, even though
+it is applied in the real world [ TRWS22]. We have postponed doing so, because now that
+we have formally introduced a calculus, we can immediately show how λsc addresses these
+issues. The first two examples in this section (exceptions with catch and reader with local)
+therefore contain both an attempt at encoding them as an handler, as well as a proper
+encoding as a sc in λsc. Secondly, the examples exemplify the expressivity of λsc.
+
+--- PDF page 24 ---
+17:24 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+Syntactic sugar. To enhance readability, we write the examples in a higher-level syntax
+following Eff’s conventions: we use top-level definitions, coalesce values and computations,
+implicitly sequence steps and insert return where needed. Furthermore, we drop trivial
+return continuations of operations:
+op ℓop x ≡ op ℓop x (y . return y)
+sc ℓsc x (y . c1) ≡ sc ℓsc x (y . c1) (z . return z)
+Implementation. A prototype implementation of an interpreter for λsc is available at
+https://github.com/thwfhk/lambdaSC. This implementation contains a Hindley-Milner
+[Mil78] type inference algorithm for λsc, which is mostly an extension of the type inference
+of Koka [Lei14]. There are two main things that we need to additionally deal with for scoped
+effects. One is that we explicit force all handlers to be polymorphic. Note that there is no
+requirement for undecidable polymorphic recursion; deep handlers are implicitly recursive
+and always given polymorphic types. The other is that we require handlers to be annotated
+with the type operators that they use for their carriers in order to avoid higher-order
+unification. With explicit annotations for type operators, our unification algorithm just
+needs to reduce types first before unifying. The details can be found in the code.
+Each of the examples covered in the rest of this section have been implemented. See the
+readme of the implementation’s repository for more information.
+9.1. Exceptions. Wu et al. [ WSH14] have shown how to catch exceptions with a scoped
+operation. Raising an exception is an algebraic operation raise : String _ Empty, and
+catching an exception is a scoped operation catch : String _ Bool. For example, consider
+that we are dealing with a counter with a maximum value of 10. The following computation
+increases the counter by 1 and raises an exception when the counter exceeds 10:
+incr = do x ← op inc () ;
+if x > 10 then op raise "Overflow" (y . absurd y) else return x
+Clearly, if we start with a state of 8 and call inc thrice, we end up with an exception.
+We want to define a catch operation that executes an alternative computation when an
+exception is thrown inside its scope.
+9.1.1. Catch as handler. One might attempt to write catch as a handler. However, as we
+will see, this method does not have the same modularity and expressivity as our calculus
+because it cannot achieve the local update semantics [WSH14].
+hexcept✗ = handler {return x 7→ right x , op raise e 7→ left e }
+catch✗ c1 c2 ≡ with handler {return x 7→ return x
+, op raise 7→ c2 } handle c1
+ccatch✗ = do incr ; catch✗ (do incr ; do incr ; return "success")
+(return "fail")
+The catch✗ implements the catch operation as a handler. The hexcept✗ interprets exceptions
+using a sum type. It is used to handle potential exceptions not captured by catch✗. By
+handling exceptions before state we obtain global update semantics where the state updates
+are not discarded when an error is raised:
+
+--- PDF page 25 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:25
+runinc 8 (with hexcept✗ handle ccatch✗) ⇝∗ (right "fail", 11)
+When handling exceptions after state, we would expect local update semantics, where we
+discard the state updates when an error is raised. Thus, the expected result should be
+right ("fail", 9). However, we again get the global update semantics:
+with hexcept✗ handle (runinc 8 ccatch✗) ⇝∗ (right "fail", 11)
+How can this be? By implementing catch✗ as a handler, we have lost the separation between
+syntax and semantics: catch✗ is supposed to denote syntax, but it contains semantics in the
+form of a handler. Since we apply catch✗ to a computation ( ccatch✗), any containing raise
+will have already been handled by catch✗ before hinc is applied. In other words, we have
+lost modular composition because the handler of raise always come before the handler of
+inc. As a result, we cannot change the semantics of the interactions of effects by swaping
+the order of their handlers, which is certainly harmful to expressivity.
+9.1.2. Catch as scoped effect. Let us implement catch as a scoped operation in λsc.
+ccatch = do incr ; sc catch "Overflow" (b .
+if b then (do incr ; do incr ; return "success")
+else return "fail")
+The scoped computation’s true branch is the program that may raise exceptions, while the
+false branch deals with the exception. Our handler interprets exceptions in terms of a sum
+type data α + β = left α | right β, where left v denotes an exception and right v a result.
+hexcept : ∀ α µ . α ! ⟨raise ; catch ; µ⟩ ⇒ String + α! ⟨µ⟩
+hexcept = handler
+{return x 7→ right x
+, op raise e 7→ left e
+, sc catch e p k 7→ do x ← p true ;
+case x of left e ′ | e ′ = e → exceptMap (p false) k
+→ exceptMap x k
+, bind x k 7→ exceptMap x k }
+The return clause and algebraic operation clause for raise construct a return value and
+raise an exception e by calling the right and left constructors, respectively. The scoped
+operation clause for catch catches an exception e. If the scoped computation in p true raises
+an exception e, it is caught by catch and replaced by the scoped computation ( p false).
+Otherwise, it continues with p true and its results are passed to the continuation k. The
+forwarding clause follows the same principle as that of how we write the forwarding clause
+for hinc in Section 3.3.2. We just need to think about how to continue with k when we have
+the result x that potentially fails. The most intuitive way is to return the exception if x
+fails (left e), and we run the continuation k with the result if x succeeds (right y).
+exceptMap : ∀ α β µ . String + β →µ (β →µ String + α) →µ String + α
+exceptMap x k = case x of left e → left e
+right y → k y
+Given an initial counter value 8, we can handle the program ccatch with hexcept and hinc.
+Different orders of the application of handlers give us different semantics of the interaction
+of effects [WSH14]. Handling exceptions before increments gives us global updates:
+
+--- PDF page 26 ---
+17:26 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+runinc 8 (with hexcept handle ccatch) ⇝∗ (right "fail", 11)
+Although an exception is raised and caught, the final value is still updated to 11 by the two
+inc operations and exceeds the maximum value of our counter. When handling exceptions
+after increments, we obtain the expected local update semantics:
+with hexcept handle (runinc 8 ccatch) ⇝∗ right ("fail", 9)
+The state updates introduced by the two invocations of inc inside the scope of catch are
+discarded. This correctly reflects our intuition when the handler of inc comes before the
+handler of raise.
+9.2. Reader with Local. Reader entails an ask operation that lets one read the (integer)
+state that is passed around. The scoped effect local takes a function f which alters the state,
+and a computation for which the state should be altered, after which the state should be
+returned to its original state. 3 For example, in sc local (λi . i ∗ 2) (op ask ()) (op ask ()),
+the first ask receives a state that is doubled, whereas the second ask receives the original
+state. To exemplify the problems that arise when implementing local as a handler, our
+example uses effect foo, which is simply mapped to ask by hfoo:
+hfoo = handler {return x 7→ return x
+, op foo k 7→ do x ← op ask () (y . k y )
+, bind x k 7→ k x }
+9.2.1. Local as a handler. Whereas the lack of effect interaction control in example of catch
+as a handler could be described as unfortunate, in the case for ask there is arguably only
+one correct interaction, which is not the one that arises from scoped effects as handlers.
+Consider clocal below, which includes foo, which is mapped to ask by hfoo.
+local✗ f c ≡ with handler {return x 7→ return x
+, op ask 7→ x ← ask ; f x } handle c
+hread✗ = handler {return x 7→ λs . x , op ask k 7→ λs . k s s }
+runread✗ s c ≡ do c′ ← with hread✗ handle c ; c′ s
+clocal✗ = do x ← op ask () ;do y ← op foo ()
+local✗ (λa → 2 ∗ a) (z ← op ask () ;u ← op foo () ;return (x , y, z , u))
+Since hfoo introduces ask, we must (re)apply hread after applying hfoo. Since foo is mapped
+to ask, in clocal✗ we expect x to be equal to y, and z equal to u. Starting with the reader
+state set to 1, we expect the result (1 , 1, 2, 2). Instead, we get:
+runread 1 (with hfoo handle clocal✗) ⇝∗ return (1, 1, 2, 1)
+Again, how can this be? The cause is the same as the example with catch: since we encode
+the semantics of local✗ in its definition, we are forced to perform the handling at the
+moment of application. Notice that foo is not caught by local✗! Therefore, f is only
+applied to ask. When foo is mapped to ask by hfoo, local✗’s effect will already have been
+triggered, which is why f is not applied to it.
+3The operation signature of local requires polymorphic parameter types like local:(∀ µ . Int →µ Int) _ (),
+which we do not support. It is easy to extend operations in λsc with prenex polymorphic parameter types
+without any need of other mechanism for higher-rank polymorphism.
+
+--- PDF page 27 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:27
+9.2.2. Local as a scoped effect. Using a scoped effect we can properly encode local:
+hread : ∀ α µ . α ! ⟨ask ; local ; µ⟩ ⇒ (Int →µ α)! ⟨µ⟩
+hread = handler {return x 7→ λs . x
+, op ask k 7→ λs . k s s
+, sc local f p k 7→ λs . do x ← p () (f s ) ;k x s
+, fwd f p k 7→ λs . f (λy . p y s , λz . k z s )}
+runread s c ≡ do c′ ← with hread handle c ; c′ s
+clocal = do x ← op ask () ;do y ← op foo () ;
+sc local (λa → 2 ∗ a)
+(do z ← op ask () ;do u ← op foo () ;return (x , y, z , u))
+Note that the forwarding clause of hread is similar to that of hinc in Section 7.4 except for
+passing the same state to the scoped computation p and continuation k. This makes natural
+sense because we definitely do not want the scopes of other irrelevant operations to change
+what can be read. Since local is now purely syntactic, we can apply hfoo before hread, and
+have hread handle the ask that hfoo outputs:
+runread 1 (with hfoo handle clocal)
+⇝ runread 1 (x ← op ask () ;y ← op ask () ;
+sc local (λa → 2 ∗ a)
+(do z ← op ask () ;do u ← op ask () ;return (x , y, z , u)))
+⇝ return (1, 1, 2, 2)
+9.3. Nondeterminism with Cut. The algebraic operation cut:() _ () provides a different
+flavor of pruning nondeterminism that has its origin as a Prolog primitive. The idea is
+that cut prunes all remaining branches and only allows the current branch to continue.
+Typically, we want to keep the effect of cut local. This is achieved with the scoped operation
+call : () _ (), as proposed by Wu et al. [ WSH14]. To handle cut and call, we use the
+CutList datatype [PS17].
+data CutList α = opened (List α) | closed (List α)
+We can think of opened v as a list that may be extended and closed v as a list that may not
+be extended with further elements. This intention is captured in the appendCutList function,
+which discards the second list if the constructor of the first list is closed.
+appendCutList : ∀ α µ . CutList α →µ CutList α →µ CutList α
+appendCutList (opened xs) (opened ys) = opened (xs + +ys)
+appendCutList (opened xs) (closed ys) = closed (xs + +ys)
+appendCutList (closed xs) = closed xs
+The handler for nondeterminism with cut is defined as follows:
+hcut : ∀ α µ . α ! ⟨choose ; fail ; cut ; call ; µ⟩ ⇒ CutList α! ⟨µ⟩
+hcut = handler {return x 7→ opened [x ]
+, op fail 7→ opened [ ]
+, op choose x k 7→ do xs ← k true ;
+if isclose xs then xs else appendCutList xs (k false)
+, op cut k 7→ close (k ())
+
+--- PDF page 28 ---
+17:28 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+, sc call p k 7→ concatMapCutList (open (p ())) k
+, bind x k 7→ concatMapCutList x k }
+The operation clause for cut closes the cutlist and the clause for call (re-)opens it when
+coming out of the scope.
+close : ∀ α µ . CutList α →µ CutList α
+close (closed as) = closed as
+close (opened as) = closed as
+open : ∀ α µ . CutList α →µ CutList α
+open (closed as) = opened as
+open (opened as) = opened as
+The function isclose checks whether a cutlist is closed. It is used in the choose clause
+for efficiency; we do not need to execute k false when k true returns a closed list.
+isclose : ∀ α µ . CutList α →µ CutList α
+isclose (closed ) = true
+isclose (opened ) = false
+The forwarding of hcut uses the function concatMapCutList, the cutlist counterpart of
+concatMap which takes the extensibility of CutList (signalled by opened and closed) into
+account when concatenating.
+concatMapCutList : ∀ α β µ . CutList β →µ (β →µ CutList α) →µ CutList α
+concatMapCutList (opened [ ]) f = return (opened [ ])
+concatMapCutList (closed [ ]) f = return (closed [ ])
+concatMapCutList (opened (b : bs)) f = do as ← f b ;
+as ′ ← concatMapCutList (opened bs) f ;
+appendCutList as as ′
+concatMapCutList (closed (b : bs)) f = do as ← f b ;
+as ′ ← concatMapCutList (closed bs) f ;
+appendCutList as as ′
+In Section 9.5, we give an example usage of cut to improve parsers.
+9.4. Depth-Bounded Search. The handler hND for nondeterminism shown in Section 2
+implements the depth-first search (DFS) strategy. However, with scoped effects and handlers
+we can implement other search strategies, such as depth-bounded search (DBS) [YPW+22],
+which uses the scoped operation depth : Int _ () to bound the depth of the branches in
+the scoped computation. The handler uses return type Int →µ List (α, Int). Here, the Int
+parameter is the current depth bound, and the result is a list of ( α, Int) pairs, where α
+denotes the result and Int reflects the remaining global depth bound. 4
+hdepth : ∀ α µ . α ! ⟨choose ; fail ; depth ; µ⟩ ⇒ (Int →µ List (α, Int))! ⟨µ⟩
+hdepth = handler
+{return x 7→ λd . [(x , d)]
+, op fail 7→ λ . [ ]
+, op choose x k 7→ λd . if d = 0 then [ ] else k true (d − 1) + +k false (d − 1)
+, sc depth d ′ p k 7→ λd . concatMap (p () d ′) (λ(v , ) . k v d )
+, fwd f p k 7→ λd . f (λy . p y d , λvs . concatMap vs (λ(v , d) . k v d ))}
+4The pair type ( α, Int) differs from Yang et al. [YPW +22]’s α in order to enable forwarding.
+
+--- PDF page 29 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:29
+sc depth 1 ( . op choose ())
+return 1 op choose ()
+return 2 return 3
+depth 1
+depth 2
+(x . op choose ())
+return x op choose ()
+return 4 op choose ()
+return 5 return 6
+depth 1
+depth 2
+depth 3
+Figure 9: Visual representation of cdepth.
+For the depth operation, we locally use the given depth bound d ′ for the scoped computation
+p and go back to using the global depth bound d for the continuation k. In case of an
+unknown scoped operation, the forwarding clause just threads the depth bound through,
+first into the scoped computation and from there into the continuation. It is similar to a
+combination of the forwarding of honce and hinc.
+For example, the following program (Figure 9) has a local depth bound of 1 and a global
+depth bound of 2. It discards the results 2 and 3 in the scoped computation as they appear
+after the second choose operation, and similarly, the results 5 and 6 in the continuation are
+ignored.
+cdepth = sc depth 1
+( . do b1 ← op choose () ;if b1 then return 1 else
+do b2 ← op choose () ;if b2 then return 2 else return 3)
+(x . do b1 ← op choose () ;if b1 then return x else
+do b2 ← op choose () ;if b2 then return 4 else
+do b3 ← op choose () ;if b3 then return 5 else return 6)
+>>> (with hdepth handle cdepth) 2
+[(1, 1), (4, 0)]
+The result is [(1 , 1), (4, 0)], where the tuple’s second parameter represents the global depth
+bound. Notice that choose operations in the scoped computation depth do not consume
+the global depth bound in the handler. We also show an alternative implementation of the
+handler clause for depth in the Supplementary Material.
+9.5. Parsers. A parser effect can be achieved by combining the nondeterminism-with-cut
+effect and a token-consuming effect [ WSH14]. The latter features the algebraic operation
+token : Char _ Char where op token t consumes a single character from the implicit input
+string; if it is t, it is passed on to the continuation; otherwise the operation fails. The token
+handler has result type String →⟨fail ;µ⟩ (α, String): it threads through the remaining part
+of the input string. Observe that the function type signals it may fail, in case the token
+does not match.
+htoken : ∀ α µ . α ! ⟨token ; fail ; µ⟩ ⇒ (String →⟨fail ;µ⟩ (α, String))! ⟨fail ; µ⟩
+htoken = handler
+{return x 7→ λs . (x , s)
+, op token x k 7→ λs . case s of [ ] → failure ()
+(x ′ : xs) → if x = x ′ then k x xs else failure ()
+, fwd f p k 7→ λs . f (λy . p y s , λ(t, s ′) . k t s ′)}
+
+--- PDF page 30 ---
+17:30 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+The forwarding clause of htoken is the same as that of hinc in Section 7.4. We uses
+the initial state s for the scoped computation p, and the updated state s ′ for the contin-
+uation k. The updated state s ′ is passed in from the scoped computation p and reflects
+the consumption of tokens in p. An alternative forwarding semantics is fwd f p k 7→
+λs . f (λy . p y s , λ(t, s ′) . k t s ), where the continuation k also uses the initial state s. In
+this way, we actually discard all the changes to the state in the scoped computation, which
+could potentially be useful to implement parser lookahead. It is up to the programmer to
+decide which semantics they want.
+We give an example parser for a small expression language, in the typical parser
+combinator style, built on top of the token-consumer and nondeterminism. For convenience,
+it uses the syntactic sugar x ⋄ y ≡ op choose (b . if b then x else y).
+digit : ∀ µ .() → Char ! ⟨token ; choose ; µ⟩
+digit = op token ’0’ ⋄ op token ’1’ ⋄ . . . ⋄ op token ’9’
+many1 : ∀ α µ . (() →µ α) →µ List α
+many1 p = do a ← p () ;do as ← many1 p ⋄ return [ ] ;return (a : as)
+expr′ : ∀ µ .() → Int ! ⟨token ; choose ; µ⟩
+expr′ = (do i ← term′ () ;do op token ’+’ ; do j ← expr′ () ;return (i + j ))
+⋄ (do i ← term′ () ;return i)
+term′ : ∀ µ .() → Int ! ⟨token ; choose ; µ⟩
+term′ = (do i ← factor () ;do op token ’*’ ; do j ← term () ;return (i ∗ j ))
+⋄ (do i ← factor () ;return i)
+factor : ∀ µ .() → Int ! ⟨token ; choose ; µ⟩
+factor = (do ds ← many1 digit ; return (read ds))
+⋄ (do op token ’(’ ; do i ← expr′ () ;do op token ’)’ ; return i)
+The expr′ and term′ parsers are naive and can be improved by two steps of refactoring: (1)
+factoring out the common prefix in the two branches, and (2) pruning the second branch
+when the first branch successfully consumes a + or ∗, respectively. The optimised versions
+of expr, term, and factor are shown as follows using the cut operation defined in Section 9.3.
+expr : ∀ µ .() → Int ! ⟨token ; choose ; cut ; µ⟩
+expr = do i ← term () ;
+sc call () ( . (do op token ’+’ ; do op cut () ;
+do j ← expr () ;return (i + j )) ⋄ i)
+term : ∀ µ .() → Int ! ⟨token ; choose ; cut ; µ⟩
+term = do i ← factor () ;
+sc call () ( . (do op token ’*’ ; do op cut () ;
+do j ← term () ;return (i ∗ j )) ⋄ i)
+Here is how we invoke the optimised parser on an example input.
+>>> with hcut handle (with htoken handle expr ()) "(2+5)*8"
+opened [(56, "")]
+Note that only the fully parsed result is returned because in expr and term we prune other
+branches when the first branch succeeds. If we parse the same input using the unoptimised
+parser expr′, we also get partially parsed results.
+
+--- PDF page 31 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:31
+>>> with hcut handle (with htoken handle expr′ ()) "(2+5)*8"
+opened [(56, ""), (7, "*8")]
+10. Related Work
+In this section, we discuss related work on algebraic effects, scoped effects, and effect systems.
+10.1. Algebraic Effects & Handlers. Many research languages for algebraic effects
+and handlers have been proposed, including Eff [ BP13, Pre15], Frank [ LMM17], Effekt
+[BSO20], or have been extended to include them, such as Links [ HL16] and Koka [ Lei17].
+OCaml [SDW+21] is the first industrial language supporting algebraic effects and handlers.
+Although it is possible to use handlers or write algebraic operations with function parameters
+to simulate the behaviours of scoped effects in these languages, none of them can achieve
+the expressiveness of real scoped effects & handlers as we have compared in Section 9.1 and
+Section 9.2.
+There are also many packages for writing effect handlers in general purpose languages
+like Haskell and OCaml [ KSSF19, KS18, RTWS18, Mag19, Kin19]. Yet, as far as we know,
+λsc is the first calculus that supports scoped effects & handlers.
+10.2. Effect Systems. Most languages with support for algebraic effects are equipped with
+an effect system to keep track of the effects that are used in the programs. There is already
+much work on different approaches to effect systems for algebraic effects.
+Eff [BP13, Pre15] uses an effect system based on subtyping relations. Each type of
+computation is decorated with an effect type ∆ to represent the set of operations that might
+be invoked. The subtyping relations are used to extend the effect type ∆ with other effects,
+which makes it possible to compose programs in a modular way. The implementation of
+such a subtyping system is orthogonal to the implementation of scoped effects, which is why
+we have opted for Koka-style row polymorphisms, which has yielded a simpler type system.
+Furthermore, supporting both polymorphism and non-trivial subtyping would complicate
+the type inference a lot as shown in [ Pre14] and [THLM24] which use type inference with
+constraints and qualified types, respectively. Moreover, since λsc has type operators, we need
+to additionally distinguish between the positive and negative positions in type operators
+and propagate subtyping relations through these positions properly. This would further
+complicate the formalisation of type system and type inference.
+Row polymorphism is another mainstream approach to effect systems. Links [ HL16]
+uses the R´ emy-style row polymorphism [R´ em94], where the row types are able to represent
+the absence of labels and each label is restricted to appear at most once. Koka [ Lei17] uses
+row polymorphism based on scoped labels [ Lei05], which allows duplicated labels and as a
+result is easier to implement. We can use row polymorphism to write handlers that handle
+particular effects and forward other effects represented by a row variable. In λsc, we opted
+for an effect system similar to Koka’s, mainly because of its brevity. We believe that the
+Links-style effect system should also work well with scoped effects.
+
+--- PDF page 32 ---
+17:32 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+10.3. Scoped Effects & Handlers. Wu et al. [ WSH14] first introduced the idea of scoped
+effects & handlers to solve the problem of separating syntax from semantics in programming
+with effects that delimit the scope. They proposed a syntax based on higher-order functors,
+which impose fewer restrictions on the shape of the signatures of scoped operations than
+λsc. Their work also considers the problem of modular composition of handlers, and
+presents a solution–called “weaving”–based on threading a handler state through unknown
+operations. This approach is rather ad-hoc; it is not a generalization of the forwarding
+approach for algebraic effects. This approach has been adopted by several Haskell packages
+[RTWS18, Mag19, Kin19].
+Pir´ og et al. [PSWJ18] and Yang et al. [ YPW+22] have developed denotational semantic
+domains of scoped effects, backed by category theoretical models. The key idea is to
+generalize the denotational approach of algebraic effects & handlers that is based on free
+monads and their unique homomorphisms. Indeed, the underlying category can be seen as a
+parameter. Then, by shifting from the base category of types and functions to a different
+(indexed or functor) category, scoped operations and their handlers turn out to be “just”
+an instance of the generalized notion of algebraic operations and handlers with the same
+structure and properties. We focus on a calculus for scoped effects instead of the denotational
+semantics of scoped effects. We make a simplification with respect to Yang et al. [ YPW+22]
+where we avoid duplication of the base algebra and endoalgebra (for the outer and inner
+scoped respectively), and thus duplication of the scoped effect clauses in our handlers. With
+respect to Pir´ og et al. [PSWJ18], we specialize the generic endofunctor Γ with signatures
+Aℓ _ Bℓ of endofunctors of the form A × (B → −). Our λsc calculus uses a similar idea to
+the ‘explicit substitution’ monad of Pir´ og et al. [PSWJ18], a generalization of Ghani and
+Uustalu’s [GU03] monad of explicit substitutions where each operation is associated with
+two computations representing the computation in scope and out of the scope (continuation)
+respectively. Neither Pir´ og et al. [ PSWJ18] nor Yang et al. [ YPW+22] considered the
+modular composition of scoped effects or the forwarding of operations in their categorical
+models.
+Yang and Wu [YW23] develop a framework for (generalized) monoids with operations,
+of which scope effects are an instance. They study the problem of semantic modularity in
+this framework, and have some generic results which can be applied to scoped effects. As
+far as we know, no language design or library implementation of scoped effects has resulted
+from this yet.
+Lindley et al. [ LMM+23] developed an equational reasoning framework for scoped
+effects based on parameterised algebraic theories [ Sta13]. They do not consider handlers or
+forwarding.
+11. Conclusion and Future Work
+In this work, we have presented λsc, a novel calculus in which scoped effects & handlers are
+built-in. We started from the core calculus of Eff, extended it with a row-based effect system
+in the style of Koka, and added primitive support for scoped operations and their handlers.
+We introduced novel forwarding clauses as a means to obtain the modular composition of
+handlers in the presence of scoped effects. Finally, we have demonstrated the usability of λsc
+by implementing a range of examples. We believe that the features to support scoped effect
+in λsc are orthogonal to other language features and can be added to any programming
+language with algebraic effects, polymorphism and type operators.
+
+--- PDF page 33 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:33
+Scoped effects require every handler in λsc to be polymorphic and equipped with an
+explicit forwarding clause. This breaks backwards compatibility: calculi that support only
+algebraic effects, such as Eff, miss an explicit forwarding clause for scoped operations and
+allow monomorphic handlers. This problem can be easily mitigated by kinds and kind
+polymorphism. The core idea is that we extend λsc with two kinds op and sc for effect
+types, such that Γ ⊢ E : op means effect type E only contains algebraic operations, and
+Γ ⊢ E : sc means effect type E may contain some scoped operations. Then, for handlers
+of type A!⟨E ⟩ ⇒ M A !⟨F ⟩ which lack forwarding clauses, we can just add the condition
+Γ ⊢ E : op to their typing rules. We leave the full formalisation and implementation of it to
+future work.
+Making scoped effects and handlers into practical languages is a pretty new research
+area full of potential. There is a lot of future work to do. Directions for future work include:
+extending λsc with shallow handlers [ KLO13, HL18b], named handlers [ BPPS20, XCIL22,
+BSO20], and other forms of higher-order effects [ BS24] including latent effects [ BSPW21]
+and parallel effects [ XJMP21]; exploring the notion of named scoped effects where scoped
+effects themselves generate fresh names for the operations in their scope in a similar style to
+named handlers; defining a CPS translation for scoped effects and handlers [ HLA20, Lei17];
+developing control-flow linearity [THLM24] for scoped effects to soundly extend λsc with
+linear types; exploring guiding principles and equational theories for writing and reasoning
+about forwarding clauses.
+Acknowledgment
+Part of this work was funded by FWO project G0A9423N.
+References
+[BP13] Andrej Bauer and Matija Pretnar. An effect system for algebraic effects and handlers. In
+Reiko Heckel and Stefan Milius, editors, Algebra and Coalgebra in Computer Science - 5th
+International Conference, CALCO 2013, Warsaw, Poland, September 3-6, 2013. Proceedings ,
+volume 8089 of Lecture Notes in Computer Science , pages 1–16. Springer, 2013. doi:10.1007/
+978-3-642-40206-7\_1 .
+[BP15] Andrej Bauer and Matija Pretnar. Programming with algebraic effects and handlers. Journal
+of Logical and Algebraic Methods in Programming , 84(1):108–123, 2015. Special Issue: The
+23rd Nordic Workshop on Programming Theory (NWPT 2011) Special Issue: Domains X,
+International workshop on Domain Theory and applications, Swansea, 5-7 September, 2011. URL:
+https://www.sciencedirect.com/science/article/pii/S2352220814000194, doi:10.1016/j.
+jlamp.2014.02.001.
+[BPPS20] Dariusz Biernacki, Maciej Pir´ og, Piotr Polesiuk, and Filip Sieczkowski. Binders by day, labels by
+night: effect instances via lexically scoped handlers. Proc. ACM Program. Lang., 4(POPL):48:1–
+48:29, 2020. doi:10.1145/3371116.
+[BS24] Birthe van den Berg and Tom Schrijvers. A framework for higher-order effects & handlers. Science
+of Computer Programming, 234:103086, 2024. URL: https://www.sciencedirect.com/science/
+article/pii/S0167642324000091, doi:10.1016/j.scico.2024.103086.
+[BSO20] Jonathan Immanuel Brachth¨ auser, Philipp Schuster, and Klaus Ostermann. Effects as capabilities:
+Effect handlers and lightweight effect polymorphism. Proc. ACM Program. Lang., 4(OOPSLA),
+November 2020. doi:10.1145/3428194.
+[BSPW21] Birthe van den Berg, Tom Schrijvers, Casper Bach Poulsen, and Nicolas Wu. Latent effects
+for reusable language components. In Hakjoo Oh, editor, Programming Languages and Systems
+- 19th Asian Symposium, APLAS 2021, Chicago, IL, USA, October 17-18, 2021, Proceedings ,
+
+--- PDF page 34 ---
+17:34 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+volume 13008 of Lecture Notes in Computer Science , pages 182–201. Springer, 2021. doi:10.
+1007/978-3-030-89051-3\_11 .
+[GU03] Neil Ghani and Tarmo Uustalu. Explicit substitutions and higher-order syntax. In Proceedings of
+the 2003 ACM SIGPLAN Workshop on Mechanized Reasoning about Languages with Variable
+Binding, MERLIN ’03, page 1–7, New York, NY, USA, 2003. Association for Computing Machinery.
+doi:10.1145/976571.976580.
+[HL16] Daniel Hillerstr¨ om and Sam Lindley. Liberating effects with rows and handlers. InProceedings of
+the 1st International Workshop on Type-Driven Development , TyDe 2016, page 15–27, New York,
+NY, USA, 2016. Association for Computing Machinery. doi:10.1145/2976022.2976033.
+[HL18a] Daniel Hillerstr¨ om and Sam Lindley. Shallow effect handlers. In Sukyoung Ryu, editor,Program-
+ming Languages and Systems - 16th Asian Symposium, APLAS 2018, Wellington, New Zealand,
+December 2-6, 2018, Proceedings, volume 11275 of Lecture Notes in Computer Science , pages
+415–435. Springer, 2018. doi:10.1007/978-3-030-02768-1\_22 .
+[HL18b] Daniel Hillerstr¨ om and Sam Lindley. Shallow effect handlers. In Sukyoung Ryu, editor,Program-
+ming Languages and Systems - 16th Asian Symposium, APLAS 2018, Wellington, New Zealand,
+December 2-6, 2018, Proceedings, volume 11275 of Lecture Notes in Computer Science , pages
+415–435. Springer, 2018. doi:10.1007/978-3-030-02768-1\_22 .
+[HLA20] Daniel Hillerstr¨ om, Sam Lindley, and Robert Atkey. Effect handlers via generalised continuations.
+J. Funct. Program., 30:e5, 2020. doi:10.1017/S0956796820000040.
+[Kin19] Alexis King. eff – screaming fast extensible effects for less, 2019. https://github.com/hasura/
+eff.
+[KLO13] Ohad Kammar, Sam Lindley, and Nicolas Oury. Handlers in action. In Greg Morrisett and
+Tarmo Uustalu, editors, ACM SIGPLAN International Conference on Functional Programming,
+ICFP’13, Boston, MA, USA - September 25 - 27, 2013 , pages 145–158. ACM, 2013. doi:
+10.1145/2500365.2500590.
+[KS18] Oleg Kiselyov and KC Sivaramakrishnan. Eff directly in OCaml. Electronic Proceedings in
+Theoretical Computer Science, 285:23–58, Dec 2018. URL: http://dx.doi.org/10.4204/EPTCS.
+285.2, doi:10.4204/eptcs.285.2.
+[KSSF19] Oleg Kiselyov, Amr Sabry, Cameron Swords, and Ben Foppa. extensible-effects: An alternative
+to monad transformers, 2019. https://hackage.haskell.org/package/extensible-effects.
+[Lei05] Daan Leijen. Extensible records with scoped labels. In Marko C. J. D. van Eekelen, editor, Revised
+Selected Papers from the Sixth Symposium on Trends in Functional Programming, TFP 2005,
+Tallinn, Estonia, 23-24 September 2005 , volume 6 of Trends in Functional Programming, pages
+179–194. Intellect, 2005.
+[Lei14] Daan Leijen. Koka: Programming with row polymorphic effect types. Electronic Proceedings in
+Theoretical Computer Science, 153, 06 2014. doi:10.4204/EPTCS.153.8.
+[Lei17] Daan Leijen. Type directed compilation of row-typed algebraic effects. In Proceedings of the
+44th ACM SIGPLAN Symposium on Principles of Programming Languages , POPL 2017, page
+486–499, New York, NY, USA, 2017. Association for Computing Machinery. doi:10.1145/
+3009837.3009872.
+[LMM17] Sam Lindley, Conor McBride, and Craig McLaughlin. Do be do be do. In Proceedings of the
+44th ACM SIGPLAN Symposium on Principles of Programming Languages , POPL 2017, page
+500–514, New York, NY, USA, 2017. Association for Computing Machinery. doi:10.1145/
+3009837.3009897.
+[LMM+23] Sam Lindley, Cristina Matache, Sean Moss, Sam Staton, Nicolas Wu, and Zhixuan Yang. Scoped
+effects as parameterized algebraic theories. In European Symposium on Programming 2024 ,
+Lecture Notes in Computer Science. Springer, December 2023. URL: https://etaps.org/2024/
+conferences/esop/.
+[LPT03] Paul Blain Levy, John Power, and Hayo Thielecke. Modelling environments in call-by-value
+programming languages. Inf. Comput. , 185(2):182–210, 2003. doi:10.1016/S0890-5401(03)
+00088-9.
+[Mag19] Sandy Maguire. polysemy: Higher-order, low-boilerplate free monads, 2019. https://hackage.
+haskell.org/package/polysemy.
+[Mil78] Robin Milner. A theory of type polymorphism in programming. J. Comput. Syst. Sci. , 17(3):348–
+375, 1978. doi:10.1016/0022-0000(78)90014-4.
+
+--- PDF page 35 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:35
+[Mog89] Eugenio Moggi. An abstract view of programming languages. Technical Report ECS-LFCS-90-113,
+Edinburgh University, Department of Computer Science, June 1989.
+[Mog91] Eugenio Moggi. Notions of computation and monads. Information and Computation , 93(1):55 –
+92, 1991. Selections from 1989 IEEE Symposium on Logic in Computer Science. doi:10.1016/
+0890-5401(91)90052-4.
+[PP03] Gordon D. Plotkin and John Power. Algebraic operations and generic effects. Appl. Categorical
+Struct., 11(1):69–94, 2003. doi:10.1023/A:1023064908962.
+[PP09] Gordon Plotkin and Matija Pretnar. Handlers of algebraic effects. In Giuseppe Castagna, editor,
+Programming Languages and Systems , pages 80–94, Berlin, Heidelberg, 2009. Springer Berlin
+Heidelberg. doi:10.1007/978-3-642-00590-9\_7 .
+[Pre14] Matija Pretnar. Inferring algebraic effects. Log. Methods Comput. Sci., 10(3), 2014. doi:10.2168/
+LMCS-10(3:21)2014.
+[Pre15] Matija Pretnar. An introduction to algebraic effects and handlers. invited tutorial paper.Electronic
+Notes in Theoretical Computer Science, 319:19–35, 2015. The 31st Conference on the Mathematical
+Foundations of Programming Semantics (MFPS XXXI). URL:https://www.sciencedirect.com/
+science/article/pii/S1571066115000705, doi:10.1016/j.entcs.2015.12.003.
+[PS17] Maciej Pir´ og and Sam Staton. Backtracking with cut via a distributive law and left-zero monoids.
+J. Funct. Program., 27:e17, 2017. doi:10.1017/S0956796817000077.
+[PSWJ18] Maciej Pir´ og, Tom Schrijvers, Nicolas Wu, and Mauro Jaskelioff. Syntax and semantics for
+operations with scopes. In Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in
+Computer Science, LICS ’18, page 809–818, New York, NY, USA, 2018. Association for Computing
+Machinery. doi:10.1145/3209108.3209166.
+[R´ em94] Didier R´ emy. Type inference for records in a natural extension of ml. InTheoretical Aspects of
+Object-Oriented Programming: Types, Semantics, and Language Design . Citeseer, 1994.
+[RTWS18] Rob Rix, Patrick Thomson, Nicolas Wu, and Tom Schrijvers. fused-effects: A fast, flexible, fused
+effect system, 2018. https://hackage.haskell.org/package/fused-effects.
+[SDW+21] KC Sivaramakrishnan, Stephen Dolan, Leo White, Tom Kelly, Sadiq Jaffer, and Anil Mad-
+havapeddy. Retrofitting effect handlers onto OCaml. In Proceedings of the 42nd ACM SIG-
+PLAN International Conference on Programming Language Design and Implementation , PLDI
+2021, page 206–221, New York, NY, USA, 2021. Association for Computing Machinery.
+doi:10.1145/3453483.3454039.
+[SPWJ19] Tom Schrijvers, Maciej Pir´ og, Nicolas Wu, and Mauro Jaskelioff. Monad transformers and modular
+algebraic effects: what binds them together. In Richard A. Eisenberg, editor, Proceedings of
+the 12th ACM SIGPLAN International Symposium on Haskell, Haskell@ICFP 2019, Berlin,
+Germany, August 18-23, 2019 , pages 98–113. ACM, 2019. doi:10.1145/3331545.3342595.
+[Sta13] Sam Staton. Instances of computational effects: An algebraic perspective. In 28th Annual
+ACM/IEEE Symposium on Logic in Computer Science, LICS 2013, New Orleans, LA, USA,
+June 25-28, 2013 , page 519. IEEE Computer Society, 2013. doi:10.1109/LICS.2013.58.
+[THLM24] Wenhao Tang, Daniel Hillerstr¨ om, Sam Lindley, and J. Garrett Morris. Soundly handling linearity.
+Proc. ACM Program. Lang., 8(POPL):1600–1628, 2024. doi:10.1145/3632896.
+[TRWS22] Patrick Thomson, Rob Rix, Nicolas Wu, and Tom Schrijvers. Fusing industry and academia at
+GitHub (experience report). Proc. ACM Program. Lang., 6(ICFP):496–511, 2022. doi:10.1145/
+3547639.
+[Wad95] Philip Wadler. Monads for functional programming. In Johan Jeuring and Erik Meijer, editors,
+Advanced Functional Programming, First International Spring School on Advanced Functional
+Programming Techniques, B ˚ astad, Sweden, May 24-30, 1995, Tutorial Text, volume 925 of Lecture
+Notes in Computer Science , pages 24–52. Springer, 1995. doi:10.1007/3-540-59451-5\_2 .
+[WSH14] Nicolas Wu, Tom Schrijvers, and Ralf Hinze. Effect handlers in scope. In Proceedings of the 2014
+ACM SIGPLAN Symposium on Haskell , Haskell ’14, page 1–12, New York, NY, USA, 2014.
+Association for Computing Machinery. doi:10.1145/2633357.2633358.
+[XCIL22] Ningning Xie, Youyou Cong, Kazuki Ikemori, and Daan Leijen. First-class names for effect
+handlers. Proc. ACM Program. Lang., 6(OOPSLA2):30–59, 2022. doi:10.1145/3563289.
+[XJMP21] Ningning Xie, Daniel D. Johnson, Dougal Maclaurin, and Adam Paszke. Parallel algebraic
+effect handlers. CoRR, abs/2110.07493, 2021. URL: https://arxiv.org/abs/2110.07493, arXiv:
+2110.07493.
+
+--- PDF page 36 ---
+17:36 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+[YPW+22] Zhixuan Yang, Marco Paviotti, Nicolas Wu, Birthe van den Berg, and Tom Schrijvers. Struc-
+tured handling of scoped effects. In Ilya Sergey, editor, Programming Languages and Systems -
+31st European Symposium on Programming, ESOP 2022, Held as Part of the European Joint
+Conferences on Theory and Practice of Software, ETAPS 2022, Munich, Germany, April 2-7,
+2022, Proceedings, volume 13240 of Lecture Notes in Computer Science , pages 462–491. Springer,
+2022. doi:10.1007/978-3-030-99336-8\_17 .
+[YW14] Jeremy Yallop and Leo White. Lightweight higher-kinded polymorphism. In Michael Codish and
+Eijiro Sumii, editors, Functional and Logic Programming, pages 119–135, Cham, 2014. Springer
+International Publishing.
+[YW23] Zhixuan Yang and Nicolas Wu. Modular models of monoids with operations. Proc. ACM Program.
+Lang., 7(ICFP):566–603, 2023. doi:10.1145/3607850.
+
+--- PDF page 37 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:37
+Appendix Contents
+• Appendix A: Semantic Derivations . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 37
+• Appendix B: Type Equivalence Rules . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 41
+• Appendix C: Well-scopedness Rules . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 42
+• Appendix D: Syntax-directed version of λsc . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 43
+• Appendix E: Metatheory . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 47
+Appendix A. Semantic Derivations
+This Appendix contains semantic derivations of different handler applications that are used
+in the examples throughout this paper.
+A.1. Nondeterminism.
+with hND handle cND1
+≡ with hND handle op choose () (b . if b then return 1 else return 2)
+⇝ {- E-HandOp -}
+do xs ← (λy . with hND handle if b then return 1 else return 2) true
+do ys ← (λy . with hND handle if b then return 1 else return 2) false
+xs + +ys
+⇝ {- E-AppAbs -}
+do xs ← with hND handle if true then return 1 else return 2
+do ys ← (λy . with hND handle if b then return 1 else return 2) false
+xs + +ys
+⇝ {- reducing if -}
+do xs ← with hND handle return 1
+do ys ← (λy . with hND handle if b then return 1 else return 2) false
+xs + +ys
+⇝ {- E-HandRet -}
+do ys ← (λy . with hND handle if b then return 1 else return 2) false
+[1] + +ys
+⇝ {- similar to above (the first branch of if) -}
+[1] + +[2]
+⇝ {- reducing + + -}
+return [1, 2]
+A.2. Increment.
+with hND handle runinc 0 cinc ≡ with hND handle (λc p . do p′ ←
+with hinc handle p ; p′ c) 0 cinc
+⇝ {- E-AppAbs -}
+with hND handle do p′ ← with hinc handle cinc ; p′ 0
+≡ { - definition of cinc -}
+with hND handle do p′ ← with hinc handle op choose () (b . if b then
+op inc () (x . x + 5) else op inc () (y . y + 2)) ;p′ 0
+
+--- PDF page 38 ---
+17:38 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+⇝ {- E-FwdOp -}
+with hND handle do p′ ← op choose () (b . with hinc handle if b then
+op inc () (x . x + 5) else op inc () (y . y + 2)) ;p′ 0
+⇝ {- E-Hand and E-DoOp -}
+with hND handle op choose () (b . do p′ ← with hinc handle if b then
+op inc () (x . x + 5) else op inc () (y . y + 2) ;p′ 0)
+⇝ {- E-HandOp -}
+do xs ← (λb . with hND handle do p′ ← with hinc handle if b then op
+inc () (x . x + 5) else op inc () (y . y + 2) ;p′ 0) true ;
+do ys ← (λb . with hND handle do p′ ← with hinc handle if b then op
+inc () (x . x + 5) else op inc () (y . y + 2) ;p′ 0) false ; xs + +ys
+⇝ {- E-AppAbs -}
+do xs ← with hND handle do p′ ← with hinc handle if true then op
+inc () (x . x + 5) else op inc () (y . y + 2) ;p′ 0
+do ys ← (λb . with hND handle do p′ ← with hinc handle if b then op
+inc () (x . x + 5) else op inc () (y . y + 2) ;p′ 0) false ; xs + +ys
+⇝ {- reducing if -}
+do xs ← with hND handle (do p′ ← with hinc handle op inc ()
+(x . x + 5) ;p′ 0)
+do ys ← (λb . with hND handle do p′ ← with hinc handle if b then op
+inc () (x . x + 5) else op inc () (y . y + 2) ;p′ 0) false ; xs + +ys
+⇝ {- E-HandOp -}
+do xs ← with hND handle (do p′ ← return (λs . do s ′ ← s + 1 ;do k ′ ←
+(λx . with hinc handle (x + 5)) s ′ ; k ′ s ′) ;p′ 0)
+do ys ← (λb . with hND handle do p′ ← with hinc handle if b then op
+inc () (x . x + 5) else op inc () (y . y + 2) ;p′ 0) false ; xs + +ys
+⇝ {- E-DoRet -}
+do xs ← with hND handle (λs . do s ′ ← s + 1 ;k ′ ← (λx . with hinc
+handle (x + 5))s ′ ; k ′ s ′) 0
+do ys ← (λb . with hND handle do p′ ← with hinc handle if b then op
+inc () (x . x + 5) else op inc () (y . y + 2) ;p′ 0) false ; xs + +ys
+⇝∗ {- E-AppAbs and reducing + - }
+do xs ← with hND handle (with hinc handle (return 6)) 1
+do ys ← (λb . with hND handle do p′ ← with hinc handle if b then op
+inc () (x . x + 5) else op inc () (y . y + 2) ;p′ 0) false ; xs + +ys
+⇝ {- E-HandRet -}
+do xs ← (λs . return (6, s)) 1
+do ys ← (λb . with hND handle do p′ ← with hinc handle if b then op
+inc () (x . x + 5) else op inc () (y . y + 2) ;p′ 0) false ; xs + +ys
+⇝ {- E-AppAbs -}
+do xs ← with hND handle return (6, 1)
+do ys ← (λb . with hND handle do p′ ← with hinc handle if b then op
+inc () (x . x + 5) else op inc () (y . y + 2) ;p′ 0) false ; xs + +ys
+⇝ {- E-HandOp -}
+
+--- PDF page 39 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:39
+do xs ← return [(6, 1)]
+do ys ← (λb . with hND handle do p′ ← with hinc handle if b then op
+inc () (x . x + 5) else op inc () (y . y + 2) ;p′ 0) false ; xs + +ys
+⇝ {- E-DoRet -}
+do ys ← (λb . with hND handle do p′ ← if b then with hinc handle op
+inc () (x . x + 5) else with hinc handle op inc () (y . y + 2) ;p′ 0) false ;
+[(6, 1)] + +ys
+⇝∗ {- similar to above (the first branch of if) -}
+do ys ← return [(3, 1)] [(6 , 1)] + +ys
+⇝∗ {- E-DoRet -}
+[(6, 1)] + +[(3, 1)]
+⇝∗ {- reducing + + -}
+return [(6, 1), (3, 1)]
+A.3. Once.
+with honce handle conce
+⇝ {- E-HandSc -}
+do ts ← (λy . with honce handle op choose () (x . return x)) () ;
+do b ← ts = [ ] ;if b then return [ ] else do t ← head ts ; (λp . with
+honce handle (do q ← op choose (b . return b) ;return (p, q))) t
+⇝ {- E-Do and E-AppAbs -}
+do ts ← with honce handle op choose () (x . return x) ;
+do b ← ts = [ ] ;if b then return [ ] else do t ← head ts ; (λp . with
+honce handle (do q ← op choose (b . return b) ;return (p, q))) t
+⇝ {- E-Do and E-HandOp -}
+do ts ← do xs ← (λx . with honce handle return x) true ;
+do ys ← (λx . with honce handle return x) false ; xs + +ys ;
+do b ← ts = [ ] ;if b then return [ ] else do t ← head ts ; (λp . with
+honce handle (do q ← op choose (b . return b) ;return (p, q))) t
+⇝ {- E-Do and E-AppAbs -}
+do ts ← do xs ← with honce handle return true ;
+do ys ← with honce handle return false ; xs + +ys ;
+do b ← ts = [ ] ;if b then return [ ] else do t ← head ts ; (λp . with
+honce handle (do q ← op choose (b . return b) ;return (p, q))) t
+⇝ {- E-Do and E-HandRet -}
+do ts ← do xs ← return [true] ;do ys ← return [false] ;xs + +ys ;
+do b ← ts = [ ] ;if b then return [ ] else do t ← head ts ; (λp . with
+honce handle (do q ← op choose (b . return b) ;return (p, q))) t
+⇝∗ {- E-DoRet -}
+do ts ← [true, false] ;
+do b ← ts = [ ] ;if b then return [ ] else do t ← head ts ; (λp . with
+honce handle (do q ← op choose (b . return b) ;return (p, q))) t
+⇝∗ {- E-DoRet -}
+
+--- PDF page 40 ---
+17:40 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+(λp . with honce handle (do q ← op choose (b . return b) ;return (p, q)))
+true
+⇝ {- E-AppAbs -}
+with honce handle (do q ← op choose (b . return b) ;return (true, q))
+⇝∗ {- similar to A.1 (handling of choose) -}
+return [(true, true), (true, false)]
+
+--- PDF page 41 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:41
+Appendix B. Type Equivalence Rules
+This appendix shows the type equivalence rules of λsc. Figures 10 and 11 contains the rules.
+Rules Q-AppAbs and Q-Swap deserve special attention. The other rules are straightforward.
+σ1 ≡ σ2 Type equivalence
+σ ≡ σ Q-Refl
+σ1 ≡ σ2
+σ2 ≡ σ1
+Q-Symm
+σ1 ≡ σ2 σ2 ≡ σ3
+σ1 ≡ σ3
+Q-Trans
+A1 ≡ A2 B1 ≡ B2
+(A1, B1) ≡ (A2, B2) Q-Pair
+A ≡ B C ≡ D
+A → C ≡ B → D Q-Fun
+C1 ≡ D1 C2 ≡ D2
+C1 ⇒ C2 ≡ D1 ⇒ D2
+Q-Hand
+σ1 ≡ σ2
+∀ α . σ1 ≡ ∀ α . σ2
+Q-AllTy
+σ1 ≡ σ2
+∀ µ . σ1 ≡ ∀ µ . σ2
+Q-AllRow
+A ≡ B
+λ α . A ≡ λ α . B Q-Abs
+M1 ≡ M2 A ≡ B
+M1 A ≡ M2 B Q-App (λ α . A) B ≡ A [B / α] Q-AppAbs
+A ≡ B E ≡⟨⟩ F
+A ! ⟨E ⟩ ≡ B ! ⟨F ⟩ Q-Comp
+Figure 10: Type equivalence of λsc.
+E ≡⟨⟩ F Row equivalence
+E ≡⟨⟩ E R-Refl
+E ≡⟨⟩ F
+F ≡⟨⟩ E R-Symm
+E1 ≡⟨⟩ E2 E2 ≡⟨⟩ E3
+E1 ≡⟨⟩ E3
+R-Trans
+E ≡⟨⟩ F
+ℓ ; E ≡⟨⟩ ℓ ; F R-Head
+ℓ1 ̸= ℓ2
+ℓ1 ; ℓ2 ; E ≡⟨⟩ ℓ2 ; ℓ1 ; E R-Swap
+Figure 11: Row equivalence of λsc.
+
+--- PDF page 42 ---
+17:42 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+Appendix C. Well-scopedness Rules
+This appendix shows the well-scopedness rules of λsc. Figure 12 contains the rules.
+Γ ⊢ σ Γ ⊢ M Γ ⊢ E Γ ⊢ C Type well-scopedness
+Γ ⊢ () W-Unit
+Γ ⊢ A Γ ⊢ B
+Γ ⊢ (A, B) W-Pair
+α ∈ Γ
+Γ ⊢ α W-V ar
+Γ, α ⊢ A
+Γ ⊢ ∀ α . A W-All
+Γ ⊢ A Γ ⊢ E
+Γ ⊢ A ! ⟨E ⟩ W-Comp
+Γ, α ⊢ A
+Γ ⊢ λ α . A W-Abs
+Γ ⊢ M Γ ⊢ A
+Γ ⊢ M A W-App
+Γ ⊢ A Γ ⊢ C
+Γ ⊢ A → C W-Fun
+Γ ⊢ C Γ ⊢ D
+Γ ⊢ C ⇒ D W-Hand
+µ ∈ Γ
+Γ ⊢ µ W-RowV ar Γ ⊢ · W-EmptyRow
+Γ ⊢ E
+Γ ⊢ ℓ ; E W-Extension
+Figure 12: Well-scopedness rules of λsc.
+
+--- PDF page 43 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:43
+Appendix D. Syntax-directed version of λsc
+This section describes the syntax-direction version of λsc.
+The syntax-directed rules can be found in Figure 13 for value typing, Figure 14 for
+computation and Figure 15 for handler typing.
+Γ ⊢SD v : A Value Typing
+(x : σ) ∈ Γ σ ⩽ A Γ ⊢SD A
+Γ ⊢SD x : A
+SD-V ar
+Γ ⊢SD () : () SD-Unit
+Γ ⊢SD v1 : A Γ ⊢SD v2 : B
+Γ ⊢SD (v1, v2) : (A, B) SD-Pair
+Γ, x : A ⊢SD c : C
+Γ ⊢SD λx . c : A → C SD-Abs
+SD-Handler
+F ≡⟨⟩ labels (oprs) ;E α /∈ Γ Γ , α ⊢M return x 7→ cr : M α! ⟨E ⟩
+Γ, α ⊢M oprs : M α! ⟨E ⟩ Γ, α ⊢M fwd f p k 7→ cf : M α! ⟨E ⟩ Γ ⊢SD A
+Γ ⊢SD handlerM {return x 7→ cr , oprs, fwd f p k 7→ cf } : A! ⟨F ⟩ ⇒ M A ! ⟨E ⟩
+Figure 13: Syntax-directed value typing.
+The syntax-directed system is obtained by incorporating the non-syntax-directed rules
+into the syntax-directed-ones where needed. In particular, we inline the non-syntax-directed
+rules for equivalence ( T-EqV and T-EqC) into the syntax-directed rules that mention the
+same type or row twice in their assumptions (e.g., SD-App, SD-Do). Similarly, we inline
+the rules T-Inst, T-InstEff, T-Gen and T-GenEff for instantiating and generalizing
+type and row variables. The generalization is incorporated into the rule for let-bindings
+(T-Let). Instantiation is incorporated into the variable rule ( T-V ar) using σ ⩽ A defined
+in Figure 16.
+Instantiation is also incorporated into the handler rule: we implicitly instantiate α with
+an arbitrary type A, which results in a monomorphically typed handler. However, since
+SD-Handler insists on sufficiency polymorphic handler clauses, we can still handle scoped
+effects by polymorphic recursion.
+Figure 17 displays declarative and syntax-directed typing derivations for both inline
+handler application (with h handle c) as well as let-bound handlers. As can be seen in the
+first derivation, in the case of inline handler application, the declarative system derives a
+polymorphically typed handler, which is instantiated. The syntax-directed system essentially
+combines these steps, as can be seen in the second derivation. In the case of a let-bound
+handler, the declarative system keeps the polymorphic handler type as-is (third derivation).
+The syntax-directed system however instantiates and then immediately generalizes handlers,
+as can be seen in the fourth derivation.
+The other rules of the declarative system are syntax-directed and remain unchanged.
+
+--- PDF page 44 ---
+17:44 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+Γ ⊢SD c : C Computation Typing
+Γ ⊢SD v1 : A1 → C Γ ⊢SD v2 : A2 A1 ≡ A2
+Γ ⊢SD v1 v2 : C SD-App
+Γ ⊢SD c1 : A! ⟨E1⟩ Γ, x : A ⊢SD c2 : B ! ⟨E2⟩ E1 ≡ E2
+Γ ⊢SD do x ← c1 ; c2 : B ! ⟨E2⟩ SD-Do
+Γ, α, µ ⊢SD v : A (α /∈ Γ) (µ /∈ Γ) Γ , x : ∀ α . ∀ µ . A ⊢SD c : C
+Γ ⊢SD let x = v in c : C SD-Let
+Γ ⊢SD v : A
+Γ ⊢SD return v : A! ⟨E ⟩ SD-Ret
+Γ ⊢SD v : C1 ⇒ D1 Γ ⊢SD c : C2 C1 ≡ C2 D1 ≡ D2
+Γ ⊢SD with v handle c : D2
+SD-Hand
+(ℓop : Aop _ Bop) ∈ Σ
+Γ ⊢SD v : A1 Aop ≡ A1 Γ, y : Bop ⊢SD c : A! ⟨E ⟩ ℓop ∈ E
+Γ ⊢SD op ℓop v (y . c) : A! ⟨E ⟩ SD-Op
+(ℓsc : Asc _ Bsc) ∈ Σ Γ ⊢SD v : A1 Asc ≡ A1
+Γ, y : Bsc ⊢SD c1 : B ! ⟨E1⟩ Γ, z : B ⊢SD c2 : A! ⟨E2⟩ E1 ≡ E2 ℓsc ∈ E2
+Γ ⊢SD sc ℓsc v (y . c1) (z . c2) : A! ⟨E2⟩ SD-Sc
+Figure 14: Syntax-directed computation typing.
+
+--- PDF page 45 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:45
+Γ ⊢M return x 7→ cr : M A ! ⟨E ⟩ Γ ⊢M oprs : M A ! ⟨E ⟩
+Γ ⊢M fwd f p k 7→ cf : M A ! ⟨E ⟩
+Return-, operation-, and forwarding-clause typing
+Γ, x : A1 ⊢SD cr : M A 2 ! ⟨E ⟩ A1 ≡ A2
+Γ ⊢M return x 7→ cr : M A ! ⟨E2⟩ SD-Return Γ ⊢M · : M A ! ⟨E ⟩ SD-Empty
+Γ ⊢M oprs : M A 1 ! ⟨E1⟩ (ℓop : Aop _ Bop) ∈ Σ
+Γ, x : Aop, k : Bop → M A 1 ! ⟨E1⟩ ⊢ SD c : M A 2 ! ⟨E2⟩
+M A 1 ! ⟨E1⟩ ≡ M A 2 ! ⟨E2⟩
+Γ ⊢M op ℓop x k 7→ c, oprs : M A 2 ! ⟨E2⟩ SD-OprOp
+Γ ⊢M oprs : M A 1 ! ⟨E1⟩ (ℓsc : Asc _ Bsc) ∈ Σ β /∈ Γ
+Γ, β, x : Asc, p : Bsc → M β ! ⟨E1⟩, k : β → M A 1 ! ⟨E1⟩ ⊢ SD c : M A 2 ! ⟨E2⟩
+M A 1 ! ⟨E1⟩ ≡ M A 2 ! ⟨E2⟩
+Γ ⊢M sc ℓsc x p k 7→ c, oprs : M A 2 ! ⟨E2⟩ SD-OprSc
+α, β, γ, δ /∈ Γ Ap = α → M β ! ⟨E1⟩
+A′
+p = α → γ ! ⟨E1⟩ Ak = β → M A 1 ! ⟨E1⟩ A′
+k = γ → δ! ⟨E1⟩
+Γ, α, β, p : Ap, k : Ak , f : ∀ γ δ . (A′
+p, A′
+k) → δ! ⟨E1⟩ ⊢ SD cf : M A 2 ! ⟨E2⟩
+M A 1 ! ⟨E1⟩ ≡ M A 2 ! ⟨E2⟩ Γ ⊢SD A2
+Γ ⊢M fwd f p k 7→ cf : M A 2 ! ⟨E2⟩ SD-Fwd
+Figure 15: Syntax-directed handler typing.
+σ ⩽ A σ-instantiation
+A ⩽ A σ-Inst-Base
+[B / α]σ ⩽ A
+∀ α . σ ⩽ A σ-Inst-α
+[E / µ] σ ⩽ A
+∀ µ . σ ⩽ A σ-Inst-µ
+Figure 16: σ-instantiation.
+
+--- PDF page 46 ---
+17:46 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+Γ, α ⊢SD oprs : M α! ⟨E ⟩
+Γ ⊢SD h : ∀ α . α! ⟨F ⟩ ⇒ M α! ⟨E ⟩ T-Handler Γ ⊢SD A
+Γ ⊢SD h : A! ⟨F ⟩ ⇒ M A ! ⟨E ⟩ T-Inst Γ ⊢SD c : A! ⟨F ⟩
+Γ ⊢SD with h handle c : M A ! ⟨E ⟩ T-Hand
+Γ, α ⊢M oprs : M α! ⟨E ⟩ Γ ⊢SD A
+Γ ⊢SD hM : A! ⟨F ⟩ ⇒ M A ! ⟨E ⟩ SD-Handler Γ ⊢SD c : A! ⟨F ⟩
+Γ ⊢SD with hM handle c : M A ! ⟨E ⟩ SD-Hand
+Γ, α ⊢SD oprs : M α! ⟨E ⟩
+Γ ⊢SD h : ∀ α . α! ⟨F ⟩ ⇒ M α! ⟨E ⟩ T-Handler Γ, x : ∀ α . α! ⟨F ⟩ ⇒ M α! ⟨E ⟩ ⊢ SD c : C
+Γ ⊢SD let x = h in c : C T-Let
+Γ, α, β ⊢M oprs : M β ! ⟨E ⟩
+Γ, α ⊢SD α
+Γ ⊢SD hM : α! ⟨F ⟩ ⇒ M α! ⟨E ⟩ SD-Handler Γ, x : ∀ α . α! ⟨F ⟩ ⇒ M α! ⟨E ⟩ ⊢ SD c : C
+Γ ⊢SD let x = hM in c : C SD-Let
+Figure 17: Handler generalisation and instantiation
+
+--- PDF page 47 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:47
+Appendix E. Metatheory
+E.1. Lemmas.
+Lemma E.1 (Canonical forms).
+• If · ⊢ SD v : A → C then v is of shape λx . c.
+• If · ⊢ SD v : C ⇒ D then v is of shape h.
+Lemma E.2 (Generalisation-equivalence). If σ1 ⩽ A1 and σ1 ≡ σ2, then there exists a A 2
+such that A 1 ≡ A2 and σ2 ⩽ A2.
+Lemma E.3 (Generalisation-instantiation). If Γ, α, µ ⊢SD v : A and ∀ α ∀ µ . A ⩽ B, then
+Γ ⊢SD v : B.
+Lemma E.4 (Preservation of types under term substitution) . Given Γ1, α, µ ⊢SD v : A1 and
+A1 ≡ A2 we have that:
+• If Γ1, x : ∀ α ∀ µ . A2, Γ2 ⊢SD c : C1, then there exists a C2 such that C1 ≡ C2 and
+Γ1, Γ2 ⊢SD [v / x ] c : C2.
+• If Γ1, x : ∀ α ∀ µ . A2, Γ2 ⊢SD v : B1, then there exists a B 2 such that B 1 ≡ B2 and
+Γ1, Γ2 ⊢SD [v / x ] v : B2.
+Proof. By mutual induction on the typing derivations. The only interesting case, SD-V ar,
+requires us to show that, given Γ 1, x : ∀ α ∀ µ . A2, Γ2 ⊢SD y : B1, there exists a B2 such
+that B1 ≡ B2 and Γ 1, Γ2 ⊢SD [v / x ] y : B2. If x ̸= y, it is trivial. If x = y, then
+∀ α ∀ µ . A2 ⩽ B1, which means by Lemma E.2 there exists a B2 such that B1 ≡ B2 and
+∀ α ∀ µ . A1 ⩽ B2, which means the result follows from Lemma E.3.
+Lemma E.5 (Preservation of types under type substitution) . If Γ1, α, Γ2 ⊢SD c : C and
+Γ1 ⊢SD B, then Γ1, [B / α] Γ2 ⊢SD c : [B / α] C.
+Lemma E.6 (Unused binding insertion). If Γ1, Γ2 ⊢SD c : C and x /∈ c then Γ1, x :A, Γ2 ⊢SD
+c : C.
+Lemma E.7 (Handlers are polymorphic) . If Γ ⊢SD h : A! ⟨F ⟩ ⇒ M A ! ⟨E ⟩ and Γ ⊢SD B,
+then Γ ⊢SD h : B ! ⟨F ⟩ ⇒ M B ! ⟨E ⟩.
+Lemma E.8 (Op membership). If Γ ⊢SD oprs : C and op ℓop x k 7→ c ∈ oprs, then there
+exists oprs 1 and oprs 2 such that oprs = oprs 1, op ℓop k ⊢SD c, oprs 2 and Γ ⊢SD op ℓop x k 7→
+c, oprs 2 : C.
+Lemma E.9 (Sc membership). If Γ ⊢SD oprs : C and (sc ℓsc x p k 7→ c) ∈ h, then
+there exists oprs 1 and oprs 2 such that oprs = oprs 1, sc ℓsc x p k 7→ c, oprs 2 and Γ ⊢SD
+sc ℓsc x p k 7→ c, oprs 2 : C.
+Lemma E.10 (Syntax-directed to Non-syntax-directed value typing). If Γ ⊢ v : ∀ α . ∀ µ . A
+then Γ, α, µ ⊢SD v : A.
+Lemma E.11 (Non-syntax-directed iff Syntax-directed). Γ ⊢ c : C ⇐ ⇒ Γ ⊢SD c : C.
+
+--- PDF page 48 ---
+17:48 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+E.2. Subject reduction.
+Theorem 8.1 (Subject Reduction). If Γ ⊢ c : C and c ⇝ c′, then there exists a C′ such
+that C ≡ C′ and Γ ⊢ c′ : C′.
+Proof. By Lemma E.11 (above) and Theorem E.12 (below).
+Theorem E.12 (Syntax-directed Subject Reduction). If Γ ⊢SD c : C and c ⇝ c′, then there
+exists a C′ such that C ≡ C′ and Γ ⊢SD c′ : C′.
+Proof. Assume, without loss of generality, that C = B !⟨F ⟩ for some B, F. Proceed by
+induction on the derivation c ⇝ c′.
+• E-AppAbs: Inversion on Γ ⊢SD (λx . c) v : B !⟨F ⟩ (SD-App) gives Γ ⊢SD λx . c : A1 →
+B !⟨F ⟩ (1), Γ ⊢SD v : A2 (2), and A1 ≡ A2 (3). Inversion on fact 1 ( SD-Abs) gives
+Γ, x :A1 ⊢SD c :B ! ⟨F ⟩ (4), which means the goal follows from facts 2 and 4 and Lemma E.4.
+• E-Let: Inversion on Γ ⊢SD let x = v in c : B !⟨F ⟩ (SD-Let) gives Γ ⊢SD v : A (1),
+σ = gen (A, Γ) (2), and Γ , x : σ ⊢SD c : B ! ⟨F ⟩ (3), which means the goal follows from facts
+1 and 3 and Lemma E.4.
+• E-Do: Follows from the IH.
+• E-DoRet: Inversion on Γ ⊢SD do x ← return v in c : B !⟨F2⟩ (SD-Do) gives Γ ⊢SD
+return v : A!⟨F1⟩ (1) and Γ , x : A ⊢SD c : B !⟨F2⟩ (2). Inversion on (1) ( SD-Ret) gives
+Γ ⊢SD v : A (3). The case follows from facts 2 and 4 and Lemma E.4.
+• E-DoOp: Similar to E-DoSc. By inversion on Γ ⊢SD do x ← op ℓop v (y . c1) in c2 :
+B ! ⟨F2⟩ (SD-Do) we have that Γ⊢SD op ℓop v (y . c1):A! ⟨F1⟩ (1), Γ, x:A ⊢SD c2:B ! ⟨F2⟩ (2),
+and F1 ≡ F2 (3). From inversion on fact 1 ( SD-Op) it follows that ℓop : Aop _ Bop ∈ Σ
+(4), Γ ⊢SD v : A1 (5), Aop ≡ A1 (6), Γ, y : Bop ⊢SD c1 : A!⟨F1⟩ (7), and ℓop ∈ F1 (8).
+Lemma E.6 on (2) gives us Γ , y : Bop, x : A ⊢SD c2 : B ! ⟨F2⟩ (9). Facts 3, 7 and 9 and rule
+SD-Do give us Γ, y : Bop ⊢SD do x ← c1 in c2 : B ! ⟨F2⟩ (10). Our goal then follows from
+facts 4, 5, 6, 8, and 10 and rule SD-Op.
+• E-DoSc: Similar to E-DoOp. By inversion on Γ ⊢SD do x ← sc ℓsc v (y . c1) (z . c2) in c3:
+B !⟨F3⟩ (SD-Do) we have that Γ ⊢SD sc ℓsc v (y . c1) (z . c2) : A!⟨F2⟩ (1), Γ , x : A ⊢SD
+c3 : B !⟨F3⟩ (2), and F2 ≡ F3 (2.1). From inversion on fact 1 ( SD-Sc) it follows that
+ℓsc : Asc _ Bsc ∈ Σ (3), Γ ⊢SD v : A1 (4), Asc ≡ A1 (5), Γ, y : Bsc ⊢SD c1 : B ′ !⟨F1⟩ (6),
+Γ, z : B ′ ⊢SD c2 : A! ⟨F2⟩ (7), F1 ≡ F2 (8), and ℓsc ∈ F2 (9). Lemma E.6 on (2) gives us
+Γ, z : B ′, x : A ⊢SD c3 : B ! ⟨F3⟩ (10), which means facts 2.1, 7 and 10 and rule SD-Do give
+us Γ, z : B ′ ⊢SD do x ← c2 in c3 : B ! ⟨F3⟩ (11). Our goal then follows from facts 3, 4, 5, 6,
+8 9, and 11 and rule SD-Sc.
+• E-Hand: Follows from the IH.
+• E-HandRet: By inversion on Γ ⊢SD with h handle return v : B !⟨F2⟩ (SD-Hand) we
+have that Γ ⊢SD h:C1 ⇒ B ! ⟨F2⟩ (1), Γ ⊢SD return v :C2 (2), and C1 ≡ C2 (3). Inversion
+on fact 1 ( SD-Handler) gives B = M A 2, C1 = A2 !⟨E ⟩, and Γ , α ⊢M return x 7→
+cr : M α!⟨F2⟩ (4). Based on fact (3) we get that C2 = A2 ′ !⟨E ′⟩, A2 ≡ A2 ′ (4), and
+E ≡ E ′ (5). Inversion on fact 4 ( SD-Return) gives Γ, α, x : A1 ⊢SD cr : M α!⟨F2⟩ (5)
+and A1 ≡ A2 (6). Inversion on fact 2 ( SD-Ret) gives Γ ⊢SD v : A2 ′ (7). From facts 4-8
+and Lemma E.4, we get that Γ , α ⊢SD [v / x ] cr : M α! ⟨F2⟩ (8). We obtain our goal from
+fact 8 and Lemma E.5.
+• E-HandOp: By inversion on Γ ⊢SD with h handle op ℓop v (y . c1) : B !⟨F2⟩ (SD-
+Hand) we have that Γ ⊢SD h : C1 ⇒ B !⟨F2⟩ (1), Γ ⊢SD op ℓop v (y . c1) : C2 (2), and
+C1 ≡ C2 (3). Inversion on fact 1 ( SD-Handler) gives B = M A 2, C1 = A2 !⟨E ⟩, and
+
+--- PDF page 49 ---
+Vol. 20:4 A CALCULUS FOR SCOPED EFFECTS & HANDLERS 17:49
+Γ, α ⊢M oprs : M α! ⟨F2⟩ (4). Based on fact (3) we get that C2 = A2 ′ ! ⟨E ′⟩, A2 ≡ A2 ′
+(4), and E ≡ E ′ (5). Inversion on fact 2 ( SD-Op) gives us ℓop : Aop _ Bop ∈ Σ (6),
+Γ ⊢SD v : A1 (7), Aop ≡ A1 (8), Γ, y : Bop ⊢SD c1 : A2 ′ !⟨E ′⟩ (9), and ℓop ∈ E ′ (10). By
+Lemma E.8 we get that Γ , α ⊢M op ℓop x k 7→ c, oprs 2 : M α!⟨F2⟩ (11). Inversion on
+fact 11 ( SD-OprOp) gives that Γ , α ⊢M oprs : M α!⟨F1⟩ (12), (ℓop : Aop _ Bop) ∈ Σ
+(13), Γ , α, x : Aop, k : Bop → M α!⟨F1⟩ ⊢ SD c : M α!⟨F2⟩ (14), and F1 ≡ F2 (15).
+Facts 1, 4 and 9 in combination with constructors SD-Abs and ST-Hand gives us that
+Γ ⊢SD λy . with h handle c1 : Bop → M A 2 !⟨F2⟩ (16). The goal follows from facts 7, 8,
+14 and 16 and lemmas Lemmas E.4 and E.5.
+• E-FwdOp By inversion on Γ ⊢SD with h handle op ℓop v (y . c1) : B !⟨F2⟩ (SD-Hand)
+we have that Γ ⊢SD h : C1 ⇒ B !⟨F2⟩ (1), Γ ⊢SD op ℓop v (y . c1) : C2 (2), and C1 ≡ C2
+(3). Inversion on fact 1 ( SD-Handler) gives B = M A 2, and C1 = A2 !⟨E ⟩. Based on
+fact (3) we get that C2 = A2 ′ !⟨E ′⟩, A2 ≡ A2 ′ (4), and E ≡ E ′ (5). Inversion on
+fact 2 ( SD-Op) gives us ℓop : Aop _ Bop ∈ Σ (6), Γ ⊢SD v : A1 (7), Aop ≡ A1 (8),
+Γ, y : Bop ⊢SD c1 : A2 ′ ! ⟨E ′⟩ (9), and ℓop ∈ E ′ (10). The goal follows from facts 1, 4, 5, 6,
+7, 8, 10, constructors SD-Hand and SD-Op, and Lemma E.6.
+• E-HandSc: By inversion on Γ ⊢SD with h handle op ℓop v (y . c1) : B ! ⟨F2⟩ (SD-Hand)
+we have that Γ ⊢SD h : C1 ⇒ B !⟨F2⟩ (1), Γ ⊢SD ℓsc v (y . c1) ( z . c2) : C2 (2), and
+C1 ≡ C2 (3). Inversion on fact 1 ( SD-Handler) gives B = M A 2, C1 = A2 !⟨E1⟩, and
+Γ, α ⊢M oprs : M α! ⟨F2⟩ (4). Based on fact (3) we get that C2 = A2 ′ ! ⟨E2⟩, A2 ≡ A2 ′
+(5), and E1 ≡ E2 (6). Inversion on fact 2 ( SD-Sc) gives us ℓsc : Asc _ Bsc ∈ Σ (7),
+Γ ⊢SD v : A1 (8), Asc ≡ A1 (9), Γ, y : Bsc ⊢SD c1 : A3 ! ⟨E3⟩ (10), Γ, z : A3 ⊢SD c2 : A2 ′ ! ⟨E2⟩
+(11), E3 ≡ E2 (12), and ℓsc ∈ E2 (13). Lemma E.8 we get that Γ , α ⊢M op ℓop x k 7→
+c, oprs 2 : M α! ⟨F2⟩ (13.1). Inversion on fact 13.1 ( SD-OprSc gives ℓsc ∈ Σ (14), β fresh
+(15), Γ, α, β, x : Asc, p : Bsc → M β !⟨F3⟩, k : β → M α!⟨F3⟩ ⊢ SD c : M α!⟨F2⟩ (16), and
+F2 ≡ F3 (17). Facts 1, 5, 6, 10 and 12, constructors SD-Abs and SD-Hand and
+Lemmas E.6 and E.7 give us that Γ , β ⊢SD λy . with h handle c1 : p : Bsc → M β !⟨F2⟩
+(18). Facts 1, 5, 6 and 11 and constructors SD-Abs and SD-Hand and Lemma E.6 give
+us that Γ , β ⊢SD λz . with h handle c2 : β → M A 2 ! ⟨F2⟩ (19). The goal now follows from
+facts 8, 9, 16, 17 and 18 and Lemma E.4.
+• E-FwdSc By inversion on Γ ⊢SD with h handle op ℓop v (y . c1) : B !⟨F2⟩ (SD-Hand)
+we have that Γ ⊢SD h : C1 ⇒ B !⟨F2⟩ (1), Γ ⊢SD ℓsc v (y . c1) ( z . c2) : C2 (2), and
+C1 ≡ C2 (3). Inversion on fact 1 ( SD-Handler) gives B = M A 2, C1 = A2 !⟨E1⟩,
+and Γ , α ⊢M fwd f p k 7→ cf : M α!⟨F2⟩ (4). Based on fact (3) we get that C2 =
+A2 ′ !⟨E2⟩, A2 ≡ A2 ′ (5), and E1 ≡ E2 (6). Inversion on fact 2 ( SD-Sc) gives us
+ℓsc : Asc _ Bsc ∈ Σ (7), Γ ⊢SD v : A1 (8), Asc ≡ A1 (9), Γ , y : Bsc ⊢SD c1 : A3 !⟨E3⟩
+(10), Γ, z : A3 ⊢SD c2 : A2 ′ !⟨E2⟩ (11), E3 ≡ E2 (12), and ℓsc ∈ E2 (13). Inversion on
+fact 4 ( SD-Fwd) gives Ap = α′ → M β ! ⟨F1⟩, A′
+p = α′ → γ ! ⟨F1⟩, Ak = β → M A 4 ! ⟨F1⟩,
+A′
+k = γ → δ! ⟨F1⟩, Γ, α, α′, β, p:Ap, k:Ak , f :∀ γ δ . (A′
+p, A′
+k) → δ! ⟨F1⟩ ⊢ SD cf :M α! ⟨F2⟩ (14)
+and M A 1 ! ⟨F1⟩ ≡ M α! ⟨F2⟩ (15). Facts 1, 6, 10 and 12, constructors SD-Abs and SD-
+Hand and Lemmas E.6 and E.7 give us that Γ, α, y :Bsc ⊢SD with h handle c1:M A 3 ! ⟨F2⟩
+(16) Facts 1, 6, 10 and 12, constructors SD-Abs and SD-Hand and Lemma E.6 give us
+that Γ, α ⊢SD λz . with h handle c2 : A3 → M A 4 ! ⟨F2⟩ (17) Facts 7, 8, 9, 13, the fact that
+ℓsc /∈ labels (oprs), constructors SD-Abs, SD-App and SD-V arand Lemma E.6 give us
+that Γ, α, (p′, k ′):∀ γ δ . (Bsc → γ ! ⟨F1⟩, γ → δ! ⟨F1⟩) ⊢SD sc ℓsc v (y . p′ y) (z . k ′ z):δ! ⟨F1⟩
+(18). Our goal then follows from facts 14, 15, 16, 17, 18 and Lemma E.4.
+
+--- PDF page 50 ---
+17:50 R. Bosman, B. van den Berg, W. Tang, and T. Schrijvers Vol. 20:4
+E.3. Progress.
+Theorem 8.2 (Progress). If · ⊢ c : A! ⟨E ⟩, then either:
+• there exists a computation c ′ such that c ⇝ c′, or
+• c is in a normal form, which means it is in one of the following forms: (1) c = return v,
+(2) c = op ℓop v (y . c′) where ℓop ∈ E , or (3) c = sc ℓsc v (y . c1) (z . c2) where ℓsc ∈ E .
+Proof. By Lemma E.11 (above) and Theorem E.13 (below).
+Theorem E.13 (Syntax-directed Progress). If · ⊢ SD c : A! ⟨E ⟩, then either:
+• there exists a computation c ′ such that c ⇝ c′, or
+• c is in a normal form, which means it is in one of the following forms: (1) c = return v,
+(2) c = op ℓop v (y . c′) where ℓop ∈ E , or (3) c = sc ℓsc v (y . c1) (z . c2) where ℓsc ∈ E .
+Proof. By induction on the typing derivation · ⊢ SD c : C.
+• SD-App: Here, · ⊢ SD v1 v2. Since v1 has type A → B !⟨F ⟩, by Lemma E.1 it must be of
+shape λx . c, which means we can step by rule E-AppAbs.
+• SD-Do: Here, · ⊢ SD do x ← c1 in c2 : C. By the induction hypothesis, c1 can either
+step (in which case we can step by E-Do), or it is a computation result. Every possible
+form has a corresponding reduction: if c1 = return v we can step by E-DoRet, if
+c1 = op ℓop v (y . c) we can step by E-DoOp, and if sc ℓop v (y . c′
+1) (z . c′
+2) we can step
+by E-DoSc.
+• SD-Let: Here, · ⊢ SD let x = v in c : C, which means we can step by E-Let.
+• SD-Ret, SD-Op, and SD-Sc: all of these are computation results (forms (1), (2), and
+(3), resp.). Since they are well-typed, the scoping condition of ℓop or ℓsc must be satisfied.
+• SD-Hand: Here · ⊢ SD with v handle c : M A ! ⟨F ⟩. By Lemma E.1, v is of shape h. By
+the induction hypothesis, c can either step (in which case we can step by E-Hand), or it
+is in a normal form. Proceed by case split on the three forms.
+(1) Case c = return v. Since · ⊢ SD h : C ⇒ D, there must be some (return x 7→ cr) ∈ h
+which means we can step by rule E-HandRet.
+(2) Case c = op ℓop v (y . c′). Depending on ( op ℓop x k 7→ c) ∈ h we can step by
+E-HandOp or E-FwdOp.
+(3) Case c = sc ℓsc v (y . c1) ( z . c2). If ( sc ℓsc x p k 7→ c) ∈ h, we can step by
+E-HandSc. If not, since · ⊢ SD h : C ⇒ D, there must be some ( fwd f p k 7→ cf ) ∈ h
+which means we can step by rule E-FwdSc.

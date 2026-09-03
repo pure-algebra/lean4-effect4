@@ -1,0 +1,250 @@
+{
+  "platform": "macOS-26.2-arm64-arm-64bit-Mach-O",
+  "rows": [
+    {
+      "name": "baseline",
+      "rep": 0,
+      "seconds": 0.256044,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "baseline",
+      "rep": 1,
+      "seconds": 0.218214,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "baseline",
+      "rep": 2,
+      "seconds": 0.201448,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "tc_8",
+      "rep": 0,
+      "seconds": 0.205714,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "tc_8",
+      "rep": 1,
+      "seconds": 0.210524,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "tc_8",
+      "rep": 2,
+      "seconds": 0.210582,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "explicit_8",
+      "rep": 0,
+      "seconds": 0.209128,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "explicit_8",
+      "rep": 1,
+      "seconds": 0.209313,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "explicit_8",
+      "rep": 2,
+      "seconds": 0.212912,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "tc_16",
+      "rep": 0,
+      "seconds": 0.240354,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "tc_16",
+      "rep": 1,
+      "seconds": 0.231509,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "tc_16",
+      "rep": 2,
+      "seconds": 0.213705,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "explicit_16",
+      "rep": 0,
+      "seconds": 0.214353,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "explicit_16",
+      "rep": 1,
+      "seconds": 0.213816,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "explicit_16",
+      "rep": 2,
+      "seconds": 0.217365,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "tc_32",
+      "rep": 0,
+      "seconds": 0.221658,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "tc_32",
+      "rep": 1,
+      "seconds": 0.220407,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "tc_32",
+      "rep": 2,
+      "seconds": 0.221145,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "explicit_32",
+      "rep": 0,
+      "seconds": 0.254693,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "explicit_32",
+      "rep": 1,
+      "seconds": 0.250177,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "explicit_32",
+      "rep": 2,
+      "seconds": 0.232731,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "tc_64",
+      "rep": 0,
+      "seconds": 0.236703,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "tc_64",
+      "rep": 1,
+      "seconds": 0.236754,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "tc_64",
+      "rep": 2,
+      "seconds": 0.319232,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "explicit_64",
+      "rep": 0,
+      "seconds": 0.304856,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "explicit_64",
+      "rep": 1,
+      "seconds": 0.296811,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "explicit_64",
+      "rep": 2,
+      "seconds": 0.308599,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "tc_128",
+      "rep": 0,
+      "seconds": 0.271654,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "tc_128",
+      "rep": 1,
+      "seconds": 0.265226,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "tc_128",
+      "rep": 2,
+      "seconds": 0.270188,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "explicit_128",
+      "rep": 0,
+      "seconds": 0.579695,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "explicit_128",
+      "rep": 1,
+      "seconds": 0.629661,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "explicit_128",
+      "rep": 2,
+      "seconds": 0.902901,
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "name": "tc_256",
+      "rep": 0,
+      "seconds": 0.25046,
+      "exit": 1,
+      "output": "/tmp/effect4-row-research-20260902/tc_256.lean:13:2106: error: maximum recursion depth has been reached\nuse `set_option maxRecDepth <num>` to increase limit\nuse `set_option diagnostics true` to get diagnostic information\n/tmp/effect4-row-research-20260902/tc_256.lean:14:35: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  Has (atom 0) row\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.\n/tmp/effect4-row-research-20260902/tc_256.lean:15:39: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  Has (atom 128) row\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.\n/tmp/effect4-row-research-20260902/tc_256.lean:16:39: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  Has (atom 255) row\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.\n"
+    },
+    {
+      "name": "explicit_256",
+      "rep": 0,
+      "seconds": 0.750686,
+      "exit": 1,
+      "output": "/tmp/effect4-row-research-20260902/explicit_256.lean:13:2106: error: maximum recursion depth has been reached\nuse `set_option maxRecDepth <num>` to increase limit\nuse `set_option diagnostics true` to get diagnostic information\n/tmp/effect4-row-research-20260902/explicit_256.lean:14:45: error: Type mismatch\n  Signature.Hom.inl\nhas type\n  Signature.Hom ?m.4 (?m.4 \u2295\u209b ?m.5)\nbut is expected to have type\n  (atom 0).Hom row\n/tmp/effect4-row-research-20260902/explicit_256.lean:15:3249: error: Application type mismatch: The argument\n  Signature.Hom.inr\nhas type\n  Signature.Hom ?m.645 (?m.644 \u2295\u209b ?m.645)\nbut is expected to have type\n  (?m.639 \u2295\u209b\n        (?m.634 \u2295\u209b\n          (?m.629 \u2295\u209b\n            (?m.624 \u2295\u209b\n              (?m.619 \u2295\u209b\n                (?m.614 \u2295\u209b\n                  (?m.609 \u2295\u209b\n                    (?m.604 \u2295\u209b\n                      (?m.599 \u2295\u209b\n                        (?m.594 \u2295\u209b\n                          (?m.589 \u2295\u209b\n                            (?m.584 \u2295\u209b\n                              (?m.579 \u2295\u209b\n                                (?m.574 \u2295\u209b\n                                  (?m.569 \u2295\u209b\n                                    (?m.564 \u2295\u209b\n                                      (?m.559 \u2295\u209b\n                                        (?m.554 \u2295\u209b\n                                          (?m.549 \u2295\u209b\n                                            (?m.544 \u2295\u209b\n                                              (?m.539 \u2295\u209b\n                                                (?m.534 \u2295\u209b\n                                                  (?m.529 \u2295\u209b\n                                                    (?m.524 \u2295\u209b\n                                                      (?m.519 \u2295\u209b\n                                                        (?m.514 \u2295\u209b\n                                                          (?m.509 \u2295\u209b\n                                                            (?m.504 \u2295\u209b\n                                                              (?m.499 \u2295\u209b\n                                                                (?m.494 \u2295\u209b\n                                                                  (?m.489 \u2295\u209b\n                                                                    (?m.484 \u2295\u209b\n                                                                      (?m.479 \u2295\u209b\n                                                                        (?m.474 \u2295\u209b\n                                                                          (?m.469 \u2295\u209b\n                                                                            (?m.464 \u2295\u209b\n                                                                              (?m.459 \u2295\u209b\n                                                                                (?m.454 \u2295\u209b\n                                                                                  (?m.449 \u2295\u209b\n                                                                                    (?m.444 \u2295\u209b\n                                                                                      (?m.439 \u2295\u209b\n                                                                                        (?m.434 \u2295\u209b\n                                                                                          (?m.429 \u2295\u209b\n                                                                                            (?m.424 \u2295\u209b\n                                                                                              (?m.419 \u2295\u209b\n                                                                                                (?m.414 \u2295\u209b\n                                                                                                  (?m.409 \u2295\u209b\n                                                                                                    (?m.404 \u2295\u209b\n                                                                                                      (?m.399 \u2295\u209b\n                                                                                                        (?m.394 \u2295\u209b\n                                                                                                          \u22ef)))))))))))))))))))))))))))))))))))))))))))))))))).Hom\n    row\nin the application\n  ((((((((((((((((((((((((((((((((((((((((((((((((((\u22ef.comp \u22ef).comp Signature.Hom.inr).comp Signature.Hom.inr).comp\n                                                                                                                                                                                                Signature.Hom.inr).comp\n                                                                                                                                                                                            Signature.Hom.inr).comp\n                                                                                                                                                                                        Signature.Hom.inr).comp\n                                                                                                                                                                                    Signature.Hom.inr).comp\n                                                                                                                                                                                Signature.Hom.inr).comp\n                                                                                                                                                                            Signature.Hom.inr).comp\n                                                                                                                                                                        Signature.Hom.inr).comp\n                                                                                                                                                                    Signature.Hom.inr).comp\n                                                                                                                                                                Signature.Hom.inr).comp\n                                                                                                                                                            Signature.Hom.inr).comp\n                                                                                                                                                        Signature.Hom.inr).comp\n                                                                                                                                                    Signature.Hom.inr).comp\n                                                                                                                                                Signature.Hom.inr).comp\n                                                                                                                                            Signature.Hom.inr).comp\n                                                                                                                                        Signature.Hom.inr).comp\n                                                                                                                                    Signature.Hom.inr).comp\n                                                                                                                                Signature.Hom.inr).comp\n                                                                                                                            Signature.Hom.inr).comp\n                                                                                                                        Signature.Hom.inr).comp\n                                                                                                                    Signature.Hom.inr).comp\n                                                                                                                Signature.Hom.inr).comp\n                                                                                                            Signature.Hom.inr).comp\n                                                                                                        Signature.Hom.inr).comp\n                                                                                                    Signature.Hom.inr).comp\n                                                                                                Signature.Hom.inr).comp\n                                                                                            Signature.Hom.inr).comp\n                                                                                        Signature.Hom.inr).comp\n                                                                                    Signature.Hom.inr).comp\n                                                                                Signature.Hom.inr).comp\n                                                                            Signature.Hom.inr).comp\n                                                                        Signature.Hom.inr).comp\n                                                                    Signature.Hom.inr).comp\n                                                                Signature.Hom.inr).comp\n                                                            Signature.Hom.inr).comp\n                                                        Signature.Hom.inr).comp\n                                                    Signature.Hom.inr).comp\n                                                Signature.Hom.inr).comp\n                                            Signature.Hom.inr).comp\n                                        Signature.Hom.inr).comp\n                                    Signature.Hom.inr).comp\n                                Signature.Hom.inr).comp\n                            Signature.Hom.inr).comp\n                        Signature.Hom.inr).comp\n                    Signature.Hom.inr).comp\n                Signature.Hom.inr).comp\n            Signature.Hom.inr).comp\n        Signature.Hom.inr).comp\n    Signature.Hom.inr\n/tmp/effect4-row-research-20260902/explicit_256.lean:16:304: error: maximum recursion depth has been reached\nuse `set_option maxRecDepth <num>` to increase limit\nuse `set_option diagnostics true` to get diagnostic information\n"
+    }
+  ]
+}

@@ -25,6 +25,7 @@ inductive Rule where
   | performDiscard
   | atomCall
   | ret
+  | errorAbort
 deriving DecidableEq, Repr
 
 namespace Rule
@@ -38,10 +39,11 @@ def id : Rule → String
   | performDiscard => "perform-discard"
   | atomCall => "atom-call"
   | ret => "ret"
+  | errorAbort => "error-abort"
 
 /-- Every rule, in ledger order. -/
 def all : List Rule :=
-  [serviceAcquire, nullaryValue, performCall, performBind, performDiscard, atomCall, ret]
+  [serviceAcquire, nullaryValue, performCall, performBind, performDiscard, atomCall, ret, errorAbort]
 
 theorem all_nodup : all.Nodup := by decide
 
@@ -69,6 +71,7 @@ def Script.ruleSet (rows : ServiceRow) (script : Script) : List Rule :=
         let nullary := (rows.row? op).map (·.params.isEmpty) |>.getD false
         let acc := step acc (if nullary then .nullaryValue else .performCall)
         let acc := step acc (if bind.isNone then .performDiscard else .performBind)
+        let acc := if ((rows.row? op).bind (·.error)).isSome then step acc .errorAbort else acc
         args.foldl atoms acc
     | .ret value => atoms (step acc .ret) value
 

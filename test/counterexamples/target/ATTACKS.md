@@ -83,3 +83,24 @@ source-target simulation. The third attack deliberately keeps those graph
 edges open. The fourth and effectful-field witnesses are also exercised by
 direct TypeScript, Effect, and language-service harnesses, but do not close
 general source-target simulation.
+
+## E4-TARGET-CE-009 — an `Except` answer rendered as `Effect<A, E>`
+
+- **BROKE:** one spelling for the two error readings.
+- **WITNESS:** `harness/trace` goldens `recover.empty` (data reading: the
+  answer carries `[false, "boom"]`, the program continues and succeeds with 0)
+  and `fallible.empty` (aborting reading: `failed get "boom"`, outcome
+  failure); each agrees with the host only under its own shape.
+- **CLASS:** target contract.
+- **FIXED-BY:** `OpRow.error` and rule `error-abort` for the aborting reading;
+  `Result.Result<A, E>` for the data reading; `Effect4/Meta/Derive.lean` `!! E`.
+
+## E4-TARGET-CE-010 — the trace of a failing run is discarded
+
+- **BROKE:** tracing a fallible service with the log inside the error monad.
+- **WITNESS:** `fallible.empty` shows `op put 5`, `answer put []` before
+  `failed get "boom"`; a `StateT log (ExceptT ε M)` carrier returns no log on
+  error.
+- **CLASS:** carrier order.
+- **FIXED-BY:** `Family.Service.tracedExcept` (Effects v0.3.1, log outside the
+  error) with `interpret_tracedExcept_fst`.

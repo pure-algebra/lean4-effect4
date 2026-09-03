@@ -1,0 +1,28 @@
+{
+  "pdf": "/Users/pooks/Dev/lean4-effect4/output/pdf/effect4-web-standards-semantics.pdf",
+  "pdf_sha256": "48f85fb4b22b6e995123834974a041dba37c927fa620199e9d1d39a4bf24e3db",
+  "source_sha256": "4c4a6b3e051b855d27b75e74e6f802dca8cbd81cc782ff98956c01ad788c7b83",
+  "pages": 15,
+  "outline_sections": 14,
+  "unique_external_urls": 30,
+  "external_link_annotations": 43,
+  "resolved_internal_link_annotations": 32,
+  "all_page_text_and_margins_checked": true,
+  "visually_inspected_pages": [
+    1,
+    6,
+    8,
+    11,
+    12,
+    14,
+    15
+  ],
+  "visual_review_scope": "Sampled rendered pages. Page 15 re-rendered and re-inspected after final QA note; earlier sampled pages unchanged.",
+  "local_source_hashes_rechecked": 46,
+  "frame_axiom_receipts": 149,
+  "frame_axioms_used": [
+    "Quot.sound",
+    "propext"
+  ],
+  "limitations": "Link annotations and cited source presence were checked; no claim that every external host will remain available. No accessibility tagging review."
+}

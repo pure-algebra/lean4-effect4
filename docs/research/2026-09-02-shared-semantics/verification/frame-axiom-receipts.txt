@@ -1,0 +1,150 @@
+'Effect4.Arm.all_nodup' does not depend on any axioms
+'Effect4.Arm.mem_all' depends on axioms: [propext]
+'Effect4.Arm.cases_receipt' does not depend on any axioms
+'Effect4.Arm.demandable_eq' does not depend on any axioms
+'Effect4.Arm.contAll_not_demandable' depends on axioms: [propext]
+'Effect4.Prim.cases_receipt' does not depend on any axioms
+'Effect4.FrameFiber.start_eq' does not depend on any axioms
+'Effect4.FrameFiber.pendingCause_some' does not depend on any axioms
+'Effect4.FrameFiber.pendingCause_none' does not depend on any axioms
+'Effect4.FrameFiber.masked_eq' does not depend on any axioms
+'Effect4.FrameFiber.interrupted_eq' does not depend on any axioms
+'Effect4.FrameEvent.poppedFrames_nil' does not depend on any axioms
+'Effect4.FrameEvent.poppedFrames_cons_popped' does not depend on any axioms
+'Effect4.FrameEvent.finalizersRun_nil' does not depend on any axioms
+'Effect4.FrameEvent.finalizersRun_cons_ran' does not depend on any axioms
+'Effect4.FrameEvent.finalizersRun_cons_popped' does not depend on any axioms
+'Effect4.Prim.hasArm_eq' does not depend on any axioms
+'Effect4.Prim.isFrame_eq' does not depend on any axioms
+'Effect4.Prim.isFrame_iff' depends on axioms: [propext]
+'Effect4.Prim.arms_onSuccess' does not depend on any axioms
+'Effect4.Prim.arms_onFailure' does not depend on any axioms
+'Effect4.Prim.arms_onSuccessAndFailure' does not depend on any axioms
+'Effect4.Prim.arms_exitFrame' does not depend on any axioms
+'Effect4.Prim.arms_onExit' does not depend on any axioms
+'Effect4.Prim.arms_setInterruptible' does not depend on any axioms
+'Effect4.Prim.arms_whileLoop' does not depend on any axioms
+'Effect4.Prim.arms_iterator' does not depend on any axioms
+'Effect4.Prim.non_frames_have_no_arms' does not depend on any axioms
+'Effect4.Prim.ofExit_asExit?' does not depend on any axioms
+'Effect4.Prim.asExit?_success' does not depend on any axioms
+'Effect4.Prim.asExit?_failure' does not depend on any axioms
+'Effect4.Prim.asExit?_eq_some' depends on axioms: [propext]
+'Effect4.Prim.ofExit_isFrame' does not depend on any axioms
+'Effect4.Prim.ensure_of_no_contAll' does not depend on any axioms
+'Effect4.Prim.ensure_onExit_masks' depends on axioms: [propext]
+'Effect4.Prim.ensure_onExit_told_not_to' depends on axioms: [propext]
+'Effect4.Prim.ensure_onExit_already_masked' depends on axioms: [propext]
+'Effect4.Prim.ensure_onExit_no_replacement' depends on axioms: [propext]
+'Effect4.Prim.ensure_setInterruptible_flag' depends on axioms: [propext]
+'Effect4.Prim.ensure_setInterruptible_stack' depends on axioms: [propext]
+'Effect4.Prim.ensure_setInterruptible_substitutes' depends on axioms: [propext]
+'Effect4.Prim.ensure_setInterruptible_false_no_replacement' depends on axioms: [propext]
+'Effect4.Prim.ensure_setInterruptible_no_pending' depends on axioms: [propext]
+'Effect4.Prim.answerOf_replacement' does not depend on any axioms
+'Effect4.Prim.answerOf_arm' depends on axioms: [propext]
+'Effect4.Prim.answerOf_missing' depends on axioms: [propext]
+'Effect4.Prim.answerOf_frame_eq' depends on axioms: [propext]
+'Effect4.Prim.armA_isSome' depends on axioms: [propext]
+'Effect4.Prim.armE_isSome' does not depend on any axioms
+'Effect4.Prim.armA_onSuccess' does not depend on any axioms
+'Effect4.Prim.armA_onSuccessAndFailure' does not depend on any axioms
+'Effect4.Prim.armE_onFailure' does not depend on any axioms
+'Effect4.Prim.armE_onSuccessAndFailure' does not depend on any axioms
+'Effect4.Prim.armE_onSuccess_none' does not depend on any axioms
+'Effect4.Prim.armA_onFailure_none' does not depend on any axioms
+'Effect4.Prim.armA_setInterruptible_none' does not depend on any axioms
+'Effect4.Prim.armE_setInterruptible_none' does not depend on any axioms
+'Effect4.Prim.armE_whileLoop_none' does not depend on any axioms
+'Effect4.Prim.armE_iterator_none' does not depend on any axioms
+'Effect4.Prim.armA_exitFrame_provided' does not depend on any axioms
+'Effect4.Prim.armA_exitFrame_none' does not depend on any axioms
+'Effect4.Prim.armE_exitFrame_provided' does not depend on any axioms
+'Effect4.Prim.armE_exitFrame_none' does not depend on any axioms
+'Effect4.Prim.armA_onExit' does not depend on any axioms
+'Effect4.Prim.armE_onExit' does not depend on any axioms
+'Effect4.Prim.onExit_finalizer_success_restores' does not depend on any axioms
+'Effect4.Prim.onExit_finalizer_failure_merges' does not depend on any axioms
+'Effect4.Prim.onExit_success_finalizer_failure' does not depend on any axioms
+'Effect4.Prim.onExit_arm_is_per_frame' does not depend on any axioms
+'Effect4.Prim.onSuccess_arm_is_per_instance' does not depend on any axioms
+'Effect4.Prim.onFailure_arm_is_per_instance' does not depend on any axioms
+'Effect4.Prim.onSuccessAndFailure_arms_are_per_instance' does not depend on any axioms
+'Effect4.Prim.armA_whileLoop_continue' depends on axioms: [propext]
+'Effect4.Prim.armA_whileLoop_stop' depends on axioms: [propext]
+'Effect4.Prim.armA_iterator_done' depends on axioms: [propext]
+'Effect4.Prim.armA_iterator_halt' depends on axioms: [propext]
+'Effect4.Prim.armA_iterator_resume' depends on axioms: [propext]
+'Effect4.Prim.iteratorFolded_eq' does not depend on any axioms
+'Effect4.Prim.iterator_folds_inline' depends on axioms: [propext]
+'Effect4.Prim.finalizerEvents_onExit' does not depend on any axioms
+'Effect4.Prim.finalizerEvents_onSuccess' does not depend on any axioms
+'Effect4.Prim.finalizerEvents_onFailure' does not depend on any axioms
+'Effect4.FrameFiber.getCont_deferred' depends on axioms: [propext]
+'Effect4.FrameFiber.getCont_deferred_pops_nothing' depends on axioms: [propext]
+'Effect4.FrameFiber.getCont_eq_popFrom' depends on axioms: [propext]
+'Effect4.FrameFiber.getCont_skip_clears_deferred' depends on axioms: [propext]
+'Effect4.FrameFiber.getCont_empty_stack' depends on axioms: [propext]
+'Effect4.FrameFiber.popFrom_nil' depends on axioms: [propext]
+'Effect4.FrameFiber.popFrom_answer_answer' depends on axioms: [propext]
+'Effect4.FrameFiber.popFrom_answer_popped' depends on axioms: [propext]
+'Effect4.FrameFiber.popFrom_answer_events' depends on axioms: [propext]
+'Effect4.FrameFiber.popFrom_answer_fiber' depends on axioms: [propext]
+'Effect4.FrameFiber.popFrom_continue_answer' depends on axioms: [propext]
+'Effect4.FrameFiber.popFrom_continue_popped' depends on axioms: [propext]
+'Effect4.FrameFiber.popFrom_continue_events' depends on axioms: [propext]
+'Effect4.FrameFiber.popFrom_continue_fiber' depends on axioms: [propext]
+'Effect4.FrameFiber.popFrom_answer_hasArm' depends on axioms: [propext]
+'Effect4.FrameFiber.getCont_answer_hasArm' depends on axioms: [propext]
+'Effect4.FrameFiber.passEvents_ranContAll' depends on axioms: [propext]
+'Effect4.FrameFiber.passEvents_poppedFrames' depends on axioms: [propext, Quot.sound]
+'Effect4.FrameFiber.popFrom_popped_eq_events' depends on axioms: [propext, Quot.sound]
+'Effect4.FrameFiber.popFrom_ranContAll' depends on axioms: [propext]
+'Effect4.FrameFiber.getCont_ranContAll' depends on axioms: [propext]
+'Effect4.FrameFiber.getCont_skip_of_no_pending_cause' depends on axioms: [propext]
+'Effect4.FrameFiber.interrupt_skips_every_handler' depends on axioms: [propext]
+'Effect4.FrameFiber.getCont_mask_stops_skip' depends on axioms: [propext]
+'Effect4.FrameFiber.resumeValue_empty' depends on axioms: [propext]
+'Effect4.FrameFiber.resumeValue_deferred' depends on axioms: [propext]
+'Effect4.FrameFiber.resumeValue_replacement' depends on axioms: [propext]
+'Effect4.FrameFiber.resumeValue_frame' depends on axioms: [propext]
+'Effect4.FrameFiber.resumeCause_empty' depends on axioms: [propext]
+'Effect4.FrameFiber.resumeCause_deferred' depends on axioms: [propext]
+'Effect4.FrameFiber.resumeCause_replacement' depends on axioms: [propext]
+'Effect4.FrameFiber.resumeCause_frame' depends on axioms: [propext]
+'Effect4.FrameFiber.step_success' depends on axioms: [propext]
+'Effect4.FrameFiber.step_failure' depends on axioms: [propext]
+'Effect4.FrameFiber.step_sync' depends on axioms: [propext]
+'Effect4.FrameFiber.step_suspend' depends on axioms: [propext]
+'Effect4.FrameFiber.step_withFiber' depends on axioms: [propext]
+'Effect4.FrameFiber.step_yieldableError' depends on axioms: [propext]
+'Effect4.FrameFiber.step_onSuccess' depends on axioms: [propext]
+'Effect4.FrameFiber.step_onFailure' depends on axioms: [propext]
+'Effect4.FrameFiber.step_onSuccessAndFailure' depends on axioms: [propext]
+'Effect4.FrameFiber.step_exitFrame' depends on axioms: [propext]
+'Effect4.FrameFiber.step_onExit' depends on axioms: [propext]
+'Effect4.FrameFiber.step_setInterruptible_not_evaluable' depends on axioms: [propext]
+'Effect4.FrameFiber.step_whileLoop_true' depends on axioms: [propext]
+'Effect4.FrameFiber.step_whileLoop_false' depends on axioms: [propext]
+'Effect4.FrameFiber.step_iterator' depends on axioms: [propext]
+'Effect4.FrameFiber.step_ofExit_finishes' depends on axioms: [propext]
+'Effect4.FrameFiber.run_zero' depends on axioms: [propext]
+'Effect4.FrameFiber.run_succ_finished' depends on axioms: [propext]
+'Effect4.FrameFiber.run_succ_running' depends on axioms: [propext]
+'Effect4.FrameFiber.uninterruptible_already_masked' depends on axioms: [propext]
+'Effect4.FrameFiber.uninterruptible_masks' depends on axioms: [propext]
+'Effect4.FrameFiber.uninterruptibleMask_eq' does not depend on any axioms
+'Effect4.FrameFiber.setFiberInterruptible_flag' does not depend on any axioms
+'Effect4.FrameFiber.setFiberInterruptible_pushes' does not depend on any axioms
+'Effect4.FrameFiber.setFiberInterruptible_immediate_failure' depends on axioms: [propext]
+'Effect4.FrameFiber.setFiberInterruptible_no_pending' depends on axioms: [propext]
+'Effect4.FrameFiber.interruptibleRegion_already' depends on axioms: [propext]
+'Effect4.FrameFiber.interruptibleRegion_masked' depends on axioms: [propext]
+'Effect4.FrameFiber.restoreAcquire_asked' does not depend on any axioms
+'Effect4.FrameFiber.restoreAcquire_not_asked' does not depend on any axioms
+'Effect4.Prim.scopedFrame_eq' does not depend on any axioms
+'Effect4.Prim.scopedFrame_finalizer_masked' depends on axioms: [propext]
+'Effect4.FrameFiber.step_scopedFrame' depends on axioms: [propext]
+'Effect4.Prim.withFiber_refused' does not depend on any axioms
+'Effect4.Prim.yieldableError_host_class_refused' does not depend on any axioms
+

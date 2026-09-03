@@ -1,0 +1,41 @@
+{
+  "node": "v22.23.2",
+  "effect": "4.0.0-rc.112",
+  "results": [
+    {
+      "case": "generator finally on yielded failure",
+      "trace": [
+        "start"
+      ],
+      "exit": "Failure"
+    },
+    {
+      "case": "scoped release sees failure after body state change",
+      "trace": [
+        "acquire",
+        "body-write",
+        "release:Failure"
+      ]
+    },
+    {
+      "case": "LIFO close then repeated close",
+      "trace": [
+        "second",
+        "first"
+      ]
+    },
+    {
+      "case": "abort reason stable and event occurs once",
+      "trace": [
+        "abort-event"
+      ],
+      "reason": "first-reason"
+    },
+    {
+      "case": "high water mark is not a hard queue cap",
+      "highWaterMark": 1,
+      "enqueued": 3,
+      "desiredSize": -2
+    }
+  ]
+}

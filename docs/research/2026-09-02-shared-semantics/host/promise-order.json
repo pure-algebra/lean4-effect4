@@ -1,0 +1,11 @@
+{
+  "node": "v22.23.2",
+  "direct": [
+    "result:same result",
+    "marker"
+  ],
+  "extraReaction": [
+    "marker",
+    "result:same result"
+  ]
+}

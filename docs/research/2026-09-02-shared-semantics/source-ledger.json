@@ -1,0 +1,850 @@
+{
+  "access_date": "2026-09-02",
+  "local": [
+    {
+      "component": "Effect4",
+      "evidence": "L1",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "lakefile.toml",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "1136ab39a23a57e06ffc6645bf6d889e126ad60fe75b0be22dbfe0efa68cb0c1"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L1",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": ".lake/package-overrides.json",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "1efde20658145030e30a488339a4984489c25145247d381310bb364c9129c47e"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L1",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "lake-manifest.json",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "71aadb1795b128121595a02a97ea7da3e0f27d2714f424eb2b6b99cb5300bfaa"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L1",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "PLAN.md",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "7579ee0bef58780990d3438935337d56fa9caab2b3c0147837a1e909b0560941"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L1",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "PORT-MANIFEST.md",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "948f8a00b3552b1909d1dd79b8b70dbe95312ebf03c8fa27aea011a50a223156"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L1",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "docs/ARCHITECTURE.md",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "bacfc3f89400c17d86996f2e663a97ef69920e6bf68aa7c6934c03aedd731e33"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L1",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "docs/research/2026-09-02-ecosystem-audit.md",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "25739fcd07348352ba7ef86af77923afa091b21f546e1c904bbeb9a8c92817c9"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L2",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "Effect4/Runtime/Runtime.lean",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "fa73134f37da77489bfc4bb14776d32a482171d0f43c9fcc3e26bd811075ccd4"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L2",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "Effect4/Runtime/Scope.lean",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "80b11b1fd7943c9a8bfcdf46e4749394e4a3ca328be0de209d9f4de3cc5059ed"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L2",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "Effect4/Semantics/Cause.lean",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "fc7d008f2955a5ea812717a77e2f3e3d187980c924fc0cb25d5014644c7f7196"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L2",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "Effect4/Concurrency/Scheduler.lean",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "0d50488b9d07a57526291cca3aa9eca6cb4ee6a28deb50bacf75c77f284eee32"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L2",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "docs/FRAMES-DAG.md",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "b68325aeb217a3f72240284970a0016017f018d9ca8075642a7460184932c1f4"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L2",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "docs/SCOPE-DAG.md",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "529c639970003ea940a46204ff8db61fa9f8c9d09e946d80aacff8f5a3c27214"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L2",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "Effect4/Semantics/Configuration.lean",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "b04737c8acfeb2dd84137e160f2746697afb45f668baa980ea54274877863af3"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L2",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "Effect4/Semantics/Step.lean",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "3b21d92be4152cc3a59c90ccf9d9c13b000f78d3e33a86023f6a6f6885014c5e"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L2",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "Effect4/Flow/Decision.lean",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "c734b147cecbec495d5326d767ccd5e97dab7fec0f52212e244a5d31cd0b3d62"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L2",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "Effect4/Flow/Region.lean",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "fea11c3c87f8ebee6f0af9c433cc5dfdd478cf82564e06a0cb9e0ec16330e71b"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L3",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "Effect4/Target/TypeScript/EffectV4.lean",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "0508acfb7e2c8e5a17f0c9e1a5420aee8b254c0528e1855bcf1cbf7395f793e2"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L3",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "Effect4/Target/TypeScript/Simulation.lean",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "5f8a4b0bce6e96a6d891665c079ddc4e030f94314a2724cee109bfccfc1ef7e4"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L3",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "Effect4/Meta/Derive.lean",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "d535da9257f3a4cdc2528598d8978f0263adf3c34580c535ce7d86a16d685099"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L4",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "docs/DESIGN-BASIS.md",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "10270b46787fa4be400addf31438410346f962492b67c1323143ceb39096d3e9"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L5",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "vendor/effect-4.0.0-rc.112/src/internal/effect.ts",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L5",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "vendor/effect-4.0.0-rc.112/src/internal/core.ts",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "233b7a1fb3a53b9f49f63c01f810052cb174cc13742f52ea2e8bd482f302fd11"
+    },
+    {
+      "component": "Effect4",
+      "evidence": "L5",
+      "root": "/Users/pooks/Dev/lean4-effect4",
+      "path": "vendor/effect-4.0.0-rc.112/src/Scheduler.ts",
+      "head": "6c9f479cf927dfcd0dad14892ea6a7b79f835a03",
+      "sha256": "e4c35925d7586a82f93975390f08a67bfff4261d35d8382db7c18c9acc349680"
+    },
+    {
+      "component": "Effects",
+      "evidence": "L1",
+      "root": "/Users/pooks/Dev/lean4-effects",
+      "path": "docs/CLAIM-BOUNDARY.md",
+      "head": "fa3cdc96c0dc631e73174aba8a2175a0ef11125a",
+      "sha256": "2305f4e3105bae7690cabc4b5321ea554888bc49a0af7d4b7b8e39b676f2f36e"
+    },
+    {
+      "component": "Effects",
+      "evidence": "L1",
+      "root": "/Users/pooks/Dev/lean4-effects",
+      "path": "lakefile.toml",
+      "head": "fa3cdc96c0dc631e73174aba8a2175a0ef11125a",
+      "sha256": "e99dec38ba6c26ee5d5e13bc7e06f1e9f5ef133532b9153dab312b750ab87a5d"
+    },
+    {
+      "component": "Effects",
+      "evidence": "L1",
+      "root": "/Users/pooks/Dev/lean4-effects",
+      "path": "lean-toolchain",
+      "head": "fa3cdc96c0dc631e73174aba8a2175a0ef11125a",
+      "sha256": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71"
+    },
+    {
+      "component": "Effects",
+      "evidence": "L9",
+      "root": "/Users/pooks/Dev/lean4-effects",
+      "path": "Effects/Morphism.lean",
+      "head": "fa3cdc96c0dc631e73174aba8a2175a0ef11125a",
+      "sha256": "fd3b34e993afc30a657273be0b969c7f1270937674e04a09cb438c519b4a2336"
+    },
+    {
+      "component": "Effects",
+      "evidence": "L9",
+      "root": "/Users/pooks/Dev/lean4-effects",
+      "path": "Effects/Family.lean",
+      "head": "fa3cdc96c0dc631e73174aba8a2175a0ef11125a",
+      "sha256": "e7764e01b42aeb224fdc2891bb55b1213ed28214776af82040e27c4092143c6a"
+    },
+    {
+      "component": "Effects",
+      "evidence": "L9",
+      "root": "/Users/pooks/Dev/lean4-effects",
+      "path": "Effects/Transport.lean",
+      "head": "fa3cdc96c0dc631e73174aba8a2175a0ef11125a",
+      "sha256": "93959ab097e5c4346c867ead16eabae2d69065b1c947c8185768ef09b360626e"
+    },
+    {
+      "component": "Effects",
+      "evidence": "L9",
+      "root": "/Users/pooks/Dev/lean4-effects",
+      "path": "Effects/Flow/Raw.lean",
+      "head": "fa3cdc96c0dc631e73174aba8a2175a0ef11125a",
+      "sha256": "e8608434403ad826e567405779d895188dc6fdf20d4c3553a206e16f929e4a66"
+    },
+    {
+      "component": "Effects",
+      "evidence": "L9",
+      "root": "/Users/pooks/Dev/lean4-effects",
+      "path": "Effects/Flow/Block.lean",
+      "head": "fa3cdc96c0dc631e73174aba8a2175a0ef11125a",
+      "sha256": "d5190349e7b85f0268a738b64de86361c22c48364dbaca9281485c4bc2d7f0ec"
+    },
+    {
+      "component": "Effects",
+      "evidence": "L9",
+      "root": "/Users/pooks/Dev/lean4-effects",
+      "path": "Effects/Flow/Checked.lean",
+      "head": "fa3cdc96c0dc631e73174aba8a2175a0ef11125a",
+      "sha256": "75f0594f511ef83949beadad7bbe24aa76a574e410353c9326a6ca31bbe935a3"
+    },
+    {
+      "component": "Effects",
+      "evidence": "L9",
+      "root": "/Users/pooks/Dev/lean4-effects",
+      "path": "Effects/Flow/Admission.lean",
+      "head": "fa3cdc96c0dc631e73174aba8a2175a0ef11125a",
+      "sha256": "8a9ce8cdad431393fc824c030180fa6bcd23fb1858e7e2ab89fbdfc3ad39c40a"
+    },
+    {
+      "component": "WHATWG",
+      "evidence": "L6",
+      "root": "/Users/pooks/Dev/lean4-whatwg",
+      "path": "docs/DESIGN-BASIS.md",
+      "head": "00f8f2d3db311e687b84eb026fe4f9f4908f952d",
+      "sha256": "d92a209f02a3b97501e236640bc8cdf86f2d9b6c61fd8c65aff8a27756c287d1"
+    },
+    {
+      "component": "WHATWG",
+      "evidence": "L6",
+      "root": "/Users/pooks/Dev/lean4-whatwg",
+      "path": "docs/REIFICATION-STRATEGY.md",
+      "head": "00f8f2d3db311e687b84eb026fe4f9f4908f952d",
+      "sha256": "1ccd231f7fa62ed4c8872f523f4f975feaef972684be5dd74a87102b6f571d21"
+    },
+    {
+      "component": "WHATWG",
+      "evidence": "L6",
+      "root": "/Users/pooks/Dev/lean4-whatwg",
+      "path": "vendor/whatwg-streams-b9ba9f49/index.bs",
+      "head": "00f8f2d3db311e687b84eb026fe4f9f4908f952d",
+      "sha256": "24360b4f8446e6c80e185c5021fcca9b67a7e0bb62490a00109080ebc04c6440"
+    },
+    {
+      "component": "WHATWG",
+      "evidence": "L11",
+      "root": "/Users/pooks/Dev/lean4-whatwg",
+      "path": "docs/research/2026-09-01-lean-stdlib-strategy-and-performance.md",
+      "head": "00f8f2d3db311e687b84eb026fe4f9f4908f952d",
+      "sha256": "e0b24d8ae74a21b814eeaaff36ed3061304df8249552ba0361ac62d72e1d009f"
+    },
+    {
+      "component": "WHATWG",
+      "evidence": "L11",
+      "root": "/Users/pooks/Dev/lean4-whatwg",
+      "path": "AGENTS.md",
+      "head": "00f8f2d3db311e687b84eb026fe4f9f4908f952d",
+      "sha256": "1784ab81d8bef2d0ac3fba9e8fcf57d5eb6ba9689aa8297b3a7f1805cbf56655"
+    },
+    {
+      "component": "Foldlab",
+      "evidence": "L4",
+      "root": "/Users/pooks/Dev/foldlab",
+      "path": ".staging/algebraic-review/prog-carrier.md",
+      "head": "4005d34f249cda25134ac2bddff514e3a068bc1e",
+      "sha256": "f84ecbfdf15050959910da637180515dafc14518252e9cf4d3b48014a8822762"
+    },
+    {
+      "component": "Foldlab",
+      "evidence": "L4",
+      "root": "/Users/pooks/Dev/foldlab",
+      "path": ".staging/algebraic-review/handlers-semantics.md",
+      "head": "4005d34f249cda25134ac2bddff514e3a068bc1e",
+      "sha256": "253f670802a0da391607efd4c11001036b9418a1be211e9730edff8a43cdaf3c"
+    },
+    {
+      "component": "Foldlab",
+      "evidence": "L4",
+      "root": "/Users/pooks/Dev/foldlab",
+      "path": ".staging/algebraic-review/THE-ALGEBRA.md",
+      "head": "4005d34f249cda25134ac2bddff514e3a068bc1e",
+      "sha256": "0e055c8ad33be84295187bf72812634c2869d55b40be17fe7e9e42cd57ed26fc"
+    },
+    {
+      "component": "Foldlab",
+      "evidence": "L4",
+      "root": "/Users/pooks/Dev/foldlab",
+      "path": "docs/SPECS.md",
+      "head": "4005d34f249cda25134ac2bddff514e3a068bc1e",
+      "sha256": "9c6365f367629eadb1c573c2a4b656288f8afcd5f86d7559b68fa39075e5bf12"
+    },
+    {
+      "component": "Foldlab",
+      "evidence": "L4",
+      "root": "/Users/pooks/Dev/foldlab",
+      "path": ".staging/operational-structure/EFFECT-AST-PLACEMENT.md",
+      "head": "4005d34f249cda25134ac2bddff514e3a068bc1e",
+      "sha256": "bc5aa7ecac7356631dd0bb2b28fbd4f287d43c8932db629f1c2252a760ec9926"
+    },
+    {
+      "component": "installed Effect",
+      "evidence": "L7",
+      "path": "/Users/pooks/Dev/foldlab/library/effects/node_modules/effect/src/internal/effect.ts",
+      "sha256": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0",
+      "vendor_equal": true
+    },
+    {
+      "component": "installed Effect",
+      "evidence": "L7",
+      "path": "/Users/pooks/Dev/foldlab/library/effects/node_modules/effect/src/Scheduler.ts",
+      "sha256": "e4c35925d7586a82f93975390f08a67bfff4261d35d8382db7c18c9acc349680",
+      "vendor_equal": true
+    }
+  ],
+  "external": [
+    {
+      "url": "https://tc39.es/ecma262/multipage/executable-code-and-execution-contexts.html#sec-hostenqueuepromisejob",
+      "titles": [
+        "ECMA-262, HostEnqueuePromiseJob"
+      ],
+      "used_in": [
+        "1. What event-loop model should both refine?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://html.spec.whatwg.org/multipage/webappapis.html#event-loops",
+      "titles": [
+        "HTML, event loops"
+      ],
+      "used_in": [
+        "1. What event-loop model should both refine?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://tc39.es/ecma262/multipage/control-abstraction-objects.html#sec-promise-objects",
+      "titles": [
+        "ECMA-262, Promise objects"
+      ],
+      "used_in": [
+        "1. What event-loop model should both refine?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://www.microsoft.com/en-us/research/wp-content/uploads/2017/08/asyncNodeSemantics.pdf",
+      "titles": [
+        "Semantics of Asynchronous JavaScript, sections 2.3-2.3.2"
+      ],
+      "used_in": [
+        "1. What event-loop model should both refine?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://arxiv.org/pdf/1906.00046",
+      "titles": [
+        "Interaction Trees, section 2"
+      ],
+      "used_in": [
+        "2. Which equivalence relates Effect to a promise API?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://arxiv.org/html/2211.06863v1",
+      "titles": [
+        "Choice Trees, sections 2-3",
+        "Choice Trees, sections 2-3 and 5"
+      ],
+      "used_in": [
+        "2. Which equivalence relates Effect to a promise API?",
+        "6. Is a decision an operation in both systems?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://www.ireneyoon.com/paper/fralmi.pdf",
+      "titles": [
+        "Formal Reasoning about Layered Monadic Interpreters, sections 3-4"
+      ],
+      "used_in": [
+        "2. Which equivalence relates Effect to a promise API?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://webidl.spec.whatwg.org/#idl-exceptions",
+      "titles": [
+        "Web IDL, exceptions and JavaScript binding"
+      ],
+      "used_in": [
+        "3. Returned error answers or an error summand?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://arxiv.org/pdf/1312.1399",
+      "titles": [
+        "Handling Algebraic Effects, introduction and section 1"
+      ],
+      "used_in": [
+        "3. Returned error answers or an error summand?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://webspace.science.uu.nl/~swier004/publications/2008-jfp.pdf",
+      "titles": [
+        "Data Types a la Carte, section 4"
+      ],
+      "used_in": [
+        "4. What open-union design, and what Lean cost?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://okmij.org/ftp/Haskell/extensible/more.pdf",
+      "titles": [
+        "Freer Monads, More Extensible Effects, section 2.2"
+      ],
+      "used_in": [
+        "4. What open-union design, and what Lean cost?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://arxiv.org/pdf/1406.2061",
+      "titles": [
+        "Koka, section 2.4"
+      ],
+      "used_in": [
+        "4. What open-union design, and what Lean cost?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://xnning.github.io/papers/multip.pdf",
+      "titles": [
+        "Xie and Leijen, Generalized Evidence Passing for Effect Handlers, sections 2.5 and 3.3"
+      ],
+      "used_in": [
+        "4. What open-union design, and what Lean cost?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://www.cs.ox.ac.uk/people/nicolas.wu/papers/Scope.pdf",
+      "titles": [
+        "Effect Handlers in Scope, section 11"
+      ],
+      "used_in": [
+        "5. Which account fits children represented by block IDs?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://www.fceia.unr.edu.ar/~mauro/pubs/ScopedOps.pdf",
+      "titles": [
+        "Syntax and Semantics for Operations with Scopes"
+      ],
+      "used_in": [
+        "5. Which account fits children represented by block IDs?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://arxiv.org/pdf/2108.11155",
+      "titles": [
+        "Latent Effects for Reusable Language Components, section 3"
+      ],
+      "used_in": [
+        "5. Which account fits children represented by block IDs?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://casperbp.net/store/hefty-algebras.pdf",
+      "titles": [
+        "Hefty Algebras, sections 3-5"
+      ],
+      "used_in": [
+        "5. Which account fits children represented by block IDs?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://arxiv.org/pdf/2304.09697",
+      "titles": [
+        "A Calculus for Scoped Effects and Handlers"
+      ],
+      "used_in": [
+        "5. Which account fits children represented by block IDs?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://arxiv.org/pdf/2302.01415",
+      "titles": [
+        "A Framework for Higher-Order Effects and Handlers, sections 4.5-4.6"
+      ],
+      "used_in": [
+        "5. Which account fits children represented by block IDs?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://tidsskrift.dk/brics/article/view/21684",
+      "titles": [
+        "Defunctionalization at Work"
+      ],
+      "used_in": [
+        "7. What Flow-to-frame simulation is affordable?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/algeff.pdf",
+      "titles": [
+        "Type Directed Compilation of Row-Typed Algebraic Effects, section 5"
+      ],
+      "used_in": [
+        "7. What Flow-to-frame simulation is affordable?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://www.research.ed.ac.uk/en/publications/liberating-effects-with-rows-and-handlers/",
+      "titles": [
+        "Liberating Effects with Rows and Handlers"
+      ],
+      "used_in": [
+        "7. What Flow-to-frame simulation is affordable?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://anil.recoil.org/papers/2021-pldi-retroeff.pdf",
+      "titles": [
+        "Retrofitting Effect Handlers onto OCaml"
+      ],
+      "used_in": [
+        "7. What Flow-to-frame simulation is affordable?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://dom.spec.whatwg.org/#aborting-ongoing-activities",
+      "titles": [
+        "DOM, aborting ongoing activities"
+      ],
+      "used_in": [
+        "8. What cleanup criterion can connect Scope and AbortSignal?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://trio.readthedocs.io/en/stable/reference-core.html#cancellation-and-timeouts",
+      "titles": [
+        "Trio cancellation and shielding"
+      ],
+      "used_in": [
+        "8. What cleanup criterion can connect Scope and AbortSignal?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://github.com/whatwg/streams/blob/b9ba9f49d95b4280be0dc2372377a006c3a91c18/index.bs#L2238",
+      "titles": [
+        "Streams, pinned piping requirements"
+      ],
+      "used_in": [
+        "10. What do Streams' masks constrain?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://streams.spec.whatwg.org/#rs-default-controller-desired-size",
+      "titles": [
+        "Streams, controller desired size"
+      ],
+      "used_in": [
+        "10. What do Streams' masks constrain?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://github.com/whatwg/streams/blob/b9ba9f49d95b4280be0dc2372377a006c3a91c18/index.bs#L6574",
+      "titles": [
+        "Streams, high-water-mark validation"
+      ],
+      "used_in": [
+        "10. What do Streams' masks constrain?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://github.com/whatwg/streams/blob/b9ba9f49d95b4280be0dc2372377a006c3a91c18/index.bs#L2372",
+      "titles": [
+        "Streams, pinned tee algorithm"
+      ],
+      "used_in": [
+        "10. What do Streams' masks constrain?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    },
+    {
+      "url": "https://yangzhixuan.github.io/pdf/fused-reasoning-appendices.pdf",
+      "titles": [
+        "Reasoning about Effect Interaction by Fusion"
+      ],
+      "used_in": [
+        "10. What do Streams' masks constrain?"
+      ],
+      "inspected": "Primary source examined during this research by the parent or assigned researcher",
+      "access_date": "2026-09-02"
+    }
+  ],
+  "question_matrix": [
+    {
+      "question": "1. What event-loop model should both refine?",
+      "external_sources": [
+        "https://tc39.es/ecma262/multipage/executable-code-and-execution-contexts.html#sec-hostenqueuepromisejob",
+        "https://html.spec.whatwg.org/multipage/webappapis.html#event-loops",
+        "https://tc39.es/ecma262/multipage/control-abstraction-objects.html#sec-promise-objects",
+        "https://www.microsoft.com/en-us/research/wp-content/uploads/2017/08/asyncNodeSemantics.pdf"
+      ],
+      "local_evidence": [
+        "L5",
+        "L6"
+      ],
+      "resolution": "Evidence-based recommendation; proposed laws remain unproved unless explicitly identified as existing theorem receipts.",
+      "remaining_gap": "Formal host profile and queue embedding not implemented; browser/Node distinction retained."
+    },
+    {
+      "question": "2. Which equivalence relates Effect to a promise API?",
+      "external_sources": [
+        "https://arxiv.org/pdf/1906.00046",
+        "https://arxiv.org/html/2211.06863v1",
+        "https://www.ireneyoon.com/paper/fralmi.pdf"
+      ],
+      "local_evidence": [
+        "L6",
+        "L7"
+      ],
+      "resolution": "Evidence-based recommendation; proposed laws remain unproved unless explicitly identified as existing theorem receipts.",
+      "remaining_gap": "Exact M2 event alphabet and two-way interaction/divergence relation not frozen."
+    },
+    {
+      "question": "3. Returned error answers or an error summand?",
+      "external_sources": [
+        "https://webidl.spec.whatwg.org/#idl-exceptions",
+        "https://arxiv.org/pdf/1312.1399"
+      ],
+      "local_evidence": [
+        "L2, L8",
+        "L3",
+        "L4",
+        "L8"
+      ],
+      "resolution": "Evidence-based recommendation; proposed laws remain unproved unless explicitly identified as existing theorem receipts.",
+      "remaining_gap": "Cause quotient and target error propagation are contract choices; narrow counterexamples checked."
+    },
+    {
+      "question": "4. What open-union design, and what Lean cost?",
+      "external_sources": [
+        "https://webspace.science.uu.nl/~swier004/publications/2008-jfp.pdf",
+        "https://okmij.org/ftp/Haskell/extensible/more.pdf",
+        "https://arxiv.org/pdf/1406.2061",
+        "https://xnning.github.io/papers/multip.pdf"
+      ],
+      "local_evidence": [
+        "L8-L9",
+        "L9"
+      ],
+      "resolution": "Evidence-based recommendation; proposed laws remain unproved unless explicitly identified as existing theorem receipts.",
+      "remaining_gap": "Only finite toy rows measured; generated shared evidence and production shapes unmeasured."
+    },
+    {
+      "question": "5. Which account fits children represented by block IDs?",
+      "external_sources": [
+        "https://www.cs.ox.ac.uk/people/nicolas.wu/papers/Scope.pdf",
+        "https://www.fceia.unr.edu.ar/~mauro/pubs/ScopedOps.pdf",
+        "https://arxiv.org/pdf/2108.11155",
+        "https://casperbp.net/store/hefty-algebras.pdf",
+        "https://arxiv.org/pdf/2304.09697",
+        "https://arxiv.org/pdf/2302.01415"
+      ],
+      "local_evidence": [
+        "L2, L4"
+      ],
+      "resolution": "Evidence-based recommendation; proposed laws remain unproved unless explicitly identified as existing theorem receipts.",
+      "remaining_gap": "Capture/delimitation/multiplicity contract remains to be frozen; Region is empty."
+    },
+    {
+      "question": "6. Is a decision an operation in both systems?",
+      "external_sources": [
+        "https://arxiv.org/html/2211.06863v1"
+      ],
+      "local_evidence": [
+        "L2, L6"
+      ],
+      "resolution": "Evidence-based recommendation; proposed laws remain unproved unless explicitly identified as existing theorem receipts.",
+      "remaining_gap": "Shared typed request protocol and finite-checker correspondence proposed, not proved."
+    },
+    {
+      "question": "7. What Flow-to-frame simulation is affordable?",
+      "external_sources": [
+        "https://tidsskrift.dk/brics/article/view/21684",
+        "https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/algeff.pdf",
+        "https://www.research.ed.ac.uk/en/publications/liberating-effects-with-rows-and-handlers/",
+        "https://anil.recoil.org/papers/2021-pldi-retroeff.pdf"
+      ],
+      "local_evidence": [
+        "L2",
+        "L5",
+        "L5, L7"
+      ],
+      "resolution": "Evidence-based recommendation; proposed laws remain unproved unless explicitly identified as existing theorem receipts.",
+      "remaining_gap": "Source-to-frame simulation, atom/iterator adequacy, and divergence handling remain open."
+    },
+    {
+      "question": "8. What cleanup criterion can connect Scope and AbortSignal?",
+      "external_sources": [
+        "https://dom.spec.whatwg.org/#aborting-ongoing-activities",
+        "https://trio.readthedocs.io/en/stable/reference-core.html#cancellation-and-timeouts"
+      ],
+      "local_evidence": [
+        "L2, L7"
+      ],
+      "resolution": "Evidence-based recommendation; proposed laws remain unproved unless explicitly identified as existing theorem receipts.",
+      "remaining_gap": "Finite cleanup observations do not prove asynchronous liveness; ownership/progress premises stated."
+    },
+    {
+      "question": "9. What do the real programs use?",
+      "external_sources": [],
+      "local_evidence": [
+        "L10"
+      ],
+      "resolution": "Evidence-based recommendation; proposed laws remain unproved unless explicitly identified as existing theorem receipts.",
+      "remaining_gap": "No CFG reducibility result or cross-project typecheck; versions mixed and usage recognizer bounded."
+    },
+    {
+      "question": "10. What do Streams' masks constrain?",
+      "external_sources": [
+        "https://github.com/whatwg/streams/blob/b9ba9f49d95b4280be0dc2372377a006c3a91c18/index.bs#L2238",
+        "https://streams.spec.whatwg.org/#rs-default-controller-desired-size",
+        "https://github.com/whatwg/streams/blob/b9ba9f49d95b4280be0dc2372377a006c3a91c18/index.bs#L6574",
+        "https://github.com/whatwg/streams/blob/b9ba9f49d95b4280be0dc2372377a006c3a91c18/index.bs#L2372",
+        "https://yangzhixuan.github.io/pdf/fused-reasoning-appendices.pdf"
+      ],
+      "local_evidence": [
+        "L6",
+        "L7"
+      ],
+      "resolution": "Evidence-based recommendation; proposed laws remain unproved unless explicitly identified as existing theorem receipts.",
+      "remaining_gap": "Queue bound is proposed under stated premises; binary64 and total memory are outside it."
+    }
+  ],
+  "retrieval_limits": [
+    "One arXiv HTML view and institutional PDF link failed; alternate primary copy or narrower institutional record used."
+  ],
+  "source_priority": "Current declarations and pinned sources for behavior; owning design documents for rulings; literature for proof patterns; measurements only for the tested inputs."
+}

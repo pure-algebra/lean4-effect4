@@ -1,0 +1,1535 @@
+--- PDF page 1 ---
+62
+He/f_ty Algebras
+Modular Elaboration of Higher-Order Algebraic Eﬀects
+CASPER BACH POULSEN, Delft University of Technology, Netherlands
+CAS V AN DER REST,Delft University of Technology, Netherlands
+Algebraic eﬀects and handlers is an increasingly popular approach to programming with eﬀects. An attraction
+of the approach is its modularity: eﬀectful programs are written against an interface of declared operations,
+which allows the implementation of these operations to be de/f_ined and re/f_ined without changing or recom-
+piling programs written against the interface. However, higher-order operations (i.e., operations that take
+computations as arguments) break this modularity. While it is possible to encode higher-order operations
+by elaborating them into more primitive algebraic eﬀects and handlers, such elaborations are typically not
+modular. In particular, operations de/f_ined by elaboration are typically not a part of any eﬀect interface, so we
+cannot de/f_ine and re/f_ine their implementation without changing or recompiling programs. To resolve this
+problem, a recent line of research focuses on developing new and improved eﬀect handlers. In this paper we
+present a (surprisingly) simple alternative solution to the modularity problem with higher-order operations:
+we modularize the previously non-modular elaborations commonly used to encode higher-order operations.
+Our solution is as expressive as the state of the art in eﬀects and handlers.
+CCS Concepts: • Software and its engineering → Semantics; • Theory of computation → Type struc-
+tures; Program speci/f_ications; Denotational semantics.
+Additional Key Words and Phrases: Algebraic Eﬀects, Modularity, Reuse, Agda, Dependent Types
+ACM Reference Format:
+Casper Bach Poulsen and Cas van der Rest. 2023. Hefty Algebras: Modular Elaboration of Higher-Order
+Algebraic Eﬀects. Proc. ACM Program. Lang. 7, POPL, Article 62 (January 2023), 31 pages. https://doi.org/10.
+1145/3571255
+1 INTRODUCTION
+De/f_ining abstractions for programming with side eﬀects is a research question with a long and rich
+history. The goal is to de/f_ine an interface of (possibly) side eﬀecting operations where the interface
+encapsulates and hides irrelevant operational details about the operations and their side eﬀects.
+Such encapsulation makes it easy to refactor, optimize, or even change the behavior of a program,
+by changing the implementation of the interface.
+Monads [Moggi 1989b] have long been the preferred solution to this research question. However,
+algebraic eﬀects and handlers [Plotkin and Pretnar 2009] are emerging as an attractive alternative
+solution, due to the modularity bene/f_its that they provide. However, these modularity bene/f_its do
+not apply to many common operations that take computations as arguments.
+Authors’ addresses: Casper Bach Poulsen, Delft University of Technology, Netherlands, c.b.poulsen@tudelft.nl; Cas van der
+Rest, Delft University of Technology, Netherlands, c.r.vanderrest@tudelft.nl.
+Permission to make digital or hard copies of part or all of this work for personal or classroom use is granted without fee
+provided that copies are not made or distributed for pro/f_it or commercial advantage and that copies bear this notice and
+the full citation on the /f_irst page. Copyrights for third-party components of this work must be honored. For all other uses,
+contact the owner/author(s).
+© 2023 Copyright held by the owner/author(s).
+2475-1421/2023/1-ART62
+https://doi.org/10.1145/3571255
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 2 ---
+62:2 Casper Bach Poulsen and Cas van der Rest
+1.1 Background: Algebraic Eﬀects and Handlers
+To understand the bene/f_its of algebraic eﬀects and handlers and the modularity problem with
+operations that take computations as parameters, we give a brief introduction to algebraic eﬀects,
+based on the eﬀect handlers tutorial by Pretnar [2015]. Readers familiar with algebraic eﬀects and
+handlers are encouraged to skim the code examples in this subsection and read its /f_inal paragraph.
+Consider a simple operation out for output which takes a string as argument and returns the
+unit value. Using algebraic eﬀects and handlers its type is:
+out : String → () ! Output
+Here Output is the eﬀect of the operation. In general A ! Δ is a computation type where A is the
+return type and Δ is a row (i.e., unordered sequence) of eﬀects, where an eﬀect is a label associated
+with a set of operations. A computation of type A ! Δ may only use operations associated with an
+eﬀect in Δ. An eﬀect can generally be associated with multiple operations (but not the other way
+around); however, the simple Output eﬀect that we consider is only associated with the operation
+out. Thus () ! Output is the type of a computation which may call the out operation.
+We can think of Output as an interface that speci/f_ies the parameter and return type ofout. The
+implementation of such an interface is given by an eﬀect handler. An eﬀect handler de/f_ines how
+to interpret operations in the execution context they occur in. The type of an eﬀect handler is
+ ! Δ ⇒  ! Δ′, where Δ is the row of eﬀects before applying the handler and Δ′ is the row after.
+For example, here is the type of an eﬀect handler for Output:
+hOut :  ! Output, Δ ⇒ (  × String) ! Δ
+The Output eﬀect is being handled, so it is only present in the eﬀect row on the left. 1 As the type
+suggests, this handler handles out operations by accumulating a string of output. Below is the
+handler of this type:
+hOut = handler { ( return G) 7→ return (G, “” )
+(out B; :) 7→ do (~, B′) ← : (); return (~, B + +B ′) }
+The return case of the handler says that, if the computation being handled terminates normally
+with a value G, then we return a pair of G and the empty string. The case for out binds a variable B
+for the string argument of the operation, but also a variable : representing the execution context (or
+continuation). Invoking an operation suspends the program and its execution context up-to the
+nearest handler of the operation. The handler can choose to re-invoke the suspended execution
+context (possibly multiple times). The handler case for out above always invokes : once. Since :
+represents an execution context that includes the current handler, calling : gives a pair of a value
+~ and a string B ′, representing the /f_inal value and output of the execution context. The result of
+handling out B is then ~ and the current output ( B) plus the output of the rest of the program ( B ′).
+In general, a computation < :  ! Δ can only be run in a context that provides handlers for
+each eﬀect in Δ. To this end, if Δ = Δ1, Δ2 and ℎ :  ! Δ1 ⇒  ! Δ′
+1, then the expression
+(with ℎ handle <) :  ! Δ′
+1, Δ2 runs < in the context of the handler ℎ. For example, consider:
+hello : () ! Output
+hello = out “Hello” ; out “ world!”
+Using this, we can run hello in a scope with the handler hOut to compute the following result:
+(with hOut handle hello) ≡ (() , “Hello world!” )
+1Output could occur in Δ too. This raises the question: which Output eﬀect does a given handler actually handle? We refer
+to the literature for answers to this question; see, e.g., the row treatment of Morris and McKinna [2019], the eﬀect lifting of
+Biernacki et al. [2018], and the eﬀect tunneling of Zhang and Myers [2019].
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 3 ---
+He/f_ty Algebras 62:3
+An attractive feature of algebraic eﬀects and handlers is that programs such as hello are de/f_ined
+independently of how the eﬀectful operations they use are implemented. This makes it is possible to
+re/f_ine, refactor, or even change the meaning of operations without having to modify the programs
+that use them. For example, we can re/f_ine the meaning ofout without modifying the hello program,
+by using a diﬀerent handler hOut ′ which prints output to the console. However, some operations
+are challenging to express in a way that provides these modularity bene/f_its.
+1.2 The Modularity Problem with Higher-Order Operations
+Algebraic eﬀects and handlers provide limited support for operations that accept computations
+as arguments (sometimes called higher-order operations). The limitation is subtle but follows from
+how handler cases are typed. Following Plotkin and Pretnar [2009]; Pretnar [2015], the left and
+right hand sides of handler cases are typed as follows:
+handler { · · · ( op E  
+
+; :  
+ →  ! Δ′
+) 7→ 2  
+ ! Δ′
+, · · · }
+Here it is only : whose type is compatible with the right hand side. In theory, the parameter type
+E would also be compatible if  =  ! Δ′. However, encoding computations as parameters in this
+way is non-modular. The reason is that eﬀect handlers are not applied recursively to parameters of
+operations [Plotkin and Pretnar 2009; Pretnar 2015]; i.e., if ℎ handles operations other than op, then
+with ℎ handle (do G ← op E; <) ≡ do G ← op E; (with ℎ handle <)
+This implies that the only way to ensure that E has type  =  ! Δ′ whose eﬀects match the context
+of the operation (e.g., : :  →  ! Δ′), is to apply handlers of higher-order eﬀect encodings (such as
+op) before applying other handlers (such as ℎ). In turn, this means that programs can contain at
+most one higher-order eﬀect encoded in this way (otherwise, which handler do we apply /f_irst?).
+Consequently, encoding computation parameters in terms of the value E carried by an operation
+does not support modular de/f_inition, composition, and handling of higher-order eﬀects.
+A consequence of this handler typing restriction is that algebraic eﬀects and handlers only
+support higher-order operations whose computation parameters are continuation-like. In particular,
+for any operation op :  ! Δ → · · · →  ! Δ →  ! Δ and any <1, . . . , <= and :,
+do G ← ( op <1 . . . <=); : G ≡ op (do G1 ← <1; : G 1) . . . (do G= ← <=; : G =) (†)
+This property, known as the algebraicity property [Plotkin and Power 2003], says that the com-
+putation parameter values <1, . . . , <= are only ever run in a way that directly passes control to :.
+Such operations can without loss of generality or modularity be encoded as operations without
+computation parameters; e.g., op <1 . . . <= = do G ← op′ (); select G where op′ : () → = ! Δ and
+select : = →  ! Δ is a function that chooses between = diﬀerent computations using a data
+type = whose constructors are 31, . . . , 3= such that select 38 = <8 for 8 = 1..=. Some higher-order
+operations obey the algebraicity property; many do not. Examples of operations that do not include:
+• Exception handling: let catch <1 <2 be an operation that handles exceptions thrown during
+evaluation of computation <1 by running <2 instead, and throw be an operation that throws
+an exception. These operations are not algebraic. For example,
+do (catch <1 <2); throw . catch (do <1; throw) ( do <2; throw)
+• Local binding (the reader monad [Jones 1995]): let ask be an operation that reads a local binding,
+and local A < be an operation that makes A the current binding in computation <. Observe:
+do (local A < ); ask . local A (do <; ask)
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 4 ---
+62:4 Casper Bach Poulsen and Cas van der Rest
+• Logging with /f_iltering (an extension of thewriter monad [Jones 1995]): let out B be an opera-
+tion for logging a string, and censor 5 < be an operation for post-processing the output of
+computation < by applying 5 : String → String.2 Observe:
+do (censor 5 < ); out B . censor 5 (do <; out B)
+It is, however, possible to elaborate higher-order operations into more primitive eﬀects and
+handlers. For example, censor can be elaborated into an inline handler application of hOut:
+censor : (String → String) →  ! Output, Δ →  ! Output, Δ
+censor 5 < = do (G, B) ← ( with hOut handle <); out (5 B ); return G
+The other higher-order operations above can be de/f_ined in a similar manner.
+Elaborating higher-order operations into standard algebraic eﬀects and handlers as illustrated
+above is a key use case that eﬀect handlers were designed for [ Plotkin and Pretnar 2009]. However,
+elaborating operations in this way means the operations are not a part of any eﬀect interface. So,
+unlike plain algebraic operations, the only way to refactor, optimize, or change the semantics of
+higher-order operations de/f_ined in this way is to modify or copy code. In other words, we forfeit
+one of the key attractive modularity features of algebraic eﬀects and handlers.
+This modularity problem with higher-order eﬀects (i.e., eﬀects with higher-order operations)
+was /f_irst observed byWu et al. [2014] who proposed scoped eﬀects and handlers [Piróg et al . 2018;
+Wu et al. 2014; Yang et al. 2022] as a solution. Scoped eﬀects and handlers have similar modularity
+bene/f_its as algebraic eﬀects and handlers, but works for a wider class of eﬀects, including many
+higher-order eﬀects. However, van den Berg et al . [2021] recently observed that operations that
+defer computation, such as evaluation strategies for _ application or (multi-)staging [Taha and
+Sheard 2000], are beyond the expressiveness of scoped eﬀects. Therefore, van den Berg et al . [2021]
+introduced another /f_lavor of eﬀects and handlers that they calllatent eﬀects and handlers .
+In this paper we present a (surprisingly) simple alternative solution to the modularity problem
+with higher-order eﬀects, which only uses standard eﬀects and handlers and oﬀ-the-shelf generic
+programming techniques known from, e.g., data types à la carte [Swierstra 2008].
+1.3 Solving the Modularity Problem: Elaboration Algebras
+We propose to de/f_ine elaborations such ascensor from § 1.2 in a modular way. To this end, we
+introduce a new type of computations with higher-order eﬀects which can be modularly elaborated
+into computations with only standard algebraic eﬀects:
+ ! !
+elaborate
+− − − − − − → ! Δ
+handle
+− − − − − →Result
+Here  ! ! is a computation type where  is a return type and  is a row comprising both algebraic
+and higher-order eﬀects. The idea is that the higher-order eﬀects in the row  are modularly
+elaborated into the row Δ. To achieve this, we de/f_ineelaborate such that it can be modularly
+composed from separately de/f_ined elaboration cases, which we call elaboration algebras (for
+reasons we explain in § 3). Using  ! ! ⇛  ! Δ as the type of elaboration algebras that elaborate
+the higher-order eﬀects in  to Δ, we can modularly compose any pair of elaboration algebras
+41 :  ! !H1 ⇛  ! Δ and 42 :  ! !H2 ⇛  ! Δ into an algebra 412 :  ! !H1, H2 ⇛  ! Δ.3
+Elaboration algebras are as simple to de/f_ine as non-modular elaborations such ascensor (§ 1.2).
+For example, here is the elaboration algebra for the higher-orderCensor eﬀect whose only associated
+2The censor operation is a variant of the function by the same name the widely used Haskell mtl library: https://hackage.
+haskell.org/package/mtl-2.2.2/docs/Control-Monad-Writer-Lazy.html
+3Readers familiar with data types à la carte [ Swierstra 2008] may recognize this as algebra composition.
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 5 ---
+He/f_ty Algebras 62:5
+operation is the higher-order operation censorop : (String → String) →  ! ! →  ! ! :
+eCensor :  ! !Censor ⇛  ! Output, Δ
+eCensor (censorop 5 < ; :) = do (G, B) ← ( with hOut handle <); out (5 B ); : G
+The implementation of eCensor is essentially the same as censor. There are two main diﬀerences.
+First, elaboration happens in-context, so the value yielded by the elaboration is passed to the context
+(or continuation) :. Second, and most importantly, programs that use the censorop operation are
+now programmed against the interface given by Censor, meaning programs do not (and cannot)
+make assumptions about how censorop is elaborated. As a consequence, we can modularly re/f_ine the
+elaboration of higher-order operations such as censorop, without modifying the programs that use
+the operations. For example, the following program censors and replaces “Hello” with “Goodbye” :4
+censorHello : () ! !Censor, Output
+censorHello = censorop (_B. if (B ≡ “Hello” ) then “Goodbye” else B) hello
+Say we have a handler hOut ′ : (String → String) →  ! Output, Δ ⇒ (  × String) ! Δ which
+handles each operation out B by pre-applying a censor function ( String → String) to B before
+emitting it. Using this handler, we can give an alternative elaboration of censorop which post-
+processes output strings individually:
+eCensor ′ :  ! !Censor ⇛  ! Output, Δ
+eCensor ′ (censorop 5 < ; :) = do G ← ( with hOut ′ 5 handle <); out B; : G
+In contrast, eCensor applies the censoring function ( String → String) to the batch output of the
+computation argument of a censorop operation. The batch output of hello is “Hello world!” which is
+unequal to “Hello” , so eCensor leaves the string unchanged. On the other hand, eCensor ′ censors
+the individually output “Hello”:
+with hOut handle (with 44=B>A elaborate censorHello) ≡ (() , “Hello world!” )
+with hOut handle (with 44=B>A ′ elaborate censorHello) ≡ (() , “Goodbye world!” )
+Higher-order operations now have the same modularity bene/f_its as algebraic operations.
+1.4 Contributions
+This paper formalizes the ideas sketched in this introduction by shallowly embedding them in
+Agda. However, the ideas transcend Agda. Similar shallow embeddings can be implemented in
+other dependently typed languages, such as Idris [ Brady 2013a]; but also in less dependently typed
+languages like Haskell, OCaml, or Scala. 5 By working a dependently typed language we can state
+algebraic laws about interfaces of eﬀectful operations, and prove that implementations of the
+interfaces respect the laws. We make the following technical contributions:
+• § 2 describes how to encode algebraic eﬀects in Agda, revisits the modularity problem with
+higher-order operations, and summarizes how scoped eﬀects and handlers address the modu-
+larity problem, for some ( scoped operations) but not all higher-order operations.
+• § 3 presents our solution to the modularity problem with higher-order operations. Our solution
+is to (1) type programs as higher-order eﬀect trees (which we dub hefty trees), and (2) build
+modular elaboration algebras for folding hefty trees into algebraic eﬀect trees and handlers. The
+computations of type  ! ! discussed in § 1.3 correspond to hefty trees, and the elaborations
+of type  ! ! ⇛  ! Δ correspond to hefty algebras.
+4This program relies on the fact that it is generally possible to lift computation  ! Δ to  ! ! when Δ ⊆  .
+5The artifact accompanying this paper [ Bach Poulsen and Reinders 2023] contains a shallow embedding of elaboration
+algebras in Haskell.
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 6 ---
+62:6 Casper Bach Poulsen and Cas van der Rest
+• § 4 shows that hefty algebras support formal reasoning on a par with algebraic eﬀects and
+handlers, by verifying algebraic laws of higher-order eﬀects for exception catching.
+• § 5 presents examples of how to de/f_ine hefty algebras for common higher-order eﬀects from
+the literature on eﬀect handlers.
+§ 6 discusses related work and § 7 concludes. An artifact containing the code of the paper and a
+Haskell embedding of the same ideas is available online [ Bach Poulsen and Reinders 2023].
+2 ALGEBRAIC EFFECTS AND HANDLERS IN AGDA
+This section describes how to encode algebraic eﬀects and handlers in Agda. We do not assume
+familiarity with Agda and explain Agda speci/f_ic notation in footnotes. §§ 2.1 to 2.4 de/f_ines algebraic
+eﬀects and handlers; § 2.5 revisits the problem of de/f_ining higher-order eﬀects using algebraic
+eﬀects and handlers; and § 2.6 discusses how scoped eﬀects [ Piróg et al . 2018; Wu et al. 2014; Yang
+et al. 2022] solves the problem for some ( scoped operations) but not all higher-order operations.
+2.1 Algebraic Eﬀects and The Free Monad
+We encode algebraic eﬀects in Agda by representing computations as an abstract syntax tree
+given by the free monad over an eﬀect signature. Such eﬀect signatures are traditionally [ Awodey
+2010; Kammar et al . 2013; Kiselyov and Ishii 2015; Swierstra 2008; Wu et al . 2014] given by a
+functor; i.e., a type of kind Set → Set together with a (lawful) mapping function. 6 In our Agda
+implementation, eﬀect signature functors are de/f_ined by giving acontainer [Abbott et al. 2003, 2005].
+Each container corresponds to a value of type Set → Set that is both strictly positive 7 and universe
+consistent8 [Martin-Löf 1984], meaning they are a constructive approximation of endofunctors on
+Set. Using containers, eﬀect signatures are given by a (dependent) record type: 9 10
+record Eﬀect : Set1 where
+field Op : Set
+Ret : Op → Set
+Here, Op is a type of operations, and Ret de/f_ines thereturn type of each operation of type Op.
+As discussed in the introduction, computations may use multiple diﬀerent eﬀects. We use the
+co-product of eﬀect signature functors to encode rows of eﬀects: 11 12
+_⊕_ : Eﬀect → Eﬀect → Eﬀect
+Op (Δ1 ⊕ Δ2) = Op Δ1 ⊎ Op Δ2
+Ret (Δ1 ⊕ Δ2) = [ Ret Δ1 , Ret Δ2 ]
+We compute the co-product of two eﬀect signatures by taking the disjoint sum of their operations
+and combining the return type mappings pointwise. The eﬀect Δ1 ⊕ Δ2 corresponds to the row
+union denoted as Δ1, Δ2 in the introduction.
+6Set is the type of types in Agda. More generally, functors mediate between diﬀerent categories. For simplicity, this paper
+only considers endofunctors on Set.
+7https://agda.readthedocs.io/en/v2.6.2.2/language/positivity-checking.html
+8https://agda.readthedocs.io/en/v2.6.2.2/language/universe-levels.html
+9https://agda.readthedocs.io/en/v2.6.2.2/language/record-types.html
+10The type of eﬀect rows has type Set1 instead of Set. To prevent logical inconsistencies, Agda has a hierarchy of types
+where Set : Set1, Set1 : Set2, etc.
+11The _⊕_ function uses copattern matching: https://agda.readthedocs.io/en/v2.6.2.2/language/copatterns.html. The Op line
+de/f_ines how to compute theOp /f_ield of the record produced by the function; and similarly for theRet line.
+12_⊎_ is a disjoint sum type from the Agda standard library. It has two constructors, inj1 : A → A ⊎ B and inj2 : B → A ⊎ B.
+The [_,_] function (also from the Agda standard library) is the eliminator for the disjoint sum type. Its type is
+[_,_] : (A → X ) → (B → X ) → (A ⊎ B) → X .
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 7 ---
+He/f_ty Algebras 62:7
+The syntax of computations with eﬀects Δ is given by the free monad over Δ. Following Hancock
+and Setzer [2000] and Kiselyov and Ishii [2015], we encode the free monad as follows:
+data Free (Δ : Eﬀect) (A : Set) : Set where
+pure : A → Free Δ A
+impure : (op : Op Δ) (k : Ret Δ op → Free Δ A) → Free Δ A
+Here, pure is a computation with no side-eﬀects, whereas impure is an operation (op : Op Δ) whose
+continuation (k : Ret Δ op → Free Δ A) expects a value of the return type of the operation. To see
+how we can represent programs using this data type, it is instructional to look at an example.
+Example 2.1. The data type on the left below de/f_ines an operation for outputting a string. On the
+right is its corresponding eﬀect signature.
+data OutOp : Set where
+out : String → OutOp
+Output : Eﬀect
+Op Output = OutOp
+Ret Output (out s) = ⊤
+The eﬀect signature on the right says that out returns a unit value ( ⊤ is the unit type). Using this,
+we can write a simple hello world corresponding to the hello program from § 1:
+hello : Free Output ⊤
+hello = impure (out /quotedbl.VarHello/quotedbl.Var) (_ _ → impure (out /quotedbl.Var world!/quotedbl.Var) (_ x → pure x))
+§ 2.1 shows how to make this program more readable by using monadic do notation.
+The hello program above makes use of just a single eﬀect. Say we want to use another eﬀect,
+Throw, with a single operation, throw, which represents throwing an exception (therefore having
+the empty type ⊥ as its return type):
+data ThrowOp : Set where
+throw : ThrowOp
+Throw : Eﬀect
+Op Throw = ThrowOp
+Ret Throw throw = ⊥
+Programs that use multiple eﬀects, such as Output and Throw, are unnecessarily verbose. For
+example, consider the following program which prints two strings before throwing an exception: 13
+hello-throw : Free (Output ⊕ Throw) A
+hello-throw = impure (inj1 (out /quotedbl.VarHello/quotedbl.Var)) (_ _ →
+impure (inj1 (out /quotedbl.Var world!/quotedbl.Var)) (_ _ →
+impure (inj2 throw) ⊥-elim))
+To reduce syntactic overhead, we use row insertions and smart constructors [Swierstra 2008].
+2.2 Row Insertions and Smart Constructors
+A row insertion Δ ∼ Δ0 ▶Δ′ is a data type representing a witness that Δ is the eﬀect row resulting
+from inserting Δ0 somewhere in Δ′:
+data _∼_▶_ : Eﬀect → Eﬀect → Eﬀect → Set1 where
+insert : (Δ0 ⊕ Δ′) ∼ Δ0 ▶Δ′
+si/f_t : (Δ ∼ Δ0 ▶Δ′) → ((Δ1 ⊕ Δ) ∼ Δ0 ▶(Δ1 ⊕ Δ′))
+The insert constructor represents a witness that Δ0 is inserted in front of Δ′, whereas si/f_twitnesses
+that Δ0 is inserted into the row Δ1 ⊕ Δ′ by inserting Δ0 somewhere in Δ′.
+13⊥-elim is the eliminator for the empty type, encoding the principle of explosion: ⊥-elim : ⊥ → A.
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 8 ---
+62:8 Casper Bach Poulsen and Cas van der Rest
+Using row insertions we can coerce eﬀects into larger ones, and de/f_ine smart constructors like:
+‵out : { | Δ ∼ Output ▶Δ′ | } → String → Free Δ ⊤
+We refer to Bach Poulsen and Reinders [2023] for the full implementation of ‵out. The double brace
+wrapped row insertion parameter of ‵out tells us that the Output eﬀect is a part of the row Δ. The
+smart constructor uses this witness to coerce an out operation into Δ. This allows ‵out to be used
+in any program that has at least the Output eﬀect.
+The double braces in { | Δ ∼ Output ▶ Δ′ | } declares the row insertion witness as an instance
+argument of ‵out. Instance arguments in Agda are conceptually similar to type class constraints in
+Haskell: when we call ‵out, Agda will attempt to automatically /f_ind a witness of the right type, and
+implicitly pass this as an argument. 14 By declaring the row insertion constructors insert and si/f_tas
+instances, Agda is able to construct insertion witnesses for us automatically in most cases. 15
+2.3 Fold and Monadic Bind for Free
+Since Free Δ is a monad, we can sequence computations using monadic bind, which is naturally
+de/f_ined in terms of the fold overFree.
+fold : (A → B) → Alg Δ B → Free Δ A → B
+fold g a (pure x) = g x
+fold g a (impure op k) = a op (fold g a ◦ k)
+Alg : (Δ : Eﬀect) (A : Set) → Set
+Alg Δ A = (op : Op Δ) (k : Ret Δ op → A) → A
+Besides the input computation to be folded (last parameter), the fold is parameterized by a function
+A → B (/f_irst parameter) which folds apure computation, and an algebra Alg Δ A (second parameter)
+which folds an impure computation. We call the latter an algebra because it corresponds to an
+ -algebra [Arbib and Manes 1975; Pierce 1991] over the signature functor of Δ, denoted Δ. That is,
+a tuple (, U) where  is an object called the carrier of the algebra, and U a morphism Δ () → .
+Using fold, monadic bind for the free monad is de/f_ined as follows:
+_≫=_ : Free Δ A → (A → Free Δ B) → Free Δ B
+m ≫= g = fold g impure m
+Intuitively, m ≫= g concatenates g to all the leaves in the computation m.
+Example 2.2. By implementing a smart constructor ‵throw : { | Δ ∼ Throw ▶Δ′ | } → Free Δ A for
+throw, our example program from before becomes more readable:
+hello-throw1 : { | Δ ∼ Output ▶Δ1 | } → { | Δ ∼ Throw ▶Δ2 | } → Free Δ A
+hello-throw1 = do ‵out /quotedbl.VarHello/quotedbl.Var; ‵out /quotedbl.Var world!/quotedbl.Var; ‵throw
+This illustrates how we use the free monad to write eﬀectful programs against an interface given
+by an eﬀect signature. Next, we de/f_ineeﬀect handlers.
+2.4 Eﬀect Handlers
+An eﬀect handler implements the interface given by an eﬀect signature, and de/f_ines how to interpret
+the syntactic operations associated with an eﬀect. Like monadic bind, eﬀect handlers can be de/f_ined
+as a fold over the free monad. The following type of parameterized handlers de/f_ines how to fold
+respectively pure and impure computations:
+14For more details on how instance argument resolution works, see the Agda documentation: https://agda.readthedocs.io/
+en/v2.6.2.2/language/instance-arguments.html
+15The two constructors for row insertion are overlapping, which will cause Agda instance resolution to fail unless we enable
+the option --overlapping-instances. The examples in this paper type check in Agda 2.6.2.2 using this option.
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 9 ---
+He/f_ty Algebras 62:9
+record ⟨_!_⇒_⇒_!_⟩ (A : Set) (Δ : Eﬀect) (P : Set) (B : Set) (Δ′ : Eﬀect) : Set1 where
+field ret : A → P → Free Δ′ B
+hdl : Alg Δ (P → Free Δ′ B)
+A handler of type ⟨ A ! Δ ⇒ P ⇒ B ! Δ′ ⟩ is parameterized in the sense that it turns a computation
+of type Free Δ A into a parameterized computation of type P → Free Δ′ B. The following function
+does so by folding using ret, hdl, and a function to-front : { | w : Δ ∼ Δ0 ▶Δ′ | } → Free Δ A → Free
+(Δ0 ⊕ Δ′) A , whose implementation can be found in the artifact [ Bach Poulsen and Reinders 2023].
+given_handle_ : { | Δ ∼ Δ0 ▶Δ′ | } → ⟨ A ! Δ0 ⇒ P ⇒ B ! Δ′ ⟩ → Free Δ A → (P → Free Δ′ B)
+given h handle m = fold
+(ret h)
+[ hdl h , (_ op k p → impure op (_ x → k x p)) ]
+(to-front m)
+Comparing with the syntax we used to explain algebraic eﬀects and handlers in the introduction,
+the ret /f_ield corresponds to thereturn case of the handlers from the introduction, and hdl cor-
+responds to the cases that de/f_ine how operations are handled. The parameterized handler type
+⟨ A ! Δ ⇒ P ⇒ B ! Δ′ ⟩ corresponds to the type  ! Δ, Δ′ ⇒ % →  ! Δ′, and given h handle m
+corresponds to with ℎ handle <.
+Using this type of handler, the hOut handler from the introduction can be de/f_ined as follows:
+hOut : ⟨ A ! Output ⇒ ⊤ ⇒ (A × String) ! Δ ⟩
+ret hOut x _ = pure (x , /quotedbl.Var/quotedbl.Var)
+hdl hOut (out s) k p = do (x , s′) ← k /t_tp; pure (x , s ++ s′)
+The handler hOut in § 1.1 did not bind any parameters. However, since we are encoding it as a
+parameterized handler, hOut now binds a unit typed parameter. Besides this diﬀerence, the handler
+is the same as in § 1.1. We can use the hOut handler to run computations. To this end, we introduce
+a Nil eﬀect with no associated operations which we will use to indicate where an eﬀect row ends:
+Nil : Eﬀect
+Op Nil = ⊥
+Ret Nil = ⊥-elim
+un : Free Nil A → A
+un (pure x) = x
+Using these, we can run a simple hello world program: 16
+hello′ : Free (Output ⊕ Nil) ⊤
+hello′ = do
+‵out /quotedbl.VarHello/quotedbl.Var; ‵out /quotedbl.Var world!/quotedbl.Var
+test-hello : un ((given hOut handle hello′) /t_t)
+≡ (/t_t, /quotedbl.VarHello world!/quotedbl.Var)
+test-hello = refl
+An example of an eﬀect handler that makes use of parameterized (as opposed to unparameterized)
+handlers, is the state eﬀect. Figure 1 declares and illustrates how to handle such an eﬀect with
+operations for reading (get) and changing (put) the state of a memory cell holding a natural number.
+2.5 The Modularity Problem with Higher-Order Eﬀects, Revisited
+§ 1.2 described the modularity problem with higher-order eﬀects, using a higher-order operation that
+interacts with output as an example. In this section we revisit the problem, framing it in terms of the
+de/f_initions introduced in the previous section, using a diﬀerent eﬀect whose interface is summarized
+16The refl constructor is from the Agda standard library, and witnesses that a propositional equality ( ≡) holds.
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 10 ---
+62:10 Casper Bach Poulsen and Cas van der Rest
+data StateOp : Set where
+get : StateOp
+put : N → StateOp
+State : Eﬀect
+Op State = StateOp
+Ret State get = N
+Ret State (put n) = ⊤
+hSt : ⟨ A ! State ⇒ N ⇒ (A × N) ! Δ′ ⟩
+ret hSt x s = pure (x , s)
+hdl hSt (put m) k n = k /t_tm
+hdl hSt get k n = k n n
+‵incr : { | Δ ∼ State ▶Δ′ | } → Free Δ ⊤
+‵incr = do n ← ‵get; ‵put (n + 1)
+incr-test : un ((given hSt handle ‵incr) 0) ≡ (/t_t, 1)
+incr-test = refl
+Fig. 1. A state eﬀect (upper), its handler (lower le/f_t), and a simple test (lower right) which uses the (elided)
+smart constructors for get and put
+by the CatchM record below. The record asserts that the computation type M : Set → Set has at
+least a higher-order operation catch and a /f_irst-order operationthrow:
+record CatchM (M : Set → Set) : Set1 where
+field catch : M A → M A → M A
+throw : M A
+The idea is that throw throws an exception, and catch m1 m2 handles any exception thrown during
+evaluation of m1 by running m2 instead. The problem is that we cannot give a modular de/f_inition
+of operations such as catch using algebraic eﬀects and handlers alone. As discussed in § 1.2, the
+crux of the problem is that algebraic eﬀects and handlers provide limited support for higher-order
+operations. However, as also discussed in § 1.2, we can encode catch in terms of more primitive
+eﬀects and handlers, such as the following handler for the Throw eﬀect:
+hThrow : ⟨ A ! Throw ⇒ ⊤ ⇒ (Maybe A) ! Δ′ ⟩
+ret hThrow x _ = pure (just x)
+hdl hThrow throw k _ = pure nothing
+The handler modi/f_ies the return type of the computation by decorating it with a Maybe. If no
+exception is thrown, ret wraps the yielded value in a just. If an exception is thrown, the handler
+never invokes the continuation k and aborts the computation by returning nothing instead. We
+can elaborate catch into an inline application of hThrow. To do so we make use of eﬀect masking
+which lets us “weaken” the type of a computation by inserting extra eﬀects in an eﬀect row:
+♯_ : { | Δ ∼ Δ0 ▶Δ′ | } → Free Δ′ A → Free Δ A
+Using this, the following elaboration de/f_ines a semantics for thecatch operation:17
+catch : { | w : Δ ∼ Throw ▶Δ′ | } → Free Δ A → Free Δ A → Free Δ A
+catch m1 m2 = (♯ ((given hThrow handle m1) /t_t)) ≫= (maybe pure m2)
+If m1 does not throw an exception, we return the produced value. If it does, m2 is run.
+As observed by Wu et al. [2014], programs that use elaborations such as catch are less modular
+than programs that only use plain algebraic operations. In particular, the eﬀect row type of com-
+putations no longer represents the interface of operations that we use to write programs, since
+17The maybe function is the eliminator for the Maybe type. Its /f_irst parameter is for eliminating ajust; the second nothing.
+Its type is maybe : (A → B) → B → Maybe A → B.
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 11 ---
+He/f_ty Algebras 62:11
+the catch elaboration is not represented in the eﬀect type at all. So we have to rely on diﬀerent
+machinery if we want to refactor, optimize, or change the semantics of catch without having to
+change programs that use it. In the next subsection we describe how to de/f_ine eﬀectful operations
+such as catch modularly using scoped eﬀects and handlers, and discuss how this is not possible for,
+e.g., operations representing _ abstraction.
+2.6 Scoped Eﬀects and Handlers
+This subsection gives an overview of scoped eﬀects and handlers. While the rest of the paper can
+be read and understood without a deep understanding of scoped eﬀects and handlers, we include
+this overview to facilitate comparison with the alternative solution that we introduce in § 3.
+Scoped eﬀects extend the expressiveness of algebraic eﬀects to support a class of higher-order
+operations that Piróg et al . [2018]; Wu et al. [2014]; Yang et al. [2022] call scoped operations. We
+illustrate how scoped eﬀects work, using a freer monad encoding of the endofunctor algebra
+approach of Yang et al. [2022]. The work of Yang et al. [2022] does not include examples of modular
+handlers, but the original paper on scoped eﬀects and handlers by Wu et al. [2014] does. We describe
+an adaptation of the modular handling techniques due to Wu et al. [2014] to the endofunctor algebra
+approach of Yang et al. [2022].
+2.6.1 Scoped Programs. Scoped eﬀects extend the free monad data type with an additional row
+for scoped operations. The return and call constructors of Prog below correspond to the pure and
+impure constructors of the free monad, whereas enter is new:
+data Prog (Δ W : Eﬀect) (A : Set) : Set1 where
+return : A → Prog Δ W A
+call : (op : Op Δ) (k : Ret Δ op → Prog Δ W A) → Prog Δ W A
+enter : (op : Op W) (sc : Ret W op → Prog Δ W B) (k : B → Prog Δ W A) → Prog Δ W A
+The enter constructor represents a higher-order operation which has as many sub-scopes (i.e.,
+computation parameters) as there are inhabitants of the return type of the operation (op : Op W).
+Each sub-scope of enter is a scope in the sense that control /f_lows from the scope to the continuation,
+since the return type of each scope ( B) matches the parameter type of the continuation k of enter.
+Using Prog, the catch operation can be de/f_ined as a scoped operation:
+data CatchOp : Set where
+catch : CatchOp
+Catch : Eﬀect
+Op Catch = CatchOp
+Ret Catch catch = Bool
+The eﬀect signature indicates that Catch has two scopes since Bool has two inhabitants. Follow-
+ing Yang et al. [2022], scoped operations are handled using a structure-preserving fold over Prog:
+hcata : (∀ {X } → X → G X )
+→ CallAlg Δ G
+→ EnterAlg W G
+→ Prog Δ W A → G A
+CallAlg : (Δ : Eﬀect) (G : Set → Set1) → Set1
+CallAlg Δ G =
+{A : Set} (op : Op Δ) (k : Ret Δ op → G A) → G A
+EnterAlg : (W : Eﬀect) (G : Set → Set1) → Set1
+EnterAlg W G =
+{A B : Set} (op : Op W) (sc : Ret W op → G B) (k : B → G A)
+→ G A
+The /f_irst argument represents the case where we are folding areturn node; the second and third
+correspond to respectively call and enter.
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 12 ---
+62:12 Casper Bach Poulsen and Cas van der Rest
+2.6.2 Scoped Eﬀect Handlers. The following de/f_ines a type of parameterized scoped eﬀect handlers:
+record ⟨•!_!_⇒_⇒_•!_!_⟩ (Δ W : Eﬀect) (P : Set) (G : Set → Set) (Δ′ W ′ : Eﬀect) : Set1 where
+field ret : X → P → Prog Δ′ W ′ (G X )
+hcall : CallAlg Δ (_ X → P → Prog Δ′ W ′ (G X ))
+henter : EnterAlg W (_ X → P → Prog Δ′ W ′ (G X ))
+glue : (k : C → P → Prog Δ′ W ′ (G X )) (r : G C) → P → Prog Δ′ W ′ (G X )
+A handler of type ⟨• ! Δ ! W ⇒ P ⇒ G •! Δ′ ! W ⟩ handles operations of Δ and W simultaneously and
+turns a computation Prog Δ W A into a parameterized computation of type P → Prog Δ′ W ′ (G A).
+The ret and hcall cases are similar to the ret and hdl cases from § 2.4. The crucial addition which
+adds support for higher-order operations is the henter case which allows handler cases to /f_irst
+invoke scoped sub-computations and inspect their return types, before (optionally) passing control
+to the continuation k. The glue function is used for modularly weaving [Wu et al. 2014] side eﬀects
+of handlers through sub-scopes of yet-unhandled operations.
+2.6.3 Weaving. To see why glue is needed, it is instructional to look at how the /f_ields in the record
+type above are used to fold over Prog:
+given_handle-scoped_ : { | w1 : Δ ∼ Δ0 ▶Δ′ | } { | w2 : W ∼ W 0 ▶W ′ | }
+→ ⟨•! Δ0 ! W 0 ⇒ P ⇒ G •! Δ′ ! W ′ ⟩
+→ Prog Δ W A → P → Prog Δ′ W ′ (G A)
+given h handle-scoped m = hcata
+(ret h)
+[ hcall h , (_ op k p → call op (_ x → k x p)) ]
+[ henter h
+, (_ op sc k p → enter op (_ x → sc x p) (_ x → glue h k x p)) ]
+(to-frontΔ (to-frontW m))
+The second to last line above shows how glue is used. Because hcata eagerly folds the current
+handler over scopes ( sc), there is a mismatch between the type that the continuation expects ( B)
+and the type that the scoped computation returns ( G B). The glue function /f_ixes this mismatch for
+the particular return type modi/f_icationG : Set → Set of a parameterized scoped eﬀect handler.
+The scoped eﬀect handler for exception catching is thus: 18
+hCatch : ⟨•! Throw ! Catch ⇒ ⊤ ⇒ Maybe •! Δ′ ! W ′ ⟩
+ret hCatch x _ = return (just x)
+hcall hCatch throw k _ = return nothing
+henter hCatch catch sc k p = let m1 = sc true p; m2 = sc false p; k = flip k p in
+m1 ≫= maybe k (m2 ≫= maybe k (return nothing))
+glue hCatch k x p = maybe (flip k p) (return nothing) x
+The henter /f_ield for thecatch operation /f_irst runsm1. If no exception is thrown, the value produced
+by m1 is forwarded to k. Otherwise, m2 is run and its value is forwarded to k, or its exception
+is propagated. The glue /f_ield ofhCatch says that, if an unhandled exception is thrown during
+evaluation of a scope, the continuation is discarded and the exception is propagated; and if no
+exception is thrown the continuation proceeds normally.
+18Here, flip : (A → B → C) → (B → A → C).
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 13 ---
+He/f_ty Algebras 62:13
+2.6.4 Discussion and Limitations. As observed by van den Berg et al . [2021], some higher-order
+eﬀects do not correspond to scoped operations. In particular, the LambdaM record shown below
+§ 2.5 is not a scoped operation:
+record LambdaM (V : Set) (M : Set → Set) : Set1 where
+field lam : (V → M V ) → M V
+app : V → M V → M V
+The lam /f_ield represents an operation that constructs a_ value. The app /f_ield represents an operation
+that will apply the function value in the /f_irst parameter position to the argument computation in
+the second parameter position. The app operation has a computation as its second parameter so
+that it remains compatible with diﬀerent evaluation strategies.
+To see why the operations summarized by the LambdaM record above are not scoped operations,
+let us revisit the de/f_inition of scoped operations, explicating an implicit quanti/f_ication in theenter
+constructor of Prog:
+enter : {B : Set} (op : Op W) (sc : Ret W op → Prog Δ W B ) (k : B → Prog Δ W A ) → Prog Δ W A
+The highlighted  is existentially quanti/f_ied, meaning that the continuation expects as input a
+value of some type B that only reveals itself once we match on enter. Consequently, the only way to
+get a value of this type B is by running the scoped computation sc. At the same time, the only thing
+we can do with the result of running sc, is applying it to the continuation, making it impossible to
+postpone the evaluation of a scoped computation. But that is exactly what the implementation of
+the lam operation of LambdaM requires. Consequently the lam operation is not a scoped operation.
+It is possible to elaborate the LambdaM operations into more primitive eﬀects and handlers, but as
+discussed in §§ 1.2 and 2.5, such elaborations are not modular.
+In the next section we present a simple alternative solution to scoped eﬀects which supports a
+broader class of higher-order eﬀects.
+3 HEFTY TREES AND ALGEBRAS
+As observed in § 2.5, operations such as catch can be elaborated into more primitive eﬀects and
+handlers. However, these elaborations are not modular. We propose to solve this problem by
+factoring these elaborations into interfaces of their own to make them modular.
+To this end, we /f_irst introduce a new type of abstract syntax trees (§§ 3.1 to 3.3) representing
+computations with higher-order operations, which we dub hefty trees (an acronymic pun on higher-
+order ef fects). We then de/f_ine elaborations as algebras (hefty algebras; § 3.4) over these trees. The
+following pipeline summarizes the idea, where H is a higher-order eﬀect signature :
+He/f_tyH A
+elaborate
+− − − − − − →Free Δ A
+handle
+− − − − − →Result
+For the categorically inclined reader, He/f_tyconceptually corresponds to the initial algebra of
+the functor He/f_tyF   ' =  +  ' ('  ) where  : (Set → Set) → ( Set → Set) de/f_ines the
+signature of higher-order operations and is a higher-order functor , meaning we have both the
+usual functorial map : (- → . ) →   - →   . for any functor  as well as a function
+hmap : Nat(,  ) → Nat( ,   ) which lifts natural transformations between any  and 
+to a natural transformation between   and   . A hefty algebra is then an  -algebra over
+a higher-order signature functor  . The notion of elaboration that we introduce in § 3.4 is an
+ -algebra whose carrier is a “/f_irst-order” eﬀect tree ( Free Δ).
+In this section, we encode this conceptual framework in Agda using containers [Abbott et al. 2003,
+2005], which correspond to a higher-order signature functor  by requiring that computation types
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 14 ---
+62:14 Casper Bach Poulsen and Cas van der Rest
+only occur in strictly positive positions. This allows us to shallowly embed the conceptual framework
+in Agda, but may be more restrictive than strictly necessary. We discuss further limitations of the
+approach and compare with previous work in § 3.5.
+3.1 Generalizing Free to Support Higher-Order Operations
+As summarized in § 2.1, Free Δ A is the type of abstract syntax trees representing computations
+over the eﬀect signature Δ. Our objective is to arrive at a more general type of abstract syntax trees
+representing computations involving (possibly) higher-order operations. To realize this objective,
+let us consider how to syntactically represent this variant of the censor operation (§ 1.2), where M
+is the type of abstract syntax trees whose type we wish to de/f_ine:
+censor> ? : (String → String) → M ⊤ → M ⊤
+We call the second parameter of this operation a computation parameter. Using Free, computation
+parameters can only be encoded as continuations; i.e., inside k of the impure constructor:
+impure : (op : Op Δ) (k : Ret Δ op → Free Δ A) → Free Δ A
+But the computation parameter of censor> ? is not a continuation, since
+do (censor> ? f m); ‵out s . censor> ? f (do m; ‵out s).
+As a /f_irst attempt at generalizingFree, we might de/f_ine a type of abstract syntax trees whereall
+operations have a computation parameter. The Eﬀect1 signature type (left) represents an eﬀect
+signature for this case, where ParRet de/f_ines the return type of the computation parameter of each
+operation. The syntax tree type on the right de/f_ines a type of abstract syntax trees where each
+operation has exactly one computation parameter ( k ):
+record Eﬀect1 : Set1 where
+field Op : Set
+ParRet : Op → Set
+Ret : Op → Set
+data He/f_ty1 (H : Eﬀect1) (A : Set) : Set where
+pure1 : A → He/f_ty1 H A
+impure1 : (op : Op H )
+(k : He/f_ty1 H (ParRet H op))
+(k : Ret H op → He/f_ty1 H A)
+→ He/f_ty1 H A
+However, algebraic operations generally do not have any computation parameters, and many
+higher-order operations have more than one (e.g., the catch operation discussed in § 2.5). For this
+reason, we further generalize eﬀect signatures to also de/f_ine how many computation parameters
+a computation has: the ParAr of the Eﬀect2 signature below (left) is a type that represents the
+computation parameter arity of each operation. The abstract syntax tree type (right) de/f_ines abstract
+syntax trees that have as many branches as ParAr has constructors:
+record Eﬀect2 : Set1 where
+field Op : Set
+ParAr : Op → Set
+ParRet : Op → Set
+Ret : Op → Set
+data He/f_ty2 (H : Eﬀect2) (A : Set) : Set where
+pure2 : A → He/f_ty2 H A
+impure2 : (op : Op H )
+(k : ParAr H op → He/f_ty2 H (ParRet H op))
+(k : Ret H op → He/f_ty2 H A)
+→ He/f_ty2 H A
+We can now use Eﬀect2 and He/f_ty2 to de/f_ine the syntax of operations with computation parameters,
+such as catch and censor> ?. However, the Eﬀect2 signature restricts all computation parameters to
+have the same return type. This unnecessarily precludes some higher-order operations, such as
+as a more general operation for exception catching ‵catch-gen : M A → M B → M (A ⊎ B) which
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 15 ---
+He/f_ty Algebras 62:15
+data CensorOp : Set where
+censor : (String → String) → CensorOp
+Censor : Eﬀect
+Op Censor = CensorOp
+Fork Censor (censor f ) = record
+{ Op = ⊤ ; Ret = _ _ → ⊤ }
+Ret Censor (censor s) = ⊤
+censor> ? : (String → String) → He/f_ty(Censor ∔ H ) ⊤ → He/f_ty(Censor ∔ H ) ⊤
+censor> ? f m = impure (inj1 (censor f )) (_ _ → m) pure
+Fig. 2. A higher-order censor eﬀect and operation, with a single computation parameter (declared with
+Op = ⊤ in the eﬀect signature top right) with return type ⊤ (declared with Ret = _ _ → ⊤ top right)
+returns either A or B, depending on whether the /f_irst computation parameter throws an exception
+at run time. As a last generalization, we therefore allow each computation parameter to have a
+diﬀerent return type. We realize this generalization by making the return type of each computation
+depend on ParAr in the Eﬀect3 type below, such that the return type of computation parameters
+varies depending on which computation parameter arity constructor ( ParAr) it is given:
+record Eﬀect3 : Set1 where
+field
+Op : Set
+ParAr : Op → Set
+ParRet : (op : Op)
+→ ParAr op → Set
+Ret : Op → Set
+data He/f_ty3 (H : Eﬀect3) (A : Set) : Set where
+pure3 : A → He/f_ty3 H A
+impure3 : (op : Op H )
+(k : (a : ParAr H op) → He/f_ty3 H (ParRet H op a))
+(k : Ret H op → He/f_ty3 H A)
+→ He/f_ty3 H A
+Notice that ParAr and ParRet is actually a signature in disguise. In other words, Eﬀect3 and He/f_ty3
+are equivalent to the following notion of higher-order eﬀect signature (H : Eﬀect ) and abstract
+syntax trees over these:
+record Eﬀect : Set1 where
+field Op : Set
+Fork : Op → Eﬀect
+Ret : Op → Set
+data He/f_ty(H : Eﬀect ) (A : Set) : Set where
+pure : A → He/f_tyH A
+impure : (op : Op H )
+(k : (a : Op (Fork H op)) → He/f_tyH (Ret (Fork H op) a))
+(k : Ret H op → He/f_tyH A)
+→ He/f_tyH A
+This type of He/f_tytrees can be used to de/f_ine higher-order operations with an arbitrary number
+of computation parameters, with arbitrary return types. Using this type, and using a co-product
+for higher-order eﬀect signatures ( _∔_) which is analogous to the co-product for algebraic eﬀect
+signatures in § 2.2, Figure 2 represents the syntax of the censor> ? operation.
+Just like Free, He/f_tytrees can be sequenced using monadic bind. Unlike for Free, the monadic
+bind of He/f_tyis not expressible in terms of the standard fold over He/f_tytrees. The diﬀerence
+between Free and He/f_tyis that Free is a regular data type whereas He/f_tyis a nested datatype [Bird
+and Paterson 1999]. The fold of a nested data type is limited to describe natural transformations. As
+Bird and Paterson [1999] show, this limitation can be overcome by using a generalized fold, but for
+the purpose of this paper it suﬃces to de/f_ine monadic bind as a recursive function:
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 16 ---
+62:16 Casper Bach Poulsen and Cas van der Rest
+_≫=_ : He/f_tyH A → (A → He/f_tyH B) → He/f_tyH B
+pure x ≫= g = g x
+impure op k k ≫= g = impure op k (_ x → k x ≫= g)
+The bind behaves similarly to the bind for Free; i.e., m ≫= g concatenates g to all the leaves in the
+continuations (but not computation parameters) of m.
+In § 3.4 we show how to modularly elaborate higher-order operations into more primitive
+algebraic eﬀects and handlers (i.e., computations over Free), by folding modular elaboration algebras
+(hefty algebras) over He/f_tytrees. First, we show (in § 3.2) how He/f_tytrees support programming
+against an interface of both algebraic and higher-order operations. We also address (in § 3.3)
+the question of how to encode eﬀect signatures for higher-order operations whose computation
+parameters have polymorphic return types, such as the highlighted A below:
+‵catch : He/f_tyH A → He/f_tyH A → He/f_tyH A
+3.2 Programs with Algebraic and Higher-Order Eﬀects
+Any algebraic eﬀect signature can be lifted to a higher-order eﬀect signature with no fork (i.e., no
+computation parameters):
+Li/f_t: Eﬀect → Eﬀect
+Op (Li/f_tΔ) = Op Δ
+Fork (Li/f_tΔ) _ = Nil
+Ret (Li/f_tΔ) = Ret Δ
+Using this eﬀect signature, and using higher-order eﬀect row insertion witnesses analogous to the
+ones we de/f_ined and used in § 2.2, the following smart constructor lets us represent any algebraic
+operation as a He/f_tycomputation:
+↑_ : { | w : H ∼ Li/f_tΔ ⊲ H′ | } → (op : Op Δ) → He/f_tyH (Ret Δ op)
+Using this notion of lifting, He/f_tytrees can be used to program against interfaces of both higher-
+order and plain algebraic eﬀects.
+3.3 Higher-Order Operations with Polymorphic Return Types
+Let us consider how to de/f_ineCatch as a higher-order eﬀect. Ideally, we would de/f_ine an operation
+that is parameterized by a return type of the branches of a particular catch operation, as shown on
+the left, such that we can de/f_ine the higher-order eﬀect signature on the right:19
+data CatchOpd : Set1 where
+catchd : Set → CatchOpd
+Catchd : Eﬀect
+Op Catchd = CatchOpd
+Fork Catchd (catchd A) = record
+{ Op = Bool; Ret = _ _ → A }
+Ret Catchd (catchd A) = A
+The Fork /f_ield on the right says thatCatch has two sub-computations (since Bool has two construc-
+tors), and that each computation parameter has some return type A. However, the signature on the
+right above is not well de/f_ined!
+The problem is that, because CatchOpd has a constructor that quanti/f_ies over a type (Set), the
+CatchOpd type lives in Set1. Consequently it does not /f_it the de/f_inition ofEﬀect , whose operations
+live in Set. There are two potential solutions to this problem: (1) increase the universe level of
+19d is for dubious.
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 17 ---
+He/f_ty Algebras 62:17
+Eﬀect to allow Op to live in Set1; or (2) use a universe of types [Martin-Löf 1984]. Either solution
+is applicable here. However, for some operations (e.g., _ in § 5.1) it is natural to model types as an
+interface that we are programming against. For this reason, using a type universe is a natural /f_it.
+A universe of types is a (dependent) pair of a syntax of types ( Ty : Set) and a semantic function
+(⟦_⟧ : Ty → Set) de/f_ining the meaning of the syntax by re/f_lecting it into Agda’sSet:
+record Universe : Set1 where
+field Ty : Set
+⟦_⟧ : Ty → Set
+Using type universes, we can parameterize the catch constructor on the left below by a syntactic
+type Ty of some universe u, and use the meaning of this type (⟦ t ⟧) as the return type of the
+computation parameters in the eﬀect signature on the right below:
+data CatchOp { | u : Universe | } : Set where
+catch : Ty → CatchOp
+Catch : { | u : Universe | } → Eﬀect
+Op Catch = CatchOp
+Fork Catch (catch t) = record
+{ Op = Bool; Ret = _ _ → ⟦ t ⟧ }
+Ret Catch (catch t) = ⟦ t ⟧
+While the universe of types encoding restricts the kind of type that catch can have as a return
+type, the eﬀect signature is parametric in the universe. Thus the implementer of the Catch eﬀect
+signature (or interface) is free to choose a suﬃciently expressive universe of types.
+3.4 He/f_ty Algebras
+As shown in § 2.5, the higher-order catch operation can be encoded as a non-modular elaboration:
+catch m1 m2 = (♯ ((given hThrow handle m1) /t_t)) ≫= (maybe pure m2)
+We can make this elaboration modular by expressing it as an algebra over He/f_tytrees containing
+operations of the Catch signature. To this end, we will use the following notion of hefty algebra
+(Alg ) and fold (or catamorphism [Meijer et al. 1991], cata ) for He/f_ty:
+record Alg (H : Eﬀect ) (F : Set → Set) : Set1 where
+field alg : (op : Op H )
+(k : (s : Op (Fork H op)) → F (Ret (Fork H op) s))
+(k : Ret H op → F A)
+→ F A
+cata : (∀ {A} → A → F A) → Alg H F → He/f_tyH A → F A
+cata g a (pure x) = g x
+cata g a (impure op k k) = alg a op (cata g a ◦ k ) (cata g a ◦ k)
+Here Alg de/f_ines how to transform animpure node of type He/f_tyH A into a value of type F A,
+assuming we have already folded the computation parameters and continuation into F values. A
+nice property of algebras is that they are closed under higher-order eﬀect signature sums:
+_⋎_ : Alg H1 F → Alg H2 F → Alg (H1 ∔ H2) F
+alg (A1 ⋎ A2) = [ alg A1 , alg A2 ]
+By de/f_ining elaborations as hefty algebras (below) we can compose them using_⋎_.
+Elaboration : Eﬀect → Eﬀect → Set1
+Elaboration H Δ = Alg H (Free Δ)
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 18 ---
+62:18 Casper Bach Poulsen and Cas van der Rest
+An Elaboration H Δ elaborates higher-order operations of signature H into algebraic operations of
+signature Δ. Given an elaboration, we can generically transform any hefty tree into more primitive
+algebraic eﬀects and handlers:
+elaborate : Elaboration H Δ → He/f_tyH A → Free Δ A
+elaborate = cata pure
+Example 3.1. The elaboration below is analogous to the non-modular catch elaboration:
+eCatch : { | u : Universe | } { | w : Δ ∼ Throw ▶Δ′ | } → Elaboration Catch Δ
+alg eCatch (catch t) k k = let m1 = k true; m2 = k false in
+(♯ ((given hThrow handle m1) /t_t)) ≫= maybe k (m2 ≫= k)
+The elaboration is essentially the same as its non-modular counterpart, except that it now uses the
+universe of types encoding discussed in § 3.3, and that it now transforms syntactic representations
+of higher-order operations instead. Using this elaboration, we can, for example, run the following
+example program involving the state eﬀect from Figure 1, the throw eﬀect from § 2.1, and the catch
+eﬀect de/f_ined here:
+transact : { | wB : H ∼ Li/f_tState ⊲ H′ | } { | wC : H ∼ Li/f_tThrow ⊲ H′′ | } { | w : H ∼ Catch ⊲ H′′′ | }
+→ He/f_tyH N
+transact = do
+↑ (put 1)
+‵catch (do ↑ (put 2); (↑ throw) ≫= ⊥-elim) (pure /t_t)
+↑ get
+The program /f_irst sets the state to 1; then to 2; and then throws an exception. The exception is
+caught, and control is immediately passed to the /f_inal operation in the program which gets the
+state. By also de/f_ining elaborations forLi/f_tand Nil, we can elaborate and run the program:
+eTransact : Elaboration (Catch ∔ Li/f_tThrow ∔ Li/f_tState ∔ Li/f_tNil) (Throw ⊕ State ⊕ Nil)
+eTransact = eCatch ⋎ eLi/f_t⋎ eLi/f_t⋎ eNil
+test-transact : un ( ( given hSt
+handle ( ( given hThrow
+handle (elaborate eTransact transact)))
+/t_t) 0 ) ≡ (just 2 , 2)
+test-transact = refl
+The program above uses a so-called global interpretation of state, where the put operation in the
+“try block” of ‵catch causes the state to be updated globally. In § 5.2.2 we return to this example
+and show how we can modularly change the elaboration of the higher-order eﬀect Catch to yield
+a so-called transactional interpretation of state where the put operation in the try block is rolled
+back when an exception is thrown.
+3.5 Discussion and Limitations
+Which (higher-order) eﬀects can we describe using hefty trees and algebras? Since the core mech-
+anism of our approach is modular elaboration of higher-order operations into more primitive
+eﬀects and handlers, it is clear that hefty trees and algebras are at least as expressive as standard
+algebraic eﬀects. The crucial bene/f_it of hefty algebras over algebraic eﬀects is that higher-order
+operations can be declared and implemented modularly. In this sense, hefty algebras provide a
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 19 ---
+He/f_ty Algebras 62:19
+modular abstraction layer over standard algebraic eﬀects that, although it adds an extra layer
+of indirection by requiring both elaborations and handlers to give a semantics to hefty trees, is
+comparatively cheap and implemented using only standard techniques such as  -algebras.
+Conceptually, we expect that hefty trees can capture any monadic higher-order eﬀect whose
+signature is given by a higher-order functor on Set → Set. Filinski [1999] showed that any monadic
+eﬀect can be represented using continuations, and given that we can encode the continuation
+monad using algebraic eﬀects [ Schrijvers et al. 2019] in terms of the sub/jump operations (§ 5.2.2)
+by Fiore and Staton [2014]; Thielecke [1997], it is possible to elaborate any monadic eﬀect into
+algebraic eﬀects using hefty algebras. The current Agda implementation, though, is slightly more
+restrictive. The type of eﬀect signatures, Eﬀect , approximates the set of higher-order functors by
+constructively enforcing that all occurrences of the computation type are strictly positive. Hence,
+there may be higher-order eﬀects that are well-de/f_ined semantically, but which cannot be captured
+in the Agda encoding presented here.
+When comparing hefty trees to scoped eﬀects, we observe two important diﬀerences. The /f_irst
+diﬀerence is that the syntax of programs with higher-order eﬀects is fundamentally more restrictive
+when using scoped eﬀects. Speci/f_ically, as discussed at the end of § 2.6.4, scoped eﬀects impose
+a restriction on operations that their computation parameters must pass control directly to the
+continuation of the operation. Hefty trees, on the other hand, do not restrict the control /f_low of
+computation parameters, meaning that they can be used to de/f_ine a broader class of operations. For
+instance, in § 5.1 we de/f_ine a higher-order eﬀect for function abstraction, which is an example of
+an operation where control does not /f_low from the computation parameter to the continuation.
+The second diﬀerence is that hefty algebras and scoped eﬀects and handlers are modular in
+diﬀerent ways. Scoped eﬀects are modular because we can modularly de/f_ine, compose, and handle
+scoped operations, by applying scoped eﬀect handlers in sequence; i.e.:
+Prog Δ0 W 0 A0
+ℎ1
+− →Prog Δ1 W 1 A1
+ℎ2
+− → · · ·
+ℎ=
+− − →Prog Nil Nil A=
+As discussed in § 2.6.3, each handler application modularly “weaves” eﬀects through sub compu-
+tations, using a dedicated glue function. Hefty algebras, on the other hand, work by applying an
+elaboration algebra assembled from modular components in one go. The program resulting from
+elaboration can then be handled using standard algebraic eﬀect handlers; i.e.:
+He/f_ty(H0 ∔ · · · ∔ H<) A
+elaborate (E0 ⋎ ··· ⋎ E<)
+− − − − − − − − − − − − − − − − − − − →Free Δ 
+ℎ1
+− → · · ·
+ℎ:
+− − →Free Nil A
+Because hefty algebras eagerly elaborate all higher-order eﬀects in one go, they do not require
+similar “weaving” as scoped eﬀect handlers. A consequence of this diﬀerence is that scoped eﬀect
+handlers exhibit more eﬀect interaction by default; i.e., diﬀerent permutations of handlers may give
+diﬀerent semantics. In contrast, when using hefty algebras we have to be more explicit about such
+eﬀect interactions. We discuss this diﬀerence in more detail in § 5.2.2.
+4 VERIFYING ALGEBRAIC LA WS FOR HIGHER-ORDER EFFECTS
+A key idea behind algebraic eﬀects is that we can state and prove algebraic laws about eﬀectful
+operations. In this section we show how to verify the lawfulness of catch , and compare the eﬀort
+required to verify lawfulness using hefty algebras vs. a non-modular elaboration for catch.
+The record type shown below de/f_ines the interface of a monad given by the record parameters
+M, return, and _≫=_. The /f_ields on the left below assert thatM has a throw and catch operation, as
+well as a run function which runs a computation to yield a result R : Set → Set.20 On the right are
+20The notation { | u | } : Universe treats the u /f_ield as aninstance that can be automatically resolved in the scope of the
+CatchIntf record type.
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 20 ---
+62:20 Casper Bach Poulsen and Cas van der Rest
+u (CatchImpl0 { | u | } ) = u
+throw CatchImpl0 = ‵throw
+catch CatchImpl0 = ‵catch
+R CatchImpl0 = Free Δ ◦ Maybe
+run CatchImpl0 = h ◦ e
+bind-throw CatchImpl0 k = refl
+catch-return CatchImpl0 x m = refl
+catch-throw1 CatchImpl0 m = begin
+h (e (‵catch ‵throw m))
+≡ ⟨ refl ⟩
+h ((♯ h (e ‵throw )) ≫= maybe pure ((e m) ≫= pure))
+≡ ⟨ cong! (Free-unitA -≡ (e m)) ⟩
+h (e m) □
+catch-throw2 CatchImpl0 m = begin
+h (e (‵catch m ‵throw ))
+≡ ⟨ refl ⟩
+h ((♯ h (e m)) ≫= maybe pure ((e ‵throw ) ≫= pure))
+≡ ⟨ cong (_ P → h ((♯ h (e m)) ≫= P))
+(extensionality (_ x →
+cong (_ P → maybe pure P x)
+(cong (impure (inj1 throw))
+(extensionality (_ x → ⊥-elim x))))) ⟩
+h ((♯ h (e m)) ≫= maybe pure ‵throw)
+≡ ⟨ catch-throw-lem (e m) ⟩
+h (e m) □
+u (CatchImpl1 { | u | } ) = u
+throw CatchImpl1 = ‵throw
+catch CatchImpl1 = catch
+R CatchImpl1 = Free Δ ◦ Maybe
+run CatchImpl1 = h
+bind-throw CatchImpl1 k = refl
+catch-return CatchImpl1 x m = refl
+catch-throw1 CatchImpl1 m = refl
+catch-throw2 CatchImpl1 m = begin
+h (catch m ‵throw)
+≡ ⟨ refl ⟩
+h ((♯ h m) ≫= maybe pure ‵throw)
+≡ ⟨ catch-throw-lem m ⟩
+h m □
+Fig. 3. Lawfulness for the modular elaboration (le/f_t) and the non-modular elaboration of catch (right)
+the laws that constrain the behavior of the throw and catch operations. The laws are borrowed
+from Delaware et al. [2013].
+record CatchIntf (M : Set → Set)
+(return : ∀ {A} → A → M A)
+(_≫=_ : ∀ {A B}
+→ M A → (A → M B) → M B) : Set1 where
+field { | u | } : Universe
+throw : {t : Ty} → M ⟦ t ⟧
+catch : {t : Ty} → M ⟦ t ⟧ → M ⟦ t ⟧ → M ⟦ t ⟧
+R : Set → Set
+run : M A → R A
+bind-throw : {t1 t2 : Ty} (k : ⟦ t1 ⟧ → M ⟦ t1 ⟧)
+→ run (throw ≫= k) ≡ run throw
+catch-throw1 : {t : Ty} (m : M ⟦ t ⟧)
+→ run (catch throw m) ≡ run m
+catch-throw2 : {t : Ty} (m : M ⟦ t ⟧)
+→ run (catch m throw ) ≡ run m
+catch-return : {t : Ty} (x : ⟦ t ⟧) (m : M ⟦ t ⟧)
+→ run (catch (return x) m) ≡ run (return x)
+Figure 3 (left) shows that the elaboration and handler from the previous section satisfy these laws.
+The /f_igure uses‵throw as an abbreviation for ↑ throw ≫= ⊥-elim, h as an abbreviation of the
+handler for hThrow, and e as an abbreviation of elaborate. The proofs are equational rewriting
+proofs akin to pen-and-paper proofs, except that each step is mechanically veri/f_ied. The equational
+rewriting steps use the ≡-Reasoning module from the Agda standard library, and have the form
+t1 ≡⟨ eq ⟩ t2 where t1 is the term before the rewrite, t2 is the term after, and eq is a proof that t1 and
+t2 are equal. The question is, how much overhead the hefty algebra encoding adds compared to the
+non-modular abbreviation of catch from § 2.5? To answer this question, Figure 3 also contains the
+implementation and proof of a non-modular elaboration of catch ( CatchImpl1 on the right).
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 21 ---
+He/f_ty Algebras 62:21
+The side-by-side comparison shows that hefty algebra elaborations add some administrative over-
+head. In particular, elaborations introduce some redundant binds, as in the sub-term (e m) ≫= pure
+of the term resulting from the /f_irst equational rewrite incatch-throw1 on the left above. These
+extraneous binds are rewritten away by applying the free monad right unit law ( Free-unitA -≡).
+Another source of overhead of using hefty algebras is that Agda is unable to infer that the term
+resulting from elaborating ‵throw is equal to the term given by the smart constructor ‵throw. We
+prove this explicitly on the left above in the second-to-last equational rewrite of catch-throw2. Both
+proofs make use of functional extensionality (which is postulated since we cannot prove functional
+extensionality in general in Agda), and a straightforward catch-throw-lem lemma that we prove by
+induction on the structure of the computation parameter of the lemma.
+Except for the administrative overhead discussed above, the proofs have the same structure, and
+the eﬀort of verifying algebraic laws for higher-order eﬀects de/f_ined using hefty algebras is about
+the same as verifying algebraic laws for direct, non-modular encodings.
+5 EXAMPLES
+As discussed in § 2.5, there is a wide range of examples of higher-order eﬀects that cannot be
+de/f_ined as algebraic operations directly, and are typically de/f_ined as non-modular elaborations
+instead. In this section we give examples of such eﬀects and show to de/f_ine them modularly using
+hefty algebras. The artifact [ Bach Poulsen and Reinders 2023] contains the full examples.
+5.1 _ as a Higher-Order Operation
+As recently observed by van den Berg et al . [2021], the (higher-order) operations for _ abstraction
+and application are neither algebraic nor scoped eﬀects. We demonstrate how hefty algebras allow
+us to modularly de/f_ine and elaborate an interface of higher-order operations for_ abstraction and
+application, inspired by Levy’s call-by-push-value [ Levy 2006]. The interface we will consider is
+parametric in a universe of types given by the following record:
+record LamUniverse : Set1 where
+field { | u | } : Universe
+_↣_ : Ty → Ty → Ty
+c : Ty → Ty
+The _↣_ /f_ield represents a function type, whereasc is the type of thunk values. Distinguishing
+thunks in this way allows us to assign either a call-by-value or call-by-name semantics to the
+interface for _ abstraction summarized by the following smart constructors:
+‵lam : {t1 t2 : Ty} → (⟦ c t1 ⟧ → He/f_tyH ⟦ t2 ⟧) → He/f_tyH ⟦ (c t1) ↣ t2 ⟧
+‵var : {t : Ty} → ⟦ c t ⟧ → He/f_tyH ⟦ t ⟧
+‵app : {t1 t2 : Ty} → ⟦ (c t1) ↣ t2 ⟧ → He/f_tyH ⟦ t1 ⟧ → He/f_tyH ⟦ t2 ⟧
+Here ‵lam is a higher-order operation with a function typed computation parameter and whose
+return type is a function value ( ⟦ c t1 ↣ t2 ⟧). The ‵var operation accepts a thunk value as argument
+and yields a value of a matching type. The ‵app operation is also a higher-order operation: its
+/f_irst parameter is a function value type, whereas its second parameter is a computation parameter
+whose return type matches the function value parameter type.
+The interface above de/f_ines a kind ofhigher-order abstract syntax [Pfenning and Elliott 1988]
+which piggy-backs on Agda functions for name binding. However, unlike most Agda functions, the
+constructors above represent functions with side-eﬀects. The representation in principle supports
+functions with arbitrary side-eﬀects since it is parametric in what the higher-order eﬀect signature
+H is. Furthermore, we can assign diﬀerent operational interpretations to the operations in the
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 22 ---
+62:22 Casper Bach Poulsen and Cas van der Rest
+interface without having to change the interface or programs written against the interface. To
+illustrate we give two diﬀerent implementations of the interface: one that implements a call-by-value
+evaluation strategy, and one that implements call-by-name.
+5.1.1 Call-by-Value. We give a call-by-value interpretation ‵lam by generically elaborating to
+algebraic eﬀect trees with any set of eﬀects Δ. Our interpretation is parametric in proof witnesses
+that the following isomorphisms hold for value types ( ↔ is the type of isomorphisms from the
+Agda standard library): 21
+iso1 : {t1 t2 : Ty} → ⟦ t1 ↣ t2 ⟧ ↔ (⟦ t1 ⟧ → Free Δ ⟦ t2 ⟧)
+iso2 : {t : Ty} → ⟦ c t ⟧ ↔ ⟦ t ⟧
+The /f_irst isomorphism says that a function value type corresponds to a function which accepts a
+value of type t1 and produces a computation whose return type matches the function type. The
+second says that thunk types coincide with value types. Using these isomorphisms, the following
+de/f_ines a call-by-value elaboration of functions:
+eLamCBV : Elaboration Lam Δ
+alg eLamCBV lam k k = k (from k )
+alg eLamCBV (var x) _ k = k (to x)
+alg eLamCBV (app f ) k k = do
+a ← k /t_t
+v ← to f (from a)
+k v
+The lam case passes the function body given by the sub-tree k as a value to the continuation,
+where the from function mediates the sub-tree of type ⟦ c t1 ⟧ → Free Δ ⟦ t2 ⟧ to a value type
+⟦ (c t1) ↣ t2 ⟧, using the isomorphism iso1. The var case uses the to function to mediate a ⟦ c t ⟧
+value to a ⟦ t ⟧ value, using the isomorphism iso2. The app case /f_irst eagerly evaluates the argument
+expression of the application (in the sub-tree k ) to an argument value, and then passes the resulting
+value to the function value of the application. The resulting value is passed to the continuation.
+Using the elaboration above, we can evaluate programs such as the following which uses both
+the higher-order lambda eﬀect, the algebraic state eﬀect, and assumes that our universe has a
+number type ⟦ num ⟧ ↔ N:
+ex : He/f_ty(Lam ∔ Li/f_tState ∔ Li/f_tNil) N
+ex = do
+↑ put 1
+f ← ‵lam (_ x → do
+n1 ← ‵var x
+n2 ← ‵var x
+pure (from ((to n1) + (to n2))))
+v ← ‵app f incr
+pure (to v)
+where incr = do s0 ← ↑ get; ↑ put (s0 + 1); s1 ← ↑ get; pure (from s1)
+The program /f_irst sets the state to1. Then it constructs a function that binds a variablex, dereferences
+the variable twice, and adds the two resulting values together. Finally, the application in the second-
+to-last line applies the function with an argument expression which increments the state by 1 and
+21The two sides of an isomorphism A ↔ B are given by the functions to : A → B and from : B → A.
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 23 ---
+He/f_ty Algebras 62:23
+returns the resulting value. Running the program produces 4 since the state increment expression
+is eagerly evaluated before the function is applied.
+elab-cbv : Elaboration (Lam ∔ Li/f_tState ∔ Li/f_tNil) (State ⊕ Nil)
+elab-cbv = eLamCBV ⋎ eLi/f_t⋎ eNil
+test-ex-cbv : un ((given hSt handle (elaborate elab-cbv ex)) 0) ≡ (4 , 2)
+test-ex-cbv = refl
+5.1.2 Call-by-Name. The key diﬀerence between the call-by-value and the call-by-name interpre-
+tation of our _ operations is that we now assume that thunks are computations. That is, we assume
+that the following isomorphisms hold for value types:
+iso1 : {t1 t2 : Ty} → ⟦ t1 ↣ t2 ⟧ ↔ (⟦ t1 ⟧ → Free Δ ⟦ t2 ⟧)
+iso2 : {t : Ty} → ⟦ c t ⟧ ↔ Free Δ ⟦ t ⟧
+Using these isomorphisms, the following de/f_ines a call-by-name elaboration of functions:
+eLamCBN : Elaboration Lam Δ
+alg eLamCBN lam k k = k (from k )
+alg eLamCBN (var x) _ k = to x ≫= k
+alg eLamCBN (app f ) k k = to f (from (k /t_t)) ≫= k
+The case for lam is the same as the call-by-value elaboration. The case for var now needs to force
+the thunk by running the computation and passing its result to k. The case for app passes the
+argument sub-tree (k ) as an argument to the function f , runs the computation resulting from doing
+so, and then passes its result to k. Running the example program ex from above now produces 5
+as result, since the state increment expression in the argument of ‵app is thunked and run twice
+during the evaluation of the called function.
+elab-cbn : Elaboration (Lam ∔ Li/f_tState ∔ Li/f_tNil) (State ⊕ Nil)
+elab-cbn = eLamCBN ⋎ eLi/f_t⋎ eNil
+test-ex-cbn : un ((given hSt handle (elaborate elab-cbn ex)) 0) ≡ (5 , 3)
+test-ex-cbn = refl
+5.2 Optionally Transactional Exception Catching
+A feature of scoped eﬀect handlers [ Piróg et al . 2018; Wu et al . 2014; Yang et al . 2022] is that
+changing the order of handlers makes it possible to obtain diﬀerent semantics of eﬀect interaction.
+A classical example of eﬀect interaction is the interaction between state and exception catching
+that we brie/f_ly considered at the end of § 3.4 in connection with this transact program:
+transact : { | wB : H ∼ Li/f_tState ⊲ H′ | } { | wC : H ∼ Li/f_tThrow ⊲ H′′ | } { | w : H ∼ Catch ⊲ H′′′ | }
+→ He/f_tyH N
+transact = do
+↑ put 1
+‵catch (do ↑ put 2; (↑ throw) ≫= ⊥-elim) (pure /t_t)
+↑ get
+The state and exception catching eﬀect can interact to give either of these two semantics:
+(1) Global interpretation of state, where the transact program returns 2 since the put operation
+in the “try” block causes the state to be updated globally.
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 24 ---
+62:24 Casper Bach Poulsen and Cas van der Rest
+(2) Transactional interpretation of state, where the transact program returns 1 since the state
+changes of the put operation are rolled back when the “try” block throws an exception.
+With monad transformers [ Cenciarelli and Moggi 1993; Liang et al. 1995] we can recover either
+of these semantics by permuting the order of monad transformers. With scoped eﬀect handlers
+we can also recover either by permuting the order of handlers. However, the eCatch elaboration
+in § 3.4 always gives us a global interpretation of state. In this section we demonstrate how we
+can recover a transactional interpretation of state by using a diﬀerent elaboration of the catch
+operation into an algebraically eﬀectful program with the throw operation and the oﬀ-the-shelf
+sub/jump control eﬀects due to Fiore and Staton [2014]; Thielecke [1997]. The diﬀerent elaboration
+is modular in the sense that we do not have to change the interface of the catch operation nor any
+programs written against the interface.
+5.2.1 Sub/Jump. We recall how to de/f_ine two operations, sub and jump, due to [Fiore and Staton
+2014; Thielecke 1997]. We de/f_ine these operations as algebraic eﬀects followingSchrijvers et al .
+[2019]. The algebraic eﬀects are summarized by the following smart constructors where CC Ref is
+associated with the sub/jump operations:
+‵sub : { | w : Δ ∼ CC Ref ▶Δ′ | } (b : Ref t → Free Δ A) (k : ⟦ t ⟧ → Free Δ A) → Free Δ A
+‵jump : { | w : Δ ∼ CC Ref ▶Δ′ | } (ref : Ref t) (x : ⟦ t ⟧) → Free Δ B
+An operation ‵sub f g gives a computation f access to the continuation g via a reference value
+Ref t which represents a continuation expecting a value of type ⟦ t ⟧. The ‵jump operation invokes
+such continuations. The operations and their handler (abbreviated to h) satisfy the following laws:
+h (‵sub (_ _ → p) k) ≡ h p
+h (‵sub (_ r → m ≫= ‵jump r) k) ≡ h (m ≫= k)
+h (‵sub p (‵jump r′)) ≡ h (p r′)
+h (‵sub p q ≫= k) ≡ h (‵sub (_ x → p x ≫= k ) (_ x → q x ≫= k))
+The last law asserts that ‵sub and ‵jump are algebraic operations, since their computational sub-
+terms behave as continuations. Thus, we encode ‵sub and its handler as an algebraic eﬀect.
+5.2.2 Optionally Transactional Exception Catching. By using the ‵sub and ‵jump operations in our
+elaboration of catch, we get a semantics of exception catching whose interaction with state depends
+on the order that the state eﬀect and sub/jump eﬀect is handled.
+eCatchOT : { | w1 : Δ ∼ CC Ref ▶Δ′ | } { | w2 : Δ ∼ Throw ▶Δ′′ | } → Elaboration Catch Δ
+alg eCatchOT (catch x) k k = let m1 = k true; m2 = k false in
+‵sub (_ r → (♯ ((given hThrow handle m1) /t_t)) ≫= maybe k (‵jump r (from /t_t)))
+(_ _ → m2 ≫= k)
+The elaboration uses ‵sub to capture the continuation of a higher-order catch operation. If no
+exception is raised, then control /f_lows to the continuationk without invoking the continuation of
+‵sub. Otherwise, we jump to the continuation of ‵sub, which runs m2 before passing control to k.
+Capturing the continuation in this way interacts with state because the continuation of ‵sub may
+have been pre-applied to a state handler that only knows about the “old” state. This happens when
+we invoke the state handler before the handler for sub/jump: in this case we get the transactional
+interpretation of state, so running transact gives 1. Otherwise, if we run the sub/jump handler
+before the state handler, we get the global interpretation of state and the result 2.
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 25 ---
+He/f_ty Algebras 62:25
+The sub/jump elaboration above is more involved than the scoped eﬀect handler that we consid-
+ered in § 2.6. However, the complicated encoding does not pollute the higher-order eﬀect interface,
+and only turns up if we strictly want or need eﬀect interaction.
+5.3 Logic Programming
+Following [Schrijvers et al. 2014; Wu et al. 2014; Yang et al. 2022] we can de/f_ine a non-deterministic
+choice operation ( _‵or_) as an algebraic eﬀect, to provide support for expressing the kind of non-
+deterministic search for solutions that is common in logic programming. We can also de/f_ine a
+‵fail operation which indicates that the search in the current branch was unsuccessful. The smart
+constructors below are the lifted higher-order counterparts to the ‵or and ‵fail operations:
+_‵or _ : { | H ∼ Li/f_tChoice ⊲ H′ | } → He/f_tyH A → He/f_tyH A → He/f_tyH A
+‵fail : { | H ∼ Li/f_tChoice ⊲ H′ | } → He/f_tyH A
+A useful operator for cutting non-deterministic search short when a solution is found is the ‵once
+operator. The ‵once operator is not an algebraic eﬀect, but a scoped (and thus higher-order) eﬀect.
+‵once : { | w : H ∼ Once ⊲ H′ | } {t : Ty} → He/f_tyH ⟦ t ⟧ → He/f_tyH ⟦ t ⟧
+We can de/f_ine the meaning of theonce operator as the following elaboration:
+eOnce : { | Δ ∼ Choice ▶Δ′ | } → Elaboration Once Δ
+alg eOnce once k k = do
+l ← ♯ ((given hChoice handle (k /t_t)) /t_t)
+maybe k ‵fail (head l)
+The elaboration runs the branch ( k ) of once under the hChoice handler to compute a list of all
+solutions of k . It then tries to choose the /f_irst solution and pass that to the continuationk. If the
+branch has no solutions, we fail. Under a strict evaluation order, the elaboration computes all
+possible solutions which is doing more work than needed. Agda 2.6.2.2 does not have a speci/f_ied
+evaluation strategy, but does compile to Haskell which is lazy. In Haskell, the solutions would be
+lazily computed, such that the once operator cuts search short as intended.
+5.4 Concurrency
+Finally, we consider how to de/f_ine higher-order operations for concurrency, inspired by Yang
+et al.’s [2022] resumption monad [Claessen 1999; Piróg and Gibbons 2014; Schmidt 1986] de/f_inition
+using scoped eﬀects. We summarize our encoding and compare it with the resumption monad. The
+goal is to de/f_ine the following operations:
+‵spawn : {t : Ty} → (m1 m2 : He/f_tyH ⟦ t ⟧) → He/f_tyH ⟦ t ⟧
+‵atomic : {t : Ty} → He/f_tyH ⟦ t ⟧ → He/f_tyH ⟦ t ⟧
+The operation ‵spawn m1 m2 spawns two threads that run concurrently, and returns the value
+produced by m1 after both have /f_inished. The operation‵atomic m represents a block to be executed
+atomically; i.e., no other threads run before the block /f_inishes executing.
+We elaborate ‵spawn by interleaving the sub-trees of its computations. To this end, we use a
+dedicated function which interleaves the operations in two trees and yields as output the value of
+the left input tree (the /f_irst computation parameter):
+interleave; : {Ref : Ty → Set} → Free (CC Ref ⊕ Δ) A → Free (CC Ref ⊕ Δ) B
+→ Free (CC Ref ⊕ Δ) A
+Here, the CC eﬀect is the sub/jump eﬀect that we also used in § 5.2.2. The interleave; function
+ensures atomic execution by only interleaving code that is not wrapped in a ‵sub operation. We
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 26 ---
+62:26 Casper Bach Poulsen and Cas van der Rest
+elaborate Concur into CC as follows, where the to-front and from-front functions use the row
+insertion witness w0 to move the CC eﬀect to the front of the row and back again:
+eConcur : {Ref : Ty → Set} { | w : Δ ∼ CC Ref ▶Δ′′ | } → Elaboration Concur Δ
+alg eConcur (spawn t) k k =
+from-front (interleave; (to-front (k true)) (to-front (k false))) ≫= k
+alg eConcur (atomic t) k k = ‵sub (_ ref → k /t_t≫= ‵jump ref ) k
+The elaboration uses ‵sub as a delimiter for blocks that should not be interleaved, such that the
+interleave; function only interleaves code that does not reside in atomic blocks. At the end of an
+atomic block, we ‵jump to the (possibly interleaved) computation context, k. By using ‵sub to
+explicitly delimit blocks that should not be interleaved, we have encoded what Wu et al. [2014, § 7]
+call scoped syntax.
+Example 5.1. Below is an example program that spawns two threads that use the Output eﬀect.
+The /f_irst thread prints0, 1, and 2; the second prints 3 and 4.
+ex-01234 : He/f_ty(Li/f_tOutput ∔ Concur ∔ Li/f_tNil) N
+ex-01234 = ‵spawn (do ↑ out /quotedbl.Var0/quotedbl.Var; ↑ out /quotedbl.Var1/quotedbl.Var; ↑ out /quotedbl.Var2/quotedbl.Var; pure 0)
+(do ↑ out /quotedbl.Var3/quotedbl.Var; ↑ out /quotedbl.Var4/quotedbl.Var; pure 0)
+Since the Concur eﬀect is elaborated to interleave the eﬀects of the two threads, the printed output
+appears in interleaved order:
+test-ex-01234 : un ( ( given hOut
+handle ( ( given hCC
+handle (elaborate concur-elab ex-01234)
+) /t_t) ) /t_t) ≡ (0 , /quotedbl.Var03142/quotedbl.Var)
+test-ex-01234 = refl
+The following program spawns an additional thread with an ‵atomic block
+ex-01234567 : He/f_ty(Li/f_tOutput ∔ Concur ∔ Li/f_tNil) N
+ex-01234567 = ‵spawn ex-01234
+(‵atomic (do ↑ out /quotedbl.Var5/quotedbl.Var; ↑ out /quotedbl.Var6/quotedbl.Var; ↑ out /quotedbl.Var7/quotedbl.Var; pure 0))
+Inspecting the output, we see that the additional thread indeed computes atomically:
+test-ex-01234567 : un ( ( given hOut
+handle ( ( given hCC
+handle (elaborate concur-elab ex-01234567)
+) /t_t) ) /t_t) ≡ (0 , /quotedbl.Var05673142/quotedbl.Var)
+test-ex-01234567 = refl
+The example above is inspired by the resumption monad, and in particular by the scoped eﬀects
+de/f_inition of concurrency due toYang et al. [2022]. Yang et al. do not (explicitly) consider how to
+de/f_ine the concurrency operations in a modular style. Instead, they give a direct semantics that
+translates to the resumption monad which we can encode as follows in Agda (assuming resumptions
+are given by the free monad):
+data Resumption Δ A : Set where
+done : A → Resumption Δ A
+more : Free Δ (Resumption Δ A) → Resumption Δ A
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 27 ---
+He/f_ty Algebras 62:27
+We could elaborate into this type using a hefty algebra Alg Concur (Resumption Δ) but that would
+be incompatible with our other elaborations which use the free monad. For that reason, we emulate
+the resumption monad using the free monad instead of using the Resumption type directly.
+6 RELATED WORK
+As stated in the introduction of this paper, de/f_ining abstractions for programming constructs with
+side eﬀects is a research question with a long and rich history, which we brie/f_ly summarize here.
+Moggi [1989a] introduced monads as a means of modeling side eﬀects and structuring programs
+with side eﬀects; an idea which Wadler [1992] helped popularize. A problem with monads is that
+they do not naturally compose. A range of diﬀerent solutions have been developed to address this
+issue [Cenciarelli and Moggi 1993; Filinski 1999; Jones and Duponcheel 1993; Steele Jr. 1994]. Of these
+solutions, monad transformers [ Cenciarelli and Moggi 1993; Jaskelioﬀ 2008; Liang et al. 1995] is the
+more widely adopted solution. However, more recently, algebraic eﬀects [ Plotkin and Power 2002]
+was proposed as an alternative solution which oﬀers some modularity bene/f_its over monads and
+monad transformers. In particular, whereas monads and monad transformers may “leak” information
+about the implementation of operations, algebraic eﬀects enforce a strict separation between the
+interface and implementation of operations. Furthermore, monad transformers commonly require
+glue code to “lift” operations between layers of monad transformer stacks. While the latter problem
+is addressed by the Monatron framework of Jaskelioﬀ [2008], algebraic eﬀects have a simple
+composition semantics that does not require intricate liftings.
+However, some eﬀects, such as exception catching, did not /f_it into the framework of algebraic
+eﬀects. Eﬀect handlers [Plotkin and Pretnar 2009] were introduced to address this problem. Algebraic
+eﬀects and handlers has since been gaining traction as a framework for modeling and structuring
+programs with side eﬀects in a modular way. Several libraries have been developed based on the
+idea such as Handlers in Action [Kammar et al. 2013], the freer monad [ Kiselyov and Ishii 2015], or
+Idris’ Effects DSL [Brady 2013b]; but also standalone languages such as Eﬀ [ Bauer and Pretnar
+2015], Koka [Leijen 2017], Frank [Lindley et al. 2017], and Eﬀekt [ Brachthäuser et al. 2020].22
+As discussed in § 1.2 and § 2.5, some modularity bene/f_its of algebraic eﬀects and handlers do
+not carry over to higher-order eﬀects. Scoped eﬀects and handlers [ Piróg et al . 2018; Wu et al .
+2014; Yang et al. 2022] address this shortcoming for scoped operations, as we summarized in § 2.6.
+This paper provides a diﬀerent solution to the modularity problem with higher-order eﬀects. Our
+solution is to provide modular elaborations of higher-order eﬀects into more primitive eﬀects
+and handlers. We can, in theory, encode any eﬀect in terms of algebraic eﬀects and handlers.
+However, for some eﬀects, the encodings may be complicated. While the complicated encodings are
+hidden behind a higher-order eﬀect interface, complicated encodings may hinder understanding the
+operational semantics of higher-order eﬀects, and may make it hard to verify algebraic laws about
+implementations of the interface. Our framework would also support elaborating higher-order
+eﬀects into scoped eﬀects and handlers, which might provide bene/f_its for veri/f_ication. We leave
+this as a question to explore in future work.
+Although not explicitly advertised, some standalone languages, such as Frank [ Lindley et al .
+2017] and Koka [ Leijen 2017] do have some support for higher-order eﬀects. The denotational
+semantics of these features of these languages is unclear. A question for future work is whether the
+modular elaborations we introduce could provide a denotational model.
+A recent paper by van den Berg et al . [2021] introduced a generalization of scoped eﬀects that
+they call latent eﬀects which supports a broader class of eﬀects, including _ abstraction. While the
+22A more extensive list of applications and frameworks can be found in Jeremy Yallop’s Eﬀects Bibliography: https:
+//github.com/yallop/eﬀects-bibliography
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 28 ---
+62:28 Casper Bach Poulsen and Cas van der Rest
+framework appears powerful, it currently lacks a denotational model, and seems to require similar
+weaving glue code as scoped eﬀects. The solution we present in this paper does not require weaving
+glue code, and is given by a modular but simple mapping onto algebraic eﬀects and handlers.
+Looking beyond purely functional models of semantics and eﬀects, there are also lines of work
+on modular support for side eﬀects in operational semantics [ Plotkin 2004]. Mosses’ Modular
+Structural Operational Semantics [ Mosses 2004] (MSOS) de/f_ines small-step rules that implicitly
+propagate an open-ended set of auxiliary entities which encode common classes of eﬀects, such as
+reading or emitting data, stateful mutation, and even control eﬀects [ Sculthorpe et al . 2015]. The K
+Framework [Rosu and Serbanuta 2010] takes a diﬀerent approach but provides many of the same
+bene/f_its. These frameworks do not encapsulate operational details but instead make it notationally
+convenient to program (or specify semantics) with side-eﬀects.
+7 CONCLUSION
+We have presented a new solution to the modularity problem with modeling and programming with
+higher-order eﬀects. Our solution allows programming against an interface of higher-order eﬀects
+in a way that provides eﬀect encapsulation, meaning we can modularly change the implementation
+of eﬀects without changing programs written against the interface and without changing the
+de/f_inition of any interface implementations. Furthermore, the solution requires a minimal amount
+of glue code to compose language de/f_initions.
+We have shown that the framework supports algebraic reasoning on a par with algebraic eﬀects
+and handlers, albeit with some administrative overhead. While we have made use of Agda and
+dependent types throughout this paper, the framework should be straightforward to port to less
+dependently-typed functional languages, such as Haskell, OCaml, or Scala. An interesting direction
+for future work is to explore whether the framework could provide a denotational model for
+handling higher-order eﬀects in standalone languages with support for eﬀect handlers.
+ACKNOWLEDGMENTS
+We thank the anonymous reviewers for their comments which helped improve the exposition of
+the paper. Furthermore, we thank Nicolas Wu, Andrew Tolmach, Peter Mosses, and Jaro Reinders
+for feedback on earlier drafts. This research was partially funded by the NWO VENI Composable
+and Safe-by-Construction Programming Language De/f_initions project (VI.Veni.192.259).
+REFERENCES
+Michael Gordon Abbott, Thorsten Altenkirch, and Neil Ghani. 2003. Categories of Containers. In Foundations of Software
+Science and Computational Structures, 6th International Conference, FOSSACS 2003 Held as Part of the Joint European
+Conference on Theory and Practice of Software, ETAPS 2003, Warsaw, Poland, April 7-11, 2003, Proceedings (Lecture Notes in
+Computer Science, Vol. 2620), Andrew D. Gordon (Ed.). Springer, 23–38. https://doi.org/10.1007/3-540-36576-1_2
+Michael Gordon Abbott, Thorsten Altenkirch, and Neil Ghani. 2005. Containers: Constructing strictly positive types. Theor.
+Comput. Sci. 342, 1 (2005), 3–27. https://doi.org/10.1016/j.tcs.2005.06.002
+Michael A. Arbib and Ernest G. Manes. 1975. Arrows, Structures, and Functors: The Categorical Imperative . Academic Press.
+Steve Awodey. 2010. Category Theory (2nd ed.). Oxford University Press, Inc., USA.
+Casper Bach Poulsen and Jaro Reinders. 2023. Hefty Algebras: Modular Elaboration of Higher-Order Algebraic Eﬀects –
+Artifact. https://doi.org/10.5281/zenodo.7315899.
+Andrej Bauer and Matija Pretnar. 2015. Programming with algebraic eﬀects and handlers. J. Log. Algebraic Methods Program.
+84, 1 (2015), 108–123. https://doi.org/10.1016/j.jlamp.2014.02.001
+Dariusz Biernacki, Maciej Piróg, Piotr Polesiuk, and Filip Sieczkowski. 2018. Handle with care: relational interpretation of
+algebraic eﬀects and handlers. Proc. ACM Program. Lang. 2, POPL (2018), 8:1–8:30. https://doi.org/10.1145/3158096
+Richard S. Bird and Ross Paterson. 1999. Generalised folds for nested datatypes. Formal Aspects Comput. 11, 2 (1999),
+200–222. https://doi.org/10.1007/s001650050047
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 29 ---
+He/f_ty Algebras 62:29
+Jonathan Immanuel Brachthäuser, Philipp Schuster, and Klaus Ostermann. 2020. Eﬀects as capabilities: eﬀect handlers and
+lightweight eﬀect polymorphism. Proc. ACM Program. Lang. 4, OOPSLA (2020), 126:1–126:30. https://doi.org/10.1145/
+3428194
+Edwin C. Brady. 2013a. Idris, a general-purpose dependently typed programming language: Design and implementation. J.
+Funct. Program. 23, 5 (2013), 552–593. https://doi.org/10.1017/S095679681300018X
+Edwin C. Brady. 2013b. Programming and reasoning with algebraic eﬀects and dependent types, See [ Morrisett and Uustalu
+2013], 133–144. https://doi.org/10.1145/2500365.2500581
+Giuseppe Castagna and Andrew D. Gordon (Eds.). 2017. Proceedings of the 44th ACM SIGPLAN Symposium on Principles of
+Programming Languages, POPL 2017, Paris, France, January 18-20, 2017 . ACM. https://doi.org/10.1145/3009837
+Pietro Cenciarelli and Eugenio Moggi. 1993. A syntactic approach to modularity in denotational semantics.
+Koen Claessen. 1999. A Poor Man’s Concurrency Monad. J. Funct. Program. 9, 3 (1999), 313–323. https://doi.org/10.1017/
+s0956796899003342
+Benjamin Delaware, Bruno C. d. S. Oliveira, and Tom Schrijvers. 2013. Meta-theory à la carte. In The 40th Annual ACM
+SIGPLAN-SIGACT Symposium on Principles of Programming Languages, POPL ’13, Rome, Italy - January 23 - 25, 2013 ,
+Roberto Giacobazzi and Radhia Cousot (Eds.). ACM, 207–218. https://doi.org/10.1145/2429069.2429094
+Andrzej Filinski. 1999. Representing Layered Monads. In POPL ’99, Proceedings of the 26th ACM SIGPLAN-SIGACT Symposium
+on Principles of Programming Languages, San Antonio, TX, USA, January 20-22, 1999 , Andrew W. Appel and Alex Aiken
+(Eds.). ACM, 175–188. https://doi.org/10.1145/292540.292557
+Marcelo P. Fiore and Sam Staton. 2014. Substitution, jumps, and algebraic eﬀects. In Joint Meeting of the Twenty-Third
+EACSL Annual Conference on Computer Science Logic (CSL) and the Twenty-Ninth Annual ACM/IEEE Symposium on Logic
+in Computer Science (LICS), CSL-LICS ’14, Vienna, Austria, July 14 - 18, 2014 , Thomas A. Henzinger and Dale Miller (Eds.).
+ACM, 41:1–41:10. https://doi.org/10.1145/2603088.2603163
+Peter G. Hancock and Anton Setzer. 2000. Interactive Programs in Dependent Type Theory. In Computer Science Logic, 14th
+Annual Conference of the EACSL, Fischbachau, Germany, August 21-26, 2000, Proceedings (Lecture Notes in Computer Science,
+Vol. 1862), Peter Clote and Helmut Schwichtenberg (Eds.). Springer, 317–331. https://doi.org/10.1007/3-540-44622-2_21
+Mauro Jaskelioﬀ. 2008. Monatron: An Extensible Monad Transformer Library. In Implementation and Application of
+Functional Languages - 20th International Symposium, IFL 2008, Hat/f_ield, UK, September 10-12, 2008. Revised Selected
+Papers (Lecture Notes in Computer Science, Vol. 5836) , Sven-Bodo Scholz and Olaf Chitil (Eds.). Springer, 233–248. https:
+//doi.org/10.1007/978-3-642-24452-0_13
+Mark P. Jones. 1995. Functional Programming with Overloading and Higher-Order Polymorphism. In Advanced Functional
+Programming, First International Spring School on Advanced Functional Programming Techniques, Båstad, Sweden, May
+24-30, 1995, Tutorial Text (Lecture Notes in Computer Science, Vol. 925) , Johan Jeuring and Erik Meijer (Eds.). Springer,
+97–136. https://doi.org/10.1007/3-540-59451-5_4
+Mark P. Jones and Luc Duponcheel. 1993. Composing Monads. Research Report YALEU/DCS/RR-1004. Yale University, New
+Haven, Connecticut, USA. http://web.cecs.pdx.edu/~mpj/pubs/RR-1004.pdf
+Ohad Kammar, Sam Lindley, and Nicolas Oury. 2013. Handlers in action, See [ Morrisett and Uustalu 2013], 145–158.
+https://doi.org/10.1145/2500365.2500590
+Oleg Kiselyov and Hiromi Ishii. 2015. Freer monads, more extensible eﬀects. In Proceedings of the 8th ACM SIGPLAN
+Symposium on Haskell, Haskell 2015, Vancouver, BC, Canada, September 3-4, 2015 , Ben Lippmeier (Ed.). ACM, 94–105.
+https://doi.org/10.1145/2804302.2804319
+Daan Leijen. 2017. Type directed compilation of row-typed algebraic eﬀects, See [ Castagna and Gordon 2017], 486–499.
+https://doi.org/10.1145/3009837.3009872
+Paul Blain Levy. 2006. Call-by-push-value: Decomposing call-by-value and call-by-name. High. Order Symb. Comput. 19, 4
+(2006), 377–414. https://doi.org/10.1007/s10990-006-0480-6
+Sheng Liang, Paul Hudak, and Mark P. Jones. 1995. Monad Transformers and Modular Interpreters. In Conference Record of
+POPL’95: 22nd ACM SIGPLAN-SIGACT Symposium on Principles of Programming Languages, San Francisco, California, USA,
+January 23-25, 1995 , Ron K. Cytron and Peter Lee (Eds.). ACM Press, 333–343. https://doi.org/10.1145/199448.199528
+Sam Lindley, Conor McBride, and Craig McLaughlin. 2017. Do be do be do, See [ Castagna and Gordon 2017], 500–514.
+https://doi.org/10.1145/3009837.3009897
+Per Martin-Löf. 1984. Intuitionistic type theory . Studies in proof theory, Vol. 1. Bibliopolis.
+Erik Meijer, Maarten M. Fokkinga, and Ross Paterson. 1991. Functional Programming with Bananas, Lenses, Envelopes and
+Barbed Wire. In Functional Programming Languages and Computer Architecture, 5th ACM Conference, Cambridge, MA,
+USA, August 26-30, 1991, Proceedings (Lecture Notes in Computer Science, Vol. 523) , John Hughes (Ed.). Springer, 124–144.
+https://doi.org/10.1007/3540543961_7
+Eugenio Moggi. 1989a. An Abstract View of Programming Languages . Technical Report ECS-LFCS-90-113. Edinburgh
+University, Department of Computer Science.
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 30 ---
+62:30 Casper Bach Poulsen and Cas van der Rest
+Eugenio Moggi. 1989b. Computational Lambda-Calculus and Monads. In Proceedings of the Fourth Annual Symposium
+on Logic in Computer Science (LICS ’89), Paci/f_ic Grove, California, USA, June 5-8, 1989. IEEE Computer Society, 14–23.
+https://doi.org/10.1109/LICS.1989.39155
+J. Garrett Morris and James McKinna. 2019. Abstracting extensible data types: or, rows by any other name. Proc. ACM
+Program. Lang. 3, POPL (2019), 12:1–12:28. https://doi.org/10.1145/3290325
+Greg Morrisett and Tarmo Uustalu (Eds.). 2013. ACM SIGPLAN International Conference on Functional Programming, ICFP’13,
+Boston, MA, USA - September 25 - 27, 2013 . ACM. https://doi.org/10.1145/2500365
+Peter D. Mosses. 2004. Modular structural operational semantics. J. Log. Algebraic Methods Program. 60-61 (2004), 195–228.
+https://doi.org/10.1016/j.jlap.2004.03.008
+Frank Pfenning and Conal Elliott. 1988. Higher-Order Abstract Syntax. In Proceedings of the ACM SIGPLAN’88 Conference on
+Programming Language Design and Implementation (PLDI), Atlanta, Georgia, USA, June 22-24, 1988 , Richard L. Wexelblat
+(Ed.). ACM, 199–208. https://doi.org/10.1145/53990.54010
+Benjamin C. Pierce. 1991. Basic category theory for computer scientists . MIT Press.
+Maciej Piróg and Jeremy Gibbons. 2014. The Coinductive Resumption Monad. In Proceedings of the 30th Conference
+on the Mathematical Foundations of Programming Semantics, MFPS 2014, Ithaca, NY, USA, June 12-15, 2014 (Electronic
+Notes in Theoretical Computer Science, Vol. 308) , Bart Jacobs, Alexandra Silva, and Sam Staton (Eds.). Elsevier, 273–288.
+https://doi.org/10.1016/j.entcs.2014.10.015
+Maciej Piróg, Tom Schrijvers, Nicolas Wu, and Mauro Jaskelioﬀ. 2018. Syntax and Semantics for Operations with Scopes. In
+Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS 2018, Oxford, UK, July 09-12,
+2018, Anuj Dawar and Erich Grädel (Eds.). ACM, 809–818. https://doi.org/10.1145/3209108.3209166
+Gordon D. Plotkin. 2004. A structural approach to operational semantics. J. Log. Algebraic Methods Program. 60-61 (2004),
+17–139.
+Gordon D. Plotkin and John Power. 2002. Notions of Computation Determine Monads. In Foundations of Software Science
+and Computation Structures, 5th International Conference, FOSSACS 2002. Held as Part of the Joint European Conferences on
+Theory and Practice of Software, ETAPS 2002 Grenoble, France, April 8-12, 2002, Proceedings (Lecture Notes in Computer
+Science, Vol. 2303), Mogens Nielsen and Uﬀe Engberg (Eds.). Springer, 342–356. https://doi.org/10.1007/3-540-45931-6_24
+Gordon D. Plotkin and John Power. 2003. Algebraic Operations and Generic Eﬀects. Appl. Categorical Struct. 11, 1 (2003),
+69–94. https://doi.org/10.1023/A:1023064908962
+Gordon D. Plotkin and Matija Pretnar. 2009. Handlers of Algebraic Eﬀects. In Programming Languages and Systems, 18th
+European Symposium on Programming, ESOP 2009, Held as Part of the Joint European Conferences on Theory and Practice
+of Software, ETAPS 2009, York, UK, March 22-29, 2009. Proceedings (Lecture Notes in Computer Science, Vol. 5502) , Giuseppe
+Castagna (Ed.). Springer, 80–94. https://doi.org/10.1007/978-3-642-00590-9_7
+Matija Pretnar. 2015. An Introduction to Algebraic Eﬀects and Handlers. Invited tutorial paper. In The 31st Conference on the
+Mathematical Foundations of Programming Semantics, MFPS 2015, Nijmegen, The Netherlands, June 22-25, 2015 (Electronic
+Notes in Theoretical Computer Science, Vol. 319) , Dan R. Ghica (Ed.). Elsevier, 19–35. https://doi.org/10.1016/j.entcs.2015.
+12.003
+Grigore Rosu and Traian-Florin Serbanuta. 2010. An overview of the K semantic framework. J. Log. Algebraic Methods
+Program. 79, 6 (2010), 397–434. https://doi.org/10.1016/j.jlap.2010.03.012
+David Schmidt. 1986. Denotational Semantics. Allyn and Bacon.
+Tom Schrijvers, Maciej Piróg, Nicolas Wu, and Mauro Jaskelioﬀ. 2019. Monad transformers and modular algebraic eﬀects:
+what binds them together. InProceedings of the 12th ACM SIGPLAN International Symposium on Haskell, Haskell@ICFP 2019,
+Berlin, Germany, August 18-23, 2019 , Richard A. Eisenberg (Ed.). ACM, 98–113. https://doi.org/10.1145/3331545.3342595
+Tom Schrijvers, Nicolas Wu, Benoit Desouter, and Bart Demoen. 2014. Heuristics Entwined with Handlers Combined: From
+Functional Speci/f_ication to Logic Programming Implementation. InProceedings of the 16th International Symposium on
+Principles and Practice of Declarative Programming, Kent, Canterbury, United Kingdom, September 8-10, 2014 , Olaf Chitil,
+Andy King, and Olivier Danvy (Eds.). ACM, 259–270. https://doi.org/10.1145/2643135.2643145
+Neil Sculthorpe, Paolo Torrini, and Peter D. Mosses. 2015. A Modular Structural Operational Semantics for Delimited
+Continuations. In Proceedings of the Workshop on Continuations, WoC 2016, London, UK, April 12th 2015 (EPTCS, Vol. 212) ,
+Olivier Danvy and Ugo de’Liguoro (Eds.). 63–80. https://doi.org/10.4204/EPTCS.212.5
+Guy L. Steele Jr. 1994. Building Interpreters by Composing Monads. In Conference Record of POPL’94: 21st ACM SIGPLAN-
+SIGACT Symposium on Principles of Programming Languages, Portland, Oregon, USA, January 17-21, 1994 , Hans-Juergen
+Boehm, Bernard Lang, and Daniel M. Yellin (Eds.). ACM Press, 472–492. https://doi.org/10.1145/174675.178068
+Wouter Swierstra. 2008. Data types à la carte. J. Funct. Program. 18, 4 (2008), 423–436. https://doi.org/10.1017/
+S0956796808006758
+Walid Taha and Tim Sheard. 2000. MetaML and multi-stage programming with explicit annotations. Theor. Comput. Sci. 248,
+1-2 (2000), 211–242. https://doi.org/10.1016/S0304-3975(00)00053-0
+Hayo Thielecke. 1997. Categorical Structure of Continuation Passing Style . Ph. D. Dissertation. University of Edinburgh.
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.
+
+--- PDF page 31 ---
+He/f_ty Algebras 62:31
+Birthe van den Berg, Tom Schrijvers, Casper Bach Poulsen, and Nicolas Wu. 2021. Latent Eﬀects for Reusable Language
+Components. In Programming Languages and Systems - 19th Asian Symposium, APLAS 2021, Chicago, IL, USA, October
+17-18, 2021, Proceedings (Lecture Notes in Computer Science, Vol. 13008) , Hakjoo Oh (Ed.). Springer, 182–201. https:
+//doi.org/10.1007/978-3-030-89051-3_11
+Philip Wadler. 1992. The Essence of Functional Programming. In Conference Record of the Nineteenth Annual ACM SIGPLAN-
+SIGACT Symposium on Principles of Programming Languages, Albuquerque, New Mexico, USA, January 19-22, 1992 , Ravi
+Sethi (Ed.). ACM Press, 1–14. https://doi.org/10.1145/143165.143169
+Nicolas Wu, Tom Schrijvers, and Ralf Hinze. 2014. Eﬀect handlers in scope. In Proceedings of the 2014 ACM SIGPLAN
+symposium on Haskell, Gothenburg, Sweden, September 4-5, 2014 , Wouter Swierstra (Ed.). ACM, 1–12. https://doi.org/10.
+1145/2633357.2633358
+Zhixuan Yang, Marco Paviotti, Nicolas Wu, Birthe van den Berg, and Tom Schrijvers. 2022. Structured Handling of Scoped
+Eﬀects. In Programming Languages and Systems - 31st European Symposium on Programming, ESOP 2022, Held as Part of the
+European Joint Conferences on Theory and Practice of Software, ETAPS 2022, Munich, Germany, April 2-7, 2022, Proceedings
+(Lecture Notes in Computer Science, Vol. 13240) , Ilya Sergey (Ed.). Springer, 462–491. https://doi.org/10.1007/978-3-030-
+99336-8_17
+Yizhou Zhang and Andrew C. Myers. 2019. Abstraction-safe eﬀect handlers via tunneling. Proc. ACM Program. Lang. 3,
+POPL (2019), 5:1–5:29. https://doi.org/10.1145/3290318
+Received 2022-07-07; accepted 2022-11-07
+Proc. ACM Program. Lang., Vol. 7, No. POPL, Article 62. Publication date: January 2023.

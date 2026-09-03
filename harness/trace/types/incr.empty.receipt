@@ -1,5 +1,5 @@
 format	effect4-type-receipt-v1
 program	incr.empty
 typescript	7.0.2
-fixture.d.ts	sha256=a3a00faa4547d9a447d47e2a8a43308f31d22c59bd9ef1af31cc018053a080ab
+fixture.d.ts	sha256=a260bfd5ea22e3e20643b577061e547550258b2df072b6f3be3722d56d055c6e
 line	export declare const incr: (n: number) => Effect.Effect<number, never, Cell>;

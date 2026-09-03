@@ -1,0 +1,64 @@
+{
+  "context": "/Users/pooks/Dev/lean4-effect4",
+  "date": "2026-09-02",
+  "commands": [
+    {
+      "command": "lake build Effect4.Runtime.Runtime Effect4.Runtime.Scope",
+      "exit": 0,
+      "result": "Local narrow build completed; stale dependency-manifest warning."
+    },
+    {
+      "command": "lake env lean Effect4Test/Runtime/FramesContract.lean",
+      "exit": 0,
+      "result": "Direct contract check; console output truncated in tool response."
+    },
+    {
+      "command": "lake env lean Effect4Test/Runtime/FramesAxiomReport.lean",
+      "exit": 0,
+      "result": "Full printed receipts in frame-axiom-receipts.txt; 149 theorem rows; only propext and Quot.sound."
+    },
+    {
+      "command": "lake env lean Effect4Test/Runtime/ScopeContract.lean",
+      "exit": 0,
+      "result": "Direct contract check; console output truncated in tool response."
+    },
+    {
+      "command": "lake env lean /private/tmp/effect4-row-research-20260902/counterexamples.lean",
+      "exit": 0,
+      "result": "Parent independently ran nine witnesses; eight empty axiom sets, throw_absorbs only Quot.sound."
+    },
+    {
+      "command": "node /private/tmp/effect4-semantics-research.lRH5ES/host-probes.mjs",
+      "exit": 0,
+      "result": "Five finite Effect/Node/DOM/Streams cases plus lazy construction assertion; result file retained."
+    },
+    {
+      "command": "node /private/tmp/effect4-semantics-research.lRH5ES/promise-order.mjs",
+      "exit": 0,
+      "result": "Direct versus additional promise reaction order assertions; result retained."
+    },
+    {
+      "command": "scripts/check-internal-citations.sh",
+      "exit": 0,
+      "result": "553 candidate citations in 405 files before final verification script; lexical gate passed."
+    },
+    {
+      "command": "git diff --check",
+      "exit": 0,
+      "result": "No whitespace errors in tracked diff."
+    },
+    {
+      "command": "bundled-python docs/research/2026-09-02-shared-semantics/verify_report.py",
+      "exit": 0,
+      "result": "All 15 pages, 30 external URL targets, 32 internal link targets, 46 source hashes and 149 axiom receipts checked; document-checks.json retains details."
+    }
+  ],
+  "not_claimed": [
+    "full repository build",
+    "full trust gate",
+    "runtime coverage gate",
+    "browser conformance",
+    "universal performance bound"
+  ],
+  "dependency_boundary": "Local sibling overrides selected; manifest stale. This is not a clean fetched dependency verification."
+}

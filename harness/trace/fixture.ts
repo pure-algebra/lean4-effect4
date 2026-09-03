@@ -8,8 +8,8 @@
  *
  * Do not edit.
  */
-import { Context, Effect } from "effect"
-import { succ } from "./atoms.ts"
+import { Context, Effect, Result } from "effect"
+import { succ, orZero } from "./atoms.ts"
 
 /** Service `Cell`: one method per operation of the Lean family. */
 export class Cell extends Context.Service<Cell, {
@@ -38,4 +38,40 @@ export const twice = (n: number) =>
     yield* cell.put(succ(n))
     const y = yield* cell.get
     return y
+  })
+
+/** Service `ECell`: one method per operation of the Lean family. */
+export class ECell extends Context.Service<ECell, {
+  readonly tryGet: Effect.Effect<Result.Result<number, string>>
+  readonly put: (n: number) => Effect.Effect<void>
+}>()("ECell") {}
+
+/** Operation rows of `ECell`, for the trace harness. */
+export const ECellRows = { "tryGet": { params: 0, answer: "Result.Result<number, string>" }, "put": { params: 1, answer: "void" } }
+
+/** Lowered from `recover` over `ECell`. */
+export const recover = (n: number) =>
+  Effect.gen(function* () {
+    const eCell = yield* ECell
+    const r = yield* eCell.tryGet
+    yield* eCell.put(n)
+    return orZero(r)
+  })
+
+/** Service `FCell`: one method per operation of the Lean family. */
+export class FCell extends Context.Service<FCell, {
+  readonly get: Effect.Effect<number, string>
+  readonly put: (n: number) => Effect.Effect<void>
+}>()("FCell") {}
+
+/** Operation rows of `FCell`, for the trace harness. */
+export const FCellRows = { "get": { params: 0, answer: "number" }, "put": { params: 1, answer: "void" } }
+
+/** Lowered from `fallible` over `FCell`. */
+export const fallible = (n: number) =>
+  Effect.gen(function* () {
+    const fCell = yield* FCell
+    yield* fCell.put(n)
+    const x = yield* fCell.get
+    return x
   })

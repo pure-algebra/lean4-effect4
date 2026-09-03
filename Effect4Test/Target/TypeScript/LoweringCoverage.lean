@@ -64,6 +64,8 @@ def rows : List Row :=
   , { rule := .atomCall, state := .checked, goldens := ["incr.empty", "twice.empty"],
       host := true, property := false, typeReceipt := true, proof := none }
   , { rule := .ret, state := .checked, goldens := ["incr.empty", "twice.empty"],
+      host := true, property := false, typeReceipt := true, proof := none }
+  , { rule := .errorAbort, state := .checked, goldens := ["fallible.empty"],
       host := true, property := false, typeReceipt := true, proof := none } ]
 
 private def allowedAxioms : List Name := [``propext, ``Quot.sound]

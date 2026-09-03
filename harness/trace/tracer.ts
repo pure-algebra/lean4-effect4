@@ -47,8 +47,9 @@ export const wire = (value: unknown): Wire => {
     const tag = (value as { _tag?: unknown })._tag
     if (tag === "Some") return `{"some":${wire((value as { value: unknown }).value)}}`
     if (tag === "None") return `{"none":true}`
-    if (tag === "Right") return `[true, ${wire((value as { right: unknown }).right)}]`
-    if (tag === "Left") return `[false, ${wire((value as { left: unknown }).left)}]`
+    // rc.112's Result (the data reading of an Except answer): Success / Failure.
+    if (tag === "Success") return `[true, ${wire((value as { success: unknown }).success)}]`
+    if (tag === "Failure") return `[false, ${wire((value as { failure: unknown }).failure)}]`
   }
   throw new TracerDefect(`no wire form for ${JSON.stringify(value)}`)
 }

@@ -1,0 +1,1484 @@
+--- PDF page 1 ---
+Latent Eﬀects for
+Reusable Language Components
+Extended Version
+Birthe van den Berg 1[0000−0002−0088−9546], Tom Schrijvers1[0000−0001−8771−5559],
+Casper Bach Poulsen 2[0000−0003−0622−7639], and
+Nicolas Wu3[0000−0002−4161−985X]
+1 KU Leuven, Belgium {birthe.vandenberg,tom.schrijvers}@kuleuven.be
+2 Delft University of Technology, The Netherlands c.b.poulsen@tudelft.nl
+3 Imperial College London, UK n.wu@imperial.ac.uk
+Abstract. The development of programming languages can be quite
+complicated and costly. Hence, much eﬀort has been devoted to the
+modular deﬁnition of language features that can be reused in various
+combinations to deﬁne new languages and experiment with their semantics.
+A notable outcome of these eﬀorts is the algebra-based “datatypes ` a la
+carte” (DTC) approach. When combined with algebraic eﬀects, DTC
+can model a wide range of common language features. Unfortunately, the
+current state of the art does not cover modular deﬁnitions of advanced
+control-ﬂow mechanisms that defer execution to an appropriate point, such
+as call-by-name and call-by-need evaluation, as well as (multi-)staging.
+This paper deﬁnes latent eﬀects, a generic class of such control-ﬂow mech-
+anisms. We demonstrate how function abstractions, lazy computations
+and a MetaML-like staging can all be expressed in a modular fashion
+using latent eﬀects, and how they can be combined in various ways to
+obtain complex semantics. We provide a full Haskell implementation of
+our eﬀects and handlers with a range of examples.
+Keywords: eﬀect handlers, eﬀects, monads, modularity, staging
+1 Introduction
+Modern programming languages, be they general purpose or domain-speciﬁc,
+can be built in a ﬂexible manner by composing simple, oﬀ-the-shelf language
+components. It is attractive to build languages in this way as it is useful to
+study language components in isolation. Furthermore, it reduces the cost of
+developing new and improved programming languages. Indeed, reducing the
+eﬀort of building languages to the eﬀort of composing oﬀ-the-shelf language
+components for features such as function abstraction, exceptions or mutable state,
+is likely to enable language designers with limited resources or expertise—e.g.,
+domain experts—to build their own languages. Providing a modular deﬁnition
+for these advanced language features enables a more widespread use of them,
+especially in the development of domain-speciﬁc languages (DSLs).
+arXiv:2108.11155v1  [cs.PL]  25 Aug 2021
+
+--- PDF page 2 ---
+2 van den Berg et al.
+To build programming languages from reusable components, we need a frame-
+work for deﬁning those components. Two promising techniques for such a frame-
+work are Data Types ` a la Carte[23] (DTC) and Algebraic Eﬀects & Handlers [18]
+(AE&H). Using these, language interpreters can be implemented in two steps:
+Syntax
+denote
+− − − − →Eﬀects
+handle
+− − − − →Result
+The ﬁrst step deﬁnes a denote function that maps the syntax of an object language
+onto eﬀectful (monadic [13]) operations. By implementing denote using DTC, we
+can seamlessly compose denote functions from isolated cases for diﬀerent Syntax
+constructors.
+In the second step, handle deﬁnes the semantics of eﬀectful operations and
+their eﬀect interactions. Using AE&H allows cases of denote to be deﬁned in an
+eﬀect polymorphic way; i.e., a case maps to a monad that has at least the relevant
+operations, and possibly more. Furthermore, we can deﬁne handle functions for
+diﬀerent eﬀects in isolation, and seamlessly compose them by nesting handlers.
+Thus, DTC+AE&H provides a powerful framework for composing programming
+languages from isolated components.
+However, not all language fragments have an obvious modular deﬁnition
+in terms of AE&H. Traditional algebraic eﬀects and scoped eﬀects [30] are
+baking in assumptions about control-ﬂow and data-ﬂow. These assumptions
+get in the way of expressing a modular semantics for some language features.
+In particular, control-ﬂow mechanisms that defer execution, such as lambda
+abstractions with eﬀectful bodies, lazy evaluation strategies, or (multi-)staging,
+are neither algebraic [17] nor scoped. This implies that the only way to implement
+these mechanisms is by means of sophisticated encodings that are often relatively
+low-level and non-modular. As such, these control-ﬂow mechanisms present a
+severe challenge for allowing non-experts to build programming languages by
+composing oﬀ-the-shelf components.
+This paper presents a novel form of eﬀects and handlers that addresses this
+challenge: latent eﬀects and handlers . Latent eﬀect handlers defer the running
+of side eﬀects, such that they are “latent” until handlers for all eﬀects have
+been applied. This notion of eﬀects can be used to directly deﬁne handlers for
+language components that defer execution, such as lambda abstractions with
+eﬀectful bodies, lazy evaluation, and (multi-)staging.
+After introducing the background (Section 2), our main contributions are:
+– We introduce latent eﬀect trees, implemented using Haskell (Section 3).
+– We show how to encode lambda abstraction and application in terms of latent
+eﬀects. We illustrate how this allows us to deﬁne lambda abstraction with
+eﬀectful bodies as a composable language component (Section 3).
+– We illustrate how to compose languages from reusable components using
+latent eﬀects by showing how to encode lazy evaluation (call-by-need and
+call-by-name), and MetaML-like multi-staging (Section 4).
+
+--- PDF page 3 ---
+Latent Eﬀects for Reusable Language Components 3
+– We provide an eﬀect library4 with syntax and semantics in Haskell for various
+simple and advanced language features. These features can be used as isolated
+components to construct languages (Section A).
+Finally, we discuss related work (Section 5) and conclude (Section 6).
+2 Background and Motivation
+This section summarizes the state of the art in modular language deﬁnition by
+means of DTC and AE&H, discusses the challenges and problems associated
+with treating lambdas in this setting, and sketches how our new latent eﬀects
+enable the integration of modular forms of advanced control-ﬂow eﬀects.
+2.1 Modular Syntax and Semantics with Data Types ` a la Carte
+Data types ` a la Carte [23] (DTC) solves the core problem of assembling language
+deﬁnitions from isolated components. It solves this for both syntax and semantics
+to be composed in a modular way. For an accessible introduction to DTC, we
+refer to [23]; we summarize the key points here.
+Firstly, the abstract syntax of a language is modularized into the syntax of
+each isolated feature. This is achieved by deﬁning a recursive type Syntax S of
+ASTs in terms of the shape S of its nodes. This shape S can be composed out of
+shapes S1,. . . ,Sn of the individual features: S = S1 +... + Sn.
+Secondly, the semantic function denote :: Syntax S → M that maps ASTs
+Syntax S to their meaning M is modularized into the separate syntactic maps of
+the individual features. This is done by parameterizing the recursive semantic
+map of the AST with the semantic mapping of the individual nodes, denote =
+fold denote S where denote S :: S M → M is composed out of the semantic maps:
+denote S1 :: S1 M → M
+denote Sn :: Sn M → M
+denote S = denote S1 +... + denote Sn
+This modular approach aﬀords great ﬂexibility to quickly assemble a range of
+diﬀerent languages and to explore language design: features can be added or
+removed, and their semantic maps can be changed. We use the DTC approach
+extensively when deﬁning a library of eﬀects in Section 4.3.
+Unfortunately, this approach comes with a serious limitation: to be able to
+combine the semantic maps of diﬀerent features, they must agree on the semantic
+domain M . This often prohibits the unanticipated combinations of features, even
+due to small diﬀerences in their semantic domain, such as one feature requiring
+access to an environment or store that the other feature does not expect.
+Moggi [13] observed that many of the diﬀerences in semantic domains of
+common language features, usually called (side-)eﬀects, can be captured in the
+category-theoretical pattern of monads. Although not all monads compose, the
+4 https://github.com/birthevdb/Latent-Eﬀect-and-Handlers.git.
+
+--- PDF page 4 ---
+4 van den Berg et al.
+state of the art in modular monads, algebraic eﬀects and handlers (AE&H) [18],
+is well-aligned with the DTC approach of modular language features.
+In fact, AE&H tackles the problem of modularly deﬁning a monad in much
+the same way DTC tackles the problem of modularly deﬁning a language. Indeed,
+the API of the monad (its “syntax”) is modularized into separate eﬀects; the
+category-theoretical concept of a free monad plays the role of an abstract syntax
+of API calls. A modular meaning is assigned to the free monad by means of
+semantic maps for the separate eﬀects. The key diﬀerence with DTC is that the
+diﬀerent eﬀects do not all have to be mapped to the same semantics. Instead, by
+means of “modular carriers” their semantics can be layered [20].
+Whereas AE&H is used to deﬁne (simpler) language features, we use latent
+eﬀects and handlers, which we introduce in Section 3, to modularly deﬁne more
+complex language features.
+2.2 Advanced, Non-Modular Control-Flow Eﬀects
+The AE&H literature shows how to express a range of diﬀerent control-ﬂow eﬀects
+such as exceptions, non-determinism and even call-with-current-continuation.
+However, as traditional eﬀects and handlers rely on assumptions about data-ﬂow
+and control-ﬂow, more advanced and complicated control-ﬂow eﬀects are missing,
+such as call-by-name and call-by-need evaluation or multi-staging. These features
+typically defer execution and are non-algebraic.
+An operation is algebraic when it meets the following requirements:
+1. It can be expressed as op ::D → ∀a.M a →... → M a where D represents the
+non-computational parameters that the operation has, M is a monad with
+algebraic operations, and each M a typed parameter represents a possible
+continuation of the operation.
+2. It satisﬁes the algebraicity property, which states that, no matter which
+possible continuation mi we take, the continuation immediately transfers
+control to the current continuation k.
+(op d m 1 ... mn)> >= k ≡ op d (m1> >= k) ... (mn > >= k)
+Although many operations are algebraic, there are many common control-
+ﬂow operations that are not. For instance, catch :: ∀a.M a → M a → M a is
+an operation that executes the computation in the ﬁrst argument, and if that
+computation raises an exception, proceeds by executing the second argument.
+The catch operation is not algebraic; i.e.,
+(catch m1 m2)> >= k ̸≡ catch (m1> >= k) (m2> >= k)
+since exceptions raised during evaluation of k should not be handled by m2.
+The lack of support for control-ﬂow eﬀects such as exception handling, moti-
+vated the development of scoped eﬀects [30]. An operation is scoped when it can
+be expressed as having the following type:
+
+--- PDF page 5 ---
+Latent Eﬀects for Reusable Language Components 5
+op :: D → ∀a.M a →... → M a → ∀b.(a → M b ) →... → (a → M b ) → M b
+The universal quantiﬁcation over a restricts data ﬂow: for a given operation
+op d m 1... mn k1...k m, it is only the possible continuations k1...k m that can
+inspect values yielded by computations mi. The allowable destinations of data
+produced by the computation are restricted to those determined by the operation.
+The catch operation is compatible with this restriction: it can be implemented
+as a scoped operation catch′ :: ∀a.M a → M a → ∀b.(a → M b ) → M b .
+However, this pattern does not apply to more advanced control-ﬂow eﬀects for
+which the data produced by a computation can be used outside of the operation.
+For example, lambda abstractions delay the execution of computations in the
+body of a function until the function is applied (or not, depending on dynamic
+control- and data ﬂow). To support such deferred execution, the return type
+V in the body of a lambda abstraction abstr :: String → M V → M V is
+not universally quantiﬁed. Thus, abstr is not a scoped operation. It is also not
+algebraic, as the equation abstr x m > >= k ≡ abstr x (m> >= k) would cause k
+to be (wrongly) deferred, and could cause free variables in k to be captured.
+Other control-ﬂow eﬀects, such as call-by-need and call-by-name evaluation and
+multi-staging annotations for (dynamically) staging and unstaging code, defer
+execution in a similar way, and are similarly neither scoped nor algebraic.
+It is theoretically possible to deﬁne the control-ﬂow eﬀects discussed above,
+by making the control ﬂow of all operations explicit; e.g., by writing interpreters
+in continuation-passing style (CPS). However, the relatively low-level nature of
+CPS and its non-modular style, make this approach fall short of our goal of
+composing languages from simple, oﬀ-the-shelf components.
+2.3 Our Approach: Latent Eﬀects
+We provide modular support for advanced control-ﬂow eﬀects such as function
+abstraction, with its diﬀerent evaluation semantics, and staging. Our solution
+generalizes the approach of DTC and AE&H outlined above. In fact, it does
+not require any changes to the DTC approach for modular abstract syntax
+trees and modular semantic mapping. It only impacts the second part of the
+pipeline, replacing AE&H with a more general notion oflatent eﬀects and handlers
+(LE&H).
+LE&H is based on a diﬀerent, more sophisticated structure than AE&H’s free
+monad. This structure supports non-atomic operations (e.g., function abstraction,
+thunking, quoting) that contain or delimit computations whose execution may
+be deferred. Also, the layered handling is diﬀerent. The idea is still the same,
+to replace bit by bit the structure of the tree by its meaning. Yet, while AE&H
+grows the meaning around the shrinking tree, LE&H grows little “pockets of
+meaning” around the individual nodes remaining in the tree, and not just around
+the root. The latter supports deferred eﬀects because later handlers can still
+re-arrange the semantic pockets created by earlier handlers.
+LE&H are the ﬁrst to modularly express advanced control-ﬂow eﬀects, such
+as staging and lambda abstractions, and provide diﬀerent handlers, e.g., for
+
+--- PDF page 6 ---
+6 van den Berg et al.
+call-by-name and call-by-need evaluation. Moreover, they combine with existing
+algebraic eﬀects to express varying semantics for a large range of languages.
+3 Latent Eﬀects
+This section presents latent eﬀects. Latent eﬀects generalize algebraic eﬀects to
+include control-ﬂow mechanisms that defer computation. As our running example
+we use lambda abstraction, which—as discussed in Section 2.2—is neither an
+algebraic nor a scoped operation. We show that it can be deﬁned as a latent
+eﬀect. We start from a non-modular version that we reﬁne in two steps. First we
+add support for modular signatures, and then support for modular handlers.
+3.1 Non-Modular Deﬁnition of Lambda Abstraction
+First we provide a non-modular deﬁnition of the lambda abstraction eﬀect.
+Monadic Syntax Tree The type LC v a is a non-modular monadic syntax tree
+that supports three primitive operations for a de Bruijn indexed λ-calculus.
+data LC v a where
+Return :: a → LC v a
+Var :: Int → (v → LC v a ) → LC v a
+App :: v → v → (v → LC v a ) → LC v a
+Abs :: LC v v → (v → LC v a ) → LC v a
+Here, the v of LC v a is a value type parameter, and a represents the return
+type of the computation. Thus Return x is a trivial computation that returns x.
+Var i k retrieves the value of type v associated with the ith variable and passes
+it to the continuation k. The application App v1 v2 k applies the value v1 to
+the value v2 and passes the result to the continuation. Finally, Abs e k builds a
+closure value out of the function body e and passes it to the continuation.
+For example, we can represent the lambda expression ( λx → x) 1 as the
+LC expression Abs (Var 0 Return) (λv → App v 1 Return). This computation
+constructs an abstraction and passes it to the continuation as a (closure) value
+v. The continuation applies v to 1 and passes the result to Return. The closure
+retrieves the the value of variable with index 0 (i.e., x) and passes it to Return.
+Handler The idea of a handler is to map the syntax tree onto its meaning. We
+illustrate this on the LC v a type, where we use the type v = Closure for values.
+data Closure1 where
+Clos1 :: FunPtr1 → Env1 → Closure1
+type Store1 = [LC Closure 1 Closure1 ]
+type FunPtr1 = Int
+type Env1 = [Closure1 ]
+A closure contains a function pointer and an environment. The function pointer
+is an index into a list of deferred computations (i.e., function bodies) that we
+
+--- PDF page 7 ---
+Latent Eﬀects for Reusable Language Components 7
+call the (resumption) store. The environment is a list that maps the closure’s
+parameters (which are indexes) onto their values.
+Now we are ready to deﬁne the handler handleAbs as a function that, given
+an initial environment and store, maps an LC Closure a computation onto its
+meaning, which is a tuple of the result value of type a and the ﬁnal store.
+handleAbs :: Env1 → Store1 → LC Closure 1 Closure1 → (Store1, Closure1 )
+handleAbs r (Return x ) = ( r, x)
+handleAbs env r (Var n k ) = handleAbs env r (k (env !! n))
+handleAbs env r (App v 1 v2 k) = handleAbs env r′ (k v )
+where (Clos1 fp env′) = v1
+(r′, v) = handleAbs (v2 : env′) r (r !! fp)
+handleAbs env r (Abs e k ) = handleAbs env r′ (k v )
+where v = Clos1 (length r ) env
+r′ = r + + [e ]
+First, the leaf case of the handler returns the value in that leaf, supplemented
+with the resumption store. Next, the variable case looks up the variable in the
+environment and passes it to the continuation. Then, the application case unpacks
+the closure, retrieves the corresponding function body from the resumption store
+and applies it to the extended environment and store. The resulting value is
+passed to the continuation. Finally, the abstraction case adds the function body
+to the resumption store, creates a closure that indexes this new entry, and calls
+the continuation on this closure value.
+3.2 Modular Latent Eﬀect Signatures and Trees, Version 1
+We now modularize the deﬁnition of LC by separating the recursive structure of
+the monadic syntax from the node shapes of the Var, App and Abs operations.
+Latent Eﬀect Signature We call the node shapes the latent eﬀect signature. In
+this case, it is called Abstracting v with v the type of values.
+data Abstracting v :: ∗ → (∗ → ∗ ) → ∗where
+Var′ :: Int → Abstracting v v NoSub
+App′ :: v → v → Abstracting v v NoSub
+Abs′ :: Abstracting v v (OneSub v )
+Besides its ﬁrst parameter v, the type Abstracting v p c is indexed by two further
+parameters: The parameter p is the return type of the primitive operations; this is
+the type of value they pass to their continuation. As all three primitive operations
+return a value of type v, we have thatp = v. The parameter c::∗ → ∗ captures the
+number and result type of the subcomputations. As Var′ and App′ have no sub-
+computations, they use the type c = NoSub to indicate that. However, Abs′ has
+a subcomputation and it indicates this with c = OneSub v. This subcomputation
+is the body of the function abstraction, whose return type is v. Hence, OneSub v
+
+--- PDF page 8 ---
+8 van den Berg et al.
+has one constructor One :: OneSub v v .
+data NoSub :: ∗ → ∗where
+data OneSub v :: ∗ → ∗where
+One :: OneSub v v
+Latent Eﬀect Tree, Version 1 The type Tree1 σ a extends a latent eﬀect signature
+σ into a recursive syntactic structure that is a monad in a.
+data Tree1 (σ :: ∗ → (∗ → ∗ ) → ∗) a where
+Leaf 1 :: a → Tree1 σ a
+Node1 ::σ p c → (∀x.c x → Tree1 σ x) → (p → Tree1 σ a) → Tree1 σ a
+The Leaf 1 constructor is trivial; Leaf 1 x returns a pure computation with result
+x. The internal nodes are of the form Node op sub k where the ﬁelds have
+the following meaning. The ﬁrst, op, identiﬁes what primitive operation the
+node represents. Next, sub is a function that, in case of a non-atomic primitive,
+selects the subcomputations of the node. Finally, k is the continuation of further
+operations to perform after the current one.
+Some notable characteristics are as follows:
+– Every operation has a result type p that is made available to its continuation,
+and a number of subcomputations c. To model these two, the signature of
+an operation op ::σ p c is parameterized by p and c.
+– The function sub has type ∀x.c x → Tree1 σ x. The input of type c x
+determines what subcomputation to select; the parameter x indicates the
+result type of that subcomputation.
+– Likewise, continuations take as input the operation’s output value ( p).
+– The Tree1 data type is monadic, with a similar notion of return and bind as
+the free monad [23]:
+instance Monad (Tree1 σ) where
+return = Leaf 1
+(Leaf 1 x)> >= f = f x
+(Node1 op sub k )> >= f = Node1 op sub (λx → k x > >= f )
+A monadic binding t > >= f thus “concatenates” the tree in f to the leaf
+positions in the continuation (only) of t.
+We can emulate the non-modular type LC v a with LC′ v a .
+type LC′ v a = Tree1 (Abstracting v ) a
+The corresponding representation for LC′s Return constructor is Leaf 1. The Var
+constructor is represented with a Node1.
+var 1 :: Int → (v → LC′ v a ) → LC′ v a
+var 1 i k = Node1 (Var′ i) (λx → case x of ) k
+
+--- PDF page 9 ---
+Latent Eﬀects for Reusable Language Components 9
+var :: (Abstracting v <σ ) ⇒ Int → Tree1 σ v
+var n = Node1 (injSig (Var′ n)) (λx → case x of ) Leaf 1
+app :: (Abstracting v <σ ) ⇒ v → v → Tree1 σ v
+app v 1 v2 = Node1 (injSig (App′ v1 v2)) (λx → case x of ) Leaf 1
+abs :: (Abstracting v <σ ) ⇒ Tree1 σ v → Tree1 σ v
+abs t = Node1 (injSig Abs ′) (λOne → t) Leaf 1
+Fig. 1: The modular constructor functions of the Abstracting eﬀect. These func-
+tions all ﬁx the continuation toLeaf 1, which can easily be replaced by an arbitrary
+continuation k using the > >= operator of Tree1’s monad instance.
+This is a Var′ i node. As there are no subcomputations, there are no branches
+in the pattern match in the selection function on the value x of the empty type
+NoSub. Lastly, the continuation k receives the value produced by the operation.
+The encodings of the two other operations are similar. One notable aspect
+of abs 1 is that it does have one subcomputation. Hence, the selection function
+matches on the One constructor and returns t:
+app1 :: v → v → (v → LC′ v a ) → LC′ v a
+app1 v1 v2 k = Node1 (App′ v1 v2) (λx → case x of ) k
+abs 1 :: LC′ v v → (v → LC′ v a ) → LC′ v a
+abs 1 t k = Node1 Abs′ (λOne → t) k
+Modular Tree Constructors We can create modular constructors for latent eﬀect
+operations, similarly to how DTC admits modular syntax constructors [23]. To this
+end, we use a co-product operator + that combines latent eﬀect signatures, and a
+subtyping relationσ1<σ 2 with an associated injection function, injSig ::σ1 p c →
+σ2 p c . Using these, we can implement the modular constructor functions in
+Figure 1, that allow combining Abstracting with other latent and algebraic eﬀects.
+The subtyping requirements in the type signatures are automatically inferrable
+by type class instance resolution in Haskell. The implementation details of + and
+< are given in Section A.
+We can now use these modular constructors to implement denotation function
+cases. We can also write programs using the constructors directly. For example,
+the following program with a lambda abstraction with an eﬀectful body:
+prog :: ∀v.Num v ⇒ Tree1 (Mutating v + Abstracting v + Ending) v
+prog = do
+put (1 :: v)
+f ← abs (do m ← var 0; (n :: v) ← get; return (m + n))
+put (2 :: v)
+app f (3 :: v)
+The body of the function abstraction increments the function argument value
+(de Bruijn index 0) by the n yielded by the get operation. The signature of
+
+--- PDF page 10 ---
+10 van den Berg et al.
+the program tree is the co-product of three signatures: (1) Mutating V for
+mutable state; (2) function abstractions Abstracting V ; and (3) the empty
+signature Ending, which provides no operations and serves as the base case. The
+Mutating V eﬀect recasts the traditional algebraic state eﬀect as a latent eﬀect,
+and has two operations, get and put. Observe that prog is essentially an AST,
+with multiple possible interpretations. If Mutating V is dynamic (runtime) state,
+then prog evaluates to 3 + 2 = 5. However, if it is for macro bindings that are
+expanded statically, then the get in the body of the abstraction is evaluated
+under the state at the “deﬁnition site” of the lambda, and prog evaluates to
+3 + 1 = 4. Next, we show how handlers can map the prog syntax tree to diﬀerent
+semantics.
+3.3 Trees with Support for Modular Handlers
+In the case of a modularly composed signature σ =σ1 +... +σn + Ending, the
+idea is to compose the handler function from individual handlers for the diﬀerent
+components of the signature h = hEnd ◦ hn ◦... ◦ h1. The type of each handler
+would be hi :: ∀σ.Tree1 (σi +σ) a → Tree1 σ (Li a). Hence, it is polymorphic in
+the remaining part of the signature and preserves those nodes in the resulting
+tree. It only replaces the nodes of σi with their meaning, which is given in the
+form of a functor Li that decorates the result type a.
+Unfortunately, our Tree1 type and, in particular, the type of its Node1 con-
+structor, needs some further reﬁnement to fully support this idea. Indeed, if the
+signature isσi+σ, and we apply hi to all the recursive occurrences of Tree (σi+σ)
+in a σ-node Node1 (Inr′ op) sub k , we get:
+Before applying hi
+Inr′ op :: (σi +σ) p c
+sub :: ∀x.c x → Tree1 (σi +σ) x
+k :: p → Tree1 (σi +σ) a
+After applying hi
+op ::σ p c
+hi ◦ sub :: ∀x.c x → Tree1 σ ( Li x )
+hi ◦ k :: p → Tree1 σ (Li a)
+The resulting ﬁelds do not together form a node of type Tree1 σ (Li a) because
+the highlighted result type of the subcomputations is ( Li x) rather than x which
+the Node1 constructor requires sub to have as return type.
+The problem is that the Tree1 type is oblivious to the eﬀect functor that
+the return type of subcomputations in the tree are decorated by. To solve this
+problem, we can expose the eﬀect functor decoration in the tree type itself; e.g.,
+data Tree2 (σ :: ∗ → (∗ → ∗ ) → ∗) ( l :: ∗ → ∗ ) a where
+Leaf 2 :: a → Tree2 σ l a
+Node2 ::σ p c → (∀x.c x → Tree2 σ l ( l x ))
+→ ( l p → Tree2 σ l a ) → Tree2 σ l a
+But the Tree2 type requires eﬀect handlers to be applied to subcomputations
+immediately. Motivated by modeling constructs that defer computation, we
+generalize the type further by parameterizing subcomputations by the eﬀect
+
+--- PDF page 11 ---
+Latent Eﬀects for Reusable Language Components 11
+functor state, and making each node “remember” the eﬀect state (the latent
+eﬀects):
+data Tree (σ :: ∗ → (∗ → ∗ ) → ∗) (l :: ∗ → ∗ ) a where
+Leaf :: a → Treeσ l a
+Node ::σ p c → l () → (∀x.c x → l () → Treeσ l (l x ))
+→ (l p → Treeσ l a ) → Treeσ l a
+In section 3.4 we discuss how Tree supports deferring computation. Tree is a
+monad with a return and bind deﬁned similarly to the ones for Tree1 in section
+3.2. We can also deﬁne modular tree constructors using similar techniques as
+in section 3.2. For instance, using Tree instead of Tree1, the type of prog from
+Section 3.2 becomes:
+prog :: Tree (Mutating V + Abstracting V + Ending) Id V
+Here, the Id functor models the absence of latent eﬀects in the tree. The type V
+represents a concrete value type.
+Example Figure 2 shows how the type of the prog tree evolves when applying
+successive handlers for the three parts of the signature:
+(hEnd ◦ hAbs [ ] [ ]◦ hMut 0) prog
+First, we run the modular handler for mutable state Mutating s, which has type:
+hMut :: Functor l ⇒ s → Tree (Mutating s +σ) l a → Treeσ (StateL s l ) (s, a)
+Given an initial state of type s, this handler transforms a tree into another tree.
+The signature of the tree evolves from Mutating s +σ to σ because the handler
+interprets the mutable state, but not the other eﬀects. Also, the latent eﬀect
+functor evolves from l (the latent eﬀects already present) to StateL s l , which
+augments l with the value of the intermediate state.
+newtype StateL s l a = StateL {unStateL :: (s, l a )}
+The result type evolves from a to (s, a), which augments it with the ﬁnal state.
+Second, the handler for Abstracting V behaves similarly to hMut, removing
+itself from the signature and growing the latent eﬀect functor. Finally, hEnd
+handles the Ending base case. It takes a tree with an empty signature, which
+thus necessarily only contains a leaf, and extracts the ﬁnal result out of it.
+hEnd :: Tree Ending l a → a
+hEnd (Leaf x ) = x
+The remainder of this section illustrates how modular handlers are imple-
+mented.
+
+--- PDF page 12 ---
+12 van den Berg et al.
+Tree (Mutating Int +Abstracting V + Ending) Id V
+↓ hMut 0
+Tree (Abstracting V +Ending) ( StateL Int Id ) ( Int, V )
+↓ hAbs [ ] [ ]
+Tree (Ending) ( StateL (Store Ending (StateL Int Id ) V ) ( StateL Int Id )
+( Store Ending (StateL Int Id ) V , (Int, V ))
+↓ hEnd
+(Store Ending (StateL Int Id ) V , (Int, V ))
+Fig. 2: The type of prog after successive handling steps.
+3.4 Example: Two Modular Handlers for Function Abstractions
+We implement two diﬀerent modular handlers for the operations in Abstracting,
+which illustrate (1) how latent eﬀects let us write handlers for function abstraction,
+and (2) the kind of ﬁne-grained control the handlers provide. The ﬁrst handler we
+consider evaluates the body of a function abstraction using the latent eﬀects of
+its call site. Hence, the evaluation of side-eﬀectful operations is postponed until
+the function is applied. The second handler evaluates the body of the function
+abstraction using the latent eﬀects of its deﬁnition site. This immediately enacts
+the latent eﬀects introduced by previously-applied handlers.
+Modular Closure Values A concern that arises when we step away from
+the earlier non-modular handler for Abstracting is reuse. Notably, in a modular
+setting we want to allow reuse of both handlers with diﬀerent notions of values.
+For that reason, they are parameterized in the type of values v. This type may
+comprise various shapes of values; all the function abstraction handlers require is
+that closures are one possible shape of value.
+To express this requirement, we introduce another type class v1 <: v2 for
+subtyping, this time at kind ∗, which witnesses (1) that any v1 can be “upcast”
+to the type v2; and (2) that a v2 can be “downcast” to type v1. The latter may
+fail, but the former does not. The minimal requirement for lambda abstractions
+is that the value type includes closure values.
+class v1<: v2 where
+inj v :: v1 → v2
+proj v :: v2 → Maybe v1
+data Closure v where
+Clos :: FunPtr → Env v → Closure v
+type Env v = [v ]
+In the modular setting, the types Closure v and Env v, of respectively closures
+and value environments, are parameterized in the type of values used.
+Modular Resumption Store Recall that the resumption store keeps track
+of the function bodies whose execution has been deferred; i.e., it is a list of
+
+--- PDF page 13 ---
+Latent Eﬀects for Reusable Language Components 13
+resumptions. In the modular setting, the type of resumptions is parametric in
+the speciﬁc type of signature, latent eﬀect functor and value type.
+type Storeσ l v = [Rσ l v ]
+Moreover, depending on whether we want to handle latent eﬀects on the call site
+or deﬁnition site, the deﬁnition of a resumption diﬀers.
+A resumption of a call-site eﬀect is a function that takes an l () input, which
+is the latent eﬀect context of the call site where the resumption is evaluated.
+type RCS σ l v = l () → Tree (Abstracting v +σ) l (l v )
+The resumptions of a deﬁnition-site eﬀect store are trees instead of functions
+that produce trees. Indeed, they have no dependency on the latent eﬀects of the
+call site. Instead, they have been fully determined by the deﬁnition site.
+type RDS σ l v = Tree (Abstracting v +σ) l (l v )
+Although the resumption store makes the handlers verbose, it is a more modular
+solution than storing Trees in values.
+Modular Handlers Figure 3 shows the modular handler hAbsCS that uses the
+call-site latent eﬀects when executing a function body 5.
+Compared to the non-modular deﬁnition, there are several diﬀerences. Firstly,
+the handler only interprets part of the work and thus returns the remaining
+tree instead. Hence, the Leaf case now returns a new leaf, and the other cases
+use monadic do-notation to build a new tree. Secondly, because the signature
+is a composition and the resulting value type is too, the pattern matching on
+operations involves the Inl′ and Inr′ tags of the + co-product. The pattern
+matching and construction of values involves inj v and proj v calls for the same
+reason. Thirdly, the latent eﬀects now matter and need to be properly threaded
+in all the operation cases. Finally, there is an additional operation case, to handle
+unknown operations from the remaining part of the signature by “forwarding”
+them, i.e., copying them to the resulting tree for later handling.
+As discussed, in a modular setting a second handler is possible: one that
+uses the latent eﬀects of the deﬁnition site for function bodies rather than their
+call site. This deﬁnition-site handler, hAbsDS, looks much like its sibling. The
+key diﬀerence is the type of resumptions, which aﬀects the code in two places
+(highlighted in gray). Firstly, the abstraction case applies the subtree function
+to the latent eﬀect of the deﬁnition site instead of deferring the application
+(st One l instead of st One ). Dually, the application case does not have to apply
+the resumption to the call-site latent eﬀect ( r !! p instead of (r !! p) l).
+5 The function (<$) is short for fmap ◦ const
+
+--- PDF page 14 ---
+14 van den Berg et al.
+hAbsCS :: (Closure v <: v, Functor l )
+⇒ Env v → Storeσ l v → Tree (Abstracting v +σ) l a
+→ Treeσ (StateL (Storeσ l v ) l) (Storeσ l v, a)
+hAbsCS r (Leaf x ) = Leaf (r, x)
+hAbsCS nv r (Node (Inl ′ Abs′) l st k ) = do let v = inj v (Clos (length r ) nv)
+let r ′ = r + + [st One ]
+hAbsCS nv r ′ (k (v <$ l))
+hAbsCS nv r (Node (Inl ′ (App′ v1 v2)) l k) = case proj v v1 of
+Just (Clos fp nv ′) → do (r ′, v) ← hAbsCS (v2 : nv ′) r ( (r !! fp) l )
+hAbsCS nv r ′ (k v )
+Nothing → error "application error"
+hAbsCS nv r (Node (Inl ′ (Var′ n)) l k) = hAbsCS nv r (k ((nv !! n)<$ l))
+hAbsCS nv r (Node (Inr ′ op) l st k ) = Node op (StateL (r, l))
+(λc (StateL (r ′, l )) → StateL<$> hAbsCS nv r ′ (st c l ))
+(λ (StateL (r ′, lv )) → hAbsCS nv r ′ (k lv ))
+Fig. 3: Modular call-site abstraction handler. The gray highlights indicate the
+places where it diﬀers from a deﬁnition-site handler.
+Example With the abstraction handlers in place, let us revisit the prog example.
+We run the handlers with default initial values, i.e., 0 for the state, the empty
+variable environment and the empty resumption store. When using the call-site
+abstraction handler after the state handler, the function body uses the value of
+the state that was written right before its invocation.
+> example CS = inspect $ hEnd $ hAbsCS [ ] [ ] $hMut 0 prog
+5
+If we use the deﬁnition-site handler instead, the function body uses the state
+value that was written right before the abstraction was created.
+> example DS = inspect $ hEnd $ hAbsDS [ ] [ ] $hMut 0 prog
+4
+4 Case Study
+This section reports on a case study implementation of a library with a range of
+modular eﬀects (Section A), and two advanced control-ﬂow features implemented
+using this library: call-by-need lambdas (section 4.1) and multi-staging (section
+4.2). For the source code of these case studies, we refer to the implementation avail-
+able at https://github.com/birthevdb/Latent-Effect-and-Handlers.git.
+
+--- PDF page 15 ---
+Latent Eﬀects for Reusable Language Components 15
+4.1 Call-by-Need Evaluation
+We have implemented two diﬀerent evaluation strategies, call-by-need (lazy) and
+call-by-value (CBV), for lambdas by using diﬀerent latent eﬀect handlers. Our
+approach is inspired by Levy’s call-by-push-value [10], which can express both
+strategies. We summarize here; Appendix B has all the details.
+Call-by-need evaluation lazily delays the evaluation of argument expressions
+of function applications, and uses memoization to ensure that evaluation only
+happens once for delayed expressions. We build a lazy semantics for function
+abstractions out of three primitive eﬀects:
+1. The Reading eﬀect corresponds to the well-known reader monad from the
+Haskell monad transformer library [11].
+2. The Suspending eﬀect delays the evaluation of function bodies, without
+memoizing the result of the evaluation of the delayed subtrees.
+3. The Thunking eﬀect delays the evaluation of argument expressions of function
+applications, memoizing the result of forcing a thunked computation.
+The deﬁnition of these eﬀects and their handlers can be found in the eﬀect library
+of Appendix A. Using these eﬀects, Appendix B.2 deﬁnes three operations for
+lazy evaluation (abs lazy, var lazy, and applazy). Lambda abstraction suspends the
+body of a lambda, and pairs a pointer to the suspension with the environment
+that the thunk should be evaluated under. The var lazy and applazy functions
+memoize and recall argument values (possibly by forcing the evaluation of a
+thunked computation), and evaluate the body of a lambda. Application evaluates
+the ﬁrst argument to a function value, and memoizes the second argument, which
+is placed in the current environment. Then, the function body is executed.
+The following example program evaluates to 0 when using lazy evaluation:
+proglazy :: Tree ( Mutating V + Reading [V ] + Suspending V
++ Thunking V + Ending) Id V
+proglazy = applazy (abs lazy get) (do put 42; get)
+Function application delays the evaluation of put in the argument, and is never
+executed because the function body does not reference its parameter.We can run
+the program with call-by-need by applying its handlers:
+> inspect $ hEnd $ hThunk [ ] $hSuspend [ ] $hRead [ ] $hMut 0 proglazy
+0
+The inspect function extracts the ﬁnal value out of the result that is decorated
+with the latent eﬀect functor (in this case nested StateL’s).
+We can also recover a CBV semantics from applazy, abs lazy, and applazy by
+implementing an alternative handler for the Thunking eﬀect. This handler eagerly
+evaluates subtrees and stores their value in a store.
+> inspect $ hEnd $ hEager [ ] $hSuspend [ ] $hRead [ ] $hMut 0 proglazy
+42
+
+--- PDF page 16 ---
+16 van den Berg et al.
+run < print " bar " ;
+1 + ~( print " foo " ; <2 >) >
+letbind (seq (print "foo") ( quote (num 2)))
+(unquote (quote (seq (print "bar")
+(add (num 1) ( splice (var 0))))))
+Fig. 4: A MetaML program (left) and its latent eﬀects implementation (right).
+This case study demonstrates that modular call-by-need can be implemented by
+decomposing it into modular, primitive latent eﬀects and handlers. It also shows
+how overloading the handler of the Thunking eﬀect provides a means of changing
+the semantics of a program without touching the program itself.
+4.2 Staging
+Another advanced control-ﬂow feature that we have implemented with latent
+eﬀects is multi-staging. By applying eﬀect handlers before the handler for the
+staging eﬀect, we can control which eﬀects should be staged, and which not. The
+implementation of these staging constructs can be found in Appendix C.
+Our inspiration are the three constructs of MetaML [26]: (1) bracket expres-
+sions (<_>) delay execution to a later stage; (2) escape expressions (~_) splice a
+staged expression into another; and (3) run expressions (run _ ) run an expression
+that has been dynamically generated by bracket and escape expressions.
+A key feature of MetaML is that staged code is statically typed and lexically
+scoped. The staging constructs that we implement diﬀer in two ways: our staging
+constructs are untyped, and we provide two constructs for splicing code ( push
+and splice) instead of the single escape expression found in MetaML.
+We use push for writing programs with escape expressions under binders in
+staged code. The dynamic semantics of push creates an environment with “holes”
+that represent unknown bindings, and splice automatically ﬁlls in these holes
+with bindings from the dynamic context of the splice expression.
+The four staging constructs we implement are thus: (1) quote, corresponding
+to brackets in MetaML; (2) unquote, corresponding to run _ in MetaML; and
+(3+4) splice and push for code splicing. The programs in section 4 illustrate the
+diﬀerence in how splicing works. The MetaML program on the left prints the
+string "foobar" and returns the value 3. The program on the right desugars into
+latent eﬀects. With the appropriate handlers, it gives the same output.
+Yet, by switching the order of handlers for the print eﬀect and staging, we
+obtain a diﬀerent semantics that eagerly handles print operations inside quoted
+code. This makes the program on the right print "barfoo" instead.
+4.3 Library Summary
+We have given two examples where latent eﬀects can be modularly composed
+to form language features. Figure 5 gives an overview of our eﬀect library in
+Appendix A and how the primitive eﬀects are combined into language features.
+The left part shows the general framework code for implementing latent
+eﬀects, consisting of Trees, the DTC approach and helper deﬁnitions (e.g. Id,
+
+--- PDF page 17 ---
+Latent Eﬀects for Reusable Language Components 17
+Fig. 5: Eﬀect Library with Lines of Code (LoC) per Eﬀect.
+Void); the ﬁgure also indicates the associated lines of code (LoC). The middle
+part shows ten diﬀerent eﬀects and their LoC. Each eﬀect comes with an eﬀect
+signature, a handler, and smart constructors for their operations. For the detailed
+implementation of these eﬀects, we refer to the eﬀect library (Section A). The
+right part contains several language features that can be implemented using these
+eﬀects, with their associated LoC. Each feature comes with its object language
+syntax and a mapping onto the eﬀects. Each language requires an additional two
+LoC, to indicate the eﬀects and handlers used and their order. A diﬀerent order
+of eﬀects and handlers may give diﬀerent semantics.
+Figure 5 only includes a few language features covered in the paper. However,
+as we provide ten eﬀects and handlers, they can be modularly composed in
+diﬀerent order, using diﬀerent combinations. In theory, when algebras are ﬁxed,
+we can deﬁne (10! + 9! + ... + 2! + 1!) = 4,037,913 semantics, although some
+compositions may result in the same behaviour. Even more variations are possible,
+varying the algebra that maps the object language syntax to the eﬀects.
+5 Related Work
+Modular Semantics and Eﬀects Modularity has received much attention both
+at the level of language deﬁnitions and of the eﬀects used by those languages.
+A landmark is the formulation of the expression problem [27], the challenge
+to modularly extend languages with new features and new interpretation func-
+tions. As diﬀerent language features use diﬀerent eﬀects, this also requires the
+modular composition of those eﬀects. Monad transformers [11] are the most
+prominent approach, including alternative implementations such as Filinksi’s
+layered monads [3] and Jaskelioﬀ’s Monatron [7].
+Algebraic Eﬀects Algebraic eﬀects [16] have been proposed as a more structured
+approach to monads that can also be composed [6]. The subsequent introduction
+
+--- PDF page 18 ---
+18 van den Berg et al.
+of handlers [18] to deal with exceptions has enabled practical language and library
+implementations, e.g., [8, 12, 9]. Schrijvers et al. [20] identiﬁed when algebraic
+eﬀect handlers are modular and related this to a subclass of monad transformers,
+using the notion of modules [15]. Wu et al. [30] have identiﬁed a class of what
+they call scoped eﬀects, which cannot be expressed as algebraic operations. To
+remedy the situation, they have proposed a practical generalization of algebraic
+eﬀects. Pir´ og et al. [14] have put this ad-hoc approach for scoped eﬀects on formal
+footing in terms of a free monad on a level-indexed category.
+Latent Eﬀects There are many works on speciﬁc types of latent eﬀects. For
+instance, staging is a widely studied area [19, 25, 22]. Some works have also
+combined algebraic eﬀects with staging mechanisms [31, 21, 28]. Yet, we are, to
+the best of our knowledge, the ﬁrst to consider staging using eﬀect handlers.
+The call-by-push-value calculus of Levy [10] provides primitives for expressing
+both call-by-name and call-by-value. These have been an inspiration for our
+modular thunking handler. A more generic work is that of Atkey and Johann [1]
+on interleaving data and eﬀects to model the incremental production of the data,
+and on interpreting these with f-and-m algebras.
+Various forms of delimited control have been used in the literature to realize
+sophisticated control mechanisms, such as the simulation of call-by-need by Garcia
+et al. [5]. Moreover, several works [4] show the interdeﬁnability of conventional
+algebraic eﬀects and delimited control. A further investigation into the relative
+expressiveness of latent eﬀects would be interesting.
+In future work we would like to demonstrate the performance of latent eﬀects,
+using the techniques of fusion by Wu and Schrijvers [29].
+6 Conclusion
+This paper has introduced the notion of latent eﬀects. These extend algebraic
+eﬀects with the ability to modularly model advanced control-ﬂow mechanisms
+that can postpone the execution of certain computations and require ﬁne-grained
+control over the eﬀects inside them. Lambda abstraction, lazy evaluation, and
+staging were shown to be three prominent instances.
+Acknowledgments This work has been supported by EPSRC grant number
+EP/S028129/1 on ‘Scoped Contextual Operations and Eﬀects’, by the NWO
+VENI project on ‘Composable and Safe-by-Construction Programming Language
+Deﬁnitions’ (VI.Veni.192.259), by FWO project G095917N, and KU Leuven
+project C14/20/079.
+References
+1. Atkey, R., Johann, P.: Interleaving data and eﬀects. J. Funct. Program. 25 (2015)
+2. de Bruijn, N.: Telescopic mappings in typed lambda calculus. Information and
+Computation 91(2), 189–204 (1991)
+
+--- PDF page 19 ---
+Latent Eﬀects for Reusable Language Components 19
+3. Filinski, A.: Representing layered monads. In: 26th symposium on Principles of
+programming languages. pp. 175–188. POPL ’99 (1999)
+4. Forster, Y., Kammar, O., Lindley, S., Pretnar, M.: On the expressive power of
+user-deﬁned eﬀects: Eﬀect handlers, monadic reﬂection, delimited control. J. Funct.
+Program. 29, e15 (2019)
+5. Garcia, R., Lumsdaine, A., Sabry, A.: Lazy evaluation and delimited control. Log.
+Methods Comput. Sci. 6(3) (2010)
+6. Hyland, M., Plotkin, G., Power, J.: Combining eﬀects: Sum and tensor. Theoretical
+Computer Science 357(1-3), 70–99 (2006)
+7. Jaskelioﬀ, M.: Monatron: An extensible monad transformer library. In: IFL. LNCS,
+vol. 5836, pp. 233–248. Springer (2011)
+8. Kiselyov, O., Ishii, H.: Freer monads, more extensible eﬀects. In: 8th Symposium
+on Haskell. pp. 94–105. ACM (2015)
+9. Leijen, D.: Type directed compilation of row-typed algebraic eﬀects. In: 44th
+Symposium on Principles of Programming Languages. p. 486–499. ACM (2017)
+10. Levy, P.B.: Call-by-push-value: Decomposing call-by-value and call-by-name. Higher-
+Order and Symbolic Computation 19(4), 377–414 (2006)
+11. Liang, S., Hudak, P., Jones, M.: Monad transformers and modular interpreters. In:
+Symposium on Principles of Programming Languages. pp. 333–343. ACM (1995)
+12. Lindley, S., McBride, C., McLaughlin, C.: Do be do be do. In: 44th Symposium on
+Principles of Programming Languages. ACM (2017)
+13. Moggi, E.: An abstract view of programming languages. Tech. Rep. ECS-LFCS-90-
+113, Edinburgh University, Department of Computer Science (June 1989)
+14. Pir´ og, M., Schrijvers, T., Wu, N., Jaskelioﬀ, M.: Syntax and semantics for operations
+with scopes. In: Logic in Computer Science. pp. 809–818. ACM (2018)
+15. Pir´ og, M., Wu, N., Gibbons, J.: Modules over monads and their algebras. In: 6th
+Conference on Algebra and Coalgebra in Computer Science. LIPIcs, vol. 35, pp.
+290–303. Schloss Dagstuhl - Leibniz-Zentrum f¨ ur Informatik (2015)
+16. Plotkin, G., Power, J.: Notions of computation determine monads. In: Foundations
+of Software Science and Computation Structures. pp. 342–356. Springer (2002)
+17. Plotkin, G.D., Power, J.: Algebraic operations and generic eﬀects. Applied Categor-
+ical Structures 11(1), 69–94 (2003)
+18. Plotkin, G.D., Pretnar, M.: Handlers of algebraic eﬀects. In: 18th European Sym-
+posium on Programming. LNCS, vol. 5502, pp. 80–94. Springer (2009)
+19. Rompf, T., Odersky, M.: Lightweight modular staging: a pragmatic approach to
+runtime code generation and compiled dsls. In: Generative Programming And
+Component Engineering. pp. 127–136. ACM (2010)
+20. Schrijvers, T., Pir´ og, M., Wu, N., Jaskelioﬀ, M.: Monad transformers and modular
+algebraic eﬀects: what binds them together. In: 12th International Symposium on
+Haskell. pp. 98–113. ACM (2019)
+21. Schuster, P., Brachth¨ auser, J.I., Ostermann, K.: Compiling eﬀect handlers in
+capability-passing style. Proc. ACM Program. Lang. 4(ICFP), 93:1–93:28 (2020)
+22. Sheard, T., Jones, S.L.P.: Template meta-programming for haskell. ACM SIGPLAN
+Notices 37(12), 60–75 (2002)
+23. Swierstra, W.: Data types ` a la carte. J. Funct. Program. 18(4), 423–436 (2008)
+24. Taha, W.: Multi-Stage Programming : Its Theory and Applications. Ph.D. thesis,
+Oregon Graduate Institute of Science and Technology (1999)
+25. Taha, W., Sheard, T.: Multi-stage programming with explicit annotations. In:
+PEPM. pp. 203–217. ACM (1997)
+26. Taha, W., Sheard, T.: MetaML and multi-stage programming with explicit annota-
+tions. Theoretical Computer Science 248(1), 211–242 (2000), PEPM ’97
+
+--- PDF page 20 ---
+20 van den Berg et al.
+27. Wadler, P.: The expression problem. Mailing list (1998)
+28. Wei, G., Braˇ cevac, O., Tan, S., Rompf, T.: Compiling symbolic execution with
+staging and algebraic eﬀects. Proc. ACM Program. Lang. 4(OOPSLA) (Nov 2020)
+29. Wu, N., Schrijvers, T.: Fusion for free: Eﬃcient algebraic eﬀect handlers. In: MPC
+2015 (2015)
+30. Wu, N., Schrijvers, T., Hinze, R.: Eﬀect handlers in scope. In: Symposium on
+Haskell. pp. 1–12. ACM (2014)
+31. Yallop, J.: Staged generic programming. Proc. ACM Program. Lang. 1(ICFP),
+29:1–29:29 (2017)
+
+--- PDF page 21 ---
+Latent Eﬀects for Reusable Language Components 21
+A An Eﬀect Library
+This Appendix contains a library of eﬀects that can be modularly composed.
+Each eﬀect can be implemented with a limited number of lines of code.
+A.1 General
+Trees and Their Instances The Tree datatype for representing latent eﬀects
+with its corresponding instances.
+data Tree (σ :: ∗ → (∗ → ∗ ) → ∗) (l :: ∗ → ∗ ) a where
+Leaf :: a → Treeσ l a
+Node :: σ p c
+→ l ()
+→ (∀x.c x → l () → Treeσ l (l x ))
+→ (l p → Treeσ l a )
+→ Treeσ l a
+instance Functor (Treeσ l) where
+fmap = liftM
+instance Applicative (Treeσ l) where
+pure = return
+(<∗>) = ap
+instance Monad (Treeσ l) where
+return = Leaf
+Leaf x > >= f = f x
+Node c l st k > >= f = Node c l st (λx → k x > >= f )
+Datatypes ` a la CarteWe use a DTC approach to compose and project values
+and signatures.
+class v1<: v2 where
+inj v :: v1 → v2
+proj v :: v2 → Maybe v1
+inﬁxr +
+data (σ1 +σ2) :: ∗ → (∗ → ∗ ) → ∗where
+Inl′ ::σ1 p c → (σ1 +σ2) p c
+Inr′ ::σ2 p c → (σ1 +σ2) p c
+class (σ1 :: ∗ → (∗ → ∗ ) → ∗)<σ 2 where
+injSig ::σ1 p c →σ2 p c
+instanceσ<σ where
+injSig = id
+instanceσ1< (σ1 +σ2) where
+injSig = Inl′
+
+--- PDF page 22 ---
+22 van den Berg et al.
+instance (σ1<σ 3) ⇒σ1< (σ2 +σ3) where
+injSig = Inr′ ◦ injSig
+Other Datatypes and Helper Functions Other straightforward datatypes
+such as the identity functor and Void.
+data Void
+newtype Id a = Id {unId :: a } deriving (Functor)
+instance Applicative Id where
+pure a = Id a
+Id f <∗> Id x = Id (f x )
+The StateL s l a type is a wrapper for the state type ( s, a), where the value
+is wrapped in a latent eﬀect functor l. Similarly, EitherL left l a is a wrapper for
+the Either left a type, where the right value is wrapped in a latent eﬀect functor
+l.
+newtype StateL s l a = StateL {unStateL :: (s, l a )}
+deriving Show
+instance Functor l ⇒ Functor (StateL s l ) where
+fmap f (StateL (s, la)) = StateL (s, fmap f la )
+newtype EitherL left l a = EitherL {unEitherL :: Either left (l a )}
+Extracting the Value from the Eﬀect Tree Ending has an empty signature,
+so the tree can only consist of a leave. The handler extracts the value from that
+leave, possibly decorated with latent eﬀects.
+data Ending :: ∗ → (∗ → ∗ ) → ∗
+hEnd :: Tree Ending l a → a
+hEnd (Leaf x ) = x
+Subtrees of the Treetype data NoSub :: ∗ → ∗where
+data OneSub v :: ∗ → ∗where
+One :: OneSub v v
+noSubNode :: ∀v σ1 σ2.σ1<σ 2
+⇒σ1 v NoSub → Treeσ2 Id v
+noSubNode n = Node (injSig n ) (Id ()) (λx → case x of ) ( Leaf ◦ unId)
+oneSubNode :: ∀v w σ1 σ2.σ1<σ 2
+⇒σ1 w (OneSub v ) → Treeσ2 Id v → Treeσ2 Id w
+oneSubNode n t = Node (injSig n ) (Id ()) (λOne → Id <$> t) (Leaf ◦ unId)
+
+--- PDF page 23 ---
+Latent Eﬀects for Reusable Language Components 23
+A.2 Eﬀects
+In this section, we present small standalone implementations of a single eﬀect,
+that can be combined in a modular fashion into languages with diﬀerent eﬀect
+features. These implementations come with a deﬁnition of the eﬀect, a handler
+for interpreting the eﬀect, and smart constructors.
+Reader The Reading eﬀect provides two operations: ask retrieves the current
+environment, and local passes down an updated environment to a subtree.
+data Reading r :: ∗ → (∗ → ∗ ) → ∗where
+Local :: (r → r) → Reading r a (OneSub a )
+Ask :: Reading r r NoSub
+hRead :: Functor l
+⇒ r
+→ Tree (Reading r +σ) l (l a )
+→ Treeσ l (l a )
+hRead r (Leaf x ) = Leaf x
+hRead r (Node (Inl′ (Local f )) l st k ) = hRead (f r ) (st One l )> >= hRead r ◦ k
+hRead r (Node (Inl′ Ask) l k) = hRead r (k (r <$ l))
+hRead r (Node (Inr′ op) l st k ) =
+Node op l (λc2 → hRead r ◦ st c 2) (hRead r ◦ k)
+local :: ∀r σ a.(Reading r <σ ) ⇒ (r → r) → Treeσ Id a → Treeσ Id a
+local f t = oneSubNode (Local f ) t
+ask :: (Reading r <σ ) ⇒ Treeσ Id r
+ask = noSubNode Ask
+State The Mutating eﬀect provides the two standard operations for state: get
+and put.
+data Mutating v :: ∗ → (∗ → ∗ ) → ∗where
+Get :: Mutating v v NoSub
+Put :: v → Mutating v () NoSub
+hMut :: Functor l
+⇒ s
+→ Tree (Mutating s +σ) l a
+→ Treeσ (StateL s l ) (StateL s Id a )
+hMut s (Leaf x ) = Leaf $ StateL (s, Id x )
+hMut s (Node (Inl′ Get) l k) = hMut s (k (fmap (λ → s) l))
+hMut (Node (Inl′ (Put s )) l k) = hMut s (k l )
+hMut s (Node (Inr′ c) l st k ) =
+Node c (StateL (s, l)) (λc (StateL (s′, l′)) → transS <$> hMut s′ (st c l′))
+(λ (StateL (s′, lv′)) → hMut s′ (k lv′))
+transS :: StateL s Id (l a ) → StateL s l a
+
+--- PDF page 24 ---
+24 van den Berg et al.
+transS (StateL (s, x)) = StateL (s, unId x )
+get :: (Mutating s <σ ) ⇒ Treeσ Id s
+get = noSubNode Get
+put :: (Mutating s <σ ) ⇒ s → Treeσ Id ()
+put s = noSubNode (Put s )
+Exceptions The Throwing eﬀect provides the two well-known operations for
+exceptions: throw and catch.
+data Throwing x v :: ∗ → (∗ → ∗ ) → ∗where
+Throw :: x → Throwing x v Void NoSub
+Catch :: Throwing x v v (MaybeSub x v )
+hExc :: (Functor l )
+⇒ Tree (Throwing x v +σ) l a
+→ Treeσ (EitherL (l (), x) l) (EitherL (l (), x) Id a )
+hExc (Leaf x ) = Leaf $ EitherL $ Right $ Id x
+hExc (Node (Inl′ (Throw x )) l ) = Leaf $ EitherL $ Left (l, x)
+hExc (Node (Inl′ Catch) l st k ) = hExc (st NothingS l )
+> >= either (λ(l′, x) → hExc (st (JustS x ) l′)
+> >= either (Leaf ◦ EitherL ◦ Left) (hExc ◦ k ◦ unId))
+(hExc ◦ k ◦ unId)
+hExc (Node (Inr′ c) l st k ) =
+Node c (EitherL $ Right l )
+(λz → either (Leaf ◦ EitherL ◦ Left)
+(λlv → transE <$> hExc (st z lv )))
+(either (Leaf ◦ EitherL ◦ Left) (hExc ◦ k))
+throw :: ∀x v σ.(Throwing x v <σ ) ⇒ x → Treeσ Id v
+throw e = Node (injSig (Throw e :: Throwing x v Void NoSub ))
+(Id ())
+(λx → case x of )
+(λx → case x of )
+catch :: ∀x v σ.(Throwing x v <σ )
+⇒ Treeσ Id v → (x → Treeσ Id v ) → Treeσ Id v
+catch p h = Node (injSig (Catch :: Throwing x v v (MaybeSub x v )))
+(Id ())
+(λz → case z of
+JustS x → Id <$> (h x )
+NothingS → Id <$> p)
+(Leaf ◦ unId)
+Errors The Failing eﬀect has a single operation err for constructing an error.
+data Failing v :: ∗ → (∗ → ∗ ) → ∗where
+Err :: v → Failing v Void NoSub
+
+--- PDF page 25 ---
+Latent Eﬀects for Reusable Language Components 25
+hErr :: Functor l
+⇒ Tree (Failing v +σ) l a
+→ Treeσ (EitherL v l ) (EitherL v Id a )
+hErr (Leaf x ) = Leaf $ EitherL $ Right $ Id x
+hErr (Node (Inl′ (Err x )) ) = Leaf $ EitherL $ Left x
+hErr (Node (Inr′ c) l st k ) =
+Node c (EitherL $ Right l )
+(λz → either (Leaf ◦ EitherL ◦ Left) (λlv → transE <$> hErr (st z lv )))
+(either (Leaf ◦ EitherL ◦ Left) ( hErr ◦ k))
+either :: (v → c) → (l a → c) → EitherL v l a → c
+either f (EitherL (Left x )) = f x
+either g (EitherL (Right y )) = g y
+transE :: EitherL v Id (l a ) → EitherL v l a
+transE (EitherL (Left x )) = EitherL $ Left x
+transE (EitherL (Right y )) = EitherL $ Right $ unId y
+err :: (Failing v <σ ) ⇒ v → Treeσ Id a
+err x = Node (injSig (Err x )) (Id ()) (λx → case x of ) (λx → case x of )
+Arithmetics The Adding eﬀect provides operations for adding natural numbers:
+plus and nat.
+data Adding v :: ∗ → (∗ → ∗ ) → ∗where
+Nat :: Integer → Adding v v NoSub
+Plus :: v → v → Adding v v NoSub
+hPlus :: (Functor l, Integer<: v)
+⇒ Tree (Adding v +σ) l a
+→ Treeσ l a
+hPlus (Leaf x ) = Leaf x
+hPlus (Node (Inl′ (Nat n )) l k) = hPlus (k (const (inj v n)<$> l))
+hPlus (Node (Inl′ (Plus v 1 v2)) l k) = case (proj v v1, proj v v2) of
+(Just n1, Just n2 ) → hPlus (k (const (inj v (n1 + n2))<$> l))
+hPlus (Node (Inr′ c) l st k ) =
+Node c l (λs → hPlus ◦ st s ) (hPlus ◦ k)
+plus :: (Adding v <σ ) ⇒ v → v → Treeσ Id v
+plus n1 n2 = noSubNode (Plus n1 n2 )
+nat :: (Adding v <σ ) ⇒ Integer → Treeσ Id v
+nat n = noSubNode (Nat n )
+Print The Printing eﬀect has a single operation for printing a string: print.
+data Printing v :: ∗ → (∗ → ∗ ) → ∗where
+Print :: String → Printing v v NoSub
+
+--- PDF page 26 ---
+26 van den Berg et al.
+hPrint :: (Functor l, String<: v)
+⇒ Tree (Printing v +σ) l a → Treeσ l a
+hPrint (Leaf x ) = Leaf x
+hPrint (Node (Inl′ (Print s )) l k) = hPrint (k (const (inj v s)<$> l))
+hPrint (Node (Inr′ c) l st k ) = Node c l (λs → hPrint ◦ st s ) (hPrint ◦ k)
+print :: (Printing v <σ ) ⇒ String → Treeσ Id v
+print s = noSubNode (Print s )
+Delay Evaluation The Suspending eﬀect provides two operations: suspend
+delays the evaluation of a recursive subtree, and enact forces the evaluation of
+the delayed subtree without memoizing the result .
+data Suspending v :: ∗ → (∗ → ∗ ) → ∗where
+Suspend :: Suspending v Ptr (OneSub v )
+Enact :: Ptr → Suspending v v NoSub
+type Ptr = Int
+type Suspensionσ l v = l () → Tree (Suspending v +σ) l (l v )
+data Suspended r = Suspended Ptr r deriving (Functor)
+hSuspend :: Functor l
+⇒ [Suspensionσ l v ]
+→ Tree (Suspending v +σ) l (l a )
+→ Treeσ (StateL [Suspensionσ l v ] l) (StateL [Suspensionσ l v ] l a )
+hSuspend rs (Leaf x ) = Leaf (StateL (rs, x))
+hSuspend rs (Node (Inl′ Suspend) l st k ) =
+hSuspend (rs + + [st One ]) (k (length rs <$ l))
+hSuspend rs (Node (Inl′ (Enact p )) l k) = do
+StateL (rs′, lv) ← hSuspend rs ((rs !! p) l); hSuspend rs′ (k lv )
+hSuspend rs (Node (Inr′ op) l st k ) =
+Node op (StateL (rs, l)) (λc2 (StateL (rs′, l′)) → hSuspend rs′ (st c 2 l′))
+(λ (StateL (rs′, lv′)) → hSuspend rs′ (k lv′))
+suspend :: ∀v σ.(Suspending v <σ ) ⇒ Treeσ Id v → Treeσ Id Ptr
+suspend t = oneSubNode (Suspend) t
+enact :: (Suspending v <σ ) ⇒ Ptr → Treeσ Id v
+enact p = noSubNode (Enact p )
+Memoization The Thunking eﬀect is analogous to Suspending, but its handler
+memoizes the result of forcing a thunked computation.
+data Thunking v :: ∗ → (∗ → ∗ ) → ∗where
+Thunk :: Thunking v Ptr (OneSub v )
+Force :: Ptr → Thunking v v NoSub
+type Ptr = Int
+
+--- PDF page 27 ---
+Latent Eﬀects for Reusable Language Components 27
+type Thunk σ l v = Either (l () → Tree (Thunking v +σ) l (l v )) v
+data TreeWith f σ (l :: ∗ → ∗ ) a =
+TreeWith {unTreeWith:: Treeσ (f l ) (f l a )}
+data Thunked r = Thunked Ptr r
+class Modular (m1 :: ∗ → ∗ ) (m2 :: (∗ → ∗ ) → ∗ → ∗ ) where
+fwd :: m1 (m2 m1 a) → m2 m1 a
+replace :: Int → a → [a ] → [a ]
+replace 0 x ( : xs) = x : xs
+replace i x (y : xs) | i> 0 = y : replace (i − 1) x xs
+replace = error "bad index"
+For this eﬀect, we can provide two handlers, one for lazy evaluation and
+another one for eager evaluation.
+hThunk :: (Functor l, Modular l (TreeWith (StateL ([Thunk σ l v ]))σ))
+⇒ [Thunk σ l v ]
+→ Tree (Thunking v +σ) l (l a )
+→ Treeσ (StateL [Thunk σ l v ] l) (StateL [Thunk σ l v ] l a )
+hThunk rs (Leaf x ) = Leaf (StateL (rs, x))
+hThunk rs (Node (Inl′ Thunk) l st k ) =
+hThunk (rs + + [Left (st One )]) (k (length rs <$ l))
+hThunk rs (Node (Inl′ (Force p)) l k) = case (rs !! p) of
+Left t → do
+StateL (rs′, lv) ← hThunk rs (t l )
+unTreeWith$ fwd $
+(λv → TreeWith$ hThunk (replace p (Right v ) rs′) (k lv ))<$> lv
+Right v → hThunk rs (k (v <$ l))
+hThunk rs (Node (Inr′ op) l st k ) =
+Node op (StateL (rs, l)) (λc2 (StateL (rs′, l′)) → hThunk rs′ (st c 2 l′))
+(λ (StateL (rs′, lv′)) → hThunk rs′ (k lv′))
+hEager :: (Functor l, Modular l (TreeWith (StateL [v ])σ))
+⇒ [v ]
+→ Tree (Thunking v +σ) l (l a )
+→ Treeσ (StateL [v ] l) (StateL [v ] l a )
+hEager vs (Leaf x ) = Leaf (StateL (vs, x))
+hEager vs (Node (Inl′ Thunk) l st k ) = do
+StateL (vs′, lv) ← hEager vs (st One l )
+unTreeWith$ fwd $
+(λv → TreeWith$ hEager (vs′ + + [v ]) (k (length vs′ <$ l)))<$> lv
+hEager vs (Node (Inl′ (Force p)) l k) = do
+hEager vs (k ((vs !! p)<$ l))
+hEager vs (Node (Inr′ op) l st k ) =
+Node op (StateL (vs, l)) (λc2 (StateL (vs′, l′)) → hEager vs′ (st c 2 l′))
+(λ (StateL (vs′, lv′)) → hEager vs′ (k lv′))
+
+--- PDF page 28 ---
+28 van den Berg et al.
+thunk :: ∀v σ.(Thunking v <σ ) ⇒ Treeσ Id v → Treeσ Id Ptr
+thunk t = oneSubNode Thunk t
+force :: (Thunking v <σ ) ⇒ Ptr → Treeσ Id v
+force p = noSubNode (Force p)
+Function Abstraction The Abstracting eﬀect has three operators: var for
+representing a variable, abs for function abstraction, and app for function appli-
+cation.
+data Abstracting v :: ∗ → (∗ → ∗ ) → ∗where
+Var :: Int → Abstracting v v NoSub
+App :: v → v → Abstracting v v NoSub
+Abs :: Abstracting v v (OneSub v )
+data Closure r where
+Clos :: Ptr → Env r → Closure r
+type Env v = [v ]
+type Ptr = Int
+For this eﬀect, we can deﬁne two handlers: one for call site handling of eﬀects an
+another for deﬁnition site handling of eﬀects
+type StoreCS σ l v = [RCS σ l v ]
+type RCS σ l v = l () → Tree (Abstracting v +σ) l (l v )
+type StoreDS σ l v = [RDS σ l v ]
+type RDS σ l v = Tree (Abstracting v +σ) l (l v )
+hAbsCS :: (Closure v <: v, Functor l )
+⇒ [v ]
+→ StoreCS σ l v
+→ Tree (Abstracting v +σ) l a
+→ Treeσ (StateL (StoreCS σ l v ) l) (StoreCS σ l v, a)
+hAbsCS r (Leaf x ) = Leaf (r, x)
+hAbsCS nv r (Node (Inl′ Abs) l st k ) = do
+let v = inj v (Clos (length r ) nv)
+let r′ = r + + [st One ]
+hAbsCS nv r′ (k (v <$ l))
+hAbsCS nv r (Node (Inl′ (App v 1 v2)) l k) = case proj v v1 of
+Just (Clos fp nv′) → do
+(r′, v) ← hAbsCS (v2 : nv′) r ((r !! fp) l)
+hAbsCS nv r′ (k v )
+Nothing → error "application error"
+hAbsCS nv r (Node (Inl′ (Var n)) l k) = hAbsCS nv r (k ((nv !! n)<$ l))
+hAbsCS nv r (Node (Inr′ op) l st k ) = Node op (StateL (r, l))
+(λc (StateL (r′, l )) → StateL<$> hAbsCS nv r′ (st c l ))
+
+--- PDF page 29 ---
+Latent Eﬀects for Reusable Language Components 29
+(λ (StateL (r′, lv )) → hAbsCS nv r′ (k lv ))
+hAbsDS :: (Closure v <: v, Functor l )
+⇒ [v ]
+→ StoreDS σ l v
+→ Tree (Abstracting v +σ) l a
+→ Treeσ (StateL (StoreDS σ l v ) l)
+(StoreDS σ l v, a)
+hAbsDS r (Leaf x ) = Leaf (r, x)
+hAbsDS nv r (Node (Inl′ Abs) l st k ) = do
+let v = inj v (Clos (length r ) nv)
+let r′ = r + + [st One l ]
+hAbsDS nv r′ (k (v <$ l))
+hAbsDS nv r (Node (Inl′ (App v 1 v2)) k) =
+case proj v v1 of
+Just (Clos fp nv′) → do
+(r′, v) ← hAbsDS (v2 : nv′) r (r !! fp)
+hAbsDS nv r′ (k v )
+Nothing → error "application error"
+hAbsDS nv r (Node (Inl′ (Var n)) l k) =
+hAbsDS nv r (k (nv !! n <$ l))
+hAbsDS nv r (Node (Inr′ op) l st k ) =
+Node op (StateL (r, l))
+(λc (StateL (r′, l)) →
+StateL<$> hAbsDS nv r′ (st c l ))
+(λ(StateL (r′, lv)) → hAbsDS nv r′ (k lv ))
+var :: (Abstracting v <σ ) ⇒ Int → Treeσ Id v
+var n = noSubNode (Var n)
+app :: (Abstracting v <σ ) ⇒ v → v → Treeσ Id v
+app v 1 v2 = noSubNode (App v 1 v2)
+abs :: (Abstracting v <σ ) ⇒ Treeσ Id v → Treeσ Id v
+abs t = oneSubNode Abs t
+A.3 Language Features
+This section introduces language features that can be used as individual compo-
+nents to modularly construct languages. We provide a syntax for these features,
+as well as a mapping to latent eﬀects, by means of an algebra.
+Arithmetics We make a simple arithmetic language with numbers and addition.
+data Arith n = Num Int | Add n n
+arithAlg :: (Adding v <σ ) ⇒ Arith v → Treeσ Id v
+
+--- PDF page 30 ---
+30 van den Berg et al.
+arithAlg (Num n ) = nat (toInteger n )
+arithAlg (Add x y ) = plus x y
+Lambda calculus The lambda calculus has constructs for variables, abstraction
+and application.
+data LamExpr e = VarExpr Int | AbsExpr e | AppExpr e e
+We can deﬁne diﬀerent algebras, depending on the evaluation strategy:
+lamAlg :: (Abstracting v <σ ) ⇒ LamExpr (Treeσ Id v ) → Treeσ Id v
+lamAlg (VarExpr n) = var n
+lamAlg (AbsExpr e ) = abs e
+lamAlg (AppExpr e 1 e2) = do
+v1 ← e1
+v2 ← e2
+app v 1 v2
+Call-by-need evaluation can be expressed through the following algebra, where
+abs, app and var are deﬁned in Section B.2.
+lazyAlg :: (Reading [v ]<σ, Thunking v <σ, Suspending v <σ,
+Thunked [v ]<: v, Closure v <: v)
+⇒ LamExpr (Treeσ Id v ) → Treeσ Id v
+lazyAlg (VarExpr n) = var lazy n
+lazyAlg (AbsExpr e ) = abs lazy e
+lazyAlg (AppExpr e 1 e2) = applazy e1 e2
+Call-by-name evaluation is similar, but without memoizing (intermediate)
+results.
+cbnAlg :: (Reading [v ]<σ, Suspending v <σ,
+Suspended [v ]<: v, Closure v <: v)
+⇒ LamExpr (Treeσ Id v ) → Treeσ Id v
+cbnAlg (VarExpr n) = var cbn n
+cbnAlg (AbsExpr e ) = abs cbn e
+cbnAlg (AppExpr e 1 e2) = appcbn e1 e2
+Staging For the staging expressions, we refer to Section C for the implementa-
+tions of splice, quote, shift and unquote.
+data StageExpr s = Splice s | Quote s | Unquote s | Shift Int s
+stageAlg :: ∀v σ r1 r2.
+(Suspending v <σ, Reading r1<σ, Reading r2<σ,
+Reading (Env s v)<σ, Suspended r1<: v,
+
+--- PDF page 31 ---
+Latent Eﬀects for Reusable Language Components 31
+Suspended r2<: v, Suspended (Env s v)<: v)
+⇒ StageExpr (Treeσ Id v ) → Treeσ Id v
+stageAlg (Splice s) = splice s
+stageAlg (Quote s ) = quote@r1 s
+stageAlg (Unquote s ) = unquote@r2 s
+stageAlg (Shift n s ) = shift n s
+Other We can deﬁne other simple language features such as printing and let-
+expressions.
+data PrintExpr e = Pr String
+printAlg :: (Printing v <σ ) ⇒ PrintExpr v → Treeσ Id v
+printAlg (Pr s ) = print s
+data LetExpr e = Let e e | Seq e e | LetVar Int
+letAlg :: (Abstracting v <σ ) ⇒ LetExpr (Treeσ Id v ) → Treeσ Id v
+letAlg (Let e1 e2) = do
+v1 ← abs e 1
+v2 ← e2
+app v 1 v2
+letAlg (Seq e1 e2) = do e1; e2
+letAlg (LetVar n) = var n
+B Modular Carriers for Call-by-Need Lambdas
+This Appendix shows how we can use an adapted form of the modular carriers
+of Schrijvers et al. [20] to deﬁne call-by-need and call-by-value evaluation for
+function abstractions. We give semantics to call-by-need lambdas using three
+diﬀerent eﬀects: Reading, Suspending and Thunking. For the deﬁnition and the
+handlers of these eﬀects, we refer to Appendix A.
+B.1 Modular Carriers
+The hThunk handler uses a technique that lets us access values wrapped in
+a latent eﬀect functor: we use a forwarding algebra, inspired by the work of
+Schrijvers et al. [20]. They propose a modular approach to composing algebraic
+eﬀects so that each handler only has to know about the part of the syntax its
+eﬀect is handling. This is achieved through the deﬁnition of a modular carrier
+Modular that features a forwarding algebra fwd.
+class Modular (m1 :: ∗ → ∗ ) (m2 :: (∗ → ∗ ) → ∗ → ∗ ) where
+fwd :: m1 (m2 m1 a) → m2 m1 a
+
+--- PDF page 32 ---
+32 van den Berg et al.
+However, we use this modular carrier in a diﬀerent context in the sense that
+it is now modular with respect to its subcomputations, for which the syntax
+and structure is known. On the contrary, the original deﬁnition is modular with
+respect to the outer computation.
+B.2 Call-by-Need Evaluation
+The three operations for call-by-need evaluation are deﬁned below.
+abs lazy :: ∀v σ.(Reading [v ]<σ, Suspending v <σ, Closure v <: v)
+⇒ Treeσ Id v → Treeσ Id v
+abs lazy body = do
+nv ← ask
+p ← suspend body
+return (inj v (Clos p (nv :: [v ])))
+var lazy :: ∀v σ.(Reading [v ]<σ, Thunking v <σ, Thunked [v ]<: v)
+⇒ Int → Treeσ Id v
+var lazy x = do
+nv ← ask
+let v = (nv :: [v ]) !! x
+case proj v v of
+Just (Thunked p nv′) → local (const (nv′ :: [v ])) (force p)
+Nothing → return v
+applazy :: ∀v σ.(Suspending v <σ, Thunking v <σ, Reading [v ]<σ,
+Closure v <: v, Thunked [v ]<: v)
+⇒ Treeσ Id v → Treeσ Id v → Treeσ Id v
+applazy e1 e2 = do
+vf ← e1; nv ← ask; p ← thunk e 2
+let th :: v = inj v $ Thunked p (nv :: [v ])
+case proj v vf of
+Just (Clos p′ nv′) → do
+local (const (th : (nv′ :: [v ]))) (enact p′)
+B.3 Call-by-Name
+The three operations for call-by-name evaluation are similar to those for call-by-
+need, but without memoizing the result.
+abs cbn :: ∀v σ.(Reading [v ]<σ, Suspending v <σ, Closure v <: v)
+⇒ Treeσ Id v → Treeσ Id v
+abs cbn body = do
+nv ← ask
+
+--- PDF page 33 ---
+Latent Eﬀects for Reusable Language Components 33
+p ← suspend body
+return (inj v (Clos p (nv :: [v ])))
+var cbn :: ∀v σ.(Reading [v ]<σ, Suspending v <σ, Suspended [v ]<: v)
+⇒ Int → Treeσ Id v
+var cbn x = do
+nv ← ask
+let v = (nv :: [v ]) !! x
+case proj v v of
+Just (Suspended p nv′) → local (const (nv′ :: [v ])) (enact p )
+Nothing → return v
+appcbn :: ∀v σ.(Suspending v <σ, Reading [v ]<σ,
+Closure v <: v, Suspended [v ]<: v)
+⇒ Treeσ Id v → Treeσ Id v → Treeσ Id v
+appcbn e1 e2 = do
+vf ← e1; nv ← ask; p ← suspend e 2
+let th :: v = inj v $ Suspended p (nv :: [v ])
+case proj v vf of
+Just (Clos p′ nv′) → do
+local (const (th : (nv′ :: [v ]))) (enact p′)
+C A Latent Eﬀect Semantics of Staging
+In this appendix we show how to model three staging operations, inspired by
+MetaML [26]: quote for staging a piece of code; unquote for unstaging; and push
+for deﬁning code with one or more variables whose bindings only become known
+when the code is unquoted. First, we deﬁne a small library of latent eﬀects to
+work with.
+C.1 Reading, Suspending, and Revisiting Lambdas
+Appendix A deﬁnes the two necessary eﬀect interfaces: Reading and Suspending.
+Furthermore, the following Bindable type class has operations for binding a value
+in an environment, and looking up a value in an environment.
+class Bindable r v where
+bindVal :: v → r → r
+lookupVal :: r → Int → v
+For plain, de Bruijn indexed environments, these functions are straightforwardly
+deﬁned:
+
+--- PDF page 34 ---
+34 van den Berg et al.
+instance Bindable [v ] v where
+bindVal = (:)
+lookupVal = (!!)
+The challenge with code splicing is to allow spliced code to reference variables
+from the context that code is being spliced with. We address this challenge by
+using a reﬁned type of environment and Bindable.
+C.2 Quote and Unquote
+The quote operation is deﬁned in Suspending and Reading. It thunks a subcom-
+putation, remembering the environment that the code is supposed to be evaluated
+under, reusing the Suspended value from Section ?? as the representation of a
+quoted piece of code:
+quote :: ∀r v l σ.(Reading r <σ, Suspending v <σ, Suspended r <: v)
+⇒ Treeσ Id v → Treeσ Id v
+quote m = do
+p ← suspend m
+nv ← ask
+return (inj v $ Suspended p (nv :: r))
+The unquote operation forces a quoted (thunked) computation.
+unquote :: ∀r v l σ.(Reading r <σ, Suspending v <σ, Suspended r <: v)
+⇒ Treeσ Id v → Treeσ Id v
+unquote m = do
+v ← m
+case proj v v of
+Just (Suspended p nv ) → local (const (nv :: r)) (enact p )
+Nothing → error "bad unquote"
+C.3 Pushing and Splicing
+We will introduce an operation for deﬁning code with variables whose bindings are
+not yet known. This operation relies on the following type of staged environment:
+newtype Env s v = Env s {unEnv s :: [Maybe (Either v Int )] }
+The Maybe type is used to distinguish positions in the environment whose bindings
+are not yet known. An unknown binding is represented as Nothing. A known
+binding is Either an actual value v, or an integer representing a forward reference
+to a value that occurs n positions further down the environment. We use forward
+references because our staged environments behave in a way that is reminiscent
+of a telescope [2]: for a bound value v occurring in a staged environment such
+as Env s (Just (Left v) : nv), the value v is closed under the substitutions in the
+
+--- PDF page 35 ---
+Latent Eﬀects for Reusable Language Components 35
+environment nv, since nv contains “contextual” bindings that potential unknown
+bindings in v must be instantiated with.
+The implementation of the Bindable interface below illustrates how this
+“closing” of values of type Val works:
+data Val = CloV (Closure (Env s Val))
+| CodV (Suspended (Env s Val))
+| IntV Int
+instance Bindable (Env s Val) Val where
+bindVal v (Env s nv) = Env s $ Just
+(Right (length nv )) : nv + + [Just (Left v )]
+lookupVal (Env s nv) x = go nv x
+where go (Nothing : nv) 0 = error "quote error"
+go (Just (Right y ) : nv) 0 = lookupVal (Env s nv) y
+go (Just (Left v ) : nv) 0 = cover v (Env s nv)
+go ( : nv) x | x ⩾ 0 = lookupVal (Env s nv) (x − 1)
+go nv x = error "bad index"
+The bindVal function prepends an environment by a forward reference to a value
+that is appended to the back of the environment. The lookupVal function follows
+forward references, and when it ﬁnds a value, it uses the cover function to “close”
+a value over the bindings in the tail of the environment (i.e., the bindings from
+the context of the bound value):
+cover :: Val → Env s Val → Val
+cover (CloV (Clos p nv′)) nv = CloV (Clos p (combine nv′ nv))
+cover (CodV (Suspended p nv′)) nv = CodV (Suspended p (combine nv′ nv))
+cover (IntV i ) nv = IntV i
+The combine function used by this cover function instantiates unknown bindings
+by bindings coming from the context:
+combine :: Env s v → Env s v → Env s v
+combine (Env s nv 1) (Env s nv 2) = Env s (go nv 1 nv 2)
+where
+go [ ] nv = nv
+go (Nothing : nv 1) [ ] = Nothing : nv 1
+go (Nothing : nv 1) (Nothing : nv 2) = Nothing : go nv 1 nv 2
+go (Nothing : nv 1) (Just (Left v ) : nv 2) = Just (Left v ) : go nv 1 nv 2
+go (Nothing : nv 1) (Just (Right n ) : nv 2) = Just (Right (n + length nv 1))
+: go nv 1 nv 2
+go (Just v : nv 1) nv 2 = Just v : go nv 1 nv 2
+The push operation introduces unknown bindings in the context of a subcompu-
+tation.
+
+--- PDF page 36 ---
+36 van den Berg et al.
+push :: ∀v σ.(Reading (Env s v)<σ )
+⇒ Int → Treeσ Id v → Treeσ Id v
+push n m = local (λ(Env s nv :: Env s v) →
+Env s $ replicate n Nothing + +nv)
+m
+Finally, the splice operation is like unquote, but it combines the environment
+in a Suspended value with the contextual environment of the splice operation,
+thereby instantiating variables whose bindings were unknown when the thunk
+was created.
+splice :: ∀r v l σ.(Reading (Env s v)<σ, Suspending v <σ,
+Suspended (Env s v)<: v)
+⇒ Treeσ Id v → Treeσ Id v
+splice m = do
+v ← m
+case proj v v of
+Just (Suspended p nv ) → local (combine (nv :: Env s v)) (enact p )
+Nothing → error "bad unquote"
+C.4 The Diﬀerence between splice and push
+While it is straightforward to deﬁne latent eﬀect handlers thatdelay the evaluation
+of subtrees (which is exactly whatSuspending and Thunking do), it is problematic
+to deﬁne handlers that “hoist” code that occurs in the computational subtree
+or the continuation of a tree. The crux of the problem is that subtrees and
+continuations require a value and a latent eﬀect context before we can inspect
+their Trees. Escape expressions in MetaML represent code that must be run before
+returning a code value, and if escape expressions were to occur in computational
+subtrees of a quote operation, we would have to hoist the code out of the subtree.
+Our push and splice operations work around this problem. They allow us to write
+splicing code so that the eﬀectful operations that compute code to be spliced
+occur in the “right” place in the latent eﬀect tree.
+The program in Figre 6 justiﬁes the need for the two diﬀerent constructs to
+mimic escape operations.
+The program in Figure 4 of Section 4.1 only uses the splice construct. In
+order to write programs that behave similarly to MetaML programs with escape
+expressions that occur under a binder inside staged code, we also need push. In
+Figure 6, the MetaML program on the left (due to Taha [24]) contains two escape
+expressions that both occur under function binders inside staged code. The result
+of running the program is a value that is alpha-equivalent to the code value
+<fn x1 => ( fn x2 => x2 + x1)> . The program on the right in Figure 6 uses
+push to indicate how many quoted binders a given computation is scoped by. 6
+6 We have also added variable names in {-comments -} in Figure 6 to increase the
+readability of the de Bruijn indexed program.
+
+--- PDF page 37 ---
+Latent Eﬀects for Reusable Language Components 37
+1 let T = fn e = >
+2 < fn x = > x + ~e >
+3 in < fn x = > ~( T <x >) >
+letbind {-T -} (abs ′ {-e -}
+(letbind {-d -}
+(push {-x -} 1 (var {-e -} 1))
+(quote (abs ′ {-x -}
+(add (var {-x -} 0) (splice (var {-d -} 1)))))))
+(letbind {-d’ -} (push {-x -} 1
+(app (var {-T -} 1) (quote (var {-x -} 0))))
+(quote (abs ′ {-x -} (splice (var {-d’ -} 1)))))
+Fig. 6: A MetaML program and its counterpart with quote, unquote, push, and
+splice.
+The push on line 3 on the right in Figure 6 corresponds to the escape expression
+in line 2 on the left. Likewise, the push on line 6 on the right corresponds to the
+escape expression in line 3 on the left. The dynamic semantics of push creates
+an environment with “holes” that represent unknown bindings. The dynamic
+semantics of splice automatically ﬁlls in the holes of environments in pushed
+code values, with bindings from the dynamic context of the splice expression.
+This pushing and ﬁlling of holes makes the splicing in the program on the right
+behave similar to the (lexically-scoped) escape expressions in the program on
+the left. This is to yield a code value similar to the code value returned by the
+MetaML program.

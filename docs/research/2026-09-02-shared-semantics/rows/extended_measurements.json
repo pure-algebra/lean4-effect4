@@ -1,0 +1,48 @@
+[
+  {
+    "name": "tc_256_depth2048",
+    "rep": 0,
+    "seconds": 0.419115,
+    "exit": 1,
+    "output": "/tmp/effect4-row-research-20260902/tc_256_depth2048.lean:16:39: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  Has (atom 128) row\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.\n/tmp/effect4-row-research-20260902/tc_256_depth2048.lean:17:39: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  Has (atom 255) row\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.\n"
+  },
+  {
+    "name": "explicit_256_depth2048",
+    "rep": 0,
+    "seconds": 3.012463,
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "name": "explicit_256_depth2048",
+    "rep": 1,
+    "seconds": 3.055646,
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "name": "explicit_256_depth2048",
+    "rep": 2,
+    "seconds": 3.096303,
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "name": "def_transparency",
+    "seconds": 0.363448,
+    "exit": 1,
+    "output": "/tmp/effect4-row-research-20260902/def_transparency.lean:14:34: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  Has (atom 0) row\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.\n"
+  },
+  {
+    "name": "left_associated",
+    "seconds": 0.250704,
+    "exit": 1,
+    "output": "/tmp/effect4-row-research-20260902/left_associated.lean:14:34: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  Has (atom 0) row\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.\n"
+  },
+  {
+    "name": "missing_member",
+    "seconds": 0.216553,
+    "exit": 1,
+    "output": "/tmp/effect4-row-research-20260902/missing_member.lean:14:34: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  Has (atom 2) row\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.\n"
+  }
+]

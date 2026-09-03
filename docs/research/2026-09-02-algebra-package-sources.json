@@ -1,0 +1,840 @@
+{
+  "record_kind": "internal-first-pass-literature-review",
+  "date": "2026-09-02",
+  "scope": "Read-only source research; separate proposed review document; no extraction, cutover, publishing, or dependency adoption.",
+  "network_used": false,
+  "effect4_commit": "686a93e684fa9ca82026faf25f92622216551521",
+  "foldlab_commit": "4005d34f249cda25134ac2bddff514e3a068bc1e",
+  "initial_worktree_changes": [
+    "COORDINATION.md",
+    "Effect4/Runtime/Runtime.lean",
+    "README.md",
+    "test/fixtures/trust-gate/known-red.txt",
+    ".claude/launch.json (untracked)"
+  ],
+  "source_snapshots": [
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/ALGEBRA-PACKAGE-PLAN.md",
+      "bytes": 7084,
+      "sha256": "cee01a9d46a6ffb0d19a9d936b646b15acf0803bc65bb08331a7c708ea4a8b88"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/REIFICATION-STRATEGY.md",
+      "bytes": 16331,
+      "sha256": "848eed031dd40bd214498d7c3cd56feb7e06e01d1a638ef1e32d1b1399667150"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/DESIGN-BASIS.md",
+      "bytes": 25675,
+      "sha256": "a8fe66bafe8654b08e50f3a93bfc040f9bb4bc219a2e7e92aa107c0d46425574"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/ARCHITECTURE.md",
+      "bytes": 3813,
+      "sha256": "8b140c510bcaaa98a6e84739d549764a5c30ab45710b185b17175ab9380a6029"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/PLAN.md",
+      "bytes": 19681,
+      "sha256": "4313098a37eb15d50459d7c4da6da1a0962f128a061a1e6cb79aa793e5274e67"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/PORT-MANIFEST.md",
+      "bytes": 88280,
+      "sha256": "7b30546509348a44d684d54e6c2a8c19e868c494251487301b72d5b1d310c82e"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/test/contracts/algebra-extraction.contract.md",
+      "bytes": 25427,
+      "sha256": "0ac2bff275396cbca495db84b31290981417edbd61456c7513079adaebcf79fd"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/test/contracts/algebra-retained-closure.contract.md",
+      "bytes": 13916,
+      "sha256": "3e0f04c75764838fe6d421c3d7e99bce13753d1da3293b9eb0813009653f84f9"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/test/counterexamples/REGISTER.md",
+      "bytes": 59967,
+      "sha256": "c9d95ee94fe0ab376c3cae32a6b51810d054f0f814f06a9a7f22c539f359f843"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/TYPESCRIPT-TARGET-DAG.md",
+      "bytes": 6650,
+      "sha256": "4f469db86d2b426815923cedc2e20e3762bc16ca2c1ed4beae6ca57b415446e5"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/lakefile.toml",
+      "bytes": 193,
+      "sha256": "7d1579b1a7ac49463ecfa0f5cd9928d161cf9b3e82815bb25f9d2f9391813152"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/lean-toolchain",
+      "bytes": 25,
+      "sha256": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/skills/lean-reification/references/sources.md",
+      "bytes": 9973,
+      "sha256": "ca758dc3e8cba0dffcc7090d56d028dd2fd8962f40b5706684448fc4931cff4e"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/Effect4/Algebra/Handler/Category.lean",
+      "bytes": 1448,
+      "sha256": "1d159b479d402d77aad0be67ba912905003e6fbeea12df827f6c810b8306d52c"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/Effect4/Algebra/Handler/Composition.lean",
+      "bytes": 2430,
+      "sha256": "edd5471c55eab7038ba7d536ce1c747a608a356d54d041ac24f899f65dd57e16"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/Effect4/Algebra/Handler.lean",
+      "bytes": 1295,
+      "sha256": "930363b64967f7d98ae3f4f177fe46a5f1d1207faf3ba0a38ad865bd126cc2f0"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/Effect4/Algebra/Laws.lean",
+      "bytes": 4266,
+      "sha256": "844ff1d20fc90b3e104272a70cd7168f740c8d27da4d53b5c8df9d9c7f8395bc"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/Effect4/Algebra/MonadLaws.lean",
+      "bytes": 1295,
+      "sha256": "5ef7ebf3d6d98c4c04e82e77289f5a66d88bdb4b3f9399d28fe6c88fa590a433"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/Effect4/Algebra/Program.lean",
+      "bytes": 1700,
+      "sha256": "73a3c53d32bfd0b373d5853f4ec861943c387fe177e631e8aa814b2bd995a06b"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/Effect4/Algebra/Signature.lean",
+      "bytes": 819,
+      "sha256": "d58abc374f99fba80396e4c59ebbb77eb4a463d4e0d50c5d2dc03cf420cdc3aa"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/Effect4/Algebra/Sum.lean",
+      "bytes": 14594,
+      "sha256": "28ef06615452c818d1e4a8c49e6f8d88af6ef69d3b20b1e5648807addccab14c"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/Effect4/Algebra/Universal.lean",
+      "bytes": 10612,
+      "sha256": "b1cd0e59fbfd3eed1c0eded21d671b51eb5523c8d7495799f7d6f1c1b5a7c648"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/Effect4Test/Algebra/AxiomReport.lean",
+      "bytes": 2891,
+      "sha256": "9f6c94b1f3801812656c3cda719b673269c428f35ad84dea71f761ba8171e6b1"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/Effect4Test/Algebra/ExtractionContract.lean",
+      "bytes": 21254,
+      "sha256": "138c15cde4ff749c01946ccb18b595879c17541fea05169364f1aba98b781bd3"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/Effect4Test/Algebra/RetainedClosureContract.lean",
+      "bytes": 8954,
+      "sha256": "e295462e37bb50724bbecc138be33914225f1acaceab8502f37cd1defd8044ee"
+    }
+  ],
+  "primary_sources": [
+    {
+      "id": "L01",
+      "title": "Interaction Trees: Representing Recursive and Impure Programs in Coq",
+      "identity": "arXiv:1906.00046v2",
+      "status": "primary-local-relevant-sections-read",
+      "pdf": {
+        "path": "/private/tmp/lean-reification-research/itrees-v2.pdf",
+        "bytes": 554944,
+        "sha256": "943dc278978b9d85f8957e9044ec2f571f315b43e98d58762dad3e08dca4934c"
+      },
+      "reading_aid": {
+        "path": "/private/tmp/lean-reification-research/itrees-v2.txt",
+        "bytes": 125710,
+        "sha256": "faf1a5ed3f813eefd001e550605132121d287a1e308bcc424582df2504046507"
+      },
+      "sections_read": [
+        "Sections 2-4; especially 3.1-3.3, Figures 8-13"
+      ],
+      "matches_previous_source_receipt": true,
+      "availability": "temporary local storage; not copied into repository",
+      "proof_artifact_rebuilt": false
+    },
+    {
+      "id": "L02",
+      "title": "Choice Trees: Representing Nondeterministic, Recursive, and Impure Programs in Coq",
+      "identity": "arXiv:2211.06863v1",
+      "status": "primary-local-relevant-sections-read",
+      "pdf": {
+        "path": "/private/tmp/lean-reification-research/ctrees-v1.pdf",
+        "bytes": 863779,
+        "sha256": "87cae08d3a3c0156a38536ebefbf7bc179895a8b67759c277d474b71fad1d3a5"
+      },
+      "reading_aid": {
+        "path": "/private/tmp/lean-reification-research/ctrees-v1.txt",
+        "bytes": 126069,
+        "sha256": "13b6f6644399f4846adaee84231104a0f9f9b3c130dbc6d469e2d322a290f9f6"
+      },
+      "sections_read": [
+        "Section 5.1, Figure 13 and Lemma 5.1; Section 5.2"
+      ],
+      "matches_previous_source_receipt": true,
+      "availability": "temporary local storage; not copied into repository",
+      "proof_artifact_rebuilt": false
+    },
+    {
+      "id": "L03",
+      "title": "HITrees: Higher-Order Interaction Trees",
+      "identity": "arXiv:2510.14558v1",
+      "status": "primary-local-relevant-sections-read",
+      "pdf": {
+        "path": "/private/tmp/lean-reification-research/hitrees-v1.pdf",
+        "bytes": 665188,
+        "sha256": "86389e257dc4b0bd24ee838e40496f86bf4b65c5c71112db0664c6188cb3afc7"
+      },
+      "reading_aid": {
+        "path": "/private/tmp/lean-reification-research/hitrees-v1.txt",
+        "bytes": 73612,
+        "sha256": "bde448ddf70dc58f6b8dc948dd3fa3bf44a34e5e3afe0aeb011dd9ee6eda1b80"
+      },
+      "sections_read": [
+        "Abstract; Section 2.1 recursion and defunctionalization; Section 2.2; Figure 4"
+      ],
+      "matches_previous_source_receipt": true,
+      "availability": "temporary local storage; not copied into repository",
+      "proof_artifact_rebuilt": false
+    },
+    {
+      "id": "L04",
+      "title": "Dijkstra Monads for All",
+      "identity": "arXiv:1903.01237v1",
+      "status": "primary-local-relevant-sections-read",
+      "pdf": {
+        "path": "/private/tmp/lean-reification-research/dijkstra-v1.pdf",
+        "bytes": 1134244,
+        "sha256": "8236fe3f4822d4ebec9e574d915743d46c2dae2c245b101e47877ef23ab02a12"
+      },
+      "reading_aid": {
+        "path": "/private/tmp/lean-reification-research/dijkstra-v1.txt",
+        "bytes": 112648,
+        "sha256": "023031d46a35217a0bcdb68804227b80a5c3a381c245d07428d11e170f7f3fc3"
+      },
+      "sections_read": [
+        "Introduction; Sections 3.2-3.3; Sections 6.1-6.2, equations 8-9 and ok(h)"
+      ],
+      "matches_previous_source_receipt": true,
+      "availability": "temporary local storage; not copied into repository",
+      "proof_artifact_rebuilt": false
+    },
+    {
+      "id": "L05",
+      "title": "Syntactic Effectful Realizability in Higher-Order Logic",
+      "identity": "arXiv:2506.09458v1",
+      "status": "primary-local-relevant-sections-read",
+      "pdf": {
+        "path": "/private/tmp/lean-reification-research/effhol-v1.pdf",
+        "bytes": 777345,
+        "sha256": "a493e698895878136a71e9ffdaaf9ece786cdd30864f853149cd69cec774ad0c"
+      },
+      "reading_aid": {
+        "path": "/private/tmp/lean-reification-research/effhol-v1.txt",
+        "bytes": 203861,
+        "sha256": "1b4073b8ae43a1defda2ded83009178e0dd8dc66ce8910cec5a56448ad636cec"
+      },
+      "sections_read": [
+        "Figure 5 and adjacent modality discussion; Section V soundness and instance discussion"
+      ],
+      "matches_previous_source_receipt": true,
+      "availability": "temporary local storage; not copied into repository",
+      "proof_artifact_rebuilt": false
+    },
+    {
+      "id": "L06",
+      "title": "Formal verification of a realistic compiler",
+      "identity": "Leroy, Communications of the ACM, 2009",
+      "status": "primary-local-relevant-sections-read",
+      "pdf": {
+        "path": "/private/tmp/lean-reification-research/compcert-cacm.pdf",
+        "bytes": 200102,
+        "sha256": "5cfa2447db8dfa4400a43bb7e41e16f4787bf614e72bf0ffbf82f75d6824a137"
+      },
+      "reading_aid": {
+        "path": "/private/tmp/lean-reification-research/compcert-cacm.txt",
+        "bytes": 50547,
+        "sha256": "543795d0f4d6f335cfbeadfddb91bda816764cc067ac59abcee4425e1e6ae80e"
+      },
+      "sections_read": [
+        "Sections 2.1-2.2, behavior inclusion and verified translation validation"
+      ],
+      "matches_previous_source_receipt": true,
+      "availability": "temporary local storage; not copied into repository",
+      "proof_artifact_rebuilt": false
+    },
+    {
+      "id": "L07",
+      "title": "PolyFun interface comparison",
+      "status": "primary-local-source-read",
+      "repository": "/private/tmp/polyfun-audit.R4fqzR",
+      "commit": "3937f7ff0830cca33d6b35a24aef55bcbe3b6bc9",
+      "files": [
+        {
+          "path": "/private/tmp/polyfun-audit.R4fqzR/lakefile.toml",
+          "bytes": 2810,
+          "sha256": "ad736a2dd9045c203b9c3f5e63ce0cc69c3a19c7e97992ef5e0d7207574c0706"
+        },
+        {
+          "path": "/private/tmp/polyfun-audit.R4fqzR/LICENSE",
+          "bytes": 11357,
+          "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+        },
+        {
+          "path": "/private/tmp/polyfun-audit.R4fqzR/PolyFun/PFunctor/Lens/Basic.lean",
+          "bytes": 39649,
+          "sha256": "22e2df1c1732fd87739164b742aba008cac076f65a7ae74c38a1ebcec08f7087"
+        },
+        {
+          "path": "/private/tmp/polyfun-audit.R4fqzR/PolyFun/PFunctor/Handler/Stateful.lean",
+          "bytes": 5135,
+          "sha256": "0607a4b71851cb38e847bcb94f84cf49e1fc71d79a0abcf1447f6c84dd329da5"
+        },
+        {
+          "path": "/private/tmp/polyfun-audit.R4fqzR/PolyFun/Control/Monad/Hom.lean",
+          "bytes": 13842,
+          "sha256": "ec59e719379713924d43c7c2d81c1d0237d57cdae66aa206192361626386cbb9"
+        }
+      ],
+      "sections_read": [
+        "Lens.comp/mapObj",
+        "Stateful.run_bind/reindex/run_reindex",
+        "MonadHom and StateT.mapHom/id/comp",
+        "dependency declarations"
+      ],
+      "proof_artifact_rebuilt": false
+    }
+  ],
+  "secondary_sources": [
+    {
+      "id": "N01",
+      "status": "secondary-historical-local-note; not current proof evidence",
+      "artifact": {
+        "path": "/Users/pooks/Dev/foldlab/docs/entity-store/research/itrees-ctrees-literature-notes.md",
+        "bytes": 23914,
+        "sha256": "370fae9448a0f548479011d73ae8a8e590b79e021ecd83d2e5ea7eff0016c055"
+      },
+      "sections_read": [
+        "Sections 3-5; layered-interpreter follow-up"
+      ]
+    },
+    {
+      "id": "N02",
+      "status": "secondary-historical-local-note; not current proof evidence",
+      "artifact": {
+        "path": "/Users/pooks/Dev/foldlab/docs/entity-store/research/lean-coinduction-realization-survey.md",
+        "bytes": 12661,
+        "sha256": "8da29a3627ee1ffa1bc80a38d0294de80a8528977319e76f87f4c2cafda7e6e8"
+      },
+      "sections_read": [
+        "PolyFun and dependency comparison; historical caveats"
+      ]
+    },
+    {
+      "id": "N03",
+      "status": "secondary-historical-local-note; not current proof evidence",
+      "artifact": {
+        "path": "/Users/pooks/Dev/foldlab/.staging/algebraic-review/handlers-semantics.md",
+        "bytes": 42869,
+        "sha256": "253f670802a0da391607efd4c11001036b9418a1be211e9730edff8a43cdaf3c"
+      },
+      "sections_read": [
+        "B.1 and review structure"
+      ]
+    },
+    {
+      "id": "N04",
+      "status": "secondary-historical-local-note; not current proof evidence",
+      "artifact": {
+        "path": "/Users/pooks/Dev/foldlab/.staging/algebraic-review/prog-carrier.md",
+        "bytes": 42537,
+        "sha256": "f84ecbfdf15050959910da637180515dafc14518252e9cf4d3b48014a8822762"
+      },
+      "sections_read": [
+        "C-4; review structure"
+      ]
+    },
+    {
+      "id": "N05",
+      "status": "secondary-historical-local-note; not current proof evidence",
+      "artifact": {
+        "path": "/Users/pooks/Dev/foldlab/.staging/algebraic-review/THE-ALGEBRA.md",
+        "bytes": 114031,
+        "sha256": "0e055c8ad33be84295187bf72812634c2869d55b40be17fe7e9e42cd57ed26fc"
+      },
+      "sections_read": [
+        "Status and baseline; scope overview"
+      ]
+    },
+    {
+      "id": "N06",
+      "status": "secondary-historical-local-note; not current proof evidence",
+      "artifact": {
+        "path": "/Users/pooks/Dev/foldlab/.staging/effect-core-v1/COUNTEREXAMPLES.md",
+        "bytes": 21746,
+        "sha256": "5562709dff0da37aedaadbf835e55bbeb563c16d4ed2246a7119eff1b7910216"
+      },
+      "sections_read": [
+        "EC1-CE041/045/048 recorded conclusions; witnesses not rerun"
+      ]
+    }
+  ],
+  "catalogue": {
+    "lock": {
+      "path": "/Users/pooks/Dev/foldlab/.reference/provenance/papers.lock.json",
+      "bytes": 44522,
+      "sha256": "0eda34e3285c04c6884241763398cfbc0cad79f76caa365ed9a1d8f709885bd1"
+    },
+    "index": {
+      "path": "/Users/pooks/Dev/foldlab/.reference/catalog/PAPERS.md",
+      "bytes": 20445,
+      "sha256": "421bef32ee13386ad2799ecf90575037404049f49869b3c3cfb196f1090de1f1"
+    },
+    "entries": 88,
+    "pdfs_present_at_recorded_paths": 0
+  },
+  "unavailable_local_context": [
+    "/Users/pooks/Dev/lean4-WHATWG-streams",
+    "docs/research/2026-09-01-web-reification-targets-survey.md (streams repository)",
+    "R0 documents and M1/M2 definitions (streams repository)"
+  ],
+  "verification": [
+    {
+      "command": "lake env lean Effect4Test/Algebra/ExtractionContract.lean",
+      "exit_code": 0,
+      "log": "/private/tmp/algebra-review-ExtractionContract.log",
+      "axiom_receipts": 0,
+      "axioms": [],
+      "log_artifact": {
+        "path": "/private/tmp/algebra-review-ExtractionContract.log",
+        "bytes": 11894,
+        "sha256": "9c827a987519494818b3d2f649e006141eb2752f88d793813c7f3f1ec06efb56"
+      }
+    },
+    {
+      "command": "lake env lean Effect4Test/Algebra/RetainedClosureContract.lean",
+      "exit_code": 0,
+      "log": "/private/tmp/algebra-review-RetainedClosureContract.log",
+      "axiom_receipts": 0,
+      "axioms": [],
+      "log_artifact": {
+        "path": "/private/tmp/algebra-review-RetainedClosureContract.log",
+        "bytes": 7176,
+        "sha256": "213677fcc941cd2514205ea3c8c95d027fd6e251f6b09ac80625daa5fd7a8d81"
+      }
+    },
+    {
+      "command": "lake env lean Effect4Test/Algebra/AxiomReport.lean",
+      "exit_code": 0,
+      "log": "/private/tmp/algebra-review-AxiomReport.log",
+      "axiom_receipts": 60,
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ],
+      "log_artifact": {
+        "path": "/private/tmp/algebra-review-AxiomReport.log",
+        "bytes": 4253,
+        "sha256": "7561ce1f544dbccd5c4be106dab7eb968c18547d474c5373230bf88fd31531a0"
+      }
+    }
+  ],
+  "axiom_receipts": [
+    {
+      "declaration": "Effect4.Program.bind_pure_right",
+      "axioms": [
+        "Quot.sound"
+      ]
+    },
+    {
+      "declaration": "Effect4.Program.bind_assoc",
+      "axioms": [
+        "Quot.sound"
+      ]
+    },
+    {
+      "declaration": "Effect4.Program.perform_bind",
+      "axioms": []
+    },
+    {
+      "declaration": "Effect4.Handler.ext",
+      "axioms": [
+        "Quot.sound"
+      ]
+    },
+    {
+      "declaration": "Effect4.leftUnit_of_lawful",
+      "axioms": []
+    },
+    {
+      "declaration": "Effect4.rightUnit_of_lawful",
+      "axioms": []
+    },
+    {
+      "declaration": "Effect4.bindAssoc_of_lawful",
+      "axioms": []
+    },
+    {
+      "declaration": "Effect4.interpret_pure",
+      "axioms": []
+    },
+    {
+      "declaration": "Effect4.interpret_vis",
+      "axioms": []
+    },
+    {
+      "declaration": "Effect4.interpret_perform",
+      "axioms": []
+    },
+    {
+      "declaration": "Effect4.interpret_perform_of_rightUnit",
+      "axioms": []
+    },
+    {
+      "declaration": "Effect4.interpret_bind",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.interpret_bind_of_equations",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.interpret_identity",
+      "axioms": [
+        "Quot.sound"
+      ]
+    },
+    {
+      "declaration": "Effect4.Program.eq_of_all_interpretations",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.Handler.sum_handle_inl",
+      "axioms": []
+    },
+    {
+      "declaration": "Effect4.Handler.sum_handle_inr",
+      "axioms": []
+    },
+    {
+      "declaration": "Effect4.Handler.sum_unique",
+      "axioms": [
+        "Quot.sound"
+      ]
+    },
+    {
+      "declaration": "Effect4.interpret_inl",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.interpret_inr",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.Program.inl_bind",
+      "axioms": [
+        "Quot.sound"
+      ]
+    },
+    {
+      "declaration": "Effect4.Program.inr_bind",
+      "axioms": [
+        "Quot.sound"
+      ]
+    },
+    {
+      "declaration": "Effect4.Program.inl_pure",
+      "axioms": []
+    },
+    {
+      "declaration": "Effect4.Program.inr_pure",
+      "axioms": []
+    },
+    {
+      "declaration": "Effect4.Program.inl_injective",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.Program.inr_injective",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.Program.inl_unique",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.Program.inr_unique",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.Program.inl_one_target_iff",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.Program.inr_one_target_iff",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.Program.inl_unique_one_target",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.Program.inr_unique_one_target",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.Program.inl_all_models_iff",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.Program.inr_all_models_iff",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.Program.inl_unique_all_models",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.Program.inr_unique_all_models",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.interpret_leftInjectionHandler",
+      "axioms": [
+        "Quot.sound"
+      ]
+    },
+    {
+      "declaration": "Effect4.interpret_rightInjectionHandler",
+      "axioms": [
+        "Quot.sound"
+      ]
+    },
+    {
+      "declaration": "Effect4.injectionHandlers_sum",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.interpret_isMonadMorphism",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.interpret_isMonadMorphism_of_equations",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.interpret_of_isMonadMorphism",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.exists_handler_of_isMonadMorphism",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.handler_eq_of_interpret_operation_eq",
+      "axioms": [
+        "Quot.sound"
+      ]
+    },
+    {
+      "declaration": "Effect4.handler_eq_of_interpret_eq",
+      "axioms": [
+        "Quot.sound"
+      ]
+    },
+    {
+      "declaration": "Effect4.program_is_free",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.program_is_initial_in_models",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.ModelMorphism.toIsMonadMorphism",
+      "axioms": []
+    },
+    {
+      "declaration": "Effect4.ModelMorphism.ext",
+      "axioms": [
+        "Quot.sound"
+      ]
+    },
+    {
+      "declaration": "Effect4.ModelMorphism.ofIsMonadMorphism_map",
+      "axioms": []
+    },
+    {
+      "declaration": "Effect4.ModelMorphism.ofIsMonadMorphism_toIsMonadMorphism",
+      "axioms": [
+        "Quot.sound"
+      ]
+    },
+    {
+      "declaration": "Effect4.program_is_initial_in_models_eq",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.interpret_pinned",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.interpret_inhabits_the_pin",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.interpret_through",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.interpret_through_of_equations",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.Handler.through_assoc",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "declaration": "Effect4.Handler.through_identity_right",
+      "axioms": [
+        "Quot.sound"
+      ]
+    },
+    {
+      "declaration": "Effect4.Handler.through_identity_left",
+      "axioms": [
+        "Quot.sound"
+      ]
+    },
+    {
+      "declaration": "Effect4.Handler.through_endomorphism_monoid",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    }
+  ],
+  "verification_limits": [
+    "This is not a whole-repository build or trust audit.",
+    "Third-party proof developments were read, not rebuilt.",
+    "No network search was used to resolve missing papers or streams documents.",
+    "Paper hashes match the earlier local skill source receipt; this does not establish applicability of their theorems to Effect4."
+  ],
+  "unread_priority_sources": [
+    "Yoon, Zakowski, Zdancewic, Formal Reasoning about Layered Monadic Interpreters (2022)",
+    "Hyland, Plotkin, Power, Combining Effects: Sum and Tensor (2006)",
+    "Plotkin and Power, Algebraic Operations and Generic Effects (2003)",
+    "Plotkin and Pretnar, Handling Algebraic Effects (2013)",
+    "Wu, Schrijvers, Hinze, Effect Handlers in Scope (2014)",
+    "Pirog, Schrijvers, Wu, Jaskelioff, Syntax and Semantics for Operations with Scopes (2018)",
+    "Yang and Wu, Reasoning about Effect Interaction by Fusion (citation identity unverified)"
+  ],
+  "closing_effect4_commit": "5af27c4cbf0a84f1abcc93162b0121be6a48df7e",
+  "concurrent_change_note": "Another lane advanced HEAD during this review. The recorded reviewed source hashes remain unchanged; no commit was made by this task.",
+  "document_checks": {
+    "local_links_and_anchors_resolve": 32,
+    "source_and_text_hashes_match": 48,
+    "polyfun_inspected_files_match_recorded_commit": true,
+    "internal_citation_gate_exit_code": 0,
+    "git_diff_check_exit_code": 0
+  }
+}
