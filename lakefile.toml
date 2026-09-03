@@ -29,50 +29,53 @@ globs = ["Effect4Test"]
 # a bare `lake env lean` on one file. The areas are disjoint and together cover
 # the tree. `Effect4TestConcurrency` and `Effect4TestProtocol` each contain one
 # declared-red module and are expected to fail until its builder lands.
+#
+# The globs are `.+`, submodules only: `.*` would also select the directory's
+# own module — `Effect4Test.Audit`, say — and no such file exists.
 
 [[lean_lib]]
 name = "Effect4TestSchema"
-globs = ["Effect4Test.Schema.*"]
+globs = ["Effect4Test.Schema.+"]
 
 [[lean_lib]]
 name = "Effect4TestFlow"
-globs = ["Effect4Test.Flow.*"]
+globs = ["Effect4Test.Flow.+"]
 
 [[lean_lib]]
 name = "Effect4TestSemantics"
-globs = ["Effect4Test.Semantics.*"]
+globs = ["Effect4Test.Semantics.+"]
 
 [[lean_lib]]
 name = "Effect4TestTarget"
-globs = ["Effect4Test.Target.*"]
+globs = ["Effect4Test.Target.+"]
 
 [[lean_lib]]
 name = "Effect4TestRuntime"
-globs = ["Effect4Test.Runtime.*"]
+globs = ["Effect4Test.Runtime.+"]
 
 [[lean_lib]]
 name = "Effect4TestConcurrency"
-globs = ["Effect4Test.Concurrency.*"]
+globs = ["Effect4Test.Concurrency.+"]
 
 [[lean_lib]]
 name = "Effect4TestAudit"
-globs = ["Effect4Test.Audit.*"]
+globs = ["Effect4Test.Audit.+"]
 
 [[lean_lib]]
 name = "Effect4TestCounterexamples"
-globs = ["Effect4Test.Counterexamples.*"]
+globs = ["Effect4Test.Counterexamples.+"]
 
 [[lean_lib]]
 name = "Effect4TestData"
-globs = ["Effect4Test.Data.*"]
+globs = ["Effect4Test.Data.+"]
 
 [[lean_lib]]
 name = "Effect4TestEnvironment"
-globs = ["Effect4Test.Environment.*"]
+globs = ["Effect4Test.Environment.+"]
 
 [[lean_lib]]
 name = "Effect4TestProtocol"
-globs = ["Effect4Test.Protocol.*"]
+globs = ["Effect4Test.Protocol.+"]
 
 # The generic effect algebra, morphisms, transport, families, and the generic
 # first-order Flow, and the shared trace alphabet. Exact commit of tag v0.7.0 of

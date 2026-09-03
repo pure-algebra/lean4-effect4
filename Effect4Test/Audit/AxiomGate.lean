@@ -516,6 +516,12 @@ declared module that the audit root does in fact import has outlived its red
 phase and fails the gate.
 
 The file is not optional. A missing one is a gate that checks nothing.
+
+Lake does not trace it — it is not an import — so a `lake build` that replays
+the audit root's olean carries the previous reading. `scripts/test-trust-gate.sh`
+step 0 is the authority: it compares the declared set against the modules that
+actually fail a red-inclusive build, in both directions, and deletes the audit
+root's artifact from its probe copy so this check always re-runs there.
 -/
 private def declaredRedModules (projectRoot : System.FilePath) : IO (List Name) := do
   let path := projectRoot / "test" / "fixtures" / "trust-gate" / "known-red.txt"

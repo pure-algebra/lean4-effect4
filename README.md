@@ -21,11 +21,18 @@ The toolchain is pinned by `lean-toolchain`. Build the production library with:
 lake build Effect4
 ```
 
+The default targets are `Effect4` and `Effect4TestGreen`, so a bare `lake build`
+compiles the library, the green battery, and the axiom gate that runs in the
+battery's root. A narrower sweep is a per-area target — `lake build
+Effect4TestSemantics`, `Effect4TestFlow`, and so on, one per `Effect4Test/`
+directory.
+
 This repository deliberately permits a frozen breaker battery to be red before
 its builder lands. The exact expected-red set is
 `test/fixtures/trust-gate/known-red.txt`; it is checked in both directions.
-Run the green remainder, the declaration-closure checks, and the source trust
-mutations with:
+Those modules are outside the default build and inside `Effect4Test`, the
+red-inclusive glob. Run the green remainder, the declaration-closure checks,
+and the source trust mutations with:
 
 ```text
 ./scripts/test-trust-gate.sh
