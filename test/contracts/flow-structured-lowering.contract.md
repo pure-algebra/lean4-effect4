@@ -111,3 +111,73 @@ lake env lean Effect4Test/Target/TypeScript/StructureLawsAxiomReport.lean
 ./scripts/test-lowering-mutations.sh
 ./scripts/check-lowering-coverage.sh
 ```
+
+## Amendment: the generic body premise is insufficient, 2026-09-03
+
+`E4-TARGET-CE-018` refutes the quantified `BreakScopedStatement` recorded
+above. This is a defect in that open statement. The existing proved
+`emitWith_wellScoped` result, with `blockLabels g` as the initial block scope,
+remains valid.
+
+The witness is `Effect4Test/Counterexamples/Target/BreakScoped.lean`.
+`diamond` has four nodes, with edges from 0 to 1 and 2, from 1 and 2 to 3,
+and no outgoing edge from 3. It is closed and reducible. `illicitBody` asks
+for `transfer 3` at every node and satisfies the original `BodyScoped`.
+The pinned emitter returns a labelled block containing `break L3`, followed
+by another `break L3` outside that label. `frozen_statement_false` proves
+`¬ Effect4.Target.Structured.BreakScopedStatement`; the emission equation is
+checked by kernel reduction.
+
+The two graph facts listed above cannot establish this original statement:
+the body may request a transfer for an edge that the graph never declared.
+The proposed corrected premise is `BodyScopedOnEdges g body`, stated in the
+witness module without changing the production declaration:
+
+```lean
+∀ (node : Nat) (transfer : Nat → Option (List Skeleton))
+  (blocks loops : List String) (own : List Skeleton),
+  (∀ target control, target ∈ g.succs node →
+    transfer target = some control →
+    Skel.wellScopedList blocks loops control = true) →
+  body node transfer = some own →
+  Skel.wellScopedList blocks loops own = true
+```
+
+`CorrectedBreakScopedStatement` retains the original graph-closedness,
+reducibility, successful-emission and empty-initial-scope requirements,
+replacing only `BodyScoped body` with `BodyScopedOnEdges g body`. It remains
+an unproved obligation. `illicit_body_not_edge_scoped` confirms that the
+corrected premise excludes the counterexample.
+
+The actual lowerer satisfies the stronger premise. `skeletonBlockWith_edgeMove`
+proves that restricting transfers to `RawTerm.successors` leaves every lowered
+block unchanged. `skeletonBlockWith_scoped_on_edges` transports the existing
+scoping theorem through that restriction. `actualBody_scoped_on_edges` then
+proves the graph-level obligation for every operation table, block list,
+entry and interrupt setting. `actualBody_exact` identifies that body with the
+one used by `Flow.skeletonBody`; it is an equality by kernel reduction.
+These declarations are test receipts for the proposed contract correction,
+not a replacement production interface.
+
+The intended full T4 remains open: for every admitted flow that lowers to
+both forms, the structured and dispatch skeletons must denote the same
+`Program` at `fuelFor`, including merges and loop headers. The current
+`skeletonStructured_denote_dispatch` theorem covers flat graphs and requires
+`interrupts = false`. Closing the stronger body premise does not remove
+either restriction. The proof still needs the graph facts, an account of
+where each labelled transfer resumes with its moved parameters, and a
+sufficient-fuel argument for structured loops. A structured loop spends fuel
+per iteration, while the dispatch form spends it per block, so the current
+flat theorem at arbitrary fuel cannot be generalized to loops by dropping
+its hypothesis. Interrupt-point denotation remains a separate obligation.
+
+The witness and actual-body receipts were checked using only:
+
+```text
+lake env lean Effect4Test/Counterexamples/Target/BreakScoped.lean
+```
+
+Every printed theorem receipt uses at most `propext` and `Quot.sound`, with
+no `sorryAx`, `Classical.choice` or native-evaluation axiom. This packet changes
+no production declaration, emitter, graph algorithm or dependency pin, and
+claims no host-boundary or full-T4 closure.
