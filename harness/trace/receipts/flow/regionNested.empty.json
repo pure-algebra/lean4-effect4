@@ -19,6 +19,7 @@
   "platform": "darwin-arm64",
   "patched": null
  },
+ "patchedFrames": [],
  "scheduler": {
   "mode": "TapeScheduler",
   "maxOpsBeforeYield": 1000000,

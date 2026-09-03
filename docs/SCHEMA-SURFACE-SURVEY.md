@@ -599,11 +599,11 @@ charged per combinator in §1.4. Every one of them is now carried:
 Which bucket each of the survey's structures now sits in:
 
 - **carried** — every row of the table above, joined under `SCHEMA-PG-PAYLOAD`
-  and closed at `generated/schema-structural-assurance.tsv:2396`.
+  and closed at `generated/schema-structural-assurance.tsv:2676`.
 - **admitted** — the recursive persisted/decode-side judgment
   `FieldAdmissible` over annotations, representations, checks, `Document`, and
   `MultiDocument` (`Effect4/Schema/Check.lean`), closed as
-  `SCHEMA-PG-FIELD-ADMISSION` at `:2397`. Non-emptiness of a `ReferenceKey`,
+  `SCHEMA-PG-FIELD-ADMISSION` at `:2677`. Non-emptiness of a `ReferenceKey`,
   of a `FilterGroup`'s checks, and of a `MultiDocument`'s roots is admission,
   not a constructor guard.
 - **generated** — raw authoring constructors (`Effect4/Schema/Authoring.lean`)
@@ -615,7 +615,7 @@ Which bucket each of the survey's structures now sits in:
   meaning, and the declaration/filter reviver registry that bucket (C) needs;
   all six modules are stubs. Document reference semantics and wire
   canonicalization remain the projection's two open rows, `SCHEMA-PG-DOCUMENT`
-  and `SCHEMA-PG-WIRE` (`:2400-2401`).
+  and `SCHEMA-PG-WIRE` (`:2681-2682`).
 
 ## 5. Contradictions and gaps against the repo documents
 

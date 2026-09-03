@@ -505,7 +505,7 @@ representation/check family are all closed. The general-recursor half of
 (`Effect4/Schema/Representation.lean:1283`, `:1332`) against
 `test/contracts/schema-recursor.contract.md` and battery
 `Effect4Test/Schema/RepresentationFoldContract.lean`;
-`generated/schema-structural-assurance.tsv:2384` records
+`generated/schema-structural-assurance.tsv:2656` records
 `SCHEMA-PG-PAYLOAD/SC-REP-03-RECURSOR` as `required-closed`. Document meaning,
 wire form, and host meaning remain separate graphs. A leaf is promoted only if
 it later acquires an independent semantic, admission, bridge, target, or
@@ -530,10 +530,10 @@ cutover claim.
 | `E4-TYPE-SCHEMA-INDEX-SIGNATURE` | `Effect4.IndexSignatureOf`; `Effect4.Schema.Payload` | exactly parameter and result type; applied alias adds no carrier or annotations field | same record leaf receipt; `declarationJoinSource = generated/schema-structural-assurance.tsv`; `required-closed` |
 | `E4-TYPE-DATA-OPTICS` | `Effect4.Lens`, `Effect4.Optional`, `Effect4.Traversal`; `Effect4.Data.Optic` | reusable pure views over existing carriers; not a second Schema tree and not an effect program | `proofGraphId = DATA-PG-OPTIC` for composition/conversion laws; direct projections are local receipts; `declarationJoinSource = generated/schema-structural-assurance.tsv`; `required-closed` |
 | `E4-TYPE-SCHEMA-ANNOTATION-KEY` | `Effect4.AnnotationKey`; `Effect4.Schema.Annotations` | typed partial-isomorphism view over existing `AnnotationEntry` payloads; no new stored annotation carrier | `proofGraphId = SCHEMA-PG-ANNOTATION-DATA`; exact reconstruction and recursive traversal joined in `generated/schema-structural-assurance.tsv`; `required-closed` |
-| `E4-TYPE-SCHEMA-EFFECTFUL-FIELD-SPEC` | `Effect4.EffectfulFieldSpec`; `Effect4.Schema.EffectfulField` | portable annotation payload containing the existing alphabet/read/write identities; no service, refusal, function, or program is persisted | `proofGraphId = SCHEMA-PG-EFFECTFUL-FIELD`; codec/admission batteries and `E4-SCHEMA-CE-049`..`052`; `required-open` pending target join |
+| `E4-TYPE-SCHEMA-EFFECTFUL-FIELD-SPEC` | `Effect4.EffectfulFieldSpec`; `Effect4.Schema.EffectfulField` | portable annotation payload containing the existing alphabet/read/write identities; no service, refusal, function, or program is persisted | `proofGraphId = SCHEMA-PG-EFFECTFUL-FIELD`; codec/admission batteries and `E4-SCHEMA-CE-049`..`055`; `required-closed`: `generated/schema-structural-assurance.tsv:2680` records `SCHEMA-PG-EFFECTFUL-FIELD all-applicable-edges-closed`, joined to the host gate row `:41` (`scripts/check-schema-effectful-field.sh`) and the two counterexample batteries (`:31-32`) |
 | `E4-TYPE-SCHEMA-FIELD-EFFECT-OPS` | `Effect4.FieldEffectOps`; `Effect4.Schema.EffectfulField` | resolved bridge into operations of one existing `Signature`, including proofs that operation IDs match; not canonical content | same graph; generated-program and interpreter equations implemented |
-| `E4-TYPE-SCHEMA-EFFECTFUL-FIELD` | `Effect4.EffectfulField`; `Effect4.Schema.EffectfulField` | derived authoring/proof view pairing an existing `Lens` with resolved operations; not a second optic or program hierarchy | same graph; Lean core implemented, TypeScript target receipt pending |
-| `E4-TYPE-SCHEMA-REPRESENTATION` | mutually recursive `Effect4.Representation` and `Effect4.Check`; `Effect4.Schema.Representation` | sole 22-constructor payload and two-constructor check family; reuses existing tag/kind alphabets and mints no second `Check` in `Schema.Check` | `proofGraphId = SCHEMA-PG-PAYLOAD`; `declarationJoinSource = generated/schema-structural-assurance.tsv`; declaration coverage, structural equality/tag projection, and the general recursor closed at tsv `:2382`, `:2383`, `:2384`; graph status `all-applicable-edges-closed` at `:2396`; `required-closed` |
+| `E4-TYPE-SCHEMA-EFFECTFUL-FIELD` | `Effect4.EffectfulField`; `Effect4.Schema.EffectfulField` | derived authoring/proof view pairing an existing `Lens` with resolved operations; not a second optic or program hierarchy | same graph; Lean core implemented and the TypeScript target harness gated by `scripts/check-schema-effectful-field.sh` (tsv `:41`) |
+| `E4-TYPE-SCHEMA-REPRESENTATION` | mutually recursive `Effect4.Representation` and `Effect4.Check`; `Effect4.Schema.Representation` | sole 22-constructor payload and two-constructor check family; reuses existing tag/kind alphabets and mints no second `Check` in `Schema.Check` | `proofGraphId = SCHEMA-PG-PAYLOAD`; `declarationJoinSource = generated/schema-structural-assurance.tsv`; declaration coverage, structural equality/tag projection, and the general recursor closed at tsv `:2654`, `:2655`, `:2656`; graph status `all-applicable-edges-closed` at `:2676`; `required-closed` |
 | `E4-TYPE-SCHEMA-REFERENCE-ENTRY` | `Effect4.ReferenceEntry`; `Effect4.Schema.Document` | ordered raw reference-table entry; duplicates remain representable for the wire boundary | `leafReceiptId = SCHEMA-LEAF-DOCUMENT-CONTAINERS`; parent `SCHEMA-PG-PAYLOAD`; `declarationJoinSource = generated/schema-structural-assurance.tsv`; `required-closed` |
 | `E4-TYPE-SCHEMA-DOCUMENT` | `Effect4.Document`; `Effect4.Schema.Document` | one-root container, nominally distinct from a multi-document | same document-container leaf; later semantics move to `SCHEMA-PG-DOCUMENT`; `declarationJoinSource = generated/schema-structural-assurance.tsv`; `required-closed` |
 | `E4-TYPE-SCHEMA-MULTI-DOCUMENT` | `Effect4.MultiDocument`; `Effect4.Schema.Document` | multi-root container; non-emptiness is field admission rather than hidden construction | same document-container leaf; later semantics move to `SCHEMA-PG-DOCUMENT`; `declarationJoinSource = generated/schema-structural-assurance.tsv`; `required-closed` |
@@ -567,10 +567,10 @@ axiom receipts, 32 counterexamples, nine duplicate-prevention checks, exact
 source pins, leaf receipts, and graph-edge statuses. Its reaction gate rejects
 stale output, a manual closure override, and a source override. The projection
 records `SCHEMA-PG-PAYLOAD/SC-REP-03-RECURSOR` as `required-closed`
-(`generated/schema-structural-assurance.tsv:2384`) and every graph it joins as
-closed (`:2395-2399`). The two rows it still keeps visibly open are external:
+(`generated/schema-structural-assurance.tsv:2656`) and every graph it joins as
+closed (`:2675-2680`). The two rows it still keeps visibly open are external:
 `SCHEMA-PG-DOCUMENT` reference semantics and `SCHEMA-PG-WIRE` codec and
-canonicalization (`:2400-2401`).
+canonicalization (`:2681-2682`).
 
 The isolated pre-implementation reconstruction receipt used `lake env lean -DmaxErrors=10000 --json Effect4Test/Schema/PayloadContract.lean` against battery SHA-256
 `e80d4be2f6385228aa87766d61ad4056fef68f947d0347cc15e1ac9279c6d27f`:

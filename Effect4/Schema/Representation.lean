@@ -446,6 +446,23 @@ theorem toLiteralKind_ne_boolean (kind : EnumValueKind) :
     kind.toLiteralKind ≠ .boolean := by
   cases kind <;> decide
 
+/-- The image, stated positively: a literal kind is reached by the embedding
+exactly when it is `string` or `number`. The two `≠` laws above rule out the
+kinds an enum cannot carry; this fixes the rest, so the pair is exhaustive
+rather than a sample. -/
+theorem exists_toLiteralKind_iff (kind : LiteralKind) :
+    (∃ source : EnumValueKind, source.toLiteralKind = kind) ↔
+      (kind = .string ∨ kind = .number) := by
+  constructor
+  · intro ⟨source, mapped⟩
+    cases source with
+    | string => exact Or.inl mapped.symm
+    | number => exact Or.inr mapped.symm
+  · intro spelled
+    cases spelled with
+    | inl isString => exact ⟨.string, isString.symm⟩
+    | inr isNumber => exact ⟨.number, isNumber.symm⟩
+
 end EnumValueKind
 
 /--

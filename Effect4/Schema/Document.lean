@@ -418,4 +418,24 @@ theorem annotationBags_lawful : Traversal.Lawful annotationBags := by
 
 end MultiDocument
 
+namespace Document
+
+/-- The single-root embedding commutes with the annotation data plane on the
+collecting face. Reading a document and reading its multi-root image visit the
+same bags in the same order, so `D6`'s embedding does not reorder the
+structural preorder. -/
+theorem annotationBags_collect_toMulti (document : Document) :
+    MultiDocument.annotationBags.collect document.toMulti =
+      Document.annotationBags.collect document := rfl
+
+/-- The single-root embedding commutes with the annotation data plane on the
+modifying face. Editing through either traversal and then embedding produces
+the same multi-root document. -/
+theorem annotationBags_modifyAll_toMulti (f : Annotations → Annotations)
+    (document : Document) :
+    MultiDocument.annotationBags.modifyAll f document.toMulti =
+      (Document.annotationBags.modifyAll f document).toMulti := rfl
+
+end Document
+
 end Effect4
