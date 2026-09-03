@@ -48,6 +48,7 @@ import Effect4.Runtime.ScopeMachine
 import Effect4.Runtime.ScopeRestoration
 import Effect4.Runtime.Resource
 import Effect4.Runtime.Runtime
+import Effect4.Runtime.LiveStack
 import Effect4.Runtime.ManagedRuntime
 import Effect4.Runtime.Lifecycle
 -- Packet D4 fence B. Above both Semantics and Runtime: it imports the frame

@@ -2080,3 +2080,69 @@ batteries, the `SCOPE-DAG`/`TRACE-DAG`/plan rows, the regenerated
 manifest under `docs/research/2026-09-02-standards-sources/`. Verified before
 committing: `lake build Effect4` green (136 jobs) and all five batteries
 elaborate within `propext`/`Quot.sound`. One sweep over the whole tree follows.
+## Independent live-stack breaker claim, 2026-09-03
+
+Codex's separate live-stack breaker claims the following packet only in this
+isolated worktree, based at `bfda8d8bd25929662f89a036efc231769adcc88d` on
+`codex/live-stack-integration`:
+
+- `test/contracts/live-stack.contract.md` and `docs/LIVE-STACK-DAG.md`;
+- `Effect4Test/Runtime/LiveStackContract.lean` and
+  `Effect4Test/Runtime/LiveStackAxiomReport.lean`;
+- `Effect4Test/Counterexamples/Runtime/LiveStack.lean`;
+- a declaration-free `Effect4/Runtime/LiveStack.lean` stub;
+- new LiveStack import lines in `Effect4.lean` and `Effect4Test.lean`;
+- new LiveStack entries in `test/fixtures/trust-gate/known-red.txt`; and
+- the new `E4-RUN-CE-022` through `E4-RUN-CE-024` rows in
+  `test/counterexamples/REGISTER.md`.
+
+The builder owns the later implementation and host harness. The frozen
+contract distinguishes whole-`FramePop` agreement with the existing pop loop
+from the source's deferred-first entry. It retains a masked deferred answer
+and records the event when an unmasked answer is discarded; compatibility
+with the old entry is guarded, while false-skip compatibility is unrestricted.
+The while-law fixes the inner-call/outer-loop relationship and event order.
+No new primitive or fiber carrier, asynchronous execution, scheduler
+simulation or default-runtime switch is admitted. `Runtime.lean`, every
+pre-existing frame packet, dependency pins and generated assurance remain
+unchanged. The main checkout is not edited by this breaker.
+
+The new stub and nine counterexample theorems build; all counterexample
+receipts are within `propext`. The contract has only the recorded missing-name
+errors and the two resulting unavailable-evaluation diagnostics; its independent
+13-case pop positive control passes. The axiom report has eight missing-name
+errors. Exact diagnostics, test counts and source hashes are frozen in
+`test/contracts/live-stack.contract.md`. The two new red modules are declared.
+
+## Live-stack builders, 2026-09-03
+
+The independent packet is committed at `8323eaf`. Root owns only
+`Effect4/Runtime/LiveStack.lean`, `scripts/check-live-stack.mjs`,
+`docs/LIVE-STACK-IMPLEMENTATION.md`, and removal of the two new
+known-red entries once green. The host builder owns
+`harness/live-stack/public.ts`, `harness/live-stack/host.mjs` and
+`harness/live-stack/HOST.md`; the compiled inspection builder owns
+`harness/live-stack/Inspect.lean` and `harness/live-stack/inspect.mjs`.
+The mutation builder owns `scripts/test-live-stack-mutations.mjs` only.
+Root also claims the new `generated/live-stack-assurance.json` projection,
+written only by `scripts/check-live-stack.mjs --write`. Existing generated
+files remain outside this claim. The projection records checked declarations,
+proof dependencies and finite host observations; it cannot close the open
+source simulation or authorize a default-runtime switch.
+The frozen contract, DAG and test files remain unchanged. All work is in
+this isolated branch; no builder switches or edits the shared main checkout.
+
+## Live-stack implementation verification, 2026-09-03
+
+The eight frozen public declarations are implemented without changing the
+contract, DAG, battery or existing carriers. Both complete local checks
+(`check-live-stack.mjs --write` and a separate fresh drift run) passed;
+`generated/live-stack-assurance.json` has digest
+`88b983b638016ba9c9a62a59ed3569a340eddef149790ecabe013412de491d85`.
+The independent review's three checker findings were repaired and verified.
+The trust self-test passed on its declared-red-excised temporary copy. The
+default package build still has the two old declared-red failures and their
+consequential root diagnostic; the separate Fiber projection and four
+pre-existing citation errors remain open. `docs/LIVE-STACK-IMPLEMENTATION.md`
+records exact evidence and the still-open source/compiler/scheduler edges.
+No shared main-checkout source or default runtime was changed.
