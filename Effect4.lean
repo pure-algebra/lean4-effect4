@@ -43,6 +43,7 @@ import Effect4.Layer.Build
 import Effect4.Layer.Provision
 import Effect4.Layer.Memo
 import Effect4.Layer.Laws
+import Effect4.Layer.LayerFamily
 import Effect4.Runtime.Scope
 import Effect4.Runtime.ScopeMachine
 import Effect4.Runtime.ScopeRestoration

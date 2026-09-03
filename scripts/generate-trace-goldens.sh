@@ -46,6 +46,13 @@ mkdir -p "$out/scope"
 for program in $(run scope-programs); do
   { provenance; run scope-golden "$program"; } > "$out/scope/$program.tsv"
 done
+# The `Layers` family (packet M4): its own generated module and its own tail
+# (`layer-tail.ts`), so neither the straight-line glob nor the scope loop sees
+# it. Its handles are rc.112 `Ref` and `Scope` objects, indexed by the tracer.
+mkdir -p "$out/layer"
+for program in $(run layer-programs); do
+  { provenance; run layer-golden "$program"; } > "$out/layer/$program.tsv"
+done
 # The `Fibers` family (packet M3): its own generated module and its own tail
 # (`fiber-tail.ts`), so the straight-line glob must not see it either. Each
 # golden carries the tape its forks are answered from, in the `tape` header row.

@@ -7,21 +7,13 @@ input	Effect4/Target/TypeScript/Trace.lean	sha256=38452fa69175f88fe675e45756f4ec
 pin	effects	2447edd76649f035e989914ac899831d66e7dad2
 format	effect4-trace-v1
 face	lean
-program	fiber.parentInterruptDuringChildWait
-tape	0:1,1:1
-rules	service-acquire,perform-call,perform-bind,perform-discard,ret
-op	fork	0
-decide	0	true
-answer	fork	0
-op	interrupt	0
-answer	interrupt	[]
-op	awaitValue	0
-answer	awaitValue	{"some":11}
-op	fork	4
-decide	1	true
-answer	fork	1
-op	interrupt	1
-answer	interrupt	[]
-op	awaitValue	1
-answer	awaitValue	{"none":true}
-done	{"success":{"none":true}}
+program	layer.freshRebuild
+tape	
+rules	service-acquire,perform-call,perform-discard,perform-bind,ret
+op	build	3
+answer	build	0
+op	build	3
+answer	build	1
+op	provideCount	1
+answer	provideCount	2
+done	{"success":2}

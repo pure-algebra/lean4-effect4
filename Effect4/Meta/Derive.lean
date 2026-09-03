@@ -132,17 +132,28 @@ private def tsOfTypeFuel : Nat → Term → CommandElabM String
     | `Unit => return "void"
     | other => throwErrorAt stx "effect_signature: no TypeScript spelling for `{other}`; add a Stratum V row first"
   match stx with
-  | `(Handle $spelling:str) => return spelling.getString
-  | `(Except $errorTy:term $valueTy:term) =>
-      let error ← tsOfTypeFuel fuel errorTy
-      let value ← tsOfTypeFuel fuel valueTy
-      return s!"Result.Result<{value}, {error}>"
-  | `($f:ident $arg:term) =>
-      let inner ← tsOfTypeFuel fuel arg
-      match f.getId.eraseMacroScopes with
-      | `Option => return s!"Option.Option<{inner}>"
-      | `List => return s!"ReadonlyArray<{inner}>"
-      | other => throwErrorAt stx "effect_signature: no TypeScript spelling for `{other}`"
+  -- A parenthesised spelling is the same spelling: `List (Handle "T")` is how
+  -- an operation answers a list of handles, and the parentheses are Lean's,
+  -- not the profile's.
+  | `(($inner)) => tsOfTypeFuel fuel inner
+  | `($f:ident $args*) =>
+      -- The head is matched by the *last component of the name as written*,
+      -- never by a quotation pattern. An ident's preresolution depends on the
+      -- enclosing namespace, so `` `(Handle $s:str) `` matches only where the
+      -- DSL is used at the top level; families also live inside `Effect4.*`
+      -- namespaces (`Effect4/Runtime/LayerFamily.lean`).
+      match Name.mkSimple f.getId.eraseMacroScopes.getString!, args.toList with
+      | `Handle, [spelling] =>
+          match spelling.raw.isStrLit? with
+          | some text => return text
+          | none => throwErrorAt spelling "effect_signature: `Handle` takes a string spelling"
+      | `Except, [errorTy, valueTy] =>
+          let error ← tsOfTypeFuel fuel errorTy
+          let value ← tsOfTypeFuel fuel valueTy
+          return s!"Result.Result<{value}, {error}>"
+      | `Option, [arg] => return s!"Option.Option<{← tsOfTypeFuel fuel arg}>"
+      | `List, [arg] => return s!"ReadonlyArray<{← tsOfTypeFuel fuel arg}>"
+      | other, _ => throwErrorAt stx "effect_signature: no TypeScript spelling for `{other}`"
   | _ => throwErrorAt stx "effect_signature: unsupported type syntax"
 
 private def tsOfType (stx : Term) : CommandElabM String :=
