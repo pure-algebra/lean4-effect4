@@ -1865,6 +1865,24 @@ waits for that commit before writing its new production module. Shared
 coordination, root wiring, proof-graph status and package/full gates remain
 coordinator-owned. No region or interruption denotation claim is made here.
 
+Structured-denotation packet released at `33409c6`: exactly the three claimed
+files, 385 added lines, parent `e8e3a58568654cfe94cf1da1f2d9fb86a76c921e`.
+All 40 independent existing-meaning controls pass. Mutating actual merge
+break, nested-loop continue and parallel-swap source targets is rejected at
+5, 6 and 2 corresponding semantic guards; restoration passes. Declaration-red
+reaches exactly the two missing public names and the first theorem's handler
+consumer, while axiom-red rejects those two absent constants. Direct repository
+imports separately fail on missing `StructureSemantics.olean`. The full packet
+against immutable candidate `f16d64a1` passes; its two public receipts are
+`[propext, Quot.sound]`, and the exhaustive current-module scan accepts all 202
+candidate/test constants, including private helpers and generated auxiliaries.
+The 13 isolated control constants also meet that ceiling. The repository
+citation check (1151 tokens, 2990 files) and three-file staged diff check pass.
+Existing production, old flat theorem, prior packets, counterexamples and graph
+algorithm are unchanged. No package build or host gate ran. The separate
+builder may create only the new production module; root imports, graph status,
+package/full gates and this shared coordination commit remain coordinator-owned.
+
 ## Local proof integration receipt, 2026-09-03
 
 The coordinator implemented and committed `RegionSafety` at
@@ -1926,3 +1944,139 @@ Scope assurance join, and all other open PLAN phases remain open. No new host
 execution is claimed by these local Lean equations. The tracked research
 bundle was separately reverified: 55/55 manifest entries, 56 bundle files and
 the 151844-byte PDF, with no missing or changed component. No push occurred.
+
+## Scope restoration composition packet, 2026-09-03
+
+Codex independent breaker (`corpus_measurement`) claims the five new files
+below after coordinator approval of the exact interp-first adapter and nine
+theorem types in `/private/tmp/effect4-scope-restoration-proposal.lean`.
+
+| File | Owner and fence |
+| --- | --- |
+| `test/contracts/scope-restoration.contract.md` | independent breaker; frozen local composition, source/profile and assurance boundaries |
+| `Effect4Test/Runtime/ScopeRestorationContract.lean` | independent breaker; exact approved surface and executable restoration/pause/cleanup controls |
+| `Effect4Test/Runtime/ScopeRestorationAxiomReport.lean` | independent breaker; nine public theorem trust receipts |
+| `Effect4Test/Counterexamples/Runtime/ScopeRestorationBoundary.lean` | independent breaker; durable named witnesses using existing ScopeMachine and Runtime only |
+| `harness/trace/scope-restoration.mjs` | independent breaker; explicit-path, off-pin-rejecting replay of finite real-request/failure/defect host evidence |
+
+The intended production owner is the separate coordinator's future
+`Effect4/Runtime/ScopeRestoration.lean`. It adds no carrier and maps only a
+completed ScopeMachine restored exit through the real FrameFiber.step after
+changing current to Prim.ofExit. Existing ScopeMachine, Scope, Runtime, Exit,
+Cause, old assertions and M2 packet stay unchanged. General D4/M2, source/tape
+embedding, arbitrary finalizer programs and host equivalence remain open.
+Root owns imports, known-red wiring, generator/graph status and package gates.
+
+The breaker also claims append-only `test/counterexamples/REGISTER.md` rows
+`E4-RUN-CE-025` and `E4-RUN-CE-026`: the coordinator corrected the initially
+proposed IDs to preserve the historical live-stack reservation for 022–024.
+The new rows cover pending interruption overwriting an existing failure and
+discarding outer cleanup causes after interruption has been delivered.
+Only these six packet paths, never this shared coordination file, will be
+committed by the breaker.
+
+Scope restoration packet released at `945f729`: exactly the six claimed
+paths, 781 insertions. The 27 independent existing-owner guards and five
+named counterexample proofs pass; all 41 declarations in their source pass
+the ownership-based axiom audit. All 29 future behavior checks also pass
+through the existing reference composition (45 declarations audited).
+Six separate policy mutants each fail only the intended candidate guard,
+and restored controls pass. Declaration-red names exactly ten absent
+declarations; axiom-red names exactly nine. The signature shell elaborates
+the complete approved surface. Against the coordinator's immutable scratch
+candidate, the full saved battery passes 56 guards and exact signatures;
+all 167 current-module declarations, including anonymous ascriptions and
+private helpers, use at most propext/Quot.sound. The repository's new direct
+imports remain honestly red until the production module is saved/built.
+
+The durable host probe passes all 40 cases, labels JavaScript-only fallible
+releases separately from legal defects, rejects a changed version and each
+of four changed source/runtime pins before imports, then reproduces the
+original observations on restoration. The six-file citation and staged
+diff checks pass. Scratch receipts are under
+`/private/tmp/effect4-scope-restoration-breaker`. Existing production and old
+packets remain unchanged. Root owns the new production implementation,
+root imports, assurance graph and generated input-digest refresh, package
+gates and this shared coordination commit. No full D4/M2 or host agreement
+claim is closed by the packet.
+
+## General structured denotation implementation, 2026-09-03
+
+Codex builder (`algebra_choices`) claims only the new
+`Effect4/Target/TypeScript/StructureSemantics.lean`, after the independent
+breaker packet commit `33409c647cd040ff43659f01eb78083ca23f692b`. The exact
+two public statements are `skeletonStructured_denote_of_fuelFor_le` and
+`skeletonStructured_denote_dispatch_of_emitted`; every helper stays private.
+The immutable checked scratch candidate is SHA-256
+`f16d64a1da115d0618844b10919456399d3aed90d4e288a60a7e6b863eacfed9`.
+The builder adds an ownership header and removes scratch receipt commands,
+preserving the proof and frozen signatures. Existing algorithms, denotations,
+flat theorems, contracts and counterexamples stay unchanged. Narrow Lean
+checks and independent saved-source review precede this single-file commit.
+The coordinator owns imports, graph status, package and trust gates, and the
+shared coordination commit. The profile is ordinary checked Flow with
+interrupts disabled, actual successful emission and the stated fuel allowance;
+region, interruption, rendering and host-semantic bridges remain separate.
+
+The general structured denotation builder released its file fence after
+production commit `1ca39de8bd69e6cb0a18a5e817dc0756703934b7`, parent exactly
+`33409c647cd040ff43659f01eb78083ca23f692b`. The commit contains only the new
+`StructureSemantics.lean` (1076 lines), SHA-256
+`bcc228b68ce81f92f20910ad5e41e1adae4d5c967b3395c2651bf4c8e145bae8`.
+Independent breaker acceptance compared its saved bytes to the frozen-tested
+candidate: only the ownership/profile header and removal of scratch receipt
+commands differ. Its fresh saved-module audit ran the unchanged packet and
+accepted all 202 production/test-owned constants; both public theorem
+closures are exactly `[propext, Quot.sound]`.
+
+Builder narrow checks: direct production Lean exit 0 (1.75s); direct single
+module olean emission exit 0 (1.43s); frozen StructureSemanticsContract exit 0
+(1.11s); frozen StructureSemanticsAxiomReport exit 0 (0.47s). The old semantic,
+order and computed modules, frozen packets and CE-018 are unchanged;
+`git diff --check` exits 0. These are complete Program equalities for actual
+successfully emitted ordinary Flow, every tape and input, interrupts disabled
+and the stated sufficient fuel. Arbitrary merges, loops and parameter moves
+are included; lower fuel, regions, interruption, rendering and host execution
+are not newly established. Root imports, proof-graph status, proper Lake
+module/package builds and full trust gates remain coordinator-owned.
+
+## General structured denotation integration, 2026-09-03
+
+The coordinator claims new StructureSemantics imports in `Effect4.lean` and
+`Effect4Test.lean`, and its current equation/profile entries in
+`docs/TRACE-DAG.md` and `docs/research/2026-09-03-reification-plan.md`.
+Production `1ca39de` and frozen packet `33409c6` remain unchanged. Root's proper
+`lake build Effect4.Target.TypeScript.StructureSemantics` and both unchanged
+contract/axiom checks pass. The independent saved-source audit accepts all
+202 owned production/test declarations and all 40 controls; each of the two
+public equations uses only `propext` and `Quot.sound`. Package and current
+root trust integration are pending the concurrently frozen ScopeRestoration
+module, so its temporary missing import is not mistaken for a completed gate.
+
+## Scope restoration implementation, 2026-09-03
+
+The coordinator claims only new `Effect4/Runtime/ScopeRestoration.lean` after
+independent breaker commit `945f729` froze the ten-name surface and nine exact
+universal statements. The checked candidate SHA-256 is
+`e10e40f2059a43bcd2688c0e5cd4715219bb614e94d2168333792583cf957caa`.
+Only the namespace-approved implementation, ownership comments and removal of
+scratch print commands are promoted. Existing ScopeMachine, Runtime, Scope,
+Exit, Cause, the frozen packet and host probe remain unchanged. Root also
+claims the new imports and local connection receipts in `Effect4.lean`,
+`Effect4Test.lean`, `docs/SCOPE-DAG.md`, `docs/TRACE-DAG.md` and the reification
+plan, plus the mechanical REGISTER digest refresh in fiber assurance.
+Independent saved-source review precedes production commit. Default build,
+trust, host-probe and drift checks remain root-owned; general M2/D4 and the
+three declared unfinished modules remain open.
+
+## Coordinator hand-off and integration, 2026-09-03
+
+Codex's pipeline is finished for this cycle; the operator handed the tree to
+the Claude coordinator. This commit lands the integration Codex left staged in
+the working tree: root imports for `Effect4/Runtime/ScopeRestoration.lean` and
+`Effect4/Target/TypeScript/StructureSemantics.lean` with their three
+batteries, the `SCOPE-DAG`/`TRACE-DAG`/plan rows, the regenerated
+`generated/fiber-assurance.tsv` provenance, and the standards-survey digest
+manifest under `docs/research/2026-09-02-standards-sources/`. Verified before
+committing: `lake build Effect4` green (136 jobs) and all five batteries
+elaborate within `propext`/`Quot.sound`. One sweep over the whole tree follows.

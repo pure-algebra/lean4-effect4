@@ -63,6 +63,8 @@ import Effect4Test.Target.TypeScript.StructureOrderContract
 import Effect4Test.Target.TypeScript.StructureOrderAxiomReport
 import Effect4Test.Target.TypeScript.StructureComputedContract
 import Effect4Test.Target.TypeScript.StructureComputedAxiomReport
+import Effect4Test.Target.TypeScript.StructureSemanticsContract
+import Effect4Test.Target.TypeScript.StructureSemanticsAxiomReport
 import Effect4Test.Counterexamples.Target.BreakScoped
 import Effect4Test.Counterexamples.Target.RegionSimulationBoundary
 import Effect4Test.Target.TypeScript.SkeletonSemanticsContract
@@ -88,6 +90,9 @@ import Effect4Test.Runtime.ScopeContract
 import Effect4Test.Runtime.ScopeAxiomReport
 import Effect4Test.Runtime.ScopeMachineContract
 import Effect4Test.Runtime.ScopeMachineAxiomReport
+import Effect4Test.Runtime.ScopeRestorationContract
+import Effect4Test.Runtime.ScopeRestorationAxiomReport
+import Effect4Test.Counterexamples.Runtime.ScopeRestorationBoundary
 import Effect4Test.Counterexamples.Runtime.Scope
 import Effect4Test.Runtime.FramesContract
 import Effect4Test.Runtime.FramesAxiomReport

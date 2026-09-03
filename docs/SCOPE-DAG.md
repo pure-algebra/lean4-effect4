@@ -406,3 +406,36 @@ including a fresh scratch-olean check. The production commit is `abefdb1`.
 Broader package and trust results are recorded in `COORDINATION.md`'s local
 proof integration receipt. Neither successful local tests nor
 these local universal equations close the external connections above.
+
+## Scope cleanup restoration continuation, 2026-09-03
+
+The independently frozen packet is `test/contracts/scope-restoration.contract.md`
+at `945f729`. `Effect4/Runtime/ScopeRestoration.lean` imports only ScopeMachine
+and the existing Runtime. It adds no carrier: its sole executable root,
+`Effect4.ScopeRestoration.resumeClosedScope`, maps a completed existing
+`ScopeMachine.restore?` exit through the real existing `FrameFiber.step` after
+replacing only the current primitive with `Prim.ofExit`.
+
+The nine public theorem roots are `resumeClosedScope_unfinished`,
+`resumeClosedScope_complete`, `resumeClosedScope_success_pending`,
+`resumeClosedScope_failure_pending`, `resumeClosedScope_success_no_pending`,
+`resumeClosedScope_already_masked`, `resumeClosedScope_masked_continuation`,
+`resumeClosedScope_failure_cleanup` and
+`resumeClosedScope_success_cleanup_failure`. They inherit the native derived
+owner, duplicate-prevention record and required local composition route from
+the executable root. All implementation helpers are private.
+
+| Local edge | Evidence and exact boundary |
+| --- | --- |
+| completion composition | `resumeClosedScope_complete` preserves the whole actual service-state pair and equates the adapter at ScopeMachine's bound with existing `closeExitsM`, the exact zero/one/many fold, existing `restoreAfterFinalizer` and the real frame step. Unfinished phases return no step. |
+| success restoration | Under the precise top `setInterruptible true` frame and false deferred latch, successful cleanup with a pending full cause immediately becomes that failure primitive, with the arbitrary tail and exact popped, ran-continuation and substituted events. No pending cause follows the actual tail success step. |
+| failure restoration | A pre-existing restored failure skips the pending replacement in the real failure evaluator and enters the actual arbitrary tail step; the substituted event remains visible. No unrestricted terminal-cause stability is claimed for arbitrary tail handlers. |
+| nested masks | Existing `uninterruptible` is unchanged on an already masked fiber, and the actual success continuation under an outer mask retains that mask, optional pending cause and arbitrary tail. |
+| cleanup causes | Existing `Cause.combine` joins failed original and cleanup causes. A cleanup failure under an originally successful exit follows the failure-restoration equation and is not overwritten by a pending interrupt. ScopeMachine remains owner of actual ordered callback replies, duplicate journal and service state. |
+| counterexamples and finite host evidence | `E4-RUN-CE-025` and `026` reject replacing existing failure at restoration and dropping outer cleanup after delivered interruption. The independent boundary has 27 controls and five named witnesses. The explicit-path host probe runs 20 cases at two scheduling thresholds, verifies the four source/runtime hashes before import and distinguishes JavaScript-only fallible releases from legally typed cleanup defects. Host observations do not prove the Lean equations. |
+| trust and generated coverage | The unchanged 56-guard battery and all nine public axiom receipts pass within `propext`/`Quot.sound`; independent saved-source review is recorded with the integration receipt. The generated declaration-assurance join for Scope remains open. |
+| external connections | Required-open: the general region compiler and source/target residual relation, arbitrary finalizer programs, actual first-order mask lowering and host-tail request delivery, parallel scheduling and host equivalence. This adapter closes only the local completed ScopeMachine-to-FrameFiber step. |
+
+This local composition contributes to `SCOPE-PG-STATE.close-restoration` and
+the Scope/Frame sides of TRACE-DAG D4 and M2. It moves no runtime-coverage
+count and does not alter the existing Scope, Runtime, Exit or Cause owners.

@@ -45,6 +45,7 @@ import Effect4.Layer.Memo
 import Effect4.Layer.Laws
 import Effect4.Runtime.Scope
 import Effect4.Runtime.ScopeMachine
+import Effect4.Runtime.ScopeRestoration
 import Effect4.Runtime.Resource
 import Effect4.Runtime.Runtime
 import Effect4.Runtime.ManagedRuntime
@@ -95,6 +96,7 @@ import Effect4.Target.TypeScript.StructuredLower
 import Effect4.Target.TypeScript.StructureLaws
 import Effect4.Target.TypeScript.StructureOrder
 import Effect4.Target.TypeScript.StructureDominators
+import Effect4.Target.TypeScript.StructureSemantics
 import Effect4.Target.TypeScript.SkeletonSemantics
 import Effect4.Target.TypeScript.Lower
 import Effect4.Target.TypeScript.Schema
