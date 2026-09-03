@@ -71,6 +71,7 @@ import Effect4.Target.TypeScript.SkeletonSemantics
 #print axioms Effect4.Target.EffectV4.Skel.execList_answerMove
 #print axioms Effect4.Target.EffectV4.Skel.ownedBy_argSlots
 #print axioms Effect4.Target.EffectV4.Skel.argSlots_agree
+#print axioms Effect4.Target.EffectV4.Skel.BlockLaw
 #print axioms Effect4.Target.EffectV4.Skel.execList_skeletonBlock
 #print axioms Effect4.Target.EffectV4.Skel.bind_pure
 #print axioms Effect4.Target.EffectV4.Skel.bind_vis_inl

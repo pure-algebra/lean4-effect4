@@ -986,7 +986,62 @@ theorem argSlots_agree {m : Machine} {block : BlockId} {env : Env} (holds : Hold
       rw [valAt, named] at step
       simpa using step.symm
 
-set_option maxHeartbeats 1000000 in
+/-! ## 13. The block law
+
+One record, three instances. The dispatch form, the transfer-parametric form
+and the bind form of `StructureSemantics` all say the same seven things about
+one block of a checked flow, and said them as an anonymous seven-way
+conjunction spelled out three times. Naming the fields makes an eighth plan
+shape one field here instead of an edit at three sites. -/
+
+/-- **One block's law.** What running a block's lowered body does, one named
+field per shape `plan` can take (`stuck` is not among them: `plan_checked`
+rules it out on an admitted flow).
+
+`run` is the program the body runs to, `fin` says how a finished outcome is
+reported, and `cont` is the continuation relation the lowering's own transfer
+law names — an equation with the transfer's own continuation for
+`execList_skeletonBlockWith`, the machine-carrying existential `ContinueLoop`
+for the dispatch form, whose continuation is not a function of
+`(target, values, tape)` alone. -/
+structure BlockLaw {Result : Type} (planned : Plan alphabet) (tape : Tape)
+    (run : Program (FullSig alphabet) Result)
+    (fin : RunResult → Program (FullSig alphabet) Result)
+    (cont : BlockId → Env → Tape → Program (FullSig alphabet) Result → Prop) : Prop where
+  ret : ∀ value, planned = .ret value → run = fin (.done value)
+  jump : ∀ target env', planned = .jump target env' → cont target env' tape run
+  perform : ∀ op request target env', planned = .perform op request target env' →
+      ∃ next : Val → Program (FullSig alphabet) Result,
+        run = .vis (.inl ⟨op, request⟩) next
+          ∧ ∀ answered : Val, cont target (env' ++ [answered]) tape (next answered)
+  choose : ∀ site branch target env' rest,
+      planned = .choose site branch target env' rest →
+      ∃ next : (FullSig alphabet).Answer (Sum.inr (site, branch)) → Program (FullSig alphabet) Result,
+        run = .vis (.inr (site, branch)) next ∧ ∀ u, cont target env' rest (next u)
+  exhausted : ∀ site, planned = .exhausted site →
+      run = fin (.frontier (.unansweredDecision site))
+  mismatch : ∀ expected actual, planned = .mismatch expected actual →
+      run = fin (.refusal expected actual)
+  performCatch : ∀ op request target env' onError errorEnv,
+      planned = .performCatch op request target env' onError errorEnv →
+      ∃ next : Val → Program (FullSig alphabet) Result,
+        run = .vis (.inl ⟨op, request⟩) next
+          ∧ ∀ answered : Val, cont target (env' ++ [answered]) tape (next answered)
+
+/-- The dispatch form's continuation: the loop turn ends by handing the machine
+back, and which machine it is depends on the block's own argument list, so the
+law names it existentially. -/
+abbrev ContinueLoop (target : BlockId) (env' : Env) (tape' : Tape)
+    (p : Program (FullSig alphabet) (Outcome × Tape)) : Prop :=
+  ∃ m' : Machine, p = .pure (.continueLoop m', tape')
+    ∧ m'.index "block" = target.value ∧ Holds m' target env'
+
+/-- A finished run of the dispatch or transfer form: the outcome, on the tape
+the block started with. -/
+abbrev Finished (tape : Tape) (result : RunResult) :
+    Program (FullSig alphabet) (Outcome × Tape) :=
+  .pure (.finished result, tape)
+
 /-- Running the dispatch-form body of one block is exactly what `plan` says that
 block does, with the machine carrying the environment across the move. -/
 theorem execList_skeletonBlock (table : List OpSpec) (fuel : Nat) (m : Machine) (tape : Tape)
@@ -995,41 +1050,10 @@ theorem execList_skeletonBlock (table : List OpSpec) (fuel : Nat) (m : Machine) 
     (holds : Holds m block.id env)
     (testBound : ∀ test site onTrue onFalse args,
       block.term = .branch test site onTrue onFalse args → test.index < env.length) :
-    (∀ value, plan (tableAlphabet ⟨0⟩ table) block env tape = .ret value →
-        execList (tableAlphabet ⟨0⟩ table) fuel m tape body
-          = .pure (.finished (.done value), tape))
-      ∧ (∀ target env', plan (tableAlphabet ⟨0⟩ table) block env tape = .jump target env' →
-        ∃ m', execList (tableAlphabet ⟨0⟩ table) fuel m tape body = .pure (.continueLoop m', tape)
-          ∧ m'.index "block" = target.value ∧ Holds m' target env')
-      ∧ (∀ op request target env',
-          plan (tableAlphabet ⟨0⟩ table) block env tape = .perform op request target env' →
-        ∃ next : Val → Machine,
-          execList (tableAlphabet ⟨0⟩ table) fuel m tape body
-            = .vis (.inl ⟨op, request⟩) (fun answered : Val =>
-                .pure (.continueLoop (next answered), tape))
-          ∧ ∀ answered, (next answered).index "block" = target.value
-              ∧ Holds (next answered) target (env' ++ [answered]))
-      ∧ (∀ site branch target env' rest,
-          plan (tableAlphabet ⟨0⟩ table) block env tape = .choose site branch target env' rest →
-        ∃ m', execList (tableAlphabet ⟨0⟩ table) fuel m tape body
-            = .vis (.inr (site, branch)) (fun _ => .pure (.continueLoop m', rest))
-          ∧ m'.index "block" = target.value ∧ Holds m' target env')
-      ∧ (∀ site, plan (tableAlphabet ⟨0⟩ table) block env tape = .exhausted site →
-        execList (tableAlphabet ⟨0⟩ table) fuel m tape body
-          = .pure (.finished (.frontier (.unansweredDecision site)), tape))
-      ∧ (∀ expected actual,
-          plan (tableAlphabet ⟨0⟩ table) block env tape = .mismatch expected actual →
-        execList (tableAlphabet ⟨0⟩ table) fuel m tape body
-          = .pure (.finished (.refusal expected actual), tape))
-      ∧ (∀ op request target env' onError errorEnv,
-          plan (tableAlphabet ⟨0⟩ table) block env tape
-            = .performCatch op request target env' onError errorEnv →
-        ∃ next : Val → Machine,
-          execList (tableAlphabet ⟨0⟩ table) fuel m tape body
-            = .vis (.inl ⟨op, request⟩) (fun answered : Val =>
-                .pure (.continueLoop (next answered), tape))
-          ∧ ∀ answered, (next answered).index "block" = target.value
-              ∧ Holds (next answered) target (env' ++ [answered])) := by
+    BlockLaw (tableAlphabet ⟨0⟩ table) (plan (tableAlphabet ⟨0⟩ table) block env tape) tape
+      (execList (tableAlphabet ⟨0⟩ table) fuel m tape body)
+      (Finished (tableAlphabet ⟨0⟩ table) tape)
+      (ContinueLoop (tableAlphabet ⟨0⟩ table)) := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro value planned
     obtain ⟨v, hterm, read⟩ := plan_ret_inv planned
@@ -1095,10 +1119,10 @@ theorem execList_skeletonBlock (table : List OpSpec) (fuel : Nat) (m : Machine) 
       execList_answerMove (tableAlphabet ⟨0⟩ table) fuel (m.enter block.id) tape block.id target
         args (.answer block.id) rfl (fun _ => by simp) env' answered (by simpa using len)
         (fun i s v slotAt valAt => by rw [enter_vals]; exact agree i s v slotAt valAt)
-    refine ⟨fun answered => movedMachine block.id target
+    refine ⟨fun answered => .pure (.continueLoop (movedMachine block.id target
         ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.answer block.id])
-        ((m.enter block.id).setVal (.answer block.id) answered), ?_,
-      fun answered => ⟨(moved answered).2.1, (moved answered).2.2⟩⟩
+        ((m.enter block.id).setVal (.answer block.id) answered)), tape), ?_,
+      fun answered => ⟨_, rfl, (moved answered).2.1, (moved answered).2.2⟩⟩
     rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
       execList_cons_control _ fuel (m.enter block.id) tape head _ (headSimple (m.enter block.id)),
       headRun fuel (m.enter block.id) tape _, performOp_eq, known, enter_vals,
@@ -1142,7 +1166,7 @@ theorem execList_skeletonBlock (table : List OpSpec) (fuel : Nat) (m : Machine) 
         rw [setVal_other _ _ _ _ (by simp), enter_vals]
         exact agree i _ v slotAt valAt
       obtain ⟨ran, idx, hold⟩ := branchRun (if branch then left else right)
-      refine ⟨_, ?_, idx, hold⟩
+      refine ⟨_, ?_, fun _ => ⟨_, rfl, idx, hold⟩⟩
       have selected : (if branch then
             Lowering.paramMove block.id left
                 (args.map fun v : Var => Slot.param block.id v.index) ++ Lowering.goto left
@@ -1181,7 +1205,7 @@ theorem execList_skeletonBlock (table : List OpSpec) (fuel : Nat) (m : Machine) 
         rw [enter_vals]
         exact agree i s v slotAt valAt
       obtain ⟨ran, idx, hold⟩ := branchRun (if branch then onTrue else onFalse)
-      refine ⟨_, ?_, idx, hold⟩
+      refine ⟨_, ?_, fun _ => ⟨_, rfl, idx, hold⟩⟩
       have selected : (if branch then
             Lowering.paramMove block.id onTrue (args.map fun v : Var => Slot.param block.id v.index) ++ Lowering.goto onTrue
           else Lowering.paramMove block.id onFalse (args.map fun v : Var => Slot.param block.id v.index) ++ Lowering.goto onFalse)
@@ -1272,9 +1296,10 @@ theorem execList_skeletonBlock (table : List OpSpec) (fuel : Nat) (m : Machine) 
           | atom => simp [kind] at built
           | lit constant => simp [kind] at built
     obtain ⟨spec, rfl⟩ := shape
-    refine ⟨fun answered => movedMachine block.id target ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.catchValue block.id])
-      ((m.enter block.id).setVal (.catchValue block.id) answered), ?_, fun answered =>
-        ⟨(moved answered).2.1, (moved answered).2.2⟩⟩
+    refine ⟨fun answered => .pure (.continueLoop (movedMachine block.id target
+      ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.catchValue block.id])
+      ((m.enter block.id).setVal (.catchValue block.id) answered)), tape), ?_, fun answered =>
+        ⟨_, rfl, (moved answered).2.1, (moved answered).2.2⟩⟩
     simp only [Lowering.performCatchResult]
     rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
       execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
@@ -1412,7 +1437,6 @@ theorem caseBody?_of_mapM (table : List OpSpec)
 
 /-! ### T3 -/
 
-set_option maxHeartbeats 1000000 in
 /-- The core of T3: one turn of the dispatch loop is one block of the flow, so
 the loop's fuel is `denoteFuel`'s fuel, unit for unit. -/
 theorem dispatchRun_denoteFuel (table : List OpSpec) (raw : RawFlow String)
@@ -1477,17 +1501,21 @@ theorem dispatchRun_denoteFuel (table : List OpSpec) (raw : RawFlow String)
           rw [ran, bind_vis_inl]
           refine congrArg (@Program.vis (FullSig (tableAlphabet ⟨0⟩ table)) (RunResult × Tape)
             (Sum.inl ⟨op, request⟩)) (funext fun answered => ?_)
+          obtain ⟨m', ran', indexed', holds'⟩ := steps answered
+          rw [ran']
           show dispatchCatch (tableAlphabet ⟨0⟩ table) fuel "block" cases
-              (Outcome.continueLoop (next answered), tape) = _
+              (Outcome.continueLoop m', tape) = _
           rw [dispatchCatch_continueLoop]
-          exact ih (next answered) tape target (env' ++ [answered]) targetBlock foundTarget
-            (by simp [← sizedTarget]) (steps answered).1 (steps answered).2
+          exact ih m' tape target (env' ++ [answered]) targetBlock foundTarget
+            (by simp [← sizedTarget]) indexed' holds'
       | choose targetBlock foundTarget sizedTarget =>
           rename_i site branch target env' rest
-          obtain ⟨m', ran, indexed', holds'⟩ := onChoose site branch target env' rest planEq
+          obtain ⟨next, ran, steps⟩ := onChoose site branch target env' rest planEq
           rw [ran, bind_vis_inr]
           refine congrArg (@Program.vis (FullSig (tableAlphabet ⟨0⟩ table)) (RunResult × Tape)
-            (Sum.inr (site, branch))) (funext fun _ => ?_)
+            (Sum.inr (site, branch))) (funext fun u => ?_)
+          obtain ⟨m', ran', indexed', holds'⟩ := steps u
+          rw [ran']
           show dispatchCatch (tableAlphabet ⟨0⟩ table) fuel "block" cases
               (Outcome.continueLoop m', rest) = _
           rw [dispatchCatch_continueLoop]
@@ -1498,11 +1526,13 @@ theorem dispatchRun_denoteFuel (table : List OpSpec) (raw : RawFlow String)
           rw [ran, bind_vis_inl]
           refine congrArg (@Program.vis (FullSig (tableAlphabet ⟨0⟩ table)) (RunResult × Tape)
             (Sum.inl ⟨op, request⟩)) (funext fun answered => ?_)
+          obtain ⟨m', ran', indexed', holds'⟩ := steps answered
+          rw [ran']
           show dispatchCatch (tableAlphabet ⟨0⟩ table) fuel "block" cases
-              (Outcome.continueLoop (next answered), tape) = _
+              (Outcome.continueLoop m', tape) = _
           rw [dispatchCatch_continueLoop]
-          exact ih (next answered) tape target (env' ++ [answered]) targetBlock foundTarget
-            (by simp [← sizedTarget]) (steps answered).1 (steps answered).2
+          exact ih m' tape target (env' ++ [answered]) targetBlock foundTarget
+            (by simp [← sizedTarget]) indexed' holds'
 
 /-- The dispatch form's prefix moves the input into the entry block's first
 parameter and sets the block index; nothing else in it inspects the machine. -/
@@ -1562,10 +1592,19 @@ theorem execList_move_then (fuel : Nat) (m : Machine) (tape : Tape)
 
 /-- The transfer-parametric block law: whatever a lowering puts after the
 parallel move, one block of a checked flow runs exactly as `plan` says and lands
-in the continuation `K` the transfer's own law names. `execList_skeletonBlock`
-is the dispatch instance of this shape — its continuation is not a function of
-`(target, values, tape)` alone, it carries the machine — so the two are stated
-separately rather than one derived from the other. -/
+in the continuation `K` the transfer's own law names. It shares `BlockLaw` with
+`execList_skeletonBlock`, which differs only in its `cont`: the dispatch form's
+continuation is not a function of `(target, values, tape)` alone, it carries
+the machine, so it uses `ContinueLoop` where this one uses an equation with
+`K`.
+
+`StructureSemantics`' `execList_skeletonBlockWith_bind` is the same law with
+`Program.bind (…) H` around every conclusion. It is not the general case this
+one is derived from, even though its conclusion is more general: it demands a
+`lookupBlock` fact and a well-scoped emitted body that this law's only consumer
+(the flat fragment, `execList_emitNode_flat`) has no reason to know. Deriving
+this from that needs the scope predicate abstracted and its four decompositions
+passed as hypotheses; survey finding L6 records the estimate. -/
 theorem execList_skeletonBlockWith (table : List OpSpec) (raw : RawFlow String)
     (wf : FlowWF (tableAlphabet ⟨0⟩ table) raw)
     (fuel : Nat) (m : Machine) (tape : Tape)
@@ -1585,31 +1624,10 @@ theorem execList_skeletonBlockWith (table : List OpSpec) (raw : RawFlow String)
     (stable : ∀ (target : BlockId) (vals : Env) (tape' : Tape),
       Program.bind (K target vals tape') (afterFell (tableAlphabet ⟨0⟩ table) fuel [])
         = K target vals tape') :
-    (∀ value, plan (tableAlphabet ⟨0⟩ table) block env tape = .ret value →
-        execList (tableAlphabet ⟨0⟩ table) fuel m tape body
-          = .pure (.finished (.done value), tape))
-      ∧ (∀ target env', plan (tableAlphabet ⟨0⟩ table) block env tape = .jump target env' →
-        execList (tableAlphabet ⟨0⟩ table) fuel m tape body = K target env' tape)
-      ∧ (∀ op request target env',
-          plan (tableAlphabet ⟨0⟩ table) block env tape = .perform op request target env' →
-        execList (tableAlphabet ⟨0⟩ table) fuel m tape body
-          = .vis (.inl ⟨op, request⟩) (fun answered : Val => K target (env' ++ [answered]) tape))
-      ∧ (∀ site branch target env' rest,
-          plan (tableAlphabet ⟨0⟩ table) block env tape = .choose site branch target env' rest →
-        execList (tableAlphabet ⟨0⟩ table) fuel m tape body
-          = .vis (.inr (site, branch)) (fun _ => K target env' rest))
-      ∧ (∀ site, plan (tableAlphabet ⟨0⟩ table) block env tape = .exhausted site →
-        execList (tableAlphabet ⟨0⟩ table) fuel m tape body
-          = .pure (.finished (.frontier (.unansweredDecision site)), tape))
-      ∧ (∀ expected actual,
-          plan (tableAlphabet ⟨0⟩ table) block env tape = .mismatch expected actual →
-        execList (tableAlphabet ⟨0⟩ table) fuel m tape body
-          = .pure (.finished (.refusal expected actual), tape))
-      ∧ (∀ op request target env' onError errorEnv,
-          plan (tableAlphabet ⟨0⟩ table) block env tape
-            = .performCatch op request target env' onError errorEnv →
-        execList (tableAlphabet ⟨0⟩ table) fuel m tape body
-          = .vis (.inl ⟨op, request⟩) (fun answered : Val => K target (env' ++ [answered]) tape)) := by
+    BlockLaw (tableAlphabet ⟨0⟩ table) (plan (tableAlphabet ⟨0⟩ table) block env tape) tape
+      (execList (tableAlphabet ⟨0⟩ table) fuel m tape body)
+      (Finished (tableAlphabet ⟨0⟩ table) tape)
+      (fun target env' tape' p => p = K target env' tape') := by
   have planSized := plan_checked wf mem envSized tape
   have testBound : ∀ test site onTrue onFalse args,
       block.term = .branch test site onTrue onFalse args → test.index < env.length := by
@@ -1644,6 +1662,7 @@ theorem execList_skeletonBlockWith (table : List OpSpec) (raw : RawFlow String)
               sizedTarget transferred (ownedBy_argSlots block.id args) len
               (by intro i s v slotAt valAt; rw [enter_vals]; exact agree i s v slotAt valAt)
   · intro op request target env' planned
+    refine ⟨fun answered : Val => K target (env' ++ [answered]) tape, ?_, fun _ => rfl⟩
     obtain ⟨operation, requestVar, args, hterm, known, got, read⟩ := plan_perform_inv planned
     obtain ⟨len, agree⟩ := argSlots_agree (holds := holds) (block := block.id) read
     obtain ⟨lenRead, _⟩ := readArgs_getElem? args env env' read
@@ -1720,6 +1739,7 @@ theorem execList_skeletonBlockWith (table : List OpSpec) (raw : RawFlow String)
             funext answered
             exact moves answered
   · intro site branch target env' rest planned
+    refine ⟨fun _ => K target env' rest, ?_, fun _ => rfl⟩
     rcases plan_choose_inv planned with
         ⟨left, right, args, hterm, read, answered, eqTarget⟩
         | ⟨test, onTrue, onFalse, args, hterm, read, answered, eqTarget, agreeTest⟩
@@ -1893,6 +1913,7 @@ theorem execList_skeletonBlockWith (table : List OpSpec) (raw : RawFlow String)
               rw [if_neg (testValue_ne wEq disagreed), RunResult.refusal_self]
   · -- Flow v3: a caught perform at an arbitrary transfer; the value edge only.
     intro op request target env' onError errorEnv planned
+    refine ⟨fun answered : Val => K target (env' ++ [answered]) tape, ?_, fun _ => rfl⟩
     obtain ⟨operation, requestVar, args, errorArgs, hterm, known, got, read, readE⟩ :=
       plan_performCatch_inv planned
     obtain ⟨len, agree⟩ := argSlots_agree (holds := holds) (block := block.id) read
@@ -2158,7 +2179,6 @@ theorem denoteOutcome_stable (table : List OpSpec) (raw : RawFlow String) (cycle
 
 /-! ## T4 on the flat fragment -/
 
-set_option maxHeartbeats 1000000 in
 /-- The structured emission of a flat graph is the dominator tree inlined, and
 it denotes the flow. -/
 theorem execList_emitNode_flat (table : List OpSpec) (raw : RawFlow String)
@@ -2241,13 +2261,20 @@ theorem execList_emitNode_flat (table : List OpSpec) (raw : RawFlow String)
           rw [onJump target env' planEq]; rfl
       | perform targetBlock foundTarget sizedTarget =>
           rename_i op request target env'
-          rw [onPerform op request target env' planEq]; rfl
+          obtain ⟨next, ran, steps⟩ := onPerform op request target env' planEq
+          rw [ran]
+          exact congrArg _ (funext fun answered => steps answered)
       | choose targetBlock foundTarget sizedTarget =>
           rename_i site branch target env' rest
-          rw [onChoose site branch target env' rest planEq]; rfl
+          obtain ⟨next, ran, steps⟩ := onChoose site branch target env' rest planEq
+          rw [ran]
+          exact congrArg _ (funext fun u => steps u)
       | performCatch targetBlock errorBlock foundTarget sizedTarget foundError sizedError =>
           rename_i op request target env' onError errorEnv
-          rw [onPerformCatch op request target env' onError errorEnv planEq]; rfl
+          obtain ⟨next, ran, steps⟩ :=
+            onPerformCatch op request target env' onError errorEnv planEq
+          rw [ran]
+          exact congrArg _ (funext fun answered => steps answered)
 
 end Skel
 
