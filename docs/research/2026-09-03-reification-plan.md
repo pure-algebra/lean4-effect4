@@ -237,3 +237,20 @@ The host is never the subject of a theorem; every M-packet adds observations,
 not proofs, and no census row turns green from a golden. Interruption and
 scheduling remain evidence-only until A1 and a two-fiber model. The lowering's
 faithfulness to Effect v4 generator semantics stays a receipt.
+
+## 6. Status at the end of wave 2 (2026-09-03)
+
+| Packet | Landed | Exact remainder |
+| --- | --- | --- |
+| D1 | T1, T2 (`Effect4/Semantics/Denotation.lean`) | — |
+| D2 | L1/L2 against `Scope` (`Effect4/Flow/Region.lean`); `runRegions_eq_interpret`, `runRegions_erase` (`Effect4/Semantics/RegionDenotation.lean`) | a fuel-free region denotation through `CyclesWF`; the stack invariant making the empty-stack arms unreachable |
+| D3 | skeleton IR; `emitWith_wellScoped`; `Skeleton.denote`, T3 at every fuel, T4 on the flat fragment (`Effect4/Target/TypeScript/SkeletonSemantics.lean`) | T4 for merge nodes and loop headers (two facts about the pinned `typescript` package's `idom`/`rpo`); an `interruptPoint` case in `Skeleton.denote` |
+| D4 | fence A; `compile_simulates`; `compileRegion`, `unwind_failure`, `close_success`, three `regions_simulate` instances (`Effect4/Semantics/RegionSimulation.lean`) | `regions_simulate` in general (needs a `leaveConfig` walk); the failing-release case is a pinned divergence (runner: one closing exit for every release; machine: threaded restored exits) |
+| D5 | `Script.toFlow_denote`, `interpret_vis_of_pure`, three-way oracle; operation-order receipt on every `effect_program` | the per-program `rfl` receipt is a type-level obstruction (`E4-TARGET-CE-016`) |
+| DB-04 | runner half and region half (`Effect4/Semantics/Approximation.lean`) | host-side region frontier golden not gated |
+| DB-06 | `Effect4/Semantics/Logic.lean`: `wp_iff_wlp_and_total`, `Flow.wp_iff`, `box_sound`, runner soundness | — |
+| Equivalence | `Effect4/Semantics/Equivalence.lean`: `Flow.Equiv` and its congruences | — |
+| M0, M1 | wire hardening, frontier latch, budget golden, `Scopes` family | — |
+| M2 | `Interrupts` decisions, masked deferral, three host-green goldens | the mask is not lowered (`Effect.uninterruptible` spelling owed) |
+| M3 | `Fibers` family, sequential projection, nine host-green goldens | `E4-SEM-CE-010/011` stay host-only; the tenth runtime-check assertion refused |
+| A1 | `Outcome.defect`, `interrupted` producible from Lean (M2) | — |
