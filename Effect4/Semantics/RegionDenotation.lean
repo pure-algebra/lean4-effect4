@@ -266,7 +266,7 @@ def denoteRegionsFuel {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty) :
                     .vis (scopeOp .fail error) fun closing : Failures =>
                       .pure ((.failed error, tape), error :: ([] ++ closing))
           | .exhausted site => .pure ((.frontier (.unansweredDecision site), tape), [])
-          | .mismatch expected actual => .pure ((.refused expected actual, tape), [])
+          | .mismatch expected actual => .pure ((.refusal expected actual, tape), [])
           | .choose site branch target env' rest =>
               .vis (decideOp site branch) fun _ : Unit =>
                 denoteRegionsFuel flow fuel target env' rest
@@ -733,7 +733,7 @@ theorem regionLoop_eq_interpret [Monad M] [LawfulMonad M] (flow : RegionFlow Ty)
               | mismatch expected actual =>
                   try simp only []
                   rw [interpretRegionsFrom_run_pure]
-                  simp [outcomeRows]
+                  simp [outcomeRows_refusal]
               | choose site branch target env' rest =>
                   try simp only []
                   rw [interpretRegionsFrom_run_decide]

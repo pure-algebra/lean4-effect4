@@ -29,6 +29,11 @@ open Effects.Trace (Val)
 #check (@Effect4.Flow.RunResult : Type)
 #check (@Effect4.Flow.RunResult.exhausted : RunResult → Bool)
 #check (@Effect4.Flow.RunResult.stuck : RunResult → Bool)
+#check (@Effect4.Flow.RunResult.refusedSite : DecisionId → DecisionId → RunResult)
+#check (@Effect4.Flow.RunResult.refusedValue : DecisionId → RunResult)
+#check (@Effect4.Flow.RunResult.refusal : DecisionId → DecisionId → RunResult)
+#check @Effect4.Flow.Tape.read_mismatch_ne
+#check @Effect4.Flow.RunResult.refusal_of_read
 #check @Effect4.Flow.FlowService
 #check @Effect4.Flow.plan
 #check @Effect4.Flow.step
@@ -166,7 +171,21 @@ def runRaw (raw : RawFlow String) (tape : Tape) :
   some ((RunResult.frontier (.unansweredDecision ⟨7⟩), []), [Effects.Trace.Event.frontier])
 
 -- A tape entry for another site is a refusal; nothing is consumed or logged.
-#guard runRaw chooser [⟨⟨8⟩, true⟩] = some ((RunResult.refused ⟨7⟩ ⟨8⟩, [⟨⟨8⟩, true⟩]), [])
+#guard runRaw chooser [⟨⟨8⟩, true⟩] = some ((RunResult.refusedSite ⟨7⟩ ⟨8⟩, [⟨⟨8⟩, true⟩]), [])
+
+/-! The two refusals are separate constructors, and the classifier is exact:
+`Tape.read` never names a site against itself (`Tape.read_mismatch_ne`), so a
+tape refusal is always `refusedSite` and `expected = actual` is reserved for a
+Flow v3 `branch` whose value disagrees (`E4-FLOW-CE-029`). -/
+
+#guard RunResult.refusal ⟨7⟩ ⟨8⟩ = RunResult.refusedSite ⟨7⟩ ⟨8⟩
+#guard RunResult.refusal ⟨7⟩ ⟨7⟩ = RunResult.refusedValue ⟨7⟩
+#guard RunResult.refusedSite ⟨7⟩ ⟨8⟩ ≠ RunResult.refusedValue ⟨7⟩
+
+example {tape : Tape} {site expected actual : DecisionId}
+    (read : Tape.read tape site = .mismatch expected actual) :
+    RunResult.refusal expected actual = .refusedSite expected actual :=
+  RunResult.refusal_of_read read
 
 -- An answered decision is consumed and logged; the branch is taken.
 #guard runRaw chooser [⟨⟨7⟩, true⟩] =

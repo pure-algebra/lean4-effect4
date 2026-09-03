@@ -235,7 +235,7 @@ private theorem execList_skeletonBlockWith_bind {Result : Type} (table : List Op
       ∧ (∀ expected actual,
           plan (tableAlphabet ⟨0⟩ table) block env tape = .mismatch expected actual →
         Program.bind (execList (tableAlphabet ⟨0⟩ table) fuel m tape body) H
-          = H (.finished (.refused expected actual), tape))
+          = H (.finished (.refusal expected actual), tape))
       ∧ (∀ op request target env' onError errorEnv,
           plan (tableAlphabet ⟨0⟩ table) block env tape
             = .performCatch op request target env' onError errorEnv →
@@ -596,7 +596,7 @@ private theorem execList_skeletonBlockWith_bind {Result : Type} (table : List Op
                 execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
                 execControl_branchIf, answered, enter_vals, holds_of_getElem? holds wEq]
               dsimp only
-              rw [if_neg (testValue_ne wEq disagreed)]
+              rw [if_neg (testValue_ne wEq disagreed), RunResult.refusal_self]
               rfl
   · -- Flow v3: a caught perform under the structured transfer; the value edge only.
     intro op request target env' onError errorEnv planned

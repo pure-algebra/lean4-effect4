@@ -54,7 +54,7 @@ def resultOf (raw : RegionFlow String) (fuel : Nat) (tape : Tape) :=
 #guard stuckOf decisionCycle 20 [] = some false
 #guard stuckOf decisionCycle 20 [⟨⟨7⟩, true⟩] = some false
 #guard resultOf decisionCycle 20 [⟨⟨8⟩, true⟩] =
-  some ((.refused ⟨7⟩ ⟨8⟩, [⟨⟨8⟩, true⟩]), [])
+  some ((.refusedSite ⟨7⟩ ⟨8⟩, [⟨⟨8⟩, true⟩]), [])
 #guard stuckOf decisionCycle 20 [⟨⟨8⟩, true⟩] = some false
 #guard resultOf decisionCycle 37 [⟨⟨7⟩, true⟩, ⟨⟨7⟩, false⟩, ⟨⟨9⟩, true⟩] =
   some ((.done (.nat 5), [⟨⟨9⟩, true⟩]), [])

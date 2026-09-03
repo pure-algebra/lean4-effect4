@@ -147,6 +147,7 @@ def denotedRaw (raw : RawFlow String) (tape : Tape) :
 #guard outcomeRows (.frontier (.fuel ⟨0⟩)) = [Effects.Trace.Event.frontier]
 #guard outcomeRows (.frontier (.unansweredDecision ⟨0⟩)) = [Effects.Trace.Event.frontier]
 #guard outcomeRows (.frontier (.stuck ⟨0⟩)) = []
-#guard outcomeRows (.refused ⟨0⟩ ⟨1⟩) = []
+#guard outcomeRows (.refusedSite ⟨0⟩ ⟨1⟩) = []
+#guard outcomeRows (.refusedValue ⟨1⟩) = []
 
 end Effect4Test.Semantics.DenotationContract

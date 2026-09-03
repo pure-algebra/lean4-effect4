@@ -273,7 +273,7 @@ private theorem regionLoop_safe [DecidableEq Ty] {σ : Type} {alphabet : FlowAlp
           | stuck => rw [hplan] at planned; cases planned
           | ret value => exact safe_bind (fun _ => safe_leaf _ _ rfl)
           | exhausted site => exact safe_bind (fun _ => safe_leaf _ _ rfl)
-          | mismatch expected actual => exact safe_leaf _ _ rfl
+          | mismatch expected actual => exact safe_leaf _ _ (RunResult.stuck_refusal _ _)
           | jump target env' =>
               rw [hplan] at planned shaped
               cases planned with

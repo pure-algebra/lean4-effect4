@@ -98,7 +98,7 @@ def denoteFuel {alphabet : FlowAlphabet Ty} :
           .vis (.inl ⟨op, request⟩) fun answer : Val =>
             denoteFuel fuel raw target (env' ++ [answer]) tape
       | .exhausted site => .pure (.frontier (.unansweredDecision site), tape)
-      | .mismatch expected actual => .pure (.refused expected actual, tape)
+      | .mismatch expected actual => .pure (.refusal expected actual, tape)
       | .choose site branch target env' rest =>
           .vis (.inr (site, branch)) fun _ => denoteFuel fuel raw target env' rest
       | .performCatch op request target env' _ _ =>
@@ -134,7 +134,7 @@ def traceHandler [Monad M] {alphabet : FlowAlphabet Ty} (service : FlowService a
 
 /-- The rows the runner appends when a run ends. `done` and `frontier` have no
 former in `Family.Service.traced` and are not operations of any summand: they
-are a function of the result the denotation returns. `stuck` and `refused` end a
+are a function of the result the denotation returns. `stuck` and both refusals end a
 run silently (`Runs.lean`, `step`). -/
 def outcomeRows : RunResult → Effect4.Trace.Log
   | .done value => [.done (.success value)]
@@ -142,7 +142,12 @@ def outcomeRows : RunResult → Effect4.Trace.Log
   | .frontier (.fuel _) => [.frontier]
   | .frontier (.unansweredDecision _) => [.frontier]
   | .frontier (.stuck _) => []
-  | .refused _ _ => []
+  | .refusedSite _ _ => []
+  | .refusedValue _ => []
+
+@[simp] theorem outcomeRows_refusal (expected actual : DecisionId) :
+    outcomeRows (.refusal expected actual) = [] := by
+  unfold RunResult.refusal; split <;> rfl
 
 /-- Append the outcome rows of a finished run. -/
 def close [Monad M] (result : RunResult × Tape) : RunM M (RunResult × Tape) :=
@@ -265,7 +270,7 @@ theorem loop_eq_interpretRun [Monad M] [LawfulMonad M] {alphabet : FlowAlphabet 
           | exhausted site =>
               simp [step, planned, interpretRun_pure, close_run, outcomeRows, emit_run]
           | mismatch expected actual =>
-              simp [step, planned, interpretRun_pure, close_run, outcomeRows]
+              simp [step, planned, interpretRun_pure, close_run, outcomeRows_refusal]
           | perform op request target env' =>
               dsimp only
               refine Eq.trans ?_ (interpretRun_run_perform service nameOf op request
@@ -536,7 +541,7 @@ def denoteGo {alphabet : FlowAlphabet Ty} (raw : RawFlow Ty) (cycles : CyclesWF 
         .vis (.inl ⟨op, request⟩) fun answer : Val =>
           denoteGo raw cycles target (env' ++ [answer]) tape
     | .exhausted site => .pure (.frontier (.unansweredDecision site), tape)
-    | .mismatch expected actual => .pure (.refused expected actual, tape)
+    | .mismatch expected actual => .pure (.refusal expected actual, tape)
     | .choose site branch target env' rest =>
         .vis (.inr (site, branch)) fun _ => denoteGo raw cycles target env' rest
     | .performCatch op request target env' _ _ =>
@@ -578,7 +583,7 @@ theorem denoteGo_eq {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty} (cycles : Cy
           .vis (.inl ⟨op, request⟩) fun answer : Val =>
             denoteGo raw cycles target (env' ++ [answer]) tape
       | .exhausted site => .pure (.frontier (.unansweredDecision site), tape)
-      | .mismatch expected actual => .pure (.refused expected actual, tape)
+      | .mismatch expected actual => .pure (.refusal expected actual, tape)
       | .choose site branch target env' rest =>
           .vis (.inr (site, branch)) fun _ => denoteGo raw cycles target env' rest
       | .performCatch op request target env' _ _ =>

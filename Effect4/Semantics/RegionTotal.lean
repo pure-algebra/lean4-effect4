@@ -131,7 +131,7 @@ def denoteRegionsGo {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
                   .vis (scopeOp .fail error) fun closing : Failures =>
                     .pure ((.failed error, tape), error :: ([] ++ closing))
         | .exhausted site => .pure ((.frontier (.unansweredDecision site), tape), [])
-        | .mismatch expected actual => .pure ((.refused expected actual, tape), [])
+        | .mismatch expected actual => .pure ((.refusal expected actual, tape), [])
         | .choose site branch target env' rest =>
             .vis (decideOp site branch) fun _ : Unit =>
               denoteRegionsGo flow cycles target env' rest
@@ -217,7 +217,7 @@ private theorem go_eq {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
                   .vis (scopeOp .fail error) fun closing : Failures =>
                     .pure ((.failed error, tape), error :: ([] ++ closing))
         | .exhausted site => .pure ((.frontier (.unansweredDecision site), tape), [])
-        | .mismatch expected actual => .pure ((.refused expected actual, tape), [])
+        | .mismatch expected actual => .pure ((.refusal expected actual, tape), [])
         | .choose site branch target env' rest =>
             .vis (decideOp site branch) fun _ : Unit =>
               denoteRegionsGo flow cycles target env' rest

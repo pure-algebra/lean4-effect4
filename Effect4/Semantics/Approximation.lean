@@ -241,7 +241,8 @@ theorem observe_settled (result : RunResult) (log : Effect4.Trace.Log) :
   cases result with
   | done value => rfl
   | failed error => rfl
-  | refused expected actual => rfl
+  | refusedSite expected actual => rfl
+  | refusedValue site => rfl
   | frontier reason => cases reason <;> rfl
 
 theorem observe_terminal {result : RunResult} (log : Effect4.Trace.Log)
@@ -249,7 +250,8 @@ theorem observe_terminal {result : RunResult} (log : Effect4.Trace.Log)
   cases result with
   | done value => rfl
   | failed error => rfl
-  | refused expected actual => rfl
+  | refusedSite expected actual => rfl
+  | refusedValue site => rfl
   | frontier reason =>
     cases reason with
     | fuel block => simp [RunResult.exhausted] at h
@@ -294,7 +296,8 @@ theorem obsLe_antisymm_terminal {a b : RunResult × Effect4.Trace.Log}
       cases rb with
       | done value => simp [observe] at this; simp [this.1, this.2]
       | failed error => simp [observe] at this; simp [this.1, this.2]
-      | refused expected actual => simp [observe] at this; simp [this.1, this.2]
+      | refusedSite expected actual => simp [observe] at this; simp [this.1, this.2]
+      | refusedValue site => simp [observe] at this; simp [this.1, this.2]
       | frontier reason =>
         cases reason with
         | fuel block => simp [observe] at this
@@ -420,11 +423,11 @@ theorem step_finished_not_exhausted {σ : Type} (alphabet : FlowAlphabet Ty)
       rfl
   | mismatch expected actual =>
       simp only [step, planEq] at finished
-      have h : Next.finished (RunResult.refused expected actual) tape =
+      have h : Next.finished (RunResult.refusal expected actual) tape =
           Next.finished result rest := finished
       injection h with h1 _
       rw [← h1]
-      rfl
+      simp
   | choose site branch target env' rest' =>
       simp only [step, planEq] at finished
       exact Next.noConfusion
@@ -1234,7 +1237,8 @@ theorem obsOf_extends {σ : Type} {m : RunM (StateT σ Id) ((RunResult × Tape) 
         cases result with
         | done value => cases exhausted
         | failed error => cases exhausted
-        | refused expected actual => cases exhausted
+        | refusedSite expected actual => cases exhausted
+        | refusedValue site => cases exhausted
         | frontier reason =>
             cases reason with
             | fuel block => exact ⟨block, rfl⟩
@@ -1349,7 +1353,8 @@ theorem regionLoop_sound {σ : Type} {alphabet : FlowAlphabet Ty} (flow : Region
                   exact Sound.bind (Appends.emit' _)
                     (fun _ => Sound.pure_settled _ _ rfl (fun _ h => RunResult.noConfusion h))
               | mismatch expected actual =>
-                  exact Sound.pure_settled _ _ rfl (fun _ h => RunResult.noConfusion h)
+                  exact Sound.pure_settled _ _ (RunResult.exhausted_refusal _ _)
+                    (fun _ h => absurd h (RunResult.refusal_ne_failed _ _ _))
               | choose site branch target env' rest =>
                   refine Sound.bind (Appends.emit' _) ?_
                   intro _
@@ -1623,7 +1628,7 @@ theorem regionLoop_frontier_live {σ : Type} {alphabet : FlowAlphabet Ty} (flow 
       (∀ error, (regionOut flow service nameOf fuel block env tape stack log s).1.1.1.1
         ≠ .failed error) ∧
       (∀ expected actual, (regionOut flow service nameOf fuel block env tape stack log s).1.1.1.1
-        ≠ .refused expected actual) ∧
+        ≠ .refusal expected actual) ∧
       (regionOut flow service nameOf fuel block env tape stack log s).1.1.2 = [] := by
   have sound := regionLoop_sound flow service nameOf fuel block env tape stack
   have isFuel : ∃ resume,
@@ -1634,7 +1639,8 @@ theorem regionLoop_frontier_live {σ : Type} {alphabet : FlowAlphabet Ty} (flow 
     cases result with
     | done value => cases exhausted
     | failed error => cases exhausted
-    | refused expected actual => cases exhausted
+    | refusedSite expected actual => cases exhausted
+    | refusedValue site => cases exhausted
     | frontier reason =>
         cases reason with
         | fuel resume => exact ⟨resume, rfl⟩
@@ -1647,7 +1653,8 @@ theorem regionLoop_frontier_live {σ : Type} {alphabet : FlowAlphabet Ty} (flow 
     exact RunResult.noConfusion failed
   · intro expected actual refused
     rw [isFuelEq] at refused
-    exact RunResult.noConfusion refused
+    unfold RunResult.refusal at refused
+    split at refused <;> exact RunResult.noConfusion refused
   · have unfolded :
         (((regionLoop alphabet flow service nameOf fuel block env tape stack).run log).run
           s).1.1.1.1 = .frontier (.fuel resume) := isFuelEq
@@ -2035,7 +2042,8 @@ theorem regionLoop_budget_not_exhausted {σ : Type} {alphabet : FlowAlphabet Ty}
                         (by simpa using sizedError) ⟨_, memErase, idEq, shaped.1, shaped.2.2⟩
           | exhausted site =>
               exact NotExhausted.bind (fun _ => NotExhausted.leaf _ _ rfl)
-          | mismatch expected actual => exact NotExhausted.leaf _ _ rfl
+          | mismatch expected actual =>
+              exact NotExhausted.leaf _ _ (RunResult.exhausted_refusal _ _)
           | choose site branch target env' rest =>
               rw [hplan] at planned shaped
               simp only [PlanShape] at shaped

@@ -46,11 +46,14 @@ inductive RunResult where
   (region flows, `Effect4/Flow/Region.lean`); plain flows never fail. -/
   | failed (error : Val)
   | frontier (reason : Frontier)
-  /-- The tape's next entry answers another site: the tape is not this flow's.
-  A Flow v3 `branch` whose tape entry names its own site but disagrees with the
-  test *value* refuses with that site twice: the entry is at the right site and
-  still not this run's answer. -/
-  | refused (expected actual : DecisionId)
+  /-- The tape's next entry answers another site: the tape is not this flow's
+  (R6). `Tape.read_mismatch_ne` says `actual ≠ expected` whenever the tape
+  produced this. -/
+  | refusedSite (expected actual : DecisionId)
+  /-- Flow v3: the tape's entry names this `branch`'s own site and still is not
+  this run's answer — the test operand has no boolean reading agreeing with it
+  (`E4-FLOW-CE-029`). -/
+  | refusedValue (site : DecisionId)
 deriving DecidableEq, Repr
 
 namespace RunResult
@@ -62,6 +65,37 @@ def exhausted : RunResult → Bool
 def stuck : RunResult → Bool
   | .frontier (.stuck _) => true
   | _ => false
+
+/-- The refusal a planned `Plan.mismatch` reports. `Tape.read` never names a
+site against itself (`Tape.read_mismatch_ne`), so `expected = actual` occurs
+only where `plan`'s `branch` clause writes it, and this classifier is exact. -/
+def refusal (expected actual : DecisionId) : RunResult :=
+  if expected = actual then .refusedValue expected else .refusedSite expected actual
+
+@[simp] theorem refusal_self (site : DecisionId) : refusal site site = .refusedValue site :=
+  if_pos rfl
+
+/-- Every refusal a tape read produces is a *site* refusal. -/
+theorem refusal_of_read {tape : Tape} {site expected actual : DecisionId}
+    (read : Tape.read tape site = .mismatch expected actual) :
+    refusal expected actual = .refusedSite expected actual :=
+  if_neg fun eq => (Tape.read_mismatch_ne read).2 eq.symm
+
+@[simp] theorem exhausted_refusal (expected actual : DecisionId) :
+    (refusal expected actual).exhausted = false := by
+  unfold refusal; split <;> rfl
+
+@[simp] theorem stuck_refusal (expected actual : DecisionId) :
+    (refusal expected actual).stuck = false := by
+  unfold refusal; split <;> rfl
+
+@[simp] theorem refusal_ne_failed (expected actual : DecisionId) (error : Val) :
+    refusal expected actual ≠ .failed error := by
+  unfold refusal; split <;> simp
+
+@[simp] theorem refusal_ne_done (expected actual : DecisionId) (value : Val) :
+    refusal expected actual ≠ .done value := by
+  unfold refusal; split <;> simp
 
 end RunResult
 
@@ -182,7 +216,7 @@ def step [Monad M] (alphabet : FlowAlphabet Ty) (service : FlowService alphabet 
   | .exhausted site => do
       emit .frontier
       pure (.finished (.frontier (.unansweredDecision site)) tape)
-  | .mismatch expected actual => pure (.finished (.refused expected actual) tape)
+  | .mismatch expected actual => pure (.finished (.refusal expected actual) tape)
   | .choose site branch target env' rest => do
       emit (.decide site.value branch)
       pure (.continue_ target env' rest)
@@ -429,7 +463,8 @@ theorem step_checked {σ : Type} {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty}
       simp [step, planEq, emit_run, NextSized, RunResult.stuck, StateT.run_bind, StateT.run_pure,
         idBind, idPure]
   | mismatch expected actual =>
-      simp [step, planEq, NextSized, RunResult.stuck, StateT.run_bind, StateT.run_pure, idBind, idPure]
+      simp [step, planEq, NextSized, RunResult.stuck_refusal, StateT.run_bind, StateT.run_pure,
+        idBind, idPure]
   | jump targetBlock found sizedTarget =>
       simp only [step, planEq, StateT.run_pure]
       exact ⟨targetBlock, found, sizedTarget⟩

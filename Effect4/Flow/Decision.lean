@@ -56,6 +56,23 @@ theorem read_cons_ne {expected actual : DecisionId} (ne : actual ≠ expected)
     Tape.read (⟨actual, branch⟩ :: rest) expected = .mismatch expected actual := by
   simp [Tape.read, ne]
 
+/-- A tape read never refuses a site against itself: `Tape.read` reports a
+mismatch only when the head entry names *another* site. This is what makes
+`expected = actual` an unambiguous marker of the Flow v3 value refusal
+(`Effect4.Flow.RunResult.refusal`, `E4-FLOW-CE-029`). -/
+theorem read_mismatch_ne {tape : Tape} {site expected actual : DecisionId}
+    (read : Tape.read tape site = .mismatch expected actual) :
+    expected = site ∧ actual ≠ expected := by
+  cases tape with
+  | nil => cases read
+  | cons decision rest =>
+      by_cases same : decision.site = site
+      · simp only [Tape.read, if_pos same] at read
+        cases read
+      · simp only [Tape.read, if_neg same] at read
+        obtain ⟨rfl, rfl⟩ := TapeRead.mismatch.inj read
+        exact ⟨rfl, fun eq => same (by rw [eq])⟩
+
 /-- An answered read consumed exactly one entry. -/
 theorem read_answered_length {tape : Tape} {site : DecisionId} {branch : Bool} {rest : Tape}
     (answered : Tape.read tape site = .answered branch rest) :

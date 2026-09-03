@@ -182,7 +182,7 @@ theorem step_progress {σ : Type} {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty
   | exhausted site =>
       simp [step, planEq, emit_run, NextProgress, RunResult.exhausted, StateT.run_pure, idPure]
   | mismatch expected actual =>
-      simp [step, planEq, NextProgress, RunResult.exhausted, StateT.run_pure, idPure]
+      simp [step, planEq, NextProgress, RunResult.exhausted_refusal, StateT.run_pure, idPure]
   | jump targetBlock found sizedTarget =>
       simp only [PlanShape] at shaped
       simp only [step, planEq, StateT.run_pure]
@@ -336,8 +336,8 @@ theorem loop_fuelFor_not_exhausted {σ : Type} {alphabet : FlowAlphabet Ty} {raw
 
 /-- The public form: running an admitted flow with the fuel `fuelFor` allots
 never ends at the fuel frontier. With `run_checked_not_stuck` this leaves an
-admitted run exactly three ends: a value, a refused foreign tape, or an
-unanswered decision. -/
+admitted run exactly three kinds of end: a value, a refusal (a foreign tape or
+a branch the value disagrees with), or an unanswered decision. -/
 theorem run_fuelFor_finishes {σ : Type} {alphabet : FlowAlphabet Ty} (flow : CheckedFlow alphabet)
     (service : FlowService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String) (tape : Tape)
     (input : Val) (log : Effect4.Trace.Log) (s : σ) :
@@ -455,9 +455,10 @@ theorem run_not_failed {σ : Type} {alphabet : FlowAlphabet Ty} (fuel : Nat)
 /-- What is left. With `run_checked_not_stuck` ruling out `stuck`, `run_not_failed`
 ruling out the region runner's failure, and
 `run_fuelFor_finishes` ruling out the fuel frontier, an admitted run at the
-allotted fuel ends in exactly one of three ways: a value, the unanswered
-decision frontier, or a refused foreign tape. The tape, not the fuel, is the
-only remaining source of a live frontier. -/
+allotted fuel ends in exactly one of four ways: a value, the unanswered
+decision frontier, a foreign tape refused at its site, or a Flow v3 `branch`
+refused because the value disagrees with the tape's own entry. The tape, not
+the fuel, is the only remaining source of a live frontier. -/
 theorem run_fuelFor_answered {σ : Type} {alphabet : FlowAlphabet Ty} (flow : CheckedFlow alphabet)
     (service : FlowService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String) (tape : Tape)
     (input : Val) (log : Effect4.Trace.Log) (s : σ) :
@@ -469,7 +470,10 @@ theorem run_fuelFor_answered {σ : Type} {alphabet : FlowAlphabet Ty} (flow : Ch
           = .frontier (.unansweredDecision site)) ∨
       (∃ expected actual,
         (((run (fuelFor flow.erase tape) flow service nameOf tape input).run log).run s).1.1
-          = .refused expected actual) := by
+          = .refusedSite expected actual) ∨
+      (∃ site,
+        (((run (fuelFor flow.erase tape) flow service nameOf tape input).run log).run s).1.1
+          = .refusedValue site) := by
   have notExhausted := run_fuelFor_finishes flow service nameOf tape input log s
   have notStuck := run_checked_not_stuck (fuelFor flow.erase tape) flow service nameOf tape input
     log s
@@ -480,7 +484,8 @@ theorem run_fuelFor_answered {σ : Type} {alphabet : FlowAlphabet Ty} (flow : Ch
   cases result with
   | done value => exact Or.inl ⟨value, rfl⟩
   | failed error => exact absurd rfl (notFailed error)
-  | refused expected actual => exact Or.inr (Or.inr ⟨expected, actual, rfl⟩)
+  | refusedSite expected actual => exact Or.inr (Or.inr (Or.inl ⟨expected, actual, rfl⟩))
+  | refusedValue site => exact Or.inr (Or.inr (Or.inr ⟨site, rfl⟩))
   | frontier reason =>
       cases reason with
       | fuel block => simp [RunResult.exhausted] at notExhausted

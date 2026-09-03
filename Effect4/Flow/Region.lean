@@ -209,7 +209,7 @@ def regionLoop [Monad M] (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
           | .exhausted site => do
               emit .frontier
               pure ((.frontier (.unansweredDecision site), tape), [])
-          | .mismatch expected actual => pure ((.refused expected actual, tape), [])
+          | .mismatch expected actual => pure ((.refusal expected actual, tape), [])
           | .choose site branch target env' rest => do
               emit (.decide site.value branch)
               regionLoop alphabet flow service nameOf fuel target env' rest stack

@@ -69,10 +69,10 @@ and the run dies with `TapeValueMismatch`. The ruling restores that parity. -/
 
 -- Neither tape decides this run: the test has no boolean reading, so the run
 -- is refused at the branch's own site twice, before any `decide` row.
-#guard runWith (.nat 0) [⟨⟨1⟩, true⟩] = some (RunResult.refused ⟨1⟩ ⟨1⟩,
+#guard runWith (.nat 0) [⟨⟨1⟩, true⟩] = some (RunResult.refusedValue ⟨1⟩,
   [ .op "probe" (.nat 5), .answer "probe" (.nat 0) ])
 
-#guard runWith (.nat 0) [⟨⟨1⟩, false⟩] = some (RunResult.refused ⟨1⟩ ⟨1⟩,
+#guard runWith (.nat 0) [⟨⟨1⟩, false⟩] = some (RunResult.refusedValue ⟨1⟩,
   [ .op "probe" (.nat 5), .answer "probe" (.nat 0) ])
 
 -- The two tapes are no longer separated by anything: neither writes a decision.
@@ -80,8 +80,8 @@ and the run dies with `TapeValueMismatch`. The ruling restores that parity. -/
 #guard decides (.nat 0) [⟨⟨1⟩, true⟩] = some []
 
 -- Every other non-boolean carrier arm reads the same way.
-#guard (runWith .unit [⟨⟨1⟩, true⟩]).map (·.1) = some (RunResult.refused ⟨1⟩ ⟨1⟩)
-#guard (runWith (.str "true") [⟨⟨1⟩, true⟩]).map (·.1) = some (RunResult.refused ⟨1⟩ ⟨1⟩)
+#guard (runWith .unit [⟨⟨1⟩, true⟩]).map (·.1) = some (RunResult.refusedValue ⟨1⟩)
+#guard (runWith (.str "true") [⟨⟨1⟩, true⟩]).map (·.1) = some (RunResult.refusedValue ⟨1⟩)
 
 /-! ## The positive controls
 
@@ -93,10 +93,10 @@ stay distinguishable. -/
 
 -- The disagreeing tape refuses, at the branch's own site twice.
 #guard (runWith (.bool true) [⟨⟨1⟩, false⟩]).map (·.1)
-  = some (RunResult.refused ⟨1⟩ ⟨1⟩)
+  = some (RunResult.refusedValue ⟨1⟩)
 
 -- A tape naming another site is the other refusal, and is unrelated to the value.
 #guard (runWith (.bool true) [⟨⟨2⟩, true⟩]).map (·.1)
-  = some (RunResult.refused ⟨1⟩ ⟨2⟩)
+  = some (RunResult.refusedSite ⟨1⟩ ⟨2⟩)
 
 end Effect4Test.Counterexamples.Flow.BranchValue

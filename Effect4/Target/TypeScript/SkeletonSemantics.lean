@@ -206,7 +206,7 @@ def execControl (fuel : Nat) (m : Machine) (tape : Tape) (node : Skeleton)
   | .decide answer site onTrue onFalse =>
       match tape.read site with
       | .exhausted => .pure (.finished (.frontier (.unansweredDecision site)), tape)
-      | .mismatch expected actual => .pure (.finished (.refused expected actual), tape)
+      | .mismatch expected actual => .pure (.finished (.refusal expected actual), tape)
       | .answered branch more =>
           .vis (.inr (site, branch)) fun _ =>
             Program.bind
@@ -226,7 +226,7 @@ def execControl (fuel : Nat) (m : Machine) (tape : Tape) (node : Skeleton)
   | .branchIf test site onTrue onFalse =>
       (match tape.read site with
        | .exhausted => .pure (.finished (.frontier (.unansweredDecision site)), tape)
-       | .mismatch expected actual => .pure (.finished (.refused expected actual), tape)
+       | .mismatch expected actual => .pure (.finished (.refusal expected actual), tape)
        | .answered branch more =>
            -- The runner's one rule (`Effect4/Semantics/Runs.lean`, `plan`): a
            -- test with no boolean reading of the tape's answer is a refusal,
@@ -235,7 +235,7 @@ def execControl (fuel : Nat) (m : Machine) (tape : Tape) (node : Skeleton)
              .vis (.inr (site, branch)) fun _ =>
                Program.bind (execList fuel m more (if branch then onTrue else onFalse))
                  (afterFell fuel rest)
-           else .pure (.finished (.refused site site), tape))
+           else .pure (.finished (.refusedValue site), tape))
   | .labelled label body =>
       Program.bind (execList fuel m tape body) (afterBlock fuel label rest)
   | .loop label body =>
@@ -664,7 +664,7 @@ theorem execControl_decide (fuel : Nat) (m : Machine) (tape : Tape) (answer : Sl
     execControl alphabet fuel m tape (.decide answer site onTrue onFalse) rest =
       (match tape.read site with
        | .exhausted => .pure (.finished (.frontier (.unansweredDecision site)), tape)
-       | .mismatch expected actual => .pure (.finished (.refused expected actual), tape)
+       | .mismatch expected actual => .pure (.finished (.refusal expected actual), tape)
        | .answered branch more =>
            .vis (.inr (site, branch)) fun _ =>
              Program.bind
@@ -691,13 +691,13 @@ theorem execControl_branchIf (fuel : Nat) (m : Machine) (tape : Tape) (test : Sl
     execControl alphabet fuel m tape (.branchIf test site onTrue onFalse) rest =
       (match tape.read site with
        | .exhausted => .pure (.finished (.frontier (.unansweredDecision site)), tape)
-       | .mismatch expected actual => .pure (.finished (.refused expected actual), tape)
+       | .mismatch expected actual => .pure (.finished (.refusal expected actual), tape)
        | .answered branch more =>
            if m.vals test = .bool branch then
              .vis (.inr (site, branch)) fun _ =>
                Program.bind (execList alphabet fuel m more (if branch then onTrue else onFalse))
                  (afterFell alphabet fuel rest)
-           else .pure (.finished (.refused site site), tape)) := by
+           else .pure (.finished (.refusedValue site), tape)) := by
   rw [execControl]
 
 theorem performOp_eq (fuel : Nat) (m : Machine) (tape : Tape) (answer : Slot)
@@ -1267,7 +1267,7 @@ theorem execList_skeletonBlock (table : List OpSpec) (fuel : Nat) (m : Machine) 
       ∧ (∀ expected actual,
           plan (tableAlphabet ⟨0⟩ table) block env tape = .mismatch expected actual →
         execList (tableAlphabet ⟨0⟩ table) fuel m tape body
-          = .pure (.finished (.refused expected actual), tape))
+          = .pure (.finished (.refusal expected actual), tape))
       ∧ (∀ op request target env' onError errorEnv,
           plan (tableAlphabet ⟨0⟩ table) block env tape
             = .performCatch op request target env' onError errorEnv →
@@ -1531,7 +1531,7 @@ theorem execList_skeletonBlock (table : List OpSpec) (fuel : Nat) (m : Machine) 
         execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
         execControl_branchIf, answered, enter_vals, holds_of_getElem? holds wEq]
       dsimp only
-      rw [if_neg (testValue_ne wEq disagreed)]
+      rw [if_neg (testValue_ne wEq disagreed), RunResult.refusal_self]
   · -- Flow v3: the plain algebra has no failure channel, so a caught perform runs
     -- its value edge, exactly as `plan` and `denoteFuel` do.
     intro op request target env' onError errorEnv planned
@@ -1794,8 +1794,8 @@ theorem dispatchRun_denoteFuel (table : List OpSpec) (raw : RawFlow String)
       | mismatch expected actual =>
           rw [onMismatch expected actual planEq]
           show dispatchCatch (tableAlphabet ⟨0⟩ table) fuel "block" cases
-              (Outcome.finished (RunResult.refused expected actual), tape)
-            = Program.pure (RunResult.refused expected actual, tape)
+              (Outcome.finished (RunResult.refusal expected actual), tape)
+            = Program.pure (RunResult.refusal expected actual, tape)
           exact dispatchCatch_finished _ fuel "block" cases _ tape
       | jump targetBlock foundTarget sizedTarget =>
           rename_i target env'
@@ -1938,7 +1938,7 @@ theorem execList_skeletonBlockWith (table : List OpSpec) (raw : RawFlow String)
       ∧ (∀ expected actual,
           plan (tableAlphabet ⟨0⟩ table) block env tape = .mismatch expected actual →
         execList (tableAlphabet ⟨0⟩ table) fuel m tape body
-          = .pure (.finished (.refused expected actual), tape))
+          = .pure (.finished (.refusal expected actual), tape))
       ∧ (∀ op request target env' onError errorEnv,
           plan (tableAlphabet ⟨0⟩ table) block env tape
             = .performCatch op request target env' onError errorEnv →
@@ -2251,7 +2251,7 @@ theorem execList_skeletonBlockWith (table : List OpSpec) (raw : RawFlow String)
                 execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
                 execControl_branchIf, answered, enter_vals, holds_of_getElem? holds wEq]
               dsimp only
-              rw [if_neg (testValue_ne wEq disagreed)]
+              rw [if_neg (testValue_ne wEq disagreed), RunResult.refusal_self]
   · -- Flow v3: a caught perform at an arbitrary transfer; the value edge only.
     intro op request target env' onError errorEnv planned
     obtain ⟨operation, requestVar, args, errorArgs, hterm, known, got, read, readE⟩ :=
