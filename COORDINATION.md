@@ -436,3 +436,87 @@ under `types/flow/`; every flow golden agrees on the host under every mask at
 both yield settings, and `generated/lowering-coverage.tsv` has all sixteen
 rules `checked`. Packet: `test/contracts/flow-dispatch-lowering.contract.md`.
 Next: P-T6, the property loop (generated flows, tapes, shrinking, mutants).
+
+## Census re-pin: `ref.*`, `deferred.*`, `layer.*` rows, 2026-09-03
+
+Claim (this packet, worktree `agent-a1a5c700de4dd016c`, branch
+`worktree-agent-a1a5c700de4dd016c`): `scripts/generate-effect-runtime-census.sh`,
+`generated/effect-runtime-census.tsv`, `Effect4Test/Audit/RuntimeCoverage.lean`
+(rows appended only), `docs/RUNTIME-COVERAGE.md`, `PORT-MANIFEST.md`
+(disposition rows only), plus five new files under
+`vendor/effect-4.0.0-rc.112/src/` and the vendor `README.md` table that pins
+them. No existing census row, witness, disposition or coverage state changed:
+`diff` of the old and new projections shows one changed line, the generator's
+own digest. Nothing under `Effect4/` was touched.
+
+The census had no rows for the mutable cell, the completion store, or Layer,
+so the P-M6 host structures could not be witnessed at all. The pin now also
+vendors `Ref.ts`, `MutableRef.ts`, `Deferred.ts`, `Layer.ts` and
+`internal/layer.ts`, and the generator emits 38 more behaviour rows. Census
+total 99 → 137; denominator 79 → 117; states after the packet: green 49,
+partial 25, absent 43 (was 5).
+
+**`ref` (10 rows).** Cell allocation identity (`ref.make`), the synchronous
+read (`ref.get`), the void-typed write whose host value is the cell itself
+(`ref.set-void-returns-cell`, with `ref.cell-set-returns-self` pinning
+`MutableRef.set` returning `self` — the source side of `E4-SEM-CE-009`), and
+the read-modify-write projections that a model must keep apart:
+`ref.get-and-set`, `ref.set-and-get-assignment` (succeeds with the assignment
+expression, not a second read), `ref.update`, `ref.modify`,
+`ref.modify-some-no-reread`, `ref.update-some-and-get-reread` (re-reads after
+the write, unlike `getAndUpdateSome`).
+
+**`deferred` (12 rows).** Allocation (`deferred.make`), done-ness as the
+presence of a stored effect (`deferred.is-done`), the waiter protocol with its
+cleanup (`deferred.await`), first-completion-wins
+(`deferred.single-completion`), clear-then-resume in registration order
+(`deferred.completion-order`), what is stored by `completeWith`/`done`/
+`complete` and whether the result is shared
+(`deferred.complete-with-stores-effect`, `deferred.done-is-complete-with`,
+`deferred.complete-runs-once`, `deferred.into-uninterruptible`), interruption
+as an ordinary stored failure carrying the completing fiber's id
+(`deferred.interrupt`, `deferred.interrupt-with`), and `deferred.poll`.
+
+**`layer` (16 rows).** Layer as a build function over a memo map and a scope
+(`layer.from-build-unsafe`, `layer.from-build-child-scope`,
+`layer.build-with-memo-map-service`); memoization
+(`layer.memo-build-once`, `layer.memo-reuse-observer-count`,
+`layer.memo-finalizer-last-observer`, `layer.memo-map-parent-lookup`,
+`layer.memo-get-or-else`, `layer.current-memo-map-fork-or-create`,
+`layer.fresh-drops-memoization`); where the scope and the memo map come from
+(`layer.build-uses-ambient-scope`, `layer.build-with-scope-still-forks-memo`);
+composition (`layer.merge-parallel-scopes`, `layer.provide-dependency-first`);
+and the layer scope versus the program scope (`layer.provide-effect-scope`,
+`layer.launch-holds-scope`).
+
+**What existing Lean already speaks to these rows: nothing directly.**
+`Effect4/Stateful/Ref.lean`, `Effect4/Stateful/Deferred.lean` and every
+`Effect4/Layer/*.lean` are eight-line breadth stubs with no declaration, as are
+`Effect4/Runtime/{Lifecycle,ManagedRuntime,Resource}.lean`. All 38 rows are
+therefore `absent` with no witness, and none is `owned` (an `owned` row must
+carry a witness). Dispositions: `derivedExpansion` for the five rows the pinned
+source itself defines in terms of another pinned operation
+(`ref.modify-some-no-reread`, `deferred.done-is-complete-with`,
+`deferred.complete-runs-once`, `deferred.interrupt`,
+`deferred.interrupt-with`); `separateCalculus` for the other 33, matching the
+`PORT-MANIFEST.md` family default for Layer and keeping the cell store and the
+completion store as calculi with their own identity.
+
+Adjacent Lean that a future witness will have to reuse rather than duplicate:
+`Effect4/Runtime/Scope.lean` already models scope state, LIFO close, fork
+linkage and `closeState_finalizers`, which is what every `layer.*` scope clause
+is stated over (`Scope.forkUnsafe`, `Scope.close`, `scopeAddFinalizerExit`);
+`Effect4/Semantics/Exit.lean` and `Cause.lean` own the `Exit` and interrupt
+cause that `deferred.interrupt-with` and `layer.memo-finalizer-last-observer`
+carry; `Effect4/Prim`'s `Sync` op is the frame under which every `ref.*` and
+several `deferred.*` behaviours execute. None of these states a `ref`,
+`deferred` or `layer` fact, so no row was promoted above `absent`.
+
+Also corrected in `docs/RUNTIME-COVERAGE.md`: the "path to full coverage" table
+said "the seven `partial` rows | 7"; the emitted count was already 25 before
+this packet.
+
+Gate at this commit: `./scripts/check-effect-runtime-census.sh` →
+`PASS ... 137 mechanism rows`; `PASS census ids, kinds, statement snapshots and
+witness receipts join the Lean row list`; `PASS coverage: denominator 117;
+owned-with-green 3; green 49, partial 25, absent 43`.

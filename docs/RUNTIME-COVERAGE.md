@@ -27,8 +27,9 @@ The reading of that source is `docs/effect-rc112-fiber-runtime.html`.
 ## Vocabulary
 
 **Row kinds** (`kind` column, fixed): `op`, `frame-arm`, `checkpoint`,
-`interrupt`, `fork`, `scope`, `scheduler`, `exit`, `cause`, `entry`, `rule`.
-A row id is `<kind>.<kebab-name>` and is stable for the life of the census.
+`interrupt`, `fork`, `scope`, `scheduler`, `exit`, `cause`, `entry`, `rule`,
+`ref`, `deferred`, `layer`. A row id is `<kind>.<kebab-name>` and is stable
+for the life of the census.
 
 **Disposition** is the `PORT-MANIFEST.md` vocabulary and answers who owns the
 behaviour's carrier. `targetOnly`, `excludedInternal`, and `evidenceOnly`
@@ -120,7 +121,10 @@ census v1 and the model that closes each:
 | `scope.*`, `rule.scope-close-lifo-state-first` | 15 | `Effect4/Runtime/Scope.lean`: state machine, LIFO close, sequential and parallel close, fork linkage |
 | `fork.*`, `interrupt.accumulate`, the two fork rules | 14 | `Effect4/Concurrency/Supervision.lean` and `Race.lean`: tracked versus daemon children, parent-exit interruption, scope-bound fibers, live-join resumption |
 | continuation-machine `op.*`, `frame-arm.*`, `checkpoint.*`, and the stack rules | 30 | a new continuation-stack calculus: frames with three arms, `getCont` with the ensure hook, deferred-interrupt flag, handler skipping, yield versus park |
-| the seven `partial` rows | 7 | finish once the models above exist; each also needs one scheduler refinement |
+| `ref.*` | 10 | `Effect4/Stateful/Ref.lean`: a cell store with allocation identity, read, write, and the read-modify-write projections, including the void-typed `Ref.set` whose host value is the cell |
+| `deferred.*` | 12 | `Effect4/Stateful/Deferred.lean`: a completion store that is empty or holds exactly one effect, a registration-ordered waiter list, single completion, and interruption as an ordinary stored failure |
+| `layer.*` | 16 | `Effect4/Layer/*.lean`: build over a memo map and a scope, one build per memo map with observer counting and a last-observer finalizer, parent memo chains, merge and provide scoping, and the layer scope versus the program scope |
+| the `partial` rows | 25 | finish once the models above exist; each also needs one scheduler refinement |
 
 The three `foreignBoundary` rows (`op.WithFiber`, `op.YieldableError`,
 `cause.annotations`) close with a registered boundary identity and a refusal

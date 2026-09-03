@@ -2566,7 +2566,7 @@ private def knownDispositions : List String :=
 
 private def knownKinds : List String :=
   [ "op", "frame-arm", "checkpoint", "interrupt", "fork", "scope", "scheduler"
-  , "exit", "cause", "entry", "rule" ]
+  , "exit", "cause", "entry", "rule", "ref", "deferred", "layer" ]
 
 private def knownCoverage : List String := ["green", "partial", "absent"]
 
@@ -3355,6 +3355,49 @@ private def censusRows : List Row :=
         [ w `Effect4.masked_interrupt_defers "propext"
         , w `Effect4.unmask_delivers_pending "propext" ] }
   , { id := "rule.budget-per-runloop-entry", kind := "rule", disposition := "targetOnly", coverage := "absent", witnesses := [] }
+    -- Host structures with no Lean carrier yet: `Effect4/Stateful/Ref.lean`,
+    -- `Effect4/Stateful/Deferred.lean` and `Effect4/Layer/*.lean` are breadth
+    -- stubs, so every row below is `absent` by construction. The five
+    -- `derivedExpansion` rows are the ones the pinned source itself defines
+    -- in terms of another pinned operation; the rest are `separateCalculus`.
+  , { id := "ref.make", kind := "ref", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "ref.get", kind := "ref", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "ref.set-void-returns-cell", kind := "ref", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "ref.cell-set-returns-self", kind := "ref", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "ref.get-and-set", kind := "ref", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "ref.set-and-get-assignment", kind := "ref", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "ref.update", kind := "ref", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "ref.modify", kind := "ref", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "ref.modify-some-no-reread", kind := "ref", disposition := "derivedExpansion", coverage := "absent", witnesses := [] }
+  , { id := "ref.update-some-and-get-reread", kind := "ref", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "deferred.make", kind := "deferred", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "deferred.is-done", kind := "deferred", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "deferred.await", kind := "deferred", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "deferred.single-completion", kind := "deferred", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "deferred.completion-order", kind := "deferred", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "deferred.complete-with-stores-effect", kind := "deferred", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "deferred.done-is-complete-with", kind := "deferred", disposition := "derivedExpansion", coverage := "absent", witnesses := [] }
+  , { id := "deferred.complete-runs-once", kind := "deferred", disposition := "derivedExpansion", coverage := "absent", witnesses := [] }
+  , { id := "deferred.into-uninterruptible", kind := "deferred", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "deferred.interrupt", kind := "deferred", disposition := "derivedExpansion", coverage := "absent", witnesses := [] }
+  , { id := "deferred.interrupt-with", kind := "deferred", disposition := "derivedExpansion", coverage := "absent", witnesses := [] }
+  , { id := "deferred.poll", kind := "deferred", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "layer.from-build-unsafe", kind := "layer", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "layer.from-build-child-scope", kind := "layer", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "layer.build-with-memo-map-service", kind := "layer", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "layer.memo-build-once", kind := "layer", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "layer.memo-finalizer-last-observer", kind := "layer", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "layer.memo-reuse-observer-count", kind := "layer", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "layer.memo-map-parent-lookup", kind := "layer", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "layer.memo-get-or-else", kind := "layer", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "layer.current-memo-map-fork-or-create", kind := "layer", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "layer.build-uses-ambient-scope", kind := "layer", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "layer.build-with-scope-still-forks-memo", kind := "layer", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "layer.merge-parallel-scopes", kind := "layer", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "layer.provide-dependency-first", kind := "layer", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "layer.fresh-drops-memoization", kind := "layer", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "layer.launch-holds-scope", kind := "layer", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
+  , { id := "layer.provide-effect-scope", kind := "layer", disposition := "separateCalculus", coverage := "absent", witnesses := [] }
   ]
 
 /-- The witness names frozen by `StatementSnapshot`, in snapshot order.
@@ -3815,8 +3858,8 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Prim.yieldableError_host_class_refused
   ]
 
-private def expectedRowTotal : Nat := 99
-private def expectedDenominator : Nat := 79
+private def expectedRowTotal : Nat := 137
+private def expectedDenominator : Nat := 117
 
 /-! ## Checks -/
 

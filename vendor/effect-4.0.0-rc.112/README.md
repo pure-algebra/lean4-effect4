@@ -28,4 +28,17 @@ Read by `scripts/generate-effect-runtime-census.sh`; joined to Lean witnesses by
 | `src/Cause.ts` | `4b39e7f578b9bceba6712fdf0f53410963006cb335a94f3c5bbd8c49cfe9962b` |
 | `src/Array.ts` | `ccc7dfbb44f0a93d4911af0d1db187925cfe7e765804bb3b9bdff2b7e1fc3936` |
 
+## Host structure census (`ref.*`, `deferred.*`, `layer.*`)
+
+Read by the same generator and gate, for the census rows that pin the mutable
+cell, the completion store, and layer build and memoization.
+
+| File | SHA-256 |
+| --- | --- |
+| `src/Ref.ts` | `69dc695dbe042baec090178dcc261f9a171e15a9fe6034d1c479408d6369d8fc` |
+| `src/MutableRef.ts` | `0ededd9c6d3f865a9ff804aff3fe7ca7413c22ecd697ae0e7f87d80771ee7a1f` |
+| `src/Deferred.ts` | `78b5d3cd2ad37f9e4f8ebaf465c9375bb982a00bd22a9f3d50ed02e0cb65f0e9` |
+| `src/Layer.ts` | `55f20d4a18913efc16f8bd5732d477e9455fb2ea1476e47d0a4ed14b12caed58` |
+| `src/internal/layer.ts` | `6ad3c8e779bae54dc0b3e57cd99fcd2087354df0c673d6335619d5cd95a74187` |
+
 The included `LICENSE` is the package license.

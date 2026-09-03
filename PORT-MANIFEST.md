@@ -751,6 +751,63 @@ needs its own profile row and evidence.
 | callback, promise, arbitrary thunk, custom Schema predicate or transform | named block, registered `foreignBoundary`, or refusal | Host closures and promises never enter canonical syntax. |
 | run functions, runtime handles, and concrete scheduler installation | `targetOnly` | Host execution supplies evidence, not denotational identity. |
 
+### Host structure census dispositions: `ref.*`, `deferred.*`, `layer.*`
+
+These are the `PORT-MANIFEST` disposition rows for the `ref`, `deferred` and
+`layer` kinds of `generated/effect-runtime-census.tsv`. Every one of them is
+`absent` in `Effect4Test/Audit/RuntimeCoverage.lean` today, because the
+destination modules named below are still breadth stubs with no declaration.
+
+None of them is `owned`: an `owned` row must carry a witness, and there is no
+Lean carrier to witness. None is excluded either — these behaviours must be
+reproduced, so they stay inside the coverage denominator. `derivedExpansion`
+is used only where the pinned source itself defines the surface in terms of
+another pinned operation on the same structure; every other row is
+`separateCalculus`, the disposition the family defaults above already assign
+to Layer, and the one that keeps the cell store and the completion store as
+calculi with their own identity rather than as core operations.
+
+| Census row | Pinned span | Effect4 destination | Disposition |
+| --- | --- | --- | --- |
+| `ref.make` | `Ref.ts` 142-173 | `Effect4/Stateful/Ref.lean` | `separateCalculus` |
+| `ref.get` | `Ref.ts` 200-200 | `Effect4/Stateful/Ref.lean` | `separateCalculus` |
+| `ref.set-void-returns-cell` | `Ref.ts` 306-307 | `Effect4/Stateful/Ref.lean` | `separateCalculus` |
+| `ref.cell-set-returns-self` | `MutableRef.ts` 1063-1070 | `Effect4/Stateful/Ref.lean` | `separateCalculus` |
+| `ref.get-and-set` | `Ref.ts` 399-404 | `Effect4/Stateful/Ref.lean` | `separateCalculus` |
+| `ref.set-and-get-assignment` | `Ref.ts` 747-747 | `Effect4/Stateful/Ref.lean` | `separateCalculus` |
+| `ref.update` | `Ref.ts` 1273-1276 | `Effect4/Stateful/Ref.lean` | `separateCalculus` |
+| `ref.modify` | `Ref.ts` 896-901 | `Effect4/Stateful/Ref.lean` | `separateCalculus` |
+| `ref.modify-some-no-reread` | `Ref.ts` 1159-1163 | `Effect4/Stateful/Ref.lean` | `derivedExpansion` |
+| `ref.update-some-and-get-reread` | `Ref.ts` 1639-1646 | `Effect4/Stateful/Ref.lean` | `separateCalculus` |
+| `deferred.make` | `Deferred.ts` 140-145 | `Effect4/Stateful/Deferred.lean` | `separateCalculus` |
+| `deferred.is-done` | `Deferred.ts` 1382-1382 | `Effect4/Stateful/Deferred.lean` | `separateCalculus` |
+| `deferred.await` | `Deferred.ts` 173-186 | `Effect4/Stateful/Deferred.lean` | `separateCalculus` |
+| `deferred.single-completion` | `Deferred.ts` 1648-1650 | `Effect4/Stateful/Deferred.lean` | `separateCalculus` |
+| `deferred.completion-order` | `Deferred.ts` 1651-1662 | `Effect4/Stateful/Deferred.lean` | `separateCalculus` |
+| `deferred.complete-with-stores-effect` | `Deferred.ts` 456-461 | `Effect4/Stateful/Deferred.lean` | `separateCalculus` |
+| `deferred.done-is-complete-with` | `Deferred.ts` 570-571 | `Effect4/Stateful/Deferred.lean` | `derivedExpansion` |
+| `deferred.complete-runs-once` | `Deferred.ts` 330-335 | `Effect4/Stateful/Deferred.lean` | `derivedExpansion` |
+| `deferred.into-uninterruptible` | `Deferred.ts` 1774-1784 | `Effect4/Stateful/Deferred.lean` | `separateCalculus` |
+| `deferred.interrupt` | `Deferred.ts` 1231-1232 | `Effect4/Stateful/Deferred.lean` | `derivedExpansion` |
+| `deferred.interrupt-with` | `Deferred.ts` 1332-1337 | `Effect4/Stateful/Deferred.lean` | `derivedExpansion` |
+| `deferred.poll` | `Deferred.ts` 1414-1416 | `Effect4/Stateful/Deferred.lean` | `separateCalculus` |
+| `layer.from-build-unsafe` | `Layer.ts` 289-298 | `Effect4/Layer/*.lean` | `separateCalculus` |
+| `layer.from-build-child-scope` | `Layer.ts` 333-345 | `Effect4/Layer/*.lean` | `separateCalculus` |
+| `layer.build-with-memo-map-service` | `Layer.ts` 756-765 | `Effect4/Layer/*.lean` | `separateCalculus` |
+| `layer.memo-build-once` | `Layer.ts` 390-419 | `Effect4/Layer/*.lean` | `separateCalculus` |
+| `layer.memo-finalizer-last-observer` | `Layer.ts` 401-410 | `Effect4/Layer/*.lean` | `separateCalculus` |
+| `layer.memo-reuse-observer-count` | `Layer.ts` 241-250 | `Effect4/Layer/*.lean` | `separateCalculus` |
+| `layer.memo-map-parent-lookup` | `Layer.ts` 434-443 | `Effect4/Layer/*.lean` | `separateCalculus` |
+| `layer.memo-get-or-else` | `Layer.ts` 445-457 | `Effect4/Layer/*.lean` | `separateCalculus` |
+| `layer.current-memo-map-fork-or-create` | `Layer.ts` 585-588 | `Effect4/Layer/*.lean` | `separateCalculus` |
+| `layer.build-uses-ambient-scope` | `Layer.ts` 800-809 | `Effect4/Layer/*.lean` | `separateCalculus` |
+| `layer.build-with-scope-still-forks-memo` | `Layer.ts` 970-980 | `Effect4/Layer/*.lean` | `separateCalculus` |
+| `layer.merge-parallel-scopes` | `Layer.ts` 1587-1602 | `Effect4/Layer/*.lean` | `separateCalculus` |
+| `layer.provide-dependency-first` | `Layer.ts` 1907-1926 | `Effect4/Layer/*.lean` | `separateCalculus` |
+| `layer.fresh-drops-memoization` | `Layer.ts` 3850-3851 | `Effect4/Layer/*.lean` | `separateCalculus` |
+| `layer.launch-holds-scope` | `Layer.ts` 3897-3898 | `Effect4/Layer/*.lean` | `separateCalculus` |
+| `layer.provide-effect-scope` | `internal/layer.ts` 8-22 | `Effect4/Layer/*.lean` | `separateCalculus` |
+
 Legacy names found in the corpus but absent from rc.112 are profile refusals
 or versioned migrations, not new rc.112 declarations:
 `Context.Tag`, `Context.GenericTag`, `Layer.scoped`, `Effect.async`,
