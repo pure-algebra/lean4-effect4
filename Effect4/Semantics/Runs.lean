@@ -17,6 +17,18 @@ Control is separated from effect: `plan` is the pure decision of one block,
 `step` runs it in the service's monad, `loop` spends one unit of fuel per
 block. Fuel exhaustion and tape exhaustion end a run at a `Frontier`, never a
 failure (DB-04); a tape entry for another site is a refusal (R6).
+
+Flow v3 adds two terminators. A `performCatch` names a failure successor; the
+plain service of this module cannot fail (`FlowService.handle` answers a `Val`),
+so a plain run always takes its value edge and reads exactly as a `perform`.
+The failure edge is taken by the region runner (`Effect4/Flow/Region.lean`),
+whose service answers an `Except`. A `branch` is taken by the *value* of its
+test operand and is still a decision *site*: the run reads the tape entry at
+that site exactly as a `choose` does, and refuses when the tape disagrees with
+the value, so the tape bound and `CyclesWF` are unchanged. A test operand with
+no boolean reading — admission types it `boolTy`, and the carrier claims no
+boolean semantics — is answered by the tape alone, which is what keeps `stuck`
+unreachable on an admitted flow (`plan_checked`).
 -/
 
 namespace Effect4.Flow
@@ -31,7 +43,10 @@ inductive RunResult where
   (region flows, `Effect4/Flow/Region.lean`); plain flows never fail. -/
   | failed (error : Val)
   | frontier (reason : Frontier)
-  /-- The tape's next entry answers another site: the tape is not this flow's. -/
+  /-- The tape's next entry answers another site: the tape is not this flow's.
+  A Flow v3 `branch` whose tape entry names its own site but disagrees with the
+  test *value* refuses with that site twice: the entry is at the right site and
+  still not this run's answer. -/
   | refused (expected actual : DecisionId)
 deriving DecidableEq, Repr
 
@@ -83,6 +98,18 @@ inductive Plan (alphabet : FlowAlphabet Ty) where
   | exhausted (site : DecisionId)
   | mismatch (expected actual : DecisionId)
   | choose (site : DecisionId) (branch : Bool) (target : BlockId) (env : Env) (rest : Tape)
+  /-- Flow v3's caught perform: the value edge's target and environment, then
+  the failure edge's. A service that cannot fail never takes the second. -/
+  | performCatch (operation : alphabet.Op) (request : Val) (target : BlockId) (env : Env)
+      (onError : BlockId) (errorEnv : Env)
+
+/-- The boolean reading of a `branch`'s test operand, when it has one. Nothing
+in admission says a value of the alphabet's `boolTy` is a `Val.bool` (the
+carrier claims no boolean semantics), so this is an `Option`. -/
+def testValue (env : Env) (test : Var) : Option Bool :=
+  match env[test.index]? with
+  | some (.bool value) => some value
+  | _ => none
 
 /-- Decide what one block does. -/
 def plan (alphabet : FlowAlphabet Ty) (block : RawBlock Ty) (env : Env) (tape : Tape) :
@@ -109,6 +136,26 @@ def plan (alphabet : FlowAlphabet Ty) (block : RawBlock Ty) (env : Env) (tape : 
         | .mismatch expected actual => .mismatch expected actual
         | .answered branch rest =>
             .choose decision branch (if branch then left else right) values rest
+  | .performCatch operation request target args onError errorArgs =>
+      match alphabet.lookup operation, env[request.index]?, readArgs env args,
+          readArgs env errorArgs with
+      | some op, some requestValue, some values, some errorValues =>
+          .performCatch op requestValue target values onError errorValues
+      | _, _, _, _ => .stuck
+  | .branch test site onTrue onFalse args =>
+      match readArgs env args with
+      | none => .stuck
+      | some values =>
+        match tape.read site with
+        | .exhausted => .exhausted site
+        | .mismatch expected actual => .mismatch expected actual
+        | .answered answer rest =>
+          match testValue env test with
+          | some value =>
+              if answer = value then
+                .choose site answer (if answer then onTrue else onFalse) values rest
+              else .mismatch site site
+          | none => .choose site answer (if answer then onTrue else onFalse) values rest
 
 /-- What one block transition yields. -/
 inductive Next where
@@ -138,6 +185,12 @@ def step [Monad M] (alphabet : FlowAlphabet Ty) (service : FlowService alphabet 
   | .choose site branch target env' rest => do
       emit (.decide site.value branch)
       pure (.continue_ target env' rest)
+  | .performCatch op request target env' _ _ => do
+      let answer ← StateT.lift (service.handle op request)
+      if service.pure op then pure () else do
+        emit (.op (nameOf op) request)
+        emit (.answer (nameOf op) answer)
+      pure (.continue_ target (env' ++ [answer]) tape)
 
 /-- Spend one unit of fuel per block. -/
 def loop [Monad M] (alphabet : FlowAlphabet Ty) (raw : RawFlow Ty)
@@ -227,6 +280,14 @@ inductive PlanSized (raw : RawFlow Ty) {alphabet : FlowAlphabet Ty} : Plan alpha
       (found : lookupBlock raw target = some targetBlock)
       (sized : env'.length = targetBlock.params.length) :
       PlanSized raw (.choose site branch target env' rest)
+  | performCatch {op : alphabet.Op} {request : Val} {target : BlockId} {env' : Env}
+      {onError : BlockId} {errorEnv : Env}
+      (targetBlock errorBlock : RawBlock Ty)
+      (found : lookupBlock raw target = some targetBlock)
+      (sized : env'.length + 1 = targetBlock.params.length)
+      (foundError : lookupBlock raw onError = some errorBlock)
+      (sizedError : errorEnv.length + 1 = errorBlock.params.length) :
+      PlanSized raw (.performCatch op request target env' onError errorEnv)
 
 /-- Admission makes `stuck` unreachable: on a well-formed flow, a block whose
 environment has exactly its parameters plans a resolving, well-sized step. -/
@@ -238,12 +299,13 @@ theorem plan_checked {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty} (wf : FlowW
   have arity := wf.terms.2.1 block mem
   have refs := wf.references block mem
   have ops := wf.operations block mem
-  have resolve : ∀ target, target ∈ block.term.successors →
+  have resolve : ∀ (edge : Nat) (target : BlockId),
+      block.term.successors[edge]? = some target →
       ∃ targetBlock, lookupBlock raw target = some targetBlock ∧
-        targetBlock.params.length = block.term.arity := by
-    intro target targetMem
-    have isSome := refs target targetMem
-    have ar := arity target targetMem
+        targetBlock.params.length = block.term.arityAt edge := by
+    intro edge target at_
+    have isSome := refs target (List.mem_of_getElem? at_)
+    have ar := arity edge target at_
     cases found : lookupBlock raw target with
     | none => rw [found] at isSome; cases isSome
     | some targetBlock => rw [found] at ar; exact ⟨targetBlock, rfl, ar⟩
@@ -260,7 +322,7 @@ theorem plan_checked {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty} (wf : FlowW
       obtain ⟨values, read, len⟩ := readArgs_of_bounded (env := env) (args := args)
         (fun v vmem => by rw [sized]; exact vars v (by rw [termEq]; exact vmem))
       rw [read]
-      obtain ⟨targetBlock, found, ar⟩ := resolve target (by rw [termEq]; exact List.mem_cons_self)
+      obtain ⟨targetBlock, found, ar⟩ := resolve 0 target (by rw [termEq]; rfl)
       exact .jump targetBlock found (by rw [len, ar, termEq]; rfl)
   | perform operation request target args =>
       dsimp only
@@ -275,7 +337,7 @@ theorem plan_checked {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty} (wf : FlowW
         obtain ⟨values, read, len⟩ := readArgs_of_bounded (env := env) (args := args)
           (fun v vmem => by rw [sized]; exact vars v (by rw [termEq]; exact List.mem_cons_of_mem _ vmem))
         rw [read]
-        obtain ⟨targetBlock, found, ar⟩ := resolve target (by rw [termEq]; exact List.mem_cons_self)
+        obtain ⟨targetBlock, found, ar⟩ := resolve 0 target (by rw [termEq]; rfl)
         exact .perform targetBlock found (by rw [len, ar, termEq]; rfl)
   | choose decision left right args =>
       dsimp only
@@ -288,13 +350,69 @@ theorem plan_checked {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty} (wf : FlowW
       | answered branch rest =>
           cases branch with
           | true =>
-              obtain ⟨targetBlock, found, ar⟩ :=
-                resolve left (by rw [termEq]; exact List.mem_cons_self)
+              obtain ⟨targetBlock, found, ar⟩ := resolve 0 left (by rw [termEq]; rfl)
               exact .choose targetBlock found (by rw [len, ar, termEq]; rfl)
           | false =>
-              obtain ⟨targetBlock, found, ar⟩ :=
-                resolve right (by rw [termEq]; exact List.mem_cons_of_mem _ List.mem_cons_self)
+              obtain ⟨targetBlock, found, ar⟩ := resolve 1 right (by rw [termEq]; rfl)
               exact .choose targetBlock found (by rw [len, ar, termEq]; rfl)
+  | performCatch operation request target args onError errorArgs =>
+      dsimp only
+      have known : (alphabet.lookup operation).isSome = true := by
+        have := ops; unfold OperationWF at this; rw [termEq] at this; exact this
+      cases lookupEq : alphabet.lookup operation with
+      | none => rw [lookupEq] at known; cases known
+      | some op =>
+        have lt : request.index < env.length := by
+          rw [sized]; exact vars request (by rw [termEq]; exact List.mem_cons_self)
+        rw [List.getElem?_eq_getElem lt]
+        obtain ⟨values, read, len⟩ := readArgs_of_bounded (env := env) (args := args)
+          (fun v vmem => by
+            rw [sized]
+            exact vars v (by
+              rw [termEq]
+              exact List.mem_cons_of_mem _ (List.mem_append_left _ vmem)))
+        obtain ⟨errorValues, readError, lenError⟩ :=
+          readArgs_of_bounded (env := env) (args := errorArgs)
+            (fun v vmem => by
+              rw [sized]
+              exact vars v (by
+                rw [termEq]
+                exact List.mem_cons_of_mem _ (List.mem_append_right _ vmem)))
+        rw [read, readError]
+        obtain ⟨targetBlock, found, ar⟩ := resolve 0 target (by rw [termEq]; rfl)
+        obtain ⟨errorBlock, foundError, arError⟩ := resolve 1 onError (by rw [termEq]; rfl)
+        exact .performCatch targetBlock errorBlock found (by rw [len, ar, termEq]; rfl)
+          foundError (by rw [lenError, arError, termEq]; rfl)
+  | branch test site onTrue onFalse args =>
+      dsimp only
+      obtain ⟨values, read, len⟩ := readArgs_of_bounded (env := env) (args := args)
+        (fun v vmem => by
+          rw [sized]; exact vars v (by rw [termEq]; exact List.mem_cons_of_mem _ vmem))
+      rw [read]
+      obtain ⟨trueBlock, foundTrue, arTrue⟩ := resolve 0 onTrue (by rw [termEq]; rfl)
+      obtain ⟨falseBlock, foundFalse, arFalse⟩ := resolve 1 onFalse (by rw [termEq]; rfl)
+      cases tape.read site with
+      | exhausted => exact .exhausted _
+      | mismatch expected actual => exact .mismatch _ _
+      | answered answer rest =>
+          have goTrue : PlanSized raw (Plan.choose (alphabet := alphabet) site true onTrue values rest) :=
+            .choose trueBlock foundTrue (by rw [len, arTrue, termEq]; rfl)
+          have goFalse : PlanSized raw (Plan.choose (alphabet := alphabet) site false onFalse values rest) :=
+            .choose falseBlock foundFalse (by rw [len, arFalse, termEq]; rfl)
+          cases hv : testValue env test with
+          | none =>
+              cases answer with
+              | true => exact goTrue
+              | false => exact goFalse
+          | some value =>
+              dsimp only
+              by_cases hb : answer = value
+              · rw [if_pos hb]
+                cases answer with
+                | true => exact goTrue
+                | false => exact goFalse
+              · rw [if_neg hb]
+                exact .mismatch _ _
 
 /-- The shape a checked step leaves behind: a finished run is not stuck, and a
 continuation resolves to a block of the environment's size. -/
@@ -332,6 +450,10 @@ theorem step_checked {σ : Type} {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty}
       simp only [step, planEq, StateT.run_bind, StateT.run_pure, emit_run]
       simp [NextSized]
       exact ⟨targetBlock, found, sizedTarget⟩
+  | performCatch targetBlock _ found sizedTarget _ _ =>
+      simp only [step, planEq, StateT.run_bind, StateT.run_lift, StateT.run_pure, emit_run]
+      cases service.pure _ <;> simp [NextSized, emit_run, StateT.run_bind, StateT.run_pure] <;>
+        exact ⟨targetBlock, found, by simp [sizedTarget]⟩
 
 /-- Admission makes `stuck` unreachable for every fuel. -/
 theorem loop_checked_not_stuck {σ : Type} {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty}

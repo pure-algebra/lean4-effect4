@@ -95,6 +95,7 @@ def PlanShape (term : RawTerm) (tape : Tape) {alphabet : FlowAlphabet Ty} :
     Plan alphabet → Prop
   | .jump target _ => term.isChoose = false ∧ target ∈ term.successors
   | .perform _ _ target _ => term.isChoose = false ∧ target ∈ term.successors
+  | .performCatch _ _ target _ _ _ => term.isChoose = false ∧ target ∈ term.successors
   | .choose _ _ _ _ rest => rest.length + 1 = tape.length
   | _ => True
 
@@ -127,6 +128,29 @@ theorem plan_shape (alphabet : FlowAlphabet Ty) (block : RawBlock Ty) (env : Env
         | mismatch expected actual => trivial
         | answered branch rest =>
             exact Tape.read_answered_length readEq
+  | performCatch operation request target args onError errorArgs =>
+      dsimp only
+      cases alphabet.lookup operation <;> cases env[request.index]? <;>
+        cases readArgs env args <;> cases readArgs env errorArgs <;>
+        simp [PlanShape, RawTerm.isChoose, RawTerm.successors]
+  | branch test site onTrue onFalse args =>
+      dsimp only
+      cases readArgs env args with
+      | none => trivial
+      | some values =>
+        dsimp only
+        cases readEq : tape.read site with
+        | exhausted => trivial
+        | mismatch expected actual => trivial
+        | answered answer rest =>
+            dsimp only
+            cases testValue env test with
+            | none => exact Tape.read_answered_length readEq
+            | some value =>
+                dsimp only
+                by_cases hb : answer = value
+                · rw [if_pos hb]; exact Tape.read_answered_length readEq
+                · rw [if_neg hb]; trivial
 
 /-! ## One step of a checked flow makes measurable progress -/
 
@@ -178,6 +202,13 @@ theorem step_progress {σ : Type} {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty
       simp only [PlanShape] at shaped
       simp only [step, planEq, StateT.run_bind, StateT.run_pure, emit_run]
       exact ⟨⟨targetBlock, found, sizedTarget⟩, Or.inr shaped⟩
+  | performCatch targetBlock _ found sizedTarget _ _ =>
+      simp only [PlanShape] at shaped
+      simp only [step, planEq, StateT.run_bind, StateT.run_lift, StateT.run_pure]
+      cases service.pure _ <;>
+        simp only [NextProgress, StateT.run_pure, if_true] <;>
+        exact ⟨⟨targetBlock, found, by simp [sizedTarget]⟩,
+          Or.inl ⟨rfl, ⟨block, mem, rfl, shaped.1, shaped.2⟩⟩⟩
 
 /-! ## The allotted fuel always suffices -/
 
@@ -382,6 +413,9 @@ theorem step_not_failed {σ : Type} {alphabet : FlowAlphabet Ty}
   | mismatch expected actual => simp [NextNotFailed, StateT.run_pure, idPure]
   | choose site branch target env' rest =>
       simp [NextNotFailed, emit_run, StateT.run_pure, idPure]
+  | performCatch op request target env' onError errorEnv =>
+      simp only [StateT.run_bind, StateT.run_lift, StateT.run_pure]
+      cases service.pure op <;> simp [NextNotFailed, emit_run, StateT.run_pure, idBind, idPure]
 
 theorem loop_not_failed {σ : Type} (alphabet : FlowAlphabet Ty) (raw : RawFlow Ty)
     (service : FlowService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String) :

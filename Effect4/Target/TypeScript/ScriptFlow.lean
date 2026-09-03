@@ -40,6 +40,11 @@ structure OpSpec where
   requestTy : String
   /-- TypeScript spelling of the answer type. -/
   answerTy : String
+  /-- TypeScript spelling of the declared error type (Flow v3): the type of the
+  value a `performCatch`'s failure edge binds in its last slot. An operation
+  that cannot fail declares `never`; the admission boundary never reads the
+  spelling, it only compares. -/
+  errorTy : String := "never"
 deriving Repr, Inhabited
 
 /-- The row of a table position. -/
@@ -54,6 +59,8 @@ abbrev tableAlphabet (id : AlphabetId) (table : List OpSpec) : FlowAlphabet Stri
   lookup id := if h : id.value < table.length then some ⟨id.value, h⟩ else none
   requestTy op := (OpSpec.at table op).requestTy
   answerTy op := (OpSpec.at table op).answerTy
+  errorTy op := (OpSpec.at table op).errorTy
+  boolTy := "boolean"
   lookup_operationId := by
     intro op
     simp [op.isLt]
@@ -162,7 +169,10 @@ def familyTable (rows : ServiceRow) : List OpSpec :=
         | [] => "void"
         | [(_, ty)] => ty
         | _ => "unsupported"
-      answerTy := row.tsAnswer }
+      answerTy := row.tsAnswer
+      errorTy := match row.error with
+        | some (_, ts) => ts
+        | none => "never" }
 
 def familyIndex (rows : ServiceRow) (op : String) : Option Nat :=
   rows.ops.findIdx? fun row => row.name == op
