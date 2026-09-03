@@ -1,9 +1,15 @@
 import { Effect, Ref, type Exit } from "effect"
-import { Cell, CellRows, Decisions, Regions, RCell, RCellRows, incr, twice, chooser, swap } from "./flow-fixture.ts"
+import { Cell, CellRows, Decisions, Regions, RCell, RCellRows, incr, twice, chooser, swap, irreducible } from "./flow-fixture.ts"
 import * as fixture from "./flow-fixture.ts"
 import { runTraced, traceService, decisionsFromTape, outcomeWire, windowRows, type Event } from "./tracer.ts"
 
 declare const process: { readonly env: Record<string, string | undefined> }
+
+/** The patched rc.112 copy (harness/trace/patched) reports frame-level rows
+ * through this sink; an unpatched copy never calls it and the report carries
+ * an empty list. These rows are recorded, never compared (docs/TRACE-DAG.md). */
+const patchedFrames: Array<Record<string, unknown>> = []
+;(globalThis as any).__effect4Frame = (row: string, data: Record<string, unknown>) => { patchedFrames.push({ row, ...data }) }
 
 /** The dispatch-form programs, run against the same traced Cell service as the
  * straight-line tail and a Decisions service answering from the golden's tape
@@ -76,6 +82,7 @@ const programs: Record<string, Effect.Effect<number, string, never>> = {
   twice: cellProgram(twice, 7, 41),
   chooser: cellProgram(chooser, 5, 41),
   swap: cellProgram(swap, 5, 41),
+  irreducible: cellProgram(irreducible, 5, 41),
   regionNested: rcellProgram(regionPrograms.regionNested!, 5, 41),
   regionTwoFail: rcellProgram(regionPrograms.regionTwoFail!, 5, 41),
   regionBothSucceed: rcellProgram(regionPrograms.regionBothSucceed!, 5, 41)
@@ -95,5 +102,6 @@ console.log(JSON.stringify({
   tracerDefect: report.tracerDefect,
   maxOpsBeforeYield,
   expectYields: process.env.EFFECT4_EXPECT_YIELDS === "1",
+  patchedFrames,
   foreign: ["succ@./atoms.ts"]
 }))

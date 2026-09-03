@@ -5,6 +5,12 @@ import { runTraced, traceService, decisionsFromTape, windowRows, type Event } fr
 
 declare const process: { readonly env: Record<string, string | undefined> }
 
+/** The patched rc.112 copy (harness/trace/patched) reports frame-level rows
+ * through this sink; an unpatched copy never calls it and the report carries
+ * an empty list. These rows are recorded, never compared (docs/TRACE-DAG.md). */
+const patchedFrames: Array<Record<string, unknown>> = []
+;(globalThis as any).__effect4Frame = (row: string, data: Record<string, unknown>) => { patchedFrames.push({ row, ...data }) }
+
 /** The batch tail: every (program, tape) of the manifest in `EFFECT4_BATCH`
  * runs once in this process against a fresh traced Cell service and a
  * Decisions service answering from its tape; one JSON report per case. */
@@ -41,7 +47,8 @@ for (const entry of manifest) {
     program: entry.program, tape: entry.tape,
     rows: windowRows(report.events), frames: report.frames.length, exitTag: report.exitTag,
     primitives: report.primitives, yields: report.yields, tracerDefect: report.tracerDefect,
-    maxOpsBeforeYield, expectYields: process.env.EFFECT4_EXPECT_YIELDS === "1"
+    maxOpsBeforeYield, expectYields: process.env.EFFECT4_EXPECT_YIELDS === "1",
+    patchedFrames: patchedFrames.splice(0)
   })
 }
 console.log(JSON.stringify(reports))

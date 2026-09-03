@@ -295,6 +295,61 @@ export const swap = (n: number) =>
     }
   })
 
+/** Lowered from the flow `irreducible` over `Cell` (dispatch form). */
+export const irreducible = (n: number) =>
+  Effect.gen(function* () {
+    const decisions = yield* Decisions
+    let b0p0!: number
+    let b1p0!: number
+    let b2p0!: number
+    let b3p0!: number
+    b0p0 = n
+    let block = 0
+    while (true) {
+      switch (block) {
+        case 0: {
+          const c0 = yield* decisions.choose(0)
+          if (c0) {
+            b1p0 = b0p0
+            block = 1
+            continue
+          } else {
+            b2p0 = b0p0
+            block = 2
+            continue
+          }
+        }
+        case 1: {
+          const c1 = yield* decisions.choose(1)
+          if (c1) {
+            b2p0 = b1p0
+            block = 2
+            continue
+          } else {
+            b3p0 = b1p0
+            block = 3
+            continue
+          }
+        }
+        case 2: {
+          const c2 = yield* decisions.choose(2)
+          if (c2) {
+            b1p0 = b2p0
+            block = 1
+            continue
+          } else {
+            b3p0 = b2p0
+            block = 3
+            continue
+          }
+        }
+        case 3: {
+          return b3p0
+        }
+      }
+    }
+  })
+
 /** Service `RCell`: one method per operation of the Lean family. */
 export class RCell extends Context.Service<RCell, {
   readonly get: Effect.Effect<number>

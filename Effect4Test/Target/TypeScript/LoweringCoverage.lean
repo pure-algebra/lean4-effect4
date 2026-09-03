@@ -96,6 +96,17 @@ def rows : List Row :=
   , { rule := .regionLeave, state := .checked,
       goldens := ["flow/regionNested.empty", "flow/regionTwoFail.empty", "flow/regionBothSucceed.empty"],
       host := true, property := false, typeReceipt := true, proof := none }
+  -- the structured form (StructuredLower.lean); swap has a self-loop, irreducible falls back
+  , { rule := .structuredLoop, state := .covered, goldens := ["flow/swap.once", "flow/swap.twice"],
+      host := true, property := true, typeReceipt := true, proof := none }
+  , { rule := .structuredMerge, state := .covered, goldens := ["flow/swap.once", "flow/swap.twice"],
+      host := true, property := true, typeReceipt := true, proof := none }
+  , { rule := .structuredContinue, state := .covered, goldens := ["flow/swap.once", "flow/swap.twice"],
+      host := true, property := true, typeReceipt := true, proof := none }
+  , { rule := .structuredBreak, state := .covered, goldens := ["flow/swap.once", "flow/swap.twice"],
+      host := true, property := true, typeReceipt := true, proof := none }
+  , { rule := .dispatchFallback, state := .checked, goldens := ["flow/irreducible.left", "flow/irreducible.right"],
+      host := true, property := false, typeReceipt := true, proof := none }
   , { rule := .flowRet, state := .covered,
       goldens := ["flow/incr.empty", "flow/twice.empty", "flow/chooser.left", "flow/swap.once"],
       host := true, property := true, typeReceipt := true, proof := none } ]

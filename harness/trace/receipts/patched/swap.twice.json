@@ -1,0 +1,153 @@
+{
+ "format": "effect4-trace-receipt-v1",
+ "program": "swap.twice",
+ "tape": "1:1,1:1,1:0",
+ "rules": "dispatch-loop,block-case,flow-literal,param-move,choose-if,flow-ret,structured-loop,structured-continue,structured-merge,structured-break",
+ "host": {
+  "effect": "4.0.0-rc.112",
+  "typescript": "7.0.2",
+  "tsgo": "0.38.0",
+  "pin": {
+   "effectVersion": "4.0.0-rc.112",
+   "effectUpstreamCommit": "2600f62f4532026928454dcea8d1c48557b3f942",
+   "effectFileCount": 2341,
+   "effectTreeSha256": "aea8ac8a25b17aa82796fad7acc1371bc9a92bbd7d25ce24f2598016f9920aad",
+   "typescriptVersion": "7.0.2",
+   "diagnosticVersion": "0.38.0"
+  },
+  "node": "v22.23.2",
+  "platform": "darwin-arm64",
+  "patched": {
+   "manifest": "/Users/pooks/Dev/lean4-effect4/harness/trace/patched/patch-manifest.json",
+   "sha256": "2e9f39f625bf2319b61802c18b3e7869492008439b98fba9442307c5b8645e2b",
+   "hunks": [
+    "frame.pop",
+    "frame.deferred-interrupt",
+    "frame.exit-fail-cause.skip",
+    "scope.close-inline",
+    "scope.close-single",
+    "scope.close-lifo",
+    "layer.memo-build"
+   ]
+  }
+ },
+ "patchedFrames": [
+  {
+   "row": "frame.pop",
+   "op": "Iterator",
+   "symbol": "~effect/Effect/successCont",
+   "depth": 0
+  },
+  {
+   "row": "frame.pop",
+   "op": "Iterator",
+   "symbol": "~effect/Effect/successCont",
+   "depth": 3
+  },
+  {
+   "row": "frame.pop",
+   "op": "Iterator",
+   "symbol": "~effect/Effect/successCont",
+   "depth": 6
+  },
+  {
+   "row": "frame.pop",
+   "op": "Iterator",
+   "symbol": "~effect/Effect/successCont",
+   "depth": 6
+  },
+  {
+   "row": "frame.pop",
+   "op": "Iterator",
+   "symbol": "~effect/Effect/successCont",
+   "depth": 6
+  },
+  {
+   "row": "frame.pop",
+   "op": "Iterator",
+   "symbol": "~effect/Effect/successCont",
+   "depth": 6
+  },
+  {
+   "row": "frame.pop",
+   "op": "OnExit",
+   "symbol": "~effect/Effect/successCont",
+   "depth": 5
+  },
+  {
+   "row": "frame.pop",
+   "op": "SetInterruptible",
+   "symbol": "~effect/Effect/successCont",
+   "depth": 5
+  },
+  {
+   "row": "frame.pop",
+   "op": "OnExit",
+   "symbol": "~effect/Effect/successCont",
+   "depth": 4
+  },
+  {
+   "row": "frame.pop",
+   "op": "SetInterruptible",
+   "symbol": "~effect/Effect/successCont",
+   "depth": 4
+  },
+  {
+   "row": "frame.pop",
+   "op": "Iterator",
+   "symbol": "~effect/Effect/successCont",
+   "depth": 3
+  },
+  {
+   "row": "frame.pop",
+   "op": "OnExit",
+   "symbol": "~effect/Effect/successCont",
+   "depth": 2
+  },
+  {
+   "row": "frame.pop",
+   "op": "SetInterruptible",
+   "symbol": "~effect/Effect/successCont",
+   "depth": 2
+  },
+  {
+   "row": "frame.pop",
+   "op": "OnExit",
+   "symbol": "~effect/Effect/successCont",
+   "depth": 1
+  },
+  {
+   "row": "frame.pop",
+   "op": "SetInterruptible",
+   "symbol": "~effect/Effect/successCont",
+   "depth": 1
+  },
+  {
+   "row": "frame.pop",
+   "op": "Iterator",
+   "symbol": "~effect/Effect/successCont",
+   "depth": 0
+  },
+  {
+   "row": "frame.pop",
+   "op": null,
+   "symbol": "~effect/Effect/successCont",
+   "depth": 0
+  }
+ ],
+ "scheduler": {
+  "mode": "TapeScheduler",
+  "maxOpsBeforeYield": 1000000,
+  "yields": 0,
+  "scheduled": []
+ },
+ "foreign": [
+  "succ@./atoms.ts"
+ ],
+ "primitives": 22,
+ "results": {
+  "outcome": "ok",
+  "m1": "ok",
+  "m2": "ok"
+ }
+}

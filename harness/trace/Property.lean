@@ -3,6 +3,7 @@ import Effect4.Target.TypeScript.Trace
 import Effect4.Target.TypeScript.Lower
 import Effect4.Target.TypeScript.ScriptFlow
 import Effect4.Target.TypeScript.FlowLower
+import Effect4.Target.TypeScript.StructuredLower
 
 /-!
 # The property loop (plan packet P-T6)
@@ -235,7 +236,7 @@ def uncoveredSites (cases : List Case) : List (String × Nat) := Id.run do
 
 def goldenOf (c : Case) : String :=
   Effect4.Target.TypeScript.Trace.golden (c.name ++ "." ++ c.tapeName) c.tape.wire
-    ((Flow.ruleSet Cell.rows c.program).map Rule.id) c.outcome.log (face := "lean-flow")
+    ((Flow.structuredRuleSet Cell.rows c.program).map Rule.id) c.outcome.log (face := "lean-flow")
 
 def isFrontier (c : Case) : Bool :=
   match c.outcome.result with
@@ -249,6 +250,9 @@ def writeCorpus (dir : String) (cases : List Case) : IO Unit := do
   match flowModules? [(Cell.rows, programs)] [.named ["succ"] "./atoms.ts"] with
   | some source => IO.FS.writeFile (dir ++ "/property-fixture.ts") source
   | none => throw (IO.userError "dispatch lowering refused a generated flow")
+  match structuredModules? [(Cell.rows, programs, [])] [.named ["succ"] "./atoms.ts"] with
+  | some source => IO.FS.writeFile (dir ++ "/property-structured-fixture.ts") source
+  | none => throw (IO.userError "structured lowering refused a generated flow")
   IO.FS.createDirAll (dir ++ "/goldens")
   for c in cases do
     IO.FS.writeFile (dir ++ "/goldens/" ++ c.name ++ "." ++ c.tapeName ++ ".tsv") (goldenOf c)

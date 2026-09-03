@@ -50,4 +50,11 @@ while IFS=$'\t' read -r program tape expected; do
     status=1
   fi
 done < <(lake env lean --run "$here/Generate.lean" flow-types | grep -v '^warning: manifest out of date')
+# --- the structured form declares the same lines ------------------------------
+structured_emitted="$tmp/out/structured-fixture.d.ts"
+[ -f "$structured_emitted" ] || { echo "FAIL no structured-fixture.d.ts emitted" >&2; exit 1; }
+while IFS=$'\t' read -r program tape expected; do
+  if grep -Fxq -- "$expected" "$structured_emitted"; then echo "PASS type receipt structured/$program.$tape: same line"
+  else echo "FAIL type receipt structured/$program.$tape: expected line not emitted" >&2; status=1; fi
+done < <(lake env lean --run "$here/Generate.lean" flow-types | grep -v '^warning: manifest out of date')
 exit "$status"

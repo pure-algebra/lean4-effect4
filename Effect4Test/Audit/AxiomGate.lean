@@ -71,7 +71,9 @@ private def targetImplementationModules : List Name :=
   -- syntax renderer); its lowering functions carry no semantic law.
   , `Effect4.Target.TypeScript.FlowLower
   -- The region lowering: the same renderer, nested scopes; no semantic law.
-  , `Effect4.Target.TypeScript.RegionLower ]
+  , `Effect4.Target.TypeScript.RegionLower
+  -- The structured form: the same renderer over structured statements.
+  , `Effect4.Target.TypeScript.StructuredLower ]
 
 private def choiceImplementationModules : List Name :=
   auditImplementationModules ++ targetImplementationModules

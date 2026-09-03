@@ -101,3 +101,13 @@ P-T7) lower an admitted region flow (Effects v0.5.0) to nested scopes; their
 goldens are the region programs of the harness under `generated/traces/flow/`
 (`regionNested`, `regionTwoFail`, `regionBothSucceed`), traced on the host with
 a `Regions` service. A fallible release has no lowering (`E4-TARGET-CE-012`).
+
+## The structured form
+
+`structured-loop`, `structured-merge`, `structured-continue`, `structured-break`
+and `dispatch-fallback` (`Effect4/Target/TypeScript/StructuredLower.lean`, P-T9b)
+are the shapes `TypeScript.Structure` emits for a reducible graph, and the
+dispatch form kept for an irreducible one (`irreducible.left`/`.right`). The
+structured module (`harness/trace/structured-fixture.ts`,
+`property-structured-fixture.ts`) is checked against the same goldens as the
+dispatch module, so a rule's host and property evidence covers both forms.

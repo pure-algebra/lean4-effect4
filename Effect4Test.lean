@@ -47,6 +47,8 @@ import Effect4Test.Semantics.ObservationContract
 import Effect4Test.Flow.RunnerContract
 import Effect4Test.Flow.RegionRunnerContract
 import Effect4Test.Target.TypeScript.RegionLowerContract
+import Effect4Test.Target.TypeScript.StructuredLowerContract
+import Effect4Test.Target.TypeScript.SimulationContract
 import Effect4Test.Flow.RunnerAxiomReport
 import Effect4Test.Counterexamples.Flow.Runner
 import Effect4Test.Target.TypeScript.FlowLowerContract

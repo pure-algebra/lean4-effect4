@@ -508,3 +508,45 @@ a body failure is the run's failure; a fallible release has no lowering
 `E4-TARGET-CE-012`. Codex: `Effect4/Target/TypeScript/Schema.lean`'s
 `exprKeysUnique` gained the two v0.3.0 arms (`lambda`, `method`) with the pin
 bump. Next: P-T9b, the structured form.
+
+## P-T9b landed: the structured form, 2026-09-02
+
+lean4-typescript v0.4.1 (`cc62799`) adds `TypeScript/Structure.lean`: reverse
+postorder, Cooper–Harvey–Kennedy dominators, reducibility, and emission over
+the dominator tree with caller-supplied shapes (re-derived; js_of_ocaml is
+reference only, and the local 5.7.1 checkout Codex holds lacks master's
+`Dispatch` edge kind, so nothing was copied). In Effect4,
+`Effect4/Target/TypeScript/StructuredLower.lean` lowers a reducible flow to
+labelled blocks, `while (true)` loops, `break` and `continue` (rules
+`structured-loop`, `structured-merge`, `structured-continue`,
+`structured-break`), keeps the dispatch form otherwise (`dispatch-fallback`,
+witnessed by the new `irreducible` program), and does the same inside
+regions. `FlowLower.lowerBlockWith` makes the block body parametric in its
+transfer; the dispatch output is unchanged byte for byte. The structured
+module runs against every flow golden and the whole property corpus (1277
+cases agree both ways; a fourth mutant, `continue` to `break`, is caught).
+The corpus found one structuring defect before any golden did (an entry that
+is its own loop header; `E4-TARGET-CE-013`, fixed in v0.4.1). Twenty-four
+rules in the ledger. Owed: the Lean theorem that both forms agree on every
+flow (`docs/TRACE-DAG.md`, `structured-agreement`). Packet:
+`test/contracts/flow-structured-lowering.contract.md`. Next: P-T11, the
+patched rc.112 copy, and the owed theorems (`fuelFor` suffices, structured
+agreement).
+
+## P-T11 landed: the patched rc.112 copy, 2026-09-02
+
+`harness/trace/patched/` holds a seven-hunk observation-only manifest and
+`apply.mjs`, which builds a patched copy of the pinned `effect` package under
+an ignored `_copy/` selected only through `EFFECT4_EFFECT_NODE_MODULES`; every
+tail reports the frame rows and `effect4-trace` records them with the
+manifest digest. `scripts/check-trace-patched.sh` requires every flow golden
+to agree under every mask on the patched copy and pins three scope facts:
+two releases latest-first through the loop, a single release inline (rc.112
+never enters `scopeCloseFinalizers` for one finalizer: `E4-TARGET-CE-014`),
+nested single releases inline inner-first. `Effect4/Target/TypeScript/Simulation.lean`
+defines the projections from `FrameEvent` and the scheduler `Event` into the
+service-level alphabet (finalizers and outcomes only); the `bridges` edges of
+both DAGs stay open with a statement now available. Packet:
+`test/contracts/trace-patched-host.contract.md`. The plan's packets are all
+landed; the owed theorems (`fuelFor` suffices, structured agreement) are with
+a proof agent on a worktree branch.

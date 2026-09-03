@@ -40,6 +40,12 @@ inductive Rule where
   | regionEnter
   | regionAcquire
   | regionLeave
+  -- the structured form (`StructuredLower.lean`)
+  | structuredLoop
+  | structuredMerge
+  | structuredContinue
+  | structuredBreak
+  | dispatchFallback
 deriving DecidableEq, Repr
 
 namespace Rule
@@ -65,12 +71,18 @@ def id : Rule → String
   | regionEnter => "region-enter"
   | regionAcquire => "region-acquire"
   | regionLeave => "region-leave"
+  | structuredLoop => "structured-loop"
+  | structuredMerge => "structured-merge"
+  | structuredContinue => "structured-continue"
+  | structuredBreak => "structured-break"
+  | dispatchFallback => "dispatch-fallback"
 
 /-- Every rule, in ledger order. -/
 def all : List Rule :=
   [serviceAcquire, nullaryValue, performCall, performBind, performDiscard, atomCall, ret, errorAbort,
    dispatchLoop, blockCase, paramMove, flowPerform, flowAtom, flowLiteral, chooseIf, flowRet,
-   regionEnter, regionAcquire, regionLeave]
+   regionEnter, regionAcquire, regionLeave,
+   structuredLoop, structuredMerge, structuredContinue, structuredBreak, dispatchFallback]
 
 theorem all_nodup : all.Nodup := by decide
 

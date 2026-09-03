@@ -4,6 +4,7 @@ import Effect4.Target.TypeScript.Lower
 import Effect4.Target.TypeScript.ScriptFlow
 import Effect4.Target.TypeScript.FlowLower
 import Effect4.Target.TypeScript.RegionLower
+import Effect4.Target.TypeScript.StructuredLower
 import Effect4.Flow.Region
 
 /-!
@@ -196,6 +197,16 @@ def swapRaw : RawFlow String :=
 
 def decision (site : Nat) (branch : Bool) : Flow.Decision := ⟨⟨site⟩, branch⟩
 
+/-- A cycle entered at two blocks: every cycle passes a `choose`, so it is
+admitted, but the graph is not reducible and keeps the dispatch form. -/
+def irreducibleRaw : RawFlow String :=
+  { alphabet := ⟨0⟩, roots := [⟨0⟩], entry := ⟨0⟩, inputTy := "number", resultTy := "number",
+    blocks :=
+      [ { id := ⟨0⟩, params := ["number"], term := .choose ⟨0⟩ ⟨1⟩ ⟨2⟩ [⟨0⟩] }
+      , { id := ⟨1⟩, params := ["number"], term := .choose ⟨1⟩ ⟨2⟩ ⟨3⟩ [⟨0⟩] }
+      , { id := ⟨2⟩, params := ["number"], term := .choose ⟨2⟩ ⟨1⟩ ⟨3⟩ [⟨0⟩] }
+      , { id := ⟨3⟩, params := ["number"], term := .ret ⟨0⟩ } ] }
+
 /-- The flow programs of the harness. -/
 def flowEntries : List FlowEntry :=
   (programs.filterMap fun entry =>
@@ -211,6 +222,11 @@ def flowEntries : List FlowEntry :=
     { program := program,
       tapes := [("once", [decision 1 true, decision 1 false]),
                 ("twice", [decision 1 true, decision 1 true, decision 1 false])],
+      input := .nat 5 }) ++
+  ((admit? "irreducible" [] irreducibleRaw).toList.map fun program =>
+    { program := program,
+      tapes := [("left", [decision 0 true, decision 1 true, decision 2 false]),
+                ("right", [decision 0 false, decision 2 true, decision 1 false])],
       input := .nat 5 })
 
 /-- Run a flow entry on one tape; the log the runner wrote. -/
@@ -366,7 +382,7 @@ def main (args : List String) : IO Unit := do
               match flowLog entry tape with
               | .ok log =>
                   IO.print (Effect4.Target.TypeScript.Trace.golden (name ++ "." ++ tapeName) tape.wire
-                    ((Flow.ruleSet entry.rows entry.program).map Rule.id) log (face := "lean-flow"))
+                    ((Flow.structuredRuleSet entry.rows entry.program).map Rule.id) log (face := "lean-flow"))
               | .error message => throw (IO.userError message)
           | none => throw (IO.userError s!"no tape {tapeName} for {name}")
       | none =>
@@ -394,6 +410,10 @@ def main (args : List String) : IO Unit := do
       match regionModules? flowFamilies [.named ["succ"] "./atoms.ts"] with
       | some source => IO.print source
       | none => throw (IO.userError "dispatch lowering refused a flow")
+  | ["structured-fixture"] =>
+      match structuredModules? flowFamilies [.named ["succ"] "./atoms.ts"] with
+      | some source => IO.print source
+      | none => throw (IO.userError "structured lowering refused a flow")
   | ["flow-types"] =>
       for entry in flowEntries do
         for (tapeName, _) in entry.tapes do
@@ -401,4 +421,4 @@ def main (args : List String) : IO Unit := do
             Flow.declarationLine entry.rows entry.program)
       for entry in regionEntries do
         IO.println (entry.program.name ++ "\tempty\t" ++ Region.declarationLine RCell.rows entry.program)
-  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | flow-types")
+  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types")

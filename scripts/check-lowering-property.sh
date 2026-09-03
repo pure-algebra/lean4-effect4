@@ -28,11 +28,11 @@ tmp="$(mktemp -d "${TMPDIR:-/tmp}/effect4-property.XXXXXX")"; trap 'rm -rf -- "$
 sha() { shasum -a 256 "$1" | cut -d' ' -f1; }
 lean_run() { lake env lean --run "$here/Property.lean" "$@" | grep -v '^warning: manifest out of date'; }
 prepare() { # dir: the harness files a batch needs beside the corpus
-  cp "$here/tracer.ts" "$here/atoms.ts" "$here/property-tail.ts" "$here/host-pin.json" "$1/"
+  cp "$here/tracer.ts" "$here/atoms.ts" "$here/property-tail.ts" "$here/property-structured-tail.ts" "$here/host-pin.json" "$1/"
 }
 mkdir -p "$tmp/corpus" && prepare "$tmp/corpus"
 summary="$(lean_run corpus "$seed" "$count" "$tmp/corpus")"
-digest="$(cat "$tmp/corpus/property-fixture.ts" "$tmp/corpus/goldens"/*.tsv | shasum -a 256 | cut -d' ' -f1)"
+digest="$(cat "$tmp/corpus/property-fixture.ts" "$tmp/corpus/property-structured-fixture.ts" "$tmp/corpus/goldens"/*.tsv | shasum -a 256 | cut -d' ' -f1)"
 mkdir -p "$here/receipts"
 batch_log="$tmp/batch.log"
 set +e
@@ -40,6 +40,13 @@ node "$tools/packages/harness/batch.mjs" "$tmp/corpus" --goldens "$tmp/corpus/go
   --masks "$repo_root/generated/traces/masks.tsv" --tail property-tail.ts \
   --receipt "$here/receipts/property.json" > "$batch_log" 2>&1
 status=$?
+if [ "$status" -eq 0 ]; then
+  # the structured form of the same corpus against the same goldens
+  node "$tools/packages/harness/batch.mjs" "$tmp/corpus" --goldens "$tmp/corpus/goldens" \
+    --masks "$repo_root/generated/traces/masks.tsv" --tail property-structured-tail.ts \
+    --receipt "$here/receipts/property-structured.json" | sed 's/^batch/batch(structured)/; s/^trace/trace(structured)/' >> "$batch_log" 2>&1
+  status=$?
+fi
 set -e
 [ "$print_row" -eq 1 ] || cat "$batch_log"
 if [ "$status" -eq 3 ]; then echo "FAIL property batch: invalid host run" >&2; exit 3; fi
