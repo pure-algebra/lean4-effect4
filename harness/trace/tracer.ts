@@ -76,6 +76,9 @@ export const wire = (value: unknown): Wire => {
     if (tag === "Success") return `[true, ${wire((value as { success: unknown }).success)}]`
     if (tag === "Failure") return `[false, ${wire((value as { failure: unknown }).failure)}]`
   }
+  // A host defect is an error object: it renders by its tag (the tracer's own
+  // refusals carry one) or else by its message, as the `defect` payload string.
+  if (value instanceof Error) return wire((value as { _tag?: unknown })._tag ?? value.message)
   throw new TracerDefect(`no wire form for ${JSON.stringify(value)}`)
 }
 
@@ -234,7 +237,6 @@ export const runTraced = async <A, E>(
 
   const fiber = Effect.runFork(traced, { scheduler: new TapeScheduler() })
   const exit: any = await new Promise((resolve) => (fiber as any).addObserver(resolve))
-  const budgetHit = sink.some((e) => e.kind === "frontier")
   // A tape exhausted at a `choose` is the unanswered frontier, never an outcome
   // (Effect4.Frontier.unansweredDecision); the Decisions service dies with
   // TapeExhausted and the run ends with a `frontier` row instead of `done`.

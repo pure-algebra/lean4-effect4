@@ -505,7 +505,7 @@ Original list:
   harness gates something and `SCHEMA-PG-EFFECTFUL-FIELD` can get a join row.
 - Add `Target/TypeScript/Schema.lean` to the assurance join inputs.
 - Add `test-schema-typescript-generation-gate.sh`; every other Schema gate has
-  a reaction test and `PLAN.md:257` says an unreacting gate is not evidence.
+  a reaction test and `PLAN.md` (the reaction-test rule) says an unreacting gate is not evidence.
 - `Lens.Lawful.toTraversal` in `Data/Optic.lean` (one line; removes the
   `change` step at `Schema/Annotations.lean:325–328`).
 - One shared home for the nine private list lemmas re-proved across
@@ -518,8 +518,8 @@ Original list:
   `Schema.lean` sit in different target namespaces.
 - `withCheck`/`withChecks?` argument order, and the fixture's silent
   `.getD Schema.string` fallback (`harness/schema-generation/EmitFixture.lean:11`).
-- Stale text: `PORT-MANIFEST.md:560` says `SC-REP-03-RECURSOR` is open while
-  the tsv says closed; `docs/SCHEMA-CUTOVER.md:3–5` header; `docs/
+- Stale text: `PORT-MANIFEST.md` (the `SC-REP-03-RECURSOR` row) says `SC-REP-03-RECURSOR` is open while
+  the tsv says closed; `docs/SCHEMA-CUTOVER.md` header; `docs/
   SCHEMA-SURFACE-SURVEY.md` §4 counts predate the payload carrier;
   `lakefile.toml:14` says v0.3.1 for a v0.4.0 pin; `harness/README.md`
   documents two of six harnesses.

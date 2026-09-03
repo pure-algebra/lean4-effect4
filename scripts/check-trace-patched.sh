@@ -17,9 +17,14 @@ patched="$(node "$here/patched/apply.mjs" --print)"
 export EFFECT4_EFFECT_NODE_MODULES="$patched"
 export EFFECT4_PATCHED="$here/patched/patch-manifest.json"
 mkdir -p "$here/receipts/patched"
+# A resource-boundary golden carries `budget default <n>`; the patched copy adds
+# no primitives (its hunks only observe), so the same budget lands the frontier.
+budget_row() { awk -F'\t' -v want="$2" '$1=="budget" && $2==want {print $3}' "$1"; }
 for golden in "$repo_root"/generated/traces/flow/*.tsv; do
+  default_budget="$(budget_row "$golden" default)"
   base="$(basename "$golden" .tsv)"; program="${base%%.*}"
-  EFFECT4_PROGRAM="$program" node "$tools/packages/harness/trace.mjs" "$here" \
+  EFFECT4_PROGRAM="$program" EFFECT4_BUDGET="${default_budget:-100000}" \
+    node "$tools/packages/harness/trace.mjs" "$here" \
     --golden "$golden" --masks "$repo_root/generated/traces/masks.tsv" --tail flow-tail.ts \
     --receipt "$here/receipts/patched/$base.json" | sed 's/^trace/trace(patched)/' | grep -v "mask outcome"
 done

@@ -577,6 +577,9 @@ def main (args : List String) : IO Unit := do
               ((entry.script.ruleSet entry.rows).map Rule.id) entry.log))
       | none => throw (IO.userError s!"unknown program {name}")
   | ["programs"] => IO.println (String.intercalate "\n" (programs.map (·.name)))
+  | ["types"] =>
+      for entry in programs do
+        IO.println (entry.name ++ "\t" ++ Script.declarationLine entry.rows entry.script)
   | ["flow-programs"] =>
       for entry in flowEntries do
         for (tapeName, _) in entry.tapes do
@@ -658,4 +661,4 @@ def main (args : List String) : IO Unit := do
   | ["scope-types"] =>
       for entry in scopePrograms do
         IO.println (entry.name ++ "\t" ++ Script.declarationLine Scopes.rows entry.script)
-  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | admission-probe")
+  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | admission-probe")

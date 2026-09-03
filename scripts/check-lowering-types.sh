@@ -20,6 +20,15 @@ emitted="$tmp/out/fixture.d.ts"
 [ -f "$emitted" ] || { echo "FAIL no fixture.d.ts emitted" >&2; ls "$tmp/out" >&2; exit 1; }
 digest="$(shasum -a 256 "$emitted" | cut -d' ' -f1)"
 mkdir -p "$here/types"
+# The generator runs once per list, up front: a refused or unknown command is a
+# gate failure, never an empty loop.
+lines="$tmp/types.tsv"; flow_lines="$tmp/flow-types.tsv"
+lake env lean --run "$here/Generate.lean" types 2>&1 | grep -v '^warning: manifest out of date' > "$lines" \
+  && ! grep -q '^uncaught exception' "$lines" && [ -s "$lines" ] \
+  || { echo "FAIL Generate.lean types produced no declaration lines" >&2; cat "$lines" >&2; exit 1; }
+lake env lean --run "$here/Generate.lean" flow-types 2>&1 | grep -v '^warning: manifest out of date' > "$flow_lines" \
+  && ! grep -q '^uncaught exception' "$flow_lines" && [ -s "$flow_lines" ] \
+  || { echo "FAIL Generate.lean flow-types produced no declaration lines" >&2; cat "$flow_lines" >&2; exit 1; }
 status=0
 while IFS=$'\t' read -r program expected; do
   if grep -Fxq -- "$expected" "$emitted"; then
@@ -32,7 +41,7 @@ while IFS=$'\t' read -r program expected; do
     grep -F "export declare const $program" "$emitted" >&2 || echo "  (no declaration for $program)" >&2
     status=1
   fi
-done < <(lake env lean --run "$here/Generate.lean" types | grep -v '^warning: manifest out of date')
+done < "$lines"
 # --- the dispatch form -------------------------------------------------------
 flow_emitted="$tmp/out/flow-fixture.d.ts"
 [ -f "$flow_emitted" ] || { echo "FAIL no flow-fixture.d.ts emitted" >&2; ls "$tmp/out" >&2; exit 1; }
@@ -49,12 +58,12 @@ while IFS=$'\t' read -r program tape expected; do
     grep -F "export declare const $program" "$flow_emitted" >&2 || echo "  (no declaration for $program)" >&2
     status=1
   fi
-done < <(lake env lean --run "$here/Generate.lean" flow-types | grep -v '^warning: manifest out of date')
+done < "$flow_lines"
 # --- the structured form declares the same lines ------------------------------
 structured_emitted="$tmp/out/structured-fixture.d.ts"
 [ -f "$structured_emitted" ] || { echo "FAIL no structured-fixture.d.ts emitted" >&2; exit 1; }
 while IFS=$'\t' read -r program tape expected; do
   if grep -Fxq -- "$expected" "$structured_emitted"; then echo "PASS type receipt structured/$program.$tape: same line"
   else echo "FAIL type receipt structured/$program.$tape: expected line not emitted" >&2; status=1; fi
-done < <(lake env lean --run "$here/Generate.lean" flow-types | grep -v '^warning: manifest out of date')
+done < "$flow_lines"
 exit "$status"

@@ -789,3 +789,53 @@ merges a failing finalizer into a failing body with `Cause.combine`, while
 `Effect4.Flow.Region.closeFrame` keeps only the first release failure (pinned by
 `E4-FLOW-CE-019`), and TRACE-DAG separation 3 makes the fail payload exactly what
 a mask cannot erase. Settle that before writing the fence.
+
+## Wave integration: seven agent branches merged one at a time, 2026-09-03
+
+Operator ruling: no trust gate per merge; merge in order, build the library
+after each, elaborate the branch's batteries, run every gate once at the end.
+
+Merged into `main`, in this order, each with `lake build Effect4` green:
+census re-pin (clean), D1 denotation, D4 frame simulation (both fences), D3
+skeleton IR (fixtures byte-identical), D2 merged-failure region runner and
+`closeExitsM`, DB-04 approximation laws, M0/M1 wire hardening and the `Scopes`
+family. Conflicts were append-only (`COORDINATION.md`, `docs/TRACE-DAG.md`,
+`Effect4Test.lean`, `harness/trace/Generate.lean`, `tracer.ts`, `tsconfig.json`,
+`scripts/check-trace-host.sh`) and resolved keep-both; the flow goldens now
+carry the structured rule set and the M0 budget rows together.
+
+Fallout found by the single sweep and fixed on `main`:
+
+- `Effect4/Semantics/Approximation.lean` kept only its runner half; the region
+  half was written against the pre-D2 failure carrier and is owed (noted in
+  the module and `docs/TRACE-DAG.md`).
+- The v0.6.0 `Outcome.defect` arm was missing from the golden admission check
+  in `Generate.lean`; the wire battery named the event constructor through an
+  `abbrev` (unresolvable) — both one-line repairs.
+- `tracer.ts` declared `budgetHit` twice after the merge (the M0 latch and the
+  pre-M0 computation); the latch stays. Its value encoder had no arm for an
+  `Error` defect, so the swapped-arms mutant surfaced as a tracer defect
+  instead of a divergence; an error now renders by its `_tag`, else its
+  message, under `{"defect":…}`.
+- The structured and patched host runs never passed the golden's budget row
+  through, so `swap.budget` finished instead of reaching the frontier; both
+  forms spend the same primitives up to the frontier (19 at the default yield
+  setting, 79 at the floor of 3, measured), so the same row serves all three.
+- `Generate.lean types` had been dropped in P-T9a and the straight-line type
+  receipts were silently unchecked since: the command is restored and
+  `scripts/check-lowering-types.sh` now fails on an empty or refused
+  generator run instead of looping over nothing.
+- `Effect4.Target.TypeScript.Skeleton` (D3) renders strings and is admitted
+  exactly in `Effect4Test/Audit/AxiomGate.lean`; `TraceWire` is imported by
+  the audit root; four line-numbered citations in research notes were reworded.
+- The axiom gate now judges a compiler auxiliary or equation lemma
+  (`f.eq_def`, `f.eq_<n>`, `f._f`, …) by the admission of the declaration it
+  was generated from (`ancestors` in `AxiomGate.lean`): the skeleton
+  renderers' equation lemmas are minted in `StructureLaws`, which unfolds
+  them, and the three `render*_wellScoped` transports carry `_f` auxiliaries.
+
+Sweep outcome after the repairs, all on the merged tree: goldens regenerated
+and byte-stable; host, patched, types, property, coverage, census, family
+check, the three planted-mutant self-tests (goldens, coverage, lowering
+4/4), citations and the trust gate all green. Agent worktrees and branches
+are removed. Not pushed.

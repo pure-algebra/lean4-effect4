@@ -53,8 +53,10 @@ for golden in "$repo_root"/generated/traces/flow/*.tsv; do
     EFFECT4_BUDGET="${yield3_budget:-100000}" \
     node "$tools/packages/harness/trace.mjs" "$here" \
     --golden "$golden" --masks "$repo_root/generated/traces/masks.tsv" --tail flow-tail.ts | sed 's/^trace/trace(dispatch,yield-every-op)/'
-  # the structured form of the same program against the same golden
-  EFFECT4_PROGRAM="$program" node "$tools/packages/harness/trace.mjs" "$here" \
+  # the structured form of the same program against the same golden, under the
+  # same budget: both forms spend the same primitives up to the frontier
+  EFFECT4_PROGRAM="$program" EFFECT4_BUDGET="${default_budget:-100000}" \
+    node "$tools/packages/harness/trace.mjs" "$here" \
     --golden "$golden" --masks "$repo_root/generated/traces/masks.tsv" --tail structured-tail.ts \
     --receipt "$here/receipts/structured/$base.json" | sed 's/^trace/trace(structured)/'
 done

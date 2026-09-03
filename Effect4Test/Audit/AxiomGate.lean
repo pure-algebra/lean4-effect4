@@ -73,7 +73,10 @@ private def targetImplementationModules : List Name :=
   -- The region lowering: the same renderer, nested scopes; no semantic law.
   , `Effect4.Target.TypeScript.RegionLower
   -- The structured form: the same renderer over structured statements.
-  , `Effect4.Target.TypeScript.StructuredLower ]
+  , `Effect4.Target.TypeScript.StructuredLower
+  -- The control-skeleton IR (packet D3): its `render` traverses strings; the
+  -- skeleton's laws are stated over the `String`-free IR, not over `render`.
+  , `Effect4.Target.TypeScript.Skeleton ]
 
 private def choiceImplementationModules : List Name :=
   auditImplementationModules ++ targetImplementationModules
@@ -132,6 +135,15 @@ private def resolveChoiceImplementationDeclarations
     | [declaration] => resolved := resolved ++ [declaration]
     | _ => throw s!"Effect4 axiom gate: private implementation exemption {owner}/{originalName} matched {privateCandidates.length} declarations; expected exactly one"
   return resolved
+
+/-- The proper prefixes of a name, nearest first. Auto-generated auxiliaries
+(`f.eq_def`, `f.eq_<n>`, `f._f`, `f.match_<n>`, `f.proof_<n>`) live under the
+declaration that produced them, and an equation lemma is minted in whichever
+module first unfolds `f`, so they are judged by `f`'s admission. -/
+private def ancestors : Name → List Name
+  | .str parent _ => parent :: ancestors parent
+  | .num parent _ => parent :: ancestors parent
+  | .anonymous => []
 
 private def belongsToAuditedTree (moduleName : Name) : Bool :=
   (`Effect4).isPrefixOf moduleName || (`Effect4Test).isPrefixOf moduleName
@@ -268,11 +280,15 @@ elab "#effect4_axiom_gate" : command => do
     | .ok resolved => pure resolved
     | .error message => throwError "{message}"
 
+  let admitted (declaration : Name) : Bool :=
+    (moduleOf? environment declaration).any choiceImplementationModules.contains ||
+      exactImplementationDeclarations.contains declaration
   for declaration in declarations do
     let axioms ← collectAxioms declaration
+    -- An auxiliary or equation lemma inherits the admission of the declaration
+    -- it was generated from (see `ancestors`).
     let bound :=
-      if (moduleOf? environment declaration).any choiceImplementationModules.contains ||
-          exactImplementationDeclarations.contains declaration then
+      if admitted declaration || (ancestors declaration).any admitted then
         auditImplementationAxioms
       else
         allowedAxioms
