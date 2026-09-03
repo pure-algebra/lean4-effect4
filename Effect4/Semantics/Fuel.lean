@@ -95,7 +95,8 @@ def PlanShape (term : RawTerm) (tape : Tape) {alphabet : FlowAlphabet Ty} :
     Plan alphabet → Prop
   | .jump target _ => term.isChoose = false ∧ target ∈ term.successors
   | .perform _ _ target _ => term.isChoose = false ∧ target ∈ term.successors
-  | .performCatch _ _ target _ _ _ => term.isChoose = false ∧ target ∈ term.successors
+  | .performCatch _ _ target _ onError _ =>
+      term.isChoose = false ∧ target ∈ term.successors ∧ onError ∈ term.successors
   | .choose _ _ _ _ rest => rest.length + 1 = tape.length
   | _ => True
 
@@ -208,7 +209,7 @@ theorem step_progress {σ : Type} {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty
       cases service.pure _ <;>
         simp only [NextProgress, StateT.run_pure, if_true] <;>
         exact ⟨⟨targetBlock, found, by simp [sizedTarget]⟩,
-          Or.inl ⟨rfl, ⟨block, mem, rfl, shaped.1, shaped.2⟩⟩⟩
+          Or.inl ⟨rfl, ⟨block, mem, rfl, shaped.1, shaped.2.1⟩⟩⟩
 
 /-! ## The allotted fuel always suffices -/
 

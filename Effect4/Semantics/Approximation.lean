@@ -356,6 +356,20 @@ theorem step_log_extends {σ : Type} (alphabet : FlowAlphabet Ty)
       refine ⟨[.decide site.value branch], ?_⟩
       simp only [step, planEq]
       rfl
+  | performCatch op request target env' onError errorEnv =>
+      cases pureOp : service.pure op with
+      | true =>
+          refine ⟨[], ?_⟩
+          rw [List.append_nil]
+          simp only [step, planEq, pureOp]
+          rfl
+      | false =>
+          refine ⟨[.op (nameOf op) request,
+            .answer (nameOf op) (((service.handle op request).run s).1)], ?_⟩
+          simp only [step, planEq, pureOp, Bool.false_eq_true, if_false]
+          show (log ++ [Effects.Trace.Event.op (nameOf op) request] ++
+            [Effects.Trace.Event.answer (nameOf op) (((service.handle op request).run s).1)]) = _
+          simp
 
 /-- A step never reports fuel exhaustion: only `loop` spends fuel. -/
 theorem step_finished_not_exhausted {σ : Type} (alphabet : FlowAlphabet Ty)
@@ -415,6 +429,20 @@ theorem step_finished_not_exhausted {σ : Type} (alphabet : FlowAlphabet Ty)
       simp only [step, planEq] at finished
       exact Next.noConfusion
         (show Next.continue_ target env' rest' = Next.finished result rest from finished)
+  | performCatch op request target env' onError errorEnv =>
+      cases pureOp : service.pure op with
+      | true =>
+          simp only [step, planEq, pureOp] at finished
+          exact Next.noConfusion
+            (show Next.continue_ target
+                (env' ++ [(((service.handle op request).run s)).1]) tape =
+              Next.finished result rest from finished)
+      | false =>
+          simp only [step, planEq, pureOp, Bool.false_eq_true, if_false] at finished
+          exact Next.noConfusion
+            (show Next.continue_ target
+                (env' ++ [(((service.handle op request).run s)).1]) tape =
+              Next.finished result rest from finished)
 
 /-! ## The observation of a fuelled run -/
 
@@ -1326,6 +1354,14 @@ theorem regionLoop_sound {σ : Type} {alphabet : FlowAlphabet Ty} (flow : Region
                   refine Sound.bind (Appends.emit' _) ?_
                   intro _
                   exact ih _ _ _ _
+              | performCatch op request target env' onError errorEnv =>
+                  refine Sound.bind (Appends.lift _) ?_
+                  intro result
+                  refine Sound.bind (logOperation_appends _ _ _ _ _) ?_
+                  intro _
+                  cases result with
+                  | ok answer => exact ih _ _ _ _
+                  | error error => exact ih _ _ _ _
           | enter region body args =>
               dsimp only
               cases hargs : readArgs env args with
@@ -1397,6 +1433,14 @@ theorem regionLoop_below {σ : Type} {alphabet : FlowAlphabet Ty} (flow : Region
                   cases result with
                   | ok answer => exact ih _ _ _ _ _
                   | error error => exact Below.refl _
+              | performCatch op request target env' onError errorEnv =>
+                  refine Below.bind ?_
+                  intro result
+                  refine Below.bind ?_
+                  intro _
+                  cases result with
+                  | ok answer => exact ih _ _ _ _ _
+                  | error error => exact ih _ _ _ _ _
               | exhausted site => exact Below.refl _
               | mismatch expected actual => exact Below.refl _
               | choose site branch target env' rest =>
@@ -1474,6 +1518,14 @@ theorem regionLoop_settles {σ : Type} {alphabet : FlowAlphabet Ty} (flow : Regi
                   cases result with
                   | ok answer => exact ih _ _ _ _ _
                   | error error => exact Settles.refl _
+              | performCatch op request target env' onError errorEnv =>
+                  refine Settles.bind ?_
+                  intro result
+                  refine Settles.bind ?_
+                  intro _
+                  cases result with
+                  | ok answer => exact ih _ _ _ _ _
+                  | error error => exact ih _ _ _ _ _
               | exhausted site => exact Settles.refl _
               | mismatch expected actual => exact Settles.refl _
               | choose site branch target env' rest =>
@@ -1964,6 +2016,23 @@ theorem regionLoop_budget_not_exhausted {σ : Type} {alphabet : FlowAlphabet Ty}
                       exact advance target (env' ++ [answer]) stack targetBlock foundTarget
                         (by simpa using sizedTarget) ⟨_, memErase, idEq, shaped.1, shaped.2⟩
                   | error error => exact fail_not_exhausted _ _ _ _ _ _
+          | performCatch op request target env' onError errorEnv =>
+              rw [hplan] at planned shaped
+              simp only [PlanShape] at shaped
+              cases planned with
+              | performCatch targetBlock errorBlock foundTarget sizedTarget foundError
+                  sizedError =>
+                  refine NotExhausted.bind ?_
+                  intro result
+                  refine NotExhausted.bind ?_
+                  intro _
+                  cases result with
+                  | ok answer =>
+                      exact advance target (env' ++ [answer]) stack targetBlock foundTarget
+                        (by simpa using sizedTarget) ⟨_, memErase, idEq, shaped.1, shaped.2.1⟩
+                  | error error =>
+                      exact advance onError (errorEnv ++ [error]) stack errorBlock foundError
+                        (by simpa using sizedError) ⟨_, memErase, idEq, shaped.1, shaped.2.2⟩
           | exhausted site =>
               exact NotExhausted.bind (fun _ => NotExhausted.leaf _ _ rfl)
           | mismatch expected actual => exact NotExhausted.leaf _ _ rfl

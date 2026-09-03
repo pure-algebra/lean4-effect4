@@ -496,7 +496,7 @@ theorem edgeNoChoose_of_plan_performCatch {alphabet : FlowAlphabet Ty} {raw : Ra
     EdgeNoChoose raw block target := by
   have shaped := plan_shape alphabet current env tape
   rw [planned] at shaped
-  exact ⟨current, List.mem_of_find?_eq_some found, lookupBlock_id found, shaped.1, shaped.2⟩
+  exact ⟨current, List.mem_of_find?_eq_some found, lookupBlock_id found, shaped.1, shaped.2.1⟩
 
 /-- A `choose` consumes exactly one tape entry. -/
 theorem tape_length_of_plan_choose {alphabet : FlowAlphabet Ty} {current : RawBlock Ty}
