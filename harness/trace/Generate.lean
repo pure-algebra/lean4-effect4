@@ -12,6 +12,7 @@ import Effect4.Semantics.Approximation
 import Effect4.Semantics.RegionSimulation
 import Effect4.Semantics.RegionDenotation
 import Effect4.Concurrency.FiberFamily
+import Effect4.Stateful.RefFamily
 
 /-!
 The trace harness family. `main fixture` prints the generated Effect v4 module,
@@ -916,4 +917,25 @@ def main (args : List String) : IO Unit := do
   | ["fiber-types"] =>
       for entry in fiberPrograms do
         IO.println (entry.name ++ "\t" ++ Script.declarationLine Fibers.rows entry.script)
-  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle | fiber-fixture | fiber-programs | fiber-golden <program> | fiber-types")
+  | ["ref-fixture"] =>
+      -- `Ref` is imported as a type only: the generated module names
+      -- `Ref.Ref<number>` in the service shape and never calls into it.
+      -- `Effect4.RefFamily` is not opened: it carries its own `succ` atom, and
+      -- this module already has one for the `Cell` scripts.
+      match modules? Effect4.RefFamily.refFamilies
+          [.types ["Ref"] "effect", .named ["succ"] "./atoms.ts"] with
+      | some source => IO.print source
+      | none => throw (IO.userError "lowering refused a ref script")
+  | ["ref-programs"] =>
+      IO.println (String.intercalate "\n" (Effect4.RefFamily.refPrograms.map (·.name)))
+  | ["ref-golden", name] =>
+      match Effect4.RefFamily.refPrograms.find? (·.name == name) with
+      | some entry =>
+          IO.print (← admitted name entry.log
+            (Effect4.Target.TypeScript.Trace.golden ("ref." ++ name) []
+              ((entry.script.ruleSet entry.rows).map Rule.id) entry.log))
+      | none => throw (IO.userError s!"unknown ref program {name}")
+  | ["ref-types"] =>
+      for entry in Effect4.RefFamily.refPrograms do
+        IO.println (entry.name ++ "\t" ++ Script.declarationLine entry.rows entry.script)
+  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle | fiber-fixture | fiber-programs | fiber-golden <program> | fiber-types | ref-fixture | ref-programs | ref-golden <program> | ref-types")

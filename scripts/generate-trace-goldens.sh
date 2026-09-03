@@ -53,4 +53,10 @@ mkdir -p "$out/fiber"
 for program in $(run fiber-programs); do
   { provenance; run fiber-golden "$program"; } > "$out/fiber/$program.tsv"
 done
+# The `Refs` family: its own generated module and its own tail (`ref-tail.ts`),
+# so the straight-line `*.empty.tsv` glob must not see it either.
+mkdir -p "$out/ref"
+for program in $(run ref-programs); do
+  { provenance; run ref-golden "$program"; } > "$out/ref/$program.tsv"
+done
 echo "PASS wrote $(find "$out" -name '*.tsv' | wc -l | tr -d ' ') trace projections to $out"
