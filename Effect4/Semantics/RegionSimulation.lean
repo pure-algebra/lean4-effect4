@@ -240,6 +240,7 @@ def performOp (point : Config) : Option (alphabet.Op × Val) :=
       match Effect4.Flow.plan alphabet
           { id := current.id, params := current.params, term := term } point.env point.tape with
       | .perform op request _ _ => some (op, request)
+      | .performCatch op request _ _ _ _ => some (op, request)
       | _ => none
     | .acquire operation request _ _ _ =>
       match alphabet.lookup operation, point.env[request.index]? with
@@ -260,12 +261,29 @@ def performCont (point : Config) : Option (BlockId × Effect4.Flow.Env × Option
       match Effect4.Flow.plan alphabet
           { id := current.id, params := current.params, term := term } point.env point.tape with
       | .perform _ _ target env' => some (target, env', none)
+      | .performCatch _ _ target env' _ _ => some (target, env', none)
       | _ => none
     | .acquire operation request release target args =>
       match alphabet.lookup operation, alphabet.lookup release, point.env[request.index]?,
           Effect4.Flow.readArgs point.env args, current.region with
       | some _, some _, some _, some values, some region => some (target, values, some region.value)
       | _, _, _, _, _ => none
+    | _ => none
+
+/-- Where the *caught* failure of the `performCatch` at `point` continues (Flow
+v3): the failure successor and the environment its parameters receive before
+the error value is appended. A point that is not a `performCatch` has none, and
+its failure unwinds as before. -/
+def catchCont (point : Config) : Option (BlockId × Effect4.Flow.Env) :=
+  match flow.block? point.block with
+  | none => none
+  | some current =>
+    match current.term with
+    | .plain term =>
+      match Effect4.Flow.plan alphabet
+          { id := current.id, params := current.params, term := term } point.env point.tape with
+      | .performCatch _ _ _ _ onError errorEnv => some (onError, errorEnv)
+      | _ => none
     | _ => none
 
 /-- The release operation the `acquire` at `point` registers. -/
@@ -305,6 +323,9 @@ def compileRegion {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty
         | .ret value => Effect4.Prim.success value
         | .jump target env' => compileRegion alphabet flow fuel target env' tape
         | .perform _ _ _ _ =>
+          Effect4.Prim.onSuccess (Effect4.Prim.sync ⟨fuel + 1, block, env, tape⟩)
+            (RegionName.cont ⟨fuel + 1, block, env, tape⟩)
+        | .performCatch _ _ _ _ _ _ =>
           Effect4.Prim.onSuccess (Effect4.Prim.sync ⟨fuel + 1, block, env, tape⟩)
             (RegionName.cont ⟨fuel + 1, block, env, tape⟩)
         | .choose _ _ target env' rest => compileRegion alphabet flow fuel target env' rest
@@ -347,7 +368,13 @@ def regionInterp {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
     match name with
     | RegionName.cont point =>
       match oracle.answer point with
-      | .error error => Effect4.Prim.failure (Effect4.Cause.fail error)
+      | .error error =>
+        -- Flow v3: a `performCatch` names where its failure continues, so the
+        -- error does not become a machine failure and no frame unwinds.
+        match catchCont alphabet flow point with
+        | some (onError, errorEnv) =>
+          compileRegion alphabet flow (point.fuel - 1) onError (errorEnv ++ [error]) point.tape
+        | none => Effect4.Prim.failure (Effect4.Cause.fail error)
       | .ok _ =>
         match performCont alphabet flow point with
         | some (target, env', none) =>

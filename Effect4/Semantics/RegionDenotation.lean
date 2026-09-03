@@ -270,6 +270,11 @@ def denoteRegionsFuel {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty) :
           | .choose site branch target env' rest =>
               .vis (decideOp site branch) fun _ : Unit =>
                 denoteRegionsFuel flow fuel target env' rest
+          | .performCatch op request target env' onError errorEnv =>
+              .vis (performOp op request) fun result : Except Val Val =>
+                match result with
+                | .ok answer => denoteRegionsFuel flow fuel target (env' ++ [answer]) tape
+                | .error error => denoteRegionsFuel flow fuel onError (errorEnv ++ [error]) tape
       | .enter region body args =>
           match readArgs env args with
           | none => stuck
@@ -736,6 +741,24 @@ theorem regionLoop_eq_interpret [Monad M] [LawfulMonad M] (flow : RegionFlow Ty)
                     regionLoop alphabet flow service nameOf fuel target env' rest stack).run log) = _
                   rw [StateT.run_bind, emit_run, pure_bind]
                   exact ih target env' rest stack _
+              | performCatch op request target env' onError errorEnv =>
+                  try simp only []
+                  rw [interpretRegionsFrom_run_perform]
+                  show ((StateT.lift (service.handle op request) >>= fun result =>
+                      logOperation service nameOf op request result >>= fun _ =>
+                        match result with
+                        | .ok answer =>
+                            regionLoop alphabet flow service nameOf fuel target
+                              (env' ++ [answer]) tape stack
+                        | .error error =>
+                            regionLoop alphabet flow service nameOf fuel onError
+                              (errorEnv ++ [error]) tape stack).run log) = _
+                  rw [StateT.run_bind, StateT.run_lift, bind_assoc]
+                  refine bind_congr fun result => ?_
+                  rw [pure_bind, StateT.run_bind, logOperation_run, pure_bind]
+                  cases result with
+                  | ok answer => exact ih target (env' ++ [answer]) tape stack _
+                  | error error => exact ih onError (errorEnv ++ [error]) tape stack _
           | enter region body args =>
               try simp only []
               cases read : readArgs env args with
@@ -961,6 +984,21 @@ theorem regionLoop_erase [Monad M] [LawfulMonad M] (flow : RegionFlow Ty)
               simp only [step, planned, emit_run, StateT.run_bind, StateT.run_pure, pure_bind]
               exact ih target env' rest _
           | perform op request target env' =>
+              simp only [step, planned, toRegionService_handle, StateT.run_bind, StateT.run_lift,
+                bind_assoc, pure_bind]
+              refine bind_congr fun answer => ?_
+              rw [logOperation_run, pure_bind]
+              cases pureOp : service.pure op with
+              | false =>
+                  simp only [opRows, toRegionService_pure, pureOp, Bool.false_eq_true, if_false,
+                    emit_run, StateT.run_bind, pure_bind, StateT.run_pure, List.append_assoc,
+                    List.cons_append, List.nil_append]
+                  exact ih target (env' ++ [answer]) tape _
+              | true =>
+                  simp only [opRows, toRegionService_pure, pureOp, if_true, List.append_nil,
+                    StateT.run_pure, pure_bind]
+                  exact ih target (env' ++ [answer]) tape log
+          | performCatch op request target env' onError errorEnv =>
               simp only [step, planned, toRegionService_handle, StateT.run_bind, StateT.run_lift,
                 bind_assoc, pure_bind]
               refine bind_congr fun answer => ?_

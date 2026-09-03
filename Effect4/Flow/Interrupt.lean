@@ -260,6 +260,22 @@ def interruptLoop [Monad M] (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
           | .choose site branch target env' rest => do
               emit (.decide site.value branch)
               interruptLoop alphabet flow masked service nameOf fuel target env' rest state stack
+          | .performCatch op request target env' onError errorEnv => do
+              -- A caught perform is an interrupt point like any other perform;
+              -- its *failure* is caught, so it continues at the failure
+              -- successor inside the still-open region and never unwinds.
+              let point ← interruptPoint (isMasked masked stack) (.perform current.id) state
+              if point.fst then deliverInterrupt service nameOf stack tape
+              else do
+                let result ← StateT.lift (service.handle op request)
+                logOperation service nameOf op request result
+                match result with
+                | .ok answer =>
+                    interruptLoop alphabet flow masked service nameOf fuel target
+                      (env' ++ [answer]) tape point.snd stack
+                | .error error =>
+                    interruptLoop alphabet flow masked service nameOf fuel onError
+                      (errorEnv ++ [error]) tape point.snd stack
       | .enter region body args =>
           match readArgs env args with
           | none => stuck
