@@ -3,14 +3,55 @@
 # requires the batch to catch each: the arms of one choose site swapped, one
 # site's decision ignored (the tape not consulted), and an off-by-one tape
 # cursor. The committed sources are never edited.
+#
+# ## Stamp (rule 9)
+#
+# The corpus is regenerated from the seed on every run, so the key is what
+# produces it and what judges it: `harness/trace/Property.lean` and the Lake
+# traces of its imports, the four harness TypeScript files staged beside the
+# corpus -- three of the four mutants edit one of them -- the mask table, the
+# effect4-tools batch runner, the pinned installation's identity, and the seed
+# and corpus size as facts, since a different corpus is a different question.
 set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . "$repo_root/scripts/lib/portable.sh"
+. "$repo_root/scripts/lib/stamp.sh"
 tools="${EFFECT4_TOOLS:-$repo_root/../effect4-tools}"
 here="$repo_root/harness/trace"
 seed="${EFFECT4_PROPERTY_SEED:-2026}"; count="${EFFECT4_MUTATION_COUNT:-40}"
+for argument in "$@"; do
+  case "$argument" in
+    --force) export EFFECT4_FORCE=1 ;;
+    *) echo "unknown argument $argument" >&2; exit 2 ;;
+  esac
+done
 cd "$repo_root"
 lake build Effect4 >/dev/null
+inputs=(
+  "$repo_root/scripts/test-lowering-mutations.sh"
+  "$repo_root/scripts/lib/portable.sh"
+  "$repo_root/scripts/lib/stamp.sh"
+  "$here/Property.lean"
+  "$here/tracer.ts" "$here/atoms.ts"
+  "$here/property-tail.ts" "$here/property-structured-tail.ts"
+  "$here/host-pin.json"
+  "$repo_root/generated/traces/masks.tsv"
+  "$repo_root/lakefile.toml"
+  "$repo_root/lake-manifest.json"
+  "$repo_root/lean-toolchain"
+)
+while IFS= read -r input; do inputs+=("$input"); done < <(
+  stamp_lean_traces "$here/Property.lean"
+  stamp_tools_inputs batch.mjs copy.mjs
+  stamp_host_inputs
+  stamp_fact seed "$seed"
+  stamp_fact count "$count"
+)
+key="$(stamp_key "${inputs[@]}")"
+if stamp_hit lowering-mutations "$key"; then
+  stamp_report lowering-mutations "$key"
+  exit 0
+fi
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/effect4-mutations.XXXXXX")"; trap 'rm -rf -- "$tmp"' EXIT
 mkdir -p "$tmp/corpus"
 cp "$here/tracer.ts" "$here/atoms.ts" "$here/property-tail.ts" "$here/property-structured-tail.ts" "$here/host-pin.json" "$tmp/corpus/"
@@ -54,4 +95,5 @@ mutate "$tmp/swapped-continue/property-structured-fixture.ts" 'continue (W[0-9]+
 if batch_structured "$tmp/swapped-continue" > "$tmp/swapped-continue.log" 2>&1; then echo "FAIL mutant swapped-continue survived" >&2; exit 1; fi
 grep -q "DIVERGES" "$tmp/swapped-continue.log" || { echo "FAIL mutant swapped-continue failed for an unrelated reason" >&2; cat "$tmp/swapped-continue.log" >&2; exit 1; }
 echo "PASS mutant swapped-continue caught: $(grep -c DIVERGES "$tmp/swapped-continue.log") diverging mask rows"; caught=$((caught + 1))
+stamp_write lowering-mutations "$key" "the property batch catches $caught/$total lowering mutants"
 echo "PASS lowering mutants caught $caught/$total"

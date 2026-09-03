@@ -5,15 +5,56 @@
 # C0 control in a string answer, a natural above 2^53 - 1, a dying program,
 # and a doubled frontier. Each mutant is written to a temp directory; the
 # committed projections are never edited.
+#
+# ## Stamp (rule 9)
+#
+# The mutants are derived from the committed goldens and run against the host,
+# so the key is the goldens and the mask table, the harness TypeScript the
+# tails and the wire fixture live in, `Generate.lean` and its import traces
+# (one mutant is a planted Lean refusal, `admission-probe`), the hermetic drift
+# gate and its generator, which two mutants are aimed at, the effect4-tools
+# trace runner, and the pinned installation's identity.
 set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . "$repo_root/scripts/lib/portable.sh"
+. "$repo_root/scripts/lib/stamp.sh"
 tools="${EFFECT4_TOOLS:-$repo_root/../effect4-tools}"
+for argument in "$@"; do
+  case "$argument" in
+    --force) export EFFECT4_FORCE=1 ;;
+    *) echo "unknown argument $argument" >&2; exit 2 ;;
+  esac
+done
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/effect4-trace-gate.XXXXXX")"
 trap 'rm -rf -- "$tmp"' EXIT
 cd "$repo_root"
 traces="$repo_root/generated/traces"
 here="$repo_root/harness/trace"
+lake build Effect4 >/dev/null
+inputs=(
+  "$repo_root/scripts/test-trace-goldens-gate.sh"
+  "$repo_root/scripts/check-trace-goldens.sh"
+  "$repo_root/scripts/generate-trace-goldens.sh"
+  "$repo_root/scripts/lib/portable.sh"
+  "$repo_root/scripts/lib/stamp.sh"
+  "$here/Generate.lean"
+  "$here/tsconfig.json"
+  "$traces"
+  "$repo_root/lakefile.toml"
+  "$repo_root/lake-manifest.json"
+  "$repo_root/lean-toolchain"
+)
+for module in "$here"/*.ts; do inputs+=("$module"); done
+while IFS= read -r input; do inputs+=("$input"); done < <(
+  stamp_lean_traces "$here/Generate.lean"
+  stamp_tools_inputs trace.mjs copy.mjs
+  stamp_host_inputs
+)
+key="$(stamp_key "${inputs[@]}")"
+if stamp_hit trace-goldens-gate "$key"; then
+  stamp_report trace-goldens-gate "$key"
+  exit 0
+fi
 # The total is counted, never spelled: it was `8` while nine mutants were
 # planted, so a green run printed `9/8` and dropping a mutant would still have
 # printed PASS (survey finding H19). `expect` lines start in column one; the
@@ -86,4 +127,5 @@ expect doubled-frontier "DIVERGES" env EFFECT4_PROGRAM=swap EFFECT4_BUDGET=19 no
   echo "FAIL $caught of $total planted defects were caught; every 'expect' line must fire" >&2
   exit 1
 }
+stamp_write trace-goldens-gate "$key" "the trace gates react to $caught/$total planted defects"
 echo "PASS trace gates react to $caught/$total planted defects"
