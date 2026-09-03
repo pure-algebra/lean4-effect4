@@ -1,5 +1,4 @@
-import Effect4.Target.TypeScript.Lower
-import Effect4.Target.TypeScript.ScriptFlow
+import Effect4.Target.TypeScript.Skeleton
 
 /-!
 # Target.TypeScript.FlowLower
@@ -32,6 +31,11 @@ every source into a temporary before assigning. The syntax has no `try` arm,
 so cleanup can never lower to `try/finally` (R4) by construction. The
 structured form (P-T9b) is an optimization behind a reducibility check and
 must agree with this form on every trace.
+
+Since packet D3 the lowering is `Skeleton.renderList rows ∘ skeletonDispatch`:
+`skeletonDispatch` builds the control skeleton (`Skeleton.lean`), which is the
+object the agreement theorems are stated over, and `renderList` spells it. No
+`Stmt` is constructed here.
 -/
 
 open TypeScript
@@ -60,122 +64,42 @@ def decisionsRows : ServiceRow :=
 
 namespace Flow
 
-/-- The variable holding parameter `index` of `block`. -/
-def paramVar (block : BlockId) (index : Nat) : String :=
-  "b" ++ toString block.value ++ "p" ++ toString index
-
-/-- The row of the operation `id` in a table, if any. -/
-def spec? (table : List OpSpec) (id : OperationId) : Option OpSpec :=
-  table[id.value]?
-
-end Flow
-
-namespace Lowering
-
-/-- Every admitted graph lowers to one dispatch loop over the block index
-held in `blockVar`. lowering: rule.dispatch-loop -/
-def dispatchLoopOn (blockVar : String) (cases : List (Nat × List Stmt)) : Stmt :=
-  .whileTrue none [.switch (.ident blockVar) cases]
-
-/-- The top-level dispatch loop, over `block`. -/
-def dispatchLoop (cases : List (Nat × List Stmt)) : Stmt :=
-  dispatchLoopOn "block" cases
-
-/-- One block is one `case` whose body ends in `continue` or `return`.
-lowering: rule.block-case -/
-def blockCase (block : BlockId) (body : List Stmt) : Nat × List Stmt :=
-  (block.value, body)
-
-/-- Pass the argument list to the target's parameters. On a self-edge every
-source is read into a temporary before any parameter is assigned, so a swap
-is a swap. lowering: rule.param-move -/
-def paramMove (source target : BlockId) (values : List Expr) : List Stmt :=
-  let indexed := (List.range values.length).zip values
-  if source = target then
-    (indexed.map fun (index, value) => Stmt.letInit ("m" ++ toString index) value) ++
-      (indexed.map fun (index, _) =>
-        Stmt.assign (Flow.paramVar target index) (.ident ("m" ++ toString index)))
-  else
-    indexed.map fun (index, value) => Stmt.assign (Flow.paramVar target index) value
-
-/-- Transfer to `target`: set the block index and re-enter the loop. This is
-part of `block-case`; it carries no rule of its own. -/
-def goto (target : BlockId) : List Stmt :=
-  [.assign "block" (.int target.value), .continueTo none]
-
-/-- A family operation of a block answers into `a<block>`: `const a1 = yield*
-cell.get` or `const a1 = yield* cell.put(b1p2)`. lowering: rule.flow-perform -/
-def flowPerform (answer : String) (call : Expr) : Stmt :=
-  .constYield answer call
-
-/-- A pure atom of a block is a plain call: `let a1 = succ(b1p0)`.
-lowering: rule.flow-atom -/
-def flowAtom (answer atom : String) (request : Expr) : Stmt :=
-  .letInit answer (.call (.ident atom) [request])
-
-/-- A literal operation of a block is its constant: `let a1 = 5`.
-lowering: rule.flow-literal -/
-def flowLiteral (answer : String) (value : Expr) : Stmt :=
-  .letInit answer value
-
-/-- A `choose` asks the `Decisions` service for its site and branches:
-`const c0 = yield* decisions.choose(7); if (c0) { ... } else { ... }`.
-lowering: rule.choose-if -/
-def chooseIf (decision : String) (site : DecisionId) (left right : List Stmt) : List Stmt :=
-  [ .constYield decision (.call (.ident "decisions.choose") [.int site.value])
-  , .ifElse (.ident decision) left right ]
-
-/-- A `ret` returns the named parameter: `return b5p3`. lowering: rule.flow-ret -/
-def flowRet (value : Expr) : Stmt :=
-  .ret value
-
-end Lowering
-
-namespace Flow
-
-/-- The constant a literal lowers to; structured values have no spelling here. -/
-def literal? : Val → Option Expr
-  | .nat n => some (.int n)
-  | .int i => some (.int i)
-  | .str s => some (.str s)
-  | .bool b => some (.bool b)
-  | .unit => some (.ident "undefined")
-  | _ => none
-
 /-- The body of one block, its answer or decision followed by the move and
 the control transfer `transfer target values` supplies. -/
-def lowerBlockWith (rows : ServiceRow) (table : List OpSpec) (block : RawBlock String)
-    (transfer : BlockId → List Expr → Option (List Stmt)) : Option (List Stmt) :=
-  let var (v : Var) : Expr := .ident (paramVar block.id v.index)
+def skeletonBlockWith (table : List OpSpec) (block : RawBlock String)
+    (transfer : BlockId → List Slot → Option (List Skeleton)) : Option (List Skeleton) :=
+  let var (v : Var) : Slot := .param block.id v.index
   match block.term with
   | .ret value => some [Lowering.flowRet (var value)]
   | .jump target args => transfer target (args.map var)
   | .perform operation request target args => do
       let spec ← spec? table operation
-      let answer := "a" ++ toString block.id.value
+      let answer : Slot := .answer block.id
       let head ← match spec.kind with
-        | .family =>
-            some (Lowering.flowPerform answer
-              (if spec.requestTy == "void" then Lowering.nullaryValue rows.receiver spec.name
-               else Lowering.performCall rows.receiver spec.name [var request]))
-        | .atom => some (Lowering.flowAtom answer spec.name (var request))
-        | .lit value => (literal? value).map (Lowering.flowLiteral answer)
-      let rest ← transfer target (args.map var ++ [.ident answer])
+        | .family => some (Lowering.flowPerform answer operation spec (var request))
+        | .atom => some (Lowering.flowAtom answer operation spec (var request))
+        | .lit value => (literal? value).map fun _ => Lowering.flowLiteral answer operation value
+      let rest ← transfer target (args.map var ++ [answer])
       some (head :: rest)
   | .choose decision left right args => do
-      let name := "c" ++ toString block.id.value
+      let name : Slot := .decision block.id
       let toLeft ← transfer left (args.map var)
       let toRight ← transfer right (args.map var)
       some (Lowering.chooseIf name decision toLeft toRight)
 
 /-- The dispatch-form transfer: the move, then `block = target; continue`. -/
-def dispatchTransfer (source : BlockId) (target : BlockId) (values : List Expr) : Option (List Stmt) :=
+def dispatchTransfer (source : BlockId) (target : BlockId) (values : List Slot) :
+    Option (List Skeleton) :=
   some (Lowering.paramMove source target values ++ Lowering.goto target)
 
 /-- The body of one block in the dispatch form. -/
+def skeletonBlock (table : List OpSpec) (block : RawBlock String) : Option (List Skeleton) :=
+  skeletonBlockWith table block (dispatchTransfer block.id)
+
+/-- The spelled body of one block in the dispatch form. -/
 def lowerBlock (rows : ServiceRow) (table : List OpSpec) (block : RawBlock String) :
     Option (List Stmt) :=
-  lowerBlockWith rows table block (dispatchTransfer block.id)
+  (Skeleton.renderList rows) <$> skeletonBlock table block
 
 /-- Whether a block performs a family operation. -/
 def performsFamily (table : List OpSpec) (block : RawBlock String) : Bool :=
@@ -192,29 +116,40 @@ def usesFamily (table : List OpSpec) (raw : RawFlow String) : Bool :=
 def usesDecisions (raw : RawFlow String) : Bool :=
   raw.blocks.any (·.term.isChoose)
 
-/-- Lower an admitted graph to the dispatch form. Refuses a literal without a
+/-- The parameter declarations of every block of a graph. -/
+def declarations (blocks : List (RawBlock String)) : List Skeleton :=
+  blocks.flatMap fun block =>
+    ((List.range block.params.length).zip block.params).map fun (index, ty) =>
+      Skeleton.declare (.param block.id index) ty
+
+/-- The services a plain flow acquires at the top of its generator. -/
+def acquisitions (rows : ServiceRow) (table : List OpSpec) (raw : RawFlow String) :
+    List Skeleton :=
+  (if usesFamily table raw then [Skeleton.acquireService rows] else []) ++
+  (if usesDecisions raw then [Skeleton.acquireService decisionsRows] else [])
+
+/-- The control skeleton of the dispatch form. Refuses a literal without a
 spelling or an operation outside the table (admission already refuses the
 latter). -/
-def lowerDispatch (rows : ServiceRow) (program : FlowProgram) : Option ProgDecl := do
+def skeletonDispatch (rows : ServiceRow) (program : FlowProgram) : Option (List Skeleton) := do
   let raw := program.flow.erase
   let cases ← raw.blocks.mapM fun block => do
-    let body ← lowerBlock rows program.table block
+    let body ← skeletonBlock program.table block
     pure (Lowering.blockCase block.id body)
-  let declarations := raw.blocks.flatMap fun block =>
-    ((List.range block.params.length).zip block.params).map fun (index, ty) =>
-      Stmt.letDefinite (paramVar block.id index) ty
-  let acquire :=
-    (if usesFamily program.table raw then [Lowering.serviceAcquire rows] else []) ++
-    (if usesDecisions raw then [Lowering.serviceAcquire decisionsRows] else [])
+  pure (acquisitions rows program.table raw ++ declarations raw.blocks ++
+    [ Skeleton.assign (.param raw.entry 0) (.input program.param.1)
+    , Skeleton.letBlockIndex "block" raw.entry
+    , Lowering.dispatchLoop cases ])
+
+/-- Lower an admitted graph to the dispatch form: the skeleton, spelled. -/
+def lowerDispatch (rows : ServiceRow) (program : FlowProgram) : Option ProgDecl := do
+  let body ← skeletonDispatch rows program
   pure { doc := ["Lowered from the flow `" ++ program.name ++ "` over `" ++ rows.name ++
                  "` (dispatch form)."]
          name := program.name
          paramName := program.param.1
          paramType := program.param.2
-         stmts := acquire ++ declarations ++
-           [ Stmt.assign (paramVar raw.entry 0) (.ident program.param.1)
-           , Stmt.letInit "block" (.int raw.entry.value)
-           , Lowering.dispatchLoop cases ] }
+         stmts := Skeleton.renderList rows body }
 
 /-- The rules a flow exercises, in first-use order. -/
 def ruleSet (rows : ServiceRow) (program : FlowProgram) : List Rule :=

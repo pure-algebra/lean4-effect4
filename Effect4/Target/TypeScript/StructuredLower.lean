@@ -1,17 +1,22 @@
 import Effect4.Target.TypeScript.RegionLower
-import TypeScript.Structure
 
 /-!
 # Target.TypeScript.StructuredLower
 
 Owner: the structured form of a checked flow (plan packet P-T9b, ruling R7).
-`TypeScript.Structure` (lean4-typescript v0.4.0) turns the block graph into
+`TypeScript.Structure` (lean4-typescript v0.4.1) turns the block graph into
 labelled blocks, `while (true)` loops, `break` and `continue` when the graph
-is reducible; the four shapes it emits are the tagged rules below. A graph
-that is not reducible keeps the dispatch form (`dispatch-fallback`). Both
-forms are checked against the same Flow-runner goldens on the host, so they
-agree on every trace the harness and the property loop produce; a Lean
-theorem that they agree on every flow is owed (`docs/TRACE-DAG.md`).
+is reducible; the four shapes it emits are the tagged rules of
+`Skeleton.lean`. A graph that is not reducible keeps the dispatch form
+(`dispatch-fallback`).
+
+Since packet D3 the shapes are instantiated at `Skeleton` rather than at
+`Stmt`, through `Structuring.emitWith` — the pinned package's algorithm with
+the statement type as a parameter, pinned to it by `Structuring.emitWith_eq`.
+Both forms are still checked against the same Flow-runner goldens on the host,
+and `Skeleton.denote` (`Skeleton.lean` §7) is now the Lean subject over which
+their agreement is stated; `docs/TRACE-DAG.md` records what is proved and what
+is owed.
 -/
 
 open TypeScript
@@ -22,23 +27,6 @@ open Effects Effect4.Flow
 
 namespace Lowering
 
-/-- A loop header is a labelled `while (true)`. lowering: rule.structured-loop -/
-def structuredLoop (label : String) (body : List Stmt) : Stmt :=
-  .whileTrue (some label) body
-
-/-- A merge node is a labelled block wrapping everything emitted before it.
-lowering: rule.structured-merge -/
-def structuredMerge (label : String) (body : List Stmt) : Stmt :=
-  .labelled label body
-
-/-- A backward transfer to a loop header. lowering: rule.structured-continue -/
-def structuredContinue (label : String) : Stmt :=
-  .continueTo (some label)
-
-/-- A forward transfer to a merge node or loop header. lowering: rule.structured-break -/
-def structuredBreak (label : String) : Stmt :=
-  .breakTo (some label)
-
 /-- A graph that is not reducible keeps the dispatch form.
 lowering: rule.dispatch-fallback -/
 def dispatchFallback (rows : ServiceRow) (program : FlowProgram) : Option ProgDecl :=
@@ -46,7 +34,8 @@ def dispatchFallback (rows : ServiceRow) (program : FlowProgram) : Option ProgDe
 
 end Lowering
 
-def structuredShapes : Structure.Shapes :=
+/-- The four structured shapes, at the control skeleton. -/
+def structuredShapes : Structuring.Shapes Skeleton :=
   { loop := Lowering.structuredLoop, merge := Lowering.structuredMerge,
     continueTo := Lowering.structuredContinue, breakTo := Lowering.structuredBreak }
 
@@ -64,14 +53,14 @@ def graphOf (blocks : List (RawBlock String)) (entry : BlockId) : Structure.Grap
       | some block => block.term.successors.filterMap (position blocks)
       | none => [] }
 
-/-- The structured statements of a declaration list, or `none` when the graph
-is not reducible or a body has no lowering. -/
-def structuredBody (rows : ServiceRow) (table : List OpSpec) (blocks : List (RawBlock String))
-    (entry : BlockId) : Option (List Stmt) :=
+/-- The structured skeleton of a declaration list, or `none` when the graph is
+not reducible or a body has no lowering. -/
+def skeletonBody (table : List OpSpec) (blocks : List (RawBlock String)) (entry : BlockId) :
+    Option (List Skeleton) :=
   let g := graphOf blocks entry
-  Structure.emitWith g structuredShapes fun i transfer => do
+  Structuring.emitWith g structuredShapes fun i transfer => do
     let block ← blocks[i]?
-    lowerBlockWith rows table block fun target values => do
+    skeletonBlockWith table block fun target values => do
       let t ← position blocks target
       let control ← transfer t
       pure (Lowering.paramMove block.id target values ++ control)
@@ -80,23 +69,23 @@ def structuredBody (rows : ServiceRow) (table : List OpSpec) (blocks : List (Raw
 def reducible (program : FlowProgram) : Bool :=
   Structure.reducible (graphOf program.flow.erase.blocks program.flow.erase.entry)
 
+/-- The control skeleton of the structured form, or `none` for an irreducible
+graph. -/
+def skeletonStructured (rows : ServiceRow) (program : FlowProgram) : Option (List Skeleton) := do
+  let raw := program.flow.erase
+  let body ← skeletonBody program.table raw.blocks raw.entry
+  pure (acquisitions rows program.table raw ++ declarations raw.blocks ++
+    [Skeleton.assign (.param raw.entry 0) (.input program.param.1)] ++ body)
+
 /-- The structured form, or `none` for an irreducible graph. -/
 def lowerStructured (rows : ServiceRow) (program : FlowProgram) : Option ProgDecl := do
-  let raw := program.flow.erase
-  let stmts ← structuredBody rows program.table raw.blocks raw.entry
-  let declarations := raw.blocks.flatMap fun block =>
-    ((List.range block.params.length).zip block.params).map fun (index, ty) =>
-      Stmt.letDefinite (paramVar block.id index) ty
-  let acquire :=
-    (if usesFamily program.table raw then [Lowering.serviceAcquire rows] else []) ++
-    (if usesDecisions raw then [Lowering.serviceAcquire decisionsRows] else [])
+  let body ← skeletonStructured rows program
   pure { doc := ["Lowered from the flow `" ++ program.name ++ "` over `" ++ rows.name ++
                  "` (structured form)."]
          name := program.name
          paramName := program.param.1
          paramType := program.param.2
-         stmts := acquire ++ declarations ++
-           [ Stmt.assign (paramVar raw.entry 0) (.ident program.param.1) ] ++ stmts }
+         stmts := Skeleton.renderList rows body }
 
 /-- The structured form when the graph is reducible, else the dispatch form. -/
 def lowerBest (rows : ServiceRow) (program : FlowProgram) : Option ProgDecl :=
@@ -120,62 +109,58 @@ end Flow
 
 namespace Region
 
-/-- The structured form of a region program: each region's blocks are a graph
-of their own, entered at the region body. -/
-def lowerStructured (rows : ServiceRow) (program : RegionProgram) : Option ProgDecl := do
+/-- The structured skeleton of a region program: each region's blocks are a
+graph of their own, entered at the region body. -/
+def skeletonStructuredBody (rows : ServiceRow) (table : List OpSpec) (flow : RegionFlow String) :
+    Nat → Option RegionId → BlockId → Option (List Skeleton)
+  | 0, _, _ => none
+  | fuel + 1, label, entry =>
+    let blocks := flow.blocks.filter (·.region == label)
+    let erased : List (RawBlock String) := blocks.map fun block =>
+      { id := block.id, params := block.params, term := flow.eraseTerm block }
+    let g := Flow.graphOf erased entry
+    Structuring.emitWith g structuredShapes fun i transfer => do
+      let block ← blocks[i]?
+      let var (v : Var) : Slot := .param block.id v.index
+      let move (target : BlockId) (values : List Slot) : Option (List Skeleton) := do
+        let t ← Flow.position erased target
+        let control ← transfer t
+        pure (Lowering.paramMove block.id target values ++ control)
+      match block.term with
+      | .plain term =>
+          Flow.skeletonBlockWith table { id := block.id, params := block.params, term := term } move
+      | .enter region entry' args => do
+          let row ← flow.row? region
+          let inner ← skeletonStructuredBody rows table flow fuel (some region) entry'
+          let rest ← move row.continue_ [.region region]
+          some (Lowering.paramMove block.id entry' (args.map var) ++
+            Lowering.regionEnter region inner ++ rest)
+      | .acquire operation request release target args => do
+          let region ← block.region
+          let spec ← Flow.spec? table operation
+          let releaser ← Flow.spec? table release
+          guard (((rows.row? releaser.name).bind (·.error)).isNone)
+          let answer : Slot := .answer block.id
+          let rest ← move target (args.map var ++ [answer])
+          some (Lowering.regionAcquire answer region spec (var request) releaser :: rest)
+      | .leave value => some [Lowering.regionLeave (var value)]
+
+/-- The control skeleton of the structured form of a region program. -/
+def skeletonStructured (rows : ServiceRow) (program : RegionProgram) : Option (List Skeleton) := do
   let flow := program.flow.flow
-  let rec cases (fuel : Nat) (label : Option RegionId) (entry : BlockId) : Option (List Stmt) :=
-    match fuel with
-    | 0 => none
-    | fuel + 1 =>
-      let blocks := flow.blocks.filter (·.region == label)
-      let erased : List (RawBlock String) := blocks.map fun block =>
-        { id := block.id, params := block.params, term := flow.eraseTerm block }
-      let g := Flow.graphOf erased entry
-      Structure.emitWith g structuredShapes fun i transfer => do
-        let block ← blocks[i]?
-        let var (v : Var) : Expr := .ident (Flow.paramVar block.id v.index)
-        let move (target : BlockId) (values : List Expr) : Option (List Stmt) := do
-          let t ← Flow.position erased target
-          let control ← transfer t
-          pure (Lowering.paramMove block.id target values ++ control)
-        match block.term with
-        | .plain term =>
-            Flow.lowerBlockWith rows program.table { id := block.id, params := block.params, term := term } move
-        | .enter region body args => do
-            let row ← flow.row? region
-            let inner ← cases fuel (some region) body
-            let name := "r" ++ toString region.value
-            let rest ← move row.continue_ [.ident name]
-            some (Lowering.paramMove block.id body (args.map var) ++
-              Lowering.regionEnter region inner ++ rest)
-        | .acquire operation request release target args => do
-            let region ← block.region
-            let spec ← Flow.spec? program.table operation
-            let releaser ← Flow.spec? program.table release
-            guard (((rows.row? releaser.name).bind (·.error)).isNone)
-            let answer := "a" ++ toString block.id.value
-            let rest ← move target (args.map var ++ [.ident answer])
-            some (Lowering.regionAcquire answer region (familyCall rows spec (var request))
-                (fun resource => familyCall rows releaser resource) :: rest)
-        | .leave value => some [Lowering.regionLeave (var value)]
-  let stmts ← cases (flow.regions.length + 1) none flow.entry
-  let declarations := flow.blocks.flatMap fun block =>
-    ((List.range block.params.length).zip block.params).map fun (index, ty) =>
-      Stmt.letDefinite (Flow.paramVar block.id index) ty
-  let usesChoose := flow.blocks.any fun block =>
-    match block.term with | .plain term => term.isChoose | _ => false
-  let acquire :=
-    (if (familyOps program.table flow).isEmpty then [] else [Lowering.serviceAcquire rows]) ++
-    (if usesChoose then [Lowering.serviceAcquire decisionsRows] else []) ++
-    (if flow.regions.isEmpty then [] else [Lowering.serviceAcquire regionsRows])
+  let body ← skeletonStructuredBody rows program.table flow (flow.regions.length + 1) none flow.entry
+  pure (acquisitions rows program.table flow ++ declarations flow ++
+    [Skeleton.assign (.param flow.entry 0) (.input program.param.1)] ++ body)
+
+/-- The structured form of a region program. -/
+def lowerStructured (rows : ServiceRow) (program : RegionProgram) : Option ProgDecl := do
+  let body ← skeletonStructured rows program
   pure { doc := ["Lowered from the region flow `" ++ program.name ++ "` over `" ++ rows.name ++
                  "` (structured form, nested scopes)."]
          name := program.name
          paramName := program.param.1
          paramType := program.param.2
-         stmts := acquire ++ declarations ++
-           [ Stmt.assign (Flow.paramVar flow.entry 0) (.ident program.param.1) ] ++ stmts }
+         stmts := Skeleton.renderList rows body }
 
 def lowerBest (rows : ServiceRow) (program : RegionProgram) : Option ProgDecl :=
   match lowerStructured rows program with
@@ -194,8 +179,7 @@ def structuredModules? (families : List (ServiceRow × List FlowProgram × List 
     pure (rows.classDecl :: rows.rowsDecl :: (lowered ++ loweredRegions).map Decl.prog)
   let chooses := families.any fun (_, programs, regionPrograms) =>
     programs.any (fun program => Flow.usesDecisions program.flow.erase) ||
-    regionPrograms.any (fun program => program.flow.flow.blocks.any fun block =>
-      match block.term with | .plain term => term.isChoose | _ => false)
+    regionPrograms.any fun program => Region.usesChoose program.flow.flow
   let regions := families.any fun (_, _, regionPrograms) =>
     regionPrograms.any fun program => !program.flow.flow.regions.isEmpty
   let result := families.any fun (rows, _, _) => rows.usesResult
