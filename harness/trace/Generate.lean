@@ -697,7 +697,6 @@ def main (args : List String) : IO Unit := do
             IO.print (Effect4.Target.TypeScript.Trace.golden (entry.program.name ++ ".frontier") []
               ((Region.ruleSet RCell.rows entry.program).map Rule.id) log (face := "lean-flow"))
         | .error message => throw (IO.userError message)
-  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe")
   | ["frame-trace"] =>
       -- Packet D4, the finalizer half. For each region program, the frame
       -- machine's projected trace (`FrameEvent.traceOf` of the run of
@@ -738,4 +737,4 @@ def main (args : List String) : IO Unit := do
               IO.println ("runner\t" ++ Effect4.Target.TypeScript.Trace.row event)
             IO.println (if machine == runner then "agree\ttrue" else "agree\tfalse")
         | .error message => throw (IO.userError message)
-  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | admission-probe | frame-trace")
+  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace")
