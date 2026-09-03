@@ -1347,7 +1347,9 @@ def families : List (ServiceRow × List Script) :=
 def main (args : List String) : IO Unit := do
   match args with
   | ["fixture"] =>
-      match modules? families [.named (Atoms.rows.map (·.name)) "./atoms.ts"] with
+      -- The straight-line module imports the atoms its scripts call; every atom
+      -- still exists on both faces (`Atoms.rows` ↔ `atoms.ts`).
+      match modules? families [.named ["succ", "orZero", "firstOr"] "./atoms.ts"] with
       | some source => IO.print source
       | none => throw (IO.userError "lowering refused a script")
   | ["atoms"] => IO.print Atoms.source
