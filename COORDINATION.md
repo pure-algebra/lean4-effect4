@@ -1412,3 +1412,15 @@ were restated at `interrupts = false` and T3/T4 (`skeletonDispatch_denote`,
 contract's programs by `interrupts_of_program?`. `Skeleton.denote` has no case
 for `interruptPoint`; giving it one (a `decide` at the interrupt site, matching
 `Effect4/Flow/Interrupt.lean`) and dropping the hypothesis is owed.
+
+## Wave 2 sweep, 2026-09-03
+
+One sweep over the merged tree after all seven branches (D3, D2 denotation,
+DB-04 region half, D4 finalizer half, D5, M2, M3) plus DB-06 and the
+equivalence bridge: goldens regenerated (straight-line, flow, interrupt,
+scope, fiber families), hermetic goldens, citations, host, patched, types,
+property, coverage, census, family check, the three planted-mutant self-tests
+and the trust gate all green. Fallout repaired on `main`: the frame-simulation
+contract follows D4's `Flow.Sig` unification (its alphabet is now a
+`FlowAlphabet`), and the fiber receipts render rows inline because the axiom
+gate scans test declarations. Agent worktrees and branches removed. Not pushed.
