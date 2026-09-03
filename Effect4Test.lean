@@ -72,6 +72,7 @@ import Effect4Test.Target.TypeScript.SkeletonSemanticsAxiomReport
 import Effect4Test.Target.TypeScript.SimulationContract
 import Effect4Test.Target.TypeScript.TraceWire
 import Effect4Test.Flow.RunnerAxiomReport
+import Effect4Test.Semantics.PlanInversionAxiomReport
 import Effect4Test.Semantics.DenotationAxiomReport
 import Effect4Test.Semantics.LogicContract
 import Effect4Test.Semantics.LogicAxiomReport

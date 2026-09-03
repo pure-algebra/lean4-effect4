@@ -63,12 +63,12 @@ import Effect4.Target.TypeScript.SkeletonSemantics
 #print axioms Effect4.Target.EffectV4.Skel.execList_cons_control
 #print axioms Effect4.Target.EffectV4.Skel.holds_of_getElem?
 #print axioms Effect4.Target.EffectV4.Skel.execList_move_goto
-#print axioms Effect4.Target.EffectV4.Skel.plan_ret_inv
-#print axioms Effect4.Target.EffectV4.Skel.plan_jump_inv
-#print axioms Effect4.Target.EffectV4.Skel.plan_perform_inv
-#print axioms Effect4.Target.EffectV4.Skel.plan_choose_inv
-#print axioms Effect4.Target.EffectV4.Skel.plan_exhausted_inv
-#print axioms Effect4.Target.EffectV4.Skel.plan_mismatch_inv
+-- The seven `plan` inversions and the two `testValue` readings moved to
+-- `Effect4.Flow` on 2026-09-03 (survey finding L7); their receipts are in
+-- `Effect4Test/Semantics/PlanInversionAxiomReport.lean`.
+#print axioms Effect4.Target.EffectV4.Skel.execControl_performCatch_eq_perform
+#print axioms Effect4.Target.EffectV4.Skel.answerSlots_agree
+#print axioms Effect4.Target.EffectV4.Skel.execList_answerMove
 #print axioms Effect4.Target.EffectV4.Skel.ownedBy_argSlots
 #print axioms Effect4.Target.EffectV4.Skel.argSlots_agree
 #print axioms Effect4.Target.EffectV4.Skel.execList_skeletonBlock
