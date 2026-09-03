@@ -31,4 +31,11 @@ mkdir -p "$out/flow"
 while IFS=$'\t' read -r program tape; do
   { provenance; run flow-golden "$program" "$tape"; } > "$out/flow/$program.$tape.tsv"
 done < <(run flow-programs)
+# The `Scopes` family, likewise in a subdirectory of its own: it has its own
+# generated module and its own tail (`scope-tail.ts`), so the straight-line
+# host loop's `*.empty.tsv` glob must not see it.
+mkdir -p "$out/scope"
+for program in $(run scope-programs); do
+  { provenance; run scope-golden "$program"; } > "$out/scope/$program.tsv"
+done
 echo "PASS wrote $(find "$out" -name '*.tsv' | wc -l | tr -d ' ') trace projections to $out"

@@ -57,6 +57,9 @@
     "tracer.ts",
     "tail.ts",
     "flow-fixture.ts",
-    "flow-tail.ts"
+    "flow-tail.ts",
+    "scope-fixture.ts",
+    "scope-tail.ts",
+    "wire-tail.ts"
   ]
 }

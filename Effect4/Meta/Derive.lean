@@ -25,6 +25,10 @@ constructor per operation (`Cell.put : Nat → Effects.Program Cell.Sig Unit`),
 handler is a `Cell.Service M`; `Cell.traced handler` logs every operation and
 `Cell.tracedExcept` does the same for a handler into `ExceptT E M`.
 
+An operation may take or answer an opaque host handle, spelled
+`Handle "TypeScriptType"`: the Lean carrier is an index, the wire value is that
+index, and the target prints the given type. See `Handle` below.
+
 An aborting operation is declared `| op (p : T) : A !! E ⟪…⟫` (`!` alone would
 parse as a prefix negation applied to `E`): the family's
 answer stays `A`, the row carries the error spellings, the method type gains
@@ -63,6 +67,32 @@ syntax "return " term : effectStep
 
 syntax "effect_program " ident "(" ident " : " term ")" " over " ident " : " term " := " effectStep+ : command
 
+/-! ## Opaque host handles -/
+
+/-- An opaque host handle: an operation may take one or answer one, and the
+only thing the wire ever says about it is a stable index.
+
+The Lean carrier is that index, so `DecidableEq`, `Repr` and `ToVal` come free
+and the wire value is an ordinary `nat` — the trace alphabet needs no new
+constructor. `spelling` is a phantom parameter carrying the TypeScript type the
+target must print for it: `Handle "Scope.Closeable"` is answered by rc.112's
+opaque `Scope.Closeable` on the host, and `tsOfType` spells it exactly that.
+Nothing else about the host object is describable, which is the point: the Lean
+face names scopes `0, 1, 2, …` in creation order, and the host tracer indexes
+the objects it is handed in first-seen order (`harness/trace/tracer.ts`
+`registerHandle`). The two agree because the handle only ever leaves the host
+as an answer of the operation that made it.
+
+This is the whole DSL feature M1 needs; `effect_signature` admits the type
+`Handle "T"` wherever it admits a Stratum V spelling. -/
+structure Handle (spelling : String) where
+  /-- The index this handle takes on the wire. -/
+  index : Nat
+deriving DecidableEq, Repr, Inhabited
+
+instance {spelling : String} : Effects.Trace.ToVal (Handle spelling) :=
+  ⟨fun handle => .nat handle.index⟩
+
 /-! ## Stratum V spellings, syntax directed -/
 
 /-- Type syntax nesting is bounded by this fuel; the DSL admits only the
@@ -80,6 +110,7 @@ private def tsOfTypeFuel : Nat → Term → CommandElabM String
     | `Unit => return "void"
     | other => throwErrorAt stx "effect_signature: no TypeScript spelling for `{other}`; add a Stratum V row first"
   match stx with
+  | `(Handle $spelling:str) => return spelling.getString
   | `(Except $errorTy:term $valueTy:term) =>
       let error ← tsOfTypeFuel fuel errorTy
       let value ← tsOfTypeFuel fuel valueTy

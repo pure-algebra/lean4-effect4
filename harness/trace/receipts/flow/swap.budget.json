@@ -1,8 +1,8 @@
 {
  "format": "effect4-trace-receipt-v1",
- "program": "fallible.empty",
- "tape": "",
- "rules": "service-acquire,perform-call,perform-discard,nullary-value,perform-bind,error-abort,ret",
+ "program": "swap.budget",
+ "tape": "1:1,1:1,1:1,1:1,1:1,1:1,1:1,1:1,1:1,1:1,1:1,1:1,1:0",
+ "rules": "dispatch-loop,block-case,flow-literal,param-move,choose-if,flow-ret",
  "host": {
   "effect": "4.0.0-rc.112",
   "typescript": "7.0.2",
@@ -27,10 +27,9 @@
   "scheduled": []
  },
  "foreign": [
-  "succ@./atoms.ts",
-  "orZero@./atoms.ts"
+  "succ@./atoms.ts"
  ],
- "primitives": 25,
+ "primitives": 23,
  "results": {
   "outcome": "ok",
   "m1": "ok",

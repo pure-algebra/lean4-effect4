@@ -1,8 +1,8 @@
 {
  "format": "effect4-trace-receipt-v1",
- "program": "fallible.empty",
+ "program": "scope.lifo",
  "tape": "",
- "rules": "service-acquire,perform-call,perform-discard,nullary-value,perform-bind,error-abort,ret",
+ "rules": "service-acquire,nullary-value,perform-bind,perform-call,perform-discard,ret",
  "host": {
   "effect": "4.0.0-rc.112",
   "typescript": "7.0.2",
@@ -26,11 +26,8 @@
   "yields": 0,
   "scheduled": []
  },
- "foreign": [
-  "succ@./atoms.ts",
-  "orZero@./atoms.ts"
- ],
- "primitives": 25,
+ "foreign": [],
+ "primitives": 74,
  "results": {
   "outcome": "ok",
   "m1": "ok",
