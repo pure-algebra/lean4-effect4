@@ -64,8 +64,19 @@ effect_signature Cell where
   | get : Nat ⟪ "read the cell", "current value" ⟫
   | put (n : Nat) : Unit ⟪ "write the cell", "store" ⟫
 
-/-- A pure atom; `atoms.ts` carries its host body. -/
-def succ (n : Nat) : Nat := n + 1
+-- The pure atoms of the harness, declared once. `effect_atoms` emits the Lean
+-- function, the row (`Atoms.rows`), the flow embedding's table
+-- (`Atoms.table`), the wire dispatcher (`Atoms.eval`) and the generated
+-- `atoms.ts` (`Atoms.source`), so no atom exists in one face only
+-- (`E4-TARGET-CE-023`). A `match` body is parenthesised: its alternatives
+-- would otherwise swallow the next atom.
+effect_atoms Atoms where
+  | succ (n : Nat) : Nat ⟪ "n + 1" ⟫ := n + 1
+  | orZero (e : Except String Nat) : Nat ⟪ "Result.isSuccess(e) ? e.success : 0" ⟫ :=
+      (match e with | .ok n => n | .error _ => 0)
+  | firstOr (r : Option (Except String Nat)) : Nat
+      ⟪ "Option.isSome(r) ? (Result.isSuccess(r.value) ? r.value.success : 0) : 0" ⟫ :=
+      (match r with | Option.some (.ok n) => n | _ => 0)
 
 effect_program incr (n : Nat) over Cell : Nat :=
   let x ← Cell.get()
@@ -82,17 +93,11 @@ effect_program twice (n : Nat) over Cell : Nat :=
   return y
 
 -- The data reading of errors: an answer that is an `Except`, spelled
--- `Either.Either<number, string>` on the host. The program recovers from it
--- through a pure atom and continues.
+-- `Result.Result<number, string>` on the host (rc.112 has no `Either`). The
+-- program recovers from it through a pure atom and continues.
 effect_signature ECell where
   | tryGet : Except String Nat ⟪ "try to read the cell" ⟫
   | put (n : Nat) : Unit ⟪ "write the cell" ⟫
-
-/-- Recover a value from a failed read; `atoms.ts` carries its host body. -/
-def orZero (e : Except String Nat) : Nat :=
-  match e with
-  | .ok n => n
-  | .error _ => 0
 
 effect_program recover (n : Nat) over ECell : Nat :=
   let r ← ECell.tryGet()
@@ -127,6 +132,32 @@ def fcellLive : FCell.Service (ExceptT String (StateT Nat Id)) := fun name =>
 example : ((interpret fcellLive.toHandler (fallible 5)).run.run 41 : Except String Nat × Nat) =
     (.error "boom", 5) := rfl
 
+-- Depth three at the answer face: a lookup that may be missing (`Option`) and,
+-- when present, may be malformed (`Except`). rc.112 has no `Either`, so the
+-- answer spells `Option.Option<Result.Result<number, string>>`. This is the
+-- shape the M3 note called out as unavailable while Stratum V capped spellings
+-- at depth two.
+effect_signature Tri where
+  | lookup (k : Nat) : Option (Except String Nat) ⟪ "look a key up", "may be missing" ⟫
+  | put (n : Nat) : Unit ⟪ "write the cell", "store" ⟫
+
+effect_program probe (n : Nat) over Tri : Nat :=
+  let r ← Tri.lookup(n)
+  let _ ← Tri.put(n)
+  return firstOr r
+
+/-- A store whose lookup misses at key zero and otherwise answers the cell
+offset by the key; the write still happens. -/
+def triLive : Tri.Service (StateT Nat Id) := fun name =>
+  match name with
+  | .lookup => fun k => do
+      let s ← get
+      pure (if k == 0 then Option.none else Option.some (Except.ok (s + k)))
+  | .put => fun n => set n
+
+example : ((interpret triLive.toHandler (probe 3)).run 41 : Nat × Nat) = (44, 3) := rfl
+example : ((interpret triLive.toHandler (probe 0)).run 41 : Nat × Nat) = (0, 0) := rfl
+
 /-- The Lean handler `tail.ts` mirrors with a `Ref`. -/
 def cellLive : Cell.Service (StateT Nat Id) := fun name =>
   match name with
@@ -155,6 +186,13 @@ def fgoldenLog (program : Program FCell.Sig Nat) (initial : Nat) : Effect4.Trace
     | .ok n => .success (.nat n)
     | .error e => .failure (.str e))]
 
+/-- The traced depth-three run: the answer of `lookup` is one wire value,
+`{"some":[true, 44]}`, on both faces. -/
+def tgoldenLog (program : Program Tri.Sig Nat) (initial : Nat) : Effect4.Trace.Log :=
+  let result : (Nat × Effect4.Trace.Log) × Nat :=
+    ((interpret (Tri.traced triLive).toHandler program).run []).run initial
+  result.1.2 ++ [.done (.success (.nat result.1.1))]
+
 /-- One harness program: its family's rows, its script, and its golden log.
 `flowInput` is the parameter value of the Flow-runner golden (the internal
 oracle); programs without one have no flow golden. -/
@@ -173,7 +211,8 @@ def programs : List Entry :=
   , { name := "twice", rows := Cell.rows, script := twice.script, log := goldenLog (twice 7) 41,
       flowInput := some (.nat 7) }
   , { name := "recover", rows := ECell.rows, script := recover.script, log := egoldenLog (recover 5) 41 }
-  , { name := "fallible", rows := FCell.rows, script := fallible.script, log := fgoldenLog (fallible 5) 41 } ]
+  , { name := "fallible", rows := FCell.rows, script := fallible.script, log := fgoldenLog (fallible 5) 41 }
+  , { name := "probe", rows := Tri.rows, script := probe.script, log := tgoldenLog (probe 3) 41 } ]
 
 /-! ## `Scopes`: a traced family over the reified rc.112 `Scope`
 
@@ -326,8 +365,9 @@ def scopePrograms : List ScopeEntry :=
 
 /-! ## The Flow face: the runner (internal oracle) and the dispatch lowering -/
 
-/-- The atoms the Cell scripts call, with their TypeScript types. -/
-def cellAtoms : AtomTable := [("succ", "number", "number")]
+/-- The atoms the scripts call, with their TypeScript types: the `effect_atoms`
+rows, read as the flow embedding reads them. -/
+def cellAtoms : AtomTable := Atoms.table
 
 /-- The Cell family by name, over the same state the traced service uses. -/
 def cellFamily : String → Effects.Trace.Val → StateT Nat Id Effects.Trace.Val
@@ -335,9 +375,8 @@ def cellFamily : String → Effects.Trace.Val → StateT Nat Id Effects.Trace.Va
   | "put", .nat n => do set n; pure .unit
   | _, _ => pure .unit
 
-def cellAtom : String → Effects.Trace.Val → Effects.Trace.Val
-  | "succ", .nat n => .nat (n + 1)
-  | _, _ => .unit
+/-- The same atoms on the wire, from the same rows. -/
+def cellAtom : String → Effects.Trace.Val → Effects.Trace.Val := Atoms.eval
 
 /-- One flow program of the harness: its admitted graph, the tapes it is run
 with (golden name suffix, tape), its input, and the traced-service log it must
@@ -699,14 +738,16 @@ def flowFamilies : List (ServiceRow × List FlowProgram × List RegionProgram) :
 
 /-- The families the module declares, each with its scripts. -/
 def families : List (ServiceRow × List Script) :=
-  [ (Cell.rows, [incr.script, twice.script]), (ECell.rows, [recover.script]), (FCell.rows, [fallible.script]) ]
+  [ (Cell.rows, [incr.script, twice.script]), (ECell.rows, [recover.script]), (FCell.rows, [fallible.script])
+  , (Tri.rows, [probe.script]) ]
 
 def main (args : List String) : IO Unit := do
   match args with
   | ["fixture"] =>
-      match modules? families [.named ["succ", "orZero"] "./atoms.ts"] with
+      match modules? families [.named (Atoms.rows.map (·.name)) "./atoms.ts"] with
       | some source => IO.print source
       | none => throw (IO.userError "lowering refused a script")
+  | ["atoms"] => IO.print Atoms.source
   | ["masks"] => IO.print Effect4.Target.TypeScript.Trace.maskTable
   | ["golden", name] =>
       match programs.find? (·.name == name) with
@@ -916,4 +957,4 @@ def main (args : List String) : IO Unit := do
   | ["fiber-types"] =>
       for entry in fiberPrograms do
         IO.println (entry.name ++ "\t" ++ Script.declarationLine Fibers.rows entry.script)
-  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle | fiber-fixture | fiber-programs | fiber-golden <program> | fiber-types")
+  | _ => throw (IO.userError "usage: Generate.lean fixture | atoms | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle | fiber-fixture | fiber-programs | fiber-golden <program> | fiber-types")

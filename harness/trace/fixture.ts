@@ -8,8 +8,8 @@
  *
  * Do not edit.
  */
-import { Context, Effect, Result } from "effect"
-import { succ, orZero } from "./atoms.ts"
+import { Context, Effect, Option, Result } from "effect"
+import { succ, orZero, firstOr } from "./atoms.ts"
 
 /** Service `Cell`: one method per operation of the Lean family. */
 export class Cell extends Context.Service<Cell, {
@@ -74,4 +74,22 @@ export const fallible = (n: number) =>
     yield* fCell.put(n)
     const x = yield* fCell.get
     return x
+  })
+
+/** Service `Tri`: one method per operation of the Lean family. */
+export class Tri extends Context.Service<Tri, {
+  readonly lookup: (k: number) => Effect.Effect<Option.Option<Result.Result<number, string>>>
+  readonly put: (n: number) => Effect.Effect<void>
+}>()("Tri") {}
+
+/** Operation rows of `Tri`, for the trace harness. */
+export const TriRows = { "lookup": { params: 1, answer: "Option.Option<Result.Result<number, string>>" }, "put": { params: 1, answer: "void" } }
+
+/** Lowered from `probe` over `Tri`. */
+export const probe = (n: number) =>
+  Effect.gen(function* () {
+    const tri = yield* Tri
+    const r = yield* tri.lookup(n)
+    yield* tri.put(n)
+    return firstOr(r)
   })
