@@ -858,6 +858,17 @@ section Inversion
 
 variable {Ty : Type} {alphabet : FlowAlphabet Ty} {block : RawBlock Ty} {env : Env} {tape : Tape}
 
+/-- The boolean reading of a test operand is a `Val.bool` in the environment. -/
+theorem testValue_some {test : Var} {value : Bool} (h : testValue env test = some value) :
+    env[test.index]? = some (.bool value) := by
+  unfold testValue at h
+  split at h
+  · rename_i b read
+    simp only [Option.some.injEq] at h
+    subst h
+    exact read
+  · cases h
+
 theorem plan_ret_inv {value : Val} (planned : plan alphabet block env tape = .ret value) :
     ∃ v : Var, block.term = .ret v ∧ env[v.index]? = some value := by
   cases hterm : block.term with
@@ -874,6 +885,23 @@ theorem plan_ret_inv {value : Val} (planned : plan alphabet block env tape = .re
   | choose decision left right args =>
       cases read : readArgs env args <;> cases answered : tape.read decision <;>
         simp [plan, hterm, read, answered] at planned
+  | performCatch operation request target args onError errorArgs =>
+      cases known : alphabet.lookup operation <;> cases got : env[request.index]? <;>
+        cases read : readArgs env args <;> cases readE : readArgs env errorArgs <;>
+        simp [plan, hterm, known, got, read, readE] at planned
+  | branch test site onTrue onFalse args =>
+      cases read : readArgs env args with
+      | none => simp [plan, hterm, read] at planned
+      | some values =>
+          cases answered : tape.read site with
+          | exhausted => simp [plan, hterm, read, answered] at planned
+          | mismatch expected actual => simp [plan, hterm, read, answered] at planned
+          | answered chosen more =>
+              cases tv : testValue env test with
+              | none => simp [plan, hterm, read, answered, tv] at planned
+              | some value =>
+                  simp only [plan, hterm, read, answered, tv] at planned
+                  split at planned <;> simp at planned
 
 theorem plan_jump_inv {target : BlockId} {env' : Env}
     (planned : plan alphabet block env tape = .jump target env') :
@@ -893,6 +921,23 @@ theorem plan_jump_inv {target : BlockId} {env' : Env}
   | choose decision left right args =>
       cases read : readArgs env args <;> cases answered : tape.read decision <;>
         simp [plan, hterm, read, answered] at planned
+  | performCatch operation request tgt args onError errorArgs =>
+      cases known : alphabet.lookup operation <;> cases got : env[request.index]? <;>
+        cases read : readArgs env args <;> cases readE : readArgs env errorArgs <;>
+        simp [plan, hterm, known, got, read, readE] at planned
+  | branch test site onTrue onFalse args =>
+      cases read : readArgs env args with
+      | none => simp [plan, hterm, read] at planned
+      | some values =>
+          cases answered : tape.read site with
+          | exhausted => simp [plan, hterm, read, answered] at planned
+          | mismatch expected actual => simp [plan, hterm, read, answered] at planned
+          | answered chosen more =>
+              cases tv : testValue env test with
+              | none => simp [plan, hterm, read, answered, tv] at planned
+              | some value =>
+                  simp only [plan, hterm, read, answered, tv] at planned
+                  split at planned <;> simp at planned
 
 theorem plan_perform_inv {op : alphabet.Op} {request : Val} {target : BlockId} {env' : Env}
     (planned : plan alphabet block env tape = .perform op request target env') :
@@ -923,15 +968,97 @@ theorem plan_perform_inv {op : alphabet.Op} {request : Val} {target : BlockId} {
   | choose decision left right args =>
       cases read : readArgs env args <;> cases answered : tape.read decision <;>
         simp [plan, hterm, read, answered] at planned
+  | performCatch operation requestVar tgt args onError errorArgs =>
+      cases known : alphabet.lookup operation <;> cases got : env[requestVar.index]? <;>
+        cases read : readArgs env args <;> cases readE : readArgs env errorArgs <;>
+        simp [plan, hterm, known, got, read, readE] at planned
+  | branch test site onTrue onFalse args =>
+      cases read : readArgs env args with
+      | none => simp [plan, hterm, read] at planned
+      | some values =>
+          cases answered : tape.read site with
+          | exhausted => simp [plan, hterm, read, answered] at planned
+          | mismatch expected actual => simp [plan, hterm, read, answered] at planned
+          | answered chosen more =>
+              cases tv : testValue env test with
+              | none => simp [plan, hterm, read, answered, tv] at planned
+              | some value =>
+                  simp only [plan, hterm, read, answered, tv] at planned
+                  split at planned <;> simp at planned
 
+/-- Flow v3: a caught perform plans exactly from a `performCatch` block. -/
+theorem plan_performCatch_inv {op : alphabet.Op} {request : Val} {target : BlockId} {env' : Env}
+    {onError : BlockId} {errorEnv : Env}
+    (planned : plan alphabet block env tape = .performCatch op request target env' onError errorEnv) :
+    ∃ (operation : OperationId) (requestVar : Var) (args errorArgs : List Var),
+      block.term = .performCatch operation requestVar target args onError errorArgs
+        ∧ alphabet.lookup operation = some op
+        ∧ env[requestVar.index]? = some request
+        ∧ readArgs env args = some env'
+        ∧ readArgs env errorArgs = some errorEnv := by
+  cases hterm : block.term with
+  | ret v => cases read : env[v.index]? <;> simp [plan, hterm, read] at planned
+  | jump tgt args => cases read : readArgs env args <;> simp [plan, hterm, read] at planned
+  | perform operation requestVar tgt args =>
+      cases known : alphabet.lookup operation <;> cases got : env[requestVar.index]? <;>
+        cases read : readArgs env args <;> simp [plan, hterm, known, got, read] at planned
+  | choose decision left right args =>
+      cases read : readArgs env args <;> cases answered : tape.read decision <;>
+        simp [plan, hterm, read, answered] at planned
+  | performCatch operation requestVar tgt args onErr errorArgs =>
+      cases known : alphabet.lookup operation with
+      | none =>
+          cases got : env[requestVar.index]? <;> cases read : readArgs env args <;>
+            cases readE : readArgs env errorArgs <;>
+            simp [plan, hterm, known, got, read, readE] at planned
+      | some found =>
+          cases got : env[requestVar.index]? with
+          | none =>
+              cases read : readArgs env args <;> cases readE : readArgs env errorArgs <;>
+                simp [plan, hterm, known, got, read, readE] at planned
+          | some requested =>
+              cases read : readArgs env args with
+              | none =>
+                  cases readE : readArgs env errorArgs <;>
+                    simp [plan, hterm, known, got, read, readE] at planned
+              | some values =>
+                  cases readE : readArgs env errorArgs with
+                  | none => simp [plan, hterm, known, got, read, readE] at planned
+                  | some errorValues =>
+                      simp only [plan, hterm, known, got, read, readE,
+                        Plan.performCatch.injEq] at planned
+                      obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ := planned
+                      exact ⟨operation, requestVar, args, errorArgs, rfl, known, got, read, readE⟩
+  | branch test site onTrue onFalse args =>
+      cases read : readArgs env args with
+      | none => simp [plan, hterm, read] at planned
+      | some values =>
+          cases answered : tape.read site with
+          | exhausted => simp [plan, hterm, read, answered] at planned
+          | mismatch expected actual => simp [plan, hterm, read, answered] at planned
+          | answered chosen more =>
+              cases tv : testValue env test with
+              | none => simp [plan, hterm, read, answered, tv] at planned
+              | some value =>
+                  simp only [plan, hterm, read, answered, tv] at planned
+                  split at planned <;> simp at planned
+
+/-- A planned decision comes from a `choose`, or (Flow v3) from a `branch` whose
+value, when it has one, agrees with the tape. -/
 theorem plan_choose_inv {site : DecisionId} {branch : Bool} {target : BlockId} {env' : Env}
     {rest : Tape}
     (planned : plan alphabet block env tape = .choose site branch target env' rest) :
-    ∃ (left right : BlockId) (args : List Var),
+    (∃ (left right : BlockId) (args : List Var),
       block.term = .choose site left right args
         ∧ readArgs env args = some env'
         ∧ tape.read site = .answered branch rest
-        ∧ target = (if branch then left else right) := by
+        ∧ target = (if branch then left else right))
+    ∨ (∃ (test : Var) (onTrue onFalse : BlockId) (args : List Var),
+      block.term = .branch test site onTrue onFalse args
+        ∧ readArgs env args = some env'
+        ∧ tape.read site = .answered branch rest
+        ∧ target = (if branch then onTrue else onFalse)
+        ∧ ∀ value, testValue env test = some value → branch = value) := by
   cases hterm : block.term with
   | ret v => cases read : env[v.index]? <;> simp [plan, hterm, read] at planned
   | jump tgt args => cases read : readArgs env args <;> simp [plan, hterm, read] at planned
@@ -948,12 +1075,42 @@ theorem plan_choose_inv {site : DecisionId} {branch : Bool} {target : BlockId} {
           | answered chosen more =>
               simp only [plan, hterm, read, answered, Plan.choose.injEq] at planned
               obtain ⟨rfl, rfl, eqTarget, rfl, rfl⟩ := planned
-              exact ⟨left, right, args, rfl, read, answered, eqTarget.symm⟩
+              exact Or.inl ⟨left, right, args, rfl, read, answered, eqTarget.symm⟩
+  | performCatch operation requestVar tgt args onError errorArgs =>
+      cases known : alphabet.lookup operation <;> cases got : env[requestVar.index]? <;>
+        cases read : readArgs env args <;> cases readE : readArgs env errorArgs <;>
+        simp [plan, hterm, known, got, read, readE] at planned
+  | branch test decision onTrue onFalse args =>
+      cases read : readArgs env args with
+      | none => simp [plan, hterm, read] at planned
+      | some values =>
+          cases answered : tape.read decision with
+          | exhausted => simp [plan, hterm, read, answered] at planned
+          | mismatch expected actual => simp [plan, hterm, read, answered] at planned
+          | answered chosen more =>
+              cases tv : testValue env test with
+              | none =>
+                  simp only [plan, hterm, read, answered, tv, Plan.choose.injEq] at planned
+                  obtain ⟨rfl, rfl, eqTarget, rfl, rfl⟩ := planned
+                  exact Or.inr ⟨test, onTrue, onFalse, args, rfl, read, answered, eqTarget.symm,
+                    fun _ hv => by rw [tv] at hv; cases hv⟩
+              | some value =>
+                  simp only [plan, hterm, read, answered, tv] at planned
+                  split at planned
+                  · rename_i agreed
+                    simp only [Plan.choose.injEq] at planned
+                    obtain ⟨rfl, rfl, eqTarget, rfl, rfl⟩ := planned
+                    exact Or.inr ⟨test, onTrue, onFalse, args, rfl, read, answered, eqTarget.symm,
+                      fun v hv => by rw [tv] at hv; cases hv; exact agreed⟩
+                  · simp at planned
 
+/-- An unanswered decision comes from a `choose` or a `branch` at an exhausted tape. -/
 theorem plan_exhausted_inv {site : DecisionId}
     (planned : plan alphabet block env tape = .exhausted site) :
-    ∃ (left right : BlockId) (args : List Var),
-      block.term = .choose site left right args ∧ tape.read site = .exhausted := by
+    (∃ (left right : BlockId) (args : List Var),
+      block.term = .choose site left right args ∧ tape.read site = .exhausted)
+    ∨ (∃ (test : Var) (onTrue onFalse : BlockId) (args : List Var),
+      block.term = .branch test site onTrue onFalse args ∧ tape.read site = .exhausted) := by
   cases hterm : block.term with
   | ret v => cases read : env[v.index]? <;> simp [plan, hterm, read] at planned
   | jump tgt args => cases read : readArgs env args <;> simp [plan, hterm, read] at planned
@@ -968,15 +1125,47 @@ theorem plan_exhausted_inv {site : DecisionId}
           | exhausted =>
               simp only [plan, hterm, read, answered, Plan.exhausted.injEq] at planned
               subst planned
-              exact ⟨left, right, args, rfl, answered⟩
+              exact Or.inl ⟨left, right, args, rfl, answered⟩
           | mismatch expected actual => simp [plan, hterm, read, answered] at planned
           | answered chosen more => simp [plan, hterm, read, answered] at planned
+  | performCatch operation requestVar tgt args onError errorArgs =>
+      cases known : alphabet.lookup operation <;> cases got : env[requestVar.index]? <;>
+        cases read : readArgs env args <;> cases readE : readArgs env errorArgs <;>
+        simp [plan, hterm, known, got, read, readE] at planned
+  | branch test decision onTrue onFalse args =>
+      cases read : readArgs env args with
+      | none => simp [plan, hterm, read] at planned
+      | some values =>
+          cases answered : tape.read decision with
+          | exhausted =>
+              simp only [plan, hterm, read, answered, Plan.exhausted.injEq] at planned
+              subst planned
+              exact Or.inr ⟨test, onTrue, onFalse, args, rfl, answered⟩
+          | mismatch expected actual => simp [plan, hterm, read, answered] at planned
+          | answered chosen more =>
+              cases tv : testValue env test with
+              | none => simp [plan, hterm, read, answered, tv] at planned
+              | some value =>
+                  simp only [plan, hterm, read, answered, tv] at planned
+                  split at planned <;> simp at planned
 
+/-- A refusal comes from a `choose` or a `branch` at a tape naming another site,
+or (Flow v3) from a `branch` whose value disagrees with the tape's answer. -/
 theorem plan_mismatch_inv {expected actual : DecisionId}
     (planned : plan alphabet block env tape = .mismatch expected actual) :
-    ∃ (site : DecisionId) (left right : BlockId) (args : List Var),
+    (∃ (site : DecisionId) (left right : BlockId) (args : List Var),
       block.term = .choose site left right args
-        ∧ tape.read site = .mismatch expected actual := by
+        ∧ tape.read site = .mismatch expected actual)
+    ∨ (∃ (test : Var) (site : DecisionId) (onTrue onFalse : BlockId) (args : List Var),
+      block.term = .branch test site onTrue onFalse args
+        ∧ tape.read site = .mismatch expected actual)
+    ∨ (∃ (test : Var) (onTrue onFalse : BlockId) (args : List Var) (chosen : Bool) (more : Tape)
+        (value : Bool),
+      block.term = .branch test expected onTrue onFalse args
+        ∧ actual = expected
+        ∧ tape.read expected = .answered chosen more
+        ∧ testValue env test = some value
+        ∧ ¬ chosen = value) := by
   cases hterm : block.term with
   | ret v => cases read : env[v.index]? <;> simp [plan, hterm, read] at planned
   | jump tgt args => cases read : readArgs env args <;> simp [plan, hterm, read] at planned
@@ -992,8 +1181,34 @@ theorem plan_mismatch_inv {expected actual : DecisionId}
           | mismatch e a =>
               simp only [plan, hterm, read, answered, Plan.mismatch.injEq] at planned
               obtain ⟨rfl, rfl⟩ := planned
-              exact ⟨decision, left, right, args, rfl, answered⟩
+              exact Or.inl ⟨decision, left, right, args, rfl, answered⟩
           | answered chosen more => simp [plan, hterm, read, answered] at planned
+  | performCatch operation requestVar tgt args onError errorArgs =>
+      cases known : alphabet.lookup operation <;> cases got : env[requestVar.index]? <;>
+        cases read : readArgs env args <;> cases readE : readArgs env errorArgs <;>
+        simp [plan, hterm, known, got, read, readE] at planned
+  | branch test decision onTrue onFalse args =>
+      cases read : readArgs env args with
+      | none => simp [plan, hterm, read] at planned
+      | some values =>
+          cases answered : tape.read decision with
+          | exhausted => simp [plan, hterm, read, answered] at planned
+          | mismatch e a =>
+              simp only [plan, hterm, read, answered, Plan.mismatch.injEq] at planned
+              obtain ⟨rfl, rfl⟩ := planned
+              exact Or.inr (Or.inl ⟨test, decision, onTrue, onFalse, args, rfl, answered⟩)
+          | answered chosen more =>
+              cases tv : testValue env test with
+              | none => simp [plan, hterm, read, answered, tv] at planned
+              | some value =>
+                  simp only [plan, hterm, read, answered, tv] at planned
+                  split at planned
+                  · simp at planned
+                  · rename_i disagreed
+                    simp only [Plan.mismatch.injEq] at planned
+                    obtain ⟨rfl, rfl⟩ := planned
+                    exact Or.inr (Or.inr ⟨test, onTrue, onFalse, args, chosen, more, value, rfl, rfl,
+                      answered, tv, disagreed⟩)
 
 end Inversion
 
@@ -1036,7 +1251,9 @@ block does, with the machine carrying the environment across the move. -/
 theorem execList_skeletonBlock (table : List OpSpec) (fuel : Nat) (m : Machine) (tape : Tape)
     (block : RawBlock String) (env : Env) (body : List Skeleton)
     (built : Flow.skeletonBlock table false block = some body)
-    (holds : Holds m block.id env) :
+    (holds : Holds m block.id env)
+    (testBound : ∀ test site onTrue onFalse args,
+      block.term = .branch test site onTrue onFalse args → test.index < env.length) :
     (∀ value, plan (tableAlphabet ⟨0⟩ table) block env tape = .ret value →
         execList (tableAlphabet ⟨0⟩ table) fuel m tape body
           = .pure (.finished (.done value), tape))
@@ -1062,8 +1279,17 @@ theorem execList_skeletonBlock (table : List OpSpec) (fuel : Nat) (m : Machine) 
       ∧ (∀ expected actual,
           plan (tableAlphabet ⟨0⟩ table) block env tape = .mismatch expected actual →
         execList (tableAlphabet ⟨0⟩ table) fuel m tape body
-          = .pure (.finished (.refused expected actual), tape)) := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+          = .pure (.finished (.refused expected actual), tape))
+      ∧ (∀ op request target env' onError errorEnv,
+          plan (tableAlphabet ⟨0⟩ table) block env tape
+            = .performCatch op request target env' onError errorEnv →
+        ∃ next : Val → Machine,
+          execList (tableAlphabet ⟨0⟩ table) fuel m tape body
+            = .vis (.inl ⟨op, request⟩) (fun answered : Val =>
+                .pure (.continueLoop (next answered), tape))
+          ∧ ∀ answered, (next answered).index "block" = target.value
+              ∧ Holds (next answered) target (env' ++ [answered])) := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro value planned
     obtain ⟨v, hterm, read⟩ := plan_ret_inv planned
     simp only [Flow.skeletonBlock, Flow.skeletonBlockWith, hterm, Option.some.injEq] at built
@@ -1187,72 +1413,241 @@ theorem execList_skeletonBlock (table : List OpSpec) (fuel : Nat) (m : Machine) 
     funext answered
     exact (moved answered).1
   · intro site branch target env' rest planned
-    obtain ⟨left, right, args, hterm, read, answered, eqTarget⟩ := plan_choose_inv planned
-    subst eqTarget
-    simp only [Flow.skeletonBlock, Flow.skeletonBlockWith, hterm, Flow.dispatchTransfer,
-      Lowering.chooseIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
-    subst built
+    rcases plan_choose_inv planned with
+        ⟨left, right, args, hterm, read, answered, eqTarget⟩
+        | ⟨test, onTrue, onFalse, args, hterm, read, answered, eqTarget, agreeTest⟩
+    · subst eqTarget
+      simp only [Flow.skeletonBlock, Flow.skeletonBlockWith, hterm, Flow.dispatchTransfer,
+        Lowering.chooseIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
+      subst built
+      obtain ⟨len, agree⟩ := argSlots_agree (holds := holds) (block := block.id) read
+      have branchRun : ∀ side : BlockId,
+          execList (tableAlphabet ⟨0⟩ table) fuel
+              ((m.enter block.id).setVal (.decision block.id) (.bool branch)) rest
+              (Lowering.paramMove block.id side
+                (args.map fun v : Var => Slot.param block.id v.index) ++ Lowering.goto side)
+            = .pure (.continueLoop (movedMachine block.id side
+                (args.map fun v : Var => Slot.param block.id v.index)
+                ((m.enter block.id).setVal (.decision block.id) (.bool branch))), rest)
+          ∧ (movedMachine block.id side
+                (args.map fun v : Var => Slot.param block.id v.index)
+                ((m.enter block.id).setVal (.decision block.id) (.bool branch))).index "block"
+              = side.value
+          ∧ Holds (movedMachine block.id side
+                (args.map fun v : Var => Slot.param block.id v.index)
+                ((m.enter block.id).setVal (.decision block.id) (.bool branch))) side env' := by
+        intro side
+        refine execList_move_goto (tableAlphabet ⟨0⟩ table) fuel _ rest block.id side _ env'
+          (ownedBy_argSlots block.id args) len ?_
+        intro i s v slotAt valAt
+        have sMem : s ∈ args.map fun v : Var => Slot.param block.id v.index :=
+          List.mem_of_getElem? slotAt
+        simp only [List.mem_map] at sMem
+        obtain ⟨a, _, rfl⟩ := sMem
+        rw [setVal_other _ _ _ _ (by simp), enter_vals]
+        exact agree i _ v slotAt valAt
+      obtain ⟨ran, idx, hold⟩ := branchRun (if branch then left else right)
+      refine ⟨_, ?_, idx, hold⟩
+      have selected : (if branch then
+            Lowering.paramMove block.id left
+                (args.map fun v : Var => Slot.param block.id v.index) ++ Lowering.goto left
+          else Lowering.paramMove block.id right
+                (args.map fun v : Var => Slot.param block.id v.index) ++ Lowering.goto right)
+          = Lowering.paramMove block.id (if branch then left else right)
+              (args.map fun v : Var => Slot.param block.id v.index)
+              ++ Lowering.goto (if branch then left else right) := by
+        cases branch <;> rfl
+      rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
+        execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
+        execControl_decide, answered]
+      dsimp only
+      congr 1
+      funext _
+      rw [selected, ran]
+      exact afterFell_continueLoop _ fuel [] _ rest
+    · -- Flow v3: a value branch is still a decision site; the machine reads the
+      -- same tape entry and takes the same edge, because the runner refused
+      -- every run where the value and the tape disagreed.
+      subst eqTarget
+      simp only [Flow.skeletonBlock, Flow.skeletonBlockWith, hterm, Flow.dispatchTransfer,
+        Lowering.branchIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
+      subst built
+      obtain ⟨len, agree⟩ := argSlots_agree (holds := holds) (block := block.id) read
+      have branchRun : ∀ side : BlockId,
+          execList (tableAlphabet ⟨0⟩ table) fuel (m.enter block.id) rest
+              (Lowering.paramMove block.id side (args.map fun v : Var => Slot.param block.id v.index) ++ Lowering.goto side)
+            = .pure (.continueLoop (movedMachine block.id side (args.map fun v : Var => Slot.param block.id v.index) (m.enter block.id)), rest)
+          ∧ (movedMachine block.id side (args.map fun v : Var => Slot.param block.id v.index) (m.enter block.id)).index "block" = side.value
+          ∧ Holds (movedMachine block.id side (args.map fun v : Var => Slot.param block.id v.index) (m.enter block.id)) side env' := by
+        intro side
+        refine execList_move_goto (tableAlphabet ⟨0⟩ table) fuel _ rest block.id side _ env'
+          (ownedBy_argSlots block.id args) len ?_
+        intro i s v slotAt valAt
+        rw [enter_vals]
+        exact agree i s v slotAt valAt
+      obtain ⟨ran, idx, hold⟩ := branchRun (if branch then onTrue else onFalse)
+      refine ⟨_, ?_, idx, hold⟩
+      have selected : (if branch then
+            Lowering.paramMove block.id onTrue (args.map fun v : Var => Slot.param block.id v.index) ++ Lowering.goto onTrue
+          else Lowering.paramMove block.id onFalse (args.map fun v : Var => Slot.param block.id v.index) ++ Lowering.goto onFalse)
+          = Lowering.paramMove block.id (if branch then onTrue else onFalse) (args.map fun v : Var => Slot.param block.id v.index)
+              ++ Lowering.goto (if branch then onTrue else onFalse) := by
+        cases branch <;> rfl
+      rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
+        execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
+        execControl_branchIf, answered]
+      dsimp only
+      cases tv : testValue env test with
+      | some value =>
+          have eqb := agreeTest value tv
+          subst eqb
+          rw [enter_vals, holds_of_getElem? holds (testValue_some tv)]
+          dsimp only
+          rw [if_pos rfl]
+          congr 1
+          funext _
+          rw [selected, ran]
+          exact afterFell_continueLoop _ fuel [] _ rest
+      | none =>
+          have lt : test.index < env.length := testBound test site onTrue onFalse args hterm
+          have wEq : env[test.index]? = some env[test.index] := List.getElem?_eq_getElem lt
+          rw [enter_vals, holds_of_getElem? holds wEq]
+          unfold testValue at tv
+          rw [wEq] at tv
+          generalize env[test.index] = w at tv ⊢
+          cases w <;> first
+            | (simp at tv; done)
+            | (dsimp only
+               congr 1
+               funext _
+               rw [selected, ran]
+               exact afterFell_continueLoop _ fuel [] _ rest)
+  · intro site planned
+    rcases plan_exhausted_inv planned with
+        ⟨left, right, args, hterm, answered⟩ | ⟨test, onTrue, onFalse, args, hterm, answered⟩
+    · simp only [Flow.skeletonBlock, Flow.skeletonBlockWith, hterm, Flow.dispatchTransfer,
+        Lowering.chooseIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
+      subst built
+      rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
+        execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
+        execControl_decide, answered]
+    · simp only [Flow.skeletonBlock, Flow.skeletonBlockWith, hterm, Flow.dispatchTransfer,
+        Lowering.branchIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
+      subst built
+      rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
+        execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
+        execControl_branchIf, answered]
+  · intro expected actual planned
+    rcases plan_mismatch_inv planned with
+        ⟨site, left, right, args, hterm, answered⟩
+        | ⟨test, site, onTrue, onFalse, args, hterm, answered⟩
+        | ⟨test, onTrue, onFalse, args, chosen, more, value, hterm, rfl, answered, tv, disagreed⟩
+    · simp only [Flow.skeletonBlock, Flow.skeletonBlockWith, hterm, Flow.dispatchTransfer,
+        Lowering.chooseIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
+      subst built
+      rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
+        execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
+        execControl_decide, answered]
+    · simp only [Flow.skeletonBlock, Flow.skeletonBlockWith, hterm, Flow.dispatchTransfer,
+        Lowering.branchIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
+      subst built
+      rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
+        execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
+        execControl_branchIf, answered]
+    · simp only [Flow.skeletonBlock, Flow.skeletonBlockWith, hterm, Flow.dispatchTransfer,
+        Lowering.branchIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
+      subst built
+      rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
+        execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
+        execControl_branchIf, answered, enter_vals, holds_of_getElem? holds (testValue_some tv)]
+      dsimp only
+      rw [if_neg disagreed]
+  · -- Flow v3: the plain algebra has no failure channel, so a caught perform runs
+    -- its value edge, exactly as `plan` and `denoteFuel` do.
+    intro op request target env' onError errorEnv planned
+    obtain ⟨operation, requestVar, args, errorArgs, hterm, known, got, read, readE⟩ :=
+      plan_performCatch_inv planned
+    simp only [Flow.skeletonBlock, Flow.skeletonBlockWith, hterm, Flow.dispatchTransfer] at built
     obtain ⟨len, agree⟩ := argSlots_agree (holds := holds) (block := block.id) read
-    have branchRun : ∀ side : BlockId,
+    obtain ⟨lenRead, _⟩ := readArgs_getElem? args env env' read
+    have moved : ∀ answered : Val,
         execList (tableAlphabet ⟨0⟩ table) fuel
-            ((m.enter block.id).setVal (.decision block.id) (.bool branch)) rest
-            (Lowering.paramMove block.id side
-              (args.map fun v : Var => Slot.param block.id v.index) ++ Lowering.goto side)
-          = .pure (.continueLoop (movedMachine block.id side
-              (args.map fun v : Var => Slot.param block.id v.index)
-              ((m.enter block.id).setVal (.decision block.id) (.bool branch))), rest)
-        ∧ (movedMachine block.id side
-              (args.map fun v : Var => Slot.param block.id v.index)
-              ((m.enter block.id).setVal (.decision block.id) (.bool branch))).index "block"
-            = side.value
-        ∧ Holds (movedMachine block.id side
-              (args.map fun v : Var => Slot.param block.id v.index)
-              ((m.enter block.id).setVal (.decision block.id) (.bool branch))) side env' := by
-      intro side
-      refine execList_move_goto (tableAlphabet ⟨0⟩ table) fuel _ rest block.id side _ env'
-        (ownedBy_argSlots block.id args) len ?_
-      intro i s v slotAt valAt
-      have sMem : s ∈ args.map fun v : Var => Slot.param block.id v.index :=
-        List.mem_of_getElem? slotAt
-      simp only [List.mem_map] at sMem
-      obtain ⟨a, _, rfl⟩ := sMem
-      rw [setVal_other _ _ _ _ (by simp), enter_vals]
-      exact agree i _ v slotAt valAt
-    obtain ⟨ran, idx, hold⟩ := branchRun (if branch then left else right)
-    refine ⟨_, ?_, idx, hold⟩
-    have selected : (if branch then
-          Lowering.paramMove block.id left
-              (args.map fun v : Var => Slot.param block.id v.index) ++ Lowering.goto left
-        else Lowering.paramMove block.id right
-              (args.map fun v : Var => Slot.param block.id v.index) ++ Lowering.goto right)
-        = Lowering.paramMove block.id (if branch then left else right)
-            (args.map fun v : Var => Slot.param block.id v.index)
-            ++ Lowering.goto (if branch then left else right) := by
-      cases branch <;> rfl
+            ((m.enter block.id).setVal (.catchValue block.id) answered) tape
+            (Lowering.paramMove block.id target ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.catchValue block.id])
+              ++ Lowering.goto target)
+          = .pure (.continueLoop (movedMachine block.id target
+              ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.catchValue block.id])
+              ((m.enter block.id).setVal (.catchValue block.id) answered)), tape)
+        ∧ (movedMachine block.id target ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.catchValue block.id])
+              ((m.enter block.id).setVal (.catchValue block.id) answered)).index "block"
+            = target.value
+        ∧ Holds (movedMachine block.id target ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.catchValue block.id])
+              ((m.enter block.id).setVal (.catchValue block.id) answered))
+            target (env' ++ [answered]) := by
+      intro answered
+      refine execList_move_goto (tableAlphabet ⟨0⟩ table) fuel _ tape block.id target _ _ ?_ ?_ ?_
+      · intro s mem
+        simp only [List.mem_append, List.mem_singleton] at mem
+        rcases mem with inArgs | rfl
+        · exact ownedBy_argSlots block.id args s inArgs
+        · exact rfl
+      · simp [len]
+      · intro i s v slotAt valAt
+        by_cases small : i < args.length
+        · rw [List.getElem?_append_left (by simpa using small)] at slotAt
+          rw [List.getElem?_append_left (by omega)] at valAt
+          have sMem : s ∈ (args.map fun v : Var => Slot.param block.id v.index) := List.mem_of_getElem? slotAt
+          simp only [List.mem_map] at sMem
+          obtain ⟨a, _, rfl⟩ := sMem
+          rw [setVal_other _ _ _ _ (by simp), enter_vals]
+          exact agree i _ v slotAt valAt
+        · have inRange : i < ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.catchValue block.id]).length :=
+            (List.getElem?_eq_some_iff.mp slotAt).1
+          simp only [List.length_append, List.length_map, List.length_singleton] at inRange
+          have same : i = args.length := by omega
+          subst same
+          rw [List.getElem?_append_right (by simp)] at slotAt
+          rw [List.getElem?_append_right (by omega)] at valAt
+          simp only [List.length_map, Nat.sub_self, List.getElem?_cons_zero,
+            Option.some.injEq] at slotAt
+          rw [show args.length - env'.length = 0 from by omega] at valAt
+          simp only [List.getElem?_cons_zero, Option.some.injEq] at valAt
+          subst slotAt
+          subst valAt
+          exact setVal_self _ _ _
+    have shape : ∃ spec : OpSpec, body = Skeleton.enterBlock block.id ::
+        Lowering.performCatchResult (.answer block.id) (.catchValue block.id)
+          (.catchError block.id) operation spec (.param block.id requestVar.index)
+          (Lowering.paramMove block.id target ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.catchValue block.id])
+            ++ Lowering.goto target)
+          (Lowering.paramMove block.id onError
+              ((errorArgs.map fun v : Var => Slot.param block.id v.index)
+                ++ [Slot.catchError block.id])
+            ++ Lowering.goto onError) := by
+      cases spec : Flow.spec? table operation with
+      | none => simp [spec] at built
+      | some row =>
+          simp only [spec, Option.bind_eq_bind, Option.bind_some] at built
+          cases kind : row.kind with
+          | family =>
+              simp only [kind, Option.bind_some, Bool.false_eq_true, ↓reduceIte,
+                List.nil_append, Option.some.injEq] at built
+              exact ⟨row, built.symm⟩
+          | atom => simp [kind] at built
+          | lit constant => simp [kind] at built
+    obtain ⟨spec, rfl⟩ := shape
+    refine ⟨fun answered => movedMachine block.id target ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.catchValue block.id])
+      ((m.enter block.id).setVal (.catchValue block.id) answered), ?_, fun answered =>
+        ⟨(moved answered).2.1, (moved answered).2.2⟩⟩
+    simp only [Lowering.performCatchResult]
     rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
       execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
-      execControl_decide, answered]
+      execControl_performCatch, known, enter_vals, holds_of_getElem? holds got]
     dsimp only
     congr 1
-    funext _
-    rw [selected, ran]
-    exact afterFell_continueLoop _ fuel [] _ rest
-  · intro site planned
-    obtain ⟨left, right, args, hterm, answered⟩ := plan_exhausted_inv planned
-    simp only [Flow.skeletonBlock, Flow.skeletonBlockWith, hterm, Flow.dispatchTransfer,
-      Lowering.chooseIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
-    subst built
-    rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
-      execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
-      execControl_decide, answered]
-  · intro expected actual planned
-    obtain ⟨site, left, right, args, hterm, answered⟩ := plan_mismatch_inv planned
-    simp only [Flow.skeletonBlock, Flow.skeletonBlockWith, hterm, Flow.dispatchTransfer,
-      Lowering.chooseIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
-    subst built
-    rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
-      execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
-      execControl_decide, answered]
+    funext answered
+    rw [(moved answered).1]
+    exact afterFell_continueLoop _ fuel [] _ tape
 
 /-! ## 14. The whole dispatch form -/
 
@@ -1404,9 +1799,11 @@ theorem dispatchRun_denoteFuel (table : List OpSpec) (raw : RawFlow String)
       intro m tape block env current found sized indexed holds
       have mem : current ∈ raw.blocks := List.mem_of_find?_eq_some found
       obtain ⟨body, lowered, case⟩ := built block.value current found
-      obtain ⟨onRet, onJump, onPerform, onChoose, onExhausted, onMismatch⟩ :=
+      obtain ⟨onRet, onJump, onPerform, onChoose, onExhausted, onMismatch, onPerformCatch⟩ :=
         execList_skeletonBlock table fuel m tape current env body lowered
           (by rw [lookupBlock_id found]; exact holds)
+          (fun test site onTrue onFalse args hterm => by
+            rw [sized]; exact wf.terms.1 current mem test (by rw [hterm]; exact List.mem_cons_self))
       have plannedSized := plan_checked wf mem sized tape
       rw [dispatchRun_succ, indexed, case, denoteFuel, found]
       dsimp only
@@ -1459,6 +1856,17 @@ theorem dispatchRun_denoteFuel (table : List OpSpec) (raw : RawFlow String)
               (Outcome.continueLoop m', rest) = _
           rw [dispatchCatch_continueLoop]
           exact ih m' rest target env' targetBlock foundTarget sizedTarget indexed' holds'
+      | performCatch targetBlock errorBlock foundTarget sizedTarget foundError sizedError =>
+          rename_i op request target env' onError errorEnv
+          obtain ⟨next, ran, steps⟩ := onPerformCatch op request target env' onError errorEnv planEq
+          rw [ran, bind_vis_inl]
+          refine congrArg (@Program.vis (FullSig (tableAlphabet ⟨0⟩ table)) (RunResult × Tape)
+            (Sum.inl ⟨op, request⟩)) (funext fun answered => ?_)
+          show dispatchCatch (tableAlphabet ⟨0⟩ table) fuel "block" cases
+              (Outcome.continueLoop (next answered), tape) = _
+          rw [dispatchCatch_continueLoop]
+          exact ih (next answered) tape target (env' ++ [answered]) targetBlock foundTarget
+            (by simp [← sizedTarget]) (steps answered).1 (steps answered).2
 
 /-- The dispatch form's prefix moves the input into the entry block's first
 parameter and sets the block index; nothing else in it inspects the machine. -/
@@ -1560,9 +1968,19 @@ theorem execList_skeletonBlockWith (table : List OpSpec) (raw : RawFlow String)
       ∧ (∀ expected actual,
           plan (tableAlphabet ⟨0⟩ table) block env tape = .mismatch expected actual →
         execList (tableAlphabet ⟨0⟩ table) fuel m tape body
-          = .pure (.finished (.refused expected actual), tape)) := by
+          = .pure (.finished (.refused expected actual), tape))
+      ∧ (∀ op request target env' onError errorEnv,
+          plan (tableAlphabet ⟨0⟩ table) block env tape
+            = .performCatch op request target env' onError errorEnv →
+        execList (tableAlphabet ⟨0⟩ table) fuel m tape body
+          = .vis (.inl ⟨op, request⟩) (fun answered : Val => K target (env' ++ [answered]) tape)) := by
   have planSized := plan_checked wf mem envSized tape
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  have testBound : ∀ test site onTrue onFalse args,
+      block.term = .branch test site onTrue onFalse args → test.index < env.length := by
+    intro test site onTrue onFalse args hterm
+    rw [envSized]
+    exact wf.terms.1 block mem test (by rw [hterm]; exact List.mem_cons_self)
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro value planned
     obtain ⟨v, hterm, read⟩ := plan_ret_inv planned
     simp only [Flow.skeletonBlockWith, hterm, Option.some.injEq] at built
@@ -1693,92 +2111,295 @@ theorem execList_skeletonBlockWith (table : List OpSpec) (raw : RawFlow String)
             funext answered
             exact moves answered
   · intro site branch target env' rest planned
-    obtain ⟨left, right, args, hterm, read, answered, eqTarget⟩ := plan_choose_inv planned
+    rcases plan_choose_inv planned with
+        ⟨left, right, args, hterm, read, answered, eqTarget⟩
+        | ⟨test, onTrue, onFalse, args, hterm, read, answered, eqTarget, agreeTest⟩
+    · obtain ⟨len, agree⟩ := argSlots_agree (holds := holds) (block := block.id) read
+      rw [planned] at planSized
+      cases planSized with
+      | choose targetBlock foundTarget sizedTarget =>
+          subst eqTarget
+          cases leftTransferred :
+              transfer left (args.map fun v : Var => Slot.param block.id v.index) with
+          | none =>
+              simp [Flow.skeletonBlockWith, hterm, leftTransferred] at built
+          | some toLeft =>
+              cases rightTransferred :
+                  transfer right (args.map fun v : Var => Slot.param block.id v.index) with
+              | none =>
+                  simp [Flow.skeletonBlockWith, hterm, leftTransferred, rightTransferred] at built
+              | some toRight =>
+                  simp only [Flow.skeletonBlockWith, hterm, leftTransferred, rightTransferred,
+                    Lowering.chooseIf, Option.bind_eq_bind, Option.bind_some,
+                    Option.some.injEq] at built
+                  subst built
+                  rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
+                    execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
+                    execControl_decide, answered]
+                  dsimp only
+                  congr 1
+                  funext _
+                  have branchAgree : ∀ (i : Nat) (s : Slot) (v : Val),
+                      (args.map fun v : Var => Slot.param block.id v.index)[i]? = some s →
+                      env'[i]? = some v →
+                      ((m.enter block.id).setVal (.decision block.id) (.bool branch)).vals s = v := by
+                    intro i s v slotAt valAt
+                    have sMem : s ∈ args.map fun v : Var => Slot.param block.id v.index :=
+                      List.mem_of_getElem? slotAt
+                    simp only [List.mem_map] at sMem
+                    obtain ⟨a, _, rfl⟩ := sMem
+                    rw [setVal_other _ _ _ _ (by simp), enter_vals]
+                    exact agree i _ v slotAt valAt
+                  have ran : execList (tableAlphabet ⟨0⟩ table) fuel
+                      ((m.enter block.id).setVal (.decision block.id) (.bool branch)) rest
+                      (if branch then toLeft else toRight)
+                    = K (if branch then left else right) env' rest := by
+                    cases branch with
+                    | true =>
+                        simp only at foundTarget sizedTarget ⊢
+                        exact step left targetBlock _ env' _ rest toLeft foundTarget sizedTarget
+                          leftTransferred (ownedBy_argSlots block.id args) len branchAgree
+                    | false =>
+                        simp only [Bool.false_eq_true] at foundTarget sizedTarget ⊢
+                        exact step right targetBlock _ env' _ rest toRight foundTarget sizedTarget
+                          rightTransferred (ownedBy_argSlots block.id args) len branchAgree
+                  rw [ran]
+                  exact stable _ _ _
+    · -- Flow v3: the value branch, at an arbitrary transfer.
+      obtain ⟨len, agree⟩ := argSlots_agree (holds := holds) (block := block.id) read
+      rw [planned] at planSized
+      cases planSized with
+      | choose targetBlock foundTarget sizedTarget =>
+          subst eqTarget
+          cases trueTransferred : transfer onTrue (args.map fun v : Var => Slot.param block.id v.index) with
+          | none => simp [Flow.skeletonBlockWith, hterm, trueTransferred] at built
+          | some toTrue =>
+              cases falseTransferred : transfer onFalse (args.map fun v : Var => Slot.param block.id v.index) with
+              | none =>
+                  simp [Flow.skeletonBlockWith, hterm, trueTransferred, falseTransferred] at built
+              | some toFalse =>
+                  simp only [Flow.skeletonBlockWith, hterm, trueTransferred, falseTransferred,
+                    Lowering.branchIf, Option.bind_eq_bind, Option.bind_some,
+                    Option.some.injEq] at built
+                  subst built
+                  have branchAgree : ∀ (i : Nat) (s : Slot) (v : Val),
+                      (args.map fun v : Var => Slot.param block.id v.index)[i]? = some s → env'[i]? = some v → (m.enter block.id).vals s = v := by
+                    intro i s v slotAt valAt
+                    rw [enter_vals]
+                    exact agree i s v slotAt valAt
+                  have ran : execList (tableAlphabet ⟨0⟩ table) fuel (m.enter block.id) rest
+                      (if branch then toTrue else toFalse)
+                    = K (if branch then onTrue else onFalse) env' rest := by
+                    cases branch with
+                    | true =>
+                        simp only at foundTarget sizedTarget ⊢
+                        exact step onTrue targetBlock _ env' _ rest toTrue foundTarget sizedTarget
+                          trueTransferred (ownedBy_argSlots block.id args) len branchAgree
+                    | false =>
+                        simp only [Bool.false_eq_true] at foundTarget sizedTarget ⊢
+                        exact step onFalse targetBlock _ env' _ rest toFalse foundTarget sizedTarget
+                          falseTransferred (ownedBy_argSlots block.id args) len branchAgree
+                  rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
+                    execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
+                    execControl_branchIf, answered]
+                  dsimp only
+                  cases tv : testValue env test with
+                  | some value =>
+                      have eqb := agreeTest value tv
+                      subst eqb
+                      rw [enter_vals, holds_of_getElem? holds (testValue_some tv)]
+                      dsimp only
+                      rw [if_pos rfl]
+                      congr 1
+                      funext _
+                      rw [ran]
+                      exact stable _ _ _
+                  | none =>
+                      have lt : test.index < env.length :=
+                        testBound test site onTrue onFalse args hterm
+                      have wEq : env[test.index]? = some env[test.index] :=
+                        List.getElem?_eq_getElem lt
+                      rw [enter_vals, holds_of_getElem? holds wEq]
+                      unfold testValue at tv
+                      rw [wEq] at tv
+                      generalize env[test.index] = w at tv ⊢
+                      cases w <;> first
+                        | (simp at tv; done)
+                        | (dsimp only
+                           congr 1
+                           funext _
+                           rw [ran]
+                           exact stable _ _ _)
+  · intro site planned
+    rcases plan_exhausted_inv planned with
+        ⟨left, right, args, hterm, answered⟩ | ⟨test, onTrue, onFalse, args, hterm, answered⟩
+    · cases leftTransferred : transfer left (args.map fun v : Var => Slot.param block.id v.index) with
+      | none => simp [Flow.skeletonBlockWith, hterm, leftTransferred] at built
+      | some toLeft =>
+          cases rightTransferred : transfer right (args.map fun v : Var => Slot.param block.id v.index) with
+          | none => simp [Flow.skeletonBlockWith, hterm, leftTransferred, rightTransferred] at built
+          | some toRight =>
+              simp only [Flow.skeletonBlockWith, hterm, leftTransferred, rightTransferred,
+                Lowering.chooseIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
+              subst built
+              rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
+                execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
+                execControl_decide, answered]
+    · cases trueTransferred : transfer onTrue (args.map fun v : Var => Slot.param block.id v.index) with
+      | none => simp [Flow.skeletonBlockWith, hterm, trueTransferred] at built
+      | some toTrue =>
+          cases falseTransferred : transfer onFalse (args.map fun v : Var => Slot.param block.id v.index) with
+          | none => simp [Flow.skeletonBlockWith, hterm, trueTransferred, falseTransferred] at built
+          | some toFalse =>
+              simp only [Flow.skeletonBlockWith, hterm, trueTransferred, falseTransferred,
+                Lowering.branchIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
+              subst built
+              rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
+                execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
+                execControl_branchIf, answered]
+  · intro expected actual planned
+    rcases plan_mismatch_inv planned with
+        ⟨site, left, right, args, hterm, answered⟩
+        | ⟨test, site, onTrue, onFalse, args, hterm, answered⟩
+        | ⟨test, onTrue, onFalse, args, chosen, more, value, hterm, rfl, answered, tv, disagreed⟩
+    · cases leftTransferred : transfer left (args.map fun v : Var => Slot.param block.id v.index) with
+      | none => simp [Flow.skeletonBlockWith, hterm, leftTransferred] at built
+      | some toLeft =>
+          cases rightTransferred : transfer right (args.map fun v : Var => Slot.param block.id v.index) with
+          | none => simp [Flow.skeletonBlockWith, hterm, leftTransferred, rightTransferred] at built
+          | some toRight =>
+              simp only [Flow.skeletonBlockWith, hterm, leftTransferred, rightTransferred,
+                Lowering.chooseIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
+              subst built
+              rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
+                execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
+                execControl_decide, answered]
+    · cases trueTransferred : transfer onTrue (args.map fun v : Var => Slot.param block.id v.index) with
+      | none => simp [Flow.skeletonBlockWith, hterm, trueTransferred] at built
+      | some toTrue =>
+          cases falseTransferred : transfer onFalse (args.map fun v : Var => Slot.param block.id v.index) with
+          | none => simp [Flow.skeletonBlockWith, hterm, trueTransferred, falseTransferred] at built
+          | some toFalse =>
+              simp only [Flow.skeletonBlockWith, hterm, trueTransferred, falseTransferred,
+                Lowering.branchIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
+              subst built
+              rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
+                execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
+                execControl_branchIf, answered]
+    · cases trueTransferred : transfer onTrue (args.map fun v : Var => Slot.param block.id v.index) with
+      | none => simp [Flow.skeletonBlockWith, hterm, trueTransferred] at built
+      | some toTrue =>
+          cases falseTransferred : transfer onFalse (args.map fun v : Var => Slot.param block.id v.index) with
+          | none => simp [Flow.skeletonBlockWith, hterm, trueTransferred, falseTransferred] at built
+          | some toFalse =>
+              simp only [Flow.skeletonBlockWith, hterm, trueTransferred, falseTransferred,
+                Lowering.branchIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
+              subst built
+              rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
+                execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
+                execControl_branchIf, answered, enter_vals,
+                holds_of_getElem? holds (testValue_some tv)]
+              dsimp only
+              rw [if_neg disagreed]
+  · -- Flow v3: a caught perform at an arbitrary transfer; the value edge only.
+    intro op request target env' onError errorEnv planned
+    obtain ⟨operation, requestVar, args, errorArgs, hterm, known, got, read, readE⟩ :=
+      plan_performCatch_inv planned
     obtain ⟨len, agree⟩ := argSlots_agree (holds := holds) (block := block.id) read
+    obtain ⟨lenRead, _⟩ := readArgs_getElem? args env env' read
     rw [planned] at planSized
     cases planSized with
-    | choose targetBlock foundTarget sizedTarget =>
-        subst eqTarget
-        cases leftTransferred :
-            transfer left (args.map fun v : Var => Slot.param block.id v.index) with
+    | performCatch targetBlock errorBlock foundTarget sizedTarget foundError sizedError =>
+        cases okTransferred : transfer target ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.catchValue block.id]) with
         | none =>
-            simp [Flow.skeletonBlockWith, hterm, leftTransferred] at built
-        | some toLeft =>
-            cases rightTransferred :
-                transfer right (args.map fun v : Var => Slot.param block.id v.index) with
+            exfalso
+            simp only [Flow.skeletonBlockWith, hterm] at built
+            cases spec : Flow.spec? table operation with
+            | none => simp [spec] at built
+            | some row =>
+                simp only [spec, Option.bind_eq_bind, Option.bind_some] at built
+                cases kind : row.kind with
+                | family => simp [kind, okTransferred] at built
+                | atom => simp [kind] at built
+                | lit constant => simp [kind] at built
+        | some toOk =>
+            cases errTransferred : transfer onError ((errorArgs.map fun v : Var => Slot.param block.id v.index) ++ [Slot.catchError block.id]) with
             | none =>
-                simp [Flow.skeletonBlockWith, hterm, leftTransferred, rightTransferred] at built
-            | some toRight =>
-                simp only [Flow.skeletonBlockWith, hterm, leftTransferred, rightTransferred,
-                  Lowering.chooseIf, Option.bind_eq_bind, Option.bind_some,
-                  Option.some.injEq] at built
-                subst built
+                exfalso
+                simp only [Flow.skeletonBlockWith, hterm] at built
+                cases spec : Flow.spec? table operation with
+                | none => simp [spec] at built
+                | some row =>
+                    simp only [spec, Option.bind_eq_bind, Option.bind_some] at built
+                    cases kind : row.kind with
+                    | family => simp [kind, okTransferred, errTransferred] at built
+                    | atom => simp [kind] at built
+                    | lit constant => simp [kind] at built
+            | some toError =>
+                have moves : ∀ answered : Val,
+                    execList (tableAlphabet ⟨0⟩ table) fuel
+                        ((m.enter block.id).setVal (.catchValue block.id) answered) tape toOk
+                      = K target (env' ++ [answered]) tape := by
+                  intro answered
+                  refine step target targetBlock _ (env' ++ [answered]) _ tape toOk foundTarget
+                    (by simp [← sizedTarget]) okTransferred ?_ ?_ ?_
+                  · intro s mem
+                    simp only [List.mem_append, List.mem_singleton] at mem
+                    rcases mem with inArgs | rfl
+                    · exact ownedBy_argSlots block.id args s inArgs
+                    · exact rfl
+                  · simp [len]
+                  · intro i s v slotAt valAt
+                    by_cases small : i < args.length
+                    · rw [List.getElem?_append_left (by simpa using small)] at slotAt
+                      rw [List.getElem?_append_left (by omega)] at valAt
+                      have sMem : s ∈ (args.map fun v : Var => Slot.param block.id v.index) := List.mem_of_getElem? slotAt
+                      simp only [List.mem_map] at sMem
+                      obtain ⟨a, _, rfl⟩ := sMem
+                      rw [setVal_other _ _ _ _ (by simp), enter_vals]
+                      exact agree i _ v slotAt valAt
+                    · have inRange : i < ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.catchValue block.id]).length :=
+                        (List.getElem?_eq_some_iff.mp slotAt).1
+                      simp only [List.length_append, List.length_map,
+                        List.length_singleton] at inRange
+                      have same : i = args.length := by omega
+                      subst same
+                      rw [List.getElem?_append_right (by simp)] at slotAt
+                      rw [List.getElem?_append_right (by omega)] at valAt
+                      simp only [List.length_map, Nat.sub_self, List.getElem?_cons_zero,
+                        Option.some.injEq] at slotAt
+                      rw [show args.length - env'.length = 0 from by omega] at valAt
+                      simp only [List.getElem?_cons_zero, Option.some.injEq] at valAt
+                      subst slotAt
+                      subst valAt
+                      exact setVal_self _ _ _
+                simp only [Flow.skeletonBlockWith, hterm, okTransferred, errTransferred] at built
+                have shape : ∃ spec : OpSpec, body = Skeleton.enterBlock block.id ::
+                    [Skeleton.performCatch (.answer block.id) (.catchValue block.id)
+                      (.catchError block.id) operation spec (.param block.id requestVar.index)
+                      toOk toError] := by
+                  cases spec : Flow.spec? table operation with
+                  | none => simp [spec] at built
+                  | some row =>
+                      simp only [spec, Option.bind_eq_bind, Option.bind_some] at built
+                      cases kind : row.kind with
+                      | family =>
+                          simp only [kind, Option.bind_some, Bool.false_eq_true, ↓reduceIte,
+                            List.nil_append, Lowering.performCatchResult,
+                            Option.some.injEq] at built
+                          exact ⟨row, built.symm⟩
+                      | atom => simp [kind] at built
+                      | lit constant => simp [kind] at built
+                obtain ⟨spec, rfl⟩ := shape
                 rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
                   execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
-                  execControl_decide, answered]
+                  execControl_performCatch, known, enter_vals, holds_of_getElem? holds got]
                 dsimp only
                 congr 1
-                funext _
-                have branchAgree : ∀ (i : Nat) (s : Slot) (v : Val),
-                    (args.map fun v : Var => Slot.param block.id v.index)[i]? = some s →
-                    env'[i]? = some v →
-                    ((m.enter block.id).setVal (.decision block.id) (.bool branch)).vals s = v := by
-                  intro i s v slotAt valAt
-                  have sMem : s ∈ args.map fun v : Var => Slot.param block.id v.index :=
-                    List.mem_of_getElem? slotAt
-                  simp only [List.mem_map] at sMem
-                  obtain ⟨a, _, rfl⟩ := sMem
-                  rw [setVal_other _ _ _ _ (by simp), enter_vals]
-                  exact agree i _ v slotAt valAt
-                have ran : execList (tableAlphabet ⟨0⟩ table) fuel
-                    ((m.enter block.id).setVal (.decision block.id) (.bool branch)) rest
-                    (if branch then toLeft else toRight)
-                  = K (if branch then left else right) env' rest := by
-                  cases branch with
-                  | true =>
-                      simp only at foundTarget sizedTarget ⊢
-                      exact step left targetBlock _ env' _ rest toLeft foundTarget sizedTarget
-                        leftTransferred (ownedBy_argSlots block.id args) len branchAgree
-                  | false =>
-                      simp only [Bool.false_eq_true] at foundTarget sizedTarget ⊢
-                      exact step right targetBlock _ env' _ rest toRight foundTarget sizedTarget
-                        rightTransferred (ownedBy_argSlots block.id args) len branchAgree
-                rw [ran]
+                funext answered
+                rw [moves answered]
                 exact stable _ _ _
-  · intro site planned
-    obtain ⟨left, right, args, hterm, answered⟩ := plan_exhausted_inv planned
-    cases leftTransferred :
-        transfer left (args.map fun v : Var => Slot.param block.id v.index) with
-    | none => simp [Flow.skeletonBlockWith, hterm, leftTransferred] at built
-    | some toLeft =>
-        cases rightTransferred :
-            transfer right (args.map fun v : Var => Slot.param block.id v.index) with
-        | none =>
-            simp [Flow.skeletonBlockWith, hterm, leftTransferred, rightTransferred] at built
-        | some toRight =>
-            simp only [Flow.skeletonBlockWith, hterm, leftTransferred, rightTransferred,
-              Lowering.chooseIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
-            subst built
-            rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
-              execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
-              execControl_decide, answered]
-  · intro expected actual planned
-    obtain ⟨site, left, right, args, hterm, answered⟩ := plan_mismatch_inv planned
-    cases leftTransferred :
-        transfer left (args.map fun v : Var => Slot.param block.id v.index) with
-    | none => simp [Flow.skeletonBlockWith, hterm, leftTransferred] at built
-    | some toLeft =>
-        cases rightTransferred :
-            transfer right (args.map fun v : Var => Slot.param block.id v.index) with
-        | none =>
-            simp [Flow.skeletonBlockWith, hterm, leftTransferred, rightTransferred] at built
-        | some toRight =>
-            simp only [Flow.skeletonBlockWith, hterm, leftTransferred, rightTransferred,
-              Lowering.chooseIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
-            subst built
-            rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
-              execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
-              execControl_decide, answered]
+
 /-! ## The flat fragment: no join, no loop
 
 `Structuring.emitWith` emits three shapes of transfer: a `continue` to a loop
@@ -2040,7 +2661,7 @@ theorem execList_emitNode_flat (table : List OpSpec) (raw : RawFlow String)
                   rw [ran, ih t targetBlock ctrl _ vals tape' atT (by rw [idEq]; exact foundTarget)
                     sizedTarget (by rw [idEq]; exact holds') inner, idEq]
             · rw [if_neg dom] at shaped; simp at shaped
-      obtain ⟨onRet, onJump, onPerform, onChoose, onExhausted, onMismatch⟩ :=
+      obtain ⟨onRet, onJump, onPerform, onChoose, onExhausted, onMismatch, onPerformCatch⟩ :=
         execList_skeletonBlockWith table raw wf fuel m tape current env nodes _
           (denoteOutcome table raw wf.cycles) mem envSized emitted holds step
           (fun target vals tape' => denoteOutcome_stable table raw wf.cycles fuel target vals tape')
@@ -2060,6 +2681,9 @@ theorem execList_emitNode_flat (table : List OpSpec) (raw : RawFlow String)
       | choose targetBlock foundTarget sizedTarget =>
           rename_i site branch target env' rest
           rw [onChoose site branch target env' rest planEq]; rfl
+      | performCatch targetBlock errorBlock foundTarget sizedTarget foundError sizedError =>
+          rename_i op request target env' onError errorEnv
+          rw [onPerformCatch op request target env' onError errorEnv planEq]; rfl
 
 end Skel
 
