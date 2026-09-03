@@ -246,6 +246,26 @@ private theorem modifyPayloadsAt_congr (name : String)
           · rw [modifyPayloadsAt_cons_other name key payload tail first same,
               modifyPayloadsAt_cons_other name key payload tail second same, ih]
 
+private theorem modifyPayloadsAt_keys (name : String) (f : Json → Json)
+    (entries : List AnnotationEntry) :
+    (modifyPayloadsAt name f entries).map AnnotationEntry.key =
+      entries.map AnnotationEntry.key := by
+  induction entries with
+  | nil => rfl
+  | cons entry tail ih =>
+      cases entry with
+      | mk key payload =>
+          by_cases same : key = name
+          · subst key
+            rw [modifyPayloadsAt_cons_same]
+            change name :: (modifyPayloadsAt name f tail).map AnnotationEntry.key =
+              name :: tail.map AnnotationEntry.key
+            rw [ih]
+          · rw [modifyPayloadsAt_cons_other name key payload tail f same]
+            change key :: (modifyPayloadsAt name f tail).map AnnotationEntry.key =
+              key :: tail.map AnnotationEntry.key
+            rw [ih]
+
 private theorem collectPayloadsAt_modify (name : String)
     (entries : List AnnotationEntry) (f : Json → Json) :
     collectPayloadsAt name (modifyPayloadsAt name f entries) =
@@ -291,6 +311,32 @@ theorem payloadsAt_lawful (name : String) :
     | none => rfl
     | some entries => exact collectPayloadsAt_modify name entries f
 
+/-- Modification preserves the outer shape: an absent bag stays absent rather
+than being created. -/
+theorem payloadsAt_modifyAll_none (name : String) (f : Json → Json) :
+    (payloadsAt name).modifyAll f none = none := rfl
+
+/-- Modification preserves the outer shape: a present bag stays present. -/
+theorem payloadsAt_modifyAll_some (name : String) (f : Json → Json)
+    (entries : List AnnotationEntry) :
+    ∃ modified, (payloadsAt name).modifyAll f (some entries) = some modified :=
+  ⟨modifyPayloadsAt name f entries, rfl⟩
+
+/-- Modification changes payloads only: every entry keeps its position and its
+key, so the entry count, the stored order, the keys, and the multiplicity of
+same-name entries all survive. The four traversal equations do not say this on
+their own — a modifier that dropped every unrelated entry would still satisfy
+`modify_id`, `modify_comp`, and `collect_modify`. -/
+theorem payloadsAt_modifyAll_keys (name : String) (f : Json → Json)
+    (entries modified : List AnnotationEntry)
+    (edited : (payloadsAt name).modifyAll f (some entries) = some modified) :
+    modified.map AnnotationEntry.key = entries.map AnnotationEntry.key := by
+  have listEdited : modifyPayloadsAt name f entries = modified := by
+    change some (modifyPayloadsAt name f entries) = some modified at edited
+    exact Option.some.inj edited
+  rw [← listEdited]
+  exact modifyPayloadsAt_keys name f entries
+
 end Annotations
 
 namespace AnnotationKey
@@ -334,6 +380,41 @@ theorem inTraversal_lawful (key : AnnotationKey A)
     Traversal.Lawful (key.inTraversal outer) := by
   change Traversal.Lawful (outer.compose key.values)
   exact Traversal.Lawful.compose outerLaw (key.values_lawful keyLaw)
+
+/-- A lawful encoder is injective. `decode_encode` already names the inverse;
+this is the separation it implies, and it is what lets a written payload stand
+for its typed value rather than merely decode to one. -/
+theorem Lawful.encode_injective {key : AnnotationKey A} (law : key.Lawful)
+    {first second : A} (equal : key.encode first = key.encode second) :
+    first = second := by
+  have decoded : key.decode (key.encode first) = some second := by
+    rw [equal]
+    exact law.decode_encode second
+  rw [law.decode_encode first] at decoded
+  exact Option.some.inj decoded
+
+/-- Reading every occurrence after a modification is that modification applied
+to every occurrence read before it. Order and multiplicity are preserved
+because `List.map` is. -/
+theorem getAll_modifyAll (key : AnnotationKey A) (law : key.Lawful) (f : A → A)
+    (annotations : Annotations) :
+    key.getAll (key.modifyAll f annotations) = (key.getAll annotations).map f :=
+  (key.values_lawful law).collect_modify annotations f
+
+/-- Reading every occurrence after a total replacement yields the replacement
+once per occurrence. The count of decoded occurrences does not change. -/
+theorem getAll_replaceAll (key : AnnotationKey A) (law : key.Lawful) (value : A)
+    (annotations : Annotations) :
+    key.getAll (key.replaceAll value annotations) =
+      (key.getAll annotations).map (fun _ => value) :=
+  (key.values_lawful law).collect_modify annotations (fun _ => value)
+
+/-- Replacing every occurrence with one value is idempotent. -/
+theorem replaceAll_idempotent (key : AnnotationKey A) (law : key.Lawful) (value : A)
+    (annotations : Annotations) :
+    key.replaceAll value (key.replaceAll value annotations) =
+      key.replaceAll value annotations :=
+  (key.values_lawful law).modify_comp annotations (fun _ => value) (fun _ => value)
 
 end AnnotationKey
 
@@ -393,6 +474,12 @@ def nodeAnnotations : Optional Representation Annotations where
 
 theorem nodeAnnotations_reference (ref : ReferenceKey) :
     nodeAnnotations.preview (.reference ref) = none := rfl
+
+/-- Replacement is a no-op on `Reference`: the constructor carries no
+annotation field, so there is nothing for the optic to write. -/
+theorem nodeAnnotations_replace_reference (ref : ReferenceKey)
+    (replacement : Annotations) :
+    nodeAnnotations.replace replacement (.reference ref) = .reference ref := rfl
 
 theorem nodeAnnotations_string_none :
     nodeAnnotations.preview (.string none []) = some none := rfl

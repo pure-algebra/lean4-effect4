@@ -34,6 +34,7 @@ row is unclaimed.
 
 | File or tree | Claimed by | State |
 | --- | --- | --- |
+| `Effect4/Semantics/Fuel.lean`, `Effect4/Target/TypeScript/StructureLaws.lean`, `Effect4Test/Target/TypeScript/StructureLaws{Contract,AxiomReport}.lean` | Claude (trace-lane owed theorems, 2026-09-03) | proved and green in worktree `agent-a7d1f74bf61e7c52b`; uncommitted. Also touched: `Effect4.lean` (two imports), `Effect4Test.lean` (two imports), `Effect4Test/Flow/Runner{Contract,AxiomReport}.lean`, `Effect4Test/Audit/AxiomGate.lean` (two exact-declaration exemptions), `test/contracts/flow-runner.contract.md`, `test/contracts/flow-structured-lowering.contract.md`, `docs/TRACE-DAG.md` (`structured-agreement` row), `test/counterexamples/REGISTER.md` (`E4-TARGET-CE-013` row) |
 | `Effect4/Data/Row.lean` | Codex | in progress |
 | `test/contracts/data-row.contract.md`, `Effect4Test/Data/RowContract.lean` | Codex | frozen, red |
 | `Effect4Test/Concurrency/**` | Codex | in progress, red |
@@ -436,6 +437,143 @@ under `types/flow/`; every flow golden agrees on the host under every mask at
 both yield settings, and `generated/lowering-coverage.tsv` has all sixteen
 rules `checked`. Packet: `test/contracts/flow-dispatch-lowering.contract.md`.
 Next: P-T6, the property loop (generated flows, tapes, shrinking, mutants).
+
+## P-T6 landed: the property loop, 2026-09-02
+
+`harness/trace/Property.lean` generates flows by construction over the Cell
+type graph (admission is the free oracle), builds tapes by policy through the
+runner (`left`, `right`, `alternate`, `random`, `only<site>`, `visit<site>`), checks per-site
+branch coverage, lowers the corpus into one dispatch-form module and runs it
+once on the host through `effect4-batch` (effect4-tools `ffd3456`); a tape
+exhausted on the host is the unanswered frontier (`tracer.ts`). Seed 2026:
+200 flows, 1277 runs, 276 frontiers, 318 sites, no divergence; three planted
+lowering mutants are caught (`scripts/test-lowering-mutations.sh`); a
+divergence would be shrunk (budget 64) and stored under
+`generated/lowering-property-failures/`. The eight dispatch-form rules are
+`covered`. Packet: `test/contracts/lowering-property.contract.md`. Next: P-T7
+regions (Effects v0.5.0), then P-T9b the structured form.
+
+## Schema consumer survey delivered, 2026-09-02
+
+Claude (Fable) delivered `docs/research/2026-09-02-schema-consumer-survey.md`:
+a read-only survey of every Effect rc.112 module that consumes Schema (core,
+SQL/Model, HttpApi/RPC/Cluster/Workflow/EventLog, AI/encoding/persistence/CLI),
+the Schema lane's status against that map, the framing of boundary surfaces
+(`ApiSurface`, `TableSurface`, `AgentSurface`, `CodecSurface`, lawful data
+constructs) as instances of the trace-lane pipeline, a ranked opportunity
+list, the missing pieces for proof-carrying npm publication, repository
+cleanup items, and upstream findings. Research evidence only: no library
+code, contract, generated assurance, pin, or ruling changed. No file claim
+is held.
+
+## Schema-lane cleanup sweep claim, 2026-09-02
+
+Claude (Fable, survey session) claims, for a cleanup sweep executed in
+isolated worktrees and integrated only into files outside the live
+regions/trace diff:
+
+| File or tree | State |
+| --- | --- |
+| `Effect4/Data/Optic.lean` (additive corollaries only, public statements unchanged), `Effect4/Schema/Annotations.lean` (use of a new lemma only) | proofs, in progress |
+| `harness/schema-generation/**`, `harness/schema-effectful-field/**`, `scripts/check-schema-typescript-generation.sh`, `scripts/check-schema-effectful-field.sh` (new), `scripts/test-schema-typescript-generation-gate.sh` (new), `scripts/generate-schema-structural-assurance.sh` (add generator input only) | gates, in progress |
+| `PORT-MANIFEST.md`, `docs/SCHEMA-CUTOVER.md` (status header only), `docs/SCHEMA-SURFACE-SURVEY.md` (§4 counts), `harness/README.md` | docs drift, in progress |
+| `docs/research/2026-09-02-standards-targets-survey.md` (new) | research, in progress |
+
+The Codex rows above naming `Effect4/Data/Optic.lean`, `PORT-MANIFEST.md`,
+`docs/SCHEMA-CUTOVER.md`, and the structural-assurance scripts date from the
+payload freeze; the assurance join records those edges closed, so this sweep
+treats them as released and says so here rather than silently. Nothing in
+`git diff --name-only` at claim time (regions and trace lane, lakefile pins,
+`Effect4.lean`, `Effect4Test.lean`, `Effect4Test/Audit/AxiomGate.lean`,
+`Effect4Test/Target/TypeScript/LoweringCoverage.lean`) is touched.
+`generated/schema-structural-assurance.tsv` is regenerated only when no
+other `lake` process is running in this tree.
+
+## P-T7 landed: regions, 2026-09-02
+
+lean4-effects v0.5.0 (`c28833b`) adds `Effects/Flow/Region.lean`: a region
+layer erasing to Flow v2 (`enter`, `acquire`, `leave`, region rows, fourteen
+region clauses, `admitRegions`, `CheckedRegionFlow`); the v2 surface is
+untouched. lean4-typescript v0.3.0 (`1f39598`) adds `Expr.lambda`,
+`Expr.method`, `Stmt.scopedGen`. In Effect4: the region runner
+(`Effect4/Flow/Region.lean`: frames, `closeFrame` latest-first with the closing
+exit, `unwind`, `RunResult.failed`), the region lowering
+(`Effect4/Target/TypeScript/RegionLower.lean`: `Effect.scoped(Effect.onExit(...))`
+with `Effect.acquireRelease` inside, rules `region-enter`/`region-acquire`/
+`region-leave`, nineteen rules in all), the `RCell` family with failing
+operations, three region goldens that agree on rc.112 under every mask at both
+yield settings (`regionNested`, `regionTwoFail`, `regionBothSucceed`), receipts
+and ledgers. Facts pinned: releases run latest-first with the closing exit;
+a body failure is the run's failure; a fallible release has no lowering
+(`Effect.acquireRelease` types it `never`). Rows `E4-FLOW-CE-019`, `-020`,
+`E4-TARGET-CE-012`. Codex: `Effect4/Target/TypeScript/Schema.lean`'s
+`exprKeysUnique` gained the two v0.3.0 arms (`lambda`, `method`) with the pin
+bump. Next: P-T9b, the structured form.
+
+## P-T9b landed: the structured form, 2026-09-02
+
+lean4-typescript v0.4.1 (`cc62799`) adds `TypeScript/Structure.lean`: reverse
+postorder, Cooper–Harvey–Kennedy dominators, reducibility, and emission over
+the dominator tree with caller-supplied shapes (re-derived; js_of_ocaml is
+reference only, and the local 5.7.1 checkout Codex holds lacks master's
+`Dispatch` edge kind, so nothing was copied). In Effect4,
+`Effect4/Target/TypeScript/StructuredLower.lean` lowers a reducible flow to
+labelled blocks, `while (true)` loops, `break` and `continue` (rules
+`structured-loop`, `structured-merge`, `structured-continue`,
+`structured-break`), keeps the dispatch form otherwise (`dispatch-fallback`,
+witnessed by the new `irreducible` program), and does the same inside
+regions. `FlowLower.lowerBlockWith` makes the block body parametric in its
+transfer; the dispatch output is unchanged byte for byte. The structured
+module runs against every flow golden and the whole property corpus (1277
+cases agree both ways; a fourth mutant, `continue` to `break`, is caught).
+The corpus found one structuring defect before any golden did (an entry that
+is its own loop header; `E4-TARGET-CE-013`, fixed in v0.4.1). Twenty-four
+rules in the ledger. Owed: the Lean theorem that both forms agree on every
+flow (`docs/TRACE-DAG.md`, `structured-agreement`). Packet:
+`test/contracts/flow-structured-lowering.contract.md`. Next: P-T11, the
+patched rc.112 copy, and the owed theorems (`fuelFor` suffices, structured
+agreement).
+
+## P-T11 landed: the patched rc.112 copy, 2026-09-02
+
+`harness/trace/patched/` holds a seven-hunk observation-only manifest and
+`apply.mjs`, which builds a patched copy of the pinned `effect` package under
+an ignored `_copy/` selected only through `EFFECT4_EFFECT_NODE_MODULES`; every
+tail reports the frame rows and `effect4-trace` records them with the
+manifest digest. `scripts/check-trace-patched.sh` requires every flow golden
+to agree under every mask on the patched copy and pins three scope facts:
+two releases latest-first through the loop, a single release inline (rc.112
+never enters `scopeCloseFinalizers` for one finalizer: `E4-TARGET-CE-014`),
+nested single releases inline inner-first. `Effect4/Target/TypeScript/Simulation.lean`
+defines the projections from `FrameEvent` and the scheduler `Event` into the
+service-level alphabet (finalizers and outcomes only); the `bridges` edges of
+both DAGs stay open with a statement now available. Packet:
+`test/contracts/trace-patched-host.contract.md`. The plan's packets are all
+landed; the owed theorems (`fuelFor` suffices, structured agreement) are with
+a proof agent on a worktree branch.
+
+## Live-stack integration claim, 2026-09-03
+
+Codex resumes the operator-requested OCaml/Rocq bootstrap integration after
+committing the research workspace at `d8d32e2`. This packet is additive: the
+existing `Runtime.lean`, its frozen frame packet, the trace lane, and all
+dependency pins remain unchanged. The independent breaker freezes on
+`codex/live-stack-integration` before implementation; verified packet files
+will be applied to this checkout without switching its branch.
+
+| File or section | Owner and fence |
+| --- | --- |
+| `test/contracts/live-stack.contract.md`, `Effect4Test/Runtime/LiveStackContract.lean`, `Effect4Test/Runtime/LiveStackAxiomReport.lean`, `Effect4Test/Counterexamples/Runtime/LiveStack.lean`, `docs/LIVE-STACK-DAG.md` | Codex independent live-stack breaker; new files only |
+| `Effect4/Runtime/LiveStack.lean`, `harness/live-stack/**`, `scripts/check-live-stack.mjs`, `scripts/test-live-stack-mutations.mjs`, `docs/LIVE-STACK-IMPLEMENTATION.md` | Codex live-stack builder; no second primitive, cause, exit, or fiber carrier |
+| `Effect4.lean`, `Effect4Test.lean` (new LiveStack imports only), `test/fixtures/trust-gate/known-red.txt` (new LiveStack entries only) | Codex live-stack packet wiring |
+| `test/counterexamples/REGISTER.md` (`E4-RUN-CE-022` through `024` only) | Codex independent live-stack breaker; additive runtime rows |
+
+The first package theorem must preserve the full `FramePop` for every existing
+primitive and both values of the interruption-skipping flag, not just the
+research probe's `skipInterrupted=false` case. Public callback regression
+evidence retains the same-final-result, different-interruption-prefix witness.
+Adding `AsyncFinalizer`, switching the default runtime, and claiming an
+executing scheduler/finalizer simulation remain separate open obligations.
 
 ## D4 fence A landed: the uninterrupted fragment and fuel additivity, 2026-09-03
 

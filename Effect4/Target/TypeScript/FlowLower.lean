@@ -72,10 +72,14 @@ end Flow
 
 namespace Lowering
 
-/-- Every admitted graph lowers to one dispatch loop over the block index.
-lowering: rule.dispatch-loop -/
+/-- Every admitted graph lowers to one dispatch loop over the block index
+held in `blockVar`. lowering: rule.dispatch-loop -/
+def dispatchLoopOn (blockVar : String) (cases : List (Nat × List Stmt)) : Stmt :=
+  .whileTrue none [.switch (.ident blockVar) cases]
+
+/-- The top-level dispatch loop, over `block`. -/
 def dispatchLoop (cases : List (Nat × List Stmt)) : Stmt :=
-  .whileTrue none [.switch (.ident "block") cases]
+  dispatchLoopOn "block" cases
 
 /-- One block is one `case` whose body ends in `continue` or `return`.
 lowering: rule.block-case -/
@@ -138,15 +142,14 @@ def literal? : Val → Option Expr
   | .unit => some (.ident "undefined")
   | _ => none
 
-/-- The body of one block: its answer or decision, then the move and transfer. -/
-def lowerBlock (rows : ServiceRow) (table : List OpSpec) (block : RawBlock String) :
-    Option (List Stmt) :=
+/-- The body of one block, its answer or decision followed by the move and
+the control transfer `transfer target values` supplies. -/
+def lowerBlockWith (rows : ServiceRow) (table : List OpSpec) (block : RawBlock String)
+    (transfer : BlockId → List Expr → Option (List Stmt)) : Option (List Stmt) :=
   let var (v : Var) : Expr := .ident (paramVar block.id v.index)
-  let transfer (target : BlockId) (values : List Expr) : List Stmt :=
-    Lowering.paramMove block.id target values ++ Lowering.goto target
   match block.term with
   | .ret value => some [Lowering.flowRet (var value)]
-  | .jump target args => some (transfer target (args.map var))
+  | .jump target args => transfer target (args.map var)
   | .perform operation request target args => do
       let spec ← spec? table operation
       let answer := "a" ++ toString block.id.value
@@ -157,11 +160,22 @@ def lowerBlock (rows : ServiceRow) (table : List OpSpec) (block : RawBlock Strin
                else Lowering.performCall rows.receiver spec.name [var request]))
         | .atom => some (Lowering.flowAtom answer spec.name (var request))
         | .lit value => (literal? value).map (Lowering.flowLiteral answer)
-      some (head :: transfer target (args.map var ++ [.ident answer]))
-  | .choose decision left right args =>
+      let rest ← transfer target (args.map var ++ [.ident answer])
+      some (head :: rest)
+  | .choose decision left right args => do
       let name := "c" ++ toString block.id.value
-      some (Lowering.chooseIf name decision
-        (transfer left (args.map var)) (transfer right (args.map var)))
+      let toLeft ← transfer left (args.map var)
+      let toRight ← transfer right (args.map var)
+      some (Lowering.chooseIf name decision toLeft toRight)
+
+/-- The dispatch-form transfer: the move, then `block = target; continue`. -/
+def dispatchTransfer (source : BlockId) (target : BlockId) (values : List Expr) : Option (List Stmt) :=
+  some (Lowering.paramMove source target values ++ Lowering.goto target)
+
+/-- The body of one block in the dispatch form. -/
+def lowerBlock (rows : ServiceRow) (table : List OpSpec) (block : RawBlock String) :
+    Option (List Stmt) :=
+  lowerBlockWith rows table block (dispatchTransfer block.id)
 
 /-- Whether a block performs a family operation. -/
 def performsFamily (table : List OpSpec) (block : RawBlock String) : Bool :=

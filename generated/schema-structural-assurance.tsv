@@ -1,35 +1,44 @@
 format	effect4-schema-structural-assurance-v1
-generator	scripts/generate-schema-structural-assurance.sh	sha256=e1ffd3703a0fb42bf2423e1c686614554f491b74c82bdb2a475a4c272bd34ccd
+generator	scripts/generate-schema-structural-assurance.sh	sha256=ad1d43ac56e2ddf9c6b35fad28c5d03a6cd3b3f42901fdc99ba781b67ddda592
 regenerate	./scripts/generate-schema-structural-assurance.sh > generated/schema-structural-assurance.tsv
-input	Effect4/Data/Optic.lean	sha256=f9f879a3e3e99052e41fa43f76eb290a664f3280bc6897e95713b0bfdbcc826a
-input	Effect4/Data/Json.lean	sha256=8714c8fbb3a3e3ba3bee94ed392bc32abe5367e9a468f5c0817e86d01926d330
+input	Effect4/Data/Optic.lean	sha256=0a02907cd4e994ff180c2d11b090f7948481dc888812d85bdb892fb7c0adf78f
+input	Effect4/Data/Json.lean	sha256=49c8596a6a84ee3d35e1b1def69f3d665a559340effb2237996ecd4ec953c75e
 input	Effect4/Schema/Payload.lean	sha256=77dc812193a79c389d2a69e4ce3f6a3461c966e6487b273ae673258e4b65d18e
-input	Effect4/Schema/Representation.lean	sha256=66993fc8cee115e3869cc75dd66c0f337d31e4671d12cdd40e56ee44c5a52306
-input	Effect4/Schema/Annotations.lean	sha256=07f19339d44e088437611dd6a5efd4c1fc6d6d23a17b2d2763cd69fa0a67b9dd
-input	Effect4/Schema/Document.lean	sha256=e3337eb9f228d09ec0a511e0b4120743f25f95ab15a246b5ee1dbf1f5c735551
-input	Effect4/Schema/Check.lean	sha256=98439bbd47195d266a188345dc749fbd9aa11bb1499d2944476dde78c8c2a9ef
+input	Effect4/Schema/Representation.lean	sha256=a1037e5b38ae0eaf1c04efb46ea137d44569b7321b61dc73550d042023ce4fc3
+input	Effect4/Schema/Annotations.lean	sha256=94fdb0e002c79fbaddd00f862f184f822373a0d33dda947ecb85443b3bd2beb7
+input	Effect4/Schema/Document.lean	sha256=16ac1aaf3f7abff54b53f1fda0091969635a0bf4aad97f2e09bfdc0921f7e364
+input	Effect4/Schema/Check.lean	sha256=49c40a2d14d5a18e04484403995ff236db0860a15f1c985e00e73ce0fbede9fe
+input	Effect4/Target/TypeScript/Schema.lean	sha256=eee62e67b1602e1e86e4c64c009fbd3a1374d8a855484d76b98bd2e64fd86198
+input	Effect4/Schema/EffectfulField.lean	sha256=2c54ef3ce3f1a60442b40c5cffe7bf850bd1bdc669cd7a6915bc9dd7666052b9
 input	test/contracts/schema-representation.contract.md	sha256=a2b85dd7ce72a8f74abfedeccb1142d7a85fa9913820fa8412c1410489ab90ee
 input	test/contracts/schema-subalphabets.contract.md	sha256=1b3d298d732be54c47108dafe914639bb5167eecc1d6b3dd27d50591fed65555
 input	test/contracts/schema-payload.contract.md	sha256=aa7d193d778cbc8e1c6ddb616d14ed7fc856889178d201439a4e36f550000f89
 input	test/contracts/schema-recursor.contract.md	sha256=c70ff82cf5b55e18516e78db1f6720441920225390ad90e99e3e3c2dd115a4d3
 input	test/contracts/schema-annotations.contract.md	sha256=0414c65d3c1120d6be286d79a7cdd7b0334e97517604dde60795b9f9813726f8
+input	test/contracts/schema-effectful-field.contract.md	sha256=7703abd3d4533387faf5c0e482da8008e4c390f2a7a6145ad6b22879d51d03d2
+input	test/contracts/schema-effectful-field-properties.contract.md	sha256=9c23feccc4762a50c2fa2806079758843ce40c460927020c4a0c870cfaa83f7c
 battery	Effect4Test/Schema/RepresentationContract.lean	sha256=fed90a2b7174a41546003dc77f248d8838935fd4ecef707e868a4705f85bcd61	required-closed
 battery	Effect4Test/Schema/SubAlphabetContract.lean	sha256=a57ed694dabe08754f28d32dc57252c49044e0c7a85ff13592eb8f968cefdf8a	required-closed
 battery	Effect4Test/Schema/PayloadContract.lean	sha256=e80d4be2f6385228aa87766d61ad4056fef68f947d0347cc15e1ac9279c6d27f	required-closed
 battery	Effect4Test/Schema/RepresentationFoldContract.lean	sha256=4de2a571131c843e83a036fcb518b45b2f1272caf3ec1467e601bc7e4510396b	required-closed
 battery	Effect4Test/Data/OpticContract.lean	sha256=b65b86534af75ec8067bda3cb3a96bd58bf8dc541a3b28dd55ddd6b7608a8bc5	required-closed
 battery	Effect4Test/Schema/AnnotationDataPlaneContract.lean	sha256=1b2aa06d0940a6e48d2c4cdbacc6a9cb67745113d78ce07ee03bcae0090fcb67	required-closed
+battery	Effect4Test/Schema/EffectfulFieldContract.lean	sha256=9293f80d81b41fb9d2e85c25f6e62bc2da9b889e8b7e9f57dce4f744265333b4	required-closed
+battery	Effect4Test/Schema/EffectfulFieldPropertiesContract.lean	sha256=504911bba1a85bf1aa5a07244ca415b510d5917d4b027c197ad355ed8d8d0eb3	required-closed
 input	Effect4Test/Schema/PayloadSurface.lean	sha256=039055e0302c7747e63a9ac8e3b63635e6a212c6ad18a60caabd6dfb44a20df8
 counterexample-battery	Effect4Test/Counterexamples/Schema/RecursiveElimination.lean	sha256=6625927071bd376f3088f2086c50f03d6440c3921e1fac94f7968d54e20197d9	required-closed
-counterexample-battery	Effect4Test/Counterexamples/Schema/AnnotationDataPlane.lean	sha256=969e2e613043a6990d47e2530bd36d5165a95eb987effaca4be748d60dad6058	required-closed
-input	Effect4Test/Schema/StructuralAssurance.lean	sha256=ab65034dc27e770287478d4496f2a485740f052e2ad5294d851242d5fcc1ef65
-input	Effect4Test/Schema/AxiomReport.lean	sha256=fbd6662dc34243dc40455230af3f35831aff8d0a4ebed3578454ea07dc6f1f36
+counterexample-battery	Effect4Test/Counterexamples/Schema/AnnotationDataPlane.lean	sha256=7cc4b2518165952dfbd8bcde720025d1f4c589f2af1d0a177ba9a2112857694b	required-closed
+counterexample-battery	Effect4Test/Counterexamples/Schema/EffectfulField.lean	sha256=1a9c34f81e531faf4fb2c44aa7a27bb20fbab9c16ebf91e638fc4ca6d3cef6f1	required-closed
+counterexample-battery	Effect4Test/Counterexamples/Schema/EffectfulFieldProperties.lean	sha256=3a63c61023f4d0b1cd74fa2911dabd277a99693492a5b2efa45ecf9a2aa4cabd	required-closed
+input	Effect4Test/Schema/StructuralAssurance.lean	sha256=16562e535ac9c58bdf7339efdd7e1ca470c56503ee0d324a41dcafd5ebd7ad73
+input	Effect4Test/Schema/AxiomReport.lean	sha256=2cdf8949fc4d2222ff4f28e28c1400d69e916f6745ecc7167f042ba0e6688bec
 source-pin	effect@4.0.0-rc.112	vendor/effect-4.0.0-rc.112/src/SchemaRepresentation.ts	sha256=a0a7a1537cfe3a9159a80210e3de92342cc9e98651f0e8273a75ccdcccae69bc	required-closed
 gate	SC-REP-CENSUS-PIN	scripts/check-schema-census.sh	required-closed
 gate	SC-REP-FIELD-PIN	scripts/check-schema-fields.sh	required-closed
 gate	SCHEMA-PAYLOAD-SURFACE	scripts/check-schema-payload-surface.sh	required-closed
 detector	SCHEMA-PAYLOAD-SURFACE-REACTION	scripts/test-schema-payload-surface-gate.sh	13-of-13	required-closed
 gate	SCHEMA-ANNOTATION-HOST	scripts/check-schema-annotations.sh	required-closed
+gate	SCHEMA-EFFECTFUL-FIELD-HOST	scripts/check-schema-effectful-field.sh	required-closed
 counterexample	E4-SCHEMA-CE-017	SEEDED	test/counterexamples/REGISTER.md	required-closed
 counterexample	E4-SCHEMA-CE-018	SEEDED	test/counterexamples/REGISTER.md	required-closed
 counterexample	E4-SCHEMA-CE-019	SEEDED	test/counterexamples/REGISTER.md	required-closed
@@ -62,6 +71,13 @@ counterexample	E4-SCHEMA-CE-045	SEEDED	test/counterexamples/REGISTER.md	required
 counterexample	E4-SCHEMA-CE-046	SEEDED	test/counterexamples/REGISTER.md	required-closed
 counterexample	E4-SCHEMA-CE-047	SEEDED	test/counterexamples/REGISTER.md	required-closed
 counterexample	E4-SCHEMA-CE-048	SEEDED	test/counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-049	SEEDED	test/counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-050	SEEDED	test/counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-051	SEEDED	test/counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-052	SEEDED	test/counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-053	SEEDED	test/counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-054	SEEDED	test/counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-055	SEEDED	test/counterexamples/REGISTER.md	required-closed
 owned-declaration	Effect4.Lens	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Lens.Lawful	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Lens.Lawful.casesOn	Effect4.Data.Optic	DATA-PG-OPTIC
@@ -73,11 +89,17 @@ owned-declaration	Effect4.Lens.Lawful.recOn	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Lens.Lawful.replace_get	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Lens.Lawful.replace_replace	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Lens.Lawful.toOptional	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Lens.Lawful.toTraversal	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Lens.casesOn	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Lens.compose	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Lens.compose.eq_1	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Lens.compose_assoc	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Lens.compose_identity	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Lens.ctorIdx	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Lens.get	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Lens.identity	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Lens.identity_compose	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Lens.identity_lawful	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Lens.mk	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Lens.mk.inj	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Lens.mk.injEq	Effect4.Data.Optic	DATA-PG-OPTIC
@@ -90,6 +112,11 @@ owned-declaration	Effect4.Lens.rec	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Lens.recOn	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Lens.replace	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Lens.toOptional	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Lens.toOptional_compose	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Lens.toOptional_identity	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Lens.toTraversal	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Lens.toTraversal_compose	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Lens.toTraversal_identity	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Optional	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Optional.Lawful	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Optional.Lawful.casesOn	Effect4.Data.Optic	DATA-PG-OPTIC
@@ -104,13 +131,20 @@ owned-declaration	Effect4.Optional.Lawful.replace_replace	Effect4.Data.Optic	DAT
 owned-declaration	Effect4.Optional.Lawful.toTraversal	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Optional.casesOn	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Optional.compose	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Optional.compose.eq_1	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Optional.compose_identity_preview	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Optional.compose_identity_replace	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Optional.ctorIdx	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Optional.identity	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Optional.identity_compose	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Optional.identity_lawful	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Optional.mk	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Optional.mk.inj	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Optional.mk.injEq	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Optional.mk.noConfusion	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Optional.mk.sizeOf_spec	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Optional.modify	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Optional.modify.eq_1	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Optional.modify.match_1	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Optional.noConfusion	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Optional.noConfusionType	Effect4.Data.Optic	DATA-PG-OPTIC
@@ -119,6 +153,9 @@ owned-declaration	Effect4.Optional.rec	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Optional.recOn	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Optional.replace	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Optional.toTraversal	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Optional.toTraversal_compose_collect	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Optional.toTraversal_compose_modifyAll	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Optional.toTraversal_identity	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Traversal	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Traversal.Lawful	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Traversal.Lawful.casesOn	Effect4.Data.Optic	DATA-PG-OPTIC
@@ -133,7 +170,17 @@ owned-declaration	Effect4.Traversal.Lawful.recOn	Effect4.Data.Optic	DATA-PG-OPTI
 owned-declaration	Effect4.Traversal.casesOn	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Traversal.collect	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Traversal.compose	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Traversal.compose_assoc_collect	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Traversal.compose_assoc_modifyAll	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Traversal.compose_collect	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Traversal.compose_identity_collect	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Traversal.compose_identity_modifyAll	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Traversal.compose_modifyAll	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Traversal.ctorIdx	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Traversal.identity	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Traversal.identity_compose_collect	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Traversal.identity_compose_modifyAll	Effect4.Data.Optic	DATA-PG-OPTIC
+owned-declaration	Effect4.Traversal.identity_lawful	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Traversal.mk	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Traversal.mk.inj	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Traversal.mk.injEq	Effect4.Data.Optic	DATA-PG-OPTIC
@@ -154,14 +201,32 @@ theorem	Effect4.Lens.Lawful.replace_replace	Effect4.Data.Optic	DATA-PG-OPTIC
 axiom	Effect4.Lens.Lawful.replace_replace	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Lens.Lawful.toOptional	Effect4.Data.Optic	DATA-PG-OPTIC
 axiom	Effect4.Lens.Lawful.toOptional	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Lens.Lawful.toTraversal	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Lens.Lawful.toTraversal	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Lens.compose.eq_1	Effect4.Data.Optic	DATA-PG-OPTIC
 axiom	Effect4.Lens.compose.eq_1	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Lens.compose_assoc	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Lens.compose_assoc	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Lens.compose_identity	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Lens.compose_identity	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Lens.identity_compose	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Lens.identity_compose	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Lens.identity_lawful	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Lens.identity_lawful	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Lens.mk.inj	Effect4.Data.Optic	DATA-PG-OPTIC
 axiom	Effect4.Lens.mk.inj	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Lens.mk.injEq	Effect4.Data.Optic	DATA-PG-OPTIC
 axiom	Effect4.Lens.mk.injEq	propext	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Lens.mk.sizeOf_spec	Effect4.Data.Optic	DATA-PG-OPTIC
 axiom	Effect4.Lens.mk.sizeOf_spec	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Lens.toOptional_compose	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Lens.toOptional_compose	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Lens.toOptional_identity	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Lens.toOptional_identity	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Lens.toTraversal_compose	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Lens.toTraversal_compose	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Lens.toTraversal_identity	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Lens.toTraversal_identity	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Optional.Lawful.compose	Effect4.Data.Optic	DATA-PG-OPTIC
 axiom	Effect4.Optional.Lawful.compose	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Optional.Lawful.preview_replace	Effect4.Data.Optic	DATA-PG-OPTIC
@@ -174,12 +239,30 @@ theorem	Effect4.Optional.Lawful.replace_replace	Effect4.Data.Optic	DATA-PG-OPTIC
 axiom	Effect4.Optional.Lawful.replace_replace	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Optional.Lawful.toTraversal	Effect4.Data.Optic	DATA-PG-OPTIC
 axiom	Effect4.Optional.Lawful.toTraversal	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Optional.compose.eq_1	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Optional.compose.eq_1	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Optional.compose_identity_preview	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Optional.compose_identity_preview	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Optional.compose_identity_replace	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Optional.compose_identity_replace	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Optional.identity_compose	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Optional.identity_compose	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Optional.identity_lawful	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Optional.identity_lawful	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Optional.mk.inj	Effect4.Data.Optic	DATA-PG-OPTIC
 axiom	Effect4.Optional.mk.inj	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Optional.mk.injEq	Effect4.Data.Optic	DATA-PG-OPTIC
 axiom	Effect4.Optional.mk.injEq	propext	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Optional.mk.sizeOf_spec	Effect4.Data.Optic	DATA-PG-OPTIC
 axiom	Effect4.Optional.mk.sizeOf_spec	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Optional.modify.eq_1	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Optional.modify.eq_1	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Optional.toTraversal_compose_collect	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Optional.toTraversal_compose_collect	propext	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Optional.toTraversal_compose_modifyAll	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Optional.toTraversal_compose_modifyAll	propext	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Optional.toTraversal_identity	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Optional.toTraversal_identity	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Traversal.Lawful.collect_modify	Effect4.Data.Optic	DATA-PG-OPTIC
 axiom	Effect4.Traversal.Lawful.collect_modify	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Traversal.Lawful.compose	Effect4.Data.Optic	DATA-PG-OPTIC
@@ -190,6 +273,24 @@ theorem	Effect4.Traversal.Lawful.modify_congr	Effect4.Data.Optic	DATA-PG-OPTIC
 axiom	Effect4.Traversal.Lawful.modify_congr	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Traversal.Lawful.modify_id	Effect4.Data.Optic	DATA-PG-OPTIC
 axiom	Effect4.Traversal.Lawful.modify_id	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Traversal.compose_assoc_collect	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Traversal.compose_assoc_collect	propext	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Traversal.compose_assoc_modifyAll	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Traversal.compose_assoc_modifyAll	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Traversal.compose_collect	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Traversal.compose_collect	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Traversal.compose_identity_collect	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Traversal.compose_identity_collect	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Traversal.compose_identity_modifyAll	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Traversal.compose_identity_modifyAll	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Traversal.compose_modifyAll	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Traversal.compose_modifyAll	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Traversal.identity_compose_collect	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Traversal.identity_compose_collect	propext	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Traversal.identity_compose_modifyAll	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Traversal.identity_compose_modifyAll	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Traversal.identity_lawful	Effect4.Data.Optic	DATA-PG-OPTIC
+axiom	Effect4.Traversal.identity_lawful	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Traversal.mk.inj	Effect4.Data.Optic	DATA-PG-OPTIC
 axiom	Effect4.Traversal.mk.inj	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Traversal.mk.injEq	Effect4.Data.Optic	DATA-PG-OPTIC
@@ -222,11 +323,13 @@ owned-declaration	Effect4.Float64.noConfusionType	Effect4.Data.Json	SCHEMA-LEAF-
 owned-declaration	Effect4.Float64.not_isFinite_ofBits_iff	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
 owned-declaration	Effect4.Float64.ofBits	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
 owned-declaration	Effect4.Float64.ofBits.eq_1	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
+owned-declaration	Effect4.Float64.ofBits_injective	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
 owned-declaration	Effect4.Float64.ofBits_toBits	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
 owned-declaration	Effect4.Float64.posInfinity	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
 owned-declaration	Effect4.Float64.rec	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
 owned-declaration	Effect4.Float64.recOn	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
 owned-declaration	Effect4.Float64.toBits	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
+owned-declaration	Effect4.Float64.toBits_injective	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
 owned-declaration	Effect4.Float64.toBits_nan	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
 owned-declaration	Effect4.Float64.toBits_negInfinity	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
 owned-declaration	Effect4.Float64.toBits_negZero	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
@@ -344,8 +447,12 @@ theorem	Effect4.Float64.not_isFinite_ofBits_iff	Effect4.Data.Json	SCHEMA-LEAF-FL
 axiom	Effect4.Float64.not_isFinite_ofBits_iff	Quot.sound,propext	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Float64.ofBits.eq_1	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
 axiom	Effect4.Float64.ofBits.eq_1	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Float64.ofBits_injective	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
+axiom	Effect4.Float64.ofBits_injective	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Float64.ofBits_toBits	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
 axiom	Effect4.Float64.ofBits_toBits	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Float64.toBits_injective	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
+axiom	Effect4.Float64.toBits_injective	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Float64.toBits_nan	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
 axiom	Effect4.Float64.toBits_nan	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Float64.toBits_negInfinity	Effect4.Data.Json	SCHEMA-LEAF-FLOAT64-BITS
@@ -867,6 +974,8 @@ owned-declaration	Effect4.EnumValueKind.census_nodup	Effect4.Schema.Representati
 owned-declaration	Effect4.EnumValueKind.ctorElim	Effect4.Schema.Representation	SCHEMA-LEAF-ENUM-VALUE-KIND
 owned-declaration	Effect4.EnumValueKind.ctorElimType	Effect4.Schema.Representation	SCHEMA-LEAF-ENUM-VALUE-KIND
 owned-declaration	Effect4.EnumValueKind.ctorIdx	Effect4.Schema.Representation	SCHEMA-LEAF-ENUM-VALUE-KIND
+owned-declaration	Effect4.EnumValueKind.exists_toLiteralKind_iff	Effect4.Schema.Representation	SCHEMA-LEAF-ENUM-VALUE-KIND
+owned-declaration	Effect4.EnumValueKind.exists_toLiteralKind_iff.match_1_1	Effect4.Schema.Representation	SCHEMA-LEAF-ENUM-VALUE-KIND
 owned-declaration	Effect4.EnumValueKind.mem_census	Effect4.Schema.Representation	SCHEMA-LEAF-ENUM-VALUE-KIND
 owned-declaration	Effect4.EnumValueKind.noConfusion	Effect4.Schema.Representation	SCHEMA-LEAF-ENUM-VALUE-KIND
 owned-declaration	Effect4.EnumValueKind.noConfusionType	Effect4.Schema.Representation	SCHEMA-LEAF-ENUM-VALUE-KIND
@@ -1430,6 +1539,8 @@ theorem	Effect4.EnumValueKind.census_length	Effect4.Schema.Representation	SCHEMA
 axiom	Effect4.EnumValueKind.census_length	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.EnumValueKind.census_nodup	Effect4.Schema.Representation	SCHEMA-LEAF-ENUM-VALUE-KIND
 axiom	Effect4.EnumValueKind.census_nodup	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.EnumValueKind.exists_toLiteralKind_iff	Effect4.Schema.Representation	SCHEMA-LEAF-ENUM-VALUE-KIND
+axiom	Effect4.EnumValueKind.exists_toLiteralKind_iff	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.EnumValueKind.mem_census	Effect4.Schema.Representation	SCHEMA-LEAF-ENUM-VALUE-KIND
 axiom	Effect4.EnumValueKind.mem_census	propext	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.EnumValueKind.number.sizeOf_spec	Effect4.Schema.Representation	SCHEMA-LEAF-ENUM-VALUE-KIND
@@ -1777,6 +1888,7 @@ owned-declaration	Effect4.AnnotationKey.Lawful	Effect4.Schema.Annotations	SCHEMA
 owned-declaration	Effect4.AnnotationKey.Lawful.casesOn	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.AnnotationKey.Lawful.decode_encode	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.AnnotationKey.Lawful.encode_decode	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
+owned-declaration	Effect4.AnnotationKey.Lawful.encode_injective	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.AnnotationKey.Lawful.mk	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.AnnotationKey.Lawful.rec	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.AnnotationKey.Lawful.recOn	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
@@ -1791,6 +1903,8 @@ owned-declaration	Effect4.AnnotationKey.encode	Effect4.Schema.Annotations	SCHEMA
 owned-declaration	Effect4.AnnotationKey.entry	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.AnnotationKey.entry_of_decodeEntry	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.AnnotationKey.getAll	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
+owned-declaration	Effect4.AnnotationKey.getAll_modifyAll	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
+owned-declaration	Effect4.AnnotationKey.getAll_replaceAll	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.AnnotationKey.inTraversal	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.AnnotationKey.inTraversal_lawful	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.AnnotationKey.mk	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
@@ -1805,11 +1919,15 @@ owned-declaration	Effect4.AnnotationKey.noConfusionType	Effect4.Schema.Annotatio
 owned-declaration	Effect4.AnnotationKey.rec	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.AnnotationKey.recOn	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.AnnotationKey.replaceAll	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
+owned-declaration	Effect4.AnnotationKey.replaceAll_idempotent	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.AnnotationKey.singleton	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.AnnotationKey.values	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.AnnotationKey.values_lawful	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.Annotations.payloadsAt	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.Annotations.payloadsAt_lawful	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
+owned-declaration	Effect4.Annotations.payloadsAt_modifyAll_keys	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
+owned-declaration	Effect4.Annotations.payloadsAt_modifyAll_none	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
+owned-declaration	Effect4.Annotations.payloadsAt_modifyAll_some	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.Check.annotationBags	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.Check.annotationBags_lawful	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.Check.annotationsLens	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
@@ -1826,15 +1944,22 @@ owned-declaration	Effect4.Representation.nodeAnnotations.match_1	Effect4.Schema.
 owned-declaration	Effect4.Representation.nodeAnnotations.match_3	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.Representation.nodeAnnotations_lawful	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.Representation.nodeAnnotations_reference	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
+owned-declaration	Effect4.Representation.nodeAnnotations_replace_reference	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 owned-declaration	Effect4.Representation.nodeAnnotations_string_none	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 theorem	Effect4.AnnotationKey.Lawful.decode_encode	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 axiom	Effect4.AnnotationKey.Lawful.decode_encode	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.AnnotationKey.Lawful.encode_decode	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 axiom	Effect4.AnnotationKey.Lawful.encode_decode	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.AnnotationKey.Lawful.encode_injective	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
+axiom	Effect4.AnnotationKey.Lawful.encode_injective	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.AnnotationKey.decodeEntry_entry	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 axiom	Effect4.AnnotationKey.decodeEntry_entry	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.AnnotationKey.entry_of_decodeEntry	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 axiom	Effect4.AnnotationKey.entry_of_decodeEntry	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.AnnotationKey.getAll_modifyAll	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
+axiom	Effect4.AnnotationKey.getAll_modifyAll	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.AnnotationKey.getAll_replaceAll	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
+axiom	Effect4.AnnotationKey.getAll_replaceAll	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.AnnotationKey.inTraversal_lawful	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 axiom	Effect4.AnnotationKey.inTraversal_lawful	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.AnnotationKey.mk.inj	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
@@ -1843,10 +1968,18 @@ theorem	Effect4.AnnotationKey.mk.injEq	Effect4.Schema.Annotations	SCHEMA-PG-ANNO
 axiom	Effect4.AnnotationKey.mk.injEq	propext	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.AnnotationKey.mk.sizeOf_spec	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 axiom	Effect4.AnnotationKey.mk.sizeOf_spec	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.AnnotationKey.replaceAll_idempotent	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
+axiom	Effect4.AnnotationKey.replaceAll_idempotent	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.AnnotationKey.values_lawful	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 axiom	Effect4.AnnotationKey.values_lawful	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Annotations.payloadsAt_lawful	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 axiom	Effect4.Annotations.payloadsAt_lawful	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Annotations.payloadsAt_modifyAll_keys	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
+axiom	Effect4.Annotations.payloadsAt_modifyAll_keys	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Annotations.payloadsAt_modifyAll_none	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
+axiom	Effect4.Annotations.payloadsAt_modifyAll_none	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Annotations.payloadsAt_modifyAll_some	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
+axiom	Effect4.Annotations.payloadsAt_modifyAll_some	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Check.annotationBags_lawful	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 axiom	Effect4.Check.annotationBags_lawful	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Check.annotationsLens_lawful	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
@@ -1861,11 +1994,15 @@ theorem	Effect4.Representation.nodeAnnotations_lawful	Effect4.Schema.Annotations
 axiom	Effect4.Representation.nodeAnnotations_lawful	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Representation.nodeAnnotations_reference	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 axiom	Effect4.Representation.nodeAnnotations_reference	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Representation.nodeAnnotations_replace_reference	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
+axiom	Effect4.Representation.nodeAnnotations_replace_reference	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Representation.nodeAnnotations_string_none	Effect4.Schema.Annotations	SCHEMA-PG-ANNOTATION-DATA
 axiom	Effect4.Representation.nodeAnnotations_string_none	none	SCHEMA-AX-STRUCTURAL
 owned-declaration	Effect4.Document	Effect4.Schema.Document	SCHEMA-LEAF-DOCUMENT-CONTAINERS
 owned-declaration	Effect4.Document.annotationBags	Effect4.Schema.Document	SCHEMA-PG-ANNOTATION-DATA/DOCUMENT
+owned-declaration	Effect4.Document.annotationBags_collect_toMulti	Effect4.Schema.Document	SCHEMA-PG-ANNOTATION-DATA/DOCUMENT
 owned-declaration	Effect4.Document.annotationBags_lawful	Effect4.Schema.Document	SCHEMA-PG-ANNOTATION-DATA/DOCUMENT
+owned-declaration	Effect4.Document.annotationBags_modifyAll_toMulti	Effect4.Schema.Document	SCHEMA-PG-ANNOTATION-DATA/DOCUMENT
 owned-declaration	Effect4.Document.casesOn	Effect4.Schema.Document	SCHEMA-LEAF-DOCUMENT-CONTAINERS
 owned-declaration	Effect4.Document.ctorIdx	Effect4.Schema.Document	SCHEMA-LEAF-DOCUMENT-CONTAINERS
 owned-declaration	Effect4.Document.mk	Effect4.Schema.Document	SCHEMA-LEAF-DOCUMENT-CONTAINERS
@@ -1923,8 +2060,12 @@ owned-declaration	Effect4.instDecidableEqMultiDocument.decEq.match_1	Effect4.Sch
 owned-declaration	Effect4.instDecidableEqReferenceEntry	Effect4.Schema.Document	SCHEMA-LEAF-DOCUMENT-CONTAINERS
 owned-declaration	Effect4.instDecidableEqReferenceEntry.decEq	Effect4.Schema.Document	SCHEMA-LEAF-DOCUMENT-CONTAINERS
 owned-declaration	Effect4.instDecidableEqReferenceEntry.decEq.match_1	Effect4.Schema.Document	SCHEMA-LEAF-DOCUMENT-CONTAINERS
+theorem	Effect4.Document.annotationBags_collect_toMulti	Effect4.Schema.Document	SCHEMA-PG-ANNOTATION-DATA/DOCUMENT
+axiom	Effect4.Document.annotationBags_collect_toMulti	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Document.annotationBags_lawful	Effect4.Schema.Document	SCHEMA-PG-ANNOTATION-DATA/DOCUMENT
 axiom	Effect4.Document.annotationBags_lawful	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Document.annotationBags_modifyAll_toMulti	Effect4.Schema.Document	SCHEMA-PG-ANNOTATION-DATA/DOCUMENT
+axiom	Effect4.Document.annotationBags_modifyAll_toMulti	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Document.mk.inj	Effect4.Schema.Document	SCHEMA-LEAF-DOCUMENT-CONTAINERS
 axiom	Effect4.Document.mk.inj	none	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Document.mk.injEq	Effect4.Schema.Document	SCHEMA-LEAF-DOCUMENT-CONTAINERS
@@ -1988,6 +2129,7 @@ owned-declaration	Effect4.Document.fieldAdmissible_deadReferenceEntry	Effect4.Sc
 owned-declaration	Effect4.Document.fieldAdmissible_emptyTableKey	Effect4.Schema.Check	SCHEMA-PG-FIELD-ADMISSION
 owned-declaration	Effect4.Document.fieldAdmissible_iff	Effect4.Schema.Check	SCHEMA-PG-FIELD-ADMISSION
 owned-declaration	Effect4.Document.fieldAdmissible_mk_iff	Effect4.Schema.Check	SCHEMA-PG-FIELD-ADMISSION
+owned-declaration	Effect4.Document.fieldAdmissible_toMulti	Effect4.Schema.Check	SCHEMA-PG-FIELD-ADMISSION
 owned-declaration	Effect4.MultiDocument.FieldAdmissible	Effect4.Schema.Check	SCHEMA-PG-FIELD-ADMISSION
 owned-declaration	Effect4.MultiDocument.FieldAdmissible.eq_1	Effect4.Schema.Check	SCHEMA-PG-FIELD-ADMISSION
 owned-declaration	Effect4.MultiDocument.fieldAdmissible	Effect4.Schema.Check	SCHEMA-PG-FIELD-ADMISSION
@@ -2146,6 +2288,8 @@ theorem	Effect4.Document.fieldAdmissible_iff	Effect4.Schema.Check	SCHEMA-PG-FIEL
 axiom	Effect4.Document.fieldAdmissible_iff	Quot.sound,propext	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Document.fieldAdmissible_mk_iff	Effect4.Schema.Check	SCHEMA-PG-FIELD-ADMISSION
 axiom	Effect4.Document.fieldAdmissible_mk_iff	propext	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.Document.fieldAdmissible_toMulti	Effect4.Schema.Check	SCHEMA-PG-FIELD-ADMISSION
+axiom	Effect4.Document.fieldAdmissible_toMulti	Quot.sound,propext	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.MultiDocument.FieldAdmissible.eq_1	Effect4.Schema.Check	SCHEMA-PG-FIELD-ADMISSION
 axiom	Effect4.MultiDocument.FieldAdmissible.eq_1	propext	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.MultiDocument.fieldAdmissible.eq_1	Effect4.Schema.Check	SCHEMA-PG-FIELD-ADMISSION
@@ -2346,6 +2490,134 @@ theorem	Effect4.Representation.not_fieldAdmissible_suspendChecks	Effect4.Schema.
 axiom	Effect4.Representation.not_fieldAdmissible_suspendChecks	propext	SCHEMA-AX-STRUCTURAL
 theorem	Effect4.Representation.not_fieldAdmissible_throughFilterSchemas	Effect4.Schema.Check	SCHEMA-PG-FIELD-ADMISSION
 axiom	Effect4.Representation.not_fieldAdmissible_throughFilterSchemas	Quot.sound,propext	SCHEMA-AX-STRUCTURAL
+owned-declaration	Effect4.EffectfulField	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.Resolvable	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.casesOn	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.ctorIdx	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.get	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.get_eq	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.interpret_get	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.interpret_modify	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.interpret_set	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.mk	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.mk.inj	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.mk.injEq	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.mk.noConfusion	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.mk.sizeOf_spec	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.modify	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.modify_eq	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.noConfusion	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.noConfusionType	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.operations	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.optic	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.rec	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.recOn	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.resolvable_iff_resolve_isSome	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.resolve	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.set	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulField.set_eq	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.Matches	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.RawAdmissible	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.alphabet	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.annotationKey	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.annotationKey_lawful	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.casesOn	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.check	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.check.match_1	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.check_eq_some_iff	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.ctorIdx	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.instDecidableEqDigit	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.instDecidableMatches	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.mk	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.mk.inj	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.mk.injEq	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.mk.noConfusion	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.mk.sizeOf_spec	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.noConfusion	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.noConfusionType	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.rawAdmissible_iff_exists_check	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.rawOccurrences	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.readOperation	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.rec	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.recOn	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.EffectfulFieldSpec.writeOperation	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps.alphabet	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps.casesOn	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps.ctorIdx	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps.mk	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps.mk.inj	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps.mk.injEq	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps.mk.noConfusion	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps.mk.sizeOf_spec	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps.noConfusion	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps.noConfusionType	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps.operationId	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps.read	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps.readOperation	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps.read_answer	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps.read_operation	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps.rec	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps.recOn	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps.write	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps.writeOperation	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.FieldEffectOps.write_operation	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.PropertySignatureOf.effectfulFieldSpec	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.PropertySignatureOf.hasEffectfulField	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.PropertySignatureOf.hasEffectfulField_eq_true_iff	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.Representation.effectfulFieldProperties	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.instDecidableEqEffectfulFieldSpec	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.instDecidableEqEffectfulFieldSpec.decEq	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.instDecidableEqEffectfulFieldSpec.decEq.match_1	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.instReprEffectfulFieldSpec	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+owned-declaration	Effect4.instReprEffectfulFieldSpec.repr	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+theorem	Effect4.EffectfulField.get_eq	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.EffectfulField.get_eq	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.EffectfulField.interpret_get	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.EffectfulField.interpret_get	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.EffectfulField.interpret_modify	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.EffectfulField.interpret_modify	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.EffectfulField.interpret_set	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.EffectfulField.interpret_set	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.EffectfulField.mk.inj	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.EffectfulField.mk.inj	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.EffectfulField.mk.injEq	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.EffectfulField.mk.injEq	propext	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.EffectfulField.mk.sizeOf_spec	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.EffectfulField.mk.sizeOf_spec	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.EffectfulField.modify_eq	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.EffectfulField.modify_eq	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.EffectfulField.resolvable_iff_resolve_isSome	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.EffectfulField.resolvable_iff_resolve_isSome	Quot.sound,propext	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.EffectfulField.set_eq	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.EffectfulField.set_eq	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.EffectfulFieldSpec.annotationKey_lawful	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.EffectfulFieldSpec.annotationKey_lawful	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.EffectfulFieldSpec.check_eq_some_iff	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.EffectfulFieldSpec.check_eq_some_iff	propext	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.EffectfulFieldSpec.mk.inj	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.EffectfulFieldSpec.mk.inj	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.EffectfulFieldSpec.mk.injEq	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.EffectfulFieldSpec.mk.injEq	propext	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.EffectfulFieldSpec.mk.sizeOf_spec	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.EffectfulFieldSpec.mk.sizeOf_spec	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.EffectfulFieldSpec.rawAdmissible_iff_exists_check	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.EffectfulFieldSpec.rawAdmissible_iff_exists_check	propext	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.FieldEffectOps.mk.inj	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.FieldEffectOps.mk.inj	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.FieldEffectOps.mk.injEq	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.FieldEffectOps.mk.injEq	propext	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.FieldEffectOps.mk.sizeOf_spec	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.FieldEffectOps.mk.sizeOf_spec	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.FieldEffectOps.read_answer	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.FieldEffectOps.read_answer	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.FieldEffectOps.read_operation	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.FieldEffectOps.read_operation	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.FieldEffectOps.write_operation	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.FieldEffectOps.write_operation	none	SCHEMA-AX-STRUCTURAL
+theorem	Effect4.PropertySignatureOf.hasEffectfulField_eq_true_iff	Effect4.Schema.EffectfulField	SCHEMA-PG-EFFECTFUL-FIELD
+axiom	Effect4.PropertySignatureOf.hasEffectfulField_eq_true_iff	Quot.sound,propext	SCHEMA-AX-STRUCTURAL
 absent	Effect4.Schema.Value.Representation	duplicate-representation-carrier	checked
 absent	Effect4.Schema.Check.Check	duplicate-check-carrier	checked
 absent	Effect4.KeywordKind	duplicate-keyword-alphabet	checked
@@ -2392,10 +2664,19 @@ graph-edge	SCHEMA-PG-ANNOTATION-DATA/recursive-traversal	ANNOTATION-EXHAUSTIVE-S
 graph-edge	SCHEMA-PG-ANNOTATION-DATA/counterexamples	E4-SCHEMA-CE-044-048	required-closed
 graph-edge	SCHEMA-PG-ANNOTATION-DATA/host	SCHEMA-ANNOTATION-HOST	required-closed
 graph-edge	SCHEMA-PG-ANNOTATION-DATA/trust	ANNOTATION-AXIOM-FREE-LAWS	required-closed
+graph-edge	SCHEMA-PG-EFFECTFUL-FIELD/marker-codec	EFFECTFUL-FIELD-MARKER-CODEC	required-closed
+graph-edge	SCHEMA-PG-EFFECTFUL-FIELD/occurrence-admission	EFFECTFUL-FIELD-RAW-OCCURRENCE-ADMISSION	required-closed
+graph-edge	SCHEMA-PG-EFFECTFUL-FIELD/identity	EFFECTFUL-FIELD-IDENTITY-AGREEMENT	required-closed
+graph-edge	SCHEMA-PG-EFFECTFUL-FIELD/program-equations	EFFECTFUL-FIELD-PROGRAM-EQUATIONS	required-closed
+graph-edge	SCHEMA-PG-EFFECTFUL-FIELD/interpretation	EFFECTFUL-FIELD-INTERPRET-PRESERVATION	required-closed
+graph-edge	SCHEMA-PG-EFFECTFUL-FIELD/counterexamples	E4-SCHEMA-CE-049-055	required-closed
+graph-edge	SCHEMA-PG-EFFECTFUL-FIELD/host	SCHEMA-EFFECTFUL-FIELD-HOST	required-closed
+graph-edge	SCHEMA-PG-EFFECTFUL-FIELD/trust	EFFECTFUL-FIELD-AXIOM-CEILING	required-closed
 graph-status	SCHEMA-PG-REPRESENTATION-TAG	all-applicable-edges-closed	required-closed
 graph-status	SCHEMA-PG-PAYLOAD	all-applicable-edges-closed	required-closed
 graph-status	SCHEMA-PG-FIELD-ADMISSION	recursive-judgment-closed	required-closed
 graph-status	DATA-PG-OPTIC	all-applicable-edges-closed	required-closed
 graph-status	SCHEMA-PG-ANNOTATION-DATA	all-applicable-edges-closed	required-closed
+graph-status	SCHEMA-PG-EFFECTFUL-FIELD	all-applicable-edges-closed	required-closed
 external-open	SCHEMA-PG-DOCUMENT	reference-semantics	required-open
 external-open	SCHEMA-PG-WIRE	codec-and-canonicalization	required-open

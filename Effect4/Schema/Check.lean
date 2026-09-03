@@ -1566,6 +1566,22 @@ theorem MultiDocument.fieldAdmissible_mk_iff (roots : List Representation)
       (∀ entry ∈ references,
         Representation.FieldAdmissible entry.representation) := Iff.rfl
 
+/--
+The `D6` embedding lands inside field admission, in both directions.
+
+`MultiDocument.fieldAdmissible_two_roots` records that admission does not
+account for non-surjectivity; this records the complementary half, that the
+embedding does not change the judgment. A single-root image is never rejected
+by the non-empty-roots clause, and no other clause distinguishes the shapes.
+-/
+theorem Document.fieldAdmissible_toMulti (document : Document) :
+    MultiDocument.FieldAdmissible document.toMulti ↔
+      Document.FieldAdmissible document := by
+  cases document with
+  | mk root references =>
+      simp [Document.toMulti, MultiDocument.FieldAdmissible,
+        Document.FieldAdmissible]
+
 /-!
 ## Witnesses
 

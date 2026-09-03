@@ -367,4 +367,280 @@ theorem toTraversal {optic : Optional S A} (law : Optional.Lawful optic) :
 
 end Optional.Lawful
 
+/-! ## Identity optics and composition coherence
+
+Each shape has an identity for `compose`, and the two forgetful views
+`toOptional` and `toTraversal` commute with `compose`.  Everything below is a
+corollary of the definitions and of the law records already stated above; no
+new equation is assumed.
+
+Where the total-lens definitions make a coherence square hold definitionally
+it is stated as an equality of optic records, which costs no axiom.  Where it
+does not, the square is stated on each face separately rather than closed with
+`funext`: the packet's pointwise `modify_congr` exists precisely so that
+composition reasoning never has to spend `Quot.sound` on equality of
+modifiers.
+-/
+
+namespace Traversal
+
+private theorem collectMany_append (collect : A → List B) (first second : List A) :
+    collectMany collect (first ++ second) =
+      collectMany collect first ++ collectMany collect second := by
+  induction first with
+  | nil => rfl
+  | cons head tail ih =>
+      change collect head ++ collectMany collect (tail ++ second) =
+        (collect head ++ collectMany collect tail) ++ collectMany collect second
+      rw [ih, List.append_assoc]
+
+private theorem collectMany_collectMany (outerCollect : A → List B)
+    (innerCollect : B → List C) (values : List A) :
+    collectMany innerCollect (collectMany outerCollect values) =
+      collectMany (fun value => collectMany innerCollect (outerCollect value)) values := by
+  induction values with
+  | nil => rfl
+  | cons head tail ih =>
+      change collectMany innerCollect (outerCollect head ++ collectMany outerCollect tail) =
+        collectMany innerCollect (outerCollect head) ++
+          collectMany (fun value => collectMany innerCollect (outerCollect value)) tail
+      rw [collectMany_append, ih]
+
+private theorem collectMany_eq_flatMap (collect : A → List B) (values : List A) :
+    collectMany collect values = values.flatMap collect := by
+  induction values with
+  | nil => rfl
+  | cons head tail ih =>
+      change collect head ++ collectMany collect tail =
+        collect head ++ tail.flatMap collect
+      rw [ih]
+
+private theorem collectMany_singleton (values : List A) :
+    collectMany (fun value => [value]) values = values := by
+  induction values with
+  | nil => rfl
+  | cons head tail ih =>
+      change head :: collectMany (fun value => [value]) tail = head :: tail
+      rw [ih]
+
+/-- The traversal whose single focus is the whole source. -/
+def identity : Traversal S S where
+  collect source := [source]
+  modifyAll f source := f source
+
+/-- The composite collects each inner collection in outer order.  This is the
+one computation law the private accumulator hides from callers. -/
+theorem compose_collect (outer : Traversal S A) (inner : Traversal A B) (source : S) :
+    (outer.compose inner).collect source =
+      (outer.collect source).flatMap inner.collect :=
+  collectMany_eq_flatMap inner.collect (outer.collect source)
+
+/-- The composite modifies through the nested modifier. -/
+theorem compose_modifyAll (outer : Traversal S A) (inner : Traversal A B)
+    (f : B → B) (source : S) :
+    (outer.compose inner).modifyAll f source =
+      outer.modifyAll (inner.modifyAll f) source := rfl
+
+/-- The identity traversal is neutral on the right of composition: it collects
+each focus once. -/
+theorem compose_identity_collect (optic : Traversal S A) (source : S) :
+    (optic.compose identity).collect source = optic.collect source :=
+  collectMany_singleton (optic.collect source)
+
+/-- The identity traversal is neutral on the right of composition: it modifies
+each focus with the given function. -/
+theorem compose_identity_modifyAll (optic : Traversal S A) (f : A → A) (source : S) :
+    (optic.compose identity).modifyAll f source = optic.modifyAll f source := rfl
+
+/-- The identity traversal is neutral on the left of composition on the
+collecting face. -/
+theorem identity_compose_collect (optic : Traversal S A) (source : S) :
+    (identity.compose optic).collect source = optic.collect source :=
+  List.append_nil _
+
+/-- The identity traversal is neutral on the left of composition on the
+modifying face. -/
+theorem identity_compose_modifyAll (optic : Traversal S A) (f : A → A) (source : S) :
+    (identity.compose optic).modifyAll f source = optic.modifyAll f source := rfl
+
+/-- Composition is associative on the collecting face: regrouping does not
+reorder the foci. -/
+theorem compose_assoc_collect (outer : Traversal S A) (middle : Traversal A B)
+    (inner : Traversal B C) (source : S) :
+    ((outer.compose middle).compose inner).collect source =
+      (outer.compose (middle.compose inner)).collect source :=
+  collectMany_collectMany middle.collect inner.collect (outer.collect source)
+
+/-- Composition is associative on the modifying face. -/
+theorem compose_assoc_modifyAll (outer : Traversal S A) (middle : Traversal A B)
+    (inner : Traversal B C) (f : C → C) (source : S) :
+    ((outer.compose middle).compose inner).modifyAll f source =
+      (outer.compose (middle.compose inner)).modifyAll f source := rfl
+
+/-- The identity traversal satisfies the finite pure traversal equations. -/
+theorem identity_lawful : Lawful (identity : Traversal S S) := by
+  constructor
+  · intro first second pointwise source
+    exact pointwise source
+  · intro _
+    rfl
+  · intro _ _ _
+    rfl
+  · intro _ _
+    rfl
+
+end Traversal
+
+namespace Optional
+
+/-- The optional whose always-present focus is the whole source. -/
+def identity : Optional S S where
+  preview source := some source
+  replace value _ := value
+
+/-- The identity optional is neutral on the left of composition. -/
+theorem identity_compose (optic : Optional S A) : identity.compose optic = optic := rfl
+
+/-- The identity optional is neutral on the right of composition on the
+previewing face. -/
+theorem compose_identity_preview (optic : Optional S A) (source : S) :
+    (optic.compose identity).preview source = optic.preview source := by
+  change (optic.preview source).bind (fun focused => some focused) = optic.preview source
+  cases optic.preview source with
+  | none => rfl
+  | some _ => rfl
+
+/-- The identity optional is neutral on the right of composition on the
+replacing face.  Lawfulness is used exactly once: an absent focus must make
+replacement a no-op, which is what the composite performs there. -/
+theorem compose_identity_replace {optic : Optional S A} (law : Lawful optic)
+    (value : A) (source : S) :
+    (optic.compose identity).replace value source = optic.replace value source := by
+  change (match optic.preview source with
+    | none => source
+    | some _ => optic.replace value source) = optic.replace value source
+  cases present : optic.preview source with
+  | none => exact (law.replace_absent source value present).symm
+  | some _ => rfl
+
+/-- The identity optional satisfies the stable-optional equations. -/
+theorem identity_lawful : Lawful (identity : Optional S S) := by
+  constructor
+  · intro source value absent
+    change some source = none at absent
+    cases absent
+  · intro _ _ _ _
+    rfl
+  · intro source current present
+    change some source = some current at present
+    exact (Option.some.inj present).symm
+  · intro _ _ _
+    rfl
+
+/-- The identity optional is the identity traversal. -/
+theorem toTraversal_identity :
+    (identity : Optional S S).toTraversal = Traversal.identity := rfl
+
+/-- `toTraversal` commutes with composition on the collecting face, with no
+hypothesis: an absent outer focus collects nothing either way. -/
+theorem toTraversal_compose_collect (outer : Optional S A) (inner : Optional A B)
+    (source : S) :
+    (outer.compose inner).toTraversal.collect source =
+      (outer.toTraversal.compose inner.toTraversal).collect source := by
+  change ((outer.preview source).bind inner.preview).toList =
+    Traversal.collectMany (fun value => (inner.preview value).toList)
+      (outer.preview source).toList
+  cases outer.preview source with
+  | none => rfl
+  | some focused =>
+      change (inner.preview focused).toList = (inner.preview focused).toList ++ []
+      exact (List.append_nil _).symm
+
+/-- `toTraversal` commutes with composition on the modifying face for a stable
+outer optional.  The hypothesis is needed exactly where the outer focus is
+present and the inner focus is absent: the composite leaves the source alone,
+while the two-step traversal writes the unchanged focus back. -/
+theorem toTraversal_compose_modifyAll {outer : Optional S A} (outerLaw : Lawful outer)
+    (inner : Optional A B) (f : B → B) (source : S) :
+    (outer.compose inner).toTraversal.modifyAll f source =
+      (outer.toTraversal.compose inner.toTraversal).modifyAll f source := by
+  show (outer.compose inner).modify f source =
+    outer.modify (fun focused => inner.modify f focused) source
+  cases outerPresent : outer.preview source with
+  | none =>
+      simp only [Optional.modify, Optional.compose, outerPresent, Option.bind]
+  | some focused =>
+      cases innerPresent : inner.preview focused with
+      | none =>
+          simp only [Optional.modify, Optional.compose, outerPresent, innerPresent,
+            Option.bind]
+          exact (outerLaw.replace_preview source focused outerPresent).symm
+      | some value =>
+          simp only [Optional.modify, Optional.compose, outerPresent, innerPresent,
+            Option.bind]
+
+end Optional
+
+namespace Lens
+
+/-- Regard a total lens as a traversal with exactly one focus. -/
+def toTraversal (optic : Lens S A) : Traversal S A :=
+  optic.toOptional.toTraversal
+
+/-- The lens whose focus is the whole source. -/
+def identity : Lens S S where
+  get source := source
+  replace value _ := value
+
+/-- The identity lens is neutral on the right of composition. -/
+theorem compose_identity (optic : Lens S A) : optic.compose identity = optic := rfl
+
+/-- The identity lens is neutral on the left of composition. -/
+theorem identity_compose (optic : Lens S A) : identity.compose optic = optic := rfl
+
+/-- Lens composition is associative. -/
+theorem compose_assoc (outer : Lens S A) (middle : Lens A B) (inner : Lens B C) :
+    (outer.compose middle).compose inner = outer.compose (middle.compose inner) := rfl
+
+/-- `toOptional` commutes with composition. -/
+theorem toOptional_compose (outer : Lens S A) (inner : Lens A B) :
+    (outer.compose inner).toOptional =
+      outer.toOptional.compose inner.toOptional := rfl
+
+/-- `toTraversal` commutes with composition.  The total case needs no
+hypothesis: a lens focus is never absent, so the composite and the two-step
+traversal agree on both faces definitionally. -/
+theorem toTraversal_compose (outer : Lens S A) (inner : Lens A B) :
+    (outer.compose inner).toTraversal =
+      outer.toTraversal.compose inner.toTraversal := rfl
+
+/-- The identity lens is the identity optional. -/
+theorem toOptional_identity :
+    (identity : Lens S S).toOptional = Optional.identity := rfl
+
+/-- The identity lens is the identity traversal. -/
+theorem toTraversal_identity :
+    (identity : Lens S S).toTraversal = Traversal.identity := rfl
+
+/-- The identity lens satisfies the three total-lens equations. -/
+theorem identity_lawful : Lens.Lawful (identity : Lens S S) := by
+  constructor
+  · intro _ _
+    rfl
+  · intro _
+    rfl
+  · intro _ _ _
+    rfl
+
+end Lens
+
+namespace Lens.Lawful
+
+/-- A lawful total lens remains lawful when viewed as a one-focus traversal. -/
+theorem toTraversal {optic : Lens S A} (law : Lens.Lawful optic) :
+    Traversal.Lawful optic.toTraversal :=
+  Optional.Lawful.toTraversal law.toOptional
+
+end Lens.Lawful
+
 end Effect4

@@ -27,6 +27,9 @@ open Effects.Trace (Val)
 /-- How a finite run ends. -/
 inductive RunResult where
   | done (value : Val)
+  /-- An operation failed and every open region was closed with the failure
+  (region flows, `Effect4/Flow/Region.lean`); plain flows never fail. -/
+  | failed (error : Val)
   | frontier (reason : Frontier)
   /-- The tape's next entry answers another site: the tape is not this flow's. -/
   | refused (expected actual : DecisionId)
