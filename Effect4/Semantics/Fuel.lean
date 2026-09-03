@@ -175,11 +175,11 @@ theorem step_progress {σ : Type} {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty
   generalize planEq : plan alphabet block env tape = p at planned shaped
   cases planned with
   | ret value =>
-      simp [step, planEq, emit_run, NextProgress, RunResult.exhausted, StateT.run_pure, idPure]
+      simp [step, planEq, NextProgress, RunResult.exhausted, StateT.run_pure]
   | exhausted site =>
-      simp [step, planEq, emit_run, NextProgress, RunResult.exhausted, StateT.run_pure, idPure]
+      simp [step, planEq, NextProgress, RunResult.exhausted, StateT.run_pure]
   | mismatch expected actual =>
-      simp [step, planEq, NextProgress, RunResult.exhausted_refusal, StateT.run_pure, idPure]
+      simp [step, planEq, NextProgress, StateT.run_pure]
   | jump targetBlock found sizedTarget =>
       simp only [PlanShape] at shaped
       simp only [step, planEq, StateT.run_pure]
@@ -194,7 +194,7 @@ theorem step_progress {σ : Type} {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty
           Or.inl ⟨rfl, ⟨block, mem, rfl, shaped.1, shaped.2⟩⟩⟩
   | choose targetBlock found sizedTarget =>
       simp only [PlanShape] at shaped
-      simp only [step, planEq, StateT.run_bind, StateT.run_pure, emit_run]
+      simp only [step, planEq, StateT.run_bind, StateT.run_pure]
       exact ⟨⟨targetBlock, found, sizedTarget⟩, Or.inr shaped⟩
   | performCatch targetBlock _ found sizedTarget _ _ =>
       simp only [PlanShape] at shaped
@@ -274,7 +274,7 @@ theorem loop_budget_not_exhausted {σ : Type} {alphabet : FlowAlphabet Ty} {raw 
       rcases outcome with ⟨⟨next, log'⟩, s'⟩
       cases next with
       | finished result rest =>
-          simpa [idBind, idPure, NextProgress, StateT.run_pure] using stepped
+          simpa [NextProgress, StateT.run_pure] using stepped
       | continue_ nextBlock env' rest =>
           obtain ⟨⟨target, foundTarget, sizedTarget⟩, progress⟩ := stepped
           simp only [idBind]
@@ -351,7 +351,7 @@ theorem run_fuelFor_finishes {σ : Type} {alphabet : FlowAlphabet Ty} (flow : Ch
       have finished := loop_fuelFor_not_exhausted wf service nameOf flow.erase.entry [input] tape
         log s current found sized
       unfold run runTape
-      simpa [StateT.run_map, idMap] using finished
+      simpa [StateT.run_map] using finished
 
 /-- `runDefault` is `run` at exactly that fuel, so it too always finishes. -/
 theorem runDefault_finishes {σ : Type} {alphabet : FlowAlphabet Ty} (flow : CheckedFlow alphabet)
@@ -396,20 +396,20 @@ theorem step_not_failed {σ : Type} {alphabet : FlowAlphabet Ty}
     NextNotFailed (((step alphabet service nameOf block env tape).run log).run s).1.1 := by
   unfold step
   cases plan alphabet block env tape with
-  | stuck => simp [NextNotFailed, StateT.run_pure, idPure]
-  | ret value => simp [NextNotFailed, emit_run, StateT.run_pure, idPure]
-  | jump target env' => simp [NextNotFailed, StateT.run_pure, idPure]
+  | stuck => simp [NextNotFailed, StateT.run_pure]
+  | ret value => simp [NextNotFailed, StateT.run_pure]
+  | jump target env' => simp [NextNotFailed, StateT.run_pure]
   | perform op request target env' =>
       simp only [StateT.run_bind, StateT.run_lift, StateT.run_pure]
-      cases service.pure op <;> simp [NextNotFailed, emit_run, StateT.run_pure, idBind, idPure]
+      cases service.pure op <;> simp [NextNotFailed, StateT.run_pure]
   | exhausted site =>
-      simp [NextNotFailed, emit_run, StateT.run_pure, idPure]
-  | mismatch expected actual => simp [NextNotFailed, StateT.run_pure, idPure]
+      simp [NextNotFailed, StateT.run_pure]
+  | mismatch expected actual => simp [NextNotFailed, StateT.run_pure]
   | choose site branch target env' rest =>
-      simp [NextNotFailed, emit_run, StateT.run_pure, idPure]
+      simp [NextNotFailed, StateT.run_pure]
   | performCatch op request target env' onError errorEnv =>
       simp only [StateT.run_bind, StateT.run_lift, StateT.run_pure]
-      cases service.pure op <;> simp [NextNotFailed, emit_run, StateT.run_pure, idBind, idPure]
+      cases service.pure op <;> simp [NextNotFailed, StateT.run_pure]
 
 theorem loop_not_failed {σ : Type} (alphabet : FlowAlphabet Ty) (raw : RawFlow Ty)
     (service : FlowService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String) :
@@ -421,11 +421,11 @@ theorem loop_not_failed {σ : Type} (alphabet : FlowAlphabet Ty) (raw : RawFlow 
   induction fuel with
   | zero =>
       intro block env tape log s error
-      simp [loop, emit_run, StateT.run_pure, idPure]
+      simp [loop, StateT.run_pure]
   | succ fuel ih =>
       intro block env tape log s error
       cases found : lookupBlock raw block with
-      | none => simp [loop, found, StateT.run_pure, idPure]
+      | none => simp [loop, found, StateT.run_pure]
       | some current =>
           have notFailed := step_not_failed service nameOf current env tape log s
           simp only [loop, found, StateT.run_bind]
@@ -434,9 +434,9 @@ theorem loop_not_failed {σ : Type} (alphabet : FlowAlphabet Ty) (raw : RawFlow 
           rcases outcome with ⟨⟨next, log'⟩, s'⟩
           cases next with
           | finished result rest =>
-              simpa [idBind, idPure, NextNotFailed, StateT.run_pure] using notFailed error
+              simpa [NextNotFailed, StateT.run_pure] using notFailed error
           | continue_ nextBlock env' rest =>
-              simpa [idBind] using ih nextBlock env' rest log' s' error
+              simpa using ih nextBlock env' rest log' s' error
 
 /-- The public form: a plain run never reports a failure. -/
 theorem run_not_failed {σ : Type} {alphabet : FlowAlphabet Ty} (fuel : Nat)
@@ -447,7 +447,7 @@ theorem run_not_failed {σ : Type} {alphabet : FlowAlphabet Ty} (fuel : Nat)
   have notFailed := loop_not_failed alphabet flow.erase service nameOf fuel flow.erase.entry
     [input] tape log s error
   unfold run runTape
-  simpa [StateT.run_map, idMap] using notFailed
+  simpa [StateT.run_map] using notFailed
 
 /-- What is left. With `run_checked_not_stuck` ruling out `stuck`, `run_not_failed`
 ruling out the region runner's failure, and

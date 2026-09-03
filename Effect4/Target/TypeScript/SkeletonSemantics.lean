@@ -482,6 +482,12 @@ theorem setVal_self (m : Machine) (slot : Slot) (value : Val) :
     (m.setVal slot value).vals slot = value := by
   simp [Machine.setVal]
 
+/-! The first half of the machine's scoped simp set: an empty statement list
+and reading back the slot just written. The control-node half is tagged below,
+after the equations it names (survey finding L17). -/
+
+attribute [scoped simp] execList_nil setVal_self
+
 theorem temps_cons (k : Nat) (value : Slot) (values : List Slot) :
     temps k (value :: values) = Skeleton.letTemp k value :: temps (k + 1) values := rfl
 
@@ -513,7 +519,7 @@ theorem runSimple_temps : ∀ (values : List Slot) (k : Nat) (m : Machine),
         cases i with
         | zero =>
             have := keeps (Slot.temp k) (by intro j le; simp; omega)
-            simpa [setVal_self] using this
+            simpa using this
         | succ i =>
             have lt' : i < values.length := by simpa using lt
             have := reads i lt'
@@ -815,6 +821,24 @@ theorem execControl_dispatchLoop (fuel : Nat) (m : Machine) (tape : Tape) (var :
       = Program.bind (dispatchRun alphabet fuel m tape var cases)
           fun result => .pure (.finished result.1, result.2) := by
   rw [execControl]
+
+/-! ### The machine's scoped simp set, second half
+
+The unconditional equations of the machine's control nodes, and what the
+machine reads back after `enter` and `setIndex`. Every proof in this lane spelled them
+by hand (survey finding L17), which is what produced finding L16's copied simp
+lists. `scoped` keeps them opt-in: a module gets them by `open …Skel` and not
+otherwise.
+
+The conditional unfolders stay off the set. `execList_cons_simple` and
+`execList_cons_control` are conditional on whether the head node is a move,
+and `execControl_decide` / `execControl_branchIf` / `execControl_performCatch`
+rewrite to a `match` on the tape read that a `simp` would split before the
+proof has named the case. -/
+
+attribute [scoped simp] execControl_gotoBlock execControl_ret
+  execControl_dispatchLoop afterFell_fell afterFell_continueLoop afterFell_finished
+  enter_vals setIndex_vals setIndex_same
 
 theorem execList_cons_control (fuel : Nat) (m : Machine) (tape : Tape) (node : Skeleton)
     (rest : List Skeleton) (control : simple? m node = none) :

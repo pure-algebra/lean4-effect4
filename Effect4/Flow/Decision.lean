@@ -89,4 +89,16 @@ theorem read_answered_length {tape : Tape} {site : DecisionId} {branch : Bool} {
 
 end Tape
 
+/-! ## The tape's scoped simp set
+
+`Tape.read` on a literal tape is the one rewrite every proof in this lane
+opens with, so it is tagged rather than spelled. `scoped` keeps it opt-in: a
+downstream module gets it by `open Effect4.Flow` and not otherwise (survey
+finding L17). `read_cons_ne` stays off the set — it is conditional on
+`actual ≠ expected`, which is exactly the discriminator `read_mismatch_ne`
+proves, and a `simp` that guessed at it would hide the site/value distinction
+`RunResult.refusal` turns on. -/
+
+attribute [scoped simp] Tape.read_nil Tape.read_cons_eq
+
 end Effect4.Flow

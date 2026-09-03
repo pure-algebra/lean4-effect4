@@ -17,6 +17,12 @@ They lived in `Effect4/Target/TypeScript/SkeletonSemantics.lean` until
 2026-09-03 (survey finding L7), which meant nothing outside the TypeScript
 target could invert a plan without importing the skeleton IR. They are facts
 about `Effect4.Flow.plan` and belong beside it.
+
+None of them joins the `Effect4.Flow` scoped simp set of finding L17: an
+inversion is `plan … = shape → ∃ …`, an implication with an existential
+conclusion, not a rewrite. `testValue_some` and `testValue_ne` are the same
+shape. The rewriters of this lane are tagged in `Effect4/Flow/Decision.lean`,
+`Effect4/Semantics/Runs.lean` and `Effect4/Semantics/Denotation.lean`.
 -/
 
 namespace Effect4.Flow

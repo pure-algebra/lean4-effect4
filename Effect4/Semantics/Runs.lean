@@ -72,7 +72,7 @@ only where `plan`'s `branch` clause writes it, and this classifier is exact. -/
 def refusal (expected actual : DecisionId) : RunResult :=
   if expected = actual then .refusedValue expected else .refusedSite expected actual
 
-@[simp] theorem refusal_self (site : DecisionId) : refusal site site = .refusedValue site :=
+theorem refusal_self (site : DecisionId) : refusal site site = .refusedValue site :=
   if_pos rfl
 
 /-- Every refusal a tape read produces is a *site* refusal. -/
@@ -81,23 +81,30 @@ theorem refusal_of_read {tape : Tape} {site expected actual : DecisionId}
     refusal expected actual = .refusedSite expected actual :=
   if_neg fun eq => (Tape.read_mismatch_ne read).2 eq.symm
 
-@[simp] theorem exhausted_refusal (expected actual : DecisionId) :
+theorem exhausted_refusal (expected actual : DecisionId) :
     (refusal expected actual).exhausted = false := by
   unfold refusal; split <;> rfl
 
-@[simp] theorem stuck_refusal (expected actual : DecisionId) :
+theorem stuck_refusal (expected actual : DecisionId) :
     (refusal expected actual).stuck = false := by
   unfold refusal; split <;> rfl
 
-@[simp] theorem refusal_ne_failed (expected actual : DecisionId) (error : Val) :
+theorem refusal_ne_failed (expected actual : DecisionId) (error : Val) :
     refusal expected actual ≠ .failed error := by
   unfold refusal; split <;> simp
 
-@[simp] theorem refusal_ne_done (expected actual : DecisionId) (value : Val) :
+theorem refusal_ne_done (expected actual : DecisionId) (value : Val) :
     refusal expected actual ≠ .done value := by
   unfold refusal; split <;> simp
 
 end RunResult
+
+/-! The result lane's scoped simp set: the classifier's five equations, so a
+proof that meets a `Plan.mismatch` does not have to unfold `refusal` by hand.
+`scoped` keeps it opt-in (survey finding L17). -/
+
+attribute [scoped simp] RunResult.refusal_self RunResult.exhausted_refusal
+  RunResult.stuck_refusal RunResult.refusal_ne_failed RunResult.refusal_ne_done
 
 /-- What a run asks of the world: one handler per operation, and which
 operations are pure atoms (run, but excluded from the trace). -/
@@ -115,7 +122,8 @@ abbrev RunM (M : Type → Type) := StateT Effect4.Trace.Log M
 def emit [Monad M] (event : Effect4.Trace.Event) : RunM M Unit :=
   fun log => pure ((), log ++ [event])
 
-theorem emit_run [Monad M] (event : Effect4.Trace.Event) (log : Effect4.Trace.Log) :
+@[scoped simp] theorem emit_run [Monad M] (event : Effect4.Trace.Event)
+    (log : Effect4.Trace.Log) :
     (emit (M := M) event).run log = pure ((), log ++ [event]) := rfl
 
 /-- Read an argument list from the environment. -/
@@ -274,9 +282,9 @@ def runDefault [Monad M] {alphabet : FlowAlphabet Ty} (flow : CheckedFlow alphab
 `Fuel`, `Approximation` and the region modules all reach for them (survey
 finding L9). -/
 
-theorem idBind {α β : Type} (x : Id α) (f : α → Id β) : x >>= f = f x := rfl
-theorem idMap {α β : Type} (x : Id α) (f : α → β) : f <$> x = f x := rfl
-theorem idPure {α : Type} (a : α) : (pure a : Id α) = a := rfl
+@[scoped simp] theorem idBind {α β : Type} (x : Id α) (f : α → Id β) : x >>= f = f x := rfl
+@[scoped simp] theorem idMap {α β : Type} (x : Id α) (f : α → β) : f <$> x = f x := rfl
+@[scoped simp] theorem idPure {α : Type} (a : α) : (pure a : Id α) = a := rfl
 
 /-- A `choose` consumes exactly the head of the tape and logs the decision. -/
 theorem step_choose_consumes_one [Monad M] (alphabet : FlowAlphabet Ty)
@@ -463,11 +471,11 @@ theorem step_checked {σ : Type} {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty}
   generalize planEq : plan alphabet block env tape = p at planned
   cases planned with
   | ret value =>
-      simp [step, planEq, emit_run, NextSized, RunResult.stuck, StateT.run_pure, idPure]
+      simp [step, planEq, NextSized, RunResult.stuck, StateT.run_pure]
   | exhausted site =>
-      simp [step, planEq, emit_run, NextSized, RunResult.stuck, StateT.run_pure, idPure]
+      simp [step, planEq, NextSized, RunResult.stuck, StateT.run_pure]
   | mismatch expected actual =>
-      simp [step, planEq, NextSized, RunResult.stuck_refusal, StateT.run_pure, idPure]
+      simp [step, planEq, NextSized, StateT.run_pure]
   | jump targetBlock found sizedTarget =>
       simp only [step, planEq, StateT.run_pure]
       exact ⟨targetBlock, found, sizedTarget⟩
@@ -476,7 +484,7 @@ theorem step_checked {σ : Type} {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty}
       cases service.pure _ <;> simp [NextSized, StateT.run_bind, StateT.run_pure] <;>
         exact ⟨targetBlock, found, by simp [sizedTarget]⟩
   | choose targetBlock found sizedTarget =>
-      simp only [step, planEq, StateT.run_bind, StateT.run_pure, emit_run]
+      simp only [step, planEq, StateT.run_bind, StateT.run_pure]
       simp [NextSized]
       exact ⟨targetBlock, found, sizedTarget⟩
   | performCatch targetBlock _ found sizedTarget _ _ =>
@@ -496,7 +504,7 @@ theorem loop_checked_not_stuck {σ : Type} {alphabet : FlowAlphabet Ty} {raw : R
   induction fuel with
   | zero =>
       intro block env tape log s current _ _
-      simp [loop, emit_run, RunResult.stuck, StateT.run_pure, idPure]
+      simp [loop, RunResult.stuck, StateT.run_pure]
   | succ fuel ih =>
       intro block env tape log s current found sized
       have mem : current ∈ raw.blocks := List.mem_of_find?_eq_some found
@@ -506,10 +514,10 @@ theorem loop_checked_not_stuck {σ : Type} {alphabet : FlowAlphabet Ty} {raw : R
       rcases outcome with ⟨⟨next, log'⟩, s'⟩
       cases next with
       | finished result rest =>
-          simpa [idBind, idPure, NextSized, StateT.run_pure] using stepped
+          simpa [NextSized, StateT.run_pure] using stepped
       | continue_ next env' rest =>
           obtain ⟨target, foundTarget, sizedTarget⟩ := stepped
-          simpa [idBind] using ih next env' rest log' s' target foundTarget sizedTarget
+          simpa using ih next env' rest log' s' target foundTarget sizedTarget
 
 /-- The public form of `loop_checked_not_stuck`: a checked run never reports
 `stuck`. -/
@@ -529,7 +537,7 @@ theorem run_checked_not_stuck {σ : Type} {alphabet : FlowAlphabet Ty} (fuel : N
       have := loop_checked_not_stuck wf service nameOf fuel flow.erase.entry [input] tape log s
         current found sized
       unfold run runTape
-      simpa [StateT.run_map, idMap] using this
+      simpa [StateT.run_map] using this
 
 /-- More fuel changes nothing about a run that did not exhaust its fuel. -/
 theorem loop_fuel_mono {σ : Type} (alphabet : FlowAlphabet Ty) (raw : RawFlow Ty)
@@ -542,7 +550,7 @@ theorem loop_fuel_mono {σ : Type} (alphabet : FlowAlphabet Ty) (raw : RawFlow T
   induction fuel with
   | zero =>
       intro block env tape log s finished
-      simp [loop, emit_run, RunResult.exhausted, StateT.run_pure, idPure] at finished
+      simp [loop, RunResult.exhausted, StateT.run_pure] at finished
   | succ fuel ih =>
       intro block env tape log s finished
       cases found : lookupBlock raw block with
@@ -565,8 +573,8 @@ theorem run_fuel_mono {σ : Type} {alphabet : FlowAlphabet Ty} (fuel : Nat)
     ((run (fuel + 1) flow service nameOf tape input).run log).run s =
       ((run fuel flow service nameOf tape input).run log).run s := by
   unfold run runTape at finished ⊢
-  simp only [StateT.run_map, idMap] at finished
-  simp only [StateT.run_map, idMap]
+  simp only [StateT.run_map] at finished
+  simp only [StateT.run_map]
   rw [loop_fuel_mono alphabet flow.erase service nameOf fuel flow.erase.entry [input] tape log s
     (by simpa using finished)]
 

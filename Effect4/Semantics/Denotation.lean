@@ -145,7 +145,7 @@ def outcomeRows : RunResult → Effect4.Trace.Log
   | .refusedSite _ _ => []
   | .refusedValue _ => []
 
-@[simp] theorem outcomeRows_refusal (expected actual : DecisionId) :
+@[scoped simp] theorem outcomeRows_refusal (expected actual : DecisionId) :
     outcomeRows (.refusal expected actual) = [] := by
   unfold RunResult.refusal; split <;> rfl
 
@@ -769,5 +769,11 @@ theorem runDefault_no_fuel_frontier {σ : Type} {alphabet : FlowAlphabet Ty}
     (log : Effect4.Trace.Log) (s : σ) :
     (((runDefault flow service nameOf tape input).run log).run s).1.1.exhausted = false :=
   runDefault_finishes flow service nameOf tape input log s
+
+/-! The denotation lane's scoped simp set: the interpreter's two equations and
+the rows a finished run appends. `scoped` keeps it opt-in (survey finding
+L17). -/
+
+attribute [scoped simp] interpretRun_pure interpretRun_vis close_run
 
 end Effect4.Flow
