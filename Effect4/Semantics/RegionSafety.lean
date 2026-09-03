@@ -87,7 +87,9 @@ private theorem plain_labels [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
     flow.targetsLabelled block.region term.successors = true := by
   cases term with
   | ret value => rfl
-  | jump target args | perform operation request target args | choose site left right args =>
+  | jump target args | perform operation request target args | choose site left right args
+  | performCatch operation request target args onError errorArgs
+  | branch test site onTrue onFalse args =>
       simp only [RegionFlow.checkBlock.checkTerm, hterm] at checked
       split at checked
       · assumption
@@ -164,6 +166,26 @@ private theorem choose_successor {alphabet : FlowAlphabet Ty} {block : RawBlock 
         · cases planned
         · rename_i selected suffix
           cases selected <;> cases planned <;> simp [RawTerm.successors]
+  | performCatch operation request next args onError errorArgs =>
+      simp only [hterm] at planned
+      cases hop : alphabet.lookup operation <;> cases hrequest : env[request.index]? <;>
+        cases hargs : readArgs env args <;> cases herrs : readArgs env errorArgs <;>
+        simp only [hop, hrequest, hargs, herrs] at planned <;> cases planned
+  | branch test site onTrue onFalse args =>
+      simp only [hterm] at planned
+      cases hargs : readArgs env args <;> simp only [hargs] at planned
+      · cases planned
+      · cases htape : tape.read site <;> simp only [htape] at planned
+        · cases planned
+        · cases planned
+        · rename_i selected suffix
+          cases hv : testValue env test <;> simp only [hv] at planned
+          · cases selected <;> cases planned <;> simp [RawTerm.successors]
+          · rename_i value
+            by_cases hb : selected = value
+            · rw [if_pos hb] at planned
+              cases selected <;> cases planned <;> simp [RawTerm.successors]
+            · rw [if_neg hb] at planned; cases planned
 
 private theorem stack_open {alphabet : FlowAlphabet Ty} {flow : RegionFlow Ty}
     {label : Option RegionId} {stack : List (Frame alphabet)}
@@ -280,6 +302,21 @@ private theorem regionLoop_safe [DecidableEq Ty] {σ : Type} {alphabet : FlowAlp
                   exact safe_bind fun _ =>
                     advance target env' rest stack targetBlock foundTarget sizedTarget
                       current.region owned (fun _ ht => target_label labels successor ht)
+          | performCatch op request target env' onError errorEnv =>
+              rw [hplan] at planned shaped
+              cases planned with
+              | performCatch targetBlock errorBlock foundTarget sizedTarget foundError
+                  sizedError =>
+                  refine safe_bind fun result => safe_bind fun _ => ?_
+                  cases result with
+                  | ok answer =>
+                      exact advance target (env' ++ [answer]) tape stack targetBlock foundTarget
+                        (by simpa using sizedTarget) current.region owned
+                        (fun _ ht => target_label labels shaped.2.1 ht)
+                  | error error =>
+                      exact advance onError (errorEnv ++ [error]) tape stack errorBlock foundError
+                        (by simpa using sizedError) current.region owned
+                        (fun _ ht => target_label labels shaped.2.2 ht)
       | enter region body args =>
           obtain ⟨row, foundRow, parent, labels⟩ := enter_checked checked hterm
           have erasedEq : erasedBlock flow current =

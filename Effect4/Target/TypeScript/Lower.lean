@@ -36,6 +36,9 @@ inductive Rule where
   | flowLiteral
   | chooseIf
   | flowRet
+  -- Flow v3: caught failures and value branches (`Skeleton.lean`, `FlowLower.lean`)
+  | performCatch
+  | branchIf
   -- interruption as decisions (`Skeleton.lean`, packet M2)
   | interruptPoint
   -- regions (`RegionLower.lean`)
@@ -72,6 +75,8 @@ def id : Rule → String
   | flowLiteral => "flow-literal"
   | chooseIf => "choose-if"
   | flowRet => "flow-ret"
+  | performCatch => "perform-catch"
+  | branchIf => "branch-if"
   | interruptPoint => "interrupt-point"
   | regionEnter => "region-enter"
   | regionAcquire => "region-acquire"
@@ -87,6 +92,7 @@ def id : Rule → String
 def all : List Rule :=
   [serviceAcquire, nullaryValue, performCall, performBind, performDiscard, atomCall, ret, errorAbort,
    dispatchLoop, blockCase, paramMove, flowPerform, flowAtom, flowLiteral, chooseIf, flowRet,
+   performCatch, branchIf,
    interruptPoint,
    regionEnter, regionAcquire, regionLeave, regionMasked,
    structuredLoop, structuredMerge, structuredContinue, structuredBreak, dispatchFallback]

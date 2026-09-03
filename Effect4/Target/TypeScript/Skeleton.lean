@@ -84,6 +84,12 @@ inductive Slot where
   | answer (block : BlockId)
   /-- `c<block>`: the branch a `choose` of `block` binds. -/
   | decision (block : BlockId)
+  /-- `a<block>.success`: the answer of a caught `perform` of `block`, read on
+  its value edge (Flow v3, rc.112 `Result`). -/
+  | catchValue (block : BlockId)
+  /-- `a<block>.failure`: the error of a caught `perform` of `block`, read on
+  its failure edge (Flow v3, rc.112 `Result`). -/
+  | catchError (block : BlockId)
   /-- `r<region>`: the value a nested region generator returns. -/
   | region (region : RegionId)
   /-- The program's own parameter binder. -/
@@ -98,6 +104,8 @@ def name : Slot → String
   | .temp index => "m" ++ toString index
   | .answer block => "a" ++ toString block.value
   | .decision block => "c" ++ toString block.value
+  | .catchValue block => "a" ++ toString block.value ++ ".success"
+  | .catchError block => "a" ++ toString block.value ++ ".failure"
   | .region id => "r" ++ toString id.value
   | .input binder => binder
 
@@ -147,6 +155,15 @@ inductive Skeleton where
   | literal (answer : Slot) (operation : OperationId) (request : Slot) (value : Val)
   /-- A decision: bind the branch from the `Decisions` service, then split. -/
   | decide (answer : Slot) (site : DecisionId) (onTrue onFalse : List Skeleton)
+  /-- A caught family operation (Flow v3): bind the operation's `Result` and
+  split on it, the value edge reading `answer.success` and the failure edge
+  `answer.failure`. -/
+  | performCatch (answer : Slot) (operation : OperationId) (spec : OpSpec) (request : Slot)
+      (onOk onError : List Skeleton)
+  /-- A value branch (Flow v3): report the site to the `Decisions` service — a
+  branch is a decision site whose answer the run already holds — then split on
+  the test operand's own value. -/
+  | branchIf (test : Slot) (site : DecisionId) (onTrue onFalse : List Skeleton)
   /-- An interruptible point: ask the `Interrupts` service whether the
   interrupt is delivered here. The site is an interrupt site
   (`Effect4.Flow.Point.site`), disjoint from every `choose` site. -/
@@ -231,6 +248,24 @@ def flowLiteral (answer : Slot) (operation : OperationId) (request : Slot) (valu
 lowering: rule.choose-if -/
 def chooseIf (answer : Slot) (site : DecisionId) (left right : List Skeleton) : List Skeleton :=
   [.decide answer site left right]
+
+/-- A `performCatch` reads its operation's failure as data: rc.112
+`Effect.result` turns `Effect<A, E>` into `Effect<Result<A, E>>`, and the two
+edges are the two arms of the `Result`. The pinned `TypeScript.Stmt` has no
+string-keyed `switch`, so the `_tag` test is spelled with rc.112's own
+`Result.isSuccess` predicate; the value edge reads `a<b>.success` and the
+failure edge `a<b>.failure`. lowering: rule.perform-catch -/
+def performCatchResult (answer : Slot) (operation : OperationId) (spec : OpSpec) (request : Slot)
+    (onOk onError : List Skeleton) : List Skeleton :=
+  [.performCatch answer operation spec request onOk onError]
+
+/-- A `branch` is taken by the value of its test operand and is still a decision
+site: `yield* decisions.report(7, b1p0); if (b1p0) { ... } else { ... }`. The
+report is what keeps the host's decision rows and the runner's `decide` rows
+the same list. lowering: rule.branch-if -/
+def branchIf (test : Slot) (site : DecisionId) (onTrue onFalse : List Skeleton) :
+    List Skeleton :=
+  [.branchIf test site onTrue onFalse]
 
 /-- An interruptible point of a run asks the `Interrupts` service whether the
 interrupt is delivered here: `yield* interrupts.point(1000001)`. The service
@@ -349,6 +384,14 @@ def render (rows : ServiceRow) : Skeleton → List Stmt
   | .decide answer site onTrue onFalse =>
       [ .constYield answer.name (.call (.ident "decisions.choose") [.int site.value])
       , .ifElse answer.expr (renderList rows onTrue) (renderList rows onFalse) ]
+  | .performCatch answer _ spec request onOk onError =>
+      [ .constYield answer.name
+          (.call (.ident "Effect.result") [Lowering.callOf rows spec request.expr])
+      , .ifElse (.call (.ident "Result.isSuccess") [answer.expr])
+          (renderList rows onOk) (renderList rows onError) ]
+  | .branchIf test site onTrue onFalse =>
+      [ .yieldDiscard (.call (.ident "decisions.report") [.int site.value, test.expr])
+      , .ifElse test.expr (renderList rows onTrue) (renderList rows onFalse) ]
   | .interruptPoint site =>
       [.yieldDiscard (.call (.ident "interrupts.point") [.int site.value])]
   | .ret value => [.ret value.expr]

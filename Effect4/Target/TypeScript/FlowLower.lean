@@ -62,9 +62,13 @@ structure FlowProgram where
 /-- The `Decisions` service every `choose` asks. -/
 def decisionsRows : ServiceRow :=
   { name := "Decisions"
-    ops := [{ name := "choose", index := 0, params := [("site", "Nat")],
-              tsParams := [("site", "number")], answer := "Bool", tsAnswer := "boolean",
-              cues := ["decide a choice site from the tape"] }] }
+    ops := [ { name := "choose", index := 0, params := [("site", "Nat")],
+               tsParams := [("site", "number")], answer := "Bool", tsAnswer := "boolean",
+               cues := ["decide a choice site from the tape"] }
+           , { name := "report", index := 1, params := [("site", "Nat"), ("branch", "Bool")],
+               tsParams := [("site", "number"), ("branch", "boolean")],
+               answer := "Unit", tsAnswer := "void",
+               cues := ["a value branch reports the decision it already took"] } ] }
 
 /-- The `Interrupts` service every interrupt point asks. `point` answers
 nothing: the host service either interrupts the running fiber at that site or
@@ -105,6 +109,23 @@ def skeletonBlockWith (table : List OpSpec) (interrupts : Bool) (block : RawBloc
       let toLeft ← transfer left (args.map var)
       let toRight ← transfer right (args.map var)
       some (entered (Lowering.chooseIf name decision toLeft toRight))
+  | .performCatch operation request target args onError errorArgs => do
+      let spec ← spec? table operation
+      -- Only a family operation can fail: an atom and a literal have no error
+      -- row, so a caught perform of either has no lowering.
+      let _ ← match spec.kind with | .family => some () | _ => none
+      let answer : Slot := .answer block.id
+      let toOk ← transfer target (args.map var ++ [.catchValue block.id])
+      let toError ← transfer onError (errorArgs.map var ++ [.catchError block.id])
+      let point : List Skeleton :=
+        if interrupts then [Lowering.interruptPoint (Effect4.Flow.Point.site (.perform block.id))]
+        else []
+      some (entered (point ++
+        Lowering.performCatchResult answer operation spec (var request) toOk toError))
+  | .branch test site onTrue onFalse args => do
+      let toTrue ← transfer onTrue (args.map var)
+      let toFalse ← transfer onFalse (args.map var)
+      some (entered (Lowering.branchIf (var test) site toTrue toFalse))
 
 /-- The dispatch-form transfer: the move, then `block = target; continue`. -/
 def dispatchTransfer (source : BlockId) (target : BlockId) (values : List Slot) :
@@ -197,6 +218,14 @@ def ruleSet (rows : ServiceRow) (program : FlowProgram) : List Rule :=
           | none => acc
         move acc (args.length + 1)
     | .choose _ _ _ args => move (step acc .chooseIf) args.length
+    | .performCatch operation _ _ args _ errorArgs =>
+        let acc := match spec? program.table operation with
+          | some spec =>
+              step (step acc .performCatch)
+                (if spec.requestTy == "void" then .nullaryValue else .performCall)
+          | none => acc
+        move (move acc (args.length + 1)) (errorArgs.length + 1)
+    | .branch _ _ _ _ args => move (step acc .branchIf) args.length
   |> fun acc => let _ := rows; acc
 
 /-- The error channel of a flow: the error spellings of the family operations
