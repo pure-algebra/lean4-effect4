@@ -31,7 +31,7 @@ had.
 No definition here traverses a rendered module.
 -/
 
-import Effect4.Target.TypeScript.Skeleton
+import Effect4.Target.TypeScript.SkeletonRender
 
 namespace Effect4Test.Counterexamples.Target.TupleRequest
 

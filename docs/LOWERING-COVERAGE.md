@@ -93,7 +93,7 @@ admitted Flow v2 graph. Their goldens are the Flow-runner face under
 
 ## Multi-argument operations
 
-`perform-tuple` (`Effect4/Target/TypeScript/Skeleton.lean`, `Lowering.tupleArgs`)
+`perform-tuple` (`Effect4/Target/TypeScript/SkeletonRender.lean`, `Lowering.tupleArgs`)
 is the projection an operation of two or more parameters needs. The flow
 alphabet has no pair constructor — `plan` hands a service exactly one `Val` —
 so such an operation is performed from a single request slot holding the
