@@ -8,7 +8,9 @@ P-T9b, `docs/TRACE-DAG.md` edge `structured-agreement`).
 
 `TypeScript.Structure.emitWith` is owned by the pinned `typescript` package
 and cannot be edited from here, so its laws are stated in Effect4 over the
-package's definitions and Effect4's own `structuredShapes`.
+package's graph analysis, Effect4's `Structuring.emitWith` (the same algorithm
+with the statement type as a parameter, pinned to the package's emitter at
+`Stmt` by `Structuring.emitWith_eq`) and Effect4's own `structuredShapes`.
 
 The property proved here is *label well-scoping*: a `continue l` must sit
 inside a `while l`, and a `break l` inside a `label l:` block. Row
@@ -17,6 +19,16 @@ block, when it was a loop header, was not wrapped in its own loop, so the
 `continue W<entry>` that `emitNode` emits for the back edge had no binder.
 `emitWith` now wraps it, and `emitWith_wellScoped` below is the theorem that
 makes that wrapping load-bearing.
+
+Since packet D3 the law is stated twice, over the two carriers, and the second
+follows from the first:
+
+* over `Skeleton` (`Skel.wellScoped`), because that is what the structured
+  lowering now emits and what the agreement theorems are stated over; and
+* over `Stmt` (`wellScoped`), the property of the *printed* program, reached
+  from the skeleton by `render_wellScoped`: `render` maps each labelled control
+  shape to its spelling and introduces no label of its own, so scoping is
+  preserved on the nose.
 
 What is proved and what is not:
 
@@ -83,6 +95,67 @@ def wellScopedCases (blocks loops : List String) (cases : List (Nat × List Stmt
 termination_by structural cases
 
 end
+
+/-! ## Label well-scoping of a control skeleton
+
+The same predicate one level up. A `dispatchLoop` binds no label — the
+`gotoBlock` inside it is an unlabelled `continue`, always in scope — and
+`enterScoped` is the function boundary. -/
+
+namespace Skel
+
+mutual
+
+/-- Every labelled jump in a skeleton names a label its binder is in scope for. -/
+def wellScoped (blocks loops : List String) (node : Skeleton) : Bool :=
+  match node with
+  | .loop label body => wellScopedList blocks (label :: loops) body
+  | .labelled label body => wellScopedList (label :: blocks) loops body
+  | .dispatchLoop _ cases => wellScopedCases blocks loops cases
+  | .decide _ _ onTrue onFalse =>
+      wellScopedList blocks loops onTrue && wellScopedList blocks loops onFalse
+  | .enterScoped _ body => wellScopedList [] [] body
+  | .breakTo label => blocks.contains label
+  | .continueTo label => loops.contains label
+  | _ => true
+termination_by structural node
+
+/-- `Skel.wellScoped` over a skeleton list. -/
+def wellScopedList (blocks loops : List String) (nodes : List Skeleton) : Bool :=
+  match nodes with
+  | [] => true
+  | node :: rest => wellScoped blocks loops node && wellScopedList blocks loops rest
+termination_by structural nodes
+
+/-- `Skel.wellScoped` over the arms of a dispatch switch. -/
+def wellScopedCases (blocks loops : List String) (cases : List (Nat × List Skeleton)) : Bool :=
+  match cases with
+  | [] => true
+  | (_, body) :: rest => wellScopedList blocks loops body && wellScopedCases blocks loops rest
+termination_by structural cases
+
+end
+
+/-- `Skel.wellScopedList` distributes over `++`. -/
+theorem wellScopedList_append (blocks loops : List String) :
+    ∀ (left right : List Skeleton),
+      wellScopedList blocks loops (left ++ right) =
+        (wellScopedList blocks loops left && wellScopedList blocks loops right)
+  | [], right => by simp [wellScopedList]
+  | s :: rest, right => by
+      simp [wellScopedList, wellScopedList_append blocks loops rest right, Bool.and_assoc]
+
+theorem wellScopedList_of_forall {blocks loops : List String} :
+    ∀ (nodes : List Skeleton), (∀ s, s ∈ nodes → wellScoped blocks loops s = true) →
+      wellScopedList blocks loops nodes = true
+  | [], _ => by simp [wellScopedList]
+  | s :: rest, all => by
+      rw [wellScopedList]
+      exact Bool.and_eq_true_iff.mpr
+        ⟨all s List.mem_cons_self,
+         wellScopedList_of_forall rest fun t mem => all t (List.mem_cons_of_mem _ mem)⟩
+
+end Skel
 
 /-! ## `dominates` is a walk up the `idom` chain
 
@@ -179,14 +252,14 @@ theorem lt_size_of_transferTarget {g : Structure.Graph} (closed : GraphClosed g)
 
 /-- The caller's block body introduces no labelled jump of its own: whatever it
 returns is well scoped as soon as every control transfer it was handed is.
-Effect4's `Flow.structuredBody` satisfies this — `lowerBlockWith` splices the
-transfer statements and adds only assignments, `const`s and `if`s. -/
-def BodyScoped (body : Nat → (Nat → Option (List Stmt)) → Option (List Stmt)) : Prop :=
-  ∀ (node : Nat) (transfer : Nat → Option (List Stmt)) (blocks loops : List String)
-    (own : List Stmt),
+Effect4's `Flow.skeletonBody` satisfies this — `skeletonBlockWith` splices the
+transfer nodes and adds only assignments, performs and decisions. -/
+def BodyScoped (body : Nat → (Nat → Option (List Skeleton)) → Option (List Skeleton)) : Prop :=
+  ∀ (node : Nat) (transfer : Nat → Option (List Skeleton)) (blocks loops : List String)
+    (own : List Skeleton),
     (∀ target control, transfer target = some control →
-      wellScopedList blocks loops control = true) →
-    body node transfer = some own → wellScopedList blocks loops own = true
+      Skel.wellScopedList blocks loops control = true) →
+    body node transfer = some own → Skel.wellScopedList blocks loops own = true
 
 /-- `wellScopedList` distributes over `++`. -/
 theorem wellScopedList_append (blocks loops : List String) :
@@ -222,20 +295,20 @@ theorem loops_of_child {g : Structure.Graph} {node child : Nat} {loops : List St
 structured form emits sits inside its `while l`; every `break l` names a block
 label of the graph. -/
 theorem emitNode_wellScoped {g : Structure.Graph}
-    {body : Nat → (Nat → Option (List Stmt)) → Option (List Stmt)}
+    {body : Nat → (Nat → Option (List Skeleton)) → Option (List Skeleton)}
     (closed : GraphClosed g) (scopedBody : BodyScoped body) :
-    ∀ (fuel node : Nat) (blocks loops : List String) (out : List Stmt),
+    ∀ (fuel node : Nat) (blocks loops : List String) (out : List Skeleton),
       (∀ target, target < g.size → Structure.blockLabel target ∈ blocks) →
       (∀ target, Structure.dominates g target node = true →
         Structure.isLoopHeader g target = true → Structure.loopLabel target ∈ loops) →
-      Structure.emitNode g structuredShapes body fuel node = some out →
-      wellScopedList blocks loops out = true := by
+      Structuring.emitNode g structuredShapes body fuel node = some out →
+      Skel.wellScopedList blocks loops out = true := by
   intro fuel
   induction fuel with
-  | zero => intro node blocks loops out _ _ emitted; simp [Structure.emitNode] at emitted
+  | zero => intro node blocks loops out _ _ emitted; simp [Structuring.emitNode] at emitted
   | succ fuel ih =>
       intro node blocks loops out hBlocks hLoops emitted
-      rw [Structure.emitNode] at emitted
+      rw [Structuring.emitNode] at emitted
       obtain ⟨own, hown, hfold⟩ := Option.bind_eq_some_iff.mp emitted
       -- Every merge child is a dominator-tree child of `node`.
       have mergeChild : ∀ m,
@@ -249,18 +322,18 @@ theorem emitNode_wellScoped {g : Structure.Graph}
           List.filter (fun c => Structure.isMerge g c || Structure.isLoopHeader g c)
             (Structure.children g node) = merges at hfold mergeChild
       -- The fold: each merge child wraps everything emitted before it.
-      have fold : ∀ (ms : List Nat) (acc result : List Stmt),
+      have fold : ∀ (ms : List Nat) (acc result : List Skeleton),
           (∀ m, m ∈ ms → Structure.idom g m = some node) →
-          wellScopedList (ms.map Structure.blockLabel ++ blocks) loops acc = true →
+          Skel.wellScopedList (ms.map Structure.blockLabel ++ blocks) loops acc = true →
           List.foldlM (fun acc m => do
-              let inner ← Structure.emitNode g structuredShapes body fuel m
-              have placed : List Stmt :=
+              let inner ← Structuring.emitNode g structuredShapes body fuel m
+              have placed : List Skeleton :=
                 if Structure.isLoopHeader g m = true then
                   [structuredShapes.loop (Structure.loopLabel m) inner]
                 else inner
               pure ([structuredShapes.merge (Structure.blockLabel m) acc] ++ placed))
             acc ms = some result →
-          wellScopedList blocks loops result = true := by
+          Skel.wellScopedList blocks loops result = true := by
         intro ms
         induction ms with
         | nil =>
@@ -277,20 +350,20 @@ theorem emitNode_wellScoped {g : Structure.Graph}
             refine ihFold _ result (fun m' mem => children m' (List.mem_cons_of_mem _ mem)) ?_ rest'
             have upM : Structure.idom g m = some node := children m List.mem_cons_self
             have innerScoped :
-                wellScopedList (rest.map Structure.blockLabel ++ blocks)
+                Skel.wellScopedList (rest.map Structure.blockLabel ++ blocks)
                   (if Structure.isLoopHeader g m = true then Structure.loopLabel m :: loops
                    else loops) inner = true :=
               ih m _ _ inner
                 (fun target lt => List.mem_append_right _ (hBlocks target lt))
                 (loops_of_child upM hLoops) hinner
-            rw [wellScopedList_append]
+            rw [Skel.wellScopedList_append]
             refine Bool.and_eq_true_iff.mpr ⟨?_, ?_⟩
-            · simpa [wellScopedList, wellScoped, structuredShapes, Lowering.structuredMerge]
-                using scopedAcc
+            · simpa [Skel.wellScopedList, Skel.wellScoped, structuredShapes,
+                Lowering.structuredMerge] using scopedAcc
             · by_cases header : Structure.isLoopHeader g m = true
               · rw [if_pos header] at innerScoped ⊢
-                simpa [wellScopedList, wellScoped, structuredShapes, Lowering.structuredLoop]
-                  using innerScoped
+                simpa [Skel.wellScopedList, Skel.wellScoped, structuredShapes,
+                  Lowering.structuredLoop] using innerScoped
               · rw [if_neg header] at innerScoped ⊢
                 exact innerScoped
       refine fold _ own out mergeChild ?_ hfold
@@ -303,8 +376,8 @@ theorem emitNode_wellScoped {g : Structure.Graph}
         obtain ⟨headerPart, dom⟩ := Bool.and_eq_true_iff.mp b1
         obtain ⟨_, header⟩ := Bool.and_eq_true_iff.mp headerPart
         cases transferred
-        simp only [wellScopedList, wellScoped, structuredShapes, Lowering.structuredContinue,
-          Bool.and_true]
+        simp only [Skel.wellScopedList, Skel.wellScoped, structuredShapes,
+          Lowering.structuredContinue, Bool.and_true]
         exact List.contains_iff_mem.mpr (hLoops target dom header)
       · rw [if_neg b1] at transferred
         by_cases b2 : (Structure.isMerge g target || Structure.isLoopHeader g target) = true
@@ -315,8 +388,8 @@ theorem emitNode_wellScoped {g : Structure.Graph}
           have member : Structure.blockLabel target ∈
               List.map Structure.blockLabel merges ++ blocks :=
             List.mem_append_right _ (hBlocks target lt)
-          simp only [wellScopedList, wellScoped, structuredShapes, Lowering.structuredBreak,
-            Bool.and_true]
+          simp only [Skel.wellScopedList, Skel.wellScoped, structuredShapes,
+            Lowering.structuredBreak, Bool.and_true]
           exact List.contains_iff_mem.mpr member
         · rw [if_neg b2] at transferred
           by_cases b3 : (Structure.idom g target == some node) = true
@@ -346,7 +419,7 @@ theorem mem_blockLabels {g : Structure.Graph} {target : Nat} (lt : target < g.si
   List.mem_map_of_mem (List.mem_range.mpr lt)
 
 /-- **The structured form is `continue`-scoped.** Every `continue l` in the
-emitted statements sits inside a `while l`, and every `break l` names a block
+emitted skeleton sits inside a `while l`, and every `break l` names a block
 label of the graph.
 
 This is where `emitWith`'s wrapping of a loop-header entry is load-bearing:
@@ -356,11 +429,11 @@ and the theorem is false for that emission. Neither reducibility nor the
 correctness of the dominator computation is needed: `Structure.dominates` is by
 definition a walk up the `idom` chain, which is the chain `emitNode` descends. -/
 theorem emitWith_wellScoped {g : Structure.Graph}
-    {body : Nat → (Nat → Option (List Stmt)) → Option (List Stmt)}
-    (closed : GraphClosed g) (scopedBody : BodyScoped body) {out : List Stmt}
-    (emitted : Structure.emitWith g structuredShapes body = some out) :
-    wellScopedList (blockLabels g) [] out = true := by
-  unfold Structure.emitWith at emitted
+    {body : Nat → (Nat → Option (List Skeleton)) → Option (List Skeleton)}
+    (closed : GraphClosed g) (scopedBody : BodyScoped body) {out : List Skeleton}
+    (emitted : Structuring.emitWith g structuredShapes body = some out) :
+    Skel.wellScopedList (blockLabels g) [] out = true := by
+  unfold Structuring.emitWith at emitted
   obtain ⟨_, _, emitted⟩ := Option.bind_eq_some_iff.mp emitted
   obtain ⟨inner, hinner, hout⟩ := Option.bind_eq_some_iff.mp emitted
   simp only [Option.pure_def, Option.some.injEq] at hout
@@ -379,7 +452,7 @@ theorem emitWith_wellScoped {g : Structure.Graph}
   by_cases header : Structure.isLoopHeader g g.entry = true
   · rw [if_pos header] at hout innerScoped
     subst hout
-    simpa [wellScopedList, wellScoped, structuredShapes, Lowering.structuredLoop]
+    simpa [Skel.wellScopedList, Skel.wellScoped, structuredShapes, Lowering.structuredLoop]
       using innerScoped
   · rw [if_neg header] at hout innerScoped
     subst hout
@@ -404,18 +477,18 @@ With (1) and (2), the induction above goes through with the block scope
 Owed by `lean4-typescript`; recorded on the `structured-agreement` row of
 `docs/TRACE-DAG.md`. -/
 def BreakScopedStatement : Prop :=
-  ∀ (g : Structure.Graph) (body : Nat → (Nat → Option (List Stmt)) → Option (List Stmt))
-    (out : List Stmt),
+  ∀ (g : Structure.Graph) (body : Nat → (Nat → Option (List Skeleton)) → Option (List Skeleton))
+    (out : List Skeleton),
     GraphClosed g → BodyScoped body → Structure.reducible g = true →
-    Structure.emitWith g structuredShapes body = some out →
-    wellScopedList [] [] out = true
+    Structuring.emitWith g structuredShapes body = some out →
+    Skel.wellScopedList [] [] out = true
 
 /-! ## Effect4's own body satisfies the hypothesis
 
-`BodyScoped` is not an assumption Effect4 leaves hanging: `Flow.structuredBody`
-reaches the control transfers only through `transfer`, and every other
-statement `lowerBlockWith` emits — a `return`, a `const`, a `let`, an `if`,
-and the parameter moves — carries no label. -/
+`BodyScoped` is not an assumption Effect4 leaves hanging: `Flow.skeletonBody`
+reaches the control transfers only through `transfer`, and every other node
+`skeletonBlockWith` emits — a return, a perform, a decision, and the parameter
+moves — carries no label. -/
 
 theorem wellScopedList_of_forall {blocks loops : List String} :
     ∀ (stmts : List Stmt), (∀ s, s ∈ stmts → wellScoped blocks loops s = true) →
@@ -428,39 +501,38 @@ theorem wellScopedList_of_forall {blocks loops : List String} :
          wellScopedList_of_forall rest fun t mem => all t (List.mem_cons_of_mem _ mem)⟩
 
 theorem paramMove_wellScoped (blocks loops : List String) (source target : BlockId)
-    (values : List Expr) :
-    wellScopedList blocks loops (Lowering.paramMove source target values) = true := by
-  have assigns : ∀ (l : List (Nat × Expr)) (f : Nat × Expr → Stmt),
-      (∀ index value, wellScoped blocks loops (f (index, value)) = true) →
-      wellScopedList blocks loops (l.map f) = true := by
+    (values : List Slot) :
+    Skel.wellScopedList blocks loops (Lowering.paramMove source target values) = true := by
+  have assigns : ∀ (l : List (Nat × Slot)) (f : Nat × Slot → Skeleton),
+      (∀ index value, Skel.wellScoped blocks loops (f (index, value)) = true) →
+      Skel.wellScopedList blocks loops (l.map f) = true := by
     intro l f jumpFree
-    refine wellScopedList_of_forall _ ?_
+    refine Skel.wellScopedList_of_forall _ ?_
     intro s mem
     obtain ⟨⟨index, value⟩, _, rfl⟩ := List.mem_map.mp mem
     exact jumpFree index value
   unfold Lowering.paramMove
   split
-  · rw [wellScopedList_append]
+  · rw [Skel.wellScopedList_append]
     refine Bool.and_eq_true_iff.mpr ⟨assigns _ _ ?_, assigns _ _ ?_⟩ <;>
-      intro index value <;> simp [wellScoped]
-  · exact assigns _ _ (by intro index value; simp [wellScoped])
+      intro index value <;> simp [Skel.wellScoped]
+  · exact assigns _ _ (by intro index value; simp [Skel.wellScoped])
 
-/-- Every statement `lowerBlockWith` emits of its own carries no label, so its
+/-- Every node `skeletonBlockWith` emits of its own carries no label, so its
 result is well scoped as soon as the transfers it was handed are. -/
-theorem lowerBlockWith_wellScoped (rows : ServiceRow) (table : List OpSpec)
-    (block : RawBlock String) (move : BlockId → List Expr → Option (List Stmt))
-    (blocks loops : List String)
+theorem skeletonBlockWith_wellScoped (table : List OpSpec) (block : RawBlock String)
+    (move : BlockId → List Slot → Option (List Skeleton)) (blocks loops : List String)
     (moveScoped : ∀ target values control, move target values = some control →
-      wellScopedList blocks loops control = true)
-    {own : List Stmt} (lowered : Flow.lowerBlockWith rows table block move = some own) :
-    wellScopedList blocks loops own = true := by
-  unfold Flow.lowerBlockWith at lowered
+      Skel.wellScopedList blocks loops control = true)
+    {own : List Skeleton} (lowered : Flow.skeletonBlockWith table block move = some own) :
+    Skel.wellScopedList blocks loops own = true := by
+  unfold Flow.skeletonBlockWith at lowered
   cases term : block.term with
   | ret value =>
       rw [term] at lowered
       simp only [Option.some.injEq] at lowered
       subst lowered
-      simp [wellScopedList, wellScoped, Lowering.flowRet]
+      simp [Skel.wellScopedList, Skel.wellScoped, Lowering.flowRet]
   | jump target args =>
       rw [term] at lowered
       exact moveScoped _ _ _ lowered
@@ -476,9 +548,9 @@ theorem lowerBlockWith_wellScoped (rows : ServiceRow) (table : List OpSpec)
           injection headed with headed
           subst headEq
           subst headed
-          rw [wellScopedList]
+          rw [Skel.wellScopedList]
           exact Bool.and_eq_true_iff.mpr
-            ⟨by simp [wellScoped, Lowering.flowPerform], moveScoped _ _ _ hrest⟩
+            ⟨by simp [Skel.wellScoped, Lowering.flowPerform], moveScoped _ _ _ hrest⟩
       | atom =>
           rw [kind] at lowered
           obtain ⟨head, headEq, lowered⟩ := Option.bind_eq_some_iff.mp lowered
@@ -487,9 +559,9 @@ theorem lowerBlockWith_wellScoped (rows : ServiceRow) (table : List OpSpec)
           injection headed with headed
           subst headEq
           subst headed
-          rw [wellScopedList]
+          rw [Skel.wellScopedList]
           exact Bool.and_eq_true_iff.mpr
-            ⟨by simp [wellScoped, Lowering.flowAtom], moveScoped _ _ _ hrest⟩
+            ⟨by simp [Skel.wellScoped, Lowering.flowAtom], moveScoped _ _ _ hrest⟩
       | lit value =>
           rw [kind] at lowered
           obtain ⟨head, headEq, lowered⟩ := Option.bind_eq_some_iff.mp lowered
@@ -498,18 +570,17 @@ theorem lowerBlockWith_wellScoped (rows : ServiceRow) (table : List OpSpec)
           injection headed with headed
           subst spelled
           subst headed
-          rw [wellScopedList]
+          rw [Skel.wellScopedList]
           exact Bool.and_eq_true_iff.mpr
-            ⟨by simp [wellScoped, Lowering.flowLiteral], moveScoped _ _ _ hrest⟩
+            ⟨by simp [Skel.wellScoped, Lowering.flowLiteral], moveScoped _ _ _ hrest⟩
   | choose decision left right args =>
       rw [term] at lowered
       obtain ⟨toLeft, hleft, lowered⟩ := Option.bind_eq_some_iff.mp lowered
       obtain ⟨toRight, hright, lowered⟩ := Option.bind_eq_some_iff.mp lowered
       simp only [Option.some.injEq] at lowered
       subst lowered
-      simp only [Lowering.chooseIf, wellScopedList, wellScoped, Bool.and_true]
-      exact Bool.and_eq_true_iff.mpr
-        ⟨rfl, Bool.and_eq_true_iff.mpr ⟨moveScoped _ _ _ hleft, moveScoped _ _ _ hright⟩⟩
+      simp only [Lowering.chooseIf, Skel.wellScopedList, Skel.wellScoped, Bool.and_true]
+      exact Bool.and_eq_true_iff.mpr ⟨moveScoped _ _ _ hleft, moveScoped _ _ _ hright⟩
 
 /-- `List.findIdx?` returns a position inside the list. Reproved by induction:
 the library form goes through `List.findIdx?_eq_some_iff_findIdx_eq`, which
@@ -545,27 +616,107 @@ theorem graphOf_closed (blocks : List (RawBlock String)) (entry : BlockId) :
       unfold Flow.position at positioned
       exact findIdx?_lt_length positioned
 
-/-- **The structured form Effect4 emits is `continue`-scoped.** Every
-`continue l` in the statements of a structured lowering sits inside its
+/-- **The structured skeleton Effect4 emits is `continue`-scoped.** Every
+`continue l` in the skeleton of a structured lowering sits inside its
 `while l`, and every `break l` names a block label of the flow's own graph.
-No hypothesis is left over: `Flow.graphOf` is closed and `lowerBlockWith`
+No hypothesis is left over: `Flow.graphOf` is closed and `skeletonBlockWith`
 introduces no label of its own. -/
-theorem structuredBody_wellScoped (rows : ServiceRow) (table : List OpSpec)
-    (blocks : List (RawBlock String)) (entry : BlockId) {out : List Stmt}
-    (emitted : Flow.structuredBody rows table blocks entry = some out) :
-    wellScopedList (blockLabels (Flow.graphOf blocks entry)) [] out = true := by
-  unfold Flow.structuredBody at emitted
+theorem skeletonBody_wellScoped (table : List OpSpec) (blocks : List (RawBlock String))
+    (entry : BlockId) {out : List Skeleton}
+    (emitted : Flow.skeletonBody table blocks entry = some out) :
+    Skel.wellScopedList (blockLabels (Flow.graphOf blocks entry)) [] out = true := by
+  unfold Flow.skeletonBody at emitted
   refine emitWith_wellScoped (graphOf_closed blocks entry) ?_ emitted
   intro node transfer scopeBlocks scopeLoops own transferScoped lowered
   obtain ⟨block, _, lowered⟩ := Option.bind_eq_some_iff.mp lowered
-  refine lowerBlockWith_wellScoped rows table block _ scopeBlocks scopeLoops ?_ lowered
+  refine skeletonBlockWith_wellScoped table block _ scopeBlocks scopeLoops ?_ lowered
   intro target values control moved
   obtain ⟨position, _, moved⟩ := Option.bind_eq_some_iff.mp moved
   obtain ⟨transferred, transferredEq, moved⟩ := Option.bind_eq_some_iff.mp moved
   injection moved with moved
   subst moved
-  rw [wellScopedList_append]
+  rw [Skel.wellScopedList_append]
   exact Bool.and_eq_true_iff.mpr
     ⟨paramMove_wellScoped _ _ _ _ _, transferScoped position transferred transferredEq⟩
+
+/-! ## Printing preserves scoping
+
+`render` maps each labelled control shape to its spelling and introduces no
+label of its own, so the property transports from the skeleton to the printed
+program on the nose. -/
+
+mutual
+
+/-- Printing one skeleton node preserves label scoping. -/
+theorem render_wellScoped (rows : ServiceRow) (blocks loops : List String) (node : Skeleton) :
+    wellScopedList blocks loops (Skeleton.render rows node) =
+      Skel.wellScoped blocks loops node := by
+  match node with
+  | .acquireService _ | .declare _ _ | .assign _ _ | .letTemp _ _ | .letBlockIndex _ _
+  | .gotoBlock _ _ | .perform _ _ _ _ | .atom _ _ _ _ | .ret _
+  | .acquire _ _ _ _ _ | .leave _ =>
+      simp [Skeleton.render, wellScopedList, wellScoped, Skel.wellScoped,
+        Lowering.serviceAcquire]
+  | .literal _ _ value =>
+      cases spelling : Flow.literal? value <;>
+        simp [Skeleton.render, spelling, wellScopedList, wellScoped, Skel.wellScoped]
+  | .dispatchLoop var cases =>
+      simp [Skeleton.render, wellScopedList, wellScoped, Skel.wellScoped,
+        renderCases_wellScoped rows blocks loops cases]
+  | .loop label body =>
+      simp [Skeleton.render, wellScopedList, wellScoped, Skel.wellScoped,
+        renderList_wellScoped rows blocks (label :: loops) body]
+  | .labelled label body =>
+      simp [Skeleton.render, wellScopedList, wellScoped, Skel.wellScoped,
+        renderList_wellScoped rows (label :: blocks) loops body]
+  | .breakTo label =>
+      simp [Skeleton.render, wellScopedList, wellScoped, Skel.wellScoped]
+  | .continueTo label =>
+      simp [Skeleton.render, wellScopedList, wellScoped, Skel.wellScoped]
+  | .decide answer site onTrue onFalse =>
+      simp [Skeleton.render, wellScopedList, wellScoped, Skel.wellScoped,
+        renderList_wellScoped rows blocks loops onTrue,
+        renderList_wellScoped rows blocks loops onFalse]
+  | .enterScoped region body =>
+      simp [Skeleton.render, wellScopedList, wellScoped, Skel.wellScoped,
+        renderList_wellScoped rows [] [] body]
+termination_by structural node
+
+/-- Printing a skeleton list preserves label scoping. -/
+theorem renderList_wellScoped (rows : ServiceRow) (blocks loops : List String)
+    (nodes : List Skeleton) :
+    wellScopedList blocks loops (Skeleton.renderList rows nodes) =
+      Skel.wellScopedList blocks loops nodes := by
+  match nodes with
+  | [] => simp [Skeleton.renderList, wellScopedList, Skel.wellScopedList]
+  | node :: rest =>
+      rw [Skeleton.renderList, Skel.wellScopedList, wellScopedList_append,
+        render_wellScoped rows blocks loops node, renderList_wellScoped rows blocks loops rest]
+termination_by structural nodes
+
+/-- Printing the arms of a dispatch switch preserves label scoping. -/
+theorem renderCases_wellScoped (rows : ServiceRow) (blocks loops : List String)
+    (cases : List (Nat × List Skeleton)) :
+    wellScopedCases blocks loops (Skeleton.renderCases rows cases) =
+      Skel.wellScopedCases blocks loops cases := by
+  match cases with
+  | [] => simp [Skeleton.renderCases, wellScopedCases, Skel.wellScopedCases]
+  | (index, body) :: rest =>
+      rw [Skeleton.renderCases, wellScopedCases, Skel.wellScopedCases,
+        renderList_wellScoped rows blocks loops body,
+        renderCases_wellScoped rows blocks loops rest]
+termination_by structural cases
+
+end
+
+/-- **The structured TypeScript Effect4 prints is `continue`-scoped.** The
+skeleton law, transported through `render`. -/
+theorem structuredBody_wellScoped (rows : ServiceRow) (table : List OpSpec)
+    (blocks : List (RawBlock String)) (entry : BlockId) {out : List Skeleton}
+    (emitted : Flow.skeletonBody table blocks entry = some out) :
+    wellScopedList (blockLabels (Flow.graphOf blocks entry)) [] (Skeleton.renderList rows out) =
+      true := by
+  rw [renderList_wellScoped]
+  exact skeletonBody_wellScoped table blocks entry emitted
 
 end Effect4.Target.Structured
