@@ -97,11 +97,13 @@ def id : Rule → String
 def all : List Rule :=
   [serviceAcquire, nullaryValue, performCall, performBind, performDiscard, atomCall, ret, errorAbort,
    dispatchLoop, blockCase, paramMove, flowPerform, flowAtom, flowLiteral, chooseIf, flowRet,
-   performCatch, branchIf,
-   interruptPoint,
+      interruptPoint,
    regionEnter, regionAcquire, regionLeave, regionMasked,
    structuredLoop, structuredMerge, structuredContinue, structuredBreak, dispatchFallback,
-   performTuple]
+   performTuple,
+   -- Flow v3 (lean4-effects v0.7.0): appended last so the positional windows of the
+   -- lowering contracts keep their places.
+   performCatch, branchIf ]
 
 theorem all_nodup : all.Nodup := by decide
 

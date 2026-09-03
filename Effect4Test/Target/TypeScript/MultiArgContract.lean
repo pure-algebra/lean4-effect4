@@ -189,7 +189,9 @@ it performs an operation of arity above one.
 -/
 
 #guard Rule.all.length = 29
-#guard Rule.all.getLast? = some .performTuple
+-- `perform-tuple` was appended so no positional window moved; Flow v3's two rules
+-- were appended after it for the same reason.
+#guard (Rule.all.map Rule.id).drop 26 = ["perform-tuple", "perform-catch", "branch-if"]
 #guard Rule.ofId? "perform-tuple" = some .performTuple
 #guard (Rule.performTuple).id = "perform-tuple"
 

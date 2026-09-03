@@ -2669,3 +2669,31 @@ the `Effect4Test.lean` import line for the new battery, the `E4-TARGET-CE-022`
 and `E4-FLOW-CE-028` rows, the `job-runner` and `coverage` rows of
 `docs/TRACE-DAG.md`, `docs/LOWERING-COVERAGE.md`, and
 `docs/research/2026-09-03-job-runner.md` §1 and §3.1.
+
+## Flow v3 landed, 2026-09-03
+
+Carrier: lean4-effects v0.7.0 (`a117157`, tagged and pushed): `performCatch`
+and `branch`, successor-indexed clauses, 18 admission clauses,
+`EF-FLOW-CE-007/008`. Effect4 pins it. Runners: `plan`/`step`, the region and
+interrupt runners, `RegionTotal`/`RegionSafety`/`Approximation`/
+`RegionDenotation`/`RegionSimulation` take both terminators; the failure edge
+is travelled only where a service can fail (the region and interrupt runners).
+Semantics: `denoteGo`/`denoteFuel` arms, T1/T2 re-proved; the plan inversions
+generalised (`plan_choose_inv`, `plan_exhausted_inv` and `plan_mismatch_inv`
+are disjunctions over `choose` and `branch`; `plan_performCatch_inv` is new);
+both skeleton block laws and the bind-form law of `StructureSemantics` gain a
+`performCatch` conjunct and the `branch` alternatives, with the branch's
+value/tape agreement discharged through `Holds` and admission's operand bound
+(`testBound`) — T3 and the general T4 hold over the v3 carrier with no new
+hypothesis. Lowering: `perform-catch` (rc.112 `Result` reading of the call and
+a `switch` on `_tag`) and `branch-if` (`decisions.report(site, test)` then
+`if`), appended last in `Rule.all` (29) so no positional window moved; the
+`Decisions` service gains `report` on both faces (`tracer.ts`: tape-checked,
+same `decide` row, a value mismatch dies where the runner refuses). Tracing:
+the job runner is rewritten on the new terminators (`nonEmpty`/`positive`
+atoms declared in `effect_atoms`), its six goldens re-derived (the requeue
+scenario now schedules three failures against a budget of two so the drain
+requeues, retakes and finishes the job) and host-green at both yield settings;
+`E4-FLOW-CE-026`/`027` are repaired with positive controls `caughtFlow` and
+`valueFlow`. Owed: nothing in Lean; the `ret` rule of the interrupt runner
+under a pending interrupt is unchanged by this packet.

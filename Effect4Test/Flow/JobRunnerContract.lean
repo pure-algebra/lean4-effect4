@@ -99,6 +99,8 @@ def jobAtom : String → Val → Val
   | "succ", .nat n => .nat (n + 1)
   | "dec", .nat n => .nat (n - 1)
   | "snd", .pair _ (.nat job) => .nat job
+  | "nonEmpty", .pair _ (.nat job) => .bool (job != 0)
+  | "positive", .nat n => .bool (n != 0)
   | _, _ => .unit
 
 def handleTy : String := "JobQueue"
@@ -112,7 +114,9 @@ def table : List OpSpec := familyTable Jobs.rows ++
   , { name := "zero", kind := .lit (.nat 0), requestTy := "number", answerTy := "number" }
   , { name := "succ", kind := .atom, requestTy := "number", answerTy := "number" }
   , { name := "dec", kind := .atom, requestTy := "number", answerTy := "number" }
-  , { name := "snd", kind := .atom, requestTy := ticketTy, answerTy := "number" } ]
+  , { name := "snd", kind := .atom, requestTy := ticketTy, answerTy := "number" }
+  , { name := "nonEmpty", kind := .atom, requestTy := ticketTy, answerTy := "boolean" }
+  , { name := "positive", kind := .atom, requestTy := "number", answerTy := "boolean" } ]
 
 def opConnect : OperationId := ⟨0⟩
 def opNext : OperationId := ⟨1⟩
@@ -126,6 +130,8 @@ def opZero : OperationId := ⟨8⟩
 def opSucc : OperationId := ⟨9⟩
 def opDec : OperationId := ⟨10⟩
 def opSnd : OperationId := ⟨11⟩
+def opNonEmpty : OperationId := ⟨12⟩
+def opPositive : OperationId := ⟨13⟩
 
 def resultTy : String := "Result.Result<number, string>"
 
@@ -150,26 +156,26 @@ def runnerFlow : RegionFlow String :=
       , jblock 4 (some 1) [handleTy, "number", "number"]
           (.plain (.perform opNext ⟨0⟩ ⟨5⟩ (vars 3)))
       , jblock 5 (some 1) [handleTy, "number", "number", ticketTy]
-          (.plain (.choose ⟨1⟩ ⟨6⟩ ⟨7⟩ (vars 4)))
-      , jblock 6 (some 1) [handleTy, "number", "number", ticketTy]
-          (.plain (.perform opSnd ⟨3⟩ ⟨8⟩ (vars 4)))
+          (.plain (.perform opNonEmpty ⟨3⟩ ⟨6⟩ (vars 4)))
+      , jblock 6 (some 1) [handleTy, "number", "number", ticketTy, "boolean"]
+          (.plain (.branch ⟨4⟩ ⟨1⟩ ⟨8⟩ ⟨7⟩ (vars 4)))
       , jblock 7 (some 1) [handleTy, "number", "number", ticketTy] (.leave ⟨2⟩)
-      , jblock 8 (some 1) [handleTy, "number", "number", ticketTy, "number"]
-          (.plain (.perform opAttempt ⟨4⟩ ⟨9⟩ (vars 4)))
-      , jblock 9 (some 1) [handleTy, "number", "number", ticketTy, resultTy]
-          (.plain (.choose ⟨2⟩ ⟨10⟩ ⟨12⟩ (vars 4)))
-      , jblock 10 (some 1) [handleTy, "number", "number", ticketTy]
+      , jblock 8 (some 1) [handleTy, "number", "number", ticketTy]
+          (.plain (.performCatch opRun ⟨3⟩ ⟨10⟩ (vars 4) ⟨12⟩ (vars 4)))
+      , jblock 9 (some 1) [handleTy, "number", "number", ticketTy, "boolean"]
+          (.plain (.branch ⟨4⟩ ⟨3⟩ ⟨13⟩ ⟨14⟩ (vars 4)))
+      , jblock 10 (some 1) [handleTy, "number", "number", ticketTy, "number"]
           (.plain (.perform opAck ⟨3⟩ ⟨11⟩ (vars 3)))
       , jblock 11 (some 1) [handleTy, "number", "number", "void"]
           (.plain (.perform opSucc ⟨2⟩ ⟨4⟩ (vars 2)))
-      , jblock 12 (some 1) [handleTy, "number", "number", ticketTy]
-          (.plain (.choose ⟨3⟩ ⟨13⟩ ⟨14⟩ (vars 4)))
+      , jblock 12 (some 1) [handleTy, "number", "number", ticketTy, "string"]
+          (.plain (.perform opPositive ⟨1⟩ ⟨9⟩ (vars 4)))
       , jblock 13 (some 1) [handleTy, "number", "number", ticketTy]
           (.plain (.perform opDec ⟨1⟩ ⟨15⟩ [⟨0⟩, ⟨2⟩, ⟨3⟩]))
       , jblock 14 (some 1) [handleTy, "number", "number", ticketTy]
           (.plain (.perform opRequeue ⟨3⟩ ⟨16⟩ (vars 3)))
       , jblock 15 (some 1) [handleTy, "number", ticketTy, "number"]
-          (.plain (.jump ⟨6⟩ [⟨0⟩, ⟨3⟩, ⟨1⟩, ⟨2⟩]))
+          (.plain (.jump ⟨8⟩ [⟨0⟩, ⟨3⟩, ⟨1⟩, ⟨2⟩]))
       , jblock 16 (some 1) [handleTy, "number", "number", "void"]
           (.plain (.jump ⟨4⟩ (vars 3)))
       , jblock 17 none ["number"] (.plain (.ret ⟨0⟩)) ] }
@@ -189,7 +195,6 @@ def poisonFlow : RegionFlow String :=
 
 def choice (site : Nat) (branch : Bool) : Decision := ⟨⟨site⟩, branch⟩
 def more (b : Bool) : Decision := choice 1 b
-def succeeded (b : Bool) : Decision := choice 2 b
 def retried (b : Bool) : Decision := choice 3 b
 def deliverAtPerform (block : Nat) (b : Bool) : Decision := ⟨(Point.perform ⟨block⟩).site, b⟩
 
@@ -233,9 +238,9 @@ def runPoison (queue : Queue) : Option (RunResult × Effect4.Trace.Log × Queue)
 #guard sitesSeparated runnerFlow && sitesSeparated poisonFlow
 #guard Effect4.Flow.interruptBase = 1000000
 
--- The interrupt sites the goldens name: the ticket projection, the `attempt`
--- the drain is interrupted before, and the region's own `leave`.
-#guard (Point.perform ⟨6⟩).site = ⟨1000013⟩
+-- The interrupt sites the goldens name: the queue test, the caught `run` the
+-- drain is interrupted before, and the region's own `leave`.
+#guard (Point.perform ⟨5⟩).site = ⟨1000011⟩
 #guard (Point.perform ⟨8⟩).site = ⟨1000017⟩
 #guard (Point.leave ⟨1⟩).site = ⟨1000002⟩
 
@@ -247,284 +252,291 @@ def runPoison (queue : Queue) : Option (RunResult × Effect4.Trace.Log × Queue)
 
 /-! ## 2. The six goldens -/
 
-def cleanTape : Tape :=
-  [more true, succeeded true, more true, succeeded true, more true, succeeded true, more false]
+def cleanTape : Tape := [more true, more true, more true, more false]
 
-def retryTape : Tape :=
-  [more true, succeeded true, more true, succeeded false, retried true, succeeded true, more false]
+def retryTape : Tape := [more true, more true, retried true, more false]
 
 def requeueTape : Tape :=
-  [more true, succeeded false, retried true, succeeded false, retried false, more false]
+  [more true, retried true, retried true, retried false, more true, more false]
 
-def interruptTape : Tape := [more true, succeeded true, more true]
+def interruptTape : Tape := [more true, more true]
 
 def interruptITape : Tape := [deliverAtPerform 8 false, deliverAtPerform 8 true]
 
-def maskedTape : Tape :=
-  [more true, succeeded true, more true, succeeded true, more false]
+def maskedTape : Tape := [more true, more true, more false]
 
 -- Golden 1, a clean run of three jobs. The connection is acquired inside
--- region 1, three jobs are dequeued, attempted and acknowledged, the tape
--- then says the queue is empty, the region closes with the acknowledged
--- count and its release closes the connection.
+-- region 1; three tickets are dequeued, each `nonEmpty` branch reports `true`,
+-- each caught `run` takes its value edge and is acknowledged; the fourth
+-- ticket is empty, the branch reports `false`, the region closes with the
+-- acknowledged count and its release closes the connection.
 #guard (runInterrupted [] cleanTape [] (Queue.seed [1, 2, 3])).map (fun r => (r.1, r.2.1)) =
-  some (.done (.nat 3),
-  [ .enter 1
-  , .decide 1000003 false
-  , .op "connect" .unit
-  , .answer "connect" (.nat 0)
-  , .decide 1000007 false
-  , .decide 1000009 false
-  , .op "next" (.nat 0)
-  , .answer "next" (.pair (.nat 0) (.nat 1))
-  , .decide 1 true
-  , .decide 1000013 false
-  , .decide 1000017 false
-  , .op "attempt" (.nat 1)
-  , .answer "attempt" (.pair (.bool true) (.nat 1))
-  , .decide 2 true
-  , .decide 1000021 false
-  , .op "ack" (.pair (.nat 0) (.nat 1))
-  , .answer "ack" .unit
-  , .decide 1000023 false
-  , .decide 1000009 false
-  , .op "next" (.nat 0)
-  , .answer "next" (.pair (.nat 0) (.nat 2))
-  , .decide 1 true
-  , .decide 1000013 false
-  , .decide 1000017 false
-  , .op "attempt" (.nat 2)
-  , .answer "attempt" (.pair (.bool true) (.nat 2))
-  , .decide 2 true
-  , .decide 1000021 false
-  , .op "ack" (.pair (.nat 0) (.nat 2))
-  , .answer "ack" .unit
-  , .decide 1000023 false
-  , .decide 1000009 false
-  , .op "next" (.nat 0)
-  , .answer "next" (.pair (.nat 0) (.nat 3))
-  , .decide 1 true
-  , .decide 1000013 false
-  , .decide 1000017 false
-  , .op "attempt" (.nat 3)
-  , .answer "attempt" (.pair (.bool true) (.nat 3))
-  , .decide 2 true
-  , .decide 1000021 false
-  , .op "ack" (.pair (.nat 0) (.nat 3))
-  , .answer "ack" .unit
-  , .decide 1000023 false
-  , .decide 1000009 false
-  , .op "next" (.nat 0)
-  , .answer "next" (.pair (.nat 0) (.nat 0))
-  , .decide 1 false
-  , .decide 1000002 false
-  , .leave 1 (.success (.nat 3))
-  , .finalizer 1 (.success (.nat 3))
-  , .op "disconnect" (.nat 0)
-  , .answer "disconnect" .unit
-  , .done (.success (.nat 3)) ])
+  some (Effect4.Flow.InterruptResult.done (Effects.Trace.Val.nat 3),
+   [Effects.Trace.Event.enter 1,
+    Effects.Trace.Event.decide 1000003 false,
+    Effects.Trace.Event.op "connect" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.answer "connect" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.decide 1000007 false,
+    Effects.Trace.Event.decide 1000009 false,
+    Effects.Trace.Event.op "next" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "next" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 1)),
+    Effects.Trace.Event.decide 1000011 false,
+    Effects.Trace.Event.decide 1 true,
+    Effects.Trace.Event.decide 1000017 false,
+    Effects.Trace.Event.op "run" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 1)),
+    Effects.Trace.Event.answer "run" (Effects.Trace.Val.nat 1),
+    Effects.Trace.Event.decide 1000021 false,
+    Effects.Trace.Event.op "ack" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 1)),
+    Effects.Trace.Event.answer "ack" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.decide 1000023 false,
+    Effects.Trace.Event.decide 1000009 false,
+    Effects.Trace.Event.op "next" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "next" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.decide 1000011 false,
+    Effects.Trace.Event.decide 1 true,
+    Effects.Trace.Event.decide 1000017 false,
+    Effects.Trace.Event.op "run" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.answer "run" (Effects.Trace.Val.nat 2),
+    Effects.Trace.Event.decide 1000021 false,
+    Effects.Trace.Event.op "ack" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.answer "ack" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.decide 1000023 false,
+    Effects.Trace.Event.decide 1000009 false,
+    Effects.Trace.Event.op "next" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "next" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 3)),
+    Effects.Trace.Event.decide 1000011 false,
+    Effects.Trace.Event.decide 1 true,
+    Effects.Trace.Event.decide 1000017 false,
+    Effects.Trace.Event.op "run" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 3)),
+    Effects.Trace.Event.answer "run" (Effects.Trace.Val.nat 3),
+    Effects.Trace.Event.decide 1000021 false,
+    Effects.Trace.Event.op "ack" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 3)),
+    Effects.Trace.Event.answer "ack" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.decide 1000023 false,
+    Effects.Trace.Event.decide 1000009 false,
+    Effects.Trace.Event.op "next" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "next" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 0)),
+    Effects.Trace.Event.decide 1000011 false,
+    Effects.Trace.Event.decide 1 false,
+    Effects.Trace.Event.decide 1000002 false,
+    Effects.Trace.Event.leave 1 (Effects.Trace.Outcome.success (Effects.Trace.Val.nat 3)),
+    Effects.Trace.Event.finalizer 1 (Effects.Trace.Outcome.success (Effects.Trace.Val.nat 3)),
+    Effects.Trace.Event.op "disconnect" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "disconnect" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.done (Effects.Trace.Outcome.success (Effects.Trace.Val.nat 3))])
 
--- Golden 2, a job that fails once and succeeds on the retry. `attempt`
--- answers `[false, "job 2 failed"]`, the tape takes the failure branch and
--- then the retry branch, the attempt budget is decremented by the `dec`
--- atom (which writes no row: an atom is pure), and the second attempt of
--- the same job succeeds.
+-- Golden 2, a job that fails once and succeeds on the retry. The caught `run`
+-- writes its `failed` row and continues on the failure edge; `positive` of the
+-- budget (2) is `true`, the branch reports it, `dec` spends one attempt (no row:
+-- an atom is pure), and the second `run` of the same ticket succeeds.
 #guard (runInterrupted [] retryTape [] (Queue.seed [1, 2] [(2, 1)])).map (fun r => (r.1, r.2.1)) =
-  some (.done (.nat 2),
-  [ .enter 1
-  , .decide 1000003 false
-  , .op "connect" .unit
-  , .answer "connect" (.nat 0)
-  , .decide 1000007 false
-  , .decide 1000009 false
-  , .op "next" (.nat 0)
-  , .answer "next" (.pair (.nat 0) (.nat 1))
-  , .decide 1 true
-  , .decide 1000013 false
-  , .decide 1000017 false
-  , .op "attempt" (.nat 1)
-  , .answer "attempt" (.pair (.bool true) (.nat 1))
-  , .decide 2 true
-  , .decide 1000021 false
-  , .op "ack" (.pair (.nat 0) (.nat 1))
-  , .answer "ack" .unit
-  , .decide 1000023 false
-  , .decide 1000009 false
-  , .op "next" (.nat 0)
-  , .answer "next" (.pair (.nat 0) (.nat 2))
-  , .decide 1 true
-  , .decide 1000013 false
-  , .decide 1000017 false
-  , .op "attempt" (.nat 2)
-  , .answer "attempt" (.pair (.bool false) (.str "job 2 failed"))
-  , .decide 2 false
-  , .decide 3 true
-  , .decide 1000027 false
-  , .decide 1000013 false
-  , .decide 1000017 false
-  , .op "attempt" (.nat 2)
-  , .answer "attempt" (.pair (.bool true) (.nat 2))
-  , .decide 2 true
-  , .decide 1000021 false
-  , .op "ack" (.pair (.nat 0) (.nat 2))
-  , .answer "ack" .unit
-  , .decide 1000023 false
-  , .decide 1000009 false
-  , .op "next" (.nat 0)
-  , .answer "next" (.pair (.nat 0) (.nat 0))
-  , .decide 1 false
-  , .decide 1000002 false
-  , .leave 1 (.success (.nat 2))
-  , .finalizer 1 (.success (.nat 2))
-  , .op "disconnect" (.nat 0)
-  , .answer "disconnect" .unit
-  , .done (.success (.nat 2)) ])
+  some (Effect4.Flow.InterruptResult.done (Effects.Trace.Val.nat 2),
+   [Effects.Trace.Event.enter 1,
+    Effects.Trace.Event.decide 1000003 false,
+    Effects.Trace.Event.op "connect" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.answer "connect" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.decide 1000007 false,
+    Effects.Trace.Event.decide 1000009 false,
+    Effects.Trace.Event.op "next" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "next" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 1)),
+    Effects.Trace.Event.decide 1000011 false,
+    Effects.Trace.Event.decide 1 true,
+    Effects.Trace.Event.decide 1000017 false,
+    Effects.Trace.Event.op "run" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 1)),
+    Effects.Trace.Event.answer "run" (Effects.Trace.Val.nat 1),
+    Effects.Trace.Event.decide 1000021 false,
+    Effects.Trace.Event.op "ack" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 1)),
+    Effects.Trace.Event.answer "ack" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.decide 1000023 false,
+    Effects.Trace.Event.decide 1000009 false,
+    Effects.Trace.Event.op "next" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "next" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.decide 1000011 false,
+    Effects.Trace.Event.decide 1 true,
+    Effects.Trace.Event.decide 1000017 false,
+    Effects.Trace.Event.op "run" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.failed "run" (Effects.Trace.Val.str "job 2 failed"),
+    Effects.Trace.Event.decide 1000025 false,
+    Effects.Trace.Event.decide 3 true,
+    Effects.Trace.Event.decide 1000027 false,
+    Effects.Trace.Event.decide 1000017 false,
+    Effects.Trace.Event.op "run" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.answer "run" (Effects.Trace.Val.nat 2),
+    Effects.Trace.Event.decide 1000021 false,
+    Effects.Trace.Event.op "ack" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.answer "ack" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.decide 1000023 false,
+    Effects.Trace.Event.decide 1000009 false,
+    Effects.Trace.Event.op "next" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "next" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 0)),
+    Effects.Trace.Event.decide 1000011 false,
+    Effects.Trace.Event.decide 1 false,
+    Effects.Trace.Event.decide 1000002 false,
+    Effects.Trace.Event.leave 1 (Effects.Trace.Outcome.success (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.finalizer 1 (Effects.Trace.Outcome.success (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.op "disconnect" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "disconnect" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.done (Effects.Trace.Outcome.success (Effects.Trace.Val.nat 2))])
 
--- Golden 3, a job requeued after its retries are exhausted: two failing
--- attempts, then the requeue branch, `requeue` puts the job back, and the
--- drain ends having acknowledged nothing.
-#guard (runInterrupted [] requeueTape [] (Queue.seed [2] [(2, 2)])).map (fun r => (r.1, r.2.1)) =
-  some (.done (.nat 0),
-  [ .enter 1
-  , .decide 1000003 false
-  , .op "connect" .unit
-  , .answer "connect" (.nat 0)
-  , .decide 1000007 false
-  , .decide 1000009 false
-  , .op "next" (.nat 0)
-  , .answer "next" (.pair (.nat 0) (.nat 2))
-  , .decide 1 true
-  , .decide 1000013 false
-  , .decide 1000017 false
-  , .op "attempt" (.nat 2)
-  , .answer "attempt" (.pair (.bool false) (.str "job 2 failed"))
-  , .decide 2 false
-  , .decide 3 true
-  , .decide 1000027 false
-  , .decide 1000013 false
-  , .decide 1000017 false
-  , .op "attempt" (.nat 2)
-  , .answer "attempt" (.pair (.bool false) (.str "job 2 failed"))
-  , .decide 2 false
-  , .decide 3 false
-  , .decide 1000029 false
-  , .op "requeue" (.pair (.nat 0) (.nat 2))
-  , .answer "requeue" .unit
-  , .decide 1000009 false
-  , .op "next" (.nat 0)
-  , .answer "next" (.pair (.nat 0) (.nat 2))
-  , .decide 1 false
-  , .decide 1000002 false
-  , .leave 1 (.success (.nat 0))
-  , .finalizer 1 (.success (.nat 0))
-  , .op "disconnect" (.nat 0)
-  , .answer "disconnect" .unit
-  , .done (.success (.nat 0)) ])
+-- Golden 3, a job requeued after its retries are exhausted. Three scheduled
+-- failures against a budget of 2: two retries, then `positive 0` reports
+-- `false` and the job is put back; the drain dequeues it again, it succeeds,
+-- and the region closes with one job acknowledged.
+#guard (runInterrupted [] requeueTape [] (Queue.seed [2] [(2, 3)])).map (fun r => (r.1, r.2.1)) =
+  some (Effect4.Flow.InterruptResult.done (Effects.Trace.Val.nat 1),
+   [Effects.Trace.Event.enter 1,
+    Effects.Trace.Event.decide 1000003 false,
+    Effects.Trace.Event.op "connect" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.answer "connect" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.decide 1000007 false,
+    Effects.Trace.Event.decide 1000009 false,
+    Effects.Trace.Event.op "next" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "next" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.decide 1000011 false,
+    Effects.Trace.Event.decide 1 true,
+    Effects.Trace.Event.decide 1000017 false,
+    Effects.Trace.Event.op "run" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.failed "run" (Effects.Trace.Val.str "job 2 failed"),
+    Effects.Trace.Event.decide 1000025 false,
+    Effects.Trace.Event.decide 3 true,
+    Effects.Trace.Event.decide 1000027 false,
+    Effects.Trace.Event.decide 1000017 false,
+    Effects.Trace.Event.op "run" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.failed "run" (Effects.Trace.Val.str "job 2 failed"),
+    Effects.Trace.Event.decide 1000025 false,
+    Effects.Trace.Event.decide 3 true,
+    Effects.Trace.Event.decide 1000027 false,
+    Effects.Trace.Event.decide 1000017 false,
+    Effects.Trace.Event.op "run" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.failed "run" (Effects.Trace.Val.str "job 2 failed"),
+    Effects.Trace.Event.decide 1000025 false,
+    Effects.Trace.Event.decide 3 false,
+    Effects.Trace.Event.decide 1000029 false,
+    Effects.Trace.Event.op "requeue" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.answer "requeue" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.decide 1000009 false,
+    Effects.Trace.Event.op "next" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "next" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.decide 1000011 false,
+    Effects.Trace.Event.decide 1 true,
+    Effects.Trace.Event.decide 1000017 false,
+    Effects.Trace.Event.op "run" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.answer "run" (Effects.Trace.Val.nat 2),
+    Effects.Trace.Event.decide 1000021 false,
+    Effects.Trace.Event.op "ack" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.answer "ack" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.decide 1000023 false,
+    Effects.Trace.Event.decide 1000009 false,
+    Effects.Trace.Event.op "next" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "next" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 0)),
+    Effects.Trace.Event.decide 1000011 false,
+    Effects.Trace.Event.decide 1 false,
+    Effects.Trace.Event.decide 1000002 false,
+    Effects.Trace.Event.leave 1 (Effects.Trace.Outcome.success (Effects.Trace.Val.nat 1)),
+    Effects.Trace.Event.finalizer 1 (Effects.Trace.Outcome.success (Effects.Trace.Val.nat 1)),
+    Effects.Trace.Event.op "disconnect" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "disconnect" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.done (Effects.Trace.Outcome.success (Effects.Trace.Val.nat 1))])
 
 -- Golden 4, an interrupt delivered mid-queue. Job 1 is acknowledged; the
--- point before the second job's `attempt` delivers, region 1 closes with
--- `interrupted`, and the release still runs -- `finalizer 1 {interrupted}`
--- and the `disconnect` rows are the connection being closed on the
--- interrupted path.
+-- interrupt is delivered at the point before the second job's caught `run`,
+-- the region closes `interrupted`, and the release still runs.
 #guard (runInterrupted [] interruptTape interruptITape (Queue.seed [1, 2, 3])).map (fun r => (r.1, r.2.1)) =
-  some (.interrupted,
-  [ .enter 1
-  , .decide 1000003 false
-  , .op "connect" .unit
-  , .answer "connect" (.nat 0)
-  , .decide 1000007 false
-  , .decide 1000009 false
-  , .op "next" (.nat 0)
-  , .answer "next" (.pair (.nat 0) (.nat 1))
-  , .decide 1 true
-  , .decide 1000013 false
-  , .decide 1000017 false
-  , .op "attempt" (.nat 1)
-  , .answer "attempt" (.pair (.bool true) (.nat 1))
-  , .decide 2 true
-  , .decide 1000021 false
-  , .op "ack" (.pair (.nat 0) (.nat 1))
-  , .answer "ack" .unit
-  , .decide 1000023 false
-  , .decide 1000009 false
-  , .op "next" (.nat 0)
-  , .answer "next" (.pair (.nat 0) (.nat 2))
-  , .decide 1 true
-  , .decide 1000013 false
-  , .decide 1000017 true
-  , .leave 1 .interrupted
-  , .finalizer 1 .interrupted
-  , .op "disconnect" (.nat 0)
-  , .answer "disconnect" .unit
-  , .done .interrupted ])
+  some (Effect4.Flow.InterruptResult.interrupted,
+   [Effects.Trace.Event.enter 1,
+    Effects.Trace.Event.decide 1000003 false,
+    Effects.Trace.Event.op "connect" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.answer "connect" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.decide 1000007 false,
+    Effects.Trace.Event.decide 1000009 false,
+    Effects.Trace.Event.op "next" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "next" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 1)),
+    Effects.Trace.Event.decide 1000011 false,
+    Effects.Trace.Event.decide 1 true,
+    Effects.Trace.Event.decide 1000017 false,
+    Effects.Trace.Event.op "run" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 1)),
+    Effects.Trace.Event.answer "run" (Effects.Trace.Val.nat 1),
+    Effects.Trace.Event.decide 1000021 false,
+    Effects.Trace.Event.op "ack" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 1)),
+    Effects.Trace.Event.answer "ack" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.decide 1000023 false,
+    Effects.Trace.Event.decide 1000009 false,
+    Effects.Trace.Event.op "next" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "next" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.decide 1000011 false,
+    Effects.Trace.Event.decide 1 true,
+    Effects.Trace.Event.decide 1000017 true,
+    Effects.Trace.Event.leave 1 (Effects.Trace.Outcome.interrupted),
+    Effects.Trace.Event.finalizer 1 (Effects.Trace.Outcome.interrupted),
+    Effects.Trace.Event.op "disconnect" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "disconnect" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.done (Effects.Trace.Outcome.interrupted)])
 
--- Golden 5, an interrupt delivered inside a masked critical section. The
--- whole drain is region 1 and region 1 is masked, so the delivery at the
--- second job's `attempt` point defers; the region's own `leave` point is
+-- Golden 5, an interrupt requested inside the masked critical section. The
+-- request at the second job's point defers, the region's own `leave` point is
 -- masked too, the region closes cleanly with both jobs acknowledged, the
--- release runs with that success exit, and the pending interrupt is
--- delivered at the restoration -- the M2 repair, E4-FLOW-CE-024/025.
+-- release runs with that success exit, and the pending interrupt is delivered
+-- at the restoration (the M2 repair).
 #guard (runInterrupted [⟨1⟩] maskedTape interruptITape (Queue.seed [1, 2])).map (fun r => (r.1, r.2.1)) =
-  some (.interrupted,
-  [ .enter 1
-  , .decide 1000003 false
-  , .op "connect" .unit
-  , .answer "connect" (.nat 0)
-  , .decide 1000007 false
-  , .decide 1000009 false
-  , .op "next" (.nat 0)
-  , .answer "next" (.pair (.nat 0) (.nat 1))
-  , .decide 1 true
-  , .decide 1000013 false
-  , .decide 1000017 false
-  , .op "attempt" (.nat 1)
-  , .answer "attempt" (.pair (.bool true) (.nat 1))
-  , .decide 2 true
-  , .decide 1000021 false
-  , .op "ack" (.pair (.nat 0) (.nat 1))
-  , .answer "ack" .unit
-  , .decide 1000023 false
-  , .decide 1000009 false
-  , .op "next" (.nat 0)
-  , .answer "next" (.pair (.nat 0) (.nat 2))
-  , .decide 1 true
-  , .decide 1000013 false
-  , .decide 1000017 true
-  , .op "attempt" (.nat 2)
-  , .answer "attempt" (.pair (.bool true) (.nat 2))
-  , .decide 2 true
-  , .decide 1000021 false
-  , .op "ack" (.pair (.nat 0) (.nat 2))
-  , .answer "ack" .unit
-  , .decide 1000023 false
-  , .decide 1000009 false
-  , .op "next" (.nat 0)
-  , .answer "next" (.pair (.nat 0) (.nat 0))
-  , .decide 1 false
-  , .decide 1000002 false
-  , .leave 1 (.success (.nat 2))
-  , .finalizer 1 (.success (.nat 2))
-  , .op "disconnect" (.nat 0)
-  , .answer "disconnect" .unit
-  , .done .interrupted ])
+  some (Effect4.Flow.InterruptResult.interrupted,
+   [Effects.Trace.Event.enter 1,
+    Effects.Trace.Event.decide 1000003 false,
+    Effects.Trace.Event.op "connect" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.answer "connect" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.decide 1000007 false,
+    Effects.Trace.Event.decide 1000009 false,
+    Effects.Trace.Event.op "next" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "next" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 1)),
+    Effects.Trace.Event.decide 1000011 false,
+    Effects.Trace.Event.decide 1 true,
+    Effects.Trace.Event.decide 1000017 false,
+    Effects.Trace.Event.op "run" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 1)),
+    Effects.Trace.Event.answer "run" (Effects.Trace.Val.nat 1),
+    Effects.Trace.Event.decide 1000021 false,
+    Effects.Trace.Event.op "ack" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 1)),
+    Effects.Trace.Event.answer "ack" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.decide 1000023 false,
+    Effects.Trace.Event.decide 1000009 false,
+    Effects.Trace.Event.op "next" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "next" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.decide 1000011 false,
+    Effects.Trace.Event.decide 1 true,
+    Effects.Trace.Event.decide 1000017 true,
+    Effects.Trace.Event.op "run" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.answer "run" (Effects.Trace.Val.nat 2),
+    Effects.Trace.Event.decide 1000021 false,
+    Effects.Trace.Event.op "ack" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.answer "ack" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.decide 1000023 false,
+    Effects.Trace.Event.decide 1000009 false,
+    Effects.Trace.Event.op "next" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "next" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 0)),
+    Effects.Trace.Event.decide 1000011 false,
+    Effects.Trace.Event.decide 1 false,
+    Effects.Trace.Event.decide 1000002 false,
+    Effects.Trace.Event.leave 1 (Effects.Trace.Outcome.success (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.finalizer 1 (Effects.Trace.Outcome.success (Effects.Trace.Val.nat 2)),
+    Effects.Trace.Event.op "disconnect" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "disconnect" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.done (Effects.Trace.Outcome.interrupted)])
 
--- Golden 6, the packet's aborting `run`. The flow has no failure handler, so
--- the abort is the end of the run: region 1 closes with the failure, the
--- release runs with it, and the run ends `failed` (E4-FLOW-CE-026).
+-- Golden 6, the packet's aborting `run`, *uncaught*: the poison job's `perform`
+-- is plain, its abort closes region 1 with the failure, the release runs on
+-- that path, and the run ends `failed`.
 #guard (runPoison (Queue.seed [7] [(7, 1)])).map (fun r => (r.1, r.2.1)) =
-  some (.failed (.str "job 7 failed"),
-  [ .enter 1
-  , .op "connect" .unit
-  , .answer "connect" (.nat 0)
-  , .op "next" (.nat 0)
-  , .answer "next" (.pair (.nat 0) (.nat 7))
-  , .op "run" (.pair (.nat 0) (.nat 7))
-  , .failed "run" (.str "job 7 failed")
-  , .leave 1 (.failure (.str "job 7 failed"))
-  , .finalizer 1 (.failure (.str "job 7 failed"))
-  , .op "disconnect" (.nat 0)
-  , .answer "disconnect" .unit
-  , .done (.failure (.str "job 7 failed")) ])
+  some (Effect4.Flow.RunResult.failed (Effects.Trace.Val.str "job 7 failed"),
+   [Effects.Trace.Event.enter 1,
+    Effects.Trace.Event.op "connect" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.answer "connect" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.op "next" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "next" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 7)),
+    Effects.Trace.Event.op "run" (Effects.Trace.Val.pair (Effects.Trace.Val.nat 0) (Effects.Trace.Val.nat 7)),
+    Effects.Trace.Event.failed "run" (Effects.Trace.Val.str "job 7 failed"),
+    Effects.Trace.Event.leave 1 (Effects.Trace.Outcome.failure (Effects.Trace.Val.str "job 7 failed")),
+    Effects.Trace.Event.finalizer 1 (Effects.Trace.Outcome.failure (Effects.Trace.Val.str "job 7 failed")),
+    Effects.Trace.Event.op "disconnect" (Effects.Trace.Val.nat 0),
+    Effects.Trace.Event.answer "disconnect" (Effects.Trace.Val.unit),
+    Effects.Trace.Event.done (Effects.Trace.Outcome.failure (Effects.Trace.Val.str "job 7 failed"))])
 
 /-! ## 3. What the runs left behind
 
@@ -542,12 +554,11 @@ golden -- the interrupted and the failing ones included.
 #guard (runInterrupted [] retryTape [] (Queue.seed [1, 2] [(2, 1)])).map (·.2.2) =
   some { pending := [], acked := [1, 2], requeued := [], failures := [(2, 0)] }
 
--- The requeue run spent both of job 2's failures, put it back, and acknowledged
--- nothing. The last `next` dequeued the requeued job and the tape then said the
--- queue was empty: the drain cannot look at what `next` answered
--- (E4-FLOW-CE-027), so `pending` is empty rather than holding job 2.
-#guard (runInterrupted [] requeueTape [] (Queue.seed [2] [(2, 2)])).map (·.2.2) =
-  some { pending := [], acked := [], requeued := [2], failures := [(2, 0)] }
+-- The requeue run spent all three of job 2's failures, put it back once, took
+-- it again and acknowledged it: the drain now reads what `next` answers
+-- (`E4-FLOW-CE-027`, repaired), so the queue is empty because it was drained.
+#guard (runInterrupted [] requeueTape [] (Queue.seed [2] [(2, 3)])).map (·.2.2) =
+  some { pending := [], acked := [2], requeued := [2], failures := [(2, 0)] }
 
 -- The interrupted run acknowledged only the first job; the rest of the queue is
 -- untouched, and the connection was still released (the `disconnect` rows above).
@@ -579,17 +590,28 @@ below is the repair, not the refusal.
 #guard ((familyTable Jobs.rows).find? (·.name == "next")).map (·.answerTy) =
   ((familyTable Jobs.rows).find? (·.name == "run")).map (·.requestTy)
 
--- `E4-FLOW-CE-026`. An aborting operation ends the run: the poison golden's log
--- has no row after `run`'s own `failed` except the region's close, and the
--- result is `failed`, not a value the flow could branch on. There is no
--- terminator that continues from an abort.
+-- `E4-FLOW-CE-026`, repaired by Flow v3. An *uncaught* abort still ends the
+-- run: the poison golden's `run` is a plain `perform`, its `failed` row is
+-- followed only by the region's close, and the result is `failed`.
 #guard (runPoison (Queue.seed [7] [(7, 1)])).map (·.1) = some (.failed (.str "job 7 failed"))
 
--- `E4-FLOW-CE-027`. The drain does not read `next`'s answer. On a tape that
--- says "another job" when the queue is empty, `next` answers 0 and the run
--- carries on and attempts job 0 all the same.
-#guard (runInterrupted [] [more true, succeeded true, more false] [] (Queue.seed [])).map
-    (fun r => r.2.1.any fun event => event == .op "attempt" (.nat 0)) = some true
+-- The drain's `run` is *caught*: after its `failed` row the run continues on
+-- the failure edge, decides the retry, and performs `run` again.
+#guard (runInterrupted [] retryTape [] (Queue.seed [1, 2] [(2, 1)])).map
+    (fun r => r.2.1.count (.op "run" (.pair (.nat 0) (.nat 2)))) = some 2
+#guard (runInterrupted [] retryTape [] (Queue.seed [1, 2] [(2, 1)])).map
+    (fun r => r.2.1.count (.failed "run" (.str "job 2 failed"))) = some 1
+
+-- `E4-FLOW-CE-027`, repaired by Flow v3. The drain reads `next`'s answer: on
+-- an empty queue the `nonEmpty` branch takes the leave, nothing is run, and the
+-- region closes with no job acknowledged.
+#guard (runInterrupted [] [more false] [] (Queue.seed [])).map
+    (fun r => (r.1, r.2.1.any fun event => match event with | .op "run" _ => true | _ => false))
+  = some (.done (.nat 0), false)
+
+-- And a branch is still a decision site: a tape that says "another job" when
+-- the value says the queue is empty is refused, never followed.
+#guard (runInterrupted [] [more true] [] (Queue.seed [])).map (·.1) = some (.refused ⟨1⟩ ⟨1⟩)
 
 -- The packet's third predicted gap, "the interrupt tape is per program not per
 -- job", is half refuted. A tape whose only entry names the `attempt` point does

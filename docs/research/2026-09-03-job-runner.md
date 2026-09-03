@@ -236,6 +236,20 @@ has neither.
 *Row.* `E4-FLOW-CE-026`, witness
 `Effect4Test/Counterexamples/Flow/JobRunner.lean` (`abortFlow`).
 
+
+**Repaired (2026-09-03, Flow v3).** lean4-effects v0.7.0 adds
+`performCatch (operation) (request) (target) (args) (onError) (errorArgs)`: on
+`.ok` the value edge continues as a `perform`; on `.error e` the run jumps to
+`onError` with `errorArgs ++ [e]`. The trace writes `op`, then `failed name
+error`, then the successor's rows — never `done failure` — and no region
+unwinds. The drain now catches `run` directly: `attempt` (the data reading) is
+no longer needed, and the retry-or-requeue decision hangs off the failure edge.
+Lowered as rc.112's `Result` reading of the call with a `switch` on `_tag`
+(`Effect4/Target/TypeScript/Skeleton.lean`, rule `perform-catch`); the
+`failed` row on the host comes from the service proxy before the result wrapper
+catches it. `abortFlow` (uncaught) and `caughtFlow` (caught) are the paired
+controls in `Effect4Test/Counterexamples/Flow/JobRunner.lean`.
+
 ### 3.3 A flow never branches on a value — `E4-FLOW-CE-027`
 
 *Wanted.* "if `0` leave the region and return the count of acked jobs" —
@@ -266,6 +280,20 @@ in the *lowering*: `b6p1` is threaded and `dec(b12p1)` is emitted.
 
 *Row.* `E4-FLOW-CE-027`, witness
 `Effect4Test/Counterexamples/Flow/JobRunner.lean` (`branchFlow`).
+
+
+**Repaired (2026-09-03, Flow v3).** `branch (test) (site) (onTrue) (onFalse)
+(args)` is taken by the *value* of `test` (a `Val.bool` the alphabet's boolean
+atoms compute — the drain uses `nonEmpty` on the ticket and `positive` on the
+budget) but remains a decision site: the runner and the denotation read the
+tape entry at `site` exactly as `choose` does, write the same `decide` row, and
+refuse the run when the tape's answer disagrees with the value. That keeps
+`everyCycleChooses` (which now counts `branch`), the tape bound and `CyclesWF`
+intact, so `Flow.denote` stays fuel-free and T1–T4 are re-proved over the new
+terminators. On the host the branch reports its decision through
+`decisions.report(site, test)` before the `if`; a value/tape disagreement dies
+in the tail exactly where the runner refuses. `valueFlow` in the counterexample
+battery is the positive control, including the refusal.
 
 ### 3.4 A region hands back exactly one value (no new row)
 
