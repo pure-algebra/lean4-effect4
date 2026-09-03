@@ -21,6 +21,10 @@ order.
    own diagnostic.
 7. Build `Effect4` and the batteries the packet touches; the sweep runs once per wave.
 8. One lean or node process per agent; the machine is memory-bound.
+9. A gate does not re-run when its inputs are unchanged. Every check keys a stamp under
+   `.lake/stamps/<name>/` on the content hash of its sources, fixtures and the Lake
+   traces of the compiled closure it reads (`scripts/lib/stamp.sh`, wave 0a), and a hit
+   prints PASS with the stamped summary and exits. `--force` re-runs.
 
 ## Wave 0 — main is green, hermetic, and the trust gate is real
 
@@ -62,6 +66,12 @@ published; saturation scaffolding private; `errorTy : Op → Option Ty`; the unk
 release arm; `diagnoseAll`; the missing axiom reports; the gate hardening backported;
 docs and counts. Effect4 deletes its `namespace Effects` block and its private copies on
 the pin bump.
+
+Packet 1d, stamped sweep (scripts): apply rule 9 to every script the sweep runs
+(`check-*`, `test-*-gate`, `generate-*`), with the inputs each one actually reads; a
+`scripts/sweep.sh` that runs them in dependency order, writes `generated/sweep-summary.tsv`
+(name, status, seconds, hit or miss), and is the single entry point until the wave 3
+`justfile` wraps it. A warm sweep with nothing changed must finish in under a minute.
 
 ## Wave 2 — the ledger and the host faces tell the truth
 
@@ -107,7 +117,7 @@ per-shape records; fuel-20 `decide`s replaced by `rfl` on extracted outcomes; th
 | wave | packets in parallel | lean builders |
 | --- | --- | --- |
 | 0 | 0a, 0b | 2 |
-| 1 | 1a, 1b, 1c (other repo) | 3 |
+| 1 | 1a, 1b, 1c (other repo), 1d (scripts) | 3 |
 | 2 | 2a, 2b | 1 |
 | 3 | 3a, 3b | 1 |
 | 4 | 4 | 1 |
