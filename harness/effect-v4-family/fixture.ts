@@ -18,7 +18,7 @@ export class Cell extends Context.Service<Cell, {
 }>()("Cell") {}
 
 /** Operation rows of `Cell`, for the trace harness. */
-export const CellRows = { "get": { params: 0 }, "put": { params: 1 } }
+export const CellRows = { "get": { params: 0, answer: "number" }, "put": { params: 1, answer: "void" } }
 
 /** Lowered from `incr` over `Cell`. */
 export const incr = (n: number) =>
