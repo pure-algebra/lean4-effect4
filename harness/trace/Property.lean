@@ -281,11 +281,22 @@ def deletePerform (raw : RawFlow String) (index : Nat) : Option (RawFlow String)
   let retarget (target : BlockId) : BlockId := if target = block.id then next else target
   let rewrite (b : RawBlock String) : RawBlock String :=
     let params := if b.id.value > block.id.value then dropParam b.params else b.params
+    -- Every successor is retargeted past the deleted block and every argument
+    -- list loses the deleted answer. The Flow v3 terms carry two successors and
+    -- two argument lists each, and `performCatch` keeps them separate: the
+    -- failure edge's `errorArgs` is a list of its own (`Effects.Flow.Block`).
+    -- The generator of this file never emits either term, so no corpus case
+    -- reaches these arms today; they are here because the shrinker rewrites
+    -- whatever the carrier admits, not whatever this generator happens to make.
     let term := match b.term with
       | .ret v => .ret v
       | .jump t args => .jump (retarget t) (dropVar args)
       | .perform op r t args => .perform op r (retarget t) (dropVar args)
       | .choose d l r args => .choose d (retarget l) (retarget r) (dropVar args)
+      | .performCatch op r t args onError errorArgs =>
+          .performCatch op r (retarget t) (dropVar args) (retarget onError) (dropVar errorArgs)
+      | .branch test site onTrue onFalse args =>
+          .branch test site (retarget onTrue) (retarget onFalse) (dropVar args)
     { b with params := params, term := term }
   let blocks := (raw.blocks.filter (·.id != block.id)).map rewrite
   some { raw with blocks := blocks }
