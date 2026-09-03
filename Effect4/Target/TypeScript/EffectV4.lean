@@ -279,6 +279,38 @@ structure Script where
 
 namespace Script
 
+/-- The operations a script performs, in order. This is the script's half of
+the per-program receipt `effect_program` emits (`Effect4/Meta/Derive.lean`):
+the elaborator builds a program and a script from the same steps, and nothing
+else relates the two. -/
+def operationNames (script : Script) : List String :=
+  script.steps.filterMap fun step =>
+    match step with
+    | .perform _ op _ => some op
+    | .ret _ => none
+
+end Script
+
+/-- The operations a first-order program performs, in order, read off the
+program itself. Every operation is answered by `answer`, which the
+straight-line fragment `effect_program` admits never branches on: it has no
+`if`, no `match`, and no operation whose continuation depends on the answer
+except through the pure terms of later requests.
+
+This is the program's half of the per-program receipt. It is not a claim about
+programs in general: a program that branched on an answer would perform other
+operations under another answer, and the receipt would say only what this
+`answer` sees. -/
+def performedNames {F : Effects.Family.{0, 0, 0}} {A : Type}
+    (spelling : F.Name → String) (answer : (name : F.Name) → F.Answer name) :
+    Effects.Program F.toSignature A → List String
+  | .pure _ => []
+  | .vis operation next =>
+      spelling operation.1 :: performedNames spelling answer (next (answer operation.1))
+  termination_by structural program => program
+
+namespace Script
+
 /-- Refuse unknown operations and arity mismatches at the first-order face;
 otherwise lower into the straight-line generator fragment. A step without a
 bind discards its answer. -/
