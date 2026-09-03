@@ -51,38 +51,42 @@ def decides (answer : Val) (tape : Tape) : Option Effect4.Trace.Log :=
   (runWith answer tape).map fun r =>
     r.2.filter fun event => match event with | .decide _ _ => true | _ => false
 
-/-! ## The attack
+/-! ## The repair
 
 `probe` answers `.nat 0`, which is not a `Val.bool`, so the run has no boolean
-reading of its test operand. The readings below are the *attacked* ones: the
-tape alone steers the admitted flow, both tapes are accepted, and the two runs
-differ only in the row the tape dictated. The `branch` contract — "the tape and
-the value must agree, else refusal" — does not hold here.
+reading of its test operand and therefore none that agrees with the tape. Since
+2026-09-03 that is a refusal like any other disagreement: `plan`'s `branch`
+clause is one rule, `if testValue env test = some answer then … else .mismatch
+site site`, and `Skel.execControl`'s `branchIf` mirrors it. Before the repair
+the tape alone steered this flow, both tapes were accepted, and the two runs
+differed only in the row the tape dictated.
 
-The host does not read it this way. `Skeleton.branchIf` renders as
+The host never had the attacked reading. `Skeleton.branchIf` renders as
 `decisions.report(site, test); if (test) …`, and `decisions.report`
 (`harness/trace/tracer.ts:327-335`) compares the reported test to the tape
 entry with `!==`, so a test that is not a boolean never equals a boolean entry
-and the run dies with `TapeValueMismatch`. These two runs have no host
-counterpart at all. -/
+and the run dies with `TapeValueMismatch`. The ruling restores that parity. -/
 
--- ATTACK: the tape decides, and it is believed.
-#guard runWith (.nat 0) [⟨⟨1⟩, true⟩] = some (RunResult.done (.nat 5),
-  [ .op "probe" (.nat 5), .answer "probe" (.nat 0), .decide 1 true
-  , .done (.success (.nat 5)) ])
+-- Neither tape decides this run: the test has no boolean reading, so the run
+-- is refused at the branch's own site twice, before any `decide` row.
+#guard runWith (.nat 0) [⟨⟨1⟩, true⟩] = some (RunResult.refused ⟨1⟩ ⟨1⟩,
+  [ .op "probe" (.nat 5), .answer "probe" (.nat 0) ])
 
--- ATTACK: the other tape is taken just as happily, on the same service.
-#guard decides (.nat 0) [⟨⟨1⟩, false⟩] = some [.decide 1 false]
+#guard runWith (.nat 0) [⟨⟨1⟩, false⟩] = some (RunResult.refused ⟨1⟩ ⟨1⟩,
+  [ .op "probe" (.nat 5), .answer "probe" (.nat 0) ])
 
--- ATTACK: the two runs of one service differ only in the tape's own row.
-#guard decides (.nat 0) [⟨⟨1⟩, true⟩] ≠ decides (.nat 0) [⟨⟨1⟩, false⟩]
+-- The two tapes are no longer separated by anything: neither writes a decision.
+#guard decides (.nat 0) [⟨⟨1⟩, true⟩] = decides (.nat 0) [⟨⟨1⟩, false⟩]
+#guard decides (.nat 0) [⟨⟨1⟩, true⟩] = some []
+
+-- Every other non-boolean carrier arm reads the same way.
+#guard (runWith .unit [⟨⟨1⟩, true⟩]).map (·.1) = some (RunResult.refused ⟨1⟩ ⟨1⟩)
+#guard (runWith (.str "true") [⟨⟨1⟩, true⟩]).map (·.1) = some (RunResult.refused ⟨1⟩ ⟨1⟩)
 
 /-! ## The positive controls
 
-With a real `Val.bool` in the slot the advertised contract does hold, and it is
-the only reading the lowering can render: `Skeleton.branchIf` emits
-`decisions.report(site, test); if (test) …`, a JavaScript truthiness test that
-has no tape-only mode. -/
+With a real `Val.bool` in the slot the branch still runs, and the two refusals
+stay distinguishable. -/
 
 -- The agreeing tape runs.
 #guard decides (.bool true) [⟨⟨1⟩, true⟩] = some [.decide 1 true]

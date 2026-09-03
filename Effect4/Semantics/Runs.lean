@@ -25,9 +25,12 @@ The failure edge is taken by the region runner (`Effect4/Flow/Region.lean`),
 whose service answers an `Except`. A `branch` is taken by the *value* of its
 test operand and is still a decision *site*: the run reads the tape entry at
 that site exactly as a `choose` does, and refuses when the tape disagrees with
-the value, so the tape bound and `CyclesWF` are unchanged. A test operand with
-no boolean reading — admission types it `boolTy`, and the carrier claims no
-boolean semantics — is answered by the tape alone, which is what keeps `stuck`
+the value, so the tape bound and `CyclesWF` are unchanged. That is one rule,
+not two. Admission types the test operand `boolTy`, but the carrier claims no
+boolean semantics (`Effects.Trace.Val` is untyped and a `FlowService` answers
+an unconstrained `Val`), so a test operand may have no boolean reading at all;
+such a run is refused like any other disagreement (`E4-FLOW-CE-029`). It is
+`PlanSized.mismatch`, not a tape-only fallthrough, that keeps `stuck`
 unreachable on an admitted flow (`plan_checked`).
 -/
 
@@ -105,7 +108,8 @@ inductive Plan (alphabet : FlowAlphabet Ty) where
 
 /-- The boolean reading of a `branch`'s test operand, when it has one. Nothing
 in admission says a value of the alphabet's `boolTy` is a `Val.bool` (the
-carrier claims no boolean semantics), so this is an `Option`. -/
+carrier claims no boolean semantics), so this is an `Option`, and a `none` is
+a disagreement with every tape answer (`E4-FLOW-CE-029`). -/
 def testValue (env : Env) (test : Var) : Option Bool :=
   match env[test.index]? with
   | some (.bool value) => some value
@@ -150,12 +154,9 @@ def plan (alphabet : FlowAlphabet Ty) (block : RawBlock Ty) (env : Env) (tape : 
         | .exhausted => .exhausted site
         | .mismatch expected actual => .mismatch expected actual
         | .answered answer rest =>
-          match testValue env test with
-          | some value =>
-              if answer = value then
-                .choose site answer (if answer then onTrue else onFalse) values rest
-              else .mismatch site site
-          | none => .choose site answer (if answer then onTrue else onFalse) values rest
+          if testValue env test = some answer then
+            .choose site answer (if answer then onTrue else onFalse) values rest
+          else .mismatch site site
 
 /-- What one block transition yields. -/
 inductive Next where
@@ -395,24 +396,14 @@ theorem plan_checked {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty} (wf : FlowW
       | exhausted => exact .exhausted _
       | mismatch expected actual => exact .mismatch _ _
       | answered answer rest =>
-          have goTrue : PlanSized raw (Plan.choose (alphabet := alphabet) site true onTrue values rest) :=
-            .choose trueBlock foundTrue (by rw [len, arTrue, termEq]; rfl)
-          have goFalse : PlanSized raw (Plan.choose (alphabet := alphabet) site false onFalse values rest) :=
-            .choose falseBlock foundFalse (by rw [len, arFalse, termEq]; rfl)
-          cases hv : testValue env test with
-          | none =>
-              cases answer with
-              | true => exact goTrue
-              | false => exact goFalse
-          | some value =>
-              dsimp only
-              by_cases hb : answer = value
-              · rw [if_pos hb]
-                cases answer with
-                | true => exact goTrue
-                | false => exact goFalse
-              · rw [if_neg hb]
-                exact .mismatch _ _
+          dsimp only
+          by_cases agreed : testValue env test = some answer
+          · rw [if_pos agreed]
+            cases answer with
+            | true => exact .choose trueBlock foundTrue (by rw [len, arTrue, termEq]; rfl)
+            | false => exact .choose falseBlock foundFalse (by rw [len, arFalse, termEq]; rfl)
+          · rw [if_neg agreed]
+            exact .mismatch _ _
 
 /-- The shape a checked step leaves behind: a finished run is not stuck, and a
 continuation resolves to a block of the environment's size. -/

@@ -228,17 +228,14 @@ def execControl (fuel : Nat) (m : Machine) (tape : Tape) (node : Skeleton)
        | .exhausted => .pure (.finished (.frontier (.unansweredDecision site)), tape)
        | .mismatch expected actual => .pure (.finished (.refused expected actual), tape)
        | .answered branch more =>
-           match m.vals test with
-           | .bool value =>
-               if branch = value then
-                 .vis (.inr (site, branch)) fun _ =>
-                   Program.bind (execList fuel m more (if branch then onTrue else onFalse))
-                     (afterFell fuel rest)
-               else .pure (.finished (.refused site site), tape)
-           | _ =>
-               .vis (.inr (site, branch)) fun _ =>
-                 Program.bind (execList fuel m more (if branch then onTrue else onFalse))
-                   (afterFell fuel rest))
+           -- The runner's one rule (`Effect4/Semantics/Runs.lean`, `plan`): a
+           -- test with no boolean reading of the tape's answer is a refusal,
+           -- not a tape-only edge (`E4-FLOW-CE-029`).
+           if m.vals test = .bool branch then
+             .vis (.inr (site, branch)) fun _ =>
+               Program.bind (execList fuel m more (if branch then onTrue else onFalse))
+                 (afterFell fuel rest)
+           else .pure (.finished (.refused site site), tape))
   | .labelled label body =>
       Program.bind (execList fuel m tape body) (afterBlock fuel label rest)
   | .loop label body =>
@@ -696,17 +693,11 @@ theorem execControl_branchIf (fuel : Nat) (m : Machine) (tape : Tape) (test : Sl
        | .exhausted => .pure (.finished (.frontier (.unansweredDecision site)), tape)
        | .mismatch expected actual => .pure (.finished (.refused expected actual), tape)
        | .answered branch more =>
-           match m.vals test with
-           | .bool value =>
-               if branch = value then
-                 .vis (.inr (site, branch)) fun _ =>
-                   Program.bind (execList alphabet fuel m more (if branch then onTrue else onFalse))
-                     (afterFell alphabet fuel rest)
-               else .pure (.finished (.refused site site), tape)
-           | _ =>
-               .vis (.inr (site, branch)) fun _ =>
-                 Program.bind (execList alphabet fuel m more (if branch then onTrue else onFalse))
-                   (afterFell alphabet fuel rest)) := by
+           if m.vals test = .bool branch then
+             .vis (.inr (site, branch)) fun _ =>
+               Program.bind (execList alphabet fuel m more (if branch then onTrue else onFalse))
+                 (afterFell alphabet fuel rest)
+           else .pure (.finished (.refused site site), tape)) := by
   rw [execControl]
 
 theorem performOp_eq (fuel : Nat) (m : Machine) (tape : Tape) (answer : Slot)
@@ -868,6 +859,15 @@ theorem testValue_some {test : Var} {value : Bool} (h : testValue env test = som
     subst h
     exact read
   · cases h
+
+/-- A test operand whose boolean reading is not the tape's answer does not hold
+that answer's `Val.bool` either — the machine's own form of the disagreement
+(`E4-FLOW-CE-029`). -/
+theorem testValue_ne {test : Var} {answer : Bool} {value : Val}
+    (at_ : env[test.index]? = some value) (ne : testValue env test ≠ some answer) :
+    value ≠ .bool answer := by
+  intro eq
+  exact ne (by simp [testValue, at_, eq])
 
 theorem plan_ret_inv {value : Val} (planned : plan alphabet block env tape = .ret value) :
     ∃ v : Var, block.term = .ret v ∧ env[v.index]? = some value := by
@@ -1058,7 +1058,7 @@ theorem plan_choose_inv {site : DecisionId} {branch : Bool} {target : BlockId} {
         ∧ readArgs env args = some env'
         ∧ tape.read site = .answered branch rest
         ∧ target = (if branch then onTrue else onFalse)
-        ∧ ∀ value, testValue env test = some value → branch = value) := by
+        ∧ testValue env test = some branch) := by
   cases hterm : block.term with
   | ret v => cases read : env[v.index]? <;> simp [plan, hterm, read] at planned
   | jump tgt args => cases read : readArgs env args <;> simp [plan, hterm, read] at planned
@@ -1088,21 +1088,14 @@ theorem plan_choose_inv {site : DecisionId} {branch : Bool} {target : BlockId} {
           | exhausted => simp [plan, hterm, read, answered] at planned
           | mismatch expected actual => simp [plan, hterm, read, answered] at planned
           | answered chosen more =>
-              cases tv : testValue env test with
-              | none =>
-                  simp only [plan, hterm, read, answered, tv, Plan.choose.injEq] at planned
-                  obtain ⟨rfl, rfl, eqTarget, rfl, rfl⟩ := planned
-                  exact Or.inr ⟨test, onTrue, onFalse, args, rfl, read, answered, eqTarget.symm,
-                    fun _ hv => by rw [tv] at hv; cases hv⟩
-              | some value =>
-                  simp only [plan, hterm, read, answered, tv] at planned
-                  split at planned
-                  · rename_i agreed
-                    simp only [Plan.choose.injEq] at planned
-                    obtain ⟨rfl, rfl, eqTarget, rfl, rfl⟩ := planned
-                    exact Or.inr ⟨test, onTrue, onFalse, args, rfl, read, answered, eqTarget.symm,
-                      fun v hv => by rw [tv] at hv; cases hv; exact agreed⟩
-                  · simp at planned
+              simp only [plan, hterm, read, answered] at planned
+              split at planned
+              · rename_i agreed
+                simp only [Plan.choose.injEq] at planned
+                obtain ⟨rfl, rfl, eqTarget, rfl, rfl⟩ := planned
+                exact Or.inr ⟨test, onTrue, onFalse, args, rfl, read, answered, eqTarget.symm,
+                  agreed⟩
+              · simp at planned
 
 /-- An unanswered decision comes from a `choose` or a `branch` at an exhausted tape. -/
 theorem plan_exhausted_inv {site : DecisionId}
@@ -1159,13 +1152,11 @@ theorem plan_mismatch_inv {expected actual : DecisionId}
     ∨ (∃ (test : Var) (site : DecisionId) (onTrue onFalse : BlockId) (args : List Var),
       block.term = .branch test site onTrue onFalse args
         ∧ tape.read site = .mismatch expected actual)
-    ∨ (∃ (test : Var) (onTrue onFalse : BlockId) (args : List Var) (chosen : Bool) (more : Tape)
-        (value : Bool),
+    ∨ (∃ (test : Var) (onTrue onFalse : BlockId) (args : List Var) (chosen : Bool) (more : Tape),
       block.term = .branch test expected onTrue onFalse args
         ∧ actual = expected
         ∧ tape.read expected = .answered chosen more
-        ∧ testValue env test = some value
-        ∧ ¬ chosen = value) := by
+        ∧ testValue env test ≠ some chosen) := by
   cases hterm : block.term with
   | ret v => cases read : env[v.index]? <;> simp [plan, hterm, read] at planned
   | jump tgt args => cases read : readArgs env args <;> simp [plan, hterm, read] at planned
@@ -1198,17 +1189,14 @@ theorem plan_mismatch_inv {expected actual : DecisionId}
               obtain ⟨rfl, rfl⟩ := planned
               exact Or.inr (Or.inl ⟨test, decision, onTrue, onFalse, args, rfl, answered⟩)
           | answered chosen more =>
-              cases tv : testValue env test with
-              | none => simp [plan, hterm, read, answered, tv] at planned
-              | some value =>
-                  simp only [plan, hterm, read, answered, tv] at planned
-                  split at planned
-                  · simp at planned
-                  · rename_i disagreed
-                    simp only [Plan.mismatch.injEq] at planned
-                    obtain ⟨rfl, rfl⟩ := planned
-                    exact Or.inr (Or.inr ⟨test, onTrue, onFalse, args, chosen, more, value, rfl, rfl,
-                      answered, tv, disagreed⟩)
+              simp only [plan, hterm, read, answered] at planned
+              split at planned
+              · simp at planned
+              · rename_i disagreed
+                simp only [Plan.mismatch.injEq] at planned
+                obtain ⟨rfl, rfl⟩ := planned
+                exact Or.inr (Or.inr ⟨test, onTrue, onFalse, args, chosen, more, rfl, rfl,
+                  answered, disagreed⟩)
 
 end Inversion
 
@@ -1497,31 +1485,11 @@ theorem execList_skeletonBlock (table : List OpSpec) (fuel : Nat) (m : Machine) 
         execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
         execControl_branchIf, answered]
       dsimp only
-      cases tv : testValue env test with
-      | some value =>
-          have eqb := agreeTest value tv
-          subst eqb
-          rw [enter_vals, holds_of_getElem? holds (testValue_some tv)]
-          dsimp only
-          rw [if_pos rfl]
-          congr 1
-          funext _
-          rw [selected, ran]
-          exact afterFell_continueLoop _ fuel [] _ rest
-      | none =>
-          have lt : test.index < env.length := testBound test site onTrue onFalse args hterm
-          have wEq : env[test.index]? = some env[test.index] := List.getElem?_eq_getElem lt
-          rw [enter_vals, holds_of_getElem? holds wEq]
-          unfold testValue at tv
-          rw [wEq] at tv
-          generalize env[test.index] = w at tv ⊢
-          cases w <;> first
-            | (simp at tv; done)
-            | (dsimp only
-               congr 1
-               funext _
-               rw [selected, ran]
-               exact afterFell_continueLoop _ fuel [] _ rest)
+      rw [enter_vals, holds_of_getElem? holds (testValue_some agreeTest), if_pos rfl]
+      congr 1
+      funext _
+      rw [selected, ran]
+      exact afterFell_continueLoop _ fuel [] _ rest
   · intro site planned
     rcases plan_exhausted_inv planned with
         ⟨left, right, args, hterm, answered⟩ | ⟨test, onTrue, onFalse, args, hterm, answered⟩
@@ -1541,7 +1509,7 @@ theorem execList_skeletonBlock (table : List OpSpec) (fuel : Nat) (m : Machine) 
     rcases plan_mismatch_inv planned with
         ⟨site, left, right, args, hterm, answered⟩
         | ⟨test, site, onTrue, onFalse, args, hterm, answered⟩
-        | ⟨test, onTrue, onFalse, args, chosen, more, value, hterm, rfl, answered, tv, disagreed⟩
+        | ⟨test, onTrue, onFalse, args, chosen, more, hterm, rfl, answered, disagreed⟩
     · simp only [Flow.skeletonBlock, Flow.skeletonBlockWith, hterm, Flow.dispatchTransfer,
         Lowering.chooseIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
       subst built
@@ -1557,11 +1525,13 @@ theorem execList_skeletonBlock (table : List OpSpec) (fuel : Nat) (m : Machine) 
     · simp only [Flow.skeletonBlock, Flow.skeletonBlockWith, hterm, Flow.dispatchTransfer,
         Lowering.branchIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
       subst built
+      have lt : test.index < env.length := testBound test _ onTrue onFalse args hterm
+      have wEq : env[test.index]? = some env[test.index] := List.getElem?_eq_getElem lt
       rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
         execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
-        execControl_branchIf, answered, enter_vals, holds_of_getElem? holds (testValue_some tv)]
+        execControl_branchIf, answered, enter_vals, holds_of_getElem? holds wEq]
       dsimp only
-      rw [if_neg disagreed]
+      rw [if_neg (testValue_ne wEq disagreed)]
   · -- Flow v3: the plain algebra has no failure channel, so a caught perform runs
     -- its value edge, exactly as `plan` and `denoteFuel` do.
     intro op request target env' onError errorEnv planned
@@ -2203,33 +2173,12 @@ theorem execList_skeletonBlockWith (table : List OpSpec) (raw : RawFlow String)
                     execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
                     execControl_branchIf, answered]
                   dsimp only
-                  cases tv : testValue env test with
-                  | some value =>
-                      have eqb := agreeTest value tv
-                      subst eqb
-                      rw [enter_vals, holds_of_getElem? holds (testValue_some tv)]
-                      dsimp only
-                      rw [if_pos rfl]
-                      congr 1
-                      funext _
-                      rw [ran]
-                      exact stable _ _ _
-                  | none =>
-                      have lt : test.index < env.length :=
-                        testBound test site onTrue onFalse args hterm
-                      have wEq : env[test.index]? = some env[test.index] :=
-                        List.getElem?_eq_getElem lt
-                      rw [enter_vals, holds_of_getElem? holds wEq]
-                      unfold testValue at tv
-                      rw [wEq] at tv
-                      generalize env[test.index] = w at tv ⊢
-                      cases w <;> first
-                        | (simp at tv; done)
-                        | (dsimp only
-                           congr 1
-                           funext _
-                           rw [ran]
-                           exact stable _ _ _)
+                  rw [enter_vals, holds_of_getElem? holds (testValue_some agreeTest),
+                    if_pos rfl]
+                  congr 1
+                  funext _
+                  rw [ran]
+                  exact stable _ _ _
   · intro site planned
     rcases plan_exhausted_inv planned with
         ⟨left, right, args, hterm, answered⟩ | ⟨test, onTrue, onFalse, args, hterm, answered⟩
@@ -2261,7 +2210,7 @@ theorem execList_skeletonBlockWith (table : List OpSpec) (raw : RawFlow String)
     rcases plan_mismatch_inv planned with
         ⟨site, left, right, args, hterm, answered⟩
         | ⟨test, site, onTrue, onFalse, args, hterm, answered⟩
-        | ⟨test, onTrue, onFalse, args, chosen, more, value, hterm, rfl, answered, tv, disagreed⟩
+        | ⟨test, onTrue, onFalse, args, chosen, more, hterm, rfl, answered, disagreed⟩
     · cases leftTransferred : transfer left (args.map fun v : Var => Slot.param block.id v.index) with
       | none => simp [Flow.skeletonBlockWith, hterm, leftTransferred] at built
       | some toLeft =>
@@ -2295,12 +2244,14 @@ theorem execList_skeletonBlockWith (table : List OpSpec) (raw : RawFlow String)
               simp only [Flow.skeletonBlockWith, hterm, trueTransferred, falseTransferred,
                 Lowering.branchIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
               subst built
+              have lt : test.index < env.length := testBound test _ onTrue onFalse args hterm
+              have wEq : env[test.index]? = some env[test.index] :=
+                List.getElem?_eq_getElem lt
               rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
                 execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
-                execControl_branchIf, answered, enter_vals,
-                holds_of_getElem? holds (testValue_some tv)]
+                execControl_branchIf, answered, enter_vals, holds_of_getElem? holds wEq]
               dsimp only
-              rw [if_neg disagreed]
+              rw [if_neg (testValue_ne wEq disagreed)]
   · -- Flow v3: a caught perform at an arbitrary transfer; the value edge only.
     intro op request target env' onError errorEnv planned
     obtain ⟨operation, requestVar, args, errorArgs, hterm, known, got, read, readE⟩ :=

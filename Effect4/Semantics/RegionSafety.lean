@@ -179,13 +179,10 @@ private theorem choose_successor {alphabet : FlowAlphabet Ty} {block : RawBlock 
         · cases planned
         · cases planned
         · rename_i selected suffix
-          cases hv : testValue env test <;> simp only [hv] at planned
-          · cases selected <;> cases planned <;> simp [RawTerm.successors]
-          · rename_i value
-            by_cases hb : selected = value
-            · rw [if_pos hb] at planned
-              cases selected <;> cases planned <;> simp [RawTerm.successors]
-            · rw [if_neg hb] at planned; cases planned
+          by_cases agreed : testValue env test = some selected
+          · rw [if_pos agreed] at planned
+            cases selected <;> cases planned <;> simp [RawTerm.successors]
+          · rw [if_neg agreed] at planned; cases planned
 
 private theorem stack_open {alphabet : FlowAlphabet Ty} {flow : RegionFlow Ty}
     {label : Option RegionId} {stack : List (Frame alphabet)}

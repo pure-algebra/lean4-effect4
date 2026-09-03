@@ -509,44 +509,17 @@ private theorem execList_skeletonBlockWith_bind {Result : Type} (table : List Op
                     execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
                     execControl_branchIf, answered]
                   dsimp only
-                  cases tv : testValue env test with
-                  | some value =>
-                      have eqb := agreeTest value tv
-                      subst eqb
-                      rw [enter_vals, holds_of_getElem? holds (testValue_some tv)]
-                      dsimp only
-                      rw [if_pos rfl]
-                      change Program.vis (signature := FullSig (tableAlphabet ⟨0⟩ table)) (Sum.inr (site, branch))
-                        (fun _ => Program.bind (Program.bind
-                          (execList (tableAlphabet ⟨0⟩ table) fuel (m.enter block.id) rest
-                            (if branch then toTrue else toFalse))
-                          (afterFell (tableAlphabet ⟨0⟩ table) fuel [])) H) = _
-                      congr 1
-                      funext _
-                      rw [terminal, Program.bind_pure_right]
-                      exact ran
-                  | none =>
-                      have lt : test.index < env.length :=
-                        testBound test site onTrue onFalse args hterm
-                      have wEq : env[test.index]? = some env[test.index] :=
-                        List.getElem?_eq_getElem lt
-                      rw [enter_vals, holds_of_getElem? holds wEq]
-                      unfold testValue at tv
-                      rw [wEq] at tv
-                      generalize env[test.index] = w at tv ⊢
-                      cases w <;> try (simp at tv; done)
-                      all_goals
-                        dsimp only
-                        change Program.vis (signature := FullSig (tableAlphabet ⟨0⟩ table))
-                            (Sum.inr (site, branch))
-                            (fun _ => Program.bind (Program.bind
-                              (execList (tableAlphabet ⟨0⟩ table) fuel (m.enter block.id) rest
-                                (if branch then toTrue else toFalse))
-                              (afterFell (tableAlphabet ⟨0⟩ table) fuel [])) H) = _
-                        congr 1
-                        funext _
-                        rw [terminal, Program.bind_pure_right]
-                        exact ran
+                  rw [enter_vals, holds_of_getElem? holds (testValue_some agreeTest),
+                    if_pos rfl]
+                  change Program.vis (signature := FullSig (tableAlphabet ⟨0⟩ table)) (Sum.inr (site, branch))
+                    (fun _ => Program.bind (Program.bind
+                      (execList (tableAlphabet ⟨0⟩ table) fuel (m.enter block.id) rest
+                        (if branch then toTrue else toFalse))
+                      (afterFell (tableAlphabet ⟨0⟩ table) fuel [])) H) = _
+                  congr 1
+                  funext _
+                  rw [terminal, Program.bind_pure_right]
+                  exact ran
   · intro site planned
     rcases plan_exhausted_inv planned with
         ⟨left, right, args, hterm, answered⟩ | ⟨test, onTrue, onFalse, args, hterm, answered⟩
@@ -580,7 +553,7 @@ private theorem execList_skeletonBlockWith_bind {Result : Type} (table : List Op
     rcases plan_mismatch_inv planned with
         ⟨site, left, right, args, hterm, answered⟩
         | ⟨test, site, onTrue, onFalse, args, hterm, answered⟩
-        | ⟨test, onTrue, onFalse, args, chosen, more, value, hterm, rfl, answered, tv, disagreed⟩
+        | ⟨test, onTrue, onFalse, args, chosen, more, hterm, rfl, answered, disagreed⟩
     · cases leftTransferred : transfer left (args.map fun v : Var => Slot.param block.id v.index) with
       | none => simp [Flow.skeletonBlockWith, hterm, leftTransferred] at built
       | some toLeft =>
@@ -616,12 +589,14 @@ private theorem execList_skeletonBlockWith_bind {Result : Type} (table : List Op
               simp only [Flow.skeletonBlockWith, hterm, trueTransferred, falseTransferred,
                 Lowering.branchIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
               subst built
+              have lt : test.index < env.length := testBound test _ onTrue onFalse args hterm
+              have wEq : env[test.index]? = some env[test.index] :=
+                List.getElem?_eq_getElem lt
               rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
                 execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
-                execControl_branchIf, answered, enter_vals,
-                holds_of_getElem? holds (testValue_some tv)]
+                execControl_branchIf, answered, enter_vals, holds_of_getElem? holds wEq]
               dsimp only
-              rw [if_neg disagreed]
+              rw [if_neg (testValue_ne wEq disagreed)]
               rfl
   · -- Flow v3: a caught perform under the structured transfer; the value edge only.
     intro op request target env' onError errorEnv planned

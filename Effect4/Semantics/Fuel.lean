@@ -145,13 +145,9 @@ theorem plan_shape (alphabet : FlowAlphabet Ty) (block : RawBlock Ty) (env : Env
         | mismatch expected actual => trivial
         | answered answer rest =>
             dsimp only
-            cases testValue env test with
-            | none => exact Tape.read_answered_length readEq
-            | some value =>
-                dsimp only
-                by_cases hb : answer = value
-                · rw [if_pos hb]; exact Tape.read_answered_length readEq
-                · rw [if_neg hb]; trivial
+            by_cases agreed : testValue env test = some answer
+            · rw [if_pos agreed]; exact Tape.read_answered_length readEq
+            · rw [if_neg agreed]; trivial
 
 /-! ## One step of a checked flow makes measurable progress -/
 
