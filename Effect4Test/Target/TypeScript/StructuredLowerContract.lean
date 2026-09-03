@@ -46,7 +46,7 @@ def program? (name : String) (table : List OpSpec) (raw : RawFlow String) : Opti
 /-! ## The swap loop: a merge that is a loop header -/
 
 def swapTable : List OpSpec :=
-  [{ name := "lit", kind := .lit (.nat 1), requestTy := "number", answerTy := "number" }]
+  [OpSpec.unary "lit" (.lit (.nat 1)) "number" "number"]
 
 def swapRaw : RawFlow String :=
   { alphabet := ⟨0⟩, roots := [⟨0⟩], entry := ⟨0⟩, inputTy := "number", resultTy := "number",

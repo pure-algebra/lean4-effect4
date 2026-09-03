@@ -172,7 +172,7 @@ only as a failed anonymous `example`. -/
 so interpreting past it is interpreting the continuation at its value. -/
 
 def litTable : List OpSpec :=
-  [{ name := "lit", kind := .lit (.nat 7), requestTy := "number", answerTy := "number" }]
+  [OpSpec.unary "lit" (.lit (.nat 7)) "number" "number"]
 
 def litService : FlowService (tableAlphabet ⟨0⟩ litTable) Id :=
   tableService ⟨0⟩ litTable (fun _ _ => pure .unit) (fun _ v => v)

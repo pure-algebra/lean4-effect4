@@ -544,14 +544,14 @@ theorem materialize_app_eq (atoms : AtomTable) (fuel : Nat) (b : Build) (atom : 
       (materialize atoms fuel b arg).bind fun r =>
         (atoms.find? (·.1 == atom)).bind fun a =>
           some (((r.1.addOp
-              { name := atom, kind := .atom, requestTy := a.2.1, answerTy := a.2.2 }).1.performTo
+              (OpSpec.unary atom .atom a.2.1 a.2.2)).1.performTo
                 (r.1.addOp
-                  { name := atom, kind := .atom, requestTy := a.2.1, answerTy := a.2.2 }).2
+                  (OpSpec.unary atom .atom a.2.1 a.2.2)).2
                 r.2.1 "" a.2.2),
             ((r.1.addOp
-              { name := atom, kind := .atom, requestTy := a.2.1, answerTy := a.2.2 }).1.performTo
+              (OpSpec.unary atom .atom a.2.1 a.2.2)).1.performTo
                 (r.1.addOp
-                  { name := atom, kind := .atom, requestTy := a.2.1, answerTy := a.2.2 }).2
+                  (OpSpec.unary atom .atom a.2.1 a.2.2)).2
                 r.2.1 "" a.2.2).last,
             a.2.2) := rfl
 

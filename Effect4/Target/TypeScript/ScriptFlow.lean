@@ -57,6 +57,22 @@ arity two or more holds the whole tuple and is destructured at the call
 (`Lowering.tupleArgs`). -/
 def OpSpec.arity (spec : OpSpec) : Nat := max 1 spec.params.length
 
+/-- A row with no declared parameter list: an atom, a literal, or a family
+operation whose request is one slot. Its arity is one and its failure edge is
+`never`, and this says so rather than leaving a reader to check that two fields
+were omitted on purpose (survey finding H16). -/
+def OpSpec.unary (name : String) (kind : OpKind) (requestTy answerTy : String) : OpSpec :=
+  { name := name, kind := kind, requestTy := requestTy, answerTy := answerTy,
+    errorTy := "never", params := [] }
+
+/-- A family operation of a declared parameter list that cannot fail. The
+request spelling is the caller's: `requestSpelling params` for a table built
+from a `ServiceRow`. -/
+def OpSpec.infallible (name : String) (requestTy answerTy : String)
+    (params : List (String × String)) : OpSpec :=
+  { name := name, kind := .family, requestTy := requestTy, answerTy := answerTy,
+    errorTy := "never", params := params }
+
 /-- The row of a table position. -/
 def OpSpec.at (table : List OpSpec) (op : Fin table.length) : OpSpec := table[op]
 
@@ -147,7 +163,7 @@ def performTo (b : Build) (op : Nat) (request : Var) (binder answerTy : String) 
 
 /-- A literal is a pure operation on the input parameter. -/
 def literal (b : Build) (value : Val) (ty : String) : Build × Var × String :=
-  let (b, op) := b.addOp { name := "lit", kind := .lit value, requestTy := b.inputTy, answerTy := ty }
+  let (b, op) := b.addOp (OpSpec.unary "lit" (.lit value) b.inputTy ty)
   let b := b.performTo op ⟨0⟩ "" ty
   (b, b.last, ty)
 
@@ -165,7 +181,7 @@ def materialize (atoms : AtomTable) : Nat → Build → PureTerm → Option (Bui
   | fuel + 1, b, .app atom [arg] => do
       let (b, v, _) ← materialize atoms fuel b arg
       let (_, requestTy, answerTy) ← atoms.find? (·.1 == atom)
-      let (b, op) := b.addOp { name := atom, kind := .atom, requestTy := requestTy, answerTy := answerTy }
+      let (b, op) := b.addOp (OpSpec.unary atom .atom requestTy answerTy)
       let b := b.performTo op v "" answerTy
       some (b, b.last, answerTy)
   | _, _, .app _ _ => none

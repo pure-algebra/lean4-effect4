@@ -90,7 +90,7 @@ def ticketTy : String := "readonly [JobQueue, number]"
 /-- The family's two rows, then the unit literal the nullary `take` needs for a
 request slot of its own type. -/
 def table : List OpSpec := familyTable Ticketed.rows ++
-  [ { name := "unit", kind := .lit .unit, requestTy := "number", answerTy := "void" } ]
+  [ OpSpec.unary "unit" (.lit .unit) "number" "void" ]
 
 def opTake : OperationId := ⟨0⟩
 def opRun : OperationId := ⟨1⟩
@@ -197,5 +197,51 @@ operation of arity above one. The census list is pinned once, by id, in
   (Effect4.Target.EffectV4.Flow.ruleSet Ticketed.rows program).contains .performTuple) = some true
 #guard (controlProgram?.map fun program =>
   (Effect4.Target.EffectV4.Flow.ruleSet Ticketed.rows program).contains .performTuple) = some false
+
+/-! ## 5. Every shipped row declares its own arity
+
+`OpSpec.arity` is `max 1 params.length`, and `params` is a defaulted field, so
+a row that omits it reports arity one and `Lowering.callOf` emits a
+one-argument call -- the exact defect `E4-TARGET-CE-022` records, re-openable
+by omission (survey finding H16). The rows this library ships are all built by
+`familyTable`, which copies the row's own TypeScript parameters, and these
+receipts hold it to that: for every operation of every shipped `ServiceRow`,
+the spec's parameter count is the row's, its arity is the declared argument
+count, and its request spelling is the product of exactly those parameters.
+A hand-written unary row says so with `OpSpec.unary` rather than by leaving
+the field out.
+-/
+
+/-- The `ServiceRow`s the library itself ships, plus the packet's own
+two-parameter family. -/
+def shippedRows : List ServiceRow :=
+  [decisionsRows, interruptsRows, regionsRows, Ticketed.rows]
+
+-- `familyTable` is row-for-row, so the zip below is total.
+#guard shippedRows.all fun rows => (familyTable rows).length == rows.ops.length
+
+-- The Lean and TypeScript parameter lists of a row have the same length, so
+-- "the family's declared arity" is one number, not two.
+#guard shippedRows.all fun rows =>
+  rows.ops.all fun row => row.params.length == row.tsParams.length
+
+-- And the spec built from a row carries that arity and that request spelling.
+#guard shippedRows.all fun rows =>
+  (rows.ops.zip (familyTable rows)).all fun (row, spec) =>
+    spec.params.length == row.tsParams.length
+      && spec.arity == max 1 row.tsParams.length
+      && spec.requestTy == requestSpelling row.tsParams
+
+-- The two-parameter row is not a hypothetical: `run` reaches the guard above
+-- with arity two.
+#guard (familyTable Ticketed.rows).any fun spec => spec.name == "run" && spec.arity == 2
+
+-- The smart constructors say what they build.
+#guard (OpSpec.unary "snd" .atom "readonly [JobQueue, number]" "number").arity = 1
+#guard (OpSpec.unary "snd" .atom "readonly [JobQueue, number]" "number").errorTy = "never"
+#guard (OpSpec.infallible "run" ticketTy "number"
+  [("conn", "JobQueue"), ("job", "number")]).arity = 2
+#guard (OpSpec.infallible "run" ticketTy "number"
+  [("conn", "JobQueue"), ("job", "number")]).errorTy = "never"
 
 end Effect4Test.Target.TypeScript.MultiArgContract

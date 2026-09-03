@@ -131,7 +131,7 @@ Repair: `param-move` reads every source into a temporary first on a self-edge;
 on any other edge the target's variables are distinct and no temporary is used. -/
 
 def swapTable : List OpSpec :=
-  [{ name := "lit", kind := .lit (.nat 1), requestTy := "number", answerTy := "number" }]
+  [OpSpec.unary "lit" (.lit (.nat 1)) "number" "number"]
 
 def swapRaw : RawFlow String :=
   { alphabet := ⟨0⟩, roots := [⟨0⟩], entry := ⟨0⟩, inputTy := "number", resultTy := "number",
@@ -173,7 +173,7 @@ def getRaw : RawFlow String :=
       , { id := ⟨1⟩, params := ["number"], term := .ret ⟨0⟩ } ] }
 
 def getTable : List OpSpec :=
-  [{ name := "get", kind := .family, requestTy := "number", answerTy := "number" }]
+  [OpSpec.unary "get" .family "number" "number"]
 
 def getter? : Option FlowProgram := program? "getter" getTable getRaw
 
