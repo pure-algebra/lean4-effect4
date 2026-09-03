@@ -839,3 +839,73 @@ and byte-stable; host, patched, types, property, coverage, census, family
 check, the three planted-mutant self-tests (goldens, coverage, lowering
 4/4), citations and the trust gate all green. Agent worktrees and branches
 are removed. Not pushed.
+
+## D2 denotation landed, 2026-09-03
+
+The remaining third of packet D2. `Effect4/Flow/Region.lean` already had the
+merged-failure runner and the `Scope` lemmas L1/L2; what was owed was the
+denotational statement, and it is now `Effect4/Semantics/RegionDenotation.lean`
+(String-free, in `Effect4.lean` after `Denotation.lean`).
+
+The scope summand `ScopeFam` has **four** names, not the plan's three. `enter`
+(param `RegionId`, answer `Unit`), `acquire op release` (param `Val`, answer
+`Option (Except Val Val)`), `leave` (param `Val`, answer `Option Failures`) and
+`fail` (param `Val`, answer `Failures`). Three deviations from the plan text,
+each forced by reading `Region.lean` rather than the plan:
+
+1. **`fail` is an operation.** A failing operation makes `regionLoop` call
+   `Flow.fail`, which closes *every* open region (`unwind`). That reads the whole
+   stack, so it is scope state, not something a pure denotation can inline.
+2. **`acquire` and `leave` answer an `Option`.** Both arms of `regionLoop` match
+   on `stack` and fall through to the stuck frontier when it is empty. Emptiness
+   is runtime state; `none` is that refusal. Region admission refuses an
+   `acquire` or a `leave` outside every region, so `none` should be unreachable
+   on an admitted flow — **that stack invariant is owed, not assumed**; it is
+   stated in the module docstring and nothing here depends on it.
+3. **`leave` answers the merged failure list**, not `Except Val Val`. That is
+   the runner's own carrier after D2's first two thirds: `closeFrame` keeps every
+   failing release in close order, `regionLoop` continues at the region's
+   `continue_` exactly when the list is empty and otherwise fails with its head
+   and carries its tail. So `scopeHandler`'s `leave` arm *is* `closeFrame`, and
+   L1/L2 are literally that arm's facts; its `fail` arm is `unwind`.
+
+The alphabet summand is **not** D1's `Fam`: a `RegionService` answers
+`Except Val Val` where a `FlowService` answers `Val`, so `RegionFam` and
+`regionTraceHandler` are the fallible twins. The decision summand is D1's
+`DecSig`, lifted, unchanged.
+
+**Shape: `Handler.sum`, not `Handler.mapHom`.** The plan offers
+`interpret (scopeHandler.mapHom (MonadHom.stateT (interpretHom traceHandler)))`
+as the alternative. The pinned lean4-effects v0.3.1 (`rev 2447edd`) has no
+`Effects/Hom.lean` at all — no `MonadHom`, no `Handler.mapHom`, no
+`interpretHom`, no `interpret_mapHom` — so that shape does not type and is not
+used. The sum shape is taken instead: all three summands are handled into one
+monad, `ScopeM M a = StateT (Stack a) (RunM M)`, with the two stackless handlers
+lifted by `Handler.overStack` (a hand-rolled `StateT.lift` transport, which is
+exactly what `mapHom` would give). If lean4-effects later gains the `Hom` module,
+`overStack` is the one declaration to replace.
+
+Theorems: `regionLoop_eq_interpret` (T1 for regions, generalised over stack and
+log), `runRegionsCause_eq_interpret`, `runRegions_eq_interpret`,
+`runRegionsDefault_eq_interpret`, and the corollary that ties D2 to D1,
+`regionLoop_erase` / `runRegions_erase` (on a flow whose every block is `plain`
+the region runner and `Runs.lean`'s plain runner agree — result, unconsumed tape
+and log — through `FlowService.toRegionService`). Axiom union `propext`,
+`Quot.sound`; no `Classical.choice`.
+
+**Owed, and named as owed:** the fuel-free region denotation. `denoteRegionsFuel`
+is fuelled, as D1's `denoteFuel` is, but there is no `denoteRegions` through
+`CyclesWF` and therefore no region twin of T2 `denoteFuel_eq_denote`. The erased
+graph carries the same lexicographic measure, but `enter`/`acquire`/`leave` need
+their own decreasing argument and the plan did not ask for one; `denoteRegions`
+here is `denoteRegionsFuel` at a supplied fuel. The exact wording of what is
+owed is in the module's `## The denotation` docstring.
+
+Receipts: `Effect4Test/Semantics/RegionDenotationContract.lean` (the frozen
+surface, the summand's parameters and answers by `rfl`, and T1 as `#guard` on
+the three region goldens `regionNested`, `regionTwoFail`, `regionBothSucceed`,
+plus a region-free program for the erase corollary) and
+`RegionDenotationAxiomReport.lean`. `harness/trace/Generate.lean` gains a
+`region-oracle` arm beside `oracle`: per region program it computes the runner's
+log and the `interpret` side's log and reports agreement. No script was touched.
+`docs/TRACE-DAG.md`'s `semantics` row is updated in place with both scope lines.

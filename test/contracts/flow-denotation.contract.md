@@ -68,9 +68,9 @@ Axiom receipts: `Effect4Test/Semantics/DenotationAxiomReport.lean`, within
 - `denote` is well-founded, so it does not reduce in the kernel: every `#guard`
   receipt is taken at `denoteFuel (fuelFor …)`, and T2 is what moves it onto
   `denote`.
-- Regions (`Effect4/Flow/Region.lean`) are out of scope: their `enter`, `leave`
-  and `finalizer` rows need a third summand and a stateful upper handler
-  (packet D2 of the reification plan).
+- Regions (`Effect4/Flow/Region.lean`) are out of scope *for D1*: their `enter`,
+  `leave` and `finalizer` rows need a third summand and a stateful upper
+  handler. That is packet D2, landed 2026-09-03 — see the amendment below.
 - The straight-line `Script` embedding is not related to the denotation here
   (packet D5).
 
@@ -81,4 +81,65 @@ lake build Effect4
 lake env lean Effect4Test/Semantics/DenotationContract.lean
 lake env lean Effect4Test/Semantics/DenotationAxiomReport.lean
 ./scripts/test-trust-gate.sh
+```
+
+## Amendment: the region denotation (D2), 2026-09-03
+
+`Effect4/Semantics/RegionDenotation.lean` extends this packet to admitted region
+flows. Nothing above is rewritten; the region layer is a third summand and a
+stateful handler over the same run monad.
+
+### Frozen surface
+
+| Name | Module | Shape |
+| --- | --- | --- |
+| `Effect4.Flow.RegionFam`, `RegionOpSig` | `Effect4/Semantics/RegionDenotation.lean` | the fallible twin of `Fam`/`Sig`: a `RegionService` answers `Except Val Val` |
+| `Effect4.Flow.RegionService.toService` | same | a `RegionService` is already a `Family.Service` for `RegionFam` |
+| `Effect4.Flow.Stack` | same | `List (Frame alphabet)`, the runner's open regions, innermost first |
+| `Effect4.Flow.ScopeName`, `ScopeName.Param`, `ScopeName.Answer`, `ScopeFam`, `ScopeSig` | same | `enter : RegionId → Unit`, `acquire op release : Val → Option (Except Val Val)`, `leave : Val → Option Failures`, `fail : Val → Failures` |
+| `Effect4.Flow.RegionSig` | same | `ScopeSig a ⊕ₛ (RegionOpSig a ⊕ₛ DecSig)` |
+| `Effect4.Flow.ScopeM` | same | `StateT (Stack a) (RunM M)` — the only stateful part of the interpretation |
+| `Effect4.Flow.Handler.overStack` | same | `StateT.lift` on every clause; the hand-rolled stand-in for `Handler.mapHom (MonadHom.stateT …)`, which lean4-effects v0.3.1 does not have |
+| `Effect4.Flow.regionTracedService`, `regionTraceHandler` | same | `logOperation` in place of `Family.Service.traced`, with the same `pure` guard |
+| `Effect4.Flow.scopeHandler` | same | its `leave` arm **is** `closeFrame`; its `fail` arm **is** `unwind` |
+| `Effect4.Flow.regionHandler` | same | `scopeHandler.sum (overStack (regionTraceHandler.sum decisionHandler))` |
+| `Effect4.Flow.denoteRegionsFuel`, `denoteRegions` | same | structural on fuel, mirrors `regionLoop` case for case |
+| `Effect4.Flow.closeCause`, `interpretRegionsFrom`, `interpretRegions` | same | D1's `outcomeRows` over the failure-carrying pair, from a given stack and from the empty one |
+| `Effect4.Flow.AllPlain`, `allPlain_of_all`, `FlowService.toRegionService` | same | the region-free fragment, and a total `FlowService` read as a `RegionService` |
+
+### Laws
+
+| Theorem | Statement |
+| --- | --- |
+| `regionHandler_run_*` (eight) | what one operation of each shape runs to, in the goal's own spelling |
+| `interpretRegionsFrom_run_handled_pure`, `_handled_bind` | one `vis` with its handler run supplied as a hypothesis — how the dependent `.Answer` is kept out of `rw` |
+| `interpretRegionsFrom_run_*` (eight) | the arm lemmas the induction consumes |
+| `fail_eq_interpret`, `stuck_eq_interpret` | the runner's `fail` and its stuck frontier, read through the algebra |
+| **T1 for regions** `regionLoop_eq_interpret` | `(regionLoop … fuel block env tape stack).run log = (interpretRegionsFrom service nameOf stack (denoteRegionsFuel flow fuel block env tape)).run log`, for `[Monad M] [LawfulMonad M]`; one induction on fuel generalised over block, environment, tape, stack and log |
+| `runRegionsCause_eq_interpret`, `runRegions_eq_interpret`, `runRegionsDefault_eq_interpret` | the public faces, run from the empty stack |
+| `lookupBlock_erase`, `block?_id` | resolving a block in the erasure is resolving it in the region flow and erasing the terminator |
+| `regionLoop_erase`, **`runRegions_erase`** | on a flow whose every block is `plain`, the region runner and the plain runner of `Runs.lean` agree — same result, same unconsumed tape, same log |
+
+Axiom receipts: `Effect4Test/Semantics/RegionDenotationAxiomReport.lean`, within
+`propext` and `Quot.sound`; no `Classical.choice`.
+
+### What the amendment does not claim
+
+- **No fuel-free region denotation.** `denoteRegions` is `denoteRegionsFuel` at a
+  supplied fuel. The region twin of T2 — *"for every admitted region flow, tape
+  and input, `denoteRegionsFuel flow (fuelFor flow.erase tape) flow.entry [input]
+  tape` equals a fuel-free `denoteRegionsGo` well-founded through `CyclesWF`"* —
+  is not proved and is owed.
+- **No stack invariant.** `acquire` and `leave` answer an `Option` because
+  `regionLoop` refuses on an empty stack. Region admission should make that
+  refusal unreachable; that is not proved, and nothing here assumes it.
+- Nothing about the host, and nothing about the frame machine's finalizers (D4).
+
+### Acceptance
+
+```text
+lake build Effect4
+lake env lean Effect4Test/Semantics/RegionDenotationContract.lean
+lake env lean Effect4Test/Semantics/RegionDenotationAxiomReport.lean
+lake env lean --run harness/trace/Generate.lean region-oracle
 ```
