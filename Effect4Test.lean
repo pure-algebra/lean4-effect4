@@ -87,6 +87,8 @@ import Effect4Test.Target.TypeScript.FlowLowerContract
 import Effect4Test.Target.TypeScript.ScriptDenotationContract
 import Effect4Test.Target.TypeScript.ScriptDenotationAxiomReport
 import Effect4Test.Target.TypeScript.LoweringCoverage
+import Effect4Test.Target.TypeScript.AnswerProfileContract
+import Effect4Test.Counterexamples.Target.AnswerProfile
 import Effect4Test.Semantics.CauseExitAxiomReport
 import Effect4Test.Counterexamples.Semantics.CauseExit
 import Effect4Test.Runtime.ScopeContract

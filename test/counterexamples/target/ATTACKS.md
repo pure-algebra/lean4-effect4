@@ -104,3 +104,40 @@ general source-target simulation.
 - **CLASS:** carrier order.
 - **FIXED-BY:** `Family.Service.tracedExcept` (Effects v0.3.1, log outside the
   error) with `interpret_tracedExcept_fst`.
+
+## E4-TARGET-CE-024 — a depth-three answer read by shape, not by spelling
+
+- **BROKE:** encoding a host answer from the value alone. Above depth two the
+  value does not carry its type: a pair and a list are both JavaScript arrays,
+  so the single host value `[[1, 2]]` has two readings in the alphabet and they
+  render in a different byte order.
+- **WITNESS:** `Effect4Test/Counterexamples/Target/AnswerProfile.lean`. Lean
+  renders `[(1, 2)] : List (Nat × Nat)` as `[[1, 2], []]` and
+  `[[1, 2]] : List (List Nat)` as `[[1, [2, []]], []]`; the bytes differ and
+  `Trace.agree m2` of the two answer events is false. The untyped encoder in
+  `harness/trace/tracer.ts` read every array as a list, so it would have
+  emitted the second wherever a row declared the first.
+- **CLASS:** wire ambiguity at the host boundary.
+- **FIXED-BY:** the declared answer-type profile
+  (`Effect4/Target/TypeScript/EffectV4.lean`, `Spelling`) and the host decoder
+  that reads it: `parseSpelling` plus `wireTyped` in `harness/trace/tracer.ts`,
+  driven by the spelling the row carries. Corpus witness:
+  `generated/traces/probe.empty.tsv`, answer
+  `Option.Option<Result.Result<number, string>>`.
+
+## E4-TARGET-CE-025 — an atom declared in one face only
+
+- **BROKE:** a pure atom as three independent declarations — a Lean function, a
+  row in a hand-written `AtomTable`, and a `const` in a hand-written
+  `atoms.ts`. A name present in one and absent in another is a host
+  `ReferenceError` or a silently refused flow embedding, and no Lean receipt
+  sees either.
+- **WITNESS:** `Effect4Test/Counterexamples/Target/AnswerProfile.lean`:
+  `Script.toFlow` refuses a script whose atom the table does not carry, and the
+  refusal is the only signal a hand-written table gives; the generated module
+  can only name rows that exist.
+- **CLASS:** duplicated declaration across faces.
+- **FIXED-BY:** `effect_atoms` (`Effect4/Meta/Derive.lean`): one row list, of
+  which the Lean function, `AtomTable`, wire dispatcher and `atoms.ts` are all
+  projections. `scripts/check-trace-host.sh` byte-compares the committed
+  `atoms.ts` with `Generate.lean atoms`.

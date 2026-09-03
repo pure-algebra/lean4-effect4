@@ -2418,3 +2418,90 @@ simply host evidence and so belongs in the receipts under
 The four rows about `setAndGet`, `modifySome`, `updateSomeAndGet` and
 `MutableRef.set` are untouched by this lane: none of those calls is an operation
 of the family.
+## Answer profile widened, 2026-09-03
+
+The declared answer-type profile is reified and goes to depth three, and a pure
+atom is now one declaration with every face derived from it.
+
+**The profile.** `Effect4/Target/TypeScript/EffectV4.lean` gains `Spelling`, the
+type spellings both faces know, with `render` (the TypeScript spelling), `depth`
+(constructor nesting), `profileDepth = 3`, `admitted`, `wireDefault` (the wire
+inhabitant) and `namespacesOf` (which `effect` namespaces a spelling needs, at
+any depth — a prefix test missed `Result` inside `Option.Option<…>`).
+`effect_signature` no longer holds a private string function: it parses Lean
+type syntax into a `Spelling` and reads the rest from the profile. Parentheses
+are now transparent to that parser and `×` is admitted, which is what capped the
+DSL at depth two. Newly admitted, with their spellings:
+`Option (Except E A)` → `Option.Option<Result.Result<A, E>>`,
+`Except E (Option A)` → `Result.Result<Option.Option<A>, E>`,
+`List (A × B)` → `ReadonlyArray<readonly [A, B]>`,
+`Option (A × B)` → `Option.Option<readonly [A, B]>`,
+`A × Except E B` → `readonly [A, Result.Result<B, E>]`. `Handle "T"` stays
+depth one. Depth four is refused with its depth in the message; a type outside
+the grammar is refused as before. Both refusals are pinned by `#guard_msgs`.
+
+This retires the first half of the M3 refusal note above: `Option (Except Nat
+Nat)`, the shape of an rc.112 `Exit`, is now a spelling the DSL has. Retiring
+the `awaitValue`/`awaitError` pair that stands in for it would move the
+`Fibers` goldens and is left to whoever owns that family. The second half
+stands: `await` is still a reserved word in the binding profile.
+
+**The host side.** `harness/trace/tracer.ts` `wireAnswer` now parses the row's
+declared spelling and encodes at it (`parseSpelling`, `wireTyped`) instead of
+reading the shape of the host value. Above depth two the value is not enough
+information — a pair and a list are both JavaScript arrays — which is row
+`E4-TARGET-CE-024`. A spelling outside the profile (a `Handle`'s target type)
+falls back to the untyped encoder, whose handle branch indexes the object, and
+`void` still answers unit whatever the host hands back (separation 7). The
+`Scopes` and `Fibers` goldens are unaffected and were re-run to confirm it.
+
+**Atoms.** `effect_atoms X where | succ (n : Nat) : Nat ⟪ "n + 1" ⟫ := n + 1`
+emits the Lean function, `X.rows : List AtomRow`, `X.table` (the flow
+embedding's `AtomTable`), `X.eval : String → Val → Val` (the wire dispatcher,
+built from the new `OfVal` class, the converse of `ToVal`) and `X.source`, the
+generated `atoms.ts`. `harness/trace/atoms.ts` is now generated and
+byte-compared by `scripts/check-trace-host.sh` beside the five module fixtures.
+Declaring an atom in one face only is `E4-TARGET-CE-025`. `OfVal` is the
+decoding direction row `E4-TARGET-CE-016` says the DSL lacked; it is partial,
+so that row stays open — nothing about `denoteScript` is closed by it.
+
+The binding profile also gained `reservedExtra`: `TypeScript.reservedIdentifiers`
+(lean4-typescript v0.4.2) carries the ECMAScript reserved words but not the
+predefined names, so `bindingName` refuses `arguments`, `eval`, `undefined`,
+`NaN` and `Infinity` on top of it.
+
+**Corpus.** A fifth straight-line program: family `Tri` with
+`lookup : Nat → Option (Except String Nat)`, program `probe`, golden
+`generated/traces/probe.empty.tsv`, atom `firstOr`. The host agrees with it
+under every mask:
+
+```text
+EFFECT4_PROGRAM=probe node ../effect4-tools/packages/harness/trace.mjs harness/trace \
+  --golden generated/traces/probe.empty.tsv --masks generated/traces/masks.tsv --tail tail.ts
+trace probe.empty mask outcome ok (1 rows)
+trace probe.empty mask m1 ok (5 rows)
+trace probe.empty mask m2 ok (5 rows)
+```
+
+**For the sweep.** `Effect4/Meta/Derive.lean` changed, and its digest is a
+provenance input of every golden under `generated/traces/`, so **every**
+golden's provenance block is stale and must be regenerated
+(`./scripts/generate-trace-goldens.sh`). No golden *body* moved: a full
+regeneration into a scratch directory was compared row-for-row against the
+thirty-three committed files and only the digest lines differ. Only
+`probe.empty.tsv` was written by this packet; the other thirty-three were
+deliberately left untouched so the regeneration is one commit in the sweep
+rather than a conflict in every branch. The five generated modules
+(`fixture.ts`, `flow-fixture.ts`, `structured-fixture.ts`, `scope-fixture.ts`,
+`fiber-fixture.ts`) regenerate byte-identically apart from `fixture.ts`, which
+gains the `Tri` class and `probe`; `harness/trace/atoms.ts` is current.
+`generated/lowering-coverage.tsv` was left untouched for the same reason as the
+goldens: it digests `Effect4/Target/TypeScript/EffectV4.lean` and the goldens it
+claims, so it has to be regenerated after them, not before. No lowering rule was
+added or removed — `probe` exercises `service-acquire`, `perform-call`,
+`perform-bind`, `perform-discard`, `ret` and `atom-call`.
+
+Packet: `test/contracts/answer-profile.contract.md`; batteries
+`Effect4Test/Target/TypeScript/AnswerProfileContract.lean` and
+`Effect4Test/Counterexamples/Target/AnswerProfile.lean`; rows
+`E4-TARGET-CE-024` and `E4-TARGET-CE-025`.

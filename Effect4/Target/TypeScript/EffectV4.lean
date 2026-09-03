@@ -1,5 +1,6 @@
 import TypeScript
 import Effects.Family
+import Effects.Trace
 
 /-!
 # Target.TypeScript.EffectV4
@@ -33,6 +34,107 @@ def hostPin : HostPin :=
     languageService := some "@effect/tsgo@0.38.0"
     runtime := "node 22 --experimental-strip-types"
     libraries := ["effect@4.0.0-rc.112"] }
+
+/-! ## The answer-type profile
+
+The type spellings both faces know, reified. `effect_signature` parses Lean
+type syntax into a `Spelling` (`Effect4/Meta/Derive.lean`) and every face reads
+it from here: `render` is the TypeScript spelling, `wireDefault` the wire
+inhabitant, `depth` the admission measure. Nothing outside this inductive is a
+legal parameter, answer or atom type, so the host decoder in
+`harness/trace/tracer.ts` is a finite case analysis over the same grammar.
+
+Frozen by `test/contracts/answer-profile.contract.md`. -/
+
+/-- One admitted type spelling. rc.112 has no `Either`: an `Except E A` answer
+is the data reading `Result.Result<A, E>`. `handle` is an opaque host object
+(`Effect4.Meta.Handle`), whose wire value is a stable index and whose target
+spelling is carried verbatim. -/
+inductive Spelling where
+  | nat
+  | int
+  | string
+  | bool
+  | unit
+  | handle (target : String)
+  | option (inner : Spelling)
+  | list (inner : Spelling)
+  | except (error value : Spelling)
+  | prod (left right : Spelling)
+  deriving DecidableEq, Repr, Inhabited
+
+namespace Spelling
+
+/-- The TypeScript spelling. -/
+def render : Spelling → String
+  | .nat | .int => "number"
+  | .string => "string"
+  | .bool => "boolean"
+  | .unit => "void"
+  | .handle target => target
+  | .option inner => "Option.Option<" ++ render inner ++ ">"
+  | .list inner => "ReadonlyArray<" ++ render inner ++ ">"
+  | .except error value => "Result.Result<" ++ render value ++ ", " ++ render error ++ ">"
+  | .prod left right => "readonly [" ++ render left ++ ", " ++ render right ++ "]"
+
+/-- Constructor nesting: a base type, a handle included, is depth one. -/
+def depth : Spelling → Nat
+  | .nat | .int | .string | .bool | .unit | .handle _ => 1
+  | .option inner | .list inner => 1 + depth inner
+  | .except left right | .prod left right => 1 + max (depth left) (depth right)
+
+/-- The deepest nesting the profile admits. Depth three is
+`Option (Except E A)`, `Except E (Option A)`, `List (A × B)`, `Option (A × B)`
+and `A × Except E B`; depth four is refused. -/
+def profileDepth : Nat := 3
+
+/-- Whether the profile admits this spelling. -/
+def admitted (spelling : Spelling) : Bool := spelling.depth <= profileDepth
+
+/-- The wire inhabitant of a spelling: what a face answers when it has nothing
+else to answer. `Effects.Trace.ToVal` of the `Inhabited` default of the Lean
+type with this spelling is exactly this value, which is what makes the
+per-program receipt's `X.answerDefault` and this agree. -/
+def wireDefault : Spelling → Effects.Trace.Val
+  | .nat | .handle _ => .nat 0
+  | .int => .int 0
+  | .string => .str ""
+  | .bool => .bool false
+  | .unit => .unit
+  | .option _ => .none
+  | .list _ => .unit
+  -- Lean's `Inhabited (Except ε α)` is `Except.error default`, so the wire
+  -- inhabitant of a `Result` spelling is its failure side.
+  | .except error _ => .pair (.bool false) (wireDefault error)
+  | .prod left right => .pair (wireDefault left) (wireDefault right)
+
+/-- Whether a rendered spelling mentions a namespace of the `effect` package,
+at any nesting depth. `Option.Option<Result.Result<number, string>>` mentions
+both, so a module carrying it imports both. -/
+def mentions (needle haystack : String) : Bool := (haystack.splitOn needle).length > 1
+
+/-- The `effect` namespaces a list of rendered spellings needs, in import
+order. -/
+def namespacesOf (spellings : List String) : List String :=
+  ["Option", "Result"].filter fun name => spellings.any (mentions (name ++ "."))
+
+end Spelling
+
+/-! ## The binding profile
+
+`TypeScript.reservedIdentifiers` (lean4-typescript v0.4.2) is the shared list;
+these are the words it does not carry and this profile still refuses. They are
+checked here rather than in the pinned package so the DSL can refuse them
+today. -/
+
+/-- Reserved and predefined names missing from
+`TypeScript.reservedIdentifiers`. -/
+def reservedExtra : List String :=
+  ["arguments", "eval", "undefined", "NaN", "Infinity"]
+
+/-- A legal generated binding name for an operation or an atom. -/
+def bindingName (name : String) : Bool :=
+  TypeScript.targetIdentifier name && !(reservedExtra.contains name)
 
 /-! ## First-order rows -/
 
@@ -117,10 +219,19 @@ def rowsDecl (rows : ServiceRow) : Decl :=
       value := .objectQuoted (rows.ops.map fun row =>
         (row.name, .object [("params", .int row.params.length), ("answer", .str row.tsAnswer)])) }
 
-/-- Whether any spelling names `Result.Result`, so the module imports it. -/
+/-- Every TypeScript spelling the rows mention, answers and parameters. -/
+def spellings (rows : ServiceRow) : List String :=
+  rows.ops.flatMap fun row => row.tsAnswer :: row.tsParams.map (·.2)
+
+/-- The `effect` namespaces the module needs beside `Context` and `Effect`. A
+depth-three spelling nests them, so this is a substring test, not a prefix
+test: `Option.Option<Result.Result<number, string>>` needs both. -/
+def namespaces (rows : ServiceRow) : List String :=
+  Spelling.namespacesOf rows.spellings
+
+/-- Whether any spelling names `Result.Result`, at any depth. -/
 def usesResult (rows : ServiceRow) : Bool :=
-  rows.ops.any fun row =>
-    row.tsAnswer.startsWith "Result." || row.tsParams.any fun p => p.2.startsWith "Result."
+  rows.namespaces.contains "Result"
 
 /-- What an LLM is told, rendered from the rows it will be checked against. -/
 def sheet (rows : ServiceRow) : String :=
@@ -362,13 +473,28 @@ end Script
 
 /-! ## Modules -/
 
+/-- The names a supplied import list already binds. The module's own `effect`
+import must not re-bind one of them: a caller that already imports `Option` as
+a type-only binding would otherwise get a duplicate identifier. -/
+def importedNames : List Import → List String
+  | [] => []
+  | .all name _ :: rest => name :: importedNames rest
+  | .named names _ :: rest => names ++ importedNames rest
+  | .types names _ :: rest => names ++ importedNames rest
+
+/-- The `effect` namespaces a module must import for its own rows, minus the
+ones the supplied imports already bind. -/
+def neededNamespaces (spellings : List String) (atoms : List Import) : List String :=
+  let bound := importedNames atoms
+  (Spelling.namespacesOf spellings).filter fun name => !bound.contains name
+
 /-- The generated module: header with the host pin, the `effect` import, the
 service class, and the lowered programs. -/
 def module (rows : ServiceRow) (programs : List ProgDecl)
     (atoms : List Import := []) : Module :=
   { header := ["Generated by Effect4 (Effect v4 profile).", ""] ++ hostPin.headerLines ++
       ["", "Do not edit."]
-    imports := .named (["Context", "Effect"] ++ (if rows.usesResult then ["Result"] else [])) "effect" :: atoms
+    imports := .named (["Context", "Effect"] ++ neededNamespaces rows.spellings atoms) "effect" :: atoms
     decls := rows.classDecl :: rows.rowsDecl :: programs.map Decl.prog }
 
 /-- Lower every script; `none` if any script is refused. `atoms` imports the
@@ -388,12 +514,126 @@ def modules? (families : List (ServiceRow × List Script))
   let decls ← families.mapM fun (rows, scripts) => do
     let programs ← scripts.mapM (Script.lower rows)
     pure (rows.classDecl :: rows.rowsDecl :: programs.map Decl.prog)
-  let result := families.any fun (rows, _) => rows.usesResult
+  let needed := neededNamespaces (families.flatMap fun (rows, _) => rows.spellings) atoms
   let target : Module :=
     { header := ["Generated by Effect4 (Effect v4 profile).", ""] ++ hostPin.headerLines ++
         ["", "Do not edit."]
-      imports := .named (["Context", "Effect"] ++ (if result then ["Result"] else [])) "effect" :: atoms
+      imports := .named (["Context", "Effect"] ++ needed) "effect" :: atoms
       decls := decls.flatten }
   pure (Render.module style target)
+
+/-! ## Pure atoms
+
+An atom is declared once, by `effect_atoms` (`Effect4/Meta/Derive.lean`), and
+both faces are projections of the row: the Lean function and the wire
+dispatcher on one side, `atoms.ts` on the other. Declaring an atom in one face
+only is `E4-TARGET-CE-025`. -/
+
+/-- One pure atom as data: the binder and its two type spellings, the Lean
+answer spelling, and the host body as a single TypeScript expression over the
+binder. -/
+structure AtomRow where
+  name : String
+  binder : String
+  /-- Lean type spelling of the argument -/
+  request : String
+  /-- TypeScript type spelling of the argument -/
+  tsRequest : String
+  /-- Lean type spelling of the answer -/
+  answer : String
+  /-- TypeScript type spelling of the answer -/
+  tsAnswer : String
+  /-- One TypeScript expression over `binder`. -/
+  body : String
+  /-- A multi-parameter atom's parameters, name and TypeScript spelling each;
+  empty for the one-parameter form, whose parameter is `binder : tsRequest`. -/
+  params : List (String × String) := []
+  deriving Repr, BEq, Inhabited
+
+namespace AtomRow
+
+/-- `export const succ = (n: number): number => n + 1`. -/
+def constSource (row : AtomRow) : String :=
+  "/** Host body of the pure atom `" ++ row.name ++ "`; its Lean model is `" ++
+    row.name ++ "`. */\n" ++
+  "export const " ++ row.name ++ " = (" ++
+    (if row.params.isEmpty then row.binder ++ ": " ++ row.tsRequest
+     else String.intercalate ", " (row.params.map fun (name, ty) => name ++ ": " ++ ty)) ++ "): " ++
+    row.tsAnswer ++ " => " ++ row.body ++ "\n"
+
+/-- The row as the flow embedding reads it: name, request, answer. -/
+def entry (row : AtomRow) : String × String × String :=
+  (row.name, row.tsRequest, row.tsAnswer)
+
+end AtomRow
+
+/-- The generated `atoms.ts`: the same header and import layout as `module`,
+then one exported constant per row. -/
+def atomsModule (rows : List AtomRow) : String :=
+  let needed := Spelling.namespacesOf (rows.flatMap fun row =>
+    [row.tsRequest, row.tsAnswer] ++ row.params.map (·.2))
+  let header := ["Generated by Effect4 (Effect v4 profile).", ""] ++ hostPin.headerLines ++
+    ["", "The pure atoms of the harness, declared by `effect_atoms`.", "", "Do not edit."]
+  "/**\n" ++ String.intercalate "\n"
+      (header.map fun line => if line.isEmpty then " *" else " * " ++ line) ++
+    "\n */\n" ++
+    (if needed.isEmpty then ""
+     else "import { " ++ String.intercalate ", " needed ++ " } from \"effect\"\n") ++
+    "\n" ++ String.intercalate "\n" (rows.map AtomRow.constSource)
+
+/-! ## Decoding the wire
+
+`Effects.Trace.ToVal` encodes; this decodes, so a generated atom dispatcher can
+run a Lean atom on a wire value. Every instance is the exact inverse of the
+`ToVal` instance for the same type. This is the encoding's converse the DSL had
+no carrier for (row `E4-TARGET-CE-016`); it is a partial function, so it closes
+nothing about `denoteScript` on its own. -/
+
+/-- Read a wire value back at a profile type. -/
+class OfVal (α : Type) where
+  ofVal : Effects.Trace.Val → Option α
+
+namespace OfVal
+
+instance : OfVal Effects.Trace.Val := ⟨Option.some⟩
+instance : OfVal Unit := ⟨fun value => match value with | .unit => Option.some () | _ => Option.none⟩
+instance : OfVal Nat := ⟨fun value => match value with | .nat n => Option.some n | _ => Option.none⟩
+instance : OfVal Int := ⟨fun value => match value with | .int i => Option.some i | _ => Option.none⟩
+instance : OfVal Bool := ⟨fun value => match value with | .bool b => Option.some b | _ => Option.none⟩
+instance : OfVal String := ⟨fun value => match value with | .str s => Option.some s | _ => Option.none⟩
+
+instance [OfVal α] [OfVal β] : OfVal (α × β) :=
+  ⟨fun value => match value with
+    | .pair left right => do
+        let a ← OfVal.ofVal left
+        let b ← OfVal.ofVal right
+        Option.some (a, b)
+    | _ => Option.none⟩
+
+instance [OfVal α] : OfVal (Option α) :=
+  ⟨fun value => match value with
+    | .none => Option.some Option.none
+    | .some inner => (OfVal.ofVal inner).map Option.some
+    | _ => Option.none⟩
+
+instance [OfVal ε] [OfVal α] : OfVal (Except ε α) :=
+  ⟨fun value => match value with
+    | .pair (.bool false) error => (OfVal.ofVal error).map Except.error
+    | .pair (.bool true) ok => (OfVal.ofVal ok).map Except.ok
+    | _ => Option.none⟩
+
+/-- A list is right-nested pairs closed by `unit`, exactly as `ToVal` writes
+it. -/
+def ofValList [OfVal α] : Effects.Trace.Val → Option (List α)
+  | .unit => Option.some []
+  | .pair head tail => do
+      let a ← OfVal.ofVal head
+      let rest ← ofValList tail
+      Option.some (a :: rest)
+  | _ => Option.none
+
+instance [OfVal α] : OfVal (List α) := ⟨ofValList⟩
+
+end OfVal
 
 end Effect4.Target.EffectV4

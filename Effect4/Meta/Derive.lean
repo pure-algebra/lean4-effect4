@@ -66,6 +66,22 @@ is owed, in these words:
 > partial function that no admitted spelling currently carries. Row
 > `E4-TARGET-CE-016`. The receipt above is what is emitted instead.
 
+A third elaborator declares the pure atoms a program's `PureTerm.app` names:
+
+```lean
+effect_atoms Atoms where
+  | succ (n : Nat) : Nat ⟪ "n + 1" ⟫ := n + 1
+```
+
+emits the Lean function `succ`, the row list `Atoms.rows : List AtomRow`, the
+flow embedding's `Atoms.table`, the wire dispatcher
+`Atoms.eval : String → Val → Val` (through `Effect4.Target.EffectV4.OfVal`,
+the converse of `ToVal`), and `Atoms.source`, the generated `atoms.ts`. One
+declaration, every face: an atom that exists in one face only is
+`E4-TARGET-CE-025`. The string is the host body, one TypeScript expression over
+the binder; the Lean body is last, so a `match` body must be parenthesised —
+its alternatives would otherwise swallow the next atom.
+
 This module is metaprogramming: `MetaM` reaches `Classical.choice`, so it sits
 behind the target-implementation exemption of the axiom gate and declares no
 theorem.
@@ -88,6 +104,13 @@ syntax "let " binderIdent " ← " ident "(" term,* ")" : effectStep
 syntax "return " term : effectStep
 
 syntax "effect_program " ident "(" ident " : " term ")" " over " ident " : " term " := " effectStep+ : command
+
+declare_syntax_cat atomOp
+syntax "| " ident effectParam " : " term " ⟪ " str " ⟫ " " := " term : atomOp
+/-- A two-parameter atom: the flow face sees its request as the pair. -/
+syntax "| " ident effectParam effectParam " : " term " ⟪ " str " ⟫ " " := " term : atomOp
+
+syntax "effect_atoms " ident " where " atomOp+ : command
 
 /-! ## Opaque host handles -/
 
@@ -115,41 +138,63 @@ deriving DecidableEq, Repr, Inhabited
 instance {spelling : String} : Effects.Trace.ToVal (Handle spelling) :=
   ⟨fun handle => .nat handle.index⟩
 
-/-! ## Stratum V spellings, syntax directed -/
+/-! ## The answer-type profile, syntax directed
 
-/-- Type syntax nesting is bounded by this fuel; the DSL admits only the
-Stratum V spellings, all of depth two at most. -/
+Lean type syntax is parsed into `Effect4.Target.EffectV4.Spelling`, which owns
+the TypeScript spelling, the depth measure and the wire inhabitant. This
+elaborator only decides which syntax reaches which constructor; the profile
+itself is frozen in `test/contracts/answer-profile.contract.md`.
+
+Stratum V is depth one (`Nat`, `Int`, `String`, `Bool`, `Unit`, `Handle "T"`);
+depth two adds one `Option`, `List`, `Except` or `×` over it; depth three nests
+one more, which is `Option (Except E A)`, `Except E (Option A)`,
+`List (A × B)`, `Option (A × B)` and `A × Except E B`. Depth four is refused,
+with its depth in the message. -/
+
+open Effect4.Target.EffectV4 (Spelling)
+
+/-- Type syntax nesting is bounded by this fuel. The profile's own bound is
+`Spelling.profileDepth`; this only keeps the parser total. -/
 private def typeFuel : Nat := 16
 
-private def tsOfTypeFuel : Nat → Term → CommandElabM String
+private def spellingOfTypeFuel : Nat → Term → CommandElabM Spelling
   | 0, stx => throwErrorAt stx "effect_signature: type syntax nested too deeply"
   | fuel + 1, stx => do
+  match stx with
+  | `(($inner:term)) => spellingOfTypeFuel fuel inner
+  | _ =>
   if stx.raw.isIdent then
     match stx.raw.getId.eraseMacroScopes with
-    | `Nat | `Int => return "number"
-    | `String => return "string"
-    | `Bool => return "boolean"
-    | `Unit => return "void"
+    | `Nat => return .nat
+    | `Int => return .int
+    | `String => return .string
+    | `Bool => return .bool
+    | `Unit => return .unit
     | other => throwErrorAt stx "effect_signature: no TypeScript spelling for `{other}`; add a Stratum V row first"
   match stx with
-  -- A nested spelling is written parenthesized (`Option (Except Nat Nat)`);
-  -- the parentheses are syntax, not a type former.
-  | `(($inner:term)) => tsOfTypeFuel fuel inner
-  | `(Handle $spelling:str) => return spelling.getString
+  | `(Handle $target:str) => return .handle target.getString
+  | `($leftTy:term × $rightTy:term) =>
+      return .prod (← spellingOfTypeFuel fuel leftTy) (← spellingOfTypeFuel fuel rightTy)
   | `(Except $errorTy:term $valueTy:term) =>
-      let error ← tsOfTypeFuel fuel errorTy
-      let value ← tsOfTypeFuel fuel valueTy
-      return s!"Result.Result<{value}, {error}>"
+      return .except (← spellingOfTypeFuel fuel errorTy) (← spellingOfTypeFuel fuel valueTy)
   | `($f:ident $arg:term) =>
-      let inner ← tsOfTypeFuel fuel arg
+      let inner ← spellingOfTypeFuel fuel arg
       match f.getId.eraseMacroScopes with
-      | `Option => return s!"Option.Option<{inner}>"
-      | `List => return s!"ReadonlyArray<{inner}>"
+      | `Option => return .option inner
+      | `List => return .list inner
       | other => throwErrorAt stx "effect_signature: no TypeScript spelling for `{other}`"
   | _ => throwErrorAt stx "effect_signature: unsupported type syntax"
 
-private def tsOfType (stx : Term) : CommandElabM String :=
-  tsOfTypeFuel typeFuel stx
+/-- The spelling of a type, refused above `Spelling.profileDepth`. -/
+private def spellingOfType (stx : Term) : CommandElabM Spelling := do
+  let spelling ← spellingOfTypeFuel typeFuel stx
+  unless spelling.admitted do
+    throwErrorAt stx
+      "effect_signature: the answer-type profile admits depth {Spelling.profileDepth} at most; this spelling has depth {spelling.depth}"
+  return spelling
+
+private def tsOfType (stx : Term) : CommandElabM String := do
+  return (← spellingOfType stx).render
 
 private def strLit (s : String) : Term := ⟨(Syntax.mkStrLit s).raw⟩
 private def natLit (n : Nat) : Term := ⟨(Syntax.mkNumLit (toString n)).raw⟩
@@ -196,7 +241,7 @@ elab_rules : command
     for op in ops do
       match op with
       | `(effectOp| | $opName:ident $params:effectParam* : $answer:term $[!! $error:term]? ⟪ $cues:str,* ⟫) => do
-          unless TypeScript.targetIdentifier opName.getId.toString do
+          unless Effect4.Target.EffectV4.bindingName opName.getId.toString do
             throwErrorAt opName "effect_signature: `{opName.getId}` is not a legal target identifier"
           let ctorName := mkIdent (famName ++ `Name ++ opName.getId)
           let smartName := mkIdent (famName ++ opName.getId)
@@ -335,5 +380,69 @@ elab_rules : command
       Effect4.Target.EffectV4.performedNames (F := $famId) $spellingName $answerDefaultName
           ($name default)
         = Effect4.Target.EffectV4.Script.operationNames $scriptName := by rfl))
+
+/-! ## `effect_atoms` -/
+
+elab_rules : command
+  | `(effect_atoms $name:ident where $atoms:atomOp*) => do
+    let tableName := mkIdent (name.getId ++ `rows)
+    let entryName := mkIdent (name.getId ++ `table)
+    let evalName := mkIdent (name.getId ++ `eval)
+    let sourceName := mkIdent (name.getId ++ `source)
+    let mut rowTerms : Array Term := #[]
+    let mut defs : Array (TSyntax `command) := #[]
+    let mut evalAlts : Array (TSyntax ``Lean.Parser.Term.matchAlt) := #[]
+    for atom in atoms do
+      match atom with
+      | `(atomOp| | $atomName:ident ($x:ident : $requestTy:term) : $answerTy:term ⟪ $body:str ⟫ := $leanBody:term) => do
+          unless Effect4.Target.EffectV4.bindingName atomName.getId.toString do
+            throwErrorAt atomName "effect_atoms: `{atomName.getId}` is not a legal target identifier"
+          unless Effect4.Target.EffectV4.bindingName x.getId.toString do
+            throwErrorAt x "effect_atoms: `{x.getId}` is not a legal target identifier"
+          defs := defs.push (← `(def $atomName ($x : $requestTy) : $answerTy := $leanBody))
+          rowTerms := rowTerms.push (← `({ name := $(strLit atomName.getId.toString)
+                                           binder := $(strLit x.getId.toString)
+                                           request := $(strLit requestTy.raw.reprint.get!.trimAscii.toString)
+                                           tsRequest := $(strLit (← tsOfType requestTy))
+                                           answer := $(strLit answerTy.raw.reprint.get!.trimAscii.toString)
+                                           tsAnswer := $(strLit (← tsOfType answerTy))
+                                           body := $body : Effect4.Target.EffectV4.AtomRow }))
+          evalAlts := evalAlts.push (← `(Lean.Parser.Term.matchAltExpr|
+            | $(strLit atomName.getId.toString) =>
+                fun value =>
+                  match (Effect4.Target.EffectV4.OfVal.ofVal value : Option $requestTy) with
+                  | Option.some argument => Effects.Trace.ToVal.toVal ($atomName argument)
+                  | Option.none => Effects.Trace.Val.unit))
+      | `(atomOp| | $atomName:ident ($x:ident : $xTy:term) ($y:ident : $yTy:term) : $answerTy:term ⟪ $body:str ⟫ := $leanBody:term) => do
+          for ident in [atomName, x, y] do
+            unless Effect4.Target.EffectV4.bindingName ident.getId.toString do
+              throwErrorAt ident "effect_atoms: `{ident.getId}` is not a legal target identifier"
+          defs := defs.push (← `(def $atomName ($x : $xTy) ($y : $yTy) : $answerTy := $leanBody))
+          let tsX ← tsOfType xTy
+          let tsY ← tsOfType yTy
+          rowTerms := rowTerms.push (← `({ name := $(strLit atomName.getId.toString)
+                                           binder := $(strLit x.getId.toString)
+                                           request := $(strLit (xTy.raw.reprint.get!.trimAscii.toString ++ " × " ++ yTy.raw.reprint.get!.trimAscii.toString))
+                                           tsRequest := $(strLit ("readonly [" ++ tsX ++ ", " ++ tsY ++ "]"))
+                                           answer := $(strLit answerTy.raw.reprint.get!.trimAscii.toString)
+                                           tsAnswer := $(strLit (← tsOfType answerTy))
+                                           body := $body
+                                           params := [($(strLit x.getId.toString), $(strLit tsX)), ($(strLit y.getId.toString), $(strLit tsY))]
+                                           : Effect4.Target.EffectV4.AtomRow }))
+          evalAlts := evalAlts.push (← `(Lean.Parser.Term.matchAltExpr|
+            | $(strLit atomName.getId.toString) =>
+                fun value =>
+                  match (Effect4.Target.EffectV4.OfVal.ofVal value : Option ($xTy × $yTy)) with
+                  | Option.some (a, b) => Effects.Trace.ToVal.toVal ($atomName a b)
+                  | Option.none => Effects.Trace.Val.unit))
+      | _ => throwUnsupportedSyntax
+    for command in defs do elabCommand command
+    evalAlts := evalAlts.push (← `(Lean.Parser.Term.matchAltExpr| | _ => fun _ => Effects.Trace.Val.unit))
+    elabCommand (← `(def $tableName : List Effect4.Target.EffectV4.AtomRow := $(← listLit rowTerms)))
+    elabCommand (← `(def $entryName : List (String × String × String) :=
+      $tableName |>.map Effect4.Target.EffectV4.AtomRow.entry))
+    elabCommand (← `(def $evalName : String → Effects.Trace.Val → Effects.Trace.Val :=
+      fun name => match name with $evalAlts:matchAlt*))
+    elabCommand (← `(def $sourceName : String := Effect4.Target.EffectV4.atomsModule $tableName))
 
 end Effect4.Meta

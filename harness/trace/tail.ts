@@ -1,5 +1,5 @@
-import { Effect, Ref, Result } from "effect"
-import { Cell, CellRows, ECell, ECellRows, FCell, FCellRows, incr, twice, recover, fallible } from "./fixture.ts"
+import { Effect, Option, Ref, Result } from "effect"
+import { Cell, CellRows, ECell, ECellRows, FCell, FCellRows, Tri, TriRows, incr, twice, recover, fallible, probe } from "./fixture.ts"
 import { runTraced, traceService, windowRows, type Event } from "./tracer.ts"
 
 declare const process: { readonly env: Record<string, string | undefined> }
@@ -50,11 +50,29 @@ const fcellProgram = (body: (n: number) => Effect.Effect<number, string, FCell>,
     return yield* body(argument).pipe(Effect.provideService(FCell, service))
   })
 
+/** `triLive`: the lookup misses at key zero and otherwise answers the cell
+ * offset by the key. Its answer is depth three,
+ * `Option.Option<Result.Result<number, string>>`, and the tracer encodes it at
+ * that declared spelling rather than by the shape of the host value. */
+const triProgram = (body: (n: number) => Effect.Effect<number, never, Tri>, argument: number, initial: number) =>
+  Effect.gen(function* () {
+    const ref = yield* Ref.make(initial)
+    const service = traceService(TriRows, {
+      lookup: (k: number) =>
+        Ref.get(ref).pipe(Effect.map((s): Option.Option<Result.Result<number, string>> =>
+          k === 0 ? Option.none() : Option.some(Result.succeed(s + k)))),
+      put: (n: number) => Ref.set(ref, n)
+    }, sink)
+    sink.push({ kind: "phase", phase: "run" })
+    return yield* body(argument).pipe(Effect.provideService(Tri, service))
+  })
+
 const programs: Record<string, Effect.Effect<number, string, never>> = {
   incr: cellProgram(incr, 0, 41),
   twice: cellProgram(twice, 7, 41),
   recover: ecellProgram(recover, 5, 41),
-  fallible: fcellProgram(fallible, 5, 41)
+  fallible: fcellProgram(fallible, 5, 41),
+  probe: triProgram(probe, 3, 41)
 }
 const program = programs[name]
 if (program === undefined) throw new Error(`unknown program ${name}`)
@@ -72,5 +90,5 @@ console.log(JSON.stringify({
   maxOpsBeforeYield,
   expectYields: process.env.EFFECT4_EXPECT_YIELDS === "1",
   patchedFrames,
-  foreign: ["succ@./atoms.ts", "orZero@./atoms.ts"]
+  foreign: ["succ@./atoms.ts", "orZero@./atoms.ts", "firstOr@./atoms.ts"]
 }))

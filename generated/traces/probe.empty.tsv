@@ -1,0 +1,17 @@
+format	effect4-trace-golden-v1
+generator	scripts/generate-trace-goldens.sh	sha256=c52e32fcdb2486c56ed912d687463631906ed37960c1398bb3ecebbbffd30a19
+regenerate	./scripts/generate-trace-goldens.sh
+input	harness/trace/Generate.lean	sha256=383c01b332d4ee3959526d349f256f394e971c98239e44f5c76434cfa6d398cf
+input	Effect4/Meta/Derive.lean	sha256=2e45a9b56f89ba813e05beb91b2f37cce6bf54df404a652d962debd4e84d19ed
+input	Effect4/Target/TypeScript/Trace.lean	sha256=38452fa69175f88fe675e45756f4ec91e6168fc828a77e5dad95ddefb190782f
+pin	effects	2447edd76649f035e989914ac899831d66e7dad2
+format	effect4-trace-v1
+face	lean
+program	probe.empty
+tape	
+rules	service-acquire,perform-call,perform-bind,perform-discard,ret,atom-call
+op	lookup	3
+answer	lookup	{"some":[true, 44]}
+op	put	3
+answer	put	[]
+done	{"success":44}

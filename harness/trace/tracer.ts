@@ -120,10 +120,137 @@ export const outcomeWire = (exit: { _tag: string; value?: unknown; cause?: unkno
   throw new TracerDefect(`no Fail, Die or Interrupt reason in the cause: [${reasons.map((r) => r._tag).join(",")}]`)
 }
 
+/**
+ * The declared answer-type profile, parsed from the spelling a row carries.
+ * This is the host side of `Spelling` in
+ * `Effect4/Target/TypeScript/EffectV4.lean`: depth one is `number`, `string`,
+ * `boolean`, `void`; depth two and three nest `Option.Option<_>`,
+ * `ReadonlyArray<_>`, `Result.Result<A, E>` and `readonly [A, B]`. Depth four
+ * is refused in Lean and never reaches a row. An opaque `Handle "T"` spells
+ * `T`, which is outside this grammar on purpose: it parses to `null` and falls
+ * back to `wire`, whose handle branch indexes the object.
+ */
+export type Spelling =
+  | { kind: "number" }
+  | { kind: "string" }
+  | { kind: "boolean" }
+  | { kind: "void" }
+  | { kind: "option"; inner: Spelling }
+  | { kind: "list"; inner: Spelling }
+  | { kind: "result"; value: Spelling; error: Spelling }
+  | { kind: "pair"; left: Spelling; right: Spelling }
+
+/** Split a type-argument list at its top-level commas. */
+const splitArguments = (text: string): string[] => {
+  const parts: string[] = []
+  let depth = 0
+  let start = 0
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index]
+    if (character === "<" || character === "[") depth += 1
+    else if (character === ">" || character === "]") depth -= 1
+    else if (character === "," && depth === 0) {
+      parts.push(text.slice(start, index).trim())
+      start = index + 1
+    }
+  }
+  parts.push(text.slice(start).trim())
+  return parts
+}
+
+/** Parse one declared spelling; `null` for anything outside the profile. */
+export const parseSpelling = (text: string): Spelling | null => {
+  const spelling = text.trim()
+  if (spelling === "number") return { kind: "number" }
+  if (spelling === "string") return { kind: "string" }
+  if (spelling === "boolean") return { kind: "boolean" }
+  if (spelling === "void") return { kind: "void" }
+  const inside = (constructor: string): string | null =>
+    spelling.startsWith(constructor + "<") && spelling.endsWith(">")
+      ? spelling.slice(constructor.length + 1, -1)
+      : null
+  const optionArgument = inside("Option.Option")
+  if (optionArgument !== null) {
+    const inner = parseSpelling(optionArgument)
+    return inner === null ? null : { kind: "option", inner }
+  }
+  const listArgument = inside("ReadonlyArray")
+  if (listArgument !== null) {
+    const inner = parseSpelling(listArgument)
+    return inner === null ? null : { kind: "list", inner }
+  }
+  const resultArguments = inside("Result.Result")
+  if (resultArguments !== null) {
+    const [valueText, errorText, ...extra] = splitArguments(resultArguments)
+    if (valueText === undefined || errorText === undefined || extra.length !== 0) return null
+    const value = parseSpelling(valueText)
+    const error = parseSpelling(errorText)
+    return value === null || error === null ? null : { kind: "result", value, error }
+  }
+  if (spelling.startsWith("readonly [") && spelling.endsWith("]")) {
+    const [leftText, rightText, ...rest] = splitArguments(spelling.slice("readonly [".length, -1))
+    if (leftText === undefined || rightText === undefined || rest.length !== 0) return null
+    const left = parseSpelling(leftText)
+    const right = parseSpelling(rightText)
+    return left === null || right === null ? null : { kind: "pair", left, right }
+  }
+  return null
+}
+
+/**
+ * Encode a host value at its declared spelling. The untyped encoder cannot do
+ * this above depth two: a pair and a list are both JavaScript arrays, and
+ * `wire` reads every array as a list, so a `ReadonlyArray<readonly [number,
+ * number]>` carrying `[[1, 2]]` would render `[[1, [2, []]], []]` where Lean
+ * renders `[[1, 2], []]` (`E4-TARGET-CE-024`). The declared spelling decides
+ * which reading applies.
+ */
+export const wireTyped = (spelling: Spelling, value: unknown): Wire => {
+  switch (spelling.kind) {
+    case "void":
+      return "[]"
+    case "number":
+    case "string":
+    case "boolean":
+      return wire(value)
+    case "option": {
+      const tag = (value as { _tag?: unknown } | null)?._tag
+      if (tag === "None") return `{"none":true}`
+      if (tag === "Some") return `{"some":${wireTyped(spelling.inner, (value as { value: unknown }).value)}}`
+      throw new TracerDefect(`not an Option: ${JSON.stringify(value)}`)
+    }
+    case "result": {
+      const tag = (value as { _tag?: unknown } | null)?._tag
+      if (tag === "Success") {
+        return `[true, ${wireTyped(spelling.value, (value as { success: unknown }).success)}]`
+      }
+      if (tag === "Failure") {
+        return `[false, ${wireTyped(spelling.error, (value as { failure: unknown }).failure)}]`
+      }
+      throw new TracerDefect(`not a Result: ${JSON.stringify(value)}`)
+    }
+    case "list": {
+      if (!Array.isArray(value)) throw new TracerDefect(`not a list: ${JSON.stringify(value)}`)
+      return value.reduceRight<Wire>((acc, item) => `[${wireTyped(spelling.inner, item)}, ${acc}]`, "[]")
+    }
+    case "pair": {
+      if (!Array.isArray(value) || value.length !== 2) {
+        throw new TracerDefect(`not a pair: ${JSON.stringify(value)}`)
+      }
+      return `[${wireTyped(spelling.left, value[0])}, ${wireTyped(spelling.right, value[1])}]`
+    }
+  }
+}
+
 /** An answer is recorded as typed: a `void` operation answers unit whatever
- * the host hands back (rc.112's `Ref.set` returns the mutable ref at runtime). */
-export const wireAnswer = (row: { answer: string }, value: unknown): Wire =>
-  row.answer === "void" ? "[]" : wire(value)
+ * the host hands back (rc.112's `Ref.set` returns the mutable ref at runtime),
+ * and a depth-three answer is encoded at its declared spelling, not by the
+ * shape of the host value. A spelling outside the profile — an opaque handle,
+ * for one — falls back to the untyped encoder. */
+export const wireAnswer = (row: { answer: string }, value: unknown): Wire => {
+  const spelling = parseSpelling(row.answer)
+  return spelling === null ? wire(value) : wireTyped(spelling, value)
+}
 
 /** Wrap every method named in `rows` so its request and answer are recorded.
  * A nullary operation is an Effect value; others are functions. */

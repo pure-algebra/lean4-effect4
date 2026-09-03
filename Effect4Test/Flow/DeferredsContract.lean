@@ -82,11 +82,12 @@ a cell in one answer; `awaitValue`/`awaitError` are the aborting reading. -/
   "  readonly awaitError: (cell: Deferred.Deferred<number, number>) => Effect.Effect<number, number>\n" ++
   "}"
 
-/-! `poll`'s answer is the first Stratum V spelling to nest one namespace inside
-another. `Result.` is not at the head of it, so the value-import trigger stays
-false and `Option`/`Result` reach the module as type-only imports instead —
-which is what `deferred-fixture.ts` shows. -/
-#guard !Deferreds.rows.usesResult
+/-! `poll`'s answer nests one namespace inside another. Since the answer-profile
+packet the namespace test is by occurrence (`Spelling.namespacesOf`), so
+`Result` counts as used wherever it appears; the module's imports are computed
+from the namespaces a spelling mentions, and `deferred-fixture.ts` is byte-stable
+across that change. -/
+#guard Deferreds.rows.usesResult
 
 /-! ## The sequential projection -/
 
