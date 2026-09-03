@@ -541,3 +541,66 @@ Nothing else moves. No `FRAME-FB-*` row is discharged, no edge of the graph-edge
 ledger changes state, and no census row turns green: `docs/RUNTIME-COVERAGE.md`
 scores clause by clause, and an invariant over a run is nobody's clause. The
 `coverage` edge stays `required-open`.
+
+## Fence B of packet D4: the simulation, and where it lives
+
+Added 2026-09-03. The module is `Effect4/Semantics/FrameSimulation.lean`; the
+contract is `test/contracts/frame-simulation.contract.md`; the battery and the
+axiom report are `Effect4Test/Semantics/FrameSimulationContract.lean` and
+`Effect4Test/Semantics/FrameSimulationAxiomReport.lean`. Nothing in this packet
+edits `Effect4/Runtime/Runtime.lean` beyond the fence A additions above.
+
+### What it adds to this graph
+
+`Effect4.FrameSimulation.compile_simulates` is the first statement in which the
+*composition* of this packet's single-transition laws means something.
+`step_onSuccess`, `step_sync`, `resumeValue_frame` and `armA_onSuccess` are each
+one equation about one transition; the simulation is the run they compose into,
+against `Effects.interpret`. `FrameFiber.run` stops being a bounded runner with
+no consumer.
+
+It moves **no** row of the per-row census table, and it must not be reported as
+moving a coverage number: `docs/RUNTIME-COVERAGE.md` scores clause by clause and
+a composite theorem is nobody's clause. What changes is the *kind* of evidence
+available to `rule.frames-are-primitives`, `op.Success`, `op.Sync` and
+`op.OnSuccess`. Recording that in `Effect4Test/Audit/RuntimeCoverage.lean` is a
+separate packet with a separate claim, under the `runtime-coverage` procedure;
+this packet writes nothing under `generated/` or `Effect4Test/Audit/`.
+
+Every `FRAME-FB-*` loss stays. `FRAME-FB-RAW-FIBER` and `FRAME-FB-HOST-ERROR`
+are outside the fragment by construction. `FRAME-FB-ASYNC-FINALIZER` is
+untouched: the fragment has no `AsyncFinalizer`, so the fusion obligation is
+neither discharged nor worsened. `FRAME-FB-MASK-CARRIER` is a cross-package
+correspondence and unaffected. `FRAME-FB-STACK-ANNOTATION` is unaffected, and
+`op.Failure` stays **partial**: nothing here supplies a `Context` or a
+`StackTrace` key. `FRAME-FB-FINALIZER-EFFECT` is the row the *finalizer* half
+would sharpen, and that half is not attempted here.
+
+### Separations 4 and 5, and the trap
+
+Separation 4 says a continuation is a name. The compilation takes `ν := Nat` (a
+continuation-table index) and `σ := Nat` (an answer-tape occurrence number), and
+the continuations live in `PrimInterp`, which carries no `DecidableEq` and is a
+parameter to `armA` / `armE` / `step` / `run` and never a field of `Prim` or
+`FrameFiber`. Separation 5 says the nested body is a subterm: `compile` emits
+`Prim.onSuccess (Prim.sync i) i`, and `Prim.sync i` is that subterm.
+
+The trap worth naming, because it elaborates fine: instantiating the name
+alphabet at `ν := Σ op, (S.Answer op -> Program S Val)` silently drops
+`DecidableEq` from `Prim ν ...` and turns every `frame-arm` census row from a
+statement about frames into a statement about Lean functions. The gate is two
+`example`s in the module and two in the battery asserting
+`DecidableEq Effect4.FrameSimulation.Code` and
+`DecidableEq Effect4.FrameSimulation.Machine`; they fail to elaborate if anyone
+does it.
+
+### The placement question, recorded rather than decided
+
+`Effect4/Semantics/FrameSimulation.lean` imports `Effect4/Runtime/Runtime.lean`,
+and separation 2 above reads `docs/ARCHITECTURE.md` as placing Runtime **above**
+Semantics. No other module under `Effect4/Semantics/` imports this one, so the
+Runtime -> Semantics edge is not reversed for any existing module and no Lean
+import cycle exists. The placement was named in the packet's own fence; if the
+merge prefers strict directory layering the module moves to
+`Effect4/Runtime/FrameSimulation.lean` unchanged. Flagged here rather than
+resolved unilaterally.
