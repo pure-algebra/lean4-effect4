@@ -6,12 +6,61 @@
 # scope finalizers run latest-first with the closing exit, and every run pops
 # frames. Receipts under harness/trace/receipts/patched/ carry the manifest
 # digest; the copy itself is never committed.
+#
+# ## Stamp (rule 9)
+#
+# What it reads: the patch machinery -- `patched/apply.mjs`, which builds the
+# copy, and `patched/patch-manifest.json`, whose digest every receipt carries;
+# the harness TypeScript and tsconfig, since `flow-tail.ts` and `tracer.ts`
+# drive the runs; the flow goldens it runs and the mask table, and no other
+# golden -- it opens `generated/traces/flow/*.tsv` and `masks.tsv` and nothing
+# else under `generated/traces/`;
+# the effect4-tools trace runner; and the identity of the unpatched
+# installation the copy is made from. `patched/_copy/` is an output of
+# `apply.mjs`, not an input, and the receipts under `receipts/patched/` are
+# written by this gate and read back by it in the same run.
 set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+. "$repo_root/scripts/lib/portable.sh"
+. "$repo_root/scripts/lib/stamp.sh"
 tools="${EFFECT4_TOOLS:-$repo_root/../effect4-tools}"
 here="$repo_root/harness/trace"
+for argument in "$@"; do
+  case "$argument" in
+    --force) export EFFECT4_FORCE=1 ;;
+    *) echo "unknown argument $argument" >&2; exit 2 ;;
+  esac
+done
 cd "$repo_root"
 lake build Effect4 >/dev/null
+inputs=(
+  "$repo_root/scripts/check-trace-patched.sh"
+  "$repo_root/scripts/lib/portable.sh"
+  "$repo_root/scripts/lib/stamp.sh"
+  "$here/patched/apply.mjs"
+  "$here/patched/patch-manifest.json"
+  "$here/patched/trace-host-pin.json"
+  "$here/tsconfig.json"
+  "$repo_root/generated/traces/masks.tsv"
+  "$stamp_build_lib/Effect4.trace"
+  "$repo_root/lakefile.toml"
+  "$repo_root/lake-manifest.json"
+  "$repo_root/lean-toolchain"
+)
+for module in "$here"/*.ts; do inputs+=("$module"); done
+# The flow goldens at the top level of `generated/traces/flow/`, and only
+# those: this gate runs no other family, and naming the whole corpus would make
+# it re-run for a straight-line or fiber golden it never opens.
+for golden in "$repo_root"/generated/traces/flow/*.tsv; do inputs+=("$golden"); done
+while IFS= read -r input; do inputs+=("$input"); done < <(
+  stamp_tools_inputs trace.mjs copy.mjs
+  stamp_host_inputs
+)
+key="$(stamp_key "${inputs[@]}")"
+if stamp_hit trace-patched "$key"; then
+  stamp_report trace-patched "$key"
+  exit 0
+fi
 node "$here/patched/apply.mjs"
 patched="$(node "$here/patched/apply.mjs" --print)"
 export EFFECT4_EFFECT_NODE_MODULES="$patched"
@@ -57,3 +106,6 @@ for name in ["incr.empty", "swap.once", "regionNested.empty"]:
 print("PASS frame.pop: every run records its continuation pops")
 PY
 echo "PASS patched host facts hold (receipts under harness/trace/receipts/patched/)"
+stamp_write trace-patched "$key" "$(printf \
+  'the patched copy agrees with %s flow goldens under every mask; scope close order and frame.pop hold' \
+  "$(find "$repo_root/generated/traces/flow" -maxdepth 1 -name '*.tsv' | wc -l | tr -d ' ')")"

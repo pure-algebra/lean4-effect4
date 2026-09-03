@@ -38,9 +38,23 @@ and the source trust mutations with:
 ./scripts/test-trust-gate.sh
 ```
 
+The trace, lowering, citation and runtime-census gates have one entry point:
+
+```text
+./scripts/sweep.sh
+```
+
+It runs every gate in dependency order, one process at a time, prints a line
+per gate with its seconds and whether it re-ran, and writes the same table to
+`.lake/sweep-summary.tsv`. `--hermetic` is the host-free subset, which is what
+CI runs; `--keep-going` runs them all instead of stopping at the first failure;
+`--force` ignores every stamp; `--list` prints the table of gates. A gate does
+not re-run when nothing it reads has changed, so a sweep with nothing changed
+takes seconds rather than the four minutes a cold one costs.
+
 The host harnesses add direct Effect rc.112 type, diagnostic, runtime,
 mutation, and language-service evidence without replacing the Lean judgments.
-See [harness/README.md](harness/README.md) for the current entry points.
+See [harness/README.md](harness/README.md) for what each harness establishes.
 
 See [PLAN.md](PLAN.md) for the phased cutover and
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for module ownership. The

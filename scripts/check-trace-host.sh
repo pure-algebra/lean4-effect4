@@ -14,16 +14,63 @@
 # The table is still spelled here rather than read from `Generate.lean`; making
 # a family one row that the generator, this gate and the tsconfig all read is
 # survey finding H35, wave 4 of the refactor plan.
+#
+# ## Stamp (rule 9)
+#
+# This is the sweep's most expensive gate -- a minute of node -- and everything
+# it reads is nameable. On the Lean side: `harness/trace/Generate.lean`, which
+# regenerates the ten committed modules, and the Lake traces of what it imports.
+# On the host side: every TypeScript file and the tsconfig under
+# `harness/trace/`, since the runner typechecks the file set and the tails drive
+# the runs; every golden and the mask table under `generated/traces/`, which the
+# runs are compared with; the effect4-tools runners; and the pinned
+# installation's identity -- the three package manifests at their absolute
+# path, `host-pin.json` with the SHA-256 of the whole rc.112 tree, and the node
+# version, which the receipts record.
+#
+# `--update` rewrites the committed modules from Lean, so it is never stamped.
 set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . "$repo_root/scripts/lib/portable.sh"
+. "$repo_root/scripts/lib/stamp.sh"
 tools="${EFFECT4_TOOLS:-$repo_root/../effect4-tools}"
 here="$repo_root/harness/trace"
 traces="$repo_root/generated/traces"
 masks="$traces/masks.tsv"
-update=0; if [ "${1:-}" = "--update" ]; then update=1; fi
+update=0; stamped=1
+for argument in "$@"; do
+  case "$argument" in
+    --update) update=1; stamped=0 ;;
+    --force) export EFFECT4_FORCE=1 ;;
+    *) echo "unknown argument $argument" >&2; exit 2 ;;
+  esac
+done
 cd "$repo_root"
 lake build Effect4 >/dev/null
+if [ "$stamped" -eq 1 ]; then
+  inputs=(
+    "$repo_root/scripts/check-trace-host.sh"
+    "$repo_root/scripts/lib/portable.sh"
+    "$repo_root/scripts/lib/stamp.sh"
+    "$here/Generate.lean"
+    "$here/tsconfig.json"
+    "$traces"
+    "$repo_root/lakefile.toml"
+    "$repo_root/lake-manifest.json"
+    "$repo_root/lean-toolchain"
+  )
+  for module in "$here"/*.ts; do inputs+=("$module"); done
+  while IFS= read -r input; do inputs+=("$input"); done < <(
+    stamp_lean_traces "$here/Generate.lean"
+    stamp_tools_inputs trace.mjs check.mjs copy.mjs
+    stamp_host_inputs
+  )
+  key="$(stamp_key "${inputs[@]}")"
+  if stamp_hit trace-host "$key"; then
+    stamp_report trace-host "$key"
+    exit 0
+  fi
+fi
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/effect4-trace-host.XXXXXX")"
 trap 'rm -rf -- "$tmp"' EXIT
 
@@ -150,4 +197,6 @@ host_family job       job-tail.ts       "$here/receipts/job"            whole ye
 host_family deferred  deferred-tail.ts  "$here/receipts/deferred"       whole yes -- "$traces"/deferred/*.tsv
 host_family ref       ref-tail.ts       "$here/receipts/ref"            whole yes -- "$traces"/ref/*.tsv
 
-echo "PASS host traces agree with every golden under every mask, in the straight-line, dispatch, structured, scope, layer, interrupt, fiber, job, deferred and ref forms"
+summary="host traces agree with every golden under every mask, in the straight-line, dispatch, structured, scope, layer, interrupt, fiber, job, deferred and ref forms"
+if [ "$stamped" -eq 1 ]; then stamp_write trace-host "$key" "$summary"; fi
+echo "PASS $summary"

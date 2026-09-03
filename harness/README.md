@@ -6,6 +6,24 @@ named host profile and file set; it never defines the Lean semantics. Each
 section below states one harness's purpose, its entry script, its pins, and
 what a pass does and does not establish.
 
+The entry point for all of them together is `./scripts/sweep.sh`, which runs
+the trace, lowering, citation and runtime-census gates in dependency order --
+hermetic before host, self-tests last -- one process at a time, and writes
+`.lake/sweep-summary.tsv`. `--hermetic` is the host-free subset that CI runs,
+`--keep-going` runs every gate rather than stopping at the first failure,
+`--force` ignores every stamp, and `--list` prints which gates are in which
+lane. Each gate keys a stamp under `.lake/stamps/` on the content of what it
+reads -- its fixtures, the goldens it compares with, the Lake traces of the
+Lean modules its driver imports, the effect4-tools runner it invokes, and the
+identity of the pinned Effect installation -- and prints its stamped summary
+instead of re-running when none of that has changed. The header of each gate
+names its own inputs. A sweep with nothing changed takes about seven seconds;
+a forced one takes about four minutes.
+
+Four harnesses below are not in the sweep and are still run by hand:
+`schema-generation/`, `schema-annotations/`, `schema-effectful-field/` and
+`fiber-supervision/`. Routing them is survey finding H34, not this packet.
+
 `schema-generation/` contains the first complete bridge fixture. Run
 `./scripts/check-schema-typescript-generation.sh`; it regenerates the fixture
 from Lean, byte-compares it, runs the unpatched TypeScript compiler, executes
@@ -55,7 +73,9 @@ or another Effect version.
 both the straight-line and the Flow-dispatch lowered form. Run
 `harness/trace/check.sh`; it runs `./scripts/check-trace-goldens.sh`,
 `./scripts/check-trace-host.sh`, `./scripts/check-lowering-types.sh`, and
-`./scripts/check-lowering-coverage.sh` in that order. The pin is
+`./scripts/check-lowering-coverage.sh` in that order. `./scripts/sweep.sh` runs
+those four and, additionally, `check-trace-patched.sh`,
+`check-lowering-property.sh` and the three mutation self-tests. The pin is
 [`host-pin.json`](trace/host-pin.json): Effect 4.0.0-rc.112 at upstream commit
 `2600f62f4532026928454dcea8d1c48557b3f942`, 2,341 files, package-tree SHA-256
 `aea8ac8a25b17aa82796fad7acc1371bc9a92bbd7d25ce24f2598016f9920aad`, TypeScript
