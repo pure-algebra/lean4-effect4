@@ -18,7 +18,7 @@ TRACE-ALPHABET (Effects/Trace.lean)
    |
    +--> TRACED-SERVICE ---- interpret_traced_fst ----> ALGEBRA (Effects/Algebra)
    |
-   +--> FLOW-RUNNER (Effect4/Semantics/Runs.lean)        [after Flow v2]
+   +--> FLOW-RUNNER (Effect4/Semantics/Runs.lean) ---- internal oracle (m2) ----> TRACED-SERVICE
    |
    +--> HOST-TRACER (harness/trace, effect4-tools)
    |
@@ -36,6 +36,7 @@ FRAME-BRIDGE (required-open): FrameEvent.toTrace, scheduler Event.toTrace
 | identity | `required-closed` | `Effects.Trace.Event`, `Trace.Mask`, `Trace.Val` frozen by `EffectsTest/Trace/TraceContract.lean` (lean4-effects v0.3.0, `test/contracts/trace.contract.md`) |
 | construction | `required-closed` | `Family.Service.traced` and `Family.Service.tracedExcept` (v0.3.1); `X.traced`, `X.tracedExcept` emitted by `effect_signature`; receipts in `Effect4Test/Semantics/ObservationContract.lean` |
 | laws | `required-closed` | `interpret_traced_fst`, `interpret_tracedExcept_fst`, `project_project`, `project_m2`, `agree_of_agree_m2`, all within `propext`/`Quot.sound` (`EffectsTest/Trace/AxiomReport.lean`) |
+| flow-runner | `required-closed` | Flow v2 runner (`Effect4/Semantics/Runs.lean`: `plan`/`step`/`loop`, `FlowService`, `Frontier`, the decision tape `Effect4/Flow/Decision.lean`) with laws `run_checked_not_stuck`, `run_fuel_mono`, `step_choose_consumes_one`, `plan_checked` within the ceiling (`Effect4Test/Flow/RunnerAxiomReport.lean`); the straight-line embedding `Script.toFlow` (`Effect4/Target/TypeScript/ScriptFlow.lean`) is admitted by `Effects.admit`; the internal oracle: `generated/traces/flow/*.empty.tsv` (face `lean-flow`) agree with the traced-service goldens under `m2` (`Generate.lean oracle`, part of `scripts/check-trace-goldens.sh`; planted mutant 4/4) |
 | semantics | `required-open` | no simulation theorem in this phase; agreement is executable evidence under a mask, never a denotation |
 | representation | `required-closed` | TSV wire form rendered only in `Effect4/Target/TypeScript/Trace.lean` (exact-module admission); no `String` in the alphabet |
 | counterexamples | `required-closed` | `EF-TRACE-CE-001..003` (lean4-effects), `E4-SEM-CE-008..009`, `E4-TARGET-CE-009..010`; planted mutants in `scripts/test-trace-goldens-gate.sh` (3/3) |

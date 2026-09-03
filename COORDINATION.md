@@ -372,3 +372,51 @@ in the v2 batteries), the v1 contracts carry a superseded header, and the
 `E4-FLOW-CE-*` register rows point at the v2 witnesses (`E4-FLOW-CE-005` is
 superseded by `EF-FLOW-CE-002`: an unchosen cycle is now rejected). Next in the
 lane: the Flow runner and decision tape (P-T2), then dispatch lowering (P-T9a).
+
+## P-T2 landed: the Flow runner and the decision tape, 2026-09-02
+
+`Effect4/Semantics/Runs.lean`, `Effect4/Semantics/Frontier.lean`, and
+`Effect4/Flow/Decision.lean` are no longer stubs: a positional-environment runner
+over Flow v2 (`plan` / `step` / `loop`, `fuelFor raw tape = (tape.length + 1) *
+blocks.length + 1`), a tape consumed by occurrence with a site check (mismatch =
+refusal, exhaustion = unanswered frontier, R6), and DB-04 frontiers. Laws:
+`run_checked_not_stuck`, `run_fuel_mono`, `step_choose_consumes_one`,
+`plan_checked` (union `propext`, `Quot.sound`). `Effect4/Target/TypeScript/ScriptFlow.lean`
+embeds a straight-line `Script` into an admitted flow over a table alphabet
+(`tableAlphabet`, `Script.toFlow`); `harness/trace/Generate.lean oracle` checks that
+the runner and the traced service agree under `m2` on every program with a flow
+golden (`generated/traces/flow/`), and `scripts/check-trace-goldens.sh` runs it.
+Packet: `test/contracts/flow-runner.contract.md`; rows `E4-FLOW-CE-017` (fuel
+exhaustion is not a failure) and `E4-FLOW-CE-018` (a foreign tape entry is a
+refusal). Next: P-T9a dispatch-form lowering from a checked flow.
+
+## Reviews of `~/Dev/effect4_of_ocaml` (Codex's Rocq and js_of_ocaml lane), 2026-09-02
+
+Three Opus reviews, operator-requested, under
+`docs/research/2026-09-02-effect4-of-ocaml-review/` (`rocq-review.md`,
+`jsoo-review.md`, `integration-review.md`). Nothing in Codex's workspace was
+edited. Findings that need action:
+
+- Codex: re-pin `lean/` to lean4-effects v0.4.0 and rewrite the flow export for
+  Flow v2 (four of the seven exported graphs are now refused by `unchosenCycle`,
+  which invalidates `evidence/lean-flow-export.json` and half of the simulation
+  corpus); commit the workspace (it has no commits; `_build/` holds the only copy
+  of the pinned js_of_ocaml 5.7.1); add the golden header (`face ocaml`) to the
+  rows already emitted so `effect4-trace` can check the OCaml 5 machine as a
+  third emitter; state the certificate checker's missing completeness theorem
+  (the `expected:false` rows are search failures, not refutations) and rename the
+  result bisimulation; note that the 875-case oracle is a same-author shallow
+  embedding under `Effect.runSync`, and that its Cell adapter never emits rows
+  that separate `m1` from `m2`.
+- Claude: seed `E4-TARGET-CE-` rows from `evidence/wire-boundary.json` (rendered
+  rows equal while `agree m2` is false for `Val.nat`/`Val.int`; `Trace.escape`
+  emits a raw U+0001 that `JSON.parse` rejects; `Val.nat` above 2^53 loses
+  precision on the host); teach the host gate a third face; port
+  `enough_fuel_finishes` (a theorem that `fuelFor` suffices, today a docstring
+  argument in `Runs.lean`) and the `resume_frontier` law; keep Codex's evidence
+  out of `generated/lowering-coverage.tsv` (R8) until a Flow-shaped corpus can
+  feed the `property` column.
+- Worth reusing: the callback packet's zero-patch instrumentation of the real
+  rc.112 fiber pins exactly the P-T11 hunks; js_of_ocaml 5.7.1 in `_build/` is
+  not the master the plan re-derives for P-T9b (no `Dispatch` edge kind, no
+  `merge_node_max`, no double translation).

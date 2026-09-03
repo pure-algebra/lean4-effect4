@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Plants defects the trace gates must catch: a flipped answer in a golden, a
-# removed mask row, and a stale projection. Each mutant is written to a temp
-# directory; the committed projections are never edited.
+# removed mask row, a stale projection, and a flipped answer in a Flow-runner
+# golden (the internal oracle). Each mutant is written to a temp directory;
+# the committed projections are never edited.
 set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 tools="${EFFECT4_TOOLS:-$repo_root/../effect4-tools}"
@@ -10,7 +11,7 @@ trap 'rm -rf -- "$tmp"' EXIT
 cd "$repo_root"
 traces="$repo_root/generated/traces"
 here="$repo_root/harness/trace"
-caught=0; total=3
+caught=0; total=4
 expect() { # name, signal, command...
   local name="$1" signal="$2"; shift 2
   local log="$tmp/$name.log"
@@ -26,7 +27,12 @@ expect flipped-answer "DIVERGES" env EFFECT4_PROGRAM=incr node "$tools/packages/
 grep -v '^mask' "$traces/masks.tsv" > "$tmp/no-masks.tsv"
 expect removed-masks "mask table drift" env EFFECT4_PROGRAM=incr node "$tools/packages/harness/trace.mjs" "$here" --golden "$traces/incr.empty.tsv" --masks "$tmp/no-masks.tsv"
 # 3. a stale projection (edited pin row) fails the hermetic drift gate
-mkdir -p "$tmp/stale" && cp "$traces"/*.tsv "$tmp/stale/"
+mkdir -p "$tmp/stale" && cp -R "$traces"/. "$tmp/stale/"
 sed -i '' 's/^pin\teffects\t.*/pin\teffects\tdeadbeef/' "$tmp/stale/incr.empty.tsv"
-expect stale-projection "stale generated trace projection" "$repo_root/scripts/check-trace-goldens.sh" --dry-run "$tmp/stale"
+expect stale-projection "stale generated trace projection: incr.empty.tsv" "$repo_root/scripts/check-trace-goldens.sh" --dry-run "$tmp/stale"
+# 4. a flipped answer in the Flow-runner golden is drift of the internal oracle
+mkdir -p "$tmp/flow-flipped" && cp -R "$traces"/. "$tmp/flow-flipped/"
+sed -i '' 's/^answer\tget\t41$/answer\tget\t40/' "$tmp/flow-flipped/flow/incr.empty.tsv"
+cmp -s "$tmp/flow-flipped/flow/incr.empty.tsv" "$traces/flow/incr.empty.tsv" && { echo "FAIL flow fixture did not mutate the golden" >&2; exit 1; }
+expect flow-flipped-answer "stale generated trace projection: flow/incr.empty.tsv" "$repo_root/scripts/check-trace-goldens.sh" --dry-run "$tmp/flow-flipped"
 echo "PASS trace gates react to $caught/$total planted defects"

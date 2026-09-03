@@ -1,6 +1,7 @@
 import Effect4.Meta.Derive
 import Effect4.Target.TypeScript.Trace
 import Effect4.Target.TypeScript.Lower
+import Effect4.Target.TypeScript.ScriptFlow
 
 /-!
 The trace harness family. `main fixture` prints the generated Effect v4 module,
@@ -108,19 +109,58 @@ def fgoldenLog (program : Program FCell.Sig Nat) (initial : Nat) : Effect4.Trace
     | .ok n => .success (.nat n)
     | .error e => .failure (.str e))]
 
-/-- One harness program: its family's rows, its script, and its golden log. -/
+/-- One harness program: its family's rows, its script, and its golden log.
+`flowInput` is the parameter value of the Flow-runner golden (the internal
+oracle); programs without one have no flow golden. -/
 structure Entry where
   name : String
   rows : ServiceRow
   script : Script
   log : Effect4.Trace.Log
+  flowInput : Option Effects.Trace.Val := none
+  initial : Nat := 41
 
 /-- The programs the harness knows. -/
 def programs : List Entry :=
-  [ { name := "incr", rows := Cell.rows, script := incr.script, log := goldenLog (incr 0) 41 }
-  , { name := "twice", rows := Cell.rows, script := twice.script, log := goldenLog (twice 7) 41 }
+  [ { name := "incr", rows := Cell.rows, script := incr.script, log := goldenLog (incr 0) 41,
+      flowInput := some (.nat 0) }
+  , { name := "twice", rows := Cell.rows, script := twice.script, log := goldenLog (twice 7) 41,
+      flowInput := some (.nat 7) }
   , { name := "recover", rows := ECell.rows, script := recover.script, log := egoldenLog (recover 5) 41 }
   , { name := "fallible", rows := FCell.rows, script := fallible.script, log := fgoldenLog (fallible 5) 41 } ]
+
+/-! ## The Flow-runner face (internal oracle) -/
+
+/-- The atoms the Cell scripts call, with their TypeScript types. -/
+def cellAtoms : AtomTable := [("succ", "number", "number")]
+
+/-- The Cell family by name, over the same state the traced service uses. -/
+def cellFamily : String → Effects.Trace.Val → StateT Nat Id Effects.Trace.Val
+  | "get", _ => do let n ← get; pure (.nat n)
+  | "put", .nat n => do set n; pure .unit
+  | _, _ => pure .unit
+
+def cellAtom : String → Effects.Trace.Val → Effects.Trace.Val
+  | "succ", .nat n => .nat (n + 1)
+  | _, _ => .unit
+
+/-- Embed, admit, and run a script's flow; the log the runner wrote. -/
+def flowLog (entry : Entry) (input : Effects.Trace.Val) : Except String Effect4.Trace.Log := do
+  let some (table, raw) := Script.toFlow entry.rows cellAtoms entry.script
+    | throw s!"embedding refused {entry.name}"
+  match admit (tableAlphabet ⟨0⟩ table) raw with
+  | .error diagnostic => throw s!"admission refused the embedded {entry.name}: {repr diagnostic}"
+  | .ok flow =>
+    let result : (Flow.RunResult × Effect4.Trace.Log) × Nat :=
+      ((Flow.runDefault flow (tableService ⟨0⟩ table cellFamily cellAtom) (tableNameOf ⟨0⟩ table)
+        [] input).run []).run entry.initial
+    match result.1.1 with
+    | .done _ => pure result.1.2
+    | other => throw s!"the flow run of {entry.name} did not finish: {repr other}"
+
+/-- The programs with a flow golden. -/
+def flowPrograms : List (Entry × Effects.Trace.Val) :=
+  programs.filterMap fun entry => entry.flowInput.map fun input => (entry, input)
 
 /-- The families the module declares, each with its scripts. -/
 def families : List (ServiceRow × List Script) :=
@@ -140,7 +180,26 @@ def main (args : List String) : IO Unit := do
             ((entry.script.ruleSet entry.rows).map Rule.id) entry.log)
       | none => throw (IO.userError s!"unknown program {name}")
   | ["programs"] => IO.println (String.intercalate "\n" (programs.map (·.name)))
+  | ["flow-programs"] => IO.println (String.intercalate "\n" (flowPrograms.map (·.1.name)))
+  | ["flow-golden", name] =>
+      match flowPrograms.find? (·.1.name == name) with
+      | some (entry, input) =>
+          match flowLog entry input with
+          | .ok log =>
+              IO.print (Effect4.Target.TypeScript.Trace.golden (name ++ ".empty") [] ["flow-runner"] log
+                (face := "lean-flow"))
+          | .error message => throw (IO.userError message)
+      | none => throw (IO.userError s!"no flow golden for {name}")
+  | ["oracle"] =>
+      for (entry, input) in flowPrograms do
+        match flowLog entry input with
+        | .ok log =>
+            if Effect4.Trace.agree Effects.Trace.Mask.m2 log entry.log then
+              IO.println s!"PASS flow oracle {entry.name}: the runner agrees with the traced service under m2 ({log.length} rows)"
+            else
+              throw (IO.userError s!"FAIL flow oracle {entry.name}: the runner and the traced service differ under m2")
+        | .error message => throw (IO.userError s!"FAIL flow oracle {entry.name}: {message}")
   | ["types"] =>
       for entry in programs do
         IO.println (entry.name ++ "\t" ++ entry.script.declarationLine entry.rows)
-  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs")
+  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | flow-programs | flow-golden <program> | oracle")

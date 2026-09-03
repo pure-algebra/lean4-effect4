@@ -75,9 +75,9 @@ def maskTable : String :=
 /-- A golden: header rows, then the events. `program` and `tape` are the
 golden's identity; `rules` lists the lowering rule ids the program exercises. -/
 def golden (program : String) (tape : List (Nat × Bool)) (rules : List String)
-    (log : Effect4.Trace.Log) : String :=
+    (log : Effect4.Trace.Log) (face : String := "lean") : String :=
   "format\teffect4-trace-v1\n" ++
-  "face\tlean\n" ++
+  "face\t" ++ face ++ "\n" ++
   "program\t" ++ program ++ "\n" ++
   "tape\t" ++ String.intercalate "," (tape.map fun entry =>
     toString entry.1 ++ ":" ++ (if entry.2 then "1" else "0")) ++ "\n" ++

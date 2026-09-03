@@ -25,4 +25,10 @@ run() { lake env lean --run harness/trace/Generate.lean "$@" | grep -v '^warning
 for program in $(run programs); do
   { provenance; run golden "$program"; } > "$out/$program.empty.tsv"
 done
-echo "PASS wrote $(ls "$out" | wc -l | tr -d ' ') trace projections to $out"
+# The Flow-runner face of the same programs (the internal oracle), kept in a
+# subdirectory so the host gate's program glob never sees them.
+mkdir -p "$out/flow"
+for program in $(run flow-programs); do
+  { provenance; run flow-golden "$program"; } > "$out/flow/$program.empty.tsv"
+done
+echo "PASS wrote $(find "$out" -name '*.tsv' | wc -l | tr -d ' ') trace projections to $out"

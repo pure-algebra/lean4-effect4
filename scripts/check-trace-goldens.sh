@@ -11,16 +11,22 @@ tmp="$(mktemp -d "${TMPDIR:-/tmp}/effect4-traces.XXXXXX")"
 trap 'rm -rf -- "$tmp"' EXIT
 "$repo_root/scripts/generate-trace-goldens.sh" "$tmp" >/dev/null
 status=0
-for candidate in "$tmp"/*.tsv; do
-  name="$(basename "$candidate")"
+while IFS= read -r candidate; do
+  name="${candidate#"$tmp"/}"
   if ! cmp -s "$candidate" "$committed_dir/$name"; then
     echo "FAIL stale generated trace projection: $name" >&2
-    diff -u "$committed_dir/$name" "$candidate" | head -20 >&2 || true
+    diff -u "$committed_dir/$name" "$candidate" 2>/dev/null | head -20 >&2 || true
     status=1
   fi
-done
-for committed in "$committed_dir"/*.tsv; do
-  [ -f "$tmp/$(basename "$committed")" ] || { echo "FAIL orphan trace projection: $(basename "$committed")" >&2; status=1; }
-done
-[ "$status" -eq 0 ] && echo "PASS generated/traces is current ($(ls "$tmp" | wc -l | tr -d ' ') files)$note"
+done < <(find "$tmp" -name '*.tsv' | LC_ALL=C sort)
+while IFS= read -r committed; do
+  name="${committed#"$committed_dir"/}"
+  [ -f "$tmp/$name" ] || { echo "FAIL orphan trace projection: $name" >&2; status=1; }
+done < <(find "$committed_dir" -name '*.tsv' | LC_ALL=C sort)
+# The internal oracle: the Flow runner and the traced service agree under m2.
+if ! ( cd "$repo_root" && lake env lean --run harness/trace/Generate.lean oracle | grep -v '^warning: manifest out of date' ); then
+  echo "FAIL flow oracle: the Flow runner and the traced service disagree" >&2
+  status=1
+fi
+[ "$status" -eq 0 ] && echo "PASS generated/traces is current ($(find "$tmp" -name '*.tsv' | wc -l | tr -d ' ') files)$note"
 exit "$status"
