@@ -19,10 +19,12 @@ denominator is `Effect4.Target.EffectV4.Rule.all` in
 `Effect4/Target/TypeScript/Lower.lean`; the tag set and the denominator must agree
 in both directions.
 
-Initial rules (straight-line scripts): `service-acquire`, `perform-bind`,
-`perform-discard`, `nullary-value`, `atom-call`, `ret`. Later: `error-abort`,
-`error-data`, `choose`, `jump-dispatch`, `loop-labelled`, `merge-block`,
-`dispatch-fallback`, `region-onExit`, `region-scoped`.
+Rules today (straight-line scripts): `service-acquire`, `nullary-value`,
+`perform-call`, `perform-bind`, `perform-discard`, `atom-call`, `ret`,
+`error-abort`. The data reading of an error (`Except E A` spelled
+`Result.Result<A, E>`) is an answer type, not a rule. Later: `choose`,
+`jump-dispatch`, `loop-labelled`, `merge-block`, `dispatch-fallback`,
+`region-onExit`, `region-scoped`.
 
 ## Evidence classes
 

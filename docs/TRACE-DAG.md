@@ -1,7 +1,8 @@
 # Trace agreement proof graph
 
-Status: opened 2026-09-02 with the trace lane; `semantics` and `bridges` are
-`required-open` by ruling for this phase.
+Status: opened 2026-09-02 with the trace lane; every edge but `semantics` and
+`bridges` closed the same day; those two are `required-open` by ruling for
+this phase.
 
 The graph-bearing owner is `TRACE-PG-AGREEMENT`. Its subject is one shared,
 service-level trace alphabet (`Effects.Trace.Event`, minted in lean4-effects) and
@@ -32,16 +33,16 @@ FRAME-BRIDGE (required-open): FrameEvent.toTrace, scheduler Event.toTrace
 
 | Edge | State | Evidence or remaining work |
 | --- | --- | --- |
-| identity | `required-open` | `Effects.Trace.Event`, `Trace.Mask`, `Trace.Val` frozen by `EffectsTest/Trace/TraceContract.lean` (P-T1) |
-| construction | `required-open` | `Family.Service.traced`; `X.traced` emitted by `effect_signature` (P-T1b) |
-| laws | `required-open` | `interpret_traced_fst`, `project_project`, `project_full`, `m1_refines_m2` (P-T1) |
+| identity | `required-closed` | `Effects.Trace.Event`, `Trace.Mask`, `Trace.Val` frozen by `EffectsTest/Trace/TraceContract.lean` (lean4-effects v0.3.0, `test/contracts/trace.contract.md`) |
+| construction | `required-closed` | `Family.Service.traced` and `Family.Service.tracedExcept` (v0.3.1); `X.traced`, `X.tracedExcept` emitted by `effect_signature`; receipts in `Effect4Test/Semantics/ObservationContract.lean` |
+| laws | `required-closed` | `interpret_traced_fst`, `interpret_tracedExcept_fst`, `project_project`, `project_m2`, `agree_of_agree_m2`, all within `propext`/`Quot.sound` (`EffectsTest/Trace/AxiomReport.lean`) |
 | semantics | `required-open` | no simulation theorem in this phase; agreement is executable evidence under a mask, never a denotation |
-| representation | `required-open` | TSV wire form rendered only in `Effect4/Target/TypeScript/Trace.lean` (exact-module admission); no `String` in the alphabet |
-| counterexamples | `required-open` | `EF-TRACE-CE-001..003` (lean4-effects), mask-drift row `E4-SEM-CE-*` (P-T1b) |
-| bridges | `required-open` | `FrameEvent.toTrace`, `Event.toTrace` in `Effect4/Target/TypeScript/Simulation.lean` (P-T11); until then the primitive stream is not evidence |
-| targets | `required-open` | `harness/trace/check.sh`: fixture drift, four host gates, all masks (P-T3, P-T4) |
-| trust | `required-open` | axiom receipts for the P-T1 lemmas; gate exemptions for renderer and drivers only |
-| coverage | `required-open` | `generated/lowering-coverage.tsv` with its drift gate and planted mutants (P-T5) |
+| representation | `required-closed` | TSV wire form rendered only in `Effect4/Target/TypeScript/Trace.lean` (exact-module admission); no `String` in the alphabet |
+| counterexamples | `required-closed` | `EF-TRACE-CE-001..003` (lean4-effects), `E4-SEM-CE-008..009`, `E4-TARGET-CE-009..010`; planted mutants in `scripts/test-trace-goldens-gate.sh` (3/3) |
+| bridges | `required-open` | `FrameEvent.toTrace`, `Event.toTrace` in `Effect4/Target/TypeScript/Simulation.lean` (P-T11); until then the primitive stream (`frames`) is not evidence |
+| targets | `required-closed` | `harness/trace/check.sh`: fixture drift, four host gates, every golden under every mask at a large yield threshold and at the rc.112 floor of 3, type receipts from `tsc.original`; receipts under `harness/trace/receipts/` |
+| trust | `required-closed` | axiom receipts for every trace law; gate exemptions for the renderer, the DSL and the numerator only; `scripts/test-trust-gate.sh` green |
+| coverage | `required-closed` | `generated/lowering-coverage.tsv` (eight rules, all `checked`), `scripts/check-lowering-coverage.sh`, planted mutants (4/4) |
 
 ## Required semantic separations
 
