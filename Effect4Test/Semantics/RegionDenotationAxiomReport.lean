@@ -33,7 +33,7 @@ import Effect4.Semantics.RegionDenotation
 #print axioms Effect4.Flow.runRegionsCause_eq_interpret
 #print axioms Effect4.Flow.runRegions_eq_interpret
 #print axioms Effect4.Flow.runRegionsDefault_eq_interpret
-#print axioms Effect4.Flow.lookupBlock_erase
+#print axioms Effect4.Flow.lookupBlock_erase_block
 #print axioms Effect4.Flow.block?_id
 #print axioms Effect4.Flow.allPlain_of_all
 #print axioms Effect4.Flow.toRegionService_handle
