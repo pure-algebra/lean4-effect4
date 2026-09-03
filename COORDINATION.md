@@ -2586,3 +2586,86 @@ for the above. `Effect4/Meta/Derive.lean` was edited additively under the
 existing trace-lane claim. `Effect4/Layer/Memo.lean` and `Effect4/Layer/Laws.lean`
 were not touched and remain unclaimed stubs.
 
+## Multi-argument operations landed, 2026-09-03
+
+`E4-TARGET-CE-022` is repaired. A family operation of two or more parameters is
+now performed by a flow, and the job runner runs the packet's own signatures:
+`run : Handle × Nat → Nat !! String`, `ack : Handle × Nat → Unit`,
+`requeue : Handle × Nat → Unit`.
+
+### What changed, and what deliberately did not
+
+The flow alphabet and `plan` are untouched. An operation of `n` parameters is
+performed with **one** request `Var` whose value is the right-nested pair
+`Effects.Trace.ToVal` builds from the parameter product — the same nesting on
+both faces, and the same spelling `Spelling.prod` renders.
+
+* `Effect4/Target/TypeScript/ScriptFlow.lean`: `OpSpec` carries the row's
+  parameters, `OpSpec.arity` is the call's argument count, and `familyTable`
+  spells every request through the new `requestSpelling`. The string
+  `"unsupported"` is gone.
+* `Effect4/Target/TypeScript/Skeleton.lean`: `Lowering.tupleArgs` is the
+  projection (`lowering: rule.perform-tuple`) and `Lowering.callOf` selects it
+  by arity, so `jobs.ack(b10p3[0], b10p3[1])` is emitted over
+  `let b10p3!: readonly [JobQueue, number]` while a one-parameter operation
+  lowers to the bytes it lowered to before.
+* `Effect4/Target/TypeScript/Lower.lean`: `Rule.performTuple`, **appended last**
+  in `Rule.all` (26 → 27) so the three positional windows the contract batteries
+  pin do not move. `FlowLower.ruleSet` emits it; `LoweringCoverage.lean` carries
+  its row, `pinned` on the job goldens.
+* `Effect4/Target/TypeScript/EffectV4.lean`: `Spelling.arity`, and
+  `OpRow.answerArity`, which `rowsDecl` writes **only when it is above one** —
+  so every pre-existing fixture regenerates byte-identically (`cmp`-verified
+  against `fixture`, `flow-fixture`, `structured-fixture`, `scope-fixture`,
+  `fiber-fixture`, `deferred-fixture`, `ref-fixture` and `layer-fixture`).
+* `harness/trace/tracer.ts` encodes a tuple answer positionally from
+  `answerArity`. It has to: `readonly [JobQueue, number]` does not parse,
+  because a `Handle` target is outside the wire grammar on purpose, and `wire`
+  would otherwise read the host array as a list.
+* `Effect4/Meta/Derive.lean`: `effect_atoms` takes an optional
+  `importing handles [T] from "./m.ts"` clause, because an atom over a host
+  handle names a type `atoms.ts` cannot work out for itself. `atomsModule` takes
+  the imports. There is also an `OfVal` instance for `Handle`.
+
+### The residual limit, and why the job runner looks like this
+
+A flow still cannot **build** a pair: `perform` names one request `Var`, a
+literal answers a constant, an atom is a unary wire function. A two-parameter
+request can only occupy a slot some *answer* already filled. So `Jobs.next`
+answers a **job ticket** — the connection and the job id — `run`, `ack` and
+`requeue` take that ticket whole, and a new unary atom `snd` takes it apart for
+the one-parameter `attempt`. That is `E4-FLOW-CE-028`, witness `unpairedRaw` in
+`Effect4Test/Counterexamples/Target/JobRequest.lean`, whose forced repair is a
+pairing former in `RawTerm`/`RegionTerm` with arms in both runners, all three
+lowerings and the admission clause that types it.
+
+### Receipts
+
+The six `generated/traces/job/*.tsv` bodies and `harness/trace/job-fixture.ts`
+are regenerated (provenance headers untouched, as for every other golden), and
+`harness/trace/atoms.ts` carries `snd`. All six goldens agree with rc.112 under
+`outcome`, `m1` and `m2` through `harness/trace/job-tail.ts`, at the default
+yield setting and at `EFFECT4_MAX_OPS=3 EFFECT4_EXPECT_YIELDS=1`.
+`Effect4Test/Flow/JobRunnerContract.lean` carries the six exact logs;
+`Effect4Test/Target/TypeScript/MultiArgContract.lean` is new and pins the
+destructured call bytes, the tuple binding, the rows declaration and the census
+row.
+
+Neither battery declares a string-traversing `def`: a rendered module reaches
+`Classical.choice`, so each module is rendered inside the `#guard` that reads it
+(this also removes the three `Classical.choice` declarations `JobRequest.lean`
+used to carry). Nothing new outside the modules `Effect4Test/Audit/AxiomGate.lean`
+already exempts reaches `Classical.choice`.
+
+### Claims
+
+Released with this commit: `Effect4/Target/TypeScript/{ScriptFlow,Skeleton,Lower,FlowLower,EffectV4,ScriptDenotation}.lean`,
+`Effect4/Meta/Derive.lean` (additively, under the existing trace-lane claim),
+`harness/trace/{Generate.lean,tracer.ts,job-tail.ts,job-fixture.ts,atoms.ts}`,
+`generated/traces/job/**`, `Effect4Test/Counterexamples/Target/JobRequest.lean`,
+`Effect4Test/Flow/JobRunnerContract.lean`,
+`Effect4Test/Target/TypeScript/{MultiArgContract,LoweringCoverage,FlowLowerContract,RegionLowerContract,StructuredLowerContract,AnswerProfileContract}.lean`,
+the `Effect4Test.lean` import line for the new battery, the `E4-TARGET-CE-022`
+and `E4-FLOW-CE-028` rows, the `job-runner` and `coverage` rows of
+`docs/TRACE-DAG.md`, `docs/LOWERING-COVERAGE.md`, and
+`docs/research/2026-09-03-job-runner.md` §1 and §3.1.
