@@ -1,0 +1,24 @@
+format	effect4-trace-golden-v1
+generator	scripts/generate-trace-goldens.sh	sha256=8ed2be7c3329d0bc26413468ee6581f6efaacaa89d40417c353b908062a2e8e4
+regenerate	./scripts/generate-trace-goldens.sh
+input	harness/trace/Generate.lean	sha256=d11aab29489ac7d6da6cd53fcf9c78c903c9a7d1e88d240116b4812ec8b0d31b
+input	Effect4/Meta/Derive.lean	sha256=556f9548e39488b73aeec0e1c8858d131b9466e21d3bf93d9fd841ebf6b27ef2
+input	Effect4/Target/TypeScript/Trace.lean	sha256=38452fa69175f88fe675e45756f4ec91e6168fc828a77e5dad95ddefb190782f
+pin	effects	2447edd76649f035e989914ac899831d66e7dad2
+format	effect4-trace-v1
+face	lean-flow
+program	jobPoison.poison
+tape	
+rules	service-acquire,dispatch-loop,block-case,param-move,flow-literal,flow-perform,nullary-value,perform-call,flow-ret,region-enter,region-acquire,region-leave
+enter	1
+op	connect	[]
+answer	connect	0
+op	next	0
+answer	next	7
+op	run	7
+failed	run	"job 7 failed"
+leave	1	{"failure":"job 7 failed"}
+finalizer	1	{"failure":"job 7 failed"}
+op	disconnect	0
+answer	disconnect	[]
+done	{"failure":"job 7 failed"}

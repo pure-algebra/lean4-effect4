@@ -692,6 +692,370 @@ def interruptLog (entry : InterruptEntry) : Except String Effect4.Trace.Log :=
   | .interrupted => pure result.1.2
   | other => throw s!"the interrupt run of {entry.program.name} did not finish: {repr other}"
 
+/-! ## `Jobs` (packet: the first real program): a resource-managed job runner
+
+The first harness program written the way an Effect user would write one: open
+a connection to a job queue inside a region, drain the queue, and let the
+region's release close the connection on *every* exit — the clean one, the
+failing one and the interrupted one.
+
+Refusals and workarounds this family and its flow record, each with a register
+row (`docs/research/2026-09-03-job-runner.md` carries the full account):
+
+- **A flow performs one argument.** `Lowering.callOf` calls
+  `service.op(request)` with exactly one expression, `RawTerm.perform` names a
+  single request `Var`, an atom is a unary pure wire function, and no term
+  builds a pair. So the packet's `run : Handle × Nat → Nat !! String` has no
+  flow spelling: `connect`, `next` and `disconnect` carry the connection and
+  `run`, `attempt`, `ack`, `requeue` name the job alone.
+  counterexample: E4-TARGET-CE-022
+- **A flow has no failure handler.** An aborting operation ends the run
+  (`Effect4.Flow.regionLoop`'s `fail`), so "on failure, retry or requeue" is
+  not expressible over `run`. `attempt` is the same job in the *data* reading
+  of its error (`Except String Nat`, rc.112 `Result`), which the run survives;
+  `run` is kept and exercised by `jobPoison`, whose whole point is that the
+  abort closes the region and the release still runs.
+  counterexample: E4-FLOW-CE-026
+- **A flow does not branch on data.** `choose` reads the decision tape, so the
+  queue-empty test and the retry/requeue decision are tape questions, not
+  tests of `next`'s answer or of the carried attempt budget. The budget is a
+  real block parameter, decremented by the `dec` atom on every retry, and the
+  flow cannot compare it with zero. counterexample: E4-FLOW-CE-027
+- **The interrupt tape addresses occurrences, not jobs.** The packet's third
+  predicted gap is half refuted: `Effect4.Flow.interruptRead` consumes the head
+  only when it names the site, so entries at one site are read in the order the
+  run reaches that site and a non-delivering entry moves delivery to the next
+  occurrence -- which is how `jobRunner.interrupt` interrupts the *second* job.
+  What stays true is that a tape names a control point, never the job the run
+  is holding there. No register row: nothing refuses what it claims to do.
+-/
+
+effect_signature Jobs where
+  | connect : Handle "JobQueue" ⟪ "open a connection to the job queue", "the connection" ⟫
+  | next (conn : Handle "JobQueue") : Nat
+      ⟪ "dequeue the next job id", "0 when the queue is empty" ⟫
+  | run (job : Nat) : Nat !! String ⟪ "run a job", "aborts with the job's error" ⟫
+  | attempt (job : Nat) : Except String Nat
+      ⟪ "run a job, reporting its error as data", "the flow has no failure handler" ⟫
+  | ack (job : Nat) : Unit ⟪ "acknowledge a finished job" ⟫
+  | requeue (job : Nat) : Unit ⟪ "put a job back at the end of the queue" ⟫
+  | disconnect (conn : Handle "JobQueue") : Unit ⟪ "close the connection" ⟫
+
+/-- The queue state the Lean handler keeps: the jobs still to run, the jobs
+acknowledged in acknowledgement order, the jobs put back, and how many more
+times each job is scheduled to fail. The host keeps the same four fields in a
+JSON file (`harness/trace/job-queue.ts`); the golden is the join. -/
+structure Queue where
+  pending : List Nat
+  acked : List Nat
+  requeued : List Nat
+  /-- job id, remaining scheduled failures -/
+  failures : List (Nat × Nat)
+deriving Repr, Inhabited
+
+namespace Queue
+
+def failuresLeft (queue : Queue) (job : Nat) : Nat :=
+  match queue.failures.find? (·.1 == job) with
+  | some entry => entry.2
+  | none => 0
+
+def consumeFailure (queue : Queue) (job : Nat) : Queue :=
+  { queue with failures := queue.failures.map fun entry =>
+      if entry.1 == job then (entry.1, entry.2 - 1) else entry }
+
+def seed (pending : List Nat) (failures : List (Nat × Nat) := []) : Queue :=
+  { pending := pending, acked := [], requeued := [], failures := failures }
+
+end Queue
+
+/-- The message a failed job reports. Both faces build it the same way. -/
+def jobError (job : Nat) : String := "job " ++ toString job ++ " failed"
+
+/-- `Jobs` by name over the queue state. `run` aborts; `attempt` is the same
+job with its error in the answer. `connect` answers handle 0 — one connection
+per run, and the host's first-seen handle index is the same 0. -/
+def jobsFamily : String → Effects.Trace.Val →
+    StateT Queue Id (Except Effects.Trace.Val Effects.Trace.Val)
+  | "connect", _ => pure (.ok (.nat 0))
+  | "next", _ => do
+      let queue ← get
+      match queue.pending with
+      | [] => pure (.ok (.nat 0))
+      | job :: rest => do
+          set { queue with pending := rest }
+          pure (.ok (.nat job))
+  | "run", .nat job => do
+      let queue ← get
+      if queue.failuresLeft job == 0 then pure (.ok (.nat job))
+      else do
+        set (queue.consumeFailure job)
+        pure (.error (.str (jobError job)))
+  | "attempt", .nat job => do
+      let queue ← get
+      if queue.failuresLeft job == 0 then
+        pure (.ok (.pair (.bool true) (.nat job)))
+      else do
+        set (queue.consumeFailure job)
+        pure (.ok (.pair (.bool false) (.str (jobError job))))
+  | "ack", .nat job => do
+      modify fun queue => { queue with acked := queue.acked ++ [job] }
+      pure (.ok .unit)
+  | "requeue", .nat job => do
+      modify fun queue =>
+        { queue with pending := queue.pending ++ [job], requeued := queue.requeued ++ [job] }
+      pure (.ok .unit)
+  | "disconnect", _ => pure (.ok .unit)
+  | _, _ => pure (.ok .unit)
+
+/-- The pure atoms the job flow calls; their host bodies are in `atoms.ts`. -/
+def jobAtom : String → Effects.Trace.Val → Effects.Trace.Val
+  | "succ", .nat n => .nat (n + 1)
+  | "dec", .nat n => .nat (n - 1)
+  | _, _ => .unit
+
+/-- The job alphabet: the family's seven operations, then the pure rows the
+graph needs — a unit literal (the nullary `connect` still takes a request slot
+of its own type), a zero literal (the initial acknowledged count) and the two
+counter atoms. -/
+def jobsTable : List OpSpec := familyTable Jobs.rows ++
+  [ { name := "unit", kind := .lit .unit, requestTy := "number", answerTy := "void" }
+  , { name := "zero", kind := .lit (.nat 0), requestTy := "number", answerTy := "number" }
+  , { name := "succ", kind := .atom, requestTy := "number", answerTy := "number" }
+  , { name := "dec", kind := .atom, requestTy := "number", answerTy := "number" } ]
+
+def opConnect : OperationId := ⟨0⟩
+def opNext : OperationId := ⟨1⟩
+def opRun : OperationId := ⟨2⟩
+def opAttempt : OperationId := ⟨3⟩
+def opAck : OperationId := ⟨4⟩
+def opRequeue : OperationId := ⟨5⟩
+def opDisconnect : OperationId := ⟨6⟩
+def opUnit : OperationId := ⟨7⟩
+def opZero : OperationId := ⟨8⟩
+def opSucc : OperationId := ⟨9⟩
+def opDec : OperationId := ⟨10⟩
+
+/-- The TypeScript spelling of a connection handle, as `Handle "JobQueue"`
+answers it. -/
+def jobHandleTy : String := "JobQueue"
+
+/-- The TypeScript spelling of `attempt`'s answer. -/
+def jobResultTy : String := "Result.Result<number, string>"
+
+def jregion (id : Nat) (parent : Option Nat) (continue_ : Nat) : RegionRow String :=
+  { id := ⟨id⟩, parent := parent.map RegionId.mk, continue_ := ⟨continue_⟩, resultTy := "number" }
+
+/-- The job runner, as a region flow.
+
+```
+b0   enter region 1
+b1     a void request slot for the nullary connect
+b2     acquire connect, release disconnect
+b3     acked := 0
+b4   loop: job := next(conn)
+b5     choose 1: another job?
+b7       no  -> leave region 1 with acked
+b6       yes -> result := attempt(job)
+b8              choose 2: did it succeed?
+b9                yes -> ack(job)
+b10                      acked := acked + 1, back to b4
+b11               no  -> choose 3: retry rather than requeue?
+b12                        yes -> attempts := attempts - 1
+b14                               back to b6, same job
+b13                        no  -> requeue(job)
+b15                               back to b4
+b16  return acked
+```
+
+The interrupt point before every `perform` and at the region's `leave` is
+declared by the lowering (`RegionProgram.interrupts`), not by the graph: an
+interrupt delivered anywhere in the drain closes region 1, and the release —
+`disconnect` — runs on that path too. -/
+def jobRunnerFlow : RegionFlow String :=
+  { alphabet := ⟨0⟩, roots := [⟨0⟩], entry := ⟨0⟩, inputTy := "number", resultTy := "number",
+    regions := [jregion 1 none 16],
+    blocks :=
+      [ rblock 0 none ["number"] (.enter ⟨1⟩ ⟨1⟩ (vars 1))
+      , rblock 1 (some 1) ["number"] (.plain (.perform opUnit ⟨0⟩ ⟨2⟩ (vars 1)))
+      , rblock 2 (some 1) ["number", "void"] (.acquire opConnect ⟨1⟩ opDisconnect ⟨3⟩ (vars 1))
+      , rblock 3 (some 1) ["number", jobHandleTy] (.plain (.perform opZero ⟨0⟩ ⟨4⟩ [⟨1⟩, ⟨0⟩]))
+      , rblock 4 (some 1) [jobHandleTy, "number", "number"]
+          (.plain (.perform opNext ⟨0⟩ ⟨5⟩ (vars 3)))
+      , rblock 5 (some 1) [jobHandleTy, "number", "number", "number"]
+          (.plain (.choose ⟨1⟩ ⟨6⟩ ⟨7⟩ (vars 4)))
+      , rblock 6 (some 1) [jobHandleTy, "number", "number", "number"]
+          (.plain (.perform opAttempt ⟨3⟩ ⟨8⟩ (vars 4)))
+      , rblock 7 (some 1) [jobHandleTy, "number", "number", "number"] (.leave ⟨2⟩)
+      , rblock 8 (some 1) [jobHandleTy, "number", "number", "number", jobResultTy]
+          (.plain (.choose ⟨2⟩ ⟨9⟩ ⟨11⟩ (vars 4)))
+      , rblock 9 (some 1) [jobHandleTy, "number", "number", "number"]
+          (.plain (.perform opAck ⟨3⟩ ⟨10⟩ (vars 3)))
+      , rblock 10 (some 1) [jobHandleTy, "number", "number", "void"]
+          (.plain (.perform opSucc ⟨2⟩ ⟨4⟩ (vars 2)))
+      , rblock 11 (some 1) [jobHandleTy, "number", "number", "number"]
+          (.plain (.choose ⟨3⟩ ⟨12⟩ ⟨13⟩ (vars 4)))
+      , rblock 12 (some 1) [jobHandleTy, "number", "number", "number"]
+          (.plain (.perform opDec ⟨1⟩ ⟨14⟩ [⟨0⟩, ⟨2⟩, ⟨3⟩]))
+      , rblock 13 (some 1) [jobHandleTy, "number", "number", "number"]
+          (.plain (.perform opRequeue ⟨3⟩ ⟨15⟩ (vars 3)))
+      , rblock 14 (some 1) [jobHandleTy, "number", "number", "number"]
+          (.plain (.jump ⟨6⟩ [⟨0⟩, ⟨3⟩, ⟨1⟩, ⟨2⟩]))
+      , rblock 15 (some 1) [jobHandleTy, "number", "number", "void"]
+          (.plain (.jump ⟨4⟩ (vars 3)))
+      , rblock 16 none ["number"] (.plain (.ret ⟨0⟩)) ] }
+
+/-- The packet's aborting `run`, which the drain cannot use: one job, taken
+from the queue and run; its abort closes region 1 with the failure, the
+release still runs, and the run ends `failed`. -/
+def jobPoisonFlow : RegionFlow String :=
+  { alphabet := ⟨0⟩, roots := [⟨0⟩], entry := ⟨0⟩, inputTy := "number", resultTy := "number",
+    regions := [jregion 1 none 6],
+    blocks :=
+      [ rblock 0 none ["number"] (.enter ⟨1⟩ ⟨1⟩ (vars 1))
+      , rblock 1 (some 1) ["number"] (.plain (.perform opUnit ⟨0⟩ ⟨2⟩ (vars 1)))
+      , rblock 2 (some 1) ["number", "void"] (.acquire opConnect ⟨1⟩ opDisconnect ⟨3⟩ (vars 1))
+      , rblock 3 (some 1) ["number", jobHandleTy] (.plain (.perform opNext ⟨1⟩ ⟨4⟩ [⟨1⟩]))
+      , rblock 4 (some 1) [jobHandleTy, "number"] (.plain (.perform opRun ⟨1⟩ ⟨5⟩ [⟨0⟩]))
+      , rblock 5 (some 1) [jobHandleTy, "number"] (.leave ⟨1⟩)
+      , rblock 6 none ["number"] (.plain (.ret ⟨0⟩)) ] }
+
+def admitJob? (name : String) (raw : RegionFlow String) (interrupts : Bool)
+    (masked : List RegionId) : Option RegionProgram :=
+  match admitRegions (tableAlphabet ⟨0⟩ jobsTable) raw with
+  | .ok flow => some { name := name, param := ("n", "number"), result := "number",
+                       table := jobsTable, flow := flow, interrupts := interrupts,
+                       masked := masked }
+  | .error _ => none
+
+/-- The three lowered job programs: the drain, the drain whose whole region is
+a masked critical section, and the poison job. -/
+def jobPrograms : List RegionProgram :=
+  ([ ("jobRunner", jobRunnerFlow, true, ([] : List RegionId))
+   , ("jobRunnerMasked", jobRunnerFlow, true, [⟨1⟩])
+   , ("jobPoison", jobPoisonFlow, false, ([] : List RegionId))
+   ] : List (String × RegionFlow String × Bool × List RegionId)).filterMap
+    fun entry => admitJob? entry.1 entry.2.1 entry.2.2.1 entry.2.2.2
+
+/-- One job golden: the program it runs, the two tapes it runs with (the
+choice tape answers `choose`, the interrupt tape answers the interrupt points;
+the site spaces are disjoint by `Effect4.Flow.sitesSeparated`), the queue it
+starts from and the attempt budget it is called with. -/
+structure JobEntry where
+  program : RegionProgram
+  golden : String
+  tape : Flow.Tape := []
+  itape : Flow.Tape := []
+  queue : Queue
+  input : Effects.Trace.Val := .nat 2
+
+def jobProgram? (name : String) : Option RegionProgram := jobPrograms.find? (·.name == name)
+
+/-- Decide `site` this way. -/
+def choice (site : Nat) (branch : Bool) : Flow.Decision := ⟨⟨site⟩, branch⟩
+
+/-- The interrupt point before the `perform` of a block. -/
+def jobPerformPoint (block : Nat) : Nat := (Effect4.Flow.Point.perform ⟨block⟩).site.value
+
+/-- The interrupt point at a region's `leave`. -/
+def jobLeavePoint (region : Nat) : Nat := (Effect4.Flow.Point.leave ⟨region⟩).site.value
+
+/-- Sites 1, 2 and 3 are the three questions the drain asks: another job? did
+it succeed? retry rather than requeue? -/
+def more (b : Bool) : Flow.Decision := choice 1 b
+
+def succeeded (b : Bool) : Flow.Decision := choice 2 b
+
+def retried (b : Bool) : Flow.Decision := choice 3 b
+
+/-- The five goldens of the packet, plus the poison job that exercises the
+packet's aborting `run`. The queue seeds are the ones `harness/trace/job-tail.ts`
+writes into its JSON file; the golden is the join of the two faces. -/
+def jobEntries : List JobEntry :=
+  (jobProgram? "jobRunner").toList.flatMap (fun program =>
+    [ -- Three jobs, each acked; then the queue is empty and the region closes.
+      { program := program, golden := "clean",
+        tape := [more true, succeeded true, more true, succeeded true, more true,
+                 succeeded true, more false],
+        queue := Queue.seed [1, 2, 3] : JobEntry }
+      -- Job 2 fails once and succeeds on the retry; the attempt budget drops.
+    , { program := program, golden := "retry",
+        tape := [more true, succeeded true, more true, succeeded false, retried true,
+                 succeeded true, more false],
+        queue := Queue.seed [1, 2] [(2, 1)] }
+      -- Job 2 fails twice; the second failure exhausts the retries and the job
+      -- is put back on the queue, where the drain stops asking for it.
+    , { program := program, golden := "requeue",
+        tape := [more true, succeeded false, retried true, succeeded false, retried false,
+                 more false],
+        queue := Queue.seed [2] [(2, 2)] }
+      -- Interrupted mid-queue: job 1 is acked, and the interrupt is delivered
+      -- at the point before the *second* job's `attempt`. The tape reaches that
+      -- occurrence by spending a non-delivering entry at the same site on the
+      -- first visit: `interruptRead` consumes the head only when it names the
+      -- site, so entries at one site are read in occurrence order. This is the
+      -- packet's predicted gap "the interrupt tape is per program not per job",
+      -- refuted for occurrences and confirmed for data: a tape addresses
+      -- control points, never the job id at that point.
+    , { program := program, golden := "interrupt",
+        tape := [more true, succeeded true, more true],
+        itape := [⟨⟨jobPerformPoint 6⟩, false⟩, ⟨⟨jobPerformPoint 6⟩, true⟩],
+        queue := Queue.seed [1, 2, 3] }
+    ]) ++
+  (jobProgram? "jobRunnerMasked").toList.map (fun program =>
+    -- The whole drain is a masked critical section. The interrupt requested at
+    -- the second job's `attempt` point defers; the region's own `leave` point
+    -- is masked too, so the region closes cleanly with the jobs acked so far,
+    -- `disconnect` runs with that success exit, and the pending interrupt is
+    -- delivered at the restoration (the M2 repair).
+    { program := program, golden := "masked",
+      tape := [more true, succeeded true, more true, succeeded true, more false],
+      itape := [⟨⟨jobPerformPoint 6⟩, false⟩, ⟨⟨jobPerformPoint 6⟩, true⟩],
+      queue := Queue.seed [1, 2] : JobEntry }) ++
+  (jobProgram? "jobPoison").toList.map (fun program =>
+    { program := program, golden := "poison", queue := Queue.seed [7] [(7, 1)] : JobEntry })
+
+/-- The runner's log of one job golden. A program that declares interrupt
+points runs through `runInterrupts`; the poison job, which declares none, runs
+through `runRegions`, so each Lean face writes exactly the rows its lowering
+asks the host for. -/
+def jobLog (entry : JobEntry) : Except String Effect4.Trace.Log :=
+  let table := entry.program.table
+  let service := Flow.tableRegionService ⟨0⟩ table jobsFamily jobAtom
+  let named := tableNameOf ⟨0⟩ table
+  if entry.program.interrupts then
+    let result : ((Flow.InterruptResult × Flow.Tape) × Effect4.Trace.Log) × Queue :=
+      ((Flow.runInterruptsDefault entry.program.flow entry.program.masked service named
+        entry.tape entry.itape entry.input).run []).run entry.queue
+    match result.1.1.1 with
+    | .done _ => pure result.1.2
+    | .failed _ => pure result.1.2
+    | .interrupted => pure result.1.2
+    | other =>
+        throw s!"the job run of {entry.program.name}.{entry.golden} did not finish: {repr other}"
+  else
+    let result : ((Flow.RunResult × Flow.Tape) × Effect4.Trace.Log) × Queue :=
+      ((Flow.runRegionsDefault entry.program.flow service named entry.tape entry.input).run
+        []).run entry.queue
+    match result.1.1.1 with
+    | .done _ => pure result.1.2
+    | .failed _ => pure result.1.2
+    | other =>
+        throw s!"the job run of {entry.program.name}.{entry.golden} did not finish: {repr other}"
+
+/-- The queue the Lean face ends with; the design note quotes it beside the
+JSON the host tail leaves behind. -/
+def jobQueueAfter (entry : JobEntry) : Queue :=
+  let table := entry.program.table
+  let service := Flow.tableRegionService ⟨0⟩ table jobsFamily jobAtom
+  let named := tableNameOf ⟨0⟩ table
+  if entry.program.interrupts then
+    (((Flow.runInterruptsDefault entry.program.flow entry.program.masked service named
+      entry.tape entry.itape entry.input).run []).run entry.queue).2
+  else
+    (((Flow.runRegionsDefault entry.program.flow service named entry.tape entry.input).run
+      []).run entry.queue).2
+
 /-- The flow families of the dispatch-form module. -/
 def flowFamilies : List (ServiceRow × List FlowProgram × List RegionProgram) :=
   [ (Cell.rows, flowEntries.map (·.program), []),
@@ -916,4 +1280,38 @@ def main (args : List String) : IO Unit := do
   | ["fiber-types"] =>
       for entry in fiberPrograms do
         IO.println (entry.name ++ "\t" ++ Script.declarationLine Fibers.rows entry.script)
-  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle | fiber-fixture | fiber-programs | fiber-golden <program> | fiber-types")
+  | ["job-fixture"] =>
+      -- `JobQueue` is imported as a type only: the generated module names it in
+      -- the `Jobs` service shape and never calls into it. `succ` and `dec` are
+      -- the two pure atoms the drain's counters use.
+      match regionModules? [(Jobs.rows, [], jobPrograms)]
+        [.named ["succ", "dec"] "./atoms.ts", .types ["JobQueue"] "./job-queue.ts"] with
+      | some source => IO.print source
+      | none => throw (IO.userError "dispatch lowering refused a job flow")
+  | ["job-programs"] =>
+      for entry in jobEntries do
+        IO.println (entry.program.name ++ "\t" ++ entry.golden)
+  | ["job-golden", name, goldenName] =>
+      match jobEntries.find? fun entry =>
+          entry.program.name == name && entry.golden == goldenName with
+      | some entry =>
+          match jobLog entry with
+          | .ok log =>
+              -- One `tape` header carries both tapes: the choice sites the flow
+              -- author wrote are below `interruptBase` and every interrupt site
+              -- is at or above it (`Effect4.Flow.Point.site_ne_choose`), so the
+              -- tail splits the one list into its two readers by site.
+              IO.print (← admitted (name ++ "." ++ goldenName) log
+                (Effect4.Target.TypeScript.Trace.golden (name ++ "." ++ goldenName)
+                  (entry.tape.wire ++ entry.itape.wire)
+                  ((Region.ruleSet Jobs.rows entry.program).map Rule.id) log (face := "lean-flow")))
+          | .error message => throw (IO.userError message)
+      | none => throw (IO.userError s!"no job golden {name}.{goldenName}")
+  | ["job-types"] =>
+      for program in jobPrograms do
+        IO.println (program.name ++ "\t" ++ Region.declarationLine Jobs.rows program)
+  | ["job-queues"] =>
+      for entry in jobEntries do
+        IO.println (entry.program.name ++ "." ++ entry.golden ++ "\t" ++
+          toString (repr (jobQueueAfter entry)))
+  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle | fiber-fixture | fiber-programs | fiber-golden <program> | fiber-types | job-fixture | job-programs | job-golden <program> <golden> | job-types | job-queues")

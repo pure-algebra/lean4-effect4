@@ -2184,3 +2184,65 @@ Against the independent amendment (`3fbf47d`, `E4-FLOW-CE-024`/`025`):
   the interrupt wherever the tape answers, and rc.112 defers and restores.
   Goldens, fixtures and receipts regenerated; the host gate passes every golden
   under every mask at both yield settings; the ledger is current.
+
+## Job runner landed, 2026-09-03
+
+The packet's "first real program": a resource-managed job runner, written in
+Lean as a region flow, lowered by the existing pipeline, and run against a real
+host service. Full account and every gap:
+`docs/research/2026-09-03-job-runner.md`; `job-runner` row in
+`docs/TRACE-DAG.md`.
+
+- `harness/trace/Generate.lean`: family `Jobs` (`connect` answering an opaque
+  `Handle "JobQueue"`, `next`, `run` aborting, `attempt` in the data reading of
+  the same error, `ack`, `requeue`, `disconnect`), a `Queue` handler over
+  pending/acked/requeued jobs and a per-job failure schedule, the region flows
+  `jobRunnerFlow` (seventeen blocks, one region, three decision sites) and
+  `jobPoisonFlow`, three lowered programs (`jobRunner`, `jobRunnerMasked` with
+  region 1 uninterruptible, `jobPoison`), and six golden entries. New arms:
+  `job-fixture`, `job-programs`, `job-golden <program> <golden>`, `job-types`,
+  `job-queues`; usage string extended.
+- Host: `harness/trace/job-queue.ts` (the queue is a JSON file in a temporary
+  directory, written and read with `node:fs` on every operation; `disconnect`
+  deletes the directory) and `harness/trace/job-tail.ts` (`attempt` and `run`
+  wait on `Effect.sleep`; the tail reports `released`). `dec` added to
+  `harness/trace/atoms.ts`. `harness/trace/job-fixture.ts` generated.
+- Six goldens under `generated/traces/job/`: a clean drain of three jobs, a job
+  that fails once and succeeds on retry, a job requeued after exhausting its
+  retries, an interrupt delivered mid-queue with the release still running, the
+  same delivery inside the masked critical section (deferred, delivered at the
+  leave, per the M2 repair), and the aborting `run` closing the region with its
+  failure. All six agree with rc.112 under `outcome`, `m1` and `m2` at the
+  default yield setting and at `EFFECT4_MAX_OPS=3 EFFECT4_EXPECT_YIELDS=1`;
+  receipts under `harness/trace/receipts/job/`. `released` is `true` on every
+  golden.
+- First goldens carrying two tapes on one wire: the choice sites are below
+  `Effect4.Flow.interruptBase` and every interrupt site at or above it, so
+  `job-tail.ts` splits `EFFECT4_TAPE` by site into the `Decisions` reader and
+  the `Interrupts` reader.
+- Lean receipts: `Effect4Test/Flow/JobRunnerContract.lean` (the exact rows of
+  all six goldens inline, admission of both graphs, `sitesSeparated`, the final
+  queue of each run, the refusals, axiom report `propext`/`Quot.sound`).
+- Gaps filed: `E4-TARGET-CE-022` (a two-parameter operation has no flow
+  request: `familyTable` writes `"unsupported"` and `Lowering.callOf` emits one
+  argument, so the packet's `run : Handle × Nat → …` had to become
+  `run : Nat → …`), `E4-FLOW-CE-026` (an aborting operation ends the run, so
+  retry-after-failure needs the data reading of the error), `E4-FLOW-CE-027` (a
+  flow never branches on a value: the queue-empty test and the retry bound are
+  tape questions and the carried attempt budget cannot be compared). Witnesses:
+  `Effect4Test/Counterexamples/Target/JobRequest.lean`,
+  `Effect4Test/Counterexamples/Flow/JobRunner.lean`. Recorded without a row: a
+  region hands back exactly one value (`RegionClause.continueTyped`), so a
+  masked critical section *inside* the drain has no spelling and the whole
+  region is masked instead.
+- Refuted: "the interrupt tape is per program not per job" is only half true.
+  `interruptRead` consumes the head entry only on a site match, so a
+  non-delivering entry at a site moves delivery to the next occurrence of that
+  site — which is how the mid-queue golden interrupts the second job. A tape
+  still names a control point and never the job the run holds at it.
+- `scripts/generate-trace-goldens.sh` and `scripts/check-trace-host.sh` gained
+  their `job` sections; neither was run by this packet. **`Generate.lean`
+  changed, so every existing golden's `input harness/trace/Generate.lean`
+  provenance digest is stale**: the coordinator should run
+  `./scripts/generate-trace-goldens.sh` once. The job goldens already carry the
+  digests that run will write.

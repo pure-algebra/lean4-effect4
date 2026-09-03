@@ -1,0 +1,45 @@
+format	effect4-trace-golden-v1
+generator	scripts/generate-trace-goldens.sh	sha256=8ed2be7c3329d0bc26413468ee6581f6efaacaa89d40417c353b908062a2e8e4
+regenerate	./scripts/generate-trace-goldens.sh
+input	harness/trace/Generate.lean	sha256=d11aab29489ac7d6da6cd53fcf9c78c903c9a7d1e88d240116b4812ec8b0d31b
+input	Effect4/Meta/Derive.lean	sha256=556f9548e39488b73aeec0e1c8858d131b9466e21d3bf93d9fd841ebf6b27ef2
+input	Effect4/Target/TypeScript/Trace.lean	sha256=38452fa69175f88fe675e45756f4ec91e6168fc828a77e5dad95ddefb190782f
+pin	effects	2447edd76649f035e989914ac899831d66e7dad2
+format	effect4-trace-v1
+face	lean-flow
+program	jobRunner.requeue
+tape	1:1,2:0,3:1,2:0,3:0,1:0
+rules	service-acquire,dispatch-loop,block-case,interrupt-point,param-move,flow-literal,flow-perform,nullary-value,perform-call,choose-if,flow-atom,flow-ret,region-enter,region-acquire,region-leave
+enter	1
+decide	1000003	false
+op	connect	[]
+answer	connect	0
+decide	1000007	false
+decide	1000009	false
+op	next	0
+answer	next	2
+decide	1	true
+decide	1000013	false
+op	attempt	2
+answer	attempt	[false, "job 2 failed"]
+decide	2	false
+decide	3	true
+decide	1000025	false
+decide	1000013	false
+op	attempt	2
+answer	attempt	[false, "job 2 failed"]
+decide	2	false
+decide	3	false
+decide	1000027	false
+op	requeue	2
+answer	requeue	[]
+decide	1000009	false
+op	next	0
+answer	next	2
+decide	1	false
+decide	1000002	false
+leave	1	{"success":0}
+finalizer	1	{"success":0}
+op	disconnect	0
+answer	disconnect	[]
+done	{"success":0}

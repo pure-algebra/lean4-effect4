@@ -53,4 +53,15 @@ mkdir -p "$out/fiber"
 for program in $(run fiber-programs); do
   { provenance; run fiber-golden "$program"; } > "$out/fiber/$program.tsv"
 done
+# The job runner (packet: the first real program). Its own generated module
+# (`job-fixture.ts`) and its own tail (`job-tail.ts`) over a real file-backed
+# queue, so neither the straight-line nor the flow glob may see it. A golden is
+# named `<program>.<golden>`: four goldens share the `jobRunner` body and differ
+# in their queue seed and their tapes. Each carries *both* tapes in one `tape`
+# header -- the choice sites are below `Effect4.Flow.interruptBase` and every
+# interrupt site is at or above it, so the tail splits the list by site.
+mkdir -p "$out/job"
+while IFS=$'\t' read -r program golden; do
+  { provenance; run job-golden "$program" "$golden"; } > "$out/job/$program.$golden.tsv"
+done < <(run job-programs)
 echo "PASS wrote $(find "$out" -name '*.tsv' | wc -l | tr -d ' ') trace projections to $out"
