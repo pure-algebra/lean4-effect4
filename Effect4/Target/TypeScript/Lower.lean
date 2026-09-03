@@ -11,9 +11,12 @@ tags, goldens, host receipts, property batches, type receipts and proofs to.
 
 Straight-line lowering from a `Script` lives in
 `Effect4/Target/TypeScript/EffectV4.lean` beside the rows; dispatch-form
-lowering from a checked flow lives in `FlowLower.lean` and its eight rules
-are the second half of the census. `perform-tuple` is appended last so the
-positions the contract batteries pin do not move.
+lowering from a checked flow lives in `FlowLower.lean`, whose eight rules are
+the second group of the census; the Flow v3, interrupt, region and structured
+groups follow. `Rule.all` is the inductive's own order and a rule is named by
+its id, never by its position: `FlowLowerContract.lean` pins the whole id list
+once, and the other lowering batteries pin `Rule.ofId?` facts, so a rule added
+in the group it belongs to moves no other battery (survey finding H9).
 -/
 
 namespace Effect4.Target.EffectV4
@@ -93,17 +96,18 @@ def id : Rule → String
   | dispatchFallback => "dispatch-fallback"
   | performTuple => "perform-tuple"
 
-/-- Every rule, in ledger order. -/
+/-- Every rule, in the order the inductive declares them: the straight-line
+group, the dispatch group, Flow v3, interruption, regions, the structured form,
+and the multi-argument perform. Nothing reads a position -- `Rule.ofId?` is the
+only lookup -- so a new rule is declared in its own group. -/
 def all : List Rule :=
   [serviceAcquire, nullaryValue, performCall, performBind, performDiscard, atomCall, ret, errorAbort,
    dispatchLoop, blockCase, paramMove, flowPerform, flowAtom, flowLiteral, chooseIf, flowRet,
-      interruptPoint,
+   performCatch, branchIf,
+   interruptPoint,
    regionEnter, regionAcquire, regionLeave, regionMasked,
    structuredLoop, structuredMerge, structuredContinue, structuredBreak, dispatchFallback,
-   performTuple,
-   -- Flow v3 (lean4-effects v0.7.0): appended last so the positional windows of the
-   -- lowering contracts keep their places.
-   performCatch, branchIf ]
+   performTuple ]
 
 theorem all_nodup : all.Nodup := by decide
 

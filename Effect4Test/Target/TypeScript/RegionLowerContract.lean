@@ -18,10 +18,16 @@ open TypeScript Effects Effect4.Flow Effect4.Target.EffectV4
 #check @Effect4.Target.EffectV4.Region.declarationLine
 #check @Effect4.Target.EffectV4.regionModules?
 
--- Eight straight-line, eight dispatch-form, `interrupt-point` (M2), these
--- three and `region-masked` (the M2 repair), then the structured rules (P-T9b).
-example : Rule.all.length = 29 := by decide
-#guard ((Rule.all.map Rule.id).drop 17).take 3 = ["region-enter", "region-acquire", "region-leave"]
+-- The region group of the census, by id. The list itself is pinned once, in
+-- `FlowLowerContract.lean`; nothing here reads a position (survey finding H9).
+#guard Rule.ofId? "region-enter" = some .regionEnter
+#guard Rule.ofId? "region-acquire" = some .regionAcquire
+#guard Rule.ofId? "region-leave" = some .regionLeave
+-- `region-masked` is the M2 repair: a region whose body runs with interruption
+-- masked.
+#guard Rule.ofId? "region-masked" = some .regionMasked
+#guard [Rule.regionEnter, .regionAcquire, .regionLeave, .regionMasked].all
+  (Rule.all.contains ·)
 
 def rcellRows : ServiceRow :=
   { name := "RCell"

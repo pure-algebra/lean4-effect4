@@ -19,16 +19,42 @@ open TypeScript Effects Effect4.Flow Effect4.Target.EffectV4
 #check @Effect4.Target.EffectV4.Flow.declarationLine
 #check @Effect4.Target.EffectV4.flowModules?
 
-/-! ## The rule census -/
+/-! ## The rule census
 
--- Eight straight-line rules, then these eight, then `interrupt-point` (M2),
--- then the region rules (with `region-masked`) and the structured rules.
+This battery owns the census list. `Rule.all` is pinned here once, by id and in
+full; the sibling lowering batteries (`RegionLowerContract`,
+`StructuredLowerContract`, `MultiArgContract`) pin `Rule.ofId?` facts about
+their own rules and no position at all, so a rule added to one group edits this
+file and its own (survey finding H9). The order is the inductive's: the
+straight-line group, the dispatch group, Flow v3, interruption, regions, the
+structured form, and the multi-argument perform. -/
+
+#guard Rule.all.map Rule.id =
+  [ "service-acquire", "nullary-value", "perform-call", "perform-bind", "perform-discard"
+  , "atom-call", "ret", "error-abort"
+  , "dispatch-loop", "block-case", "param-move", "flow-perform", "flow-atom", "flow-literal"
+  , "choose-if", "flow-ret"
+  , "perform-catch", "branch-if"
+  , "interrupt-point"
+  , "region-enter", "region-acquire", "region-leave", "region-masked"
+  , "structured-loop", "structured-merge", "structured-continue", "structured-break"
+  , "dispatch-fallback"
+  , "perform-tuple" ]
 example : Rule.all.length = 29 := by decide
 example : Rule.all.Nodup := Rule.all_nodup
-#guard ((Rule.all.map Rule.id).drop 8).take 8 =
-  ["dispatch-loop", "block-case", "param-move", "flow-perform", "flow-atom", "flow-literal",
-   "choose-if", "flow-ret"]
+-- Both directions of the id map, for every rule: `all` misses none, and no id
+-- resolves to a rule outside it.
+example (rule : Rule) : rule ∈ Rule.all := Rule.mem_all rule
+example (rule : Rule) : Rule.ofId? rule.id = some rule := Rule.ofId?_id rule
+-- This battery's own group, by name.
 #guard Rule.ofId? "param-move" = some .paramMove
+#guard Rule.ofId? "dispatch-loop" = some .dispatchLoop
+#guard Rule.ofId? "block-case" = some .blockCase
+#guard Rule.ofId? "flow-perform" = some .flowPerform
+#guard Rule.ofId? "flow-atom" = some .flowAtom
+#guard Rule.ofId? "flow-literal" = some .flowLiteral
+#guard Rule.ofId? "choose-if" = some .chooseIf
+#guard Rule.ofId? "flow-ret" = some .flowRet
 
 /-! ## A chooser: acquires Decisions only, one case per block -/
 

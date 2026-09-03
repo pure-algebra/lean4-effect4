@@ -15,8 +15,8 @@ bytes each of them produces:
 * `Lowering.callOf` uses it, and the block parameter is declared at the tuple
   spelling, so the emitted module declares and calls the method at one arity.
 
-`Rule.performTuple` is the census row. It is appended last in `Rule.all`, so
-the three positional pins in the sibling contract batteries are unmoved.
+`Rule.performTuple` is the census row, named by id; `Rule.all` itself is pinned
+once in `FlowLowerContract.lean`.
 
 The one thing a flow still cannot do is *build* the tuple, which is why the
 graph below takes it from an answer (`E4-FLOW-CE-028`,
@@ -184,16 +184,14 @@ def controlProgram? : Option FlowProgram :=
 
 /-! ## 4. The census
 
-`perform-tuple` is one rule, appended last, and a flow reports it exactly when
-it performs an operation of arity above one.
+`perform-tuple` is one rule and a flow reports it exactly when it performs an
+operation of arity above one. The census list is pinned once, by id, in
+`FlowLowerContract.lean`; nothing here reads a position (survey finding H9).
 -/
 
-#guard Rule.all.length = 29
--- `perform-tuple` was appended so no positional window moved; Flow v3's two rules
--- were appended after it for the same reason.
-#guard (Rule.all.map Rule.id).drop 26 = ["perform-tuple", "perform-catch", "branch-if"]
 #guard Rule.ofId? "perform-tuple" = some .performTuple
 #guard (Rule.performTuple).id = "perform-tuple"
+#guard Rule.all.contains .performTuple
 
 #guard (program?.map fun program =>
   (Effect4.Target.EffectV4.Flow.ruleSet Ticketed.rows program).contains .performTuple) = some true
