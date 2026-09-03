@@ -78,11 +78,16 @@ ideas are credited even when their implementation is not imported.
 ## Current phase
 
 P0, P2, and the P3 algebra substrate are complete. The repository is an
-independent Lean 4.33.1 package with exactly one Lake dependency: the
-generic effect algebra, which since slice S4 of `docs/EFFECTS-SPLIT-PLAN.md`
-lives in lean4-effects `v0.1.0` (`5611c3a`) under the `Effects` namespace and is pinned by exact commit in
-`lakefile.toml`. The move preserved history and changed only the declaration
-namespace; that repository's `generated/algebra-parity.tsv` is the
+independent Lean 4.33.1 package with two Lake dependencies. `lakefile.toml`
+and `lake-manifest.json` agree on `effects` at
+`2447edd76649f035e989914ac899831d66e7dad2` and `typescript` at
+`cc62799055b1af7ce22b083afcfb30155c1ed4d0`. Effects supplies the generic
+algebra, first-order Flow and shared trace alphabet; TypeScript supplies the
+target syntax, renderer and structuring machinery. Slice S4 of
+`docs/EFFECTS-SPLIT-PLAN.md` originally moved the algebra to lean4-effects
+`v0.1.0` (`5611c3a`) under the `Effects` namespace. That move preserved history
+and changed only the declaration namespace; that repository's
+`generated/algebra-parity.tsv` is the
 byte-identical receipt over all 215 compiled constants against Effect4 commit
 `217d3e4`, and its batteries, axiom report, counterexample register, and gate
 carry the P3 evidence. All planned category modules exist, every module is
@@ -91,6 +96,12 @@ declarations. Foldlab compatibility spellings, adapters, and
 interpretation-preservation results remain P12 obligations; they do not keep
 P3 open. A change to the algebra goes through the Effects breaker process and
 a version bump here, never through an edit in this tree.
+
+The current continuation starts from
+[the reification plan, section 6](docs/research/2026-09-03-reification-plan.md#6-status-at-the-end-of-wave-2-2026-09-03),
+which records the integrated Wave 2 packets and their remaining obligations.
+The full goal remains every phase and required assurance route in this plan,
+including host evidence and downstream compatibility.
 
 P1 remains open as a recurring exhaustiveness gate rather than a prose-only
 inventory. The current manifest pins Foldlab, Effect rc.112, the resolved npm
@@ -190,7 +201,7 @@ cutover decision.
 | ---: | --- | --- | --- |
 | 0 | Schema payload surface | gate repair, not a new proof graph | **Closed.** The gate rejects aliases and ordinary type-valued definitions, proves the Payload-only D0-D3/D4-D7 boundary, checks every D7 owner, and kills all 13 specified shape, duplication, owner, import, and override defects. |
 | 1 | Schema payload, field admission, optics, and annotation data | four required graphs plus attached local receipts | **Closed.** The generated join covers 1,298 owned declarations, 493 theorem/axiom receipts, 32 counterexamples, exact source pins, all leaf routes, the complete general recursor, lawful optic composition, and exhaustive annotation traversal. The annotation host gate also checks the generated field-admission witness with TypeScript, Effect, and the Effect language service. No denotation, document-reference, wire, or host-equivalence claim is part of this structural closure. |
-| 1a | `SCHEMA-PG-EFFECTFUL-FIELD` | additive generated-program graph over existing Schema/effect carriers | **Lean core implemented.** Exact marker codec/admission, alphabet and operation identity agreement, effectful `get`/`set`/`modify`, interpreter-order laws, and `E4-SCHEMA-CE-049`..`052` are present. The next forward slice generates and checks the TypeScript field API from wild-type property annotations. |
+| 1a | `SCHEMA-PG-EFFECTFUL-FIELD` | additive generated-program graph over existing Schema/effect carriers | **Closed.** `generated/schema-structural-assurance.tsv` closes every applicable edge: marker codec, occurrence admission, identity, program equations, interpretation, `E4-SCHEMA-CE-049`..`055`, the generated TypeScript field API's host checks, and trust. Document-reference semantics and wire closure remain in their separate open graphs. |
 | 2 | `Effect4.ServiceName`, `ServiceTypeCode`, `ServiceKey`, and `ServiceUniverse` | local key-family and Std-order-bridge receipts; `ENV-KEY-INTERP` alone attaches to the Context graph | **Closed locally.** `ENV-LEAF-KEY-IDENTITY` and `ENV-LEAF-KEY-ORDER-BRIDGE` are generated from the exact 97-name module census, separate 25-name Key API, separate 14-name Std bridge API, theorem/axiom receipts, and five detector reactions. The bridge is a delegated route into the now-closed `DATA-PG-ROW/ORDER`; only Data.Row assigns that parent edge's status. `ServiceUniverse` remains the sole open Context semantic attachment at `ENV-KEY-INTERP`. |
 | 3 | `Effect4.Data.Row` | `DATA-PG-ROW`, required graph | **Closed.** The fixed battery and generated join cover the sole proof-carrying carrier, raw-list normalization boundary, sorted insertion, canonical extensionality, union algebra, subset/weakening, exact owners and hypotheses, 23 theorem/axiom receipts with no choice, eight duplicate-name exclusions, nine counterexamples, all ten graph edges, and five detector reactions. This closes the reusable row algebra only; it deliberately proves no downstream denotational preservation. |
 | 4 | `Context.Service` and `Context.Requirement` | local carrier receipts plus nodes in `ENV-PG-CONTEXT` | Reuse `ServiceKey`, `Program`, `Signature`, and `Data.Row`; no second key, row, program, type-code, or order carrier. Prefer a derived `ServiceSignature U` and `request = Program.perform` over a duplicate service program. Make `Requirement` an alias or named view of `Row ServiceKey`. The graph-bearing part is `Program.UsesOnly`: prove its pure, visit, perform, bind-by-union, and weakening laws. Do not claim a finite `Program.requirements` function for arbitrary higher-order continuations; synthesis belongs to checked first-order Flow. |

@@ -18,15 +18,21 @@ Runtime --------> interpretation and managed ownership
 Fiber ----------> scheduler/interruption/resource lifecycle
 ```
 
-Effect4 depends on the `Effects` package for its algebra and on nothing else. Effect4 has no dependency on Foldlab. Foldlab's later adapter depends on the
-public Effect4 algebra and proves compatibility with its existing CAS-specific
-types and observations.
+Effect4 has two external Lake dependencies: `effects` at
+`2447edd76649f035e989914ac899831d66e7dad2` and `typescript` at
+`cc62799055b1af7ce22b083afcfb30155c1ed4d0`, pinned in `lakefile.toml` and
+resolved at the same commits in `lake-manifest.json`. Effects supplies the
+generic algebra, first-order Flow and shared trace alphabet. TypeScript
+supplies target syntax, rendering and structuring. Effect4 has no dependency
+on Foldlab. Foldlab's later adapter depends on the public Effect4 algebra and
+proves compatibility with its existing CAS-specific types and observations.
 
 ## Planned source tree
 
 | Area | Public responsibility |
 | --- | --- |
-| (`Effects.Algebra`, from lean4-effects `v0.1.0` (`5611c3a`)) | indexed signatures, free programs, handlers, interpreters, morphisms and laws; consumed through the pinned `effects` dependency, never re-declared here |
+| `Effects` (external `effects` package) | indexed signatures, free programs, handlers, interpreters, morphisms, laws, generic first-order Flow and the shared trace alphabet; consumed through the pinned dependency, never re-declared here |
+| `TypeScript` (external `typescript` package) | target syntax, rendering and graph structuring; consumed by Effect4's target profile through the pinned dependency |
 | `Effect4/Data` | finite rows, IDs, canonical forms, typed values and shared codecs |
 | `Effect4/Flow` | raw and checked first-order graphs, blocks, regions, decisions and admission |
 | `Effect4/Semantics` | cause/exit, configurations, steps, runs, approximations, observations and logic |
