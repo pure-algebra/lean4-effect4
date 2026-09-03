@@ -2317,3 +2317,104 @@ One gate line still open: `scripts/check-lowering-types.sh` does not read the
 `deferred-types` arm this packet added to `Generate.lean`, the way it does not
 yet read `scope-types` or `fiber-types` either. Two of the six declaration
 lines are frozen inline as `#guard`s in the contract meanwhile.
+## Refs family landed, 2026-09-03
+
+`Refs` is the second lane over an opaque host handle after M1's `Scopes`, and
+the one where the handle is the whole of what the family owns.
+`Handle "Ref.Ref<number>"` prints rc.112's own type, so `harness/trace/ref-tail.ts`
+keeps **no store**: `make` is `Ref.make`, `get` is `Ref.get`, and so on down the
+row; the ref objects go straight through and `tracer.ts`'s `registerHandle`
+indexes them. That is the whole benefit of building on M1 — my pre-rebase draft
+carried a hand-rolled index table on both faces, and none of it is needed.
+
+Corpus in `Effect4/Stateful/RefFamily.lean`, following M3's precedent
+(`Effect4/Concurrency/FiberFamily.lean`) rather than M1's harness-local one:
+`Effect4Test/Flow/RefsContract.lean` then guards the *imported* corpus, so a
+second copy of the handler cannot drift from the goldens while every receipt
+still passes. `Effect4/Stateful/Ref.lean` is untouched — still a breadth stub,
+still someone else's to freeze.
+
+Seven programs: make-get, set-get, update twice, `modify` answering the old
+value, `getAndSet`, two handles interleaved, and `takeUnderflow` over a second
+family `ERefs` whose `tryTake` refuses rather than underflowing — the refusal is
+an answer, not an abort, and the read after it is unaffected.
+
+**Host agreement, run directly (no gate script):**
+`EFFECT4_PROGRAM=<p> node ~/Dev/effect4-tools/packages/harness/trace.mjs harness/trace --golden generated/traces/ref/<p>.tsv --masks generated/traces/masks.tsv --tail ref-tail.ts`.
+All seven agree under `outcome`, `m1` and `m2`, at the default yield threshold
+and at `EFFECT4_MAX_OPS=3 EFFECT4_EXPECT_YIELDS=1`. `tsc.original` and
+`effect-tsgo --strict` both accept the extended file set (0 diagnostics over 15
+files), and every `ref-types` line is emitted byte-identically by the pinned
+compiler. Following M1's `scope-types` precedent that arm is **not** wired into
+`scripts/check-lowering-types.sh`, which still covers only `types` and
+`flow-types`.
+
+Two register rows, `E4-SEM-CE-014` and `E4-SEM-CE-015`, witnessed by
+`Effect4Test/Counterexamples/Runtime/Refs.lean`.
+
+**012 is a constraint on M1's machinery that anyone adding a third handle lane
+needs.** `tracer.ts`'s `nextHandleIndex` is *one* module-global counter over
+every branded object, while a Lean face numbers each family's handles from 0 in
+its own store. With both `~effect/Ref` and `~effect/Scope` branded,
+`harness/trace/ref-probe.mjs` prints `first scope -> 1`, `next ref -> 2` where a
+per-family store would say 0. First-seen order equals creation order only within
+one branded type. `ref-tail.ts` brands one; `scope-tail.ts` brands one; a tail
+that brands two must reconcile the counters before its goldens mean anything.
+
+**013 matters for anyone writing a golden.** When an operation's answer and its
+new state share a type, the *type* separates nothing: `Ref.modify` with its
+tuple swapped is accepted by the pinned compiler with zero diagnostics, and only
+a golden with a non-zero amount catches it. `ERefs.tryTake` is the contrasting
+half — differently-typed components, so the compiler does pin the order.
+
+**A probe, not a gate.** `harness/trace/ref-probe.mjs` records what rc.112
+actually answers under each declaration; nothing imports it and no script runs
+it. It earned its keep by killing a claim I had written into a docstring — that
+`Ref.update` leaks the new number under `Effect<void>`. It does not: it is a
+block-bodied arrow and answers `undefined`, which is exactly what the census row
+`ref.update` has said since `b11ef32`. I had not seen that row, because the
+worktree I was given predated the census re-pin; the rebase would have caught
+the error a second time. Worth stating plainly: **the ten `ref.*` census rows
+are the reading of record for this lane** — `ref.set-void-returns-cell`,
+`ref.cell-set-returns-self`, `ref.update` and `ref.modify` between them already
+pin everything the probe re-observed. Check them before writing a claim about
+rc.112's ref semantics.
+
+What survives as this packet's own finding is the pair, not either half: two
+`void`-declared operations of one rc.112 module disagree about their runtime
+answer (`Ref.set` hands back the `MutableRef`, `Ref.update` hands back
+`undefined`). That is a sharper argument for TRACE-DAG separation 7 than the
+single observation it was minted from — no runtime-value heuristic could cover
+both, so the typed rule is not a convenience.
+
+**Goldens.** Only `generated/traces/ref/*.tsv` (7, new) were written, against
+main's generator. The pre-existing goldens' provenance rows are deliberately
+**not** refreshed here even though `Generate.lean`, `Effect4.lean` and
+`generate-trace-goldens.sh` all changed — that is the coordinator's sweep.
+
+**Files.** New: `Effect4/Stateful/RefFamily.lean`, `Effect4Test/Flow/RefsContract.lean`,
+`Effect4Test/Flow/RefsAxiomReport.lean`, `Effect4Test/Counterexamples/Runtime/Refs.lean`,
+`harness/trace/ref-fixture.ts`, `harness/trace/ref-tail.ts`,
+`harness/trace/ref-probe.mjs`, `generated/traces/ref/*.tsv`. Modified:
+`Effect4.lean`, `Effect4Test.lean`, `harness/trace/Generate.lean` (four `ref-*`
+arms before the one usage arm, and that arm's string), `harness/trace/tsconfig.json`,
+`scripts/check-trace-host.sh` (a `ref` section before the one closing `echo PASS`),
+`scripts/generate-trace-goldens.sh`, `docs/TRACE-DAG.md` (new `refs` edge row),
+`test/counterexamples/REGISTER.md`. `atoms.ts` needed no change: the ref scripts
+call the `succ` that is already there.
+
+**Census.** Not touched. `docs/RUNTIME-COVERAGE.md` gives the census no
+`observed` column — the denominator is anchored spans of the vendored pin and
+the only sanctioned witness is a Lean theorem in
+`Effect4Test/Audit/RuntimeCoverage.lean`. Host agreement under a mask is not a
+witness in that vocabulary and should not be smuggled in as one. Main already
+carries ten `ref.*` rows from `b11ef32`/`9585fce`, so there was nothing to add
+to the denominator either. Six of them are the behaviours these goldens now
+exercise end to end — `ref.make`, `ref.get`, `ref.set-void-returns-cell`,
+`ref.update`, `ref.modify`, `ref.get-and-set` — and that is worth knowing for
+whoever attaches numerator witnesses: the executable evidence exists, it is
+simply host evidence and so belongs in the receipts under
+`harness/trace/receipts/ref/`, not in `Effect4Test/Audit/RuntimeCoverage.lean`.
+The four rows about `setAndGet`, `modifySome`, `updateSomeAndGet` and
+`MutableRef.set` are untouched by this lane: none of those calls is an operation
+of the family.

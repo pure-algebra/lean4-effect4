@@ -67,5 +67,8 @@
     "wire-tail.ts",
     "deferred-fixture.ts",
     "deferred-tail.ts"
+    "ref-fixture.ts",
+    "ref-tail.ts",
+    "wire-tail.ts"
   ]
 }

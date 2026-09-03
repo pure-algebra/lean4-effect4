@@ -12,6 +12,7 @@ import Effect4.Semantics.Approximation
 import Effect4.Semantics.RegionSimulation
 import Effect4.Semantics.RegionDenotation
 import Effect4.Concurrency.FiberFamily
+import Effect4.Stateful.RefFamily
 
 /-!
 The trace harness family. `main fixture` prints the generated Effect v4 module,
@@ -359,8 +360,8 @@ and fails with the error, and `Effect.flip` of it answers the error and fails
 with the value. Both are total on a *completed* cell only. On a pending cell
 rc.112 suspends the fiber until another fiber completes it; this projection has
 no other fiber, so the run stops there and the golden records a `frontier` — no
-`answer`, no `failed`, no outcome. Register rows `E4-SEM-CE-012` and
-`E4-SEM-CE-013`.
+`answer`, no `failed`, no outcome. Register rows `E4-SEM-CE-014` and
+`E4-SEM-CE-015`.
 -/
 
 /-- The handle a `Deferreds` operation takes and returns. -/
@@ -539,7 +540,7 @@ a child that performs operations of its own (its bodies are numbers), so a
 `Fibers`-only variant cannot express it either. `deferredPendingAwait` stands
 in for it and records the half the sequential projection can see — the parent's
 await with nothing to complete it. The other half (the child's `succeed`
-resuming that await) is register row `E4-SEM-CE-013`. -/
+resuming that await) is register row `E4-SEM-CE-015`. -/
 structure DeferredEntry where
   name : String
   script : Script
@@ -1574,4 +1575,25 @@ def main (args : List String) : IO Unit := do
   | ["deferred-types"] =>
       for entry in deferredEntries do
         IO.println (entry.name ++ "\t" ++ Script.declarationLine Deferreds.rows entry.script)
-  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle | fiber-fixture | fiber-programs | fiber-golden <program> | fiber-types | job-fixture | job-programs | job-golden <program> <golden> | job-types | job-queues | deferred-fixture | deferred-programs | deferred-golden <program> | deferred-types")
+  | ["ref-fixture"] =>
+      -- `Ref` is imported as a type only: the generated module names
+      -- `Ref.Ref<number>` in the service shape and never calls into it.
+      -- `Effect4.RefFamily` is not opened: it carries its own `succ` atom, and
+      -- this module already has one for the `Cell` scripts.
+      match modules? Effect4.RefFamily.refFamilies
+          [.types ["Ref"] "effect", .named ["succ"] "./atoms.ts"] with
+      | some source => IO.print source
+      | none => throw (IO.userError "lowering refused a ref script")
+  | ["ref-programs"] =>
+      IO.println (String.intercalate "\n" (Effect4.RefFamily.refPrograms.map (·.name)))
+  | ["ref-golden", name] =>
+      match Effect4.RefFamily.refPrograms.find? (·.name == name) with
+      | some entry =>
+          IO.print (← admitted name entry.log
+            (Effect4.Target.TypeScript.Trace.golden ("ref." ++ name) []
+              ((entry.script.ruleSet entry.rows).map Rule.id) entry.log))
+      | none => throw (IO.userError s!"unknown ref program {name}")
+  | ["ref-types"] =>
+      for entry in Effect4.RefFamily.refPrograms do
+        IO.println (entry.name ++ "\t" ++ Script.declarationLine entry.rows entry.script)
+  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle | fiber-fixture | fiber-programs | fiber-golden <program> | fiber-types | job-fixture | job-programs | job-golden <program> <golden> | job-types | job-queues | deferred-fixture | deferred-programs | deferred-golden <program> | deferred-types | ref-fixture | ref-programs | ref-golden <program> | ref-types")
