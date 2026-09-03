@@ -2,7 +2,7 @@
 
 Packet: `test/contracts/flow-admission.contract.md`
 
-Battery: `Effect4Test/Flow/AdmissionContract.lean`
+Battery: `Effect4Test/Flow/AdmissionContract.lean` (v1; retired 2026-09-02 with the Flow v2 re-freeze in lean4-effects v0.4.0, whose batteries are `EffectsTest/Flow/FlowV2Contract.lean` and `EffectsTest/Counterexamples/Flow/FlowV2.lean`)
 
 These are durable semantic attacks. They are retained after the implementation
 turns the breaker battery green.

@@ -1,3 +1,10 @@
+> **Superseded (2026-09-02).** The first-order flow packet moved to
+> lean4-effects and was re-frozen as Flow v2 in
+> `test/contracts/flow-v2.contract.md` there (Effects v0.4.0, `e86f141`):
+> block parameter lists, positional operands, the cycle clause, and seventeen
+> ordered admission clauses. This file is retained as the v1 record; its
+> battery and the Effect4 mutation script were retired with the pin bump.
+
 # Flow diagnostic precision contract
 
 Status: FROZEN / RED, breaker-authored 2026-08-31

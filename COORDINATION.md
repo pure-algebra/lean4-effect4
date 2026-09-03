@@ -357,3 +357,18 @@ GitHub under pure-algebra and both manifests resolve them; the path overrides ar
 retired; the trace probe moved to `harness/trace/tracer.ts`. Ceremony is light
 (builder writes contract, battery and code together) for every packet except the
 Flow v2 re-freeze in lean4-effects, which keeps the separate breaker process.
+
+## Flow v2 landed, 2026-09-02
+
+lean4-effects v0.4.0 (`e86f141`, tagged and pushed) is the Flow v2 re-freeze:
+block parameter lists, `Var` operands, argument lists on `jump`/`choose`/
+`perform`, `CyclesWF` with the kernel-computable `cyclesChoose`, and seventeen
+ordered admission clauses (`test/contracts/flow-v2.contract.md` there). The
+retained admission theorems survive unchanged; the axiom union stays `propext`
+and `Quot.sound`. Effect4 and whatwg pin `e86f141`. In Effect4 the v1 batteries
+`Effect4Test/Flow/{AdmissionContract,DiagnosticPrecisionContract,AxiomReport,PrivacyContract}.lean`
+and `scripts/test-flow-admission-mutations.sh` are retired (their witnesses live
+in the v2 batteries), the v1 contracts carry a superseded header, and the
+`E4-FLOW-CE-*` register rows point at the v2 witnesses (`E4-FLOW-CE-005` is
+superseded by `EF-FLOW-CE-002`: an unchosen cycle is now rejected). Next in the
+lane: the Flow runner and decision tape (P-T2), then dispatch lowering (P-T9a).
