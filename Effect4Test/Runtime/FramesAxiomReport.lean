@@ -203,3 +203,20 @@ checkpoint.set-fiber-interruptible, scope.scoped, scope.acquire-release) -/
 #print axioms Effect4.Prim.withFiber_refused
 #print axioms Effect4.Prim.yieldableError_host_class_refused
 
+
+/-! ## F10 — the uninterrupted fragment and fuel additivity (census:
+checkpoint.getcont-deferred, checkpoint.exit-failcause-skip,
+exit.success-failure) -/
+
+#print axioms Effect4.FrameFiber.popFrom_interruptedCause
+#print axioms Effect4.FrameFiber.popFrom_deferredInterrupt
+#print axioms Effect4.FrameFiber.getCont_fiber_uninterrupted
+#print axioms Effect4.FrameFiber.popFrom_never_skips
+#print axioms Effect4.FrameFiber.popFrom_answer_ne_deferred
+#print axioms Effect4.FrameFiber.getCont_never_defers
+#print axioms Effect4.FrameFiber.step_preserves_uninterrupted
+#print axioms Effect4.FrameFiber.run_preserves_uninterrupted
+#print axioms Effect4.FrameFiber.run_add
+#print axioms Effect4.FrameFiber.run_add_finished
+#print axioms Effect4.FrameFiber.run_add_running
+#print axioms Effect4.FrameFiber.run_mono

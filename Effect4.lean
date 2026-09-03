@@ -44,6 +44,9 @@ import Effect4.Runtime.Resource
 import Effect4.Runtime.Runtime
 import Effect4.Runtime.ManagedRuntime
 import Effect4.Runtime.Lifecycle
+-- Packet D4 fence B. Above both Semantics and Runtime: it imports the frame
+-- machine. See `test/contracts/frame-simulation.contract.md` ruling 5.
+import Effect4.Semantics.FrameSimulation
 import Effect4.Concurrency.Fiber
 import Effect4.Concurrency.Scheduler
 import Effect4.Concurrency.Interrupt

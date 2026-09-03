@@ -498,3 +498,109 @@ the finalizer's own frame activity, the stack-frame cause annotation, the
 
 Three of the thirty-one assigned rows are explicitly **partial**. Reporting any
 of them green on the strength of this packet would be a false green.
+
+## Fence A of packet D4: the uninterrupted fragment, and fuel additivity
+
+Added 2026-09-03 by packet D4 fence A
+(`docs/research/2026-09-03-frame-simulation.md` section 1.3 and "Fuel
+adequacy"). Twelve public theorems were **appended** to
+`Effect4/Runtime/Runtime.lean`; nothing already frozen was edited. They are
+ascribed in `Effect4Test/Runtime/FramesContract.lean` section F10 and receipted
+in `Effect4Test/Runtime/FramesAxiomReport.lean` section F10, all within the
+`propext` / `Quot.sound` ceiling.
+
+| Declaration | What it says | Route |
+| --- | --- | --- |
+| `Effect4.FrameFiber.popFrom_interruptedCause`, `.popFrom_deferredInterrupt` | a pop leaves both interrupt fields exactly as it found them; no hook writes either | `derived` from `popFrom` |
+| `Effect4.FrameFiber.getCont_fiber_uninterrupted` | with nothing recorded and nothing deferred, `getCont` leaves the fiber uninterrupted | `derived` |
+| `Effect4.FrameFiber.popFrom_never_skips` | with no accumulated cause, an answering frame answers whatever the skip flag says | `derived` |
+| `Effect4.FrameFiber.popFrom_answer_ne_deferred`, `.getCont_never_defers` | the pop loop cannot answer `ContAnswer.deferred`; only `getCont`'s pre-stack branch can, and it needs `deferredInterrupt = true` | `derived` |
+| `Effect4.FrameFiber.step_preserves_uninterrupted`, `.run_preserves_uninterrupted` | `interruptedCause = none` together with `deferredInterrupt = false` is an invariant of `step`, hence of `run` | `canonical` invariant |
+| `Effect4.FrameFiber.run_add`, `.run_add_finished`, `.run_add_running`, `.run_mono` | fuel composes; a finished run is stable under extra fuel | `derived` from `run` |
+
+### What this does to `FRAME-FB-NONNULL`
+
+`FRAME-FB-NONNULL` records that `FrameFiber.pendingCause` answers `Cause.empty`
+in the state rc.112 asserts unreachable with `fiber._interruptedCause!`.
+`step_preserves_uninterrupted` makes that row **vacuous on the fragment reachable
+from `FrameFiber.start`**: `start` sets `interruptedCause := none` and
+`deferredInterrupt := false`, nothing in the module writes `interruptedCause`,
+and `getCont_never_defers` then says the deferred branch — the first of the two
+sites the row names — is never taken. `pendingCause` is never read there.
+
+The row is **not retired**, and the loss table is not rewritten. The invariant is
+a *fragment* fact and not a *model* fact: it is stated with the uninterrupted
+state as a hypothesis precisely because the supervision packet's
+`interrupt.unsafe-entry` will record an interrupt, discharge the hypothesis, and
+put the model back in exactly the state the row describes. `FRAME-FB-NONNULL`
+stays open as the statement of what happens then, and the second site it names
+(`setInterruptible[contAll]`, `Prim.ensure_setInterruptible_substitutes`) is
+reachable in that packet and unaffected here.
+
+Nothing else moves. No `FRAME-FB-*` row is discharged, no edge of the graph-edge
+ledger changes state, and no census row turns green: `docs/RUNTIME-COVERAGE.md`
+scores clause by clause, and an invariant over a run is nobody's clause. The
+`coverage` edge stays `required-open`.
+
+## Fence B of packet D4: the simulation, and where it lives
+
+Added 2026-09-03. The module is `Effect4/Semantics/FrameSimulation.lean`; the
+contract is `test/contracts/frame-simulation.contract.md`; the battery and the
+axiom report are `Effect4Test/Semantics/FrameSimulationContract.lean` and
+`Effect4Test/Semantics/FrameSimulationAxiomReport.lean`. Nothing in this packet
+edits `Effect4/Runtime/Runtime.lean` beyond the fence A additions above.
+
+### What it adds to this graph
+
+`Effect4.FrameSimulation.compile_simulates` is the first statement in which the
+*composition* of this packet's single-transition laws means something.
+`step_onSuccess`, `step_sync`, `resumeValue_frame` and `armA_onSuccess` are each
+one equation about one transition; the simulation is the run they compose into,
+against `Effects.interpret`. `FrameFiber.run` stops being a bounded runner with
+no consumer.
+
+It moves **no** row of the per-row census table, and it must not be reported as
+moving a coverage number: `docs/RUNTIME-COVERAGE.md` scores clause by clause and
+a composite theorem is nobody's clause. What changes is the *kind* of evidence
+available to `rule.frames-are-primitives`, `op.Success`, `op.Sync` and
+`op.OnSuccess`. Recording that in `Effect4Test/Audit/RuntimeCoverage.lean` is a
+separate packet with a separate claim, under the `runtime-coverage` procedure;
+this packet writes nothing under `generated/` or `Effect4Test/Audit/`.
+
+Every `FRAME-FB-*` loss stays. `FRAME-FB-RAW-FIBER` and `FRAME-FB-HOST-ERROR`
+are outside the fragment by construction. `FRAME-FB-ASYNC-FINALIZER` is
+untouched: the fragment has no `AsyncFinalizer`, so the fusion obligation is
+neither discharged nor worsened. `FRAME-FB-MASK-CARRIER` is a cross-package
+correspondence and unaffected. `FRAME-FB-STACK-ANNOTATION` is unaffected, and
+`op.Failure` stays **partial**: nothing here supplies a `Context` or a
+`StackTrace` key. `FRAME-FB-FINALIZER-EFFECT` is the row the *finalizer* half
+would sharpen, and that half is not attempted here.
+
+### Separations 4 and 5, and the trap
+
+Separation 4 says a continuation is a name. The compilation takes `ν := Nat` (a
+continuation-table index) and `σ := Nat` (an answer-tape occurrence number), and
+the continuations live in `PrimInterp`, which carries no `DecidableEq` and is a
+parameter to `armA` / `armE` / `step` / `run` and never a field of `Prim` or
+`FrameFiber`. Separation 5 says the nested body is a subterm: `compile` emits
+`Prim.onSuccess (Prim.sync i) i`, and `Prim.sync i` is that subterm.
+
+The trap worth naming, because it elaborates fine: instantiating the name
+alphabet at `ν := Σ op, (S.Answer op -> Program S Val)` silently drops
+`DecidableEq` from `Prim ν ...` and turns every `frame-arm` census row from a
+statement about frames into a statement about Lean functions. The gate is two
+`example`s in the module and two in the battery asserting
+`DecidableEq Effect4.FrameSimulation.Code` and
+`DecidableEq Effect4.FrameSimulation.Machine`; they fail to elaborate if anyone
+does it.
+
+### The placement question, recorded rather than decided
+
+`Effect4/Semantics/FrameSimulation.lean` imports `Effect4/Runtime/Runtime.lean`,
+and separation 2 above reads `docs/ARCHITECTURE.md` as placing Runtime **above**
+Semantics. No other module under `Effect4/Semantics/` imports this one, so the
+Runtime -> Semantics edge is not reversed for any existing module and no Lean
+import cycle exists. The placement was named in the packet's own fence; if the
+merge prefers strict directory layering the module moves to
+`Effect4/Runtime/FrameSimulation.lean` unchanged. Flagged here rather than
+resolved unilaterally.

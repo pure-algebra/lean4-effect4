@@ -1651,4 +1651,128 @@ do, not with a behavioural model of the host object. -/
   ∀ {ε : Type u} [DecidableEq ε] {ϑ : Type u} (host : ε → ϑ) (left right : ε), left = right →
   host left = host right)
 
+
+/-! F10: the uninterrupted fragment and fuel additivity (census:
+checkpoint.getcont-deferred, checkpoint.exit-failcause-skip,
+exit.success-failure).
+
+Fence A of packet D4, `docs/research/2026-09-03-frame-simulation.md`. Nothing in
+`Effect4/Runtime/Runtime.lean` writes `interruptedCause`, so
+`interruptedCause = none` together with `deferredInterrupt = false` is a `step`
+invariant, and under it the pop loop never skips an answering frame and
+`getCont` never answers a deferred interrupt. `FRAME-FB-NONNULL` is *vacuous* on
+that fragment and is not retired: the hypothesis is a fragment fact, not a model
+fact. `run_add` / `run_mono` are the composition and monotonicity laws the
+bounded runner lacked, and are what makes a `forall fuel >= bound` statement
+sayable without contradicting DB-04. -/
+
+-- census: checkpoint.getcont-deferred
+#check (@Effect4.FrameFiber.popFrom_interruptedCause :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool)
+  (frames : List (Effect4.Prim ν σ β ε δ ι α)) (fiber : Effect4.FrameFiber ν σ β ε δ ι α),
+  (Effect4.FrameFiber.popFrom demand skip frames fiber).fiber.interruptedCause =
+  fiber.interruptedCause)
+
+-- census: checkpoint.getcont-deferred
+#check (@Effect4.FrameFiber.popFrom_deferredInterrupt :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool)
+  (frames : List (Effect4.Prim ν σ β ε δ ι α)) (fiber : Effect4.FrameFiber ν σ β ε δ ι α),
+  (Effect4.FrameFiber.popFrom demand skip frames fiber).fiber.deferredInterrupt =
+  fiber.deferredInterrupt)
+
+-- census: checkpoint.getcont-deferred
+#check (@Effect4.FrameFiber.getCont_fiber_uninterrupted :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
+  (demand : Effect4.Arm) (skip : Bool), self.interruptedCause = Option.none →
+  self.deferredInterrupt = Bool.false →
+  (self.getCont demand skip).fiber.interruptedCause = Option.none ∧
+  (self.getCont demand skip).fiber.deferredInterrupt = Bool.false)
+
+-- census: checkpoint.exit-failcause-skip
+#check (@Effect4.FrameFiber.popFrom_never_skips :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool)
+  (frame : Effect4.Prim ν σ β ε δ ι α) (rest : List (Effect4.Prim ν σ β ε δ ι α))
+  (fiber : Effect4.FrameFiber ν σ β ε δ ι α) (answer : Effect4.ContAnswer ν σ β ε δ ι α),
+  fiber.interruptedCause = Option.none →
+  Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure frame fiber).snd = Option.some answer →
+  Effect4.FrameFiber.popFrom demand skip (frame :: rest) fiber =
+  { answer := answer, popped := [frame],
+    events := Effect4.Prim.passEvents frame (Effect4.Prim.ensure frame fiber).snd,
+    fiber := have __src := (Effect4.Prim.ensure frame fiber).fst;
+      Effect4.FrameFiber.mk __src.current
+        ((Effect4.Prim.ensure frame fiber).fst.stack ++ rest) __src.interruptible
+        __src.interruptedCause __src.deferredInterrupt })
+
+-- census: checkpoint.getcont-deferred
+#check (@Effect4.FrameFiber.popFrom_answer_ne_deferred :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool)
+  (cause : Effect4.Cause ε δ ι α) (frames : List (Effect4.Prim ν σ β ε δ ι α))
+  (fiber : Effect4.FrameFiber ν σ β ε δ ι α),
+  (Effect4.FrameFiber.popFrom demand skip frames fiber).answer ≠
+  Effect4.ContAnswer.deferred cause)
+
+-- census: checkpoint.getcont-deferred
+#check (@Effect4.FrameFiber.getCont_never_defers :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
+  (demand : Effect4.Arm) (skip : Bool) (cause : Effect4.Cause ε δ ι α),
+  self.deferredInterrupt = Bool.false →
+  (self.getCont demand skip).answer ≠ Effect4.ContAnswer.deferred cause)
+
+-- census: checkpoint.getcont-deferred
+#check (@Effect4.FrameFiber.step_preserves_uninterrupted :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ]
+  [DecidableEq ι] [DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι α)
+  (self next : Effect4.FrameFiber ν σ β ε δ ι α), self.interruptedCause = Option.none →
+  self.deferredInterrupt = Bool.false →
+  (Effect4.FrameFiber.step interp self).fst = Effect4.FrameStep.running next →
+  next.interruptedCause = Option.none ∧ next.deferredInterrupt = Bool.false)
+
+-- census: checkpoint.getcont-deferred
+#check (@Effect4.FrameFiber.run_preserves_uninterrupted :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ]
+  [DecidableEq ι] [DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι α) (fuel : Nat)
+  (self next : Effect4.FrameFiber ν σ β ε δ ι α), self.interruptedCause = Option.none →
+  self.deferredInterrupt = Bool.false →
+  (Effect4.FrameFiber.run interp fuel self).fst = Effect4.FrameStep.running next →
+  next.interruptedCause = Option.none ∧ next.deferredInterrupt = Bool.false)
+
+-- census: exit.success-failure
+#check (@Effect4.FrameFiber.run_add :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ]
+  [DecidableEq ι] [DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι α) (m n : Nat)
+  (self : Effect4.FrameFiber ν σ β ε δ ι α),
+  Effect4.FrameFiber.run interp (m + n) self =
+  match Effect4.FrameFiber.run interp m self with
+  | (Effect4.FrameStep.finished exit, events) => (Effect4.FrameStep.finished exit, events)
+  | (Effect4.FrameStep.running mid, events) =>
+    ((Effect4.FrameFiber.run interp n mid).fst, events ++ (Effect4.FrameFiber.run interp n mid).snd))
+
+-- census: exit.success-failure
+#check (@Effect4.FrameFiber.run_add_finished :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ]
+  [DecidableEq ι] [DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι α)
+  (self : Effect4.FrameFiber ν σ β ε δ ι α) (m n : Nat) (exit : Effect4.Exit β ε δ ι α)
+  (events : List (Effect4.FrameEvent ν σ β ε δ ι α)),
+  Effect4.FrameFiber.run interp m self = (Effect4.FrameStep.finished exit, events) →
+  Effect4.FrameFiber.run interp (m + n) self = (Effect4.FrameStep.finished exit, events))
+
+-- census: exit.success-failure
+#check (@Effect4.FrameFiber.run_add_running :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ]
+  [DecidableEq ι] [DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι α)
+  (self mid : Effect4.FrameFiber ν σ β ε δ ι α) (m n : Nat)
+  (events : List (Effect4.FrameEvent ν σ β ε δ ι α)),
+  Effect4.FrameFiber.run interp m self = (Effect4.FrameStep.running mid, events) →
+  Effect4.FrameFiber.run interp (m + n) self =
+  ((Effect4.FrameFiber.run interp n mid).fst, events ++ (Effect4.FrameFiber.run interp n mid).snd))
+
+-- census: exit.success-failure
+#check (@Effect4.FrameFiber.run_mono :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ]
+  [DecidableEq ι] [DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι α)
+  (self : Effect4.FrameFiber ν σ β ε δ ι α) (m n : Nat) (exit : Effect4.Exit β ε δ ι α)
+  (events : List (Effect4.FrameEvent ν σ β ε δ ι α)), m ≤ n →
+  Effect4.FrameFiber.run interp m self = (Effect4.FrameStep.finished exit, events) →
+  Effect4.FrameFiber.run interp n self = (Effect4.FrameStep.finished exit, events))
+
 end Effect4Test.Runtime.FramesContract

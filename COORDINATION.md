@@ -709,3 +709,83 @@ copies.
 Next in this lane: D2 (regions as a scope summand) needs a third summand and a
 stateful upper handler through `Handler.mapHom`/`MonadHom.stateT`; D5 (the
 `Script` embedding) needs `interpret_vis_of_pure`.
+
+## D4 fence A landed: the uninterrupted fragment and fuel additivity, 2026-09-03
+
+Claim (Claude, frame-simulation lane, worktree `agent-aa0ab582898ec636e`,
+branch `codex/effect4-cutover`): `Effect4/Runtime/Runtime.lean`
+(**additions only**, appended after `step_scopedFrame`);
+`Effect4/Semantics/FrameSimulation.lean` (new);
+`Effect4Test/Semantics/FrameSimulationContract.lean`,
+`Effect4Test/Semantics/FrameSimulationAxiomReport.lean` (new);
+`Effect4Test/Runtime/FramesContract.lean` and
+`Effect4Test/Runtime/FramesAxiomReport.lean` (**section F10 only**, appended);
+`test/contracts/frame-simulation.contract.md` (new); `docs/FRAMES-DAG.md`,
+`docs/TRACE-DAG.md`, `Effect4.lean`, `Effect4Test.lean` (appended lines only).
+Packet: `docs/research/2026-09-03-frame-simulation.md`, packet D4 of
+`docs/research/2026-09-03-reification-plan.md`.
+
+Fence A adds twelve public theorems to `Effect4/Runtime/Runtime.lean` and edits
+nothing that was already there. `step_preserves_uninterrupted` says
+`interruptedCause = none` with `deferredInterrupt = false` is a `step`
+invariant; `popFrom_never_skips` and `getCont_never_defers` are its two
+consequences (no handler is skipped, the deferred interrupt is never answered),
+so `FRAME-FB-NONNULL` is *vacuous on the fragment reachable from
+`FrameFiber.start`* and is **not** retired — see the new closing section of
+`docs/FRAMES-DAG.md`. `run_add`, `run_add_finished`, `run_add_running` and
+`run_mono` are the fuel composition and monotonicity laws the bounded runner
+lacked; DB-04's live-frontier ruling forbids the `forall fuel` form, so every
+downstream statement is `forall fuel >= bound` and needs them. All twelve are
+within `propext` / `Quot.sound`.
+
+Anyone touching `Effect4/Runtime/Runtime.lean`: the additions are at the end of
+the file inside a re-opened `namespace FrameFiber`. Nothing above line 2212 of
+the pre-D4 file was changed.
+
+## D4 fence B landed: the simulation theorem, 2026-09-03
+
+New module `Effect4/Semantics/FrameSimulation.lean` with battery
+`Effect4Test/Semantics/FrameSimulationContract.lean`, axiom report
+`Effect4Test/Semantics/FrameSimulationAxiomReport.lean`, and light contract
+`test/contracts/frame-simulation.contract.md`. Root import lines appended to
+`Effect4.lean` and `Effect4Test.lean`; `docs/FRAMES-DAG.md` and
+`docs/TRACE-DAG.md` updated. Nothing frozen was edited.
+
+`compile_simulates`: for `bound tape <= fuel` and `answersOf H p s0 = tape`, the
+frame machine started on `compile 0 p` with the table `tapeInterp p tape`
+finishes with `exitOf ((interpret H p).run.run s0).1`, with `H` into
+`ExceptT (Cause Val Unit Unit Unit) (StateT St Id)`. The workhorse is
+`run_in_context`. `compile_simulates_fail` is the `Cause.fail` corollary.
+
+**Read the scope line before quoting it.** The answers are *supplied*: the tape
+is the oracle, `PrimInterp` is pure and total, and what is proved is that the
+machine's control flow and exit equal the algebra's given agreeing answers. It
+is a simulation modulo an effect oracle, not "the machine computes `interpret`".
+
+`docs/TRACE-DAG.md` `semantics` moves to `required-closed` **for the Lean pair
+only**, with an explicit scope line; the host agreeing with either emitter is
+still executable evidence under a mask. `bridges` stays `required-open` and
+cannot close by theorem. **No census row turns green**: coverage is scored
+clause by clause and a composite theorem is nobody's clause. Nothing under
+`generated/` or `Effect4Test/Audit/` was touched; adding the composed-run
+evidence to `rule.frames-are-primitives` is a separate packet with a separate
+claim.
+
+Two open items for the merge, both flagged in the contract:
+
+1. **Module placement.** `Effect4/Semantics/FrameSimulation.lean` imports
+   `Effect4/Runtime/Runtime.lean`, and `docs/ARCHITECTURE.md` places Runtime
+   above Semantics (FRAMES-DAG separation 2). No other `Effect4/Semantics/`
+   module imports it, so no existing edge is reversed and there is no Lean import
+   cycle; but if strict directory layering is preferred the module moves to
+   `Effect4/Runtime/FrameSimulation.lean` unchanged.
+2. **`Flow.Sig`.** Declared locally as `Effect4.FrameSimulation.Flow.Sig` and
+   marked `-- to be unified with Denotation.lean`. A sibling packet declares the
+   same signature; the coordinator merges them.
+
+The finalizer half is **not** started. Its statement is a comment at the end of
+the module, and it is blocked on a ruling, not merely unscheduled: the machine
+merges a failing finalizer into a failing body with `Cause.combine`, while
+`Effect4.Flow.Region.closeFrame` keeps only the first release failure (pinned by
+`E4-FLOW-CE-019`), and TRACE-DAG separation 3 makes the fail payload exactly what
+a mask cannot erase. Settle that before writing the fence.
