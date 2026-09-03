@@ -19,8 +19,8 @@ git = "https://github.com/pure-algebra/lean4-effects"
 rev = "9595a88df524b8397a53262a12480b0e7dbf857a"
 
 # TypeScript as a target: syntax, renderer, identifier profile, host pins.
-# Exact commit of tag v0.1.1 of pure-algebra/lean4-typescript.
+# Exact commit of tag v0.2.0 of pure-algebra/lean4-typescript.
 [[require]]
 name = "typescript"
 git = "https://github.com/pure-algebra/lean4-typescript"
-rev = "8f17b881950476c211853fa76a6b467c037f0c76"
+rev = "fcbc05a40e52f9bbe8a8e3ee0f4a746ebd4e9554"
