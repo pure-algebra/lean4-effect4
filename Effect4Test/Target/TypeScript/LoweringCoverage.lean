@@ -86,6 +86,14 @@ def rows : List Row :=
   , { rule := .chooseIf, state := .covered,
       goldens := ["flow/chooser.left", "flow/chooser.right", "flow/swap.once", "flow/swap.twice"],
       host := true, property := true, typeReceipt := true, proof := none }
+  -- interruption as decisions (Skeleton.lean, packet M2); the goldens are the
+  -- three interrupt programs. No host column: the interrupt goldens run through
+  -- `interrupt-tail.ts`, whose receipts live under receipts/flow/interrupt/ and
+  -- are written by the host gate, not by this join.
+  , { rule := .interruptPoint, state := .pinned,
+      goldens := ["flow/interrupt/interruptUnmasked", "flow/interrupt/interruptMasked",
+                  "flow/interrupt/interruptFinalizer"],
+      host := false, property := false, typeReceipt := false, proof := none }
   -- regions (RegionLower.lean); the goldens are the region programs of the harness
   , { rule := .regionEnter, state := .checked,
       goldens := ["flow/regionNested.empty", "flow/regionTwoFail.empty", "flow/regionBothSucceed.empty"],

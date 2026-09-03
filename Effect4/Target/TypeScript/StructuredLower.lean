@@ -55,12 +55,12 @@ def graphOf (blocks : List (RawBlock String)) (entry : BlockId) : Structure.Grap
 
 /-- The structured skeleton of a declaration list, or `none` when the graph is
 not reducible or a body has no lowering. -/
-def skeletonBody (table : List OpSpec) (blocks : List (RawBlock String)) (entry : BlockId) :
-    Option (List Skeleton) :=
+def skeletonBody (table : List OpSpec) (interrupts : Bool) (blocks : List (RawBlock String))
+    (entry : BlockId) : Option (List Skeleton) :=
   let g := graphOf blocks entry
   Structuring.emitWith g structuredShapes fun i transfer => do
     let block ← blocks[i]?
-    skeletonBlockWith table block fun target values => do
+    skeletonBlockWith table interrupts block fun target values => do
       let t ← position blocks target
       let control ← transfer t
       pure (Lowering.paramMove block.id target values ++ control)
@@ -73,8 +73,8 @@ def reducible (program : FlowProgram) : Bool :=
 graph. -/
 def skeletonStructured (rows : ServiceRow) (program : FlowProgram) : Option (List Skeleton) := do
   let raw := program.flow.erase
-  let body ← skeletonBody program.table raw.blocks raw.entry
-  pure (acquisitions rows program.table raw ++ declarations raw.blocks ++
+  let body ← skeletonBody program.table program.interrupts raw.blocks raw.entry
+  pure (acquisitions rows program.table program.interrupts raw ++ declarations raw.blocks ++
     [Skeleton.assign (.param raw.entry 0) (.input program.param.1)] ++ body)
 
 /-- The structured form, or `none` for an irreducible graph. -/
@@ -111,7 +111,8 @@ namespace Region
 
 /-- The structured skeleton of a region program: each region's blocks are a
 graph of their own, entered at the region body. -/
-def skeletonStructuredBody (rows : ServiceRow) (table : List OpSpec) (flow : RegionFlow String) :
+def skeletonStructuredBody (rows : ServiceRow) (table : List OpSpec) (interrupts : Bool)
+    (flow : RegionFlow String) :
     Nat → Option RegionId → BlockId → Option (List Skeleton)
   | 0, _, _ => none
   | fuel + 1, label, entry =>
@@ -128,10 +129,11 @@ def skeletonStructuredBody (rows : ServiceRow) (table : List OpSpec) (flow : Reg
         pure (Lowering.paramMove block.id target values ++ control)
       match block.term with
       | .plain term =>
-          Flow.skeletonBlockWith table { id := block.id, params := block.params, term := term } move
+          Flow.skeletonBlockWith table interrupts
+            { id := block.id, params := block.params, term := term } move
       | .enter region entry' args => do
           let row ← flow.row? region
-          let inner ← skeletonStructuredBody rows table flow fuel (some region) entry'
+          let inner ← skeletonStructuredBody rows table interrupts flow fuel (some region) entry'
           let rest ← move row.continue_ [.region region]
           some (Skeleton.enterBlock block.id :: Lowering.paramMove block.id entry' (args.map var) ++
             Lowering.regionEnter region inner ++ rest)
@@ -144,13 +146,19 @@ def skeletonStructuredBody (rows : ServiceRow) (table : List OpSpec) (flow : Reg
           let rest ← move target (args.map var ++ [answer])
           some (Skeleton.enterBlock block.id ::
             Lowering.regionAcquire answer region operation spec (var request) releaser :: rest)
-      | .leave value => some [Skeleton.enterBlock block.id, Lowering.regionLeave (var value)]
+      | .leave value => do
+          let region ← block.region
+          let point : List Skeleton :=
+            if interrupts then [Lowering.interruptPoint (Effect4.Flow.Point.site (.leave region))]
+            else []
+          some (Skeleton.enterBlock block.id :: point ++ [Lowering.regionLeave (var value)])
 
 /-- The control skeleton of the structured form of a region program. -/
 def skeletonStructured (rows : ServiceRow) (program : RegionProgram) : Option (List Skeleton) := do
   let flow := program.flow.flow
-  let body ← skeletonStructuredBody rows program.table flow (flow.regions.length + 1) none flow.entry
-  pure (acquisitions rows program.table flow ++ declarations flow ++
+  let body ← skeletonStructuredBody rows program.table program.interrupts flow
+    (flow.regions.length + 1) none flow.entry
+  pure (acquisitions rows program.table program.interrupts flow ++ declarations flow ++
     [Skeleton.assign (.param flow.entry 0) (.input program.param.1)] ++ body)
 
 /-- The structured form of a region program. -/
@@ -183,6 +191,8 @@ def structuredModules? (families : List (ServiceRow × List FlowProgram × List 
     regionPrograms.any fun program => Region.usesChoose program.flow.flow
   let regions := families.any fun (_, _, regionPrograms) =>
     regionPrograms.any fun program => !program.flow.flow.regions.isEmpty
+  let interrupts := families.any fun (_, programs, regionPrograms) =>
+    programs.any (·.interrupts) || regionPrograms.any (·.interrupts)
   let result := families.any fun (rows, _, _) => rows.usesResult
   let target : Module :=
     { header := ["Generated by Effect4 (Effect v4 profile, structured form).", ""] ++
@@ -191,6 +201,7 @@ def structuredModules? (families : List (ServiceRow × List FlowProgram × List 
         (if result then ["Result"] else [])) "effect" :: atoms
       decls := (if chooses then [decisionsRows.classDecl, decisionsRows.rowsDecl] else []) ++
         (if regions then [regionsRows.classDecl, regionsRows.rowsDecl] else []) ++
+        (if interrupts then [interruptsRows.classDecl, interruptsRows.rowsDecl] else []) ++
         decls.flatten }
   pure (Render.module style target)
 

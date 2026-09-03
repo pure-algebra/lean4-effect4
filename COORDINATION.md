@@ -1043,3 +1043,75 @@ executable face (the fuelled denotations at `fuelFor` agree), and
 `equiv_of_erase_eq` says the denotation reads only the erased graph. This is
 the relation D3's T4 (structured ≡ dispatch) instantiates. Axiom report
 `Effect4Test/Semantics/EquivalenceAxiomReport.lean`; nothing host-side.
+
+## M2 landed, 2026-09-03
+
+Interruption as decisions. The packet's one refusal is the mask: it is a model
+fact of the flow that the lowering does not spell (no `Effect.uninterruptible`
+is emitted), so the masked golden observes the tail's own deferral rather than
+rc.112's. Everything else is a Lean face with a host that agrees.
+
+Lean (`Effect4/Flow/Interrupt.lean`, imported from `Effect4.lean`):
+
+- An `Interrupts` decision family over the region runner. Points are before
+  every `perform` of a plain block and at every region `leave`; `acquire` is
+  not a point (rc.112 acquires uninterruptibly). Every point writes one
+  `Trace.Event.decide` row at its own site, whatever the answer.
+- The site space is disjoint by construction: `Point.site` lands at or above
+  `interruptBase = 1000000`, `perform` sites odd and `leave` sites even.
+  `Point.site_ne_choose` refuses every `choose` site below the base,
+  `Point.site_inj` separates the two shapes, and `sitesSeparated` decides per
+  flow that its authored sites lie below the base. One wire carries both tapes.
+- Exhaustion of the interrupt tape is *not* a frontier: it answers "not
+  delivered". So the empty tape is the uninterrupted run and the tape names
+  only the points that deliver. A tape entry for another point is neither
+  consumed nor an answer here.
+- A mask defers, it does not drop: `interruptPoint_masked_defers` keeps a
+  delivered answer in `IState.pending` (rc.112's `_deferredInterrupt`),
+  `interruptPoint_unmasked_delivers` delivers it at the first unmasked point.
+  A mask is inherited by every open region on the frame stack, its own `leave`
+  point included (`isMasked`).
+- Delivery closes every open region innermost-first with `Outcome.interrupted`
+  and ends the run `done interrupted`. `closeFrame_interrupted_log` is
+  `closeFrame_log` at that outcome, so the A1 arm finally has a Lean producer:
+  before M2 only the P-T11 projection could build one.
+- `RunResult` and `regionLoop` are untouched — the new runner is
+  `runInterrupts` with its own `InterruptResult` — so every region-runner
+  theorem still speaks about the function it spoke about.
+
+Host: `Skeleton.interruptPoint` and `Lowering.interruptPoint`
+(`rule.interrupt-point`, the twenty-fifth rule) render `yield*
+interrupts.point(<site>)`; `FlowProgram`/`RegionProgram` gained
+`interrupts : Bool := false` and `masked : List RegionId := []`, so
+`flow-fixture.ts` and `structured-fixture.ts` are additive — every program
+that existed before M2 lowers to the same bytes (checked with `cmp` before the
+new programs were added). `harness/trace/interrupt-tail.ts` is the
+interruptor: it answers the tape exactly as `interruptRead` does, pushes the
+same `decide` row, and calls `fiber.interruptUnsafe()` at the delivered site,
+the idiom `tracer.ts` already uses on the budget path.
+
+Goldens: `generated/traces/flow/interrupt/{interruptUnmasked, interruptMasked,
+interruptFinalizer}.tsv` — unmasked delivery, masked deferral then delivery at
+the first unmasked point, and two nested finalizers seeing `interrupted`. They
+sit in a subdirectory so the flow host loop's `flow/*.tsv` glob does not hand
+them to `flow-tail.ts`, which has no `Interrupts` service; `interrupt-tail.ts`
+gets its own section in `scripts/check-trace-host.sh`. All three agree under
+`outcome`, `m1` and `m2` at the default yield setting and at the rc.112 floor
+of 3 (run directly, not through the gate).
+
+Editing `scripts/generate-trace-goldens.sh` rewrites the `generator` and
+`input` digests every golden carries, so every `.tsv` under `generated/traces`
+is regenerated in this branch; the event rows of the pre-M2 goldens are
+unchanged.
+
+Batteries: `Effect4Test/Flow/InterruptContract.lean` (the three goldens' logs
+as `#guard`s, the empty-tape and foreign-entry runs, the site algebra, axiom
+report `propext`/`Quot.sound`) and
+`Effect4Test/Counterexamples/Flow/Interrupt.lean` (`E4-FLOW-CE-022`,
+`E4-FLOW-CE-023`). Both reachable from `Effect4Test.lean`.
+
+Owed after M2: the mask as a lowered primitive (which rc.112 spelling carries
+`RegionProgram.masked` — `Effect.uninterruptible` around the region body is the
+obvious candidate, and it changes the primitive count the budget goldens
+measure); the interruptor identity, which the wire drops; and an interrupt
+point at `acquire`, refused here because rc.112 acquires uninterruptibly.

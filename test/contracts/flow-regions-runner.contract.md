@@ -34,9 +34,22 @@ Host evidence: `generated/traces/flow/regionNested.empty`, `regionTwoFail.empty`
 fallible release runs in Lean but has no lowering (`E4-TARGET-CE-012`), so
 `regionReleaseFails` is a Lean-only receipt. Rows `E4-FLOW-CE-019`, `E4-FLOW-CE-020`.
 
-Refusals (not modelled): an interrupt cause, a parallel finalizer strategy, a
-region closed twice, a finalizer that opens a region (a release is one
-operation by construction), a fallible release on the host.
+Refusals (not modelled): a parallel finalizer strategy, a region closed twice,
+a finalizer that opens a region (a release is one operation by construction), a
+fallible release on the host.
+
+Lifted 2026-09-03 by packet M2: an interrupt cause is modelled, but not by this
+runner. `regionLoop` still has no interrupted arm and `RunResult` is unchanged;
+`Effect4/Flow/Interrupt.lean` carries a second runner (`runInterrupts`, result
+type `InterruptResult`) that answers an interrupt tape at every interruptible
+point, defers under a mask, and closes every open region with
+`Outcome.interrupted` through this module's own `closeFrame`. So `closeFrame`
+and `unwind` are the shared subject — `closeFrame_interrupted_log` is
+`closeFrame_log` at the new outcome — and the refusal that remains here is
+narrower: *this* runner never produces an interrupt cause, and no release of
+either runner reads the interruptor identity (the wire drops it). Rows
+`E4-FLOW-CE-022`, `E4-FLOW-CE-023`; contract receipts in
+`Effect4Test/Flow/InterruptContract.lean`.
 
 ## Acceptance
 

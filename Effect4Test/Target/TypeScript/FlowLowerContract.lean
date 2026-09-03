@@ -21,8 +21,9 @@ open TypeScript Effects Effect4.Flow Effect4.Target.EffectV4
 
 /-! ## The rule census -/
 
--- Eight straight-line rules, then these eight, then the region and structured rules.
-example : Rule.all.length = 24 := by decide
+-- Eight straight-line rules, then these eight, then `interrupt-point` (M2),
+-- then the region and structured rules.
+example : Rule.all.length = 25 := by decide
 example : Rule.all.Nodup := Rule.all_nodup
 #guard ((Rule.all.map Rule.id).drop 8).take 8 =
   ["dispatch-loop", "block-case", "param-move", "flow-perform", "flow-atom", "flow-literal",
@@ -118,7 +119,7 @@ def swap? : Option FlowProgram := program? "swap" swapTable swapRaw
 #guard swap?.isSome
 
 -- The self-edge reads both sources into temporaries before assigning; the exit edge does not.
-#guard (swap?.bind fun program => Flow.lowerBlock cellRows program.table
+#guard (swap?.bind fun program => Flow.lowerBlock cellRows program.table false
     { id := ⟨1⟩, params := ["number", "number"], term := .choose ⟨1⟩ ⟨1⟩ ⟨2⟩ [⟨1⟩, ⟨0⟩] }) ==
   some [ .constYield "c1" (.call (.ident "decisions.choose") [.int 1])
        , .ifElse (.ident "c1")
@@ -129,7 +130,7 @@ def swap? : Option FlowProgram := program? "swap" swapTable swapRaw
            , .assign "block" (.int 2), .continueTo none ] ]
 
 -- The literal block: `let a0 = 1`, then the move appends the answer.
-#guard (swap?.bind fun program => Flow.lowerBlock cellRows program.table
+#guard (swap?.bind fun program => Flow.lowerBlock cellRows program.table false
     { id := ⟨0⟩, params := ["number"], term := .perform ⟨0⟩ ⟨0⟩ ⟨1⟩ [⟨0⟩] }) ==
   some [ .letInit "a0" (.int 1), .assign "b1p0" (.ident "b0p0"), .assign "b1p1" (.ident "a0")
        , .assign "block" (.int 1), .continueTo none ]
@@ -151,7 +152,7 @@ def getTable : List OpSpec :=
 def getter? : Option FlowProgram := program? "getter" getTable getRaw
 
 #guard getter?.isSome
-#guard (getter?.bind fun program => Flow.lowerBlock cellRows program.table
+#guard (getter?.bind fun program => Flow.lowerBlock cellRows program.table false
     { id := ⟨0⟩, params := ["number"], term := .perform ⟨0⟩ ⟨0⟩ ⟨1⟩ [] }) ==
   some [ .constYield "a0" (.call (.ident "cell.get") [.ident "b0p0"])
        , .assign "b1p0" (.ident "a0"), .assign "block" (.int 1), .continueTo none ]

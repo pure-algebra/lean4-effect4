@@ -20,8 +20,8 @@ open TypeScript Effects Effect4.Flow Effect4.Target.EffectV4
 #check @Effect4.Target.EffectV4.Region.lowerStructured
 #check @Effect4.Target.EffectV4.structuredModules?
 
-example : Rule.all.length = 24 := by decide
-#guard (Rule.all.map Rule.id).drop 19 =
+example : Rule.all.length = 25 := by decide
+#guard (Rule.all.map Rule.id).drop 20 =
   ["structured-loop", "structured-merge", "structured-continue", "structured-break", "dispatch-fallback"]
 
 def cellRows : ServiceRow :=

@@ -75,4 +75,16 @@ for golden in "$repo_root"/generated/traces/scope/*.tsv; do
   EFFECT4_PROGRAM="$program" EFFECT4_MAX_OPS=3 EFFECT4_EXPECT_YIELDS=1 node "$tools/packages/harness/trace.mjs" "$here" \
     --golden "$golden" --masks "$repo_root/generated/traces/masks.tsv" --tail scope-tail.ts | sed 's/^trace/trace(scope,yield-every-op)/'
 done
-echo "PASS host traces agree with every golden under every mask (straight-line, dispatch, structured and scope forms)"
+# --- interruption as decisions (M2): the interrupt tail over the same module ---
+mkdir -p "$here/receipts/flow/interrupt"
+for golden in "$repo_root"/generated/traces/flow/interrupt/*.tsv; do
+  program="$(basename "$golden" .tsv)"
+  EFFECT4_PROGRAM="$program" node "$tools/packages/harness/trace.mjs" "$here" \
+    --golden "$golden" --masks "$repo_root/generated/traces/masks.tsv" --tail interrupt-tail.ts \
+    --receipt "$here/receipts/flow/interrupt/$program.json" | sed 's/^trace/trace(interrupt)/'
+  EFFECT4_PROGRAM="$program" EFFECT4_MAX_OPS=3 EFFECT4_EXPECT_YIELDS=1 \
+    node "$tools/packages/harness/trace.mjs" "$here" \
+    --golden "$golden" --masks "$repo_root/generated/traces/masks.tsv" --tail interrupt-tail.ts \
+    | sed 's/^trace/trace(interrupt,yield-every-op)/'
+done
+echo "PASS host traces agree with every golden under every mask (straight-line, dispatch, structured, scope and interrupt forms)"

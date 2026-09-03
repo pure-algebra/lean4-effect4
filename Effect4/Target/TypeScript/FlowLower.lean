@@ -54,6 +54,10 @@ structure FlowProgram where
   result : String
   table : List OpSpec
   flow : CheckedFlow (tableAlphabet ⟨0⟩ table)
+  /-- Whether the flow declares interrupt points (packet M2). Off by default,
+  so a program that does not declare them lowers to the bytes it lowered to
+  before this field existed. -/
+  interrupts : Bool := false
 
 /-- The `Decisions` service every `choose` asks. -/
 def decisionsRows : ServiceRow :=
@@ -62,11 +66,21 @@ def decisionsRows : ServiceRow :=
               tsParams := [("site", "number")], answer := "Bool", tsAnswer := "boolean",
               cues := ["decide a choice site from the tape"] }] }
 
+/-- The `Interrupts` service every interrupt point asks. `point` answers
+nothing: the host service either interrupts the running fiber at that site or
+lets the run continue. -/
+def interruptsRows : ServiceRow :=
+  { name := "Interrupts"
+    ops := [{ name := "point", index := 0, params := [("site", "Nat")],
+              tsParams := [("site", "number")], answer := "Unit", tsAnswer := "void",
+              cues := ["an interruptible point of the run"] }] }
+
 namespace Flow
 
 /-- The body of one block, its answer or decision followed by the move and
-the control transfer `transfer target values` supplies. -/
-def skeletonBlockWith (table : List OpSpec) (block : RawBlock String)
+the control transfer `transfer target values` supplies. When `interrupts` is
+set, a `perform` is preceded by its interrupt point. -/
+def skeletonBlockWith (table : List OpSpec) (interrupts : Bool) (block : RawBlock String)
     (transfer : BlockId → List Slot → Option (List Skeleton)) : Option (List Skeleton) :=
   let var (v : Var) : Slot := .param block.id v.index
   let entered (body : List Skeleton) : List Skeleton := Skeleton.enterBlock block.id :: body
@@ -82,7 +96,10 @@ def skeletonBlockWith (table : List OpSpec) (block : RawBlock String)
         | .lit value =>
             (literal? value).map fun _ => Lowering.flowLiteral answer operation (var request) value
       let rest ← transfer target (args.map var ++ [answer])
-      some (entered (head :: rest))
+      let point : List Skeleton :=
+        if interrupts then [Lowering.interruptPoint (Effect4.Flow.Point.site (.perform block.id))]
+        else []
+      some (entered (point ++ head :: rest))
   | .choose decision left right args => do
       let name : Slot := .decision block.id
       let toLeft ← transfer left (args.map var)
@@ -95,13 +112,14 @@ def dispatchTransfer (source : BlockId) (target : BlockId) (values : List Slot) 
   some (Lowering.paramMove source target values ++ Lowering.goto target)
 
 /-- The body of one block in the dispatch form. -/
-def skeletonBlock (table : List OpSpec) (block : RawBlock String) : Option (List Skeleton) :=
-  skeletonBlockWith table block (dispatchTransfer block.id)
+def skeletonBlock (table : List OpSpec) (interrupts : Bool) (block : RawBlock String) :
+    Option (List Skeleton) :=
+  skeletonBlockWith table interrupts block (dispatchTransfer block.id)
 
 /-- The spelled body of one block in the dispatch form. -/
-def lowerBlock (rows : ServiceRow) (table : List OpSpec) (block : RawBlock String) :
-    Option (List Stmt) :=
-  (Skeleton.renderList rows) <$> skeletonBlock table block
+def lowerBlock (rows : ServiceRow) (table : List OpSpec) (interrupts : Bool)
+    (block : RawBlock String) : Option (List Stmt) :=
+  (Skeleton.renderList rows) <$> skeletonBlock table interrupts block
 
 /-- Whether a block performs a family operation. -/
 def performsFamily (table : List OpSpec) (block : RawBlock String) : Bool :=
@@ -125,10 +143,11 @@ def declarations (blocks : List (RawBlock String)) : List Skeleton :=
       Skeleton.declare (.param block.id index) ty
 
 /-- The services a plain flow acquires at the top of its generator. -/
-def acquisitions (rows : ServiceRow) (table : List OpSpec) (raw : RawFlow String) :
-    List Skeleton :=
+def acquisitions (rows : ServiceRow) (table : List OpSpec) (interrupts : Bool)
+    (raw : RawFlow String) : List Skeleton :=
   (if usesFamily table raw then [Skeleton.acquireService rows] else []) ++
-  (if usesDecisions raw then [Skeleton.acquireService decisionsRows] else [])
+  (if usesDecisions raw then [Skeleton.acquireService decisionsRows] else []) ++
+  (if interrupts then [Skeleton.acquireService interruptsRows] else [])
 
 /-- The control skeleton of the dispatch form. Refuses a literal without a
 spelling or an operation outside the table (admission already refuses the
@@ -136,9 +155,9 @@ latter). -/
 def skeletonDispatch (rows : ServiceRow) (program : FlowProgram) : Option (List Skeleton) := do
   let raw := program.flow.erase
   let cases ← raw.blocks.mapM fun block => do
-    let body ← skeletonBlock program.table block
+    let body ← skeletonBlock program.table program.interrupts block
     pure (Lowering.blockCase block.id body)
-  pure (acquisitions rows program.table raw ++ declarations raw.blocks ++
+  pure (acquisitions rows program.table program.interrupts raw ++ declarations raw.blocks ++
     [ Skeleton.assign (.param raw.entry 0) (.input program.param.1)
     , Skeleton.letBlockIndex "block" raw.entry
     , Lowering.dispatchLoop cases ])
@@ -162,7 +181,7 @@ def ruleSet (rows : ServiceRow) (program : FlowProgram) : List Rule :=
     if arity = 0 then acc else step acc .paramMove
   let start :=
     (if usesFamily program.table raw then [Rule.serviceAcquire] else []) ++
-      [.dispatchLoop, .blockCase]
+      [.dispatchLoop, .blockCase] ++ (if program.interrupts then [Rule.interruptPoint] else [])
   raw.blocks.foldl (init := start) fun acc block =>
     match block.term with
     | .ret _ => step acc .flowRet
@@ -200,7 +219,8 @@ def requirementChannel (rows : ServiceRow) (program : FlowProgram) : String :=
   let raw := program.flow.erase
   let parts :=
     (if usesFamily program.table raw then [rows.name] else []) ++
-    (if usesDecisions raw then ["Decisions"] else [])
+    (if usesDecisions raw then ["Decisions"] else []) ++
+    (if program.interrupts then ["Interrupts"] else [])
   if parts.isEmpty then "never" else String.intercalate " | " parts
 
 /-- The declaration line the pinned compiler must emit for the lowered flow. -/
@@ -220,12 +240,14 @@ def flowModules? (families : List (ServiceRow × List FlowProgram))
     pure (rows.classDecl :: rows.rowsDecl :: lowered.map Decl.prog)
   let chooses := families.any fun (_, programs) =>
     programs.any fun program => Flow.usesDecisions program.flow.erase
+  let interrupts := families.any fun (_, programs) => programs.any (·.interrupts)
   let result := families.any fun (rows, _) => rows.usesResult
   let target : Module :=
     { header := ["Generated by Effect4 (Effect v4 profile, dispatch form).", ""] ++
         hostPin.headerLines ++ ["", "Do not edit."]
       imports := .named (["Context", "Effect"] ++ (if result then ["Result"] else [])) "effect" :: atoms
       decls := (if chooses then [decisionsRows.classDecl, decisionsRows.rowsDecl] else []) ++
+        (if interrupts then [interruptsRows.classDecl, interruptsRows.rowsDecl] else []) ++
         decls.flatten }
   pure (Render.module style target)
 

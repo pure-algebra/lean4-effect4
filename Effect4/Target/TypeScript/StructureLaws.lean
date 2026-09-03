@@ -520,11 +520,13 @@ theorem paramMove_wellScoped (blocks loops : List String) (source target : Block
 
 /-- Every node `skeletonBlockWith` emits of its own carries no label, so its
 result is well scoped as soon as the transfers it was handed are. -/
-theorem skeletonBlockWith_wellScoped (table : List OpSpec) (block : RawBlock String)
+theorem skeletonBlockWith_wellScoped (table : List OpSpec) (interrupts : Bool)
+    (block : RawBlock String)
     (move : BlockId → List Slot → Option (List Skeleton)) (blocks loops : List String)
     (moveScoped : ∀ target values control, move target values = some control →
       Skel.wellScopedList blocks loops control = true)
-    {own : List Skeleton} (lowered : Flow.skeletonBlockWith table block move = some own) :
+    {own : List Skeleton}
+    (lowered : Flow.skeletonBlockWith table interrupts block move = some own) :
     Skel.wellScopedList blocks loops own = true := by
   have entered : ∀ body : List Skeleton, Skel.wellScopedList blocks loops body = true →
       Skel.wellScopedList blocks loops (Skeleton.enterBlock block.id :: body) = true := by
@@ -555,9 +557,13 @@ theorem skeletonBlockWith_wellScoped (table : List OpSpec) (block : RawBlock Str
           subst headEq
           subst headed
           refine entered _ ?_
-          rw [Skel.wellScopedList]
-          exact Bool.and_eq_true_iff.mpr
-            ⟨by simp [Skel.wellScoped, Lowering.flowPerform], moveScoped _ _ _ hrest⟩
+          rw [Skel.wellScopedList_append]
+          refine Bool.and_eq_true_iff.mpr ⟨?_, ?_⟩
+          · cases interrupts <;>
+              simp [Skel.wellScopedList, Skel.wellScoped, Lowering.interruptPoint]
+          · rw [Skel.wellScopedList]
+            exact Bool.and_eq_true_iff.mpr
+              ⟨by simp [Skel.wellScoped, Lowering.flowPerform], moveScoped _ _ _ hrest⟩
       | atom =>
           rw [kind] at lowered
           obtain ⟨head, headEq, lowered⟩ := Option.bind_eq_some_iff.mp lowered
@@ -567,9 +573,13 @@ theorem skeletonBlockWith_wellScoped (table : List OpSpec) (block : RawBlock Str
           subst headEq
           subst headed
           refine entered _ ?_
-          rw [Skel.wellScopedList]
-          exact Bool.and_eq_true_iff.mpr
-            ⟨by simp [Skel.wellScoped, Lowering.flowAtom], moveScoped _ _ _ hrest⟩
+          rw [Skel.wellScopedList_append]
+          refine Bool.and_eq_true_iff.mpr ⟨?_, ?_⟩
+          · cases interrupts <;>
+              simp [Skel.wellScopedList, Skel.wellScoped, Lowering.interruptPoint]
+          · rw [Skel.wellScopedList]
+            exact Bool.and_eq_true_iff.mpr
+              ⟨by simp [Skel.wellScoped, Lowering.flowAtom], moveScoped _ _ _ hrest⟩
       | lit value =>
           rw [kind] at lowered
           obtain ⟨head, headEq, lowered⟩ := Option.bind_eq_some_iff.mp lowered
@@ -579,9 +589,13 @@ theorem skeletonBlockWith_wellScoped (table : List OpSpec) (block : RawBlock Str
           subst spelled
           subst headed
           refine entered _ ?_
-          rw [Skel.wellScopedList]
-          exact Bool.and_eq_true_iff.mpr
-            ⟨by simp [Skel.wellScoped, Lowering.flowLiteral], moveScoped _ _ _ hrest⟩
+          rw [Skel.wellScopedList_append]
+          refine Bool.and_eq_true_iff.mpr ⟨?_, ?_⟩
+          · cases interrupts <;>
+              simp [Skel.wellScopedList, Skel.wellScoped, Lowering.interruptPoint]
+          · rw [Skel.wellScopedList]
+            exact Bool.and_eq_true_iff.mpr
+              ⟨by simp [Skel.wellScoped, Lowering.flowLiteral], moveScoped _ _ _ hrest⟩
   | choose decision left right args =>
       rw [term] at lowered
       obtain ⟨toLeft, hleft, lowered⟩ := Option.bind_eq_some_iff.mp lowered
@@ -631,15 +645,16 @@ theorem graphOf_closed (blocks : List (RawBlock String)) (entry : BlockId) :
 `while l`, and every `break l` names a block label of the flow's own graph.
 No hypothesis is left over: `Flow.graphOf` is closed and `skeletonBlockWith`
 introduces no label of its own. -/
-theorem skeletonBody_wellScoped (table : List OpSpec) (blocks : List (RawBlock String))
+theorem skeletonBody_wellScoped (table : List OpSpec) (interrupts : Bool)
+    (blocks : List (RawBlock String))
     (entry : BlockId) {out : List Skeleton}
-    (emitted : Flow.skeletonBody table blocks entry = some out) :
+    (emitted : Flow.skeletonBody table interrupts blocks entry = some out) :
     Skel.wellScopedList (blockLabels (Flow.graphOf blocks entry)) [] out = true := by
   unfold Flow.skeletonBody at emitted
   refine emitWith_wellScoped (graphOf_closed blocks entry) ?_ emitted
   intro node transfer scopeBlocks scopeLoops own transferScoped lowered
   obtain ⟨block, _, lowered⟩ := Option.bind_eq_some_iff.mp lowered
-  refine skeletonBlockWith_wellScoped table block _ scopeBlocks scopeLoops ?_ lowered
+  refine skeletonBlockWith_wellScoped table interrupts block _ scopeBlocks scopeLoops ?_ lowered
   intro target values control moved
   obtain ⟨position, _, moved⟩ := Option.bind_eq_some_iff.mp moved
   obtain ⟨transferred, transferredEq, moved⟩ := Option.bind_eq_some_iff.mp moved
@@ -664,7 +679,7 @@ theorem render_wellScoped (rows : ServiceRow) (blocks loops : List String) (node
   match node with
   | .acquireService _ | .declare _ _ | .assign _ _ | .letTemp _ _ | .letBlockIndex _ _
   | .gotoBlock _ _ | .perform _ _ _ _ | .atom _ _ _ _ | .ret _
-  | .acquire _ _ _ _ _ _ | .leave _ | .enterBlock _ =>
+  | .acquire _ _ _ _ _ _ | .leave _ | .enterBlock _ | .interruptPoint _ =>
       simp [Skeleton.render, wellScopedList, wellScoped, Skel.wellScoped,
         Lowering.serviceAcquire]
   | .literal _ _ _ value =>
@@ -721,12 +736,12 @@ end
 
 /-- **The structured TypeScript Effect4 prints is `continue`-scoped.** The
 skeleton law, transported through `render`. -/
-theorem structuredBody_wellScoped (rows : ServiceRow) (table : List OpSpec)
+theorem structuredBody_wellScoped (rows : ServiceRow) (table : List OpSpec) (interrupts : Bool)
     (blocks : List (RawBlock String)) (entry : BlockId) {out : List Skeleton}
-    (emitted : Flow.skeletonBody table blocks entry = some out) :
+    (emitted : Flow.skeletonBody table interrupts blocks entry = some out) :
     wellScopedList (blockLabels (Flow.graphOf blocks entry)) [] (Skeleton.renderList rows out) =
       true := by
   rw [renderList_wellScoped]
-  exact skeletonBody_wellScoped table blocks entry emitted
+  exact skeletonBody_wellScoped table interrupts blocks entry emitted
 
 end Effect4.Target.Structured

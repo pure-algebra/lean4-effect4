@@ -529,6 +529,56 @@ def regionBothSucceed : RegionFlow String := regionFlow [rregion 1 none 3]
   , rblock 2 (some 1) ["number", "number"] (.leave ⟨1⟩)
   , rblock 3 none ["number"] (.plain (.ret ⟨0⟩)) ]
 
+/-! ## Interruption as decisions (M2)
+
+Three region flows whose lowering declares interrupt points. The tape in each
+golden's `tape` header is the *interrupt* tape (`Effect4.Flow.interruptRead`),
+not a choice tape: none of these flows chooses, and the interrupt site space is
+disjoint from every `choose` site (`Effect4.Flow.Point.site_ne_choose`). -/
+
+/-- Position of `put` in `rcellTable`: a `number` request answering `void`. -/
+def opPut : OperationId := ⟨1⟩
+
+/-- Unmasked delivery: one region, a `perform` inside it, the interrupt
+delivered at that point. The region closes with `interrupted` and the run ends
+`done interrupted`; there is no resource, so no finalizer runs. -/
+def interruptUnmasked : RegionFlow String := regionFlow [rregion 1 none 3]
+  [ rblock 0 none ["number"] (.enter ⟨1⟩ ⟨1⟩ (vars 1))
+  , rblock 1 (some 1) ["number"] (.plain (.perform opPut ⟨0⟩ ⟨2⟩ (vars 1)))
+  , rblock 2 (some 1) ["number", "void"] (.leave ⟨0⟩)
+  , rblock 3 none ["number"] (.plain (.ret ⟨0⟩)) ]
+
+/-- Masked deferral, then delivery at the first unmasked point. Region 1 is
+uninterruptible: the tape delivers at the `perform` inside it, the runner keeps
+the interrupt pending across that point and across the region's own `leave`
+(both masked), the region closes cleanly with `success`, and the `perform` after
+it — outside every region — delivers. -/
+def interruptMasked : RegionFlow String := regionFlow [rregion 1 none 4]
+  [ rblock 0 none ["number"] (.enter ⟨1⟩ ⟨1⟩ (vars 1))
+  , rblock 1 (some 1) ["number"] (.acquire opAcquire ⟨0⟩ opRelease ⟨2⟩ (vars 1))
+  , rblock 2 (some 1) ["number", "number"] (.plain (.perform opPut ⟨0⟩ ⟨3⟩ (vars 2)))
+  , rblock 3 (some 1) ["number", "number", "void"] (.leave ⟨1⟩)
+  , rblock 4 none ["number"] (.plain (.perform opPut ⟨0⟩ ⟨5⟩ (vars 1)))
+  , rblock 5 none ["number", "void"] (.plain (.ret ⟨0⟩)) ]
+
+/-- A finalizer observing `interrupted`: two nested regions, each holding a
+resource, the interrupt delivered at a `perform` in the inner body. Both
+regions close innermost-first with `interrupted`, and each release runs with
+that closing exit — the `finalizer r {"interrupted":true}` rows. -/
+def interruptFinalizer : RegionFlow String := regionFlow [rregion 1 none 7, rregion 2 (some 1) 6]
+  [ rblock 0 none ["number"] (.enter ⟨1⟩ ⟨1⟩ (vars 1))
+  , rblock 1 (some 1) ["number"] (.acquire opAcquire ⟨0⟩ opRelease ⟨2⟩ (vars 1))
+  , rblock 2 (some 1) ["number", "number"] (.enter ⟨2⟩ ⟨3⟩ (vars 2))
+  , rblock 3 (some 2) ["number", "number"] (.acquire opAcquire ⟨0⟩ opRelease ⟨4⟩ (vars 2))
+  , rblock 4 (some 2) ["number", "number", "number"] (.plain (.perform opPut ⟨0⟩ ⟨5⟩ (vars 3)))
+  , rblock 5 (some 2) ["number", "number", "number", "void"] (.leave ⟨1⟩)
+  , rblock 6 (some 1) ["number"] (.leave ⟨0⟩)
+  , rblock 7 none ["number"] (.plain (.ret ⟨0⟩)) ]
+
+/-- One interrupt tape entry, at the point before the `perform` of a block. -/
+def deliverAtPerform (block : Nat) : Flow.Decision :=
+  ⟨(Effect4.Flow.Point.perform ⟨block⟩).site, true⟩
+
 structure RegionEntry where
   program : RegionProgram
   input : Effects.Trace.Val := .nat 5
@@ -582,10 +632,47 @@ def regionFrontierLog (entry : RegionEntry) : Except String Effect4.Trace.Log :=
       let out := regionRunAt entry settles
       if out.1.exhausted then pure out.2
       else throw s!"the region run of {entry.program.name} did not stop at a fuel frontier"
+/-- One interrupt program of the harness: its admitted graph (with interrupt
+points declared and its masked regions named) and the interrupt tape it runs
+with. -/
+structure InterruptEntry where
+  program : RegionProgram
+  itape : Flow.Tape
+  input : Effects.Trace.Val := .nat 5
+  initial : Nat := 41
+
+def admitInterrupt? (name : String) (raw : RegionFlow String) (masked : List RegionId) :
+    Option RegionProgram :=
+  match admitRegions (tableAlphabet ⟨0⟩ rcellTable) raw with
+  | .ok flow => some { name := name, param := ("n", "number"), result := "number",
+                       table := rcellTable, flow := flow, interrupts := true, masked := masked }
+  | .error _ => none
+
+def interruptEntries : List InterruptEntry :=
+  [ ("interruptUnmasked", interruptUnmasked, ([] : List RegionId), [deliverAtPerform 1])
+  , ("interruptMasked", interruptMasked, [⟨1⟩], [deliverAtPerform 2])
+  , ("interruptFinalizer", interruptFinalizer, ([] : List RegionId), [deliverAtPerform 4])
+  ].filterMap fun (name, raw, masked, itape) =>
+    (admitInterrupt? name raw masked).map fun program =>
+      { program := program, itape := itape }
+
+/-- The runner's log of an interrupt program; an interrupted run is finished. -/
+def interruptLog (entry : InterruptEntry) : Except String Effect4.Trace.Log :=
+  let table := entry.program.table
+  let result : ((Flow.InterruptResult × Flow.Tape) × Effect4.Trace.Log) × Nat :=
+    ((Flow.runInterruptsDefault entry.program.flow entry.program.masked
+      (Flow.tableRegionService ⟨0⟩ table rcellFamily cellAtom)
+      (tableNameOf ⟨0⟩ table) [] entry.itape entry.input).run []).run entry.initial
+  match result.1.1.1 with
+  | .done _ => pure result.1.2
+  | .failed _ => pure result.1.2
+  | .interrupted => pure result.1.2
+  | other => throw s!"the interrupt run of {entry.program.name} did not finish: {repr other}"
 
 /-- The flow families of the dispatch-form module. -/
 def flowFamilies : List (ServiceRow × List FlowProgram × List RegionProgram) :=
-  [ (Cell.rows, flowEntries.map (·.program), []), (RCell.rows, [], regionEntries.map (·.program)) ]
+  [ (Cell.rows, flowEntries.map (·.program), []),
+    (RCell.rows, [], regionEntries.map (·.program) ++ interruptEntries.map (·.program)) ]
 
 /-- The families the module declares, each with its scripts. -/
 def families : List (ServiceRow × List Script) :=
@@ -665,6 +752,18 @@ def main (args : List String) : IO Unit := do
             Flow.declarationLine entry.rows entry.program)
       for entry in regionEntries do
         IO.println (entry.program.name ++ "\tempty\t" ++ Region.declarationLine RCell.rows entry.program)
+  | ["interrupt-programs"] =>
+      IO.println (String.intercalate "\n" (interruptEntries.map (·.program.name)))
+  | ["interrupt-golden", name] =>
+      match interruptEntries.find? (·.program.name == name) with
+      | some entry =>
+          match interruptLog entry with
+          | .ok log =>
+              IO.print (← admitted name log
+                (Effect4.Target.TypeScript.Trace.golden name entry.itape.wire
+                  ((Region.ruleSet RCell.rows entry.program).map Rule.id) log (face := "lean-flow")))
+          | .error message => throw (IO.userError message)
+      | none => throw (IO.userError s!"no interrupt program {name}")
   | ["scope-fixture"] =>
       -- `Scope` is imported as a type only: the generated module names
       -- `Scope.Closeable` in the service shape and never calls into it.
@@ -737,4 +836,4 @@ def main (args : List String) : IO Unit := do
               IO.println ("runner\t" ++ Effect4.Target.TypeScript.Trace.row event)
             IO.println (if machine == runner then "agree\ttrue" else "agree\tfalse")
         | .error message => throw (IO.userError message)
-  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace")
+  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program>")

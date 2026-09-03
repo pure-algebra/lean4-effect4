@@ -29,6 +29,14 @@ export class Regions extends Context.Service<Regions, {
 /** Operation rows of `Regions`, for the trace harness. */
 export const RegionsRows = { "enter": { params: 1, answer: "void" }, "leave": { params: 2, answer: "void" }, "finalizer": { params: 2, answer: "void" } }
 
+/** Service `Interrupts`: one method per operation of the Lean family. */
+export class Interrupts extends Context.Service<Interrupts, {
+  readonly point: (site: number) => Effect.Effect<void>
+}>()("Interrupts") {}
+
+/** Operation rows of `Interrupts`, for the trace harness. */
+export const InterruptsRows = { "point": { params: 1, answer: "void" } }
+
 /** Service `Cell`: one method per operation of the Lean family. */
 export class Cell extends Context.Service<Cell, {
   readonly get: Effect.Effect<number>
@@ -478,6 +486,217 @@ export const regionBothSucceed = (n: number) =>
         }
         case 3: {
           return b3p0
+        }
+      }
+    }
+  })
+
+/** Lowered from the region flow `interruptUnmasked` over `RCell` (dispatch form, nested scopes). */
+export const interruptUnmasked = (n: number) =>
+  Effect.gen(function* () {
+    const rCell = yield* RCell
+    const regions = yield* Regions
+    const interrupts = yield* Interrupts
+    let b0p0!: number
+    let b1p0!: number
+    let b2p0!: number
+    let b2p1!: void
+    let b3p0!: number
+    b0p0 = n
+    let block = 0
+    while (true) {
+      switch (block) {
+        case 0: {
+          b1p0 = b0p0
+          yield* regions.enter(1)
+          const r1 = yield* Effect.scoped(Effect.onExit(Effect.gen(function* () {
+            let block1 = 1
+            while (true) {
+              switch (block1) {
+                case 1: {
+                  yield* interrupts.point(1000003)
+                  const a1 = yield* rCell.put(b1p0)
+                  b2p0 = b1p0
+                  b2p1 = a1
+                  block1 = 2
+                  continue
+                }
+                case 2: {
+                  yield* interrupts.point(1000002)
+                  return b2p0
+                }
+              }
+            }
+          }), (exit) => regions.leave(1, exit)))
+          b3p0 = r1
+          block = 3
+          continue
+        }
+        case 3: {
+          return b3p0
+        }
+      }
+    }
+  })
+
+/** Lowered from the region flow `interruptMasked` over `RCell` (dispatch form, nested scopes). */
+export const interruptMasked = (n: number) =>
+  Effect.gen(function* () {
+    const rCell = yield* RCell
+    const regions = yield* Regions
+    const interrupts = yield* Interrupts
+    let b0p0!: number
+    let b1p0!: number
+    let b2p0!: number
+    let b2p1!: number
+    let b3p0!: number
+    let b3p1!: number
+    let b3p2!: void
+    let b4p0!: number
+    let b5p0!: number
+    let b5p1!: void
+    b0p0 = n
+    let block = 0
+    while (true) {
+      switch (block) {
+        case 0: {
+          b1p0 = b0p0
+          yield* regions.enter(1)
+          const r1 = yield* Effect.scoped(Effect.onExit(Effect.gen(function* () {
+            let block1 = 1
+            while (true) {
+              switch (block1) {
+                case 1: {
+                  const a1 = yield* Effect.acquireRelease(rCell.acquire(b1p0), (a, exit) => regions.finalizer(1, exit).pipe(Effect.andThen(rCell.release(a))))
+                  b2p0 = b1p0
+                  b2p1 = a1
+                  block1 = 2
+                  continue
+                }
+                case 2: {
+                  yield* interrupts.point(1000005)
+                  const a2 = yield* rCell.put(b2p0)
+                  b3p0 = b2p0
+                  b3p1 = b2p1
+                  b3p2 = a2
+                  block1 = 3
+                  continue
+                }
+                case 3: {
+                  yield* interrupts.point(1000002)
+                  return b3p1
+                }
+              }
+            }
+          }), (exit) => regions.leave(1, exit)))
+          b4p0 = r1
+          block = 4
+          continue
+        }
+        case 4: {
+          yield* interrupts.point(1000009)
+          const a4 = yield* rCell.put(b4p0)
+          b5p0 = b4p0
+          b5p1 = a4
+          block = 5
+          continue
+        }
+        case 5: {
+          return b5p0
+        }
+      }
+    }
+  })
+
+/** Lowered from the region flow `interruptFinalizer` over `RCell` (dispatch form, nested scopes). */
+export const interruptFinalizer = (n: number) =>
+  Effect.gen(function* () {
+    const rCell = yield* RCell
+    const regions = yield* Regions
+    const interrupts = yield* Interrupts
+    let b0p0!: number
+    let b1p0!: number
+    let b2p0!: number
+    let b2p1!: number
+    let b3p0!: number
+    let b3p1!: number
+    let b4p0!: number
+    let b4p1!: number
+    let b4p2!: number
+    let b5p0!: number
+    let b5p1!: number
+    let b5p2!: number
+    let b5p3!: void
+    let b6p0!: number
+    let b7p0!: number
+    b0p0 = n
+    let block = 0
+    while (true) {
+      switch (block) {
+        case 0: {
+          b1p0 = b0p0
+          yield* regions.enter(1)
+          const r1 = yield* Effect.scoped(Effect.onExit(Effect.gen(function* () {
+            let block1 = 1
+            while (true) {
+              switch (block1) {
+                case 1: {
+                  const a1 = yield* Effect.acquireRelease(rCell.acquire(b1p0), (a, exit) => regions.finalizer(1, exit).pipe(Effect.andThen(rCell.release(a))))
+                  b2p0 = b1p0
+                  b2p1 = a1
+                  block1 = 2
+                  continue
+                }
+                case 2: {
+                  b3p0 = b2p0
+                  b3p1 = b2p1
+                  yield* regions.enter(2)
+                  const r2 = yield* Effect.scoped(Effect.onExit(Effect.gen(function* () {
+                    let block2 = 3
+                    while (true) {
+                      switch (block2) {
+                        case 3: {
+                          const a3 = yield* Effect.acquireRelease(rCell.acquire(b3p0), (a, exit) => regions.finalizer(2, exit).pipe(Effect.andThen(rCell.release(a))))
+                          b4p0 = b3p0
+                          b4p1 = b3p1
+                          b4p2 = a3
+                          block2 = 4
+                          continue
+                        }
+                        case 4: {
+                          yield* interrupts.point(1000009)
+                          const a4 = yield* rCell.put(b4p0)
+                          b5p0 = b4p0
+                          b5p1 = b4p1
+                          b5p2 = b4p2
+                          b5p3 = a4
+                          block2 = 5
+                          continue
+                        }
+                        case 5: {
+                          yield* interrupts.point(1000004)
+                          return b5p1
+                        }
+                      }
+                    }
+                  }), (exit) => regions.leave(2, exit)))
+                  b6p0 = r2
+                  block1 = 6
+                  continue
+                }
+                case 6: {
+                  yield* interrupts.point(1000002)
+                  return b6p0
+                }
+              }
+            }
+          }), (exit) => regions.leave(1, exit)))
+          b7p0 = r1
+          block = 7
+          continue
+        }
+        case 7: {
+          return b7p0
         }
       }
     }

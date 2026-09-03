@@ -5,6 +5,7 @@ import Effect4.Data.Json
 import Effect4.Data.Optic
 import Effect4.Flow.Region
 import Effect4.Flow.Decision
+import Effect4.Flow.Interrupt
 import Effect4.Semantics.Cause
 import Effect4.Semantics.Exit
 import Effect4.Semantics.Frontier
