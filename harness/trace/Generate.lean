@@ -41,7 +41,7 @@ def valAdmissible : Effects.Trace.Val → Bool
   | .some value => valAdmissible value
 
 def outcomeAdmissible : Effects.Trace.Outcome Effects.Trace.Val → Bool
-  | .success v | .failure v => valAdmissible v
+  | .success v | .failure v | .defect v => valAdmissible v
   | .interrupted => true
 
 def eventAdmissible : Effect4.Trace.Event → Bool

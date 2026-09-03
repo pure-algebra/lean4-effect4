@@ -56,7 +56,7 @@ def jsonStringifyC0 : List String :=
 -- events and agreement is stated under the declared answer-type profile.
 -- counterexample: E4-TARGET-CE-016
 #guard val (.nat 7) == val (.int 7)
-#guard (Effect4.Trace.Event.answer "get" (.nat 7)) != (Effect4.Trace.Event.answer "get" (.int 7))
+#guard ((.answer "get" (.nat 7) : Effect4.Trace.Event) != (.answer "get" (.int 7) : Effect4.Trace.Event))
 #guard row (.answer "get" (.nat 7)) == row (.answer "get" (.int 7))
 
 -- A golden carries budget rows only when it is a resource-boundary golden, so
