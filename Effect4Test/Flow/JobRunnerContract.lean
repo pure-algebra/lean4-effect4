@@ -25,13 +25,16 @@ open Effects.Trace (Val)
 
 effect_signature Jobs where
   | connect : Handle "JobQueue" ⟪ "open a connection to the job queue", "the connection" ⟫
-  | next (conn : Handle "JobQueue") : Nat
-      ⟪ "dequeue the next job id", "0 when the queue is empty" ⟫
-  | run (job : Nat) : Nat !! String ⟪ "run a job", "aborts with the job's error" ⟫
+  | next (conn : Handle "JobQueue") : Handle "JobQueue" × Nat
+      ⟪ "dequeue the next job", "a ticket: the connection and the job id, 0 when empty" ⟫
+  | run (conn : Handle "JobQueue") (job : Nat) : Nat !! String
+      ⟪ "run a job on its connection", "aborts with the job's error" ⟫
   | attempt (job : Nat) : Except String Nat
       ⟪ "run a job, reporting its error as data", "the flow has no failure handler" ⟫
-  | ack (job : Nat) : Unit ⟪ "acknowledge a finished job" ⟫
-  | requeue (job : Nat) : Unit ⟪ "put a job back at the end of the queue" ⟫
+  | ack (conn : Handle "JobQueue") (job : Nat) : Unit
+      ⟪ "acknowledge a finished job on its connection" ⟫
+  | requeue (conn : Handle "JobQueue") (job : Nat) : Unit
+      ⟪ "put a job back at the end of its connection's queue" ⟫
   | disconnect (conn : Handle "JobQueue") : Unit ⟪ "close the connection" ⟫
 
 /-- The queue state, as `harness/trace/Generate.lean` and
@@ -63,14 +66,14 @@ def jobError (job : Nat) : String := "job " ++ toString job ++ " failed"
 
 def jobsFamily : String → Val → StateT Queue Id (Except Val Val)
   | "connect", _ => pure (.ok (.nat 0))
-  | "next", _ => do
+  | "next", conn => do
       let queue ← get
       match queue.pending with
-      | [] => pure (.ok (.nat 0))
+      | [] => pure (.ok (.pair conn (.nat 0)))
       | job :: rest => do
           set { queue with pending := rest }
-          pure (.ok (.nat job))
-  | "run", .nat job => do
+          pure (.ok (.pair conn (.nat job)))
+  | "run", .pair _ (.nat job) => do
       let queue ← get
       if queue.failuresLeft job == 0 then pure (.ok (.nat job))
       else do
@@ -82,10 +85,10 @@ def jobsFamily : String → Val → StateT Queue Id (Except Val Val)
       else do
         set (queue.consumeFailure job)
         pure (.ok (.pair (.bool false) (.str (jobError job))))
-  | "ack", .nat job => do
+  | "ack", .pair _ (.nat job) => do
       modify fun queue => { queue with acked := queue.acked ++ [job] }
       pure (.ok .unit)
-  | "requeue", .nat job => do
+  | "requeue", .pair _ (.nat job) => do
       modify fun queue =>
         { queue with pending := queue.pending ++ [job], requeued := queue.requeued ++ [job] }
       pure (.ok .unit)
@@ -95,13 +98,21 @@ def jobsFamily : String → Val → StateT Queue Id (Except Val Val)
 def jobAtom : String → Val → Val
   | "succ", .nat n => .nat (n + 1)
   | "dec", .nat n => .nat (n - 1)
+  | "snd", .pair _ (.nat job) => .nat job
   | _, _ => .unit
+
+def handleTy : String := "JobQueue"
+
+/-- What `next` answers and what the three two-parameter operations take: one
+right-nested product, so one block slot serves both readings. -/
+def ticketTy : String := "readonly [" ++ handleTy ++ ", number]"
 
 def table : List OpSpec := familyTable Jobs.rows ++
   [ { name := "unit", kind := .lit .unit, requestTy := "number", answerTy := "void" }
   , { name := "zero", kind := .lit (.nat 0), requestTy := "number", answerTy := "number" }
   , { name := "succ", kind := .atom, requestTy := "number", answerTy := "number" }
-  , { name := "dec", kind := .atom, requestTy := "number", answerTy := "number" } ]
+  , { name := "dec", kind := .atom, requestTy := "number", answerTy := "number" }
+  , { name := "snd", kind := .atom, requestTy := ticketTy, answerTy := "number" } ]
 
 def opConnect : OperationId := ⟨0⟩
 def opNext : OperationId := ⟨1⟩
@@ -114,8 +125,8 @@ def opUnit : OperationId := ⟨7⟩
 def opZero : OperationId := ⟨8⟩
 def opSucc : OperationId := ⟨9⟩
 def opDec : OperationId := ⟨10⟩
+def opSnd : OperationId := ⟨11⟩
 
-def handleTy : String := "JobQueue"
 def resultTy : String := "Result.Result<number, string>"
 
 def jblock (id : Nat) (region : Option Nat) (params : List String) (term : RegionTerm) :
@@ -130,7 +141,7 @@ def vars (n : Nat) : List Var := (List.range n).map Var.mk
 /-- `generated/traces/job/jobRunner.*.tsv` and `jobRunnerMasked.masked.tsv`. -/
 def runnerFlow : RegionFlow String :=
   { alphabet := ⟨0⟩, roots := [⟨0⟩], entry := ⟨0⟩, inputTy := "number", resultTy := "number",
-    regions := [jregion 1 none 16],
+    regions := [jregion 1 none 17],
     blocks :=
       [ jblock 0 none ["number"] (.enter ⟨1⟩ ⟨1⟩ (vars 1))
       , jblock 1 (some 1) ["number"] (.plain (.perform opUnit ⟨0⟩ ⟨2⟩ (vars 1)))
@@ -138,28 +149,30 @@ def runnerFlow : RegionFlow String :=
       , jblock 3 (some 1) ["number", handleTy] (.plain (.perform opZero ⟨0⟩ ⟨4⟩ [⟨1⟩, ⟨0⟩]))
       , jblock 4 (some 1) [handleTy, "number", "number"]
           (.plain (.perform opNext ⟨0⟩ ⟨5⟩ (vars 3)))
-      , jblock 5 (some 1) [handleTy, "number", "number", "number"]
+      , jblock 5 (some 1) [handleTy, "number", "number", ticketTy]
           (.plain (.choose ⟨1⟩ ⟨6⟩ ⟨7⟩ (vars 4)))
-      , jblock 6 (some 1) [handleTy, "number", "number", "number"]
-          (.plain (.perform opAttempt ⟨3⟩ ⟨8⟩ (vars 4)))
-      , jblock 7 (some 1) [handleTy, "number", "number", "number"] (.leave ⟨2⟩)
-      , jblock 8 (some 1) [handleTy, "number", "number", "number", resultTy]
-          (.plain (.choose ⟨2⟩ ⟨9⟩ ⟨11⟩ (vars 4)))
-      , jblock 9 (some 1) [handleTy, "number", "number", "number"]
-          (.plain (.perform opAck ⟨3⟩ ⟨10⟩ (vars 3)))
-      , jblock 10 (some 1) [handleTy, "number", "number", "void"]
+      , jblock 6 (some 1) [handleTy, "number", "number", ticketTy]
+          (.plain (.perform opSnd ⟨3⟩ ⟨8⟩ (vars 4)))
+      , jblock 7 (some 1) [handleTy, "number", "number", ticketTy] (.leave ⟨2⟩)
+      , jblock 8 (some 1) [handleTy, "number", "number", ticketTy, "number"]
+          (.plain (.perform opAttempt ⟨4⟩ ⟨9⟩ (vars 4)))
+      , jblock 9 (some 1) [handleTy, "number", "number", ticketTy, resultTy]
+          (.plain (.choose ⟨2⟩ ⟨10⟩ ⟨12⟩ (vars 4)))
+      , jblock 10 (some 1) [handleTy, "number", "number", ticketTy]
+          (.plain (.perform opAck ⟨3⟩ ⟨11⟩ (vars 3)))
+      , jblock 11 (some 1) [handleTy, "number", "number", "void"]
           (.plain (.perform opSucc ⟨2⟩ ⟨4⟩ (vars 2)))
-      , jblock 11 (some 1) [handleTy, "number", "number", "number"]
-          (.plain (.choose ⟨3⟩ ⟨12⟩ ⟨13⟩ (vars 4)))
-      , jblock 12 (some 1) [handleTy, "number", "number", "number"]
-          (.plain (.perform opDec ⟨1⟩ ⟨14⟩ [⟨0⟩, ⟨2⟩, ⟨3⟩]))
-      , jblock 13 (some 1) [handleTy, "number", "number", "number"]
-          (.plain (.perform opRequeue ⟨3⟩ ⟨15⟩ (vars 3)))
-      , jblock 14 (some 1) [handleTy, "number", "number", "number"]
+      , jblock 12 (some 1) [handleTy, "number", "number", ticketTy]
+          (.plain (.choose ⟨3⟩ ⟨13⟩ ⟨14⟩ (vars 4)))
+      , jblock 13 (some 1) [handleTy, "number", "number", ticketTy]
+          (.plain (.perform opDec ⟨1⟩ ⟨15⟩ [⟨0⟩, ⟨2⟩, ⟨3⟩]))
+      , jblock 14 (some 1) [handleTy, "number", "number", ticketTy]
+          (.plain (.perform opRequeue ⟨3⟩ ⟨16⟩ (vars 3)))
+      , jblock 15 (some 1) [handleTy, "number", ticketTy, "number"]
           (.plain (.jump ⟨6⟩ [⟨0⟩, ⟨3⟩, ⟨1⟩, ⟨2⟩]))
-      , jblock 15 (some 1) [handleTy, "number", "number", "void"]
+      , jblock 16 (some 1) [handleTy, "number", "number", "void"]
           (.plain (.jump ⟨4⟩ (vars 3)))
-      , jblock 16 none ["number"] (.plain (.ret ⟨0⟩)) ] }
+      , jblock 17 none ["number"] (.plain (.ret ⟨0⟩)) ] }
 
 /-- `generated/traces/job/jobPoison.poison.tsv`: the packet's aborting `run`. -/
 def poisonFlow : RegionFlow String :=
@@ -169,9 +182,9 @@ def poisonFlow : RegionFlow String :=
       [ jblock 0 none ["number"] (.enter ⟨1⟩ ⟨1⟩ (vars 1))
       , jblock 1 (some 1) ["number"] (.plain (.perform opUnit ⟨0⟩ ⟨2⟩ (vars 1)))
       , jblock 2 (some 1) ["number", "void"] (.acquire opConnect ⟨1⟩ opDisconnect ⟨3⟩ (vars 1))
-      , jblock 3 (some 1) ["number", handleTy] (.plain (.perform opNext ⟨1⟩ ⟨4⟩ [⟨1⟩]))
-      , jblock 4 (some 1) [handleTy, "number"] (.plain (.perform opRun ⟨1⟩ ⟨5⟩ [⟨0⟩]))
-      , jblock 5 (some 1) [handleTy, "number"] (.leave ⟨1⟩)
+      , jblock 3 (some 1) ["number", handleTy] (.plain (.perform opNext ⟨1⟩ ⟨4⟩ []))
+      , jblock 4 (some 1) [ticketTy] (.plain (.perform opRun ⟨0⟩ ⟨5⟩ []))
+      , jblock 5 (some 1) ["number"] (.leave ⟨0⟩)
       , jblock 6 none ["number"] (.plain (.ret ⟨0⟩)) ] }
 
 def choice (site : Nat) (branch : Bool) : Decision := ⟨⟨site⟩, branch⟩
@@ -220,9 +233,10 @@ def runPoison (queue : Queue) : Option (RunResult × Effect4.Trace.Log × Queue)
 #guard sitesSeparated runnerFlow && sitesSeparated poisonFlow
 #guard Effect4.Flow.interruptBase = 1000000
 
--- The interrupt sites the goldens name.
+-- The interrupt sites the goldens name: the ticket projection, the `attempt`
+-- the drain is interrupted before, and the region's own `leave`.
 #guard (Point.perform ⟨6⟩).site = ⟨1000013⟩
-#guard (Point.perform ⟨9⟩).site = ⟨1000019⟩
+#guard (Point.perform ⟨8⟩).site = ⟨1000017⟩
 #guard (Point.leave ⟨1⟩).site = ⟨1000002⟩
 
 -- The release is one operation of the alphabet and it takes what `connect`
@@ -244,20 +258,10 @@ def requeueTape : Tape :=
 
 def interruptTape : Tape := [more true, succeeded true, more true]
 
-def interruptITape : Tape := [deliverAtPerform 6 false, deliverAtPerform 6 true]
+def interruptITape : Tape := [deliverAtPerform 8 false, deliverAtPerform 8 true]
 
 def maskedTape : Tape :=
   [more true, succeeded true, more true, succeeded true, more false]
-
-/-! A second reading of the packet's `run`, spelled the way the packet writes
-it: an operation of the connection *and* the job. It is legal DSL and it has a
-legal service class on the host, and it is exactly what the flow face cannot
-perform -- `E4-TARGET-CE-022`, witnessed in section 4. A doc comment cannot
-precede `effect_signature`, so this is a module comment. -/
-
-effect_signature Paired where
-  | run (conn : Handle "JobQueue") (job : Nat) : Nat !! String
-      ⟪ "run a job on a connection", "the shape a flow cannot perform" ⟫
 
 -- Golden 1, a clean run of three jobs. The connection is acquired inside
 -- region 1, three jobs are dequeued, attempted and acknowledged, the tape
@@ -272,43 +276,46 @@ effect_signature Paired where
   , .decide 1000007 false
   , .decide 1000009 false
   , .op "next" (.nat 0)
-  , .answer "next" (.nat 1)
+  , .answer "next" (.pair (.nat 0) (.nat 1))
   , .decide 1 true
   , .decide 1000013 false
+  , .decide 1000017 false
   , .op "attempt" (.nat 1)
   , .answer "attempt" (.pair (.bool true) (.nat 1))
   , .decide 2 true
-  , .decide 1000019 false
-  , .op "ack" (.nat 1)
-  , .answer "ack" .unit
   , .decide 1000021 false
+  , .op "ack" (.pair (.nat 0) (.nat 1))
+  , .answer "ack" .unit
+  , .decide 1000023 false
   , .decide 1000009 false
   , .op "next" (.nat 0)
-  , .answer "next" (.nat 2)
+  , .answer "next" (.pair (.nat 0) (.nat 2))
   , .decide 1 true
   , .decide 1000013 false
+  , .decide 1000017 false
   , .op "attempt" (.nat 2)
   , .answer "attempt" (.pair (.bool true) (.nat 2))
   , .decide 2 true
-  , .decide 1000019 false
-  , .op "ack" (.nat 2)
-  , .answer "ack" .unit
   , .decide 1000021 false
+  , .op "ack" (.pair (.nat 0) (.nat 2))
+  , .answer "ack" .unit
+  , .decide 1000023 false
   , .decide 1000009 false
   , .op "next" (.nat 0)
-  , .answer "next" (.nat 3)
+  , .answer "next" (.pair (.nat 0) (.nat 3))
   , .decide 1 true
   , .decide 1000013 false
+  , .decide 1000017 false
   , .op "attempt" (.nat 3)
   , .answer "attempt" (.pair (.bool true) (.nat 3))
   , .decide 2 true
-  , .decide 1000019 false
-  , .op "ack" (.nat 3)
-  , .answer "ack" .unit
   , .decide 1000021 false
+  , .op "ack" (.pair (.nat 0) (.nat 3))
+  , .answer "ack" .unit
+  , .decide 1000023 false
   , .decide 1000009 false
   , .op "next" (.nat 0)
-  , .answer "next" (.nat 0)
+  , .answer "next" (.pair (.nat 0) (.nat 0))
   , .decide 1 false
   , .decide 1000002 false
   , .leave 1 (.success (.nat 3))
@@ -331,37 +338,40 @@ effect_signature Paired where
   , .decide 1000007 false
   , .decide 1000009 false
   , .op "next" (.nat 0)
-  , .answer "next" (.nat 1)
+  , .answer "next" (.pair (.nat 0) (.nat 1))
   , .decide 1 true
   , .decide 1000013 false
+  , .decide 1000017 false
   , .op "attempt" (.nat 1)
   , .answer "attempt" (.pair (.bool true) (.nat 1))
   , .decide 2 true
-  , .decide 1000019 false
-  , .op "ack" (.nat 1)
-  , .answer "ack" .unit
   , .decide 1000021 false
+  , .op "ack" (.pair (.nat 0) (.nat 1))
+  , .answer "ack" .unit
+  , .decide 1000023 false
   , .decide 1000009 false
   , .op "next" (.nat 0)
-  , .answer "next" (.nat 2)
+  , .answer "next" (.pair (.nat 0) (.nat 2))
   , .decide 1 true
   , .decide 1000013 false
+  , .decide 1000017 false
   , .op "attempt" (.nat 2)
   , .answer "attempt" (.pair (.bool false) (.str "job 2 failed"))
   , .decide 2 false
   , .decide 3 true
-  , .decide 1000025 false
+  , .decide 1000027 false
   , .decide 1000013 false
+  , .decide 1000017 false
   , .op "attempt" (.nat 2)
   , .answer "attempt" (.pair (.bool true) (.nat 2))
   , .decide 2 true
-  , .decide 1000019 false
-  , .op "ack" (.nat 2)
-  , .answer "ack" .unit
   , .decide 1000021 false
+  , .op "ack" (.pair (.nat 0) (.nat 2))
+  , .answer "ack" .unit
+  , .decide 1000023 false
   , .decide 1000009 false
   , .op "next" (.nat 0)
-  , .answer "next" (.nat 0)
+  , .answer "next" (.pair (.nat 0) (.nat 0))
   , .decide 1 false
   , .decide 1000002 false
   , .leave 1 (.success (.nat 2))
@@ -382,25 +392,27 @@ effect_signature Paired where
   , .decide 1000007 false
   , .decide 1000009 false
   , .op "next" (.nat 0)
-  , .answer "next" (.nat 2)
+  , .answer "next" (.pair (.nat 0) (.nat 2))
   , .decide 1 true
   , .decide 1000013 false
+  , .decide 1000017 false
   , .op "attempt" (.nat 2)
   , .answer "attempt" (.pair (.bool false) (.str "job 2 failed"))
   , .decide 2 false
   , .decide 3 true
-  , .decide 1000025 false
+  , .decide 1000027 false
   , .decide 1000013 false
+  , .decide 1000017 false
   , .op "attempt" (.nat 2)
   , .answer "attempt" (.pair (.bool false) (.str "job 2 failed"))
   , .decide 2 false
   , .decide 3 false
-  , .decide 1000027 false
-  , .op "requeue" (.nat 2)
+  , .decide 1000029 false
+  , .op "requeue" (.pair (.nat 0) (.nat 2))
   , .answer "requeue" .unit
   , .decide 1000009 false
   , .op "next" (.nat 0)
-  , .answer "next" (.nat 2)
+  , .answer "next" (.pair (.nat 0) (.nat 2))
   , .decide 1 false
   , .decide 1000002 false
   , .leave 1 (.success (.nat 0))
@@ -423,21 +435,23 @@ effect_signature Paired where
   , .decide 1000007 false
   , .decide 1000009 false
   , .op "next" (.nat 0)
-  , .answer "next" (.nat 1)
+  , .answer "next" (.pair (.nat 0) (.nat 1))
   , .decide 1 true
   , .decide 1000013 false
+  , .decide 1000017 false
   , .op "attempt" (.nat 1)
   , .answer "attempt" (.pair (.bool true) (.nat 1))
   , .decide 2 true
-  , .decide 1000019 false
-  , .op "ack" (.nat 1)
-  , .answer "ack" .unit
   , .decide 1000021 false
+  , .op "ack" (.pair (.nat 0) (.nat 1))
+  , .answer "ack" .unit
+  , .decide 1000023 false
   , .decide 1000009 false
   , .op "next" (.nat 0)
-  , .answer "next" (.nat 2)
+  , .answer "next" (.pair (.nat 0) (.nat 2))
   , .decide 1 true
-  , .decide 1000013 true
+  , .decide 1000013 false
+  , .decide 1000017 true
   , .leave 1 .interrupted
   , .finalizer 1 .interrupted
   , .op "disconnect" (.nat 0)
@@ -459,31 +473,33 @@ effect_signature Paired where
   , .decide 1000007 false
   , .decide 1000009 false
   , .op "next" (.nat 0)
-  , .answer "next" (.nat 1)
+  , .answer "next" (.pair (.nat 0) (.nat 1))
   , .decide 1 true
   , .decide 1000013 false
+  , .decide 1000017 false
   , .op "attempt" (.nat 1)
   , .answer "attempt" (.pair (.bool true) (.nat 1))
   , .decide 2 true
-  , .decide 1000019 false
-  , .op "ack" (.nat 1)
-  , .answer "ack" .unit
   , .decide 1000021 false
+  , .op "ack" (.pair (.nat 0) (.nat 1))
+  , .answer "ack" .unit
+  , .decide 1000023 false
   , .decide 1000009 false
   , .op "next" (.nat 0)
-  , .answer "next" (.nat 2)
+  , .answer "next" (.pair (.nat 0) (.nat 2))
   , .decide 1 true
-  , .decide 1000013 true
+  , .decide 1000013 false
+  , .decide 1000017 true
   , .op "attempt" (.nat 2)
   , .answer "attempt" (.pair (.bool true) (.nat 2))
   , .decide 2 true
-  , .decide 1000019 false
-  , .op "ack" (.nat 2)
-  , .answer "ack" .unit
   , .decide 1000021 false
+  , .op "ack" (.pair (.nat 0) (.nat 2))
+  , .answer "ack" .unit
+  , .decide 1000023 false
   , .decide 1000009 false
   , .op "next" (.nat 0)
-  , .answer "next" (.nat 0)
+  , .answer "next" (.pair (.nat 0) (.nat 0))
   , .decide 1 false
   , .decide 1000002 false
   , .leave 1 (.success (.nat 2))
@@ -501,8 +517,8 @@ effect_signature Paired where
   , .op "connect" .unit
   , .answer "connect" (.nat 0)
   , .op "next" (.nat 0)
-  , .answer "next" (.nat 7)
-  , .op "run" (.nat 7)
+  , .answer "next" (.pair (.nat 0) (.nat 7))
+  , .op "run" (.pair (.nat 0) (.nat 7))
   , .failed "run" (.str "job 7 failed")
   , .leave 1 (.failure (.str "job 7 failed"))
   , .finalizer 1 (.failure (.str "job 7 failed"))
@@ -542,17 +558,26 @@ golden -- the interrupted and the failing ones included.
 
 Each is a fact about the pipeline, stated over the actual declarations. The
 full account is `docs/research/2026-09-03-job-runner.md`; the register rows are
-`E4-FLOW-CE-026`, `E4-FLOW-CE-027` and `E4-TARGET-CE-022`, with their attack
-batteries under `Effect4Test/Counterexamples/`.
+`E4-FLOW-CE-026`, `E4-FLOW-CE-027` and `E4-FLOW-CE-028`, with their attack
+batteries under `Effect4Test/Counterexamples/`. `E4-TARGET-CE-022` -- a
+two-parameter operation has no flow request spelling -- is repaired: the row
+below is the repair, not the refusal.
 -/
 
--- `E4-TARGET-CE-022`. A two-parameter operation has no flow request spelling:
--- `familyTable` gives up and writes `"unsupported"`, which nothing downstream
--- refuses. This is why `run : Handle × Nat → Nat !! String` became
--- `run : Nat → Nat !! String` with the connection carried by `connect`,
--- `next` and `disconnect`.
-#guard ((familyTable Paired.rows).find? (·.name == "run")).map (·.requestTy) = some "unsupported"
-#guard ((familyTable Jobs.rows).find? (·.name == "run")).map (·.requestTy) = some "number"
+-- The packet's `run : Handle × Nat → Nat !! String`, performed. Its request is
+-- the right-nested product spelling, its arity is two, and the lowering
+-- destructures the one request slot at the call.
+#guard ((familyTable Jobs.rows).find? (·.name == "run")).map (·.requestTy) =
+  some "readonly [JobQueue, number]"
+#guard ((familyTable Jobs.rows).find? (·.name == "run")).map OpSpec.arity = some 2
+#guard ((familyTable Jobs.rows).find? (·.name == "attempt")).map (·.requestTy) = some "number"
+
+-- `E4-FLOW-CE-028`. The pair is not *built* by the flow: `plan` hands a service
+-- one `Val`, so a two-parameter request can only occupy a slot some answer
+-- already filled. `next` is that answer, and its spelling is exactly `run`'s
+-- request -- which is why one slot serves both.
+#guard ((familyTable Jobs.rows).find? (·.name == "next")).map (·.answerTy) =
+  ((familyTable Jobs.rows).find? (·.name == "run")).map (·.requestTy)
 
 -- `E4-FLOW-CE-026`. An aborting operation ends the run: the poison golden's log
 -- has no row after `run`'s own `failed` except the region's close, and the
@@ -569,8 +594,8 @@ batteries under `Effect4Test/Counterexamples/`.
 -- The packet's third predicted gap, "the interrupt tape is per program not per
 -- job", is half refuted. A tape whose only entry names the `attempt` point does
 -- deliver at the *first* visit, so no job is ever acknowledged...
-#guard (runInterrupted [] [more true] [deliverAtPerform 6 true] (Queue.seed [1, 2, 3])).map
-    (fun r => r.2.1.any fun event => event == .op "ack" (.nat 1)) = some false
+#guard (runInterrupted [] [more true] [deliverAtPerform 8 true] (Queue.seed [1, 2, 3])).map
+    (fun r => r.2.1.any fun event => event == .op "ack" (.pair (.nat 0) (.nat 1))) = some false
 -- ...but `interruptRead` consumes the head only when it names the site, so a
 -- non-delivering entry at the same site moves delivery to the next occurrence.
 -- That is how the mid-queue golden interrupts the second job after the first is
@@ -578,7 +603,7 @@ batteries under `Effect4Test/Counterexamples/`.
 -- because a tape entry is a site and a bit and never sees a value. No register
 -- row: the tape does what it says it does.
 #guard (runInterrupted [] interruptTape interruptITape (Queue.seed [1, 2, 3])).map
-    (fun r => r.2.1.any fun event => event == .op "ack" (.nat 1)) = some true
+    (fun r => r.2.1.any fun event => event == .op "ack" (.pair (.nat 0) (.nat 1))) = some true
 
 /-! ## 5. Axiom report
 

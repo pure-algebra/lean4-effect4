@@ -26,7 +26,8 @@ open Effects.Trace (Val ToVal)
 #check (@Effect4.Target.EffectV4.Spelling.wireDefault : Spelling → Val)
 #check (@Effect4.Target.EffectV4.bindingName : String → Bool)
 #check @Effect4.Target.EffectV4.AtomRow
-#check (@Effect4.Target.EffectV4.atomsModule : List AtomRow → String)
+#check (@Effect4.Target.EffectV4.atomsModule :
+  List AtomRow → List TypeScript.Import → TypeScript.Style → String)
 
 /-! ## Depth one and two: the spellings this packet inherits -/
 

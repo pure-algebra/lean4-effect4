@@ -36,11 +36,21 @@ deriving DecidableEq, Repr, Inhabited
 structure OpSpec where
   name : String
   kind : OpKind
-  /-- TypeScript spelling of the request type; `void` for a nullary operation. -/
+  /-- TypeScript spelling of the request type; `void` for a nullary operation,
+  and the right-nested tuple spelling for an operation of two or more
+  parameters. -/
   requestTy : String
   /-- TypeScript spelling of the answer type. -/
   answerTy : String
+  /-- The parameters of a family operation, binder and TypeScript spelling
+  each. Empty on the hand-written rows of a table, which are unary. -/
+  params : List (String × String) := []
 deriving Repr, Inhabited
+
+/-- How many arguments the host call of this operation takes. A request slot of
+arity two or more holds the whole tuple and is destructured at the call
+(`Lowering.tupleArgs`). -/
+def OpSpec.arity (spec : OpSpec) : Nat := max 1 spec.params.length
 
 /-- The row of a table position. -/
 def OpSpec.at (table : List OpSpec) (op : Fin table.length) : OpSpec := table[op]
@@ -153,16 +163,27 @@ def materialize (atoms : AtomTable) : Nat → Build → PureTerm → Option (Bui
       some (b, b.last, answerTy)
   | _, _, .app _ _ => none
 
-/-- The family's operations, in row order, as the head of the table. -/
+/-- The request spelling of a parameter list: `void` for none, the parameter's
+own spelling for one, and the right-nested product spelling for two or more.
+This is exactly what `Effects.Trace.ToVal` builds from the parameter product on
+the Lean face, and what `Spelling.prod` renders, so the two faces read one
+request slot the same way. -/
+def requestSpelling : List (String × String) → String
+  | [] => "void"
+  | [(_, ty)] => ty
+  | (_, ty) :: rest => "readonly [" ++ ty ++ ", " ++ requestSpelling rest ++ "]"
+
+/-- The family's operations, in row order, as the head of the table. Every row
+has a request spelling, whatever its arity: an operation of two or more
+parameters is performed with one request slot holding the tuple
+(`E4-TARGET-CE-022`, repaired). -/
 def familyTable (rows : ServiceRow) : List OpSpec :=
   rows.ops.map fun row =>
     { name := row.name
       kind := .family
-      requestTy := match row.tsParams with
-        | [] => "void"
-        | [(_, ty)] => ty
-        | _ => "unsupported"
-      answerTy := row.tsAnswer }
+      requestTy := requestSpelling row.tsParams
+      answerTy := row.tsAnswer
+      params := row.tsParams }
 
 def familyIndex (rows : ServiceRow) (op : String) : Option Nat :=
   rows.ops.findIdx? fun row => row.name == op
@@ -186,7 +207,9 @@ def embedStep (rows : ServiceRow) (atoms : AtomTable) (b : Build) : Step → Opt
 
 /-- Embed a straight-line script as a Flow v2 graph over a table alphabet.
 Refuses operations with two or more parameters and atoms with an argument
-list other than one; the graph is then admitted by `Effects.admit`. -/
+list other than one; the graph is then admitted by `Effects.admit`. The
+restriction is this embedding's, not the alphabet's: a hand-written region flow
+performs a two-parameter operation from one tuple slot. -/
 def Script.toFlow (rows : ServiceRow) (atoms : AtomTable) (script : Script) :
     Option (List OpSpec × RawFlow String) := do
   let start : Build :=

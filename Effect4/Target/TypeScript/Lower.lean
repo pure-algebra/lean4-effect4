@@ -12,7 +12,8 @@ tags, goldens, host receipts, property batches, type receipts and proofs to.
 Straight-line lowering from a `Script` lives in
 `Effect4/Target/TypeScript/EffectV4.lean` beside the rows; dispatch-form
 lowering from a checked flow lives in `FlowLower.lean` and its eight rules
-are the second half of the census.
+are the second half of the census. `perform-tuple` is appended last so the
+positions the contract batteries pin do not move.
 -/
 
 namespace Effect4.Target.EffectV4
@@ -50,6 +51,9 @@ inductive Rule where
   | structuredContinue
   | structuredBreak
   | dispatchFallback
+  /-- A `perform` of an operation with two or more parameters: the request slot
+  holds the tuple and the call destructures it (`Skeleton.lean`). -/
+  | performTuple
 deriving DecidableEq, Repr
 
 namespace Rule
@@ -82,6 +86,7 @@ def id : Rule → String
   | structuredContinue => "structured-continue"
   | structuredBreak => "structured-break"
   | dispatchFallback => "dispatch-fallback"
+  | performTuple => "perform-tuple"
 
 /-- Every rule, in ledger order. -/
 def all : List Rule :=
@@ -89,7 +94,8 @@ def all : List Rule :=
    dispatchLoop, blockCase, paramMove, flowPerform, flowAtom, flowLiteral, chooseIf, flowRet,
    interruptPoint,
    regionEnter, regionAcquire, regionLeave, regionMasked,
-   structuredLoop, structuredMerge, structuredContinue, structuredBreak, dispatchFallback]
+   structuredLoop, structuredMerge, structuredContinue, structuredBreak, dispatchFallback,
+   performTuple]
 
 theorem all_nodup : all.Nodup := by decide
 

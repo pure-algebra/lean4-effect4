@@ -10,6 +10,12 @@
  * directory. The seeded per-job failure schedule lives in the file, so a
  * failure on the host is the same failure the Lean handler models.
  *
+ * `next` hands out a *ticket*: the connection it dequeued from and the job id.
+ * `run`, `ack` and `requeue` are two-parameter operations over that ticket, so
+ * each of them reads the file through the connection it was handed rather than
+ * through a module-level one. The flow performs them from a single request
+ * slot holding the ticket, destructured at the call.
+ *
  * `EFFECT4_PROGRAM` is the *golden* name (`jobRunner.clean`, `jobPoison.poison`,
  * …), not just the program name: four goldens share the `jobRunner` body and
  * differ only in their queue seed and their tapes, and the seed is what makes
@@ -115,7 +121,8 @@ const interrupts = {
 const jobDuration = "2 millis"
 
 /** The one connection a run opens, kept so the report can say whether the
- * release actually closed it. */
+ * release actually closed it. `attempt` is the only operation that still reads
+ * it: it names the job alone, and a flow cannot pair the connection back on. */
 let connection: JobQueue | null = null
 
 const live = (seed: QueueState) => ({
@@ -127,14 +134,13 @@ const live = (seed: QueueState) => ({
     Effect.sync(() => {
       const state = readQueue(conn)
       const job = state.pending[0]
-      if (job === undefined) return 0
+      if (job === undefined) return [conn, 0] as const
       writeQueue(conn, { ...state, pending: state.pending.slice(1) })
-      return job
+      return [conn, job] as const
     }),
-  run: (job: number) =>
+  run: (conn: JobQueue, job: number) =>
     Effect.gen(function* () {
       yield* Effect.sleep(jobDuration)
-      const conn = connection!
       const state = readQueue(conn)
       if (failuresLeft(state, job) === 0) return job
       writeQueue(conn, consumeFailure(state, job))
@@ -149,15 +155,13 @@ const live = (seed: QueueState) => ({
       writeQueue(conn, consumeFailure(state, job))
       return Result.fail(jobError(job))
     }) as Effect.Effect<Result.Result<number, string>>,
-  ack: (job: number) =>
+  ack: (conn: JobQueue, job: number) =>
     Effect.sync(() => {
-      const conn = connection!
       const state = readQueue(conn)
       writeQueue(conn, { ...state, acked: [...state.acked, job] })
     }),
-  requeue: (job: number) =>
+  requeue: (conn: JobQueue, job: number) =>
     Effect.sync(() => {
-      const conn = connection!
       const state = readQueue(conn)
       writeQueue(conn, {
         ...state,
@@ -234,5 +238,5 @@ console.log(JSON.stringify({
   expectYields: process.env.EFFECT4_EXPECT_YIELDS === "1",
   patchedFrames,
   released,
-  foreign: ["succ@./atoms.ts", "dec@./atoms.ts"]
+  foreign: ["succ@./atoms.ts", "dec@./atoms.ts", "snd@./atoms.ts"]
 }))
