@@ -4,6 +4,7 @@ Expected union: `propext` and `Quot.sound`.
 -/
 
 import Effect4.Semantics.Runs
+import Effect4.Semantics.Fuel
 
 #print axioms Effect4.Flow.Tape.read_answered_length
 #print axioms Effect4.Flow.step_choose_consumes_one
@@ -14,3 +15,19 @@ import Effect4.Semantics.Runs
 #print axioms Effect4.Flow.run_checked_not_stuck
 #print axioms Effect4.Flow.loop_fuel_mono
 #print axioms Effect4.Flow.run_fuel_mono
+
+-- The fuel argument (`Effect4/Semantics/Fuel.lean`).
+#print axioms Effect4.Flow.lookupBlock_id
+#print axioms Effect4.Flow.mem_blockIds_of_lookup
+#print axioms Effect4.Flow.plan_shape
+#print axioms Effect4.Flow.step_progress
+#print axioms Effect4.Flow.LoopBudget.segment_lt
+#print axioms Effect4.Flow.loop_budget_not_exhausted
+#print axioms Effect4.Flow.loop_fuelFor_not_exhausted
+#print axioms Effect4.Flow.run_fuelFor_finishes
+#print axioms Effect4.Flow.runDefault_finishes
+#print axioms Effect4.Flow.run_fuel_ge_finishes
+#print axioms Effect4.Flow.step_not_failed
+#print axioms Effect4.Flow.loop_not_failed
+#print axioms Effect4.Flow.run_not_failed
+#print axioms Effect4.Flow.run_fuelFor_answered

@@ -34,6 +34,7 @@ row is unclaimed.
 
 | File or tree | Claimed by | State |
 | --- | --- | --- |
+| `Effect4/Semantics/Fuel.lean`, `Effect4/Target/TypeScript/StructureLaws.lean`, `Effect4Test/Target/TypeScript/StructureLaws{Contract,AxiomReport}.lean` | Claude (trace-lane owed theorems, 2026-09-03) | proved and green in worktree `agent-a7d1f74bf61e7c52b`; uncommitted. Also touched: `Effect4.lean` (two imports), `Effect4Test.lean` (two imports), `Effect4Test/Flow/Runner{Contract,AxiomReport}.lean`, `Effect4Test/Audit/AxiomGate.lean` (two exact-declaration exemptions), `test/contracts/flow-runner.contract.md`, `test/contracts/flow-structured-lowering.contract.md`, `docs/TRACE-DAG.md` (`structured-agreement` row), `test/counterexamples/REGISTER.md` (`E4-TARGET-CE-013` row) |
 | `Effect4/Data/Row.lean` | Codex | in progress |
 | `test/contracts/data-row.contract.md`, `Effect4Test/Data/RowContract.lean` | Codex | frozen, red |
 | `Effect4Test/Concurrency/**` | Codex | in progress, red |
