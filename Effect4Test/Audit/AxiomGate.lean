@@ -93,6 +93,15 @@ private def choiceImplementationDeclarations : List Name :=
   , ``Effect4.Target.TypeScript.EffectfulField.source?
   , ``Effect4.Target.TypeScript.EffectfulField.generate?
   , ``Effect4.Target.TypeScript.EffectfulField.source_contains_directional_rows
+  -- The two label-scoping laws whose *statements* name Effect4's own block
+  -- lowering. `Flow.lowerBlockWith` and `Flow.structuredBody` already cross the
+  -- boundary above (they spell `a<block>` and compare `spec.requestTy`), so a
+  -- theorem about their output inherits the crossing. The scoping law itself —
+  -- `emitNode_wellScoped`, `emitWith_wellScoped` over the package's `emitWith`
+  -- — is `String`-free and stays at the ceiling; only these two discharges of
+  -- its `BodyScoped` hypothesis are admitted, by exact declaration.
+  , ``Effect4.Target.Structured.lowerBlockWith_wellScoped
+  , ``Effect4.Target.Structured.structuredBody_wellScoped
   ]
 
 /-- Private rendering helpers are identified by exact owner and original name,

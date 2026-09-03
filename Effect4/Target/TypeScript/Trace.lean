@@ -41,6 +41,7 @@ def val : Val → String
 def outcome : Outcome Val → String
   | .success v => "{\"success\":" ++ val v ++ "}"
   | .failure e => "{\"failure\":" ++ val e ++ "}"
+  | .defect e => "{\"defect\":" ++ val e ++ "}"
   | .interrupted => "{\"interrupted\":true}"
 
 /-- One event as a tab-separated row. -/
