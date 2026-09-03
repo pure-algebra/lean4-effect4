@@ -28,15 +28,15 @@ def flip : Program Coin Bool := .vis () .pure
 def twice : Program Coin Nat :=
   .vis () fun a => .vis () fun b => .pure (cond a 1 0 + cond b 1 0)
 
--- Every path of `twice` counts at most two, under any specification.
-example : Logic.wlp (Spec.any Coin) (fun n => n ≤ 2) twice := by
+/-- Every path of `twice` counts at most two, under any specification. -/
+theorem twice_wlp_any : Logic.wlp (Spec.any Coin) (fun n => n ≤ 2) twice := by
   unfold Logic.wlp twice
   simp only [box]
   intro a _ b _
   cases a <;> cases b <;> decide
 
--- And it is total under `Spec.any`, so the total reading holds too (DB-06).
-example : Logic.wp (Spec.any Coin) (fun n => n ≤ 2) twice :=
+/-- And it is total under `Spec.any`, so the total reading holds too (DB-06). -/
+theorem twice_wp_any : Logic.wp (Spec.any Coin) (fun n => n ≤ 2) twice :=
   (wp_iff_wlp_and_total _ _ _).2 ⟨by
     unfold Logic.wlp twice
     simp only [box]
@@ -46,10 +46,11 @@ example : Logic.wp (Spec.any Coin) (fun n => n ≤ 2) twice :=
     simp only [Logic.total]
     exact ⟨⟨true, trivial⟩, fun _ _ => ⟨⟨true, trivial⟩, fun _ _ => trivial⟩⟩⟩
 
--- The heads-only specification: the box decides the count exactly.
+/-- The heads-only specification. -/
 def headsOnly : Spec Coin := fun _ answer => answer = true
 
-example : Logic.wlp headsOnly (fun n => n = 2) twice := by
+/-- The box over `headsOnly` decides the count exactly. -/
+theorem twice_wlp_headsOnly : Logic.wlp headsOnly (fun n => n = 2) twice := by
   unfold Logic.wlp twice
   simp only [box]
   intro a ha b hb
@@ -60,9 +61,17 @@ example : Logic.wlp headsOnly (fun n => n = 2) twice := by
 -- holds, and the total reading of *nothing* does — `wp` is not `wlp`.
 def unanswerable : Spec Coin := fun _ _ => False
 
-example : Logic.wlp unanswerable (fun _ => False) flip := fun _ h => h.elim
-example : ¬ Logic.total unanswerable flip := fun ⟨⟨_, h⟩, _⟩ => h
-example : ¬ Logic.wp unanswerable (fun _ => True) flip := fun ⟨⟨_, h⟩, _⟩ => h
+/-- With no admissible answer the liberal reading of anything holds … -/
+theorem flip_wlp_unanswerable : Logic.wlp unanswerable (fun _ => False) flip :=
+  fun _ h => h.elim
+
+/-- … while `flip` is not total under it … -/
+theorem flip_not_total_unanswerable : ¬ Logic.total unanswerable flip :=
+  fun ⟨⟨_, h⟩, _⟩ => h
+
+/-- … so the total reading of nothing does: `wp` is not `wlp`. -/
+theorem flip_not_wp_unanswerable : ¬ Logic.wp unanswerable (fun _ => True) flip :=
+  fun ⟨⟨_, h⟩, _⟩ => h
 
 -- The oracle reading evaluates.
 #guard evalOracle (fun _ => true) twice = 2

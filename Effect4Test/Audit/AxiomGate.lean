@@ -25,6 +25,20 @@ an error and leaves the build green. The source pass is what closes that hole:
 it visits every token of every audited file whether or not the surrounding
 declaration is named. `forbiddenTrustTokens` records what it refuses and why.
 
+## The policy on `example`
+
+An `example` stays an `example` when it is a sanity check — a shape that would
+read the same as a comment, and that nothing cites. The tokenizer reaches
+inside it now, so nothing trust-relevant hides there.
+
+A *receipt* becomes a named `theorem` where it is cited. A receipt that leaves
+no constant cannot be named by an axiom report, joined by
+`Effect4Test/Audit/RuntimeCoverage.lean`, or listed by a proof-graph trust
+edge: it is checked once at its declaration site and then vanishes. The six
+DB-06 modality receipts in `Effect4Test/Semantics/LogicContract.lean` and the
+per-program receipt `Effect4/Meta/Derive.lean` emits for every `effect_program`
+were `example`s and are theorems now.
+
 ## The ruling on `opaque`
 
 `opaque f : T := body` is admitted. The kernel checks `body`, the constant

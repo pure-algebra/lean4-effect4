@@ -46,9 +46,15 @@ emits `incr : Nat → Effects.Program Cell.Sig Nat` and `incr.script : Script`,
 and beside them one receipt, checked by `rfl` at the declaration site:
 
 ```lean
-example : Effect4.Target.EffectV4.performedNames Cell.Name.spelling Cell.answerDefault
-    (incr default) = Effect4.Target.EffectV4.Script.operationNames incr.script := rfl
+theorem incr.performedNames_eq :
+    Effect4.Target.EffectV4.performedNames Cell.Name.spelling Cell.answerDefault
+      (incr default) = Effect4.Target.EffectV4.Script.operationNames incr.script := rfl
 ```
+
+It is a named theorem rather than an `example` so that it leaves a constant:
+an `example` is checked once and then gone — no `#print axioms`, no census
+join, nothing for a proof-graph trust edge or the axiom gate to name. The name
+is `<program>.performedNames_eq`, one per `effect_program`.
 
 The elaborator builds the `Program` value and the `Script` from the same steps
 but by two independent traversals, and until packet D5 nothing related them.
@@ -397,10 +403,12 @@ elab_rules : command
     let stepList ← listLit stepRows.reverse
     elabCommand (← `(def $scriptName : Effect4.Target.EffectV4.Script := { family := $(strLit famId.getId.toString), name := $(strLit name.getId.toString), param := ($(strLit param.getId.toString), $(strLit (← tsOfType paramTy))), result := $(strLit (← tsOfType result)), steps := $stepList }))
     -- The per-program receipt: the value and the script perform the same
-    -- operations in the same order (packet D5).
+    -- operations in the same order (packet D5). A named theorem, so the
+    -- receipt survives its own elaboration and can be cited.
     let spellingName := mkIdent (famId.getId ++ `Name ++ `spelling)
     let answerDefaultName := mkIdent (famId.getId ++ `answerDefault)
-    elabCommand (← `(example :
+    let receiptName := mkIdent (name.getId ++ `performedNames_eq)
+    elabCommand (← `(theorem $receiptName :
       Effect4.Target.EffectV4.performedNames (F := $famId) $spellingName $answerDefaultName
           ($name default)
         = Effect4.Target.EffectV4.Script.operationNames $scriptName := by rfl))
