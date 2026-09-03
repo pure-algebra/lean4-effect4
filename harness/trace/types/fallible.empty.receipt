@@ -1,5 +1,5 @@
 format	effect4-type-receipt-v1
 program	fallible.empty
 typescript	7.0.2
-fixture.d.ts	sha256=a260bfd5ea22e3e20643b577061e547550258b2df072b6f3be3722d56d055c6e
+fixture.d.ts	sha256=e135d44cf638ea05b54aa6926a72e8e6a153198c17463234013587648cc752fd
 line	export declare const fallible: (n: number) => Effect.Effect<number, string, FCell>;

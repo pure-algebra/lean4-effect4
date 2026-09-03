@@ -28,7 +28,8 @@
  },
  "foreign": [
   "succ@./atoms.ts",
-  "orZero@./atoms.ts"
+  "orZero@./atoms.ts",
+  "firstOr@./atoms.ts"
  ],
  "primitives": 27,
  "results": {
