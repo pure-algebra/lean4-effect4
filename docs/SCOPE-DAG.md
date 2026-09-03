@@ -1,13 +1,15 @@
 # Scope runtime proof DAG
 
-Status: breaker-frozen, RED, 2026-09-01
+Status: base implementation present; generated assurance and host connections
+remain open. The original frozen requirements below are retained, with the
+separate close-stepping continuation recorded at the end (2026-09-03).
 
-This document is the bounded ownership and proof graph for `Effect4.Scope` as a
-first-order state machine. It is not an Effect compatibility claim, a fiber, a
-continuation machine, or a cutover approval. `Effect4/Runtime/Scope.lean`
-remains an annotation-only stub until the red contract in
-`test/contracts/scope.contract.md` has an independently implemented green proof
-graph.
+This document owns the bounded Scope state machine and its independently
+stepping close interpreter. `Effect4/Runtime/Scope.lean` implements the base
+contract; `Effect4/Runtime/ScopeMachine.lean` implements the later request and
+response contract. These local implementations do not close the generated
+assurance, fiber, region-compilation or host connections, and do not approve
+cutover.
 
 The pinned source is `effect@4.0.0-rc.112` as vendored under
 `vendor/effect-4.0.0-rc.112/src/`. Its reading is
@@ -359,3 +361,48 @@ machine.
 
 Six of the fifteen assigned rows are explicitly **partial**. Reporting any of
 them green on the strength of this packet would be a false green.
+
+
+## Scope close stepping continuation, 2026-09-03
+
+The independently frozen packet is `test/contracts/scope-machine.contract.md`
+at `e5a2bdb835b414ef329c1067ef95bec467dceae6`. Its production owner is
+`Effect4/Runtime/ScopeMachine.lean`, importing only existing Scope. This extends
+`SCOPE-L3-CLOSE` with an execution residual; it does not replace the canonical
+Scope, Exit, Cause or finalizer-operation alphabets. The same local edge feeds
+`docs/TRACE-DAG.md`'s D4 `frame-simulation` obligation, which remains open.
+
+| Stable public type | Owner | Native origin and relationship | Assurance route |
+| --- | --- | --- | --- |
+| `Effect4.ScopeMachine.Phase` | `Runtime/ScopeMachine.lean` | The three administrative phases of one close, frozen by the scope-machine packet; distinct from Scope's lifetime states and from fiber or scheduler status. | Local construction receipts under `SCOPE-PG-STATE.close-stepping` |
+| `Effect4.ScopeMachine.State` | `Runtime/ScopeMachine.lean` | Residual execution data: retained closed Scope, original exit, pending operation names, actual operation/exit pairs, and phase. Its completed view is related to existing `Scope.closeExitsM` by `runState_complete`; it is not another Scope or stored program syntax. | Required `SCOPE-PG-STATE.close-stepping` semantic edge |
+
+The nine operation roots are `start`, `advance`, `request?`, `respond`,
+`result?`, `journal`, `restore?`, `bound`, and `runState`, all in
+`Effect4.ScopeMachine`. The packet owns their exact declarations and
+observations. Constructors, projections and derived equality inherit their
+corresponding type row. The ten public theorem roots below inherit the same
+native origin and owner. All other implementation helpers are private; the
+new namespace's sole production owner is `Runtime/ScopeMachine.lean`.
+
+| Local obligation | Named evidence and current boundary |
+| --- | --- |
+| construction and interface | The unchanged frozen battery checks both types, constructor/field order, independent body-value universe, all nine operation signatures, equality instances and all ten exact theorem statements. |
+| request identity | `request_uses_original`, `respond_rejects_wrong_id`, `respond_rejects_wrong_phase`; finite controls reject stale, future, repeated and wrong-phase replies. Response routing between different close instances remains caller-owned. |
+| pause and resume | `runState_zero`, `runState_add`; the equality retains both machine and service state for every budget, with no fabricated failure at a pause. This is a microstep law for this independent machine, not a general fixed-source-fuel bind law. |
+| scope and prefix semantics | `runState_scope`, `runState_prefix`; exact captured/waiting/pending operation partition, fixed original exit and closed Scope, and actual captured replies plus service-state equality at every prefix. |
+| completed fold and restoration | `runState_complete` gives the complete machine/service pair at `2 * closeOrder.length + 1`; `runState_result` agrees with existing pure `Scope.closeResult`; `runState_restore` agrees with stateful `closeExitsM`, the exact zero/one/many exit fold and existing `restoreAfterFinalizer`. |
+| counterexamples | The packet reuses `E4-RUN-CE-001`, `002`, `003`, `008`, `009` and `E4-TARGET-CE-019`/`020`; all 27 existing-owner controls and 72 machine guards pass, including failures, duplicate reasons and singleton empty failure. The old region/frame counterexamples stay unchanged. |
+| trust | All ten saved public receipts pass: the first six use `propext`; prefix, completion, result and restoration use `propext` and `Quot.sound`. No added axiom is admitted. |
+| representation and coverage | First-order fields and derived equality are checked. No serialization theorem is claimed. A generated declaration-assurance join covering this extension remains owed; no runtime census row or percentage changes here. |
+| external connections | Required-open: the general region compiler and residual simulation, arbitrary-program finalizer evaluation, generic frame relation, host behavior, interruption and parallel scheduling. The state retains either strategy label, while this driver executes the existing sequential fold for both labels. |
+
+Narrow verification is `lake build Effect4.Runtime.ScopeMachine`,
+`lake env lean Effect4Test/Runtime/ScopeMachineContract.lean` and
+`lake env lean Effect4Test/Runtime/ScopeMachineAxiomReport.lean`; all pass on
+the saved implementation. Independent review accepted SHA-256
+`1189173bca2b6b76e114bc178d1945463e0e862e0faca3d0ed91cf04ddb95979`,
+including a fresh scratch-olean check. The production commit is `abefdb1`.
+Broader package and trust results are recorded in `COORDINATION.md`'s local
+proof integration receipt. Neither successful local tests nor
+these local universal equations close the external connections above.

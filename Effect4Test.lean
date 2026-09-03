@@ -51,13 +51,20 @@ import Effect4Test.Semantics.ApproximationAxiomReport
 import Effect4Test.Semantics.RegionDenotationContract
 import Effect4Test.Semantics.RegionTotalContract
 import Effect4Test.Semantics.RegionTotalAxiomReport
+import Effect4Test.Semantics.RegionSafetyContract
+import Effect4Test.Semantics.RegionSafetyAxiomReport
 import Effect4Test.Flow.RegionRunnerContract
 import Effect4Test.Flow.InterruptContract
 import Effect4Test.Target.TypeScript.RegionLowerContract
 import Effect4Test.Target.TypeScript.StructuredLowerContract
 import Effect4Test.Target.TypeScript.StructureLawsContract
 import Effect4Test.Target.TypeScript.StructureLawsAxiomReport
+import Effect4Test.Target.TypeScript.StructureOrderContract
+import Effect4Test.Target.TypeScript.StructureOrderAxiomReport
+import Effect4Test.Target.TypeScript.StructureComputedContract
+import Effect4Test.Target.TypeScript.StructureComputedAxiomReport
 import Effect4Test.Counterexamples.Target.BreakScoped
+import Effect4Test.Counterexamples.Target.RegionSimulationBoundary
 import Effect4Test.Target.TypeScript.SkeletonSemanticsContract
 import Effect4Test.Target.TypeScript.SkeletonSemanticsAxiomReport
 import Effect4Test.Target.TypeScript.SimulationContract
@@ -70,6 +77,7 @@ import Effect4Test.Semantics.EquivalenceAxiomReport
 import Effect4Test.Semantics.RegionDenotationAxiomReport
 import Effect4Test.Counterexamples.Flow.Runner
 import Effect4Test.Counterexamples.Flow.Interrupt
+import Effect4Test.Counterexamples.Flow.InterruptMaskBoundary
 import Effect4Test.Target.TypeScript.FlowLowerContract
 import Effect4Test.Target.TypeScript.ScriptDenotationContract
 import Effect4Test.Target.TypeScript.ScriptDenotationAxiomReport
@@ -78,6 +86,8 @@ import Effect4Test.Semantics.CauseExitAxiomReport
 import Effect4Test.Counterexamples.Semantics.CauseExit
 import Effect4Test.Runtime.ScopeContract
 import Effect4Test.Runtime.ScopeAxiomReport
+import Effect4Test.Runtime.ScopeMachineContract
+import Effect4Test.Runtime.ScopeMachineAxiomReport
 import Effect4Test.Counterexamples.Runtime.Scope
 import Effect4Test.Runtime.FramesContract
 import Effect4Test.Runtime.FramesAxiomReport

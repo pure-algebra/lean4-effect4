@@ -29,3 +29,7 @@ Effect4Test.Protocol.ByteParserContract
 # the remaining preservation, framing, cleanup, and existence theorems named
 # by this contract have not landed yet.
 Effect4Test.Concurrency.RaceRepresentativeContract
+
+# M2 mask-restoration correction, independent packet 3fbf47d. The historical
+# runner still waits for another point and loses pending interruption on ret.
+Effect4Test.Counterexamples.Flow.InterruptMaskBoundary

@@ -16,6 +16,7 @@ import Effect4.Semantics.Fuel
 import Effect4.Semantics.Denotation
 import Effect4.Semantics.RegionDenotation
 import Effect4.Semantics.RegionTotal
+import Effect4.Semantics.RegionSafety
 import Effect4.Semantics.Approximation
 import Effect4.Semantics.Observation
 import Effect4.Semantics.Equivalence
@@ -43,6 +44,7 @@ import Effect4.Layer.Provision
 import Effect4.Layer.Memo
 import Effect4.Layer.Laws
 import Effect4.Runtime.Scope
+import Effect4.Runtime.ScopeMachine
 import Effect4.Runtime.Resource
 import Effect4.Runtime.Runtime
 import Effect4.Runtime.ManagedRuntime
@@ -91,6 +93,8 @@ import Effect4.Target.TypeScript.FlowLower
 import Effect4.Target.TypeScript.RegionLower
 import Effect4.Target.TypeScript.StructuredLower
 import Effect4.Target.TypeScript.StructureLaws
+import Effect4.Target.TypeScript.StructureOrder
+import Effect4.Target.TypeScript.StructureDominators
 import Effect4.Target.TypeScript.SkeletonSemantics
 import Effect4.Target.TypeScript.Lower
 import Effect4.Target.TypeScript.Schema

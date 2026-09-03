@@ -29,8 +29,10 @@ plan text.
   frontier when it is empty. Emptiness is runtime state, so `acquire` answers
   `Option (Except Val Val)` and `leave` answers `Option Failures`, `none` being
   that refusal in both. (Region admission refuses an `acquire` or a `leave`
-  outside every region, so `none` is unreachable on an admitted flow — but that
-  is a stack invariant nobody has proved, and it is owed, not assumed here.)
+  outside every region. `Effect4/Semantics/RegionSafety.lean` now derives the
+  frame-identity and parent-chain invariant from admission and proves these
+  stuck arms unreachable for checked entry runs under the standard handler.
+  The unrestricted denotation still retains both answers.)
 * **`leave` answers the merged failure list.** `closeFrame` keeps every failing
   release, in close order (L2). `regionLoop` continues at the region's
   `continue_` block exactly when that list is empty, and otherwise fails with

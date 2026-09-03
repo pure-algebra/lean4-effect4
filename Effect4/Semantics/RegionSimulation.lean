@@ -10,6 +10,16 @@ runner of `Effect4/Flow/Region.lean` and the rc.112 frame machine of
 `Effect4/Runtime/Runtime.lean`, under the mask that keeps `finalizer` and
 `done`.
 
+**Current boundary (2026-09-03).** The independent amendment in
+`test/contracts/frame-simulation.contract.md` supersedes the unrestricted
+region equation proposed below. `E4-TARGET-CE-019` through `E4-TARGET-CE-021`
+prove that this compiler differs from the region runner on a failing release,
+fuel exhaustion and unanswered decisions. The replacement must independently
+execute scope registrations and closing, and preserve suspended state in a
+finite-prefix simulation. A source replay hidden in an oracle does not close
+that obligation. The existing restricted lemmas and concrete receipts remain
+valid; this module does not establish the general region connection.
+
 `Effect4/Semantics/FrameSimulation.lean` (fence B) proves the *value* half
 against `Effects.interpret` and closes with the note that the finalizer half
 needs a bracket former the algebra does not have. This module is that half,
