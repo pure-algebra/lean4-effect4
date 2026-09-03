@@ -55,6 +55,8 @@
     "fixture.ts",
     "atoms.ts",
     "tracer.ts",
-    "tail.ts"
+    "tail.ts",
+    "flow-fixture.ts",
+    "flow-tail.ts"
   ]
 }

@@ -420,3 +420,19 @@ edited. Findings that need action:
   rc.112 fiber pins exactly the P-T11 hunks; js_of_ocaml 5.7.1 in `_build/` is
   not the master the plan re-derives for P-T9b (no `Dispatch` edge kind, no
   `merge_node_max`, no double translation).
+
+## P-T9a landed: dispatch-form lowering, 2026-09-02
+
+`Effect4/Target/TypeScript/FlowLower.lean` lowers an admitted Flow v2 graph to
+`while (true) { switch (block) { … } }` (ruling R7): block parameters as
+`b<i>p<j>` variables, `perform` answering into `a<i>`, `choose` deciding into
+`c<i>` from the `Decisions` service, and a sequentialized parallel move with
+temporaries on self-edges (row `E4-TARGET-CE-011`, witnessed by the `swap`
+flow). Eight rules join the census (`Lower.lean`, sixteen in all); the
+harness gains `flow-fixture.ts` (generated, drift-checked), `flow-tail.ts`,
+goldens `generated/traces/flow/<program>.<tape>.tsv` for `incr`, `twice`,
+`chooser` and `swap`, host receipts under `receipts/flow/`, and type receipts
+under `types/flow/`; every flow golden agrees on the host under every mask at
+both yield settings, and `generated/lowering-coverage.tsv` has all sixteen
+rules `checked`. Packet: `test/contracts/flow-dispatch-lowering.contract.md`.
+Next: P-T6, the property loop (generated flows, tapes, shrinking, mutants).

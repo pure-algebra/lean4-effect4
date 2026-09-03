@@ -10,8 +10,9 @@ tags, goldens, host receipts, property batches, type receipts and proofs to.
 `Rule.all` and the tag set must agree in both directions; the gate checks it.
 
 Straight-line lowering from a `Script` lives in
-`Effect4/Target/TypeScript/EffectV4.lean` beside the rows; graph lowering from
-a checked flow arrives with the Flow v2 packets and adds its rules here.
+`Effect4/Target/TypeScript/EffectV4.lean` beside the rows; dispatch-form
+lowering from a checked flow lives in `FlowLower.lean` and its eight rules
+are the second half of the census.
 -/
 
 namespace Effect4.Target.EffectV4
@@ -26,6 +27,15 @@ inductive Rule where
   | atomCall
   | ret
   | errorAbort
+  -- dispatch-form lowering of a checked flow (`FlowLower.lean`)
+  | dispatchLoop
+  | blockCase
+  | paramMove
+  | flowPerform
+  | flowAtom
+  | flowLiteral
+  | chooseIf
+  | flowRet
 deriving DecidableEq, Repr
 
 namespace Rule
@@ -40,10 +50,19 @@ def id : Rule → String
   | atomCall => "atom-call"
   | ret => "ret"
   | errorAbort => "error-abort"
+  | dispatchLoop => "dispatch-loop"
+  | blockCase => "block-case"
+  | paramMove => "param-move"
+  | flowPerform => "flow-perform"
+  | flowAtom => "flow-atom"
+  | flowLiteral => "flow-literal"
+  | chooseIf => "choose-if"
+  | flowRet => "flow-ret"
 
 /-- Every rule, in ledger order. -/
 def all : List Rule :=
-  [serviceAcquire, nullaryValue, performCall, performBind, performDiscard, atomCall, ret, errorAbort]
+  [serviceAcquire, nullaryValue, performCall, performBind, performDiscard, atomCall, ret, errorAbort,
+   dispatchLoop, blockCase, paramMove, flowPerform, flowAtom, flowLiteral, chooseIf, flowRet]
 
 theorem all_nodup : all.Nodup := by decide
 

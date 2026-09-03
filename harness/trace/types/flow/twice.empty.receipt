@@ -1,0 +1,5 @@
+format	effect4-type-receipt-v1
+program	flow/twice.empty
+typescript	7.0.2
+flow-fixture.d.ts	sha256=c72bce1b91061f10086b1b5b5c126abf493193526e8a34d655f02be6b0871ad6
+line	export declare const twice: (n: number) => Effect.Effect<number, never, Cell>;

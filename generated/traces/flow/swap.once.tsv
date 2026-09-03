@@ -6,12 +6,10 @@ input	Effect4/Meta/Derive.lean	sha256=b8ddf699bd1544ae3c19f7eb46c860e6a03591104e
 input	Effect4/Target/TypeScript/Trace.lean	sha256=10876d7fcc16f96e00a866aa5a976cab01890c52baedc005ee8d117a056fe068
 pin	effects	e86f1412361e30fe5d9ba930b478617611933fb8
 format	effect4-trace-v1
-face	lean
-program	recover.empty
-tape	
-rules	service-acquire,nullary-value,perform-bind,perform-call,perform-discard,ret,atom-call
-op	tryGet	[]
-answer	tryGet	[false, "boom"]
-op	put	5
-answer	put	[]
-done	{"success":0}
+face	lean-flow
+program	swap.once
+tape	1:1,1:0
+rules	dispatch-loop,block-case,flow-literal,param-move,choose-if,flow-ret
+decide	1	true
+decide	1	false
+done	{"success":5}

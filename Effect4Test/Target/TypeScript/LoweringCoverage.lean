@@ -66,6 +66,28 @@ def rows : List Row :=
   , { rule := .ret, state := .checked, goldens := ["incr.empty", "twice.empty"],
       host := true, property := false, typeReceipt := true, proof := none }
   , { rule := .errorAbort, state := .checked, goldens := ["fallible.empty"],
+      host := true, property := false, typeReceipt := true, proof := none }
+  -- the dispatch form (FlowLower.lean); goldens are the Flow-runner face under generated/traces/flow/
+  , { rule := .dispatchLoop, state := .checked,
+      goldens := ["flow/incr.empty", "flow/twice.empty", "flow/chooser.left", "flow/swap.once"],
+      host := true, property := false, typeReceipt := true, proof := none }
+  , { rule := .blockCase, state := .checked,
+      goldens := ["flow/incr.empty", "flow/twice.empty", "flow/chooser.left", "flow/swap.once"],
+      host := true, property := false, typeReceipt := true, proof := none }
+  , { rule := .paramMove, state := .checked,
+      goldens := ["flow/incr.empty", "flow/twice.empty", "flow/chooser.left", "flow/swap.once", "flow/swap.twice"],
+      host := true, property := false, typeReceipt := true, proof := none }
+  , { rule := .flowPerform, state := .checked, goldens := ["flow/incr.empty", "flow/twice.empty"],
+      host := true, property := false, typeReceipt := true, proof := none }
+  , { rule := .flowAtom, state := .checked, goldens := ["flow/incr.empty", "flow/twice.empty"],
+      host := true, property := false, typeReceipt := true, proof := none }
+  , { rule := .flowLiteral, state := .checked, goldens := ["flow/incr.empty", "flow/twice.empty", "flow/swap.once"],
+      host := true, property := false, typeReceipt := true, proof := none }
+  , { rule := .chooseIf, state := .checked,
+      goldens := ["flow/chooser.left", "flow/chooser.right", "flow/swap.once", "flow/swap.twice"],
+      host := true, property := false, typeReceipt := true, proof := none }
+  , { rule := .flowRet, state := .checked,
+      goldens := ["flow/incr.empty", "flow/twice.empty", "flow/chooser.left", "flow/swap.once"],
       host := true, property := false, typeReceipt := true, proof := none } ]
 
 private def allowedAxioms : List Name := [``propext, ``Quot.sound]

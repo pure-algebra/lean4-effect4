@@ -66,7 +66,10 @@ private def targetImplementationModules : List Name :=
   -- in `String`-free modules.
   [ `Effect4.Meta.Derive
   , `Effect4.Target.TypeScript.EffectV4
-  , `Effect4.Target.TypeScript.Trace ]
+  , `Effect4.Target.TypeScript.Trace
+  -- The dispatch-form renderer (`flowModules?` traverses strings through the
+  -- syntax renderer); its lowering functions carry no semantic law.
+  , `Effect4.Target.TypeScript.FlowLower ]
 
 private def choiceImplementationModules : List Name :=
   auditImplementationModules ++ targetImplementationModules

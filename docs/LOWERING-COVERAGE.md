@@ -70,3 +70,14 @@ frontiers); byte identity of the program (see `check.sh`); any statement about
 the host from a Lean theorem. Wording in reports follows `AGENTS.md`: no
 "sound", "equivalent", "preserves" or "complete" without the mask, corpus and
 receipt named.
+
+## The dispatch form
+
+Since P-T9a the census has two halves. The straight-line rules
+(`Effect4/Target/TypeScript/EffectV4.lean`) lower a `Script`; the dispatch-form
+rules (`FlowLower.lean`: `dispatch-loop`, `block-case`, `param-move`,
+`flow-perform`, `flow-atom`, `flow-literal`, `choose-if`, `flow-ret`) lower an
+admitted Flow v2 graph. Their goldens are the Flow-runner face under
+`generated/traces/flow/<program>.<tape>.tsv`, their host receipts live under
+`harness/trace/receipts/flow/`, and their type receipts under
+`harness/trace/types/flow/`; the join keys are the same paths.

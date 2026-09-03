@@ -33,4 +33,21 @@ while IFS=$'\t' read -r program expected; do
     status=1
   fi
 done < <(lake env lean --run "$here/Generate.lean" types | grep -v '^warning: manifest out of date')
+# --- the dispatch form -------------------------------------------------------
+flow_emitted="$tmp/out/flow-fixture.d.ts"
+[ -f "$flow_emitted" ] || { echo "FAIL no flow-fixture.d.ts emitted" >&2; ls "$tmp/out" >&2; exit 1; }
+flow_digest="$(shasum -a 256 "$flow_emitted" | cut -d' ' -f1)"
+mkdir -p "$here/types/flow"
+while IFS=$'\t' read -r program tape expected; do
+  if grep -Fxq -- "$expected" "$flow_emitted"; then
+    printf 'format\teffect4-type-receipt-v1\nprogram\tflow/%s.%s\ntypescript\t%s\nflow-fixture.d.ts\tsha256=%s\nline\t%s\n' \
+      "$program" "$tape" "$("$tsc" --version | sed 's/^Version //')" "$flow_digest" "$expected" > "$here/types/flow/$program.$tape.receipt"
+    echo "PASS type receipt flow/$program.$tape: $expected"
+  else
+    echo "FAIL type receipt flow/$program.$tape: expected line not emitted" >&2
+    echo "  expected: $expected" >&2
+    grep -F "export declare const $program" "$flow_emitted" >&2 || echo "  (no declaration for $program)" >&2
+    status=1
+  fi
+done < <(lake env lean --run "$here/Generate.lean" flow-types | grep -v '^warning: manifest out of date')
 exit "$status"
