@@ -55,9 +55,11 @@ For an admitted plain flow the search is unnecessary: `run_fuelFor_finishes`
 proves it settled, and `runColimit_eq_default` says the searched colimit
 agrees with it. This is the "colimit is a partial function" statement of
 DB-03/DB-04 for the deterministic fragment: with the tape fixed, the run is a
-function of it. The region runner has no fuel-sufficiency theorem yet, so
-`runRegionsColimit` stays an `Option`; `Chain.colimit_of_settles` is the way to
-conclude it is `some`.
+function of it. The region runner has its own allotment,
+`regionFuelFor flow tape = fuelFor flow.erase tape`, and
+`runRegions_fuelFor_finishes` proves it suffices, so
+`runRegionsColimitDefault` is total as well; the searched `runRegionsColimit`
+agrees with it above that fuel (`runRegionsColimit_eq_default`).
 
 Nothing here claims a denotation for an unbounded or open program. The colimit
 is taken over one fixed tape, one service, and one starting state; a run whose
@@ -937,8 +939,1238 @@ theorem runColimit_eq_default {σ : Type} {alphabet : FlowAlphabet Ty} {bound : 
 
 /-! ## The region runner
 
-The same laws for `regionLoop`/`runRegions` were drafted against the region
-runner before packet D2 changed its failure carrier to the merged failure
-list; that half is owed and is recorded in `docs/TRACE-DAG.md`. -/
+`Effect4/Flow/Region.lean` runs an admitted region flow: `regionLoop` keeps a
+stack of open regions, `enter` pushes one, `acquire` registers a release,
+`leave` closes the innermost region latest-release-first, and a failing
+operation unwinds every open region and ends the run `failed`. Packet D2 made
+the failure carrier a *merged* list -- every failing release is kept, in close
+order -- so a region run's raw value is `(RunResult × Tape) × Failures`, and
+every law below is stated over that carrier. The merge is the one
+`closeFrame_failure_merge` describes; the wire keeps only its head, and
+`regionLoop_failed_head` is that projection.
+
+The proofs do not repeat the plain runner's computation. They go through four
+properties of a run computation, each closed under `bind`, so each law is one
+structural walk over `regionLoop`'s branches:
+
+* `Appends` -- the computation only appends to the log;
+* `Sound` -- it appends, it punctuates a fuel frontier with the marker it
+  emitted (which is what makes stripping the marker safe), a failing run's
+  merged list is headed by the reported error, and a run that did not fail has
+  an empty merged list;
+* `Below` -- one computation observes below another at every log and state;
+* `Settles` -- wherever the first did not exhaust its fuel, the second is the
+  identical run.
+
+What regions add over the plain runner -- failure, finalizers, the region
+stack -- changes none of the laws: `RunResult.failed` is terminal, exactly
+like `done` and `refused`, and fuel exhaustion still produces the *only* live
+leaf (`regionLoop_frontier_live`).
+
+The fuel argument transfers too, and exactly: an `enter` erases to a jump, an
+`acquire` to a `perform`, a `leave` to a jump at the region's `continue_`, so
+`regionLoop` spends one unit of fuel per block of `flow.erase` -- the very
+graph `CyclesWF` constrains. `regionFuelFor flow tape = fuelFor flow.erase
+tape = (tape.length + 1) * flow.blocks.length + 1` therefore suffices
+(`runRegions_fuelFor_finishes`), and `runRegionsColimitDefault` is a total
+`Observation`, not an `Option`. -/
+
+
+/-! ## Three properties of a region-run computation -/
+
+/-- A run computation only appends to the log: it never rewrites or drops a row
+an earlier step emitted. -/
+def Appends {σ : Type} {α : Type} (m : RunM (StateT σ Id) α) : Prop :=
+  ∀ (log : Effect4.Trace.Log) (s : σ), ∃ events, ((m.run log).run s).1.2 = log ++ events
+
+namespace Appends
+
+theorem pure' {σ α : Type} (a : α) : Appends (σ := σ) (Pure.pure a) :=
+  fun log _ => ⟨[], by simp only [List.append_nil]; rfl⟩
+
+theorem emit' {σ : Type} (event : Effect4.Trace.Event) : Appends (σ := σ) (emit event) :=
+  fun _ _ => ⟨[event], rfl⟩
+
+theorem lift {σ α : Type} (x : StateT σ Id α) : Appends (σ := σ) (StateT.lift x) :=
+  fun log _ => ⟨[], by simp only [List.append_nil]; rfl⟩
+
+theorem bind {σ α β : Type} {m : RunM (StateT σ Id) α} {f : α → RunM (StateT σ Id) β}
+    (hm : Appends m) (hf : ∀ a, Appends (f a)) : Appends (m >>= f) := by
+  intro log s
+  obtain ⟨events, eq⟩ := hm log s
+  obtain ⟨events', eq'⟩ :=
+    hf (((m.run log).run s)).1.1 (((m.run log).run s)).1.2 (((m.run log).run s)).2
+  refine ⟨events ++ events', ?_⟩
+  have run_eq : (((m >>= f).run log).run s)
+      = ((f (((m.run log).run s)).1.1).run (((m.run log).run s)).1.2).run
+          (((m.run log).run s)).2 := rfl
+  rw [run_eq, eq', eq, List.append_assoc]
+
+end Appends
+
+theorem logOperation_appends {σ : Type} {alphabet : FlowAlphabet Ty}
+    (service : RegionService alphabet (StateT σ Id))
+    (nameOf : alphabet.Op → String) (op : alphabet.Op) (request : Val)
+    (result : Except Val Val) : Appends (logOperation service nameOf op request result) := by
+  unfold logOperation
+  split
+  · exact Appends.pure' ()
+  · refine Appends.bind (Appends.emit' _) ?_
+    intro _
+    cases result with
+    | ok answer => exact Appends.emit' _
+    | error error => exact Appends.emit' _
+
+theorem closeReleases_appends {σ : Type} {alphabet : FlowAlphabet Ty}
+    (service : RegionService alphabet (StateT σ Id))
+    (nameOf : alphabet.Op → String) (region : Nat) (exit : Outcome Val) :
+    ∀ releases, Appends (closeReleases service nameOf region exit releases) := by
+  intro releases
+  induction releases with
+  | nil => unfold closeReleases; exact Appends.pure' _
+  | cons entry rest ih =>
+      obtain ⟨release, resource⟩ := entry
+      unfold closeReleases
+      refine Appends.bind (Appends.emit' _) ?_
+      intro _
+      refine Appends.bind (Appends.lift _) ?_
+      intro result
+      refine Appends.bind (logOperation_appends _ _ _ _ _) ?_
+      intro _
+      refine Appends.bind ih ?_
+      intro later
+      cases result with
+      | ok answer => exact Appends.pure' _
+      | error error => exact Appends.pure' _
+
+theorem closeFrame_appends {σ : Type} {alphabet : FlowAlphabet Ty}
+    (service : RegionService alphabet (StateT σ Id))
+    (nameOf : alphabet.Op → String) (frame : Frame alphabet) (exit : Outcome Val) :
+    Appends (closeFrame service nameOf frame exit) := by
+  unfold closeFrame
+  refine Appends.bind (Appends.emit' _) ?_
+  intro _
+  exact closeReleases_appends _ _ _ _ _
+
+theorem unwind_appends {σ : Type} {alphabet : FlowAlphabet Ty}
+    (service : RegionService alphabet (StateT σ Id))
+    (nameOf : alphabet.Op → String) (error : Val) :
+    ∀ stack, Appends (unwind service nameOf stack error) := by
+  intro stack
+  induction stack with
+  | nil => unfold unwind; exact Appends.pure' _
+  | cons frame rest ih =>
+      unfold unwind
+      refine Appends.bind (closeFrame_appends _ _ _ _) ?_
+      intro _
+      refine Appends.bind ih ?_
+      intro _
+      exact Appends.pure' _
+
+theorem fail_appends {σ : Type} {alphabet : FlowAlphabet Ty}
+    (service : RegionService alphabet (StateT σ Id))
+    (nameOf : alphabet.Op → String) (stack : List (Frame alphabet)) (error : Val)
+    (rest : Failures) (tape : Tape) :
+    Appends (fail service nameOf stack error rest tape) := by
+  unfold fail
+  refine Appends.bind (unwind_appends _ _ _ _) ?_
+  intro _
+  refine Appends.bind (Appends.emit' _) ?_
+  intro _
+  exact Appends.pure' _
+
+/-- The observation a finished region computation makes. -/
+def obsOf {σ : Type} (m : RunM (StateT σ Id) ((RunResult × Tape) × Failures))
+    (log : Effect4.Trace.Log) (s : σ) : Observation :=
+  observe ((m.run log).run s).1.1.1.1 ((m.run log).run s).1.2
+
+/-- What every region-run computation satisfies. -/
+structure Sound {σ : Type} (m : RunM (StateT σ Id) ((RunResult × Tape) × Failures)) : Prop where
+  appends : Appends m
+  punctuates : ∀ (log : Effect4.Trace.Log) (s : σ),
+    ((m.run log).run s).1.1.1.1.exhausted = true →
+      ∃ events, ((m.run log).run s).1.2 = (log ++ events) ++ [Effects.Trace.Event.frontier]
+  headed : ∀ (log : Effect4.Trace.Log) (s : σ) (error : Val),
+    ((m.run log).run s).1.1.1.1 = .failed error →
+      ∃ more, ((m.run log).run s).1.1.2 = error :: more
+  clean : ∀ (log : Effect4.Trace.Log) (s : σ),
+    (∀ error, ((m.run log).run s).1.1.1.1 ≠ .failed error) → ((m.run log).run s).1.1.2 = []
+
+namespace Sound
+
+theorem bind {σ α : Type} {m : RunM (StateT σ Id) α}
+    {f : α → RunM (StateT σ Id) ((RunResult × Tape) × Failures)}
+    (hm : Appends m) (hf : ∀ a, Sound (f a)) : Sound (m >>= f) := by
+  have run_eq : ∀ (log : Effect4.Trace.Log) (s : σ), (((m >>= f).run log).run s)
+      = ((f (((m.run log).run s)).1.1).run (((m.run log).run s)).1.2).run
+          (((m.run log).run s)).2 := fun _ _ => rfl
+  refine ⟨Appends.bind hm (fun a => (hf a).appends), ?_, ?_, ?_⟩
+  · intro log s exhausted
+    rw [run_eq] at exhausted ⊢
+    obtain ⟨events, eq⟩ := hm log s
+    obtain ⟨events', eq'⟩ := (hf _).punctuates _ _ exhausted
+    exact ⟨events ++ events', by rw [eq', eq]; simp [List.append_assoc]⟩
+  · intro log s error failed
+    rw [run_eq] at failed ⊢
+    exact (hf _).headed _ _ error failed
+  · intro log s notFailed
+    rw [run_eq] at notFailed ⊢
+    exact (hf _).clean _ _ notFailed
+
+/-- A settled leaf: the run stops here with a result that is neither a fuel
+frontier nor a failure, and the merged failure list is empty. -/
+theorem pure_settled {σ : Type} (result : RunResult) (tape : Tape)
+    (notExhausted : result.exhausted = false) (notFailed : ∀ error, result ≠ .failed error) :
+    Sound (σ := σ) (Pure.pure ((result, tape), ([] : Failures))) where
+  appends := Appends.pure' _
+  punctuates := by
+    intro log s exhausted
+    rw [show ((((Pure.pure ((result, tape), ([] : Failures)) :
+      RunM (StateT σ Id) ((RunResult × Tape) × Failures)).run log).run s)).1.1.1.1 = result from rfl,
+      notExhausted] at exhausted
+    cases exhausted
+  headed := by
+    intro log s error failed
+    exact absurd (show result = .failed error from failed) (notFailed error)
+  clean := by intro log s _; rfl
+
+/-- The failing leaf: the merged failure list is headed by the reported error. -/
+theorem pure_failed {σ : Type} (error : Val) (tape : Tape) (more : Failures) :
+    Sound (σ := σ) (Pure.pure ((RunResult.failed error, tape), error :: more)) where
+  appends := Appends.pure' _
+  punctuates := by
+    intro log s exhausted
+    rw [show ((((Pure.pure ((RunResult.failed error, tape), error :: more) :
+      RunM (StateT σ Id) ((RunResult × Tape) × Failures)).run log).run s)).1.1.1.1
+        = RunResult.failed error from rfl] at exhausted
+    cases exhausted
+  headed := by
+    intro log s e failed
+    have h : RunResult.failed error = RunResult.failed e := failed
+    injection h with he
+    subst he
+    exact ⟨more, rfl⟩
+  clean := by
+    intro log s notFailed
+    exact absurd (show RunResult.failed error = .failed error from rfl) (notFailed error)
+
+/-- The fuel-frontier leaf: the marker is appended and the failure list is
+empty. Fuel exhaustion is a live frontier, never a failure (DB-04). -/
+theorem frontier_leaf {σ : Type} (block : BlockId) (tape : Tape) :
+    Sound (σ := σ) (do emit Effects.Trace.Event.frontier
+                       pure ((RunResult.frontier (Frontier.fuel block), tape), ([] : Failures)))
+    where
+  appends := fun _ _ => ⟨[Effects.Trace.Event.frontier], rfl⟩
+  punctuates := by
+    intro log s _
+    refine ⟨[], ?_⟩
+    show log ++ [Effects.Trace.Event.frontier]
+      = (log ++ []) ++ [Effects.Trace.Event.frontier]
+    rw [List.append_nil]
+  headed := by
+    intro log s error failed
+    exact absurd (show RunResult.frontier (Frontier.fuel block) = .failed error from failed)
+      (fun h => RunResult.noConfusion h)
+  clean := by intro log s _; rfl
+
+end Sound
+
+theorem fail_sound {σ : Type} {alphabet : FlowAlphabet Ty}
+    (service : RegionService alphabet (StateT σ Id))
+    (nameOf : alphabet.Op → String) (stack : List (Frame alphabet)) (error : Val)
+    (rest : Failures) (tape : Tape) : Sound (fail service nameOf stack error rest tape) := by
+  unfold fail
+  refine Sound.bind (unwind_appends _ _ _ _) ?_
+  intro closing
+  refine Sound.bind (Appends.emit' _) ?_
+  intro _
+  exact Sound.pure_failed error tape (rest ++ closing)
+
+/-- A sound computation observes a log extending the one it started from. -/
+theorem obsOf_extends {σ : Type} {m : RunM (StateT σ Id) ((RunResult × Tape) × Failures)}
+    (h : Sound m) (log : Effect4.Trace.Log) (s : σ) :
+    logPrefix log (obsOf m log s).log = true := by
+  obtain ⟨events, eq⟩ := h.appends log s
+  cases exhausted : (((m.run log).run s)).1.1.1.1.exhausted with
+  | false =>
+      have terminal := observe_terminal (result := (((m.run log).run s)).1.1.1.1)
+        (((m.run log).run s)).1.2 exhausted
+      rw [obsOf, terminal]
+      simp only [Observation.log]
+      rw [eq]
+      exact logPrefix_append log events
+  | true =>
+      obtain ⟨events', eq'⟩ := h.punctuates log s exhausted
+      have fuel : ∃ block, (((m.run log).run s)).1.1.1.1 = .frontier (.fuel block) := by
+        generalize (((m.run log).run s)).1.1.1.1 = result at exhausted
+        cases result with
+        | done value => cases exhausted
+        | failed error => cases exhausted
+        | refused expected actual => cases exhausted
+        | frontier reason =>
+            cases reason with
+            | fuel block => exact ⟨block, rfl⟩
+            | unansweredDecision site => cases exhausted
+            | stuck block => cases exhausted
+      obtain ⟨block, isFuel⟩ := fuel
+      rw [obsOf, isFuel, eq', observe_fuel]
+      simp only [Observation.log]
+      exact logPrefix_append log events'
+
+/-- One region computation observes below another at every starting log and
+state. -/
+def Below {σ : Type} (m m' : RunM (StateT σ Id) ((RunResult × Tape) × Failures)) : Prop :=
+  ∀ (log : Effect4.Trace.Log) (s : σ), Observation.le (obsOf m log s) (obsOf m' log s) = true
+
+namespace Below
+
+theorem refl {σ : Type} (m : RunM (StateT σ Id) ((RunResult × Tape) × Failures)) : Below m m :=
+  fun _ _ => Observation.le_refl _
+
+theorem bind {σ α : Type} {m : RunM (StateT σ Id) α}
+    {f g : α → RunM (StateT σ Id) ((RunResult × Tape) × Failures)} (h : ∀ a, Below (f a) (g a)) :
+    Below (m >>= f) (m >>= g) := by
+  intro log s
+  exact h (((m.run log).run s)).1.1 (((m.run log).run s)).1.2 (((m.run log).run s)).2
+
+/-- The fuel-zero computation is below every sound computation: the base case
+of every monotonicity induction. -/
+theorem frontier {σ : Type} {block : BlockId} {tape : Tape}
+    {m : RunM (StateT σ Id) ((RunResult × Tape) × Failures)} (h : Sound m) :
+    Below (do emit Effects.Trace.Event.frontier
+              pure ((RunResult.frontier (Frontier.fuel block), tape), ([] : Failures))) m := by
+  intro log s
+  have left : obsOf (σ := σ)
+      (do emit Effects.Trace.Event.frontier
+          pure ((RunResult.frontier (Frontier.fuel block), tape), ([] : Failures))) log s
+        = .live log := by
+    show observe (RunResult.frontier (Frontier.fuel block)) (log ++ [Effects.Trace.Event.frontier])
+      = .live log
+    exact observe_fuel block log
+  rw [left, Observation.live_le_iff]
+  exact obsOf_extends h log s
+
+end Below
+
+/-- One region computation is stable under another: wherever the first did not
+exhaust its fuel, the second gives exactly the same run -- result, tape, merged
+failure list, log and service state. -/
+def Settles {σ : Type} (m m' : RunM (StateT σ Id) ((RunResult × Tape) × Failures)) : Prop :=
+  ∀ (log : Effect4.Trace.Log) (s : σ),
+    ((m.run log).run s).1.1.1.1.exhausted = false → (m'.run log).run s = (m.run log).run s
+
+namespace Settles
+
+theorem refl {σ : Type} (m : RunM (StateT σ Id) ((RunResult × Tape) × Failures)) : Settles m m :=
+  fun _ _ _ => rfl
+
+theorem bind {σ α : Type} {m : RunM (StateT σ Id) α}
+    {f g : α → RunM (StateT σ Id) ((RunResult × Tape) × Failures)} (h : ∀ a, Settles (f a) (g a)) :
+    Settles (m >>= f) (m >>= g) := by
+  intro log s settled
+  exact h (((m.run log).run s)).1.1 (((m.run log).run s)).1.2 (((m.run log).run s)).2 settled
+
+/-- The fuel-zero computation is stable under every computation, vacuously: it
+did exhaust its fuel. -/
+theorem frontier {σ : Type} {block : BlockId} {tape : Tape}
+    {m : RunM (StateT σ Id) ((RunResult × Tape) × Failures)} :
+    Settles (do emit Effects.Trace.Event.frontier
+                pure ((RunResult.frontier (Frontier.fuel block), tape), ([] : Failures))) m := by
+  intro log s settled
+  cases settled
+
+end Settles
+
+/-! ## The three inductions over `regionLoop` -/
+
+theorem regionLoop_sound {σ : Type} {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String) :
+    ∀ (fuel : Nat) (block : BlockId) (env : Env) (tape : Tape) (stack : List (Frame alphabet)),
+      Sound (regionLoop alphabet flow service nameOf fuel block env tape stack) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro block env tape stack
+      exact Sound.frontier_leaf block tape
+  | succ fuel ih =>
+      intro block env tape stack
+      unfold regionLoop
+      cases hblock : flow.block? block with
+      | none => exact Sound.pure_settled _ _ rfl (fun _ h => RunResult.noConfusion h)
+      | some current =>
+          dsimp only
+          cases hterm : current.term with
+          | plain term =>
+              dsimp only
+              cases hplan : plan alphabet
+                  { id := current.id, params := current.params, term := term } env tape with
+              | stuck => exact Sound.pure_settled _ _ rfl (fun _ h => RunResult.noConfusion h)
+              | ret value =>
+                  exact Sound.bind (Appends.emit' _)
+                    (fun _ => Sound.pure_settled _ _ rfl (fun _ h => RunResult.noConfusion h))
+              | jump target env' => exact ih _ _ _ _
+              | perform op request target env' =>
+                  refine Sound.bind (Appends.lift _) ?_
+                  intro result
+                  refine Sound.bind (logOperation_appends _ _ _ _ _) ?_
+                  intro _
+                  cases result with
+                  | ok answer => exact ih _ _ _ _
+                  | error error => exact fail_sound _ _ _ _ _ _
+              | exhausted site =>
+                  exact Sound.bind (Appends.emit' _)
+                    (fun _ => Sound.pure_settled _ _ rfl (fun _ h => RunResult.noConfusion h))
+              | mismatch expected actual =>
+                  exact Sound.pure_settled _ _ rfl (fun _ h => RunResult.noConfusion h)
+              | choose site branch target env' rest =>
+                  refine Sound.bind (Appends.emit' _) ?_
+                  intro _
+                  exact ih _ _ _ _
+          | enter region body args =>
+              dsimp only
+              cases hargs : readArgs env args with
+              | none => exact Sound.pure_settled _ _ rfl (fun _ h => RunResult.noConfusion h)
+              | some values =>
+                  refine Sound.bind (Appends.emit' _) ?_
+                  intro _
+                  exact ih _ _ _ _
+          | acquire operation request release target args =>
+              dsimp only
+              cases hop : alphabet.lookup operation <;> cases hrelease : alphabet.lookup release <;>
+                cases hrequest : env[request.index]? <;> cases hargs : readArgs env args <;>
+                cases hstack : stack <;> dsimp only <;>
+                first
+                  | exact Sound.pure_settled _ _ rfl (fun _ h => RunResult.noConfusion h)
+                  | (refine Sound.bind (Appends.lift _) ?_
+                     intro result
+                     refine Sound.bind (logOperation_appends _ _ _ _ _) ?_
+                     intro _
+                     cases result with
+                     | ok answer => exact ih _ _ _ _
+                     | error error => exact fail_sound _ _ _ _ _ _)
+          | leave value =>
+              dsimp only
+              cases hvalue : env[value.index]? <;> cases hstack : stack <;>
+                cases hrow : current.region.bind flow.row? <;> dsimp only <;>
+                first
+                  | exact Sound.pure_settled _ _ rfl (fun _ h => RunResult.noConfusion h)
+                  | (refine Sound.bind (closeFrame_appends _ _ _ _) ?_
+                     intro failures
+                     cases failures with
+                     | nil => exact ih _ _ _ _
+                     | cons error more => exact fail_sound _ _ _ _ _ _)
+
+theorem regionLoop_below {σ : Type} {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String) :
+    ∀ (fuel k : Nat) (block : BlockId) (env : Env) (tape : Tape) (stack : List (Frame alphabet)),
+      Below (regionLoop alphabet flow service nameOf fuel block env tape stack)
+        (regionLoop alphabet flow service nameOf (fuel + k) block env tape stack) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro k block env tape stack
+      rw [Nat.zero_add]
+      show Below (do emit Effects.Trace.Event.frontier
+                     pure ((RunResult.frontier (Frontier.fuel block), tape), ([] : Failures))) _
+      exact Below.frontier (regionLoop_sound flow service nameOf k block env tape stack)
+  | succ fuel ih =>
+      intro k block env tape stack
+      rw [Nat.add_right_comm fuel 1 k]
+      unfold regionLoop
+      cases hblock : flow.block? block with
+      | none => exact Below.refl _
+      | some current =>
+          dsimp only
+          cases hterm : current.term with
+          | plain term =>
+              dsimp only
+              cases hplan : plan alphabet
+                  { id := current.id, params := current.params, term := term } env tape with
+              | stuck => exact Below.refl _
+              | ret value => exact Below.refl _
+              | jump target env' => exact ih _ _ _ _ _
+              | perform op request target env' =>
+                  refine Below.bind ?_
+                  intro result
+                  refine Below.bind ?_
+                  intro _
+                  cases result with
+                  | ok answer => exact ih _ _ _ _ _
+                  | error error => exact Below.refl _
+              | exhausted site => exact Below.refl _
+              | mismatch expected actual => exact Below.refl _
+              | choose site branch target env' rest =>
+                  refine Below.bind ?_
+                  intro _
+                  exact ih _ _ _ _ _
+          | enter region body args =>
+              dsimp only
+              cases hargs : readArgs env args with
+              | none => exact Below.refl _
+              | some values =>
+                  refine Below.bind ?_
+                  intro _
+                  exact ih _ _ _ _ _
+          | acquire operation request release target args =>
+              dsimp only
+              cases hop : alphabet.lookup operation <;> cases hrelease : alphabet.lookup release <;>
+                cases hrequest : env[request.index]? <;> cases hargs : readArgs env args <;>
+                cases hstack : stack <;> dsimp only <;>
+                first
+                  | exact Below.refl _
+                  | (refine Below.bind ?_
+                     intro result
+                     refine Below.bind ?_
+                     intro _
+                     cases result with
+                     | ok answer => exact ih _ _ _ _ _
+                     | error error => exact Below.refl _)
+          | leave value =>
+              dsimp only
+              cases hvalue : env[value.index]? <;> cases hstack : stack <;>
+                cases hrow : current.region.bind flow.row? <;> dsimp only <;>
+                first
+                  | exact Below.refl _
+                  | (refine Below.bind ?_
+                     intro failures
+                     cases failures with
+                     | nil => exact ih _ _ _ _ _
+                     | cons error more => exact Below.refl _)
+
+theorem regionLoop_settles {σ : Type} {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String) :
+    ∀ (fuel k : Nat) (block : BlockId) (env : Env) (tape : Tape) (stack : List (Frame alphabet)),
+      Settles (regionLoop alphabet flow service nameOf fuel block env tape stack)
+        (regionLoop alphabet flow service nameOf (fuel + k) block env tape stack) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro k block env tape stack
+      rw [Nat.zero_add]
+      show Settles (do emit Effects.Trace.Event.frontier
+                       pure ((RunResult.frontier (Frontier.fuel block), tape), ([] : Failures))) _
+      exact Settles.frontier
+  | succ fuel ih =>
+      intro k block env tape stack
+      rw [Nat.add_right_comm fuel 1 k]
+      unfold regionLoop
+      cases hblock : flow.block? block with
+      | none => exact Settles.refl _
+      | some current =>
+          dsimp only
+          cases hterm : current.term with
+          | plain term =>
+              dsimp only
+              cases hplan : plan alphabet
+                  { id := current.id, params := current.params, term := term } env tape with
+              | stuck => exact Settles.refl _
+              | ret value => exact Settles.refl _
+              | jump target env' => exact ih _ _ _ _ _
+              | perform op request target env' =>
+                  refine Settles.bind ?_
+                  intro result
+                  refine Settles.bind ?_
+                  intro _
+                  cases result with
+                  | ok answer => exact ih _ _ _ _ _
+                  | error error => exact Settles.refl _
+              | exhausted site => exact Settles.refl _
+              | mismatch expected actual => exact Settles.refl _
+              | choose site branch target env' rest =>
+                  refine Settles.bind ?_
+                  intro _
+                  exact ih _ _ _ _ _
+          | enter region body args =>
+              dsimp only
+              cases hargs : readArgs env args with
+              | none => exact Settles.refl _
+              | some values =>
+                  refine Settles.bind ?_
+                  intro _
+                  exact ih _ _ _ _ _
+          | acquire operation request release target args =>
+              dsimp only
+              cases hop : alphabet.lookup operation <;> cases hrelease : alphabet.lookup release <;>
+                cases hrequest : env[request.index]? <;> cases hargs : readArgs env args <;>
+                cases hstack : stack <;> dsimp only <;>
+                first
+                  | exact Settles.refl _
+                  | (refine Settles.bind ?_
+                     intro result
+                     refine Settles.bind ?_
+                     intro _
+                     cases result with
+                     | ok answer => exact ih _ _ _ _ _
+                     | error error => exact Settles.refl _)
+          | leave value =>
+              dsimp only
+              cases hvalue : env[value.index]? <;> cases hstack : stack <;>
+                cases hrow : current.region.bind flow.row? <;> dsimp only <;>
+                first
+                  | exact Settles.refl _
+                  | (refine Settles.bind ?_
+                     intro failures
+                     cases failures with
+                     | nil => exact ih _ _ _ _ _
+                     | cons error more => exact Settles.refl _)
+
+
+/-! ## The region runner's laws -/
+
+/-- The full result of a fuelled region loop over `StateT σ Id`: the run
+result, the unconsumed tape, the merged failure list, the log and the service
+state. -/
+def regionOut {σ : Type} {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String)
+    (fuel : Nat) (block : BlockId) (env : Env) (tape : Tape) (stack : List (Frame alphabet))
+    (log : Effect4.Trace.Log) (s : σ) :
+    (((RunResult × Tape) × Failures) × Effect4.Trace.Log) × σ :=
+  ((regionLoop alphabet flow service nameOf fuel block env tape stack).run log).run s
+
+/-- **The region analogue of `step_log_extends`.** The region runner has no
+separable `step`: one block's worth of fuel is `regionLoop` at `fuel + 1`. It
+only appends to the log -- `enter`, `op`, `answer`, `decide`, `leave`,
+`finalizer`, `failed` and `done` rows are added, never rewritten or dropped. -/
+theorem regionStep_log_extends {σ : Type} {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String)
+    (fuel : Nat) (block : BlockId) (env : Env) (tape : Tape) (stack : List (Frame alphabet))
+    (log : Effect4.Trace.Log) (s : σ) :
+    ∃ events, (regionOut flow service nameOf (fuel + 1) block env tape stack log s).1.2
+      = log ++ events :=
+  (regionLoop_sound flow service nameOf (fuel + 1) block env tape stack).appends log s
+
+/-- **Fuel stability, raw form.** Once a region run at fuel `i` has finished --
+with a value, a failure, a refusal, an unanswered decision or a stuck block --
+every fuel `j ≥ i` gives exactly the same run: the same result, the same
+unconsumed tape, the same *merged failure list*, the same log and the same
+service state. -/
+theorem regionLoop_fuel_stable {σ : Type} {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String)
+    {i j : Nat} (le : i ≤ j) (block : BlockId) (env : Env) (tape : Tape)
+    (stack : List (Frame alphabet)) (log : Effect4.Trace.Log) (s : σ)
+    (settled : (regionOut flow service nameOf i block env tape stack log s).1.1.1.1.exhausted
+      = false) :
+    regionOut flow service nameOf j block env tape stack log s =
+      regionOut flow service nameOf i block env tape stack log s := by
+  obtain ⟨k, rfl⟩ := Nat.le.dest le
+  exact regionLoop_settles flow service nameOf i k block env tape stack log s settled
+
+/-- **A fuel frontier is exactly a live observation.** When a region run stops
+at the fuel bound its result is a `fuel` frontier -- never `failed`, never
+`refused` -- and the merged failure list is untouched: it is empty. This is
+DB-04's "fuel exhaustion is a live frontier, never a failure, never a
+refusal" for the region runner, stated over the D2 failure carrier. -/
+theorem regionLoop_frontier_live {σ : Type} {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String)
+    (fuel : Nat) (block : BlockId) (env : Env) (tape : Tape) (stack : List (Frame alphabet))
+    (log : Effect4.Trace.Log) (s : σ)
+    (exhausted : (regionOut flow service nameOf fuel block env tape stack log s).1.1.1.1.exhausted
+      = true) :
+    (∃ resume, (regionOut flow service nameOf fuel block env tape stack log s).1.1.1.1
+        = .frontier (.fuel resume)) ∧
+      (∀ error, (regionOut flow service nameOf fuel block env tape stack log s).1.1.1.1
+        ≠ .failed error) ∧
+      (∀ expected actual, (regionOut flow service nameOf fuel block env tape stack log s).1.1.1.1
+        ≠ .refused expected actual) ∧
+      (regionOut flow service nameOf fuel block env tape stack log s).1.1.2 = [] := by
+  have sound := regionLoop_sound flow service nameOf fuel block env tape stack
+  have isFuel : ∃ resume,
+      (regionOut flow service nameOf fuel block env tape stack log s).1.1.1.1
+        = .frontier (.fuel resume) := by
+    generalize (regionOut flow service nameOf fuel block env tape stack log s).1.1.1.1 = result
+      at exhausted
+    cases result with
+    | done value => cases exhausted
+    | failed error => cases exhausted
+    | refused expected actual => cases exhausted
+    | frontier reason =>
+        cases reason with
+        | fuel resume => exact ⟨resume, rfl⟩
+        | unansweredDecision site => cases exhausted
+        | stuck resume => cases exhausted
+  obtain ⟨resume, isFuelEq⟩ := isFuel
+  refine ⟨⟨resume, isFuelEq⟩, ?_, ?_, ?_⟩
+  · intro error failed
+    rw [isFuelEq] at failed
+    exact RunResult.noConfusion failed
+  · intro expected actual refused
+    rw [isFuelEq] at refused
+    exact RunResult.noConfusion refused
+  · have unfolded :
+        (((regionLoop alphabet flow service nameOf fuel block env tape stack).run log).run
+          s).1.1.1.1 = .frontier (.fuel resume) := isFuelEq
+    refine sound.clean log s ?_
+    intro error failed
+    rw [unfolded] at failed
+    exact RunResult.noConfusion failed
+
+/-- **The merged failure carrier.** A failing region run reports the head of
+its merged failure list, and that list is empty on every run that did not
+fail. The list is the close-order merge `closeFrame_failure_merge` describes:
+a failing release under a failing body keeps both, body failure first. -/
+theorem regionLoop_failed_head {σ : Type} {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String)
+    (fuel : Nat) (block : BlockId) (env : Env) (tape : Tape) (stack : List (Frame alphabet))
+    (log : Effect4.Trace.Log) (s : σ) (error : Val)
+    (failed : (regionOut flow service nameOf fuel block env tape stack log s).1.1.1.1
+      = .failed error) :
+    ∃ more, (regionOut flow service nameOf fuel block env tape stack log s).1.1.2
+      = error :: more :=
+  (regionLoop_sound flow service nameOf fuel block env tape stack).headed log s error failed
+
+/-- The observation a fuelled region run makes. -/
+def regionObservation {σ : Type} {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String) (fuel : Nat)
+    (block : BlockId) (env : Env) (tape : Tape) (stack : List (Frame alphabet))
+    (log : Effect4.Trace.Log) (s : σ) : Observation :=
+  obsOf (regionLoop alphabet flow service nameOf fuel block env tape stack) log s
+
+/-- **Monotonicity.** The region analogue of `loop_obs_mono`: more fuel yields
+an observation above the smaller fuel's. -/
+theorem region_obs_mono {σ : Type} {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String)
+    (fuel k : Nat) (block : BlockId) (env : Env) (tape : Tape) (stack : List (Frame alphabet))
+    (log : Effect4.Trace.Log) (s : σ) :
+    Observation.le (regionObservation flow service nameOf fuel block env tape stack log s)
+      (regionObservation flow service nameOf (fuel + k) block env tape stack log s) = true :=
+  regionLoop_below flow service nameOf fuel k block env tape stack log s
+
+/-- **The chain law.** Observations along increasing fuel form a chain. -/
+theorem region_obs_chain {σ : Type} {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String)
+    {i j : Nat} (le : i ≤ j) (block : BlockId) (env : Env) (tape : Tape)
+    (stack : List (Frame alphabet)) (log : Effect4.Trace.Log) (s : σ) :
+    Observation.le (regionObservation flow service nameOf i block env tape stack log s)
+      (regionObservation flow service nameOf j block env tape stack log s) = true := by
+  obtain ⟨k, rfl⟩ := Nat.le.dest le
+  exact region_obs_mono flow service nameOf i k block env tape stack log s
+
+/-- The region loop's chain of finite approximations. -/
+def regionChain {σ : Type} {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String)
+    (block : BlockId) (env : Env) (tape : Tape) (stack : List (Frame alphabet))
+    (log : Effect4.Trace.Log) (s : σ) : Chain where
+  observation fuel := regionObservation flow service nameOf fuel block env tape stack log s
+  mono le := region_obs_chain flow service nameOf le block env tape stack log s
+
+/-- **Compatibility.** A settled region observation is the observation of every
+larger fuel. -/
+theorem regionObservation_stable {σ : Type} {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String)
+    {fuel larger : Nat} (block : BlockId) (env : Env) (tape : Tape)
+    (stack : List (Frame alphabet)) (log : Effect4.Trace.Log) (s : σ)
+    (settled : (regionObservation flow service nameOf fuel block env tape stack log s).settled
+      = true) (le : fuel ≤ larger) :
+    regionObservation flow service nameOf larger block env tape stack log s =
+      regionObservation flow service nameOf fuel block env tape stack log s :=
+  (regionChain flow service nameOf block env tape stack log s).stable settled le
+
+/-! ## The same laws for `runRegions` -/
+
+/-- The observation a fuelled run of an admitted region flow makes. -/
+def runRegionsObservation {σ : Type} [DecidableEq Ty] {alphabet : FlowAlphabet Ty} (fuel : Nat)
+    (flow : CheckedRegionFlow alphabet) (service : RegionService alphabet (StateT σ Id))
+    (nameOf : alphabet.Op → String) (tape : Tape) (input : Val) (log : Effect4.Trace.Log)
+    (s : σ) : Observation :=
+  obsOf (runRegionsCause fuel flow service nameOf tape input) log s
+
+/-- The observation is the *wire* runner's: `runRegions` projects the merged
+failure list away and keeps result, tape and log, so it observes exactly what
+`runRegionsCause` observes. -/
+theorem runRegionsObservation_wire {σ : Type} [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
+    (fuel : Nat) (flow : CheckedRegionFlow alphabet)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String) (tape : Tape)
+    (input : Val) (log : Effect4.Trace.Log) (s : σ) :
+    runRegionsObservation fuel flow service nameOf tape input log s =
+      observe (((runRegions fuel flow service nameOf tape input).run log).run s).1.1.1
+        (((runRegions fuel flow service nameOf tape input).run log).run s).1.2 := rfl
+
+theorem runRegionsObservation_eq {σ : Type} [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
+    (fuel : Nat) (flow : CheckedRegionFlow alphabet)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String) (tape : Tape)
+    (input : Val) (log : Effect4.Trace.Log) (s : σ) :
+    runRegionsObservation fuel flow service nameOf tape input log s =
+      regionObservation flow.flow service nameOf fuel flow.flow.entry [input] tape [] log s := rfl
+
+/-- Monotonicity for the public region runner. -/
+theorem runRegions_obs_mono {σ : Type} [DecidableEq Ty] {alphabet : FlowAlphabet Ty} (fuel k : Nat)
+    (flow : CheckedRegionFlow alphabet) (service : RegionService alphabet (StateT σ Id))
+    (nameOf : alphabet.Op → String) (tape : Tape) (input : Val) (log : Effect4.Trace.Log) (s : σ) :
+    Observation.le (runRegionsObservation fuel flow service nameOf tape input log s)
+      (runRegionsObservation (fuel + k) flow service nameOf tape input log s) = true :=
+  region_obs_mono flow.flow service nameOf fuel k flow.flow.entry [input] tape [] log s
+
+/-- The chain form for the public region runner. -/
+theorem runRegions_obs_chain {σ : Type} [DecidableEq Ty] {alphabet : FlowAlphabet Ty} {i j : Nat}
+    (le : i ≤ j) (flow : CheckedRegionFlow alphabet)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String) (tape : Tape)
+    (input : Val) (log : Effect4.Trace.Log) (s : σ) :
+    Observation.le (runRegionsObservation i flow service nameOf tape input log s)
+      (runRegionsObservation j flow service nameOf tape input log s) = true :=
+  region_obs_chain flow.flow service nameOf le flow.flow.entry [input] tape [] log s
+
+/-- The chain of finite approximations of an admitted region run. -/
+def runRegionsChain {σ : Type} [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
+    (flow : CheckedRegionFlow alphabet) (service : RegionService alphabet (StateT σ Id))
+    (nameOf : alphabet.Op → String) (tape : Tape) (input : Val) (log : Effect4.Trace.Log)
+    (s : σ) : Chain where
+  observation fuel := runRegionsObservation fuel flow service nameOf tape input log s
+  mono le := runRegions_obs_chain le flow service nameOf tape input log s
+
+/-- A settled region run observes the same thing for every larger fuel. -/
+theorem runRegions_obs_stable {σ : Type} [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
+    {fuel larger : Nat} (flow : CheckedRegionFlow alphabet)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String) (tape : Tape)
+    (input : Val) (log : Effect4.Trace.Log) (s : σ)
+    (settled : (runRegionsObservation fuel flow service nameOf tape input log s).settled = true)
+    (le : fuel ≤ larger) :
+    runRegionsObservation larger flow service nameOf tape input log s =
+      runRegionsObservation fuel flow service nameOf tape input log s :=
+  (runRegionsChain flow service nameOf tape input log s).stable settled le
+
+/-- The colimit of an admitted region run, searched below a bound. -/
+def runRegionsColimit {σ : Type} [DecidableEq Ty] {alphabet : FlowAlphabet Ty} (bound : Nat)
+    (flow : CheckedRegionFlow alphabet) (service : RegionService alphabet (StateT σ Id))
+    (nameOf : alphabet.Op → String) (tape : Tape) (input : Val) (log : Effect4.Trace.Log)
+    (s : σ) : Option Observation :=
+  (runRegionsChain flow service nameOf tape input log s).colimit bound
+
+theorem runRegionsColimit_settled {σ : Type} [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
+    {bound : Nat} {flow : CheckedRegionFlow alphabet}
+    {service : RegionService alphabet (StateT σ Id)} {nameOf : alphabet.Op → String} {tape : Tape}
+    {input : Val} {log : Effect4.Trace.Log} {s : σ} {o : Observation}
+    (found : runRegionsColimit bound flow service nameOf tape input log s = some o) :
+    o.settled = true :=
+  Chain.colimit_settled found
+
+theorem runRegionsColimit_eq_of_settled {σ : Type} [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
+    {bound fuel : Nat} {flow : CheckedRegionFlow alphabet}
+    {service : RegionService alphabet (StateT σ Id)} {nameOf : alphabet.Op → String} {tape : Tape}
+    {input : Val} {log : Effect4.Trace.Log} {s : σ}
+    (settled : (runRegionsObservation fuel flow service nameOf tape input log s).settled = true)
+    (le : fuel ≤ bound) :
+    runRegionsColimit bound flow service nameOf tape input log s =
+      some (runRegionsObservation fuel flow service nameOf tape input log s) :=
+  Chain.colimit_eq_of_settled (c := runRegionsChain flow service nameOf tape input log s) settled le
+
+
+/-! ## The fuel an admitted region flow needs -/
+
+/-- The v2 block a region block erases to. -/
+def eraseBlock (flow : RegionFlow Ty) (block : RegionBlock Ty) : RawBlock Ty :=
+  { id := block.id, params := block.params, term := flow.eraseTerm block }
+
+private theorem find?_map_erase (flow : RegionFlow Ty) (id : BlockId) :
+    ∀ (bs : List (RegionBlock Ty)),
+      (bs.map (eraseBlock flow)).find? (fun block => block.id = id)
+        = (bs.find? (fun block => block.id = id)).map (eraseBlock flow)
+  | [] => rfl
+  | b :: bs => by
+      have head : (eraseBlock flow b).id = b.id := rfl
+      simp only [List.map_cons, List.find?_cons, head]
+      by_cases h : b.id = id
+      · simp [h]
+      · simp [h, find?_map_erase flow id bs]
+
+/-- Resolving a block in the erased graph is resolving it in the region graph
+and erasing: erasure is name-preserving and table-preserving. -/
+theorem lookupBlock_erase (flow : RegionFlow Ty) (id : BlockId) :
+    lookupBlock flow.erase id = (flow.block? id).map (eraseBlock flow) :=
+  find?_map_erase flow id flow.blocks
+
+/-- A block resolved in the erased graph came from a region block with the same
+parameter list. -/
+theorem block?_of_lookup_erase {flow : RegionFlow Ty} {id : BlockId} {target : RawBlock Ty}
+    (found : lookupBlock flow.erase id = some target) :
+    ∃ block, flow.block? id = some block ∧ block.params = target.params := by
+  rw [lookupBlock_erase] at found
+  cases hb : flow.block? id with
+  | none => rw [hb] at found; cases found
+  | some block =>
+      rw [hb, Option.map_some] at found
+      injection found with erased
+      exact ⟨block, rfl, by rw [← erased]; rfl⟩
+
+/-- Walking a non-`choose` edge: the segment since the last decision grows by
+one block and one unit of fuel pays for it. -/
+theorem LoopBudget.advance {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty}
+    (wf : FlowWF alphabet raw) {block next : BlockId} {tape : Tape} {visited : List BlockId}
+    {fuel : Nat} {current : RawBlock Ty} (found : lookupBlock raw block = some current)
+    (edge : EdgeNoChoose raw block next)
+    (budget : LoopBudget raw block tape visited (fuel + 1)) :
+    LoopBudget raw next tape (block :: visited) fuel where
+  nodup := List.nodup_cons.mpr ⟨budget.fresh, budget.nodup⟩
+  fresh := by
+    intro inSegment
+    have reachBack : ReachableNoChoose raw next block := by
+      rcases List.mem_cons.mp inSegment with eq | inVisited
+      · cases eq; exact .refl _
+      · exact budget.reaches next inVisited
+    exact wf.cycles block next edge reachBack
+  declared := by
+    intro x hx
+    rcases List.mem_cons.mp hx with rfl | hx
+    · exact mem_blockIds_of_lookup found
+    · exact budget.declared x hx
+  reaches := by
+    intro x hx
+    rcases List.mem_cons.mp hx with rfl | hx
+    · exact .step (.refl _) edge
+    · exact .step (budget.reaches x hx) edge
+  covers := by
+    have covers := budget.covers
+    simp only [List.length_cons]
+    omega
+
+/-- Answering a decision: one tape entry is consumed and the segment restarts,
+paid for by the `blocks.length` the segment could not exceed. -/
+theorem LoopBudget.consume {raw : RawFlow Ty} {block next : BlockId} {tape rest : Tape}
+    {visited : List BlockId} {fuel : Nat}
+    (bound : visited.length + 1 ≤ raw.blocks.length)
+    (consumed : rest.length + 1 = tape.length)
+    (budget : LoopBudget raw block tape visited (fuel + 1)) :
+    LoopBudget raw next rest [] fuel where
+  nodup := List.nodup_nil
+  fresh := List.not_mem_nil
+  declared := fun _ hx => absurd hx List.not_mem_nil
+  reaches := fun _ hx => absurd hx List.not_mem_nil
+  covers := by
+    have covers := budget.covers
+    have expand : (tape.length + 1) * raw.blocks.length
+        = (rest.length + 1) * raw.blocks.length + raw.blocks.length := by
+      rw [← consumed]
+      simp [Nat.add_mul]
+    simp only [List.length_nil]
+    omega
+
+/-- A region computation that does not stop at the fuel bound. -/
+def NotExhausted {σ : Type} (m : RunM (StateT σ Id) ((RunResult × Tape) × Failures)) : Prop :=
+  ∀ (log : Effect4.Trace.Log) (s : σ), ((m.run log).run s).1.1.1.1.exhausted = false
+
+namespace NotExhausted
+
+theorem bind {σ α : Type} {m : RunM (StateT σ Id) α}
+    {f : α → RunM (StateT σ Id) ((RunResult × Tape) × Failures)} (hf : ∀ a, NotExhausted (f a)) :
+    NotExhausted (m >>= f) := fun _ _ => hf _ _ _
+
+theorem leaf {σ : Type} {result : RunResult} (tape : Tape) (failures : Failures)
+    (h : result.exhausted = false) :
+    NotExhausted (σ := σ) (Pure.pure ((result, tape), failures)) := fun _ _ => h
+
+end NotExhausted
+
+theorem fail_not_exhausted {σ : Type} {alphabet : FlowAlphabet Ty}
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String)
+    (stack : List (Frame alphabet)) (error : Val) (rest : Failures) (tape : Tape) :
+    NotExhausted (fail service nameOf stack error rest tape) := by
+  unfold fail
+  refine NotExhausted.bind ?_
+  intro _
+  refine NotExhausted.bind ?_
+  intro _
+  exact NotExhausted.leaf _ _ rfl
+
+/-- **The region fuel argument.** A region run walked under `LoopBudget` never
+stops at the fuel bound. The region layer changes nothing about the count: an
+`enter` erases to a jump, an `acquire` to a `perform` and a `leave` to a jump
+at the region's `continue_`, so `regionLoop` spends exactly one unit of fuel
+per block of the *erased* graph, which is the graph `CyclesWF` constrains. A
+failing operation, a failing release and every unresolved shape end the run
+earlier still. -/
+theorem regionLoop_budget_not_exhausted {σ : Type} {alphabet : FlowAlphabet Ty}
+    {flow : RegionFlow Ty} (wf : FlowWF alphabet flow.erase)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String) :
+    ∀ (fuel : Nat) (block : BlockId) (env : Env) (tape : Tape) (visited : List BlockId)
+      (stack : List (Frame alphabet)) (current : RegionBlock Ty),
+      flow.block? block = some current →
+      env.length = current.params.length →
+      LoopBudget flow.erase block tape visited fuel →
+      NotExhausted (regionLoop alphabet flow service nameOf fuel block env tape stack) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro block env tape visited stack current found _ budget
+      exfalso
+      have foundErase : lookupBlock flow.erase block = some (eraseBlock flow current) := by
+        rw [lookupBlock_erase, found]; rfl
+      have bound := budget.segment_lt foundErase
+      have covers := budget.covers
+      have pos : flow.erase.blocks.length ≤ (tape.length + 1) * flow.erase.blocks.length :=
+        Nat.le_mul_of_pos_left _ (Nat.succ_pos _)
+      omega
+  | succ fuel ih =>
+      intro block env tape visited stack current found sized budget
+      have foundErase : lookupBlock flow.erase block = some (eraseBlock flow current) := by
+        rw [lookupBlock_erase, found]; rfl
+      have bound := budget.segment_lt foundErase
+      have memErase : eraseBlock flow current ∈ flow.erase.blocks :=
+        List.mem_of_find?_eq_some foundErase
+      have idEq : current.id = block := lookupBlock_id foundErase
+      have sizedErase : env.length = (eraseBlock flow current).params.length := sized
+      have planned := plan_checked wf memErase sizedErase tape
+      have shaped := plan_shape alphabet (eraseBlock flow current) env tape
+      -- Walking a declared non-`choose` edge of the erased graph.
+      have advance : ∀ (next : BlockId) (env' : Env) (stack' : List (Frame alphabet))
+          (target : RawBlock Ty), lookupBlock flow.erase next = some target →
+          env'.length = target.params.length → EdgeNoChoose flow.erase block next →
+          NotExhausted (regionLoop alphabet flow service nameOf fuel next env' tape stack') := by
+        intro next env' stack' target foundTarget sizedTarget edge
+        obtain ⟨rb, foundRb, paramsEq⟩ := block?_of_lookup_erase foundTarget
+        exact ih next env' tape (block :: visited) stack' rb foundRb
+          (by rw [paramsEq]; exact sizedTarget) (LoopBudget.advance wf foundErase edge budget)
+      -- Answering one decision.
+      have consume : ∀ (next : BlockId) (env' : Env) (rest : Tape)
+          (stack' : List (Frame alphabet)) (target : RawBlock Ty),
+          lookupBlock flow.erase next = some target → env'.length = target.params.length →
+          rest.length + 1 = tape.length →
+          NotExhausted (regionLoop alphabet flow service nameOf fuel next env' rest stack') := by
+        intro next env' rest stack' target foundTarget sizedTarget consumed
+        obtain ⟨rb, foundRb, paramsEq⟩ := block?_of_lookup_erase foundTarget
+        exact ih next env' rest [] stack' rb foundRb (by rw [paramsEq]; exact sizedTarget)
+          (LoopBudget.consume bound consumed budget)
+      unfold regionLoop
+      rw [found]
+      dsimp only
+      cases hterm : current.term with
+      | plain term =>
+          have erasedEq : eraseBlock flow current
+              = { id := current.id, params := current.params, term := term } := by
+            simp [eraseBlock, RegionFlow.eraseTerm, hterm]
+          rw [erasedEq] at planned shaped memErase
+          dsimp only
+          cases hplan : plan alphabet
+              { id := current.id, params := current.params, term := term } env tape with
+          | stuck => exact NotExhausted.leaf _ _ rfl
+          | ret value =>
+              exact NotExhausted.bind (fun _ => NotExhausted.leaf _ _ rfl)
+          | jump target env' =>
+              rw [hplan] at planned shaped
+              simp only [PlanShape] at shaped
+              cases planned with
+              | jump targetBlock foundTarget sizedTarget =>
+                  exact advance target env' stack targetBlock foundTarget sizedTarget
+                    ⟨_, memErase, idEq, shaped.1, shaped.2⟩
+          | perform op request target env' =>
+              rw [hplan] at planned shaped
+              simp only [PlanShape] at shaped
+              cases planned with
+              | perform targetBlock foundTarget sizedTarget =>
+                  refine NotExhausted.bind ?_
+                  intro result
+                  refine NotExhausted.bind ?_
+                  intro _
+                  cases result with
+                  | ok answer =>
+                      exact advance target (env' ++ [answer]) stack targetBlock foundTarget
+                        (by simpa using sizedTarget) ⟨_, memErase, idEq, shaped.1, shaped.2⟩
+                  | error error => exact fail_not_exhausted _ _ _ _ _ _
+          | exhausted site =>
+              exact NotExhausted.bind (fun _ => NotExhausted.leaf _ _ rfl)
+          | mismatch expected actual => exact NotExhausted.leaf _ _ rfl
+          | choose site branch target env' rest =>
+              rw [hplan] at planned shaped
+              simp only [PlanShape] at shaped
+              cases planned with
+              | choose targetBlock foundTarget sizedTarget =>
+                  refine NotExhausted.bind ?_
+                  intro _
+                  exact consume target env' rest stack targetBlock foundTarget sizedTarget shaped
+      | enter region body args =>
+          have erasedEq : eraseBlock flow current
+              = { id := current.id, params := current.params, term := .jump body args } := by
+            simp [eraseBlock, RegionFlow.eraseTerm, hterm]
+          rw [erasedEq] at planned shaped memErase
+          dsimp only
+          cases hargs : readArgs env args with
+          | none => exact NotExhausted.leaf _ _ rfl
+          | some values =>
+              have planEq : plan alphabet
+                  { id := current.id, params := current.params, term := RawTerm.jump body args }
+                  env tape = .jump body values := by
+                simp [plan, hargs]
+              rw [planEq] at planned shaped
+              simp only [PlanShape] at shaped
+              cases planned with
+              | jump targetBlock foundTarget sizedTarget =>
+                  refine NotExhausted.bind ?_
+                  intro _
+                  exact advance body values _ targetBlock foundTarget sizedTarget
+                    ⟨_, memErase, idEq, shaped.1, shaped.2⟩
+      | acquire operation request release target args =>
+          have erasedEq : eraseBlock flow current
+              = { id := current.id, params := current.params,
+                  term := .perform operation request target args } := by
+            simp [eraseBlock, RegionFlow.eraseTerm, hterm]
+          rw [erasedEq] at planned shaped memErase
+          dsimp only
+          cases hop : alphabet.lookup operation <;> cases hrelease : alphabet.lookup release <;>
+            cases hrequest : env[request.index]? <;> cases hargs : readArgs env args <;>
+            cases hstack : stack <;> dsimp only <;>
+            first
+              | exact NotExhausted.leaf _ _ rfl
+              | (rename_i op releaser requestValue values frame rest
+                 have planEq : plan alphabet
+                     { id := current.id, params := current.params,
+                       term := RawTerm.perform operation request target args } env tape
+                     = .perform op requestValue target values := by
+                   simp [plan, hop, hrequest, hargs]
+                 rw [planEq] at planned shaped
+                 simp only [PlanShape] at shaped
+                 cases planned with
+                 | perform targetBlock foundTarget sizedTarget =>
+                     refine NotExhausted.bind ?_
+                     intro result
+                     refine NotExhausted.bind ?_
+                     intro _
+                     cases result with
+                     | ok answer =>
+                         exact advance target (values ++ [answer]) _ targetBlock foundTarget
+                           (by simpa using sizedTarget) ⟨_, memErase, idEq, shaped.1, shaped.2⟩
+                     | error error => exact fail_not_exhausted _ _ _ _ _ _)
+      | leave value =>
+          dsimp only
+          cases hvalue : env[value.index]? <;> cases hstack : stack <;>
+            cases hrow : current.region.bind flow.row? <;> dsimp only <;>
+            first
+              | exact NotExhausted.leaf _ _ rfl
+              | (rename_i v frame rest row
+                 have erasedEq : eraseBlock flow current
+                     = { id := current.id, params := current.params,
+                         term := .jump row.continue_ [value] } := by
+                   simp [eraseBlock, RegionFlow.eraseTerm, hterm, hrow]
+                 rw [erasedEq] at planned shaped memErase
+                 have planEq : plan alphabet
+                     { id := current.id, params := current.params,
+                       term := RawTerm.jump row.continue_ [value] } env tape
+                     = .jump row.continue_ [v] := by
+                   simp [plan, readArgs, hvalue]
+                 rw [planEq] at planned shaped
+                 simp only [PlanShape] at shaped
+                 cases planned with
+                 | jump targetBlock foundTarget sizedTarget =>
+                     refine NotExhausted.bind ?_
+                     intro failures
+                     cases failures with
+                     | nil =>
+                         exact advance row.continue_ [v] rest targetBlock foundTarget sizedTarget
+                           ⟨_, memErase, idEq, shaped.1, shaped.2⟩
+                     | cons error more => exact fail_not_exhausted _ _ _ _ _ _)
+
+
+/-- Enough fuel for every run of an admitted region flow: the fuel its erasure
+needs. `regionLoop` spends one unit per block of `flow.erase` and the region
+boundaries are blocks of that graph, so the region layer adds nothing to the
+count -- `regionFuelFor flow tape = (tape.length + 1) * flow.blocks.length + 1`
+(`regionFuelFor_blocks`). -/
+def regionFuelFor (flow : RegionFlow Ty) (tape : Tape) : Nat := fuelFor flow.erase tape
+
+/-- The region flow's own block table gives the same allotment: erasure is one
+block per block. -/
+theorem regionFuelFor_blocks (flow : RegionFlow Ty) (tape : Tape) :
+    regionFuelFor flow tape = (tape.length + 1) * flow.blocks.length + 1 := by
+  simp [regionFuelFor, fuelFor, RegionFlow.erase]
+
+/-- The admitted region flow's erasure carries the v2 evidence. -/
+theorem regionFlow_erase_wf [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
+    (flow : CheckedRegionFlow alphabet) : FlowWF alphabet flow.flow.erase :=
+  flow.erased ▸ erase_wf flow.checked
+
+/-- **DB-04 for the region runner, with the merged failure carrier.** Running
+an admitted region flow with the fuel `regionFuelFor` allots never ends at the
+fuel frontier. With `regionLoop_frontier_live` this says a fuel frontier is
+never what an admitted region run reports at its own allotment. -/
+theorem runRegionsCause_fuelFor_finishes {σ : Type} [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
+    (flow : CheckedRegionFlow alphabet) (service : RegionService alphabet (StateT σ Id))
+    (nameOf : alphabet.Op → String) (tape : Tape) (input : Val) (log : Effect4.Trace.Log)
+    (s : σ) :
+    ((((runRegionsCause (regionFuelFor flow.flow tape) flow service nameOf tape
+      input).run log).run s)).1.1.1.1.exhausted = false := by
+  have wf := regionFlow_erase_wf flow
+  have entry := wf.entry
+  unfold EntryWF at entry
+  cases found : lookupBlock flow.flow.erase flow.flow.erase.entry with
+  | none => rw [found] at entry; cases entry
+  | some erased =>
+      rw [found] at entry
+      obtain ⟨current, foundCurrent, paramsEq⟩ := block?_of_lookup_erase found
+      have sized : ([input] : Env).length = current.params.length := by
+        rw [paramsEq, entry]; rfl
+      exact regionLoop_budget_not_exhausted wf service nameOf (regionFuelFor flow.flow tape)
+        flow.flow.entry [input] tape [] [] current foundCurrent sized
+        { nodup := List.nodup_nil
+          fresh := List.not_mem_nil
+          declared := fun _ hx => absurd hx List.not_mem_nil
+          reaches := fun _ hx => absurd hx List.not_mem_nil
+          covers := by simp [regionFuelFor, fuelFor] } log s
+
+/-- The wire form: the public region runner at its own allotment never ends at
+the fuel frontier. -/
+theorem runRegions_fuelFor_finishes {σ : Type} [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
+    (flow : CheckedRegionFlow alphabet) (service : RegionService alphabet (StateT σ Id))
+    (nameOf : alphabet.Op → String) (tape : Tape) (input : Val) (log : Effect4.Trace.Log)
+    (s : σ) :
+    ((((runRegions (regionFuelFor flow.flow tape) flow service nameOf tape
+      input).run log).run s)).1.1.1.exhausted = false :=
+  runRegionsCause_fuelFor_finishes flow service nameOf tape input log s
+
+/-- `runRegionsDefault` is `runRegions` at exactly that fuel, so it too always
+finishes. -/
+theorem runRegionsDefault_finishes {σ : Type} [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
+    (flow : CheckedRegionFlow alphabet) (service : RegionService alphabet (StateT σ Id))
+    (nameOf : alphabet.Op → String) (tape : Tape) (input : Val) (log : Effect4.Trace.Log)
+    (s : σ) :
+    ((((runRegionsDefault flow service nameOf tape input).run log).run s)).1.1.1.exhausted
+      = false :=
+  runRegions_fuelFor_finishes flow service nameOf tape input log s
+
+/-- The colimit of an admitted region run: the settled observation reached at
+the fuel `regionFuelFor` allots. Total, not `Option`. -/
+def runRegionsColimitDefault {σ : Type} [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
+    (flow : CheckedRegionFlow alphabet) (service : RegionService alphabet (StateT σ Id))
+    (nameOf : alphabet.Op → String) (tape : Tape) (input : Val) (log : Effect4.Trace.Log)
+    (s : σ) : Observation :=
+  runRegionsObservation (regionFuelFor flow.flow tape) flow service nameOf tape input log s
+
+/-- The region colimit is settled: no more fuel can refine it. -/
+theorem runRegionsColimitDefault_settled {σ : Type} [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
+    (flow : CheckedRegionFlow alphabet) (service : RegionService alphabet (StateT σ Id))
+    (nameOf : alphabet.Op → String) (tape : Tape) (input : Val) (log : Effect4.Trace.Log)
+    (s : σ) :
+    (runRegionsColimitDefault flow service nameOf tape input log s).settled = true := by
+  have finishes := runRegionsCause_fuelFor_finishes flow service nameOf tape input log s
+  simp only [runRegionsColimitDefault, runRegionsObservation, obsOf]
+  rw [observe_settled, finishes]
+  rfl
+
+/-- Every smaller fuel is below the region colimit. -/
+theorem runRegionsColimitDefault_above {σ : Type} [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
+    (fuel : Nat) (flow : CheckedRegionFlow alphabet)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String) (tape : Tape)
+    (input : Val) (log : Effect4.Trace.Log) (s : σ) (le : fuel ≤ regionFuelFor flow.flow tape) :
+    Observation.le (runRegionsObservation fuel flow service nameOf tape input log s)
+      (runRegionsColimitDefault flow service nameOf tape input log s) = true :=
+  runRegions_obs_chain le flow service nameOf tape input log s
+
+/-- Every larger fuel observes exactly the region colimit. -/
+theorem runRegionsColimitDefault_stable {σ : Type} [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
+    {larger : Nat} (flow : CheckedRegionFlow alphabet)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String) (tape : Tape)
+    (input : Val) (log : Effect4.Trace.Log) (s : σ)
+    (le : regionFuelFor flow.flow tape ≤ larger) :
+    runRegionsObservation larger flow service nameOf tape input log s =
+      runRegionsColimitDefault flow service nameOf tape input log s :=
+  (runRegionsChain flow service nameOf tape input log s).stable
+    (runRegionsColimitDefault_settled flow service nameOf tape input log s) le
+
+/-- The searched region colimit and the colimit at the allotted fuel agree. -/
+theorem runRegionsColimit_eq_default {σ : Type} [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
+    {bound : Nat} (flow : CheckedRegionFlow alphabet)
+    (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String) (tape : Tape)
+    (input : Val) (log : Effect4.Trace.Log) (s : σ)
+    (le : regionFuelFor flow.flow tape ≤ bound) :
+    runRegionsColimit bound flow service nameOf tape input log s =
+      some (runRegionsColimitDefault flow service nameOf tape input log s) :=
+  Chain.colimit_eq_of_settled (c := runRegionsChain flow service nameOf tape input log s)
+    (runRegionsColimitDefault_settled flow service nameOf tape input log s) le
 
 end Effect4.Flow

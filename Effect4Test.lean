@@ -46,6 +46,8 @@ import Effect4Test.Semantics.CauseExitContract
 import Effect4Test.Semantics.ObservationContract
 import Effect4Test.Flow.RunnerContract
 import Effect4Test.Semantics.DenotationContract
+import Effect4Test.Semantics.ApproximationContract
+import Effect4Test.Semantics.ApproximationAxiomReport
 import Effect4Test.Flow.RegionRunnerContract
 import Effect4Test.Target.TypeScript.RegionLowerContract
 import Effect4Test.Target.TypeScript.StructuredLowerContract

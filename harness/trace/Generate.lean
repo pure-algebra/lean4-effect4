@@ -7,6 +7,7 @@ import Effect4.Target.TypeScript.FlowLower
 import Effect4.Target.TypeScript.RegionLower
 import Effect4.Target.TypeScript.StructuredLower
 import Effect4.Flow.Region
+import Effect4.Semantics.Approximation
 
 /-!
 The trace harness family. `main fixture` prints the generated Effect v4 module,
@@ -554,6 +555,33 @@ def regionLog (entry : RegionEntry) : Except String Effect4.Trace.Log :=
   | .failed _ => pure result.1.2
   | other => throw s!"the region run of {entry.program.name} did not finish: {repr other}"
 
+/-- The Lean-face run of a region program at one fuel: the result and the log. -/
+def regionRunAt (entry : RegionEntry) (fuel : Nat) : Flow.RunResult × Effect4.Trace.Log :=
+  let table := entry.program.table
+  let result : ((Flow.RunResult × Flow.Tape) × Effect4.Trace.Log) × Nat :=
+    ((Flow.runRegions fuel entry.program.flow
+      (Flow.tableRegionService ⟨0⟩ table rcellFamily cellAtom)
+      (tableNameOf ⟨0⟩ table) [] entry.input).run []).run entry.initial
+  (result.1.1.1, result.1.2)
+
+/-- The DB-04 frontier golden of a region program: the run at one fuel below
+the least fuel that finishes. Its log is the region rows already written,
+punctuated by the `frontier` marker -- and nothing else: fuel exhaustion is a
+live frontier, never a failure and never a refusal, and it leaves the merged
+failure list untouched (`Effect4/Semantics/Approximation.lean`,
+`regionLoop_frontier_live`). The region counterpart of the `swap.budget`
+golden. `regionFuelFor` bounds the search, and
+`Effect4.Flow.runRegions_fuelFor_finishes` is why that bound is enough. -/
+def regionFrontierLog (entry : RegionEntry) : Except String Effect4.Trace.Log :=
+  let bound := Flow.regionFuelFor entry.program.flow.flow []
+  match (List.range (bound + 1)).find? fun fuel => !(regionRunAt entry fuel).1.exhausted with
+  | none => throw s!"the region run of {entry.program.name} does not finish below fuel {bound}"
+  | some 0 => throw s!"the region run of {entry.program.name} finishes at zero fuel"
+  | some (settles + 1) =>
+      let out := regionRunAt entry settles
+      if out.1.exhausted then pure out.2
+      else throw s!"the region run of {entry.program.name} did not stop at a fuel frontier"
+
 /-- The flow families of the dispatch-form module. -/
 def flowFamilies : List (ServiceRow × List FlowProgram × List RegionProgram) :=
   [ (Cell.rows, flowEntries.map (·.program), []), (RCell.rows, [], regionEntries.map (·.program)) ]
@@ -661,4 +689,11 @@ def main (args : List String) : IO Unit := do
   | ["scope-types"] =>
       for entry in scopePrograms do
         IO.println (entry.name ++ "\t" ++ Script.declarationLine Scopes.rows entry.script)
-  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | admission-probe")
+  | ["region-frontier"] =>
+      for entry in regionEntries do
+        match regionFrontierLog entry with
+        | .ok log =>
+            IO.print (Effect4.Target.TypeScript.Trace.golden (entry.program.name ++ ".frontier") []
+              ((Region.ruleSet RCell.rows entry.program).map Rule.id) log (face := "lean-flow"))
+        | .error message => throw (IO.userError message)
+  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe")

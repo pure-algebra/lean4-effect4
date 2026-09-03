@@ -839,3 +839,77 @@ and byte-stable; host, patched, types, property, coverage, census, family
 check, the three planted-mutant self-tests (goldens, coverage, lowering
 4/4), citations and the trust gate all green. Agent worktrees and branches
 are removed. Not pushed.
+
+## DB-04 region half landed, 2026-09-03
+
+`Effect4/Semantics/Approximation.lean` carried only the tape runner's half of
+the DB-04 approximation laws; the region half had been drafted against the
+pre-D2 region runner and was cut when D2 changed the failure carrier to a
+merged failure list. It is now in the tree, restated over that carrier.
+
+The laws travel on four properties of a region-run computation, each closed
+under `bind`, so each law is one structural walk over `regionLoop`'s branches
+rather than a repeat of the plain runner's computation: `Appends` (the log
+only grows), `Sound` (it appends, it punctuates a fuel frontier with the
+marker it emitted, a failing run's merged list is headed by the reported
+error, and a run that did not fail has an empty merged list), `Below` (one
+computation observes below another), `Settles` (wherever the first did not
+exhaust its fuel the second is the identical run).
+
+What landed:
+
+- `regionStep_log_extends` — one block's worth of region fuel only appends.
+- `regionLoop_fuel_stable` — once a run at fuel `i` has finished, failed,
+  refused, stuck or run out of tape, every fuel `j ≥ i` gives the *same* run:
+  result, unconsumed tape, merged failure list, log and service state.
+- `region_obs_mono`, `region_obs_chain`, `regionObservation_stable`, and the
+  `runRegions` forms `runRegions_obs_mono`, `runRegions_obs_chain`,
+  `runRegions_obs_stable`, with `runRegionsChain`/`runRegionsColimit`.
+- `regionLoop_frontier_live` — a fuel frontier is a `fuel` frontier, never a
+  `failed` and never a `refused` result, and the merged failure list is
+  untouched: it is `[]`. This is DB-04's "fuel exhaustion is a live frontier,
+  never a failure, never a refusal" for the region runner.
+- `regionLoop_failed_head` — the D2 carrier's own law: a failing region run's
+  merged list is headed by the error the wire and `RunResult.failed` report.
+  The carrier is `closeFrame_failure_merge`'s, close order, first failure
+  first.
+
+The fuel formula. The region runner had none. It does not need one of its own:
+an `enter` erases to a jump, an `acquire` to a `perform`, a `leave` to a jump
+at the region's `continue_`, so `regionLoop` spends exactly one unit of fuel
+per block of `flow.erase` — the graph `CyclesWF` constrains. So
+`regionFuelFor flow tape = fuelFor flow.erase tape`, which
+`regionFuelFor_blocks` reads back as `(tape.length + 1) * flow.blocks.length
++ 1` on the region flow's own table, and `runRegions_fuelFor_finishes` proves
+it suffices — `Fuel.lean`'s `LoopBudget` carried through `regionLoop`'s
+branches, with `lookupBlock_erase` as the bridge. `runRegionsColimitDefault`
+is therefore total, not an `Option`, exactly as `runColimitDefault` is for the
+plain runner; the module docstring's old "the region runner has no
+fuel-sufficiency theorem yet" paragraph is retired.
+
+Receipts (`Effect4Test/Semantics/ApproximationContract.lean`, new file — the
+runner half's counterexample receipt was referenced by the module docstring
+but had no file): the antisymmetry counterexample (two fuel frontiers with the
+same log and different resumption blocks are mutually below and not equal, and
+equal once observed), and the four DB-04 facts on `regionNested`,
+`regionTwoFail` and `regionBothSucceed` from `harness/trace/Generate.lean`
+plus one program whose release fails under a failing body. Allotments 9, 7, 5
+and 6; the runs settle at 5, 4, 4 and 3, so the allotment is sufficient and not
+tight. The merged-failure program's carrier is `[boom, boom]` — the body's
+failure and the release's, in close order — while its wire result is
+`failed boom`. Axioms in `Effect4Test/Semantics/ApproximationAxiomReport.lean`:
+`propext` and `Quot.sound` only, no `Classical.choice`.
+
+Tracing. `harness/trace/Generate.lean` grew a `region-frontier` arm: for each
+region program it emits the Lean-face golden at one fuel below finishing — the
+region rows already written, then a `frontier` row — the region counterpart of
+`swap.budget`. It prints to stdout only; no file was added under `generated/`
+and no script was touched, so nothing in the gate set changed.
+
+Not closed. The `approximation` row of `docs/TRACE-DAG.md` stays
+`required-open`: nothing host-side is claimed, and no gate compares a host run
+at a region fuel frontier against the new golden. `Chain.colimit_below` and
+`Chain.colimit_bound_mono` are stated once, over an arbitrary chain, and serve
+both runners; there is no separate region restatement of them.
+
+`lake build Effect4` green.
