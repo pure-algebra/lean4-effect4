@@ -306,6 +306,16 @@ namespace Probe
 
 inductive Ty where
   | nat
+  /-- The spelling a `branch` test operand must carry (Flow v3). No term in
+  this probe is a `branch`, so nothing here reads it; the alphabet still has to
+  name a spelling, and naming `nat` would claim the counter's answers are
+  boolean tests. -/
+  | bool
+  /-- The declared error spelling (Flow v3): the type a `performCatch` binds in
+  its failure successor. This probe runs `Effects.Program`, not a checked flow,
+  so its failures are `Effect4.Cause` values at the handler and no term reads
+  this spelling either. -/
+  | err
 deriving DecidableEq
 
 inductive Op where
@@ -322,6 +332,8 @@ def alphabet : Effects.FlowAlphabet Ty where
   lookup id := if id.value = 0 then some .get else if id.value = 1 then some .add else none
   requestTy := fun _ => Ty.nat
   answerTy := fun _ => Ty.nat
+  errorTy := fun _ => Ty.err
+  boolTy := Ty.bool
   lookup_operationId := by intro op; cases op <;> rfl
   operationId_of_lookup := by
     intro id op h
