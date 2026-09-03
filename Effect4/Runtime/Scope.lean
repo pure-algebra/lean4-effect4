@@ -1331,6 +1331,45 @@ theorem runScoped_lifo [DecidableEq κ] (run : φ -> Exit β ε δ ι α -> Exit
     ((make FinalizerStrategy.sequential : Scope κ φ β ε δ ι α).addAll registrations) bodyExit,
     make_addAll_finalizers FinalizerStrategy.sequential registrations h]
 
+/-! ### Closing in a monad
+
+`closeExits` takes a *pure* `run`. A finalizer that runs in a monad — a region
+runner's release, which performs an alphabet operation — needs the same walk
+with the effects threaded through, in the same close order. `closeExitsM` is
+that generalisation and nothing more: at `Id` it is `closeExits`.
+-/
+
+/-- Every registered finalizer's own exit, in close order, when running a
+finalizer is itself effectful. The walk is left to right over `closeOrder`, so
+the effects are threaded in close order and a failing finalizer does not abort
+the loop. census: scope.close-sequential -/
+def closeExitsM {M : Type u -> Type w} [Monad M]
+    (run : φ -> Exit β ε δ ι α -> M (Exit Unit ε δ ι α))
+    (self : Scope κ φ β ε δ ι α) (exit : Exit β ε δ ι α) : M (List (Exit Unit ε δ ι α)) :=
+  self.closeOrder.mapM (fun finalizer => run finalizer exit)
+
+/-- The monadic close walks `closeOrder`, by definition.
+census: scope.close-sequential -/
+theorem closeExitsM_eq {M : Type u -> Type w} [Monad M]
+    (run : φ -> Exit β ε δ ι α -> M (Exit Unit ε δ ι α))
+    (self : Scope κ φ β ε δ ι α) (exit : Exit β ε δ ι α) :
+    closeExitsM run self exit = self.closeOrder.mapM (fun finalizer => run finalizer exit) :=
+  rfl
+
+/-- An effect-free finalizer run gives back `closeExits`: the monadic
+generalisation adds threading, not order. census: scope.close-sequential -/
+theorem closeExitsM_id (run : φ -> Exit β ε δ ι α -> Exit Unit ε δ ι α)
+    (self : Scope κ φ β ε δ ι α) (exit : Exit β ε δ ι α) :
+    closeExitsM (M := Id) (fun finalizer bodyExit => run finalizer bodyExit) self exit =
+      closeExits run self exit := by
+  show self.closeOrder.mapM (m := Id) (fun finalizer => run finalizer exit) = _
+  rw [closeExits_eq run self exit]
+  induction self.closeOrder with
+  | nil => rfl
+  | cons finalizer rest ih =>
+    rw [List.mapM_cons, List.map_cons, ← ih]
+    rfl
+
 /-- rc.112 `acquireRelease`, scope side only: register the release against the
 ambient scope, and only after a successful acquire. `uninterruptibleMask` and
 `provideContext` are not modelled (`SCOPE-FB-FIBER`).
