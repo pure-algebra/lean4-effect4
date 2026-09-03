@@ -1,0 +1,4 @@
+-- An admitted goal is a warning, not an error: this module still compiles and
+-- the build stays green. Only the source pass refuses it.
+private theorem plantedSorry : (0 : Nat) = 1 := by
+  sorry

@@ -1,0 +1,3 @@
+-- Replaces a checked Lean body with host code at runtime. It moves no axiom,
+-- and it is not a claim this tree is entitled to make about its own semantics.
+@[extern "planted_extern"] private def plantedExtern : Nat := 0

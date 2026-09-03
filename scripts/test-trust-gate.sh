@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# Exercises whether the source trust gate rejects authored `partial` and
-# `unsafe` declaration modifiers.
+# Exercises whether the trust gate rejects what it claims to reject: authored
+# trust tokens in the source (`partial`, `unsafe`, `sorry`, `native_decide` —
+# the last two also when hidden inside an `example`, which leaves no constant
+# for the declaration pass to see), a bodyless `opaque`, and an unadmitted
+# `Classical.choice` dependency.
 #
 # The detector is an elaboration-time check in the root aggregator
 # `Effect4Test.lean`, which Lake builds LAST. Any earlier module that fails to
@@ -39,6 +42,34 @@ if [[ -d "$repo_root/.lake/packages" ]]; then
   mkdir -p "$project_root/.lake"
   cp -R "$repo_root/.lake/packages" "$project_root/.lake/"
 fi
+# And the build artifacts, so the control build is a replay rather than 243
+# modules from scratch. Lake's traces are content hashes, so anything the copy
+# gets wrong is rebuilt rather than believed: the speedup is free of trust.
+if [[ -d "$repo_root/.lake/build" ]]; then
+  mkdir -p "$project_root/.lake"
+  cp -R "$repo_root/.lake/build" "$project_root/.lake/"
+  # ... with one exception. The audit root is the thing under test, and its
+  # artifact must never be replayed: `#effect4_axiom_gate` reads the source
+  # tree and `known-red.txt` directly, neither of which is in Lake's trace, so
+  # a replayed olean would report a verdict about the repository rather than
+  # about this probe. Delete it and let it re-elaborate every time.
+  rm -f "$project_root/.lake/build/lib/lean/Effect4Test.olean" \
+        "$project_root/.lake/build/lib/lean/Effect4Test.olean.hash" \
+        "$project_root/.lake/build/lib/lean/Effect4Test.ilean" \
+        "$project_root/.lake/build/lib/lean/Effect4Test.ilean.hash" \
+        "$project_root/.lake/build/lib/lean/Effect4Test.trace" \
+        "$project_root/.lake/build/ir/Effect4Test.c" \
+        "$project_root/.lake/build/ir/Effect4Test.c.hash" \
+        "$project_root/.lake/build/ir/Effect4Test.setup.json"
+fi
+
+# The module-closure half of the gate reads the declared-red set from the tree
+# it is auditing, and treats a missing file as a defect rather than an empty
+# set. Step 0 below runs against the repository's own set; after the excision
+# the probe's set is emptied, because by then the modules it names are gone.
+probe_known_red="$project_root/test/fixtures/trust-gate/known-red.txt"
+mkdir -p "$project_root/test/fixtures/trust-gate"
+cp "$known_red" "$probe_known_red"
 
 build_log="$tmp_root/build.log"
 
@@ -55,7 +86,12 @@ declared_red="$( { [[ -f "$known_red" ]] && grep -v '''^[[:space:]]*#''' "$known
   | grep -v '''^[[:space:]]*$''' || true; } | LC_ALL=C sort -u )"
 
 # --- 0. establish that the declared red set is exactly the failing set ------
-(cd "$project_root" && lake build) >"$build_log" 2>&1 || true
+# The RED-INCLUSIVE target, not the default one. `lake build` builds
+# `Effect4TestGreen` — the audit root and its import closure — which by
+# construction excludes a declared red module, so it could never observe one
+# failing. `Effect4Test` is the glob over every module under `Effect4Test/`,
+# which is what this step has to look at.
+(cd "$project_root" && lake build Effect4Test) >"$build_log" 2>&1 || true
 observed_red="$(failing_targets "$build_log")"
 
 # The root aggregator fails whenever anything it imports fails. It is a
@@ -98,6 +134,14 @@ if [[ -n "$declared_red" ]]; then
   done <<<"$declared_red"
 fi
 
+# The probe tree is all green now, so its declared-red set is empty by
+# construction. The header stays because the file must exist.
+cat >"$probe_known_red" <<'PROBE_KNOWN_RED'
+# Written by scripts/test-trust-gate.sh. The probe copy excises every declared
+# red module before the planted-declaration assertions run, so by then the tree
+# is all green and this set is empty.
+PROBE_KNOWN_RED
+
 cp "$audit_source" "$audit_original"
 
 expect_acceptance() {
@@ -110,9 +154,12 @@ expect_acceptance() {
   echo "PASS trust gate accepted $label"
 }
 
-expect_rejection() {
+# Plant a fixture in the audit source and require the build to fail with the
+# exact diagnostic named. A rejection for the wrong reason is a failure: the
+# point is that the gate saw what was planted, not that something broke.
+expect_rejection_matching() {
   local fixture="$1"
-  local expected_modifier="$2"
+  local expected_message="$2"
   local label="$3"
   cp "$audit_original" "$audit_source"
   printf '''\n''' >>"$audit_source"
@@ -121,12 +168,21 @@ expect_rejection() {
     echo "trust-gate self-test unexpectedly accepted $label" >&2
     exit 1
   fi
-  if ! grep -Fq "contains an authored \`$expected_modifier\` declaration modifier" "$build_log"; then
+  if ! grep -Fq "$expected_message" "$build_log"; then
     echo "trust-gate self-test rejected $label for an unexpected reason" >&2
+    echo "--- expected to find: $expected_message" >&2
     tail -80 "$build_log" >&2
     exit 1
   fi
   echo "PASS planted $label rejected"
+}
+
+expect_rejection() {
+  local fixture="$1"
+  local expected_token="$2"
+  local label="$3"
+  expect_rejection_matching "$fixture" \
+    "contains an authored \`$expected_token\` trust token" "$label"
 }
 
 expect_acceptance "the unmodified source tree"
@@ -140,6 +196,19 @@ expect_rejection "$repo_root/test/fixtures/trust-gate/partial.lean.txt" partial 
   "partial declaration"
 expect_rejection "$repo_root/test/fixtures/trust-gate/unsafe.lean.txt" unsafe \
   "unsafe declaration"
+expect_rejection "$repo_root/test/fixtures/trust-gate/sorry.lean.txt" sorry \
+  "sorry in a named theorem"
+# The one that says finding #1 is closed: an `example` leaves no constant, so
+# only the source pass can see this.
+expect_rejection "$repo_root/test/fixtures/trust-gate/example-sorry.lean.txt" sorry \
+  "sorry inside an example"
+expect_rejection "$repo_root/test/fixtures/trust-gate/native-decide.lean.txt" native_decide \
+  "native_decide"
+# `opaque` is not a token check: the bodied form is admitted and the keyword is
+# the same, so this is the declaration pass reading the synthesised value.
+expect_rejection_matching "$repo_root/test/fixtures/trust-gate/opaque.lean.txt" \
+  "plantedBodylessOpaque is an \`opaque\` with no body" \
+  "bodyless opaque"
 
 cp "$audit_original" "$audit_source"
 field_source="$project_root/Effect4/Target/TypeScript/EffectfulField.lean"

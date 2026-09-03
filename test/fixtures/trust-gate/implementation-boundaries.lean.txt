@@ -55,8 +55,9 @@ run_elab do
   unless privateMatches.size == 1 do
     throwError "expected exactly one owned directionalRowsPresent declaration, found {privateMatches.size}"
   let privateName := privateMatches[0]!
-  unless choiceImplementationPrivateDeclarations == [(targetModule, privateSpelling)] do
-    throwError "private rendering admission must be exactly its owning module and declaration spelling"
+  unless (choiceImplementationPrivateDeclarations.filter
+      (· == (targetModule, privateSpelling))).length == 1 do
+    throwError "private rendering admission must name exactly its owning module and declaration spelling, exactly once"
   let expected :=
     [ ``Effect4.Target.TypeScript.EffectfulField.source?
     , ``Effect4.Target.TypeScript.EffectfulField.generate?
@@ -106,5 +107,32 @@ run_elab do
     throwError "fresh choice-bearing semantic helper received an implementation exemption"
   logInfo "PASS exact private resolution, rendering receipts, and base ceiling for semantic declarations"
   logInfo "PASS fresh choice-bearing semantic helper exceeds its selected ceiling"
+
+-- The two bridge theorems the deleted `targetImplementationModules` used to
+-- cover. They say Effect4's emitter IS the pinned `typescript` package's
+-- emitter, node for node, and the comment justifying the blanket admission
+-- claimed the module "declares no theorem". They are clean; this is the gate
+-- proving it rather than a comment asserting it.
+run_elab do
+  let environment ← Lean.getEnv
+  let declarations := environment.constants.toList.toArray.map Prod.fst
+  let admitted ← match resolveChoiceImplementationDeclarations environment declarations with
+    | .ok names => pure names
+    | .error error => throwError "could not resolve exact implementation admissions: {error}"
+  let skeletonModule := `Effect4.Target.TypeScript.Skeleton
+  if choiceImplementationModules.contains skeletonModule then
+    throwError "the skeleton module has a blanket exemption again; the bridge theorems are inside it"
+  let bridges :=
+    [ ``Effect4.Target.EffectV4.Structuring.emitNode_eq
+    , ``Effect4.Target.EffectV4.Structuring.emitWith_eq
+    ]
+  for name in bridges do
+    if admitted.contains name then
+      throwError "the emitter bridge theorem received an implementation exemption: {name}"
+    unless (moduleOf? environment name) == some skeletonModule do
+      throwError "the emitter bridge theorem moved out of the skeleton module: {name}"
+    unless (← collectAxioms name).all allowedAxioms.contains do
+      throwError "the emitter bridge theorem exceeds the base ceiling: {name}"
+  logInfo "PASS the emitter bridge theorems are unadmitted and at the base ceiling"
 
 end Effect4Test.Audit

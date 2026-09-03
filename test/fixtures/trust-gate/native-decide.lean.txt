@@ -1,0 +1,4 @@
+-- Closes the goal by compiler evaluation, reaching `Lean.ofReduceBool`. The
+-- source pass names it before the declaration pass gets there.
+private theorem plantedNativeDecide : (1 + 1 : Nat) = 2 := by
+  native_decide
