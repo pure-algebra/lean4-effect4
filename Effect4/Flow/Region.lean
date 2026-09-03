@@ -18,6 +18,13 @@ value; a release failure becomes the exit of everything enclosing. A failing
 operation closes every open region innermost-first with `failure error` and
 the run ends `failed`.
 
+A Flow v3 `performCatch` is the exception: its failure is *caught*, so it does
+not unwind. The run writes the operation's `op` row and its `failed name error`
+row and continues at the declared failure successor with `errorArgs ++ [error]`
+inside the still-open region; no `leave`, no `finalizer` and no `done failure`
+row is written on that path, and an enclosing region's releases still run when
+that region is left later.
+
 A run failure is a *merged* cause: the failures a run collected, in close
 order, first failure first (`Failures`). A close keeps every failing release,
 not only the first, which is what the reified rc.112 `Scope.closeResult`
@@ -206,6 +213,15 @@ def regionLoop [Monad M] (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
           | .choose site branch target env' rest => do
               emit (.decide site.value branch)
               regionLoop alphabet flow service nameOf fuel target env' rest stack
+          | .performCatch op request target env' onError errorEnv => do
+              let result ← StateT.lift (service.handle op request)
+              logOperation service nameOf op request result
+              match result with
+              | .ok answer =>
+                  regionLoop alphabet flow service nameOf fuel target (env' ++ [answer]) tape stack
+              | .error error =>
+                  regionLoop alphabet flow service nameOf fuel onError (errorEnv ++ [error]) tape
+                    stack
       | .enter region body args =>
           match readArgs env args with
           | none => stuck

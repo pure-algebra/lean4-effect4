@@ -101,6 +101,9 @@ def denoteFuel {alphabet : FlowAlphabet Ty} :
       | .mismatch expected actual => .pure (.refused expected actual, tape)
       | .choose site branch target env' rest =>
           .vis (.inr (site, branch)) fun _ => denoteFuel fuel raw target env' rest
+      | .performCatch op request target env' _ _ =>
+          .vis (.inl ⟨op, request⟩) fun answer : Val =>
+            denoteFuel fuel raw target (env' ++ [answer]) tape
 
 /-! ## The interpreting handler -/
 
@@ -279,6 +282,16 @@ theorem loop_eq_interpretRun [Monad M] [LawfulMonad M] {alphabet : FlowAlphabet 
                 (fun _ => denoteFuel fuel raw target env' rest) log).symm
               simp only [step, planned, StateT.run_bind, StateT.run_pure, emit_run, pure_bind]
               exact ih target env' rest _
+          | performCatch op request target env' onError errorEnv =>
+              dsimp only
+              refine Eq.trans ?_ (interpretRun_run_perform service nameOf op request
+                (fun answer => denoteFuel fuel raw target (env' ++ [answer]) tape) log).symm
+              simp only [step, planned, StateT.run_bind, StateT.run_lift,
+                bind_assoc, pure_bind]
+              refine bind_congr (m := M) fun answer => ?_
+              cases pureOp : service.pure op with
+              | false => simpa [emit_run] using ih target (env' ++ [answer]) tape _
+              | true => simpa [emit_run] using ih target (env' ++ [answer]) tape log
 
 /-- T1 at the public face. -/
 theorem runTape_eq_interpretRun [Monad M] [LawfulMonad M] {alphabet : FlowAlphabet Ty}
@@ -471,6 +484,20 @@ theorem edgeNoChoose_of_plan_perform {alphabet : FlowAlphabet Ty} {raw : RawFlow
   rw [planned] at shaped
   exact ⟨current, List.mem_of_find?_eq_some found, lookupBlock_id found, shaped.1, shaped.2⟩
 
+/-- A `performCatch` leaves its block along a declared non-`choose` edge: the
+plain runner's service cannot fail, so the value edge is the only one it
+travels. -/
+theorem edgeNoChoose_of_plan_performCatch {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty}
+    {block : BlockId} {current : RawBlock Ty} (found : lookupBlock raw block = some current)
+    {env : Env} {tape : Tape} {op : alphabet.Op} {request : Val} {target : BlockId} {env' : Env}
+    {onError : BlockId} {errorEnv : Env}
+    (planned : plan alphabet current env tape
+      = .performCatch op request target env' onError errorEnv) :
+    EdgeNoChoose raw block target := by
+  have shaped := plan_shape alphabet current env tape
+  rw [planned] at shaped
+  exact ⟨current, List.mem_of_find?_eq_some found, lookupBlock_id found, shaped.1, shaped.2⟩
+
 /-- A `choose` consumes exactly one tape entry. -/
 theorem tape_length_of_plan_choose {alphabet : FlowAlphabet Ty} {current : RawBlock Ty}
     {env : Env} {tape : Tape} {site : DecisionId} {branch : Bool} {target : BlockId}
@@ -499,6 +526,9 @@ def denoteGo {alphabet : FlowAlphabet Ty} (raw : RawFlow Ty) (cycles : CyclesWF 
     | .mismatch expected actual => .pure (.refused expected actual, tape)
     | .choose site branch target env' rest =>
         .vis (.inr (site, branch)) fun _ => denoteGo raw cycles target env' rest
+    | .performCatch op request target env' _ _ =>
+        .vis (.inl ⟨op, request⟩) fun answer : Val =>
+          denoteGo raw cycles target (env' ++ [answer]) tape
   termination_by (tape.length, (raw.reachSet block).length)
   decreasing_by
     · exact Prod.Lex.right _ (reachSet_length_lt_of_edge cycles
@@ -506,6 +536,8 @@ def denoteGo {alphabet : FlowAlphabet Ty} (raw : RawFlow Ty) (cycles : CyclesWF 
     · exact Prod.Lex.right _ (reachSet_length_lt_of_edge cycles
         (edgeNoChoose_of_plan_perform found planned))
     · exact Prod.Lex.left _ _ (by have := tape_length_of_plan_choose planned; omega)
+    · exact Prod.Lex.right _ (reachSet_length_lt_of_edge cycles
+        (edgeNoChoose_of_plan_performCatch found planned))
 
 /-- The denotation of an admitted flow against a decision tape. Admission is
 used for exactly one thing: `CyclesWF`, the termination measure. -/
@@ -535,7 +567,10 @@ theorem denoteGo_eq {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty} (cycles : Cy
       | .exhausted site => .pure (.frontier (.unansweredDecision site), tape)
       | .mismatch expected actual => .pure (.refused expected actual, tape)
       | .choose site branch target env' rest =>
-          .vis (.inr (site, branch)) fun _ => denoteGo raw cycles target env' rest := by
+          .vis (.inr (site, branch)) fun _ => denoteGo raw cycles target env' rest
+      | .performCatch op request target env' _ _ =>
+          .vis (.inl ⟨op, request⟩) fun answer : Val =>
+            denoteGo raw cycles target (env' ++ [answer]) tape := by
   rw [denoteGo]
   split
   · rename_i noBlock
@@ -653,6 +688,14 @@ theorem denoteFuel_eq_denoteGo {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty}
             (Sum.inr (site, branch))) (funext fun _ => ?_)
           exact ih target env' rest [] targetBlock foundTarget sizedTarget
             (decisionBudget found budget consumed)
+      | performCatch targetBlock errorBlock foundTarget sizedTarget foundError sizedError =>
+          rename_i op request target env' onError errorEnv
+          have edge : EdgeNoChoose raw block target :=
+            edgeNoChoose_of_plan_performCatch found planEq
+          refine congrArg (@Program.vis (FullSig alphabet) (RunResult × Tape)
+            (Sum.inl ⟨op, request⟩)) (funext fun answer => ?_)
+          exact ih target (env' ++ [answer]) tape (block :: visited) targetBlock foundTarget
+            (by simp [← sizedTarget]) (segmentBudget wf.cycles found budget edge)
 
 /-- T2. Given the fuel `fuelFor` allots (or more), the fuelled denotation is the
 denotation. -/
