@@ -51,6 +51,8 @@ import Effect4Test.Target.TypeScript.RegionLowerContract
 import Effect4Test.Target.TypeScript.StructuredLowerContract
 import Effect4Test.Target.TypeScript.StructureLawsContract
 import Effect4Test.Target.TypeScript.StructureLawsAxiomReport
+import Effect4Test.Target.TypeScript.SkeletonSemanticsContract
+import Effect4Test.Target.TypeScript.SkeletonSemanticsAxiomReport
 import Effect4Test.Target.TypeScript.SimulationContract
 import Effect4Test.Target.TypeScript.TraceWire
 import Effect4Test.Flow.RunnerAxiomReport

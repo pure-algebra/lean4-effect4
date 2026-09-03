@@ -839,3 +839,63 @@ and byte-stable; host, patched, types, property, coverage, census, family
 check, the three planted-mutant self-tests (goldens, coverage, lowering
 4/4), citations and the trust gate all green. Agent worktrees and branches
 are removed. Not pushed.
+
+## D3 theorems landed, 2026-09-03
+
+Packet D3's second half: the control skeleton has a denotation, and the
+dispatch form's agreement with the flow denotation is a theorem.
+
+`Effect4/Target/TypeScript/SkeletonSemantics.lean` (new, ~2 100 lines) defines
+`⟦·⟧` as `Skeleton.denote`: a tape-indexed evaluation of a lowered statement
+list into the *same* `Program (FullSig alphabet) (RunResult × Tape)` that
+`Effect4/Semantics/Denotation.lean` denotes a checked flow into. The machine is
+a total slot store plus the dispatch index variables plus the block last
+entered; statement lists are structural and fuel is spent only by a loop
+iteration, so one turn of a `dispatchLoop` is one block of the flow and the
+skeleton's fuel is `Flow.denoteFuel`'s fuel unit for unit. That alignment is
+what makes T3 an equation at every fuel instead of an inequality at a large one.
+
+Two decisions worth recording because they are load-bearing:
+
+- `perform`, `atom` and `literal` denote the **same** `Sig` operation. `plan`
+  never reads the operation table, so a family call, a pure atom and a literal
+  are one `perform` of the algebra; what separates them is a spelling
+  (`Skeleton.render`) and a tracing policy (`FlowService.pure`), never a
+  different program. This is why T3 can be stated as equality of `Program`s
+  rather than equality after a handler.
+- The three region nodes (`enterScoped`, `acquire`, `leave`) have no denotation
+  here. Regions are a scope summand of `FullSig` that packet D2 owns and this
+  module does not import; they stop the machine at a `stuck` frontier of the
+  block last entered, which is what `enterBlock` is carried for.
+
+Landed:
+
+- **T3** `skeletonDispatch_denote` — for every checked flow and every tape,
+  `⟦skeletonDispatch flow⟧ = Flow.denote flow`. Closed, no side conditions
+  beyond admission.
+- **T4 on the flat fragment** `skeletonStructured_denote_dispatch` — for a
+  graph with no join and no loop the structured form and the dispatch form
+  denote the same `Program`, through `skeletonStructured_denote`. `Skel.Flat`
+  is the fragment; `Skel.flatBelow` is its decidable half and
+  `Skel.flat_of_flatBelow` closes the gap for any `Flow.graphOf`.
+- `Skel.execList_skeletonBlockWith` — one block of a checked flow runs exactly
+  as `plan` says, for an **arbitrary** transfer. Both forms are instances; a
+  third lowering only has to name its own transfer's law.
+
+Owed, and stated in the module (§18) and in `docs/TRACE-DAG.md` in the same
+words: the merge and loop-header shapes of `Structuring.emitNode`. Neither is a
+gap in the denotation — `Skel.execList` interprets `labelled`/`breakTo` and
+`loop`/`continueTo`, and the block law is transfer-parametric — the missing half
+is two facts about the pinned `typescript` package's own algorithms, the same
+two `Effect4/Target/TypeScript/StructureLaws.lean` leaves open under
+`BreakScopedStatement`.
+
+Receipts: `Effect4Test/Target/TypeScript/SkeletonSemanticsContract.lean`
+(the machine's own laws, the four packet flows rebuilt, which graphs are flat,
+and T3/T4 instantiated at them) and `SkeletonSemanticsAxiomReport.lean`
+(74 declarations, union `propext` + `Quot.sound`, no `Classical.choice`). Two
+library lemmas were deliberately not used because they cross the ceiling:
+`List.filter_eq_nil_iff` and `Exists.choose` — `Skel.movedMachine` names the
+machine a `perform`'s continuation needs rather than choosing it.
+
+`lake build Effect4` green. No gate script run from this worktree.

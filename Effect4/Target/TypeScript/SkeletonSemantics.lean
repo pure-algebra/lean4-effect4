@@ -4,9 +4,59 @@ import Effect4.Semantics.Denotation
 /-!
 # Target.TypeScript.SkeletonSemantics
 
-Owner: the denotation of the control skeleton, and the agreement of the two
-lowered forms with the flow denotation (plan packet D3 of
-`docs/research/2026-09-03-reification-plan.md`).
+Owner: `⟦·⟧`, the denotation of the control skeleton, and the agreement of the
+two lowered forms with the flow denotation (plan packet D3 of
+`docs/research/2026-09-03-reification-plan.md`; `docs/TRACE-DAG.md` row
+`structured-agreement`).
+
+`Effect4/Target/TypeScript/Skeleton.lean` made the control syntax the three
+lowerings share into a first-order object; this module gives that object a
+meaning in the *same* `Program (FullSig alphabet)` that
+`Effect4/Semantics/Denotation.lean` (packet D1) denotes a checked flow into, so
+"the dispatch form and the structured form compute the flow" becomes an equality
+of Lean terms rather than a comparison of emitted bytes on the host.
+
+## The machine
+
+A skeleton runs in `Skel.Machine`: a total store `Slot → Val`, the value of each
+dispatch index variable, and the block last entered (`enterBlock`, the marker
+`Skeleton` carries for exactly this purpose). Statement lists are structural;
+`fuel` is spent only by a loop iteration, so one turn of a `dispatchLoop` is one
+block of the flow and the skeleton's fuel *is* `Flow.denoteFuel`'s fuel, unit for
+unit. That alignment is what makes T3 an equation at every fuel rather than an
+inequality at a large one.
+
+## What the operations are
+
+`perform`, `atom` and `literal` all denote the **same** `Sig` operation. `plan`
+does not read the target's operation table, so a family call, a pure atom and a
+literal are one and the same `perform` of the algebra; the difference between
+them is a spelling (`Skeleton.render`) and a tracing policy
+(`FlowService.pure`), never a different program. `decide` denotes the `DecSig`
+operation of the decision summand, with the branch the tape has already fixed.
+`ret` finishes. The three region nodes (`enterScoped`, `acquire`, `leave`) have
+no denotation here: regions are a scope summand of `FullSig` that packet D2 owns
+and this module does not import, so they stop the machine at a `stuck` frontier
+of the block last entered.
+
+## What is proved
+
+* **T3** `skeletonDispatch_denote`: for every checked flow, the dispatch-form
+  skeleton denotes the flow — `⟦skeletonDispatch flow⟧ tape input =
+  Flow.denote flow tape input`, at the fuel `fuelFor` allots, which
+  `Flow.denoteFuel_eq_denote` shows is not binding.
+* **T4, on the flat fragment** `skeletonStructured_denote_dispatch`: for a graph
+  with no join and no loop the structured form denotes the same `Program` as the
+  dispatch form, through `skeletonStructured_denote`. §18 says exactly what the
+  other two emitted shapes still owe and why.
+
+`Skel.execList_skeletonBlockWith` is the reusable half: one block of a checked
+flow runs exactly as `plan` says, for an *arbitrary* transfer, so a third
+lowering only has to name its transfer's own law.
+
+No `String` operation is used for a semantic decision anywhere in the module;
+the axiom ceiling is `propext` and `Quot.sound`
+(`Effect4Test/Target/TypeScript/SkeletonSemanticsAxiomReport.lean`).
 -/
 
 set_option autoImplicit false
@@ -1373,6 +1423,579 @@ theorem execList_dispatchPrefix (rows : ServiceRow) (table : List OpSpec) (raw :
   rw [execList_cons_control _ fuel _ tape (Lowering.dispatchLoop cases) [] rfl]
   exact execControl_dispatchLoop _ fuel _ tape "block" cases []
 
+/-! ## 16. The transfer-parametric block law, and the flat fragment -/
+
+/-- The machine a parallel move leaves behind, before any control transfer. -/
+def moved (source target : BlockId) (slots : List Slot) (m : Machine) : Machine :=
+  (runSimple m (Lowering.paramMove source target slots)).getD m
+
+theorem movedMachine_eq (source target : BlockId) (slots : List Slot) (m : Machine) :
+    movedMachine source target slots m = (moved source target slots m).setIndex "block" target.value :=
+  rfl
+
+theorem execList_move_then (fuel : Nat) (m : Machine) (tape : Tape)
+    (source target : BlockId) (slots : List Slot) (vals : List Val) (control : List Skeleton)
+    (owned : ∀ s ∈ slots, ownedBy source s)
+    (len : slots.length = vals.length)
+    (agree : ∀ (i : Nat) (s : Slot) (v : Val), slots[i]? = some s → vals[i]? = some v →
+      m.vals s = v) :
+    execList alphabet fuel m tape (Lowering.paramMove source target slots ++ control)
+        = execList alphabet fuel (moved source target slots m) tape control
+      ∧ Holds (moved source target slots m) target vals := by
+  obtain ⟨m₂, folded, reads, _, _, _⟩ := runSimple_paramMove source target slots m owned
+  have named : moved source target slots m = m₂ := by simp [moved, folded]
+  rw [named]
+  refine ⟨execList_append_simple alphabet fuel tape _ m m₂ folded control, ?_⟩
+  intro i lt
+  have lt' : i < slots.length := by omega
+  rw [reads i lt']
+  exact agree i slots[i] vals[i] (List.getElem?_eq_getElem lt') (List.getElem?_eq_getElem lt)
+
+/-- The transfer-parametric block law: whatever a lowering puts after the
+parallel move, one block of a checked flow runs exactly as `plan` says and lands
+in the continuation `K` the transfer's own law names. `execList_skeletonBlock`
+is the dispatch instance of this shape — its continuation is not a function of
+`(target, values, tape)` alone, it carries the machine — so the two are stated
+separately rather than one derived from the other. -/
+theorem execList_skeletonBlockWith (table : List OpSpec) (raw : RawFlow String)
+    (wf : FlowWF (tableAlphabet ⟨0⟩ table) raw)
+    (fuel : Nat) (m : Machine) (tape : Tape)
+    (block : RawBlock String) (env : Env) (body : List Skeleton)
+    (transfer : BlockId → List Slot → Option (List Skeleton))
+    (K : BlockId → Env → Tape → Program (FullSig (tableAlphabet ⟨0⟩ table)) (Outcome × Tape))
+    (mem : block ∈ raw.blocks) (envSized : env.length = block.params.length)
+    (built : Flow.skeletonBlockWith table block transfer = some body)
+    (holds : Holds m block.id env)
+    (step : ∀ (target : BlockId) (targetBlock : RawBlock String) (slots : List Slot)
+        (vals : List Val) (m' : Machine) (tape' : Tape) (control : List Skeleton),
+      lookupBlock raw target = some targetBlock → vals.length = targetBlock.params.length →
+      transfer target slots = some control →
+      (∀ s ∈ slots, ownedBy block.id s) → slots.length = vals.length →
+      (∀ (i : Nat) (s : Slot) (v : Val), slots[i]? = some s → vals[i]? = some v → m'.vals s = v) →
+      execList (tableAlphabet ⟨0⟩ table) fuel m' tape' control = K target vals tape')
+    (stable : ∀ (target : BlockId) (vals : Env) (tape' : Tape),
+      Program.bind (K target vals tape') (afterFell (tableAlphabet ⟨0⟩ table) fuel [])
+        = K target vals tape') :
+    (∀ value, plan (tableAlphabet ⟨0⟩ table) block env tape = .ret value →
+        execList (tableAlphabet ⟨0⟩ table) fuel m tape body
+          = .pure (.finished (.done value), tape))
+      ∧ (∀ target env', plan (tableAlphabet ⟨0⟩ table) block env tape = .jump target env' →
+        execList (tableAlphabet ⟨0⟩ table) fuel m tape body = K target env' tape)
+      ∧ (∀ op request target env',
+          plan (tableAlphabet ⟨0⟩ table) block env tape = .perform op request target env' →
+        execList (tableAlphabet ⟨0⟩ table) fuel m tape body
+          = .vis (.inl ⟨op, request⟩) (fun answered : Val => K target (env' ++ [answered]) tape))
+      ∧ (∀ site branch target env' rest,
+          plan (tableAlphabet ⟨0⟩ table) block env tape = .choose site branch target env' rest →
+        execList (tableAlphabet ⟨0⟩ table) fuel m tape body
+          = .vis (.inr (site, branch)) (fun _ => K target env' rest))
+      ∧ (∀ site, plan (tableAlphabet ⟨0⟩ table) block env tape = .exhausted site →
+        execList (tableAlphabet ⟨0⟩ table) fuel m tape body
+          = .pure (.finished (.frontier (.unansweredDecision site)), tape))
+      ∧ (∀ expected actual,
+          plan (tableAlphabet ⟨0⟩ table) block env tape = .mismatch expected actual →
+        execList (tableAlphabet ⟨0⟩ table) fuel m tape body
+          = .pure (.finished (.refused expected actual), tape)) := by
+  have planSized := plan_checked wf mem envSized tape
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro value planned
+    obtain ⟨v, hterm, read⟩ := plan_ret_inv planned
+    simp only [Flow.skeletonBlockWith, hterm, Option.some.injEq] at built
+    subst built
+    rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
+      execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl]
+    show execControl _ fuel (m.enter block.id) tape
+      (Skeleton.ret (.param block.id v.index)) [] = _
+    rw [execControl_ret, enter_vals, holds_of_getElem? holds read]
+  · intro target env' planned
+    obtain ⟨args, hterm, read⟩ := plan_jump_inv planned
+    obtain ⟨len, agree⟩ := argSlots_agree (holds := holds) (block := block.id) read
+    rw [planned] at planSized
+    cases planSized with
+    | jump targetBlock foundTarget sizedTarget =>
+        cases transferred :
+            transfer target (args.map fun v : Var => Slot.param block.id v.index) with
+        | none => simp [Flow.skeletonBlockWith, hterm, transferred] at built
+        | some control =>
+            simp only [Flow.skeletonBlockWith, hterm, transferred, Option.map_some,
+              Option.some.injEq] at built
+            subst built
+            rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl]
+            exact step target targetBlock _ env' (m.enter block.id) tape control foundTarget
+              sizedTarget transferred (ownedBy_argSlots block.id args) len
+              (by intro i s v slotAt valAt; rw [enter_vals]; exact agree i s v slotAt valAt)
+  · intro op request target env' planned
+    obtain ⟨operation, requestVar, args, hterm, known, got, read⟩ := plan_perform_inv planned
+    obtain ⟨len, agree⟩ := argSlots_agree (holds := holds) (block := block.id) read
+    obtain ⟨lenRead, _⟩ := readArgs_getElem? args env env' read
+    rw [planned] at planSized
+    cases planSized with
+    | perform targetBlock foundTarget sizedTarget =>
+        cases transferred : transfer target
+            ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.answer block.id]) with
+        | none =>
+            exfalso
+            simp only [Flow.skeletonBlockWith, hterm] at built
+            cases spec : Flow.spec? table operation with
+            | none => simp [spec] at built
+            | some row =>
+                simp only [spec, Option.bind_eq_bind, Option.bind_some] at built
+                cases kind : row.kind with
+                | family => simp [kind, transferred] at built
+                | atom => simp [kind, transferred] at built
+                | lit constant =>
+                    simp only [kind] at built
+                    cases spelled : Flow.literal? constant with
+                    | none => simp [spelled] at built
+                    | some expr => simp [spelled, transferred] at built
+        | some control =>
+            have moves : ∀ answered : Val,
+                execList (tableAlphabet ⟨0⟩ table) fuel
+                    ((m.enter block.id).setVal (.answer block.id) answered) tape control
+                  = K target (env' ++ [answered]) tape := by
+              intro answered
+              refine step target targetBlock _ (env' ++ [answered]) _ tape control foundTarget
+                (by simp [← sizedTarget]) transferred ?_ ?_ ?_
+              · intro s mem
+                simp only [List.mem_append, List.mem_singleton] at mem
+                rcases mem with inArgs | rfl
+                · exact ownedBy_argSlots block.id args s inArgs
+                · exact rfl
+              · simp [len]
+              · intro i s v slotAt valAt
+                by_cases small : i < args.length
+                · rw [List.getElem?_append_left (by simpa using small)] at slotAt
+                  rw [List.getElem?_append_left (by omega)] at valAt
+                  have sMem : s ∈ args.map fun v : Var => Slot.param block.id v.index :=
+                    List.mem_of_getElem? slotAt
+                  simp only [List.mem_map] at sMem
+                  obtain ⟨a, _, rfl⟩ := sMem
+                  rw [setVal_other _ _ _ _ (by simp), enter_vals]
+                  exact agree i _ v slotAt valAt
+                · have inRange : i < ((args.map fun v : Var => Slot.param block.id v.index)
+                      ++ [Slot.answer block.id]).length :=
+                    (List.getElem?_eq_some_iff.mp slotAt).1
+                  simp only [List.length_append, List.length_map, List.length_singleton] at inRange
+                  have same : i = args.length := by omega
+                  subst same
+                  rw [List.getElem?_append_right (by simp)] at slotAt
+                  rw [List.getElem?_append_right (by omega)] at valAt
+                  simp only [List.length_map, Nat.sub_self, List.getElem?_cons_zero,
+                    Option.some.injEq] at slotAt
+                  rw [show args.length - env'.length = 0 from by omega] at valAt
+                  simp only [List.getElem?_cons_zero, Option.some.injEq] at valAt
+                  subst slotAt
+                  subst valAt
+                  exact setVal_self _ _ _
+            simp only [Flow.skeletonBlockWith, hterm, transferred] at built
+            have shape : ∃ head : Skeleton,
+                (∀ m' : Machine, simple? m' head = none)
+                  ∧ (∀ (fuel' : Nat) (m' : Machine) (tape' : Tape) (rest' : List Skeleton),
+                    execControl (tableAlphabet ⟨0⟩ table) fuel' m' tape' head rest'
+                      = performOp (tableAlphabet ⟨0⟩ table) fuel' m' tape' (.answer block.id)
+                          operation (.param block.id requestVar.index) rest')
+                  ∧ body = Skeleton.enterBlock block.id :: head :: control := by
+              cases spec : Flow.spec? table operation with
+              | none => simp [spec] at built
+              | some row =>
+                  simp only [spec, Option.bind_eq_bind, Option.bind_some] at built
+                  cases kind : row.kind with
+                  | family =>
+                      simp only [kind, Option.some.injEq] at built
+                      exact ⟨_, fun _ => rfl,
+                        fun _ _ _ _ => execControl_perform _ _ _ _ _ _ _ _ _, built.symm⟩
+                  | atom =>
+                      simp only [kind, Option.some.injEq] at built
+                      exact ⟨_, fun _ => rfl,
+                        fun _ _ _ _ => execControl_atom _ _ _ _ _ _ _ _ _, built.symm⟩
+                  | lit constant =>
+                      simp only [kind] at built
+                      cases spelled : Flow.literal? constant with
+                      | none => simp [spelled] at built
+                      | some expr =>
+                          simp only [spelled, Option.map_some, Option.bind_some,
+                            Option.some.injEq] at built
+                          exact ⟨_, fun _ => rfl,
+                            fun _ _ _ _ => execControl_literal _ _ _ _ _ _ _ _ _, built.symm⟩
+            obtain ⟨head, headSimple, headRun, rfl⟩ := shape
+            rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
+              execList_cons_control _ fuel (m.enter block.id) tape head _
+                (headSimple (m.enter block.id)),
+              headRun fuel (m.enter block.id) tape _, performOp_eq, known, enter_vals,
+              holds_of_getElem? holds got]
+            dsimp only
+            congr 1
+            funext answered
+            exact moves answered
+  · intro site branch target env' rest planned
+    obtain ⟨left, right, args, hterm, read, answered, eqTarget⟩ := plan_choose_inv planned
+    obtain ⟨len, agree⟩ := argSlots_agree (holds := holds) (block := block.id) read
+    rw [planned] at planSized
+    cases planSized with
+    | choose targetBlock foundTarget sizedTarget =>
+        subst eqTarget
+        cases leftTransferred :
+            transfer left (args.map fun v : Var => Slot.param block.id v.index) with
+        | none =>
+            simp [Flow.skeletonBlockWith, hterm, leftTransferred] at built
+        | some toLeft =>
+            cases rightTransferred :
+                transfer right (args.map fun v : Var => Slot.param block.id v.index) with
+            | none =>
+                simp [Flow.skeletonBlockWith, hterm, leftTransferred, rightTransferred] at built
+            | some toRight =>
+                simp only [Flow.skeletonBlockWith, hterm, leftTransferred, rightTransferred,
+                  Lowering.chooseIf, Option.bind_eq_bind, Option.bind_some,
+                  Option.some.injEq] at built
+                subst built
+                rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
+                  execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
+                  execControl_decide, answered]
+                dsimp only
+                congr 1
+                funext _
+                have branchAgree : ∀ (i : Nat) (s : Slot) (v : Val),
+                    (args.map fun v : Var => Slot.param block.id v.index)[i]? = some s →
+                    env'[i]? = some v →
+                    ((m.enter block.id).setVal (.decision block.id) (.bool branch)).vals s = v := by
+                  intro i s v slotAt valAt
+                  have sMem : s ∈ args.map fun v : Var => Slot.param block.id v.index :=
+                    List.mem_of_getElem? slotAt
+                  simp only [List.mem_map] at sMem
+                  obtain ⟨a, _, rfl⟩ := sMem
+                  rw [setVal_other _ _ _ _ (by simp), enter_vals]
+                  exact agree i _ v slotAt valAt
+                have ran : execList (tableAlphabet ⟨0⟩ table) fuel
+                    ((m.enter block.id).setVal (.decision block.id) (.bool branch)) rest
+                    (if branch then toLeft else toRight)
+                  = K (if branch then left else right) env' rest := by
+                  cases branch with
+                  | true =>
+                      simp only at foundTarget sizedTarget ⊢
+                      exact step left targetBlock _ env' _ rest toLeft foundTarget sizedTarget
+                        leftTransferred (ownedBy_argSlots block.id args) len branchAgree
+                  | false =>
+                      simp only [Bool.false_eq_true] at foundTarget sizedTarget ⊢
+                      exact step right targetBlock _ env' _ rest toRight foundTarget sizedTarget
+                        rightTransferred (ownedBy_argSlots block.id args) len branchAgree
+                rw [ran]
+                exact stable _ _ _
+  · intro site planned
+    obtain ⟨left, right, args, hterm, answered⟩ := plan_exhausted_inv planned
+    cases leftTransferred :
+        transfer left (args.map fun v : Var => Slot.param block.id v.index) with
+    | none => simp [Flow.skeletonBlockWith, hterm, leftTransferred] at built
+    | some toLeft =>
+        cases rightTransferred :
+            transfer right (args.map fun v : Var => Slot.param block.id v.index) with
+        | none =>
+            simp [Flow.skeletonBlockWith, hterm, leftTransferred, rightTransferred] at built
+        | some toRight =>
+            simp only [Flow.skeletonBlockWith, hterm, leftTransferred, rightTransferred,
+              Lowering.chooseIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
+            subst built
+            rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
+              execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
+              execControl_decide, answered]
+  · intro expected actual planned
+    obtain ⟨site, left, right, args, hterm, answered⟩ := plan_mismatch_inv planned
+    cases leftTransferred :
+        transfer left (args.map fun v : Var => Slot.param block.id v.index) with
+    | none => simp [Flow.skeletonBlockWith, hterm, leftTransferred] at built
+    | some toLeft =>
+        cases rightTransferred :
+            transfer right (args.map fun v : Var => Slot.param block.id v.index) with
+        | none =>
+            simp [Flow.skeletonBlockWith, hterm, leftTransferred, rightTransferred] at built
+        | some toRight =>
+            simp only [Flow.skeletonBlockWith, hterm, leftTransferred, rightTransferred,
+              Lowering.chooseIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
+            subst built
+            rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
+              execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
+              execControl_decide, answered]
+/-! ## The flat fragment: no join, no loop
+
+`Structuring.emitWith` emits three shapes of transfer: a `continue` to a loop
+header, a `break` to a merge block or loop header, and an inlining of the
+target's dominator subtree. On a graph with no merge node and no loop header
+only the third can fire, so the emission is the dominator tree inlined and
+carries no label at all. That is the fragment this module's T4 covers; §17 says
+exactly what the other two shapes still owe. -/
+
+/-- No join and no loop: every node has at most one predecessor and no back edge
+reaches it. -/
+def Flat (g : Structure.Graph) : Prop :=
+  ∀ node : Nat, Structure.isMerge g node = false ∧ Structure.isLoopHeader g node = false
+
+private theorem filter_false_nil {α : Type} :
+    ∀ l : List α, l.filter (fun _ => false) = []
+  | [] => rfl
+  | _ :: l => by rw [List.filter_cons_of_neg (by simp)]; exact filter_false_nil l
+
+theorem emitNode_flat {α : Type} (g : Structure.Graph) (shapes : Structuring.Shapes α)
+    (body : Nat → (Nat → Option (List α)) → Option (List α)) (flat : Flat g)
+    (eFuel current : Nat) :
+    Structuring.emitNode g shapes body (eFuel + 1) current
+      = body current fun target =>
+          if Structure.idom g target == some current then
+            Structuring.emitNode g shapes body eFuel target
+          else none := by
+  have merge : ∀ n, Structure.isMerge g n = false := fun n => (flat n).1
+  have loop : ∀ n, Structure.isLoopHeader g n = false := fun n => (flat n).2
+  rw [Structuring.emitNode]
+  simp only [merge, loop, Bool.and_false, Bool.false_and, Bool.or_self, Bool.false_eq_true,
+    if_false]
+  rw [filter_false_nil (Structure.children g current)]
+  simp only [List.foldlM_nil]
+  cases body current (fun target =>
+      if Structure.idom g target == some current then
+        Structuring.emitNode g shapes body eFuel target else none) <;> rfl
+
+private theorem guard_pos {p : Prop} [Decidable p] (h : p) :
+    (guard p : Option Unit) = some () := by
+  simp [guard, h]
+
+private theorem guard_neg {p : Prop} [Decidable p] (h : ¬ p) :
+    (guard p : Option Unit) = none := by
+  simp only [guard, if_neg h]
+  rfl
+
+theorem emitWith_flat {α : Type} (g : Structure.Graph) (shapes : Structuring.Shapes α)
+    (body : Nat → (Nat → Option (List α)) → Option (List α)) (flat : Flat g)
+    (nodes : List α) (emitted : Structuring.emitWith g shapes body = some nodes) :
+    Structuring.emitNode g shapes body (g.size + 1) g.entry = some nodes := by
+  have notLoop : Structure.isLoopHeader g g.entry = false := (flat g.entry).2
+  unfold Structuring.emitWith at emitted
+  cases red : Structure.reducible g with
+  | false =>
+      rw [guard_neg (show ¬ (Structure.reducible g = true) from by simp [red])] at emitted
+      simp at emitted
+  | true =>
+      rw [guard_pos (show Structure.reducible g = true from red)] at emitted
+      simp only [Option.bind_eq_bind, Option.bind_some, notLoop, Bool.false_eq_true,
+        if_false] at emitted
+      simpa using emitted
+
+/-! ### Deciding flatness
+
+`Flat` quantifies over every natural number; a graph only ever names finitely
+many. `flatBelow` is the decidable half, and `flat_of_flatBelow` closes the gap
+for any graph whose successor lists stay inside it — which `Flow.graphOf` does,
+because every successor it names is a `List.findIdx?` into the block table. -/
+
+private theorem filter_nil_of_all_false {α : Type} (p : α → Bool) :
+    ∀ (l : List α), (∀ a, p a = false) → l.filter p = []
+  | [], _ => rfl
+  | a :: l, allFalse => by
+      rw [List.filter_cons_of_neg (by simp [allFalse a])]
+      exact filter_nil_of_all_false p l allFalse
+
+private theorem findIdx?_lt_length {α : Type} (p : α → Bool) :
+    ∀ (l : List α) (i : Nat), l.findIdx? p = some i → i < l.length
+  | [], i, found => by simp [List.findIdx?, List.findIdx?.go] at found
+  | a :: l, i, found => by
+      rw [List.findIdx?_cons] at found
+      by_cases here : p a = true
+      · rw [if_pos here] at found
+        obtain rfl : i = 0 := (Option.some.inj found).symm
+        simp
+      · rw [if_neg here] at found
+        obtain ⟨j, tail, rfl⟩ := Option.map_eq_some_iff.mp found
+        have bound := findIdx?_lt_length p l j tail
+        simp only [List.length_cons]
+        omega
+
+/-- Every node the graph names is a node of the graph. -/
+theorem graphOf_bounded (blocks : List (RawBlock String)) (entry : BlockId) :
+    ∀ p n, n ∈ (Flow.graphOf blocks entry).succs p → n < (Flow.graphOf blocks entry).size := by
+  intro p n mem
+  simp only [Flow.graphOf] at mem ⊢
+  cases atP : blocks[p]? with
+  | none => rw [atP] at mem; simp at mem
+  | some block =>
+      rw [atP] at mem
+      obtain ⟨target, _, positioned⟩ := List.mem_filterMap.mp mem
+      exact findIdx?_lt_length _ blocks n positioned
+
+/-- The decidable half of `Flat`. -/
+def flatBelow (g : Structure.Graph) : Bool :=
+  (List.range g.size).all fun node =>
+    !Structure.isMerge g node && !Structure.isLoopHeader g node
+
+theorem flat_of_flatBelow (g : Structure.Graph)
+    (bounded : ∀ p n, n ∈ g.succs p → n < g.size) (below : flatBelow g = true) : Flat g := by
+  intro node
+  by_cases small : node < g.size
+  · have checked := List.all_eq_true.mp below node (List.mem_range.mpr small)
+    simp only [Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true] at checked
+    exact ⟨checked.1, checked.2⟩
+  · have nil : Structure.preds g node = [] := by
+      unfold Structure.preds
+      refine filter_nil_of_all_false _ _ fun p => ?_
+      by_cases inSuccs : node ∈ g.succs p
+      · exact absurd (bounded p node inSuccs) (by omega)
+      · simpa using inSuccs
+    exact ⟨by simp [Structure.isMerge, nil], by simp [Structure.isLoopHeader, nil]⟩
+
+/-! ## Positions and the block table -/
+
+theorem getElem?_of_findIdx? {α : Type} (p : α → Bool) :
+    ∀ (l : List α) (i : Nat), l.findIdx? p = some i → l[i]? = l.find? p
+  | [], i, found => by simp [List.findIdx?, List.findIdx?.go] at found
+  | a :: l, i, found => by
+      rw [List.findIdx?_cons] at found
+      by_cases here : p a = true
+      · rw [if_pos here] at found
+        obtain rfl : i = 0 := (Option.some.inj found).symm
+        rw [List.find?_cons_of_pos here]
+        rfl
+      · rw [if_neg here] at found
+        obtain ⟨j, tail, rfl⟩ := Option.map_eq_some_iff.mp found
+        rw [List.find?_cons_of_neg (by simpa using here)]
+        exact getElem?_of_findIdx? p l j tail
+
+theorem findIdx?_isSome_of_find? {α : Type} (p : α → Bool) :
+    ∀ (l : List α) (a : α), l.find? p = some a → ∃ i, l.findIdx? p = some i
+  | [], a, found => by simp at found
+  | b :: l, a, found => by
+      by_cases here : p b = true
+      · exact ⟨0, by rw [List.findIdx?_cons, if_pos here]⟩
+      · rw [List.find?_cons_of_neg (by simpa using here)] at found
+        obtain ⟨i, tail⟩ := findIdx?_isSome_of_find? p l a found
+        exact ⟨i + 1, by rw [List.findIdx?_cons, if_neg here, tail]; rfl⟩
+
+/-! ## The structured emission, named -/
+
+/-- The transfer the structured lowering hands to each block: the parallel move,
+then whatever control the emitter chose. -/
+def structuredMove (blocks : List (RawBlock String)) (source : BlockId)
+    (transfer : Nat → Option (List Skeleton)) (target : BlockId) (values : List Slot) :
+    Option (List Skeleton) := do
+  let t ← Flow.position blocks target
+  let control ← transfer t
+  pure (Lowering.paramMove source target values ++ control)
+
+/-- The per-node body the structured lowering hands to the emitter. -/
+def structuredBodyFn (table : List OpSpec) (blocks : List (RawBlock String)) (i : Nat)
+    (transfer : Nat → Option (List Skeleton)) : Option (List Skeleton) := do
+  let block ← blocks[i]?
+  Flow.skeletonBlockWith table block (structuredMove blocks block.id transfer)
+
+theorem skeletonBody_eq (table : List OpSpec) (blocks : List (RawBlock String)) (entry : BlockId) :
+    Flow.skeletonBody table blocks entry
+      = Structuring.emitWith (Flow.graphOf blocks entry) structuredShapes
+          (structuredBodyFn table blocks) := rfl
+
+/-! ## The flow denotation, as a skeleton outcome -/
+
+/-- `Flow.denoteGo` in the machine's result type: the run result a finished
+skeleton reports is the run result the flow denotes. -/
+def denoteOutcome (table : List OpSpec) (raw : RawFlow String) (cycles : CyclesWF raw)
+    (block : BlockId) (env : Env) (tape : Tape) :
+    Program (FullSig (tableAlphabet ⟨0⟩ table)) (Outcome × Tape) :=
+  Program.bind (denoteGo (alphabet := tableAlphabet ⟨0⟩ table) raw cycles block env tape)
+    fun result => .pure (.finished result.1, result.2)
+
+theorem denoteOutcome_stable (table : List OpSpec) (raw : RawFlow String) (cycles : CyclesWF raw)
+    (fuel : Nat) (target : BlockId) (vals : Env) (tape : Tape) :
+    Program.bind (denoteOutcome table raw cycles target vals tape)
+        (afterFell (tableAlphabet ⟨0⟩ table) fuel []) = denoteOutcome table raw cycles target vals tape := by
+  rw [denoteOutcome, Program.bind_assoc]
+  refine congrArg _ (funext fun result => ?_)
+  show afterFell (tableAlphabet ⟨0⟩ table) fuel [] (Outcome.finished result.1, result.2) = _
+  exact afterFell_finished _ fuel [] result.1 result.2
+
+/-! ## T4 on the flat fragment -/
+
+set_option maxHeartbeats 1000000 in
+/-- The structured emission of a flat graph is the dominator tree inlined, and
+it denotes the flow. -/
+theorem execList_emitNode_flat (table : List OpSpec) (raw : RawFlow String)
+    (wf : FlowWF (tableAlphabet ⟨0⟩ table) raw)
+    (flat : Flat (Flow.graphOf raw.blocks raw.entry)) (fuel : Nat) :
+    ∀ (eFuel i : Nat) (current : RawBlock String) (nodes : List Skeleton) (m : Machine)
+      (env : Env) (tape : Tape),
+      raw.blocks[i]? = some current →
+      lookupBlock raw current.id = some current →
+      env.length = current.params.length →
+      Holds m current.id env →
+      Structuring.emitNode (Flow.graphOf raw.blocks raw.entry) structuredShapes
+          (structuredBodyFn table raw.blocks) eFuel i = some nodes →
+      execList (tableAlphabet ⟨0⟩ table) fuel m tape nodes
+        = denoteOutcome table raw wf.cycles current.id env tape := by
+  intro eFuel
+  induction eFuel with
+  | zero =>
+      intro i current nodes m env tape _ _ _ _ emitted
+      simp [Structuring.emitNode] at emitted
+  | succ eFuel ih =>
+      intro i current nodes m env tape atIndex found envSized holds emitted
+      rw [emitNode_flat _ _ _ flat] at emitted
+      simp only [structuredBodyFn, atIndex, Option.bind_eq_bind, Option.bind_some] at emitted
+      have mem : current ∈ raw.blocks := List.mem_of_getElem? atIndex
+      have step : ∀ (target : BlockId) (targetBlock : RawBlock String) (slots : List Slot)
+          (vals : List Val) (m' : Machine) (tape' : Tape) (control : List Skeleton),
+          lookupBlock raw target = some targetBlock →
+          vals.length = targetBlock.params.length →
+          structuredMove raw.blocks current.id
+              (fun t => if Structure.idom (Flow.graphOf raw.blocks raw.entry) t == some i then
+                Structuring.emitNode (Flow.graphOf raw.blocks raw.entry) structuredShapes
+                  (structuredBodyFn table raw.blocks) eFuel t
+              else none) target slots = some control →
+          (∀ s ∈ slots, ownedBy current.id s) → slots.length = vals.length →
+          (∀ (j : Nat) (s : Slot) (v : Val), slots[j]? = some s → vals[j]? = some v →
+            m'.vals s = v) →
+          execList (tableAlphabet ⟨0⟩ table) fuel m' tape' control
+            = denoteOutcome table raw wf.cycles target vals tape' := by
+        intro target targetBlock slots vals m' tape' control foundTarget sizedTarget shaped
+          owned len agree
+        simp only [structuredMove, Option.bind_eq_bind] at shaped
+        cases positioned : Flow.position raw.blocks target with
+        | none => rw [positioned] at shaped; simp at shaped
+        | some t =>
+            rw [positioned] at shaped
+            simp only [Option.bind_some] at shaped
+            by_cases dom : (Structure.idom (Flow.graphOf raw.blocks raw.entry) t == some i) = true
+            · rw [if_pos dom] at shaped
+              cases inner : Structuring.emitNode (Flow.graphOf raw.blocks raw.entry)
+                  structuredShapes (structuredBodyFn table raw.blocks) eFuel t with
+              | none => rw [inner] at shaped; simp at shaped
+              | some ctrl =>
+                  rw [inner] at shaped
+                  simp only [Option.bind_some] at shaped
+                  obtain rfl : control = Lowering.paramMove current.id target slots ++ ctrl :=
+                    (Option.some.inj shaped).symm
+                  obtain ⟨ran, holds'⟩ := execList_move_then (tableAlphabet ⟨0⟩ table) fuel m'
+                    tape' current.id target slots vals ctrl owned len agree
+                  have atT : raw.blocks[t]? = some targetBlock := by
+                    rw [getElem?_of_findIdx? _ raw.blocks t positioned]
+                    exact foundTarget
+                  have idEq : targetBlock.id = target := lookupBlock_id foundTarget
+                  rw [ran, ih t targetBlock ctrl _ vals tape' atT (by rw [idEq]; exact foundTarget)
+                    sizedTarget (by rw [idEq]; exact holds') inner, idEq]
+            · rw [if_neg dom] at shaped; simp at shaped
+      obtain ⟨onRet, onJump, onPerform, onChoose, onExhausted, onMismatch⟩ :=
+        execList_skeletonBlockWith table raw wf fuel m tape current env nodes _
+          (denoteOutcome table raw wf.cycles) mem envSized emitted holds step
+          (fun target vals tape' => denoteOutcome_stable table raw wf.cycles fuel target vals tape')
+      rw [denoteOutcome, denoteGo_eq wf.cycles found env tape]
+      have planSized := plan_checked wf mem envSized tape
+      generalize planEq : plan (tableAlphabet ⟨0⟩ table) current env tape = p at planSized
+      cases planSized with
+      | ret value => rw [onRet value planEq]; rfl
+      | exhausted site => rw [onExhausted site planEq]; rfl
+      | mismatch expected actual => rw [onMismatch expected actual planEq]; rfl
+      | jump targetBlock foundTarget sizedTarget =>
+          rename_i target env'
+          rw [onJump target env' planEq]; rfl
+      | perform targetBlock foundTarget sizedTarget =>
+          rename_i op request target env'
+          rw [onPerform op request target env' planEq]; rfl
+      | choose targetBlock foundTarget sizedTarget =>
+          rename_i site branch target env' rest
+          rw [onChoose site branch target env' rest planEq]; rfl
+
 end Skel
 
 /-! ## 15. `⟦·⟧` and T3 -/
@@ -1436,5 +2059,124 @@ theorem skeletonDispatch_denote (rows : ServiceRow) (program : FlowProgram) (tap
         obtain rfl : i = 0 := by omega
         rw [setIndex_vals, setVal_self]
         rfl
+
+/-! ## 17. T4 on the flat fragment -/
+
+open Skel in
+/-- The structured form of a flat graph — no join, no loop, so the emitter
+inlines the dominator tree and emits no label — denotes the flow. Any fuel does:
+a flat emission has no loop to spend it on. -/
+theorem skeletonStructured_denote (rows : ServiceRow) (program : FlowProgram) (fuel : Nat)
+    (tape : Tape) (input : Val) {nodes : List Skeleton}
+    (flat : Skel.Flat (Flow.graphOf program.flow.erase.blocks program.flow.erase.entry))
+    (built : Flow.skeletonStructured rows program = some nodes) :
+    Skeleton.denote (tableAlphabet ⟨0⟩ program.table) fuel program.param.1 nodes tape input
+      = Effect4.Flow.denote program.flow tape input := by
+  have wf : FlowWF (tableAlphabet ⟨0⟩ program.table) program.flow.erase := erase_wf program.flow
+  simp only [Flow.skeletonStructured, Option.bind_eq_bind] at built
+  obtain ⟨body, emitted, shaped⟩ := Option.bind_eq_some_iff.mp built
+  obtain rfl : Flow.acquisitions rows program.table program.flow.erase
+      ++ Flow.declarations program.flow.erase.blocks
+      ++ [Skeleton.assign (.param program.flow.erase.entry 0) (.input program.param.1)]
+      ++ body = nodes := Option.some.inj shaped
+  rw [Skel.skeletonBody_eq] at emitted
+  have inlined := Skel.emitWith_flat _ _ _ flat body emitted
+  have entry := wf.entry
+  unfold EntryWF at entry
+  cases found : lookupBlock program.flow.erase program.flow.erase.entry with
+  | none => rw [found] at entry; exact entry.elim
+  | some current =>
+      rw [found] at entry
+      have sized : ([input] : Env).length = current.params.length := by rw [entry]; rfl
+      have idEq : current.id = program.flow.erase.entry := lookupBlock_id found
+      obtain ⟨t, positioned⟩ :=
+        Skel.findIdx?_isSome_of_find? _ program.flow.erase.blocks current found
+      have entryIndex :
+          (Flow.graphOf program.flow.erase.blocks program.flow.erase.entry).entry = t := by
+        simp only [Flow.graphOf, Flow.position, positioned, Option.getD_some]
+      have atT : program.flow.erase.blocks[t]? = some current := by
+        rw [Skel.getElem?_of_findIdx? _ _ t positioned]
+        exact found
+      have base : Skel.runSimple (Skel.start program.param.1 input)
+          (Flow.acquisitions rows program.table program.flow.erase
+            ++ Flow.declarations program.flow.erase.blocks)
+          = some (Skel.start program.param.1 input) := by
+        rw [Skel.runSimple_append _ _ _ (Skel.runSimple_acquisitions rows program.table
+          program.flow.erase (Skel.start program.param.1 input))]
+        exact Skel.runSimple_declarations program.flow.erase.blocks _
+      have prefixRun : Skel.runSimple (Skel.start program.param.1 input)
+          (Flow.acquisitions rows program.table program.flow.erase
+            ++ Flow.declarations program.flow.erase.blocks
+            ++ [Skeleton.assign (.param program.flow.erase.entry 0) (.input program.param.1)])
+          = some ((Skel.start program.param.1 input).setVal
+              (.param program.flow.erase.entry 0) input) := by
+        rw [Skel.runSimple_append _ _ _ base]
+        simp [Skel.runSimple, Skel.simple?, Skel.start_input]
+      rw [Skeleton.denote, Skel.denoteNodes,
+        Skel.execList_append_simple _ fuel tape _ _ _ prefixRun body,
+        Skel.execList_emitNode_flat program.table program.flow.erase wf flat fuel
+          (program.flow.erase.blocks.length + 1) t current body _ [input] tape atT
+          (by rw [idEq]; exact found) sized
+          (by
+            intro j lt
+            simp only [List.length_singleton] at lt
+            obtain rfl : j = 0 := by omega
+            rw [idEq, Skel.setVal_self]
+            rfl)
+          (by
+            rw [← entryIndex]
+            exact inlined),
+        Skel.denoteOutcome, Program.bind_assoc]
+      show Program.bind (denoteGo (alphabet := tableAlphabet ⟨0⟩ program.table)
+          program.flow.erase wf.cycles current.id [input] tape)
+          (fun result => Program.pure (result.1, result.2)) = _
+      rw [Program.bind_pure_right, idEq]
+      rfl
+
+/-- **T4, on the flat fragment.** For a graph with no join and no loop the
+structured form and the dispatch form denote the same `Program`. -/
+theorem skeletonStructured_denote_dispatch (rows : ServiceRow) (program : FlowProgram)
+    (tape : Tape) (input : Val) {structured dispatch : List Skeleton}
+    (flat : Skel.Flat (Flow.graphOf program.flow.erase.blocks program.flow.erase.entry))
+    (builtStructured : Flow.skeletonStructured rows program = some structured)
+    (builtDispatch : Flow.skeletonDispatch rows program = some dispatch) :
+    Skeleton.denote (tableAlphabet ⟨0⟩ program.table) (fuelFor program.flow.erase tape)
+        program.param.1 structured tape input
+      = Skeleton.denote (tableAlphabet ⟨0⟩ program.table) (fuelFor program.flow.erase tape)
+        program.param.1 dispatch tape input :=
+  (skeletonStructured_denote rows program _ tape input flat builtStructured).trans
+    (skeletonDispatch_denote rows program tape input builtDispatch).symm
+
+/-! ## 18. What T4 does not cover, exactly
+
+`Flat` is the fragment where `Structuring.emitNode`'s transfer has exactly one
+successful shape, the inlining, so the emitted skeleton carries no label and the
+proof above needs nothing about `Structure.idom` beyond the fact that the
+emitter asked for the right node. Two shapes are left, and both are open for the
+same reason `Effect4/Target/TypeScript/StructureLaws.lean` leaves
+`BreakScopedStatement` open — the facts they need are about the pinned
+`typescript` package's algorithms, not about Effect4's definitions.
+
+* **A merge node.** `emitNode` wraps its own emission in `merge (blockLabel t)`
+  for each merge child `t` and emits `break (blockLabel t)` for a transfer to
+  `t`. `Skel.afterBlock` catches that `break` and continues with the statements
+  after the labelled block, which are exactly `t`'s emission — so the machine
+  does the right thing *provided every `break L<t>` is dynamically inside its
+  `label L<t>:`. That is `BreakScopedStatement`, and it needs `Structure.idom t`
+  to lie on the `idom` chain of every predecessor of `t` (correctness of the
+  Cooper–Harvey–Kennedy iteration in `Structure.idoms`).
+
+* **A loop header.** `emitNode` wraps a loop-header child in
+  `loop (loopLabel t)` and emits `continue (loopLabel t)` for a back edge.
+  `Skel.loopRun` spends one unit of fuel per iteration, so the statement to be
+  proved is a fuel statement of the same shape as T3's, and it additionally
+  needs that a back edge's target is the enclosing loop's header — a fact about
+  `Structure.rpo` and `Structure.isBackEdge`.
+
+Neither is a gap in the denotation: `Skel.execList` interprets both shapes, and
+`Skel.execList_skeletonBlockWith` is stated over an arbitrary transfer, so the
+missing half is precisely the two graph facts above. `docs/TRACE-DAG.md`
+row `structured-agreement` records this in the same words.
+-/
 
 end Effect4.Target.EffectV4
