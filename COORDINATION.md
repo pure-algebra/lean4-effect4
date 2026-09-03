@@ -2146,3 +2146,19 @@ consequential root diagnostic; the separate Fiber projection and four
 pre-existing citation errors remain open. `docs/LIVE-STACK-IMPLEMENTATION.md`
 records exact evidence and the still-open source/compiler/scheduler edges.
 No shared main-checkout source or default runtime was changed.
+
+## Live-stack branch merged and re-pinned, 2026-09-03
+
+`codex/live-stack-integration` (two commits, never merged) is merged: the
+`LiveStack` runtime module, its three batteries, `docs/LIVE-STACK-*.md`, the
+host harness under `harness/live-stack/`, its gate and mutation self-test, and
+register rows `E4-RUN-CE-022..024`. The library builds and the batteries
+elaborate within the ceiling. The gate's frozen-input table had drifted on four
+files that packet D4 fence A extended additively after the fork
+(`Effect4/Runtime/Runtime.lean`, `docs/FRAMES-DAG.md`, the frames contract and
+axiom report); their digests, the contract's own digest, and the declared-red
+assertion (now "no live-stack module is red, both historical orphans are") are
+re-pinned, and `generated/live-stack-assurance.json` regenerated with
+`--write`. `node scripts/check-live-stack.mjs` reports `local-pass` against the
+pinned install (`EFFECT4_EFFECT_NODE_MODULES`, as `harness/live-stack/HOST.md`
+documents; the repo has no `node_modules`).

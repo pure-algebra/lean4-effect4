@@ -14,11 +14,11 @@ const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const frozenFiles = {
   "Effect4/Semantics/Cause.lean": "fc7d008f2955a5ea812717a77e2f3e3d187980c924fc0cb25d5014644c7f7196",
   "Effect4/Semantics/Exit.lean": "a4a4c024ad54a8ab6e52acc1493183349bb532e668af0ed7c2512fa134161383",
-  "Effect4/Runtime/Runtime.lean": "fa73134f37da77489bfc4bb14776d32a482171d0f43c9fcc3e26bd811075ccd4",
+  "Effect4/Runtime/Runtime.lean": "f51ad546ce01022624f1d871dd63bb31b99ba87d2e076293b78429a94c887e33",
   "Effect4Test/Runtime/LiveStackContract.lean": "3b48462973b45a09b9fa95e4cf567372dffd6166b7a787548e8af51827a9254a",
   "Effect4Test/Runtime/LiveStackAxiomReport.lean": "e7a84c14d4262bfd7b6936eeedee531330aacc7c991141d2b1d196cd701a6a76",
   "Effect4Test/Counterexamples/Runtime/LiveStack.lean": "af2e8579e456fbf556c2261de7f64433d6be3fe62cb019399a3c58f9cf72075c",
-  "test/contracts/live-stack.contract.md": "0c9b3bd3b8d6b881032f7de53445d27c0261415be64cf1358b33afa134563460",
+  "test/contracts/live-stack.contract.md": "4d1a61f10b29bc8a38042c0f9f887b27397c8020da5631a1c0b39809499cf7d3",
   "docs/LIVE-STACK-DAG.md": "b59daa2fa781a91d3bc36f0e8e91acafcb0f2dd214d92d003d68a1ed8bd0b0a0",
   "lean-toolchain": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71",
 };

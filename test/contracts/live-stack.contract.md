@@ -271,11 +271,11 @@ closure override.
 
 | File | SHA-256 |
 | --- | --- |
-| `Effect4/Runtime/Runtime.lean` | `fa73134f37da77489bfc4bb14776d32a482171d0f43c9fcc3e26bd811075ccd4` |
+| `Effect4/Runtime/Runtime.lean` | `f51ad546ce01022624f1d871dd63bb31b99ba87d2e076293b78429a94c887e33` |
 | `test/contracts/frames.contract.md` | `03b162e30538eecee5e91c10efa8ccb4289cf80c1922f6ae8569598b0c569b48` |
-| `docs/FRAMES-DAG.md` | `78738c025b1f13db14bb9b04fb6448de921252d69e635a7981eeb1165d98dd9a` |
-| `Effect4Test/Runtime/FramesContract.lean` | `f52f93567af2cda199c6f82431b5201b6f0319839914f25a5f9b0e0b3a26296d` |
-| `Effect4Test/Runtime/FramesAxiomReport.lean` | `02391a0afd9bcae89d216765db51d92ab5b574c6d7bcd5c852ac8f1576ba8cae` |
+| `docs/FRAMES-DAG.md` | `7f37fe640d6692a75ae03b8b9d683c83dbbcac66be5ca65447b7e1ccc7d7494d` |
+| `Effect4Test/Runtime/FramesContract.lean` | `abcaf5fc65ff31d9c71caa23e3eca9353a747144d2a3a55e421fbb66148ccbae` |
+| `Effect4Test/Runtime/FramesAxiomReport.lean` | `89b8d2cc11cefa462a7ea9867a09f0df5433df8fe369d918295985132e0e35ff` |
 | `Effect4Test/Counterexamples/Runtime/Frames.lean` | `8038b59ab9826fb0099a38b31df60c965b9ba5f315fedc6fbcbedef528ce44a3` |
 | `Effect4/Semantics/Cause.lean` | `fc7d008f2955a5ea812717a77e2f3e3d187980c924fc0cb25d5014644c7f7196` |
 | `Effect4/Semantics/Exit.lean` | `a4a4c024ad54a8ab6e52acc1493183349bb532e668af0ed7c2512fa134161383` |
@@ -287,3 +287,14 @@ closure override.
 | `Effect4Test/Runtime/LiveStackContract.lean` | `3b48462973b45a09b9fa95e4cf567372dffd6166b7a787548e8af51827a9254a` |
 | `Effect4Test/Runtime/LiveStackAxiomReport.lean` | `e7a84c14d4262bfd7b6936eeedee531330aacc7c991141d2b1d196cd701a6a76` |
 | `Effect4Test/Counterexamples/Runtime/LiveStack.lean` | `af2e8579e456fbf556c2261de7f64433d6be3fe62cb019399a3c58f9cf72075c` |
+
+### Re-pin, 2026-09-03 (coordinator)
+
+The branch froze these inputs before packet D4 fence A landed on `main`
+(`14730d0`: `step_preserves_uninterrupted`, `run_add`/`run_mono`, 337 added
+lines in `Effect4/Runtime/Runtime.lean`, with the matching frames contract,
+axiom report and `docs/FRAMES-DAG.md` rows). The change is additive — no
+existing declaration, `FramePop` field or frame packet assertion moved — so the
+four digests above are re-pinned to the merged tree and every live-stack
+theorem, control and host observation is re-checked against it by
+`scripts/check-live-stack.mjs`. Re-pinned: `Effect4/Runtime/Runtime.lean`, `docs/FRAMES-DAG.md`, `Effect4Test/Runtime/FramesContract.lean`, `Effect4Test/Runtime/FramesAxiomReport.lean`.
