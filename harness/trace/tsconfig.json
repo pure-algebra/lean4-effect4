@@ -62,6 +62,8 @@
     "structured-tail.ts",
     "scope-fixture.ts",
     "scope-tail.ts",
+    "fiber-fixture.ts",
+    "fiber-tail.ts",
     "wire-tail.ts"
   ]
 }

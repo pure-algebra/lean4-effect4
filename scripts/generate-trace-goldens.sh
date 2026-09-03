@@ -38,4 +38,11 @@ mkdir -p "$out/scope"
 for program in $(run scope-programs); do
   { provenance; run scope-golden "$program"; } > "$out/scope/$program.tsv"
 done
+# The `Fibers` family (packet M3): its own generated module and its own tail
+# (`fiber-tail.ts`), so the straight-line glob must not see it either. Each
+# golden carries the tape its forks are answered from, in the `tape` header row.
+mkdir -p "$out/fiber"
+for program in $(run fiber-programs); do
+  { provenance; run fiber-golden "$program"; } > "$out/fiber/$program.tsv"
+done
 echo "PASS wrote $(find "$out" -name '*.tsv' | wc -l | tr -d ' ') trace projections to $out"

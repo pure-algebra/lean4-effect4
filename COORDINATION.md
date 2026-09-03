@@ -839,3 +839,105 @@ and byte-stable; host, patched, types, property, coverage, census, family
 check, the three planted-mutant self-tests (goldens, coverage, lowering
 4/4), citations and the trust gate all green. Agent worktrees and branches
 are removed. Not pushed.
+
+## M3 landed, 2026-09-03
+
+`Fibers` as a traced family and a two-fiber host. Nine goldens under
+`generated/traces/fiber/`, one per assertion of
+`harness/fiber-supervision/runtime-check.ts` that this alphabet can carry, all
+agreeing with the pinned rc.112 install under `outcome`, `m1` and `m2`.
+
+**The projection I chose, stated so the next packet does not have to guess.**
+A `fork` enqueues its child and then reads one entry off the tape at the fork's
+own site. On `true` the child is given the processor *at the fork point* — and
+so is every other queued child, in fork order, because rc.112 drains its whole
+run queue at a yield. On `false` nothing runs, and the child waits for the
+first `join` or await that blocks the parent. So the packet's "at the fork
+point *or* at the first join/await" is not a choice made once: the tape makes
+it per fork, and it is observable — `raceImmediateSuccessStopsLaunch` differs
+from `raceFailureAllowsNextLaunch` in exactly that decision, and
+`emptyRacePendingUntilInterrupted` is pending only because its one decision is
+`false`.
+
+The other three clauses, each read off the host before it was written down:
+`join` and the awaits drain **only** when their target has not published, so
+awaiting a winner that already finished launches nothing (which is what
+`raceReentrantEmptySetBypasses` turns on); `interrupt` never drains, and a
+child interrupted while still queued never runs and is never cleaned;
+`started` and `cleanups` are `Effect.sync` reads and never hand the processor
+over.
+
+The supervision half is `FiberTable.parentExit`: the parent's own exit
+interrupts and waits for every *tracked* child and leaves daemons running —
+`Supervision.interruptAllRequests` / `awaitAllChildren` and
+`commitFork_daemon_untracked` as handler behaviour. It happens after the last
+traced row, so no golden shows it; what it accounts for is why every program of
+the corpus terminates at all, and why `daemonSurvivesParentExit` terminates
+with its child still running where the same program with a tracked child would
+wait forever.
+
+**Two rows that stay host-only, and the honest reason.**
+`Effect4/Concurrency/Scheduler.lean`'s `Machine` carries no program, so nothing
+in the Lean tree steps two fibers against each other. Consequences, registered:
+
+- `E4-SEM-CE-010` — `join` of an interrupted child. rc.112 ends the run
+  `{"interrupted":true}`; the family's abort channel is `Nat` and could only
+  invent `{"failure":n}`. The projection refuses (`FiberTable.stuck`) and the
+  `fiber-golden` arm emits nothing for such a program. Witness:
+  `Effect4Test/Counterexamples/Concurrency/FiberProjection.lean`.
+- `E4-SEM-CE-011` — a `false` decision is not a fact about the run. At
+  `EFFECT4_MAX_OPS=3` the run loop yields on its own and a deferred child
+  starts with no `decide` row for it; measured on
+  `emptyRacePendingUntilInterrupted`, `answer started []` against
+  `answer started [4, []]`. The `fiber` section of `check-trace-host.sh`
+  therefore runs at the default threshold only and says why — it is the one
+  family without a yield-every-op run.
+
+**Refusals of spelling, recorded where they bite.** `await` is a reserved word
+in the generated-binding profile, and Stratum V admits type spellings of depth
+two, so `Option (Except Nat Nat)` — the exact shape of an rc.112 `Exit` — is
+not a spelling the DSL has. Rather than widen the stratum (which would change
+`Effect4/Meta/Derive.lean`, whose digest is provenance for every golden in the
+tree) or hand-roll a tag encoding into a `List Nat`, the trichotomy is two
+operations built from the alphabet's own formers: `awaitValue` answers
+`some v` exactly when the child succeeded, `awaitError` answers `some e`
+exactly when it failed, and an interrupted child answers `none` to both.
+Neither ever invents a code. The tenth runtime-check assertion,
+`race-reentrant-nonempty-set-includes-late-insertion`, is refused outright: it
+is distinguished from the empty-set case only by cleanups run from inside the
+winner's own completion callback, and this family has no former for a child
+that completes another child.
+
+**Where the handler lives, and why.** `Effect4/Concurrency/FiberFamily.lean`,
+under `Effect4/` and audited by `#effect4_axiom_gate` with no exemption, so
+`Effect4Test/Flow/FibersContract.lean` can hold the `#guard` receipts of all
+nine goldens' rows without restating the family. The error channel is `Nat`,
+not `String`, to keep string folds out of the semantics; the report is
+`propext` only (`Effect4Test/Flow/FibersAxiomReport.lean`).
+
+**One shared file moved.** `harness/trace/tracer.ts` gained an optional
+`RunOptions.armed`, consulted first by `TapeScheduler.shouldYield`. Existing
+tails pass nothing and are byte-for-byte unaffected (the straight-line and
+scope families were re-run against their goldens to confirm). Its digest is
+provenance in `generated/lowering-property.tsv`, whose `input` line is updated;
+the `row` line is untouched because the property loop's behaviour is not.
+
+**Generation note for the sweep.** Every golden in `generated/traces/` carries
+`harness/trace/Generate.lean`'s digest, and that file gained the four
+`fiber-*` arms, so all 21 existing projections were regenerated; the diff is
+exactly two provenance lines each, no row moved. The generator scripts were not
+run (the packet forbids it): the arms were driven directly and the provenance
+block reproduced verbatim, and `scripts/check-trace-goldens.sh` in the sweep is
+the check that this was done correctly.
+
+Not run here, left for the sweep: `check-trace-host.sh` end to end, the trust
+gate, the property loop, `check-trace-patched.sh`. Run here: `lake build
+Effect4` (green), every new battery under `lake env lean` (all silent), the
+harness type gate `check.mjs` (tsc and tsgo ok over 13 files), and the `fiber`
+tail against all nine goldens plus the straight-line and scope families as a
+regression on the `tracer.ts` change (51/51 mask comparisons ok).
+
+One pre-existing failure is untouched and not ours: the Effect4Test
+module-closure gate rejects `Effect4Test/Protocol/ByteParserContract.lean`,
+which is not reachable from the audit root and was not reachable before this
+packet either.
