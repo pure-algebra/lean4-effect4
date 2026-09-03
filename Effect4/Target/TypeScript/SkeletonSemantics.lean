@@ -726,6 +726,25 @@ theorem afterFell_finished (fuel : Nat) (rest : List Skeleton) (result : RunResu
   intro _ h
   exact Outcome.noConfusion h
 
+/-- **Flow v3's caught perform is a perform here.** The plain algebra has no
+failure channel (`FullSig` answers a `Val`), so the node runs its value edge
+and nothing else: it is `performOp` into the value edge's own statement list,
+continued by the statements after the construct. This is the machine-side form
+of `Runs.lean`'s ruling that a plain run of a `performCatch` reads exactly as a
+`perform` -- the identity that lets one answer-slot move
+(`answerSlots_agree`) serve both shapes in every block law. -/
+theorem execControl_performCatch_eq_perform (fuel : Nat) (m : Machine) (tape : Tape)
+    (answer value error : Slot) (operation : OperationId) (spec : OpSpec) (request : Slot)
+    (onOk onError rest : List Skeleton) :
+    execControl alphabet fuel m tape
+        (.performCatch answer value error operation spec request onOk onError) rest
+      = Program.bind (performOp alphabet fuel m tape value operation request onOk)
+          (afterFell alphabet fuel rest) := by
+  rw [execControl_performCatch, performOp_eq]
+  cases alphabet.lookup operation with
+  | none => exact (afterFell_finished alphabet fuel rest _ tape).symm
+  | some op => rfl
+
 theorem dispatchRun_zero (m : Machine) (tape : Tape) (var : String)
     (cases : List (Nat × List Skeleton)) :
     dispatchRun alphabet 0 m tape var cases = .pure (.frontier (.fuel ⟨m.index var⟩), tape) := by
@@ -1210,6 +1229,91 @@ theorem ownedBy_argSlots (block : BlockId) (args : List Var) :
   obtain ⟨v, _, rfl⟩ := mem
   exact rfl
 
+/-- The three side conditions of a `perform`-shaped move: the slots are the
+block's own, they are as many as the values, and the machine reads each of them
+as the value that belongs there. The slot list is the block's argument slots
+followed by the single slot the operation's answer landed in — `Slot.answer`
+for a `perform`, `Slot.catchValue` for Flow v3's `performCatch`, which in the
+plain algebra takes exactly the same edge
+(`execControl_performCatch_eq_perform`). -/
+theorem answerSlots_agree {m : Machine} {block : BlockId} {args : List Var} {env' : Env}
+    (answerSlot : Slot) (ownedAnswer : ownedBy block answerSlot)
+    (freshAnswer : ∀ i : Nat, Slot.param block i ≠ answerSlot)
+    (len : args.length = env'.length) (answered : Val)
+    (agree : ∀ (i : Nat) (s : Slot) (v : Val),
+      (args.map fun v : Var => Slot.param block v.index)[i]? = some s → env'[i]? = some v →
+      m.vals s = v) :
+    (∀ s ∈ (args.map fun v : Var => Slot.param block v.index) ++ [answerSlot], ownedBy block s)
+    ∧ ((args.map fun v : Var => Slot.param block v.index) ++ [answerSlot]).length
+        = (env' ++ [answered]).length
+    ∧ ∀ (i : Nat) (s : Slot) (v : Val),
+        ((args.map fun v : Var => Slot.param block v.index) ++ [answerSlot])[i]? = some s →
+        (env' ++ [answered])[i]? = some v → (m.setVal answerSlot answered).vals s = v := by
+  refine ⟨?_, by simp [len], ?_⟩
+  · intro s mem
+    simp only [List.mem_append, List.mem_singleton] at mem
+    rcases mem with inArgs | rfl
+    · exact ownedBy_argSlots block args s inArgs
+    · exact ownedAnswer
+  · intro i s v slotAt valAt
+    by_cases small : i < args.length
+    · rw [List.getElem?_append_left (by simpa using small)] at slotAt
+      rw [List.getElem?_append_left (by omega)] at valAt
+      have sMem : s ∈ args.map fun v : Var => Slot.param block v.index :=
+        List.mem_of_getElem? slotAt
+      simp only [List.mem_map] at sMem
+      obtain ⟨a, _, rfl⟩ := sMem
+      rw [setVal_other _ _ _ _ (freshAnswer a.index)]
+      exact agree i _ v slotAt valAt
+    · have inRange : i < ((args.map fun v : Var => Slot.param block v.index)
+          ++ [answerSlot]).length :=
+        (List.getElem?_eq_some_iff.mp slotAt).1
+      simp only [List.length_append, List.length_map, List.length_singleton] at inRange
+      have same : i = args.length := by omega
+      subst same
+      rw [List.getElem?_append_right (by simp)] at slotAt
+      rw [List.getElem?_append_right (by omega)] at valAt
+      simp only [List.length_map, Nat.sub_self, List.getElem?_cons_zero,
+        Option.some.injEq] at slotAt
+      rw [show args.length - env'.length = 0 from by omega] at valAt
+      simp only [List.getElem?_cons_zero, Option.some.injEq] at valAt
+      subst slotAt
+      subst valAt
+      exact setVal_self _ _ _
+
+/-- The move a `perform`-shaped edge makes: the block's argument slots, then
+the one slot the answer landed in, into the target's parameters. `plan`'s
+`perform` and its Flow v3 `performCatch` take exactly this edge — the plain
+algebra has no failure channel, so a caught perform runs its value edge and
+reads as a `perform` (`Runs.lean`, `execControl_performCatch_eq_perform`) —
+and the only difference between them is which slot the answer landed in. -/
+theorem execList_answerMove (fuel : Nat) (m : Machine) (tape : Tape)
+    (block target : BlockId) (args : List Var) (answerSlot : Slot)
+    (ownedAnswer : ownedBy block answerSlot)
+    (freshAnswer : ∀ i : Nat, Slot.param block i ≠ answerSlot)
+    (env' : Env) (answered : Val) (len : args.length = env'.length)
+    (agree : ∀ (i : Nat) (s : Slot) (v : Val),
+      (args.map fun v : Var => Slot.param block v.index)[i]? = some s → env'[i]? = some v →
+      m.vals s = v) :
+    execList alphabet fuel (m.setVal answerSlot answered) tape
+        (Lowering.paramMove block target
+          ((args.map fun v : Var => Slot.param block v.index) ++ [answerSlot])
+          ++ Lowering.goto target)
+      = .pure (.continueLoop (movedMachine block target
+          ((args.map fun v : Var => Slot.param block v.index) ++ [answerSlot])
+          (m.setVal answerSlot answered)), tape)
+    ∧ (movedMachine block target
+        ((args.map fun v : Var => Slot.param block v.index) ++ [answerSlot])
+        (m.setVal answerSlot answered)).index "block" = target.value
+    ∧ Holds (movedMachine block target
+        ((args.map fun v : Var => Slot.param block v.index) ++ [answerSlot])
+        (m.setVal answerSlot answered)) target (env' ++ [answered]) := by
+  obtain ⟨owned, sized, reads⟩ :=
+    answerSlots_agree (m := m) (block := block) (args := args) (env' := env')
+      answerSlot ownedAnswer freshAnswer len answered agree
+  exact execList_move_goto alphabet fuel _ tape block target _ (env' ++ [answered])
+    owned sized reads
+
 /-- The move of a `jump` or a `choose` reads the block's parameters and finds
 exactly the values `readArgs` read. -/
 theorem argSlots_agree {m : Machine} {block : BlockId} {env : Env} (holds : Holds m block env)
@@ -1338,56 +1442,10 @@ theorem execList_skeletonBlock (table : List OpSpec) (fuel : Nat) (m : Machine) 
     obtain ⟨head, headSimple, headRun, rfl⟩ := shape
     obtain ⟨len, agree⟩ := argSlots_agree (holds := holds) (block := block.id) read
     obtain ⟨lenRead, _⟩ := readArgs_getElem? args env env' read
-    have moved : ∀ answered : Val,
-        execList (tableAlphabet ⟨0⟩ table) fuel
-            ((m.enter block.id).setVal (.answer block.id) answered) tape
-            (Lowering.paramMove block.id target
-              ((args.map fun v : Var => Slot.param block.id v.index)
-                ++ [Slot.answer block.id]) ++ Lowering.goto target)
-          = .pure (.continueLoop (movedMachine block.id target
-              ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.answer block.id])
-              ((m.enter block.id).setVal (.answer block.id) answered)), tape)
-        ∧ (movedMachine block.id target
-              ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.answer block.id])
-              ((m.enter block.id).setVal (.answer block.id) answered)).index "block" = target.value
-        ∧ Holds (movedMachine block.id target
-              ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.answer block.id])
-              ((m.enter block.id).setVal (.answer block.id) answered))
-            target (env' ++ [answered]) := by
-      intro answered
-      refine execList_move_goto (tableAlphabet ⟨0⟩ table) fuel _ tape block.id target _
-        (env' ++ [answered]) ?_ ?_ ?_
-      · intro s mem
-        simp only [List.mem_append, List.mem_singleton] at mem
-        rcases mem with inArgs | rfl
-        · exact ownedBy_argSlots block.id args s inArgs
-        · exact rfl
-      · simp [len]
-      · intro i s v slotAt valAt
-        by_cases small : i < args.length
-        · rw [List.getElem?_append_left (by simpa using small)] at slotAt
-          rw [List.getElem?_append_left (by omega)] at valAt
-          have sMem : s ∈ args.map fun v : Var => Slot.param block.id v.index :=
-            List.mem_of_getElem? slotAt
-          simp only [List.mem_map] at sMem
-          obtain ⟨a, _, rfl⟩ := sMem
-          rw [setVal_other _ _ _ _ (by simp), enter_vals]
-          exact agree i _ v slotAt valAt
-        · have inRange : i < ((args.map fun v : Var => Slot.param block.id v.index)
-              ++ [Slot.answer block.id]).length :=
-            (List.getElem?_eq_some_iff.mp slotAt).1
-          simp only [List.length_append, List.length_map, List.length_singleton] at inRange
-          have same : i = args.length := by omega
-          subst same
-          rw [List.getElem?_append_right (by simp)] at slotAt
-          rw [List.getElem?_append_right (by omega)] at valAt
-          simp only [List.length_map, Nat.sub_self, List.getElem?_cons_zero,
-            Option.some.injEq] at slotAt
-          rw [show args.length - env'.length = 0 from by omega] at valAt
-          simp only [List.getElem?_cons_zero, Option.some.injEq] at valAt
-          subst slotAt
-          subst valAt
-          exact setVal_self _ _ _
+    have moved := fun answered : Val =>
+      execList_answerMove (tableAlphabet ⟨0⟩ table) fuel (m.enter block.id) tape block.id target
+        args (.answer block.id) rfl (fun _ => by simp) env' answered (by simpa using len)
+        (fun i s v slotAt valAt => by rw [enter_vals]; exact agree i s v slotAt valAt)
     refine ⟨fun answered => movedMachine block.id target
         ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.answer block.id])
         ((m.enter block.id).setVal (.answer block.id) answered), ?_,
@@ -1540,51 +1598,10 @@ theorem execList_skeletonBlock (table : List OpSpec) (fuel : Nat) (m : Machine) 
     simp only [Flow.skeletonBlock, Flow.skeletonBlockWith, hterm, Flow.dispatchTransfer] at built
     obtain ⟨len, agree⟩ := argSlots_agree (holds := holds) (block := block.id) read
     obtain ⟨lenRead, _⟩ := readArgs_getElem? args env env' read
-    have moved : ∀ answered : Val,
-        execList (tableAlphabet ⟨0⟩ table) fuel
-            ((m.enter block.id).setVal (.catchValue block.id) answered) tape
-            (Lowering.paramMove block.id target ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.catchValue block.id])
-              ++ Lowering.goto target)
-          = .pure (.continueLoop (movedMachine block.id target
-              ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.catchValue block.id])
-              ((m.enter block.id).setVal (.catchValue block.id) answered)), tape)
-        ∧ (movedMachine block.id target ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.catchValue block.id])
-              ((m.enter block.id).setVal (.catchValue block.id) answered)).index "block"
-            = target.value
-        ∧ Holds (movedMachine block.id target ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.catchValue block.id])
-              ((m.enter block.id).setVal (.catchValue block.id) answered))
-            target (env' ++ [answered]) := by
-      intro answered
-      refine execList_move_goto (tableAlphabet ⟨0⟩ table) fuel _ tape block.id target _ _ ?_ ?_ ?_
-      · intro s mem
-        simp only [List.mem_append, List.mem_singleton] at mem
-        rcases mem with inArgs | rfl
-        · exact ownedBy_argSlots block.id args s inArgs
-        · exact rfl
-      · simp [len]
-      · intro i s v slotAt valAt
-        by_cases small : i < args.length
-        · rw [List.getElem?_append_left (by simpa using small)] at slotAt
-          rw [List.getElem?_append_left (by omega)] at valAt
-          have sMem : s ∈ (args.map fun v : Var => Slot.param block.id v.index) := List.mem_of_getElem? slotAt
-          simp only [List.mem_map] at sMem
-          obtain ⟨a, _, rfl⟩ := sMem
-          rw [setVal_other _ _ _ _ (by simp), enter_vals]
-          exact agree i _ v slotAt valAt
-        · have inRange : i < ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.catchValue block.id]).length :=
-            (List.getElem?_eq_some_iff.mp slotAt).1
-          simp only [List.length_append, List.length_map, List.length_singleton] at inRange
-          have same : i = args.length := by omega
-          subst same
-          rw [List.getElem?_append_right (by simp)] at slotAt
-          rw [List.getElem?_append_right (by omega)] at valAt
-          simp only [List.length_map, Nat.sub_self, List.getElem?_cons_zero,
-            Option.some.injEq] at slotAt
-          rw [show args.length - env'.length = 0 from by omega] at valAt
-          simp only [List.getElem?_cons_zero, Option.some.injEq] at valAt
-          subst slotAt
-          subst valAt
-          exact setVal_self _ _ _
+    have moved := fun answered : Val =>
+      execList_answerMove (tableAlphabet ⟨0⟩ table) fuel (m.enter block.id) tape block.id target
+        args (.catchValue block.id) rfl (fun _ => by simp) env' answered (by simpa using len)
+        (fun i s v slotAt valAt => by rw [enter_vals]; exact agree i s v slotAt valAt)
     have shape : ∃ spec : OpSpec, body = Skeleton.enterBlock block.id ::
         Lowering.performCatchResult (.answer block.id) (.catchValue block.id)
           (.catchError block.id) operation spec (.param block.id requestVar.index)
@@ -2007,39 +2024,12 @@ theorem execList_skeletonBlockWith (table : List OpSpec) (raw : RawFlow String)
                     ((m.enter block.id).setVal (.answer block.id) answered) tape control
                   = K target (env' ++ [answered]) tape := by
               intro answered
-              refine step target targetBlock _ (env' ++ [answered]) _ tape control foundTarget
-                (by simp [← sizedTarget]) transferred ?_ ?_ ?_
-              · intro s mem
-                simp only [List.mem_append, List.mem_singleton] at mem
-                rcases mem with inArgs | rfl
-                · exact ownedBy_argSlots block.id args s inArgs
-                · exact rfl
-              · simp [len]
-              · intro i s v slotAt valAt
-                by_cases small : i < args.length
-                · rw [List.getElem?_append_left (by simpa using small)] at slotAt
-                  rw [List.getElem?_append_left (by omega)] at valAt
-                  have sMem : s ∈ args.map fun v : Var => Slot.param block.id v.index :=
-                    List.mem_of_getElem? slotAt
-                  simp only [List.mem_map] at sMem
-                  obtain ⟨a, _, rfl⟩ := sMem
-                  rw [setVal_other _ _ _ _ (by simp), enter_vals]
-                  exact agree i _ v slotAt valAt
-                · have inRange : i < ((args.map fun v : Var => Slot.param block.id v.index)
-                      ++ [Slot.answer block.id]).length :=
-                    (List.getElem?_eq_some_iff.mp slotAt).1
-                  simp only [List.length_append, List.length_map, List.length_singleton] at inRange
-                  have same : i = args.length := by omega
-                  subst same
-                  rw [List.getElem?_append_right (by simp)] at slotAt
-                  rw [List.getElem?_append_right (by omega)] at valAt
-                  simp only [List.length_map, Nat.sub_self, List.getElem?_cons_zero,
-                    Option.some.injEq] at slotAt
-                  rw [show args.length - env'.length = 0 from by omega] at valAt
-                  simp only [List.getElem?_cons_zero, Option.some.injEq] at valAt
-                  subst slotAt
-                  subst valAt
-                  exact setVal_self _ _ _
+              obtain ⟨ownedSlots, sizedSlots, readsSlots⟩ :=
+                answerSlots_agree (m := m.enter block.id) (block := block.id) (args := args)
+                  (env' := env') (.answer block.id) rfl (fun _ => by simp) (by simpa using len)
+                  answered (fun i s v a b => by rw [enter_vals]; exact agree i s v a b)
+              exact step target targetBlock _ (env' ++ [answered]) _ tape control foundTarget
+                (by simp [← sizedTarget]) transferred ownedSlots sizedSlots readsSlots
             simp only [Flow.skeletonBlockWith, hterm, transferred] at built
             have shape : ∃ head : Skeleton,
                 (∀ m' : Machine, simple? m' head = none)
@@ -2292,38 +2282,12 @@ theorem execList_skeletonBlockWith (table : List OpSpec) (raw : RawFlow String)
                         ((m.enter block.id).setVal (.catchValue block.id) answered) tape toOk
                       = K target (env' ++ [answered]) tape := by
                   intro answered
-                  refine step target targetBlock _ (env' ++ [answered]) _ tape toOk foundTarget
-                    (by simp [← sizedTarget]) okTransferred ?_ ?_ ?_
-                  · intro s mem
-                    simp only [List.mem_append, List.mem_singleton] at mem
-                    rcases mem with inArgs | rfl
-                    · exact ownedBy_argSlots block.id args s inArgs
-                    · exact rfl
-                  · simp [len]
-                  · intro i s v slotAt valAt
-                    by_cases small : i < args.length
-                    · rw [List.getElem?_append_left (by simpa using small)] at slotAt
-                      rw [List.getElem?_append_left (by omega)] at valAt
-                      have sMem : s ∈ (args.map fun v : Var => Slot.param block.id v.index) := List.mem_of_getElem? slotAt
-                      simp only [List.mem_map] at sMem
-                      obtain ⟨a, _, rfl⟩ := sMem
-                      rw [setVal_other _ _ _ _ (by simp), enter_vals]
-                      exact agree i _ v slotAt valAt
-                    · have inRange : i < ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.catchValue block.id]).length :=
-                        (List.getElem?_eq_some_iff.mp slotAt).1
-                      simp only [List.length_append, List.length_map,
-                        List.length_singleton] at inRange
-                      have same : i = args.length := by omega
-                      subst same
-                      rw [List.getElem?_append_right (by simp)] at slotAt
-                      rw [List.getElem?_append_right (by omega)] at valAt
-                      simp only [List.length_map, Nat.sub_self, List.getElem?_cons_zero,
-                        Option.some.injEq] at slotAt
-                      rw [show args.length - env'.length = 0 from by omega] at valAt
-                      simp only [List.getElem?_cons_zero, Option.some.injEq] at valAt
-                      subst slotAt
-                      subst valAt
-                      exact setVal_self _ _ _
+                  obtain ⟨ownedSlots, sizedSlots, readsSlots⟩ :=
+                    answerSlots_agree (m := m.enter block.id) (block := block.id) (args := args)
+                      (env' := env') (.catchValue block.id) rfl (fun _ => by simp) (by simpa using len)
+                      answered (fun i s v a b => by rw [enter_vals]; exact agree i s v a b)
+                  exact step target targetBlock _ (env' ++ [answered]) _ tape toOk foundTarget
+                    (by simp [← sizedTarget]) okTransferred ownedSlots sizedSlots readsSlots
                 simp only [Flow.skeletonBlockWith, hterm, okTransferred, errTransferred] at built
                 have shape : ∃ spec : OpSpec, body = Skeleton.enterBlock block.id ::
                     [Skeleton.performCatch (.answer block.id) (.catchValue block.id)

@@ -346,41 +346,14 @@ private theorem execList_skeletonBlockWith_bind {Result : Type} (table : List Op
                     ((m.enter block.id).setVal (.answer block.id) answered) tape control) H
                   = K target (env' ++ [answered]) tape := by
               intro answered
-              refine step target targetBlock _ (env' ++ [answered]) _ tape control foundTarget
-                (by simp [← sizedTarget]) transferred ?_ ?_ ?_
+              obtain ⟨ownedSlots, sizedSlots, readsSlots⟩ :=
+                answerSlots_agree (m := m.enter block.id) (block := block.id) (args := args)
+                  (env' := env') (.answer block.id) rfl (fun _ => by simp) (by simpa using len)
+                  answered (fun i s v a b => by rw [enter_vals]; exact agree i s v a b)
+              exact step target targetBlock _ (env' ++ [answered]) _ tape control foundTarget
+                (by simp [← sizedTarget]) transferred ownedSlots sizedSlots readsSlots
                 (by simp only [hterm, RawTerm.successors, List.mem_singleton])
                 (Or.inl ⟨rfl, edgeNoChoose_of_plan_perform found planned⟩) scopedControl
-              · intro s mem
-                simp only [List.mem_append, List.mem_singleton] at mem
-                rcases mem with inArgs | rfl
-                · exact ownedBy_argSlots block.id args s inArgs
-                · exact rfl
-              · simp [len]
-              · intro i s v slotAt valAt
-                by_cases small : i < args.length
-                · rw [List.getElem?_append_left (by simpa using small)] at slotAt
-                  rw [List.getElem?_append_left (by omega)] at valAt
-                  have sMem : s ∈ args.map fun v : Var => Slot.param block.id v.index :=
-                    List.mem_of_getElem? slotAt
-                  simp only [List.mem_map] at sMem
-                  obtain ⟨a, _, rfl⟩ := sMem
-                  rw [setVal_other _ _ _ _ (by simp), enter_vals]
-                  exact agree i _ v slotAt valAt
-                · have inRange : i < ((args.map fun v : Var => Slot.param block.id v.index)
-                      ++ [Slot.answer block.id]).length :=
-                    (List.getElem?_eq_some_iff.mp slotAt).1
-                  simp only [List.length_append, List.length_map, List.length_singleton] at inRange
-                  have same : i = args.length := by omega
-                  subst same
-                  rw [List.getElem?_append_right (by simp)] at slotAt
-                  rw [List.getElem?_append_right (by omega)] at valAt
-                  simp only [List.length_map, Nat.sub_self, List.getElem?_cons_zero,
-                    Option.some.injEq] at slotAt
-                  rw [show args.length - env'.length = 0 from by omega] at valAt
-                  simp only [List.getElem?_cons_zero, Option.some.injEq] at valAt
-                  subst slotAt
-                  subst valAt
-                  exact setVal_self _ _ _
             rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
               execList_cons_control _ fuel (m.enter block.id) tape head _
                 (headSimple (m.enter block.id)),
@@ -659,40 +632,14 @@ private theorem execList_skeletonBlockWith_bind {Result : Type} (table : List Op
                         ((m.enter block.id).setVal (.catchValue block.id) answered) tape toOk) H
                       = K target (env' ++ [answered]) tape := by
                   intro answered
-                  refine step target targetBlock _ (env' ++ [answered]) _ tape toOk foundTarget
-                    (by simp [← sizedTarget]) okTransferred ?_ ?_ ?_
+                  obtain ⟨ownedSlots, sizedSlots, readsSlots⟩ :=
+                    answerSlots_agree (m := m.enter block.id) (block := block.id) (args := args)
+                      (env' := env') (.catchValue block.id) rfl (fun _ => by simp) (by simpa using len)
+                      answered (fun i s v a b => by rw [enter_vals]; exact agree i s v a b)
+                  exact step target targetBlock _ (env' ++ [answered]) _ tape toOk foundTarget
+                    (by simp [← sizedTarget]) okTransferred ownedSlots sizedSlots readsSlots
                     (by simp [hterm, RawTerm.successors])
                     (Or.inl ⟨rfl, edgeNoChoose_of_plan_performCatch found planned⟩) scopedOk
-                  · intro s mem
-                    simp only [List.mem_append, List.mem_singleton] at mem
-                    rcases mem with inArgs | rfl
-                    · exact ownedBy_argSlots block.id args s inArgs
-                    · exact rfl
-                  · simp [len]
-                  · intro i s v slotAt valAt
-                    by_cases small : i < args.length
-                    · rw [List.getElem?_append_left (by simpa using small)] at slotAt
-                      rw [List.getElem?_append_left (by omega)] at valAt
-                      have sMem : s ∈ (args.map fun v : Var => Slot.param block.id v.index) := List.mem_of_getElem? slotAt
-                      simp only [List.mem_map] at sMem
-                      obtain ⟨a, _, rfl⟩ := sMem
-                      rw [setVal_other _ _ _ _ (by simp), enter_vals]
-                      exact agree i _ v slotAt valAt
-                    · have inRange : i < ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.catchValue block.id]).length :=
-                        (List.getElem?_eq_some_iff.mp slotAt).1
-                      simp only [List.length_append, List.length_map,
-                        List.length_singleton] at inRange
-                      have same : i = args.length := by omega
-                      subst same
-                      rw [List.getElem?_append_right (by simp)] at slotAt
-                      rw [List.getElem?_append_right (by omega)] at valAt
-                      simp only [List.length_map, Nat.sub_self, List.getElem?_cons_zero,
-                        Option.some.injEq] at slotAt
-                      rw [show args.length - env'.length = 0 from by omega] at valAt
-                      simp only [List.getElem?_cons_zero, Option.some.injEq] at valAt
-                      subst slotAt
-                      subst valAt
-                      exact setVal_self _ _ _
                 rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
                   execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
                   execControl_performCatch, known, enter_vals, holds_of_getElem? holds got]
