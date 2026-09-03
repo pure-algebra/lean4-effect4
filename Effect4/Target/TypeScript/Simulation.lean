@@ -26,8 +26,8 @@ namespace Effect4
 
 open Effects.Trace (Val Outcome)
 
-/-- The outcome of an exit: the value, the first failure's error, or an
-interruption; a defect with no failure before it projects through `defect`. -/
+/-- The outcome of an exit: the value, the first failure's error, an
+interruption, or (a die with no failure before it) a defect. -/
 def Exit.toOutcome {β : Type v} {ε δ ι α : Type u}
     (value : β → Val) (error : ε → Val) (defect : δ → Val) : Exit β ε δ ι α → Outcome Val
   | .success v => .success (value v)
@@ -38,7 +38,7 @@ def Exit.toOutcome {β : Type v} {ε δ ι α : Type u}
           if cause.reasons.any (fun reason => reason.tag = ReasonTag.interrupt) then .interrupted
           else
             match cause.reasons.find? (fun reason => reason.tag = ReasonTag.die) with
-            | some (.die d _) => .failure (defect d)
+            | some (.die d _) => .defect (defect d)
             | _ => .interrupted
 
 /-- The service-level shadow of a frame event: finalizers and the yielded

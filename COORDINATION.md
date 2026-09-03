@@ -34,6 +34,7 @@ row is unclaimed.
 
 | File or tree | Claimed by | State |
 | --- | --- | --- |
+| `Effect4/Semantics/Fuel.lean`, `Effect4/Target/TypeScript/StructureLaws.lean`, `Effect4Test/Target/TypeScript/StructureLaws{Contract,AxiomReport}.lean` | Claude (trace-lane owed theorems, 2026-09-03) | proved and green in worktree `agent-a7d1f74bf61e7c52b`; uncommitted. Also touched: `Effect4.lean` (two imports), `Effect4Test.lean` (two imports), `Effect4Test/Flow/Runner{Contract,AxiomReport}.lean`, `Effect4Test/Audit/AxiomGate.lean` (two exact-declaration exemptions), `test/contracts/flow-runner.contract.md`, `test/contracts/flow-structured-lowering.contract.md`, `docs/TRACE-DAG.md` (`structured-agreement` row), `test/counterexamples/REGISTER.md` (`E4-TARGET-CE-013` row) |
 | `Effect4/Data/Row.lean` | Codex | in progress |
 | `test/contracts/data-row.contract.md`, `Effect4Test/Data/RowContract.lean` | Codex | frozen, red |
 | `Effect4Test/Concurrency/**` | Codex | in progress, red |
@@ -550,3 +551,26 @@ both DAGs stay open with a statement now available. Packet:
 `test/contracts/trace-patched-host.contract.md`. The plan's packets are all
 landed; the owed theorems (`fuelFor` suffices, structured agreement) are with
 a proof agent on a worktree branch.
+
+## Live-stack integration claim, 2026-09-03
+
+Codex resumes the operator-requested OCaml/Rocq bootstrap integration after
+committing the research workspace at `d8d32e2`. This packet is additive: the
+existing `Runtime.lean`, its frozen frame packet, the trace lane, and all
+dependency pins remain unchanged. The independent breaker freezes on
+`codex/live-stack-integration` before implementation; verified packet files
+will be applied to this checkout without switching its branch.
+
+| File or section | Owner and fence |
+| --- | --- |
+| `test/contracts/live-stack.contract.md`, `Effect4Test/Runtime/LiveStackContract.lean`, `Effect4Test/Runtime/LiveStackAxiomReport.lean`, `Effect4Test/Counterexamples/Runtime/LiveStack.lean`, `docs/LIVE-STACK-DAG.md` | Codex independent live-stack breaker; new files only |
+| `Effect4/Runtime/LiveStack.lean`, `harness/live-stack/**`, `scripts/check-live-stack.mjs`, `scripts/test-live-stack-mutations.mjs`, `docs/LIVE-STACK-IMPLEMENTATION.md` | Codex live-stack builder; no second primitive, cause, exit, or fiber carrier |
+| `Effect4.lean`, `Effect4Test.lean` (new LiveStack imports only), `test/fixtures/trust-gate/known-red.txt` (new LiveStack entries only) | Codex live-stack packet wiring |
+| `test/counterexamples/REGISTER.md` (`E4-RUN-CE-022` through `024` only) | Codex independent live-stack breaker; additive runtime rows |
+
+The first package theorem must preserve the full `FramePop` for every existing
+primitive and both values of the interruption-skipping flag, not just the
+research probe's `skipInterrupted=false` case. Public callback regression
+evidence retains the same-final-result, different-interruption-prefix witness.
+Adding `AsyncFinalizer`, switching the default runtime, and claiming an
+executing scheduler/finalizer simulation remain separate open obligations.
