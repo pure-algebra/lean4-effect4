@@ -7,6 +7,16 @@ import Effect4.Semantics.Runs
 import Effect4.Semantics.Fuel
 
 #print axioms Effect4.Flow.Tape.read_answered_length
+#print axioms Effect4.Flow.Tape.read_mismatch_ne
+#print axioms Effect4.Flow.RunResult.refusal_self
+#print axioms Effect4.Flow.RunResult.refusal_of_read
+#print axioms Effect4.Flow.RunResult.exhausted_refusal
+#print axioms Effect4.Flow.RunResult.stuck_refusal
+#print axioms Effect4.Flow.RunResult.refusal_ne_failed
+#print axioms Effect4.Flow.RunResult.refusal_ne_done
+#print axioms Effect4.Flow.idBind
+#print axioms Effect4.Flow.idMap
+#print axioms Effect4.Flow.idPure
 #print axioms Effect4.Flow.step_choose_consumes_one
 #print axioms Effect4.Flow.readArgs_of_bounded
 #print axioms Effect4.Flow.plan_checked

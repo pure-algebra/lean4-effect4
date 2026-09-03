@@ -128,7 +128,7 @@ private def resultOf (table : List OpSpec) (raw : RawFlow String) (tape : Tape)
 #guard observed true operations nestedLoops [⟨⟨7⟩, true⟩, ⟨⟨8⟩, true⟩] =
   some (sourceObserved operations nestedLoops [⟨⟨7⟩, true⟩, ⟨⟨8⟩, true⟩])
 #guard resultOf operations nestedLoops [⟨⟨7⟩, true⟩, ⟨⟨99⟩, false⟩] =
-  some (.refused ⟨8⟩ ⟨99⟩, [⟨⟨99⟩, false⟩])
+  some (.refusedSite ⟨8⟩ ⟨99⟩, [⟨⟨99⟩, false⟩])
 #guard observed true operations nestedLoops [⟨⟨7⟩, true⟩, ⟨⟨99⟩, false⟩] =
   some (sourceObserved operations nestedLoops [⟨⟨7⟩, true⟩, ⟨⟨99⟩, false⟩])
 #guard resultOf operations nestedLoops (loopTape ++ [⟨⟨99⟩, true⟩]) =
@@ -152,7 +152,7 @@ private def resultOf (table : List OpSpec) (raw : RawFlow String) (tape : Tape)
 #guard observed true swapTable swapRaw [⟨⟨1⟩, true⟩] =
   some (sourceObserved swapTable swapRaw [⟨⟨1⟩, true⟩])
 #guard resultOf swapTable swapRaw [⟨⟨1⟩, true⟩, ⟨⟨9⟩, false⟩] =
-  some (.refused ⟨1⟩ ⟨9⟩, [⟨⟨9⟩, false⟩])
+  some (.refusedSite ⟨1⟩ ⟨9⟩, [⟨⟨9⟩, false⟩])
 #guard resultOf swapTable swapRaw [⟨⟨1⟩, false⟩] 0 (.bool true) =
   some (.done (.str "arbitrary answer"), [])
 

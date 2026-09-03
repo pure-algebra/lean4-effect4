@@ -48,10 +48,10 @@ the frontier `fuel block` with a trailing `frontier` row and no `done` row. -/
 /-! ## E4-FLOW-CE-018: a foreign tape entry answers this site
 
 Attack: consume the head entry whatever site it names. Repair: R6, the tape
-is consumed by occurrence with a site check; a mismatch is `refused expected
+is consumed by occurrence with a site check; a mismatch is `refusedSite expected
 actual`, logs nothing, and consumes nothing. -/
 
-#guard runWith 2 [⟨⟨2⟩, true⟩] = some (RunResult.refused ⟨1⟩ ⟨2⟩, [])
+#guard runWith 2 [⟨⟨2⟩, true⟩] = some (RunResult.refusedSite ⟨1⟩ ⟨2⟩, [])
 
 -- Exhaustion, by contrast, is a live frontier: the run is unanswered, not refused.
 #guard runWith 2 [] =

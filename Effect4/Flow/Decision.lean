@@ -56,6 +56,23 @@ theorem read_cons_ne {expected actual : DecisionId} (ne : actual ≠ expected)
     Tape.read (⟨actual, branch⟩ :: rest) expected = .mismatch expected actual := by
   simp [Tape.read, ne]
 
+/-- A tape read never refuses a site against itself: `Tape.read` reports a
+mismatch only when the head entry names *another* site. This is what makes
+`expected = actual` an unambiguous marker of the Flow v3 value refusal
+(`Effect4.Flow.RunResult.refusal`, `E4-FLOW-CE-029`). -/
+theorem read_mismatch_ne {tape : Tape} {site expected actual : DecisionId}
+    (read : Tape.read tape site = .mismatch expected actual) :
+    expected = site ∧ actual ≠ expected := by
+  cases tape with
+  | nil => cases read
+  | cons decision rest =>
+      by_cases same : decision.site = site
+      · simp only [Tape.read, if_pos same] at read
+        cases read
+      · simp only [Tape.read, if_neg same] at read
+        obtain ⟨rfl, rfl⟩ := TapeRead.mismatch.inj read
+        exact ⟨rfl, fun eq => same (by rw [eq])⟩
+
 /-- An answered read consumed exactly one entry. -/
 theorem read_answered_length {tape : Tape} {site : DecisionId} {branch : Bool} {rest : Tape}
     (answered : Tape.read tape site = .answered branch rest) :
@@ -71,5 +88,17 @@ theorem read_answered_length {tape : Tape} {site : DecisionId} {branch : Bool} {
         cases answered
 
 end Tape
+
+/-! ## The tape's scoped simp set
+
+`Tape.read` on a literal tape is the one rewrite every proof in this lane
+opens with, so it is tagged rather than spelled. `scoped` keeps it opt-in: a
+downstream module gets it by `open Effect4.Flow` and not otherwise (survey
+finding L17). `read_cons_ne` stays off the set — it is conditional on
+`actual ≠ expected`, which is exactly the discriminator `read_mismatch_ne`
+proves, and a `simp` that guessed at it would hide the site/value distinction
+`RunResult.refusal` turns on. -/
+
+attribute [scoped simp] Tape.read_nil Tape.read_cons_eq
 
 end Effect4.Flow

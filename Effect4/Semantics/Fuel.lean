@@ -145,19 +145,12 @@ theorem plan_shape (alphabet : FlowAlphabet Ty) (block : RawBlock Ty) (env : Env
         | mismatch expected actual => trivial
         | answered answer rest =>
             dsimp only
-            cases testValue env test with
-            | none => exact Tape.read_answered_length readEq
-            | some value =>
-                dsimp only
-                by_cases hb : answer = value
-                · rw [if_pos hb]; exact Tape.read_answered_length readEq
-                · rw [if_neg hb]; trivial
+            by_cases agreed : testValue env test = some answer
+            · rw [if_pos agreed]; exact Tape.read_answered_length readEq
+            · rw [if_neg agreed]; trivial
 
 /-! ## One step of a checked flow makes measurable progress -/
 
-private theorem idBind {α β : Type} (x : Id α) (f : α → Id β) : x >>= f = f x := rfl
-private theorem idMap {α β : Type} (x : Id α) (f : α → β) : f <$> x = f x := rfl
-private theorem idPure {α : Type} (a : α) : (pure a : Id α) = a := rfl
 
 /-- What one checked step leaves behind for the fuel argument: a finished run
 never reports fuel exhaustion (only `loop` can), and a continuation either
@@ -182,11 +175,11 @@ theorem step_progress {σ : Type} {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty
   generalize planEq : plan alphabet block env tape = p at planned shaped
   cases planned with
   | ret value =>
-      simp [step, planEq, emit_run, NextProgress, RunResult.exhausted, StateT.run_pure, idPure]
+      simp [step, planEq, NextProgress, RunResult.exhausted, StateT.run_pure]
   | exhausted site =>
-      simp [step, planEq, emit_run, NextProgress, RunResult.exhausted, StateT.run_pure, idPure]
+      simp [step, planEq, NextProgress, RunResult.exhausted, StateT.run_pure]
   | mismatch expected actual =>
-      simp [step, planEq, NextProgress, RunResult.exhausted, StateT.run_pure, idPure]
+      simp [step, planEq, NextProgress, StateT.run_pure]
   | jump targetBlock found sizedTarget =>
       simp only [PlanShape] at shaped
       simp only [step, planEq, StateT.run_pure]
@@ -201,7 +194,7 @@ theorem step_progress {σ : Type} {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty
           Or.inl ⟨rfl, ⟨block, mem, rfl, shaped.1, shaped.2⟩⟩⟩
   | choose targetBlock found sizedTarget =>
       simp only [PlanShape] at shaped
-      simp only [step, planEq, StateT.run_bind, StateT.run_pure, emit_run]
+      simp only [step, planEq, StateT.run_bind, StateT.run_pure]
       exact ⟨⟨targetBlock, found, sizedTarget⟩, Or.inr shaped⟩
   | performCatch targetBlock _ found sizedTarget _ _ =>
       simp only [PlanShape] at shaped
@@ -281,7 +274,7 @@ theorem loop_budget_not_exhausted {σ : Type} {alphabet : FlowAlphabet Ty} {raw 
       rcases outcome with ⟨⟨next, log'⟩, s'⟩
       cases next with
       | finished result rest =>
-          simpa [idBind, idPure, NextProgress, StateT.run_pure] using stepped
+          simpa [NextProgress, StateT.run_pure] using stepped
       | continue_ nextBlock env' rest =>
           obtain ⟨⟨target, foundTarget, sizedTarget⟩, progress⟩ := stepped
           simp only [idBind]
@@ -340,8 +333,8 @@ theorem loop_fuelFor_not_exhausted {σ : Type} {alphabet : FlowAlphabet Ty} {raw
 
 /-- The public form: running an admitted flow with the fuel `fuelFor` allots
 never ends at the fuel frontier. With `run_checked_not_stuck` this leaves an
-admitted run exactly three ends: a value, a refused foreign tape, or an
-unanswered decision. -/
+admitted run exactly three kinds of end: a value, a refusal (a foreign tape or
+a branch the value disagrees with), or an unanswered decision. -/
 theorem run_fuelFor_finishes {σ : Type} {alphabet : FlowAlphabet Ty} (flow : CheckedFlow alphabet)
     (service : FlowService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String) (tape : Tape)
     (input : Val) (log : Effect4.Trace.Log) (s : σ) :
@@ -358,7 +351,7 @@ theorem run_fuelFor_finishes {σ : Type} {alphabet : FlowAlphabet Ty} (flow : Ch
       have finished := loop_fuelFor_not_exhausted wf service nameOf flow.erase.entry [input] tape
         log s current found sized
       unfold run runTape
-      simpa [StateT.run_map, idMap] using finished
+      simpa [StateT.run_map] using finished
 
 /-- `runDefault` is `run` at exactly that fuel, so it too always finishes. -/
 theorem runDefault_finishes {σ : Type} {alphabet : FlowAlphabet Ty} (flow : CheckedFlow alphabet)
@@ -403,20 +396,20 @@ theorem step_not_failed {σ : Type} {alphabet : FlowAlphabet Ty}
     NextNotFailed (((step alphabet service nameOf block env tape).run log).run s).1.1 := by
   unfold step
   cases plan alphabet block env tape with
-  | stuck => simp [NextNotFailed, StateT.run_pure, idPure]
-  | ret value => simp [NextNotFailed, emit_run, StateT.run_pure, idPure]
-  | jump target env' => simp [NextNotFailed, StateT.run_pure, idPure]
+  | stuck => simp [NextNotFailed, StateT.run_pure]
+  | ret value => simp [NextNotFailed, StateT.run_pure]
+  | jump target env' => simp [NextNotFailed, StateT.run_pure]
   | perform op request target env' =>
       simp only [StateT.run_bind, StateT.run_lift, StateT.run_pure]
-      cases service.pure op <;> simp [NextNotFailed, emit_run, StateT.run_pure, idBind, idPure]
+      cases service.pure op <;> simp [NextNotFailed, StateT.run_pure]
   | exhausted site =>
-      simp [NextNotFailed, emit_run, StateT.run_pure, idPure]
-  | mismatch expected actual => simp [NextNotFailed, StateT.run_pure, idPure]
+      simp [NextNotFailed, StateT.run_pure]
+  | mismatch expected actual => simp [NextNotFailed, StateT.run_pure]
   | choose site branch target env' rest =>
-      simp [NextNotFailed, emit_run, StateT.run_pure, idPure]
+      simp [NextNotFailed, StateT.run_pure]
   | performCatch op request target env' onError errorEnv =>
       simp only [StateT.run_bind, StateT.run_lift, StateT.run_pure]
-      cases service.pure op <;> simp [NextNotFailed, emit_run, StateT.run_pure, idBind, idPure]
+      cases service.pure op <;> simp [NextNotFailed, StateT.run_pure]
 
 theorem loop_not_failed {σ : Type} (alphabet : FlowAlphabet Ty) (raw : RawFlow Ty)
     (service : FlowService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String) :
@@ -428,11 +421,11 @@ theorem loop_not_failed {σ : Type} (alphabet : FlowAlphabet Ty) (raw : RawFlow 
   induction fuel with
   | zero =>
       intro block env tape log s error
-      simp [loop, emit_run, StateT.run_pure, idPure]
+      simp [loop, StateT.run_pure]
   | succ fuel ih =>
       intro block env tape log s error
       cases found : lookupBlock raw block with
-      | none => simp [loop, found, StateT.run_pure, idPure]
+      | none => simp [loop, found, StateT.run_pure]
       | some current =>
           have notFailed := step_not_failed service nameOf current env tape log s
           simp only [loop, found, StateT.run_bind]
@@ -441,9 +434,9 @@ theorem loop_not_failed {σ : Type} (alphabet : FlowAlphabet Ty) (raw : RawFlow 
           rcases outcome with ⟨⟨next, log'⟩, s'⟩
           cases next with
           | finished result rest =>
-              simpa [idBind, idPure, NextNotFailed, StateT.run_pure] using notFailed error
+              simpa [NextNotFailed, StateT.run_pure] using notFailed error
           | continue_ nextBlock env' rest =>
-              simpa [idBind] using ih nextBlock env' rest log' s' error
+              simpa using ih nextBlock env' rest log' s' error
 
 /-- The public form: a plain run never reports a failure. -/
 theorem run_not_failed {σ : Type} {alphabet : FlowAlphabet Ty} (fuel : Nat)
@@ -454,14 +447,15 @@ theorem run_not_failed {σ : Type} {alphabet : FlowAlphabet Ty} (fuel : Nat)
   have notFailed := loop_not_failed alphabet flow.erase service nameOf fuel flow.erase.entry
     [input] tape log s error
   unfold run runTape
-  simpa [StateT.run_map, idMap] using notFailed
+  simpa [StateT.run_map] using notFailed
 
 /-- What is left. With `run_checked_not_stuck` ruling out `stuck`, `run_not_failed`
 ruling out the region runner's failure, and
 `run_fuelFor_finishes` ruling out the fuel frontier, an admitted run at the
-allotted fuel ends in exactly one of three ways: a value, the unanswered
-decision frontier, or a refused foreign tape. The tape, not the fuel, is the
-only remaining source of a live frontier. -/
+allotted fuel ends in exactly one of four ways: a value, the unanswered
+decision frontier, a foreign tape refused at its site, or a Flow v3 `branch`
+refused because the value disagrees with the tape's own entry. The tape, not
+the fuel, is the only remaining source of a live frontier. -/
 theorem run_fuelFor_answered {σ : Type} {alphabet : FlowAlphabet Ty} (flow : CheckedFlow alphabet)
     (service : FlowService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String) (tape : Tape)
     (input : Val) (log : Effect4.Trace.Log) (s : σ) :
@@ -473,7 +467,10 @@ theorem run_fuelFor_answered {σ : Type} {alphabet : FlowAlphabet Ty} (flow : Ch
           = .frontier (.unansweredDecision site)) ∨
       (∃ expected actual,
         (((run (fuelFor flow.erase tape) flow service nameOf tape input).run log).run s).1.1
-          = .refused expected actual) := by
+          = .refusedSite expected actual) ∨
+      (∃ site,
+        (((run (fuelFor flow.erase tape) flow service nameOf tape input).run log).run s).1.1
+          = .refusedValue site) := by
   have notExhausted := run_fuelFor_finishes flow service nameOf tape input log s
   have notStuck := run_checked_not_stuck (fuelFor flow.erase tape) flow service nameOf tape input
     log s
@@ -484,7 +481,8 @@ theorem run_fuelFor_answered {σ : Type} {alphabet : FlowAlphabet Ty} (flow : Ch
   cases result with
   | done value => exact Or.inl ⟨value, rfl⟩
   | failed error => exact absurd rfl (notFailed error)
-  | refused expected actual => exact Or.inr (Or.inr ⟨expected, actual, rfl⟩)
+  | refusedSite expected actual => exact Or.inr (Or.inr (Or.inl ⟨expected, actual, rfl⟩))
+  | refusedValue site => exact Or.inr (Or.inr (Or.inr ⟨site, rfl⟩))
   | frontier reason =>
       cases reason with
       | fuel block => simp [RunResult.exhausted] at notExhausted

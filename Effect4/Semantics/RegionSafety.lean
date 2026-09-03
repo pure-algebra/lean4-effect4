@@ -179,13 +179,10 @@ private theorem choose_successor {alphabet : FlowAlphabet Ty} {block : RawBlock 
         · cases planned
         · cases planned
         · rename_i selected suffix
-          cases hv : testValue env test <;> simp only [hv] at planned
-          · cases selected <;> cases planned <;> simp [RawTerm.successors]
-          · rename_i value
-            by_cases hb : selected = value
-            · rw [if_pos hb] at planned
-              cases selected <;> cases planned <;> simp [RawTerm.successors]
-            · rw [if_neg hb] at planned; cases planned
+          by_cases agreed : testValue env test = some selected
+          · rw [if_pos agreed] at planned
+            cases selected <;> cases planned <;> simp [RawTerm.successors]
+          · rw [if_neg agreed] at planned; cases planned
 
 private theorem stack_open {alphabet : FlowAlphabet Ty} {flow : RegionFlow Ty}
     {label : Option RegionId} {stack : List (Frame alphabet)}
@@ -195,9 +192,6 @@ private theorem stack_open {alphabet : FlowAlphabet Ty} {flow : RegionFlow Ty}
   cases owned with
   | outside => cases inside
   | inside found parent => exact ⟨_, _, _, rfl, rfl, found, parent⟩
-
-private def erasedBlock (flow : RegionFlow Ty) (block : RegionBlock Ty) : RawBlock Ty :=
-  { id := block.id, params := block.params, term := flow.eraseTerm block }
 
 private theorem region_of_erased {flow : RegionFlow Ty} {id : BlockId} {target : RawBlock Ty}
     (found : lookupBlock flow.erase id = some target) :
@@ -276,7 +270,7 @@ private theorem regionLoop_safe [DecidableEq Ty] {σ : Type} {alphabet : FlowAlp
           | stuck => rw [hplan] at planned; cases planned
           | ret value => exact safe_bind (fun _ => safe_leaf _ _ rfl)
           | exhausted site => exact safe_bind (fun _ => safe_leaf _ _ rfl)
-          | mismatch expected actual => exact safe_leaf _ _ rfl
+          | mismatch expected actual => exact safe_leaf _ _ (RunResult.stuck_refusal _ _)
           | jump target env' =>
               rw [hplan] at planned shaped
               cases planned with

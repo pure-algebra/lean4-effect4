@@ -266,7 +266,7 @@ def denoteRegionsFuel {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty) :
                     .vis (scopeOp .fail error) fun closing : Failures =>
                       .pure ((.failed error, tape), error :: ([] ++ closing))
           | .exhausted site => .pure ((.frontier (.unansweredDecision site), tape), [])
-          | .mismatch expected actual => .pure ((.refused expected actual, tape), [])
+          | .mismatch expected actual => .pure ((.refusal expected actual, tape), [])
           | .choose site branch target env' rest =>
               .vis (decideOp site branch) fun _ : Unit =>
                 denoteRegionsFuel flow fuel target env' rest
@@ -733,7 +733,7 @@ theorem regionLoop_eq_interpret [Monad M] [LawfulMonad M] (flow : RegionFlow Ty)
               | mismatch expected actual =>
                   try simp only []
                   rw [interpretRegionsFrom_run_pure]
-                  simp [outcomeRows]
+                  simp [outcomeRows_refusal]
               | choose site branch target env' rest =>
                   try simp only []
                   rw [interpretRegionsFrom_run_decide]
@@ -916,6 +916,13 @@ theorem toRegionService_handle [Monad M] {alphabet : FlowAlphabet Ty}
 theorem toRegionService_pure [Monad M] {alphabet : FlowAlphabet Ty}
     (service : FlowService alphabet M) (op : alphabet.Op) :
     service.toRegionService.pure op = service.pure op := rfl
+
+/-- The raw block a region block erases to: same identity and parameters, its
+terminator through `RegionFlow.eraseTerm`. `RegionTotal` and `RegionSafety`
+each had a private copy of this (survey finding L9); it belongs beside
+`lookupBlock_erase_block`, which is the fact about it they both use. -/
+def erasedBlock (flow : RegionFlow Ty) (current : RegionBlock Ty) : RawBlock Ty :=
+  { id := current.id, params := current.params, term := flow.eraseTerm current }
 
 /-- Resolving a block in the erasure is resolving it in the region flow and
 erasing the terminator. -/

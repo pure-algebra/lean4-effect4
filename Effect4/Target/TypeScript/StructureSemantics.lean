@@ -216,31 +216,10 @@ private theorem execList_skeletonBlockWith_bind {Result : Type} (table : List Op
       Effect4.Target.Structured.Skel.wellScopedList scopeBlocks scopeLoops control = true →
       Program.bind (execList (tableAlphabet ⟨0⟩ table) fuel m' tape' control) H = K target vals tape')
  :
-    (∀ value, plan (tableAlphabet ⟨0⟩ table) block env tape = .ret value →
-        Program.bind (execList (tableAlphabet ⟨0⟩ table) fuel m tape body) H
-          = H (.finished (.done value), tape))
-      ∧ (∀ target env', plan (tableAlphabet ⟨0⟩ table) block env tape = .jump target env' →
-        Program.bind (execList (tableAlphabet ⟨0⟩ table) fuel m tape body) H = K target env' tape)
-      ∧ (∀ op request target env',
-          plan (tableAlphabet ⟨0⟩ table) block env tape = .perform op request target env' →
-        Program.bind (execList (tableAlphabet ⟨0⟩ table) fuel m tape body) H
-          = .vis (.inl ⟨op, request⟩) (fun answered : Val => K target (env' ++ [answered]) tape))
-      ∧ (∀ site branch target env' rest,
-          plan (tableAlphabet ⟨0⟩ table) block env tape = .choose site branch target env' rest →
-        Program.bind (execList (tableAlphabet ⟨0⟩ table) fuel m tape body) H
-          = .vis (.inr (site, branch)) (fun _ => K target env' rest))
-      ∧ (∀ site, plan (tableAlphabet ⟨0⟩ table) block env tape = .exhausted site →
-        Program.bind (execList (tableAlphabet ⟨0⟩ table) fuel m tape body) H
-          = H (.finished (.frontier (.unansweredDecision site)), tape))
-      ∧ (∀ expected actual,
-          plan (tableAlphabet ⟨0⟩ table) block env tape = .mismatch expected actual →
-        Program.bind (execList (tableAlphabet ⟨0⟩ table) fuel m tape body) H
-          = H (.finished (.refused expected actual), tape))
-      ∧ (∀ op request target env' onError errorEnv,
-          plan (tableAlphabet ⟨0⟩ table) block env tape
-            = .performCatch op request target env' onError errorEnv →
-        Program.bind (execList (tableAlphabet ⟨0⟩ table) fuel m tape body) H
-          = .vis (.inl ⟨op, request⟩) (fun answered : Val => K target (env' ++ [answered]) tape)) := by
+    BlockLaw (tableAlphabet ⟨0⟩ table) (plan (tableAlphabet ⟨0⟩ table) block env tape) tape
+      (Program.bind (execList (tableAlphabet ⟨0⟩ table) fuel m tape body) H)
+      (fun result => H (.finished result, tape))
+      (fun target env' tape' p => p = K target env' tape') := by
   have planSized := plan_checked wf mem envSized tape
   have testBound : ∀ test site onTrue onFalse args,
       block.term = .branch test site onTrue onFalse args → test.index < env.length := by
@@ -282,6 +261,7 @@ private theorem execList_skeletonBlockWith_bind {Result : Type} (table : List Op
               (by simpa only [Effect4.Target.Structured.Skel.wellScopedList,
                 Effect4.Target.Structured.Skel.wellScoped, Bool.true_and] using scopedBody)
   · intro op request target env' planned
+    refine ⟨fun answered : Val => K target (env' ++ [answered]) tape, ?_, fun _ => rfl⟩
     obtain ⟨operation, requestVar, args, hterm, known, got, read⟩ := plan_perform_inv planned
     obtain ⟨len, agree⟩ := argSlots_agree (holds := holds) (block := block.id) read
     obtain ⟨lenRead, _⟩ := readArgs_getElem? args env env' read
@@ -346,41 +326,14 @@ private theorem execList_skeletonBlockWith_bind {Result : Type} (table : List Op
                     ((m.enter block.id).setVal (.answer block.id) answered) tape control) H
                   = K target (env' ++ [answered]) tape := by
               intro answered
-              refine step target targetBlock _ (env' ++ [answered]) _ tape control foundTarget
-                (by simp [← sizedTarget]) transferred ?_ ?_ ?_
+              obtain ⟨ownedSlots, sizedSlots, readsSlots⟩ :=
+                answerSlots_agree (m := m.enter block.id) (block := block.id) (args := args)
+                  (env' := env') (.answer block.id) rfl (fun _ => by simp) (by simpa using len)
+                  answered (fun i s v a b => by rw [enter_vals]; exact agree i s v a b)
+              exact step target targetBlock _ (env' ++ [answered]) _ tape control foundTarget
+                (by simp [← sizedTarget]) transferred ownedSlots sizedSlots readsSlots
                 (by simp only [hterm, RawTerm.successors, List.mem_singleton])
                 (Or.inl ⟨rfl, edgeNoChoose_of_plan_perform found planned⟩) scopedControl
-              · intro s mem
-                simp only [List.mem_append, List.mem_singleton] at mem
-                rcases mem with inArgs | rfl
-                · exact ownedBy_argSlots block.id args s inArgs
-                · exact rfl
-              · simp [len]
-              · intro i s v slotAt valAt
-                by_cases small : i < args.length
-                · rw [List.getElem?_append_left (by simpa using small)] at slotAt
-                  rw [List.getElem?_append_left (by omega)] at valAt
-                  have sMem : s ∈ args.map fun v : Var => Slot.param block.id v.index :=
-                    List.mem_of_getElem? slotAt
-                  simp only [List.mem_map] at sMem
-                  obtain ⟨a, _, rfl⟩ := sMem
-                  rw [setVal_other _ _ _ _ (by simp), enter_vals]
-                  exact agree i _ v slotAt valAt
-                · have inRange : i < ((args.map fun v : Var => Slot.param block.id v.index)
-                      ++ [Slot.answer block.id]).length :=
-                    (List.getElem?_eq_some_iff.mp slotAt).1
-                  simp only [List.length_append, List.length_map, List.length_singleton] at inRange
-                  have same : i = args.length := by omega
-                  subst same
-                  rw [List.getElem?_append_right (by simp)] at slotAt
-                  rw [List.getElem?_append_right (by omega)] at valAt
-                  simp only [List.length_map, Nat.sub_self, List.getElem?_cons_zero,
-                    Option.some.injEq] at slotAt
-                  rw [show args.length - env'.length = 0 from by omega] at valAt
-                  simp only [List.getElem?_cons_zero, Option.some.injEq] at valAt
-                  subst slotAt
-                  subst valAt
-                  exact setVal_self _ _ _
             rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
               execList_cons_control _ fuel (m.enter block.id) tape head _
                 (headSimple (m.enter block.id)),
@@ -392,6 +345,7 @@ private theorem execList_skeletonBlockWith_bind {Result : Type} (table : List Op
             funext answered
             exact moves answered
   · intro site branch target env' rest planned
+    refine ⟨fun _ => K target env' rest, ?_, fun _ => rfl⟩
     rcases plan_choose_inv planned with
         ⟨left, right, args, hterm, read, answered, eqTarget⟩
         | ⟨test, onTrue, onFalse, args, hterm, read, answered, eqTarget, agreeTest⟩
@@ -509,44 +463,17 @@ private theorem execList_skeletonBlockWith_bind {Result : Type} (table : List Op
                     execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
                     execControl_branchIf, answered]
                   dsimp only
-                  cases tv : testValue env test with
-                  | some value =>
-                      have eqb := agreeTest value tv
-                      subst eqb
-                      rw [enter_vals, holds_of_getElem? holds (testValue_some tv)]
-                      dsimp only
-                      rw [if_pos rfl]
-                      change Program.vis (signature := FullSig (tableAlphabet ⟨0⟩ table)) (Sum.inr (site, branch))
-                        (fun _ => Program.bind (Program.bind
-                          (execList (tableAlphabet ⟨0⟩ table) fuel (m.enter block.id) rest
-                            (if branch then toTrue else toFalse))
-                          (afterFell (tableAlphabet ⟨0⟩ table) fuel [])) H) = _
-                      congr 1
-                      funext _
-                      rw [terminal, Program.bind_pure_right]
-                      exact ran
-                  | none =>
-                      have lt : test.index < env.length :=
-                        testBound test site onTrue onFalse args hterm
-                      have wEq : env[test.index]? = some env[test.index] :=
-                        List.getElem?_eq_getElem lt
-                      rw [enter_vals, holds_of_getElem? holds wEq]
-                      unfold testValue at tv
-                      rw [wEq] at tv
-                      generalize env[test.index] = w at tv ⊢
-                      cases w <;> try (simp at tv; done)
-                      all_goals
-                        dsimp only
-                        change Program.vis (signature := FullSig (tableAlphabet ⟨0⟩ table))
-                            (Sum.inr (site, branch))
-                            (fun _ => Program.bind (Program.bind
-                              (execList (tableAlphabet ⟨0⟩ table) fuel (m.enter block.id) rest
-                                (if branch then toTrue else toFalse))
-                              (afterFell (tableAlphabet ⟨0⟩ table) fuel [])) H) = _
-                        congr 1
-                        funext _
-                        rw [terminal, Program.bind_pure_right]
-                        exact ran
+                  rw [enter_vals, holds_of_getElem? holds (testValue_some agreeTest),
+                    if_pos rfl]
+                  change Program.vis (signature := FullSig (tableAlphabet ⟨0⟩ table)) (Sum.inr (site, branch))
+                    (fun _ => Program.bind (Program.bind
+                      (execList (tableAlphabet ⟨0⟩ table) fuel (m.enter block.id) rest
+                        (if branch then toTrue else toFalse))
+                      (afterFell (tableAlphabet ⟨0⟩ table) fuel [])) H) = _
+                  congr 1
+                  funext _
+                  rw [terminal, Program.bind_pure_right]
+                  exact ran
   · intro site planned
     rcases plan_exhausted_inv planned with
         ⟨left, right, args, hterm, answered⟩ | ⟨test, onTrue, onFalse, args, hterm, answered⟩
@@ -580,7 +507,7 @@ private theorem execList_skeletonBlockWith_bind {Result : Type} (table : List Op
     rcases plan_mismatch_inv planned with
         ⟨site, left, right, args, hterm, answered⟩
         | ⟨test, site, onTrue, onFalse, args, hterm, answered⟩
-        | ⟨test, onTrue, onFalse, args, chosen, more, value, hterm, rfl, answered, tv, disagreed⟩
+        | ⟨test, onTrue, onFalse, args, chosen, more, hterm, rfl, answered, disagreed⟩
     · cases leftTransferred : transfer left (args.map fun v : Var => Slot.param block.id v.index) with
       | none => simp [Flow.skeletonBlockWith, hterm, leftTransferred] at built
       | some toLeft =>
@@ -616,15 +543,18 @@ private theorem execList_skeletonBlockWith_bind {Result : Type} (table : List Op
               simp only [Flow.skeletonBlockWith, hterm, trueTransferred, falseTransferred,
                 Lowering.branchIf, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at built
               subst built
+              have lt : test.index < env.length := testBound test _ onTrue onFalse args hterm
+              have wEq : env[test.index]? = some env[test.index] :=
+                List.getElem?_eq_getElem lt
               rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
                 execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
-                execControl_branchIf, answered, enter_vals,
-                holds_of_getElem? holds (testValue_some tv)]
+                execControl_branchIf, answered, enter_vals, holds_of_getElem? holds wEq]
               dsimp only
-              rw [if_neg disagreed]
+              rw [if_neg (testValue_ne wEq disagreed), RunResult.refusal_self]
               rfl
   · -- Flow v3: a caught perform under the structured transfer; the value edge only.
     intro op request target env' onError errorEnv planned
+    refine ⟨fun answered : Val => K target (env' ++ [answered]) tape, ?_, fun _ => rfl⟩
     obtain ⟨operation, requestVar, args, errorArgs, hterm, known, got, read, readE⟩ :=
       plan_performCatch_inv planned
     obtain ⟨len, agree⟩ := argSlots_agree (holds := holds) (block := block.id) read
@@ -669,7 +599,7 @@ private theorem execList_skeletonBlockWith_bind {Result : Type} (table : List Op
                       simp only [spec, Option.bind_eq_bind, Option.bind_some] at built
                       cases kind : row.kind with
                       | family =>
-                          simp only [kind, Option.bind_some, Bool.false_eq_true, ↓reduceIte,
+                          simp only [kind, Bool.false_eq_true, ↓reduceIte,
                             List.nil_append, Lowering.performCatchResult,
                             Option.some.injEq] at built
                           exact ⟨row, built.symm⟩
@@ -684,40 +614,14 @@ private theorem execList_skeletonBlockWith_bind {Result : Type} (table : List Op
                         ((m.enter block.id).setVal (.catchValue block.id) answered) tape toOk) H
                       = K target (env' ++ [answered]) tape := by
                   intro answered
-                  refine step target targetBlock _ (env' ++ [answered]) _ tape toOk foundTarget
-                    (by simp [← sizedTarget]) okTransferred ?_ ?_ ?_
+                  obtain ⟨ownedSlots, sizedSlots, readsSlots⟩ :=
+                    answerSlots_agree (m := m.enter block.id) (block := block.id) (args := args)
+                      (env' := env') (.catchValue block.id) rfl (fun _ => by simp) (by simpa using len)
+                      answered (fun i s v a b => by rw [enter_vals]; exact agree i s v a b)
+                  exact step target targetBlock _ (env' ++ [answered]) _ tape toOk foundTarget
+                    (by simp [← sizedTarget]) okTransferred ownedSlots sizedSlots readsSlots
                     (by simp [hterm, RawTerm.successors])
                     (Or.inl ⟨rfl, edgeNoChoose_of_plan_performCatch found planned⟩) scopedOk
-                  · intro s mem
-                    simp only [List.mem_append, List.mem_singleton] at mem
-                    rcases mem with inArgs | rfl
-                    · exact ownedBy_argSlots block.id args s inArgs
-                    · exact rfl
-                  · simp [len]
-                  · intro i s v slotAt valAt
-                    by_cases small : i < args.length
-                    · rw [List.getElem?_append_left (by simpa using small)] at slotAt
-                      rw [List.getElem?_append_left (by omega)] at valAt
-                      have sMem : s ∈ (args.map fun v : Var => Slot.param block.id v.index) := List.mem_of_getElem? slotAt
-                      simp only [List.mem_map] at sMem
-                      obtain ⟨a, _, rfl⟩ := sMem
-                      rw [setVal_other _ _ _ _ (by simp), enter_vals]
-                      exact agree i _ v slotAt valAt
-                    · have inRange : i < ((args.map fun v : Var => Slot.param block.id v.index) ++ [Slot.catchValue block.id]).length :=
-                        (List.getElem?_eq_some_iff.mp slotAt).1
-                      simp only [List.length_append, List.length_map,
-                        List.length_singleton] at inRange
-                      have same : i = args.length := by omega
-                      subst same
-                      rw [List.getElem?_append_right (by simp)] at slotAt
-                      rw [List.getElem?_append_right (by omega)] at valAt
-                      simp only [List.length_map, Nat.sub_self, List.getElem?_cons_zero,
-                        Option.some.injEq] at slotAt
-                      rw [show args.length - env'.length = 0 from by omega] at valAt
-                      simp only [List.getElem?_cons_zero, Option.some.injEq] at valAt
-                      subst slotAt
-                      subst valAt
-                      exact setVal_self _ _ _
                 rw [execList_cons_simple _ fuel m (m.enter block.id) tape _ _ rfl,
                   execList_cons_control _ fuel (m.enter block.id) tape _ [] rfl,
                   execControl_performCatch, known, enter_vals, holds_of_getElem? holds got]
@@ -1199,12 +1103,14 @@ private theorem emitted_node_meaning (table : List OpSpec) (raw : RawFlow String
           rfl
       | perform targetBlock foundTarget sizedTarget =>
           rename_i op request target vals
-          rw [onPerform op request target vals planEq, bind_vis_inl]
-          rfl
+          obtain ⟨next, ran, steps⟩ := onPerform op request target vals planEq
+          rw [ran, bind_vis_inl]
+          exact congrArg _ (funext fun answered => by rw [steps answered]; rfl)
       | choose targetBlock foundTarget sizedTarget =>
           rename_i site branch target vals rest
-          rw [onChoose site branch target vals rest planEq, bind_vis_inr]
-          rfl
+          obtain ⟨next, ran, steps⟩ := onChoose site branch target vals rest planEq
+          rw [ran, bind_vis_inr]
+          exact congrArg _ (funext fun u => by rw [steps u]; rfl)
       | exhausted site =>
           rw [onExhausted site planEq, runContext_finished]
           rfl
@@ -1213,8 +1119,10 @@ private theorem emitted_node_meaning (table : List OpSpec) (raw : RawFlow String
           rfl
       | performCatch targetBlock errorBlock foundTarget sizedTarget foundError sizedError =>
           rename_i op request target vals onError errorEnv
-          rw [onPerformCatch op request target vals onError errorEnv planEq, bind_vis_inl]
-          rfl
+          obtain ⟨next, ran, steps⟩ :=
+            onPerformCatch op request target vals onError errorEnv planEq
+          rw [ran, bind_vis_inl]
+          exact congrArg _ (funext fun answered => by rw [steps answered]; rfl)
 termination_by (tape.length, (raw.reachSet block).length)
 decreasing_by
   rcases progress with ⟨sameTape, nextEdge⟩ | consumed

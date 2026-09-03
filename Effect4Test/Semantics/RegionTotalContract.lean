@@ -87,11 +87,11 @@ def resultOf (raw : RegionFlow String) (tape : Tape) (extra : Nat := 0) :=
 #guard resultOf decisionCycle [] =
   some ((.frontier (.unansweredDecision ⟨7⟩), []), [])
 #guard resultOf decisionCycle [⟨⟨8⟩, true⟩] =
-  some ((.refused ⟨7⟩ ⟨8⟩, [⟨⟨8⟩, true⟩]), [])
+  some ((.refusedSite ⟨7⟩ ⟨8⟩, [⟨⟨8⟩, true⟩]), [])
 #guard resultOf decisionCycle [⟨⟨7⟩, true⟩] =
   some ((.frontier (.unansweredDecision ⟨7⟩), []), [])
 #guard resultOf decisionCycle [⟨⟨7⟩, true⟩, ⟨⟨8⟩, false⟩] =
-  some ((.refused ⟨7⟩ ⟨8⟩, [⟨⟨8⟩, false⟩]), [])
+  some ((.refusedSite ⟨7⟩ ⟨8⟩, [⟨⟨8⟩, false⟩]), [])
 
 -- A suspended open scope has neither leave nor release nor done rows.
 #guard (observed decisionCycle [⟨⟨7⟩, true⟩]).map (fun result => result.1.2) =

@@ -123,7 +123,7 @@ theorem unanswered_after_choice_diverges :
 
 theorem mismatched_decision_is_refusal :
     runnerResultAt decisionCycle 20 [⟨⟨8⟩, false⟩] =
-      some (.refused ⟨7⟩ ⟨8⟩, [⟨⟨8⟩, false⟩]) := by rfl
+      some (.refusedSite ⟨7⟩ ⟨8⟩, [⟨⟨8⟩, false⟩]) := by rfl
 
 theorem completed_decision_control :
     machineAt decisionCycle 20 [⟨⟨7⟩, false⟩] =

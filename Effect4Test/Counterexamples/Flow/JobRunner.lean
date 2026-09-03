@@ -196,7 +196,7 @@ def valueFlow : RegionFlow String :=
   = some [.decide 1 true]
 
 -- ... and a tape that disagrees with the value is refused, not followed.
-#guard (runWith pingZero valueFlow [⟨⟨1⟩, false⟩]).map (·.1) = some (.refused ⟨1⟩ ⟨1⟩)
+#guard (runWith pingZero valueFlow [⟨⟨1⟩, false⟩]).map (·.1) = some (.refusedValue ⟨1⟩)
 
 /-! ## Axiom report
 

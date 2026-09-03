@@ -23,9 +23,6 @@ open Effects.Trace (Val)
 universe uTy
 variable {Ty : Type uTy}
 
-private def erasedBlock (flow : RegionFlow Ty) (current : RegionBlock Ty) : RawBlock Ty :=
-  { id := current.id, params := current.params, term := flow.eraseTerm current }
-
 private theorem foundErased {flow : RegionFlow Ty} {block : BlockId}
     {current : RegionBlock Ty} (found : flow.block? block = some current) :
     lookupBlock flow.erase block = some (erasedBlock flow current) := by
@@ -131,7 +128,7 @@ def denoteRegionsGo {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
                   .vis (scopeOp .fail error) fun closing : Failures =>
                     .pure ((.failed error, tape), error :: ([] ++ closing))
         | .exhausted site => .pure ((.frontier (.unansweredDecision site), tape), [])
-        | .mismatch expected actual => .pure ((.refused expected actual, tape), [])
+        | .mismatch expected actual => .pure ((.refusal expected actual, tape), [])
         | .choose site branch target env' rest =>
             .vis (decideOp site branch) fun _ : Unit =>
               denoteRegionsGo flow cycles target env' rest
@@ -217,7 +214,7 @@ private theorem go_eq {alphabet : FlowAlphabet Ty} (flow : RegionFlow Ty)
                   .vis (scopeOp .fail error) fun closing : Failures =>
                     .pure ((.failed error, tape), error :: ([] ++ closing))
         | .exhausted site => .pure ((.frontier (.unansweredDecision site), tape), [])
-        | .mismatch expected actual => .pure ((.refused expected actual, tape), [])
+        | .mismatch expected actual => .pure ((.refusal expected actual, tape), [])
         | .choose site branch target env' rest =>
             .vis (decideOp site branch) fun _ : Unit =>
               denoteRegionsGo flow cycles target env' rest
