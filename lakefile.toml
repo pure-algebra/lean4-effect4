@@ -1,14 +1,81 @@
 name = "effect4"
 version = "0.1.0"
-defaultTargets = ["Effect4", "Effect4Test"]
+# `Effect4TestGreen`, not `Effect4Test`: the umbrella plus exactly its
+# transitive imports, which is the green battery and the gate. The declared-red
+# modules of `test/fixtures/trust-gate/known-red.txt` are deliberately not
+# imported by `Effect4Test.lean`, so they stay out of the default build and
+# `#effect4_axiom_gate` actually runs in it.
+defaultTargets = ["Effect4", "Effect4TestGreen"]
 
 [[lean_lib]]
 name = "Effect4"
 globs = ["Effect4.*"]
 
+# The red-inclusive battery: every module under `Effect4Test/`, including the
+# frozen breaker batteries that are expected to fail. Build it to see the whole
+# tree; it is not a gate.
 [[lean_lib]]
 name = "Effect4Test"
 globs = ["Effect4Test.*"]
+
+# The green battery: the audit root and its import closure.
+[[lean_lib]]
+name = "Effect4TestGreen"
+roots = ["Effect4Test"]
+globs = ["Effect4Test"]
+
+# Per-area batteries. One target per `Effect4Test/` directory, so a narrow
+# sweep is `lake build Effect4TestSemantics` rather than a whole-tree build or
+# a bare `lake env lean` on one file. The areas are disjoint and together cover
+# the tree. `Effect4TestConcurrency` and `Effect4TestProtocol` each contain one
+# declared-red module and are expected to fail until its builder lands.
+#
+# The globs are `.+`, submodules only: `.*` would also select the directory's
+# own module — `Effect4Test.Audit`, say — and no such file exists.
+
+[[lean_lib]]
+name = "Effect4TestSchema"
+globs = ["Effect4Test.Schema.+"]
+
+[[lean_lib]]
+name = "Effect4TestFlow"
+globs = ["Effect4Test.Flow.+"]
+
+[[lean_lib]]
+name = "Effect4TestSemantics"
+globs = ["Effect4Test.Semantics.+"]
+
+[[lean_lib]]
+name = "Effect4TestTarget"
+globs = ["Effect4Test.Target.+"]
+
+[[lean_lib]]
+name = "Effect4TestRuntime"
+globs = ["Effect4Test.Runtime.+"]
+
+[[lean_lib]]
+name = "Effect4TestConcurrency"
+globs = ["Effect4Test.Concurrency.+"]
+
+[[lean_lib]]
+name = "Effect4TestAudit"
+globs = ["Effect4Test.Audit.+"]
+
+[[lean_lib]]
+name = "Effect4TestCounterexamples"
+globs = ["Effect4Test.Counterexamples.+"]
+
+[[lean_lib]]
+name = "Effect4TestData"
+globs = ["Effect4Test.Data.+"]
+
+[[lean_lib]]
+name = "Effect4TestEnvironment"
+globs = ["Effect4Test.Environment.+"]
+
+[[lean_lib]]
+name = "Effect4TestProtocol"
+globs = ["Effect4Test.Protocol.+"]
 
 # The generic effect algebra, morphisms, transport, families, and the generic
 # first-order Flow, and the shared trace alphabet. Exact commit of tag v0.7.0 of

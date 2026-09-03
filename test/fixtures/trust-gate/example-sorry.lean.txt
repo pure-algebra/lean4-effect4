@@ -1,0 +1,5 @@
+-- Finding #1 in one line: an `example` leaves no constant, so the declaration
+-- pass never sees this, and an admitted goal is a warning rather than an
+-- error. The source pass reads it anyway.
+example : (0 : Nat) = 1 := by
+  sorry

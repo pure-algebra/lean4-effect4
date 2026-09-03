@@ -1,0 +1,4 @@
+-- A new axiom is invisible to the axiom pass until something reaches it. The
+-- ceiling is a claim about what the tree contains, so the declaration is
+-- refused where it is written.
+axiom plantedAxiom : (0 : Nat) = 1

@@ -1,0 +1,4 @@
+-- The same substitution from the other side: the compiled program runs
+-- `plantedReplacement`, the kernel checks `plantedImplementedBy`.
+private def plantedReplacement : Nat := 1
+@[implemented_by plantedReplacement] private def plantedImplementedBy : Nat := 0

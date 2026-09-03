@@ -18,5 +18,14 @@ private theorem plantedNestedProjection (a b c : Nat)
 private theorem plantedPipeProjection (a b c : Nat)
     (h : True ∧ a = b) (step : b = c) : a = c := h |>.2.trans step
 
+-- An `opaque` WITH a body: the kernel checks the value, only the unfolding is
+-- hidden, and the ceiling is untouched. `opaque.lean.txt` carries the bodyless
+-- form the gate refuses.
+private opaque plantedOpaqueWithBody : Nat := 3
+
+-- `admit` here is `Effects.admit`, the flow admission function the lowering
+-- batteries call unqualified — an identifier, not a tactic.
+private def plantedAdmitIdentifier (admit : Nat) : Nat := admit
+
 private def plantedDecimal : Float := 1.25
 private def plantedScientific : Float := 1.25e3

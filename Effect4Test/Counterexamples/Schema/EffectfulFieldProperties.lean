@@ -117,9 +117,17 @@ private def shallow : Representation -> List (PropertySignature × EffectfulFiel
       property.effectfulFieldSpec.map fun spec => (property, spec)
   | _ => []
 
-example : shallow recursiveWitness = [] := by rfl
-example : Representation.effectfulFieldProperties recursiveWitness != [] := by
-  native_decide
+/-- The shallow reading finds nothing: the witness carries no effectful field
+directly on `recursiveWitness` itself. -/
+theorem shallow_recursiveWitness : shallow recursiveWitness = [] := by rfl
+
+/-- The recursive reading does. This was an `example` closed by `native_decide`
+until the axiom gate learned to read the source: an `example` leaves no
+constant, so neither the gate's declaration pass nor `#print axioms` ever saw
+that it reached `Lean.ofReduceBool`. It is a named theorem closed in the kernel
+now, and the `#guard` below pins the two occurrences it finds. -/
+theorem recursiveWitness_effectfulFieldProperties_ne_nil :
+    Representation.effectfulFieldProperties recursiveWitness != [] := by decide
 
 /-! `E4-SCHEMA-CE-055`: duplicates are occurrences, not map entries. -/
 

@@ -21,6 +21,16 @@ run_elab do
     ("benign.lean.txt", .ok none),
     ("partial.lean.txt", .ok (some "partial")),
     ("unsafe.lean.txt", .ok (some "unsafe")),
+    ("sorry.lean.txt", .ok (some "sorry")),
+    ("example-sorry.lean.txt", .ok (some "sorry")),
+    ("native-decide.lean.txt", .ok (some "native_decide")),
+    ("axiom.lean.txt", .ok (some "axiom")),
+    ("extern.lean.txt", .ok (some "extern")),
+    ("implemented-by.lean.txt", .ok (some "implemented_by")),
+    -- `opaque` is a keyword the bodied form uses too, so the tokenizer must
+    -- NOT refuse it; the ruling on the bodyless shape is a declaration-level
+    -- check, and `test-trust-gate.sh` is where that fixture is exercised.
+    ("opaque.lean.txt", .ok none),
     ("malformed-comment.lean.txt", .error ()),
     ("malformed-string.lean.txt", .error ()),
     ("malformed-raw-string.lean.txt", .error ()),
