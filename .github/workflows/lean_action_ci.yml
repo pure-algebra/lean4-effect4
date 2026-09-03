@@ -24,3 +24,18 @@ jobs:
         run: ./scripts/test-schema-structural-assurance-gate.sh
       - name: Verify Effect runtime census join
         run: ./scripts/check-effect-runtime-census.sh
+      # The trace and lowering gates below need no host: they regenerate from
+      # Lean and compare bytes. They ran nowhere but a hand-driven local sweep
+      # until now, which is why both of their drift gates were red on main
+      # without anyone noticing (survey finding H5). They are portable since
+      # scripts/lib/portable.sh replaced `shasum -a 256` and `sed -i ''`
+      # (finding H36); `check-trace-goldens.sh` is also one Lean process rather
+      # than seventy (finding H11).
+      - name: Verify generated trace projections
+        run: ./scripts/check-trace-goldens.sh
+      - name: Verify lowering coverage ledger
+        run: ./scripts/check-lowering-coverage.sh
+      - name: Self-test lowering coverage gate
+        run: ./scripts/test-lowering-coverage-gate.sh
+      - name: Verify internal citations
+        run: ./scripts/check-internal-citations.sh
