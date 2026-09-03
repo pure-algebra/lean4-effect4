@@ -575,3 +575,54 @@ research probe's `skipInterrupted=false` case. Public callback regression
 evidence retains the same-final-result, different-interruption-prefix witness.
 Adding `AsyncFinalizer`, switching the default runtime, and claiming an
 executing scheduler/finalizer simulation remain separate open obligations.
+
+## D1 landed: the algebraic denotation of a checked flow, 2026-09-03
+
+`Effect4/Semantics/Denotation.lean` (packet D1 of
+`docs/research/2026-09-03-reification-plan.md`). A `CheckedFlow` denotes a
+`Program (Flow.Sig a ⊕ₛ Flow.DecSig)`: the alphabet through
+`Alphabet.toFamily` at the constant denotation `Val`, plus a decision summand
+`⟨DecisionId × Bool, fun _ => Unit⟩` announcing the branch the tape already
+fixed. `denoteFuel` is structural on fuel and mirrors `plan`/`loop` case for
+case; `denote` is fuel-free by well-founded recursion on
+`(tape.length, (raw.reachSet block).length)`, with the new measure lemma
+`reachSet_length_lt_of_edge` (`CyclesWF` is the only thing admission buys it).
+
+Theorems (all within `propext`, `Quot.sound`; receipts in
+`Effect4Test/Semantics/DenotationAxiomReport.lean`):
+
+- T1 `loop_eq_interpretRun` / `runTape_eq_interpretRun` — the runner at every
+  fuel is `interpret` under
+  `(tracedFlowService service nameOf).toHandler.sum decisionHandler`, closed by
+  `outcomeRows`. `Family.Service.traced` logs unconditionally, so the guarded
+  service carries the runner's `FlowService.pure` policy; `done` and `frontier`
+  have no former in the algebra at all and are a function of the `RunResult`,
+  not operations of any summand. That is the one honest gap between the letter
+  of "runner = interpret ∘ denote" and what is provable.
+- T2 `denoteFuel_eq_denoteGo` / `denoteFuel_eq_denote` — derived from the
+  `LoopBudget` invariant of `Effect4/Semantics/Fuel.lean` (Codex's
+  `run_fuelFor_finishes` lane), not from a second pigeonhole argument. The new
+  helpers `segmentBudget` and `decisionBudget` factor the two budget steps.
+  `runDefault_no_fuel_frontier` is this packet's name for `runDefault_finishes`.
+- `interpret_log_append` / `interpret_log_of_nil` — the log is a writer, under
+  the side condition `WritesLog` discharged for `traceHandler`.
+
+Fence used: new `Effect4/Semantics/Denotation.lean`,
+`Effect4Test/Semantics/DenotationContract.lean`,
+`Effect4Test/Semantics/DenotationAxiomReport.lean`,
+`test/contracts/flow-denotation.contract.md`; append-only lines in
+`Effect4.lean` and `Effect4Test.lean`; the `semantics` row (plus the status
+paragraph and the diagram tail) of `docs/TRACE-DAG.md`. `Runs.lean` and
+`Fuel.lean` were read, never edited: the guarded traced service lives in the new
+module, not in `Runs.lean` as the plan sketched.
+
+Two declarations carry `-- upstream: lean4-effects`:
+`Effects.FlowAlphabet.toAlphabet` and `reachableNoChoose_trans` /
+`reachSet_length_lt_of_edge`. `length_le_of_nodup_subset` is reproved privately
+for a third time (it is private in `Effects/Flow/Raw.lean` and private again in
+`Effect4/Semantics/Fuel.lean`); making it public upstream would retire all three
+copies.
+
+Next in this lane: D2 (regions as a scope summand) needs a third summand and a
+stateful upper handler through `Handler.mapHom`/`MonadHom.stateT`; D5 (the
+`Script` embedding) needs `interpret_vis_of_pure`.

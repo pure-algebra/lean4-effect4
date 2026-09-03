@@ -1,8 +1,11 @@
 # Trace agreement proof graph
 
 Status: opened 2026-09-02 with the trace lane; every edge but `semantics` and
-`bridges` closed the same day; those two are `required-open` by ruling for
-this phase.
+`bridges` closed the same day; those two were `required-open` by ruling for
+this phase. Amended 2026-09-03: `semantics` is closed for the Lean-to-Lean pair
+(the runner is `interpret` of a denotation, packet D1); `bridges` and the host
+half of `semantics` stay open by construction — no Lean statement reaches the
+host.
 
 The graph-bearing owner is `TRACE-PG-AGREEMENT`. Its subject is one shared,
 service-level trace alphabet (`Effects.Trace.Event`, minted in lean4-effects) and
@@ -27,6 +30,10 @@ AGREEMENT under Mask (Effect4/Semantics/Observation.lean)
    |                  \
    v                   --> LOWERING-COVERAGE ledger (docs/LOWERING-COVERAGE.md)
 FRAME-BRIDGE (required-open): FrameEvent.toTrace, scheduler Event.toTrace
+
+DENOTATION (Effect4/Semantics/Denotation.lean, D1)
+  FLOW-RUNNER = interpret (traceHandler service nameOf) . denote, closed by outcomeRows
+  so the Lean pair agrees by theorem, not by comparison under a mask
 ```
 
 ## Edge ledger
@@ -37,7 +44,7 @@ FRAME-BRIDGE (required-open): FrameEvent.toTrace, scheduler Event.toTrace
 | construction | `required-closed` | `Family.Service.traced` and `Family.Service.tracedExcept` (v0.3.1); `X.traced`, `X.tracedExcept` emitted by `effect_signature`; receipts in `Effect4Test/Semantics/ObservationContract.lean` |
 | laws | `required-closed` | `interpret_traced_fst`, `interpret_tracedExcept_fst`, `project_project`, `project_m2`, `agree_of_agree_m2`, all within `propext`/`Quot.sound` (`EffectsTest/Trace/AxiomReport.lean`) |
 | flow-runner | `required-closed` | Flow v2 runner (`Effect4/Semantics/Runs.lean`: `plan`/`step`/`loop`, `FlowService`, `Frontier`, the decision tape `Effect4/Flow/Decision.lean`) with laws `run_checked_not_stuck`, `run_fuel_mono`, `step_choose_consumes_one`, `plan_checked` within the ceiling (`Effect4Test/Flow/RunnerAxiomReport.lean`); the straight-line embedding `Script.toFlow` (`Effect4/Target/TypeScript/ScriptFlow.lean`) is admitted by `Effects.admit`; the internal oracle: `generated/traces/flow/*.empty.tsv` (face `lean-flow`) agree with the traced-service goldens under `m2` (`Generate.lean oracle`, part of `scripts/check-trace-goldens.sh`; planted mutant 4/4) |
-| semantics | `required-open` | no simulation theorem in this phase; agreement is executable evidence under a mask, never a denotation |
+| semantics | **closed for the Lean pair: runner = `interpret ∘ denote`; host stays evidence** (2026-09-03) | `Effect4/Semantics/Denotation.lean` (packet D1, `test/contracts/flow-denotation.contract.md`): a `CheckedFlow` denotes a `Program (Sig a ⊕ₛ DecSig)` — the alphabet through `Alphabet.toFamily` at the constant denotation `Val`, plus a decision summand answering `Unit`. T1 `runTape_eq_interpretRun`: the runner at every fuel is `interpret` under `(guarded traced service).toHandler.sum decisionHandler`, closed by `outcomeRows` (`done` and `frontier` have no former in the algebra and are a function of the result, not operations of any summand). T2 `denoteFuel_eq_denote`: at `fuelFor`'s allotment the fuelled denotation is the fuel-free `denote`, well-founded on `(tape.length, (raw.reachSet block).length)` through `reachSet_length_lt_of_edge` and `CyclesWF`, carried by the `LoopBudget` invariant of `Effect4/Semantics/Fuel.lean`. The `m2` oracle is an instance of T1 on the `incr`, `chooser` and `chosenLoop` flows (`Effect4Test/Semantics/DenotationContract.lean`). Still open on this edge: regions (a scope summand, packet D2), the `Script` embedding (D5), the frame machine (D4), and everything host-side, which stays evidence |
 | representation | `required-closed` | TSV wire form rendered only in `Effect4/Target/TypeScript/Trace.lean` (exact-module admission); no `String` in the alphabet |
 | counterexamples | `required-closed` | `EF-TRACE-CE-001..003` (lean4-effects), `E4-SEM-CE-008..009`, `E4-TARGET-CE-009..010`; planted mutants in `scripts/test-trace-goldens-gate.sh` (3/3) |
 | bridges | `required-open` | `FrameEvent.toTrace`, `FrameEvent.traceOf`, `Event.toTrace` and `Exit.toOutcome` are defined in `Effect4/Target/TypeScript/Simulation.lean` (P-T11): finalizers and outcomes project, everything else to `none`; the patched rc.112 copy (`harness/trace/patched/`, seven observation-only hunks) records frame-level rows in `harness/trace/receipts/patched/` and `scripts/check-trace-patched.sh` pins three scope facts (two releases latest-first through the loop, a single release inline, nested single releases inline inner-first) while every service-level trace stays equal; no theorem relates a host row to a `FrameEvent`, so the primitive stream is still not evidence |
