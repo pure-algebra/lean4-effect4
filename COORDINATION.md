@@ -913,3 +913,96 @@ at a region fuel frontier against the new golden. `Chain.colimit_below` and
 both runners; there is no separate region restatement of them.
 
 `lake build Effect4` green.
+## D4 finalizer half landed, 2026-09-03
+
+New module `Effect4/Semantics/RegionSimulation.lean` with battery
+`Effect4Test/Semantics/RegionSimulationContract.lean` and axiom report
+`Effect4Test/Semantics/RegionSimulationAxiomReport.lean`. Root import lines
+appended to `Effect4.lean` (after `Target.TypeScript.Simulation`, which it
+imports) and `Effect4Test.lean`. `harness/trace/Generate.lean` gains a
+`frame-trace` arm. Nothing frozen was edited; no script was touched.
+
+**The ruling fence B was blocked on is settled, and settled the other way from
+what the note feared.** Packet D2 gave the region runner a merged failure list
+in close order (`closeFrame_failure_merge`, against `Exit.asVoidAll`), so the
+machine's `Cause.combine bodyCause finalizerCause` and the runner's list are
+related by a projection: `causeOfFailures` is the section, `failuresOfCause`
+(`cause.reasons.filterMap Reason.error?`) is the direction that is a total
+function, and `failuresOfCause_causeOfFailures` says it retracts.
+
+The empty-annotation hypothesis of the research note's section 5(b) is **not**
+a hypothesis of this module, and the reason is sharper than avoidance:
+`Cause.combine` is `Cause.dedup` of the concatenation and `dedup` keeps the
+first occurrence, so the head of a merged cause is the head of the body's cause
+whatever annotations either side carries, and `Exit.toOutcome` reads exactly
+that head. `toOutcome_combine` proves it with no hypothesis on
+`ReasonAnnotations`. 5(b) stays live only for a statement comparing whole
+causes rather than their wire projection; nothing here does.
+
+What is proved, in full generality:
+
+- `unwind_failure`: a failing exit propagating through a fragment stack runs
+  exactly the finalizers that stack names, in pop order, every one against the
+  *same* exit — which is what `closeReleases` does — and then yields that exit,
+  in `(unwindNames stack).length + 1` machine steps or more.
+- `close_success`: a closing value runs the `onExit` frames above the answering
+  `onSuccess` frame, latest-registered first, each against the closing exit, and
+  then the region frame answers with its named continuation under the stack
+  below it.
+
+Both carry `hfin`: every finalizer succeeds. That is exactly the hypothesis
+`regionReleaseFails` violates, which is also why that flow has no host golden
+(`E4-TARGET-CE-012`); the failing-release case is recorded as owed.
+
+What is *not* proved: the general `regions_simulate`. Its exact wording is in
+the module header as an owed note, and it is closed by evaluation at the three
+region programs the harness pins — `regions_simulate_regionBothSucceed`
+(one region, one release), `regions_simulate_regionNested` (nested regions,
+successful releases), `regions_simulate_regionTwoFail` (two releases of one
+region closing on a failing body) — each `by rfl`, each with both sides pinned
+to a literal so the equation cannot be satisfied vacuously. So of the operator's
+ladder, (a) and (b) are closed as instances and generally as machine-side
+theorems; (c), a *failing* release, is closed for neither: the runner gives
+every release of one close the same closing exit, while the machine threads the
+accumulating exit, so the two differ on the second release's `finalizer` row.
+That is a real divergence, not a proof gap, and it belongs to whoever re-pins
+`E4-FLOW-CE-019`'s neighbour.
+
+What blocks the general theorem is the induction, not the payload: the runner's
+`leave` continues at `row.continue_` with the fuel and decision tape it holds
+*at the leave*, while the frame `enter` pushes is named at the *enter*. Closing
+it needs a `leaveConfig` that walks a region body to its close under the oracle
+plus a proof that it agrees with the runner — a second copy of the runner, and
+its own fence.
+
+The compilation is the host's shape. `enter` becomes `Prim.onSuccess body ν`
+(`Effect.scoped(Effect.onExit(…))`, whose value continues at `continue_`) and
+pushes **no** finalizer, because the row it writes is `leave` and `leave` has no
+frame-machine shadow — compiling it to `Prim.onExit` would manufacture a
+`finalizer` row the runner never writes. `acquire` becomes the fence-B `sync`
+gadget followed by `Prim.onExit rest (RegionName.fin region point) false`
+(rc.112's `scopedFrame`, `Effect.acquireRelease`), so the frames stack in
+registration order and pop latest-first: the order `E4-TARGET-CE-012..014` pin.
+
+Separation 4 holds with room to spare: `ν := RegionName` is an inductive over
+`Config = Nat × BlockId × Env × Tape`, first-order data with a derived
+`DecidableEq`, and the battery's `DecidableEq (Prim …)` gate is what fails the
+moment anyone instantiates a name alphabet at a function type. `Config.fuel` is
+a step counter, so a point occurs at most once in a run and needs no separate
+occurrence index. `compileRegion` recurses structurally on its fuel argument
+(not on `Config.fuel`), which is what makes the compiled program
+kernel-reducible and the three instances provable by `rfl` rather than by
+`#guard` alone.
+
+Also in this packet, small and separate: `Effect4.FrameSimulation.Flow.Sig` —
+the local copy marked `-- to be unified with Denotation.lean` — is gone.
+`FrameSimulation` now imports `Effect4/Semantics/Denotation.lean` and uses
+`Effect4.Flow.Sig`; the five `variable` lines move from `Alphabet.{0,0} Ty` to
+`FlowAlphabet.{0,0} Ty` and every theorem statement is unchanged, `Flow.Sig a`
+resolving through the enclosing namespace. The "later fence" note at the end of
+`FrameSimulation.lean` is replaced by a pointer to the new module.
+
+Open for the merge: `Effect4/Semantics/RegionSimulation.lean` inherits fence
+B's placement question — it imports Runtime, Flow and the trace bridge, so it
+sits above all three, and if strict directory layering wins it moves to
+`Effect4/Runtime/RegionSimulation.lean` unchanged.

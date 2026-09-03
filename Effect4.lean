@@ -91,6 +91,9 @@ import Effect4.Target.TypeScript.Schema
 import Effect4.Target.TypeScript.EffectfulField
 import Effect4.Target.TypeScript.Decode
 import Effect4.Target.TypeScript.Simulation
+-- Packet D4, the finalizer half. Above Runtime, Flow and the trace bridge:
+-- it relates the region runner to the frame machine under a mask.
+import Effect4.Semantics.RegionSimulation
 import Effect4.Meta.Registry
 import Effect4.Meta.Introspection
 import Effect4.Meta.Derive
