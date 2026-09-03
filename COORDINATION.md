@@ -584,3 +584,36 @@ errors and the two resulting unavailable-evaluation diagnostics; its independent
 13-case pop positive control passes. The axiom report has eight missing-name
 errors. Exact diagnostics, test counts and source hashes are frozen in
 `test/contracts/live-stack.contract.md`. The two new red modules are declared.
+
+## Live-stack builders, 2026-09-03
+
+The independent packet is committed at `8323eaf`. Root owns only
+`Effect4/Runtime/LiveStack.lean`, `scripts/check-live-stack.mjs`,
+`docs/LIVE-STACK-IMPLEMENTATION.md`, and removal of the two new
+known-red entries once green. The host builder owns
+`harness/live-stack/public.ts`, `harness/live-stack/host.mjs` and
+`harness/live-stack/HOST.md`; the compiled inspection builder owns
+`harness/live-stack/Inspect.lean` and `harness/live-stack/inspect.mjs`.
+The mutation builder owns `scripts/test-live-stack-mutations.mjs` only.
+Root also claims the new `generated/live-stack-assurance.json` projection,
+written only by `scripts/check-live-stack.mjs --write`. Existing generated
+files remain outside this claim. The projection records checked declarations,
+proof dependencies and finite host observations; it cannot close the open
+source simulation or authorize a default-runtime switch.
+The frozen contract, DAG and test files remain unchanged. All work is in
+this isolated branch; no builder switches or edits the shared main checkout.
+
+## Live-stack implementation verification, 2026-09-03
+
+The eight frozen public declarations are implemented without changing the
+contract, DAG, battery or existing carriers. Both complete local checks
+(`check-live-stack.mjs --write` and a separate fresh drift run) passed;
+`generated/live-stack-assurance.json` has digest
+`88b983b638016ba9c9a62a59ed3569a340eddef149790ecabe013412de491d85`.
+The independent review's three checker findings were repaired and verified.
+The trust self-test passed on its declared-red-excised temporary copy. The
+default package build still has the two old declared-red failures and their
+consequential root diagnostic; the separate Fiber projection and four
+pre-existing citation errors remain open. `docs/LIVE-STACK-IMPLEMENTATION.md`
+records exact evidence and the still-open source/compiler/scheduler edges.
+No shared main-checkout source or default runtime was changed.
