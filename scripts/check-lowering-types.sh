@@ -6,6 +6,7 @@
 # digest of the emitted declaration file.
 set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+. "$repo_root/scripts/lib/portable.sh"
 here="$repo_root/harness/trace"
 node_modules="$(cd "${EFFECT4_EFFECT_NODE_MODULES:-$HOME/Dev/foldlab/library/effects/node_modules}" && pwd)"
 cd "$repo_root"
@@ -18,15 +19,18 @@ cp "$here"/*.ts "$here"/tsconfig.json "$tmp/" && ln -s "$node_modules" "$tmp/nod
   || { echo "FAIL declaration emit rejected the harness module" >&2; exit 1; }
 emitted="$tmp/out/fixture.d.ts"
 [ -f "$emitted" ] || { echo "FAIL no fixture.d.ts emitted" >&2; ls "$tmp/out" >&2; exit 1; }
-digest="$(shasum -a 256 "$emitted" | cut -d' ' -f1)"
+digest="$(sha256 "$emitted")"
 mkdir -p "$here/types"
 # The generator runs once per list, up front: a refused or unknown command is a
 # gate failure, never an empty loop.
 lines="$tmp/types.tsv"; flow_lines="$tmp/flow-types.tsv"
-lake env lean --run "$here/Generate.lean" types 2>&1 | grep -v '^warning: manifest out of date' > "$lines" \
+# `lean_run` (scripts/lib/portable.sh) fails loudly with Lean's own diagnostic;
+# an empty or exception-bearing list is still refused here, because Lean can
+# print a usage error and exit zero.
+lean_run "$here/Generate.lean" types > "$lines" \
   && ! grep -q '^uncaught exception' "$lines" && [ -s "$lines" ] \
   || { echo "FAIL Generate.lean types produced no declaration lines" >&2; cat "$lines" >&2; exit 1; }
-lake env lean --run "$here/Generate.lean" flow-types 2>&1 | grep -v '^warning: manifest out of date' > "$flow_lines" \
+lean_run "$here/Generate.lean" flow-types > "$flow_lines" \
   && ! grep -q '^uncaught exception' "$flow_lines" && [ -s "$flow_lines" ] \
   || { echo "FAIL Generate.lean flow-types produced no declaration lines" >&2; cat "$flow_lines" >&2; exit 1; }
 status=0
@@ -45,7 +49,7 @@ done < "$lines"
 # --- the dispatch form -------------------------------------------------------
 flow_emitted="$tmp/out/flow-fixture.d.ts"
 [ -f "$flow_emitted" ] || { echo "FAIL no flow-fixture.d.ts emitted" >&2; ls "$tmp/out" >&2; exit 1; }
-flow_digest="$(shasum -a 256 "$flow_emitted" | cut -d' ' -f1)"
+flow_digest="$(sha256 "$flow_emitted")"
 mkdir -p "$here/types/flow"
 while IFS=$'\t' read -r program tape expected; do
   if grep -Fxq -- "$expected" "$flow_emitted"; then

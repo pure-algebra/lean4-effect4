@@ -11,6 +11,7 @@
 #   --print-row                 print only the ledger row (used by the generator)
 set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+. "$repo_root/scripts/lib/portable.sh"
 tools="${EFFECT4_TOOLS:-$repo_root/../effect4-tools}"
 here="$repo_root/harness/trace"
 seed="${EFFECT4_PROPERTY_SEED:-2026}"; count="${EFFECT4_PROPERTY_COUNT:-200}"; print_row=0
@@ -25,14 +26,18 @@ done
 cd "$repo_root"
 lake build Effect4 >/dev/null
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/effect4-property.XXXXXX")"; trap 'rm -rf -- "$tmp"' EXIT
-sha() { shasum -a 256 "$1" | cut -d' ' -f1; }
-lean_run() { lake env lean --run "$here/Property.lean" "$@" | grep -v '^warning: manifest out of date'; }
+# `lean_run` comes from scripts/lib/portable.sh: it prints a FAIL line naming
+# this gate and everything Lean wrote whenever the run fails. The older spelling
+# piped Lean straight into a command substitution, and Lean writes its errors to
+# standard output, so a missing-cases error in Property.lean left this script
+# exiting 1 with an empty log.
+property_run() { lean_run "$here/Property.lean" "$@"; }
 prepare() { # dir: the harness files a batch needs beside the corpus
   cp "$here/tracer.ts" "$here/atoms.ts" "$here/property-tail.ts" "$here/property-structured-tail.ts" "$here/host-pin.json" "$1/"
 }
 mkdir -p "$tmp/corpus" && prepare "$tmp/corpus"
-summary="$(lean_run corpus "$seed" "$count" "$tmp/corpus")"
-digest="$(cat "$tmp/corpus/property-fixture.ts" "$tmp/corpus/property-structured-fixture.ts" "$tmp/corpus/goldens"/*.tsv | shasum -a 256 | cut -d' ' -f1)"
+summary="$(property_run corpus "$seed" "$count" "$tmp/corpus")"
+digest="$(cat "$tmp/corpus/property-fixture.ts" "$tmp/corpus/property-structured-fixture.ts" "$tmp/corpus/goldens"/*.tsv | sha256)"
 mkdir -p "$here/receipts"
 batch_log="$tmp/batch.log"
 set +e
@@ -57,7 +62,7 @@ if [ "$status" -ne 0 ]; then
   path=""; budget=64
   while [ "$budget" -gt 0 ]; do
     rm -rf "$tmp/shrink" && mkdir -p "$tmp/shrink" && prepare "$tmp/shrink"
-    lean_run shrink "$seed" "$count" "$program" "$tape" "$path" "$tmp/shrink" >/dev/null
+    property_run shrink "$seed" "$count" "$program" "$tape" "$path" "$tmp/shrink" >/dev/null
     candidates="$(ls "$tmp/shrink/goldens" | wc -l | tr -d ' ')"
     [ "$candidates" -gt 0 ] || break
     budget=$((budget - candidates))
@@ -71,7 +76,7 @@ if [ "$status" -ne 0 ]; then
   done
   out="$repo_root/generated/lowering-property-failures/$program.$tape"
   mkdir -p "$out"
-  lean_run case "$seed" "$count" "$program" "$tape" "$path" > "$out/case.tsv"
+  property_run case "$seed" "$count" "$program" "$tape" "$path" > "$out/case.tsv"
   printf 'seed\t%s\ncount\t%s\nprogram\t%s\ntape\t%s\npath\t%s\n' "$seed" "$count" "$program" "$tape" "$path" > "$out/origin.tsv"
   cp "$batch_log" "$out/batch.log"
   echo "FAIL property batch: minimal case stored under $out (path $path)" >&2

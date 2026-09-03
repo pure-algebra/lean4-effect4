@@ -10,6 +10,7 @@
 #   --receipts <dir>  host receipts instead of harness/trace/receipts      (self-test only)
 set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+. "$repo_root/scripts/lib/portable.sh"
 cd "$repo_root"
 sources="Effect4/Target/TypeScript"; traces="generated/traces"; receipts="harness/trace/receipts"
 while [ $# -gt 0 ]; do
@@ -23,7 +24,6 @@ done
 for variable in EFFECT4_LOWERING_COVERAGE_SOURCE EFFECT4_LOWERING_COVERAGE_CANDIDATE; do
   [ -z "${!variable:-}" ] || { echo "FAIL $variable is not an admitted override" >&2; exit 2; }
 done
-sha() { shasum -a 256 "$1" | cut -d' ' -f1; }
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/effect4-lowering.XXXXXX")"; trap 'rm -rf -- "$tmp"' EXIT
 lake build Effect4 >/dev/null
 # --- the numerator -----------------------------------------------------------
@@ -72,11 +72,18 @@ for line in open(rows_path):
 PY
 # --- print --------------------------------------------------------------------
 effects_rev="$(python3 -c "import json;m=json.load(open('lake-manifest.json'));print(next(p['rev'] for p in m['packages'] if p['name']=='effects'))")"
+# An abbreviated revision is not a durable identifier, and the provenance width
+# once changed mid-corpus (survey finding H10). Refuse before a byte is printed.
+[[ "$effects_rev" =~ ^[0-9a-f]{40}$ ]] || {
+  echo "FAIL lake-manifest.json gives the effects rev as '$effects_rev'; a pin row must be 40 hex characters" >&2
+  echo "  put the full sha in lakefile.toml and re-resolve the manifest" >&2
+  exit 1
+}
 printf 'format\teffect4-lowering-coverage-v1\n'
-printf 'generator\tscripts/generate-lowering-coverage.sh\tsha256=%s\n' "$(sha scripts/generate-lowering-coverage.sh)"
+printf 'generator\tscripts/generate-lowering-coverage.sh\tsha256=%s\n' "$(sha256 scripts/generate-lowering-coverage.sh)"
 printf 'regenerate\t./scripts/generate-lowering-coverage.sh > generated/lowering-coverage.tsv\n'
 for input in Effect4Test/Target/TypeScript/LoweringCoverage.lean Effect4/Target/TypeScript/Lower.lean Effect4/Target/TypeScript/EffectV4.lean docs/LOWERING-COVERAGE.md; do
-  printf 'input\t%s\tsha256=%s\n' "$input" "$(sha "$input")"
+  printf 'input\t%s\tsha256=%s\n' "$input" "$(sha256 "$input")"
 done
 printf 'pin\teffects\t%s\n' "$effects_rev"
 printf 'columns\trule\tid\tstate\tgoldens\thost\tproperty\ttypeReceipt\tproof\n'
