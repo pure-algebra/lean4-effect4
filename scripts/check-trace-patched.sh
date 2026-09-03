@@ -12,7 +12,9 @@
 # What it reads: the patch machinery -- `patched/apply.mjs`, which builds the
 # copy, and `patched/patch-manifest.json`, whose digest every receipt carries;
 # the harness TypeScript and tsconfig, since `flow-tail.ts` and `tracer.ts`
-# drive the runs; the flow goldens and the mask table under `generated/traces/`;
+# drive the runs; the flow goldens it runs and the mask table, and no other
+# golden -- it opens `generated/traces/flow/*.tsv` and `masks.tsv` and nothing
+# else under `generated/traces/`;
 # the effect4-tools trace runner; and the identity of the unpatched
 # installation the copy is made from. `patched/_copy/` is an output of
 # `apply.mjs`, not an input, and the receipts under `receipts/patched/` are
@@ -39,13 +41,17 @@ inputs=(
   "$here/patched/patch-manifest.json"
   "$here/patched/trace-host-pin.json"
   "$here/tsconfig.json"
-  "$repo_root/generated/traces"
+  "$repo_root/generated/traces/masks.tsv"
   "$stamp_build_lib/Effect4.trace"
   "$repo_root/lakefile.toml"
   "$repo_root/lake-manifest.json"
   "$repo_root/lean-toolchain"
 )
 for module in "$here"/*.ts; do inputs+=("$module"); done
+# The flow goldens at the top level of `generated/traces/flow/`, and only
+# those: this gate runs no other family, and naming the whole corpus would make
+# it re-run for a straight-line or fiber golden it never opens.
+for golden in "$repo_root"/generated/traces/flow/*.tsv; do inputs+=("$golden"); done
 while IFS= read -r input; do inputs+=("$input"); done < <(
   stamp_tools_inputs trace.mjs copy.mjs
   stamp_host_inputs
