@@ -136,3 +136,37 @@ No production code, prior packet or CE-018 witness was changed. No package
 build or host check ran. The coordination claim is append-only and remains
 coordinator-owned for its commit; the breaker commit contains these three new
 packet files only.
+
+### Proof-only trust amendment, 2026-09-03
+
+The coordinator's full trust self-test rejected the concrete
+`terminal_childIndex` helper because its original simplification proof reached
+`Classical.choice`. That rejection was independent of the seven production
+receipts, which already met the frozen ceiling. The breaker replaces only this
+helper's proof body: split the child into zero and successor cases, reduce its
+impossible parent premise to `none = some parent`, then eliminate that equality
+directly. Its statement, terminal graph, accepted domain, all controls and every
+public ascription remain byte-identical. Production, the trust gate and its
+allowlist are unchanged. The computed packet needs no repair.
+
+Verified against base `f7cd8a18a93e35b846d84c926cf67e14b02db0cb` in
+`/private/tmp/structure-packet-trust.ZshdVG`:
+
+| Command | Observed result |
+| --- | --- |
+| `lake env lean -o .lake/build/lib/lean/Effect4Test/Target/TypeScript/StructureOrderContract.olean Effect4Test/Target/TypeScript/StructureOrderContract.lean` | Exit 0: saved packet and all unchanged controls pass; this is one module compilation, not a package build. |
+| `lake env lean /private/tmp/structure-packet-trust.ZshdVG/Audit.lean` | Exit 0 after fresh compilation: all 25 constants owned by the order, computed and RegionTotal test modules, including private helpers and generated auxiliaries, use at most `propext` and `Quot.sound`. Both terminal premise proofs and `diamond_sourceBounded` use only `propext`. |
+| `lake env lean /private/tmp/structure-packet-trust.ZshdVG/Control.lean` | Exit 0: unchanged full order packet plus a helper-specific axiom check. |
+| `lake env lean /private/tmp/structure-packet-trust.ZshdVG/OriginalProofMutant.lean` | Exit 1 only at that check: restoring the original proof reaches `Classical.choice`; the packet itself still elaborates. |
+| `lake env lean /private/tmp/structure-packet-trust.ZshdVG/Control.lean` (restored) | Exit 0 again, with helper receipt `[propext]`. |
+| `lake env lean Effect4Test/Target/TypeScript/StructureComputedContract.lean` | Exit 0, unchanged packet. |
+| `lake env lean Effect4Test/Target/TypeScript/StructureOrderAxiomReport.lean` | Exit 0: all seven production receipts remain within the frozen ceiling. |
+| `lake env lean Effect4Test/Target/TypeScript/StructureComputedAxiomReport.lean` | Exit 0: all four production receipts remain within the frozen ceiling. |
+
+The scratch audit selects constants by their actual owning module, so private
+concrete-premise proofs are included. The before-repair audit rejected the old
+compiled helper at the same axiom. The positive/mutant/restored source checks
+separately establish that the detector responds to the changed proof body.
+Only this amendment and the single helper proof are committed; shared
+coordination and the full trust self-test rerun remain coordinator-owned. No
+semantic obligation or host boundary changes through this repair.

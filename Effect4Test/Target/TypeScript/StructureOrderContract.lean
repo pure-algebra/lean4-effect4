@@ -48,10 +48,8 @@ theorem terminal_childIndex :
     ∀ parent child, Structure.idom terminalGraph child = some parent →
       Structure.index terminalGraph parent ≤ Structure.index terminalGraph child := by
   intro parent child up
-  simp [Structure.idom, Structure.idoms, Structure.index, Structure.rpo,
-    Structure.postorder, Structure.postorder.visit, terminalGraph] at up
-  obtain ⟨nonzero, up⟩ := up
-  simp [Structure.idoms.iterate, Ne.symm nonzero] at up
+  cases child <;> change (none : Option Nat) = some parent at up
+  all_goals exact False.elim (Option.noConfusion rfl (heq_of_eq up))
 
 theorem terminal_forwardJoinParent :
     ∀ source target, target ∈ terminalGraph.succs source →
