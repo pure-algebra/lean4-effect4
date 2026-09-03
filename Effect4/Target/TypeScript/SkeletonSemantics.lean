@@ -972,7 +972,7 @@ set_option maxHeartbeats 1000000 in
 block does, with the machine carrying the environment across the move. -/
 theorem execList_skeletonBlock (table : List OpSpec) (fuel : Nat) (m : Machine) (tape : Tape)
     (block : RawBlock String) (env : Env) (body : List Skeleton)
-    (built : Flow.skeletonBlock table block = some body)
+    (built : Flow.skeletonBlock table false block = some body)
     (holds : Holds m block.id env) :
     (∀ value, plan (tableAlphabet ⟨0⟩ table) block env tape = .ret value →
         execList (tableAlphabet ⟨0⟩ table) fuel m tape body
@@ -1247,10 +1247,12 @@ theorem runSimple_fixed : ∀ (nodes : List Skeleton) (m : Machine),
       exact runSimple_fixed rest m fun n mem => fixed n (List.mem_cons_of_mem _ mem)
 
 theorem runSimple_acquisitions (rows : ServiceRow) (table : List OpSpec) (raw : RawFlow String)
-    (m : Machine) : runSimple m (Flow.acquisitions rows table raw) = some m := by
+    (m : Machine) : runSimple m (Flow.acquisitions rows table false raw) = some m := by
   refine runSimple_fixed _ m ?_
   intro node mem
   unfold Flow.acquisitions at mem
+  -- no interrupt points: the third summand is empty
+  simp only [Bool.false_eq_true, ↓reduceIte, List.append_nil] at mem
   have shape : ∃ row : ServiceRow, node = Skeleton.acquireService row := by
     rcases List.mem_append.mp mem with inFamily | inDecisions
     · split at inFamily
@@ -1280,16 +1282,16 @@ for a block index is the lowered body of the block that index resolves to. Both
 list in order, so no uniqueness of block identities is needed. -/
 theorem caseBody?_of_mapM (table : List OpSpec)
     (lower : RawBlock String → Option (Nat × List Skeleton))
-    (spec : ∀ b, lower b = (Flow.skeletonBlock table b).map (Lowering.blockCase b.id)) :
+    (spec : ∀ b, lower b = (Flow.skeletonBlock table false b).map (Lowering.blockCase b.id)) :
     ∀ (blocks : List (RawBlock String)) (cases : List (Nat × List Skeleton)),
       blocks.mapM lower = some cases →
       ∀ (index : Nat) (current : RawBlock String),
         blocks.find? (fun block => block.id = ⟨index⟩) = some current →
-        ∃ body, Flow.skeletonBlock table current = some body ∧ caseBody? cases index = some body
+        ∃ body, Flow.skeletonBlock table false current = some body ∧ caseBody? cases index = some body
   | [], cases, built, index, current, found => by simp at found
   | block :: blocks, cases, built, index, current, found => by
       rw [List.mapM_cons, spec block] at built
-      cases lowered : Flow.skeletonBlock table block with
+      cases lowered : Flow.skeletonBlock table false block with
       | none => rw [lowered] at built; simp at built
       | some body =>
           rw [lowered] at built
@@ -1323,7 +1325,7 @@ theorem dispatchRun_denoteFuel (table : List OpSpec) (raw : RawFlow String)
     (wf : FlowWF (tableAlphabet ⟨0⟩ table) raw) (cases : List (Nat × List Skeleton))
     (built : ∀ (index : Nat) (current : RawBlock String),
       lookupBlock raw ⟨index⟩ = some current →
-        ∃ body, Flow.skeletonBlock table current = some body ∧ caseBody? cases index = some body) :
+        ∃ body, Flow.skeletonBlock table false current = some body ∧ caseBody? cases index = some body) :
     ∀ (fuel : Nat) (m : Machine) (tape : Tape) (block : BlockId) (env : Env)
       (current : RawBlock String),
       lookupBlock raw block = some current → env.length = current.params.length →
@@ -1401,7 +1403,7 @@ theorem execList_dispatchPrefix (rows : ServiceRow) (table : List OpSpec) (raw :
     (fuel : Nat) (tape : Tape) (binder : String) (input : Val)
     (cases : List (Nat × List Skeleton)) :
     execList (tableAlphabet ⟨0⟩ table) fuel (start binder input) tape
-        (Flow.acquisitions rows table raw ++ Flow.declarations raw.blocks ++
+        (Flow.acquisitions rows table false raw ++ Flow.declarations raw.blocks ++
           [ Skeleton.assign (.param raw.entry 0) (.input binder)
           , Skeleton.letBlockIndex "block" raw.entry
           , Lowering.dispatchLoop cases ])
@@ -1464,7 +1466,7 @@ theorem execList_skeletonBlockWith (table : List OpSpec) (raw : RawFlow String)
     (transfer : BlockId → List Slot → Option (List Skeleton))
     (K : BlockId → Env → Tape → Program (FullSig (tableAlphabet ⟨0⟩ table)) (Outcome × Tape))
     (mem : block ∈ raw.blocks) (envSized : env.length = block.params.length)
-    (built : Flow.skeletonBlockWith table block transfer = some body)
+    (built : Flow.skeletonBlockWith table false block transfer = some body)
     (holds : Holds m block.id env)
     (step : ∀ (target : BlockId) (targetBlock : RawBlock String) (slots : List Slot)
         (vals : List Val) (m' : Machine) (tape' : Tape) (control : List Skeleton),
@@ -1880,10 +1882,10 @@ def structuredMove (blocks : List (RawBlock String)) (source : BlockId)
 def structuredBodyFn (table : List OpSpec) (blocks : List (RawBlock String)) (i : Nat)
     (transfer : Nat → Option (List Skeleton)) : Option (List Skeleton) := do
   let block ← blocks[i]?
-  Flow.skeletonBlockWith table block (structuredMove blocks block.id transfer)
+  Flow.skeletonBlockWith table false block (structuredMove blocks block.id transfer)
 
 theorem skeletonBody_eq (table : List OpSpec) (blocks : List (RawBlock String)) (entry : BlockId) :
-    Flow.skeletonBody table blocks entry
+    Flow.skeletonBody table false blocks entry
       = Structuring.emitWith (Flow.graphOf blocks entry) structuredShapes
           (structuredBodyFn table blocks) := rfl
 
@@ -2016,14 +2018,15 @@ The fuel is the one `fuelFor` allots, and by `Effect4.Flow.denoteFuel_eq_denote`
 that fuel is not binding: the right-hand side is the fuel-free `Flow.denote`. -/
 theorem skeletonDispatch_denote (rows : ServiceRow) (program : FlowProgram) (tape : Tape)
     (input : Val) {nodes : List Skeleton}
+    (noInterrupts : program.interrupts = false)
     (built : Flow.skeletonDispatch rows program = some nodes) :
     Skeleton.denote (tableAlphabet ⟨0⟩ program.table)
         (fuelFor program.flow.erase tape) program.param.1 nodes tape input
       = Effect4.Flow.denote program.flow tape input := by
   have wf : FlowWF (tableAlphabet ⟨0⟩ program.table) program.flow.erase := erase_wf program.flow
-  simp only [Flow.skeletonDispatch, Option.bind_eq_bind] at built
+  simp only [Flow.skeletonDispatch, Option.bind_eq_bind, noInterrupts] at built
   obtain ⟨cases, lowered, shaped⟩ := Option.bind_eq_some_iff.mp built
-  obtain rfl : Flow.acquisitions rows program.table program.flow.erase
+  obtain rfl : Flow.acquisitions rows program.table false program.flow.erase
       ++ Flow.declarations program.flow.erase.blocks
       ++ [ Skeleton.assign (.param program.flow.erase.entry 0) (.input program.param.1)
          , Skeleton.letBlockIndex "block" program.flow.erase.entry
@@ -2047,9 +2050,9 @@ theorem skeletonDispatch_denote (rows : ServiceRow) (program : FlowProgram) (tap
       rw [dispatchRun_denoteFuel program.table program.flow.erase wf cases
         (fun index cur resolved =>
           caseBody?_of_mapM program.table
-            (fun block => (Flow.skeletonBlock program.table block).bind fun body =>
+            (fun block => (Flow.skeletonBlock program.table false block).bind fun body =>
               pure (Lowering.blockCase block.id body))
-            (fun b => by cases Flow.skeletonBlock program.table b <;> rfl)
+            (fun b => by cases Flow.skeletonBlock program.table false b <;> rfl)
             program.flow.erase.blocks cases lowered index cur resolved)
         (fuelFor program.flow.erase tape) _ tape program.flow.erase.entry [input] current found
         sized (setIndex_same _ _ _) ?_]
@@ -2069,13 +2072,14 @@ a flat emission has no loop to spend it on. -/
 theorem skeletonStructured_denote (rows : ServiceRow) (program : FlowProgram) (fuel : Nat)
     (tape : Tape) (input : Val) {nodes : List Skeleton}
     (flat : Skel.Flat (Flow.graphOf program.flow.erase.blocks program.flow.erase.entry))
+    (noInterrupts : program.interrupts = false)
     (built : Flow.skeletonStructured rows program = some nodes) :
     Skeleton.denote (tableAlphabet ⟨0⟩ program.table) fuel program.param.1 nodes tape input
       = Effect4.Flow.denote program.flow tape input := by
   have wf : FlowWF (tableAlphabet ⟨0⟩ program.table) program.flow.erase := erase_wf program.flow
-  simp only [Flow.skeletonStructured, Option.bind_eq_bind] at built
+  simp only [Flow.skeletonStructured, Option.bind_eq_bind, noInterrupts] at built
   obtain ⟨body, emitted, shaped⟩ := Option.bind_eq_some_iff.mp built
-  obtain rfl : Flow.acquisitions rows program.table program.flow.erase
+  obtain rfl : Flow.acquisitions rows program.table false program.flow.erase
       ++ Flow.declarations program.flow.erase.blocks
       ++ [Skeleton.assign (.param program.flow.erase.entry 0) (.input program.param.1)]
       ++ body = nodes := Option.some.inj shaped
@@ -2098,14 +2102,14 @@ theorem skeletonStructured_denote (rows : ServiceRow) (program : FlowProgram) (f
         rw [Skel.getElem?_of_findIdx? _ _ t positioned]
         exact found
       have base : Skel.runSimple (Skel.start program.param.1 input)
-          (Flow.acquisitions rows program.table program.flow.erase
+          (Flow.acquisitions rows program.table false program.flow.erase
             ++ Flow.declarations program.flow.erase.blocks)
           = some (Skel.start program.param.1 input) := by
         rw [Skel.runSimple_append _ _ _ (Skel.runSimple_acquisitions rows program.table
           program.flow.erase (Skel.start program.param.1 input))]
         exact Skel.runSimple_declarations program.flow.erase.blocks _
       have prefixRun : Skel.runSimple (Skel.start program.param.1 input)
-          (Flow.acquisitions rows program.table program.flow.erase
+          (Flow.acquisitions rows program.table false program.flow.erase
             ++ Flow.declarations program.flow.erase.blocks
             ++ [Skeleton.assign (.param program.flow.erase.entry 0) (.input program.param.1)])
           = some ((Skel.start program.param.1 input).setVal
@@ -2138,14 +2142,15 @@ structured form and the dispatch form denote the same `Program`. -/
 theorem skeletonStructured_denote_dispatch (rows : ServiceRow) (program : FlowProgram)
     (tape : Tape) (input : Val) {structured dispatch : List Skeleton}
     (flat : Skel.Flat (Flow.graphOf program.flow.erase.blocks program.flow.erase.entry))
+    (noInterrupts : program.interrupts = false)
     (builtStructured : Flow.skeletonStructured rows program = some structured)
     (builtDispatch : Flow.skeletonDispatch rows program = some dispatch) :
     Skeleton.denote (tableAlphabet ⟨0⟩ program.table) (fuelFor program.flow.erase tape)
         program.param.1 structured tape input
       = Skeleton.denote (tableAlphabet ⟨0⟩ program.table) (fuelFor program.flow.erase tape)
         program.param.1 dispatch tape input :=
-  (skeletonStructured_denote rows program _ tape input flat builtStructured).trans
-    (skeletonDispatch_denote rows program tape input builtDispatch).symm
+  (skeletonStructured_denote rows program _ tape input flat noInterrupts builtStructured).trans
+    (skeletonDispatch_denote rows program tape input noInterrupts builtDispatch).symm
 
 /-! ## 18. What T4 does not cover, exactly
 

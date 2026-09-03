@@ -150,6 +150,15 @@ theorem erase_of_program? {name : String} {table : List OpSpec} {raw : RawFlow S
     exact erase_admit accepted
   · exact absurd built (by simp)
 
+/-- `program?` declares no interrupt points: the packet M2 field keeps its default. -/
+theorem interrupts_of_program? {name : String} {table : List OpSpec} {raw : RawFlow String}
+    {program : FlowProgram} (built : program? name table raw = some program) :
+    program.interrupts = false := by
+  simp only [program?] at built
+  split at built
+  · cases built; rfl
+  · cases built
+
 def incr? : Option FlowProgram := program? "incr" cellTable incrRaw
 def chooser? : Option FlowProgram := program? "chooser" [] chooserRaw
 def swap? : Option FlowProgram := program? "swap" swapTable swapRaw
@@ -175,28 +184,32 @@ theorem incr_dispatch (tape : Tape) (input : Val) :
       Skeleton.denote (tableAlphabet ⟨0⟩ program.table) (fuelFor program.flow.erase tape)
           program.param.1 nodes tape input
         = Effect4.Flow.denote program.flow tape input :=
-  fun program _ nodes built => skeletonDispatch_denote cellRows program tape input built
+  fun program admitted nodes built =>
+    skeletonDispatch_denote cellRows program tape input (interrupts_of_program? admitted) built
 
 theorem chooser_dispatch (tape : Tape) (input : Val) :
     ∀ program ∈ chooser?, ∀ nodes ∈ Flow.skeletonDispatch cellRows program,
       Skeleton.denote (tableAlphabet ⟨0⟩ program.table) (fuelFor program.flow.erase tape)
           program.param.1 nodes tape input
         = Effect4.Flow.denote program.flow tape input :=
-  fun program _ nodes built => skeletonDispatch_denote cellRows program tape input built
+  fun program admitted nodes built =>
+    skeletonDispatch_denote cellRows program tape input (interrupts_of_program? admitted) built
 
 theorem swap_dispatch (tape : Tape) (input : Val) :
     ∀ program ∈ swap?, ∀ nodes ∈ Flow.skeletonDispatch cellRows program,
       Skeleton.denote (tableAlphabet ⟨0⟩ program.table) (fuelFor program.flow.erase tape)
           program.param.1 nodes tape input
         = Effect4.Flow.denote program.flow tape input :=
-  fun program _ nodes built => skeletonDispatch_denote cellRows program tape input built
+  fun program admitted nodes built =>
+    skeletonDispatch_denote cellRows program tape input (interrupts_of_program? admitted) built
 
 theorem irreducible_dispatch (tape : Tape) (input : Val) :
     ∀ program ∈ irreducible?, ∀ nodes ∈ Flow.skeletonDispatch cellRows program,
       Skeleton.denote (tableAlphabet ⟨0⟩ program.table) (fuelFor program.flow.erase tape)
           program.param.1 nodes tape input
         = Effect4.Flow.denote program.flow tape input :=
-  fun program _ nodes built => skeletonDispatch_denote cellRows program tape input built
+  fun program admitted nodes built =>
+    skeletonDispatch_denote cellRows program tape input (interrupts_of_program? admitted) built
 
 /-! ## Which graphs are flat -/
 
@@ -231,8 +244,8 @@ theorem incr_structured_dispatch (tape : Tape) (input : Val) :
           = Skeleton.denote (tableAlphabet ⟨0⟩ program.table) (fuelFor program.flow.erase tape)
             program.param.1 dispatch tape input := by
   intro program admitted structured builtStructured dispatch builtDispatch
-  refine skeletonStructured_denote_dispatch cellRows program tape input ?_ builtStructured
-    builtDispatch
+  refine skeletonStructured_denote_dispatch cellRows program tape input ?_
+    (interrupts_of_program? admitted) builtStructured builtDispatch
   rw [erase_of_program? admitted]
   exact incr_flat
 
@@ -244,8 +257,8 @@ theorem chooser_structured_dispatch (tape : Tape) (input : Val) :
           = Skeleton.denote (tableAlphabet ⟨0⟩ program.table) (fuelFor program.flow.erase tape)
             program.param.1 dispatch tape input := by
   intro program admitted structured builtStructured dispatch builtDispatch
-  refine skeletonStructured_denote_dispatch cellRows program tape input ?_ builtStructured
-    builtDispatch
+  refine skeletonStructured_denote_dispatch cellRows program tape input ?_
+    (interrupts_of_program? admitted) builtStructured builtDispatch
   rw [erase_of_program? admitted]
   exact chooser_flat
 

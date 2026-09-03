@@ -1401,3 +1401,14 @@ library lemmas were deliberately not used because they cross the ceiling:
 machine a `perform`'s continuation needs rather than choosing it.
 
 `lake build Effect4` green. No gate script run from this worktree.
+
+## D3 merge note, 2026-09-03
+
+D3 forked before M2 landed the `interruptPoint` skeleton node and the
+`interrupts : Bool` argument of every skeleton builder. At merge the D3 lemmas
+were restated at `interrupts = false` and T3/T4 (`skeletonDispatch_denote`,
+`skeletonStructured_denote`, `skeletonStructured_denote_dispatch`) carry a
+`noInterrupts : program.interrupts = false` hypothesis, discharged for the
+contract's programs by `interrupts_of_program?`. `Skeleton.denote` has no case
+for `interruptPoint`; giving it one (a `decide` at the interrupt site, matching
+`Effect4/Flow/Interrupt.lean`) and dropping the hypothesis is owed.
