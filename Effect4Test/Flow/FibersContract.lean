@@ -46,12 +46,11 @@ open Effect4.FiberFamily
 
 /-! ## The rows of each golden -/
 
-/-- The wire rows of one program's Lean log, exactly as the golden carries
-them. An unknown name answers a row that no golden can match. -/
-def rowsOf (name : String) : List String :=
-  match fiberPrograms.find? (·.name == name) with
-  | some entry => entry.log.map Effect4.Target.TypeScript.Trace.row
-  | none => ["unknown fiber program"]
+/- The wire rows of one program's Lean log, exactly as the golden carries them,
+are computed inline in each receipt below: a `def` rendering rows would reach
+`Classical.choice` through the renderer and the axiom gate scans test
+declarations too, while a `#guard` is a command, not a declaration. An unknown
+name answers a row that no golden can match. -/
 
 /-- The tape one program's forks are answered from. -/
 def tapeOf (name : String) : List (Nat × Bool) :=
@@ -63,7 +62,7 @@ def tapeOf (name : String) : List (Nat × Bool) :=
 -- processor over and body 0 completes; the second fork's `false` leaves body 1
 -- queued, so `started` sees only `[0]`.
 #guard tapeOf "raceImmediateSuccessStopsLaunch" == [(0, true), (1, false)]
-#guard rowsOf "raceImmediateSuccessStopsLaunch" ==
+#guard ((fiberPrograms.find? (·.name == "raceImmediateSuccessStopsLaunch")).map (fun entry => entry.log.map Effect4.Target.TypeScript.Trace.row)).getD ["unknown fiber program"] ==
   [ "op\tfork\t0", "decide\t0\ttrue", "answer\tfork\t0"
   , "op\tfork\t1", "decide\t1\tfalse", "answer\tfork\t1"
   , "op\tstarted\t[]", "answer\tstarted\t[0, []]"
@@ -73,7 +72,7 @@ def tapeOf (name : String) : List (Nat × Bool) :=
 -- race-failure-allows-next-launch: the first entrant completed by *failing*,
 -- which does not stop the launch of the second.
 #guard tapeOf "raceFailureAllowsNextLaunch" == [(0, true), (1, true)]
-#guard rowsOf "raceFailureAllowsNextLaunch" ==
+#guard ((fiberPrograms.find? (·.name == "raceFailureAllowsNextLaunch")).map (fun entry => entry.log.map Effect4.Target.TypeScript.Trace.row)).getD ["unknown fiber program"] ==
   [ "op\tfork\t2", "decide\t0\ttrue", "answer\tfork\t0"
   , "op\tawaitError\t0", "answer\tawaitError\t{\"some\":1}"
   , "op\tfork\t1", "decide\t1\ttrue", "answer\tfork\t1"
@@ -83,7 +82,7 @@ def tapeOf (name : String) : List (Nat × Bool) :=
 -- race-all-failures-retain-order-and-duplicates: three entrants, two failing
 -- with the same code, and both the completion order and the duplicate survive
 -- in `cleanups` and in the three `awaitError` answers.
-#guard rowsOf "raceAllFailuresRetainOrder" ==
+#guard ((fiberPrograms.find? (·.name == "raceAllFailuresRetainOrder")).map (fun entry => entry.log.map Effect4.Target.TypeScript.Trace.row)).getD ["unknown fiber program"] ==
   [ "op\tfork\t2", "decide\t0\ttrue", "answer\tfork\t0"
   , "op\tfork\t3", "decide\t1\ttrue", "answer\tfork\t1"
   , "op\tfork\t2", "decide\t2\ttrue", "answer\tfork\t2"
@@ -97,7 +96,7 @@ def tapeOf (name : String) : List (Nat × Bool) :=
 -- it is pending; the explicit interrupt finishes it, and it finishes without
 -- ever having run, which is why `cleanups` is still empty at the end.
 #guard tapeOf "emptyRacePendingUntilInterrupted" == [(0, false)]
-#guard rowsOf "emptyRacePendingUntilInterrupted" ==
+#guard ((fiberPrograms.find? (·.name == "emptyRacePendingUntilInterrupted")).map (fun entry => entry.log.map Effect4.Target.TypeScript.Trace.row)).getD ["unknown fiber program"] ==
   [ "op\tfork\t4", "decide\t0\tfalse", "answer\tfork\t0"
   , "op\tstarted\t[]", "answer\tstarted\t[]"
   , "op\tinterrupt\t0", "answer\tinterrupt\t[]"
@@ -108,7 +107,7 @@ def tapeOf (name : String) : List (Nat × Bool) :=
 
 -- parent-publishes-after-tracked-child-cleanup: nothing is cleaned while the
 -- child is live, and by the time its exit is observable its cleanup has run.
-#guard rowsOf "parentPublishesAfterChildCleanup" ==
+#guard ((fiberPrograms.find? (·.name == "parentPublishesAfterChildCleanup")).map (fun entry => entry.log.map Effect4.Target.TypeScript.Trace.row)).getD ["unknown fiber program"] ==
   [ "op\tfork\t4", "decide\t0\ttrue", "answer\tfork\t0"
   , "op\tcleanups\t[]", "answer\tcleanups\t[]"
   , "op\tinterrupt\t0", "answer\tinterrupt\t[]"
@@ -118,7 +117,7 @@ def tapeOf (name : String) : List (Nat × Bool) :=
 
 -- daemon-survives-parent-exit: the daemon is started and uncleaned when the
 -- program returns, and the program returns anyway.
-#guard rowsOf "daemonSurvivesParentExit" ==
+#guard ((fiberPrograms.find? (·.name == "daemonSurvivesParentExit")).map (fun entry => entry.log.map Effect4.Target.TypeScript.Trace.row)).getD ["unknown fiber program"] ==
   [ "op\tforkDetach\t4", "decide\t0\ttrue", "answer\tforkDetach\t0"
   , "op\tstarted\t[]", "answer\tstarted\t[4, []]"
   , "op\tcleanups\t[]", "answer\tcleanups\t[]"
@@ -127,7 +126,7 @@ def tapeOf (name : String) : List (Nat × Bool) :=
 -- await-value-distinct-from-join-effect: the same failed child three times.
 -- The awaits answer its exit as a value and the run continues; `join` resumes
 -- it and the run ends failed. This is `E4-CONC-CE-016` at the trace face.
-#guard rowsOf "awaitValueDistinctFromJoinEffect" ==
+#guard ((fiberPrograms.find? (·.name == "awaitValueDistinctFromJoinEffect")).map (fun entry => entry.log.map Effect4.Target.TypeScript.Trace.row)).getD ["unknown fiber program"] ==
   [ "op\tfork\t2", "decide\t0\ttrue", "answer\tfork\t0"
   , "op\tawaitValue\t0", "answer\tawaitValue\t{\"none\":true}"
   , "op\tawaitError\t0", "answer\tawaitError\t{\"some\":1}"
@@ -137,7 +136,7 @@ def tapeOf (name : String) : List (Nat × Bool) :=
 -- race-reentrant-empty-set-bypasses-late-insertion: awaiting a winner that has
 -- already published runs nothing, so the late entrant is still unlaunched.
 #guard tapeOf "raceReentrantEmptySetBypasses" == [(0, true), (1, false)]
-#guard rowsOf "raceReentrantEmptySetBypasses" ==
+#guard ((fiberPrograms.find? (·.name == "raceReentrantEmptySetBypasses")).map (fun entry => entry.log.map Effect4.Target.TypeScript.Trace.row)).getD ["unknown fiber program"] ==
   [ "op\tfork\t0", "decide\t0\ttrue", "answer\tfork\t0"
   , "op\tfork\t4", "decide\t1\tfalse", "answer\tfork\t1"
   , "op\tawaitValue\t0", "answer\tawaitValue\t{\"some\":11}"
@@ -149,7 +148,7 @@ def tapeOf (name : String) : List (Nat × Bool) :=
 -- parent-interrupt-during-child-wait-changes-result: an interrupt after
 -- publication cannot change the exit (`some 11` stands), and one before
 -- publication replaces it (`none`).
-#guard rowsOf "parentInterruptDuringChildWait" ==
+#guard ((fiberPrograms.find? (·.name == "parentInterruptDuringChildWait")).map (fun entry => entry.log.map Effect4.Target.TypeScript.Trace.row)).getD ["unknown fiber program"] ==
   [ "op\tfork\t0", "decide\t0\ttrue", "answer\tfork\t0"
   , "op\tinterrupt\t0", "answer\tinterrupt\t[]"
   , "op\tawaitValue\t0", "answer\tawaitValue\t{\"some\":11}"
