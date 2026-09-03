@@ -288,11 +288,34 @@ def structuredContinue (label : String) : Skeleton :=
 def structuredBreak (label : String) : Skeleton :=
   .breakTo label
 
+/-- The right-nested projections of a tuple slot: `x[0]`, `x[1][0]`, …, with
+the last component the remaining tail. This is the converse of the nesting
+`Effects.Trace.ToVal` builds from a parameter product, so the argument at
+position `i` on the host is the component at position `i` on the wire. -/
+private def tupleProjections (path : String) : Nat → List Expr
+  | 0 => []
+  | 1 => [.ident path]
+  | n + 1 => .ident (path ++ "[0]") :: tupleProjections (path ++ "[1]") n
+
+/-- The arguments of a call whose request slot holds a parameter tuple: the
+slot destructured at the call, `jobs.run(b4p0[0], b4p0[1])`. The flow alphabet
+has no pair constructor -- `plan` hands a service exactly one `Val` -- so an
+operation of two or more parameters is performed with one request slot holding
+the right-nested product, and the call takes it apart again.
+lowering: rule.perform-tuple -/
+def tupleArgs (request : Expr) (arity : Nat) : List Expr :=
+  match request with
+  | .ident name => tupleProjections name arity
+  | _ => [request]
+
 /-- The call of a family operation on a request expression: an Effect value
-when the operation is nullary, a method call otherwise. -/
+when the operation is nullary, a method call on the request otherwise, and a
+method call on the destructured request when the operation takes two or more
+parameters. -/
 def callOf (rows : ServiceRow) (spec : OpSpec) (request : Expr) : Expr :=
   if spec.requestTy == "void" then nullaryValue rows.receiver spec.name
-  else performCall rows.receiver spec.name [request]
+  else if spec.arity == 1 then performCall rows.receiver spec.name [request]
+  else performCall rows.receiver spec.name (tupleArgs request spec.arity)
 
 end Lowering
 

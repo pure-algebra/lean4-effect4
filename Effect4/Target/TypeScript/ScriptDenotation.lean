@@ -773,7 +773,7 @@ theorem literal_segment {id : AlphabetId} {raw : RawFlow String} {cycles : Cycle
       Segment raw cycles b.next (b.literal value ty).1.next b.scope.length
         (b.literal value ty).1.scope.length walk := by
   obtain ⟨walk, mintEq, seg⟩ :=
-    mint_segment (id := id) (spec := ⟨"lit", .lit value, b.inputTy, ty⟩)
+    mint_segment (id := id) (spec := ⟨"lit", .lit value, b.inputTy, ty, []⟩)
       blocksEq ordered counted (by simpa using nonempty) tablePre blocksPre
   have scopeLen : (b.literal value ty).1.scope.length = b.scope.length + 1 := by
     simp [Build.literal, Build.performTo, Build.addOp]
@@ -851,24 +851,24 @@ theorem materialize_segment {id : AlphabetId} {atoms : AtomTable}
           obtain ⟨⟨b1, v1, ty1⟩, first, embedded⟩ := Option.bind_eq_some_iff.mp embedded
           obtain ⟨⟨atomName, requestTy, answerTy⟩, found, embedded⟩ :=
             Option.bind_eq_some_iff.mp embedded
-          have bEq : b' = (b1.addOp ⟨atom, .atom, requestTy, answerTy⟩).1.performTo
-              (b1.addOp ⟨atom, .atom, requestTy, answerTy⟩).2 v1 "" answerTy :=
+          have bEq : b' = (b1.addOp ⟨atom, .atom, requestTy, answerTy, []⟩).1.performTo
+              (b1.addOp ⟨atom, .atom, requestTy, answerTy, []⟩).2 v1 "" answerTy :=
             (congrArg Prod.fst (Option.some.inj embedded)).symm
-          have vEq : v = ((b1.addOp ⟨atom, .atom, requestTy, answerTy⟩).1.performTo
-              (b1.addOp ⟨atom, .atom, requestTy, answerTy⟩).2 v1 "" answerTy).last :=
+          have vEq : v = ((b1.addOp ⟨atom, .atom, requestTy, answerTy, []⟩).1.performTo
+              (b1.addOp ⟨atom, .atom, requestTy, answerTy, []⟩).2 v1 "" answerTy).last :=
             (congrArg (fun p => p.2.1) (Option.some.inj embedded)).symm
           subst b'
           subst v
           have grows1 := materialize_appends atoms fuel arg b b1 v1 ty1 first
-          have grows2 := (addOp_appends b1 ⟨atom, .atom, requestTy, answerTy⟩).trans
-            (performTo_appends _ (b1.addOp ⟨atom, .atom, requestTy, answerTy⟩).2 v1 "" answerTy)
+          have grows2 := (addOp_appends b1 ⟨atom, .atom, requestTy, answerTy, []⟩).trans
+            (performTo_appends _ (b1.addOp ⟨atom, .atom, requestTy, answerTy, []⟩).2 v1 "" answerTy)
           have counted1 : b1.blocks.length = b1.next := grows1.counted counted
           obtain ⟨walk1, walkEq1, vBound1, seg1⟩ := ih arg b b1 v1 ty1 first
             (grows2.blocks.trans blocksPre) (grows2.table.trans tablePre) counted nonempty
           obtain ⟨walk2, mintEq, seg2⟩ :=
             mint_segment (id := id) blocksEq ordered counted1 vBound1 tablePre blocksPre
-          have lastEq : ((b1.addOp ⟨atom, .atom, requestTy, answerTy⟩).1.performTo
-              (b1.addOp ⟨atom, .atom, requestTy, answerTy⟩).2 v1 "" answerTy).last
+          have lastEq : ((b1.addOp ⟨atom, .atom, requestTy, answerTy, []⟩).1.performTo
+              (b1.addOp ⟨atom, .atom, requestTy, answerTy, []⟩).2 v1 "" answerTy).last
               = (⟨b1.scope.length⟩ : Var) := by
             simp [Build.last, Build.performTo, Build.addOp]
           refine ⟨fun env => (walk1 env).bind walk2, ?_, ?_, ?_⟩
@@ -880,8 +880,8 @@ theorem materialize_segment {id : AlphabetId} {atoms : AtomTable}
             rfl
           · show (Build.last _).index < _
             simp [Build.last, Build.performTo, Build.addOp]
-          · have scopeLen : ((b1.addOp ⟨atom, .atom, requestTy, answerTy⟩).1.performTo
-                (b1.addOp ⟨atom, .atom, requestTy, answerTy⟩).2 v1 "" answerTy).scope.length
+          · have scopeLen : ((b1.addOp ⟨atom, .atom, requestTy, answerTy, []⟩).1.performTo
+                (b1.addOp ⟨atom, .atom, requestTy, answerTy, []⟩).2 v1 "" answerTy).scope.length
                 = b1.scope.length + 1 := by
               simp [Build.performTo, Build.addOp]
             rw [scopeLen]

@@ -110,7 +110,14 @@ syntax "| " ident effectParam " : " term " ⟪ " str " ⟫ " " := " term : atomO
 /-- A two-parameter atom: the flow face sees its request as the pair. -/
 syntax "| " ident effectParam effectParam " : " term " ⟪ " str " ⟫ " " := " term : atomOp
 
+/-- The opaque host types an atom's spelling names, and the module they come
+from: a `Handle "T"` target is outside the `effect` namespaces, so `atoms.ts`
+cannot work out where to import it from. -/
+declare_syntax_cat atomImport
+syntax "handles " "[" ident,* "]" " from " str : atomImport
+
 syntax "effect_atoms " ident " where " atomOp+ : command
+syntax "effect_atoms " ident " importing " atomImport+ " where " atomOp+ : command
 
 /-! ## Opaque host handles -/
 
@@ -137,6 +144,12 @@ deriving DecidableEq, Repr, Inhabited
 
 instance {spelling : String} : Effects.Trace.ToVal (Handle spelling) :=
   ⟨fun handle => .nat handle.index⟩
+
+/-- The converse: a handle is read back from its index, so a pure atom over a
+tuple that carries one (`snd : Handle "JobQueue" × Nat → Nat`) has a wire
+dispatcher like any other. -/
+instance {spelling : String} : Effect4.Target.EffectV4.OfVal (Handle spelling) :=
+  ⟨fun value => match value with | .nat index => Option.some ⟨index⟩ | _ => Option.none⟩
 
 /-! ## The answer-type profile, syntax directed
 
@@ -284,7 +297,11 @@ elab_rules : command
                 let tsSpelling := strLit (← tsOfType errorTy)
                 `(some ($leanSpelling, $tsSpelling))
             | none => `(none)
-          rowTerms := rowTerms.push (← `({ name := $(strLit opName.getId.toString), index := $(natLit index), params := $(← listLit paramRows), tsParams := $(← listLit tsParamRows), answer := $(strLit answer.raw.reprint.get!.trimAscii.toString), tsAnswer := $(strLit (← tsOfType answer)), cues := $(← listLit cueTerms), error := $errorRow : Effect4.Target.EffectV4.OpRow }))
+          -- The answer's spelling is parsed once: its rendering is the row's
+          -- TypeScript answer and its arity is what the host tracer needs to
+          -- read a tuple answer back as a pair rather than a list.
+          let answerSpelling ← spellingOfType answer
+          rowTerms := rowTerms.push (← `({ name := $(strLit opName.getId.toString), index := $(natLit index), params := $(← listLit paramRows), tsParams := $(← listLit tsParamRows), answer := $(strLit answer.raw.reprint.get!.trimAscii.toString), tsAnswer := $(strLit answerSpelling.render), cues := $(← listLit cueTerms), error := $errorRow, answerArity := $(natLit answerSpelling.arity) : Effect4.Target.EffectV4.OpRow }))
           index := index + 1
       | _ => throwUnsupportedSyntax
     elabCommand (← `(inductive $nameTy where $ctors* deriving DecidableEq, Repr))
@@ -390,8 +407,15 @@ elab_rules : command
 
 /-! ## `effect_atoms` -/
 
-elab_rules : command
-  | `(effect_atoms $name:ident where $atoms:atomOp*) => do
+/-- One `types [A, B] from "./m.ts"` clause as a `TypeScript.Import` term. -/
+private def atomImportTerm : TSyntax `atomImport → CommandElabM Term
+  | `(atomImport| handles [$names:ident,*] from $path:str) => do
+      let items : Array Term := names.getElems.map fun n => strLit n.getId.toString
+      `(TypeScript.Import.types [$items,*] $path)
+  | _ => throwUnsupportedSyntax
+
+private def elabEffectAtoms (name : Ident) (imports : Array (TSyntax `atomImport))
+    (atoms : Array (TSyntax `atomOp)) : CommandElabM Unit := do
     let tableName := mkIdent (name.getId ++ `rows)
     let entryName := mkIdent (name.getId ++ `table)
     let evalName := mkIdent (name.getId ++ `eval)
@@ -450,6 +474,13 @@ elab_rules : command
       $tableName |>.map Effect4.Target.EffectV4.AtomRow.entry))
     elabCommand (← `(def $evalName : String → Effects.Trace.Val → Effects.Trace.Val :=
       fun name => match name with $evalAlts:matchAlt*))
-    elabCommand (← `(def $sourceName : String := Effect4.Target.EffectV4.atomsModule $tableName))
+    let importTerms ← imports.mapM atomImportTerm
+    elabCommand (← `(def $sourceName : String :=
+      Effect4.Target.EffectV4.atomsModule $tableName [$importTerms,*]))
+
+elab_rules : command
+  | `(effect_atoms $name:ident where $atoms:atomOp*) => elabEffectAtoms name #[] atoms
+  | `(effect_atoms $name:ident importing $imports:atomImport* where $atoms:atomOp*) =>
+      elabEffectAtoms name imports atoms
 
 end Effect4.Meta
