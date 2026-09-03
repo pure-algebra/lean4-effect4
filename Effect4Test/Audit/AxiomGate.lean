@@ -69,7 +69,9 @@ private def targetImplementationModules : List Name :=
   , `Effect4.Target.TypeScript.Trace
   -- The dispatch-form renderer (`flowModules?` traverses strings through the
   -- syntax renderer); its lowering functions carry no semantic law.
-  , `Effect4.Target.TypeScript.FlowLower ]
+  , `Effect4.Target.TypeScript.FlowLower
+  -- The region lowering: the same renderer, nested scopes; no semantic law.
+  , `Effect4.Target.TypeScript.RegionLower ]
 
 private def choiceImplementationModules : List Name :=
   auditImplementationModules ++ targetImplementationModules

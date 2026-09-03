@@ -7,8 +7,14 @@ input	Effect4/Target/TypeScript/Trace.lean	sha256=10876d7fcc16f96e00a866aa5a976c
 pin	effects	c28833b3c14431ba2886a0fb66bcc688c86c2589
 format	effect4-trace-v1
 face	lean-flow
-program	chooser.right
-tape	7:0
-rules	dispatch-loop,block-case,choose-if,param-move,flow-ret
-decide	7	false
+program	regionBothSucceed.empty
+tape	
+rules	service-acquire,dispatch-loop,block-case,param-move,flow-perform,perform-call,flow-ret,region-enter,region-acquire,region-leave
+enter	1
+op	acquire	5
+answer	acquire	5
+leave	1	{"success":5}
+finalizer	1	{"success":5}
+op	release	5
+answer	release	[]
 done	{"success":5}

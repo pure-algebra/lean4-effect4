@@ -1,6 +1,7 @@
-import { Effect, Ref } from "effect"
-import { Cell, CellRows, Decisions, incr, twice, chooser, swap } from "./flow-fixture.ts"
-import { runTraced, traceService, decisionsFromTape, windowRows, type Event } from "./tracer.ts"
+import { Effect, Ref, type Exit } from "effect"
+import { Cell, CellRows, Decisions, Regions, RCell, RCellRows, incr, twice, chooser, swap } from "./flow-fixture.ts"
+import * as fixture from "./flow-fixture.ts"
+import { runTraced, traceService, decisionsFromTape, outcomeWire, windowRows, type Event } from "./tracer.ts"
 
 declare const process: { readonly env: Record<string, string | undefined> }
 
@@ -20,6 +21,40 @@ const tape: Array<readonly [number, boolean]> = (process.env.EFFECT4_TAPE ?? "")
 const sink: Event[] = []
 const decisions = decisionsFromTape(tape, sink)
 
+/** The regions service: every region event is pushed as the run observes it,
+ * with the exit `onExit` or the release saw, rendered as the outcome wire. */
+const regions = {
+  enter: (region: number) => Effect.sync(() => { sink.push({ kind: "enter", region }) }),
+  leave: (region: number, exit: Exit.Exit<unknown, unknown>) =>
+    Effect.sync(() => { sink.push({ kind: "leave", region, outcome: outcomeWire(exit as any) }) }),
+  finalizer: (region: number, exit: Exit.Exit<unknown, unknown>) =>
+    Effect.sync(() => { sink.push({ kind: "finalizer", region, outcome: outcomeWire(exit as any) }) })
+}
+
+/** `RCell`: resources are their numbers, `boom` and `releaseBoom` fail. */
+const rcellProgram = (
+  body: (n: number) => Effect.Effect<number, string, RCell | Regions | Decisions>,
+  argument: number,
+  initial: number
+) =>
+  Effect.gen(function* () {
+    const ref = yield* Ref.make(initial)
+    const service = traceService(RCellRows, {
+      get: Ref.get(ref),
+      put: (n: number) => Ref.set(ref, n),
+      acquire: (n: number) => Effect.succeed(n),
+      release: (_n: number) => Effect.void,
+      boom: (_n: number) => Effect.fail("boom") as Effect.Effect<number, string>,
+      releaseBoom: (_n: number) => Effect.fail("boom") as Effect.Effect<void, string>
+    }, sink)
+    sink.push({ kind: "phase", phase: "run" })
+    return yield* body(argument).pipe(
+      Effect.provideService(RCell, service),
+      Effect.provideService(Regions, regions),
+      Effect.provideService(Decisions, decisions)
+    )
+  })
+
 const cellProgram = (
   body: (n: number) => Effect.Effect<number, never, Cell | Decisions>,
   argument: number,
@@ -35,11 +70,15 @@ const cellProgram = (
     )
   })
 
-const programs: Record<string, Effect.Effect<number, never, never>> = {
+const regionPrograms = fixture as unknown as Record<string, (n: number) => Effect.Effect<number, string, RCell | Regions | Decisions>>
+const programs: Record<string, Effect.Effect<number, string, never>> = {
   incr: cellProgram(incr, 0, 41),
   twice: cellProgram(twice, 7, 41),
   chooser: cellProgram(chooser, 5, 41),
-  swap: cellProgram(swap, 5, 41)
+  swap: cellProgram(swap, 5, 41),
+  regionNested: rcellProgram(regionPrograms.regionNested!, 5, 41),
+  regionTwoFail: rcellProgram(regionPrograms.regionTwoFail!, 5, 41),
+  regionBothSucceed: rcellProgram(regionPrograms.regionBothSucceed!, 5, 41)
 }
 const program = programs[name]
 if (program === undefined) throw new Error(`unknown program ${name}`)

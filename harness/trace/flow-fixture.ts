@@ -8,7 +8,7 @@
  *
  * Do not edit.
  */
-import { Context, Effect } from "effect"
+import { Context, Effect, Exit } from "effect"
 import { succ } from "./atoms.ts"
 
 /** Service `Decisions`: one method per operation of the Lean family. */
@@ -18,6 +18,16 @@ export class Decisions extends Context.Service<Decisions, {
 
 /** Operation rows of `Decisions`, for the trace harness. */
 export const DecisionsRows = { "choose": { params: 1, answer: "boolean" } }
+
+/** Service `Regions`: one method per operation of the Lean family. */
+export class Regions extends Context.Service<Regions, {
+  readonly enter: (region: number) => Effect.Effect<void>
+  readonly leave: (region: number, exit: Exit.Exit<unknown, unknown>) => Effect.Effect<void>
+  readonly finalizer: (region: number, exit: Exit.Exit<unknown, unknown>) => Effect.Effect<void>
+}>()("Regions") {}
+
+/** Operation rows of `Regions`, for the trace harness. */
+export const RegionsRows = { "enter": { params: 1, answer: "void" }, "leave": { params: 2, answer: "void" }, "finalizer": { params: 2, answer: "void" } }
 
 /** Service `Cell`: one method per operation of the Lean family. */
 export class Cell extends Context.Service<Cell, {
@@ -280,6 +290,223 @@ export const swap = (n: number) =>
         }
         case 2: {
           return b2p0
+        }
+      }
+    }
+  })
+
+/** Service `RCell`: one method per operation of the Lean family. */
+export class RCell extends Context.Service<RCell, {
+  readonly get: Effect.Effect<number>
+  readonly put: (n: number) => Effect.Effect<void>
+  readonly acquire: (n: number) => Effect.Effect<number>
+  readonly release: (n: number) => Effect.Effect<void>
+  readonly boom: (n: number) => Effect.Effect<number, string>
+  readonly releaseBoom: (n: number) => Effect.Effect<void, string>
+}>()("RCell") {}
+
+/** Operation rows of `RCell`, for the trace harness. */
+export const RCellRows = { "get": { params: 0, answer: "number" }, "put": { params: 1, answer: "void" }, "acquire": { params: 1, answer: "number" }, "release": { params: 1, answer: "void" }, "boom": { params: 1, answer: "number" }, "releaseBoom": { params: 1, answer: "void" } }
+
+/** Lowered from the region flow `regionNested` over `RCell` (dispatch form, nested scopes). */
+export const regionNested = (n: number) =>
+  Effect.gen(function* () {
+    const rCell = yield* RCell
+    const regions = yield* Regions
+    let b0p0!: number
+    let b1p0!: number
+    let b2p0!: number
+    let b2p1!: number
+    let b3p0!: number
+    let b3p1!: number
+    let b4p0!: number
+    let b4p1!: number
+    let b4p2!: number
+    let b5p0!: number
+    let b5p1!: number
+    let b5p2!: number
+    let b5p3!: number
+    let b6p0!: number
+    let b7p0!: number
+    b0p0 = n
+    let block = 0
+    while (true) {
+      switch (block) {
+        case 0: {
+          b1p0 = b0p0
+          yield* regions.enter(1)
+          const r1 = yield* Effect.scoped(Effect.onExit(Effect.gen(function* () {
+            let block1 = 1
+            while (true) {
+              switch (block1) {
+                case 1: {
+                  const a1 = yield* Effect.acquireRelease(rCell.acquire(b1p0), (a, exit) => regions.finalizer(1, exit).pipe(Effect.andThen(rCell.release(a))))
+                  b2p0 = b1p0
+                  b2p1 = a1
+                  block1 = 2
+                  continue
+                }
+                case 2: {
+                  b3p0 = b2p0
+                  b3p1 = b2p1
+                  yield* regions.enter(2)
+                  const r2 = yield* Effect.scoped(Effect.onExit(Effect.gen(function* () {
+                    let block2 = 3
+                    while (true) {
+                      switch (block2) {
+                        case 3: {
+                          const a3 = yield* Effect.acquireRelease(rCell.acquire(b3p0), (a, exit) => regions.finalizer(2, exit).pipe(Effect.andThen(rCell.release(a))))
+                          b4p0 = b3p0
+                          b4p1 = b3p1
+                          b4p2 = a3
+                          block2 = 4
+                          continue
+                        }
+                        case 4: {
+                          const a4 = yield* rCell.boom(b4p0)
+                          b5p0 = b4p0
+                          b5p1 = b4p1
+                          b5p2 = b4p2
+                          b5p3 = a4
+                          block2 = 5
+                          continue
+                        }
+                        case 5: {
+                          return b5p3
+                        }
+                      }
+                    }
+                  }), (exit) => regions.leave(2, exit)))
+                  b6p0 = r2
+                  block1 = 6
+                  continue
+                }
+                case 6: {
+                  return b6p0
+                }
+              }
+            }
+          }), (exit) => regions.leave(1, exit)))
+          b7p0 = r1
+          block = 7
+          continue
+        }
+        case 7: {
+          return b7p0
+        }
+      }
+    }
+  })
+
+/** Lowered from the region flow `regionTwoFail` over `RCell` (dispatch form, nested scopes). */
+export const regionTwoFail = (n: number) =>
+  Effect.gen(function* () {
+    const rCell = yield* RCell
+    const regions = yield* Regions
+    let b0p0!: number
+    let b1p0!: number
+    let b2p0!: number
+    let b2p1!: number
+    let b3p0!: number
+    let b3p1!: number
+    let b3p2!: number
+    let b4p0!: number
+    let b4p1!: number
+    let b4p2!: number
+    let b4p3!: number
+    let b5p0!: number
+    b0p0 = n
+    let block = 0
+    while (true) {
+      switch (block) {
+        case 0: {
+          b1p0 = b0p0
+          yield* regions.enter(1)
+          const r1 = yield* Effect.scoped(Effect.onExit(Effect.gen(function* () {
+            let block1 = 1
+            while (true) {
+              switch (block1) {
+                case 1: {
+                  const a1 = yield* Effect.acquireRelease(rCell.acquire(b1p0), (a, exit) => regions.finalizer(1, exit).pipe(Effect.andThen(rCell.release(a))))
+                  b2p0 = b1p0
+                  b2p1 = a1
+                  block1 = 2
+                  continue
+                }
+                case 2: {
+                  const a2 = yield* Effect.acquireRelease(rCell.acquire(b2p1), (a, exit) => regions.finalizer(1, exit).pipe(Effect.andThen(rCell.release(a))))
+                  b3p0 = b2p0
+                  b3p1 = b2p1
+                  b3p2 = a2
+                  block1 = 3
+                  continue
+                }
+                case 3: {
+                  const a3 = yield* rCell.boom(b3p0)
+                  b4p0 = b3p0
+                  b4p1 = b3p1
+                  b4p2 = b3p2
+                  b4p3 = a3
+                  block1 = 4
+                  continue
+                }
+                case 4: {
+                  return b4p3
+                }
+              }
+            }
+          }), (exit) => regions.leave(1, exit)))
+          b5p0 = r1
+          block = 5
+          continue
+        }
+        case 5: {
+          return b5p0
+        }
+      }
+    }
+  })
+
+/** Lowered from the region flow `regionBothSucceed` over `RCell` (dispatch form, nested scopes). */
+export const regionBothSucceed = (n: number) =>
+  Effect.gen(function* () {
+    const rCell = yield* RCell
+    const regions = yield* Regions
+    let b0p0!: number
+    let b1p0!: number
+    let b2p0!: number
+    let b2p1!: number
+    let b3p0!: number
+    b0p0 = n
+    let block = 0
+    while (true) {
+      switch (block) {
+        case 0: {
+          b1p0 = b0p0
+          yield* regions.enter(1)
+          const r1 = yield* Effect.scoped(Effect.onExit(Effect.gen(function* () {
+            let block1 = 1
+            while (true) {
+              switch (block1) {
+                case 1: {
+                  const a1 = yield* Effect.acquireRelease(rCell.acquire(b1p0), (a, exit) => regions.finalizer(1, exit).pipe(Effect.andThen(rCell.release(a))))
+                  b2p0 = b1p0
+                  b2p1 = a1
+                  block1 = 2
+                  continue
+                }
+                case 2: {
+                  return b2p1
+                }
+              }
+            }
+          }), (exit) => regions.leave(1, exit)))
+          b3p0 = r1
+          block = 3
+          continue
+        }
+        case 3: {
+          return b3p0
         }
       }
     }

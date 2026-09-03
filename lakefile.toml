@@ -16,11 +16,11 @@ globs = ["Effect4Test.*"]
 [[require]]
 name = "effects"
 git = "https://github.com/pure-algebra/lean4-effects"
-rev = "e86f1412361e30fe5d9ba930b478617611933fb8"
+rev = "c28833b3c14431ba2886a0fb66bcc688c86c2589"
 
 # TypeScript as a target: syntax, renderer, identifier profile, host pins.
-# Exact commit of tag v0.2.0 of pure-algebra/lean4-typescript.
+# Exact commit of tag v0.3.0 of pure-algebra/lean4-typescript.
 [[require]]
 name = "typescript"
 git = "https://github.com/pure-algebra/lean4-typescript"
-rev = "fcbc05a40e52f9bbe8a8e3ee0f4a746ebd4e9554"
+rev = "1f3959865927ad40407286ad057a6b7dc97cb553"

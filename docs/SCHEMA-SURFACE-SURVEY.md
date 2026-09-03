@@ -534,47 +534,88 @@ Two facts about the mapping export-name → identity, both [probe]:
 ### 4.1 What "covered" means here
 
 The Effect4 tag layer is 22 + 2 + 2 + 4 + 2 + 3 = 35 constructors across six
-finite enums, with census, spelling, and injectivity theorems, and no payload.
-`Effect4/Schema/Representation.lean` states its own scope: "no denotation,
-admission, codec, wire, or profile claim is made."
+finite enums, with census, spelling, and injectivity theorems. It no longer
+stands alone: the payload carrier is declared beside it, and
+`generated/schema-structural-assurance.tsv` joins both. The carrier is
+`Effect4/Schema/Payload.lean` (scalars, `RepresentationAnnotation`,
+`CheckRepresentationAnnotationOf`, and the three parameterized child records),
+the 22 field-carrying `Representation` constructors and the two `Check`
+constructors at `Effect4/Schema/Representation.lean:701` and `:771`, the
+containers at `Effect4/Schema/Document.lean:115-145`, the recursive
+field-admission judgment in `Effect4/Schema/Check.lean`, the typed annotation
+plane in `Effect4/Schema/Annotations.lean`, the raw constructors in
+`Effect4/Schema/Authoring.lean`, and the checked document lowering in
+`Effect4/Target/TypeScript/Schema.lean`.
 
-So the honest statement has three levels, and they are very different numbers:
+Denotation, codec, getter, transformation, registry, and foreign meaning are
+still breadth stubs that export no declaration at all: `Value.lean`,
+`Codec.lean`, `Getter.lean`, `Transformation.lean`, `Registry.lean`, and
+`Foreign.lean` under `Effect4/Schema/` each contain zero `def`, `theorem`,
+`structure`, or `inductive`.
+
+So the honest statement still has three levels. Two of them have converged,
+and the gap has moved from the payload carrier to the registry lane:
 
 | Question | Answer | Basis |
 | --- | --- | --- |
 | What fraction of the 22 persisted tags does the frozen alphabet **name**? | 22 / 22 | `census_length`, `census_nodup`, `mem_census` in `Effect4/Schema/Representation.lean`, plus `scripts/check-schema-census.sh` against the pinned bytes |
-| What fraction of the 348 authoring exports can be **spelled today**? | **0 / 348** | no payload carrier exists; a `_tag` with no fields cannot hold a `Struct`'s properties, a `Union`'s members, or a `Literal`'s value |
-| What fraction has an authoring constructor whose **node kind** the alphabet already names? | 20 / 348 (A), 90 / 348 counting (A)+(B) | §1.5, §2 |
+| What fraction of the 348 authoring exports can be **spelled today**? | **90 / 348** | the payload carrier now holds a `Struct`'s properties, a `Union`'s members, and a `Literal`'s value; by §1.3 exactly (A)+(B) lower onto node kinds it declares |
+| What fraction has a canonical authoring constructor of its own, before any sugar? | 20 / 348 (A) | §1.5 |
+| What fraction reaches persisted content at all, once the registry lane is built? | 178 / 348 (A)+(B)+(C) | §1.4 |
 
 ### 4.2 The three-sentence answer
 
-The frozen tag layer names every one of the 22 persisted node kinds and the
-five auxiliary payload-kind alphabets, but it declares no field, so **zero of
-the 348 authoring exports is expressible today** — 20 have a constructor whose
-node kind is named (A), and a further 70 are sugar that lowers onto those same
-node kinds (B). Opening the payload carrier — per-tag fields, `Check`,
-annotations, `Document`/`References` — would make those **90 of 348 (25.9%)**
-expressible, and only those. The remaining **88 (25.3%)** additionally require
-the declaration/filter reviver registry (`SC-REG-*`, `SC-HOST-*`), **17
-(4.9%)** cannot be persisted without a caller-supplied registry identity and
-five of them cannot be persisted at all, and **153 (44.0%)** never reach a
-persisted document and belong to the codec/getter calculus and the host
-evidence lanes rather than to the representation.
+The tag layer names every one of the 22 persisted node kinds and the five
+auxiliary payload-kind alphabets, and the payload carrier now declares the
+per-tag fields, `Check`, annotations, and the `Document`/`MultiDocument`
+envelope those kinds need, so **90 of the 348 authoring exports (25.9%) are
+expressible today** — 20 whose canonical constructor is a named node kind (A),
+and 70 that are sugar lowering onto those same node kinds (B). The remaining
+**88 (25.3%)** additionally require the declaration/filter reviver registry
+(`SC-REG-*`, `SC-HOST-*`), which `Effect4/Schema/Registry.lean` still does not
+declare; **17 (4.9%)** cannot be persisted without a caller-supplied registry
+identity and five of them cannot be persisted at all; and **153 (44.0%)**
+never reach a persisted document and belong to the codec/getter calculus and
+the host evidence lanes rather than to the representation. Expressible means
+the document can be constructed in Lean, judged by `FieldAdmissible`, and
+lowered to TypeScript; it does not mean decoded, denoted, encoded to canonical
+bytes, or revived on a host.
 
-### 4.3 The universal payload gap, charged once
+### 4.3 The universal payload structures, charged once
 
 These are needed before *any* export is expressible, and are deliberately not
-charged per combinator in §1.4:
+charged per combinator in §1.4. Every one of them is now carried:
 
-| Structure | Pin location | Frozen Effect4 name? |
+| Structure | Pin location | Effect4 carrier |
 | --- | --- | --- |
-| per-tag persisted fields (20 codec structs) | `SchemaRepresentation.ts:917–1105` | none — `scripts/check-schema-fields.sh` guards the source side only |
-| `checks: Array(Check)` on every non-`Reference` node | `:952` | `CheckTag` names the two node kinds; no payload |
-| `annotations` (pruned JSON record) | `:939` | none |
-| `RepresentationAnnotation` `{ id, payload }` | `:917` | none |
-| `CheckRepresentationAnnotation` (+ `schemas?`) | `:922` | none |
-| `References = Record(String, Representation)` | `:1096` | none |
-| `Document`, `MultiDocument` | `:1098`, `:1105` | none |
+| per-tag persisted fields (20 codec structs) | `SchemaRepresentation.ts:917–1105` | the 22 field-carrying constructors, `Effect4/Schema/Representation.lean:701`; `scripts/check-schema-fields.sh` still guards the source side only |
+| `checks: Array(Check)` on every non-`Reference` node | `:952` | `checks : List Check` on all 21 non-`reference` constructors; `Check` at `Effect4/Schema/Representation.lean:771` |
+| `annotations` (pruned JSON record) | `:939` | `Annotations := Option (List AnnotationEntry)`, `Effect4/Schema/Payload.lean:39`, with the typed plane in `Effect4/Schema/Annotations.lean` |
+| `RepresentationAnnotation` `{ id, payload }` | `:917` | `Effect4/Schema/Payload.lean:69` |
+| `CheckRepresentationAnnotation` (+ `schemas?`) | `:922` | `CheckRepresentationAnnotationOf`, `Effect4/Schema/Payload.lean:75` |
+| `References = Record(String, Representation)` | `:1096` | `ReferenceEntry` lists, `Effect4/Schema/Document.lean:115`; ordered, so duplicate keys stay representable |
+| `Document`, `MultiDocument` | `:1098`, `:1105` | `Effect4/Schema/Document.lean:127`, `:141` |
+
+Which bucket each of the survey's structures now sits in:
+
+- **carried** — every row of the table above, joined under `SCHEMA-PG-PAYLOAD`
+  and closed at `generated/schema-structural-assurance.tsv:2396`.
+- **admitted** — the recursive persisted/decode-side judgment
+  `FieldAdmissible` over annotations, representations, checks, `Document`, and
+  `MultiDocument` (`Effect4/Schema/Check.lean`), closed as
+  `SCHEMA-PG-FIELD-ADMISSION` at `:2397`. Non-emptiness of a `ReferenceKey`,
+  of a `FilterGroup`'s checks, and of a `MultiDocument`'s roots is admission,
+  not a constructor guard.
+- **generated** — raw authoring constructors (`Effect4/Schema/Authoring.lean`)
+  and the checked TypeScript document lowering
+  (`Effect4/Target/TypeScript/Schema.lean`), exercised by
+  `./scripts/check-schema-typescript-generation.sh` over all 22 tags and both
+  check constructors.
+- **still absent** — denotation, codec, getter, transformation, foreign
+  meaning, and the declaration/filter reviver registry that bucket (C) needs;
+  all six modules are stubs. Document reference semantics and wire
+  canonicalization remain the projection's two open rows, `SCHEMA-PG-DOCUMENT`
+  and `SCHEMA-PG-WIRE` (`:2400-2401`).
 
 ## 5. Contradictions and gaps against the repo documents
 
@@ -746,12 +787,20 @@ cd /Users/pooks/Dev/lean4-effect4
 for w in Optic Bottom TemplateLiteralParser StandardSchema JsonSchema Formatter; do
   printf '%-24s %s %s\n' "$w" "$(grep -ic "$w" docs/SCHEMA-CUTOVER.md)" "$(grep -ic "$w" PORT-MANIFEST.md)"
 done
-# every count is 0 0
+# no pair is 0 0 any more; every non-zero hit is classified below
 ```
 
-`Iso`, `Arbitrary`, and `Equivalence` return non-zero counts, but every hit is
-a false positive (`isOptional`, "arbitrary ordered `rest`", "lossless
-equivalence"); no hit refers to the Effect face of that name. The unaccounted
+The counts were `0 0` for all six when this survey was written. They are not
+any more, and no new hit is a disposition row, so the finding stands. The hits
+are of three kinds. `PORT-MANIFEST.md` now quotes this finding back under
+"Dispositions" and so names all six words while stating that the rows are
+undisposed. The same file, under "Schema extraction ruling", records that the
+underlying `Bottom` carries 15 type parameters against the four-index `Codec`,
+which bounds what "view" may mean but disposes no export. Every `Optic` hit in
+either document is Effect4's own `Effect4.Data.Optic` carrier or its
+`DATA-PG-OPTIC` graph, not Effect's `Optic` face. `Iso`, `Arbitrary`, and `Equivalence` likewise
+return non-zero counts whose every hit is a false positive (`isOptional`,
+"arbitrary ordered `rest`", "lossless equivalence"). The unaccounted
 exports:
 
 | Face | Exports | Count |

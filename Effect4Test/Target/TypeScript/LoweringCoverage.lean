@@ -86,6 +86,16 @@ def rows : List Row :=
   , { rule := .chooseIf, state := .covered,
       goldens := ["flow/chooser.left", "flow/chooser.right", "flow/swap.once", "flow/swap.twice"],
       host := true, property := true, typeReceipt := true, proof := none }
+  -- regions (RegionLower.lean); the goldens are the region programs of the harness
+  , { rule := .regionEnter, state := .checked,
+      goldens := ["flow/regionNested.empty", "flow/regionTwoFail.empty", "flow/regionBothSucceed.empty"],
+      host := true, property := false, typeReceipt := true, proof := none }
+  , { rule := .regionAcquire, state := .checked,
+      goldens := ["flow/regionNested.empty", "flow/regionTwoFail.empty", "flow/regionBothSucceed.empty"],
+      host := true, property := false, typeReceipt := true, proof := none }
+  , { rule := .regionLeave, state := .checked,
+      goldens := ["flow/regionNested.empty", "flow/regionTwoFail.empty", "flow/regionBothSucceed.empty"],
+      host := true, property := false, typeReceipt := true, proof := none }
   , { rule := .flowRet, state := .covered,
       goldens := ["flow/incr.empty", "flow/twice.empty", "flow/chooser.left", "flow/swap.once"],
       host := true, property := true, typeReceipt := true, proof := none } ]

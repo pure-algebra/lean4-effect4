@@ -72,10 +72,14 @@ end Flow
 
 namespace Lowering
 
-/-- Every admitted graph lowers to one dispatch loop over the block index.
-lowering: rule.dispatch-loop -/
+/-- Every admitted graph lowers to one dispatch loop over the block index
+held in `blockVar`. lowering: rule.dispatch-loop -/
+def dispatchLoopOn (blockVar : String) (cases : List (Nat × List Stmt)) : Stmt :=
+  .whileTrue none [.switch (.ident blockVar) cases]
+
+/-- The top-level dispatch loop, over `block`. -/
 def dispatchLoop (cases : List (Nat × List Stmt)) : Stmt :=
-  .whileTrue none [.switch (.ident "block") cases]
+  dispatchLoopOn "block" cases
 
 /-- One block is one `case` whose body ends in `continue` or `return`.
 lowering: rule.block-case -/

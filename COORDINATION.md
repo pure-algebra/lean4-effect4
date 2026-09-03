@@ -464,3 +464,47 @@ list, the missing pieces for proof-carrying npm publication, repository
 cleanup items, and upstream findings. Research evidence only: no library
 code, contract, generated assurance, pin, or ruling changed. No file claim
 is held.
+
+## Schema-lane cleanup sweep claim, 2026-09-02
+
+Claude (Fable, survey session) claims, for a cleanup sweep executed in
+isolated worktrees and integrated only into files outside the live
+regions/trace diff:
+
+| File or tree | State |
+| --- | --- |
+| `Effect4/Data/Optic.lean` (additive corollaries only, public statements unchanged), `Effect4/Schema/Annotations.lean` (use of a new lemma only) | proofs, in progress |
+| `harness/schema-generation/**`, `harness/schema-effectful-field/**`, `scripts/check-schema-typescript-generation.sh`, `scripts/check-schema-effectful-field.sh` (new), `scripts/test-schema-typescript-generation-gate.sh` (new), `scripts/generate-schema-structural-assurance.sh` (add generator input only) | gates, in progress |
+| `PORT-MANIFEST.md`, `docs/SCHEMA-CUTOVER.md` (status header only), `docs/SCHEMA-SURFACE-SURVEY.md` (§4 counts), `harness/README.md` | docs drift, in progress |
+| `docs/research/2026-09-02-standards-targets-survey.md` (new) | research, in progress |
+
+The Codex rows above naming `Effect4/Data/Optic.lean`, `PORT-MANIFEST.md`,
+`docs/SCHEMA-CUTOVER.md`, and the structural-assurance scripts date from the
+payload freeze; the assurance join records those edges closed, so this sweep
+treats them as released and says so here rather than silently. Nothing in
+`git diff --name-only` at claim time (regions and trace lane, lakefile pins,
+`Effect4.lean`, `Effect4Test.lean`, `Effect4Test/Audit/AxiomGate.lean`,
+`Effect4Test/Target/TypeScript/LoweringCoverage.lean`) is touched.
+`generated/schema-structural-assurance.tsv` is regenerated only when no
+other `lake` process is running in this tree.
+
+## P-T7 landed: regions, 2026-09-02
+
+lean4-effects v0.5.0 (`c28833b`) adds `Effects/Flow/Region.lean`: a region
+layer erasing to Flow v2 (`enter`, `acquire`, `leave`, region rows, fourteen
+region clauses, `admitRegions`, `CheckedRegionFlow`); the v2 surface is
+untouched. lean4-typescript v0.3.0 (`1f39598`) adds `Expr.lambda`,
+`Expr.method`, `Stmt.scopedGen`. In Effect4: the region runner
+(`Effect4/Flow/Region.lean`: frames, `closeFrame` latest-first with the closing
+exit, `unwind`, `RunResult.failed`), the region lowering
+(`Effect4/Target/TypeScript/RegionLower.lean`: `Effect.scoped(Effect.onExit(...))`
+with `Effect.acquireRelease` inside, rules `region-enter`/`region-acquire`/
+`region-leave`, nineteen rules in all), the `RCell` family with failing
+operations, three region goldens that agree on rc.112 under every mask at both
+yield settings (`regionNested`, `regionTwoFail`, `regionBothSucceed`), receipts
+and ledgers. Facts pinned: releases run latest-first with the closing exit;
+a body failure is the run's failure; a fallible release has no lowering
+(`Effect.acquireRelease` types it `never`). Rows `E4-FLOW-CE-019`, `-020`,
+`E4-TARGET-CE-012`. Codex: `Effect4/Target/TypeScript/Schema.lean`'s
+`exprKeysUnique` gained the two v0.3.0 arms (`lambda`, `method`) with the pin
+bump. Next: P-T9b, the structured form.

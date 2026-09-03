@@ -22,6 +22,7 @@ source_rels=(
   Effect4/Schema/Annotations.lean
   Effect4/Schema/Document.lean
   Effect4/Schema/Check.lean
+  Effect4/Target/TypeScript/Schema.lean
 )
 contract_rels=(
   test/contracts/schema-representation.contract.md
@@ -47,6 +48,7 @@ expected_source_shas=(
   07f19339d44e088437611dd6a5efd4c1fc6d6d23a17b2d2763cd69fa0a67b9dd
   e3337eb9f228d09ec0a511e0b4120743f25f95ab15a246b5ee1dbf1f5c735551
   98439bbd47195d266a188345dc749fbd9aa11bb1499d2944476dde78c8c2a9ef
+  b440ea7d7f10e2d58b4fea6662f4125a23e5257ec0ef9be35f2d54457a455c3c
 )
 expected_contract_shas=(
   a2b85dd7ce72a8f74abfedeccb1142d7a85fa9913820fa8412c1410489ab90ee

@@ -93,3 +93,11 @@ needs that file, and `scripts/test-lowering-mutations.sh` keeps the corpus
 honest with three planted lowering mutants. A divergence is shrunk with a
 budget of 64 host-confirmed candidates and stored under
 `generated/lowering-property-failures/`.
+
+## Regions
+
+`region-enter`, `region-acquire` and `region-leave` (`Effect4/Target/TypeScript/RegionLower.lean`,
+P-T7) lower an admitted region flow (Effects v0.5.0) to nested scopes; their
+goldens are the region programs of the harness under `generated/traces/flow/`
+(`regionNested`, `regionTwoFail`, `regionBothSucceed`), traced on the host with
+a `Regions` service. A fallible release has no lowering (`E4-TARGET-CE-012`).
