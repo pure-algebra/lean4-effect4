@@ -436,3 +436,31 @@ under `types/flow/`; every flow golden agrees on the host under every mask at
 both yield settings, and `generated/lowering-coverage.tsv` has all sixteen
 rules `checked`. Packet: `test/contracts/flow-dispatch-lowering.contract.md`.
 Next: P-T6, the property loop (generated flows, tapes, shrinking, mutants).
+
+## P-T6 landed: the property loop, 2026-09-02
+
+`harness/trace/Property.lean` generates flows by construction over the Cell
+type graph (admission is the free oracle), builds tapes by policy through the
+runner (`left`, `right`, `alternate`, `random`, `only<site>`, `visit<site>`), checks per-site
+branch coverage, lowers the corpus into one dispatch-form module and runs it
+once on the host through `effect4-batch` (effect4-tools `ffd3456`); a tape
+exhausted on the host is the unanswered frontier (`tracer.ts`). Seed 2026:
+200 flows, 1277 runs, 276 frontiers, 318 sites, no divergence; three planted
+lowering mutants are caught (`scripts/test-lowering-mutations.sh`); a
+divergence would be shrunk (budget 64) and stored under
+`generated/lowering-property-failures/`. The eight dispatch-form rules are
+`covered`. Packet: `test/contracts/lowering-property.contract.md`. Next: P-T7
+regions (Effects v0.5.0), then P-T9b the structured form.
+
+## Schema consumer survey delivered, 2026-09-02
+
+Claude (Fable) delivered `docs/research/2026-09-02-schema-consumer-survey.md`:
+a read-only survey of every Effect rc.112 module that consumes Schema (core,
+SQL/Model, HttpApi/RPC/Cluster/Workflow/EventLog, AI/encoding/persistence/CLI),
+the Schema lane's status against that map, the framing of boundary surfaces
+(`ApiSurface`, `TableSurface`, `AgentSurface`, `CodecSurface`, lawful data
+constructs) as instances of the trace-lane pipeline, a ranked opportunity
+list, the missing pieces for proof-carrying npm publication, repository
+cleanup items, and upstream findings. Research evidence only: no library
+code, contract, generated assurance, pin, or ruling changed. No file claim
+is held.

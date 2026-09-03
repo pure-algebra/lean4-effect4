@@ -43,7 +43,7 @@ FRAME-BRIDGE (required-open): FrameEvent.toTrace, scheduler Event.toTrace
 | bridges | `required-open` | `FrameEvent.toTrace`, `Event.toTrace` in `Effect4/Target/TypeScript/Simulation.lean` (P-T11); until then the primitive stream (`frames`) is not evidence |
 | targets | `required-closed` | `harness/trace/check.sh`: fixture drift for the straight-line module (`fixture.ts`) and the dispatch-form module (`flow-fixture.ts`, `Effect4/Target/TypeScript/FlowLower.lean`, ruling R7), four host gates, every golden under every mask at a large yield threshold and at the rc.112 floor of 3 (the flow goldens through `flow-tail.ts` with the `Decisions` service answering from the golden's tape), type receipts from `tsc.original` for both modules; receipts under `harness/trace/receipts/` and `receipts/flow/` |
 | trust | `required-closed` | axiom receipts for every trace law; gate exemptions for the renderer, the DSL and the numerator only; `scripts/test-trust-gate.sh` green |
-| coverage | `required-closed` | `generated/lowering-coverage.tsv` (sixteen rules: eight straight-line, eight dispatch-form, all `checked`), `scripts/check-lowering-coverage.sh`, planted mutants (4/4) |
+| coverage | `required-closed` | `generated/lowering-coverage.tsv` (sixteen rules: eight straight-line `checked`, eight dispatch-form `covered` by the property loop `generated/lowering-property.tsv`: 200 generated flows, 1277 host runs, 276 frontiers, 318 sites both ways, 3/3 planted lowering mutants caught), `scripts/check-lowering-coverage.sh`, planted mutants (4/4) |
 
 ## Required semantic separations
 

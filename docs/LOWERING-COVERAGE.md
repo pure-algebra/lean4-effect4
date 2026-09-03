@@ -81,3 +81,15 @@ admitted Flow v2 graph. Their goldens are the Flow-runner face under
 `generated/traces/flow/<program>.<tape>.tsv`, their host receipts live under
 `harness/trace/receipts/flow/`, and their type receipts under
 `harness/trace/types/flow/`; the join keys are the same paths.
+
+## The property loop
+
+`scripts/check-lowering-property.sh` (P-T6, `test/contracts/lowering-property.contract.md`)
+regenerates a seeded corpus of flows by construction, admits them, builds
+tapes by policy, lowers all of them into one dispatch-form module, and runs the
+batch once on the host (`effect4-batch`). Its summary row is
+`generated/lowering-property.tsv`; a rule whose ledger row claims `property`
+needs that file, and `scripts/test-lowering-mutations.sh` keeps the corpus
+honest with three planted lowering mutants. A divergence is shrunk with a
+budget of 64 host-confirmed candidates and stored under
+`generated/lowering-property-failures/`.

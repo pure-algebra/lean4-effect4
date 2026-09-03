@@ -30,7 +30,7 @@ inductive OpKind where
   | atom
   /-- A literal: answers `value`, never traced. -/
   | lit (value : Val)
-deriving DecidableEq, Repr
+deriving DecidableEq, Repr, Inhabited
 
 /-- One row of the embedded alphabet. -/
 structure OpSpec where
@@ -40,7 +40,7 @@ structure OpSpec where
   requestTy : String
   /-- TypeScript spelling of the answer type. -/
   answerTy : String
-deriving Repr
+deriving Repr, Inhabited
 
 /-- The row of a table position. -/
 def OpSpec.at (table : List OpSpec) (op : Fin table.length) : OpSpec := table[op]

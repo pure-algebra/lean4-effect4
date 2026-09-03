@@ -183,7 +183,13 @@ export const runTraced = async <A, E>(
   const fiber = Effect.runFork(traced, { scheduler: new TapeScheduler() })
   const exit: any = await new Promise((resolve) => (fiber as any).addObserver(resolve))
   const budgetHit = sink.some((e) => e.kind === "frontier")
-  if (!budgetHit) sink.push({ kind: "done", outcome: outcomeWire(exit) })
+  // A tape exhausted at a `choose` is the unanswered frontier, never an outcome
+  // (Effect4.Frontier.unansweredDecision); the Decisions service dies with
+  // TapeExhausted and the run ends with a `frontier` row instead of `done`.
+  const reasons = exit._tag === "Failure" ? ((exit.cause?.reasons ?? []) as ReadonlyArray<{ _tag: string; defect?: unknown }>) : []
+  const tapeExhausted = reasons.some((r) => r._tag === "Die" && r.defect instanceof TapeExhausted)
+  if (tapeExhausted) sink.push({ kind: "frontier" })
+  else if (!budgetHit) sink.push({ kind: "done", outcome: outcomeWire(exit) })
   return { events: sink, frames, exitTag: exit._tag, primitives, yields, scheduled, tracerDefect }
 }
 
