@@ -1,4 +1,5 @@
 import Effect4.Meta.Derive
+import Effect4.Runtime.Scope
 import Effect4.Target.TypeScript.Trace
 import Effect4.Target.TypeScript.Lower
 import Effect4.Target.TypeScript.ScriptFlow
@@ -17,6 +18,42 @@ golden is the traced service's log plus the outcome, rendered by
 -/
 
 open Effects Effect4 Effect4.Meta Effect4.Target.EffectV4
+
+/-! ## Golden admission: what the host can carry exactly
+
+A JavaScript number is an IEEE-754 double, so above `2^53 - 1` it is not the
+integer it prints and a row carrying one would be a fiction. `Effects.Trace.Val`
+is unbounded, so the refusal has to be stated here, at emission: a golden whose
+log leaves the safe range is not written at all. The host tracer refuses the
+same values from the other side (`harness/trace/tracer.ts` `wire`), so neither
+face can quietly produce a row the other cannot.
+counterexample: E4-TARGET-CE-015 -/
+
+/-- `Number.MAX_SAFE_INTEGER`: `2^53 - 1`. -/
+def hostSafeInteger : Nat := 9007199254740991
+
+/-- Whether every number in a value is one the host carries exactly. -/
+def valAdmissible : Effects.Trace.Val → Bool
+  | .unit | .none | .bool _ | .str _ => true
+  | .nat n => n ≤ hostSafeInteger
+  | .int i => -(hostSafeInteger : Int) ≤ i && i ≤ (hostSafeInteger : Int)
+  | .pair left right => valAdmissible left && valAdmissible right
+  | .some value => valAdmissible value
+
+def outcomeAdmissible : Effects.Trace.Outcome Effects.Trace.Val → Bool
+  | .success v | .failure v => valAdmissible v
+  | .interrupted => true
+
+def eventAdmissible : Effect4.Trace.Event → Bool
+  | .op _ v | .answer _ v | .failed _ v => valAdmissible v
+  | .leave _ o | .finalizer _ o | .done o => outcomeAdmissible o
+  | .decide _ _ | .enter _ | .frontier => true
+
+/-- Emit a golden only if the host can carry every number in it. -/
+def admitted (name : String) (log : Effect4.Trace.Log) (rendered : String) : IO String :=
+  if log.all eventAdmissible then pure rendered
+  else throw (IO.userError
+    s!"refusing to emit golden {name}: a value leaves the host-exact range (at most {hostSafeInteger})")
 
 effect_signature Cell where
   | get : Nat ⟪ "read the cell", "current value" ⟫
@@ -133,6 +170,155 @@ def programs : List Entry :=
   , { name := "recover", rows := ECell.rows, script := recover.script, log := egoldenLog (recover 5) 41 }
   , { name := "fallible", rows := FCell.rows, script := fallible.script, log := fgoldenLog (fallible 5) 41 } ]
 
+/-! ## `Scopes`: a traced family over the reified rc.112 `Scope`
+
+The first family whose operations take and return an opaque host handle. The
+handle is `Handle "Scope.Closeable"` (`Effect4/Meta/Derive.lean`): the Lean
+carrier is an index, the wire value is that index, and the target prints
+rc.112's own opaque `Scope.Closeable`. The Lean face names scopes in creation
+order and the host tracer indexes the objects it is handed in first-seen order,
+which is the same order because a handle only ever leaves the host as the
+answer of the `make` that produced it.
+
+`close` answers the *keys the close ran, in order*. That is what makes LIFO,
+removal and close idempotence observable at the service level without a
+finalizer having to be an operation of its own: the model's answer is
+`Scope.closeOrder` and the host's answer is the order rc.112 actually ran them
+in. `addFinalizer` answers whether it registered (`true`) or ran the finalizer
+immediately because the scope had closed (`false`), which is rc.112
+`scopeAddFinalizerExit`'s two arms and the model's `Scope.addExit`.
+
+Refusals, recorded here and in `docs/TRACE-DAG.md`:
+
+- The finalizer strategy is not an operation. `make` is nullary and takes
+  rc.112's `"sequential"` default; the parallel strategy needs a fiber machine
+  (`Effect4Test/Audit/RuntimeCoverage.lean` `scope.close-parallel`), and this
+  lane cannot observe it.
+- `remove` has no rc.112 entry point. `effect`'s package exports map
+  `"./internal/*"` to `null`, so `scopeRemoveFinalizerUnsafe` is unreachable;
+  the host service performs the same two-arm removal over the *public* mutable
+  `Scope.state` (`Scope.ts` `State.Open`), locating the entry by the identity
+  of the finalizer it registered. The `remove` golden therefore pins the public
+  state shape and the model, not an rc.112 call. -/
+
+effect_signature Scopes where
+  | make : Handle "Scope.Closeable" ⟪ "open a new scope", "acquire a lifetime" ⟫
+  | addFinalizer (scope : Handle "Scope.Closeable") (key : Nat) : Bool
+      ⟪ "register a finalizer under a key", "true when it was registered, false when the scope had closed and it ran now" ⟫
+  | remove (scope : Handle "Scope.Closeable") (key : Nat) : Unit
+      ⟪ "unregister the finalizer under a key" ⟫
+  | close (scope : Handle "Scope.Closeable") : List Nat
+      ⟪ "close the scope", "the keys the close ran, in order" ⟫
+
+/-- The scope the model handler keeps: keys and finalizers are both `Nat`, so a
+finalizer *is* its key and `Scope.closeOrder` is exactly the answer `close`
+gives. `φ` is nominal by DB-02; what a finalizer does is the `run` argument. -/
+abbrev ScopeCarrier := Scope Nat Nat Unit Unit Unit Unit Unit
+
+/-- Every live scope, in creation order; a `Handle` indexes into it. -/
+abbrev ScopeStore := List ScopeCarrier
+
+/-- The nominal finalizer's effect. Nothing in this family observes a
+finalizer's own exit, so it is the void exit; a fallible release is the packet
+that settles the cause-merge divergence, and is refused here. -/
+def scopeRun : Nat → Exit Unit Unit Unit Unit Unit → Exit Unit Unit Unit Unit Unit :=
+  fun _ _ => Exit.void
+
+/-- The Lean handler: a thin wrapper over `Effect4/Runtime/Scope.lean`.
+`make` is `Scope.make`, `addFinalizer` is `Scope.addExit`, `remove` is
+`Scope.removeUnsafe`, `close` is `Scope.close` with `Scope.closeOrder` as its
+answer. It adds no scope semantics of its own. -/
+def scopesLive : Scopes.Service (StateT ScopeStore Id) := fun name =>
+  match name with
+  | .make => fun _ => do
+      let store ← get
+      set (store ++ [Scope.make FinalizerStrategy.sequential])
+      pure ⟨store.length⟩
+  | .addFinalizer => fun (handle, key) => do
+      let store ← get
+      match store[handle.index]? with
+      | none => pure false
+      | some scope =>
+          set (store.set handle.index (Scope.addExit scopeRun scope key key).1)
+          pure (!scope.isClosed)
+  | .remove => fun (handle, key) => do
+      let store ← get
+      match store[handle.index]? with
+      | none => pure ()
+      | some scope => set (store.set handle.index (scope.removeUnsafe key))
+  | .close => fun handle => do
+      let store ← get
+      match store[handle.index]? with
+      | none => pure []
+      | some scope =>
+          set (store.set handle.index (Scope.close scopeRun scope Exit.void).1)
+          pure scope.closeOrder
+
+-- Three finalizers, closed once: the keys come back last registered first.
+effect_program scopeLifo (n : Nat) over Scopes : List Nat :=
+  let s ← Scopes.make()
+  let _ ← Scopes.addFinalizer(s, 1)
+  let _ ← Scopes.addFinalizer(s, 2)
+  let _ ← Scopes.addFinalizer(s, 3)
+  let r ← Scopes.close(s)
+  return r
+
+-- Registering on a closed scope runs the finalizer now and answers `false`.
+effect_program scopeAddAfterClosed (n : Nat) over Scopes : Bool :=
+  let s ← Scopes.make()
+  let _ ← Scopes.addFinalizer(s, 1)
+  let _ ← Scopes.close(s)
+  let a ← Scopes.addFinalizer(s, 2)
+  return a
+
+-- A removed key does not run.
+effect_program scopeRemove (n : Nat) over Scopes : List Nat :=
+  let s ← Scopes.make()
+  let _ ← Scopes.addFinalizer(s, 1)
+  let _ ← Scopes.addFinalizer(s, 2)
+  let _ ← Scopes.remove(s, 1)
+  let r ← Scopes.close(s)
+  return r
+
+-- The second close runs nothing and answers the empty order.
+effect_program scopeCloseTwice (n : Nat) over Scopes : List Nat :=
+  let s ← Scopes.make()
+  let _ ← Scopes.addFinalizer(s, 1)
+  let _ ← Scopes.addFinalizer(s, 2)
+  let _ ← Scopes.close(s)
+  let r ← Scopes.close(s)
+  return r
+
+example : ((interpret scopesLive.toHandler (scopeLifo 0)).run [] : List Nat × ScopeStore).1
+    = [3, 2, 1] := rfl
+example : ((interpret scopesLive.toHandler (scopeAddAfterClosed 0)).run [] : Bool × ScopeStore).1
+    = false := rfl
+example : ((interpret scopesLive.toHandler (scopeRemove 0)).run [] : List Nat × ScopeStore).1
+    = [2] := rfl
+example : ((interpret scopesLive.toHandler (scopeCloseTwice 0)).run [] : List Nat × ScopeStore).1
+    = [] := rfl
+
+/-- The traced run of a scope program, with its outcome appended. -/
+def scopeGoldenLog {α : Type} [Effects.Trace.ToVal α] (program : Program Scopes.Sig α) :
+    Effect4.Trace.Log :=
+  let result : (α × Effect4.Trace.Log) × ScopeStore :=
+    ((interpret (Scopes.traced scopesLive).toHandler program).run []).run []
+  result.1.2 ++ [.done (.success (Effects.Trace.ToVal.toVal result.1.1))]
+
+/-- One scope program: its script and its golden log. -/
+structure ScopeEntry where
+  name : String
+  script : Script
+  log : Effect4.Trace.Log
+
+def scopePrograms : List ScopeEntry :=
+  [ { name := "lifo", script := scopeLifo.script, log := scopeGoldenLog (scopeLifo 0) }
+  , { name := "addAfterClosed", script := scopeAddAfterClosed.script,
+      log := scopeGoldenLog (scopeAddAfterClosed 0) }
+  , { name := "remove", script := scopeRemove.script, log := scopeGoldenLog (scopeRemove 0) }
+  , { name := "closeTwice", script := scopeCloseTwice.script,
+      log := scopeGoldenLog (scopeCloseTwice 0) } ]
+
 /-! ## The Flow face: the runner (internal oracle) and the dispatch lowering -/
 
 /-- The atoms the Cell scripts call, with their TypeScript types. -/
@@ -158,6 +344,12 @@ structure FlowEntry where
   input : Effects.Trace.Val
   initial : Nat := 41
   oracle : Option Effect4.Trace.Log := none
+  /-- Resource-boundary tapes. A tape named here is run with the given fuel
+  instead of `fuelFor`, so the Lean face stops at a `frontier` with tape left
+  over, and its golden carries the op budgets whose host `frontier` lands at the
+  same row. One budget per yield setting: the budget counts primitives and the
+  yield wrapper is itself primitives. -/
+  boundaries : List (String × Nat × List (String × Nat)) := []
 
 /-- Embed and admit a script's flow. -/
 def embed? (entry : Entry) : Option FlowProgram := do
@@ -221,7 +413,15 @@ def flowEntries : List FlowEntry :=
   ((admit? "swap" swapTable swapRaw).toList.map fun program =>
     { program := program,
       tapes := [("once", [decision 1 true, decision 1 false]),
-                ("twice", [decision 1 true, decision 1 true, decision 1 false])],
+                ("twice", [decision 1 true, decision 1 true, decision 1 false]),
+                -- The budget tape: thirteen answers, of which the run reaches
+                -- four before its resource runs out on either face.
+                ("budget", (List.replicate 12 (decision 1 true)) ++ [decision 1 false])],
+      -- Fuel 5: one block-0 visit plus four `choose` visits, then the frontier.
+      -- The host budgets were measured against rc.112 on the pinned install and
+      -- are exact: 19 primitives at the default yield setting, 79 at the rc.112
+      -- floor of 3, both giving the same four `decide` rows and one `frontier`.
+      boundaries := [("budget", 5, [("default", 19), ("yield3", 79)])],
       input := .nat 5 }) ++
   ((admit? "irreducible" [] irreducibleRaw).toList.map fun program =>
     { program := program,
@@ -229,15 +429,23 @@ def flowEntries : List FlowEntry :=
                 ("right", [decision 0 false, decision 2 true, decision 1 false])],
       input := .nat 5 })
 
-/-- Run a flow entry on one tape; the log the runner wrote. -/
-def flowLog (entry : FlowEntry) (tape : Flow.Tape) : Except String Effect4.Trace.Log :=
+/-- Run a flow entry on one tape; the log the runner wrote. With no fuel given
+the run is expected to finish; with fuel given it is expected to stop at a fuel
+frontier, which is one `frontier` row and no outcome. -/
+def flowLogWith (entry : FlowEntry) (tape : Flow.Tape) (fuel? : Option Nat) :
+    Except String Effect4.Trace.Log :=
   let table := entry.program.table
+  let fuel := fuel?.getD (Flow.fuelFor entry.program.flow.erase tape)
   let result : (Flow.RunResult × Effect4.Trace.Log) × Nat :=
-    ((Flow.runDefault entry.program.flow (tableService ⟨0⟩ table cellFamily cellAtom)
+    ((Flow.run fuel entry.program.flow (tableService ⟨0⟩ table cellFamily cellAtom)
       (tableNameOf ⟨0⟩ table) tape entry.input).run []).run entry.initial
-  match result.1.1 with
-  | .done _ => pure result.1.2
-  | other => throw s!"the flow run of {entry.program.name} did not finish: {repr other}"
+  match fuel?, result.1.1 with
+  | none, .done _ => pure result.1.2
+  | some _, .frontier (.fuel _) => pure result.1.2
+  | _, other => throw s!"the flow run of {entry.program.name} did not finish: {repr other}"
+
+def flowLog (entry : FlowEntry) (tape : Flow.Tape) : Except String Effect4.Trace.Log :=
+  flowLogWith entry tape none
 
 /-! ## Regions (P-T7): a family with resources and failures -/
 
@@ -364,8 +572,9 @@ def main (args : List String) : IO Unit := do
   | ["golden", name] =>
       match programs.find? (·.name == name) with
       | some entry =>
-          IO.print (Effect4.Target.TypeScript.Trace.golden (name ++ ".empty") []
-            ((entry.script.ruleSet entry.rows).map Rule.id) entry.log)
+          IO.print (← admitted name entry.log
+            (Effect4.Target.TypeScript.Trace.golden (name ++ ".empty") []
+              ((entry.script.ruleSet entry.rows).map Rule.id) entry.log))
       | none => throw (IO.userError s!"unknown program {name}")
   | ["programs"] => IO.println (String.intercalate "\n" (programs.map (·.name)))
   | ["flow-programs"] =>
@@ -379,10 +588,13 @@ def main (args : List String) : IO Unit := do
       | some entry =>
           match entry.tapes.find? (·.1 == tapeName) with
           | some (_, tape) =>
-              match flowLog entry tape with
+              let boundary := entry.boundaries.find? (·.1 == tapeName)
+              match flowLogWith entry tape (boundary.map (·.2.1)) with
               | .ok log =>
-                  IO.print (Effect4.Target.TypeScript.Trace.golden (name ++ "." ++ tapeName) tape.wire
-                    ((Flow.structuredRuleSet entry.rows entry.program).map Rule.id) log (face := "lean-flow"))
+                  IO.print (← admitted (name ++ "." ++ tapeName) log
+                    (Effect4.Target.TypeScript.Trace.golden (name ++ "." ++ tapeName) tape.wire
+                      ((Flow.structuredRuleSet entry.rows entry.program).map Rule.id) log (face := "lean-flow")
+                      (budgets := (boundary.map (·.2.2)).getD [])))
               | .error message => throw (IO.userError message)
           | none => throw (IO.userError s!"no tape {tapeName} for {name}")
       | none =>
@@ -421,4 +633,29 @@ def main (args : List String) : IO Unit := do
             Flow.declarationLine entry.rows entry.program)
       for entry in regionEntries do
         IO.println (entry.program.name ++ "\tempty\t" ++ Region.declarationLine RCell.rows entry.program)
-  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types")
+  | ["scope-fixture"] =>
+      -- `Scope` is imported as a type only: the generated module names
+      -- `Scope.Closeable` in the service shape and never calls into it.
+      match modules? [(Scopes.rows, scopePrograms.map (·.script))] [.types ["Scope"] "effect"] with
+      | some source => IO.print source
+      | none => throw (IO.userError "lowering refused a scope script")
+  | ["scope-programs"] => IO.println (String.intercalate "\n" (scopePrograms.map (·.name)))
+  | ["scope-golden", name] =>
+      match scopePrograms.find? (·.name == name) with
+      | some entry =>
+          IO.print (← admitted name entry.log
+            (Effect4.Target.TypeScript.Trace.golden ("scope." ++ name) []
+              ((entry.script.ruleSet Scopes.rows).map Rule.id) entry.log))
+      | none => throw (IO.userError s!"unknown scope program {name}")
+  | ["admission-probe"] =>
+      -- The planted value of `scripts/test-trace-goldens-gate.sh`: no program of
+      -- the corpus produces a natural the host cannot carry, so the admission
+      -- clause is only reachable by planting one here.
+      let log : Effect4.Trace.Log :=
+        [.answer "probe" (.nat (hostSafeInteger + 1)), .done (.success .unit)]
+      IO.print (← admitted "admission-probe" log
+        (Effect4.Target.TypeScript.Trace.golden "admission.probe" [] [] log))
+  | ["scope-types"] =>
+      for entry in scopePrograms do
+        IO.println (entry.name ++ "\t" ++ Script.declarationLine Scopes.rows entry.script)
+  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | admission-probe")

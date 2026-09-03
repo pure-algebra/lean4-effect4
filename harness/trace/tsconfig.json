@@ -59,6 +59,9 @@
     "flow-fixture.ts",
     "flow-tail.ts",
     "structured-fixture.ts",
-    "structured-tail.ts"
+    "structured-tail.ts",
+    "scope-fixture.ts",
+    "scope-tail.ts",
+    "wire-tail.ts"
   ]
 }

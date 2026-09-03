@@ -30,11 +30,35 @@ export type Rows = Record<string, { params: number; answer: string }>
 
 export class TracerDefect extends Error {}
 
+/** An opaque host handle: an object the wire may not describe, only index.
+ * A tail registers the brand of a handle type it hands to a traced service
+ * (`scope-tail.ts` registers rc.112's `Scope` type id); `wire` then encodes
+ * such an object as its index in first-seen order, which is the Lean face's
+ * `Handle` carrier. Nothing else about the object reaches the wire. */
+export type HandleBrand = (value: object) => boolean
+const handleBrands: HandleBrand[] = []
+export const registerHandle = (brand: HandleBrand): void => { handleBrands.push(brand) }
+
+const handleIndices = new WeakMap<object, number>()
+let nextHandleIndex = 0
+export const handleIndex = (value: object): number => {
+  const seen = handleIndices.get(value)
+  if (seen !== undefined) return seen
+  const fresh = nextHandleIndex
+  nextHandleIndex += 1
+  handleIndices.set(value, fresh)
+  return fresh
+}
+
 /** Encode one host value in the wire form of `Effects.Trace.Val`. */
 export const wire = (value: unknown): Wire => {
   if (value === undefined || value === null) return "[]"
   if (typeof value === "number") {
     if (!Number.isInteger(value)) throw new TracerDefect(`non-integer number ${value}`)
+    // Beyond 2^53 - 1 a JavaScript number is not the integer it prints, so the
+    // row would be a fiction. Refuse it: `Effects.Trace.Val.nat` is unbounded
+    // and `harness/trace/Generate.lean` refuses to emit a golden past this.
+    if (!Number.isSafeInteger(value)) throw new TracerDefect(`integer beyond 2^53 - 1: ${value}`)
     return String(value)
   }
   if (typeof value === "boolean") return value ? "true" : "false"
@@ -44,6 +68,7 @@ export const wire = (value: unknown): Wire => {
     return value.reduceRight<Wire>((acc, item) => `[${wire(item)}, ${acc}]`, "[]")
   }
   if (typeof value === "object") {
+    if (handleBrands.some((brand) => brand(value as object))) return String(handleIndex(value as object))
     const tag = (value as { _tag?: unknown })._tag
     if (tag === "Some") return `{"some":${wire((value as { value: unknown }).value)}}`
     if (tag === "None") return `{"none":true}`
@@ -62,13 +87,34 @@ export const wireArgs = (args: ReadonlyArray<unknown>): Wire => {
   return args.slice(0, -1).reduceRight<Wire>((acc, item) => `[${wire(item)}, ${acc}]`, wire(args[args.length - 1]))
 }
 
+/** The outcome of a run, in the four arms `Effects.Trace.Outcome` has from
+ * lean4-effects v0.6.0: `success`, `failure`, `defect`, `interrupted`.
+ *
+ * A defect used to render `{"failure":[]}` — `reasons.find(Fail)` is
+ * `undefined` and `wire(undefined)` is `"[]"` — byte-identical to a unit
+ * failure, so a dying program silently compared equal to a failing one. A
+ * `Die`-only cause now renders `{"defect":d}`, byte-paired with the Lean arm
+ * `Trace.outcome | .defect e => "{\"defect\":" ++ val e ++ "}"`.
+ * counterexample: E4-TARGET-CE-017
+ *
+ * Precedence, and what it refuses (TRACE-DAG separation 3, which makes the
+ * outcome annotation-blind and host-error-identity-blind): a cause carrying a
+ * `Fail` renders that failure whatever else it carries; a cause with no `Fail`
+ * but an `Interrupt` renders `{"interrupted":true}`; only a cause that is
+ * neither renders its first `Die`. A cause with no reason of any of the three
+ * kinds has no arm at all and is a tracer defect: the run is reported INVALID
+ * by the driver, never pass and never fail. */
 export const outcomeWire = (exit: { _tag: string; value?: unknown; cause?: unknown }): Wire => {
   if (exit._tag === "Success") return `{"success":${wire(exit.value)}}`
-  const cause = exit.cause as { reasons?: ReadonlyArray<{ _tag: string; error?: unknown }> } | undefined
+  const cause = exit.cause as
+    { reasons?: ReadonlyArray<{ _tag: string; error?: unknown; defect?: unknown }> } | undefined
   const reasons = cause?.reasons ?? []
-  if (reasons.some((r) => r._tag === "Interrupt") && !reasons.some((r) => r._tag === "Fail")) return `{"interrupted":true}`
   const fail = reasons.find((r) => r._tag === "Fail")
-  return `{"failure":${wire(fail?.error)}}`
+  if (fail !== undefined) return `{"failure":${wire(fail.error)}}`
+  if (reasons.some((r) => r._tag === "Interrupt")) return `{"interrupted":true}`
+  const die = reasons.find((r) => r._tag === "Die")
+  if (die !== undefined) return `{"defect":${wire(die.defect)}}`
+  throw new TracerDefect(`no Fail, Die or Interrupt reason in the cause: [${reasons.map((r) => r._tag).join(",")}]`)
 }
 
 /** An answer is recorded as typed: a `void` operation answers unit whatever
@@ -147,6 +193,11 @@ export const runTraced = async <A, E>(
   let primitives = 0
   let yields = 0
   let tracerDefect: string | null = null
+  // The op budget is a frontier, and a Lean frontier is a single row. The
+  // counter keeps rising after the budget is spent and the interrupt is not
+  // delivered at once, so without this latch every later primitive pushed
+  // another `frontier`. counterexample: E4-TARGET-CE-018
+  let budgetHit = false
 
   class TapeScheduler extends Scheduler.MixedScheduler {
     override shouldYield(fiber: any): boolean {
@@ -164,7 +215,8 @@ export const runTraced = async <A, E>(
         try {
           primitives += 1
           frames.push({ op: primitive["~effect/Effect/identifier"] ?? "?", depth: fiber._stack.length })
-          if (primitives > options.budget) {
+          if (primitives > options.budget && !budgetHit) {
+            budgetHit = true
             sink.push({ kind: "frontier" })
             fiber.interruptUnsafe()
           }
@@ -188,8 +240,16 @@ export const runTraced = async <A, E>(
   // TapeExhausted and the run ends with a `frontier` row instead of `done`.
   const reasons = exit._tag === "Failure" ? ((exit.cause?.reasons ?? []) as ReadonlyArray<{ _tag: string; defect?: unknown }>) : []
   const tapeExhausted = reasons.some((r) => r._tag === "Die" && r.defect instanceof TapeExhausted)
+  // A run that reached its budget ends at the frontier and has no outcome; a
+  // wire the tracer cannot encode marks the run invalid rather than failed.
   if (tapeExhausted) sink.push({ kind: "frontier" })
-  else if (!budgetHit) sink.push({ kind: "done", outcome: outcomeWire(exit) })
+  else if (!budgetHit) {
+    try {
+      sink.push({ kind: "done", outcome: outcomeWire(exit) })
+    } catch (error) {
+      tracerDefect = tracerDefect ?? String(error)
+    }
+  }
   return { events: sink, frames, exitTag: exit._tag, primitives, yields, scheduled, tracerDefect }
 }
 

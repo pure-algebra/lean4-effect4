@@ -1,0 +1,36 @@
+{
+ "format": "effect4-trace-receipt-v1",
+ "program": "scope.remove",
+ "tape": "",
+ "rules": "service-acquire,nullary-value,perform-bind,perform-call,perform-discard,ret",
+ "host": {
+  "effect": "4.0.0-rc.112",
+  "typescript": "7.0.2",
+  "tsgo": "0.38.0",
+  "pin": {
+   "effectVersion": "4.0.0-rc.112",
+   "effectUpstreamCommit": "2600f62f4532026928454dcea8d1c48557b3f942",
+   "effectFileCount": 2341,
+   "effectTreeSha256": "aea8ac8a25b17aa82796fad7acc1371bc9a92bbd7d25ce24f2598016f9920aad",
+   "typescriptVersion": "7.0.2",
+   "diagnosticVersion": "0.38.0"
+  },
+  "node": "v22.23.2",
+  "platform": "darwin-arm64",
+  "patched": null
+ },
+ "patchedFrames": [],
+ "scheduler": {
+  "mode": "TapeScheduler",
+  "maxOpsBeforeYield": 1000000,
+  "yields": 0,
+  "scheduled": []
+ },
+ "foreign": [],
+ "primitives": 59,
+ "results": {
+  "outcome": "ok",
+  "m1": "ok",
+  "m2": "ok"
+ }
+}
