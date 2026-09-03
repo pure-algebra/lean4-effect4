@@ -31,8 +31,8 @@ example : outcome (.success 42) = .success (.nat 42) := by decide
 example : outcome (.failure ⟨[.fail "boom" ReasonAnnotations.empty, .die "later" ReasonAnnotations.empty]⟩) = .failure (.str "boom") := by decide
 -- An interruption with no failure before it is `interrupted`.
 example : outcome (.failure ⟨[.interrupt (some 1) ReasonAnnotations.empty]⟩) = .interrupted := by decide
--- A defect with no failure projects through `defect`.
-example : outcome (.failure ⟨[.die "oops" ReasonAnnotations.empty]⟩) = .failure (.str "defect oops") := by decide
+-- A defect with no failure is a defect outcome (Effects v0.6.0), never a failure.
+example : outcome (.failure ⟨[.die "oops" ReasonAnnotations.empty]⟩) = .defect (.str "defect oops") := by decide
 
 /-- A frame trace with two finalizers, pushes and pops between them, and the
 yielded exit projects to exactly the finalizer rows and the outcome. -/
