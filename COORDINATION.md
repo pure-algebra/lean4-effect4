@@ -2505,3 +2505,84 @@ Packet: `test/contracts/answer-profile.contract.md`; batteries
 `Effect4Test/Target/TypeScript/AnswerProfileContract.lean` and
 `Effect4Test/Counterexamples/Target/AnswerProfile.lean`; rows
 `E4-TARGET-CE-024` and `E4-TARGET-CE-025`.
+## Layers family landed, 2026-09-03
+
+Packet M4. `Layers` is the fourth traced family, built on the `Scopes` (M1) and
+`Fibers` (M3) shape: the family, its handler and its programs are a library
+module, `harness/trace/Generate.lean` only renders them, and the host tail is
+compared against the goldens under every mask.
+
+Landed:
+
+- `Effect4/Layer/LayerFamily.lean` (new, routed from `Effect4.lean`):
+  `effect_signature Layers` with `build`, `provideCount`, `scopeOf`, `close`
+  over a memo-table handler, eight `effect_program`s, `layerGoldenLog`,
+  `layerPrograms`, and eight `rfl` clauses. It declares no semantic object on
+  behalf of `Effect4/Layer/Memo.lean`, which stays the empty owner of build
+  identity as a semantic object; a family is a signature, a first-order handler
+  and the rows that render it.
+- `harness/trace/layer-fixture.ts` (generated, byte-compared),
+  `harness/trace/layer-tail.ts`, `generated/traces/layer/*.tsv` (eight),
+  a `layer` section in `scripts/check-trace-host.sh` and generation lines in
+  `scripts/generate-trace-goldens.sh`, and `layer-fixture` / `layer-programs` /
+  `layer-golden` / `layer-types` arms in `Generate.lean`.
+- `Effect4Test/Flow/LayersContract.lean`,
+  `Effect4Test/Flow/LayersAxiomReport.lean` (all eight clauses axiom-free),
+  `Effect4Test/Counterexamples/Semantics/Layers.lean`, rows
+  `E4-SEM-CE-016`..`015`, the `layers` row of `docs/TRACE-DAG.md`.
+
+### Two decisions worth not rediscovering
+
+- **Release is an answer, not a `finalizer` row.** The packet allowed either.
+  `Family.Service.traced` is an around-wrapper over a handler in `M`: it writes
+  one `op` and one `answer` per operation and cannot reach `M`'s state, so a
+  family that keeps the derived tracer cannot emit region or finalizer events
+  at all. `Layers.close` therefore answers *the services it released, in
+  release order*, which is exactly what `Scopes.close` does with the keys it
+  ran. Emitting `finalizer` rows would have meant a bespoke traced handler and
+  giving up `interpret_traced_fst` on this family.
+- **The build handle is the service object, not the `Context`.**
+  `buildWithMemoMap` maps `Context.add(CurrentMemoMap, memoMap)` over the
+  built context (`layer.build-with-memo-map-service`), so the `Context` wrapper
+  is a *fresh object on every build* while the service inside it is replayed
+  unchanged by the memo entry. Probed on the pinned install before the family
+  was written; a handle on the `Context` would have made every memo hit look
+  like a construction.
+
+### One additive DSL change
+
+`Effect4/Meta/Derive.lean`'s `tsOfTypeFuel` now matches its heads by the *last
+component of the name as written* rather than by quotation patterns, and strips
+parentheses. An ident's preresolution depends on the enclosing namespace, so
+`` `(Handle $s:str) `` matched only where the DSL was used at the top level —
+`Generate.lean` — and failed inside `namespace Effect4.LayerFamily` with
+"unsupported type syntax" pointing at the string literal. The same change is
+what admits `List (Handle "T")` as an answer. `Except`, `Option` and `List` are
+matched the same way now; no spelling changed, and `fixture.ts`,
+`flow-fixture.ts` and `scope-fixture.ts` regenerate byte-identically.
+
+### Follow-up, not done here
+
+`harness/trace/patched/patch-manifest.json` already carries a `layer.memo-build`
+hunk that fires once per `memoMapBuild`. Pairing it with the layer goldens would
+give a frame-level cross-check of the construction count — the number of
+`layer.memo-build` frames under a patched run should equal the total of
+`provideCount` at the end of each program. It is **not** done here and the
+manifest is untouched: the frame stream is not an emitter of this alphabet
+(`bridges` is `required-open`), so the pairing would be a new kind of receipt,
+not an extension of an existing one. Whoever takes it should also decide
+whether `scripts/check-trace-patched.sh` grows a `layer` assertion beside its
+three scope facts.
+
+### Claims
+
+Released with this commit: `Effect4/Layer/LayerFamily.lean`,
+`harness/trace/layer-*.ts`, `generated/traces/layer/**`,
+`Effect4Test/Flow/Layers*.lean`,
+`Effect4Test/Counterexamples/Semantics/Layers.lean`, the `layer` sections of
+both trace scripts, the `E4-SEM-CE-016`..`015` rows, the `layers` row of
+`docs/TRACE-DAG.md`, and the `Effect4.lean` / `Effect4Test.lean` import lines
+for the above. `Effect4/Meta/Derive.lean` was edited additively under the
+existing trace-lane claim. `Effect4/Layer/Memo.lean` and `Effect4/Layer/Laws.lean`
+were not touched and remain unclaimed stubs.
+

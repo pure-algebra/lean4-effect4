@@ -108,6 +108,9 @@ import Effect4Test.Semantics.RegionSimulationContract
 import Effect4Test.Semantics.RegionSimulationAxiomReport
 import Effect4Test.Flow.FibersContract
 import Effect4Test.Flow.FibersAxiomReport
+import Effect4Test.Flow.LayersContract
+import Effect4Test.Flow.LayersAxiomReport
+import Effect4Test.Counterexamples.Semantics.Layers
 import Effect4Test.Counterexamples.Concurrency.FiberProjection
 import Effect4Test.Flow.RefsContract
 import Effect4Test.Flow.RefsAxiomReport

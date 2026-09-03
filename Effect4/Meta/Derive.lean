@@ -172,17 +172,24 @@ private def spellingOfTypeFuel : Nat → Term → CommandElabM Spelling
     | `Unit => return .unit
     | other => throwErrorAt stx "effect_signature: no TypeScript spelling for `{other}`; add a Stratum V row first"
   match stx with
-  | `(Handle $target:str) => return .handle target.getString
   | `($leftTy:term × $rightTy:term) =>
       return .prod (← spellingOfTypeFuel fuel leftTy) (← spellingOfTypeFuel fuel rightTy)
-  | `(Except $errorTy:term $valueTy:term) =>
-      return .except (← spellingOfTypeFuel fuel errorTy) (← spellingOfTypeFuel fuel valueTy)
-  | `($f:ident $arg:term) =>
-      let inner ← spellingOfTypeFuel fuel arg
-      match f.getId.eraseMacroScopes with
-      | `Option => return .option inner
-      | `List => return .list inner
-      | other => throwErrorAt stx "effect_signature: no TypeScript spelling for `{other}`"
+  | `($f:ident $args*) =>
+      -- The head is matched by the *last component of the name as written*,
+      -- never by a quotation pattern: an ident's preresolution depends on the
+      -- enclosing namespace, so `` `(Handle $s:str) `` matches only where the DSL
+      -- is used at the top level, while families also live inside `Effect4.*`
+      -- namespaces (`Effect4/Layer/LayerFamily.lean`, `Effect4/Stateful/RefFamily.lean`).
+      match Name.mkSimple f.getId.eraseMacroScopes.getString!, args.toList with
+      | `Handle, [spelling] =>
+          match spelling.raw.isStrLit? with
+          | some text => return .handle text
+          | none => throwErrorAt spelling "effect_signature: `Handle` takes a string spelling"
+      | `Except, [errorTy, valueTy] =>
+          return .except (← spellingOfTypeFuel fuel errorTy) (← spellingOfTypeFuel fuel valueTy)
+      | `Option, [arg] => return .option (← spellingOfTypeFuel fuel arg)
+      | `List, [arg] => return .list (← spellingOfTypeFuel fuel arg)
+      | other, _ => throwErrorAt stx "effect_signature: no TypeScript spelling for `{other}`"
   | _ => throwErrorAt stx "effect_signature: unsupported type syntax"
 
 /-- The spelling of a type, refused above `Spelling.profileDepth`. -/

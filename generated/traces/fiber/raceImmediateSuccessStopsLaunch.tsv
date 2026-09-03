@@ -1,8 +1,8 @@
 format	effect4-trace-golden-v1
-generator	scripts/generate-trace-goldens.sh	sha256=c52e32fcdb2486c56ed912d687463631906ed37960c1398bb3ecebbbffd30a19
+generator	scripts/generate-trace-goldens.sh	sha256=776e011ab469d1debb6e9af9114d9cfbd6e805b6171540a0b62955eed465d34f
 regenerate	./scripts/generate-trace-goldens.sh
-input	harness/trace/Generate.lean	sha256=b89fb669d38e99ee9c6b95b1d0f9b279956bda9125ca075b433fe667295288c9
-input	Effect4/Meta/Derive.lean	sha256=556f9548e39488b73aeec0e1c8858d131b9466e21d3bf93d9fd841ebf6b27ef2
+input	harness/trace/Generate.lean	sha256=8114973ea9bdb17a2b24f4390146bd775667f29d13323c955c0a7c506c1d2e7f
+input	Effect4/Meta/Derive.lean	sha256=75766531652a4b775ed3185620b0a6d4a6aeb6dfe11cf0eaddc305b4b27aebb4
 input	Effect4/Target/TypeScript/Trace.lean	sha256=38452fa69175f88fe675e45756f4ec91e6168fc828a77e5dad95ddefb190782f
 pin	effects	2447edd76649f035e989914ac899831d66e7dad2
 format	effect4-trace-v1

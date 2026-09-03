@@ -13,6 +13,7 @@ import Effect4.Semantics.RegionSimulation
 import Effect4.Semantics.RegionDenotation
 import Effect4.Concurrency.FiberFamily
 import Effect4.Stateful.RefFamily
+import Effect4.Layer.LayerFamily
 
 /-!
 The trace harness family. `main fixture` prints the generated Effect v4 module,
@@ -23,7 +24,7 @@ golden is the traced service's log plus the outcome, rendered by
 `fixture.ts` and `generated/traces/` and then runs the host.
 -/
 
-open Effects Effect4 Effect4.Meta Effect4.Target.EffectV4 Effect4.FiberFamily
+open Effects Effect4 Effect4.Meta Effect4.Target.EffectV4 Effect4.FiberFamily Effect4.LayerFamily
 
 /-! ## Golden admission: what the host can carry exactly
 
@@ -1444,6 +1445,24 @@ def main (args : List String) : IO Unit := do
                   ((Region.ruleSet RCell.rows entry.program).map Rule.id) log (face := "lean-flow")))
           | .error message => throw (IO.userError message)
       | none => throw (IO.userError s!"no interrupt program {name}")
+  | ["layer-fixture"] =>
+      -- `Ref` and `Scope` are imported as types only: the generated module
+      -- names `Ref.Ref<number>` and `Scope.Closeable` in the service shape and
+      -- never calls into either.
+      match modules? [(Layers.rows, layerPrograms.map (·.script))] [.types ["Ref", "Scope"] "effect"] with
+      | some source => IO.print source
+      | none => throw (IO.userError "lowering refused a layer script")
+  | ["layer-programs"] => IO.println (String.intercalate "\n" (layerPrograms.map (·.name)))
+  | ["layer-golden", name] =>
+      match layerPrograms.find? (·.name == name) with
+      | some entry =>
+          IO.print (← admitted name entry.log
+            (Effect4.Target.TypeScript.Trace.golden ("layer." ++ name) []
+              ((entry.script.ruleSet Layers.rows).map Rule.id) entry.log))
+      | none => throw (IO.userError s!"unknown layer program {name}")
+  | ["layer-types"] =>
+      for entry in layerPrograms do
+        IO.println (entry.name ++ "\t" ++ Script.declarationLine Layers.rows entry.script)
   | ["scope-fixture"] =>
       -- `Scope` is imported as a type only: the generated module names
       -- `Scope.Closeable` in the service shape and never calls into it.
@@ -1638,4 +1657,4 @@ def main (args : List String) : IO Unit := do
   | ["ref-types"] =>
       for entry in Effect4.RefFamily.refPrograms do
         IO.println (entry.name ++ "\t" ++ Script.declarationLine entry.rows entry.script)
-  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle | fiber-fixture | fiber-programs | fiber-golden <program> | fiber-types | job-fixture | job-programs | job-golden <program> <golden> | job-types | job-queues | deferred-fixture | deferred-programs | deferred-golden <program> | deferred-types | ref-fixture | ref-programs | ref-golden <program> | ref-types | atoms")
+  | _ => throw (IO.userError "usage: Generate.lean fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle | fiber-fixture | fiber-programs | fiber-golden <program> | fiber-types | job-fixture | job-programs | job-golden <program> <golden> | job-types | job-queues | deferred-fixture | deferred-programs | deferred-golden <program> | deferred-types | ref-fixture | ref-programs | ref-golden <program> | ref-types | atoms | layer-fixture | layer-programs | layer-golden <program> | layer-types")

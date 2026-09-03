@@ -140,3 +140,73 @@ The pinned source is `effect@4.0.0-rc.112` under
 - **FIXED-BY:** `ServiceRow.rowsDecl` carries each operation's answer spelling
   and `wireAnswer` records a `void` answer as unit; `docs/TRACE-DAG.md`
   separation 7.
+
+## E4-SEM-CE-016 — a memoized rebuild as a second construction
+
+- **BROKE:** reading `build` as "run the layer", so every build constructs,
+  answers a fresh handle, and raises the construction count.
+- **WITNESS:** `Effect4Test/Counterexamples/Semantics/Layers.lean`: a memo hit
+  leaves the store untouched and answers the handle already bound. The
+  `buildMemo` golden is two builds and one handle; `freshRebuild` and
+  `freshRegion` are the contrast that makes it a choice, because layer 3 is
+  `Layer.fresh` of layer 1 — a distinct layer identity, never memoized — and
+  answers two handles, two layer scopes, and a count of two against layer 1.
+- **CLASS:** identity confusion (a layer value versus a construction).
+- **FIXED-BY:** `build` answers the memo table when the layer is memoized and
+  the scope is open; only a construction raises `provideCount` or takes a
+  handle. `harness/trace/layer-tail.ts` reads both back off rc.112: the memo
+  entry replays the built context, and the *service* object inside it is the
+  identity — the `Context` wrapper is not, because `buildWithMemoMap` maps
+  `Context.add(CurrentMemoMap, …)` over it on every build. Census rows
+  `layer.memo-build-once`, `layer.memo-get-or-else`,
+  `layer.build-with-memo-map-service`, `layer.fresh-drops-memoization`.
+
+## E4-SEM-CE-017 — release in construction order
+
+- **BROKE:** releasing constructed layers in the order they were built, or
+  leaving the order unstated because "a scope closes what it owns".
+- **WITNESS:** `Effect4Test/Counterexamples/Semantics/Layers.lean`: `close`
+  answers `live.reverse`, and on three live layers that list differs from the
+  construction order. The `releaseOrder` and `freshRelease` goldens answer
+  `[1, [0, []]]`, and the host agrees under `outcome`, `m1` and `m2` at a large
+  `MaxOpsBeforeYield` and at the rc.112 floor of 3.
+- **CLASS:** unstated order.
+- **FIXED-BY:** rc.112 registers each memo entry's finalizer on the caller
+  scope before running the construction and a scope runs its finalizers in
+  reverse registration order, so the last layer built is the first released.
+  Census rows `layer.memo-build-once`, `layer.memo-finalizer-last-observer`.
+
+## E4-SEM-CE-018 — `close` as a memo-table reset
+
+- **BROKE:** treating `close` as "drop the memo table", so the next build is an
+  ordinary first build.
+- **WITNESS:** `Effect4Test/Counterexamples/Semantics/Layers.lean`: after
+  `close`, a build raises the count and takes a new handle but joins neither
+  the memo table nor the live set. The `rebuildAfterClose` golden shows the
+  rebuild answering a second handle and the second `close` answering the empty
+  order.
+- **CLASS:** missing terminal state.
+- **FIXED-BY:** a closed scope forks closed (`internal/effect.ts`,
+  `scopeForkUnsafe`), so the construction lands in an already-closed layer
+  scope and is released inside its own build. The handler carries `closed`.
+
+## E4-SEM-CE-019 — what a layer trace does not say
+
+- **BROKE:** reading the agreement of `generated/traces/layer/` as evidence
+  about observer counting, concurrent builds, or layer composition.
+- **WITNESS:** none for any of the three, and that is the row. A memoized
+  rebuild registers the memo entry's finalizer a second time; at close that
+  finalizer decrements `entry.observers` and releases nothing, so one release
+  per *construction* reaches the wire and never one per build. `memoMapBuild`
+  installs the entry and a `Deferred` before the construction runs, so a
+  second fiber awaits the first fiber's result instead of constructing, and
+  this handler is a single-fiber state machine over a single-fiber corpus.
+  `Layer.provide` and `Layer.merge` need a layer *value* on the wire, and a
+  layer is a build function, not a handle.
+- **CLASS:** claim scope.
+- **FIXED-BY:** the row is registered as a refusal;
+  `Effect4/Layer/LayerFamily.lean` records all three in its module comment,
+  `docs/TRACE-DAG.md` lists them among the things agreement does not
+  establish, and the battery pins only what is claimed: two builds, one live
+  entry, one release, and a four-operation surface.
+
