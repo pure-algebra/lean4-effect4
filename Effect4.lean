@@ -15,6 +15,7 @@ import Effect4.Semantics.Runs
 import Effect4.Semantics.Fuel
 import Effect4.Semantics.Denotation
 import Effect4.Semantics.RegionDenotation
+import Effect4.Semantics.RegionTotal
 import Effect4.Semantics.Approximation
 import Effect4.Semantics.Observation
 import Effect4.Semantics.Equivalence

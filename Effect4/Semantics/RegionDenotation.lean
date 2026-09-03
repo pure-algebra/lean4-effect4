@@ -61,14 +61,13 @@ the parameter; that keeps every parameter and every answer in `Type 0`. And
 never the one the terminator names, so the region identity in the request would
 be decoration the runner does not read.
 
-**Owed.** There is no fuel-free region denotation. `denoteRegionsFuel` is
-fuelled, as D1's `denoteFuel` is, and `denoteRegions` is that at a supplied
-fuel; the region twin of D1's T2 — *"for every admitted region flow, tape and
-input, `denoteRegionsFuel flow (fuelFor flow.erase tape) flow.entry [input] tape`
-equals a fuel-free `denoteRegionsGo` well-founded through `CyclesWF`"* — is not
-proved. The erased graph carries the same lexicographic measure
-`(tape.length, (raw.reachSet block).length)`, but `enter`, `acquire` and `leave`
-need their own decreasing argument on it and D2 did not ask for one.
+The fuel-free continuation is `Effect4/Semantics/RegionTotal.lean`.
+`denoteRegionsGo` follows the erased graph with the lexicographic measure
+`(tape.length, (raw.reachSet block).length)`, including the `enter`, `acquire`
+and `leave` cases. `denoteRegionsFuel_eq_denoteRegionsWF` proves agreement
+for every admitted region flow, tape, input and sufficient fuel, before any
+handler is selected. The stack invariant mentioned above remains a separate
+obligation; this equality does not assume it.
 -/
 
 namespace Effect4.Flow
@@ -220,11 +219,10 @@ def regionHandler [Monad M] {alphabet : FlowAlphabet Ty} (service : RegionServic
 
 /-! ## The denotation
 
-`Program` is inductive, so the denotation is fuelled, exactly as D1's
-`denoteFuel` is. A fuel-free version through `CyclesWF` is *not* proved here;
-what is owed is spelled out at the head of the module. `denoteRegions` below is
-this at a supplied fuel, which is what every receipt and the public theorems
-use. -/
+This module defines the fuelled approximation, as D1 defines `denoteFuel`.
+`denoteRegions` below selects a supplied fuel. The separate continuation in
+`Effect4/Semantics/RegionTotal.lean` defines and proves its fuel-free meaning
+through `CyclesWF`; existing fuelled receipts and signatures stay unchanged. -/
 
 /-- The injection of one alphabet operation. -/
 abbrev performOp {alphabet : FlowAlphabet Ty} (op : alphabet.Op) (request : Val) :

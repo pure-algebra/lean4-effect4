@@ -1424,3 +1424,139 @@ and the trust gate all green. Fallout repaired on `main`: the frame-simulation
 contract follows D4's `Flow.Sig` unification (its alphabet is now a
 `FlowAlphabet`), and the fiber receipts render rows inline because the axiom
 gate scans test declarations. Agent worktrees and branches removed. Not pushed.
+
+## Full reification continuation: region denotation, 2026-09-03
+
+Codex resumes the operator's full-reification goal from `70bd017`. The supplied
+Wave 2 handoff and the current single-worktree census establish that its merged
+lanes are finished; the older trace-lane reservations above are superseded only
+for the following continuation fence. The full objective remains all phases
+and required assurance routes in `PLAN.md`, including the open host boundaries.
+
+| File or section | Owner |
+| --- | --- |
+| `test/contracts/region-total-denotation.contract.md`, `Effect4Test/Semantics/RegionTotalContract.lean`, `Effect4Test/Semantics/RegionTotalAxiomReport.lean` | Codex independent breaker; new packet, frozen before implementation |
+| `Effect4/Semantics/RegionTotal.lean` | Codex builder; fuel-free region meaning and agreement with the existing fuelled denotation |
+| `Effect4.lean`, `Effect4Test.lean` (RegionTotal import lines only), `test/fixtures/trust-gate/known-red.txt` (RegionTotal entries only) | Codex packet wiring |
+| `docs/TRACE-DAG.md` (region fuel-free scope line only), `docs/research/2026-09-03-reification-plan.md` (D2 remainder only), `Effect4/Semantics/RegionDenotation.lean` (owed documentation only) | Codex coordinator after verification |
+
+The existing region runner, failure/cleanup policy, scope signature, fuelled
+denotation, dependency pins and frozen batteries are unchanged by this fence.
+The packet must prove agreement at every sufficient fuel for every admitted
+region flow and finite decision tape, without hiding unanswered frontiers or
+assuming a stack invariant. No runtime-coverage or host-bridge closure follows.
+Only the coordinator launches package builds; agents run narrow Lean files.
+
+## Routing documentation reconciled, 2026-09-03
+
+Codex documentation continuation claimed and completed only the current
+dependency paragraph, Wave 2 continuation pointer and near-term effectful-field
+row in `PLAN.md`, plus the dependency paragraph and external-package table
+rows in `docs/ARCHITECTURE.md`. The narrow claim superseded only those sections
+of the completed Schema documentation reservation, as supported by the Wave 2
+integration note and generated assurance closure, and is now released.
+
+Both dependency revisions match `lakefile.toml` and `lake-manifest.json`.
+The effectful-field row matches all eight closed edges and the closed graph
+status in `generated/schema-structural-assurance.tsv`; document and wire edges
+remain open. The extraction parity history is retained. Source comparisons,
+the continuation link, a citation check limited to the two edited documents,
+and `git diff --check` passed. No build or generated-output change was needed.
+
+## Full reification continuation: break-scoping counterexample, 2026-09-03
+
+Codex breaker (`algebra_choices`) claims only the following fence, dispatched
+by the coordinator after a kernel proof refuted the existing generic
+`BreakScopedStatement`. The merged Wave 2 reservations are superseded only for
+these paths and append-only sections. Production `StructureLaws.lean` and
+`SkeletonSemantics.lean` remain unchanged by this packet.
+
+| File or section | Owner | State |
+| --- | --- | --- |
+| `Effect4Test/Counterexamples/Target/BreakScoped.lean` | Codex breaker (`algebra_choices`) | new kernel witness and actual-lowerer edge-discipline receipts |
+| `test/counterexamples/REGISTER.md` (`E4-TARGET-CE-018` only) | Codex breaker (`algebra_choices`) | append-only counterexample row |
+| `test/contracts/flow-structured-lowering.contract.md` (2026-09-03 amendment only) | Codex breaker (`algebra_choices`) | original quantified statement refuted; corrected hypothesis and intended full T4 remain explicit |
+
+The coordinator owns root test imports and the shared coordination commit.
+This breaker runs only the narrow Lean file and its axiom receipts.
+
+Break-scoping packet released: commit `2bd2077` contains only the three files
+above (244 added lines). `lake env lean
+Effect4Test/Counterexamples/Target/BreakScoped.lean` exited 0; its eleven
+theorem receipts use at most `propext` and `Quot.sound`. The staged diff check
+passed. Root test imports, shared coordination commit and any generated
+counterexample-register projections remain coordinator-owned. The corrected
+generic statement and full T4 are still open. No package build ran here.
+
+## Fuel-free region proof integrated, 2026-09-03
+
+The independent packet was frozen at `8351f88`, after 24 concrete controls,
+missing-declaration red checks and a rejected first-failure-only mutant. The
+coordinator implements its four public declarations in
+`Effect4/Semantics/RegionTotal.lean`; helper declarations are private. The
+recursive definition uses tape length and erased non-choice reachability,
+never a fuelled runner. The equality quantifies over every sufficient fuel
+and every handler answer, including refusals and failures.
+
+The coordinator additionally claims the D2 row in the Wave 2 status table,
+the existing semantics row in `docs/TRACE-DAG.md`, and the false
+`BreakScopedStatement` sentence in its structured-agreement row. Root imports
+for this packet and the committed break-scoping witness are coordinator-owned.
+No other packet's proof or generated status is included in this amendment.
+
+`lake build Effect4.Semantics.RegionTotal` and both narrow packet files
+passed. A first axiom inspection found `Classical.byContradiction` introduced
+by arithmetic automation on the impossible zero-fuel branch. Direct
+`False.elim` removed it; all four fresh receipts now contain exactly
+`propext` and `Quot.sound`. Independent review also traversed the definition
+dependencies, verified the six decreases and every branch, and confirmed that
+neither fuel-free definition reaches a fuelled runner or `fuelFor`.
+
+The default `lake build` compiled the library root and new packet, then failed
+on the two existing declared-red modules (`ByteParserContract` and
+`RaceRepresentativeContract`) and their audit-root closure consequence. This
+is not an all-green package or a full-goal completion claim. The separate
+stack invariant, finalizer-machine connection and host boundaries remain open.
+
+## Full reification continuation: region simulation boundaries, 2026-09-03
+
+Codex independent breaker (`corpus_measurement`) claims only the following
+packet, dispatched after the same-scope cleanup and live-frontier mismatches
+were reproduced in scratch Lean checks. The completed Wave 2 trace-lane
+reservations are superseded only for these paths and append-only sections.
+
+| File or section | Owner | State |
+| --- | --- | --- |
+| `Effect4Test/Counterexamples/Target/RegionSimulationBoundary.lean` | Codex breaker (`corpus_measurement`) | new kernel witnesses and successful controls |
+| `test/counterexamples/REGISTER.md` (`E4-TARGET-CE-019` through `021` only) | Codex breaker (`corpus_measurement`) | append-only target rows |
+| `test/contracts/frame-simulation.contract.md` (2026-09-03 independent boundary amendment only) | Codex breaker (`corpus_measurement`) | append-only correction; general finite-prefix and residual-state obligation |
+| `test/counterexamples/target/region-simulation-boundary.mjs` | Codex breaker (`corpus_measurement`) | pinned rc.112 finite host reproducer, with source-hash verification |
+
+Production implementations, existing witnesses, root imports, generated
+evidence and runtime coverage are outside this fence. The coordinator owns
+the shared coordination commit and packet wiring. This breaker runs the
+narrow Lean witness, host reproducer and scoped citation/diff checks only.
+
+
+## Full reification continuation: structured order contract, 2026-09-03
+
+Codex independent breaker (`web_semantics`) claims only the three new files
+below, dispatched by the coordinator before production `StructureOrder`
+implementation. This continues the corrected edge-local body premise of
+`E4-TARGET-CE-018`; the previous counterexample and frozen packet remain intact.
+
+| File or section | Owner | State |
+| --- | --- | --- |
+| `test/contracts/structure-order.contract.md` | Codex independent breaker (`web_semantics`) | new minimal public declaration/conditional theorem contract |
+| `Effect4Test/Target/TypeScript/StructureOrderContract.lean` | Codex independent breaker (`web_semantics`) | exact signatures, actual-body control and illicit-body rejection |
+| `Effect4Test/Target/TypeScript/StructureOrderAxiomReport.lean` | Codex independent breaker (`web_semantics`) | trust receipts for the frozen public surface |
+
+The intended production file is `Effect4/Target/TypeScript/StructureOrder.lean`
+owned by the separate builder (`algebra_choices`) after this packet is frozen.
+Existing `StructureLaws`, graph algorithms, emitter, CE-018 witness and the old
+structured-lowering contract remain unchanged. The existing
+`docs/TRACE-DAG.md` structured-agreement route remains open for computed
+dominator correctness, full merge/loop agreement and interrupt denotation.
+The coordinator owns root imports, known-red wiring and the shared coordination
+commit. The breaker commits only the three new packet files and runs narrow
+Lean files; only the coordinator launches package builds.

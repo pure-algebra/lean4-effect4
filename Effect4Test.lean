@@ -49,12 +49,15 @@ import Effect4Test.Semantics.DenotationContract
 import Effect4Test.Semantics.ApproximationContract
 import Effect4Test.Semantics.ApproximationAxiomReport
 import Effect4Test.Semantics.RegionDenotationContract
+import Effect4Test.Semantics.RegionTotalContract
+import Effect4Test.Semantics.RegionTotalAxiomReport
 import Effect4Test.Flow.RegionRunnerContract
 import Effect4Test.Flow.InterruptContract
 import Effect4Test.Target.TypeScript.RegionLowerContract
 import Effect4Test.Target.TypeScript.StructuredLowerContract
 import Effect4Test.Target.TypeScript.StructureLawsContract
 import Effect4Test.Target.TypeScript.StructureLawsAxiomReport
+import Effect4Test.Counterexamples.Target.BreakScoped
 import Effect4Test.Target.TypeScript.SkeletonSemanticsContract
 import Effect4Test.Target.TypeScript.SkeletonSemanticsAxiomReport
 import Effect4Test.Target.TypeScript.SimulationContract
