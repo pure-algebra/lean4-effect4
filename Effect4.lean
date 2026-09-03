@@ -86,6 +86,7 @@ import Effect4.Target.TypeScript.FlowLower
 import Effect4.Target.TypeScript.RegionLower
 import Effect4.Target.TypeScript.StructuredLower
 import Effect4.Target.TypeScript.StructureLaws
+import Effect4.Target.TypeScript.SkeletonSemantics
 import Effect4.Target.TypeScript.Lower
 import Effect4.Target.TypeScript.Schema
 import Effect4.Target.TypeScript.EffectfulField
