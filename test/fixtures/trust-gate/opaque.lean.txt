@@ -1,6 +1,18 @@
--- An `opaque` with no body. Lean synthesises `default_or_ofNonempty%` for the
--- missing value, so the constant denotes an arbitrary inhabitant nobody chose.
--- No token gives this away — the keyword is the one a bodied `opaque` uses too,
--- and the bodied form is admitted — so it is the declaration pass that refuses
--- it. `benign.lean.txt` carries the bodied form the gate accepts.
-private opaque plantedBodylessOpaque : Nat
+import Effect4
+
+/-!
+An `opaque` with no body. Lean synthesises `default_or_ofNonempty%` for the
+missing value, so the constant denotes an arbitrary inhabitant nobody chose.
+
+No token gives this away — the keyword is the one a bodied `opaque` uses too,
+and the bodied form is admitted — so this is the declaration pass reading the
+synthesised value's head constant. It therefore has to be a compiled module
+rather than text appended to one; `benign.lean.txt` carries the bodied form the
+gate accepts.
+-/
+
+namespace Effect4Test.PlantedOpaque
+
+opaque plantedBodylessOpaque : Nat
+
+end Effect4Test.PlantedOpaque

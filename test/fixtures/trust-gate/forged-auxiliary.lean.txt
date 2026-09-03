@@ -1,0 +1,22 @@
+import Effect4
+
+/-!
+The cross-module admission attack, from the module that can actually mount it.
+
+`Effect4.Target.EffectV4.Skeleton.render` is an exactly admitted declaration:
+it traverses Lean `String` values and so reaches `Classical.choice`. Its real
+equation lemmas are minted in `Effect4.Target.TypeScript.StructureLaws`, a
+different module, and the gate has to inherit `render`'s admission for them or
+refuse 32 genuine lemmas.
+
+So the question is whether a foreign module can spell a name that passes for
+one. Lean refuses `render.eq_1` and `render.eq_9999` outright — reserved names
+— but `proof_1` is not reserved and this module declares it without complaint.
+A gate that recognised auxiliaries by their spelling would admit it.
+
+`Lean.isReservedName` is the mark that tells the two apart, and this fixture is
+what says the gate reads the mark rather than the spelling.
+-/
+
+noncomputable def Effect4.Target.EffectV4.Skeleton.render.proof_1 : Nat :=
+  Classical.choice (inferInstance : Nonempty Nat)

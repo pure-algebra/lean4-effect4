@@ -297,76 +297,87 @@ private def moduleOf? (environment : Environment) (declaration : Name) : Option 
   let index ← environment.getModuleIdxFor? declaration
   environment.header.moduleNames[index.toNat]?
 
+/-- Resolve each `(owner, original name)` exemption to the one private
+declaration that carries it, and refuse anything but exactly one.
+
+One pass over the constants, not one pass per exemption. Being private is a
+rare shape, so the pairing is decided per declaration and the twelve
+exemptions are matched against the handful of candidates that survive; the
+array itself is walked once. Filtering the whole array once per exemption
+costs `#exemptions × #constants` calls to `privateToUserName?` and
+`moduleOf?`, which with twelve exemptions is minutes rather than seconds — the
+difference between a gate that gets run and one that gets skipped. -/
 private def resolveChoiceImplementationDeclarations
     (environment : Environment) (declarations : Array Name) : Except String (List Name) := do
+  let mut candidates : List (Name × Name × Name) := []
+  for declaration in declarations do
+    if let some userName := privateToUserName? declaration then
+      if let some owner := moduleOf? environment declaration then
+        if choiceImplementationPrivateDeclarations.contains (owner, userName) then
+          candidates := (owner, userName, declaration) :: candidates
   let mut resolved := choiceImplementationDeclarations
   for (owner, originalName) in choiceImplementationPrivateDeclarations do
-    let privateCandidates := declarations.toList.filter fun declaration =>
-      moduleOf? environment declaration == some owner &&
-        privateToUserName? declaration == some originalName
-    match privateCandidates with
+    let owned := candidates.filterMap fun (candidateOwner, candidateName, declaration) =>
+      if candidateOwner == owner && candidateName == originalName then some declaration else none
+    match owned with
     | [declaration] => resolved := resolved ++ [declaration]
-    | _ => throw s!"Effect4 axiom gate: private implementation exemption {owner}/{originalName} matched {privateCandidates.length} declarations; expected exactly one"
+    | _ => throw s!"Effect4 axiom gate: private implementation exemption {owner}/{originalName} matched {owned.length} declarations; expected exactly one"
   return resolved
 
-/-- Whether a single name component is one Lean appends when it generates an
-auxiliary for the declaration above it, rather than one an author wrote.
-
-Measured, not guessed: the 32 declarations in this tree that are admitted only
-through a parent in another module are all `render.eq_def` and `render.eq_<n>`
-under `Effect4.Target.EffectV4.Skeleton`, minted in
-`Effect4.Target.TypeScript.StructureLaws` — the module that first unfolds the
-renderer. The rest of the family is listed because it is generated the same
-way, not because it occurs here yet. -/
-private def isGeneratedComponent : Name → Bool
-  | .str _ component =>
-      component.startsWith "eq_" || component.startsWith "_eq_"
-        || component.startsWith "match_" || component.startsWith "proof_"
-        || component.startsWith "_cstage" || component.startsWith "_elambda"
-        || component.startsWith "_lambda" || component.startsWith "_spec_"
-        || component == "_unfold" || component == "_sunfold"
-        || component == "induct" || component == "fun_cases"
-  | .num _ _ => true
-  | .anonymous => false
+/-- The ancestors reachable by walking up while the parent stays in the same
+module as the declaration. A definition's `match_<n>`, `proof_<n>` and private
+helpers land beside it, under its own author's control, so they are judged by
+it. The walk stops at the first parent that lives elsewhere. -/
+private def sameModuleAncestors
+    (environment : Environment) (declarationModule : Option Name) : Name → List Name
+  | .anonymous => []
+  | .str parent _ =>
+      if moduleOf? environment parent == declarationModule then
+        parent :: sameModuleAncestors environment declarationModule parent
+      else []
+  | .num parent _ =>
+      if moduleOf? environment parent == declarationModule then
+        parent :: sameModuleAncestors environment declarationModule parent
+      else []
 
 /--
-The ancestors whose admission a declaration may inherit.
+The ancestors whose admission a declaration may inherit. Two shapes, and
+nothing else.
 
-An auto-generated auxiliary is judged by the declaration that produced it. Two
-shapes qualify, and nothing else does:
+* A parent in the *same module*, per `sameModuleAncestors`.
+* The immediate parent of a name Lean itself *reserves* for it. An equation
+  lemma is minted in whichever module first unfolds `f`, so `f.eq_def` and
+  `f.eq_<n>` genuinely live somewhere else, and this is the only way admission
+  crosses a module boundary.
 
-* a parent in the *same module* — `f.match_<n>`, `f.proof_<n>`, and the private
-  helpers a definition elaborates into all land beside `f`; and
-* a parent in *another* module reached only through Lean's own auxiliary
-  suffixes — an equation lemma is minted in whichever module first unfolds `f`,
-  so `f.eq_def` genuinely lives elsewhere.
+The second clause reads `Lean.isReservedName` rather than the spelling, and
+that distinction is the whole of it. Measured against this tree: a foreign
+module can declare `Skeleton.render.proof_1`, `Skeleton.render.match_1` and
+`Skeleton.render._spec_1` — they are ordinary names Lean reserves nothing about
+— while `Skeleton.render.eq_1` and `Skeleton.render.eq_9999` are refused
+outright, `is a reserved name`. A suffix-spelling test would therefore have
+handed `Classical.choice` to any of the first three;
+`test/fixtures/trust-gate/forged-auxiliary.lean.txt` is the fixture that says
+it does not.
 
-The second clause is why the rule is a suffix walk rather than the plain prefix
-list it used to be. `admitted` reads the module an *ancestor* lives in, so with
-an unrestricted prefix list any constant whose name happens to equal an
-admitted module's — a `structure Skeleton` in namespace
-`Effect4.Target.TypeScript`, say — would hand `Classical.choice` to every
-declaration under that namespace anywhere in the tree. Under this rule the
-authored component `Skeleton.someTheorem` breaks the chain and only genuine
-auxiliaries cross a module boundary.
+Without any cross-module clause the gate refuses 32 real equation lemmas:
+`Skeleton.render.eq_<n>` and its siblings are minted in
+`Effect4.Target.TypeScript.StructureLaws`, the module that first unfolds the
+renderer. All 32 are reserved names.
+
+`admitted` reads the module an *ancestor* lives in, so an unrestricted prefix
+list would let any constant whose name happens to equal an admitted module's —
+a `structure Skeleton` in namespace `Effect4.Target.TypeScript`, say — hand
+`Classical.choice` to every declaration under that namespace tree-wide. Neither
+clause above can reach across a module boundary for an authored name.
 -/
-private def admissionAncestorsFrom
-    (environment : Environment) (declarationModule : Option Name) :
-    Name → Bool → List Name
-  | .anonymous, _ => []
-  | name@(.str parent _), allGenerated =>
-      let generated := allGenerated && isGeneratedComponent name
-      let inheritable := generated || moduleOf? environment parent == declarationModule
-      (if inheritable then [parent] else []) ++
-        admissionAncestorsFrom environment declarationModule parent generated
-  | name@(.num parent _), allGenerated =>
-      let generated := allGenerated && isGeneratedComponent name
-      let inheritable := generated || moduleOf? environment parent == declarationModule
-      (if inheritable then [parent] else []) ++
-        admissionAncestorsFrom environment declarationModule parent generated
-
 private def admissionAncestors (environment : Environment) (declaration : Name) : List Name :=
-  admissionAncestorsFrom environment (moduleOf? environment declaration) declaration true
+  let sameModule :=
+    sameModuleAncestors environment (moduleOf? environment declaration) declaration
+  if Lean.isReservedName environment declaration then
+    declaration.getPrefix :: sameModule
+  else
+    sameModule
 
 /-- Strip the binders a parameterised `opaque` puts in front of its value.
 `opaque f (n : Nat) : Nat` has value `fun n => default`, and the head constant
