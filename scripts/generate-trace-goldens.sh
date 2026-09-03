@@ -70,6 +70,7 @@ done < <(run job-programs)
 mkdir -p "$out/deferred"
 for program in $(run deferred-programs); do
   { provenance; run deferred-golden "$program"; } > "$out/deferred/$program.tsv"
+done
 # The `Refs` family: its own generated module and its own tail (`ref-tail.ts`),
 # so the straight-line `*.empty.tsv` glob must not see it either.
 mkdir -p "$out/ref"
