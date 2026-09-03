@@ -28,6 +28,7 @@ set_option autoImplicit false
 open TypeScript Effects Effect4.Flow Effect4.Target.EffectV4 Effect4.Target.EffectV4.Skel
 namespace Effect4.Target.EffectV4
 open Effects.Trace (Val)
+open Effects.RawFlow (reachSet_length_lt_of_edge)
 namespace T4Sequencing
 private theorem bindPure {S : Signature} {A B : Type} (value : A) (next : A → Program S B) :
     Program.bind (.pure value) next = next value := rfl

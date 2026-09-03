@@ -1,4 +1,5 @@
 import Effects.Algebra.Sum
+import Effects.Flow.Alphabet
 import Effects.Trace
 import Effect4.Semantics.Runs
 import Effect4.Semantics.Fuel
@@ -33,23 +34,12 @@ Two facts shape everything here.
   `close`. `interpretRun` is that composite and is the right-hand side of T1.
 -/
 
-namespace Effects
-
 universe uTy uOp
-
-/-- The first-order alphabet under a flow alphabet: identity and the executable
-lookup are admission's business, the operation table is the algebra's.
-
-upstream: lean4-effects (`Effects/Family.lean`, beside `Alphabet.toFamily`). -/
-abbrev FlowAlphabet.toAlphabet {Ty : Type uTy} (alphabet : FlowAlphabet.{uTy, uOp} Ty) :
-    Alphabet.{uTy, uOp} Ty :=
-  ⟨alphabet.Op, alphabet.requestTy, alphabet.answerTy⟩
-
-end Effects
 
 namespace Effect4.Flow
 
 open Effects
+open Effects.RawFlow (reachSet_length_lt_of_edge)
 open Effects.Trace (Val)
 
 /-! ## The signature -/
@@ -389,85 +379,6 @@ The measure is lexicographic: `(tape.length, (raw.reachSet block).length)`. A
 a `jump` or a `perform` travels a declared non-`choose` edge, and `CyclesWF`
 makes the reachable set strictly smaller across such an edge. Admission enters
 `denote` here and nowhere else. -/
-
-/-- Removing every copy of a present element shortens a list.
-
-upstream: lean4-effects (`Effects/Flow/Raw.lean` proves this privately for
-`BlockId`; `Effect4/Semantics/Fuel.lean` reproves it privately for a general
-`α`. A third copy is needed only because both are private). -/
-private theorem length_filter_ne {a : BlockId} :
-    ∀ {l : List BlockId}, a ∈ l →
-      (l.filter fun x => decide (x ≠ a)).length + 1 ≤ l.length
-  | [], mem => absurd mem List.not_mem_nil
-  | b :: bs, mem => by
-      by_cases eq : b = a
-      · subst eq
-        rw [List.filter_cons_of_neg (p := fun x => decide (x ≠ b))
-          (by rw [decide_eq_false (fun h => h rfl)]; exact Bool.false_ne_true)]
-        rw [List.length_cons]
-        exact Nat.succ_le_succ (List.length_filter_le _ _)
-      · rw [List.filter_cons_of_pos (p := fun x => decide (x ≠ a)) (decide_eq_true eq),
-          List.length_cons, List.length_cons]
-        have tailMem : a ∈ bs := by
-          rcases List.mem_cons.mp mem with h | h
-          · exact absurd h.symm eq
-          · exact h
-        have ih := length_filter_ne tailMem
-        omega
-
-/-- A duplicate-free list is no longer than any list containing it.
-
-upstream: lean4-effects (see `length_filter_ne`). -/
-private theorem length_le_of_nodup_subset :
-    ∀ {l₁ l₂ : List BlockId}, l₁.Nodup → l₁ ⊆ l₂ → l₁.length ≤ l₂.length
-  | [], _, _, _ => Nat.zero_le _
-  | a :: l, l₂, nodup, sub => by
-      have ⟨notMem, nodupTail⟩ := List.nodup_cons.mp nodup
-      have aMem : a ∈ l₂ := sub List.mem_cons_self
-      have tailSub : l ⊆ l₂.filter fun x => decide (x ≠ a) := by
-        intro x hx
-        have ne : x ≠ a := fun eq => notMem (eq ▸ hx)
-        exact List.mem_filter.mpr ⟨sub (List.mem_cons_of_mem _ hx), decide_eq_true ne⟩
-      have ih := length_le_of_nodup_subset nodupTail tailSub
-      have bound := length_filter_ne aMem
-      rw [List.length_cons]
-      omega
-
-/-- Non-`choose` reachability is transitive.
-
-upstream: lean4-effects (`Effects/Flow/Raw.lean`, beside `ReachableNoChoose`). -/
-theorem reachableNoChoose_trans {raw : RawFlow Ty} {source middle target : BlockId}
-    (first : ReachableNoChoose raw source middle)
-    (second : ReachableNoChoose raw middle target) :
-    ReachableNoChoose raw source target := by
-  induction second with
-  | refl => exact first
-  | step _ edge ih => exact .step ih edge
-
-/-- The measure lemma D1 owes. Across a declared non-`choose` edge the
-reachable set strictly shrinks: it can only shrink because the source is in its
-own reachable set and, by `CyclesWF`, not in the target's.
-
-upstream: lean4-effects (`Effects/Flow/Raw.lean`). -/
-theorem reachSet_length_lt_of_edge {raw : RawFlow Ty} (cycles : CyclesWF raw)
-    {source target : BlockId} (edge : EdgeNoChoose raw source target) :
-    (raw.reachSet target).length < (raw.reachSet source).length := by
-  have nodupTarget : (raw.reachSet target).Nodup := by
-    unfold RawFlow.reachSet
-    exact RawFlow.nodup_saturate raw _ (by simp)
-  have notMem : source ∉ raw.reachSet target := fun mem =>
-    cycles source target edge (RawFlow.mem_reachSet.mp mem)
-  have nodup : (source :: raw.reachSet target).Nodup :=
-    List.nodup_cons.mpr ⟨notMem, nodupTarget⟩
-  have sub : (source :: raw.reachSet target) ⊆ raw.reachSet source := by
-    intro x hx
-    rcases List.mem_cons.mp hx with rfl | hx
-    · exact RawFlow.mem_reachSet.mpr (.refl _)
-    · exact RawFlow.mem_reachSet.mpr
-        (reachableNoChoose_trans (.step (.refl source) edge) (RawFlow.mem_reachSet.mp hx))
-  have counted := length_le_of_nodup_subset nodup sub
-  simp only [List.length_cons] at counted
-  omega
 
 /-- A `jump` leaves its block along a declared non-`choose` edge. -/
 theorem edgeNoChoose_of_plan_jump {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty}

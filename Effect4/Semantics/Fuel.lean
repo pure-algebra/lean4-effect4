@@ -26,61 +26,7 @@ namespace Effect4.Flow
 
 open Effects
 open Effects.Trace (Val)
-
-/-! ## Two list facts, proved by induction
-
-`List.Nodup.length_le_of_subset` is in scope but depends on `Classical.choice`;
-the trace lane's ceiling is `propext` and `Quot.sound`, so the pigeonhole step
-is reproved here by structural induction, as `Effects.RawFlow` does privately
-for its own saturation bound. -/
-
-private theorem length_filter_ne {α : Type} [DecidableEq α] {a : α} :
-    ∀ {l : List α}, a ∈ l → (l.filter fun x => decide (x ≠ a)).length + 1 ≤ l.length
-  | [], mem => absurd mem List.not_mem_nil
-  | b :: bs, mem => by
-      by_cases eq : b = a
-      · subst eq
-        rw [List.filter_cons_of_neg (p := fun x => decide (x ≠ b))
-          (by rw [decide_eq_false (fun h => h rfl)]; exact Bool.false_ne_true)]
-        rw [List.length_cons]
-        exact Nat.succ_le_succ (List.length_filter_le _ _)
-      · rw [List.filter_cons_of_pos (p := fun x => decide (x ≠ a)) (decide_eq_true eq),
-          List.length_cons, List.length_cons]
-        have tailMem : a ∈ bs := by
-          rcases List.mem_cons.mp mem with h | h
-          · exact absurd h.symm eq
-          · exact h
-        have ih := length_filter_ne tailMem
-        omega
-
-/-- A duplicate-free list is no longer than any list containing it. -/
-private theorem length_le_of_nodup_subset {α : Type} [DecidableEq α] :
-    ∀ {l₁ l₂ : List α}, l₁.Nodup → l₁ ⊆ l₂ → l₁.length ≤ l₂.length
-  | [], _, _, _ => Nat.zero_le _
-  | a :: l, l₂, nodup, sub => by
-      have ⟨notMem, nodupTail⟩ := List.nodup_cons.mp nodup
-      have aMem : a ∈ l₂ := sub List.mem_cons_self
-      have tailSub : l ⊆ l₂.filter fun x => decide (x ≠ a) := by
-        intro x hx
-        have ne : x ≠ a := fun eq => notMem (eq ▸ hx)
-        exact List.mem_filter.mpr ⟨sub (List.mem_cons_of_mem _ hx), decide_eq_true ne⟩
-      have ih := length_le_of_nodup_subset nodupTail tailSub
-      have bound := length_filter_ne aMem
-      rw [List.length_cons]
-      omega
-
-/-- A resolved block carries the identity it was looked up by. -/
-theorem lookupBlock_id {raw : RawFlow Ty} {id : BlockId} {block : RawBlock Ty}
-    (found : lookupBlock raw id = some block) : block.id = id := by
-  unfold lookupBlock at found
-  have matched := List.find?_some found
-  simpa using matched
-
-/-- A resolved identity is one of the declared block identities. -/
-theorem mem_blockIds_of_lookup {raw : RawFlow Ty} {id : BlockId} {block : RawBlock Ty}
-    (found : lookupBlock raw id = some block) :
-    id ∈ raw.blocks.map RawBlock.id :=
-  lookupBlock_id found ▸ List.mem_map_of_mem (List.mem_of_find?_eq_some found)
+open Effects.ListAux (length_le_of_nodup_subset)
 
 /-! ## What a plan says about the graph and the tape
 

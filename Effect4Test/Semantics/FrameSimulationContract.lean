@@ -332,7 +332,7 @@ def alphabet : Effects.FlowAlphabet Ty where
   lookup id := if id.value = 0 then some .get else if id.value = 1 then some .add else none
   requestTy := fun _ => Ty.nat
   answerTy := fun _ => Ty.nat
-  errorTy := fun _ => Ty.err
+  errorTy := fun _ => some Ty.err
   boolTy := Ty.bool
   lookup_operationId := by intro op; cases op <;> rfl
   operationId_of_lookup := by

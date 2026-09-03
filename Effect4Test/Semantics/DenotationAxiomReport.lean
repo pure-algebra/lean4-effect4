@@ -5,8 +5,8 @@ Expected union: `propext` and `Quot.sound`.
 
 import Effect4.Semantics.Denotation
 
-#print axioms Effect4.Flow.reachableNoChoose_trans
-#print axioms Effect4.Flow.reachSet_length_lt_of_edge
+#print axioms Effects.reachableNoChoose_trans
+#print axioms Effects.RawFlow.reachSet_length_lt_of_edge
 #print axioms Effect4.Flow.edgeNoChoose_of_plan_jump
 #print axioms Effect4.Flow.edgeNoChoose_of_plan_perform
 #print axioms Effect4.Flow.tape_length_of_plan_choose

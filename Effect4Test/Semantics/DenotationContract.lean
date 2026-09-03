@@ -42,8 +42,8 @@ open Effect4Test.Flow.RunnerContract
 
 /-! ## The laws -/
 
-#check @Effect4.Flow.reachableNoChoose_trans
-#check @Effect4.Flow.reachSet_length_lt_of_edge
+#check @Effects.reachableNoChoose_trans
+#check @Effects.RawFlow.reachSet_length_lt_of_edge
 #check @Effect4.Flow.edgeNoChoose_of_plan_jump
 #check @Effect4.Flow.edgeNoChoose_of_plan_perform
 #check @Effect4.Flow.tape_length_of_plan_choose

@@ -27,8 +27,8 @@ import Effect4.Semantics.Fuel
 #print axioms Effect4.Flow.run_fuel_mono
 
 -- The fuel argument (`Effect4/Semantics/Fuel.lean`).
-#print axioms Effect4.Flow.lookupBlock_id
-#print axioms Effect4.Flow.mem_blockIds_of_lookup
+#print axioms Effects.lookupBlock_id
+#print axioms Effects.mem_blockIds_of_lookup
 #print axioms Effect4.Flow.plan_shape
 #print axioms Effect4.Flow.step_progress
 #print axioms Effect4.Flow.LoopBudget.segment_lt

@@ -8,6 +8,14 @@ Owner: the D2 reachable-stack obligation in `docs/TRACE-DAG.md`, frozen by
 theorems over the existing region runner and standard handler. The private
 invariant retains each frame's region identity and the complete parent chain;
 it is a proof judgment, not a second stored program or runtime carrier.
+
+Effects v0.8.0 made `RegionWF` a fourteen-field structure with
+`regionWF_iff_check`; this module still recovers its facts by unfolding the
+checker through that equivalence (`table_checked`, `term_checked`,
+`entry_outside`, and the `checkTerm` unfoldings), which is the mechanical port.
+The owed cleanup replaces each private helper with the matching `RegionWF`
+field (the table is in lean4-effects `docs/RELEASE-v0.8.0.md`) and deletes
+`alternative_none`.
 -/
 
 namespace Effect4.Flow
@@ -32,13 +40,15 @@ private theorem alternative_none {α : Type} {a b : Option α} :
 
 private theorem table_checked [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
     {flow : RegionFlow Ty} (wf : RegionWF alphabet flow) : flow.checkTable = none := by
-  simp only [RegionWF, RegionFlow.check, alternative_none] at wf
+  have wf := (regionWF_iff_check alphabet flow).mp wf
+  simp only [RegionFlow.check, alternative_none] at wf
   exact wf.1
 
 private theorem term_checked [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
     {flow : RegionFlow Ty} (wf : RegionWF alphabet flow) {block : RegionBlock Ty}
-    (mem : block ∈ flow.blocks) : RegionFlow.checkBlock.checkTerm alphabet flow block = none := by
-  simp only [RegionWF, RegionFlow.check, alternative_none] at wf
+    (mem : block ∈ flow.blocks) : RegionFlow.checkTerm alphabet flow block = none := by
+  have wf := (regionWF_iff_check alphabet flow).mp wf
+  simp only [RegionFlow.check, alternative_none] at wf
   have checked := List.findSome?_eq_none_iff.mp wf.2.2 block mem
   unfold RegionFlow.checkBlock at checked
   cases label : block.region with
@@ -52,7 +62,8 @@ private theorem term_checked [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
 private theorem entry_outside [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
     {flow : RegionFlow Ty} (wf : RegionWF alphabet flow) {entry : RegionBlock Ty}
     (found : flow.block? flow.entry = some entry) : entry.region = none := by
-  simp only [RegionWF, RegionFlow.check, alternative_none] at wf
+  have wf := (regionWF_iff_check alphabet flow).mp wf
+  simp only [RegionFlow.check, alternative_none] at wf
   have h := wf.2.1
   rw [found] at h
   cases label : entry.region <;> simp_all
@@ -82,7 +93,7 @@ private theorem continue_label [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
 
 private theorem plain_labels [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
     {flow : RegionFlow Ty} {block : RegionBlock Ty} {term : RawTerm}
-    (checked : RegionFlow.checkBlock.checkTerm alphabet flow block = none)
+    (checked : RegionFlow.checkTerm alphabet flow block = none)
     (hterm : block.term = .plain term) :
     flow.targetsLabelled block.region term.successors = true := by
   cases term with
@@ -90,7 +101,7 @@ private theorem plain_labels [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
   | jump target args | perform operation request target args | choose site left right args
   | performCatch operation request target args onError errorArgs
   | branch test site onTrue onFalse args =>
-      simp only [RegionFlow.checkBlock.checkTerm, hterm] at checked
+      simp only [RegionFlow.checkTerm, hterm] at checked
       split at checked
       · assumption
       · cases checked
@@ -98,11 +109,11 @@ private theorem plain_labels [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
 private theorem enter_checked [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
     {flow : RegionFlow Ty} {block : RegionBlock Ty} {region : RegionId}
     {body : BlockId} {args : List Var}
-    (checked : RegionFlow.checkBlock.checkTerm alphabet flow block = none)
+    (checked : RegionFlow.checkTerm alphabet flow block = none)
     (hterm : block.term = .enter region body args) :
     ∃ row, flow.row? region = some row ∧ row.parent = block.region ∧
       flow.targetsLabelled (some region) [body] = true := by
-  simp only [RegionFlow.checkBlock.checkTerm, hterm] at checked
+  simp only [RegionFlow.checkTerm, hterm] at checked
   cases found : flow.row? region with
   | none => simp [found] at checked
   | some row =>
@@ -120,22 +131,22 @@ private theorem enter_checked [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
 private theorem acquire_checked [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
     {flow : RegionFlow Ty} {block : RegionBlock Ty} {operation release : OperationId}
     {request : Var} {target : BlockId} {args : List Var} {op : alphabet.Op}
-    (checked : RegionFlow.checkBlock.checkTerm alphabet flow block = none)
+    (checked : RegionFlow.checkTerm alphabet flow block = none)
     (hterm : block.term = .acquire operation request release target args)
     (hop : alphabet.lookup operation = some op) :
     block.region.isSome = true ∧ flow.targetsLabelled block.region [target] = true ∧
       ∃ releaser, alphabet.lookup release = some releaser := by
-  simp only [RegionFlow.checkBlock.checkTerm, hterm, hop] at checked
+  simp only [RegionFlow.checkTerm, hterm, hop] at checked
   cases labelled : flow.targetsLabelled block.region [target] <;>
   cases label : block.region <;> cases found : alphabet.lookup release <;>
     simp_all
 
 private theorem leave_checked [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
     {flow : RegionFlow Ty} {block : RegionBlock Ty} {value : Var}
-    (checked : RegionFlow.checkBlock.checkTerm alphabet flow block = none)
+    (checked : RegionFlow.checkTerm alphabet flow block = none)
     (hterm : block.term = .leave value) :
     ∃ row, block.region.bind flow.row? = some row := by
-  simp only [RegionFlow.checkBlock.checkTerm, hterm] at checked
+  simp only [RegionFlow.checkTerm, hterm] at checked
   cases found : block.region.bind flow.row? with
   | none => simp [found] at checked
   | some row => exact ⟨row, rfl⟩

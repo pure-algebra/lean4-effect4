@@ -4,7 +4,7 @@ regenerate	./scripts/generate-trace-goldens.sh
 input	harness/trace/Generate.lean	sha256=0f5508df224ee765a7aff37407639d9a8fc5b7aa096bc1f8f0e4ee157387b7a7
 input	Effect4/Meta/Derive.lean	sha256=e13be0a7c9183499088b4f299b62652f2ca5a4728305b2c853a65fea631bfda4
 input	Effect4/Target/TypeScript/Trace.lean	sha256=38452fa69175f88fe675e45756f4ec91e6168fc828a77e5dad95ddefb190782f
-pin	effects	a11715748b04f2369e5031e3350f30b99862a07f
+pin	effects	a4ee7a14248ee5976039b73039319efa87834986
 format	effect4-trace-v1
 face	lean
 program	scope.addAfterClosed

@@ -88,7 +88,11 @@ abbrev tableAlphabet (id : AlphabetId) (table : List OpSpec) : FlowAlphabet Stri
   lookup id := if h : id.value < table.length then some ⟨id.value, h⟩ else none
   requestTy op := (OpSpec.at table op).requestTy
   answerTy op := (OpSpec.at table op).answerTy
-  errorTy op := (OpSpec.at table op).errorTy
+  -- v0.8.0 reads `errorTy` as an `Option`: `some` keeps the v0.7.0 behaviour
+  -- exactly (every operation may fail). Reading the row spelling `"never"` as
+  -- `none`, so that a catch on an unfailable operation is refused at
+  -- admission, is a behaviour change owed to the lowering packet.
+  errorTy op := some (OpSpec.at table op).errorTy
   boolTy := "boolean"
   lookup_operationId := by
     intro op

@@ -18,6 +18,7 @@ proof with the existing executable approximation.
 namespace Effect4.Flow
 
 open Effects
+open Effects.RawFlow (reachSet_length_lt_of_edge)
 open Effects.Trace (Val)
 
 universe uTy
