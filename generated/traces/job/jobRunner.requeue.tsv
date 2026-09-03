@@ -9,7 +9,7 @@ format	effect4-trace-v1
 face	lean-flow
 program	jobRunner.requeue
 tape	1:1,2:0,3:1,2:0,3:0,1:0
-rules	service-acquire,dispatch-loop,block-case,interrupt-point,param-move,flow-literal,flow-perform,nullary-value,perform-call,choose-if,flow-atom,flow-ret,region-enter,region-acquire,region-leave
+rules	service-acquire,dispatch-loop,block-case,interrupt-point,param-move,flow-literal,flow-perform,nullary-value,perform-call,choose-if,flow-atom,perform-tuple,flow-ret,region-enter,region-acquire,region-leave
 enter	1
 decide	1000003	false
 op	connect	[]
@@ -17,25 +17,27 @@ answer	connect	0
 decide	1000007	false
 decide	1000009	false
 op	next	0
-answer	next	2
+answer	next	[0, 2]
 decide	1	true
 decide	1000013	false
+decide	1000017	false
 op	attempt	2
 answer	attempt	[false, "job 2 failed"]
 decide	2	false
 decide	3	true
-decide	1000025	false
+decide	1000027	false
 decide	1000013	false
+decide	1000017	false
 op	attempt	2
 answer	attempt	[false, "job 2 failed"]
 decide	2	false
 decide	3	false
-decide	1000027	false
-op	requeue	2
+decide	1000029	false
+op	requeue	[0, 2]
 answer	requeue	[]
 decide	1000009	false
 op	next	0
-answer	next	2
+answer	next	[0, 2]
 decide	1	false
 decide	1000002	false
 leave	1	{"success":0}

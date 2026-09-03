@@ -11,6 +11,7 @@
  * Do not edit.
  */
 import { Option, Result } from "effect"
+import type { JobQueue } from "./job-queue.ts"
 
 /** Host body of the pure atom `succ`; its Lean model is `succ`. */
 export const succ = (n: number): number => n + 1
@@ -32,3 +33,6 @@ export const pollValue = (cell: Option.Option<Result.Result<number, number>>): n
 
 /** Host body of the pure atom `addNat`; its Lean model is `addNat`. */
 export const addNat = (left: number, right: number): number => left + right
+
+/** Host body of the pure atom `snd`; its Lean model is `snd`. */
+export const snd = (ticket: readonly [JobQueue, number]): number => ticket[1]

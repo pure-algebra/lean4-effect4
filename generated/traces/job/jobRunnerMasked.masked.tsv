@@ -8,8 +8,8 @@ pin	effects	2447edd76649f035e989914ac899831d66e7dad2
 format	effect4-trace-v1
 face	lean-flow
 program	jobRunnerMasked.masked
-tape	1:1,2:1,1:1,2:1,1:0,1000013:0,1000013:1
-rules	service-acquire,dispatch-loop,block-case,interrupt-point,param-move,flow-literal,flow-perform,nullary-value,perform-call,choose-if,flow-atom,flow-ret,region-enter,region-acquire,region-leave,region-masked
+tape	1:1,2:1,1:1,2:1,1:0,1000017:0,1000017:1
+rules	service-acquire,dispatch-loop,block-case,interrupt-point,param-move,flow-literal,flow-perform,nullary-value,perform-call,choose-if,flow-atom,perform-tuple,flow-ret,region-enter,region-acquire,region-leave,region-masked
 enter	1
 decide	1000003	false
 op	connect	[]
@@ -17,31 +17,33 @@ answer	connect	0
 decide	1000007	false
 decide	1000009	false
 op	next	0
-answer	next	1
+answer	next	[0, 1]
 decide	1	true
 decide	1000013	false
+decide	1000017	false
 op	attempt	1
 answer	attempt	[true, 1]
 decide	2	true
-decide	1000019	false
-op	ack	1
-answer	ack	[]
 decide	1000021	false
+op	ack	[0, 1]
+answer	ack	[]
+decide	1000023	false
 decide	1000009	false
 op	next	0
-answer	next	2
+answer	next	[0, 2]
 decide	1	true
-decide	1000013	true
+decide	1000013	false
+decide	1000017	true
 op	attempt	2
 answer	attempt	[true, 2]
 decide	2	true
-decide	1000019	false
-op	ack	2
-answer	ack	[]
 decide	1000021	false
+op	ack	[0, 2]
+answer	ack	[]
+decide	1000023	false
 decide	1000009	false
 op	next	0
-answer	next	0
+answer	next	[0, 0]
 decide	1	false
 decide	1000002	false
 leave	1	{"success":2}

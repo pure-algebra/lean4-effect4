@@ -9,13 +9,13 @@ format	effect4-trace-v1
 face	lean-flow
 program	jobPoison.poison
 tape	
-rules	service-acquire,dispatch-loop,block-case,param-move,flow-literal,flow-perform,nullary-value,perform-call,flow-ret,region-enter,region-acquire,region-leave
+rules	service-acquire,dispatch-loop,block-case,param-move,flow-literal,flow-perform,nullary-value,perform-call,perform-tuple,flow-ret,region-enter,region-acquire,region-leave
 enter	1
 op	connect	[]
 answer	connect	0
 op	next	0
-answer	next	7
-op	run	7
+answer	next	[0, 7]
+op	run	[0, 7]
 failed	run	"job 7 failed"
 leave	1	{"failure":"job 7 failed"}
 finalizer	1	{"failure":"job 7 failed"}
