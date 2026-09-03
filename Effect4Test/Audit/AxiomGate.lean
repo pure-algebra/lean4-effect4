@@ -309,12 +309,6 @@ private def resolveChoiceImplementationDeclarations
     | _ => throw s!"Effect4 axiom gate: private implementation exemption {owner}/{originalName} matched {privateCandidates.length} declarations; expected exactly one"
   return resolved
 
-/-- The proper prefixes of a name, nearest first. -/
-private def ancestors : Name → List Name
-  | .str parent _ => parent :: ancestors parent
-  | .num parent _ => parent :: ancestors parent
-  | .anonymous => []
-
 /-- Whether a single name component is one Lean appends when it generates an
 auxiliary for the declaration above it, rather than one an author wrote.
 
