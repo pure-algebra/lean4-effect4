@@ -896,7 +896,7 @@ theorem toRegionService_pure [Monad M] {alphabet : FlowAlphabet Ty}
 
 /-- Resolving a block in the erasure is resolving it in the region flow and
 erasing the terminator. -/
-theorem lookupBlock_erase (flow : RegionFlow Ty) (block : BlockId) :
+theorem lookupBlock_erase_block (flow : RegionFlow Ty) (block : BlockId) :
     lookupBlock flow.erase block =
       (flow.block? block).map fun current =>
         { id := current.id, params := current.params, term := flow.eraseTerm current } := by
@@ -939,7 +939,7 @@ theorem regionLoop_erase [Monad M] [LawfulMonad M] (flow : RegionFlow Ty)
       simp [regionLoop, loop, emit_run]
   | succ fuel ih =>
       intro block env tape log
-      simp only [regionLoop, loop, lookupBlock_erase]
+      simp only [regionLoop, loop, lookupBlock_erase_block]
       cases found : flow.block? block with
       | none => simp
       | some current =>
