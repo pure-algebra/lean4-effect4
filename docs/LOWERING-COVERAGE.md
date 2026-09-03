@@ -82,6 +82,21 @@ admitted Flow v2 graph. Their goldens are the Flow-runner face under
 `harness/trace/receipts/flow/`, and their type receipts under
 `harness/trace/types/flow/`; the join keys are the same paths.
 
+## Multi-argument operations
+
+`perform-tuple` (`Effect4/Target/TypeScript/Skeleton.lean`, `Lowering.tupleArgs`)
+is the projection an operation of two or more parameters needs. The flow
+alphabet has no pair constructor — `plan` hands a service exactly one `Val` —
+so such an operation is performed from a single request slot holding the
+right-nested product `Effects.Trace.ToVal` builds, and the call takes it apart
+again: `jobs.ack(b10p3[0], b10p3[1])` over
+`let b10p3!: readonly [JobQueue, number]`. `Lowering.callOf` selects it by
+`OpSpec.arity`, so a one-parameter operation is spelled exactly as before. The
+rule is appended last in `Rule.all`, which is why the positional pins in the
+contract batteries are windows rather than tails. Its goldens are the job
+programs under `generated/traces/job/`, whose host receipts live under
+`harness/trace/receipts/job/`.
+
 ## The property loop
 
 `scripts/check-lowering-property.sh` (P-T6, `test/contracts/lowering-property.contract.md`)

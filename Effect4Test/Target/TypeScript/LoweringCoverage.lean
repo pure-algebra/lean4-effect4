@@ -122,7 +122,15 @@ def rows : List Row :=
       host := true, property := false, typeReceipt := true, proof := none }
   , { rule := .flowRet, state := .covered,
       goldens := ["flow/incr.empty", "flow/twice.empty", "flow/chooser.left", "flow/swap.once"],
-      host := true, property := true, typeReceipt := true, proof := none } ]
+      host := true, property := true, typeReceipt := true, proof := none }
+  -- a two-parameter operation performed from one request slot (Skeleton.lean);
+  -- pinned on the job goldens, whose `ack`, `requeue` and `run` are the only
+  -- multi-argument calls the harness lowers. No host column: the job goldens
+  -- run through `job-tail.ts`, whose receipts live under receipts/job/ and are
+  -- written by the host gate, not by this join.
+  , { rule := .performTuple, state := .pinned,
+      goldens := ["job/jobRunner.clean", "job/jobRunner.requeue", "job/jobPoison.poison"],
+      host := false, property := false, typeReceipt := false, proof := none } ]
 
 private def allowedAxioms : List Name := [``propext, ``Quot.sound]
 

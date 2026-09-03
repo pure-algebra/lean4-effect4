@@ -20,8 +20,10 @@ open TypeScript Effects Effect4.Flow Effect4.Target.EffectV4
 #check @Effect4.Target.EffectV4.Region.lowerStructured
 #check @Effect4.Target.EffectV4.structuredModules?
 
-example : Rule.all.length = 26 := by decide
-#guard (Rule.all.map Rule.id).drop 21 =
+example : Rule.all.length = 29 := by decide
+-- The structured block is still rules 21..25; `perform-tuple` is appended after
+-- it, so this window is taken rather than dropped to the end.
+#guard ((Rule.all.map Rule.id).drop 21).take 5 =
   ["structured-loop", "structured-merge", "structured-continue", "structured-break", "dispatch-fallback"]
 
 def cellRows : ServiceRow :=

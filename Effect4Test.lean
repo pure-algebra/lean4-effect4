@@ -84,6 +84,7 @@ import Effect4Test.Flow.DeferredsContract
 import Effect4Test.Flow.DeferredsAxiomReport
 import Effect4Test.Counterexamples.Flow.Deferreds
 import Effect4Test.Target.TypeScript.FlowLowerContract
+import Effect4Test.Target.TypeScript.MultiArgContract
 import Effect4Test.Target.TypeScript.ScriptDenotationContract
 import Effect4Test.Target.TypeScript.ScriptDenotationAxiomReport
 import Effect4Test.Target.TypeScript.LoweringCoverage

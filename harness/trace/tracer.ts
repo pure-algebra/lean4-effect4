@@ -26,7 +26,7 @@ export type Event =
   | { kind: "frontier" }
   | { kind: "phase"; phase: "build" | "run" | "teardown" }
 
-export type Rows = Record<string, { params: number; answer: string }>
+export type Rows = Record<string, { params: number; answer: string; answerArity?: number }>
 
 export class TracerDefect extends Error {}
 
@@ -242,14 +242,39 @@ export const wireTyped = (spelling: Spelling, value: unknown): Wire => {
   }
 }
 
+/** A tuple answer whose spelling did not parse, encoded positionally: the
+ * right-nested pairs `ToVal` builds from a product, `[a, b]` rather than the
+ * list `[a, [b, []]]` an untyped array becomes. */
+const wireTuple = (values: ReadonlyArray<unknown>): Wire =>
+  values.length === 1
+    ? wire(values[0])
+    : `[${wire(values[0])}, ${wireTuple(values.slice(1))}]`
+
 /** An answer is recorded as typed: a `void` operation answers unit whatever
  * the host hands back (rc.112's `Ref.set` returns the mutable ref at runtime),
  * and a depth-three answer is encoded at its declared spelling, not by the
  * shape of the host value. A spelling outside the profile — an opaque handle,
- * for one — falls back to the untyped encoder. */
-export const wireAnswer = (row: { answer: string }, value: unknown): Wire => {
+ * for one — falls back to the untyped encoder.
+ *
+ * A tuple *containing* an opaque handle is the one case the spelling cannot
+ * settle: `readonly [JobQueue, number]` fails to parse because `JobQueue` is
+ * outside the grammar on purpose, and `wire` would then read the host array as
+ * a list. The row's declared `answerArity` decides it, so `Jobs.next`'s ticket
+ * reaches the wire as the pair the Lean face builds. */
+export const wireAnswer = (
+  row: { answer: string; answerArity?: number },
+  value: unknown
+): Wire => {
   const spelling = parseSpelling(row.answer)
-  return spelling === null ? wire(value) : wireTyped(spelling, value)
+  if (spelling !== null) return wireTyped(spelling, value)
+  const arity = row.answerArity ?? 1
+  if (arity > 1) {
+    if (!Array.isArray(value) || value.length !== arity) {
+      throw new TracerDefect(`not a ${arity}-tuple: ${JSON.stringify(value)}`)
+    }
+    return wireTuple(value)
+  }
+  return wire(value)
 }
 
 /** Wrap every method named in `rows` so its request and answer are recorded.
@@ -281,6 +306,11 @@ export class Decisions extends Context.Service<Decisions, {
 export class TapeExhausted extends Error { readonly _tag = "TAPE_EXHAUSTED" }
 export class TapeSiteMismatch extends Error { readonly _tag = "TAPE_SITE_MISMATCH" }
 
+/** The tape's answer at a value branch disagrees with the value the program
+ * computed: the Lean runner refuses such a run (`RunResult.refused`), and the
+ * host dies here, so the two faces diverge on the same row. */
+export class TapeValueMismatch extends Error { readonly _tag = "TAPE_VALUE_MISMATCH" }
+
 export const decisionsFromTape = (tape: ReadonlyArray<readonly [number, boolean]>, sink: Event[]) => {
   let cursor = 0
   const choose = (site: number) => Effect.suspend(() => {
@@ -291,7 +321,19 @@ export const decisionsFromTape = (tape: ReadonlyArray<readonly [number, boolean]
     sink.push({ kind: "decide", site, branch: entry[1] })
     return Effect.succeed(entry[1])
   })
-  return { choose, consumed: () => cursor }
+  /** A value branch (Flow v3 `branch`): the program decided by a value, but the
+   * site is still a decision site — the tape entry is consumed and must agree
+   * with the value, and the same `decide` row is pushed. */
+  const report = (site: number, branch: boolean) => Effect.suspend(() => {
+    const entry = tape[cursor]
+    if (entry === undefined) return Effect.die(new TapeExhausted(`site ${site} at position ${cursor}`))
+    if (entry[0] !== site) return Effect.die(new TapeSiteMismatch(`wanted ${site}, tape has ${entry[0]} at ${cursor}`))
+    if (entry[1] !== branch) return Effect.die(new TapeValueMismatch(`site ${site}: tape says ${entry[1]}, the value is ${branch}`))
+    cursor += 1
+    sink.push({ kind: "decide", site, branch })
+    return Effect.void
+  })
+  return { choose, report, consumed: () => cursor }
 }
 
 export interface FrameSnapshot { op: string; depth: number }

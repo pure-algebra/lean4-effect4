@@ -108,6 +108,10 @@ private def choiceImplementationDeclarations : List Name :=
   , ``Effect4.Target.Structured.render_wellScoped
   , ``Effect4.Target.Structured.renderList_wellScoped
   , ``Effect4.Target.Structured.renderCases_wellScoped
+  -- `effect_atoms` declared inside a battery emits `<Name>.source`, the generated
+  -- `atoms.ts` text: a renderer output, admitted exactly like the production one.
+  , `Effect4Test.Counterexamples.Target.AnswerProfile.ProbeAtoms.source
+  , `Effect4Test.Target.TypeScript.AnswerProfileContract.ProfileAtoms.source
   , ``Effect4.Target.Structured.structuredBody_wellScoped
   ]
 

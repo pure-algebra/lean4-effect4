@@ -213,8 +213,9 @@ def ruleSet (rows : ServiceRow) (program : FlowProgram) : List Rule :=
         let acc := match spec? program.table operation with
           | some spec => match spec.kind with
             | .family =>
-                step (step acc .flowPerform)
+                let acc := step (step acc .flowPerform)
                   (if spec.requestTy == "void" then .nullaryValue else .performCall)
+                if spec.arity == 1 then acc else step acc .performTuple
             | .atom => step acc .flowAtom
             | .lit _ => step acc .flowLiteral
           | none => acc

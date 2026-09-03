@@ -72,7 +72,7 @@ effect_signature Cell where
 -- `atoms.ts` (`Atoms.source`), so no atom exists in one face only
 -- (`E4-TARGET-CE-025`). A `match` body is parenthesised: its alternatives
 -- would otherwise swallow the next atom.
-effect_atoms Atoms where
+effect_atoms Atoms importing handles [JobQueue] from "./job-queue.ts" where
   | succ (n : Nat) : Nat ⟪ "n + 1" ⟫ := n + 1
   | orZero (e : Except String Nat) : Nat ⟪ "Result.isSuccess(e) ? e.success : 0" ⟫ :=
       (match e with | .ok n => n | .error _ => 0)
@@ -88,6 +88,11 @@ effect_atoms Atoms where
       ⟪ "Option.isSome(cell) && Result.isSuccess(cell.value) ? cell.value.success : 0" ⟫ :=
       (match cell with | Option.some (.ok value) => value | _ => 0)
   | addNat (left : Nat) (right : Nat) : Nat ⟪ "left + right" ⟫ := left + right
+  -- The job runner's ticket projection. `Jobs.next` answers a job ticket --
+  -- the connection it came from and the job id -- because a flow cannot build
+  -- a pair from two block slots (`E4-FLOW-CE-028`); this takes it apart again
+  -- for the one-parameter `attempt`.
+  | snd (ticket : Handle "JobQueue" × Nat) : Nat ⟪ "ticket[1]" ⟫ := ticket.2
 
 effect_program incr (n : Nat) over Cell : Nat :=
   let x ← Cell.get()
@@ -981,13 +986,14 @@ failing one and the interrupted one.
 Refusals and workarounds this family and its flow record, each with a register
 row (`docs/research/2026-09-03-job-runner.md` carries the full account):
 
-- **A flow performs one argument.** `Lowering.callOf` calls
-  `service.op(request)` with exactly one expression, `RawTerm.perform` names a
-  single request `Var`, an atom is a unary pure wire function, and no term
-  builds a pair. So the packet's `run : Handle × Nat → Nat !! String` has no
-  flow spelling: `connect`, `next` and `disconnect` carry the connection and
-  `run`, `attempt`, `ack`, `requeue` name the job alone.
-  counterexample: E4-TARGET-CE-024
+- **A flow cannot build a pair.** `plan` hands a service exactly one `Val`, so
+  a request is one block slot and no term of the flow language pairs two of
+  them. A two-parameter operation is therefore performed from a slot that
+  already holds the tuple, which means the tuple has to *arrive* as an answer:
+  `next` answers a job ticket, the connection and the job id, and `run`, `ack`
+  and `requeue` take that ticket as their two-parameter request. The `snd`
+  atom takes it apart for the one-parameter `attempt`.
+  counterexample: E4-FLOW-CE-028
 - **A flow has no failure handler.** An aborting operation ends the run
   (`Effect4.Flow.regionLoop`'s `fail`), so "on failure, retry or requeue" is
   not expressible over `run`. `attempt` is the same job in the *data* reading
@@ -1011,13 +1017,16 @@ row (`docs/research/2026-09-03-job-runner.md` carries the full account):
 
 effect_signature Jobs where
   | connect : Handle "JobQueue" ⟪ "open a connection to the job queue", "the connection" ⟫
-  | next (conn : Handle "JobQueue") : Nat
-      ⟪ "dequeue the next job id", "0 when the queue is empty" ⟫
-  | run (job : Nat) : Nat !! String ⟪ "run a job", "aborts with the job's error" ⟫
+  | next (conn : Handle "JobQueue") : Handle "JobQueue" × Nat
+      ⟪ "dequeue the next job", "a ticket: the connection and the job id, 0 when empty" ⟫
+  | run (conn : Handle "JobQueue") (job : Nat) : Nat !! String
+      ⟪ "run a job on its connection", "aborts with the job's error" ⟫
   | attempt (job : Nat) : Except String Nat
       ⟪ "run a job, reporting its error as data", "the flow has no failure handler" ⟫
-  | ack (job : Nat) : Unit ⟪ "acknowledge a finished job" ⟫
-  | requeue (job : Nat) : Unit ⟪ "put a job back at the end of the queue" ⟫
+  | ack (conn : Handle "JobQueue") (job : Nat) : Unit
+      ⟪ "acknowledge a finished job on its connection" ⟫
+  | requeue (conn : Handle "JobQueue") (job : Nat) : Unit
+      ⟪ "put a job back at the end of its connection's queue" ⟫
   | disconnect (conn : Handle "JobQueue") : Unit ⟪ "close the connection" ⟫
 
 /-- The queue state the Lean handler keeps: the jobs still to run, the jobs
@@ -1053,18 +1062,21 @@ def jobError (job : Nat) : String := "job " ++ toString job ++ " failed"
 
 /-- `Jobs` by name over the queue state. `run` aborts; `attempt` is the same
 job with its error in the answer. `connect` answers handle 0 — one connection
-per run, and the host's first-seen handle index is the same 0. -/
+per run, and the host's first-seen handle index is the same 0. `next` answers
+the ticket `(conn, job)`, and the three two-parameter operations receive that
+ticket as one `Val.pair`: exactly what `wireArgs` builds from a two-argument
+host call. -/
 def jobsFamily : String → Effects.Trace.Val →
     StateT Queue Id (Except Effects.Trace.Val Effects.Trace.Val)
   | "connect", _ => pure (.ok (.nat 0))
-  | "next", _ => do
+  | "next", conn => do
       let queue ← get
       match queue.pending with
-      | [] => pure (.ok (.nat 0))
+      | [] => pure (.ok (.pair conn (.nat 0)))
       | job :: rest => do
           set { queue with pending := rest }
-          pure (.ok (.nat job))
-  | "run", .nat job => do
+          pure (.ok (.pair conn (.nat job)))
+  | "run", .pair _ (.nat job) => do
       let queue ← get
       if queue.failuresLeft job == 0 then pure (.ok (.nat job))
       else do
@@ -1077,31 +1089,43 @@ def jobsFamily : String → Effects.Trace.Val →
       else do
         set (queue.consumeFailure job)
         pure (.ok (.pair (.bool false) (.str (jobError job))))
-  | "ack", .nat job => do
+  | "ack", .pair _ (.nat job) => do
       modify fun queue => { queue with acked := queue.acked ++ [job] }
       pure (.ok .unit)
-  | "requeue", .nat job => do
+  | "requeue", .pair _ (.nat job) => do
       modify fun queue =>
         { queue with pending := queue.pending ++ [job], requeued := queue.requeued ++ [job] }
       pure (.ok .unit)
   | "disconnect", _ => pure (.ok .unit)
   | _, _ => pure (.ok .unit)
 
-/-- The pure atoms the job flow calls; their host bodies are in `atoms.ts`. -/
+/-- The pure atoms the job flow calls; their host bodies are in `atoms.ts`,
+from the same `effect_atoms Atoms` rows (`E4-TARGET-CE-025`). -/
 def jobAtom : String → Effects.Trace.Val → Effects.Trace.Val
   | "succ", .nat n => .nat (n + 1)
   | "dec", .nat n => .nat (n - 1)
+  | "snd", .pair _ (.nat job) => .nat job
   | _, _ => .unit
+
+/-- The TypeScript spelling of a connection handle, as `Handle "JobQueue"`
+answers it. -/
+def jobHandleTy : String := "JobQueue"
+
+/-- The TypeScript spelling of a job ticket: what `next` answers and what the
+three two-parameter operations take as their request. Both readings are the
+same right-nested product, which is why one slot serves both. -/
+def jobTicketTy : String := "readonly [" ++ jobHandleTy ++ ", number]"
 
 /-- The job alphabet: the family's seven operations, then the pure rows the
 graph needs — a unit literal (the nullary `connect` still takes a request slot
-of its own type), a zero literal (the initial acknowledged count) and the two
-counter atoms. -/
+of its own type), a zero literal (the initial acknowledged count), the two
+counter atoms and the ticket projection. -/
 def jobsTable : List OpSpec := familyTable Jobs.rows ++
   [ { name := "unit", kind := .lit .unit, requestTy := "number", answerTy := "void" }
   , { name := "zero", kind := .lit (.nat 0), requestTy := "number", answerTy := "number" }
   , { name := "succ", kind := .atom, requestTy := "number", answerTy := "number" }
-  , { name := "dec", kind := .atom, requestTy := "number", answerTy := "number" } ]
+  , { name := "dec", kind := .atom, requestTy := "number", answerTy := "number" }
+  , { name := "snd", kind := .atom, requestTy := jobTicketTy, answerTy := "number" } ]
 
 def opConnect : OperationId := ⟨0⟩
 def opNext : OperationId := ⟨1⟩
@@ -1114,10 +1138,7 @@ def opUnit : OperationId := ⟨7⟩
 def opZero : OperationId := ⟨8⟩
 def opSucc : OperationId := ⟨9⟩
 def opDec : OperationId := ⟨10⟩
-
-/-- The TypeScript spelling of a connection handle, as `Handle "JobQueue"`
-answers it. -/
-def jobHandleTy : String := "JobQueue"
+def opSnd : OperationId := ⟨11⟩
 
 /-- The TypeScript spelling of `attempt`'s answer. -/
 def jobResultTy : String := "Result.Result<number, string>"
@@ -1132,20 +1153,26 @@ b0   enter region 1
 b1     a void request slot for the nullary connect
 b2     acquire connect, release disconnect
 b3     acked := 0
-b4   loop: job := next(conn)
+b4   loop: ticket := next(conn)              <- (conn, job)
 b5     choose 1: another job?
 b7       no  -> leave region 1 with acked
-b6       yes -> result := attempt(job)
-b8              choose 2: did it succeed?
-b9                yes -> ack(job)
-b10                      acked := acked + 1, back to b4
-b11               no  -> choose 3: retry rather than requeue?
-b12                        yes -> attempts := attempts - 1
-b14                               back to b6, same job
-b13                        no  -> requeue(job)
-b15                               back to b4
-b16  return acked
+b6       yes -> job := snd(ticket)
+b8              result := attempt(job)
+b9              choose 2: did it succeed?
+b10               yes -> ack(ticket[0], ticket[1])
+b11                      acked := acked + 1, back to b4
+b12               no  -> choose 3: retry rather than requeue?
+b13                        yes -> attempts := attempts - 1
+b15                               back to b6, same ticket
+b14                        no  -> requeue(ticket[0], ticket[1])
+b16                               back to b4
+b17  return acked
 ```
+
+The ticket is the packet's two-parameter request. `plan` hands a service one
+`Val`, so a flow cannot pair two block slots; the pair therefore arrives as an
+*answer* — `next` hands out a ticket — and `ack` and `requeue` destructure it
+at the call (`E4-FLOW-CE-028`, `Lowering.tupleArgs`).
 
 The interrupt point before every `perform` and at the region's `leave` is
 declared by the lowering (`RegionProgram.interrupts`), not by the graph: an
@@ -1153,7 +1180,7 @@ interrupt delivered anywhere in the drain closes region 1, and the release —
 `disconnect` — runs on that path too. -/
 def jobRunnerFlow : RegionFlow String :=
   { alphabet := ⟨0⟩, roots := [⟨0⟩], entry := ⟨0⟩, inputTy := "number", resultTy := "number",
-    regions := [jregion 1 none 16],
+    regions := [jregion 1 none 17],
     blocks :=
       [ rblock 0 none ["number"] (.enter ⟨1⟩ ⟨1⟩ (vars 1))
       , rblock 1 (some 1) ["number"] (.plain (.perform opUnit ⟨0⟩ ⟨2⟩ (vars 1)))
@@ -1161,32 +1188,36 @@ def jobRunnerFlow : RegionFlow String :=
       , rblock 3 (some 1) ["number", jobHandleTy] (.plain (.perform opZero ⟨0⟩ ⟨4⟩ [⟨1⟩, ⟨0⟩]))
       , rblock 4 (some 1) [jobHandleTy, "number", "number"]
           (.plain (.perform opNext ⟨0⟩ ⟨5⟩ (vars 3)))
-      , rblock 5 (some 1) [jobHandleTy, "number", "number", "number"]
+      , rblock 5 (some 1) [jobHandleTy, "number", "number", jobTicketTy]
           (.plain (.choose ⟨1⟩ ⟨6⟩ ⟨7⟩ (vars 4)))
-      , rblock 6 (some 1) [jobHandleTy, "number", "number", "number"]
-          (.plain (.perform opAttempt ⟨3⟩ ⟨8⟩ (vars 4)))
-      , rblock 7 (some 1) [jobHandleTy, "number", "number", "number"] (.leave ⟨2⟩)
-      , rblock 8 (some 1) [jobHandleTy, "number", "number", "number", jobResultTy]
-          (.plain (.choose ⟨2⟩ ⟨9⟩ ⟨11⟩ (vars 4)))
-      , rblock 9 (some 1) [jobHandleTy, "number", "number", "number"]
-          (.plain (.perform opAck ⟨3⟩ ⟨10⟩ (vars 3)))
-      , rblock 10 (some 1) [jobHandleTy, "number", "number", "void"]
+      , rblock 6 (some 1) [jobHandleTy, "number", "number", jobTicketTy]
+          (.plain (.perform opSnd ⟨3⟩ ⟨8⟩ (vars 4)))
+      , rblock 7 (some 1) [jobHandleTy, "number", "number", jobTicketTy] (.leave ⟨2⟩)
+      , rblock 8 (some 1) [jobHandleTy, "number", "number", jobTicketTy, "number"]
+          (.plain (.perform opAttempt ⟨4⟩ ⟨9⟩ (vars 4)))
+      , rblock 9 (some 1) [jobHandleTy, "number", "number", jobTicketTy, jobResultTy]
+          (.plain (.choose ⟨2⟩ ⟨10⟩ ⟨12⟩ (vars 4)))
+      , rblock 10 (some 1) [jobHandleTy, "number", "number", jobTicketTy]
+          (.plain (.perform opAck ⟨3⟩ ⟨11⟩ (vars 3)))
+      , rblock 11 (some 1) [jobHandleTy, "number", "number", "void"]
           (.plain (.perform opSucc ⟨2⟩ ⟨4⟩ (vars 2)))
-      , rblock 11 (some 1) [jobHandleTy, "number", "number", "number"]
-          (.plain (.choose ⟨3⟩ ⟨12⟩ ⟨13⟩ (vars 4)))
-      , rblock 12 (some 1) [jobHandleTy, "number", "number", "number"]
-          (.plain (.perform opDec ⟨1⟩ ⟨14⟩ [⟨0⟩, ⟨2⟩, ⟨3⟩]))
-      , rblock 13 (some 1) [jobHandleTy, "number", "number", "number"]
-          (.plain (.perform opRequeue ⟨3⟩ ⟨15⟩ (vars 3)))
-      , rblock 14 (some 1) [jobHandleTy, "number", "number", "number"]
+      , rblock 12 (some 1) [jobHandleTy, "number", "number", jobTicketTy]
+          (.plain (.choose ⟨3⟩ ⟨13⟩ ⟨14⟩ (vars 4)))
+      , rblock 13 (some 1) [jobHandleTy, "number", "number", jobTicketTy]
+          (.plain (.perform opDec ⟨1⟩ ⟨15⟩ [⟨0⟩, ⟨2⟩, ⟨3⟩]))
+      , rblock 14 (some 1) [jobHandleTy, "number", "number", jobTicketTy]
+          (.plain (.perform opRequeue ⟨3⟩ ⟨16⟩ (vars 3)))
+      , rblock 15 (some 1) [jobHandleTy, "number", jobTicketTy, "number"]
           (.plain (.jump ⟨6⟩ [⟨0⟩, ⟨3⟩, ⟨1⟩, ⟨2⟩]))
-      , rblock 15 (some 1) [jobHandleTy, "number", "number", "void"]
+      , rblock 16 (some 1) [jobHandleTy, "number", "number", "void"]
           (.plain (.jump ⟨4⟩ (vars 3)))
-      , rblock 16 none ["number"] (.plain (.ret ⟨0⟩)) ] }
+      , rblock 17 none ["number"] (.plain (.ret ⟨0⟩)) ] }
 
 /-- The packet's aborting `run`, which the drain cannot use: one job, taken
-from the queue and run; its abort closes region 1 with the failure, the
-release still runs, and the run ends `failed`. -/
+from the queue and run *on its connection*; its abort closes region 1 with the
+failure, the release still runs, and the run ends `failed`. This is the
+shortest program over the packet's two-parameter `run`: `next` answers the
+ticket and `run` is performed with it, whole. -/
 def jobPoisonFlow : RegionFlow String :=
   { alphabet := ⟨0⟩, roots := [⟨0⟩], entry := ⟨0⟩, inputTy := "number", resultTy := "number",
     regions := [jregion 1 none 6],
@@ -1194,9 +1225,9 @@ def jobPoisonFlow : RegionFlow String :=
       [ rblock 0 none ["number"] (.enter ⟨1⟩ ⟨1⟩ (vars 1))
       , rblock 1 (some 1) ["number"] (.plain (.perform opUnit ⟨0⟩ ⟨2⟩ (vars 1)))
       , rblock 2 (some 1) ["number", "void"] (.acquire opConnect ⟨1⟩ opDisconnect ⟨3⟩ (vars 1))
-      , rblock 3 (some 1) ["number", jobHandleTy] (.plain (.perform opNext ⟨1⟩ ⟨4⟩ [⟨1⟩]))
-      , rblock 4 (some 1) [jobHandleTy, "number"] (.plain (.perform opRun ⟨1⟩ ⟨5⟩ [⟨0⟩]))
-      , rblock 5 (some 1) [jobHandleTy, "number"] (.leave ⟨1⟩)
+      , rblock 3 (some 1) ["number", jobHandleTy] (.plain (.perform opNext ⟨1⟩ ⟨4⟩ []))
+      , rblock 4 (some 1) [jobTicketTy] (.plain (.perform opRun ⟨0⟩ ⟨5⟩ []))
+      , rblock 5 (some 1) ["number"] (.leave ⟨0⟩)
       , rblock 6 none ["number"] (.plain (.ret ⟨0⟩)) ] }
 
 def admitJob? (name : String) (raw : RegionFlow String) (interrupts : Bool)
@@ -1278,7 +1309,7 @@ def jobEntries : List JobEntry :=
       -- control points, never the job id at that point.
     , { program := program, golden := "interrupt",
         tape := [more true, succeeded true, more true],
-        itape := [⟨⟨jobPerformPoint 6⟩, false⟩, ⟨⟨jobPerformPoint 6⟩, true⟩],
+        itape := [⟨⟨jobPerformPoint 8⟩, false⟩, ⟨⟨jobPerformPoint 8⟩, true⟩],
         queue := Queue.seed [1, 2, 3] }
     ]) ++
   (jobProgram? "jobRunnerMasked").toList.map (fun program =>
@@ -1289,7 +1320,7 @@ def jobEntries : List JobEntry :=
     -- delivered at the restoration (the M2 repair).
     { program := program, golden := "masked",
       tape := [more true, succeeded true, more true, succeeded true, more false],
-      itape := [⟨⟨jobPerformPoint 6⟩, false⟩, ⟨⟨jobPerformPoint 6⟩, true⟩],
+      itape := [⟨⟨jobPerformPoint 8⟩, false⟩, ⟨⟨jobPerformPoint 8⟩, true⟩],
       queue := Queue.seed [1, 2] : JobEntry }) ++
   (jobProgram? "jobPoison").toList.map (fun program =>
     { program := program, golden := "poison", queue := Queue.seed [7] [(7, 1)] : JobEntry })
@@ -1584,9 +1615,9 @@ def main (args : List String) : IO Unit := do
   | ["job-fixture"] =>
       -- `JobQueue` is imported as a type only: the generated module names it in
       -- the `Jobs` service shape and never calls into it. `succ` and `dec` are
-      -- the two pure atoms the drain's counters use.
+      -- the drain's counters and `snd` is its ticket projection.
       match regionModules? [(Jobs.rows, [], jobPrograms)]
-        [.named ["succ", "dec"] "./atoms.ts", .types ["JobQueue"] "./job-queue.ts"] with
+        [.named ["succ", "dec", "snd"] "./atoms.ts", .types ["JobQueue"] "./job-queue.ts"] with
       | some source => IO.print source
       | none => throw (IO.userError "dispatch lowering refused a job flow")
   | ["job-programs"] =>

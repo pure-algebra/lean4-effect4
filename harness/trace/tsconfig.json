@@ -9,6 +9,9 @@
       "ESNext",
       "DOM"
     ],
+    "types": [
+      "node"
+    ],
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "exactOptionalPropertyTypes": true,
