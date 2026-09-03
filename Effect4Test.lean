@@ -47,6 +47,7 @@ import Effect4Test.Semantics.ObservationContract
 import Effect4Test.Flow.RunnerContract
 import Effect4Test.Semantics.DenotationContract
 import Effect4Test.Flow.RegionRunnerContract
+import Effect4Test.Flow.InterruptContract
 import Effect4Test.Target.TypeScript.RegionLowerContract
 import Effect4Test.Target.TypeScript.StructuredLowerContract
 import Effect4Test.Target.TypeScript.StructureLawsContract
@@ -56,6 +57,7 @@ import Effect4Test.Target.TypeScript.TraceWire
 import Effect4Test.Flow.RunnerAxiomReport
 import Effect4Test.Semantics.DenotationAxiomReport
 import Effect4Test.Counterexamples.Flow.Runner
+import Effect4Test.Counterexamples.Flow.Interrupt
 import Effect4Test.Target.TypeScript.FlowLowerContract
 import Effect4Test.Target.TypeScript.LoweringCoverage
 import Effect4Test.Semantics.CauseExitAxiomReport

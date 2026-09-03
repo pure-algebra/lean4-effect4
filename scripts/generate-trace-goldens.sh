@@ -31,6 +31,14 @@ mkdir -p "$out/flow"
 while IFS=$'\t' read -r program tape; do
   { provenance; run flow-golden "$program" "$tape"; } > "$out/flow/$program.$tape.tsv"
 done < <(run flow-programs)
+# Interruption as decisions (M2). Their own subdirectory under flow/, so the
+# flow host loop's `flow/*.tsv` glob never sees them: they need the Interrupts
+# service and `interrupt-tail.ts`, not `flow-tail.ts`. The `tape` header of each
+# is the *interrupt* tape; none of these flows chooses.
+mkdir -p "$out/flow/interrupt"
+for program in $(run interrupt-programs); do
+  { provenance; run interrupt-golden "$program"; } > "$out/flow/interrupt/$program.tsv"
+done
 # The `Scopes` family, likewise in a subdirectory of its own: it has its own
 # generated module and its own tail (`scope-tail.ts`), so the straight-line
 # host loop's `*.empty.tsv` glob must not see it.

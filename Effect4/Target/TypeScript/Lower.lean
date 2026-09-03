@@ -36,6 +36,8 @@ inductive Rule where
   | flowLiteral
   | chooseIf
   | flowRet
+  -- interruption as decisions (`Skeleton.lean`, packet M2)
+  | interruptPoint
   -- regions (`RegionLower.lean`)
   | regionEnter
   | regionAcquire
@@ -68,6 +70,7 @@ def id : Rule → String
   | flowLiteral => "flow-literal"
   | chooseIf => "choose-if"
   | flowRet => "flow-ret"
+  | interruptPoint => "interrupt-point"
   | regionEnter => "region-enter"
   | regionAcquire => "region-acquire"
   | regionLeave => "region-leave"
@@ -81,6 +84,7 @@ def id : Rule → String
 def all : List Rule :=
   [serviceAcquire, nullaryValue, performCall, performBind, performDiscard, atomCall, ret, errorAbort,
    dispatchLoop, blockCase, paramMove, flowPerform, flowAtom, flowLiteral, chooseIf, flowRet,
+   interruptPoint,
    regionEnter, regionAcquire, regionLeave,
    structuredLoop, structuredMerge, structuredContinue, structuredBreak, dispatchFallback]
 

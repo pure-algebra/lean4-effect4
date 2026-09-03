@@ -7,13 +7,22 @@ input	Effect4/Target/TypeScript/Trace.lean	sha256=38452fa69175f88fe675e45756f4ec
 pin	effects	2447edd76649f035e989914ac899831d66e7dad2
 format	effect4-trace-v1
 face	lean-flow
-program	incr.empty
-tape	
-rules	service-acquire,dispatch-loop,block-case,flow-literal,param-move,flow-perform,nullary-value,flow-atom,perform-call,flow-ret
-op	get	[]
-answer	get	41
-op	put	42
-answer	put	[]
-op	get	[]
-answer	get	42
-done	{"success":42}
+program	interruptFinalizer
+tape	1000009:1
+rules	service-acquire,dispatch-loop,block-case,interrupt-point,param-move,flow-perform,perform-call,flow-ret,region-enter,region-acquire,region-leave
+enter	1
+op	acquire	5
+answer	acquire	5
+enter	2
+op	acquire	5
+answer	acquire	5
+decide	1000009	true
+leave	2	{"interrupted":true}
+finalizer	2	{"interrupted":true}
+op	release	5
+answer	release	[]
+leave	1	{"interrupted":true}
+finalizer	1	{"interrupted":true}
+op	release	5
+answer	release	[]
+done	{"interrupted":true}

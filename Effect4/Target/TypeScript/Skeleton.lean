@@ -2,6 +2,7 @@ import Effect4.Target.TypeScript.Lower
 import Effect4.Target.TypeScript.ScriptFlow
 import Effect4.Semantics.Runs
 import Effect4.Flow.Region
+import Effect4.Flow.Interrupt
 import TypeScript.Structure
 
 /-!
@@ -24,8 +25,8 @@ lowerings already shared, made first-order:
   `while (true)` loops, and `break`/`continue` to a label;
 * assignment of a parameter variable, and the sequentialising temporaries a
   self-edge needs;
-* a family, atom or literal `perform` binding an answer, and a decision
-  binding its branch;
+* a family, atom or literal `perform` binding an answer, a decision binding its
+  branch, and an interrupt point binding nothing (packet M2);
 * `return`; and
 * the three region forms — enter-scoped, acquire, leave — as the region
   lowering emits them.
@@ -146,6 +147,10 @@ inductive Skeleton where
   | literal (answer : Slot) (operation : OperationId) (request : Slot) (value : Val)
   /-- A decision: bind the branch from the `Decisions` service, then split. -/
   | decide (answer : Slot) (site : DecisionId) (onTrue onFalse : List Skeleton)
+  /-- An interruptible point: ask the `Interrupts` service whether the
+  interrupt is delivered here. The site is an interrupt site
+  (`Effect4.Flow.Point.site`), disjoint from every `choose` site. -/
+  | interruptPoint (site : DecisionId)
   /-- `return value`. -/
   | ret (value : Slot)
   /-- Open a region: report it, run `body` as a nested generator in its own
@@ -222,6 +227,15 @@ def flowLiteral (answer : Slot) (operation : OperationId) (request : Slot) (valu
 lowering: rule.choose-if -/
 def chooseIf (answer : Slot) (site : DecisionId) (left right : List Skeleton) : List Skeleton :=
   [.decide answer site left right]
+
+/-- An interruptible point of a run asks the `Interrupts` service whether the
+interrupt is delivered here: `yield* interrupts.point(1000001)`. The service
+answers by interrupting the fiber at that point and returning nothing
+otherwise, so the point is a `void` operation and binds no slot. Emitted only
+by a flow that declares interrupt points, so a flow without them lowers to the
+bytes it lowered to before. lowering: rule.interrupt-point -/
+def interruptPoint (site : DecisionId) : Skeleton :=
+  .interruptPoint site
 
 /-- A `ret` returns the named parameter: `return b5p3`. lowering: rule.flow-ret -/
 def flowRet (value : Slot) : Skeleton :=
@@ -324,6 +338,8 @@ def render (rows : ServiceRow) : Skeleton → List Stmt
   | .decide answer site onTrue onFalse =>
       [ .constYield answer.name (.call (.ident "decisions.choose") [.int site.value])
       , .ifElse answer.expr (renderList rows onTrue) (renderList rows onFalse) ]
+  | .interruptPoint site =>
+      [.yieldDiscard (.call (.ident "interrupts.point") [.int site.value])]
   | .ret value => [.ret value.expr]
   | .enterScoped region body =>
       [ .yieldDiscard (.call (.ident "regions.enter") [.int region.value])
