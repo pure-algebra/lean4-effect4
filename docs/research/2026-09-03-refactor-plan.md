@@ -31,11 +31,13 @@ order.
 Packet 0a, trust gate (Lean): L1, L2, L3, L12, L23, L29, L31, L47, plus the sweep-9
 break in `FrameSimulationContract` (`FlowAlphabet` needs `errorTy`/`boolTy`).
 Tokenizer refuses `native_decide`/`sorry`/`admit`/`axiom`/`extern`/`implemented_by`;
-the live `native_decide` goes; blanket module admissions become the 71 exact
-declarations with a print command; `ancestors` is same-module; the closure gate honours
-`known-red.txt`; `Effect4TestGreen` default target and per-area test targets; the trust
-gate copies `.lake/build`; four new fixtures are the acceptance test; Derive's receipt
-is a named theorem.
+the live `native_decide` goes; blanket module admissions become 66 exact roots with
+`#effect4_print_choice_reachers`; admission crosses a module only through names Lean
+reserves (`isReservedName`), never by spelling; the closure gate honours `known-red.txt`;
+`Effect4TestGreen` default target and per-area test targets; the trust gate is root-only
+(planted tokens are a source copy elaborated against the real build, planted declarations
+are one module compiled alone) and stamped (rule 9): 84 s on a miss, 1 s on a hit; nine
+planted defects; Derive's receipt is a named theorem. Landed 2026-09-03 (2876fe9 + stamp).
 
 Packet 0b, sweep (scripts, harness, generators): H1, H2, H5, H10 (assert width), H11,
 H18, H19, H36, H39, plus the sweep-9 breaks (`Property.lean` lacks the v3 cases; the

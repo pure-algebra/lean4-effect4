@@ -45,9 +45,29 @@
 # refused by the closure gate itself — either it is reachable from the audit
 # root, in which case `lake build Effect4TestGreen` fails, or it is not, in
 # which case the gate names it.
+#
+# ## Stamps
+#
+# Rule 9: the gate does not re-run when nothing it reads has changed. After
+# step 0a has made the build current, the inputs are keyed (lib/stamp.sh): this
+# script and its two harnesses, the stamp and portability libraries, every
+# fixture, the gate's own source, the Lake configuration, the Lake trace of
+# every module under `Effect4/` and `Effect4Test/` (each trace hashes that
+# module's source and its imports' traces, so together they stand for every
+# olean the gate reads), and the sources of the declared-red modules, which
+# have no trace because they never build. A hit prints the stamped summary and
+# exits 0; `--force` or EFFECT4_FORCE=1 re-runs.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+. "$repo_root/scripts/lib/portable.sh"
+. "$repo_root/scripts/lib/stamp.sh"
+for argument in "$@"; do
+  case "$argument" in
+    --force) export EFFECT4_FORCE=1 ;;
+    *) echo "unknown argument $argument" >&2; exit 2 ;;
+  esac
+done
 tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/effect4-test-trust.XXXXXX")"
 probe="$tmp_root/project"
 probe_log="$tmp_root/probe.log"
@@ -99,6 +119,39 @@ failing_targets() {
 
 declared_red="$( { [[ -f "$known_red" ]] && grep -v '''^[[:space:]]*#''' "$known_red" \
   | grep -v '''^[[:space:]]*$''' || true; } | LC_ALL=C sort -u )"
+
+# --- 0c. the stamp ------------------------------------------------------------
+
+step_begin
+red_sources=()
+while IFS= read -r module; do
+  [[ -n "$module" ]] || continue
+  red_sources+=("$repo_root/${module//.//}.lean")
+done <<<"$declared_red"
+stamp_inputs=(
+  "$repo_root/scripts/test-trust-gate.sh"
+  "$repo_root/scripts/test-source-trust-tokenizer.sh"
+  "$repo_root/scripts/test-trust-boundaries.sh"
+  "$repo_root/scripts/lib/stamp.sh"
+  "$repo_root/scripts/lib/portable.sh"
+  "$fixtures"
+  "$repo_root/Effect4Test/Audit/AxiomGate.lean"
+  "$repo_root/lakefile.toml"
+  "$repo_root/lake-manifest.json"
+  "$repo_root/lean-toolchain"
+  "$real_build_lib/Effect4.trace"
+  "$real_build_lib/Effect4Test.trace"
+)
+while IFS= read -r trace; do
+  stamp_inputs+=("$trace")
+done < <(find "$real_build_lib/Effect4" "$real_build_lib/Effect4Test" -name '*.trace')
+stamp_inputs+=("${red_sources[@]}")
+gate_key="$(stamp_key "${stamp_inputs[@]}")"
+step_end "step 0c  key ${#stamp_inputs[@]} inputs"
+if stamp_hit trust-gate "$gate_key"; then
+  stamp_report trust-gate "$gate_key"
+  exit 0
+fi
 
 step_begin
 if [[ -n "$declared_red" ]]; then
@@ -319,5 +372,7 @@ step_begin
 (cd "$repo_root" && lake env lean "$fixtures/expr-equality.lean.txt")
 step_end "step 4c  Expr equality probes"
 
-printf 'PASS trust gate: %d planted defects rejected, %d accepted, %ss\n' \
-  "$rejected" "$accepted" "$(( $(date +%s) - run_start ))"
+summary="$(printf '%d planted defects rejected, %d accepted, %ss' \
+  "$rejected" "$accepted" "$(( $(date +%s) - run_start ))")"
+stamp_write trust-gate "$gate_key" "$summary"
+echo "PASS trust gate: $summary"
