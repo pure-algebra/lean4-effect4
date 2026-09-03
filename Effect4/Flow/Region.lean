@@ -399,13 +399,13 @@ theorem closeExitsM_run (service : RegionService alphabet (StateT σ Id)) (frame
   | nil => rfl
   | cons entry rest ih =>
     obtain ⟨release, resource⟩ := entry
-    simp only [StateT.run, runRelease, Functor.map, StateT.map] at ih
+    simp only [StateT.run, runRelease, Functor.map] at ih
     rw [List.mapM_cons]
     cases hres : service.handle release resource s with
     | mk result s' =>
-      simp only [runRelease, releaseExits, closeStateAfter, hres, StateT.run_bind, StateT.run_lift,
-        StateT.run_pure, bind_pure_comp]
-      simp [StateT.run, StateT.map, Functor.map, bind, pure, StateT.pure, hres, ih]
+      simp only [runRelease, releaseExits, closeStateAfter, hres, StateT.run_bind,
+        bind_pure_comp]
+      simp [StateT.run, StateT.map, Functor.map, bind, pure, hres, ih]
 
 /-- The errors the release exits carry are the failures the runner reports. -/
 theorem exitErrors_releaseExits (service : RegionService alphabet (StateT σ Id)) :

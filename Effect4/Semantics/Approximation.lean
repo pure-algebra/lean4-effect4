@@ -306,9 +306,6 @@ theorem obsLe_antisymm_terminal {a b : RunResult × Effect4.Trace.Log}
 
 /-! ## The step and the loop extend the log -/
 
-private theorem idBind {α β : Type} (x : Id α) (f : α → Id β) : x >>= f = f x := rfl
-private theorem idMap {α β : Type} (x : Id α) (f : α → β) : f <$> x = f x := rfl
-private theorem idPure {α : Type} (a : α) : (pure a : Id α) = a := rfl
 
 /-- One step only appends to the log. -/
 theorem step_log_extends {σ : Type} (alphabet : FlowAlphabet Ty)

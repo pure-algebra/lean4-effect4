@@ -268,9 +268,15 @@ def runDefault [Monad M] {alphabet : FlowAlphabet Ty} (flow : CheckedFlow alphab
 
 /-! ## Laws -/
 
-private theorem idBind {α β : Type} (x : Id α) (f : α → Id β) : x >>= f = f x := rfl
-private theorem idMap {α β : Type} (x : Id α) (f : α → β) : f <$> x = f x := rfl
-private theorem idPure {α : Type} (a : α) : (pure a : Id α) = a := rfl
+/-! The three `Id` equations every proof in this lane rewrites with. They are
+`rfl`, but `simp` needs them named: the runner is `StateT σ Id`, so unfolding a
+`run` leaves `Id`'s `bind`, `map` and `pure` behind. They live here because
+`Fuel`, `Approximation` and the region modules all reach for them (survey
+finding L9). -/
+
+theorem idBind {α β : Type} (x : Id α) (f : α → Id β) : x >>= f = f x := rfl
+theorem idMap {α β : Type} (x : Id α) (f : α → β) : f <$> x = f x := rfl
+theorem idPure {α : Type} (a : α) : (pure a : Id α) = a := rfl
 
 /-- A `choose` consumes exactly the head of the tape and logs the decision. -/
 theorem step_choose_consumes_one [Monad M] (alphabet : FlowAlphabet Ty)
@@ -457,28 +463,25 @@ theorem step_checked {σ : Type} {alphabet : FlowAlphabet Ty} {raw : RawFlow Ty}
   generalize planEq : plan alphabet block env tape = p at planned
   cases planned with
   | ret value =>
-      simp [step, planEq, emit_run, NextSized, RunResult.stuck, StateT.run_bind, StateT.run_pure,
-        idBind, idPure]
+      simp [step, planEq, emit_run, NextSized, RunResult.stuck, StateT.run_pure, idPure]
   | exhausted site =>
-      simp [step, planEq, emit_run, NextSized, RunResult.stuck, StateT.run_bind, StateT.run_pure,
-        idBind, idPure]
+      simp [step, planEq, emit_run, NextSized, RunResult.stuck, StateT.run_pure, idPure]
   | mismatch expected actual =>
-      simp [step, planEq, NextSized, RunResult.stuck_refusal, StateT.run_bind, StateT.run_pure,
-        idBind, idPure]
+      simp [step, planEq, NextSized, RunResult.stuck_refusal, StateT.run_pure, idPure]
   | jump targetBlock found sizedTarget =>
       simp only [step, planEq, StateT.run_pure]
       exact ⟨targetBlock, found, sizedTarget⟩
   | perform targetBlock found sizedTarget =>
-      simp only [step, planEq, StateT.run_bind, StateT.run_lift, StateT.run_pure, emit_run]
-      cases service.pure _ <;> simp [NextSized, emit_run, StateT.run_bind, StateT.run_pure] <;>
+      simp only [step, planEq, StateT.run_bind, StateT.run_lift, StateT.run_pure]
+      cases service.pure _ <;> simp [NextSized, StateT.run_bind, StateT.run_pure] <;>
         exact ⟨targetBlock, found, by simp [sizedTarget]⟩
   | choose targetBlock found sizedTarget =>
       simp only [step, planEq, StateT.run_bind, StateT.run_pure, emit_run]
       simp [NextSized]
       exact ⟨targetBlock, found, sizedTarget⟩
   | performCatch targetBlock _ found sizedTarget _ _ =>
-      simp only [step, planEq, StateT.run_bind, StateT.run_lift, StateT.run_pure, emit_run]
-      cases service.pure _ <;> simp [NextSized, emit_run, StateT.run_bind, StateT.run_pure] <;>
+      simp only [step, planEq, StateT.run_bind, StateT.run_lift, StateT.run_pure]
+      cases service.pure _ <;> simp [NextSized, StateT.run_bind, StateT.run_pure] <;>
         exact ⟨targetBlock, found, by simp [sizedTarget]⟩
 
 /-- Admission makes `stuck` unreachable for every fuel. -/
@@ -493,7 +496,7 @@ theorem loop_checked_not_stuck {σ : Type} {alphabet : FlowAlphabet Ty} {raw : R
   induction fuel with
   | zero =>
       intro block env tape log s current _ _
-      simp [loop, emit_run, RunResult.stuck, StateT.run_bind, StateT.run_pure, idBind, idPure]
+      simp [loop, emit_run, RunResult.stuck, StateT.run_pure, idPure]
   | succ fuel ih =>
       intro block env tape log s current found sized
       have mem : current ∈ raw.blocks := List.mem_of_find?_eq_some found
@@ -539,8 +542,7 @@ theorem loop_fuel_mono {σ : Type} (alphabet : FlowAlphabet Ty) (raw : RawFlow T
   induction fuel with
   | zero =>
       intro block env tape log s finished
-      simp [loop, emit_run, RunResult.exhausted, StateT.run_bind, StateT.run_pure, idBind, idPure]
-        at finished
+      simp [loop, emit_run, RunResult.exhausted, StateT.run_pure, idPure] at finished
   | succ fuel ih =>
       intro block env tape log s finished
       cases found : lookupBlock raw block with

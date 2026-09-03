@@ -599,7 +599,7 @@ private theorem execList_skeletonBlockWith_bind {Result : Type} (table : List Op
                       simp only [spec, Option.bind_eq_bind, Option.bind_some] at built
                       cases kind : row.kind with
                       | family =>
-                          simp only [kind, Option.bind_some, Bool.false_eq_true, ↓reduceIte,
+                          simp only [kind, Bool.false_eq_true, ↓reduceIte,
                             List.nil_append, Lowering.performCatchResult,
                             Option.some.injEq] at built
                           exact ⟨row, built.symm⟩

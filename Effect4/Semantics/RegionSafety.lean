@@ -193,9 +193,6 @@ private theorem stack_open {alphabet : FlowAlphabet Ty} {flow : RegionFlow Ty}
   | outside => cases inside
   | inside found parent => exact ⟨_, _, _, rfl, rfl, found, parent⟩
 
-private def erasedBlock (flow : RegionFlow Ty) (block : RegionBlock Ty) : RawBlock Ty :=
-  { id := block.id, params := block.params, term := flow.eraseTerm block }
-
 private theorem region_of_erased {flow : RegionFlow Ty} {id : BlockId} {target : RawBlock Ty}
     (found : lookupBlock flow.erase id = some target) :
     ∃ block, flow.block? id = some block ∧ block.params = target.params := by

@@ -917,6 +917,13 @@ theorem toRegionService_pure [Monad M] {alphabet : FlowAlphabet Ty}
     (service : FlowService alphabet M) (op : alphabet.Op) :
     service.toRegionService.pure op = service.pure op := rfl
 
+/-- The raw block a region block erases to: same identity and parameters, its
+terminator through `RegionFlow.eraseTerm`. `RegionTotal` and `RegionSafety`
+each had a private copy of this (survey finding L9); it belongs beside
+`lookupBlock_erase_block`, which is the fact about it they both use. -/
+def erasedBlock (flow : RegionFlow Ty) (current : RegionBlock Ty) : RawBlock Ty :=
+  { id := current.id, params := current.params, term := flow.eraseTerm current }
+
 /-- Resolving a block in the erasure is resolving it in the region flow and
 erasing the terminator. -/
 theorem lookupBlock_erase_block (flow : RegionFlow Ty) (block : BlockId) :

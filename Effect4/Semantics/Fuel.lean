@@ -151,9 +151,6 @@ theorem plan_shape (alphabet : FlowAlphabet Ty) (block : RawBlock Ty) (env : Env
 
 /-! ## One step of a checked flow makes measurable progress -/
 
-private theorem idBind {α β : Type} (x : Id α) (f : α → Id β) : x >>= f = f x := rfl
-private theorem idMap {α β : Type} (x : Id α) (f : α → β) : f <$> x = f x := rfl
-private theorem idPure {α : Type} (a : α) : (pure a : Id α) = a := rfl
 
 /-- What one checked step leaves behind for the fuel argument: a finished run
 never reports fuel exhaustion (only `loop` can), and a continuation either

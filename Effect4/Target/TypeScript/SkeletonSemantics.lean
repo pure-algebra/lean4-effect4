@@ -1290,7 +1290,7 @@ theorem execList_skeletonBlock (table : List OpSpec) (fuel : Nat) (m : Machine) 
           simp only [spec, Option.bind_eq_bind, Option.bind_some] at built
           cases kind : row.kind with
           | family =>
-              simp only [kind, Option.bind_some, Bool.false_eq_true, ↓reduceIte,
+              simp only [kind, Bool.false_eq_true, ↓reduceIte,
                 List.nil_append, Option.some.injEq] at built
               exact ⟨row, built.symm⟩
           | atom => simp [kind] at built
@@ -1969,7 +1969,7 @@ theorem execList_skeletonBlockWith (table : List OpSpec) (raw : RawFlow String)
                       simp only [spec, Option.bind_eq_bind, Option.bind_some] at built
                       cases kind : row.kind with
                       | family =>
-                          simp only [kind, Option.bind_some, Bool.false_eq_true, ↓reduceIte,
+                          simp only [kind, Bool.false_eq_true, ↓reduceIte,
                             List.nil_append, Lowering.performCatchResult,
                             Option.some.injEq] at built
                           exact ⟨row, built.symm⟩
