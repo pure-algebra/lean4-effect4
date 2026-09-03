@@ -87,7 +87,6 @@ for golden in "$repo_root"/generated/traces/flow/interrupt/*.tsv; do
     --golden "$golden" --masks "$repo_root/generated/traces/masks.tsv" --tail interrupt-tail.ts \
     | sed 's/^trace/trace(interrupt,yield-every-op)/'
 done
-echo "PASS host traces agree with every golden under every mask (straight-line, dispatch, structured, scope and interrupt forms)"
 # --- the Fibers family: two fibers over rc.112, interleaved by the tape ---
 fiber_generated="$(mktemp)"; trap 'rm -f "$generated" "$flow_generated" "$structured_generated" "$scope_generated" "$fiber_generated"' EXIT
 lake env lean --run "$here/Generate.lean" fiber-fixture | grep -v '^warning: manifest out of date' > "$fiber_generated"
@@ -106,4 +105,4 @@ for golden in "$repo_root"/generated/traces/fiber/*.tsv; do
     --golden "$golden" --masks "$repo_root/generated/traces/masks.tsv" --tail fiber-tail.ts \
     --receipt "$here/receipts/fiber/$program.json" | sed 's/^trace/trace(fiber)/'
 done
-echo "PASS host traces agree with every golden under every mask (straight-line, dispatch, structured, scope and fiber forms)"
+echo "PASS host traces agree with every golden under every mask (straight-line, dispatch, structured, scope, interrupt and fiber forms)"
