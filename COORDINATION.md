@@ -839,3 +839,61 @@ and byte-stable; host, patched, types, property, coverage, census, family
 check, the three planted-mutant self-tests (goldens, coverage, lowering
 4/4), citations and the trust gate all green. Agent worktrees and branches
 are removed. Not pushed.
+
+## D5 landed, 2026-09-03
+
+`Effect4/Target/TypeScript/ScriptDenotation.lean` gives the straight-line
+script embedding a meaning and proves the graph agrees with it. `denoteScript`
+reads the program off a `Script`'s steps — one `vis` per performed operation,
+literals and atoms included, the environment as the open block's scope — and
+`Script.toFlow_denote` says that `Flow.denoteGo` of `Script.toFlow`'s output, on
+the empty tape, is `liftScript` of that program (`liftScript` is
+`Program.inl` into `FullSig` followed by `done` with the untouched tape: a
+straight-line run announces no decision and always returns). The `m2` oracle of
+`docs/TRACE-DAG.md` is now a corollary per embedded program rather than an
+observation.
+
+The `Build` invariant the packet asked to be named is two predicates proved as
+their own lemmas: `Appends` (every clause of `materialize` and `embedStep` only
+extends the block list, the table and the scope, and keeps `next` counting the
+blocks) and `Ordered` (the blocks carry the ids `0, 1, 2, …` in order, so
+`lookupBlock` resolves positionally — `lookupBlock_ordered`). The induction runs
+`performTo_segment` → `mint_segment` → `literal_segment` →
+`materialize_segment` → `step_segment` → `stepsWalk_denote`, composed through
+`Segment`, a straight stretch of the graph with its walk; `Leaves` and its
+`bind_congr` are what let the next segment be rewritten under a `bind`.
+`interpret_vis_of_pure` is the erasure lemma the packet named: a `vis` whose
+handler answers purely is the continuation at that answer, which is exactly the
+status of the literal and atom rows of an embedded table
+(`tableService_handle_pure`). Everything is inside `propext`/`Quot.sound`;
+`List.findIdx?_eq_some_iff_findIdx_eq` is classical upstream and is reproved
+privately as `findIdx?_lt` so the module needs no gate exemption. The
+semantics live in a module of their own because `ScriptFlow` and `EffectV4` are
+exempt for `Classical.choice` as renderers.
+
+The oracle arm of `harness/trace/Generate.lean` gained a third face: it now
+interprets `denoteScript` under the same table service and prints three-way
+agreement per program (`incr`, `twice`: traced service, Flow runner, script
+denotation, 7 rows each). Receipts:
+`Effect4Test/Target/TypeScript/ScriptDenotationContract.lean` (the theorem at
+each of the four programs of `Generate.lean`'s `programs` list, plus `#guard`s
+that each embeds, is admitted, is denoted, and mints the ids in order) and
+`ScriptDenotationAxiomReport.lean`.
+
+**What D5 did not deliver.** `example : denoteScript <rows> <name>.script =
+<name> := by rfl` cannot be stated: `denoteScript` lands in
+`Program (Sig (tableAlphabet id table)) Val` while `<name>` lands in
+`Program X.Sig A`, and relating them needs a decoding `Val → X.Answer name`
+that the DSL has no half of (`E4-TARGET-CE-016`, `Effect4/Meta/Derive.lean`
+carries the owed note in its module docstring). What `effect_program` emits
+instead is the strongest agreement the two faces admit and is new:
+`performedNames X.Name.spelling X.answerDefault (<name> default)
+= <name>.script.operationNames`, one `rfl`-checked `example` per declaration,
+green on all eleven `effect_program` declarations in the tree.
+`effect_signature` gained one emission for it, `X.answerDefault`, an inhabitant
+per answer; every admitted Stratum V spelling has one.
+
+Also noted, not fixed: `E4-TARGET-CE-015` is cited by
+`Effect4/Target/TypeScript/Trace.lean`, `harness/trace/Generate.lean` and
+`harness/trace/wire-tail.ts` but has no row in
+`test/counterexamples/REGISTER.md`.

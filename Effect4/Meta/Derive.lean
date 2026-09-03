@@ -42,7 +42,29 @@ effect_program incr (n : Nat) over Cell : Nat :=
   return x
 ```
 
-emits `incr : Nat → Effects.Program Cell.Sig Nat` and `incr.script : Script`.
+emits `incr : Nat → Effects.Program Cell.Sig Nat` and `incr.script : Script`,
+and beside them one receipt, checked by `rfl` at the declaration site:
+
+```lean
+example : Effect4.Target.EffectV4.performedNames Cell.Name.spelling Cell.answerDefault
+    (incr default) = Effect4.Target.EffectV4.Script.operationNames incr.script := rfl
+```
+
+The elaborator builds the `Program` value and the `Script` from the same steps
+but by two independent traversals, and until packet D5 nothing related them.
+The receipt says they perform the same operations in the same order. It is the
+strongest statement of that agreement the two faces admit; the one D5 asked for
+is owed, in these words:
+
+> **Owed (D5).** `example : denoteScript <rows> <name>.script = <name> := by rfl`
+> cannot be stated. `denoteScript` (`Effect4/Target/TypeScript/ScriptDenotation.lean`)
+> lands in `Program (Sig (tableAlphabet id table)) Val` — every request and
+> every answer a wire `Effects.Trace.Val` — while `<name>` lands in
+> `Program X.Sig A` at the Lean types the family declares. Relating them needs
+> a decoding `Val → X.Answer name`, the converse of `X.encodeAnswer`; the DSL
+> has only the encoding direction (`Effects.Trace.ToVal`), and a decoding is a
+> partial function that no admitted spelling currently carries. Row
+> `E4-TARGET-CE-016`. The receipt above is what is emitted instead.
 
 This module is metaprogramming: `MetaM` reaches `Classical.choice`, so it sits
 behind the target-implementation exemption of the axiom gate and declares no
@@ -166,6 +188,7 @@ elab_rules : command
     let mut spellingAlts : Array (TSyntax ``Lean.Parser.Term.matchAlt) := #[]
     let mut encodeParamAlts : Array (TSyntax ``Lean.Parser.Term.matchAlt) := #[]
     let mut encodeAnswerAlts : Array (TSyntax ``Lean.Parser.Term.matchAlt) := #[]
+    let mut answerDefaultAlts : Array (TSyntax ``Lean.Parser.Term.matchAlt) := #[]
     let mut index := 0
     for op in ops do
       match op with
@@ -196,6 +219,7 @@ elab_rules : command
           spellingAlts := spellingAlts.push (← `(Lean.Parser.Term.matchAltExpr| | $ctorName => $(strLit opName.getId.toString)))
           encodeParamAlts := encodeParamAlts.push (← `(Lean.Parser.Term.matchAltExpr| | $ctorName => fun (p : $paramTy) => Effects.Trace.ToVal.toVal p))
           encodeAnswerAlts := encodeAnswerAlts.push (← `(Lean.Parser.Term.matchAltExpr| | $ctorName => fun (a : $answer) => Effects.Trace.ToVal.toVal a))
+          answerDefaultAlts := answerDefaultAlts.push (← `(Lean.Parser.Term.matchAltExpr| | $ctorName => (default : $answer)))
           smart := smart.push (← `(def $smartName:ident $binders:bracketedBinder* : Effects.Program $sigName $answer :=
             Effects.Family.perform $name $ctorName $packed))
           let cueTerms : Array Term := cues.getElems.map fun c => (⟨c.raw⟩ : Term)
@@ -227,6 +251,13 @@ elab_rules : command
     elabCommand (← `(def $tracedName {M : Type → Type} [Monad M] (service : Effects.Family.Service $name M) :
         Effects.Family.Service $name (StateT Effect4.Trace.Log M) :=
       Effects.Family.Service.traced (δ := Nat) (ρ := Nat) $spellingName $encodeParamName $encodeAnswerName service))
+    -- One inhabitant per answer, so a program's operation sequence can be read
+    -- off the program itself (`Effect4.Target.EffectV4.performedNames`); the
+    -- straight-line fragment never branches on an answer, so which inhabitant
+    -- is chosen does not change the sequence.
+    let answerDefaultName := mkIdent (famName ++ `answerDefault)
+    elabCommand (← `(def $answerDefaultName : (name : $nameTy) → $answerFn name :=
+      fun name => match name with $answerDefaultAlts:matchAlt*))
     let tracedExceptName := mkIdent (famName ++ `tracedExcept)
     elabCommand (← `(def $tracedExceptName {E : Type} [Effects.Trace.ToVal E] {M : Type → Type} [Monad M]
         (service : Effects.Family.Service $name (ExceptT E M)) :
@@ -293,5 +324,13 @@ elab_rules : command
     let scriptName := mkIdent (name.getId ++ `script)
     let stepList ← listLit stepRows.reverse
     elabCommand (← `(def $scriptName : Effect4.Target.EffectV4.Script := { family := $(strLit famId.getId.toString), name := $(strLit name.getId.toString), param := ($(strLit param.getId.toString), $(strLit (← tsOfType paramTy))), result := $(strLit (← tsOfType result)), steps := $stepList }))
+    -- The per-program receipt: the value and the script perform the same
+    -- operations in the same order (packet D5).
+    let spellingName := mkIdent (famId.getId ++ `Name ++ `spelling)
+    let answerDefaultName := mkIdent (famId.getId ++ `answerDefault)
+    elabCommand (← `(example :
+      Effect4.Target.EffectV4.performedNames (F := $famId) $spellingName $answerDefaultName
+          ($name default)
+        = Effect4.Target.EffectV4.Script.operationNames $scriptName := by rfl))
 
 end Effect4.Meta

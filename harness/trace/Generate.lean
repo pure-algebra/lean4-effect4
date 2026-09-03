@@ -3,6 +3,7 @@ import Effect4.Runtime.Scope
 import Effect4.Target.TypeScript.Trace
 import Effect4.Target.TypeScript.Lower
 import Effect4.Target.TypeScript.ScriptFlow
+import Effect4.Target.TypeScript.ScriptDenotation
 import Effect4.Target.TypeScript.FlowLower
 import Effect4.Target.TypeScript.RegionLower
 import Effect4.Target.TypeScript.StructuredLower
@@ -344,6 +345,10 @@ structure FlowEntry where
   input : Effects.Trace.Val
   initial : Nat := 41
   oracle : Option Effect4.Trace.Log := none
+  /-- The script the graph was embedded from, when it was embedded from one.
+  Its own denotation (`denoteScript`, packet D5) is the third face of the
+  oracle; `Script.toFlow_denote` is why the two Lean faces cannot drift. -/
+  script : Option Script := none
   /-- Resource-boundary tapes. A tape named here is run with the given fuel
   instead of `fuelFor`, so the Lean face stops at a `frontier` with tape left
   over, and its golden carries the op budgets whose host `frontier` lands at the
@@ -405,7 +410,7 @@ def flowEntries : List FlowEntry :=
     match entry.flowInput, embed? entry with
     | some input, some program =>
         some { program := program, rows := entry.rows, tapes := [("empty", [])], input := input,
-               initial := entry.initial, oracle := some entry.log }
+               initial := entry.initial, oracle := some entry.log, script := some entry.script }
     | _, _ => none) ++
   ((admit? "chooser" [] chooserRaw).toList.map fun program =>
     { program := program, tapes := [("left", [decision 7 true]), ("right", [decision 7 false])],
@@ -446,6 +451,22 @@ def flowLogWith (entry : FlowEntry) (tape : Flow.Tape) (fuel? : Option Nat) :
 
 def flowLog (entry : FlowEntry) (tape : Flow.Tape) : Except String Effect4.Trace.Log :=
   flowLogWith entry tape none
+
+/-- The third face of the internal oracle: the script's own denotation
+(`Effect4/Target/TypeScript/ScriptDenotation.lean`, packet D5), interpreted
+under the same table service that the runner uses. `Script.toFlow_denote` makes
+its agreement with the flow-runner face a theorem rather than an observation;
+the arm prints it anyway, so a change to either face shows up here. -/
+def denotationLog (entry : FlowEntry) (script : Script) : Except String Effect4.Trace.Log :=
+  let table := entry.program.table
+  match denoteScript ⟨0⟩ entry.rows cellAtoms table script entry.input with
+  | none => throw s!"the script of {entry.program.name} has no denotation"
+  | some program =>
+    let traced := Flow.tracedFlowService (tableService ⟨0⟩ table cellFamily cellAtom)
+      (tableNameOf ⟨0⟩ table)
+    let result : (Effects.Trace.Val × Effect4.Trace.Log) × Nat :=
+      ((interpret (Effects.Family.Service.toHandler traced) program).run []).run entry.initial
+    pure (result.1.2 ++ [.done (.success result.1.1)])
 
 /-! ## Regions (P-T7): a family with resources and failures -/
 
@@ -615,10 +636,21 @@ def main (args : List String) : IO Unit := do
         | some expected, (_, tape) :: _ =>
             match flowLog entry tape with
             | .ok log =>
-                if Effect4.Trace.agree Effects.Trace.Mask.m2 log expected then
-                  IO.println s!"PASS flow oracle {entry.program.name}: the runner agrees with the traced service under m2 ({log.length} rows)"
-                else
+                unless Effect4.Trace.agree Effects.Trace.Mask.m2 log expected do
                   throw (IO.userError s!"FAIL flow oracle {entry.program.name}: the runner and the traced service differ under m2")
+                match entry.script with
+                | none =>
+                    IO.println s!"PASS flow oracle {entry.program.name}: the runner agrees with the traced service under m2 ({log.length} rows); no script face"
+                | some script =>
+                    match denotationLog entry script with
+                    | .error message =>
+                        throw (IO.userError s!"FAIL flow oracle {entry.program.name}: {message}")
+                    | .ok denoted =>
+                        unless Effect4.Trace.agree Effects.Trace.Mask.m2 denoted expected do
+                          throw (IO.userError s!"FAIL flow oracle {entry.program.name}: the script denotation and the traced service differ under m2")
+                        unless Effect4.Trace.agree Effects.Trace.Mask.m2 denoted log do
+                          throw (IO.userError s!"FAIL flow oracle {entry.program.name}: the script denotation and the runner differ under m2")
+                        IO.println s!"PASS flow oracle {entry.program.name}: the traced service, the Flow runner and the script denotation agree under m2 ({log.length} rows)"
             | .error message => throw (IO.userError s!"FAIL flow oracle {entry.program.name}: {message}")
         | _, _ => pure ()
   | ["flow-fixture"] =>
