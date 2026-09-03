@@ -309,7 +309,7 @@ owned by `Effect4/Semantics/Runs.lean:114`, living in the TypeScript lowering na
 
 The consequence is already visible: `StructureSemantics.lean` imports `SkeletonSemantics`
 and uses them 7 times, and nothing outside the TypeScript target can invert `plan` without
-importing the skeleton IR. `docs/ARCHITECTURE.md:38-39` assigns `Effect4/Semantics` the
+importing the skeleton IR. `docs/ARCHITECTURE.md` ("Planned source tree") assigns `Effect4/Semantics` the
 "steps, runs" responsibility.
 
 The section header is also stale: `SkeletonSemantics.lean:851-853` says "Six inversion
@@ -432,7 +432,7 @@ re-adding an import is one line when the packet opens.
 
 **Category:** dx
 
-Root `AGENTS.md:37-40` makes reading this file mandatory before any write. It is 176 KB,
+Root `AGENTS.md` ("Development order") makes reading this file mandatory before any write. It is 176 KB,
 85 sections, and the live "Current claims" table is 47 rows at `:30-84` followed by ~2 600
 lines of append-only history.
 
@@ -482,7 +482,7 @@ planted `partial`/`unsafe`/`Classical.choice` fixtures.
 
 **Category:** cleanup (authority document)
 
-`docs/ARCHITECTURE.md:21-24`:
+`docs/ARCHITECTURE.md` ("Dependency direction"):
 
 > "Effect4 has two external Lake dependencies: `effects` at
 > `2447edd76649f035e989914ac899831d66e7dad2` and `typescript` at
@@ -497,7 +497,7 @@ checkouts. The sentence asserts agreement with `lake-manifest.json` that does no
 `Effect4/Target/TypeScript/StructureOrder.lean:20` and
 `Effect4Test/Counterexamples/Target/BreakScoped.lean:18`.
 
-`docs/ARCHITECTURE.md:39` additionally assigns `Effect4/Flow` "raw and checked first-order
+`docs/ARCHITECTURE.md` ("Planned source tree") additionally assigns `Effect4/Flow` "raw and checked first-order
 graphs, blocks, regions, decisions and admission" — but raw/checked/blocks/admission moved to
 the `effects` package; `Effect4/Flow/` now holds only `Region.lean`, `Decision.lean`,
 `Interrupt.lean`.
@@ -514,7 +514,7 @@ gate in `scripts/check-internal-citations.sh` that cross-checks `lakefile.toml`.
 
 **Category:** correctness (process)
 
-Root `AGENTS.md:99-101`: "All counterexamples that can change a declaration or cutover
+Root `AGENTS.md` ("Counterexamples and claims"): "All counterexamples that can change a declaration or cutover
 decision have a stable ID in `test/counterexamples/REGISTER.md`."
 
 Cross-checking every `E4-*-CE-\d+` token in `Effect4/` + `Effect4Test/` against the 195 rows
@@ -862,7 +862,7 @@ easier to work with — the tree already contains the good pattern.
 
 `lakefile.toml:19` and `lake-manifest.json` both carry `"rev": "a117157"` / `"inputRev":
 "a117157"` for `effects`, while `typescript` uses the full 40-character SHA
-(`31665ffca361ce2ceb2e57f3ec18f8c8500abda0`). Root `AGENTS.md:80-83` requires "pinned by exact
+(`31665ffca361ce2ceb2e57f3ec18f8c8500abda0`). Root `AGENTS.md` ("Reuse and compatibility") requires "pinned by exact
 commit in `lakefile.toml`".
 
 A 7-character prefix is not an exact commit: it is a prefix match against the remote's object
@@ -992,7 +992,7 @@ land in their own target that is *expected* to fail. Pairs naturally with findin
 `lakefile.toml` declares no `lean_exe`. Every gate is a shell script under `scripts/`
 (56 files: 25 `check-*`, 8 `generate-*`, 20 `test-*`, 3 other). Nothing in `README.md` or the
 `AGENTS.md` files enumerates them; `README.md:29-33` names only `scripts/test-trust-gate.sh`,
-and root `AGENTS.md:103-108` names `scripts/report-effect-runtime-coverage.sh` and
+and root `AGENTS.md` ("Counterexamples and claims") names `scripts/report-effect-runtime-coverage.sh` and
 `scripts/check-effect-runtime-census.sh`.
 
 A newcomer (or a fresh agent session) has to `ls scripts/` and guess which of `check-x.sh`,
@@ -1125,7 +1125,7 @@ deliberate and defensible — say so.
 
 1. **#16** — delete the 19 linter-named unused simp arguments and `String.mk` → `String.ofList`. Zero risk, removes all warnings from `lake build Effect4`.
 2. **#26** — `rm` the 22 stale oleans under `.lake/build/lib/lean/Effect4{,Test}/{Algebra,Flow,Target/TypeScript/{Expr,Render}}`.
-3. **#13 + #33 + #25** — fix the three wrong pins in `docs/ARCHITECTURE.md:21-24`, `README.md:8`, and expand `lakefile.toml:19`'s abbreviated rev to the full SHA.
+3. **#13 + #33 + #25** — fix the three wrong pins in `docs/ARCHITECTURE.md` ("Dependency direction"), `README.md:8`, and expand `lakefile.toml:19`'s abbreviated rev to the full SHA.
 4. **#23** — two-line fix to `AxiomGate.lean:270-273` so `ancestors` cannot admit across modules.
 5. **#12** — add `.lake/build` to the `cp -R` in `scripts/test-trust-gate.sh:37-41`.
 6. **#31** — one-word change in `Effect4/Meta/Derive.lean:400`: `example` → a named `theorem`.
@@ -1302,7 +1302,7 @@ abbrev FlowAlphabet.toAlphabet {Ty : Type uTy} (alphabet : FlowAlphabet.{uTy, uO
 end Effects
 ```
 
-Its own comment says where it belongs. `docs/ARCHITECTURE.md:35` states the rule it breaks:
+Its own comment says where it belongs. `docs/ARCHITECTURE.md` ("Planned source tree") states the rule it breaks:
 Effects is "consumed through the pinned dependency, never re-declared here".
 
 Four more declarations are upstream-shaped without squatting: `reachableNoChoose_trans`
@@ -1676,7 +1676,7 @@ these names are frozen by `Effect4Test/Concurrency/FiberSupervisionContract.lean
 > `Effect4/Runtime/FrameSimulation.lean` unchanged."
 
 It is the only module under `Effect4/Semantics/` that imports `Effect4/Runtime/`, reversing the
-direction `docs/ARCHITECTURE.md:6-13` declares, and it is why its namespace is
+direction `docs/ARCHITECTURE.md` ("Dependency direction") declares, and it is why its namespace is
 `Effect4.FrameSimulation` rather than `Effect4.Flow` like its seven directory-mates.
 `Effect4.lean:52-54` carries a matching fence comment.
 
