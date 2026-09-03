@@ -7,13 +7,18 @@
 # committed projections are never edited.
 set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+. "$repo_root/scripts/lib/portable.sh"
 tools="${EFFECT4_TOOLS:-$repo_root/../effect4-tools}"
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/effect4-trace-gate.XXXXXX")"
 trap 'rm -rf -- "$tmp"' EXIT
 cd "$repo_root"
 traces="$repo_root/generated/traces"
 here="$repo_root/harness/trace"
-caught=0; total=8
+# The total is counted, never spelled: it was `8` while nine mutants were
+# planted, so a green run printed `9/8` and dropping a mutant would still have
+# printed PASS (survey finding H19). `expect` lines start in column one; the
+# function definition does not.
+caught=0; total="$(grep -c '^expect ' "$0")"
 expect() { # name, signal, command...
   local name="$1" signal="$2"; shift 2
   local log="$tmp/$name.log"
@@ -42,11 +47,11 @@ grep -v '^mask' "$traces/masks.tsv" > "$tmp/no-masks.tsv"
 expect removed-masks "mask table drift" env EFFECT4_PROGRAM=incr node "$tools/packages/harness/trace.mjs" "$here" --golden "$traces/incr.empty.tsv" --masks "$tmp/no-masks.tsv"
 # 3. a stale projection (edited pin row) fails the hermetic drift gate
 mkdir -p "$tmp/stale" && cp -R "$traces"/. "$tmp/stale/"
-sed -i '' 's/^pin\teffects\t.*/pin\teffects\tdeadbeef/' "$tmp/stale/incr.empty.tsv"
+sed_inplace 's/^pin\teffects\t.*/pin\teffects\tdeadbeef/' "$tmp/stale/incr.empty.tsv"
 expect stale-projection "stale generated trace projection: incr.empty.tsv" "$repo_root/scripts/check-trace-goldens.sh" --dry-run "$tmp/stale"
 # 4. a flipped answer in the Flow-runner golden is drift of the internal oracle
 mkdir -p "$tmp/flow-flipped" && cp -R "$traces"/. "$tmp/flow-flipped/"
-sed -i '' 's/^answer\tget\t41$/answer\tget\t40/' "$tmp/flow-flipped/flow/incr.empty.tsv"
+sed_inplace 's/^answer\tget\t41$/answer\tget\t40/' "$tmp/flow-flipped/flow/incr.empty.tsv"
 cmp -s "$tmp/flow-flipped/flow/incr.empty.tsv" "$traces/flow/incr.empty.tsv" && { echo "FAIL flow fixture did not mutate the golden" >&2; exit 1; }
 expect flow-flipped-answer "stale generated trace projection: flow/incr.empty.tsv" "$repo_root/scripts/check-trace-goldens.sh" --dry-run "$tmp/flow-flipped"
 # --- M0: the four wire facts, none of which the corpus reaches ---------------
@@ -63,6 +68,9 @@ accept escaped-control "mask m2 ok" env EFFECT4_PROGRAM=control node "$tools/pac
 # the run invalid, and Lean refuses to emit a golden carrying one at all.
 plant "$tmp/overflow.tsv" overflow 'done	{"success":9007199254740992}'
 expect unsafe-integer-host "INVALID: tracer defect" env EFFECT4_PROGRAM=overflow node "$tools/packages/harness/trace.mjs" "$here" --golden "$tmp/overflow.tsv" --masks "$traces/masks.tsv" --tail wire-tail.ts
+# This one Lean run is a planted negative: `expect` captures both its streams
+# into the log and reprints them whenever the signal is absent, so it is not one
+# of the invocations that could swallow a diagnostic.
 expect unsafe-integer-emission "leaves the host-exact range" lake env lean --run "$here/Generate.lean" admission-probe
 # 7. a dying program. A defect rendered as `{"failure":[]}` was byte-identical
 # to a unit failure; the golden below still claims that form and must diverge,
@@ -74,4 +82,8 @@ expect die-as-failure '{"defect":' env EFFECT4_PROGRAM=die node "$tools/packages
 awk '{ print; if ($0 == "frontier") print "frontier" }' "$traces/flow/swap.budget.tsv" > "$tmp/double-frontier.tsv"
 cmp -s "$tmp/double-frontier.tsv" "$traces/flow/swap.budget.tsv" && { echo "FAIL frontier fixture did not mutate the golden" >&2; exit 1; }
 expect doubled-frontier "DIVERGES" env EFFECT4_PROGRAM=swap EFFECT4_BUDGET=19 node "$tools/packages/harness/trace.mjs" "$here" --golden "$tmp/double-frontier.tsv" --masks "$traces/masks.tsv" --tail flow-tail.ts
+[ "$caught" -eq "$total" ] || {
+  echo "FAIL $caught of $total planted defects were caught; every 'expect' line must fire" >&2
+  exit 1
+}
 echo "PASS trace gates react to $caught/$total planted defects"

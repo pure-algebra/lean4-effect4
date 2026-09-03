@@ -14,10 +14,11 @@ import { succ } from "./atoms.ts"
 /** Service `Decisions`: one method per operation of the Lean family. */
 export class Decisions extends Context.Service<Decisions, {
   readonly choose: (site: number) => Effect.Effect<boolean>
+  readonly report: (site: number, branch: boolean) => Effect.Effect<void>
 }>()("Decisions") {}
 
 /** Operation rows of `Decisions`, for the trace harness. */
-export const DecisionsRows = { "choose": { params: 1, answer: "boolean" } }
+export const DecisionsRows = { "choose": { params: 1, answer: "boolean" }, "report": { params: 2, answer: "void" } }
 
 /** Service `Regions`: one method per operation of the Lean family. */
 export class Regions extends Context.Service<Regions, {

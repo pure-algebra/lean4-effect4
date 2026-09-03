@@ -5,6 +5,7 @@
 # cursor. The committed sources are never edited.
 set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+. "$repo_root/scripts/lib/portable.sh"
 tools="${EFFECT4_TOOLS:-$repo_root/../effect4-tools}"
 here="$repo_root/harness/trace"
 seed="${EFFECT4_PROPERTY_SEED:-2026}"; count="${EFFECT4_MUTATION_COUNT:-40}"
@@ -13,7 +14,11 @@ lake build Effect4 >/dev/null
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/effect4-mutations.XXXXXX")"; trap 'rm -rf -- "$tmp"' EXIT
 mkdir -p "$tmp/corpus"
 cp "$here/tracer.ts" "$here/atoms.ts" "$here/property-tail.ts" "$here/property-structured-tail.ts" "$here/host-pin.json" "$tmp/corpus/"
-lake env lean --run "$here/Property.lean" corpus "$seed" "$count" "$tmp/corpus" | grep -v '^warning: manifest out of date' >/dev/null
+# Discarding Lean's stdout discards Lean's errors with it -- they are printed
+# there, not on stderr -- so this gate once exited 1 with an empty log while
+# Property.lean had a missing-cases error. `lean_run` (scripts/lib/portable.sh)
+# names the failure and reprints everything Lean wrote.
+lean_run "$here/Property.lean" corpus "$seed" "$count" "$tmp/corpus" >/dev/null
 batch() { node "$tools/packages/harness/batch.mjs" "$1" --goldens "$1/goldens" --masks "$repo_root/generated/traces/masks.tsv" --tail property-tail.ts; }
 batch "$tmp/corpus" > "$tmp/clean.log" 2>&1 || { echo "FAIL the unmutated corpus does not pass" >&2; cat "$tmp/clean.log" >&2; exit 1; }
 caught=0; total=3
