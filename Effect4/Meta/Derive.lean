@@ -228,9 +228,9 @@ elab_rules : command
           let leanArgs : Array Term := pairs.map (·.1)
           let rows : Array Term := pairs.map (·.2)
           let call : Term ← if leanArgs.isEmpty then pure (opRef : Term) else `($opRef $leanArgs*)
-          let bindName := if isHole then s!"_{discard}" else x.getId.eraseMacroScopes.toString
+          let bindRow : Term ← if isHole then `(none) else `(some $(strLit x.getId.eraseMacroScopes.toString))
           if isHole then discard := discard + 1
-          stepRows := stepRows.push (← `(Effect4.Target.EffectV4.Step.perform $(strLit bindName) $(strLit opName) $(← listLit rows)))
+          stepRows := stepRows.push (← `(Effect4.Target.EffectV4.Step.perform $bindRow $(strLit opName) $(← listLit rows)))
           body := some (← `($call >>= fun $x => $rest))
       | _ => throwUnsupportedSyntax
     let some programTerm := body | throwError "effect_program: empty body"

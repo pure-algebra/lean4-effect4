@@ -241,9 +241,10 @@ where
 
 end PureTerm
 
-/-- One step: bind (or discard) the answer of an operation, or return. -/
+/-- One step: bind the answer of an operation (`some name`), discard it
+(`none`), or return. -/
 inductive Step where
-  | perform (bind : String) (op : String) (args : List PureTerm)
+  | perform (bind : Option String) (op : String) (args : List PureTerm)
   | ret (value : PureTerm)
   deriving Repr, BEq, Inhabited
 
@@ -261,8 +262,8 @@ structure Script where
 namespace Script
 
 /-- Refuse unknown operations and arity mismatches at the first-order face;
-otherwise lower into the straight-line generator fragment. A bind spelled
-with a leading underscore discards its answer. -/
+otherwise lower into the straight-line generator fragment. A step without a
+bind discards its answer. -/
 def lower (rows : ServiceRow) (script : Script) : Option ProgDecl := do
   guard (script.family == rows.name)
   let recv := rows.receiver
@@ -276,7 +277,9 @@ def lower (rows : ServiceRow) (script : Script) : Option ProgDecl := do
           if row.params.isEmpty then Lowering.nullaryValue recv op
           else Lowering.performCall recv op (args.map PureTerm.lower)
         stmts := stmts ++
-          [if bind.startsWith "_" then Lowering.performDiscard call else Lowering.performBind bind call]
+          [match bind with
+           | none => Lowering.performDiscard call
+           | some name => Lowering.performBind name call]
     | .ret value =>
         stmts := stmts ++ [Lowering.ret value.lower]
   pure { doc := ["Lowered from `" ++ script.name ++ "` over `" ++ script.family ++ "`."]

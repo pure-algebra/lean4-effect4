@@ -68,7 +68,7 @@ def Script.ruleSet (rows : ServiceRow) (script : Script) : List Rule :=
     | .perform bind op args =>
         let nullary := (rows.row? op).map (·.params.isEmpty) |>.getD false
         let acc := step acc (if nullary then .nullaryValue else .performCall)
-        let acc := step acc (if bind.startsWith "_" then .performDiscard else .performBind)
+        let acc := step acc (if bind.isNone then .performDiscard else .performBind)
         args.foldl atoms acc
     | .ret value => atoms (step acc .ret) value
 
