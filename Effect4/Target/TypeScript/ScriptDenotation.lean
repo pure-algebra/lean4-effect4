@@ -7,8 +7,8 @@ import Effect4.Target.TypeScript.ScriptFlow
 Owner: the meaning of the straight-line script embedding (packet D5 of
 `docs/research/2026-09-03-reification-plan.md`).
 
-`Effect4/Target/TypeScript/ScriptFlow.lean` embeds a `Script` into a Flow v2
-graph. `Effect4/Semantics/Denotation.lean` gives an admitted flow an algebraic
+`Effect4/Target/TypeScript/ScriptFlow.lean` embeds a `Script` into a Flow graph
+(Flow v3, in its straight-line fragment). `Effect4/Semantics/Denotation.lean` gives an admitted flow an algebraic
 meaning. Until this module nothing related the two: the embedding was checked
 by running it (`harness/trace/Generate.lean oracle`), never by a theorem. Here
 the script gets a *direct* denotation — the program the script says, read off

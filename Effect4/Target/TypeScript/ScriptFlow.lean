@@ -4,8 +4,11 @@ import Effect4.Semantics.Runs
 /-!
 # Target.TypeScript.ScriptFlow
 
-Owner: the embedding of a straight-line `Script` into a Flow v2 graph, and
-the closed alphabet it runs against. This is the internal oracle of the trace
+Owner: the embedding of a straight-line `Script` into a Flow graph, and the
+closed alphabet it runs against. The graph language is Flow v3 (lean4-effects
+v0.7.0) -- `tableAlphabet` answers its `errorTy` and `boolTy` -- and this
+embedding emits only its straight-line shapes, `perform` and `ret`; a caught
+perform or a value branch is written as a flow, not embedded from a script. This is the internal oracle of the trace
 lane: the same program traced through the algebra (`X.traced`) and run through
 the Flow runner must agree under `m2` (`docs/TRACE-DAG.md`).
 
@@ -231,7 +234,8 @@ def embedStep (rows : ServiceRow) (atoms : AtomTable) (b : Build) : Step → Opt
         blocks := b.blocks ++ [{ id := ⟨b.next⟩, params := b.params, term := .ret v }]
         next := b.next + 1 }
 
-/-- Embed a straight-line script as a Flow v2 graph over a table alphabet.
+/-- Embed a straight-line script as a Flow graph over a table alphabet, in the
+straight-line fragment: `perform` and `ret` only.
 Refuses operations with two or more parameters and atoms with an argument
 list other than one; the graph is then admitted by `Effects.admit`. The
 restriction is this embedding's, not the alphabet's: a hand-written region flow
