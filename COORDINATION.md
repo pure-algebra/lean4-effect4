@@ -70,6 +70,7 @@ row is unclaimed.
 | `Effect4/Semantics/Cause.lean`, `Effect4/Semantics/Exit.lean`, `test/contracts/cause-exit.contract.md`, `docs/CAUSE-DAG.md`, `Effect4Test/Semantics/CauseExitContract.lean`, `Effect4Test/Semantics/CauseExitAxiomReport.lean`, `Effect4Test/Counterexamples/Semantics/CauseExit.lean`, `test/counterexamples/semantics/ATTACKS.md`, `test/counterexamples/REGISTER.md` (`E4-SEM-CE-001`..`007` only), `Effect4Test.lean` (Cause/Exit import lines only), `test/fixtures/trust-gate/known-red.txt` (Cause/Exit entries only) | Claude | Cause/Exit packet implemented and green; coverage join in progress |
 | `scripts/*effect-runtime-census*`, `generated/effect-runtime-census.tsv`, `Effect4Test/Audit/RuntimeCoverage.lean`, `vendor/effect-4.0.0-rc.112/src/{internal/**,Scheduler.ts,Scope.ts,Exit.ts,Cause.ts}`, `vendor/effect-4.0.0-rc.112/README.md`, `docs/effect-rc112-fiber-runtime.html` | Claude | Effect runtime coverage slice: behaviour census joined to Lean witnesses; additive, reads pinned bytes only |
 | `Effect4/Semantics/Observation.lean`, `Effect4/Semantics/Runs.lean`, `Effect4/Semantics/Frontier.lean`, `Effect4/Flow/Decision.lean` | Claude (trace lane) | trace alphabet consumer, Flow runner and tape; plan `~/.claude/plans/misty-frolicking-naur.md` P-T1b, P-T2 |
+| `Effect4/Semantics/Denotation.lean`, `test/contracts/flow-denotation.contract.md`, `Effect4Test/Semantics/DenotationContract.lean`, `Effect4Test/Semantics/DenotationAxiomReport.lean` | Claude (D1 denotation lane) | packet D1 of `docs/research/2026-09-03-reification-plan.md`: `Flow.denote`, `runTape = interpret ∘ denoteFuel`, fuel sufficiency; append-only lines in `Effect4.lean`, `Effect4Test.lean`, `docs/TRACE-DAG.md` (`semantics` row only) |
 | `Effect4/Meta/Derive.lean`, `Effect4/Target/TypeScript/{EffectV4,Lower,Trace,Simulation}.lean`, `Effect4Test/Semantics/ObservationContract.lean`, `Effect4Test/Target/TypeScript/LoweringCoverage.lean`, `Effect4Test/Audit/AxiomGate.lean` (Derive and trace-renderer exemption entries only) | Claude (trace lane) | Effect v4 profile, rule ids, trace rendering, lowering; light ceremony by operator ruling D2 |
 | `harness/trace/**`, `harness/effect-v4-family/**`, `generated/traces/**`, `generated/lowering-*.tsv`, `scripts/*trace*`, `scripts/*lowering*`, `docs/TRACE-DAG.md`, `docs/LOWERING-COVERAGE.md` | Claude (trace lane) | host tracer, goldens, coverage ledger and their gates |
 | `test/counterexamples/REGISTER.md`, `test/counterexamples/{semantics,target,flow}/ATTACKS.md`, `Effect4Test/Counterexamples/{Semantics,Target}/Trace*.lean` (next free `E4-SEM-CE-`, `E4-TARGET-CE-`, `E4-FLOW-CE-` ids only, append-only) | Claude (trace lane) | trace and lowering attack rows |
@@ -657,3 +658,54 @@ Gate at this commit: `./scripts/check-effect-runtime-census.sh` →
 `PASS ... 137 mechanism rows`; `PASS census ids, kinds, statement snapshots and
 witness receipts join the Lean row list`; `PASS coverage: denominator 117;
 owned-with-green 3; green 49, partial 25, absent 43`.
+
+## D1 landed: the algebraic denotation of a checked flow, 2026-09-03
+
+`Effect4/Semantics/Denotation.lean` (packet D1 of
+`docs/research/2026-09-03-reification-plan.md`). A `CheckedFlow` denotes a
+`Program (Flow.Sig a ⊕ₛ Flow.DecSig)`: the alphabet through
+`Alphabet.toFamily` at the constant denotation `Val`, plus a decision summand
+`⟨DecisionId × Bool, fun _ => Unit⟩` announcing the branch the tape already
+fixed. `denoteFuel` is structural on fuel and mirrors `plan`/`loop` case for
+case; `denote` is fuel-free by well-founded recursion on
+`(tape.length, (raw.reachSet block).length)`, with the new measure lemma
+`reachSet_length_lt_of_edge` (`CyclesWF` is the only thing admission buys it).
+
+Theorems (all within `propext`, `Quot.sound`; receipts in
+`Effect4Test/Semantics/DenotationAxiomReport.lean`):
+
+- T1 `loop_eq_interpretRun` / `runTape_eq_interpretRun` — the runner at every
+  fuel is `interpret` under
+  `(tracedFlowService service nameOf).toHandler.sum decisionHandler`, closed by
+  `outcomeRows`. `Family.Service.traced` logs unconditionally, so the guarded
+  service carries the runner's `FlowService.pure` policy; `done` and `frontier`
+  have no former in the algebra at all and are a function of the `RunResult`,
+  not operations of any summand. That is the one honest gap between the letter
+  of "runner = interpret ∘ denote" and what is provable.
+- T2 `denoteFuel_eq_denoteGo` / `denoteFuel_eq_denote` — derived from the
+  `LoopBudget` invariant of `Effect4/Semantics/Fuel.lean` (Codex's
+  `run_fuelFor_finishes` lane), not from a second pigeonhole argument. The new
+  helpers `segmentBudget` and `decisionBudget` factor the two budget steps.
+  `runDefault_no_fuel_frontier` is this packet's name for `runDefault_finishes`.
+- `interpret_log_append` / `interpret_log_of_nil` — the log is a writer, under
+  the side condition `WritesLog` discharged for `traceHandler`.
+
+Fence used: new `Effect4/Semantics/Denotation.lean`,
+`Effect4Test/Semantics/DenotationContract.lean`,
+`Effect4Test/Semantics/DenotationAxiomReport.lean`,
+`test/contracts/flow-denotation.contract.md`; append-only lines in
+`Effect4.lean` and `Effect4Test.lean`; the `semantics` row (plus the status
+paragraph and the diagram tail) of `docs/TRACE-DAG.md`. `Runs.lean` and
+`Fuel.lean` were read, never edited: the guarded traced service lives in the new
+module, not in `Runs.lean` as the plan sketched.
+
+Two declarations carry `-- upstream: lean4-effects`:
+`Effects.FlowAlphabet.toAlphabet` and `reachableNoChoose_trans` /
+`reachSet_length_lt_of_edge`. `length_le_of_nodup_subset` is reproved privately
+for a third time (it is private in `Effects/Flow/Raw.lean` and private again in
+`Effect4/Semantics/Fuel.lean`); making it public upstream would retire all three
+copies.
+
+Next in this lane: D2 (regions as a scope summand) needs a third summand and a
+stateful upper handler through `Handler.mapHom`/`MonadHom.stateT`; D5 (the
+`Script` embedding) needs `interpret_vis_of_pure`.
