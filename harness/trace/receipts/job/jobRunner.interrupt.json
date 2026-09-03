@@ -1,8 +1,8 @@
 {
  "format": "effect4-trace-receipt-v1",
  "program": "jobRunner.interrupt",
- "tape": "1:1,2:1,1:1,1000013:0,1000013:1",
- "rules": "service-acquire,dispatch-loop,block-case,interrupt-point,param-move,flow-literal,flow-perform,nullary-value,perform-call,choose-if,flow-atom,flow-ret,region-enter,region-acquire,region-leave",
+ "tape": "1:1,1:1,1000017:0,1000017:1",
+ "rules": "service-acquire,dispatch-loop,block-case,interrupt-point,param-move,flow-literal,flow-perform,nullary-value,perform-call,flow-atom,branch-if,perform-catch,perform-tuple,flow-ret,region-enter,region-acquire,region-leave",
  "host": {
   "effect": "4.0.0-rc.112",
   "typescript": "7.0.2",
@@ -28,9 +28,10 @@
  },
  "foreign": [
   "succ@./atoms.ts",
-  "dec@./atoms.ts"
+  "dec@./atoms.ts",
+  "snd@./atoms.ts"
  ],
- "primitives": 122,
+ "primitives": 126,
  "results": {
   "outcome": "ok",
   "m1": "ok",

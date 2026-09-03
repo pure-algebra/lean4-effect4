@@ -189,7 +189,7 @@ const scenarios: Record<string, { body: string; input: number; seed: QueueState 
   },
   "jobRunner.requeue": {
     body: "jobRunner", input: 2,
-    seed: { pending: [2], acked: [], requeued: [], failures: [[2, 2]] }
+    seed: { pending: [2], acked: [], requeued: [], failures: [[2, 3]] }
   },
   "jobRunner.interrupt": {
     body: "jobRunner", input: 2,

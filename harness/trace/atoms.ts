@@ -36,3 +36,9 @@ export const addNat = (left: number, right: number): number => left + right
 
 /** Host body of the pure atom `snd`; its Lean model is `snd`. */
 export const snd = (ticket: readonly [JobQueue, number]): number => ticket[1]
+
+/** Host body of the pure atom `nonEmpty`; its Lean model is `nonEmpty`. */
+export const nonEmpty = (ticket: readonly [JobQueue, number]): boolean => ticket[1] !== 0
+
+/** Host body of the pure atom `positive`; its Lean model is `positive`. */
+export const positive = (n: number): boolean => n !== 0

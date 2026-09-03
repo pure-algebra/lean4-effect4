@@ -130,6 +130,15 @@ def rows : List Row :=
   -- written by the host gate, not by this join.
   , { rule := .performTuple, state := .pinned,
       goldens := ["job/jobRunner.clean", "job/jobRunner.requeue", "job/jobPoison.poison"],
+      host := false, property := false, typeReceipt := false, proof := none }
+  -- Flow v3 (lean4-effects v0.7.0): the caught perform and the value branch,
+  -- both exercised by the job runner's drain. Pinned like the other job rules:
+  -- the goldens run through `job-tail.ts`, whose receipts the host gate writes.
+  , { rule := .performCatch, state := .pinned,
+      goldens := ["job/jobRunner.retry", "job/jobRunner.requeue"],
+      host := false, property := false, typeReceipt := false, proof := none }
+  , { rule := .branchIf, state := .pinned,
+      goldens := ["job/jobRunner.clean", "job/jobRunner.retry", "job/jobRunner.requeue"],
       host := false, property := false, typeReceipt := false, proof := none } ]
 
 private def allowedAxioms : List Name := [``propext, ``Quot.sound]

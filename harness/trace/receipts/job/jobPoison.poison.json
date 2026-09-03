@@ -2,7 +2,7 @@
  "format": "effect4-trace-receipt-v1",
  "program": "jobPoison.poison",
  "tape": "",
- "rules": "service-acquire,dispatch-loop,block-case,param-move,flow-literal,flow-perform,nullary-value,perform-call,flow-ret,region-enter,region-acquire,region-leave",
+ "rules": "service-acquire,dispatch-loop,block-case,param-move,flow-literal,flow-perform,nullary-value,perform-call,perform-tuple,flow-ret,region-enter,region-acquire,region-leave",
  "host": {
   "effect": "4.0.0-rc.112",
   "typescript": "7.0.2",
@@ -28,7 +28,8 @@
  },
  "foreign": [
   "succ@./atoms.ts",
-  "dec@./atoms.ts"
+  "dec@./atoms.ts",
+  "snd@./atoms.ts"
  ],
  "primitives": 82,
  "results": {

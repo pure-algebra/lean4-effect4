@@ -9,16 +9,17 @@
  * Do not edit.
  */
 import { Context, Effect, Exit, Result } from "effect"
-import { succ, dec, snd } from "./atoms.ts"
+import { succ, dec, snd, nonEmpty, positive } from "./atoms.ts"
 import type { JobQueue } from "./job-queue.ts"
 
 /** Service `Decisions`: one method per operation of the Lean family. */
 export class Decisions extends Context.Service<Decisions, {
   readonly choose: (site: number) => Effect.Effect<boolean>
+  readonly report: (site: number, branch: boolean) => Effect.Effect<void>
 }>()("Decisions") {}
 
 /** Operation rows of `Decisions`, for the trace harness. */
-export const DecisionsRows = { "choose": { params: 1, answer: "boolean" } }
+export const DecisionsRows = { "choose": { params: 1, answer: "boolean" }, "report": { params: 2, answer: "void" } }
 
 /** Service `Regions`: one method per operation of the Lean family. */
 export class Regions extends Context.Service<Regions, {
@@ -76,6 +77,7 @@ export const jobRunner = (n: number) =>
     let b6p1!: number
     let b6p2!: number
     let b6p3!: readonly [JobQueue, number]
+    let b6p4!: boolean
     let b7p0!: JobQueue
     let b7p1!: number
     let b7p2!: number
@@ -84,16 +86,16 @@ export const jobRunner = (n: number) =>
     let b8p1!: number
     let b8p2!: number
     let b8p3!: readonly [JobQueue, number]
-    let b8p4!: number
     let b9p0!: JobQueue
     let b9p1!: number
     let b9p2!: number
     let b9p3!: readonly [JobQueue, number]
-    let b9p4!: Result.Result<number, string>
+    let b9p4!: boolean
     let b10p0!: JobQueue
     let b10p1!: number
     let b10p2!: number
     let b10p3!: readonly [JobQueue, number]
+    let b10p4!: number
     let b11p0!: JobQueue
     let b11p1!: number
     let b11p2!: number
@@ -102,6 +104,7 @@ export const jobRunner = (n: number) =>
     let b12p1!: number
     let b12p2!: number
     let b12p3!: readonly [JobQueue, number]
+    let b12p4!: string
     let b13p0!: JobQueue
     let b13p1!: number
     let b13p2!: number
@@ -165,33 +168,33 @@ export const jobRunner = (n: number) =>
                   continue
                 }
                 case 5: {
-                  const c5 = yield* decisions.choose(1)
-                  if (c5) {
-                    b6p0 = b5p0
-                    b6p1 = b5p1
-                    b6p2 = b5p2
-                    b6p3 = b5p3
-                    block1 = 6
+                  yield* interrupts.point(1000011)
+                  let a5 = nonEmpty(b5p3)
+                  b6p0 = b5p0
+                  b6p1 = b5p1
+                  b6p2 = b5p2
+                  b6p3 = b5p3
+                  b6p4 = a5
+                  block1 = 6
+                  continue
+                }
+                case 6: {
+                  yield* decisions.report(1, b6p4)
+                  if (b6p4) {
+                    b8p0 = b6p0
+                    b8p1 = b6p1
+                    b8p2 = b6p2
+                    b8p3 = b6p3
+                    block1 = 8
                     continue
                   } else {
-                    b7p0 = b5p0
-                    b7p1 = b5p1
-                    b7p2 = b5p2
-                    b7p3 = b5p3
+                    b7p0 = b6p0
+                    b7p1 = b6p1
+                    b7p2 = b6p2
+                    b7p3 = b6p3
                     block1 = 7
                     continue
                   }
-                }
-                case 6: {
-                  yield* interrupts.point(1000013)
-                  let a6 = snd(b6p3)
-                  b8p0 = b6p0
-                  b8p1 = b6p1
-                  b8p2 = b6p2
-                  b8p3 = b6p3
-                  b8p4 = a6
-                  block1 = 8
-                  continue
                 }
                 case 7: {
                   yield* interrupts.point(1000002)
@@ -199,30 +202,40 @@ export const jobRunner = (n: number) =>
                 }
                 case 8: {
                   yield* interrupts.point(1000017)
-                  const a8 = yield* jobs.attempt(b8p4)
-                  b9p0 = b8p0
-                  b9p1 = b8p1
-                  b9p2 = b8p2
-                  b9p3 = b8p3
-                  b9p4 = a8
-                  block1 = 9
-                  continue
-                }
-                case 9: {
-                  const c9 = yield* decisions.choose(2)
-                  if (c9) {
-                    b10p0 = b9p0
-                    b10p1 = b9p1
-                    b10p2 = b9p2
-                    b10p3 = b9p3
+                  const a8 = yield* Effect.result(jobs.run(b8p3[0], b8p3[1]))
+                  if (Result.isSuccess(a8)) {
+                    b10p0 = b8p0
+                    b10p1 = b8p1
+                    b10p2 = b8p2
+                    b10p3 = b8p3
+                    b10p4 = a8.success
                     block1 = 10
                     continue
                   } else {
-                    b12p0 = b9p0
-                    b12p1 = b9p1
-                    b12p2 = b9p2
-                    b12p3 = b9p3
+                    b12p0 = b8p0
+                    b12p1 = b8p1
+                    b12p2 = b8p2
+                    b12p3 = b8p3
+                    b12p4 = a8.failure
                     block1 = 12
+                    continue
+                  }
+                }
+                case 9: {
+                  yield* decisions.report(3, b9p4)
+                  if (b9p4) {
+                    b13p0 = b9p0
+                    b13p1 = b9p1
+                    b13p2 = b9p2
+                    b13p3 = b9p3
+                    block1 = 13
+                    continue
+                  } else {
+                    b14p0 = b9p0
+                    b14p1 = b9p1
+                    b14p2 = b9p2
+                    b14p3 = b9p3
+                    block1 = 14
                     continue
                   }
                 }
@@ -246,22 +259,15 @@ export const jobRunner = (n: number) =>
                   continue
                 }
                 case 12: {
-                  const c12 = yield* decisions.choose(3)
-                  if (c12) {
-                    b13p0 = b12p0
-                    b13p1 = b12p1
-                    b13p2 = b12p2
-                    b13p3 = b12p3
-                    block1 = 13
-                    continue
-                  } else {
-                    b14p0 = b12p0
-                    b14p1 = b12p1
-                    b14p2 = b12p2
-                    b14p3 = b12p3
-                    block1 = 14
-                    continue
-                  }
+                  yield* interrupts.point(1000025)
+                  let a12 = positive(b12p1)
+                  b9p0 = b12p0
+                  b9p1 = b12p1
+                  b9p2 = b12p2
+                  b9p3 = b12p3
+                  b9p4 = a12
+                  block1 = 9
+                  continue
                 }
                 case 13: {
                   yield* interrupts.point(1000027)
@@ -284,11 +290,11 @@ export const jobRunner = (n: number) =>
                   continue
                 }
                 case 15: {
-                  b6p0 = b15p0
-                  b6p1 = b15p3
-                  b6p2 = b15p1
-                  b6p3 = b15p2
-                  block1 = 6
+                  b8p0 = b15p0
+                  b8p1 = b15p3
+                  b8p2 = b15p1
+                  b8p3 = b15p2
+                  block1 = 8
                   continue
                 }
                 case 16: {
@@ -336,6 +342,7 @@ export const jobRunnerMasked = (n: number) =>
     let b6p1!: number
     let b6p2!: number
     let b6p3!: readonly [JobQueue, number]
+    let b6p4!: boolean
     let b7p0!: JobQueue
     let b7p1!: number
     let b7p2!: number
@@ -344,16 +351,16 @@ export const jobRunnerMasked = (n: number) =>
     let b8p1!: number
     let b8p2!: number
     let b8p3!: readonly [JobQueue, number]
-    let b8p4!: number
     let b9p0!: JobQueue
     let b9p1!: number
     let b9p2!: number
     let b9p3!: readonly [JobQueue, number]
-    let b9p4!: Result.Result<number, string>
+    let b9p4!: boolean
     let b10p0!: JobQueue
     let b10p1!: number
     let b10p2!: number
     let b10p3!: readonly [JobQueue, number]
+    let b10p4!: number
     let b11p0!: JobQueue
     let b11p1!: number
     let b11p2!: number
@@ -362,6 +369,7 @@ export const jobRunnerMasked = (n: number) =>
     let b12p1!: number
     let b12p2!: number
     let b12p3!: readonly [JobQueue, number]
+    let b12p4!: string
     let b13p0!: JobQueue
     let b13p1!: number
     let b13p2!: number
@@ -425,33 +433,33 @@ export const jobRunnerMasked = (n: number) =>
                   continue
                 }
                 case 5: {
-                  const c5 = yield* decisions.choose(1)
-                  if (c5) {
-                    b6p0 = b5p0
-                    b6p1 = b5p1
-                    b6p2 = b5p2
-                    b6p3 = b5p3
-                    block1 = 6
+                  yield* interrupts.point(1000011)
+                  let a5 = nonEmpty(b5p3)
+                  b6p0 = b5p0
+                  b6p1 = b5p1
+                  b6p2 = b5p2
+                  b6p3 = b5p3
+                  b6p4 = a5
+                  block1 = 6
+                  continue
+                }
+                case 6: {
+                  yield* decisions.report(1, b6p4)
+                  if (b6p4) {
+                    b8p0 = b6p0
+                    b8p1 = b6p1
+                    b8p2 = b6p2
+                    b8p3 = b6p3
+                    block1 = 8
                     continue
                   } else {
-                    b7p0 = b5p0
-                    b7p1 = b5p1
-                    b7p2 = b5p2
-                    b7p3 = b5p3
+                    b7p0 = b6p0
+                    b7p1 = b6p1
+                    b7p2 = b6p2
+                    b7p3 = b6p3
                     block1 = 7
                     continue
                   }
-                }
-                case 6: {
-                  yield* interrupts.point(1000013)
-                  let a6 = snd(b6p3)
-                  b8p0 = b6p0
-                  b8p1 = b6p1
-                  b8p2 = b6p2
-                  b8p3 = b6p3
-                  b8p4 = a6
-                  block1 = 8
-                  continue
                 }
                 case 7: {
                   yield* interrupts.point(1000002)
@@ -459,30 +467,40 @@ export const jobRunnerMasked = (n: number) =>
                 }
                 case 8: {
                   yield* interrupts.point(1000017)
-                  const a8 = yield* jobs.attempt(b8p4)
-                  b9p0 = b8p0
-                  b9p1 = b8p1
-                  b9p2 = b8p2
-                  b9p3 = b8p3
-                  b9p4 = a8
-                  block1 = 9
-                  continue
-                }
-                case 9: {
-                  const c9 = yield* decisions.choose(2)
-                  if (c9) {
-                    b10p0 = b9p0
-                    b10p1 = b9p1
-                    b10p2 = b9p2
-                    b10p3 = b9p3
+                  const a8 = yield* Effect.result(jobs.run(b8p3[0], b8p3[1]))
+                  if (Result.isSuccess(a8)) {
+                    b10p0 = b8p0
+                    b10p1 = b8p1
+                    b10p2 = b8p2
+                    b10p3 = b8p3
+                    b10p4 = a8.success
                     block1 = 10
                     continue
                   } else {
-                    b12p0 = b9p0
-                    b12p1 = b9p1
-                    b12p2 = b9p2
-                    b12p3 = b9p3
+                    b12p0 = b8p0
+                    b12p1 = b8p1
+                    b12p2 = b8p2
+                    b12p3 = b8p3
+                    b12p4 = a8.failure
                     block1 = 12
+                    continue
+                  }
+                }
+                case 9: {
+                  yield* decisions.report(3, b9p4)
+                  if (b9p4) {
+                    b13p0 = b9p0
+                    b13p1 = b9p1
+                    b13p2 = b9p2
+                    b13p3 = b9p3
+                    block1 = 13
+                    continue
+                  } else {
+                    b14p0 = b9p0
+                    b14p1 = b9p1
+                    b14p2 = b9p2
+                    b14p3 = b9p3
+                    block1 = 14
                     continue
                   }
                 }
@@ -506,22 +524,15 @@ export const jobRunnerMasked = (n: number) =>
                   continue
                 }
                 case 12: {
-                  const c12 = yield* decisions.choose(3)
-                  if (c12) {
-                    b13p0 = b12p0
-                    b13p1 = b12p1
-                    b13p2 = b12p2
-                    b13p3 = b12p3
-                    block1 = 13
-                    continue
-                  } else {
-                    b14p0 = b12p0
-                    b14p1 = b12p1
-                    b14p2 = b12p2
-                    b14p3 = b12p3
-                    block1 = 14
-                    continue
-                  }
+                  yield* interrupts.point(1000025)
+                  let a12 = positive(b12p1)
+                  b9p0 = b12p0
+                  b9p1 = b12p1
+                  b9p2 = b12p2
+                  b9p3 = b12p3
+                  b9p4 = a12
+                  block1 = 9
+                  continue
                 }
                 case 13: {
                   yield* interrupts.point(1000027)
@@ -544,11 +555,11 @@ export const jobRunnerMasked = (n: number) =>
                   continue
                 }
                 case 15: {
-                  b6p0 = b15p0
-                  b6p1 = b15p3
-                  b6p2 = b15p1
-                  b6p3 = b15p2
-                  block1 = 6
+                  b8p0 = b15p0
+                  b8p1 = b15p3
+                  b8p2 = b15p1
+                  b8p3 = b15p2
+                  block1 = 8
                   continue
                 }
                 case 16: {
