@@ -90,10 +90,14 @@ def releaseExit : Except Val Val -> Effect4.Exit Unit Val Unit Unit Unit
   | .ok _ => Effect4.Exit.void
   | .error error => Effect4.Exit.failure ⟨[.fail error Effect4.ReasonAnnotations.empty]⟩
 
-/-- The closing exit a frame is closed with, as the reified scope sees it. -/
+/-- The closing exit a frame is closed with, as the reified scope sees it. A
+`defect` outcome has no `Val`-typed defect carrier here (`δ := Unit`), so it
+lands on the unit defect: the runner never emits one, and the region alphabet
+has no producer for it. -/
 def frameExit : Outcome Val -> Effect4.Exit Val Val Unit Unit Unit
   | .success value => Effect4.Exit.success value
   | .failure error => Effect4.Exit.failure ⟨[.fail error Effect4.ReasonAnnotations.empty]⟩
+  | .defect _ => Effect4.Exit.failure ⟨[.die () Effect4.ReasonAnnotations.empty]⟩
   | .interrupted => Effect4.Exit.failure ⟨[.interrupt none Effect4.ReasonAnnotations.empty]⟩
 
 /-- Running one release as the reified scope's finalizer run: a release
@@ -250,5 +254,215 @@ def runRegionsDefault [Monad M] [DecidableEq Ty] {alphabet : FlowAlphabet Ty}
     (flow : CheckedRegionFlow alphabet) (service : RegionService alphabet M)
     (nameOf : alphabet.Op → String) (tape : Tape) (input : Val) : RunM M (RunResult × Tape) :=
   runRegions (fuelFor flow.flow.erase tape) flow service nameOf tape input
+
+/-! ## Laws: what a close writes, and what it reports
+
+Both laws are stated over `StateT σ Id`: the shape the runner's own laws, every
+fixture and every golden run in. The service threads its own state, and `Id`
+keeps the receipts kernel-reducible.
+
+`Effect4.Scope` is the reified rc.112 `Scope`. `Frame.toScope_closeOrder` is the
+bridge: the runner's `Frame.releases` *is* that scope's `closeOrder`.
+-/
+
+/-- The rows one operation writes: none at all if the service calls it pure. -/
+def opRows {alphabet : FlowAlphabet Ty} (service : RegionService alphabet M)
+    (nameOf : alphabet.Op → String) (op : alphabet.Op) (request : Val)
+    (result : Except Val Val) : Effect4.Trace.Log :=
+  if service.pure op then []
+  else
+    [ .op (nameOf op) request
+    , match result with
+      | .ok answer => .answer (nameOf op) answer
+      | .error error => .failed (nameOf op) error ]
+
+/-- Logging an operation appends exactly its rows and nothing else. -/
+theorem logOperation_run [Monad M] [LawfulMonad M] {alphabet : FlowAlphabet Ty}
+    (service : RegionService alphabet M) (nameOf : alphabet.Op → String) (op : alphabet.Op)
+    (request : Val) (result : Except Val Val) (log : Effect4.Trace.Log) :
+    (logOperation service nameOf op request result).run log =
+      pure ((), log ++ opRows service nameOf op request result) := by
+  by_cases h : service.pure op = true
+  · simp only [logOperation, h, if_true, opRows, List.append_nil]
+    rfl
+  · cases result <;>
+      simp only [logOperation, h, opRows, if_false, Bool.false_eq_true, StateT.run_bind, emit_run,
+        pure_bind, List.append_assoc, List.cons_append, List.nil_append]
+
+section StatefulService
+
+variable {σ : Type} {alphabet : FlowAlphabet Ty}
+
+/-- The service state a walk over `releases` leaves behind. -/
+def closeStateAfter (service : RegionService alphabet (StateT σ Id)) :
+    List (alphabet.Op × Val) → σ → σ
+  | [], s => s
+  | (release, resource) :: rest, s =>
+      closeStateAfter service rest (service.handle release resource s).snd
+
+/-- The rows a close's releases write, in close order: one `finalizer` row
+carrying the closing exit before each release's own rows. -/
+def closeRows (service : RegionService alphabet (StateT σ Id)) (nameOf : alphabet.Op → String)
+    (region : Nat) (exit : Outcome Val) : List (alphabet.Op × Val) → σ → Effect4.Trace.Log
+  | [], _ => []
+  | (release, resource) :: rest, s =>
+      Effects.Trace.Event.finalizer region exit ::
+        (opRows service nameOf release resource (service.handle release resource s).fst
+          ++ closeRows service nameOf region exit rest (service.handle release resource s).snd)
+
+/-- The failures a close's releases report, in close order, first failure
+first. Every failure is kept: this is the merge. -/
+def closeFailures (service : RegionService alphabet (StateT σ Id)) :
+    List (alphabet.Op × Val) → σ → Failures
+  | [], _ => []
+  | (release, resource) :: rest, s =>
+      match (service.handle release resource s).fst with
+      | .ok _ => closeFailures service rest (service.handle release resource s).snd
+      | .error error => error :: closeFailures service rest (service.handle release resource s).snd
+
+/-- The exits the releases report to the reified scope, in close order. -/
+def releaseExits (service : RegionService alphabet (StateT σ Id)) :
+    List (alphabet.Op × Val) → σ → List (Effect4.Exit Unit Val Unit Unit Unit)
+  | [], _ => []
+  | (release, resource) :: rest, s =>
+      releaseExit (service.handle release resource s).fst ::
+        releaseExits service rest (service.handle release resource s).snd
+
+/-- The whole run of a close's releases: the failures it reports, the rows it
+appends, and the service state it leaves. -/
+theorem closeReleases_run (service : RegionService alphabet (StateT σ Id))
+    (nameOf : alphabet.Op → String) (region : Nat) (exit : Outcome Val) :
+    ∀ (releases : List (alphabet.Op × Val)) (log : Effect4.Trace.Log) (s : σ),
+      ((closeReleases service nameOf region exit releases).run log).run s =
+        ((closeFailures service releases s,
+            log ++ closeRows service nameOf region exit releases s),
+          closeStateAfter service releases s) := by
+  intro releases
+  induction releases with
+  | nil =>
+    intro log s
+    show ((pure [] : RunM (StateT σ Id) Failures).run log).run s = _
+    simp [closeFailures, closeRows, closeStateAfter, StateT.run, pure, StateT.pure]
+  | cons entry rest ih =>
+    obtain ⟨release, resource⟩ := entry
+    simp only [StateT.run] at ih
+    intro log s
+    simp only [closeReleases, StateT.run_bind, emit_run, logOperation_run, StateT.run_lift,
+      pure_bind, bind_pure_comp]
+    cases hres : service.handle release resource s with
+    | mk result s' =>
+      cases result <;>
+        simp [closeFailures, closeRows, closeStateAfter, hres, ih, StateT.run, StateT.map,
+          Functor.map, bind, pure, StateT.pure, List.append_assoc]
+
+/-- **L1.** The log a close writes is `leave region exit` followed, in
+`Scope.closeOrder frame.toScope`, by one `finalizer region exit` row before each
+release's own rows. The reified scope's close order is the order the runner
+runs (`Frame.toScope_closeOrder`, over `Scope.closeOrder`). -/
+theorem closeFrame_log (service : RegionService alphabet (StateT σ Id))
+    (nameOf : alphabet.Op → String) (frame : Frame alphabet) (exit : Outcome Val)
+    (log : Effect4.Trace.Log) (s : σ) :
+    (((closeFrame service nameOf frame exit).run log).run s).fst.snd =
+      log ++ Effects.Trace.Event.leave frame.region.value exit ::
+        closeRows service nameOf frame.region.value exit
+          (Effect4.Scope.closeOrder frame.toScope) s := by
+  rw [Frame.toScope_closeOrder]
+  show (((emit (Effects.Trace.Event.leave frame.region.value exit) >>= fun _ =>
+      closeReleases service nameOf frame.region.value exit frame.releases).run log).run s).fst.snd = _
+  rw [StateT.run_bind, emit_run, pure_bind, closeReleases_run]
+  simp
+
+/-- The monadic close of the reified scope walks the same releases, in the same
+order, threading the same state. -/
+theorem closeExitsM_run (service : RegionService alphabet (StateT σ Id)) (frame : Frame alphabet)
+    (exit : Outcome Val) (s : σ) :
+    ((Effect4.Scope.closeExitsM (runRelease service) frame.toScope (frameExit exit)).run s) =
+      (releaseExits service frame.releases s, closeStateAfter service frame.releases s) := by
+  rw [Effect4.Scope.closeExitsM_eq, Frame.toScope_closeOrder]
+  induction frame.releases generalizing s with
+  | nil => rfl
+  | cons entry rest ih =>
+    obtain ⟨release, resource⟩ := entry
+    simp only [StateT.run, runRelease, Functor.map, StateT.map] at ih
+    rw [List.mapM_cons]
+    cases hres : service.handle release resource s with
+    | mk result s' =>
+      simp only [runRelease, releaseExits, closeStateAfter, hres, StateT.run_bind, StateT.run_lift,
+        StateT.run_pure, bind_pure_comp]
+      simp [StateT.run, StateT.map, Functor.map, bind, pure, StateT.pure, hres, ih]
+
+/-- The errors the release exits carry are the failures the runner reports. -/
+theorem exitErrors_releaseExits (service : RegionService alphabet (StateT σ Id)) :
+    ∀ (releases : List (alphabet.Op × Val)) (s : σ),
+      exitErrors (releaseExits service releases s) = closeFailures service releases s := by
+  intro releases
+  induction releases with
+  | nil => intro s; rfl
+  | cons entry rest ih =>
+    obtain ⟨release, resource⟩ := entry
+    intro s
+    cases hres : service.handle release resource s with
+    | mk result s' =>
+      have hih := ih s'
+      simp only [exitErrors] at hih
+      cases result <;>
+        simp [exitErrors, releaseExits, closeFailures, releaseExit, hres, hih,
+          Effect4.Exit.causeReasons, Effect4.Exit.void, Effect4.Reason.error?]
+
+/-- **L2.** The failures a close reports are exactly the failing exits of
+`Scope.closeExitsM`, in close order. A failing release does not abort the loop
+and a later failure is not dropped: every one reaches the list. -/
+theorem closeFrame_failure (service : RegionService alphabet (StateT σ Id))
+    (nameOf : alphabet.Op → String) (frame : Frame alphabet) (exit : Outcome Val)
+    (log : Effect4.Trace.Log) (s : σ) :
+    (((closeFrame service nameOf frame exit).run log).run s).fst.fst =
+      exitErrors ((Effect4.Scope.closeExitsM (runRelease service) frame.toScope
+        (frameExit exit)).run s).fst := by
+  rw [closeExitsM_run service frame exit s, exitErrors_releaseExits]
+  show (((emit (Effects.Trace.Event.leave frame.region.value exit) >>= fun _ =>
+      closeReleases service nameOf frame.region.value exit frame.releases).run log).run s).fst.fst = _
+  rw [StateT.run_bind, emit_run, pure_bind, closeReleases_run]
+
+/-- **L2, merged form.** The same failures are the reasons of the merged cause
+rc.112 builds with `exitAsVoidAll`, in the same order — including duplicates
+(`Exit.asVoidAll_keeps_duplicates`). This is the fact the wire cannot see: it
+carries only the head. -/
+theorem closeFrame_failure_merge (service : RegionService alphabet (StateT σ Id))
+    (nameOf : alphabet.Op → String) (frame : Frame alphabet) (exit : Outcome Val)
+    (log : Effect4.Trace.Log) (s : σ) :
+    (((closeFrame service nameOf frame exit).run log).run s).fst.fst =
+      (Effect4.Exit.asVoidAll ((Effect4.Scope.closeExitsM (runRelease service) frame.toScope
+        (frameExit exit)).run s).fst).causeReasons.filterMap Effect4.Reason.error? := by
+  rw [closeFrame_failure, Effect4.Exit.asVoidAll_reasons]
+  rfl
+
+/-- A frame's scope is open, so its close reports rather than skips. -/
+theorem toScope_isClosed (frame : Frame alphabet) : frame.toScope.isClosed = false := rfl
+
+/-- **L2 against `Scope.closeResult`.** For a service whose operations do not
+read or write the run state, the failures a close reports are exactly the `fail`
+reasons of the cause `Scope.closeResult` reports, in close order. This is the
+three-arm rc.112 result (`closeResult_nil`, `closeResult_single`,
+`closeResult_many`) seen through `closeResult_reasons`. -/
+theorem closeFrame_failure_closeResult (service : RegionService alphabet (StateT σ Id))
+    (nameOf : alphabet.Op → String) (answerOf : alphabet.Op → Val → Except Val Val)
+    (stateless : ∀ op request s, service.handle op request s = (answerOf op request, s))
+    (frame : Frame alphabet) (exit : Outcome Val) (log : Effect4.Trace.Log) (s : σ) :
+    (((closeFrame service nameOf frame exit).run log).run s).fst.fst =
+      (Effect4.Scope.closeResult (fun release _ => releaseExit (answerOf release.fst release.snd))
+        frame.toScope (frameExit exit)).causeReasons.filterMap Effect4.Reason.error? := by
+  rw [Effect4.Scope.closeResult_reasons _ _ _ (toScope_isClosed frame),
+    Effect4.Scope.closeExits_eq, Frame.toScope_closeOrder, closeFrame_failure,
+    closeExitsM_run service frame exit s]
+  show exitErrors (releaseExits service frame.releases s) = exitErrors _
+  rw [exitErrors]
+  congr 1
+  induction frame.releases generalizing s with
+  | nil => rfl
+  | cons entry rest ih =>
+    obtain ⟨release, resource⟩ := entry
+    rw [releaseExits, List.map_cons, List.flatMap_cons, List.flatMap_cons, stateless, ih]
+
+end StatefulService
 
 end Effect4.Flow
