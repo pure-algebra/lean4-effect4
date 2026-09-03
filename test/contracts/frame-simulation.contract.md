@@ -217,3 +217,121 @@ lake build Effect4Test
 
 Every public theorem of this packet is within `propext` / `Quot.sound`; the
 `#print axioms` receipts are in the axiom report.
+
+## Independent boundary amendment, 2026-09-03
+
+The current region compilation does not satisfy the unrestricted region trace
+equation. This amendment supersedes ruling 7's claim that acquisition
+registrations are nested `scopedFrame`s, the proposed complete-run
+`leaveConfig` replay as a sufficient repair, and any reading of GREEN as a
+general fence-C result. The existing proved value simulation, generic frame
+laws, Scope laws and region-runner meanings remain unchanged. The existing
+`unwind_failure` and `close_success` remain conditional on their actual `hfin`
+premise; they do not establish cleanup with arbitrary failing releases.
+
+The independent witnesses are in
+`Effect4Test/Counterexamples/Target/RegionSimulationBoundary.lean`, based on
+repository commit `8351f88939cf03dcdb9487b5f9b0a11792632800`. They reuse
+`Effect4Test.Flow.RegionRunnerContract.releaseFails`, already linked by
+`E4-FLOW-CE-019` and `E4-FLOW-CE-020`; `E4-TARGET-CE-012` continues to refuse a
+typed fallible release at the TypeScript lowering boundary.
+
+### Source and decisive controls
+
+The source pin is `effect@4.0.0-rc.112`, upstream commit
+`2600f62f4532026928454dcea8d1c48557b3f942`, with
+`src/internal/effect.ts` SHA-256
+`0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0`.
+`vendor/effect-4.0.0-rc.112/README.md` owns the package integrity. In the pinned
+`vendor/effect-4.0.0-rc.112/src/internal/effect.ts:3815-3827`, sequential scope
+close calls every finalizer with the same `exit_`, captures each exit, and
+combines the resulting list only after the loop. `scoped` installs one scope
+callback at lines 3938-3946; `acquireRelease` registers on that scope at lines
+3971-3987. The generic `onExit` arms at lines 4017-4027 restore or merge the
+exit after each callback. These are distinct compositions.
+
+- **E4-TARGET-CE-019:** an admitted scope registers A, then B; its body succeeds
+  with `5`; B's release fails. The runner gives both releases `success 5`.
+  The compiled nested frames give B `success 5` and A `failure "boom"`.
+  Both finish with that failure. The same two registrations with successful
+  releases form a positive control: both traces contain two successful
+  finalizer observations followed by successful completion.
+- **E4-TARGET-CE-020:** at source fuel zero, the runner is a fuel frontier and
+  its masked trace is empty; the compiled machine reports `done interrupted`.
+  At source fuel two, after acquisition, the runner remains live without
+  cleanup; the machine runs a finalizer with `interrupted` and then reports
+  completion. The machine is given `regionBound` fuel in both cases.
+- **E4-TARGET-CE-021:** an admitted resource-bearing decision cycle reaches
+  unanswered site 7, both with an initially empty tape and after consuming a
+  true decision. The runner remains live without cleanup, whereas the machine
+  finalizes and reports interruption. A false decision exits and closes
+  successfully on both sides. A mismatched site remains a distinct refusal
+  with the unmatched tape retained on the runner side.
+
+`unrestricted_finite_agreement_false` refutes the universally quantified trace
+equation even for the fixed stateless service used by these admitted fixtures.
+The battery compiles because it proves the mismatches; this is a green
+counterexample battery against a false claim, not an implemented repair.
+
+`test/counterexamples/target/region-simulation-boundary.mjs` preserves the
+scratch host experiment. It checks installed package version and source hash
+against this pin before comparing scope cleanup with nested `onExit` cleanup.
+The `die` control uses an effect whose error row is `never`; the `fail` control
+deliberately executes JavaScript outside `acquireRelease`'s public TypeScript
+release signature. All three finite cases, including successful cleanup,
+passed on Node.js 22.23.2. This evidence confirms the source-policy distinction;
+it neither widens current lowering admission nor closes the host bridge.
+
+### Required replacement and observations
+
+The replacement must execute scope registration and cleanup independently of
+the source runner. It must retain canonical first-order scope state and a
+closing phase containing the original closing exit, pending releases,
+captured release exits, and actual continuation. Reuse the existing Scope,
+Exit and Cause owners. Register only after successful acquisition, mark the
+scope closed before cleanup, execute every pending release with the same
+original exit while retaining state produced before failure, and apply the
+scope merge followed by `restoreAfterFinalizer` once per scope. An enclosing
+scope observes the resulting exit of the inner scope. A completed-run oracle
+that replays the source and supplies registrations or cleanup traces does not
+satisfy this representation requirement.
+
+The general obligation is a finite-prefix simulation with a residual-state
+relation for every admitted flow, finite tape and matching service/decision
+responses, including failing releases. The relation must connect the current
+continuation and environment, unconsumed tape, open scopes and registrations,
+service state, and cleanup progress. Endpoints distinguish success, failure,
+refusal and live suspension. Fuel exhaustion and unanswered choices retain
+pending work without finalization; supplying fuel or a compatible decision
+continues that stored work. No settled-only, successful-release-only or
+complete-tape premise may replace this general obligation. A settled trace
+equality may be an intermediate theorem or corollary.
+
+Prove the cleanup sub-execution against `Scope.closeExitsM` and the existing
+zero/one/many `Scope.closeResult` policy, then connect one scope callback to
+`Prim.scopedFrame` and `Exit.restoreAfterFinalizer`. The explicit
+`FRAME-FB-FINALIZER-EFFECT` boundary in `docs/FRAMES-DAG.md` currently collapses
+callback execution to `PrimInterp.finalizerExit`; a nominal constructor alone
+does not close it. Finalizer trace rows must arise from actual cleanup steps,
+not from a projection that invents them from a completed source trace.
+
+The old `finalizerAndOutcomeMask` retains finalizer and outcome rows only.
+Operation, answer, operation-failure, decision, region and frontier rows are
+discarded. `Exit.toOutcome` further loses complete causes and annotations.
+The new general relation must retain frontier identity and residual state
+outside this mask. `Exit.asVoidAll` keeps duplicate cleanup reasons, while
+`Cause.combine` may deduplicate when merging a failed body with cleanup.
+Therefore `failuresOfCause_causeOfFailures` is only the stated retraction;
+it does not establish equality between an arbitrary final target cause and
+the runner's complete failure list.
+
+### Narrow verification
+
+```text
+lake env lean Effect4Test/Counterexamples/Target/RegionSimulationBoundary.lean
+node test/counterexamples/target/region-simulation-boundary.mjs /absolute/path/to/node_modules/effect
+```
+
+The Lean file prints an axiom receipt for every theorem. Root imports,
+generated register projections, package builds, runtime coverage and the new
+production execution component remain separate coordinator-owned work.
