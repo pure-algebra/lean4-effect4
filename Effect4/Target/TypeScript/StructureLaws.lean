@@ -526,16 +526,22 @@ theorem skeletonBlockWith_wellScoped (table : List OpSpec) (block : RawBlock Str
       Skel.wellScopedList blocks loops control = true)
     {own : List Skeleton} (lowered : Flow.skeletonBlockWith table block move = some own) :
     Skel.wellScopedList blocks loops own = true := by
+  have entered : ∀ body : List Skeleton, Skel.wellScopedList blocks loops body = true →
+      Skel.wellScopedList blocks loops (Skeleton.enterBlock block.id :: body) = true := by
+    intro body ok
+    rw [Skel.wellScopedList]
+    exact Bool.and_eq_true_iff.mpr ⟨by simp [Skel.wellScoped], ok⟩
   unfold Flow.skeletonBlockWith at lowered
   cases term : block.term with
   | ret value =>
       rw [term] at lowered
       simp only [Option.some.injEq] at lowered
       subst lowered
-      simp [Skel.wellScopedList, Skel.wellScoped, Lowering.flowRet]
+      exact entered _ (by simp [Skel.wellScopedList, Skel.wellScoped, Lowering.flowRet])
   | jump target args =>
       rw [term] at lowered
-      exact moveScoped _ _ _ lowered
+      obtain ⟨control, moved, rfl⟩ := Option.map_eq_some_iff.mp lowered
+      exact entered _ (moveScoped _ _ _ moved)
   | perform operation request target args =>
       rw [term] at lowered
       obtain ⟨spec, _, lowered⟩ := Option.bind_eq_some_iff.mp lowered
@@ -548,6 +554,7 @@ theorem skeletonBlockWith_wellScoped (table : List OpSpec) (block : RawBlock Str
           injection headed with headed
           subst headEq
           subst headed
+          refine entered _ ?_
           rw [Skel.wellScopedList]
           exact Bool.and_eq_true_iff.mpr
             ⟨by simp [Skel.wellScoped, Lowering.flowPerform], moveScoped _ _ _ hrest⟩
@@ -559,6 +566,7 @@ theorem skeletonBlockWith_wellScoped (table : List OpSpec) (block : RawBlock Str
           injection headed with headed
           subst headEq
           subst headed
+          refine entered _ ?_
           rw [Skel.wellScopedList]
           exact Bool.and_eq_true_iff.mpr
             ⟨by simp [Skel.wellScoped, Lowering.flowAtom], moveScoped _ _ _ hrest⟩
@@ -570,6 +578,7 @@ theorem skeletonBlockWith_wellScoped (table : List OpSpec) (block : RawBlock Str
           injection headed with headed
           subst spelled
           subst headed
+          refine entered _ ?_
           rw [Skel.wellScopedList]
           exact Bool.and_eq_true_iff.mpr
             ⟨by simp [Skel.wellScoped, Lowering.flowLiteral], moveScoped _ _ _ hrest⟩
@@ -579,6 +588,7 @@ theorem skeletonBlockWith_wellScoped (table : List OpSpec) (block : RawBlock Str
       obtain ⟨toRight, hright, lowered⟩ := Option.bind_eq_some_iff.mp lowered
       simp only [Option.some.injEq] at lowered
       subst lowered
+      refine entered _ ?_
       simp only [Lowering.chooseIf, Skel.wellScopedList, Skel.wellScoped, Bool.and_true]
       exact Bool.and_eq_true_iff.mpr ⟨moveScoped _ _ _ hleft, moveScoped _ _ _ hright⟩
 
@@ -654,10 +664,10 @@ theorem render_wellScoped (rows : ServiceRow) (blocks loops : List String) (node
   match node with
   | .acquireService _ | .declare _ _ | .assign _ _ | .letTemp _ _ | .letBlockIndex _ _
   | .gotoBlock _ _ | .perform _ _ _ _ | .atom _ _ _ _ | .ret _
-  | .acquire _ _ _ _ _ | .leave _ =>
+  | .acquire _ _ _ _ _ _ | .leave _ | .enterBlock _ =>
       simp [Skeleton.render, wellScopedList, wellScoped, Skel.wellScoped,
         Lowering.serviceAcquire]
-  | .literal _ _ value =>
+  | .literal _ _ _ value =>
       cases spelling : Flow.literal? value <;>
         simp [Skeleton.render, spelling, wellScopedList, wellScoped, Skel.wellScoped]
   | .dispatchLoop var cases =>

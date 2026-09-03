@@ -133,7 +133,7 @@ def skeletonStructuredBody (rows : ServiceRow) (table : List OpSpec) (flow : Reg
           let row ← flow.row? region
           let inner ← skeletonStructuredBody rows table flow fuel (some region) entry'
           let rest ← move row.continue_ [.region region]
-          some (Lowering.paramMove block.id entry' (args.map var) ++
+          some (Skeleton.enterBlock block.id :: Lowering.paramMove block.id entry' (args.map var) ++
             Lowering.regionEnter region inner ++ rest)
       | .acquire operation request release target args => do
           let region ← block.region
@@ -142,8 +142,9 @@ def skeletonStructuredBody (rows : ServiceRow) (table : List OpSpec) (flow : Reg
           guard (((rows.row? releaser.name).bind (·.error)).isNone)
           let answer : Slot := .answer block.id
           let rest ← move target (args.map var ++ [answer])
-          some (Lowering.regionAcquire answer region spec (var request) releaser :: rest)
-      | .leave value => some [Lowering.regionLeave (var value)]
+          some (Skeleton.enterBlock block.id ::
+            Lowering.regionAcquire answer region operation spec (var request) releaser :: rest)
+      | .leave value => some [Skeleton.enterBlock block.id, Lowering.regionLeave (var value)]
 
 /-- The control skeleton of the structured form of a region program. -/
 def skeletonStructured (rows : ServiceRow) (program : RegionProgram) : Option (List Skeleton) := do

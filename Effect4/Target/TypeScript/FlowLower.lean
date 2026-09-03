@@ -69,23 +69,25 @@ the control transfer `transfer target values` supplies. -/
 def skeletonBlockWith (table : List OpSpec) (block : RawBlock String)
     (transfer : BlockId → List Slot → Option (List Skeleton)) : Option (List Skeleton) :=
   let var (v : Var) : Slot := .param block.id v.index
+  let entered (body : List Skeleton) : List Skeleton := Skeleton.enterBlock block.id :: body
   match block.term with
-  | .ret value => some [Lowering.flowRet (var value)]
-  | .jump target args => transfer target (args.map var)
+  | .ret value => some (entered [Lowering.flowRet (var value)])
+  | .jump target args => (transfer target (args.map var)).map entered
   | .perform operation request target args => do
       let spec ← spec? table operation
       let answer : Slot := .answer block.id
       let head ← match spec.kind with
         | .family => some (Lowering.flowPerform answer operation spec (var request))
         | .atom => some (Lowering.flowAtom answer operation spec (var request))
-        | .lit value => (literal? value).map fun _ => Lowering.flowLiteral answer operation value
+        | .lit value =>
+            (literal? value).map fun _ => Lowering.flowLiteral answer operation (var request) value
       let rest ← transfer target (args.map var ++ [answer])
-      some (head :: rest)
+      some (entered (head :: rest))
   | .choose decision left right args => do
       let name : Slot := .decision block.id
       let toLeft ← transfer left (args.map var)
       let toRight ← transfer right (args.map var)
-      some (Lowering.chooseIf name decision toLeft toRight)
+      some (entered (Lowering.chooseIf name decision toLeft toRight))
 
 /-- The dispatch-form transfer: the move, then `block = target; continue`. -/
 def dispatchTransfer (source : BlockId) (target : BlockId) (values : List Slot) :

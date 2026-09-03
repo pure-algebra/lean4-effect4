@@ -93,7 +93,7 @@ def skeletonCases (rows : ServiceRow) (table : List OpSpec) (flow : RegionFlow S
         | .enter region entry args => do
             let row ← flow.row? region
             let inner ← skeletonCases rows table flow fuel (some region) (blockVarOf region)
-            some (Lowering.paramMove block.id entry (args.map var) ++
+            some (Skeleton.enterBlock block.id :: Lowering.paramMove block.id entry (args.map var) ++
               Lowering.regionEnter region
                 [ Skeleton.letBlockIndex (blockVarOf region) entry
                 , Lowering.dispatchLoopOn (blockVarOf region) inner ] ++
@@ -107,10 +107,11 @@ def skeletonCases (rows : ServiceRow) (table : List OpSpec) (flow : RegionFlow S
             -- a release with an error row has no lowering (E4-TARGET-CE-012).
             guard (((rows.row? releaser.name).bind (·.error)).isNone)
             let answer : Slot := .answer block.id
-            some (Lowering.regionAcquire answer region spec (var request) releaser ::
+            some (Skeleton.enterBlock block.id ::
+              Lowering.regionAcquire answer region operation spec (var request) releaser ::
               (Lowering.paramMove block.id target (args.map var ++ [answer]) ++
                Lowering.gotoIn blockVar target))
-        | .leave value => some [Lowering.regionLeave (var value)]
+        | .leave value => some [Skeleton.enterBlock block.id, Lowering.regionLeave (var value)]
       pure (Lowering.blockCase block.id body)
 
 def familyOp? (table : List OpSpec) (id : OperationId) : Option OpSpec :=

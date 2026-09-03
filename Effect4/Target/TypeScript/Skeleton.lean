@@ -123,6 +123,10 @@ inductive Skeleton where
   | letBlockIndex (var : String) (target : BlockId)
   /-- `<var> = <block>; continue`: transfer inside the loop that owns `var`. -/
   | gotoBlock (var : String) (target : BlockId)
+  /-- The body of `block` begins here. A marker: it spells nothing, and it is
+  what makes the two compilations comparable — both enter the same blocks in
+  the same order, however their control is arranged. -/
+  | enterBlock (block : BlockId)
   /-- `while (true) { switch (<var>) { case n: … } }`. -/
   | dispatchLoop (var : String) (cases : List (Nat × List Skeleton))
   /-- `<label>: while (true) { body }`. -/
@@ -137,8 +141,9 @@ inductive Skeleton where
   | perform (answer : Slot) (operation : OperationId) (spec : OpSpec) (request : Slot)
   /-- A pure atom: `let a<b> = succ(x)`. -/
   | atom (answer : Slot) (operation : OperationId) (spec : OpSpec) (request : Slot)
-  /-- A literal: `let a<b> = 3`. -/
-  | literal (answer : Slot) (operation : OperationId) (value : Val)
+  /-- A literal: `let a<b> = 3`. The request is not spelled — the constant is
+  the whole spelling — but the operation still consumes it. -/
+  | literal (answer : Slot) (operation : OperationId) (request : Slot) (value : Val)
   /-- A decision: bind the branch from the `Decisions` service, then split. -/
   | decide (answer : Slot) (site : DecisionId) (onTrue onFalse : List Skeleton)
   /-- `return value`. -/
@@ -147,8 +152,8 @@ inductive Skeleton where
   scope, and bind the value it returns to `r<region>`. -/
   | enterScoped (region : RegionId) (body : List Skeleton)
   /-- Acquire a resource inside a region, registering its release. -/
-  | acquire (answer : Slot) (region : RegionId) (spec : OpSpec) (request : Slot)
-      (release : OpSpec)
+  | acquire (answer : Slot) (region : RegionId) (operation : OperationId) (spec : OpSpec)
+      (request : Slot) (release : OpSpec)
   /-- The nested region generator returns. -/
   | leave (value : Slot)
 
@@ -208,8 +213,9 @@ def flowAtom (answer : Slot) (operation : OperationId) (spec : OpSpec) (request 
 
 /-- A literal operation of a block is its constant: `let a1 = 5`.
 lowering: rule.flow-literal -/
-def flowLiteral (answer : Slot) (operation : OperationId) (value : Val) : Skeleton :=
-  .literal answer operation value
+def flowLiteral (answer : Slot) (operation : OperationId) (request : Slot) (value : Val) :
+    Skeleton :=
+  .literal answer operation request value
 
 /-- A `choose` asks the `Decisions` service for its site and branches:
 `const c0 = yield* decisions.choose(7); if (c0) { ... } else { ... }`.
@@ -231,9 +237,9 @@ def regionEnter (region : RegionId) (body : List Skeleton) : List Skeleton :=
 /-- Acquire inside a region: `Effect.acquireRelease` registers the release in
 the enclosing scope; the release reports `finalizer` with the closing exit
 before running its own operation. lowering: rule.region-acquire -/
-def regionAcquire (answer : Slot) (region : RegionId) (spec : OpSpec) (request : Slot)
-    (release : OpSpec) : Skeleton :=
-  .acquire answer region spec request release
+def regionAcquire (answer : Slot) (region : RegionId) (operation : OperationId) (spec : OpSpec)
+    (request : Slot) (release : OpSpec) : Skeleton :=
+  .acquire answer region operation spec request release
 
 /-- Leave a region: the nested generator returns the value.
 lowering: rule.region-leave -/
@@ -300,6 +306,7 @@ def render (rows : ServiceRow) : Skeleton → List Stmt
   | .letTemp index source => [.letInit (Slot.temp index).name source.expr]
   | .letBlockIndex var target => [.letInit var (.int target.value)]
   | .gotoBlock var target => [.assign var (.int target.value), .continueTo none]
+  | .enterBlock _ => []
   | .dispatchLoop var cases =>
       [.whileTrue none [.switch (.ident var) (renderCases rows cases)]]
   | .loop label body => [.whileTrue (some label) (renderList rows body)]
@@ -310,7 +317,7 @@ def render (rows : ServiceRow) : Skeleton → List Stmt
       [.constYield answer.name (Lowering.callOf rows spec request.expr)]
   | .atom answer _ spec request =>
       [.letInit answer.name (.call (.ident spec.name) [request.expr])]
-  | .literal answer _ value =>
+  | .literal answer _ _ value =>
       match Flow.literal? value with
       | some spelling => [.letInit answer.name spelling]
       | none => []
@@ -323,7 +330,7 @@ def render (rows : ServiceRow) : Skeleton → List Stmt
       , .scopedGen (Slot.region region).name (renderList rows body)
           (.lambda ["exit"]
             (.call (.ident "regions.leave") [.int region.value, .ident "exit"])) ]
-  | .acquire answer region spec request release =>
+  | .acquire answer region _ spec request release =>
       [ .constYield answer.name (.call (.ident "Effect.acquireRelease")
           [ Lowering.callOf rows spec request.expr
           , .lambda ["a", "exit"]
