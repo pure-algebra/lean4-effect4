@@ -130,7 +130,7 @@ variable {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
 
 def empty : Dispatcher ν σ β ε δ ι α := ⟨[], false⟩
 
-private def insert (priority : Nat) (task : Task ν σ β ε δ ι α) :
+def insert (priority : Nat) (task : Task ν σ β ε δ ι α) :
     List (Bucket ν σ β ε δ ι α) → List (Bucket ν σ β ε δ ι α)
   | [] => [⟨priority, [task]⟩]
   | bucket :: rest =>
@@ -687,30 +687,46 @@ def linkScope (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν
         { t with observers := t.observers ++ [Observer.dropScopeFinalizer scope key] }
       (m.emit [RunEvent.scopeLinked mode scope key target], [])
 
-/-- One `runLoop` iteration (`:638-668`) on fiber `f` in machine `m`; `yielding` is the
-per-entry injection latch (`:634`, `:648`). -/
-def iteration (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
-    (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool) : Iter ν σ β ε δ ι α χ St :=
-  -- :639-642 top of loop: a deferred interrupt replaces the current primitive
-  let f :=
-    if f.frame.deferredInterrupt then
-      { f with frame :=
-          { f.frame with deferredInterrupt := false, current := Prim.failure f.frame.pendingCause } }
-    else f
-  -- :643 the op counter
-  let f := { f with currentOpCount := f.currentOpCount + 1 }
-  -- :644-652 yield injection, at most once per entry; `Scheduler.ts:174-176` default
-  let verdict := f.yieldOverride.getD (decide (f.currentOpCount >= f.maxOpsBeforeYield))
-  if !yielding && !f.preventYield && verdict then
+/-- The top of a `runLoop` iteration (`:639-642`): a deferred interrupt is cleared and the
+current primitive is replaced by the pending cause's failure. -/
+def runloopTop (f : RunFiber ν σ β ε δ ι α χ) : RunFiber ν σ β ε δ ι α χ :=
+  if f.frame.deferredInterrupt then
+    { f with frame :=
+        { f.frame with deferredInterrupt := false, current := Prim.failure f.frame.pendingCause } }
+  else f
+
+/-- The op counter (`:643`). -/
+def countOp (f : RunFiber ν σ β ε δ ι α χ) : RunFiber ν σ β ε δ ι α χ :=
+  { f with currentOpCount := f.currentOpCount + 1 }
+
+/-- `shouldYield` (`Scheduler.ts:174-176`): the op count has reached the budget — under the
+tape's override (`Scheduler.ts:78-81`), which answers instead when present. -/
+def yieldVerdict (f : RunFiber ν σ β ε δ ι α χ) : Bool :=
+  f.yieldOverride.getD (decide (f.currentOpCount >= f.maxOpsBeforeYield))
+
+/-- Yield injection (`:644-652`): at most once per entry (the `yielding` latch), never under
+`PreventSchedulerYield`, and only on the verdict. The fiber parks behind a resume guard
+whose task carries its current primitive at priority 0. -/
+def injectYield (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ)
+    (yielding : Bool) : Option (Iter ν σ β ε δ ι α χ St) :=
+  if !yielding && !f.preventYield && yieldVerdict f then
     let token := m.nextToken
     let m := { m with nextToken := m.nextToken + 1 }
     let f := { f with
       yieldOverride := none
       dispatcher := (f.dispatcher.enqueue 0 (Task.resume f.id token f.frame.current)) }
     let f := f.park ⟨token, none, 0, [], Resume.void, false, []⟩
-    ⟨m.emit [RunEvent.yieldInjected f.id f.currentOpCount, RunEvent.parkedOn f.id token],
+    some ⟨m.emit [RunEvent.yieldInjected f.id f.currentOpCount, RunEvent.parkedOn f.id token],
       f, true, Outcome.parked, []⟩
-  else
+  else none
+
+/-- Evaluate the current primitive (`current[evaluate](this)`, `:655`), with the fiber-level
+arms rc.112 keeps out of the frame machine: the two parks the alphabet spells (`Yield`,
+`Async`), the join park the interp classifies, `withFiber` actions, stateful `sync` thunks,
+and exits meeting an `OnExit` frame whose finalizer is a program. Everything else is the
+frame machine's step. -/
+def evaluatePrim (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+    (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool) : Iter ν σ β ε δ ι α χ St :=
     match f.frame.current with
     | Prim.yieldNowWith priority =>                                     -- :982-990
       let token := m.nextToken
@@ -940,6 +956,16 @@ where
       let nested := if applyNow then [Cmd.evaluate target] else []
       let (m, f, parked) := countdownPark interp m f [target] Resume.void
       ⟨m, f, yielding, (if parked then Outcome.parked else Outcome.continue_), nested⟩
+
+/-- One `runLoop` iteration (`:638-668`) on fiber `f` in machine `m`; `yielding` is the
+per-entry injection latch (`:634`, `:648`): the top of the loop, the op counter, then either
+a yield injection or the evaluation of the current primitive. -/
+def iteration (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+    (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool) : Iter ν σ β ε δ ι α χ St :=
+  let f := countOp (runloopTop f)
+  match injectYield m f yielding with
+  | some it => it
+  | none => evaluatePrim interp m f yielding
 
 /-- Fire one observer (`:621-623`) of fiber `id`, which has exited with `exit`. Resumes
 are synchronous (`:1121`), so they come back as commands. -/

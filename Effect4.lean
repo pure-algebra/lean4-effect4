@@ -84,6 +84,7 @@ import Effect4.Semantics.RegionSimulation
 -- `FiberState`/`Supervision.Fiber`/`Scheduler.Machine` carriers are now its
 -- computed projections and retire with the witnesses phase.
 import Effect4.Deep.Fibers
+import Effect4.Deep.Clauses
 import Effect4.Deep.Stores
 import Effect4.Deep.Witnesses
 import Effect4.Deep.ForkFlow
