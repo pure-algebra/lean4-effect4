@@ -99,3 +99,11 @@ rev = "18220f71445fcad01dbd9d6aebbbc60dc4953c2e"
 name = "Deep"
 srcDir = "workshop"
 globs = ["Deep.+"]
+
+# Design spike for docs/research/2026-09-03-ocaml5-deep-plan.md: OCaml 5 effect handlers and
+# js_of_ocaml's effects pass as a reference machine. Same status as `Deep`: not a default
+# target, not an audited source.
+[[lean_lib]]
+name = "OCaml5"
+srcDir = "workshop"
+globs = ["OCaml5.+"]
