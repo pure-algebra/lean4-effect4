@@ -450,3 +450,164 @@ bisimulation with `MachineJ`'s global `caml_exn_stack` has to contradict or repr
 jsoo side the traps of a parked fiber are *not* on the fiber, so "the frames of a parked stack are
 unchanged" is trivially true there and the content moves into `caml_resume_stack`'s save/restore.
 That is the shape of the deviation, and it is now stated on both sides.
+
+## 11. Second pass (2026-09-04): `stdlib_safe`, the operand prefix, the avatar relation
+
+Commit `dc0eba1` is the first pass. This section is the coordinator's follow-up list, taken in
+its order, and the checkpoint status of each. `Invariant.lean` is now 4677 lines, 258 theorems;
+`Effect.lean` is still untouched.
+
+```
+$ lake build OCaml5.Effect OCaml5.Invariant
+✔ Built OCaml5.Invariant (23s)
+Build completed successfully (5 jobs).
+```
+
+No `sorry`, `axiom`, `partial`, `unsafe`, `native_decide`, `implemented_by`, `Classical.choice`.
+(Mid-session `Compiler → Witnesses → EffectJsoo` was transiently broken by spike P3, so the
+iteration used a scratch copy without the `OCaml5.Compiler` import; the build above is the real
+module, after P3's file came back.)
+
+### (1) `stdlib_safe` — the invariant half is proved, the syntactic half is stated
+
+**What was proved.** The plan in §8.1 was a value-provenance invariant over `Term`/`Value`/`Frame`.
+Working it through turned up a better decomposition, and the reason is worth recording: three of
+`Safe`'s six clauses need no provenance argument at all, and the other three need it only across a
+*fixed, heap-neutral window*, which a state invariant can carry.
+
+```lean
+structure ParkedAt (m : Machine ν) (sid : StackId) : Prop where
+  live : (m.stack? sid).isSome
+  childless : ∀ q, m.parentOf q ≠ some sid
+  notCurrent : sid ≠ m.current
+
+def Parked  (m : Machine ν) : Prop := ∀ c sid, m.conts[c]? = some (some sid) → ParkedAt m sid
+def ContInj (m : Machine ν) : Prop := ∀ c c' s, m.conts[c]? = some (some s) →
+                                        m.conts[c']? = some (some s) → c = c'
+def ParkInv (m : Machine ν) : Prop := Parked m ∧ ContInj m
+```
+
+* `noCycle_of_childless` — **a childless stack that is not running is off the running chain.** No
+  disjointness field is needed in `ParkedAt`: `parentInj` makes the child on a chain unique and
+  `noChildOfCurrent` closes the base case, so "nothing points at `sid`" walks the whole chain down
+  (`chainReaches_pred`, `chainReaches_of_outermost`, `outermostOf_parent`, `outermost_stable`).
+* `attachSafe_of_parkedAt` — **`AttachSafe` for free from `ParkedAt`.**
+* `safe_of_invariants : m.WF → ParkInv m → ResumeSafe m → Safe m`. `completion`,
+  `reperformRoot` and `dropCont` fall out of `Parked` and `ContInj`; `ResumeSafe` is the residue:
+  the three clauses about what the *program* hands `%resume`, `%runstack` and `%reperform`.
+* `step_parkInv` — **`ParkInv` is preserved by `step`**, arm by arm, needing only `WF` and
+  `EnterDisc` (the stack being entered is not one a live `Cont_tag` still names). It does **not**
+  need `Safe`: a fifth exhaustive case analysis over the same 65 arms, with `parkInv_perform`,
+  `parkInv_attach_enter`, `parkInv_reparent`, `parkInv_free`, `parkInv_snoc`, `parkInv_setNone`
+  as the shape lemmas.
+* `run_parkInv`, `parkInv_start`, `enterDisc_start` — the run-level and initial versions.
+
+**What remains** (the syntactic half, unchanged in substance from §8.1/§8.2 but now much
+smaller): `ResumeSafe` and `EnterDisc` are still hypotheses. The exact obligation:
+
+```lean
+theorem stdlib_resumeSafe (t : Term ν) (h : builtFromStdlib t) (a : Machine ν)
+    (hr : Reaches (Machine.start t) a) : ResumeSafe a ∧ EnterDisc a
+```
+
+and it is genuinely syntactic: the machine cannot tell where a `Value.stack` came from, so the
+content is that `OCaml5.Stdlib` passes an `effc` closure's `last_fiber` only to `%reperform`
+(never to `%resume`/`%runstack`), and passes only `caml_alloc_stack`/`take_cont_noexc` results as
+a `%resume`/`%runstack` stack operand. That is a decidable predicate on `Term` in the shape of
+`Compiler.Admissible`, plus the observation that clause bodies never reference the `last_fiber`
+de Bruijn index. §14 discharges it *pointwise* for the avatar's own shape, which is what the
+avatar needs today.
+
+### (2) The operand-evaluation prefix — proved for the resume family
+
+```lean
+theorem resume_chain (h : m.WF) (hinv : ParkInv m)
+    (hctl : m.control = .eval env (Term.resume (.contUseNoexc (.var i)) (.lam body) (.var j)))
+    (hi : env[i]? = some (.cont cid)) (hj : env[j]? = some v)
+    (hc : m.conts[cid]? = some (some sid))
+    (hfs : (m.stack? sid).map (·.frames) = some fsSid) :
+    ∃ M, Reaches m M ∧ M.WF ∧ M.current = sid ∧ M.control = .ret v ∧
+      (M.stack? sid).map (·.frames) = some (.appFn (.closure env body) :: fsSid) ∧
+      M.conts[cid]? = some none
+```
+
+Nine steps, each a named small-step lemma (`step_eval_resume`, `step_eval_contUse`,
+`step_eval_var'`, `step_ret_contUseArg`, `step_ret_resume1/2/3`, `step_eval_lam`), threaded by
+`OnStack m sid M` — "the parent forest and the running stack are `m`'s, and the run has stayed off
+`sid` and kept it live". **`Safe` at the `%resume` is discharged, not assumed**: `ParkedAt sid`
+travels from the take to the resume because every step between them is heap-neutral, and
+`attachSafe_of_parkedAt` turns it into the `AttachSafe` that `wf_doResumeStack` wants. That is the
+`ResumeSafe` obligation of (1), met pointwise on this shape.
+
+Composed to the source terms:
+
+```lean
+theorem deepContinue_from_term    … : ∃ M, Reaches m M ∧ M.current = sid ∧ M.control = .ret v ∧
+      (M.stack? sid).map (·.frames) = some fsSid ∧ M.conts[cid]? = some none
+theorem deepDiscontinue_from_term … : ∃ M, Reaches m M ∧ M.current = sid ∧ M.control = .throw e ∧
+      (M.stack? sid).map (·.frames) = some fsSid ∧ M.conts[cid]? = some none
+```
+
+**§8.7, the remaining goal on this item.** The two source-term theorems conclude the behaviour but
+not `WF` past the `%resume` (`resume_chain` carries `WF` up to and including it). Extending it is
+mechanical and needs no new idea: `Safe` at the two (resp. four) post-resume states is
+`safe_of_invariants`, whose `ResumeSafe`/`EnterDisc` are vacuous there because the frame head is
+an `appFn`/`raiseArg`, not a `resume3`/`runstack3`/`reperform3` — the missing piece is only the
+`ParkInv` at those states, i.e. one `run_parkInv` application with `EnterDisc` threaded along the
+same eleven steps. `deepMatchWith` from its source term (`letIn (allocStack …) (runstack …)`) and
+`Shallow.continue_with` (`contUseUpdate` in place of `contUseNoexc`) are the same construction
+with `step_eval_allocStack`/`step_ret_runstack3` and `step_ret_contUseUpdate4` in place of the
+resume lemmas; they are **not written**.
+
+### (3) `AvatarRelation.lean` — not started
+
+The checkpoint arrived before this item. Nothing was created, so there is no half-finished module
+to review. What the reading (A0 §2, §6(b), `deep_fibers.ml:150-260`, `:642-684`) settles for
+whoever picks it up:
+
+| avatar field (`deep_fibers.ml`) | machine side | theorem available today |
+| --- | --- | --- |
+| `run_fiber.running : bool` (`:196`) | `sid = m.current` | `step_current_live`, `quiescence` |
+| `run_fiber.parked = WithGuard token` (`:197`) | `∃ c, m.conts[c]? = some (some sid)` | `Parked`, `ParkedAt`, `resume_at_most_once_raises` |
+| `frame.control = Suspended {ktoken; kresume}` (`:170`) | the `Cont_tag` block, `Value.cont cid` | `handle_taken_stable`, `ContInj` |
+| `frame.control = Onstack` (`:169`) | `sid = m.current` | as above |
+| `frame.control = Ended` (`:173`) | `m.stack? sid = none` | `freed_stays_freed` |
+| the scheduler handler `{retc; exnc; effc}` (`:642`) | `(m.stack? sid).map (·.handler)` | `perform_parks_and_handles_on_parent`, `child_return_runs_retc_on_parent`, `child_raise_runs_exnc_on_parent` |
+| the fiber's own frames (its OCaml stack) | `(m.stack? sid).map (·.frames)` | `frames_parked`, `trap_survives_capture` |
+| `{ ret = continue k }` / `{ thr = discontinue k }` (`:684`) | `Stdlib.deepContinue` / `deepDiscontinue` | `deepContinue_from_term`, `deepDiscontinue_from_term` |
+
+The relation should be a `structure` over a `RunFiber` and a `StackId`, and the four transitions
+to prove it preserved by are `perform` (park), `resume` (unpark), `return` and `raise` (exit) —
+each of which now has its field-level theorem in the right-hand column. A0 §6(f) schedules this as
+packet A3 and asks for it *after* A2 freezes the arm set, which is consistent with it not being
+started here.
+
+### Second-pass `#print axioms`
+
+```
+'OCaml5.Machine.noCycle_of_childless'       depends on axioms: [propext, Quot.sound]
+'OCaml5.Machine.attachSafe_of_parkedAt'     depends on axioms: [propext, Quot.sound]
+'OCaml5.Machine.safe_of_invariants'         depends on axioms: [propext, Quot.sound]
+'OCaml5.Machine.step_parkInv'               depends on axioms: [propext, Quot.sound]
+'OCaml5.Machine.run_parkInv'                depends on axioms: [propext, Quot.sound]
+'OCaml5.Machine.parkInv_start'              depends on axioms: [propext]
+'OCaml5.Machine.enterDisc_start'            depends on axioms: [propext]
+'OCaml5.Machine.resume_chain'               depends on axioms: [propext, Quot.sound]
+'OCaml5.Machine.deepContinue_from_term'     depends on axioms: [propext, Quot.sound]
+'OCaml5.Machine.deepDiscontinue_from_term'  depends on axioms: [propext, Quot.sound]
+'OCaml5.Machine.step_ret_contUseArg'        depends on axioms: [propext, Quot.sound]
+'OCaml5.Machine.outermostOf_parent'         depends on axioms: [propext, Quot.sound]
+'OCaml5.Machine.chainReaches_of_outermost'  depends on axioms: [propext, Quot.sound]
+```
+
+### Finding
+
+**Three of `Safe`'s six clauses were never program-level obligations.** The first pass stated
+`Safe` as one predicate and §8.1 as one obligation. Splitting it showed that `completion`,
+`reperformRoot` and `dropCont` follow from an invariant the runtime maintains by itself, and that
+`noCycle` — the field that looked like it needed chain-disjointness bookkeeping — is a consequence
+of `parentInj` and `noChildOfCurrent`. What is left needing a syntactic argument is exactly the
+three places a `Value.stack` reaches a primitive, which is the sentence `stdlib/effect.ml`'s
+abstract types enforce. The provenance invariant §8.1 asked for is therefore smaller than it
+looked: it does not have to track values through closure environments in general, only to say
+that `last_fiber` never reaches `%resume`.

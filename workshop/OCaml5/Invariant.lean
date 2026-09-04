@@ -2732,6 +2732,9 @@ theorem frames_map_of_live {m : Machine ν} {X : List (Frame ν)}
   rw [hi] at h
   simpa using h
 
+theorem parentOf_setControl (m : Machine ν) (c : Control ν) (t : StackId) :
+    (m.setControl c).parentOf t = m.parentOf t := rfl
+
 theorem isSome_setControl (m : Machine ν) (c : Control ν) (t : StackId) :
     ((m.setControl c).stack? t).isSome = (m.stack? t).isSome := rfl
 
@@ -2974,9 +2977,9 @@ the raising closure — the shape `REPERFORMTERM`'s root route (`interp.c:1374-1
 `Deep.discontinue` (`effect.ml:59`) both use — the control is `throw v` on that same stack, with
 its own frames, so its own traps see it. -/
 theorem raise_closure_throws [ToString ν] [Add ν] {m : Machine ν} {fs : List (Frame ν)}
-    {v : Value ν} (hctl : m.control = Control.ret v)
+    {env : List (Value ν)} {v : Value ν} (hctl : m.control = Control.ret v)
     (hfr : (m.stack? m.current).map (·.frames)
-      = Option.some (Frame.appFn (Value.closure [] (Term.raise (Term.var 0))) :: fs)) :
+      = Option.some (Frame.appFn (Value.closure env (Term.raise (Term.var 0))) :: fs)) :
     ∃ M, Reaches m M ∧ M.current = m.current ∧ M.control = Control.throw v ∧
       (M.stack? m.current).map (·.frames) = Option.some fs := by
   obtain ⟨M1, h1, h1c, h1ctl, h1f⟩ := step_ret_appFn_closure hctl hfr
@@ -3480,6 +3483,1160 @@ theorem discontinue_runs_trap_first [ToString ν] [Add ν] {m : Machine ν} {sid
   obtain ⟨M, hr, hc, hctl, hfr'⟩ := throw_reaches_first_trap pre env hn rest hctl1 hfr1 hnt
   refine ⟨M, hr1.trans hr, by rw [hc, hc1], hctl, ?_⟩
   rw [← hc1]; exact hfr'
+
+/-! ## 13. Parked stacks, and `Safe` from an invariant
+
+Spike A0's programs — and every `OCaml5.Stdlib` builder — reach a primitive's stack argument in
+exactly one of three ways: `caml_alloc_stack`'s result, `caml_continuation_use_noexc`'s result,
+or the `last_fiber` an `effc` closure was handed. This section turns the first two into a state
+invariant, which discharges three of `Safe`'s six clauses outright; §14 discharges the rest for
+the shapes the avatar uses, by carrying the invariant across the operand-evaluation window.
+
+`ParkedAt m sid` is the machine's spelling of `RunFiber.parked`: the stack is live, nothing
+points at it, and it is not the one running. -/
+
+/-- A stack that a live `Cont_tag` block names. -/
+structure ParkedAt (m : Machine ν) (sid : StackId) : Prop where
+  live : (m.stack? sid).isSome
+  childless : ∀ q, m.parentOf q ≠ Option.some sid
+  notCurrent : sid ≠ m.current
+
+/-- Every live continuation names a parked stack. -/
+def Parked (m : Machine ν) : Prop :=
+  ∀ (c : ContId) (sid : StackId), m.conts[c]? = Option.some (Option.some sid) → ParkedAt m sid
+
+/-- Two live continuations never name the same stack: `PERFORM` allocates one block per capture
+(`interp.c:1332`) and the captured stack is the one that was running, which `Parked` says no live
+block names. -/
+def ContInj (m : Machine ν) : Prop :=
+  ∀ (c c' : ContId) (s : StackId), m.conts[c]? = Option.some (Option.some s) →
+    m.conts[c']? = Option.some (Option.some s) → c = c'
+
+theorem ParkedAt.congr {m m' : Machine ν} (hs : SameStacks m m') {sid : StackId}
+    (h : ParkedAt m sid) : ParkedAt m' sid :=
+  ⟨by rw [hs.live]; exact h.live,
+    fun q hq => h.childless q (by rw [← hs.parent]; exact hq),
+    by rw [hs.current]; exact h.notCurrent⟩
+
+theorem Parked.congr {m m' : Machine ν} (hs : SameHeap m m') (h : Parked m) : Parked m' := by
+  intro c sid hc
+  rw [hs.conts] at hc
+  exact (h c sid hc).congr hs.toSameStacks
+
+theorem ContInj.congr {m m' : Machine ν} (hs : SameHeap m m') (h : ContInj m) : ContInj m' := by
+  intro c c' s hc hc'
+  rw [hs.conts] at hc hc'
+  exact h c c' s hc hc'
+
+/-! ### The chain, walked backwards
+
+`chainReaches_pred` is the inversion `noCycle_of_childless` needs: on a chain that reaches `t`
+from `s ≠ t`, some stack on it is `t`'s child. With `parentInj` that child is unique, which is
+how "nothing points at `sid`" propagates down a whole chain. -/
+
+theorem chainReaches_pred {m : Machine ν} {s t : StackId} (h : m.ChainReaches s t) :
+    t ≠ s → ∃ q, m.ChainReaches s q ∧ m.parentOf q = Option.some t := by
+  induction h with
+  | refl u => intro hne; exact absurd rfl hne
+  | @step a p b hp _ ih =>
+    intro _
+    by_cases hpb : b = p
+    · exact ⟨a, ChainReaches.refl a, by rw [hpb]; exact hp⟩
+    · obtain ⟨q, hq, hqp⟩ := ih hpb
+      exact ⟨q, ChainReaches.step hp hq, hqp⟩
+
+/-- More fuel does not move a walk that has already arrived. -/
+theorem outermost_stable {m : Machine ν} :
+    ∀ (n : Nat) (s : StackId), m.Grounded n s → ∀ k, m.outermost (n + k) s = m.outermost n s := by
+  intro n
+  induction n with
+  | zero =>
+    intro s hs k
+    rw [grounded_iff'] at hs
+    obtain ⟨info, hi⟩ := isSome_iff_exists.mp hs.1
+    have hp : info.handler.parent = Option.none := by
+      unfold parentOf handlerOf at hs
+      rw [hi] at hs
+      simpa using hs.2
+    have hi' : m.stack? s = Option.some info := hi
+    cases k with
+    | zero => rfl
+    | succ j => simp [outermost, hi', hp]
+  | succ i ih =>
+    intro s hs k
+    cases hst : m.stack? s with
+    | none => exact absurd hs (not_grounded_of_dead hst _)
+    | some info =>
+      cases hp : info.handler.parent with
+      | none =>
+        have he : i + 1 + k = (i + k) + 1 := by omega
+        rw [he]
+        simp [outermost, hst, hp]
+      | some p =>
+        rw [grounded_succ_iff hst hp] at hs
+        have he : i + 1 + k = (i + k) + 1 := by omega
+        rw [he, show m.outermost ((i + k) + 1) s = m.outermost (i + k) p by simp [outermost, hst, hp],
+          show m.outermost (i + 1) s = m.outermost i p by simp [outermost, hst, hp]]
+        exact ih p hs k
+
+/-- The walk from a stack and the walk from its parent end in the same place. -/
+theorem outermostOf_parent {m : Machine ν} (h : m.WF) {s p : StackId}
+    (hp : m.parentOf s = Option.some p) : m.outermostOf s = m.outermostOf p := by
+  have hlive : (m.stack? s).isSome := isSome_of_parentOf hp
+  have hlt : s < m.stacks.length := lt_length_of_isSome hlive
+  cases hLe : m.stacks.length with
+  | zero => rw [hLe] at hlt; exact absurd hlt (Nat.not_lt_zero s)
+  | succ L =>
+  have hgs : m.Grounded (L + 1) s := hLe ▸ wf_grounded h hlive
+  have hgpL : m.Grounded L p := (grounded_succ_iff' hp L).mp hgs
+  obtain ⟨info, hi, hip⟩ := exists_info_of_parentOf hp
+  unfold outermostOf
+  rw [hLe, show m.outermost (L + 1) s = m.outermost L p by simp [outermost, hi, hip]]
+  exact (outermost_stable L p hgpL 1).symm
+
+/-- **A childless stack that is not running is off the running chain.** No extra invariant is
+needed: `parentInj` makes the child on a chain unique and `noChildOfCurrent` closes the base
+case, so "nothing points at `sid`" walks all the way down the chain. This is what lets
+`ParkedAt` get away with three fields. -/
+theorem chainReaches_of_outermost {m : Machine ν} (h : m.WF) :
+    ∀ (n : Nat) (x : StackId), m.Grounded n x →
+      m.ChainReaches m.current (m.outermostOf x) → m.ChainReaches m.current x := by
+  have hroot : ∀ x : StackId, m.parentOf x = Option.none → (m.stack? x).isSome →
+      m.outermostOf x = x := by
+    intro x hpx hlx
+    obtain ⟨info, hi⟩ := isSome_iff_exists.mp hlx
+    have hp : info.handler.parent = Option.none := by
+      unfold parentOf handlerOf at hpx
+      rw [hi] at hpx
+      simpa using hpx
+    unfold outermostOf
+    cases hl : m.stacks.length with
+    | zero => rfl
+    | succ j => simp [outermost, hi, hp]
+  intro n
+  induction n with
+  | zero =>
+    intro x hg hr
+    have hlive := live_of_grounded hg
+    have hpx : m.parentOf x = Option.none := by
+      rw [grounded_iff'] at hg
+      have : m.outermost 0 x = x := rfl
+      rw [this] at hg
+      exact hg.2
+    rw [hroot x hpx hlive] at hr
+    exact hr
+  | succ k ih =>
+    intro x hg hr
+    have hlive := live_of_grounded hg
+    cases hpx : m.parentOf x with
+    | none =>
+      rw [hroot x hpx hlive] at hr
+      exact hr
+    | some p =>
+      have hgp : m.Grounded k p := (grounded_succ_iff' hpx k).mp hg
+      have hrp : m.ChainReaches m.current p := by
+        refine ih p hgp ?_
+        rw [← outermostOf_parent h hpx]
+        exact hr
+      by_cases hpc : p = m.current
+      · exact absurd (hpc ▸ hpx) (h.noChildOfCurrent x)
+      · obtain ⟨q, hq, hqp⟩ := chainReaches_pred hrp hpc
+        have hqx : q = x := h.parentInj q x p hqp hpx
+        exact hqx ▸ hq
+
+theorem noCycle_of_childless {m : Machine ν} (h : m.WF) {sid : StackId}
+    (hlive : (m.stack? sid).isSome) (hchild : ∀ q, m.parentOf q ≠ Option.some sid)
+    (hne : sid ≠ m.current) : ¬ m.ChainReaches m.current (m.outermostOf sid) := by
+  intro hr
+  have hsid := chainReaches_of_outermost h m.stacks.length sid (wf_grounded h hlive) hr
+  obtain ⟨q, _, hqp⟩ := chainReaches_pred hsid hne
+  exact hchild q hqp
+
+/-- **A parked stack is safe to attach and enter.** This is `AttachSafe` for free from
+`ParkedAt`, and it is why `Safe`'s `reperformRoot` clause needs no program-level argument. -/
+theorem attachSafe_of_parkedAt {m : Machine ν} (h : m.WF) {sid : StackId}
+    (hp : ParkedAt m sid) : AttachSafe m (m.outermostOf sid) sid :=
+  ⟨hp.live, hp.childless, hp.notCurrent,
+    noCycle_of_childless h hp.live hp.childless hp.notCurrent⟩
+
+/-! ### Three of `Safe`'s six clauses, for free -/
+
+/-- The clauses `Parked` cannot supply: what the *program* guarantees about a stack value it
+hands `%resume`, `%runstack` or `%reperform`. §14 discharges these for the shapes spike A0 uses;
+they are the only place a term-level argument is needed. -/
+structure ResumeSafe (m : Machine ν) : Prop where
+  resume : ∀ (sid : StackId) (fn : Value ν) (rest : List (Frame ν)),
+    m.frames = Frame.resume3 (Value.stack sid) fn :: rest → AttachSafe m (m.outermostOf sid) sid
+  runstack : ∀ (sid : StackId) (fn : Value ν) (rest : List (Frame ν)),
+    m.frames = Frame.runstack3 (Value.stack sid) fn :: rest → AttachSafe m sid sid
+  reperform : ∀ (e cont : Value ν) (rest : List (Frame ν)) (tail : StackId),
+    m.frames = Frame.reperform3 e cont :: rest → m.control = Control.ret (Value.stack tail) →
+    tail ≠ m.current
+
+/-- **`Safe` from the invariant.** `completion`, `reperformRoot` and `dropCont` are consequences
+of `Parked` and `ContInj`; only the three `ResumeSafe` clauses need the program. -/
+theorem safe_of_parked {m : Machine ν} (h : m.WF) (hp : Parked m) (hinj : ContInj m)
+    (hrs : ResumeSafe m) : Safe m :=
+  ⟨fun _ c s hc => (hp c s hc).notCurrent,
+    hrs.resume, hrs.runstack, hrs.reperform,
+    fun _ cid _ sid _ hc => attachSafe_of_parkedAt h (hp cid sid hc),
+    fun cid _ sid _ _ hc =>
+      ⟨(hp cid sid hc).notCurrent, (hp cid sid hc).childless,
+        fun c _ hcs hssid => hinj c cid sid (hssid ▸ hcs) hc⟩⟩
+
+/-! ### Preservation
+
+One transfer lemma, instantiated per transition: a parked stack stays parked when it stays live,
+stays childless and is not the stack being entered. -/
+
+theorem parked_transfer {m m' : Machine ν} (hp : Parked m)
+    (hconts : ∀ (c : ContId) (s : StackId), m'.conts[c]? = Option.some (Option.some s) →
+      m.conts[c]? = Option.some (Option.some s))
+    (hlive : ∀ (c : ContId) (s : StackId), m.conts[c]? = Option.some (Option.some s) →
+      ParkedAt m s → (m'.stack? s).isSome)
+    (hchild : ∀ (c : ContId) (s q : StackId), m.conts[c]? = Option.some (Option.some s) →
+      ParkedAt m s → m'.parentOf q = Option.some s → False)
+    (hcur : ∀ (c : ContId) (s : StackId), m.conts[c]? = Option.some (Option.some s) →
+      ParkedAt m s → s ≠ m'.current) : Parked m' := by
+  intro c s hc
+  have hc0 := hconts c s hc
+  have hpa := hp c s hc0
+  exact ⟨hlive c s hc0 hpa, fun q hq => hchild c s q hc0 hpa hq, hcur c s hc0 hpa⟩
+
+theorem contInj_transfer {m m' : Machine ν} (hi : ContInj m)
+    (hconts : ∀ (c : ContId) (s : StackId), m'.conts[c]? = Option.some (Option.some s) →
+      m.conts[c]? = Option.some (Option.some s)) : ContInj m' :=
+  fun c c' s hc hc' => hi c c' s (hconts c s hc) (hconts c' s hc')
+
+/-- A parked stack is never the parent of the running one, because it has no child at all and
+the running stack's parent does. -/
+theorem parked_ne_parent {m : Machine ν} {s p : StackId} (hpa : ParkedAt m s)
+    (hpar : m.parentOf m.current = Option.some p) : s ≠ p := by
+  intro hsp
+  exact hpa.childless m.current (hsp ▸ hpar)
+
+/-- The continuation heap after `PERFORM`'s allocation is still injective: the block names the
+stack that was running, and `Parked` says no live block did. -/
+theorem contInj_snoc {m : Machine ν} (hi : ContInj m) (hp : Parked m) :
+    ContInj ({ m with conts := m.conts ++ [Option.some m.current] } : Machine ν) := by
+  have key : ∀ (c : ContId) (s : StackId),
+      (m.conts ++ [Option.some m.current])[c]? = Option.some (Option.some s) →
+      (c < m.conts.length ∧ m.conts[c]? = Option.some (Option.some s)) ∨
+        (c = m.conts.length ∧ s = m.current) := by
+    intro c s hc
+    by_cases hlt : c < m.conts.length
+    · rw [List.getElem?_append_left hlt] at hc
+      exact Or.inl ⟨hlt, hc⟩
+    · have hge : m.conts.length ≤ c := Nat.le_of_not_lt hlt
+      rw [List.getElem?_append_right hge] at hc
+      by_cases heq : c = m.conts.length
+      · subst heq
+        simp at hc
+        exact Or.inr ⟨rfl, hc.symm⟩
+      · exfalso
+        have hgt : m.conts.length < c := by
+          rcases Nat.lt_or_ge m.conts.length c with hcc | hcc
+          · exact hcc
+          · exact absurd (Nat.le_antisymm hge hcc).symm heq
+        have hnone : ([Option.some m.current] : List (Option StackId))[c - m.conts.length]?
+            = Option.none := by
+          refine List.getElem?_eq_none ?_
+          simp only [List.length_singleton]
+          exact Nat.le_sub_of_add_le (by omega)
+        rw [hnone] at hc
+        simp at hc
+  intro c c' s hc hc'
+  rcases key c s hc with ⟨-, hc1⟩ | ⟨hce, hse⟩ <;> rcases key c' s hc' with ⟨-, hc2⟩ | ⟨hce', hse'⟩
+  · exact hi c c' s hc1 hc2
+  · exact absurd hse' (hp c s hc1).notCurrent
+  · exact absurd hse (hp c' s hc2).notCurrent
+  · rw [hce, hce']
+
+/-- The two shapes an appended continuation heap can be read at. -/
+theorem conts_snoc_cases (m : Machine ν) (x : StackId) (c : ContId) (s : StackId)
+    (hc : (m.conts ++ [Option.some x])[c]? = Option.some (Option.some s)) :
+    m.conts[c]? = Option.some (Option.some s) ∨ s = x := by
+  by_cases hlt : c < m.conts.length
+  · rw [List.getElem?_append_left hlt] at hc
+    exact Or.inl hc
+  · have hge : m.conts.length ≤ c := Nat.le_of_not_lt hlt
+    rw [List.getElem?_append_right hge] at hc
+    by_cases heq : c = m.conts.length
+    · subst heq
+      simp at hc
+      exact Or.inr hc.symm
+    · exfalso
+      have hgt : m.conts.length < c := by
+        rcases Nat.lt_or_ge m.conts.length c with hcc | hcc
+        · exact hcc
+        · exact absurd (Nat.le_antisymm hge hcc).symm heq
+      have hnone : ([Option.some x] : List (Option StackId))[c - m.conts.length]? = Option.none := by
+        refine List.getElem?_eq_none ?_
+        simp only [List.length_singleton]
+        exact Nat.le_sub_of_add_le (by omega)
+      rw [hnone] at hc
+      simp at hc
+
+/-- What the program must guarantee for `Parked` to survive an *entering* transition: the stack
+being entered is not one a live `Cont_tag` block still names. In the C this is automatic for a
+`Stdlib` resume, which goes through `caml_continuation_use_noexc` first (`effect.ml:57`). -/
+structure EnterDisc (m : Machine ν) : Prop where
+  resume : ∀ (sid : StackId) (fn : Value ν) (rest : List (Frame ν)),
+    m.frames = Frame.resume3 (Value.stack sid) fn :: rest →
+    ∀ (c : ContId), m.conts[c]? ≠ Option.some (Option.some sid)
+  runstack : ∀ (sid : StackId) (fn : Value ν) (rest : List (Frame ν)),
+    m.frames = Frame.runstack3 (Value.stack sid) fn :: rest →
+    ∀ (c : ContId), m.conts[c]? ≠ Option.some (Option.some sid)
+
+theorem EnterDisc.congr {m m' : Machine ν} (hs : SameHeap m m') (hfr : m'.frames = m.frames)
+    (h : EnterDisc m) : EnterDisc m' :=
+  ⟨fun sid fn rest hf c => by rw [hs.conts]; exact h.resume sid fn rest (by rw [← hfr]; exact hf) c,
+    fun sid fn rest hf c => by
+      rw [hs.conts]; exact h.runstack sid fn rest (by rw [← hfr]; exact hf) c⟩
+
+theorem conts_doReturnToParent (m : Machine ν) (old p : StackId) (v : Value ν) :
+    (m.doReturnToParent old p v).conts = m.conts := by
+  unfold doReturnToParent; rw [conts_emit, conts_applyOne]; rfl
+
+theorem conts_doRaiseToParent (m : Machine ν) (old p : StackId) (e : Value ν) :
+    (m.doRaiseToParent old p e).conts = m.conts := by
+  unfold doRaiseToParent; rw [conts_emit, conts_applyOne]; rfl
+
+/-- The pair of invariants, so one lemma carries both through the heap-neutral arms. -/
+def ParkInv (m : Machine ν) : Prop := Parked m ∧ ContInj m
+
+theorem ParkInv.ofSameHeap {m m' : Machine ν} (h : ParkInv m) (hs : SameHeap m m') : ParkInv m' :=
+  ⟨h.1.congr hs, h.2.congr hs⟩
+
+/-- `caml_continuation_use_noexc` only nulls a field, so both invariants survive it. -/
+theorem ParkInv.takeCont {m : Machine ν} (h : ParkInv m) (cid : ContId) :
+    ParkInv (m.takeCont cid).1 := by
+  have hss := sameStacks_takeCont m cid
+  refine ⟨parked_transfer h.1 (conts_takeCont_weaken m cid) ?_ ?_ ?_,
+    contInj_transfer h.2 (conts_takeCont_weaken m cid)⟩
+  · intro _ s _ hpa; rw [hss.live]; exact hpa.live
+  · intro _ s q _ hpa hq; exact hpa.childless q (by rw [← hss.parent]; exact hq)
+  · intro _ s _ hpa; rw [hss.current]; exact hpa.notCurrent
+
+/-- The attach-and-enter shape (`%resume`, `%runstack`, the `reperform` root route) keeps both
+invariants, given that no live block names the stack being entered. -/
+theorem parkInv_attach_enter {m : Machine ν} (hinv : ParkInv m) {x enter : StackId}
+    (hnc : ∀ (c : ContId), m.conts[c]? ≠ Option.some (Option.some enter))
+    (f a : Value ν) (ev : Event) :
+    ParkInv ((((m.setParent x (Option.some m.current)).setCurrent enter).applyOne f a).emit ev) := by
+  have hce : ∀ (c : ContId) (s : StackId),
+      ((((m.setParent x (Option.some m.current)).setCurrent enter).applyOne f a).emit ev).conts[c]?
+        = Option.some (Option.some s) → m.conts[c]? = Option.some (Option.some s) := by
+    intro c s hcs
+    rw [conts_emit, conts_applyOne, conts_setCurrent, conts_setParent] at hcs
+    exact hcs
+  have hedge : ∀ q s, ((((m.setParent x (Option.some m.current)).setCurrent enter).applyOne f
+      a).emit ev).parentOf q = Option.some s → s = m.current ∨ m.parentOf q = Option.some s := by
+    intro q s hq
+    rw [parentOf_emit, parentOf_applyOne, parentOf_setCurrent] at hq
+    by_cases hxl : (m.stack? x).isSome
+    · rw [parentOf_setParent hxl _ q] at hq
+      by_cases hqx : q = x
+      · rw [if_pos hqx] at hq
+        have : m.current = s := by simpa using hq
+        exact Or.inl this.symm
+      · rw [if_neg hqx] at hq
+        exact Or.inr hq
+    · have hnone : m.stack? x = Option.none := by
+        cases hst : m.stack? x with
+        | none => rfl
+        | some i => rw [hst] at hxl; exact absurd hxl (by simp)
+      rw [setParent_of_dead hnone] at hq
+      exact Or.inr hq
+  refine ⟨parked_transfer hinv.1 hce ?_ ?_ ?_, contInj_transfer hinv.2 hce⟩
+  · intro _ s _ hpa
+    rw [stack?_emit, isSome_applyOne, stack?_setCurrent, isSome_setParent]
+    exact hpa.live
+  · intro _ s q _ hpa hq
+    rcases hedge q s hq with hs | hs
+    · exact hpa.notCurrent hs
+    · exact hpa.childless q hs
+  · intro c s hc _
+    rw [show ((((m.setParent x (Option.some m.current)).setCurrent enter).applyOne f a).emit
+      ev).current = enter by simp only [current_emit, current_applyOne, current_setCurrent]]
+    intro hse
+    exact hnc c (hse ▸ hc)
+
+/-- `PERFORM` with a parent: the fresh block names the stack that was running, which is exactly
+what `ParkedAt` describes once its parent has been nulled (`interp.c:1332,1345`). Stated about
+any machine with that heap, so the arm proof is four rewrites. -/
+theorem parkInv_perform {m m' : Machine ν} (h : m.WF) (hinv : ParkInv m) {p : StackId}
+    (hpar : m.parentOf m.current = Option.some p)
+    (hconts : m'.conts = m.conts ++ [Option.some m.current])
+    (hlive : ∀ t, (m'.stack? t).isSome = (m.stack? t).isSome)
+    (hedge : ∀ q s, m'.parentOf q = Option.some s → q ≠ m.current ∧ m.parentOf q = Option.some s)
+    (hcur : m'.current = p) : ParkInv m' := by
+  constructor
+  · intro c s hcs
+    rw [hconts] at hcs
+    rcases conts_snoc_cases m m.current c s hcs with hold | hnew
+    · have hpa := hinv.1 c s hold
+      exact ⟨by rw [hlive]; exact hpa.live,
+        fun q hq => hpa.childless q (hedge q s hq).2,
+        by rw [hcur]; exact parked_ne_parent hpa hpar⟩
+    · subst hnew
+      exact ⟨by rw [hlive]; exact h.currentLive,
+        fun q hq => h.noChildOfCurrent q (hedge q _ hq).2,
+        by rw [hcur]; exact fun hcp => parent_ne_self h hpar hcp.symm⟩
+  · refine contInj_transfer (contInj_snoc hinv.2 hinv.1) ?_
+    intro c s hcs
+    rw [hconts] at hcs
+    exact hcs
+
+/-- `REPERFORMTERM` with a parent, and any transition that only removes parent edges or adds one
+whose parent is the running stack. -/
+theorem parkInv_reparent {m m' : Machine ν} (hinv : ParkInv m) {p : StackId}
+    (hpar : m.parentOf m.current = Option.some p)
+    (hconts : ∀ (c : ContId) (s : StackId), m'.conts[c]? = Option.some (Option.some s) →
+      m.conts[c]? = Option.some (Option.some s))
+    (hlive : ∀ t, (m'.stack? t).isSome = (m.stack? t).isSome)
+    (hedge : ∀ q s, m'.parentOf q = Option.some s →
+      s = m.current ∨ m.parentOf q = Option.some s)
+    (hcur : m'.current = p) : ParkInv m' := by
+  refine ⟨parked_transfer hinv.1 hconts ?_ ?_ ?_, contInj_transfer hinv.2 hconts⟩
+  · intro _ s _ hpa; rw [hlive]; exact hpa.live
+  · intro _ s q _ hpa hq
+    rcases hedge q s hq with hs | hs
+    · exact hpa.notCurrent hs
+    · exact hpa.childless q hs
+  · intro _ s _ hpa; rw [hcur]; exact parked_ne_parent hpa hpar
+
+/-- `caml_free_stack` on a stack no live block names. -/
+theorem parkInv_free {m m' : Machine ν} (hinv : ParkInv m) {x : StackId}
+    (hnc : ∀ (c : ContId), m.conts[c]? ≠ Option.some (Option.some x))
+    (hconts : ∀ (c : ContId) (s : StackId), m'.conts[c]? = Option.some (Option.some s) →
+      m.conts[c]? = Option.some (Option.some s))
+    (hlive : ∀ t, t ≠ x → (m'.stack? t).isSome = (m.stack? t).isSome)
+    (hedge : ∀ q s, m'.parentOf q = Option.some s → m.parentOf q = Option.some s)
+    (hcur : m'.current = m.current) : ParkInv m' := by
+  refine ⟨parked_transfer hinv.1 hconts ?_ ?_ ?_, contInj_transfer hinv.2 hconts⟩
+  · intro c s hc hpa
+    have hsx : s ≠ x := fun hs => hnc c (hs ▸ hc)
+    rw [hlive s hsx]; exact hpa.live
+  · intro _ s q _ hpa hq; exact hpa.childless q (hedge q s hq)
+  · intro _ s _ hpa; rw [hcur]; exact hpa.notCurrent
+
+/-- `caml_alloc_stack`: the fresh slot is nobody's parent and nobody's continuation. -/
+theorem parkInv_snoc {m : Machine ν} (hinv : ParkInv m) {info : StackInfo ν}
+    (hroot : info.handler.parent = Option.none) :
+    ParkInv ({ m with stacks := m.stacks ++ [Option.some info] } : Machine ν) := by
+  refine ⟨parked_transfer hinv.1 (fun _ _ hcs => hcs) ?_ ?_ ?_,
+    contInj_transfer hinv.2 (fun _ _ hcs => hcs)⟩
+  · intro _ s _ hpa
+    rw [live_snoc, if_pos (lt_length_of_isSome hpa.live)]
+    exact hpa.live
+  · intro _ s q _ hpa hq
+    rw [parentOf_snoc m hroot] at hq
+    by_cases hql : q < m.stacks.length
+    · rw [if_pos hql] at hq; exact hpa.childless q hq
+    · rw [if_neg hql] at hq; simp at hq
+  · intro _ s _ hpa; exact hpa.notCurrent
+
+/-- After the take, no live block names the stack the block named — that is `ContInj`. -/
+theorem no_cont_of_taken {m : Machine ν} (hinj : ContInj m) {cid : ContId} {sid : StackId}
+    (hc : m.conts[cid]? = Option.some (Option.some sid)) :
+    ∀ (c : ContId), (m.takeCont cid).1.conts[c]? ≠ Option.some (Option.some sid) := by
+  intro c hcc
+  have hc0 := conts_takeCont_weaken m cid c sid hcc
+  have hce : c = cid := hinj c cid sid hc0 hc
+  subst hce
+  have hlt : c < m.conts.length := by
+    rcases Nat.lt_or_ge c m.conts.length with hlt | hge
+    · exact hlt
+    · rw [List.getElem?_eq_none hge] at hc; simp at hc
+  rw [takeCont_live m c sid hc] at hcc
+  rw [show ({ m with conts := m.conts.set c Option.none } : Machine ν).conts
+    = m.conts.set c Option.none from rfl, List.getElem?_set_self hlt] at hcc
+  simp at hcc
+
+/-- Nulling one block, in the record-update spelling `takeCont` reduces to. -/
+theorem conts_setNone_weaken (m : Machine ν) (cid : ContId) :
+    ∀ (c : ContId) (s : StackId),
+      ({ m with conts := m.conts.set cid Option.none } : Machine ν).conts[c]?
+        = Option.some (Option.some s) → m.conts[c]? = Option.some (Option.some s) := by
+  intro c s hcs
+  rw [show ({ m with conts := m.conts.set cid Option.none } : Machine ν).conts
+    = m.conts.set cid Option.none from rfl] at hcs
+  by_cases hcid : cid = c
+  · subst hcid
+    by_cases hlt : cid < m.conts.length
+    · rw [List.getElem?_set_self hlt] at hcs; simp at hcs
+    · rw [List.getElem?_eq_none (by simpa using Nat.le_of_not_lt hlt)] at hcs; simp at hcs
+  · rw [List.getElem?_set_ne hcid] at hcs; exact hcs
+
+theorem parkInv_setNone {m : Machine ν} (h : ParkInv m) (cid : ContId) :
+    ParkInv ({ m with conts := m.conts.set cid Option.none } : Machine ν) :=
+  ⟨parked_transfer h.1 (conts_setNone_weaken m cid) (fun _ _ _ hpa => hpa.live)
+      (fun _ _ q _ hpa hq => hpa.childless q hq) (fun _ _ _ hpa => hpa.notCurrent),
+    contInj_transfer h.2 (conts_setNone_weaken m cid)⟩
+
+theorem no_cont_of_setNone {m : Machine ν} (hinj : ContInj m) {cid : ContId} {sid : StackId}
+    (hc : m.conts[cid]? = Option.some (Option.some sid)) :
+    ∀ (c : ContId), ({ m with conts := m.conts.set cid Option.none } : Machine ν).conts[c]?
+      ≠ Option.some (Option.some sid) := by
+  intro c hcc
+  have hc0 := conts_setNone_weaken m cid c sid hcc
+  have hce : c = cid := hinj c cid sid hc0 hc
+  subst hce
+  have hlt : c < m.conts.length := by
+    rcases Nat.lt_or_ge c m.conts.length with hlt | hge
+    · exact hlt
+    · rw [List.getElem?_eq_none hge] at hc; simp at hc
+  rw [show ({ m with conts := m.conts.set c Option.none } : Machine ν).conts
+    = m.conts.set c Option.none from rfl, List.getElem?_set_self hlt] at hcc
+  simp at hcc
+
+/-- **`Parked` and `ContInj` are preserved by `step`.** Under `WF`, `Safe` and the entering
+discipline, a live `Cont_tag` block keeps naming a live, childless, non-running stack, and two
+blocks never name the same one. -/
+theorem step_parkInv [ToString ν] [Add ν] {m m' : Machine ν} (h : m.WF)
+    (hed : EnterDisc m) (hinv : ParkInv m) (hstep : m.step = Sum.inl m') : ParkInv m' := by
+  unfold step at hstep
+  cases hc : m.control with
+  | eval env t =>
+    rw [hc] at hstep
+    exact hinv.ofSameHeap (stepEval_sameHeap hstep)
+  | throw e =>
+    rw [hc] at hstep
+    cases hf : m.frames with
+    | nil =>
+      cases hi : m.stack? m.current with
+      | none => simp only [stepThrow, hf, hi] at hstep; exact absurd hstep (by simp)
+      | some info =>
+        cases hp : info.handler.parent with
+        | none => simp only [stepThrow, hf, hi, hp] at hstep; exact absurd hstep (by simp)
+        | some p =>
+          have hpar : m.parentOf m.current = Option.some p := by
+            unfold parentOf handlerOf; rw [hi]; exact hp
+          simp only [stepThrow, hf, hi, hp] at hstep
+          injection hstep with hstep
+          subst hstep
+          have hce : ∀ (c : ContId) (s : StackId),
+              (m.doRaiseToParent m.current p e).conts[c]? = Option.some (Option.some s) →
+              m.conts[c]? = Option.some (Option.some s) := by
+            intro c s hcs; rw [conts_doRaiseToParent] at hcs; exact hcs
+          refine ⟨parked_transfer hinv.1 hce ?_ ?_ ?_, contInj_transfer hinv.2 hce⟩
+          · intro _ s _ hpa
+            unfold doRaiseToParent
+            rw [stack?_emit, isSome_applyOne, stack?_setCurrent,
+              isSome_freeStack_ne (Ne.symm hpa.notCurrent)]
+            exact hpa.live
+          · intro _ s q _ hpa hq
+            unfold doRaiseToParent at hq
+            rw [parentOf_emit, parentOf_applyOne, parentOf_setCurrent] at hq
+            by_cases hqc : q = m.current
+            · subst hqc; rw [parentOf_freeStack_self] at hq; simp at hq
+            · rw [parentOf_freeStack_ne (Ne.symm hqc)] at hq
+              exact hpa.childless q hq
+          · intro _ s _ hpa
+            rw [show (m.doRaiseToParent m.current p e).current = p by
+              unfold doRaiseToParent
+              simp only [current_emit, current_applyOne, current_setCurrent]]
+            exact parked_ne_parent hpa hpar
+    | cons f rest =>
+      cases f <;>
+        simp only [stepThrow, hf] at hstep <;>
+        injection hstep with hstep <;>
+        subst hstep <;>
+        first
+          | exact hinv.ofSameHeap (((SameHeap.rfl' m).withFrames rest).setControl _)
+          | exact hinv.ofSameHeap ((((SameHeap.rfl' m).withFrames rest).emit _).setControl _)
+  | ret v =>
+    rw [hc] at hstep
+    cases hf : m.frames with
+    | nil =>
+      cases hi : m.stack? m.current with
+      | none => simp only [stepRet, hf, hi] at hstep; exact absurd hstep (by simp)
+      | some info =>
+        cases hp : info.handler.parent with
+        | none => simp only [stepRet, hf, hi, hp] at hstep; exact absurd hstep (by simp)
+        | some p =>
+          have hpar : m.parentOf m.current = Option.some p := by
+            unfold parentOf handlerOf; rw [hi]; exact hp
+          simp only [stepRet, hf, hi, hp] at hstep
+          injection hstep with hstep
+          subst hstep
+          have hce : ∀ (c : ContId) (s : StackId),
+              (m.doReturnToParent m.current p v).conts[c]? = Option.some (Option.some s) →
+              m.conts[c]? = Option.some (Option.some s) := by
+            intro c s hcs; rw [conts_doReturnToParent] at hcs; exact hcs
+          refine ⟨parked_transfer hinv.1 hce ?_ ?_ ?_, contInj_transfer hinv.2 hce⟩
+          · intro _ s _ hpa
+            unfold doReturnToParent
+            rw [stack?_emit, isSome_applyOne, stack?_setCurrent,
+              isSome_freeStack_ne (Ne.symm hpa.notCurrent)]
+            exact hpa.live
+          · intro _ s q _ hpa hq
+            unfold doReturnToParent at hq
+            rw [parentOf_emit, parentOf_applyOne, parentOf_setCurrent] at hq
+            by_cases hqc : q = m.current
+            · subst hqc; rw [parentOf_freeStack_self] at hq; simp at hq
+            · rw [parentOf_freeStack_ne (Ne.symm hqc)] at hq
+              exact hpa.childless q hq
+          · intro _ s _ hpa
+            rw [show (m.doReturnToParent m.current p v).current = p by
+              unfold doReturnToParent
+              simp only [current_emit, current_applyOne, current_setCurrent]]
+            exact parked_ne_parent hpa hpar
+    | cons f rest =>
+      have hsh0 : SameHeap m (m.withFrames rest) := (SameHeap.rfl' m).withFrames rest
+      have hinv0 : ParkInv (m.withFrames rest) := hinv.ofSameHeap hsh0
+      have hwf0 : (m.withFrames rest).WF := h.sameHeap hsh0
+      have hfr0 : (m.withFrames rest).frames = rest := by
+        obtain ⟨info, hi⟩ := isSome_iff_exists.mp h.currentLive
+        exact frames_withFrames rest hi
+      have hcur0 : (m.withFrames rest).current = m.current := current_withFrames _ _
+      have hconts0 : (m.withFrames rest).conts = m.conts := hsh0.conts
+      cases f
+      case performArg =>
+        simp only [stepRet, hf] at hstep
+        cases hi : (m.withFrames rest).stack? (m.withFrames rest).current with
+        | none => simp only [doPerform, hi] at hstep; exact absurd hstep (by simp)
+        | some info =>
+          cases hp : info.handler.parent with
+          | none =>
+            simp only [doPerform, hi, hp] at hstep
+            injection hstep with hstep
+            subst hstep
+            exact hinv0.ofSameHeap (((SameHeap.rfl' _).emit _).setControl _)
+          | some p =>
+            have hpar : (m.withFrames rest).parentOf (m.withFrames rest).current
+                = Option.some p := by
+              unfold parentOf handlerOf; rw [hi]; exact hp
+            simp only [doPerform, hi, hp] at hstep
+            injection hstep with hstep
+            subst hstep
+            refine parkInv_perform hwf0 hinv0 hpar ?_ ?_ ?_ ?_
+            · rw [conts_emit, conts_applyThree, conts_setCurrent, conts_setParent]
+            · intro t
+              rw [stack?_emit, isSome_applyThree, stack?_setCurrent, isSome_setParent]
+              rfl
+            · intro q s hq
+              rw [parentOf_emit, parentOf_applyThree, parentOf_setCurrent,
+                parentOf_setParent (m := ({ (m.withFrames rest) with
+                  conts := (m.withFrames rest).conts ++
+                    [Option.some (m.withFrames rest).current] } : Machine ν))
+                  hwf0.currentLive] at hq
+              by_cases hqc : q = (m.withFrames rest).current
+              · rw [if_pos hqc] at hq; simp at hq
+              · rw [if_neg hqc] at hq; exact ⟨hqc, hq⟩
+            · simp only [current_emit, current_applyThree, current_setCurrent]
+      case resume3 stackV fn =>
+        simp only [stepRet, hf] at hstep
+        cases stackV <;> simp only [doResume] at hstep <;>
+          first
+            | (injection hstep with hstep
+               subst hstep
+               first
+                 | (unfold doResumeStack
+                    refine parkInv_attach_enter hinv0 ?_ _ _ _
+                    intro c hcc
+                    rw [hconts0] at hcc
+                    exact hed.resume _ fn rest hf c hcc)
+                 | exact hinv0.ofSameHeap (((SameHeap.rfl' _).setControl _).emit _))
+            | exact absurd hstep (by simp)
+      case runstack3 stackV fn =>
+        simp only [stepRet, hf] at hstep
+        cases stackV <;> simp only [doRunstack] at hstep <;>
+          first
+            | (injection hstep with hstep
+               subst hstep
+               first
+                 | (refine parkInv_attach_enter hinv0 ?_ _ _ _
+                    intro c hcc
+                    rw [hconts0] at hcc
+                    exact hed.runstack _ fn rest hf c hcc)
+                 | exact hinv0.ofSameHeap (((SameHeap.rfl' _).setControl _).emit _))
+            | exact absurd hstep (by simp)
+      case reperform3 e cont =>
+        simp only [stepRet, hf] at hstep
+        cases hi : (m.withFrames rest).stack? (m.withFrames rest).current with
+        | none => simp only [doReperform, hi] at hstep; exact absurd hstep (by simp)
+        | some info =>
+          cases hp : info.handler.parent with
+          | none =>
+            cases cont <;> simp only [doReperform, hi, hp] at hstep
+            case cont cid =>
+              cases hcc : (m.withFrames rest).conts[cid]? with
+              | none =>
+                simp only [takeCont, hcc] at hstep
+                injection hstep with hstep
+                subst hstep
+                exact hinv0.ofSameHeap (((SameHeap.rfl' _).setControl _).emit _)
+              | some slot =>
+                cases slot with
+                | none =>
+                  simp only [takeCont, hcc] at hstep
+                  injection hstep with hstep
+                  subst hstep
+                  exact hinv0.ofSameHeap (((SameHeap.rfl' _).setControl _).emit _)
+                | some sid =>
+                  simp only [takeCont, hcc] at hstep
+                  injection hstep with hstep
+                  subst hstep
+                  have htake2 : ParkInv (({ (m.withFrames rest) with
+                      conts := (m.withFrames rest).conts.set cid Option.none } : Machine ν).emit
+                      (Event.unhandled e.effIdOf)) :=
+                    (parkInv_setNone hinv0 cid).ofSameHeap ((SameHeap.rfl' _).emit _)
+                  unfold doResumeStack
+                  refine parkInv_attach_enter htake2 ?_ _ _ _
+                  exact no_cont_of_setNone hinv0.2 hcc
+            all_goals exact absurd hstep (by simp)
+          | some p =>
+            have hpar : (m.withFrames rest).parentOf (m.withFrames rest).current
+                = Option.some p := by
+              unfold parentOf handlerOf; rw [hi]; exact hp
+            cases v <;> simp only [doReperform, hi, hp] at hstep
+            case stack tail =>
+              injection hstep with hstep
+              subst hstep
+              refine parkInv_reparent hinv0 hpar ?_ ?_ ?_ ?_
+              · intro c s hcs
+                rw [conts_emit, conts_applyThree, conts_setCurrent, conts_setParent,
+                  conts_setParent] at hcs
+                exact hcs
+              · intro t
+                rw [stack?_emit, isSome_applyThree, stack?_setCurrent, isSome_setParent,
+                  isSome_setParent]
+              · intro q s hq
+                rw [parentOf_emit, parentOf_applyThree, parentOf_setCurrent] at hq
+                by_cases htl : ((m.withFrames rest).setParent (m.withFrames rest).current
+                    Option.none).stack? tail |>.isSome
+                · rw [parentOf_setParent htl _ q] at hq
+                  by_cases hqt : q = tail
+                  · rw [if_pos hqt] at hq
+                    have : (m.withFrames rest).current = s := by simpa using hq
+                    exact Or.inl this.symm
+                  · rw [if_neg hqt,
+                      parentOf_setParent hwf0.currentLive Option.none q] at hq
+                    by_cases hqc : q = (m.withFrames rest).current
+                    · rw [if_pos hqc] at hq; simp at hq
+                    · rw [if_neg hqc] at hq; exact Or.inr hq
+                · have hnone : ((m.withFrames rest).setParent (m.withFrames rest).current
+                      Option.none).stack? tail = Option.none := by
+                    cases hst : ((m.withFrames rest).setParent (m.withFrames rest).current
+                      Option.none).stack? tail with
+                    | none => rfl
+                    | some i => rw [hst] at htl; exact absurd htl (by simp)
+                  rw [setParent_of_dead hnone,
+                    parentOf_setParent hwf0.currentLive Option.none q] at hq
+                  by_cases hqc : q = (m.withFrames rest).current
+                  · rw [if_pos hqc] at hq; simp at hq
+                  · rw [if_neg hqc] at hq; exact Or.inr hq
+              · simp only [current_emit, current_applyThree, current_setCurrent]
+            all_goals exact absurd hstep (by simp)
+      case dropContArg =>
+        simp only [stepRet, hf] at hstep
+        cases v <;> simp only [doDropCont] at hstep
+        case cont cid =>
+          cases hcc : (m.withFrames rest).conts[cid]? with
+          | none =>
+            simp only [takeCont, hcc] at hstep
+            injection hstep with hstep
+            subst hstep
+            exact hinv0.ofSameHeap (((SameHeap.rfl' _).setControl _).emit _)
+          | some slot =>
+            cases slot with
+            | none =>
+              simp only [takeCont, hcc] at hstep
+              injection hstep with hstep
+              subst hstep
+              exact hinv0.ofSameHeap (((SameHeap.rfl' _).setControl _).emit _)
+            | some sid =>
+              simp only [takeCont, hcc] at hstep
+              injection hstep with hstep
+              subst hstep
+              refine parkInv_free (parkInv_setNone hinv0 cid) (no_cont_of_setNone hinv0.2 hcc)
+                (fun _ _ hcs => hcs) ?_ ?_ ?_
+              · intro t htx
+                rw [stack?_setControl, stack?_emit, isSome_freeStack_ne (Ne.symm htx)]
+              · intro q s hq
+                rw [parentOf_setControl, parentOf_emit] at hq
+                by_cases hqx : q = sid
+                · subst hqx; rw [parentOf_freeStack_self] at hq; simp at hq
+                · rw [parentOf_freeStack_ne (Ne.symm hqx)] at hq; exact hq
+              · rfl
+        all_goals exact absurd hstep (by simp)
+      case allocStack3 hv hx =>
+        simp only [stepRet, hf] at hstep
+        injection hstep with hstep
+        subst hstep
+        exact (parkInv_snoc hinv0 rfl).ofSameHeap ((SameHeap.rfl' _).setControl _)
+      all_goals
+        simp only [stepRet, hf, applyValue, takeContUpdate] at hstep
+      all_goals repeat' split at hstep
+      all_goals
+        first
+          | (injection hstep with hstep
+             subst hstep
+             first
+               | exact hinv0
+               | exact hinv0.ofSameHeap ((SameHeap.rfl' _).setControl _)
+               | exact hinv0.ofSameHeap (((SameHeap.rfl' _).pushFrame _).setControl _)
+               | exact hinv0.ofSameHeap (((SameHeap.rfl' _).emit _).setControl _)
+               | exact hinv0.ofSameHeap (((SameHeap.rfl' _).setCell _).setControl _)
+               | exact (hinv0.takeCont _).ofSameHeap (((SameHeap.rfl' _).emit _).setControl _)
+               | exact (hinv0.takeCont _).ofSameHeap ((SameHeap.rfl' _).setControl _)
+               | exact ((hinv0.takeCont _).ofSameHeap ((SameHeap.rfl' _).triple _ _ _ _)).ofSameHeap
+                   (((SameHeap.rfl' _).emit _).setControl _)
+               | exact ((hinv0.takeCont _).ofSameHeap ((SameHeap.rfl' _).triple _ _ _ _)).ofSameHeap
+                   ((SameHeap.rfl' _).setControl _))
+          | exact absurd hstep (by simp)
+
+/-- The initial machine has no continuations at all, so both invariants and the entering
+discipline hold vacuously (`caml_alloc_main_stack`, `fiber.c:550`). -/
+theorem parkInv_start (t : Term ν) : ParkInv (Machine.start t) := by
+  constructor
+  · intro c s hc; exact absurd hc (by simp [start])
+  · intro c c' s hc _; exact absurd hc (by simp [start])
+
+theorem enterDisc_start (t : Term ν) : EnterDisc (Machine.start t) := by
+  constructor <;> (intro sid fn rest hf; exact absurd hf (by simp [frames, start, stack?]))
+
+/-- **`ParkInv` along a whole run.** -/
+theorem run_parkInv [ToString ν] [Add ν] {m : Machine ν} (h : m.WF) (hinv : ParkInv m)
+    (hsafe : ∀ a, Reaches m a → a.Safe) (hed : ∀ a, Reaches m a → EnterDisc a)
+    {m' : Machine ν} (hr : Reaches m m') : ParkInv m' := by
+  have key : ∀ a b, (Reaches m a ∧ a.WF ∧ ParkInv a) → a.step = Sum.inl b →
+      (Reaches m b ∧ b.WF ∧ ParkInv b) := by
+    rintro a b ⟨hra, hwa, hia⟩ hs
+    exact ⟨Reaches.tail hra hs, step_wf hwa (hsafe a hra) hs, step_parkInv hwa (hed a hra) hia hs⟩
+  exact (reaches_induction key hr ⟨Reaches.refl m, h, hinv⟩).2.2
+
+/-- **The bottom line of this section.** `Safe` — the side condition of `step_wf` — is a
+consequence of an invariant plus three clauses about the *program*: what it hands `%resume`,
+`%runstack` and `%reperform`. Everything else the runtime guarantees on its own. -/
+theorem safe_of_invariants {m : Machine ν} (h : m.WF) (hinv : ParkInv m) (hrs : ResumeSafe m) :
+    Safe m := safe_of_parked h hinv.1 hinv.2 hrs
+
+/-! ## 14. From the source term: the operand-evaluation prefix
+
+§11's corollaries start at `doResumeStack`. This section supplies the steps before it — the ones
+that evaluate `resume (take_cont_noexc k) (fun x -> x) v` down to three values — so the `Stdlib`
+statements are about the terms `OCaml5.Stdlib` builds, which are exactly the shapes spike A0's
+avatar writes (`deep_fibers.ml:642` for `match_with`, `:684` and the `effc` arms for
+`continue`/`discontinue`).
+
+Each step is heap-neutral except the `caml_continuation_use_noexc` one, which only nulls a block,
+so `ParkedAt` — hence `AttachSafe`, hence `Safe` — travels from the take to the `%resume` that
+consumes it. That is what discharges `ResumeSafe` on this fragment. -/
+
+theorem step_eval_resume [ToString ν] [Add ν] {m : Machine ν} {fs : List (Frame ν)}
+    {env : List (Value ν)} {st fn arg : Term ν}
+    (hctl : m.control = Control.eval env (Term.resume st fn arg))
+    (hfr : (m.stack? m.current).map (·.frames) = Option.some fs) :
+    ∃ M, m.step = Sum.inl M ∧ SameHeap m M ∧ M.control = Control.eval env st ∧
+      (M.stack? m.current).map (·.frames) = Option.some (Frame.resume1 env fn arg :: fs) := by
+  refine ⟨(m.pushFrame (Frame.resume1 env fn arg)).setControl (Control.eval env st), ?_, ?_, rfl, ?_⟩
+  · rw [step, hctl]; simp only [stepEval]
+  · exact ((SameHeap.rfl' m).pushFrame _).setControl _
+  · exact framesMap_pushFrame _ m.current rfl hfr
+
+theorem step_eval_contUse [ToString ν] [Add ν] {m : Machine ν} {fs : List (Frame ν)}
+    {env : List (Value ν)} {kt : Term ν}
+    (hctl : m.control = Control.eval env (Term.contUseNoexc kt))
+    (hfr : (m.stack? m.current).map (·.frames) = Option.some fs) :
+    ∃ M, m.step = Sum.inl M ∧ SameHeap m M ∧ M.control = Control.eval env kt ∧
+      (M.stack? m.current).map (·.frames) = Option.some (Frame.contUseArg :: fs) := by
+  refine ⟨(m.pushFrame Frame.contUseArg).setControl (Control.eval env kt), ?_, ?_, rfl, ?_⟩
+  · rw [step, hctl]; simp only [stepEval]
+  · exact ((SameHeap.rfl' m).pushFrame _).setControl _
+  · exact framesMap_pushFrame _ m.current rfl hfr
+
+theorem step_eval_lam [ToString ν] [Add ν] {m : Machine ν} {env : List (Value ν)} {body : Term ν}
+    (hctl : m.control = Control.eval env (Term.lam body)) :
+    ∃ M, m.step = Sum.inl M ∧ SameHeap m M ∧ M.control = Control.ret (Value.closure env body) ∧
+      ∀ t, (M.stack? t).map (·.frames) = (m.stack? t).map (·.frames) := by
+  refine ⟨m.setControl (Control.ret (Value.closure env body)), ?_, (SameHeap.rfl' m).setControl _,
+    rfl, fun _ => rfl⟩
+  rw [step, hctl]; simp only [stepEval]
+
+theorem step_eval_var' [ToString ν] [Add ν] {m : Machine ν} {env : List (Value ν)} {i : Nat}
+    {v : Value ν} (hctl : m.control = Control.eval env (Term.var i))
+    (hv : env[i]? = Option.some v) :
+    ∃ M, m.step = Sum.inl M ∧ SameHeap m M ∧ M.control = Control.ret v ∧
+      ∀ t, (M.stack? t).map (·.frames) = (m.stack? t).map (·.frames) := by
+  refine ⟨m.setControl (Control.ret v), ?_, (SameHeap.rfl' m).setControl _, rfl, fun _ => rfl⟩
+  rw [step, hctl]; simp only [stepEval, hv]
+
+/-- `caml_continuation_use_noexc` on a live block: the answer is the captured stack and the block
+is spent, and nothing else in the heap moves (`fiber.c:595-622`). -/
+theorem step_ret_contUseArg [ToString ν] [Add ν] {m : Machine ν} {fs : List (Frame ν)}
+    {cid : ContId} {sid : StackId}
+    (hctl : m.control = Control.ret (Value.cont cid))
+    (hfr : (m.stack? m.current).map (·.frames) = Option.some (Frame.contUseArg :: fs))
+    (hc : m.conts[cid]? = Option.some (Option.some sid)) :
+    ∃ M, m.step = Sum.inl M ∧ SameStacks m M ∧ M.control = Control.ret (Value.stack sid) ∧
+      (M.stack? m.current).map (·.frames) = Option.some fs ∧
+      M.conts = m.conts.set cid Option.none := by
+  obtain ⟨info, hi⟩ := isSome_iff_exists.mp (by
+    cases hst : m.stack? m.current with
+    | none => rw [hst] at hfr; simp at hfr
+    | some info => rfl : (m.stack? m.current).isSome)
+  refine ⟨?M, ?step, ?ss, ?ctl, ?fr, ?cs⟩
+  case step =>
+    rw [step, hctl]
+    simp only [stepRet, frames_of_framesMap hfr, takeCont, conts_withFrames, hc]
+    rfl
+  case ss =>
+    refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
+    · exact stacks_length_withFrames m fs
+    · intro t; exact isSome_withFrames fs t
+    · intro t; exact parentOf_withFrames fs t
+    · exact current_withFrames m fs
+  case ctl => rfl
+  case fr =>
+    have hw := framesMap_withFrames (m := m) fs hi
+    rw [current_withFrames] at hw
+    exact hw
+  case cs => rfl
+
+theorem step_ret_resume1 [ToString ν] [Add ν] {m : Machine ν} {fs : List (Frame ν)}
+    {env : List (Value ν)} {fn arg : Term ν} {sv : Value ν}
+    (hctl : m.control = Control.ret sv)
+    (hfr : (m.stack? m.current).map (·.frames) = Option.some (Frame.resume1 env fn arg :: fs)) :
+    ∃ M, m.step = Sum.inl M ∧ SameHeap m M ∧ M.control = Control.eval env fn ∧
+      (M.stack? m.current).map (·.frames) = Option.some (Frame.resume2 sv env arg :: fs) := by
+  refine ⟨((m.withFrames fs).pushFrame (Frame.resume2 sv env arg)).setControl
+    (Control.eval env fn), ?_, ?_, rfl, ?_⟩
+  · rw [step, hctl]; simp only [stepRet, frames_of_framesMap hfr]
+  · exact (((SameHeap.rfl' m).withFrames fs).pushFrame _).setControl _
+  · have hw : ((m.withFrames fs).stack? (m.withFrames fs).current).map (·.frames)
+        = Option.some fs := by
+      obtain ⟨info, hi⟩ := isSome_iff_exists.mp (by
+        cases hst : m.stack? m.current with
+        | none => rw [hst] at hfr; simp at hfr
+        | some info => rfl : (m.stack? m.current).isSome)
+      exact framesMap_withFrames fs hi
+    have := framesMap_pushFrame (Frame.resume2 sv env arg) (m.withFrames fs).current rfl hw
+    rw [current_withFrames] at this
+    exact this
+
+theorem step_ret_resume2 [ToString ν] [Add ν] {m : Machine ν} {fs : List (Frame ν)}
+    {env : List (Value ν)} {arg : Term ν} {sv fv : Value ν}
+    (hctl : m.control = Control.ret fv)
+    (hfr : (m.stack? m.current).map (·.frames) = Option.some (Frame.resume2 sv env arg :: fs)) :
+    ∃ M, m.step = Sum.inl M ∧ SameHeap m M ∧ M.control = Control.eval env arg ∧
+      (M.stack? m.current).map (·.frames) = Option.some (Frame.resume3 sv fv :: fs) := by
+  refine ⟨((m.withFrames fs).pushFrame (Frame.resume3 sv fv)).setControl
+    (Control.eval env arg), ?_, ?_, rfl, ?_⟩
+  · rw [step, hctl]; simp only [stepRet, frames_of_framesMap hfr]
+  · exact (((SameHeap.rfl' m).withFrames fs).pushFrame _).setControl _
+  · have hw : ((m.withFrames fs).stack? (m.withFrames fs).current).map (·.frames)
+        = Option.some fs := by
+      obtain ⟨info, hi⟩ := isSome_iff_exists.mp (by
+        cases hst : m.stack? m.current with
+        | none => rw [hst] at hfr; simp at hfr
+        | some info => rfl : (m.stack? m.current).isSome)
+      exact framesMap_withFrames fs hi
+    have := framesMap_pushFrame (Frame.resume3 sv fv) (m.withFrames fs).current rfl hw
+    rw [current_withFrames] at this
+    exact this
+
+/-- The `%resume` itself: `do_resume` on the value the take produced. -/
+theorem step_ret_resume3 [ToString ν] [Add ν] {m : Machine ν} {fs : List (Frame ν)}
+    {sid : StackId} {fnv av : Value ν}
+    (hctl : m.control = Control.ret av)
+    (hfr : (m.stack? m.current).map (·.frames)
+      = Option.some (Frame.resume3 (Value.stack sid) fnv :: fs)) :
+    m.step = Sum.inl ((m.withFrames fs).doResumeStack sid fnv av) := by
+  rw [step, hctl]
+  simp only [stepRet, frames_of_framesMap hfr, doResume]
+
+/-! ### Threading the chain
+
+`OnStack m0 sid M` bundles what every step of the operand chain preserves: the parent forest and
+the running stack are `m0`'s, and the run so far has stayed off `sid` and kept it live — which is
+what carries `ParkedAt sid`, and with it `AttachSafe`, from the take to the `%resume`. -/
+
+structure OnStack [ToString ν] [Add ν] (m0 : Machine ν) (sid : StackId) (M : Machine ν) : Prop where
+  ss : SameStacks m0 M
+  ro : ReachesOff sid m0 M
+
+theorem OnStack.refl' [ToString ν] [Add ν] {m0 : Machine ν} {sid : StackId}
+    (hne : m0.current ≠ sid) (hlive : (m0.stack? sid).isSome) : OnStack m0 sid m0 :=
+  ⟨SameStacks.rfl' m0, ReachesOff.refl m0 hne hlive⟩
+
+theorem OnStack.step [ToString ν] [Add ν] {m0 : Machine ν} {sid : StackId} {M M' : Machine ν}
+    (h : OnStack m0 sid M) (hstep : M.step = Sum.inl M') (hss : SameStacks M M') :
+    OnStack m0 sid M' :=
+  ⟨h.ss.trans hss,
+    ReachesOff.tail h.ro hstep (by rw [hss.current]; exact h.ro.currentNe)
+      (by rw [hss.live]; exact h.ro.live)⟩
+
+theorem OnStack.reaches [ToString ν] [Add ν] {m0 : Machine ν} {sid : StackId} {M : Machine ν}
+    (h : OnStack m0 sid M) : Reaches m0 M := h.ro.toReaches
+
+/-- The captured stack's frames are still what they were when the chain started. -/
+theorem OnStack.framesMap [ToString ν] [Add ν] {m0 : Machine ν} {sid : StackId} {M : Machine ν}
+    (h : OnStack m0 sid M) : (M.stack? sid).map (·.frames) = (m0.stack? sid).map (·.frames) :=
+  frames_parked h.ro
+
+/-- …and it is still parked, so `AttachSafe` still holds of it. -/
+theorem OnStack.parkedAt [ToString ν] [Add ν] {m0 : Machine ν} {sid : StackId} {M : Machine ν}
+    (h : OnStack m0 sid M) (hpa : ParkedAt m0 sid) : ParkedAt M sid := hpa.congr h.ss
+
+/-- **The operand-evaluation prefix, proved.** From the source term
+`resume (take_cont_noexc k) (fun x -> …) v` with `k` and `v` already values in the environment —
+which is exactly the shape every `effc` arm of `deep_fibers.ml:684` writes — nine steps reach the
+captured stack, with the resumption function applied to `v` on top of that stack's own frames and
+the `Cont_tag` block spent. `WF` holds throughout, and `Safe` at the `%resume` is discharged, not
+assumed: `ParkedAt sid` travels from the take to the resume because every step between them is
+heap-neutral. -/
+theorem resume_chain [ToString ν] [Add ν] {m : Machine ν} {env : List (Value ν)}
+    {i j : Nat} {body : Term ν} {cid : ContId} {sid : StackId} {v : Value ν}
+    {fsSid : List (Frame ν)}
+    (h : m.WF) (hinv : ParkInv m)
+    (hctl : m.control = Control.eval env
+      (Term.resume (Term.contUseNoexc (Term.var i)) (Term.lam body) (Term.var j)))
+    (hi : env[i]? = Option.some (Value.cont cid))
+    (hj : env[j]? = Option.some v)
+    (hc : m.conts[cid]? = Option.some (Option.some sid))
+    (hfs : (m.stack? sid).map (·.frames) = Option.some fsSid) :
+    ∃ M, Reaches m M ∧ M.WF ∧ M.current = sid ∧ M.control = Control.ret v ∧
+      (M.stack? sid).map (·.frames)
+        = Option.some (Frame.appFn (Value.closure env body) :: fsSid) ∧
+      M.conts[cid]? = Option.some Option.none := by
+  have hpa : ParkedAt m sid := hinv.1 cid sid hc
+  have hlt : cid < m.conts.length := by
+    rcases Nat.lt_or_ge cid m.conts.length with hlt | hge
+    · exact hlt
+    · rw [List.getElem?_eq_none hge] at hc; simp at hc
+  obtain ⟨info0, hi0⟩ := isSome_iff_exists.mp h.currentLive
+  have hfr0 : (m.stack? m.current).map (·.frames) = Option.some info0.frames := by
+    rw [hi0]; rfl
+  have hos0 : OnStack m sid m := OnStack.refl' (Ne.symm hpa.notCurrent) hpa.live
+  -- 1. the `%resume`'s first operand
+  obtain ⟨M1, hs1, hsh1, hctl1, hfr1⟩ := step_eval_resume hctl hfr0
+  have hos1 := hos0.step hs1 hsh1.toSameStacks
+  rw [← hsh1.current] at hfr1
+  -- 2. `caml_continuation_use_noexc`'s operand
+  obtain ⟨M2, hs2, hsh2, hctl2, hfr2⟩ := step_eval_contUse hctl1 hfr1
+  have hos2 := hos1.step hs2 hsh2.toSameStacks
+  rw [← hsh2.current] at hfr2
+  -- 3. the variable holding the continuation
+  obtain ⟨M3, hs3, hsh3, hctl3, hfm3⟩ := step_eval_var' (m := M2) (env := env) (i := i)
+    (v := Value.cont cid) (by rw [hctl2]) hi
+  have hos3 := hos2.step hs3 hsh3.toSameStacks
+  have hfr3 : (M3.stack? M3.current).map (·.frames)
+      = Option.some (Frame.contUseArg :: Frame.resume1 env (Term.lam body) (Term.var j)
+        :: info0.frames) := by
+    rw [hsh3.current, hfm3 M2.current]
+    exact hfr2
+  -- 4. the take
+  have hc3 : M3.conts[cid]? = Option.some (Option.some sid) := by
+    rw [hsh3.conts, hsh2.conts, hsh1.conts]; exact hc
+  obtain ⟨M4, hs4, hss4, hctl4, hfr4, hcs4⟩ := step_ret_contUseArg hctl3 hfr3 hc3
+  have hos4 := hos3.step hs4 hss4
+  rw [← hss4.current] at hfr4
+  -- 5. the resumption function
+  obtain ⟨M5, hs5, hsh5, hctl5, hfr5⟩ := step_ret_resume1 (sv := Value.stack sid) hctl4 hfr4
+  have hos5 := hos4.step hs5 hsh5.toSameStacks
+  rw [← hsh5.current] at hfr5
+  -- 6. its closure
+  obtain ⟨M6, hs6, hsh6, hctl6, hfm6⟩ := step_eval_lam hctl5
+  have hos6 := hos5.step hs6 hsh6.toSameStacks
+  have hfr6 : (M6.stack? M6.current).map (·.frames)
+      = Option.some (Frame.resume2 (Value.stack sid) env (Term.var j) :: info0.frames) := by
+    rw [hsh6.current, hfm6 M5.current]
+    exact hfr5
+  -- 7. the resumption value's operand
+  obtain ⟨M7, hs7, hsh7, hctl7, hfr7⟩ := step_ret_resume2 hctl6 hfr6
+  have hos7 := hos6.step hs7 hsh7.toSameStacks
+  rw [← hsh7.current] at hfr7
+  -- 8. the variable holding it
+  obtain ⟨M8, hs8, hsh8, hctl8, hfm8⟩ := step_eval_var' (m := M7) (env := env) (i := j) (v := v)
+    (by rw [hctl7]) hj
+  have hos8 := hos7.step hs8 hsh8.toSameStacks
+  have hfr8 : (M8.stack? M8.current).map (·.frames)
+      = Option.some (Frame.resume3 (Value.stack sid) (Value.closure env body) :: info0.frames) := by
+    rw [hsh8.current, hfm8 M7.current]
+    exact hfr7
+  -- 9. `do_resume`
+  have hs9 := step_ret_resume3 (fs := info0.frames) hctl8 hfr8
+  have hos9ss : SameStacks M8 (M8.withFrames info0.frames) :=
+    ((SameHeap.rfl' M8).withFrames info0.frames).toSameStacks
+  have hne8 : M8.current ≠ sid := hos8.ro.currentNe
+  have hpa8 : ParkedAt (M8.withFrames info0.frames) sid :=
+    hpa.congr (hos8.ss.trans hos9ss)
+  have hconts8 : (M8.withFrames info0.frames).conts = m.conts.set cid Option.none := by
+    rw [conts_withFrames, hsh8.conts, hsh7.conts, hsh6.conts, hsh5.conts, hcs4,
+      hsh3.conts, hsh2.conts, hsh1.conts]
+  have hwf8 : (M8.withFrames info0.frames).WF := by
+    refine h.contsWeaken (hos8.ss.trans hos9ss) ?_
+    intro c s hcs
+    rw [hconts8] at hcs
+    exact h.contLive c s (conts_setNone_weaken m cid c s hcs)
+  have hfrsid8 : ((M8.withFrames info0.frames).stack? sid).map (·.frames)
+      = Option.some fsSid := by
+    rw [stack?_withFrames_ne _ hne8, frames_parked hos8.ro]
+    exact hfs
+  refine ⟨(M8.withFrames info0.frames).doResumeStack sid (Value.closure env body) v,
+    Reaches.tail hos8.reaches hs9, ?_, doResumeStack_current _ _ _ _,
+    doResumeStack_control _ _ _ _, ?_, ?_⟩
+  · exact wf_doResumeStack hwf8 _ _ (attachSafe_of_parkedAt hwf8 hpa8)
+  · exact doResumeStack_framesMap _ _ hfrsid8
+  · rw [doResumeStack_conts, hconts8]
+    exact List.getElem?_set_self hlt
+
+/-- **`Deep.continue k v`, from the source term** (`effect.ml:57`). Eleven steps from
+`resume (take_cont_noexc k) (fun x -> x) v`: the machine is running on the captured stack, with
+`v` returned, that stack's own frames — traps included — underneath, and the `Cont_tag` block
+spent for the rest of the run. This is the avatar's `{ ret = continue k; … }` arm
+(`deep_fibers.ml:684`). `WF` is carried by `resume_chain` as far as the `%resume` itself; see the
+report §8.7 for the two steps after it. -/
+theorem deepContinue_from_term [ToString ν] [Add ν] {m : Machine ν} {env : List (Value ν)}
+    {i j : Nat} {cid : ContId} {sid : StackId} {v : Value ν} {fsSid : List (Frame ν)}
+    (h : m.WF) (hinv : ParkInv m)
+    (hctl : m.control = Control.eval env (Stdlib.deepContinue (Term.var i) (Term.var j)))
+    (hi : env[i]? = Option.some (Value.cont cid)) (hj : env[j]? = Option.some v)
+    (hc : m.conts[cid]? = Option.some (Option.some sid))
+    (hfs : (m.stack? sid).map (·.frames) = Option.some fsSid) :
+    ∃ M, Reaches m M ∧ M.current = sid ∧ M.control = Control.ret v ∧
+      (M.stack? sid).map (·.frames) = Option.some fsSid ∧
+      M.conts[cid]? = Option.some Option.none := by
+  obtain ⟨M9, hr9, hwf9, hcur9, hctl9, hfr9, hcs9⟩ :=
+    resume_chain (body := Term.var 0) h hinv hctl hi hj hc hfs
+  have hfr9' : (M9.stack? M9.current).map (·.frames)
+      = Option.some (Frame.appFn (Value.closure env (Term.var 0)) :: fsSid) := by
+    rw [hcur9]; exact hfr9
+  obtain ⟨M10, hs10, hcur10, hctl10, hfr10⟩ := step_ret_appFn_closure hctl9 hfr9'
+  obtain ⟨M11, hs11, hsh11, hctl11, hfm11⟩ :=
+    step_eval_var' (m := M10) (env := v :: env) (i := 0) (v := v) hctl10 rfl
+  have hr11 : Reaches M9 M11 := Reaches.tail (Reaches.tail (Reaches.refl M9) hs10) hs11
+  refine ⟨M11, hr9.trans hr11, ?_, hctl11, ?_, handle_taken_stable hr11 hcs9⟩
+  · rw [hsh11.current, hcur10, hcur9]
+  · rw [hfm11 sid, ← hcur9]
+    exact hfr10
+
+/-- **`Deep.discontinue k e`, from the source term** (`effect.ml:59`): the same eleven steps with
+the raising resumption function, then four more, and the exception is being thrown *on the
+captured stack*, over its own frames — so a trap pushed there before the `perform` catches it
+(witness 09, and the avatar's `{ thr = discontinue k; … }` arm). -/
+theorem deepDiscontinue_from_term [ToString ν] [Add ν] {m : Machine ν} {env : List (Value ν)}
+    {i j : Nat} {cid : ContId} {sid : StackId} {e : Value ν} {fsSid : List (Frame ν)}
+    (h : m.WF) (hinv : ParkInv m)
+    (hctl : m.control = Control.eval env (Stdlib.deepDiscontinue (Term.var i) (Term.var j)))
+    (hi : env[i]? = Option.some (Value.cont cid)) (hj : env[j]? = Option.some e)
+    (hc : m.conts[cid]? = Option.some (Option.some sid))
+    (hfs : (m.stack? sid).map (·.frames) = Option.some fsSid) :
+    ∃ M, Reaches m M ∧ M.current = sid ∧ M.control = Control.throw e ∧
+      (M.stack? sid).map (·.frames) = Option.some fsSid ∧
+      M.conts[cid]? = Option.some Option.none := by
+  obtain ⟨M9, hr9, hwf9, hcur9, hctl9, hfr9, hcs9⟩ :=
+    resume_chain (body := Term.raise (Term.var 0)) h hinv hctl hi hj hc hfs
+  have hfr9' : (M9.stack? M9.current).map (·.frames)
+      = Option.some (Frame.appFn (Value.closure env (Term.raise (Term.var 0))) :: fsSid) := by
+    rw [hcur9]; exact hfr9
+  obtain ⟨M, hrM, hcurM, hctlM, hfrM⟩ := raise_closure_throws hctl9 hfr9'
+  refine ⟨M, hr9.trans hrM, ?_, hctlM, ?_, handle_taken_stable hrM hcs9⟩
+  · rw [hcurM, hcur9]
+  · rw [← hcur9]; exact hfrM
 
 end Machine
 
