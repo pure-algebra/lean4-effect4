@@ -3,7 +3,7 @@ import Effect4.Codegen.EffectfulField
 namespace Effect4.Harness.SchemaEffectfulField
 
 open Effect4
-open Effect4.Target.TypeScript
+open Effect4.Codegen
 
 private def spec : EffectfulFieldSpec :=
   { alphabet := ⟨7⟩, readOperation := ⟨11⟩, writeOperation := ⟨12⟩ }

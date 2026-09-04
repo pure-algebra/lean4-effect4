@@ -58,6 +58,9 @@ Only `scripts/generate-effect-runtime-census.sh` and the Lean row list change.
 
 - Add a witness that is a `def`, a finite probe, or a model-integrity lemma.
 - Edit `generated/effect-runtime-census.tsv` by hand.
-- Add a public declaration to `Effect4/Concurrency/*` without also updating
-  the frozen surface census in `Effect4Test/Concurrency/FiberAssurance.lean`.
+- Cite the frozen surface census in `Effect4Test/Concurrency/FiberAssurance.lean`:
+  it, its two scripts and `generated/fiber-assurance.tsv` were retired on
+  2026-09-04 with the machines they counted, so a declaration under
+  `Effect4/Concurrency/` now moves only the coverage join. Freeze a surface by
+  its `#check` ascription snapshot in the join instead.
 - Describe coverage as compatibility or equivalence with Effect.

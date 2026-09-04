@@ -13,3 +13,11 @@
 # Claude Code per-machine settings and agent worktrees
 .claude/settings.local.json
 .claude/worktrees/
+
+# Harness spikes: per-machine scratch under harness/ stays on disk, not in git.
+# The 23 files already tracked here are unaffected — six gates read them
+# (check-schema-annotations, check-schema-effectful-field,
+# check-schema-typescript-generation, check-internal-citations and their two
+# gate tests) — so this hides only new, untracked harness work such as
+# harness/trace/.
+/harness/

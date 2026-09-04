@@ -1,0 +1,19 @@
+# Line endings are LF in the tree and in the index, on every machine.
+#
+# The prod cleanup of 2026-09-04 was authored on the PC and committed CRLF into
+# 156 files under src/, Test/ and harness/. That broke 11 of the 24 frozen
+# SHA-256 pins in scripts/generate-schema-structural-assurance.sh, which are
+# taken over raw file bytes: a line-ending flip is indistinguishable from an
+# edit to a frozen source. This file makes the flip impossible rather than
+# re-pinning after each one.
+* text=auto eol=lf
+
+# Two trees are byte-compared rather than read as text, so git must never
+# rewrite them:
+#
+#   vendor/  is pinned against the upstream release by SHA-256
+#            (scripts/generate-effect-runtime-census.sh, 150 pins;
+#            scripts/check-schema-census.sh and check-schema-fields.sh).
+#   generated/  holds the assurance and census goldens, compared byte for byte.
+vendor/** -text
+generated/** -text

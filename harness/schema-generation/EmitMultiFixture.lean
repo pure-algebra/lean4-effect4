@@ -30,7 +30,7 @@ private def fixture : String :=
     , ""
     , "/** Raw Effect Schema multi-root document. */"
     , "export const TwoRootsSchemaJson: Schema.Json = " ++
-        Target.TypeScript.Schema.multiDocumentSource multi
+        Codegen.Schema.multiDocumentSource multi
     , "" ]
 
 #eval IO.print fixture
