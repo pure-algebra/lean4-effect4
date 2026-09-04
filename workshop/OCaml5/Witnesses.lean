@@ -38,13 +38,18 @@ deriving Repr
 
 /-- The row spelling of an event, to be matched byte for byte against the hosts. -/
 def Event.render : Event → Row
-  | .perform eff => s!"perform\t{eff.value}"
-  | .handled eff => s!"handled\t{eff.value}"
-  | .forwarded eff => s!"forwarded\t{eff.value}"
-  | .resumed handle => s!"resumed\t{handle}"
-  | .discontinued handle => s!"discontinued\t{handle}"
-  | .returned => "returned"
-  | .raised exn => s!"raised\t{exn.value}"
+  | .perform eff cont => s!"perform\t{eff.value}\t{cont}"
+  | .reperform eff cont => s!"reperform\t{eff.value}\t{cont}"
+  | .resume stack => s!"resume\t{stack}"
+  | .runstack stack => s!"runstack\t{stack}"
+  | .returnToParent stack => s!"return\t{stack}"
+  | .raiseToParent stack => s!"raise\t{stack}"
+  | .unhandled eff => s!"unhandled\t{eff.value}"
+  | .alreadyResumed => "already-resumed"
+  | .contUsed cont => s!"cont-used\t{cont}"
+  | .contDropped cont => s!"cont-dropped\t{cont}"
+  | .trapEntered => "trap"
+  | .trapCaught exn => s!"caught\t{exn.value}"
 
 /-- Host agreement is a decidable fact of the transcribed rows. -/
 def Witness.hostsAgree {ν : Type u} (w : Witness ν) : Bool := w.nativeRows == w.jsooRows

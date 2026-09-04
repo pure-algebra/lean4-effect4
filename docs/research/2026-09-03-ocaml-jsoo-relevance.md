@@ -85,8 +85,12 @@ land (`Effect4/Target/TypeScript/Trace.lean:38-48`).
 
 The target is small and principled, which is why the user's intuition is right.
 
-**OCaml side.** `Stdlib.Effect` (`ocaml-base-compiler.5.1.1/stdlib/effect.ml`) is six primitives
-and two records:
+**OCaml side.** Correction (second pass, same evening): `Stdlib.Effect` is the *wrapper*; the
+implementation is the runtime, `runtime/fiber.c` and `fiber.h` (`stack_handler`, `stack_info`,
+the `Cont_tag` block nulled on use), the four bytecode instructions in `runtime/interp.c:1279-1399`
+and the four entry points in `runtime/amd64.S:878-1000`; see
+`2026-09-03-ocaml5-deep-plan.md` §0 for the eight transitions with line numbers. The wrapper
+(`stdlib/effect.ml`) is six primitives and two records:
 
 ```ocaml
 external perform  : 'a t -> 'a = "%perform"
