@@ -1,0 +1,29 @@
+Spike P2, 2026-09-04: the three programs the property harness minimised to, run on all three
+hosts.  Commands, in a scratch directory, with
+  PATH=$HOME/.opam/default/bin:$PATH   (ocamlc 5.1.1, ocamlopt 5.1.1, ocamlrun 5.1.1)
+  JS=.../ocaml5-jsoo-5.7.1/_build/default/vendor/js_of_ocaml-compiler.5.7.1/
+       compiler/bin-js_of_ocaml/js_of_ocaml.exe   (js_of_ocaml 5.7.1)
+  node v22.23.2
+
+  $ ocamlc   -o pN.byte pN.ml && ocamlrun pN.byte
+  $ ocamlopt -o pN.native pN.ml && ./pN.native
+  $ $JS compile --enable effects --target-env=nodejs --pretty pN.byte -o pN.js && node pN.js
+
+p4_callback_trap.ml    ocamlrun 18      ocamlopt 18      node 18
+p5_unhandled_unlinked  ocamlrun "Fatal error: exception Effect.Unhandled"
+                       ocamlopt "Fatal error: exception Effect.Unhandled"
+                       node     7
+p6_unhandled_linked    ocamlrun 7       ocamlopt 7       node 7
+
+p4 is CE-1 of ir/Counterexamples.lean: `Code.Machine` answers `uncaught 103` on the transform's
+output, all three hosts answer 18.  p4_callback_trap.js.excerpt is the generated JavaScript
+around the top-level trap: the `Pushtrap` became a JavaScript `try { … } catch` wrapping the
+`caml_callback`, which is why the exception thrown out of `caml_callback` (jslib.js:100) is
+still caught.
+
+p5 and p6 differ only in a reference to `Effect.Unhandled`.  Without it `%perform` is the only
+mention of `Stdlib.Effect`, and `%perform` is an external, so `Stdlib__Effect` is not linked,
+its `Callback.register_exception` never runs, and `fiber.c:668-682` (cache_named_exception)
+`fprintf`s "Fatal error: exception %s" and `exit(2)`s from C rather than raising.  With the
+reference, all three hosts agree that `perform` at the root raises a catchable
+`Effect.Unhandled` — which is CE-2.
