@@ -1,116 +1,112 @@
 name = "effect4"
 version = "0.1.0"
-# `Effect4TestGreen`, not `Effect4Test`: the umbrella plus exactly its
-# transitive imports, which is the green battery and the gate. The declared-red
-# modules of `test/fixtures/trust-gate/known-red.txt` are deliberately not
-# imported by `Effect4Test.lean`, so they stay out of the default build and
-# `#effect4_axiom_gate` actually runs in it.
-defaultTargets = ["Effect4", "Effect4TestGreen"]
+# `Test`, not the red-inclusive glob: the umbrella `Test.All` plus exactly its transitive
+# imports is the green battery and the gate. A module declared red in
+# `Test/fixtures/trust-gate/known-red.txt` is deliberately not imported by `Test/All.lean`,
+# so it stays out of the default build and `#effect4_axiom_gate` actually runs in it.
+defaultTargets = ["Effect4", "Test"]
 
+# Every Lean process of this package is capped at 6 GB (`lean --memory`): a runaway
+# elaboration aborts with "memory limit exceeded" instead of taking the machine down
+# (docs/research/2026-09-04-s3-volume-plan.md, memory rule).
 [[lean_lib]]
 name = "Effect4"
+srcDir = "src"
 globs = ["Effect4.*"]
-
-# The red-inclusive battery: every module under `Effect4Test/`, including the
-# frozen breaker batteries that are expected to fail. Build it to see the whole
-# tree; it is not a gate.
-[[lean_lib]]
-name = "Effect4Test"
-globs = ["Effect4Test.*"]
+moreLeanArgs = ["-M6144"]
 
 # The green battery: the audit root and its import closure.
 [[lean_lib]]
-name = "Effect4TestGreen"
-roots = ["Effect4Test"]
-globs = ["Effect4Test"]
+name = "Test"
+roots = ["Test.All"]
+globs = ["Test.All"]
+moreLeanArgs = ["-M6144"]
 
-# Per-area batteries. One target per `Effect4Test/` directory, so a narrow
-# sweep is `lake build Effect4TestSemantics` rather than a whole-tree build or
-# a bare `lean env lean` on one file. The areas are disjoint and together cover
-# the tree. Every area is expected green: the two declared-red modules
-# (`Effect4TestProtocol`'s byte parser, `Effect4TestConcurrency`'s binary race)
-# were retired on 2026-09-04; the `Effect4TestConcurrency` area itself was
-# retired with the old fiber machines the same day.
-#
-# The globs are `.+`, submodules only: `.*` would also select the directory's
-# own module — `Effect4Test.Audit`, say — and no such file exists.
+# The red-inclusive battery: every module under `Test/`, including any frozen breaker
+# battery expected to fail. Build it to see the whole tree; it is not a gate.
+[[lean_lib]]
+name = "TestAll"
+globs = ["Test.+"]
+moreLeanArgs = ["-M6144"]
+
+# Per-area batteries, one per `Test/` directory, so a narrow sweep is
+# `lake build TestSchema` rather than a whole-tree build. The globs are `.+`,
+# submodules only: `.*` would also select the directory's own module, which
+# does not exist.
+[[lean_lib]]
+name = "TestApi"
+globs = ["Test.Api.+"]
+moreLeanArgs = ["-M6144"]
 
 [[lean_lib]]
-name = "Effect4TestSchema"
-globs = ["Effect4Test.Schema.+"]
+name = "TestSchema"
+globs = ["Test.Schema.+"]
+moreLeanArgs = ["-M6144"]
 
 [[lean_lib]]
-name = "Effect4TestSemantics"
-globs = ["Effect4Test.Semantics.+"]
+name = "TestSurface"
+globs = ["Test.Surface.+"]
+moreLeanArgs = ["-M6144"]
 
 [[lean_lib]]
-name = "Effect4TestTarget"
-globs = ["Effect4Test.Target.+"]
+name = "TestProgram"
+globs = ["Test.Program.+"]
+moreLeanArgs = ["-M6144"]
 
 [[lean_lib]]
-name = "Effect4TestRuntime"
-globs = ["Effect4Test.Runtime.+"]
+name = "TestMachine"
+globs = ["Test.Machine.+"]
+moreLeanArgs = ["-M6144"]
 
 [[lean_lib]]
-name = "Effect4TestAudit"
-globs = ["Effect4Test.Audit.+"]
+name = "TestCodegen"
+globs = ["Test.Codegen.+"]
+moreLeanArgs = ["-M6144"]
 
 [[lean_lib]]
-name = "Effect4TestCounterexamples"
-globs = ["Effect4Test.Counterexamples.+"]
+name = "TestData"
+globs = ["Test.Data.+"]
+moreLeanArgs = ["-M6144"]
 
 [[lean_lib]]
-name = "Effect4TestData"
-globs = ["Effect4Test.Data.+"]
+name = "TestStore"
+globs = ["Test.Store.+"]
+moreLeanArgs = ["-M6144"]
 
 [[lean_lib]]
-name = "Effect4TestEnvironment"
-globs = ["Effect4Test.Environment.+"]
+name = "TestEvidence"
+globs = ["Test.Evidence.+"]
+moreLeanArgs = ["-M6144"]
 
 [[lean_lib]]
-name = "Effect4TestSyntax"
-globs = ["Effect4Test.Syntax.+"]
+name = "TestAudit"
+globs = ["Test.Audit.+"]
+moreLeanArgs = ["-M6144"]
 
 [[lean_lib]]
-name = "Effect4TestSurface"
-globs = ["Effect4Test.Surface.+"]
+name = "TestCounterexamples"
+globs = ["Test.Counterexamples.+"]
+moreLeanArgs = ["-M6144"]
 
-# The generic effect algebra, morphisms, transport, families, and the generic
-# first-order Flow, and the shared trace alphabet. Exact commit of tag v0.8.0 of
-# pure-algebra/lean4-effects (v0.8.0: the consumer boundary; Flow v3 carrier).
+# The generic effect algebra, morphisms, transport, families, and the shared trace
+# alphabet. Exact commit of tag v0.8.0 of pure-algebra/lean4-effects.
 [[require]]
 name = "effects"
 git = "https://github.com/pure-algebra/lean4-effects"
 rev = "a4ee7a14248ee5976039b73039319efa87834986"
 
 # TypeScript as a target: syntax, renderer, identifier profile, host pins.
-# Exact commit of v0.5.0 of pure-algebra/lean4-typescript, branch `v0.5.0-generator-cond`
-# (`Expr.generator`, `Expr.cond`, `Expr.arrowBlock`, the formers the Eff printer needs).
+# Exact commit of v0.5.0 of pure-algebra/lean4-typescript (`Expr.generator`, `Expr.cond`,
+# `Expr.arrowBlock`, the formers the Eff printer needs).
 [[require]]
 name = "typescript"
 git = "https://github.com/pure-algebra/lean4-typescript"
 rev = "71bad1252ee8a1b243ed283320ededcb7d0a93c4"
 
-# Proved SHA-256 for content addresses (Effect4/Store/Digest.lean): exact commit of
+# Proved SHA-256 for content addresses (src/Effect4/Store/Digest.lean): exact commit of
 # pure-algebra/lean4-hash main. Its SHA-256 family is audited at zero declarations
 # reaching Classical.choice, so a digest stays inside this tree's axiom ceiling.
 [[require]]
 name = "hash"
 git = "https://github.com/pure-algebra/lean4-hash"
 rev = "c906b15dc3e94ebac0c10056270fbb345a1d2b6e"
-
-[[lean_lib]]
-name = "Effect4TestStore"
-globs = ["Effect4Test.Store.+"]
-
-[[lean_lib]]
-name = "Effect4TestArch"
-globs = ["Effect4Test.Arch.+"]
-
-[[lean_lib]]
-name = "Effect4TestDeep"
-globs = ["Effect4Test.Deep.+"]
-
-[[lean_lib]]
-name = "Effect4TestApi"
-globs = ["Effect4Test.Api.+"]

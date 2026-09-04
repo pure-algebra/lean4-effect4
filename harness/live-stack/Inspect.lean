@@ -1,7 +1,7 @@
 import Lean
 import Lean.Compiler.IR.CompilerM
 import Lean.Util.CollectAxioms
-import Effect4.Runtime.LiveStack
+import Effect4.Machine.LiveStack
 
 /-!
 Compiled inspection for the live-stack packet. The graph is over proof-erased
@@ -259,8 +259,8 @@ private def requiredImports (source : String) (imports : Array Import)
 private def checkRootImports : IO Json := do
   let roots : Array (String × Array Name) := #[
     ("Effect4.lean", #[`Effect4.Runtime.LiveStack]),
-    ("Effect4Test.lean", #[`Effect4Test.Runtime.LiveStackContract,
-      `Effect4Test.Runtime.LiveStackAxiomReport, `Effect4Test.Counterexamples.Runtime.LiveStack])]
+    ("Test.lean", #[`Test.Runtime.LiveStackContract,
+      `Test.Runtime.LiveStackAxiomReport, `Test.Counterexamples.Runtime.LiveStack])]
   let mut receipts : Array Json := #[]
   for (source, required) in roots do
     let input ← IO.FS.readFile source

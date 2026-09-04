@@ -1,0 +1,11 @@
+import Effect4.Machine.ScopeRestoration
+
+#print axioms Effect4.ScopeRestoration.resumeClosedScope_unfinished
+#print axioms Effect4.ScopeRestoration.resumeClosedScope_complete
+#print axioms Effect4.ScopeRestoration.resumeClosedScope_success_pending
+#print axioms Effect4.ScopeRestoration.resumeClosedScope_failure_pending
+#print axioms Effect4.ScopeRestoration.resumeClosedScope_success_no_pending
+#print axioms Effect4.ScopeRestoration.resumeClosedScope_already_masked
+#print axioms Effect4.ScopeRestoration.resumeClosedScope_masked_continuation
+#print axioms Effect4.ScopeRestoration.resumeClosedScope_failure_cleanup
+#print axioms Effect4.ScopeRestoration.resumeClosedScope_success_cleanup_failure

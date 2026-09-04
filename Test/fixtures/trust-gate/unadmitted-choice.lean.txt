@@ -1,0 +1,20 @@
+import Effect4
+
+/-!
+A module the audited tree contains and no admission names. Compiled on its own
+and imported by the probe root, so the gate reads it as an ordinary member of
+the tree rather than as part of the file being elaborated — a constant declared
+in the root itself has no module and is never audited.
+
+The module is `Test.PlantedChoice` and the namespace is
+`Test.Audit.PlantedChoice`. The mismatch is the point: `Test.Audit`
+is where the admitted audit-implementation modules live, and declaring into
+that namespace from outside must buy nothing. Admission follows the module.
+-/
+
+namespace Test.Audit.PlantedChoice
+
+noncomputable def plantedUnadmittedChoice : Nat :=
+  Classical.choice (inferInstance : Nonempty Nat)
+
+end Test.Audit.PlantedChoice

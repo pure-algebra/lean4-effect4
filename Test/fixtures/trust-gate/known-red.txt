@@ -1,0 +1,69 @@
+# Modules that are INTENTIONALLY red, one Lake target per line.
+#
+# The breaker/builder discipline in AGENTS.md has a phase in which a frozen
+# red battery exists and its implementation does not. During that phase the
+# default build cannot be green, and a trust gate whose control step demands a
+# green build cannot run at all.
+#
+# This file makes that phase explicit rather than letting the gate abort. It is
+# self-checking in both directions: an undeclared failure fails the gate, and a
+# declared module that is actually GREEN also fails the gate, so an entry
+# cannot outlive the red phase it describes.
+#
+# Removing the last entry restores the original all-green control.
+#
+# History: the payload battery Test.Schema.PayloadContract was declared
+# here during its red phase and removed when the builder turned it green; the
+# gate itself caught the stale entry and refused to run until it was cleared.
+#
+# History: Test.Machine.Environment.ContextKeyContract, the frozen breaker
+# battery for environment-slice node L0, fence F-KEY (src/Effect4/Machine/Key.lean),
+# packet Test/contracts/environment-context-key.contract.md, was declared here
+# during its red phase and removed when the builder turned it green.
+
+# History: Test.Protocol.ByteParserContract (the W0 byte parser breaker) and
+# Test.Concurrency.RaceRepresentativeContract (the binary race closure packet)
+# were declared here from their birth; both lanes were retired on 2026-09-04 with
+# their batteries deleted, so the list is empty and the all-green control holds.
+
+# The Surface library's frozen breaker packet (wave 1b of
+# docs/research/2026-09-04-surface-library-plan.md, plus the Handler packet that
+# plan §13.7 ruling 7 requires before wave 2d builds). The breaker froze these
+# from the plan alone, without reading src/Effect4/Surface/, which is the whole point
+# of the role; they are red until §13.7 ruling 5's repair lands, which restates
+# them clause for clause against the vocabulary Refusal.lean actually carries. That
+# repair, the Test/All.lean import lines and the TestSurface target are
+# the coordinator's wave 4. Each entry below was elaborated with
+# `lake env lean` on 2026-09-04 and observed to fail.
+Test.Surface.Fixtures
+Test.Surface.FactsContract
+Test.Surface.KindContract
+Test.Surface.EntityContract
+Test.Surface.JsonSchemaContract
+Test.Surface.ApiContract
+Test.Surface.AgentContract
+Test.Surface.DeployContract
+Test.Surface.SiteContract
+Test.Surface.IngestContract
+Test.Surface.EmitContract
+Test.Surface.DeriveContract
+Test.Surface.SurfaceAxiomReport
+Test.Counterexamples.Surface.Facts
+Test.Counterexamples.Surface.Kind
+Test.Counterexamples.Surface.Entity
+Test.Counterexamples.Surface.JsonSchema
+Test.Counterexamples.Surface.Api
+Test.Counterexamples.Surface.Agent
+Test.Counterexamples.Surface.Deploy
+Test.Counterexamples.Surface.Site
+Test.Counterexamples.Surface.Ingest
+Test.Counterexamples.Surface.Emit
+Test.Counterexamples.Surface.Derive
+
+# The Handler packet that plan §13.7 ruling 7 requires before wave 2d builds.
+# Frozen from §13.2 alone; red until src/Effect4/Surface/Handler.lean exists, whose
+# module path is itself a coordinator ruling (§13.2 puts Endpoint.effTy over
+# Effect4.Program.Typing, and §2 forbids Effect4.Surface.* importing it).
+# Both elaborated with `lake env lean` on 2026-09-04 and observed to fail.
+Test.Surface.HandlerFitsContract
+Test.Counterexamples.Surface.HandlerFits
