@@ -29,7 +29,7 @@
  (name effect4_avatar)
  (wrapped false)
  (modules
-  deep_fibers deep_stores deep_layer avatar_trace deep_census deep_clauses deep_witnesses
+  deep_fibers deep_stores deep_context deep_layer deep_forkflow avatar_trace deep_census deep_clauses deep_witnesses
   fibers_fixture store_fixtures extra_fixture corpus_dsl corpus_data corpus_run)
  (flags (:standard -w -a)))
 

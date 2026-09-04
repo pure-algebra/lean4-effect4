@@ -26,7 +26,7 @@ decide	2	false
 answer	fork	2
 op	yield	[]
 answer	yield	[]
-answer	awaitAll	[22, [4, []]]
+answer	awaitAll	[4, [22, []]]
 op	started	[]
 answer	started	[10, [1, [0, []]]]
 done	{"success":[10, [1, [0, []]]]}

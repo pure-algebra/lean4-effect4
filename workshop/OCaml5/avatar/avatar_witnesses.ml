@@ -25,6 +25,8 @@ let clauses_of_rows (rows : Deep_census.row list) : (string * clause option) lis
       (n, find short))
     names
 
+let all_park_violations : string list ref = ref []
+
 let verdict_string = function
   | Holds -> "HOLDS"
   | Fails msg -> "FAILS: " ^ msg
@@ -88,6 +90,7 @@ let () =
             w.defs
         in
         on_event := (fun _ _ -> ());
+        all_park_violations := !all_park_violations @ !park_violations;
         let lookup n =
           match List.assoc_opt n snaps with
           | Some (Ok s) -> s
@@ -122,4 +125,9 @@ let () =
            else String.concat "; " (List.map (fun (n, v) -> n ^ " FAILS at " ^ v) swept_bad)))
     Deep_witnesses.witnesses;
   Printf.printf "witnesses\t%d\tholds\t%d\tfails\t%d\tnot-portable\t%d\n" Deep_witnesses.count !w_ok !w_bad !w_refused;
-  Printf.printf "run-clauses\tholds\t%d\tfails\t%d\n" !run_holds !run_fails
+  Printf.printf "run-clauses\tholds\t%d\tfails\t%d\n" !run_holds !run_fails;
+  (* PARK (seat F2): the guard/one-shot probe over every run above -- at most one guard
+     fires per park and it is always the token. `Deep_clauses.setup` resets the probe per
+     machine; the violations of every witness run are accumulated here. *)
+  Printf.printf "park-guard\tviolations\t%d%s\n" (List.length !all_park_violations)
+    (String.concat "" (List.map (fun v -> "\t" ^ v) !all_park_violations))

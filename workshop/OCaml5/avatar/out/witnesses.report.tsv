@@ -28,95 +28,115 @@ clause	budget_defaults	Clauses.lean:245	scheduler.max-ops-default	HOLDS
 clause	evaluatePrim_yieldNowWith	Clauses.lean:256	scheduler.yield-now-resume-guard	HOLDS
 clause	drive_loop_parked	Clauses.lean:274	rule.yield-is-overloaded	NOT PORTABLE: `Cmd.loop` has no OCaml existence: `continue k` runs the fiber to its next `perform` (DIVERGENCE 2)
 clause	drive_loop_continues	Clauses.lean:288	rule.yield-is-overloaded	NOT PORTABLE: `Cmd.loop` has no OCaml existence (DIVERGENCE 2)
-clause	drive_resume_wrong_token	Clauses.lean:302	scheduler.yield-now-resume-guard	HOLDS
-clause	drive_resume_guard	Clauses.lean:312	scheduler.yield-now-resume-guard	HOLDS
-clause	drive_resume_not_parked	Clauses.lean:326	scheduler.yield-now-resume-guard	HOLDS
-clause	interruptRecord_exited	Clauses.lean:336	interrupt.unsafe-entry	HOLDS
-clause	interruptRecord_records	Clauses.lean:354	rule.record-and-apply-separate	HOLDS
-clause	interruptRecord_accumulates	Clauses.lean:365	interrupt.accumulate	HOLDS
-clause	interruptRecord_running_defers	Clauses.lean:378	rule.record-and-apply-separate	HOLDS
-clause	interruptRecord_idle_applies	Clauses.lean:390	rule.record-and-apply-separate	HOLDS
-clause	interruptRecord_masked	Clauses.lean:404	rule.record-and-apply-separate	HOLDS
-clause	interruptRecord_parked_applies	Clauses.lean:419	checkpoint.post-yield-cancel	HOLDS
-clause	spawn_eq	Clauses.lean:447	fork.unsafe	HOLDS
-clause	spawnChild_fields	Clauses.lean:458	fork.unsafe	HOLDS
-clause	spawn_daemon_untracked	Clauses.lean:474	rule.only-fork-child-tracks	HOLDS
-clause	start_eq	Clauses.lean:483	rule.start-is-asymmetric	HOLDS
-clause	runFork_eq	Clauses.lean:494	entry.run-fork-with	HOLDS
-clause	evaluatePrim_join_done	Clauses.lean:508	fork.join	HOLDS
-clause	evaluatePrim_join_live	Clauses.lean:522	fork.await	HOLDS
-clause	evaluatePrim_join_unknown	Clauses.lean:539	fork.join	HOLDS
-clause	withFiber_snapshotChildren	Clauses.lean:552	fork.await-all-children	HOLDS
-clause	withFiber_awaitNewChildren	Clauses.lean:560	fork.await-all-children	HOLDS
-clause	withFiber_runIn	Clauses.lean:572	fork.fiber-run-in	HOLDS
-clause	linkScope_closed	Clauses.lean:585	fork.fiber-run-in	HOLDS
-clause	linkScope_unknown	Clauses.lean:598	fork.fiber-run-in	HOLDS
-clause	runCallback_eq	Clauses.lean:609	entry.run-callback-with	HOLDS
-clause	fireObserver_callback	Clauses.lean:622	entry.run-callback-with	HOLDS
-clause	stepDecision_abort	Clauses.lean:630	entry.abort-signal	HOLDS
-clause	runSyncExit_exited	Clauses.lean:644	entry.run-sync-exit-with	HOLDS
-clause	runSyncExit_survives	Clauses.lean:654	entry.async-fiber-error	HOLDS
-clause	promiseOutcome_eq	Clauses.lean:663	entry.run-promise-exit-with	HOLDS
-clause	promiseOutcome_failure	Clauses.lean:669	entry.run-promise-with	HOLDS
-clause	fiber?_emit	Clauses.lean:684		HOLDS
-clause	race?_emit	Clauses.lean:687		HOLDS
-clause	state_emit	Clauses.lean:690		HOLDS
-clause	stuck_emit	Clauses.lean:693		HOLDS
-clause	interruptEach_nil	Clauses.lean:715	fork.interrupt-all	HOLDS
-clause	interruptEach_cons	Clauses.lean:722	fork.interrupt-all	HOLDS
-clause	interruptEach_known	Clauses.lean:735	fork.interrupt-all	HOLDS
-clause	exitFiber_eq	Clauses.lean:785	rule.children-interrupted-after-exit	HOLDS
-clause	exitFiber_no_middleware	Clauses.lean:794	fork.child	HOLDS
-clause	exitFiber_no_children	Clauses.lean:803	fork.detach	HOLDS
-clause	exitFiber_finalizing	Clauses.lean:813		HOLDS
-clause	exitFiber_children	Clauses.lean:821	rule.children-interrupted-after-exit	HOLDS
-clause	exitStore_fiber	Clauses.lean:830	fork.child	HOLDS
-clause	exitStore_fields	Clauses.lean:835	fork.child	HOLDS
-clause	exitStore_fires	Clauses.lean:850	fork.child	HOLDS
-clause	exitInterruptChildren_eq	Clauses.lean:859	rule.children-interrupted-after-exit	HOLDS
-clause	exitInterruptChildren_interrupts	Clauses.lean:870	fork.detach	HOLDS
-clause	countdownPark_finalizing	Clauses.lean:876		HOLDS
-clause	exitInterruptChildren_finalizing	Clauses.lean:886	rule.children-interrupted-after-exit	HOLDS
-clause	resumePrim_continueWith	Clauses.lean:894	rule.children-interrupted-after-exit	HOLDS
-clause	stepDecision_installMiddleware	Clauses.lean:901	fork.child	HOLDS
-clause	fireObserver_resumeAwait	Clauses.lean:908	fork.child	HOLDS
-clause	fireObserver_untrackChild	Clauses.lean:917	rule.only-fork-child-tracks	HOLDS
-clause	fireObserver_dropScopeFinalizer	Clauses.lean:926	fork.in	HOLDS
-clause	fireObserver_countdown_last	Clauses.lean:937	fork.interrupt-all	HOLDS
-clause	fireObserver_countdown_more	Clauses.lean:954	fork.interrupt-all	HOLDS
-clause	fireObserver_raceCallback_settles	Clauses.lean:995	fork.race-all	HOLDS
-clause	fireObserver_raceCallback_late	Clauses.lean:1012	fork.race-all	HOLDS
-clause	fireObserver_raceCallback_pending	Clauses.lean:1024	fork.race-all	HOLDS
-clause	drive_launch_skipped	Clauses.lean:1036	fork.race-all	HOLDS
-clause	drive_launch_runs	Clauses.lean:1051	fork.race-all	HOLDS
-clause	withFiber_fork	Clauses.lean:1066	fork.child	HOLDS
-clause	withFiber_forkIn	Clauses.lean:1079	fork.in	HOLDS
-clause	withFiber_forkScoped_ambient	Clauses.lean:1097	fork.scoped	NOT PORTABLE: `χ = unit`: the avatar's context carries no ambient `Scope` service (A0 §18), so the `_ambient` arm has no instance
-clause	withFiber_forkScoped_none	Clauses.lean:1118	fork.scoped	HOLDS
-clause	linkScope_open	Clauses.lean:1130	fork.in	HOLDS
-clause	withFiber_closeScope	Clauses.lean:1145	scope.close-sequential	HOLDS
-clause	withFiber_closeScope_unknown	Clauses.lean:1155	scope.close-sequential	HOLDS
-clause	withFiber_interrupt	Clauses.lean:1165	fork.interrupt	HOLDS
-clause	withFiber_interruptScoped_self	Clauses.lean:1173	fork.interrupt	HOLDS
-clause	withFiber_interruptScoped_other	Clauses.lean:1182	fork.interrupt	HOLDS
-clause	interruptThenJoin_eq	Clauses.lean:1192	fork.interrupt	HOLDS
-clause	interruptThenJoin_unknown	Clauses.lean:1206	fork.interrupt	HOLDS
-clause	withFiber_interruptAll	Clauses.lean:1216	fork.interrupt-all	HOLDS
-clause	raceEntrant_options	Clauses.lean:1241	rule.only-fork-child-tracks	HOLDS
-clause	withFiber_raceAll	Clauses.lean:1253	fork.race-all	HOLDS
-clause	evaluatePrim_async_immediate	Clauses.lean:1271	op.Async	HOLDS
-clause	evaluatePrim_async_parks	Clauses.lean:1289	op.Async	HOLDS
-clauses	107	holds	104	fails	0	not-portable	3
+clause	evaluatePrim_sync_answers	Clauses.lean:303	op.Sync	HOLDS
+clause	evaluatePrim_sync_pure	Clauses.lean:317	op.Sync	NOT PORTABLE: every `SyncOp` of the avatar's alphabet is a store step (`sync_op_step` is total on `sync_op`, `Stores.lean:1160`), so the pure `syncValue` fallback has no instance; the `deliver` it shares is checked by `settle_answered`
+clause	settle_answered	Clauses.lean:329	op.Sync	HOLDS
+clause	settle_finished	Clauses.lean:337	rule.children-interrupted-after-exit	HOLDS
+clause	drive_loop_answered	Clauses.lean:345	op.Sync	NOT PORTABLE: `Cmd.loop` and `Cmd.deliver` have no OCaml existence (DIVERGENCE 2): the answered iteration is the store arm's `drive [CdrainDue]; deliver`, checked by `evaluatePrim_sync_answers` and `settle_answered`
+clause	drive_deliver	Clauses.lean:360	op.Sync	HOLDS
+clause	drive_finish	Clauses.lean:372	fork.child	HOLDS
+clause	drive_resume_wrong_token	Clauses.lean:384	scheduler.yield-now-resume-guard	HOLDS
+clause	drive_resume_guard	Clauses.lean:394	scheduler.yield-now-resume-guard	HOLDS
+clause	drive_resume_not_parked	Clauses.lean:408	scheduler.yield-now-resume-guard	HOLDS
+clause	interruptRecord_exited	Clauses.lean:418	interrupt.unsafe-entry	HOLDS
+clause	interruptRecord_records	Clauses.lean:436	rule.record-and-apply-separate	HOLDS
+clause	interruptRecord_accumulates	Clauses.lean:447	interrupt.accumulate	HOLDS
+clause	interruptRecord_running_defers	Clauses.lean:460	rule.record-and-apply-separate	HOLDS
+clause	interruptRecord_idle_applies	Clauses.lean:472	rule.record-and-apply-separate	HOLDS
+clause	interruptRecord_masked	Clauses.lean:486	rule.record-and-apply-separate	HOLDS
+clause	interruptRecord_parked_applies	Clauses.lean:501	checkpoint.post-yield-cancel	HOLDS
+clause	spawn_eq	Clauses.lean:529	fork.unsafe	HOLDS
+clause	spawnChild_fields	Clauses.lean:540	fork.unsafe	HOLDS
+clause	spawn_daemon_untracked	Clauses.lean:556	rule.only-fork-child-tracks	HOLDS
+clause	start_eq	Clauses.lean:565	rule.start-is-asymmetric	HOLDS
+clause	runFork_eq	Clauses.lean:576	entry.run-fork-with	HOLDS
+clause	evaluatePrim_join_done	Clauses.lean:590	fork.join	HOLDS
+clause	evaluatePrim_join_live	Clauses.lean:606	fork.await	HOLDS
+clause	evaluatePrim_join_unknown	Clauses.lean:625	fork.join	HOLDS
+clause	withFiber_snapshotChildren	Clauses.lean:638	fork.await-all-children	HOLDS
+clause	withFiber_awaitNewChildren	Clauses.lean:646	fork.await-all-children	HOLDS
+clause	withFiber_runIn	Clauses.lean:658	fork.fiber-run-in	HOLDS
+clause	linkScope_closed	Clauses.lean:671	fork.fiber-run-in	HOLDS
+clause	linkScope_unknown	Clauses.lean:684	fork.fiber-run-in	HOLDS
+clause	runCallback_eq	Clauses.lean:695	entry.run-callback-with	HOLDS
+clause	fireObserver_callback	Clauses.lean:708	entry.run-callback-with	HOLDS
+clause	stepDecision_abort	Clauses.lean:716	entry.abort-signal	HOLDS
+clause	runSyncExit_exited	Clauses.lean:730	entry.run-sync-exit-with	HOLDS
+clause	runSyncExit_survives	Clauses.lean:740	entry.async-fiber-error	HOLDS
+clause	promiseOutcome_eq	Clauses.lean:749	entry.run-promise-exit-with	HOLDS
+clause	promiseOutcome_failure	Clauses.lean:755	entry.run-promise-with	HOLDS
+clause	fiber?_emit	Clauses.lean:770		HOLDS
+clause	race?_emit	Clauses.lean:773		HOLDS
+clause	state_emit	Clauses.lean:776		HOLDS
+clause	stuck_emit	Clauses.lean:779		HOLDS
+clause	interruptEach_nil	Clauses.lean:789	fork.interrupt-all	HOLDS
+clause	interruptEach_cons	Clauses.lean:797	fork.interrupt-all	HOLDS
+clause	interruptEach_known	Clauses.lean:812	fork.interrupt-all	HOLDS
+clause	exitFiber_eq	Clauses.lean:863	rule.children-interrupted-after-exit	HOLDS
+clause	exitFiber_no_middleware	Clauses.lean:872	fork.child	HOLDS
+clause	exitFiber_no_children	Clauses.lean:881	fork.detach	HOLDS
+clause	exitFiber_finalizing	Clauses.lean:891		HOLDS
+clause	exitFiber_children	Clauses.lean:899	rule.children-interrupted-after-exit	HOLDS
+clause	exitStore_fiber	Clauses.lean:908	fork.child	HOLDS
+clause	exitStore_fields	Clauses.lean:913	fork.child	HOLDS
+clause	exitStore_fires	Clauses.lean:929	fork.child	HOLDS
+clause	exitInterruptChildren_eq	Clauses.lean:938	rule.children-interrupted-after-exit	HOLDS
+clause	exitInterruptChildren_interrupts	Clauses.lean:949	fork.detach	HOLDS
+clause	countdownPark_finalizing	Clauses.lean:955		HOLDS
+clause	exitInterruptChildren_finalizing	Clauses.lean:966	rule.children-interrupted-after-exit	HOLDS
+clause	resumePrim_continueWith	Clauses.lean:974	rule.children-interrupted-after-exit	HOLDS
+clause	stepDecision_installMiddleware	Clauses.lean:981	fork.child	HOLDS
+clause	fireObserver_resumeAwait	Clauses.lean:988	fork.child	HOLDS
+clause	fireObserver_untrackChild	Clauses.lean:997	rule.only-fork-child-tracks	HOLDS
+clause	fireObserver_dropScopeFinalizer	Clauses.lean:1006	fork.in	HOLDS
+clause	countdownWalk_nil	Clauses.lean:1016	fork.await-all-children	HOLDS
+clause	countdownWalk_exited	Clauses.lean:1021	fork.await-all-children	HOLDS
+clause	countdownWalk_live	Clauses.lean:1029	fork.await-all-children	HOLDS
+clause	countdownPark_none_live	Clauses.lean:1037	fork.await-all-children	HOLDS
+clause	countdownPark_parks	Clauses.lean:1050	fork.await-all-children	HOLDS
+clause	fireObserver_countdown_done	Clauses.lean:1069	fork.await-all-children	HOLDS
+clause	fireObserver_countdown_next	Clauses.lean:1088	fork.await-all-children	HOLDS
+clause	settleRace_eq	Clauses.lean:1120	fork.race-all	HOLDS
+clause	fireObserver_raceCallback_settles	Clauses.lean:1129	fork.race-all	HOLDS
+clause	fireObserver_raceCallback_late	Clauses.lean:1146	fork.race-all	HOLDS
+clause	fireObserver_raceCallback_pending	Clauses.lean:1158	fork.race-all	HOLDS
+clause	drive_launch_done	Clauses.lean:1171	fork.race-all	HOLDS
+clause	drive_launch_exhausted	Clauses.lean:1181	fork.race-all	HOLDS
+clause	drive_launch_runs	Clauses.lean:1191	fork.race-all	HOLDS
+clause	drive_link	Clauses.lean:1210	fork.in	HOLDS
+clause	withFiber_fork	Clauses.lean:1222	fork.child	HOLDS
+clause	withFiber_forkIn	Clauses.lean:1237	fork.in	HOLDS
+clause	withFiber_forkScoped_ambient	Clauses.lean:1251	fork.scoped	NOT PORTABLE: `χ = unit`: the avatar's context carries no ambient `Scope` service (A0 §18), so the `_ambient` arm has no instance
+clause	withFiber_forkScoped_none	Clauses.lean:1269	fork.scoped	HOLDS
+clause	linkScope_open	Clauses.lean:1281	fork.in	HOLDS
+clause	linkScope_open_exited	Clauses.lean:1296	fork.fiber-run-in	HOLDS
+clause	withFiber_closeScope	Clauses.lean:1308	scope.close-sequential	HOLDS
+clause	withFiber_closeScope_unknown	Clauses.lean:1318	scope.close-sequential	HOLDS
+clause	withFiber_interrupt	Clauses.lean:1328	fork.interrupt	HOLDS
+clause	withFiber_interruptScoped_self	Clauses.lean:1336	fork.interrupt	HOLDS
+clause	withFiber_interruptScoped_other	Clauses.lean:1345	fork.interrupt	HOLDS
+clause	interruptThenJoin_eq	Clauses.lean:1355	fork.interrupt	HOLDS
+clause	interruptThenJoin_unknown	Clauses.lean:1369	fork.interrupt	HOLDS
+clause	withFiber_interruptAll	Clauses.lean:1379	fork.interrupt-all	HOLDS
+clause	launchEntrant_eq	Clauses.lean:1395	rule.only-fork-child-tracks	HOLDS
+clause	withFiber_raceAll	Clauses.lean:1408	fork.race-all	HOLDS
+clause	withFiber_dropObservers	Clauses.lean:1428	fork.await	HOLDS
+clause	withFiber_cancelRace	Clauses.lean:1443	fork.race-all	HOLDS
+clause	withFiber_cancelRace_unknown	Clauses.lean:1458	fork.race-all	HOLDS
+clause	evaluatePrim_async_immediate	Clauses.lean:1468	op.Async	HOLDS
+clause	evaluatePrim_async_parks	Clauses.lean:1486	op.Async	HOLDS
+clauses	126	holds	121	fails	0	not-portable	5
 
 == deep_witnesses: one entry per `Effect4/Deep/Witnesses.lean` theorem, run through the avatar
-witness	w1_deferred_join_parent	Witnesses.lean:267	rows	
+witness	w1_deferred_join_parent	Witnesses.lean:287	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w1_deferred_join_child	Witnesses.lean:271	rows	fork.child
+witness	w1_deferred_join_child	Witnesses.lean:291	rows	fork.child
   statement	HOLDS
   clause	Effect4.Deep.Witnesses.w1_deferred_join_child	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w1_deferred_start_is_a_task	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w5_middleware_interrupts_children	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.drive_finish	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.exitFiber_eq	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.exitFiber_no_middleware	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.exitStore_fields	HOLDS on this run
@@ -125,11 +145,12 @@ witness	w1_deferred_join_child	Witnesses.lean:271	rows	fork.child
   clause	Effect4.Deep.stepDecision_installMiddleware	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_fork	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
-witness	w1_deferred_start_is_a_task	Witnesses.lean:277	rows	fork.child
+witness	w1_deferred_start_is_a_task	Witnesses.lean:297	rows	fork.child
   statement	HOLDS
   clause	Effect4.Deep.Witnesses.w1_deferred_join_child	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w1_deferred_start_is_a_task	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w5_middleware_interrupts_children	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.drive_finish	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.exitFiber_eq	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.exitFiber_no_middleware	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.exitStore_fields	HOLDS on this run
@@ -138,28 +159,16 @@ witness	w1_deferred_start_is_a_task	Witnesses.lean:277	rows	fork.child
   clause	Effect4.Deep.stepDecision_installMiddleware	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_fork	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
-witness	w1_immediate_join	Witnesses.lean:287	rows	
+witness	w1_immediate_join	Witnesses.lean:307	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w1_await_is_a_value	Witnesses.lean:293	rows	
+witness	w1_await_is_a_value	Witnesses.lean:313	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w1_join_is_an_effect	Witnesses.lean:299	rows	
+witness	w1_join_is_an_effect	Witnesses.lean:319	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w2_delivered_at_unmask	Witnesses.lean:325	rows	fork.interrupt
-  statement	HOLDS
-  clause	Effect4.Deep.Witnesses.w2_delivered_at_unmask	not transferred (not a `Clauses.lean` theorem)
-  clause	Effect4.Deep.Witnesses.w2_masked_interrupt_does_not_apply	not transferred (not a `Clauses.lean` theorem)
-  clause	Effect4.Deep.Witnesses.w2_recorded_once	not transferred (not a `Clauses.lean` theorem)
-  clause	Effect4.Deep.Witnesses.w6_self_interruptor_skipped	not transferred (not a `Clauses.lean` theorem)
-  clause	Effect4.Deep.interruptThenJoin_eq	HOLDS (pure, evaluated once above)
-  clause	Effect4.Deep.interruptThenJoin_unknown	HOLDS (pure, evaluated once above)
-  clause	Effect4.Deep.withFiber_interrupt	HOLDS (pure, evaluated once above)
-  clause	Effect4.Deep.withFiber_interruptScoped_other	HOLDS (pure, evaluated once above)
-  clause	Effect4.Deep.withFiber_interruptScoped_self	HOLDS (pure, evaluated once above)
-  sweep	20 step clauses over every event	all hold
-witness	w2_recorded_once	Witnesses.lean:329	rows	fork.interrupt
+witness	w2_delivered_at_unmask	Witnesses.lean:345	rows	fork.interrupt
   statement	HOLDS
   clause	Effect4.Deep.Witnesses.w2_delivered_at_unmask	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w2_masked_interrupt_does_not_apply	not transferred (not a `Clauses.lean` theorem)
@@ -171,10 +180,7 @@ witness	w2_recorded_once	Witnesses.lean:329	rows	fork.interrupt
   clause	Effect4.Deep.withFiber_interruptScoped_other	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_interruptScoped_self	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
-witness	w2_finalizer_runs_once	Witnesses.lean:332	rows	
-  statement	HOLDS
-  sweep	20 step clauses over every event	all hold
-witness	w2_masked_interrupt_does_not_apply	Witnesses.lean:336	rows	fork.interrupt
+witness	w2_recorded_once	Witnesses.lean:349	rows	fork.interrupt
   statement	HOLDS
   clause	Effect4.Deep.Witnesses.w2_delivered_at_unmask	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w2_masked_interrupt_does_not_apply	not transferred (not a `Clauses.lean` theorem)
@@ -186,103 +192,149 @@ witness	w2_masked_interrupt_does_not_apply	Witnesses.lean:336	rows	fork.interrup
   clause	Effect4.Deep.withFiber_interruptScoped_other	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_interruptScoped_self	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
-witness	w3_empty_is_a_frontier	Witnesses.lean:363	rows	fork.race-all
+witness	w2_finalizer_runs_once	Witnesses.lean:352	rows	
+  statement	HOLDS
+  sweep	20 step clauses over every event	all hold
+witness	w2_masked_interrupt_does_not_apply	Witnesses.lean:356	rows	fork.interrupt
+  statement	HOLDS
+  clause	Effect4.Deep.Witnesses.w2_delivered_at_unmask	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w2_masked_interrupt_does_not_apply	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w2_recorded_once	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w6_self_interruptor_skipped	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.interruptThenJoin_eq	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.interruptThenJoin_unknown	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_interrupt	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_interruptScoped_other	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_interruptScoped_self	HOLDS (pure, evaluated once above)
+  sweep	20 step clauses over every event	all hold
+witness	w3_empty_is_a_frontier	Witnesses.lean:383	rows	fork.race-all
   statement	HOLDS
   clause	Effect4.Deep.Witnesses.w3_all_failures_retain_order	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w3_empty_is_a_frontier	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w3_empty_until_interrupted	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w3_failure_allows_next_launch	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_host_interrupt_cancels_entrants	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w3_immediate_success_stops_launch	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_settle_interrupts_the_parked_loser	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.drive_launch_done	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.drive_launch_exhausted	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.drive_launch_runs	HOLDS on this run
-  clause	Effect4.Deep.drive_launch_skipped	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.fireObserver_raceCallback_late	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.fireObserver_raceCallback_pending	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.fireObserver_raceCallback_settles	HOLDS on this run
-  clause	Effect4.Deep.raceEntrant_options	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.launchEntrant_eq	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.resumePrim_continueWith	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.settleRace_eq	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_cancelRace	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_cancelRace_unknown	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_raceAll	HOLDS on this run
   sweep	20 step clauses over every event	all hold
-witness	w3_empty_until_interrupted	Witnesses.lean:369	rows	fork.race-all
+witness	w3_empty_until_interrupted	Witnesses.lean:389	rows	fork.race-all
   statement	HOLDS
   clause	Effect4.Deep.Witnesses.w3_all_failures_retain_order	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w3_empty_is_a_frontier	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w3_empty_until_interrupted	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w3_failure_allows_next_launch	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_host_interrupt_cancels_entrants	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w3_immediate_success_stops_launch	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_settle_interrupts_the_parked_loser	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.drive_launch_done	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.drive_launch_exhausted	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.drive_launch_runs	HOLDS on this run
-  clause	Effect4.Deep.drive_launch_skipped	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.fireObserver_raceCallback_late	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.fireObserver_raceCallback_pending	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.fireObserver_raceCallback_settles	HOLDS on this run
-  clause	Effect4.Deep.raceEntrant_options	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.launchEntrant_eq	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.resumePrim_continueWith	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.settleRace_eq	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_cancelRace	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_cancelRace_unknown	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_raceAll	HOLDS on this run
   sweep	20 step clauses over every event	all hold
-witness	w3_immediate_success_stops_launch	Witnesses.lean:376	rows	fork.race-all
+witness	w3_immediate_success_stops_launch	Witnesses.lean:397	rows	fork.race-all
   statement	HOLDS
   clause	Effect4.Deep.Witnesses.w3_all_failures_retain_order	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w3_empty_is_a_frontier	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w3_empty_until_interrupted	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w3_failure_allows_next_launch	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_host_interrupt_cancels_entrants	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w3_immediate_success_stops_launch	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_settle_interrupts_the_parked_loser	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.drive_launch_done	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.drive_launch_exhausted	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.drive_launch_runs	HOLDS on this run
-  clause	Effect4.Deep.drive_launch_skipped	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.fireObserver_raceCallback_late	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.fireObserver_raceCallback_pending	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.fireObserver_raceCallback_settles	HOLDS on this run
-  clause	Effect4.Deep.raceEntrant_options	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.launchEntrant_eq	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.resumePrim_continueWith	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.settleRace_eq	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_cancelRace	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_cancelRace_unknown	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_raceAll	HOLDS on this run
   sweep	20 step clauses over every event	all hold
-witness	w3_failure_allows_next_launch	Witnesses.lean:386	rows	fork.race-all
+witness	w3_failure_allows_next_launch	Witnesses.lean:408	rows	fork.race-all
   statement	HOLDS
   clause	Effect4.Deep.Witnesses.w3_all_failures_retain_order	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w3_empty_is_a_frontier	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w3_empty_until_interrupted	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w3_failure_allows_next_launch	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_host_interrupt_cancels_entrants	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w3_immediate_success_stops_launch	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_settle_interrupts_the_parked_loser	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.drive_launch_done	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.drive_launch_exhausted	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.drive_launch_runs	HOLDS on this run
-  clause	Effect4.Deep.drive_launch_skipped	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.fireObserver_raceCallback_late	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.fireObserver_raceCallback_pending	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.fireObserver_raceCallback_settles	HOLDS on this run
-  clause	Effect4.Deep.raceEntrant_options	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.launchEntrant_eq	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.resumePrim_continueWith	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.settleRace_eq	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_cancelRace	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_cancelRace_unknown	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_raceAll	HOLDS on this run
   sweep	20 step clauses over every event	all hold
-witness	w3_all_failures_retain_order	Witnesses.lean:393	rows	fork.race-all
+witness	w3_all_failures_retain_order	Witnesses.lean:415	rows	fork.race-all
   statement	HOLDS
   clause	Effect4.Deep.Witnesses.w3_all_failures_retain_order	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w3_empty_is_a_frontier	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w3_empty_until_interrupted	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w3_failure_allows_next_launch	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_host_interrupt_cancels_entrants	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w3_immediate_success_stops_launch	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_settle_interrupts_the_parked_loser	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.drive_launch_done	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.drive_launch_exhausted	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.drive_launch_runs	HOLDS on this run
-  clause	Effect4.Deep.drive_launch_skipped	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.fireObserver_raceCallback_late	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.fireObserver_raceCallback_pending	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.fireObserver_raceCallback_settles	HOLDS on this run
-  clause	Effect4.Deep.raceEntrant_options	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.launchEntrant_eq	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.resumePrim_continueWith	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.settleRace_eq	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_cancelRace	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_cancelRace_unknown	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_raceAll	HOLDS on this run
   sweep	20 step clauses over every event	all hold
-witness	w4_sibling_resumes	Witnesses.lean:451	rows	
+witness	w4_sibling_resumes	Witnesses.lean:473	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w4_completion_resumes_on_the_spot	Witnesses.lean:460	rows	
+witness	w4_completion_resumes_on_the_spot	Witnesses.lean:482	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w4_complete_twice_answers_false	Witnesses.lean:467	rows	
+witness	w4_complete_twice_answers_false	Witnesses.lean:489	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w4_interrupt_reaches_the_waiter	Witnesses.lean:472	rows	
+witness	w4_interrupt_reaches_the_waiter	Witnesses.lean:494	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w5_middleware_interrupts_children	Witnesses.lean:501	rows	fork.child,rule.children-interrupted-after-exit
+witness	w5_middleware_interrupts_children	Witnesses.lean:534	rows	fork.child,rule.children-interrupted-after-exit
   statement	HOLDS
   clause	Effect4.Deep.Witnesses.w1_deferred_join_child	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w1_deferred_start_is_a_task	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w5_middleware_interrupts_children	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.drive_finish	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.exitFiber_children	HOLDS on this run
   clause	Effect4.Deep.exitFiber_eq	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.exitFiber_finalizing	HOLDS (pure, evaluated once above)
@@ -294,12 +346,14 @@ witness	w5_middleware_interrupts_children	Witnesses.lean:501	rows	fork.child,rul
   clause	Effect4.Deep.exitStore_fires	HOLDS on this run
   clause	Effect4.Deep.fireObserver_resumeAwait	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.resumePrim_continueWith	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.settle_finished	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.stepDecision_installMiddleware	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_fork	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
-witness	w5_no_middleware_leaves_children	Witnesses.lean:509	rows	fork.detach
+witness	w5_fork_latches_the_middleware	Witnesses.lean:544	rows	fork.detach
   statement	HOLDS
-  clause	Effect4.Deep.Witnesses.w5_no_middleware_leaves_children	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w5_daemon_child_survives_parent_exit	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w5_fork_latches_the_middleware	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.exitFiber_no_children	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.exitInterruptChildren_eq	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.exitInterruptChildren_interrupts	HOLDS (pure, evaluated once above)
@@ -307,57 +361,114 @@ witness	w5_no_middleware_leaves_children	Witnesses.lean:509	rows	fork.detach
   clause	Effect4.Deep.spawn_daemon_untracked	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.start_eq	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
-witness	w5_await_all_children_awaits_only_new	Witnesses.lean:518	rows	fork.await-all-children
+witness	w5_daemon_child_survives_parent_exit	Witnesses.lean:554	rows	fork.detach
+  statement	HOLDS
+  clause	Effect4.Deep.Witnesses.w5_daemon_child_survives_parent_exit	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w5_fork_latches_the_middleware	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.exitFiber_no_children	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.exitInterruptChildren_eq	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.exitInterruptChildren_interrupts	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.spawnChild_fields	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.spawn_daemon_untracked	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.start_eq	HOLDS (pure, evaluated once above)
+  sweep	20 step clauses over every event	all hold
+witness	w5_await_all_children_on_failure	Witnesses.lean:580	rows	fork.await-all-children
   statement	HOLDS
   clause	Effect4.Deep.Witnesses.w12_awaitAll_answers_the_exits	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w12_awaitAll_input_order	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w5_await_all_children_awaits_only_new	not transferred (not a `Clauses.lean` theorem)
-  clause	Effect4.Deep.fireObserver_countdown_last	HOLDS (pure, evaluated once above)
-  clause	Effect4.Deep.fireObserver_countdown_more	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.Witnesses.w5_await_all_children_on_failure	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.countdownPark_none_live	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.countdownPark_parks	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.countdownWalk_exited	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.countdownWalk_live	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.countdownWalk_nil	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.fireObserver_countdown_done	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.fireObserver_countdown_next	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_awaitNewChildren	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_snapshotChildren	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
-witness	w6_link_then_close	Witnesses.lean:571	rows	fork.in
+witness	w5_await_all_children_awaits_only_new	Witnesses.lean:592	rows	fork.await-all-children
+  statement	HOLDS
+  clause	Effect4.Deep.Witnesses.w12_awaitAll_answers_the_exits	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w12_awaitAll_input_order	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w5_await_all_children_awaits_only_new	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w5_await_all_children_on_failure	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.countdownPark_none_live	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.countdownPark_parks	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.countdownWalk_exited	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.countdownWalk_live	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.countdownWalk_nil	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.fireObserver_countdown_done	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.fireObserver_countdown_next	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_awaitNewChildren	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_snapshotChildren	HOLDS (pure, evaluated once above)
+  sweep	20 step clauses over every event	all hold
+witness	w6_link_then_close	Witnesses.lean:648	rows	fork.in
   statement	HOLDS
   clause	Effect4.Deep.Witnesses.w6_child_exit_drops_key	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w6_closed_scope_interrupts_now	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w6_deferred_child_is_linked	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w6_link_then_close	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.drive_link	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.fireObserver_dropScopeFinalizer	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.linkScope_closed	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.linkScope_open	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_closeScope	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_forkIn	HOLDS on this run
   sweep	20 step clauses over every event	all hold
-witness	w6_closed_scope_interrupts_now	Witnesses.lean:590	rows	fork.in
+witness	w6_close_interrupt_carries_closer_annotations	Witnesses.lean:661	rows	
+  statement	HOLDS
+  sweep	20 step clauses over every event	all hold
+witness	w6_closed_scope_interrupts_now	Witnesses.lean:677	rows	fork.in
   statement	HOLDS
   clause	Effect4.Deep.Witnesses.w6_child_exit_drops_key	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w6_closed_scope_interrupts_now	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w6_deferred_child_is_linked	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w6_link_then_close	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.drive_link	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.fireObserver_dropScopeFinalizer	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.linkScope_closed	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.linkScope_open	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_closeScope	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_forkIn	HOLDS on this run
   sweep	20 step clauses over every event	all hold
-witness	w6_runIn_closed_scope_uses_no_caller_annotations	Witnesses.lean:600	rows	fork.fiber-run-in
+witness	w6_runIn_closed_scope_uses_no_caller_annotations	Witnesses.lean:687	rows	fork.fiber-run-in
   statement	HOLDS
   clause	Effect4.Deep.Witnesses.w6_runIn_closed_scope_uses_no_caller_annotations	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.linkScope_closed	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.linkScope_open	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.linkScope_open_exited	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.linkScope_unknown	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_runIn	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
-witness	w6_child_exit_drops_key	Witnesses.lean:608	rows	fork.in
+witness	w6_child_exit_drops_key	Witnesses.lean:697	rows	fork.in
   statement	HOLDS
   clause	Effect4.Deep.Witnesses.w6_child_exit_drops_key	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w6_closed_scope_interrupts_now	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w6_deferred_child_is_linked	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w6_link_then_close	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.drive_link	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.fireObserver_dropScopeFinalizer	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.linkScope_closed	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.linkScope_open	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_closeScope	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_forkIn	HOLDS on this run
   sweep	20 step clauses over every event	all hold
-witness	w6_self_interruptor_skipped	Witnesses.lean:614	rows	fork.interrupt
+witness	w6_deferred_child_is_linked	Witnesses.lean:715	rows	fork.in
+  statement	HOLDS
+  clause	Effect4.Deep.Witnesses.w6_child_exit_drops_key	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w6_closed_scope_interrupts_now	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w6_deferred_child_is_linked	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w6_link_then_close	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.drive_link	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.fireObserver_dropScopeFinalizer	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.linkScope_closed	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.linkScope_open	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_closeScope	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_forkIn	HOLDS on this run
+  sweep	20 step clauses over every event	all hold
+witness	w6_self_interruptor_skipped	Witnesses.lean:724	rows	fork.interrupt
   statement	HOLDS
   clause	Effect4.Deep.Witnesses.w2_delivered_at_unmask	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w2_masked_interrupt_does_not_apply	not transferred (not a `Clauses.lean` theorem)
@@ -369,7 +480,7 @@ witness	w6_self_interruptor_skipped	Witnesses.lean:614	rows	fork.interrupt
   clause	Effect4.Deep.withFiber_interruptScoped_other	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_interruptScoped_self	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
-witness	w6_sequential_captures_and_merges	Witnesses.lean:645	rows	scope.close-sequential
+witness	w6_sequential_captures_and_merges	Witnesses.lean:755	rows	scope.close-sequential
   statement	HOLDS
   clause	Effect4.Deep.Witnesses.w6_sequential_captures_and_merges	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.closeSeqChain_captures	not transferred (not a `Clauses.lean` theorem)
@@ -377,96 +488,189 @@ witness	w6_sequential_captures_and_merges	Witnesses.lean:645	rows	scope.close-se
   clause	Effect4.Deep.withFiber_closeScope	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_closeScope_unknown	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
-witness	w6_parallel_forks_and_merges	Witnesses.lean:653	rows	scope.close-parallel,scope.close-merge
+witness	w6_parallel_forks_and_merges	Witnesses.lean:763	rows	scope.close-parallel,scope.close-merge
   statement	HOLDS
   clause	Effect4.Deep.Witnesses.w12_awaitAll_answers_the_exits	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w6_parallel_forks_and_merges	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.closeParChain_awaits_all	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.closeParChain_forks_immediate_daemon	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.closeSeqChain_merges	not transferred (not a `Clauses.lean` theorem)
-  clause	Effect4.Deep.fireObserver_countdown_last	HOLDS (pure, evaluated once above)
-  clause	Effect4.Deep.fireObserver_countdown_more	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.fireObserver_countdown_done	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.fireObserver_countdown_next	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.spawnChild_fields	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_fork	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
-witness	w10_program_masks_its_own_fiber	Witnesses.lean:689	rows	
+witness	w10_program_masks_its_own_fiber	Witnesses.lean:800	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w10_into_completes_on_failure	Witnesses.lean:704	rows	
+witness	w10_into_completes_on_failure	Witnesses.lean:815	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w11_cancel_splices_the_waiter	Witnesses.lean:736	rows	
+witness	w11_cancel_splices_the_waiter	Witnesses.lean:848	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w12_awaitAll_answers_the_exits	Witnesses.lean:758	rows	fork.await-all-children,scope.close-merge
+witness	w12_awaitAll_answers_the_exits	Witnesses.lean:870	rows	fork.await-all-children,scope.close-merge
   statement	HOLDS
   clause	Effect4.Deep.Witnesses.w12_awaitAll_answers_the_exits	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w12_awaitAll_input_order	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w5_await_all_children_awaits_only_new	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w5_await_all_children_on_failure	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.Witnesses.w6_parallel_forks_and_merges	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.closeParChain_awaits_all	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Deep.closeSeqChain_merges	not transferred (not a `Clauses.lean` theorem)
-  clause	Effect4.Deep.fireObserver_countdown_last	HOLDS (pure, evaluated once above)
-  clause	Effect4.Deep.fireObserver_countdown_more	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.countdownPark_none_live	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.countdownPark_parks	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.countdownWalk_exited	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.countdownWalk_live	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.countdownWalk_nil	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.fireObserver_countdown_done	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.fireObserver_countdown_next	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_awaitNewChildren	HOLDS (pure, evaluated once above)
   clause	Effect4.Deep.withFiber_snapshotChildren	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
-witness	w13_unknown_scope_is_stuck	Witnesses.lean:781	rows	
+witness	w12_awaitAll_input_order	Witnesses.lean:903	rows	fork.await-all-children
+  statement	HOLDS
+  clause	Effect4.Deep.Witnesses.w12_awaitAll_answers_the_exits	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w12_awaitAll_input_order	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w5_await_all_children_awaits_only_new	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w5_await_all_children_on_failure	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.countdownPark_none_live	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.countdownPark_parks	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.countdownWalk_exited	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.countdownWalk_live	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.countdownWalk_nil	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.fireObserver_countdown_done	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.fireObserver_countdown_next	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_awaitNewChildren	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_snapshotChildren	HOLDS (pure, evaluated once above)
+  sweep	20 step clauses over every event	all hold
+witness	w13_unknown_scope_is_stuck	Witnesses.lean:929	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w13_unknown_link_is_stuck	Witnesses.lean:789	rows	
+witness	w13_unknown_link_is_stuck	Witnesses.lean:937	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w7_set_answers_the_cell	Witnesses.lean:821	rows	
+witness	w7_set_answers_the_cell	Witnesses.lean:969	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w7_update_answers_void	Witnesses.lean:827	rows	
+witness	w7_update_answers_void	Witnesses.lean:975	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w7_modify_some_writes_back_the_read	Witnesses.lean:833	rows	
+witness	w7_modify_some_writes_back_the_read	Witnesses.lean:981	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w7_update_some_and_get_rereads	Witnesses.lean:840	rows	
+witness	w7_update_some_and_get_rereads	Witnesses.lean:988	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w8_sync_exit_async_fiber_error	Witnesses.lean:867	rows	
+witness	w8_sync_exit_async_fiber_error	Witnesses.lean:1015	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w8_sync_exit_value	Witnesses.lean:871	rows	
+witness	w8_sync_exit_value	Witnesses.lean:1019	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w8_callback_fires	Witnesses.lean:874	rows	
+witness	w8_callback_fires	Witnesses.lean:1022	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w8_promise_squashes	Witnesses.lean:877	rows	
+witness	w8_promise_squashes	Witnesses.lean:1025	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	forbidden_observers_and_double_exit	Witnesses.lean:900	rows	
+witness	w13_completion_pop_sees_the_waiter_interrupt	Witnesses.lean:1095	rows	op.Sync,checkpoint.getcont-deferred,deferred.completion-order
+  statement	HOLDS
+  clause	Effect4.Deep.Witnesses.w13_completion_pop_sees_the_waiter_interrupt	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w13_sync_meets_the_finalizer_program	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.deferredStore_complete_pending	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.drive_deliver	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.drive_loop_answered	NOT PORTABLE: `Cmd.loop` and `Cmd.deliver` have no OCaml existence (DIVERGENCE 2): the answered iteration is the store arm's `drive [CdrainDue]; deliver`, checked by `evaluatePrim_sync_answers` and `settle_answered`
+  clause	Effect4.Deep.evaluatePrim_sync_answers	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.evaluatePrim_sync_pure	NOT PORTABLE: every `SyncOp` of the avatar's alphabet is a store step (`sync_op_step` is total on `sync_op`, `Stores.lean:1160`), so the pure `syncValue` fallback has no instance; the `deliver` it shares is checked by `settle_answered`
+  clause	Effect4.Deep.settle_answered	HOLDS (pure, evaluated once above)
+  sweep	20 step clauses over every event	all hold
+witness	w13_sync_meets_the_finalizer_program	Witnesses.lean:1108	rows	op.Sync,frame-arm.OnExit
+  statement	HOLDS
+  clause	Effect4.Deep.Witnesses.w13_completion_pop_sees_the_waiter_interrupt	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w13_sync_meets_the_finalizer_program	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.drive_deliver	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.drive_loop_answered	NOT PORTABLE: `Cmd.loop` and `Cmd.deliver` have no OCaml existence (DIVERGENCE 2): the answered iteration is the store arm's `drive [CdrainDue]; deliver`, checked by `evaluatePrim_sync_answers` and `settle_answered`
+  clause	Effect4.Deep.evaluatePrim_sync_answers	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.evaluatePrim_sync_pure	NOT PORTABLE: every `SyncOp` of the avatar's alphabet is a store step (`sync_op_step` is total on `sync_op`, `Stores.lean:1160`), so the pure `syncValue` fallback has no instance; the `deliver` it shares is checked by `settle_answered`
+  clause	Effect4.Deep.settle_answered	HOLDS (pure, evaluated once above)
+  sweep	20 step clauses over every event	all hold
+witness	w14_join_cleanup_drops_the_observer	Witnesses.lean:1138	rows	op.AsyncFinalizer,checkpoint.post-yield-cancel,fork.join,fork.await
+  statement	HOLDS
+  clause	Effect4.Deep.Witnesses.w14_join_cleanup_drops_the_observer	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_host_interrupt_cancels_entrants	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.evaluatePrim_join_done	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.evaluatePrim_join_live	HOLDS on this run
+  clause	Effect4.Deep.evaluatePrim_join_unknown	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.interruptRecord_parked_applies	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_dropObservers	HOLDS (pure, evaluated once above)
+  sweep	20 step clauses over every event	all hold
+witness	w3_host_interrupt_cancels_entrants	Witnesses.lean:1166	rows	checkpoint.post-yield-cancel,fork.race-all
+  statement	HOLDS
+  clause	Effect4.Deep.Witnesses.w14_join_cleanup_drops_the_observer	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_all_failures_retain_order	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_empty_is_a_frontier	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_empty_until_interrupted	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_failure_allows_next_launch	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_host_interrupt_cancels_entrants	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_immediate_success_stops_launch	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_settle_interrupts_the_parked_loser	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.drive_launch_done	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.drive_launch_exhausted	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.drive_launch_runs	HOLDS on this run
+  clause	Effect4.Deep.fireObserver_raceCallback_late	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.fireObserver_raceCallback_pending	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.fireObserver_raceCallback_settles	HOLDS on this run
+  clause	Effect4.Deep.interruptRecord_parked_applies	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.launchEntrant_eq	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.resumePrim_continueWith	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.settleRace_eq	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_cancelRace	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_cancelRace_unknown	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_raceAll	HOLDS on this run
+  sweep	20 step clauses over every event	all hold
+witness	w3_settle_interrupts_the_parked_loser	Witnesses.lean:1179	rows	fork.race-all
+  statement	HOLDS
+  clause	Effect4.Deep.Witnesses.w3_all_failures_retain_order	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_empty_is_a_frontier	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_empty_until_interrupted	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_failure_allows_next_launch	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_host_interrupt_cancels_entrants	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_immediate_success_stops_launch	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.Witnesses.w3_settle_interrupts_the_parked_loser	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Deep.drive_launch_done	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.drive_launch_exhausted	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.drive_launch_runs	HOLDS on this run
+  clause	Effect4.Deep.fireObserver_raceCallback_late	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.fireObserver_raceCallback_pending	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.fireObserver_raceCallback_settles	HOLDS on this run
+  clause	Effect4.Deep.launchEntrant_eq	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.resumePrim_continueWith	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.settleRace_eq	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_cancelRace	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_cancelRace_unknown	HOLDS (pure, evaluated once above)
+  clause	Effect4.Deep.withFiber_raceAll	HOLDS on this run
+  sweep	20 step clauses over every event	all hold
+witness	forbidden_observers_and_double_exit	Witnesses.lean:1190	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	forbidden_interrupt_while_running	Witnesses.lean:921	rows	
+witness	forbidden_interrupt_while_running	Witnesses.lean:1212	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	forbidden_setInterruptible_as_current	Witnesses.lean:932	rows	
+witness	forbidden_setInterruptible_as_current	Witnesses.lean:1223	rows	
   statement	NOT PORTABLE: `Prim.setInterruptible` never sits in `frame.current` here: the avatar's frame is the OCaml stack (DIVERGENCE 1) and the mask change is the `Op_set_interruptible` arm, so the forbidden step has no shape to reach
-witness	forbidden_no_notImplemented_defect	Witnesses.lean:940	rows	
+witness	forbidden_no_notImplemented_defect	Witnesses.lean:1231	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	forbidden_task_enqueued_during_drain	Witnesses.lean:955	rows	
+witness	forbidden_task_enqueued_during_drain	Witnesses.lean:1247	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	w9_next_fire_runs_it	Witnesses.lean:961	rows	
+witness	w9_next_fire_runs_it	Witnesses.lean:1253	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	db07_store_survives_failure	Witnesses.lean:978	rows	
+witness	db07_store_survives_failure	Witnesses.lean:1270	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
-witness	toSched_computes	Witnesses.lean:990	rows	
-  statement	NOT PORTABLE: `RunMachine.toSched` (the old scheduler's `Event` alphabet) is not ported; only `RunFiber.status` is (`run_fiber_status`)
-witness	toSup_computes	Witnesses.lean:998	rows	
-  statement	HOLDS
-  sweep	20 step clauses over every event	all hold
-witness	toSup_records_the_interrupt	Witnesses.lean:1008	rows	
-  statement	HOLDS
-  sweep	20 step clauses over every event	all hold
-witnesses	53	holds	51	fails	0	not-portable	2
-run-clauses	holds	26	fails	0
+witnesses	60	holds	59	fails	0	not-portable	1
+run-clauses	holds	34	fails	0
+park-guard	violations	0

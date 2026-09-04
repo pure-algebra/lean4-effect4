@@ -12,4 +12,7 @@ open OCaml5.Ml
 def main (args : List String) : IO Unit := do
   match args.getD 0 "stores" with
   | "stores" => IO.println (moduleText Deep.Stores.generated)
+  | "layer" => IO.println (moduleText Deep.Layer.generated)
+  | "context" => IO.println (moduleText Deep.Context.generated)
+  | "forkflow" => IO.println (moduleText Deep.ForkFlow.generated)
   | other => throw (IO.userError s!"seat W1: no description set named {other}")

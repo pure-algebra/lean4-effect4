@@ -1406,11 +1406,14 @@ def err : InductiveDesc where
   leanName := "Err"; site := "Stores.lean:73"; ctorPrefix := "E"; subst := subst
   ctors := [{ leanName := "boom" }, { leanName := "tag", args := [⟨"code", .nat, false⟩] }]
 
-/-- `Defect` (`Stores.lean:81`), prefix `X`. -/
+/-- `Defect` (`Stores.lean:81`), prefix `X`. Five constructors since finding S1-1 (2026-09-04):
+`missingService` is `Context.get` on a missing service (`forkScoped` with no ambient `Scope`,
+`internal/effect.ts:5400-5406`) and `user n` is `Effect.die(d)` with a numeric payload. Seat F2. -/
 def defect : InductiveDesc where
   leanName := "Defect"; site := "Stores.lean:81"; ctorPrefix := "X"; subst := subst
   ctors := [{ leanName := "notImplemented" }, { leanName := "asyncFiber" },
-            { leanName := "badName" }]
+            { leanName := "badName" }, { leanName := "missingService" },
+            { leanName := "user", args := [⟨"payload", .nat, false⟩] }]
 
 /-- `FnName` (`Stores.lean:94`), prefix `Fn`. -/
 def fnName : InductiveDesc where
@@ -1426,6 +1429,8 @@ def finName : InductiveDesc where
      { leanName := "closeChildScope", args := [⟨"scope", .nat, false⟩] },
      { leanName := "detachFromParent", args := [⟨"parent", .nat, false⟩, ⟨"key", .nat, false⟩] },
      { leanName := "release", args := [⟨"label", .nat, false⟩, ⟨"fails", .bool, false⟩] },
+     -- `57924eb` (seat F2): `awaitAllChildren`'s finalizer (`:5319-5333`, R2-7)
+     { leanName := "awaitNewChildren", args := [⟨"snapshot", .lst fid, false⟩] },
      { leanName := "parkThen", args := [⟨"slot", .nat, false⟩] }]
 
 /-- `Ctx` (`Stores.lean:130`). -/
@@ -1486,11 +1491,13 @@ def syncOp : InductiveDesc where
      { leanName := "scopeRemove", args := [⟨"scope", .nat, false⟩, ⟨"key", .nat, false⟩] },
      { leanName := "scopeIsClosed", args := [⟨"scope", .nat, false⟩] }]
 
-/-- `RaceName` (`Stores.lean:248`), prefix `Rn`. -/
+/-- `RaceName` (`Stores.lean:248`), prefix `Rn`; six since `2f77f7d` (`parkOnly`,
+`parkThenSuccess`: R2-12/R2-13's witnesses). Seat F2. -/
 def raceName : InductiveDesc where
   leanName := "RaceName"; site := "Stores.lean:248"; ctorPrefix := "Rn"; subst := subst
   ctors := [{ leanName := "empty" }, { leanName := "successThenSecond" },
-            { leanName := "failThenSuccess" }, { leanName := "failThenFail" }]
+            { leanName := "failThenSuccess" }, { leanName := "failThenFail" },
+            { leanName := "parkOnly" }, { leanName := "parkThenSuccess" }]
 
 /-- `ProgName` (`Stores.lean:265`), 22 constructors, prefix `P`. -/
 def progName : InductiveDesc where
@@ -1534,7 +1541,11 @@ def progName : InductiveDesc where
                 ⟨"options", .nm "Supervision.ForkOptions", false⟩, ⟨"key", .nat, false⟩] },
      { leanName := "raceOf", args := [⟨"race", .nm "RaceName", false⟩] },
      { leanName := "closeScopeOf", args := [⟨"scope", .nat, false⟩, ⟨"exit", exitL, false⟩] },
-     { leanName := "awaitAllNew", args := [⟨"body", .nm "ProgName", false⟩] }]
+     { leanName := "awaitAllNew", args := [⟨"body", .nm "ProgName", false⟩] },
+     -- `2f77f7d` (seat F2): the settle's cleanup half and a join on an existing handle
+     { leanName := "interruptFibers", args := [⟨"targets", .lst fid, false⟩] },
+     { leanName := "joinFiber",
+       args := [⟨"target", fid, false⟩, ⟨"mode", .nm "Supervision.ObserverMode", false⟩] }]
 
 /-- `Name` (`Stores.lean:321`), 20 constructors, prefix `N`. -/
 def name : InductiveDesc where
@@ -1548,12 +1559,15 @@ def name : InductiveDesc where
      { leanName := "doneInto", args := [⟨"cell", .nm "DeferredKey", false⟩] },
      { leanName := "constant", args := [⟨"value", valL, false⟩] },
      { leanName := "exitOfValue" },
-     { leanName := "awaitNew", args := [⟨"snapshot", .lst fid, false⟩] },
+     -- `Name.awaitNew` retired in `57924eb` (R2-7): the await is `FinName.awaitNewChildren`
      { leanName := "snapshotThen", args := [⟨"body", .nm "ProgName", false⟩] },
      { leanName := "registerAwait", args := [⟨"cell", .nm "DeferredKey", false⟩] },
      { leanName := "cancelAwait", args := [⟨"cell", .nm "DeferredKey", false⟩] },
      { leanName := "externalRegister", args := [⟨"slot", .nat, false⟩] },
      { leanName := "abortController" },
+     -- `2f77f7d` (seat F2): `RunInterp.parkCancelName` and `raceCancelName` (R2-3, R2-13)
+     { leanName := "cancelPark" },
+     { leanName := "cancelRace", args := [⟨"race", .nat, false⟩] },
      { leanName := "withWaiter",
        args := [⟨"base", .nm "Name", false⟩, ⟨"waiter", fid, false⟩, ⟨"token", .nat, false⟩] },
      { leanName := "reFail", args := [⟨"cause", causeL, false⟩] },
@@ -1598,7 +1612,10 @@ def actionName : InductiveDesc where
      { leanName := "closeScope", args := [⟨"scope", .nat, false⟩, ⟨"exit", exitL, false⟩] },
      { leanName := "setInterruptible",
        args := [⟨"body", .nm "ProgName", false⟩, ⟨"flag", .bool, false⟩] },
-     { leanName := "refuse", args := [⟨"cause", causeL, false⟩] }]
+     { leanName := "refuse", args := [⟨"cause", causeL, false⟩] },
+     -- `2f77f7d` (seat F2): the two park cleanups (R2-3, R2-13)
+     { leanName := "dropObservers", args := [⟨"token", .nat, false⟩] },
+     { leanName := "cancelRace", args := [⟨"race", .nat, false⟩] }]
 
 /-- `Thunk` (`Stores.lean:403`), prefix `T`. -/
 def thunk : InductiveDesc where
@@ -1741,6 +1758,477 @@ def generated : List Decl := generatedHead ++ tupleAliases ++ generatedTail
 
 end Stores
 
+/-! ## `Effect4/Deep/Layer.lean` → `workshop/OCaml5/avatar/deep_layer.ml` (seat F2)
+
+The collision ruling (F1.4 step 2, taken): Layer's carriers keep the Lean type names inside
+their own module (`Deep_layer.sync_op` beside `Deep_stores.sync_op`, as `Effect4.Deep.Layers`
+beside `Effect4.Deep`), `deep_layer.ml` does not `open Deep_stores`, and every constructor takes
+a Layer prefix (`Lc`/`Lk`/`Ld`/`Lfin`/`Ls`/`Lp`/`Ln`/`La`/`Lt`/`Lu`/`Lx`, `Lss` for the
+`ScopeState` copy) so a file opening both modules is unambiguous. The SHIM
+`DeferredKey`/`DeferredCell`/`DeferredStore` (`Layer.lean:367-429`) are *substituted* by
+`Deep_stores`' (one store, as the landing intends); `ScopeEntry`/`ScopeStore` and the `Scope`/
+`ScopeState` they are made of are rendered as Layer's own monomorphic copies over Layer's
+`FinName` (`Layer.lean:431-482`; the generator has no type parameters here — a row). `Val`
+(`Context.lean:797`) is the wire alphabet `value` (W1-1 again: `memoMap`/`promise`/`scopeHandle`
+are one `Vhandle`, `ctxNil`/`ctxCons` the context list, `exitOk`/`exitErr` lost); `Ctx` is
+`(service_key * value) list`; `Err` is `Deep_stores.err` (the same two constructors,
+`Context.lean:772`); `Ann` is `unit`. -/
+
+/-! ## `Effect4/Deep/Context.lean` → `workshop/OCaml5/avatar/deep_context.ml` (seat F2)
+
+The first-order environment (M4a/M4b) and the machine's value alphabet. `Context`'s `keysNodup`
+proof field is ERASED (F2-L2: a proof has no OCaml counterpart; `add`/`mergeEntries` keep the
+invariant by construction). `Val` is generated as its own carrier `val_` (prefix `Cv`) so that
+`encode`/`decode` and the hooks keep the Lean shape; `Deep_context.wire_of_val` is the projection
+onto the avatar's wire alphabet, the W1-1 row. `Requirement` (`Row ServiceKey`) is the strictly
+ascending key list; `ServiceProgram`/`UsesOnly`/`interpret` (an `Effects` free program) refuse. -/
+
+namespace Context
+
+def subst : Subst :=
+  [("FiberId", Ty.int),
+   ("ServiceKey", Ty.named "service_key"),
+   ("ServiceName", Ty.int),
+   ("ServiceTypeCode", Ty.int),
+   ("Err", Ty.named "err"),
+   ("Defect", Ty.named "defect"),
+   ("Ann", Ty.unit),
+   ("Val", Ty.named "val_"),
+   ("Ctx", Ty.named "context"),
+   ("Context", Ty.named "context"),
+   ("Service", Ty.named "service"),
+   ("Reference", Ty.named "reference"),
+   ("Requirement", Ty.list (Ty.named "service_key")),
+   ("CauseV", Ty.named "cause_v"), ("Cause", Ty.named "cause_v"),
+   ("ExitV", Ty.named "exit_v"), ("Exit", Ty.named "exit_v"),
+   ("ServiceKey.Carrier", Ty.named "val_")]
+
+private def keyL : LTy := .nm "ServiceKey"
+private def valL : LTy := .nm "Val"
+
+def serviceKey : StructDesc where
+  leanName := "ServiceKey"; site := "Context/Key.lean:79"; subst := subst
+  fields := [{ leanName := "name", leanTy := .nm "ServiceName" },
+             { leanName := "service", leanTy := .nm "ServiceTypeCode" }]
+/-- `Service U` (`Context.lean:89`): the key and its carrier value, `Val` at `ValU`. -/
+def service : StructDesc where
+  leanName := "Service"; site := "Context.lean:89"; subst := subst
+  fields := [{ leanName := "key", leanTy := keyL }, { leanName := "value", leanTy := valL }]
+/-- `Context U` (`Context.lean:180`): the insertion-ordered entries; the proof field erased. -/
+def context : StructDesc where
+  leanName := "Context"; site := "Context.lean:180"; subst := subst
+  fields := [{ leanName := "entries", leanTy := .lst (.nm "Service") },
+             { leanName := "keysNodup", leanTy := .unit,
+               kind := .erased "a proof (`(entries.map Service.key).Nodup`); kept by construction (F2-L2)" }]
+/-- `Reference U` (`Context.lean:406`). -/
+def reference : StructDesc where
+  leanName := "Reference"; site := "Context.lean:406"; subst := subst
+  fields := [{ leanName := "key", leanTy := keyL }, { leanName := "default", leanTy := valL }]
+def err : InductiveDesc where
+  leanName := "Err"; site := "Context.lean:772"; ctorPrefix := "Ce"; subst := subst
+  ctors := [{ leanName := "boom" }, { leanName := "tag", args := [⟨"code", .nat, false⟩] }]
+def defect : InductiveDesc where
+  leanName := "Defect"; site := "Context.lean:781"; ctorPrefix := "Cx"; subst := subst
+  ctors := [{ leanName := "notImplemented" }, { leanName := "asyncFiber" }, { leanName := "badName" },
+            { leanName := "serviceNotFound", args := [⟨"key", keyL, false⟩] },
+            { leanName := "unknownLayer", args := [⟨"index", .nat, false⟩] }]
+/-- `Val` (`Context.lean:797`), fifteen constructors, prefix `Cv`. -/
+def val : InductiveDesc where
+  leanName := "Val"; site := "Context.lean:797"; ctorPrefix := "Cv"; subst := subst
+  ctors := [{ leanName := "unit" }, { leanName := "nat", args := [⟨"n", .nat, false⟩] },
+            { leanName := "bool", args := [⟨"b", .bool, false⟩] },
+            { leanName := "fiber", args := [⟨"id", .nm "FiberId", false⟩] },
+            { leanName := "fibers", args := [⟨"ids", .lst (.nm "FiberId"), false⟩] },
+            { leanName := "scopeHandle", args := [⟨"scope", .nat, false⟩] },
+            { leanName := "memoMap", args := [⟨"id", .nat, false⟩] },
+            { leanName := "promise", args := [⟨"cell", .nat, false⟩] },
+            { leanName := "pair", args := [⟨"first", valL, false⟩, ⟨"second", valL, false⟩] },
+            { leanName := "exitOk", args := [⟨"value", valL, false⟩] },
+            { leanName := "exitErr", args := [⟨"cause", .nm "CauseV", false⟩] },
+            { leanName := "exitNil" },
+            { leanName := "exitCons", args := [⟨"head", valL, false⟩, ⟨"tail", valL, false⟩] },
+            { leanName := "ctxNil" },
+            { leanName := "ctxCons", args := [⟨"key", keyL, false⟩, ⟨"value", valL, false⟩, ⟨"rest", valL, false⟩] }]
+def contextUpdate : InductiveDesc where
+  leanName := "ContextUpdate"; site := "Context.lean:1005"; ctorPrefix := "Cu"; subst := subst
+  ctors := [{ leanName := "setTo", args := [⟨"context", .nm "Ctx", false⟩] },
+            { leanName := "provide", args := [⟨"that", .nm "Ctx", false⟩] },
+            { leanName := "provideService", args := [⟨"key", keyL, false⟩, ⟨"value", valL, false⟩] }]
+
+def structs : List StructDesc := [serviceKey, service, context, reference]
+def inductives : List InductiveDesc := [err, defect, val, contextUpdate]
+
+def generated : List Decl :=
+  [.comment ("Generated by OCaml5.Ml (`Render.lean`, seat W1). Do not edit; edit the"
+      ++ " descriptions (`Ml.Deep.Context`, seat F2).\n   One declaration per `Effect4/Deep/Context.lean`"
+      ++ " carrier (and `ServiceKey` of `Context/Key.lean`), same field and constructor order."),
+   serviceKey.header, renameDecl "service_key" serviceKey.decl,
+   err.header, renameDecl "err" err.decl,
+   defect.header, renameDecl "defect" defect.decl,
+   .comment "`CauseV`/`ExitV` (`Context.lean:829-832`) over this `Err`/`Defect`: the avatar's `cause`/`exitv` carry the wire's `int` error and `string` defect (W1-1); the aliases name the site.",
+   .rawD "type cause_v = cause",
+   .rawD "type exit_v = exitv",
+   .comment "`Val`, `Service ValU` and `Context ValU` are one mutually recursive group in OCaml (`ctxCons` names a key and a value; `Context` holds services).",
+   val.header, renameDecl "val_" val.decl,
+   service.header, renameDecl "service" service.decl,
+   context.header, renameDecl "context" context.decl,
+   reference.header, renameDecl "reference" reference.decl,
+   contextUpdate.header, renameDecl "context_update" contextUpdate.decl]
+
+end Context
+
+namespace Layer
+
+def subst : Subst :=
+  [("FiberId", Ty.int),
+   ("LayerId", Ty.named "layer_id"),
+   ("MemoMapId", Ty.named "memo_map_id"),
+   ("DeferredKey", Ty.named "Deep_stores.deferred_key"),
+   ("DeferredCell", Ty.named "Deep_stores.deferred_cell"),
+   ("DeferredStore", Ty.named "Deep_stores.deferred_store"),
+   ("ServiceKey", Ty.named "Deep_context.service_key"),
+   ("ServiceName", Ty.int),
+   ("ServiceTypeCode", Ty.int),
+   ("Err", Ty.named "Deep_stores.err"),
+   ("Defect", Ty.named "Deep_context.defect"),
+   ("Ann", Ty.unit),
+   ("Val", Ty.named "value"),
+   ("Ctx", Ty.list (Ty.named "service_pair")),
+   ("ContextUpdate", Ty.named "Deep_context.context_update"),
+   ("CombineMode", Ty.named "combine_mode"),
+   ("Construction", Ty.named "construction"),
+   ("LayerDesc", Ty.named "layer_desc"),
+   ("LayerTable", Ty.list (Ty.named "layer_desc")),
+   ("FinName", Ty.named "fin_name"),
+   ("SyncOp", Ty.named "sync_op"),
+   ("ProgName", Ty.named "prog_name"),
+   ("Name", Ty.named "name"),
+   ("ActionName", Ty.named "action_name"),
+   ("Thunk", Ty.named "thunk"),
+   ("Program", Ty.named "program"),
+   ("Prim", Ty.named "program"),
+   ("MemoEntry", Ty.named "memo_entry"),
+   ("MemoMap", Ty.named "memo_map"),
+   ("MemoWorld", Ty.list (Ty.named "memo_map")),
+   ("ScopeEntry", Ty.named "scope_entry"),
+   ("ScopeStore", Ty.named "scope_store"),
+   ("ScopeV", Ty.named "scope"),
+   ("Scope", Ty.named "scope"),
+   ("ScopeState", Ty.named "scope_state"),
+   ("FinalizerStrategy", Ty.named "Deep_stores.finalizer_strategy"),
+   ("Exit", Ty.named "exitv"), ("ExitV", Ty.named "exitv"),
+   ("Cause", Ty.named "cause"), ("CauseV", Ty.named "cause"),
+   ("Reason", Ty.named "reason"), ("ReasonV", Ty.named "reason"),
+   ("ReasonAnnotations", Ty.list Ty.string),
+   ("Supervision.ObserverMode", Ty.named "observer_mode"),
+   ("Supervision.ForkOptions", Ty.named "fork_options"),
+   ("χ", Ty.list (Ty.named "service_pair"))]
+
+private def fid : LTy := .nm "FiberId"
+private def exitL : LTy := .nm "ExitV"
+private def causeL : LTy := .nm "CauseV"
+private def valL : LTy := .nm "Val"
+private def ctxL : LTy := .nm "Ctx"
+private def lid : LTy := .nm "LayerId"
+private def mid : LTy := .nm "MemoMapId"
+private def keyL : LTy := .nm "ServiceKey"
+private def progL : LTy := .nm "ProgName"
+
+def layerId : StructDesc where
+  leanName := "LayerId"; site := "Layer.lean:53"; subst := subst
+  fields := [{ leanName := "index", leanTy := .nat }]
+def memoMapId : StructDesc where
+  leanName := "MemoMapId"; site := "Layer.lean:58"; subst := subst
+  fields := [{ leanName := "index", leanTy := .nat }]
+/-- `ServiceKey` (`Effect4/Context/Key.lean:79`): `ServiceName`/`ServiceTypeCode` are `Nat`
+boxes, rendered as `int`. -/
+def serviceKey : StructDesc where
+  leanName := "ServiceKey"; site := "Context/Key.lean:79"; subst := subst
+  fields := [{ leanName := "name", leanTy := .nm "ServiceName" },
+             { leanName := "service", leanTy := .nm "ServiceTypeCode" }]
+/-- `Defect` (`Context.lean:781`), prefix `Lx`. -/
+def defect : InductiveDesc where
+  leanName := "Defect"; site := "Context.lean:781"; ctorPrefix := "Lx"; subst := subst
+  ctors := [{ leanName := "notImplemented" }, { leanName := "asyncFiber" }, { leanName := "badName" },
+            { leanName := "serviceNotFound", args := [⟨"key", keyL, false⟩] },
+            { leanName := "unknownLayer", args := [⟨"index", .nat, false⟩] }]
+/-- `ContextUpdate` (`Context.lean:1005`), prefix `Lu`. -/
+def contextUpdate : InductiveDesc where
+  leanName := "ContextUpdate"; site := "Context.lean:1005"; ctorPrefix := "Lu"; subst := subst
+  ctors := [{ leanName := "setTo", args := [⟨"context", ctxL, false⟩] },
+            { leanName := "provide", args := [⟨"that", ctxL, false⟩] },
+            { leanName := "provideService", args := [⟨"key", keyL, false⟩, ⟨"value", valL, false⟩] }]
+def combineMode : InductiveDesc where
+  leanName := "CombineMode"; site := "Layer.lean:69"; ctorPrefix := "Lc"; subst := subst
+  ctors := [{ leanName := "provide" }, { leanName := "provideMerge" }]
+def construction : InductiveDesc where
+  leanName := "Construction"; site := "Layer.lean:76"; ctorPrefix := "Lk"; subst := subst
+  ctors := [{ leanName := "succeedContext", args := [⟨"services", .lst (.nm "ServicePair"), false⟩] },
+            { leanName := "failWith", args := [⟨"error", .nm "Err", false⟩] },
+            { leanName := "acquire", args := [⟨"services", .lst (.nm "ServicePair"), false⟩, ⟨"release", .nat, false⟩] },
+            { leanName := "fromService", args := [⟨"input", keyL, false⟩, ⟨"output", keyL, false⟩] }]
+def layerDesc : InductiveDesc where
+  leanName := "LayerDesc"; site := "Layer.lean:92"; ctorPrefix := "Ld"; subst := subst
+  ctors := [{ leanName := "atom", args := [⟨"construction", .nm "Construction", false⟩] },
+            { leanName := "memoized", args := [⟨"construction", .nm "Construction", false⟩] },
+            { leanName := "childScope", args := [⟨"inner", lid, false⟩] },
+            { leanName := "fresh", args := [⟨"inner", lid, false⟩] },
+            { leanName := "provideWith", args := [⟨"self", lid, false⟩, ⟨"that", lid, false⟩, ⟨"mode", .nm "CombineMode", false⟩] },
+            { leanName := "mergeAll", args := [⟨"layers", .lst lid, false⟩] }]
+def finName : InductiveDesc where
+  leanName := "FinName"; site := "Layer.lean:115"; ctorPrefix := "Lfin"; subst := subst
+  ctors := [{ leanName := "closeChildScope", args := [⟨"scope", .nat, false⟩] },
+            { leanName := "detachFromParent", args := [⟨"parent", .nat, false⟩, ⟨"key", .nat, false⟩] },
+            { leanName := "closeChildOnFailure", args := [⟨"scope", .nat, false⟩] },
+            { leanName := "memoEntry", args := [⟨"layer", lid, false⟩, ⟨"memoMap", mid, false⟩] },
+            { leanName := "memoDone", args := [⟨"layer", lid, false⟩, ⟨"memoMap", mid, false⟩] },
+            { leanName := "restoreContext", args := [⟨"prev", ctxL, false⟩] },
+            { leanName := "scopedExit", args := [⟨"prev", ctxL, false⟩, ⟨"scope", .nat, false⟩] },
+            { leanName := "closeScopeWith", args := [⟨"scope", .nat, false⟩] },
+            { leanName := "release", args := [⟨"label", .nat, false⟩, ⟨"fails", .bool, false⟩] },
+            { leanName := "releaseWith", args := [⟨"label", .nat, false⟩, ⟨"captured", ctxL, false⟩] },
+            { leanName := "interruptFiber", args := [⟨"fiber", fid, false⟩, ⟨"skipSelf", .bool, false⟩] }]
+def syncOp : InductiveDesc where
+  leanName := "SyncOp"; site := "Layer.lean:144"; ctorPrefix := "Ls"; subst := subst
+  ctors := [{ leanName := "scopeMake", args := [⟨"strategy", .nm "FinalizerStrategy", false⟩] },
+            { leanName := "scopeFork", args := [⟨"parent", .nat, false⟩, ⟨"strategy", .nm "FinalizerStrategy", false⟩] },
+            { leanName := "scopeAdd", args := [⟨"scope", .nat, false⟩, ⟨"finalizer", .nm "FinName", false⟩] },
+            { leanName := "scopeRemove", args := [⟨"scope", .nat, false⟩, ⟨"key", .nat, false⟩] },
+            { leanName := "memoFork", args := [⟨"parent", .opt mid, false⟩] },
+            { leanName := "memoGet", args := [⟨"layer", lid, false⟩, ⟨"memoMap", mid, false⟩] },
+            { leanName := "memoBuild", args := [⟨"layer", lid, false⟩, ⟨"memoMap", mid, false⟩] },
+            { leanName := "memoComplete", args := [⟨"layer", lid, false⟩, ⟨"memoMap", mid, false⟩, ⟨"exit", exitL, false⟩] },
+            { leanName := "memoRelease", args := [⟨"layer", lid, false⟩, ⟨"memoMap", mid, false⟩] },
+            { leanName := "deferredAwaitCleanup", args := [⟨"cell", .nm "DeferredKey", false⟩, ⟨"waiter", fid, false⟩, ⟨"token", .nat, false⟩] }]
+def progName : InductiveDesc where
+  leanName := "ProgName"; site := "Layer.lean:174"; ctorPrefix := "Lp"; subst := subst
+  ctors := [{ leanName := "value", args := [⟨"v", valL, false⟩] },
+            { leanName := "failCause", args := [⟨"cause", causeL, false⟩] },
+            { leanName := "getContext" },
+            { leanName := "service", args := [⟨"key", keyL, false⟩] },
+            { leanName := "setContextTo", args := [⟨"context", ctxL, false⟩, ⟨"body", progL, false⟩] },
+            { leanName := "provideContext", args := [⟨"context", ctxL, false⟩, ⟨"body", progL, false⟩] },
+            { leanName := "provideService", args := [⟨"key", keyL, false⟩, ⟨"value", valL, false⟩, ⟨"body", progL, false⟩] },
+            { leanName := "scoped", args := [⟨"body", progL, false⟩] },
+            { leanName := "acquireRelease", args := [⟨"acquire", progL, false⟩, ⟨"release", .nat, false⟩, ⟨"interruptible", .bool, false⟩] },
+            { leanName := "acquireMasked", args := [⟨"acquire", progL, false⟩, ⟨"release", .nat, false⟩, ⟨"captured", ctxL, false⟩, ⟨"interruptible", .bool, false⟩] },
+            { leanName := "addFinalizer", args := [⟨"label", .nat, false⟩] },
+            { leanName := "seq", args := [⟨"first", progL, false⟩, ⟨"second", progL, false⟩] },
+            { leanName := "never" },
+            { leanName := "closeScope", args := [⟨"scope", .nat, false⟩, ⟨"exit", exitL, false⟩] },
+            { leanName := "build", args := [⟨"layer", lid, false⟩] },
+            { leanName := "buildWithScope", args := [⟨"layer", lid, false⟩, ⟨"scope", .nat, false⟩] },
+            { leanName := "buildWithMemoMap", args := [⟨"layer", lid, false⟩, ⟨"memoMap", mid, false⟩, ⟨"scope", .nat, false⟩] },
+            { leanName := "layerBuild", args := [⟨"layer", lid, false⟩, ⟨"memoMap", mid, false⟩, ⟨"scope", .nat, false⟩] },
+            { leanName := "buildAdding", args := [⟨"layer", lid, false⟩, ⟨"memoMap", mid, false⟩, ⟨"scope", .nat, false⟩] },
+            { leanName := "buildThenNever", args := [⟨"layer", lid, false⟩] },
+            { leanName := "launch", args := [⟨"layer", lid, false⟩] },
+            { leanName := "provideLayer", args := [⟨"layer", lid, false⟩, ⟨"isLocal", .bool, false⟩, ⟨"body", progL, false⟩] },
+            { leanName := "scopedWithAlloc", args := [⟨"layer", lid, false⟩, ⟨"isLocal", .bool, false⟩, ⟨"body", progL, false⟩] },
+            { leanName := "memoLookup", args := [⟨"layer", lid, false⟩, ⟨"memoMap", mid, false⟩, ⟨"scope", .nat, false⟩, ⟨"construction", .nm "Construction", false⟩] },
+            { leanName := "finalizerOf", args := [⟨"fin", .nm "FinName", false⟩, ⟨"exit", exitL, false⟩] },
+            { leanName := "memoReleaseOf", args := [⟨"layer", lid, false⟩, ⟨"memoMap", mid, false⟩, ⟨"exit", exitL, false⟩] },
+            { leanName := "releaseOf", args := [⟨"label", .nat, false⟩] }]
+def name : InductiveDesc where
+  leanName := "Name"; site := "Layer.lean:233"; ctorPrefix := "Ln"; subst := subst
+  ctors := [{ leanName := "restore", args := [⟨"exit", exitL, false⟩] },
+            { leanName := "merge", args := [⟨"exit", exitL, false⟩] },
+            { leanName := "seq", args := [⟨"next", progL, false⟩] },
+            { leanName := "constant", args := [⟨"value", valL, false⟩] },
+            { leanName := "registerAwait", args := [⟨"cell", .nm "DeferredKey", false⟩] },
+            { leanName := "cancelAwait", args := [⟨"cell", .nm "DeferredKey", false⟩] },
+            { leanName := "neverRegister" },
+            { leanName := "abortController" },
+            { leanName := "cancelPark" },
+            { leanName := "cancelRace", args := [⟨"race", .nat, false⟩] },
+            { leanName := "withWaiter", args := [⟨"base", .nm "Name", false⟩, ⟨"waiter", fid, false⟩, ⟨"token", .nat, false⟩] },
+            { leanName := "reFail", args := [⟨"cause", causeL, false⟩] },
+            { leanName := "finalizerName", args := [⟨"fin", .nm "FinName", false⟩] },
+            { leanName := "closeSeq", args := [⟨"remaining", .lst (.nm "FinName"), false⟩, ⟨"exit", exitL, false⟩, ⟨"captured", .lst (.nm "ReasonV"), false⟩] },
+            { leanName := "closePar", args := [⟨"remaining", .lst (.nm "FinName"), false⟩, ⟨"exit", exitL, false⟩, ⟨"forked", .lst fid, false⟩, ⟨"closerInterruptible", .bool, false⟩] },
+            { leanName := "mergeAwaitedExits" },
+            { leanName := "afterScopeAdd", args := [⟨"fin", .nm "FinName", false⟩] },
+            { leanName := "updateThen", args := [⟨"update", .nm "ContextUpdate", false⟩, ⟨"body", progL, false⟩] },
+            { leanName := "bodyThen", args := [⟨"body", progL, false⟩, ⟨"prev", ctxL, false⟩] },
+            { leanName := "scopedThen", args := [⟨"body", progL, false⟩] },
+            { leanName := "scopedInstall", args := [⟨"body", progL, false⟩, ⟨"prev", ctxL, false⟩] },
+            { leanName := "scopedBody", args := [⟨"body", progL, false⟩, ⟨"prev", ctxL, false⟩, ⟨"scope", .nat, false⟩] },
+            { leanName := "thenClose", args := [⟨"scope", .nat, false⟩, ⟨"exit", exitL, false⟩] },
+            { leanName := "serviceLookup", args := [⟨"key", keyL, false⟩] },
+            { leanName := "bindService", args := [⟨"output", keyL, false⟩] },
+            { leanName := "acquireWith", args := [⟨"acquire", progL, false⟩, ⟨"release", .nat, false⟩, ⟨"interruptible", .bool, false⟩] },
+            { leanName := "acquireInScope", args := [⟨"acquire", progL, false⟩, ⟨"release", .nat, false⟩, ⟨"captured", ctxL, false⟩, ⟨"interruptible", .bool, false⟩] },
+            { leanName := "registerRelease", args := [⟨"scope", .nat, false⟩, ⟨"release", .nat, false⟩, ⟨"captured", ctxL, false⟩] },
+            { leanName := "addFinalizerOn", args := [⟨"label", .nat, false⟩] },
+            { leanName := "addFinalizerCaptured", args := [⟨"scope", .nat, false⟩, ⟨"label", .nat, false⟩] },
+            { leanName := "buildFromContext", args := [⟨"layer", lid, false⟩] },
+            { leanName := "buildWithScopeFromContext", args := [⟨"layer", lid, false⟩, ⟨"scope", .nat, false⟩] },
+            { leanName := "withMemoMapThen", args := [⟨"layer", lid, false⟩, ⟨"scope", .opt .nat, false⟩] },
+            { leanName := "addCurrentMemoMap", args := [⟨"memoMap", mid, false⟩] },
+            { leanName := "memoize", args := [⟨"layer", lid, false⟩, ⟨"memoMap", mid, false⟩, ⟨"scope", .nat, false⟩, ⟨"construction", .nm "Construction", false⟩] },
+            { leanName := "awaitPromise", args := [⟨"cell", .nm "DeferredKey", false⟩] },
+            { leanName := "buildIntoLayerScope", args := [⟨"layer", lid, false⟩, ⟨"memoMap", mid, false⟩, ⟨"scope", .nat, false⟩, ⟨"construction", .nm "Construction", false⟩] },
+            { leanName := "thenBuildInto", args := [⟨"layer", lid, false⟩, ⟨"memoMap", mid, false⟩, ⟨"construction", .nm "Construction", false⟩, ⟨"layerScope", .nat, false⟩] },
+            { leanName := "closeIfLast", args := [⟨"exit", exitL, false⟩] },
+            { leanName := "fromBuildThen", args := [⟨"desc", .nm "LayerDesc", false⟩, ⟨"self", lid, false⟩, ⟨"memoMap", mid, false⟩] },
+            { leanName := "freshThen", args := [⟨"inner", lid, false⟩, ⟨"scope", .nat, false⟩] },
+            { leanName := "provideThen", args := [⟨"self", lid, false⟩, ⟨"memoMap", mid, false⟩, ⟨"scope", .nat, false⟩, ⟨"mode", .nm "CombineMode", false⟩] },
+            { leanName := "combineWith", args := [⟨"mode", .nm "CombineMode", false⟩, ⟨"thatContext", ctxL, false⟩] },
+            { leanName := "mergeChildren", args := [⟨"layers", .lst lid, false⟩, ⟨"memoMap", mid, false⟩] },
+            { leanName := "mergeForkOne", args := [⟨"layer", lid, false⟩, ⟨"rest", .lst lid, false⟩, ⟨"memoMap", mid, false⟩, ⟨"parent", .nat, false⟩, ⟨"forked", .lst fid, false⟩] },
+            { leanName := "mergeForkNext", args := [⟨"rest", .lst lid, false⟩, ⟨"memoMap", mid, false⟩, ⟨"parent", .nat, false⟩, ⟨"forked", .lst fid, false⟩] },
+            { leanName := "mergeContexts" },
+            { leanName := "provideLayerWith", args := [⟨"layer", lid, false⟩, ⟨"isLocal", .bool, false⟩, ⟨"body", progL, false⟩] },
+            { leanName := "provideLayerBody", args := [⟨"body", progL, false⟩] }]
+def actionName : InductiveDesc where
+  leanName := "ActionName"; site := "Layer.lean:341"; ctorPrefix := "La"; subst := subst
+  ctors := [{ leanName := "fork", args := [⟨"program", progL, false⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩] },
+            { leanName := "forkScoped", args := [⟨"program", progL, false⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩, ⟨"key", .nat, false⟩] },
+            { leanName := "interrupt", args := [⟨"target", fid, false⟩] },
+            { leanName := "interruptScoped", args := [⟨"target", fid, false⟩] },
+            { leanName := "awaitAll", args := [⟨"targets", .lst fid, false⟩] },
+            { leanName := "awaitAllFailFast", args := [⟨"targets", .lst fid, false⟩] },
+            { leanName := "setContext", args := [⟨"context", ctxL, false⟩] },
+            { leanName := "getContext" },
+            { leanName := "getId" },
+            { leanName := "closeScope", args := [⟨"scope", .nat, false⟩, ⟨"exit", exitL, false⟩] },
+            { leanName := "setInterruptible", args := [⟨"body", progL, false⟩, ⟨"flag", .bool, false⟩] },
+            { leanName := "refuse", args := [⟨"cause", causeL, false⟩] },
+            { leanName := "dropObservers", args := [⟨"token", .nat, false⟩] }]
+def thunk : InductiveDesc where
+  leanName := "Thunk"; site := "Layer.lean:361"; ctorPrefix := "Lt"; subst := subst
+  ctors := [{ leanName := "act", args := [⟨"action", .nm "ActionName", false⟩] },
+            { leanName := "op", args := [⟨"operation", .nm "SyncOp", false⟩] },
+            { leanName := "body", args := [⟨"program", progL, false⟩] }]
+/-- `ScopeState` (`Scope.lean:71`) at Layer's `FinName`, prefix `Lss`. -/
+def scopeState : InductiveDesc where
+  leanName := "ScopeState"; site := "Scope.lean:71 at Layer.lean:437"; ctorPrefix := "Lss"; subst := subst
+  ctors := [{ leanName := "empty" }, { leanName := "openEmpty" },
+            { leanName := "openInline", args := [⟨"key", .nat, false⟩, ⟨"finalizer", .nm "FinName", false⟩] },
+            { leanName := "openMap", args := [⟨"entries", .lst (.nm "ScopeEntryPair"), false⟩] },
+            { leanName := "closed", args := [⟨"exit", exitL, false⟩] }]
+def scope : StructDesc where
+  leanName := "Scope"; site := "Scope.lean:86 at Layer.lean:437"; subst := subst
+  fields := [{ leanName := "strategy", leanTy := .nm "FinalizerStrategy" },
+             { leanName := "state", leanTy := .nm "ScopeState", isMutable := true }]
+def scopeEntry : StructDesc where
+  leanName := "ScopeEntry"; site := "Layer.lean:439"; subst := subst
+  fields := [{ leanName := "key", leanTy := .nat }, { leanName := "scope", leanTy := .nm "ScopeV", isMutable := true }]
+def scopeStore : StructDesc where
+  leanName := "ScopeStore"; site := "Layer.lean:444"; subst := subst
+  fields := [{ leanName := "entries", leanTy := .lst (.nm "ScopeEntry"), isMutable := true }]
+def memoEntry : StructDesc where
+  leanName := "MemoEntry"; site := "Layer.lean:487"; subst := subst
+  fields := [{ leanName := "observers", leanTy := .nat, isMutable := true },
+             { leanName := "effect", leanTy := .nm "Program", isMutable := true,
+               comment := Option.some "Lean: `Program`; a thunk here (DIVERGENCE 1)" },
+             { leanName := "layerScope", leanTy := .nat },
+             { leanName := "deferred", leanTy := .nm "DeferredKey" },
+             { leanName := "finalizer", leanTy := .nm "FinName" }]
+def memoMap : StructDesc where
+  leanName := "MemoMap"; site := "Layer.lean:501"; subst := subst
+  fields := [{ leanName := "id", leanTy := mid },
+             { leanName := "parent", leanTy := .opt mid },
+             { leanName := "entries", leanTy := .lst (.nm "MemoPair"), isMutable := true }]
+def st : StructDesc where
+  leanName := "St"; site := "Layer.lean:624"; subst := subst
+  fields := [{ leanName := "memo", leanTy := .nm "MemoWorld", isMutable := true },
+             { leanName := "scopes", leanTy := .nm "ScopeStore" },
+             { leanName := "deferreds", leanTy := .nm "DeferredStore" },
+             { leanName := "nextName", leanTy := .nat, isMutable := true }]
+
+def tupleAliases : List Decl :=
+  [.rawD "type service_pair = service_key * value",
+   .rawD "type scope_entry_pair = int * fin_name",
+   .rawD "type memo_pair = layer_id * memo_entry"]
+
+def structs : List StructDesc := [layerId, memoMapId, scope, scopeEntry, scopeStore, memoEntry, memoMap, st]
+def inductives : List InductiveDesc :=
+  [combineMode, construction, layerDesc, finName, syncOp, progName, name, actionName, thunk, scopeState]
+
+def generated : List Decl :=
+  [.comment ("Generated by OCaml5.Ml (`Render.lean`, seat W1). Do not edit; edit the"
+      ++ " descriptions (`Ml.Deep.Layer`, seat F2).\n   One declaration per `Effect4/Deep/Layer.lean`"
+      ++ " carrier (and the four `Context.lean`/`Key.lean` carriers it names), same field and"
+      ++ " constructor order."),
+   layerId.header, renameDecl "layer_id" layerId.decl,
+   memoMapId.header, renameDecl "memo_map_id" memoMapId.decl,
+   .comment "`ServiceKey`, `Defect` and `ContextUpdate` are `deep_context.ml`'s (`Context.lean`, which `Layer.lean` imports).",
+   .rawD "type service_pair = Deep_context.service_key * value",
+   combineMode.header, renameDecl "combine_mode" combineMode.decl,
+   construction.header, renameDecl "construction" construction.decl,
+   layerDesc.header, renameDecl "layer_desc" layerDesc.decl,
+   finName.header, renameDecl "fin_name" finName.decl,
+   .rawD "type scope_entry_pair = int * fin_name",
+   scopeState.header, renameDecl "scope_state" scopeState.decl,
+   scope.header, renameDecl "scope" scope.decl,
+   scopeEntry.header, renameDecl "scope_entry" scopeEntry.decl,
+   scopeStore.header, renameDecl "scope_store" scopeStore.decl,
+   syncOp.header, renameDecl "sync_op" syncOp.decl,
+   .comment ("`ProgName`, `Name`, `ActionName` and `Thunk` are one mutually recursive group in"
+      ++ " OCaml; order inside the group is the Lean order."),
+   progName.header, renameDecl "prog_name" progName.decl,
+   name.header, renameDecl "name" name.decl,
+   actionName.header, renameDecl "action_name" actionName.decl,
+   thunk.header, renameDecl "thunk" thunk.decl,
+   memoEntry.header, renameDecl "memo_entry" memoEntry.decl,
+   .rawD "type memo_pair = layer_id * memo_entry",
+   memoMap.header, renameDecl "memo_map" memoMap.decl,
+   st.header, renameDecl "st" st.decl]
+
+end Layer
+
+/-! ## `Effect4/Deep/ForkFlow.lean` → `workshop/OCaml5/avatar/deep_forkflow.ml` (seat F2)
+
+The fiber profile's alphabet: `FiberOp` (twelve rows), the request carriers and the refusal
+alphabet. Everything else in `ForkFlow.lean` is the compile of that profile over the Flow IR
+(`RegionFlow`, `Code`, `Config`, `OpSpec`), which the avatar has no carriers for: it refuses by
+name. `Val` here is `Effects.Trace.Val` (`str`/`nat`/`bool`/`pair`/`unit`/`none`/`some`), which
+the wire `value` spells one for one; `BlockId` and `FiberId` are `int`. -/
+
+namespace ForkFlow
+
+def subst : Subst :=
+  [("FiberId", Ty.int), ("BlockId", Ty.int), ("Val", Ty.named "value"),
+   ("Res", Ty.named "exitv"), ("FiberOp", Ty.named "fiber_op"),
+   ("RootRequest", Ty.named "root_request"), ("ForkRequest", Ty.named "fork_request"),
+   ("ForkRefusal", Ty.named "fork_refusal")]
+
+/-- `FiberOp` (`ForkFlow.lean:122`), twelve rows in profile order, prefix `Fo`. -/
+def fiberOp : InductiveDesc where
+  leanName := "FiberOp"; site := "ForkFlow.lean:122"; ctorPrefix := "Fo"; subst := subst
+  ctors := [{ leanName := "fork" }, { leanName := "forkScoped" }, { leanName := "join" },
+            { leanName := "await" }, { leanName := "interrupt" }, { leanName := "interruptAll" },
+            { leanName := "childrenSnapshot" }, { leanName := "awaitChildren" }, { leanName := "raceAll" },
+            { leanName := "uninterruptibleIn" }, { leanName := "interruptibleIn" }, { leanName := "yieldNow" }]
+def rootRequest : StructDesc where
+  leanName := "RootRequest"; site := "ForkFlow.lean:382"; subst := subst
+  fields := [{ leanName := "root", leanTy := .nm "BlockId" }, { leanName := "args", leanTy := .lst (.nm "Val") }]
+def forkRequest : StructDesc where
+  leanName := "ForkRequest"; site := "ForkFlow.lean:401"; subst := subst
+  fields := [{ leanName := "root", leanTy := .nm "BlockId" }, { leanName := "args", leanTy := .lst (.nm "Val") },
+             { leanName := "daemon", leanTy := .bool }, { leanName := "region", leanTy := .opt .nat }]
+/-- `ForkRefusal` (`ForkFlow.lean:449`), prefix `Fr`. -/
+def forkRefusal : InductiveDesc where
+  leanName := "ForkRefusal"; site := "ForkFlow.lean:449"; ctorPrefix := "Fr"; subst := subst
+  ctors := [{ leanName := "requestMalformed", args := [⟨"request", .nm "Val", false⟩] },
+            { leanName := "rootUndeclared", args := [⟨"root", .nm "BlockId", false⟩] },
+            { leanName := "rootUnknown", args := [⟨"root", .nm "BlockId", false⟩] },
+            { leanName := "rootArity", args := [⟨"root", .nm "BlockId", false⟩, ⟨"declared", .nat, false⟩, ⟨"supplied", .nat, false⟩] },
+            { leanName := "handleMalformed", args := [⟨"request", .nm "Val", false⟩] },
+            { leanName := "scopedNamesRegion", args := [⟨"root", .nm "BlockId", false⟩] }]
+
+def generated : List Decl :=
+  [.comment ("Generated by OCaml5.Ml (`Render.lean`, seat W1). Do not edit; edit the"
+      ++ " descriptions (`Ml.Deep.ForkFlow`, seat F2).\n   One declaration per `Effect4/Deep/ForkFlow.lean`"
+      ++ " carrier of the profile's alphabet, same order."),
+   fiberOp.header, renameDecl "fiber_op" fiberOp.decl,
+   rootRequest.header, renameDecl "root_request" rootRequest.decl,
+   forkRequest.header, renameDecl "fork_request" forkRequest.decl,
+   forkRefusal.header, renameDecl "fork_refusal" forkRefusal.decl]
+
+end ForkFlow
+
 end Deep
 
 /-! ### Checks on the seat-W1 descriptions
@@ -1756,15 +2244,15 @@ field order against the Lean field order, and the mangling round-trip on every f
 
 -- `Stores.lean`'s constructor counts.
 #guard Deep.Stores.err.ctors.length == 2
-#guard Deep.Stores.defect.ctors.length == 3
+#guard Deep.Stores.defect.ctors.length == 5
 #guard Deep.Stores.fnName.ctors.length == 5
-#guard Deep.Stores.finName.ctors.length == 5
+#guard Deep.Stores.finName.ctors.length == 6
 #guard Deep.Stores.completion.ctors.length == 2
 #guard Deep.Stores.syncOp.ctors.length == 23
-#guard Deep.Stores.raceName.ctors.length == 4
-#guard Deep.Stores.progName.ctors.length == 22
-#guard Deep.Stores.name.ctors.length == 20
-#guard Deep.Stores.actionName.ctors.length == 17
+#guard Deep.Stores.raceName.ctors.length == 6
+#guard Deep.Stores.progName.ctors.length == 24
+#guard Deep.Stores.name.ctors.length == 21
+#guard Deep.Stores.actionName.ctors.length == 19
 #guard Deep.Stores.thunk.ctors.length == 4
 #guard Deep.Stores.finalizerStrategy.ctors.length == 2
 #guard Deep.Stores.scopeState.ctors.length == 5
@@ -1773,8 +2261,12 @@ field order against the Lean field order, and the mangling round-trip on every f
 -- same order: `setInterruptible` is `WithFiberAction`'s twelfth and `ActionName`'s sixteenth.
 -- A0 §3 lists no such row, so it is seat W1's, and `deep_stores.ml` follows the `Stores.lean`
 -- order because that is the file it is the port of.
+-- Seat F2: `WithFiberAction` gained `dropObservers` and `cancelRace` in `2f77f7d`;
+-- `Ml.Avatar.withFiberAction` (above the banner, not this seat's to edit) still describes the
+-- seventeen of `e77282d`, so the two are named here until that description catches up.
 #guard (Deep.Stores.actionName.ctors.map (·.leanName)).all
-  (fun n => (Avatar.withFiberAction.ctors.map (·.leanName)).contains n)
+  (fun n => (Avatar.withFiberAction.ctors.map (·.leanName)).contains n
+    || n == "dropObservers" || n == "cancelRace")
 #guard (Avatar.withFiberAction.ctors.map (·.leanName)).all
   (fun n => (Deep.Stores.actionName.ctors.map (·.leanName)).contains n)
 #guard Deep.Stores.actionName.ctors.map (·.leanName) !=
@@ -1805,6 +2297,37 @@ field order against the Lean field order, and the mangling round-trip on every f
    "SscopeMake", "SscopeAdd", "SscopeRemove", "SscopeIsClosed"]
 #guard Deep.Stores.scopeState.ctors.map (CtorDesc.ocaml "Ss") ==
   ["Ssempty", "SsopenEmpty", "SsopenInline", "SsopenMap", "Ssclosed"]
+
+-- `Layer.lean`'s constructor counts (seat F2, at `2f77f7d`).
+#guard Deep.Layer.combineMode.ctors.length == 2
+#guard Deep.Layer.construction.ctors.length == 4
+#guard Deep.Layer.layerDesc.ctors.length == 6
+#guard Deep.Layer.finName.ctors.length == 11
+#guard Deep.Layer.syncOp.ctors.length == 10
+#guard Deep.Layer.progName.ctors.length == 27
+#guard Deep.Layer.name.ctors.length == 49
+#guard Deep.Layer.actionName.ctors.length == 13
+#guard Deep.Layer.thunk.ctors.length == 3
+#guard Deep.ForkFlow.fiberOp.ctors.length == 12
+#guard Deep.ForkFlow.forkRefusal.ctors.length == 6
+#guard Deep.ForkFlow.forkRequest.fields.map (·.ocaml) == ["root", "args", "daemon", "region"]
+#guard Deep.Context.contextUpdate.ctors.length == 3
+#guard Deep.Context.defect.ctors.length == 5
+#guard Deep.Context.val.ctors.length == 15
+#guard Deep.Context.err.ctors.length == 2
+#guard Deep.Context.context.erasures.map (·.1) == ["keysNodup"]
+#guard Deep.Context.structs.all (fun d => d.holes.isEmpty)
+#guard Deep.Layer.scopeState.ctors.length == 5
+#guard Deep.Layer.st.fields.map (·.ocaml) == ["memo", "scopes", "deferreds", "next_name"]
+#guard Deep.Layer.memoEntry.fields.map (·.ocaml) == ["observers", "effect", "layer_scope", "deferred", "finalizer"]
+#guard Deep.Layer.inductives.all (fun d => d.erasures.isEmpty)
+#guard (Deep.Layer.structs.flatMap (fun d => d.fields.map (·.leanName))).all
+  (fun n => unmangleField (mangleField n) == n)
+-- Layer's `ActionName` is `WithFiberAction` minus the fork-in/run-in/race family plus nothing:
+-- every name is a `WithFiberAction` name (`dropObservers` since `2f77f7d`).
+#guard (Deep.Layer.actionName.ctors.map (·.leanName)).all
+  (fun n => (Avatar.withFiberAction.ctors.map (·.leanName)).contains n
+    || n == "dropObservers" || n == "awaitAllFailFast")
 
 end Ml
 end OCaml5

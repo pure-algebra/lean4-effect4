@@ -97,10 +97,8 @@ let render_event (e : run_event) : string =
   | FinalizerProgram (f, n, _) -> Printf.sprintf "finalizerProgram\t%d\t%s" f n
   | ScopeLinked (s, k, f) -> Printf.sprintf "scopeLinked\t%d\t%d\t%d" s k f
   | ScopeClosedOnLink (s, f) -> Printf.sprintf "scopeClosedOnLink\t%d\t%d" s f
-  | RaceStarted (r, h, es) ->
-    Printf.sprintf "raceStarted\t%d\t%d\t[%s]" r h (String.concat ";" (List.map string_of_int es))
+  | RaceStarted (r, h, n) -> Printf.sprintf "raceStarted\t%d\t%d\t%d" r h n
   | RaceLaunched (r, e) -> Printf.sprintf "raceLaunched\t%d\t%d" r e
-  | RaceSkipped (r, e) -> Printf.sprintf "raceSkipped\t%d\t%d" r e
   | RaceSettled (r, e) -> Printf.sprintf "raceSettled\t%d\t%s" r (wire_exit e)
   | ContextSet f -> Printf.sprintf "contextSet\t%d" f
   | CallbackEv (k, e) -> Printf.sprintf "callback\t%d\t%s" k (wire_exit e)

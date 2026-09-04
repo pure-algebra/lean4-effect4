@@ -249,7 +249,7 @@ root 10 fork 0 ; yield ; succeed 4
 main fork 10 ; fork 1 ; awaitAll #0,#1 ; started
 
 prog cForkInsideMask
-note a masked fiber forks; the child inherits the mask
+note a masked fiber forks; rc.112's fork names no mask, so the child is interruptible (`:5258`, `:5271`; "inherit" is opt-in) and the interrupt reaches it
 root 10 mask ; fork 4 ; yield ; unmask ; never
 main fork 10 ; yield ; interrupt #0 ; cleanups ; started
 

@@ -25,4 +25,9 @@ op	yield	[]
 answer	yield	[]
 op	interrupt	0
 answer	yield	[]
-frontier
+answer	interrupt	[]
+op	cleanups	[]
+answer	cleanups	[10, [4, []]]
+op	started	[]
+answer	started	[10, [4, []]]
+done	{"success":[10, [4, []]]}

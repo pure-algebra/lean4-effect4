@@ -23,7 +23,7 @@ answer	yield	[]
 op	interrupt	0
 answer	interrupt	[]
 op	cleanups	[]
-answer	cleanups	[10, []]
+answer	cleanups	[4, [4, [10, []]]]
 op	started	[]
 answer	started	[10, [4, [4, []]]]
 done	{"success":[10, [4, [4, []]]]}

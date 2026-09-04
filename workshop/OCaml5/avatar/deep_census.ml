@@ -8,6 +8,15 @@ type row = { id : string; kind : string; disposition : string; coverage : string
 
 let rows : row list =
   [
+    { id = "op.Sync"; kind = "op"; disposition = "separateCalculus"; coverage = "green";
+      deep =
+        [ "Effect4.Deep.evaluatePrim_sync_answers";
+          "Effect4.Deep.evaluatePrim_sync_pure";
+          "Effect4.Deep.settle_answered";
+          "Effect4.Deep.drive_loop_answered";
+          "Effect4.Deep.drive_deliver";
+          "Effect4.Deep.Witnesses.w13_completion_pop_sees_the_waiter_interrupt";
+          "Effect4.Deep.Witnesses.w13_sync_meets_the_finalizer_program" ] };
     { id = "op.Yield"; kind = "op"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Deep.evaluatePrim_yieldNowWith" ] };
@@ -15,15 +24,27 @@ let rows : row list =
       deep =
         [ "Effect4.Deep.evaluatePrim_async_immediate";
           "Effect4.Deep.evaluatePrim_async_parks" ] };
+    { id = "op.AsyncFinalizer"; kind = "op"; disposition = "separateCalculus"; coverage = "green";
+      deep =
+        [ "Effect4.Deep.withFiber_dropObservers";
+          "Effect4.Deep.Witnesses.w14_join_cleanup_drops_the_observer" ] };
+    { id = "frame-arm.OnExit"; kind = "frame-arm"; disposition = "owned"; coverage = "green";
+      deep =
+        [ "Effect4.Deep.Witnesses.w13_sync_meets_the_finalizer_program" ] };
     { id = "checkpoint.runloop-top"; kind = "checkpoint"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Deep.runloopTop_deferred";
           "Effect4.Deep.runloopTop_idle";
           "Effect4.Deep.runloopTop_clears";
           "Effect4.Deep.iteration_evaluates" ] };
+    { id = "checkpoint.getcont-deferred"; kind = "checkpoint"; disposition = "separateCalculus"; coverage = "green";
+      deep =
+        [ "Effect4.Deep.Witnesses.w13_completion_pop_sees_the_waiter_interrupt" ] };
     { id = "checkpoint.post-yield-cancel"; kind = "checkpoint"; disposition = "separateCalculus"; coverage = "green";
       deep =
-        [ "Effect4.Deep.interruptRecord_parked_applies" ] };
+        [ "Effect4.Deep.interruptRecord_parked_applies";
+          "Effect4.Deep.Witnesses.w14_join_cleanup_drops_the_observer";
+          "Effect4.Deep.Witnesses.w3_host_interrupt_cancels_entrants" ] };
     { id = "interrupt.unsafe-entry"; kind = "interrupt"; disposition = "owned"; coverage = "green";
       deep =
         [ "Effect4.Deep.interruptRecord_exited";
@@ -53,7 +74,8 @@ let rows : row list =
           "Effect4.Deep.withFiber_fork";
           "Effect4.Deep.Witnesses.w1_deferred_join_child";
           "Effect4.Deep.Witnesses.w1_deferred_start_is_a_task";
-          "Effect4.Deep.Witnesses.w5_middleware_interrupts_children" ] };
+          "Effect4.Deep.Witnesses.w5_middleware_interrupts_children";
+          "Effect4.Deep.drive_finish" ] };
     { id = "fork.detach"; kind = "fork"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Deep.spawn_daemon_untracked";
@@ -62,7 +84,8 @@ let rows : row list =
           "Effect4.Deep.exitFiber_no_children";
           "Effect4.Deep.exitInterruptChildren_eq";
           "Effect4.Deep.exitInterruptChildren_interrupts";
-          "Effect4.Deep.Witnesses.w5_no_middleware_leaves_children" ] };
+          "Effect4.Deep.Witnesses.w5_fork_latches_the_middleware";
+          "Effect4.Deep.Witnesses.w5_daemon_child_survives_parent_exit" ] };
     { id = "fork.in"; kind = "fork"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Deep.withFiber_forkIn";
@@ -72,7 +95,9 @@ let rows : row list =
           "Effect4.Deep.withFiber_closeScope";
           "Effect4.Deep.Witnesses.w6_link_then_close";
           "Effect4.Deep.Witnesses.w6_closed_scope_interrupts_now";
-          "Effect4.Deep.Witnesses.w6_child_exit_drops_key" ] };
+          "Effect4.Deep.Witnesses.w6_child_exit_drops_key";
+          "Effect4.Deep.drive_link";
+          "Effect4.Deep.Witnesses.w6_deferred_child_is_linked" ] };
     { id = "fork.scoped"; kind = "fork"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Deep.withFiber_forkScoped_ambient";
@@ -80,9 +105,9 @@ let rows : row list =
     { id = "fork.race-all"; kind = "fork"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Deep.withFiber_raceAll";
-          "Effect4.Deep.raceEntrant_options";
+          "Effect4.Deep.launchEntrant_eq";
           "Effect4.Deep.drive_launch_runs";
-          "Effect4.Deep.drive_launch_skipped";
+          "Effect4.Deep.drive_launch_done";
           "Effect4.Deep.fireObserver_raceCallback_pending";
           "Effect4.Deep.fireObserver_raceCallback_settles";
           "Effect4.Deep.fireObserver_raceCallback_late";
@@ -91,31 +116,48 @@ let rows : row list =
           "Effect4.Deep.Witnesses.w3_empty_until_interrupted";
           "Effect4.Deep.Witnesses.w3_immediate_success_stops_launch";
           "Effect4.Deep.Witnesses.w3_failure_allows_next_launch";
-          "Effect4.Deep.Witnesses.w3_all_failures_retain_order" ] };
+          "Effect4.Deep.Witnesses.w3_all_failures_retain_order";
+          "Effect4.Deep.settleRace_eq";
+          "Effect4.Deep.withFiber_cancelRace";
+          "Effect4.Deep.withFiber_cancelRace_unknown";
+          "Effect4.Deep.Witnesses.w3_host_interrupt_cancels_entrants";
+          "Effect4.Deep.Witnesses.w3_settle_interrupts_the_parked_loser";
+          "Effect4.Deep.drive_launch_exhausted" ] };
     { id = "fork.await-all-children"; kind = "fork"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Deep.withFiber_snapshotChildren";
           "Effect4.Deep.withFiber_awaitNewChildren";
-          "Effect4.Deep.fireObserver_countdown_last";
-          "Effect4.Deep.fireObserver_countdown_more";
+          "Effect4.Deep.fireObserver_countdown_done";
+          "Effect4.Deep.fireObserver_countdown_next";
           "Effect4.Deep.Witnesses.w5_await_all_children_awaits_only_new";
-          "Effect4.Deep.Witnesses.w12_awaitAll_answers_the_exits" ] };
+          "Effect4.Deep.Witnesses.w12_awaitAll_answers_the_exits";
+          "Effect4.Deep.countdownWalk_nil";
+          "Effect4.Deep.countdownWalk_exited";
+          "Effect4.Deep.countdownWalk_live";
+          "Effect4.Deep.countdownPark_none_live";
+          "Effect4.Deep.countdownPark_parks";
+          "Effect4.Deep.Witnesses.w12_awaitAll_input_order";
+          "Effect4.Deep.Witnesses.w5_await_all_children_on_failure" ] };
     { id = "fork.fiber-run-in"; kind = "fork"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Deep.withFiber_runIn";
           "Effect4.Deep.linkScope_closed";
           "Effect4.Deep.linkScope_unknown";
           "Effect4.Deep.linkScope_open";
+          "Effect4.Deep.linkScope_open_exited";
           "Effect4.Deep.Witnesses.w6_runIn_closed_scope_uses_no_caller_annotations" ] };
     { id = "fork.join"; kind = "fork"; disposition = "owned"; coverage = "green";
       deep =
         [ "Effect4.Deep.evaluatePrim_join_done";
           "Effect4.Deep.evaluatePrim_join_live";
-          "Effect4.Deep.evaluatePrim_join_unknown" ] };
+          "Effect4.Deep.evaluatePrim_join_unknown";
+          "Effect4.Deep.Witnesses.w14_join_cleanup_drops_the_observer" ] };
     { id = "fork.await"; kind = "fork"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Deep.evaluatePrim_join_done";
-          "Effect4.Deep.evaluatePrim_join_live" ] };
+          "Effect4.Deep.evaluatePrim_join_live";
+          "Effect4.Deep.withFiber_dropObservers";
+          "Effect4.Deep.Witnesses.w14_join_cleanup_drops_the_observer" ] };
     { id = "fork.interrupt"; kind = "fork"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Deep.withFiber_interrupt";
@@ -133,8 +175,9 @@ let rows : row list =
           "Effect4.Deep.interruptEach_nil";
           "Effect4.Deep.interruptEach_cons";
           "Effect4.Deep.interruptEach_known";
-          "Effect4.Deep.fireObserver_countdown_last";
-          "Effect4.Deep.fireObserver_countdown_more" ] };
+          "Effect4.Deep.fireObserver_countdown_done";
+          "Effect4.Deep.fireObserver_countdown_next";
+          "Effect4.Deep.countdownPark_parks" ] };
     { id = "scope.close-sequential"; kind = "scope"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Deep.closeSeqChain_order";
@@ -153,8 +196,8 @@ let rows : row list =
       deep =
         [ "Effect4.Deep.closeSeqChain_merges";
           "Effect4.Deep.closeParChain_awaits_all";
-          "Effect4.Deep.fireObserver_countdown_last";
-          "Effect4.Deep.fireObserver_countdown_more";
+          "Effect4.Deep.fireObserver_countdown_done";
+          "Effect4.Deep.fireObserver_countdown_next";
           "Effect4.Deep.Witnesses.w6_parallel_forks_and_merges";
           "Effect4.Deep.Witnesses.w12_awaitAll_answers_the_exits" ] };
     { id = "scheduler.should-yield"; kind = "scheduler"; disposition = "separateCalculus"; coverage = "green";
@@ -226,7 +269,7 @@ let rows : row list =
           "Effect4.Deep.withFiber_fork";
           "Effect4.Deep.withFiber_forkIn";
           "Effect4.Deep.withFiber_forkScoped_ambient";
-          "Effect4.Deep.raceEntrant_options";
+          "Effect4.Deep.launchEntrant_eq";
           "Effect4.Deep.fireObserver_untrackChild" ] };
     { id = "rule.children-interrupted-after-exit"; kind = "rule"; disposition = "separateCalculus"; coverage = "green";
       deep =
@@ -237,7 +280,9 @@ let rows : row list =
           "Effect4.Deep.exitInterruptChildren_interrupts";
           "Effect4.Deep.resumePrim_continueWith";
           "Effect4.Deep.exitFiber_finalizing";
-          "Effect4.Deep.Witnesses.w5_middleware_interrupts_children" ] };
+          "Effect4.Deep.Witnesses.w5_middleware_interrupts_children";
+          "Effect4.Deep.settle_finished";
+          "Effect4.Deep.drive_finish" ] };
     { id = "rule.start-is-asymmetric"; kind = "rule"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Deep.start_eq";
@@ -308,7 +353,8 @@ let rows : row list =
         [ "Effect4.Deep.deferredStore_complete_done" ] };
     { id = "deferred.completion-order"; kind = "deferred"; disposition = "separateCalculus"; coverage = "green";
       deep =
-        [ "Effect4.Deep.deferredStore_complete_pending" ] };
+        [ "Effect4.Deep.deferredStore_complete_pending";
+          "Effect4.Deep.Witnesses.w13_completion_pop_sees_the_waiter_interrupt" ] };
     { id = "deferred.complete-with-stores-effect"; kind = "deferred"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Deep.deferredStore_complete_stores_argument";
@@ -387,5 +433,5 @@ let rows : row list =
         [ "Effect4.Deep.Layers.provideLayer_scope" ] };
   ]
 
-(* 80 of the 130 census rows name a Deep witness. *)
+(* 84 of the 130 census rows name a Deep witness. *)
 let rows_total : int = 130

@@ -34,7 +34,7 @@ print("let text = {corpus|" + open(sys.argv[1]).read() + "|corpus}")
 PY
 # Seat F1: `deep_census.ml`, `deep_clauses.ml` and `deep_witnesses.ml` are libraries (no
 # top-level effects); the report driver `avatar_witnesses.ml` is linked by `run-witnesses.sh`.
-modules="deep_fibers.ml deep_stores.ml deep_layer.ml avatar_trace.ml deep_census.ml deep_clauses.ml deep_witnesses.ml fibers_fixture.ml store_fixtures.ml extra_fixture.ml corpus_dsl.ml corpus_data.ml corpus_run.ml avatar_main.ml"
+modules="deep_fibers.ml deep_stores.ml deep_context.ml deep_layer.ml deep_forkflow.ml avatar_trace.ml deep_census.ml deep_clauses.ml deep_witnesses.ml fibers_fixture.ml store_fixtures.ml extra_fixture.ml corpus_dsl.ml corpus_data.ml corpus_run.ml avatar_main.ml"
 "$oc/ocamlc"   -o avatar.byte   $modules
 "$oc/ocamlopt" -o avatar.native $modules
 "$jsoo" compile --enable effects --target-env=nodejs avatar.byte -o avatar.js 2>/dev/null

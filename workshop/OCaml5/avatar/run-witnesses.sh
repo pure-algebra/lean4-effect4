@@ -22,7 +22,7 @@ cp "$here"/*.ml "$out/witnesses/"
 cd "$out/witnesses"
 status=0
 
-modules="deep_fibers.ml deep_stores.ml deep_layer.ml avatar_trace.ml deep_census.ml deep_clauses.ml deep_witnesses.ml avatar_witnesses.ml"
+modules="deep_fibers.ml deep_stores.ml deep_context.ml deep_layer.ml deep_forkflow.ml avatar_trace.ml deep_census.ml deep_clauses.ml deep_witnesses.ml avatar_witnesses.ml"
 "$oc/ocamlc"   -o witnesses.byte   $modules || exit 1
 "$oc/ocamlopt" -o witnesses.native $modules || exit 1
 "$jsoo" compile --enable effects --target-env=nodejs witnesses.byte -o witnesses.js 2>/dev/null || exit 1
@@ -48,7 +48,11 @@ if [ "$lean_witnesses" = "$have_witnesses" ]; then echo "witnesses: $have_witnes
 else echo "witnesses: $have_witnesses entries != $lean_witnesses Witnesses.lean theorems"; status=1; fi
 python3 "$here/extract-census.py" --check || status=1
 
-grep -E '^clauses|^witnesses|^run-clauses' byte.tsv
+grep -E '^clauses|^witnesses|^run-clauses|^park-guard' byte.tsv
+# Seat F2: the park guard/one-shot probe must be silent on every run.
+if [ "$(awk -F'\t' '$1=="park-guard"{print $3}' byte.tsv)" != "0" ]; then
+  echo "park-guard violations on the avatar"; status=1
+fi
 if [ "$(awk -F'\t' '$1=="witnesses"{print $6}' byte.tsv)" != "0" ]; then
   echo "witness statements FAIL on the avatar:"; grep -B1 '^  statement	FAILS' byte.tsv; status=1
 fi

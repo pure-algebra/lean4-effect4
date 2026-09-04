@@ -483,3 +483,349 @@ W1-2 (`Completion` in the slot), `Err.boom` = code 100, `Defect.asyncFiber` = th
    first with `[@sexp.opaque]`/`[@compare.ignore]` on the closure fields, then emit the
    attributes through the descriptions.
 4. `deep_context.ml`, `deep_forkflow.ml`: not started.
+
+---
+
+# Seat F2, 2026-09-04
+
+**STATUS (updated at every step boundary):** step 3c of 7 done — (0) the PC review folded in,
+(1) R2-1 folded in, (2) the four consistency tables below, the fixture-mask and join-park
+divergences closed, (3) the PARK section landed with its guard/one-shot probe, (3b) re-diffed arm
+for arm against `2f77f7d` (R2-3/4/12/13), (3c) **re-diffed against `57924eb`** (R2-7/8/11: the
+fork family — `awaitAllChildren` as `onExit`, `forkIn`'s link after the start as `Clink`, the
+race's register loop as `Claunch race` forking one entrant per iteration). Base `57924eb` (Mac =
+PC; step 4b pending on the PC — re-diff again when it lands). Counts: clauses **126 = 126**
+(121 hold, 0 fail, 5 not portable), witnesses **60 = 60** (59 hold, 0 fail, 1 not portable),
+run-clauses 34/0, park-guard violations **0**, census 84 of 130 rows IDENTICAL. After `2f77f7d`
+(F2.7): goldens 21/18/12/24 twice, extra 12/12, corpus **445 ok / 0 unclassified / 2 classified**
+(only `hYieldStorm`, R2-14/15, remains; `cAwaitAllTwoGenerations` and `dRaceThenInterruptHost`
+closed by the park re-diff and their rows dropped), hosts agree 31 + 158, dune green and
+IDENTICAL; the `57924eb` battery: the same numbers (445/0/2, 21/18/12/24 ×2, 12/12, 158,
+dune IDENTICAL). **Step 4 done**: `deep_layer.ml` proper (F2.8) — 21 carriers generated and
+IDENTICAL, the store half ported (the memo world, Layer's scope store, `syncStep`'s ten arms,
+`St`), the context-bound half refusing by name (28 sites). **Step 5 done**: `deep_context.ml` (F2.9)
+— 8 carriers generated and IDENTICAL (`Val` as its own carrier, the `Nodup` proof erased), the
+environment's operations and the four hooks ported, the free-program half refusing; linked
+into every build (`build-avatar.sh`, `run-witnesses.sh`, `dune`, `run-fuzz.sh`), report
+unchanged (126/60, park-guard 0). **Step 6 done**: `deep_forkflow.ml` (F2.10) — the profile's
+alphabet generated (4 carriers, IDENTICAL) and its value codings ported; the compile over the
+Flow IR refusing by name (17 sites). **Step 7 not started** (deriving attributes with
+`[@sexp.opaque]`, the `%expect` tests under dune, Base/Core `Map`/`Deque` for the tables and
+buckets citing `Lib/Deque.lean:420`): the exact remaining work is in F2.6 Q8. Every battery
+green at the checkpoint (F2.7). Nothing committed; every owned file compiles on disk.
+
+Owner files unchanged from F1 plus `avatar/corpus/known-divergences.tsv` and
+`avatar/corpus/programs.txt` (two rows closed, one note corrected). Tools: the Mac cannot run
+`lake` at this manifest (open question Q1), so `render-deep.sh` falls back to `lean` over the
+built oleans and `OCaml5.Render` was rebuilt the same way; `#guard`s green.
+
+## F2.0 The PC review (step 0): what applied to the avatar
+
+Read: `docs/research/2026-09-04-deep-review-2.md` (R2-1 … R2-19 with the repair order),
+`2026-09-04-stress-plan.md` (S1 landed, one finding S1-1), the diffs of `Fibers.lean`,
+`Clauses.lean`, `Witnesses.lean`, `Runtime.lean` across `e77282d..c926acd`. Every repaired item
+was checked arm for arm against `deep_fibers.ml`/`deep_stores.ml`; "carried" means the avatar
+had the same bug.
+
+| id | rc.112 | Lean repair | avatar carried it? | avatar fix (file:decl) | Lean cited |
+| --- | --- | --- | --- | --- | --- |
+| R2-1 | `Sync[evaluate]` = thunk, then `getCont` (`:931-935`); a waiter resumed inside the thunk can record a deferred interrupt the pop must see (`:680-683`) | `Outcome.answered`, `Cmd.deliver`, `Cmd.finish`, `settle` (`c926acd`) | **yes** — the Lean-alphabet `Rsync`/`Rinterrupt_deferred` arms drained then `ko.ret`, so the deferred flag was seen only at the next primitive, after a `try` (an `onExit`) had been left | `deep_fibers.ml: deliver` (the pop with `getCont`'s check, no op count); `deep_stores.ml: store_arm` `Rsync`/`Rinterrupt_deferred` call it | `Fibers.lean:481-484`, `:743-751`, `:1067-1085`, `:1109-1114` |
+| R2-1 second half | a `sync` under an `onExit` meets the finalizer *program* | `Cmd.deliver` through `finalizerOr` | no — `on_exit_program` always ran the program | none needed; pinned by `w13_sync_meets_the_finalizer_program` | `Fibers.lean:766-786` |
+| R2-2 | `_deferredInterrupt = false` when the loop returns an exit (`:659`) | both branches of `exitFiber` | **yes** — neither `exit_store` nor `exit_interrupt_children` cleared it | both clear it | `Fibers.lean:1030-1031`, `:1035-1038` |
+| R2-5 | `fiberInterrupt`/`fiberInterruptAll`/`…As` pass the caller's stack annotations (`:880-883`, `:892-895`, `:910-913`) | `interruptEach` takes `extra`; every site passes `stackAnnotations caller` | **yes** — `interrupt_each` and six sites passed `[]` | `interrupt_each m who extra …`; `exit_interrupt_children`, the race settle, `Claunch` skipped, `arm_interrupt` (fixture), `arm_interrupt_then_join`, `arm_interrupt_all` | `Clauses.lean:704-714`; `Fibers.lean:836-838`, `:911-912`, `:992-993`, `:1026-1028`, `:1115-1116` |
+| R2-6 | `forkChild` latches the interrupt-children middleware (`:5253`, `:6656-6658`) | the `fork` arm sets `middlewareInstalled` unless daemon | **half** — the fixture's `arm_fork` latched, the Lean-alphabet `arm_fork_prog` did not | `arm_fork_prog` latches | `Fibers.lean:796-802` |
+| R2-9 | `fiberRunIn` on an exited fiber returns it unlinked (`:5367`, `:5451-5452`) | `linkScope`'s open arm checks the target's exit; unknown target is stuck | **yes** — `link_scope` linked an exited target and silently skipped an unknown one | the open arm re-spelled arm for arm | `Fibers.lean:624-636` |
+| R2-10 | race entrants are forked interruptible (`:1521`) | `⟨true, true, .interruptible⟩` | **yes** — `race_entrant` used `Minherit` | `Minterruptible` | `Fibers.lean:861-864`, `Clauses.lean:1253-1259` |
+| S1-1 | `forkScoped` with no ambient `Scope` is `Context.get`'s `ServiceNotFound` (`:5400-5406`) | `RunInterp.missingScope`, `Defect.missingService`, Layer's `serviceNotFound scopeKey` | **yes** — `arm_fork_scoped` died `"notImplemented"` | dies `"missingService"`; `Defect` regenerated with `missingService`/`user n` (`Render.lean` SEAT W1, `#guard … == 5`) | `Fibers.lean:411-414`, `:809-820`; `Stores.lean:81-92` |
+| Frame machine (`72701d4`): `IterStep.resume next continueAs`, `loopStep : ν → β → β → β` | generators advance, loops read the cursor | n/a — the avatar's loops and generators are OCaml control (DIVERGENCE 1); nothing to port | — | `Runtime.lean:222-230`, `:252-259` |
+| R2-3 | `fiberJoin`/`fiberAwait`/`fiberAwaitAll` are `callback`s whose registration returns the splice-out cleanup (`:773`, `:812`, `:821`) | `2f77f7d`: `parkCancelName`, `WithFiberAction.dropObservers token`, the `asyncFinalizer` frame pushed by the join arm and by `countdownPark` | **yes** — bare guards: an interrupted joiner left its observer on the target | `join_park` and `countdown_park` build the closure whose `Acause` arm runs `drop_observers m token`, masked (`run_cleanup`), then delivers the cause; `Op_drop_observers` is the program arm | `Fibers.lean:257-260`, `:566-576`, `:578-600`, `:766-789`, `:971-978` |
+| R2-4 | `fiberAwaitAll` walks its fibers in input order, one observer at a time, and answers in input order (`:794-808`) | `countdownWalk`; `Pending.remaining : List FiberId`, `waitingOn` the observed target; the countdown observer continues the walk | **yes** — every live target observed at once, exits in completion order (corpus row `cAwaitAllTwoGenerations`) | `countdown_walk`, `pending` re-spelled (six fields), `fire_observer (Countdown …)` continues the walk | `Fibers.lean:73-88`, `:562-600`, `:1028-1060` |
+| R2-12 | the winner resumes the host with `flatMap(uninterruptible(fiberInterruptAll(live)), () => exit)` (`:1510-1514`) | `raceSettle`, `raceSettleProgram`; `settleRace` resumes the host on its race guard with it and touches nothing else | **yes** — the callback interrupted the losers itself and parked the host on an unmasked countdown | `Aprogram` (a fourth answer shape): the settle resumes the host with `race_settle_program live accepted`, which the host runs on its own stack through `current_program` (`race_all_program`, `race_all_fixture`); `Op_interrupt_fibers` is `ProgName.interruptFibers` | `Fibers.lean:1069-1076`; `Stores.lean:1134-1142` |
+| R2-13 | the race park's cleanup is `fiberInterruptAll(fibers)` (`:1530`) | `raceCancelName`, `WithFiberAction.cancelRace race`, pushed as the host's `asyncFinalizer` | **yes** — an interrupted host leaked its entrants (corpus row `dRaceThenInterruptHost`) | the host's closure: on an interrupt, `cancel_race` (interrupt the live entrants with the host's id and annotations, await them), then re-fail; `Op_cancel_race` is the program arm | `Fibers.lean:919-947`, `:979-988` |
+| R2-7 | `awaitAllChildren` is `onExit(self, …)` (`:5314-5333`): the new children are awaited on any exit, under the finalizer mask, and the body's own value is answered | `57924eb`: `Name.snapshotThen` compiles to `Prim.onExit body (finalizerName (FinName.awaitNewChildren snapshot)) false`; `Name.awaitNew` retired | **yes** — `PawaitAllNew` was `snapshot; body; await` (a failing body never awaited) and answered void | `prog_of (PawaitAllNew …)` is `on_exit_program body (FinawaitNewChildren snapshot)`; `fin_program`/`fin_name_string` gain the arm; `FinName` regenerated (6), `Name` (21) | `Stores.lean` `progOf`/`finProgram`; `Fibers.lean:894-901` |
+| R2-8 | `forkIn` forks and, when immediate, runs the child first, then links only a child that has not exited (`:5366-5376`) | `Cmd.link` after the start commands; `linkScope` skips an exited target (R2-9) | **yes** — `arm_fork_in` linked before starting | `Clink (mode, scope, key, target, interruptor, extra)` as a command after `start`; `exec (Clink …)` = `link_scope` | `Fibers.lean:513-517`, `:894-901`, `:1206-1208` |
+| R2-11 | entrants are forked one per iteration of the register loop, which breaks once done (`:1520-1528`): a skipped entrant never exists | `Race.programs`, `Cmd.launch race` as one iteration (`launchEntrant`, evaluate, the next launch), `raceSkipped` retired, `raceStarted` carries the count | **yes** — every entrant was spawned before any launch (M8) | `race.programs`; `Claunch race_id` forks/records/evaluates the next entrant and re-issues itself; `RaceStarted (race, host, count)`; `launch_entrant` | `Fibers.lean:299-310`, `:672-680`, `:942-958`, `:1188-1205` |
+| R2-11b (trace-level), R2-14/15 (root-only flush, arming order) | owed to R4 / Lean repair step 4b | the avatar matches the current Lean; `hYieldStorm` stays classified | none until Lean lands | `deep-review-2.md` §"Order of repair" 4 |
+| R2-16…19 (trace-level) | owed to R4 | not visible at the avatar (no frame stream) | — | ibid. 5 |
+
+Two further divergences the review's *class* ("state rc.112 keeps that the model abstracted")
+turned up in the avatar itself, both closed:
+
+| id | where | what | fix |
+| --- | --- | --- | --- |
+| F2-1 | `deep_fibers.ml: arm_join`, `arm_await` (the fixture's join/await parks) | the park left `running = true`, so an interrupt on a fiber parked on a join was *deferred* (`:588-590`) and never applied; corpus row `aIntJoinPending` (avatar-open since round five) | `running <- false` on park (`Outcome.parked`, `settle`, `Fibers.lean:1077-1078`) |
+| F2-2 | `deep_fibers.ml: fixture_fork_options` | the fixture's `fork`/`forkDetach` gave the child the parent's mask (`Minherit`, after `Witnesses.lean:219-232`'s reading of `:5264-5272`); rc.112's `Effect.fork` passes `options?.uninterruptible ?? false` (`:5258`) and `forkUnsafe` defaults `uninterruptible = false` (`:5271`), so a fork that names no mask is *interruptible* whatever the parent is; corpus row `cForkInsideMask` (a masked parent's child, interrupted) showed it | `Minterruptible`; the corpus note corrected. **Lean note for the coordinator:** `immediateChild`/`deferredChild`/`scopedChild`/`daemonChild` (`Witnesses.lean:219-232`) say `inherit` citing those lines; rc.112's default is `false`. Invisible while every witness root is interruptible |
+
+Also closed on the way: `guard`, `arm_set_interruptible`, `arm_fork_scoped`, `arm_refuse`
+cleared `running` *before* throwing a cause into the fiber's stack; a fiber that catches the
+cause (an `onExit`'s `try`, a mask region) kept running with the flag false, so a second
+interrupt from a resumed waiter looked like one on an idle fiber (a spurious `Started` and an
+op-count reset). Now only a park or the exit path clears it, as `settle` does. And `finish`
+(`Cmd.finish`) drains the store's owed resumes after the exit path unless the fiber parked on
+its children (`Fibers.lean:1152-1158`), which it did not.
+
+Re-cited and re-counted: `deep_clauses.ml` 115 entries = 115 `Clauses.lean` theorems, same
+names, same order (`linkScope_open_exited`, `evaluatePrim_sync_answers`, `evaluatePrim_sync_pure`,
+`settle_answered`, `settle_finished`, `drive_loop_answered`, `drive_deliver`, `drive_finish`
+added); `deep_witnesses.ml` 54 = 54 (the three `toSched`/`toSup` entries dropped — retired with
+the old machines in `72698bb`, no theorem names them; `w5_no_middleware_leaves_children` replaced
+by `w5_fork_latches_the_middleware` and `w5_daemon_child_survives_parent_exit`;
+`w6_close_interrupt_carries_closer_annotations`, `w13_completion_pop_sees_the_waiter_interrupt`,
+`w13_sync_meets_the_finalizer_program` added; W2/W10/W11 fork `daemon_child`; every `lean`
+field re-read from the current file). `deep_census.ml` regenerated (83 rows).
+
+## F2.1 Consistency: fiber behaviour (`Fibers.lean` arm → avatar arm)
+
+Status: **identical** (same transition, same events, same commands, up to the standing
+divergences DIVERGENCE 1–4 of A0 §3), **divergent** (with the row that shows it), **refused**.
+
+| Lean arm | line | avatar | status |
+| --- | --- | --- | --- |
+| `runloopTop`, `countOp`, `yieldVerdict`, `injectYield` | `:692-720` | `runloop_top`, `count_op`, `yield_verdict`, `inject_yield` | identical; the op is a perform, not a `Prim` node (DIVERGENCE 2, E4-SEM-CE-011) |
+| `Cmd.evaluate` | `:1096-1108` | `exec (Cevaluate)` | identical (exited/running no-op, op count and latch reset, `started`) |
+| `Cmd.loop` | `:1108-1110` | — | refused (DIVERGENCE 2) |
+| `Cmd.deliver` (R2-1) | `:1109-1114` | `deliver` | identical: the deferred check, no op count |
+| `Cmd.finish` | `:1152-1158` | `finish` | identical since F2 (the trailing drain was missing) |
+| `Cmd.resume` (token guard) | `:1118-1131` | `exec (Cresume)` | identical; plus the guard/one-shot probe (F2.5) |
+| `Cmd.drainDue` | `:1159-1165` | `exec CdrainDue` | identical |
+| `settle` | `:1067-1085` | `finish`/the park arms' `running <- false` | identical since F2-1 |
+| `interruptRecord` | `:489-517` | `interrupt_record` | identical (DIVERGENCE 8's three cases) |
+| `spawn`, `spawnChild`, `start` | `:582-616` | `spawn`, `spawn_child`, `start` | identical |
+| `fork` | `:796-802` | `arm_fork_prog`; the fixture's `arm_fork` | identical (R2-6, F2-2) |
+| `forkIn` | `:894-901` | `arm_fork_in` | identical: spawn, start, then `Clink` (R2-8) |
+| `forkScoped` ambient / none | `:809-820` | `arm_fork_scoped` | `_none` identical (S1-1); `_ambient` refused (`χ = unit`, A0 §18) |
+| `runIn` | `:821-824` | `arm_run_in` | identical |
+| `interrupt` (`interruptThenJoin`) | `:825`, `:903-921` | `arm_interrupt_then_join`; the fixture's `arm_interrupt` | identical (R2-5) |
+| `interruptScoped` | `:826-828` | `arm_interrupt_scoped` | identical |
+| `interruptAll` | `:829-842` | `arm_interrupt_all` | identical (R2-5) |
+| `awaitAll` | `:905-908` | `arm_await_fibers`; the fixture's `arm_await_all` | identical; input order since `2f77f7d` (R2-4) |
+| `dropObservers`, `cancelRace` (`2f77f7d`) | `:971-988` | `drop_observers` / `Op_drop_observers`; `cancel_race` / `Op_cancel_race` | identical |
+| `awaitAllFailFast` | `:847-850` | — | refused: no program names it yet (Layer's `mergeAll` does); the countdown's fail-fast half is ported (F2.5) |
+| `snapshotChildren`, `awaitNewChildren` | `:851-854` | `arm_snapshot_children`, `arm_await_new_children` | identical |
+| `raceAll` | `:942-958` | `arm_race_all_prog`; `launch_entrant`; the host's cleanup closure | identical (R2-10, R2-11, R2-13); the settle resumes the host with the program (R2-12) |
+| `Cmd.launch` (the register loop), `Cmd.link` | `:1188-1208` | `exec (Claunch _)`, `exec (Clink …)` | identical |
+| `snapshotChildren`, `awaitNewChildren` as `onExit`'s finalizer | `:5314-5333`; `Stores.lean` `snapshotThen` | `arm_snapshot_children`; `on_exit_program` with `FinawaitNewChildren` | identical (R2-7) |
+| `setInterruptible` (M2) | `:930-937` | `arm_set_interruptible`, `deep_stores.ml: masked_region` | identical |
+| `setContext`, `getContext` | `:881-890` | — | refused (`χ = unit`) |
+| `getId`, `closeScope`, `refuse` | `:891-902`, `:939-946` | `Op_get_id`, `arm_close_scope` (F1-3), `arm_refuse` | identical |
+| `exitFiber`, `exitInterruptChildren`, `exitStore` | `:1005-1064` | `exit_fiber`, `exit_interrupt_children`, `exit_store` | identical (R2-2, R2-5) |
+| `fireObserver` (six shapes) | `:925-1003` | `fire_observer` | identical, fail-fast included (F2.5) |
+| `linkScope` open / closed / unknown | `:600-636` | `link_scope` | identical (R2-9) |
+| `runFork`, `runCallback`, `runSyncExit`, `promiseOutcome` | `:1237-1280` | same names | identical; `runSyncExit` flushes every armed dispatcher, as Lean does (R2-14 owed) |
+| `Resume.continueWith restoreName` at the exit path's countdown | `:545-548` | the `kresume` closure that re-enters `exit_fiber` | divergent, trace-level only: Lean's resume runs one iteration (an op is counted) before the restoring frame; the avatar re-enters the exit path directly. No row shows it (no golden budgets the exit path) |
+
+## F2.2 Consistency: scope behaviour
+
+| Lean | line | avatar | status |
+| --- | --- | --- | --- |
+| `Effect4.Scope` five-state machine, `addUnsafe`/`removeUnsafe`/`closeState`/`closeOrder`/`fork` | `Scope.lean` (W1 §2) | `deep_stores.ml` (20 decls) | identical |
+| `ScopeStore.make/addFinalizer/removeFinalizer/forkChild/status/closeState` | `Stores.lean:875-947` | same names | identical |
+| `RunInterp.scopeLinkFiber` (M4: `forkIn` self-guarded, `runIn` unguarded) | `Stores.lean:1345-1357` | `stores.scope_link_fiber` | identical |
+| `RunInterp.dropFinalizer` (`forkIn`'s observer) | `Stores.lean:1358-1361` | `stores.drop_finalizer`; `fire_observer DropScopeFinalizer` | identical |
+| `linkScope` closed arm: interrupt with `interruptor` + caller annotations (M5/M10) | `Fibers.lean:612-623` | `link_scope` | identical |
+| `linkScope` open arm: no link of an exited target (R2-9) | `:624-636` | `link_scope` | identical |
+| `closeScope`: `closeState` first, sequential chain / parallel daemons with the closer's mask, `exitAsVoidAll` merge (M6) | `Stores.lean:1107-1160` | `stores_close_scope`, `close_seq_chain`, `close_par_chain` | identical (W1's `try` spelling of the `Prim` chain) |
+| `interruptScoped` self-skip (`:5370`) | `Fibers.lean:826-828` | `arm_interrupt_scoped` | identical |
+| `Stuck.unknownScope` (M7) on close/link/drop | `Fibers.lean:602`, `:633`, `:933` | `halt (UnknownScope _)` | identical |
+| `ScopeLinked` carries the mode | `Fibers.lean:320` | erased (F1-1) | divergent, event shape only (`w6_link_then_close`'s row `[0; scope; key; fiber]`) |
+
+## F2.3 Consistency: deferred behaviour
+
+| Lean | line | avatar | status |
+| --- | --- | --- | --- |
+| `DeferredStore.make/cellAt/register/cancel/complete/drainDue` | `Stores.lean:673-735` | same names (`setCell` identity, DIVERGENCE 3) | identical |
+| `Deferred.await` as `Prim.async register withSignal cancel`: immediate answer or park under the token; the `AsyncFinalizer` frame when a cancel exists | `Fibers.lean:702-718`; `Stores.lean:1354` | `arm_async` (F2.5), `deep_stores.ml: arm_def_await` as its instance | identical since F2 (F1 had a bespoke park) |
+| the cancel (M3): `cancelName (cancelAwait cell) waiter token` → `deferredAwaitCleanup` splices exactly that waiter | `Stores.lean:1107-1113`, `:1354`; `Runtime.lean:883-888` | `arm_async`'s `cancel token`, masked, then re-fail | identical (`w11_cancel_splices_the_waiter`, `evaluatePrim_async_parks`) |
+| completion drains the owed resumes before the completer continues (M1), and the pop sees what they recorded (R2-1) | `Fibers.lean:743-751`, `:1109-1114` | `store_arm Rsync`: `drive [CdrainDue]; deliver` | identical (`w13_*`, `evaluatePrim_sync_answers`) |
+| `Deferred.interrupt` = `withFiber` id + stateful `sync` | `Stores.lean:1065-1067` | `Rinterrupt_deferred` | identical |
+| the slot holds `Option Program` / `poll` answers `Val.bool` | `Stores.lean:655`, `:224` | `Option completion` / the fixture's `poll` answers the exit | divergent by design (W1-2, W1-4) |
+| `isDone`, `completeWith` first-wins, second answers `false` | `Stores.lean:715-726` | identical | identical (`w4_complete_twice_answers_false`) |
+
+## F2.4 Consistency: schedule behaviour (dispatcher, yield, op budget)
+
+| Lean | line | avatar | status |
+| --- | --- | --- | --- |
+| `Dispatcher.insert/enqueue/drain` (ascending priority, FIFO, arm on enqueue, drain once) | `Fibers.lean:120-149` | `Dispatcher.*` | identical (the six `Dispatcher.*` clauses hold); `Lib/Deque.lean:406-428` is the projection onto `Buckets` (Q4 below) |
+| `fire` (`runTasks`: drain once, `drainDue` after each task) | `:1186-1198` | `fire` | identical |
+| `flushAll` in fiber order until none armed | `:1199-1206` | `flush_all` | identical to Lean; rc.112 differs (R2-14/15 owed; `hYieldStorm`) |
+| `yieldNowWith`: resume task at the priority, park behind the token, `voidValue` | `:693-701` | `park_yield` | identical |
+| `Task.start` deferred at priority 0; `Task.resume` | `:590-616` | identical | identical |
+| the per-entry latch `yielding`, cleared by `Cmd.evaluate` | `:683`, `:1103` | `f.yielding` (a fiber field, DIVERGENCE 2) | identical |
+| `yieldOverride` (the tape's verdict), `preventYield`, `maxOpsBeforeYield` from the budget pair | `:704-720`, `:226-233` | same fields; `EFFECT4_MAX_OPS` | identical |
+| the op count: one per `runLoop` iteration over a `Prim` | `:699` | one per perform | divergent (DIVERGENCE 2); shown by the fiber family at `MAX_OPS=3` (E4-SEM-CE-011, refused by the estate too); the ref/deferred/scope/layer families at `MAX_OPS=3` are 21/18/12/24 |
+| a resume is one iteration (loop top, op count, verdict) before the answer meets the frame | `:1128-1129` | `guard` on every Lean-alphabet resume (F2.5 (4)); the fixture's `answer_row` iteration | identical since F2 for `join`/`awaitAll`/`interrupt`/`async`; the race host's resume and the exit path's countdown resume still deliver without an iteration (trace-level; no row) |
+| `runSyncExit` flush | `:1268-1275` | `run_sync_exit` | identical to Lean |
+
+## F2.5 The PARK section (`deep_fibers.ml`, banner "PARK -- seat F2")
+
+Ported arm for arm against `c926acd`, kept under one banner so the incoming correctness edit is
+re-diffed in one pass:
+
+| Lean | line | avatar |
+| --- | --- | --- |
+| `ParkKind`, `Parked.withGuard token`, `Resume` | `:52-70` | `park_kind`, `parked`, `resume_with` (unchanged) |
+| `Pending` (`2f77f7d`) — six fields: token, waitingOn (the target observed now), remaining (the targets not yet walked), collected, resumeWith, failFast | `:73-88` | `pending`, six fields, `waiting_on`/`remaining` mutable (the walk moves them) |
+| `RunFiber.park` | `:224-226` | `run_fiber_park` |
+| `interruptEach` (moved into `Fibers.lean`) | `:548-560` | `interrupt_each` |
+| `countdownWalk` (input order, exited exits collected in place, the first live target observed) | `:562-576` | `countdown_walk` |
+| `countdownPark`: walk, observe one, push the cleanup frame, park; or answer at once; `resumePrim` | `:578-600` | `countdown_park ?fail_fast ~on_answer : countdown` (`Cparked token` / `Cdone exits`), `resume_prim` |
+| the countdown observer: collect, fail-fast over the *remaining*, continue the walk (`done`/`next`) | `:1028-1060` | `fire_observer (Countdown …)` |
+| `yieldNowWith` park | `:738-746` | `park_yield` |
+| `Prim.async register withSignal cancel`: immediate (drain, then one iteration) or park; the `AsyncFinalizer` frame iff a cancel; its `contAll` masks, its `contE` cancels-then-refails on an interrupt | `:747-765`; `Runtime.lean:645-652`, `:883-888` | `arm_async ~register ~cancel ~on_answer`; `arm_never` and `arm_def_await` are instances |
+| the join park with its cleanup frame (`dropObservers`) | `:766-789` | `join_park` — `arm_join_on` (Lean alphabet), `arm_join`/`arm_await` (fixture) are instances |
+| the race park with its cleanup frame (`cancelRace`), the settle program (`raceSettle`) | `:919-947`, `:1069-1076` | `arm_race_all_prog`'s closure; `race_settle_program`; `race_all_program`/`race_all_fixture` run it on the host's stack |
+| the resume-token check on every resume | `:1118-1131` | `exec (Cresume)` |
+| the four `AsyncFinalizer` cleanups: `cancelAwait` (M3), `cancelPark` (R2-3), `cancelRace` (R2-13), `abortController` | `Stores.lean:1145-1154` | `deep_stores.ml: cancel_program` (the programs) and the same three run inline from the park closures (`run_cleanup`) |
+| the guard/one-shot invariant (P3/A0): at most one guard fires per park and it is always the token | — | `fire_guard` at both firing sites (`Cresume` and the interrupt apply in `run_control`); `park_violations` reported as `park-guard  violations  N` and gated by `run-witnesses.sh` |
+
+Behavioural properties listed in the banner: (1) one guard per park; (2) at most one guard
+fires and it is the token — the OCaml one-shot (`Continuation_already_resumed`) and the token
+guard are both present and the probe fires first; (3) a parked fiber is not running; (4) a
+resume is one iteration; (5) an interrupted park with a cleanup runs it, masked, then
+re-fails. Divergence rows kept: the `AsyncFinalizer` frame is the `Acause` arm of the closure
+the fiber parked on, not a stack entry (DIVERGENCE 1) — `w14`'s and `w3HostParked`'s
+`stackOf … = some 1` conjuncts have no avatar shape and are stated without them; a cleanup
+runs inline in the closure (`dropObservers` and `deferredAwaitCleanup` are one step each;
+`cancelRace`'s await parks the host again through `countdown_park`, as Lean's does); the race
+host's `race_answer` field is dead since R2-12 and kept only for the generated `run_fiber`
+carrier.
+
+## F2.8 `Effect4/Deep/Layer.lean` → `deep_layer.ml` (step 4)
+
+Ruling taken (F1.4 step 2): Layer's types keep the Lean names inside `Deep_layer` (`sync_op`,
+`prog_name`, `name`, `action_name`, `thunk`, `fin_name`, `scope`, `scope_state`, `scope_entry`,
+`scope_store`, `defect`, `st`, …), the module does not `open Deep_stores`, and every
+constructor takes a Layer prefix (`Lc`/`Lk`/`Ld`/`Lfin`/`Ls`/`Lp`/`Ln`/`La`/`Lt`/`Lu`/`Lx`,
+`Lss`); the SHIM `DeferredKey`/`DeferredCell`/`DeferredStore` are `Deep_stores`' (one store);
+`ScopeEntry`/`ScopeStore` and their `Scope`/`ScopeState` are Layer's own monomorphic copies
+over Layer's `FinName`. Described in `Render.lean` SEAT W1 (`Ml.Deep.Layer`: 9 `StructDesc`s,
+12 `InductiveDesc`s, 3 tuple aliases, 17 `#guard`s pinning every constructor count at
+`57924eb`: `Name` 49, `ProgName` 27, `ActionName` 13, `FinName` 11, `SyncOp` 10, …), rendered
+by `render-deep.sh layer`, IDENTICAL.
+
+| Lean | line | OCaml | state |
+| --- | --- | --- | --- |
+| `LayerId`, `MemoMapId`, `ServiceKey` (`Key.lean:79`), `Defect` (`Context.lean:781`), `ContextUpdate` (`:1005`), `CombineMode`, `Construction`, `LayerDesc`, `FinName`, `SyncOp`, `ProgName`, `Name`, `ActionName`, `Thunk`, `ScopeState`/`Scope` (Layer copy), `ScopeEntry`, `ScopeStore`, `MemoEntry`, `MemoMap`, `St` | `:53-365`, `:437-508`, `:624` | generated, 21 carriers + 3 aliases | IDENTICAL |
+| `DeferredKey`/`DeferredCell`/`DeferredStore` (SHIM) | `:63`, `:367-429` | `Deep_stores.*` | substituted (one store; W1-2 slot) |
+| `Val` (`Context.lean:797`, 16 ctors), `Ctx`, `Err`, `Ann` | — | `value`, `service_pair list`, `Deep_stores.err`, `unit` | substituted (F2-L1: W1-1 again; F2-L2: the `Nodup` proof field has no OCaml counterpart) |
+| `ScopeState.*`, `Scope.*` (`Scope.lean:98-1036`), `ScopeStore.entryAt/setEntry/make/removeFinalizer/forkChild/status` | `:450-482` | same names, Layer copy | hand-ported |
+| `MemoWorld.mapAt/setMap/entryAt/updateEntry/insertEntry/deleteEntry/lookup/get` | `:512-556` | `memo_world_*` | hand-ported (`setMap` identity, DIVERGENCE 3) |
+| `St.empty`, `St.seeded` | `:633-637` | `st_empty`, `st_seeded`; `store`, `store_reset` | hand-ported |
+| `reifyExitVal`, `exitsVal`, `exitsOfVal`, `reasonsOfVal`, `voidAllOf`, `ctxOfList`, `memoMapOfVal`, `currentMemoMapOf`; the four keys (`Context.lean:912-925`) | `:645-693` | same names; `ctx_add`, `ctx_get`, `scope_key`… | hand-ported; `exitsOfVal`/`reasonsOfVal` lossy (W1-8), `exitsOfVal_exitsVal` (`:672`) has no counterpart |
+| `syncStep` (10 arms) | `:698-763` | `sync_step`, arm for arm; `Rlayer_sync`, `layer_sync_arm` (drain then `deliver`, M1/R2-1) | hand-ported |
+| `syncOp`, `act` | `:771-774` | `sync_op`; `act` is the effect alphabet | hand-ported / spelled |
+| `finProgram` (11 arms) | `:874` | `fin_program` | 7 ported (`closeChildScope`, `detachFromParent`, `closeChildOnFailure`, `memoEntry`, `memoDone`, `release`, `interruptFiber`), 4 REFUSE (`restoreContext`, `scopedExit`, `closeScopeWith`, `releaseWith`: they set the fiber's context) |
+| `progOf` (27 arms) | `:931` | `prog_of` | 8 ported (`value`, `failCause`, `seq`, `never`, `closeScope`, `finalizerOf`, `releaseOf`, `memoReleaseOf`), 19 REFUSE by name (every arm that reads or sets the context, builds a layer or provides one) |
+| `contAOf`, `contEOf`, `actionOf`, `raceSettleProgram`, `cancelProgram`, `interp`, the `*K` continuations, `mergeExitContexts`, `closeSeqChain`/`closeParChain`/`closeScopeProgram` | `:896-1291` | `cont_a_of`, `cont_e_of`, `action_of` REFUSE structurally (W1-9); the rest not declared | refused |
+| the census clauses (`:1300-1789`), the witnesses (`:1799-2033`), the forgetful join (`:2045-2077`) | — | — | not transferred: the store witnesses (`memoBuildThenGet`, `memoReleaseTwice`, `forkedWorld`, `forkedScopes`) are the natural `%expect` tests of step 7 |
+| the `Layers` golden family | — | `layer_state`, `Rlayer_build`/`_provide_count`/`_scope_of`/`_close` | kept as is (W1-3's analogue); 24/24 unchanged |
+
+Refusal sites: 28, all `Deep_fibers.refuse "Effect4.Deep.Layers.<decl> (<ctor>)"`. **The
+structural reason (F2-L3):** every refused arm runs against the fiber's context — `χ` is
+`unit` in the avatar (A0 §18) — so `Layer.build`, `provideLayer`, `scoped`, `acquireRelease`
+and the context updates have nothing to read or write. Giving the fiber a `service_pair list`
+context (the `setContext`/`getContext` arms of `Fibers.lean:881-890`, refused since A0) is the
+one change that unlocks the whole module; it is a machine change, not a Layer one, and is Q6.
+
+## F2.9 `Effect4/Deep/Context.lean` → `deep_context.ml` (step 5)
+
+Described in `Render.lean` SEAT W1 (`Ml.Deep.Context`: 4 `StructDesc`s, 4 `InductiveDesc`s,
+6 `#guard`s), rendered by `render-deep.sh context`, IDENTICAL; linked before `deep_layer.ml`
+(Lean's import direction), whose `ServiceKey`/`Defect`/`ContextUpdate` now come from here.
+
+| Lean | line | OCaml | state |
+| --- | --- | --- | --- |
+| `ServiceKey` (`Key.lean:79`), `Err`, `Defect`, `Val` (15), `Service ValU`, `Context ValU`, `Reference ValU`, `ContextUpdate` | `:772-1012` | generated (`service_key`, `err` `Ce`, `defect` `Cx`, `val_` `Cv`, `service`, `context`, `reference`, `context_update` `Cu`) | IDENTICAL; `Context.keysNodup` ERASED (F2-L2), `CauseV`/`ExitV` are the wire's `cause`/`exitv` |
+| `Requirement.empty/single/union/ofList` (`Row.normalize`) | `:63-79` | `requirement_*`, `row_normalize` (name-major `key_compare`) | hand-ported |
+| `serviceSig`, `ServiceProgram`, `UsesOnly` + laws, `UniverseAgreement` | `:100-170` | `service_program`, `uses_only` | REFUSE (an `Effects` free program, a `Prop`) |
+| `rightBiased`, `Context.empty/lookup/get?/keys/setEntries/add/mergeEntries/merge/mergeAll/Equiv/keysRow/Satisfies/getRef/References.default?/getOption/getOrElse/getUnsafe?` | `:188-446` | same names (`context_*`); `Equiv`/`Satisfies` decided over the keys | hand-ported |
+| `Context.interpret`, `transportAll` | `:485`, `:756` | `context_interpret`, `context_transport_all` | REFUSE |
+| `ValU`, `Service.valueVal`, `Ctx`, `addV`/`getV` | `:835-905` | `service_value_val`, `context_add_v`/`_get_v` | hand-ported |
+| the keys and references | `:912-931` | `scope_key`, `max_ops_key`, `prevent_yield_key`, `current_memo_map_key`, `max_ops_ref`, `prevent_yield_ref` | hand-ported |
+| `scopeOfVal`, `natOfVal`, `boolOfVal`, `ambientScope`, `budgetOf`, `encodeEntries`, `encode`, `spine`, `decode`, `ContextUpdate.apply` | `:936-1018` | same names | hand-ported; `decode_encode` and `hooks_empty` are the module's properties (8), (9) |
+| `HooksAgree`, the counterexample `example`s, the eleven laws | `:1030-1164` | — | the laws are the module's named properties (1)–(7); nothing to execute yet: no fiber carries a context (Q6) |
+| the projection onto the wire | — | `wire_of_val` | the W1-1 row, stated as a function |
+
+## F2.10 `Effect4/Deep/ForkFlow.lean` → `deep_forkflow.ml` (step 6)
+
+| Lean | line | OCaml | state |
+| --- | --- | --- | --- |
+| `FiberOp` (12), `RootRequest`, `ForkRequest`, `ForkRefusal` (6) | `:122`, `:382`, `:401`, `:449` | generated (`fiber_op` `Fo`, `root_request`, `fork_request`, `fork_refusal` `Fr`) | IDENTICAL |
+| `FiberOp.index/ofIndex/count/direct`, `handleTy`, `exitTy`, `forkParams`, `rootParams`, `requestSpelling`, `forkRequestTy`, `rootRequestTy` | `:153-234` | same names | hand-ported |
+| `handleValue/handleOf`, `natOf`, `listValue/listOf`, `handlesValue/handlesOf`, `exitAsValue`, `RootRequest.value/rootRequestOf`, `ForkRequest.value/forkRequestOf`, `entrantsOf` | `:325-437` | same names, over the wire `value` (`Effects.Trace.Val` spelled one for one) | hand-ported; the four inverse theorems are the module's property (2) |
+| `fiberProfile`, `profileTable`, `profileOpOf`; `checkRoot`, `checkFork`, `refusal?`, `compileRefusal?`, `directRefusalAt`; `fiberPrim`, `catchesMachineFailure`, `compileFork`, `compileForkAt`; `forkTable`, `forkParkOf`, `forkActionOf`, `forkWithFiberOf`, `forkInterp`, `forkAnswerOf`, `forkOracle`; `WellSourced`, `actionPrograms`, `ConfigWellSourced`, `WellSourcedClosed`; `runDecisionSite`, `SitesSeparated`; `runnerFuel`, `fiberBound`, `ForkFuelBound`; the witnesses (`flowJoin`… `strandedMachine`) | `:239-316`, `:467-1712` | 17 refusal sites by name | REFUSE: the compile of the profile over the Flow IR (`RegionFlow`, `Code`, `Config`, `OpSpec`), for which the avatar has no carriers — its programs are OCaml control, not a flow (DIVERGENCE 1) |
+| `forkInterp`'s three park hooks (`2f77f7d`) | `:976-984` | — | with the interp |
+
+## F2.7 Verification at the checkpoint (`57924eb`)
+
+Every step re-ran `run-witnesses.sh`; steps 0, 1, 3, 3b, 3c, 4, 5 and 6 each re-ran
+`build-avatar.sh` (goldens under every mask, the yield-every-op form, the rc.112 face through
+the estate's runner, the extra family, the corpus on three hosts, the report) and
+`build-dune.sh witnesses` (the effect4 switch: OCaml 5.1.1, dune 3.24.2, jsoo 5.7.1). Final:
+
+```
+compare[lean]  ref 21   deferred 18   scope 12   layer 24    0 failed   (twice: plain, MAX_OPS=3)
+compare[rc112] extra: 12 ok, 0 unclassified, 0 classified
+corpus: avatar ok=158 bad=0 ; hosts agree: 158, disagree: 0
+compare[rc112] corpus: 445 ok, 0 unclassified, 2 classified   (hYieldStorm ×2: R2-14/15)
+clauses    126  holds 121  fails 0  not-portable 5
+witnesses   60  holds  59  fails 0  not-portable 1
+run-clauses      holds  34  fails 0
+park-guard       violations 0
+dune: library + 2 executables x 3 modes; hosts AGREE; report IDENTICAL to the shell build's
+render-deep.sh stores | context | layer | forkflow: carriers IDENTICAL
+```
+
+Not portable, with why: clauses `drive_loop_parked`, `drive_loop_continues`,
+`drive_loop_answered` (`Cmd.loop`, DIVERGENCE 2), `evaluatePrim_sync_pure` (every `SyncOp` is a
+store step), `withFiber_forkScoped_ambient` (`χ = unit`); witness
+`forbidden_setInterruptible_as_current` (no `Prim` in `current`, DIVERGENCE 1).
+
+## F2.6 Open questions
+
+1. **`lake` cannot resolve the manifest on this Mac.** `lake-manifest.json` pins
+   lean4-typescript at `6a70b884` (v0.5.0, branch `v0.5.0-generator-cond`), which is not on
+   `origin` (`git ls-remote` shows `main` at `18220f7` = v0.4.3). `lake env`/`lake build` die
+   before running anything. `render-deep.sh` now falls back to `lean` over the built oleans
+   and `OCaml5.Render` was rebuilt with the same `LEAN_PATH`; the `.trace` files are stale
+   until lake runs again. The coordinator should push v0.5.0 (or repin).
+2. **The Lean witnesses' fork options cite `"inherit"`** (`Witnesses.lean:219-232`) where
+   rc.112's `fork`/`forkDetach`/`forkIn` default to `uninterruptible = false` (F2-2). Invisible
+   while every witness root is interruptible; a masked root with a tracked child would show it.
+3. **`Resume.continueWith` and the race host resume without an iteration** in the avatar
+   (F2.1/F2.4 last rows): trace-level, owed with R4 or when a budgeted witness needs it.
+4. `Lib/Deque.lean`'s projection (`Dispatcher.drain_projection`, `:420-426`) is the theorem the
+   Base/Core `Deque` port of the dispatcher buckets should cite; step (7).
+5. W1 Q1–Q5 stand (the fiber goldens, two store-request families, `exitsVal` — closed by F1's
+   `Aexits` —, `Effect4/Runtime` as a module, `tools/fuzz.sh`).
+6. **A context on the fiber.** The Layer programs, `forkScoped`'s ambient arm and
+   `setContext`/`getContext` all refuse for one reason: `χ = unit`. A `service_pair list`
+   on `run_fiber` (spawned children inherit it, `:5273`; the budget pair read off it,
+   `:726-727`) would let `deep_layer.ml`'s 19 refused `progOf` arms and the Layer witnesses
+   run. Recommended as F3's first step, before `deep_context.ml`'s functions have a consumer.
+7. `Ml.Avatar.withFiberAction` (above the SEAT W1 banner, seat W3's) still lists seventeen
+   constructors: `awaitAllFailFast`, `dropObservers` and `cancelRace` are named by exception
+   in the SEAT W1 guards until that description catches up.
+8. **Step 7, not started — the exact work.** (a) Deriving: `TypeDecl.derivers` exists
+   (`Ml/Syntax.lean:556`) but `FieldDesc` has no `attrs`, so `[@sexp.opaque]` on a closure
+   field cannot be *described*; a SEAT W1 post-processor over `Decl` (like `renameDecl`)
+   that adds `attrs` to named fields and `janeRecordDerivers`/`janeVariantDerivers` to every
+   generated `TypeDecl` is the additive route; the closure-bearing fields are
+   `frame_fiber.control`, `kont.kresume`, `run_fiber.race_answer`, `answer.Aprogram`,
+   `race.programs`, `memo_entry.effect`, `deep_stores.deferred_cell.completion`'s
+   `CoofRefGet` (a key, fine) — and `Effect.t` values never sit in a carrier. The dune
+   library then needs `(preprocess (pps ppx_jane))` and `ppx_expect` in the switch (present:
+   v0.16). (b) `%expect` tests: `Layer.lean:1825-1860`'s four store witnesses and the
+   `deep_context.ml` laws (1)–(9) are the natural first `let%expect_test`s; the report's
+   `witnesses.report.tsv` is already the byte-identical three-host artefact. (c) `Map`/`Deque`:
+   `Dispatcher.buckets` is `bucket list` with `Dispatcher.insert` (`Fibers.lean:120-149`);
+   `Lib/Deque.lean:406-428` (`toBuckets`, `toBuckets_enqueue`, `drain_projection`) is the
+   theorem a `Buckets`-over-`Map`/`Deque` carrier cites, and `Lib/Map.lean`'s `find_set_*`
+   the one the memo world's entries (`memo_map.entries`) and `ScopeStore.entries` cite. None
+   of the three changes behaviour; each is a carrier swap under an existing clause.
+9. `run-fuzz.sh`/`tools/fuzz.sh` module lists: the new `deep_context.ml`/`deep_forkflow.ml`
+   were added to `build-avatar.sh`, `run-witnesses.sh`, `dune` and `run-fuzz.sh`;
+   `tools/fuzz.sh` is not this seat's (W1 Q5).
+10. `known-divergences.tsv` now holds one row (`hYieldStorm`, R2-14/15). The two
+    `avatar-open` rows (F2-1/F2-2) and the two `rc112-behaviour` rows closed by `2f77f7d`
+    were dropped; the coordinator may want the closures as register rows.

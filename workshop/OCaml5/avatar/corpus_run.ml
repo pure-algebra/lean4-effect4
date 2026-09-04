@@ -47,7 +47,7 @@ let step slots (st : step) : value =
   | "awaitAll" -> Effect.perform (Op_await_all (handles slots (a 0)))
   | "childrenSnapshot" -> Effect.perform (Op_snapshot_children ())
   | "awaitChildren" -> Effect.perform (Op_await_new_children (vof slots (a 0)))
-  | "raceAll" -> Effect.perform (Op_race_all (if st.args = [] then [] else ints slots (a 0)))
+  | "raceAll" -> race_all_fixture (if st.args = [] then [] else ints slots (a 0))
   | "yield" ->
     push_row (Rop ("yield", Vunit));
     let v = Effect.perform (Op_yield_now 0) in
