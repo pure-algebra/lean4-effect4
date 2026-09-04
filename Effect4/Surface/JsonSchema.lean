@@ -73,6 +73,19 @@ Every divergence this module cannot match is a refusal, never a fallback:
   bytes is not available in the kernel-reducible fragment this tree uses, and
   no entity name can contain either character, so the case is refused rather
   than approximated.
+* **A `$ref` pointer whose key is not ASCII, on ingest only.** `refOfPointer`
+  reads the pointer over `pointer.toUTF8.data.toList` and rebuilds the key with
+  `Char.ofNat`/`String.ofList`, because `String.splitOn` reaches
+  `Classical.choice` on this toolchain and the axiom gate refuses it. That
+  route is exact below 128 and has nothing to say above it, so a non-ASCII byte
+  in the key is a refusal. Every reference key an `Entity` puts in a document is
+  its name, and `Entity.nameLegal` asks that name for
+  `Effect4/Surface/Spell.lean`'s `identifier`, whose bytes are ASCII
+  (`Effect4/Surface/Api.lean`, `identifier_bytes`); so no document this tree
+  emits from an entity can hit the refusal. A hand-built `Document` with a
+  non-ASCII reference key, and ingest of a *foreign* document with a non-ASCII
+  `$defs` key, do hit it. That is the honest cost of the ceiling rather than a
+  claim about JSON Schema.
 * **Definition aliasing.** `:204-227` collapses two definitions that compile
   alike when both carry the identifier-fallback annotation, and rewrites every
   `$ref`. This module refuses a representation carrying that annotation key
@@ -548,11 +561,53 @@ private def literalsOfJson : List Json → Except Refusal (List Representation)
     | .error refusal, _ => .error refusal
     | _, .error refusal => .error refusal
 
+/-- The UTF-8 bytes of `"#/$defs/"`, the only pointer prefix this fragment
+writes (`onNode`, the `reference` arm) and therefore the only one it reads:
+`#` 35, `/` 47, `$` 36, `d` 100, `e` 101, `f` 102, `s` 115, `/` 47. -/
+private def defsPointerPrefix : List UInt8 := [35, 47, 36, 100, 101, 102, 115, 47]
+
+/-- Drop a byte prefix, or refuse bytes that do not begin with it. -/
+private def afterPrefix : List UInt8 → List UInt8 → Option (List UInt8)
+  | [], bytes => some bytes
+  | _ :: _, [] => none
+  | wanted :: wantedRest, byte :: bytesRest =>
+    if wanted == byte then afterPrefix wantedRest bytesRest else none
+
+/-- Read ASCII bytes back as characters, refusing the first byte that is not
+ASCII. `Char.ofNat` agrees with the UTF-8 decoding exactly below 128, and both
+it and `String.ofList` reach no axiom on this toolchain. -/
+private def asciiChars? : List UInt8 → Option (List Char)
+  | [] => some []
+  | byte :: rest =>
+    if byte < 128 then
+      match asciiChars? rest with
+      | some tail => some (Char.ofNat byte.toNat :: tail)
+      | none => none
+    else none
+
+/--
+Read a `$ref` pointer back as a reference, over UTF-8 bytes.
+
+The inverse of the `reference` arm of `onNode`, clause for clause: that arm
+writes `"#/$defs/" ++ token` for a `token` `pointerToken?` admitted, so this one
+strips exactly those bytes and refuses a token carrying `/` (47) or `~` (126),
+which is `pointerToken?`'s refusal read backwards. A non-ASCII byte in the
+token is refused too, and that is a narrowing of the ingest side recorded in
+this module's header: the byte route is the one route to a `String`'s content
+that stays inside the axiom ceiling, and rebuilding a non-ASCII `String` from
+bytes needs a decoder this tree does not have.
+-/
 private def refOfPointer (pointer : String) : Except Refusal Representation :=
-  match pointer.splitOn "#/$defs/" with
-  | ["", key] => if key.isEmpty then .error (.jsonSchemaUnsupportedReference pointer)
-                 else .ok (Schema.reference key)
-  | _ => .error (.jsonSchemaUnsupportedReference pointer)
+  let refused : Except Refusal Representation := .error (.jsonSchemaUnsupportedReference pointer)
+  match afterPrefix defsPointerPrefix pointer.toUTF8.data.toList with
+  | none => refused
+  | some [] => refused
+  | some token =>
+    if token.any (fun byte => byte == 47 || byte == 126) then refused
+    else
+      match asciiChars? token with
+      | some characters => .ok (Schema.reference (String.ofList characters))
+      | none => refused
 
 private def ofList (go : Json → Except Refusal Representation) :
     List Json → Except Refusal (List Representation)
@@ -820,6 +875,17 @@ def ofJsonSchema (value : Json) : Except Refusal Representation :=
 #guard ofJsonSchema (.str "x") == .error .jsonSchemaNotAnObject
 #guard ofJsonSchema (.obj [("$ref", .str "#/definitions/User")]) ==
   .error (.jsonSchemaUnsupportedReference "#/definitions/User")
+#guard ofJsonSchema (.obj [("$ref", .str "#/$defs/")]) ==
+  .error (.jsonSchemaUnsupportedReference "#/$defs/")
+-- the two refusals the byte route adds, both stated rather than hidden: an
+-- unescaped `/` or `~` in the key, which `pointerToken?` refuses on the way
+-- out, and a key that is not ASCII
+#guard ofJsonSchema (.obj [("$ref", .str "#/$defs/a/b")]) ==
+  .error (.jsonSchemaUnsupportedReference "#/$defs/a/b")
+#guard ofJsonSchema (.obj [("$ref", .str "#/$defs/a~b")]) ==
+  .error (.jsonSchemaUnsupportedReference "#/$defs/a~b")
+#guard ofJsonSchema (.obj [("$ref", .str "#/$defs/café")]) ==
+  .error (.jsonSchemaUnsupportedReference "#/$defs/café")
 #guard ofJsonSchema (.obj [("type", .str "integer")]) == .error (.jsonSchemaUnsupportedType "integer")
 #guard ofJsonSchema (.obj [("type", .str "object"), ("properties", .obj [])]) ==
   .error .jsonSchemaOpenObject

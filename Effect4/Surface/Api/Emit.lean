@@ -586,24 +586,30 @@ else.
 
 open TypeScript (house0)
 
-private def render (expr : Expr) : String := TypeScript.Render.expr house0 0 expr
+-- `TypeScript.Render.expr` is spelled out at each site rather than abbreviated
+-- by a local `def`, as the `Render.import_` and `Render.decl` pins below
+-- already are. The renderer traverses a Lean `String` and so reaches
+-- `Classical.choice`; used inside a `#guard` it leaves no constant and the
+-- axiom gate has nothing to judge, while a named wrapper would be a
+-- declaration over the ceiling for the sake of an abbreviation.
 
 -- surface.api.httpApi
-#guard (endpointExpr getUser).map render ==
+#guard (endpointExpr getUser).map (TypeScript.Render.expr house0 0) ==
   some ("HttpApiEndpoint.get(\"getUser\", \"/:id\", { params: " ++
     "Schema.Struct({ \"id\": Schema.String }), success: User, " ++
     "error: [NotFound.pipe(HttpApiSchema.status(404))] })")
-#guard (endpointExpr createUser).map render ==
+#guard (endpointExpr createUser).map (TypeScript.Render.expr house0 0) ==
   some "HttpApiEndpoint.post(\"createUser\", \"/\", { payload: User, success: HttpApiSchema.Empty(201) })"
-#guard (endpointExpr listUsers).map render ==
+#guard (endpointExpr listUsers).map (TypeScript.Render.expr house0 0) ==
   some ("HttpApiEndpoint.get(\"listUsers\", \"/\", { query: " ++
     "Schema.Struct({ \"role\": Schema.optionalKey(Schema.Literals([\"admin\", \"member\"])) }), " ++
     "success: HttpApiSchema.WithHeaders(Schema.Array(User), " ++
     "Schema.Struct({ \"x-total-count\": Schema.String })) })")
-#guard render (groupExpr usersGroup) ==
+#guard TypeScript.Render.expr house0 0 (groupExpr usersGroup) ==
   ("HttpApiGroup.make(\"users\").add(listUsers).add(getUser).add(createUser)" ++
     ".add(updateUser).add(removeUser).prefix(\"/users\")")
-#guard render (apiExpr shopApi) == "HttpApi.make(\"ShopApi\").add(users).prefix(\"/api\")"
+#guard TypeScript.Render.expr house0 0 (apiExpr shopApi) ==
+  "HttpApi.make(\"ShopApi\").add(users).prefix(\"/api\")"
 #guard Api.entityNames shopApiDomain shopApi == ["User", "NotFound"]
 #guard (httpApiModule shopApiDomain shopApi).map
     (fun target => target.imports.map (TypeScript.Render.import_ house0)) ==

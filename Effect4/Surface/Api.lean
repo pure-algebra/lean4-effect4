@@ -50,7 +50,7 @@ exist.
 | --- | --- |
 | Carrier | `Method` (7), `Segment` (2), `Path`, `ApiKeyLocation` (3), `Security` (3), `ResponseBody refs` (3), `Response refs` (4 fields), `Payload refs` (3), `Endpoint refs` (12 fields), `Group refs` (5 fields), `Api refs` (4 fields) |
 | Operations | `Path.render`, `Path.parse?`, the three `check`s, `Endpoint.fullPath`, `Api.endpointTable`, `Api.requirements`, `Api.requirementNames`, `Endpoint.successEntities`, `Endpoint.errorEntities`, `Api.json` |
-| Laws | `parseChars_bodyChars`, `Endpoint.wellFormed_iff`, `Group.wellFormed_iff`, `Api.wellFormed_iff`, `Group.checkEndpoints_ok_iff`, `Api.checkGroups_ok_iff`, `Api.wellFormed_endpoint` |
+| Laws | `parseChars_bodyChars`, `Path.parse?_render`, `identifier_bytes`, `Endpoint.wellFormed_iff`, `Group.wellFormed_iff`, `Api.wellFormed_iff`, `Group.checkEndpoints_ok_iff`, `Api.checkGroups_ok_iff`, `Api.wellFormed_endpoint` |
 | Structure | a three-level finite tree whose only cross-level law is route distinctness, decided on the rendered `(method, fullPath)` pair |
 | Payoff | retires the construction-time throws of `HttpApiEndpoint.ts:1134-1310` as a class, and gives the client, server and OpenAPI emitters one row set to read |
 | Anti-vacuity | the `shopApi` fixture: `decide` receipts for `WellFormed`, an `Arch.accepts` receipt for the view, and one refused mutant per clause |
@@ -86,13 +86,13 @@ exist.
 
 ## The identifier profile, said out loud
 
-`Segment.spelled` asks a `param` name for **both** `Spell.identifier` (the
+`segmentOf?` asks a `param` piece for **both** `Spell.identifier` (the
 byte-level generated-binding profile) and "no `/` among its characters". The
 second is implied by the first, because `/` is byte 47 and no identifier byte
-is 47, but the implication relates `String.toUTF8` to `String.toList` and is
-not proved here. It is the same owed row `Effect4/Surface/Spell.lean`'s header
-already carries for `TypeScript.targetIdentifier`, and `Path.parse?_render`
-consumes the char-level half directly rather than resting on it.
+is 47. That implication used to be an owed row here, because it appeared to
+relate `String.toUTF8` to `String.toList`; it does not, now that the reader is
+`asciiChars?` over bytes, and `identifier_bytes` is the theorem. `Segment.spelled`
+therefore asks a `param` name for `identifier` alone.
 -/
 
 set_option autoImplicit false
@@ -225,30 +225,40 @@ end Method
 A path is a list of segments; a `param` segment is the `:name` spelling
 `unstable/http/HttpRouter.ts:701` calls `PathInput`. `render` is built from
 `String.append` and `String.intercalate` alone, so every clause that reads a
-rendered route stays inside the estate's axiom budget; `parse?` walks
-characters, and the round trip is proved over those characters.
+rendered route stays inside the estate's axiom budget; `parse?` reads the
+template's UTF-8 bytes, and the round trip is a theorem both over characters
+and at the `String`.
 
 ## The axiom budget, and what it costs this module
 
 On this toolchain `String.toList`, `String.splitOn`, `String.startsWith`,
 `String.drop` and `String.length` all reach `Classical.choice`, which this
-tree's axiom gate refuses in a theorem. `String.append`, `String.intercalate`,
-`String.toUTF8`, `String.ofList` and `String.decEq` do not. So:
+tree's axiom gate refuses in a declaration. `String.append`,
+`String.intercalate`, `String.toUTF8`, `String.ofList` and `String.decEq` do
+not. So:
 
 * `Path.render` and `Segment.spelled` use only the clean primitives, and are
   therefore usable inside `Endpoint.check`, `Api.check` and every theorem about
   them;
-* `Path.parse?` is `parseChars` composed with `String.toList`, and is the one
-  declaration in this module that reaches `Classical.choice`. No clause, no
-  emitter and no theorem evaluates it;
-* the round trip is proved where it is clean: `parseChars_bodyChars` says that
-  parsing the `/`-joined characters of a piece list returns exactly the
-  segments those pieces denote. The `String`-level statement
-  `Path.parse? path.render = some path` is an **owed row**, not a theorem, and
-  is pinned by the `#guard`s at the end of this module. It is the same owed row
-  `Effect4/Surface/Spell.lean`'s header carries for `identifier`, and for the
-  same reason: the byte and character views of a `String` are not related by
-  anything this tree may cite.
+* `Path.parse?` walks `text.toUTF8.data.toList` through `asciiChars?`, the byte
+  route `Effect4/Surface/Spell.lean` and `Effect4/Surface/Site.lean` take, and
+  reaches no axiom. It refuses a byte above 127: `Char.ofNat` is exact below
+  128 and says nothing above it, and rebuilding a non-ASCII `String` from bytes
+  needs a decoder this tree does not have. A route template carrying such a
+  byte is refused rather than half-read, and `Segment.spelled` refuses to spell
+  one, so `render` and `parse?` still invert on the whole fragment `spelled`
+  admits;
+* the round trip is proved twice. `parseChars_bodyChars` says that parsing the
+  `/`-joined characters of a piece list returns exactly the segments those
+  pieces denote, and `Path.parse?_render` carries it to the `String`:
+  `path.spelled = true → Path.parse? path.render = some path`. The second was
+  an owed row while `parse?` went through `String.toList`, on the grounds that
+  the byte and character views of a `String` are not related by anything this
+  tree may cite. They are: `String.toByteArray_ofList` and
+  `String.toByteArray_inj` relate them, `utf8EncodeChar` is one byte below 128
+  by its own definition, and none of those names `String.toList`. What the tree
+  may not cite is the *decoding*, and the ASCII refusal is exactly the price of
+  not citing it.
 -/
 
 /-- One path segment: a literal, or a `:name` parameter. -/
@@ -270,16 +280,25 @@ def spelling : Segment → String
 The segment is in the fragment `render` and `parse?` invert on.
 
 A literal is non-empty, does not begin with `:` (which would re-read as a
-parameter), is not the router wildcard `*`, and holds no `/`. A parameter's
-name is a legal generated binding. Decided over UTF-8 bytes, by the route
-`Effect4/Surface/Spell.lean` takes: `:` is 58 and `/` is 47.
+parameter), is not the router wildcard `*`, holds no `/`, and is ASCII. A
+parameter's name is a legal generated binding, which is ASCII already: every
+byte `Effect4/Surface/Spell.lean`'s `identifierStart` and `identifierContinue`
+admit is below 128, and `identifier_bytes` is the theorem. Decided over UTF-8
+bytes, by the route that module takes: `:` is 58 and `/` is 47.
+
+The ASCII clause is not decoration. `Path.parse?` reads a template over its
+bytes and refuses one above 127, because the character view of a `String` is
+out of reach of this tree's axiom ceiling above ASCII; a literal segment
+carrying such a byte is therefore genuinely *not* in the fragment the two
+invert on, and `Path.parse?_render` is the theorem that says the rest of it is.
 -/
 def spelled : Segment → Bool
   | .literal text =>
     match text.toUTF8.data.toList with
     | [] => false
     | first :: rest =>
-      first != 58 && !(text == "*") && (first :: rest).all (fun byte => byte != 47)
+      first != 58 && !(text == "*") &&
+        (first :: rest).all (fun byte => byte != 47 && byte < 128)
   | .param name => identifier name
 
 /-- The parameter name of a segment, when it is one. -/
@@ -341,9 +360,9 @@ def bodyChars : List (List Char) → List Char
 /-- Read one piece back as a segment, or refuse it.
 
 Both branches ask the piece to hold no separator. For a parameter that is
-implied by `identifier` (no identifier byte is 47), but the implication relates
-`String.toUTF8` to `String.toList` and is the owed row of this module's header,
-so the clause is asked for outright and `segmentOf?_noSlash` is a theorem. -/
+implied by `identifier` (no identifier byte is 47, which is `identifier_bytes`),
+but the clause is asked for outright anyway so that `segmentOf?_noSlash` holds
+of every piece this function admits, including one no `identifier` produced. -/
 def segmentOf? : List Char → Option Segment
   | [] => none
   | first :: rest =>
@@ -379,16 +398,46 @@ def parseChars : List Char → Option Path
     else none
 
 /--
-Read a path template. Refuses anything that does not begin with `/`, an empty
-segment, the router wildcard `*`, and a parameter name that is not a legal
-generated binding.
+The character an ASCII byte denotes.
 
-This is the one declaration of this module that reaches `Classical.choice`,
-through `String.toList`; nothing a theorem or a clause evaluates calls it.
+`Char.ofNat` agrees with the UTF-8 decoding exactly below 128 and reaches no
+axiom; `charOfByte_inj` is the injectivity that makes it a reader rather than a
+guess, and `encodeChar_charOfByte` is the encoding half.
 -/
-def Path.parse? (text : String) : Option Path := parseChars text.toList
+def charOfByte (byte : UInt8) : Char := Char.ofNat byte.toNat
 
-/-! ### The round trip, where it is clean -/
+/--
+Read ASCII bytes back as characters, refusing the first byte that is not ASCII.
+
+With `String.ofList`, which reaches no axiom either, this is the whole route
+from a `String`'s content to its characters that stays inside the axiom
+ceiling. Above 128 it has nothing to say and refuses, which is what makes
+`Path.parse?` an ASCII reader; this module's header says so.
+-/
+def asciiChars? : List UInt8 → Option (List Char)
+  | [] => some []
+  | byte :: rest =>
+    if byte < 128 then
+      match asciiChars? rest with
+      | some tail => some (charOfByte byte :: tail)
+      | none => none
+    else none
+
+/--
+Read a path template. Refuses anything that does not begin with `/`, an empty
+segment, the router wildcard `*`, a parameter name that is not a legal
+generated binding, and any template carrying a byte above 127.
+
+The walk to characters is `text.toUTF8.data.toList` through `asciiChars?`, the
+byte route `Effect4/Surface/Spell.lean` and `Effect4/Surface/Site.lean` already
+take, because `String.toList` reaches `Classical.choice` on this toolchain.
+-/
+def Path.parse? (text : String) : Option Path :=
+  match asciiChars? text.toUTF8.data.toList with
+  | some characters => parseChars characters
+  | none => none
+
+/-! ### The round trip, over characters -/
 
 /-- Splitting a separator-free prefix leaves the rest of the split alone. -/
 theorem splitSlash_append (piece : List Char)
@@ -454,11 +503,9 @@ theorem segmentsOf?_noSlash :
 Parsing the `/`-joined characters of a piece list returns exactly the segments
 those pieces denote.
 
-This is the invertibility law of the path spelling, stated where it is a
-theorem: `parseChars` undoes `bodyChars` on every piece list `segmentsOf?`
-admits. The `String`-level corollary `Path.parse? path.render = some path` is
-this law composed with `String.toList`, which is an owed row rather than a
-theorem for the reason in this module's header.
+This is the invertibility law of the path spelling at the character level:
+`parseChars` undoes `bodyChars` on every piece list `segmentsOf?` admits. The
+`String`-level corollary is `Path.parse?_render`, below.
 -/
 theorem parseChars_bodyChars (pieces : List (List Char)) (segments : List Segment)
     (nonEmpty : pieces ≠ []) (read : segmentsOf? pieces = some segments) :
@@ -495,6 +542,364 @@ theorem parseChars_bodyChars (pieces : List (List Char)) (segments : List Segmen
           | none => none) = some ⟨segments⟩
     rw [splitFst, splitSnd, read, notEmpty]
     rfl
+
+/-! ### The round trip, all the way to the `String`
+
+`Path.parse?_render` was an owed row until the byte reader replaced
+`String.toList`. What unblocked it is that the byte view of a `String` is no
+longer opaque: `String.toByteArray_ofList` says the bytes of `String.ofList` are
+`List.utf8Encode`, and `String.toByteArray_inj` says the bytes determine the
+`String`. Below 128 `utf8EncodeChar` is a single byte by its own definition, so
+`asciiChars?` is a section of the encoding on ASCII and `ofList_charOfByte` is
+the retraction. Nothing here names `String.toList`, which is what keeps the
+whole section inside the ceiling: a theorem that mentioned it would inherit its
+`Classical.choice` and the gate would refuse the theorem.
+-/
+
+/-- Below 128 `Char.ofNat` is exact: the character's code point is the byte. -/
+theorem val_charOfByte {byte : UInt8} (h : byte.toNat < 128) :
+    (charOfByte byte).val.toNat = byte.toNat := by
+  rw [charOfByte, Char.ofNat, dif_pos (by unfold Nat.isValidChar; omega)]
+  rfl
+
+/-- Distinct ASCII bytes denote distinct characters. -/
+theorem charOfByte_inj {a b : UInt8} (ha : a.toNat < 128) (hb : b.toNat < 128)
+    (h : charOfByte a = charOfByte b) : a = b := by
+  have step := congrArg (fun character => (Char.val character).toNat) h
+  simp only [val_charOfByte ha, val_charOfByte hb] at step
+  exact UInt8.toNat_inj.mp step
+
+/-- On an all-ASCII byte list the reader is total, and reads byte by byte. -/
+theorem asciiChars?_map : ∀ {bs : List UInt8}, bs.all (fun byte => byte < 128) = true →
+    asciiChars? bs = some (bs.map charOfByte) := by
+  intro bs
+  induction bs with
+  | nil => intro _; rfl
+  | cons byte rest ih =>
+    intro h
+    simp only [List.all_cons, Bool.and_eq_true, decide_eq_true_eq] at h
+    simp only [asciiChars?, if_pos h.1, ih h.2, List.map_cons]
+
+/-- An ASCII character encodes back to the one byte it came from. This is
+`String.utf8EncodeChar`'s own first branch, taken rather than cited: the core
+lemma `String.utf8EncodeChar_eq_singleton` reaches `Classical.choice`. -/
+theorem encodeChar_charOfByte {byte : UInt8} (h : byte.toNat < 128) :
+    String.utf8EncodeChar (charOfByte byte) = [byte] := by
+  unfold charOfByte String.utf8EncodeChar
+  simp only [show (Char.ofNat byte.toNat).val.toNat = byte.toNat from val_charOfByte h]
+  rw [if_pos (Nat.le_of_lt_succ h), UInt8.ofNat_toNat]
+
+/-- The reader is a section of UTF-8 encoding on ASCII bytes. -/
+theorem flatMap_charOfByte : ∀ {bs : List UInt8}, bs.all (fun byte => byte < 128) = true →
+    (bs.map charOfByte).flatMap String.utf8EncodeChar = bs := by
+  intro bs
+  induction bs with
+  | nil => intro _; rfl
+  | cons byte rest ih =>
+    intro h
+    simp only [List.all_cons, Bool.and_eq_true, decide_eq_true_eq] at h
+    have hb : byte.toNat < 128 := UInt8.lt_iff_toNat_lt.mp h.1
+    rw [List.map_cons, List.flatMap_cons, encodeChar_charOfByte hb, ih h.2,
+      List.cons_append, List.nil_append]
+
+/-- A byte array is its data. -/
+theorem byteArray_eq_of_data {first second : ByteArray} (h : first.data = second.data) :
+    first = second := by
+  cases first; cases second; simp_all
+
+/-- The retraction: reading an all-ASCII `String`'s bytes and spelling the
+characters back returns the `String` it started from. -/
+theorem ofList_charOfByte {text : String}
+    (h : (text.toUTF8.data.toList).all (fun byte => byte < 128) = true) :
+    String.ofList ((text.toUTF8.data.toList).map charOfByte) = text := by
+  rw [← String.toByteArray_inj, String.toByteArray_ofList, List.utf8Encode,
+    flatMap_charOfByte h]
+  exact byteArray_eq_of_data (by rw [List.data_toByteArray, Array.toArray_toList]; rfl)
+
+/-- Concatenation of `String`s is concatenation of their bytes. -/
+theorem utf8_append (first second : String) :
+    (first ++ second).toUTF8.data.toList =
+      first.toUTF8.data.toList ++ second.toUTF8.data.toList := by
+  rw [String.toUTF8_eq_toByteArray, String.toByteArray_append, ByteArray.toList_data_append]
+  rfl
+
+/-! ### The identifier profile is ASCII, and holds no separator
+
+These three are facts about `Effect4/Surface/Spell.lean`'s byte profile, proved
+here because this is the module that consumes them: `Segment.spelled` asks a
+`param` name for `identifier` alone, and the round trip needs to know that a
+name so admitted carries no `/` and nothing above 127. The header's "identifier
+profile, said out loud" used to record the first of those as an owed row; the
+byte reader is what made it a statement about bytes on both sides, and so a
+theorem.
+-/
+
+/-- The ranges `identifierStart` and `identifierContinue` admit are ASCII and
+miss 47. Stated over `Nat` because `omega` reaches `Classical.choice` when it
+has to case on a `UInt8`. -/
+private theorem ascii_of_ranges {n : Nat}
+    (h : ((65 ≤ n ∧ n ≤ 90) ∨ (97 ≤ n ∧ n ≤ 122)) ∨ n = 95 ∨ n = 36 ∨ (48 ≤ n ∧ n ≤ 57)) :
+    n < 128 ∧ n ≠ 47 := ⟨by omega, by omega⟩
+
+/-- An identifier start byte is ASCII and is not `/`. -/
+theorem identifierStart_ascii (byte : UInt8) (h : identifierStart byte = true) :
+    byte.toNat < 128 ∧ byte.toNat ≠ 47 := by
+  unfold identifierStart at h
+  simp only [Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq, beq_iff_eq,
+    UInt8.le_iff_toNat_le, show (65 : UInt8).toNat = 65 from rfl,
+    show (90 : UInt8).toNat = 90 from rfl, show (97 : UInt8).toNat = 97 from rfl,
+    show (122 : UInt8).toNat = 122 from rfl] at h
+  refine ascii_of_ranges ?_
+  rcases h with ((range | range) | letter) | letter
+  · exact Or.inl (Or.inl range)
+  · exact Or.inl (Or.inr range)
+  · exact Or.inr (Or.inl (by rw [letter]; rfl))
+  · exact Or.inr (Or.inr (Or.inl (by rw [letter]; rfl)))
+
+/-- An identifier continuation byte is ASCII and is not `/`. -/
+theorem identifierContinue_ascii (byte : UInt8) (h : identifierContinue byte = true) :
+    byte.toNat < 128 ∧ byte.toNat ≠ 47 := by
+  unfold identifierContinue at h
+  simp only [Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq,
+    UInt8.le_iff_toNat_le, show (48 : UInt8).toNat = 48 from rfl,
+    show (57 : UInt8).toNat = 57 from rfl] at h
+  rcases h with start | digit
+  · exact identifierStart_ascii byte start
+  · exact ascii_of_ranges (Or.inr (Or.inr (Or.inr digit)))
+
+/-- The `Bool` shape of the clause `Segment.spelled` asks a literal for. -/
+private theorem byte_ok {byte : UInt8} (h : byte.toNat < 128 ∧ byte.toNat ≠ 47) :
+    (byte != 47 && byte < 128) = true := by
+  rw [Bool.and_eq_true]
+  refine ⟨?_, ?_⟩
+  · rw [bne_iff_ne]
+    intro eq
+    exact h.2 (by rw [eq]; rfl)
+  · rw [decide_eq_true_eq, UInt8.lt_iff_toNat_lt]
+    exact h.1
+
+/-- Every byte of a legal generated binding is ASCII and is not `/`. This is the
+implication this module's header used to owe. -/
+theorem identifier_bytes {name : String} (h : identifier name = true) :
+    (name.toUTF8.data.toList).all (fun byte => byte != 47 && byte < 128) = true := by
+  unfold identifier at h
+  split at h
+  · exact absurd h (by simp)
+  · rename_i first rest heq
+    rw [heq, List.all_cons, Bool.and_eq_true]
+    simp only [Bool.and_eq_true] at h
+    refine ⟨byte_ok (identifierStart_ascii first h.1.1), ?_⟩
+    rw [List.all_eq_true] at h ⊢
+    intro byte mem
+    exact byte_ok (identifierContinue_ascii byte (h.1.2 byte mem))
+
+/-! ### From a spelled path to its characters -/
+
+/-- Byte 58 is `:`. -/
+theorem charOfByte_colon : charOfByte 58 = ':' := by decide
+
+/-- Byte 47 is `/`. -/
+theorem charOfByte_slash : charOfByte 47 = '/' := by decide
+
+/-- The bytes of `":"`. -/
+theorem bytes_colon : (":" : String).toUTF8.data.toList = [58] := by decide
+
+/-- The bytes of `"/"`. -/
+theorem bytes_slash : ("/" : String).toUTF8.data.toList = [47] := by decide
+
+/-- An admitted byte list is ASCII. -/
+theorem all_lt_of_all_ok {bs : List UInt8}
+    (h : bs.all (fun byte => byte != 47 && byte < 128) = true) :
+    bs.all (fun byte => byte < 128) = true := by
+  rw [List.all_eq_true] at h ⊢
+  intro byte mem
+  exact (Bool.and_eq_true _ _ |>.mp (h byte mem)).2
+
+/-- No admitted byte denotes `/`. -/
+theorem map_charOfByte_noSlash {bs : List UInt8}
+    (h : bs.all (fun byte => byte != 47 && byte < 128) = true) :
+    (bs.map charOfByte).all (fun character => character != '/') = true := by
+  rw [List.all_eq_true] at h ⊢
+  intro character mem
+  obtain ⟨byte, memByte, rfl⟩ := List.exists_of_mem_map mem
+  obtain ⟨notSlash, ascii⟩ := Bool.and_eq_true _ _ |>.mp (h byte memByte)
+  rw [bne_iff_ne]
+  intro eq
+  rw [← charOfByte_slash] at eq
+  have bound : byte.toNat < 128 := UInt8.lt_iff_toNat_lt.mp (decide_eq_true_eq.mp ascii)
+  exact (bne_iff_ne.mp notSlash) (charOfByte_inj bound (by decide) eq)
+
+/-- The bytes of a segment's spelling. -/
+def spellingBytes (segment : Segment) : List UInt8 :=
+  segment.spelling.toUTF8.data.toList
+
+/-- The characters of a segment's spelling. -/
+def spellingChars (segment : Segment) : List Char := (spellingBytes segment).map charOfByte
+
+/-- A spelled segment spells in ASCII, with no `/`. For a literal that is
+`Segment.spelled`'s own clause; for a parameter it is `identifier_bytes` after
+the leading `:`. -/
+theorem spellingBytes_ok {segment : Segment} (h : segment.spelled = true) :
+    (spellingBytes segment).all (fun byte => byte != 47 && byte < 128) = true := by
+  cases segment with
+  | literal text =>
+    simp only [Segment.spelled] at h
+    split at h
+    · exact absurd h (by simp)
+    · rename_i first rest heq
+      simp only [Bool.and_eq_true] at h
+      show (text.toUTF8.data.toList).all _ = true
+      rw [heq]
+      exact h.2
+  | param name =>
+    show ((":" ++ name).toUTF8.data.toList).all _ = true
+    rw [utf8_append, bytes_colon, List.cons_append, List.nil_append, List.all_cons,
+      Bool.and_eq_true]
+    exact ⟨by decide, identifier_bytes h⟩
+
+/-- One spelled segment reads back as itself. -/
+theorem segmentOf?_spellingChars {segment : Segment} (h : segment.spelled = true) :
+    segmentOf? (spellingChars segment) = some segment := by
+  have ok := spellingBytes_ok h
+  have noSlash : (spellingChars segment).all (fun character => character != '/') = true :=
+    map_charOfByte_noSlash ok
+  cases segment with
+  | literal text =>
+    simp only [Segment.spelled] at h
+    split at h
+    · exact absurd h (by simp)
+    · rename_i first rest heq
+      simp only [Bool.and_eq_true] at h
+      obtain ⟨⟨notColon, notStar⟩, all⟩ := h
+      have chars : spellingChars (.literal text) = charOfByte first :: rest.map charOfByte := by
+        show (text.toUTF8.data.toList).map charOfByte = _
+        rw [heq, List.map_cons]
+      have spelledBack : String.ofList (charOfByte first :: rest.map charOfByte) = text := by
+        rw [← chars]
+        exact ofList_charOfByte (all_lt_of_all_ok ok)
+      have head : (first != 47 && first < 128) = true :=
+        (List.all_eq_true.mp all) first (by simp)
+      have bound : first.toNat < 128 :=
+        UInt8.lt_iff_toNat_lt.mp (decide_eq_true_eq.mp (Bool.and_eq_true _ _ |>.mp head).2)
+      have notColonChar : (charOfByte first == ':') = false := by
+        rw [beq_eq_false_iff_ne]
+        intro eq
+        rw [← charOfByte_colon] at eq
+        exact (bne_iff_ne.mp notColon) (charOfByte_inj bound (by decide) eq)
+      rw [chars]
+      show (if (charOfByte first == ':') then _ else _) = _
+      rw [notColonChar, if_neg (by simp), spelledBack]
+      rw [chars] at noSlash
+      rw [if_pos (by rw [Bool.and_eq_true]; exact ⟨notStar, noSlash⟩)]
+  | param name =>
+    have bytes := identifier_bytes h
+    have chars : spellingChars (.param name) =
+        ':' :: (name.toUTF8.data.toList).map charOfByte := by
+      show ((":" ++ name).toUTF8.data.toList).map charOfByte = _
+      rw [utf8_append, bytes_colon, List.cons_append, List.nil_append, List.map_cons,
+        charOfByte_colon]
+    have spelledBack : String.ofList ((name.toUTF8.data.toList).map charOfByte) = name :=
+      ofList_charOfByte (all_lt_of_all_ok bytes)
+    rw [chars]
+    simp only [segmentOf?]
+    rw [if_pos (by decide : ((':' : Char) == ':') = true), spelledBack,
+      if_pos (by rw [Bool.and_eq_true]; exact ⟨h, map_charOfByte_noSlash bytes⟩)]
+
+/-- Every spelled segment of a list reads back as itself. -/
+theorem segmentsOf?_spellingChars : ∀ {segments : List Segment},
+    segments.all Segment.spelled = true →
+      segmentsOf? (segments.map spellingChars) = some segments := by
+  intro segments
+  induction segments with
+  | nil => intro _; rfl
+  | cons segment rest ih =>
+    intro h
+    rw [List.all_cons, Bool.and_eq_true] at h
+    rw [List.map_cons]
+    simp only [segmentsOf?, segmentOf?_spellingChars h.1, ih h.2]
+
+/-- The bytes of a rendered path body: one `/` before each segment's spelling. -/
+def bodyBytes : List Segment → List UInt8
+  | [] => []
+  | segment :: rest => 47 :: (spellingBytes segment ++ bodyBytes rest)
+
+/-- A non-empty path renders to exactly those bytes. `String.intercalate` is
+peeled by core's own `String.intercalate_cons_cons`; the tail of that peel is
+the render of the shorter path, which is what makes the induction close. -/
+theorem bytes_render : ∀ {segments : List Segment}, segments ≠ [] →
+    (Path.render ⟨segments⟩).toUTF8.data.toList = bodyBytes segments := by
+  intro segments
+  induction segments with
+  | nil => intro absent; exact absurd rfl absent
+  | cons segment rest ih =>
+    intro _
+    cases rest with
+    | nil =>
+      show ("/" ++ String.intercalate "/" [segment.spelling]).toUTF8.data.toList = _
+      rw [show String.intercalate "/" [segment.spelling] = segment.spelling from rfl,
+        utf8_append, bytes_slash]
+      show 47 :: spellingBytes segment = 47 :: (spellingBytes segment ++ bodyBytes [])
+      rw [show bodyBytes [] = [] from rfl, List.append_nil]
+    | cons next more =>
+      have step : Path.render ⟨segment :: next :: more⟩ =
+          "/" ++ (segment.spelling ++ Path.render ⟨next :: more⟩) := by
+        show "/" ++ String.intercalate "/"
+          (segment.spelling :: next.spelling :: more.map Segment.spelling) = _
+        rw [String.intercalate_cons_cons, String.append_assoc]
+        rfl
+      rw [step, utf8_append, bytes_slash, utf8_append, ih (by simp)]
+      rfl
+
+/-- Those bytes are ASCII: the separator is 47 and every spelling is ASCII. -/
+theorem bodyBytes_ascii : ∀ {segments : List Segment},
+    segments.all Segment.spelled = true →
+      (bodyBytes segments).all (fun byte => byte < 128) = true := by
+  intro segments
+  induction segments with
+  | nil => intro _; rfl
+  | cons segment rest ih =>
+    intro h
+    rw [List.all_cons, Bool.and_eq_true] at h
+    rw [show bodyBytes (segment :: rest) = 47 :: (spellingBytes segment ++ bodyBytes rest) from rfl,
+      List.all_cons, Bool.and_eq_true]
+    refine ⟨by decide, ?_⟩
+    rw [List.all_append, Bool.and_eq_true]
+    exact ⟨all_lt_of_all_ok (spellingBytes_ok h.1), ih h.2⟩
+
+/-- And they denote exactly the characters `parseChars_bodyChars` speaks about. -/
+theorem map_bodyBytes : ∀ (segments : List Segment),
+    (bodyBytes segments).map charOfByte = bodyChars (segments.map spellingChars) := by
+  intro segments
+  induction segments with
+  | nil => rfl
+  | cons segment rest ih =>
+    rw [show bodyBytes (segment :: rest) = 47 :: (spellingBytes segment ++ bodyBytes rest) from rfl,
+      List.map_cons, List.map_append, ih, charOfByte_slash, List.map_cons]
+    rfl
+
+/--
+Reading a spelled path's rendering returns the path.
+
+This is the row this module's header owed. `Path.spelled` is exactly the
+hypothesis it needs and nothing more: a literal segment that is empty, starts
+`:`, is `*`, holds `/`, or carries a byte above 127 is refused by `spelled` and
+is genuinely outside the fragment `render` and `parse?` invert on, and a
+parameter name that is not a legal generated binding is refused for the same
+reason.
+-/
+theorem Path.parse?_render (path : Path) (spelled : path.spelled = true) :
+    Path.parse? path.render = some path := by
+  cases path with
+  | mk segments =>
+    cases segments with
+    | nil => rfl
+    | cons segment rest =>
+      show (match asciiChars? (Path.render ⟨segment :: rest⟩).toUTF8.data.toList with
+            | some characters => parseChars characters
+            | none => none) = _
+      rw [bytes_render (by simp), asciiChars?_map (bodyBytes_ascii spelled), map_bodyBytes]
+      exact parseChars_bodyChars ((segment :: rest).map spellingChars) (segment :: rest)
+        (by simp) (segmentsOf?_spellingChars spelled)
 
 /-! ## Security
 
@@ -1721,6 +2126,11 @@ theorem shopApi_routes_unique : namesUnique shopApi.routeKeys = true :=
 #guard (Path.mk [.param "1st"]).spelled == false
 #guard Path.parse? (Path.mk [.literal "a", .param "b", .literal "c"]).render ==
   some ⟨[.literal "a", .param "b", .literal "c"]⟩
+-- the ASCII edge, on both sides: a non-ASCII literal is not spelled, and its
+-- template is refused rather than half-read. `Path.parse?_render` is the
+-- theorem that everything `spelled` does admit round-trips.
+#guard (Path.mk [.literal "café"]).spelled == false
+#guard Path.parse? "/café" == none
 #guard (Path.mk [.literal "users"]).paramNames == []
 #guard (Path.mk [.literal "users", .param "id"]).paramNames == ["id"]
 

@@ -2888,3 +2888,54 @@ and `Path.parse?` is the owed row wave 2a already recorded. `Site.lean:105`
 `Api.lean:233-241` states the rule. The gate's exemption list is not widened
 here: an exemption is a trust decision and belongs to a ruling, not to
 integration.
+
+### The axiom ceiling restored, 2026-09-04
+
+The gate is green: `lake build Effect4TestGreen` completes in 289 jobs and
+reports "checked 280 modules and 32210 declarations; semantic/test axioms are
+[propext, Quot.sound]". `lake build Effect4` is 160 jobs green. No declaration
+under `Effect4.Surface.*`, `Effect4.Char.*` or `Effect4.Store.Pin.*` reaches
+`Classical.choice`. `Effect4Test/Audit/AxiomGate.lean` is untouched: nothing was
+exempted, everything was repaired.
+
+Four causes, not three. `refOfPointer` (`JsonSchema.lean`) reads a `$ref` by
+stripping the eight prefix bytes and rebuilding the key from ASCII, which
+cleared the eight `ofJsonSchemaFuel` and MCP ingest declarations at once.
+`docsWorkerLines` (`Deploy/Emit.lean`) no longer splits a rendered module:
+its three window guards are replaced by three named line fixtures and one
+equation pinning the whole rendered text against `String.intercalate`, which is
+strictly stronger than the windows it replaces. `Path.parse?` (`Api.lean`) goes
+through `asciiChars? text.toUTF8.data.toList`. The thirteenth was found only by
+the gate: a `private def render` wrapper in `Api/Emit.lean`, used as an
+abbreviation inside five `#guard`s; it is deleted and the renderer spelled at
+each site, as the neighbouring pins already did. The scanner that missed it
+compared `Name.toString`, which for a private name begins `_private.`; it now
+compares `privateToUserName?`.
+
+`Path.parse? path.render = some path` is a theorem, at `Api.lean:890`, within
+propext and Quot.sound. The header's claim that the byte and character views of
+a `String` are unrelatable here was wrong: `String.toByteArray_ofList` and
+`String.toByteArray_inj` relate them and neither names `String.toList`, which is
+the load-bearing point, since a theorem that mentions `String.toList` inherits
+its `Classical.choice` and the gate refuses the theorem. `identifier_bytes`, the
+second owed row of that header, closed with it.
+
+Three deliberate narrowings, each pinned by a `#guard` rather than left in
+prose: a `$defs` pointer key carrying `/`, `~` or a non-ASCII byte now refuses
+(the emit side could never produce one, and entity names are `identifier`-legal,
+whose bytes are now proved ASCII); `Segment.spelled` asks every literal byte to
+be below 128, so an api with a non-ASCII literal path segment is refused by
+`Api.check`. URL paths are percent-encoded ASCII in practice, but that is a
+judgement and not a theorem. Removing all three needs a real UTF-8 decoder
+(`List UInt8 → Option (List Char)`), which is the next piece of work if wanted.
+
+Owed and small: `asciiChars?` is now defined twice, privately in `JsonSchema.lean`
+and publicly in `Api.lean`, and four modules roll their own `toUTF8.data.toList`
+reader. A shared `Effect4/Surface/Bytes.lean` is the better design and is a
+refactor of five modules rather than part of this repair.
+
+Two toolchain facts banked for the next lane: `omega` reaches `Classical.choice`
+when the goal is a conjunction (split it with `⟨by omega, by omega⟩`) and can
+reach it on `UInt8.toNat` atoms, so state the arithmetic over `Nat` and
+instantiate; and `String.utf8EncodeChar_eq_singleton` reaches it, so the ASCII
+single-byte fact must come from `utf8EncodeChar`'s own first branch.
