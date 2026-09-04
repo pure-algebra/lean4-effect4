@@ -2756,3 +2756,16 @@ connect step owns that). Publish the tag before a fresh clone resolves the pin.
 | `harness/surface/**`, `scripts/check-surface-generation.sh`, `scripts/test-surface-generation-gate.sh`, `scripts/sweep.sh` (one row), `vendor/wrangler-3.114.16/**` | Surface builder 3b | pending 2a–2c |
 | `skills/lean-surface*/**`, `skills/README.md` (four rows), `docs/SURFACE.md`, `docs/ARCHITECTURE.md` (one row), `PLAN.md` (one paragraph) | Surface author 3c | pending |
 | `lakefile.toml` (`Effect4TestSurface` lib), `Effect4Test.lean` (Surface import lines), `COORDINATION.md` (this section) | Surface coordinator | integration |
+
+### Checkpoint, 2026-09-04 (usage exhausted mid-wave 2)
+
+Wave 1a landed and repaired: `Effect4/Surface/{Kind,Facts,Annotate,Spell,Entity,JsonSchema,Emit,Views}.lean`
+(3.5k lines, 162 `#guard`s, every theorem within propext/Quot.sound), imported from `Effect4.lean`;
+`lake build Effect4` 155 jobs green. Wave 1b landed: eleven `test/contracts/surface-*.contract.md`,
+thirteen batteries under `Effect4Test/Surface/` (red until the builders land; not yet imported by
+`Effect4Test.lean`), ten counterexample files, `E4-SURFACE-CE-001..075`. Rulings from the
+reconciliation: plan §13.7. Wave 2 was interrupted: `Effect4/Surface/Api.lean` (2a) and
+`Effect4/Surface/Agent.lean` (2b) are partial but elaborate; `Deploy.lean`/`Site.lean` (2c) not
+started; the breaker's handler packet (§13.7 ruling 7) not started. Resume from plan §13.5 with
+2a–2c against the landed substrate, then the battery renames (§13.7 ruling 5), then `Effect4Test.lean`
+imports and the `Effect4TestSurface` target.

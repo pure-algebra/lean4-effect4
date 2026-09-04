@@ -98,6 +98,28 @@ import Effect4.Arch.Views
 import Effect4.StdLib.Entry
 import Effect4.StdLib.Rc112
 import Effect4.StdLib.Links
+-- The Surface library (docs/research/2026-09-04-surface-library-plan.md), wave
+-- 1a: the substrate. `Kind` is the typed embedding, a representation with a
+-- kernel-checked kind, so an ill-kinded slot of a surface is unrepresentable
+-- rather than caught; `Facts` is the one closed `Refusal` and the clause lists
+-- every check is read from (§14.2); `Annotate` is the semantic layer, the
+-- typed annotation keys and the estate's brand, which §15 makes mandatory
+-- rather than optional; `Spell` is the `Schema.Struct({…})` rendering admitted
+-- as a view of the persisted one; `Entity` and `Domain` are the first carriers,
+-- with their clause-by-clause `check`, their `Arch` document views and their
+-- store content; `JsonSchema` is draft 2020-12 in both directions on one
+-- fragment, read off rc.112's own compiler; `Emit` is the rule census and the
+-- stance, where every rule is `emitted` until its receipt lands; and `Views` is
+-- the surface store. The Api, Agent, Deploy, Site and Ingest rows of the plan's
+-- §2 follow in waves 2a-2c.
+import Effect4.Surface.Kind
+import Effect4.Surface.Facts
+import Effect4.Surface.Annotate
+import Effect4.Surface.Spell
+import Effect4.Surface.Entity
+import Effect4.Surface.JsonSchema
+import Effect4.Surface.Emit
+import Effect4.Surface.Views
 -- The AST relation (docs/research/2026-09-04-ast-relation-plan.md), lane A1:
 -- the Effect TS program syntax `Eff` and its typing, first-order and
 -- decidable throughout; the printer, the compile and the parser follow.

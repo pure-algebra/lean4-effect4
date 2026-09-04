@@ -539,9 +539,10 @@ No run-agreement claim: a surface's claims are well-formedness, containment
 and round-trip claims, checked by the kernel on rows and by the host at the
 pin on emitted bytes. No claim that an emitted server behaves as the model
 says; that is the runtime lane's `Eff`/Deep work and joins here later through
-`requires` and the service rows. No DOM model. No streaming responses, no
-multipart, no `suspend`ed (recursive) entities in emitted modules, no
-`declaration` schemas: each is a refusal row with its id. No percentage.
+`requires` and the service rows. No DOM model. Streaming responses, multipart
+and url-encoded payloads are expressible by the carriers (§13.1) and refused
+by every v1 emitter by rule id; `suspend`ed (recursive) entities and
+`declaration` schemas are refused by `kindCheck`: each is a refusal row. No percentage.
 
 ## 12. Open questions for the operator
 
@@ -757,3 +758,283 @@ are checked at review, and a wave that breaks one is sent back:
     keys, tagged errors with statuses, requirement names matched by
     bindings, path params matched by schemas) so that codegen has nothing
     left to get wrong; the commands are one line each.
+
+## 14. The meta API: facts you opt into, functions you get back
+
+The operator's fourth steer, binding: adapt type-driven, algebraic,
+effectful, functional domain modeling, conservatively, so the meta API is
+not an opinionated framework; the API is utility types and theorems whose
+proofs one opts into, and which then yield generated functions and
+contracts; dig into how the auto-proving and auto-fitting work well across
+diverse uses; keep it clean.
+
+### 14.1 The shape in one paragraph
+
+A **fact** is a decidable proposition about a surface value, named after the
+clause it checks. A **capability** is a value together with the facts one
+has chosen to prove about it: a Lean structure whose proof fields have
+`:= by decide` as their default, so writing `⟨user⟩` discharges them and a
+failure names the fact. A **derivation** is an ordinary function out of a
+capability, so it cannot be called without the proof in hand, and the
+library proves once, generically, that what it derives is well-formed. A
+**contract** is the law a derivation carries about the code it will emit,
+stated over a Lean model of that code and proved in the library; the host
+receipt that later tests an implementation against it is the stance flip
+of §5. Nothing here adds a carrier: a capability is `{ x // facts }` over
+the rows of §4, and "the type is the schema" still holds.
+
+The payoff, in the room's terms: a user proves a small fact by `decide` and
+inherits every large one by theorem; kernel work stays linear in the size of
+the fact, not of the derived value; and there is exactly one place a
+derived endpoint could be ill-formed, and that place is a theorem.
+
+### 14.2 Facts
+
+Every well-formedness predicate of §4 is restated as a list of named
+clauses, each a total function returning the first refusal:
+
+```lean
+-- Effect4/Surface/Facts.lean
+inductive Refusal
+  | keyEmpty (entity : String)
+  | keyNotRequired (entity field : String)
+  | keyDuplicate (entity field : String)
+  | referenceUnresolved (entity target : String)
+  | pathParamWithoutSchema (endpoint param : String)
+  | schemaParamWithoutPath (endpoint param : String)
+  | payloadOnBodylessMethod (endpoint : String)
+  | statusCollision (endpoint : String) (status : Nat)
+  | routeCollision (method path : String)
+  | requirementUnprovided (deployment service : String)
+  | … one constructor per clause, the offending names inside
+deriving DecidableEq, Repr
+
+def Entity.check (dom : Domain) (e : Entity) : Except Refusal Unit   -- the clauses, in order, first refusal wins
+def Entity.WellFormed (dom) (e) : Prop := Entity.check dom e = .ok ()
+instance : Decidable (Entity.WellFormed dom e) := inferInstance         -- equality of a DecidableEq inductive
+```
+
+`WellFormed` is therefore one `Decidable` equation and stays `decide`-able;
+`#surface_check e` (Meta) evaluates `check` and prints the refusal, which is
+the whole error-message story: the clause, by name, with the names it
+failed on. Facts finer than the whole `WellFormed` are the individual
+clauses lifted to `Prop` the same way (`Entity.HasKey`, `Entity.KeyRequired`,
+`Domain.Closed`, `Endpoint.ParamsMatchPath`, `Endpoint.BodylessHasNoPayload`,
+`Api.RoutesDistinct`, `Deployment.Satisfies`), and `WellFormed` is proved
+equal to their conjunction (`wellFormed_iff`), so a capability may ask for
+exactly the clauses a derivation needs and no more.
+
+### 14.3 Capabilities
+
+```lean
+-- Effect4/Surface/Derive.lean
+structure Identified (dom : Domain) where
+  entity : Entity
+  hasKey : Entity.HasKey entity := by decide
+  keyRequired : Entity.KeyRequired dom entity := by decide
+
+structure Creatable (dom : Domain) extends Identified dom where
+  create : Entity                                   -- the request body
+  subshape : Entity.Subshape dom create entity := by decide   -- every property of `create` is a property of `entity` with the same type
+
+structure TaggedError (dom : Domain) where
+  entity : Entity
+  status : Nat
+  tagged : Entity.HasTag entity := by decide           -- a `_tag` string-literal property
+  errorStatus : 400 ≤ status ∧ status ≤ 599 := by decide
+```
+
+Conservatism rules for capabilities: a capability names facts, never
+behaviour; it extends another capability rather than repeating its facts; it
+carries no field an existing carrier already owns; its proofs are
+auto-params with `by decide` and nothing else, so a user who cannot
+`decide` a fact writes the term proof by hand and the API does not change.
+The first set is `Identified`, `Creatable`, `Updatable` (a partial body:
+every property optional, `Subshape` of the entity), `Listable` (derives the
+`<Name>List` wrapper entity), `TaggedError`, `Closed` (a domain whose
+references resolve), `Provided` (a deployment with the apis it serves and a
+proof of `Satisfies`). Nothing else until a derivation needs it.
+
+### 14.4 Derivations and their theorems
+
+```lean
+def Identified.keyParams (i : Identified dom) : Sch dom.refs .text         -- the key fields as a params schema; text kind by theorem `key_text` from `keyRequired` and the key fields' types
+def Identified.getEndpoint (i : Identified dom) (plural : String) : Endpoint dom.refs
+theorem Identified.getEndpoint_wf (i) (plural) : Endpoint.WellFormed (i.getEndpoint plural)
+def Identified.deleteEndpoint …  ; theorem deleteEndpoint_wf …
+def Creatable.createEndpoint … ; theorem createEndpoint_wf …
+def Listable.listEndpoint … ; theorem listEndpoint_wf …
+def Identified.repository (i : Identified dom) : ServiceRow     -- get, put, delete rows over the entity handle
+def Identified.crudGroup (i : Creatable dom) … : Group dom.refs ; theorem crudGroup_wf …
+```
+
+`getEndpoint` builds its `params` from the key, so `ParamsMatchPath` is
+true by construction and `getEndpoint_wf` is a proof about the builder,
+not a `decide` over its output. Every derivation follows that pattern:
+the theorem is stated once over the capability and proved by unfolding the
+builder, never by evaluating a fixture. A derivation that cannot be given
+its theorem in the packet does not land; it is an owed row.
+
+Derived values are ordinary rows. A user may take `i.getEndpoint "docs"`,
+change its description or add an error, and check the result with `decide`
+like any hand-written endpoint; derivation is a starting point that is
+correct, not a frame one is locked into.
+
+### 14.5 Contracts
+
+`Identified.repository` emits an interface (the `ServiceRow`, hence the
+rc.112 service class). Its contract is stated over the library's model of a
+store, `Model.Store (key entity : Type) := List (key × entity)` with `get`,
+`put`, `delete`, and proved there once:
+
+```lean
+theorem Repository.get_put (s) (k) (e) : (s.put k e).get k = some e
+theorem Repository.get_delete (s) (k) : (s.delete k).get k = none
+theorem Repository.put_put (s) (k) (e e') : (s.put k e).put k e' = s.put k e'
+```
+
+The contract rows are data beside the service row (`Contract := { service,
+name, sentence }`) so the emitter prints them as the doc comment of the
+service class and the harness of a later wave replays an implementation
+against them (Char's `characterize` over the model is the instrument; its
+join is that later wave). The stance of the repository emitter stays
+`emitted` until then; the contract is nevertheless a theorem today, about
+the model, and the docstring says exactly that.
+
+### 14.6 Auto-fitting
+
+Two mechanisms, both in core Lean:
+
+1. **Auto-params** (`:= by decide`) on capability fields: construction is
+   the fit, failure is the clause name. `by decide` is the only tactic
+   admitted in an auto-param here; a `surface_decide` macro may wrap it to
+   evaluate `check` first and rewrite the failure into the refusal's
+   `Repr`, but it discharges nothing `decide` would not.
+2. **`#surface_fit x`** (Meta): for a value of a known carrier, evaluate
+   every registered fact's checker and print a table `fact | holds |
+   refusal`, then the capabilities that would construct. It proves nothing
+   and stores nothing; it tells the user what to opt into. The registry of
+   facts is `Facts.registry : List (String × String)` (name, carrier) and
+   a `#guard` keeps it equal to the constructors of `Refusal`, so a clause
+   cannot exist without a name the user can see.
+
+What is deliberately not here: typeclass-resolved facts (`[Fact P]`
+instances found by search), a proof cache, a tactic that searches for
+theorems, or a derivation that picks facts by inspection. Each would make a
+fit depend on elaborator state rather than on the rows, and the operator
+asked for something they will not have to come back to.
+
+### 14.7 The algebra, stated once
+
+Facts under conjunction form a meet-semilattice; a capability is a point
+in it; derivations are monotone (a capability with more facts derives at
+least what one with fewer derives, by `extends`); the derived value's
+well-formedness is the theorem attached to the derivation. That is the
+whole structure, and it pays by deleting the `decide` over every derived
+value and the class of "the generator built an ill-formed endpoint".
+Nothing is called a functor or an adjunction.
+
+### 14.8 Effect on the waves
+
+Wave 1a: `Entity.check : Except Refusal Unit` with named clauses, and
+`WellFormed := check = .ok ()`; `Refusal` starts in `Facts.lean` (1a owns
+it; later waves append constructors). Wave 2a–2c: the same shape for every
+carrier, clause names in the refusal, `wellFormed_iff` per carrier. New
+wave 2e (after 2a): `Facts.lean` lifts, `Derive.lean` with the seven
+capabilities and their derivations and theorems, `Model.lean` with the
+store and the repository contract. Wave 3a adds `#surface_check` and
+`#surface_fit`. Wave 3c's skills teach the facts: what a real deployment
+demands of a row is exactly the list of clauses, and opting in is the
+sentence a user writes.
+
+## 15. The semantic layer is always present: annotations everywhere
+
+The operator's fifth steer, binding: the semantic layer is never optional,
+and annotations are everywhere. The estate already has the typed annotation
+data plane (`Effect4/Schema/Annotations.lean`: `AnnotationKey` with
+`Lawful`, the exact partial isomorphism `decode_encode`/`encode_decode`, the
+lawful traversals `annotationBags`), and rc.112 reads title, description,
+identifier and examples off the same bags when it emits JSON Schema and
+OpenAPI. So the semantic layer is a set of keys, a clause, and a rule:
+
+### 15.1 Keys (`Effect4/Surface/Annotate.lean`)
+
+| key | carrier | where it goes |
+| --- | --- | --- |
+| rc.112 standard: `identifier`, `title`, `description`, `documentation`, `examples`, `default`, `deprecated` | `String`, `String`, `String`, `String`, `List Json`, `Json`, `Bool` | the node's annotation bag, spelled exactly as rc.112's `Annotations.*` reads them (read `src/SchemaAnnotations.ts` or wherever the names live; cite) |
+| `effect4/surface` (branded, one key) | `SurfaceMark := { kind : "entity" \| "endpoint" \| "tool" \| "resource" \| "deployment" \| "site", domain, name, version : Nat, stance, facts : List String, pins : List Pin, source : Option Digest }` | the root node of every surface value's representation; `facts` is written by derivations and by `#surface_check`, never by hand |
+
+Every key is an `AnnotationKey` with a `Lawful` instance proved (the
+payloads are strings, naturals, booleans, lists and one flat record, so the
+proofs are `rfl`-shaped). No key is a Lean function; no key is optional in
+the sense of §15.2.
+
+### 15.2 The clause
+
+`Refusal` gains `descriptionMissing (kind name : String)` and
+`identifierMissing (kind name : String)`. `Entity.check`, `Endpoint.check`,
+`Tool.check`, `Resource.check`, `Deployment.check`, `Site.check` each
+require `identifier` and `description` on the value's root bag; properties
+of an entity require `description` when the domain is marked `active`
+(the source of truth documents its fields), and are advised otherwise by
+`#surface_fit`. A surface value with no meaning is ill-formed, by the same
+mechanism as one with a bad path.
+
+### 15.3 The rule
+
+Emitters read semantics only from annotations: an OpenAPI `summary`, a
+JSON Schema `title`, a doc comment on a generated `export const`, an MCP
+tool `description`, the `description` field of a wrangler binding comment,
+all come from the bag through the keys of §15.1, never from a separate
+field on the carrier. The `effect4/surface` mark is emitted verbatim into
+every generated schema's annotations, so the generated code carries its
+domain, version, stance, the facts proved about it and the pins it rests
+on; the host receipt for `entityJsonSchema` and `apiOpenApi` then covers
+titles and descriptions too, because rc.112 derives them from the same
+bags.
+
+The DSL writes annotations with the same weight as fields:
+
+```lean
+entity Doc in docs "A documentation page rendered at /docs/:slug" where
+  slug  : String  [key] "The URL slug, unique within the site"
+  title : String         "The page title"
+```
+
+A string literal after the entity name is its `description`; after a field
+type, the field's; `identifier` is the entity's name. Ingested rows
+(`stance := ingested`) carry the source's descriptions where the source has
+them and the refusal names the ones it lacks.
+
+### 15.4 Effect on the waves
+
+Wave 1a owns `Annotate.lean` (the keys, their `Lawful` proofs, `mark`/
+`markOf` on `Representation`), and the two clauses in `Entity.check`. Waves
+2a–2c apply the clauses to their carriers and read semantics through the
+keys. Wave 2e writes `facts` into the mark from derivations. Wave 3a adds the
+string-literal descriptions to every command. Wave 3c's skills say it
+plainly: a row without a description does not compile.
+
+### 13.7 Rulings from the wave-1 reconciliation (2026-09-04)
+
+The breaker's findings against §13–§15, ruled by the coordinator:
+
+1. `Stance` is the entity stance; the rule stance is `RuleStance` (as landed).
+2. The kinds stay four. Multipart, url-encoded and stream are carried by the
+   slot constructors, `Payload | json | multipart | urlEncoded` over
+   `Sch .json`/`.struct`/`.text` and `ResponseBody | void | json | stream`, not
+   by new kinds: the representation has no node for them, so a kind would be
+   a marker with no decision procedure of its own (finding 7).
+3. `pathPrefix`, never `prefix` (a reserved token).
+4. One payload per endpoint in v1; rc.112's per-content-type payload map is a
+   v2 row, and its two duplicate-encoding throws are unrepresentable here.
+5. Clause vocabulary: the constructors landed in `Facts.lean` are the names;
+   the breaker's batteries are repaired to them at integration, statement for
+   statement, and the mapping is recorded in the landing note. Five clauses
+   the breaker found and the plan lacked are added: `streamWithBufferedStatus`
+   (`HttpApiEndpoint.ts:1209`, `:1225`), `sseEventNameReserved` (`:1306`),
+   `successEmpty`, and the wrangler and site names as landed.
+6. `Facts.registry` versus the constructors of `Refusal` is a shell census in
+   the gate (wave 3b), as `check-lowering-coverage.sh` does for rule tags;
+   `Refusal.name` is its Lean side.
+7. `Handler.fits` (§13.2) gets its own breaker packet before wave 2d builds.
