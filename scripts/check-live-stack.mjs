@@ -167,7 +167,8 @@ try {
   assert.throws(() => checkDefaultBuild({ ...whole, stdout: whole.stdout + "\nerror: Lean exited with code 143\n" }, knownRed), /compiler/)
   if (args.includes("--repository")) {
     const checks = {}
-    for (const [label, script] of [["trust", "test-trust-gate.sh"], ["fiber-assurance", "check-fiber-assurance.sh"], ["citations", "check-internal-citations.sh"]]) {
+    // `check-fiber-assurance.sh` was retired on 2026-09-04 with the old fiber machines.
+    for (const [label, script] of [["trust", "test-trust-gate.sh"], ["citations", "check-internal-citations.sh"]]) {
       const result = await run(label, "bash", [`scripts/${script}`], { allowFailure: true, timeout: 1200000 })
       checks[label] = result.exitCode
     }

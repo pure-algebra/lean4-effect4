@@ -1,9 +1,10 @@
 # Fork and supervision host observations
 
-Run `./scripts/check-fiber-supervision-host.sh`. By default it uses the held
-Effect installation in the neighboring Foldlab `library/effects/node_modules`;
-`EFFECT4_EFFECT_NODE_MODULES` can identify another installation with the exact
-same checked bytes. The script installs nothing.
+The runner `scripts/check-fiber-supervision-host.sh` was retired on 2026-09-04
+with the supervision calculus (`docs/research/2026-09-04-retire-old-machines.md`).
+The cases in [`runtime-check.ts`](runtime-check.ts) and the pin below stand as
+host evidence; a run uses a held Effect installation with exactly the pinned
+bytes and installs nothing.
 
 The [pin](host-pin.json) binds Effect rc.112 to the entire inspected package
 tree, TypeScript 7.0.2, and diagnostics 0.38.0. The tree digest is SHA-256 of
@@ -29,5 +30,6 @@ unchanged harness bytes are executed.
 
 These are finite observations of the pinned host. They do not prove all
 schedules, eventual completion, an interpretation of arbitrary callbacks,
-or a Lean-to-host simulation. The local Lean statements and their trust
-receipts are owned by the supervision contract and its proof graph.
+or a Lean-to-host simulation. The Lean side is the reference machine's
+clauses and witnesses (`Effect4/Deep/Clauses.lean`, `Effect4/Deep/Witnesses.lean`),
+joined in `Effect4Test/Audit/RuntimeCoverage.lean`.

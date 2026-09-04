@@ -29,7 +29,8 @@ globs = ["Effect4Test"]
 # a bare `lean env lean` on one file. The areas are disjoint and together cover
 # the tree. Every area is expected green: the two declared-red modules
 # (`Effect4TestProtocol`'s byte parser, `Effect4TestConcurrency`'s binary race)
-# were retired on 2026-09-04.
+# were retired on 2026-09-04; the `Effect4TestConcurrency` area itself was
+# retired with the old fiber machines the same day.
 #
 # The globs are `.+`, submodules only: `.*` would also select the directory's
 # own module — `Effect4Test.Audit`, say — and no such file exists.
@@ -53,10 +54,6 @@ globs = ["Effect4Test.Target.+"]
 [[lean_lib]]
 name = "Effect4TestRuntime"
 globs = ["Effect4Test.Runtime.+"]
-
-[[lean_lib]]
-name = "Effect4TestConcurrency"
-globs = ["Effect4Test.Concurrency.+"]
 
 [[lean_lib]]
 name = "Effect4TestAudit"

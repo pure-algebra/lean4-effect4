@@ -335,7 +335,7 @@ approve Foldlab retirement.
 | `Effect4.Reason` | `Semantics/Cause.lean` | canonical carrier | canonical failure-reason carrier; the concurrency representative's `τ` terminal alphabet is a *parameter* it may later be instantiated at, not a duplicate of it | `internal/core.ts:245-275` (Fail), `288-319` (Die), `internal/effect.ts:107-145` (Interrupt) | `CAUSE-PG` |
 | `Effect4.Cause` | `Semantics/Cause.lean` | canonical carrier | canonical flat cause; explicitly *separate* from `Effect4.Data.Row` (order-retaining, duplicate-retaining) and from any tree-shaped cause, which `E4-SEM-CE-001` rejects | `internal/core.ts:138-176` (`CauseImpl`) | `CAUSE-PG` |
 | `Effect4.Squashed` | `Semantics/Cause.lean` | derived observation alphabet | lossy projection of `Cause`; no inverse is claimed and it carries no annotations | `internal/effect.ts:298-309` (`causeSquash`) | leaf receipts linked to `CAUSE-PG.semantics` |
-| `Effect4.Exit` | `Semantics/Exit.lean` | canonical carrier | canonical success/failure observation; separate calculus from `Effect4.Flow` diagnostics, from `SchedulerRefusal`, and from any frontier arm | `Exit.ts:118-157` | `CAUSE-PG` |
+| `Effect4.Exit` | `Semantics/Exit.lean` | canonical carrier | canonical success/failure observation; separate calculus from `Effect4.Flow` diagnostics, from `SchedulerRefusal` (retired 2026-09-04), and from any frontier arm | `Exit.ts:118-157` | `CAUSE-PG` |
 
 The declaration and assurance snapshot remains a separate obligation. A green
 contract and axiom report do not replace the generated per-declaration join or
@@ -345,46 +345,31 @@ and insertion-order contract.
 
 ## Fork and supervision declaration dispositions
 
-These 27 native type and judgment rows mirror `docs/SUPERVISION-DAG.md`
-"Complete type and judgment disposition". The frozen contract is
-`test/contracts/fiber-supervision.contract.md`; the DAG owns shapes and the
-`SUPERVISION-PG-RC112` obligations. The owner below is relative to `Effect4/`.
+These six native vocabulary rows are the part of `Concurrency/Supervision.lean`
+that is shared with the reference fiber machine `Effect4/Deep/Fibers.lean` and its
+stores, fork-flow compile, `Clauses.lean` and `Witnesses.lean`. The 21 controller rows
+that stood here — the `Globals`, `Fiber`, `Subscription` and `Observation` views, the
+fork/interrupt call-plan and result data, the `Refusal`/`ReplayResult` outcomes, the
+scope-binding instructions, `RaceAllDecision`, and the five `Prop` judgments over
+`WaitState` and `RaceAllState` replay — were retired on 2026-09-04 together with
+`Concurrency/Scheduler.lean` and the supervision controller calculus
+(`docs/research/2026-09-04-retire-old-machines.md`); every behaviour they carried is
+witnessed on the reference machine through `Effect4Test/Audit/RuntimeCoverage.lean`.
+The owner below is relative to `Effect4/`.
 The source profile is Effect rc.112 at the runtime pin above, specifically
 `src/internal/effect.ts`, SHA-256
 `0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0`.
-No declaration is moved from Foldlab. Canonical FiberId, FiberState, Cause,
-Exit, and Scope retain their existing owners. These rows allocate assurance;
-they do not close the continuation or host interpretation boundaries.
+No declaration is moved from Foldlab. Canonical FiberId, Cause, Exit, and Scope
+retain their existing owners.
 
 | Public type or judgment | Owning module | Disposition | Relationship and duplicate prevention | Assurance route |
 | --- | --- | --- | --- | --- |
-| `Effect4.Supervision.MaskMode` | `Concurrency/Supervision.lean` | native finite leaf | Selects existing InterruptMask; not a second mask carrier | `SUP-L-MASK` |
-| `Effect4.Supervision.ForkOptions` | `Concurrency/Supervision.lean` | native options data | Immediate/daemon/mask inputs to fork boundary; not host closure storage | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.Globals` | `Concurrency/Supervision.lean` | native global view | Allocated canonical FiberIds and one shared middleware flag; not per-parent middleware | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.ObserverMode` | `Concurrency/Supervision.lean` | native finite leaf | Distinct await-value versus join-effect observations | `SUP-L-OBSERVER` |
-| `Effect4.Supervision.Subscription` | `Concurrency/Supervision.lean` | native observer handle | Named cancellation key and ObserverMode; no callback payload | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.Fiber` | `Concurrency/Supervision.lean` | native related view | Contains canonical FiberState Exit; exact toFiberState projection, adds boundary metadata | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.Observation` | `Concurrency/Supervision.lean` | native result observation | Canonical Exit returned as value or resumed effect; waiting is a keyed frontier | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.StartObservation` | `Concurrency/Supervision.lean` | native external decision data | Deferred or full observed Globals/parent/child after immediate execution | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.ForkEvent` | `Concurrency/Supervision.lean` | native boundary trace | Scheduled/evaluated/registered order; not Scheduler.Event replacement | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.ForkResult` | `Concurrency/Supervision.lean` | native result data | Initial and observed child kept separately with post-world and exact parent link | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.InterruptAction` | `Concurrency/Supervision.lean` | native call-plan alphabet | Request versus explicit await; no completion or source execution claim | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.Refusal` | `Concurrency/Supervision.lean` | native controller refusal | Invalid views/decisions only; never effect Cause or finite-tape exhaustion | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.WaitState` | `Concurrency/Supervision.lean` | native shared controller | Targets, actual publications, stored continuation datum; result field is not return | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.ReplayResult` | `Concurrency/Supervision.lean` | native controller outcome | Distinct done/frontier/refused over observed state; not Scheduler.ReplayResult alias | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.ScopeMode` | `Concurrency/Supervision.lean` | native finite leaf | Source forkIn versus fiberRunIn policies over the canonical Scope owner | `SUP-L-SCOPE` |
-| `Effect4.Supervision.ScopeFinalizer` | `Concurrency/Supervision.lean` | native first-order instruction | Child identity plus self guard; canonical Scope stores lifted data, never a function | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.ScopeBinding` | `Concurrency/Supervision.lean` | native related result | Canonical Scope with standard ULift keys/instructions, exact observer key and interruptor | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.RaceAllState` | `Concurrency/Supervision.lean` | native controller state | First-success rc.112 bookkeeping; distinct from bounded binary first-completion RaceState | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.RaceAllDecision` | `Concurrency/Supervision.lean` | native decision alphabet | Split launch, callback, cleanup selection, request; no hidden callback choice | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.Globals.Valid` | `Concurrency/Supervision.lean` | native Prop judgment | Allocation uniqueness only; exact valid_iff | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.Globals.Extends` | `Concurrency/Supervision.lean` | native Prop judgment | Allocation prefix, monotone global middleware, unique post IDs | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.Globals.OwnsChildren` | `Concurrency/Supervision.lean` | native Prop judgment | Observed fiber and each direct child allocated in the observed global view | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.Fiber.Valid` | `Concurrency/Supervision.lean` | native Prop judgment | Local lifecycle and key/child uniqueness; does not assert Machine.WellFormed | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.WaitStep` | `Concurrency/Supervision.lean` | native Prop judgment | Exactly successful WaitState.observe for an actual publication decision | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.WaitRuns` | `Concurrency/Supervision.lean` | native Prop judgment | Exactly total finite waitReplay on a fixed publication tape | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.RaceStep` | `Concurrency/Supervision.lean` | native Prop judgment | Exactly successful raceStep on the explicit decision | `SUPERVISION-PG-RC112` |
-| `Effect4.Supervision.RaceRuns` | `Concurrency/Supervision.lean` | native Prop judgment | Exactly total finite raceReplay on a fixed race decision tape | `SUPERVISION-PG-RC112` |
+| `Effect4.Supervision.MaskMode` | `Concurrency/Supervision.lean` | native finite leaf | The fork-boundary mask choice the machine's `spawn` reads; `InterruptMask` retired | `MaskMode.cases_receipt` |
+| `Effect4.Supervision.ForkOptions` | `Concurrency/Supervision.lean` | native options data | Immediate/daemon/mask inputs to the fork boundary, read by `Deep/Fibers.lean` and `Deep/ForkFlow.lean`; not host closure storage | `Effect4Test/Audit/RuntimeCoverage.lean`, the `fork.*` rows |
+| `Effect4.Supervision.ObserverMode` | `Concurrency/Supervision.lean` | native finite leaf | Distinct await-value versus join-effect observations | `ObserverMode.cases_receipt` |
+| `Effect4.Supervision.WaitState` | `Concurrency/Supervision.lean` | native controller datum | Survives only as the `cleanup` field of `RaceAllState` (with `WaitState.pending`); the replay controller over it is retired | `Effect4Test/Audit/RuntimeCoverage.lean`, the `fork.race-all` row |
+| `Effect4.Supervision.ScopeMode` | `Concurrency/Supervision.lean` | native finite leaf | Source forkIn versus fiberRunIn policies over the canonical Scope owner | `ScopeMode.cases_receipt` |
+| `Effect4.Supervision.RaceAllState` | `Concurrency/Supervision.lean` | native controller state | First-success rc.112 bookkeeping read by `Deep.Fibers.raceAll` and `fireObserver`; distinct from the bounded binary first-completion RaceState | `RaceAllState.initial_eq`, `raceComplete_unknown/_after_accepted/_success/_failure_last/_failure_pending` |
 
 ## Retained TypeScript target fragment
 

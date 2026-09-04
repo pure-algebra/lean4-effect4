@@ -1,5 +1,4 @@
 import Effect4.Runtime.Runtime
-import Effect4.Concurrency.Scheduler
 import Effect4.Concurrency.Supervision
 
 /-!
@@ -17,14 +16,15 @@ drains the resumes it owes on the spot (S2 M1), a program can mask its own fiber
 cancel name knows the waiter it splices out (M3), scope linking knows its mode (M4), an
 interrupt carries the caller's annotations (M5), a countdown collects the exits it awaited
 (M6), the scope hooks can say "unknown" (M7), a settled race interrupts its unlaunched
-entrants instead of deleting them (M8), and the projection loss of M9 is recorded.
+entrants instead of deleting them (M8), and M9 (the old alphabet's missing suspended phase)
+is moot since the projections were retired.
 
 One source of truth. A `RunFiber` holds the frame machine's five fields
 (`Effect4/Runtime/Runtime.lean`, reused unchanged), the parking state, the exit, the
-supervision-only fields, and the per-fiber dispatcher. The old `FiberState`
-(`Effect4/Concurrency/Fiber.lean`) and the old `Scheduler.Machine` are *computed* from it,
-never stored beside it, so every old theorem transfers through a projection lemma and no
-coherence invariant exists.
+supervision fields, and the per-fiber dispatcher. The scheduler and supervision calculi this
+machine replaced were retired on 2026-09-04
+(`docs/research/2026-09-04-retire-old-machines.md`); only their vocabulary
+(`Effect4/Concurrency/Supervision.lean`) remains.
 
 Every arm names the rc.112 line it transcribes (`vendor/effect-4.0.0-rc.112/src/`,
 `internal/effect.ts` unless another file is named). Where rc.112 leaves a choice to the
@@ -32,10 +32,6 @@ host, the machine takes a `RunDecision` from a tape. Tape exhaustion and fuel ex
 are live frontiers (DB-04); so is a stuck machine, which is what a state rc.112 cannot reach
 (a join on a handle the machine does not hold, an unknown scope key) becomes here, observably.
 The error channel is `Cause ε δ ι α` and `Exit` everywhere.
-
-Recorded, not hidden (M9): the old `FiberStatus` has no "suspended" phase, so `toCore`
-projects a fiber parked on an async or a countdown to `runnable`; the landing carries a
-refusal row for that projection or re-freezes the scheduler alphabet.
 -/
 
 namespace Effect4.Deep
@@ -181,54 +177,8 @@ namespace RunFiber
 
 variable {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
 
-/-- The old lifecycle phase, computed. M9: the old alphabet has no "suspended" phase, so an
-async or countdown park projects to `runnable`; recorded in the module header. -/
-def status (f : RunFiber ν σ β ε δ ι α χ) : FiberStatus :=
-  if f.exit.isSome then FiberStatus.done
-  else if f.finalizing.isSome then FiberStatus.finalizing
-  else if f.running then FiberStatus.running
-  else
-    match f.parked with
-    | Parked.notParked => FiberStatus.runnable
-    | Parked.withGuard token =>
-      match (f.pending.find? fun p => p.token = token).bind Pending.waitingOn with
-      | some target => FiberStatus.waiting target
-      | none => FiberStatus.runnable
-
-def mask (f : RunFiber ν σ β ε δ ι α χ) : InterruptMask :=
-  if f.frame.interruptible then InterruptMask.unmasked else InterruptMask.masked
-
 def interruptPending (f : RunFiber ν σ β ε δ ι α χ) : Bool :=
   f.frame.deferredInterrupt || f.frame.interruptedCause.isSome
-
-def cleanup (f : RunFiber ν σ β ε δ ι α χ) : CleanupState :=
-  if f.exit.isSome then CleanupState.done
-  else if f.finalizing.isSome then CleanupState.pending
-  else CleanupState.notStarted
-
-/-- The exact old `FiberState`, as a function of the new record. -/
-def toCore (f : RunFiber ν σ β ε δ ι α χ) : FiberState (Exit β ε δ ι α) where
-  id := f.id
-  status := f.status
-  terminal := f.exit <|> f.finalizing
-  mask := f.mask
-  interruptPending := f.interruptPending
-  cleanup := f.cleanup
-  cleanupCount := if f.exit.isSome then 1 else 0
-
-def subscriptions (f : RunFiber ν σ β ε δ ι α χ) : List Supervision.Subscription :=
-  f.observers.filterMap fun
-    | Observer.resumeAwait _ token mode => some ⟨token, mode⟩
-    | _ => none
-
-/-- The exact old `Supervision.Fiber`, as a function of the new record: `interrupted`
-is the frame's `interruptedCause`, one fact, not two. -/
-def toSup (f : RunFiber ν σ β ε δ ι α χ) : Supervision.Fiber χ β ε δ ι α where
-  core := f.toCore
-  context := f.context
-  children := f.children
-  subscriptions := f.subscriptions
-  interrupted := f.frame.interruptedCause
 
 /-- `new FiberImpl(context, interruptible)` (`:512-514`) with the modelled fields; the
 budget fields are read off the context as `setContext` does (`:726-727`). -/
@@ -494,19 +444,7 @@ def updateRace (m : RunMachine ν σ β ε δ ι α χ St) (r : Race β ε δ ι
     RunMachine ν σ β ε δ ι α χ St :=
   { m with races := m.races.map fun s => if s.id = r.id then r else s }
 
-/-- The projection onto the old scheduler's machine: fibers as `FiberState`, the trace as
-the old alphabet where an event has an image. -/
-def toSched (m : RunMachine ν σ β ε δ ι α χ St) : Effect4.Machine (Exit β ε δ ι α) where
-  fibers := m.fibers.map RunFiber.toCore
-  trace := m.trace.filterMap fun
-    | RunEvent.scheduledTask _ _ (Task.start child) => some (Event.scheduled child)
-    | RunEvent.interruptRecorded (some requester) target =>
-      some (Event.interruptRequested requester target)
-    | RunEvent.interruptDeferred target => some (Event.interruptDeferred target)
-    | RunEvent.exited fiber exit => some (Event.completed fiber exit)
-    | _ => none
-
-/-- Every fiber has exited (`Machine.Finished`'s image). -/
+/-- Every fiber has exited. -/
 def finished (m : RunMachine ν σ β ε δ ι α χ St) : Bool :=
   m.fibers.all fun f => f.exit.isSome
 

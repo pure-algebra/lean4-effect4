@@ -1,24 +1,22 @@
 import Effect4.Runtime.Runtime
-import Effect4.Concurrency.Scheduler
 import Effect4.Semantics.Observation
 
 /-!
 # Target.TypeScript.Simulation
 
-Owner: the projections from the frame machine's alphabet (`Effect4.FrameEvent`,
-`Effect4/Runtime/Runtime.lean`) and the scheduler's alphabet (`Effect4.Event`,
-`Effect4/Concurrency/Scheduler.lean`) into the shared service-level trace
-alphabet (`Effect4.Trace.Event`, `Effect4/Semantics/Observation.lean`). This
-is the one module allowed to see both sides (`docs/FRAMES-DAG.md` separation
-7; `docs/TRACE-DAG.md` edge `bridges`).
+Owner: the projection from the frame machine's alphabet (`Effect4.FrameEvent`,
+`Effect4/Runtime/Runtime.lean`) into the shared service-level trace alphabet
+(`Effect4.Trace.Event`, `Effect4/Semantics/Observation.lean`)
+(`docs/TRACE-DAG.md` edge `bridges`). The scheduler-side projection this
+module also owned was retired on 2026-09-04 with the old scheduler
+(`docs/research/2026-09-04-retire-old-machines.md`).
 
 Only finalizers and outcomes project: a `ranFinalizer` becomes `finalizer`
-with the exit it observed, a `yielded` exit becomes `done`, a scheduler
-`completed` becomes `done`; everything else is a frame or scheduler fact with
-no service-level shadow and projects to `none`. No simulation is claimed: the
-projections state what a frame-level or scheduler-level observation *would*
-say in the service-level alphabet, so that a future bridge theorem has a
-statement to make. The host side (`harness/trace/patched/`) records the
+with the exit it observed and a `yielded` exit becomes `done`; everything else
+is a frame fact with no service-level shadow and projects to `none`. No
+simulation is claimed: the projection states what a frame-level observation
+*would* say in the service-level alphabet, so that a future bridge theorem has
+a statement to make. The host side (`harness/trace/patched/`) records the
 corresponding rc.112 rows in receipts; they are evidence of nothing yet.
 -/
 
@@ -49,12 +47,6 @@ def FrameEvent.toTrace {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
   | .ranFinalizer finalizer exit =>
       some (.finalizer (region finalizer) (Exit.toOutcome value error defect exit))
   | .yielded exit => some (.done (Exit.toOutcome value error defect exit))
-  | _ => none
-
-/-- The service-level shadow of a scheduler event: a completed fiber's
-result, as the outcome; scheduling, joins, interrupts and masks have none. -/
-def Event.toTrace {τ : Type u} (result : τ → Outcome Val) : Event τ → Option Effect4.Trace.Event
-  | .completed _ r => some (.done (result r))
   | _ => none
 
 /-- Project a frame trace to its service-level shadow, dropping the rest. -/

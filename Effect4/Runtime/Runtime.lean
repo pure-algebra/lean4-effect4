@@ -32,7 +32,7 @@ equality and kernel-reducible ground receipts. `Effect4.Exit` and
 `Effect4.Cause` are reused unchanged; this module mints no second exit or cause
 carrier and imports only `Effect4.Semantics.Exit`. Nothing under
 `Effect4/Concurrency/` is imported or mentioned, so the mask flag is rc.112's
-own `Bool` rather than `Effect4.InterruptMask`.
+own `Bool` rather than a separate mask alphabet.
 
 Pinned source: `vendor/effect-4.0.0-rc.112/src/internal/core.ts` 365-583 and
 `internal/effect.ts` 505-550, 653-698, 737-744, 928-946, 1356-1379, 1662-1689,
@@ -291,8 +291,8 @@ inductive ContAnswer (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Typ
   | empty
 deriving DecidableEq
 
-/-- The stack's trace alphabet. It is not `Effect4.Event`, the scheduler's
-trace alphabet: `docs/FRAMES-DAG.md` separation 7 records why. -/
+/-- The stack's trace alphabet; the reference machine's `Effect4.Deep.RunEvent`
+wraps it per fiber. -/
 inductive FrameEvent (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max u v)
   /-- A frame the pop passed or answered with. -/
   | popped (frame : Prim ν σ β ε δ ι α)
@@ -354,8 +354,9 @@ def pendingCause (self : FrameFiber ν σ β ε δ ι α) : Cause ε δ ι α :=
   | some cause => cause
   | none => Cause.empty
 
-/-- The shared mask word. `FRAME-FB-MASK-CARRIER` records that the
-correspondence to `Effect4.InterruptMask` is a later bridge obligation.
+/-- The shared mask word. `FRAME-FB-MASK-CARRIER` records that this `Bool` is
+the only mask carrier; the separate mask alphabet it once had to agree with was
+retired on 2026-09-04.
 census: rule.frames-are-primitives -/
 def masked (self : FrameFiber ν σ β ε δ ι α) : Bool := !self.interruptible
 

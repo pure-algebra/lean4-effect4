@@ -52,8 +52,6 @@ import Effect4.Runtime.LiveStack
 -- machine. See `test/contracts/frame-simulation.contract.md` ruling 5.
 import Effect4.Semantics.FrameSimulation
 import Effect4.Concurrency.Fiber
-import Effect4.Concurrency.Scheduler
-import Effect4.Concurrency.Interrupt
 import Effect4.Concurrency.Supervision
 import Effect4.Stateful.RefFamily
 import Effect4.Stateful.DeferredFamily
@@ -80,9 +78,9 @@ import Effect4.Semantics.RegionSimulation
 -- The reference machine (docs/research/2026-09-03-deep-plan.md): one
 -- program-carrying fiber machine over the rc.112 frames, the stores it drives,
 -- the witnesses over them, the fork-profile compile, and the Context and Layer
--- models. Promoted from the `workshop/Deep` spike on 2026-09-04; the old
--- `FiberState`/`Supervision.Fiber`/`Scheduler.Machine` carriers are now its
--- computed projections and retire with the witnesses phase.
+-- models. Promoted from the `workshop/Deep` spike on 2026-09-04; the old fiber
+-- and scheduler carriers were retired the same day
+-- (`docs/research/2026-09-04-retire-old-machines.md`).
 import Effect4.Deep.Fibers
 import Effect4.Deep.Clauses
 import Effect4.Deep.Stores

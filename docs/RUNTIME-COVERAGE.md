@@ -105,10 +105,11 @@ recorded command, and run the gate. A digest that drifts because upstream
 changed is a deliberate re-pin: the whole pin moves together, never one row.
 
 **A new theorem in `Effect4/`** intended as a witness still passes through the
-normal packet discipline, and any public declaration added to
-`Effect4/Concurrency/*` also moves the frozen surface census in
-`Effect4Test/Concurrency/FiberAssurance.lean` and its generator counts. Plan
-both edits together.
+normal packet discipline. The frozen surface census that used to shadow
+`Effect4/Concurrency/*` (`Effect4Test/Concurrency/FiberAssurance.lean` and its
+generated projection) was retired on 2026-09-04 with the machines it counted
+(`docs/research/2026-09-04-retire-old-machines.md`), so a concurrency
+declaration now moves only the coverage join.
 
 ## Path to full coverage
 
@@ -119,12 +120,12 @@ census v1 and the model that closes each:
 | --- | ---: | --- |
 | `cause.*`, `exit.*`, `rule.cause-has-no-structure` | 13 | `Effect4/Semantics/Cause.lean`, `Exit.lean`: flat reasons, union combine, squash, finalizer merge |
 | `scope.*`, `rule.scope-close-lifo-state-first` | 15 | `Effect4/Runtime/Scope.lean`: state machine, LIFO close, sequential and parallel close, fork linkage |
-| `fork.*`, `interrupt.accumulate`, the two fork rules | 14 | `Effect4/Concurrency/Supervision.lean` and `Race.lean`: tracked versus daemon children, parent-exit interruption, scope-bound fibers, live-join resumption |
+| `fork.*`, `interrupt.accumulate`, the two fork rules | 14 | `Effect4/Deep/Fibers.lean` with `Effect4/Deep/Clauses.lean` and `Witnesses.lean`: spawn/start, the exit path, observers, races, scope links, interrupt record and apply |
 | continuation-machine `op.*`, `frame-arm.*`, `checkpoint.*`, and the stack rules | 30 | a new continuation-stack calculus: frames with three arms, `getCont` with the ensure hook, deferred-interrupt flag, handler skipping, yield versus park |
 | `ref.*` | 10 | `Effect4/Stateful/Ref.lean`: a cell store with allocation identity, read, write, and the read-modify-write projections, including the void-typed `Ref.set` whose host value is the cell |
 | `deferred.*` | 12 | `Effect4/Stateful/Deferred.lean`: a completion store that is empty or holds exactly one effect, a registration-ordered waiter list, single completion, and interruption as an ordinary stored failure |
 | `layer.*` | 16 | `Effect4/Layer/*.lean`: build over a memo map and a scope, one build per memo map with observer counting and a last-observer finalizer, parent memo chains, merge and provide scoping, and the layer scope versus the program scope |
-| the `partial` rows | 25 | finish once the models above exist; each also needs one scheduler refinement |
+| the `partial` rows | 1 | `op.Failure`: the stack-frame annotation of a failure needs a `StackTrace` service key |
 
 The three `foreignBoundary` rows (`op.WithFiber`, `op.YieldableError`,
 `cause.annotations`) close with a registered boundary identity and a refusal
