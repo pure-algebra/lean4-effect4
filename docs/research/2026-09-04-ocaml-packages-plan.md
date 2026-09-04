@@ -28,6 +28,14 @@ Effect program explorer that shows a run's fibers, dispatcher, observers and row
 by the daemon's `step`/`explain`), `incremental`, `core_bench`, `ocaml-lsp` for the daemon's
 editor face.
 
+**Built 2026-09-04.** `opam switch effect4`: OCaml 5.1.1, js_of_ocaml 5.7.1 (pinned), Core
+v0.16.2 with the v0.16 Jane Street set (base v0.16.5, ppx_jane/ppx_expect/bin_prot/sexplib
+v0.16), ppxlib 0.35, Eio 1.2, Picos 0.6, ocamlformat. v0.17 was tried first and refused: every
+Core v0.17.x depends on `gel` v0.17.0, which fails to compile against every `bin_prot` in the
+index (`Bin_prot.Shape.Location … Bin_shape.Location is missing`); the index has no
+`bin_prot` v0.17.1. The opam repository was repointed to `git+https://github.com/ocaml/opam-repository.git`
+because the tarball update fails on `patch` under opam 2.1.5 on this Mac.
+
 ## 2. How each lane uses it
 
 - **W1, the port.** Carriers get `[@@deriving sexp, compare, equal, fields, variants]` from
