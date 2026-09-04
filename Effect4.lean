@@ -1,6 +1,14 @@
 import Effect4.Data.Row
 import Effect4.Data.Json
 import Effect4.Data.Optic
+-- The generic content-addressed store (2026-09-04): canonical bytes, a proved
+-- SHA-256 address, ids by insertion, names by path trie. The substrate every
+-- ingested surface — a standard library, a schema surface, a code blob and
+-- the syntax read from it — is modelled in as data.
+import Effect4.Store.Canonical
+import Effect4.Store.Digest
+import Effect4.Store.Trie
+import Effect4.Store.Store
 import Effect4.Flow.Region
 import Effect4.Flow.Decision
 import Effect4.Flow.Interrupt

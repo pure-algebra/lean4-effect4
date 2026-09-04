@@ -92,3 +92,15 @@ rev = "a4ee7a14248ee5976039b73039319efa87834986"
 name = "typescript"
 git = "https://github.com/pure-algebra/lean4-typescript"
 rev = "18220f71445fcad01dbd9d6aebbbc60dc4953c2e"
+
+# Proved SHA-256 for content addresses (Effect4/Store/Digest.lean): exact commit of
+# pure-algebra/lean4-hash main. Its SHA-256 family is audited at zero declarations
+# reaching Classical.choice, so a digest stays inside this tree's axiom ceiling.
+[[require]]
+name = "hash"
+git = "https://github.com/pure-algebra/lean4-hash"
+rev = "c906b15dc3e94ebac0c10056270fbb345a1d2b6e"
+
+[[lean_lib]]
+name = "Effect4TestStore"
+globs = ["Effect4Test.Store.+"]

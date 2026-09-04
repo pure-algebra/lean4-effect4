@@ -127,6 +127,7 @@ import Effect4Test.Flow.JobRunnerContract
 import Effect4Test.Counterexamples.Flow.JobRunner
 import Effect4Test.Counterexamples.Target.JobRequest
 import Effect4Test.Counterexamples.Target.TupleRequest
+import Effect4Test.Store.StoreContract
 import Effect4Test.Audit.RuntimeCoverage
 import Effect4Test.Audit.AxiomGate
 
