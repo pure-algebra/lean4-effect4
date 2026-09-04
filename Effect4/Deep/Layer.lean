@@ -1225,7 +1225,7 @@ def interp (table : LayerTable) : RunInterp Name Thunk Val Err Defect FiberId An
   iterNext := fun _ value => ([], IterStep.done value)
   loopTest := fun _ _ => false
   loopBody := fun _ value => Prim.success value
-  loopStep := fun _ value => value
+  loopStep := fun _ _ value => value
   loopDone := fun _ => Val.unit
   notImplemented := Defect.notImplemented
   cancelThenFail := fun name cause => Prim.onSuccess (cancelProgram name) (Name.reFail cause)

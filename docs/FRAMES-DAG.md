@@ -77,7 +77,13 @@ Two `PrimInterp` fields need their own justification.
 - `iterNext : ν -> β -> List β × IterStep`. rc.112's `Iterator[contA]` is a
   `while (true)` loop that folds every `Success` exit the generator yields
   *inline*, without touching the stack, and stops at the first `done`, `Failure`
-  exit, or non-Exit effect (`internal/effect.ts:1362-1377`). Re-deriving that
+  exit, or non-Exit effect (`internal/effect.ts:1362-1377`). Since 2026-09-04
+  the `resume` outcome also names the *advanced* generator (`continueAs`), and
+  the frame pushed back under the yielded effect carries it, as the generator
+  object does: without it a body with two `yield*`s was not expressible
+  (`E4-RUN-CE-027`). `loopStep` likewise reads the stored cursor and the body's
+  answer, as rc.112's `step(value)` reads the closure it mutates
+  (`E4-RUN-CE-028`). Re-deriving that
   loop in Lean would need either fuel — which DB-04 then makes a live frontier
   rather than a value, for a mechanism that is not a frontier — or a
   well-foundedness argument about an opaque generator, which is not available.
@@ -248,7 +254,7 @@ later packet joins these witnesses, under the clause-by-clause rule in
 | `op.Suspend` | returns the result of calling the thunk, with no stack interaction — `FrameFiber.step_suspend` | none | **green** |
 | `op.WithFiber` | `foreignBoundary`: the raw `FiberImpl` is handed to a function — `FrameFiber.step_withFiber` models the effect it returns, `Prim.withFiber_refused` refuses the object identity | none; the boundary is closed by refusal, not by a model, exactly as `cause.annotations` is | **green** |
 | `op.YieldableError` | `foreignBoundary`: `evaluate` is `exitFail(this)` — `FrameFiber.step_yieldableError` models the failure, `Prim.yieldableError_host_class_refused` refuses the host `Error` class identity | none; same shape | **green** |
-| `op.Iterator` | drives the generator; an Exit yielded from it is folded inline; any other effect is pushed under this frame — `FrameFiber.step_iterator`, `Prim.armA_iterator_done`, `armA_iterator_halt`, `armA_iterator_resume`, `iteratorFolded_eq`, `iterator_folds_inline` | none | **green** |
+| `op.Iterator` | drives the generator; an Exit yielded from it is folded inline; any other effect is pushed under this frame, which carries the advanced generator (since 2026-09-04, `E4-RUN-CE-027`) — `FrameFiber.step_iterator`, `Prim.armA_iterator_done`, `armA_iterator_halt`, `armA_iterator_resume`, `iteratorFolded_eq`, `iterator_folds_inline` | none | **green** |
 | `op.OnSuccess` | pushes itself and returns the inner effect; the `contA` arm is assigned per instance — `FrameFiber.step_onSuccess`, `Prim.armA_onSuccess`, `onSuccess_arm_is_per_instance` | none | **green** |
 | `op.OnFailure` | pushes itself and returns the inner effect; the `contE` arm is assigned per instance — `FrameFiber.step_onFailure`, `Prim.armE_onFailure`, `onFailure_arm_is_per_instance` | none | **green** |
 | `op.OnSuccessAndFailure` | pushes itself and returns the inner effect; both arms are assigned per instance — `FrameFiber.step_onSuccessAndFailure`, `Prim.armA_onSuccessAndFailure`, `armE_onSuccessAndFailure`, `onSuccessAndFailure_arms_are_per_instance` | none | **green** |
@@ -294,7 +300,7 @@ further down.
 | --- | --- | --- | --- | --- | --- |
 | `Effect4.Arm` | `Runtime/Runtime.lean` | canonical finite alphabet | the closed rc.112 continuation-slot alphabet; no other alphabet claims this role | `internal/core.ts:365-380` (`Primitive`), `Effect.ts` slot symbols | leaf receipts linked to `FRAME-PG.construction` |
 | `Effect4.Prim` | `Runtime/Runtime.lean` | canonical carrier | canonical first-order primitive syntax; **not** `Effect4.Program` (a higher-order proof carrier, DB-01) and **not** `Effect4.CheckedFlow` (the general reifiable graph, DB-02) — this is the pinned rc.112 op family only, with no admission judgment, no block ids and no cycles | `internal/core.ts:365-563`, `internal/effect.ts:928-946, 1356-1379, 1662-1689, 2474-2501, 3426-3465, 3620-3637, 4001-4029, 4302-4367, 4623-4645` | `FRAME-PG` |
-| `Effect4.IterStep` | `Runtime/Runtime.lean` | canonical finite alphabet | the three outcomes that stop a generator's inline fold | `internal/effect.ts:1362-1377` | leaf receipts linked to `FRAME-PG.construction` |
+| `Effect4.IterStep` | `Runtime/Runtime.lean` | canonical finite alphabet | the three outcomes that stop a generator's inline fold; `resume` also names the advanced generator (2026-09-04, `E4-RUN-CE-027`) | `internal/effect.ts:1362-1377` | leaf receipts linked to `FRAME-PG.construction` |
 | `Effect4.PrimInterp` | `Runtime/Runtime.lean` | `separate-calculus` parameter record | the externally supplied meaning of a continuation name; a *parameter*, never canonical program content, and therefore carrying no `DecidableEq`. Sibling of the `run` argument of `Effect4.Scope.close` | `internal/effect.ts:1682, 2492, 3452-3456, 4021` | `FRAME-PG.semantics` |
 | `Effect4.FrameFiber` | `Runtime/Runtime.lean` | canonical carrier | the single-fiber continuation state; `separate-calculus` from the multi-fiber machine, now `Effect4.Deep.RunMachine` in `Effect4/Deep/Fibers.lean` (`Effect4.FiberState`/`Effect4.Machine` in `Effect4/Concurrency/Scheduler.lean` retired 2026-09-04) — see separation 1. This packet claims no conversion; `Effect4/Deep` runs a `FrameFiber` as one fiber's body | `internal/effect.ts:505-550` (the five modelled fields only) | `FRAME-PG` |
 | `Effect4.ContAnswer` | `Runtime/Runtime.lean` | canonical finite alphabet | what a pop answers: the deferred continuation, a replacement, the answering frame, or nothing | `internal/effect.ts:680-698, 737-744` | leaf receipts linked to `FRAME-PG.semantics` |

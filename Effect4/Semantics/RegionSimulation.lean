@@ -1040,7 +1040,7 @@ def regionInterp {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
   iterNext := fun _ _ => ([], Effect4.IterStep.done Val.unit)
   loopTest := fun _ _ => false
   loopBody := fun name _ => Effect4.Prim.suspend name.point
-  loopStep := fun _ value => value
+  loopStep := fun _ _ value => value
   loopDone := fun _ => Val.unit
   notImplemented := ()
 

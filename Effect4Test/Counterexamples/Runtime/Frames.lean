@@ -449,7 +449,7 @@ exits: the pinned model supplies the run and the outcome as first-order data. -/
 inductive IterStep
   | done (value : Nat)
   | halt (cause : MiniCause)
-  | resume (next : Prim)
+  | resume (next : Prim) (continueAs : Nat)
   deriving DecidableEq, Repr
 
 /-- Generator `0` yields two `Success` exits inline and then finishes. -/
@@ -463,7 +463,7 @@ def iteratorArmPinned (generator cursor : Nat) : Prim × List Prim × Nat :=
   match (iterNext generator cursor).snd with
   | .done value => (.success value, [], 1)
   | .halt cause => (.failure cause, [], 1)
-  | .resume next => (next, [Prim.iterator generator cursor], 1)
+  | .resume next continueAs => (next, [Prim.iterator continueAs cursor], 1)
 
 /-- E4-RUN-CE-018's rejected arm: each inline `Success` exit is pushed back
 through the stack like any other effect, so the fold costs one machine step and
@@ -472,8 +472,8 @@ def iteratorArmThroughStack (generator cursor : Nat) : Prim × List Prim × Nat 
   match (iterNext generator cursor).snd with
   | .done value => (.success value, [], (iterNext generator cursor).fst.length + 1)
   | .halt cause => (.failure cause, [], (iterNext generator cursor).fst.length + 1)
-  | .resume next =>
-    (next, [Prim.iterator generator cursor], (iterNext generator cursor).fst.length + 1)
+  | .resume next continueAs =>
+    (next, [Prim.iterator continueAs cursor], (iterNext generator cursor).fst.length + 1)
 
 /-- E4-RUN-CE-018: the generator folds two `Success` exits inline, so the pinned
 arm reaches its result in a single step while a variant that routes each folded
@@ -497,34 +497,36 @@ theorem iterator_pushes_only_for_a_real_effect :
 /-- The loop predicate: run while the cursor is below `2`. -/
 def loopTest (_loop : Nat) (cursor : Nat) : Bool := decide (cursor < 2)
 
-def loopStep (_loop : Nat) (cursor : Nat) : Nat := cursor + 1
+/-- The cursor step reads the stored cursor and the body's answer, as rc.112's
+`step(value)` reads the closure it mutates. -/
+def loopStep (_loop : Nat) (cursor : Nat) (_answer : Nat) : Nat := cursor + 1
 
 def loopBody (_loop : Nat) (cursor : Nat) : Prim := .success cursor
 
-/-- The pinned `While` arm: step the cursor, re-test, and only then push and run
-the body again. -/
-def whileArmPinned (loop cursor : Nat) : Prim × List Prim :=
-  let stepped := loopStep loop cursor
+/-- The pinned `While` arm: step the stored cursor with the body's answer,
+re-test, and only then push and run the body again. -/
+def whileArmPinned (loop cursor answer : Nat) : Prim × List Prim :=
+  let stepped := loopStep loop cursor answer
   if loopTest loop stepped = true then (loopBody loop stepped, [Prim.whileLoop loop stepped])
   else (.success 0, [])
 
 /-- E4-RUN-CE-019's rejected arm: step and run the body again without re-testing,
 because the predicate was already checked by `evaluate`. -/
-def whileArmNoRetest (loop cursor : Nat) : Prim × List Prim :=
-  let stepped := loopStep loop cursor
+def whileArmNoRetest (loop cursor answer : Nat) : Prim × List Prim :=
+  let stepped := loopStep loop cursor answer
   (loopBody loop stepped, [Prim.whileLoop loop stepped])
 
 /-- E4-RUN-CE-019: at the cursor where the predicate goes false the pinned arm
 stops and the rejected arm pushes the frame again, so the loop never ends. -/
 theorem while_retests_through_contA :
-    whileArmPinned 0 1 = (Prim.success 0, []) /\
-      whileArmNoRetest 0 1 = (Prim.success 2, [Prim.whileLoop 0 2]) := by
+    whileArmPinned 0 1 9 = (Prim.success 0, []) /\
+      whileArmNoRetest 0 1 9 = (Prim.success 2, [Prim.whileLoop 0 2]) := by
   refine ⟨by decide, by decide⟩
 
 /-- E4-RUN-CE-019: below the bound both agree, so the difference is the re-test
 and not the step. -/
 theorem while_steps_before_it_retests :
-    whileArmPinned 0 0 = whileArmNoRetest 0 0 := by
+    whileArmPinned 0 0 9 = whileArmNoRetest 0 0 9 := by
   decide
 
 /-! ## E4-RUN-CE-020 — an empty stack yields the Exit -/
@@ -620,5 +622,87 @@ object identity is refused. -/
 theorem yieldable_error_evaluates_to_its_own_failure :
     (fun (payload : Nat) => Prim.failure [payload]) 7 = Prim.failure [7] := by
   decide
+
+/-! ## E4-RUN-CE-027 — a generator's progress is not a function of its name and the last answer
+
+Found on 2026-09-04 by writing a two-`yield*` `Effect.gen` as `Effect4/Syntax/Eff.lean` data
+(`docs/research/2026-09-04-eff-compile.md` §0). rc.112's `Iterator[contA]` calls
+`this[args].next(value)` on a generator *object*, which advances
+(`internal/effect.ts:1362-1377`). The arm the frames pinned pushed the frame back with the
+name the generator started with, so the second answer resumed the first yield: no program
+with two yields was expressible, and no battery had ever run one. -/
+
+/-- A generator with two yields: name `10` yields `1` and advances to `11`, `11` yields `2`
+and advances to `12`, and `12` finishes with the answer it is given. -/
+def twoYields : Nat -> Nat -> List Nat × IterStep
+  | 10, _ => ([], .resume (.success 1) 11)
+  | 11, _ => ([], .resume (.success 2) 12)
+  | _, value => ([], .done value)
+
+/-- The rejected arm: the frame pushed back keeps the name the generator started with. -/
+def iteratorArmSameName (generator cursor : Nat) : Prim × List Prim :=
+  match (twoYields generator cursor).snd with
+  | .done value => (.success value, [])
+  | .halt cause => (.failure cause, [])
+  | .resume next _ => (next, [Prim.iterator generator cursor])
+
+/-- The corrected arm: the frame pushed back carries the advanced generator. -/
+def iteratorArmAdvancing (generator cursor : Nat) : Prim × List Prim :=
+  match (twoYields generator cursor).snd with
+  | .done value => (.success value, [])
+  | .halt cause => (.failure cause, [])
+  | .resume next continueAs => (next, [Prim.iterator continueAs cursor])
+
+/-- The generator name of the frame an arm pushed back, if it pushed one. -/
+def pushedGenerator : Prim × List Prim -> Option Nat
+  | (_, [Prim.iterator generator _]) => some generator
+  | _ => none
+
+/-- E4-RUN-CE-027: the rejected arm pushes back name `10` after the first yield, so the
+second answer is delivered to `10` again and yields the first effect a second time. -/
+theorem same_name_reenters_the_first_yield :
+    pushedGenerator (iteratorArmSameName 10 0) = some 10 /\
+      (iteratorArmSameName 10 0).fst = Prim.success 1 /\
+        (iteratorArmSameName 10 5).fst = Prim.success 1 := by
+  refine ⟨by decide, by decide, by decide⟩
+
+/-- E4-RUN-CE-027: the corrected arm pushes back `11`, whose answer yields the second
+effect and pushes back `12`, which finishes with the answer it is given. -/
+theorem advanced_name_reaches_done :
+    pushedGenerator (iteratorArmAdvancing 10 0) = some 11 /\
+      (iteratorArmAdvancing 11 5).fst = Prim.success 2 /\
+        pushedGenerator (iteratorArmAdvancing 11 5) = some 12 /\
+          iteratorArmAdvancing 12 7 = (Prim.success 7, []) := by
+  refine ⟨by decide, by decide, by decide, by decide⟩
+
+/-! ## E4-RUN-CE-028 — `While`'s step reads the closure cursor, not the answer alone
+
+Found the same day (`docs/research/2026-09-04-eff-compile.md` §4 G3). rc.112's
+`While[contA](value)` runs `step(value)` on a closure that holds the cursor
+(`internal/effect.ts:4624-4645`); the arm the frames pinned stepped from the body's answer
+alone and dropped the stored cursor, so a loop whose step counts (`i++`) could not be
+written. -/
+
+/-- The body of the counting loop answers a constant. -/
+def constantAnswer : Nat := 0
+
+/-- One iteration under the rejected signature, `step : answer -> cursor`: the next cursor
+is a function of the answer alone, so the stored cursor is unread. -/
+def iterateAnswerOnly (_cursor : Nat) : Nat := constantAnswer + 1
+
+/-- One iteration under the corrected signature, `step : cursor -> answer -> cursor`. -/
+def iterateWithCursor (cursor : Nat) : Nat := loopStep 0 cursor constantAnswer
+
+/-- E4-RUN-CE-028: under the rejected signature the cursor after two iterations is the
+cursor after one, whatever it was — the loop cannot count. -/
+theorem answer_only_step_cannot_count :
+    iterateAnswerOnly (iterateAnswerOnly 0) = iterateAnswerOnly 0 /\
+      iterateAnswerOnly 5 = iterateAnswerOnly 0 := by
+  refine ⟨by decide, by decide⟩
+
+/-- E4-RUN-CE-028: under the corrected signature the loop counts. -/
+theorem cursor_step_counts :
+    iterateWithCursor 0 = 1 /\ iterateWithCursor (iterateWithCursor 0) = 2 := by
+  refine ⟨by decide, by decide⟩
 
 end Effect4Test.Counterexamples.Runtime.Frames

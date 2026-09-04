@@ -1376,20 +1376,22 @@ set_option linter.unusedVariables false
   body onValue onCause) cause provided = Option.some (interp.contE onCause cause, []))
 
 #check (@Effect4.Prim.armA_whileLoop_continue :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (loop : ν) (cursor value : β) (provided : Option (Effect4.Exit β ε δ ι α)), interp.loopTest
-  loop (interp.loopStep loop value) = Bool.true → Effect4.Prim.armA interp
-  (Effect4.Prim.whileLoop loop cursor) value provided = Option.some (interp.loopBody loop
-  (interp.loopStep loop value), [Effect4.Prim.whileLoop loop (interp.loopStep loop value)]))
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε]
+    [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι α)
+    (loop : ν) (cursor value : β) (provided : Option (Effect4.Exit β ε δ ι α)),
+    interp.loopTest loop (interp.loopStep loop cursor value) = Bool.true →
+      Effect4.Prim.armA interp (Effect4.Prim.whileLoop loop cursor) value provided =
+        Option.some
+          (interp.loopBody loop (interp.loopStep loop cursor value),
+            [Effect4.Prim.whileLoop loop (interp.loopStep loop cursor value)]))
 
 #check (@Effect4.Prim.armA_whileLoop_stop :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (loop : ν) (cursor value : β) (provided : Option (Effect4.Exit β ε δ ι α)), interp.loopTest
-  loop (interp.loopStep loop value) = Bool.false → Effect4.Prim.armA interp
-  (Effect4.Prim.whileLoop loop cursor) value provided = Option.some (Effect4.Prim.success
-  (interp.loopDone loop), []))
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε]
+    [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι α)
+    (loop : ν) (cursor value : β) (provided : Option (Effect4.Exit β ε δ ι α)),
+    interp.loopTest loop (interp.loopStep loop cursor value) = Bool.false →
+      Effect4.Prim.armA interp (Effect4.Prim.whileLoop loop cursor) value provided =
+        Option.some (Effect4.Prim.success (interp.loopDone loop), []))
 
 #check (@Effect4.Prim.armA_iterator_done :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
@@ -1408,12 +1410,13 @@ set_option linter.unusedVariables false
   Option.some (Effect4.Prim.failure cause, []))
 
 #check (@Effect4.Prim.armA_iterator_resume :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (generator : ν) (cursor value : β) (next : Effect4.Prim ν σ β ε δ ι α) (provided : Option
-  (Effect4.Exit β ε δ ι α)), (interp.iterNext generator value).snd = Effect4.IterStep.resume
-  next → Effect4.Prim.armA interp (Effect4.Prim.iterator generator cursor) value provided =
-  Option.some (next, [Effect4.Prim.iterator generator cursor]))
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε]
+    [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι α)
+    (generator : ν) (cursor value : β) (next : Effect4.Prim ν σ β ε δ ι α) (continueAs : ν)
+    (provided : Option (Effect4.Exit β ε δ ι α)),
+    (interp.iterNext generator value).snd = Effect4.IterStep.resume next continueAs →
+      Effect4.Prim.armA interp (Effect4.Prim.iterator generator cursor) value provided =
+        Option.some (next, [Effect4.Prim.iterator continueAs cursor]))
 
 #check (@Effect4.Prim.iteratorFolded_eq :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ] [DecidableEq

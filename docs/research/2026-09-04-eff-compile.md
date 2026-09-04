@@ -153,17 +153,16 @@ half): `WellTyped sig root → compile root p` never has `notImplemented` in its
   by value at compile time" with no frame; `ofFlow` maps it to `Eff.branch`, which now
   costs one `suspend` on both sides equally — R3 is stated against `compile ∘ ofFlow`, not
   against the old `compileRegion` (D3).
-* **G3. `whileLoop`'s step receives the body's answer.** `PrimInterp.loopStep : ν → β → β`
-  steps the *cursor*, and `armA (whileLoop loop _) value` steps `loopStep loop value` — the
-  frame model's β is the body's answer at that arm and the cursor at `step`'s evaluate.
-  So the cursor and the body's answer share the one β and `step` reads only one value.
-  rc.112: `step: (a: A) => void` mutates the closure cursor from the body's answer; the
-  cursor is not passed. Faithful encoding: the cursor is the body's answer — `whileLoop`'s
-  `initial` is the first cursor and `step` is a term over *one* variable (the body's
-  answer), the AST's `step` over `(cursor, answer)` is one variable too many. **Correction
-  to A1:** `step : Term` over `env ++ [answer]`, and `test` over `env ++ [cursor]` where
-  the cursor after each iteration is `step answer`. `Typing` changes accordingly; the
-  printer's `step: (a{n+1}) => { a{n} = s }` is unchanged in shape (`s` reads `a{n+1}`).
+* **G3. `whileLoop`'s step reads the closure cursor.** rc.112's `While` (`internal/effect.ts:4624-4645`):
+  `[contA](value) { step(value); if (while()) { push(this); return body() } return exitVoid }`
+  — `step` mutates the closure's cursor from the body's answer *and* the cursor it can read;
+  `while` and `body` read the cursor. The frame model's `armA (whileLoop loop _) value`
+  drops the stored cursor and steps `loopStep loop value` from the answer alone, so a loop
+  whose step counts (`i++`) is not expressible. Same kind of shortcut as §0, same kind of
+  fix: `PrimInterp.loopStep : ν → β → β → β` (loop, current cursor, answer) and the arm
+  steps the stored cursor. The AST's `step` over `env ++ [cursor, answer]` (A1 as written)
+  is then exactly the model; no A1 change. The register rows are `E4-RUN-CE-027` (two-yield
+  generator) and `E4-RUN-CE-028` (a counting loop); both corrections are one Opus piece.
 * **G4. Positions vs. names.** A `Point.path` into the root program is what `RegionName.cont
   (point : Config)` does with a block id; the difference is that the subterm is recovered by
   `subtermAt`, a total function with a refusal (`none` → `suspend`, the frontier). The

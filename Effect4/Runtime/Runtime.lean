@@ -222,8 +222,12 @@ inductive IterStep (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type 
   | done (value : β)
   /-- The generator yielded a failed exit. -/
   | halt (cause : Cause ε δ ι α)
-  /-- The generator yielded a non-exit effect. -/
-  | resume (next : Prim ν σ β ε δ ι α)
+  /-- The generator yielded a non-exit effect, and advanced: `continueAs` names
+  the generator the next answer is delivered to. rc.112's `Iterator[contA]`
+  calls `this[args].next(value)` on a generator *object*, which moves; the frame
+  pushed back under the yielded effect therefore carries the advanced
+  generator, as the object does (`internal/effect.ts:1362-1377`). -/
+  | resume (next : Prim ν σ β ε δ ι α) (continueAs : ν)
 deriving DecidableEq
 
 /-- The externally supplied meaning of a continuation name. It is a
@@ -248,8 +252,9 @@ structure PrimInterp (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Typ
   loopTest : ν -> β -> Bool
   /-- `whileLoop`'s body. -/
   loopBody : ν -> β -> Prim ν σ β ε δ ι α
-  /-- `whileLoop`'s cursor step. -/
-  loopStep : ν -> β -> β
+  /-- `whileLoop`'s cursor step: from the current cursor and the body's answer,
+  as rc.112's `step(value)` reads the closure it mutates. -/
+  loopStep : ν -> β -> β -> β
   /-- The terminal value of a finished loop, rc.112's `exitVoid`. -/
   loopDone : ν -> β
   /-- The defect payload of `defaultEvaluate`. -/
@@ -840,16 +845,16 @@ def armA [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
   | onExit _ finalizer _, value, provided =>
     some (ofExit (Exit.restoreAfterFinalizer (provided.getD (Exit.success value))
       (interp.finalizerExit finalizer (provided.getD (Exit.success value)))), [])
-  | whileLoop loop _, value, _ =>
-    if interp.loopTest loop (interp.loopStep loop value) then
-      some (interp.loopBody loop (interp.loopStep loop value),
-        [whileLoop loop (interp.loopStep loop value)])
+  | whileLoop loop cursor, value, _ =>
+    let next := interp.loopStep loop cursor value
+    if interp.loopTest loop next then
+      some (interp.loopBody loop next, [whileLoop loop next])
     else some (success (interp.loopDone loop), [])
   | iterator generator cursor, value, _ =>
     match (interp.iterNext generator value).snd with
     | IterStep.done result => some (success result, [])
     | IterStep.halt cause => some (failure cause, [])
-    | IterStep.resume next => some (next, [iterator generator cursor])
+    | IterStep.resume next continueAs => some (next, [iterator continueAs cursor])
   | success _, _, _ => none
   | failure _, _, _ => none
   | sync _, _, _ => none
@@ -966,7 +971,8 @@ theorem armA_isSome [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [Decidabl
   | asyncFinalizer _ => rfl
   | whileLoop loop cursor =>
     show (armA interp (whileLoop loop cursor) value provided).isSome = true
-    cases hloop : interp.loopTest loop (interp.loopStep loop value) <;> simp [armA, hloop]
+    cases hloop : interp.loopTest loop (interp.loopStep loop cursor value) <;>
+      simp [armA, hloop]
 
 /-- The cause arm is defined exactly on the frames that declare it.
 census: rule.frames-are-primitives -/
@@ -1207,15 +1213,16 @@ theorem onSuccessAndFailure_arms_are_per_instance [DecidableEq ε] [DecidableEq 
       (onSuccessAndFailure body onValue onCause).armE interp cause provided =
         some (interp.contE onCause cause, []) := ⟨rfl, rfl⟩
 
-/-- The loop steps the cursor, re-tests, and only then pushes and runs the body.
+/-- The loop steps the stored cursor with the body's answer, re-tests, and only
+then pushes and runs the body.
 census: op.While -/
 theorem armA_whileLoop_continue [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
     [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α) (loop : ν) (cursor value : β)
     (provided : Option (Exit β ε δ ι α))
-    (h : interp.loopTest loop (interp.loopStep loop value) = true) :
+    (h : interp.loopTest loop (interp.loopStep loop cursor value) = true) :
     (whileLoop loop cursor : Prim ν σ β ε δ ι α).armA interp value provided =
-      some (interp.loopBody loop (interp.loopStep loop value),
-        [whileLoop loop (interp.loopStep loop value)]) := by
+      some (interp.loopBody loop (interp.loopStep loop cursor value),
+        [whileLoop loop (interp.loopStep loop cursor value)]) := by
   simp [armA, h]
 
 /-- A loop whose re-test fails finishes with the supplied terminal value.
@@ -1223,7 +1230,7 @@ census: op.While -/
 theorem armA_whileLoop_stop [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
     (interp : PrimInterp ν σ β ε δ ι α) (loop : ν) (cursor value : β)
     (provided : Option (Exit β ε δ ι α))
-    (h : interp.loopTest loop (interp.loopStep loop value) = false) :
+    (h : interp.loopTest loop (interp.loopStep loop cursor value) = false) :
     (whileLoop loop cursor : Prim ν σ β ε δ ι α).armA interp value provided =
       some (success (interp.loopDone loop), []) := by
   simp [armA, h]
@@ -1246,14 +1253,15 @@ theorem armA_iterator_halt [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [D
       some (failure cause, []) := by
   simp [armA, h]
 
-/-- A generator that yielded a non-exit effect pushes this frame under it.
-census: op.Iterator -/
+/-- A generator that yielded a non-exit effect pushes this frame under it,
+carrying the advanced generator: the object moved when it was asked for the
+yield. census: op.Iterator -/
 theorem armA_iterator_resume [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
     (interp : PrimInterp ν σ β ε δ ι α) (generator : ν) (cursor value : β)
-    (next : Prim ν σ β ε δ ι α) (provided : Option (Exit β ε δ ι α))
-    (h : (interp.iterNext generator value).snd = IterStep.resume next) :
+    (next : Prim ν σ β ε δ ι α) (continueAs : ν) (provided : Option (Exit β ε δ ι α))
+    (h : (interp.iterNext generator value).snd = IterStep.resume next continueAs) :
     (iterator generator cursor : Prim ν σ β ε δ ι α).armA interp value provided =
-      some (next, [iterator generator cursor]) := by
+      some (next, [iterator continueAs cursor]) := by
   simp [armA, h]
 
 /-- The inline run is exactly the supplied prefix. census: op.Iterator -/
@@ -1278,9 +1286,10 @@ theorem iterator_folds_inline [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
   | halt cause =>
     rw [armA_iterator_halt left generator cursor value cause provided (h.trans hright),
       armA_iterator_halt right generator cursor value cause provided hright]
-  | resume next =>
-    rw [armA_iterator_resume left generator cursor value next provided (h.trans hright),
-      armA_iterator_resume right generator cursor value next provided hright]
+  | resume next continueAs =>
+    rw [armA_iterator_resume left generator cursor value next continueAs provided
+        (h.trans hright),
+      armA_iterator_resume right generator cursor value next continueAs provided hright]
 
 /-- An `onExit` arm records the finalizer it ran. census: op.OnExit -/
 theorem finalizerEvents_onExit (body : Prim ν σ β ε δ ι α) (finalizer : ν) (flag : Bool)

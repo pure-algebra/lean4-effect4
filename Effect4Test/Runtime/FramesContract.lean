@@ -166,8 +166,8 @@ outcome that ended it are supplied as first-order data by `PrimInterp.iterNext`;
   ν σ β ε δ ι α)
 
 #check (@Effect4.IterStep.resume :
-  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.Prim ν σ β ε δ ι α →
-  Effect4.IterStep ν σ β ε δ ι α)
+  {ν σ : Type u} →
+    {β : Type v} → {ε δ ι α : Type u} → Effect4.Prim ν σ β ε δ ι α → ν → Effect4.IterStep ν σ β ε δ ι α)
 
 /-! F1c: the externally supplied interpretation (census: op.Sync, op.Suspend,
 op.Iterator, op.Exit, op.OnExit, op.While).
@@ -180,12 +180,23 @@ keeps first-order identity and decidable equality. -/
   Type u → Type u → Type v → Type u → Type u → Type u → Type u → Type (max u v))
 
 #check (@Effect4.PrimInterp.mk :
-  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → (ν → β → Effect4.Prim ν σ β ε δ ι α) → (ν
-  → Effect4.Cause ε δ ι α → Effect4.Prim ν σ β ε δ ι α) → (σ → β) → (σ → Effect4.Prim ν σ β ε δ
-  ι α) → (ν → Effect4.Exit β ε δ ι α → Effect4.Exit Unit ε δ ι α) → (Effect4.Exit β ε δ ι α → β)
-  → (ν → β → List β × Effect4.IterStep ν σ β ε δ ι α) → (ν → β → Bool) → (ν → β → Effect4.Prim ν
-  σ β ε δ ι α) → (ν → β → β) → (ν → β) → δ → (ν → Effect4.Cause ε δ ι α → Effect4.Prim ν σ β ε δ
-  ι α) → Effect4.PrimInterp ν σ β ε δ ι α)
+  {ν σ : Type u} →
+    {β : Type v} →
+      {ε δ ι α : Type u} →
+        (ν → β → Effect4.Prim ν σ β ε δ ι α) →
+          (ν → Effect4.Cause ε δ ι α → Effect4.Prim ν σ β ε δ ι α) →
+            (σ → β) →
+              (σ → Effect4.Prim ν σ β ε δ ι α) →
+                (ν → Effect4.Exit β ε δ ι α → Effect4.Exit Unit ε δ ι α) →
+                  (Effect4.Exit β ε δ ι α → β) →
+                    (ν → β → List β × Effect4.IterStep ν σ β ε δ ι α) →
+                      (ν → β → Bool) →
+                        (ν → β → Effect4.Prim ν σ β ε δ ι α) →
+                          (ν → β → β → β) →
+                            (ν → β) →
+                              δ →
+                                (ν → Effect4.Cause ε δ ι α → Effect4.Prim ν σ β ε δ ι α) →
+                                  Effect4.PrimInterp ν σ β ε δ ι α)
 
 #check (@Effect4.PrimInterp.contA :
   {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.PrimInterp ν σ β ε δ ι α → ν → β
@@ -223,8 +234,8 @@ keeps first-order identity and decidable equality. -/
   → Effect4.Prim ν σ β ε δ ι α)
 
 #check (@Effect4.PrimInterp.loopStep :
-  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.PrimInterp ν σ β ε δ ι α → ν → β
-  → β)
+  {ν σ : Type u} →
+    {β : Type v} → {ε δ ι α : Type u} → Effect4.PrimInterp ν σ β ε δ ι α → ν → β → β → β)
 
 #check (@Effect4.PrimInterp.loopDone :
   {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.PrimInterp ν σ β ε δ ι α → ν → β)
@@ -975,21 +986,23 @@ frame-arm.*). -/
 
 -- census: op.While
 #check (@Effect4.Prim.armA_whileLoop_continue :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (loop : ν) (cursor value : β) (provided : Option (Effect4.Exit β ε δ ι α)), interp.loopTest
-  loop (interp.loopStep loop value) = Bool.true → Effect4.Prim.armA interp
-  (Effect4.Prim.whileLoop loop cursor) value provided = Option.some (interp.loopBody loop
-  (interp.loopStep loop value), [Effect4.Prim.whileLoop loop (interp.loopStep loop value)]))
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε]
+    [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι α)
+    (loop : ν) (cursor value : β) (provided : Option (Effect4.Exit β ε δ ι α)),
+    interp.loopTest loop (interp.loopStep loop cursor value) = Bool.true →
+      Effect4.Prim.armA interp (Effect4.Prim.whileLoop loop cursor) value provided =
+        Option.some
+          (interp.loopBody loop (interp.loopStep loop cursor value),
+            [Effect4.Prim.whileLoop loop (interp.loopStep loop cursor value)]))
 
 -- census: op.While
 #check (@Effect4.Prim.armA_whileLoop_stop :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (loop : ν) (cursor value : β) (provided : Option (Effect4.Exit β ε δ ι α)), interp.loopTest
-  loop (interp.loopStep loop value) = Bool.false → Effect4.Prim.armA interp
-  (Effect4.Prim.whileLoop loop cursor) value provided = Option.some (Effect4.Prim.success
-  (interp.loopDone loop), []))
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε]
+    [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι α)
+    (loop : ν) (cursor value : β) (provided : Option (Effect4.Exit β ε δ ι α)),
+    interp.loopTest loop (interp.loopStep loop cursor value) = Bool.false →
+      Effect4.Prim.armA interp (Effect4.Prim.whileLoop loop cursor) value provided =
+        Option.some (Effect4.Prim.success (interp.loopDone loop), []))
 
 -- census: op.Iterator
 #check (@Effect4.Prim.armA_iterator_done :
@@ -1011,12 +1024,13 @@ frame-arm.*). -/
 
 -- census: op.Iterator
 #check (@Effect4.Prim.armA_iterator_resume :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (generator : ν) (cursor value : β) (next : Effect4.Prim ν σ β ε δ ι α) (provided : Option
-  (Effect4.Exit β ε δ ι α)), (interp.iterNext generator value).snd = Effect4.IterStep.resume
-  next → Effect4.Prim.armA interp (Effect4.Prim.iterator generator cursor) value provided =
-  Option.some (next, [Effect4.Prim.iterator generator cursor]))
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε]
+    [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι α)
+    (generator : ν) (cursor value : β) (next : Effect4.Prim ν σ β ε δ ι α) (continueAs : ν)
+    (provided : Option (Effect4.Exit β ε δ ι α)),
+    (interp.iterNext generator value).snd = Effect4.IterStep.resume next continueAs →
+      Effect4.Prim.armA interp (Effect4.Prim.iterator generator cursor) value provided =
+        Option.some (next, [Effect4.Prim.iterator continueAs cursor]))
 
 -- census: op.Iterator
 #check (@Effect4.Prim.iteratorFolded_eq :

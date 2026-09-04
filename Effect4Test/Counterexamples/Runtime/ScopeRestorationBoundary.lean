@@ -35,7 +35,7 @@ def interp : PrimInterp Nat Nat Nat Nat Nat Nat Nat where
   iterNext := fun _ value => ([], .done value)
   loopTest := fun _ _ => false
   loopBody := fun _ value => .success value
-  loopStep := fun _ value => value
+  loopStep := fun _ _ value => value
   loopDone := fun _ => 0
   notImplemented := 999
   cancelThenFail := fun _ cause => .failure cause

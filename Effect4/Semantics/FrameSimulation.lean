@@ -235,7 +235,7 @@ def tapeInterp (root : Program (Flow.Sig a) Val) (tape : Tape) : Table where
   iterNext := fun _ _ => ([], Effect4.IterStep.done Val.unit)
   loopTest := fun _ _ => false
   loopBody := fun _ _ => Effect4.Prim.failure Effect4.Cause.empty
-  loopStep := fun _ value => value
+  loopStep := fun _ _ value => value
   loopDone := fun _ => Val.unit
   notImplemented := ()
   -- No `asyncFinalizer` frame is ever emitted by `compile` (the fragment is closed, below),
