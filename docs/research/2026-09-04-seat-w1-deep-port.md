@@ -405,3 +405,81 @@ naming because the port makes them *false* here rather than merely unstated:
  workshop/OCaml5/tools/fuzz.sh                  module list (see §7 Q5)
  docs/research/2026-09-04-seat-w1-deep-port.md  NEW  (this file)
 ```
+
+---
+
+# Seat F1 (checkpoint 2), 2026-09-04
+
+Base `b60fe28` (W3's `Ml/` API and W2's daemon committed). Nothing committed by F1; the
+coordinator holds the WIP save. Every file below compiles and every gate that was green is
+green: `build-avatar.sh` exit 0 with the numbers of §0 unchanged (75+75 lean pairs, 12 extra,
+corpus 435 ok / 0 unclassified / 12 classified, hosts agree 31 + 158), plus the new
+witness/clause report; `lake build OCaml5.Render` untouched this round (no Render edit landed).
+
+## F1.1 What landed
+
+| File | State |
+| --- | --- |
+| `avatar/deep_fibers.ml` | the run-loop top split as `dd1bc93` split it (`runloop_top`, `count_op`, `yield_verdict`, `inject_yield`; `guard` is their composition); `interrupt_each`, `exit_interrupt_children`/`exit_store`, `link_scope`, `spawn_child`/`spawn` over `fork_options` (moved here from `deep_stores.ml`, W1-5 closed), `race_entrant`, `replay_eval`, `squash`; `answer` gains `Aexits` (W1-7 closed: `resume_prim RexitsValue` answers the exits, each site projects); `'a kops`; `RunInterp.stackAnnotations` slot; the probe `on_event`; the Lean alphabet's own effects and arms: `Op_fork_prog`, `Op_fork_in`, `Op_fork_scoped` (dies `notImplemented`: `χ = unit`), `Op_run_in`, `Op_join_on`, `Op_await_fibers` (exits-typed), `Op_interrupt_fiber`, `Op_interrupt_scoped`, `Op_race_all_prog`, `Op_close_scope` (installs the program in `current_program`, the fiber-side wrapper runs it: DIVERGENCE 1's spelling of `current := program`), `Op_get_id`, `Op_on_exit_enter` (`Prim.onExit`'s `ensure`) |
+| `avatar/deep_stores.ml` | **every `progOf` arm ported** (22/22), `finProgram` 5/5, `closeParChain` ported, `on_exit_program`/`masked_region` (M2), M3 cancel on an interrupted `Deferred.await` park, `Rinterrupt_deferred` drains on the spot (M1). Refusals left: `contAOf`/`contEOf`/`actionOf` (structural, W1-9), `Completion.ofRefGet` (2 sites), unknown `store_request` tails |
+| `avatar/deep_census.ml` + `extract-census.py` | the census join as data: the 80 of 130 `RuntimeCoverage.lean` rows naming an `Effect4.Deep.*` witness, extracted mechanically, `--check` diffs (IDENTICAL) |
+| `avatar/deep_clauses.ml` | **107 entries = 107 `Clauses.lean` theorems, same names, same order**, each with its line and census tags; `Pure`/`Run`/`Both`/`Refused` checks |
+| `avatar/deep_witnesses.ml` | **53 entries = 53 `Witnesses.lean` theorems**, same order; every `def` ported (`replay` over a seeded store and a decision tape) |
+| `avatar/avatar_witnesses.ml`, `run-witnesses.sh` | the report on three hosts, byte-identical; wired into `build-avatar.sh` (module list updated for W2's daemon) |
+| `avatar/dune-project`, `effect4-avatar.opam`, `dune`, `build-dune.sh` | the dune project in the `effect4` switch (5.1.1, dune 3.24.2, jsoo 5.7.1 *from the switch*): library + 2 executables × {byte, exe, js}; **green; its witness report is byte-identical to the shell build's**. No ppx yet (see F1.4) |
+| `avatar/deep_layer.ml` | unchanged (checkpoint stub); collision settled on paper only (F1.4) |
+
+## F1.2 The clause transfer, counts
+
+```
+$ ./workshop/OCaml5/avatar/run-witnesses.sh
+hosts witnesses AGREE (bytecode = native = js_of_ocaml)
+clauses: 107 entries = 107 Clauses.lean theorems
+witnesses: 53 entries = 53 Witnesses.lean theorems
+deep_census.ml: IDENTICAL to RuntimeCoverage.lean (80 of 130 rows)
+clauses    107  holds 104  fails 0  not-portable 3
+witnesses   53  holds  51  fails 0  not-portable 2
+run-clauses      holds  26  fails 0        (the step checks on the runs that exercise them)
+```
+
+Not portable, with why: `drive_loop_parked`, `drive_loop_continues` (`Cmd.loop`, DIVERGENCE 2);
+`withFiber_forkScoped_ambient` (`χ = unit`, no ambient scope; the `_none` arm holds);
+witnesses `forbidden_setInterruptible_as_current` (no `Prim` in `current`, DIVERGENCE 1) and
+`toSched_computes` (`toSched` not ported). Every other clause and witness holds on the avatar,
+including all of W6 (scope linkage: `forkIn`/`runIn`/`closeScope` no longer refuse) and W6b
+(both close strategies), W10, W11, W12, W13. Statements that depend on the value alphabet are
+stated at the avatar's and cite the row: W1-1 (`Val.fiber` = wire handle, `exitErr` = `Vnone`),
+W1-2 (`Completion` in the slot), `Err.boom` = code 100, `Defect.asyncFiber` = the string.
+
+## F1.3 New divergence rows
+
+| # | Where | Divergence |
+| --- | --- | --- |
+| F1-1 | `deep_witnesses.ml` `scope_rows` | `ScopeLinked` erases the mode (`Avatar.runEvent.erasures`), so a linked row is `[0; scope; key; fiber]` |
+| F1-2 | `resume_prim (RcontinueWith e)` | the restoring name applied to the collected exits is the restored exit delivered directly (DIVERGENCE 1); clause `resumePrim_continueWith` holds in that spelling |
+| F1-3 | `Op_close_scope` | `current := program` is `current_program` + the fiber-side `take_current_program` |
+| F1-4 | `cause_keys` | the avatar annotates the cause, not each reason: one key list, not one per reason |
+
+## F1.4 Exact next steps
+
+1. **Re-cite `Witnesses.lean` lines in `deep_witnesses.ml`**: the file changed on disk during
+   this round (harness lines shifted by ~3); the `lean` fields were taken from the earlier read.
+2. **`deep_layer.ml`, collision settled**: types keep the Lean names inside their own module
+   (`Deep_layer.sync_op` vs `Deep_stores.sync_op`, as `Effect4.Deep.Layers` vs `Effect4.Deep`);
+   constructors take Layer prefixes (`Lc/Lk/Ld/Lfin/Ls/Lp/Ln/La/Lt/Lu/Lx`, `Lss` for the
+   `ScopeState` copy) so a file opening both modules is unambiguous; the SHIM `DeferredKey`/
+   `DeferredCell`/`DeferredStore` are *substituted* by `Deep_stores`' (one store, as the landing
+   intends); `ScopeEntry`/`ScopeStore`/`Scope`/`ScopeState` are rendered as Layer's own
+   monomorphic copies over Layer's `FinName` (generator has no type parameters here; row).
+   Counts pinned from `Layer.lean`: CombineMode 2, Construction 4, LayerDesc 6, FinName 11,
+   SyncOp 10, ProgName 27, Name 47, ActionName 12, Thunk 3, ContextUpdate 3, Defect 5; `Ctx`
+   is `(service_key * value) list`, `service_key = {name; type_code}`. Then add `Ml.Deep.Layer`
+   to the SEAT W1 section, a `"layer"` case to `render-deep.lean`, port `MemoWorld.*`,
+   `St.empty/seeded`, the value helpers and `syncStep` (10 arms), keep `layer_state` for the
+   golden family as W1-3's analogue.
+3. **`[@@deriving]` on generated carriers** (dune, ppx_jane v0.16): `TypeDecl.derivers` exists
+   (W3); the obstacle is that generated carriers reference hand-written `deep_fibers.ml` types
+   with closures (`run_fiber.frame.control`, `kops`) — derive `deep_fibers.ml`'s data carriers
+   first with `[@sexp.opaque]`/`[@compare.ignore]` on the closure fields, then emit the
+   attributes through the descriptions.
+4. `deep_context.ml`, `deep_forkflow.ml`: not started.
