@@ -67,6 +67,10 @@ def none : UInt8 := 6
 def some : UInt8 := 7
 def bytes : UInt8 := 8
 def unit : UInt8 := 9
+/-- A constructor application: the payload is the constructor's index as a `Nat` frame,
+then its arguments, each framed. One tag for every inductive; the index tells them apart
+inside a family whose shape the decoder already knows. -/
+def ctor : UInt8 := 10
 end Tag
 
 /-- The canonical byte encoding of a carrier. -/

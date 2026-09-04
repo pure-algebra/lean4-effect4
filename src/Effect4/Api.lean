@@ -1,4 +1,5 @@
 import Effect4.Program.Compile
+import Effect4.Program.Wire
 import Effect4.Codegen.Print
 import Effect4.Codegen.Schema
 
@@ -19,6 +20,8 @@ One module, the whole pipeline, small interface:
   never text. Rendering to bytes is one call to the pinned package — `TypeScript.Render.expr
   house0 0 e` — kept outside this module on purpose: Lean's `String` folds reach
   `Classical.choice`, and this module stays at the library's axiom ceiling.
+* `bytesOf` / `ofBytes` are the canonical bytes of a program and the exact decoder: what
+  the store addresses and what an OCaml or TypeScript host is sent and sends back.
 * `compile` is the defunctionalising compile to the frame alphabet; `interpOf` gives the
   names their meaning.
 * `replay` runs a program against an explicit host decision tape (the meaning is the
@@ -52,6 +55,16 @@ def wellTyped (program : Program) : Bool := (typeOf program).isSome
 /-- The program as one TypeScript expression, at the empty environment. -/
 def print (program : Program) : Except PrintRefusal TypeScript.Expr :=
   Program.print nativeSignature 0 program
+
+/-! ## Bytes: how a program crosses a boundary -/
+
+/-- The canonical bytes of a program: what the store addresses and what a host is sent
+(`Effect4.Program.Wire`). -/
+def bytesOf (program : Program) : Store.Bytes := Wire.encodeProgram program
+
+/-- A program from its canonical bytes, exactly: `none` unless the bytes are one
+well-formed program and nothing else. Type it with `wellTyped` before running it. -/
+def ofBytes (bytes : Store.Bytes) : Option Program := Wire.decodeProgram bytes
 
 /-- The program as an exported constant with its `Effect.Effect<A, E>` type; `none` when it
 is ill-typed or the printer refuses it. -/

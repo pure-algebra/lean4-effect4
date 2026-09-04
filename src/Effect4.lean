@@ -130,6 +130,10 @@ import Effect4.Program.Typing
 import Effect4.Codegen.Print
 import Effect4.Program.Native
 import Effect4.Program.Compile
+-- The canonical bytes of a program and the exact decoder (2026-09-04): how a
+-- program crosses the store, the OCaml host and the daemon, and comes back as
+-- exactly itself. `workshop/OCaml5/eff` implements the same rule in OCaml.
+import Effect4.Program.Wire
 -- The application face: one module, the whole pipeline (type, print, compile,
 -- run; the Schema syntax), answering syntax and never text. Import this.
 import Effect4.Api
