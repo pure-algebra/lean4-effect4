@@ -1,6 +1,6 @@
 # The OCaml 5 deep plan: one reference machine for effect handlers and their compilation to JavaScript
 
-Status: scaffold, 2026-09-03 evening, second pass (the first pass took `stdlib/effect.ml` as
+Status: scaffold, 2026-09-03 evening, second pass; §0 corrected after spike O1 (report `2026-09-03-spike-o1-runtime-machine.md`) (the first pass took `stdlib/effect.ml` as
 the reference; that is the wrapper, and this pass takes the runtime). Companion to
 `2026-09-03-ocaml-jsoo-relevance.md` (the assessment) and modelled on
 `2026-09-03-deep-plan.md` (the Effect4 deep plan, whose method and nine rules this plan
@@ -28,11 +28,11 @@ The eight transitions, each with its bytecode and native line:
 
 | Transition | Bytecode | Native | Effect |
 | --- | --- | --- | --- |
-| `perform` with a parent | `interp.c:1334-1357` | `amd64.S:882-896` | allocate `Cont_tag` → performer; `Stack_parent(performer) := NULL`; switch to the parent; call its `handle_effect eff cont performer` |
+| `perform` with a parent | `interp.c:1334-1357` | `amd64.S:882-896` | allocate `Cont_tag` → performer; `Stack_parent(performer) := NULL`; switch to the parent; call **the performer's** `handle_effect eff cont performer` there (`Stack_handle_effect(old_stack)`, `interp.c:1354`: the triple belongs to the stack `alloc_stack` created and runs on its parent) |
 | `perform` at the root | `:1327-1332` | `:897-905` | raise `Unhandled eff` on the performer |
-| `reperform` with a parent | `:1383-1398` | `:915-925` | `Stack_parent(self) := NULL; Stack_parent(cont_tail) := self`; switch to the parent; call its `handle_effect eff cont self` |
+| `reperform` with a parent | `:1383-1398` | `:915-925` | `Stack_parent(self) := NULL; Stack_parent(cont_tail) := self`; switch to the parent; call **self's** `handle_effect eff cont self` there (`Stack_handle_effect(self)`, `:1394`) |
 | `reperform` at the root | `:1374-1381` | `:897-905` via `do_perform` | take the continuation (one-shot) and resume it with a function that raises `Unhandled` |
-| `resume` (continue or discontinue) | `:1290-1310` | `:927-957` | null stack → `Continuation_already_resumed`; else `Stack_parent(outermost captured) := current`; switch to the captured stack; apply `fn arg` there |
+| `resume` (continue or discontinue) | `:1290-1310` | `:927-957` | null stack → `Continuation_already_resumed`; else walk the parent chain and set `Stack_parent(outermost captured) := current`; switch to the **innermost** captured stack, the one the continuation points at; apply `fn arg` there |
 | `runstack` | `RESUME` (`bytegen.ml:786`) | `:961-1000` | `Stack_parent(new) := current`; switch; apply `fn arg`; on return `frame_runstack` |
 | child stack returns | `do_return` | `frame_runstack` | free the stack; switch to the parent; call `handle_value v` |
 | child stack raises past its last trap | `:980-1000` | `fiber_exn_handler` | free the stack; switch to the parent; call `handle_exn e` |
@@ -108,8 +108,9 @@ Statements, owed at the landing, proved where a spike can.
 - **Chain discipline**: after `perform`, the performer's parent is `none` and the continuation
   points at it; after `reperform`, the reperforming stack is the new tail of the chain with
   parent `none`; after `resume`, the outermost captured stack's parent is the resumer.
-- **Handler runs in the parent**: the `handle_effect` call executes with the parent as the
-  current stack and the performer as `last_fiber`.
+- **Handler runs in the parent**: the performing stack's own `handle_effect` executes with the
+  parent as the current stack and the performer as `last_fiber` (corrected by O1: the triple
+  is the child's, installed by `alloc_stack`; witnesses 06 and 10 separate the two readings).
 - **Return and raise to parent**: a child stack's completion frees it and calls exactly one of
   `handle_value`/`handle_exn` on the parent, once.
 - **`Unhandled` on both routes**: at the root, `perform` raises on the performer without taking
