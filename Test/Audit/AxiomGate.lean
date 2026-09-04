@@ -146,26 +146,26 @@ private def choiceImplementationDeclarations : List Name :=
   , ``Effect4.Codegen.EffectfulField.source?
   , ``Effect4.Codegen.EffectfulField.generate?
   , ``Effect4.Codegen.EffectfulField.source_contains_directional_rows
-  -- The Effect v4 profile: service-class, method-type and LLM-sheet renderers,
-  -- and the module assemblers that concatenate their output. The profile's
-  -- own row and spelling *data* are `String`-free and are not here.
-  , ``Effect4.Target.EffectV4.ServiceRow.namespaces
-  , ``Effect4.Target.EffectV4.ServiceRow.receiver
-  , ``Effect4.Target.EffectV4.ServiceRow.sheet
-  , ``Effect4.Target.EffectV4.ServiceRow.usesResult
-  , ``Effect4.Target.EffectV4.Spelling.mentions
-  , ``Effect4.Target.EffectV4.Spelling.namespacesOf
-  , ``Effect4.Target.EffectV4.neededNamespaces
-  , ``Effect4.Target.EffectV4.atomsModule
-  , ``Effect4.Target.EffectV4.module
-  , ``Effect4.Target.EffectV4.module?
-  , ``Effect4.Target.EffectV4.modules?
-  , ``Effect4.Target.EffectV4.source?
-  -- The namespace set a generated module imports, computed from the rendered
-  -- declarations (`Spelling.namespacesOf` over text), so it crosses like they do.
-  , ``Effect4.Target.EffectV4.moduleNamespaces
-  , ``Effect4.Target.EffectV4.Script.lower
-  , ``Effect4.Target.EffectV4.Lowering.serviceAcquire
+  -- The Effect v4 profile: the service receiver (`String.decapitalize`), the LLM sheet
+  -- rendered from it, and the `effect` namespace set computed over rendered spellings
+  -- (`String.splitOn`). The profile's row *data* is `String`-free and is not here.
+  , ``Effect4.Codegen.Profile.ServiceRow.namespaces
+  , ``Effect4.Codegen.Profile.ServiceRow.receiver
+  , ``Effect4.Codegen.Profile.ServiceRow.sheet
+  , ``Effect4.Codegen.Profile.ServiceRow.usesResult
+  , ``Effect4.Codegen.Profile.mentions
+  , ``Effect4.Codegen.Profile.namespacesOf
+  , ``Effect4.Codegen.Profile.neededNamespaces
+  -- The codegen crossing to bytes (`docs/research/2026-09-04-codegen-api-design.md` §3.1):
+  -- JSON text folds over `String`s for escaping, and the artefact renderer is one call to
+  -- the pinned package's renderer or to it. `JsonText.number` is deliberately not here: it
+  -- writes digits without traversing a `String` and stays at the ceiling.
+  , ``Effect4.Codegen.JsonText.escape
+  , ``Effect4.Codegen.JsonText.render
+  , ``Effect4.Codegen.JsonText.renderList
+  , ``Effect4.Codegen.JsonText.renderEntries
+  , ``Effect4.Codegen.renderJson
+  , ``Effect4.Codegen.Artefact.render
   ]
 
 /-- Private rendering helpers are identified by exact owner and original name,

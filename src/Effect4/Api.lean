@@ -2,6 +2,10 @@ import Effect4.Program.Compile
 import Effect4.Program.Wire
 import Effect4.Codegen.Print
 import Effect4.Codegen.Schema
+import Effect4.Codegen.App
+import Effect4.Ingest.JsonSchema
+import Effect4.Ingest.Wrangler
+import Effect4.Ingest.Mcp
 
 /-!
 # Effect4.Api — the application face
@@ -32,6 +36,13 @@ One module, the whole pipeline, small interface:
   syntax (`schemaDocument`, `schemaRepresentation`) and the JSON payload beside it
   (`jsonExpr`). Text generation with its module assembler is
   `Effect4.Codegen.Schema.generate?`, admitted by exact name in the axiom gate.
+* The codegen half (`docs/research/2026-09-04-codegen-api-design.md`): `Rule` is the census
+  of emitters, `emit r x` the one call that answers a rule's artefact as syntax or the first
+  refusal by name, `ingest r dom artefact` the reader that goes the other way, `App` an
+  application under one closed world with `App.check` and `App.tree` (every artefact at its
+  path), and `render` the one crossing from an artefact to bytes — admitted by exact name
+  in the gate as `Effect4.Codegen.Artefact.render`, and the reason the rest of this face
+  never returns text.
 
 Everything else in the library is implementation behind this seam. Callers and tests cross
 it the same way; `Test/Api/ApiContract.lean` is the receipt.
@@ -158,5 +169,15 @@ def schemaRepresentation (representation : Effect4.Representation) : TypeScript.
 /-- A JSON payload as a TypeScript literal. -/
 def jsonExpr (value : Effect4.Json) : TypeScript.Expr :=
   Effect4.Codegen.Schema.json value
+
+/-! ## Codegen: the rules, the emitters, the readers, the application tree
+
+These are the codegen layer's own names, re-exported unchanged so a caller crosses one
+seam: `emit .apiHttpApi ⟨dom, api⟩`, `ingest .deployWrangler dom json`, `app.check`,
+`app.tree`, and `render artefact` for the bytes. -/
+
+export Effect4.Codegen (Rule Emit emit Artefact InDomain App)
+export Effect4.Ingest (Ingest ingest)
+export Effect4.Codegen.Artefact (render)
 
 end Effect4.Api

@@ -34,7 +34,7 @@ parse (`Json.ofNat`); the receipts keep every natural well inside 2^53.
 namespace Effect4.Arch
 
 open Effect4 Effect4.Schema Effect4.Store
-open Effect4.Target.EffectV4 (OpRow ServiceRow)
+open Effect4.Codegen.Profile (OpRow ServiceRow)
 open Effect4.Machine.Layers (LayerDesc LayerId CombineMode)
 
 /-! ## Service: a profile's rows -/

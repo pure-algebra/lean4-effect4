@@ -1,9 +1,10 @@
-import Effect4.Surface.Entity
+import Effect4.Codegen.Emit
 
 /-!
-# Surface.JsonSchema: draft 2020-12, both directions on one fragment
+# Codegen.JsonSchema — draft 2020-12, the emit half
 
-Implements `docs/research/2026-09-04-surface-library-plan.md` §4.3.
+Rule `surface.entity.jsonSchema` (`Rule.entityJsonSchema`), the `json` artefact of an entity
+under its domain. The reader that inverts it is `Effect4/Ingest/JsonSchema.lean`.
 
 `toJsonSchema` is read off rc.112's own compiler, not invented: the public entry
 is `SchemaRepresentation.toJsonSchemaDocument`
@@ -38,80 +39,83 @@ restricted here to an annotation-only right operand (`appendAnnotations`).
 
 | | |
 | --- | --- |
-| Carrier | none of its own: the ingest refusals are `Effect4/Surface/Facts.lean`'s `Refusal` |
-| Operations | `toJsonSchema`, `Document.jsonSchema`, `Entity.jsonSchema`, `ofJsonSchema` |
-| Laws | none proved. The round trip is `#guard`s on the fixtures and an **owed** theorem, named below |
-| Structure | a partial function each way over one fragment; the composite is idempotent on the canonical representatives, not an isomorphism |
-| Payoff | the `inputSchema` of an MCP tool, the schema half of an OpenAPI document, and the ingest of an existing JSON Schema, all from one carrier |
-| Anti-vacuity | one emitted `#guard` per node above, one refusal `#guard` per refusal row, and the round trips |
+| Carrier | none of its own: the refusals are `Effect4/Surface/Refusal.lean`'s `Refusal` |
+| Operations | `toJsonSchema`, `toJsonSchemaFuel`, `Document.jsonSchema`, `Entity.jsonSchema`; the `Emit .entityJsonSchema` instance |
+| Laws | none proved. The round trip is the reader's `#guard`s and an **owed** theorem, named below |
+| Structure | a fuel-bounded partial function over one fragment, every refusal a named shape |
+| Payoff | the `inputSchema` of an MCP tool and the schema half of an OpenAPI document are this one function |
+| Anti-vacuity | one emitted `#guard` per node above, one refusal `#guard` per shape in `Rule.jsonSchemaShapes`, and the instance on the fixture |
 | Generation | `toJsonSchema` is a generator; its receipt is `toJsonSchemaDocument(fromJson(documentJson))` at the pin |
 
 ## The refusals, by name
 
-Every divergence this module cannot match is a refusal, never a fallback:
+Every divergence this module cannot match is a refusal, never a fallback. A refusal is
+`Refusal.refusedShape "schema.jsonSchema" shape ""`, with `shape` one of
+`Rule.jsonSchemaShapes`; the emitter that asked re-addresses it with its own rule id and the
+value it was compiling (`Refusal.at`, through `addressed`), so a caller reads
+`refusedShape "surface.entity.jsonSchema" "schema.checks" "User"`.
 
-* **`Declaration`.** rc.112 emits `{}` (`:326-328`) and says an opaque
+* **`schema.depth`.** The fuel ran out: the representation nests deeper than the walk goes.
+* **`schema.declaration`.** rc.112 emits `{}` (`:326-328`) and says an opaque
   declaration is outside its own exact round-trip subset
   (`SchemaRepresentation.ts:846`). Emitting `{}` here would silently widen a
-  schema, so `toJsonSchema` answers `none`.
-* **`TemplateLiteral`.** `:360-361` builds a pattern from
+  schema, so the node is refused.
+* **`schema.templateLiteral`.** `:360-361` builds a pattern from
   `SchemaAST.STRING_PATTERN` and `SchemaAST.FINITE_PATTERN` and
   `RegExp.escape`; none of those is modelled here.
-* **Checks.** rc.112 compiles a check only through a `toJsonSchema` callback
+* **`schema.checks`.** rc.112 compiles a check only through a `toJsonSchema` callback
   carried in the *live* check's annotations (`:255-268`), installed by the
   importer's reviver when a persisted document is decoded. Our carrier holds
   the persisted form, which has no callback, so a check is either dropped
   (wrong: it would silently widen) or refused. It is refused.
-* **Index signatures.** `:418-470` needs `getParameterPatterns` and the
-  `patternProperties`/`allOf` merge; v1 refuses them.
-* **A non-finite number literal or enum value.** `:349` and `:354-355` render
-  it with `globalThis.String`; the decimal rendering of a number is not
+* **`schema.indexSignature`.** `:418-470` needs `getParameterPatterns` and the
+  `patternProperties`/`allOf` merge; v1 refuses them. This shape is also the row under which
+  the two documents rc.112 itself calls invalid are answered, because
+  `Rule.jsonSchemaShapes` names no separate shape for either and a refusal outside the
+  ledger is the drift the census exists to prevent: an `Arrays` node with more than one
+  `rest` (`:363-365` throws `Invalid schema representation document`) and a property whose
+  name is not a string (`:398-404`, the same throw). Both are container shapes this fragment
+  does not write.
+* **`schema.nonFiniteNumber`.** A non-finite number literal or enum value: `:349` and
+  `:354-355` render it with `globalThis.String`; the decimal rendering of a number is not
   modelled here.
-* **A bigint literal.** Same reason.
-* **A reference key containing `/` or `~`.** `escapeToken`
+* **`schema.bigintLiteral`.** A bigint literal, for the same reason.
+* **`schema.referenceUnresolved`.** A `$ref` whose key names no entry of the table.
+* **`schema.referencePointer`.** A reference key containing `/` or `~`: `escapeToken`
   (`JsonPointer.ts:42-44`) escapes them; rebuilding an escaped `String` from
   bytes is not available in the kernel-reducible fragment this tree uses, and
   no entity name can contain either character, so the case is refused rather
-  than approximated.
-* **A `$ref` pointer whose key is not ASCII, on ingest only.** `refOfPointer`
-  reads the pointer over `pointer.toUTF8.data.toList` and rebuilds the key with
-  `Char.ofNat`/`String.ofList`, because `String.splitOn` reaches
-  `Classical.choice` on this toolchain and the axiom gate refuses it. That
-  route is exact below 128 and has nothing to say above it, so a non-ASCII byte
-  in the key is a refusal. Every reference key an `Entity` puts in a document is
-  its name, and `Entity.nameLegal` asks that name for
-  `Effect4/Surface/Spell.lean`'s `identifier`, whose bytes are ASCII
-  (`Effect4/Surface/Api.lean`, `identifier_bytes`); so no document this tree
-  emits from an entity can hit the refusal. A hand-built `Document` with a
-  non-ASCII reference key, and ingest of a *foreign* document with a non-ASCII
-  `$defs` key, do hit it. That is the honest cost of the ceiling rather than a
-  claim about JSON Schema.
-* **Definition aliasing.** `:204-227` collapses two definitions that compile
+  than approximated. This is what `pointerToken?` decides.
+* **`schema.identifierFallback`.** `:204-227` collapses two definitions that compile
   alike when both carry the identifier-fallback annotation, and rewrites every
   `$ref`. This module refuses a representation carrying that annotation key
   rather than modelling the collapse.
 
+A carrier that is not well formed is answered with **its own** refusal, unwrapped: the
+`Emit` instance runs `Entity.check` first, so a caller reads `keyEmpty "User"` and not a
+shape name.
+
 ## The owed row
 
-`ofJsonSchema_toJsonSchema` is **not proved**. The obstruction is stated, not
-hidden: `toJsonSchema` is not injective on the fragment (`Any` and `Unknown`
+`ofJsonSchema_toJsonSchema` is **not proved**, and the reader it speaks of now lives in
+`Effect4/Ingest/JsonSchema.lean` with the quotient stated beside it. The obstruction is
+stated, not hidden: `toJsonSchema` is not injective on the fragment (`Any` and `Unknown`
 both emit `{}`; `Void`, `Undefined` and `Null` all emit `{"type":"null"}`;
 `ObjectKeyword` and an empty `objects` both emit the object/array `anyOf`), so
 the round trip is an identity only up to the quotient `ofJsonSchema` picks a
 representative of. The representative it picks is `unknown` for `{}`, `null`
 for `{"type":"null"}`, and `objectKeyword` for the object/array `anyOf`; the
-`#guard`s at the end of this module exercise the round trip on those and on
-every other admitted shape. Proving
-`ofJsonSchema (toJsonSchema r) = .ok (canonical r)` for every admitted `r`,
+`#guard`s of the reader exercise the round trip on those and on every other admitted
+shape. Proving `ofJsonSchema (toJsonSchema r) = .ok (canonical r)` for every admitted `r`,
 with `canonical` the map onto those representatives, is a structural induction
 over the fuel and remains owed.
 -/
 
 set_option autoImplicit false
 
-namespace Effect4.Surface
+namespace Effect4.Codegen
 
-open Effect4 Effect4.Schema
+open Effect4
 
 /-! ## Ordered JSON objects
 
@@ -119,6 +123,9 @@ A JSON object is an ordered entry list here, and rc.112's output order is
 observable content, so every operation below is order-preserving in the way the
 JavaScript it copies is: assignment replaces in place when the key is present
 and appends otherwise, and `delete` removes.
+
+These five are the layer's, not this module's: the OpenAPI rows of `Codegen/HttpApi.lean`
+and the `$defs` merge of `Codegen/Mcp.lean` read them too.
 -/
 
 /-- The value at a key, if any. -/
@@ -142,6 +149,26 @@ def objKeys (fields : List (String × Json)) : List String := fields.map (·.1)
 /-- The object spread `{ ...left, ...right }`. -/
 def objMerge (left right : List (String × Json)) : List (String × Json) :=
   right.foldl (fun acc entry => objSet acc entry.1 entry.2) left
+
+end Effect4.Codegen
+
+namespace Effect4.Codegen.JsonSchema
+
+open Effect4 Effect4.Schema Effect4.Surface Effect4.Codegen
+
+/-! ## Refusing by name -/
+
+/-- The rule id a compilation refusal carries before an emitter re-addresses it. -/
+def ruleId : String := "schema.jsonSchema"
+
+/-- Refuse a shape by name; the site is the emitter's to fill in. -/
+def refuse {α : Type} (shape : String) : Except Refusal α :=
+  .error (.refusedShape ruleId shape "")
+
+/-- The shape a compilation refused, when it refused one. -/
+def refusedShape? {α : Type} : Except Refusal α → Option String
+  | .error (.refusedShape _ shape _) => some shape
+  | _ => none
 
 /-! ## Annotations -/
 
@@ -290,34 +317,34 @@ def neverSchema : Json := .obj [("not", .obj [])]
 
 /-- `Literal` (`:346-351`). A bigint literal and a non-finite number literal are
 refused; both need `globalThis.String` of the value. -/
-def literalSchema : LiteralValue → Option Json
-  | .string value => some (.obj [("type", .str "string"), ("enum", .arr [.str value])])
+def literalSchema : LiteralValue → Except Refusal Json
+  | .string value => .ok (.obj [("type", .str "string"), ("enum", .arr [.str value])])
   | .number value =>
     if value.isFinite then
-      some (.obj [("type", .str "number"), ("enum", .arr [.number value])])
-    else none
-  | .boolean value => some (.obj [("type", .str "boolean"), ("enum", .arr [.bool value])])
-  | .bigint _ => none
+      .ok (.obj [("type", .str "number"), ("enum", .arr [.number value])])
+    else refuse "schema.nonFiniteNumber"
+  | .boolean value => .ok (.obj [("type", .str "boolean"), ("enum", .arr [.bool value])])
+  | .bigint _ => refuse "schema.bigintLiteral"
 
 /-- One `Enum` member (`:353-356`): type, enum, title, in that order. -/
-private def enumMember : EnumEntry → Option Json
+private def enumMember : EnumEntry → Except Refusal Json
   | ⟨name, .string value⟩ =>
-    some (.obj [("type", .str "string"), ("enum", .arr [.str value]), ("title", .str name)])
+    .ok (.obj [("type", .str "string"), ("enum", .arr [.str value]), ("title", .str name)])
   | ⟨name, .number value⟩ =>
     if value.isFinite then
-      some (.obj [("type", .str "number"), ("enum", .arr [.number value]), ("title", .str name)])
-    else none
+      .ok (.obj [("type", .str "number"), ("enum", .arr [.number value]), ("title", .str name)])
+    else refuse "schema.nonFiniteNumber"
 
-private def enumMembers : List EnumEntry → Option (List Json)
-  | [] => some []
-  | first :: rest =>
-    match enumMember first, enumMembers rest with
-    | some head, some tail => some (head :: tail)
-    | _, _ => none
+private def enumMembers : List EnumEntry → Except Refusal (List Json)
+  | [] => .ok []
+  | first :: rest => do
+    let head ← enumMember first
+    let tail ← enumMembers rest
+    .ok (head :: tail)
 
 /-- `Enum` (`:352-359`). -/
-def enumSchema (entries : List EnumEntry) : Option Json :=
-  if entries.isEmpty then some neverSchema
+def enumSchema (entries : List EnumEntry) : Except Refusal Json :=
+  if entries.isEmpty then .ok neverSchema
   else (enumMembers entries).map fun members => .obj [("anyOf", .arr members)]
 
 /-- The two parts of a compactable enum member (`:526`): exactly two keys, a
@@ -342,106 +369,100 @@ private def compactParts : List Json → Option (Json × List Json)
     | _, _ => none
 
 /-- `compactEnums` (`:519-534`): a union of same-typed single-value enums
-collapses to one `{type, enum}`. -/
+collapses to one `{type, enum}`. `none` is "no compaction applies", not a refusal. -/
 def compactEnums (schemas : List Json) : Option Json :=
   (compactParts schemas).map fun parts =>
     .obj [("type", parts.1), ("enum", .arr parts.2)]
 
 /-! ## The compiler -/
 
-private def compileList (go : Representation → Option Json) :
-    List Representation → Option (List Json)
-  | [] => some []
-  | first :: rest =>
-    match go first, compileList go rest with
-    | some head, some tail => some (head :: tail)
-    | _, _ => none
+private def compileList (go : Representation → Except Refusal Json) :
+    List Representation → Except Refusal (List Json)
+  | [] => .ok []
+  | first :: rest => do
+    let head ← go first
+    let tail ← compileList go rest
+    .ok (head :: tail)
 
-private def compileElements (go : Representation → Option Json) :
-    List Element → Option (List Json)
-  | [] => some []
-  | element :: rest =>
-    match go element.type, compileElements go rest with
-    | some compiled, some tail =>
-      some ((match collectAnnotations element.annotations with
-             | some extra => appendAnnotations compiled extra
-             | none => compiled) :: tail)
-    | _, _ => none
-
-private def compileProperties (go : Representation → Option Json) :
-    List PropertySignature → Option (List (String × Json) × List String) :=
-  fun properties =>
-    match properties with
-    | [] => some ([], [])
-    | property :: rest =>
-      match propertyName? property.name, go property.type, compileProperties go rest with
-      | some name, some compiled, some (fields, required) =>
-        let value :=
-          match collectAnnotations property.annotations with
+private def compileElements (go : Representation → Except Refusal Json) :
+    List Element → Except Refusal (List Json)
+  | [] => .ok []
+  | element :: rest => do
+    let compiled ← go element.type
+    let tail ← compileElements go rest
+    .ok ((match collectAnnotations element.annotations with
           | some extra => appendAnnotations compiled extra
-          | none => compiled
-        some ((name, value) :: fields,
-          if property.isOptional then required else name :: required)
-      | _, _, _ => none
+          | none => compiled) :: tail)
 
-/-- `Arrays` (`:362-388`). -/
-private def arraysSchema (go : Representation → Option Json)
-    (elements : List Element) (rest : List Representation) : Option Json :=
-  if rest.length > 1 then none
-  else
-    match compileElements go elements with
-    | none => none
-    | some prefixItems =>
-      let minItems := elements.length - (elements.filter (·.isOptional)).length
-      let base : List (String × Json) := [("type", .str "array")]
-      let withPrefix :=
-        if prefixItems.isEmpty then base ++ [("items", .bool false)]
-        else
-          base ++ [("prefixItems", .arr prefixItems),
-                   ("maxItems", Arch.Json.ofNat elements.length)] ++
-            (if minItems > 0 then [("minItems", Arch.Json.ofNat minItems)] else [])
-      match rest with
-      | [] => some (.obj withPrefix)
-      | item :: _ =>
-        match go item with
-        | none => none
-        | some restSchema =>
-          let dropped := objDelete withPrefix "maxItems"
-          match restSchema with
-          | .obj [] => some (.obj (objDelete dropped "items"))
-          | _ => some (.obj (objSet dropped "items" restSchema))
+/-- A property whose name is not a string is what rc.112 throws on at `:398-404`; it is
+answered under the container-shape row, this module's header. -/
+private def compileProperties (go : Representation → Except Refusal Json) :
+    List PropertySignature → Except Refusal (List (String × Json) × List String)
+  | [] => .ok ([], [])
+  | property :: rest =>
+    match propertyName? property.name with
+    | none => refuse "schema.indexSignature"
+    | some name => do
+      let compiled ← go property.type
+      let tail ← compileProperties go rest
+      let value :=
+        match collectAnnotations property.annotations with
+        | some extra => appendAnnotations compiled extra
+        | none => compiled
+      .ok ((name, value) :: tail.1,
+        if property.isOptional then tail.2 else name :: tail.2)
+
+/-- `Arrays` (`:362-388`). More than one `rest` is the document rc.112 refuses at
+`:363-365`; see this module's header for the row it is answered under. -/
+private def arraysSchema (go : Representation → Except Refusal Json)
+    (elements : List Element) (rest : List Representation) : Except Refusal Json :=
+  if rest.length > 1 then refuse "schema.indexSignature"
+  else do
+    let prefixItems ← compileElements go elements
+    let minItems := elements.length - (elements.filter (·.isOptional)).length
+    let base : List (String × Json) := [("type", .str "array")]
+    let withPrefix :=
+      if prefixItems.isEmpty then base ++ [("items", .bool false)]
+      else
+        base ++ [("prefixItems", .arr prefixItems),
+                 ("maxItems", Arch.Json.ofNat elements.length)] ++
+          (if minItems > 0 then [("minItems", Arch.Json.ofNat minItems)] else [])
+    match rest with
+    | [] => .ok (.obj withPrefix)
+    | item :: _ => do
+      let restSchema ← go item
+      let dropped := objDelete withPrefix "maxItems"
+      match restSchema with
+      | .obj [] => .ok (.obj (objDelete dropped "items"))
+      | _ => .ok (.obj (objSet dropped "items" restSchema))
 
 /-- `Objects` (`:389-472`), without index signatures. -/
-private def objectsSchema (go : Representation → Option Json)
+private def objectsSchema (go : Representation → Except Refusal Json)
     (properties : List PropertySignature) (indexes : List IndexSignature) :
-    Option Json :=
-  if !indexes.isEmpty then none
-  else if properties.isEmpty then some objectOrArraySchema
-  else
-    match compileProperties go properties with
-    | none => none
-    | some (fields, required) =>
-      some (.obj
-        ([("type", .str "object"), ("properties", .obj fields)] ++
-          (if required.isEmpty then [] else [("required", .arr (required.map .str))]) ++
-          [("additionalProperties", .bool false)]))
+    Except Refusal Json :=
+  if !indexes.isEmpty then refuse "schema.indexSignature"
+  else if properties.isEmpty then .ok objectOrArraySchema
+  else do
+    let compiled ← compileProperties go properties
+    .ok (.obj
+      ([("type", .str "object"), ("properties", .obj compiled.1)] ++
+        (if compiled.2.isEmpty then [] else [("required", .arr (compiled.2.map .str))]) ++
+        [("additionalProperties", .bool false)]))
 
 /-- `Union` (`:473-481`). -/
-private def unionSchema (go : Representation → Option Json)
-    (types : List Representation) (mode : UnionMode) : Option Json :=
-  match compileList go types with
-  | none => none
-  | some compiled =>
-    if compiled.isEmpty then some neverSchema
-    else
-      match mode with
-      | .anyOf =>
-        if compiled.length > 1 then
-          match compactEnums compiled with
-          | some compacted => some compacted
-          | none => some (.obj [("anyOf", .arr compiled)])
-        else some (.obj [("anyOf", .arr compiled)])
-      | .oneOf => some (.obj [("oneOf", .arr compiled)])
+private def unionSchema (go : Representation → Except Refusal Json)
+    (types : List Representation) (mode : UnionMode) : Except Refusal Json := do
+  let compiled ← compileList go types
+  if compiled.isEmpty then .ok neverSchema
+  else
+    match mode with
+    | .anyOf =>
+      if compiled.length > 1 then
+        match compactEnums compiled with
+        | some compacted => .ok compacted
+        | none => .ok (.obj [("anyOf", .arr compiled)])
+      else .ok (.obj [("anyOf", .arr compiled)])
+    | .oneOf => .ok (.obj [("oneOf", .arr compiled)])
 
 /-- A reference key with no JSON Pointer escaping to do. -/
 def pointerToken? (name : String) : Option String :=
@@ -450,42 +471,42 @@ def pointerToken? (name : String) : Option String :=
 
 /-- The node's own compilation, before annotations and checks
 (`toJsonSchemaDocument.ts:307-483`). -/
-private def onNode (refs : List ReferenceEntry) (fuel : Nat)
-    (go : Representation → Option Json) : Representation → Option Json
-  | .any _ _ => some (.obj [])
-  | .unknown _ _ => some (.obj [])
-  | .objectKeyword _ _ => some objectOrArraySchema
-  | .void _ _ => some (.obj [("type", .str "null")])
-  | .undefined _ _ => some (.obj [("type", .str "null")])
-  | .null _ _ => some (.obj [("type", .str "null")])
+private def onNode (refs : List ReferenceEntry) (_fuel : Nat)
+    (go : Representation → Except Refusal Json) : Representation → Except Refusal Json
+  | .any _ _ => .ok (.obj [])
+  | .unknown _ _ => .ok (.obj [])
+  | .objectKeyword _ _ => .ok objectOrArraySchema
+  | .void _ _ => .ok (.obj [("type", .str "null")])
+  | .undefined _ _ => .ok (.obj [("type", .str "null")])
+  | .null _ _ => .ok (.obj [("type", .str "null")])
   | .bigint _ _ =>
-    some (.obj [("type", .str "string"),
+    .ok (.obj [("type", .str "string"),
       ("allOf", .arr [.obj [("pattern", .str "^-?\\d+$")]])])
   | .symbol _ _ =>
-    some (.obj [("type", .str "string"),
+    .ok (.obj [("type", .str "string"),
       ("allOf", .arr [.obj [("pattern", .str "^Symbol\\((.*)\\)$")]])])
   | .uniqueSymbol _ _ _ =>
-    some (.obj [("type", .str "string"),
+    .ok (.obj [("type", .str "string"),
       ("allOf", .arr [.obj [("pattern", .str "^Symbol\\((.*)\\)$")]])])
-  | .never _ _ => some neverSchema
-  | .string _ _ => some (.obj [("type", .str "string")])
-  | .number _ _ => some numberSchema
-  | .boolean _ _ => some (.obj [("type", .str "boolean")])
+  | .never _ _ => .ok neverSchema
+  | .string _ _ => .ok (.obj [("type", .str "string")])
+  | .number _ _ => .ok numberSchema
+  | .boolean _ _ => .ok (.obj [("type", .str "boolean")])
   | .literal _ _ value => literalSchema value
   | .enum _ _ entries => enumSchema entries
   | .suspend _ _ thunk => go thunk
   | .arrays _ _ elements rest => arraysSchema go elements rest
   | .objects _ _ properties indexes => objectsSchema go properties indexes
   | .union _ _ types mode => unionSchema go types mode
-  | .declaration _ _ _ _ => none
-  | .templateLiteral _ _ _ => none
+  | .declaration _ _ _ _ => refuse "schema.declaration"
+  | .templateLiteral _ _ _ => refuse "schema.templateLiteral"
   | .reference key =>
-    match refs.find? (·.key == key.value), pointerToken? key.value with
-    | some _, some token => some (.obj [("$ref", .str ("#/$defs/" ++ token))])
-    | _, _ =>
-      -- `fuel` is named here only so the signature matches the recursive caller.
-      let _ := fuel
-      none
+    match refs.find? (·.key == key.value) with
+    | none => refuse "schema.referenceUnresolved"
+    | some _ =>
+      match pointerToken? key.value with
+      | some token => .ok (.obj [("$ref", .str ("#/$defs/" ++ token))])
+      | none => refuse "schema.referencePointer"
 
 /--
 Compile one representation to draft 2020-12, fuel-bounded.
@@ -493,340 +514,157 @@ Compile one representation to draft 2020-12, fuel-bounded.
 `checks` must be empty and the identifier-fallback annotation must be absent;
 both are refusals of this module's header, not omissions.
 -/
-def toJsonSchemaFuel (refs : List ReferenceEntry) : Nat → Representation → Option Json
-  | 0, _ => none
+def toJsonSchemaFuel (refs : List ReferenceEntry) :
+    Nat → Representation → Except Refusal Json
+  | 0, _ => refuse "schema.depth"
   | fuel + 1, representation =>
-    if !(representationChecks representation).isEmpty then none
-    else if hasIdentifierFallback (representationAnnotations representation) then none
+    if !(representationChecks representation).isEmpty then refuse "schema.checks"
+    else if hasIdentifierFallback (representationAnnotations representation) then
+      refuse "schema.identifierFallback"
     else
       match onNode refs fuel (toJsonSchemaFuel refs fuel) representation with
-      | none => none
-      | some output =>
+      | .error refusal => .error refusal
+      | .ok output =>
         match collectAnnotations (representationAnnotations representation), output with
-        | some (.obj extra), .obj fields => some (.obj (objMerge fields extra))
-        | _, _ => some output
+        | some (.obj extra), .obj fields => .ok (.obj (objMerge fields extra))
+        | _, _ => .ok output
 
 /-- Compile one representation to draft 2020-12 under a references table.
 
 surface: rule.surface.entity.jsonSchema -/
 def toJsonSchema (refs : List ReferenceEntry) (representation : Representation) :
-    Option Json :=
+    Except Refusal Json :=
   toJsonSchemaFuel refs 64 representation
 
 private def compileDefinitions (refs : List ReferenceEntry) :
-    List ReferenceEntry → Option (List (String × Json))
-  | [] => some []
-  | entry :: rest =>
-    match toJsonSchema refs entry.representation, compileDefinitions refs rest with
-    | some compiled, some tail => some ((entry.key, compiled) :: tail)
-    | _, _ => none
+    List ReferenceEntry → Except Refusal (List (String × Json))
+  | [] => .ok []
+  | entry :: rest => do
+    let compiled ← toJsonSchema refs entry.representation
+    let tail ← compileDefinitions refs rest
+    .ok ((entry.key, compiled) :: tail)
 
 /--
 The document form (`toJsonSchemaDocument.ts:570-585`): `dialect`, the root
 `schema`, and every definition, in the references table's order.
 
 surface: rule.surface.entity.jsonSchema -/
-def Document.jsonSchema (document : Document) : Option Json :=
-  match toJsonSchema document.references document.representation,
-        compileDefinitions document.references document.references with
-  | some root, some definitions =>
-    some (.obj
-      [ ("dialect", .str "draft-2020-12")
-      , ("schema", root)
-      , ("definitions", .obj definitions) ])
-  | _, _ => none
+def Document.jsonSchema (document : Document) : Except Refusal Json := do
+  let root ← toJsonSchema document.references document.representation
+  let definitions ← compileDefinitions document.references document.references
+  .ok (.obj
+    [ ("dialect", .str "draft-2020-12")
+    , ("schema", root)
+    , ("definitions", .obj definitions) ])
 
-/-- The entity's JSON Schema document under its domain. -/
-def Entity.jsonSchema (dom : Domain) (entity : Entity) : Option Json :=
-  Document.jsonSchema (entity.document dom)
+/-- The entity's JSON Schema document under its domain, the compilation's refusal
+addressed to this rule and to the entity, so a caller reads
+`refusedShape "surface.entity.jsonSchema" "schema.checks" "User"`. -/
+def Entity.jsonSchema (dom : Domain) (entity : Entity) : Except Refusal Json :=
+  addressed Rule.entityJsonSchema.id entity.name (Document.jsonSchema (entity.document dom))
 
-/-! ## The ingest direction
+/-- The emitter. The carrier's own refusal is answered unwrapped, before any emission. -/
+instance : Emit .entityJsonSchema :=
+  ⟨fun x => do
+    let _ ← Entity.check x.domain x.value
+    Entity.jsonSchema x.domain x.value⟩
 
-The refusals are constructors of the one closed `Refusal` of
-`Effect4/Surface/Facts.lean`, in its `jsonSchema*` group, so a `#surface_check`
-and a `#surface_fit` see the ingest clauses beside the well-formedness ones.
--/
+/-! ## Anti-vacuity: one emitted shape per node, one refusal per shape in the ledger -/
 
-private def literalOfJson : Json → Except Refusal LiteralValue
-  | .str value => .ok (.string value)
-  | .number value => .ok (.number value)
-  | .bool value => .ok (.boolean value)
-  | _ => .error .jsonSchemaStructuredEnumValue
-
-private def literalsOfJson : List Json → Except Refusal (List Representation)
-  | [] => .ok []
-  | first :: rest =>
-    match literalOfJson first, literalsOfJson rest with
-    | .ok value, .ok tail => .ok (Schema.literal value :: tail)
-    | .error refusal, _ => .error refusal
-    | _, .error refusal => .error refusal
-
-/-- The UTF-8 bytes of `"#/$defs/"`, the only pointer prefix this fragment
-writes (`onNode`, the `reference` arm) and therefore the only one it reads:
-`#` 35, `/` 47, `$` 36, `d` 100, `e` 101, `f` 102, `s` 115, `/` 47. -/
-private def defsPointerPrefix : List UInt8 := [35, 47, 36, 100, 101, 102, 115, 47]
-
-/-- Drop a byte prefix, or refuse bytes that do not begin with it. -/
-private def afterPrefix : List UInt8 → List UInt8 → Option (List UInt8)
-  | [], bytes => some bytes
-  | _ :: _, [] => none
-  | wanted :: wantedRest, byte :: bytesRest =>
-    if wanted == byte then afterPrefix wantedRest bytesRest else none
-
-/-- Read ASCII bytes back as characters, refusing the first byte that is not
-ASCII. `Char.ofNat` agrees with the UTF-8 decoding exactly below 128, and both
-it and `String.ofList` reach no axiom on this toolchain. -/
-private def asciiChars? : List UInt8 → Option (List Char)
-  | [] => some []
-  | byte :: rest =>
-    if byte < 128 then
-      match asciiChars? rest with
-      | some tail => some (Char.ofNat byte.toNat :: tail)
-      | none => none
-    else none
-
-/--
-Read a `$ref` pointer back as a reference, over UTF-8 bytes.
-
-The inverse of the `reference` arm of `onNode`, clause for clause: that arm
-writes `"#/$defs/" ++ token` for a `token` `pointerToken?` admitted, so this one
-strips exactly those bytes and refuses a token carrying `/` (47) or `~` (126),
-which is `pointerToken?`'s refusal read backwards. A non-ASCII byte in the
-token is refused too, and that is a narrowing of the ingest side recorded in
-this module's header: the byte route is the one route to a `String`'s content
-that stays inside the axiom ceiling, and rebuilding a non-ASCII `String` from
-bytes needs a decoder this tree does not have.
--/
-private def refOfPointer (pointer : String) : Except Refusal Representation :=
-  let refused : Except Refusal Representation := .error (.jsonSchemaUnsupportedReference pointer)
-  match afterPrefix defsPointerPrefix pointer.toUTF8.data.toList with
-  | none => refused
-  | some [] => refused
-  | some token =>
-    if token.any (fun byte => byte == 47 || byte == 126) then refused
-    else
-      match asciiChars? token with
-      | some characters => .ok (Schema.reference (String.ofList characters))
-      | none => refused
-
-private def ofList (go : Json → Except Refusal Representation) :
-    List Json → Except Refusal (List Representation)
-  | [] => .ok []
-  | first :: rest =>
-    match go first, ofList go rest with
-    | .ok head, .ok tail => .ok (head :: tail)
-    | .error refusal, _ => .error refusal
-    | _, .error refusal => .error refusal
-
-private def ofProperties (go : Json → Except Refusal Representation)
-    (required : List String) : List (String × Json) →
-    Except Refusal (List PropertySignature) :=
-  fun fields =>
-    match fields with
-    | [] => .ok []
-    | (name, value) :: rest =>
-      match go value, ofProperties go required rest with
-      | .ok compiled, .ok tail =>
-        .ok (Schema.property name compiled (!required.contains name) :: tail)
-      | .error refusal, _ => .error refusal
-      | _, .error refusal => .error refusal
-
-/--
-Read a draft 2020-12 fragment back as a representation, fuel-bounded.
-
-The fragment is exactly what `toJsonSchema` emits for the *canonical*
-representatives named in this module's header: `{}` reads back as `unknown`,
-`{"type":"null"}` as `null`, and the object/array `anyOf` as `objectKeyword`.
--/
-def ofJsonSchemaFuel : Nat → Json → Except Refusal Representation
-  | 0, _ => .error .jsonSchemaFuelExhausted
-  | fuel + 1, value =>
-    match value with
-    | .obj [] => .ok Schema.unknown
-    | .obj fields =>
-      if value = neverSchema then .ok Schema.never
-      else if value = numberSchema then .ok Schema.number
-      else if value = objectOrArraySchema then .ok Schema.objectKeyword
-      else
-        match objGet fields "$ref" with
-        | some (.str pointer) =>
-          if fields.length == 1 then refOfPointer pointer
-          else .error (.jsonSchemaUnsupportedKeywords (objKeys fields))
-        | some _ => .error (.jsonSchemaUnsupportedKeywords (objKeys fields))
-        | none =>
-          match objGet fields "anyOf", objGet fields "oneOf" with
-          | some (.arr members), _ =>
-            if fields.length == 1 then
-              (ofList (ofJsonSchemaFuel fuel) members).map fun types =>
-                .union none [] types .anyOf
-            else .error (.jsonSchemaUnsupportedKeywords (objKeys fields))
-          | _, some (.arr members) =>
-            if fields.length == 1 then
-              (ofList (ofJsonSchemaFuel fuel) members).map fun types =>
-                .union none [] types .oneOf
-            else .error (.jsonSchemaUnsupportedKeywords (objKeys fields))
-          | _, _ =>
-            match objGet fields "type" with
-            | some (.str "null") =>
-              if fields.length == 1 then .ok Schema.null
-              else .error (.jsonSchemaUnsupportedKeywords (objKeys fields))
-            | some (.str "boolean") =>
-              match objGet fields "enum" with
-              | none => if fields.length == 1 then .ok Schema.boolean
-                        else .error (.jsonSchemaUnsupportedKeywords (objKeys fields))
-              | some (.arr values) => enumBack values
-              | some _ => .error .jsonSchemaStructuredEnumValue
-            | some (.str "string") =>
-              match objGet fields "enum" with
-              | none => if fields.length == 1 then .ok Schema.string
-                        else .error (.jsonSchemaUnsupportedKeywords (objKeys fields))
-              | some (.arr values) => enumBack values
-              | some _ => .error .jsonSchemaStructuredEnumValue
-            | some (.str "number") =>
-              match objGet fields "enum" with
-              | none => .error (.jsonSchemaUnsupportedKeywords (objKeys fields))
-              | some (.arr values) => enumBack values
-              | some _ => .error .jsonSchemaStructuredEnumValue
-            | some (.str "object") => objectBack fields fuel
-            | some (.str "array") => arrayBack fields fuel
-            | some (.str name) => .error (.jsonSchemaUnsupportedType name)
-            | _ => .error (.jsonSchemaUnsupportedKeywords (objKeys fields))
-    | _ => .error .jsonSchemaNotAnObject
-where
-  /-- One or more `enum` values read back as a literal or a union of literals. -/
-  enumBack (values : List Json) : Except Refusal Representation :=
-    match values with
-    | [] => .error .jsonSchemaEmptyEnum
-    | [only] => (literalOfJson only).map Schema.literal
-    | _ => (literalsOfJson values).map fun members => .union none [] members .anyOf
-  /-- `{"type":"object", "properties":…, "required":…, "additionalProperties":false}`. -/
-  objectBack (fields : List (String × Json)) (fuel : Nat) :
-      Except Refusal Representation :=
-    if !(objKeys fields).all
-        (fun key => ["type", "properties", "required", "additionalProperties"].contains key) then
-      .error (.jsonSchemaUnsupportedKeywords (objKeys fields))
-    else
-      match objGet fields "additionalProperties" with
-      | some (.bool false) =>
-        let required :=
-          match objGet fields "required" with
-          | some (.arr names) => names.filterMap fun name =>
-              match name with
-              | .str text => some text
-              | _ => none
-          | _ => []
-        match objGet fields "properties" with
-        | some (.obj properties) =>
-          (ofProperties (ofJsonSchemaFuel fuel) required properties).map fun signatures =>
-            Schema.struct signatures
-        | some _ => .error .jsonSchemaMalformedProperties
-        | none => .ok (Schema.struct [])
-      | _ => .error .jsonSchemaOpenObject
-  /-- `{"type":"array", …}` with `items` or `prefixItems`. -/
-  arrayBack (fields : List (String × Json)) (fuel : Nat) :
-      Except Refusal Representation :=
-    if !(objKeys fields).all
-        (fun key => ["type", "items", "prefixItems", "maxItems", "minItems"].contains key) then
-      .error (.jsonSchemaUnsupportedKeywords (objKeys fields))
-    else
-      match objGet fields "prefixItems", objGet fields "items" with
-      | none, some (.bool false) => .ok (Schema.tuple [])
-      | none, some item => (ofJsonSchemaFuel fuel item).map Schema.array
-      | none, none => .ok (Schema.array Schema.unknown)
-      | some (.arr items), rest =>
-        match ofList (ofJsonSchemaFuel fuel) items with
-        | .error refusal => .error refusal
-        | .ok elements =>
-          let optionalFrom :=
-            match objGet fields "minItems" with
-            | some (.number value) => (Arch.binary64OfNat elements.length == value.bits)
-            | _ => false
-          let _ := optionalFrom
-          match rest with
-          | none => .ok (Schema.tuple (elements.map fun element => Schema.element element))
-          | some item =>
-            (ofJsonSchemaFuel fuel item).map fun restRep =>
-              Schema.tuple (elements.map fun element => Schema.element element) [restRep]
-      | some _, _ => .error (.jsonSchemaUnsupportedKeywords (objKeys fields))
-
-/-- Read a draft 2020-12 fragment back as a representation. This is the ingest
-direction and carries no emission rule tag; `Effect4/Surface/Ingest.lean` owns
-the ingest census in a later wave. -/
-def ofJsonSchema (value : Json) : Except Refusal Representation :=
-  ofJsonSchemaFuel 64 value
-
-/-! ## Anti-vacuity: one emitted shape per node, and the round trips -/
-
-#guard toJsonSchema [] Schema.string == some (.obj [("type", .str "string")])
-#guard toJsonSchema [] Schema.boolean == some (.obj [("type", .str "boolean")])
-#guard toJsonSchema [] Schema.number == some numberSchema
-#guard toJsonSchema [] Schema.null == some (.obj [("type", .str "null")])
-#guard toJsonSchema [] Schema.void == some (.obj [("type", .str "null")])
-#guard toJsonSchema [] Schema.never == some neverSchema
-#guard toJsonSchema [] Schema.unknown == some (.obj [])
-#guard toJsonSchema [] Schema.any == some (.obj [])
-#guard toJsonSchema [] Schema.objectKeyword == some objectOrArraySchema
+#guard toJsonSchema [] Schema.string == .ok (.obj [("type", .str "string")])
+#guard toJsonSchema [] Schema.boolean == .ok (.obj [("type", .str "boolean")])
+#guard toJsonSchema [] Schema.number == .ok numberSchema
+#guard toJsonSchema [] Schema.null == .ok (.obj [("type", .str "null")])
+#guard toJsonSchema [] Schema.void == .ok (.obj [("type", .str "null")])
+#guard toJsonSchema [] Schema.never == .ok neverSchema
+#guard toJsonSchema [] Schema.unknown == .ok (.obj [])
+#guard toJsonSchema [] Schema.any == .ok (.obj [])
+#guard toJsonSchema [] Schema.objectKeyword == .ok objectOrArraySchema
 #guard toJsonSchema [] Schema.bigint ==
-  some (.obj [("type", .str "string"), ("allOf", .arr [.obj [("pattern", .str "^-?\\d+$")]])])
+  .ok (.obj [("type", .str "string"), ("allOf", .arr [.obj [("pattern", .str "^-?\\d+$")]])])
 #guard toJsonSchema [] Schema.symbol ==
-  some (.obj [("type", .str "string"),
+  .ok (.obj [("type", .str "string"),
     ("allOf", .arr [.obj [("pattern", .str "^Symbol\\((.*)\\)$")]])])
 #guard toJsonSchema [] (Schema.literalString "admin") ==
-  some (.obj [("type", .str "string"), ("enum", .arr [.str "admin"])])
+  .ok (.obj [("type", .str "string"), ("enum", .arr [.str "admin"])])
 #guard toJsonSchema [] (Schema.array Schema.string) ==
-  some (.obj [("type", .str "array"), ("items", .obj [("type", .str "string")])])
+  .ok (.obj [("type", .str "array"), ("items", .obj [("type", .str "string")])])
 #guard toJsonSchema [] (Schema.array Schema.unknown) ==
-  some (.obj [("type", .str "array")])
+  .ok (.obj [("type", .str "array")])
 #guard toJsonSchema [] (Schema.tuple []) ==
-  some (.obj [("type", .str "array"), ("items", .bool false)])
+  .ok (.obj [("type", .str "array"), ("items", .bool false)])
 #guard toJsonSchema [] (Schema.tuple [Schema.element Schema.string]) ==
-  some (.obj
+  .ok (.obj
     [ ("type", .str "array")
     , ("prefixItems", .arr [.obj [("type", .str "string")]])
     , ("maxItems", Arch.Json.ofNat 1)
     , ("minItems", Arch.Json.ofNat 1) ])
 #guard toJsonSchema [] (Schema.struct [Schema.property "id" Schema.string]) ==
-  some (.obj
+  .ok (.obj
     [ ("type", .str "object")
     , ("properties", .obj [("id", .obj [("type", .str "string")])])
     , ("required", .arr [.str "id"])
     , ("additionalProperties", .bool false) ])
 #guard toJsonSchema [] (Schema.struct [Schema.property "id" Schema.string true]) ==
-  some (.obj
+  .ok (.obj
     [ ("type", .str "object")
     , ("properties", .obj [("id", .obj [("type", .str "string")])])
     , ("additionalProperties", .bool false) ])
-#guard toJsonSchema [] (Schema.struct []) == some objectOrArraySchema
+#guard toJsonSchema [] (Schema.struct []) == .ok objectOrArraySchema
 #guard toJsonSchema [] (Schema.anyOf (Schema.literalString "a") [Schema.literalString "b"]) ==
-  some (.obj [("type", .str "string"), ("enum", .arr [.str "a", .str "b"])])
+  .ok (.obj [("type", .str "string"), ("enum", .arr [.str "a", .str "b"])])
 #guard toJsonSchema [] (Schema.anyOf Schema.string [Schema.number]) ==
-  some (.obj [("anyOf", .arr [.obj [("type", .str "string")], numberSchema])])
+  .ok (.obj [("anyOf", .arr [.obj [("type", .str "string")], numberSchema])])
 #guard toJsonSchema [] (Schema.oneOf Schema.string [Schema.boolean]) ==
-  some (.obj [("oneOf", .arr
+  .ok (.obj [("oneOf", .arr
     [.obj [("type", .str "string")], .obj [("type", .str "boolean")]])])
 #guard toJsonSchema [⟨"User", Schema.struct [Schema.property "id" Schema.string]⟩]
     (Schema.reference "User") ==
-  some (.obj [("$ref", .str "#/$defs/User")])
+  .ok (.obj [("$ref", .str "#/$defs/User")])
 #guard toJsonSchema [] (.string (some [⟨"description", .str "the id"⟩]) []) ==
-  some (.obj [("type", .str "string"), ("description", .str "the id")])
+  .ok (.obj [("type", .str "string"), ("description", .str "the id")])
 #guard toJsonSchema [] (Schema.suspend Schema.string) ==
-  some (.obj [("type", .str "string")])
+  .ok (.obj [("type", .str "string")])
 
--- the refusals
-#guard toJsonSchema [] (.declaration ⟨"d", .null⟩ none [] []) == none
-#guard toJsonSchema [] (.templateLiteral none [] []) == none
-#guard toJsonSchema [] (Schema.literal (.bigint 3)) == none
-#guard toJsonSchema [] (Schema.struct [] [Schema.index Schema.string Schema.number]) == none
-#guard toJsonSchema [] (Schema.reference "Missing") == none
-#guard (Schema.withCheck Schema.string Check.trimmed).bind (toJsonSchema []) == none
-#guard toJsonSchema []
-  (.string (some [⟨identifierFallbackKey, .str "User"⟩]) []) == none
+/-! ### One refusing input per shape of `Rule.jsonSchemaShapes` -/
 
--- the document form
+/-- A representation nested deeper than the walk's fuel, for the depth refusal. -/
+private def nest : Nat → Representation
+  | 0 => Schema.string
+  | depth + 1 => Schema.array (nest depth)
+
+#guard refusedShape? (toJsonSchema [] (nest 70)) == some "schema.depth"
+#guard refusedShape? (toJsonSchema [] (.declaration ⟨"d", .null⟩ none [] [])) ==
+  some "schema.declaration"
+#guard refusedShape? (toJsonSchema [] (.templateLiteral none [] [])) ==
+  some "schema.templateLiteral"
+#guard ((Schema.withCheck Schema.string Check.trimmed).map
+  (fun representation => refusedShape? (toJsonSchema [] representation))) ==
+  some (some "schema.checks")
+#guard refusedShape? (toJsonSchema []
+    (Schema.struct [] [Schema.index Schema.string Schema.number])) ==
+  some "schema.indexSignature"
+#guard refusedShape? (toJsonSchema [] (Schema.literal (.number Float64.nan))) ==
+  some "schema.nonFiniteNumber"
+#guard refusedShape? (toJsonSchema [] (Schema.literal (.bigint 3))) ==
+  some "schema.bigintLiteral"
+#guard refusedShape? (toJsonSchema [] (Schema.reference "Missing")) ==
+  some "schema.referenceUnresolved"
+#guard refusedShape? (toJsonSchema [⟨"a/b", Schema.string⟩] (Schema.reference "a/b")) ==
+  some "schema.referencePointer"
+#guard refusedShape? (toJsonSchema []
+    (.string (some [⟨identifierFallbackKey, .str "User"⟩]) [])) ==
+  some "schema.identifierFallback"
+
+-- and the ledger the shapes are held to is this rule's own
+#guard (Rule.refuses .entityJsonSchema) == Rule.jsonSchemaShapes
+
+/-! ### The document form, the entity, and the instance -/
+
 #guard Document.jsonSchema
     { representation := Schema.reference "User"
       references := [⟨"User", Schema.struct [Schema.property "id" Schema.string]⟩] } ==
-  some (.obj
+  .ok (.obj
     [ ("dialect", .str "draft-2020-12")
     , ("schema", .obj [("$ref", .str "#/$defs/User")])
     , ("definitions", .obj
@@ -836,62 +674,16 @@ def ofJsonSchema (value : Json) : Except Refusal Representation :=
           , ("required", .arr [.str "id"])
           , ("additionalProperties", .bool false) ])]) ])
 
-#guard (Entity.jsonSchema shopDomain addressEntity).isSome == true
+#guard (Entity.jsonSchema shopDomain addressEntity).toOption.isSome
 
--- the round trips, on the canonical representatives
-#guard ofJsonSchema (.obj []) == .ok Schema.unknown
-#guard ofJsonSchema neverSchema == .ok Schema.never
-#guard ofJsonSchema numberSchema == .ok Schema.number
-#guard ofJsonSchema objectOrArraySchema == .ok Schema.objectKeyword
-#guard ofJsonSchema (.obj [("type", .str "string")]) == .ok Schema.string
-#guard ofJsonSchema (.obj [("type", .str "boolean")]) == .ok Schema.boolean
-#guard ofJsonSchema (.obj [("type", .str "null")]) == .ok Schema.null
-#guard ofJsonSchema (.obj [("type", .str "string"), ("enum", .arr [.str "admin"])]) ==
-  .ok (Schema.literalString "admin")
-#guard ofJsonSchema (.obj [("type", .str "string"), ("enum", .arr [.str "a", .str "b"])]) ==
-  .ok (Schema.anyOf (Schema.literalString "a") [Schema.literalString "b"])
-#guard ofJsonSchema (.obj [("$ref", .str "#/$defs/User")]) == .ok (Schema.reference "User")
-#guard ofJsonSchema (.obj [("type", .str "array"), ("items", .obj [("type", .str "string")])]) ==
-  .ok (Schema.array Schema.string)
-#guard ofJsonSchema (.obj [("type", .str "array"), ("items", .bool false)]) ==
-  .ok (Schema.tuple [])
-#guard ofJsonSchema
-    (.obj [("anyOf", .arr [.obj [("type", .str "string")], numberSchema])]) ==
-  .ok (Schema.anyOf Schema.string [Schema.number])
-#guard ofJsonSchema
-    (.obj [("oneOf", .arr [.obj [("type", .str "string")], .obj [("type", .str "boolean")]])]) ==
-  .ok (Schema.oneOf Schema.string [Schema.boolean])
+-- a compilation refusal reaches the caller addressed to this rule and to the entity
+#guard Entity.jsonSchema shopDomain
+    { userEntity with rep := .declaration ⟨"d", .null⟩ none [] [] } ==
+  .error (.refusedShape "surface.entity.jsonSchema" "schema.declaration" "User")
 
--- The round trip on the fixture entity's own representation, spelled as a
--- `#guard` because the theorem is owed.
-#guard (toJsonSchema [] (Schema.struct
-    [ Schema.property "street" Schema.string
-    , Schema.property "city" Schema.string ])).map ofJsonSchema ==
-  some (.ok (Schema.struct
-    [ Schema.property "street" Schema.string
-    , Schema.property "city" Schema.string ]))
+-- the instance emits the fixture, and answers the carrier's own refusal unwrapped
+#guard (emit .entityJsonSchema ⟨shopDomain, addressEntity⟩).toOption.isSome
+#guard refusal? (emit .entityJsonSchema ⟨shopDomain, { userEntity with key := [] }⟩) ==
+  some (.keyEmpty "User")
 
--- the ingest refusals
-#guard ofJsonSchema (.str "x") == .error .jsonSchemaNotAnObject
-#guard ofJsonSchema (.obj [("$ref", .str "#/definitions/User")]) ==
-  .error (.jsonSchemaUnsupportedReference "#/definitions/User")
-#guard ofJsonSchema (.obj [("$ref", .str "#/$defs/")]) ==
-  .error (.jsonSchemaUnsupportedReference "#/$defs/")
--- the two refusals the byte route adds, both stated rather than hidden: an
--- unescaped `/` or `~` in the key, which `pointerToken?` refuses on the way
--- out, and a key that is not ASCII
-#guard ofJsonSchema (.obj [("$ref", .str "#/$defs/a/b")]) ==
-  .error (.jsonSchemaUnsupportedReference "#/$defs/a/b")
-#guard ofJsonSchema (.obj [("$ref", .str "#/$defs/a~b")]) ==
-  .error (.jsonSchemaUnsupportedReference "#/$defs/a~b")
-#guard ofJsonSchema (.obj [("$ref", .str "#/$defs/café")]) ==
-  .error (.jsonSchemaUnsupportedReference "#/$defs/café")
-#guard ofJsonSchema (.obj [("type", .str "integer")]) == .error (.jsonSchemaUnsupportedType "integer")
-#guard ofJsonSchema (.obj [("type", .str "object"), ("properties", .obj [])]) ==
-  .error .jsonSchemaOpenObject
-#guard ofJsonSchema (.obj [("type", .str "string"), ("enum", .arr [.obj []])]) ==
-  .error .jsonSchemaStructuredEnumValue
-#guard ofJsonSchema (.obj [("type", .str "string"), ("enum", .arr [])]) == .error .jsonSchemaEmptyEnum
-#guard ofJsonSchema (.obj [("if", .obj [])]) == .error (.jsonSchemaUnsupportedKeywords ["if"])
-
-end Effect4.Surface
+end Effect4.Codegen.JsonSchema

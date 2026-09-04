@@ -54,6 +54,11 @@ import Test.Counterexamples.Machine.Runtime.LiveStack
 import Test.Store.StoreContract
 import Test.Evidence.ArchContract
 import Test.Codegen.PrintContract
+import Test.Codegen.RuleContract
+import Test.Codegen.AppContract
+import Test.Ingest.JsonSchemaContract
+import Test.Ingest.WranglerContract
+import Test.Ingest.McpContract
 import Test.Program.CompileContract
 import Test.Api.ApiContract
 import Test.Machine.Fuzz

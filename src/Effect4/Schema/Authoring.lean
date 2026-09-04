@@ -204,6 +204,16 @@ def struct (properties : List PropertySignature)
 def anyOf (first : Representation) (rest : List Representation := []) : Representation :=
   .union none [] (first :: rest) .anyOf
 
+/-- A tagged struct: the discriminant `_tag` first, a required string literal, then the
+fields. This is the one shape every target spells as a case of a sum type
+(`docs/research/2026-09-04-codegen-api-design.md` §7.2). -/
+def tagged (tag : String) (properties : List PropertySignature) : Representation :=
+  struct (property "_tag" (literalString tag) :: properties)
+
+/-- A sum type: the `anyOf` of one tagged struct per case, in declaration order. -/
+def variant (cases : List (String × List PropertySignature)) : Representation :=
+  .union none [] (cases.map fun case => tagged case.1 case.2) .anyOf
+
 def oneOf (first : Representation) (rest : List Representation := []) : Representation :=
   .union none [] (first :: rest) .oneOf
 

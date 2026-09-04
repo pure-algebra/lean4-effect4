@@ -1,4 +1,5 @@
 import Effect4.Program.Typing
+import TypeScript
 
 /-!
 # Syntax.Print — `Eff` into TypeScript (lane A2 of the AST relation)

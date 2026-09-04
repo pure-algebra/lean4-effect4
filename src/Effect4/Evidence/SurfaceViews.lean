@@ -1,4 +1,4 @@
-import Effect4.Codegen.Rules
+import Effect4.Codegen.Rule
 import Effect4.Store.Store
 
 /-!
@@ -46,13 +46,14 @@ namespace Effect4.Surface
 open Effect4 Effect4.Store
 
 /-- Every surface view, named. Later waves append; nothing is inserted, so a
-recorded path keeps its position. -/
-def views : List (Path × Document) :=
+recorded path keeps its position. (`Store.Path`, the store's name; `Surface.Path` is an
+HTTP path and is in scope here through the rule census.) -/
+def views : List (Store.Path × Document) :=
   [ (["surface", "entity"], entityDoc)
   , (["surface", "domain"], domainDoc) ]
 
 /-- The paths the views are registered at. -/
-def viewPaths : List Path := views.map Prod.fst
+def viewPaths : List Store.Path := views.map Prod.fst
 
 /-- The view documents in a store of their own: addressed by their canonical
 bytes and named by their paths. -/

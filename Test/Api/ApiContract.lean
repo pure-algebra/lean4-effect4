@@ -54,6 +54,25 @@ def pInternal : Program := .withFiber (.setContext (.lit .unit))
 
 #guard expr house0 0 (jsonExpr (.arr [])) = "[]"
 
+/-! ## Codegen, through the face: a rule's artefact, its bytes, the application tree -/
+
+-- one rule, crossed by its name: the artefact answers in the rule's target
+#guard (emit .siteRoutes Effect4.Surface.docsSite).toOption.map Effect4.Codegen.Artefact.target
+  = some Effect4.Codegen.Target.json
+-- the carrier's own refusal comes back unwrapped
+#guard (emit .siteRoutes { Effect4.Surface.docsSite with name := "class" }).toOption.isNone
+-- the one crossing to bytes, kept inside the guard
+#guard render (Effect4.Codegen.Artefact.json (.arr [])) = "[]\n"
+-- the shop application: sixteen artefacts at the plan's paths, every path distinct
+#guard (Effect4.Codegen.App.shopApp.paths).toOption.map List.length = some 16
+#guard (Effect4.Codegen.App.shopApp.paths).toOption.map (fun paths => paths.eraseDups.length)
+  = some 16
+-- a reader, crossed by its name: the wrangler file round-trips at its quotient
+#guard (match emit .deployWrangler Effect4.Surface.docsDeployment with
+  | .ok (.json j) => (ingest .deployWrangler Effect4.Surface.shopDomain j).toOption.map
+      (fun dep => dep.host)
+  | _ => none) = some Effect4.Surface.docsDeployment.host
+
 /-! ## Axiom receipts -/
 
 #print axioms Effect4.Api.typeOf

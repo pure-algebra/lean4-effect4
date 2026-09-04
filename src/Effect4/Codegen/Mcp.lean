@@ -1,21 +1,23 @@
-import Effect4.Surface.Agent
 import Effect4.Codegen.JsonSchema
 
 /-!
-# Surface.Agent.Emit: the toolkit module and the MCP list payloads
+# Codegen.Mcp — the toolkit module and the MCP list payloads
 
-Implements the projections of `docs/research/2026-09-04-surface-library-plan.md`
-§4.5, and the `ofMcpToolsList` row of §4.8. Two rules of the census
-(`Effect4/Surface/Emit.lean`) live here and every definition that is one carries
-its tag:
+Design: `docs/research/2026-09-04-codegen-api-design.md` §4, the `mcpToolkit` and
+`mcpToolsList` rows. Two rules of the census (`Effect4/Codegen/Rule.lean`) live here:
 
-| rule | id | what it emits |
-| --- | --- | --- |
-| `Rule.mcpToolkit` | `surface.mcp.toolkit` | the rc.112 toolkit module |
-| `Rule.mcpToolsList` | `surface.mcp.toolsList` | the `tools/list`, `resources/list` and `prompts/list` payloads |
+| rule | id | target | emitter |
+| --- | --- | --- | --- |
+| `Rule.mcpToolkit` | `surface.mcp.toolkit` | ts | `toolkitModule` |
+| `Rule.mcpToolsList` | `surface.mcp.toolsList` | json | `toolsListJson` |
 
 Both are `emitted`, not `modeled`: no host receipt has landed, and
 `Rule.modeled_has_receipt` keeps the stance honest.
+
+**The reader half is `Effect4/Ingest/Mcp.lean`.** `ofMcpToolsList`, the parsers it is built
+from, `toolFingerprint`, the `Ingest .mcpToolsList` instance, the quotient the round trip is
+up to and the round-trip guards all live there; nothing in this module reads back what it
+writes.
 
 ## The spellings, pinned
 
@@ -33,101 +35,65 @@ Paths are relative to `node_modules/effect/src` at `effect` 4.0.0-rc.112.
 | `{ prompts: [{ name, description, arguments: [{ name, required }] }] }` | `unstable/ai/McpSchema.ts:1218-1239` (`Prompt`), `:1196-1210` (`PromptArgument`), `:1382-1388` (`ListPromptsResult`) |
 | `inputSchema` = the parameters' JSON Schema, with `$defs` when it has definitions | `unstable/ai/Tool.ts:1719-1744` (`getJsonSchemaFromSchema` into `getJsonSchemaFromSchemaWith`) |
 
-Every emitted key is a *required* or a *present optional* field of the cited
-class, and no key is emitted that the class does not declare. An optional field
-the carrier does not have is left out rather than emitted as `null`, which is
-what `Schema.optional` reads (`McpSchema.ts:1561`, `:1570`, and so on).
+Every emitted key is a *required* or a *present optional* field of the cited class, and no
+key is emitted that the class does not declare. An optional field the carrier does not have
+is left out rather than emitted as `null`, which is what `Schema.optional` reads
+(`McpSchema.ts:1561`, `:1570`, and so on).
 
 | | |
 | --- | --- |
 | Carrier | none of its own; `TypeScript.Module` is the target package's and `Json` is the estate's |
-| Operations | `toolkitModule`, `toolsListJson`, `resourcesListJson`, `promptsListJson`, `ofMcpToolsList` |
-| Laws | none proved. The round trip is a `#guard` on the fixture, up to the quotient named below, and the host receipt is owed |
-| Structure | four partial functions out of one carrier, plus one partial function back on the `tools/list` fragment |
-| Payoff | the toolkit module, the three list payloads and the ingest all read one carrier, so a description cannot differ between the module and the wire |
-| Anti-vacuity | the `#guard`s at the end: the three payloads on the fixture, the rendered module lines, the round trip, and one refusal each |
+| Operations | `toolkitModule`, `toolsListJson`, `resourcesListJson`, `promptsListJson`; the two `Emit` instances |
+| Laws | none proved. `emit x = .ok _ → McpServer.check x.value = .ok ()` holds by construction: both rule emitters open with that check |
+| Structure | two partial functions out of one carrier, each refusing by name, and two total ones |
+| Payoff | the toolkit module and the three list payloads read one carrier, so a description cannot differ between the module and the wire |
+| Anti-vacuity | the `#guard`s at the end: the three payloads on the fixture, the rendered module lines, and one refusal per constructor |
 | Generation | this module *is* generation; nothing generates it |
-
-## The quotient the round trip is up to
-
-`toolsListJson` then `ofMcpToolsList` is **not** the identity on `Tool`, and
-the drop is named here the way `Effect4/Surface/JsonSchema.lean` names its own:
-
-* `success` and `failure` are not on the `tools/list` wire in the fragment
-  emitted here, so the decoded tool carries `success := Schema.unknown` and
-  `failure := none`;
-* the only annotations the decoded tool carries are `identifier`, set to the
-  tool name, and `description`, when the wire has one. Every other entry of the
-  original bag is gone;
-* `parameters` survives exactly, because `toJsonSchema` and `ofJsonSchema`
-  agree on an annotation-free struct of admitted property types. A parameter
-  object whose nodes carry `description` or `title` is emitted with those
-  keywords and then **refused** on the way back, because §4.3's ingest fragment
-  admits no annotation keyword; lifting that is `JsonSchema.lean`'s row, not
-  this one.
-
-So the `#guard` below compares `(name, parameters.rep, descriptionOf)`, which
-is exactly the part of a tool the fragment carries both ways.
 
 ## The refusals, by name
 
-* a tool whose name is not a legal generated binding (`get-user` is a legal MCP
-  name and not a legal TypeScript identifier): the module refuses rather than
-  inventing a mangling, because a mangled constant is a second spelling of the
-  tool's identity;
-* a server, resource or prompt name that is not a legal binding, for the same
-  reason;
-* a server that is not `McpServer.WellFormed`;
-* a schema `Effect4/Surface/Spell.lean` refuses, or that `toJsonSchema` refuses;
-* on ingest: a payload that is not `{ tools: [...] }`, an entry that is not an
-  object, a missing or non-string `name`, a missing `inputSchema`, an
-  `inputSchema` outside §4.3's fragment (including one carrying `$defs`), and an
-  `inputSchema` that is not `Kind.struct` under the table.
+* **The server's own, unwrapped.** `toolkitModule` and `toolsListJson` open with
+  `McpServer.check`, so an ill-formed server answers the refusal that check names and
+  nothing else: a caller reads `identifierMissing "mcpServer" "shop"`, never "emit failed".
+  This is the design note's §3.5 rule, and it is why there is no `emitNotWellFormed`
+  constructor.
+* **`notABinding "surface.mcp.toolkit" name`.** A name the toolkit module must bind as a
+  top-level constant and cannot: a tool name (`get-user` is a legal MCP name and not a legal
+  TypeScript identifier, `Effect4/Surface/Agent.lean`), a resource name, a prompt name, or
+  the server's own name. The module refuses rather than inventing a mangling, because a
+  mangled constant is a second spelling of the value's identity.
+* **`refusedShape "surface.mcp.toolkit" shape site`**, `shape ∈ Rule.refuses .mcpToolkit`
+  (`= Rule.schemaShapes`). A schema slot `Effect4/Codegen/Spell.lean` has no constructor
+  spelling for; `site` is `<tool>.parameters`, `<tool>.success` or `<tool>.failure`, so the
+  caller reads which slot of which tool was refused.
+* **`refusedShape "surface.mcp.toolsList" shape site`**, `shape ∈ Rule.refuses .mcpToolsList`
+  (`= Rule.jsonSchemaShapes`). A schema `Effect4/Codegen/JsonSchema.lean` will not compile;
+  `site` is the tool's name for its own `inputSchema` and the reference key for a `$defs`
+  entry.
+
+`resourcesListJson` and `promptsListJson` are total and are not rules: no field of a
+resource or a prompt is compiled, so nothing can fall outside a fragment.
 -/
 
 set_option autoImplicit false
 
-namespace Effect4.Surface
+namespace Effect4.Codegen.Mcp
 
-open Effect4 Effect4.Schema
+open Effect4 Effect4.Schema Effect4.Surface Effect4.Codegen
+open Effect4.Codegen.JsonSchema (toJsonSchema numberSchema)
 open TypeScript (Expr)
 
 /-! ## Reachable definitions
 
-`getJsonSchemaFromSchemaWith` (`unstable/ai/Tool.ts:1725-1744`) compiles the
-parameters to a document and, when that document has definitions, hangs them on
-the root as `$defs`. rc.112's document collects a definition only for a
-reference it actually meets, so the definitions emitted here are the references
-reachable from the parameters, not the whole domain.
+`getJsonSchemaFromSchemaWith` (`unstable/ai/Tool.ts:1725-1744`) compiles the parameters to a
+document and, when that document has definitions, hangs them on the root as `$defs`. rc.112's
+document collects a definition only for a reference it actually meets, so the definitions
+emitted here are the references reachable from the parameters, not the whole domain.
+
+The syntactic walk and its de-duplication are the layer's one pair, `Codegen.referenceKeys`
+and `Codegen.dedupe` (`Effect4/Codegen/Spell.lean`); this module adds only the closure over
+the table.
 -/
-
-/-- The reference keys occurring syntactically in a representation, in
-document order, fuel-bounded. References are not followed, so this terminates
-on a cyclic table. -/
-def referenceKeys : Nat → Representation → List String
-  | 0, _ => []
-  | fuel + 1, representation =>
-    match representation with
-    | .reference key => [key.value]
-    | .declaration _ _ typeParameters _ => typeParameters.flatMap (referenceKeys fuel)
-    | .suspend _ _ thunk => referenceKeys fuel thunk
-    | .templateLiteral _ _ parts => parts.flatMap (referenceKeys fuel)
-    | .arrays _ _ elements rest =>
-      elements.flatMap (fun element => referenceKeys fuel element.type) ++
-        rest.flatMap (referenceKeys fuel)
-    | .objects _ _ properties indexes =>
-      properties.flatMap (fun property => referenceKeys fuel property.type) ++
-        indexes.flatMap (fun index =>
-          referenceKeys fuel index.parameter ++ referenceKeys fuel index.type)
-    | .union _ _ types _ => types.flatMap (referenceKeys fuel)
-    | _ => []
-
-/-- Drop repeats, keeping the first occurrence of each name. -/
-def dedupeNames (seen : List String) : List String → List String
-  | [] => []
-  | first :: rest =>
-    if seen.contains first then dedupeNames seen rest
-    else first :: dedupeNames (seen ++ [first]) rest
 
 /-- One step of the reachability closure: every key already present, plus every
 key its entry mentions. -/
@@ -152,77 +118,66 @@ def closeKeys (refs : List ReferenceEntry) : Nat → List String → List String
 order they were first met. -/
 def reachableKeys (refs : List ReferenceEntry) (representation : Representation) :
     List String :=
-  closeKeys refs refs.length (dedupeNames [] (referenceKeys 64 representation))
+  closeKeys refs refs.length (dedupe [] (referenceKeys 64 representation))
 
-/-- The `$defs` entries for a representation: the reachable definitions, in the
-table's own order, each compiled by §4.3. `none` when one of them is outside
-that fragment. -/
+/-- The `$defs` entries for a representation: the reachable definitions, in the table's own
+order, each compiled by `Codegen.JsonSchema`. A compilation refusal is addressed to
+`mcpToolsList` and to the entry's own key. -/
 def reachableDefinitions (refs : List ReferenceEntry) (representation : Representation) :
-    Option (List (String × Json)) :=
+    Except Refusal (List (String × Json)) :=
   let wanted := reachableKeys refs representation
-  compile (refs.filter fun entry => wanted.contains entry.key)
-where
-  /-- Compile a table slice, refusing as soon as one entry refuses. -/
-  compile : List ReferenceEntry → Option (List (String × Json))
-    | [] => some []
-    | entry :: rest =>
-      match toJsonSchema refs entry.representation, compile rest with
-      | some compiled, some tail => some ((entry.key, compiled) :: tail)
-      | _, _ => none
+  traverse
+    (fun entry =>
+      (addressed Rule.mcpToolsList.id entry.key
+          (toJsonSchema refs entry.representation)).map fun compiled =>
+        (entry.key, compiled))
+    (refs.filter fun entry => wanted.contains entry.key)
 
 /-! ## The list payloads -/
-
-/-- Collect a list of options, refusing as soon as one refuses. -/
-def optionList {A : Type} : List (Option A) → Option (List A)
-  | [] => some []
-  | first :: rest =>
-    match first, optionList rest with
-    | some head, some tail => some (head :: tail)
-    | _, _ => none
 
 /--
 The `inputSchema` of one tool: the parameters' JSON Schema, with the reachable
 definitions hung on the root as `$defs` when there are any.
 
-Pin: `unstable/ai/Tool.ts:1725-1744`.
+The compilation's refusal is addressed to `mcpToolsList` and to the tool, so a caller reads
+`refusedShape "surface.mcp.toolsList" "schema.checks" "get_user"`.
 
-surface: rule.surface.mcp.toolsList -/
-def toolInputSchema {refs : List ReferenceEntry} (tool : Tool refs) : Option Json :=
-  match toJsonSchema refs tool.parameters.rep with
-  | none => none
-  | some root =>
-    match reachableDefinitions refs tool.parameters.rep with
-    | none => none
-    | some [] => some root
-    | some definitions =>
-      match root with
-      | .obj fields => some (.obj (objSet fields "$defs" (.obj definitions)))
-      | other => some other
+Pin: `unstable/ai/Tool.ts:1725-1744`.
+-/
+def toolInputSchema {refs : List ReferenceEntry} (tool : Tool refs) :
+    Except Refusal Json := do
+  let root ← addressed Rule.mcpToolsList.id tool.name (toJsonSchema refs tool.parameters.rep)
+  let definitions ← reachableDefinitions refs tool.parameters.rep
+  match definitions with
+  | [] => .ok root
+  | _ :: _ =>
+    match root with
+    | .obj fields => .ok (.obj (objSet fields "$defs" (.obj definitions)))
+    | other => .ok other
 
 /-- One entry of `tools/list`: `name`, `description` when the tool has one, and
-`inputSchema`, in `McpSchema.Tool`'s own field order (`:1559-1596`).
-
-surface: rule.surface.mcp.toolsList -/
-def toolListEntry {refs : List ReferenceEntry} (tool : Tool refs) : Option Json :=
-  match toolInputSchema tool with
-  | none => none
-  | some inputSchema =>
-    some (.obj
-      ([("name", .str tool.name)] ++
-        (match tool.descriptionOf with
-          | some text => [("description", .str text)]
-          | none => []) ++
-        [("inputSchema", inputSchema)]))
+`inputSchema`, in `McpSchema.Tool`'s own field order (`:1559-1596`). -/
+def toolListEntry {refs : List ReferenceEntry} (tool : Tool refs) :
+    Except Refusal Json := do
+  let inputSchema ← toolInputSchema tool
+  .ok (.obj
+    ([("name", .str tool.name)] ++
+      (match tool.descriptionOf with
+        | some text => [("description", Json.str text)]
+        | none => []) ++
+      [("inputSchema", inputSchema)]))
 
 /--
 The `tools/list` result payload (`unstable/ai/McpSchema.ts:1604-1610`).
 
-`none` when one tool's parameters fall outside §4.3's fragment.
+The server's own refusal when it is not well formed, unwrapped; then one entry per tool,
+first refusal wins.
 
 surface: rule.surface.mcp.toolsList -/
-def toolsListJson (dom : Domain) (server : McpServer dom.refs) : Option Json :=
-  (optionList (server.tools.map toolListEntry)).map fun entries =>
-    .obj [("tools", .arr entries)]
+def toolsListJson (dom : Domain) (server : McpServer dom.refs) : Except Refusal Json := do
+  let _ ← McpServer.check server
+  let entries ← traverse toolListEntry server.tools
+  .ok (.obj [("tools", .arr entries)])
 
 /--
 The `resources/list` result payload (`unstable/ai/McpSchema.ts:1031-1037`),
@@ -231,18 +186,17 @@ whose entries are `McpSchema.Resource`'s `uri`, `name`, `description` and
 
 Total, unlike `toolsListJson`: no field of a resource is compiled, so nothing
 can fall outside a fragment.
-
-surface: rule.surface.mcp.toolsList -/
+-/
 def resourcesListJson (dom : Domain) (server : McpServer dom.refs) : Json :=
   .obj
     [("resources", .arr (server.resources.map fun resource =>
       .obj
         ([("uri", .str resource.uri), ("name", .str resource.name)] ++
           (match resource.descriptionOf with
-            | some text => [("description", .str text)]
+            | some text => [("description", Json.str text)]
             | none => []) ++
           (match resource.mimeType with
-            | some text => [("mimeType", .str text)]
+            | some text => [("mimeType", Json.str text)]
             | none => []))))]
 
 /--
@@ -250,15 +204,14 @@ The `prompts/list` result payload (`unstable/ai/McpSchema.ts:1382-1388`), whose
 entries are `McpSchema.Prompt`'s `name`, `description` and `arguments`
 (`:1218-1239`), each argument being `McpSchema.PromptArgument`'s `name` and
 `required` (`:1196-1210`).
-
-surface: rule.surface.mcp.toolsList -/
+-/
 def promptsListJson (dom : Domain) (server : McpServer dom.refs) : Json :=
   .obj
     [("prompts", .arr (server.prompts.map fun prompt =>
       .obj
         ([("name", .str prompt.name)] ++
           (match prompt.descriptionOf with
-            | some text => [("description", .str text)]
+            | some text => [("description", Json.str text)]
             | none => []) ++
           [("arguments", .arr (prompt.arguments.map fun argument =>
             .obj [("name", .str argument.1), ("required", .bool argument.2)]))])))]
@@ -269,7 +222,7 @@ def promptsListJson (dom : Domain) (server : McpServer dom.refs) : Json :=
 Qualify an entity constant with the namespace the generated module imports it
 under.
 
-`Effect4/Surface/Spell.lean` spells a `reference` as the bare identifier of the
+`Effect4/Codegen/Spell.lean` spells a `reference` as the bare identifier of the
 entity, because it does not know how the referring module names the entity
 module. Here it is `import * as Entities from "./entities.generated"`, so every
 bare identifier that is a key of the table becomes `Entities.<Name>`. The walk
@@ -296,11 +249,13 @@ def qualifyEntities (refs : List ReferenceEntry) (namespaceName : String) :
         (field.1, qualifyEntities refs namespaceName fuel field.2))
     | other => other
 
-/-- The constructor spelling of a schema as this module writes it: `spell`, with
-entity references qualified. -/
-def spellQualified (refs : List ReferenceEntry) (representation : Representation) :
-    Option Expr :=
-  (spell refs representation).map (qualifyEntities refs "Entities" 64)
+/-- The constructor spelling of a schema as this module writes it: `Spell.spell`, its
+refusal addressed to `mcpToolkit` and to the slot it was spelling, with entity references
+qualified. -/
+def spellQualified (refs : List ReferenceEntry) (site : String)
+    (representation : Representation) : Except Refusal Expr :=
+  (addressed Rule.mcpToolkit.id site (Spell.spell refs representation)).map
+    (qualifyEntities refs "Entities" 64)
 
 /-- Whether a slot spells as a bare entity constant, and therefore needs no
 `Schema.` former. -/
@@ -315,41 +270,45 @@ def schemaSlots {refs : List ReferenceEntry} (server : McpServer refs) :
     [tool.parameters.rep, tool.success.rep] ++
       (match tool.failure with | some schema => [schema.rep] | none => [])
 
-/-- One tool's declaration. `none` when the tool name is not a legal binding or
-one of its schemas has no constructor spelling.
+/-- One tool's declaration. `notABinding` when the tool name is not a legal generated
+binding; otherwise the three schema slots in emission order, each refusal addressed to its
+own site.
 
 Pin: `unstable/ai/Tool.ts:1204-1246`. -/
-def toolDecl {refs : List ReferenceEntry} (tool : Tool refs) : Option TypeScript.Decl :=
-  if !identifier tool.name then none
-  else
-    match spellQualified refs tool.parameters.rep, spellQualified refs tool.success.rep,
-        optionList ((match tool.failure with
-          | some schema => [schema.rep]
-          | none => []).map (spellQualified refs)) with
-    | some parameters, some success, some failures =>
-      some (.const
-        { doc := []
-          name := tool.name
-          value :=
-            .call (.ident "Tool.make")
-              [ .str tool.name
-              , .objectML
-                  ((match tool.descriptionOf with
-                    | some text => [("description", Expr.str text)]
-                    | none => []) ++
-                    [("parameters", parameters), ("success", success)] ++
-                    (failures.map fun failure => ("failure", failure))) ] })
-    | _, _, _ => none
+def toolDecl {refs : List ReferenceEntry} (tool : Tool refs) :
+    Except Refusal TypeScript.Decl :=
+  if !identifier tool.name then .error (.notABinding Rule.mcpToolkit.id tool.name)
+  else do
+    let parameters ← spellQualified refs (tool.name ++ ".parameters") tool.parameters.rep
+    let success ← spellQualified refs (tool.name ++ ".success") tool.success.rep
+    let failure ← optional
+      (fun (schema : Sch refs .json) =>
+        spellQualified refs (tool.name ++ ".failure") schema.rep)
+      tool.failure
+    .ok (.const
+      { doc := []
+        name := tool.name
+        value :=
+          .call (.ident "Tool.make")
+            [ .str tool.name
+            , .objectML
+                ((match tool.descriptionOf with
+                  | some text => [("description", Expr.str text)]
+                  | none => []) ++
+                  [("parameters", parameters), ("success", success)] ++
+                  (match failure with
+                    | some value => [("failure", value)]
+                    | none => [])) ] })
 
-/-- One resource's declaration, with a typed stub for its content. `none` when
-the resource name is not a legal binding.
+/-- One resource's declaration, with a typed stub for its content. `notABinding` when the
+resource name is not a legal generated binding.
 
 Pin: `unstable/ai/McpServer.ts:1894-1909`. The content stub takes the `string`
 leg of that overload's content union, which rc.112 turns into a text resource. -/
-def resourceDecl (resource : Resource) : Option TypeScript.Decl :=
-  if !identifier resource.name then none
+def resourceDecl (resource : Resource) : Except Refusal TypeScript.Decl :=
+  if !identifier resource.name then .error (.notABinding Rule.mcpToolkit.id resource.name)
   else
-    some (.const
+    .ok (.const
       { doc := ["Stub content: replace with this resource's own program."]
         name := resource.name ++ "Resource"
         value :=
@@ -364,18 +323,18 @@ def resourceDecl (resource : Resource) : Option TypeScript.Decl :=
                     | none => []) ++
                   [("content", .call (.ident "Effect.succeed") [.str ""])]) ] })
 
-/-- One prompt's declaration, with a typed stub for its content. `none` when the
-prompt name is not a legal binding.
+/-- One prompt's declaration, with a typed stub for its content. `notABinding` when the
+prompt name is not a legal generated binding.
 
 Pin: `unstable/ai/McpServer.ts:2106-2126`. An argument becomes one field of the
 `parameters` record; a required argument is `Schema.String` and an optional one
 is `Schema.optionalKey(Schema.String)` (`Schema.ts:2444`), which is the same
 optionality `McpSchema.PromptArgument.required` carries on the wire
 (`:1196-1210`). -/
-def promptDecl (prompt : Prompt) : Option TypeScript.Decl :=
-  if !identifier prompt.name then none
+def promptDecl (prompt : Prompt) : Except Refusal TypeScript.Decl :=
+  if !identifier prompt.name then .error (.notABinding Rule.mcpToolkit.id prompt.name)
   else
-    some (.const
+    .ok (.const
       { doc := ["Stub content: replace with this prompt's own program."]
         name := prompt.name ++ "Prompt"
         value :=
@@ -419,123 +378,49 @@ The rc.112 toolkit module of an agent server.
 
 One `Tool.make` constant per tool, then `Toolkit.make` over them, then
 `McpServer.toolkit` of that toolkit, then one `McpServer.resource` and one
-`McpServer.prompt` constant per registered value. `none` when the server is not
-well-formed, when a name it needs as a binding is not one, or when a schema has
-no constructor spelling.
+`McpServer.prompt` constant per registered value. The server's own refusal when it is not
+well formed, `notABinding` for a name it needs as a binding and does not have, and
+`refusedShape` for a schema with no constructor spelling.
 
 surface: rule.surface.mcp.toolkit -/
 def toolkitModule (dom : Domain) (server : McpServer dom.refs) :
-    Option TypeScript.Module :=
-  if !McpServer.wellFormed server then none
-  else if !identifier server.name then none
-  else
-    match optionList (server.tools.map toolDecl),
-        optionList (server.resources.map resourceDecl),
-        optionList (server.prompts.map promptDecl) with
-    | some toolDecls, some resourceDecls, some promptDecls =>
-      some
-        { header := ["Generated by Effect4 Surface.", "", "Do not edit."]
-          imports := toolkitImports server
-          decls :=
-            toolDecls ++
-              (if server.tools.isEmpty then []
-                else
-                  [ .const
-                      { doc := []
-                        name := server.name ++ "Toolkit"
-                        value := .call (.ident "Toolkit.make")
-                          (server.tools.map fun tool => .ident tool.name) }
-                  , .const
-                      { doc := []
-                        name := server.name ++ "ToolkitLayer"
-                        value := .call (.ident "McpServer.toolkit")
-                          [.ident (server.name ++ "Toolkit")] } ]) ++
-              resourceDecls ++ promptDecls }
-    | _, _, _ => none
+    Except Refusal TypeScript.Module := do
+  let _ ← McpServer.check server
+  if !identifier server.name then .error (.notABinding Rule.mcpToolkit.id server.name)
+  else do
+    let toolDecls ← traverse toolDecl server.tools
+    let resourceDecls ← traverse resourceDecl server.resources
+    let promptDecls ← traverse promptDecl server.prompts
+    .ok
+      { header := ["Generated by Effect4 Surface.", "", "Do not edit."]
+        imports := toolkitImports server
+        decls :=
+          toolDecls ++
+            (if server.tools.isEmpty then []
+              else
+                [ .const
+                    { doc := []
+                      name := server.name ++ "Toolkit"
+                      value := .call (.ident "Toolkit.make")
+                        (server.tools.map fun tool => .ident tool.name) }
+                , .const
+                    { doc := []
+                      name := server.name ++ "ToolkitLayer"
+                      value := .call (.ident "McpServer.toolkit")
+                        [.ident (server.name ++ "Toolkit")] } ]) ++
+            resourceDecls ++ promptDecls }
 
-/-! ## Ingest: `tools/list` back into rows -/
+/-! ## The instances -/
 
-/-- `Schema.unknown` is JSON-representable under every table, which is what the
-decoded tool's absent success schema needs. -/
-theorem kindCheck_unknown_json (refs : List ReferenceEntry) :
-    kindCheck refs 64 .json Schema.unknown = true := rfl
+instance : Emit .mcpToolkit := ⟨fun x => toolkitModule x.domain x.value⟩
 
-/-- The path a `mcpMalformed` refusal names, for one entry of the array. -/
-def toolsPath (index : Nat) (field : String) : String :=
-  "tools/" ++ toString index ++ "/" ++ field
-
-/--
-Decode one entry of `tools/list`.
-
-The decoded tool carries `identifier` set to its name and `description` when
-the wire has one, and nothing else; a wire entry with no description therefore
-decodes to a tool that `Tool.check` refuses by `descriptionMissing`, which is
-§15.2's "the refusal names the ones it lacks".
--/
-def toolOfJson (refs : List ReferenceEntry) (index : Nat) (value : Json) :
-    Except Refusal (Tool refs) :=
-  match value with
-  | .obj fields =>
-    match objGet fields "name" with
-    | some (.str name) =>
-      match objGet fields "inputSchema" with
-      | some inputSchema =>
-        match ofJsonSchema inputSchema with
-        | .error refusal => .error refusal
-        | .ok parameters =>
-          if h : kindCheck refs 64 .struct parameters = true then
-            .ok
-              { name := name
-                parameters := ⟨parameters, h⟩
-                success := ⟨Schema.unknown, kindCheck_unknown_json refs⟩
-                failure := none
-                annotations :=
-                  match objGet fields "description" with
-                  | some (.str text) =>
-                    descriptionKey.append text (identifierKey.append name none)
-                  | _ => identifierKey.append name none }
-          else .error (.mcpMalformed (toolsPath index "inputSchema"))
-      | none => .error (.mcpMalformed (toolsPath index "inputSchema"))
-    | _ => .error (.mcpMalformed (toolsPath index "name"))
-  | _ => .error (.mcpMalformed ("tools/" ++ toString index))
-
-/-- Decode the entries of `tools/list`, first refusal wins. -/
-def toolsOfJson (refs : List ReferenceEntry) : Nat → List Json →
-    Except Refusal (List (Tool refs))
-  | _, [] => .ok []
-  | index, first :: rest =>
-    match toolOfJson refs index first, toolsOfJson refs (index + 1) rest with
-    | .ok head, .ok tail => .ok (head :: tail)
-    | .error refusal, _ => .error refusal
-    | _, .error refusal => .error refusal
-
-/--
-Read a `tools/list` payload back as surface rows, on the fragment §4.3 admits.
-
-The wrapping direction of the plan's §4.8: total on the admitted fragment,
-refusing the rest by constructor. The quotient it is an inverse up to is named
-in this module's header.
--/
-def ofMcpToolsList (refs : List ReferenceEntry) (value : Json) :
-    Except Refusal (List (Tool refs)) :=
-  match value with
-  | .obj fields =>
-    match objGet fields "tools" with
-    | some (.arr entries) => toolsOfJson refs 0 entries
-    | _ => .error (.mcpMalformed "tools")
-  | _ => .error (.mcpMalformed "tools/list")
-
-/-- The part of a tool the `tools/list` fragment carries in both directions:
-its name, its parameter representation and its description. -/
-def toolFingerprint {refs : List ReferenceEntry} (tool : Tool refs) :
-    String × Representation × Option String :=
-  (tool.name, tool.parameters.rep, tool.descriptionOf)
+instance : Emit .mcpToolsList := ⟨fun x => toolsListJson x.domain x.value⟩
 
 /-! ## Anti-vacuity -/
 
 -- the three list payloads, field for field
 #guard toolsListJson shopDomain shopServer ==
-  some (.obj
+  .ok (.obj
     [("tools", .arr
       [ .obj
           [ ("name", .str "get_user")
@@ -584,19 +469,20 @@ def toolFingerprint {refs : List ReferenceEntry} (tool : Tool refs) :
 
 -- `$defs` appears exactly when the parameters reach a definition
 #guard (toolInputSchema
-    { getUserTool with parameters := ⟨Schema.reference "Address", by decide⟩ }).isSome = true
+    { getUserTool with parameters := ⟨Schema.reference "Address", by decide⟩ }).toOption.isSome
+  = true
 #guard ((toolInputSchema
-    { getUserTool with parameters := ⟨Schema.reference "Address", by decide⟩ }).map
+    { getUserTool with parameters := ⟨Schema.reference "Address", by decide⟩ }).toOption.map
   fun schema => match schema with
     | .obj fields => (objGet fields "$defs").isSome
     | _ => false) == some true
-#guard ((toolInputSchema getUserTool).map fun schema => match schema with
+#guard ((toolInputSchema getUserTool).toOption.map fun schema => match schema with
     | .obj fields => (objGet fields "$defs").isSome
     | _ => false) == some false
 
 -- the module builds, and its first lines are pinned
-#guard (toolkitModule shopDomain shopServer).isSome = true
-#guard ((toolkitModule shopDomain shopServer).map
+#guard (toolkitModule shopDomain shopServer).toOption.isSome = true
+#guard ((toolkitModule shopDomain shopServer).toOption.map
     fun target => ((TypeScript.Render.module TypeScript.house0 target).splitOn "\n").take 7) ==
   some
     [ "/**"
@@ -607,7 +493,7 @@ def toolFingerprint {refs : List ReferenceEntry} (tool : Tool refs) :
     , "import { Effect } from \"effect\""
     , "import * as Schema from \"effect/Schema\"" ]
 
-#guard ((toolkitModule shopDomain shopServer).map
+#guard ((toolkitModule shopDomain shopServer).toOption.map
     fun target => ((TypeScript.Render.module TypeScript.house0 target).splitOn "\n").drop 7
       |>.take 8) ==
   some
@@ -621,66 +507,49 @@ def toolFingerprint {refs : List ReferenceEntry} (tool : Tool refs) :
     , "  failure: Schema.Struct({ \"message\": Schema.String }),"]
 
 -- the toolkit, its layer, the resource and the prompt
-#guard ((toolkitModule shopDomain shopServer).map
+#guard ((toolkitModule shopDomain shopServer).toOption.map
     fun target => ((target.decls.drop 2).take 2).map fun declaration =>
       ((TypeScript.Render.decl TypeScript.house0 declaration).splitOn "\n").take 1) ==
   some
     [ ["export const shopToolkit = Toolkit.make(get_user, list_users)"]
     , ["export const shopToolkitLayer = McpServer.toolkit(shopToolkit)"] ]
 
--- the module's refusals
-#guard (toolkitModule shopDomain { shopServer with annotations := none }).isNone = true
-#guard (toolkitModule shopDomain
-  { shopServer with tools := [{ getUserTool with name := "get-user" }] }).isNone = true
-#guard (toolkitModule shopDomain
-  { shopServer with resources := [{ usersResource with name := "class" }] }).isNone = true
+-- the refusals, by constructor: the server's own, unwrapped
+#guard refusal? (toolkitModule shopDomain { shopServer with annotations := none }) ==
+  some (.identifierMissing "mcpServer" "shop")
 
--- the round trip, up to the quotient named in this module's header
-#guard ((toolsListJson shopDomain shopServer).map fun payload =>
-    (ofMcpToolsList shopDomain.refs payload).map (List.map toolFingerprint)) ==
-  some (.ok
-    [ ("get_user", Schema.struct [Schema.property "id" Schema.string],
-        some "Fetch one shop customer by id.")
-    , ("list_users", Schema.struct [Schema.property "limit" Schema.number true],
-        some "List the shop's customers.") ])
+-- a name the module must bind and cannot: a tool name, then a resource name
+#guard refusal? (toolkitModule shopDomain
+  { shopServer with tools := [{ getUserTool with name := "get-user" }] }) ==
+  some (.notABinding "surface.mcp.toolkit" "get-user")
+#guard refusal? (toolkitModule shopDomain
+  { shopServer with resources := [{ usersResource with name := "class" }] }) ==
+  some (.notABinding "surface.mcp.toolkit" "class")
 
--- and the parts the quotient drops
-#guard ((toolsListJson shopDomain shopServer).map fun payload =>
-    (ofMcpToolsList shopDomain.refs payload).map fun tools =>
-      tools.map fun tool => (tool.success.rep, (tool.failure.map Sch.rep).isSome)) ==
-  some (.ok [(Schema.unknown, false), (Schema.unknown, false)])
+-- a schema the constructor spelling refuses, addressed to the slot it was found in
+#guard refusal? (toolkitModule shopDomain
+  { shopServer with tools :=
+      [{ getUserTool with
+          parameters :=
+            ⟨Schema.struct [Schema.property "id" (.string none [Check.pattern "^a$"])],
+              by decide⟩ }] }) ==
+  some (.refusedShape "surface.mcp.toolkit" "schema.checkPattern" "get_user.parameters")
 
--- a wire tool with no description ingests, and is then refused by name
-#guard (ofMcpToolsList shopDomain.refs
-    (.obj [("tools", .arr [.obj
-      [ ("name", .str "ping")
-      , ("inputSchema", .obj
-          [ ("type", .str "object")
-          , ("properties", .obj [])
-          , ("additionalProperties", .bool false) ]) ]])])).map
-  (List.map (Tool.check "shop")) ==
-  .ok [.error (.descriptionMissing "tool" "ping")]
+-- a schema the JSON Schema compiler refuses, addressed to the tool it was found on
+#guard refusal? (toolsListJson shopDomain
+  { shopServer with tools :=
+      [{ getUserTool with
+          parameters :=
+            ⟨Schema.struct [Schema.property "id" (.string none [Check.trimmed])],
+              by decide⟩ }] }) ==
+  some (.refusedShape "surface.mcp.toolsList" "schema.checks" "get_user")
 
--- the ingest refusals
-#guard (ofMcpToolsList shopDomain.refs (.str "x") :
-    Except Refusal (List (Tool shopDomain.refs))).map (List.map toolFingerprint) ==
-  .error (.mcpMalformed "tools/list")
-#guard (ofMcpToolsList shopDomain.refs (.obj [])).map (List.map toolFingerprint) ==
-  .error (.mcpMalformed "tools")
-#guard (ofMcpToolsList shopDomain.refs (.obj [("tools", .arr [.str "x"])])).map
-  (List.map toolFingerprint) == .error (.mcpMalformed "tools/0")
-#guard (ofMcpToolsList shopDomain.refs (.obj [("tools", .arr [.obj []])])).map
-  (List.map toolFingerprint) == .error (.mcpMalformed "tools/0/name")
-#guard (ofMcpToolsList shopDomain.refs
-    (.obj [("tools", .arr [.obj [("name", .str "ping")]])])).map
-  (List.map toolFingerprint) == .error (.mcpMalformed "tools/0/inputSchema")
-#guard (ofMcpToolsList shopDomain.refs
-    (.obj [("tools", .arr [.obj
-      [("name", .str "ping"), ("inputSchema", .obj [("type", .str "string")])]])])).map
-  (List.map toolFingerprint) == .error (.mcpMalformed "tools/0/inputSchema")
-#guard (ofMcpToolsList shopDomain.refs
-    (.obj [("tools", .arr [.obj
-      [("name", .str "ping"), ("inputSchema", .obj [("type", .str "integer")])]])])).map
-  (List.map toolFingerprint) == .error (.jsonSchemaUnsupportedType "integer")
+-- and the ledgers those shapes are held to are these rules' own
+#guard (Rule.refuses .mcpToolkit) == Rule.schemaShapes
+#guard (Rule.refuses .mcpToolsList) == Rule.jsonSchemaShapes
 
-end Effect4.Surface
+-- the instances, through the one call
+#guard (emit .mcpToolkit ⟨shopDomain, shopServer⟩).toOption.isSome
+#guard (emit .mcpToolsList ⟨shopDomain, shopServer⟩).toOption.isSome
+
+end Effect4.Codegen.Mcp

@@ -1,6 +1,5 @@
 import Effect4.Machine.Key
 import Effect4.Machine.Supervision
-import Effect4.Codegen.Profile
 
 /-!
 # Syntax.Eff — the Effect TS program AST (lane A1 of the AST relation)
@@ -38,10 +37,11 @@ open Effect4 (ServiceKey)
 
 /-! ## The type language
 
-`Ty` is the profile's `Spelling` (`Effect4/Target/TypeScript/EffectV4.lean`) plus what an
-`Effect<A, E, R>` needs and a service row never spells: `never`, the `Exit`, `Cause` and
-`Fiber` handles, and unions of error types. Unions are canonical through `join`: members
-sorted by their rendering, no duplicates, right-nested, `never` the empty union. -/
+`Ty` is the type language of the programs this tree prints: the wire types a service row
+spells plus what an `Effect<A, E, R>` needs and a row never spells: `never`, the `Exit`,
+`Cause` and `Fiber` handles, and unions of error types. `render` is its TypeScript spelling;
+the codegen layer reads that and adds nothing. Unions are canonical through `join`: members
+sorted by a structural key, no duplicates, right-nested, `never` the empty union. -/
 
 inductive Ty
   | never
@@ -66,20 +66,8 @@ deriving DecidableEq, Repr
 
 namespace Ty
 
-/-- The profile's spellings embed. -/
-def ofSpelling : Effect4.Target.EffectV4.Spelling → Ty
-  | .nat => .nat
-  | .int => .int
-  | .string => .string
-  | .bool => .bool
-  | .unit => .unit
-  | .handle target => .handle target
-  | .option inner => .option (ofSpelling inner)
-  | .list inner => .list (ofSpelling inner)
-  | .except error value => .except (ofSpelling error) (ofSpelling value)
-  | .prod left right => .prod (ofSpelling left) (ofSpelling right)
-
-/-- The TypeScript spelling; on the profile's fragment it is `Spelling.render`. -/
+/-- The TypeScript spelling. rc.112 has no `Either`: an `except` answer is the data reading
+`Result.Result<A, E>`; a `handle` is an opaque host type whose spelling is carried verbatim. -/
 def render : Ty → String
   | .never => "never"
   | .unit => "void"
@@ -95,15 +83,6 @@ def render : Ty → String
   | .causeOf error => "Cause.Cause<" ++ render error ++ ">"
   | .fiberOf value error => "Fiber.Fiber<" ++ render value ++ ", " ++ render error ++ ">"
   | .union left right => render left ++ " | " ++ render right
-
-theorem render_ofSpelling (s : Effect4.Target.EffectV4.Spelling) :
-    (ofSpelling s).render = s.render := by
-  induction s with
-  | nat | int | string | bool | unit | handle _ => rfl
-  | option _ ih => simp [ofSpelling, render, Effect4.Target.EffectV4.Spelling.render, ih]
-  | list _ ih => simp [ofSpelling, render, Effect4.Target.EffectV4.Spelling.render, ih]
-  | except _ _ ihe ihv => simp [ofSpelling, render, Effect4.Target.EffectV4.Spelling.render, ihe, ihv]
-  | prod _ _ ihl ihr => simp [ofSpelling, render, Effect4.Target.EffectV4.Spelling.render, ihl, ihr]
 
 /-- The members of a union, flattened at the top; `never` contributes none. -/
 def members : Ty → List Ty

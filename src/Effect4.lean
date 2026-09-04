@@ -1,7 +1,9 @@
--- The core alphabet: requirement rows, JSON, optics.
+-- The core alphabet: requirement rows, JSON, optics, and the optic at a key of a JSON
+-- object with its laws (the model of every generated `Optic.id<S>().key(…)`).
 import Effect4.Data.Row
 import Effect4.Data.Json
 import Effect4.Data.Optic
+import Effect4.Data.JsonOptic
 -- The generic content-addressed store (2026-09-04): canonical bytes, a proved
 -- SHA-256 address, ids by insertion, names by path trie. The substrate every
 -- ingested surface — a standard library, a schema surface, a code blob and
@@ -24,6 +26,7 @@ import Effect4.Schema.EffectfulField
 import Effect4.Schema.Document
 import Effect4.Schema.Check
 import Effect4.Schema.Authoring
+import Effect4.Schema.Dimension
 import Effect4.Schema.Pins.Value
 import Effect4.Schema.Pins.Getter
 import Effect4.Schema.Pins.Transformation
@@ -90,15 +93,26 @@ import Effect4.Evidence.StdLib.Rc112
 -- renders the rc.112 `HttpApi` module, its client and the OpenAPI 3.1 document.
 -- `Agent` is the MCP surface and `Agent.Emit` its tools listing. `Deploy` and
 -- `Deploy.Emit` are the worker and its bindings, read against the vendored
--- wrangler schema. `Site` is the static carrier. `Ingest` has no module of its
--- own: `ofMcpToolsList` and `ofWrangler` live with the emitters that read them.
+-- wrangler schema. `Site` is the static carrier. The readers (`ofJsonSchema`,
+-- `ofMcpToolsList`, `ofWrangler`) live under `Effect4.Ingest`, one module per rule.
 import Effect4.Surface.Kind
 import Effect4.Surface.Refusal
 import Effect4.Surface.Annotate
 import Effect4.Codegen.Spell
 import Effect4.Surface.Entity
 import Effect4.Codegen.JsonSchema
-import Effect4.Codegen.Rules
+-- The codegen spine (docs/research/2026-09-04-codegen-api-design.md): the targets and
+-- the artefact with its one crossing to bytes, the rule census that indexes every
+-- emitter, and the emitter class itself.
+import Effect4.Codegen.Target
+import Effect4.Codegen.Rule
+import Effect4.Codegen.Emit
+import Effect4.Ingest.Ingest
+-- The readers, one per rule whose artefact is read back (`Effect4.Ingest.*`); each names
+-- the quotient its round trip holds up to.
+import Effect4.Ingest.JsonSchema
+import Effect4.Ingest.Wrangler
+import Effect4.Ingest.Mcp
 import Effect4.Evidence.SurfaceViews
 import Effect4.Surface.Api
 import Effect4.Codegen.HttpApi
@@ -107,6 +121,13 @@ import Effect4.Codegen.Mcp
 import Effect4.Surface.Deploy
 import Effect4.Codegen.Worker
 import Effect4.Surface.Site
+-- The two emitters whose bodies live elsewhere, given their rule: the persisted document
+-- module over `Codegen.Schema.module?`, and the site's route table over `Surface.routesJson`.
+import Effect4.Codegen.EntityDocument
+import Effect4.Codegen.SiteRoutes
+-- The application bundle: every carrier of one application under one closed world, its
+-- check (the parts, then the joins) and its artefact tree at the plan's paths.
+import Effect4.Codegen.App
 -- The characterized components lane (workshop/Char/): a component is its kinds,
 -- its failure set and the order they induce, so a lossy table still gets `order`
 -- from one generic theorem rather than a hand-written word induction. `Queue` is
@@ -132,7 +153,7 @@ import Effect4.Program.Native
 import Effect4.Program.Compile
 -- The canonical bytes of a program and the exact decoder (2026-09-04): how a
 -- program crosses the store, the OCaml host and the daemon, and comes back as
--- exactly itself. `workshop/OCaml5/eff` implements the same rule in OCaml.
+-- exactly itself. `ocaml/eff` implements the same rule in OCaml.
 import Effect4.Program.Wire
 -- The application face: one module, the whole pipeline (type, print, compile,
 -- run; the Schema syntax), answering syntax and never text. Import this.

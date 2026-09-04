@@ -224,6 +224,25 @@ inductive Refusal where
   -- Wave 2b addition: prompt arguments (plan §4.5).
   /-- A prompt declares one argument name twice. -/
   | promptArgumentDuplicate (prompt argument : String)
+  -- The emitters and readers (`Effect4/Codegen`, `Effect4/Ingest`;
+  -- `docs/research/2026-09-04-codegen-api-design.md` §3.5). A carrier that is not well
+  -- formed is answered with its own refusal, unwrapped, so there is no wrapper here.
+  /-- A shape the carrier expresses and this rule does not emit; `shape ∈ Rule.refuses`. -/
+  | refusedShape (rule shape site : String)
+  /-- Two top-level bindings of the emitted module would share a name. -/
+  | bindingCollision (rule name : String)
+  /-- A name the emitted module must bind is not a legal generated binding. -/
+  | notABinding (rule name : String)
+  /-- The deployment's host has no configuration of this kind. -/
+  | hostNotConfigured (rule host : String)
+  /-- A program the printer refuses; `refusal` is the `PrintRefusal` constructor name. -/
+  | notPrintable (rule site refusal : String)
+  /-- The entity references form a cycle, so no declaration order exists. -/
+  | referenceCycle (rule key : String)
+  /-- Two domains of one application share a name. -/
+  | domainNameDuplicate (app name : String)
+  /-- Two domains of one application declare one entity name. -/
+  | entityNameCollision (app name : String)
   -- Later waves append after this line; keep the group comment style.
 deriving DecidableEq, Repr, Inhabited
 
@@ -300,6 +319,14 @@ def name : Refusal → String
   | promptArgumentDuplicate _ _ => "promptArgumentDuplicate"
   | buildOutputDirMissing _ => "buildOutputDirMissing"
   | routeIllegal _ _ => "routeIllegal"
+  | refusedShape _ _ _ => "refusedShape"
+  | bindingCollision _ _ => "bindingCollision"
+  | notABinding _ _ => "notABinding"
+  | hostNotConfigured _ _ => "hostNotConfigured"
+  | notPrintable _ _ _ => "notPrintable"
+  | referenceCycle _ _ => "referenceCycle"
+  | domainNameDuplicate _ _ => "domainNameDuplicate"
+  | entityNameCollision _ _ => "entityNameCollision"
 
 end Refusal
 
