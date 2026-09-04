@@ -3463,7 +3463,8 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
               (Effect4.Deep.exitStore interp m f exit).snd.fst.pending = [] ∧
                 (Effect4.Deep.exitStore interp m f exit).snd.fst.context = interp.emptyContext ∧
                   (Effect4.Deep.exitStore interp m f exit).snd.fst.observers = [] ∧
-                    (Effect4.Deep.exitStore interp m f exit).snd.snd.fst = Bool.false)
+                    (Effect4.Deep.exitStore interp m f exit).snd.fst.frame.deferredInterrupt = Bool.false ∧
+                      (Effect4.Deep.exitStore interp m f exit).snd.snd.fst = Bool.false)
 
 #check (@Effect4.Deep.exitStore_fires :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
@@ -3502,7 +3503,12 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
     (f : Effect4.Deep.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (program : Effect4.Prim ν σ β ε δ ι α)
     (options : Effect4.Supervision.ForkOptions),
     Effect4.Deep.evaluatePrim.withFiber interp m f yielding (Effect4.Deep.WithFiberAction.fork program options) =
-      have s := Effect4.Deep.spawn interp m f program options;
+      have m' :=
+        if options.daemon = Bool.true then m
+        else
+          { fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken, nextRace := m.nextRace,
+            middlewareInstalled := Bool.true, state := m.state, trace := m.trace, stuck := m.stuck };
+      have s := Effect4.Deep.spawn interp m' f program options;
       have t := Effect4.Deep.start s.fst s.snd.fst s.snd.snd options.startImmediately;
       { machine := t.fst,
         fiber :=
@@ -3543,7 +3549,9 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
 #check (@Effect4.Deep.Witnesses.w5_middleware_interrupts_children :
   Effect4.Deep.Witnesses.exitOf
         Effect4.Deep.Witnesses.w5WithMiddleware 1 =
-      Option.some (Effect4.Deep.Witnesses.interruptedBy { value := 0 } { value := 1 }) ∧
+      Option.some
+        (Effect4.Deep.Witnesses.interruptedWith { value := 0 } { value := 1 }
+          (Effect4.Deep.stores.stackAnnotations { value := 0 })) ∧
     Effect4.Deep.Witnesses.childrenInterruptedRows Effect4.Deep.Witnesses.w5WithMiddleware = [(0, [1])] ∧
       Effect4.Deep.Witnesses.interruptRows Effect4.Deep.Witnesses.w5WithMiddleware = [(Option.some 0, 1)] ∧
         Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w5WithMiddleware 0 =
@@ -3563,13 +3571,18 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
     (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Deep.RunFiber ν σ β ε δ ι α χ)
     (exit : Effect4.Exit β ε δ ι α),
     Effect4.Deep.exitInterruptChildren interp m f exit =
-      have r := Effect4.Deep.interruptEach interp f.id f.children (m, []);
+      have r := Effect4.Deep.interruptEach interp f.id (interp.stackAnnotations f.id) f.children (m, []);
       have p :=
         Effect4.Deep.countdownPark interp (r.fst.emit [Effect4.Deep.RunEvent.childrenInterrupted f.id f.children])
-          { id := f.id, frame := f.frame, running := f.running, parked := f.parked, pending := f.pending,
-            finalizing := Option.some exit, exit := f.exit, currentOpCount := f.currentOpCount,
-            maxOpsBeforeYield := f.maxOpsBeforeYield, preventYield := f.preventYield, yieldOverride := f.yieldOverride,
-            observers := f.observers, children := f.children, dispatcher := f.dispatcher, context := f.context }
+          { id := f.id,
+            frame :=
+              have __src := f.frame;
+              { current := __src.current, stack := __src.stack, interruptible := __src.interruptible,
+                interruptedCause := __src.interruptedCause, deferredInterrupt := Bool.false },
+            running := f.running, parked := f.parked, pending := f.pending, finalizing := Option.some exit,
+            exit := f.exit, currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield,
+            preventYield := f.preventYield, yieldOverride := f.yieldOverride, observers := f.observers,
+            children := f.children, dispatcher := f.dispatcher, context := f.context }
           f.children (Effect4.Deep.Resume.continueWith (interp.restoreName exit));
       (p.fst, p.snd.fst, p.snd.snd, r.snd))
 
@@ -3580,16 +3593,26 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
     (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Deep.RunFiber ν σ β ε δ ι α χ)
     (exit : Effect4.Exit β ε δ ι α),
     (Effect4.Deep.exitInterruptChildren interp m f exit).snd.snd.snd =
-      (Effect4.Deep.interruptEach interp f.id f.children (m, [])).snd)
+      (Effect4.Deep.interruptEach interp f.id (interp.stackAnnotations f.id) f.children (m, [])).snd)
 
-#check (@Effect4.Deep.Witnesses.w5_no_middleware_leaves_children :
-  Effect4.Deep.Witnesses.exitOf
-        Effect4.Deep.Witnesses.w5WithoutMiddleware 1 =
-      Option.none ∧
-    Effect4.Deep.Witnesses.childrenInterruptedRows Effect4.Deep.Witnesses.w5WithoutMiddleware = [] ∧
-      Effect4.Deep.Witnesses.interruptRows Effect4.Deep.Witnesses.w5WithoutMiddleware = [] ∧
-        Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w5WithoutMiddleware 0 =
-          Option.some (Effect4.Exit.success Effect4.Deep.Val.unit))
+#check (@Effect4.Deep.Witnesses.w5_fork_latches_the_middleware :
+  Effect4.Deep.Witnesses.w5ForkLatches.middlewareInstalled =
+      Bool.true ∧
+    Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w5ForkLatches 1 =
+        Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w5WithMiddleware 1 ∧
+      Effect4.Deep.Witnesses.childrenInterruptedRows Effect4.Deep.Witnesses.w5ForkLatches = [(0, [1])] ∧
+        Effect4.Deep.Witnesses.interruptRows Effect4.Deep.Witnesses.w5ForkLatches = [(Option.some 0, 1)] ∧
+          Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w5ForkLatches 0 =
+            Option.some (Effect4.Exit.success Effect4.Deep.Val.unit))
+
+#check (@Effect4.Deep.Witnesses.w5_daemon_child_survives_parent_exit :
+  Effect4.Deep.Witnesses.w5Daemon.middlewareInstalled =
+      Bool.false ∧
+    Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w5Daemon 1 = Option.none ∧
+      Effect4.Deep.Witnesses.childrenInterruptedRows Effect4.Deep.Witnesses.w5Daemon = [] ∧
+        Effect4.Deep.Witnesses.interruptRows Effect4.Deep.Witnesses.w5Daemon = [] ∧
+          Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w5Daemon 0 =
+            Option.some (Effect4.Exit.success Effect4.Deep.Val.unit))
 
 #check (@Effect4.Deep.withFiber_forkIn :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
@@ -3631,22 +3654,36 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
     (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St)
     (mode : Effect4.Supervision.ScopeMode) (scope key : Nat) (target : Effect4.FiberId)
-    (interruptor : Option Effect4.FiberId) (extra : Effect4.ReasonAnnotations α) (state : St),
+    (interruptor : Option Effect4.FiberId) (extra : Effect4.ReasonAnnotations α) (state : St)
+    (t : Effect4.Deep.RunFiber ν σ β ε δ ι α χ),
     interp.scopeStatus scope m.state = Option.some Option.none →
-      interp.scopeLinkFiber mode scope key target m.state = Option.some state →
-        Effect4.Deep.linkScope interp m mode scope key target interruptor extra =
-          ((({ fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken, nextRace := m.nextRace,
-                      middlewareInstalled := m.middlewareInstalled, state := state, trace := m.trace,
-                      stuck := m.stuck } : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St).modify
-                  target fun t =>
-                  { id := t.id, frame := t.frame, running := t.running, parked := t.parked, pending := t.pending,
-                    finalizing := t.finalizing, exit := t.exit, currentOpCount := t.currentOpCount,
-                    maxOpsBeforeYield := t.maxOpsBeforeYield, preventYield := t.preventYield,
-                    yieldOverride := t.yieldOverride,
-                    observers := t.observers ++ [Effect4.Deep.Observer.dropScopeFinalizer scope key],
-                    children := t.children, dispatcher := t.dispatcher, context := t.context }).emit
-              [Effect4.Deep.RunEvent.scopeLinked mode scope key target],
-            []))
+      m.fiber? target = Option.some t →
+        t.exit = Option.none →
+          interp.scopeLinkFiber mode scope key target m.state = Option.some state →
+            Effect4.Deep.linkScope interp m mode scope key target interruptor extra =
+              ((({ fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken,
+                          nextRace := m.nextRace, middlewareInstalled := m.middlewareInstalled, state := state,
+                          trace := m.trace, stuck := m.stuck } : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St).modify
+                      target fun t =>
+                      { id := t.id, frame := t.frame, running := t.running, parked := t.parked, pending := t.pending,
+                        finalizing := t.finalizing, exit := t.exit, currentOpCount := t.currentOpCount,
+                        maxOpsBeforeYield := t.maxOpsBeforeYield, preventYield := t.preventYield,
+                        yieldOverride := t.yieldOverride,
+                        observers := t.observers ++ [Effect4.Deep.Observer.dropScopeFinalizer scope key],
+                        children := t.children, dispatcher := t.dispatcher, context := t.context }).emit
+                  [Effect4.Deep.RunEvent.scopeLinked mode scope key target],
+                []))
+
+#check (@Effect4.Deep.linkScope_open_exited :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St)
+    (mode : Effect4.Supervision.ScopeMode) (scope key : Nat) (target : Effect4.FiberId)
+    (interruptor : Option Effect4.FiberId) (extra : Effect4.ReasonAnnotations α)
+    (t : Effect4.Deep.RunFiber ν σ β ε δ ι α χ) (exit : Effect4.Exit β ε δ ι α),
+    interp.scopeStatus scope m.state = Option.some Option.none →
+      m.fiber? target = Option.some t →
+        t.exit = Option.some exit → Effect4.Deep.linkScope interp m mode scope key target interruptor extra = (m, []))
 
 #check (@Effect4.Deep.fireObserver_dropScopeFinalizer :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
@@ -3692,7 +3729,9 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
   Effect4.Deep.Witnesses.scopeRows Effect4.Deep.Witnesses.w6LinkThenClose =
       [[0, 0, 0, 100, 1]] ∧
     Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w6LinkThenClose 1 =
-        Option.some (Effect4.Deep.Witnesses.interruptedBy { value := 0 } { value := 1 }) ∧
+        Option.some
+          (Effect4.Deep.Witnesses.interruptedWith { value := 0 } { value := 1 }
+            (Effect4.Deep.stores.stackAnnotations { value := 0 })) ∧
       Effect4.Deep.Witnesses.scopeKeys Effect4.Deep.Witnesses.w6LinkThenClose 0 = Option.some [] ∧
         Effect4.Deep.Witnesses.scopeClosed Effect4.Deep.Witnesses.w6LinkThenClose 0 = Option.some Bool.true ∧
           Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w6LinkThenClose 0 =
@@ -3812,7 +3851,7 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
     Effect4.Deep.raceEntrant interp raceId acc program =
       have s :=
         Effect4.Deep.spawn interp acc.fst acc.snd.fst program
-          { startImmediately := Bool.true, daemon := Bool.true, maskMode := Effect4.Supervision.MaskMode.inherit };
+          { startImmediately := Bool.true, daemon := Bool.true, maskMode := Effect4.Supervision.MaskMode.interruptible };
       (s.fst.modify s.snd.snd fun c =>
           { id := c.id, frame := c.frame, running := c.running, parked := c.parked, pending := c.pending,
             finalizing := c.finalizing, exit := c.exit, currentOpCount := c.currentOpCount,
@@ -3856,7 +3895,7 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
         race.state.accepted = Option.some accepted →
           m.fiber? entrant = Option.some e →
             Effect4.Deep.drive interp (fuel + 1) m (Effect4.Deep.Cmd.launch raceId entrant :: rest) =
-              have r := Effect4.Deep.interruptRecord interp (Option.some race.host) Effect4.ReasonAnnotations.empty e;
+              have r := Effect4.Deep.interruptRecord interp (Option.some race.host) (interp.stackAnnotations race.host) e;
               Effect4.Deep.drive interp fuel
                 ((m.update r.fst).emit
                   [Effect4.Deep.RunEvent.raceSkipped raceId entrant,
@@ -3940,7 +3979,9 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
       Effect4.Deep.Witnesses.fiberCount Effect4.Deep.Witnesses.w3StopsLaunch = 3 ∧
         Effect4.Deep.Witnesses.interruptRows Effect4.Deep.Witnesses.w3StopsLaunch = [(Option.some 0, 2)] ∧
           Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w3StopsLaunch 2 =
-            Option.some (Effect4.Deep.Witnesses.interruptedBy { value := 0 } { value := 2 }))
+            Option.some
+              (Effect4.Deep.Witnesses.interruptedWith { value := 0 } { value := 2 }
+                (Effect4.Deep.stores.stackAnnotations { value := 0 })))
 
 #check (@Effect4.Deep.Witnesses.w3_failure_allows_next_launch :
   Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w3NextLaunch
@@ -3973,7 +4014,7 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
     (interruptor : Option Effect4.FiberId) (t : Effect4.Deep.RunFiber ν σ β ε δ ι α χ),
     m.fiber? target = Option.some t →
       Effect4.Deep.evaluatePrim.interruptThenJoin interp m f yielding target interruptor =
-        have r := Effect4.Deep.interruptRecord interp interruptor Effect4.ReasonAnnotations.empty t;
+        have r := Effect4.Deep.interruptRecord interp interruptor (interp.stackAnnotations f.id) t;
         have m := (m.update r.fst).emit [Effect4.Deep.RunEvent.interruptRecorded interruptor target];
         have p := Effect4.Deep.countdownPark interp m f [target] Effect4.Deep.Resume.void;
         { machine := p.fst, fiber := p.snd.fst, yielding := yielding,
@@ -4032,7 +4073,7 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
 #check (@Effect4.Deep.Witnesses.w2_masked_interrupt_does_not_apply :
   Effect4.Deep.Witnesses.exitOf
       (Effect4.Deep.Witnesses.replay Effect4.Deep.Stores.empty
-        (Effect4.Deep.Witnesses.w2Child.forkOnly Effect4.Deep.Witnesses.immediateChild)
+        (Effect4.Deep.Witnesses.w2Child.forkOnly Effect4.Deep.Witnesses.daemonChild)
         [Effect4.Deep.RunDecision.evaluate { value := 0 },
           Effect4.Deep.RunDecision.interruptFrom (Option.some { value := 0 }) Effect4.ReasonAnnotations.empty
             { value := 1 }])
@@ -4054,7 +4095,7 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
     (targets : List Effect4.FiberId) (interruptor : Option Effect4.FiberId),
     Effect4.Deep.evaluatePrim.withFiber interp m f yielding
         (Effect4.Deep.WithFiberAction.interruptAll targets interruptor) =
-      have r := Effect4.Deep.interruptEach interp (interruptor.getD f.id) targets (m, []);
+      have r := Effect4.Deep.interruptEach interp (interruptor.getD f.id) (interp.stackAnnotations f.id) targets (m, []);
       have p := Effect4.Deep.countdownPark interp r.fst f targets Effect4.Deep.Resume.void;
       { machine := p.fst, fiber := p.snd.fst, yielding := yielding,
         outcome :=
@@ -4066,34 +4107,35 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
 #check (@Effect4.Deep.interruptEach_nil :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (who : Effect4.FiberId)
+    (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (who : Effect4.FiberId) (extra : Effect4.ReasonAnnotations α)
     (acc : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St × List (Effect4.Deep.Cmd ν σ β ε δ ι α)),
-    Effect4.Deep.interruptEach interp who [] acc = acc)
+    Effect4.Deep.interruptEach interp who extra [] acc = acc)
 
 #check (@Effect4.Deep.interruptEach_cons :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (who t : Effect4.FiberId) (ts : List Effect4.FiberId)
+    (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (who t : Effect4.FiberId) (extra : Effect4.ReasonAnnotations α)
+    (ts : List Effect4.FiberId)
     (acc : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St × List (Effect4.Deep.Cmd ν σ β ε δ ι α)),
-    Effect4.Deep.interruptEach interp who (t :: ts) acc =
-      Effect4.Deep.interruptEach interp who ts
+    Effect4.Deep.interruptEach interp who extra (t :: ts) acc =
+      Effect4.Deep.interruptEach interp who extra ts
         (match acc.fst.fiber? t with
         | Option.none => acc
         | Option.some g =>
-          have r := Effect4.Deep.interruptRecord interp (Option.some who) Effect4.ReasonAnnotations.empty g;
+          have r := Effect4.Deep.interruptRecord interp (Option.some who) extra g;
           ((acc.fst.update r.fst).emit [Effect4.Deep.RunEvent.interruptRecorded (Option.some who) t],
             acc.snd ++ if r.snd = Bool.true then [Effect4.Deep.Cmd.evaluate t] else [])))
 
 #check (@Effect4.Deep.interruptEach_known :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (who t : Effect4.FiberId) (ts : List Effect4.FiberId)
-    (acc : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St × List (Effect4.Deep.Cmd ν σ β ε δ ι α))
+    (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (who t : Effect4.FiberId) (extra : Effect4.ReasonAnnotations α)
+    (ts : List Effect4.FiberId) (acc : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St × List (Effect4.Deep.Cmd ν σ β ε δ ι α))
     (g : Effect4.Deep.RunFiber ν σ β ε δ ι α χ),
     acc.fst.fiber? t = Option.some g →
-      Effect4.Deep.interruptEach interp who (t :: ts) acc =
-        Effect4.Deep.interruptEach interp who ts
-          (have r := Effect4.Deep.interruptRecord interp (Option.some who) Effect4.ReasonAnnotations.empty g;
+      Effect4.Deep.interruptEach interp who extra (t :: ts) acc =
+        Effect4.Deep.interruptEach interp who extra ts
+          (have r := Effect4.Deep.interruptRecord interp (Option.some who) extra g;
           ((acc.fst.update r.fst).emit [Effect4.Deep.RunEvent.interruptRecorded (Option.some who) t],
             acc.snd ++ if r.snd = Bool.true then [Effect4.Deep.Cmd.evaluate t] else [])))
 
@@ -4163,9 +4205,13 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
   Effect4.Deep.Witnesses.exitOf
         Effect4.Deep.Witnesses.w5AwaitAllChildren 2 =
       Option.some (Effect4.Exit.success (Effect4.Deep.Val.nat 5)) ∧
-    Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w5AwaitAllChildren 1 = Option.none ∧
-      Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w5AwaitAllChildren 0 =
-        Option.some (Effect4.Exit.success Effect4.Deep.Val.unit))
+    Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w5AwaitAllChildren 0 =
+        Option.some (Effect4.Exit.success Effect4.Deep.Val.unit) ∧
+      Effect4.Deep.Witnesses.childrenInterruptedRows Effect4.Deep.Witnesses.w5AwaitAllChildren = [(0, [1])] ∧
+        Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w5AwaitAllChildren 1 =
+          Option.some
+            (Effect4.Deep.Witnesses.interruptedWith { value := 0 } { value := 1 }
+              (Effect4.Deep.stores.stackAnnotations { value := 0 })))
 
 #check (@Effect4.Deep.Witnesses.w12_awaitAll_answers_the_exits :
   Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w12AwaitAll
@@ -4619,7 +4665,8 @@ private def censusRows : List Row :=
         , w `Effect4.Deep.exitFiber_no_children "propext,Quot.sound"
         , w `Effect4.Deep.exitInterruptChildren_eq "propext,Quot.sound"
         , w `Effect4.Deep.exitInterruptChildren_interrupts "propext,Quot.sound"
-        , w `Effect4.Deep.Witnesses.w5_no_middleware_leaves_children "propext,Quot.sound" ] }
+        , w `Effect4.Deep.Witnesses.w5_fork_latches_the_middleware "propext,Quot.sound"
+        , w `Effect4.Deep.Witnesses.w5_daemon_child_survives_parent_exit "propext,Quot.sound" ] }
   , { id := "fork.in", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Supervision.ScopeMode.cases_receipt "propext"
@@ -4671,6 +4718,7 @@ private def censusRows : List Row :=
         , w `Effect4.Deep.linkScope_closed "propext,Quot.sound"
         , w `Effect4.Deep.linkScope_unknown "propext,Quot.sound"
         , w `Effect4.Deep.linkScope_open "propext,Quot.sound"
+        , w `Effect4.Deep.linkScope_open_exited "propext,Quot.sound"
         , w `Effect4.Deep.Witnesses.w6_runIn_closed_scope_uses_no_caller_annotations "propext,Quot.sound" ] }
   , { id := "fork.join", kind := "fork", disposition := "owned", coverage := "green"
     , witnesses :=
@@ -5709,9 +5757,11 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Deep.exitFiber_no_children
   , `Effect4.Deep.exitInterruptChildren_eq
   , `Effect4.Deep.exitInterruptChildren_interrupts
-  , `Effect4.Deep.Witnesses.w5_no_middleware_leaves_children
+  , `Effect4.Deep.Witnesses.w5_fork_latches_the_middleware
+  , `Effect4.Deep.Witnesses.w5_daemon_child_survives_parent_exit
   , `Effect4.Deep.withFiber_forkIn
   , `Effect4.Deep.linkScope_open
+  , `Effect4.Deep.linkScope_open_exited
   , `Effect4.Deep.fireObserver_dropScopeFinalizer
   , `Effect4.Deep.withFiber_closeScope
   , `Effect4.Deep.Witnesses.w6_link_then_close

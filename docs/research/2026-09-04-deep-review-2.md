@@ -59,6 +59,18 @@ close-state-first, single-finalizer-unmerged and strategy split (`:3779-3827`), 
 ## Order of repair
 
 1. Small and local: R2-2, R2-5, R2-6 (with the witness rewritten), R2-9, R2-10.
+   **Landed 2026-09-04.** R2-2: `exitFiber` clears `deferredInterrupt` in both branches
+   (`exitStore_fields`, `exitInterruptChildren_eq`). R2-5: `interruptEach` takes the caller's
+   annotations; every site passes `interp.stackAnnotations caller` (`interruptEach_known`,
+   `interruptThenJoin_eq`, `withFiber_interruptAll`, `drive_launch_skipped`); register row
+   `E4-RUN-CE-030`, witness `w6_close_interrupt_carries_closer_annotations`. R2-6: the `fork`
+   arm latches the middleware unless `daemon` (`withFiber_fork`); `w5_no_middleware_leaves_children`
+   is replaced by `w5_fork_latches_the_middleware` and `w5_daemon_child_survives_parent_exit`;
+   register row `E4-RUN-CE-029`. The witnesses whose child must outlive the root (W2, W10, W11,
+   the compile battery's mask pins) fork it as `daemonChild`. R2-9: `linkScope`'s open arm
+   checks the target's exit (`linkScope_open` with the liveness hypothesis,
+   `linkScope_open_exited`). R2-10: `raceEntrant_options` reads `.interruptible`. Coverage
+   join unchanged at 134 green / 1 partial / 0 absent of 135.
 2. The store-sync ordering R2-1 (`Outcome.answered`), with a witness: a completer under
    `matchCauseEffect` whose waiter interrupts it.
 3. The park redesign R2-3/R2-4/R2-12/R2-13 (join, await, awaitAll and the race as `Async`

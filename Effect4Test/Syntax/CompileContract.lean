@@ -144,6 +144,14 @@ def deferredChild : Supervision.ForkOptions := ⟨false, false, Supervision.Mask
 /-- `forkScoped`'s daemon child. -/
 def scopedChild : Supervision.ForkOptions := ⟨true, true, Supervision.MaskMode.inherit⟩
 
+/-- `forkDaemon`'s child: untracked, so it outlives its parent's exit (R2-6). -/
+def daemonChild : Supervision.ForkOptions := ⟨true, true, Supervision.MaskMode.inherit⟩
+
+/-- The exit of `target` interrupted by `who` from `who`'s own stack: the `fiberInterrupt` /
+`fiberInterruptAll` family carries the caller's stack annotations (R2-5). -/
+def interruptedFrom (who target : FiberId) : ExitV :=
+  Effect4.Deep.Witnesses.interruptedWith who target (stores.stackAnnotations who)
+
 /-! ## Exits, thunks and sequencing -/
 
 def pSucceed : NativeEff := .succeed (.lit (.nat 42))
@@ -311,7 +319,8 @@ def pJoinFailing : NativeEff :=
 /-! ## `raceAll`: W3's `successThenSecond`
 
 The first entrant's success settles the race and the second is never launched; since M8 the
-unlaunched entrant is interrupted with the host's id and kept. -/
+unlaunched entrant is interrupted with the host's id (and, R2-5, the host's stack annotations)
+and kept. -/
 
 def pRace : NativeEff :=
   .withFiber (.raceAll (.cons (.succeed (.lit (.nat 1)))
@@ -322,12 +331,13 @@ def pRace : NativeEff :=
 #guard raceRows (replayEff pRace [evaluateRoot]) = [[0, 0, 1], [2, 0], [1, 0, 2]]
 #guard fiberCount (replayEff pRace [evaluateRoot]) = 3
 #guard interruptRows (replayEff pRace [evaluateRoot]) = [(some 0, 2)]
-#guard exitOf (replayEff pRace [evaluateRoot]) 2
-  = some (Effect4.Deep.Witnesses.interruptedBy ⟨0⟩ ⟨2⟩)
+#guard exitOf (replayEff pRace [evaluateRoot]) 2 = some (interruptedFrom ⟨0⟩ ⟨2⟩)
 
 /-! ## The children middleware: W5's shape
 
-A parent forks a child parked on the `await` of a Deferred nobody completes, then succeeds. -/
+A parent forks a child parked on the `await` of a Deferred nobody completes, then succeeds.
+The non-daemon `fork` latches the interrupt-children middleware itself (R2-6), so the
+parent's exit interrupts the child whether or not the tape installs it. -/
 
 def pMiddleware : NativeEff :=
   .bind (.perform .deferredMake (.lit .unit))
@@ -336,20 +346,33 @@ def pMiddleware : NativeEff :=
 
 #guard (typeOf nativeSignature pMiddleware).isSome
 
-/-- With the latch installed, the parent's exit interrupts its tracked child. -/
 def middlewareTape : List DC := [RunDecision.installMiddleware, evaluateRoot]
 
 #guard exitOf (replayEff pMiddleware middlewareTape) 0 = some (Exit.success Val.unit)
-#guard exitOf (replayEff pMiddleware middlewareTape) 1
-  = some (Effect4.Deep.Witnesses.interruptedBy ⟨0⟩ ⟨1⟩)
+#guard exitOf (replayEff pMiddleware middlewareTape) 1 = some (interruptedFrom ⟨0⟩ ⟨1⟩)
 #guard childrenInterruptedRows (replayEff pMiddleware middlewareTape) = [(0, [1])]
 #guard interruptRows (replayEff pMiddleware middlewareTape) = [(some 0, 1)]
 
--- Without it, the child survives the parent's exit.
+-- The fork alone latches it (R2-6).
+#guard (replayEff pMiddleware [evaluateRoot]).middlewareInstalled = true
 #guard exitOf (replayEff pMiddleware [evaluateRoot]) 0 = some (Exit.success Val.unit)
-#guard exitOf (replayEff pMiddleware [evaluateRoot]) 1 = none
-#guard childrenInterruptedRows (replayEff pMiddleware [evaluateRoot]) = []
-#guard interruptRows (replayEff pMiddleware [evaluateRoot]) = []
+#guard exitOf (replayEff pMiddleware [evaluateRoot]) 1 = some (interruptedFrom ⟨0⟩ ⟨1⟩)
+#guard childrenInterruptedRows (replayEff pMiddleware [evaluateRoot]) = [(0, [1])]
+#guard interruptRows (replayEff pMiddleware [evaluateRoot]) = [(some 0, 1)]
+
+/-- A daemon child is untracked and does not latch the middleware: it survives the parent's
+exit (`forkDaemon`). -/
+def pDaemon : NativeEff :=
+  .bind (.perform .deferredMake (.lit .unit))
+    (.bind (.withFiber (.fork (.callback .deferredAwait (.var 0)) daemonChild))
+      (.succeed (.lit .unit)))
+
+#guard (typeOf nativeSignature pDaemon).isSome
+#guard (replayEff pDaemon [evaluateRoot]).middlewareInstalled = false
+#guard exitOf (replayEff pDaemon [evaluateRoot]) 0 = some (Exit.success Val.unit)
+#guard exitOf (replayEff pDaemon [evaluateRoot]) 1 = none
+#guard childrenInterruptedRows (replayEff pDaemon [evaluateRoot]) = []
+#guard interruptRows (replayEff pDaemon [evaluateRoot]) = []
 
 /-! ## `scoped` with `forkScoped`
 
@@ -364,8 +387,7 @@ def pScoped : NativeEff :=
 
 #guard (typeOf nativeSignature pScoped).isSome
 #guard scopeRows (replayEff pScoped [evaluateRoot]) = [[0, 0, 0, 398, 1]]
-#guard exitOf (replayEff pScoped [evaluateRoot]) 1
-  = some (Effect4.Deep.Witnesses.interruptedBy ⟨0⟩ ⟨1⟩)
+#guard exitOf (replayEff pScoped [evaluateRoot]) 1 = some (interruptedFrom ⟨0⟩ ⟨1⟩)
 #guard exitOf (replayEff pScoped [evaluateRoot]) 0 = some (Exit.success (Val.fiber ⟨1⟩))
 #guard fiberCount (replayEff pScoped [evaluateRoot]) = 2
 #guard stuckOf (replayEff pScoped [evaluateRoot]) = none
@@ -535,14 +557,14 @@ def pYieldNow : NativeEff := .bind (.yieldNow 0) (.succeed (.lit (.nat 5)))
 
 /-! ## The masks
 
-A child parked on a `Deferred.await` inside `Effect.uninterruptible`: the interrupt is
-recorded and not applied, and is delivered by the restoring frame when the park is
-answered (W2's and W10's shape). -/
+A daemon child (so the parent's exit leaves it; R2-6) parked on a `Deferred.await` inside
+`Effect.uninterruptible`: the interrupt is recorded and not applied, and is delivered by the
+restoring frame when the park is answered (W2's and W10's shape). -/
 
 def pMasked : NativeEff :=
   .bind (.perform .deferredMake (.lit .unit))
     (.bind (.withFiber (.fork (.uninterruptible (.callback .deferredAwait (.var 0)))
-              immediateChild))
+              daemonChild))
       (.succeed (.lit .unit)))
 
 def maskTapePending : List DC := [evaluateRoot, interruptChild]
@@ -561,7 +583,7 @@ def maskTapeAnswered : List DC :=
 def pUnmasked : NativeEff :=
   .bind (.perform .deferredMake (.lit .unit))
     (.bind (.withFiber (.fork (.interruptible (.callback .deferredAwait (.var 0)))
-              immediateChild))
+              daemonChild))
       (.succeed (.lit .unit)))
 
 #guard (typeOf nativeSignature pUnmasked).isSome

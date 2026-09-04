@@ -226,6 +226,11 @@ def deferredChild : Supervision.ForkOptions := ⟨false, false, Supervision.Mask
 /-- `forkIn`'s daemon child (`:5366`). -/
 def scopedChild : Supervision.ForkOptions := ⟨true, true, Supervision.MaskMode.inherit⟩
 
+/-- `forkDaemon`'s child (`forkDetach`, `:5288-5294`): immediate, untracked, and — since a
+non-daemon `fork` latches the interrupt-children middleware for the process (R2-6, `:5253`) —
+the only child that outlives its parent's exit. -/
+def daemonChild : Supervision.ForkOptions := ⟨true, true, Supervision.MaskMode.inherit⟩
+
 /-! ## W1 — fork and join
 
 Pass A positive example 1. A parent forks a child, the child runs to its exit, the parent joins
@@ -311,10 +316,10 @@ frame's `contAll` when the finalizer's exit passes it. -/
 def w2Child : ProgName :=
   ProgName.onExitOf (ProgName.value (Val.nat 7)) (FinName.parkThen 1) false
 
-/-- Tape: evaluate the root (which forks the child, whose finalizer parks), interrupt the
-masked child, then answer its async. -/
+/-- Tape: evaluate the root (which forks the child as a daemon, so the root's exit leaves it;
+the child's finalizer parks), interrupt the masked child, then answer its async. -/
 def w2 : M :=
-  replay Stores.empty (ProgName.forkOnly w2Child immediateChild)
+  replay Stores.empty (ProgName.forkOnly w2Child daemonChild)
     [RunDecision.evaluate ⟨0⟩,
       RunDecision.interruptFrom (some ⟨0⟩) ReasonAnnotations.empty ⟨1⟩,
       RunDecision.answerAsync ⟨1⟩ 0 (Prim.success Val.unit)]
@@ -333,7 +338,7 @@ theorem w2_finalizer_runs_once : finalizerRuns w2 1 = 1 := by decide
 /-- Before the async is answered the child is parked, not exited: the interrupt was deferred to
 the unmask frame rather than applied at the interrupt. -/
 theorem w2_masked_interrupt_does_not_apply :
-    exitOf (replay Stores.empty (ProgName.forkOnly w2Child immediateChild)
+    exitOf (replay Stores.empty (ProgName.forkOnly w2Child daemonChild)
       [RunDecision.evaluate ⟨0⟩, RunDecision.interruptFrom (some ⟨0⟩) ReasonAnnotations.empty ⟨1⟩]) 1 = none := by
   decide
 
@@ -371,13 +376,16 @@ theorem w3_empty_until_interrupted :
 /-- `test/fixtures/traces/fiber-m3/raceImmediateSuccessStopsLaunch.tsv`: the first entrant's success
 settles the race, and the second entrant is never launched (row `1` is `raceSkipped`). Since M8
 the unlaunched entrant is *interrupted with the host's id and kept*, as the golden's
-`op interrupt 1` row and `Supervision.RaceAllState` both have it — not deleted. -/
+`op interrupt 1` row and `Supervision.RaceAllState` both have it — not deleted; since R2-5 the
+interrupt carries the host's stack annotations, as every `fiberInterruptAll` does (`:892-895`).
+R2-11 (the entrant is never created in rc.112) is owed to repair step 4. -/
 theorem w3_immediate_success_stops_launch :
     exitOf w3StopsLaunch 0 = some (Exit.success (Val.nat 1)) ∧
       raceRows w3StopsLaunch = [[0, 0, 1], [2, 0], [1, 0, 2]] ∧
       fiberCount w3StopsLaunch = 3 ∧
       interruptRows w3StopsLaunch = [(some 0, 2)] ∧
-      exitOf w3StopsLaunch 2 = some (interruptedBy ⟨0⟩ ⟨2⟩) := by
+      exitOf w3StopsLaunch 2 =
+        some (interruptedWith ⟨0⟩ ⟨2⟩ (stores.stackAnnotations ⟨0⟩)) := by
   decide
 
 /-- `test/fixtures/traces/fiber-m3/raceFailureAllowsNextLaunch.tsv`: a failure does not settle the
@@ -484,8 +492,18 @@ def w5Program : ProgName :=
 def w5WithMiddleware : M :=
   replay Stores.empty w5Program [RunDecision.installMiddleware, RunDecision.evaluate ⟨0⟩]
 
-def w5WithoutMiddleware : M :=
+/-- The same program with nothing on the tape but the root's start: the `fork` itself latches
+the middleware (R2-6). -/
+def w5ForkLatches : M :=
   replay Stores.empty w5Program [RunDecision.evaluate ⟨0⟩]
+
+/-- A parent that forks one parked *daemon* child and then returns
+(the host golden `daemonSurvivesParentExit`). -/
+def w5Daemon : M :=
+  replay Stores.empty
+    (ProgName.seqOf (ProgName.forkOnly (ProgName.park 1) daemonChild)
+      (ProgName.value Val.unit))
+    [RunDecision.evaluate ⟨0⟩]
 
 /-- `awaitAllChildren` around a body that forks a second child: only the child added during the
 body is awaited (`internal/effect.ts:5318-5322`). -/
@@ -496,28 +514,45 @@ def w5AwaitAllChildren : M :=
     [RunDecision.evaluate ⟨0⟩, RunDecision.fire ⟨0⟩]
 
 /-- With the middleware latched, the parent's exit interrupts its tracked children with the
-parent's id and awaits them before the exit is stored (`:613-617`). -/
+parent's id and the parent's stack annotations (`fiberInterruptAll`, `:892-895`; R2-5), and
+awaits them before the exit is stored (`:613-617`). -/
 theorem w5_middleware_interrupts_children :
-    exitOf w5WithMiddleware 1 = some (interruptedBy ⟨0⟩ ⟨1⟩) ∧
+    exitOf w5WithMiddleware 1 =
+        some (interruptedWith ⟨0⟩ ⟨1⟩ (stores.stackAnnotations ⟨0⟩)) ∧
       childrenInterruptedRows w5WithMiddleware = [(0, [1])] ∧
       interruptRows w5WithMiddleware = [(some 0, 1)] ∧
       exitOf w5WithMiddleware 0 = some (Exit.success Val.unit) := by
   decide
 
-/-- Without it, the child survives the parent's exit. -/
-theorem w5_no_middleware_leaves_children :
-    exitOf w5WithoutMiddleware 1 = none ∧
-      childrenInterruptedRows w5WithoutMiddleware = [] ∧
-      interruptRows w5WithoutMiddleware = [] ∧
-      exitOf w5WithoutMiddleware 0 = some (Exit.success Val.unit) := by
+/-- R2-6: a non-daemon `fork` is `forkChild`, which installs the middleware
+(`interruptChildrenPatch()`, `:5253`); the tape's `installMiddleware` changes nothing. -/
+theorem w5_fork_latches_the_middleware :
+    w5ForkLatches.middlewareInstalled = true ∧
+      exitOf w5ForkLatches 1 = exitOf w5WithMiddleware 1 ∧
+      childrenInterruptedRows w5ForkLatches = [(0, [1])] ∧
+      interruptRows w5ForkLatches = [(some 0, 1)] ∧
+      exitOf w5ForkLatches 0 = some (Exit.success Val.unit) := by
+  decide
+
+/-- A daemon child is not tracked (`forkDetach`, `:5288-5294`) and does not latch the
+middleware: it survives the parent's exit (`daemonSurvivesParentExit`). -/
+theorem w5_daemon_child_survives_parent_exit :
+    w5Daemon.middlewareInstalled = false ∧
+      exitOf w5Daemon 1 = none ∧
+      childrenInterruptedRows w5Daemon = [] ∧
+      interruptRows w5Daemon = [] ∧
+      exitOf w5Daemon 0 = some (Exit.success Val.unit) := by
   decide
 
 /-- `awaitAllChildren` awaits only the children added during its body: the pre-existing parked
-child `1` is never awaited and never interrupted. -/
+child `1` is not awaited (the parent exits although `1` never does) — it is then interrupted
+by the parent's exit path, as any tracked child is (R2-6). -/
 theorem w5_await_all_children_awaits_only_new :
     exitOf w5AwaitAllChildren 2 = some (Exit.success (Val.nat 5)) ∧
-      exitOf w5AwaitAllChildren 1 = none ∧
-      exitOf w5AwaitAllChildren 0 = some (Exit.success Val.unit) := by
+      exitOf w5AwaitAllChildren 0 = some (Exit.success Val.unit) ∧
+      childrenInterruptedRows w5AwaitAllChildren = [(0, [1])] ∧
+      exitOf w5AwaitAllChildren 1 =
+        some (interruptedWith ⟨0⟩ ⟨1⟩ (stores.stackAnnotations ⟨0⟩)) := by
   decide
 
 /-! ## W6 — scope linkage -/
@@ -565,14 +600,24 @@ def w6SelfInterruptorSkipped : M :=
     [RunDecision.evaluate ⟨0⟩]
 
 /-- On an open scope the linkage row is emitted, the close runs the fiber finalizer, the child
-is interrupted by the closer, the key is dropped by the child's exit observer, and the scope
-ends `Closed`. -/
+is interrupted by the closer (`fiberInterrupt`, with the closer's stack annotations, `:880-883`;
+R2-5), the key is dropped by the child's exit observer, and the scope ends `Closed`. -/
 theorem w6_link_then_close :
     scopeRows w6LinkThenClose = [[0, 0, 0, 100, 1]] ∧
-      exitOf w6LinkThenClose 1 = some (interruptedBy ⟨0⟩ ⟨1⟩) ∧
+      exitOf w6LinkThenClose 1 =
+        some (interruptedWith ⟨0⟩ ⟨1⟩ (stores.stackAnnotations ⟨0⟩)) ∧
       scopeKeys w6LinkThenClose 0 = some [] ∧
       scopeClosed w6LinkThenClose 0 = some true ∧
       exitOf w6LinkThenClose 0 = some (Exit.success Val.unit) := by
+  decide
+
+/-- R2-5 (`E4-RUN-CE-030`): the close's `fiberInterrupt` is annotated from the *closer's*
+stack (`:880-883`), so the child's cause carries the closer's key on top of its own — the same
+two keys `forkIn`'s closed-scope arm leaves (`w6_closed_scope_interrupts_now`), and one more
+than a tape interrupt with empty annotations (`w2_delivered_at_unmask`). -/
+theorem w6_close_interrupt_carries_closer_annotations :
+    (exitOf w6LinkThenClose 1).map causeKeys = some [["stack1", "stack0"]] ∧
+      (exitOf w2 1).map causeKeys = some [["stack1"]] := by
   decide
 
 /-- `fiberRunIn` on a closed scope: the *existing* fiber is interrupted with its **own** id and
@@ -669,9 +714,10 @@ theorem w6_parallel_forks_and_merges :
 /-- A fiber that masks itself and then parks on an external async. -/
 def w10MaskedChild : ProgName := ProgName.maskedPark 1
 
-/-- Tape: fork the masked child, interrupt it while masked, then answer its async. -/
+/-- Tape: fork the masked child as a daemon (so the root's exit leaves it), interrupt it while
+masked, then answer its async. -/
 def w10Masked : M :=
-  replay Stores.empty (ProgName.forkOnly w10MaskedChild immediateChild)
+  replay Stores.empty (ProgName.forkOnly w10MaskedChild daemonChild)
     [RunDecision.evaluate ⟨0⟩,
       RunDecision.interruptFrom (some ⟨0⟩) ReasonAnnotations.empty ⟨1⟩,
       RunDecision.answerAsync ⟨1⟩ 0 (Prim.success Val.unit)]
@@ -679,7 +725,7 @@ def w10Masked : M :=
 /-- Without the answer the interrupt is recorded and *not* applied: the fiber is still parked,
 because it masked itself. -/
 def w10MaskedPending : M :=
-  replay Stores.empty (ProgName.forkOnly w10MaskedChild immediateChild)
+  replay Stores.empty (ProgName.forkOnly w10MaskedChild daemonChild)
     [RunDecision.evaluate ⟨0⟩,
       RunDecision.interruptFrom (some ⟨0⟩) ReasonAnnotations.empty ⟨1⟩]
 
@@ -714,14 +760,15 @@ theorem w10_into_completes_on_failure :
 `contE` runs `cancelThenFail` when the failure passes through it
 (`internal/effect.ts:1145-1160`). -/
 
-/-- A child parked on `Deferred.await`, not yet interrupted. -/
+/-- A daemon child (the root's exit leaves it; R2-6) parked on `Deferred.await`, not yet
+interrupted. -/
 def w11Parked : M :=
-  replay oneCell (ProgName.forkOnly (ProgName.awaitDeferred ⟨0⟩) immediateChild)
+  replay oneCell (ProgName.forkOnly (ProgName.awaitDeferred ⟨0⟩) daemonChild)
     [RunDecision.evaluate ⟨0⟩]
 
 /-- The same child, interrupted while parked. -/
 def w11Cancelled : M :=
-  replay oneCell (ProgName.forkOnly (ProgName.awaitDeferred ⟨0⟩) immediateChild)
+  replay oneCell (ProgName.forkOnly (ProgName.awaitDeferred ⟨0⟩) daemonChild)
     [RunDecision.evaluate ⟨0⟩,
       RunDecision.interruptFrom (some ⟨0⟩) ReasonAnnotations.empty ⟨1⟩]
 

@@ -621,13 +621,19 @@ def linkScope (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν
         RunEvent.interruptRecorded interruptor target]
       (m, if applyNow then [Cmd.evaluate target] else [])
   | some none =>                                                       -- open: :5369-5372
-    match interp.scopeLinkFiber mode scope key target m.state with
-    | none => (m.halt (Stuck.unknownScope scope), [])
-    | some state =>
-      let m := { m with state := state }
-      let m := m.modify target fun t =>
-        { t with observers := t.observers ++ [Observer.dropScopeFinalizer scope key] }
-      (m.emit [RunEvent.scopeLinked mode scope key target], [])
+    match m.fiber? target with
+    | none => (m.halt (Stuck.unknownFiber target), [])
+    -- an exited fiber is not linked (`:5367`, `:5451-5452`, R2-9)
+    | some t =>
+      if t.exit.isSome then (m, [])
+      else
+        match interp.scopeLinkFiber mode scope key target m.state with
+        | none => (m.halt (Stuck.unknownScope scope), [])
+        | some state =>
+          let m := { m with state := state }
+          let m := m.modify target fun t =>
+            { t with observers := t.observers ++ [Observer.dropScopeFinalizer scope key] }
+          (m.emit [RunEvent.scopeLinked mode scope key target], [])
 
 /-- The top of a `runLoop` iteration (`:639-642`): a deferred interrupt is cleared and the
 current primitive is replaced by the pending cause's failure. -/
@@ -788,6 +794,9 @@ where
       | none => if parked then Outcome.parked else Outcome.continue_
     match action with
     | WithFiberAction.fork program options =>
+      -- `forkChild` installs the interrupt-children middleware for the process
+      -- (`interruptChildrenPatch()`, `:5253`, `:6656-6658`); `forkDetach` does not (R2-6)
+      let m := if options.daemon then m else { m with middlewareInstalled := true }
       let (m, f, child) := spawn interp m f program options
       let (m, f, nested) := start m f child options.startImmediately
       ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_, nested⟩
@@ -824,7 +833,8 @@ where
           match acc.1.fiber? t with
           | none => acc
           | some g =>
-            let (g, applyNow) := interruptRecord interp (some who) ReasonAnnotations.empty g
+            -- the caller's stack annotations, whoever the interruptor is (`:892-895`, `:910-913`)
+            let (g, applyNow) := interruptRecord interp (some who) (interp.stackAnnotations f.id) g
             let m := (acc.1.update g).emit [RunEvent.interruptRecorded (some who) t]
             (m, acc.2 ++ (if applyNow then [Cmd.evaluate t] else []))) (m, [])
       let (m, f, parked) := countdownPark interp m f targets Resume.void
@@ -848,8 +858,10 @@ where
       -- entrants exist as fibers before any launch; a launch is a command
       let (m, f, ids) := entrants.foldl
         (fun (acc : RunMachine ν σ β ε δ ι α χ St × RunFiber ν σ β ε δ ι α χ × List FiberId) program =>
+          -- `forkUnsafe(parent, effect, true, true, false)`: immediate, daemon, and
+          -- *interruptible* — `uninterruptible = false` (`:1521`, R2-10)
           let (m, f, child) := spawn interp acc.1 acc.2.1 program
-            ⟨true, true, Supervision.MaskMode.inherit⟩
+            ⟨true, true, Supervision.MaskMode.interruptible⟩
           let m := m.modify child fun c =>
             { c with observers := c.observers ++ [Observer.raceCallback raceId] }
           (m, f, acc.2.2 ++ [child])) (m, f, [])
@@ -893,7 +905,8 @@ where
     match m.fiber? target with
     | none => ⟨m, f, yielding, Outcome.stuck (Stuck.unknownFiber target), []⟩
     | some t =>
-      let (t, applyNow) := interruptRecord interp interruptor ReasonAnnotations.empty t
+      -- `fiberInterruptAs` passes the caller's stack annotations (`:880-883`, R2-5)
+      let (t, applyNow) := interruptRecord interp interruptor (interp.stackAnnotations f.id) t
       let m := (m.update t).emit [RunEvent.interruptRecorded interruptor target]
       let nested := if applyNow then [Cmd.evaluate target] else []
       let (m, f, parked) := countdownPark interp m f [target] Resume.void
@@ -942,7 +955,8 @@ def fireObserver (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId) 
                 match a.1.fiber? t with
                 | none => a
                 | some g =>
-                  let (g, applyNow) := interruptRecord interp (some waiter) ReasonAnnotations.empty g
+                  let (g, applyNow) :=
+                    interruptRecord interp (some waiter) (interp.stackAnnotations waiter) g
                   let m := (a.1.update g).emit [RunEvent.interruptRecorded (some waiter) t]
                   (m, a.2 ++ (if applyNow then [Cmd.evaluate t] else []))) (m, [])
           else (m, [])
@@ -975,7 +989,8 @@ def fireObserver (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId) 
             match a.1.fiber? entrant with
             | none => a
             | some e =>
-              let (e, applyNow) := interruptRecord interp (some race.host) ReasonAnnotations.empty e
+              let (e, applyNow) :=
+                interruptRecord interp (some race.host) (interp.stackAnnotations race.host) e
               let m := (a.1.update e).emit [RunEvent.interruptRecorded (some race.host) entrant]
               (m, a.2 ++ (if applyNow then [Cmd.evaluate entrant] else []))) (m, [])
         -- the host is resumed after the losers have been awaited: a countdown over them
@@ -1005,11 +1020,14 @@ def exitFiber (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν
         match a.1.fiber? child with
         | none => a
         | some c =>
-          let (c, applyNow) := interruptRecord interp (some f.id) ReasonAnnotations.empty c
+          -- `fiberInterruptAll(children)` under `withFiber(parent)`: the parent's stack
+          -- annotations (`:892-895`, R2-5)
+          let (c, applyNow) := interruptRecord interp (some f.id) (interp.stackAnnotations f.id) c
           let m := (a.1.update c).emit [RunEvent.interruptRecorded (some f.id) child]
           (m, a.2 ++ (if applyNow then [Cmd.evaluate child] else []))) (m, [])
     let m := m.emit [RunEvent.childrenInterrupted f.id f.children]
-    let f := { f with finalizing := some exit }
+    -- the loop returned an exit: `_deferredInterrupt = false` (`:659`, R2-2)
+    let f := { f with finalizing := some exit, frame := { f.frame with deferredInterrupt := false } }
     let (m, f, parked) :=
       countdownPark interp m f f.children (Resume.continueWith (interp.restoreName exit))
     (m, f, parked, nested)
@@ -1017,7 +1035,7 @@ def exitFiber (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν
     let f := { f with                                                  -- :619-627
       exit := some exit
       finalizing := none
-      frame := { f.frame with stack := [] }
+      frame := { f.frame with stack := [], deferredInterrupt := false }
       children := []
       parked := Parked.notParked
       pending := []
@@ -1094,7 +1112,8 @@ def drive (interp : RunInterp ν σ β ε δ ι α χ St) :
           match m.fiber? entrant with
           | none => drive interp fuel m rest
           | some e =>
-            let (e, applyNow) := interruptRecord interp (some race.host) ReasonAnnotations.empty e
+            let (e, applyNow) :=
+              interruptRecord interp (some race.host) (interp.stackAnnotations race.host) e
             let m := (m.update e).emit [RunEvent.raceSkipped raceId entrant,
               RunEvent.interruptRecorded (some race.host) entrant]
             drive interp fuel m ((if applyNow then [Cmd.evaluate entrant] else []) ++ rest)
