@@ -407,7 +407,11 @@ def newEnv (m : Machine) (parent : Option EnvId) (binds : List (Var × Val)) : E
 
 /-! ### Variables -/
 
-private def lookupIn : Nat → List (EnvId × EnvRec) → EnvId → Var → Option Val
+/-- The environment walk `look` runs: find the activation record, look the variable up in its
+bindings, otherwise follow `parent`. Public (spike P2 round five, visibility only — no rename
+and no change to the body): `CpsProof.lean` proves that a binding made in an activation is
+still visible after further bindings in it, and that proof needs this equation. -/
+def lookupIn : Nat → List (EnvId × EnvRec) → EnvId → Var → Option Val
   | 0, _, _, _ => none
   | fuel + 1, envs, e, x =>
     match (envs.find? (·.1 = e)).map (·.2) with

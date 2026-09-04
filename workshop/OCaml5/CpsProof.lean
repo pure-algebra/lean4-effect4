@@ -1184,8 +1184,9 @@ body change, and it does not rename anything, so it is compatible with P4; but t
 coordinator's authorisation covered exactly the two repairs of §9.0 and this would be a third.
 With it, both lemmas are a dozen lines of `List.find?` reasoning. -/
 
-/-- The two facts about `Machine.look` that `ScopeAtJump` consumes. Both are true; neither can
-be proved from outside `Code.lean` while `lookupIn` is `private`. -/
+/-- The two facts about `Machine.look` that `ScopeAtJump` consumes. **Discharged in round five,
+§7** — `look_bind_self` and `look_bind_mono` — once `lookupIn` became visible. Kept as a record
+of the shape of what was needed; `ScopeAtJump_reduced` no longer takes it. -/
 structure LookLemmas : Prop where
   /-- A name just bound is visible. -/
   self : ∀ (m : Machine) (x : Var) (v : Val), ((m.bind x v).look x).isSome
@@ -1237,13 +1238,15 @@ def DominatorSound (idom : Idom) (blocks : List (Addr × Block K)) (start : Addr
 entry to the jump passes through the dominator, the dominator's block binds the closure, the
 whole path is one activation (§5.2), and bindings persist (`LookLemmas.mono`).
 
-Stated as the implication rather than proved outright, because the run-level induction that
-turns "the machine got here" into "there is a `CfgPath` from the entry to here" is the same
-`Reaches` induction spike P1 built for `OCaml5.Effect` (`Invariant.lean` §6) and this module has
-no counterpart for `Code.Machine`. That induction, `LookLemmas`, and `DominatorSound` are
-exactly what is left. -/
+Round five removed one of the three: `LookLemmas` is discharged (§7). What is left is
+`DominatorSound` — still stated, not proved; it is the correctness of `dominator_tree`'s one
+Cooper-Harvey-Kennedy pass, and `effects.ml:98-104` is the compiler asserting that same fixed
+point with `assert (inter pc d = d)` — and the run-level induction that turns "the machine got
+here" into "there is a `CfgPath` from the entry to here", which is the `Reaches` induction
+spike P1 built for `OCaml5.Effect` (`Invariant.lean` §6) and which this module has no
+counterpart for. -/
 def ScopeAtJump_reduced (ctx : Ctx) (blocks : List (Addr × Block K)) (start : Addr) : Prop :=
-  LookLemmas → DominatorSound ctx.idom blocks start →
+  DominatorSound ctx.idom blocks start →
     (∀ (b : Machine) (pc : Addr), ctx.blocksToTransform.mem pc →
       (∃ l, CfgPath blocks l ∧ l.head? = some start ∧ pc ∈ l) →
       ScopeAtJump ctx b)
@@ -1519,5 +1522,156 @@ mention: that the initial states are related, and that related halted states hav
 outcome. Both are listed in `SimulationSuffices` (§3). -/
 theorem R_at_any_index (base : SimParam) (a b : Machine)
     (h : ∀ n, R (paramAt base n) a b) (n : Nat) : R (paramAt base n) a b := h n
+
+/-! ## 7. Round five, part one: `LookLemmas`, discharged
+
+§10.6 of the report recorded the blocker: both facts were true and one iota-step deep, and
+neither could be proved because `lookupIn` was `private` in `Code.lean`. It is public as of
+round five (visibility only — no rename, no change to the body), so this section finishes them
+and `ScopeAtJump` no longer needs the `LookLemmas` interface.
+
+The second fact needs one side condition, and it is worth naming rather than hiding: `look`'s
+fuel is `m.envs.length + 1`, and `bind` rebuilds the environment list as
+`(m.env, r') :: m.envs.filter (·.1 ≠ m.env)`. If `m.env` occurred **twice** in `m.envs` the
+filter would drop both and the fuel would shrink, so a deep parent chain could run out of fuel
+after a `bind` that succeeded before it. `EnvKeyUnique` is exactly the absence of that, and it
+is self-propagating: `bind` *establishes* it, because `setEnv` filters. -/
+
+/-- The current activation occurs exactly once in the environment list — equivalently, `bind`
+does not shorten `look`'s fuel. -/
+def EnvKeyUnique (m : Machine) : Prop :=
+  (m.envs.filter (fun p => p.1 ≠ m.env)).length + 1 = m.envs.length
+
+/-- **`bind` establishes it**: `setEnv` filters the old record out and conses the new one, so
+after any `bind` the current activation occurs exactly once. The invariant therefore holds from
+the first binding of an activation onwards, which is all §5.4 needs. -/
+theorem bind_envKeyUnique (m : Machine) (y : Var) (v : Val) (r : EnvRec)
+    (h : m.getEnv m.env = some r) : EnvKeyUnique (m.bind y v) := by
+  unfold EnvKeyUnique Machine.bind
+  rw [h]
+  simp [Machine.setEnv, List.filter_filter]
+
+/-- **`LookLemmas.self`.** A name just bound is visible. -/
+theorem look_bind_self (m : Machine) (x : Var) (v : Val) (r : EnvRec)
+    (h : m.getEnv m.env = some r) : (m.bind x v).look x = some v := by
+  unfold Machine.look Machine.bind
+  rw [h]
+  simp [Machine.setEnv, Machine.lookupIn]
+
+/-- The walk is monotone in its fuel. -/
+theorem lookupIn_fuel_mono (envs : List (EnvId × EnvRec)) (x : Var) :
+    ∀ (f : Nat) (e : EnvId), (Machine.lookupIn f envs e x).isSome →
+      (Machine.lookupIn (f + 1) envs e x).isSome := by
+  intro f
+  induction f with
+  | zero => intro e h; simp [Machine.lookupIn] at h
+  | succ f ih =>
+    intro e h
+    rw [Machine.lookupIn] at h ⊢
+    split at h
+    · simp at h
+    · split at h
+      · exact h
+      · split at h
+        · simp at h
+        · exact ih _ h
+
+/-- Attempt 1 proved `isSome` monotonicity of the walk directly, by splitting the two `match`es
+in step. It fails on matcher identity: the `match … with | none => none | some a => …` written in
+a helper lemma elaborates to a *different* auxiliary matcher from the one inside `lookupIn`, so
+the two are not defeq at reducible transparency and `exact` is refused on goals that print
+identically. Attempt 2, kept, replaces monotonicity by **equality** — for `y ≠ x` the rebuilt
+environment answers exactly as the old one, and the case `y = x` is `look_bind_self`, which is
+already proved — and keeps the rebuilt list *opaque* so that `cases` on a scrutinee substitutes
+on both sides of the equation at once. -/
+private theorem find?_filter_ne {α : Type} (d a : Addr) (h : ¬ (d = a))
+    (l : List (Addr × α)) :
+    (l.filter (fun p => p.1 ≠ d)).find? (fun p => p.1 = a) = l.find? (fun p => p.1 = a) := by
+  simpa using find?_skip_ne d a h l
+
+/-- The walk is insensitive to a change that adds one binding, for a *different* variable, to
+one activation record. Stated over an abstract `envs'` so that the induction never has to look
+inside the rebuilt list. -/
+theorem lookupIn_congr_bind (envs envs' : List (EnvId × EnvRec)) (ev : EnvId) (x : Var)
+    (r r' : EnvRec)
+    (hr : (envs.find? (fun p => p.1 = ev)).map (·.2) = some r)
+    (hr' : (envs'.find? (fun p => p.1 = ev)).map (·.2) = some r')
+    (hbinds : (r'.binds.find? (fun p => p.1 = x)).map (·.2)
+              = (r.binds.find? (fun p => p.1 = x)).map (·.2))
+    (hpar : r'.parent = r.parent)
+    (hother : ∀ e, ¬ (e = ev) →
+       (envs'.find? (fun p => p.1 = e)).map (·.2) = (envs.find? (fun p => p.1 = e)).map (·.2)) :
+    ∀ (f : Nat) (e : EnvId),
+      Machine.lookupIn f envs' e x = Machine.lookupIn f envs e x := by
+  intro f
+  induction f with
+  | zero => intro e; rfl
+  | succ f ih =>
+    intro e
+    rw [Machine.lookupIn, Machine.lookupIn]
+    by_cases hev : e = ev
+    · subst hev
+      rw [hr, hr']
+      dsimp only
+      rw [hbinds, hpar]
+      cases hw : ((r.binds.find? (fun p => p.1 = x)).map (·.2)) with
+      | some w => rfl
+      | none =>
+        dsimp only
+        cases hp : r.parent with
+        | none => rfl
+        | some p => exact ih p
+    · rw [hother e hev]
+      cases hre : ((envs.find? (fun p => p.1 = e)).map (·.2)) with
+      | none => rfl
+      | some re =>
+        dsimp only
+        cases hw : ((re.binds.find? (fun p => p.1 = x)).map (·.2)) with
+        | some w => rfl
+        | none =>
+          dsimp only
+          cases hp : re.parent with
+          | none => rfl
+          | some p => exact ih p
+
+/-- **Binding a different variable changes nothing.** -/
+theorem look_bind_ne (m : Machine) (x y : Var) (v : Val) (r : EnvRec)
+    (hr : m.getEnv m.env = some r) (hu : EnvKeyUnique m) (hxy : ¬ (y = x)) :
+    (m.bind y v).look x = m.look x := by
+  unfold Machine.look Machine.bind
+  rw [hr]
+  simp only [Machine.setEnv]
+  have hlen : (List.filter (fun p => p.1 ≠ m.env) m.envs).length + 1 = m.envs.length := hu
+  simp only [List.length_cons, hlen]
+  refine lookupIn_congr_bind m.envs _ m.env x r { r with binds := (y, v) :: r.binds }
+    hr ?_ ?_ rfl ?_ (m.envs.length + 1) m.env
+  · simp
+  · simp [hxy]
+  · intro e hne
+    have hne' : ¬ (m.env = e) := fun hh => hne hh.symm
+    simp only [List.find?_cons, hne', decide_false]
+    congr 1
+    exact find?_filter_ne m.env e hne' m.envs
+
+/-- **`LookLemmas.mono`.** Binding does not un-bind: an activation only ever grows. -/
+theorem look_bind_mono (m : Machine) (x y : Var) (v : Val) (r : EnvRec)
+    (hr : m.getEnv m.env = some r) (hu : EnvKeyUnique m)
+    (h : (m.look x).isSome) : ((m.bind y v).look x).isSome := by
+  by_cases hxy : y = x
+  · subst hxy
+    rw [look_bind_self m y v r hr]
+    rfl
+  · rw [look_bind_ne m x y v r hr hu hxy]
+    exact h
+
+/-- **`LookLemmas`, discharged.** The interface of §5.3 is inhabited for every machine whose
+current activation exists and occurs once — which, by `bind_envKeyUnique`, is every machine
+reached by a binding. -/
+theorem lookLemmas_hold (m : Machine) (r : EnvRec) (hr : m.getEnv m.env = some r)
+    (hu : EnvKeyUnique m) :
+    (∀ (x : Var) (v : Val), ((m.bind x v).look x).isSome)
+  ∧ (∀ (x y : Var) (v : Val), (m.look x).isSome → ((m.bind y v).look x).isSome) :=
+  ⟨fun x v => by rw [look_bind_self m x v r hr]; rfl
+  , fun x y v h => look_bind_mono m x y v r hr hu h⟩
 
 end OCaml5.CpsProof

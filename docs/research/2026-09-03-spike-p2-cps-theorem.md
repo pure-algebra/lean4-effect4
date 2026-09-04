@@ -1,6 +1,7 @@
 # Spike P2: `cps_preserves_outcome`, pass by pass
 
-Status: done, 2026-09-04, four rounds; §9 is round three, §10 is round four. Plan: `docs/research/2026-09-03-ocaml5-deep-plan.md`, row P2 of §6.
+Status: 2026-09-04, five rounds; §9 round three, §10 round four, §11 round five
+(cut short by a checkpoint — §11 says exactly what was and was not reached). Plan: `docs/research/2026-09-03-ocaml5-deep-plan.md`, row P2 of §6.
 Predecessor: `docs/research/2026-09-03-spike-o2-jsoo.md`, whose §5 states the theorem this
 spike attacks. Base commit `7729f58`; re-verified on `fa7bb5f` (spike P6 landed while this ran;
 `Code.lean` and `Cps.lean` are untouched by it). Files written: `workshop/OCaml5/CpsProof.lean`
@@ -37,6 +38,7 @@ one dominator fact with no machine in it, shared with `ScopeAtJump`.**
 | `cps_preserves_outcome`, assembled | `CpsProof.lean` §3 | stated; obligations reduced in round four (§10.7) |
 | `KSound` step-indexed, and the knot closed by induction | `CpsProof.lean` §6 | 20 theorems proved; `KSound` is no longer an obligation |
 | `ScopeAtJump`: the machine's half | `CpsProof.lean` §5 | 9 theorems proved; the rest is a pure graph fact |
+| `LookLemmas` (round five) | `CpsProof.lean` §7 | 7 theorems proved; the interface is discharged |
 | The property harness: generator, driver, shrinker | `ir/Fuzz.lean` | 4500 programs run, 8 `#guard`s |
 | Two machine defects, minimised and pinned | `ir/Counterexamples.lean` | 11 `#guard`s |
 | The four shapes the Effect avatar produces | `ir/Avatar.lean`, `Fuzz.gen` cases 10-13 | 9 `#guard`s, and 6 more theorems in `CpsProof.lean` §2.3 |
@@ -907,7 +909,166 @@ Round four changed no executable definition — every addition is a theorem or a
 depth 5, **3500 agree, 0 disagreements, 0 source-side `stuck`, 0 fuel exhaustion**. All five
 `ir/` modules re-elaborate clean.
 
-## 11. Commands to re-run everything
+## 11. Round five: `LookLemmas` discharged; the two other items' exact status
+
+Round five, 2026-09-04, on `06def66` plus round four. Cut short by a checkpoint: **item (1) is
+done, items (2) and (3) were not reached.** This section says exactly where each of the three
+stands, because two of them are unchanged and it would be easy to read the round-four text as
+if they had moved.
+
+### 11.0 The authorised change to `Code.lean`
+
+One line, visibility only:
+
+```lean
+-  private def lookupIn : Nat → List (EnvId × EnvRec) → EnvId → Var → Option Val
++  def lookupIn : Nat → List (EnvId × EnvRec) → EnvId → Var → Option Val
+```
+
+with a docstring recording why. No rename, no change to the body, no change to any signature,
+so `Machine.look`, `Machine.bind` and everything P4 reads are untouched. This is the third
+non-additive edit to `Code.lean` across the spike; the first two are §9.0.
+
+### 11.1 (1) `LookLemmas` — **proved**
+
+§10.6 recorded the blocker: the two facts were true and one iota-step deep, and unprovable only
+because `lookupIn` was `private`. With it visible, `look_bind_self` is three lines:
+
+```lean
+theorem look_bind_self (m : Machine) (x : Var) (v : Val) (r : EnvRec)
+    (h : m.getEnv m.env = some r) : (m.bind x v).look x = some v := by
+  unfold Machine.look Machine.bind
+  rw [h]
+  simp [Machine.setEnv, Machine.lookupIn]
+```
+
+The second fact, `look_bind_mono`, took two attempts, both recorded in the module:
+
+- **Attempt 1** proved `isSome` monotonicity of the walk directly, splitting the two `match`es
+  in step. It fails on **matcher identity**: a `match … with | none => none | some a => …`
+  written in a helper lemma elaborates to a *different* auxiliary matcher from the one inside
+  `lookupIn`, so the two are not defeq at reducible transparency and `exact` is refused on goals
+  that print identically. Working around it by `rename_i` on `split`'s inaccessible hypotheses
+  was brittle — the arity of the anonymous context varies by branch.
+- **Attempt 2**, kept, replaces monotonicity by **equality**. For `y ≠ x` the rebuilt
+  environment answers exactly as the old one (`lookupIn_congr_bind`, stated over an *abstract*
+  `envs'` so the induction never looks inside the rebuilt list and `cases` on a scrutinee
+  substitutes on both sides of the equation at once); the case `y = x` is `look_bind_self`,
+  already proved. `look_bind_mono` is then four lines.
+
+One side condition had to be named rather than hidden. `look`'s fuel is `m.envs.length + 1`,
+and `bind` rebuilds the list as `(m.env, r') :: m.envs.filter (·.1 ≠ m.env)`. If `m.env`
+occurred **twice**, the filter would drop both and the fuel would *shrink*, so a deep parent
+chain could run out of fuel after a `bind` that succeeded before it. `EnvKeyUnique` is exactly
+the absence of that — and it is self-propagating:
+
+```lean
+theorem bind_envKeyUnique (m : Machine) (y : Var) (v : Val) (r : EnvRec)
+    (h : m.getEnv m.env = some r) : EnvKeyUnique (m.bind y v)
+```
+
+**`bind` establishes it**, because `setEnv` filters. So the invariant holds from the first
+binding of an activation onwards, which is all §5.4 needs; it is not a hole.
+
+`lookLemmas_hold` inhabits the interface, and `ScopeAtJump_reduced` was restated **without**
+it. Seven theorems:
+
+```
+bind_envKeyUnique     [propext, Quot.sound]     look_bind_ne     [propext, Quot.sound]
+look_bind_self        [propext, Quot.sound]     look_bind_mono   [propext, Quot.sound]
+lookupIn_fuel_mono    [propext]                 lookLemmas_hold  [propext, Quot.sound]
+lookupIn_congr_bind   does not depend on any axioms
+```
+
+### 11.2 (2) `DominatorSound` — **not proved; unchanged from §10.5(c)**
+
+Not attempted beyond reading the source; the checkpoint arrived first. The statement stands
+exactly as round four left it:
+
+```lean
+def DominatorSound (idom : Idom) (blocks : List (Addr × Block K)) (start : Addr) : Prop :=
+  ∀ (l : List Addr) (pc : Addr),
+    CfgPath blocks l → l.head? = some start → pc ∈ l → amGetD idom pc pc ∈ l
+```
+
+— every path from the entry to `pc` passes `idom pc`. No `Machine` occurs in it; §10.5(a) and
+(b) discharged the machine's half (`stepLast_jump_mem_children`, the five `env` lemmas,
+`cfgPath_extend`).
+
+What was learned, so the next seat does not restart from scratch. `effects.ml:78-104` is
+Cooper–Harvey–Kennedy, and the compiler asserts its own fixed point:
+
+```ocaml
+  (* Check we have reached a fixed point (reducible graph) *)
+  List.iter g.reverse_post_order ~f:(fun pc ->
+      let l = Hashtbl.find g.succs pc in
+      Addr.Set.iter (fun pc' ->
+          let d = Hashtbl.find dom pc' in
+          assert (inter pc d = d))
+        l);
+```
+
+So the hypothesis to take, exactly as the compiler takes it, is: **for every edge `pc → pc'`,
+`inter pc (idom pc') = idom pc'`** — the answer is already a common ancestor of every
+predecessor. From that, the intended two-step decomposition is
+
+1. `idom pc` is an *immediate* dominator: every path from `start` to `pc` contains it. This is
+   the induction over the reverse post-order that the fixed point makes available; it is
+   `DominatorSound` for the case `pc = l.getLast?`.
+2. `DominatorSound` in general follows from 1 by taking the prefix of `l` up to `pc` — "a
+   `CfgPath` prefix is a `CfgPath`" is the list lemma to prove first — and the transitive form,
+   `dominates g idom fuel pc pc' = true → pc` is on every such path, follows by induction on
+   `dominates`' own fuel, using 1 at each link of the `idom` chain.
+
+None of that is written. `dominates_refl` (§2.2) is the only piece of it that exists.
+
+### 11.3 (3) `cps_preserves_outcome` — **not assembled; unchanged from §3 and §10.7**
+
+Not attempted; the checkpoint arrived first. The theorem is still the `def` of §3, and the
+honest ledger of what it rests on, after four and a half rounds:
+
+| ingredient | status |
+| --- | --- |
+| the continuation knot (`KSound`) | **closed** (§10.2, §10.4): `KSoundAt` is a theorem, and `knot_frame_all`/`knot_trap_all` close the family by induction on the step index |
+| `LookLemmas` | **proved** (§11.1) |
+| `EntryOk` / `TrapEntryOk` — `R`'s clause (R8) after entering a closure | open; the same fact `DominatorSound` supplies |
+| `DominatorSound` | open (§11.2), pure graph fact |
+| the run-level `Reaches` induction for `Code.Machine` | open; P1 has the pattern for `OCaml5.Effect` |
+| the whole-program simulation step (`R` preserved by `step`) | open; §2.1's shape lemmas supply it per shape, the induction over `cps_transform`'s output is not written |
+| the observation clause + `Code.invariant` | open, as §3 states |
+
+An honest note on the brief, which asked for the assembly "with only the observation clause and
+`Code.invariant` as hypotheses": that is not reachable from where the module is. The forward
+direction needs the whole-program simulation step, and proving *that* from §2.1's shape lemmas
+requires an induction over every block `cps_transform` emits — a separate piece of work from
+either of the two obligations round four isolated. The assembly that *is* reachable is the one
+sketched in `SimulationSuffices` (§3): `init`, `step`, `obs` chained by `iter_add`, turning a
+terminating source run of `N` steps into a target run of some `M`. That chaining is mechanical
+and was not written.
+
+### 11.4 Verification at the checkpoint
+
+```
+$ lake build OCaml5.Code OCaml5.Cps OCaml5.CpsProof     # clean
+$ lake env lean workshop/OCaml5/ir/{Programs,Counterexamples,Fuzz,Avatar,RunUnderHandler}.lean
+                                                        # all clean
+```
+
+No `sorry`, `axiom`, `partial`, `unsafe`, `native_decide`, `implemented_by` or `maxHeartbeats`
+in `Code.lean`, `CpsProof.lean` or any `ir/` module. Harness re-run once, unchanged:
+
+| depth | programs | result |
+| --- | --- | --- |
+| 2 | 1000 | 1000 agree |
+| 3 | 1000 | 1000 agree |
+| 4 | 1000 | 1000 agree |
+| 5 | 500 | 500 agree |
+
+3500 programs, 0 disagreements, 0 source-side `stuck`, 0 fuel exhaustion. Running total across
+five rounds: **77 theorems proved**, `propext`/`Quot.sound` only except for two from round two
+that use `Classical.choice` through `by_cases`.
+
+## 12. Commands to re-run everything
 
 ```
 $ cd /Users/pooks/Dev/lean4-effect4
