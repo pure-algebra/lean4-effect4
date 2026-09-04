@@ -46,7 +46,7 @@ run_hosts() {
     > "$here/out/$family.$program.events.tsv"
 }
 
-families="fiber ref deferred scope"
+families="fiber ref deferred scope layer"
 status=0
 
 for family in $families; do
@@ -98,18 +98,53 @@ for family in $families; do
     --face "$here/out" --prefix "$family." --suffix .ocaml.tsv || status=1
 done
 
+# --- the yield-every-op form --------------------------------------------------
+# `scripts/check-trace-host.sh:191` runs this form for ref, deferred and scope (yield3=yes)
+# and refuses it for the fiber family (counterexample E4-SEM-CE-011). Round four gives the
+# avatar a real yield injection, so it can be run at the same setting.
+echo "=== ocaml face at EFFECT4_MAX_OPS=3 (the yield-every-op form)"
+mkdir -p "$here/out/yield3"
+for family in ref deferred scope layer fiber; do
+  for golden in "$traces/$family"/*.tsv; do
+    program=$(basename "$golden" .tsv)
+    tape=$(awk -F'\t' '$1=="tape"{print $2}' "$golden")
+    rules=$(awk -F'\t' '$1=="rules"{print $2}' "$golden")
+    env EFFECT4_FAMILY="$family" EFFECT4_PROGRAM="$program" EFFECT4_TAPE="$tape" \
+        EFFECT4_RULES="$rules" EFFECT4_PIN="$pin" EFFECT4_SHA="$sha" \
+        EFFECT4_MAX_OPS=3 EFFECT4_YIELDS=1 \
+        "$oc/ocamlrun" ./avatar.byte > "$here/out/yield3/$family.$program.ocaml.tsv" || true
+  done
+done
+for family in ref deferred scope layer; do
+  python3 "$here/compare.py" --masks "$masks" --goldens "$traces/$family" \
+    --face "$here/out/yield3" --prefix "$family." --suffix .ocaml.tsv || status=1
+done
+echo "--- the fiber family at MAX_OPS=3 (the form the estate refuses)"
+python3 "$here/compare.py" --masks "$masks" --goldens "$traces/fiber" \
+  --face "$here/out/yield3" --prefix "fiber." --suffix .ocaml.tsv \
+  || echo "fiber yield-every-op DIVERGES, as E4-SEM-CE-011 predicts"
+
 echo "=== rc.112 host face vs lean golden, through the estate's own runner"
 if [ -d "$tools" ]; then
   # bash 3.2 on macOS has no associative arrays.
   tail_of() { case "$1" in
       fiber) echo fiber-tail.ts ;; ref) echo ref-tail.ts ;;
       deferred) echo deferred-tail.ts ;; scope) echo scope-tail.ts ;;
+      layer) echo layer-tail.ts ;;
     esac; }
   for family in $families; do
     for golden in "$traces/$family"/*.tsv; do
       program=$(basename "$golden" .tsv)
       env EFFECT4_PROGRAM="$program" node "$tools/packages/harness/trace.mjs" "$repo/harness/trace" \
         --golden "$golden" --masks "$masks" --tail "$(tail_of "$family")" || status=1
+      # The estate's own yield-every-op form, for the three families it applies to.
+      case "$family" in
+        ref|deferred|scope|layer)
+          env EFFECT4_PROGRAM="$program" EFFECT4_MAX_OPS=3 EFFECT4_EXPECT_YIELDS=1 \
+            node "$tools/packages/harness/trace.mjs" "$repo/harness/trace" \
+            --golden "$golden" --masks "$masks" --tail "$(tail_of "$family")" \
+            | sed 's/^trace/trace(yield-every-op)/' || status=1 ;;
+      esac
     done
   done
 else

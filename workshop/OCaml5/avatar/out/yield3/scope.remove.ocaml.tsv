@@ -1,0 +1,26 @@
+format	effect4-trace-golden-v1
+generator	workshop/OCaml5/avatar/build-avatar.sh	sha256=b0c54a94900ebe1962d4becc96757c95d9f4a09ebf45eb15fc47418bc743df4e
+regenerate	./workshop/OCaml5/avatar/build-avatar.sh
+input	workshop/OCaml5/avatar/deep_fibers.ml	sha256=b0c54a94900ebe1962d4becc96757c95d9f4a09ebf45eb15fc47418bc743df4e
+input	workshop/OCaml5/avatar/avatar_trace.ml	sha256=b0c54a94900ebe1962d4becc96757c95d9f4a09ebf45eb15fc47418bc743df4e
+input	workshop/OCaml5/avatar/fibers_fixture.ml	sha256=b0c54a94900ebe1962d4becc96757c95d9f4a09ebf45eb15fc47418bc743df4e
+input	workshop/OCaml5/avatar/store_fixtures.ml	sha256=b0c54a94900ebe1962d4becc96757c95d9f4a09ebf45eb15fc47418bc743df4e
+input	workshop/OCaml5/avatar/extra_fixture.ml	sha256=b0c54a94900ebe1962d4becc96757c95d9f4a09ebf45eb15fc47418bc743df4e
+pin	effects	a4ee7a14248ee5976039b73039319efa87834986
+format	effect4-trace-v1
+face	ocaml
+program	scope.remove
+tape	
+rules	service-acquire,nullary-value,perform-bind,perform-call,perform-discard,ret
+op	make	[]
+answer	make	0
+op	addFinalizer	[0, 1]
+answer	addFinalizer	true
+op	addFinalizer	[0, 2]
+answer	addFinalizer	true
+op	remove	[0, 1]
+answer	remove	[]
+op	close	0
+answer	close	[2, []]
+done	{"success":[2, []]}
+#	yields	4

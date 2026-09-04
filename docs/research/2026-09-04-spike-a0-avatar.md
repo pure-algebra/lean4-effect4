@@ -555,3 +555,190 @@ No `raceAll` (`Claunch` is still a no-op and no race is ever created), no scope 
 context, no layer family, no async registration beyond the Deferred waiter, and no yield-budget
 comparison. `RunInterp` is still not a record (DIVERGENCE 5). Nothing above the executed rows is
 proved. A3 remains the next packet.
+
+---
+
+# Round four
+
+Appended 2026-09-04, after A2 landed as `f6088bd`. Same ownership: `workshop/OCaml5/avatar/*`
+only, no `harness/`, `scripts/` or Lean edit, nothing committed. `workshop/Deep/AvatarRelation.lean`
+is **not** written here: P1 owns that edge and states it over `StackInfo` and this record.
+11 source files, 2,859 lines; 83 outputs.
+
+## 14. Headline
+
+**Five families, 34 goldens, 102 mask comparisons in the default form and 75 more in the
+yield-every-op form, no divergence. The one divergence of round three is closed.**
+
+```
+$ ./workshop/OCaml5/avatar/build-avatar.sh ; echo $?
+=== three OCaml hosts agree … 40 programs, all AGREE, 0 DISAGREE
+=== ocaml face vs lean golden, under every mask
+compare[lean]: 27 ok, 0 failed   (fiber, 9)
+compare[lean]: 21 ok, 0 failed   (ref, 7)
+compare[lean]: 18 ok, 0 failed   (deferred, 6)
+compare[lean]: 12 ok, 0 failed   (scope, 4)
+compare[lean]: 24 ok, 0 failed   (layer, 8)
+=== ocaml face at EFFECT4_MAX_OPS=3 (the yield-every-op form)
+compare[lean]: 21 ok, 0 failed   (ref)
+compare[lean]: 18 ok, 0 failed   (deferred)
+compare[lean]: 12 ok, 0 failed   (scope)
+compare[lean]: 24 ok, 0 failed   (layer)
+--- the fiber family at MAX_OPS=3 (the form the estate refuses)
+compare[lean]: 18 ok, 9 failed
+fiber yield-every-op DIVERGES, as E4-SEM-CE-011 predicts
+=== rc.112 host face vs lean golden, through the estate's own runner
+… 102 default ok, 75 yield-every-op ok
+=== the extra family: avatar vs rc.112
+compare[rc112]: 12 ok, 0 failed
+0
+```
+
+| Family | Goldens | Avatar, default | Avatar, `MAX_OPS=3` | rc.112, default | rc.112, `MAX_OPS=3` |
+| --- | --- | --- | --- | --- | --- |
+| fiber | 9 | 27/27 | 18/27 (refused form, §17) | 27/27 | not run by the estate |
+| ref | 7 | 21/21 | 21/21 | 21/21 | 21/21 |
+| deferred | 6 | 18/18 | 18/18 | 18/18 | 18/18 |
+| scope | 4 | 12/12 | 12/12 | 12/12 | 12/12 |
+| layer | 8 | 24/24 | 24/24 | 24/24 | 24/24 |
+| **total** | **34** | **102/102** | **75/75** (+ the refused 9) | **102** | **75** |
+| extra (ref = rc.112) | 6 | 12/12 | — | — | — |
+
+40 programs byte-identical across `ocamlrun`, `ocamlopt` and jsoo `--enable effects`.
+
+## 15. The divergence is closed: an `answer` row is a primitive
+
+Round three's single failure was `extra.siblingCompletesDeferred`, where the avatar printed a
+trailing `answer succeed true` that rc.112 loses. The cause was that the avatar pushed the row
+from inside the arm, while rc.112's traced service emits it from an `Effect.tap`
+(`harness/trace/tracer.ts:288-291`) — a separate primitive, so a whole run-loop iteration sits
+between the operation's value and the row, and a deferred interrupt pre-empts it.
+
+That is now modelled rather than described. `answer_then` / `answer_row`
+(`deep_fibers.ml:995`, `:1000`) push every service `answer` row *through* `guard`, so the row
+costs one iteration: interrupt check, op count, yield check. All twenty `answer` sites go
+through them; the only `push_row (Ranswer …)` left in the file is inside `answer_then` itself.
+
+Result: `compare[rc112]: 12 ok, 0 failed` — the four comparable extra programs at three masks
+each — and **the 102 default comparisons are unchanged**, because `guard`'s interrupt arm only
+fires on a `deferred_interrupt`, which needs an interrupt recorded against a *running* fiber, and
+no golden in the five families has one.
+
+`fail_op` is deliberately left outside this treatment and recorded as such: rc.112's `tapError`
+is equally a primitive, but routing a failure row through `guard` would let a deferred interrupt
+replace the cause the row is about. No golden reaches it; A3 should state which cause wins.
+
+## 16. Divergence 2 narrowed: the op counter is rc.112's
+
+`iteration_prelude` is gone. `guard` (`deep_fibers.ml:966`) is the whole of one `runLoop`
+iteration's prelude, transcribed against `internal/effect.ts:638-668`:
+
+* `:639-642` — a deferred interrupt replaces the current primitive;
+* `:643` — `this.currentOpCount++`, **one per iteration over a primitive**, where round three
+  counted one per `perform`;
+* `:644-652` — the yield injection, at most once per entry into `evaluate`, spelled by rc.112 as
+  `current = flatMap(yieldNow, () => prev)` — the *same* primitive runs again after the yield,
+  which is why `guard` takes the arm as a thunk and re-enters itself on resume.
+
+Two carriers had to come with it. The per-entry latch `yielding` is Lean's argument to
+`Cmd.loop`; `Cmd.loop` has no OCaml existence, so it is a fiber field (`:210`), cleared exactly
+where Lean's `Cmd.evaluate` and `Cmd.resume` pass `false`. And `max_ops_before_yield` (`:408`) is
+read from `EFFECT4_MAX_OPS` as the host tails read it, then cached on each fiber at `make`, which
+is what rc.112 does at `setContext` (`:726-727`).
+
+Round three only *emitted* a `yieldInjected` event and carried on, so the budget was
+unobservable. It is now a transition: the fiber parks, enqueues its resume at priority 0 on its
+own dispatcher, and the flush drains it. Across the 34 programs at `MAX_OPS=3` the avatar injects
+**91 yields** (e.g. `ref.twoRefs` 6, `scope.lifo` 4, `layer.rebuildAfterClose` 4,
+`fiber.emptyRacePendingUntilInterrupted` 5) — and every service row of the 25 goldens the estate
+runs this form for is unchanged.
+
+## 17. The fiber family at `MAX_OPS=3`, and why the estate refuses it
+
+`scripts/check-trace-host.sh:191` runs the yield-every-op form for ref, deferred, scope and layer
+and refuses it for the fiber family, citing counterexample `E4-SEM-CE-011`: at rc.112's yield
+floor the run loop yields on its own, a deferred child starts with no `decide` row to account for
+it, and the tape's `false` stops being a fact about the run.
+
+Run anyway, the avatar reproduces that refusal exactly — **18 ok, 9 failed**, and all nine
+failures are the three programs with a `decide … false` fork whose child starts regardless:
+
+| Program | expected | actual |
+| --- | --- | --- |
+| `emptyRacePendingUntilInterrupted` | `answer started []` | `answer started [4, []]` |
+| `raceImmediateSuccessStopsLaunch` | `answer started [0, []]` | `answer started [0, [1, []]]` |
+| `raceReentrantEmptySetBypasses` | `answer started [0, []]` | `answer started [0, [4, []]]` |
+
+Every other fiber program passes at the floor. This is an independent reproduction of the
+estate's own recorded refusal from a different implementation, and it is evidence that the
+avatar's op counter is now rc.112's rather than a paraphrase: a weaker counter would not have
+yielded early enough to start the child.
+
+## 18. Layers, and why there is no Context family
+
+`generated/traces/layer/` has 8 goldens and `check-trace-host.sh:184` runs them against
+`layer-tail.ts`. The avatar now answers the four-row `Layers` alphabet through
+`RunInterp.syncState` over a `layer_state` store (`deep_fibers.ml:290`), and matches all 24 mask
+comparisons in both forms. The memo world is the one `layer-tail.ts:75-110` builds: layers 0, 1
+and 2 memoised through one memo map, layer 3 = `Layer.fresh(layer 1)` so it misses every time and
+counts against base 1, each construction registering its release finalizer on the layer scope
+`memoMapBuild` forked from the root.
+
+Two arms the goldens forced, both recorded at `arm_layer_build` (`:1301`):
+
+1. **Closing the root drops the memo.** `rebuildAfterClose` builds layer 0, closes, builds 0
+   again and gets a *different* service handle. The memo map's entries live in the root scope.
+2. **After the close, a build's release is immediate.** The second `close` in that program
+   answers `[]`, because a layer scope forked from a closed root is already closed, so the
+   finalizer runs on the spot and the next close sees nothing.
+
+**There is no Context family in this checkout.** `harness/trace/context-tail.ts` exists but its
+fixture is `context-fixture.stub.ts`, `generated/traces/` has no `context/` directory, and
+`check-trace-host.sh`'s family table has no context row — the L3 lane's `Context` family is
+listed in `2026-09-03-deep-plan.md`'s lowering table as work not yet landed. Nothing was invented
+for it. The same holds for `job` and `flow`, which have goldens but whose tails drive a
+file-backed queue and the Flow runner rather than a service alphabet the avatar models; they are
+out of A2/A4 scope and named here so the omission is deliberate.
+
+## 19. Divergence 7: the two-bound shape A3 should adopt
+
+Stated explicitly, because P1 will read it. The avatar now carries **two** bounds, and Lean's
+`drive` carries one; the simulation must relate them as a pair.
+
+**Bound A — the command-list fuel.** `drive m fuel cmds` costs one fuel per command and passes
+`fuel` to each nested `drive`, exactly as Lean's `drive` and `fire` do
+(`Fibers.lean:1025`, `:1130`). `flushAll` is bounded separately by rounds. This is the same
+argument on both sides and relates by equality. Executed: below fuel 4 between one and five of
+the 26 golden programs reach a frontier instead of finishing, always one whose interrupt path
+issues a nested `Cmd.evaluate`; at fuel ≥ 4 nothing changes.
+
+**Bound B — the per-fiber op counter.** `RunFiber.currentOpCount` against
+`maxOpsBeforeYield`, checked in `guard`, with the per-entry `yielding` latch. On the Lean side
+this is `iteration`'s `:643-652`, bounded implicitly by `Cmd.loop` appearing once per iteration
+in `drive`'s command list. On the OCaml side `Cmd.loop` does not exist, so bound A cannot see a
+fiber's own progress: `continue k` runs a fiber to its next `perform` outside any fuel, and a
+fuel of 1 still finishes `raceAllFailuresRetainOrder`.
+
+**What A3 should state.** Not "the same fuel on both sides". The relation should be indexed by a
+pair `(fuel, ops)` with:
+
+* `fuel` related by equality, counting `Cmd` steps — Lean's `drive` fuel is the avatar's
+  `drive` fuel, and the `Cmd` alphabets agree minus `Cmd.loop`;
+* Lean's `Cmd.loop` steps related to the avatar's `guard` calls, one per primitive, with
+  `RunFiber.currentOpCount` and `yielding` the shared witness — they are now literally the same
+  two fields updated by the same two lines of `:643-652`;
+* the frontier conditions related as: Lean's `drive` at fuel 0 ↔ the avatar's `drive` at fuel 0,
+  and Lean's `Cmd.loop` never scheduled ↔ the avatar's fiber quiescent with the root unexited,
+  which is what `run_program`'s `Rfrontier` already answers.
+
+Concretely: a step of Lean's `drive` that pops `Cmd.loop id yielding` corresponds to one `guard`
+call on fiber `id` with `f.yielding = yielding`, and every other `Cmd` corresponds one-for-one.
+That is the shape in which divergence 2 and divergence 7 are the same obligation, and it is
+statable now that both counters are rc.112's.
+
+## 20. Standing limits, unchanged plus one
+
+No `raceAll`, no scope linkage, no `Context` family (none exists here), no `job` or `flow`
+alphabet, `RunInterp` still not a record (DIVERGENCE 5), and `fail_op` outside the
+answer-as-primitive treatment (§15). Nothing above the executed rows is proved. The relation
+itself is P1's.

@@ -1,0 +1,30 @@
+format	effect4-trace-golden-v1
+generator	workshop/OCaml5/avatar/build-avatar.sh	sha256=b0c54a94900ebe1962d4becc96757c95d9f4a09ebf45eb15fc47418bc743df4e
+regenerate	./workshop/OCaml5/avatar/build-avatar.sh
+input	workshop/OCaml5/avatar/deep_fibers.ml	sha256=b0c54a94900ebe1962d4becc96757c95d9f4a09ebf45eb15fc47418bc743df4e
+input	workshop/OCaml5/avatar/avatar_trace.ml	sha256=b0c54a94900ebe1962d4becc96757c95d9f4a09ebf45eb15fc47418bc743df4e
+input	workshop/OCaml5/avatar/fibers_fixture.ml	sha256=b0c54a94900ebe1962d4becc96757c95d9f4a09ebf45eb15fc47418bc743df4e
+input	workshop/OCaml5/avatar/store_fixtures.ml	sha256=b0c54a94900ebe1962d4becc96757c95d9f4a09ebf45eb15fc47418bc743df4e
+input	workshop/OCaml5/avatar/extra_fixture.ml	sha256=b0c54a94900ebe1962d4becc96757c95d9f4a09ebf45eb15fc47418bc743df4e
+pin	effects	a4ee7a14248ee5976039b73039319efa87834986
+format	effect4-trace-v1
+face	ocaml
+program	fiber.raceReentrantEmptySetBypasses
+tape	0:1,1:0
+rules	service-acquire,perform-call,perform-bind,nullary-value,perform-discard,ret
+op	fork	0
+decide	0	true
+answer	fork	0
+op	fork	4
+decide	1	false
+answer	fork	1
+op	awaitValue	0
+answer	awaitValue	{"some":11}
+op	started	[]
+answer	started	[0, [4, []]]
+op	interrupt	1
+answer	interrupt	[]
+op	awaitValue	1
+answer	awaitValue	{"none":true}
+done	{"success":[0, [4, []]]}
+#	yields	4

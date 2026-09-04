@@ -170,3 +170,58 @@ let deferred_programs : (string * (unit -> value)) list =
 let scope_programs : (string * (unit -> value)) list =
   [ ("lifo", scope_lifo); ("addAfterClosed", scope_add_after_closed);
     ("remove", scope_remove_program); ("closeTwice", scope_close_twice) ]
+
+(* ---------------------------------------------------------------- Layers *)
+
+let layer_build k = Effect.perform (Op_layer_build k)
+let layer_provide_count base = Effect.perform (Op_layer_provide_count base)
+let layer_scope_of h = Effect.perform (Op_layer_scope_of (handle h))
+let layer_close () = Effect.perform (Op_layer_close ())
+
+let layer_build_once () =
+  ignore (layer_build 0);
+  layer_provide_count 0
+
+let layer_build_memo () =
+  ignore (layer_build 0);
+  ignore (layer_build 0);
+  layer_provide_count 0
+
+let layer_release_order () =
+  ignore (layer_build 0);
+  ignore (layer_build 1);
+  layer_close ()
+
+let layer_scoped_release () =
+  let h = layer_build 2 in
+  let s = layer_scope_of h in
+  ignore (layer_close ());
+  s
+
+let layer_fresh_rebuild () =
+  ignore (layer_build 3);
+  ignore (layer_build 3);
+  layer_provide_count 1
+
+let layer_fresh_region () =
+  ignore (layer_build 1);
+  let h = layer_build 3 in
+  layer_scope_of h
+
+let layer_fresh_release () =
+  ignore (layer_build 1);
+  ignore (layer_build 3);
+  layer_close ()
+
+let layer_rebuild_after_close () =
+  ignore (layer_build 0);
+  ignore (layer_close ());
+  ignore (layer_build 0);
+  ignore (layer_close ());
+  layer_provide_count 0
+
+let layer_programs : (string * (unit -> value)) list =
+  [ ("buildOnce", layer_build_once); ("buildMemo", layer_build_memo);
+    ("releaseOrder", layer_release_order); ("scopedRelease", layer_scoped_release);
+    ("freshRebuild", layer_fresh_rebuild); ("freshRegion", layer_fresh_region);
+    ("freshRelease", layer_fresh_release); ("rebuildAfterClose", layer_rebuild_after_close) ]

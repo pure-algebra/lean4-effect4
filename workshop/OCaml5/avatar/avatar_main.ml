@@ -22,6 +22,7 @@ let () =
     | "ref" -> Store_fixtures.ref_programs
     | "deferred" -> Store_fixtures.deferred_programs
     | "scope" -> Store_fixtures.scope_programs
+    | "layer" -> Store_fixtures.layer_programs
     | "extra" -> Extra_fixture.programs
     | other -> failwith ("unknown family " ^ other)
   in
@@ -31,6 +32,7 @@ let () =
     | None -> failwith ("unknown program " ^ name)
   in
   Tape.load tape;
+  max_ops_before_yield := int_of_string (getenv "EFFECT4_MAX_OPS" (string_of_int max_int));
   let m = machine_empty state in
   let fuel = int_of_string (getenv "EFFECT4_FUEL" (string_of_int default_fuel)) in
   (match run_program m fuel program with
@@ -49,6 +51,12 @@ let () =
   in
   List.iter print_endline head;
   List.iter (fun r -> print_endline (Avatar_trace.render_row r)) !sink;
+  (* The yield count the host tails report (`EFFECT4_EXPECT_YIELDS`): one per injection. *)
+  let yields =
+    List.length (List.filter (function YieldInjected _ -> true | _ -> false) m.trace)
+  in
+  if getenv "EFFECT4_YIELDS" "" = "1" then
+    print_endline (Printf.sprintf "#\tyields\t%d" yields);
   if getenv "EFFECT4_EVENTS" "" = "1" then
     List.iter (fun e -> print_endline ("#\t" ^ Avatar_trace.render_event e)) m.trace;
   if getenv "EFFECT4_STATUS" "" = "1" then begin

@@ -203,6 +203,11 @@ type run_fiber = {
   mutable max_ops_before_yield : int;
   mutable prevent_yield : bool;
   mutable yield_override : bool option;
+  (* Not a Lean field: `iteration`'s per-entry injection latch is Lean's `yielding` argument
+     to `Cmd.loop` (`Fibers.lean:683`, rc.112's `runLoop` local at `internal/effect.ts:634`).
+     `Cmd.loop` has no OCaml existence (DIVERGENCE 2), so the latch lives on the fiber and is
+     cleared wherever Lean's `Cmd.evaluate` would have passed `false`. *)
+  mutable yielding : bool;
   mutable observers : observer list;
   mutable children : int list;
   mutable dispatcher : dispatcher;
@@ -225,6 +230,7 @@ let run_fiber_make id program interruptible (max_ops, prevent) context =
     max_ops_before_yield = max_ops;
     prevent_yield = prevent;
     yield_override = None;
+    yielding = false;
     observers = [];
     children = [];
     dispatcher = Dispatcher.empty ();
@@ -310,6 +316,21 @@ type scope_cell = {
   mutable ran : int list;
 }
 
+(* The Layer memo world (`docs/ENVIRONMENT-DAG.md` M4b, `harness/trace/layer-tail.ts`): four
+   declared layers, 0/1/2 memoised through one memo map and 3 = `Layer.fresh(layer 1)`,
+   which constructs on every build and counts against base 1. The memo map's entries live
+   in the root scope, so closing it drops them. *)
+type layer_state = {
+  counts : (int, int) Hashtbl.t;          (* base -> how many times its construction ran *)
+  memo : (int, int) Hashtbl.t;            (* layer id -> the service it replays *)
+  mutable root_open : bool;
+  mutable registered : int list;          (* services whose finalizer is on the root, LIFO *)
+  mutable release_log : int list;         (* every service released so far, oldest first *)
+  service_scope : (int, int) Hashtbl.t;   (* service -> the layer scope of its construction *)
+  mutable next_service : int;
+  mutable next_layer_scope : int;
+}
+
 type st = {
   mutable started : int list;
   mutable cleanups : int list;
@@ -320,12 +341,17 @@ type st = {
   scopes : (int, scope_cell) Hashtbl.t;
   mutable next_scope : int;
   mutable due : (int * int * answer) list;
+  layers : layer_state;
 }
 
 let state : st =
   { started = []; cleanups = []; refs = Hashtbl.create 8; next_ref = 0;
     deferreds = Hashtbl.create 8; next_deferred = 0; scopes = Hashtbl.create 8; next_scope = 0;
-    due = [] }
+    due = [];
+    layers =
+      { counts = Hashtbl.create 8; memo = Hashtbl.create 8; root_open = true; registered = [];
+        release_log = []; service_scope = Hashtbl.create 8; next_service = 0;
+        next_layer_scope = 0 } }
 
 (* The wire's handle space: `registerHandle`/`handleIndex` in `harness/trace/tracer.ts`.
    An object never reaches the wire; it is encoded as its index in first-seen order, over
@@ -375,6 +401,12 @@ let machine_empty state =
    `flushAll` one round per sweep of the armed dispatchers. *)
 let default_fuel = 100000
 let default_rounds = 1000
+
+(* `Scheduler.MaxOpsBeforeYield` as the host tails read it (`EFFECT4_MAX_OPS`,
+   `harness/trace/fiber-tail.ts:74`). rc.112 caches it on the fiber at `setContext`
+   (`internal/effect.ts:726-727`), which is what `RunFiber.make`'s budget pair is. *)
+let max_ops_before_yield = ref max_int
+let prevent_yield = ref false
 
 let fiber_opt m id = List.find_opt (fun f -> f.id = id) m.fibers
 
@@ -450,6 +482,11 @@ type _ Effect.t +=
   | Op_scope_add : int * int -> value Effect.t
   | Op_scope_remove : int * int -> value Effect.t
   | Op_scope_close : int -> value Effect.t
+  (* The `Layers` family: `syncState` over the memo world. *)
+  | Op_layer_build : int -> value Effect.t
+  | Op_layer_provide_count : int -> value Effect.t
+  | Op_layer_scope_of : int -> value Effect.t
+  | Op_layer_close : unit -> value Effect.t
 
 (* A typed failure raised by a fiber body: `Prim.yieldableError`. *)
 exception Efail_exn of int
@@ -548,7 +585,10 @@ let countdown_park m (f : run_fiber) (targets : int list) resume_with : int opti
 (* `spawn` (`:622`): mask by the options, the parent's context, tracked unless daemon. *)
 let spawn m (parent : run_fiber) (program : unit -> value) ~daemon : int =
   let child_id = m.next_id in
-  let child = run_fiber_make child_id program parent.frame.interruptible (max_int, false) () in
+  let child =
+    run_fiber_make child_id program parent.frame.interruptible
+      (!max_ops_before_yield, !prevent_yield) ()
+  in
   if not daemon then begin
     child.observers <- [ UntrackChild parent.id ];
     parent.children <- parent.children @ [ child_id ]
@@ -573,26 +613,8 @@ let exit_value (e : exitv) (mode : observer_mode) : answer =
   | MAwait -> Aval (match e with Esuccess v -> Vsome v | Efailure _ -> Vnone)
   | MJoin -> ( match e with Esuccess v -> Aval v | Efailure c -> Acause c)
 
-(* `iteration` (`:683`) lines :639-652: the deferred interrupt, the op counter, the yield
-   injection. DIVERGENCE 2: run at the head of every handler arm. *)
-let iteration_prelude m (f : run_fiber) : cause option =
-  if f.frame.deferred_interrupt then begin
-    f.frame.deferred_interrupt <- false;
-    Some (frame_pending_cause f.frame)
-  end
-  else begin
-    f.current_op_count <- f.current_op_count + 1;
-    let verdict =
-      match f.yield_override with
-      | Some v -> v
-      | None -> f.current_op_count >= f.max_ops_before_yield
-    in
-    if (not f.prevent_yield) && verdict then begin
-      f.yield_override <- None;
-      emit m [ YieldInjected (f.id, f.current_op_count) ]
-    end;
-    None
-  end
+(* Round four: `iteration_prelude` is gone; `guard` below is the whole prelude, and it can
+   now park, so the yield injection is a transition rather than an event. *)
 
 (* ------------------------------------------------------------- exit, observers, drive *)
 
@@ -704,6 +726,7 @@ and exec m fuel (c : cmd) : unit =
       else begin
         f.running <- true;
         f.current_op_count <- 0;
+        f.yielding <- false;
         f.parked <- NotParked;
         emit m [ Started id ];
         run_control m fuel f
@@ -723,6 +746,7 @@ and exec m fuel (c : cmd) : unit =
           t.frame.control <- Onstack;
           t.running <- true;
           t.current_op_count <- 0;
+          t.yielding <- false;
           emit m [ Started id ];
           k.kresume answer
         | _ -> ())
@@ -777,127 +801,106 @@ and run_under_handler m fuel (f : run_fiber) (body : unit -> value) : unit =
           finish m fuel f exit_);
       effc =
         (fun (type a) (eff : a Effect.t) : ((a, unit) continuation -> unit) option ->
+          (* One primitive, one `runLoop` iteration: `guard` runs `iteration`'s prelude
+             (`internal/effect.ts:638-652`) before the arm, and the arm is a thunk because
+             rc.112's yield injection re-evaluates the *same* primitive after the yield. *)
+          let dispatch (k : (value, unit) continuation) (arm : kops -> unit) : unit =
+            let ko = { ret = continue k; thr = discontinue k } in
+            guard m f ko (fun () -> arm ko)
+          in
           match eff with
           | Op_fork (code, daemon) ->
-            Some (fun k -> arm_fork m f code daemon { ret = continue k; thr = discontinue k })
-          | Op_join h -> Some (fun k -> arm_join m f h { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_fork m f code daemon ko))
+          | Op_join h -> Some (fun k -> dispatch k (fun ko -> arm_join m f h ko))
           | Op_await_value h ->
-            Some (fun k -> arm_await m f h `Value { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_await m f h `Value ko))
           | Op_await_error h ->
-            Some (fun k -> arm_await m f h `Error { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_await m f h `Error ko))
           | Op_interrupt h ->
-            Some (fun k -> arm_interrupt m f h { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_interrupt m f h ko))
           | Op_started () ->
-            Some (fun k ->
-                arm_sync m f "started" (fun st -> st.started)
-                  { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_sync m f "started" (fun st -> st.started) ko))
           | Op_cleanups () ->
-            Some (fun k ->
-                arm_sync m f "cleanups" (fun st -> st.cleanups)
-                  { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_sync m f "cleanups" (fun st -> st.cleanups) ko))
           | Op_yield_now p ->
-            Some (fun k -> arm_yield m f p { ret = continue k; thr = discontinue k })
-          | Op_never () -> Some (fun k -> arm_never m f { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_yield m f p ko))
+          | Op_never () -> Some (fun k -> dispatch k (fun ko -> arm_never m f ko))
           | Op_await_all hs ->
-            Some (fun k -> arm_await_all m f hs { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_await_all m f hs ko))
           | Op_interrupt_all hs ->
-            Some (fun k -> arm_interrupt_all m f hs { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_interrupt_all m f hs ko))
           | Op_snapshot_children () ->
-            Some (fun k -> arm_snapshot_children m f { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_snapshot_children m f ko))
           | Op_await_new_children snap ->
-            Some (fun k -> arm_await_new_children m f snap { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_await_new_children m f snap ko))
           | Op_set_interruptible flag ->
-            Some (fun k -> arm_set_interruptible m f flag { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_set_interruptible m f flag ko))
           | Op_refuse name ->
-            Some (fun k -> arm_refuse m f name { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_refuse m f name ko))
           | Op_ref_make n ->
-            Some (fun k -> arm_ref_make m f n { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_ref_make m f n ko))
           | Op_ref_get h ->
-            Some (fun k ->
-                arm_state m f "get" (Vhandle h)
-                  (fun st -> Vnat (ref_cell st h).cell) { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_state m f "get" (Vhandle h)
+                  (fun st -> Vnat (ref_cell st h).cell) ko))
           | Op_ref_set (h, v) ->
-            Some (fun k ->
-                arm_state m f "set" (Vpair (Vhandle h, Vnat v))
-                  (fun st -> (ref_cell st h).cell <- v; Vunit)
-                  { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_state m f "set" (Vpair (Vhandle h, Vnat v))
+                  (fun st -> (ref_cell st h).cell <- v; Vunit) ko))
           | Op_ref_update (h, a) ->
-            Some (fun k ->
-                arm_state m f "update" (Vpair (Vhandle h, Vnat a))
-                  (fun st -> let c = ref_cell st h in c.cell <- c.cell + a; Vunit)
-                  { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_state m f "update" (Vpair (Vhandle h, Vnat a))
+                  (fun st -> let c = ref_cell st h in c.cell <- c.cell + a; Vunit) ko))
           | Op_ref_modify (h, a) ->
-            Some (fun k ->
-                arm_state m f "modify" (Vpair (Vhandle h, Vnat a))
+            Some (fun k -> dispatch k (fun ko -> arm_state m f "modify" (Vpair (Vhandle h, Vnat a))
                   (fun st -> let c = ref_cell st h in let before = c.cell in
-                             c.cell <- before + a; Vnat before)
-                  { ret = continue k; thr = discontinue k })
+                             c.cell <- before + a; Vnat before) ko))
           | Op_ref_get_and_set (h, v) ->
-            Some (fun k ->
-                arm_state m f "getAndSet" (Vpair (Vhandle h, Vnat v))
+            Some (fun k -> dispatch k (fun ko -> arm_state m f "getAndSet" (Vpair (Vhandle h, Vnat v))
                   (fun st -> let c = ref_cell st h in let before = c.cell in
-                             c.cell <- v; Vnat before)
-                  { ret = continue k; thr = discontinue k })
+                             c.cell <- v; Vnat before) ko))
           | Op_ref_try_take (h, a) ->
-            Some (fun k ->
-                arm_state m f "tryTake" (Vpair (Vhandle h, Vnat a))
+            Some (fun k -> dispatch k (fun ko -> arm_state m f "tryTake" (Vpair (Vhandle h, Vnat a))
                   (fun st ->
                     let c = ref_cell st h in
                     if c.cell >= a then begin c.cell <- c.cell - a; Vpair (Vbool true, Vnat c.cell) end
-                    else Vpair (Vbool false, Vstring "underflow"))
-                  { ret = continue k; thr = discontinue k })
+                    else Vpair (Vbool false, Vstring "underflow")) ko))
           | Op_def_make () ->
-            Some (fun k -> arm_def_make m f { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_def_make m f ko))
           | Op_def_succeed (h, v) ->
-            Some (fun k ->
-                arm_def_complete m f "succeed" h (Esuccess (Vnat v)) (Vnat v)
-                  { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_def_complete m f "succeed" h (Esuccess (Vnat v)) (Vnat v) ko))
           | Op_def_fail (h, e) ->
-            Some (fun k ->
-                arm_def_complete m f "fail" h (Efailure (cause_fail e)) (Vnat e)
-                  { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_def_complete m f "fail" h (Efailure (cause_fail e)) (Vnat e) ko))
           | Op_def_is_done h ->
-            Some (fun k ->
-                arm_state m f "isDone" (Vhandle h)
-                  (fun st -> Vbool ((deferred_cell st h).completion <> None))
-                  { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_state m f "isDone" (Vhandle h)
+                  (fun st -> Vbool ((deferred_cell st h).completion <> None)) ko))
           | Op_def_poll h ->
-            Some (fun k ->
-                arm_state m f "poll" (Vhandle h)
+            Some (fun k -> dispatch k (fun ko -> arm_state m f "poll" (Vhandle h)
                   (fun st ->
                     match (deferred_cell st h).completion with
                     | None -> Vnone
                     | Some (Esuccess v) -> Vsome (Vpair (Vbool true, v))
                     | Some (Efailure c) ->
                       Vsome (Vpair (Vbool false,
-                                    match cause_fail_of c with Some e -> Vnat e | None -> Vunit)))
-                  { ret = continue k; thr = discontinue k })
+                                    match cause_fail_of c with Some e -> Vnat e | None -> Vunit))) ko))
           | Op_def_await_value h ->
-            Some (fun k -> arm_def_await m f h `Value { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_def_await m f h `Value ko))
           | Op_def_await_error h ->
-            Some (fun k -> arm_def_await m f h `Error { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_def_await m f h `Error ko))
           | Op_scope_make () ->
-            Some (fun k -> arm_scope_make m f { ret = continue k; thr = discontinue k })
+            Some (fun k -> dispatch k (fun ko -> arm_scope_make m f ko))
           | Op_scope_add (h, key) ->
-            Some (fun k ->
-                arm_state m f "addFinalizer" (Vpair (Vhandle h, Vnat key))
+            Some (fun k -> dispatch k (fun ko -> arm_state m f "addFinalizer" (Vpair (Vhandle h, Vnat key))
                   (fun st ->
                     let sc = scope_cell st h in
                     if sc.scope_open then begin sc.finalizers <- key :: sc.finalizers; Vbool true end
-                    else begin sc.ran <- sc.ran @ [ key ]; Vbool false end)
-                  { ret = continue k; thr = discontinue k })
+                    else begin sc.ran <- sc.ran @ [ key ]; Vbool false end) ko))
           | Op_scope_remove (h, key) ->
-            Some (fun k ->
-                arm_state m f "remove" (Vpair (Vhandle h, Vnat key))
+            Some (fun k -> dispatch k (fun ko -> arm_state m f "remove" (Vpair (Vhandle h, Vnat key))
                   (fun st ->
                     let sc = scope_cell st h in
                     if sc.scope_open then
                       sc.finalizers <- List.filter (fun x -> x <> key) sc.finalizers;
-                    Vunit)
-                  { ret = continue k; thr = discontinue k })
+                    Vunit) ko))
           | Op_scope_close h ->
-            Some (fun k ->
-                arm_state m f "close" (Vhandle h)
+            Some (fun k -> dispatch k (fun ko -> arm_state m f "close" (Vhandle h)
                   (fun st ->
                     let sc = scope_cell st h in
                     if not sc.scope_open then Vlist []
@@ -907,24 +910,99 @@ and run_under_handler m fuel (f : run_fiber) (body : unit -> value) : unit =
                       sc.scope_open <- false;
                       sc.ran <- sc.ran @ ran;
                       Vlist (List.map (fun key -> Vnat key) ran)
-                    end)
-                  { ret = continue k; thr = discontinue k })
+                    end) ko))
+          | Op_layer_build layer ->
+            Some (fun k -> dispatch k (fun ko -> arm_layer_build m f layer ko))
+          | Op_layer_provide_count base ->
+            Some (fun k ->
+                dispatch k (fun ko ->
+                    arm_state m f "provideCount" (Vnat base)
+                      (fun st ->
+                        Vnat (match Hashtbl.find_opt st.layers.counts base with
+                              | Some n -> n
+                              | None -> 0))
+                      ko))
+          | Op_layer_scope_of h ->
+            Some (fun k ->
+                dispatch k (fun ko ->
+                    arm_state m f "scopeOf" (Vhandle h)
+                      (fun st ->
+                        let service = handle_target "service" h in
+                        match Hashtbl.find_opt st.layers.service_scope service with
+                        | Some sc -> Vhandle (handle_index "layerScope" sc)
+                        | None -> failwith "no layer scope for that service")
+                      ko))
+          | Op_layer_close () ->
+            Some (fun k ->
+                dispatch k (fun ko ->
+                    arm_state m f "close" Vunit
+                      (fun st ->
+                        let ls = st.layers in
+                        if not ls.root_open then Vlist []
+                        else begin
+                          let released = ls.registered in
+                          ls.registered <- [];
+                          ls.root_open <- false;
+                          (* The memo map's entries live in the root scope. *)
+                          Hashtbl.reset ls.memo;
+                          ls.release_log <- ls.release_log @ released;
+                          Vlist (List.map (fun sv -> Vhandle (handle_index "service" sv)) released)
+                        end)
+                      ko))
           | _ -> None);
     }
 
-(* Every arm runs `iteration_prelude` first; a deferred interrupt replaces the primitive. *)
-and prelude_or_fail m (f : run_fiber) (ko : kops) : bool =
-  match iteration_prelude m f with
-  | None -> false
-  | Some cause ->
+(* One `runLoop` iteration's prelude (`internal/effect.ts:638-668`, `Fibers.lean:683`),
+   run before every primitive the avatar steps:
+
+     :639-642  a deferred interrupt replaces the current primitive;
+     :643      `this.currentOpCount++`, one per iteration over a primitive;
+     :644-652  the yield injection, at most once per entry into `evaluate`, spelled by
+               rc.112 as `current = flatMap(yieldNow, () => prev)` -- so the *same*
+               primitive runs again after the yield, which is why `body` is a thunk.
+
+   Round four makes this a real transition: it can park. Round three only emitted the
+   `yieldInjected` event and carried on, so the budget was unobservable. *)
+and guard m (f : run_fiber) (ko : kops) (body : unit -> unit) : unit =
+  if f.frame.deferred_interrupt then begin
+    f.frame.deferred_interrupt <- false;
     f.running <- false;
-    ko.thr (Einterrupt_exn cause);
-    true
+    ko.thr (Einterrupt_exn (frame_pending_cause f.frame))
+  end
+  else begin
+    f.current_op_count <- f.current_op_count + 1;
+    let verdict =
+      match f.yield_override with
+      | Some v -> v
+      | None -> f.current_op_count >= f.max_ops_before_yield
+    in
+    if (not f.yielding) && (not f.prevent_yield) && verdict then begin
+      f.yielding <- true;
+      f.yield_override <- None;
+      emit m [ YieldInjected (f.id, f.current_op_count) ];
+      park_yield m f 0
+        (fun () -> guard m f ko body)
+        (fun c -> ko.thr (Einterrupt_exn c))
+    end
+    else body ()
+  end
+
+(* The service `answer` row is a further primitive. rc.112's traced service wraps the
+   method's effect in `Effect.tap` (`harness/trace/tracer.ts:288-291`), so a whole run-loop
+   iteration -- interrupt check, op count, yield check -- sits between the operation's value
+   and the row. Round three pushed the row from inside the arm, where nothing could pre-empt
+   it, which is the one divergence `extra.siblingCompletesDeferred` reported. *)
+and answer_then m (f : run_fiber) name (v : value) (ko : kops) (k : unit -> unit) : unit =
+  guard m f ko (fun () ->
+      push_row (Ranswer (name, v));
+      k ())
+
+and answer_row m (f : run_fiber) name (v : value) (ko : kops) : unit =
+  answer_then m f name v ko (fun () -> ko.ret v)
 
 (* `WithFiberAction.fork` (`:5264-5284`) followed by `start` (`:5277`). *)
 and arm_fork m f code daemon (ko : kops) : unit =
-  if prelude_or_fail m f ko then ()
-  else begin
+  begin
     let name = if daemon then "forkDetach" else "fork" in
     push_row (Rop (name, Vnat code));
     (* rc.112 adds the `interruptChildren` middleware in `Effect.forkChild` (`:612-614`). *)
@@ -935,13 +1013,15 @@ and arm_fork m f code daemon (ko : kops) : unit =
     let site = Tape.site () in
     let branch = Tape.decide () in
     push_row (Rdecide (site, branch));
-    push_row (Ranswer (name, Vhandle handle));
-    drive m m.drive_fuel nested;
-    (* On `true` the parent spends one primitive with the scheduler armed, so the run loop
-       takes the processor away and drains its queue: `Prim.yieldNowWith 0`. *)
-    if branch then park_yield m f 0 (fun () -> ko.ret (Vhandle handle))
-        (fun c -> ko.thr (Einterrupt_exn c))
-    else ko.ret (Vhandle handle)
+    answer_then m f name (Vhandle handle) ko (fun () ->
+        drive m m.drive_fuel nested;
+        (* On `true` the parent spends one primitive with the scheduler armed, so the run
+           loop takes the processor away and drains its queue: `Prim.yieldNowWith 0`. *)
+        if branch then
+          park_yield m f 0
+            (fun () -> ko.ret (Vhandle handle))
+            (fun c -> ko.thr (Einterrupt_exn c))
+        else ko.ret (Vhandle handle))
   end
 
 (* `Prim.yieldNowWith` (`:982-990`): enqueue the resume on this fiber's own dispatcher at
@@ -960,16 +1040,13 @@ and park_yield m f priority (on_value : unit -> unit) (on_cause : cause -> unit)
   f.running <- false
 
 and arm_yield m f priority (ko : kops) : unit =
-  if prelude_or_fail m f ko then ()
-  else
-    park_yield m f priority
+  park_yield m f priority
       (fun () -> ko.ret Vunit)
       (fun c -> ko.thr (Einterrupt_exn c))
 
 (* `Prim.async` registering no resume: rc.112's `Effect.never`. *)
 and arm_never m f (ko : kops) : unit =
-  if prelude_or_fail m f ko then ()
-  else begin
+  begin
     let token = fresh_token m in
     run_fiber_park f
       { token; waiting_on = None; remaining = 0; collected = []; resume_with = Rvoid };
@@ -987,15 +1064,14 @@ and arm_never m f (ko : kops) : unit =
 
 (* `ParkKind.join _ MJoin` (`:5291`): the child's exit continues this fiber as an effect. *)
 and arm_join m f handle (ko : kops) : unit =
-  if prelude_or_fail m f ko then ()
-  else begin
+  begin
     push_row (Rop ("join", Vhandle handle));
     let target = handle_target "fiber" handle in
     match fiber_opt m target with
     | None -> halt m (UnknownFiber target)
     | Some t -> (
       match t.exit_ with
-      | Some e -> answer_join ko e (* :561-562 *)
+      | Some e -> answer_join m f ko e (* :561-562 *)
       | None ->
         let token = fresh_token m in
         t.observers <- t.observers @ [ ResumeAwait (f.id, token, MJoin) ];
@@ -1008,17 +1084,13 @@ and arm_join m f handle (ko : kops) : unit =
               kresume =
                 (fun a ->
                   match a with
-                  | Aval v ->
-                    push_row (Ranswer ("join", v));
-                    ko.ret v
+                  | Aval v -> answer_row m f "join" v ko
                   | Acause c -> fail_op "join" ko c) })
   end
 
-and answer_join ko (e : exitv) : unit =
+and answer_join m f ko (e : exitv) : unit =
   match e with
-  | Esuccess v ->
-    push_row (Ranswer ("join", v));
-    ko.ret v
+  | Esuccess v -> answer_row m f "join" v ko
   | Efailure c -> fail_op "join" ko c
 
 (* A service operation that fails: the `failed` row, then the cause into the fiber. *)
@@ -1030,8 +1102,7 @@ and fail_op name (ko : kops) (c : cause) : unit =
 
 (* `awaitValue` / `awaitError`: both `Fiber.await` (`:5304`), projected. *)
 and arm_await m f handle which (ko : kops) : unit =
-  if prelude_or_fail m f ko then ()
-  else begin
+  begin
     let name = match which with `Value -> "awaitValue" | `Error -> "awaitError" in
     push_row (Rop (name, Vhandle handle));
     let project (e : exitv) : value =
@@ -1047,10 +1118,7 @@ and arm_await m f handle which (ko : kops) : unit =
     | None -> halt m (UnknownFiber target)
     | Some t -> (
       match t.exit_ with
-      | Some e ->
-        let v = project e in
-        push_row (Ranswer (name, v));
-        ko.ret v
+      | Some e -> answer_row m f name (project e) ko
       | None ->
         let token = fresh_token m in
         t.observers <- t.observers @ [ ResumeAwait (f.id, token, MAwait) ];
@@ -1068,15 +1136,12 @@ and arm_await m f handle which (ko : kops) : unit =
                   let e =
                     match (fiber_exn m target).exit_ with Some e -> e | None -> Esuccess Vunit
                   in
-                  let v = project e in
-                  push_row (Ranswer (name, v));
-                  ko.ret v) })
+                  answer_row m f name (project e) ko) })
   end
 
 (* `WithFiberAction.interrupt` (`:859`) = `interruptThenJoin`. *)
 and arm_interrupt m f handle (ko : kops) : unit =
-  if prelude_or_fail m f ko then ()
-  else begin
+  begin
     push_row (Rop ("interrupt", Vhandle handle));
     let target = handle_target "fiber" handle in
     match fiber_opt m target with
@@ -1093,39 +1158,32 @@ and arm_interrupt m f handle (ko : kops) : unit =
                kresume =
                  (fun a ->
                    match a with
-                   | Aval _ ->
-                     push_row (Ranswer ("interrupt", Vunit));
-                     ko.ret Vunit
+                   | Aval _ -> answer_row m f "interrupt" Vunit ko
                    | Acause c -> ko.thr (Einterrupt_exn c)) };
          f.running <- false;
          drive m m.drive_fuel nested
        | None ->
          drive m m.drive_fuel nested;
-         push_row (Ranswer ("interrupt", Vunit));
-         ko.ret Vunit)
+         answer_row m f "interrupt" Vunit ko)
   end
 
 (* `Prim.sync` through `RunInterp.syncState` (M1). *)
 and arm_sync m f name (read : st -> int list) (ko : kops) : unit =
-  if prelude_or_fail m f ko then ()
-  else begin
+  begin
     push_row (Rop (name, Vunit));
     let v = Vlist (List.map (fun n -> Vnat n) (read m.state)) in
-    push_row (Ranswer (name, v));
     drive m m.drive_fuel [ CdrainDue ];
-    ko.ret v
+    answer_row m f name v ko
   end
 
 (* The general `Prim.sync` arm: `RunInterp.syncState` answers a value and the resumes the
    store owes are drained on the spot (`iteration`'s `some (state, value)` arm, M1). *)
 and arm_state m f name (request : value) (compute : st -> value) (ko : kops) : unit =
-  if prelude_or_fail m f ko then ()
-  else begin
+  begin
     push_row (Rop (name, request));
     let v = compute m.state in
-    push_row (Ranswer (name, v));
     drive m m.drive_fuel [ CdrainDue ];
-    ko.ret v
+    answer_row m f name v ko
   end
 
 (* ------------------------------------------------- the remaining fiber arms *)
@@ -1133,25 +1191,23 @@ and arm_state m f name (request : value) (compute : st -> value) (ko : kops) : u
 (* `WithFiberAction.awaitAll` (`:5318-5322`): a countdown over the targets' exits, answered
    as the list of exits. *)
 and arm_await_all m f (hs : int list) (ko : kops) : unit =
-  if prelude_or_fail m f ko then ()
-  else begin
+  begin
     push_row (Rop ("awaitAll", Vlist (List.map (fun h -> Vhandle h) hs)));
     let targets = List.map (handle_target "fiber") hs in
     match countdown_park m f targets RexitsValue with
     | Some token ->
       f.frame.control <-
-        Suspended { ktoken = token; kresume = (fun a -> answer_countdown "awaitAll" ko a) };
+        Suspended { ktoken = token; kresume = (fun a -> answer_countdown m f "awaitAll" ko a) };
       f.running <- false
     | None ->
       let exits = List.filter_map (fun t -> (fiber_exn m t).exit_) targets in
-      answer_countdown "awaitAll" ko (resume_prim RexitsValue exits)
+      answer_countdown m f "awaitAll" ko (resume_prim RexitsValue exits)
   end
 
 (* `WithFiberAction.interruptAll` (`:895`, `:913`): record on every target first, then await
    them all. *)
 and arm_interrupt_all m f (hs : int list) (ko : kops) : unit =
-  if prelude_or_fail m f ko then ()
-  else begin
+  begin
     push_row (Rop ("interruptAll", Vlist (List.map (fun h -> Vhandle h) hs)));
     let targets = List.map (handle_target "fiber") hs in
     let nested =
@@ -1168,29 +1224,25 @@ and arm_interrupt_all m f (hs : int list) (ko : kops) : unit =
     match countdown_park m f targets Rvoid with
     | Some token ->
       f.frame.control <-
-        Suspended { ktoken = token; kresume = (fun a -> answer_countdown "interruptAll" ko a) };
+        Suspended { ktoken = token; kresume = (fun a -> answer_countdown m f "interruptAll" ko a) };
       f.running <- false;
       drive m m.drive_fuel nested
     | None ->
       drive m m.drive_fuel nested;
-      push_row (Ranswer ("interruptAll", Vunit));
-      ko.ret Vunit
+      answer_row m f "interruptAll" Vunit ko
   end
 
 (* `WithFiberAction.snapshotChildren` (`:5318`). *)
 and arm_snapshot_children m f (ko : kops) : unit =
-  if prelude_or_fail m f ko then ()
-  else begin
+  begin
     push_row (Rop ("childrenSnapshot", Vunit));
     let v = Vlist (List.map (fun c -> Vhandle (handle_index "fiber" c)) f.children) in
-    push_row (Ranswer ("childrenSnapshot", v));
-    ko.ret v
+    answer_row m f "childrenSnapshot" v ko
   end
 
 (* `WithFiberAction.awaitNewChildren snapshot`: await the children added since. *)
 and arm_await_new_children m f (snapshot : value) (ko : kops) : unit =
-  if prelude_or_fail m f ko then ()
-  else begin
+  begin
     push_row (Rop ("awaitChildren", snapshot));
     let seen =
       match snapshot with
@@ -1202,27 +1254,22 @@ and arm_await_new_children m f (snapshot : value) (ko : kops) : unit =
     match countdown_park m f fresh Rvoid with
     | Some token ->
       f.frame.control <-
-        Suspended { ktoken = token; kresume = (fun a -> answer_countdown "awaitChildren" ko a) };
+        Suspended { ktoken = token; kresume = (fun a -> answer_countdown m f "awaitChildren" ko a) };
       f.running <- false
-    | None ->
-      push_row (Ranswer ("awaitChildren", Vunit));
-      ko.ret Vunit
+    | None -> answer_row m f "awaitChildren" Vunit ko
   end
 
 (* What a finished countdown answers with. *)
-and answer_countdown name (ko : kops) (a : answer) : unit =
+and answer_countdown m f name (ko : kops) (a : answer) : unit =
   match a with
-  | Aval v ->
-    push_row (Ranswer (name, v));
-    ko.ret v
+  | Aval v -> answer_row m f name v ko
   | Acause c -> fail_op name ko c
 
 (* `WithFiberAction.setInterruptible` (`:4302-4310`, `:4331-4352`, M2): set the flag, and on
    restoring interruptibility fail now if a cause is pending. Answers the previous flag, so a
    program can spell rc.112's `uninterruptible` as a bracket. *)
 and arm_set_interruptible m f (flag : bool) (ko : kops) : unit =
-  if prelude_or_fail m f ko then ()
-  else begin
+  begin
     let previous = f.frame.interruptible in
     f.frame.interruptible <- flag;
     if flag then
@@ -1240,55 +1287,76 @@ and arm_set_interruptible m f (flag : bool) (ko : kops) : unit =
    with the cause, visibly. Every `WithFiberAction` arm this pass does not implement is
    reached through here, so an unimplemented arm refuses rather than differing. *)
 and arm_refuse m f (name : string) (ko : kops) : unit =
-  if prelude_or_fail m f ko then ()
-  else begin
+  begin
     f.running <- false;
     ko.thr (Einterrupt_exn (cause_die ("unimplemented WithFiberAction: " ^ name)))
   end
 
 (* ------------------------------------------------------ the store arms (S2) *)
 
+(* `Layer.buildWithMemoMap(layer, memoMap, root)` answering `Context.get(context, Tag)`:
+   the service object, which the memo entry replays unchanged on a hit
+   (`harness/trace/layer-tail.ts:114-121`). Layer 3 is `Layer.fresh(layer 1)`, so it misses
+   the memo every time and counts against base 1. *)
+and arm_layer_build m f (layer : int) (ko : kops) : unit =
+  begin
+    push_row (Rop ("build", Vnat layer));
+    let ls = m.state.layers in
+    let base = if layer = 3 then 1 else layer in
+    let fresh = layer = 3 in
+    let service =
+      match (if fresh then None else Hashtbl.find_opt ls.memo layer) with
+      | Some service -> service                                        (* the memo hit *)
+      | None ->
+        Hashtbl.replace ls.counts base
+          (1 + match Hashtbl.find_opt ls.counts base with Some n -> n | None -> 0);
+        let service = ls.next_service in
+        ls.next_service <- service + 1;
+        let layer_scope = ls.next_layer_scope in
+        ls.next_layer_scope <- layer_scope + 1;
+        Hashtbl.replace ls.service_scope service layer_scope;
+        (* The construction registers its release finalizer on its own layer scope, which
+           `memoMapBuild` forked from the root. A scope forked from a closed root is already
+           closed, so the finalizer runs on the spot and the next `close` sees nothing. *)
+        if ls.root_open then ls.registered <- service :: ls.registered
+        else ls.release_log <- ls.release_log @ [ service ];
+        if not fresh then Hashtbl.replace ls.memo layer service;
+        service
+    in
+    answer_row m f "build" (Vhandle (handle_index "service" service)) ko
+  end
+
 and arm_ref_make m f (initial : int) (ko : kops) : unit =
-  if prelude_or_fail m f ko then ()
-  else begin
+  begin
     push_row (Rop ("make", Vnat initial));
     let id = m.state.next_ref in
     m.state.next_ref <- id + 1;
     Hashtbl.replace m.state.refs id { cell = initial };
-    let v = Vhandle (handle_index "ref" id) in
-    push_row (Ranswer ("make", v));
-    ko.ret v
+    answer_row m f "make" (Vhandle (handle_index "ref" id)) ko
   end
 
 and arm_def_make m f (ko : kops) : unit =
-  if prelude_or_fail m f ko then ()
-  else begin
+  begin
     push_row (Rop ("make", Vunit));
     let id = m.state.next_deferred in
     m.state.next_deferred <- id + 1;
     Hashtbl.replace m.state.deferreds id { completion = None; waiters = [] };
-    let v = Vhandle (handle_index "deferred" id) in
-    push_row (Ranswer ("make", v));
-    ko.ret v
+    answer_row m f "make" (Vhandle (handle_index "deferred" id)) ko
   end
 
 and arm_scope_make m f (ko : kops) : unit =
-  if prelude_or_fail m f ko then ()
-  else begin
+  begin
     push_row (Rop ("make", Vunit));
     let id = m.state.next_scope in
     m.state.next_scope <- id + 1;
     Hashtbl.replace m.state.scopes id { scope_open = true; finalizers = []; ran = [] };
-    let v = Vhandle (handle_index "scope" id) in
-    push_row (Ranswer ("make", v));
-    ko.ret v
+    answer_row m f "make" (Vhandle (handle_index "scope" id)) ko
   end
 
 (* A Deferred completion: the first one wins, and the waiters it owes are queued for
    `dueResumes` in registration order (`Deferred.ts:1655-1659`, M1). *)
 and arm_def_complete m f name h (exit_ : exitv) (_payload : value) (ko : kops) : unit =
-  if prelude_or_fail m f ko then ()
-  else begin
+  begin
     push_row (Rop (name, Vpair (Vhandle h,
                                 match exit_ with
                                 | Esuccess v -> v
@@ -1308,28 +1376,22 @@ and arm_def_complete m f name h (exit_ : exitv) (_payload : value) (ko : kops) :
        runs first. The service `answer` row is what the host face emits when the effect
        completes, i.e. after that nested work -- hence the drain before the row. *)
     drive m m.drive_fuel [ CdrainDue ];
-    push_row (Ranswer (name, Vbool fresh));
-    ko.ret (Vbool fresh)
+    answer_row m f name (Vbool fresh) ko
   end
 
 (* `Deferred.await` and its flip: answered at once when the cell is settled, otherwise a
    `Prim.async` whose `registerAsync` adds the waiter and parks (`:1109-1143`). *)
 and arm_def_await m f h which (ko : kops) : unit =
-  if prelude_or_fail m f ko then ()
-  else begin
+  begin
     let name = match which with `Value -> "awaitValue" | `Error -> "awaitError" in
     push_row (Rop (name, Vhandle h));
     let answer_now () =
       let cell = deferred_cell m.state h in
       match (which, cell.completion) with
-      | `Value, Some (Esuccess v) ->
-        push_row (Ranswer (name, v));
-        ko.ret v
+      | `Value, Some (Esuccess v) -> answer_row m f name v ko
       | `Value, Some (Efailure c) -> fail_op name ko c
       | `Error, Some (Efailure c) ->
-        let v = match cause_fail_of c with Some e -> Vnat e | None -> Vunit in
-        push_row (Ranswer (name, v));
-        ko.ret v
+        answer_row m f name (match cause_fail_of c with Some e -> Vnat e | None -> Vunit) ko
       | `Error, Some (Esuccess v) -> fail_op name ko (cause_fail (match v with Vnat n -> n | _ -> 0))
       | _, None -> ()
     in
@@ -1422,7 +1484,7 @@ let step_decision m fuel = function
 (* `runFork` (`:1184`): one root fiber, evaluated synchronously on the caller stack. *)
 let run_fork m fuel (program : unit -> value) : int =
   let root = m.next_id in
-  let fiber = run_fiber_make root program true (max_int, false) () in
+  let fiber = run_fiber_make root program true (!max_ops_before_yield, !prevent_yield) () in
   m.fibers <- m.fibers @ [ fiber ];
   m.next_id <- m.next_id + 1;
   drive m fuel [ Cevaluate root; CdrainDue ];
@@ -1431,7 +1493,7 @@ let run_fork m fuel (program : unit -> value) : int =
 (* `runCallback` (`:1194`): `runFork` plus an exit observer under `key`. *)
 let run_callback m fuel (program : unit -> value) (key : int) : int =
   let root = m.next_id in
-  let fiber = run_fiber_make root program true (max_int, false) () in
+  let fiber = run_fiber_make root program true (!max_ops_before_yield, !prevent_yield) () in
   fiber.observers <- [ Callback key ];
   m.fibers <- m.fibers @ [ fiber ];
   m.next_id <- m.next_id + 1;
