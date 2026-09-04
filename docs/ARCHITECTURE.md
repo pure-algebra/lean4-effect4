@@ -18,6 +18,10 @@ Api: the application face (type, print, compile, run; Schema syntax)
 Schema (carrier, annotations, checker, authoring) -> Target/TypeScript (profile, Schema generation)
 Store (canonical bytes, digest, trie) -> Arch (views as Schema documents), StdLib (rc.112 export census)
                                       -> Surface (entities, HTTP API, MCP agent, deployment, site), Char
+
+OCaml5 (lake library, src/OCaml5): the OCaml 5 / js_of_ocaml runtime model, the OCaml
+language model, library carriers, the LCNF backend, the Machine descriptions; imports
+Effect4.Machine and Effect4.Api, nothing imports it   ->   ocaml/ (the dune workspace)
 ```
 
 Arrows point from what is imported to what imports it. `Api` imports the
@@ -43,10 +47,27 @@ none of their carriers.
 | `src/Effect4/Codegen`, `src/Effect4/Ingest` | the pinned Effect v4 profile, `print`, the Schema and annotated-field generators and the surface emitters; the readers that go the other way |
 | `src/Effect4/Store`, `src/Effect4/Evidence` | content store; architecture and surface views; the rc.112 export census (`Evidence/StdLib`) and its links to the model |
 | `src/Effect4/Surface`, `src/Effect4/Evidence/Char` | surface carriers; characterized components |
+| `src/OCaml5` | the Lean half of the OCaml estate: the OCaml 5 handler machine and its theorems, the jsoo machine, the OCaml language model (`Ml`), library carriers (`Lib`), the LCNF → OCaml backend (`Lcnf`), the Machine carriers described and rendered (`Render`, `Derived`), the route-1 bridge (`Bridge`), the `--run` drivers (`Tools`) |
+| `ocaml/` | the OCaml estate as one dune workspace: the avatar (the Machine as OCaml 5 handlers), the daemon `effect4d`, the route-1 link and host core, the LCNF route's generated machine, and the `Eff` IR as an OCaml library (`ocaml/README.md`) |
+| `harness/truth` | the Lean-vs-rc.112 exit differential over the program corpus (bun) |
 
 Tests mirror these areas under `Test/`; durable attacks live under
 `Test/Counterexamples/` with their stable IDs in
 `Test/Counterexamples/REGISTER.md` and their contracts under `Test/contracts/`.
+
+## The OCaml estate
+
+Two runtimes exist on purpose. The *visible machine* is the Lean `RunMachine` running in
+OCaml — compiled Lean held as an opaque value (`ocaml/link`), or Lean's compiler IR
+translated to typed OCaml (`ocaml/gen`) — so every fiber, frame and park token is a field
+of one value that can be inspected, serialised and messaged through the model's own
+decision alphabet. The *avatar* (`ocaml/avatar`) is the same machine as OCaml 5 effect
+handlers with the frame stack on the OCaml stack: fast, effects-native, never one-for-one,
+and held to the Lean model by the witness report, the corpus differential against rc.112,
+and the projection guard between its hand descriptions and the descriptions derived from
+the environment. The daemon (`ocaml/server`) serves the avatar on three hosts from one
+module list; `ocaml/eff` is `Eff` as an OCaml language whose bytes the Lean decoder accepts
+exactly. Everything under `ocaml/` is held to `ocaml/STANDARDS.md`.
 
 ## The seam
 

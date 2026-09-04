@@ -1,0 +1,16 @@
+Lit: unit nat bool str
+Term: var lit app
+Terms: nil cons
+CauseTerm: fail die interrupt both
+FnName: incr double zeroWhenPositive noChange takeAndBump
+FinalizerStrategy: sequential parallel
+NativeOp: refMake refGet refSet refGetAndSet refSetAndGet refUpdate refGetAndUpdate refUpdateAndGet refUpdateSome refGetAndUpdateSome refUpdateSomeAndGet refModify refModifySome deferredMake deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake
+MaskMode: interruptible uninterruptible inherit
+ObserverMode: awaitValue joinEffect
+ForkOptions: startImmediately daemon maskMode
+Eff: succeed fail failCause yieldError sync suspend perform bind gen catchCause matchCause onExit exit uninterruptible interruptible branch whileLoop yieldNow callback awaitFiber withFiber scoped acquireRelease choose
+Stmt: bindYield yieldDiscard ret ifElse whileTrue breakLoop
+Stmts: nil cons
+Effs: nil cons
+ActionTerm: fork forkIn forkScoped runIn interrupt interruptScoped interruptAll awaitAll awaitAllFailFast snapshotChildren awaitNewChildren raceAll setContext getContext getId closeScope
+tags: bool=1 nat=2 string=3 list=4 pair=5 none=6 some=7 bytes=8 unit=9 ctor=10

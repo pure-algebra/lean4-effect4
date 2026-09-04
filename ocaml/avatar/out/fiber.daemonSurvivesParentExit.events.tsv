@@ -1,0 +1,39 @@
+format	effect4-trace-golden-v1
+generator	ocaml/avatar/build-avatar.sh	sha256=7e7bc8a18137a76f139cb735d0b84dd5ab16eb5ce68ed483a8657c59a4ddd025
+regenerate	./ocaml/avatar/build-avatar.sh
+input	ocaml/avatar/deep_fibers.ml	sha256=7e7bc8a18137a76f139cb735d0b84dd5ab16eb5ce68ed483a8657c59a4ddd025
+input	ocaml/avatar/avatar_trace.ml	sha256=7e7bc8a18137a76f139cb735d0b84dd5ab16eb5ce68ed483a8657c59a4ddd025
+input	ocaml/avatar/fibers_fixture.ml	sha256=7e7bc8a18137a76f139cb735d0b84dd5ab16eb5ce68ed483a8657c59a4ddd025
+input	ocaml/avatar/store_fixtures.ml	sha256=7e7bc8a18137a76f139cb735d0b84dd5ab16eb5ce68ed483a8657c59a4ddd025
+input	ocaml/avatar/extra_fixture.ml	sha256=7e7bc8a18137a76f139cb735d0b84dd5ab16eb5ce68ed483a8657c59a4ddd025
+input	ocaml/avatar/corpus_run.ml	sha256=7e7bc8a18137a76f139cb735d0b84dd5ab16eb5ce68ed483a8657c59a4ddd025
+input	ocaml/avatar/corpus/programs.txt	sha256=7e7bc8a18137a76f139cb735d0b84dd5ab16eb5ce68ed483a8657c59a4ddd025
+pin	effects	a4ee7a14248ee5976039b73039319efa87834986
+format	effect4-trace-v1
+face	ocaml
+program	fiber.daemonSurvivesParentExit
+tape	0:1
+rules	service-acquire,perform-call,perform-bind,nullary-value,ret
+op	forkDetach	4
+decide	0	true
+answer	forkDetach	0
+op	started	[]
+answer	started	[4, []]
+op	cleanups	[]
+answer	cleanups	[]
+done	{"success":[]}
+#	started	0
+#	forked	0	1	true
+#	scheduledTask	0	0	start(1)
+#	scheduledTask	0	0	resume(0,0)
+#	parkedOn	0	0
+#	ranTask	0	start(1)
+#	started	1
+#	parkedOn	1	1
+#	ranTask	0	resume(0,0)
+#	resumedWith	0	0
+#	started	0
+#	exited	0	{"success":[]}
+#	finished	false	stuck	-
+#	fiber	0	status	done	observers	0	children	[]
+#	fiber	1	status	runnable	observers	0	children	[]

@@ -1,0 +1,5 @@
+(lang dune 3.0)
+; The OCaml 5 workshop as one dune workspace: `avatar/` (its own nested project, the
+; `effect4_avatar` library and the trace faces) and `server/` (`effect4d`, which links that
+; library). `dune build` from this directory builds both; `avatar/build-dune.sh` still
+; builds the avatar alone with `--root avatar`.

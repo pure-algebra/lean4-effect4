@@ -1,0 +1,1 @@
+["bind",["withFiber",["fork",["bind",["yieldNow",0],["succeed",["lit",["nat",7]]]],{"startImmediately":false,"daemon":false,"maskMode":["inherit"]}]],["awaitFiber",["var",0],["awaitValue"]]]

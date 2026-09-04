@@ -1,0 +1,24 @@
+; The battery: goldens (bytes, JSON, types) against the Lean side, the GADT corpus, the
+; constructor pins, the wire kernel; and the property test of the wire on random programs.
+(test
+ (name test_eff)
+ (modules test_eff)
+ (libraries effect4_eff)
+ (deps
+  (glob_files %{project_root}/goldens/*)
+  %{project_root}/eff_manifest.txt))
+
+(test
+ (name prop_wire)
+ (modules prop_wire)
+ (libraries effect4_eff))
+
+; The differential against Lean's own encoder (Effect4.Program.Wire, printed as hex by
+; src/OCaml5/Tools/EffWire.lean into ocaml/goldens/eff). That directory is a sibling of this
+; dune project, so it cannot be a tracked dep: the test reaches it relatively and says so
+; when it is absent. Our own goldens are deps because it compares against them.
+(test
+ (name test_lean_wire)
+ (modules test_lean_wire)
+ (libraries effect4_eff)
+ (deps (glob_files %{project_root}/goldens/*)))

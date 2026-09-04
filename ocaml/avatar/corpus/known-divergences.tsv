@@ -1,0 +1,9 @@
+# Classified divergences of the adversarial corpus (round five of spike A0).
+# <program>	<class>	<why>
+# Classes:
+#   rc112-behaviour   rc.112 does something the Lean Deep machine does not model
+#   avatar-open       a real avatar defect, minimised and named, not yet repaired
+#   tracing           where a row is emitted, not what the machine did
+# An avatar bug that has been repaired never appears here.
+# 2026-09-04, seat F3: `hYieldStorm` (rc112-behaviour, the cross-dispatcher flush order) closed by
+# R2-14/R2-15 (`8a51d95`, `RunMachine.armed`): 447 ok / 0 unclassified / 0 classified. No row remains.

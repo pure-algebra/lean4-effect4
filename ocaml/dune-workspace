@@ -1,0 +1,3 @@
+(lang dune 3.0)
+; Marks ocaml as the workspace root, so that `dune build` anywhere below it
+; (avatar/ or server/) resolves to one build in ocaml/_build.

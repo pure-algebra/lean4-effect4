@@ -22,7 +22,7 @@ enough fuel because every frame costs at least nine bytes.
 
 Laws owed: `decodeProgram (encodeProgram p) = some p` (checked on the corpus below,
 theorem pending) and exactness, `decodeProgram b = some p → b = encodeProgram p` (pending).
-The same rule is implemented on the OCaml side (`workshop/OCaml5/eff`) from the same
+The same rule is implemented on the OCaml side (`ocaml/eff`) from the same
 constructor order, and the goldens `tools/EffWire.lean` prints are the cross-check.
 -/
 

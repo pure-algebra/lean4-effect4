@@ -1,0 +1,23 @@
+Effect4.Program.Ty (ty) inductive: never unit nat int string bool handle(string) option(ty) list(ty) prod(ty,ty) except(ty,ty) exitOf(ty,ty) causeOf(ty) fiberOf(ty,ty) union(ty,ty)
+Effect4.Program.Lit (lit) inductive: unit nat(int) bool(bool) str(string)
+Effect4.Program.Term (term) inductive: var(int) lit(lit) app(string,terms)
+Effect4.Program.Terms (terms) inductive: nil cons(term,terms)
+Effect4.Program.CauseTerm (cause_term) inductive: fail(term) die(term) interrupt(term option) both(cause_term,cause_term)
+Effect4.Supervision.MaskMode (mask_mode) inductive: interruptible uninterruptible inherit
+Effect4.Supervision.ForkOptions (fork_options) structure: startImmediately:bool daemon:bool maskMode:mask_mode
+Effect4.Supervision.ObserverMode (observer_mode) inductive: awaitValue joinEffect
+Effect4.FinalizerStrategy (finalizer_strategy) inductive: sequential parallel
+Effect4.Machine.FnName (fn_name) inductive: incr double zeroWhenPositive noChange takeAndBump
+Effect4.Program.NativeOp (native_op) inductive: refMake refGet refSet refGetAndSet refSetAndGet refUpdate(fn_name) refGetAndUpdate(fn_name) refUpdateAndGet(fn_name) refUpdateSome(fn_name) refGetAndUpdateSome(fn_name) refUpdateSomeAndGet(fn_name) refModify(fn_name) refModifySome(fn_name) deferredMake deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake(finalizer_strategy)
+Effect4.Program.Eff (eff) inductive: succeed(term) fail(term) failCause(cause_term) yieldError(term) sync(term) suspend(eff) perform(native_op,term) bind(eff,eff) gen(stmts) catchCause(eff,eff) matchCause(eff,eff,eff) onExit(eff,eff) exit(eff) uninterruptible(eff) interruptible(eff) branch(term,eff,eff) whileLoop(term,term,term,eff) yieldNow(int) callback(native_op,term) awaitFiber(term,observer_mode) withFiber(action_term) scoped(eff) acquireRelease(eff,eff) choose(int,eff,eff)
+Effect4.Program.Stmt (stmt) inductive: bindYield(eff) yieldDiscard(eff) ret(term) ifElse(term,stmts,stmts) whileTrue(stmts) breakLoop
+Effect4.Program.Stmts (stmts) inductive: nil cons(stmt,stmts)
+Effect4.Program.Effs (effs) inductive: nil cons(eff,effs)
+Effect4.Program.ActionTerm (action_term) inductive: fork(eff,fork_options) forkIn(eff,fork_options,term) forkScoped(eff,fork_options) runIn(term,term) interrupt(term) interruptScoped(term) interruptAll(term,term option) awaitAll(term) awaitAllFailFast(term) snapshotChildren awaitNewChildren(term) raceAll(effs) setContext(term) getContext getId closeScope(term,term)
+Effect4.Program.RowKind (row_kind) inductive: sync async program
+Effect4.Program.RowShape (row_shape) inductive: call value
+Effect4.ServiceName (service_name) structure: value:int
+Effect4.ServiceTypeCode (service_type_code) structure: value:int
+Effect4.ServiceKey (service_key) structure: name:service_name service:service_type_code
+Effect4.Program.Row (row) structure: name:string spelling:string shape:row_shape trailing:string list kind:row_kind request:ty answer:ty error:ty requires:service_key list cite:string
+Effect4.Program.EffTy (eff_ty) structure: answer:ty error:ty requires:service_key list

@@ -1,0 +1,100 @@
+format	effect4-trace-golden-v1
+generator	ocaml/avatar/build-avatar.sh	sha256=
+regenerate	./ocaml/avatar/build-avatar.sh
+input	ocaml/avatar/deep_fibers.ml	sha256=
+input	ocaml/avatar/avatar_trace.ml	sha256=
+input	ocaml/avatar/fibers_fixture.ml	sha256=
+input	ocaml/avatar/store_fixtures.ml	sha256=
+input	ocaml/avatar/extra_fixture.ml	sha256=
+input	ocaml/avatar/corpus_run.ml	sha256=
+input	ocaml/avatar/corpus/programs.txt	sha256=
+pin	effects	
+format	effect4-trace-v1
+face	ocaml
+program	fuzz.p400062
+tape	0:1,1:1,2:1,3:1,4:0
+rules	
+op	fork	0
+decide	0	true
+answer	fork	0
+op	make	[]
+answer	make	1
+op	make	4
+answer	make	2
+op	cleanups	[]
+answer	cleanups	[0, []]
+op	fork	1
+decide	1	true
+answer	fork	3
+op	cleanups	[]
+answer	cleanups	[0, [1, []]]
+op	build	0
+answer	build	4
+op	fork	0
+decide	2	true
+answer	fork	5
+op	build	2
+answer	build	6
+op	join	0
+answer	join	11
+op	join	0
+answer	join	11
+op	cleanups	[]
+answer	cleanups	[0, [1, [0, []]]]
+op	set	[2, 3]
+answer	set	[]
+op	make	[]
+answer	make	7
+op	make	8
+answer	make	8
+op	modify	[8, 8]
+answer	modify	8
+op	getAndSet	[2, 6]
+answer	getAndSet	3
+op	cleanups	[]
+answer	cleanups	[0, [1, [0, []]]]
+op	join	3
+answer	join	22
+op	started	[]
+answer	started	[0, [1, [0, []]]]
+op	addFinalizer	[1, 2]
+answer	addFinalizer	true
+op	join	3
+answer	join	22
+op	remove	[7, 2]
+answer	remove	[]
+op	cleanups	[]
+answer	cleanups	[0, [1, [0, []]]]
+op	addFinalizer	[1, 2]
+answer	addFinalizer	true
+op	cleanups	[]
+answer	cleanups	[0, [1, [0, []]]]
+op	interrupt	5
+answer	interrupt	[]
+op	close	7
+answer	close	[]
+op	awaitError	3
+answer	awaitError	{"none":true}
+op	awaitError	3
+answer	awaitError	{"none":true}
+op	cleanups	[]
+answer	cleanups	[0, [1, [0, []]]]
+op	cleanups	[]
+answer	cleanups	[0, [1, [0, []]]]
+op	cleanups	[]
+answer	cleanups	[0, [1, [0, []]]]
+op	fork	2
+decide	3	true
+answer	fork	9
+op	cleanups	[]
+answer	cleanups	[0, [1, [0, [2, []]]]]
+op	make	1
+answer	make	10
+op	cleanups	[]
+answer	cleanups	[0, [1, [0, [2, []]]]]
+op	fork	4
+decide	4	false
+answer	fork	11
+op	cleanups	[]
+answer	cleanups	[0, [1, [0, [2, []]]]]
+done	{"success":[0, [1, [0, [2, []]]]]}

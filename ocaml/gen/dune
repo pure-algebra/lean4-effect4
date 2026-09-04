@@ -1,0 +1,24 @@
+; The LCNF route's output and its check. Build standalone from this directory:
+;   dune build --root . && dune test --root .
+; `machine_gen.ml` (the nine target functions, exercised by gen_check) and
+; `fibers_gen.ml` (every top-level function of Fibers.lean, type-checked only) are
+; GENERATED (see their headers for the regenerating command);
+; `avatar_reference.ml` is a marked copy of avatar/deep_fibers.ml's dispatcher.
+
+(library
+ (name effect4_gen)
+ (modules machine_gen fibers_gen avatar_reference)
+ (flags
+  (:standard -warn-error -a)))
+
+(executable
+ (name gen_check)
+ (modules gen_check)
+ (libraries effect4_gen)
+ (flags
+  (:standard -warn-error -a)))
+
+(rule
+ (alias runtest)
+ (action
+  (run %{exe:gen_check.exe})))

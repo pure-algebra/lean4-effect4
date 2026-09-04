@@ -1,0 +1,1 @@
+["matchCause",["succeed",["lit",["nat",1]]],["succeed",["app","isZero",["cons",["var",0],["nil"]]]],["succeed",["lit",["bool",false]]]]

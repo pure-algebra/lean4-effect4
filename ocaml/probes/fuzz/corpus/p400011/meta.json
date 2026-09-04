@@ -1,0 +1,14 @@
+{
+  "name": "p400011",
+  "seed": 400011,
+  "operations": 6,
+  "forks": 1,
+  "families": ["fiber", "deferred", "scope"],
+  "usesExtra": true,
+  "tape": "0:0",
+  "rules": "service-acquire,perform-call,perform-bind,nullary-value,perform-discard,ret",
+  "wireProgram": "corpus.p400011",
+  "ocamlEntry": "corpus_p400011",
+  "tsEntry": "corpus_p400011",
+  "opFamilies": ["fiber", "deferred", "scope", "fiber", "fiber", "fiber"]
+}

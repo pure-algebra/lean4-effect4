@@ -19,5 +19,17 @@
 # (check-schema-annotations, check-schema-effectful-field,
 # check-schema-typescript-generation, check-internal-citations and their two
 # gate tests) — so this hides only new, untracked harness work such as
-# harness/trace/.
-/harness/
+# harness/trace/. `harness/truth/` (the Lean-vs-rc.112 exit differential, 2026-09-04)
+# is tracked; its bun install and its copy of the archived trace lane are not.
+/harness/*
+!/harness/truth/
+/harness/truth/node_modules/
+/harness/truth/archive/
+
+# The OCaml estate (`ocaml/`, one dune workspace) is tracked; dune's build directories,
+# the per-machine generated link flags (absolute paths of this machine's Lean install,
+# written by ocaml/link/tools/lean-flags.sh) and any node install are not.
+/ocaml/**/_build/
+/ocaml/**/node_modules/
+/ocaml/link/c_flags.sexp
+/ocaml/link/lean_flags.sexp

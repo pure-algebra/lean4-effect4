@@ -1,0 +1,5 @@
+(lang dune 3.0)
+; effect4_eff: the Eff program IR of lean4-effect4 as an OCaml library (typed embedding,
+; wire, checker). Its own project root, so it builds alone with `dune build --root .` from
+; inside ocaml/eff (its own ocaml/eff/_build, which does not contend with the ocaml/
+; workspace another lane drives), and as `dune build eff` from the ocaml/ workspace root.

@@ -37,6 +37,9 @@ caller does.
 | `src/Effect4/Store`, `src/Effect4/Evidence` | the content-addressed store; architecture and surface views as Schema documents, the pinned rc.112 export census (`Evidence/StdLib`) and the characterized components lane (`Evidence/Char`) |
 | `src/Effect4/Surface` | the surface carriers (entities, HTTP API, MCP agent, deployment, site) |
 | `Test/` | one battery per area; `Test/Audit/AxiomGate.lean` audits every declaration; `RuntimeCoverage.lean` joins the rc.112 mechanism census to the machine witnesses |
+| `src/OCaml5` | the Lean half of the OCaml estate: the OCaml 5 handler machine and the js_of_ocaml machine with their theorems, the OCaml language model, library carriers with laws, the LCNF → OCaml backend, the Machine carriers described and rendered, the route-1 bridge, and the `--run` drivers |
+| `ocaml/` | the OCaml estate as one dune workspace: the avatar (the machine as OCaml 5 effect handlers, three hosts), the daemon `effect4d`, the route-1 link and host core, the generated machine of the LCNF route, and `Eff` as an OCaml library (`ocaml/README.md`) |
+| `harness/truth` | the Lean-vs-rc.112 exit differential over the program corpus |
 
 The Flow route of earlier work — the Effects-flow language, its runner and
 simulations, the TypeScript flow lowering and the store families — lives on
@@ -58,7 +61,9 @@ declaration under `Effect4.*` and `Test.*` is audited at
 `[propext, Quot.sound]` with a short list of exact, named rendering
 exceptions, and every battery file must be reachable from `Test/All.lean`.
 A narrower sweep is a per-area target (`lake build TestMachine`,
-`TestProgram`, `TestSchema`, …). Run one `lake` at a time.
+`TestProgram`, `TestSchema`, …). Run one `lake` at a time. `lake build OCaml5`
+builds the Lean half of the OCaml estate; the OCaml half is `dune build` in
+`ocaml/` under the `effect4` opam switch (`ocaml/README.md`).
 
 The gates beyond the build (bash; on Windows run them through WSL):
 

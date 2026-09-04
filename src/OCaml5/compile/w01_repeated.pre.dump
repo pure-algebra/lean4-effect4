@@ -1,0 +1,186 @@
+Specialize js once...
+Entry point: 0
+
+==== 0 () ====
+  v66 = "caml_get_global_data"()
+  v40 = CONST{"perform\tNumber"}
+  v43 = CONST{<0>(<11>("got\t", <4>(0, 0, 0, 0)), "got\t%d")}
+  v48 = CONST{"perform\tNumber"}
+  v51 = CONST{<0>(<11>("got\t", <4>(0, 0, 0, 0)), "got\t%d")}
+  v23 = CONST{"handled\tNumber"}
+  v25 = CONST{"continue\t21"}
+  v3 = CONST{"W01_repeated.Number"}
+  v59 = CONST{<0>(<11>("value\t", <4>(0, 0, 0, 0)), "value\t%d")}
+  v44 = "caml_js_get"(v66, "Stdlib__Printf"j)
+  v28 = "caml_js_get"(v66, "Stdlib__Effect"j)
+  v8 = "caml_js_get"(v66, "Stdlib"j)
+  branch 78 ()
+
+==== 2 (v39) ====
+  v41 = v5(v40)
+  v42 = "%perform"(v4)
+  v45 = v44[3]
+  v46 = v45(v43, v42)
+  v47 = v5(v46)
+  v49 = v5(v48)
+  v50 = "%perform"(v4)
+  v52 = v44[3]
+  v53 = v52(v51, v50)
+  v54 = v5(v53)
+  v55 = v42 + v50
+  return v55
+
+==== 37 (v22) ====
+  v24 = v5(v23)
+  v26 = v5(v25)
+  v27 = CONST{21}
+  v29 = v28[2]
+  v30 = v29[0]
+  v31 = v30(v22, v27)
+  return v31
+
+==== 54 (v16) ====
+  v17 = v16 === v4
+  if v17 then 59 (v16, v17) else 65 (v16, v17)
+
+==== 59 (v18, v19) ====
+  v20 = fun(v21){37 (v21)}
+  v32 = {tag=0; 0 = v20}
+  branch 65 (v18, v32)
+
+==== 65 (v33, v34) ====
+  return v34
+
+==== 67 (v7) ====
+  v9 = v8[41]
+  v10 = v9(v7)
+  v11 = CONST{0}
+  v12 = v8[46]
+  v13 = v12(v11)
+  return v13
+
+==== 78 () ====
+  v1 = CONST{0}
+  v2 = "caml_fresh_oo_id"(v1)
+  v4 = {tag=248; 0 = v3; 1 = v2}
+  v5 = fun(v6){67 (v6)}
+  v14 = fun(v15){54 (v15)}
+  v35 = {tag=0; 0 = v14}
+  v36 = CONST{0}
+  v37 = fun(v38){2 (v38)}
+  v56 = v28[2]
+  v57 = v56[4]
+  v58 = v57(v37, v36, v35)
+  v60 = v44[3]
+  v61 = v60(v59, v58)
+  v62 = v5(v61)
+  v63 = {tag=0; 0 = v4; 1 = v5}
+  v65 = "caml_register_global"(11, v63, "W01_repeated"j)
+  v64 = CONST{0}
+  stop
+
+Tail-call optimization...
+Data flow...
+Specialize...
+Specialize js...
+Dead-code...
+Inlining...
+Dead-code...
+Tail-call optimization...
+Variable passing simplification...
+Data flow...
+Specialize...
+Specialize js...
+Dead-code...
+Inlining...
+Dead-code...
+Entry point: 0
+
+==== 0 () ====
+  v66 = "caml_get_global_data"()
+  v40 = CONST{"perform\tNumber"}
+  v43 = CONST{<0>(<11>("got\t", <4>(0, 0, 0, 0)), "got\t%d")}
+  v48 = CONST{"perform\tNumber"}
+  v51 = CONST{<0>(<11>("got\t", <4>(0, 0, 0, 0)), "got\t%d")}
+  v23 = CONST{"handled\tNumber"}
+  v25 = CONST{"continue\t21"}
+  v3 = CONST{"W01_repeated.Number"}
+  v59 = CONST{<0>(<11>("value\t", <4>(0, 0, 0, 0)), "value\t%d")}
+  v44 = "caml_js_get"(v66, "Stdlib__Printf"j)
+  v28 = "caml_js_get"(v66, "Stdlib__Effect"j)
+  v8 = "caml_js_get"(v66, "Stdlib"j)
+  branch 78 ()
+
+==== 2 () ====
+  v41 = v5!(v40)
+  v42 = "%perform"(v4)
+  v45 = v44[3]
+  v46 = v45(v43, v42)
+  v47 = v5!(v46)
+  v49 = v5!(v48)
+  v50 = "%perform"(v4)
+  v52 = v44[3]
+  v53 = v52(v51, v50)
+  v54 = v5!(v53)
+  v55 = v42 + v50
+  return v55
+
+==== 37 () ====
+  v24 = v5!(v23)
+  v26 = v5!(v25)
+  v27 = CONST{21}
+  v29 = v28[2]
+  v30 = v29[0]
+  v31 = v30(v21, v27)
+  return v31
+
+==== 54 () ====
+  v17 = v15 === v4
+  if v17 then 59 () else 65 (v17)
+
+==== 59 () ====
+  v20 = fun(v21){37 ()}
+  v32 = {tag=0; 0 = v20}
+  branch 65 (v32)
+
+==== 65 (v34) ====
+  return v34
+
+==== 67 () ====
+  v9 = v8[41]
+  v10 = v9(v6)
+  v11 = CONST{0}
+  v12 = v8[46]
+  v13 = v12(v11)
+  return v13
+
+==== 78 () ====
+  v2 = "caml_fresh_oo_id"(0)
+  v4 = {tag=248; 0 = v3; 1 = v2}
+  v5 = fun(v6){67 ()}
+  v14 = fun(v15){54 ()}
+  v35 = {tag=0; 0 = v14}
+  v36 = CONST{0}
+  v37 = fun(v38){2 ()}
+  v56 = v28[2]
+  v57 = v56[4]
+  v58 = v57(v37, v36, v35)
+  v60 = v44[3]
+  v61 = v60(v59, v58)
+  v62 = v5!(v61)
+  v63 = {tag=0; 0 = v4; 1 = v5}
+  v65 = "caml_register_global"(11, v63, "W01_repeated"j)
+  stop
+
+Data flow...
+Specialize...
+Specialize js...
+Dead-code...
+Inlining...
+Dead-code...
+Variable passing simplification...
+Data flow...
+Specialize...
+Specialize js...
+Effects...
+Dead-code...

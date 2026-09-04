@@ -1,0 +1,14 @@
+{
+  "name": "p400019",
+  "seed": 400019,
+  "operations": 26,
+  "forks": 3,
+  "families": ["fiber", "ref", "deferred", "scope", "layer"],
+  "usesExtra": true,
+  "tape": "0:0,1:1,2:0",
+  "rules": "service-acquire,perform-call,perform-bind,nullary-value,perform-discard,ret",
+  "wireProgram": "corpus.p400019",
+  "ocamlEntry": "corpus_p400019",
+  "tsEntry": "corpus_p400019",
+  "opFamilies": ["fiber", "scope", "ref", "fiber", "scope", "fiber", "fiber", "fiber", "fiber", "scope", "fiber", "fiber", "fiber", "fiber", "scope", "fiber", "fiber", "ref", "fiber", "layer", "deferred", "deferred", "ref", "scope", "ref", "fiber"]
+}

@@ -1,0 +1,1 @@
+["gen",["cons",["bindYield",["succeed",["lit",["nat",1]]]],["cons",["ret",["app","succ",["cons",["var",0],["nil"]]]],["nil"]]]]

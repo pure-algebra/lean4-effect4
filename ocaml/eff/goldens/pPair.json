@@ -1,0 +1,1 @@
+["succeed",["app","fst",["cons",["app","pair",["cons",["lit",["nat",1]],["cons",["lit",["bool",true]],["nil"]]]],["nil"]]]]

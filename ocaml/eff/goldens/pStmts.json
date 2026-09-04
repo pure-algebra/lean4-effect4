@@ -1,0 +1,1 @@
+["gen",["cons",["bindYield",["succeed",["lit",["nat",0]]]],["cons",["whileTrue",["cons",["ifElse",["app","lt",["cons",["var",0],["cons",["lit",["nat",3]],["nil"]]]],["cons",["yieldDiscard",["yieldNow",0]],["nil"]],["cons",["breakLoop"],["nil"]]],["nil"]]],["cons",["ret",["var",0]],["nil"]]]]]

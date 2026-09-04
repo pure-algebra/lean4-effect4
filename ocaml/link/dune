@@ -1,0 +1,32 @@
+; link/: one library, three thin drivers, one test.
+;
+; Generated inputs (tools/lean-flags.sh writes both; tools/build.sh runs it after
+; tools/compile-bridge.sh has produced Bridge.o from Bridge.lean):
+;   c_flags.sexp     the include path of the Lean C ABI (lean/lean.h), for the stubs
+;   lean_flags.sexp  `-cclib` pairs: Bridge.o, the four Lean static libraries and the
+;                    runtime libraries, for every executable that links the library
+; The link flags sit on the executables, not on the library: `c_library_flags` would also
+; feed the bytecode stubs .so, and libleanrt's local-exec TLS cannot enter a shared object.
+; ocamlopt places command-line `-cclib` objects after the library's stubs archive, so the
+; stubs archive is scanned first and Bridge.o + the Lean archives resolve its references.
+
+(library
+ (name effect4_bridge)
+ (wrapped false)
+ (modules e4_bridge e4_snapshot e4_mailbox e4_inbox e4_reply e4_ring e4_quiescence e4_worker e4_router e4_host)
+ (libraries unix)
+ (foreign_stubs (language c) (names e4_stubs) (flags (:standard (:include c_flags.sexp)))))
+
+(executables
+ (names e4_demo e4_bench e4_probe)
+ (modules e4_demo e4_bench e4_probe)
+ (modes exe)
+ (libraries effect4_bridge unix)
+ (link_flags (:include lean_flags.sexp)))
+
+(test
+ (name e4_test)
+ (modules e4_test)
+ (modes exe)
+ (libraries effect4_bridge unix)
+ (link_flags (:include lean_flags.sexp)))

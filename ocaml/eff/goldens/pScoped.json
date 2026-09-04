@@ -1,0 +1,1 @@
+["scoped",["bind",["perform",["scopeMake",["parallel"]],["lit",["unit"]]],["withFiber",["forkIn",["succeed",["lit",["nat",1]]],{"startImmediately":true,"daemon":true,"maskMode":["uninterruptible"]},["var",0]]]]]

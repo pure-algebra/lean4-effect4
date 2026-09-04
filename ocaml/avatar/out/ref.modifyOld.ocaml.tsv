@@ -1,0 +1,23 @@
+format	effect4-trace-golden-v1
+generator	ocaml/avatar/build-avatar.sh	sha256=501f31463ef4fb5f68cccb62efcb77a7615eaf530dc2402ae73274fb4bbb730c
+regenerate	./ocaml/avatar/build-avatar.sh
+input	ocaml/avatar/deep_fibers.ml	sha256=501f31463ef4fb5f68cccb62efcb77a7615eaf530dc2402ae73274fb4bbb730c
+input	ocaml/avatar/avatar_trace.ml	sha256=501f31463ef4fb5f68cccb62efcb77a7615eaf530dc2402ae73274fb4bbb730c
+input	ocaml/avatar/fibers_fixture.ml	sha256=501f31463ef4fb5f68cccb62efcb77a7615eaf530dc2402ae73274fb4bbb730c
+input	ocaml/avatar/store_fixtures.ml	sha256=501f31463ef4fb5f68cccb62efcb77a7615eaf530dc2402ae73274fb4bbb730c
+input	ocaml/avatar/extra_fixture.ml	sha256=501f31463ef4fb5f68cccb62efcb77a7615eaf530dc2402ae73274fb4bbb730c
+input	ocaml/avatar/corpus_run.ml	sha256=501f31463ef4fb5f68cccb62efcb77a7615eaf530dc2402ae73274fb4bbb730c
+input	ocaml/avatar/corpus/programs.txt	sha256=501f31463ef4fb5f68cccb62efcb77a7615eaf530dc2402ae73274fb4bbb730c
+pin	effects	a4ee7a14248ee5976039b73039319efa87834986
+format	effect4-trace-v1
+face	ocaml
+program	ref.modifyOld
+tape	
+rules	service-acquire,perform-call,perform-bind,perform-discard,ret
+op	make	7
+answer	make	0
+op	modify	[0, 5]
+answer	modify	7
+op	get	0
+answer	get	12
+done	{"success":7}

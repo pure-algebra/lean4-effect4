@@ -1,0 +1,45 @@
+format	effect4-trace-golden-v1
+generator	ocaml/avatar/build-avatar.sh	sha256=501f31463ef4fb5f68cccb62efcb77a7615eaf530dc2402ae73274fb4bbb730c
+regenerate	./ocaml/avatar/build-avatar.sh
+input	ocaml/avatar/deep_fibers.ml	sha256=501f31463ef4fb5f68cccb62efcb77a7615eaf530dc2402ae73274fb4bbb730c
+input	ocaml/avatar/avatar_trace.ml	sha256=501f31463ef4fb5f68cccb62efcb77a7615eaf530dc2402ae73274fb4bbb730c
+input	ocaml/avatar/fibers_fixture.ml	sha256=501f31463ef4fb5f68cccb62efcb77a7615eaf530dc2402ae73274fb4bbb730c
+input	ocaml/avatar/store_fixtures.ml	sha256=501f31463ef4fb5f68cccb62efcb77a7615eaf530dc2402ae73274fb4bbb730c
+input	ocaml/avatar/extra_fixture.ml	sha256=501f31463ef4fb5f68cccb62efcb77a7615eaf530dc2402ae73274fb4bbb730c
+input	ocaml/avatar/corpus_run.ml	sha256=501f31463ef4fb5f68cccb62efcb77a7615eaf530dc2402ae73274fb4bbb730c
+input	ocaml/avatar/corpus/programs.txt	sha256=501f31463ef4fb5f68cccb62efcb77a7615eaf530dc2402ae73274fb4bbb730c
+pin	effects	a4ee7a14248ee5976039b73039319efa87834986
+format	effect4-trace-v1
+face	ocaml
+program	extra.siblingCompletesDeferred
+tape	0:0
+rules	
+op	make	[]
+answer	make	0
+op	fork	6
+decide	0	false
+answer	fork	1
+op	awaitValue	0
+op	succeed	[0, 42]
+answer	awaitValue	42
+done	{"success":42}
+#	started	0
+#	forked	0	1	false
+#	scheduledTask	0	0	start(1)
+#	parkedOn	0	0
+#	ranTask	0	start(1)
+#	started	1
+#	resumedWith	0	0
+#	started	0
+#	interruptRecorded	0	1
+#	childrenInterrupted	0	[1]
+#	parkedOn	0	1
+#	exited	1	{"interrupted":true}
+#	observerFired	1	untrackChild(0)
+#	observerFired	1	countdown(0,1)
+#	resumedWith	0	1
+#	started	0
+#	exited	0	{"success":42}
+#	finished	true	stuck	-
+#	fiber	0	status	done	observers	0	children	[]
+#	fiber	1	status	done	observers	0	children	[]

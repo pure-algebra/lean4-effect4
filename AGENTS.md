@@ -28,7 +28,11 @@ The product is Effect codegen (`README.md`): `Eff` is the one program IR,
 `Effect4.Api` the one module an application imports, the Deep machine the
 semantics under it, Schema the data plane beside it. The Flow route of
 earlier work lives on branch `archive/flow-route`; do not re-import it, and
-do not write a second program representation.
+do not write a second program representation. The OCaml estate (`ocaml/`, one
+dune workspace, and its Lean half `src/OCaml5`, lake library `OCaml5`) is
+held to `ocaml/STANDARDS.md`: libraries with thin drivers, a property list at
+the head of every component, generated files marked and regenerable, every
+number in a report behind a command; `ocaml/README.md` is its map.
 
 ## Representation rules
 

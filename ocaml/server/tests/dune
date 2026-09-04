@@ -1,0 +1,17 @@
+; The OCaml library test (README §6): the daemon's handlers used with no wire, on the
+; bytecode and native hosts. `dune build @server/runtest` (or `dune test`) runs both.
+; tests/test_client.py and tests/node_module_demo.mjs are driven by tools/dune-test.sh.
+(executable
+ (name lib_test)
+ (modules lib_test)
+ (modes byte exe)
+ (libraries effect4d_lib)
+ (flags (:standard -warn-error -a)))
+
+(rule
+ (alias runtest)
+ (action (run %{exe:lib_test.exe})))
+
+(rule
+ (alias runtest)
+ (action (run %{bin:ocamlrun} %{dep:lib_test.bc})))

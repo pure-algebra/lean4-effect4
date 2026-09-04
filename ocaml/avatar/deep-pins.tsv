@@ -1,0 +1,13 @@
+# Seat F3: the Effect4 Lean files the avatar was last re-diffed against (SHA-256).
+# `run-witnesses.sh` compares these against the working tree and fails on a mismatch, so a
+# stale avatar cannot report green: re-diff arm for arm, then `avatar/pin-deep.sh --write`.
+# base 625a207 (Deep files as of 8a51d95), re-diff (3d) of seat F2 / verification by seat F3.
+Effect4/Deep/Fibers.lean	47706360aeb84aa4ee8368ca31eda77a1dcfb8c5000be63160c9c3fa310183c2
+Effect4/Deep/Stores.lean	2249f8e2dfceb1ccda774663b4d3af733d346a2a6c31b88286c9e2f1f0967a9b
+Effect4/Deep/Context.lean	15cc1375985019d1450f19e40e495aa3397791aae800face483840e3df7d1711
+Effect4/Deep/Layer.lean	6b4284329f12a009bf0d651c0e7a80dd928dc213b912d77513327d20b807047f
+Effect4/Deep/ForkFlow.lean	7f9eb91aa6e9cf46ba30f9bd8f05a1cfca25d4f6f10241dd3cd594264523c286
+Effect4/Deep/Clauses.lean	1c1f310623f34fcaf81bd8e2c593ce577195ebe0eb2656077ec54b347e4f7ff9
+Effect4/Deep/Witnesses.lean	bcf8733ddd6b60d35b2069749c6c00d1137bd92cfbcecc6fb9ef007d8bcf4217
+Effect4/Runtime/Runtime.lean	f883181af2f9d1f5d576fcd7de2e0d15ebe023272df657ee725e43e9933fbc2b
+Effect4Test/Audit/RuntimeCoverage.lean	3a8e35a3dcb467af41f116701bae99245249cb5e0b5b5369b591e7310b08ea16

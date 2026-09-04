@@ -1,0 +1,43 @@
+format	effect4-trace-golden-v1
+generator	ocaml/avatar/build-avatar.sh	sha256=
+regenerate	./ocaml/avatar/build-avatar.sh
+input	ocaml/avatar/deep_fibers.ml	sha256=
+input	ocaml/avatar/avatar_trace.ml	sha256=
+input	ocaml/avatar/fibers_fixture.ml	sha256=
+input	ocaml/avatar/store_fixtures.ml	sha256=
+input	ocaml/avatar/extra_fixture.ml	sha256=
+input	ocaml/avatar/corpus_run.ml	sha256=
+input	ocaml/avatar/corpus/programs.txt	sha256=
+pin	effects	
+format	effect4-trace-v1
+face	ocaml
+program	fuzz.p400017
+tape	0:0,1:1,2:1
+rules	
+op	fork	0
+decide	0	false
+answer	fork	0
+op	make	5
+answer	make	1
+op	fork	2
+decide	1	true
+answer	fork	2
+op	interrupt	2
+answer	interrupt	[]
+op	cleanups	[]
+answer	cleanups	[0, [2, []]]
+op	get	1
+answer	get	5
+op	started	[]
+answer	started	[0, [2, []]]
+op	started	[]
+answer	started	[0, [2, []]]
+op	awaitValue	0
+answer	awaitValue	{"some":11}
+op	forkDetach	4
+decide	2	true
+answer	forkDetach	3
+op	awaitValue	2
+answer	awaitValue	{"none":true}
+op	join	3
+frontier

@@ -1,0 +1,14 @@
+; The OCaml estate as one dune workspace (README.md). `dune build` from this directory
+; builds every project listed here into ocaml/_build; each is its own nested dune project
+; and can still be built alone with `dune build --root .` from inside it.
+;
+;   avatar/  the Deep machine as OCaml 5 effect handlers (library effect4_avatar, the
+;            trace faces, the witness report), in byte, native and js_of_ocaml modes
+;   server/  effect4d, the daemon over the avatar, three hosts from one module list
+;   gen/     the LCNF route: Fibers.lean as generated typed OCaml, and its check
+;   eff/     the Eff program IR as an OCaml library (typed embedding, wire, checker)
+;
+; Not built from here: link/ (route 1, links the Lean machine's static libraries and is
+; built by link/tools/build.sh after the Lean half compiles), probes/ (single-file probes
+; and corpora with their own shell builds), goldens/ (data).
+(dirs avatar server gen eff)

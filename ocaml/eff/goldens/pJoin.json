@@ -1,0 +1,1 @@
+["bind",["withFiber",["fork",["bind",["yieldNow",0],["succeed",["lit",["nat",7]]]],{"startImmediately":false,"daemon":true,"maskMode":["uninterruptible"]}]],["awaitFiber",["var",0],["joinEffect"]]]
