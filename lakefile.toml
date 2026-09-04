@@ -79,6 +79,10 @@ globs = ["Effect4Test.Protocol.+"]
 name = "Effect4TestSyntax"
 globs = ["Effect4Test.Syntax.+"]
 
+[[lean_lib]]
+name = "Effect4TestSurface"
+globs = ["Effect4Test.Surface.+"]
+
 # The generic effect algebra, morphisms, transport, families, and the generic
 # first-order Flow, and the shared trace alphabet. Exact commit of tag v0.8.0 of
 # pure-algebra/lean4-effects (v0.8.0: the consumer boundary; Flow v3 carrier).
@@ -93,7 +97,7 @@ rev = "a4ee7a14248ee5976039b73039319efa87834986"
 [[require]]
 name = "typescript"
 git = "https://github.com/pure-algebra/lean4-typescript"
-rev = "6a70b884ab2adec482e3e69a3b1f1b9e4bdf8d6c"
+rev = "71bad1252ee8a1b243ed283320ededcb7d0a93c4"
 
 # Proved SHA-256 for content addresses (Effect4/Store/Digest.lean): exact commit of
 # pure-algebra/lean4-hash main. Its SHA-256 family is audited at zero declarations

@@ -58,6 +58,12 @@ row is unclaimed.
 | `Effect4/Target/TypeScript/Schema.lean`, `Effect4Test/Target/TypeScript/SchemaGenerationContract.lean` | Codex | raw Schema/document/data generation facade |
 | `Effect4/Target/TypeScript/Expr.lean`, `Effect4/Target/TypeScript/Render.lean`, `Effect4Test/Target/TypeScript/ExprContract.lean`, `test/contracts/typescript-target-expr.contract.md`, `docs/TYPESCRIPT-TARGET-DAG.md` | Codex | additive exact-binary64 and quoted-object target syntax for Schema generation |
 | `Effect4.lean`, `Effect4Test.lean` | Codex | Schema authoring/generation import lines only |
+| `workshop/Char/**` | Claude (`lean4-effect4-e5`), ten-agent bootstrap wave, 2026-09-04 | in progress; one agent per section, each writing only its own folder, plus `workshop/Char/ALGEBRA.md` and `workshop/Char/README.md` |
+| `Effect4/Char/Core.lean` (additive only), `Effect4/Char/Queue/**` | Claude (`lean4-effect4-e5`), connect lane A, 2026-09-04 | in progress: `LocalBalanceLe`, `Guarded`/`Graded`, the Queue port from `workshop/Char/01-model`; every file left on disk must elaborate; `lakefile.toml` and `Effect4.lean` NOT touched |
+| `Effect4/Char/Conformance.lean`, `Effect4/Char/Conformance/{GSet,Vector,VectorSet,Generators,Consume,Compose,Surface,Cell}.lean`, `workshop/Char/10-conformance/**` | Claude (`lean4-effect4-e5`), connect lane B, 2026-09-04 | landed 2026-09-04: the monotone conformance substrate, nine modules, oleans in the mirror tree; imports `Core` and lane C's `Evidence`, edits neither; eight items plus INDEX |
+| `workshop/Char/10-pipeline/**`, `Effect4/Store/Pin.lean`, `Effect4/Char/Evidence.lean`, `Effect4/Char/Manifest.lean` | Claude (`lean4-effect4-e5`), connect lane C, 2026-09-04 | in progress: end-to-end pipeline and AI workflow design, plus the pin entity, evidence and rungs, and the flat manifest; every file left on disk must elaborate |
+| `workshop/Char/REVIEW-01.md` | Claude (`lean4-effect4-e5`) | written 2026-09-04; the ruling queue for the room |
+| `workshop/Picos/**` | Claude (`lean4-effect4-e5`), Picos spike, 2026-09-04 | in progress; six seats, one folder each; `workshop/OCaml5/**` is read-only to this spike and `Lib/Picos.lean` is NOT edited, only a re-derivation plan is written |
 | `Effect4Test/Audit/AxiomGate.lean` | Codex | exact target-renderer `Classical.choice` boundary only |
 | `test/counterexamples/REGISTER.md`, `test/counterexamples/target/ATTACKS.md`, `Effect4Test/Counterexamples/Target/TypeScriptRender.lean` | Codex | `E4-TARGET-CE-004` only |
 | `Effect4/Context/Key.lean` | Claude | **closed, green, do not edit** |
@@ -2728,3 +2734,25 @@ Owed and recorded: H16 remainder (`OpSpec` defaults, five sites), `String.mk` in
 constructors, four endings), `Interrupt.lean` docstring "four of five", the `_With`-from-
 `_bind` derivation (scope predicate abstraction). Sweep: twelve gates green, trust gate
 nine planted defects rejected. Waves 2–5 are on hold until the user says so.
+
+## The Surface library dispatched, 2026-09-04
+
+Plan: `docs/research/2026-09-04-surface-library-plan.md` (read it first; §10 is the
+wave table). The lean4-typescript pin `6a70b884` (v0.5.0) existed in no clone and no
+remote, so v0.5.0 was re-created from the printer's 58 byte pins at `71bad12` in
+`~/Dev/lean4-typescript` (tag `v0.5.0`, not yet pushed) and this tree is repinned to
+it; `lake build Effect4` 145 jobs green; the default battery is green in 273 of 274 jobs,
+the one red being the pre-existing module-closure gate at `Effect4Test.lean:138`, which
+rejects the untracked `Effect4/Char/*.lean` that no root import reaches (the Char lane's
+connect step owns that). Publish the tag before a fresh clone resolves the pin.
+
+### Claims
+
+| File or tree | Claimed by | State |
+| --- | --- | --- |
+| `Effect4/Surface/**`, `Effect4.lean` (Surface import lines only) | Surface builders (waves 1a, 2a–2c of the plan) | in progress |
+| `Effect4/Meta/Surface.lean`, `Effect4Test/Audit/AxiomGate.lean` (Surface exemption entries only) | Surface builder 3a | pending 2a–2c |
+| `test/contracts/surface-*.contract.md`, `Effect4Test/Surface/**`, `Effect4Test/Counterexamples/Surface/**`, `test/counterexamples/REGISTER.md` (`E4-SURFACE-CE-*` rows only, append) | Surface breaker (wave 1b) | in progress, red until the builders land |
+| `harness/surface/**`, `scripts/check-surface-generation.sh`, `scripts/test-surface-generation-gate.sh`, `scripts/sweep.sh` (one row), `vendor/wrangler-3.114.16/**` | Surface builder 3b | pending 2a–2c |
+| `skills/lean-surface*/**`, `skills/README.md` (four rows), `docs/SURFACE.md`, `docs/ARCHITECTURE.md` (one row), `PLAN.md` (one paragraph) | Surface author 3c | pending |
+| `lakefile.toml` (`Effect4TestSurface` lib), `Effect4Test.lean` (Surface import lines), `COORDINATION.md` (this section) | Surface coordinator | integration |
