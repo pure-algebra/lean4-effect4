@@ -219,6 +219,9 @@ def callbackRows (m : M) : List (Nat × List Nat) :=
 /-- Whether a fiber's dispatcher is armed (`Scheduler.ts:207-212`). -/
 def armedOf (m : M) (id : Nat) : Option Bool := (m.fiber? ⟨id⟩).map fun f => f.dispatcher.armed
 
+/-- The host callbacks scheduled, in arming order (R2-15). -/
+def armedQueueOf (m : M) : List Nat := m.armed.map FiberId.value
+
 /-- How many tasks are queued on a fiber's dispatcher. -/
 def queuedOf (m : M) (id : Nat) : Option Nat :=
   (m.fiber? ⟨id⟩).map fun f => ((f.dispatcher.buckets.map Bucket.tasks).flatten).length
@@ -1011,9 +1014,28 @@ def w8Promise : Except (Squashed Err Defect) Val :=
   promiseOutcome (Exit.failure
     (Cause.combine (Cause.fail (Err.tag 4) : CauseV) (Cause.die Defect.badName)))
 
+/-- R2-14 (`E4-RUN-CE-038`): a child that yields parks on its *own* dispatcher, which
+`runSyncExit` does not flush (`:5542`); the root, joining it, has not exited. -/
+def w8SyncChildYield : M × ExitV :=
+  runSyncExit stores fuel (RunMachine.empty Stores.empty)
+    (progOf (ProgName.forkThen (ProgName.yieldNow 0) immediateChild
+      Supervision.ObserverMode.joinEffect)) emptyCtx
+
 /-- A root that survives the flush answers the `AsyncFiberError` defect. -/
 theorem w8_sync_exit_async_fiber_error :
     w8SyncExit = Exit.failure (Cause.die Defect.asyncFiber) := by decide
+
+/-- The entry answers `AsyncFiberError` although the program can finish: the child's
+callback is scheduled (a microtask under the sync scheduler), and once the host runs it the
+root completes. Before R2-14 the model's flush ran every armed dispatcher and answered the
+value. -/
+theorem w8_sync_child_yield_is_async :
+    w8SyncChildYield.2 = Exit.failure (Cause.die Defect.asyncFiber) ∧
+      exitOf w8SyncChildYield.1 0 = none ∧
+      armedQueueOf w8SyncChildYield.1 = [1] ∧
+      exitOf (stepDecision stores fuel w8SyncChildYield.1 RunDecision.flush) 0 =
+        some (Exit.success Val.unit) := by
+  decide
 
 /-- A root that finishes answers its exit. -/
 theorem w8_sync_exit_value : w8SyncValue = Exit.success (Val.nat 3) := by decide
@@ -1040,6 +1062,36 @@ def w9AfterOneFire : M :=
 def w9AfterTwoFires : M :=
   replay Stores.empty w9TwoYields
     [RunDecision.evaluate ⟨0⟩, RunDecision.fire ⟨0⟩, RunDecision.fire ⟨0⟩]
+
+/-! ## W15 — the host runs scheduled callbacks in arming order (R2-15)
+
+A dispatcher arms itself with `setImmediate` the first time a task is scheduled on it
+(`Scheduler.ts:207-212`); the host runs those callbacks in the order they were armed, not in
+fiber order. `w15`: daemon `1` parks on an external async, daemon `2` yields (armed first);
+the tape answers `1`, which then yields (armed second). -/
+
+def w15Program : ProgName :=
+  ProgName.seqOf
+    (ProgName.forkOnly (ProgName.seqOf (ProgName.park 1) (ProgName.yieldNow 0)) daemonChild)
+    (ProgName.forkOnly (ProgName.yieldNow 0) daemonChild)
+
+def w15Armed : M :=
+  replay Stores.empty w15Program
+    [RunDecision.evaluate ⟨0⟩, RunDecision.answerAsync ⟨1⟩ 0 (Prim.success Val.unit)]
+
+def w15Flushed : M :=
+  replay Stores.empty w15Program
+    [RunDecision.evaluate ⟨0⟩, RunDecision.answerAsync ⟨1⟩ 0 (Prim.success Val.unit),
+      RunDecision.flush]
+
+/-- `E4-RUN-CE-039`: the schedule is `[2, 1]` — `2` armed before `1` — and the flush runs `2`'s
+callback first: `2` resumes and exits before `1` does. Fiber order would have run `1` first. -/
+theorem w15_flush_runs_callbacks_in_arming_order :
+    armedQueueOf w15Armed = [2, 1] ∧
+      armedOf w15Armed 1 = some true ∧ armedOf w15Armed 2 = some true ∧
+      armedQueueOf w15Flushed = [] ∧
+      resumeAndExitOrder w15Flushed = [[1, 0], [0, 1, 0], [0, 2, 1], [1, 2], [0, 1, 2], [1, 1]] := by
+  decide
 
 /-! ## W13 — a completing `sync` sees the interrupt its waiter records (R2-1)
 

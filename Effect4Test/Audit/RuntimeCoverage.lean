@@ -2176,13 +2176,10 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
     (parent : Effect4.Deep.RunFiber ν σ β ε δ ι α χ) (child : Effect4.FiberId),
     Effect4.Deep.start m parent child Bool.true = (m, parent, [Effect4.Deep.Cmd.evaluate child]) ∧
       Effect4.Deep.start m parent child Bool.false =
-        (m.emit [Effect4.Deep.RunEvent.scheduledTask parent.id 0 (Effect4.Deep.Task.start child)],
-          { id := parent.id, frame := parent.frame, running := parent.running, parked := parent.parked,
-            pending := parent.pending, finalizing := parent.finalizing, exit := parent.exit,
-            currentOpCount := parent.currentOpCount, maxOpsBeforeYield := parent.maxOpsBeforeYield,
-            preventYield := parent.preventYield, yieldOverride := parent.yieldOverride, observers := parent.observers,
-            children := parent.children, dispatcher := parent.dispatcher.enqueue 0 (Effect4.Deep.Task.start child),
-            context := parent.context },
+        ((m.arm parent.id).emit [Effect4.Deep.RunEvent.scheduledTask parent.id 0 (Effect4.Deep.Task.start child)],
+          Effect4.Deep.RunFiber.mk parent.id parent.frame parent.running parent.parked parent.pending parent.finalizing
+            parent.exit parent.currentOpCount parent.maxOpsBeforeYield parent.preventYield parent.yieldOverride
+            parent.observers parent.children (parent.dispatcher.enqueue 0 (Effect4.Deep.Task.start child)) parent.context,
           []))
 
 #check (@Effect4.Deep.runFork_eq :
@@ -2192,14 +2189,13 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
     (program : Effect4.Prim ν σ β ε δ ι α) (context : χ),
     Effect4.Deep.runFork interp fuel m program context =
       (Effect4.Deep.drive interp fuel
-          {
-            fibers :=
-              m.fibers ++
-                [Effect4.Deep.RunFiber.make { value := m.nextId } program Bool.true (interp.budgetOf context) context],
-            races := m.races, nextId := m.nextId + 1, nextToken := m.nextToken, nextRace := m.nextRace,
-            middlewareInstalled := m.middlewareInstalled, state := m.state, trace := m.trace, stuck := m.stuck }
-          [Effect4.Deep.Cmd.evaluate { value := m.nextId }, Effect4.Deep.Cmd.drainDue],
-        { value := m.nextId }))
+          (Effect4.Deep.RunMachine.mk
+            (m.fibers ++
+              [Effect4.Deep.RunFiber.make (Effect4.FiberId.mk m.nextId) program Bool.true (interp.budgetOf context)
+                  context])
+            m.races (m.nextId + 1) m.nextToken m.nextRace m.middlewareInstalled m.armed m.state m.trace m.stuck)
+          [Effect4.Deep.Cmd.evaluate (Effect4.FiberId.mk m.nextId), Effect4.Deep.Cmd.drainDue],
+        Effect4.FiberId.mk m.nextId))
 
 #check (@Effect4.Deep.interruptRecord_records :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
@@ -2361,12 +2357,11 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
               Effect4.Deep.drive interp fuel m [Effect4.Deep.Cmd.evaluate child, Effect4.Deep.Cmd.drainDue]
             | Effect4.Deep.Task.resume target token answer =>
               Effect4.Deep.drive interp fuel m [Effect4.Deep.Cmd.resume target token answer, Effect4.Deep.Cmd.drainDue])
-          (m.update
-            { id := o.id, frame := o.frame, running := o.running, parked := o.parked, pending := o.pending,
-              finalizing := o.finalizing, exit := o.exit, currentOpCount := o.currentOpCount,
-              maxOpsBeforeYield := o.maxOpsBeforeYield, preventYield := o.preventYield, yieldOverride := o.yieldOverride,
-              observers := o.observers, children := o.children, dispatcher := o.dispatcher.drain.snd,
-              context := o.context })
+          ((m.update
+                (Effect4.Deep.RunFiber.mk o.id o.frame o.running o.parked o.pending o.finalizing o.exit o.currentOpCount
+                  o.maxOpsBeforeYield o.preventYield o.yieldOverride o.observers o.children o.dispatcher.drain.snd
+                  o.context)).disarm
+            owner)
           o.dispatcher.drain.fst)
 
 #check (@Effect4.Deep.flushAll_idle :
@@ -2374,20 +2369,17 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
     (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (fuel rounds : Nat)
     (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St),
-    List.filter (fun f => f.dispatcher.armed) m.fibers = [] →
-      Effect4.Deep.stepDecision.flushAll interp fuel (rounds + 1) m = m)
+    m.armed = [] → Effect4.Deep.stepDecision.flushAll interp fuel (rounds + 1) m = m)
 
 #check (@Effect4.Deep.flushAll_round :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
     (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (fuel rounds : Nat)
-    (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St),
-    (List.map Effect4.Deep.RunFiber.id (List.filter (fun f => f.dispatcher.armed) m.fibers)).isEmpty = Bool.false →
+    (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St) (owner : Effect4.FiberId) (rest : List Effect4.FiberId),
+    m.armed = owner :: rest →
       m.stuck = Option.none →
         Effect4.Deep.stepDecision.flushAll interp fuel (rounds + 1) m =
-          Effect4.Deep.stepDecision.flushAll interp fuel rounds
-            (List.foldl (Effect4.Deep.stepDecision.fire interp fuel) m
-              (List.map Effect4.Deep.RunFiber.id (List.filter (fun f => f.dispatcher.armed) m.fibers))))
+          Effect4.Deep.stepDecision.flushAll interp fuel rounds (Effect4.Deep.stepDecision.fire interp fuel m owner))
 
 #check (@Effect4.Deep.evaluatePrim_yieldNowWith :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
@@ -2514,21 +2506,17 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
     (program : Effect4.Prim ν σ β ε δ ι α) (context : χ) (key : Nat),
     Effect4.Deep.runCallback interp fuel m program context key =
       (Effect4.Deep.drive interp fuel
-          {
-            fibers :=
-              m.fibers ++
-                [have __src :=
-                    Effect4.Deep.RunFiber.make { value := m.nextId } program Bool.true (interp.budgetOf context) context;
-                  { id := __src.id, frame := __src.frame, running := __src.running, parked := __src.parked,
-                    pending := __src.pending, finalizing := __src.finalizing, exit := __src.exit,
-                    currentOpCount := __src.currentOpCount, maxOpsBeforeYield := __src.maxOpsBeforeYield,
-                    preventYield := __src.preventYield, yieldOverride := __src.yieldOverride,
-                    observers := [Effect4.Deep.Observer.callback key], children := __src.children,
-                    dispatcher := __src.dispatcher, context := __src.context }],
-            races := m.races, nextId := m.nextId + 1, nextToken := m.nextToken, nextRace := m.nextRace,
-            middlewareInstalled := m.middlewareInstalled, state := m.state, trace := m.trace, stuck := m.stuck }
-          [Effect4.Deep.Cmd.evaluate { value := m.nextId }, Effect4.Deep.Cmd.drainDue],
-        { value := m.nextId }))
+          (Effect4.Deep.RunMachine.mk
+            (m.fibers ++
+              [have __src :=
+                  Effect4.Deep.RunFiber.make (Effect4.FiberId.mk m.nextId) program Bool.true (interp.budgetOf context)
+                    context;
+                Effect4.Deep.RunFiber.mk __src.id __src.frame __src.running __src.parked __src.pending __src.finalizing
+                  __src.exit __src.currentOpCount __src.maxOpsBeforeYield __src.preventYield __src.yieldOverride
+                  [Effect4.Deep.Observer.callback key] __src.children __src.dispatcher __src.context])
+            m.races (m.nextId + 1) m.nextToken m.nextRace m.middlewareInstalled m.armed m.state m.trace m.stuck)
+          [Effect4.Deep.Cmd.evaluate (Effect4.FiberId.mk m.nextId), Effect4.Deep.Cmd.drainDue],
+        Effect4.FiberId.mk m.nextId))
 
 #check (@Effect4.Deep.fireObserver_callback :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
@@ -2556,8 +2544,8 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
     (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St)
     (program : Effect4.Prim ν σ β ε δ ι α) (context : χ) (exit : Effect4.Exit β ε δ ι α),
-    ((Effect4.Deep.stepDecision interp fuel (Effect4.Deep.runFork interp fuel m program context).fst
-                  Effect4.Deep.RunDecision.flush).fiber?
+    ((Effect4.Deep.stepDecision.flushRoot interp fuel (Effect4.Deep.runFork interp fuel m program context).snd fuel
+                  (Effect4.Deep.runFork interp fuel m program context).fst).fiber?
               (Effect4.Deep.runFork interp fuel m program context).snd).bind
           Effect4.Deep.RunFiber.exit =
         Option.some exit →
@@ -2568,8 +2556,8 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
     (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St)
     (program : Effect4.Prim ν σ β ε δ ι α) (context : χ),
-    ((Effect4.Deep.stepDecision interp fuel (Effect4.Deep.runFork interp fuel m program context).fst
-                  Effect4.Deep.RunDecision.flush).fiber?
+    ((Effect4.Deep.stepDecision.flushRoot interp fuel (Effect4.Deep.runFork interp fuel m program context).snd fuel
+                  (Effect4.Deep.runFork interp fuel m program context).fst).fiber?
               (Effect4.Deep.runFork interp fuel m program context).snd).bind
           Effect4.Deep.RunFiber.exit =
         Option.none →
@@ -2582,18 +2570,15 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
     (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St) (parent : Effect4.Deep.RunFiber ν σ β ε δ ι α χ)
     (program : Effect4.Prim ν σ β ε δ ι α) (options : Effect4.Supervision.ForkOptions),
     Effect4.Deep.spawn interp m parent program options =
-      (({ fibers := m.fibers ++ [Effect4.Deep.spawnChild interp m parent program options], races := m.races,
-              nextId := m.nextId + 1, nextToken := m.nextToken, nextRace := m.nextRace,
-              middlewareInstalled := m.middlewareInstalled, state := m.state, trace := m.trace, stuck := m.stuck }
-            : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St).emit
-          [Effect4.Deep.RunEvent.forked parent.id { value := m.nextId } options.daemon],
-        { id := parent.id, frame := parent.frame, running := parent.running, parked := parent.parked,
-          pending := parent.pending, finalizing := parent.finalizing, exit := parent.exit,
-          currentOpCount := parent.currentOpCount, maxOpsBeforeYield := parent.maxOpsBeforeYield,
-          preventYield := parent.preventYield, yieldOverride := parent.yieldOverride, observers := parent.observers,
-          children := if options.daemon = Bool.true then parent.children else parent.children ++ [{ value := m.nextId }],
-          dispatcher := parent.dispatcher, context := parent.context },
-        { value := m.nextId }))
+      ((Effect4.Deep.RunMachine.mk (m.fibers ++ [Effect4.Deep.spawnChild interp m parent program options]) m.races
+              (m.nextId + 1) m.nextToken m.nextRace m.middlewareInstalled m.armed m.state m.trace m.stuck).emit
+          [Effect4.Deep.RunEvent.forked parent.id (Effect4.FiberId.mk m.nextId) options.daemon],
+        Effect4.Deep.RunFiber.mk parent.id parent.frame parent.running parent.parked parent.pending parent.finalizing
+          parent.exit parent.currentOpCount parent.maxOpsBeforeYield parent.preventYield parent.yieldOverride
+          parent.observers
+          (if options.daemon = Bool.true then parent.children else parent.children ++ [Effect4.FiberId.mk m.nextId])
+          parent.dispatcher parent.context,
+        Effect4.FiberId.mk m.nextId))
 
 #check (@Effect4.Deep.evaluatePrim_join_done :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
@@ -2640,46 +2625,31 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
       m.fiber? target = Option.some t →
         t.exit = Option.none →
           have g :=
-            { id := f.id,
-              frame :=
-                have __src := f.frame;
-                { current := Effect4.Prim.sync thunk, stack := __src.stack, interruptible := __src.interruptible,
-                  interruptedCause := __src.interruptedCause, deferredInterrupt := __src.deferredInterrupt },
-              running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
-              currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield,
-              preventYield := f.preventYield, yieldOverride := f.yieldOverride, observers := f.observers,
-              children := f.children, dispatcher := f.dispatcher, context := f.context };
+            Effect4.Deep.RunFiber.mk f.id
+              (have __src := f.frame;
+              Effect4.FrameFiber.mk (Effect4.Prim.sync thunk) __src.stack __src.interruptible __src.interruptedCause
+                __src.deferredInterrupt)
+              f.running f.parked f.pending f.finalizing f.exit f.currentOpCount f.maxOpsBeforeYield f.preventYield
+              f.yieldOverride f.observers f.children f.dispatcher f.context;
           Effect4.Deep.evaluatePrim interp m g yielding =
-            {
-              machine :=
-                (({ fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken + 1,
-                          nextRace := m.nextRace, middlewareInstalled := m.middlewareInstalled, state := m.state,
-                          trace := m.trace, stuck := m.stuck } : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St).update
-                      { id := t.id, frame := t.frame, running := t.running, parked := t.parked, pending := t.pending,
-                        finalizing := t.finalizing, exit := t.exit, currentOpCount := t.currentOpCount,
-                        maxOpsBeforeYield := t.maxOpsBeforeYield, preventYield := t.preventYield,
-                        yieldOverride := t.yieldOverride,
-                        observers := t.observers ++ [Effect4.Deep.Observer.resumeAwait g.id m.nextToken mode],
-                        children := t.children, dispatcher := t.dispatcher, context := t.context }).emit
-                  [Effect4.Deep.RunEvent.parkedOn g.id m.nextToken],
-              fiber :=
-                ({ id := g.id,
-                      frame :=
-                        have __src := g.frame;
-                        { current := __src.current,
-                          stack :=
-                            Effect4.Prim.asyncFinalizer (interp.cancelName interp.parkCancelName g.id m.nextToken) ::
-                              g.frame.stack,
-                          interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
-                          deferredInterrupt := __src.deferredInterrupt },
-                      running := g.running, parked := g.parked, pending := g.pending, finalizing := g.finalizing,
-                      exit := g.exit, currentOpCount := g.currentOpCount, maxOpsBeforeYield := g.maxOpsBeforeYield,
-                      preventYield := g.preventYield, yieldOverride := g.yieldOverride, observers := g.observers,
-                      children := g.children, dispatcher := g.dispatcher, context := g.context } :
-                    Effect4.Deep.RunFiber ν σ β ε δ ι α χ).park
-                  { token := m.nextToken, waitingOn := Option.some target, remaining := [], collected := [],
-                    resumeWith := Effect4.Deep.Resume.void, failFast := Bool.false },
-              yielding := yielding, outcome := Effect4.Deep.Outcome.parked, nested := [] })
+            Effect4.Deep.Iter.mk
+              (((Effect4.Deep.RunMachine.mk m.fibers m.races m.nextId (m.nextToken + 1) m.nextRace m.middlewareInstalled
+                        m.armed m.state m.trace m.stuck).update
+                    (Effect4.Deep.RunFiber.mk t.id t.frame t.running t.parked t.pending t.finalizing t.exit
+                      t.currentOpCount t.maxOpsBeforeYield t.preventYield t.yieldOverride
+                      (t.observers ++ [Effect4.Deep.Observer.resumeAwait g.id m.nextToken mode]) t.children t.dispatcher
+                      t.context)).emit
+                [Effect4.Deep.RunEvent.parkedOn g.id m.nextToken])
+              ((Effect4.Deep.RunFiber.mk g.id
+                    (have __src := g.frame;
+                    Effect4.FrameFiber.mk __src.current
+                      (Effect4.Prim.asyncFinalizer (interp.cancelName interp.parkCancelName g.id m.nextToken) ::
+                        g.frame.stack)
+                      __src.interruptible __src.interruptedCause __src.deferredInterrupt)
+                    g.running g.parked g.pending g.finalizing g.exit g.currentOpCount g.maxOpsBeforeYield g.preventYield
+                    g.yieldOverride g.observers g.children g.dispatcher g.context).park
+                (Effect4.Deep.Pending.mk m.nextToken (Option.some target) [] [] Effect4.Deep.Resume.void Bool.false))
+              yielding Effect4.Deep.Outcome.parked [])
 
 #check (@Effect4.Deep.evaluatePrim_join_unknown :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
@@ -3506,8 +3476,8 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
     [inst_3 : DecidableEq α] (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
     (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St),
     Effect4.Deep.stepDecision interp fuel m Effect4.Deep.RunDecision.installMiddleware =
-      { fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken, nextRace := m.nextRace,
-        middlewareInstalled := Bool.true, state := m.state, trace := m.trace, stuck := m.stuck })
+      Effect4.Deep.RunMachine.mk m.fibers m.races m.nextId m.nextToken m.nextRace Bool.true m.armed m.state m.trace
+        m.stuck)
 
 #check (@Effect4.Deep.withFiber_fork :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
@@ -3519,24 +3489,20 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
       have m' :=
         if options.daemon = Bool.true then m
         else
-          { fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken, nextRace := m.nextRace,
-            middlewareInstalled := Bool.true, state := m.state, trace := m.trace, stuck := m.stuck };
+          Effect4.Deep.RunMachine.mk m.fibers m.races m.nextId m.nextToken m.nextRace Bool.true m.armed m.state m.trace
+            m.stuck;
       have s := Effect4.Deep.spawn interp m' f program options;
       have t := Effect4.Deep.start s.fst s.snd.fst s.snd.snd options.startImmediately;
-      { machine := t.fst,
-        fiber :=
-          have __src := t.snd.fst;
-          { id := __src.id,
-            frame :=
-              have __src := t.snd.fst.frame;
-              { current := Effect4.Prim.success (interp.fiberValue s.snd.snd), stack := __src.stack,
-                interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
-                deferredInterrupt := __src.deferredInterrupt },
-            running := __src.running, parked := __src.parked, pending := __src.pending, finalizing := __src.finalizing,
-            exit := __src.exit, currentOpCount := __src.currentOpCount, maxOpsBeforeYield := __src.maxOpsBeforeYield,
-            preventYield := __src.preventYield, yieldOverride := __src.yieldOverride, observers := __src.observers,
-            children := __src.children, dispatcher := __src.dispatcher, context := __src.context },
-        yielding := yielding, outcome := Effect4.Deep.Outcome.continue_, nested := t.snd.snd })
+      Effect4.Deep.Iter.mk t.fst
+        (have __src := t.snd.fst;
+        Effect4.Deep.RunFiber.mk __src.id
+          (have __src := t.snd.fst.frame;
+          Effect4.FrameFiber.mk (Effect4.Prim.success (interp.fiberValue s.snd.snd)) __src.stack __src.interruptible
+            __src.interruptedCause __src.deferredInterrupt)
+          __src.running __src.parked __src.pending __src.finalizing __src.exit __src.currentOpCount
+          __src.maxOpsBeforeYield __src.preventYield __src.yieldOverride __src.observers __src.children __src.dispatcher
+          __src.context)
+        yielding Effect4.Deep.Outcome.continue_ t.snd.snd)
 
 #check (@Effect4.Deep.Witnesses.w1_deferred_join_child :
   Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w1DeferredJoin 1 =
@@ -3670,16 +3636,13 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
         t.exit = Option.none →
           interp.scopeLinkFiber mode scope key target m.state = Option.some state →
             Effect4.Deep.linkScope interp m mode scope key target interruptor extra =
-              ((({ fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken,
-                          nextRace := m.nextRace, middlewareInstalled := m.middlewareInstalled, state := state,
-                          trace := m.trace, stuck := m.stuck } : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St).modify
+              (((Effect4.Deep.RunMachine.mk m.fibers m.races m.nextId m.nextToken m.nextRace m.middlewareInstalled m.armed
+                          state m.trace m.stuck).modify
                       target fun t =>
-                      { id := t.id, frame := t.frame, running := t.running, parked := t.parked, pending := t.pending,
-                        finalizing := t.finalizing, exit := t.exit, currentOpCount := t.currentOpCount,
-                        maxOpsBeforeYield := t.maxOpsBeforeYield, preventYield := t.preventYield,
-                        yieldOverride := t.yieldOverride,
-                        observers := t.observers ++ [Effect4.Deep.Observer.dropScopeFinalizer scope key],
-                        children := t.children, dispatcher := t.dispatcher, context := t.context }).emit
+                      Effect4.Deep.RunFiber.mk t.id t.frame t.running t.parked t.pending t.finalizing t.exit
+                        t.currentOpCount t.maxOpsBeforeYield t.preventYield t.yieldOverride
+                        (t.observers ++ [Effect4.Deep.Observer.dropScopeFinalizer scope key]) t.children t.dispatcher
+                        t.context).emit
                   [Effect4.Deep.RunEvent.scopeLinked mode scope key target],
                 []))
 
@@ -3705,9 +3668,8 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
       Effect4.Deep.fireObserver interp id exit acc (Effect4.Deep.Observer.dropScopeFinalizer scope key) =
         (have __src :=
             acc.fst.emit [Effect4.Deep.RunEvent.observerFired id (Effect4.Deep.Observer.dropScopeFinalizer scope key)];
-          { fibers := __src.fibers, races := __src.races, nextId := __src.nextId, nextToken := __src.nextToken,
-            nextRace := __src.nextRace, middlewareInstalled := __src.middlewareInstalled, state := state,
-            trace := __src.trace, stuck := __src.stuck },
+          Effect4.Deep.RunMachine.mk __src.fibers __src.races __src.nextId __src.nextToken __src.nextRace
+            __src.middlewareInstalled __src.armed state __src.trace __src.stuck,
           acc.snd))
 
 #check (@Effect4.Deep.withFiber_closeScope :
@@ -3718,21 +3680,15 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
     (state : St) (program : Effect4.Prim ν σ β ε δ ι α),
     interp.closeScope scope exit f.frame.interruptible f.id m.state = Option.some (state, program) →
       Effect4.Deep.evaluatePrim.withFiber interp m f yielding (Effect4.Deep.WithFiberAction.closeScope scope exit) =
-        {
-          machine :=
-            { fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken, nextRace := m.nextRace,
-              middlewareInstalled := m.middlewareInstalled, state := state, trace := m.trace, stuck := m.stuck },
-          fiber :=
-            { id := f.id,
-              frame :=
-                have __src := f.frame;
-                { current := program, stack := __src.stack, interruptible := __src.interruptible,
-                  interruptedCause := __src.interruptedCause, deferredInterrupt := __src.deferredInterrupt },
-              running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
-              currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield,
-              preventYield := f.preventYield, yieldOverride := f.yieldOverride, observers := f.observers,
-              children := f.children, dispatcher := f.dispatcher, context := f.context },
-          yielding := yielding, outcome := Effect4.Deep.Outcome.continue_, nested := [] })
+        Effect4.Deep.Iter.mk
+          (Effect4.Deep.RunMachine.mk m.fibers m.races m.nextId m.nextToken m.nextRace m.middlewareInstalled m.armed state
+            m.trace m.stuck)
+          (Effect4.Deep.RunFiber.mk f.id
+            (have __src := f.frame;
+            Effect4.FrameFiber.mk program __src.stack __src.interruptible __src.interruptedCause __src.deferredInterrupt)
+            f.running f.parked f.pending f.finalizing f.exit f.currentOpCount f.maxOpsBeforeYield f.preventYield
+            f.yieldOverride f.observers f.children f.dispatcher f.context)
+          yielding Effect4.Deep.Outcome.continue_ [])
 
 #check (@Effect4.Deep.Witnesses.w6_link_then_close :
   Effect4.Deep.Witnesses.scopeRows Effect4.Deep.Witnesses.w6LinkThenClose =
@@ -3826,42 +3782,30 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
     Effect4.Deep.evaluatePrim.withFiber interp m f yielding (Effect4.Deep.WithFiberAction.raceAll entrants) =
       have raceId := m.nextRace;
       have token := m.nextToken;
-      have m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St :=
-        { fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken + 1,
-          nextRace := m.nextRace + 1, middlewareInstalled := m.middlewareInstalled, state := m.state, trace := m.trace,
-          stuck := m.stuck };
-      have race : Effect4.Deep.Race ν σ β ε δ ι α :=
-        { id := raceId, host := f.id, token := token,
-          state :=
-            have __src := Effect4.Supervision.RaceAllState.initial [];
-            { unstarted := __src.unstarted, starting := __src.starting, live := __src.live, remaining := entrants.length,
-              failures := __src.failures, winner := __src.winner, accepted := __src.accepted,
-              cleanupNeeded := __src.cleanupNeeded, requests := __src.requests, cleanup := __src.cleanup,
-              cleanupRequested := __src.cleanupRequested },
-          settled := Bool.false, programs := entrants };
       have m :=
-        Effect4.Deep.RunMachine.emit
-          { fibers := m.fibers, races := m.races ++ [race], nextId := m.nextId, nextToken := m.nextToken,
-              nextRace := m.nextRace, middlewareInstalled := m.middlewareInstalled, state := m.state, trace := m.trace,
-              stuck := m.stuck }
+        Effect4.Deep.RunMachine.mk m.fibers m.races m.nextId (m.nextToken + 1) (m.nextRace + 1) m.middlewareInstalled
+          m.armed m.state m.trace m.stuck;
+      have race :=
+        Effect4.Deep.Race.mk raceId f.id token
+          (have __src := Effect4.Supervision.RaceAllState.initial [];
+          Effect4.Supervision.RaceAllState.mk __src.unstarted __src.starting __src.live entrants.length __src.failures
+            __src.winner __src.accepted __src.cleanupNeeded __src.requests __src.cleanup __src.cleanupRequested)
+          Bool.false entrants;
+      have m :=
+        (Effect4.Deep.RunMachine.mk m.fibers (m.races ++ [race]) m.nextId m.nextToken m.nextRace m.middlewareInstalled
+              m.armed m.state m.trace m.stuck).emit
           [Effect4.Deep.RunEvent.raceStarted raceId f.id entrants.length];
       have name := interp.cancelName (interp.raceCancelName raceId) f.id token;
       have g :=
-        ({ id := f.id,
-              frame :=
-                have __src := f.frame;
-                { current := __src.current, stack := Effect4.Prim.asyncFinalizer name :: f.frame.stack,
-                  interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
-                  deferredInterrupt := __src.deferredInterrupt },
-              running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
-              currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield,
-              preventYield := f.preventYield, yieldOverride := f.yieldOverride, observers := f.observers,
-              children := f.children, dispatcher := f.dispatcher, context := f.context } :
-            Effect4.Deep.RunFiber ν σ β ε δ ι α χ).park
-          { token := token, waitingOn := Option.none, remaining := [], collected := [],
-            resumeWith := Effect4.Deep.Resume.void, failFast := Bool.false };
-      { machine := m.emit [Effect4.Deep.RunEvent.parkedOn g.id token], fiber := g, yielding := yielding,
-        outcome := Effect4.Deep.Outcome.parked, nested := [Effect4.Deep.Cmd.launch raceId] })
+        (Effect4.Deep.RunFiber.mk f.id
+              (have __src := f.frame;
+              Effect4.FrameFiber.mk __src.current (Effect4.Prim.asyncFinalizer name :: f.frame.stack) __src.interruptible
+                __src.interruptedCause __src.deferredInterrupt)
+              f.running f.parked f.pending f.finalizing f.exit f.currentOpCount f.maxOpsBeforeYield f.preventYield
+              f.yieldOverride f.observers f.children f.dispatcher f.context).park
+          (Effect4.Deep.Pending.mk token Option.none [] [] Effect4.Deep.Resume.void Bool.false);
+      Effect4.Deep.Iter.mk (m.emit [Effect4.Deep.RunEvent.parkedOn g.id token]) g yielding Effect4.Deep.Outcome.parked
+        [Effect4.Deep.Cmd.launch raceId])
 
 #check (@Effect4.Deep.launchEntrant_eq :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
@@ -4351,33 +4295,22 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
     (register : ν) (withSignal : Bool) (cancel : Option ν) (state : St) (next : Effect4.Prim ν σ β ε δ ι α),
     interp.registerAsync register f.id m.nextToken m.state = (state, Option.some next) →
       have g :=
-        { id := f.id,
-          frame :=
-            have __src := f.frame;
-            { current := Effect4.Prim.async register withSignal cancel, stack := __src.stack,
-              interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
-              deferredInterrupt := __src.deferredInterrupt },
-          running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
-          currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield, preventYield := f.preventYield,
-          yieldOverride := f.yieldOverride, observers := f.observers, children := f.children, dispatcher := f.dispatcher,
-          context := f.context };
+        Effect4.Deep.RunFiber.mk f.id
+          (have __src := f.frame;
+          Effect4.FrameFiber.mk (Effect4.Prim.async register withSignal cancel) __src.stack __src.interruptible
+            __src.interruptedCause __src.deferredInterrupt)
+          f.running f.parked f.pending f.finalizing f.exit f.currentOpCount f.maxOpsBeforeYield f.preventYield
+          f.yieldOverride f.observers f.children f.dispatcher f.context;
       Effect4.Deep.evaluatePrim interp m g yielding =
-        {
-          machine :=
-            { fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken + 1,
-              nextRace := m.nextRace, middlewareInstalled := m.middlewareInstalled, state := state, trace := m.trace,
-              stuck := m.stuck },
-          fiber :=
-            { id := g.id,
-              frame :=
-                have __src := g.frame;
-                { current := next, stack := __src.stack, interruptible := __src.interruptible,
-                  interruptedCause := __src.interruptedCause, deferredInterrupt := __src.deferredInterrupt },
-              running := g.running, parked := g.parked, pending := g.pending, finalizing := g.finalizing, exit := g.exit,
-              currentOpCount := g.currentOpCount, maxOpsBeforeYield := g.maxOpsBeforeYield,
-              preventYield := g.preventYield, yieldOverride := g.yieldOverride, observers := g.observers,
-              children := g.children, dispatcher := g.dispatcher, context := g.context },
-          yielding := yielding, outcome := Effect4.Deep.Outcome.continue_, nested := [Effect4.Deep.Cmd.drainDue] })
+        Effect4.Deep.Iter.mk
+          (Effect4.Deep.RunMachine.mk m.fibers m.races m.nextId (m.nextToken + 1) m.nextRace m.middlewareInstalled m.armed
+            state m.trace m.stuck)
+          (Effect4.Deep.RunFiber.mk g.id
+            (have __src := g.frame;
+            Effect4.FrameFiber.mk next __src.stack __src.interruptible __src.interruptedCause __src.deferredInterrupt)
+            g.running g.parked g.pending g.finalizing g.exit g.currentOpCount g.maxOpsBeforeYield g.preventYield
+            g.yieldOverride g.observers g.children g.dispatcher g.context)
+          yielding Effect4.Deep.Outcome.continue_ [Effect4.Deep.Cmd.drainDue])
 
 #check (@Effect4.Deep.evaluatePrim_async_parks :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
@@ -4387,44 +4320,31 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
     (register : ν) (withSignal : Bool) (cancel : Option ν) (state : St),
     interp.registerAsync register f.id m.nextToken m.state = (state, Option.none) →
       have g :=
-        { id := f.id,
-          frame :=
-            have __src := f.frame;
-            { current := Effect4.Prim.async register withSignal cancel, stack := __src.stack,
-              interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
-              deferredInterrupt := __src.deferredInterrupt },
-          running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
-          currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield, preventYield := f.preventYield,
-          yieldOverride := f.yieldOverride, observers := f.observers, children := f.children, dispatcher := f.dispatcher,
-          context := f.context };
+        Effect4.Deep.RunFiber.mk f.id
+          (have __src := f.frame;
+          Effect4.FrameFiber.mk (Effect4.Prim.async register withSignal cancel) __src.stack __src.interruptible
+            __src.interruptedCause __src.deferredInterrupt)
+          f.running f.parked f.pending f.finalizing f.exit f.currentOpCount f.maxOpsBeforeYield f.preventYield
+          f.yieldOverride f.observers f.children f.dispatcher f.context;
       Effect4.Deep.evaluatePrim interp m g yielding =
         have token := m.nextToken;
-        have m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St :=
-          { fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken + 1,
-            nextRace := m.nextRace, middlewareInstalled := m.middlewareInstalled, state := state, trace := m.trace,
-            stuck := m.stuck };
+        have m :=
+          Effect4.Deep.RunMachine.mk m.fibers m.races m.nextId (m.nextToken + 1) m.nextRace m.middlewareInstalled m.armed
+            state m.trace m.stuck;
         have g :=
           if (withSignal || cancel.isSome) = Bool.true then
-            { id := g.id,
-              frame :=
-                have __src := g.frame;
-                { current := __src.current,
-                  stack :=
-                    Effect4.Prim.asyncFinalizer (interp.cancelName (cancel.getD interp.abortName) g.id token) ::
-                      g.frame.stack,
-                  interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
-                  deferredInterrupt := __src.deferredInterrupt },
-              running := g.running, parked := g.parked, pending := g.pending, finalizing := g.finalizing, exit := g.exit,
-              currentOpCount := g.currentOpCount, maxOpsBeforeYield := g.maxOpsBeforeYield,
-              preventYield := g.preventYield, yieldOverride := g.yieldOverride, observers := g.observers,
-              children := g.children, dispatcher := g.dispatcher, context := g.context }
+            Effect4.Deep.RunFiber.mk g.id
+              (have __src := g.frame;
+              Effect4.FrameFiber.mk __src.current
+                (Effect4.Prim.asyncFinalizer (interp.cancelName (cancel.getD interp.abortName) g.id token) ::
+                  g.frame.stack)
+                __src.interruptible __src.interruptedCause __src.deferredInterrupt)
+              g.running g.parked g.pending g.finalizing g.exit g.currentOpCount g.maxOpsBeforeYield g.preventYield
+              g.yieldOverride g.observers g.children g.dispatcher g.context
           else g;
-        have g :=
-          g.park
-            { token := token, waitingOn := Option.none, remaining := [], collected := [],
-              resumeWith := Effect4.Deep.Resume.void, failFast := Bool.false };
-        { machine := m.emit [Effect4.Deep.RunEvent.parkedOn g.id token], fiber := g, yielding := yielding,
-          outcome := Effect4.Deep.Outcome.parked, nested := [] })
+        have g := g.park (Effect4.Deep.Pending.mk token Option.none [] [] Effect4.Deep.Resume.void Bool.false);
+        Effect4.Deep.Iter.mk (m.emit [Effect4.Deep.RunEvent.parkedOn g.id token]) g yielding Effect4.Deep.Outcome.parked
+          [])
 
 
 /-! Repair step 2 of the second review, 2026-09-04 (R2-1): the `Sync` arm answers and the pop is a
@@ -4439,32 +4359,23 @@ command run after what the thunk owed; the exit path is a command too. -/
     interp.parkOf (Effect4.Prim.sync thunk) = Option.none →
       interp.syncState thunk m.state = Option.some (state, value) →
         have g :=
-          { id := f.id,
-            frame :=
-              have __src := f.frame;
-              { current := Effect4.Prim.sync thunk, stack := __src.stack, interruptible := __src.interruptible,
-                interruptedCause := __src.interruptedCause, deferredInterrupt := __src.deferredInterrupt },
-            running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
-            currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield, preventYield := f.preventYield,
-            yieldOverride := f.yieldOverride, observers := f.observers, children := f.children,
-            dispatcher := f.dispatcher, context := f.context };
+          Effect4.Deep.RunFiber.mk f.id
+            (have __src := f.frame;
+            Effect4.FrameFiber.mk (Effect4.Prim.sync thunk) __src.stack __src.interruptible __src.interruptedCause
+              __src.deferredInterrupt)
+            f.running f.parked f.pending f.finalizing f.exit f.currentOpCount f.maxOpsBeforeYield f.preventYield
+            f.yieldOverride f.observers f.children f.dispatcher f.context;
         Effect4.Deep.evaluatePrim interp m g yielding =
-          {
-            machine :=
-              { fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken,
-                nextRace := m.nextRace, middlewareInstalled := m.middlewareInstalled, state := state, trace := m.trace,
-                stuck := m.stuck },
-            fiber :=
-              { id := g.id,
-                frame :=
-                  have __src := g.frame;
-                  { current := Effect4.Prim.success value, stack := __src.stack, interruptible := __src.interruptible,
-                    interruptedCause := __src.interruptedCause, deferredInterrupt := __src.deferredInterrupt },
-                running := g.running, parked := g.parked, pending := g.pending, finalizing := g.finalizing,
-                exit := g.exit, currentOpCount := g.currentOpCount, maxOpsBeforeYield := g.maxOpsBeforeYield,
-                preventYield := g.preventYield, yieldOverride := g.yieldOverride, observers := g.observers,
-                children := g.children, dispatcher := g.dispatcher, context := g.context },
-            yielding := yielding, outcome := Effect4.Deep.Outcome.answered, nested := [Effect4.Deep.Cmd.drainDue] })
+          Effect4.Deep.Iter.mk
+            (Effect4.Deep.RunMachine.mk m.fibers m.races m.nextId m.nextToken m.nextRace m.middlewareInstalled m.armed
+              state m.trace m.stuck)
+            (Effect4.Deep.RunFiber.mk g.id
+              (have __src := g.frame;
+              Effect4.FrameFiber.mk (Effect4.Prim.success value) __src.stack __src.interruptible __src.interruptedCause
+                __src.deferredInterrupt)
+              g.running g.parked g.pending g.finalizing g.exit g.currentOpCount g.maxOpsBeforeYield g.preventYield
+              g.yieldOverride g.observers g.children g.dispatcher g.context)
+            yielding Effect4.Deep.Outcome.answered [Effect4.Deep.Cmd.drainDue])
 
 #check (@Effect4.Deep.evaluatePrim_sync_pure :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
@@ -4609,40 +4520,29 @@ input order; a settled race resumes its host with the masked cleanup program. -/
     (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Deep.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
     (token : Nat),
     Effect4.Deep.evaluatePrim.withFiber interp m f yielding (Effect4.Deep.WithFiberAction.dropObservers token) =
-      {
-        machine :=
-          {
-            fibers :=
-              List.map
-                (fun g =>
-                  { id := g.id, frame := g.frame, running := g.running, parked := g.parked, pending := g.pending,
-                    finalizing := g.finalizing, exit := g.exit, currentOpCount := g.currentOpCount,
-                    maxOpsBeforeYield := g.maxOpsBeforeYield, preventYield := g.preventYield,
-                    yieldOverride := g.yieldOverride,
-                    observers :=
-                      List.filter
-                        (fun x =>
-                          match x with
-                          | Effect4.Deep.Observer.resumeAwait waiter t mode => Decidable.decide (t ≠ token)
-                          | Effect4.Deep.Observer.countdown waiter t => Decidable.decide (t ≠ token)
-                          | x => Bool.true)
-                        g.observers,
-                    children := g.children, dispatcher := g.dispatcher, context := g.context })
-                m.fibers,
-            races := m.races, nextId := m.nextId, nextToken := m.nextToken, nextRace := m.nextRace,
-            middlewareInstalled := m.middlewareInstalled, state := m.state, trace := m.trace, stuck := m.stuck },
-        fiber :=
-          { id := f.id,
-            frame :=
-              have __src := f.frame;
-              { current := Effect4.Prim.success interp.voidValue, stack := __src.stack,
-                interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
-                deferredInterrupt := __src.deferredInterrupt },
-            running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
-            currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield, preventYield := f.preventYield,
-            yieldOverride := f.yieldOverride, observers := f.observers, children := f.children,
-            dispatcher := f.dispatcher, context := f.context },
-        yielding := yielding, outcome := Effect4.Deep.Outcome.continue_, nested := [] })
+      Effect4.Deep.Iter.mk
+        (Effect4.Deep.RunMachine.mk
+          (List.map
+            (fun g =>
+              Effect4.Deep.RunFiber.mk g.id g.frame g.running g.parked g.pending g.finalizing g.exit g.currentOpCount
+                g.maxOpsBeforeYield g.preventYield g.yieldOverride
+                (List.filter
+                  (fun x =>
+                    match x with
+                    | Effect4.Deep.Observer.resumeAwait waiter t mode => Decidable.decide (t ≠ token)
+                    | Effect4.Deep.Observer.countdown waiter t => Decidable.decide (t ≠ token)
+                    | x => Bool.true)
+                  g.observers)
+                g.children g.dispatcher g.context)
+            m.fibers)
+          m.races m.nextId m.nextToken m.nextRace m.middlewareInstalled m.armed m.state m.trace m.stuck)
+        (Effect4.Deep.RunFiber.mk f.id
+          (have __src := f.frame;
+          Effect4.FrameFiber.mk (Effect4.Prim.success interp.voidValue) __src.stack __src.interruptible
+            __src.interruptedCause __src.deferredInterrupt)
+          f.running f.parked f.pending f.finalizing f.exit f.currentOpCount f.maxOpsBeforeYield f.preventYield
+          f.yieldOverride f.observers f.children f.dispatcher f.context)
+        yielding Effect4.Deep.Outcome.continue_ [])
 
 #check (@Effect4.Deep.Witnesses.w14_join_cleanup_drops_the_observer :
   Option.map List.length
@@ -4686,24 +4586,19 @@ input order; a settled race resumes its host with the masked cleanup program. -/
     (f : Effect4.Deep.RunFiber ν σ β ε δ ι α χ) (targets : List Effect4.FiberId) (resumeWith : Effect4.Deep.Resume ν)
     (failFast : Bool) (exits : List (Effect4.Exit β ε δ ι α)),
     Effect4.Deep.countdownWalk
-          { fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken + 1,
-            nextRace := m.nextRace, middlewareInstalled := m.middlewareInstalled, state := m.state, trace := m.trace,
-            stuck := m.stuck }
+          (Effect4.Deep.RunMachine.mk m.fibers m.races m.nextId (m.nextToken + 1) m.nextRace m.middlewareInstalled m.armed
+            m.state m.trace m.stuck)
           targets [] =
         (exits, Option.none) →
       Effect4.Deep.countdownPark interp m f targets resumeWith failFast =
-        ({ fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken + 1, nextRace := m.nextRace,
-            middlewareInstalled := m.middlewareInstalled, state := m.state, trace := m.trace, stuck := m.stuck },
-          { id := f.id,
-            frame :=
-              have __src := f.frame;
-              { current := Effect4.Deep.countdownPark.resumePrim interp resumeWith exits, stack := __src.stack,
-                interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
-                deferredInterrupt := __src.deferredInterrupt },
-            running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
-            currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield, preventYield := f.preventYield,
-            yieldOverride := f.yieldOverride, observers := f.observers, children := f.children,
-            dispatcher := f.dispatcher, context := f.context },
+        (Effect4.Deep.RunMachine.mk m.fibers m.races m.nextId (m.nextToken + 1) m.nextRace m.middlewareInstalled m.armed
+            m.state m.trace m.stuck,
+          Effect4.Deep.RunFiber.mk f.id
+            (have __src := f.frame;
+            Effect4.FrameFiber.mk (Effect4.Deep.countdownPark.resumePrim interp resumeWith exits) __src.stack
+              __src.interruptible __src.interruptedCause __src.deferredInterrupt)
+            f.running f.parked f.pending f.finalizing f.exit f.currentOpCount f.maxOpsBeforeYield f.preventYield
+            f.yieldOverride f.observers f.children f.dispatcher f.context,
           Bool.false))
 
 #check (@Effect4.Deep.countdownPark_parks :
@@ -4713,38 +4608,28 @@ input order; a settled race resumes its host with the masked cleanup program. -/
     (targets : List Effect4.FiberId) (resumeWith : Effect4.Deep.Resume ν) (failFast : Bool)
     (exits : List (Effect4.Exit β ε δ ι α)) (target : Effect4.FiberId) (remaining : List Effect4.FiberId),
     Effect4.Deep.countdownWalk
-          { fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken + 1,
-            nextRace := m.nextRace, middlewareInstalled := m.middlewareInstalled, state := m.state, trace := m.trace,
-            stuck := m.stuck }
+          (Effect4.Deep.RunMachine.mk m.fibers m.races m.nextId (m.nextToken + 1) m.nextRace m.middlewareInstalled m.armed
+            m.state m.trace m.stuck)
           targets [] =
         (exits, Option.some (target, remaining)) →
       Effect4.Deep.countdownPark interp m f targets resumeWith failFast =
-        have m' : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St :=
-          { fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken + 1,
-            nextRace := m.nextRace, middlewareInstalled := m.middlewareInstalled, state := m.state, trace := m.trace,
-            stuck := m.stuck };
+        have m' :=
+          Effect4.Deep.RunMachine.mk m.fibers m.races m.nextId (m.nextToken + 1) m.nextRace m.middlewareInstalled m.armed
+            m.state m.trace m.stuck;
         have name := interp.cancelName interp.parkCancelName f.id m.nextToken;
         have g :=
-          ({ id := f.id,
-                frame :=
-                  have __src := f.frame;
-                  { current := __src.current, stack := Effect4.Prim.asyncFinalizer name :: f.frame.stack,
-                    interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
-                    deferredInterrupt := __src.deferredInterrupt },
-                running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing,
-                exit := f.exit, currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield,
-                preventYield := f.preventYield, yieldOverride := f.yieldOverride, observers := f.observers,
-                children := f.children, dispatcher := f.dispatcher, context := f.context } :
-              Effect4.Deep.RunFiber ν σ β ε δ ι α χ).park
-            { token := m.nextToken, waitingOn := Option.some target, remaining := remaining, collected := exits,
-              resumeWith := resumeWith, failFast := failFast };
+          (Effect4.Deep.RunFiber.mk f.id
+                (have __src := f.frame;
+                Effect4.FrameFiber.mk __src.current (Effect4.Prim.asyncFinalizer name :: f.frame.stack)
+                  __src.interruptible __src.interruptedCause __src.deferredInterrupt)
+                f.running f.parked f.pending f.finalizing f.exit f.currentOpCount f.maxOpsBeforeYield f.preventYield
+                f.yieldOverride f.observers f.children f.dispatcher f.context).park
+            (Effect4.Deep.Pending.mk m.nextToken (Option.some target) remaining exits resumeWith failFast);
         ((m'.modify target fun g =>
-                { id := g.id, frame := g.frame, running := g.running, parked := g.parked, pending := g.pending,
-                  finalizing := g.finalizing, exit := g.exit, currentOpCount := g.currentOpCount,
-                  maxOpsBeforeYield := g.maxOpsBeforeYield, preventYield := g.preventYield,
-                  yieldOverride := g.yieldOverride,
-                  observers := g.observers ++ [Effect4.Deep.Observer.countdown f.id m.nextToken], children := g.children,
-                  dispatcher := g.dispatcher, context := g.context }).emit
+                Effect4.Deep.RunFiber.mk g.id g.frame g.running g.parked g.pending g.finalizing g.exit g.currentOpCount
+                  g.maxOpsBeforeYield g.preventYield g.yieldOverride
+                  (g.observers ++ [Effect4.Deep.Observer.countdown f.id m.nextToken]) g.children g.dispatcher
+                  g.context).emit
             [Effect4.Deep.RunEvent.parkedOn f.id m.nextToken],
           g, Bool.true))
 
@@ -4891,6 +4776,73 @@ input order; a settled race resumes its host with the masked cleanup program. -/
           Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w5AwaitAllChildrenFailsFired 0 =
               Option.some (Effect4.Exit.failure (Effect4.Cause.fail Effect4.Deep.Err.boom)) ∧
             Effect4.Deep.Witnesses.finalizerRuns Effect4.Deep.Witnesses.w5AwaitAllChildrenFailsFired 0 = 1)
+
+
+/-! Repair step 4b of the second review, 2026-09-04 (R2-14/15): the host runs scheduled callbacks in
+arming order, and `runSyncExit` flushes the root's dispatcher only. -/
+
+#check (@Effect4.Deep.RunMachine.arm_new :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St)
+    (owner : Effect4.FiberId), m.armed.contains owner = Bool.false → (m.arm owner).armed = m.armed ++ [owner])
+
+#check (@Effect4.Deep.RunMachine.arm_known :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St)
+    (owner : Effect4.FiberId), m.armed.contains owner = Bool.true → (m.arm owner).armed = m.armed)
+
+#check (@Effect4.Deep.RunMachine.arm_fields :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St)
+    (owner : Effect4.FiberId),
+    (m.arm owner).fibers = m.fibers ∧
+      (m.arm owner).nextToken = m.nextToken ∧ (m.arm owner).trace = m.trace ∧ (m.arm owner).state = m.state)
+
+#check (@Effect4.Deep.Witnesses.w15_flush_runs_callbacks_in_arming_order :
+  Effect4.Deep.Witnesses.armedQueueOf
+        Effect4.Deep.Witnesses.w15Armed =
+      [2, 1] ∧
+    Effect4.Deep.Witnesses.armedOf Effect4.Deep.Witnesses.w15Armed 1 = Option.some Bool.true ∧
+      Effect4.Deep.Witnesses.armedOf Effect4.Deep.Witnesses.w15Armed 2 = Option.some Bool.true ∧
+        Effect4.Deep.Witnesses.armedQueueOf Effect4.Deep.Witnesses.w15Flushed = [] ∧
+          Effect4.Deep.Witnesses.resumeAndExitOrder Effect4.Deep.Witnesses.w15Flushed =
+            [[1, 0], [0, 1, 0], [0, 2, 1], [1, 2], [0, 1, 2], [1, 1]])
+
+#check (@Effect4.Deep.RunMachine.disarm_eq :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St)
+    (owner : Effect4.FiberId), (m.disarm owner).armed = List.filter (fun x => Decidable.decide (x ≠ owner)) m.armed)
+
+#check (@Effect4.Deep.flushRoot_idle :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (fuel rounds : Nat) (root : Effect4.FiberId)
+    (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St) (o : Effect4.Deep.RunFiber ν σ β ε δ ι α χ),
+    m.fiber? root = Option.some o →
+      o.dispatcher.buckets = [] → Effect4.Deep.stepDecision.flushRoot interp fuel root (rounds + 1) m = m)
+
+#check (@Effect4.Deep.flushRoot_round :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (fuel rounds : Nat) (root : Effect4.FiberId)
+    (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St) (o : Effect4.Deep.RunFiber ν σ β ε δ ι α χ),
+    m.fiber? root = Option.some o →
+      o.dispatcher.buckets.isEmpty = Bool.false →
+        m.stuck = Option.none →
+          Effect4.Deep.stepDecision.flushRoot interp fuel root (rounds + 1) m =
+            Effect4.Deep.stepDecision.flushRoot interp fuel root rounds
+              (Effect4.Deep.stepDecision.fire interp fuel m root))
+
+#check (@Effect4.Deep.Witnesses.w8_sync_child_yield_is_async :
+  Effect4.Deep.Witnesses.w8SyncChildYield.snd =
+      Effect4.Exit.failure (Effect4.Cause.die Effect4.Deep.Defect.asyncFiber) ∧
+    Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w8SyncChildYield.fst 0 = Option.none ∧
+      Effect4.Deep.Witnesses.armedQueueOf Effect4.Deep.Witnesses.w8SyncChildYield.fst = [1] ∧
+        Effect4.Deep.Witnesses.exitOf
+            (Effect4.Deep.stepDecision Effect4.Deep.stores Effect4.Deep.Witnesses.fuel
+              Effect4.Deep.Witnesses.w8SyncChildYield.fst Effect4.Deep.RunDecision.flush)
+            0 =
+          Option.some (Effect4.Exit.success Effect4.Deep.Val.unit))
 
 end StatementSnapshot
 
@@ -5462,16 +5414,22 @@ private def censusRows : List Row :=
   , { id := "scheduler.dispatcher-arming", kind := "scheduler", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Deep.Dispatcher.enqueue_arms "none"
-        , w `Effect4.Deep.Dispatcher.drain_disarms "none" ] }
+        , w `Effect4.Deep.Dispatcher.drain_disarms "none"
+        , w `Effect4.Deep.RunMachine.arm_new "propext"
+        , w `Effect4.Deep.RunMachine.arm_known "propext"
+        , w `Effect4.Deep.RunMachine.arm_fields "none"
+        , w `Effect4.Deep.Witnesses.w15_flush_runs_callbacks_in_arming_order "propext,Quot.sound" ] }
   , { id := "scheduler.run-tasks-drain-once", kind := "scheduler", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Deep.Dispatcher.drain_eq "none"
         , w `Effect4.Deep.Dispatcher.drain_disarms "none"
-        , w `Effect4.Deep.fire_eq "propext,Quot.sound" ] }
+        , w `Effect4.Deep.fire_eq "propext,Quot.sound"
+        , w `Effect4.Deep.RunMachine.disarm_eq "none" ] }
   , { id := "scheduler.flush", kind := "scheduler", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Deep.flushAll_idle "propext,Quot.sound"
-        , w `Effect4.Deep.flushAll_round "propext,Quot.sound" ] }
+        , w `Effect4.Deep.flushAll_round "propext,Quot.sound"
+        , w `Effect4.Deep.Witnesses.w15_flush_runs_callbacks_in_arming_order "propext,Quot.sound" ] }
   , { id := "scheduler.yield-now-resume-guard", kind := "scheduler", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Deep.evaluatePrim_yieldNowWith "propext,Quot.sound"
@@ -5591,10 +5549,14 @@ private def censusRows : List Row :=
   , { id := "entry.run-sync-exit-with", kind := "entry", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Deep.runSyncExit_exited "propext,Quot.sound"
-        , w `Effect4.Deep.runSyncExit_survives "propext,Quot.sound" ] }
+        , w `Effect4.Deep.runSyncExit_survives "propext,Quot.sound"
+        , w `Effect4.Deep.flushRoot_idle "propext,Quot.sound"
+        , w `Effect4.Deep.flushRoot_round "propext,Quot.sound"
+        , w `Effect4.Deep.Witnesses.w8_sync_child_yield_is_async "propext,Quot.sound" ] }
   , { id := "entry.async-fiber-error", kind := "entry", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Deep.runSyncExit_survives "propext,Quot.sound" ] }
+        [ w `Effect4.Deep.runSyncExit_survives "propext,Quot.sound"
+        , w `Effect4.Deep.Witnesses.w8_sync_child_yield_is_async "propext,Quot.sound" ] }
   , { id := "entry.with-error-reporting", kind := "entry", disposition := "targetOnly", coverage := "absent", witnesses := [] }
   , { id := "rule.frames-are-primitives", kind := "rule", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
@@ -6370,6 +6332,14 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Deep.drive_link
   , `Effect4.Deep.Witnesses.w6_deferred_child_is_linked
   , `Effect4.Deep.Witnesses.w5_await_all_children_on_failure
+  , `Effect4.Deep.RunMachine.arm_new
+  , `Effect4.Deep.RunMachine.arm_known
+  , `Effect4.Deep.RunMachine.arm_fields
+  , `Effect4.Deep.Witnesses.w15_flush_runs_callbacks_in_arming_order
+  , `Effect4.Deep.RunMachine.disarm_eq
+  , `Effect4.Deep.flushRoot_idle
+  , `Effect4.Deep.flushRoot_round
+  , `Effect4.Deep.Witnesses.w8_sync_child_yield_is_async
   ]
 
 private def expectedRowTotal : Nat := 137

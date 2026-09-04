@@ -320,6 +320,11 @@ structure RunMachine (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (S
   nextToken : Nat
   nextRace : Nat
   middlewareInstalled : Bool
+  /-- The host callbacks scheduled and not yet run, in arming order: a dispatcher arms
+  itself with `setImmediate` (or the sync scheduler's microtask) the first time a task is
+  scheduled on it (`Scheduler.ts:207-212`), and the host runs those callbacks in the order
+  they were armed (R2-15). -/
+  armed : List FiberId
   state : St
   trace : List (RunEvent ν σ β ε δ ι α χ)
   stuck : Option Stuck
@@ -328,8 +333,8 @@ structure RunMachine (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (S
 inductive RunDecision (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max u v)
   /-- (a) the host fires this fiber's dispatcher: drain once, run the tasks in order. -/
   | fire (owner : FiberId)
-  /-- the sync scheduler's `flush` (`Scheduler.ts`): every armed dispatcher, in fiber order,
-  until none is armed. -/
+  /-- the host's event loop runs the scheduled callbacks in arming order until none is
+  scheduled (`Scheduler.ts:207-212`, R2-15). -/
   | flush
   /-- a fiber evaluated now: the root's synchronous start (`runFork`, `:5423`). -/
   | evaluate (fiber : FiberId)
@@ -479,9 +484,20 @@ def empty (state : St) : RunMachine ν σ β ε δ ι α χ St where
   nextToken := 0
   nextRace := 0
   middlewareInstalled := false
+  armed := []
   state := state
   trace := []
   stuck := none
+
+/-- A task was scheduled on `owner`'s dispatcher: the first one arms it — a host callback is
+scheduled behind those already scheduled (`Scheduler.ts:207-212`); later tasks join the
+armed callback. -/
+def arm (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId) : RunMachine ν σ β ε δ ι α χ St :=
+  { m with armed := if m.armed.contains owner then m.armed else m.armed ++ [owner] }
+
+/-- The host callback of `owner` ran: it is no longer scheduled. -/
+def disarm (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId) : RunMachine ν σ β ε δ ι α χ St :=
+  { m with armed := m.armed.filter fun x => x ≠ owner }
 
 end RunMachine
 
@@ -667,7 +683,7 @@ def start (m : RunMachine ν σ β ε δ ι α χ St) (parent : RunFiber ν σ �
   if immediately then (m, parent, [Cmd.evaluate child])
   else
     let parent := { parent with dispatcher := parent.dispatcher.enqueue 0 (Task.start child) }
-    (m.emit [RunEvent.scheduledTask parent.id 0 (Task.start child)], parent, [])
+    ((m.arm parent.id).emit [RunEvent.scheduledTask parent.id 0 (Task.start child)], parent, [])
 
 /-- One entrant of a `raceAll`, forked at its launch (`forkUnsafe(parent, effect, true, true,
 false)`, `:1521`): an immediate daemon, interruptible (R2-10), with the race callback as its
@@ -743,7 +759,7 @@ def injectYield (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ 
       yieldOverride := none
       dispatcher := (f.dispatcher.enqueue 0 (Task.resume f.id token f.frame.current)) }
     let f := f.park ⟨token, none, [], [], Resume.void, false⟩
-    some ⟨m.emit [RunEvent.yieldInjected f.id f.currentOpCount, RunEvent.parkedOn f.id token],
+    some ⟨(m.arm f.id).emit [RunEvent.yieldInjected f.id f.currentOpCount, RunEvent.parkedOn f.id token],
       f, true, Outcome.parked, []⟩
   else none
 
@@ -763,7 +779,7 @@ def evaluatePrim (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine
         dispatcher :=
           (f.dispatcher.enqueue priority (Task.resume f.id token (Prim.success interp.voidValue))) }
       let f := f.park ⟨token, none, [], [], Resume.void, false⟩
-      ⟨m.emit [RunEvent.parkedOn f.id token], f, yielding, Outcome.parked, []⟩
+      ⟨(m.arm f.id).emit [RunEvent.parkedOn f.id token], f, yielding, Outcome.parked, []⟩
     | Prim.async register withSignal cancel =>                          -- :1109-1143
       let token := m.nextToken
       let (state, immediate) := interp.registerAsync register f.id token m.state
@@ -1242,29 +1258,44 @@ def stepDecision (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
       if applyNow then drive interp fuel m [Cmd.evaluate target, Cmd.drainDue] else m
   | RunDecision.installMiddleware => { m with middlewareInstalled := true }
 where
-  /-- `runTasks` (`Scheduler.ts:225-233`): drain once, run in order. -/
+  /-- The host callback of `owner`'s dispatcher (`afterScheduled`, `Scheduler.ts:214-217`):
+  it is no longer scheduled, and `runTasks` (`:225-233`) drains once and runs in order. -/
   fire (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : RunMachine ν σ β ε δ ι α χ St)
       (owner : FiberId) : RunMachine ν σ β ε δ ι α χ St :=
     match m.fiber? owner with
     | none => m
     | some o =>
       let (tasks, dispatcher) := o.dispatcher.drain
-      let m := m.update { o with dispatcher := dispatcher }
+      let m := (m.update { o with dispatcher := dispatcher }).disarm owner
       tasks.foldl (fun m task =>
           let m := m.emit [RunEvent.ranTask owner task]
           match task with
           | Task.start child => drive interp fuel m [Cmd.evaluate child, Cmd.drainDue]
           | Task.resume target token answer =>
             drive interp fuel m [Cmd.resume target token answer, Cmd.drainDue]) m
-  /-- The sync scheduler's `flush`: armed dispatchers in fiber order until none is armed.
-  Assumption, recorded: the cross-dispatcher order under a synchronous flush is fiber order. -/
+  /-- The host's event loop: the scheduled callbacks in arming order, one per round, a
+  callback re-armed during a round going to the back (`setImmediate` FIFO,
+  `Scheduler.ts:207-212`; R2-15), until none is scheduled. -/
   flushAll (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) :
       Nat → RunMachine ν σ β ε δ ι α χ St → RunMachine ν σ β ε δ ι α χ St
     | 0, m => m
     | rounds + 1, m =>
-      let armed := (m.fibers.filter fun f => f.dispatcher.armed).map RunFiber.id
-      if armed.isEmpty || m.stuck.isSome then m
-      else flushAll interp fuel rounds (armed.foldl (fire interp fuel) m)
+      match m.armed with
+      | [] => m
+      | owner :: _ =>
+        if m.stuck.isSome then m else flushAll interp fuel rounds (fire interp fuel m owner)
+  /-- `MixedSchedulerDispatcher.flush` (`Scheduler.ts:238-246`) on one dispatcher: while it
+  holds tasks, cancel its scheduled callback and run them; `runSyncExit` flushes the *root's*
+  dispatcher only (`:5542`, R2-14). -/
+  flushRoot (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (root : FiberId) :
+      Nat → RunMachine ν σ β ε δ ι α χ St → RunMachine ν σ β ε δ ι α χ St
+    | 0, m => m
+    | rounds + 1, m =>
+      match m.fiber? root with
+      | none => m
+      | some o =>
+        if o.dispatcher.buckets.isEmpty || m.stuck.isSome then m
+        else flushRoot interp fuel root rounds (fire interp fuel m root)
 
 /-! ## Replay and the runtime entries -/
 
@@ -1315,13 +1346,14 @@ def runCallback (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
   let m := { m with fibers := m.fibers ++ [fiber], nextId := m.nextId + 1 }
   (drive interp fuel m [Cmd.evaluate root, Cmd.drainDue], root)
 
-/-- `runSyncExitWith` (`:5500-5530`): `runFork` on the sync scheduler, flush, and the
-`AsyncFiberError` defect when the root survives the flush. -/
+/-- `runSyncExitWith` (`:5535-5545`): `runFork` on the sync scheduler, the *root's*
+dispatcher flushed (`fiber._dispatcher?.flush()`, `:5542`; R2-14 — a child's own dispatcher
+is not), and the `AsyncFiberError` defect when the root has not exited. -/
 def runSyncExit (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St) (program : Prim ν σ β ε δ ι α) (context : χ) :
     RunMachine ν σ β ε δ ι α χ St × Exit β ε δ ι α :=
   let (m, root) := runFork interp fuel m program context
-  let m := stepDecision interp fuel m RunDecision.flush
+  let m := stepDecision.flushRoot interp fuel root fuel m
   match (m.fiber? root).bind RunFiber.exit with
   | some exit => (m, exit)
   | none => (m, Exit.failure (Cause.die interp.asyncFiberError))

@@ -117,7 +117,13 @@ close-state-first, single-finalizer-unmerged and strategy split (`:3779-3827`), 
    nothing once accepted; `RunEvent.raceSkipped` retired, `raceStarted` carries the count.
    Witnesses `w5_await_all_children_on_failure`, `w6_deferred_child_is_linked`,
    `w3_immediate_success_stops_launch` (restated: two fibers, one program unlaunched);
-   register rows `E4-RUN-CE-035/036/037`. Trace-level remainder R2-11b: an entrant that
+   register rows `E4-RUN-CE-035/036/037`. **R2-14, R2-15 landed 2026-09-04.** `RunMachine.armed`
+   is the schedule of host callbacks in arming order; `arm` at every scheduling site
+   (`start`, `injectYield`, `yieldNowWith`), `disarm` in `fire`; `flushAll` (the tape's
+   `flush`) runs the head of the schedule per round; `runSyncExit` runs `flushRoot` — the
+   root's dispatcher while it holds tasks — and nothing else. Witnesses
+   `w15_flush_runs_callbacks_in_arming_order`, `w8_sync_child_yield_is_async`; register rows
+   `E4-RUN-CE-038/039`. Trace-level remainder R2-11b: an entrant that
    wins synchronously during registration makes rc.112's `Async` return the exit without
    parking (`:1120-1126`), where the model parks the host and resumes it on the spot —
    `parkedOn`/`resumedWith` rows and the race's cleanup frame differ, outcomes agree; owed

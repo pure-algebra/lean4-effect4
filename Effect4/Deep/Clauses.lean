@@ -130,7 +130,7 @@ theorem injectYield_fires (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFi
       it.fiber.yieldOverride = none ∧
       it.fiber.dispatcher = f.dispatcher.enqueue 0 (Task.resume f.id m.nextToken f.frame.current) ∧
       it.machine.nextToken = m.nextToken + 1 := by
-  refine ⟨⟨{ m with nextToken := m.nextToken + 1 }.emit
+  refine ⟨⟨({ m with nextToken := m.nextToken + 1 }.arm f.id).emit
       [RunEvent.yieldInjected f.id f.currentOpCount, RunEvent.parkedOn f.id m.nextToken],
     ({ f with
         yieldOverride := none
@@ -200,9 +200,10 @@ theorem fire_unknown (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat
   unfold stepDecision.fire
   rw [h]
 
-/-- The host's callback (`Scheduler.ts:83-103`, the tape's `fire`): the owner's dispatcher
-is drained once and the snapshot runs in order, a start as an `evaluate` and a resume as
-a `resume`, each followed by the store's due resumes. census: scheduler.host-loop -/
+/-- The host's callback (`Scheduler.ts:214-217`, the tape's `fire`): the owner's dispatcher
+is no longer scheduled, it is drained once, and the snapshot runs in order, a start as an
+`evaluate` and a resume as a `resume`, each followed by the store's due resumes.
+census: scheduler.host-loop -/
 theorem fire_eq (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId) (o : RunFiber ν σ β ε δ ι α χ)
     (h : m.fiber? owner = some o) :
@@ -213,31 +214,70 @@ theorem fire_eq (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
           | Task.start child => drive interp fuel m [Cmd.evaluate child, Cmd.drainDue]
           | Task.resume target token answer =>
             drive interp fuel m [Cmd.resume target token answer, Cmd.drainDue])
-        (m.update { o with dispatcher := (o.dispatcher.drain).2 }) := by
+        ((m.update { o with dispatcher := (o.dispatcher.drain).2 }).disarm owner) := by
   unfold stepDecision.fire
   rw [h]
   rfl
 
-/-- `flush` (`Scheduler.ts:238-246`): with no armed dispatcher there is nothing to run.
-census: scheduler.flush -/
+/-- The first task scheduled on a dispatcher arms it: a host callback is scheduled behind
+those already scheduled (`Scheduler.ts:207-212`, R2-15). census: scheduler.dispatcher-arming -/
+theorem RunMachine.arm_new (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId)
+    (h : m.armed.contains owner = false) : (m.arm owner).armed = m.armed ++ [owner] := by
+  unfold RunMachine.arm
+  rw [h]
+  simp
+
+/-- A later task joins the armed callback: the order is unchanged.
+census: scheduler.dispatcher-arming -/
+theorem RunMachine.arm_known (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId)
+    (h : m.armed.contains owner = true) : (m.arm owner).armed = m.armed := by
+  unfold RunMachine.arm
+  rw [h]
+  simp
+
+/-- Arming changes nothing but the schedule. census: scheduler.dispatcher-arming -/
+theorem RunMachine.arm_fields (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId) :
+    (m.arm owner).fibers = m.fibers ∧ (m.arm owner).nextToken = m.nextToken ∧
+      (m.arm owner).trace = m.trace ∧ (m.arm owner).state = m.state := ⟨rfl, rfl, rfl, rfl⟩
+
+/-- A callback that ran is no longer scheduled. census: scheduler.host-loop -/
+theorem RunMachine.disarm_eq (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId) :
+    (m.disarm owner).armed = m.armed.filter fun x => x ≠ owner := rfl
+
+/-- The event loop with nothing scheduled runs nothing. census: scheduler.flush -/
 theorem flushAll_idle (interp : RunInterp ν σ β ε δ ι α χ St) (fuel rounds : Nat)
-    (m : RunMachine ν σ β ε δ ι α χ St)
-    (h : (m.fibers.filter fun f => f.dispatcher.armed) = []) :
+    (m : RunMachine ν σ β ε δ ι α χ St) (h : m.armed = []) :
     stepDecision.flushAll interp fuel (rounds + 1) m = m := by
   simp [stepDecision.flushAll, h]
 
-/-- `flush` runs every armed dispatcher in fiber order and goes round again
-(`Scheduler.ts:238-246`). census: scheduler.flush -/
+/-- The event loop runs the scheduled callbacks in arming order, one per round: the head of
+the schedule fires, and the loop goes round on what it left (`setImmediate` FIFO,
+`Scheduler.ts:207-212`; R2-15 — fiber order was an assumption, recorded, and wrong).
+census: scheduler.flush -/
 theorem flushAll_round (interp : RunInterp ν σ β ε δ ι α χ St) (fuel rounds : Nat)
-    (m : RunMachine ν σ β ε δ ι α χ St)
-    (harmed : ((m.fibers.filter fun f => f.dispatcher.armed).map RunFiber.id).isEmpty = false)
-    (hs : m.stuck = none) :
+    (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId) (rest : List FiberId)
+    (h : m.armed = owner :: rest) (hs : m.stuck = none) :
     stepDecision.flushAll interp fuel (rounds + 1) m =
-      stepDecision.flushAll interp fuel rounds
-        (((m.fibers.filter fun f => f.dispatcher.armed).map RunFiber.id).foldl
-          (stepDecision.fire interp fuel) m) := by
-  simp only [stepDecision.flushAll, harmed, hs, Option.isSome_none, Bool.or_false,
-    Bool.false_eq_true, ↓reduceIte]
+      stepDecision.flushAll interp fuel rounds (stepDecision.fire interp fuel m owner) := by
+  simp [stepDecision.flushAll, h, hs]
+
+/-- `MixedSchedulerDispatcher.flush` (`Scheduler.ts:238-246`) on a dispatcher holding no
+task runs nothing. census: entry.run-sync-exit-with -/
+theorem flushRoot_idle (interp : RunInterp ν σ β ε δ ι α χ St) (fuel rounds : Nat)
+    (root : FiberId) (m : RunMachine ν σ β ε δ ι α χ St) (o : RunFiber ν σ β ε δ ι α χ)
+    (h : m.fiber? root = some o) (hb : o.dispatcher.buckets = []) :
+    stepDecision.flushRoot interp fuel root (rounds + 1) m = m := by
+  simp [stepDecision.flushRoot, h, hb]
+
+/-- … and while it holds tasks its callback is cancelled and they run, round after round.
+census: entry.run-sync-exit-with -/
+theorem flushRoot_round (interp : RunInterp ν σ β ε δ ι α χ St) (fuel rounds : Nat)
+    (root : FiberId) (m : RunMachine ν σ β ε δ ι α χ St) (o : RunFiber ν σ β ε δ ι α χ)
+    (h : m.fiber? root = some o) (hb : o.dispatcher.buckets.isEmpty = false)
+    (hs : m.stuck = none) :
+    stepDecision.flushRoot interp fuel root (rounds + 1) m =
+      stepDecision.flushRoot interp fuel root rounds (stepDecision.fire interp fuel m root) := by
+  simp [stepDecision.flushRoot, h, hb, hs]
 
 /-- The two budget references default to `2048` and `false` (`Scheduler.ts:269-272`,
 `:295-298`), read off an ambient context the family models; the machine reads them through
@@ -566,7 +606,7 @@ theorem start_eq (m : RunMachine ν σ β ε δ ι α χ St) (parent : RunFiber 
     (child : FiberId) :
     start m parent child true = (m, parent, [Cmd.evaluate child]) ∧
       start m parent child false =
-        (m.emit [RunEvent.scheduledTask parent.id 0 (Task.start child)],
+        ((m.arm parent.id).emit [RunEvent.scheduledTask parent.id 0 (Task.start child)],
           { parent with dispatcher := parent.dispatcher.enqueue 0 (Task.start child) }, []) :=
   ⟨rfl, rfl⟩
 
@@ -725,21 +765,25 @@ theorem stepDecision_abort (interp : RunInterp ν σ β ε δ ι α χ St) (fuel
        if r.2 then drive interp fuel m [Cmd.evaluate target, Cmd.drainDue] else m) := by
   simp [stepDecision, ht]
 
-/-- `runSyncExitWith` (`:5500-5530`): the root is forked and the sync scheduler flushed; the
-root's exit is the answer. census: entry.run-sync-exit-with -/
+/-- `runSyncExitWith` (`:5535-5545`): the root is forked and the *root's* dispatcher flushed
+(`fiber._dispatcher?.flush()`, `:5542`; R2-14); the root's exit is the answer.
+census: entry.run-sync-exit-with -/
 theorem runSyncExit_exited (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St) (program : Prim ν σ β ε δ ι α) (context : χ)
     (exit : Exit β ε δ ι α)
-    (h : (((stepDecision interp fuel (runFork interp fuel m program context).1 RunDecision.flush).fiber?
+    (h : (((stepDecision.flushRoot interp fuel (runFork interp fuel m program context).2 fuel
+        (runFork interp fuel m program context).1).fiber?
         (runFork interp fuel m program context).2).bind RunFiber.exit) = some exit) :
     (runSyncExit interp fuel m program context).2 = exit := by
   simp [runSyncExit, h]
 
-/-- A root that survives the flush is the `AsyncFiberError` defect (`:6184-6196`).
+/-- A root that has not exited after its own dispatcher is flushed is the `AsyncFiberError`
+defect (`:5543`) — a child parked on its *own* dispatcher is not run (R2-14).
 census: entry.async-fiber-error -/
 theorem runSyncExit_survives (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St) (program : Prim ν σ β ε δ ι α) (context : χ)
-    (h : (((stepDecision interp fuel (runFork interp fuel m program context).1 RunDecision.flush).fiber?
+    (h : (((stepDecision.flushRoot interp fuel (runFork interp fuel m program context).2 fuel
+        (runFork interp fuel m program context).1).fiber?
         (runFork interp fuel m program context).2).bind RunFiber.exit) = none) :
     (runSyncExit interp fuel m program context).2 = Exit.failure (Cause.die interp.asyncFiberError) := by
   simp [runSyncExit, h]
