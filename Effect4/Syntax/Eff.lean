@@ -283,8 +283,10 @@ mutual
     | interruptible (body : Eff Op)
     -- control by value
     | branch (test : Term) (thenB elseB : Eff Op)
-    /-- `Effect.whileLoop`: a cursor initialised by `initial`; `test` and `step` are terms
-    over the environment extended by the cursor, `body` a program over it. -/
+    /-- `Effect.whileLoop({ while, body, step })` (`Effect.ts:1282-1286`): rc.112 keeps the
+    cursor in a closure variable; here it is the next variable, initialised by `initial`.
+    `test` is a term over the environment extended by the cursor, `body` a program over it,
+    and `step` a term over the cursor and the body's answer, giving the next cursor. -/
     | whileLoop (initial test step : Term) (body : Eff Op)
     -- scheduling and parking
     | yieldNow (priority : Nat)
