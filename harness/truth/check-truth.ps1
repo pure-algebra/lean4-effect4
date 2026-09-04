@@ -41,6 +41,9 @@ if (-not $SkipLean) {
   $p = Start-Process -FilePath "lake" -WorkingDirectory $repo -NoNewWindow -PassThru `
     -ArgumentList @("env", "lean", "-M4096", "--run", "harness/truth/Truth.lean", "harness/truth/corpus.json") `
     -RedirectStandardOutput $out -RedirectStandardError $err
+  # Touch the handle now: under Windows PowerShell 5.1 a -PassThru process whose handle was
+  # never read reports a null ExitCode after WaitForExit, which read as "failed" here once.
+  $null = $p.Handle
   if (-not $p.WaitForExit($LeanTimeoutSec * 1000)) {
     Write-Host "Lean tool timed out after $LeanTimeoutSec s; killing process tree $($p.Id)"
     taskkill /PID $p.Id /T /F | Out-Null

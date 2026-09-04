@@ -1,5 +1,4 @@
-{"regenerate":
- "lake env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json",
+{"regenerate": "lake env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json",
  "programs":
  [{"wellTyped": true,
    "type": {"requiresEmpty": true, "error": "never", "answer": "number"},
@@ -124,29 +123,25 @@
    "Effect.gen(function* () {\n  const a0 = yield* Effect.succeed(3)\n  if (isZero(a0)) {\n    return true\n  } else {\n    return false\n  }\n})",
    "decl":
    "export const main: Effect.Effect<boolean, never> = Effect.gen(function* () {\n  const a0 = yield* Effect.succeed(3)\n  if (isZero(a0)) {\n    return true\n  } else {\n    return false\n  }\n})\n"},
-  {"wellTyped": false,
-   "type": null,
-   "runSync":
-   {"sync": true, "exitKind": "die", "exit": {"failure": {"reasons": [{"die": "badName"}]}}},
+  {"wellTyped": true,
+   "type": {"requiresEmpty": true, "error": "never", "answer": "void"},
+   "runSync": {"sync": true, "exitKind": "success", "exit": {"success": null}},
    "run":
-   {"schedule": ["started 0", "exited 0 die"],
+   {"schedule": ["started 0", "exited 0 success"],
     "outcome": "finished",
     "internal": [],
-    "frames": 3,
-    "fibers":
-    [{"parkedToken": null,
-      "id": 0,
-      "exited": true,
-      "exit": {"failure": {"reasons": [{"die": "badName"}]}}}],
+    "frames": 5,
+    "fibers": [{"parkedToken": null, "id": 0, "exited": true, "exit": {"success": null}}],
     "fiberCount": 1,
-    "exitKind": "die",
-    "exit": {"failure": {"reasons": [{"die": "badName"}]}},
-    "events": ["started 0", "exited 0 {\"failure\":{\"reasons\":[{\"die\":\"badName\"}]}}"]},
+    "exitKind": "success",
+    "exit": {"success": null},
+    "events": ["started 0", "exited 0 {\"success\":null}"]},
    "name": "pLoop",
    "exprRefusal": null,
    "expr":
-   "Effect.suspend(() => {\n  let a0 = 0\n  return Effect.whileLoop({\n    while: () => isZero(a0),\n    body: () => Ref.update(a0, incr),\n    step: (a1) => {\n      a0 = succ(a0)\n    },\n  })\n})",
-   "decl": null},
+   "Effect.flatMap(Ref.make(0), (a0) => Effect.suspend(() => {\n  let a1 = 0\n  return Effect.whileLoop({\n    while: () => isZero(a1),\n    body: () => Ref.update(a0, incr),\n    step: (a2) => {\n      a1 = succ(a1)\n    },\n  })\n}))",
+   "decl":
+   "export const main: Effect.Effect<void, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.suspend(() => {\n  let a1 = 0\n  return Effect.whileLoop({\n    while: () => isZero(a1),\n    body: () => Ref.update(a0, incr),\n    step: (a2) => {\n      a1 = succ(a1)\n    },\n  })\n}))\n"},
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "error": "never", "answer": "void"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": null}},
@@ -166,25 +161,26 @@
    "Effect.catchCause(Effect.failCause(Cause.combine(Cause.fail(1), Cause.interrupt())), (a0) => Effect.succeed(undefined))",
    "decl":
    "export const main: Effect.Effect<void, never> = Effect.catchCause(Effect.failCause(Cause.combine(Cause.fail(1), Cause.interrupt())), (a0) => Effect.succeed(undefined))\n"},
-  {"wellTyped": false,
-   "type": null,
-   "runSync":
-   {"sync": false, "exitKind": "die", "exit": {"failure": {"reasons": [{"die": "asyncFiber"}]}}},
+  {"wellTyped": true,
+   "type": {"requiresEmpty": true, "error": "never", "answer": "void"},
+   "runSync": {"sync": true, "exitKind": "success", "exit": {"success": null}},
    "run":
-   {"schedule": ["started 0"],
-    "outcome": "frontier",
-    "internal": ["contextSet 0"],
-    "frames": 8,
-    "fibers": [{"parkedToken": null, "id": 0, "exited": false, "exit": null}],
+   {"schedule": ["started 0", "exited 0 success"],
+    "outcome": "finished",
+    "internal":
+    ["contextSet 0", "finalizerProgram 0 success", "contextSet 0", "finalizerProgram 0 success"],
+    "frames": 29,
+    "fibers": [{"parkedToken": null, "id": 0, "exited": true, "exit": {"success": null}}],
     "fiberCount": 1,
-    "exitKind": null,
-    "exit": null,
-    "events": ["started 0"]},
+    "exitKind": "success",
+    "exit": {"success": null},
+    "events": ["started 0", "exited 0 {\"success\":null}"]},
    "name": "pScope",
    "exprRefusal": null,
    "expr":
-   "Effect.scoped(Effect.acquireRelease(Scope.make(\"parallel\"), (a0, a1) => Fiber.interruptAllAs(a0, a1)))",
-   "decl": null},
+   "Effect.scoped(Effect.flatMap(Scope.make(\"parallel\"), (a0) => Effect.flatMap(Effect.exit(Effect.succeed(1)), (a1) => Scope.close(a0, a1))))",
+   "decl":
+   "export const main: Effect.Effect<void, never> = Effect.scoped(Effect.flatMap(Scope.make(\"parallel\"), (a0) => Effect.flatMap(Effect.exit(Effect.succeed(1)), (a1) => Scope.close(a0, a1))))\n"},
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "error": "never", "answer": "Exit.Exit<number, never>"},
    "runSync":

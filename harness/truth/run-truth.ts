@@ -44,6 +44,18 @@
  *    `exited <kind>` over fiber indices in first-seen order (root `0`, children in fork
  *    order) — `scheduled` rows are recorded on both faces and dropped from the verdict,
  *    because the Lean trace records the fork's scheduling but not the yield's (NOTES.md §5);
+ *  - one entry decides the schedule, and it is the one that has a fiber: the compared rows
+ *    are always the fork entry's, because `Api.run` — the Lean side of the comparison — is
+ *    `runFork` plus the flush rounds, and `runForkWith` (`:5413-5438`) always constructs a
+ *    `FiberImpl` and calls `fiber.evaluate`, so `runLoop`'s tracer hook (`:653-655`) sees
+ *    the root's first primitive even when the whole program is a bare `Exit`
+ *    (`Effect.succeed(42)` records `started 0`, `exited 0 success`). `runSyncExitWith`
+ *    returns such a program unevaluated at `:5539` (`effectIsExit`) without ever building a
+ *    fiber, so for a synchronous root that entry has no start to observe: it contributes
+ *    only its exit to the verdict, and its empty schedule is reported as a note, never
+ *    compared. Nothing is masked — no row kind is dropped for any program, and the sync
+ *    entry's rows are never substituted for the fork entry's (by construction:
+ *    `compareSchedules` is called on `hostFork` alone);
  *  - exact where it can be: a success value and a `fail` payload are compared as JSON; a
  *    `die` and an `interrupt` are compared by kind, the payloads shown (the Lean defect
  *    alphabet has no host errors) (by construction, `compareExits`);
@@ -514,7 +526,9 @@ const main = async (): Promise<number> => {
     }
     if (hostSync.settledLater !== null) notes.push(`runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: ${renderExit(hostSync.settledLater)}`)
 
-    if (hostSync.schedule.length === 0) notes.push("runSyncExit created no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539)")
+    // A synchronous root has no start for the sync entry to observe; the fork entry does
+    // build a fiber for it, and that is the entry the schedule is compared against.
+    if (hostSync.schedule.length === 0) notes.push("runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one")
 
     // The fork entry always: `Api.run` is `runFork` (Fibers.lean:339-340, `RunDecision.evaluate`)
     // plus the event loop's flush rounds, so its schedule is compared with this observation.

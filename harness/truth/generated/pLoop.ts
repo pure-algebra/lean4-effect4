@@ -2,13 +2,13 @@
 // Regenerate: harness/truth/check-truth.ps1
 import { Cause, Deferred, Effect, Exit, Fiber, Option, Ref, Scope } from "effect"
 import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, incr, double, takeAndBump, zeroWhenPositive, noChange } from "../prelude.ts"
-export const main = Effect.suspend(() => {
-  let a0 = 0
+export const main: Effect.Effect<void, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.suspend(() => {
+  let a1 = 0
   return Effect.whileLoop({
-    while: () => isZero(a0),
+    while: () => isZero(a1),
     body: () => Ref.update(a0, incr),
-    step: (a1) => {
-      a0 = succ(a0)
+    step: (a2) => {
+      a1 = succ(a1)
     },
   })
-})
+}))

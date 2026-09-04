@@ -589,15 +589,27 @@ def pGen : Eff NativeOp :=
   .gen (.cons (.bindYield (.succeed (.lit (.nat 3))))
     (.cons (.ifElse (.app "isZero" (.cons (.var 0) .nil)) (.cons (.ret (.lit (.bool true))) .nil)
       (.cons (.ret (.lit (.bool false))) .nil)) .nil))
+/-- A loop that iterates: the cell is bound in front of the loop (`.var 0`), the cursor
+(`.var 1`) starts at `0` and steps by `succ` while `isZero` holds, and each trip updates the
+cell. The cell is what makes the body well-typed — `refUpdate`'s request row is
+`Ref.Ref<number>` (`Native.lean`), not a number, so the cursor cannot stand in for it. -/
 def pLoop : Eff NativeOp :=
-  .whileLoop (.lit (.nat 0)) (.app "isZero" (.cons (.var 0) .nil))
-    (.app "succ" (.cons (.var 0) .nil)) (.perform (.refUpdate .incr) (.var 0))
+  .bind (.perform .refMake (.lit (.nat 0)))
+    (.whileLoop (.lit (.nat 0)) (.app "isZero" (.cons (.var 1) .nil))
+      (.app "succ" (.cons (.var 1) .nil)) (.perform (.refUpdate .incr) (.var 0)))
 def pCatch : Eff NativeOp :=
   .catchCause (.failCause (.both (.fail (.lit (.nat 1))) (.interrupt none)))
     (.succeed (.lit .unit))
+/-- A scope acquired and released: `Scope.make` under an ambient `scoped`, then
+`Scope.close` on that handle with a reified exit. Spelled as the pair rather than
+`acquireRelease` for two reasons: `acquireRelease` binds the resource and the exit, so its
+release cannot be `interruptAll`, which wants a list of fibers and a fiber id; and this cut
+compiles `acquireRelease` to the frontier (`Compile.lean`), so a program built on it has no
+Lean verdict to compare. -/
 def pScope : Eff NativeOp :=
-  .scoped (.acquireRelease (.perform (.scopeMake .parallel) (.lit .unit))
-    (.withFiber (.interruptAll (.var 0) (some (.var 1)))))
+  .scoped (.bind (.perform (.scopeMake .parallel) (.lit .unit))
+    (.bind (.exit (.succeed (.lit (.nat 1))))
+      (.withFiber (.closeScope (.var 0) (.var 1)))))
 
 def all : List (String × Eff NativeOp) :=
   [("p42", p42), ("pBind", pBind), ("pFork", pFork), ("pAwait", pAwait), ("pGen", pGen),
@@ -605,6 +617,9 @@ def all : List (String × Eff NativeOp) :=
 
 end Corpus
 
+-- Every corpus program is well-typed at the native signature, so `Api.printDecl` answers
+-- for each and the rc.112 differential runs the declaration rather than a bare expression.
+#guard Corpus.all.all fun (_, p) => (typeOf nativeSignature p).isSome
 #guard Corpus.all.all fun (_, p) => decodeProgram (encodeProgram p) = some p
 -- A byte appended or dropped is refused.
 #guard Corpus.all.all fun (_, p) => decodeProgram (encodeProgram p ++ [0]) = none

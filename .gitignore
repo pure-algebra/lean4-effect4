@@ -25,6 +25,8 @@
 !/harness/truth/
 /harness/truth/node_modules/
 /harness/truth/archive/
+/harness/truth/lean.out.log
+/harness/truth/lean.err.log
 
 # The OCaml estate (`ocaml/`, one dune workspace) is tracked; dune's build directories,
 # the per-machine generated link flags (absolute paths of this machine's Lean install,

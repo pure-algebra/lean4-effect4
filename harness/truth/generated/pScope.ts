@@ -2,4 +2,4 @@
 // Regenerate: harness/truth/check-truth.ps1
 import { Cause, Deferred, Effect, Exit, Fiber, Option, Ref, Scope } from "effect"
 import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, incr, double, takeAndBump, zeroWhenPositive, noChange } from "../prelude.ts"
-export const main = Effect.scoped(Effect.acquireRelease(Scope.make("parallel"), (a0, a1) => Fiber.interruptAllAs(a0, a1)))
+export const main: Effect.Effect<void, never> = Effect.scoped(Effect.flatMap(Scope.make("parallel"), (a0) => Effect.flatMap(Effect.exit(Effect.succeed(1)), (a1) => Scope.close(a0, a1))))
