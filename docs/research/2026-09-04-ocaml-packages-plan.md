@@ -80,3 +80,11 @@ packages and for style, above convenience:
 The consequence for the port: prefer Base/Core structures with obvious Lean counterparts,
 write the daemon and the streaming layer as plain functions over derived carriers, and treat
 every package as a modelling obligation before it is a convenience.
+5. **Characterisable behaviour** (user, same day). Every component we write comes with a short
+   list of named behavioural properties, the kind that fit in one line each: delivery
+   (at-least-once / at-most-once / exactly-once, and under which failure), ordering (FIFO per
+   key, priority ascending), one-shot, idempotent retry, bounded back-pressure, termination
+   under fuel. Each is a Lean theorem over the component's carrier or an explicit refusal row,
+   and the OCaml is written so those are its *only* behaviours: no ambient state, no
+   time-dependent branch, no unbounded queue without its bound stated. The daemon's wire, the
+   streaming carriers, the dispatcher buckets and the library carriers all carry such a list.
