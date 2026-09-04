@@ -1,6 +1,6 @@
 # The OCaml 5 deep plan: one reference machine for effect handlers and their compilation to JavaScript
 
-Status: scaffold, 2026-09-03 evening, second pass; §0 corrected after spike O1 (report `2026-09-03-spike-o1-runtime-machine.md`) (the first pass took `stdlib/effect.ml` as
+Status: 2026-09-03 evening, second pass; all five spikes landed (reports `2026-09-03-spike-o{1,2,3,4,5}-*.md`); §0 corrected after O1 and O5 (the first pass took `stdlib/effect.ml` as
 the reference; that is the wrapper, and this pass takes the runtime). Companion to
 `2026-09-03-ocaml-jsoo-relevance.md` (the assessment) and modelled on
 `2026-09-03-deep-plan.md` (the Effect4 deep plan, whose method and nine rules this plan
@@ -18,7 +18,7 @@ All under `~/.opam/default/.opam-switch/sources/ocaml-base-compiler.5.1.1/` unle
 | Layer | Source | Reified as |
 | --- | --- | --- |
 | L4 stdlib | `stdlib/effect.ml` (`perform`/`resume`/`runstack`/`reperform` as externals `:2,34-35`; `Deep` `:37-88`; `Shallow` `:90-142`) | `OCaml5.Stdlib`: term builders over the primitives, one per definition |
-| L3 compiler | `lambda/translprim.ml:371-374` (arities), `bytecomp/bytegen.ml:417-419,786-800` (`Kperform`, `Kresume`/`Kresumeterm`, `Kreperformterm` tail-only), `asmcomp/cmmgen.ml:861-865,1122-1140` (`caml_perform` with a fresh `Cont_tag` block, `caml_resume`, `caml_runstack`, `caml_reperform`) | the four `Term` constructors and their arities; the tail-position constraint as an admission clause (O5) |
+| L3 compiler | `lambda/translprim.ml:371-374` (arities), `bytecomp/bytegen.ml:417-419,786-804` (`Kperform`, `Kresume`/`Kresumeterm`, `Kreperformterm` tail-only, `fatal_error` at `:804`), `asmcomp/cmmgen.ml:861-865,1121-1138` (`caml_perform` with a fresh `Cont_tag` block, `caml_resume`, `caml_runstack`, `caml_reperform`) | the four `Term` constructors and their arities; the tail-position constraint as an admission clause (O5) |
 | L2 runtime C | `runtime/caml/fiber.h:31-61` (`stack_handler`, `stack_info`), `:165-235` (the operational description), `runtime/fiber.c:318-334` (`caml_alloc_stack`), `:595-664` (`caml_continuation_use_noexc`, `_use`, `_use_and_update_handler_noexc`, `caml_drop_continuation`), `:666-708` (the two exceptions) | `StackHandler`, `StackInfo`, the continuation heap, `allocStack`/`contUse*`/`dropCont` terms |
 | L1a bytecode | `runtime/interp.c:1279-1399` (`RESUME`, `do_resume`, `RESUMETERM`, `PERFORM`, `REPERFORMTERM`), `:930-950` (`PUSHTRAP`/`POPTRAP`, per-stack `trap_sp_off`), `:964-1005` (`raise_notrace`: the child-stack-raises arm), `do_return` (the child-stack-returns arm) | presentation 1 of the eight transitions |
 | L1b native | `runtime/amd64.S:870-1010` (`caml_perform`/`do_perform`, `caml_reperform`, `caml_resume`, `caml_runstack`, `frame_runstack`, `fiber_exn_handler`); `runtime/arm64.S` | presentation 2 of the same transitions |

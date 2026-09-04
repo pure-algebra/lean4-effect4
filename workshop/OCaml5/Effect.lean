@@ -1178,8 +1178,22 @@ end Machine
 
 /-! ## `Stdlib.Effect` as definitions over the primitives (`stdlib/effect.ml`)
 
-Nothing below is an arm of `step`: each is a `Term` built from the four Lambda primitives and
-the four C entry points, so its behaviour is a consequence of the transitions above.
+Owned by spike O5 (report `docs/research/2026-09-03-spike-o5-compiler.md`). Nothing below is an
+arm of `step`: each is a `Term` built from the four Lambda primitives and the four C entry
+points, so its behaviour is a consequence of the transitions above. The order of the definitions
+is the order of `stdlib/effect.ml`, one Lean `def` per OCaml `let`, and each docstring cites the
+lines it transcribes. Their compilation — the arity, the bytecode instruction and the native
+symbol of each primitive occurrence, and the `reperform`-in-tail-position admission clause — is
+`OCaml5.Compiler`.
+
+The externals are not definitions and have no builder; they are `Term` constructors:
+`perform` (`:16`) is `Term.perform`, `resume` (`:41`) is `Term.resume`, `runstack` (`:42`) is
+`Term.runstack`, `Deep.take_cont_noexc` (`:49-50`) is `Term.contUseNoexc`, `Deep.alloc_stack`
+(`:51-55`) and `Shallow.alloc_stack` (`:103-107`) are `Term.allocStack`, `Deep.reperform`
+(`:69-70`) and `Shallow.reperform` (`:137-138`) are `Term.reperform`, `Shallow.update_handler`
+(`:130-135`) is `Term.contUseUpdate`. `Deep.get_callstack` (`:93-95`) and
+`Shallow.get_callstack` (`:158-160`) are out of scope (plan §0, "out of scope, recorded"), and so
+is the `Printexc` printer registration of `:21-37`.
 
 De Bruijn convention for the `effc` tables. `effc'` is `fun eff k last_fiber -> match eff with
 …`, so inside a clause body the environment is `payload :: last_fiber :: k :: eff :: outer`:
@@ -1196,6 +1210,12 @@ namespace Stdlib
 
 variable {ν : Type u}
 
+/-- `Failure`, which `Shallow.fiber`'s `error _ = failwith "impossible"` raises
+(`effect.ml:114`). A global constructor like `Unhandled` (`ExnId.unhandled`, `⟨0⟩`) and
+`Continuation_already_resumed` (`⟨1⟩`); `⟨2⟩`, `⟨3⟩` and `⟨4⟩` are taken by the witness corpus,
+so this is `⟨5⟩`. -/
+def failureExn : ExnId := ⟨5⟩
+
 /-- `Deep.continue k v = resume (take_cont_noexc k) (fun x -> x) v` (`effect.ml:57`). -/
 def deepContinue (k v : Term ν) : Term ν :=
   .resume (.contUseNoexc k) (.lam (.var 0)) v
@@ -1205,30 +1225,46 @@ def deepContinue (k v : Term ν) : Term ν :=
 def deepDiscontinue (k e : Term ν) : Term ν :=
   .resume (.contUseNoexc k) (.lam (.raise (.var 0))) e
 
-/-- The `effc'` of `effect.ml:73-77` and `:85-89`: `fun eff k last_fiber -> match handler.effc
-eff with Some f -> f k | None -> reperform eff k last_fiber`, with the `option` fused into the
-clause table. -/
+/-- `Deep.discontinue_with_backtrace k e bt = resume (take_cont_noexc k)
+(fun e -> Printexc.raise_with_backtrace e bt) e` (`effect.ml:61-62`). The machine has no
+backtraces (plan §0, out of scope), so `raise_with_backtrace e bt` is `raise e` and `bt` is
+evaluated nowhere; the term is `deepDiscontinue` and the difference is invisible to
+`Machine.rows`. -/
+def deepDiscontinueWithBacktrace (k e _bt : Term ν) : Term ν :=
+  .resume (.contUseNoexc k) (.lam (.raise (.var 0))) e
+
+/-- The inner `effc` of `Deep.match_with` (`effect.ml:73-77`) and the `effc'` of
+`Deep.try_with` (`:85-89`) and of `Shallow.continue_gen` (`:141-145`) — the three are the same
+three lines: `fun eff k last_fiber -> match handler.effc eff with Some f -> f k | None ->
+reperform eff k last_fiber`, with the `option` fused into the clause table. The `reperform` is
+the last expression of the default arm of a `match` that is itself the body of a function, so it
+is in tail position (`bytegen.ml:800-802`) and the closure compiles; see
+`OCaml5.Compiler.Admissible`. -/
 def effcClosure (effc : List (EffId × Term ν)) : Term ν :=
   .lam (.lam (.lam (.matchEff (.var 2) effc (.reperform (.var 3) (.var 2) (.var 1)))))
 
-/-- The same closure when `handler.effc` has an observable `| _ -> …; None` branch: `onNone`
-runs, on the parent stack, before the `reperform`. Witnesses 5, 8 and 10 need to see that the
-`None` branch was taken; `onNone` is evaluated under the default's payload binder, so it must be
-closed. -/
+/-- Not an `effect.ml` definition: `effcClosure` when the user's `handler.effc` has an
+observable `| _ -> …; None` branch, so `onNone` runs on the parent stack before the `reperform`
+(spike O1 report §4.6; witnesses 5, 8 and 10). `onNone` is evaluated under the default's binder,
+so it must be closed. The `reperform` is still the last expression of the arm, so this closure
+compiles too. -/
 def effcClosureWith (effc : List (EffId × Term ν)) (onNone : Term ν) : Term ν :=
   .lam (.lam (.lam
     (.matchEff (.var 2) effc (.seq onNone (.reperform (.var 3) (.var 2) (.var 1))))))
 
-/-- `Deep.match_with comp arg {retc; exnc; effc}` (`effect.ml:72-79`). -/
+/-- `Deep.match_with comp arg {retc; exnc; effc}` (`effect.ml:72-79`): the `effc` closure of
+`:73-77`, `let s = alloc_stack handler.retc handler.exnc effc` (`:78`), then `runstack s comp
+arg` (`:79`), which is the last expression of `match_with` and so is in tail position. -/
 def deepMatchWith (comp arg retc exnc : Term ν) (effc : List (EffId × Term ν)) : Term ν :=
   .letIn (.allocStack retc exnc (effcClosure effc)) (.runstack (.var 0) comp arg)
 
-/-- `Deep.match_with` with an observable `None` branch. -/
+/-- `Deep.match_with` with an observable `None` branch (see `effcClosureWith`). -/
 def deepMatchWithLogging (comp arg retc exnc onNone : Term ν)
     (effc : List (EffId × Term ν)) : Term ν :=
   .letIn (.allocStack retc exnc (effcClosureWith effc onNone)) (.runstack (.var 0) comp arg)
 
-/-- `Deep.try_with comp arg {effc}` (`effect.ml:84-91`): identity `retc`, re-raising `exnc`. -/
+/-- `Deep.try_with comp arg {effc}` (`effect.ml:84-91`): `match_with` with the identity `retc`
+and the re-raising `exnc` of `:90`. -/
 def deepTryWith (comp arg : Term ν) (effc : List (EffId × Term ν)) : Term ν :=
   deepMatchWith comp arg (.lam (.var 0)) (.lam (.raise (.var 0))) effc
 
@@ -1236,7 +1272,40 @@ def deepTryWith (comp arg : Term ν) (effc : List (EffId × Term ν)) : Term ν 
 def deepTryWithLogging (comp arg onNone : Term ν) (effc : List (EffId × Term ν)) : Term ν :=
   deepMatchWithLogging comp arg (.lam (.var 0)) (.lam (.raise (.var 0))) onNone effc
 
-/-- `Shallow.continue_gen k resume_fun v {retc; exnc; effc}` (`effect.ml:140-147`). -/
+/-- `Shallow.fiber f` (`effect.ml:110-123`), transcribed line by line:
+
+* `error _ = failwith "impossible"` (`:114`) — raises `Failure`, `failureExn`;
+* `f' () = f (perform M.Initial_setup__)` (`:113`) — `f` must be closed;
+* `effc eff k _last_fiber = match eff with M.Initial_setup__ -> raise_notrace (E k) | _ ->
+  error ()` (`:115-119`) — the machine has one `raise`, so `raise_notrace` is `Term.raise`;
+* `let s = alloc_stack error error effc` (`:120`);
+* `match runstack s f' () with exception E k -> k | _ -> error ()` (`:121-123`) — the `exception`
+  case is a trap around the `runstack`, whose non-`E` default re-raises, and the value case
+  calls `error ()`. That last arm is dead (a normal return of `f'` runs `error` as the fiber's
+  `retc` and raises first) but it is compiled, and it is transcribed.
+
+`initId` is `M.Initial_setup__` and `eId` the local `exception E of (a,b) continuation`; both
+must be fresh in the term they are used in. `error` is a closed closure and is duplicated at its
+three occurrences rather than `let`-bound, which is invisible to `Machine.rows`.
+
+This is the one place in `stdlib/effect.ml` where an effect primitive is not in tail position:
+the `runstack` sits under the trap of `:121`, so it compiles to `Kresume`, not `Kresumeterm`
+(`bytegen.ml:791-795`; executed, spike O5 report §5). -/
+def shallowFiber (initId : EffId) (eId : ExnId) (f : Term ν)
+    (failId : ExnId := failureExn) : Term ν :=
+  let error : Term ν := .lam (.raise (.exn failId .unit))
+  let fPrime : Term ν := .lam (.app f (.perform (.eff initId .unit)))
+  let effc : Term ν :=
+    .lam (.lam (.lam
+      (.matchEff (.var 2) [(initId, .raise (.exn eId (.var 2)))] (.app error .unit))))
+  .letIn (.allocStack error error effc)
+    (.tryWith
+      (.seq (.runstack (.var 0) fPrime .unit) (.app error .unit))
+      (.matchExn (.var 0) [(eId, .var 0)] (.raise (.var 0))))
+
+/-- `Shallow.continue_gen k resume_fun v {retc; exnc; effc}` (`effect.ml:140-147`): the `effc`
+closure of `:141-145`, `update_handler` (`:146`), then `resume stack resume_fun v` (`:147`),
+in tail position. -/
 def shallowContinueGen (k resumeFun v retc exnc : Term ν) (effc : List (EffId × Term ν)) :
     Term ν :=
   .resume (.contUseUpdate k retc exnc (effcClosure effc)) resumeFun v
@@ -1245,25 +1314,15 @@ def shallowContinueGen (k resumeFun v retc exnc : Term ν) (effc : List (EffId �
 def shallowContinueWith (k v retc exnc : Term ν) (effc : List (EffId × Term ν)) : Term ν :=
   shallowContinueGen k (.lam (.var 0)) v retc exnc effc
 
-/-- `Shallow.discontinue_with` (`effect.ml:152-153`). -/
+/-- `Shallow.discontinue_with k v {retc; exnc; effc}` (`effect.ml:152-153`). -/
 def shallowDiscontinueWith (k e retc exnc : Term ν) (effc : List (EffId × Term ν)) : Term ν :=
   shallowContinueGen k (.lam (.raise (.var 0))) e retc exnc effc
 
-/-- `Shallow.fiber f` (`effect.ml:110-123`): run `f (perform Initial_setup__)` on a fresh stack
-whose `effc` answers the local effect by raising a local exception carrying the continuation, and
-catch that exception outside `runstack`. `initId` is `M.Initial_setup__` and `eId` is the local
-`exception E of (a,b) continuation`; both must be fresh in the term they are used in. `f` must be
-closed. This is spike O5's carrier, transcribed here because witness 11 needs it. -/
-def shallowFiber (initId : EffId) (eId : ExnId) (f : Term ν) : Term ν :=
-  let err : Term ν := .lam (.raise (.exn eId .unit))
-  .tryWith
-    (.runstack
-      (.allocStack err err
-        (.lam (.lam (.lam
-          (.matchEff (.var 2) [(initId, .raise (.exn eId (.var 2)))] (.app err .unit))))))
-      (.lam (.app f (.perform (.eff initId .unit))))
-      .unit)
-    (.matchExn (.var 0) [(eId, .var 0)] (.raise (.var 0)))
+/-- `Shallow.discontinue_with_backtrace k v bt {retc; exnc; effc}` (`effect.ml:155-156`).
+No backtraces (see `deepDiscontinueWithBacktrace`), so `bt` is dropped. -/
+def shallowDiscontinueWithBacktrace (k e _bt retc exnc : Term ν)
+    (effc : List (EffId × Term ν)) : Term ν :=
+  shallowContinueGen k (.lam (.raise (.var 0))) e retc exnc effc
 
 /-! ### `Stdlib.Effect` facts
 
@@ -1271,13 +1330,19 @@ These are the definitional equations of `stdlib/effect.ml`, so they hold by `rfl
 `Stdlib` is an arm of `step`, and each builder is exactly the term the OCaml source spells. The
 *behavioural* Stdlib facts — `continue` twice raises, `discontinue` reaches the fiber's own trap,
 `Shallow.continue_with` re-installs the triple of the outermost captured fiber — are the executed
-witnesses of `OCaml5.Witnesses`; see the report §7 for what remains to be proved rather than
-executed. -/
+witnesses of `OCaml5.Witnesses`; see the O1 report §7 for what remains to be proved rather than
+executed. That every builder here is *admissible*, in the sense of `bytegen.ml:796-804`, is
+`OCaml5.Compiler`. -/
 
 /-- `Deep.continue` and `Deep.discontinue` are one term with two resume functions
 (`effect.ml:57,59`). -/
 theorem deepDiscontinue_eq (k e : Term ν) :
     deepDiscontinue k e = Term.resume (.contUseNoexc k) (.lam (.raise (.var 0))) e := rfl
+
+/-- `Deep.discontinue_with_backtrace` differs from `Deep.discontinue` only in the backtrace,
+which the machine does not model (`effect.ml:59` against `:61-62`). -/
+theorem deepDiscontinueWithBacktrace_eq (k e bt : Term ν) :
+    deepDiscontinueWithBacktrace k e bt = deepDiscontinue k e := rfl
 
 /-- `Deep.try_with` is `Deep.match_with` with the identity `retc` and the re-raising `exnc`
 (`effect.ml:90`). -/
@@ -1296,6 +1361,10 @@ theorem shallowDiscontinueWith_eq (k e retc exnc : Term ν) (effc : List (EffId 
       Term.resume (.contUseUpdate k retc exnc (effcClosure effc)) (.lam (.raise (.var 0))) e :=
   rfl
 
+theorem shallowDiscontinueWithBacktrace_eq (k e bt retc exnc : Term ν)
+    (effc : List (EffId × Term ν)) :
+    shallowDiscontinueWithBacktrace k e bt retc exnc effc =
+      shallowDiscontinueWith k e retc exnc effc := rfl
 
 end Stdlib
 
