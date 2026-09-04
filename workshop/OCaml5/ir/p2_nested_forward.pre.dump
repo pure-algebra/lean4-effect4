@@ -1,0 +1,87 @@
+Entry point: 0
+
+==== 0 () ====
+  v73 = "caml_get_global_data"()
+  v3 = CONST{"P2_nested_forward.E"}
+  v28 = "caml_js_get"(v73, "Stdlib__Effect"j)
+  v62 = "caml_js_get"(v73, "Stdlib"j)
+  branch 74 ()
+
+==== 2 () ====
+  v56 = "%direct_int_mul"(v53, 2)
+  return v56
+
+==== 7 () ====
+  raise v50
+
+==== 9 () ====
+  v43 = v28[2]
+  v44 = v43[0]
+  v45 = v44(v41, v39)
+  return v45
+
+==== 17 () ====
+  v35 = v33[0]
+  v36 = v35 === v4
+  if v36 then 23 () else 33 (v36)
+
+==== 23 () ====
+  v39 = v33[1]
+  v40 = fun(v41){9 ()}
+  v46 = {tag=0; 0 = v40}
+  branch 33 (v46)
+
+==== 33 (v48) ====
+  return v48
+
+==== 35 () ====
+  return v24
+
+==== 38 () ====
+  raise v21
+
+==== 40 () ====
+  v19 = CONST{0}
+  return v19
+
+==== 43 () ====
+  v16 = fun(v17){40 ()}
+  v20 = fun(v21){38 ()}
+  v23 = fun(v24){35 ()}
+  v26 = {tag=0; 0 = v23; 1 = v20; 2 = v16}
+  v27 = CONST{0}
+  v29 = v28[2]
+  v30 = v29[3]
+  v31 = v30(v5, v27, v26)
+  return v31
+
+==== 64 () ====
+  v8 = CONST{41}
+  v9 = {tag=0; 0 = v4; 1 = v8}
+  v10 = "%perform"(v9)
+  v12 = 1 + v10
+  return v12
+
+==== 74 () ====
+  v2 = "caml_fresh_oo_id"(0)
+  v4 = {tag=248; 0 = v3; 1 = v2}
+  v5 = fun(v6){64 ()}
+  v13 = fun(v14){43 ()}
+  v32 = fun(v33){17 ()}
+  v49 = fun(v50){7 ()}
+  v52 = fun(v53){2 ()}
+  v57 = {tag=0; 0 = v52; 1 = v49; 2 = v32}
+  v58 = CONST{0}
+  v59 = v28[2]
+  v60 = v59[3]
+  v61 = v60(v13, v58, v57)
+  v63 = v62[32]
+  v64 = v63(v61)
+  v65 = v62[41]
+  v66 = v65(v64)
+  v67 = CONST{0}
+  v68 = v62[46]
+  v69 = v68(v67)
+  v70 = {tag=0; 0 = v4; 1 = v5; 2 = v13}
+  v72 = "caml_register_global"(3, v70, "P2_nested_forward"j)
+  stop

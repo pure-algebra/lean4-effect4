@@ -1,0 +1,64 @@
+Entry point: 0
+
+==== 0 () ====
+  v53 = "caml_get_global_data"()
+  v3 = CONST{"P1_perform_continue.E"}
+  v24 = "caml_js_get"(v53, "Stdlib__Effect"j)
+  v42 = "caml_js_get"(v53, "Stdlib"j)
+  branch 43 ()
+
+==== 2 () ====
+  return v35
+
+==== 5 () ====
+  raise v32
+
+==== 7 () ====
+  v25 = v24[2]
+  v26 = v25[0]
+  v27 = v26(v22, v20)
+  return v27
+
+==== 15 () ====
+  v16 = v14[0]
+  v17 = v16 === v4
+  if v17 then 21 () else 31 (v17)
+
+==== 21 () ====
+  v20 = v14[1]
+  v21 = fun(v22){7 ()}
+  v28 = {tag=0; 0 = v21}
+  branch 31 (v28)
+
+==== 31 (v30) ====
+  return v30
+
+==== 33 () ====
+  v8 = CONST{41}
+  v9 = {tag=0; 0 = v4; 1 = v8}
+  v10 = "%perform"(v9)
+  v12 = 1 + v10
+  return v12
+
+==== 43 () ====
+  v2 = "caml_fresh_oo_id"(0)
+  v4 = {tag=248; 0 = v3; 1 = v2}
+  v5 = fun(v6){33 ()}
+  v13 = fun(v14){15 ()}
+  v31 = fun(v32){5 ()}
+  v34 = fun(v35){2 ()}
+  v37 = {tag=0; 0 = v34; 1 = v31; 2 = v13}
+  v38 = CONST{0}
+  v39 = v24[2]
+  v40 = v39[3]
+  v41 = v40(v5, v38, v37)
+  v43 = v42[32]
+  v44 = v43(v41)
+  v45 = v42[41]
+  v46 = v45(v44)
+  v47 = CONST{0}
+  v48 = v42[46]
+  v49 = v48(v47)
+  v50 = {tag=0; 0 = v4; 1 = v5}
+  v52 = "caml_register_global"(3, v50, "P1_perform_continue"j)
+  stop
