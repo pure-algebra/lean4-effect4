@@ -1,6 +1,12 @@
 import OCaml5.Effect
 import OCaml5.Compiler
 import OCaml5.Witnesses
+import OCaml5.Ml.Identifier
+import OCaml5.Ml.Syntax
+import OCaml5.Ml.Render
+import OCaml5.Ml.Reflect
+import OCaml5.Ml.Check
+import OCaml5.Ml.Passes
 
 /-!
 # OCaml 5 spike: `Term` → OCaml 5 source
@@ -157,20 +163,12 @@ def normIds : List Nat → List Nat
 
 /-! ## Source text -/
 
-private def pad3 (n : Nat) : String :=
-  let s := toString n
-  if s.length ≥ 3 then s else if s.length == 2 then "0" ++ s else "00" ++ s
+/-- An OCaml string literal body. The row alphabet is ASCII with tabs.
 
-/-- An OCaml string literal body. The row alphabet is ASCII with tabs. -/
-def esc (s : String) : String :=
-  s.foldl (init := "") fun acc c =>
-    acc ++
-      (if c == '"' then "\\\""
-       else if c == '\\' then "\\\\"
-       else if c == '\t' then "\\t"
-       else if c == '\n' then "\\n"
-       else if c.toNat < 32 || c.toNat > 126 then "\\" ++ pad3 c.toNat
-       else String.singleton c)
+One function under two names: this is `OCaml5.Ml.escString` (`Ml/Identifier.lean`), which is the
+same escaping the declaration surface needs, and the name is kept because the whole `rend` table
+below spells it. -/
+def esc (s : String) : String := Ml.escString s
 
 private def vn (n : Nat) : String := "v" ++ toString n
 private def xn (n : Nat) : String := "x" ++ toString n
@@ -429,456 +427,51 @@ claim is even meant), and that the renderer declares exactly the constructors ea
 end OCaml5
 
 /-!
-# A general Lean → OCaml declaration surface
+# The general Lean → OCaml declaration surface: where it now lives
 
-Status: spike P5 part 2, 2026-09-04, for spike A0 (`docs/research/2026-09-04-spike-a0-avatar.md`):
-the OCaml avatar of `workshop/Deep/Fibers.lean` is to be *generated* from the Lean carriers, not
-hand-written. `Term.render` above emits one expression over the raw effect primitives, which is
-what a reference machine needs and not what a program needs. This section is the rest of the
-surface: declarations.
+Status: spike P5 part 2 (2026-09-04), refactored into a package-shaped API by seat W3
+(`docs/research/2026-09-04-seat-w3-ml-api.md`).
 
-It is a **reflected description**, not Lean metaprogramming. `Ml.TypeDecl`, `Ml.Expr` and
-`Ml.Decl` are ordinary data; A0 populates them by hand from `Fibers.lean` (a `structure` becomes
-an `Ml.TyBody.record`, an `inductive` becomes an `Ml.TyBody.variant`), and `Ml.moduleText` turns
-a `List Ml.Decl` into a compilation unit. Nothing here inspects a Lean declaration; when the
-mapping is settled, an elaborator that builds these values from `Lean.Expr` is a separate,
-later step, and this type is the interface it would target.
+`Term.render` above emits one expression over the raw effect primitives, which is what a
+reference machine needs and not what a program needs. The rest of the surface — declarations,
+and the descriptions that generate them — is **no longer in this file**. It is six modules under
+`workshop/OCaml5/Ml/`, shaped like the estate's TypeScript target package
+(`.lake/packages/typescript/TypeScript/{Syntax,Render,Identifier,HostPin,Structure}.lean`) so
+that it can be lifted out as a sibling package `lean4-ocaml` without being rewritten:
 
-What the surface covers, in the order A0 asked for it:
+| module | what it owns |
+| --- | --- |
+| `OCaml5.Ml.Identifier` | reserved words, the identifier profile, `escString`, the total injective `mangleField` and its exhibited left inverse |
+| `OCaml5.Ml.Syntax` | the OCaml surface as first-order data: `Ty`, `Pat`, `Expr`, `Decl`, `ModTy`, `Module` |
+| `OCaml5.Ml.Render` | deterministic rendering with a precedence table: `renderTy`, `renderExpr`, `renderDecl`, `moduleText`, `render : Module → String` |
+| `OCaml5.Ml.Reflect` | the description layer: `LTy`, `Subst`, `FieldKind`, `StructDesc`, `InductiveDesc`, `TypeDesc`, `toTypeDecl` |
+| `OCaml5.Ml.Check` | well-formedness as decidable predicates with diagnostics |
+| `OCaml5.Ml.Passes` | the pure-update → mutation pass and its residue checker |
 
-* records, with `mutable` fields, and variants, both with type parameters, and mutually recursive
-  groups joined by `and`;
-* `ref`s, dereference and assignment;
-* `let rec` and mutually recursive functions (`let rec f … and g …`), with optional parameter and
-  result annotations;
-* `match` with `when` guards, `try … with`, `if`, tuples, lists, record literals and functional
-  record update;
-* effect declarations as `type _ Effect.t += C : t -> answer Effect.t`, exceptions, `external`s
-  and `open`;
-* `Effect.Deep.match_with` and `Effect.Deep.try_with` handler blocks with a `retc`/`exnc`/`effc`
-  record, the `effc` table written the way `effect.ml:66-68` types it — a locally abstract `type
-  a`, one clause per effect constructor, `Some (fun (k : (a, answer) continuation) -> …)`, and a
-  `| _ -> None` default.
+Every name this file used before the split still resolves to the same thing: the modules are
+imported above and every definition kept its name and its namespace (`OCaml5.Ml`). Consumers —
+`OCaml5.Fuzz` and `tools/fuzz.sh` — are unchanged.
 
-Two deliberate simplifications. Expressions are **parenthesised aggressively** rather than by a
-precedence table: `ocamlc` accepts redundant parentheses everywhere and a wrong precedence table
-is a silent miscompile. And the surface is untyped — it will happily describe a module `ocamlc`
-rejects. The check is executed, not structural: `tools/fuzz.sh surface` renders the sample below
-and compiles it.
+What remains below is what was always this file's own: the **descriptions and probes**, which are
+data about `workshop/Deep/Fibers.lean` and about `workshop/OCaml5/avatar/deep_fibers.ml` rather
+than API. `tools/fuzz.sh surface` renders `Ml.Deep.sample` and compiles it; `tools/fuzz.sh
+avatar` renders `Ml.Avatar.generated` and diffs it against the hand-written avatar.
 -/
 
 namespace OCaml5
 namespace Ml
 
-/-! ## Types -/
+/-! ## The surface itself
 
-/-- An OCaml type expression. Type application is postfix, as OCaml writes it. -/
-inductive Ty where
-  | var (name : String)
-  | con (name : String) (args : List Ty)
-  | arrow (dom cod : Ty)
-  | tuple (parts : List Ty)
-deriving Repr, Inhabited
+`Ty`, `Pat`, `Expr`, `Arm`, `Effc`, `Field`, `Ctor`, `TyBody`, `TypeDecl`, `Bind` and `Decl` are
+declared in `OCaml5.Ml.Syntax`, and `renderTy`, `renderPat`, `renderExpr`, `renderDecl` and
+`moduleText` in `OCaml5.Ml.Render`. Both are imported above, so every use below is unchanged.
 
-namespace Ty
-def int : Ty := .con "int" []
-def bool : Ty := .con "bool" []
-def unit : Ty := .con "unit" []
-def string : Ty := .con "string" []
-def exn : Ty := .con "exn" []
-def named (n : String) : Ty := .con n []
-def list (t : Ty) : Ty := .con "list" [t]
-def option (t : Ty) : Ty := .con "option" [t]
-def ref (t : Ty) : Ty := .con "ref" [t]
-/-- `'a Effect.t`. -/
-def effect (t : Ty) : Ty := .con "Effect.t" [t]
-/-- `('a, 'b) Effect.Deep.continuation`. -/
-def cont (a b : Ty) : Ty := .con "Effect.Deep.continuation" [a, b]
-end Ty
-
-mutual
-
-def renderTy : Ty → String
-  | .var n => "'" ++ n
-  | .con n [] => n
-  | .con n [a] => renderTy a ++ " " ++ n
-  | .con n args => "(" ++ String.intercalate ", " (renderTys args) ++ ") " ++ n
-  | .arrow a b => "(" ++ renderTy a ++ " -> " ++ renderTy b ++ ")"
-  | .tuple ps => "(" ++ String.intercalate " * " (renderTys ps) ++ ")"
-
-def renderTys : List Ty → List String
-  | [] => []
-  | t :: rest => renderTy t :: renderTys rest
-
-end
-
-/-! ## Patterns -/
-
-inductive Pat where
-  | wild
-  | var (name : String)
-  | int (n : Nat)
-  | str (s : String)
-  /-- A constructor pattern; `≥ 2` arguments are rendered as one tuple, as OCaml requires. -/
-  | ctor (name : String) (args : List Pat)
-  | record (fields : List (String × Pat))
-  | tuple (parts : List Pat)
-  /-- `hd :: tl`, which `Pat.ctor` cannot spell. -/
-  | cons (hd tl : Pat)
-  | alias (p : Pat) (name : String)
-  | orPat (a b : Pat)
-deriving Repr, Inhabited
-
-mutual
-
-def renderPat : Pat → String
-  | .wild => "_"
-  | .var n => n
-  | .int n => toString n
-  | .str s => "\"" ++ Render.esc s ++ "\""
-  | .ctor n [] => n
-  | .ctor n [a] => "(" ++ n ++ " " ++ renderPat a ++ ")"
-  | .ctor n args => "(" ++ n ++ " (" ++ String.intercalate ", " (renderPats args) ++ "))"
-  | .record fs => "{ " ++ String.intercalate "; " (renderPatFields fs) ++ " }"
-  | .tuple ps => "(" ++ String.intercalate ", " (renderPats ps) ++ ")"
-  | .cons hd tl => "(" ++ renderPat hd ++ " :: " ++ renderPat tl ++ ")"
-  | .alias p n => "(" ++ renderPat p ++ " as " ++ n ++ ")"
-  | .orPat a b => "(" ++ renderPat a ++ " | " ++ renderPat b ++ ")"
-
-def renderPats : List Pat → List String
-  | [] => []
-  | p :: rest => renderPat p :: renderPats rest
-
-def renderPatFields : List (String × Pat) → List String
-  | [] => []
-  | (n, p) :: rest => (n ++ " = " ++ renderPat p) :: renderPatFields rest
-
-end
-
-/-! ## Expressions -/
-
-mutual
-
-/-- An OCaml expression. -/
-inductive Expr where
-  | var (name : String)
-  | int (n : Nat)
-  | str (s : String)
-  | bool (b : Bool)
-  | unit
-  | ctor (name : String) (args : List Expr)
-  | app (fn : Expr) (args : List Expr)
-  /-- An infix application: `(l op r)`. -/
-  | binop (op : String) (l r : Expr)
-  /-- `fun p1 p2 -> body`; a parameter named `()` renders as the unit pattern. -/
-  | fn (params : List String) (body : Expr)
-  | letIn (name : String) (value body : Expr)
-  /-- A local `let rec … and …`. -/
-  | letRecIn (binds : List (String × List String × Expr)) (body : Expr)
-  | seq (a b : Expr)
-  | ifThen (cond thenE elseE : Expr)
-  | matchE (scrut : Expr) (arms : List Arm)
-  | tryWith (body : Expr) (arms : List Arm)
-  | record (fields : List (String × Expr))
-  /-- `{ base with f = e; … }`. -/
-  | recordWith (base : Expr) (fields : List (String × Expr))
-  | field (e : Expr) (name : String)
-  /-- `e.f <- v`, the mutable-field write. -/
-  | setField (e : Expr) (name : String) (v : Expr)
-  | tuple (parts : List Expr)
-  | listLit (items : List Expr)
-  | mkRef (e : Expr)
-  | deref (e : Expr)
-  | assign (r v : Expr)
-  | raiseE (e : Expr)
-  | perform (e : Expr)
-  | continueK (k v : Expr)
-  | discontinueK (k e : Expr)
-  /-- `Effect.Deep.match_with comp arg { retc; exnc; effc }`. `answer` is the handler's `'b`,
-  which the `effc` clauses need to annotate their continuation with. -/
-  | matchWith (comp arg : Expr) (answer : Ty) (retcVar : String) (retc : Expr)
-      (exnc : List Arm) (effc : List Effc)
-  /-- `Effect.Deep.try_with comp arg { effc }` (`effect.ml:84-91`): the identity `retc` and the
-  re-raising `exnc` are the wrapper's, not ours. -/
-  | tryWithEff (comp arg : Expr) (answer : Ty) (effc : List Effc)
-  | annot (e : Expr) (ty : Ty)
-  /-- Request 5: a place the renderer refuses to fill. `note` says what the Lean side had;
-  `fill` is what the hand-written module supplies in its place. -/
-  | hole (note : String) (fill : Expr)
-  /-- Verbatim text, for anything this surface does not spell. -/
-  | raw (text : String)
-
-/-- One `match`/`try` arm, with an optional `when` guard. -/
-inductive Arm where
-  | mk (pat : Pat) (guard : Option Expr) (body : Expr)
-
-/-- One `effc` clause: an effect constructor, its argument patterns, the name the continuation is
-bound to, and the body. -/
-inductive Effc where
-  | mk (ctorName : String) (args : List Pat) (kBinder : String) (body : Expr)
-
-end
-
-namespace Expr
-instance : Inhabited Expr := ⟨Expr.unit⟩
-def call (f : String) (args : List Expr) : Expr := .app (.var f) args
-def ignoreE (e : Expr) : Expr := .app (.var "ignore") [e]
-end Expr
-
-private def indentOf (n : Nat) : String := "".pushn ' ' (2 * n)
-
-mutual
-
-/-- One expression. Compound forms are always parenthesised, so no precedence table is needed
-and no reparse can change the meaning. `ind` only affects where newlines are indented to. -/
-def renderExpr (ind : Nat) : Expr → String
-  | .var n => n
-  | .int n => toString n
-  | .str s => "\"" ++ Render.esc s ++ "\""
-  | .bool b => if b then "true" else "false"
-  | .unit => "()"
-  | .ctor n [] => n
-  | .ctor n [a] => "(" ++ n ++ " " ++ renderExpr ind a ++ ")"
-  | .ctor n args => "(" ++ n ++ " (" ++ String.intercalate ", " (renderExprs ind args) ++ "))"
-  | .app f args =>
-      "(" ++ renderExpr ind f ++ " " ++ String.intercalate " " (renderExprs ind args) ++ ")"
-  | .binop op l r => "(" ++ renderExpr ind l ++ " " ++ op ++ " " ++ renderExpr ind r ++ ")"
-  | .fn ps b => "(fun " ++ String.intercalate " " ps ++ " -> " ++ renderExpr ind b ++ ")"
-  | .letIn n v b =>
-      "(let " ++ n ++ " = " ++ renderExpr ind v ++ " in\n" ++ indentOf ind ++ renderExpr ind b
-        ++ ")"
-  | .letRecIn binds b =>
-      "(let rec " ++ String.intercalate ("\n" ++ indentOf ind ++ "and ") (renderLocalBinds ind binds)
-        ++ " in\n" ++ indentOf ind ++ renderExpr ind b ++ ")"
-  | .seq a b => "(" ++ renderExpr ind a ++ ";\n" ++ indentOf ind ++ renderExpr ind b ++ ")"
-  | .ifThen c t e =>
-      "(if " ++ renderExpr ind c ++ " then " ++ renderExpr (ind + 1) t ++ " else "
-        ++ renderExpr (ind + 1) e ++ ")"
-  | .matchE s arms =>
-      "(match " ++ renderExpr ind s ++ " with" ++ renderArms (ind + 1) arms ++ ")"
-  | .tryWith b arms =>
-      "(try " ++ renderExpr (ind + 1) b ++ " with" ++ renderArms (ind + 1) arms ++ ")"
-  | .record fs => "{ " ++ String.intercalate "; " (renderFields ind fs) ++ " }"
-  | .recordWith base fs =>
-      "{ " ++ renderExpr ind base ++ " with " ++ String.intercalate "; " (renderFields ind fs)
-        ++ " }"
-  | .field e n => "(" ++ renderExpr ind e ++ ")." ++ n
-  | .setField e n v =>
-      "((" ++ renderExpr ind e ++ ")." ++ n ++ " <- " ++ renderExpr ind v ++ ")"
-  | .tuple ps => "(" ++ String.intercalate ", " (renderExprs ind ps) ++ ")"
-  | .listLit items => "[" ++ String.intercalate "; " (renderExprs ind items) ++ "]"
-  | .mkRef e => "(ref " ++ renderExpr ind e ++ ")"
-  | .deref e => "(!" ++ renderExpr ind e ++ ")"
-  | .assign r v => "(" ++ renderExpr ind r ++ " := " ++ renderExpr ind v ++ ")"
-  | .raiseE e => "(raise " ++ renderExpr ind e ++ ")"
-  | .perform e => "(Effect.perform " ++ renderExpr ind e ++ ")"
-  | .continueK k v =>
-      "(Effect.Deep.continue " ++ renderExpr ind k ++ " " ++ renderExpr ind v ++ ")"
-  | .discontinueK k e =>
-      "(Effect.Deep.discontinue " ++ renderExpr ind k ++ " " ++ renderExpr ind e ++ ")"
-  | .matchWith comp arg answer retcVar retc exnc effc =>
-      "(Effect.Deep.match_with " ++ renderExpr ind comp ++ " " ++ renderExpr ind arg ++ "\n"
-        ++ indentOf (ind + 1) ++ "{ retc = (fun " ++ retcVar ++ " -> "
-        ++ renderExpr (ind + 2) retc ++ ");\n"
-        ++ indentOf (ind + 1) ++ "  exnc = (function" ++ renderArms (ind + 2) exnc
-        ++ "\n" ++ indentOf (ind + 2) ++ "| e -> raise e);\n"
-        ++ indentOf (ind + 1) ++ "  effc = (fun (type a) (eff : a Effect.t) ->\n"
-        ++ indentOf (ind + 2) ++ "match eff with" ++ renderEffcClauses (ind + 2) answer effc
-        ++ "\n" ++ indentOf (ind + 2) ++ "| _ -> None) })"
-  | .tryWithEff comp arg answer effc =>
-      "(Effect.Deep.try_with " ++ renderExpr ind comp ++ " " ++ renderExpr ind arg ++ "\n"
-        ++ indentOf (ind + 1) ++ "{ effc = (fun (type a) (eff : a Effect.t) ->\n"
-        ++ indentOf (ind + 2) ++ "match eff with" ++ renderEffcClauses (ind + 2) answer effc
-        ++ "\n" ++ indentOf (ind + 2) ++ "| _ -> None) })"
-  | .annot e ty => "(" ++ renderExpr ind e ++ " : " ++ renderTy ty ++ ")"
-  | .hole note fill => "(* HOLE: " ++ note ++ " *) " ++ renderExpr ind fill
-  | .raw t => t
-
-def renderExprs (ind : Nat) : List Expr → List String
-  | [] => []
-  | e :: rest => renderExpr ind e :: renderExprs ind rest
-
-def renderFields (ind : Nat) : List (String × Expr) → List String
-  | [] => []
-  | (n, e) :: rest => (n ++ " = " ++ renderExpr ind e) :: renderFields ind rest
-
-def renderLocalBinds (ind : Nat) : List (String × List String × Expr) → List String
-  | [] => []
-  | (n, ps, b) :: rest =>
-      (n ++ (if ps.isEmpty then "" else " " ++ String.intercalate " " ps) ++ " = "
-        ++ renderExpr (ind + 1) b) :: renderLocalBinds ind rest
-
-def renderArms (ind : Nat) : List Arm → String
-  | [] => ""
-  | .mk p g b :: rest =>
-      "\n" ++ indentOf ind ++ "| " ++ renderPat p
-        ++ (match g with
-            | Option.none => ""
-            | Option.some ge => " when " ++ renderExpr ind ge)
-        ++ " -> " ++ renderExpr (ind + 1) b
-        ++ renderArms ind rest
-
-/-- The clauses of the `effc` field of `Effect.Deep.handler` (`effect.ml:66-68`). The
-continuation is annotated `(a, answer) Effect.Deep.continuation`, which is what makes the `'c.`
-polymorphism of the field check. -/
-def renderEffcClauses (ind : Nat) (answer : Ty) : List Effc → String
-  | [] => ""
-  | .mk name args k body :: rest =>
-      -- `a` and not `'a`: the annotation must name the *locally abstract* type the
-      -- `(type a)` binder introduced, or the GADT match does not refine it and the clause
-      -- bodies are all forced to one answer type.
-      "\n" ++ indentOf ind ++ "| " ++ renderPat (.ctor name args) ++ " -> Some (fun ("
-        ++ k ++ " : " ++ renderTy (Ty.cont (.named "a") answer) ++ ") -> "
-        ++ renderExpr (ind + 1) body ++ ")"
-        ++ renderEffcClauses ind answer rest
-
-end
-
-/-! ## Declarations -/
-
-/-- One record field. `isMutable` is the `mutable` keyword, which is how a Lean `structure` field
-that the avatar updates in place is spelled. -/
-structure Field where
-  name : String
-  ty : Ty
-  isMutable : Bool := false
-  /-- A trailing `(* … *)` on the field's own line, when the record is rendered wide. -/
-  comment : Option String := Option.none
-  /-- Verbatim lines emitted above the field, when the record is rendered wide. A substitute
-  field needs one: it has no Lean counterpart, so the only place to say why it exists is here. -/
-  leading : List String := []
-deriving Repr, Inhabited
-
-/-- One variant constructor: `| C of t1 * t2`. -/
-structure Ctor where
-  name : String
-  args : List Ty := []
-  /-- A trailing `(* … *)` on the constructor's own line. -/
-  comment : Option String := Option.none
-deriving Repr, Inhabited
-
-inductive TyBody where
-  | record (fields : List Field)
-  | variant (ctors : List Ctor)
-  | alias (ty : Ty)
-  | abstract
-deriving Repr, Inhabited
-
-/-- One `type` declaration. A Lean `structure` becomes a `record`, a Lean `inductive` a
-`variant`, and a group of them joined by `and` is a `Decl.types`. -/
-structure TypeDecl where
-  name : String
-  params : List String := []
-  body : TyBody
-deriving Repr, Inhabited
-
-/-- One `let` binding, possibly a function. -/
-structure Bind where
-  name : String
-  params : List (String × Option Ty) := []
-  result : Option Ty := Option.none
-  body : Expr
-
-inductive Decl where
-  /-- `type a = … and b = …`. -/
-  | types (group : List TypeDecl)
-  | exn (name : String) (args : List Ty)
-  /-- `type _ Effect.t += C : t1 -> t2 -> answer Effect.t`, one entry per constructor. -/
-  | effects (ctors : List (String × List Ty × Ty))
-  /-- `let [rec] f … and g …`. -/
-  | letD (isRec : Bool) (binds : List Bind)
-  | ext (name : String) (ty : Ty) (prim : String) (attrs : List String := [])
-  | openM (name : String)
-  | comment (text : String)
-  | rawD (text : String)
-
-private def renderParams : List String → String
-  | [] => ""
-  | [p] => "'" ++ p ++ " "
-  | ps => "(" ++ String.intercalate ", " (ps.map fun p => "'" ++ p) ++ ") "
-
-private def renderField (f : Field) : String :=
-  (if f.isMutable then "mutable " else "") ++ f.name ++ " : " ++ renderTy f.ty
-
-private def renderCtor (c : Ctor) : String :=
-  "| " ++ c.name
-    ++ (if c.args.isEmpty then ""
-        else " of " ++ String.intercalate " * " (renderTys c.args))
-
-private def trailing : Option String → String
-  | Option.none => ""
-  | Option.some t => "  (* " ++ t ++ " *)"
-
-/-- A record or variant with four or more members is laid out one member per line, which is
-the shape `workshop/OCaml5/avatar/deep_fibers.ml` is written in; three or fewer stay on one
-line. Below the threshold a comment has nowhere to go and is dropped. -/
-def wideAt : Nat := 4
-
-private def renderTyBody (b : TyBody) : String :=
-  match b with
-  | .record fs =>
-      if fs.length < wideAt then "{ " ++ String.intercalate "; " (fs.map renderField) ++ " }"
-      else
-        "{\n" ++ String.join (fs.map fun f =>
-          String.join (f.leading.map fun l => "  " ++ l ++ "\n")
-            ++ "  " ++ renderField f ++ ";" ++ trailing f.comment ++ "\n") ++ "}"
-  | .variant cs =>
-      if cs.length < wideAt then
-        " " ++ String.intercalate " | " (cs.map fun c =>
-          c.name ++ (if c.args.isEmpty then ""
-                     else " of " ++ String.intercalate " * " (renderTys c.args)))
-      else
-        "\n" ++ String.join (cs.map fun c => "  " ++ renderCtor c ++ trailing c.comment ++ "\n")
-          |>.dropEnd 1 |>.toString
-  | .alias t => renderTy t
-  | .abstract => ""
-
-private def renderTypeDecl (d : TypeDecl) : String :=
-  renderParams d.params ++ d.name
-    ++ (match d.body with
-        | .abstract => ""
-        -- a variant body starts on its own line, so no space before it
-        | .variant cs => " =" ++ renderTyBody (.variant cs)
-        | b => " = " ++ renderTyBody b)
-
-private def renderBind (b : Bind) : String :=
-  b.name
-    ++ String.join (b.params.map fun p =>
-         match p.2 with
-         | Option.none => " " ++ p.1
-         | Option.some t => " (" ++ p.1 ++ " : " ++ renderTy t ++ ")")
-    ++ (match b.result with
-        | Option.none => ""
-        | Option.some t => " : " ++ renderTy t)
-    ++ " =\n  " ++ renderExpr 1 b.body
-
-/-- One declaration, as a top-level structure item. -/
-def renderDecl : Decl → String
-  | .types group =>
-      "type " ++ String.intercalate "\nand " (group.map renderTypeDecl)
-  | .exn n args =>
-      "exception " ++ n
-        ++ (if args.isEmpty then ""
-            else " of " ++ String.intercalate " * " (renderTys args))
-  | .effects ctors =>
-      "type _ Effect.t +=\n  "
-        ++ String.intercalate "\n  " (ctors.map fun c =>
-             "| " ++ c.1 ++ " : "
-               ++ String.join ((renderTys c.2.1).map (· ++ " -> "))
-               ++ renderTy (Ty.effect c.2.2))
-  | .letD isRec binds =>
-      "let " ++ (if isRec then "rec " else "")
-        ++ String.intercalate "\n\nand " (binds.map renderBind)
-  | .ext n ty prim attrs =>
-      "external " ++ n ++ " : " ++ renderTy ty ++ " = \"" ++ prim ++ "\""
-        ++ String.join (attrs.map fun a => " [@@" ++ a ++ "]")
-  | .openM n => "open " ++ n
-  | .comment t => "(* " ++ t ++ " *)"
-  | .rawD t => t
-
-/-- A whole compilation unit. -/
-def moduleText (decls : List Decl) : String :=
-  String.join (decls.map fun d => renderDecl d ++ "\n\n")
+One rendering change came with the split and is visible in the `#guard`s: the renderer carries a
+**precedence table** and emits only the parentheses a form needs, where round two parenthesised
+every compound form. The table is conservative in one direction — a level that is too low adds a
+parenthesis and can never change a parse — and the executed checks (`fuzz.sh surface`,
+`fuzz.sh avatar`, `tools/ml-check.sh`) are what say the output is still OCaml. -/
 
 /-! ## The Deep-shaped probe
 
@@ -1086,7 +679,9 @@ one of these strings changes, the module that was compiled is no longer the modu
 renders. -/
 
 #guard renderTy (Ty.cont (.var "a") Ty.int) == "('a, int) Effect.Deep.continuation"
-#guard renderTy (.arrow Ty.unit (Ty.list (.con "bucket" [.var "b"]))) == "(unit -> 'b bucket list)"
+-- The renderer now emits only the parentheses the form needs: an arrow at the top level
+-- of a type has none, and one in the domain of another arrow has them.
+#guard renderTy (.arrow Ty.unit (Ty.list (.con "bucket" [.var "b"]))) == "unit -> 'b bucket list"
 #guard renderTy (.con "pending" [.var "nu", .var "b"]) == "('nu, 'b) pending"
 
 #guard renderDecl Deep.fiberIdDecl == "type fiber_id = int"
@@ -1113,7 +708,7 @@ renders. -/
 #guard ((renderDecl Deep.enqueueDecl).splitOn "\n\nand ").length == 2
 #guard ((renderDecl Deep.enqueueDecl).splitOn " when ").length == 2
 #guard ((renderDecl Deep.enqueueDecl).splitOn " with tasks = ").length == 2
-#guard ((renderDecl Deep.enqueueDecl).splitOn ").buckets <- ").length == 2
+#guard ((renderDecl Deep.enqueueDecl).splitOn "d.buckets <- ").length == 2
 
 -- The `effc` table: a locally abstract type, one clause per constructor, a `None` default.
 #guard ((renderDecl Deep.runDecl).splitOn "(fun (type a) (eff : a Effect.t) ->").length == 2
@@ -1129,262 +724,21 @@ renders. -/
 # Descriptions of Lean declarations, and the avatar's carriers
 
 Round three, 2026-09-04: `docs/research/2026-09-04-spike-a0-avatar.md` §1 asks P5 to *generate*
-the avatar's carriers rather than let a human retype them. This layer is the description of a
-Lean declaration — its name, its field or constructor order, its Lean types — plus the two
-mappings that turn one into OCaml: a **name mangling** and a **type substitution**.
+the avatar's carriers rather than let a human retype them.
 
-The division of labour is deliberate. The renderer owns everything mechanical: order, arity,
+The description layer itself — `LTy`, `Subst`, `lowerTy`, `FieldKind`, `FieldDesc`, `StructDesc`,
+`CtorArg`, `CtorDesc`, `InductiveDesc`, `TypeDesc`, `toTypeDecl` — and the name mangling —
+`mangleField`, `unmangleField`, `typeName`, `ctorName`, `reservedNames` — are in
+`OCaml5.Ml.Reflect` and `OCaml5.Ml.Identifier`. What is below is the **descriptions**: the actual
+carriers of `workshop/Deep/Fibers.lean`, and the one substitution table the avatar is read
+against.
+
+The division of labour is the point. The renderer owns everything mechanical: order, arity,
 mutability, layout, and the names. The substitution table owns the one thing a renderer cannot
 decide — which OCaml type stands for a Lean type the avatar does not transcribe (`Exit β ε δ ι α`
 is `exitv`, `χ` is `unit`, `Prim` in an answer position is `answer`). That table is one visible
 list per module, not a decision scattered through 900 lines of hand-written OCaml.
 -/
-
-/-! ## Names
-
-`mangleField` is **total** and **injective**; `unmangleField` is an exhibited left inverse and the
-`#guard`s below run it on every field name of the carriers rendered here plus a row of adversarial
-ones. The code, character by character:
-
-| source | image |
-| --- | --- |
-| a lowercase letter or a digit | itself |
-| an uppercase `X` | `_` ++ lowercase `X` (this is camelCase → snake_case) |
-| `_` | `_0` |
-| `'` | `_1` |
-| anything else, code `c` | `_2` ++ three decimal digits of `c` |
-
-and a result that is an OCaml keyword, or `exit`, gets one `_` appended. That last step cannot
-collide: no image of the character code ends in a bare `_`, because every escape `_` is followed
-by a letter or a digit. `exit` → `exit_` is `deep_fibers.ml:194`. -/
-
-/-- The OCaml keywords, plus `exit`: a record field named `exit` is legal, but `f.exit` reads as
-`Stdlib.exit` at a glance, and the avatar spells it `exit_`. -/
-def reservedNames : List String :=
-  ["and", "as", "assert", "asr", "begin", "class", "constraint", "do", "done", "downto",
-   "else", "end", "exception", "external", "false", "for", "fun", "function", "functor",
-   "if", "in", "include", "inherit", "initializer", "land", "lazy", "let", "lor", "lsl",
-   "lsr", "lxor", "match", "method", "mod", "module", "mutable", "new", "nonrec", "object",
-   "of", "open", "or", "private", "rec", "sig", "struct", "then", "to", "true", "try",
-   "type", "val", "virtual", "when", "while", "with", "exit"]
-
-private def pad3 (n : Nat) : String :=
-  let s := toString n
-  if s.length ≥ 3 then s else if s.length == 2 then "0" ++ s else "00" ++ s
-
-private def encChar (c : Char) : String :=
-  if c.isLower || c.isDigit then String.singleton c
-  else if c.isUpper then "_" ++ String.singleton (Char.ofNat (c.toNat + 32))
-  else if c == '_' then "_0"
-  else if c == '\'' then "_1"
-  else "_2" ++ pad3 c.toNat
-
-/-- The character code, before the keyword escape. -/
-def mangleCore (s : String) : String := s.foldl (init := "") fun acc c => acc ++ encChar c
-
-/-- A Lean field name as an OCaml record label. Total; `unmangleField` is a left inverse. -/
-def mangleField (s : String) : String :=
-  let e := mangleCore s
-  if reservedNames.contains e then e ++ "_" else e
-
-private def decodeAux : List Char → List Char
-  | [] => []
-  | '_' :: [] => []                                        -- the keyword escape
-  | '_' :: '0' :: rest => '_' :: decodeAux rest
-  | '_' :: '1' :: rest => '\'' :: decodeAux rest
-  | '_' :: '2' :: a :: b :: c :: rest =>
-      Char.ofNat (100 * (a.toNat - 48) + 10 * (b.toNat - 48) + (c.toNat - 48))
-        :: decodeAux rest
-  | '_' :: x :: rest => Char.ofNat (x.toNat - 32) :: decodeAux rest
-  | c :: rest => c :: decodeAux rest
-
-/-- The left inverse of `mangleField`. -/
-def unmangleField (s : String) : String := String.ofList (decodeAux s.toList)
-
-/-- A Lean type name as an OCaml type name: the same code, minus the leading `_` an initial
-capital produces. Injective on names whose first character is an uppercase ASCII letter. -/
-def typeName (s : String) : String :=
-  let e := mangleCore s
-  if e.startsWith "_" then (e.drop 1).toString else e
-
-/-- A Lean constructor name as an OCaml constructor name. With an empty prefix the initial is
-capitalised (`resumeAwait` → `ResumeAwait`); with a prefix the prefix supplies the required
-capital and the Lean name is kept verbatim (`"C"`, `evaluate` → `Cevaluate`), which is the
-scheme `deep_fibers.ml` uses to keep `Cmd` and `RunDecision` from colliding with each other and
-with `WithFiberAction`. Injective for a fixed prefix. -/
-def ctorName (pfx : String) (s : String) : String :=
-  if pfx.isEmpty then
-    match s.toList with
-    | [] => s
-    | c :: rest => String.ofList (Char.ofNat (if c.isLower then c.toNat - 32 else c.toNat) :: rest)
-  else pfx ++ s
-
-/-! ## Lean types, and the substitution -/
-
-/-- A Lean type expression, as much of one as the description needs: a head and its arguments. -/
-inductive LTy where
-  | app (head : String) (args : List LTy)
-deriving Repr, Inhabited
-
-namespace LTy
-def nm (h : String) : LTy := .app h []
-def opt (t : LTy) : LTy := .app "Option" [t]
-def lst (t : LTy) : LTy := .app "List" [t]
-def nat : LTy := .app "Nat" []
-def bool : LTy := .app "Bool" []
-def str : LTy := .app "String" []
-end LTy
-
-/-- What each Lean type head becomes in OCaml. Keyed on the head only: `Exit β ε δ ι α` and
-`Exit β' ε' δ' ι' α'` are both `exitv`, because the avatar is one profile of the family and its
-arguments are fixed by the fixture. A head with no entry falls through to `typeName` applied to
-its own name, with its arguments lowered — so a carrier that *is* transcribed needs no entry. -/
-abbrev Subst := List (String × Ty)
-
-private def substLookup : Subst → String → Option Ty
-  | [], _ => Option.none
-  | (k, v) :: rest, n => if k == n then Option.some v else substLookup rest n
-
-mutual
-
-def lowerTy (tbl : Subst) : LTy → Ty
-  | .app "Nat" [] => Ty.int
-  | .app "Bool" [] => Ty.bool
-  | .app "String" [] => Ty.string
-  | .app "Unit" [] => Ty.unit
-  | .app "Option" [t] => Ty.option (lowerTy tbl t)
-  | .app "List" [t] => Ty.list (lowerTy tbl t)
-  | .app h args =>
-      match substLookup tbl h with
-      | Option.some t => t
-      | Option.none => .con (typeName h) (lowerTys tbl args)
-
-def lowerTys (tbl : Subst) : List LTy → List Ty
-  | [] => []
-  | t :: rest => lowerTy tbl t :: lowerTys tbl rest
-
-end
-
-/-! ## Structures -/
-
-/-- What becomes of one Lean field. `hole` is A0's request 5: the field is *not* rendered, the
-hand-written module supplies it, and `structHoles` names it so a check can insist. -/
-inductive FieldKind where
-  | keep
-  /-- Not rendered. The note says what the avatar must fill in. -/
-  | hole (note : String)
-  /-- An OCaml field with no Lean counterpart, standing for the holes. -/
-  | substitute
-deriving Repr, Inhabited
-
-structure FieldDesc where
-  leanName : String
-  leanTy : LTy
-  isMutable : Bool := false
-  kind : FieldKind := .keep
-  /-- Only for a `substitute`, whose name is not a mangled Lean name. -/
-  ocamlName : Option String := Option.none
-  comment : Option String := Option.none
-  leading : List String := []
-deriving Repr, Inhabited
-
-/-- A Lean `structure`, in Lean field order. -/
-structure StructDesc where
-  leanName : String
-  /-- Where it lives, for the generated comment: `"Fibers.lean:157"`. -/
-  site : String
-  subst : Subst
-  fields : List FieldDesc
-deriving Repr, Inhabited
-
-def FieldDesc.ocaml (d : FieldDesc) : String :=
-  match d.ocamlName with
-  | Option.some n => n
-  | Option.none => mangleField d.leanName
-
-private def toField (tbl : Subst) (d : FieldDesc) : Field :=
-  { name := d.ocaml, ty := lowerTy tbl d.leanTy, isMutable := d.isMutable, comment := d.comment,
-    leading := d.leading }
-
-/-- The Lean fields this description refuses to render (request 5). -/
-def StructDesc.holes (d : StructDesc) : List (String × String) :=
-  d.fields.filterMap fun f =>
-    match f.kind with
-    | .hole note => Option.some (f.leanName, note)
-    | _ => Option.none
-
-/-- The OCaml record: same order, same arity minus the holes, `mutable` where the description
-says so, field names mangled. -/
-def StructDesc.decl (d : StructDesc) : Decl :=
-  .types [{ name := typeName d.leanName,
-            body := .record ((d.fields.filter fun f =>
-              match f.kind with | .hole _ => false | _ => true).map (toField d.subst)) }]
-
-/-- The comment the generator puts above the record: the Lean site, the field count, and every
-hole, so that request 5 is visible in the output and not only in the description. -/
-def StructDesc.header (d : StructDesc) : Decl :=
-  .comment (s!"`{d.leanName}` (`{d.site}`), {d.fields.length} Lean fields, "
-    ++ s!"{(d.fields.filter fun f => match f.kind with | .hole _ => false | _ => true).length}"
-    ++ " rendered. Generated by OCaml5.Ml."
-    ++ String.join (d.holes.map fun h => s!"\n     HOLE {h.1}: {h.2}"))
-
-/-! ## Inductives -/
-
-structure CtorArg where
-  leanName : String
-  leanTy : LTy
-  /-- Dropped from the OCaml arity. Every use is a divergence and is counted. -/
-  erased : Bool := false
-deriving Repr, Inhabited
-
-structure CtorDesc where
-  leanName : String
-  args : List CtorArg := []
-  /-- Overrides `ctorName`, for the two names that would collide inside one module. -/
-  ocamlName : Option String := Option.none
-  comment : Option String := Option.none
-deriving Repr, Inhabited
-
-/-- A Lean `inductive`, in Lean constructor order. -/
-structure InductiveDesc where
-  leanName : String
-  site : String
-  ctorPrefix : String := ""
-  subst : Subst
-  ctors : List CtorDesc
-deriving Repr, Inhabited
-
-def CtorDesc.ocaml (pfx : String) (c : CtorDesc) : String :=
-  match c.ocamlName with
-  | Option.some n => n
-  | Option.none => ctorName pfx c.leanName
-
-private def toCtor (tbl : Subst) (pfx : String) (c : CtorDesc) : Ctor :=
-  { name := CtorDesc.ocaml pfx c,
-    args := lowerTys tbl ((c.args.filter fun a => !a.erased).map (·.leanTy)),
-    comment := c.comment }
-
-/-- The OCaml variant: same order, arity for arity except where an argument is explicitly
-`erased`. -/
-def InductiveDesc.decl (d : InductiveDesc) : Decl :=
-  .types [{ name := typeName d.leanName,
-            body := .variant (d.ctors.map (toCtor d.subst d.ctorPrefix)) }]
-
-/-- The Lean arity of each constructor, and the OCaml one; equal unless an argument is erased. -/
-def InductiveDesc.arities (d : InductiveDesc) : List (String × Nat × Nat) :=
-  d.ctors.map fun c =>
-    (c.leanName, c.args.length, (c.args.filter fun a => !a.erased).length)
-
-/-- Every erasure, as `(constructor, argument, Lean type head)`. -/
-def InductiveDesc.erasures (d : InductiveDesc) : List (String × String) :=
-  d.ctors.flatMap fun c =>
-    (c.args.filter (·.erased)).map fun a => (c.leanName, a.leanName)
-
-def InductiveDesc.header (d : InductiveDesc) : Decl :=
-  .comment (s!"`{d.leanName}` (`{d.site}`), {d.ctors.length} constructors"
-    ++ (if d.ctorPrefix.isEmpty then "" else s!", prefix `{d.ctorPrefix}`")
-    ++ ". Generated by OCaml5.Ml."
-    ++ String.join (d.erasures.map fun e => s!"\n     ERASED {e.1}.{e.2}"))
 
 /-! ## The avatar's carriers, described
 
@@ -1483,6 +837,16 @@ def runFiber : StructDesc where
           "   to `Cmd.loop` (`Fibers.lean:683`, rc.112's `runLoop` local at `internal/effect.ts:634`).",
           "   `Cmd.loop` has no OCaml existence (DIVERGENCE 2), so the latch lives on the fiber and is",
           "   cleared wherever Lean's `Cmd.evaluate` would have passed `false`. *)"] },
+     -- No Lean counterpart either: a `raceAll` host is resumed by two different tokens and the
+     -- OCaml continuation has to survive both, where Lean keeps the program in `frame.current`
+     -- (DIVERGENCE 1). Added by A0 after round three; the byte diff went red on exactly this
+     -- field, which is what the diff is for.
+     { leanName := "raceAnswer", leanTy := .opt (.nm "Kops"), isMutable := true,
+       kind := .substitute, ocamlName := Option.some "race_answer",
+       leading :=
+         ["(* Not a Lean field: a `raceAll` host is resumed either by its own race token or by the",
+          "   settle path's countdown token, and the OCaml continuation has to survive both. Lean",
+          "   keeps the program in `frame.current` instead (DIVERGENCE 1). *)"] },
      { leanName := "observers", leanTy := .lst (.nm "Observer"), isMutable := true },
      { leanName := "children", leanTy := .lst fid, isMutable := true },
      { leanName := "dispatcher", leanTy := .app "Dispatcher" [.nm "ν"], isMutable := true },
@@ -1629,177 +993,11 @@ end Avatar
 
 /-! ## Request 3: the pure-update → mutation pass
 
-Lean threads the machine through pure updates; the avatar mutates a record in place
-(`deep_fibers.ml`, DIVERGENCE 3). The rewrite is mechanical on one shape and only on that shape,
-which is what makes it checkable:
-
-```
-let f = { f with x = v; y = w } in body   ⟶   f.x <- v; f.y <- w; body
-let f = { f with g = { f.g with x = v } } in body   ⟶   f.g.x <- v; body
-```
-
-with `f` in the declared **linear** set — the names the caller asserts are used linearly, so that
-overwriting the old value is unobservable. `mutate` fires only when the `let` rebinds the same
-name it updates; anything else is traversed and left alone. When the body is just `f`, the result
-is `()`: a Lean function returning the updated record becomes an OCaml procedure whose caller
-already holds it.
-
-`residue` is the checker: the `{ … with … }` occurrences the pass did *not* eliminate. A caller
-`#guard`s that it is empty, so "the pass applied everywhere" is a fact and not a hope. -/
-
-/-- The nested case: `{ f.g with x = v }` under `{ f with g = … }` targets `f.g`. -/
-private def flatten (f : String) : List (String × Expr) → List (String × Expr) × List (String × Expr)
-  | [] => ([], [])
-  | (g, .recordWith (.field (.var f') g') inner) :: rest =>
-      let (flat, nested) := flatten f rest
-      if f' == f && g' == g then (flat, inner.map (fun kv => (g ++ "." ++ kv.1, kv.2)) ++ nested)
-      else ((g, .recordWith (.field (.var f') g') inner) :: flat, nested)
-  | kv :: rest => let (flat, nested) := flatten f rest; (kv :: flat, nested)
-
-private def setPath (f : String) (path : String) (v : Expr) : Expr :=
-  match path.splitOn "." with
-  | [k] => .setField (.var f) k v
-  | [g, k] => .setField (.field (.var f) g) k v
-  | _ => .raw ("(* unsupported update path " ++ path ++ " *)")
-
-private def setChainPaths (f : String) (fs : List (String × Expr)) (body : Expr) : Expr :=
-  match fs, body with
-  | [], _ => body
-  -- a trailing `()` is the statement itself; do not sequence it
-  | [(k, v)], .unit => setPath f k v
-  | [(k, v)], _ => .seq (setPath f k v) body
-  | (k, v) :: rest, _ => .seq (setPath f k v) (setChainPaths f rest body)
-
-mutual
-
-/-- The pass. Structural; the only rewrite is the one in the docstring. -/
-def mutate (linear : List String) : Expr → Expr
-  | .letIn n (.recordWith (.var f) fs) body =>
-      let fs' := mutateFields linear fs
-      let body' := mutate linear body
-      if n == f && linear.contains f then
-        let (flat, nested) := flatten f fs'
-        let tail := match body with
-          | .var b => if b == f then Expr.unit else body'
-          | _ => body'
-        setChainPaths f (flat ++ nested) tail
-      else .letIn n (.recordWith (.var f) fs') body'
-  | .letIn n v b => .letIn n (mutate linear v) (mutate linear b)
-  | .ctor n args => .ctor n (mutates linear args)
-  | .app f args => .app (mutate linear f) (mutates linear args)
-  | .binop op l r => .binop op (mutate linear l) (mutate linear r)
-  | .fn ps b => .fn ps (mutate linear b)
-  | .letRecIn bs b => .letRecIn (mutateBinds linear bs) (mutate linear b)
-  | .seq a b => .seq (mutate linear a) (mutate linear b)
-  | .ifThen c t e => .ifThen (mutate linear c) (mutate linear t) (mutate linear e)
-  | .matchE s arms => .matchE (mutate linear s) (mutateArms linear arms)
-  | .tryWith b arms => .tryWith (mutate linear b) (mutateArms linear arms)
-  | .record fs => .record (mutateFields linear fs)
-  | .recordWith b fs => .recordWith (mutate linear b) (mutateFields linear fs)
-  | .field e n => .field (mutate linear e) n
-  | .setField e n v => .setField (mutate linear e) n (mutate linear v)
-  | .tuple ps => .tuple (mutates linear ps)
-  | .listLit xs => .listLit (mutates linear xs)
-  | .mkRef e => .mkRef (mutate linear e)
-  | .deref e => .deref (mutate linear e)
-  | .assign r v => .assign (mutate linear r) (mutate linear v)
-  | .raiseE e => .raiseE (mutate linear e)
-  | .perform e => .perform (mutate linear e)
-  | .continueK k v => .continueK (mutate linear k) (mutate linear v)
-  | .discontinueK k e => .discontinueK (mutate linear k) (mutate linear e)
-  | .matchWith c a ty rv r ex ef =>
-      .matchWith (mutate linear c) (mutate linear a) ty rv (mutate linear r)
-        (mutateArms linear ex) (mutateEffc linear ef)
-  | .tryWithEff c a ty ef => .tryWithEff (mutate linear c) (mutate linear a) ty (mutateEffc linear ef)
-  | .annot e ty => .annot (mutate linear e) ty
-  | .hole note fill => .hole note (mutate linear fill)
-  | e => e
-
-def mutates (linear : List String) : List Expr → List Expr
-  | [] => []
-  | e :: rest => mutate linear e :: mutates linear rest
-
-def mutateFields (linear : List String) : List (String × Expr) → List (String × Expr)
-  | [] => []
-  | (n, e) :: rest => (n, mutate linear e) :: mutateFields linear rest
-
-def mutateBinds (linear : List String) :
-    List (String × List String × Expr) → List (String × List String × Expr)
-  | [] => []
-  | (n, ps, e) :: rest => (n, ps, mutate linear e) :: mutateBinds linear rest
-
-def mutateArms (linear : List String) : List Arm → List Arm
-  | [] => []
-  | .mk p g b :: rest =>
-      .mk p (match g with
-             | Option.none => Option.none
-             | Option.some ge => Option.some (mutate linear ge))
-        (mutate linear b) :: mutateArms linear rest
-
-def mutateEffc (linear : List String) : List Effc → List Effc
-  | [] => []
-  | .mk n args k b :: rest => .mk n args k (mutate linear b) :: mutateEffc linear rest
-
-end
-
-mutual
-
-/-- Every `{ … with … }` the pass left behind, named by the field it updates. Empty means the
-pass fired everywhere. -/
-def residue : Expr → List String
-  | .recordWith b fs => fs.map (·.1) ++ residue b ++ residueFields fs
-  | .letIn _ v b => residue v ++ residue b
-  | .ctor _ args => residues args
-  | .app f args => residue f ++ residues args
-  | .binop _ l r => residue l ++ residue r
-  | .fn _ b => residue b
-  | .letRecIn bs b => residueBinds bs ++ residue b
-  | .seq a b => residue a ++ residue b
-  | .ifThen c t e => residue c ++ residue t ++ residue e
-  | .matchE s arms => residue s ++ residueArms arms
-  | .tryWith b arms => residue b ++ residueArms arms
-  | .record fs => residueFields fs
-  | .field e _ => residue e
-  | .setField e _ v => residue e ++ residue v
-  | .tuple ps => residues ps
-  | .listLit xs => residues xs
-  | .mkRef e => residue e
-  | .deref e => residue e
-  | .assign r v => residue r ++ residue v
-  | .raiseE e => residue e
-  | .perform e => residue e
-  | .continueK k v => residue k ++ residue v
-  | .discontinueK k e => residue k ++ residue e
-  | .matchWith c a _ _ r ex ef => residue c ++ residue a ++ residue r ++ residueArms ex
-      ++ residueEffc ef
-  | .tryWithEff c a _ ef => residue c ++ residue a ++ residueEffc ef
-  | .annot e _ => residue e
-  | .hole _ fill => residue fill
-  | _ => []
-
-def residues : List Expr → List String
-  | [] => []
-  | e :: rest => residue e ++ residues rest
-
-def residueFields : List (String × Expr) → List String
-  | [] => []
-  | (_, e) :: rest => residue e ++ residueFields rest
-
-def residueBinds : List (String × List String × Expr) → List String
-  | [] => []
-  | (_, _, e) :: rest => residue e ++ residueBinds rest
-
-def residueArms : List Arm → List String
-  | [] => []
-  | .mk _ g b :: rest =>
-      (match g with | Option.none => [] | Option.some ge => residue ge) ++ residue b
-        ++ residueArms rest
-
-def residueEffc : List Effc → List String
-  | [] => []
-  | .mk _ _ _ b :: rest => residue b ++ residueEffc rest
-
-end
+`Ml.mutate` and `Ml.residue` are in `OCaml5.Ml.Passes`, with the precondition they need stated
+there: the names in the `linear` list are the ones the caller asserts are used linearly, so that
+overwriting the old record is unobservable. What is below is the two functions of A0's request 3,
+each written twice — `…Pure` is the Lean function transcribed with its pure record updates, and
+the rendered declaration is `mutate ["f"] …Pure`. -/
 
 /-! ### The three functions of request 3
 
@@ -1910,6 +1108,9 @@ def preamble : List Decl :=
    .rawD "type bucket = { priority : int; mutable tasks : task list }",
    .rawD "type dispatcher = { mutable buckets : bucket list; mutable armed : bool }",
    .rawD "type control = Program of (unit -> value) | Onstack | Failing of cause | Ended",
+   -- `deep_fibers.ml:180`: the pair of callbacks a store arm answers through, which is what
+   -- `run_fiber.race_answer` holds.
+   .rawD "type kops = { ret : value -> unit; thr : exn -> unit }",
    .rawD "type fork_options = { daemon : bool }"]
 
 /-- The four functions `interrupt_record` calls. `frame_fail` is the hole of request 5: the
@@ -1985,17 +1186,19 @@ for that diff to be meaningful. -/
 #guard ctorName "C" "drainDue" == "CdrainDue"
 #guard ctorName "D" "yieldVerdict" == "DyieldVerdict"
 
--- Request 1: fifteen Lean fields, in the Lean order, mangled.
--- Fifteen Lean fields plus one substitute: `yielding`, which the avatar carries because
--- `Cmd.loop` has none (DIVERGENCE 2).
-#guard Avatar.runFiber.fields.length == 16
+-- Request 1: fifteen Lean fields, in the Lean order, mangled, plus two substitutes with no
+-- Lean counterpart: `yielding`, which the avatar carries because `Cmd.loop` has none
+-- (DIVERGENCE 2), and `race_answer`, which it carries because a race host is resumed by two
+-- tokens (DIVERGENCE 1).
+#guard Avatar.runFiber.fields.length == 17
 #guard (Avatar.runFiber.fields.filter (fun f =>
           match f.kind with | .substitute => false | _ => true)).length == 15
 #guard Avatar.runFiber.fields.map (·.ocaml) ==
   ["id", "frame", "running", "parked", "pending", "finalizing", "exit_", "current_op_count",
-   "max_ops_before_yield", "prevent_yield", "yield_override", "yielding", "observers",
-   "children", "dispatcher", "context"]
-#guard (Avatar.runFiber.fields.filter (·.isMutable)).length == 14
+   "max_ops_before_yield", "prevent_yield", "yield_override", "yielding", "race_answer",
+   "observers", "children", "dispatcher", "context"]
+#guard (Avatar.runFiber.fields.filter (·.isMutable)).length == 15
+#guard Avatar.runFiber.substitutes == ["yielding", "race_answer"]
 
 -- Request 5: `FrameFiber`'s `Prim` pair is a hole, and `prim` never reaches the output.
 #guard Avatar.frameFiber.holes.map (·.1) == ["current", "stack"]
@@ -2038,9 +1241,9 @@ for that diff to be meaningful. -/
 #guard (residue Avatar.interruptRecordPure).length == 6
 -- The rewrite produced mutations, including one through the nested `frame` update.
 #guard ((renderDecl Avatar.parkDecl).splitOn " <- ").length == 3
-#guard ((renderDecl Avatar.interruptRecordDecl).splitOn ").frame).interrupted_cause <- ").length
+#guard ((renderDecl Avatar.interruptRecordDecl).splitOn "f.frame.interrupted_cause <- ").length
   == 2
-#guard ((renderDecl Avatar.interruptRecordDecl).splitOn ").frame).deferred_interrupt <- ").length
+#guard ((renderDecl Avatar.interruptRecordDecl).splitOn "f.frame.deferred_interrupt <- ").length
   == 2
 
 /-! ### Request 4: the `RunDecision` tape, as a wire
@@ -2082,6 +1285,526 @@ def tapeModule (tapes : List (List Expr)) : List Decl :=
         body := .listLit (tapes.map (fun t => .listLit t)) }]]
 
 end Avatar
+
+end Ml
+end OCaml5
+
+/-! ================================================================================
+# SEAT W1 — the remaining `Effect4/Deep` carriers (additive only)
+
+Everything below this banner was added by seat W1 (`docs/research/2026-09-04-seat-w1-deep-port.md`)
+and nothing above it was touched, so that seat W3's refactor of `OCaml5.Ml` can re-export the
+names this section uses without merging into it.
+
+The avatar is one OCaml module per `Effect4/Deep` module, same declaration order, same names and
+field order for every carrier. `Ml.Avatar` describes `Fibers.lean`'s carriers; the namespaces
+below describe the carriers of the other five modules, so that `deep_stores.ml`,
+`deep_context.ml`, `deep_layer.ml`, `deep_forkflow.ml` and `deep_witnesses.ml` are *generated*
+where they are data and hand-written only where they are code.
+
+Rendered by `workshop/OCaml5/avatar/render-deep.lean` (a `lake env lean --run` driver that lives
+in the scratchpad, not in the repository), diffed against the avatar files the way
+`tools/fuzz.sh avatar` diffs `deep_fibers.ml`.
+================================================================================ -/
+
+namespace OCaml5
+namespace Ml
+
+/-- `typeName` with `mangleField`'s keyword escape. `Ml.typeName` does not apply it because no
+`Fibers.lean` carrier needed it; `Stores.lean`'s `Val` and `Layer.lean`'s `St` do — `val` is an
+OCaml keyword. The rule is the file's own: `exit` → `exit_`, so `Val` → `val_`. -/
+def typeName' (s : String) : String :=
+  let e := typeName s
+  if reservedNames.contains e then e ++ "_" else e
+
+/-- Rename the single type a `StructDesc.decl`/`InductiveDesc.decl` produces. Additive: the two
+description structures are not changed, so seat W3's refactor sees them as they were. -/
+def renameDecl (n : String) : Decl → Decl
+  | .types [td] => .types [{ td with name := n }]
+  | d => d
+
+namespace Deep
+
+/-! ## `Effect4/Deep/Stores.lean` → `workshop/OCaml5/avatar/deep_stores.ml` -/
+
+namespace Stores
+
+/-- The substitution table for `deep_stores.ml`. Ten entries are decisions, not derivations, and
+each is a row of the report's divergence table:
+
+* `Val` is **substituted** by the avatar's wire alphabet `value` (`deep_fibers.ml:64`). The two
+  alphabets are different — `Val.fiber`/`.cell`/`.promise`/`.scopeHandle` are one `Vhandle`
+  under the wire's first-seen handle counter, and `Val.exitNil`/`.exitCons` are one `Vlist` —
+  so the map is in the report and not here;
+* `Prim ν σ β ε δ ι α` is `program`, i.e. `unit -> value`: DIVERGENCE 1, a program is OCaml
+  control and not a tree;
+* `Exit β ε δ ι α` and `Exit Unit ε δ ι α` are both `exitv` (`deep_fibers.ml:96`), whose value
+  half is the wire alphabet by the `Val` row above;
+* `Cause`/`Reason`/`ReasonAnnotations` are the avatar's (`:76-77`);
+* `χ` is `unit`: the avatar carries no context service (A0 §18);
+* `FiberId` is `int`. -/
+def subst : Subst :=
+  [("FiberId", Ty.int),
+   ("RefKey", Ty.named "ref_key"),
+   ("DeferredKey", Ty.named "deferred_key"),
+   ("Err", Ty.named "err"),
+   ("Defect", Ty.named "defect"),
+   ("Ann", Ty.unit),
+   ("FnName", Ty.named "fn_name"),
+   ("FinName", Ty.named "fin_name"),
+   ("Ctx", Ty.named "ctx"),
+   ("Val", Ty.named "value"),
+   ("Completion", Ty.named "completion"),
+   ("SyncOp", Ty.named "sync_op"),
+   ("RaceName", Ty.named "race_name"),
+   ("ProgName", Ty.named "prog_name"),
+   ("Name", Ty.named "name"),
+   ("ActionName", Ty.named "action_name"),
+   ("Thunk", Ty.named "thunk"),
+   ("Program", Ty.named "program"),
+   ("Prim", Ty.named "program"),
+   ("RefHeap", Ty.list (Ty.named "value")),
+   ("DeferredCell", Ty.named "deferred_cell"),
+   ("DeferredStore", Ty.named "deferred_store"),
+   ("ScopeEntry", Ty.named "scope_entry"),
+   ("ScopeStore", Ty.named "scope_store"),
+   ("ScopeV", Ty.named "scope"),
+   ("Scope", Ty.named "scope"),
+   ("ScopeState", Ty.named "scope_state"),
+   ("FinalizerStrategy", Ty.named "finalizer_strategy"),
+   ("Exit", Ty.named "exitv"),
+   ("ExitV", Ty.named "exitv"),
+   ("VoidExitV", Ty.named "exitv"),
+   ("Cause", Ty.named "cause"),
+   ("CauseV", Ty.named "cause"),
+   ("Reason", Ty.named "reason"),
+   ("ReasonAnnotations", Ty.list Ty.string),
+   ("ParkKind", Ty.named "park_kind"),
+   ("Supervision.ObserverMode", Ty.named "observer_mode"),
+   ("Supervision.ForkOptions", Ty.named "fork_options"),
+   ("Supervision.ScopeMode", Ty.int),
+   ("χ", Ty.unit)]
+
+private def fid : LTy := .nm "FiberId"
+private def exitL : LTy := .nm "ExitV"
+private def voidExitL : LTy := .nm "VoidExitV"
+private def causeL : LTy := .nm "CauseV"
+private def valL : LTy := .nm "Val"
+
+/-- `RefKey` (`Stores.lean:56`). -/
+def refKey : StructDesc where
+  leanName := "RefKey"; site := "Stores.lean:56"; subst := subst
+  fields := [{ leanName := "index", leanTy := .nat }]
+
+/-- `DeferredKey` (`Stores.lean:62`). -/
+def deferredKey : StructDesc where
+  leanName := "DeferredKey"; site := "Stores.lean:62"; subst := subst
+  fields := [{ leanName := "index", leanTy := .nat }]
+
+/-- `Err` (`Stores.lean:73`), prefix `E`. -/
+def err : InductiveDesc where
+  leanName := "Err"; site := "Stores.lean:73"; ctorPrefix := "E"; subst := subst
+  ctors := [{ leanName := "boom" }, { leanName := "tag", args := [⟨"code", .nat, false⟩] }]
+
+/-- `Defect` (`Stores.lean:81`), prefix `X`. -/
+def defect : InductiveDesc where
+  leanName := "Defect"; site := "Stores.lean:81"; ctorPrefix := "X"; subst := subst
+  ctors := [{ leanName := "notImplemented" }, { leanName := "asyncFiber" },
+            { leanName := "badName" }]
+
+/-- `FnName` (`Stores.lean:94`), prefix `Fn`. -/
+def fnName : InductiveDesc where
+  leanName := "FnName"; site := "Stores.lean:94"; ctorPrefix := "Fn"; subst := subst
+  ctors := [{ leanName := "incr" }, { leanName := "double" }, { leanName := "zeroWhenPositive" },
+            { leanName := "noChange" }, { leanName := "takeAndBump" }]
+
+/-- `FinName` (`Stores.lean:110`), prefix `Fin`. -/
+def finName : InductiveDesc where
+  leanName := "FinName"; site := "Stores.lean:110"; ctorPrefix := "Fin"; subst := subst
+  ctors :=
+    [{ leanName := "interruptFiber", args := [⟨"fiber", fid, false⟩, ⟨"skipSelf", .bool, false⟩] },
+     { leanName := "closeChildScope", args := [⟨"scope", .nat, false⟩] },
+     { leanName := "detachFromParent", args := [⟨"parent", .nat, false⟩, ⟨"key", .nat, false⟩] },
+     { leanName := "release", args := [⟨"label", .nat, false⟩, ⟨"fails", .bool, false⟩] },
+     { leanName := "parkThen", args := [⟨"slot", .nat, false⟩] }]
+
+/-- `Ctx` (`Stores.lean:130`). -/
+def ctx : StructDesc where
+  leanName := "Ctx"; site := "Stores.lean:130"; subst := subst
+  fields :=
+    [{ leanName := "ambientScope", leanTy := .opt .nat },
+     { leanName := "maxOpsBeforeYield", leanTy := .nat },
+     { leanName := "preventYield", leanTy := .bool }]
+
+/-- `Completion` (`Stores.lean:184`), prefix `Co`. -/
+def completion : InductiveDesc where
+  leanName := "Completion"; site := "Stores.lean:184"; ctorPrefix := "Co"; subst := subst
+  ctors := [{ leanName := "ofExit", args := [⟨"exit", exitL, false⟩] },
+            { leanName := "ofRefGet", args := [⟨"cell", .nm "RefKey", false⟩] }]
+
+/-- `SyncOp` (`Stores.lean:193`), 23 constructors, prefix `S`. -/
+def syncOp : InductiveDesc where
+  leanName := "SyncOp"; site := "Stores.lean:193"; ctorPrefix := "S"; subst := subst
+  ctors :=
+    [{ leanName := "refMake", args := [⟨"initial", valL, false⟩] },
+     { leanName := "refGet", args := [⟨"cell", .nm "RefKey", false⟩] },
+     { leanName := "refSet", args := [⟨"cell", .nm "RefKey", false⟩, ⟨"value", valL, false⟩] },
+     { leanName := "refGetAndSet",
+       args := [⟨"cell", .nm "RefKey", false⟩, ⟨"value", valL, false⟩] },
+     { leanName := "refSetAndGet",
+       args := [⟨"cell", .nm "RefKey", false⟩, ⟨"value", valL, false⟩] },
+     { leanName := "refUpdate",
+       args := [⟨"cell", .nm "RefKey", false⟩, ⟨"f", .nm "FnName", false⟩] },
+     { leanName := "refGetAndUpdate",
+       args := [⟨"cell", .nm "RefKey", false⟩, ⟨"f", .nm "FnName", false⟩] },
+     { leanName := "refUpdateAndGet",
+       args := [⟨"cell", .nm "RefKey", false⟩, ⟨"f", .nm "FnName", false⟩] },
+     { leanName := "refUpdateSome",
+       args := [⟨"cell", .nm "RefKey", false⟩, ⟨"pf", .nm "FnName", false⟩] },
+     { leanName := "refGetAndUpdateSome",
+       args := [⟨"cell", .nm "RefKey", false⟩, ⟨"pf", .nm "FnName", false⟩] },
+     { leanName := "refUpdateSomeAndGet",
+       args := [⟨"cell", .nm "RefKey", false⟩, ⟨"pf", .nm "FnName", false⟩] },
+     { leanName := "refModify",
+       args := [⟨"cell", .nm "RefKey", false⟩, ⟨"f", .nm "FnName", false⟩] },
+     { leanName := "refModifySome",
+       args := [⟨"cell", .nm "RefKey", false⟩, ⟨"pf", .nm "FnName", false⟩] },
+     { leanName := "deferredMake" },
+     { leanName := "deferredIsDone", args := [⟨"cell", .nm "DeferredKey", false⟩] },
+     { leanName := "deferredPoll", args := [⟨"cell", .nm "DeferredKey", false⟩] },
+     { leanName := "deferredCompleteWith",
+       args := [⟨"cell", .nm "DeferredKey", false⟩, ⟨"completion", .nm "Completion", false⟩] },
+     { leanName := "deferredInterruptWith",
+       args := [⟨"cell", .nm "DeferredKey", false⟩, ⟨"interruptor", fid, false⟩] },
+     { leanName := "deferredAwaitCleanup",
+       args := [⟨"cell", .nm "DeferredKey", false⟩, ⟨"waiter", fid, false⟩,
+                ⟨"token", .nat, false⟩] },
+     { leanName := "scopeMake", args := [⟨"strategy", .nm "FinalizerStrategy", false⟩] },
+     { leanName := "scopeAdd",
+       args := [⟨"scope", .nat, false⟩, ⟨"key", .nat, false⟩,
+                ⟨"finalizer", .nm "FinName", false⟩] },
+     { leanName := "scopeRemove", args := [⟨"scope", .nat, false⟩, ⟨"key", .nat, false⟩] },
+     { leanName := "scopeIsClosed", args := [⟨"scope", .nat, false⟩] }]
+
+/-- `RaceName` (`Stores.lean:248`), prefix `Rn`. -/
+def raceName : InductiveDesc where
+  leanName := "RaceName"; site := "Stores.lean:248"; ctorPrefix := "Rn"; subst := subst
+  ctors := [{ leanName := "empty" }, { leanName := "successThenSecond" },
+            { leanName := "failThenSuccess" }, { leanName := "failThenFail" }]
+
+/-- `ProgName` (`Stores.lean:265`), 22 constructors, prefix `P`. -/
+def progName : InductiveDesc where
+  leanName := "ProgName"; site := "Stores.lean:265"; ctorPrefix := "P"; subst := subst
+  ctors :=
+    [{ leanName := "value", args := [⟨"v", valL, false⟩] },
+     { leanName := "failCause", args := [⟨"cause", causeL, false⟩] },
+     { leanName := "syncOp", args := [⟨"op", .nm "SyncOp", false⟩] },
+     { leanName := "yieldNow", args := [⟨"priority", .nat, false⟩] },
+     { leanName := "park", args := [⟨"slot", .nat, false⟩] },
+     { leanName := "awaitDeferred", args := [⟨"cell", .nm "DeferredKey", false⟩] },
+     { leanName := "intoDeferred",
+       args := [⟨"body", .nm "ProgName", false⟩, ⟨"cell", .nm "DeferredKey", false⟩] },
+     { leanName := "intoBody",
+       args := [⟨"body", .nm "ProgName", false⟩, ⟨"cell", .nm "DeferredKey", false⟩] },
+     { leanName := "maskedPark", args := [⟨"slot", .nat, false⟩] },
+     { leanName := "awaitFibers", args := [⟨"targets", .lst fid, false⟩] },
+     { leanName := "finalizerOf",
+       args := [⟨"fin", .nm "FinName", false⟩, ⟨"exit", exitL, false⟩] },
+     { leanName := "interruptDeferred", args := [⟨"cell", .nm "DeferredKey", false⟩] },
+     { leanName := "onExitOf",
+       args := [⟨"body", .nm "ProgName", false⟩, ⟨"fin", .nm "FinName", false⟩,
+                ⟨"finalizerInterruptible", .bool, false⟩] },
+     { leanName := "seqOf",
+       args := [⟨"first", .nm "ProgName", false⟩, ⟨"second", .nm "ProgName", false⟩] },
+     { leanName := "forkThen",
+       args := [⟨"child", .nm "ProgName", false⟩,
+                ⟨"options", .nm "Supervision.ForkOptions", false⟩,
+                ⟨"mode", .nm "Supervision.ObserverMode", false⟩] },
+     { leanName := "forkOnly",
+       args := [⟨"child", .nm "ProgName", false⟩,
+                ⟨"options", .nm "Supervision.ForkOptions", false⟩] },
+     { leanName := "forkInScope",
+       args := [⟨"child", .nm "ProgName", false⟩,
+                ⟨"options", .nm "Supervision.ForkOptions", false⟩,
+                ⟨"scope", .nat, false⟩, ⟨"key", .nat, false⟩] },
+     { leanName := "runInScope",
+       args := [⟨"target", fid, false⟩, ⟨"scope", .nat, false⟩, ⟨"key", .nat, false⟩] },
+     { leanName := "forkScopedOf",
+       args := [⟨"child", .nm "ProgName", false⟩,
+                ⟨"options", .nm "Supervision.ForkOptions", false⟩, ⟨"key", .nat, false⟩] },
+     { leanName := "raceOf", args := [⟨"race", .nm "RaceName", false⟩] },
+     { leanName := "closeScopeOf", args := [⟨"scope", .nat, false⟩, ⟨"exit", exitL, false⟩] },
+     { leanName := "awaitAllNew", args := [⟨"body", .nm "ProgName", false⟩] }]
+
+/-- `Name` (`Stores.lean:321`), 20 constructors, prefix `N`. -/
+def name : InductiveDesc where
+  leanName := "Name"; site := "Stores.lean:321"; ctorPrefix := "N"; subst := subst
+  ctors :=
+    [{ leanName := "restore", args := [⟨"exit", exitL, false⟩] },
+     { leanName := "merge", args := [⟨"exit", exitL, false⟩] },
+     { leanName := "seq", args := [⟨"next", .nm "ProgName", false⟩] },
+     { leanName := "joinOn", args := [⟨"mode", .nm "Supervision.ObserverMode", false⟩] },
+     { leanName := "interruptWith", args := [⟨"cell", .nm "DeferredKey", false⟩] },
+     { leanName := "doneInto", args := [⟨"cell", .nm "DeferredKey", false⟩] },
+     { leanName := "constant", args := [⟨"value", valL, false⟩] },
+     { leanName := "exitOfValue" },
+     { leanName := "awaitNew", args := [⟨"snapshot", .lst fid, false⟩] },
+     { leanName := "snapshotThen", args := [⟨"body", .nm "ProgName", false⟩] },
+     { leanName := "registerAwait", args := [⟨"cell", .nm "DeferredKey", false⟩] },
+     { leanName := "cancelAwait", args := [⟨"cell", .nm "DeferredKey", false⟩] },
+     { leanName := "externalRegister", args := [⟨"slot", .nat, false⟩] },
+     { leanName := "abortController" },
+     { leanName := "withWaiter",
+       args := [⟨"base", .nm "Name", false⟩, ⟨"waiter", fid, false⟩, ⟨"token", .nat, false⟩] },
+     { leanName := "reFail", args := [⟨"cause", causeL, false⟩] },
+     { leanName := "finalizerName", args := [⟨"fin", .nm "FinName", false⟩] },
+     { leanName := "closeSeq",
+       args := [⟨"remaining", .lst (.nm "FinName"), false⟩, ⟨"exit", exitL, false⟩,
+                ⟨"captured", .lst (.nm "Reason"), false⟩] },
+     { leanName := "closePar",
+       args := [⟨"remaining", .lst (.nm "FinName"), false⟩, ⟨"exit", exitL, false⟩,
+                ⟨"forked", .lst fid, false⟩, ⟨"closerInterruptible", .bool, false⟩] },
+     { leanName := "mergeAwaitedExits" }]
+
+/-- `ActionName` (`Stores.lean:377`), 17 constructors, prefix `A`. Arm for arm with
+`Fibers.lean`'s `WithFiberAction` (`Ml.Avatar.withFiberAction`), except that every `Prim`
+argument is a `ProgName` here — which is the whole point of the name alphabet. -/
+def actionName : InductiveDesc where
+  leanName := "ActionName"; site := "Stores.lean:377"; ctorPrefix := "A"; subst := subst
+  ctors :=
+    [{ leanName := "fork",
+       args := [⟨"program", .nm "ProgName", false⟩,
+                ⟨"options", .nm "Supervision.ForkOptions", false⟩] },
+     { leanName := "forkIn",
+       args := [⟨"program", .nm "ProgName", false⟩,
+                ⟨"options", .nm "Supervision.ForkOptions", false⟩,
+                ⟨"scope", .nat, false⟩, ⟨"key", .nat, false⟩] },
+     { leanName := "forkScoped",
+       args := [⟨"program", .nm "ProgName", false⟩,
+                ⟨"options", .nm "Supervision.ForkOptions", false⟩, ⟨"key", .nat, false⟩] },
+     { leanName := "runIn",
+       args := [⟨"target", fid, false⟩, ⟨"scope", .nat, false⟩, ⟨"key", .nat, false⟩] },
+     { leanName := "interrupt", args := [⟨"target", fid, false⟩] },
+     { leanName := "interruptScoped", args := [⟨"target", fid, false⟩] },
+     { leanName := "interruptAll",
+       args := [⟨"targets", .lst fid, false⟩, ⟨"interruptor", .opt fid, false⟩] },
+     { leanName := "awaitAll", args := [⟨"targets", .lst fid, false⟩] },
+     { leanName := "snapshotChildren" },
+     { leanName := "awaitNewChildren", args := [⟨"snapshot", .lst fid, false⟩] },
+     { leanName := "raceAll", args := [⟨"race", .nm "RaceName", false⟩] },
+     { leanName := "setContext", args := [⟨"context", .nm "Ctx", false⟩] },
+     { leanName := "getContext" },
+     { leanName := "getId" },
+     { leanName := "closeScope", args := [⟨"scope", .nat, false⟩, ⟨"exit", exitL, false⟩] },
+     { leanName := "setInterruptible",
+       args := [⟨"body", .nm "ProgName", false⟩, ⟨"flag", .bool, false⟩] },
+     { leanName := "refuse", args := [⟨"cause", causeL, false⟩] }]
+
+/-- `Thunk` (`Stores.lean:403`), prefix `T`. -/
+def thunk : InductiveDesc where
+  leanName := "Thunk"; site := "Stores.lean:403"; ctorPrefix := "T"; subst := subst
+  ctors :=
+    [{ leanName := "park", args := [⟨"kind", .nm "ParkKind", false⟩] },
+     { leanName := "act", args := [⟨"action", .nm "ActionName", false⟩] },
+     { leanName := "op", args := [⟨"operation", .nm "SyncOp", false⟩] },
+     { leanName := "body", args := [⟨"program", .nm "ProgName", false⟩] }]
+
+/-! ### `Effect4/Runtime/Scope.lean`
+
+`ScopeStore` is keyed `Effect4.Scope`s, "reused unchanged" (`Stores.lean:850`). There is no
+OCaml module for `Effect4/Runtime` in this pass — the seat's frame is one module per
+`Effect4/Deep` module — so the two carriers the store needs are described here and rendered into
+`deep_stores.ml` under their own banner, with their Lean site named. -/
+
+/-- `FinalizerStrategy` (`Scope.lean:39`), prefix `Fs`. -/
+def finalizerStrategy : InductiveDesc where
+  leanName := "FinalizerStrategy"; site := "Scope.lean:39"; ctorPrefix := "Fs"; subst := subst
+  ctors := [{ leanName := "sequential" }, { leanName := "parallel" }]
+
+/-- `ScopeState` (`Scope.lean:71`), five states, prefix `Ss`. `κ` is `Nat` and `φ` is `FinName`
+at this instantiation (`ScopeV`, `Stores.lean:850`). -/
+def scopeState : InductiveDesc where
+  leanName := "ScopeState"; site := "Scope.lean:71"; ctorPrefix := "Ss"; subst := subst
+  ctors :=
+    [{ leanName := "empty" },
+     { leanName := "openEmpty" },
+     { leanName := "openInline",
+       args := [⟨"key", .nat, false⟩, ⟨"finalizer", .nm "FinName", false⟩] },
+     { leanName := "openMap",
+       args := [⟨"entries", .lst (.nm "ScopeEntryPair"), false⟩] },
+     { leanName := "closed", args := [⟨"exit", exitL, false⟩] }]
+
+/-- `Scope` (`Scope.lean:86`). -/
+def scope : StructDesc where
+  leanName := "Scope"; site := "Scope.lean:86"; subst := subst
+  fields :=
+    [{ leanName := "strategy", leanTy := .nm "FinalizerStrategy" },
+     { leanName := "state", leanTy := .nm "ScopeState", isMutable := true }]
+
+/-! ### The three stores -/
+
+/-- `DeferredCell` (`Stores.lean:653`). Both fields are `mutable`: DIVERGENCE 3, the pure
+updates of `DeferredStore.register`/`cancel`/`complete` are in-place writes here. -/
+def deferredCell : StructDesc where
+  leanName := "DeferredCell"; site := "Stores.lean:653"; subst := subst
+  fields :=
+    [{ leanName := "completion", leanTy := .opt (.nm "Completion"), isMutable := true,
+       comment := Option.some "Lean: `Option Program`; see the report" },
+     { leanName := "waiters", leanTy := .lst (.nm "WaiterPair"), isMutable := true }]
+
+/-- `DeferredStore` (`Stores.lean:663`). -/
+def deferredStore : StructDesc where
+  leanName := "DeferredStore"; site := "Stores.lean:663"; subst := subst
+  fields :=
+    [{ leanName := "cells", leanTy := .lst (.nm "DeferredCell"), isMutable := true },
+     { leanName := "due", leanTy := .lst (.nm "DuePair"), isMutable := true }]
+
+/-- `ScopeEntry` (`Stores.lean:859`). -/
+def scopeEntry : StructDesc where
+  leanName := "ScopeEntry"; site := "Stores.lean:859"; subst := subst
+  fields :=
+    [{ leanName := "key", leanTy := .nat },
+     { leanName := "scope", leanTy := .nm "ScopeV", isMutable := true }]
+
+/-- `ScopeStore` (`Stores.lean:867`). -/
+def scopeStore : StructDesc where
+  leanName := "ScopeStore"; site := "Stores.lean:867"; subst := subst
+  fields := [{ leanName := "entries", leanTy := .lst (.nm "ScopeEntry"), isMutable := true }]
+
+/-- `Stores` (`Stores.lean:1002`), the `St` of this profile. -/
+def stores : StructDesc where
+  leanName := "Stores"; site := "Stores.lean:1002"; subst := subst
+  fields :=
+    [{ leanName := "refs", leanTy := .nm "RefHeap", isMutable := true },
+     { leanName := "deferreds", leanTy := .nm "DeferredStore" },
+     { leanName := "scopes", leanTy := .nm "ScopeStore" },
+     { leanName := "nextName", leanTy := .nat, isMutable := true }]
+
+/-- The tuple aliases the descriptions above name, because `LTy` has no product head: a
+`ScopeState.openMap` entry is `Nat × FinName`, a waiter is `FiberId × Nat`, and a due resume is
+`FiberId × Nat × Prim`. -/
+def tupleAliases : List Decl :=
+  [.rawD "type scope_entry_pair = int * fin_name",
+   .rawD "type waiter_pair = int * int",
+   .rawD "(* `FiberId × Nat × Prim`; the `Prim` is the avatar's `answer` (DIVERGENCE 1). *)",
+   .rawD "type due_pair = int * int * answer"]
+
+def structs : List StructDesc :=
+  [refKey, deferredKey, ctx, scope, deferredCell, deferredStore, scopeEntry, scopeStore, stores]
+
+def inductives : List InductiveDesc :=
+  [err, defect, fnName, finName, completion, syncOp, raceName, progName, name, actionName,
+   thunk, finalizerStrategy, scopeState]
+
+/-- The generated carriers of `deep_stores.ml`, in dependency order (which is not the Lean order:
+`FinalizerStrategy` and `ScopeState` come from `Scope.lean`, and OCaml needs a type before its
+use — P5 §11.7 finding 4). -/
+def generatedHead : List Decl :=
+  [.comment ("Generated by OCaml5.Ml (`Render.lean`, seat W1). Do not edit; edit the"
+      ++ " descriptions.\n   One declaration per `Effect4/Deep/Stores.lean` carrier, same field"
+      ++ " and constructor order."),
+   refKey.header, renameDecl "ref_key" refKey.decl,
+   deferredKey.header, renameDecl "deferred_key" deferredKey.decl,
+   err.header, renameDecl "err" err.decl,
+   defect.header, renameDecl "defect" defect.decl,
+   fnName.header, renameDecl "fn_name" fnName.decl,
+   finName.header, renameDecl "fin_name" finName.decl,
+   .comment ("The tuple aliases the descriptions name, because `LTy` has no product head."
+      ++ " `answer` is `deep_fibers.ml:131`.")]
+
+/-- The carriers after the tuple aliases. -/
+def generatedTail : List Decl :=
+  [.comment "`Effect4/Runtime/Scope.lean`: the two carriers `ScopeStore` is made of.",
+   finalizerStrategy.header, renameDecl "finalizer_strategy" finalizerStrategy.decl,
+   scopeState.header, renameDecl "scope_state" scopeState.decl,
+   scope.header, renameDecl "scope" scope.decl,
+   ctx.header, renameDecl "ctx" ctx.decl,
+   completion.header, renameDecl "completion" completion.decl,
+   syncOp.header, renameDecl "sync_op" syncOp.decl,
+   raceName.header, renameDecl "race_name" raceName.decl,
+   .comment ("`ProgName`, `Name`, `ActionName` and `Thunk` are one mutually recursive group in"
+      ++ " OCaml, which Lean does not need because its four are separate inductives over"
+      ++ " already-declared types. Order inside the group is the Lean order."),
+   progName.header, renameDecl "prog_name" progName.decl,
+   name.header, renameDecl "name" name.decl,
+   actionName.header, renameDecl "action_name" actionName.decl,
+   thunk.header, renameDecl "thunk" thunk.decl,
+   .comment "The three stores and the `St` over them.",
+   deferredCell.header, renameDecl "deferred_cell" deferredCell.decl,
+   deferredStore.header, renameDecl "deferred_store" deferredStore.decl,
+   scopeEntry.header, renameDecl "scope_entry" scopeEntry.decl,
+   scopeStore.header, renameDecl "scope_store" scopeStore.decl,
+   stores.header, renameDecl "stores" stores.decl]
+
+/-- The generated carriers of `deep_stores.ml`: the head, the tuple aliases, the tail. -/
+def generated : List Decl := generatedHead ++ tupleAliases ++ generatedTail
+
+end Stores
+
+end Deep
+
+/-! ### Checks on the seat-W1 descriptions
+
+Counts and names pinned the way `Ml.Avatar`'s are: constructor counts against the Lean file,
+field order against the Lean field order, and the mangling round-trip on every field name. -/
+
+-- The keyword escape for type names, and the reason it exists.
+#guard typeName "Val" == "val"
+#guard typeName' "Val" == "val_"
+#guard typeName' "RunFiber" == "run_fiber"
+#guard typeName' "SyncOp" == "sync_op"
+
+-- `Stores.lean`'s constructor counts.
+#guard Deep.Stores.err.ctors.length == 2
+#guard Deep.Stores.defect.ctors.length == 3
+#guard Deep.Stores.fnName.ctors.length == 5
+#guard Deep.Stores.finName.ctors.length == 5
+#guard Deep.Stores.completion.ctors.length == 2
+#guard Deep.Stores.syncOp.ctors.length == 23
+#guard Deep.Stores.raceName.ctors.length == 4
+#guard Deep.Stores.progName.ctors.length == 22
+#guard Deep.Stores.name.ctors.length == 20
+#guard Deep.Stores.actionName.ctors.length == 17
+#guard Deep.Stores.thunk.ctors.length == 4
+#guard Deep.Stores.finalizerStrategy.ctors.length == 2
+#guard Deep.Stores.scopeState.ctors.length == 5
+
+-- `ActionName` is arm for arm with `WithFiberAction` — the same 17 names — but *not* in the
+-- same order: `setInterruptible` is `WithFiberAction`'s twelfth and `ActionName`'s sixteenth.
+-- A0 §3 lists no such row, so it is seat W1's, and `deep_stores.ml` follows the `Stores.lean`
+-- order because that is the file it is the port of.
+#guard (Deep.Stores.actionName.ctors.map (·.leanName)).all
+  (fun n => (Avatar.withFiberAction.ctors.map (·.leanName)).contains n)
+#guard (Avatar.withFiberAction.ctors.map (·.leanName)).all
+  (fun n => (Deep.Stores.actionName.ctors.map (·.leanName)).contains n)
+#guard Deep.Stores.actionName.ctors.map (·.leanName) !=
+  Avatar.withFiberAction.ctors.map (·.leanName)
+
+-- Field order, in the Lean order, mangled.
+#guard Deep.Stores.stores.fields.map (·.ocaml) == ["refs", "deferreds", "scopes", "next_name"]
+#guard Deep.Stores.deferredCell.fields.map (·.ocaml) == ["completion", "waiters"]
+#guard Deep.Stores.deferredStore.fields.map (·.ocaml) == ["cells", "due"]
+#guard Deep.Stores.scopeEntry.fields.map (·.ocaml) == ["key", "scope"]
+#guard Deep.Stores.ctx.fields.map (·.ocaml) ==
+  ["ambient_scope", "max_ops_before_yield", "prevent_yield"]
+
+-- The mangling is injective on every name this section renders.
+#guard (Deep.Stores.structs.flatMap (fun d => d.fields.map (·.leanName))).all
+  (fun n => unmangleField (mangleField n) == n)
+
+-- No description erases an argument: every `Stores.lean` constructor is arity for arity.
+#guard Deep.Stores.inductives.all (fun d => d.erasures.isEmpty)
+#guard Deep.Stores.inductives.all (fun d => d.arities.all (fun a => a.2.1 == a.2.2))
+
+-- The names `deep_stores.ml` uses.
+#guard Deep.Stores.syncOp.ctors.map (CtorDesc.ocaml "S") ==
+  ["SrefMake", "SrefGet", "SrefSet", "SrefGetAndSet", "SrefSetAndGet", "SrefUpdate",
+   "SrefGetAndUpdate", "SrefUpdateAndGet", "SrefUpdateSome", "SrefGetAndUpdateSome",
+   "SrefUpdateSomeAndGet", "SrefModify", "SrefModifySome", "SdeferredMake", "SdeferredIsDone",
+   "SdeferredPoll", "SdeferredCompleteWith", "SdeferredInterruptWith", "SdeferredAwaitCleanup",
+   "SscopeMake", "SscopeAdd", "SscopeRemove", "SscopeIsClosed"]
+#guard Deep.Stores.scopeState.ctors.map (CtorDesc.ocaml "Ss") ==
+  ["Ssempty", "SsopenEmpty", "SsopenInline", "SsopenMap", "Ssclosed"]
 
 end Ml
 end OCaml5
