@@ -1,4 +1,0 @@
-{
-  "manifests": ["CAS-001.json", "CAS-002.json", "CAS-004.json", "CMP-002.json", "MRK-001.json", "MRK-002.json", "MRK-003.json", "MRK-005.json", "MRK-006.json", "MRK-007.json", "MRK-011.json", "MRK-012.json", "MRK-014.json", "MRK-015.json", "MRK-018.json", "MRK-020.json", "RMT-001.json", "RMT-002.json", "RMT-003.json", "RMT-004.json", "RMT-005.json", "RMT-006.json", "RMT-007.json", "RMT-008.json", "RMT-014.json", "RMT-015.json", "RMT-017.json", "RPL-002.json", "RPL-003.json", "RPL-004.json", "RPL-005.json", "SES-001.json", "SES-002.json", "SES-003.json", "SRV-001.json"],
-  "model": "effects-model@0.3.0"
-}

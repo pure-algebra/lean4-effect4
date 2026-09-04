@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# The sweep: every gate of the trace, lowering, citation and runtime-census
-# lanes, in dependency order, one process at a time.
+# The sweep: every gate of the citation and runtime-census lanes, in dependency
+# order, one process at a time.
 #
 # This is the entry point. Before it there was no sweep, only a scratchpad of
 # `.log` files and fifteen of fifty-seven scripts that somebody remembered to
@@ -18,12 +18,10 @@
 # Generators before checkers -- each drift gate regenerates from Lean inside
 # itself, so this is a property of the gates rather than of the list. Then
 # hermetic before host: the Lean-only gates need no node and no installed
-# Effect, they are the ones CI can run, and a golden that has drifted from Lean
-# should be reported before a minute of host runs against it. Then the host
-# lane, `check-trace-host.sh` first because it is what establishes that the
-# committed TypeScript modules are still Lean's. Self-tests last: they plant
-# defects and ask whether the gates catch them, which is only worth asking once
-# the gates have passed on the real tree.
+# Effect, and they are the ones CI can run. Since the trace, lowering and
+# family lanes were archived to branch `archive/flow-route` on 2026-09-04,
+# every remaining gate is hermetic and there is no host lane; the `host` column
+# and the `--hermetic` filter are kept for the gates that come back.
 #
 # ## Stamps
 #
@@ -63,18 +61,8 @@ done
 # needs no node and no installed Effect package, and `host` when it does.
 gate_table() {
   cat <<'GATES'
-hermetic|trace-goldens|scripts/check-trace-goldens.sh
-hermetic|lowering-coverage|scripts/check-lowering-coverage.sh
 hermetic|internal-citations|scripts/check-internal-citations.sh
 hermetic|effect-runtime-census|scripts/check-effect-runtime-census.sh
-host|trace-host|scripts/check-trace-host.sh
-host|lowering-types|scripts/check-lowering-types.sh
-host|trace-patched|scripts/check-trace-patched.sh
-host|lowering-property|scripts/check-lowering-property.sh
-host|effect-v4-family|harness/effect-v4-family/check.sh
-hermetic|lowering-coverage-gate|scripts/test-lowering-coverage-gate.sh
-host|trace-goldens-gate|scripts/test-trace-goldens-gate.sh
-host|lowering-mutations|scripts/test-lowering-mutations.sh
 GATES
 }
 

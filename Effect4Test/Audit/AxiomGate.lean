@@ -88,7 +88,6 @@ private def auditImplementationModules : List Name :=
   , `Effect4Test.Data.RowAssurance
   , `Effect4Test.Environment.ContextKeyAssurance
   , `Effect4Test.Audit.RuntimeCoverage
-  , `Effect4Test.Target.TypeScript.LoweringCoverage
   ]
 
 /--
@@ -147,19 +146,6 @@ private def choiceImplementationDeclarations : List Name :=
   , ``Effect4.Target.TypeScript.EffectfulField.source?
   , ``Effect4.Target.TypeScript.EffectfulField.generate?
   , ``Effect4.Target.TypeScript.EffectfulField.source_contains_directional_rows
-  -- The label-scoping laws whose *statements* name Effect4's printer.
-  -- `Skeleton.render` spells `a<block>` and compares `spec.requestTy`, so it
-  -- already crosses the boundary above and a theorem about its output inherits
-  -- the crossing. The scoping law itself — `emitNode_wellScoped`,
-  -- `emitWith_wellScoped` over `Structuring.emitWith`, and its discharge for
-  -- Effect4's own lowering, `skeletonBlockWith_wellScoped` and
-  -- `skeletonBody_wellScoped` — is `String`-free at the skeleton and stays at
-  -- the ceiling; only the four transports through `render` are admitted, by
-  -- exact declaration.
-  , ``Effect4.Target.Structured.render_wellScoped
-  , ``Effect4.Target.Structured.renderList_wellScoped
-  , ``Effect4.Target.Structured.renderCases_wellScoped
-  , ``Effect4.Target.Structured.structuredBody_wellScoped
   -- The Effect v4 profile: service-class, method-type and LLM-sheet renderers,
   -- and the module assemblers that concatenate their output. The profile's
   -- own row and spelling *data* are `String`-free and are not here.
@@ -175,96 +161,18 @@ private def choiceImplementationDeclarations : List Name :=
   , ``Effect4.Target.EffectV4.module?
   , ``Effect4.Target.EffectV4.modules?
   , ``Effect4.Target.EffectV4.source?
-  , ``Effect4.Target.EffectV4.flowModules?
-  , ``Effect4.Target.EffectV4.regionModules?
-  , ``Effect4.Target.EffectV4.structuredModules?
-  -- The lowering forms: dispatch, region and structured, plus the call and
-  -- acquire helpers they spell (`Lowering.callOf` in `SkeletonRender.lean`).
-  -- Their *laws* live in `String`-free modules and are absent from this list,
-  -- which is the point of naming declarations rather than the modules they sit
-  -- in.
-  , ``Effect4.Target.EffectV4.Flow.lowerBest
-  , ``Effect4.Target.EffectV4.Flow.lowerBlock
-  , ``Effect4.Target.EffectV4.Flow.lowerDispatch
-  -- The multi-root entry (lowering lane L1, `docs/research/2026-09-03-lowering-l1-fiber-profile.md`):
-  -- the entry renderer, the per-root declarations, and the byte-identity theorem that names
-  -- a renderer. Measured by `#print axioms`; `Skeleton.lean` itself stays choice-free.
-  , ``Effect4.Target.EffectV4.Flow.lowerEntry
-  , ``Effect4.Target.EffectV4.Flow.lowerRoots
-  , ``Effect4.Target.EffectV4.Flow.lowerDispatch_single_root_eq
-  , ``Effect4.Target.EffectV4.Flow.lowerRootsBest
-  , ``Effect4.Target.EffectV4.Flow.lowerBest_single_root_eq
-  , ``Effect4.Target.EffectV4.Region.lowerEntry
-  , ``Effect4.Target.EffectV4.Region.lowerRoots
-  , ``Effect4.Target.EffectV4.Region.lowerDispatch_single_root_eq
-  , ``Effect4.Target.EffectV4.Region.lowerRootsBest
-  , ``Effect4.Target.EffectV4.Region.lowerBest_single_root_eq
   -- The namespace set a generated module imports, computed from the rendered
   -- declarations (`Spelling.namespacesOf` over text), so it crosses like they do.
   , ``Effect4.Target.EffectV4.moduleNamespaces
-  , ``Effect4.Target.EffectV4.Flow.lowerStructured
-  , ``Effect4.Target.EffectV4.Region.lowerBest
-  , ``Effect4.Target.EffectV4.Region.lowerDispatch
-  , ``Effect4.Target.EffectV4.Region.lowerStructured
   , ``Effect4.Target.EffectV4.Script.lower
-  , ``Effect4.Target.EffectV4.Lowering.callOf
-  , ``Effect4.Target.EffectV4.Lowering.dispatchFallback
   , ``Effect4.Target.EffectV4.Lowering.serviceAcquire
-  -- The control-skeleton printer, `Effect4/Target/TypeScript/SkeletonRender.lean`.
-  -- `emitNode_eq` and `emitWith_eq`, the bridge theorems saying Effect4's
-  -- emitter is the pinned package's emitter node for node, are deliberately NOT
-  -- here: they are clean, they live in `Skeleton.lean` on the other side of the
-  -- split, and the gate proves it instead of a comment asserting it.
-  , ``Effect4.Target.EffectV4.Skeleton.render
-  , ``Effect4.Target.EffectV4.Skeleton.renderList
-  , ``Effect4.Target.EffectV4.Skeleton.renderCases
-  -- The tracer's golden-text emitter.
-  , ``Effect4.Target.TypeScript.Trace.escape
-  , ``Effect4.Target.TypeScript.Trace.val
-  , ``Effect4.Target.TypeScript.Trace.outcome
-  , ``Effect4.Target.TypeScript.Trace.row
-  , ``Effect4.Target.TypeScript.Trace.rows
-  , ``Effect4.Target.TypeScript.Trace.golden
-  -- The family DSL's command elaborators. `CommandElabM` reaches
-  -- `Classical.choice` the way every `MetaM` audit here does; these four
-  -- declare no theorem.
-  , ``Effect4.Meta._aux_Effect4_Meta_Derive___elabRules_Effect4_Meta_commandEffect_atoms_Importing_Where__1
-  , ``Effect4.Meta._aux_Effect4_Meta_Derive___elabRules_Effect4_Meta_commandEffect_atoms_Where__1
-  , ``Effect4.Meta._aux_Effect4_Meta_Derive___elabRules_Effect4_Meta_commandEffect_signature_Where__1
-  , ``Effect4.Meta.«_aux_Effect4_Meta_Derive___elabRules_Effect4_Meta_commandEffect_program_(_:_)Over_:_:=__1»
-  -- `effect_atoms` declared inside a battery emits `<Name>.source`, the generated
-  -- `atoms.ts` text: a renderer output, admitted exactly like the production one.
-  , `Effect4Test.Counterexamples.Target.AnswerProfile.ProbeAtoms.source
-  , `Effect4Test.Target.TypeScript.AnswerProfileContract.ProfileAtoms.source
-  -- The same `<Name>.source` of the five atoms blocks the store families declare
-  -- under `Effect4/` (`atomsModule` over their rows, which are themselves
-  -- axiom-free, as are their `eval` dispatchers). Each is one crossing to text;
-  -- nothing semantic in those modules is admitted with it.
-  , `Effect4.RefFamily.RefFns.source
-  , `Effect4.DeferredFamily.DeferredAtoms.source
-  , `Effect4.ScopeFamily.ScopeAtoms.source
-  , `Effect4.LayerFamily.LayerAtoms.source
-  , `Effect4.ContextFamily.ContextAtoms.source
   ]
 
 /-- Private rendering helpers are identified by exact owner and original name,
-never a namespace prefix or Lean's unstable private-name counter. The eleven
-`Effect4.Meta` entries are the family DSL's own spelling and literal builders,
-which the elaborators above call. -/
+never a namespace prefix or Lean's unstable private-name counter. -/
 private def choiceImplementationPrivateDeclarations : List (Name × Name) :=
   [ (`Effect4.Target.TypeScript.EffectfulField,
       `Effect4.Target.TypeScript.EffectfulField.directionalRowsPresent)
-  , (`Effect4.Meta.Derive, `Effect4.Meta.atomImportTerm)
-  , (`Effect4.Meta.Derive, `Effect4.Meta.elabEffectAtoms)
-  , (`Effect4.Meta.Derive, `Effect4.Meta.listLit)
-  , (`Effect4.Meta.Derive, `Effect4.Meta.pairLit)
-  , (`Effect4.Meta.Derive, `Effect4.Meta.productOf)
-  , (`Effect4.Meta.Derive, `Effect4.Meta.pureOfTerm)
-  , (`Effect4.Meta.Derive, `Effect4.Meta.pureOfTermFuel)
-  , (`Effect4.Meta.Derive, `Effect4.Meta.spellingOfType)
-  , (`Effect4.Meta.Derive, `Effect4.Meta.spellingOfTypeFuel)
-  , (`Effect4.Meta.Derive, `Effect4.Meta.tsOfType)
-  , (`Effect4.Meta.Derive, `Effect4.Meta.tupleOf)
   ]
 
 private def forbiddenAxioms : List Name :=

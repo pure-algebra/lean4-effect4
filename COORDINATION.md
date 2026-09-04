@@ -2939,3 +2939,22 @@ when the goal is a conjunction (split it with `⟨by omega, by omega⟩`) and ca
 reach it on `UInt8.toNat` atoms, so state the arithmetic over `Nat` and
 instantiate; and `String.utf8EncodeChar_eq_singleton` reaches it, so the ASCII
 single-byte fact must come from `utf8EncodeChar`'s own first branch.
+
+## The prod cleanup: the Flow route archived, 2026-09-04
+
+Plan and rulings: `docs/research/2026-09-04-prod-cleanup-inventory.md` (§6, D1–D11). Archive
+branch `archive/flow-route` at `606918e` keeps every file reachable. Coordinator: the PC session
+(`lean4-effect4-32`). Disjoint from the Surface, Char and Pin lanes: nothing under
+`Effect4/Surface/**`, `Effect4/Char/**`, `Effect4/Store/**`, `Effect4Test/Surface/**`,
+`Effect4Test/Counterexamples/Surface/**`, `test/contracts/surface-*`, `vendor/wrangler-*`, or
+`workshop/**` is touched.
+
+### Claims
+
+| File or tree | Claimed by | State |
+| --- | --- | --- |
+| `Effect4/Deep/ForkFlow.lean`, `Effect4/Flow/**`, `Effect4/Semantics/*` except `Cause`/`Exit`, `Effect4/Target/TypeScript/*` except `EffectV4`/`Schema`/`EffectfulField`, `Effect4/Stateful/**`, `Effect4/Runtime/ScopeFamily.lean`, `Effect4/Context/ContextFamily.lean`, `Effect4/Layer/**`, `Effect4/Meta/**` (deleted); `Effect4/Deep/Layer.lean`, `Effect4/Deep/Clauses.lean` (two sections removed); `Effect4.lean` (removed import lines only), `Effect4Test.lean`, `lakefile.toml` (removed libs only), `Effect4Test/Audit/AxiomGate.lean` (removed entries only), `Effect4Test/Audit/RuntimeCoverage.lean` (two rows re-pointed) | PC coordinator | commit 1, in progress |
+| `Effect4Test/Flow/**`, `Effect4Test/Counterexamples/Flow/**`, the batteries of the deleted modules under `Effect4Test/Semantics`, `Effect4Test/Target/TypeScript`, `Effect4Test/Counterexamples/{Runtime,Semantics,Target}` (deleted) | PC coordinator | commit 1 |
+| `scripts/` (trace, lowering, foldlab, corpus, fiber-representative, supervision-evidence gates deleted; `sweep.sh` rows), `.github/workflows/lean_action_ci.yml` (foldlab step), `harness/trace/**`, `harness/effect-v4-family/**`, `harness/README.md`, `generated/traces/**`, `generated/lowering-*.tsv`, `test/contracts/` (flow, frame-simulation, region, structure, answer-profile, lowering-property, trace-patched-host, algebra, foldlab packets), `test/port/**`, `vendor/foldlab/**`, `PORT-MANIFEST.md`, `docs/{TRACE-DAG,LOWERING-COVERAGE,TYPESCRIPT-TARGET-DAG,EFFECTS-SPLIT-PLAN,ALGEBRA-PACKAGE-PLAN}.md`, one history note at the top of `test/counterexamples/REGISTER.md` | PC records agent | commit 1 |
+| `.gitignore`, un-tracking `docs/research/`, `COORDINATION.md`, `PLAN.md`, `misty-frolicking-naur.md`, `output/`, `workshop/`; `AGENTS.md`, `README.md`, `docs/ARCHITECTURE.md`, `docs/AGENT-ROUTING.md` rewrites | PC coordinator | commit 2, **after the Mac has committed or stashed its `docs/research` and `workshop/Char` edits** |
+| `Effect4/Api.lean` (the facade), comment trims per module | PC coordinator + agents | commits 3+ |

@@ -1,4 +1,0 @@
-import Effect4.Target.TypeScript.StructureSemantics
-
-#print axioms Effect4.Target.EffectV4.skeletonStructured_denote_of_fuelFor_le
-#print axioms Effect4.Target.EffectV4.skeletonStructured_denote_dispatch_of_emitted

@@ -3,7 +3,7 @@ import Effect4.Arch.Accepts
 import Effect4.Schema.Authoring
 import Effect4.Store.Store
 import Effect4.Target.TypeScript.EffectV4
-import Effect4.Layer.LayerFamily
+import Effect4.Deep.Layer
 import Effect4.Data.Row
 import Effect4.Context.Key
 
@@ -35,9 +35,9 @@ namespace Effect4.Arch
 
 open Effect4 Effect4.Schema Effect4.Store
 open Effect4.Target.EffectV4 (OpRow ServiceRow)
-open Effect4.LayerFamily (LayerDesc)
+open Effect4.Deep.Layers (LayerDesc LayerId CombineMode)
 
-/-! ## Service: a family's rows -/
+/-! ## Service: a profile's rows -/
 
 /-- One operation of a service. -/
 def operationRep : Representation :=
@@ -72,51 +72,35 @@ def operationJson (row : OpRow) : Json :=
 def serviceJson (rows : ServiceRow) : Json :=
   .obj [("name", .str rows.name), ("ops", .arr (rows.ops.map operationJson))]
 
-/-! ## Layer graph: what a layer store declares -/
+/-! ## Layer graph: what a layer table declares
+
+The carrier is the Deep machine's `LayerDesc` (`Effect4/Deep/Layer.lean`): a layer is its
+construction (`atom`, `memoized`), a child scope, a `fresh`, a `provideWith` under its
+combine mode, or a `mergeAll`. Constructions are opaque to the view; only the layer graph
+(ids, kinds, arguments, dependency edges) crosses. -/
 
 def layerKind : LayerDesc → String
-  | .succeed _ => "succeed"
-  | .effect _ => "effect"
-  | .scopedIn _ => "scoped"
-  | .provide _ _ => "provide"
-  | .provideMerge _ _ => "provideMerge"
-  | .merge _ _ => "merge"
-  | .mergeAll _ => "mergeAll"
+  | .atom _ => "atom"
+  | .memoized _ => "memoized"
+  | .childScope _ => "childScope"
   | .fresh _ => "fresh"
-  | .memoize _ => "memoize"
-  | .orDie _ => "orDie"
-  | .unwrap _ => "unwrap"
+  | .provideWith _ _ .provide => "provide"
+  | .provideWith _ _ .provideMerge => "provideMerge"
+  | .mergeAll _ => "mergeAll"
 
 def layerArgs : LayerDesc → List Nat
-  | .succeed s => [s]
-  | .effect s => [s]
-  | .scopedIn s => [s]
-  | .provide l d => [l, d]
-  | .provideMerge l d => [l, d]
-  | .merge l r => [l, r]
-  | .mergeAll ls => ls
-  | .fresh l => [l]
-  | .memoize l => [l]
-  | .orDie l => [l]
-  | .unwrap l => [l]
+  | .atom _ => []
+  | .memoized _ => []
+  | .childScope l => [l.index]
+  | .fresh l => [l.index]
+  | .provideWith l d _ => [l.index, d.index]
+  | .mergeAll ls => ls.map LayerId.index
 
 /-- The layers a description builds on: the edges of the layer graph. -/
-def layerDependencies : LayerDesc → List Nat
-  | .succeed _ => []
-  | .effect _ => []
-  | .scopedIn _ => []
-  | .provide l d => [l, d]
-  | .provideMerge l d => [l, d]
-  | .merge l r => [l, r]
-  | .mergeAll ls => ls
-  | .fresh l => [l]
-  | .memoize l => [l]
-  | .orDie l => [l]
-  | .unwrap l => [l]
+def layerDependencies : LayerDesc → List Nat := layerArgs
 
 def layerKinds : List String :=
-  ["succeed", "effect", "scoped", "provide", "provideMerge", "merge", "mergeAll", "fresh",
-   "memoize", "orDie", "unwrap"]
+  ["atom", "memoized", "childScope", "fresh", "provide", "provideMerge", "mergeAll"]
 
 /-- The layer graph: every declared layer with its kind and arguments, and the
 dependency edges. -/
@@ -125,7 +109,7 @@ def layerDoc : Document :=
       struct
         [ property "layers" (array (struct
             [ property "id" number
-            , property "kind" (anyOf (literalString "succeed") (layerKinds.tail.map literalString))
+            , property "kind" (anyOf (literalString "atom") (layerKinds.tail.map literalString))
             , property "args" (array number) ]))
         , property "edges" (array (struct [property "from" number, property "to" number])) ]
     references := [] }

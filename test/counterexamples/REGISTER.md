@@ -1,5 +1,13 @@
 # Effect4 counterexample register
 
+2026-09-04: the Flow route was archived off `main` to branch
+`archive/flow-route` (decision D1 of
+`docs/research/2026-09-04-prod-cleanup-inventory.md`). Every row below whose
+attacked module now lives only on that branch — the flow, region, structure,
+lowering, trace, family and foldlab lanes — is kept here as history: its ID
+still resolves and is never reused, but no battery on `main` checks it any
+more. Read those rows against the archive branch, not against this tree.
+
 Stable IDs in this file are never reused. A row closes only when its witness
 is retained and the repaired declaration or theorem mechanically rejects the
 attack. `PINNED` means the witness already exists at the named immutable source

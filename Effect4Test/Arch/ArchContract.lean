@@ -16,30 +16,29 @@ import Effect4.Arch.Accepts
 namespace Effect4Test.Arch.ArchContract
 
 open Effect4 Effect4.Arch Effect4.StdLib Effect4.Store
-open Effect4.LayerFamily (LayerDesc)
+open Effect4.Deep.Layers (LayerDesc)
 
 /-! ## The views accept their projections -/
 
-#guard accepts serviceDoc (serviceJson Effect4.ContextFamily.Contexts.rows)
-#guard accepts serviceDoc (serviceJson Effect4.LayerFamily.Layers.rows)
-#guard accepts serviceDoc (serviceJson Effect4.RefFamily.Refs.rows)
-#guard accepts serviceDoc (serviceJson Effect4.DeferredFamily.Deferreds.rows)
-#guard accepts serviceDoc (serviceJson Effect4.ScopeFamily.Scopes.rows)
-#guard accepts serviceDoc (serviceJson Effect4.Target.EffectV4.fibersRowsNat)
-
+-- A service view of an empty profile row table is accepted.
+#guard accepts serviceDoc (serviceJson ⟨"Empty", []⟩)
 -- A service payload with a missing required property is refused.
 #guard !(accepts serviceDoc (.obj [("name", .str "X")]))
 -- A wrongly typed property is refused.
 #guard !(accepts serviceDoc (.obj [("name", .str "X"), ("ops", .str "no")]))
 
--- The layer graph of a small declared store: two effect layers, their merge,
--- and a provide over the merge.
+-- The layer graph of a small declared table: two atoms, a provide of one over
+-- the other, a merge of the first with the provide, and a fresh over the merge.
 def layers : List (Nat × LayerDesc) :=
-  [(0, .effect 0), (1, .effect 1), (2, .merge 0 1), (3, .provide 2 0), (4, .mergeAll [2, 3])]
+  [ (0, .atom (.succeedContext []))
+  , (1, .atom (.succeedContext []))
+  , (2, .provideWith ⟨0⟩ ⟨1⟩ .provide)
+  , (3, .mergeAll [⟨0⟩, ⟨2⟩])
+  , (4, .fresh ⟨3⟩) ]
 
 #guard accepts layerDoc (layersJson layers)
-#guard (layers.map fun entry => (layerDependencies entry.2)) = [[], [], [0, 1], [2, 0], [2, 3]]
-#guard layerKinds.length = 11
+#guard (layers.map fun entry => (layerDependencies entry.2)) = [[], [], [0, 1], [0, 2], [3]]
+#guard layerKinds.length = 7
 
 #guard accepts requirementDoc (requirementJson (Row.normalize [⟨⟨4⟩, ⟨0⟩⟩, ⟨⟨5⟩, ⟨1⟩⟩]))
 #guard accepts requirementDoc (requirementJson Row.empty)
@@ -63,7 +62,7 @@ def layers : List (Nat × LayerDesc) :=
 /-! ## The views generate their app face -/
 
 #guard (Target.TypeScript.Schema.generate? "ArchService" serviceDoc
-  [("contexts", serviceJson Effect4.ContextFamily.Contexts.rows)]).isSome
+  [("empty", serviceJson ⟨"Empty", []⟩)]).isSome
 #guard (Target.TypeScript.Schema.generate? "ArchLayers" layerDoc [("sample", layersJson layers)]).isSome
 #guard (Target.TypeScript.Schema.generate? "ArchRequirement" requirementDoc []).isSome
 #guard (Target.TypeScript.Schema.generate? "ArchStore" storeDoc []).isSome
@@ -117,16 +116,15 @@ def layers : List (Nat × LayerDesc) :=
 /-! ## The links -/
 
 #guard links.all Link.checked
-#guard links.length = 65
--- What the census refuses to link: the family's `scoped` row names no export.
+#guard links.length = 36
+-- What the census refuses to link: `Layer.scoped` is a construction, not an export.
 #guard (rc112.resolve ["Layer", "scoped"]).isNone
-#guard (Effect4.LayerFamily.Layers.rows.row? "scoped").isSome
 #guard (semanticsOf ["Effect", "gen"]).map (·.2) = some [.prim "iterator"]
-#guard (semanticsOf ["Ref", "get"]).map (·.2) = some [.prim "sync", .syncOp "refGet", .row "Refs" "get"]
+#guard (semanticsOf ["Ref", "get"]).map (·.2) = some [.prim "sync", .syncOp "refGet"]
 -- A path with an entry but no link held yet answers the entry and no references.
 #guard (semanticsOf ["Effect", "map"]).map (·.2) = some []
--- A reference to an operation a family does not have is not declared.
-#guard !(ModelRef.declared (.row "Refs" "teleport"))
+-- A reference to an operation the model does not have is not declared.
+#guard !(ModelRef.declared (.syncOp "refTeleport"))
 #guard !(ModelRef.declared (.prim "onStep"))
 
 /-! ## Axiom receipts -/

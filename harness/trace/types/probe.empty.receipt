@@ -1,5 +1,0 @@
-format	effect4-type-receipt-v1
-program	probe.empty
-typescript	7.0.2
-fixture.d.ts	sha256=e135d44cf638ea05b54aa6926a72e8e6a153198c17463234013587648cc752fd
-line	export declare const probe: (n: number) => Effect.Effect<number, never, Tri>;

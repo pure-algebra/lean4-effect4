@@ -1,5 +1,0 @@
-format	effect4-type-receipt-v1
-program	flow/swap.twice
-typescript	7.0.2
-flow-fixture.d.ts	sha256=103db3d9ab24c4919fc56c7bc3f902631ff79b60dd4902d71d73c1d4e164f541
-line	export declare const swap: (n: number) => Effect.Effect<number, never, Decisions>;

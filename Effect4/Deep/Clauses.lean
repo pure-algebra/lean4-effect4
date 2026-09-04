@@ -1,5 +1,4 @@
 import Effect4.Deep.Fibers
-import Effect4.Context.ContextFamily
 
 /-!
 # Deep.Clauses
@@ -279,14 +278,9 @@ theorem flushRoot_round (interp : RunInterp ν σ β ε δ ι α χ St) (fuel ro
       stepDecision.flushRoot interp fuel root rounds (stepDecision.fire interp fuel m root) := by
   simp [stepDecision.flushRoot, h, hb, hs]
 
-/-- The two budget references default to `2048` and `false` (`Scheduler.ts:269-272`,
-`:295-298`), read off an ambient context the family models; the machine reads them through
-`RunInterp.budgetOf`. census: scheduler.max-ops-default -/
-theorem budget_defaults (store : Effect4.ContextFamily.ContextStore)
-    (h : store.ambient = Option.none) :
-    (store.referenceValue .maxOpsBeforeYield).getD 2048 = 2048 ∧
-      (((store.referenceValue .preventSchedulerYield).getD 0) != 0) = false :=
-  ⟨Effect4.ContextFamily.maxOps_default store h, Effect4.ContextFamily.preventYield_default store h⟩
+/-! The two budget references default to `2048` and `false` (`Scheduler.ts:269-272`,
+`:295-298`); the machine reads them through `RunInterp.budgetOf`, and the defaults are
+`Effect4.Deep.Env.hooks_empty` (`Effect4/Deep/Context.lean`). -/
 
 /-! ## Yield now, and the resume guard -/
 

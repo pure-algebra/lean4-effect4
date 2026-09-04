@@ -1,9 +1,0 @@
-format	effect4-lowering-property-v1
-generator	scripts/generate-lowering-property.sh	sha256=2353a09f2b91b304a94581b1a8d3ceb634b1c4d8c151125a53d920a8f8f702bb
-regenerate	./scripts/generate-lowering-property.sh > generated/lowering-property.tsv
-input	harness/trace/Property.lean	sha256=c7597698b4fff1581c3c083c095736ad39e7047e336f1a7712a7b19a0a449b5d
-input	harness/trace/property-tail.ts	sha256=c057251a8214399a0526decc4762872acbabc00bc9a623ca83e078bad6b6ff87
-input	harness/trace/tracer.ts	sha256=4c3cb1ea339bc36efb972aa2118d2ddbb6a61f15ae4702a5a40ceaece2890ef3
-input	Effect4/Target/TypeScript/FlowLower.lean	sha256=1aff0e0833991b270cb46c6f2022e2d8bc69c7a733338ebfa22365c23f8f6742
-pin	effects	a11715748b04f2369e5031e3350f30b99862a07f
-row	seed	2026	generated	200	admitted	200	runs	1277	frontiers	276	sites	318	digest	sha256=e9520c3aa2868fd567ffee30f8308a9a258d83351a6ffc9592ba8dcd5cee1470

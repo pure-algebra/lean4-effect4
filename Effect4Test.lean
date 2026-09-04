@@ -35,56 +35,6 @@ import Effect4Test.Target.TypeScript.EffectfulFieldContract
 import Effect4Test.Target.TypeScript.EffectfulFieldAxiomReport
 import Effect4Test.Counterexamples.Target.EffectfulField
 import Effect4Test.Semantics.CauseExitContract
-import Effect4Test.Semantics.ObservationContract
-import Effect4Test.Flow.RunnerContract
-import Effect4Test.Semantics.DenotationContract
-import Effect4Test.Semantics.ApproximationContract
-import Effect4Test.Semantics.ApproximationAxiomReport
-import Effect4Test.Semantics.RegionDenotationContract
-import Effect4Test.Semantics.RegionTotalContract
-import Effect4Test.Semantics.RegionTotalAxiomReport
-import Effect4Test.Semantics.RegionSafetyContract
-import Effect4Test.Semantics.RegionSafetyAxiomReport
-import Effect4Test.Flow.RegionRunnerContract
-import Effect4Test.Flow.InterruptContract
-import Effect4Test.Target.TypeScript.RegionLowerContract
-import Effect4Test.Target.TypeScript.StructuredLowerContract
-import Effect4Test.Target.TypeScript.StructureLawsContract
-import Effect4Test.Target.TypeScript.StructureLawsAxiomReport
-import Effect4Test.Target.TypeScript.StructureOrderContract
-import Effect4Test.Target.TypeScript.StructureOrderAxiomReport
-import Effect4Test.Target.TypeScript.StructureComputedContract
-import Effect4Test.Target.TypeScript.StructureComputedAxiomReport
-import Effect4Test.Target.TypeScript.StructureSemanticsContract
-import Effect4Test.Target.TypeScript.StructureSemanticsAxiomReport
-import Effect4Test.Counterexamples.Target.BreakScoped
-import Effect4Test.Counterexamples.Target.RegionSimulationBoundary
-import Effect4Test.Target.TypeScript.SkeletonSemanticsContract
-import Effect4Test.Target.TypeScript.SkeletonSemanticsAxiomReport
-import Effect4Test.Target.TypeScript.SimulationContract
-import Effect4Test.Target.TypeScript.TraceWire
-import Effect4Test.Flow.RunnerAxiomReport
-import Effect4Test.Semantics.PlanInversionAxiomReport
-import Effect4Test.Semantics.DenotationAxiomReport
-import Effect4Test.Semantics.LogicContract
-import Effect4Test.Semantics.LogicAxiomReport
-import Effect4Test.Semantics.EquivalenceAxiomReport
-import Effect4Test.Semantics.RegionDenotationAxiomReport
-import Effect4Test.Counterexamples.Flow.Runner
-import Effect4Test.Counterexamples.Flow.BranchValue
-import Effect4Test.Counterexamples.Flow.Interrupt
-import Effect4Test.Counterexamples.Flow.InterruptMaskBoundary
-import Effect4Test.Flow.DeferredsContract
-import Effect4Test.Flow.DeferredsAxiomReport
-import Effect4Test.Counterexamples.Flow.Deferreds
-import Effect4Test.Target.TypeScript.FlowLowerContract
-import Effect4Test.Target.TypeScript.MultiArgContract
-import Effect4Test.Target.TypeScript.FiberProfileContract
-import Effect4Test.Target.TypeScript.ScriptDenotationContract
-import Effect4Test.Target.TypeScript.ScriptDenotationAxiomReport
-import Effect4Test.Target.TypeScript.LoweringCoverage
-import Effect4Test.Target.TypeScript.AnswerProfileContract
-import Effect4Test.Counterexamples.Target.AnswerProfile
 import Effect4Test.Semantics.CauseExitAxiomReport
 import Effect4Test.Counterexamples.Semantics.CauseExit
 import Effect4Test.Runtime.ScopeContract
@@ -98,27 +48,9 @@ import Effect4Test.Counterexamples.Runtime.Scope
 import Effect4Test.Runtime.FramesContract
 import Effect4Test.Runtime.FramesAxiomReport
 import Effect4Test.Counterexamples.Runtime.Frames
-import Effect4Test.Semantics.FrameSimulationContract
-import Effect4Test.Semantics.FrameSimulationAxiomReport
-import Effect4Test.Semantics.RegionSimulationContract
-import Effect4Test.Semantics.RegionSimulationAxiomReport
-import Effect4Test.Flow.LayersContract
-import Effect4Test.Flow.LayersAxiomReport
-import Effect4Test.Counterexamples.Semantics.Layers
-import Effect4Test.Flow.RefsContract
-import Effect4Test.Flow.RefsAxiomReport
-import Effect4Test.Counterexamples.Runtime.Refs
-import Effect4Test.Flow.ScopesContract
-import Effect4Test.Flow.ScopesAxiomReport
-import Effect4Test.Flow.ContextsContract
-import Effect4Test.Flow.ContextsAxiomReport
 import Effect4Test.Runtime.LiveStackContract
 import Effect4Test.Runtime.LiveStackAxiomReport
 import Effect4Test.Counterexamples.Runtime.LiveStack
-import Effect4Test.Flow.JobRunnerContract
-import Effect4Test.Counterexamples.Flow.JobRunner
-import Effect4Test.Counterexamples.Target.JobRequest
-import Effect4Test.Counterexamples.Target.TupleRequest
 import Effect4Test.Store.StoreContract
 import Effect4Test.Arch.ArchContract
 import Effect4Test.Syntax.PrintContract
@@ -132,7 +64,8 @@ import Effect4Test.Audit.AxiomGate
 
 The default Lake build imports every admitted contract, attack, and kernel
 dependency report through this root. A test file not reachable here is not a
-passing gate.
+passing gate. The batteries of the Flow route live on branch
+`archive/flow-route` (`docs/research/2026-09-04-prod-cleanup-inventory.md`).
 -/
 
 #effect4_axiom_gate

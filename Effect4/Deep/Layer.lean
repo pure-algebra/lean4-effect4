@@ -1,6 +1,5 @@
 import Effect4.Deep.Context
 import Effect4.Runtime.Scope
-import Effect4.Layer.LayerFamily
 
 /-!
 # Deep spike S5, part 2: the Layer store, and the machine instantiated at `Ctx`
@@ -2044,49 +2043,5 @@ def finProgCount (program : ProgName) : Nat :=
 #guard finProgCount w1 = 2
 #guard witnessScopes w10 = [(0, true)]
 end Witnesses
-
-/-! ## The forgetful join to `Effect4.LayerFamily`
-
-`Effect4/Layer/LayerFamily.lean` is the *traced* face of the same machinery: a `LayerStore`
-of memo maps with a parent, observer counts, a construction ledger and a live set, rendered as
-the `Layers` family's rows. The join runs one way only, and that module's docstring already
-records why (`Effect4/Layer/LayerFamily.lean:36-54`): the store counts observers exactly and a
-host trace cannot, so the direction that exists is the one that *forgets*. What it forgets
-here is the Deferred, the layer scope's finalizer list, and the program an entry's `effect`
-is; what it carries is the identity, the layer scope and the count. -/
-
-section ForgetfulJoin
-
-/-- A `Deep` memo entry as the family's: the count and the layer scope cross, the Deferred and
-the entry program do not. `service` is the family's constructed-service handle, which this
-model does not mint — the caller supplies it. -/
-def forgetEntry (layer : LayerId) (service : Nat) (e : MemoEntry) :
-    Effect4.LayerFamily.MemoEntry :=
-  ⟨layer.index, service, e.layerScope, e.observers⟩
-
-/-- A whole map: the parent chain the family's `memoChain` walks is the one carried here. -/
-def forgetMap (m : MemoMap) : Effect4.LayerFamily.MemoMap :=
-  ⟨m.parent.map MemoMapId.index, m.entries.map fun e => forgetEntry e.1 e.1.index e.2⟩
-
-/-- The count is preserved, so `memoGet`'s bump and the family's `bumpObservers` agree.
-census: layer.memo-reuse-observer-count -/
-theorem forget_observers (layer : LayerId) (service : Nat) (e : MemoEntry) :
-    (forgetEntry layer service { e with observers := e.observers + 1 }).observers =
-      (forgetEntry layer service e).observers + 1 := rfl
-
-/-- The layer scope crosses, so `Layers.scopeOf` reads the scope `memoMapBuild` allocated. -/
-theorem forget_layerScope (layer : LayerId) (service : Nat) (e : MemoEntry) :
-    (forgetEntry layer service e).scope = e.layerScope := rfl
-
-/-- The parent crosses, so the family's parent-chain lookup is this model's `MemoWorld.lookup`
-read forgetfully. census: layer.memo-map-parent-lookup -/
-theorem forget_parent (m : MemoMap) : (forgetMap m).parent = m.parent.map MemoMapId.index := rfl
-
-/-- A fresh map has no parent on either side. census: layer.fresh-drops-memoization -/
-theorem forget_fresh (id : MemoMapId) :
-    (forgetMap ⟨id, none, []⟩).parent = none ∧ (forgetMap ⟨id, none, []⟩).entries = [] :=
-  ⟨rfl, rfl⟩
-
-end ForgetfulJoin
 
 end Effect4.Deep.Layers

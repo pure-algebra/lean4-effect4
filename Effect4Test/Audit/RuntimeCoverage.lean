@@ -9,7 +9,6 @@ import Effect4.Deep.Clauses
 import Effect4.Deep.Stores
 import Effect4.Deep.Layer
 import Effect4.Deep.Witnesses
-import Effect4.Context.ContextFamily
 
 /-!
 # Effect v4 fiber runtime coverage
@@ -2459,27 +2458,15 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
           Effect4.Deep.drive interp (fuel + 1) m (Effect4.Deep.Cmd.resume id token answer :: rest) =
             Effect4.Deep.drive interp fuel m rest)
 
-#check (@Effect4.Deep.budget_defaults :
-  ∀ (store : Effect4.ContextFamily.ContextStore),
-    store.ambient = Option.none →
-      (store.referenceValue Effect4.ContextFamily.Reference.maxOpsBeforeYield).getD 2048 = 2048 ∧
-        ((store.referenceValue Effect4.ContextFamily.Reference.preventSchedulerYield).getD 0 != 0) = Bool.false)
-
-#check (@Effect4.ContextFamily.maxOps_default :
-  ∀ (store : Effect4.ContextFamily.ContextStore),
-    store.ambient = Option.none →
-      (store.referenceValue Effect4.ContextFamily.Reference.maxOpsBeforeYield).getD 2048 = 2048)
+#check (@Effect4.Deep.Env.hooks_empty :
+  Effect4.Deep.Env.ambientScope Effect4.Deep.Env.Context.empty = Option.none ∧
+    Effect4.Deep.Env.budgetOf Effect4.Deep.Env.Context.empty = (2048, Bool.false))
 
 #check (@Effect4.Deep.injectYield_prevented :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
     [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St)
     (f : Effect4.Deep.RunFiber ν σ β ε δ ι α χ) (yielding : Bool),
     f.preventYield = Bool.true → Effect4.Deep.injectYield m f yielding = Option.none)
-
-#check (@Effect4.ContextFamily.preventYield_default :
-  ∀ (store : Effect4.ContextFamily.ContextStore),
-    store.ambient = Option.none →
-      ((store.referenceValue Effect4.ContextFamily.Reference.preventSchedulerYield).getD 0 != 0) = Bool.false)
 
 #check (@Effect4.Deep.stepDecision_abort :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
@@ -5438,12 +5425,11 @@ private def censusRows : List Row :=
         , w `Effect4.Deep.drive_resume_not_parked "propext,Quot.sound" ] }
   , { id := "scheduler.max-ops-default", kind := "scheduler", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Deep.budget_defaults "propext,Quot.sound"
-        , w `Effect4.ContextFamily.maxOps_default "propext" ] }
+        [ w `Effect4.Deep.Env.hooks_empty "propext" ] }
   , { id := "scheduler.prevent-yield-default", kind := "scheduler", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Deep.injectYield_prevented "propext"
-        , w `Effect4.ContextFamily.preventYield_default "propext,Quot.sound" ] }
+        , w `Effect4.Deep.Env.hooks_empty "propext" ] }
   , { id := "scheduler.host-loop", kind := "scheduler", disposition := "targetOnly", coverage := "absent", witnesses := [] }
   , { id := "exit.success-failure", kind := "exit", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
@@ -6156,10 +6142,8 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Deep.drive_resume_wrong_token
   , `Effect4.Deep.drive_resume_guard
   , `Effect4.Deep.drive_resume_not_parked
-  , `Effect4.Deep.budget_defaults
-  , `Effect4.ContextFamily.maxOps_default
+  , `Effect4.Deep.Env.hooks_empty
   , `Effect4.Deep.injectYield_prevented
-  , `Effect4.ContextFamily.preventYield_default
   , `Effect4.Deep.stepDecision_abort
   , `Effect4.Deep.runCallback_eq
   , `Effect4.Deep.fireObserver_callback

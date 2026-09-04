@@ -1,3 +1,4 @@
+-- The core alphabet: requirement rows, JSON, optics.
 import Effect4.Data.Row
 import Effect4.Data.Json
 import Effect4.Data.Optic
@@ -10,23 +11,12 @@ import Effect4.Store.Digest
 import Effect4.Store.Trie
 import Effect4.Store.Store
 import Effect4.Store.Pin
-import Effect4.Flow.Region
-import Effect4.Flow.Decision
-import Effect4.Flow.Interrupt
+-- The error channel everywhere.
 import Effect4.Semantics.Cause
 import Effect4.Semantics.Exit
-import Effect4.Semantics.Frontier
-import Effect4.Semantics.Runs
-import Effect4.Semantics.Fuel
-import Effect4.Semantics.PlanInversion
-import Effect4.Semantics.Denotation
-import Effect4.Semantics.RegionDenotation
-import Effect4.Semantics.RegionTotal
-import Effect4.Semantics.RegionSafety
-import Effect4.Semantics.Approximation
-import Effect4.Semantics.Observation
-import Effect4.Semantics.Equivalence
-import Effect4.Semantics.Logic
+-- The Schema data plane: the persisted carrier, the annotation data plane, the
+-- checker, the authoring face, and the value, getter, transformation, codec,
+-- registry and foreign rows.
 import Effect4.Schema.Payload
 import Effect4.Schema.Representation
 import Effect4.Schema.Annotations
@@ -40,65 +30,45 @@ import Effect4.Schema.Transformation
 import Effect4.Schema.Codec
 import Effect4.Schema.Registry
 import Effect4.Schema.Foreign
+-- Service keys, the rc.112 scope state machine, the frame alphabet (`Prim`,
+-- `PrimInterp`, `FrameFiber`), and the frame-level facts that still pin it.
 import Effect4.Context.Key
-import Effect4.Context.ContextFamily
-import Effect4.Layer.LayerFamily
 import Effect4.Runtime.Scope
-import Effect4.Runtime.ScopeFamily
 import Effect4.Runtime.ScopeMachine
 import Effect4.Runtime.ScopeRestoration
 import Effect4.Runtime.Runtime
 import Effect4.Runtime.LiveStack
--- Packet D4 fence B. Above both Semantics and Runtime: it imports the frame
--- machine. See `test/contracts/frame-simulation.contract.md` ruling 5.
-import Effect4.Semantics.FrameSimulation
+-- Fiber ids and the supervision vocabulary the machine speaks.
 import Effect4.Concurrency.Fiber
 import Effect4.Concurrency.Supervision
-import Effect4.Stateful.RefFamily
-import Effect4.Stateful.DeferredFamily
+-- The Effect TypeScript target: the pinned v4 profile (spellings, service
+-- rows), and the Schema and annotated-field generators.
 import Effect4.Target.TypeScript.EffectV4
-import Effect4.Target.TypeScript.Trace
-import Effect4.Target.TypeScript.ScriptFlow
-import Effect4.Target.TypeScript.ScriptDenotation
-import Effect4.Target.TypeScript.Skeleton
-import Effect4.Target.TypeScript.FlowLower
-import Effect4.Target.TypeScript.RegionLower
-import Effect4.Target.TypeScript.StructuredLower
-import Effect4.Target.TypeScript.StructureLaws
-import Effect4.Target.TypeScript.StructureOrder
-import Effect4.Target.TypeScript.StructureDominators
-import Effect4.Target.TypeScript.StructureSemantics
-import Effect4.Target.TypeScript.SkeletonSemantics
-import Effect4.Target.TypeScript.Lower
 import Effect4.Target.TypeScript.Schema
 import Effect4.Target.TypeScript.EffectfulField
-import Effect4.Target.TypeScript.Simulation
--- Packet D4, the finalizer half. Above Runtime, Flow and the trace bridge:
--- it relates the region runner to the frame machine under a mask.
-import Effect4.Semantics.RegionSimulation
 -- The reference machine (docs/research/2026-09-03-deep-plan.md): one
 -- program-carrying fiber machine over the rc.112 frames, the stores it drives,
--- the witnesses over them, the fork-profile compile, and the Context and Layer
--- models. Promoted from the `workshop/Deep` spike on 2026-09-04; the old fiber
--- and scheduler carriers were retired the same day
--- (`docs/research/2026-09-04-retire-old-machines.md`).
+-- the witnesses over them, and the Context and Layer models. Promoted from the
+-- `workshop/Deep` spike on 2026-09-04; the old fiber and scheduler carriers
+-- were retired the same day (`docs/research/2026-09-04-retire-old-machines.md`)
+-- and the Flow route (the Effects-flow compile and its simulations) was
+-- archived to branch `archive/flow-route` the same day
+-- (`docs/research/2026-09-04-prod-cleanup-inventory.md`).
 import Effect4.Deep.Fibers
 import Effect4.Deep.Clauses
 import Effect4.Deep.Stores
 import Effect4.Deep.Witnesses
-import Effect4.Deep.ForkFlow
 import Effect4.Deep.Context
 import Effect4.Deep.Layer
 -- The middle tier (2026-09-04): architecture views as Effect Schema documents
 -- with payloads projected from the proof carriers, the JSON canonical form that
 -- makes schemas store content, the structural acceptance checker, and the
--- pinned standard library as store entries with checked links to the model.
+-- pinned standard library as store entries.
 import Effect4.Arch.JsonCanonical
 import Effect4.Arch.Accepts
 import Effect4.Arch.Views
 import Effect4.StdLib.Entry
 import Effect4.StdLib.Rc112
-import Effect4.StdLib.Links
 -- The Surface library (docs/research/2026-09-04-surface-library-plan.md), wave
 -- 1a: the substrate. `Kind` is the typed embedding, a representation with a
 -- kernel-checked kind, so an ill-kinded slot of a surface is unrepresentable
@@ -152,13 +122,14 @@ import Effect4.Char.Queue.Grade
 import Effect4.Char.Queue.Mutants
 -- The AST relation (docs/research/2026-09-04-ast-relation-plan.md), lane A1:
 -- the Effect TS program syntax `Eff` and its typing, first-order and
--- decidable throughout; the printer, the compile and the parser follow.
+-- decidable throughout; the printer, the compile and the parser follow. `Eff`
+-- is the one program IR of this library; it compiles to the frame alphabet the
+-- Deep machine runs.
 import Effect4.Syntax.Eff
 import Effect4.Syntax.Typing
 import Effect4.Syntax.Print
 import Effect4.Syntax.Native
 import Effect4.Syntax.Compile
-import Effect4.Meta.Derive
 
 /-!
 # Effect4

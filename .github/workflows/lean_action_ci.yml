@@ -11,8 +11,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
-      - name: Check sealed Foldlab evidence vendor
-        run: ./scripts/test-vendor-foldlab.sh
       - uses: leanprover/lean-action@v1
         with:
           auto-config: false
@@ -24,16 +22,14 @@ jobs:
         run: ./scripts/test-schema-structural-assurance-gate.sh
       - name: Verify Effect runtime census join
         run: ./scripts/check-effect-runtime-census.sh
-      # The hermetic lane of the sweep: the trace, lowering, citation and
-      # census gates, which regenerate from Lean and compare bytes and need no
-      # node and no installed Effect package. They ran nowhere but a
-      # hand-driven local sweep until wave 0, which is why both of their drift
-      # gates were red on main without anyone noticing (survey finding H5).
-      # They are portable since scripts/lib/portable.sh replaced
-      # `shasum -a 256` and `sed -i ''` (finding H36); `check-trace-goldens.sh`
-      # is also one Lean process rather than seventy (finding H11). This step
-      # replaces the four that used to be spelled out here one by one; the
-      # census above is inside the subset too and hits its stamp the second
-      # time, so it costs nothing to leave both.
+      # The hermetic lane of the sweep: the internal-citations and
+      # effect-runtime-census gates, which regenerate from Lean and compare
+      # bytes and need no node and no installed Effect package. Gates ran
+      # nowhere but a hand-driven local sweep until wave 0, which is why drift
+      # gates could stay red on main without anyone noticing (survey finding
+      # H5). They are portable since scripts/lib/portable.sh replaced
+      # `shasum -a 256` and `sed -i ''` (finding H36). The census above is
+      # inside the subset too and hits its stamp the second time, so it costs
+      # nothing to leave both.
       - name: Sweep the hermetic gates
         run: ./scripts/sweep.sh --hermetic

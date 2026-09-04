@@ -40,10 +40,6 @@ name = "Effect4TestSchema"
 globs = ["Effect4Test.Schema.+"]
 
 [[lean_lib]]
-name = "Effect4TestFlow"
-globs = ["Effect4Test.Flow.+"]
-
-[[lean_lib]]
 name = "Effect4TestSemantics"
 globs = ["Effect4Test.Semantics.+"]
 
@@ -70,10 +66,6 @@ globs = ["Effect4Test.Data.+"]
 [[lean_lib]]
 name = "Effect4TestEnvironment"
 globs = ["Effect4Test.Environment.+"]
-
-[[lean_lib]]
-name = "Effect4TestProtocol"
-globs = ["Effect4Test.Protocol.+"]
 
 [[lean_lib]]
 name = "Effect4TestSyntax"
@@ -118,11 +110,3 @@ globs = ["Effect4Test.Arch.+"]
 [[lean_lib]]
 name = "Effect4TestDeep"
 globs = ["Effect4Test.Deep.+"]
-
-# Design spike for docs/research/2026-09-03-ocaml5-deep-plan.md: OCaml 5 effect handlers and
-# js_of_ocaml's effects pass as a reference machine. Not a default target, not an audited
-# source; the landing home is a sibling package of `effects`.
-[[lean_lib]]
-name = "OCaml5"
-srcDir = "workshop"
-globs = ["OCaml5.+"]
