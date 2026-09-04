@@ -193,6 +193,16 @@ private def choiceImplementationDeclarations : List Name :=
   , ``Effect4.Target.EffectV4.Flow.lowerEntry
   , ``Effect4.Target.EffectV4.Flow.lowerRoots
   , ``Effect4.Target.EffectV4.Flow.lowerDispatch_single_root_eq
+  , ``Effect4.Target.EffectV4.Flow.lowerRootsBest
+  , ``Effect4.Target.EffectV4.Flow.lowerBest_single_root_eq
+  , ``Effect4.Target.EffectV4.Region.lowerEntry
+  , ``Effect4.Target.EffectV4.Region.lowerRoots
+  , ``Effect4.Target.EffectV4.Region.lowerDispatch_single_root_eq
+  , ``Effect4.Target.EffectV4.Region.lowerRootsBest
+  , ``Effect4.Target.EffectV4.Region.lowerBest_single_root_eq
+  -- The namespace set a generated module imports, computed from the rendered
+  -- declarations (`Spelling.namespacesOf` over text), so it crosses like they do.
+  , ``Effect4.Target.EffectV4.moduleNamespaces
   , ``Effect4.Target.EffectV4.Flow.lowerStructured
   , ``Effect4.Target.EffectV4.Region.lowerBest
   , ``Effect4.Target.EffectV4.Region.lowerDispatch
@@ -227,6 +237,15 @@ private def choiceImplementationDeclarations : List Name :=
   -- `atoms.ts` text: a renderer output, admitted exactly like the production one.
   , `Effect4Test.Counterexamples.Target.AnswerProfile.ProbeAtoms.source
   , `Effect4Test.Target.TypeScript.AnswerProfileContract.ProfileAtoms.source
+  -- The same `<Name>.source` of the five atoms blocks the store families declare
+  -- under `Effect4/` (`atomsModule` over their rows, which are themselves
+  -- axiom-free, as are their `eval` dispatchers). Each is one crossing to text;
+  -- nothing semantic in those modules is admitted with it.
+  , `Effect4.RefFamily.RefFns.source
+  , `Effect4.DeferredFamily.DeferredAtoms.source
+  , `Effect4.ScopeFamily.ScopeAtoms.source
+  , `Effect4.LayerFamily.LayerAtoms.source
+  , `Effect4.ContextFamily.ContextAtoms.source
   ]
 
 /-- Private rendering helpers are identified by exact owner and original name,

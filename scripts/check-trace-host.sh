@@ -145,7 +145,6 @@ regenerate flow-fixture harness/trace/flow-fixture.ts
 regenerate structured-fixture harness/trace/structured-fixture.ts
 regenerate scope-fixture harness/trace/scope-fixture.ts
 regenerate layer-fixture harness/trace/layer-fixture.ts
-regenerate fiber-fixture harness/trace/fiber-fixture.ts
 regenerate job-fixture harness/trace/job-fixture.ts
 regenerate deferred-fixture harness/trace/deferred-fixture.ts
 regenerate ref-fixture harness/trace/ref-fixture.ts
@@ -183,12 +182,6 @@ done
 host_family scope     scope-tail.ts     "$here/receipts/scope"          whole yes -- "$traces"/scope/*.tsv
 host_family layer     layer-tail.ts     "$here/receipts/layer"          whole yes -- "$traces"/layer/*.tsv
 host_family interrupt interrupt-tail.ts "$here/receipts/flow/interrupt" whole yes -- "$traces"/flow/interrupt/*.tsv
-# There is no yield-every-op run for the fibers, and the refusal is that
-# packet's finding. The tape drives `TapeScheduler.shouldYield`; at rc.112's own
-# floor of 3 the run loop yields on its own, a deferred child starts with no
-# `decide` row to account for it, and the sequential projection's `false` stops
-# being a fact about the run. counterexample: E4-SEM-CE-011
-host_family fiber     fiber-tail.ts     "$here/receipts/fiber"          whole no  -- "$traces"/fiber/*.tsv
 # The job runner (the first real program): its module and its tail over a real
 # file-backed queue. `EFFECT4_PROGRAM` is the *golden* name, not the program
 # name -- four goldens share the `jobRunner` body and differ in the queue seed

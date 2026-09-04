@@ -344,7 +344,7 @@ export interface RunOptions {
   /** A tape-driven yield. A multi-fiber tail arms this at a decision site and
    * the `TapeScheduler` consumes it at the next check, so *which* fiber holds
    * the processor is chosen by the golden's tape rather than by rc.112's op
-   * counter (`harness/trace/fiber-tail.ts`). Returning `true` both answers and
+   * counter (the retired M3 `fiber-tail.ts`; `fibers-tail.ts` now). Returning `true` both answers and
    * consumes the arming. A single-fiber tail leaves it out and every yield is
    * rc.112's own. */
   readonly armed?: () => boolean

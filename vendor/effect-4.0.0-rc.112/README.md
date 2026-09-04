@@ -28,6 +28,17 @@ Read by `scripts/generate-effect-runtime-census.sh`; joined to Lean witnesses by
 | `src/Cause.ts` | `4b39e7f578b9bceba6712fdf0f53410963006cb335a94f3c5bbd8c49cfe9962b` |
 | `src/Array.ts` | `ccc7dfbb44f0a93d4911af0d1db187925cfe7e765804bb3b9bdff2b7e1fc3936` |
 
+## Context and Result (vendored 2026-09-03 for the Context model and the caught-perform reading)
+
+Copied byte for byte from the pinned install whose integrity matches the package hash above
+(`docs/research/2026-09-03-lowering-l2-host-tails.md`); read by `workshop/Deep/Context.lean`
+and the `Result` arm of the lowering. Not yet a census input.
+
+| File | SHA-256 |
+| --- | --- |
+| `src/Context.ts` | `dae8fd7aaee4263e4223a415e343542b567d6132da3ad321b30649b24ee1b862` |
+| `src/Result.ts` | `2866d8a618682b1d0c32d7578933810f68e353c1615dab4b399239b2b8ca6593` |
+
 ## Host structure census (`ref.*`, `deferred.*`, `layer.*`)
 
 Read by the same generator and gate, for the census rows that pin the mutable

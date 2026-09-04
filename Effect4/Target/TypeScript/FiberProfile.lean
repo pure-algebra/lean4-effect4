@@ -34,7 +34,7 @@ Three facts the rows carry, and the reason each is a field rather than a shape.
   `daemon` is only consulted when `region` is `none` (review finding 14,
   `docs/research/2026-09-03-deep-plan-review.md:524-556`).
 * **`await` is a reserved generated binding**, the same refusal
-  `Effect4/Concurrency/FiberFamily.lean:68-71` records, so the rows are
+  the retired M3 `FiberFamily` (2026-09-04; the fact is `TypeScript.reservedIdentifiers`) records, so the rows are
   `awaitFiber` and — for symmetry — `interruptFiber`. Every name passes
   `EffectV4.bindingName` (`Effect4/Target/TypeScript/EffectV4.lean:145-147`);
   `Effect4Test/Target/TypeScript/FiberProfileContract.lean` is the receipt.

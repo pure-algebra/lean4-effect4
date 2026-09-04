@@ -36,6 +36,7 @@ codes do not: `keyConflict` is `ServiceKey.Conflict` on the wire.
 | `get` | `Context.getUnsafe` (`Layer.ts:806`), which throws when missing |
 | `getOption` | `Context.getOrUndefined` (`Layer.ts:586`) |
 | `merge` | `Context.merge` (`Layer.ts:2797-2805` uses it) |
+| `mergeAll` | `Context.mergeAll` (`Context.ts:1861-1871`) |
 | `pick` | `Context.pick` |
 | `omit` | `Context.omit` |
 | `provideContext` | `internal/effect.ts:2180` |
@@ -46,6 +47,26 @@ codes do not: `keyConflict` is `ServiceKey.Conflict` on the wire.
 | `preventSchedulerYield` | `Scheduler.ts:295-298`, default `false` |
 | `currentMemoMap` | `Layer.ts:584-588` |
 | `currentScope` | `Scope.ts:215`, `internal/effect.ts:3772` |
+
+Two spellings need saying out loud:
+
+* **rc.112 has no `Effect.withContext`.** The reader is `Effect.contextWith`
+  (`Effect.ts:11346` = `internal/effect.ts:2156-2158`,
+  `withFiber(fiber => f(fiber.context))`) and `Effect.context()` (`:2152`) is
+  the same read as a value, which is what this nullary row answers. The row
+  keeps the name `withContext` because `harness/trace/context-tail.ts` and
+  `context-fixture.stub.ts` already carry it, so the two faces agree name for
+  name; that the name is not an rc.112 export is the refusal, not the row.
+  (`docs/research/2026-09-03-lowering-l2-host-tails.md` §12.5.)
+* **`merge` and `mergeAll` differ in what they answer, not in what they
+  bind.** `Context.merge` returns the *other argument itself* when one side is
+  empty (`Context.ts:1817-1818`) and copies otherwise (`:1819`);
+  `Context.mergeAll` builds one fresh map from every argument's entries in
+  order (`:1864-1870`) and never answers an argument. The two arms below say
+  exactly that: `merge` answers an existing handle when a side has no
+  bindings, `mergeAll` always mints. The list argument is spelled on the wire
+  by the `twoContexts` atom, the same list-former the `Layers` family uses for
+  its own `mergeAll`.
 
 ## The ambient context
 
@@ -111,7 +132,11 @@ effect_signature Contexts where
       (key : Handle "Context.Key<never, number>") : Option Nat
       ⟪ "the bound value, or none" ⟫
   | merge (left : Handle "Context.Context<never>") (right : Handle "Context.Context<never>")
-      : Handle "Context.Context<never>" ⟪ "both, the right winning a shared key" ⟫
+      : Handle "Context.Context<never>"
+      ⟪ "both, the right winning a shared key", "an empty side answers the other itself" ⟫
+  | mergeAll (contexts : List (Handle "Context.Context<never>"))
+      : Handle "Context.Context<never>"
+      ⟪ "every context, the last winning a shared key", "always a fresh context" ⟫
   | pick (context : Handle "Context.Context<never>") (key : Handle "Context.Key<never, number>")
       : Handle "Context.Context<never>" ⟪ "only this key's binding" ⟫
   | «omit» (context : Handle "Context.Context<never>") (key : Handle "Context.Key<never, number>")
@@ -288,10 +313,27 @@ def contextsLive : Contexts.Service ContextM := fun name =>
       pure (ContextStore.lookup (store.bindingsOf context) (store.keyOf key))
   | .merge => fun (left, right) => do
       let store ← get
+      -- `Context.ts:1817-1818`: a side with no bindings answers the *other*
+      -- context itself; only two non-empty sides copy (`:1819`).
+      if (store.bindingsOf left).isEmpty then pure right
+      else if (store.bindingsOf right).isEmpty then pure left
+      else
+        let merged :=
+          (store.bindingsOf right).foldl
+            (fun current entry => ContextStore.bind current entry.1 entry.2)
+            (store.bindingsOf left)
+        let (handle, store') := store.declareContext merged
+        set store'; pure handle
+  | .mergeAll => fun contexts => do
+      let store ← get
+      -- `Context.ts:1864-1870`: one fresh map, every argument's entries set
+      -- into it in order, so the last wins; never an argument itself.
       let merged :=
-        (store.bindingsOf right).foldl
-          (fun current entry => ContextStore.bind current entry.1 entry.2)
-          (store.bindingsOf left)
+        contexts.foldl
+          (fun current context =>
+            (store.bindingsOf context).foldl
+              (fun acc entry => ContextStore.bind acc entry.1 entry.2) current)
+          []
       let (handle, store') := store.declareContext merged
       set store'; pure handle
   | .pick => fun (context, key) => do
@@ -388,7 +430,16 @@ theorem objectReferences_have_no_default (store : ContextStore) (h : store.ambie
       store.referenceValue .scope = Option.none := by
   constructor <;> simp [ContextStore.referenceValue, h]
 
-/-! ## The programs -/
+/-! ## The programs
+
+`twoContexts` is the list-former `mergeAll` needs on the wire: an operation's
+argument is an atom application or a bound name, and a list of two handles is
+neither until an atom says so (the `Layers` family's `twoLayers` is the same
+shape). -/
+
+effect_atoms ContextAtoms importing handles [Context] from "effect" where
+  | twoContexts (left : Handle "Context.Context<never>") (right : Handle "Context.Context<never>")
+      : List (Handle "Context.Context<never>") ⟪ "[left, right]" ⟫ := [left, right]
 
 -- A key, a binding, and the read that finds it.
 effect_program contextAddGet (n : Nat) over Contexts : Nat :=
@@ -426,6 +477,16 @@ effect_program contextMergePickOmit (n : Nat) over Contexts : Option Nat :=
   let picked ← Contexts.pick(m, k)
   let dropped ← Contexts.«omit»(picked, k)
   let v ← Contexts.getOption(dropped, k)
+  return v
+
+-- `mergeAll` sets every argument's entries into one fresh map in order, so the
+-- last context wins a shared key (`Context.ts:1864-1870`).
+effect_program contextMergeAllLastWins (n : Nat) over Contexts : Option Nat :=
+  let k ← Contexts.key(0, 0)
+  let left ← Contexts.make(k, n)
+  let right ← Contexts.make(k, 9)
+  let m ← Contexts.mergeAll(twoContexts left right)
+  let v ← Contexts.getOption(m, k)
   return v
 
 -- `provideContext` answers the context it replaced, and `withContext` answers
@@ -485,9 +546,14 @@ def contextPrograms : List ContextEntry :=
   , contextEntry "getMissing" contextGetMissing.script (contextGetMissing 7)
   , contextEntry "keyConflict" contextKeyConflict.script (contextKeyConflict 7)
   , contextEntry "mergePickOmit" contextMergePickOmit.script (contextMergePickOmit 7)
+  , contextEntry "mergeAllLastWins" contextMergeAllLastWins.script (contextMergeAllLastWins 7)
   , contextEntry "provideThenRead" contextProvideThenRead.script (contextProvideThenRead 7)
   , contextEntry "referenceDefaults" contextReferenceDefaults.script (contextReferenceDefaults 0)
   , contextEntry "updateReference" contextUpdateReference.script (contextUpdateReference 3)
   , contextEntry "memoMapAbsent" contextMemoMapAbsent.script (contextMemoMapAbsent 0) ]
+
+/-- The atoms the context programs call, for the generated fixture's import
+line. -/
+def contextAtomNames : List String := ["twoContexts"]
 
 end Effect4.ContextFamily

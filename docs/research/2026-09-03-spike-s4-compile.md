@@ -1,5 +1,12 @@
 # Spike S4: the compile repairs and the general theorem
 
+> **Superseded in part by §9 (S4b), 2026-09-03.** Summary item 7, §4's "exact
+> remaining obligation", §5's first bullet and §8's follow-up 3 are stale: the
+> `leaveConfig` ruling was taken (repair, not restrict), the compile now resumes
+> a region at the *leave*'s configuration, and
+> `RegionOracleAgrees.registrations` is proved rather than assumed. §9 is the
+> current reading; everything else in this file still holds.
+
 Status: implemented, 2026-09-03. Row S4 of `docs/research/2026-09-03-deep-plan.md`
 §2 — packets P1 (one scope per region), P2 (frontier-preserving compile), P3
 (`performCatch` as `onSuccessAndFailure`) and P4 (the settled general theorem)
@@ -547,3 +554,349 @@ this spike changed, plus the files spikes S1 and the LiveStack agent own.
    are now witnessed Lean-side by the five T5/T6 instances; adding
    `proved-lean-side` entries moves no host state
    (`docs/LOWERING-COVERAGE.md:56`) and is a separate, additive packet.
+
+---
+
+## 9. S4b: the leave configuration
+
+Status: implemented, 2026-09-03, in the **main checkout**
+`C:\Users\kokok\Dev\lean4-effect4` (not the S4 worktree). Nothing committed.
+This section closes S4's one open obligation — clause
+`RegionOracleAgrees.registrations` — and takes the ruling §4 deferred.
+
+### 9.1 The ruling
+
+Repair, do not restrict. §4 offered two options: give the oracle a
+`leaveConfig` field, or state T5/T6 under a hypothesis that no region body
+consumes tape. The second is exactly the kind of restriction
+`E4-TARGET-CE-020`'s repair column forbids, so it is out. The route taken is
+**(a) of the brief**: `regionInterp.contA`'s `regionCont` arm computes the leave
+configuration *under the oracle, at answer time*. `PrimInterp`'s purity is not
+violated — the flow note's §2.4 argument is that the tape is data and the answer
+function is total and pure, and `statelessOracle` is the standing hypothesis.
+Route (b) — carrying the leave configuration through the frame — is not
+available: `Prim`'s value carrier is one `β`, the machine hands `contA` only that
+`β`, and giving the continuation table a result-configuration index would change
+`PrimInterp`'s shape and re-freeze `test/contracts/frames.contract.md`. Route (a)
+also costs the oracle nothing: `RegionOracle` still has three fields.
+
+### 9.2 The definition
+
+`closeWalk` is rewritten so that it *is* the runner rather than the compile. It
+now takes the oracle's `answer` **and** `release`, and carries the runner's open
+region stack in the runner's own shape:
+
+```lean
+def closeWalk (alphabet) (flow) (answer release : Config -> Except Val Val) :
+    Nat -> BlockId -> Env -> Tape ->
+      List Config ->            -- the walked region's own accumulator
+      List (List Config) ->     -- nested open regions, innermost first
+      List Config × Option LeavePoint
+```
+
+* `enter` pushes an empty accumulator onto `inner`;
+* `acquire` registers on the innermost open accumulator (`acc` when `inner` is
+  empty), latest registered first;
+* `leave` pops one nested accumulator — refusing to continue if any of *its*
+  releases fails, because the runner's `fail` diverts there — or, when `inner`
+  is empty, ends the walk;
+* every other arm mirrors `Effect4.Flow.regionLoop` arm for arm, spending one
+  unit of fuel per block.
+
+Because the recursion is now structural in the runner's own fuel, no separate
+step budget is needed and the agreement below is an ordinary induction.
+
+```lean
+structure LeavePoint where
+  value : Val        -- what the `leave` hands on
+  resume : Config    -- where `regionLoop` continues: continue_ block, [value],
+                     -- and the fuel and tape held *at the leave*
+
+def regionWalk … (point : Config) : List Config × Option LeavePoint
+def regionRegistrations … point : List Config := (regionWalk … point).fst
+def leaveConfig … point : Option Config := (regionWalk … point).snd.map LeavePoint.resume
+```
+
+`leaveConfig` is `none` exactly when the body does not reach a `leave` — a
+failure, a frontier, a refusal, or a nested region that closes badly. In every
+one of those cases the scope frame's *value* arm is never demanded (the cause
+arm answers, or the machine stays suspended), so `Prim.suspend point` is the
+honest filler.
+
+### 9.3 The compile
+
+```lean
+| RegionName.regionCont _ point =>
+  match closeExit oracle (oracle.registrations point) with
+  | Exit.failure closing => Prim.failure closing
+  | Exit.success _ =>
+    match leaveConfig alphabet flow oracle.answer oracle.release point with
+    | some resume => compileRegion alphabet flow resume.fuel resume.block [value] resume.tape
+    | none => Prim.suspend point
+```
+
+The frame still supplies the *value* (that is what a frame can carry); the walk
+supplies the fuel, block and tape (that is what it cannot). `flow.row?` moved
+out of `contA` and into the walk's `leave` arm, where the runner reads it —
+`current.region.bind flow.row?` of the *leave* block, not of the enter.
+`regionInterp_regionCont_resume` states the arm as an equation.
+
+Under S4 the same arm read
+`compileRegion alphabet flow (point.fuel - 1) row.continue_ [value] point.tape`.
+The receipts show the size of the difference: at `regionBothSucceed` the enter
+holds fuel 5 at block 0 (`enterPoint_regionBothSucceed`), so S4 resumed at fuel
+4, while the runner resumes at fuel 2 (`leaveConfig_regionBothSucceed`).
+
+### 9.4 The agreement lemma
+
+One lemma per runner arm, then the induction, then the corollary at an `enter`.
+All are in `Effect4/Semantics/RegionSimulation.lean`, namespace
+`Effect4.RegionSimulation`.
+
+The runner writes rows and the walk does not, so the agreement is stated up to a
+prefix of rows:
+
+```lean
+def RunPrefix {α} (left right : Effect4.Flow.RunM Id α) : Prop :=
+  ∃ rows, ∀ log, left.run log = right.run (log ++ rows)
+```
+
+with `refl`, `of_eq`, `trans` and `emit`. Nothing is assumed about which rows
+the runner writes, which is why the statement needs no second copy of the
+runner's log.
+
+**Per runner arm** (each an equation on `Effect4.Flow.regionLoop` at `fuel + 1`,
+proved by `simp only` on the definition):
+`regionLoop_jump`, `regionLoop_choose` (the arm S4's compile disagreed with),
+`regionLoop_perform`, `regionLoop_performCatch_ok`,
+`regionLoop_performCatch_error`, `regionLoop_enter`, `regionLoop_acquire`,
+`regionLoop_leave`. Plus `logOperation_prefix` (an operation's rows are a
+prefix and nothing else, from `Effect4.Flow.logOperation_run`).
+
+**The close**: `closeReleases_cons_ok`, `closeReleases_success` and
+`closeFrame_success` — a frame whose registrations all release cleanly closes
+with no failure and writes only rows. The bridge between the walk's
+`anyReleaseFails` and the runner's `closeFailures` is `statelessAnswer_of` plus
+`registeredRelease`, which pairs an acquire point with the `(releaser, resource)`
+entry the runner conses onto `Frame.releases`.
+
+**The induction**:
+
+```lean
+theorem closeWalk_agrees_regionLoop
+    (hservice : ∀ op request, service.handle op request = answerOf op request) :
+  ∀ fuel block env tape acc inner regs leave innerFrames outer rest,
+    closeWalk alphabet flow (statelessAnswer …) (statelessRelease …)
+        fuel block env tape acc inner = (regs, some leave) →
+    innerFrames.map Flow.Frame.releases = inner.map (registeredReleases …) →
+    outer.releases = registeredReleases … acc →
+    RunPrefix
+      (Flow.regionLoop alphabet flow service nameOf fuel block env tape
+        (innerFrames ++ outer :: rest))
+      (leaveStep alphabet flow service nameOf answerOf outer.region regs leave rest)
+```
+
+`leaveStep` is what the runner does at the `leave`: close the walked region's
+frame — whose releases are exactly `registeredReleases … regs` — with the leave
+value, then continue at `leave.resume` or `fail` on a failing release. So the
+theorem says, in one statement, both halves the register asked for: the
+registrations the compile closes against *are* the runner's `Frame.releases`,
+and the configuration the compile resumes at *is* the one the runner holds at
+the leave.
+
+**The corollary at an `enter`**: `leaveConfig_agrees_runRegions`, plus
+`leaveConfig_of_regionWalk` and `regionRegistrations_of_regionWalk` tying the
+walk's two components to the two public functions.
+
+**The only premise is `hservice`** — the service is stateless on this alphabet.
+That is D2's `stateless` (`Effect4/Flow/Region.lean:465`) in the oracle form the
+flow note's §2.4 fixes, it is what `statelessOracle` already carries, and it is
+not a restriction on flows. There is no hypothesis about tape, about region
+bodies, about nesting depth or about which arms a body uses.
+
+### 9.5 T5 and T6
+
+**Not proved in general, and stated as a `Prop`, as the brief's fallback
+requires.** What S4b removes is the `leaveConfig`/`registrations` clause; what is
+left is the *machine-side* induction — relating `FrameFiber.run`'s steps to the
+runner's blocks with `run_add`/`run_mono` and `regionBound`, and
+`Frame.toScope_closeOrder` for the order. `runRegions_fuelFor_finishes`
+(`Effect4/Semantics/Approximation.lean:2182`) supplies the runner-side
+termination and is unchanged; `resumeClosedScope_complete` is still not consumed,
+for the reason §5 gives (the compiled close is driven by frames, not by a
+`ScopeMachine.State`).
+
+The exact remaining obligation, as `Prop`-valued definitions in
+`Effect4/Semantics/RegionSimulation.lean`:
+
+```lean
+def RegionsSimulateAll (alphabet) : Prop :=
+  ∀ flow service answerOf nameOf oracle tape input fuel' fuel,
+    RegionsSimulate alphabet flow service answerOf nameOf oracle tape input fuel' fuel
+
+def RegionsSimulateExitAll (alphabet) : Prop := …  -- the same over RegionsSimulateExit
+```
+
+and, at the boundary battery's fixed stateless service,
+`AllFiniteInputsAgree` (retained, no longer refuted).
+
+**It is not vacuous.** Two witnesses, both in
+`Effect4Test/Counterexamples/Target/RegionSimulationBoundary.lean`:
+
+* `finite_agreement_has_content` — at `failingRelease` the equation holds with
+  *both sides non-empty* (`[finalizer 1 (success 5), finalizer 1 (success 5),
+  done (failure "boom")]`), so the obligation is not "two empty lists are
+  equal";
+* `unrestricted_finite_classification_false` — the machine and the runner still
+  differ, on the endpoint: `decisionCycle` at tape `[⟨8, false⟩]` is a
+  `refusedSite` for the runner and a live suspension for the machine
+  (`mismatched_decision_classification_diverges`). `Endpoint`,
+  `runnerEndpoint` and `machineEndpoint` spell the three-way classifier the
+  machine has only two readings of. That is T8, packet P5, untouched here.
+
+No restriction on flows was introduced anywhere.
+
+### 9.6 The inverted witness
+
+`tapeAfterRegion` — a region body that consumes decision site 7, followed by
+site 8 after the region — was S4's minimal witness that the walk was not the
+runner. After S4b:
+
+| Theorem | S4 | S4b |
+| --- | --- | --- |
+| `tapeAfterRegion_machine` | `some []` | `some [.done (.success (.nat 5))]` |
+| `tapeAfterRegion_diverges` | proved | **deleted** |
+| `tapeAfterRegion_agrees` | — | added: machine = runner |
+| `tapeAfterRegion_agrees_other_branch` | — | added: the other edge and the other tape |
+| `unrestricted_finite_agreement_false` | proved from the above | **deleted** — the trace equation has no counterexample left |
+| `unrestricted_finite_classification_false` | — | added: what survives is the *endpoint* half |
+
+The five instance receipts (`T5_*`, `T6_*`, `regions_simulate_*`,
+`runnerSide_*`, the four `registrations_*`, the five `catch_free`) are unchanged
+and still closed by evaluation; the `regionBothSucceed`, `regionNested`,
+`regionTwoFail`, `regionReleaseFails` and `regionCatch` masked traces are
+byte-identical to S4's. `regionBound` is unchanged at `4 * runnerFuel + 1`; its
+docstring gains the S4b re-derivation (the compile now unrolls only blocks the
+runner spends fuel on, so the per-block budget is exact rather than
+mis-aligned).
+
+A scratch search — not committed, run with `lake env lean` on a probe file in
+the session scratchpad — compared `machineAt` against `runnerAt` over eight
+region flows (including a nested region with decisions on both sides of it, a
+region re-entered through its own `continue_`, and a caught failure that leaves
+on the error edge), 22 fuels each and 91 tapes each: **16 016 cases, zero
+mismatches.** That is evidence, not a receipt; the receipts are the theorems
+above.
+
+### 9.7 Public declarations added and changed
+
+`Effect4/Semantics/RegionSimulation.lean` (2 115 → 2 801 lines), namespace
+`Effect4.RegionSimulation`.
+
+**Changed**
+
+| Name | S4 | S4b |
+| --- | --- | --- |
+| `closeWalk` | `(answer) : Nat → BlockId → Env → Tape → List Config → List Config × Option Val` | `(answer release) : Nat → BlockId → Env → Tape → List Config → List (List Config) → List Config × Option LeavePoint`; mirrors the runner, not the compile |
+| `regionRegistrations` | `(answer) point` | `(answer release) point`, defined as `(regionWalk … point).fst` |
+| `regionInterp` | `contA`'s `regionCont` arm resumed at `point.fuel - 1`, `flow.row? ⟨region⟩`, `point.tape` | resumes at `leaveConfig alphabet flow oracle.answer oracle.release point`; the arm's `region` binder is now unused |
+| `statelessOracle` | `registrations := regionRegistrations … (statelessAnswer …)` | `… (statelessAnswer …) (statelessRelease …)` |
+| `RegionOracleAgrees.registrations` | "the missing induction" | a definition check on the oracle; the induction is `closeWalk_agrees_regionLoop` |
+| `regionBound` | `4 * runnerFuel + 1` | same value, docstring re-derived for the leave-fuel resume |
+
+**Added** — carriers and functions: `LeavePoint`, `anyReleaseFails`,
+`registeredRelease`, `registeredReleases`, `regionWalk`, `leaveConfig`,
+`RunPrefix`, `leaveStep`, `RegionsSimulateAll`, `RegionsSimulateExitAll`.
+
+**Added** — theorems: `RunPrefix.refl`, `RunPrefix.of_eq`, `RunPrefix.trans`,
+`RunPrefix.emit`, `logOperation_prefix`, `regionLoop_jump`, `regionLoop_choose`,
+`regionLoop_perform`, `regionLoop_performCatch_ok`,
+`regionLoop_performCatch_error`, `regionLoop_enter`, `regionLoop_acquire`,
+`regionLoop_leave`, `anyReleaseFails_cons`, `closeReleases_cons_ok`,
+`statelessAnswer_of`, `registeredReleases_nil`, `closeReleases_success`,
+`closeFrame_success`, `closeWalk_agrees_regionLoop`,
+`leaveConfig_agrees_runRegions`, `leaveConfig_of_regionWalk`,
+`regionRegistrations_of_regionWalk`, `regionInterp_regionCont_resume`.
+
+**Removed from the library:** nothing.
+
+**Batteries.** `Effect4Test/Semantics/RegionSimulationContract.lean` (323 → 382)
+adds 26 `#check`s, `leaveConfigOf`, `enterPointOf` and six leave-configuration
+receipts. `Effect4Test/Semantics/RegionSimulationAxiomReport.lean` (96 → 132)
+adds groups R11 (24 lines) and R12 (6 lines).
+`Effect4Test/Counterexamples/Target/RegionSimulationBoundary.lean` (227 → 285)
+inverts `tapeAfterRegion_machine`, adds `tapeAfterRegion_agrees`,
+`tapeAfterRegion_agrees_other_branch`, `finite_agreement_has_content`,
+`Endpoint`, `runnerEndpoint`, `machineEndpoint`, `AllFiniteInputsClassify`,
+`mismatched_decision_classification_diverges` and
+`unrestricted_finite_classification_false`, and deletes
+`tapeAfterRegion_diverges` and `unrestricted_finite_agreement_false`.
+
+### 9.8 Build results
+
+One Lean process at a time; no bare `lake build`, no sweep, no trust gate.
+
+```text
+Effect4/Semantics/RegionSimulation.lean                          exit=0 errors=0 sorry=0
+Effect4Test/Semantics/RegionSimulationContract.lean              exit=0 errors=0 sorry=0
+Effect4Test/Semantics/RegionSimulationAxiomReport.lean           exit=0 errors=0 sorry=0
+Effect4Test/Counterexamples/Target/RegionSimulationBoundary.lean exit=0 errors=0 sorry=0
+
+$ lake build Effect4.Semantics.RegionSimulation \
+    Effect4Test.Semantics.RegionSimulationContract \
+    Effect4Test.Semantics.RegionSimulationAxiomReport \
+    Effect4Test.Counterexamples.Target.RegionSimulationBoundary
+Build completed successfully (49 jobs).
+
+$ lake build Deep.ForkFlow
+Build completed successfully (48 jobs).
+```
+
+Axiom report: exit 0, 9 declarations depend on no axioms, 91 depend on
+`[propext]` or `[propext, Quot.sound]`, 0 mentions of `sorryAx`, 0 of
+`Classical.choice`. The only warning in any of these builds is S1's pre-existing
+`unusedVariables` lint at `Effect4/Runtime/Runtime.lean:1883`.
+
+**`workshop/Deep/ForkFlow.lean` is not broken.** It builds green and was not
+edited. It calls `compileRegion` (unchanged), matches on `RegionName` (unchanged,
+still five constructors), and uses `statelessOracle`, `closeExit`,
+`oracle.registrations`, `regionSuspendBody`, `regionBound`, `performCont`,
+`catchCont` and `compileRegion_not_failure` — all unchanged in signature. It does
+not mention `closeWalk` or `regionRegistrations`. One thing the coordinator
+should know: `Deep.ForkFlow`'s `forkTable` (the `regionCont` arm of its `contA`,
+around `workshop/Deep/ForkFlow.lean:805`; the file is being edited by another
+lane, so the line may have moved) overrides `contA` with **its own copy** of that
+arm, and the copy still reads
+
+```lean
+| RegionName.regionCont region point =>
+  match closeExit oracle (oracle.registrations point) with
+  | Exit.failure closing => Prim.failure closing
+  | Exit.success _ =>
+    match flow.row? ⟨region⟩ with
+    | some row => compileFork … (point.fuel - 1) row.continue_ [value] point.tape
+    | none => Prim.suspend point
+```
+
+— the **enter**'s fuel and tape, i.e. the shape S4b just repaired. It compiles
+and nothing regresses, but `Deep.ForkFlow` now carries the defect S4b removed
+from `regionInterp`. The one-line fix, when that spike lands, is to replace those
+four lines with the `leaveConfig` match, exactly as `regionInterp.contA` does.
+`forkOracle` needs no change (it is `statelessOracle`).
+
+### 9.9 Out of fence, and stale
+
+* `test/contracts/frame-simulation.contract.md` is now stale in four places and
+  was **not** edited (it is outside this spike's fence): "Open" item 2
+  (`:191-201`) still says the `leaveConfig` proof is owed and cites
+  `tapeAfterRegion_diverges`; `:275` and `:420-422` still cite
+  `unrestricted_finite_agreement_false`, which is deleted; the "Spike S4
+  verification" block should gain
+  `Effect4Test.Semantics.RegionSimulationAxiomReport` and `Deep.ForkFlow`.
+* `docs/TRACE-DAG.md:50` was already flagged stale by S4 and still is.
+* `harness/trace/Generate.lean frame-trace` prints to stdout and has no golden
+  file, so nothing needed regenerating; the harness uses only `regionInterp`,
+  `statelessOracle`, `regionBound`, `compileAt`, `traceOfRun` and
+  `finalizerAndOutcomeMask`, none of which changed signature.
+* No census row, ledger row, golden or host artefact moved, and none was
+  claimed to.

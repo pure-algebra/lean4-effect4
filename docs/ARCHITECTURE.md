@@ -46,7 +46,6 @@ proves compatibility with its existing CAS-specific types and observations.
 | `Effect4/Schedule` | pure recurrence descriptions and effectful stepping boundaries |
 | `Effect4/Transaction` | atomic read/write/retry/orElse/commit calculus |
 | `Effect4/Classification` | independent domains, concretizations, transfers, products and fixpoints |
-| `Effect4/Protocol` | portable IDs, profile admission and canonical protocol bytes |
 | `Effect4/Target/TypeScript` | typed target IR, lowering, rendering, decoding, simulation and Effect v4 profile |
 | `Effect4/Meta` | environment extensions, declaration introspection, derivation and deterministic emitters |
 | `Effect4/Audit` | axiom receipts, declaration snapshots, per-type closure and cutover refusal |

@@ -12,6 +12,8 @@
  */
 import { Option, Result } from "effect"
 import type { JobQueue } from "./job-queue.ts"
+import type { RefFn } from "./ref-fns.ts"
+import type { Context, Layer, Ref } from "effect"
 
 /** Host body of the pure atom `succ`; its Lean model is `succ`. */
 export const succ = (n: number): number => n + 1
@@ -25,6 +27,15 @@ export const firstOr = (r: Option.Option<Result.Result<number, string>>): number
 /** Host body of the pure atom `dec`; its Lean model is `dec`. */
 export const dec = (n: number): number => n - 1
 
+/** Host body of the pure atom `snd`; its Lean model is `snd`. */
+export const snd = (ticket: readonly [JobQueue, number]): number => ticket[1]
+
+/** Host body of the pure atom `nonEmpty`; its Lean model is `nonEmpty`. */
+export const nonEmpty = (ticket: readonly [JobQueue, number]): boolean => ticket[1] !== 0
+
+/** Host body of the pure atom `positive`; its Lean model is `positive`. */
+export const positive = (n: number): boolean => n !== 0
+
 /** Host body of the pure atom `flagToNat`; its Lean model is `flagToNat`. */
 export const flagToNat = (flag: boolean): number => flag ? 1 : 0
 
@@ -34,11 +45,35 @@ export const pollValue = (cell: Option.Option<Result.Result<number, number>>): n
 /** Host body of the pure atom `addNat`; its Lean model is `addNat`. */
 export const addNat = (left: number, right: number): number => left + right
 
-/** Host body of the pure atom `snd`; its Lean model is `snd`. */
-export const snd = (ticket: readonly [JobQueue, number]): number => ticket[1]
+/** Host body of the pure atom `okOf`; its Lean model is `okOf`. */
+export const okOf = (value: number): Result.Result<number, number> => Result.succeed(value)
 
-/** Host body of the pure atom `nonEmpty`; its Lean model is `nonEmpty`. */
-export const nonEmpty = (ticket: readonly [JobQueue, number]): boolean => ticket[1] !== 0
+/** Host body of the pure atom `orZeroNat`; its Lean model is `orZeroNat`. */
+export const orZeroNat = (r: Result.Result<number, number>): number => Result.isSuccess(r) ? r.success : 0
 
-/** Host body of the pure atom `positive`; its Lean model is `positive`. */
-export const positive = (n: number): boolean => n !== 0
+/** Host body of the pure atom `errorOf`; its Lean model is `errorOf`. */
+export const errorOf = (error: number): Result.Result<number, number> => Result.fail(error)
+
+/** Host body of the pure atom `firstService`; its Lean model is `firstService`. */
+export const firstService = (services: ReadonlyArray<Ref.Ref<number>>): Ref.Ref<number> => services[0]
+
+/** Host body of the pure atom `twoLayers`; its Lean model is `twoLayers`. */
+export const twoLayers = (left: Layer.Layer<number>, right: Layer.Layer<number>): ReadonlyArray<Layer.Layer<number>> => [left, right]
+
+/** Host body of the pure atom `fnIncr`; its Lean model is `fnIncr`. */
+export const fnIncr = (tag: number): RefFn => 0
+
+/** Host body of the pure atom `fnDouble`; its Lean model is `fnDouble`. */
+export const fnDouble = (tag: number): RefFn => 1
+
+/** Host body of the pure atom `fnTakeAndBump`; its Lean model is `fnTakeAndBump`. */
+export const fnTakeAndBump = (tag: number): RefFn => 2
+
+/** Host body of the pure atom `fnNoChange`; its Lean model is `fnNoChange`. */
+export const fnNoChange = (tag: number): RefFn => 3
+
+/** Host body of the pure atom `fnZeroWhenPositive`; its Lean model is `fnZeroWhenPositive`. */
+export const fnZeroWhenPositive = (tag: number): RefFn => 4
+
+/** Host body of the pure atom `twoContexts`; its Lean model is `twoContexts`. */
+export const twoContexts = (left: Context.Context<never>, right: Context.Context<never>): ReadonlyArray<Context.Context<never>> => [left, right]

@@ -110,15 +110,16 @@ import Effect4Test.Semantics.FrameSimulationContract
 import Effect4Test.Semantics.FrameSimulationAxiomReport
 import Effect4Test.Semantics.RegionSimulationContract
 import Effect4Test.Semantics.RegionSimulationAxiomReport
-import Effect4Test.Flow.FibersContract
-import Effect4Test.Flow.FibersAxiomReport
 import Effect4Test.Flow.LayersContract
 import Effect4Test.Flow.LayersAxiomReport
 import Effect4Test.Counterexamples.Semantics.Layers
-import Effect4Test.Counterexamples.Concurrency.FiberProjection
 import Effect4Test.Flow.RefsContract
 import Effect4Test.Flow.RefsAxiomReport
 import Effect4Test.Counterexamples.Runtime.Refs
+import Effect4Test.Flow.ScopesContract
+import Effect4Test.Flow.ScopesAxiomReport
+import Effect4Test.Flow.ContextsContract
+import Effect4Test.Flow.ContextsAxiomReport
 import Effect4Test.Runtime.LiveStackContract
 import Effect4Test.Runtime.LiveStackAxiomReport
 import Effect4Test.Counterexamples.Runtime.LiveStack
@@ -126,6 +127,7 @@ import Effect4Test.Flow.JobRunnerContract
 import Effect4Test.Counterexamples.Flow.JobRunner
 import Effect4Test.Counterexamples.Target.JobRequest
 import Effect4Test.Counterexamples.Target.TupleRequest
+import Effect4Test.Store.StoreContract
 import Effect4Test.Audit.RuntimeCoverage
 import Effect4Test.Audit.AxiomGate
 

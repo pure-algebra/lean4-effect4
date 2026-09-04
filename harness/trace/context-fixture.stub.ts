@@ -23,6 +23,7 @@
  */
 import { Context, Effect } from "effect"
 import type { Option } from "effect"
+import { twoContexts } from "./atoms.ts"
 
 export interface ContextsService {
   readonly empty: Effect.Effect<Context.Context<never>>
@@ -42,8 +43,7 @@ export interface ContextsService {
     that: Context.Context<never>
   ) => Effect.Effect<Context.Context<never>>
   readonly mergeAll: (
-    self: Context.Context<never>,
-    that: Context.Context<never>
+    contexts: ReadonlyArray<Context.Context<never>>
   ) => Effect.Effect<Context.Context<never>>
   readonly pick: (
     context: Context.Context<never>,
@@ -76,7 +76,7 @@ export const ContextsRows = {
   "get": { params: 2, answer: "number" },
   "getOption": { params: 2, answer: "Option.Option<number>" },
   "merge": { params: 2, answer: "Context.Context<never>" },
-  "mergeAll": { params: 2, answer: "Context.Context<never>" },
+  "mergeAll": { params: 1, answer: "Context.Context<never>" },
   "pick": { params: 2, answer: "Context.Context<never>" },
   "omit": { params: 2, answer: "Context.Context<never>" },
   "provide": { params: 2, answer: "number" },
@@ -106,7 +106,7 @@ export const contextMergeIsRightBiased = (n: number) =>
     const b = yield* contexts.make(0, n + 1)
     const m = yield* contexts.merge(a, b)
     const v = yield* contexts.get(m, 0)
-    const all = yield* contexts.mergeAll(a, b)
+    const all = yield* contexts.mergeAll(twoContexts(a, b))
     const w = yield* contexts.get(all, 0)
     return [v, w] as const
   })

@@ -73,28 +73,33 @@ example (left right : Handle "Ref.Ref<number>")
 /-! ## E4-SEM-CE-015: a `modify` answer is pinned by its type
 
 Attack: rc.112's `Ref.modify(self, f)` takes `f : (a) => readonly [B, A]`, and
-`Refs.modify` declares `Handle × Nat → Nat`. Read the declaration as fixing
-which component is the answer.
+`Refs.modify` declares `Handle × Handle "RefFn" → Nat`. Read the declaration as
+fixing which component is the answer.
 
 It does not, when `B = A`. A tail that answers the *new* value and stores the
 *old* one typechecks under the pinned unpatched compiler (`tsc.original`, exit
 0) and draws no `effect-tsgo` diagnostic; only a golden separates them.
 
-Repair: `refModifyOld` adds a non-zero amount and reads the cell afterwards, so
-the answer (7) and the new state (12) are two rows in the order the family
-fixes. `ERefs.tryTake` is the contrasting half: its two tuple components have
-different types, so there the compiler does pin the order and no golden is
-carrying the claim alone. -/
+Repair: `refModifyOld` names `fnTakeAndBump`, whose two components differ
+(`a ↦ [a, a + 1]`), and reads the cell afterwards, so the answer (7) and the
+new state (8) are two rows in the order the family fixes. `ERefs.tryTake` is
+the contrasting half: its two tuple components have different types, so there
+the compiler does pin the order and no golden is carrying the claim alone.
 
-/-- The attack as a handler: `modify` answers the value after the write. Every
-other operation is `refsLive`, so the mutation is exactly one arm. -/
+Since the L3 packet the read-modify-write argument is a *named* function
+(`RefFn`, DB-02) rather than an amount, so the attacked handler names the
+function too; the shape of the attack is unchanged. -/
+
+/-- The attack as a handler: `modify` answers the value after the write — the
+second component of `RefFn.modify` instead of the first. Every other operation
+is `refsLive`, so the mutation is exactly one arm. -/
 def refsModifyAnswersNew : Refs.Service (StateT RefStore Id) := fun name =>
   match name with
-  | .modify => fun (handle, amount) => do
+  | .modify => fun (handle, f) => do
       let store ← get
-      let after := refPeek store handle + amount
-      set (refPoke store handle after)
-      pure after
+      let pair := (RefFn.ofHandle f).modify (refPeek store handle)
+      set (refPoke store handle pair.2)
+      pure pair.2
   | other => refsLive other
 
 def attackLog {α : Type} [Effects.Trace.ToVal α] (program : Program Refs.Sig α) :
@@ -108,20 +113,23 @@ def attackLog {α : Type} [Effects.Trace.ToVal α] (program : Program Refs.Sig �
 
 #guard attackLog (refModifyOld 7) =
   [ .op "make" (.nat 7), .answer "make" (.nat 0)
-  , .op "modify" (.pair (.nat 0) (.nat 5)), .answer "modify" (.nat 12)
-  , .op "get" (.nat 0), .answer "get" (.nat 12)
-  , .done (.success (.nat 12)) ]
+  , .op "modify" (.pair (.nat 0) (.nat 2)), .answer "modify" (.nat 8)
+  , .op "get" (.nat 0), .answer "get" (.nat 8)
+  , .done (.success (.nat 8)) ]
 
 -- It is rejected under every registered mask, including the coarsest.
 #guard Effect4.Trace.maskTable.all (fun mask =>
   Effect4.Trace.agree mask.2 (attackLog (refModifyOld 7)) (refGoldenLog (refModifyOld 7))) = false
 
-/-- The golden that would not have caught it: the same program with a zero
-amount. The answer and the new state coincide, so the attacked and repaired
-handlers are indistinguishable — every row, every mask. -/
+/-- The golden that would not have caught it: the same program naming
+`fnNoChange`, whose two components coincide (`a ↦ [a, a]`). The answer and the
+new state are equal, so the attacked and repaired handlers are
+indistinguishable — every row, every mask. Before the L3 packet the same hole
+was reached with a zero *amount*; the named function is the same hole under
+DB-02's spelling. -/
 def modifyZero : Program Refs.Sig Nat :=
   Refs.make 7 >>= fun handle =>
-    Refs.modify handle 0 >>= fun before =>
+    Refs.modify handle (fnNoChange 0) >>= fun before =>
       Refs.get handle >>= fun _ => pure before
 
 #guard attackLog modifyZero = refGoldenLog modifyZero
@@ -130,10 +138,10 @@ def modifyZero : Program Refs.Sig Nat :=
   Effect4.Trace.agree mask.2 (attackLog modifyZero) (refGoldenLog modifyZero))
 
 -- What separates them is a row carrying the old value beside the new one, which
--- only a non-zero amount produces.
+-- only a function whose two components differ produces.
 #guard refGoldenLog modifyZero =
   [ .op "make" (.nat 7), .answer "make" (.nat 0)
-  , .op "modify" (.pair (.nat 0) (.nat 0)), .answer "modify" (.nat 7)
+  , .op "modify" (.pair (.nat 0) (.nat 3)), .answer "modify" (.nat 7)
   , .op "get" (.nat 0), .answer "get" (.nat 7)
   , .done (.success (.nat 7)) ]
 

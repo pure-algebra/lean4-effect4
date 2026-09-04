@@ -71,7 +71,7 @@ def handle : String := handleTy "number" "number"
 example (op : FiberOp) : FiberOp.ofIndex op.index = some op := FiberOp.ofIndex_index op
 
 -- The names, in profile order. `await` is a reserved generated binding (the
--- refusal `Effect4/Concurrency/FiberFamily.lean:68-71` records), so the row is
+-- refusal the retired M3 `FiberFamily` (2026-09-04; the fact is `TypeScript.reservedIdentifiers`) records), so the row is
 -- `awaitFiber` and `interruptFiber` follows it for symmetry.
 #guard table.map (·.name) =
   ["fork", "forkScoped", "join", "awaitFiber", "interruptFiber", "interruptAll",
@@ -717,23 +717,30 @@ two facts that say why: a row set that names nothing needs nothing, and
 -- types only and keep the value import at `Context, Effect`.
 #guard moduleNamespaces [rows] [.types ["Fiber", "Option", "Result"] "effect"] = []
 
-def importLine (source : String) : String :=
-  ((source.splitOn "\n").filter fun line =>
-    (line.splitOn "from \"effect\"").length > 1).headD "-"
+-- The `effect` import line of a rendered module is read inline in each receipt:
+-- a `def` splitting the rendered text would reach `Classical.choice` through
+-- Lean's string folds, and the axiom gate audits battery declarations too,
+-- while a `#guard` is a command and leaves none.
 
 -- A family that names no `effect` namespace: `Context` and `Effect`, as before.
-#guard (flowModules? [(decisionsRows, [])]).map importLine =
+#guard (flowModules? [(decisionsRows, [])]).map (fun source =>
+    ((source.splitOn "\n").filter fun line =>
+      (line.splitOn "from \"effect\"").length > 1).headD "-") =
   some "import { Context, Effect } from \"effect\""
 
 -- The fiber module names `Fiber` (every handle), `Option` (the fork's region
 -- field) and `Result` (`awaitFiber`'s exit), and now imports all three.
 #guard (forkJoin?.bind fun a => caughtJoin?.bind fun b => maskedChild?.bind fun c =>
-    (flowModules? [(rows, [a, b, c])]).map importLine) =
+    (flowModules? [(rows, [a, b, c])]).map (fun source =>
+    ((source.splitOn "\n").filter fun line =>
+      (line.splitOn "from \"effect\"").length > 1).headD "-")) =
   some "import { Context, Effect, Fiber, Option, Result } from \"effect\""
 
 -- With a region, `Exit` joins them — carried by the `Regions` class, in the
 -- needle list's order.
-#guard (forkInRegion?.bind fun p => (regionModules? [(rows, [], [p])]).map importLine) =
+#guard (forkInRegion?.bind fun p => (regionModules? [(rows, [], [p])]).map (fun source =>
+    ((source.splitOn "\n").filter fun line =>
+      (line.splitOn "from \"effect\"").length > 1).headD "-")) =
   some "import { Context, Effect, Exit, Fiber, Option, Result } from \"effect\""
 
 end Effect4Test.Target.TypeScript.FiberProfileContract

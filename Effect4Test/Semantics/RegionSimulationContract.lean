@@ -50,6 +50,33 @@ open Effects.Trace (Val)
 #check @Effect4.RegionSimulation.RegionsSimulate
 #check @Effect4.RegionSimulation.RegionsSimulateExit
 
+-- Spike S4b: the leave configuration, and the proof that the walk is the runner.
+#check @Effect4.RegionSimulation.LeavePoint
+#check @Effect4.RegionSimulation.anyReleaseFails
+#check @Effect4.RegionSimulation.registeredRelease
+#check @Effect4.RegionSimulation.registeredReleases
+#check @Effect4.RegionSimulation.regionWalk
+#check @Effect4.RegionSimulation.leaveConfig
+#check @Effect4.RegionSimulation.RunPrefix
+#check @Effect4.RegionSimulation.logOperation_prefix
+#check @Effect4.RegionSimulation.regionLoop_jump
+#check @Effect4.RegionSimulation.regionLoop_choose
+#check @Effect4.RegionSimulation.regionLoop_perform
+#check @Effect4.RegionSimulation.regionLoop_performCatch_ok
+#check @Effect4.RegionSimulation.regionLoop_performCatch_error
+#check @Effect4.RegionSimulation.regionLoop_enter
+#check @Effect4.RegionSimulation.regionLoop_acquire
+#check @Effect4.RegionSimulation.regionLoop_leave
+#check @Effect4.RegionSimulation.closeFrame_success
+#check @Effect4.RegionSimulation.leaveStep
+#check @Effect4.RegionSimulation.closeWalk_agrees_regionLoop
+#check @Effect4.RegionSimulation.leaveConfig_agrees_runRegions
+#check @Effect4.RegionSimulation.leaveConfig_of_regionWalk
+#check @Effect4.RegionSimulation.regionRegistrations_of_regionWalk
+#check @Effect4.RegionSimulation.regionInterp_regionCont_resume
+#check @Effect4.RegionSimulation.RegionsSimulateAll
+#check @Effect4.RegionSimulation.RegionsSimulateExitAll
+
 /-! ## Separation 4: the name alphabet is data, not a function
 
 `DecidableEq (Prim …)` is the guard. It fails to elaborate the moment `ν` or
@@ -326,6 +353,49 @@ theorem runnerSide_regionCatch :
 
 #guard machineSide regionCatch ==
   some [ .finalizer 1 (.success (.nat 5)), .done (.success (.nat 5)) ]
+
+/-! ## Spike S4b: the leave configuration, as receipts
+
+`leaveConfig` is the configuration `Effect4.Flow.regionLoop` holds when the
+region entered at the flow's entry hands its value on. These pin the literal on
+both halves — the block and the fuel — so a mutant that resumed at the enter's
+configuration (which is what spike S4 did) would break them. -/
+
+def leaveConfigOf (raw : RegionFlow String) : Option (Option Config) :=
+  (admit? raw).map fun flow =>
+    leaveConfig alphabet flow.flow (statelessAnswer alphabet flow.flow answerOf)
+      (statelessRelease alphabet flow.flow answerOf)
+      ⟨Flow.fuelFor flow.flow.erase [], flow.flow.entry, [.nat 5], []⟩
+
+/-- The entry point of a fixture: the configuration the *enter* holds. -/
+def enterPointOf (raw : RegionFlow String) : Option Config :=
+  (admit? raw).map fun flow =>
+    ⟨Flow.fuelFor flow.flow.erase [], flow.flow.entry, [.nat 5], []⟩
+
+/-- One region, one release, a clean leave: the runner reaches the `leave` with
+two units of fuel left and no tape, and continues at block 3. -/
+theorem leaveConfig_regionBothSucceed :
+    leaveConfigOf regionBothSucceed = some (some ⟨2, ⟨3⟩, [.nat 5], []⟩) := by rfl
+
+/-- **The repair has content.** The enter holds fuel 5 at block 0; the compile
+used to resume at `point.fuel - 1 = 4`, and the runner resumes at 2. -/
+theorem enterPoint_regionBothSucceed :
+    enterPointOf regionBothSucceed = some ⟨5, ⟨0⟩, [.nat 5], []⟩ := by rfl
+
+theorem leaveConfig_regionReleaseFails :
+    leaveConfigOf regionReleaseFails = some (some ⟨2, ⟨4⟩, [.nat 5], []⟩) := by rfl
+
+/-- P3's fixture: the caught failure runs through the error edge and the
+acquire, so the leave is reached three units of fuel from the end. -/
+theorem leaveConfig_regionCatch :
+    leaveConfigOf regionCatch = some (some ⟨3, ⟨4⟩, [.nat 5], []⟩) := by rfl
+
+/-- A region whose body fails reaches no `leave`, so the value arm of its scope
+frame is never demanded and `leaveConfig` is honestly `none`: the cause arm
+answers instead. -/
+theorem leaveConfig_regionTwoFail : leaveConfigOf regionTwoFail = some none := by rfl
+
+theorem leaveConfig_regionNested : leaveConfigOf regionNested = some none := by rfl
 
 /-! ## P4: the instances, as instances of T5 and T6
 

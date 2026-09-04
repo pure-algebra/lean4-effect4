@@ -119,3 +119,44 @@ The fence A and fence B theorems this packet consumes —
 #print axioms Effect4Test.Semantics.RegionSimulationContract.regionNested_catch_free
 #print axioms Effect4Test.Semantics.RegionSimulationContract.regionTwoFail_catch_free
 #print axioms Effect4Test.Semantics.RegionSimulationContract.regionReleaseFails_catch_free
+
+/-! ## R11 — spike S4b: the leave configuration, and the proof that the walk is
+the runner
+
+One lemma per runner arm, the close lemma, the induction, and the corollaries
+that let `regionInterp.contA` resume a region where the runner resumes it. -/
+
+#print axioms Effect4.RegionSimulation.logOperation_prefix
+#print axioms Effect4.RegionSimulation.regionLoop_jump
+#print axioms Effect4.RegionSimulation.regionLoop_choose
+#print axioms Effect4.RegionSimulation.regionLoop_perform
+#print axioms Effect4.RegionSimulation.regionLoop_performCatch_ok
+#print axioms Effect4.RegionSimulation.regionLoop_performCatch_error
+#print axioms Effect4.RegionSimulation.regionLoop_enter
+#print axioms Effect4.RegionSimulation.regionLoop_acquire
+#print axioms Effect4.RegionSimulation.regionLoop_leave
+#print axioms Effect4.RegionSimulation.anyReleaseFails_cons
+#print axioms Effect4.RegionSimulation.closeReleases_cons_ok
+#print axioms Effect4.RegionSimulation.statelessAnswer_of
+#print axioms Effect4.RegionSimulation.registeredReleases_nil
+#print axioms Effect4.RegionSimulation.closeReleases_success
+#print axioms Effect4.RegionSimulation.closeFrame_success
+#print axioms Effect4.RegionSimulation.closeWalk_agrees_regionLoop
+#print axioms Effect4.RegionSimulation.leaveConfig_agrees_runRegions
+#print axioms Effect4.RegionSimulation.leaveConfig_of_regionWalk
+#print axioms Effect4.RegionSimulation.regionRegistrations_of_regionWalk
+#print axioms Effect4.RegionSimulation.regionInterp_regionCont_resume
+#print axioms Effect4.RegionSimulation.RunPrefix.refl
+#print axioms Effect4.RegionSimulation.RunPrefix.of_eq
+#print axioms Effect4.RegionSimulation.RunPrefix.trans
+#print axioms Effect4.RegionSimulation.RunPrefix.emit
+
+/-! ## R12 — spike S4b: the leave-configuration receipts and the inverted
+boundary witness -/
+
+#print axioms Effect4Test.Semantics.RegionSimulationContract.leaveConfig_regionBothSucceed
+#print axioms Effect4Test.Semantics.RegionSimulationContract.enterPoint_regionBothSucceed
+#print axioms Effect4Test.Semantics.RegionSimulationContract.leaveConfig_regionReleaseFails
+#print axioms Effect4Test.Semantics.RegionSimulationContract.leaveConfig_regionCatch
+#print axioms Effect4Test.Semantics.RegionSimulationContract.leaveConfig_regionTwoFail
+#print axioms Effect4Test.Semantics.RegionSimulationContract.leaveConfig_regionNested
