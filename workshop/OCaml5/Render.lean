@@ -602,6 +602,9 @@ inductive Expr where
   re-raising `exnc` are the wrapper's, not ours. -/
   | tryWithEff (comp arg : Expr) (answer : Ty) (effc : List Effc)
   | annot (e : Expr) (ty : Ty)
+  /-- Request 5: a place the renderer refuses to fill. `note` says what the Lean side had;
+  `fill` is what the hand-written module supplies in its place. -/
+  | hole (note : String) (fill : Expr)
   /-- Verbatim text, for anything this surface does not spell. -/
   | raw (text : String)
 
@@ -688,6 +691,7 @@ def renderExpr (ind : Nat) : Expr → String
         ++ indentOf (ind + 2) ++ "match eff with" ++ renderEffcClauses (ind + 2) answer effc
         ++ "\n" ++ indentOf (ind + 2) ++ "| _ -> None) })"
   | .annot e ty => "(" ++ renderExpr ind e ++ " : " ++ renderTy ty ++ ")"
+  | .hole note fill => "(* HOLE: " ++ note ++ " *) " ++ renderExpr ind fill
   | .raw t => t
 
 def renderExprs (ind : Nat) : List Expr → List String
@@ -738,12 +742,19 @@ structure Field where
   name : String
   ty : Ty
   isMutable : Bool := false
+  /-- A trailing `(* … *)` on the field's own line, when the record is rendered wide. -/
+  comment : Option String := Option.none
+  /-- Verbatim lines emitted above the field, when the record is rendered wide. A substitute
+  field needs one: it has no Lean counterpart, so the only place to say why it exists is here. -/
+  leading : List String := []
 deriving Repr, Inhabited
 
 /-- One variant constructor: `| C of t1 * t2`. -/
 structure Ctor where
   name : String
   args : List Ty := []
+  /-- A trailing `(* … *)` on the constructor's own line. -/
+  comment : Option String := Option.none
 deriving Repr, Inhabited
 
 inductive TyBody where
@@ -794,10 +805,31 @@ private def renderCtor (c : Ctor) : String :=
     ++ (if c.args.isEmpty then ""
         else " of " ++ String.intercalate " * " (renderTys c.args))
 
+private def trailing : Option String → String
+  | Option.none => ""
+  | Option.some t => "  (* " ++ t ++ " *)"
+
+/-- A record or variant with four or more members is laid out one member per line, which is
+the shape `workshop/OCaml5/avatar/deep_fibers.ml` is written in; three or fewer stay on one
+line. Below the threshold a comment has nowhere to go and is dropped. -/
+def wideAt : Nat := 4
+
 private def renderTyBody (b : TyBody) : String :=
   match b with
-  | .record fs => "{ " ++ String.intercalate "; " (fs.map renderField) ++ " }"
-  | .variant cs => "\n  " ++ String.intercalate "\n  " (cs.map renderCtor)
+  | .record fs =>
+      if fs.length < wideAt then "{ " ++ String.intercalate "; " (fs.map renderField) ++ " }"
+      else
+        "{\n" ++ String.join (fs.map fun f =>
+          String.join (f.leading.map fun l => "  " ++ l ++ "\n")
+            ++ "  " ++ renderField f ++ ";" ++ trailing f.comment ++ "\n") ++ "}"
+  | .variant cs =>
+      if cs.length < wideAt then
+        " " ++ String.intercalate " | " (cs.map fun c =>
+          c.name ++ (if c.args.isEmpty then ""
+                     else " of " ++ String.intercalate " * " (renderTys c.args)))
+      else
+        "\n" ++ String.join (cs.map fun c => "  " ++ renderCtor c ++ trailing c.comment ++ "\n")
+          |>.dropEnd 1 |>.toString
   | .alias t => renderTy t
   | .abstract => ""
 
@@ -1059,8 +1091,7 @@ renders. -/
 
 #guard renderDecl Deep.fiberIdDecl == "type fiber_id = int"
 
-#guard renderDecl Deep.parkedDecl ==
-  "type parked =\n  | NotParked\n  | WithGuard of int"
+#guard renderDecl Deep.parkedDecl == "type parked = NotParked | WithGuard of int"
 
 #guard renderDecl Deep.stuckDecl == "exception Stuck_unknown_fiber of fiber_id"
 
@@ -1070,10 +1101,10 @@ renders. -/
 
 -- A record with `mutable` fields, and a mutually recursive `and` group.
 #guard renderDecl Deep.runFiberDecl ==
-  "type ('nu, 'b) run_fiber = { id : fiber_id; mutable running : bool; mutable parked : parked;"
-    ++ " mutable pending : ('nu, 'b) pending list; mutable exit : 'b option;"
-    ++ " mutable observers : observer list; mutable children : fiber_id list;"
-    ++ " dispatcher : 'b dispatcher }"
+  "type ('nu, 'b) run_fiber = {\n  id : fiber_id;\n  mutable running : bool;\n"
+    ++ "  mutable parked : parked;\n  mutable pending : ('nu, 'b) pending list;\n"
+    ++ "  mutable exit : 'b option;\n  mutable observers : observer list;\n"
+    ++ "  mutable children : fiber_id list;\n  dispatcher : 'b dispatcher;\n}"
 
 #guard ((renderDecl Deep.schedulerDecls).splitOn "\nand ").length == 3
 
@@ -1093,6 +1124,964 @@ renders. -/
 -- The module is one text, and every declaration is in it.
 #guard (Ml.moduleText Deep.sample).length > 2000
 #guard ((Ml.moduleText Deep.sample).splitOn "type _ Effect.t +=").length == 2
+
+/-!
+# Descriptions of Lean declarations, and the avatar's carriers
+
+Round three, 2026-09-04: `docs/research/2026-09-04-spike-a0-avatar.md` §1 asks P5 to *generate*
+the avatar's carriers rather than let a human retype them. This layer is the description of a
+Lean declaration — its name, its field or constructor order, its Lean types — plus the two
+mappings that turn one into OCaml: a **name mangling** and a **type substitution**.
+
+The division of labour is deliberate. The renderer owns everything mechanical: order, arity,
+mutability, layout, and the names. The substitution table owns the one thing a renderer cannot
+decide — which OCaml type stands for a Lean type the avatar does not transcribe (`Exit β ε δ ι α`
+is `exitv`, `χ` is `unit`, `Prim` in an answer position is `answer`). That table is one visible
+list per module, not a decision scattered through 900 lines of hand-written OCaml.
+-/
+
+/-! ## Names
+
+`mangleField` is **total** and **injective**; `unmangleField` is an exhibited left inverse and the
+`#guard`s below run it on every field name of the carriers rendered here plus a row of adversarial
+ones. The code, character by character:
+
+| source | image |
+| --- | --- |
+| a lowercase letter or a digit | itself |
+| an uppercase `X` | `_` ++ lowercase `X` (this is camelCase → snake_case) |
+| `_` | `_0` |
+| `'` | `_1` |
+| anything else, code `c` | `_2` ++ three decimal digits of `c` |
+
+and a result that is an OCaml keyword, or `exit`, gets one `_` appended. That last step cannot
+collide: no image of the character code ends in a bare `_`, because every escape `_` is followed
+by a letter or a digit. `exit` → `exit_` is `deep_fibers.ml:194`. -/
+
+/-- The OCaml keywords, plus `exit`: a record field named `exit` is legal, but `f.exit` reads as
+`Stdlib.exit` at a glance, and the avatar spells it `exit_`. -/
+def reservedNames : List String :=
+  ["and", "as", "assert", "asr", "begin", "class", "constraint", "do", "done", "downto",
+   "else", "end", "exception", "external", "false", "for", "fun", "function", "functor",
+   "if", "in", "include", "inherit", "initializer", "land", "lazy", "let", "lor", "lsl",
+   "lsr", "lxor", "match", "method", "mod", "module", "mutable", "new", "nonrec", "object",
+   "of", "open", "or", "private", "rec", "sig", "struct", "then", "to", "true", "try",
+   "type", "val", "virtual", "when", "while", "with", "exit"]
+
+private def pad3 (n : Nat) : String :=
+  let s := toString n
+  if s.length ≥ 3 then s else if s.length == 2 then "0" ++ s else "00" ++ s
+
+private def encChar (c : Char) : String :=
+  if c.isLower || c.isDigit then String.singleton c
+  else if c.isUpper then "_" ++ String.singleton (Char.ofNat (c.toNat + 32))
+  else if c == '_' then "_0"
+  else if c == '\'' then "_1"
+  else "_2" ++ pad3 c.toNat
+
+/-- The character code, before the keyword escape. -/
+def mangleCore (s : String) : String := s.foldl (init := "") fun acc c => acc ++ encChar c
+
+/-- A Lean field name as an OCaml record label. Total; `unmangleField` is a left inverse. -/
+def mangleField (s : String) : String :=
+  let e := mangleCore s
+  if reservedNames.contains e then e ++ "_" else e
+
+private def decodeAux : List Char → List Char
+  | [] => []
+  | '_' :: [] => []                                        -- the keyword escape
+  | '_' :: '0' :: rest => '_' :: decodeAux rest
+  | '_' :: '1' :: rest => '\'' :: decodeAux rest
+  | '_' :: '2' :: a :: b :: c :: rest =>
+      Char.ofNat (100 * (a.toNat - 48) + 10 * (b.toNat - 48) + (c.toNat - 48))
+        :: decodeAux rest
+  | '_' :: x :: rest => Char.ofNat (x.toNat - 32) :: decodeAux rest
+  | c :: rest => c :: decodeAux rest
+
+/-- The left inverse of `mangleField`. -/
+def unmangleField (s : String) : String := String.ofList (decodeAux s.toList)
+
+/-- A Lean type name as an OCaml type name: the same code, minus the leading `_` an initial
+capital produces. Injective on names whose first character is an uppercase ASCII letter. -/
+def typeName (s : String) : String :=
+  let e := mangleCore s
+  if e.startsWith "_" then (e.drop 1).toString else e
+
+/-- A Lean constructor name as an OCaml constructor name. With an empty prefix the initial is
+capitalised (`resumeAwait` → `ResumeAwait`); with a prefix the prefix supplies the required
+capital and the Lean name is kept verbatim (`"C"`, `evaluate` → `Cevaluate`), which is the
+scheme `deep_fibers.ml` uses to keep `Cmd` and `RunDecision` from colliding with each other and
+with `WithFiberAction`. Injective for a fixed prefix. -/
+def ctorName (pfx : String) (s : String) : String :=
+  if pfx.isEmpty then
+    match s.toList with
+    | [] => s
+    | c :: rest => String.ofList (Char.ofNat (if c.isLower then c.toNat - 32 else c.toNat) :: rest)
+  else pfx ++ s
+
+/-! ## Lean types, and the substitution -/
+
+/-- A Lean type expression, as much of one as the description needs: a head and its arguments. -/
+inductive LTy where
+  | app (head : String) (args : List LTy)
+deriving Repr, Inhabited
+
+namespace LTy
+def nm (h : String) : LTy := .app h []
+def opt (t : LTy) : LTy := .app "Option" [t]
+def lst (t : LTy) : LTy := .app "List" [t]
+def nat : LTy := .app "Nat" []
+def bool : LTy := .app "Bool" []
+def str : LTy := .app "String" []
+end LTy
+
+/-- What each Lean type head becomes in OCaml. Keyed on the head only: `Exit β ε δ ι α` and
+`Exit β' ε' δ' ι' α'` are both `exitv`, because the avatar is one profile of the family and its
+arguments are fixed by the fixture. A head with no entry falls through to `typeName` applied to
+its own name, with its arguments lowered — so a carrier that *is* transcribed needs no entry. -/
+abbrev Subst := List (String × Ty)
+
+private def substLookup : Subst → String → Option Ty
+  | [], _ => Option.none
+  | (k, v) :: rest, n => if k == n then Option.some v else substLookup rest n
+
+mutual
+
+def lowerTy (tbl : Subst) : LTy → Ty
+  | .app "Nat" [] => Ty.int
+  | .app "Bool" [] => Ty.bool
+  | .app "String" [] => Ty.string
+  | .app "Unit" [] => Ty.unit
+  | .app "Option" [t] => Ty.option (lowerTy tbl t)
+  | .app "List" [t] => Ty.list (lowerTy tbl t)
+  | .app h args =>
+      match substLookup tbl h with
+      | Option.some t => t
+      | Option.none => .con (typeName h) (lowerTys tbl args)
+
+def lowerTys (tbl : Subst) : List LTy → List Ty
+  | [] => []
+  | t :: rest => lowerTy tbl t :: lowerTys tbl rest
+
+end
+
+/-! ## Structures -/
+
+/-- What becomes of one Lean field. `hole` is A0's request 5: the field is *not* rendered, the
+hand-written module supplies it, and `structHoles` names it so a check can insist. -/
+inductive FieldKind where
+  | keep
+  /-- Not rendered. The note says what the avatar must fill in. -/
+  | hole (note : String)
+  /-- An OCaml field with no Lean counterpart, standing for the holes. -/
+  | substitute
+deriving Repr, Inhabited
+
+structure FieldDesc where
+  leanName : String
+  leanTy : LTy
+  isMutable : Bool := false
+  kind : FieldKind := .keep
+  /-- Only for a `substitute`, whose name is not a mangled Lean name. -/
+  ocamlName : Option String := Option.none
+  comment : Option String := Option.none
+  leading : List String := []
+deriving Repr, Inhabited
+
+/-- A Lean `structure`, in Lean field order. -/
+structure StructDesc where
+  leanName : String
+  /-- Where it lives, for the generated comment: `"Fibers.lean:157"`. -/
+  site : String
+  subst : Subst
+  fields : List FieldDesc
+deriving Repr, Inhabited
+
+def FieldDesc.ocaml (d : FieldDesc) : String :=
+  match d.ocamlName with
+  | Option.some n => n
+  | Option.none => mangleField d.leanName
+
+private def toField (tbl : Subst) (d : FieldDesc) : Field :=
+  { name := d.ocaml, ty := lowerTy tbl d.leanTy, isMutable := d.isMutable, comment := d.comment,
+    leading := d.leading }
+
+/-- The Lean fields this description refuses to render (request 5). -/
+def StructDesc.holes (d : StructDesc) : List (String × String) :=
+  d.fields.filterMap fun f =>
+    match f.kind with
+    | .hole note => Option.some (f.leanName, note)
+    | _ => Option.none
+
+/-- The OCaml record: same order, same arity minus the holes, `mutable` where the description
+says so, field names mangled. -/
+def StructDesc.decl (d : StructDesc) : Decl :=
+  .types [{ name := typeName d.leanName,
+            body := .record ((d.fields.filter fun f =>
+              match f.kind with | .hole _ => false | _ => true).map (toField d.subst)) }]
+
+/-- The comment the generator puts above the record: the Lean site, the field count, and every
+hole, so that request 5 is visible in the output and not only in the description. -/
+def StructDesc.header (d : StructDesc) : Decl :=
+  .comment (s!"`{d.leanName}` (`{d.site}`), {d.fields.length} Lean fields, "
+    ++ s!"{(d.fields.filter fun f => match f.kind with | .hole _ => false | _ => true).length}"
+    ++ " rendered. Generated by OCaml5.Ml."
+    ++ String.join (d.holes.map fun h => s!"\n     HOLE {h.1}: {h.2}"))
+
+/-! ## Inductives -/
+
+structure CtorArg where
+  leanName : String
+  leanTy : LTy
+  /-- Dropped from the OCaml arity. Every use is a divergence and is counted. -/
+  erased : Bool := false
+deriving Repr, Inhabited
+
+structure CtorDesc where
+  leanName : String
+  args : List CtorArg := []
+  /-- Overrides `ctorName`, for the two names that would collide inside one module. -/
+  ocamlName : Option String := Option.none
+  comment : Option String := Option.none
+deriving Repr, Inhabited
+
+/-- A Lean `inductive`, in Lean constructor order. -/
+structure InductiveDesc where
+  leanName : String
+  site : String
+  ctorPrefix : String := ""
+  subst : Subst
+  ctors : List CtorDesc
+deriving Repr, Inhabited
+
+def CtorDesc.ocaml (pfx : String) (c : CtorDesc) : String :=
+  match c.ocamlName with
+  | Option.some n => n
+  | Option.none => ctorName pfx c.leanName
+
+private def toCtor (tbl : Subst) (pfx : String) (c : CtorDesc) : Ctor :=
+  { name := CtorDesc.ocaml pfx c,
+    args := lowerTys tbl ((c.args.filter fun a => !a.erased).map (·.leanTy)),
+    comment := c.comment }
+
+/-- The OCaml variant: same order, arity for arity except where an argument is explicitly
+`erased`. -/
+def InductiveDesc.decl (d : InductiveDesc) : Decl :=
+  .types [{ name := typeName d.leanName,
+            body := .variant (d.ctors.map (toCtor d.subst d.ctorPrefix)) }]
+
+/-- The Lean arity of each constructor, and the OCaml one; equal unless an argument is erased. -/
+def InductiveDesc.arities (d : InductiveDesc) : List (String × Nat × Nat) :=
+  d.ctors.map fun c =>
+    (c.leanName, c.args.length, (c.args.filter fun a => !a.erased).length)
+
+/-- Every erasure, as `(constructor, argument, Lean type head)`. -/
+def InductiveDesc.erasures (d : InductiveDesc) : List (String × String) :=
+  d.ctors.flatMap fun c =>
+    (c.args.filter (·.erased)).map fun a => (c.leanName, a.leanName)
+
+def InductiveDesc.header (d : InductiveDesc) : Decl :=
+  .comment (s!"`{d.leanName}` (`{d.site}`), {d.ctors.length} constructors"
+    ++ (if d.ctorPrefix.isEmpty then "" else s!", prefix `{d.ctorPrefix}`")
+    ++ ". Generated by OCaml5.Ml."
+    ++ String.join (d.erasures.map fun e => s!"\n     ERASED {e.1}.{e.2}"))
+
+/-! ## The avatar's carriers, described
+
+`workshop/OCaml5/avatar/deep_fibers.ml` transcribed `workshop/Deep/Fibers.lean` by hand. These
+are the descriptions that generate the carriers A0's request 1 and request 2 name, against the
+one substitution table below. `tools/fuzz.sh avatar` renders them, compiles the result, and diffs
+it against A0's file. -/
+
+namespace Avatar
+
+/-- The one substitution table for the avatar module: what each Lean type head becomes. Every
+entry is a decision A0 made by hand in `deep_fibers.ml`; collecting them here is the point.
+
+* the family's parameters are fixed by the fixture: `χ` is `unit` (no context service) and `ν`
+  is a program name, printed as a string;
+* `Exit β ε δ ι α` is `exitv`, `Cause ε δ ι α` is `cause`, `ReasonAnnotations α` is
+  `string list`;
+* `Prim ν σ β ε δ ι α` is `answer` — every `Prim` in an answer position is `Prim.success` or
+  `Prim.failure` (`deep_fibers.ml:121-124`), and `Prim` proper is never rendered (request 5);
+* `FrameEvent` is a `string`: the avatar prints frame events, it does not carry them. -/
+def subst : Subst :=
+  [("FiberId", Ty.int),
+   ("Parked", Ty.named "parked"),
+   ("FrameFiber", Ty.named "frame_fiber"),
+   ("Pending", Ty.named "pending"),
+   ("Exit", Ty.named "exitv"),
+   ("Observer", Ty.named "observer"),
+   ("Dispatcher", Ty.named "dispatcher"),
+   ("Task", Ty.named "task"),
+   ("Prim", Ty.named "answer"),
+   ("Cause", Ty.named "cause"),
+   ("FrameEvent", Ty.string),
+   ("ReasonAnnotations", Ty.list Ty.string),
+   ("Supervision.ObserverMode", Ty.named "observer_mode"),
+   ("Supervision.ScopeMode", Ty.int),
+   ("Supervision.ForkOptions", Ty.named "fork_options"),
+   ("χ", Ty.unit),
+   ("ν", Ty.string),
+   ("σ", Ty.unit)]
+
+private def fid : LTy := .nm "FiberId"
+private def exitL : LTy := .app "Exit" [.nm "β", .nm "ε", .nm "δ", .nm "ι", .nm "α"]
+private def primL : LTy :=
+  .app "Prim" [.nm "ν", .nm "σ", .nm "β", .nm "ε", .nm "δ", .nm "ι", .nm "α"]
+private def taskL : LTy :=
+  .app "Task" [.nm "ν", .nm "σ", .nm "β", .nm "ε", .nm "δ", .nm "ι", .nm "α"]
+
+/-! ### Request 5: `FrameFiber`, with the `Prim` pair as a hole
+
+`Effect4/Runtime/Runtime.lean:269`, five fields. `current : Prim …` and `stack : List (Prim …)`
+are DIVERGENCE 1 — the OCaml 5 stack itself — and the renderer refuses them. `control` is the
+substitute the hand-written module fills. -/
+def frameFiber : StructDesc where
+  leanName := "FrameFiber"
+  site := "Runtime.lean:269"
+  subst := subst
+  fields :=
+    [{ leanName := "current", leanTy := primL,
+       kind := .hole ("the OCaml 5 stack: a closure, `Onstack`, a captured continuation,"
+         ++ " or a recorded failure. DIVERGENCE 1.") },
+     { leanName := "stack", leanTy := .lst primL,
+       kind := .hole "rc.112's `_stack`; the OCaml 5 stack carries it. DIVERGENCE 1." },
+     { leanName := "control", leanTy := .nm "control", isMutable := true, kind := .substitute,
+       ocamlName := Option.some "control",
+       comment := Option.some "current + stack, DIVERGENCE 1" },
+     { leanName := "interruptible", leanTy := .bool, isMutable := true },
+     { leanName := "interruptedCause", leanTy := .opt (.app "Cause" [.nm "ε"]), isMutable := true },
+     { leanName := "deferredInterrupt", leanTy := .bool, isMutable := true }]
+
+/-! ### Request 1: `RunFiber`, fifteen fields in the Lean order
+
+`Fibers.lean:157`. Everything but `id` and `frame` is `mutable`: DIVERGENCE 3, the machine is a
+value threaded through pure updates in Lean and a record updated in place in OCaml. -/
+def runFiber : StructDesc where
+  leanName := "RunFiber"
+  site := "Fibers.lean:157"
+  subst := subst
+  fields :=
+    [{ leanName := "id", leanTy := fid },
+     { leanName := "frame", leanTy := .app "FrameFiber" [.nm "ν"] },
+     { leanName := "running", leanTy := .bool, isMutable := true },
+     { leanName := "parked", leanTy := .nm "Parked", isMutable := true },
+     { leanName := "pending", leanTy := .lst (.app "Pending" [.nm "ν"]), isMutable := true },
+     { leanName := "finalizing", leanTy := .opt exitL, isMutable := true },
+     { leanName := "exit", leanTy := .opt exitL, isMutable := true },
+     { leanName := "currentOpCount", leanTy := .nat, isMutable := true },
+     { leanName := "maxOpsBeforeYield", leanTy := .nat, isMutable := true },
+     { leanName := "preventYield", leanTy := .bool, isMutable := true },
+     { leanName := "yieldOverride", leanTy := .opt .bool, isMutable := true },
+     -- No Lean counterpart: the avatar carries `Cmd.loop`'s `yielding` argument on the fiber,
+     -- because `Cmd.loop` has no OCaml existence (DIVERGENCE 2). The comment is A0's own.
+     { leanName := "yielding", leanTy := .bool, isMutable := true, kind := .substitute,
+       ocamlName := Option.some "yielding",
+       leading :=
+         ["(* Not a Lean field: `iteration`'s per-entry injection latch is Lean's `yielding` argument",
+          "   to `Cmd.loop` (`Fibers.lean:683`, rc.112's `runLoop` local at `internal/effect.ts:634`).",
+          "   `Cmd.loop` has no OCaml existence (DIVERGENCE 2), so the latch lives on the fiber and is",
+          "   cleared wherever Lean's `Cmd.evaluate` would have passed `false`. *)"] },
+     { leanName := "observers", leanTy := .lst (.nm "Observer"), isMutable := true },
+     { leanName := "children", leanTy := .lst fid, isMutable := true },
+     { leanName := "dispatcher", leanTy := .app "Dispatcher" [.nm "ν"], isMutable := true },
+     { leanName := "context", leanTy := .nm "χ", isMutable := true }]
+
+/-! ### Request 2: the five inductives -/
+
+/-- `Observer` (`Fibers.lean:93`), six shapes, no prefix. -/
+def observer : InductiveDesc where
+  leanName := "Observer"
+  site := "Fibers.lean:93"
+  subst := subst
+  ctors :=
+    [{ leanName := "resumeAwait",
+       args := [⟨"waiter", fid, false⟩, ⟨"token", .nat, false⟩,
+                ⟨"mode", .nm "Supervision.ObserverMode", false⟩] },
+     { leanName := "untrackChild", args := [⟨"parent", fid, false⟩] },
+     { leanName := "dropScopeFinalizer", args := [⟨"scope", .nat, false⟩, ⟨"key", .nat, false⟩] },
+     { leanName := "countdown", args := [⟨"waiter", fid, false⟩, ⟨"token", .nat, false⟩] },
+     { leanName := "raceCallback", args := [⟨"race", .nat, false⟩] },
+     { leanName := "callback", args := [⟨"key", .nat, false⟩] }]
+
+/-- `RunEvent` (`Fibers.lean:305`), 22 constructors. Two names are overridden because they
+would collide inside one OCaml module: `frame` with the `frame_fiber` field and `callback` with
+`Observer.callback`. Two arguments are erased, both of them A0's own omissions, now recorded:
+`scopeLinked.mode` and `contextSet.context` (the profile's context is `unit`). -/
+def runEvent : InductiveDesc where
+  leanName := "RunEvent"
+  site := "Fibers.lean:305"
+  subst := subst
+  ctors :=
+    [{ leanName := "forked",
+       args := [⟨"parent", fid, false⟩, ⟨"child", fid, false⟩, ⟨"daemon", .bool, false⟩] },
+     { leanName := "started", args := [⟨"fiber", fid, false⟩] },
+     { leanName := "scheduledTask",
+       args := [⟨"owner", fid, false⟩, ⟨"priority", .nat, false⟩, ⟨"task", taskL, false⟩] },
+     { leanName := "ranTask", args := [⟨"owner", fid, false⟩, ⟨"task", taskL, false⟩] },
+     { leanName := "yieldInjected", args := [⟨"fiber", fid, false⟩, ⟨"atOp", .nat, false⟩] },
+     { leanName := "parkedOn", args := [⟨"fiber", fid, false⟩, ⟨"token", .nat, false⟩] },
+     { leanName := "resumedWith",
+       args := [⟨"fiber", fid, false⟩, ⟨"token", .nat, false⟩, ⟨"answer", primL, false⟩] },
+     { leanName := "interruptRecorded",
+       args := [⟨"interruptor", .opt fid, false⟩, ⟨"target", fid, false⟩] },
+     { leanName := "interruptDeferred", args := [⟨"target", fid, false⟩] },
+     { leanName := "childrenInterrupted",
+       args := [⟨"parent", fid, false⟩, ⟨"children", .lst fid, false⟩] },
+     { leanName := "observerFired",
+       args := [⟨"fiber", fid, false⟩, ⟨"observer", .nm "Observer", false⟩] },
+     { leanName := "frame", ocamlName := Option.some "FrameEv",
+       args := [⟨"fiber", fid, false⟩, ⟨"event", .nm "FrameEvent", false⟩] },
+     { leanName := "finalizerProgram",
+       args := [⟨"fiber", fid, false⟩, ⟨"finalizer", .nm "ν", false⟩, ⟨"exit", exitL, false⟩] },
+     { leanName := "scopeLinked",
+       args := [⟨"mode", .nm "Supervision.ScopeMode", true⟩, ⟨"scope", .nat, false⟩,
+                ⟨"key", .nat, false⟩, ⟨"fiber", fid, false⟩] },
+     { leanName := "scopeClosedOnLink", args := [⟨"scope", .nat, false⟩, ⟨"fiber", fid, false⟩] },
+     { leanName := "raceStarted",
+       args := [⟨"race", .nat, false⟩, ⟨"host", fid, false⟩, ⟨"entrants", .lst fid, false⟩] },
+     { leanName := "raceLaunched", args := [⟨"race", .nat, false⟩, ⟨"entrant", fid, false⟩] },
+     { leanName := "raceSkipped", args := [⟨"race", .nat, false⟩, ⟨"entrant", fid, false⟩] },
+     { leanName := "raceSettled", args := [⟨"race", .nat, false⟩, ⟨"exit", exitL, false⟩] },
+     { leanName := "contextSet",
+       args := [⟨"fiber", fid, false⟩, ⟨"context", .nm "χ", true⟩] },
+     { leanName := "callback", ocamlName := Option.some "CallbackEv",
+       args := [⟨"key", .nat, false⟩, ⟨"exit", exitL, false⟩] },
+     { leanName := "exited", args := [⟨"fiber", fid, false⟩, ⟨"exit", exitL, false⟩] }]
+
+/-- `RunDecision` (`Fibers.lean:362`), seven constructors, prefix `D`. -/
+def runDecision : InductiveDesc where
+  leanName := "RunDecision"
+  site := "Fibers.lean:362"
+  ctorPrefix := "D"
+  subst := subst
+  ctors :=
+    [{ leanName := "fire", args := [⟨"owner", fid, false⟩] },
+     { leanName := "flush" },
+     { leanName := "evaluate", args := [⟨"fiber", fid, false⟩] },
+     { leanName := "yieldVerdict", args := [⟨"fiber", fid, false⟩, ⟨"verdict", .bool, false⟩] },
+     { leanName := "answerAsync",
+       args := [⟨"fiber", fid, false⟩, ⟨"token", .nat, false⟩, ⟨"answer", primL, false⟩] },
+     { leanName := "interruptFrom",
+       args := [⟨"interruptor", .opt fid, false⟩,
+                ⟨"annotations", .app "ReasonAnnotations" [.nm "α"], false⟩,
+                ⟨"target", fid, false⟩] },
+     { leanName := "installMiddleware" }]
+
+/-- `Cmd` (`Fibers.lean:526`), five constructors, prefix `C`. `loop` is DIVERGENCE 2: the
+avatar has no `Cloop` because `continue k` runs the fiber to its next `perform`. It is rendered
+here anyway — the request is arity for arity — and the diff against `deep_fibers.ml:326` is the
+divergence, stated rather than silently absorbed. -/
+def cmd : InductiveDesc where
+  leanName := "Cmd"
+  site := "Fibers.lean:526"
+  ctorPrefix := "C"
+  subst := subst
+  ctors :=
+    [{ leanName := "evaluate", args := [⟨"fiber", fid, false⟩] },
+     { leanName := "loop", args := [⟨"fiber", fid, false⟩, ⟨"yielding", .bool, false⟩],
+       comment := Option.some "DIVERGENCE 2: absent from deep_fibers.ml" },
+     { leanName := "resume",
+       args := [⟨"fiber", fid, false⟩, ⟨"token", .nat, false⟩, ⟨"answer", primL, false⟩] },
+     { leanName := "launch", args := [⟨"race", .nat, false⟩, ⟨"entrant", fid, false⟩] },
+     { leanName := "drainDue" }]
+
+/-- `WithFiberAction` (`Fibers.lean:258`), 17 constructors, prefix `W`. Every `Prim` argument is
+an *action's program*, not an answer, so each is a hole: `Prim` is never rendered (request 5),
+and the avatar reaches these shapes through its own `Effect.t` constructors
+(`deep_fibers.ml:345-354`) with the program left to the hand-written handler. -/
+def withFiberAction : InductiveDesc where
+  leanName := "WithFiberAction"
+  site := "Fibers.lean:258"
+  ctorPrefix := "W"
+  subst := subst
+  ctors :=
+    [{ leanName := "fork",
+       args := [⟨"program", primL, true⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩] },
+     { leanName := "forkIn",
+       args := [⟨"program", primL, true⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩,
+                ⟨"scope", .nat, false⟩, ⟨"key", .nat, false⟩] },
+     { leanName := "forkScoped",
+       args := [⟨"program", primL, true⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩,
+                ⟨"key", .nat, false⟩] },
+     { leanName := "runIn",
+       args := [⟨"target", fid, false⟩, ⟨"scope", .nat, false⟩, ⟨"key", .nat, false⟩] },
+     { leanName := "interrupt", args := [⟨"target", fid, false⟩] },
+     { leanName := "interruptScoped", args := [⟨"target", fid, false⟩] },
+     { leanName := "interruptAll",
+       args := [⟨"targets", .lst fid, false⟩, ⟨"interruptor", .opt fid, false⟩] },
+     { leanName := "awaitAll", args := [⟨"targets", .lst fid, false⟩] },
+     { leanName := "snapshotChildren" },
+     { leanName := "awaitNewChildren", args := [⟨"snapshot", .lst fid, false⟩] },
+     { leanName := "raceAll", args := [⟨"entrants", .lst primL, true⟩] },
+     { leanName := "setInterruptible",
+       args := [⟨"body", primL, true⟩, ⟨"flag", .bool, false⟩] },
+     { leanName := "setContext", args := [⟨"context", .nm "χ", false⟩] },
+     { leanName := "getContext" },
+     { leanName := "getId" },
+     { leanName := "closeScope", args := [⟨"scope", .nat, false⟩, ⟨"exit", exitL, false⟩] },
+     { leanName := "refuse", args := [⟨"cause", .app "Cause" [.nm "ε"], false⟩] }]
+
+def inductives : List InductiveDesc := [observer, runEvent, runDecision, cmd, withFiberAction]
+
+end Avatar
+
+/-! ## Request 3: the pure-update → mutation pass
+
+Lean threads the machine through pure updates; the avatar mutates a record in place
+(`deep_fibers.ml`, DIVERGENCE 3). The rewrite is mechanical on one shape and only on that shape,
+which is what makes it checkable:
+
+```
+let f = { f with x = v; y = w } in body   ⟶   f.x <- v; f.y <- w; body
+let f = { f with g = { f.g with x = v } } in body   ⟶   f.g.x <- v; body
+```
+
+with `f` in the declared **linear** set — the names the caller asserts are used linearly, so that
+overwriting the old value is unobservable. `mutate` fires only when the `let` rebinds the same
+name it updates; anything else is traversed and left alone. When the body is just `f`, the result
+is `()`: a Lean function returning the updated record becomes an OCaml procedure whose caller
+already holds it.
+
+`residue` is the checker: the `{ … with … }` occurrences the pass did *not* eliminate. A caller
+`#guard`s that it is empty, so "the pass applied everywhere" is a fact and not a hope. -/
+
+/-- The nested case: `{ f.g with x = v }` under `{ f with g = … }` targets `f.g`. -/
+private def flatten (f : String) : List (String × Expr) → List (String × Expr) × List (String × Expr)
+  | [] => ([], [])
+  | (g, .recordWith (.field (.var f') g') inner) :: rest =>
+      let (flat, nested) := flatten f rest
+      if f' == f && g' == g then (flat, inner.map (fun kv => (g ++ "." ++ kv.1, kv.2)) ++ nested)
+      else ((g, .recordWith (.field (.var f') g') inner) :: flat, nested)
+  | kv :: rest => let (flat, nested) := flatten f rest; (kv :: flat, nested)
+
+private def setPath (f : String) (path : String) (v : Expr) : Expr :=
+  match path.splitOn "." with
+  | [k] => .setField (.var f) k v
+  | [g, k] => .setField (.field (.var f) g) k v
+  | _ => .raw ("(* unsupported update path " ++ path ++ " *)")
+
+private def setChainPaths (f : String) (fs : List (String × Expr)) (body : Expr) : Expr :=
+  match fs, body with
+  | [], _ => body
+  -- a trailing `()` is the statement itself; do not sequence it
+  | [(k, v)], .unit => setPath f k v
+  | [(k, v)], _ => .seq (setPath f k v) body
+  | (k, v) :: rest, _ => .seq (setPath f k v) (setChainPaths f rest body)
+
+mutual
+
+/-- The pass. Structural; the only rewrite is the one in the docstring. -/
+def mutate (linear : List String) : Expr → Expr
+  | .letIn n (.recordWith (.var f) fs) body =>
+      let fs' := mutateFields linear fs
+      let body' := mutate linear body
+      if n == f && linear.contains f then
+        let (flat, nested) := flatten f fs'
+        let tail := match body with
+          | .var b => if b == f then Expr.unit else body'
+          | _ => body'
+        setChainPaths f (flat ++ nested) tail
+      else .letIn n (.recordWith (.var f) fs') body'
+  | .letIn n v b => .letIn n (mutate linear v) (mutate linear b)
+  | .ctor n args => .ctor n (mutates linear args)
+  | .app f args => .app (mutate linear f) (mutates linear args)
+  | .binop op l r => .binop op (mutate linear l) (mutate linear r)
+  | .fn ps b => .fn ps (mutate linear b)
+  | .letRecIn bs b => .letRecIn (mutateBinds linear bs) (mutate linear b)
+  | .seq a b => .seq (mutate linear a) (mutate linear b)
+  | .ifThen c t e => .ifThen (mutate linear c) (mutate linear t) (mutate linear e)
+  | .matchE s arms => .matchE (mutate linear s) (mutateArms linear arms)
+  | .tryWith b arms => .tryWith (mutate linear b) (mutateArms linear arms)
+  | .record fs => .record (mutateFields linear fs)
+  | .recordWith b fs => .recordWith (mutate linear b) (mutateFields linear fs)
+  | .field e n => .field (mutate linear e) n
+  | .setField e n v => .setField (mutate linear e) n (mutate linear v)
+  | .tuple ps => .tuple (mutates linear ps)
+  | .listLit xs => .listLit (mutates linear xs)
+  | .mkRef e => .mkRef (mutate linear e)
+  | .deref e => .deref (mutate linear e)
+  | .assign r v => .assign (mutate linear r) (mutate linear v)
+  | .raiseE e => .raiseE (mutate linear e)
+  | .perform e => .perform (mutate linear e)
+  | .continueK k v => .continueK (mutate linear k) (mutate linear v)
+  | .discontinueK k e => .discontinueK (mutate linear k) (mutate linear e)
+  | .matchWith c a ty rv r ex ef =>
+      .matchWith (mutate linear c) (mutate linear a) ty rv (mutate linear r)
+        (mutateArms linear ex) (mutateEffc linear ef)
+  | .tryWithEff c a ty ef => .tryWithEff (mutate linear c) (mutate linear a) ty (mutateEffc linear ef)
+  | .annot e ty => .annot (mutate linear e) ty
+  | .hole note fill => .hole note (mutate linear fill)
+  | e => e
+
+def mutates (linear : List String) : List Expr → List Expr
+  | [] => []
+  | e :: rest => mutate linear e :: mutates linear rest
+
+def mutateFields (linear : List String) : List (String × Expr) → List (String × Expr)
+  | [] => []
+  | (n, e) :: rest => (n, mutate linear e) :: mutateFields linear rest
+
+def mutateBinds (linear : List String) :
+    List (String × List String × Expr) → List (String × List String × Expr)
+  | [] => []
+  | (n, ps, e) :: rest => (n, ps, mutate linear e) :: mutateBinds linear rest
+
+def mutateArms (linear : List String) : List Arm → List Arm
+  | [] => []
+  | .mk p g b :: rest =>
+      .mk p (match g with
+             | Option.none => Option.none
+             | Option.some ge => Option.some (mutate linear ge))
+        (mutate linear b) :: mutateArms linear rest
+
+def mutateEffc (linear : List String) : List Effc → List Effc
+  | [] => []
+  | .mk n args k b :: rest => .mk n args k (mutate linear b) :: mutateEffc linear rest
+
+end
+
+mutual
+
+/-- Every `{ … with … }` the pass left behind, named by the field it updates. Empty means the
+pass fired everywhere. -/
+def residue : Expr → List String
+  | .recordWith b fs => fs.map (·.1) ++ residue b ++ residueFields fs
+  | .letIn _ v b => residue v ++ residue b
+  | .ctor _ args => residues args
+  | .app f args => residue f ++ residues args
+  | .binop _ l r => residue l ++ residue r
+  | .fn _ b => residue b
+  | .letRecIn bs b => residueBinds bs ++ residue b
+  | .seq a b => residue a ++ residue b
+  | .ifThen c t e => residue c ++ residue t ++ residue e
+  | .matchE s arms => residue s ++ residueArms arms
+  | .tryWith b arms => residue b ++ residueArms arms
+  | .record fs => residueFields fs
+  | .field e _ => residue e
+  | .setField e _ v => residue e ++ residue v
+  | .tuple ps => residues ps
+  | .listLit xs => residues xs
+  | .mkRef e => residue e
+  | .deref e => residue e
+  | .assign r v => residue r ++ residue v
+  | .raiseE e => residue e
+  | .perform e => residue e
+  | .continueK k v => residue k ++ residue v
+  | .discontinueK k e => residue k ++ residue e
+  | .matchWith c a _ _ r ex ef => residue c ++ residue a ++ residue r ++ residueArms ex
+      ++ residueEffc ef
+  | .tryWithEff c a _ ef => residue c ++ residue a ++ residueEffc ef
+  | .annot e _ => residue e
+  | .hole _ fill => residue fill
+  | _ => []
+
+def residues : List Expr → List String
+  | [] => []
+  | e :: rest => residue e ++ residues rest
+
+def residueFields : List (String × Expr) → List String
+  | [] => []
+  | (_, e) :: rest => residue e ++ residueFields rest
+
+def residueBinds : List (String × List String × Expr) → List String
+  | [] => []
+  | (_, _, e) :: rest => residue e ++ residueBinds rest
+
+def residueArms : List Arm → List String
+  | [] => []
+  | .mk _ g b :: rest =>
+      (match g with | Option.none => [] | Option.some ge => residue ge) ++ residue b
+        ++ residueArms rest
+
+def residueEffc : List Effc → List String
+  | [] => []
+  | .mk _ _ _ b :: rest => residue b ++ residueEffc rest
+
+end
+
+/-! ### The three functions of request 3
+
+`fireObserver` (`:923`), `exitFiber` (`:992`) and `interruptRecord` (`:550`) are the three A0
+names. Two are here; §"what did not land" of the report says why the other two are not.
+
+Each is written twice: `…Pure` is the Lean function transcribed as written, with its pure record
+updates, and the rendered declaration is `mutate ["f"] …Pure`. The `#guard`s below check that
+`residue` is empty, so the pass fired on every update rather than leaving one behind. -/
+
+namespace Avatar
+
+/-- `RunFiber.park` (`Fibers.lean:249`), the smallest instance of the rewrite:
+`{ f with parked := …, pending := … }`. Not one of the three, but it is the shape they are made
+of, and `deep_fibers.ml:228` is the text to compare against. -/
+def parkPure : Expr :=
+  .letIn "f"
+    (.recordWith (.var "f")
+      [("parked", .ctor "WithGuard" [.field (.var "p") "token"]),
+       ("pending", .binop "@" (.field (.var "f") "pending") (.listLit [.var "p"]))])
+    (.var "f")
+
+def parkDecl : Decl :=
+  .letD false
+    [{ name := "run_fiber_park", params := [("f", Option.none), ("p", Option.none)],
+       body := mutate ["f"] parkPure }]
+
+/-- `interruptRecord` (`Fibers.lean:550`), arm for arm. Three divergences meet here and each is
+visible in the output rather than absorbed:
+
+* DIVERGENCE 3, the pure updates — three of them, one nested through `frame` — become mutations,
+  by the pass and not by hand;
+* DIVERGENCE 3 again, the Lean function returns `RunFiber × Bool` and the OCaml one returns the
+  `Bool`: the record the caller holds *is* the updated one;
+* request 5: `frame := { f.frame with current := Prim.failure accumulated }` is a `Prim`
+  assignment, so the renderer refuses it and emits a hole. `deep_fibers.ml:405-409` is what fills
+  it, and it is the only place in this function a human has to write. -/
+def interruptRecordPure : Expr :=
+  .ifThen (.binop "<>" (.field (.var "f") "exit_") (.ctor "None" []))
+    (.bool false)
+    (.letIn "cause"
+      (Expr.call "cause_annotate"
+        [Expr.call "cause_interrupt" [.var "interruptor"],
+         .binop "::"
+           (Expr.call "Printf.sprintf" [.str "stack:%d", .field (.var "f") "id"])
+           (.var "extra")])
+      (.letIn "accumulated"
+        (.matchE (.field (.field (.var "f") "frame") "interrupted_cause")
+          [.mk (.ctor "None" []) Option.none (.var "cause"),
+           .mk (.ctor "Some" [.var "previous"]) Option.none
+             (Expr.call "cause_combine" [.var "previous", .var "cause"])])
+        (.letIn "f"
+          (.recordWith (.var "f")
+            [("frame", .recordWith (.field (.var "f") "frame")
+               [("interrupted_cause", .ctor "Some" [.var "accumulated"])])])
+          (.ifThen (.field (.field (.var "f") "frame") "interruptible")
+            (.ifThen (.field (.var "f") "running")
+              (.letIn "f"
+                (.recordWith (.var "f")
+                  [("frame", .recordWith (.field (.var "f") "frame")
+                     [("deferred_interrupt", .bool true)])])
+                (.bool false))
+              (.seq
+                (.hole "FrameFiber.current := Prim.failure accumulated (Fibers.lean:571)"
+                  (Expr.call "frame_fail" [.var "f", .var "accumulated"]))
+                (.letIn "f"
+                  (.recordWith (.var "f")
+                    [("parked", .ctor "NotParked" []), ("pending", .listLit [])])
+                  (.bool true))))
+            (.bool false)))))
+
+def interruptRecordDecl : Decl :=
+  .letD false
+    [{ name := "interrupt_record",
+       params := [("_m", Option.none), ("interruptor", Option.none),
+                  ("extra", Option.some (Ty.list Ty.string)),
+                  ("f", Option.some (Ty.named "run_fiber"))],
+       result := Option.some Ty.bool,
+       body := mutate ["f"] interruptRecordPure }]
+
+end Avatar
+
+/-! ### The compile check
+
+`Avatar.generated` is a fragment: it names `exitv`, `cause`, `task` and the rest without
+declaring them, because the avatar declares them. `checkModule` closes it — the supporting
+carriers `deep_fibers.ml` spells above the generated ones, and the four helpers
+`interrupt_record` calls, `frame_fail` among them, which is the hand-written filling of the hole
+the renderer left. `tools/fuzz.sh avatar` compiles it on all three hosts. -/
+
+namespace Avatar
+
+/-- The carriers `deep_fibers.ml` declares before the generated ones, in its spelling, so that
+the generated fragment type-checks in isolation. Not generated, and not claimed to be. -/
+def preamble : List Decl :=
+  [.comment "Hand-written: the carriers the generated fragment refers to (deep_fibers.ml:64-160).",
+   .rawD "type value = Vunit | Vnat of int",
+   .rawD "type reason = Rfail of int | Rdie of string | Rinterrupt of int option",
+   .rawD "type cause = { reasons : reason list; annotations : string list }",
+   .rawD "type exitv = Esuccess of value | Efailure of cause",
+   .rawD "type observer_mode = MJoin | MAwait",
+   .rawD "type parked = NotParked | WithGuard of int",
+   .rawD "type resume_with = RexitsValue | Rvoid | RcontinueWith of exitv",
+   .rawD ("type pending = { token : int; waiting_on : int option; mutable remaining : int;"
+     ++ " mutable collected : exitv list; resume_with : resume_with }"),
+   .rawD "type answer = Aval of value | Acause of cause",
+   .rawD "type task = Tstart of int | Tresume of int * int * answer",
+   .rawD "type bucket = { priority : int; mutable tasks : task list }",
+   .rawD "type dispatcher = { mutable buckets : bucket list; mutable armed : bool }",
+   .rawD "type control = Program of (unit -> value) | Onstack | Failing of cause | Ended",
+   .rawD "type fork_options = { daemon : bool }"]
+
+/-- The four functions `interrupt_record` calls. `frame_fail` is the hole of request 5: the
+renderer refuses `FrameFiber.current := Prim.failure` and this is what the avatar puts there
+(`deep_fibers.ml:405-409`). -/
+def helpers : List Decl :=
+  [.comment "Hand-written: the helpers the generated functions call. `frame_fail` fills the HOLE.",
+   .rawD "let cause_interrupt who = { reasons = [ Rinterrupt who ]; annotations = [] }",
+   .rawD "let cause_annotate c extra = { c with annotations = c.annotations @ extra }",
+   .rawD ("let cause_combine a b ="
+     ++ " { reasons = a.reasons @ b.reasons; annotations = a.annotations @ b.annotations }"),
+   .rawD ("let frame_fail (f : run_fiber) (c : cause) =\n"
+     ++ "  match f.frame.control with\n"
+     ++ "  | Onstack -> ()\n"
+     ++ "  | Program _ | Failing _ | Ended -> f.frame.control <- Failing c")]
+
+/-- Declaration order is dependency order, which is `deep_fibers.ml`'s own: `Observer` before
+`RunFiber`, `FrameFiber` before it too. The Lean file's order is not a constraint — only the
+field and constructor order inside each carrier is. -/
+def generatedTypes : List Decl :=
+  [.comment "Generated by OCaml5.Ml (spike P5, round three). Do not edit; edit the descriptions.",
+   observer.header, observer.decl,
+   frameFiber.header, frameFiber.decl,
+   runFiber.header, runFiber.decl,
+   runEvent.header, runEvent.decl,
+   runDecision.header, runDecision.decl,
+   cmd.header, cmd.decl,
+   withFiberAction.header, withFiberAction.decl]
+
+def generatedFns : List Decl :=
+  [.comment "`RunFiber.park` (`Fibers.lean:249`), pure update rewritten to mutation.",
+   parkDecl,
+   .comment "`interruptRecord` (`Fibers.lean:550`), pure updates rewritten to mutation.",
+   interruptRecordDecl]
+
+/-- A compilation unit: the hand-written support, the generated carriers, the hand-written
+helpers, the generated functions. -/
+def checkModule : List Decl := preamble ++ generatedTypes ++ helpers ++ generatedFns
+
+end Avatar
+namespace Avatar
+
+/-- The generated part of the avatar: the carriers of requests 1, 2 and 5, and the functions of
+request 3. `tools/fuzz.sh avatar` renders this, compiles it against a small hand-written
+preamble, and diffs each carrier against `deep_fibers.ml`. -/
+def generated : List Decl := generatedTypes ++ generatedFns
+
+end Avatar
+
+/-! ### Checks: names, order, arity, holes
+
+The rendered text is checked against `deep_fibers.ml` itself by `tools/fuzz.sh avatar`, which
+diffs the real file rather than a copy of it. What is pinned here is everything that must hold
+for that diff to be meaningful. -/
+
+-- The mangling is injective: `unmangleField` is a left inverse, on every field name rendered
+-- here and on a row of adversarial ones.
+#guard (Avatar.runFiber.fields.map (·.leanName)).all
+  (fun n => unmangleField (mangleField n) == n)
+#guard (Avatar.frameFiber.fields.map (·.leanName)).all
+  (fun n => unmangleField (mangleField n) == n)
+#guard ["exit", "type", "currentOpCount", "a_b", "aB", "x'", "ABC", "", "let", "a__b"].all
+  (fun n => unmangleField (mangleField n) == n)
+
+-- …and the two adversarial pairs really are separated.
+#guard mangleField "aB" == "a_b"
+#guard mangleField "a_b" == "a_0b"
+#guard mangleField "exit" == "exit_"
+#guard mangleField "currentOpCount" == "current_op_count"
+#guard typeName "RunFiber" == "run_fiber"
+#guard typeName "WithFiberAction" == "with_fiber_action"
+#guard ctorName "" "resumeAwait" == "ResumeAwait"
+#guard ctorName "C" "drainDue" == "CdrainDue"
+#guard ctorName "D" "yieldVerdict" == "DyieldVerdict"
+
+-- Request 1: fifteen Lean fields, in the Lean order, mangled.
+-- Fifteen Lean fields plus one substitute: `yielding`, which the avatar carries because
+-- `Cmd.loop` has none (DIVERGENCE 2).
+#guard Avatar.runFiber.fields.length == 16
+#guard (Avatar.runFiber.fields.filter (fun f =>
+          match f.kind with | .substitute => false | _ => true)).length == 15
+#guard Avatar.runFiber.fields.map (·.ocaml) ==
+  ["id", "frame", "running", "parked", "pending", "finalizing", "exit_", "current_op_count",
+   "max_ops_before_yield", "prevent_yield", "yield_override", "yielding", "observers",
+   "children", "dispatcher", "context"]
+#guard (Avatar.runFiber.fields.filter (·.isMutable)).length == 14
+
+-- Request 5: `FrameFiber`'s `Prim` pair is a hole, and `prim` never reaches the output.
+#guard Avatar.frameFiber.holes.map (·.1) == ["current", "stack"]
+#guard ((renderDecl Avatar.frameFiber.decl).splitOn "prim").length == 1
+#guard ((moduleText Avatar.generated).splitOn "prim").length == 1
+-- three holes reach the output: the two `FrameFiber` fields, and `interruptRecord`'s
+-- `current := Prim.failure`.
+#guard ((moduleText Avatar.generated).splitOn "HOLE").length == 4
+
+-- Request 2: constructor order and arity, per carrier.
+#guard Avatar.observer.ctors.length == 6
+#guard Avatar.runEvent.ctors.length == 22
+#guard Avatar.runDecision.ctors.length == 7
+#guard Avatar.cmd.ctors.length == 5
+#guard Avatar.withFiberAction.ctors.length == 17
+
+-- Arity for arity, except the erasures, which are named.
+#guard Avatar.inductives.all
+  (fun d => d.arities.all (fun a => a.2.1 == a.2.2 || (d.erasures.map (·.1)).contains a.1))
+#guard Avatar.runEvent.erasures == [("scopeLinked", "mode"), ("contextSet", "context")]
+#guard Avatar.observer.erasures == []
+#guard Avatar.runDecision.erasures == []
+#guard (Avatar.withFiberAction.erasures.map (·.1)) ==
+  ["fork", "forkIn", "forkScoped", "raceAll", "setInterruptible"]
+
+-- The names `deep_fibers.ml` actually uses.
+#guard Avatar.observer.ctors.map (CtorDesc.ocaml "") ==
+  ["ResumeAwait", "UntrackChild", "DropScopeFinalizer", "Countdown", "RaceCallback", "Callback"]
+#guard Avatar.runDecision.ctors.map (CtorDesc.ocaml "D") ==
+  ["Dfire", "Dflush", "Devaluate", "DyieldVerdict", "DanswerAsync", "DinterruptFrom",
+   "DinstallMiddleware"]
+#guard (Avatar.runEvent.ctors.map (CtorDesc.ocaml "")).contains "FrameEv"
+#guard (Avatar.runEvent.ctors.map (CtorDesc.ocaml "")).contains "CallbackEv"
+
+-- Request 3: the pass fired on every update in both functions.
+#guard (residue (mutate ["f"] Avatar.parkPure)).isEmpty
+#guard (residue (mutate ["f"] Avatar.interruptRecordPure)).isEmpty
+-- …and it had something to fire on: the unrewritten forms do have residue.
+#guard (residue Avatar.parkPure).length == 2
+#guard (residue Avatar.interruptRecordPure).length == 6
+-- The rewrite produced mutations, including one through the nested `frame` update.
+#guard ((renderDecl Avatar.parkDecl).splitOn " <- ").length == 3
+#guard ((renderDecl Avatar.interruptRecordDecl).splitOn ").frame).interrupted_cause <- ").length
+  == 2
+#guard ((renderDecl Avatar.interruptRecordDecl).splitOn ").frame).deferred_interrupt <- ").length
+  == 2
+
+/-! ### Request 4: the `RunDecision` tape, as a wire
+
+A0's request 4 is a differential fuzzer: generate `RunDecision` tapes, run `replayEval` in Lean
+and the rendered OCaml, compare the traces. Two halves of that are not P5's to land yet — the
+report says why — but the half that is, is the **tape itself**: the wire both sides must agree on.
+
+The spelling is derived from `Avatar.runDecision`, so the OCaml literal and the wire line cannot
+drift from the constructor order and arity the same description generates the type from. One
+entry per line-separated field:
+
+```
+fire 3 | flush | evaluate 1 | yieldVerdict 2 true | answerAsync 1 7 v5
+  | interruptFrom - a;b 2 | installMiddleware
+```
+
+the head being the *Lean* constructor name, which is the one name both files share. -/
+
+namespace Avatar
+
+/-- The types a tape module needs, and nothing else. -/
+def tapePreamble : List Decl :=
+  [.comment "Hand-written: the value alphabet a tape's answers are drawn from.",
+   .rawD "type value = Vunit | Vnat of int",
+   .rawD "type reason = Rfail of int | Rdie of string | Rinterrupt of int option",
+   .rawD "type cause = { reasons : reason list; annotations : string list }",
+   .rawD "type answer = Aval of value | Acause of cause",
+   .rawD "let cause_fail e = { reasons = [ Rfail e ]; annotations = [] }"]
+
+/-- A tape module: the alphabet, the generated `run_decision`, and the tapes as OCaml literals.
+`tools/fuzz.sh tapes` compiles it on all three hosts, which is what makes "every generated tape
+is a well-typed `run_decision list`" a fact rather than a claim. -/
+def tapeModule (tapes : List (List Expr)) : List Decl :=
+  tapePreamble ++ [runDecision.header, runDecision.decl] ++
+  [.comment s!"{tapes.length} generated tapes.",
+   .letD false
+     [{ name := "tapes", result := Option.some (Ty.list (Ty.list (Ty.named "run_decision"))),
+        body := .listLit (tapes.map (fun t => .listLit t)) }]]
+
+end Avatar
 
 end Ml
 end OCaml5

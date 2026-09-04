@@ -9,11 +9,13 @@ Status: 2026-09-03 night, round two. Spike P5 of
 Files owned and written: `workshop/OCaml5/Render.lean`, `workshop/OCaml5/Fuzz.lean`,
 `workshop/OCaml5/tools/fuzz.sh`, `workshop/OCaml5/fuzz/`.
 
-Two parts. §§1–6 are the spike as the plan's §6 asked for it: a `Term` renderer, a random term
+Three parts. §§1–6 are the spike as the plan's §6 asked for it: a `Term` renderer, a random term
 generator and a fuzzing campaign against the three hosts. §7 is the second part, added after the
 estate's target moved to an OCaml avatar of the Effect runtime (spike A0): a general Lean → OCaml
 *declaration* surface, so that the avatar's OCaml is generated from the Lean carriers rather than
-hand-written.
+hand-written. §11 is the third, answering A0's five requests once its report existed: the
+description layer that drives that surface from the real `Deep` carriers, and the diff against
+A0's hand-written file.
 
 This closes the top edge of the plan's §6 diagram. Round one had `Term ─▶ M_T` and a hand-written
 OCaml file per witness, related by a human transcribing one into the other. P5 replaces the human:
@@ -522,6 +524,8 @@ $ git rev-parse HEAD                       # 7729f58, the base of round two
 $ lake build OCaml5.Effect OCaml5.Compiler OCaml5.Render OCaml5.Fuzz
 $ ./workshop/OCaml5/tools/fuzz.sh witnesses
 $ ./workshop/OCaml5/tools/fuzz.sh surface
+$ ./workshop/OCaml5/tools/fuzz.sh avatar                # round three
+$ ./workshop/OCaml5/tools/fuzz.sh tapes 7 60 8          # round three
 $ ./workshop/OCaml5/tools/fuzz.sh run 100000 250 4      # … 600000 150 9
 $ ./workshop/OCaml5/tools/fuzz.sh shrink 100010 4
 $ ./workshop/OCaml5/tools/fuzz.sh _one workshop/OCaml5/fuzz/min/drop-min.ml
@@ -532,3 +536,226 @@ js_of_ocaml 5.7.1 at
 `.../_build/toolchains/ocaml5-jsoo-5.7.1/.../js_of_ocaml.exe`, node v22.23.2, macOS arm64,
 Lean 4.33.1, no Mathlib. Build products under the session scratchpad; nothing written into
 `effect4_of_ocaml` or the opam switches. Nothing committed.
+
+## 11. Round three: generating the avatar's carriers (A0's five requests)
+
+`docs/research/2026-09-04-spike-a0-avatar.md` §1 asks P5 for five things, in priority order, so
+that `workshop/OCaml5/avatar/deep_fibers.ml` is *generated* from the Lean carriers rather than
+retyped. Round two's `OCaml5.Ml` already rendered records, variants and `let rec` groups; what
+round three adds is the layer that drives it from a **description of the actual `Deep` carriers**,
+and the two mappings that description needs.
+
+| # | Request | Landed |
+| --- | --- | --- |
+| 1 | Lean `structure` → OCaml record, same field order, total injective mangling | **yes**, byte-identical to `deep_fibers.ml`'s `run_fiber` |
+| 2 | Lean `inductive` → OCaml variant, same order, arity for arity | **yes**, three of five byte-identical; the other two have no identical counterpart, §11.3 |
+| 3 | a `let rec` group with the pure-update → mutation rewrite as a named pass | **partly**: the pass and two functions, not all three A0 named |
+| 4 | a differential fuzzer over `RunDecision` tapes | **partly**: the tape, the wire and the type-check; the comparison is blocked, §11.6 |
+| 5 | never render `Prim`/`FrameFiber.step`; emit a hole | **yes**, three holes, and `prim` occurs nowhere in the output |
+
+```
+$ ./workshop/OCaml5/tools/fuzz.sh avatar
+avatar 19 declarations
+holes 2 in FrameFiber
+ocamlc     OK
+ocamlopt   OK
+js_of_ocaml OK
+run_fiber: IDENTICAL to deep_fibers.ml
+frame_fiber: IDENTICAL to deep_fibers.ml
+observer: IDENTICAL to deep_fibers.ml
+run_event: IDENTICAL to deep_fibers.ml
+run_decision: IDENTICAL to deep_fibers.ml
+```
+
+`IDENTICAL` is a byte comparison against A0's file itself, not against a copy of it: the script
+cuts the block out of `workshop/OCaml5/avatar/deep_fibers.ml` and out of the generated module and
+runs `diff`. So the claim decays the moment either side changes, which is the point — and it did,
+once, during this session: A0 added a sixteenth field to `run_fiber` while the diff was running,
+the check went red on exactly that field, and the description now records it (§11.2).
+
+The round-one and round-two checks are unaffected and were re-run on the same tree:
+`fuzz.sh witnesses` 12 agree + `w12-drop`, `fuzz.sh surface` AGREE, and a 40-program smoke
+(seeds 800000–800039, size 6) 38 agree with 2 host-vs-host, both calling
+`caml_drop_continuation` and both with the Lean machine equal to the two OCaml hosts.
+
+### 11.1 The two mappings
+
+**Names.** `Ml.mangleField` is total, and injective because `Ml.unmangleField` is an exhibited
+left inverse. The code: a lowercase letter or digit is itself; an uppercase `X` is `_` ++
+lowercase `X`, which *is* camelCase → snake_case; `_` is `_0`, `'` is `_1`, anything else is `_2`
+++ three decimal digits; and an image that is an OCaml keyword — or `exit` — gets one `_`
+appended. That last step cannot collide, because every escape `_` is followed by a letter or a
+digit, so no image of the character code ends in a bare `_`. `exit` → `exit_` is
+`deep_fibers.ml:194`, and `currentOpCount` → `current_op_count` is the camel rule. The pair that
+a naive `camelToSnake` would collapse is separated: `aB` → `a_b`, `a_b` → `a_0b`.
+
+`typeName` is the same code minus the leading `_` an initial capital produces (`RunFiber` →
+`run_fiber`). `ctorName` takes a per-type prefix: empty means capitalise the initial
+(`resumeAwait` → `ResumeAwait`), non-empty means the prefix supplies the capital and the Lean name
+is kept (`"C"`, `drainDue` → `CdrainDue`). Those prefixes are **not derivable** — they are how
+`deep_fibers.ml` keeps `Cmd`, `RunDecision` and `Observer` from colliding in one module — so they
+are a field of the description, and so are the two per-constructor overrides a prefix cannot
+solve: `RunEvent.frame` → `FrameEv` (the `frame` field) and `RunEvent.callback` → `CallbackEv`
+(`Observer.callback`).
+
+**Types.** `Ml.Avatar.subst` is one visible list: `Exit β ε δ ι α` is `exitv`, `Cause ε δ ι α` is
+`cause`, `ReasonAnnotations α` is `string list`, `FrameEvent` is `string`, `χ` is `unit`, `ν` is
+`string`, `Prim …` in an answer position is `answer`. Keyed on the head, arguments dropped on a
+hit, because the avatar is one profile of the family and its parameters are fixed by the fixture.
+Every entry is a substitution A0 made by hand; collecting them in one place is most of the value
+of doing this at all.
+
+### 11.2 Request 1: `RunFiber`
+
+`Ml.Avatar.runFiber` is the fifteen fields of `Fibers.lean:157` in the Lean order, with
+`isMutable` on the thirteen the avatar updates in place (everything but `id` and `frame`,
+DIVERGENCE 3). The rendered record is byte-identical to `deep_fibers.ml`'s `run_fiber`, `exit_`
+included. `#guard`s pin the field list, the count, the mutable count, and the round-trip
+`unmangleField ∘ mangleField = id` on every one of them.
+
+There is a sixteenth field, and it is the one interesting thing the diff found. Partway through
+this session A0 added `mutable yielding : bool` — no Lean counterpart, carrying `Cmd.loop`'s
+`yielding` argument on the fiber because `Cmd.loop` has no OCaml existence (DIVERGENCE 2). The
+check went red on exactly that field and on nothing else. It is now a `FieldKind.substitute` in
+the description, with A0's own four-line comment carried verbatim, and `#guard`s separate the
+fifteen Lean fields from the one substitute. A field with no Lean counterpart is the thing a
+simulation relation cannot see, so the description had better name it.
+
+### 11.3 Request 2: the five inductives
+
+| carrier | Lean | rendered | against `deep_fibers.ml` |
+| --- | --- | --- | --- |
+| `Observer` (`:93`) | 6 | 6 | IDENTICAL |
+| `RunEvent` (`:305`) | 22 | 22 | IDENTICAL |
+| `RunDecision` (`:362`) | 7 | 7 | IDENTICAL |
+| `Cmd` (`:526`) | 5 | 5 | differs by exactly `Cloop`, §11.5 |
+| `WithFiberAction` (`:258`) | 17 | 17 | no counterpart: the avatar substitutes `Effect.t` constructors |
+
+Two counts in the request are off by one against the file: `RunEvent` has 22 constructors, not 23,
+and `WithFiberAction` has 17, not 18. Worth reconciling before the simulation relation is stated
+arm by arm.
+
+Two arguments A0 dropped by hand are now **recorded** rather than silently absent, as
+`CtorArg.erased`: `RunEvent.scopeLinked.mode` (a `Supervision.ScopeMode` the avatar does not
+carry) and `RunEvent.contextSet.context` (`χ` is `unit` in this profile). `InductiveDesc.erasures`
+lists them and a `#guard` says that every other constructor is arity for arity. The five
+`WithFiberAction` erasures are all `Prim` arguments, which is request 5 (§11.5) rather than a
+substitution.
+
+### 11.4 Request 3: the mutation pass
+
+`Ml.mutate` is the named pass. It fires on one shape and only one:
+
+```
+let f = { f with x = v; y = w } in body            ⟶   f.x <- v; f.y <- w; body
+let f = { f with g = { f.g with x = v } } in body  ⟶   f.g.x <- v; body
+```
+
+for `f` in a declared **linear** set, and only when the `let` rebinds the name it updates. When
+the body is just `f` — a Lean function returning the updated record — the result is `()`, because
+the OCaml caller already holds it.
+
+`Ml.residue` is the checker: the `{ … with … }` occurrences the pass did *not* eliminate. Both
+functions below are `#guard`ed to have empty residue after the pass and non-empty before, so
+"the pass applied everywhere" is a fact rather than a hope.
+
+Encoded: `RunFiber.park` (`Fibers.lean:249`, two updates) and `interruptRecord` (`:550`, three
+updates, one of them nested through `frame`). `interruptRecord` is where three divergences meet
+and each is visible in the output — the mutations, the dropped record half of the returned pair,
+and the `Prim` hole. Not encoded: `fireObserver` (`:923`) and `exitFiber` (`:992`); the pass does
+not need them and they are a transcription job, but the request named three and two are here.
+
+The generated text is arm for arm with `deep_fibers.ml:386-410`; the visible difference is
+parenthesisation — `((f).frame).interrupted_cause <- …` where A0 writes
+`f.frame.interrupted_cause <- …` — because `Ml` parenthesises aggressively rather than carrying a
+precedence table (§7).
+
+### 11.5 Request 5: the holes
+
+`Ml.FieldKind.hole` on a field and `Ml.Expr.hole` in an expression. Three holes reach the output
+and `prim` reaches it nowhere (both `#guard`ed):
+
+* `FrameFiber.current : Prim …` and `FrameFiber.stack : List (Prim …)` — not rendered at all. The
+  record that comes out is A0's four-field `frame_fiber`, byte-identical, with `control` as the
+  declared substitute;
+* `interruptRecord`'s `frame := { f.frame with current := Prim.failure accumulated }` — rendered
+  as `(* HOLE: FrameFiber.current := Prim.failure accumulated (Fibers.lean:571) *) frame_fail f
+  accumulated`. `frame_fail` is the hand-written filling, `deep_fibers.ml:405-409`, and it is the
+  only line of that function a human has to write.
+
+`Cmd.loop` is a different kind of gap and is treated differently: it is rendered, arity for arity
+as the request asks, and carries a generated comment saying it is absent from `deep_fibers.ml`
+(DIVERGENCE 2). A divergence the generator states is better than one it absorbs.
+
+### 11.6 Request 4: what a tape is, and what blocks the comparison
+
+Landed: `Fuzz.genDecision`/`genTape` draw `RunDecision` tapes uniformly over the seven
+constructors, and print each entry twice from the same draw — as the OCaml literal and as a wire
+line — with both spellings derived from `Ml.Avatar.runDecision`, so they cannot drift from the
+type the same description generates. `tools/fuzz.sh tapes SEED COUNT LEN` writes both and
+compiles the OCaml on all three hosts, which is what makes "every generated tape is a well-typed
+`run_decision list`" a fact.
+
+Blocked, and this is the report: the comparison needs two things P5 does not own.
+
+1. **The avatar has no `RunDecision` entry point.** `EFFECT4_TAPE` is the *fork-branch* tape of
+   `harness/trace/fiber-tail.ts` — `site:branch` pairs, read by `Tape.decide`
+   (`deep_fibers.ml:48-58`) — and `avatar_main.ml` never consumes a `run_decision`. The type is
+   declared (`:329`) and unused. A reader against the wire above, and a driver that feeds it to
+   the machine the way `replayEval` does, is A0's half.
+2. **`replayEval` is in another spike's file.** `Effect4.Deep.replayEval` is
+   `workshop/Deep/Fibers.lean:1164` and needs a `Stores` fixture (`Deep.Witnesses.replay`,
+   `:45`). Importing `Deep.Fibers` from `OCaml5.Fuzz` couples this spike to a file P1 and A0 are
+   both editing; the round-two rule — own your file, import the frozen ones — says not to, until
+   the names are frozen.
+
+So request 4 landed as its wire and its generator, and the differential half is one reader away on
+each side.
+
+### 11.7 Findings for A0
+
+1. **Five of six carriers come out byte-identical.** The hand-written transcription was accurate;
+   what the generator adds is that it stays accurate. The three checks that matter are cheap and
+   now exist: the diff against the real file, the compile on three hosts, and the `#guard`s on
+   order, arity and mangling.
+2. **The non-mechanical decisions are exactly three, and they are now enumerated.** The
+   substitution table (17 entries), the constructor prefixes (four), and the two name overrides.
+   Everything else — order, arity, mutability, layout, names — is derived. That is the shape of
+   the elaborator this should eventually become: it would compute all of the second list and none
+   of the first.
+3. **Two erasures, one extra constructor and one extra field are the whole diff.**
+   `RunEvent.scopeLinked.mode` and `RunEvent.contextSet.context` are dropped by hand in
+   `deep_fibers.ml`; `Cmd.loop` is present in Lean and absent in OCaml; `run_fiber.yielding` is
+   present in OCaml and absent in Lean. Nothing else in the carriers differs. For a simulation
+   relation stated field by field and arm by arm, that is the complete list of places that need a
+   clause of their own — and the last one, a field with no Lean counterpart, is the only one the
+   relation cannot state as an equality.
+4. **Declaration order is not Lean order.** `deep_fibers.ml` declares `Observer` before
+   `RunFiber` because OCaml needs it to; `Fibers.lean` declares `RunFiber` at `:157` and
+   `Observer` at `:93` for its own reasons. The generator sorts by dependency and says so; a
+   future elaborator must too, and it is a topological sort over the substitution table, not over
+   the Lean file.
+5. **The mangling had to be designed, not guessed.** `camelToSnake` alone is not injective —
+   `aB` and `a_b` collide — and the simulation relation is stated field by field, so a collision
+   would be a hole in the relation rather than a cosmetic bug. The escape code above is injective
+   and has a left inverse that is run on every name in the corpus.
+
+### 11.8 What did not land
+
+1. `fireObserver` (`Fibers.lean:923`) and `exitFiber` (`:992`) are not encoded. They are the two
+   longest of the three, both build `Cmd` lists and match over `Observer`, and both are within the
+   surface — `Ml.Expr` already has `matchE`, `listLit`, `binop` and the mutation pass. It is
+   transcription time, not a missing capability.
+2. `Ml.mutate` handles one level of nesting (`{ f with g = { f.g with x = v } }`). A third level
+   would need `setPath` to walk further; nothing in `Fibers.lean` has one today.
+3. The differential comparison of request 4, for the two reasons in §11.6.
+4. `Ml` still has no module system (§9 item 7), which `Shallow.fiber`-shaped code needs. The
+   avatar does not need it yet.
+5. **A cross-spike build coupling, worth naming.** `workshop/OCaml5/Compiler.lean` imports
+   `OCaml5.Witnesses`, and P3 has added `import OCaml5.EffectJsoo` to `Witnesses.lean`. Every
+   consumer of `Compiler` — this spike included — therefore cannot build while `EffectJsoo.lean`
+   is mid-proof, and during this session that was several times: the tree went green, red, green
+   and red again over an hour as P3 worked, and §11 had to be verified in the green windows.
+   It is green as this is written, and every claim in §11 was re-run on it. Additive-only on a
+   shared file is not enough: an *import* added to a shared file is not additive for that file's
+   consumers, and the plan's parallel-spike rule should say so.

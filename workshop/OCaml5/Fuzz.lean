@@ -781,17 +781,115 @@ def cmdSurface (dir : String) : IO Unit := do
   IO.FS.writeFile (dir ++ "/surface.rows") (rowsText Ml.Deep.sampleRows)
   IO.println s!"surface {Ml.Deep.sample.length} declarations"
 
+/-- `avatar <dir>`: render the generated part of the avatar (`OCaml5.Ml.Avatar`, spike A0's
+requests 1, 2, 3 and 5) twice — the fragment on its own, for the diff against
+`workshop/OCaml5/avatar/deep_fibers.ml`, and closed with its hand-written preamble, for the
+compile check. -/
+def cmdAvatar (dir : String) : IO Unit := do
+  IO.FS.writeFile (dir ++ "/generated.ml") (Ml.moduleText Ml.Avatar.generated)
+  IO.FS.writeFile (dir ++ "/avatar_check.ml") (Ml.moduleText Ml.Avatar.checkModule)
+  IO.println (s!"avatar {Ml.Avatar.generated.length} declarations, "
+    ++ s!"{Ml.Avatar.frameFiber.holes.length} holes in FrameFiber")
+
+/-! ## Round three: `RunDecision` tapes (A0's request 4)
+
+A tape entry is generated once and printed twice — as the OCaml literal the avatar will match on
+and as the wire line both sides key on — from the same draw, so the two spellings cannot drift.
+The constructor names are the Lean ones, taken from `OCaml5.Ml.Avatar.runDecision`. -/
+
+structure TapeEntry where
+  /-- The OCaml `run_decision` literal. -/
+  expr : Ml.Expr
+  /-- The wire spelling: the Lean constructor name and its arguments. -/
+  wire : String
+
+private def genFiber (n : Nat) : Gen Nat := do
+  let i ← pick n
+  return i
+
+private def genAnswer : Gen (Ml.Expr × String) := do
+  let k ← pick 3
+  if k == 0 then
+    let n ← pick 10
+    return (.ctor "Aval" [.ctor "Vnat" [.int n]], s!"v{n}")
+  else if k == 1 then
+    return (.ctor "Aval" [.ctor "Vunit" []], "vunit")
+  else
+    let e ← pick 5
+    return (.ctor "Acause" [Ml.Expr.call "cause_fail" [.int e]], s!"c{e}")
+
+/-- One `RunDecision`, uniformly over the seven constructors of `Fibers.lean:362`. -/
+def genDecision (nfibers : Nat) : Gen TapeEntry := do
+  let k ← pick 7
+  if k == 0 then
+    let f ← genFiber nfibers
+    return ⟨.ctor "Dfire" [.int f], s!"fire {f}"⟩
+  else if k == 1 then
+    return ⟨.ctor "Dflush" [], "flush"⟩
+  else if k == 2 then
+    let f ← genFiber nfibers
+    return ⟨.ctor "Devaluate" [.int f], s!"evaluate {f}"⟩
+  else if k == 3 then
+    let f ← genFiber nfibers
+    let b ← pick 2
+    return ⟨.ctor "DyieldVerdict" [.int f, .bool (b == 1)],
+            s!"yieldVerdict {f} {if b == 1 then "true" else "false"}"⟩
+  else if k == 4 then
+    let f ← genFiber nfibers
+    let t ← pick 8
+    let (ae, aw) ← genAnswer
+    return ⟨.ctor "DanswerAsync" [.int f, .int t, ae], s!"answerAsync {f} {t} {aw}"⟩
+  else if k == 5 then
+    let who ← pick (nfibers + 1)
+    let t ← genFiber nfibers
+    let ann ← pick 3
+    let anns : List String := (List.range ann).map fun i => s!"a{i}"
+    let whoE : Ml.Expr :=
+      if who == nfibers then .ctor "None" [] else .ctor "Some" [.int who]
+    let whoW : String := if who == nfibers then "-" else toString who
+    return ⟨.ctor "DinterruptFrom" [whoE, .listLit (anns.map (Ml.Expr.str ·)), .int t],
+            s!"interruptFrom {whoW} {String.intercalate ";" anns} {t}"⟩
+  else
+    return ⟨.ctor "DinstallMiddleware" [], "installMiddleware"⟩
+
+def genTape (len nfibers : Nat) : Gen (List TapeEntry) :=
+  match len with
+  | 0 => return []
+  | n + 1 => do
+      let e ← genDecision nfibers
+      let rest ← genTape n nfibers
+      return e :: rest
+
+/-- `tapes <dir> <seed> <count> <len>`: `count` tapes of `len` decisions over four fibers, as one
+wire file and one OCaml module. `fuzz.sh tapes` compiles the module on the three hosts, so every
+generated tape is a well-typed `run_decision list` before anything tries to replay it. -/
+def cmdTapes (dir : String) (seed count len : Nat) : IO Unit := do
+  let (tapes, _) :=
+    (((List.range count).foldl (fun (acc : Gen (List (List TapeEntry))) _ => do
+        let xs ← acc
+        let t ← genTape len 4
+        return xs ++ [t]) (pure [])) (rngOf seed))
+  IO.FS.writeFile (dir ++ "/tapes.wire")
+    (String.join (tapes.map fun t =>
+      String.intercalate " | " (t.map (·.wire)) ++ "\n"))
+  IO.FS.writeFile (dir ++ "/tapes.ml")
+    (Ml.moduleText (Ml.Avatar.tapeModule (tapes.map fun t => t.map (·.expr))))
+  IO.println s!"tapes {tapes.length} of {len} decisions"
+
 def main (args : List String) : IO Unit := do
   match args with
   | ["witnesses", dir] => cmdWitnesses dir
   | ["surface", dir] => cmdSurface dir
+  | ["avatar", dir] => cmdAvatar dir
+  | ["tapes", dir, seed, count, len] =>
+      cmdTapes dir (natOf seed) (natOf count) (natOf len)
   | ["gen", dir, first, count, size] =>
       cmdGen dir (natOf first) (natOf count) (natOf size)
   | "cands" :: dir :: seed :: size :: path =>
       cmdCands dir (natOf seed) (natOf size) (path.map natOf)
   | "one" :: dir :: name :: seed :: size :: path =>
       cmdOne dir name (natOf seed) (natOf size) (path.map natOf)
-  | _ => IO.println ("usage: witnesses DIR | surface DIR | gen DIR FIRST COUNT SIZE"
+  | _ => IO.println ("usage: witnesses DIR | surface DIR | avatar DIR | tapes DIR SEED COUNT LEN | gen DIR FIRST COUNT SIZE"
       ++ " | cands DIR SEED SIZE PATH… | one DIR NAME SEED SIZE PATH…")
 
 end Fuzz

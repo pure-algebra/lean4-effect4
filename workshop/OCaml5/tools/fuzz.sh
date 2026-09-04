@@ -8,6 +8,8 @@
 #
 #   tools/fuzz.sh witnesses              render the 13 witnesses and check them on all hosts
 #   tools/fuzz.sh surface                render the A0 shape probe (OCaml5.Ml) and check it
+#   tools/fuzz.sh avatar                 render the avatar carriers, compile them, diff vs A0
+#   tools/fuzz.sh tapes SEED COUNT LEN   generate RunDecision tapes and type-check them
 #   tools/fuzz.sh run FIRST COUNT SIZE   generate seeds FIRST… and check COUNT of them
 #   tools/fuzz.sh shrink SEED SIZE       minimise the disagreement of one seed
 #
@@ -108,6 +110,57 @@ case "${1:-}" in
     rm -rf "$sdir"; mkdir -p "$sdir"
     ( cd "$REPO" && $LEANRUN surface "$sdir" ) || exit 1
     check_one "$sdir/surface.ml"
+    ;;
+
+  avatar)
+    adir="$P5_BUILD/avatar"
+    rm -rf "$adir"; mkdir -p "$adir"
+    ( cd "$REPO" && $LEANRUN avatar "$adir" ) || exit 1
+    # 1. it compiles, on all three hosts
+    ( cd "$adir" && "$OCAMLC" -w -a -c avatar_check.ml ) >"$adir/byte.build" 2>&1 \
+      && echo "ocamlc     OK" || { echo "ocamlc     FAILED"; sed -n '1,20p' "$adir/byte.build"; }
+    ( cd "$adir" && "$OCAMLOPT" -w -a -c avatar_check.ml ) >"$adir/native.build" 2>&1 \
+      && echo "ocamlopt   OK" || { echo "ocamlopt   FAILED"; sed -n '1,20p' "$adir/native.build"; }
+    ( cd "$adir" && "$OCAMLC" -w -a -o chk.byte avatar_check.ml ) >>"$adir/byte.build" 2>&1 \
+      && "$JSOO" compile --enable effects --target-env=nodejs "$adir/chk.byte" \
+           -o "$adir/chk.js" >"$adir/jsoo.build" 2>&1 \
+      && echo "js_of_ocaml OK" || { echo "js_of_ocaml FAILED"; sed -n '1,20p' "$adir/jsoo.build"; }
+    # 2. each generated carrier, diffed against the hand-written avatar
+    A="$REPO/workshop/OCaml5/avatar/deep_fibers.ml"
+    G="$adir/generated.ml"
+    check_block() {
+      name=$1; first=$2; last=$3
+      awk "/$first/,/$last/" "$A" > "$adir/a0.$name"
+      awk "/$first/,/$last/" "$G" > "$adir/gen.$name"
+      if [ ! -s "$adir/a0.$name" ]; then echo "$name: ABSENT from deep_fibers.ml"; return; fi
+      if diff -q "$adir/a0.$name" "$adir/gen.$name" >/dev/null; then
+        echo "$name: IDENTICAL to deep_fibers.ml"
+      else
+        echo "$name: DIFF"; diff "$adir/a0.$name" "$adir/gen.$name" | sed 's/^/    /'
+      fi
+    }
+    check_block run_fiber     '^type run_fiber = \{'   '^\}'
+    check_block frame_fiber   '^type frame_fiber = \{' '^\}'
+    check_block observer      '^type observer ='        '^  \| Callback of int$'
+    check_block run_event     '^type run_event ='       '^  \| Exited of int \* exitv$'
+    check_block run_decision  '^type run_decision ='    '^  \| DinstallMiddleware$'
+    ;;
+
+  tapes)
+    seed=${2:-1}; count=${3:-50}; len=${4:-8}
+    tdir="$P5_BUILD/tapes"
+    rm -rf "$tdir"; mkdir -p "$tdir"
+    ( cd "$REPO" && $LEANRUN tapes "$tdir" "$seed" "$count" "$len" ) || exit 1
+    ( cd "$tdir" && "$OCAMLC" -w -a -c tapes.ml ) >"$tdir/byte.build" 2>&1 \
+      && echo "ocamlc     OK" || { echo "ocamlc     FAILED"; sed -n '1,20p' "$tdir/byte.build"; }
+    ( cd "$tdir" && "$OCAMLOPT" -w -a -c tapes.ml ) >"$tdir/native.build" 2>&1 \
+      && echo "ocamlopt   OK" || { echo "ocamlopt   FAILED"; sed -n '1,20p' "$tdir/native.build"; }
+    ( cd "$tdir" && "$OCAMLC" -w -a -o tapes.byte tapes.ml ) >>"$tdir/byte.build" 2>&1 \
+      && "$JSOO" compile --enable effects --target-env=nodejs "$tdir/tapes.byte" \
+           -o "$tdir/tapes.js" >"$tdir/jsoo.build" 2>&1 \
+      && echo "js_of_ocaml OK" || { echo "js_of_ocaml FAILED"; sed -n '1,20p' "$tdir/jsoo.build"; }
+    echo "wire: $tdir/tapes.wire"
+    head -3 "$tdir/tapes.wire" | sed 's/^/    /'
     ;;
 
   run)
