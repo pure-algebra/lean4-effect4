@@ -103,6 +103,7 @@ import Effect4.StdLib.Links
 -- decidable throughout; the printer, the compile and the parser follow.
 import Effect4.Syntax.Eff
 import Effect4.Syntax.Typing
+import Effect4.Syntax.Print
 import Effect4.Meta.Derive
 
 /-!

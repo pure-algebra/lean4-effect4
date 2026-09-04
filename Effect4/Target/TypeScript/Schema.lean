@@ -424,6 +424,12 @@ private def exprKeysUnique : Expr → Bool
   | .lambda _ body => exprKeysUnique body
   | .method target _ arguments => exprKeysUnique target && exprListKeysUnique arguments
   | .member target _ => exprKeysUnique target
+  | .cond test thenBranch elseBranch =>
+      exprKeysUnique test && exprKeysUnique thenBranch && exprKeysUnique elseBranch
+  -- The statement-bearing formers (lean4-typescript v0.5.0, for the `Eff` printer) are
+  -- not schema content: the admission refuses them rather than skipping their bodies.
+  | .generator _ => false
+  | .arrowBlock _ _ => false
 termination_by value => sizeOf value
 decreasing_by all_goals decreasing_tactic
 
