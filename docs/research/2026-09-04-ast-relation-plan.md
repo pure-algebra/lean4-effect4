@@ -231,6 +231,46 @@ Two styles are *syntax*, not options: `gen` prints as a generator body,
 This parser is small because the grammar is ours; it is the proven half of
 "parsing code".
 
+### 5.1 The spelling table (fixed 2026-09-04, checked against the census and `Effect.ts`)
+
+`print : Signature → Nat → Eff Op → Except Refusal TypeScript.Expr`, the `Nat` the
+environment's length, so the next binder is `a{n}`. Variables print as `a{i}`; literals as
+`undefined`, the number, `true`/`false`, the quoted string; an atom as `atom(args)`. A row
+prints by its `shape`: `spelling(request)`, `spelling()` on a unit request, or the value
+`spelling` (the service route's nullary rows). Every name below is an rc.112 export
+(`generated/stdlib-census.tsv`); `forkDaemon` and `Cause.merge` are not, so the table
+says `forkDetach` and `Cause.combine`. lean4-typescript v0.5.0 supplies the three formers
+the fragment lacked: `Expr.generator` (`function* () { … }`), `Expr.cond` (`t ? a : b`) and
+`Expr.arrowBlock` (`(a) => { … }`).
+
+| constructor | printed as |
+| --- | --- |
+| `succeed v` | `Effect.succeed(v)` |
+| `fail e` / `failCause c` | `Effect.fail(e)` / `Effect.failCause(C)` with `C` = `Cause.fail(e)`, `Cause.die(d)`, `Cause.interrupt()` / `Cause.interrupt(who)`, `Cause.combine(l, r)` |
+| `yieldError e` | `e` (a yieldable error is an Effect) |
+| `sync t` / `suspend b` | `Effect.sync(() => t)` / `Effect.suspend(() => b)` |
+| `perform op r` / `callback op r` | the row's shape |
+| `bind first rest` | `Effect.flatMap(first, (a{n}) => rest)` |
+| `gen body` | `Effect.gen(function* () { … })`; `bindYield e` → `const a{n} = yield* e`, `yieldDiscard e` → `yield* e`, `ret v` → `return v`, `ifElse`/`whileTrue`/`breakLoop` → the statements |
+| `catchCause b h` | `Effect.catchCause(b, (a{n}) => h)` |
+| `matchCause b v c` | `Effect.matchCauseEffect(b, { onFailure: (a{n}) => c, onSuccess: (a{n}) => v })` |
+| `onExit b f` / `exit b` | `Effect.onExit(b, (a{n}) => f)` / `Effect.exit(b)` |
+| `uninterruptible b` / `interruptible b` | `Effect.uninterruptible(b)` / `Effect.interruptible(b)` |
+| `branch t a b` | `Effect.suspend(() => t ? a : b)` |
+| `whileLoop i t s b` | `Effect.suspend(() => { let a{n} = i; return Effect.whileLoop({ while: () => t, body: () => b, step: (a{n+1}) => { a{n} = s } }) })` |
+| `yieldNow p` | `Effect.yieldNowWith(p)` |
+| `awaitFiber f joinEffect` / `awaitValue` | `Fiber.join(f)` / `Fiber.await(f)` |
+| `fork p o` | `Effect.forkChild(p, O)` or `Effect.forkDetach(p, O)` when `o.daemon`, with `O` = `{ startImmediately: b, uninterruptible: true | false | "inherit" }` |
+| `forkIn p o s` / `forkScoped p o` | `Effect.forkIn(p, s, O)` / `Effect.forkScoped(p, O)` |
+| `runIn f s` | `Fiber.runIn(f, s)` |
+| `interrupt f` / `interruptAll fs none` / `interruptAll fs (some who)` | `Fiber.interrupt(f)` / `Fiber.interruptAll(fs)` / `Fiber.interruptAllAs(fs, who)` |
+| `awaitAll fs` | `Fiber.awaitAll(fs)` |
+| `raceAll es` | `Effect.raceAll([e1, …])` |
+| `getContext` / `getId` | `Effect.context()` / `Effect.fiberId` |
+| `closeScope s e` | `Scope.close(s, e)` |
+| `scoped b` / `acquireRelease a r` | `Effect.scoped(b)` / `Effect.acquireRelease(a, (a{n}, a{n+1}) => r)` |
+| refused | `choose` (flows only); the internal actions `interruptScoped`, `awaitAllFailFast`, `snapshotChildren`, `awaitNewChildren`, `setContext` (no public spelling with the same frame shape) |
+
 ## 6. Reading real Effect code (the recognizer route)
 
 For programs we did not print — the way to "control Effect in Lean" over an

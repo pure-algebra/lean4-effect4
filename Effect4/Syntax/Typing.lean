@@ -160,8 +160,8 @@ mutual
     | .whileLoop initial test step body => do
       let cursor ← termTy sig env initial
       let t ← termTy sig (env ++ [cursor]) test
-      let s ← termTy sig (env ++ [cursor]) step
       let b ← effTy sig (env ++ [cursor]) body
+      let s ← termTy sig (env ++ [cursor, b.answer]) step
       if t = .bool ∧ s = cursor then some ⟨.unit, b.error, b.requires⟩ else none
     | .yieldNow _ => some (EffTy.pure .unit)
     | .callback register request => do
