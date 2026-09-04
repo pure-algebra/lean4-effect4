@@ -478,6 +478,15 @@ inductive Cmd (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max 
   | evaluate (fiber : FiberId)
   /-- Continue a running fiber's `runLoop` with the injection latch. -/
   | loop (fiber : FiberId) (yielding : Bool)
+  /-- The second half of `Sync[evaluate]` (`:933-934`, R2-1): the thunk's value is in the
+  fiber's `current`, what the thunk owed synchronously has run, and the continuation is
+  popped now — by a `getCont` that sees what those nested runs recorded on this fiber. No
+  loop top, no op count. -/
+  | deliver (fiber : FiberId) (yielding : Bool)
+  /-- The exit path of a fiber whose loop returned `exit` (`:611-628`), run after what its
+  last primitive owed synchronously (M1); the fiber is re-read, since a nested command may
+  have recorded an interrupt on it. -/
+  | finish (fiber : FiberId) (exit : Exit β ε δ ι α)
   /-- `resume(effect)` (`:1121`): unpark on the token and evaluate. -/
   | resume (fiber : FiberId) (token : Nat) (answer : Prim ν σ β ε δ ι α)
   /-- One race entrant's immediate launch; once the race is settled the entrant is
@@ -556,6 +565,9 @@ inductive Outcome (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (
   | parked
   | finished (exit : Exit β ε δ ι α)
   | stuck (why : Stuck)
+  /-- A `Sync` ran its thunk (`:932`): the value is the fiber's `current`, the resumes the
+  thunk owes are the nested commands, and the pop (`:933`) is owed after them (R2-1). -/
+  | answered
 deriving DecidableEq
 
 /-- The result of one iteration: the machine, the fiber, the latch, where it left off, and
@@ -729,11 +741,18 @@ def evaluatePrim (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine
           | some action => withFiber interp m f yielding action
           | none => stepFrame interp m f yielding
         | Prim.sync thunk =>
+          -- `Sync[evaluate]` (`:931-935`): the thunk first, then `getCont`. What the thunk owes
+          -- synchronously (a completion's waiters, `Deferred.ts:1655-1658`; M1) runs before
+          -- the pop, so an interrupt a waiter records on this fiber is seen by that pop
+          -- (R2-1). The pop is `Cmd.deliver`, which evaluates the answer as `success value`
+          -- — through `finalizerOr`, so an `OnExit` frame's finalizer *program* runs.
           match interp.syncState thunk m.state with
-          | some (state, value) =>                                     -- M1: drain on the spot
-            let (next, events) := f.frame.resumeValue interp.toPrimInterp value none
-            finishFrame { m with state := state } f yielding next events [Cmd.drainDue]
-          | none => stepFrame interp m f yielding
+          | some (state, value) =>
+            ⟨{ m with state := state }, { f with frame := { f.frame with current := Prim.success value } },
+              yielding, Outcome.answered, [Cmd.drainDue]⟩
+          | none =>
+            ⟨m, { f with frame := { f.frame with current := Prim.success (interp.syncValue thunk) } },
+              yielding, Outcome.answered, []⟩
         | Prim.success value =>
           finalizerOr interp m f yielding (Exit.success value)
         | Prim.failure cause =>
@@ -1045,6 +1064,25 @@ def exitFiber (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν
     let f := { f with observers := [] }
     (m.update f, f, false, nested)
 
+/-- What the loop does with where an iteration (or a delivery) left fiber `id`: the machine
+to continue in and the commands to run before `rest`. A stuck fiber halts the machine and
+leaves nothing to run. -/
+def settle (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α)) (it : Iter ν σ β ε δ ι α χ St) :
+    RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α) :=
+  match it.outcome with
+  | Outcome.continue_ =>
+    (it.machine.update it.fiber, it.nested ++ [Cmd.loop id it.yielding] ++ rest)
+  | Outcome.answered =>                                                -- :932-933, R2-1
+    (it.machine.update it.fiber, it.nested ++ [Cmd.deliver id it.yielding] ++ rest)
+  | Outcome.parked =>                                                  -- :667, :608-610
+    (it.machine.update { it.fiber with running := false }, it.nested ++ rest)
+  | Outcome.finished exit =>
+    -- M1: what the last primitive owes synchronously (a completion's waiters) runs
+    -- before this fiber's exit path, as it does on rc.112's stack
+    (it.machine.update it.fiber, it.nested ++ [Cmd.finish id exit] ++ rest)
+  | Outcome.stuck why =>
+    ((it.machine.update { it.fiber with running := false }).halt why, [])
+
 /-- The command loop. Each command costs one fuel; exhaustion is a live frontier, and so is
 a stuck machine, which stops the loop with its reason recorded. -/
 def drive (interp : RunInterp ν σ β ε δ ι α χ St) :
@@ -1068,28 +1106,14 @@ def drive (interp : RunInterp ν σ β ε δ ι α χ St) :
       match m.fiber? id with
       | none => drive interp fuel m rest
       | some f =>
-        let it := iteration interp m f yielding
-        match it.outcome with
-        | Outcome.continue_ =>
-          let m := it.machine.update it.fiber
-          drive interp fuel m (it.nested ++ [Cmd.loop id it.yielding] ++ rest)
-        | Outcome.parked =>                                            -- :667, :608-610
-          let m := it.machine.update { it.fiber with running := false }
-          drive interp fuel m (it.nested ++ rest)
-        | Outcome.finished exit =>
-          -- M1: what the last primitive owes synchronously (a completion's waiters) runs
-          -- before this fiber's exit path, as it does on rc.112's stack; the fiber is then
-          -- re-read, since a nested command may have recorded an interrupt on it.
-          let m := drive interp fuel (it.machine.update it.fiber) it.nested
-          if m.stuck.isSome then m else
-          match m.fiber? id with
-          | none => drive interp fuel m rest
-          | some f =>
-            let (m, f, parked, nested) := exitFiber interp m { f with running := false } exit
-            let m := m.update f
-            drive interp fuel m (nested ++ (if parked then [] else [Cmd.drainDue]) ++ rest)
-        | Outcome.stuck why =>
-          (it.machine.update { it.fiber with running := false }).halt why
+        let (m, cmds) := settle id rest (iteration interp m f yielding)
+        drive interp fuel m cmds
+    | Cmd.deliver id yielding =>                                       -- :933-934, R2-1
+      match m.fiber? id with
+      | none => drive interp fuel m rest
+      | some f =>
+        let (m, cmds) := settle id rest (evaluatePrim interp m f yielding)
+        drive interp fuel m cmds
     | Cmd.resume id token answer =>                                    -- :602-606, :1121
       match m.fiber? id with
       | none => drive interp fuel m rest
@@ -1125,6 +1149,13 @@ def drive (interp : RunInterp ν σ β ε δ ι α χ St) :
           drive interp fuel (m.emit [RunEvent.raceLaunched raceId entrant])
             (Cmd.evaluate entrant :: rest)
       | none => drive interp fuel m rest
+    | Cmd.finish id exit =>                                            -- :611-628
+      match m.fiber? id with
+      | none => drive interp fuel m rest
+      | some f =>
+        let (m, f, parked, nested) := exitFiber interp m { f with running := false } exit
+        let m := m.update f
+        drive interp fuel m (nested ++ (if parked then [] else [Cmd.drainDue]) ++ rest)
     | Cmd.drainDue =>
       let (due, state) := interp.dueResumes m.state
       let m := { m with state := state }

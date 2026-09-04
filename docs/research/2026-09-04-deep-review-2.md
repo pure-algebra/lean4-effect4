@@ -73,6 +73,21 @@ close-state-first, single-finalizer-unmerged and strategy split (`:3779-3827`), 
    join unchanged at 134 green / 1 partial / 0 absent of 135.
 2. The store-sync ordering R2-1 (`Outcome.answered`), with a witness: a completer under
    `matchCauseEffect` whose waiter interrupts it.
+   **Landed 2026-09-04.** The sync arm answers `Outcome.answered` (the value as `current`,
+   `drainDue` nested); the pop is a new `Cmd.deliver`, `evaluatePrim` on the answer with no
+   loop top and no op count, run after the nested commands. The loop's outcome dispatch is
+   the first-order `settle`, and the exit path a `Cmd.finish` command (the fiber re-read
+   after its nested commands, as before). A second half surfaced on the way: the old pop
+   went through the frame machine's `resumeValue`, whose `OnExit` arm is the pure
+   `finalizerExit` stand-in, so a `sync` directly under an `onExit` never ran the finalizer
+   *program*; `deliver` goes through `finalizerOr`, which does. The handler in the witness
+   is `onExit`, not `matchCauseEffect`: an interruptible fiber's failure pop skips handler
+   frames while it is interrupted (`popFrom`'s `skip`), and only the masking `OnExit` answers.
+   Witnesses `w13_completion_pop_sees_the_waiter_interrupt`,
+   `w13_sync_meets_the_finalizer_program`; clauses `evaluatePrim_sync_answers`,
+   `evaluatePrim_sync_pure`, `settle_answered`, `settle_finished`, `drive_loop_answered`,
+   `drive_deliver`, `drive_finish`; register row `E4-RUN-CE-031`. W4's resume/exit order is
+   unchanged (`w4_completion_resumes_on_the_spot`).
 3. The park redesign R2-3/R2-4/R2-12/R2-13 (join, await, awaitAll and the race as `Async`
    parks with cancels; input-order exits; masked settle), with witnesses for each.
 4. The fork family R2-7, R2-8, R2-11 and the scheduler R2-14/R2-15.

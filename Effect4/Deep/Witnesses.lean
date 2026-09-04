@@ -155,6 +155,13 @@ def finalizerRuns (m : M) (id : Nat) : Nat :=
     | RunEvent.finalizerProgram f _ _ => decide (f = ⟨id⟩)
     | _ => false).length
 
+/-- The exits the `finalizerProgram` rows of fiber `id` carry, in order: what each finalizer
+program was handed. -/
+def finalizerExits (m : M) (id : Nat) : List ExitV :=
+  m.trace.filterMap fun
+    | RunEvent.finalizerProgram f _ exit => if f = ⟨id⟩ then some exit else none
+    | _ => none
+
 /-- The `interruptRecorded` rows, as (interruptor, target). -/
 def interruptRows (m : M) : List (Option Nat × Nat) :=
   m.trace.filterMap fun
@@ -939,6 +946,79 @@ def w9AfterTwoFires : M :=
   replay Stores.empty w9TwoYields
     [RunDecision.evaluate ⟨0⟩, RunDecision.fire ⟨0⟩, RunDecision.fire ⟨0⟩]
 
+/-! ## W13 — a completing `sync` sees the interrupt its waiter records (R2-1)
+
+`Sync[evaluate]` runs the thunk and *then* pops (`internal/effect.ts:931-935`).
+`Deferred.succeed`'s thunk resumes every waiter inside `doneUnsafe` (`Deferred.ts:1655-1658`),
+on the completer's stack; a waiter that interrupts the completer records a deferred interrupt
+on it (`:588-590`, the completer is running), which the completer's very next `getCont`
+answers (`:680-683`) — before the frame under the `sync` is popped. Since R2-1 the pop is
+`Cmd.deliver`, run after the resumes the thunk owed. -/
+
+/-- The waiter: await the Deferred, then interrupt the fiber that completed it
+(`fiberInterrupt`: recorded with the waiter's id and stack annotations, then joined). -/
+def w13Waiter : ProgName :=
+  ProgName.seqOf (ProgName.awaitDeferred ⟨0⟩)
+    (ProgName.finalizerOf (FinName.interruptFiber ⟨0⟩ false) (Exit.success Val.unit))
+
+/-- The completer: fork the waiter as a daemon, then complete the Deferred under an `onExit`
+whose finalizer program is a plain success. -/
+def w13 : M :=
+  replay oneCell
+    (ProgName.seqOf (ProgName.forkOnly w13Waiter daemonChild)
+      (ProgName.onExitOf
+        (ProgName.syncOp (SyncOp.deferredCompleteWith ⟨0⟩
+          (Completion.ofExit (Exit.success (Val.nat 7)))))
+        (FinName.release 9 false) false))
+    [RunDecision.evaluate ⟨0⟩]
+
+/-- A `sync` directly under an `onExit` whose finalizer parks (R2-1's second half): the pop
+meets the finalizer *program* (`OnExit`'s `contAll`, `:4021`), not a pure stand-in. -/
+def w13SyncUnderOnExit : M :=
+  replay oneCell
+    (ProgName.onExitOf
+      (ProgName.syncOp (SyncOp.deferredCompleteWith ⟨0⟩
+        (Completion.ofExit (Exit.success (Val.nat 7)))))
+      (FinName.parkThen 1) false)
+    [RunDecision.evaluate ⟨0⟩]
+
+/-- The same, with the finalizer's park answered. -/
+def w13SyncUnderOnExitAnswered : M :=
+  replay oneCell
+    (ProgName.onExitOf
+      (ProgName.syncOp (SyncOp.deferredCompleteWith ⟨0⟩
+        (Completion.ofExit (Exit.success (Val.nat 7)))))
+      (FinName.parkThen 1) false)
+    [RunDecision.evaluate ⟨0⟩, RunDecision.answerAsync ⟨0⟩ 0 (Prim.success Val.unit)]
+
+/-- The interrupt the waiter records on the completer, while the completer is inside its
+`sync`, is what the `onExit` frame under that `sync` sees: its finalizer runs once, with the
+interrupt exit (by `1`, annotated from `1`'s stack on top of `0`'s own; R2-5), and the
+completer exits with it. The waiter's `fiberInterrupt` answers void once the target has
+exited (`:883`). Before R2-1 the frame was popped with `success true` before the waiter ran,
+and the finalizer never saw the interrupt. -/
+theorem w13_completion_pop_sees_the_waiter_interrupt :
+    finalizerRuns w13 0 = 1 ∧
+      finalizerExits w13 0 = [interruptedWith ⟨1⟩ ⟨0⟩ (stores.stackAnnotations ⟨1⟩)] ∧
+      exitOf w13 0 = some (interruptedWith ⟨1⟩ ⟨0⟩ (stores.stackAnnotations ⟨1⟩)) ∧
+      (exitOf w13 0).map causeKeys = some [["stack0", "stack1"]] ∧
+      interruptRows w13 = [(some 1, 0)] ∧
+      exitOf w13 1 = some (Exit.success Val.unit) ∧
+      resumeAndExitOrder w13 = [[0, 1, 0], [1, 0], [0, 1, 1], [1, 1]] := by
+  decide
+
+/-- A `sync` directly under an `onExit`: the delivery meets the finalizer *program* — it runs
+once, handed the thunk's success, and parks the fiber; the answer then restores the thunk's
+exit. Before R2-1 the pop ran the frame machine's pure stand-in and no program ran. -/
+theorem w13_sync_meets_the_finalizer_program :
+    finalizerRuns w13SyncUnderOnExit 0 = 1 ∧
+      finalizerExits w13SyncUnderOnExit 0 = [Exit.success (Val.bool true)] ∧
+      exitOf w13SyncUnderOnExit 0 = none ∧
+      parkedOf w13SyncUnderOnExit 0 = some (Parked.withGuard 0) ∧
+      exitOf w13SyncUnderOnExitAnswered 0 = some (Exit.success (Val.bool true)) ∧
+      finalizerRuns w13SyncUnderOnExitAnswered 0 = 1 := by
+  decide
+
 /-! ## The five forbidden examples -/
 
 /-- Forbidden 1 and 5, on every witness trace: no observer fires before its fiber's `exited`
@@ -957,7 +1037,8 @@ theorem forbidden_observers_and_double_exit :
       traceWellFormed w9AfterTwoFires.trace [] = true ∧
       traceWellFormed w10Masked.trace [] = true ∧
       traceWellFormed w11Cancelled.trace [] = true ∧
-      traceWellFormed w12AwaitAll.trace [] = true := by
+      traceWellFormed w12AwaitAll.trace [] = true ∧
+      traceWellFormed w13.trace [] = true := by
   decide
 
 /-- Forbidden 2, as a fact about the step function rather than one tape: an interrupt of a
@@ -993,7 +1074,8 @@ theorem forbidden_no_notImplemented_defect :
       noNotImplementedDefect w9AfterTwoFires = true ∧
       noNotImplementedDefect w10Masked = true ∧
       noNotImplementedDefect w11Cancelled = true ∧
-      noNotImplementedDefect w12AwaitAll = true := by
+      noNotImplementedDefect w12AwaitAll = true ∧
+      noNotImplementedDefect w13 = true := by
   decide
 
 /-- Forbidden 4. After one `fire` the fiber has not finished: the task the drained resume

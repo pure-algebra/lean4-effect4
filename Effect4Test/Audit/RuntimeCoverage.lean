@@ -4393,6 +4393,177 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
         { machine := m.emit [Effect4.Deep.RunEvent.parkedOn g.id token], fiber := g, yielding := yielding,
           outcome := Effect4.Deep.Outcome.parked, nested := [] })
 
+
+/-! Repair step 2 of the second review, 2026-09-04 (R2-1): the `Sync` arm answers and the pop is a
+command run after what the thunk owed; the exit path is a command too. -/
+
+#check (@Effect4.Deep.evaluatePrim_sync_answers :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
+    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
+    [inst_3 : DecidableEq α] (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St)
+    (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Deep.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (thunk : σ) (state : St) (value : β),
+    interp.parkOf (Effect4.Prim.sync thunk) = Option.none →
+      interp.syncState thunk m.state = Option.some (state, value) →
+        have g :=
+          { id := f.id,
+            frame :=
+              have __src := f.frame;
+              { current := Effect4.Prim.sync thunk, stack := __src.stack, interruptible := __src.interruptible,
+                interruptedCause := __src.interruptedCause, deferredInterrupt := __src.deferredInterrupt },
+            running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
+            currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield, preventYield := f.preventYield,
+            yieldOverride := f.yieldOverride, observers := f.observers, children := f.children,
+            dispatcher := f.dispatcher, context := f.context };
+        Effect4.Deep.evaluatePrim interp m g yielding =
+          {
+            machine :=
+              { fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken,
+                nextRace := m.nextRace, middlewareInstalled := m.middlewareInstalled, state := state, trace := m.trace,
+                stuck := m.stuck },
+            fiber :=
+              { id := g.id,
+                frame :=
+                  have __src := g.frame;
+                  { current := Effect4.Prim.success value, stack := __src.stack, interruptible := __src.interruptible,
+                    interruptedCause := __src.interruptedCause, deferredInterrupt := __src.deferredInterrupt },
+                running := g.running, parked := g.parked, pending := g.pending, finalizing := g.finalizing,
+                exit := g.exit, currentOpCount := g.currentOpCount, maxOpsBeforeYield := g.maxOpsBeforeYield,
+                preventYield := g.preventYield, yieldOverride := g.yieldOverride, observers := g.observers,
+                children := g.children, dispatcher := g.dispatcher, context := g.context },
+            yielding := yielding, outcome := Effect4.Deep.Outcome.answered, nested := [Effect4.Deep.Cmd.drainDue] })
+
+#check (@Effect4.Deep.evaluatePrim_sync_pure :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
+    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
+    [inst_3 : DecidableEq α] (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St)
+    (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Deep.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (thunk : σ),
+    interp.parkOf (Effect4.Prim.sync thunk) = Option.none →
+      interp.syncState thunk m.state = Option.none →
+        have g :=
+          { id := f.id,
+            frame :=
+              have __src := f.frame;
+              { current := Effect4.Prim.sync thunk, stack := __src.stack, interruptible := __src.interruptible,
+                interruptedCause := __src.interruptedCause, deferredInterrupt := __src.deferredInterrupt },
+            running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
+            currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield, preventYield := f.preventYield,
+            yieldOverride := f.yieldOverride, observers := f.observers, children := f.children,
+            dispatcher := f.dispatcher, context := f.context };
+        Effect4.Deep.evaluatePrim interp m g yielding =
+          { machine := m,
+            fiber :=
+              { id := g.id,
+                frame :=
+                  have __src := g.frame;
+                  { current := Effect4.Prim.success (interp.syncValue thunk), stack := __src.stack,
+                    interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
+                    deferredInterrupt := __src.deferredInterrupt },
+                running := g.running, parked := g.parked, pending := g.pending, finalizing := g.finalizing,
+                exit := g.exit, currentOpCount := g.currentOpCount, maxOpsBeforeYield := g.maxOpsBeforeYield,
+                preventYield := g.preventYield, yieldOverride := g.yieldOverride, observers := g.observers,
+                children := g.children, dispatcher := g.dispatcher, context := g.context },
+            yielding := yielding, outcome := Effect4.Deep.Outcome.answered, nested := [] })
+
+#check (@Effect4.Deep.settle_answered :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (id : Effect4.FiberId)
+    (rest : List (Effect4.Deep.Cmd ν σ β ε δ ι α)) (it : Effect4.Deep.Iter ν σ β ε δ ι α χ St),
+    it.outcome = Effect4.Deep.Outcome.answered →
+      Effect4.Deep.settle id rest it =
+        (it.machine.update it.fiber, it.nested ++ [Effect4.Deep.Cmd.deliver id it.yielding] ++ rest))
+
+#check (@Effect4.Deep.drive_loop_answered :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St)
+    (id : Effect4.FiberId) (yielding : Bool) (f : Effect4.Deep.RunFiber ν σ β ε δ ι α χ)
+    (rest : List (Effect4.Deep.Cmd ν σ β ε δ ι α)),
+    m.stuck = Option.none →
+      m.fiber? id = Option.some f →
+        (Effect4.Deep.iteration interp m f yielding).outcome = Effect4.Deep.Outcome.answered →
+          Effect4.Deep.drive interp (fuel + 1) m (Effect4.Deep.Cmd.loop id yielding :: rest) =
+            Effect4.Deep.drive interp fuel
+              ((Effect4.Deep.iteration interp m f yielding).machine.update
+                (Effect4.Deep.iteration interp m f yielding).fiber)
+              ((Effect4.Deep.iteration interp m f yielding).nested ++
+                  [Effect4.Deep.Cmd.deliver id (Effect4.Deep.iteration interp m f yielding).yielding] ++
+                rest))
+
+#check (@Effect4.Deep.drive_deliver :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St)
+    (id : Effect4.FiberId) (yielding : Bool) (f : Effect4.Deep.RunFiber ν σ β ε δ ι α χ)
+    (rest : List (Effect4.Deep.Cmd ν σ β ε δ ι α)),
+    m.stuck = Option.none →
+      m.fiber? id = Option.some f →
+        Effect4.Deep.drive interp (fuel + 1) m (Effect4.Deep.Cmd.deliver id yielding :: rest) =
+          Effect4.Deep.drive interp fuel (Effect4.Deep.settle id rest (Effect4.Deep.evaluatePrim interp m f yielding)).fst
+            (Effect4.Deep.settle id rest (Effect4.Deep.evaluatePrim interp m f yielding)).snd)
+
+#check (@Effect4.Deep.Witnesses.w13_completion_pop_sees_the_waiter_interrupt :
+  Effect4.Deep.Witnesses.finalizerRuns
+        Effect4.Deep.Witnesses.w13 0 =
+      1 ∧
+    Effect4.Deep.Witnesses.finalizerExits Effect4.Deep.Witnesses.w13 0 =
+        [Effect4.Deep.Witnesses.interruptedWith { value := 1 } { value := 0 }
+            (Effect4.Deep.stores.stackAnnotations { value := 1 })] ∧
+      Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w13 0 =
+          Option.some
+            (Effect4.Deep.Witnesses.interruptedWith { value := 1 } { value := 0 }
+              (Effect4.Deep.stores.stackAnnotations { value := 1 })) ∧
+        Option.map Effect4.Deep.Witnesses.causeKeys (Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w13 0) =
+            Option.some [["stack0", "stack1"]] ∧
+          Effect4.Deep.Witnesses.interruptRows Effect4.Deep.Witnesses.w13 = [(Option.some 1, 0)] ∧
+            Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w13 1 =
+                Option.some (Effect4.Exit.success Effect4.Deep.Val.unit) ∧
+              Effect4.Deep.Witnesses.resumeAndExitOrder Effect4.Deep.Witnesses.w13 =
+                [[0, 1, 0], [1, 0], [0, 1, 1], [1, 1]])
+
+#check (@Effect4.Deep.Witnesses.w13_sync_meets_the_finalizer_program :
+  Effect4.Deep.Witnesses.finalizerRuns
+        Effect4.Deep.Witnesses.w13SyncUnderOnExit 0 =
+      1 ∧
+    Effect4.Deep.Witnesses.finalizerExits Effect4.Deep.Witnesses.w13SyncUnderOnExit 0 =
+        [Effect4.Exit.success (Effect4.Deep.Val.bool Bool.true)] ∧
+      Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w13SyncUnderOnExit 0 = Option.none ∧
+        Effect4.Deep.Witnesses.parkedOf Effect4.Deep.Witnesses.w13SyncUnderOnExit 0 =
+            Option.some (Effect4.Deep.Parked.withGuard 0) ∧
+          Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w13SyncUnderOnExitAnswered 0 =
+              Option.some (Effect4.Exit.success (Effect4.Deep.Val.bool Bool.true)) ∧
+            Effect4.Deep.Witnesses.finalizerRuns Effect4.Deep.Witnesses.w13SyncUnderOnExitAnswered 0 = 1)
+
+#check (@Effect4.Deep.drive_finish :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St)
+    (id : Effect4.FiberId) (exit : Effect4.Exit β ε δ ι α) (f : Effect4.Deep.RunFiber ν σ β ε δ ι α χ)
+    (rest : List (Effect4.Deep.Cmd ν σ β ε δ ι α)),
+    m.stuck = Option.none →
+      m.fiber? id = Option.some f →
+        Effect4.Deep.drive interp (fuel + 1) m (Effect4.Deep.Cmd.finish id exit :: rest) =
+          have r :=
+            Effect4.Deep.exitFiber interp m
+              { id := f.id, frame := f.frame, running := Bool.false, parked := f.parked, pending := f.pending,
+                finalizing := f.finalizing, exit := f.exit, currentOpCount := f.currentOpCount,
+                maxOpsBeforeYield := f.maxOpsBeforeYield, preventYield := f.preventYield,
+                yieldOverride := f.yieldOverride, observers := f.observers, children := f.children,
+                dispatcher := f.dispatcher, context := f.context }
+              exit;
+          Effect4.Deep.drive interp fuel (r.fst.update r.snd.fst)
+            ((r.snd.snd.snd ++ if r.snd.snd.fst = Bool.true then [] else [Effect4.Deep.Cmd.drainDue]) ++ rest))
+
+#check (@Effect4.Deep.settle_finished :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (id : Effect4.FiberId)
+    (rest : List (Effect4.Deep.Cmd ν σ β ε δ ι α)) (it : Effect4.Deep.Iter ν σ β ε δ ι α χ St)
+    (exit : Effect4.Exit β ε δ ι α),
+    it.outcome = Effect4.Deep.Outcome.finished exit →
+      Effect4.Deep.settle id rest it =
+        (it.machine.update it.fiber, it.nested ++ [Effect4.Deep.Cmd.finish id exit] ++ rest))
+
 end StatementSnapshot
 
 /-! ## The frozen census join -/
@@ -4454,7 +4625,14 @@ private def censusRows : List Row :=
         , w `Effect4.Prim.yieldableError_host_class_refused "none" ] }
   , { id := "op.Sync", kind := "op", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.FrameFiber.step_sync "propext" ] }
+        [ w `Effect4.FrameFiber.step_sync "propext"
+        , w `Effect4.Deep.evaluatePrim_sync_answers "propext,Quot.sound"
+        , w `Effect4.Deep.evaluatePrim_sync_pure "propext,Quot.sound"
+        , w `Effect4.Deep.settle_answered "propext"
+        , w `Effect4.Deep.drive_loop_answered "propext,Quot.sound"
+        , w `Effect4.Deep.drive_deliver "propext,Quot.sound"
+        , w `Effect4.Deep.Witnesses.w13_completion_pop_sees_the_waiter_interrupt "propext,Quot.sound"
+        , w `Effect4.Deep.Witnesses.w13_sync_meets_the_finalizer_program "propext,Quot.sound" ] }
   , { id := "op.Suspend", kind := "op", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.FrameFiber.step_suspend "propext" ] }
@@ -4561,7 +4739,8 @@ private def censusRows : List Row :=
         , w `Effect4.Prim.ensure_onExit_told_not_to "propext"
         , w `Effect4.Prim.ensure_onExit_already_masked "propext"
         , w `Effect4.Prim.ensure_onExit_no_replacement "propext"
-        , w `Effect4.Prim.onExit_arm_is_per_frame "none" ] }
+        , w `Effect4.Prim.onExit_arm_is_per_frame "none"
+        , w `Effect4.Deep.Witnesses.w13_sync_meets_the_finalizer_program "propext,Quot.sound" ] }
   , { id := "frame-arm.SetInterruptible", kind := "frame-arm", disposition := "owned", coverage := "green"
     , witnesses :=
         [ w `Effect4.Prim.arms_setInterruptible "none"
@@ -4599,7 +4778,8 @@ private def censusRows : List Row :=
         , w `Effect4.FrameFiber.getCont_deferred_pops_nothing "propext"
         , w `Effect4.FrameFiber.getCont_skip_clears_deferred "propext"
         , w `Effect4.FrameFiber.resumeValue_deferred "propext"
-        , w `Effect4.FrameFiber.resumeCause_deferred "propext" ] }
+        , w `Effect4.FrameFiber.resumeCause_deferred "propext"
+        , w `Effect4.Deep.Witnesses.w13_completion_pop_sees_the_waiter_interrupt "propext,Quot.sound" ] }
   , { id := "checkpoint.post-yield-cancel", kind := "checkpoint", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Deep.interruptRecord_parked_applies "propext,Quot.sound"
@@ -4656,7 +4836,8 @@ private def censusRows : List Row :=
         , w `Effect4.Deep.withFiber_fork "propext,Quot.sound"
         , w `Effect4.Deep.Witnesses.w1_deferred_join_child "propext,Quot.sound"
         , w `Effect4.Deep.Witnesses.w1_deferred_start_is_a_task "propext,Quot.sound"
-        , w `Effect4.Deep.Witnesses.w5_middleware_interrupts_children "propext,Quot.sound" ] }
+        , w `Effect4.Deep.Witnesses.w5_middleware_interrupts_children "propext,Quot.sound"
+        , w `Effect4.Deep.drive_finish "propext,Quot.sound" ] }
   , { id := "fork.detach", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Deep.spawn_daemon_untracked "propext"
@@ -5136,7 +5317,9 @@ private def censusRows : List Row :=
         , w `Effect4.Deep.exitInterruptChildren_interrupts "propext,Quot.sound"
         , w `Effect4.Deep.resumePrim_continueWith "none"
         , w `Effect4.Deep.exitFiber_finalizing "propext,Quot.sound"
-        , w `Effect4.Deep.Witnesses.w5_middleware_interrupts_children "propext,Quot.sound" ] }
+        , w `Effect4.Deep.Witnesses.w5_middleware_interrupts_children "propext,Quot.sound"
+        , w `Effect4.Deep.settle_finished "propext"
+        , w `Effect4.Deep.drive_finish "propext,Quot.sound" ] }
   , { id := "rule.scope-close-lifo-state-first", kind := "rule", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Scope.close_state_independent_of_run "none"
@@ -5225,7 +5408,8 @@ private def censusRows : List Row :=
         [ w `Effect4.Deep.deferredStore_complete_done "propext" ] }
   , { id := "deferred.completion-order", kind := "deferred", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Deep.deferredStore_complete_pending "propext" ] }
+        [ w `Effect4.Deep.deferredStore_complete_pending "propext"
+        , w `Effect4.Deep.Witnesses.w13_completion_pop_sees_the_waiter_interrupt "propext,Quot.sound" ] }
   , { id := "deferred.complete-with-stores-effect", kind := "deferred", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Deep.deferredStore_complete_stores_argument "propext"
@@ -5809,6 +5993,15 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Deep.Witnesses.w6_parallel_forks_and_merges
   , `Effect4.Deep.evaluatePrim_async_immediate
   , `Effect4.Deep.evaluatePrim_async_parks
+  , `Effect4.Deep.evaluatePrim_sync_answers
+  , `Effect4.Deep.evaluatePrim_sync_pure
+  , `Effect4.Deep.settle_answered
+  , `Effect4.Deep.drive_loop_answered
+  , `Effect4.Deep.drive_deliver
+  , `Effect4.Deep.Witnesses.w13_completion_pop_sees_the_waiter_interrupt
+  , `Effect4.Deep.Witnesses.w13_sync_meets_the_finalizer_program
+  , `Effect4.Deep.drive_finish
+  , `Effect4.Deep.settle_finished
   ]
 
 private def expectedRowTotal : Nat := 137

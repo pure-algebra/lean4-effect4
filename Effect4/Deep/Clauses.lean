@@ -281,7 +281,7 @@ theorem drive_loop_parked (interp : RunInterp ν σ β ε δ ι α χ St) (fuel 
         ((iteration interp m f yielding).machine.update
           { (iteration interp m f yielding).fiber with running := false })
         ((iteration interp m f yielding).nested ++ rest) := by
-  simp [drive, hs, hf, h]
+  simp [drive, settle, hs, hf, h]
 
 /-- … and where the iteration continues, the loop goes on with the latch it answered
 (`:648`, `:667`). census: rule.yield-is-overloaded -/
@@ -295,7 +295,89 @@ theorem drive_loop_continues (interp : RunInterp ν σ β ε δ ι α χ St) (fu
         ((iteration interp m f yielding).machine.update (iteration interp m f yielding).fiber)
         ((iteration interp m f yielding).nested ++
           [Cmd.loop id (iteration interp m f yielding).yielding] ++ rest) := by
-  simp [drive, hs, hf, h]
+  simp [drive, settle, hs, hf, h]
+
+/-- `Sync[evaluate]` (`:931-935`): the thunk runs against the store first, its value becomes
+the fiber's `current`, the resumes it owes are the nested `drainDue`, and the pop is owed
+*after* them (R2-1). census: op.Sync -/
+theorem evaluatePrim_sync_answers (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (thunk : σ) (state : St) (value : β)
+    (hpark : interp.parkOf (Prim.sync thunk) = none)
+    (hsync : interp.syncState thunk m.state = some (state, value)) :
+    let g : RunFiber ν σ β ε δ ι α χ := { f with frame := { f.frame with current := Prim.sync thunk } }
+    evaluatePrim interp m g yielding =
+      ⟨{ m with state := state }, { g with frame := { g.frame with current := Prim.success value } },
+        yielding, Outcome.answered, [Cmd.drainDue]⟩ := by
+  simp only [evaluatePrim, hpark, hsync]
+
+/-- A `sync` the store does not recognise answers the interp's pure `syncValue` and owes
+nothing; the pop is still deferred to `Cmd.deliver`, so an `OnExit` frame under it meets its
+finalizer program. census: op.Sync -/
+theorem evaluatePrim_sync_pure (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (thunk : σ) (hpark : interp.parkOf (Prim.sync thunk) = none)
+    (hsync : interp.syncState thunk m.state = none) :
+    let g : RunFiber ν σ β ε δ ι α χ := { f with frame := { f.frame with current := Prim.sync thunk } }
+    evaluatePrim interp m g yielding =
+      ⟨m, { g with frame := { g.frame with current := Prim.success (interp.syncValue thunk) } },
+        yielding, Outcome.answered, []⟩ := by
+  simp only [evaluatePrim, hpark, hsync]
+
+/-- An answered iteration: the nested commands run first, then the delivery (`:932-933`).
+census: op.Sync -/
+theorem settle_answered (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α))
+    (it : Iter ν σ β ε δ ι α χ St) (h : it.outcome = Outcome.answered) :
+    settle id rest it =
+      (it.machine.update it.fiber, it.nested ++ [Cmd.deliver id it.yielding] ++ rest) := by
+  simp [settle, h]
+
+/-- A finished iteration: the nested commands run first, then the exit path (`:611-628`, M1).
+census: rule.children-interrupted-after-exit -/
+theorem settle_finished (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α))
+    (it : Iter ν σ β ε δ ι α χ St) (exit : Exit β ε δ ι α)
+    (h : it.outcome = Outcome.finished exit) :
+    settle id rest it =
+      (it.machine.update it.fiber, it.nested ++ [Cmd.finish id exit] ++ rest) := by
+  simp [settle, h]
+
+/-- The loop on an answered iteration (R2-1). census: op.Sync -/
+theorem drive_loop_answered (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId) (yielding : Bool)
+    (f : RunFiber ν σ β ε δ ι α χ) (rest : List (Cmd ν σ β ε δ ι α))
+    (hs : m.stuck = none) (hf : m.fiber? id = some f)
+    (h : (iteration interp m f yielding).outcome = Outcome.answered) :
+    drive interp (fuel + 1) m (Cmd.loop id yielding :: rest) =
+      drive interp fuel
+        ((iteration interp m f yielding).machine.update (iteration interp m f yielding).fiber)
+        ((iteration interp m f yielding).nested ++
+          [Cmd.deliver id (iteration interp m f yielding).yielding] ++ rest) := by
+  simp [drive, settle, hs, hf, h]
+
+/-- The delivery (`:933-934`): the answer is evaluated as the fiber's `current` — no loop
+top, no op count — so its `getCont` sees what the nested commands recorded, and an `OnExit`
+frame's finalizer program runs through `finalizerOr`. census: op.Sync -/
+theorem drive_deliver (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId) (yielding : Bool)
+    (f : RunFiber ν σ β ε δ ι α χ) (rest : List (Cmd ν σ β ε δ ι α))
+    (hs : m.stuck = none) (hf : m.fiber? id = some f) :
+    drive interp (fuel + 1) m (Cmd.deliver id yielding :: rest) =
+      drive interp fuel (settle id rest (evaluatePrim interp m f yielding)).1
+        (settle id rest (evaluatePrim interp m f yielding)).2 := by
+  simp [drive, hs, hf]
+
+/-- The exit path as a command (`:611-628`): the fiber is re-read, its loop is over, and
+what `exitFiber` leaves to run precedes a drain of the store's owed resumes unless the fiber
+parked on its children. census: fork.child -/
+theorem drive_finish (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId) (exit : Exit β ε δ ι α)
+    (f : RunFiber ν σ β ε δ ι α χ) (rest : List (Cmd ν σ β ε δ ι α))
+    (hs : m.stuck = none) (hf : m.fiber? id = some f) :
+    drive interp (fuel + 1) m (Cmd.finish id exit :: rest) =
+      (let r := exitFiber interp m { f with running := false } exit
+       drive interp fuel (r.1.update r.2.1)
+         (r.2.2.2 ++ (if r.2.2.1 then [] else [Cmd.drainDue]) ++ rest)) := by
+  simp [drive, hs, hf]
 
 /-- The resume guard (`:990-993`, `:1121`): a resume whose token is not the guard the fiber
 is parked behind is dropped. census: scheduler.yield-now-resume-guard -/
