@@ -41,12 +41,12 @@ none of their carriers.
 | `src/Effect4/Machine` (`Key.lean`) | `ServiceKey`, its universe and transport |
 | `src/Effect4/Machine` (`Frames.lean`, `Scope*.lean`, `LiveStack.lean`) | the rc.112 frame alphabet and single-fiber step, the `Scope` state machine, and the frame-level facts that pin them (`LiveStack`, `ScopeRestoration`) |
 | `src/Effect4/Machine` (`Fibers.lean`, `Stores.lean`, `Context.lean`, `Layer.lean`, `Clauses.lean`, `Witnesses.lean`) | the reference fiber machine (`RunMachine`, `drive`, `replayEval`, `runSyncExit`), the stores, the Context and Layer models, the clause theorems and the witnesses |
-| `src/Effect4/Program` | `Eff`, `typeOf`, the native operation alphabet, `compile` and `interpOf` |
+| `src/Effect4/Program` | `Eff`, `typeOf`, the native operation alphabet, `compile` and `interpOf`; `Provision` — the requirement algebra (`Row.diff`), the layer signature `LayerTy` and its laws, the layer term `LayerTerm` with `Eff` bodies, `App` (`Effect.provide`), the build specification and its totality theorem, and the lowering into the Layer machine (`docs/research/2026-09-04-provision-algebra.md`) |
 | `src/Effect4/Api` | the one application-facing module |
 | `src/Effect4/Schema` | the persisted Schema data plane |
 | `src/Effect4/Codegen`, `src/Effect4/Ingest` | the pinned Effect v4 profile, `print`, the Schema and annotated-field generators and the surface emitters; the readers that go the other way |
 | `src/Effect4/Store`, `src/Effect4/Evidence` | content store; architecture and surface views; the rc.112 export census (`Evidence/StdLib`) and its links to the model |
-| `src/Effect4/Surface`, `src/Effect4/Evidence/Char` | surface carriers; characterized components |
+| `src/Effect4/Surface`, `src/Effect4/Evidence/Char` | surface carriers; characterized components; `Surface/Middleware` and `Surface/Provision` are the joins of the surface carriers to the provision algebra (an HTTP middleware as a requirement transformer, a deployment as a closed layer) and are the one place `Surface` imports `Program` |
 | `src/OCaml5` | the Lean half of the OCaml estate: the OCaml 5 handler machine and its theorems, the jsoo machine, the OCaml language model (`Ml`), library carriers (`Lib`), the LCNF → OCaml backend (`Lcnf`), the Machine carriers described and rendered (`Render`, `Derived`), the route-1 bridge (`Bridge`), the `--run` drivers (`Tools`) |
 | `ocaml/` | the OCaml estate as one dune workspace: the avatar (the Machine as OCaml 5 handlers), the daemon `effect4d`, the route-1 link and host core, the LCNF route's generated machine, and the `Eff` IR as an OCaml library (`ocaml/README.md`) |
 | `harness/truth` | the Lean-vs-rc.112 exit differential over the program corpus (bun) |

@@ -121,6 +121,14 @@ import Effect4.Codegen.Mcp
 import Effect4.Surface.Deploy
 import Effect4.Codegen.Worker
 import Effect4.Surface.Site
+-- The joins of the surface carriers to the provision algebra: an HTTP middleware as a
+-- requirement transformer (`ApplyServices` is `LayerTy.provide`), with the security
+-- schemes' decode cost and the router's discharge.
+import Effect4.Surface.Middleware
+-- A deployment (a wrangler configuration) as a closed layer: bindings are `Layer.succeed`
+-- leaves, `provides` rows are `Layer.effect` leaves reading one binding, and the deployment
+-- law is the closure theorem of the provision algebra.
+import Effect4.Surface.Provision
 -- The two emitters whose bodies live elsewhere, given their rule: the persisted document
 -- module over `Codegen.Schema.module?`, and the site's route table over `Surface.routesJson`.
 import Effect4.Codegen.EntityDocument
@@ -151,6 +159,14 @@ import Effect4.Program.Typing
 import Effect4.Codegen.Print
 import Effect4.Program.Native
 import Effect4.Program.Compile
+-- The provision algebra (docs/research/2026-09-04-provision-algebra.md): `Row.diff`, the
+-- layer signature `LayerTy` and its laws, the layer term `LayerTerm` over `Eff` bodies,
+-- `App` (`Effect.provide`), the build specification with its totality theorem, and the
+-- lowering into the Layer machine with the docs deployment as its witness.
+import Effect4.Program.Provision
+-- The layer printer: a `LayerTerm` and an `App` as the rc.112 `Layer.*` / `Effect.provide`
+-- combinators, syntax never text, with the declared `Layer.Layer<ROut, E, RIn>` types.
+import Effect4.Codegen.Layer
 -- The canonical bytes of a program and the exact decoder (2026-09-04): how a
 -- program crosses the store, the OCaml host and the daemon, and comes back as
 -- exactly itself. `ocaml/eff` implements the same rule in OCaml.

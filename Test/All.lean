@@ -60,6 +60,11 @@ import Test.Ingest.JsonSchemaContract
 import Test.Ingest.WranglerContract
 import Test.Ingest.McpContract
 import Test.Program.CompileContract
+import Test.Program.ProvisionContract
+import Test.Program.ProvisionAxiomReport
+import Test.Surface.ProvisionContract
+import Test.Surface.ProvisionAxiomReport
+import Test.Codegen.LayerPrintAxiomReport
 import Test.Api.ApiContract
 import Test.Machine.Fuzz
 import Test.Audit.RuntimeCoverage

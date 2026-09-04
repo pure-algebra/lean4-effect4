@@ -6,11 +6,13 @@ import Effect4.Data.Row
 # Data.Row declaration and proof-graph join
 
 This test-only checker closes the existing `DATA-PG-ROW` graph without
-creating another graph.  It separates Lean's complete 60-name module-owned
-surface (including generated companions) from the 34 names deliberately
-authored as the public Row API.  It also checks the 23 exported theorem
+creating another graph.  It separates Lean's complete 72-name module-owned
+surface (including generated companions) from the 44 names deliberately
+authored as the public Row API.  It also checks the 32 exported theorem
 receipts, their exact kernel dependencies, every declaration owner, the exact
 standard-order instance binders, and the frozen duplicate-prevention names.
+The `DIFFERENCE` edge (`Row.diff` and its nine laws) joined on 2026-09-04 with
+the provision algebra (`docs/research/2026-09-04-provision-algebra.md`).
 
 The generic commands at the end exist only for bounded detector-reaction
 fixtures.  The generated projection is the authority for edge closure; this
@@ -70,6 +72,16 @@ private def expectedOwnedDeclarations : List Name :=
   , `Effect4.Row.ascending_normalize
   , `Effect4.Row.casesOn
   , `Effect4.Row.ctorIdx
+  , `Effect4.Row.diff
+  , `Effect4.Row.diff.congr_simp
+  , `Effect4.Row.diff.eq_1
+  , `Effect4.Row.diff_empty
+  , `Effect4.Row.diff_eq_empty_iff_subset
+  , `Effect4.Row.diff_self
+  , `Effect4.Row.diff_subset
+  , `Effect4.Row.diff_subset_diff_left
+  , `Effect4.Row.diff_subset_diff_right
+  , `Effect4.Row.diff_union_right
   , `Effect4.Row.elems
   , `Effect4.Row.empty
   , `Effect4.Row.empty.eq_1
@@ -80,6 +92,7 @@ private def expectedOwnedDeclarations : List Name :=
   , `Effect4.Row.instDecidableSubsetOfDecidableEq
   , `Effect4.Row.instMembership
   , `Effect4.Row.mem_def
+  , `Effect4.Row.mem_diff
   , `Effect4.Row.mem_insert
   , `Effect4.Row.mem_normalize
   , `Effect4.Row.mem_singleton
@@ -115,6 +128,7 @@ private def expectedOwnedDeclarations : List Name :=
   , `Effect4.Row.union.eq_1
   , `Effect4.Row.union_assoc
   , `Effect4.Row.union_comm
+  , `Effect4.Row.union_diff_distrib
   , `Effect4.Row.union_empty_left
   , `Effect4.Row.union_empty_right
   , `Effect4.Row.union_idem
@@ -159,6 +173,16 @@ private def authoredApiDeclarations : List (Name × String) :=
   , (`Effect4.Row.subset_trans, "WEAKENING")
   , (`Effect4.Row.subset_union_left, "WEAKENING")
   , (`Effect4.Row.subset_union_right, "WEAKENING")
+  , (`Effect4.Row.diff, "DIFFERENCE")
+  , (`Effect4.Row.mem_diff, "DIFFERENCE")
+  , (`Effect4.Row.diff_subset, "DIFFERENCE")
+  , (`Effect4.Row.diff_empty, "DIFFERENCE")
+  , (`Effect4.Row.diff_self, "DIFFERENCE")
+  , (`Effect4.Row.diff_eq_empty_iff_subset, "DIFFERENCE")
+  , (`Effect4.Row.diff_union_right, "DIFFERENCE")
+  , (`Effect4.Row.union_diff_distrib, "DIFFERENCE")
+  , (`Effect4.Row.diff_subset_diff_left, "DIFFERENCE")
+  , (`Effect4.Row.diff_subset_diff_right, "DIFFERENCE")
   ]
 
 private def sixOrderHypotheses : List Name :=
@@ -201,6 +225,16 @@ private def hypothesisProfiles : List (Name × List Name) :=
   , (`Effect4.Row.subset_trans, [`LT])
   , (`Effect4.Row.subset_union_left, sixOrderHypotheses)
   , (`Effect4.Row.subset_union_right, sixOrderHypotheses)
+  , (`Effect4.Row.diff, sixOrderHypotheses)
+  , (`Effect4.Row.mem_diff, sixOrderHypotheses)
+  , (`Effect4.Row.diff_subset, sixOrderHypotheses)
+  , (`Effect4.Row.diff_empty, sixOrderHypotheses)
+  , (`Effect4.Row.diff_self, sixOrderHypotheses)
+  , (`Effect4.Row.diff_eq_empty_iff_subset, sixOrderHypotheses)
+  , (`Effect4.Row.diff_union_right, sixOrderHypotheses)
+  , (`Effect4.Row.union_diff_distrib, sixOrderHypotheses)
+  , (`Effect4.Row.diff_subset_diff_left, sixOrderHypotheses)
+  , (`Effect4.Row.diff_subset_diff_right, sixOrderHypotheses)
   ]
 
 private def theoremReceipts : List (Name × String) :=
@@ -227,6 +261,15 @@ private def theoremReceipts : List (Name × String) :=
   , (`Effect4.Row.subset_trans, "WEAKENING")
   , (`Effect4.Row.subset_union_left, "WEAKENING")
   , (`Effect4.Row.subset_union_right, "WEAKENING")
+  , (`Effect4.Row.mem_diff, "DIFFERENCE")
+  , (`Effect4.Row.diff_subset, "DIFFERENCE")
+  , (`Effect4.Row.diff_empty, "DIFFERENCE")
+  , (`Effect4.Row.diff_self, "DIFFERENCE")
+  , (`Effect4.Row.diff_eq_empty_iff_subset, "DIFFERENCE")
+  , (`Effect4.Row.diff_union_right, "DIFFERENCE")
+  , (`Effect4.Row.union_diff_distrib, "DIFFERENCE")
+  , (`Effect4.Row.diff_subset_diff_left, "DIFFERENCE")
+  , (`Effect4.Row.diff_subset_diff_right, "DIFFERENCE")
   ]
 
 private def noAxioms : List Name := []
@@ -257,6 +300,15 @@ private def axiomReceipts : List (Name × List Name) :=
   , (`Effect4.Row.subset_trans, noAxioms)
   , (`Effect4.Row.subset_union_left, propextAndQuot)
   , (`Effect4.Row.subset_union_right, propextAndQuot)
+  , (`Effect4.Row.mem_diff, propextAndQuot)
+  , (`Effect4.Row.diff_subset, propextAndQuot)
+  , (`Effect4.Row.diff_empty, propextAndQuot)
+  , (`Effect4.Row.diff_self, propextAndQuot)
+  , (`Effect4.Row.diff_eq_empty_iff_subset, propextAndQuot)
+  , (`Effect4.Row.diff_union_right, propextAndQuot)
+  , (`Effect4.Row.union_diff_distrib, propextAndQuot)
+  , (`Effect4.Row.diff_subset_diff_left, propextAndQuot)
+  , (`Effect4.Row.diff_subset_diff_right, propextAndQuot)
   ]
 
 private def forbiddenDuplicateDeclarations : List (Name × String) :=
@@ -277,6 +329,7 @@ private def graphEdges : List (String × String) :=
   , ("NORMALIZE", "DATA-ROW-NORMALIZE")
   , ("EXTENSIONALITY", "DATA-ROW-EXTENSIONALITY")
   , ("UNION", "DATA-ROW-UNION")
+  , ("DIFFERENCE", "DATA-ROW-DIFFERENCE")
   , ("WEAKENING", "DATA-ROW-WEAKENING")
   , ("COUNTEREXAMPLES", "DATA-ROW-COUNTEREXAMPLES")
   , ("TRUST", "DATA-ROW-TRUST")

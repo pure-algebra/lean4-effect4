@@ -397,5 +397,91 @@ theorem subset_union_right {α : Type u} [LE α] [LT α] [DecidableEq α]
   intro a ha
   exact (mem_union a r s).mpr (Or.inr ha)
 
+/-! ## Difference
+
+`Exclude<R, S>` on rows (2026-09-04, `docs/research/2026-09-04-provision-algebra.md`): the
+members of the left operand outside the right, canonical through `normalize` like `union`.
+`Layer.provide`'s requirement row is `RIn | Exclude<RIn2, ROut>`
+(`vendor/effect-4.0.0-rc.112/src/Layer.ts:2089`), and every law of the provision algebra is a
+membership law over `mem_diff` and `mem_union`. -/
+
+section Difference
+
+variable {α : Type u} [LE α] [LT α] [DecidableEq α] [DecidableLT α] [Std.IsLinearOrder α]
+  [Std.LawfulOrderLT α]
+
+/-- The members of `r` that are not members of `s`. -/
+def diff (r s : Row α) : Row α :=
+  normalize (r.elems.filter fun a => decide (a ∉ s))
+
+/-- Difference contains exactly the members of the left operand outside the right. -/
+theorem mem_diff (a : α) (r s : Row α) : a ∈ diff r s ↔ a ∈ r ∧ a ∉ s := by
+  rw [diff, mem_normalize, List.mem_filter, decide_eq_true_iff]
+  exact Iff.rfl
+
+/-- Difference is a subrow of its left operand. -/
+theorem diff_subset (r s : Row α) : Subset (diff r s) r :=
+  fun a ha => ((mem_diff a r s).mp ha).1
+
+/-- Removing nothing is the identity. -/
+theorem diff_empty (r : Row α) : diff r empty = r := by
+  apply eq_of_mem_iff
+  intro a
+  rw [mem_diff]
+  exact ⟨fun h => h.1, fun h => ⟨h, not_mem_empty a⟩⟩
+
+/-- Removing everything leaves nothing. -/
+theorem diff_self (r : Row α) : diff r r = empty := by
+  apply eq_of_mem_iff
+  intro a
+  rw [mem_diff]
+  exact ⟨fun h => absurd h.1 h.2, fun h => absurd h (not_mem_empty a)⟩
+
+/-- A difference is empty exactly when the left operand is included in the right: the
+"fully provided" test. -/
+theorem diff_eq_empty_iff_subset (r s : Row α) : diff r s = empty ↔ Subset r s := by
+  constructor
+  · intro h a ha
+    by_cases hs : a ∈ s
+    · exact hs
+    · exfalso
+      have hm : a ∈ diff r s := (mem_diff a r s).mpr ⟨ha, hs⟩
+      rw [h] at hm
+      exact not_mem_empty a hm
+  · intro h
+    apply eq_of_mem_iff
+    intro a
+    rw [mem_diff]
+    exact ⟨fun hm => absurd (h a hm.1) hm.2, fun hm => absurd hm (not_mem_empty a)⟩
+
+/-- Removing a union is removing one operand and then the other. -/
+theorem diff_union_right (r s t : Row α) : diff r (union s t) = diff (diff r s) t := by
+  apply eq_of_mem_iff
+  intro a
+  simp only [mem_diff, mem_union, not_or, and_assoc]
+
+/-- Difference distributes over the union on the left. -/
+theorem union_diff_distrib (r s t : Row α) :
+    diff (union r s) t = union (diff r t) (diff s t) := by
+  apply eq_of_mem_iff
+  intro a
+  simp only [mem_diff, mem_union, or_and_right]
+
+/-- Difference is monotone in its left operand. -/
+theorem diff_subset_diff_left {r r' : Row α} (s : Row α) (h : Subset r r') :
+    Subset (diff r s) (diff r' s) := by
+  intro a ha
+  rw [mem_diff] at ha ⊢
+  exact ⟨h a ha.1, ha.2⟩
+
+/-- Difference is antitone in its right operand. -/
+theorem diff_subset_diff_right (r : Row α) {s s' : Row α} (h : Subset s s') :
+    Subset (diff r s') (diff r s) := by
+  intro a ha
+  rw [mem_diff] at ha ⊢
+  exact ⟨ha.1, fun hs => ha.2 (h a hs)⟩
+
+end Difference
+
 end Row
 end Effect4
