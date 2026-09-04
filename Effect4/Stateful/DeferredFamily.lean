@@ -475,12 +475,26 @@ theorem awaitDeferred_pending_registers (store : DeferredStore) (cell : Deferred
       store.setCell cell { c with waiters := c.waiters ++ [(selfFiber, c.waiters.length)] } := by
   simp [deferredStep, DeferredStore.poll, parkOn, DeferredStore.register, h, hp]
 
+/-- `n == n` at `Nat`, without `Classical.choice`. The general
+`beq_self_eq_true` goes through `[ReflBEq α]` and reaches `Classical.choice`,
+which the axiom gate refuses under `Effect4/`; `instBEqNat` is
+`instBEqOfDecidableEq`, so the decidable form is the whole proof. -/
+private theorem natBeqSelf (n : Nat) : (n == n) = true := by
+  show decide (n = n) = true
+  exact decide_eq_true rfl
+
 /-- `deferred.await`'s cleanup splices exactly this waiter out, and is a no-op
 once completion has cleared the array. census: deferred.await -/
 theorem cancel_splices_the_waiter (waiter token : Nat) :
     (({ cells := [⟨Option.none, [(waiter, token)]⟩] } : DeferredStore).cancel
         ⟨0⟩ waiter token).cells = [⟨Option.none, []⟩] := by
-  simp [DeferredStore.cancel, DeferredStore.cellAt, DeferredStore.setCell]
+  have h : (!((waiter == waiter) && (token == token))) = false := by
+    rw [natBeqSelf waiter, natBeqSelf token]; rfl
+  show ([⟨Option.none,
+      List.filter (fun w => !((w.1 == waiter) && (w.2 == token))) [(waiter, token)]⟩]
+    : List DeferredCell) = [⟨Option.none, []⟩]
+  rw [List.filter, h]
+  rfl
 
 /-- Once a completion has cleared the array the cleanup changes nothing.
 census: deferred.await -/

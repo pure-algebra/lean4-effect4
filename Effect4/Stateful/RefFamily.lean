@@ -86,6 +86,18 @@ cell of this family holds a number. Nothing else is dropped.
   (`harness/trace/tracer.ts` `nextHandleIndex`). A tail that branded two handle
   types and interleaved their allocation would diverge from a per-family store.
   `E4-SEM-CE-014`.
+
+  `set` is where that bites, and the host lane measured it
+  (`docs/research/2026-09-03-lowering-l2-host-tails.md` §4). rc.112's `Ref.set`
+  answers the `MutableRef` *inside* the ref, which is a different object from
+  the `Ref` (`Ref.ts:307`, `MutableRef.ts:1067-1070`), so `ref-tail.ts` brands
+  `~effect/MutableRef` (`MutableRef.ts:18`) and the tracer gives it a fresh
+  index: `op set [0, 9]` answers `1` on the host and `0` here, because this
+  store has one cell and answers the key it was given. Both faces say "the cell
+  is the answer", and the *number* is exactly what `E4-SEM-CE-014` refuses to
+  compare until the tail reconciles the two counters. The row's declared
+  spelling differs for the same reason: `Handle "Ref.Ref<number>"` here,
+  `MutableRef.MutableRef<number>` on the host.
 - **A `RefFn` handle is a *table index*, not a first-seen object index.** The
   host tail must map `RefFn` back through the same declared table
   (`RefFn.ofHandle` below), because a function reaching the host as an ordinary

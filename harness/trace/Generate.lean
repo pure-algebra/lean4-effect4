@@ -11,7 +11,6 @@ import Effect4.Flow.Region
 import Effect4.Semantics.Approximation
 import Effect4.Semantics.RegionSimulation
 import Effect4.Semantics.RegionDenotation
-import Effect4.Concurrency.FiberFamily
 import Effect4.Stateful.RefFamily
 import Effect4.Stateful.DeferredFamily
 import Effect4.Runtime.ScopeFamily
@@ -27,7 +26,7 @@ golden is the traced service's log plus the outcome, rendered by
 `fixture.ts` and `generated/traces/` and then runs the host.
 -/
 
-open Effects Effect4 Effect4.Meta Effect4.Target.EffectV4 Effect4.FiberFamily Effect4.LayerFamily
+open Effects Effect4 Effect4.Meta Effect4.Target.EffectV4 Effect4.LayerFamily
   Effect4.DeferredFamily Effect4.ScopeFamily Effect4.ContextFamily
 
 /-! ## Golden admission: what the host can carry exactly
@@ -1103,21 +1102,6 @@ def layerGoldenText (name : String) : IO String :=
           ((entry.script.ruleSet Layers.rows).map Rule.id) entry.log)
   | none => throw (IO.userError s!"unknown layer program {name}")
 
-def fiberGoldenText (name : String) : IO String :=
-  match fiberPrograms.find? (·.name == name) with
-  | some entry =>
-      -- A program the sequential projection refused something in has no
-      -- Lean face to compare, and its golden is not written at all.
-      -- counterexample: E4-SEM-CE-010
-      if entry.stuck then
-        throw (IO.userError
-          s!"refusing to emit golden fiber.{name}: the sequential projection has no answer for one of its operations")
-      else
-        admitted name entry.log
-          (Effect4.Target.TypeScript.Trace.golden ("fiber." ++ name) entry.tape
-            ((entry.script.ruleSet Fibers.rows).map Rule.id) entry.log)
-  | none => throw (IO.userError s!"unknown fiber program {name}")
-
 /-- The job projections, as `<program>` and `<golden>` name pairs: four goldens
 share the `jobRunner` body and differ in their queue seed and their tapes. -/
 def jobProjections : List (String × String) :=
@@ -1204,12 +1188,6 @@ def writeAll (dir prologue : String) : IO Unit := do
   IO.FS.createDirAll (dir ++ "/layer")
   for entry in layerPrograms do
     write ("layer/" ++ entry.name ++ ".tsv") (← layerGoldenText entry.name)
-  -- The `Fibers` family (packet M3): its own generated module and its own tail
-  -- (`fiber-tail.ts`). Each golden carries the tape its forks are answered
-  -- from, in the `tape` header row.
-  IO.FS.createDirAll (dir ++ "/fiber")
-  for entry in fiberPrograms do
-    write ("fiber/" ++ entry.name ++ ".tsv") (← fiberGoldenText entry.name)
   -- The job runner (the first real program): its own generated module
   -- (`job-fixture.ts`) and its own tail (`job-tail.ts`) over a real file-backed
   -- queue. A golden is named `<program>.<golden>`.
@@ -1243,10 +1221,10 @@ def main (args : List String) : IO Unit := do
       IO.print (atomsModule
         (Atoms.rows ++ Effect4.DeferredFamily.DeferredAtoms.rows ++
           Effect4.ScopeFamily.ScopeAtoms.rows ++ Effect4.LayerFamily.LayerAtoms.rows ++
-          Effect4.RefFamily.RefFns.rows)
+          Effect4.RefFamily.RefFns.rows ++ Effect4.ContextFamily.ContextAtoms.rows)
         [TypeScript.Import.types ["JobQueue"] "./job-queue.ts",
          TypeScript.Import.types ["RefFn"] "./ref-fns.ts",
-         TypeScript.Import.types ["Layer", "Ref"] "effect"])
+         TypeScript.Import.types ["Context", "Layer", "Ref"] "effect"])
   | ["masks"] => IO.print Effect4.Target.TypeScript.Trace.maskTable
   | ["golden", name] => IO.print (← goldenText name)
   | ["all", dir] => writeAll dir ""
@@ -1404,18 +1382,6 @@ def main (args : List String) : IO Unit := do
           IO.println s!"PASS region oracle {entry.program.name}: the runner and interpret of the denotation write the same log ({runner.1.2.length} rows)"
         else
           throw (IO.userError s!"FAIL region oracle {entry.program.name}: the runner and interpret of the denotation differ")
-  | ["fiber-fixture"] =>
-      -- `Fiber` and `Option` are imported as types only: the generated module
-      -- names `Fiber.Fiber<number, number>` and `Option.Option<number>` in the
-      -- service shape and never calls into either.
-      match modules? [(Fibers.rows, fiberPrograms.map (·.script))] [.types ["Fiber", "Option"] "effect"] with
-      | some source => IO.print source
-      | none => throw (IO.userError "lowering refused a fiber script")
-  | ["fiber-programs"] => IO.println (String.intercalate "\n" (fiberPrograms.map (·.name)))
-  | ["fiber-golden", name] => IO.print (← fiberGoldenText name)
-  | ["fiber-types"] =>
-      for entry in fiberPrograms do
-        IO.println (entry.name ++ "\t" ++ Script.declarationLine Fibers.rows entry.script)
   | ["job-fixture"] =>
       -- `JobQueue` is imported as a type only: the generated module names it in
       -- the `Jobs` service shape and never calls into it. `succ` and `dec` are
@@ -1465,9 +1431,11 @@ def main (args : List String) : IO Unit := do
       | some source => IO.print source
       | none => throw (IO.userError "lowering refused a ref script")
   | ["context-fixture"] =>
-      -- `Context`, `Layer`, `Scope` and `Option` are imported as types only.
+      -- `Context`, `Layer`, `Scope` and `Option` are imported as types only;
+      -- `twoContexts` is the list-former `mergeAll`'s argument is spelled by.
       match modules? [(Contexts.rows, contextPrograms.map (·.script))]
-          [.types ["Layer", "Scope"] "effect"] with
+          [.types ["Layer", "Scope"] "effect",
+           .named Effect4.ContextFamily.contextAtomNames "./atoms.ts"] with
       | some source => IO.print source
       | none => throw (IO.userError "lowering refused a context script")
   | ["context-programs"] =>
@@ -1482,4 +1450,4 @@ def main (args : List String) : IO Unit := do
   | ["ref-types"] =>
       for entry in Effect4.RefFamily.refPrograms do
         IO.println (entry.name ++ "\t" ++ Script.declarationLine entry.rows entry.script)
-  | _ => throw (IO.userError "usage: Generate.lean all <dir> [<provenance-file>] | fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle | fiber-fixture | fiber-programs | fiber-golden <program> | fiber-types | job-fixture | job-programs | job-golden <program> <golden> | job-types | job-queues | deferred-fixture | deferred-programs | deferred-golden <program> | deferred-types | ref-fixture | ref-programs | ref-golden <program> | ref-types | context-fixture | context-programs | context-golden <program> | context-types | atoms | layer-fixture | layer-programs | layer-golden <program> | layer-types")
+  | _ => throw (IO.userError "usage: Generate.lean all <dir> [<provenance-file>] | fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle | job-fixture | job-programs | job-golden <program> <golden> | job-types | job-queues | deferred-fixture | deferred-programs | deferred-golden <program> | deferred-types | ref-fixture | ref-programs | ref-golden <program> | ref-types | context-fixture | context-programs | context-golden <program> | context-types | atoms | layer-fixture | layer-programs | layer-golden <program> | layer-types")

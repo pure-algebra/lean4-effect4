@@ -86,6 +86,25 @@ row names `Layer.effect` of a construction that acquires in the layer scope
 `fromBuildMemo` (`:380-388`), which is what `Layer.effect` already goes through
 — so `memoize` is idempotent here, and says so.
 
+Two refusals ride on that, both found by the host lane
+(`docs/research/2026-09-03-lowering-l2-host-tails.md` §12.2, §12.3):
+
+* **A `Layer`'s raw builder is not a public API.** `Layer.build(memoMap, scope)`
+  is a member of the exported interface at `Layer.ts:56`, carries `@internal`,
+  and is stripped from `dist/Layer.d.ts`. So `fresh`'s own one-line spelling at
+  `:3851` cannot be written by a consumer, and this family models what `fresh`
+  *does* — build through a private memo map — rather than how rc.112 spells it.
+  The `build` row is the exported `Layer.build(self)` (`:800-809`), which is a
+  different declaration and is public.
+* **`memoize` on the host carries one extra service.** Because of the previous
+  point the only builder a consumer can hand `fromBuildMemo` is
+  `Layer.buildWithMemoMap`, which is `self.build(memoMap, scope)` **plus**
+  installing the memo map as the `CurrentMemoMap` service and adding it to the
+  produced context (`:761-765`). This row therefore does not claim
+  `fromBuildMemo ∘ build`: the model's `memoize` is the identity on the memo
+  behaviour, and the extra `CurrentMemoMap` binding the host tail's `memoize`
+  leaves in the built context is not on this wire.
+
 ## Refusals kept
 
 * **`launch` answers `Unit` and rc.112's never-returning `Effect<never>` is not

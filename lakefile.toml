@@ -26,9 +26,10 @@ globs = ["Effect4Test"]
 
 # Per-area batteries. One target per `Effect4Test/` directory, so a narrow
 # sweep is `lake build Effect4TestSemantics` rather than a whole-tree build or
-# a bare `lake env lean` on one file. The areas are disjoint and together cover
-# the tree. `Effect4TestConcurrency` and `Effect4TestProtocol` each contain one
-# declared-red module and are expected to fail until its builder lands.
+# a bare `lean env lean` on one file. The areas are disjoint and together cover
+# the tree. Every area is expected green: the two declared-red modules
+# (`Effect4TestProtocol`'s byte parser, `Effect4TestConcurrency`'s binary race)
+# were retired on 2026-09-04.
 #
 # The globs are `.+`, submodules only: `.*` would also select the directory's
 # own module — `Effect4Test.Audit`, say — and no such file exists.
@@ -91,11 +92,3 @@ rev = "a4ee7a14248ee5976039b73039319efa87834986"
 name = "typescript"
 git = "https://github.com/pure-algebra/lean4-typescript"
 rev = "18220f71445fcad01dbd9d6aebbbc60dc4953c2e"
-
-# Design spike for docs/research/2026-09-03-deep-plan.md. Not a default target and not
-# an audited source: it exists so the spike files can import each other while they are
-# validated, before the one landing moves them under Effect4/.
-[[lean_lib]]
-name = "Deep"
-srcDir = "workshop"
-globs = ["Deep.+"]

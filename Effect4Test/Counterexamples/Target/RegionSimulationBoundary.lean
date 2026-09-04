@@ -19,14 +19,19 @@ quietly dropped:
   is a refusal on the runner side and a live suspension on the machine side, and
   the masked trace cannot tell them apart. `mismatched_decision_is_refusal` and
   `mismatched_decision_machine_is_live` pin both readings.
-* the `leaveConfig` obligation the general theorem still owes.
-  `tapeAfterRegion` is the smallest witness: a region body that consumes a
-  decision, followed by a decision after the region. The compile resumes the
-  region's continuation with the tape it held at the *enter*, so it re-reads a
-  consumed decision and stops; the runner continues with the tape it holds at
-  the *leave*. `unrestricted_finite_agreement_false` is now proved from that,
-  not from a failing release. It is exactly
-  `Effect4.RegionSimulation.RegionOracleAgrees.registrations`.
+**Spike S4b inverted the fourth group.** S4 left one divergence, the
+`leaveConfig` obligation: `tapeAfterRegion` is a region body that consumes a
+decision, followed by a decision after the region, and S4's compile resumed the
+region's continuation with the tape held at the *enter*, so it re-read a
+consumed decision and stopped, while the runner continues with the tape it holds
+at the *leave*. S4b repaired the compile — `regionInterp.contA` resumes at
+`Effect4.RegionSimulation.leaveConfig` — so `tapeAfterRegion_diverges` is gone
+and `tapeAfterRegion_agrees` stands in its place, and
+`unrestricted_finite_agreement_false` is gone with it: no refutation of the
+unrestricted **trace** equation is offered any more. `AllFiniteInputsAgree` is
+retained as the `Prop` naming what T5 in general still owes, and
+`unrestricted_finite_classification_false` is what survives — the *endpoint*
+half, refuted by the refusal witness.
 
 The existing fallible-release fixture remains in RegionRunnerContract.
 -/
@@ -195,13 +200,15 @@ theorem completed_decision_control :
 theorem completed_decision_result : runnerResultAt decisionCycle 20 [⟨⟨7⟩, false⟩] =
     some (.done (.nat 5), []) := by rfl
 
-/-! ## What the general theorem still owes
+/-! ## The `leaveConfig` witness, inverted (spike S4b)
 
 A region body that consumes a decision, followed by a decision after the
-region. The runner leaves the region with the tape it holds at the `leave`; the
-compile resumes the region's continuation with the tape the `enter` was named
-at, so it meets a site mismatch and stops. No acquire is involved, so this
-isolates the `leaveConfig` obligation from P1 and P2. -/
+region. The runner leaves the region with the tape it holds at the `leave`.
+Spike S4 compiled the region's continuation against the tape the `enter` was
+named at, so the machine met a site mismatch and stopped; **S4b resumes at
+`Effect4.RegionSimulation.leaveConfig`**, the configuration the body actually
+reaches, so the two now agree. No acquire is involved, so this isolates the
+`leaveConfig` repair from P1 and P2. -/
 
 def tapeAfterRegion : RegionFlow String := regionFlow [rregion 1 none 3]
   [ rblock 0 none ["number"] (.enter ⟨1⟩ ⟨1⟩ (vars 1))
@@ -222,26 +229,81 @@ theorem tapeAfterRegion_runner :
     runnerAt tapeAfterRegion 20 [⟨⟨7⟩, true⟩, ⟨⟨8⟩, false⟩] =
       some [.done (.success (.nat 5))] := by rfl
 
-/-- The compiled machine never reaches the `done` row: it resumes the region's
-continuation against the tape the `enter` held. -/
+/-- **S4b, the repaired reading.** The compiled machine reaches the `done` row:
+its region continuation is compiled at `leaveConfig`, which carries the fuel and
+tape the body held at the `leave`, so the decision after the region reads site 8
+exactly as the runner does. Under S4 this was `some []`. -/
 theorem tapeAfterRegion_machine :
-    machineAt tapeAfterRegion 20 [⟨⟨7⟩, true⟩, ⟨⟨8⟩, false⟩] = some [] := by rfl
+    machineAt tapeAfterRegion 20 [⟨⟨7⟩, true⟩, ⟨⟨8⟩, false⟩] =
+      some [.done (.success (.nat 5))] := by rfl
 
-theorem tapeAfterRegion_diverges :
-    machineAt tapeAfterRegion 20 [⟨⟨7⟩, true⟩, ⟨⟨8⟩, false⟩] ≠
-      runnerAt tapeAfterRegion 20 [⟨⟨7⟩, true⟩, ⟨⟨8⟩, false⟩] := by decide
+/-- The positive theorem that replaces `tapeAfterRegion_diverges`. -/
+theorem tapeAfterRegion_agrees :
+    machineAt tapeAfterRegion 20 [⟨⟨7⟩, true⟩, ⟨⟨8⟩, false⟩] =
+      runnerAt tapeAfterRegion 20 [⟨⟨7⟩, true⟩, ⟨⟨8⟩, false⟩] := by rfl
 
--- The fixed stateless service is still enough to refute the unrestricted
--- finite-input trace equation — but for the `leaveConfig` reason now, not for a
--- failing release, exhausted fuel or an unanswered decision.
+/-- The same fixture with the other branch and the other tape, so the agreement
+is not an accident of one edge. -/
+theorem tapeAfterRegion_agrees_other_branch :
+    machineAt tapeAfterRegion 20 [⟨⟨7⟩, false⟩, ⟨⟨8⟩, true⟩] =
+      runnerAt tapeAfterRegion 20 [⟨⟨7⟩, false⟩, ⟨⟨8⟩, true⟩] := by rfl
+
+/-- The unrestricted finite-input **trace** equation. S4 refuted it, from
+`tapeAfterRegion`; S4b repaired the compile and that witness is gone, so **no
+refutation of this statement is offered any more**. It is not claimed true
+either: proving it is exactly T5 in general
+(`Effect4.RegionSimulation.RegionsSimulate`), and it is stated here as the
+`Prop` that names the remaining Lean obligation. -/
 def AllFiniteInputsAgree : Prop :=
   ∀ (raw : RegionFlow String) (fuel : Nat) (tape : Flow.Tape),
     (admit? raw).isSome = true → machineAt raw fuel tape = runnerAt raw fuel tape
 
-theorem unrestricted_finite_agreement_false : ¬ AllFiniteInputsAgree := by
+/-- The obligation is not vacuous: the equation has content at a flow whose two
+sides are non-empty and whose close merges a failing release. -/
+theorem finite_agreement_has_content :
+    machineAt failingRelease 20 [] = runnerAt failingRelease 20 [] ∧
+      runnerAt failingRelease 20 [] ≠ some [] :=
+  ⟨failing_release_agrees, by decide⟩
+
+/-- The runner's three-way endpoint, which the masked trace cannot see. -/
+inductive Endpoint where
+  /-- Live: a fuel frontier or an unanswered decision (`docs/DESIGN-BASIS.md` DB-04). -/
+  | live
+  /-- Refused: the tape is not this flow's run (`RunResult.refusedSite`/`refusedValue`). -/
+  | refused
+  /-- Completed: `done` or `failed`. -/
+  | completed
+deriving DecidableEq, Repr
+
+def runnerEndpoint (raw : RegionFlow String) (fuel : Nat) (tape : Flow.Tape) : Option Endpoint :=
+  (runnerResultAt raw fuel tape).map fun result =>
+    match result.fst with
+    | .frontier _ => .live
+    | .refusedSite _ _ => .refused
+    | .refusedValue _ => .refused
+    | _ => .completed
+
+/-- The machine's endpoint has only two readings: `FrameStep.running` is DB-04's
+live frontier and `FrameStep.finished` is completion. There is no third. -/
+def machineEndpoint (raw : RegionFlow String) (fuel : Nat) (tape : Flow.Tape) : Option Endpoint :=
+  (machineIsLive raw fuel tape).map fun live => if live then .live else .completed
+
+/-- **The remaining unrestricted divergence, and the only one S4b leaves.** The
+trace half is repaired; the *classification* half is not. This is the statement
+`unrestricted_finite_agreement_false` used to make with the `leaveConfig`
+witness and makes now with the refusal witness — T8, packet P5. -/
+def AllFiniteInputsClassify : Prop :=
+  ∀ (raw : RegionFlow String) (fuel : Nat) (tape : Flow.Tape),
+    (admit? raw).isSome = true → machineEndpoint raw fuel tape = runnerEndpoint raw fuel tape
+
+theorem mismatched_decision_classification_diverges :
+    machineEndpoint decisionCycle 20 [⟨⟨8⟩, false⟩] ≠
+      runnerEndpoint decisionCycle 20 [⟨⟨8⟩, false⟩] := by decide
+
+theorem unrestricted_finite_classification_false : ¬ AllFiniteInputsClassify := by
   intro h
-  exact tapeAfterRegion_diverges
-    (h tapeAfterRegion 20 [⟨⟨7⟩, true⟩, ⟨⟨8⟩, false⟩] tapeAfterRegion_admitted)
+  exact mismatched_decision_classification_diverges
+    (h decisionCycle 20 [⟨⟨8⟩, false⟩] decisionCycle_admitted)
 
 #print axioms failingRelease_admitted
 #print axioms same_scope_closing_exit
@@ -276,7 +338,10 @@ theorem unrestricted_finite_agreement_false : ¬ AllFiniteInputsAgree := by
 #print axioms tapeAfterRegion_runner_completes
 #print axioms tapeAfterRegion_runner
 #print axioms tapeAfterRegion_machine
-#print axioms tapeAfterRegion_diverges
-#print axioms unrestricted_finite_agreement_false
+#print axioms tapeAfterRegion_agrees
+#print axioms tapeAfterRegion_agrees_other_branch
+#print axioms finite_agreement_has_content
+#print axioms mismatched_decision_classification_diverges
+#print axioms unrestricted_finite_classification_false
 
 end Effect4Test.Counterexamples.Target.RegionSimulationBoundary

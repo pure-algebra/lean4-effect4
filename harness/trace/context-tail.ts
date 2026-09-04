@@ -127,9 +127,11 @@ const live: ContextsService = {
   // empty side is returned as-is rather than copied.
   merge: (self, that) => Effect.sync(() => Context.merge(self, that) as Context.Context<never>),
   // `Context.mergeAll` — `Context.ts:1861-1871`: one fresh `Map`, every
-  // argument's entries set into it in order, so the last argument wins.
-  mergeAll: (self, that) =>
-    Effect.sync(() => Context.mergeAll(self, that) as Context.Context<never>),
+  // argument's entries set into it in order, so the last argument wins. Unlike
+  // `merge` it never answers an argument itself, even for a single or an empty
+  // argument list. The list arrives as the `twoContexts` atom's answer.
+  mergeAll: (contexts) =>
+    Effect.sync(() => Context.mergeAll(...contexts) as Context.Context<never>),
   // `Context.pick` — `Context.ts:1904-1913`: a flat copy with every key not in
   // the kept set deleted.
   pick: (context, key) => {

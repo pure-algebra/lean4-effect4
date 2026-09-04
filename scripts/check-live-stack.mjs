@@ -101,10 +101,10 @@ try {
   assert.deepEqual(checkRegister(registerSource + "\nUnrelated registration text.\n"), counterexamples)
   const knownRed = (await text("test/fixtures/trust-gate/known-red.txt")).split(/\r?\n/).filter(line => line && !line.startsWith("#")).sort()
   // The declared red set belongs to other packets; this gate only requires that no
-  // live-stack module is declared red and that the two historical orphans still are.
+  // live-stack module is declared red. (The two historical orphans it used to
+  // expect there, the binary race contract and the byte parser contract, were
+  // retired with their lanes on 2026-09-04, and the list is empty.)
   assert(!knownRed.some(module => module.includes("LiveStack")), "A live-stack module is declared red")
-  for (const module of ["Effect4Test.Concurrency.RaceRepresentativeContract", "Effect4Test.Protocol.ByteParserContract"])
-    assert(knownRed.includes(module), `Historical declared-red module missing: ${module}`)
   await run("narrow-build", "lake", ["build", "Effect4Test.Runtime.LiveStackContract", "Effect4Test.Runtime.LiveStackAxiomReport", "Effect4Test.Counterexamples.Runtime.LiveStack"])
   const axiomResult = await run("fresh-axioms", "lake", ["env", "lean", "Effect4Test/Runtime/LiveStackAxiomReport.lean"])
   const proofs = [...axiomResult.stdout.matchAll(/'([^']+)' depends on axioms: \[([^\]]*)\]/g)]

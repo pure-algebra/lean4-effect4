@@ -132,16 +132,39 @@ value runs the `onExit` frames above the frame that answers it, latest
 registered first, all against the same exit), and `regionInterp_finalizerExit`,
 which discharges all three theorems' premise for every compiled run.
 
+**Spike S4b (2026-09-03) closed S4's one open clause.** S4 left the compile
+resuming a region's continuation at the fuel and decision tape the *enter* held,
+while `Effect4.Flow.regionLoop` continues with the fuel and tape it holds at the
+*leave*; `closeWalk` mirrored the compile rather than the runner, so
+`RegionOracleAgrees.registrations` could not be discharged, and
+`tapeAfterRegion` was the minimal witness of the divergence. The ruling was: no
+restriction and no hypothesis excluding region bodies that consume tape — the
+compile must agree with the runner on the leave's configuration for every
+admitted flow. So:
+
+* `closeWalk` is rewritten as the runner is written — one unit of fuel per
+  block, an open-region stack, `acquire` registering on the innermost frame,
+  `leave` popping one — and it now reports a `LeavePoint`: the value the leave
+  hands on and **the configuration the runner resumes at**.
+* `leaveConfig` is that configuration, and `regionInterp.contA` compiles a
+  region's continuation there (`regionInterp_regionCont_resume`). The oracle
+  gains no field: the flow note's §2.4 purity argument permits computing the
+  walk at answer time, because the tape is data and `statelessOracle` is the
+  standing hypothesis.
+* `closeWalk_agrees_regionLoop` proves the walk *is* the runner, by induction on
+  the runner's fuel with one lemma per runner arm, for every flow;
+  `leaveConfig_agrees_runRegions` is its corollary at an `enter`. That is the
+  induction `RegionOracleAgrees.registrations` used to name as owed.
+
 Owed — the general theorem. `RegionsSimulate` and `RegionsSimulateExit` below
 state T5 and T6 of `docs/research/2026-09-03-deep-flow-to-frames.md` §2.3 as
-`Prop`s, with `RegionOracleAgrees` naming the missing induction: the agreement
-between `oracle.registrations` and the runner's `Frame.releases`, and between
-the configuration a region's continuation resumes at and the one the runner
-holds at the `leave`. `closeWalk` is the `leaveConfig` function that obligation
-needs, spelled here so the instances evaluate; the proof that it agrees with
-`Effect4.Flow.regionLoop` is packet P4's remaining obligation and is not in this
-file. The instances on `regionNested`, `regionTwoFail`, `regionBothSucceed` and
-`releaseFails` are closed by evaluation in
+`Prop`s (`RegionsSimulateAll`/`RegionsSimulateExitAll` are their universally
+quantified forms, which is exactly what is still owed). After S4b the missing
+half is the *machine-side* induction — relating `FrameFiber.run`'s steps to the
+runner's blocks under `run_add`/`run_mono` and `regionBound` — not the
+`leaveConfig`/`registrations` agreement, which is proved. The instances on
+`regionBothSucceed`, `regionNested`, `regionTwoFail`, `regionReleaseFails` and
+`regionCatch` are closed by evaluation in
 `Effect4Test/Semantics/RegionSimulationContract.lean`, and the harness prints
 both sides of the equation for every region program
 (`harness/trace/Generate.lean frame-trace`).
@@ -369,28 +392,84 @@ def releaseOp (point : Config) : Option alphabet.Op :=
 
 end Shapes
 
-/-! ## `leaveConfig`, spelled
+/-! ## `leaveConfig`: the configuration the runner holds at the `leave`
 
 The module header used to record the general induction as blocked on "a
 `leaveConfig` function that walks a region body to its close under the oracle".
-`closeWalk` is that function. It mirrors `compileRegion`'s recursion arm for
-arm — including the fuel and tape a nested region's continuation resumes with —
-so every `Config` it records is *the same name* the compile emits. It is used
-only to give `statelessOracle` a computable `registrations` field; the general
-theorem carries the agreement as `RegionOracleAgrees` rather than assuming this
-walk is the runner. -/
+`closeWalk` is that walk and `leaveConfig` is that function.
 
-/-- The acquire points a region body registers on its own scope, latest
-registered first, and the value its `leave` hands on when it reaches one. A body
-that fails, runs out of fuel, or stops on a frontier still reports the
-registrations it made — which is exactly the runner's `Frame.releases` at the
-moment `unwind` closes the frame. -/
+**Spike S4b completed both, and repaired the compile against them.** Before S4b
+`closeWalk` mirrored `compileRegion` rather than the runner: a region's
+continuation resumed at the fuel and decision tape the **enter** held, while
+`Effect4.Flow.regionLoop` continues with the fuel and tape it holds at the
+**leave** (`Effect4/Flow/Region.lean:244-249`). The two differ on every flow
+whose region body consumes tape or whose region body is not one block long, and
+`tapeAfterRegion` was the minimal witness. The ruling was: no restriction, no
+named hypothesis excluding region bodies that consume tape — the compile has to
+agree with the runner on the leave's configuration for every admitted flow. So
+`closeWalk` is now written as the runner is written, arm for arm, and
+`regionInterp.contA` resumes a region at `leaveConfig`'s answer.
+
+The walk carries the runner's open-region stack in exactly the runner's shape:
+`acc` is the accumulator of the region whose body is being walked (its
+`Frame.releases`, latest registered first) and `inner` is the accumulator of
+every *nested* region the walk has entered and not yet left, innermost first.
+`enter` pushes an empty accumulator, `acquire` registers on the innermost open
+accumulator, and `leave` pops one — or, when `inner` is empty, ends the walk at
+the region it was walking. The recursion is therefore structural in the runner's
+own fuel, one unit per block, which is what makes the agreement below an
+ordinary induction rather than a well-founded one. -/
+
+/-- Where a region body's walk ends when it reaches its `leave`: the value the
+`leave` hands on, and **the configuration the runner resumes at** — the region
+row's `continue_` block, that value as the block's environment, and the fuel and
+decision tape the runner holds *at the leave*, never at the enter. -/
+structure LeavePoint where
+  /-- The value the `leave` hands on. -/
+  value : Val
+  /-- The configuration `Effect4.Flow.regionLoop` continues at once the region
+  has closed. -/
+  resume : Config
+deriving DecidableEq
+
+/-- Whether any of a region's registered releases fails. A failing close diverts
+the run — the runner's `fail` (`Region.lean:249`), the compile's
+`Prim.failure closing` — so a body whose *nested* region closes badly never
+reaches its own `leave`, and the walk must say so. -/
+def anyReleaseFails (release : Config -> Except Val Val) (points : List Config) : Bool :=
+  points.any fun point =>
+    match release point with
+    | .ok _ => false
+    | .error _ => true
+
+/-- The release pair the `acquire` at `point` registers on its region's frame:
+the release operation and the resource the acquire's answer produced. This is
+the entry `Effect4.Flow.regionLoop`'s `acquire` arm conses onto
+`Frame.releases`. -/
+def registeredRelease {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
+    (answer : Config -> Except Val Val) (point : Config) : Option (alphabet.Op × Val) :=
+  match performOp alphabet flow point, releaseOp alphabet flow point, answer point with
+  | some _, some releaser, .ok value => some (releaser, value)
+  | _, _, _ => none
+
+/-- The runner's `Frame.releases` for a registration list, in the same order. -/
+def registeredReleases {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
+    (answer : Config -> Except Val Val) (points : List Config) : List (alphabet.Op × Val) :=
+  points.filterMap (registeredRelease alphabet flow answer)
+
+/-- **The runner's walk of a region body, under the oracle.** It returns the
+acquire points the walked region has registered on its own scope, latest
+registered first — the runner's `Frame.releases` at the moment the frame closes
+— and, when the body reaches its `leave`, the `LeavePoint` the runner resumes
+at. A body that fails, runs out of fuel, meets a frontier or refusal, or whose
+nested region closes on a failing release still reports the registrations it
+made, which is exactly what the runner's `unwind` closes. -/
 def closeWalk {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
-    (answer : Config -> Except Val Val) :
+    (answer release : Config -> Except Val Val) :
     Nat -> BlockId -> Effect4.Flow.Env -> Effect4.Flow.Tape -> List Config ->
-      List Config × Option Val
-  | 0, _, _, _, acc => (acc, none)
-  | fuel + 1, block, env, tape, acc =>
+      List (List Config) -> List Config × Option LeavePoint
+  | 0, _, _, _, acc, _ => (acc, none)
+  | fuel + 1, block, env, tape, acc, inner =>
     match flow.block? block with
     | none => (acc, none)
     | some current =>
@@ -398,53 +477,81 @@ def closeWalk {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
       | .plain term =>
         match Effect4.Flow.plan alphabet
             { id := current.id, params := current.params, term := term } env tape with
-        | .jump target env' => closeWalk alphabet flow answer fuel target env' tape acc
-        | .choose _ _ target env' rest => closeWalk alphabet flow answer fuel target env' rest acc
+        | .jump target env' =>
+          closeWalk alphabet flow answer release fuel target env' tape acc inner
+        | .choose _ _ target env' rest =>
+          closeWalk alphabet flow answer release fuel target env' rest acc inner
         | .perform _ _ target env' =>
           match answer ⟨fuel + 1, block, env, tape⟩ with
-          | .ok value => closeWalk alphabet flow answer fuel target (env' ++ [value]) tape acc
+          | .ok value =>
+            closeWalk alphabet flow answer release fuel target (env' ++ [value]) tape acc inner
           | .error _ => (acc, none)
         | .performCatch _ _ target env' onError errorEnv =>
           match answer ⟨fuel + 1, block, env, tape⟩ with
-          | .ok value => closeWalk alphabet flow answer fuel target (env' ++ [value]) tape acc
+          | .ok value =>
+            closeWalk alphabet flow answer release fuel target (env' ++ [value]) tape acc inner
           | .error error =>
-            closeWalk alphabet flow answer fuel onError (errorEnv ++ [error]) tape acc
+            closeWalk alphabet flow answer release fuel onError (errorEnv ++ [error]) tape acc inner
         | _ => (acc, none)
-      | .enter region body args =>
+      | .enter _ body args =>
         match Effect4.Flow.readArgs env args with
         | none => (acc, none)
         | some values =>
-          match (closeWalk alphabet flow answer fuel body values tape []).snd with
-          | none => (acc, none)
-          | some value =>
-            match flow.row? region with
-            | none => (acc, none)
-            | some row => closeWalk alphabet flow answer fuel row.continue_ [value] tape acc
+          closeWalk alphabet flow answer release fuel body values tape acc ([] :: inner)
       | .acquire _ _ _ _ _ =>
         match performCont alphabet flow ⟨fuel + 1, block, env, tape⟩,
             answer ⟨fuel + 1, block, env, tape⟩ with
         | some (target, env', _), .ok value =>
-          closeWalk alphabet flow answer fuel target (env' ++ [value]) tape
-            (⟨fuel + 1, block, env, tape⟩ :: acc)
+          match inner with
+          | [] =>
+            closeWalk alphabet flow answer release fuel target (env' ++ [value]) tape
+              (⟨fuel + 1, block, env, tape⟩ :: acc) []
+          | head :: more =>
+            closeWalk alphabet flow answer release fuel target (env' ++ [value]) tape acc
+              ((⟨fuel + 1, block, env, tape⟩ :: head) :: more)
         | _, _ => (acc, none)
       | .leave value =>
-        match env[value.index]? with
-        | some v => (acc, some v)
-        | none => (acc, none)
+        match env[value.index]?, current.region.bind flow.row? with
+        | some v, some row =>
+          match inner with
+          | [] => (acc, some ⟨v, ⟨fuel, row.continue_, [v], tape⟩⟩)
+          | head :: more =>
+            if anyReleaseFails release head then (acc, none)
+            else closeWalk alphabet flow answer release fuel row.continue_ [v] tape acc more
+        | _, _ => (acc, none)
 
-/-- The registrations of the region whose `enter` is at `point`. -/
-def regionRegistrations {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
-    (answer : Config -> Except Val Val) (point : Config) : List Config :=
+/-- The walk of the body of the region whose `enter` is at `point`, from the
+configuration the runner starts that body in: one unit of fuel spent on the
+`enter` itself, the `enter`'s arguments as the body's environment, and the
+`enter`'s tape. -/
+def regionWalk {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
+    (answer release : Config -> Except Val Val) (point : Config) :
+    List Config × Option LeavePoint :=
   match flow.block? point.block with
-  | none => []
+  | none => ([], none)
   | some current =>
     match current.term with
     | .enter _ body args =>
       match Effect4.Flow.readArgs point.env args with
       | some values =>
-        (closeWalk alphabet flow answer (point.fuel - 1) body values point.tape []).fst
-      | none => []
-    | _ => []
+        closeWalk alphabet flow answer release (point.fuel - 1) body values point.tape [] []
+      | none => ([], none)
+    | _ => ([], none)
+
+/-- The registrations of the region whose `enter` is at `point`. -/
+def regionRegistrations {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
+    (answer release : Config -> Except Val Val) (point : Config) : List Config :=
+  (regionWalk alphabet flow answer release point).fst
+
+/-- **The leave configuration.** The `Config` the runner holds when the region
+entered at `point` hands its value on: the region row's `continue_` block, the
+leave value as its environment, and the fuel and decision tape the body actually
+reached — *not* the enter's. `none` when the body does not reach a `leave` at
+all, in which case the region's value arm is never demanded (a failing body is
+answered by the scope frame's cause arm, and a frontier stays live). -/
+def leaveConfig {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
+    (answer release : Config -> Except Val Val) (point : Config) : Option Config :=
+  (regionWalk alphabet flow answer release point).snd.map LeavePoint.resume
 
 /-! ## One scope per region: the close result
 
@@ -870,7 +977,14 @@ Three fields carry the spike's repairs.
   `close` name to the region's scope close, appending the closing reasons to the
   body's — concatenation, as `Exit.asVoidAll` concatenates
   (`internal/effect.ts:2025-2038`), never `Cause.combine`, which dedups
-  (`:242-258`). -/
+  (`:242-258`).
+
+A fourth field carries S4b's repair. `contA`'s `regionCont` arm resumes the
+region's continuation at `leaveConfig alphabet flow oracle.answer oracle.release
+point` — the fuel, block and decision tape the body reaches at its `leave` —
+with the frame's own value as that block's environment. It used to resume at
+`point.fuel - 1` and `point.tape`, the *enter*'s, which is what
+`tapeAfterRegion` refuted. -/
 def regionInterp {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
     (oracle : RegionOracle) : Table where
   -- No `asyncFinalizer` frame is ever emitted by the compile, so the cancel arm is never
@@ -890,13 +1004,13 @@ def regionInterp {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
             (compileRegion alphabet flow (point.fuel - 1) target (env' ++ [value]) point.tape)
             (RegionName.fin region point) false
         | none => Effect4.Prim.suspend point
-    | RegionName.regionCont region point =>
+    | RegionName.regionCont _ point =>
       match closeExit oracle (oracle.registrations point) with
       | Effect4.Exit.failure closing => Effect4.Prim.failure closing
       | Effect4.Exit.success _ =>
-        match flow.row? ⟨region⟩ with
-        | some row =>
-          compileRegion alphabet flow (point.fuel - 1) row.continue_ [value] point.tape
+        match leaveConfig alphabet flow oracle.answer oracle.release point with
+        | some resume =>
+          compileRegion alphabet flow resume.fuel resume.block [value] resume.tape
         | none => Effect4.Prim.suspend point
     -- The value arm of a `caught`, `close` or `fin` name is never demanded: the
     -- first two are cause names and the third is an `onExit` finalizer.
@@ -1001,6 +1115,752 @@ def statelessOracle {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow 
   answer := statelessAnswer alphabet flow answerOf
   release := statelessRelease alphabet flow answerOf
   registrations := regionRegistrations alphabet flow (statelessAnswer alphabet flow answerOf)
+    (statelessRelease alphabet flow answerOf)
+
+/-! ## S4b: the walk *is* the runner
+
+The obligation S4 left open — "the proof that `closeWalk` is the runner is not in
+this file" — is discharged here, for every admitted flow and with no restriction
+on region bodies. The shape is one lemma per runner arm
+(`regionLoop_jump`, `_choose`, `_perform`, `_performCatch_ok`,
+`_performCatch_error`, `_enter`, `_acquire`, `_leave`), a close lemma
+(`closeFrame_success`), then one induction on the runner's fuel
+(`closeWalk_agrees_regionLoop`) and its corollary at a region's `enter`
+(`leaveConfig_agrees_runRegions`).
+
+The runner writes rows as it goes and the walk does not, so the agreement is
+stated up to a *prefix of rows*: `RunPrefix left right` says the two
+computations are the same run once `right` is started on the rows `left` wrote
+on the way. Nothing about which rows those are is assumed, which is why the
+statement needs no second copy of the runner's log.
+
+The standing hypothesis is the one the flow note's §2.4 fixes and D2's
+`closeFrame_failure_closeResult` already carries: `hservice`, the service is
+stateless on this alphabet. It is not a restriction on flows. -/
+
+/-- Two runner computations that differ only by a fixed prefix of rows: `left`
+is `right` run against a log that `left`'s own rows have already extended. -/
+def RunPrefix {α : Type} (left right : Effect4.Flow.RunM Id α) : Prop :=
+  exists rows : Effect4.Trace.Log, forall log, left.run log = right.run (log ++ rows)
+
+namespace RunPrefix
+
+theorem refl {α : Type} (m : Effect4.Flow.RunM Id α) : RunPrefix m m :=
+  ⟨[], fun log => by rw [List.append_nil]⟩
+
+theorem of_eq {α : Type} {left right : Effect4.Flow.RunM Id α} (h : left = right) :
+    RunPrefix left right := h ▸ refl left
+
+theorem trans {α : Type} {a b c : Effect4.Flow.RunM Id α}
+    (hab : RunPrefix a b) (hbc : RunPrefix b c) : RunPrefix a c := by
+  obtain ⟨rows, hrows⟩ := hab
+  obtain ⟨rows', hrows'⟩ := hbc
+  refine ⟨rows ++ rows', fun log => ?_⟩
+  rw [hrows log, hrows' (log ++ rows), List.append_assoc]
+
+/-- An `emit` is exactly a one-row prefix. -/
+theorem emit {α : Type} (event : Effect4.Trace.Event) (k : Unit -> Effect4.Flow.RunM Id α) :
+    RunPrefix (Effect4.Flow.emit event >>= k) (k ()) :=
+  ⟨[event], fun _ => rfl⟩
+
+end RunPrefix
+
+section RunnerArms
+
+variable {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
+  (service : Effect4.Flow.RegionService alphabet Id) (nameOf : alphabet.Op -> String)
+
+/-- Logging an operation is a prefix of rows and nothing else
+(`Effect4.Flow.logOperation_run`). -/
+theorem logOperation_prefix {α : Type} (op : alphabet.Op) (request : Val)
+    (result : Except Val Val) (k : Unit -> Effect4.Flow.RunM Id α) :
+    RunPrefix (Effect4.Flow.logOperation service nameOf op request result >>= k) (k ()) := by
+  refine ⟨Effect4.Flow.opRows service nameOf op request result, fun log => ?_⟩
+  rw [StateT.run_bind, Effect4.Flow.logOperation_run]
+  rfl
+
+/-- Runner arm: a `jump` spends one unit of fuel and writes nothing. -/
+theorem regionLoop_jump (fuel : Nat) (block : BlockId) (env : Effect4.Flow.Env)
+    (tape : Effect4.Flow.Tape) (stack : List (Effect4.Flow.Frame alphabet))
+    (current : RegionBlock Ty) (term : RawTerm) (target : BlockId) (env' : Effect4.Flow.Env)
+    (hblock : flow.block? block = some current)
+    (hterm : current.term = .plain term)
+    (hplan : Effect4.Flow.plan alphabet
+        { id := current.id, params := current.params, term := term } env tape
+      = .jump target env') :
+    Effect4.Flow.regionLoop alphabet flow service nameOf (fuel + 1) block env tape stack
+      = Effect4.Flow.regionLoop alphabet flow service nameOf fuel target env' tape stack := by
+  simp only [Effect4.Flow.regionLoop, hblock, hterm, hplan]
+
+/-- Runner arm: a `choose` consumes the tape entry the plan read and writes one
+`decide` row. This is the arm the S4 compile disagreed with. -/
+theorem regionLoop_choose (fuel : Nat) (block : BlockId) (env : Effect4.Flow.Env)
+    (tape : Effect4.Flow.Tape) (stack : List (Effect4.Flow.Frame alphabet))
+    (current : RegionBlock Ty) (term : RawTerm) (site : DecisionId) (branch : Bool)
+    (target : BlockId) (env' : Effect4.Flow.Env) (rest : Effect4.Flow.Tape)
+    (hblock : flow.block? block = some current)
+    (hterm : current.term = .plain term)
+    (hplan : Effect4.Flow.plan alphabet
+        { id := current.id, params := current.params, term := term } env tape
+      = .choose site branch target env' rest) :
+    Effect4.Flow.regionLoop alphabet flow service nameOf (fuel + 1) block env tape stack
+      = (Effect4.Flow.emit (Effects.Trace.Event.decide site.value branch) >>= fun _ =>
+          Effect4.Flow.regionLoop alphabet flow service nameOf fuel target env' rest stack) := by
+  simp only [Effect4.Flow.regionLoop, hblock, hterm, hplan]
+
+/-- Runner arm: a successful `perform` writes its own rows and continues. -/
+theorem regionLoop_perform (fuel : Nat) (block : BlockId) (env : Effect4.Flow.Env)
+    (tape : Effect4.Flow.Tape) (stack : List (Effect4.Flow.Frame alphabet))
+    (current : RegionBlock Ty) (term : RawTerm) (op : alphabet.Op) (request : Val)
+    (target : BlockId) (env' : Effect4.Flow.Env) (answer : Val)
+    (hblock : flow.block? block = some current)
+    (hterm : current.term = .plain term)
+    (hplan : Effect4.Flow.plan alphabet
+        { id := current.id, params := current.params, term := term } env tape
+      = .perform op request target env')
+    (hres : service.handle op request = .ok answer) :
+    Effect4.Flow.regionLoop alphabet flow service nameOf (fuel + 1) block env tape stack
+      = (Effect4.Flow.logOperation service nameOf op request (.ok answer) >>= fun _ =>
+          Effect4.Flow.regionLoop alphabet flow service nameOf fuel target
+            (env' ++ [answer]) tape stack) := by
+  simp only [Effect4.Flow.regionLoop, hblock, hterm, hplan]
+  show (StateT.lift (service.handle op request) >>= _) = _
+  rw [hres]
+  rfl
+
+/-- Runner arm: a `performCatch` whose operation answers. -/
+theorem regionLoop_performCatch_ok (fuel : Nat) (block : BlockId) (env : Effect4.Flow.Env)
+    (tape : Effect4.Flow.Tape) (stack : List (Effect4.Flow.Frame alphabet))
+    (current : RegionBlock Ty) (term : RawTerm) (op : alphabet.Op) (request : Val)
+    (target : BlockId) (env' : Effect4.Flow.Env) (onError : BlockId)
+    (errorEnv : Effect4.Flow.Env) (answer : Val)
+    (hblock : flow.block? block = some current)
+    (hterm : current.term = .plain term)
+    (hplan : Effect4.Flow.plan alphabet
+        { id := current.id, params := current.params, term := term } env tape
+      = .performCatch op request target env' onError errorEnv)
+    (hres : service.handle op request = .ok answer) :
+    Effect4.Flow.regionLoop alphabet flow service nameOf (fuel + 1) block env tape stack
+      = (Effect4.Flow.logOperation service nameOf op request (.ok answer) >>= fun _ =>
+          Effect4.Flow.regionLoop alphabet flow service nameOf fuel target
+            (env' ++ [answer]) tape stack) := by
+  simp only [Effect4.Flow.regionLoop, hblock, hterm, hplan]
+  show (StateT.lift (service.handle op request) >>= _) = _
+  rw [hres]
+  rfl
+
+/-- Runner arm: a `performCatch` whose operation fails is *caught* — the run
+continues at the failure successor inside the still-open region, so the walk
+must follow it there. -/
+theorem regionLoop_performCatch_error (fuel : Nat) (block : BlockId) (env : Effect4.Flow.Env)
+    (tape : Effect4.Flow.Tape) (stack : List (Effect4.Flow.Frame alphabet))
+    (current : RegionBlock Ty) (term : RawTerm) (op : alphabet.Op) (request : Val)
+    (target : BlockId) (env' : Effect4.Flow.Env) (onError : BlockId)
+    (errorEnv : Effect4.Flow.Env) (error : Val)
+    (hblock : flow.block? block = some current)
+    (hterm : current.term = .plain term)
+    (hplan : Effect4.Flow.plan alphabet
+        { id := current.id, params := current.params, term := term } env tape
+      = .performCatch op request target env' onError errorEnv)
+    (hres : service.handle op request = .error error) :
+    Effect4.Flow.regionLoop alphabet flow service nameOf (fuel + 1) block env tape stack
+      = (Effect4.Flow.logOperation service nameOf op request (.error error) >>= fun _ =>
+          Effect4.Flow.regionLoop alphabet flow service nameOf fuel onError
+            (errorEnv ++ [error]) tape stack) := by
+  simp only [Effect4.Flow.regionLoop, hblock, hterm, hplan]
+  show (StateT.lift (service.handle op request) >>= _) = _
+  rw [hres]
+  rfl
+
+/-- Runner arm: an `enter` pushes one frame with no registrations. -/
+theorem regionLoop_enter (fuel : Nat) (block : BlockId) (env : Effect4.Flow.Env)
+    (tape : Effect4.Flow.Tape) (stack : List (Effect4.Flow.Frame alphabet))
+    (current : RegionBlock Ty) (region : RegionId) (body : BlockId) (args : List Var)
+    (values : Effect4.Flow.Env)
+    (hblock : flow.block? block = some current)
+    (hterm : current.term = .enter region body args)
+    (hargs : Effect4.Flow.readArgs env args = some values) :
+    Effect4.Flow.regionLoop alphabet flow service nameOf (fuel + 1) block env tape stack
+      = (Effect4.Flow.emit (Effects.Trace.Event.enter region.value) >>= fun _ =>
+          Effect4.Flow.regionLoop alphabet flow service nameOf fuel body values tape
+            ({ region := region, releases := [] } :: stack)) := by
+  simp only [Effect4.Flow.regionLoop, hblock, hterm, hargs]
+
+/-- Runner arm: an `acquire` registers its release on the *innermost* open
+frame, latest registered first. -/
+theorem regionLoop_acquire (fuel : Nat) (block : BlockId) (env : Effect4.Flow.Env)
+    (tape : Effect4.Flow.Tape) (frame : Effect4.Flow.Frame alphabet)
+    (rest : List (Effect4.Flow.Frame alphabet))
+    (current : RegionBlock Ty) (operation : OperationId) (request : Var) (release : OperationId)
+    (target : BlockId) (args : List Var) (op releaser : alphabet.Op) (requestValue : Val)
+    (values : Effect4.Flow.Env) (answer : Val)
+    (hblock : flow.block? block = some current)
+    (hterm : current.term = .acquire operation request release target args)
+    (hop : alphabet.lookup operation = some op)
+    (hrel : alphabet.lookup release = some releaser)
+    (hreq : env[request.index]? = some requestValue)
+    (hargs : Effect4.Flow.readArgs env args = some values)
+    (hres : service.handle op requestValue = .ok answer) :
+    Effect4.Flow.regionLoop alphabet flow service nameOf (fuel + 1) block env tape
+        (frame :: rest)
+      = (Effect4.Flow.logOperation service nameOf op requestValue (.ok answer) >>= fun _ =>
+          Effect4.Flow.regionLoop alphabet flow service nameOf fuel target (values ++ [answer])
+            tape ({ frame with releases := (releaser, answer) :: frame.releases } :: rest)) := by
+  simp only [Effect4.Flow.regionLoop, hblock, hterm, hop, hrel, hreq, hargs]
+  show (StateT.lift (service.handle op requestValue) >>= _) = _
+  rw [hres]
+  rfl
+
+/-- **Runner arm: the `leave`.** The frame is closed with the leave value, and
+the run continues at the region row's `continue_` with *this* block's fuel and
+tape — the fact the whole of S4b exists to compile faithfully. -/
+theorem regionLoop_leave (fuel : Nat) (block : BlockId) (env : Effect4.Flow.Env)
+    (tape : Effect4.Flow.Tape) (frame : Effect4.Flow.Frame alphabet)
+    (rest : List (Effect4.Flow.Frame alphabet))
+    (current : RegionBlock Ty) (value : Var) (v : Val) (row : RegionRow Ty)
+    (hblock : flow.block? block = some current)
+    (hterm : current.term = .leave value)
+    (hval : env[value.index]? = some v)
+    (hrow : current.region.bind flow.row? = some row) :
+    Effect4.Flow.regionLoop alphabet flow service nameOf (fuel + 1) block env tape
+        (frame :: rest)
+      = (Effect4.Flow.closeFrame service nameOf frame (.success v) >>= fun failures =>
+          match failures with
+          | [] => Effect4.Flow.regionLoop alphabet flow service nameOf fuel row.continue_ [v]
+              tape rest
+          | error :: more => Effect4.Flow.fail service nameOf rest error more tape) := by
+  simp only [Effect4.Flow.regionLoop, hblock, hterm, hval, hrow]
+  rfl
+
+end RunnerArms
+
+section CloseAgreement
+
+variable {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
+  (service : Effect4.Flow.RegionService alphabet Id) (nameOf : alphabet.Op -> String)
+  (answerOf : alphabet.Op -> Val -> Except Val Val)
+
+theorem anyReleaseFails_cons (release : Config -> Except Val Val) (point : Config)
+    (points : List Config) :
+    anyReleaseFails release (point :: points)
+      = ((match release point with | .ok _ => false | .error _ => true) ||
+          anyReleaseFails release points) := rfl
+
+/-- One release of a close that succeeds: a `finalizer` row, the release's own
+rows, and then the rest of the close. -/
+theorem closeReleases_cons_ok (region : Nat) (exit : Outcome Val) (releaser : alphabet.Op)
+    (resource reply : Val) (more : List (alphabet.Op × Val))
+    (hres : service.handle releaser resource = .ok reply) :
+    Effect4.Flow.closeReleases service nameOf region exit ((releaser, resource) :: more)
+      = (Effect4.Flow.emit (Effects.Trace.Event.finalizer region exit) >>= fun _ =>
+          Effect4.Flow.logOperation service nameOf releaser resource (.ok reply) >>= fun _ =>
+            Effect4.Flow.closeReleases service nameOf region exit more) := by
+  simp only [Effect4.Flow.closeReleases]
+  show (Effect4.Flow.emit (Effects.Trace.Event.finalizer region exit) >>= fun _ =>
+      StateT.lift (service.handle releaser resource) >>= _) = _
+  rw [hres]
+  rfl
+
+/-- At a point that performs an operation, the stateless answer is the service's
+answer to it. -/
+theorem statelessAnswer_of (point : Config) (op : alphabet.Op) (request : Val)
+    (hop : performOp alphabet flow point = some (op, request)) :
+    statelessAnswer alphabet flow answerOf point = answerOf op request := by
+  simp only [statelessAnswer, hop]
+
+theorem registeredReleases_nil :
+    registeredReleases alphabet flow (statelessAnswer alphabet flow answerOf) [] = [] := rfl
+
+/-- A close none of whose releases fails reports no failure, and writes only
+rows. `anyReleaseFails` is exactly the runner's `closeFailures` being empty. -/
+theorem closeReleases_success (hservice : forall op request,
+      service.handle op request = answerOf op request) :
+    forall (points : List Config),
+      anyReleaseFails (statelessRelease alphabet flow answerOf) points = false ->
+      forall {α : Type} (region : Nat) (exit : Outcome Val)
+        (k : Effect4.Flow.Failures -> Effect4.Flow.RunM Id α),
+        RunPrefix
+          (Effect4.Flow.closeReleases service nameOf region exit
+            (registeredReleases alphabet flow (statelessAnswer alphabet flow answerOf) points)
+              >>= k)
+          (k []) := by
+  intro points
+  induction points with
+  | nil =>
+    intro _ _ region exit k
+    exact RunPrefix.of_eq rfl
+  | cons point rest ih =>
+    intro hfail α region exit k
+    rw [anyReleaseFails_cons, Bool.or_eq_false_iff] at hfail
+    obtain ⟨hhere, hrest⟩ := hfail
+    cases hop : performOp alphabet flow point with
+    | none =>
+      have hnone : registeredRelease alphabet flow
+          (statelessAnswer alphabet flow answerOf) point = none := by
+        simp only [registeredRelease, hop]
+      have hlist : registeredReleases alphabet flow (statelessAnswer alphabet flow answerOf)
+          (point :: rest)
+          = registeredReleases alphabet flow (statelessAnswer alphabet flow answerOf) rest := by
+        simp only [registeredReleases, List.filterMap_cons, hnone]
+      rw [hlist]
+      exact ih hrest region exit k
+    | some pair =>
+      obtain ⟨op, request⟩ := pair
+      cases hrel : releaseOp alphabet flow point with
+      | none =>
+        have hnone : registeredRelease alphabet flow
+            (statelessAnswer alphabet flow answerOf) point = none := by
+          simp only [registeredRelease, hop, hrel]
+        have hlist : registeredReleases alphabet flow (statelessAnswer alphabet flow answerOf)
+            (point :: rest)
+            = registeredReleases alphabet flow (statelessAnswer alphabet flow answerOf) rest := by
+          simp only [registeredReleases, List.filterMap_cons, hnone]
+        rw [hlist]
+        exact ih hrest region exit k
+      | some releaser =>
+        cases hans : answerOf op request with
+        | error error =>
+          exfalso
+          have hrelease : statelessRelease alphabet flow answerOf point = .error error := by
+            simp only [statelessRelease, hop, hrel, hans]
+          rw [hrelease] at hhere
+          exact absurd hhere (by simp)
+        | ok resource =>
+          have hsome : registeredRelease alphabet flow
+              (statelessAnswer alphabet flow answerOf) point = some (releaser, resource) := by
+            simp only [registeredRelease, hop, hrel,
+              statelessAnswer_of alphabet flow answerOf point op request hop, hans]
+          have hlist : registeredReleases alphabet flow (statelessAnswer alphabet flow answerOf)
+              (point :: rest)
+              = (releaser, resource) ::
+                registeredReleases alphabet flow (statelessAnswer alphabet flow answerOf) rest := by
+            simp only [registeredReleases, List.filterMap_cons, hsome]
+          have hrelease : statelessRelease alphabet flow answerOf point
+              = answerOf releaser resource := by
+            simp only [statelessRelease, hop, hrel, hans]
+          cases hreply : answerOf releaser resource with
+          | error error =>
+            exfalso
+            rw [hrelease, hreply] at hhere
+            exact absurd hhere (by simp)
+          | ok reply =>
+            rw [hlist, closeReleases_cons_ok alphabet service nameOf region exit releaser resource
+              reply _ (by rw [hservice, hreply])]
+            simp only [bind_assoc]
+            refine RunPrefix.trans (RunPrefix.emit _ _) ?_
+            refine RunPrefix.trans (logOperation_prefix alphabet service nameOf _ _ _ _) ?_
+            exact ih hrest region exit k
+
+/-- The same at a whole frame: a frame whose registrations all release cleanly
+closes with no failure. -/
+theorem closeFrame_success (hservice : forall op request,
+      service.handle op request = answerOf op request)
+    (frame : Effect4.Flow.Frame alphabet) (points : List Config)
+    (hrel : frame.releases
+      = registeredReleases alphabet flow (statelessAnswer alphabet flow answerOf) points)
+    (hfail : anyReleaseFails (statelessRelease alphabet flow answerOf) points = false)
+    {α : Type} (exit : Outcome Val) (k : Effect4.Flow.Failures -> Effect4.Flow.RunM Id α) :
+    RunPrefix (Effect4.Flow.closeFrame service nameOf frame exit >>= k) (k []) := by
+  have hopen : (Effect4.Flow.closeFrame service nameOf frame exit >>= k)
+      = (Effect4.Flow.emit (Effects.Trace.Event.leave frame.region.value exit) >>= fun _ =>
+          Effect4.Flow.closeReleases service nameOf frame.region.value exit frame.releases
+            >>= k) := by
+    simp only [Effect4.Flow.closeFrame, bind_assoc]
+  rw [hopen, hrel]
+  refine RunPrefix.trans (RunPrefix.emit _ _) ?_
+  exact closeReleases_success alphabet flow service nameOf answerOf hservice points hfail
+    frame.region.value exit k
+
+end CloseAgreement
+
+section WalkAgreement
+
+variable {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
+  (service : Effect4.Flow.RegionService alphabet Id) (nameOf : alphabet.Op -> String)
+  (answerOf : alphabet.Op -> Val -> Except Val Val)
+
+/-- What the runner does once the region it is running reaches its `leave`: it
+closes that region's frame with the leave value, and then either continues at
+the leave configuration or fails with the close's failures. -/
+def leaveStep (region : RegionId) (regs : List Config) (leave : LeavePoint)
+    (rest : List (Effect4.Flow.Frame alphabet)) :
+    Effect4.Flow.RunM Id ((Effect4.Flow.RunResult × Effect4.Flow.Tape) × Effect4.Flow.Failures) :=
+  Effect4.Flow.closeFrame service nameOf
+      { region := region,
+        releases := registeredReleases alphabet flow (statelessAnswer alphabet flow answerOf) regs }
+      (Outcome.success leave.value) >>= fun failures =>
+    match failures with
+    | [] => Effect4.Flow.regionLoop alphabet flow service nameOf leave.resume.fuel
+        leave.resume.block leave.resume.env leave.resume.tape rest
+    | error :: more => Effect4.Flow.fail service nameOf rest error more leave.resume.tape
+
+/-- **The walk is the runner.** If `closeWalk` reaches a `leave`, then the
+runner, started at the same block with a stack whose frames hold exactly the
+walk's accumulators, runs to that same `leave`, closes the walked region's frame
+with exactly the registrations the walk collected, and continues at exactly the
+`LeavePoint` the walk reports — the fuel, block, environment and decision tape
+held *at the leave*.
+
+This is the induction `RegionOracleAgrees.registrations` used to name as owed,
+and the reason `regionInterp.contA` may resume a region at `leaveConfig`. It is
+proved for every flow, with no hypothesis on region bodies: the only premise is
+that the service is stateless (`hservice`). -/
+theorem closeWalk_agrees_regionLoop
+    (hservice : forall op request, service.handle op request = answerOf op request) :
+    forall (fuel : Nat) (block : BlockId) (env : Effect4.Flow.Env) (tape : Effect4.Flow.Tape)
+      (acc : List Config) (inner : List (List Config)) (regs : List Config) (leave : LeavePoint)
+      (innerFrames : List (Effect4.Flow.Frame alphabet)) (outer : Effect4.Flow.Frame alphabet)
+      (rest : List (Effect4.Flow.Frame alphabet)),
+      closeWalk alphabet flow (statelessAnswer alphabet flow answerOf)
+          (statelessRelease alphabet flow answerOf) fuel block env tape acc inner
+        = (regs, some leave) ->
+      innerFrames.map Effect4.Flow.Frame.releases
+        = inner.map (registeredReleases alphabet flow (statelessAnswer alphabet flow answerOf)) ->
+      outer.releases
+        = registeredReleases alphabet flow (statelessAnswer alphabet flow answerOf) acc ->
+      RunPrefix
+        (Effect4.Flow.regionLoop alphabet flow service nameOf fuel block env tape
+          (innerFrames ++ outer :: rest))
+        (leaveStep alphabet flow service nameOf answerOf outer.region regs leave rest) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+    intro block env tape acc inner regs leave innerFrames outer rest hwalk _ _
+    simp [closeWalk] at hwalk
+  | succ fuel ih =>
+    intro block env tape acc inner regs leave innerFrames outer rest hwalk hinner houter
+    cases hblock : flow.block? block with
+    | none => simp [closeWalk, hblock] at hwalk
+    | some current =>
+      cases hterm : current.term with
+      | plain term =>
+        cases hplan : Effect4.Flow.plan alphabet
+            { id := current.id, params := current.params, term := term } env tape with
+        | stuck => simp [closeWalk, hblock, hterm, hplan] at hwalk
+        | ret value => simp [closeWalk, hblock, hterm, hplan] at hwalk
+        | exhausted site => simp [closeWalk, hblock, hterm, hplan] at hwalk
+        | mismatch expected actual => simp [closeWalk, hblock, hterm, hplan] at hwalk
+        | jump target env' =>
+          have hw : closeWalk alphabet flow (statelessAnswer alphabet flow answerOf)
+              (statelessRelease alphabet flow answerOf) fuel target env' tape acc inner
+              = (regs, some leave) := by
+            simpa only [closeWalk, hblock, hterm, hplan] using hwalk
+          rw [regionLoop_jump alphabet flow service nameOf fuel block env tape
+            (innerFrames ++ outer :: rest) current term target env' hblock hterm hplan]
+          exact ih target env' tape acc inner regs leave innerFrames outer rest hw hinner houter
+        | choose site branch target env' more =>
+          have hw : closeWalk alphabet flow (statelessAnswer alphabet flow answerOf)
+              (statelessRelease alphabet flow answerOf) fuel target env' more acc inner
+              = (regs, some leave) := by
+            simpa only [closeWalk, hblock, hterm, hplan] using hwalk
+          rw [regionLoop_choose alphabet flow service nameOf fuel block env tape
+            (innerFrames ++ outer :: rest) current term site branch target env' more
+            hblock hterm hplan]
+          refine RunPrefix.trans (RunPrefix.emit _ _) ?_
+          exact ih target env' more acc inner regs leave innerFrames outer rest hw hinner houter
+        | perform op request target env' =>
+          have hop : performOp alphabet flow ⟨fuel + 1, block, env, tape⟩ = some (op, request) := by
+            simp only [performOp, hblock, hterm, hplan]
+          cases hans : statelessAnswer alphabet flow answerOf ⟨fuel + 1, block, env, tape⟩ with
+          | error e => simp [closeWalk, hblock, hterm, hplan, hans] at hwalk
+          | ok value =>
+            have hw : closeWalk alphabet flow (statelessAnswer alphabet flow answerOf)
+                (statelessRelease alphabet flow answerOf) fuel target (env' ++ [value]) tape acc
+                inner = (regs, some leave) := by
+              simpa only [closeWalk, hblock, hterm, hplan, hans] using hwalk
+            have hres : service.handle op request = .ok value := by
+              rw [hservice, ← statelessAnswer_of alphabet flow answerOf _ op request hop]
+              exact hans
+            rw [regionLoop_perform alphabet flow service nameOf fuel block env tape
+              (innerFrames ++ outer :: rest) current term op request target env' value
+              hblock hterm hplan hres]
+            refine RunPrefix.trans (logOperation_prefix alphabet service nameOf _ _ _ _) ?_
+            exact ih target (env' ++ [value]) tape acc inner regs leave innerFrames outer rest
+              hw hinner houter
+        | performCatch op request target env' onError errorEnv =>
+          have hop : performOp alphabet flow ⟨fuel + 1, block, env, tape⟩ = some (op, request) := by
+            simp only [performOp, hblock, hterm, hplan]
+          cases hans : statelessAnswer alphabet flow answerOf ⟨fuel + 1, block, env, tape⟩ with
+          | ok value =>
+            have hw : closeWalk alphabet flow (statelessAnswer alphabet flow answerOf)
+                (statelessRelease alphabet flow answerOf) fuel target (env' ++ [value]) tape acc
+                inner = (regs, some leave) := by
+              simpa only [closeWalk, hblock, hterm, hplan, hans] using hwalk
+            have hres : service.handle op request = .ok value := by
+              rw [hservice, ← statelessAnswer_of alphabet flow answerOf _ op request hop]
+              exact hans
+            rw [regionLoop_performCatch_ok alphabet flow service nameOf fuel block env tape
+              (innerFrames ++ outer :: rest) current term op request target env' onError errorEnv
+              value hblock hterm hplan hres]
+            refine RunPrefix.trans (logOperation_prefix alphabet service nameOf _ _ _ _) ?_
+            exact ih target (env' ++ [value]) tape acc inner regs leave innerFrames outer rest
+              hw hinner houter
+          | error error =>
+            have hw : closeWalk alphabet flow (statelessAnswer alphabet flow answerOf)
+                (statelessRelease alphabet flow answerOf) fuel onError (errorEnv ++ [error]) tape
+                acc inner = (regs, some leave) := by
+              simpa only [closeWalk, hblock, hterm, hplan, hans] using hwalk
+            have hres : service.handle op request = .error error := by
+              rw [hservice, ← statelessAnswer_of alphabet flow answerOf _ op request hop]
+              exact hans
+            rw [regionLoop_performCatch_error alphabet flow service nameOf fuel block env tape
+              (innerFrames ++ outer :: rest) current term op request target env' onError errorEnv
+              error hblock hterm hplan hres]
+            refine RunPrefix.trans (logOperation_prefix alphabet service nameOf _ _ _ _) ?_
+            exact ih onError (errorEnv ++ [error]) tape acc inner regs leave innerFrames outer rest
+              hw hinner houter
+      | enter region body args =>
+        cases hargs : Effect4.Flow.readArgs env args with
+        | none => simp [closeWalk, hblock, hterm, hargs] at hwalk
+        | some values =>
+          have hw : closeWalk alphabet flow (statelessAnswer alphabet flow answerOf)
+              (statelessRelease alphabet flow answerOf) fuel body values tape acc ([] :: inner)
+              = (regs, some leave) := by
+            simpa only [closeWalk, hblock, hterm, hargs] using hwalk
+          rw [regionLoop_enter alphabet flow service nameOf fuel block env tape
+            (innerFrames ++ outer :: rest) current region body args values hblock hterm hargs]
+          refine RunPrefix.trans (RunPrefix.emit _ _) ?_
+          have hinner' : (({ region := region, releases := [] } : Effect4.Flow.Frame alphabet)
+              :: innerFrames).map Effect4.Flow.Frame.releases
+              = ([] :: inner).map
+                (registeredReleases alphabet flow (statelessAnswer alphabet flow answerOf)) := by
+            simp only [List.map_cons, hinner, registeredReleases, List.filterMap_nil]
+          exact ih body values tape acc ([] :: inner) regs leave
+            ({ region := region, releases := [] } :: innerFrames) outer rest hw hinner' houter
+      | acquire operation request release target args =>
+        cases hop : alphabet.lookup operation with
+        | none =>
+          have hcont : performCont alphabet flow ⟨fuel + 1, block, env, tape⟩ = none := by
+            simp only [performCont, hblock, hterm, hop]
+          simp [closeWalk, hblock, hterm, hcont] at hwalk
+        | some op =>
+          cases hrel : alphabet.lookup release with
+          | none =>
+            have hcont : performCont alphabet flow ⟨fuel + 1, block, env, tape⟩ = none := by
+              simp only [performCont, hblock, hterm, hop, hrel]
+            simp [closeWalk, hblock, hterm, hcont] at hwalk
+          | some releaser =>
+            cases hreq : env[request.index]? with
+            | none =>
+              have hcont : performCont alphabet flow ⟨fuel + 1, block, env, tape⟩ = none := by
+                simp only [performCont, hblock, hterm, hop, hrel, hreq]
+              simp [closeWalk, hblock, hterm, hcont] at hwalk
+            | some requestValue =>
+              cases hargs : Effect4.Flow.readArgs env args with
+              | none =>
+                have hcont : performCont alphabet flow ⟨fuel + 1, block, env, tape⟩ = none := by
+                  simp only [performCont, hblock, hterm, hop, hrel, hreq, hargs]
+                simp [closeWalk, hblock, hterm, hcont] at hwalk
+              | some values =>
+                cases hregion : current.region with
+                | none =>
+                  have hcont : performCont alphabet flow ⟨fuel + 1, block, env, tape⟩ = none := by
+                    simp only [performCont, hblock, hterm, hop, hrel, hreq, hargs, hregion]
+                  simp [closeWalk, hblock, hterm, hcont] at hwalk
+                | some regionId =>
+                  have hcont : performCont alphabet flow ⟨fuel + 1, block, env, tape⟩
+                      = some (target, values, some regionId.value) := by
+                    simp only [performCont, hblock, hterm, hop, hrel, hreq, hargs, hregion]
+                  have hperformOp : performOp alphabet flow ⟨fuel + 1, block, env, tape⟩
+                      = some (op, requestValue) := by
+                    simp only [performOp, hblock, hterm, hop, hreq]
+                  have hreleaseOp : releaseOp alphabet flow ⟨fuel + 1, block, env, tape⟩
+                      = some releaser := by
+                    simp only [releaseOp, hblock, hterm, hrel]
+                  cases hans : statelessAnswer alphabet flow answerOf ⟨fuel + 1, block, env, tape⟩
+                    with
+                  | error e => simp [closeWalk, hblock, hterm, hcont, hans] at hwalk
+                  | ok value =>
+                    have hres : service.handle op requestValue = .ok value := by
+                      rw [hservice,
+                        ← statelessAnswer_of alphabet flow answerOf _ op requestValue hperformOp]
+                      exact hans
+                    have hregistered : registeredRelease alphabet flow
+                        (statelessAnswer alphabet flow answerOf) ⟨fuel + 1, block, env, tape⟩
+                        = some (releaser, value) := by
+                      simp only [registeredRelease, hperformOp, hreleaseOp, hans]
+                    cases inner with
+                    | nil =>
+                      have hnil : innerFrames = [] := by
+                        cases innerFrames with
+                        | nil => rfl
+                        | cons f fs => simp at hinner
+                      subst hnil
+                      have hw : closeWalk alphabet flow (statelessAnswer alphabet flow answerOf)
+                          (statelessRelease alphabet flow answerOf) fuel target (values ++ [value])
+                          tape (⟨fuel + 1, block, env, tape⟩ :: acc) []
+                          = (regs, some leave) := by
+                        simpa only [closeWalk, hblock, hterm, hcont, hans] using hwalk
+                      simp only [List.nil_append]
+                      rw [regionLoop_acquire alphabet flow service nameOf fuel block env tape
+                        outer rest current operation request release target args op releaser
+                        requestValue values value hblock hterm hop hrel hreq hargs hres]
+                      refine RunPrefix.trans (logOperation_prefix alphabet service nameOf _ _ _ _)
+                        ?_
+                      have houter' : ({ outer with
+                            releases := (releaser, value) :: outer.releases } :
+                            Effect4.Flow.Frame alphabet).releases
+                          = registeredReleases alphabet flow
+                            (statelessAnswer alphabet flow answerOf)
+                            (⟨fuel + 1, block, env, tape⟩ :: acc) := by
+                        simp only [registeredReleases, List.filterMap_cons, hregistered, houter]
+                      exact ih target (values ++ [value]) tape (⟨fuel + 1, block, env, tape⟩ :: acc)
+                        [] regs leave [] { outer with
+                          releases := (releaser, value) :: outer.releases } rest hw hinner houter'
+                    | cons head more =>
+                      cases innerFrames with
+                      | nil => simp at hinner
+                      | cons f fs =>
+                        have hf : f.releases = registeredReleases alphabet flow
+                            (statelessAnswer alphabet flow answerOf) head := by
+                          simpa using congrArg (fun l => l.headD []) hinner
+                        have hfs : fs.map Effect4.Flow.Frame.releases
+                            = more.map (registeredReleases alphabet flow
+                              (statelessAnswer alphabet flow answerOf)) := by
+                          simpa using congrArg (fun l => l.tail) hinner
+                        have hw : closeWalk alphabet flow (statelessAnswer alphabet flow answerOf)
+                            (statelessRelease alphabet flow answerOf) fuel target
+                            (values ++ [value]) tape acc
+                            ((⟨fuel + 1, block, env, tape⟩ :: head) :: more)
+                            = (regs, some leave) := by
+                          simpa only [closeWalk, hblock, hterm, hcont, hans] using hwalk
+                        rw [show (f :: fs) ++ outer :: rest = f :: (fs ++ outer :: rest) from rfl,
+                          regionLoop_acquire alphabet flow service nameOf fuel block env tape
+                            f (fs ++ outer :: rest) current operation request release target args
+                            op releaser requestValue values value hblock hterm hop hrel hreq hargs
+                            hres]
+                        refine RunPrefix.trans (logOperation_prefix alphabet service nameOf _ _ _ _)
+                          ?_
+                        have hinner' : (({ f with
+                              releases := (releaser, value) :: f.releases } :
+                              Effect4.Flow.Frame alphabet) :: fs).map Effect4.Flow.Frame.releases
+                            = ((⟨fuel + 1, block, env, tape⟩ :: head) :: more).map
+                              (registeredReleases alphabet flow
+                                (statelessAnswer alphabet flow answerOf)) := by
+                          simp only [List.map_cons, hfs, registeredReleases, List.filterMap_cons,
+                            hregistered, hf]
+                        exact ih target (values ++ [value]) tape acc
+                          ((⟨fuel + 1, block, env, tape⟩ :: head) :: more) regs leave
+                          ({ f with releases := (releaser, value) :: f.releases } :: fs) outer rest
+                          hw hinner' houter
+      | leave valueVar =>
+        cases hval : env[valueVar.index]? with
+        | none => simp [closeWalk, hblock, hterm, hval] at hwalk
+        | some v =>
+          cases hrow : current.region.bind flow.row? with
+          | none => simp [closeWalk, hblock, hterm, hval, hrow] at hwalk
+          | some row =>
+            cases inner with
+            | nil =>
+              have hnil : innerFrames = [] := by
+                cases innerFrames with
+                | nil => rfl
+                | cons f fs => simp at hinner
+              subst hnil
+              have hw : (acc, some (⟨v, ⟨fuel, row.continue_, [v], tape⟩⟩ : LeavePoint))
+                  = (regs, some leave) := by
+                simpa only [closeWalk, hblock, hterm, hval, hrow] using hwalk
+              rw [Prod.mk.injEq, Option.some.injEq] at hw
+              obtain ⟨hregs, hleave⟩ := hw
+              subst hregs
+              subst hleave
+              rw [show ([] : List (Effect4.Flow.Frame alphabet)) ++ outer :: rest
+                  = outer :: rest from rfl,
+                regionLoop_leave alphabet flow service nameOf fuel block env tape outer rest
+                  current valueVar v row hblock hterm hval hrow]
+              refine RunPrefix.of_eq ?_
+              show _ = leaveStep alphabet flow service nameOf answerOf outer.region acc
+                ⟨v, ⟨fuel, row.continue_, [v], tape⟩⟩ rest
+              unfold leaveStep
+              rw [← houter]
+            | cons head more =>
+              cases hfail : anyReleaseFails (statelessRelease alphabet flow answerOf) head with
+              | true => simp [closeWalk, hblock, hterm, hval, hrow, hfail] at hwalk
+              | false =>
+                cases innerFrames with
+                | nil => simp at hinner
+                | cons f fs =>
+                  have hf : f.releases = registeredReleases alphabet flow
+                      (statelessAnswer alphabet flow answerOf) head := by
+                    simpa using congrArg (fun l => l.headD []) hinner
+                  have hfs : fs.map Effect4.Flow.Frame.releases
+                      = more.map (registeredReleases alphabet flow
+                        (statelessAnswer alphabet flow answerOf)) := by
+                    simpa using congrArg (fun l => l.tail) hinner
+                  have hw : closeWalk alphabet flow (statelessAnswer alphabet flow answerOf)
+                      (statelessRelease alphabet flow answerOf) fuel row.continue_ [v] tape acc more
+                      = (regs, some leave) := by
+                    simpa only [closeWalk, hblock, hterm, hval, hrow, hfail, if_false,
+                      Bool.false_eq_true] using hwalk
+                  rw [show (f :: fs) ++ outer :: rest = f :: (fs ++ outer :: rest) from rfl,
+                    regionLoop_leave alphabet flow service nameOf fuel block env tape f
+                      (fs ++ outer :: rest) current valueVar v row hblock hterm hval hrow]
+                  refine RunPrefix.trans (closeFrame_success alphabet flow service nameOf answerOf
+                    hservice f head hf hfail _ _) ?_
+                  exact ih row.continue_ [v] tape acc more regs leave fs outer rest hw hfs houter
+
+/-- **`leaveConfig` is the runner, at a region's `enter`.** The runner, started
+on the body in the state the `enter` leaves it, reaches that region's `leave`,
+closes a frame holding exactly `regionRegistrations`, and continues at exactly
+the configuration `leaveConfig` reports. This is the statement
+`Effect4Test/Counterexamples/Target/RegionSimulationBoundary.lean`'s
+`tapeAfterRegion` attacked and `regionInterp.contA` now compiles against. -/
+theorem leaveConfig_agrees_runRegions
+    (hservice : forall op request, service.handle op request = answerOf op request)
+    (point : Config) (regs : List Config) (leave : LeavePoint)
+    (current : RegionBlock Ty) (region : RegionId) (body : BlockId) (args : List Var)
+    (values : Effect4.Flow.Env)
+    (hblock : flow.block? point.block = some current)
+    (hterm : current.term = .enter region body args)
+    (hargs : Effect4.Flow.readArgs point.env args = some values)
+    (hwalk : regionWalk alphabet flow (statelessAnswer alphabet flow answerOf)
+        (statelessRelease alphabet flow answerOf) point = (regs, some leave))
+    (rest : List (Effect4.Flow.Frame alphabet)) :
+    RunPrefix
+      (Effect4.Flow.regionLoop alphabet flow service nameOf (point.fuel - 1) body values point.tape
+        ({ region := region, releases := [] } :: rest))
+      (leaveStep alphabet flow service nameOf answerOf region regs leave rest) := by
+  have hw : closeWalk alphabet flow (statelessAnswer alphabet flow answerOf)
+      (statelessRelease alphabet flow answerOf) (point.fuel - 1) body values point.tape [] []
+      = (regs, some leave) := by
+    simpa only [regionWalk, hblock, hterm, hargs] using hwalk
+  have hmain := closeWalk_agrees_regionLoop alphabet flow service nameOf answerOf hservice
+    (point.fuel - 1) body values point.tape [] [] regs leave []
+    { region := region, releases := [] } rest hw rfl rfl
+  simpa using hmain
+
+/-- The walk's leave endpoint is what `leaveConfig` answers. -/
+theorem leaveConfig_of_regionWalk (point : Config) (regs : List Config) (leave : LeavePoint)
+    (hwalk : regionWalk alphabet flow (statelessAnswer alphabet flow answerOf)
+      (statelessRelease alphabet flow answerOf) point = (regs, some leave)) :
+    leaveConfig alphabet flow (statelessAnswer alphabet flow answerOf)
+        (statelessRelease alphabet flow answerOf) point = some leave.resume := by
+  simp only [leaveConfig, hwalk, Option.map_some]
+
+/-- The walk's accumulator is what `regionRegistrations` answers. -/
+theorem regionRegistrations_of_regionWalk (point : Config) (regs : List Config)
+    (leave : Option LeavePoint)
+    (hwalk : regionWalk alphabet flow (statelessAnswer alphabet flow answerOf)
+      (statelessRelease alphabet flow answerOf) point = (regs, leave)) :
+    regionRegistrations alphabet flow (statelessAnswer alphabet flow answerOf)
+        (statelessRelease alphabet flow answerOf) point = regs := by
+  simp only [regionRegistrations, hwalk]
+
+/-- **The compile side of the repair, as an equation.** On a region whose close
+succeeds, the scope frame's value arm continues at the compile of the *leave*
+configuration, with the frame's own value as the continuation block's
+environment. Under S4 the right-hand side was
+`compileAt … ⟨point.fuel - 1, row.continue_, [value], point.tape⟩` — the enter's
+fuel and tape. -/
+theorem regionInterp_regionCont_resume (oracle : RegionOracle) (region : Nat) (point : Config)
+    (value : Val) (resume : Config)
+    (hclose : closeExit oracle (oracle.registrations point) = Effect4.Exit.success ())
+    (hleave : leaveConfig alphabet flow oracle.answer oracle.release point = some resume) :
+    (regionInterp alphabet flow oracle).contA (RegionName.regionCont region point) value
+      = compileAt alphabet flow ⟨resume.fuel, resume.block, [value], resume.tape⟩ := by
+  simp only [regionInterp, hclose, hleave, compileAt]
+
+end WalkAgreement
 
 /-- The machine fuel a region run needs, re-derived after P1. The runner spends
 one unit per block, and a block costs the machine at most four steps:
@@ -1018,7 +1878,16 @@ one unit per block, and a block costs the machine at most four steps:
 P1 did not lower the constant: the release frames stay, because they are what
 writes the `finalizer` row rc.112's release lambda writes
 (`internal/effect.ts:3971-3987`). What P1 removed is the *nesting*, not the
-frame count. -/
+frame count.
+
+S4b does not raise it either, and the derivation is now exact rather than
+generous. Before S4b a region's continuation was compiled at `point.fuel - 1`,
+the *enter*'s fuel, so the compiled program could unroll blocks the runner never
+reaches and the count "one machine step per runner block" was an over-estimate
+in one direction and a mis-alignment in the other. Since `contA` resumes at
+`leaveConfig`, whose fuel is the runner's own fuel at the `leave`, every block
+the compile unrolls is a block the runner spends fuel on, so the per-block
+budget above is the whole story and `4 * runnerFuel + 1` still bounds it. -/
 def regionBound (runnerFuel : Nat) : Nat := 4 * runnerFuel + 1
 
 /-! ## The general theorem, stated
@@ -1032,9 +1901,10 @@ is the missing induction — that `oracle.registrations` is the runner's
 `Frame.releases` at the moment the frame closes. -/
 
 /-- The oracle answers what the service answers, and its `registrations` field
-is the runner's `Frame.releases`. The third clause is what a proof of
-`RegionsSimulate` still owes; `closeWalk` computes a candidate for it and
-`statelessOracle` installs that candidate. -/
+is the walk's. Since S4b the fourth clause is a definition check on the oracle,
+not an owed induction: `closeWalk_agrees_regionLoop` proves the walk *is* the
+runner, so an oracle satisfying this structure reports the runner's
+`Frame.releases` and the runner's leave configuration. -/
 structure RegionOracleAgrees {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
     (service : Effect4.Flow.RegionService alphabet Id)
     (answerOf : alphabet.Op -> Val -> Except Val Val) (oracle : RegionOracle) : Prop where
@@ -1046,12 +1916,15 @@ structure RegionOracleAgrees {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : Re
   /-- The oracle's release outcome is the service's answer to the release
   operation on the acquired resource. -/
   release : forall point, oracle.release point = statelessRelease alphabet flow answerOf point
-  /-- **The missing induction.** The registrations the oracle reports for a
-  region are the releases the runner's `Frame` holds when that frame closes, in
-  `Scope.closeOrder`. -/
+  /-- The registrations the oracle reports for a region are the ones the walk
+  computes — and `closeWalk_registrations_agrees_regionLoop` proves those are the
+  releases the runner's `Frame` holds when that frame closes, in
+  `Scope.closeOrder`. Since S4b this clause is a *definition* check on the
+  oracle, not the missing induction: the induction is discharged. -/
   registrations : forall point,
     oracle.registrations point =
-      regionRegistrations alphabet flow (statelessAnswer alphabet flow answerOf) point
+      regionRegistrations alphabet flow (statelessAnswer alphabet flow answerOf)
+        (statelessRelease alphabet flow answerOf) point
 
 /-- `statelessOracle` satisfies three of the four clauses by construction; the
 fourth is the service's own statelessness. So the only content of
@@ -1105,6 +1978,40 @@ def RegionsSimulateExit {Ty : Type} [DecidableEq Ty] (alphabet : FlowAlphabet Ty
         (match ((Effect4.Flow.runRegionsCause fuel' flow service nameOf tape input).run []).1 with
           | ((.done value, _), _) => Effect4.Exit.success value
           | ((_, _), failures) => Effect4.Exit.failure (causeOfFailures failures))
+
+/-! ## The exact remaining obligation, after S4b
+
+S4b discharged the clause S4 named: `closeWalk_agrees_regionLoop` proves the
+walk is the runner, `leaveConfig_agrees_runRegions` proves the compile resumes
+where the runner does, and `RegionOracleAgrees.registrations` is therefore a
+definition check on the oracle rather than a missing induction.
+
+What is left of T5 and T6 is the *machine-side* induction: relating
+`FrameFiber.run`'s steps to the runner's blocks under `run_add`/`run_mono` and
+`regionBound`. The two `Prop`s below name it exactly — they are the universally
+quantified forms of the statements the five instances close pointwise. Neither
+is proved and neither is refuted: S4b removed the only counterexample
+(`tapeAfterRegion`), and
+`Effect4Test/Counterexamples/Target/RegionSimulationBoundary.lean` keeps
+`unrestricted_finite_classification_false` as the witness that the machine and
+the runner still differ somewhere — on the *endpoint* classification (T8),
+not on the trace. -/
+
+/-- **T5, universally quantified**: what a general proof still owes on the
+trace side. -/
+def RegionsSimulateAll {Ty : Type} [DecidableEq Ty] (alphabet : FlowAlphabet Ty) : Prop :=
+  forall (flow : CheckedRegionFlow alphabet) (service : Effect4.Flow.RegionService alphabet Id)
+    (answerOf : alphabet.Op -> Val -> Except Val Val) (nameOf : alphabet.Op -> String)
+    (oracle : RegionOracle) (tape : Effect4.Flow.Tape) (input : Val) (fuel' fuel : Nat),
+    RegionsSimulate alphabet flow service answerOf nameOf oracle tape input fuel' fuel
+
+/-- **T6, universally quantified**: what a general proof still owes on the exit
+side. -/
+def RegionsSimulateExitAll {Ty : Type} [DecidableEq Ty] (alphabet : FlowAlphabet Ty) : Prop :=
+  forall (flow : CheckedRegionFlow alphabet) (service : Effect4.Flow.RegionService alphabet Id)
+    (answerOf : alphabet.Op -> Val -> Except Val Val) (nameOf : alphabet.Op -> String)
+    (oracle : RegionOracle) (tape : Effect4.Flow.Tape) (input : Val) (fuel' fuel : Nat),
+    RegionsSimulateExit alphabet flow service answerOf nameOf oracle tape input fuel' fuel
 
 /-! ## The retraction and the wire projection -/
 

@@ -79,7 +79,7 @@ const sink: Event[] = []
 /** The decision tape, in the golden's own spelling: `site:1` for a fork that
  * hands the processor to the run loop, `site:0` for one that does not. The
  * site is the fork's ordinal, which is what the Lean face numbers its forks
- * by (`harness/trace/fiber-tail.ts` uses the same convention). */
+ * by (the retired M3 `fiber-tail.ts` used the same convention). */
 const tape: Array<readonly [number, boolean]> = (process.env.EFFECT4_TAPE ?? "")
   .split(",")
   .filter((entry) => entry.length > 0)
