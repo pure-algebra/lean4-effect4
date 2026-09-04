@@ -110,3 +110,7 @@ globs = ["Effect4Test.Arch.+"]
 [[lean_lib]]
 name = "Effect4TestDeep"
 globs = ["Effect4Test.Deep.+"]
+
+[[lean_lib]]
+name = "Effect4TestApi"
+globs = ["Effect4Test.Api.+"]

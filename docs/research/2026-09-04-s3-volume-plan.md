@@ -73,10 +73,23 @@ Fork options: `⟨true, true, Supervision.MaskMode.inherit⟩` is an immediate d
 
 (`[a, b]` above abbreviates `.cons a (.cons b .nil)`.)
 
+## Memory rule (added 2026-09-04 after two machine crashes)
+
+The PC has 15.6 GB of RAM and a 32 GB pagefile. On 2026-09-04 one probe process
+(`s3-onExitNest-100000.lean`) reached 54 GB of virtual memory and took the machine down,
+twice, because `Stop-Job` on the timeout wrapper does not kill the child `lean.exe`. So:
+
+* every probe runs as `lake env lean -M 4096 <file>` (a 4 GB cap; Lean aborts with "memory
+  limit exceeded", which the measurement records as `oom`);
+* the timeout kills the process tree: start the probe with `Start-Process -PassThru`, wait
+  on the process, and on timeout run `taskkill /PID <pid> /T /F`; never `Stop-Job` alone;
+* the size ladder is `10, 100, 1000, 10000` and stops there; `100000` is not run;
+* no other `lake` runs while a probe runs.
+
 ## The measurement
 
-Sizes `10, 100, 1000, 10000, 100000`, in that order per probe; stop a probe at the first
-size that fails (crash or timeout). Each (probe, size) is its own scratch file under the
+Sizes `10, 100, 1000, 10000`, in that order per probe; stop a probe at the first
+size that fails (`oom`, crash or timeout). Each (probe, size) is its own scratch file under the
 scratchpad, `s3-<probe>-<N>.lean`:
 
 ```lean

@@ -7,122 +7,84 @@ full, then open only the authority documents named for the current task.
 
 | Path | Owns |
 | --- | --- |
-| `COORDINATION.md` | live claims between concurrent agents, and what past collisions cost |
-| `PLAN.md` | extraction phases, entry and exit gates, current phase |
-| `docs/ARCHITECTURE.md` | module boundaries, dependency direction, public API policy |
-| `PORT-MANIFEST.md` | exact Foldlab source declarations, tests, pins, and destination dispositions |
-| `test/contracts/` | breaker-authored algebraic contracts and executable falsifiers |
-| `test/counterexamples/` | central counterexample register and durable witnesses |
+| `README.md` | what the product is, the application face, the source tree, how to build |
+| `docs/ARCHITECTURE.md` | module boundaries, dependency direction, the API seam |
+| `docs/DESIGN-BASIS.md` | the representation decisions (DB-01 … DB-07) and their sources |
+| `Effect4/AGENTS.md` | source ownership and the assurance route a declaration takes |
+| `docs/AGENT-ROUTING.md` | the assurance threshold: leaf receipt versus proof graph, and the graph's edges |
+| `docs/RUNTIME-COVERAGE.md` | the rc.112 runtime mechanism census, its rows, and the one coverage report format |
+| `test/contracts/` | frozen contract packets and their executable falsifiers |
+| `test/counterexamples/REGISTER.md` | stable IDs of every declaration-changing counterexample |
 | `Effect4/` | library declarations and proofs |
-| `Effect4Test/` | Lean tests, attacks, examples, and proof receipts |
-| `harness/` | host conformance, TypeScript, runtime, and language-service checks |
+| `Effect4Test/` | batteries, attacks and proof receipts; `Audit/AxiomGate.lean` is the gate |
 | `generated/` | deterministic projections only; never hand-edited |
-| `docs/RUNTIME-COVERAGE.md` | definition, vocabulary, and the one report format of Effect runtime coverage |
-| `docs/TRACE-DAG.md` | the trace-agreement proof graph: the shared service-level alphabet, its masks, and which edges are evidence versus theorem |
-| `docs/LOWERING-COVERAGE.md` | the lowering coverage ledger vocabulary: rule ids, evidence classes, states, and what agreement does not establish |
+| `docs/research/` | working notes and plans; not part of the product and not tracked once the tree is clean |
+| `COORDINATION.md` | live claims between concurrent sessions while more than one session edits this branch |
 
 If two files appear to own the same fact, stop and repair the ownership map.
 
-More than one agent may edit this worktree at once. Direct messaging is not a
-durable ownership record, so every agent reads `COORDINATION.md` before
-writing and records a file claim there before freezing a packet or changing a
-shared surface.
+## What the tree is
 
-## Development order
-
-1. Freeze the public declaration record, existing-type disposition, and
-   assurance route.
-2. A breaker, in a separate process, commits the contract and red battery.
-3. The builder implements without editing that packet or battery.
-4. Run the narrow test, the package build, axiom inspection, and the relevant
-   host gate.
-5. An independent reviewer checks model intent, proof trust, compatibility,
-   and claim scope.
-6. Close the required assurance route: a proof graph for semantic or
-   cutover-bearing work, or local signature and theorem receipts for a trivial
-   finite leaf. No category or full cutover may hide an open graph edge or
-   leaf receipt.
-
-Every exported declaration still receives a lightweight ownership,
-disposition, and duplicate-prevention record. A proof graph is mandatory only
-for admission or refusal, judgments or denotations, interpreters or handlers,
-reification or generated-code relations, nontrivial composition or recursive
-invariants, external semantic equivalence, and declarations that directly
-gate cutover. Empty stubs have no declaration to record and need no graph.
-`docs/AGENT-ROUTING.md` owns the full threshold and Schema examples.
-
-Breadth precedes depth: every major category receives a frozen representative
-contract before one category is developed far beyond the others.
+The product is Effect codegen (`README.md`): `Eff` is the one program IR,
+`Effect4.Api` the one module an application imports, the Deep machine the
+semantics under it, Schema the data plane beside it. The Flow route of
+earlier work lives on branch `archive/flow-route`; do not re-import it, and
+do not write a second program representation.
 
 ## Representation rules
 
 - Canonical program content is first-order data. Lean functions, `Expr`, host
   closures, promises, and runtime objects are not stored program syntax.
-- Raw Lean `Expr` is allowed only at the metaprogramming boundary. Elaborated
-  declarations must emit checked first-order rows before entering semantics.
+- Every rc.112 behaviour a declaration models names the line it transcribes
+  (`vendor/effect-4.0.0-rc.112/src/…`); a theorem that witnesses a census row
+  names the row id in its docstring and is joined in
+  `Effect4Test/Audit/RuntimeCoverage.lean`. The theorem alone moves no number.
 - Fuel exhaustion and unanswered choices are live frontiers, never typed
   errors, causes, or refusals.
 - Full meaning is relational over explicit decisions. Determinism is claimed
   only after fixing a complete compatible decision tape or proving a fragment
   contains no decision source.
-- Fixed-fuel execution is not assigned a general bind law. Composition is
-  proved at the big-step/interpreter face.
-- State produced before failure remains available to finalization. Resource
-  laws must not be encoded with a carrier that discards that state.
-- Schema, Context/Service, Layer, Runtime, ManagedRuntime, Scope, Fiber,
-  Channel/Stream, Schedule, and transactions are distinct calculi or layers
-  with explicit embeddings; type mention alone does not make a primitive.
+- State produced before failure remains available to finalization.
 - Effect TypeScript is one target profile, not the identity or semantic owner.
+- Names are data: an alphabet instantiated at a function type fails the
+  separation gates at the foot of the machine modules.
 
-## Reuse and compatibility
+## Trust
 
-- This repository must not depend on Foldlab.
-- The effect algebra (`Signature`, `Program`, `Handler`, their laws) is the
-  `Effects` package, pinned by exact commit in `lakefile.toml`. Effect4
-  depends on Effects, never conversely, and never re-declares its carriers.
-  A change to the algebra goes through the Effects breaker process and a
-  version bump here.
-- Foldlab compatibility adapters depend on Effect4, never conversely.
-- A moved declaration keeps a source digest and compatibility theorem before
-  its Foldlab owner can be retired.
-- Existing Foldlab CAS identity, bytes, refusal classification, and program
-  spellings remain Foldlab-owned until their rows are explicitly closed.
-- Experimental carriers that do not compose are evidence, not port sources.
+- No `sorry`, `partial`, `unsafe`, `native_decide`, `axiom`, `extern`,
+  `implemented_by`. The gate audits every `Effect4.*` and `Effect4Test.*`
+  declaration at `[propext, Quot.sound]`; a rendering declaration that must
+  traverse a `String` is admitted by exact name in `AxiomGate.lean`, never by
+  module. A battery `def` over rendered text reaches `Classical.choice`: keep
+  rendered bytes inside `#guard`s.
+- Every battery file under `Effect4Test/` must be reachable from
+  `Effect4Test.lean`, or the module-closure gate refuses the build.
+- Do not say "sound", "equivalent", "preserves", "fully reified", or
+  "complete" without naming the exact judgment, observation, theorem or gate,
+  assumptions, and remaining host boundary. A compiling finite probe is
+  reported as a finite probe.
+- Coverage of the Effect runtime is stated only in the block printed by
+  `scripts/report-effect-runtime-coverage.sh`, after
+  `scripts/check-effect-runtime-census.sh` passes.
 
-## Counterexamples and claims
+## Working
 
-All counterexamples that can change a declaration or cutover decision have a
-stable ID in `test/counterexamples/REGISTER.md`. Proof sources remain beside
-the attacked code and are linked, not copied into prose.
-
-Do not say “sound”, “equivalent”, “preserves”, “fully reified”, or “complete”
-without naming the exact judgment, observation, theorem or gate, assumptions,
-and remaining host boundary. A compiling finite probe is reported as a finite
-probe.
-
-Coverage of the Effect runtime is stated only in the block printed by
-`scripts/report-effect-runtime-coverage.sh`, pasted verbatim with its commit,
-after `scripts/check-effect-runtime-census.sh` passes. `docs/RUNTIME-COVERAGE.md`
-defines the rows, the green criterion, and how the number may move; the
-`runtime-coverage` skill is the procedure. No percentage is computed by hand.
-
-## Generated facts and long-run continuity
-
-Authored routers such as this file are never generated. Machine status,
-surface rows, declaration digests, conditional obligation graphs, leaf receipts,
-and proof receipts are generated from canonical inputs and checked for drift.
-A fresh session resumes by reading, in order:
-
-1. `PLAN.md` current-phase row;
-2. `PORT-MANIFEST.md` source pin and open dispositions;
-3. the current contract packet and counterexample rows;
-4. the per-declaration assurance row;
-5. the narrow verification command recorded by that row; and
-6. `git status --short --branch` to attribute local changes.
-
-## Handoff
-
-Every handoff records base and head commits, file fence, changed files, exact
-commands and results, public declarations, axiom output, open proof edges or
-leaf receipts, counterexamples exercised, and whether any evidence is bounded
-or host-only.
+- Design first, land once: a change to the machine or the syntax starts as a
+  grilled plan in `docs/research/`, then lands as one commit with the gate
+  green. Mechanical pieces on disjoint files may be delegated; the coordinator
+  reviews, adds the root imports, runs the build and commits. An agent never
+  commits, never `git add`s, and never edits `Effect4.lean`,
+  `Effect4Test.lean`, `Effect4Test/Audit/AxiomGate.lean` or `lakefile.toml`.
+- One `lake` at a time in a working tree.
+- On Windows the shell is PowerShell; the bash gate scripts run through WSL.
+- Every exported declaration keeps its ownership and assurance route
+  (`docs/AGENT-ROUTING.md`); a proof graph is mandatory only for admission or
+  refusal, judgments or denotations, interpreters or handlers, reification or
+  generated-code relations, nontrivial composition or recursive invariants,
+  and external semantic equivalence.
+- More than one session may edit this branch. Read `COORDINATION.md` before
+  changing a shared surface and record a claim there; `git fetch` before a
+  commit and never `git add -A` without reading `git status` first.
+- A handoff records base and head commits, changed files, exact commands and
+  results, axiom output, open obligations, and whether any evidence is bounded
+  or host-only.

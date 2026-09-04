@@ -102,6 +102,39 @@ dependency can drop. `typescript` (lean4-typescript): `EffectV4`, `Skeleton`, `T
 `Syntax.Print`'s test (`TypeScript.Render`) — the Eff printer keeps it. `hash`: `Store.Digest`
 only.
 
+## 7. Landing record
+
+**Commit 1 — `75002d7` "Prod cleanup 1: archive the Flow route, Eff is the one program IR"
+(2026-09-04, local, not pushed).** 1,276 files, +344 / −327,273. Archive branch
+`archive/flow-route` at `606918e`. Green: `lake build Effect4` 113 jobs; `Effect4TestGreen` 174
+jobs; gate 172 modules / 22,806 declarations at `[propext, Quot.sound]`; runtime coverage
+green 134 / partial 1 / absent 0 of 135 (unchanged). Deviations from the rulings, each
+deliberate: `PORT-MANIFEST.md` stays on main (D7) because
+`scripts/generate-environment-context-key-evidence.sh` reads it; `COORDINATION.md` and
+`PLAN.md` stay tracked until the Surface/Char session on the Mac is done with them (D6);
+`Effect4Test/Deep/Volume.lean` (the S3 agent's partial) was moved to the session scratchpad
+because the module-closure gate refuses an unreachable battery file — the S3 agent restarts
+from it. Stale prose the records agent found and left for commit 2: `scripts/lib/stamp.sh:147,162`
+(`stamp_host_inputs`, now uncalled), `docs/FRAMES-DAG.md:293,468` (cites the archived
+`Simulation.lean`), `docs/DESIGN-BASIS.md:425`, and the `vendor/foldlab` / `PORT-MANIFEST`
+citations across the Schema docs.
+
+**Commit 2, in progress (uncommitted):** `Effect4/Api.lean` (D5: `Program`, `typeOf`,
+`wellTyped`, `print`, `printDecl`, `compile`, `load`, `replay`, `run`, `runSync`, `Run.exit/
+trace/stores/fiberCount`, `schemaDocument`, `schemaRepresentation`, `jsonExpr`; syntax only,
+never text) with `Effect4Test/Api/ApiContract.lean`, lib `Effect4TestApi`, both roots
+importing them; `README.md`, `AGENTS.md`, `docs/ARCHITECTURE.md` rewritten for the product
+tree. Not yet built (the S3 and A4 agents hold the build slot). Still owed in this commit:
+`Effect4/AGENTS.md` (modified on the Mac — wait), `docs/AGENT-ROUTING.md` (its
+`PORT-MANIFEST` and breaker-packet prose), the D8 comment trims. The `.gitignore` untracking
+is its own commit once the Mac is clean.
+
+Owed next, in order: commit 2 (D6: `.gitignore` `docs/research/`, `output/`, `workshop/`,
+`misty-frolicking-naur.md`; `git rm --cached`; `AGENTS.md`, `README.md`, `docs/ARCHITECTURE.md`,
+`docs/AGENT-ROUTING.md` rewritten for the product tree) **after the Mac commits or stashes its
+`docs/research` and `workshop/Char` edits**; commit 3 (D5 `Effect4/Api.lean`; D8 comment trim);
+D4 later.
+
 ## 6. Decisions (filled in as they are made)
 
 | # | decision | recommendation | ruling |

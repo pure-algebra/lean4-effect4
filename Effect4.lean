@@ -130,6 +130,9 @@ import Effect4.Syntax.Typing
 import Effect4.Syntax.Print
 import Effect4.Syntax.Native
 import Effect4.Syntax.Compile
+-- The application face: one module, the whole pipeline (type, print, compile,
+-- run; the Schema syntax), answering syntax and never text. Import this.
+import Effect4.Api
 
 /-!
 # Effect4

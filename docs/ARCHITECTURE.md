@@ -3,82 +3,72 @@
 ## Dependency direction
 
 ```text
-Effects (external package: signatures, programs, handlers, laws)
-  -> first-order data and rows
-  -> checked flow
-  -> operational/relational semantics
-  -> logic and classification
-  -> portable protocol and typed targets
-  -> host conformance harnesses
+effects (external: signatures, programs, laws)      typescript (external: syntax, rendering)
+        |                                                    |
+Data (Row, Json, Optic)   Semantics (Cause, Exit)   Concurrency (FiberId, vocabulary)   Context (ServiceKey)
+        |                        |                          |                              |
+Runtime: the frame alphabet (Prim, PrimInterp, FrameFiber) and the Scope state machine
+        |
+Deep: the fiber machine over the frames; its stores; Context and Layer models; clauses; witnesses
+        |
+Syntax: Eff (the program IR), typing, printer, native alphabet, compile to frames
+        |
+Api: the application face (type, print, compile, run; Schema syntax)
 
-Schema ---------> checked values, transforms, target codecs
-Context/Service -> requirements and environments
-Layer ----------> scoped environment construction
-Runtime --------> interpretation and managed ownership
-Fiber ----------> scheduler/interruption/resource lifecycle
+Schema (carrier, annotations, checker, authoring) -> Target/TypeScript (profile, Schema generation)
+Store (canonical bytes, digest, trie) -> Arch (views as Schema documents), StdLib (rc.112 export census)
+                                      -> Surface (entities, HTTP API, MCP agent, deployment, site), Char
 ```
 
-Effect4 has two external Lake dependencies: `effects` at
-`2447edd76649f035e989914ac899831d66e7dad2` and `typescript` at
-`cc62799055b1af7ce22b083afcfb30155c1ed4d0`, pinned in `lakefile.toml` and
-resolved at the same commits in `lake-manifest.json`. Effects supplies the
-generic algebra, first-order Flow and shared trace alphabet. TypeScript
-supplies target syntax, rendering and structuring. Effect4 has no dependency
-on Foldlab. Foldlab's later adapter depends on the public Effect4 algebra and
-proves compatibility with its existing CAS-specific types and observations.
+Arrows point from what is imported to what imports it. `Api` imports the
+Syntax and Schema faces and nothing imports `Api`; `Deep` never imports
+`Syntax`; `Schema` never imports `Deep`. The two external packages are pinned
+by exact commit in `lakefile.toml` (`effects`, `typescript`, and `hash` for the
+store's SHA-256). Effect4 depends on them, never conversely, and re-declares
+none of their carriers.
 
-## Planned source tree
+## Source tree
 
-| Area | Public responsibility |
+| Area | Responsibility |
 | --- | --- |
-| `Effects` (external `effects` package) | indexed signatures, free programs, handlers, interpreters, morphisms, laws, generic first-order Flow and the shared trace alphabet; consumed through the pinned dependency, never re-declared here |
-| `TypeScript` (external `typescript` package) | target syntax, rendering and graph structuring; consumed by Effect4's target profile through the pinned dependency |
-| `Effect4/Data` | finite rows, IDs, canonical forms, typed values and shared codecs |
-| `Effect4/Flow` | raw and checked first-order graphs, blocks, regions, decisions and admission |
-| `Effect4/Semantics` | cause/exit, configurations, steps, runs, approximations, observations and logic |
-| `Effect4/Schema` | decoded/encoded/representation types, codecs, refinements, transformations and portability |
-| `Effect4/Context` | stable keys, service requirements and environments |
-| `Effect4/Layer` | dependency graphs, acquisition, provision, composition and scoped release |
-| `Effect4/Runtime` | interpreters, scopes, managed runtimes and execution boundaries |
-| `Effect4/Concurrency` | fiber identity and the fork/observer/scope/race vocabulary shared with `Effect4/Deep` |
-| `Effect4/Deep` | the reference fiber machine over the rc.112 frames, its stores, witnesses, fork-flow compile, Context and Layer models |
-| `Effect4/Stateful` | Ref, Deferred, Queue and coordination primitives |
-| `Effect4/Channel` | Channel/Stream/Sink/Pull/Take calculi and embeddings |
-| `Effect4/Schedule` | pure recurrence descriptions and effectful stepping boundaries |
-| `Effect4/Transaction` | atomic read/write/retry/orElse/commit calculus |
-| `Effect4/Classification` | independent domains, concretizations, transfers, products and fixpoints |
-| `Effect4/Target/TypeScript` | typed target IR, lowering, rendering, decoding, simulation and Effect v4 profile |
-| `Effect4/Meta` | environment extensions, declaration introspection, derivation and deterministic emitters |
-| `Effect4/Audit` | axiom receipts, declaration snapshots, per-type closure and cutover refusal |
+| `Effect4/Data` | requirement rows, JSON, lawful optics |
+| `Effect4/Semantics` | `Cause` and `Exit`, the error channel everywhere |
+| `Effect4/Concurrency` | `FiberId`; the fork, observer, scope and race vocabulary the machine speaks |
+| `Effect4/Context` | `ServiceKey`, its universe and transport |
+| `Effect4/Runtime` | the rc.112 frame alphabet and single-fiber step, the `Scope` state machine, and the frame-level facts that pin them (`LiveStack`, `ScopeRestoration`) |
+| `Effect4/Deep` | the reference fiber machine (`RunMachine`, `drive`, `replayEval`, `runSyncExit`), the stores, the Context and Layer models, the clause theorems and the witnesses |
+| `Effect4/Syntax` | `Eff`, `typeOf`, `print`, the native operation alphabet, `compile` and `interpOf` |
+| `Effect4/Api` | the one application-facing module |
+| `Effect4/Schema` | the persisted Schema data plane |
+| `Effect4/Target/TypeScript` | the pinned Effect v4 profile; the Schema and annotated-field generators |
+| `Effect4/Store`, `Effect4/Arch`, `Effect4/StdLib` | content store; architecture views; the rc.112 export census and its links to the model |
+| `Effect4/Surface`, `Effect4/Char` | surface carriers and their emitters; characterized components |
 
-Tests mirror these areas under `Effect4Test/`. Durable attacks live under
-`Effect4Test/Counterexamples/`, while their stable registry and algebraic
-contracts live under `test/`.
+Tests mirror these areas under `Effect4Test/`; durable attacks live under
+`Effect4Test/Counterexamples/` with their stable IDs in
+`test/counterexamples/REGISTER.md` and their contracts under `test/contracts/`.
 
-## Public API principles
+## The seam
 
-The public API exposes small semantic objects and strong composition:
+`Effect4.Api` is a deep module: a small interface (a dozen definitions) over
+the whole pipeline. Callers and batteries cross it the same way. It answers
+syntax (`TypeScript.Expr`, `ConstDecl`) and never text, so it stays at the
+library's axiom ceiling; rendering to bytes is the pinned package's one call,
+outside the seam, and the few text-producing generators (`Target.TypeScript.
+Schema.generate?` and its kin) are admitted by exact name in the gate.
 
-- operations are indexed by their answer type;
-- programs are abstract behind constructors and folds;
-- handlers expose interpretation and composition laws, not representation;
-- checked graphs expose erasure and certified observations, not unchecked
-  internal tables;
-- Schema exposes both encoded and decoded views and the laws connecting them;
-- services expose keys and requirements, while layers own construction and
-  cleanup;
-- runtimes eliminate effect programs but never become canonical program data;
-- metaprogramming emits first-order declarations and digests, never stores raw
-  `Lean.Expr` as semantic content.
+Inside the seam the library keeps its faces distinct and relates them by
+theorem: structural syntax (`Eff`) for construction and printing; the frame
+alphabet for what rc.112 evaluates; the machine's relational meaning over
+explicit decision tapes, with `replayEval` as its fuel-bounded simulator; and
+the executable witnesses and host receipts as bounded evidence. No bounded
+runner is promoted into the meaning merely because it executes.
 
-## Observation faces
+## What is not here
 
-The library keeps four faces distinct:
-
-1. structural syntax for induction and construction;
-2. first-order checked flow for identity, cycles, sharing, and generation;
-3. relational big-step/small-step meaning for arbitrary choices;
-4. executable bounded runners and host harnesses for decidable evidence.
-
-Theorems relate these faces explicitly. No bounded runner is promoted into the
-denotation merely because it executes.
+The Flow route — the Effects-flow language and runner, the region and frame
+simulations, the TypeScript flow lowering, the store families and their trace
+harness — lives on branch `archive/flow-route`
+(`docs/research/2026-09-04-prod-cleanup-inventory.md`, D1). The single-fiber
+loop inside `Runtime/Runtime.lean` and its batteries are the next candidates
+for the same move (D4).
