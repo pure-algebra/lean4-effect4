@@ -1,0 +1,12 @@
+# Classified divergences of the adversarial corpus (round five of spike A0).
+# <program>	<class>	<why>
+# Classes:
+#   rc112-behaviour   rc.112 does something the Lean Deep machine does not model
+#   avatar-open       a real avatar defect, minimised and named, not yet repaired
+#   tracing           where a row is emitted, not what the machine did
+# An avatar bug that has been repaired never appears here.
+cAwaitAllTwoGenerations	rc112-behaviour	Fiber.awaitAll answers the exits in ARGUMENT order; Deep countdownPark collects them in COMPLETION order (Fibers.lean:576, M6). Minimised: two children, the second completing first. The Lean model has no argument-order clause.
+aIntJoinPending	avatar-open	interrupting a fiber that is parked on a join of its own tracked child leaves the avatar at a frontier where rc.112 finishes; the exit prologue's countdown over the grandchild does not resume the parent. Minimised to root 10 = fork 4 ; join #0.
+cForkInsideMask	avatar-open	same shape as aIntJoinPending: a masked fiber with a tracked child, interrupted while parked.
+hYieldStorm	rc112-behaviour	the child's three yields and the parent's three interleave one step differently: rc.112's dispatcher drains its queue once per host task, the avatar's flush drains per armed fiber. Row 11 of m1.
+dRaceThenInterruptHost	rc112-behaviour	interrupting a raceAll host interrupts its entrants in rc.112 (cleanups [4,4,10]); the Deep Race carrier has settle-time cleanup only, and interruptRecord on the host does not touch the race, so the avatar leaves them parked (cleanups [10]). Fibers.lean:550 and :866-880 have no host-interrupt arm.

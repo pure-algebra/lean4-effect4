@@ -1,0 +1,88 @@
+format	effect4-trace-golden-v1
+generator	workshop/OCaml5/avatar/build-avatar.sh	sha256=
+regenerate	./workshop/OCaml5/avatar/build-avatar.sh
+input	workshop/OCaml5/avatar/deep_fibers.ml	sha256=
+input	workshop/OCaml5/avatar/avatar_trace.ml	sha256=
+input	workshop/OCaml5/avatar/fibers_fixture.ml	sha256=
+input	workshop/OCaml5/avatar/store_fixtures.ml	sha256=
+input	workshop/OCaml5/avatar/extra_fixture.ml	sha256=
+input	workshop/OCaml5/avatar/corpus_run.ml	sha256=
+input	workshop/OCaml5/avatar/corpus/programs.txt	sha256=
+pin	effects	
+format	effect4-trace-v1
+face	ocaml
+program	fuzz.p400159
+tape	0:1,1:0,2:1
+rules	
+op	fork	1
+decide	0	true
+answer	fork	0
+op	started	[]
+answer	started	[1, []]
+op	make	[]
+answer	make	1
+op	started	[]
+answer	started	[1, []]
+op	awaitError	0
+answer	awaitError	{"none":true}
+op	make	6
+answer	make	2
+op	started	[]
+answer	started	[1, []]
+op	set	[2, 9]
+answer	set	[]
+op	modify	[2, 8]
+answer	modify	9
+op	started	[]
+answer	started	[1, []]
+op	make	[]
+answer	make	3
+op	make	[]
+answer	make	4
+op	yield	[]
+answer	yield	[]
+op	isDone	1
+answer	isDone	false
+op	awaitError	0
+answer	awaitError	{"none":true}
+op	fork	0
+decide	1	false
+answer	fork	5
+op	make	10
+answer	make	6
+op	make	[]
+answer	make	7
+op	make	[]
+answer	make	8
+op	build	0
+answer	build	9
+op	addFinalizer	[8, 4]
+answer	addFinalizer	true
+op	scopeOf	9
+answer	scopeOf	10
+op	awaitValue	5
+answer	awaitValue	{"some":11}
+op	addFinalizer	[4, 4]
+answer	addFinalizer	true
+op	build	0
+answer	build	9
+op	provideCount	3
+answer	provideCount	0
+op	interrupt	0
+answer	interrupt	[]
+op	join	0
+answer	join	22
+op	make	9
+answer	make	11
+op	awaitValue	5
+answer	awaitValue	{"some":11}
+op	forkDetach	1
+decide	2	true
+answer	forkDetach	12
+op	addFinalizer	[4, 3]
+answer	addFinalizer	true
+op	join	12
+answer	join	22
+op	awaitValue	0
+answer	awaitValue	{"some":22}
+done	{"success":{"some":22}}

@@ -1,0 +1,88 @@
+format	effect4-trace-golden-v1
+generator	workshop/OCaml5/avatar/build-avatar.sh	sha256=
+regenerate	./workshop/OCaml5/avatar/build-avatar.sh
+input	workshop/OCaml5/avatar/deep_fibers.ml	sha256=
+input	workshop/OCaml5/avatar/avatar_trace.ml	sha256=
+input	workshop/OCaml5/avatar/fibers_fixture.ml	sha256=
+input	workshop/OCaml5/avatar/store_fixtures.ml	sha256=
+input	workshop/OCaml5/avatar/extra_fixture.ml	sha256=
+input	workshop/OCaml5/avatar/corpus_run.ml	sha256=
+input	workshop/OCaml5/avatar/corpus/programs.txt	sha256=
+pin	effects	
+format	effect4-trace-v1
+face	ocaml
+program	fuzz.p400087
+tape	0:0,1:1,2:1
+rules	
+op	fork	0
+decide	0	false
+answer	fork	0
+op	make	5
+answer	make	1
+op	interrupt	0
+answer	interrupt	[]
+op	cleanups	[]
+answer	cleanups	[]
+op	interruptAll	[0, []]
+answer	interruptAll	[]
+op	set	[1, 7]
+answer	set	[]
+op	started	[]
+answer	started	[]
+op	started	[]
+answer	started	[]
+op	set	[1, 4]
+answer	set	[]
+op	started	[]
+answer	started	[]
+op	awaitAll	[0, []]
+answer	awaitAll	[{"none":true}, []]
+op	awaitError	0
+answer	awaitError	{"none":true}
+op	make	6
+answer	make	2
+op	make	[]
+answer	make	3
+op	cleanups	[]
+answer	cleanups	[]
+op	fork	0
+decide	1	true
+answer	fork	4
+op	build	1
+answer	build	5
+op	update	[1, 10]
+answer	update	[]
+op	cleanups	[]
+answer	cleanups	[0, []]
+op	started	[]
+answer	started	[0, []]
+op	fork	1
+decide	2	true
+answer	fork	6
+op	interruptAll	[4, []]
+answer	interruptAll	[]
+op	awaitValue	0
+answer	awaitValue	{"none":true}
+op	started	[]
+answer	started	[0, [1, []]]
+op	modify	[1, 1]
+answer	modify	14
+op	cleanups	[]
+answer	cleanups	[0, [1, []]]
+op	join	6
+answer	join	22
+op	provideCount	3
+answer	provideCount	0
+op	provideCount	3
+answer	provideCount	0
+op	awaitError	6
+answer	awaitError	{"none":true}
+op	cleanups	[]
+answer	cleanups	[0, [1, []]]
+op	cleanups	[]
+answer	cleanups	[0, [1, []]]
+op	get	1
+answer	get	15
+op	join	6
+answer	join	22
+done	{"success":22}

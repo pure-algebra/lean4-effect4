@@ -1,0 +1,50 @@
+format	effect4-trace-golden-v1
+generator	workshop/OCaml5/avatar/build-avatar.sh	sha256=
+regenerate	./workshop/OCaml5/avatar/build-avatar.sh
+input	workshop/OCaml5/avatar/deep_fibers.ml	sha256=
+input	workshop/OCaml5/avatar/avatar_trace.ml	sha256=
+input	workshop/OCaml5/avatar/fibers_fixture.ml	sha256=
+input	workshop/OCaml5/avatar/store_fixtures.ml	sha256=
+input	workshop/OCaml5/avatar/extra_fixture.ml	sha256=
+input	workshop/OCaml5/avatar/corpus_run.ml	sha256=
+input	workshop/OCaml5/avatar/corpus/programs.txt	sha256=
+pin	effects	
+format	effect4-trace-v1
+face	ocaml
+program	fuzz.p400198
+tape	0:0,1:0
+rules	
+op	fork	0
+decide	0	false
+answer	fork	0
+op	started	[]
+answer	started	[]
+op	started	[]
+answer	started	[]
+op	cleanups	[]
+answer	cleanups	[]
+op	build	0
+answer	build	1
+op	fork	1
+decide	1	false
+answer	fork	2
+op	started	[]
+answer	started	[]
+op	build	2
+answer	build	3
+op	started	[]
+answer	started	[]
+op	make	[]
+answer	make	4
+op	succeed	[4, 3]
+answer	succeed	true
+op	started	[]
+answer	started	[]
+op	interruptAll	[0, [2, []]]
+answer	interruptAll	[]
+op	make	6
+answer	make	5
+op	set	[5, 6]
+answer	set	[]
+op	join	2
+done	{"interrupted":true}

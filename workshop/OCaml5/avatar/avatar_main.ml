@@ -16,6 +16,7 @@ let () =
   let pin = getenv "EFFECT4_PIN" "" in
   let sha = getenv "EFFECT4_SHA" "" in
   let family = getenv "EFFECT4_FAMILY" "fiber" in
+  let corpus = lazy (Corpus_dsl.parse Corpus_data.text) in
   let table =
     match family with
     | "fiber" -> Fibers_fixture.programs
@@ -24,6 +25,11 @@ let () =
     | "scope" -> Store_fixtures.scope_programs
     | "layer" -> Store_fixtures.layer_programs
     | "extra" -> Extra_fixture.programs
+    | "fuzz" -> !fuzz_programs
+    | "corpus" ->
+      List.map
+        (fun (p : Corpus_dsl.prog) -> (p.name, Corpus_run.program p))
+        (Lazy.force corpus)
     | other -> failwith ("unknown family " ^ other)
   in
   let program =
@@ -31,8 +37,28 @@ let () =
     | Some p -> p
     | None -> failwith ("unknown program " ^ name)
   in
+  (* A corpus program carries its own tape, budget and root table. With no `tape` line it
+     gets 32 all-`false` entries, so a fork never hands the processor over unless the program
+     says so; both faces synthesise the same default. *)
+  let tape, max_ops =
+    if family = "fuzz" then
+      (* P5's generated corpus carries its tape in `<program>/tape`, handed over by the
+         runner as EFFECT4_TAPE. *)
+      (tape, getenv "EFFECT4_MAX_OPS" (string_of_int max_int))
+    else if family <> "corpus" then (tape, getenv "EFFECT4_MAX_OPS" (string_of_int max_int))
+    else
+      match List.find_opt (fun (p : Corpus_dsl.prog) -> p.name = name) (Lazy.force corpus) with
+      | None -> failwith ("unknown corpus program " ^ name)
+      | Some p ->
+        Corpus_run.install p;
+        ( (if p.tape = "" then
+             String.concat ","
+               (List.init 32 (fun i -> string_of_int i ^ ":0"))
+           else p.tape),
+          match p.maxops with Some n -> string_of_int n | None -> string_of_int max_int )
+  in
   Tape.load tape;
-  max_ops_before_yield := int_of_string (getenv "EFFECT4_MAX_OPS" (string_of_int max_int));
+  max_ops_before_yield := int_of_string max_ops;
   let m = machine_empty state in
   let fuel = int_of_string (getenv "EFFECT4_FUEL" (string_of_int default_fuel)) in
   (match run_program m fuel program with
@@ -46,7 +72,9 @@ let () =
           ("workshop/OCaml5/avatar/avatar_trace.ml", sha);
           ("workshop/OCaml5/avatar/fibers_fixture.ml", sha);
           ("workshop/OCaml5/avatar/store_fixtures.ml", sha);
-          ("workshop/OCaml5/avatar/extra_fixture.ml", sha) ]
+          ("workshop/OCaml5/avatar/extra_fixture.ml", sha);
+          ("workshop/OCaml5/avatar/corpus_run.ml", sha);
+          ("workshop/OCaml5/avatar/corpus/programs.txt", sha) ]
       ~pin ~program:(family ^ "." ^ name) ~tape ~rules
   in
   List.iter print_endline head;

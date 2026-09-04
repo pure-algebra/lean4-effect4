@@ -208,6 +208,10 @@ type run_fiber = {
      `Cmd.loop` has no OCaml existence (DIVERGENCE 2), so the latch lives on the fiber and is
      cleared wherever Lean's `Cmd.evaluate` would have passed `false`. *)
   mutable yielding : bool;
+  (* Not a Lean field: a `raceAll` host is resumed either by its own race token or by the
+     settle path's countdown token, and the OCaml continuation has to survive both. Lean
+     keeps the program in `frame.current` instead (DIVERGENCE 1). *)
+  mutable race_answer : kops option;
   mutable observers : observer list;
   mutable children : int list;
   mutable dispatcher : dispatcher;
@@ -231,6 +235,7 @@ let run_fiber_make id program interruptible (max_ops, prevent) context =
     prevent_yield = prevent;
     yield_override = None;
     yielding = false;
+    race_answer = None;
     observers = [];
     children = [];
     dispatcher = Dispatcher.empty ();
@@ -296,7 +301,10 @@ type race = {
   mutable settled : bool;
   mutable live : int list;
   mutable unstarted : int list;
+  mutable remaining : int;
+  mutable failures : reason list;
   mutable accepted : exitv option;
+  mutable cleanup_needed : bool;
 }
 
 (* The store `St`. Round two carried the two arrays the fiber fixture's bodies append to;
@@ -487,6 +495,8 @@ type _ Effect.t +=
   | Op_layer_provide_count : int -> value Effect.t
   | Op_layer_scope_of : int -> value Effect.t
   | Op_layer_close : unit -> value Effect.t
+  (* `WithFiberAction.raceAll` (`Fibers.lean:866-880`). Round five. *)
+  | Op_race_all : int list -> value Effect.t
 
 (* A typed failure raised by a fiber body: `Prim.yieldableError`. *)
 exception Efail_exn of int
@@ -496,6 +506,10 @@ exception Einterrupt_exn of cause
 
 (* The body of a child, resolved through the fixture's table -- a fork names a declared
    root, never a closure (`fork-lowering.md` §(b)). Set by the fixture module. *)
+(* P5's generated corpus (`workshop/OCaml5/fuzz/corpus/corpus_fixture.ml`) registers itself
+   here, so the avatar's own binary does not depend on a file another spike regenerates. *)
+let fuzz_programs : (string * (unit -> value)) list ref = ref []
+
 let body_of_code : (int -> unit -> value) ref =
   ref (fun _ () -> failwith "no root table installed")
 
@@ -582,6 +596,37 @@ let countdown_park m (f : run_fiber) (targets : int list) resume_with : int opti
     Some token
   end
 
+(* `Supervision.raceComplete` (`Effect4/Concurrency/Supervision.lean:407-420`): a callback
+   preserves the first accepted result while updating the live bookkeeping. *)
+let race_complete (r : race) (child : int) (exit_ : exitv) : unit =
+  if List.mem child r.live then begin
+    r.live <- List.filter (fun id -> id <> child) r.live;
+    let reasons = match exit_ with Esuccess _ -> [] | Efailure c -> c.reasons in
+    match r.accepted with
+    | Some _ ->
+      r.remaining <- r.remaining - 1;
+      r.failures <- r.failures @ reasons
+    | None -> (
+      match exit_ with
+      | Esuccess value ->
+        r.remaining <- r.remaining - 1;
+        r.accepted <- Some (Esuccess value);
+        r.cleanup_needed <- r.live <> []
+      | Efailure c ->
+        if r.remaining <= 1 then begin
+          r.remaining <- r.remaining - 1;
+          r.failures <- r.failures @ c.reasons;
+          r.accepted <- Some (Efailure { reasons = r.failures; annotations = [] });
+          r.cleanup_needed <- false
+        end
+        else begin
+          r.remaining <- r.remaining - 1;
+          r.failures <- r.failures @ c.reasons
+        end)
+  end
+
+let race_opt m id = List.find_opt (fun r -> r.rid = id) m.races
+
 (* `spawn` (`:622`): mask by the options, the parent's context, tracked unless daemon. *)
 let spawn m (parent : run_fiber) (program : unit -> value) ~daemon : int =
   let child_id = m.next_id in
@@ -646,7 +691,46 @@ let rec fire_observer m (id : int) (exit_ : exitv) (acc : cmd list) (o : observe
           p.remaining <- p.remaining - 1;
           acc
         end))
-  | RaceCallback _ -> acc
+  | RaceCallback race_id -> (
+    match race_opt m race_id with
+    | None -> acc
+    | Some r ->
+      race_complete r id exit_;
+      (match (r.accepted, r.settled) with
+       | Some accepted, false ->
+         (* settle: interrupt the live entrants with the host's id, then resume the host
+            after they have been awaited -- a countdown over them (`:1108-1130`). *)
+         r.settled <- true;
+         emit m [ RaceSettled (race_id, accepted) ];
+         let nested =
+           List.fold_left
+             (fun a entrant ->
+               match fiber_opt m entrant with
+               | None -> a
+               | Some e ->
+                 let apply_now = interrupt_record m (Some r.host) [] e in
+                 emit m [ InterruptRecorded (Some r.host, entrant) ];
+                 a @ if apply_now then [ Cevaluate entrant ] else [])
+             [] r.live
+         in
+         (match fiber_opt m r.host with
+          | None -> acc @ nested
+          | Some host ->
+            host.parked <- NotParked;
+            host.pending <- List.filter (fun p -> p.token <> r.rtoken) host.pending;
+            (match countdown_park m host r.live (RcontinueWith accepted) with
+             | Some token ->
+               host.frame.control <-
+                 Suspended { ktoken = token; kresume = (fun a -> race_answer m host a) };
+               acc @ nested
+             | None ->
+               (* Nothing was live: `countdownPark` applies the continuation at once, which
+                  for the race host is the accepted exit. Re-evaluating the host instead
+                  would deliver its pending cause -- the round-five bug this arm had. *)
+               host.frame.control <- Onstack;
+               race_answer m host (resume_prim (RcontinueWith accepted) []);
+               acc @ nested))
+       | _, _ -> acc))
   | Callback key ->
     emit m [ CallbackEv (key, exit_) ];
     acc
@@ -751,7 +835,25 @@ and exec m fuel (c : cmd) : unit =
           k.kresume answer
         | _ -> ())
       | _ -> () (* the token guard: a stale resume is dropped *)))
-  | Claunch _ -> ()  (* the race arm refuses in this pass *)
+  | Claunch (race_id, entrant) -> (
+    (* `:1082-1101`. M8: once the race is settled an unlaunched entrant is interrupted, not
+       deleted. *)
+    match race_opt m race_id with
+    | None -> ()
+    | Some r ->
+      if r.accepted <> None then (
+        match fiber_opt m entrant with
+        | None -> ()
+        | Some e ->
+          let apply_now = interrupt_record m (Some r.host) [] e in
+          emit m [ RaceSkipped (race_id, entrant); InterruptRecorded (Some r.host, entrant) ];
+          if apply_now then exec m fuel (Cevaluate entrant))
+      else begin
+        r.unstarted <- List.filter (fun e -> e <> entrant) r.unstarted;
+        r.live <- r.live @ [ entrant ];
+        emit m [ RaceLaunched (race_id, entrant) ];
+        exec m fuel (Cevaluate entrant)
+      end)
   | CdrainDue ->
     (* `RunInterp.dueResumes` (`:414`): the resumes the store owes now, in registration
        order, resumed synchronously inside the completing `sync` (M1). *)
@@ -911,6 +1013,8 @@ and run_under_handler m fuel (f : run_fiber) (body : unit -> value) : unit =
                       sc.ran <- sc.ran @ ran;
                       Vlist (List.map (fun key -> Vnat key) ran)
                     end) ko))
+          | Op_race_all codes ->
+            Some (fun k -> dispatch k (fun ko -> arm_race_all m f codes ko))
           | Op_layer_build layer ->
             Some (fun k -> dispatch k (fun ko -> arm_layer_build m f layer ko))
           | Op_layer_provide_count base ->
@@ -1095,9 +1199,11 @@ and answer_join m f ko (e : exitv) : unit =
 
 (* A service operation that fails: the `failed` row, then the cause into the fiber. *)
 and fail_op name (ko : kops) (c : cause) : unit =
-  (match cause_fail_of c with
-   | Some e -> push_row (Rfailed (name, e))
-   | None -> push_row (Rfailed (name, 0)));
+  (* Only a typed failure gets a `failed` row: `traceService`'s `Effect.tapError`
+     (`harness/trace/tracer.ts:291`) fires on the error channel, and an interruption is not
+     on it. Round five: the avatar used to fabricate `failed <op> 0` for an interrupted
+     operation, which rc.112 never emits. *)
+  (match cause_fail_of c with Some e -> push_row (Rfailed (name, e)) | None -> ());
   ko.thr (Einterrupt_exn c)
 
 (* `awaitValue` / `awaitError`: both `Fiber.await` (`:5304`), projected. *)
@@ -1231,6 +1337,50 @@ and arm_interrupt_all m f (hs : int list) (ko : kops) : unit =
       drive m m.drive_fuel nested;
       answer_row m f "interruptAll" Vunit ko
   end
+
+(* `WithFiberAction.raceAll` (`Fibers.lean:866-880`): the entrants exist as fibers before any
+   launch, each carrying a `raceCallback` observer; the host parks on the race token and each
+   launch is a command. The empty race stays pending until interrupted. *)
+and arm_race_all m f (codes : int list) (ko : kops) : unit =
+  begin
+    push_row (Rop ("raceAll", Vlist (List.map (fun c -> Vnat c) codes)));
+    let race_id = m.next_race in
+    let token = fresh_token m in
+    m.next_race <- race_id + 1;
+    let ids =
+      List.map
+        (fun code ->
+          let child = spawn m f (!body_of_code code) ~daemon:true in
+          let c = fiber_exn m child in
+          c.observers <- c.observers @ [ RaceCallback race_id ];
+          child)
+        codes
+    in
+    let r =
+      { rid = race_id; host = f.id; rtoken = token; settled = false; live = []; unstarted = ids;
+        remaining = List.length ids; failures = []; accepted = None; cleanup_needed = false }
+    in
+    m.races <- m.races @ [ r ];
+    emit m [ RaceStarted (race_id, f.id, ids) ];
+    run_fiber_park f
+      { token; waiting_on = None; remaining = 0; collected = []; resume_with = Rvoid };
+    emit m [ ParkedOn (f.id, token) ];
+    f.frame.control <-
+      Suspended { ktoken = token; kresume = (fun a -> race_answer m f a) };
+    f.race_answer <- Some ko;
+    f.running <- false;
+    drive m m.drive_fuel (List.map (fun e -> Claunch (race_id, e)) ids)
+  end
+
+(* The host's resumption, whichever token it comes back on. *)
+and race_answer m (f : run_fiber) (a : answer) : unit =
+  match f.race_answer with
+  | None -> ()
+  | Some ko ->
+    f.race_answer <- None;
+    (match a with
+     | Aval v -> answer_row m f "raceAll" v ko
+     | Acause c -> fail_op "raceAll" ko c)
 
 (* `WithFiberAction.snapshotChildren` (`:5318`). *)
 and arm_snapshot_children m f (ko : kops) : unit =

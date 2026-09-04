@@ -1,0 +1,90 @@
+format	effect4-trace-golden-v1
+generator	workshop/OCaml5/avatar/build-avatar.sh	sha256=
+regenerate	./workshop/OCaml5/avatar/build-avatar.sh
+input	workshop/OCaml5/avatar/deep_fibers.ml	sha256=
+input	workshop/OCaml5/avatar/avatar_trace.ml	sha256=
+input	workshop/OCaml5/avatar/fibers_fixture.ml	sha256=
+input	workshop/OCaml5/avatar/store_fixtures.ml	sha256=
+input	workshop/OCaml5/avatar/extra_fixture.ml	sha256=
+input	workshop/OCaml5/avatar/corpus_run.ml	sha256=
+input	workshop/OCaml5/avatar/corpus/programs.txt	sha256=
+pin	effects	
+format	effect4-trace-v1
+face	ocaml
+program	fuzz.p400113
+tape	0:1,1:1,2:1,3:0
+rules	
+op	fork	0
+decide	0	true
+answer	fork	0
+op	started	[]
+answer	started	[0, []]
+op	join	0
+answer	join	11
+op	fork	1
+decide	1	true
+answer	fork	1
+op	started	[]
+answer	started	[0, [1, []]]
+op	started	[]
+answer	started	[0, [1, []]]
+op	awaitValue	0
+answer	awaitValue	{"some":11}
+op	started	[]
+answer	started	[0, [1, []]]
+op	join	1
+answer	join	22
+op	make	[]
+answer	make	2
+op	make	2
+answer	make	3
+op	cleanups	[]
+answer	cleanups	[0, [1, []]]
+op	update	[3, 8]
+answer	update	[]
+op	fork	1
+decide	2	true
+answer	fork	4
+op	make	[]
+answer	make	5
+op	awaitAll	[0, [1, [4, []]]]
+answer	awaitAll	[11, [22, [22, []]]]
+op	isDone	2
+answer	isDone	false
+op	get	3
+answer	get	10
+op	set	[3, 5]
+answer	set	[]
+op	make	3
+answer	make	6
+op	make	[]
+answer	make	7
+op	get	6
+answer	get	3
+op	forkDetach	0
+decide	3	false
+answer	forkDetach	8
+op	make	[]
+answer	make	9
+op	awaitError	4
+answer	awaitError	{"none":true}
+op	build	2
+answer	build	10
+op	interrupt	8
+answer	interrupt	[]
+op	build	3
+answer	build	11
+op	interrupt	0
+answer	interrupt	[]
+op	make	8
+answer	make	12
+op	make	[]
+answer	make	13
+op	update	[12, 1]
+answer	update	[]
+op	awaitValue	1
+answer	awaitValue	{"some":22}
+op	close	7
+answer	close	[]
+op	join	8
+done	{"interrupted":true}

@@ -1,0 +1,96 @@
+format	effect4-trace-golden-v1
+generator	workshop/OCaml5/avatar/build-avatar.sh	sha256=
+regenerate	./workshop/OCaml5/avatar/build-avatar.sh
+input	workshop/OCaml5/avatar/deep_fibers.ml	sha256=
+input	workshop/OCaml5/avatar/avatar_trace.ml	sha256=
+input	workshop/OCaml5/avatar/fibers_fixture.ml	sha256=
+input	workshop/OCaml5/avatar/store_fixtures.ml	sha256=
+input	workshop/OCaml5/avatar/extra_fixture.ml	sha256=
+input	workshop/OCaml5/avatar/corpus_run.ml	sha256=
+input	workshop/OCaml5/avatar/corpus/programs.txt	sha256=
+pin	effects	
+format	effect4-trace-v1
+face	ocaml
+program	fuzz.p400134
+tape	0:0
+rules	
+op	forkDetach	0
+decide	0	false
+answer	forkDetach	0
+op	cleanups	[]
+answer	cleanups	[]
+op	yield	[]
+answer	yield	[]
+op	awaitValue	0
+answer	awaitValue	{"some":11}
+op	interruptAll	[0, []]
+answer	interruptAll	[]
+op	awaitAll	[0, []]
+answer	awaitAll	[11, []]
+op	interrupt	0
+answer	interrupt	[]
+op	cleanups	[]
+answer	cleanups	[0, []]
+op	started	[]
+answer	started	[0, []]
+op	started	[]
+answer	started	[0, []]
+op	yield	[]
+answer	yield	[]
+op	make	[]
+answer	make	1
+op	started	[]
+answer	started	[0, []]
+op	cleanups	[]
+answer	cleanups	[0, []]
+op	interruptAll	[0, []]
+answer	interruptAll	[]
+op	awaitValue	0
+answer	awaitValue	{"some":11}
+op	started	[]
+answer	started	[0, []]
+op	make	9
+answer	make	2
+op	build	2
+answer	build	3
+op	started	[]
+answer	started	[0, []]
+op	interrupt	0
+answer	interrupt	[]
+op	make	[]
+answer	make	4
+op	interrupt	0
+answer	interrupt	[]
+op	make	[]
+answer	make	5
+op	cleanups	[]
+answer	cleanups	[0, []]
+op	awaitValue	0
+answer	awaitValue	{"some":11}
+op	join	0
+answer	join	11
+op	interrupt	0
+answer	interrupt	[]
+op	getAndSet	[2, 5]
+answer	getAndSet	9
+op	awaitValue	0
+answer	awaitValue	{"some":11}
+op	close	4
+answer	close	[]
+op	succeed	[5, 9]
+answer	succeed	true
+op	started	[]
+answer	started	[0, []]
+op	getAndSet	[2, 0]
+answer	getAndSet	5
+op	awaitValue	0
+answer	awaitValue	{"some":11}
+op	build	3
+answer	build	6
+op	fail	[5, 8]
+answer	fail	false
+op	interrupt	0
+answer	interrupt	[]
+op	started	[]
+answer	started	[0, []]
+done	{"success":[0, []]}

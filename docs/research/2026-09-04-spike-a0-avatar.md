@@ -742,3 +742,220 @@ No `raceAll`, no scope linkage, no `Context` family (none exists here), no `job`
 alphabet, `RunInterp` still not a record (DIVERGENCE 5), and `fail_op` outside the
 answer-as-primitive treatment (§15). Nothing above the executed rows is proved. The relation
 itself is P1's.
+
+---
+
+# Round five (packet A4): the adversarial corpus
+
+Appended 2026-09-04, after round four landed as `ad3d3a6`. Same ownership: `workshop/OCaml5/avatar/*`
+only, no `harness/`, `scripts/` or Lean edit, nothing committed. `workshop/OCaml5/Invariant.lean`
+and `AvatarRelation.lean` are P1's and were not touched.
+
+## 21. What was built
+
+The goldens are a floor. Round five adds **158 hand-authored adversarial programs** plus
+**220 machine-generated ones from P5**, and runs both on both faces.
+
+**The corpus is data, not code.** `corpus/programs.txt` is a small DSL (`corpus_dsl.ml`):
+a program is a step list over the union of the five service alphabets plus a root table for
+the bodies its forks name. Two interpreters read that one text — `corpus_run.ml` over the
+avatar and `corpus_rc112.mjs` over rc.112 — so a program is authored once and neither face can
+drift from the other by transcription. `mask`/`unmask` bracket an uninterruptible region
+(`WithFiberAction.setInterruptible` on one side, `Effect.uninterruptible` on the other);
+`#n` names the result of step *n*, `@n` a global slot a child body can read. A program with no
+`tape` line gets 32 all-`false` entries on both faces, so a fork hands the processor over only
+where the program says so.
+
+| Family | Programs | What it attacks |
+| --- | ---: | --- |
+| A `aInt*` | 20 | interrupt in every position: during a join, a Deferred await, a scope close, while masked (once, twice, nested), of a daemon, of a parent whose child is mid-finalizer, of an interruptor, of an unstarted child, at a yield park, across three generations |
+| B `bDef*` | 18 | completed by a sibling / a daemon / a grandchild / never; two and three awaiters in registration order; completed while an awaiter is being interrupted; fail vs succeed first-wins; await inside a mask; the completer interrupted |
+| C `cFork*`, `cScope*` | 14 | forks inside forks inside forks; scopes owned by children; finalizers around live children; add-after-close; snapshot and awaitChildren across forks; fork inside a mask; daemon inside a child |
+| D `dRace*` | 16 | `raceAll` with succeeding, failing, never-settling and interrupted entrants; empty; re-entrant; host interrupted; entrant that forks; masked host; success-then-failure and failure-then-success |
+| E `eBudget*` | 24 | the two shapes at every op budget from 1 to 12 |
+| F `fRef*` | 12 | concurrent Ref updates interleaved by the tape and by explicit yields; writer interrupted, masked, parked on a Deferred, or a daemon |
+| G `gLayer*` | 10 | layers built and closed under interruption, across fibers, memo hits across fibers, fresh layers, close-then-rebuild |
+| H `h*` | 14 | combinations: Deferred through a race, scope inside a race entrant, ref through Deferred through fork, interrupt during `awaitAll`, one program touching all five alphabets |
+| I `iW*`, `iRunCe*`, `iSemCe*`, `iFlowCe*` | 30 | the **required members**: mirrors of `workshop/Deep/Witnesses.lean` W1–W5 and thirteen pinned counterexample rows |
+| **total** | **158** | |
+| P5 `p4000xx` | 220 | spike P5's generated corpus, rendered by P5 to both an OCaml fixture and a TypeScript one |
+
+The required members are named so they can be checked off: `iW1DeferredJoin`,
+`iW1ImmediateJoin`, `iW1AwaitFailing`, `iW1JoinFailing` (Deep W1); `iW2MaskedInterruptDelivered`,
+`iW2MaskedInterruptNotApplied` (W2); `iW3EmptyPending`, `iW3StopsLaunch`, `iW3NextLaunch`,
+`iW3AllFail` (W3); `iW4Sibling`, `iW4CompleteTwice`, `iW4SiblingThenMore`, `iW4InterruptWaiter`
+(W4); `iW5WithMiddleware`, `iW5WithoutMiddleware`, `iW5AwaitAllChildren` (W5); and
+`iRunCe002ScopeOrder`, `iRunCe003CloseTwice`, `iRunCe004AddToClosed`, `iRunCe005Removal`,
+`iSemCe011YieldFloor`, `iSemCe012PendingAwaitIsFrontier`, `iSemCe014HandleSpace`,
+`iSemCe015ModifyOldValue`, `iSemCe016MemoNotSecondConstruction`, `iSemCe017ReleaseOrder`,
+`iSemCe018CloseDropsMemo`, `iFlowCe022MaskDefers`, `iFlowCe023InterruptedFinalizer` for the
+register. **Deep W6 (scope linkage) has no corpus member**: `forkIn`/`forkScoped`/`runIn` have
+no avatar arm and refuse, so there is nothing to compare.
+
+**`raceAll` is now implemented in the avatar**, because the corpus needed it: the `Race`
+carrier gains `RaceAllState`'s bookkeeping fields, `Supervision.raceComplete`
+(`Effect4/Concurrency/Supervision.lean:407-420`) is transcribed at `deep_fibers.ml:592`,
+`fireObserver`'s `raceCallback` arm and `Cmd.launch` (M8: a settled race interrupts its
+unlaunched entrants rather than deleting them) are transcribed, and the empty race stays
+pending until interrupted. That closes the last big `WithFiberAction` arm; only the scope-linkage
+arms still refuse.
+
+## 22. The Lean Deep face, and why it is absent
+
+The packet asked for the Lean Deep machine as a third face where its alphabet covers the
+program. It is not here, and the reason is ownership, not difficulty: replaying a corpus
+program through `Deep.Witnesses.replayEval` means writing new `ProgName` values and new
+`#guard`s in `workshop/Deep/Witnesses.lean`, which is a Lean edit this packet is forbidden.
+What round five does instead is name the coverage precisely, so P1/A3 can pick it up: the
+Deep alphabet covers families A, B, D and the `iW*` members outright (they are fork, join,
+await, interrupt, mask, Deferred and race — every one a `RunDecision` tape over
+`Deep.Stores`); it does not cover the Ref, Scope and Layer families, whose stores exist in
+`Deep.Stores` but whose service alphabets do not.
+
+## 23. Counts, before and after
+
+`./workshop/OCaml5/avatar/run-corpus.sh` (also run from `build-avatar.sh`) builds the three
+OCaml hosts, runs every corpus program on each, runs the rc.112 face through
+`corpus_rc112.mjs`, and compares under the three masks of `generated/traces/masks.tsv` with
+`compare.py`, which now separates *unclassified* from *classified* divergences
+(`corpus/known-divergences.tsv`).
+
+**Before the round-five fixes** (first full sweep, 158 programs):
+
+```
+avatar ok=158 bad=0 ; rc112 ok=149 skipped=5 nonterminating=4
+compare[rc112]: 357 ok, 90 failed        (32 programs diverging on at least one mask)
+```
+
+Nine programs have no rc.112 comparison at all, and both reasons are pinned:
+
+| Programs | Why |
+| --- | --- |
+| `aIntSelfViaChild`, `cChildrenSnapshotAcrossForks`, `cAwaitNewChildrenOnly`, `hInterruptDuringChildrenAwait`, `iW5AwaitAllChildren` | `childrenSnapshot` / `awaitChildren` have **no rc.112 surface**: rc.112 fuses both halves into `Effect.awaitAllChildren`, the REFUSAL `harness/trace/fibers-tail.ts:33-35` already records |
+| `eBudgetStore01`, `eBudgetStore02`, `eBudgetFiber01`, `eBudgetFiber02` | rc.112 **does not terminate** at `MaxOpsBeforeYield` 1 or 2: it counts the op before its yield check and the yield wrapper is itself two primitives, so the loop makes no progress. `scripts/check-trace-host.sh:129-131` records the same fact ("1 and 2 never progress; 3 is the floor"). The avatar finishes both, which is a *divergence in the avatar's favour* and is classified, not hidden |
+
+**Four defects were found by the corpus and fixed**, two in the avatar and two in the corpus's
+own harness:
+
+| # | Where | Defect | Programs it hit |
+| --- | --- | --- | --- |
+| 1 | **avatar bug** | the `raceAll` settle path with no live entrants re-evaluated the parked host, which delivers its *pending cause* instead of the accepted exit, so every race answered `failed raceAll` | 16 of the 18 race programs |
+| 2 | **avatar bug** | `raceAll` with no entrants raised `Failure "nth"` instead of being the empty race | `iW3EmptyPending`, `dRaceEmpty` |
+| 3 | **corpus harness** | `corpus_rc112.mjs` had no body 6, so the sibling-completes-a-Deferred witnesses ran `Effect.never` on the rc.112 side | `bDefSiblingCompletes`, `iW4Sibling`, `bDefDaemonCompletes` and the race/Deferred combinations |
+| 4 | **corpus authoring** | `aIntAllMixed` named the yields rather than the forks (`#0,#1,#2` for `#0,#2,#4`); the avatar tolerated it, rc.112 died with "Invalid value used as weak map key" | `aIntAllMixed` |
+
+Defect 1 is the substantive one and it is exactly what an adversarial corpus is for: no
+golden, no round-four witness and no hand-run had a race whose winner was the only live
+entrant. It was invisible until 158 programs asked.
+
+**After the four repairs** (second full sweep):
+
+```
+avatar ok=158 bad=0 ; rc112 ok=149 skipped=5 nonterminating=4
+hosts agree: 158, disagree: 0
+compare[rc112]: 430 ok, 17 unclassified, 0 classified
+```
+
+**After two further repairs** (third full sweep, the numbers this section stands on):
+
+```
+avatar ok=158 bad=0 ; rc112 ok=149 skipped=5 nonterminating=4
+hosts agree: 158, disagree: 0
+compare[rc112]: 435 ok, 0 unclassified, 12 classified
+```
+
+**90 failed → 17 → 0 unclassified**, and **all 158 programs are byte-identical across
+`ocamlrun`, `ocamlopt` and js_of_ocaml effects mode** (the first sweep's "hosts agree: 0" was a stale-binary
+artefact: `run-corpus.sh` had been handed round-four `avatar.native`/`avatar.js`; it now
+rebuilds all three). Eight programs account for the divergences, and every one is classified. Twelve mask
+comparisons remain divergent and all twelve carry a class and a minimisation in
+`corpus/known-divergences.tsv`, so `compare.py` reports them as `CLASSIFIED` and the run does
+not fail on them:
+
+| Program | Class | Finding |
+| --- | --- | --- |
+| `cAwaitAllTwoGenerations` | **rc.112 behaviour the Lean model does not have** | `Fiber.awaitAll` answers the exits in **argument** order; `Deep.countdownPark` collects them in **completion** order (`Fibers.lean:576`, M6 — "the exits collected so far"). Minimised: two children, the second completing first; rc.112 answers `[4, [22, []]]`, the avatar `[22, [4, []]]`. The Lean model has no argument-order clause, so this is a gap in `countdownPark`, not in the avatar |
+| `hYieldStorm` | **rc.112 behaviour** | six yields, three in a child and three in the parent, interleave one step apart: rc.112's dispatcher drains its queue once per host task, the avatar's `flush_all` sweeps the armed fibers. `Fibers.lean:1130` already records the cross-dispatcher order under a synchronous flush as an *assumption* ("the cross-dispatcher order under a synchronous flush is fiber order"); this is the first program that observes it |
+| `dRaceThenInterruptHost`, `hInterruptDuringAwaitAll` | **tracing** → **repaired** | the avatar emitted `failed <op> 0` when an operation was ended by an *interruption*; rc.112's `Effect.tapError` fires on the error channel only, so it emits no row. `fail_op` now emits a `failed` row only for a cause carrying a typed `Fail` |
+| `aIntMaskedChildOfMasked` | **corpus harness** → **repaired** | `mask ; mask ; … ; unmask` must nest. `WithFiberAction.setInterruptible` is a flag on both sides and *answers the previous value*; the corpus interpreter now keeps a stack of saved flags and restores it, which is what `Effect.uninterruptible`'s region does. The avatar's machine was right; its DSL was not |
+| `dRaceThenInterruptHost` | **rc.112 behaviour** | interrupting a `raceAll` **host** interrupts its entrants in rc.112 (`cleanups [4, [4, [10, []]]]`); the Deep `Race` carrier has settle-time cleanup only — `interruptRecord` (`Fibers.lean:550`) does not touch the race and the `raceAll` arm (`:866-880`) has no host-interrupt clause — so the avatar leaves the entrants parked (`cleanups [10, []]`). A second gap in `Fibers.lean`, found the same way as the `awaitAll` one |
+| `aIntJoinPending`, `cForkInsideMask` | **avatar defect, open** | interrupting a fiber that is parked on a join (or masked) *and* has a tracked child of its own leaves the avatar at a frontier where rc.112 finishes: the exit prologue's countdown over the grandchild does not resume the exiting fiber. Minimised to `root 10 = fork 4 ; join #0`, three fibers. This is the deep end of `exitFiber`'s first branch, which round three fixed once and this corpus has now reached again from a different direction |
+
+Six defects in all, then: **four avatar or harness bugs repaired** (the race settle path, the
+empty race, the `failed`-on-interrupt row, and the corpus's own non-nesting `mask`), **three
+gaps in the Lean Deep machine found and named** (`awaitAll`'s answer order, the cross-dispatcher
+flush order, and a race host's interruption not reaching its entrants), and **two avatar
+defects left open with a minimisation** (`aIntJoinPending`, `cForkInsideMask`: the exit
+prologue's countdown over a grandchild does not resume an exiting fiber that was itself
+discontinued while parked on a join or masked; three fibers, `root 10 = fork 4 ; join #0`).
+An avatar bug that is *repaired* never appears in `known-divergences.tsv`; the three model
+gaps and the two open defects do, with their class and their minimisation.
+
+The three model gaps are the round's real yield. None of them is reachable from any committed
+golden, from round four's witnesses, or from P5's generated programs; each needed a program
+written to attack a specific arm.
+
+## 24. P5's generated corpus
+
+Spike P5 delivered 220 random programs, each rendered to an OCaml fixture and a TypeScript
+one (`workshop/OCaml5/fuzz/corpus/`, index at `index.tsv` with seed, op count, fork count,
+families and tape per program). Round five consumes both, without editing either:
+
+* the OCaml half is linked into `avatar-fuzz.byte` as the **`fuzz` family**. P5's fixture
+  calls `Fibers_fixture.*`, `Store_fixtures.*` and `Extra_fixture.*` — the avatar's own
+  service surface — and registers itself through `fuzz_programs` (`deep_fibers.ml:498`), so
+  the avatar's own binary never depends on a file another spike regenerates. **218 of 220 run**
+  (two exhaust their tape or their time budget);
+* the TypeScript half runs over rc.112 through `fuzz_rc112_tail.ts`, which imports P5's
+  fixture and provides the five live service implementations plus a transcription of
+  `traceService`, the wire, the first-seen handle counter, the tape scheduler and the stall
+  deadline. Nothing under `harness/` is imported or edited; the staging is a `node_modules`
+  symlink in the scratchpad, the same trick `copy.mjs` uses.
+
+`run-fuzz.sh` runs both faces over all 220 and compares under the three masks:
+
+```
+fuzz: avatar ok=218 bad=2 ; rc112 ok=220 bad=0
+compare[rc112]: 497 ok, 159 unclassified, 0 classified
+```
+
+78 programs diverge on at least one mask, and **three contract mismatches account for 152 of
+the 159**, none of them a machine divergence:
+
+| First differing row | Count | Class | Finding |
+| --- | ---: | --- | --- |
+| `op yieldNow <priority>` vs `op yield []` | 70 | **contract** | P5's TypeScript declares the row as `yieldNow: (priority: number) => …`; the avatar's `Extra_fixture.yield` spells it `yield` with a unit request. The two renderings are each internally consistent; the *names* disagree. Fix: rename the avatar's row to `yieldNow` and carry the priority, in `extra_fixture.ml`, `corpus_run.ml` and `extra_rc112.mjs` together |
+| `answer awaitAll []` vs `answer awaitAll [11, …]` | 52 | **contract** | P5's TypeScript declares `awaitAll: … => Effect.Effect<void>`; the avatar answers the list of exits, which is what `WithFiberAction.awaitAll` (`Fibers.lean:5318-5322`, `Resume.exitsValue`) does. P5's OCaml rendering calls `Extra_fixture.await_all`, which answers the exits, so **P5's two renderings disagree with each other** on this row. This is the one worth routing back to P5 |
+| `answer set {…}` vs `answer set []` | 30 | **my tail's bug** | rc.112's `Ref.set` answers the `Ref`, not void; `fuzz_rc112_tail.ts` passed it through instead of `Effect.asVoid`. Repaired; the sweep measuring the repair is not in this section's numbers |
+
+The residue is 4 `answer started` and 1 `frontier`, unexamined at the checkpoint. What is
+established: **the path works end to end** — P5's two renderings and the avatar's alphabet meet,
+`p400001` produces byte-identical service rows on both faces, and 497 of 656 mask comparisons
+already agree with three named spelling mismatches explaining almost all of the rest.
+
+## 25. Round five's standing limits
+
+`forkIn` / `forkScoped` / `runIn` still refuse, so Deep W6 has no corpus member. The Lean Deep
+face is absent for the reason in §22 (it needs a Lean edit this packet may not make), with the
+covered families named. Four rc.112 comparisons are impossible at `MaxOpsBeforeYield` 1 and 2
+because rc.112 does not terminate there, and five because `childrenSnapshot`/`awaitChildren`
+have no rc.112 surface; both are pinned to the estate's own records. `RunInterp` is still not
+a record. Nothing above the executed rows is proved.
+
+## 26. Round four is not regressed
+
+Round five changed the machine in three places (`raceAll` and its `Cmd.launch`/`raceCallback`
+arms; the `failed` row only for a typed failure; the race settle path with no live entrants).
+All of round four's evidence was re-run against the round-five binary:
+
+```
+compare[lean]: 27 ok  (fiber)     compare[lean]: 21 ok  (ref)
+compare[lean]: 18 ok  (deferred)  compare[lean]: 12 ok  (scope)
+compare[lean]: 24 ok  (layer)     compare[rc112]: 12 ok (extra)
+```
+
+**102/102 golden-mask pairs and 12/12 extra pairs, 0 failed** — unchanged. `run-corpus.sh` is
+wired into `build-avatar.sh` and exits 0: the twelve remaining corpus divergences are all
+classified. `run-fuzz.sh` is deliberately *not* wired in, because P5's corpus and its two
+renderings are still moving and its 159 divergences are three named spelling mismatches, not
+a gate signal.

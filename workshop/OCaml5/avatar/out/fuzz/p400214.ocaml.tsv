@@ -1,0 +1,66 @@
+format	effect4-trace-golden-v1
+generator	workshop/OCaml5/avatar/build-avatar.sh	sha256=
+regenerate	./workshop/OCaml5/avatar/build-avatar.sh
+input	workshop/OCaml5/avatar/deep_fibers.ml	sha256=
+input	workshop/OCaml5/avatar/avatar_trace.ml	sha256=
+input	workshop/OCaml5/avatar/fibers_fixture.ml	sha256=
+input	workshop/OCaml5/avatar/store_fixtures.ml	sha256=
+input	workshop/OCaml5/avatar/extra_fixture.ml	sha256=
+input	workshop/OCaml5/avatar/corpus_run.ml	sha256=
+input	workshop/OCaml5/avatar/corpus/programs.txt	sha256=
+pin	effects	
+format	effect4-trace-v1
+face	ocaml
+program	fuzz.p400214
+tape	0:1,1:1,2:1
+rules	
+op	fork	0
+decide	0	true
+answer	fork	0
+op	build	2
+answer	build	1
+op	started	[]
+answer	started	[0, []]
+op	provideCount	0
+answer	provideCount	0
+op	started	[]
+answer	started	[0, []]
+op	make	[]
+answer	make	2
+op	join	0
+answer	join	11
+op	join	0
+answer	join	11
+op	make	[]
+answer	make	3
+op	cleanups	[]
+answer	cleanups	[0, []]
+op	awaitAll	[0, []]
+answer	awaitAll	[11, []]
+op	join	0
+answer	join	11
+op	fork	3
+decide	1	true
+answer	fork	4
+op	started	[]
+answer	started	[0, [3, []]]
+op	started	[]
+answer	started	[0, [3, []]]
+op	make	4
+answer	make	5
+op	modify	[5, 10]
+answer	modify	4
+op	make	4
+answer	make	6
+op	make	8
+answer	make	7
+op	fork	1
+decide	2	true
+answer	fork	8
+op	yield	[]
+answer	yield	[]
+op	cleanups	[]
+answer	cleanups	[0, [3, [1, []]]]
+op	started	[]
+answer	started	[0, [3, [1, []]]]
+done	{"success":[0, [3, [1, []]]]}

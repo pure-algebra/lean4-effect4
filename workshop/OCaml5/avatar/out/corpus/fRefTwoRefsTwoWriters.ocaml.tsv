@@ -1,0 +1,43 @@
+format	effect4-trace-golden-v1
+generator	workshop/OCaml5/avatar/build-avatar.sh	sha256=
+regenerate	./workshop/OCaml5/avatar/build-avatar.sh
+input	workshop/OCaml5/avatar/deep_fibers.ml	sha256=
+input	workshop/OCaml5/avatar/avatar_trace.ml	sha256=
+input	workshop/OCaml5/avatar/fibers_fixture.ml	sha256=
+input	workshop/OCaml5/avatar/store_fixtures.ml	sha256=
+input	workshop/OCaml5/avatar/extra_fixture.ml	sha256=
+input	workshop/OCaml5/avatar/corpus_run.ml	sha256=
+input	workshop/OCaml5/avatar/corpus/programs.txt	sha256=
+pin	effects	
+format	effect4-trace-v1
+face	ocaml
+program	corpus.fRefTwoRefsTwoWriters
+tape	0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0,10:0,11:0,12:0,13:0,14:0,15:0,16:0,17:0,18:0,19:0,20:0,21:0,22:0,23:0,24:0,25:0,26:0,27:0,28:0,29:0,30:0,31:0
+rules	
+op	make	0
+answer	make	0
+op	make	0
+answer	make	1
+op	fork	10
+decide	0	false
+answer	fork	2
+op	yield	[]
+op	update	[0, 1]
+answer	update	[]
+op	update	[1, 2]
+answer	update	[]
+answer	yield	[]
+op	fork	11
+decide	1	false
+answer	fork	3
+op	yield	[]
+op	update	[1, 20]
+answer	update	[]
+op	update	[0, 10]
+answer	update	[]
+answer	yield	[]
+op	get	0
+answer	get	11
+op	get	1
+answer	get	22
+done	{"success":22}

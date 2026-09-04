@@ -1,0 +1,97 @@
+format	effect4-trace-golden-v1
+generator	workshop/OCaml5/avatar/build-avatar.sh	sha256=
+regenerate	./workshop/OCaml5/avatar/build-avatar.sh
+input	workshop/OCaml5/avatar/deep_fibers.ml	sha256=
+input	workshop/OCaml5/avatar/avatar_trace.ml	sha256=
+input	workshop/OCaml5/avatar/fibers_fixture.ml	sha256=
+input	workshop/OCaml5/avatar/store_fixtures.ml	sha256=
+input	workshop/OCaml5/avatar/extra_fixture.ml	sha256=
+input	workshop/OCaml5/avatar/corpus_run.ml	sha256=
+input	workshop/OCaml5/avatar/corpus/programs.txt	sha256=
+pin	effects	
+format	effect4-trace-v1
+face	ocaml
+program	fuzz.p400139
+tape	0:1,1:0,2:0,3:0
+rules	
+op	fork	1
+decide	0	true
+answer	fork	0
+op	cleanups	[]
+answer	cleanups	[1, []]
+op	join	0
+answer	join	22
+op	awaitValue	0
+answer	awaitValue	{"some":22}
+op	started	[]
+answer	started	[1, []]
+op	make	[]
+answer	make	1
+op	awaitValue	0
+answer	awaitValue	{"some":22}
+op	started	[]
+answer	started	[1, []]
+op	awaitAll	[0, []]
+answer	awaitAll	[22, []]
+op	interrupt	0
+answer	interrupt	[]
+op	make	9
+answer	make	2
+op	join	0
+answer	join	22
+op	cleanups	[]
+answer	cleanups	[1, []]
+op	fork	0
+decide	1	false
+answer	fork	3
+op	cleanups	[]
+answer	cleanups	[1, []]
+op	make	1
+answer	make	4
+op	awaitError	0
+answer	awaitError	{"none":true}
+op	awaitAll	[3, []]
+answer	awaitAll	[11, []]
+op	interrupt	3
+answer	interrupt	[]
+op	interrupt	3
+answer	interrupt	[]
+op	cleanups	[]
+answer	cleanups	[1, [0, []]]
+op	build	2
+answer	build	5
+op	scopeOf	5
+answer	scopeOf	6
+op	join	0
+answer	join	22
+op	forkDetach	2
+decide	2	false
+answer	forkDetach	7
+op	get	2
+answer	get	9
+op	interrupt	3
+answer	interrupt	[]
+op	interruptAll	[0, [3, [7, []]]]
+answer	interruptAll	[]
+op	update	[4, 4]
+answer	update	[]
+op	remove	[1, 4]
+answer	remove	[]
+op	cleanups	[]
+answer	cleanups	[1, [0, []]]
+op	provideCount	3
+answer	provideCount	0
+op	forkDetach	1
+decide	3	false
+answer	forkDetach	8
+op	awaitValue	8
+answer	awaitValue	{"some":22}
+op	get	2
+answer	get	9
+op	cleanups	[]
+answer	cleanups	[1, [0, [1, []]]]
+op	awaitValue	0
+answer	awaitValue	{"some":22}
+op	awaitValue	0
+answer	awaitValue	{"some":22}
+done	{"success":{"some":22}}

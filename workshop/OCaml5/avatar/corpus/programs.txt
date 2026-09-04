@@ -1,0 +1,761 @@
+# The adversarial corpus. Round five of spike A0.
+#
+# One record per program, blank-line separated. See `corpus_dsl.ml` for the grammar.
+# A program with no `tape` line gets 32 all-`false` entries, so a fork never hands the
+# processor over unless the program says so; handovers are written as explicit `yield` steps
+# or as an explicit tape.
+#
+# Body codes 0-6 are the standard table of `harness/trace/fiber-tail.ts` (0 succeeds 11,
+# 1 succeeds 22, 2 fails 1, 3 fails 2, 4 never, 5 masks across a yield, 6 completes the
+# Deferred at handle 0). Codes 10 and up are declared per program.
+
+# ===================================================================== family A: interrupts
+prog aIntJoinPending
+note interrupt a fiber parked on a join; its own child is interrupted by the exit prologue
+root 10 fork 4 ; join #0
+main fork 10 ; yield ; interrupt #0 ; cleanups ; started
+
+prog aIntJoinImmediate
+note interrupt a fiber that has already exited: the record is a no-op
+main fork 0 ; yield ; interrupt #0 ; interrupt #0 ; awaitValue #0 ; cleanups
+
+prog aIntDeferredAwait
+note interrupt a fiber parked on a Deferred that nothing completes
+root 10 defAwaitValue @0
+main @0=defMake ; fork 10 ; yield ; interrupt #1 ; defIsDone @0 ; cleanups
+
+prog aIntDeferredAwaitThenComplete
+note complete a Deferred after its only awaiter was interrupted
+root 10 defAwaitValue @0
+main @0=defMake ; fork 10 ; yield ; interrupt #1 ; defSucceed @0 7 ; defPoll @0 ; cleanups
+
+prog aIntDuringScopeClose
+note a scope closed by a fiber that is interrupted at its next point
+root 10 scopeMake ; scopeAdd #0 1 ; scopeAdd #0 2 ; scopeClose #0 ; never
+main fork 10 ; yield ; interrupt #0 ; cleanups
+
+prog aIntMasked
+note the interrupt is recorded while masked and delivered when interruptibility returns
+root 10 mask ; yield ; started ; unmask ; never
+main fork 10 ; yield ; interrupt #0 ; started ; cleanups
+
+prog aIntMaskedNeverUnmasks
+note a fiber that never unmasks is never interrupted: the run reaches a frontier
+root 10 mask ; never
+main fork 10 ; yield ; interrupt #0 ; cleanups
+
+prog aIntMaskedTwice
+note two interrupts recorded under one mask accumulate into one cause
+root 10 mask ; yield ; unmask ; never
+main fork 10 ; yield ; interruptAll #0,#0 ; cleanups
+
+prog aIntDaemon
+note a daemon is not a tracked child, but it can still be interrupted by handle
+main forkDetach 4 ; yield ; started ; interrupt #0 ; cleanups
+
+prog aIntDaemonSurvives
+note a daemon survives its parent's exit; nothing interrupts it
+main forkDetach 4 ; yield ; started ; cleanups
+
+prog aIntParentWithChildMidFinalizer
+note the parent's exit prologue interrupts a child that is itself parked inside a finalizer
+root 10 scopeMake ; scopeAdd #0 9 ; fork 4 ; yield ; never
+main fork 10 ; yield ; interrupt #0 ; cleanups ; started
+
+prog aIntOfInterruptor
+note interrupt the fiber that is itself parked interrupting a third
+root 10 interrupt @0
+root 11 never
+main @0=fork 11 ; yield ; fork 10 ; yield ; interrupt #2 ; cleanups
+
+prog aIntAllThree
+note interruptAll over three parked fibers, all of them awaited
+main fork 4 ; fork 4 ; fork 4 ; yield ; started ; interruptAll #0,#1,#2 ; cleanups
+
+prog aIntAllMixed
+note interruptAll over one exited, one parked and one unstarted fiber
+main fork 0 ; yield ; fork 4 ; yield ; fork 4 ; interruptAll #0,#2,#4 ; cleanups ; started
+
+prog aIntUnstarted
+note interrupt a queued child: its body never runs, so it registers no finalizer
+main fork 4 ; started ; interrupt #0 ; awaitValue #0 ; cleanups
+
+prog aIntSelfViaChild
+note a child interrupts its own parent, which is parked joining it
+root 10 interrupt @0 ; succeed 5
+main @0=childrenSnapshot ; fork 10 ; yield ; awaitValue #1 ; cleanups
+
+prog aIntNestedThree
+note three generations; interrupting the middle one cascades through both prologues
+root 10 fork 11 ; yield ; never
+root 11 never
+main fork 10 ; yield ; interrupt #0 ; cleanups ; started
+
+prog aIntThenJoinExited
+note join a fiber that was interrupted before it started
+main fork 4 ; interrupt #0 ; awaitError #0 ; awaitValue #0 ; cleanups
+
+prog aIntDuringYield
+note interrupt a fiber parked on its own yield resume; the stale resume is dropped
+root 10 yield ; started ; never
+main fork 10 ; yield ; interrupt #0 ; started ; cleanups
+
+prog aIntMaskedChildOfMasked
+note nested masks: the inner unmask does not restore interruptibility
+root 10 mask ; mask ; yield ; unmask ; started ; never
+main fork 10 ; yield ; interrupt #0 ; started ; cleanups
+
+# ===================================================================== family B: deferreds
+prog bDefSiblingCompletes
+note a sibling completes the Deferred the parent is parked on
+main @0=defMake ; fork 6 ; defAwaitValue @0
+
+prog bDefDaemonCompletes
+note a daemon completes the Deferred the parent is parked on
+main @0=defMake ; forkDetach 6 ; defAwaitValue @0
+
+prog bDefNeverCompleted
+note nobody completes it: the run reaches a frontier
+main defMake ; defAwaitValue #0
+
+prog bDefTwoAwaiters
+note two fibers park on one Deferred and are resumed in registration order
+root 10 defAwaitValue @0 ; refUpdate @1 1 ; refGet @1
+root 11 defAwaitValue @0 ; refUpdate @1 10 ; refGet @1
+main @0=defMake ; @1=refMake 0 ; fork 10 ; yield ; fork 11 ; yield ; defSucceed @0 7 ; refGet @1
+
+prog bDefThreeAwaiters
+note three awaiters, resumed in registration order
+root 10 defAwaitValue @0 ; refUpdate @1 1
+root 11 defAwaitValue @0 ; refUpdate @1 10
+root 12 defAwaitValue @0 ; refUpdate @1 100
+main @0=defMake ; @1=refMake 0 ; fork 10 ; yield ; fork 11 ; yield ; fork 12 ; yield ; defSucceed @0 7 ; refGet @1
+
+prog bDefCompleteWhileAwaiterInterrupted
+note one awaiter is interrupted, then the Deferred is completed for the other
+root 10 defAwaitValue @0 ; refUpdate @1 1
+root 11 defAwaitValue @0 ; refUpdate @1 10
+main @0=defMake ; @1=refMake 0 ; fork 10 ; yield ; fork 11 ; yield ; interrupt #2 ; defSucceed @0 7 ; refGet @1
+
+prog bDefFailCompletion
+note a failing completion delivered to a parked awaiter
+root 10 defAwaitError @0 ; refSet @1 #0
+main @0=defMake ; @1=refMake 0 ; fork 10 ; yield ; defFail @0 9 ; yield ; refGet @1
+
+prog bDefFailVsSucceedFirstWins
+note the first completion wins whichever kind it is
+main defMake ; defFail #0 3 ; defSucceed #0 7 ; defPoll #0 ; defIsDone #0
+
+prog bDefSucceedThenFail
+note succeed then fail: the second is refused
+main defMake ; defSucceed #0 7 ; defFail #0 3 ; defPoll #0
+
+prog bDefAwaitValueOnFailed
+note awaitValue on a failed cell fails the caller
+main defMake ; defFail #0 4 ; defAwaitValue #0
+
+prog bDefAwaitErrorOnSucceeded
+note awaitError on a succeeded cell fails the caller with the value
+main defMake ; defSucceed #0 4 ; defAwaitError #0
+
+prog bDefPollBeforeAndAfter
+note poll is none before and some after
+main defMake ; defPoll #0 ; defIsDone #0 ; defSucceed #0 6 ; defPoll #0 ; defIsDone #0
+
+prog bDefTwoCellsCrossed
+note two cells completed by two children in the opposite order
+root 10 defSucceed @1 20 ; succeed 1
+root 11 defSucceed @0 10 ; succeed 2
+main @0=defMake ; @1=defMake ; fork 10 ; fork 11 ; yield ; defAwaitValue @0 ; defAwaitValue @1
+
+prog bDefAwaitInsideMask
+note a masked fiber parked on a Deferred is not interrupted until it unmasks
+root 10 mask ; defAwaitValue @0 ; unmask ; never
+main @0=defMake ; fork 10 ; yield ; interrupt #1 ; defSucceed @0 5 ; cleanups
+
+prog bDefCompletedByGrandchild
+note the completer is two generations down
+root 10 fork 11 ; yield ; succeed 1
+root 11 defSucceed @0 33 ; succeed 2
+main @0=defMake ; fork 10 ; yield ; defAwaitValue @0
+
+prog bDefAwaitThenInterruptCompleter
+note interrupt the fiber that was going to complete the cell
+root 10 yield ; defSucceed @0 5 ; succeed 1
+main @0=defMake ; fork 10 ; yield ; interrupt #1 ; defIsDone @0 ; defPoll @0
+
+prog bDefManyCompletionsOneCell
+note four completions of one cell, only the first observable
+main defMake ; defSucceed #0 1 ; defSucceed #0 2 ; defFail #0 3 ; defSucceed #0 4 ; defPoll #0
+
+prog bDefAwaitAfterInterruptOfSelfChild
+note the parent awaits a cell its interrupted child would have completed
+root 10 defSucceed @0 8 ; never
+main @0=defMake ; fork 10 ; yield ; interrupt #1 ; defAwaitValue @0
+
+# ============================================ family C: forks in forks in scopes with finalizers
+prog cForkInFork
+note two generations of tracked children, both awaited by the exit prologue
+root 10 fork 0 ; yield ; awaitValue #0
+main fork 10 ; yield ; awaitValue #0 ; started ; cleanups
+
+prog cForkInForkInFork
+note three generations
+root 10 fork 11 ; yield ; awaitValue #0
+root 11 fork 0 ; yield ; awaitValue #0
+main fork 10 ; yield ; awaitValue #0 ; started ; cleanups
+
+prog cScopeWithForkingFinalizer
+note a scope whose close happens while a child of the same fiber is still live
+root 10 fork 4 ; yield ; succeed 3
+main scopeMake ; scopeAdd #0 1 ; fork 10 ; yield ; scopeClose #0 ; cleanups ; started
+
+prog cScopeInChild
+note each child owns its own scope; the close order is per fiber
+root 10 scopeMake ; scopeAdd #0 7 ; scopeAdd #0 8 ; scopeClose #0
+main fork 10 ; yield ; awaitValue #0 ; cleanups
+
+prog cScopeCloseTwiceInChild
+note the second close of a child's scope answers the empty list
+root 10 scopeMake ; scopeAdd #0 7 ; scopeClose #0 ; scopeClose #0
+main fork 10 ; yield ; awaitValue #0
+
+prog cScopeRemoveThenClose
+note remove drops one finalizer before the close
+root 10 scopeMake ; scopeAdd #0 1 ; scopeAdd #0 2 ; scopeAdd #0 3 ; scopeRemove #0 2 ; scopeClose #0
+main fork 10 ; yield ; awaitValue #0
+
+prog cScopeAddAfterCloseInChild
+note adding to a closed scope runs the finalizer on the spot and answers false
+root 10 scopeMake ; scopeAdd #0 1 ; scopeClose #0 ; scopeAdd #0 2 ; scopeClose #0
+main fork 10 ; yield ; awaitValue #0
+
+prog cForkFromFinalizerPosition
+note a fork issued after a scope close, in the same fiber, is still tracked
+root 10 scopeMake ; scopeClose #0 ; fork 0 ; yield ; awaitValue #2
+main fork 10 ; yield ; awaitValue #0 ; started
+
+prog cChildrenSnapshotAcrossForks
+note the snapshot names only the children that existed when it was taken
+main fork 4 ; childrenSnapshot ; fork 0 ; yield ; childrenSnapshot ; interrupt #0 ; started
+
+prog cAwaitNewChildrenOnly
+note awaitChildren waits for the children added since the snapshot, not the earlier ones
+main fork 4 ; childrenSnapshot ; fork 0 ; awaitChildren #1 ; started ; interrupt #0 ; cleanups
+
+prog cAwaitAllTwoGenerations
+note awaitAll over two children, one of which forks its own
+root 10 fork 0 ; yield ; succeed 4
+main fork 10 ; fork 1 ; awaitAll #0,#1 ; started
+
+prog cForkInsideMask
+note a masked fiber forks; the child inherits the mask
+root 10 mask ; fork 4 ; yield ; unmask ; never
+main fork 10 ; yield ; interrupt #0 ; cleanups ; started
+
+prog cDaemonInsideChild
+note a daemon forked by a child outlives the child
+root 10 forkDetach 4 ; yield ; succeed 1
+main fork 10 ; yield ; awaitValue #0 ; started ; cleanups
+
+prog cChildForksAndFails
+note a child forks then fails; its own child is interrupted by the exit prologue
+root 10 fork 4 ; yield ; failWith 7
+main fork 10 ; yield ; awaitError #0 ; cleanups ; started
+
+# ===================================================================== family D: raceAll
+prog dRaceOneSuccess
+note a single-entrant race that succeeds
+main raceAll 0
+
+prog dRaceFirstSucceeds
+note the first entrant succeeds and the second is interrupted before it launches
+main raceAll 0,4 ; started ; cleanups
+
+prog dRaceSecondSucceeds
+note the first entrant fails, so the second is launched and wins
+main raceAll 2,1 ; started ; cleanups
+
+prog dRaceAllFail
+note every entrant fails; the accepted exit carries every failure in order
+main raceAll 2,3 ; started
+
+prog dRaceThreeAllFail
+note three failures, retained in launch order
+main raceAll 2,3,2 ; started ; cleanups
+
+prog dRaceEmpty
+note the empty race stays pending until something interrupts the host
+main raceAll
+
+prog dRaceWithNever
+note one entrant never settles; the other wins and the loser is interrupted
+main raceAll 4,0 ; started ; cleanups
+
+prog dRaceTwoNevers
+note no entrant settles: the run reaches a frontier
+main raceAll 4,4 ; started
+
+prog dRaceInsideChild
+note a child runs the race; the parent awaits it
+root 10 raceAll 0,4
+main fork 10 ; yield ; awaitValue #0 ; cleanups
+
+prog dRaceThenInterruptHost
+note interrupt the fiber that is hosting a race
+root 10 raceAll 4,4
+main fork 10 ; yield ; interrupt #0 ; cleanups ; started
+
+prog dRaceReentrant
+note a race whose entrant itself runs a race
+root 10 raceAll 0,4
+main raceAll 10,4 ; started ; cleanups
+
+prog dRaceEntrantForks
+note an entrant forks a tracked child of its own before winning
+root 10 fork 4 ; yield ; succeed 9
+main raceAll 10,4 ; started ; cleanups
+
+prog dRaceAfterFork
+note a race started while an unrelated child is queued
+main fork 4 ; raceAll 0,1 ; started ; interrupt #0 ; cleanups
+
+prog dRaceMasked
+note a masked fiber hosting a race is not interrupted at the race park
+root 10 mask ; raceAll 4,4 ; unmask
+main fork 10 ; yield ; interrupt #0 ; cleanups
+
+prog dRaceSuccessThenFailure
+note the accepted success stands even though the loser fails afterwards
+main raceAll 0,2 ; started ; cleanups
+
+prog dRaceFailureThenSuccess
+note a failure before a success: the success is accepted
+main raceAll 2,0 ; started ; cleanups
+
+# ================================================================ family F: refs and the tape
+prog fRefTwoWriters
+note two children update one Ref; the tape fixes the interleaving
+root 10 refUpdate @0 1 ; refGet @0
+root 11 refUpdate @0 10 ; refGet @0
+main @0=refMake 0 ; fork 10 ; fork 11 ; yield ; refGet @0
+
+prog fRefTwoWritersHandover
+note the same program with the tape handing the processor over at each fork
+tape 0:1,1:1
+root 10 refUpdate @0 1 ; refGet @0
+root 11 refUpdate @0 10 ; refGet @0
+main @0=refMake 0 ; fork 10 ; fork 11 ; refGet @0
+
+prog fRefWriterInterrupted
+note one writer is interrupted before it runs
+root 10 refUpdate @0 1
+root 11 refUpdate @0 10
+main @0=refMake 0 ; fork 10 ; fork 11 ; interrupt #1 ; yield ; refGet @0
+
+prog fRefModifyRace
+note two children each read-modify-write, serialised by the scheduler
+root 10 refModify @0 5
+root 11 refModify @0 7
+main @0=refMake 1 ; fork 10 ; yield ; fork 11 ; yield ; refGet @0
+
+prog fRefGetAndSetRace
+root 10 refGetAndSet @0 100
+root 11 refGetAndSet @0 200
+main @0=refMake 1 ; fork 10 ; yield ; fork 11 ; yield ; refGet @0
+
+prog fRefTryTakeUnderflowRace
+note two takers of a shared budget; the second underflows
+root 10 refTryTake @0 5
+root 11 refTryTake @0 5
+main @0=refMake 7 ; fork 10 ; yield ; fork 11 ; yield ; refGet @0
+
+prog fRefUpdateInMask
+note a masked writer completes its update before taking the interrupt
+root 10 mask ; yield ; refUpdate @0 4 ; unmask ; never
+main @0=refMake 0 ; fork 10 ; yield ; interrupt #1 ; refGet @0
+
+prog fRefUpdateInFinalizerPosition
+note a child writes the Ref, then is interrupted while parked
+root 10 refUpdate @0 3 ; never
+main @0=refMake 0 ; fork 10 ; yield ; interrupt #1 ; refGet @0 ; cleanups
+
+prog fRefWrittenByDaemon
+note a daemon writes the Ref and outlives the read
+root 10 refUpdate @0 6 ; never
+main @0=refMake 0 ; forkDetach 10 ; yield ; refGet @0
+
+prog fRefThreeWriters
+root 10 refUpdate @0 1
+root 11 refUpdate @0 10
+root 12 refUpdate @0 100
+main @0=refMake 0 ; fork 10 ; fork 11 ; fork 12 ; yield ; refGet @0
+
+prog fRefWriterInDeferredAwaiter
+note the writer is parked on a Deferred until the parent completes it
+root 10 defAwaitValue @1 ; refUpdate @0 9
+main @0=refMake 0 ; @1=defMake ; fork 10 ; yield ; refGet @0 ; defSucceed @1 1 ; refGet @0
+
+prog fRefTwoRefsTwoWriters
+root 10 refUpdate @0 1 ; refUpdate @1 2
+root 11 refUpdate @1 20 ; refUpdate @0 10
+main @0=refMake 0 ; @1=refMake 0 ; fork 10 ; yield ; fork 11 ; yield ; refGet @0 ; refGet @1
+
+# ==================================================== family G: layers under interruption
+prog gLayerBuiltByChild
+root 10 layerBuild 0 ; layerProvideCount 0
+main fork 10 ; yield ; awaitValue #0 ; layerProvideCount 0
+
+prog gLayerMemoAcrossFibers
+note the memo map is shared, so the second fiber's build is a hit
+root 10 layerBuild 0
+root 11 layerBuild 0
+main fork 10 ; yield ; fork 11 ; yield ; layerProvideCount 0
+
+prog gLayerBuilderInterrupted
+note interrupt the fiber that built a layer; the memo entry survives
+root 10 layerBuild 0 ; never
+main fork 10 ; yield ; interrupt #0 ; layerProvideCount 0 ; layerBuild 0
+
+prog gLayerCloseUnderInterrupt
+note the closing fiber is interrupted at its next point after the close
+root 10 layerBuild 0 ; layerBuild 1 ; layerClose ; never
+main fork 10 ; yield ; interrupt #0 ; layerProvideCount 0 ; layerBuild 0
+
+prog gLayerFreshInChild
+note layer 3 is fresh, so each child's build constructs again
+root 10 layerBuild 3
+root 11 layerBuild 3
+main fork 10 ; yield ; fork 11 ; yield ; layerProvideCount 1
+
+prog gLayerScopeOfAfterClose
+main layerBuild 2 ; layerScopeOf #0 ; layerClose ; layerBuild 2 ; layerScopeOf #3
+
+prog gLayerCloseTwiceAcrossFibers
+root 10 layerClose
+main layerBuild 0 ; fork 10 ; yield ; layerClose ; layerProvideCount 0
+
+prog gLayerBuildInMask
+root 10 mask ; layerBuild 0 ; yield ; layerBuild 1 ; unmask ; never
+main fork 10 ; yield ; interrupt #0 ; layerProvideCount 0 ; layerProvideCount 1
+
+prog gLayerRebuildAfterCloseByChild
+root 10 layerClose
+main layerBuild 0 ; fork 10 ; yield ; layerBuild 0 ; layerProvideCount 0 ; layerClose
+
+prog gLayerAndScopeTogether
+main layerBuild 0 ; scopeMake ; scopeAdd #1 5 ; layerClose ; scopeClose #1
+
+# ======================================================== family H: combinations
+prog hDeferredThroughRace
+note a race entrant completes the Deferred the host will read afterwards
+main @0=defMake ; raceAll 6,4 ; defPoll @0 ; cleanups
+
+prog hRaceWithDeferredAwaiter
+root 10 defAwaitValue @0
+main @0=defMake ; fork 10 ; yield ; raceAll 6,4 ; yield ; defPoll @0
+
+prog hScopeInRaceEntrant
+root 10 scopeMake ; scopeAdd #0 3 ; scopeClose #0 ; succeed 6
+main raceAll 10,4 ; cleanups
+
+prog hLayerInRaceEntrant
+root 10 layerBuild 0 ; layerProvideCount 0
+main raceAll 10,4 ; layerProvideCount 0
+
+prog hRefThroughDeferredThroughFork
+root 10 defAwaitValue @1 ; refUpdate @0 5 ; refGet @0
+root 11 defSucceed @1 1 ; succeed 2
+main @0=refMake 1 ; @1=defMake ; fork 10 ; yield ; fork 11 ; yield ; refGet @0
+
+prog hMaskedScopeCloseUnderInterrupt
+root 10 scopeMake ; scopeAdd #0 1 ; mask ; yield ; scopeClose #0 ; unmask ; never
+main fork 10 ; yield ; interrupt #0 ; cleanups
+
+prog hInterruptDuringAwaitAll
+note interrupt a fiber parked on an awaitAll over two children
+root 10 fork 4 ; fork 4 ; awaitAll #0,#1
+main fork 10 ; yield ; interrupt #0 ; cleanups ; started
+
+prog hInterruptDuringChildrenAwait
+root 10 childrenSnapshot ; fork 4 ; awaitChildren #0
+main fork 10 ; yield ; interrupt #0 ; cleanups ; started
+
+prog hDeferredCompletedFromFinalizerOrder
+root 10 defSucceed @0 4 ; failWith 2
+main @0=defMake ; fork 10 ; yield ; defPoll @0 ; cleanups
+
+prog hEverything
+note one program touching all five alphabets and both concurrency shapes
+root 10 refUpdate @0 1 ; defSucceed @1 5 ; succeed 3
+main @0=refMake 0 ; @1=defMake ; layerBuild 0 ; scopeMake ; scopeAdd #3 1 ; fork 10 ; yield ; defAwaitValue @1 ; refGet @0 ; scopeClose #3 ; layerClose ; started ; cleanups
+
+prog hRaceInsideScopeInsideFork
+root 10 scopeMake ; scopeAdd #0 2 ; raceAll 0,4 ; scopeClose #0
+main fork 10 ; yield ; awaitValue #0 ; cleanups
+
+prog hTwoRacesSequential
+main raceAll 0,4 ; raceAll 1,4 ; started ; cleanups
+
+prog hInterruptAllWithDaemon
+main fork 4 ; forkDetach 4 ; yield ; interruptAll #0,#1 ; cleanups ; started
+
+prog hYieldStorm
+root 10 yield ; yield ; yield ; succeed 1
+main fork 10 ; yield ; yield ; yield ; awaitValue #0 ; started
+
+# ============================================== family E: yields at every budget
+# The same two programs at every op budget from 1 to 12. rc.112 counts the op before its
+# yield check and the yield wrapper is itself primitives, so the low budgets are where a
+# counter that is not rc.112's shows up.
+prog eBudgetStore01
+note the ref/deferred/scope shapes at op budget 1
+maxops 1
+main refMake 7 ; refUpdate #0 1 ; defMake ; defSucceed #2 5 ; defAwaitValue #2 ; scopeMake ; scopeAdd #5 1 ; scopeAdd #5 2 ; scopeClose #5 ; refGet #0
+
+prog eBudgetStore02
+note the ref/deferred/scope shapes at op budget 2
+maxops 2
+main refMake 7 ; refUpdate #0 1 ; defMake ; defSucceed #2 5 ; defAwaitValue #2 ; scopeMake ; scopeAdd #5 1 ; scopeAdd #5 2 ; scopeClose #5 ; refGet #0
+
+prog eBudgetStore03
+note the ref/deferred/scope shapes at op budget 3
+maxops 3
+main refMake 7 ; refUpdate #0 1 ; defMake ; defSucceed #2 5 ; defAwaitValue #2 ; scopeMake ; scopeAdd #5 1 ; scopeAdd #5 2 ; scopeClose #5 ; refGet #0
+
+prog eBudgetStore04
+note the ref/deferred/scope shapes at op budget 4
+maxops 4
+main refMake 7 ; refUpdate #0 1 ; defMake ; defSucceed #2 5 ; defAwaitValue #2 ; scopeMake ; scopeAdd #5 1 ; scopeAdd #5 2 ; scopeClose #5 ; refGet #0
+
+prog eBudgetStore05
+note the ref/deferred/scope shapes at op budget 5
+maxops 5
+main refMake 7 ; refUpdate #0 1 ; defMake ; defSucceed #2 5 ; defAwaitValue #2 ; scopeMake ; scopeAdd #5 1 ; scopeAdd #5 2 ; scopeClose #5 ; refGet #0
+
+prog eBudgetStore06
+note the ref/deferred/scope shapes at op budget 6
+maxops 6
+main refMake 7 ; refUpdate #0 1 ; defMake ; defSucceed #2 5 ; defAwaitValue #2 ; scopeMake ; scopeAdd #5 1 ; scopeAdd #5 2 ; scopeClose #5 ; refGet #0
+
+prog eBudgetStore07
+note the ref/deferred/scope shapes at op budget 7
+maxops 7
+main refMake 7 ; refUpdate #0 1 ; defMake ; defSucceed #2 5 ; defAwaitValue #2 ; scopeMake ; scopeAdd #5 1 ; scopeAdd #5 2 ; scopeClose #5 ; refGet #0
+
+prog eBudgetStore08
+note the ref/deferred/scope shapes at op budget 8
+maxops 8
+main refMake 7 ; refUpdate #0 1 ; defMake ; defSucceed #2 5 ; defAwaitValue #2 ; scopeMake ; scopeAdd #5 1 ; scopeAdd #5 2 ; scopeClose #5 ; refGet #0
+
+prog eBudgetStore09
+note the ref/deferred/scope shapes at op budget 9
+maxops 9
+main refMake 7 ; refUpdate #0 1 ; defMake ; defSucceed #2 5 ; defAwaitValue #2 ; scopeMake ; scopeAdd #5 1 ; scopeAdd #5 2 ; scopeClose #5 ; refGet #0
+
+prog eBudgetStore10
+note the ref/deferred/scope shapes at op budget 10
+maxops 10
+main refMake 7 ; refUpdate #0 1 ; defMake ; defSucceed #2 5 ; defAwaitValue #2 ; scopeMake ; scopeAdd #5 1 ; scopeAdd #5 2 ; scopeClose #5 ; refGet #0
+
+prog eBudgetStore11
+note the ref/deferred/scope shapes at op budget 11
+maxops 11
+main refMake 7 ; refUpdate #0 1 ; defMake ; defSucceed #2 5 ; defAwaitValue #2 ; scopeMake ; scopeAdd #5 1 ; scopeAdd #5 2 ; scopeClose #5 ; refGet #0
+
+prog eBudgetStore12
+note the ref/deferred/scope shapes at op budget 12
+maxops 12
+main refMake 7 ; refUpdate #0 1 ; defMake ; defSucceed #2 5 ; defAwaitValue #2 ; scopeMake ; scopeAdd #5 1 ; scopeAdd #5 2 ; scopeClose #5 ; refGet #0
+
+prog eBudgetFiber01
+note fork, yield, join and interrupt at op budget 1
+maxops 1
+main fork 0 ; yield ; awaitValue #0 ; fork 4 ; yield ; interrupt #3 ; started ; cleanups
+
+prog eBudgetFiber02
+note fork, yield, join and interrupt at op budget 2
+maxops 2
+main fork 0 ; yield ; awaitValue #0 ; fork 4 ; yield ; interrupt #3 ; started ; cleanups
+
+prog eBudgetFiber03
+note fork, yield, join and interrupt at op budget 3
+maxops 3
+main fork 0 ; yield ; awaitValue #0 ; fork 4 ; yield ; interrupt #3 ; started ; cleanups
+
+prog eBudgetFiber04
+note fork, yield, join and interrupt at op budget 4
+maxops 4
+main fork 0 ; yield ; awaitValue #0 ; fork 4 ; yield ; interrupt #3 ; started ; cleanups
+
+prog eBudgetFiber05
+note fork, yield, join and interrupt at op budget 5
+maxops 5
+main fork 0 ; yield ; awaitValue #0 ; fork 4 ; yield ; interrupt #3 ; started ; cleanups
+
+prog eBudgetFiber06
+note fork, yield, join and interrupt at op budget 6
+maxops 6
+main fork 0 ; yield ; awaitValue #0 ; fork 4 ; yield ; interrupt #3 ; started ; cleanups
+
+prog eBudgetFiber07
+note fork, yield, join and interrupt at op budget 7
+maxops 7
+main fork 0 ; yield ; awaitValue #0 ; fork 4 ; yield ; interrupt #3 ; started ; cleanups
+
+prog eBudgetFiber08
+note fork, yield, join and interrupt at op budget 8
+maxops 8
+main fork 0 ; yield ; awaitValue #0 ; fork 4 ; yield ; interrupt #3 ; started ; cleanups
+
+prog eBudgetFiber09
+note fork, yield, join and interrupt at op budget 9
+maxops 9
+main fork 0 ; yield ; awaitValue #0 ; fork 4 ; yield ; interrupt #3 ; started ; cleanups
+
+prog eBudgetFiber10
+note fork, yield, join and interrupt at op budget 10
+maxops 10
+main fork 0 ; yield ; awaitValue #0 ; fork 4 ; yield ; interrupt #3 ; started ; cleanups
+
+prog eBudgetFiber11
+note fork, yield, join and interrupt at op budget 11
+maxops 11
+main fork 0 ; yield ; awaitValue #0 ; fork 4 ; yield ; interrupt #3 ; started ; cleanups
+
+prog eBudgetFiber12
+note fork, yield, join and interrupt at op budget 12
+maxops 12
+main fork 0 ; yield ; awaitValue #0 ; fork 4 ; yield ; interrupt #3 ; started ; cleanups
+
+# ================================ family I: the required members (Deep witnesses, register rows)
+prog iW1DeferredJoin
+note Deep W1 deferred start: the child's start is a task, and the join finds it unexited
+main fork 0 ; join #0
+
+prog iW1ImmediateJoin
+note Deep W1 immediate start: the join finds the child already exited
+tape 0:1
+main fork 0 ; join #0
+
+prog iW1AwaitFailing
+note Deep W1: await answers a failing child's exit as a value, so the parent survives
+tape 0:1
+main fork 2 ; awaitValue #0 ; awaitError #0
+
+prog iW1JoinFailing
+note Deep W1: join answers it as an effect, so the parent fails
+tape 0:1
+main fork 2 ; join #0
+
+prog iW2MaskedInterruptDelivered
+note Deep W2: an interrupt recorded against a masked fiber is delivered when it unmasks
+root 10 mask ; yield ; unmask ; succeed 7
+main fork 10 ; yield ; interrupt #0 ; cleanups ; started
+
+prog iW2MaskedInterruptNotApplied
+note Deep W2: while the fiber is still masked the interrupt is recorded and not applied
+root 10 mask ; never
+main fork 10 ; yield ; interrupt #0 ; started
+
+prog iW3EmptyPending
+note Deep W3: the empty race stays pending
+main raceAll
+
+prog iW3StopsLaunch
+note Deep W3: an immediate success stops the second launch
+main raceAll 0,1 ; started
+
+prog iW3NextLaunch
+note Deep W3: a failure allows the next launch
+main raceAll 2,1 ; started
+
+prog iW3AllFail
+note Deep W3: every entrant fails, in launch order
+main raceAll 2,3 ; started ; cleanups
+
+prog iW4Sibling
+note Deep W4: a sibling completes the cell the awaiter is parked on
+main @0=defMake ; fork 6 ; defAwaitValue @0
+
+prog iW4CompleteTwice
+note Deep W4: the second completion answers false and changes nothing
+main defMake ; defSucceed #0 7 ; defSucceed #0 8 ; defPoll #0
+
+prog iW4SiblingThenMore
+note Deep W4 M1: the completion is not the completer's last primitive
+root 10 defSucceed @0 7 ; succeed 1
+main @0=defMake ; fork 10 ; defAwaitValue @0
+
+prog iW4InterruptWaiter
+note Deep W4: the waiter is interrupted rather than completed
+root 10 defAwaitValue @0
+main @0=defMake ; fork 10 ; yield ; interrupt #1 ; defIsDone @0
+
+prog iW5WithMiddleware
+note Deep W5: the parent's exit interrupts and awaits its tracked child
+main fork 4 ; yield ; started ; cleanups
+
+prog iW5WithoutMiddleware
+note Deep W5: a daemon is not tracked, so the parent's exit leaves it running
+main forkDetach 4 ; yield ; started ; cleanups
+
+prog iW5AwaitAllChildren
+note Deep W5: only the child added during the body is awaited
+main fork 4 ; childrenSnapshot ; fork 0 ; awaitChildren #1 ; started ; interrupt #0
+
+prog iRunCe002ScopeOrder
+note E4-RUN-CE-002 refuted: scope finalizers run latest-first, not in registration order
+main scopeMake ; scopeAdd #0 1 ; scopeAdd #0 2 ; scopeAdd #0 3 ; scopeClose #0
+
+prog iRunCe003CloseTwice
+note E4-RUN-CE-003 refuted: the second close re-runs nothing
+main scopeMake ; scopeAdd #0 1 ; scopeClose #0 ; scopeClose #0
+
+prog iRunCe004AddToClosed
+note E4-RUN-CE-004 refuted: adding to a closed scope neither registers nor silently drops
+main scopeMake ; scopeClose #0 ; scopeAdd #0 5 ; scopeClose #0
+
+prog iRunCe005Removal
+note E4-RUN-CE-005: removal of an inline slot and of a keyed entry
+main scopeMake ; scopeAdd #0 1 ; scopeRemove #0 1 ; scopeClose #0 ; scopeMake ; scopeAdd #4 1 ; scopeAdd #4 2 ; scopeRemove #4 1 ; scopeClose #4
+
+prog iSemCe012PendingAwaitIsFrontier
+note E4-SEM-CE-012: a pending await is a frontier, never a declared failure
+main defMake ; defIsDone #0 ; defAwaitValue #0
+
+prog iSemCe014HandleSpace
+note E4-SEM-CE-014: one first-seen counter over every handle kind
+main refMake 1 ; defMake ; scopeMake ; fork 0 ; layerBuild 0 ; layerScopeOf #4
+
+prog iSemCe015ModifyOldValue
+note E4-SEM-CE-015: modify answers the old value, which the new cell contents do not determine
+main refMake 7 ; refModify #0 5 ; refGet #0 ; refGetAndSet #0 100 ; refGet #0
+
+prog iSemCe016MemoNotSecondConstruction
+note E4-SEM-CE-016 refuted: a memo hit answers the same handle and does not construct
+main layerBuild 0 ; layerBuild 0 ; layerProvideCount 0
+
+prog iSemCe017ReleaseOrder
+note E4-SEM-CE-017: layers are released latest-first
+main layerBuild 0 ; layerBuild 1 ; layerClose
+
+prog iSemCe018CloseDropsMemo
+note E4-SEM-CE-018: close drops the memo, and the rebuilt layer is not live under the closed root
+main layerBuild 0 ; layerClose ; layerBuild 0 ; layerClose ; layerProvideCount 0
+
+prog iFlowCe022MaskDefers
+note E4-FLOW-CE-022: a mask defers the delivery to the first unmasked point
+root 10 mask ; yield ; refUpdate @0 5 ; unmask ; refUpdate @0 100
+main @0=refMake 0 ; fork 10 ; yield ; interrupt #1 ; refGet @0
+
+prog iFlowCe023InterruptedFinalizer
+note E4-FLOW-CE-023: an interrupted close hands its releases the interrupted exit
+root 10 scopeMake ; scopeAdd #0 1 ; never
+main fork 10 ; yield ; interrupt #0 ; cleanups
+
+prog iSemCe011YieldFloor
+note E4-SEM-CE-011: at the yield floor a decide-false child starts anyway
+maxops 3
+tape 0:0
+main fork 0 ; started ; awaitValue #0
