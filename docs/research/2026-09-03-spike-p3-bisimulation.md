@@ -516,3 +516,77 @@ rel_returnToParent, rel_raiseToParent, forward, backward, rows_agree, rows_agree
 
 No `sorry`, no `axiom`, no `partial`, no `unsafe`, no `native_decide`, no `implemented_by`, no
 `maxHeartbeats` anywhere in the module.
+
+## 10. Round two (2026-09-04): the axiom ceiling, and where the eight fields stand
+
+Base `e0ae53a`. Same ownership; `Witnesses.lean` still byte-identical to its committed content
+(`git diff` empty). This round was cut short by a checkpoint, so it landed one of its four
+goals in full, one partly, and two not at all. What is here is honest about which is which.
+
+### 10.1 `Classical.choice` is gone — the ceiling is `propext`/`Quot.sound`
+
+Bisected by `#print axioms` per lemma: every classical dependency in the module came from
+**one** `by simp`, in `Rel.fibers_cons`, discharging a `Nat` length *dis*equality
+(`¬((r :: rs).length = (self :: r :: rs).length)`). Isolated:
+
+```lean
+theorem t1 … : ¬ ((r :: rs).length = (self :: r :: rs).length) := by simp
+-- 't1' depends on axioms: [propext, Classical.choice, Quot.sound]
+theorem t4 … : ¬ ((r :: rs).length = (self :: r :: rs).length) := fun h => Nat.succ_ne_self _ h.symm
+-- 't4' does not depend on any axioms
+```
+
+The `<` form (`by simp` on `(f' :: fs).length < (f :: f' :: fs).length`) and `omega` are both
+clean — only the equality form reaches for choice. Replacing that one call with
+`Nat.succ_ne_self _` removes `Classical.choice` from the whole development:
+
+```
+rel_start, innermost_of_capR, takeCont_live, contUseNoexcJ_live      → [propext]
+forward, backward, rows_agree, rows_agree_start,
+rel_apply, rel_tryWith, rel_poptrap, rel_throw_stutter, rel_throw_catch,
+rel_returnToParent, rel_raiseToParent, rel_alloc, rel_performRoot     → [propext, Quot.sound]
+```
+
+### 10.2 Two changes the remaining pairs need, landed
+
+* **`Sep` is now five place-wise clauses** (`liveCont`, `liveObj`, `conts`, `mixed`, `objs`) —
+  "any two places hold different stacks" — instead of a `capIds` list with `flatMap`. Every arm
+  that moves a chain between two places has to re-establish separation, and the place-wise form
+  is what those proofs actually use; `capIds` and its two membership lemmas are gone.
+* **A pair may end in `stuck`.** The eight fields now conclude `PairAt m j`, which is *either*
+  both machines step to related states *or* both stop with the same outcome. This is not
+  decoration: a continuation primitive applied to a value that is not a continuation is `stuck`
+  on both sides, so the old shape was unprovable for four of the eight. `PairAt.toForward`
+  feeds it into `forward`, which is unchanged otherwise.
+
+### 10.3 Per-field status
+
+| Field | Status | What remains |
+| --- | --- | --- |
+| `contUsePair` | **partly** — the arithmetic half is proved and landed | `innermost_of_capR` (`capR m sid cells.reverse → innermost cells = sid`, via `innermost_append`, `capR_head_id`, `capR_ne_nil`), `innermost_lt`, and both arms as top-level equations (`takeCont_live`, `contUseNoexcJ_live`) are proved, `propext` only. What is left is the `Rel` bookkeeping for the two heap writes — `m.conts.set cid none` against `j.conts.set cid []` plus `j.stacks.set sid cells` — and the five `Sep` clauses following the cells from the continuation to the stack object. |
+| `contUpdatePair` | open | `contUsePair` plus: native writes the triple of `m.outermostOf sid`, jsoo writes `stack[3]` of the head cell; `capR m sid cells.reverse` makes them the same stack, by one induction relating `outermostOf` to `capR`. |
+| `performPair` | open | §5 obligation 4, unchanged. |
+| `reperformPair` | open | §5 obligation 5, unchanged. |
+| `resumePair` | open | §5 obligation 6, unchanged. |
+| `runstackPair` | open | §5 obligation 7, unchanged. Note found this round: the pair is **false** without the side condition that the stack has no parent, and the condition belongs in `HypH`, not in the field — on a multi-cell stack `caml_runstack` (native) and `Kresume` (bytecode) differ from *each other*, so it is outside the correspondence rather than inside it. |
+| `matchEffPair` | open, **blocked** | Three attempts now recorded: `rfl` after `simp only [Machine.stepRet]`; `induction cls` with `split`; and resolving the mangled private name `_private.OCaml5.Effect.«0».OCaml5.Machine.lookupEff`, which the elaborator refuses (executed). The fix is one word in `Effect.lean`, which spike P1 owns. |
+| `matchExnPair` | open, **blocked** | As above. |
+
+**Two documented attempts on `contUsePair`,** since it is the one that was worked: attempt 1
+built the two post-states as structure literals inside a tactic-block `have` type — Lean's
+tactic parser rejects `{ x with a := …, b := … }` across a line break, a syntactic limit, not a
+mathematical one. Attempt 2 stated both arms as top-level equations and rewrote with them; that
+parses, but leaves the goal spelled as a fully expanded record whose field-by-field `List.set`
+rewrites no longer match, and a `by_cases … ; subst` renames the continuation index underneath
+them. Attempt 3, for whoever takes it: state the *whole pair* as one top-level equation between
+the two post-states — the shape `popFiber_cons` and `resumeCells_root` already use for the root
+`perform`, and the only shape that has worked for a two-field update in this module.
+
+### 10.4 Not done this round
+
+* **Witness 16** (A0 request 2: a continuation resumed from inside another fiber's `retc`) was
+  not written. It needs an OCaml source, a three-host run, a `Term`, and a `WitnessesJ` entry;
+  nothing in `Rel` has to change for it.
+* **The 16-witness re-run** was therefore not done either; the 15 of §2 are unchanged and still
+  green (`lake env lean workshop/OCaml5/WitnessesJ.lean` is silent), and the two divergence
+  witnesses were re-run from their landed sources this round.

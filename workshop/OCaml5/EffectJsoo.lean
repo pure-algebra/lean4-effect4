@@ -686,14 +686,15 @@ def contR (m : Machine ν) (j : MachineJ ν) (c : ContId) : Prop :=
   ∧ (m.conts[c]? = Option.some Option.none → j.conts[c]? = Option.some [])
   ∧ (m.conts[c]? = Option.none → j.conts[c]? = Option.none)
 
-/-- Every cell id held in a continuation or in a stack object. -/
-def capIds (j : MachineJ ν) : List StackId :=
-  (j.conts.flatMap fun cs => cs.map (·.id)) ++ (j.stacks.flatMap fun cs => cs.map (·.id))
-
 /-- The fragment of the run invariant that the correspondence needs, and that spike P1 owns in
-full: a live stack is not also captured, and two captured chains never share a stack. -/
+full: a live stack is not also captured, and two captured chains never share a stack. Stated as
+five "any two places hold different stacks" clauses rather than over a list of ids, because
+every arm that moves a chain between two places has to re-establish it. -/
 structure Sep (j : MachineJ ν) : Prop where
-  live : ∀ f ∈ j.fibers, f.id ∉ capIds j
+  liveCont : ∀ f ∈ j.fibers, ∀ (c : ContId) (cs : List (Cell ν)),
+    j.conts[c]? = Option.some cs → ∀ x ∈ cs, x.id ≠ f.id
+  liveObj : ∀ f ∈ j.fibers, ∀ (o : Nat) (os : List (Cell ν)),
+    j.stacks[o]? = Option.some os → ∀ x ∈ os, x.id ≠ f.id
   conts : ∀ (c₁ c₂ : ContId) (cs₁ cs₂ : List (Cell ν)),
     j.conts[c₁]? = Option.some cs₁ → j.conts[c₂]? = Option.some cs₂ → c₁ ≠ c₂ →
     ∀ x ∈ cs₁, ∀ y ∈ cs₂, x.id ≠ y.id
@@ -919,37 +920,28 @@ theorem Rel.head_id {m : Machine ν} {j : MachineJ ν} (h : Rel m j) :
   | [f], hh => exact ⟨f, [], rfl, hh.1⟩
   | f :: f' :: fs, hh => exact ⟨f, f' :: fs, rfl, hh.1⟩
 
-theorem mem_capIds_of_cont {j : MachineJ ν} {c : ContId} {cells : List (Cell ν)}
-    (hc : j.conts[c]? = Option.some cells) {x : Cell ν} (hx : x ∈ cells) : x.id ∈ capIds j := by
-  refine List.mem_append_left _ ?_
-  refine List.mem_flatMap.2 ⟨cells, ?_, ?_⟩
-  · exact List.mem_of_getElem? hc
-  · exact List.mem_map_of_mem hx
-
-theorem mem_capIds_of_obj {j : MachineJ ν} {o : Nat} {cells : List (Cell ν)}
-    (hc : j.stacks[o]? = Option.some cells) {x : Cell ν} (hx : x ∈ cells) : x.id ∈ capIds j := by
-  refine List.mem_append_right _ ?_
-  refine List.mem_flatMap.2 ⟨cells, ?_, ?_⟩
-  · exact List.mem_of_getElem? hc
-  · exact List.mem_map_of_mem hx
+/-- `j.stacks[s]?` whenever the object at `s` is non-empty. -/
+theorem stacks_of_stackObj {j : MachineJ ν} {s : StackId} {x : Cell ν} (hx : x ∈ j.stackObj s) :
+    j.stacks[s]? = Option.some (j.stackObj s) := by
+  cases hst : j.stacks[s]? with
+  | none => rw [MachineJ.stackObj, hst] at hx; simp at hx
+  | some cells => simp [MachineJ.stackObj, hst]
 
 /-- The current stack is not in any captured chain: `Sep` plus `fibR`'s head clause. -/
 theorem Rel.cont_ne_cur {m : Machine ν} {j : MachineJ ν} (h : Rel m j) {c : ContId}
     {cells : List (Cell ν)} (hc : j.conts[c]? = Option.some cells) :
     ∀ x ∈ cells, x.id ≠ m.current := by
-  intro x hx heq
+  intro x hx
   obtain ⟨f, fs, hfs, hid⟩ := h.head_id
-  exact h.sep.live f (by rw [hfs]; simp) (by rw [hid, ← heq]; exact mem_capIds_of_cont hc hx)
+  rw [← hid]
+  exact h.sep.liveCont f (by rw [hfs]; simp) c cells hc x hx
 
 theorem Rel.obj_ne_cur {m : Machine ν} {j : MachineJ ν} (h : Rel m j) (s : StackId) :
     ∀ x ∈ j.stackObj s, x.id ≠ m.current := by
-  intro x hx heq
+  intro x hx
   obtain ⟨f, fs, hfs, hid⟩ := h.head_id
-  have hs : j.stacks[s]? = Option.some (j.stackObj s) := by
-    cases hst : j.stacks[s]? with
-    | none => rw [MachineJ.stackObj, hst] at hx; simp at hx
-    | some cells => simp [MachineJ.stackObj, hst]
-  exact h.sep.live f (by rw [hfs]; simp) (by rw [hid, ← heq]; exact mem_capIds_of_obj hs hx)
+  rw [← hid]
+  exact h.sep.liveObj f (by rw [hfs]; simp) s (j.stackObj s) (stacks_of_stackObj hx) x hx
 
 /-! ## The ordinary transitions, factored
 
@@ -1007,12 +999,10 @@ theorem framesOf_withFrames {m : Machine ν} {info : StackInfo ν} (fs : List (F
     framesOf (m.withFrames fs) (m.withFrames fs).current = fs :=
   Machine.frames_withFrames (m := m) fs hs
 
-theorem capIds_congr {j j' : MachineJ ν} (hc : j'.conts = j.conts) (hs : j'.stacks = j.stacks) :
-    capIds j' = capIds j := by simp [capIds, hc, hs]
-
 theorem sep_congr {j j' : MachineJ ν} (h : Sep j) (hc : j'.conts = j.conts)
     (hs : j'.stacks = j.stacks) (hf : j'.fibers = j.fibers) : Sep j' where
-  live := by rw [capIds_congr hc hs, hf]; exact h.live
+  liveCont := by rw [hc, hf]; exact h.liveCont
+  liveObj := by rw [hs, hf]; exact h.liveObj
   conts := by rw [hc]; exact h.conts
   mixed := by rw [hc, hs]; exact h.mixed
   objs := by rw [hs]; exact h.objs
@@ -1572,23 +1562,20 @@ theorem Rel.fibers_cons {m : Machine ν} {j : MachineJ ν} (h : Rel m j) {p : St
       have hne : m.current ≠ q := by
         intro hc
         rw [← hc] at hrest
-        exact absurd (fibR_len_unique hfib hrest) (by simp)
+        -- `by simp` proves this too, but through a classical lemma; the estate's ceiling is
+        -- `propext`/`Quot.sound`, so the disequality is spelled out.
+        exact absurd (fibR_len_unique hfib hrest) (Nat.succ_ne_self _)
       exact ⟨self, r :: rs, rfl, hid, hinfo, hrk, hrx, hrest, hne,
         fibR_head_not_mem hfib⟩
 
 theorem Rel.cont_ne_fiber {m : Machine ν} {j : MachineJ ν} (h : Rel m j) {f : FiberJ ν}
     (hf : f ∈ j.fibers) {c : ContId} {cells : List (Cell ν)}
     (hc : j.conts[c]? = Option.some cells) : ∀ x ∈ cells, x.id ≠ f.id :=
-  fun _ hx heq => h.sep.live f hf (heq ▸ mem_capIds_of_cont hc hx)
+  h.sep.liveCont f hf c cells hc
 
 theorem Rel.obj_ne_fiber {m : Machine ν} {j : MachineJ ν} (h : Rel m j) {f : FiberJ ν}
-    (hf : f ∈ j.fibers) (s : StackId) : ∀ x ∈ j.stackObj s, x.id ≠ f.id := by
-  intro x hx heq
-  have hs : j.stacks[s]? = Option.some (j.stackObj s) := by
-    cases hst : j.stacks[s]? with
-    | none => rw [MachineJ.stackObj, hst] at hx; simp at hx
-    | some cells => simp [MachineJ.stackObj, hst]
-  exact h.sep.live f hf (heq ▸ mem_capIds_of_obj hs hx)
+    (hf : f ∈ j.fibers) (s : StackId) : ∀ x ∈ j.stackObj s, x.id ≠ f.id :=
+  fun x hx => h.sep.liveObj f hf s (j.stackObj s) (stacks_of_stackObj hx) x hx
 
 theorem fibR_stack {m : Machine ν} {t : StackId} {fs : List (FiberJ ν)} (h : fibR m t fs) :
     ∃ info, m.stack? t = Option.some info := by
@@ -1754,7 +1741,8 @@ theorem rel_returnToParent {m : Machine ν} {j : MachineJ ν} (h : Rel m j) (v :
     | inl he => exact Or.inl he
     | inr hc => exact Or.inr (capR_congr htouch (hobjs s) hc)
   · -- separation
-    exact ⟨fun f hf => h.sep.live f (by rw [hjf]; exact List.mem_cons_of_mem _ hf),
+    exact ⟨fun f hf => h.sep.liveCont f (by rw [hjf]; exact List.mem_cons_of_mem _ hf),
+      fun f hf => h.sep.liveObj f (by rw [hjf]; exact List.mem_cons_of_mem _ hf),
       h.sep.conts, h.sep.mixed, h.sep.objs⟩
   · show (((m.freeStack m.current).setCurrent p).applyOne info.handler.handleValue v).stacks.length = j.stacks.length
     rw [show (((m.freeStack m.current).setCurrent p).applyOne info.handler.handleValue v).stacks.length = ((m.freeStack m.current).setCurrent p).stacks.length from
@@ -1920,7 +1908,8 @@ theorem rel_raiseToParent {m : Machine ν} {j : MachineJ ν} (h : Rel m j) (e : 
     | inl he => exact Or.inl he
     | inr hc => exact Or.inr (capR_congr htouch (hobjs s) hc)
   · -- separation
-    exact ⟨fun f hf => h.sep.live f (by rw [hjf]; exact List.mem_cons_of_mem _ hf),
+    exact ⟨fun f hf => h.sep.liveCont f (by rw [hjf]; exact List.mem_cons_of_mem _ hf),
+      fun f hf => h.sep.liveObj f (by rw [hjf]; exact List.mem_cons_of_mem _ hf),
       h.sep.conts, h.sep.mixed, h.sep.objs⟩
   · show (((m.freeStack m.current).setCurrent p).applyOne info.handler.handleExn e).stacks.length = j.stacks.length
     rw [show (((m.freeStack m.current).setCurrent p).applyOne info.handler.handleExn e).stacks.length = ((m.freeStack m.current).setCurrent p).stacks.length from
@@ -2183,9 +2172,6 @@ theorem rel_alloc {m : Machine ν} {j : MachineJ ν} (h : Rel m j)
         exact Or.inr
           (capR_congr htouch (fun y hy heq => Nat.lt_irrefl _ (heq ▸ capR_lt hc y hy)) hc)
   · -- separation: the fresh object's only id is the fresh one, and every old id is smaller
-    have hcap : capIds (j.allocStackJ av ax af) = capIds j ++ [j.stacks.length] := by
-      simp [capIds, MachineJ.allocStackJ, MachineJ.setControl, List.flatMap_append,
-        List.append_assoc]
     have hfreshid : ∀ (os : List (Cell ν)),
         os = [⟨j.stacks.length, [FrameJ.hval], [TrapJ.hexn], ⟨av, ax, af⟩⟩] →
         ∀ z ∈ os, z.id = j.stacks.length := by
@@ -2193,14 +2179,13 @@ theorem rel_alloc {m : Machine ν} {j : MachineJ ν} (h : Rel m j)
       subst hos
       have : z = ⟨j.stacks.length, [FrameJ.hval], [TrapJ.hexn], ⟨av, ax, af⟩⟩ := by simpa using hz
       rw [this]
-    refine ⟨?_, h.sep.conts, ?_, ?_⟩
-    · intro f hf' hmem
-      rw [hcap] at hmem
-      rcases List.mem_append.1 hmem with hmm | hmm
-      · exact h.sep.live f hf' hmm
-      · have hfl : f.id = j.stacks.length := by simpa using hmm
+    refine ⟨h.sep.liveCont, ?_, h.sep.conts, ?_, ?_⟩
+    · intro f hf' o os ho z hz
+      rcases hcellfresh o os ho with ⟨ho', -⟩ | ⟨-, ho'⟩
+      · exact h.sep.liveObj f hf' o os ho' z hz
+      · intro heq
         have hlt := fibR_lt h.fib f hf'
-        rw [hlen, hfl] at hlt
+        rw [hlen, ← heq, hfreshid os ho' z hz] at hlt
         exact Nat.lt_irrefl _ hlt
     · intro c o cs os hc ho y hy z hz
       rcases hcellfresh o os ho with ⟨ho', -⟩ | ⟨-, ho'⟩
@@ -2253,6 +2238,13 @@ def HypH (m : Machine ν) : Prop :=
       (∀ cont hv hx cid, f = .contUseUpdate4 cont hv hx → cont = .cont cid →
         m.conts[cid]? ≠ Option.some Option.none)
 
+/-- What a pair of arms owes: either both machines step to related states, or both stop with
+the same outcome. The second case is not decoration — a continuation primitive applied to a
+value that is not a continuation is `stuck` on both sides. -/
+def PairAt [ToString ν] [Add ν] (m : Machine ν) (j : MachineJ ν) : Prop :=
+  (∃ m' j', m.step = Sum.inl m' ∧ j.stepJ = Sum.inl j' ∧ Rel m' j') ∨
+    (∃ o, m.step = Sum.inr o ∧ j.stepJ = Sum.inr o)
+
 /-- One field per pair this spike has not closed, each stated as the goal that remains. The
 first two are blocked on `Machine.lookupEff`/`lookupExn` being `private` to `Effect.lean`; the
 other six are the fiber-switching arms. `allocStack3` and the root half of `performArg` are
@@ -2261,36 +2253,124 @@ structure SpecialPairs (ν : Type u) [ToString ν] [Add ν] : Prop where
   matchEffPair : ∀ (m : Machine ν) (j : MachineJ ν) (v : Value ν) (env : List (Value ν))
     (cls : List (EffId × Term ν)) (d : Term ν) (rest : List (Frame ν)),
     Rel m j → m.control = .ret v → m.frames = .matchEffScrut env cls d :: rest →
-    ∃ m' j', m.step = Sum.inl m' ∧ j.stepJ = Sum.inl j' ∧ Rel m' j'
+    PairAt m j
   matchExnPair : ∀ (m : Machine ν) (j : MachineJ ν) (v : Value ν) (env : List (Value ν))
     (cls : List (ExnId × Term ν)) (d : Term ν) (rest : List (Frame ν)),
     Rel m j → m.control = .ret v → m.frames = .matchExnScrut env cls d :: rest →
-    ∃ m' j', m.step = Sum.inl m' ∧ j.stepJ = Sum.inl j' ∧ Rel m' j'
+    PairAt m j
   performPair : ∀ (m : Machine ν) (j : MachineJ ν) (v : Value ν) (rest : List (Frame ν)),
     Rel m j → m.control = .ret v → m.frames = .performArg :: rest →
     (m.parentOf m.current).isSome →
-    ∃ m' j', m.step = Sum.inl m' ∧ j.stepJ = Sum.inl j' ∧ Rel m' j'
+    PairAt m j
   resumePair : ∀ (m : Machine ν) (j : MachineJ ν) (v : Value ν) (st fn : Value ν)
     (rest : List (Frame ν)),
     Rel m j → m.control = .ret v → m.frames = .resume3 st fn :: rest →
-    ∃ m' j', m.step = Sum.inl m' ∧ j.stepJ = Sum.inl j' ∧ Rel m' j'
+    PairAt m j
   runstackPair : ∀ (m : Machine ν) (j : MachineJ ν) (v : Value ν) (st fn : Value ν)
     (rest : List (Frame ν)),
     Rel m j → m.control = .ret v → m.frames = .runstack3 st fn :: rest →
-    ∃ m' j', m.step = Sum.inl m' ∧ j.stepJ = Sum.inl j' ∧ Rel m' j'
+    PairAt m j
   reperformPair : ∀ (m : Machine ν) (j : MachineJ ν) (v : Value ν) (e c : Value ν)
     (rest : List (Frame ν)),
     Rel m j → m.control = .ret v → m.frames = .reperform3 e c :: rest →
     (m.parentOf m.current).isSome →
-    ∃ m' j', m.step = Sum.inl m' ∧ j.stepJ = Sum.inl j' ∧ Rel m' j'
+    PairAt m j
   contUsePair : ∀ (m : Machine ν) (j : MachineJ ν) (v : Value ν) (rest : List (Frame ν)),
     Rel m j → m.control = .ret v → m.frames = .contUseArg :: rest →
-    ∃ m' j', m.step = Sum.inl m' ∧ j.stepJ = Sum.inl j' ∧ Rel m' j'
+    PairAt m j
   contUpdatePair : ∀ (m : Machine ν) (j : MachineJ ν) (v : Value ν) (cont hv hx : Value ν)
     (rest : List (Frame ν)),
     Rel m j → m.control = .ret v → m.frames = .contUseUpdate4 cont hv hx :: rest →
     (∀ cid, cont = .cont cid → m.conts[cid]? ≠ Option.some Option.none) →
-    ∃ m' j', m.step = Sum.inl m' ∧ j.stepJ = Sum.inl j' ∧ Rel m' j'
+    PairAt m j
+
+/-! ### `caml_continuation_use_noexc` (`effect.js:150-154`)
+
+The native runtime reads the `Cont_tag` field, which points at the *innermost* captured stack,
+and nulls it; js_of_ocaml reads `cont[1]`, the whole cell list, and nulls it. The two answers
+are the same stack because the innermost captured fiber is the last cell of an outermost-first
+list — `innermost_of_capR`, which is clause R4's reversal used in the direction the primitive
+needs. -/
+
+theorem innermost_append : ∀ (l : List (Cell ν)) (c : Cell ν),
+    MachineJ.innermost (l ++ [c]) = c.id
+  | [], _ => rfl
+  | [_], _ => rfl
+  | _ :: b :: bs, c => innermost_append (b :: bs) c
+
+theorem capR_head_id {m : Machine ν} {s : StackId} {c : Cell ν} {cs : List (Cell ν)}
+    (h : capR m s (c :: cs)) : c.id = s := by
+  cases cs with
+  | nil => exact h.1.1
+  | cons b bs => exact h.1.1
+
+theorem capR_ne_nil {m : Machine ν} {s : StackId} {cells : List (Cell ν)}
+    (h : capR m s cells.reverse) : cells ≠ [] := by
+  intro hnil
+  rw [hnil] at h
+  exact absurd h (by simp [capR])
+
+theorem innermost_of_capR {m : Machine ν} {sid : StackId} {cells : List (Cell ν)}
+    (h : capR m sid cells.reverse) : MachineJ.innermost cells = sid := by
+  cases hrev : cells.reverse with
+  | nil => rw [hrev] at h; exact absurd h (by simp [capR])
+  | cons c t =>
+    have hc : cells = t.reverse ++ [c] := by
+      have h2 := congrArg List.reverse hrev
+      simpa using h2
+    rw [hrev] at h
+    rw [hc, innermost_append]
+    exact capR_head_id h
+
+/-- The last cell of a captured list names a live stack, so the object heap has room for it. -/
+theorem innermost_lt {m : Machine ν} {sid : StackId} {cells : List (Cell ν)}
+    (h : capR m sid cells.reverse) : sid < m.stacks.length := by
+  cases hrev : cells.reverse with
+  | nil => rw [hrev] at h; exact absurd h (by simp [capR])
+  | cons c t =>
+    rw [hrev] at h
+    have hid : c.id = sid := capR_head_id h
+    have := capR_lt h c (by simp)
+    rwa [hid] at this
+
+theorem takeCont_live {m : Machine ν} {cid : ContId} {sid : StackId}
+    (h : m.conts[cid]? = Option.some (Option.some sid)) :
+    m.takeCont cid = ({ m with conts := m.conts.set cid Option.none }, .stack sid) := by
+  simp only [Machine.takeCont, h]
+
+theorem contUseNoexcJ_live {j : MachineJ ν} {cid : ContId} {cells : List (Cell ν)}
+    {sid : StackId} (h : j.conts[cid]? = Option.some cells) (hne : cells ≠ [])
+    (hinn : MachineJ.innermost cells = sid) :
+    j.contUseNoexcJ cid =
+      ({ j with conts := j.conts.set cid [], stacks := j.stacks.set sid cells }, .stack sid) := by
+  subst hinn
+  unfold MachineJ.contUseNoexcJ MachineJ.contList
+  rw [h]
+  cases cells with
+  | nil => exact absurd rfl hne
+  | cons c cs => rfl
+
+/-! The pair itself — `SpecialPairs.contUsePair` — is not closed. With the four lemmas above
+the arithmetic half is done (`innermost_of_capR` is the step the report named as missing, and
+`takeCont_live`/`contUseNoexcJ_live` put both arms in explicit form); what remains is the
+`Rel` bookkeeping for the two heap writes: `m.conts.set cid none` against
+`j.conts.set cid []` together with `j.stacks.set sid cells`, and the five `Sep` clauses that
+have to follow the cells from the continuation to the stack object. Attempt 1 built the two
+machines as structure literals inside a tactic-block `have` type, which Lean's tactic parser
+rejects across a line break; attempt 2 (recorded here) states the two arms as the top-level
+equations above and rewrites with them, which leaves the goal spelled as a fully expanded
+record whose field-by-field `List.set` rewrites no longer match. Attempt 3 should state the
+whole pair as one top-level equation between the two post-states, the way `popFiber_cons` and
+`resumeCells_root` do for the root `perform`. -/
+
+/-- A `PairAt` is the second or third disjunct of the simulation. -/
+theorem PairAt.toForward [ToString ν] [Add ν] {m : Machine ν} {j : MachineJ ν} (hp : PairAt m j) :
+    (∃ m', m.step = Sum.inl m' ∧ Rel m' j ∧ μ m' < μ m ∧ ∃ e, m'.control = Control.throw e)
+  ∨ (∃ m' j', m.step = Sum.inl m' ∧ j.stepJ = Sum.inl j' ∧ Rel m' j')
+  ∨ (∃ o, m.step = Sum.inr o ∧ j.stepJ = Sum.inr o) :=
+  match hp with
+  | Or.inl x => Or.inr (Or.inl x)
+  | Or.inr x => Or.inr (Or.inr x)
 
 /-- Which frames `localRet` leaves to a special pair. -/
 theorem localRet_none [ToString ν] [Add ν] {v : Value ν} {f : Frame ν}
@@ -2438,8 +2518,8 @@ theorem forward [ToString ν] [Add ν] (sp : SpecialPairs ν) {m : Machine ν} {
           refine Or.inr (Or.inl ⟨_, _, ?_, ?_, hrel⟩)
           · rw [hstep]; simp only [Machine.stepRet, hfr]
           · rw [hstepJ]; simp only [MachineJ.stepRetJ, hjkk]
-        · exact Or.inr (Or.inl (sp.matchEffPair m j v env cls d rest h hc hfr))
-        · exact Or.inr (Or.inl (sp.matchExnPair m j v env cls d rest h hc hfr))
+        · exact (sp.matchEffPair m j v env cls d rest h hc hfr).toForward
+        · exact (sp.matchExnPair m j v env cls d rest h hc hfr).toForward
         · -- `%perform`: the root half is proved, the parent half is the obligation
           cases hp : info.handler.parent with
           | none =>
@@ -2460,11 +2540,11 @@ theorem forward [ToString ν] [Add ν] (sp : SpecialPairs ν) {m : Machine ν} {
             · rw [hstep]; simp only [Machine.stepRet, hfr]; exact e1
             · rw [hstepJ]; simp only [MachineJ.stepRetJ, hjkk]; exact e2
           | some p =>
-            refine Or.inr (Or.inl (sp.performPair m j v rest h hc hfr ?_))
+            refine PairAt.toForward (sp.performPair m j v rest h hc hfr ?_)
             simp [Machine.parentOf, Machine.handlerOf, hs, hp]
-        · exact Or.inr (Or.inl (sp.resumePair m j v st fn rest h hc hfr))
-        · exact Or.inr (Or.inl (sp.runstackPair m j v st fn rest h hc hfr))
-        · exact Or.inr (Or.inl (sp.reperformPair m j v e c rest h hc hfr (hrep e c rfl)))
+        · exact (sp.resumePair m j v st fn rest h hc hfr).toForward
+        · exact (sp.runstackPair m j v st fn rest h hc hfr).toForward
+        · exact (sp.reperformPair m j v e c rest h hc hfr (hrep e c rfl)).toForward
         · -- `caml_alloc_stack`
           have hf : pushOK (Frame.allocStack3 hv hx) := ⟨rfl, fun _ _ _ => rfl⟩
           obtain ⟨kk, hjkk, hrel⟩ := rel_pop h hnt hfr hf
@@ -2473,9 +2553,9 @@ theorem forward [ToString ν] [Add ν] (sp : SpecialPairs ν) {m : Machine ν} {
           refine Or.inr (Or.inl ⟨_, _, ?_, ?_, rel_alloc hrel hnt' hv hx v⟩)
           · rw [hstep]; simp only [Machine.stepRet, hfr]
           · rw [hstepJ]; simp only [MachineJ.stepRetJ, hjkk]
-        · exact Or.inr (Or.inl (sp.contUsePair m j v rest h hc hfr))
-        · exact Or.inr (Or.inl (sp.contUpdatePair m j v cont hv hx rest h hc hfr
-            (fun cid hcid => hupd cont hv hx cid rfl hcid)))
+        · exact (sp.contUsePair m j v rest h hc hfr).toForward
+        · exact (sp.contUpdatePair m j v cont hv hx rest h hc hfr
+            (fun cid hcid => hupd cont hv hx cid rfl hcid)).toForward
         · exact absurd rfl hnd
   | throw e =>
     have hstep : m.step = m.stepThrow e := by unfold Machine.step; rw [hc]
@@ -2523,7 +2603,7 @@ initial continuation (`:93`); `caml_alloc_main_stack` (`fiber.c:550`) gives the 
 one parentless stack with no frames. -/
 theorem rel_start [ToString ν] [Add ν] (t : Term ν) :
     Rel (Machine.start t) (MachineJ.start t) := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ⟨?_, ?_, ?_, ?_⟩, rfl, rfl, rfl, rfl, rfl⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ⟨?_, ?_, ?_, ?_, ?_⟩, rfl, rfl, rfl, rfl, rfl⟩
   · exact ⟨rfl, ⟨⟨[], ⟨.unit, .unit, .unit, Option.none⟩⟩, rfl, rfl⟩, rfl, rfl, rfl⟩
   · intro _; rfl
   · rfl
@@ -2533,7 +2613,12 @@ theorem rel_start [ToString ν] [Add ν] (t : Term ν) :
     refine Or.inl ?_
     show ((([[]] : List (List (Cell ν)))[s]?).getD []) = []
     cases s <;> simp
-  · intro f hf hmem; simp [capIds, MachineJ.start] at hmem
+  · intro f hf c cs hc; simp [MachineJ.start] at hc
+  · intro f hf o os ho x hx
+    have h1 : os = [] := by
+      show os = []
+      cases o <;> simp [MachineJ.start] at ho <;> exact ho
+    subst h1; simp at hx
   · intro c₁ c₂ cs₁ cs₂ hc₁; simp [MachineJ.start] at hc₁
   · intro c o cs os hc; simp [MachineJ.start] at hc
   · intro o₁ o₂ os₁ os₂ ho₁ ho₂ hne x hx y hy
