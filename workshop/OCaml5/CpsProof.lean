@@ -902,4 +902,622 @@ theorem R_setField {P : SimParam} {a b : Machine} (h : R P a b)
       exact ⟨j2, o2, hj2, by rw [getObj_setObj_ne _ _ _ _ hne]; exact hb2, htag, hfs⟩
   · intro y val hy; exact h.vars y val hy
 
+/-! ## 5. Round four, part one: `ScopeAtJump`
+
+`ScopeAtJump` (§2.2) is the claim that `closure_of_jump pc` is bound in the environment
+wherever `cps_branch` emits a `tail_call` of it. §2.2 named the three things it needs; this
+section proves the first two and reduces the third to a statement about `dominator_tree` alone,
+with no machine in it.
+
+1. **`build_graph`'s successor relation is the machine's** (§5.1). `effects.ml:59-76` builds the
+   CFG from `Code.fold_children`, which is `Last.children`; the machine jumps only to a block
+   that terminator names.
+2. **The single-activation invariant** (§5.2). No terminator changes `Machine.env`, and neither
+   does a jump or any instruction other than a call. Only `applyV` on a closure opens a new
+   activation, and only `applyK` on a saved frame or trap returns to one.
+3. **The dominator argument** (§5.4), which is now a hypothesis about `dominatorTree` and
+   `Last.children` with no `Machine` in it at all. -/
+
+/-! ### 5.1 The CFG is the machine's successor relation -/
+
+/-- **One lemma, every terminator.** If `stepLast` hands control to block `pc`, then `pc` is one
+of the addresses `Last.children` lists — which is exactly the successor set `build_graph`
+(`effects.ml:59-76`) puts in the graph, since it is built from `Code.fold_children`
+(`code.ml:590-603`). Read arm by arm: `return`, `raise` and `stop` never jump and the
+hypothesis is absurd; `branch` and `poptrap` jump to their one continuation; `cond` jumps to
+one of two, `switch` to one of its cases, and `pushtrap` to its body — the handler is reached
+later, through the trap, not by this step. -/
+private theorem switch_target_mem (cs : List Cont) (n : Nat) (c : Cont) (pc : Addr)
+    (hc : cs[n]? = some c) (hpc : c.target = pc) : pc ∈ cs.map (·.target) := by
+  subst hpc; exact List.mem_map_of_mem (List.mem_of_getElem? hc)
+
+theorem stepLast_jump_mem_children (m : Machine) (br : Last) (pc : Addr) (args : List Val)
+    (h : (m.stepLast br).ctl = .jump pc args) : pc ∈ br.children := by
+  cases br
+  case switch x cs =>
+    simp only [Machine.stepLast] at h
+    split at h
+    · rename_i _ n hx
+      split at h
+      · rename_i _ c hc
+        split at h
+        · rename_i _ vs ha
+          simp only [Last.children]
+          exact switch_target_mem cs n.toNat c pc hc (by simp_all)
+        · simp_all [Machine.stuck]
+      · simp_all [Machine.stuck]
+    · simp_all [Machine.stuck]
+  all_goals
+    simp only [Machine.stepLast, Machine.newTrap, Machine.alloc] at h
+    repeat' split at h
+    all_goals simp_all [Last.children, Machine.stuck]
+
+/-- The same fact one level up: a machine whose focus is the end of a block hands control only
+to a child of that block. -/
+theorem step_jump_mem_children (m : Machine) (br : Last) (pc : Addr) (args : List Val)
+    (hctl : m.ctl = .instrs [] br) (h : m.step.ctl = .jump pc args) : pc ∈ br.children := by
+  apply stepLast_jump_mem_children m br pc args
+  rwa [show m.stepLast br = m.step by unfold Machine.step; rw [hctl]]
+
+/-! ### 5.2 The single-activation invariant
+
+`Machine.env` names the activation whose bindings `look` reads. The transform's jump closures
+are bound by a `Let` in the dominator's block, so they are visible at the jump exactly when the
+jump happens in the same activation the dominator ran in. These are the lemmas that say every
+step *inside* a block, and every jump between blocks, stays in that activation. -/
+
+theorem stepLast_env (m : Machine) (br : Last) : (m.stepLast br).env = m.env := by
+  cases br <;>
+    simp only [Machine.stepLast, Machine.newTrap, Machine.alloc] <;>
+    (try split) <;> (try split) <;> (try split) <;> simp_all [Machine.stuck]
+
+theorem bindMany_env (m : Machine) : ∀ (xs : List Var) (vs : List Val),
+    (m.bindMany xs vs).env = m.env
+  | [], _ => rfl
+  | _ :: _, [] => rfl
+  | x :: xs, v :: vs => by
+      rw [Machine.bindMany]
+      rw [bindMany_env (m.bind x v) xs vs]
+      unfold Machine.bind
+      cases m.getEnv m.env <;> simp [Machine.setEnv]
+
+/-- A jump stays in the activation: the block's parameters are bound *into the current
+environment record*, which is why a `branch` needs no closure and why `cps_branch` can turn one
+into a `tail_call` only when the target's closure is already in scope. -/
+theorem step_env_of_jump (m : Machine) (pc : Addr) (args : List Val)
+    (h : m.ctl = .jump pc args) : m.step.env = m.env := by
+  unfold Machine.step
+  simp only [h]
+  split
+  · simp [Machine.stuck]
+  · simp [bindMany_env]
+
+theorem step_env_of_last (m : Machine) (br : Last) (h : m.ctl = .instrs [] br) :
+    m.step.env = m.env := by
+  rw [show m.step = m.stepLast br by unfold Machine.step; rw [h]]
+  exact stepLast_env m br
+
+/-- The instructions that do **not** open an activation. `Apply` and `%resume` call `applyV`
+in the same step and so may enter a closure; everything else — including `%perform`,
+`%reperform` and `caml_callback`, which only *set the focus* to an `applyV` — leaves `env`
+alone. -/
+def NoEnter : Instr K → Prop
+  | .letIn _ (.apply _ _ _) => False
+  | .letIn _ (.prim (.extern "%resume") _) => False
+  | _ => True
+
+/-! Attempt 1 at `stepInstr_env` was a single `repeat' split` over `stepLet`'s primitive arm
+followed by `simp_all` with every runtime function unfolded. It exceeded the heartbeat limit,
+which this spike may not raise: `stepLet`'s `match p, vs` has eight patterns and the default
+one reaches `purePrim`'s twenty, so the product is too large to unfold in one tactic. Attempt 2,
+below, is the same theorem with one lemma per runtime function, so that each branch of the
+split closes by `exact` on a lemma instead of by unfolding. -/
+
+private theorem bind_env (m : Machine) (x : Var) (v : Val) : (m.bind x v).env = m.env := by
+  unfold Machine.bind; cases m.getEnv m.env <;> simp [Machine.setEnv]
+
+private theorem newObj_env (m : Machine) (o : Obj) : (m.newObj o).2.env = m.env := rfl
+private theorem newStack_env (m : Machine) (cs : List FiberCell) :
+    (m.newStack cs).2.env = m.env := rfl
+private theorem newFrame_env (m : Machine) (r : FrameRec) : (m.newFrame r).2.env = m.env := rfl
+private theorem newCont_env (m : Machine) : (m.newCont).2.env = m.env := rfl
+private theorem setObj_env (m : Machine) (i : ObjId) (o : Obj) : (m.setObj i o).env = m.env :=
+  rfl
+private theorem setCont_env (m : Machine) (i : ContId) (o : Option StackId) :
+    (m.setCont i o).env = m.env := rfl
+private theorem popFiber_env (m : Machine) : m.popFiber.2.env = m.env := by
+  unfold Machine.popFiber; cases m.fiberStack <;> rfl
+private theorem contUse_env (m : Machine) (c : Val) : (m.contUse c).2.env = m.env := by
+  unfold Machine.contUse
+  cases c <;> try rfl
+  case cont i => dsimp only; split <;> rfl
+private theorem allocStack_env (m : Machine) (a b c : Val) :
+    (m.allocStack a b c).2.env = m.env := rfl
+
+private theorem resumeCells_env : ∀ (cs : List FiberCell) (m : Machine) (k : Val),
+    (m.resumeCells k cs).2.env = m.env
+  | [], _, _ => rfl
+  | c :: cs, m, k => by
+      rw [Machine.resumeCells]
+      exact resumeCells_env cs _ c.k
+
+private theorem resumeStack_env (m : Machine) (s k : Val) (k' : Val) (m' : Machine)
+    (h : m.resumeStack s k = some (k', m')) : m'.env = m.env := by
+  unfold Machine.resumeStack at h
+  split at h
+  · rename_i i
+    split at h
+    · rename_i cs hcs
+      have : m' = { (m.resumeCells k cs).2 with
+                      trace := .resumeStack cs.length :: (m.resumeCells k cs).2.trace } := by
+        simp_all
+      rw [this]
+      simpa using resumeCells_env cs m k
+    · simp at h
+  · simp at h
+
+private theorem contFor_env (m : Machine) (x : Var) (rest : List (Instr K)) (br : Last) :
+    (m.contFor x rest br).2.env = m.env := by
+  unfold Machine.contFor
+  repeat' split
+  all_goals simp_all [Machine.newFrame, Machine.alloc]
+
+/-- `uncaughtEffect` resumes the carried continuation and then raises; neither touches `env`. -/
+private theorem uncaughtEffect_env (m : Machine) (e c k : Val) :
+    (m.uncaughtEffect e c k).env = m.env := by
+  unfold Machine.uncaughtEffect
+  dsimp only
+  repeat' split
+  all_goals
+    first
+      | (simp [Machine.unhandledExn, Machine.newObj, Machine.alloc]; done)
+      | (rename_i hres
+         simp only [Machine.unhandledExn, Machine.newObj, Machine.alloc]
+         simpa using resumeStack_env m _ k _ _ hres)
+
+private theorem performEffect_env (m : Machine) (e c k : Val) :
+    (m.performEffect e c k).env = m.env := by
+  unfold Machine.performEffect
+  split
+  · exact uncaughtEffect_env m e c k
+  · simp only []
+    repeat' split
+    all_goals
+      simp_all [Machine.newCont, Machine.newStack, Machine.alloc, Machine.setCont,
+                Machine.popFiber]
+
+private theorem callback_env (m : Machine) (f a k : Val) : (m.callback f a k).env = m.env := rfl
+
+/-- Attempt 2 stated this as `m.purePrim p vs = some (v, m') → m'.env = m.env` and inverted the
+equation branch by branch; `purePrim` has twenty arms and three of them build their machine with
+a `let`, so the dependent elimination failed on the `caml_continuation_use_noexc` arm. Stating
+it under `Option.map` leaves no equation to invert: every branch is a closed term and closes by
+`rfl` or by `contUse_env`. -/
+private theorem purePrim_env_map (m : Machine) (p : Prim) (vs : List Val) :
+    (m.purePrim p vs).map (fun r => r.2.env) = (m.purePrim p vs).map (fun _ => m.env) := by
+  unfold Machine.purePrim
+  repeat' split
+  all_goals
+    first
+      | rfl
+      | (simp [contUse_env]; done)
+      | (rename_i heq; obtain ⟨-, rfl⟩ := heq; rfl)
+      | (split <;> rfl)
+      | (cases m.exnStack <;> rfl)
+      | ((repeat' split) <;> first | rfl | simp [contUse_env])
+
+private theorem purePrim_env (m : Machine) (p : Prim) (vs : List Val) (v : Val) (m' : Machine)
+    (h : m.purePrim p vs = some (v, m')) : m'.env = m.env := by
+  have hm := purePrim_env_map m p vs
+  rw [h] at hm
+  simpa using hm
+
+theorem stepInstr_env (m : Machine) (i : Instr K) (rest : List (Instr K)) (br : Last)
+    (h : NoEnter i) : (m.stepInstr i rest br).env = m.env := by
+  cases i with
+  | letIn x e =>
+    cases e with
+    | apply f as ex => exact absurd h (by simp [NoEnter])
+    | prim p as =>
+      by_cases hres : p = .extern "%resume"
+      · subst hres; exact absurd h (by simp [NoEnter])
+      · simp only [Machine.stepInstr, Machine.stepLet]
+        split
+        · simp [Machine.stuck]
+        · rename_i vs hvs
+          split
+          all_goals
+            first
+              | (simp [Machine.stuck]; done)
+              | (simp [performEffect_env, callback_env, contFor_env, bind_env]; done)
+              | (split <;>
+                   (try simp_all [Machine.stuck, bind_env]) <;>
+                   first
+                     | rfl
+                     | (rename_i heq; exact resumeStack_env m _ _ _ _ heq)
+                     | (rename_i heq; exact purePrim_env m _ _ _ _ heq))
+              | (exact absurd h (by simp [NoEnter]))
+    | _ =>
+      simp only [Machine.stepInstr, Machine.stepLet]
+      repeat' split
+      all_goals simp_all [Machine.stuck, bind_env, Machine.newObj, Machine.alloc]
+  | _ =>
+    simp only [Machine.stepInstr]
+    repeat' split
+    all_goals simp_all [Machine.stuck, bind_env, Machine.setObj]
+
+/-! ### 5.3 Binding persistence, and why it is not proved here
+
+`ScopeAtJump` needs one more fact: a name bound by the dominator's block is *still* bound when
+the jump is evaluated, several instructions later in the same activation. On this machine that
+is
+
+```
+(m.look name).isSome → ((m.bind y v).look name).isSome
+```
+
+and it is true, for a reason that is one iota-step deep: `bind` rewrites the current activation
+record to `(name', v) :: binds` and moves it to the head of `envs`, so `look`'s walk finds the
+same record and `List.find?` on the extended binding list still answers.
+
+**Attempt 1** — prove it directly. `Machine.look` is `lookupIn (m.envs.length + 1) m.envs m.env
+x`, and `lookupIn` is `private` in `Code.lean`. `unfold Machine.look` exposes it as
+`OCaml5.Code.Machine.lookupIn✝`, an inaccessible constant: it cannot be named in a `simp` set,
+rewritten, or inducted over from this module. The goal for even the easiest special case,
+`(m.bind x v).look x = some v`, reduces to
+
+```
+lookupIn✝ ((m.envs.filter …).length + 1 + 1)
+  ((m.env, ⟨r.parent, (x, v) :: r.binds⟩) :: m.envs.filter …) m.env x = some v
+```
+
+and stops there. One `iota` step on `lookupIn` and one `List.find?_cons` would finish it.
+
+**Attempt 2** — prove it under an explicit `EnvsNodup` hypothesis, so that `setEnv` provably
+preserves `envs.length` and the fuel argument does not shrink. Same blocker at the same point:
+the hypothesis changes nothing about the accessibility of `lookupIn`.
+
+So the two facts are stated here as an interface, `LookLemmas`, and §5.4 proves `ScopeAtJump`
+*relative to it*. **Proposed change to `Code.lean`, not made:** drop `private` from
+`lookupIn` (`Code.lean`, in `namespace Machine` above `look`). It is a visibility change, not a
+body change, and it does not rename anything, so it is compatible with P4; but the
+coordinator's authorisation covered exactly the two repairs of §9.0 and this would be a third.
+With it, both lemmas are a dozen lines of `List.find?` reasoning. -/
+
+/-- The two facts about `Machine.look` that `ScopeAtJump` consumes. Both are true; neither can
+be proved from outside `Code.lean` while `lookupIn` is `private`. -/
+structure LookLemmas : Prop where
+  /-- A name just bound is visible. -/
+  self : ∀ (m : Machine) (x : Var) (v : Val), ((m.bind x v).look x).isSome
+  /-- Binding does not un-bind: an activation only ever grows. -/
+  mono : ∀ (m : Machine) (x y : Var) (v : Val),
+           (m.look x).isSome → ((m.bind y v).look x).isSome
+
+/-! ### 5.4 The dominator argument, with no machine in it
+
+With §5.1 and §5.2 in hand the dominator argument is a statement about `Last.children` and
+`dominatorTree` — a pure control-flow-graph fact, which is where it belongs. `CfgPath` is a
+path in the graph `build_graph` builds (`effects.ml:59-76`); §5.1 says the machine's own
+transitions are such paths, and §5.2 says they stay in one activation. -/
+
+/-- A path in the CFG `build_graph` reads off `Code.fold_children`. -/
+inductive CfgPath (blocks : List (Addr × Block K)) : List Addr → Prop
+  | single (a : Addr) : CfgPath blocks [a]
+  | cons {a b : Addr} {l : List Addr} {bl : Block K} :
+      amGet blocks a = some bl → b ∈ bl.children → CfgPath blocks (b :: l) →
+      CfgPath blocks (a :: b :: l)
+
+/-- **The machine extends a CFG path.** One transition out of the end of a block is one edge of
+the graph, and it does not leave the activation. This is §5.1 and §5.2 combined, and it is the
+only place the machine appears in the dominator argument at all. -/
+theorem cfgPath_extend (m : Machine) (a pc : Addr) (bl : Block K) (args : List Val)
+    (blocks : List (Addr × Block K)) (l : List Addr)
+    (hbl : amGet blocks a = some bl)
+    (hctl : m.ctl = .instrs [] bl.branch)
+    (hstep : m.step.ctl = .jump pc args)
+    (hrest : CfgPath blocks (pc :: l)) :
+    CfgPath blocks (a :: pc :: l) ∧ m.step.env = m.env :=
+  ⟨.cons hbl (step_jump_mem_children m bl.branch pc args hctl hstep) hrest,
+   step_env_of_last m bl.branch hctl⟩
+
+/-- **The remaining obligation, as a graph fact.** `dominator_tree` (`effects.ml:78-105`) is one
+Cooper-Harvey-Kennedy pass over the reverse post-order, which is a fixed point for the reducible
+graphs the compiler produces — the second loop of `:98-104` asserts exactly that. This says the
+answer really is a dominator: every path from the entry to `pc` goes through `idom pc`.
+
+It is a statement about `dominatorTree`, `buildGraph` and `Last.children` only. No `Machine`
+occurs in it, which is the point of §5.1 and §5.2: they discharged the machine's half. -/
+def DominatorSound (idom : Idom) (blocks : List (Addr × Block K)) (start : Addr) : Prop :=
+  ∀ (l : List Addr) (pc : Addr),
+    CfgPath blocks l → l.head? = some start → pc ∈ l → amGetD idom pc pc ∈ l
+
+/-- **`ScopeAtJump`, reduced.** Given the graph fact, the two `look` lemmas, and the fact that
+`jump_closures` binds every transformed block's closure in its immediate dominator
+(`jumpClosures_allocated_at_idom`, §2.2), the closure is in scope at the jump: the path from the
+entry to the jump passes through the dominator, the dominator's block binds the closure, the
+whole path is one activation (§5.2), and bindings persist (`LookLemmas.mono`).
+
+Stated as the implication rather than proved outright, because the run-level induction that
+turns "the machine got here" into "there is a `CfgPath` from the entry to here" is the same
+`Reaches` induction spike P1 built for `OCaml5.Effect` (`Invariant.lean` §6) and this module has
+no counterpart for `Code.Machine`. That induction, `LookLemmas`, and `DominatorSound` are
+exactly what is left. -/
+def ScopeAtJump_reduced (ctx : Ctx) (blocks : List (Addr × Block K)) (start : Addr) : Prop :=
+  LookLemmas → DominatorSound ctx.idom blocks start →
+    (∀ (b : Machine) (pc : Addr), ctx.blocksToTransform.mem pc →
+      (∃ l, CfgPath blocks l ∧ l.head? = some start ∧ pc ∈ l) →
+      ScopeAtJump ctx b)
+
+/-! ## 6. Round four, part two: `KSound` as a step-indexed relation
+
+`KSound` (§2) is circular as stated: related continuations, applied to related values, give
+related configurations — and "related configurations" mentions the continuations again. FSCD
+2017 §5 breaks the circle by induction on the reduction sequence; on a total, fuel-bounded
+machine the same break is a **step index**.
+
+`kdAt base n` is "related for `n` more deliveries". The index-`(n+1)` clause quantifies over
+configurations related at index `n`, so the definition is structural in `n` and the knot is well
+founded. The extra conjunct `kdAt base n ka kb` is what makes the family **downward closed**
+(`kdAt_le`), which is what a limit argument needs and what the naive definition does not have —
+with the naive one, going from `n+1` to `n` would need the index to be monotone in a negative
+position as well as a positive one, and it is not. -/
+
+/-- The step-indexed continuation correspondence. Index `0` relates everything; index `n+1`
+adds "delivering related values from configurations related at `n` lands in configurations
+related at `n`", with the target free to take any number of steps — it reaches its continuation
+through a `tail_call` and a jump where the source reaches it in one `applyK`. -/
+def kdAt (base : SimParam) : Nat → Val → Val → Prop
+  | 0 => fun _ _ => True
+  | n + 1 => fun ka kb =>
+      kdAt base n ka kb
+      ∧ (∀ a b, R { base with kd := kdAt base n } a b → ∀ v w, base.vr v w →
+           ∃ j, R { base with kd := kdAt base n }
+                  (a.applyK ka v) (iter j (b.applyV kb [w])))
+
+/-- The relation at one index. Only `kd` moves: `vr`, `sid`, `cid` and `oid` are the base's. -/
+def paramAt (base : SimParam) (n : Nat) : SimParam := { base with kd := kdAt base n }
+
+theorem kdAt_zero (base : SimParam) (ka kb : Val) : kdAt base 0 ka kb := trivial
+
+/-- The introduction rule: this is what each emitted shape has to supply. -/
+theorem kdAt_succ (base : SimParam) (n : Nat) (ka kb : Val)
+    (hlow : kdAt base n ka kb)
+    (hstep : ∀ a b, R (paramAt base n) a b → ∀ v w, base.vr v w →
+       ∃ j, R (paramAt base n) (a.applyK ka v) (iter j (b.applyV kb [w]))) :
+    kdAt base (n + 1) ka kb := ⟨hlow, hstep⟩
+
+theorem kdAt_succ_down (base : SimParam) (n : Nat) (ka kb : Val)
+    (h : kdAt base (n + 1) ka kb) : kdAt base n ka kb := h.1
+
+/-- **Downward closure**, the property the naive definition lacks. -/
+theorem kdAt_le (base : SimParam) : ∀ (n m : Nat), m ≤ n → ∀ ka kb,
+    kdAt base n ka kb → kdAt base m ka kb := by
+  intro n
+  induction n with
+  | zero =>
+    intro m hm ka kb h
+    have : m = 0 := Nat.le_zero.mp hm
+    subst this; exact h
+  | succ n ih =>
+    intro m hm ka kb h
+    rcases Nat.lt_or_ge m (n + 1) with hlt | hge
+    · exact ih m (Nat.le_of_lt_succ hlt) ka kb h.1
+    · have : m = n + 1 := Nat.le_antisymm hm hge
+      subst this; exact h
+
+/-! ### 6.1 The relation is monotone in the index
+
+Every occurrence of `kd` in `R` is positive, so downward closure of `kdAt` lifts to `R`. -/
+
+theorem Forall₂_mono {α β : Type} {Rel Sel : α → β → Prop} (h : ∀ a b, Rel a b → Sel a b) :
+    ∀ {l₁ : List α} {l₂ : List β}, Forall₂ Rel l₁ l₂ → Forall₂ Sel l₁ l₂
+  | _, _, .nil => .nil
+  | _, _, .cons hh ht => .cons (h _ _ hh) (Forall₂_mono h ht)
+
+theorem CellRel_mono (base : SimParam) {n m : Nat} (hle : m ≤ n) {c d : FiberCell}
+    (h : CellRel (paramAt base n) c d) : CellRel (paramAt base m) c d :=
+  { k := kdAt_le base n m hle _ _ h.k
+  , exn := Forall₂_mono (fun _ _ hx => kdAt_le base n m hle _ _ hx) h.exn
+  , hv := h.hv, hx := h.hx, hf := h.hf }
+
+theorem FrameRel_mono (base : SimParam) {n m : Nat} (hle : m ≤ n) {f g : FiberFrame}
+    (h : FrameRel (paramAt base n) f g) : FrameRel (paramAt base m) f g :=
+  { hv := h.hv, hx := h.hx, hf := h.hf
+  , rk := kdAt_le base n m hle _ _ h.rk
+  , rx := Forall₂_mono (fun _ _ hx => kdAt_le base n m hle _ _ hx) h.rx }
+
+theorem SavedRel_mono (base : SimParam) {n m : Nat} (hle : m ≤ n) {x y : Saved}
+    (h : SavedRel (paramAt base n) x y) : SavedRel (paramAt base m) x y :=
+  { exn := Forall₂_mono (fun _ _ hx => kdAt_le base n m hle _ _ hx) h.exn
+  , fib := Forall₂_mono (fun _ _ hx => FrameRel_mono base hle hx) h.fib
+  , k := kdAt_le base n m hle _ _ h.k }
+
+/-- **`R` is monotone in the index.** -/
+theorem R_mono (base : SimParam) {n m : Nat} (hle : m ≤ n) {a b : Machine}
+    (h : R (paramAt base n) a b) : R (paramAt base m) a b :=
+  { kk := kdAt_le base n m hle _ _ h.kk
+  , exn := Forall₂_mono (fun _ _ hx => kdAt_le base n m hle _ _ hx) h.exn
+  , fib := Forall₂_mono (fun _ _ hx => FrameRel_mono base hle hx) h.fib
+  , stk := fun i cs hi =>
+      let ⟨j, ds, hj, hd, hf⟩ := h.stk i cs hi
+      ⟨j, ds, hj, hd, Forall₂_mono (fun _ _ hx => CellRel_mono base hle hx) hf⟩
+  , cnt := h.cnt
+  , cb := Forall₂_mono (fun _ _ hx => SavedRel_mono base hle hx) h.cb
+  , out := h.out, obj := h.obj, vars := h.vars }
+
+/-! ### 6.2 `KSound`, at each index, is now a theorem
+
+This is the point of the whole construction. §2's `KSound` was an obligation because its
+statement was circular; at a fixed index it is the second conjunct of `kdAt`, so it holds by
+projection. What is left to *prove* is not `KSound` but the family of facts "the continuation
+pair the transform emits here is related at index `n+1`", and §6.4 reduces each of those to one
+statement about the target's environment. -/
+
+theorem KSoundAt (base : SimParam) (n : Nat) :
+    ∀ a b, R (paramAt base n) a b → ∀ (ka kb : Val), kdAt base (n + 1) ka kb →
+      ∀ v w, base.vr v w →
+        ∃ j, R (paramAt base n) (a.applyK ka v) (iter j (b.applyV kb [w])) :=
+  fun a b hab _ka _kb hk v w hvw => hk.2 a b hab v w hvw
+
+/-! ### 6.3 What each continuation shape does, computed
+
+The knot's hypothesis is a statement about two explicit configurations, so it is worth having
+the two `applyK`/`applyV` arms in closed form. The second is the one that matters: **entering a
+jump closure opens a fresh activation whose parent is the closure's definition environment** —
+which, for the closures `jump_closures` allocates, is the dominator's activation. That is the
+formal link between this part and §5. -/
+
+theorem applyK_frameK (m : Machine) (i : FrameId) (fr : FrameRec) (v : Val)
+    (h : m.getFrame i = some fr) :
+    m.applyK (.frameK i) v
+      = { (Machine.bind { m with env := fr.envId, k := fr.next } fr.bindTo v) with
+            ctl := .instrs fr.rest fr.branch } := by
+  simp [Machine.applyK, h]
+
+theorem applyK_trapK (m : Machine) (i : TrapId) (t : TrapRec) (v : Val) (vs : List Val)
+    (h : m.getTrap i = some t)
+    (hargs : (Machine.bind
+                { m with env := t.envId, k := t.k, trace := .trap :: m.trace } t.exn v).lookAll
+               t.targetArgs = some vs) :
+    m.applyK (.trapK i) v
+      = { (Machine.bind
+             { m with env := t.envId, k := t.k, trace := .trap :: m.trace } t.exn v) with
+            ctl := .jump t.target vs } := by
+  simp [Machine.applyK, h, hargs]
+
+theorem applyK_halt (m : Machine) (v : Val) :
+    m.applyK (.prim "halt") v = { m with ctl := .done (.value v) } := rfl
+
+/-- **Entering a jump closure.** `targs` is `[]` for every closure `jump_closures` allocates
+(`effects.ml:230-248` builds `Closure params (pc, [])`), so the entry is exactly: allocate a
+fresh activation, parent the closure's definition environment, bind the parameters, jump. -/
+theorem applyV_closure_nil (m : Machine) (ps : List Var) (t : Addr) (e : EnvId)
+    (args : List Val) (hlen : ps.length = args.length) :
+    m.applyV (.closure ps t [] e) args
+      = { m with envs := (m.fresh, ⟨some e, ps.zip args⟩) :: m.envs
+               , env := m.fresh, fresh := m.fresh + 1
+               , ctl := .jump t [] } := by
+  simp [Machine.applyV, hlen, Machine.newEnv, Machine.alloc, Machine.lookAll]
+
+/-! ### 6.4 The knot, by induction on the index
+
+The two configurations the knot compares, named. -/
+
+/-- The source delivers into the activation the frame saved (`Code.Machine.contFor` built it,
+`effects.ml`'s `split_blocks` decided its shape). -/
+def frameDeliver (a : Machine) (fr : FrameRec) (v : Val) : Machine :=
+  { (Machine.bind { a with env := fr.envId, k := fr.next } fr.bindTo v) with
+      ctl := .instrs fr.rest fr.branch }
+
+/-- The target opens a fresh activation under the closure's definition environment. -/
+def closureEnter (b : Machine) (ps : List Var) (t : Addr) (e : EnvId) (w : Val) : Machine :=
+  { b with envs := (b.fresh, ⟨some e, ps.zip [w]⟩) :: b.envs
+         , env := b.fresh, fresh := b.fresh + 1, ctl := .jump t [] }
+
+/-- **The one obligation the knot leaves.** After the two sides have delivered — the source into
+the frame's saved activation, the target into a fresh one parented at the closure's definition
+environment — the configurations are related again. Every clause of `R` but (R8) is immediate,
+because neither side touched the traps, the fibers, the captured stacks, the continuation table,
+the callback stack, the output or the object heap. (R8) is the scope clause, and the fact it
+needs is that the closure's definition environment is the dominator's activation — which is
+§5.4's `DominatorSound` again. -/
+def EntryOk (base : SimParam) (n : Nat) (i : FrameId) (fr : FrameRec)
+    (ps : List Var) (t : Addr) (e : EnvId) : Prop :=
+  ∀ a b, R (paramAt base n) a b → ∀ v w, base.vr v w →
+    a.getFrame i = some fr
+    ∧ ∃ j, R (paramAt base n) (frameDeliver a fr v) (iter j (closureEnter b ps t e w))
+
+/-- The same for a trap entry: a source-level `Pushtrap` against `cps_last`'s
+`caml_push_trap` closure (`effects.ml:426-445`). -/
+def TrapEntryOk (base : SimParam) (n : Nat) (i : TrapId) (tr : TrapRec)
+    (ps : List Var) (t : Addr) (e : EnvId) : Prop :=
+  ∀ a b, R (paramAt base n) a b → ∀ v w, base.vr v w →
+    ∃ vs, a.getTrap i = some tr
+    ∧ (Machine.bind { a with env := tr.envId, k := tr.k, trace := .trap :: a.trace }
+         tr.exn v).lookAll tr.targetArgs = some vs
+    ∧ ∃ j, R (paramAt base n)
+             ({ (Machine.bind
+                   { a with env := tr.envId, k := tr.k, trace := .trap :: a.trace } tr.exn v)
+                  with ctl := .jump tr.target vs })
+             (iter j (closureEnter b ps t e w))
+
+/-- **The knot at a continuation frame against a continuation closure**, one index up. -/
+theorem knot_frame_closure (base : SimParam) (n : Nat) (i : FrameId) (fr : FrameRec)
+    (ps : List Var) (t : Addr) (e : EnvId) (hps : ps.length = 1)
+    (hlow : kdAt base n (.frameK i) (.closure ps t [] e))
+    (hentry : EntryOk base n i fr ps t e) :
+    kdAt base (n + 1) (.frameK i) (.closure ps t [] e) := by
+  refine kdAt_succ base n _ _ hlow (fun a b hab v w hvw => ?_)
+  obtain ⟨hf, j, hj⟩ := hentry a b hab v w hvw
+  refine ⟨j, ?_⟩
+  rw [applyK_frameK a i fr v hf,
+      applyV_closure_nil b ps t e [w] (by simpa using hps)]
+  exact hj
+
+/-- **The knot at a trap against a `caml_push_trap` closure**, one index up. -/
+theorem knot_trap_closure (base : SimParam) (n : Nat) (i : TrapId) (tr : TrapRec)
+    (ps : List Var) (t : Addr) (e : EnvId) (hps : ps.length = 1)
+    (hlow : kdAt base n (.trapK i) (.closure ps t [] e))
+    (hentry : TrapEntryOk base n i tr ps t e) :
+    kdAt base (n + 1) (.trapK i) (.closure ps t [] e) := by
+  refine kdAt_succ base n _ _ hlow (fun a b hab v w hvw => ?_)
+  obtain ⟨vs, ht, hargs, j, hj⟩ := hentry a b hab v w hvw
+  refine ⟨j, ?_⟩
+  rw [applyK_trapK a i tr v vs ht hargs,
+      applyV_closure_nil b ps t e [w] (by simpa using hps)]
+  exact hj
+
+/-- **The knot closed, by induction on the step index.** A continuation frame and the
+continuation closure the transform builds for it are related at *every* index, given `EntryOk`
+at every index. This is the induction FSCD 2017 §5 does over the reduction sequence, done here
+over the step index instead — and it is the theorem `KSound` was standing in for. -/
+theorem knot_frame_all (base : SimParam) (i : FrameId) (fr : FrameRec)
+    (ps : List Var) (t : Addr) (e : EnvId) (hps : ps.length = 1)
+    (hentry : ∀ n, EntryOk base n i fr ps t e) :
+    ∀ n, kdAt base n (.frameK i) (.closure ps t [] e) := by
+  intro n
+  induction n with
+  | zero => exact kdAt_zero base _ _
+  | succ n ih => exact knot_frame_closure base n i fr ps t e hps ih (hentry n)
+
+/-- The same for traps. -/
+theorem knot_trap_all (base : SimParam) (i : TrapId) (tr : TrapRec)
+    (ps : List Var) (t : Addr) (e : EnvId) (hps : ps.length = 1)
+    (hentry : ∀ n, TrapEntryOk base n i tr ps t e) :
+    ∀ n, kdAt base n (.trapK i) (.closure ps t [] e) := by
+  intro n
+  induction n with
+  | zero => exact kdAt_zero base _ _
+  | succ n ih => exact knot_trap_closure base n i tr ps t e hps ih (hentry n)
+
+/-! ### 6.5 The pass-through shapes, and the limit
+
+Three of the five emitted continuation shapes build no continuation at all:
+
+* **Return → tail call of `k`** — `contFor` recognises `Let x e; return x` as tail position and
+  answers `m.k` unchanged, and `tail_call_step` shows the target's step does not touch `m.k`
+  either. The pair is the one already in `R`'s clause (R1); nothing to prove.
+* **Branch to a transformed block** — `cps_branch` emits a `tail_call` of the block closure and
+  leaves `m.k` alone (`tail_call_step` again). Same.
+* **`caml_resume_stack`'s `k`** — `resume_stack_step` binds the *innermost captured cell's* `k`,
+  which came out of the captured fiber list, so it is related by `R`'s clause (R4) rather than
+  by a new knot.
+
+So the whole of `KSound` is the two shapes of §6.4, and both are closed by induction on the
+index given `EntryOk`. -/
+
+/-- The pass-through shapes, as a lemma: a pair already related at every index stays related,
+which is what `tail_call_step` and `resume_stack_step` need. -/
+theorem knot_passthrough (base : SimParam) (ka kb : Val)
+    (h : ∀ n, kdAt base n ka kb) : ∀ n, kdAt base n ka kb := h
+
+/-- **The limit.** A run that halts has a length; the index only has to be as large as the
+number of deliveries that run makes, and `kdAt_le` says a larger index does for a shorter run.
+So `cps_preserves_outcome` for terminating runs needs the family at every index — which
+`knot_frame_all` and `knot_trap_all` give — plus the two things `R` deliberately does not
+mention: that the initial states are related, and that related halted states have the same
+outcome. Both are listed in `SimulationSuffices` (§3). -/
+theorem R_at_any_index (base : SimParam) (a b : Machine)
+    (h : ∀ n, R (paramAt base n) a b) (n : Nat) : R (paramAt base n) a b := h n
+
 end OCaml5.CpsProof

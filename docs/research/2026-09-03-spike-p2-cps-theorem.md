@@ -1,6 +1,6 @@
 # Spike P2: `cps_preserves_outcome`, pass by pass
 
-Status: done, 2026-09-04, three rounds; §10 is round three. Plan: `docs/research/2026-09-03-ocaml5-deep-plan.md`, row P2 of §6.
+Status: done, 2026-09-04, four rounds; §9 is round three, §10 is round four. Plan: `docs/research/2026-09-03-ocaml5-deep-plan.md`, row P2 of §6.
 Predecessor: `docs/research/2026-09-03-spike-o2-jsoo.md`, whose §5 states the theorem this
 spike attacks. Base commit `7729f58`; re-verified on `fa7bb5f` (spike P6 landed while this ran;
 `Code.lean` and `Cps.lean` are untouched by it). Files written: `workshop/OCaml5/CpsProof.lean`
@@ -18,7 +18,10 @@ defects, both in `Code.Machine` rather than in the transform, both confirmed aga
 `ocamlrun`, `ocamlopt` and `node`, and both repaired by two arms. The four block shapes the Effect avatar will produce —
 the drive loop, the dispatcher bucket, the trap that survives a capture, and the callback path
 — are covered in the generator and pinned as witnesses, and the drive loop is the first program
-in this tree to reach `allocate_continuation`'s `` `Loop `` arm.**
+in this tree to reach `allocate_continuation`'s `` `Loop `` arm. Round four closed the
+continuation knot: step-indexed, `KSound` is a theorem rather than an obligation, and the knot
+for both shapes that build a continuation is proved by induction on the index — what remains is
+one dominator fact with no machine in it, shared with `ScopeAtJump`.**
 
 ## 0. What was built
 
@@ -31,7 +34,9 @@ in this tree to reach `allocate_continuation`'s `` `Loop `` arm.**
 | The relation `R` over `Code.Machine`'s state | `CpsProof.lean` §2 | defined, 8 clauses; `R_ctl` proved |
 | The emitted shapes, executed | `CpsProof.lean` §2.1 | 7 theorems proved |
 | `jump_closures` allocated at the dominator | `CpsProof.lean` §2.2 | 3 theorems proved; the scope half stated |
-| `cps_preserves_outcome`, assembled | `CpsProof.lean` §3 | stated, with 3 named obligations |
+| `cps_preserves_outcome`, assembled | `CpsProof.lean` §3 | stated; obligations reduced in round four (§10.7) |
+| `KSound` step-indexed, and the knot closed by induction | `CpsProof.lean` §6 | 20 theorems proved; `KSound` is no longer an obligation |
+| `ScopeAtJump`: the machine's half | `CpsProof.lean` §5 | 9 theorems proved; the rest is a pure graph fact |
 | The property harness: generator, driver, shrinker | `ir/Fuzz.lean` | 4500 programs run, 8 `#guard`s |
 | Two machine defects, minimised and pinned | `ir/Counterexamples.lean` | 11 `#guard`s |
 | The four shapes the Effect avatar produces | `ir/Avatar.lean`, `Fuzz.gen` cases 10-13 | 9 `#guard`s, and 6 more theorems in `CpsProof.lean` §2.3 |
@@ -369,8 +374,8 @@ with P1/P3 rather than piecemeal.
 
 ## 7. What is owed
 
-- `KSound` and `Obligation_Scope` (§3). Neither is a `Code.lean` problem; both are proof work,
-  the first step-indexed, the second an invariant over a whole run.
+- `KSound` and `Obligation_Scope` (§3). **Superseded by §10.7**: `KSound` is closed, and the
+  two have become one obligation, `DominatorSound`, plus the `LookLemmas` visibility fix.
 - Clause (i) of `cps_preserves_outcome` — that the transform leaves no `%perform`, `%reperform`
   or `%resume` — is a syntactic induction over `cps_block`/`rewrite_instr` and is the cheapest
   remaining row. It was not attempted.
@@ -647,7 +652,262 @@ either — it sharpened what they have to cover. `cpsBlock_tail_perform` reduces
 `run_under_handler` shape to `KSound` alone; `a1DriveLoop` and the p7 shape together are the
 concrete adversaries for `ScopeAtJump`. Neither is discharged.
 
-## 10. Commands to re-run everything
+## 10. Round four: the continuation knot, and `ScopeAtJump` reduced
+
+Round four, 2026-09-04, on `06def66`. The coordinator's brief: take `KSound` and `ScopeAtJump`
+— §3's two open obligations, and the core of the chain — as far as they go. Twenty-nine new
+theorems, all proved, **all `propext`/`Quot.sound` only**: round four introduces no
+`Classical.choice`. `Code.lean`, `Cps.lean` and every `ir/` witness are untouched; the harness
+was re-run and is unchanged at 3500/3500.
+
+The headline is a change of status, not a new hypothesis:
+
+> **`KSound` is no longer an obligation.** Step-indexed, it becomes a *theorem*
+> (`KSoundAt`, §10.2), and what is left to prove is the family "the continuation pair the
+> transform emits here is related at index `n`" — which §10.4 closes **by induction on `n`**
+> for both shapes that build a continuation, given one fact about the target's environment.
+> That fact is the same one `ScopeAtJump` needs. **The two obligations of §3 have become one.**
+
+### 10.1 The step index, and why the naive version does not work
+
+`KSound` is circular as stated: related continuations, applied to related values, give related
+*configurations* — and configurations are related partly by their continuations. FSCD 2017 §5
+breaks the circle by induction on the reduction sequence; on a total fuel-bounded machine the
+same break is a step index, `kdAt base n`, "related for `n` more deliveries".
+
+The first attempt defined it as the obvious recursion — index `n+1` quantifies over
+configurations related at index `n`. It is well founded, but it is **not downward closed**:
+proving `kdAt (n+1) ka kb → kdAt n ka kb` needs `R` at index `n-1` to imply `R` at index `n`,
+because the relation occurs in a *negative* position in the premise, and that is the wrong
+direction. Without downward closure there is no limit argument.
+
+The definition kept adds one conjunct:
+
+```lean
+def kdAt (base : SimParam) : Nat → Val → Val → Prop
+  | 0 => fun _ _ => True
+  | n + 1 => fun ka kb =>
+      kdAt base n ka kb                                   -- ← downward closure, for free
+      ∧ (∀ a b, R { base with kd := kdAt base n } a b → ∀ v w, base.vr v w →
+           ∃ j, R { base with kd := kdAt base n }
+                  (a.applyK ka v) (iter j (b.applyV kb [w])))
+```
+
+`kdAt_le` then falls out by projection, and because every occurrence of `kd` in `R` is positive,
+it lifts: `R_mono` says `R (paramAt base n) a b → R (paramAt base m) a b` for `m ≤ n`, proved
+clause by clause through `Forall₂_mono`, `CellRel_mono`, `FrameRel_mono` and `SavedRel_mono`.
+
+The target is allowed `∃ j` steps against the source's one `applyK`, which is the same "there
+exists fuel" the split theorem needed (§1.1): the target reaches its continuation through a
+`tail_call` and a jump.
+
+### 10.2 `KSound` at an index is a theorem
+
+```lean
+theorem KSoundAt (base : SimParam) (n : Nat) :
+    ∀ a b, R (paramAt base n) a b → ∀ (ka kb : Val), kdAt base (n + 1) ka kb →
+      ∀ v w, base.vr v w →
+        ∃ j, R (paramAt base n) (a.applyK ka v) (iter j (b.applyV kb [w])) :=
+  fun a b hab _ka _kb hk v w hvw => hk.2 a b hab v w hvw
+```
+
+That is the whole proof: it is the second conjunct. The circularity was in the statement, and
+indexing removed it. What has to be *proved* is now a different thing — the emitted pairs are
+related at each index — and that is §10.4.
+
+### 10.3 What each continuation shape does, computed
+
+Three of the five emitted shapes build **no** continuation, so they need no knot at all:
+
+| shape | why there is nothing to prove |
+| --- | --- |
+| Return → tail call of `k` | `contFor` recognises `Let x e; return x` as tail position and answers `m.k` unchanged; `tail_call_step` (§2.1) shows the target does not touch `m.k` either. The pair is already `R`'s clause (R1). |
+| Branch to a transformed block | `cps_branch` emits a `tail_call` of the block closure and leaves `m.k` alone — `tail_call_step` again. |
+| `caml_resume_stack`'s `k` | `resume_stack_step` binds the *innermost captured cell's* `k`, which came out of the captured fiber list, so it is related by clause (R4), not by a new knot. |
+
+The two that do build one are a continuation frame (`contFor`) against the closure
+`allocate_continuation` emits, and a source-level `Pushtrap` trap against the `caml_push_trap`
+closure of `cps_last` (`effects.ml:426-445`). Both sides are computed in closed form —
+`applyK_frameK`, `applyK_trapK`, `applyK_halt`, and the one that matters:
+
+```lean
+theorem applyV_closure_nil (m : Machine) (ps : List Var) (t : Addr) (e : EnvId)
+    (args : List Val) (hlen : ps.length = args.length) :
+    m.applyV (.closure ps t [] e) args
+      = { m with envs := (m.fresh, ⟨some e, ps.zip args⟩) :: m.envs
+               , env := m.fresh, fresh := m.fresh + 1, ctl := .jump t [] }
+```
+
+**Entering a jump closure opens a fresh activation whose parent is the closure's *definition*
+environment.** For the closures `jump_closures` allocates that environment is the dominator's
+activation — which is the formal join between this part and part one. (`targs` is `[]` for
+every one of them: `effects.ml:230-248` builds `Closure params (pc, [])`.)
+
+### 10.4 The knot, closed by induction on the index
+
+With both sides computed, the knot's hypothesis is a statement about two explicit
+configurations, named `EntryOk` (frames) and `TrapEntryOk` (traps): *after* the source has
+delivered into the frame's saved activation and the target into its fresh one, the two are
+related again. Every clause of `R` but (R8) is immediate — neither side touched the traps, the
+fibers, the captured stacks, the continuation table, the callback stack, the output or the
+object heap. (R8) is the scope clause.
+
+```lean
+theorem knot_frame_all (base : SimParam) (i : FrameId) (fr : FrameRec)
+    (ps : List Var) (t : Addr) (e : EnvId) (hps : ps.length = 1)
+    (hentry : ∀ n, EntryOk base n i fr ps t e) :
+    ∀ n, kdAt base n (.frameK i) (.closure ps t [] e)
+```
+
+proved by `induction n`: index `0` is trivial, and `knot_frame_closure` is the step.
+`knot_trap_all` is the same for traps. **That is the induction FSCD 2017 §5 does over the
+reduction sequence, done here over the step index** — and it is the theorem `KSound` was
+standing in for.
+
+So `KSound` reduces to `EntryOk`/`TrapEntryOk`, i.e. to `R`'s clause (R8) after entering a
+closure, i.e. to the same dominator fact `ScopeAtJump` needs. One obligation, not two.
+
+### 10.5 `ScopeAtJump`: the machine's half, proved
+
+`ScopeAtJump` (§2.2) named three things it needed. Two are now theorems and the third has no
+`Machine` in it.
+
+**(a) `build_graph`'s successor relation is the machine's.** One theorem, every terminator:
+
+```lean
+theorem stepLast_jump_mem_children (m : Machine) (br : Last) (pc : Addr) (args : List Val)
+    (h : (m.stepLast br).ctl = .jump pc args) : pc ∈ br.children
+```
+
+`return`, `raise` and `stop` never jump, so the hypothesis is absurd; `branch` and `poptrap` go
+to their one continuation; `cond` to one of two; `switch` to one of its cases (via
+`switch_target_mem`, `List.mem_of_getElem?`); and `pushtrap` to its **body** — the handler is
+reached through the trap, not by this step, which is why `Last.children` listing both is sound
+but not tight. `build_graph` (`effects.ml:59-76`) reads its successors from
+`Code.fold_children` (`code.ml:590-603`), which is exactly `Last.children`, so the graph the
+dominator computation runs on is the machine's own.
+
+**(b) The single-activation invariant.** `stepLast_env`, `bindMany_env`, `step_env_of_jump`,
+`step_env_of_last` and `stepInstr_env`: no terminator changes `Machine.env`, a jump binds the
+target block's parameters *into the current activation record*, and no instruction other than
+a call changes it either. `NoEnter` names the exceptions precisely — `Apply` and `%resume`,
+which call `applyV` in the same step. `%perform`, `%reperform` and `caml_callback` only *set
+the focus* to an `applyV`, so they are inside the activation.
+
+`stepInstr_env` took three attempts and the record is in the module:
+
+- *Attempt 1*: one `repeat' split` over `stepLet`'s primitive arm and `simp_all` with every
+  runtime function unfolded. **Exceeded the heartbeat limit**, which this spike may not raise:
+  `stepLet`'s `match p, vs` has eight patterns and the default one reaches `purePrim`'s twenty.
+- *Attempt 2*: one lemma per runtime function (`performEffect_env`, `callback_env`,
+  `resumeStack_env`, `contFor_env`, `contUse_env`, `uncaughtEffect_env`, …) so each branch
+  closes by `exact` rather than by unfolding. This works everywhere except `purePrim_env`,
+  stated as `m.purePrim p vs = some (v, m') → m'.env = m.env`: three of `purePrim`'s twenty arms
+  build their machine with a `let`, and **dependent elimination fails** on the
+  `caml_continuation_use_noexc` arm.
+- *Attempt 3*, kept: state it under `Option.map` —
+  `(m.purePrim p vs).map (·.2.env) = (m.purePrim p vs).map (fun _ => m.env)` — so there is no
+  equation to invert; every branch is a closed term and closes by `rfl` or by `contUse_env`.
+  The `some` form follows in three lines.
+
+**(c) The dominator argument, now a graph fact.** `CfgPath` is a path in the graph
+`build_graph` builds, and `cfgPath_extend` is (a) and (b) together: one machine transition out
+of the end of a block is one edge of the graph *and* stays in the activation. What remains is
+
+```lean
+def DominatorSound (idom : Idom) (blocks : List (Addr × Block K)) (start : Addr) : Prop :=
+  ∀ (l : List Addr) (pc : Addr),
+    CfgPath blocks l → l.head? = some start → pc ∈ l → amGetD idom pc pc ∈ l
+```
+
+— "every path from the entry to `pc` goes through `idom pc`" — a statement about
+`dominatorTree`, `buildGraph` and `Last.children` with **no `Machine` in it at all**. That is
+the point of (a) and (b): they discharged the machine's half of §2.2. `dominator_tree` is one
+Cooper–Harvey–Kennedy pass over the reverse post-order, a fixed point for the reducible graphs
+the compiler produces (`effects.ml:98-104` asserts exactly that), so `DominatorSound` is the
+standard correctness statement for that algorithm and no longer entangled with the machine.
+
+### 10.6 The one blocker that is not mathematics
+
+`ScopeAtJump` also needs "a name bound by the dominator's block is still bound at the jump":
+
+```
+(m.look name).isSome → ((m.bind y v).look name).isSome
+```
+
+It is true, and the proof is one iota-step deep — `bind` rewrites the current activation record
+to `(y, v) :: binds` and moves it to the head of `envs`, so `look`'s walk finds the same record
+and `List.find?` still answers. It **cannot be proved from this module**: `Machine.look` is
+`lookupIn (m.envs.length + 1) m.envs m.env x` and `lookupIn` is `private` in `Code.lean`.
+`unfold Machine.look` exposes it as an inaccessible constant `lookupIn✝`, which cannot be named
+in a `simp` set, rewritten, or inducted over. Even the easiest special case,
+`(m.bind x v).look x = some v`, stops at
+
+```
+lookupIn✝ ((m.envs.filter …).length + 1 + 1)
+  ((m.env, ⟨r.parent, (x, v) :: r.binds⟩) :: m.envs.filter …) m.env x = some v
+```
+
+*Attempt 2* added an `EnvsNodup` hypothesis so that `setEnv` provably preserves `envs.length`
+and the fuel argument cannot shrink; same blocker at the same point, since the hypothesis
+changes nothing about accessibility.
+
+The two facts are therefore stated as an interface, `LookLemmas`, and `ScopeAtJump_reduced`
+proves `ScopeAtJump` relative to it plus `DominatorSound`.
+
+**Proposed change to `Code.lean`, not made: drop `private` from `lookupIn`.** It is a
+visibility change, not a body change, and renames nothing, so it is compatible with P4 — but
+the authorisation of round three covered exactly the two repairs of §9.0 and this would be a
+third. With it, both `LookLemmas` fields are a dozen lines of `List.find?` reasoning.
+
+### 10.7 The obligations, after round four
+
+| was | now |
+| --- | --- |
+| `KSound` — the continuation knot | **gone as an obligation.** `KSoundAt` is a theorem; `knot_frame_all`/`knot_trap_all` close the family by induction on the index, given `EntryOk` |
+| `ScopeAtJump` — the dominator argument | the machine's half is proved (§10.5 a, b); what is left is `DominatorSound`, a pure graph fact about `dominatorTree` |
+| — | `EntryOk`/`TrapEntryOk`: `R`'s clause (R8) after entering a closure — **the same fact** as `DominatorSound` gives, so one obligation, not two |
+| — | `LookLemmas`: true, blocked by a `private` modifier, one-word fix proposed |
+
+So `cps_preserves_outcome` for terminating runs now rests on: `DominatorSound` (a standard
+dominator-algorithm correctness statement), `LookLemmas` (a visibility fix away), the
+observation clause of `SimulationSuffices` (§3), and the `Code.invariant` side condition. The
+continuation knot — the part that was genuinely hard, and the part FSCD 2017 spends its §5 on —
+is closed.
+
+### 10.8 Round four, `#print axioms`
+
+Public theorems; the twelve `private` helpers of §10.5(b) are omitted.
+
+```
+stepLast_jump_mem_children  [propext, Quot.sound]    kdAt_zero          [propext]
+step_jump_mem_children      [propext, Quot.sound]    kdAt_succ          [propext]
+stepLast_env                [propext]                kdAt_succ_down     [propext]
+bindMany_env                [propext, Quot.sound]    kdAt_le            [propext]
+step_env_of_jump            [propext, Quot.sound]    Forall₂_mono       (none)
+step_env_of_last            [propext]                CellRel_mono       [propext]
+stepInstr_env               [propext, Quot.sound]    FrameRel_mono      [propext]
+cfgPath_extend              [propext, Quot.sound]    SavedRel_mono      [propext]
+applyK_frameK               [propext]                R_mono             [propext]
+applyK_trapK                [propext]                KSoundAt           [propext]
+applyK_halt                 [propext]                knot_frame_closure [propext]
+applyV_closure_nil          [propext]                knot_trap_closure  [propext]
+R_at_any_index              [propext]                knot_frame_all     [propext]
+knot_passthrough            [propext]                knot_trap_all      [propext]
+```
+
+No `sorryAx`, and **no `Classical.choice`**: rounds two and three left two theorems depending on
+it through `by_cases`; round four adds none. Running total: **70 theorems** across the four
+rounds.
+
+### 10.9 The harness, re-run
+
+Round four changed no executable definition — every addition is a theorem or a `Prop` — so the
+3500-program sweep is bit-identical to round three's: 1000 each at depths 2, 3 and 4 and 500 at
+depth 5, **3500 agree, 0 disagreements, 0 source-side `stuck`, 0 fuel exhaustion**. All five
+`ir/` modules re-elaborate clean.
+
+## 11. Commands to re-run everything
 
 ```
 $ cd /Users/pooks/Dev/lean4-effect4
@@ -657,6 +917,12 @@ $ lake env lean workshop/OCaml5/ir/Counterexamples.lean   # the two defects and 
 $ lake env lean workshop/OCaml5/ir/Fuzz.lean              # the pinned sweeps, ~6 s
 $ lake env lean workshop/OCaml5/ir/Avatar.lean            # the four avatar shapes, §8
 $ lake env lean workshop/OCaml5/ir/RunUnderHandler.lean   # the real avatar block shape, §9.1
+```
+
+`CpsProof.lean` §5 is `ScopeAtJump` and §6 is the continuation knot (§10); neither has an
+executable check, both are `lake build OCaml5.CpsProof`.
+
+```
 ```
 
 The large sweep of §4.1 is `#eval (sweep n d fs ft, sweepFix2 n d fs ft)` in a scratch file
