@@ -4,48 +4,48 @@ set -euo pipefail
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 generator_rel="scripts/generate-schema-structural-assurance.sh"
-assurance_rel="Effect4Test/Schema/StructuralAssurance.lean"
-axiom_report_rel="Effect4Test/Schema/AxiomReport.lean"
-surface_rel="Effect4Test/Schema/PayloadSurface.lean"
+assurance_rel="Test/Schema/StructuralAssurance.lean"
+axiom_report_rel="Test/Schema/AxiomReport.lean"
+surface_rel="Test/Schema/PayloadSurface.lean"
 pin_rel="vendor/effect-4.0.0-rc.112/src/SchemaRepresentation.ts"
-register_rel="test/counterexamples/REGISTER.md"
-attacks_rel="test/counterexamples/schema/ATTACKS.md"
-recursor_attack_rel="Effect4Test/Counterexamples/Schema/RecursiveElimination.lean"
-annotation_attack_rel="Effect4Test/Counterexamples/Schema/AnnotationDataPlane.lean"
+register_rel="Test/Counterexamples/REGISTER.md"
+attacks_rel="Test/Counterexamples/Schema/ATTACKS.md"
+recursor_attack_rel="Test/Counterexamples/Schema/RecursiveElimination.lean"
+annotation_attack_rel="Test/Counterexamples/Schema/AnnotationDataPlane.lean"
 annotation_gate_rel="scripts/check-schema-annotations.sh"
-effectful_attack_rel="Effect4Test/Counterexamples/Schema/EffectfulField.lean"
-effectful_properties_attack_rel="Effect4Test/Counterexamples/Schema/EffectfulFieldProperties.lean"
+effectful_attack_rel="Test/Counterexamples/Schema/EffectfulField.lean"
+effectful_properties_attack_rel="Test/Counterexamples/Schema/EffectfulFieldProperties.lean"
 effectful_gate_rel="scripts/check-schema-effectful-field.sh"
 
 source_rels=(
-  Effect4/Data/Optic.lean
-  Effect4/Data/Json.lean
-  Effect4/Schema/Payload.lean
-  Effect4/Schema/Representation.lean
-  Effect4/Schema/Annotations.lean
-  Effect4/Schema/Document.lean
-  Effect4/Schema/Check.lean
-  Effect4/Target/TypeScript/Schema.lean
-  Effect4/Schema/EffectfulField.lean
+  src/Effect4/Data/Optic.lean
+  src/Effect4/Data/Json.lean
+  src/Effect4/Schema/Payload.lean
+  src/Effect4/Schema/Representation.lean
+  src/Effect4/Schema/Annotations.lean
+  src/Effect4/Schema/Document.lean
+  src/Effect4/Schema/Check.lean
+  src/Effect4/Codegen/Schema.lean
+  src/Effect4/Schema/EffectfulField.lean
 )
 contract_rels=(
-  test/contracts/schema-representation.contract.md
-  test/contracts/schema-subalphabets.contract.md
-  test/contracts/schema-payload.contract.md
-  test/contracts/schema-recursor.contract.md
-  test/contracts/schema-annotations.contract.md
-  test/contracts/schema-effectful-field.contract.md
-  test/contracts/schema-effectful-field-properties.contract.md
+  Test/contracts/schema-representation.contract.md
+  Test/contracts/schema-subalphabets.contract.md
+  Test/contracts/schema-payload.contract.md
+  Test/contracts/schema-recursor.contract.md
+  Test/contracts/schema-annotations.contract.md
+  Test/contracts/schema-effectful-field.contract.md
+  Test/contracts/schema-effectful-field-properties.contract.md
 )
 battery_rels=(
-  Effect4Test/Schema/RepresentationContract.lean
-  Effect4Test/Schema/SubAlphabetContract.lean
-  Effect4Test/Schema/PayloadContract.lean
-  Effect4Test/Schema/RepresentationFoldContract.lean
-  Effect4Test/Data/OpticContract.lean
-  Effect4Test/Schema/AnnotationDataPlaneContract.lean
-  Effect4Test/Schema/EffectfulFieldContract.lean
-  Effect4Test/Schema/EffectfulFieldPropertiesContract.lean
+  Test/Schema/RepresentationContract.lean
+  Test/Schema/SubAlphabetContract.lean
+  Test/Schema/PayloadContract.lean
+  Test/Schema/RepresentationFoldContract.lean
+  Test/Data/OpticContract.lean
+  Test/Schema/AnnotationDataPlaneContract.lean
+  Test/Schema/EffectfulFieldContract.lean
+  Test/Schema/EffectfulFieldPropertiesContract.lean
 )
 
 expected_source_shas=(

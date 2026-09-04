@@ -102,7 +102,7 @@ stamp_report() {
 # ---------------------------------------------------------------------------
 
 # stamp_lean_traces <lean-source>...   the Lake trace of every `Effect4` or
-# `Effect4Test` module these sources import.
+# `Test` module these sources import.
 #
 # A harness driver such as `harness/trace/Generate.lean` is elaborated by
 # `lake env lean --run`, so it is never a compiled module and has no trace of
@@ -113,7 +113,8 @@ stamp_report() {
 # naming. A trace that does not exist yet is `absent` to `stamp_key`, which is
 # a change, not an error: the first build after it appears is a miss.
 #
-# Only `Effect4*` modules are named. `Lean` and `Init` belong to the toolchain,
+# Only this package's modules (`Effect4*`, `Test*`, `Fixtures*`) are named.
+# `Lean` and `Init` belong to the toolchain,
 # which the caller pins by listing `lean-toolchain`.
 stamp_lean_traces() {
   local source module
@@ -121,7 +122,7 @@ stamp_lean_traces() {
     [ -f "$source" ] || continue
     while IFS= read -r module; do
       case "$module" in
-        Effect4|Effect4.*|Effect4Test|Effect4Test.*)
+        Effect4|Effect4.*|Test|Test.*|Fixtures|Fixtures.*)
           printf '%s\n' "$stamp_build_lib/${module//.//}.trace" ;;
       esac
     done < <(sed -n 's/^import[[:space:]][[:space:]]*\([A-Za-z0-9_.]*\).*$/\1/p' "$source")

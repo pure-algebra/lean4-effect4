@@ -1,6 +1,0 @@
-
-namespace Effect4.Row
-
-def ofList : List Nat → List Nat := id
-
-end Effect4.Row

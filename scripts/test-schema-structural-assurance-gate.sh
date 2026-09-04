@@ -5,7 +5,7 @@ repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 gate="$repo_root/scripts/check-schema-structural-assurance.sh"
 generator="$repo_root/scripts/generate-schema-structural-assurance.sh"
 projection="$repo_root/generated/schema-structural-assurance.tsv"
-contract="$repo_root/test/contracts/schema-payload.contract.md"
+contract="$repo_root/Test/contracts/schema-payload.contract.md"
 
 tmp_parent="${TMPDIR:-/tmp}"
 tmp_parent="${tmp_parent%/}"

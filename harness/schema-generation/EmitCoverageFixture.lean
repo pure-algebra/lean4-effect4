@@ -1,10 +1,10 @@
-import Effect4Test.Target.TypeScript.SchemaGenerationCoverage
+import Test.Codegen.SchemaGenerationCoverage
 
 namespace Effect4Harness.SchemaGenerationCoverage
 
 private def fixture : String :=
-  (Effect4.Target.TypeScript.Schema.generate? "AllRepresentationsSchema"
-    Effect4Test.Target.TypeScript.SchemaGenerationCoverage.document).getD ""
+  (Effect4.Codegen.Schema.generate? "AllRepresentationsSchema"
+    Test.Target.TypeScript.SchemaGenerationCoverage.document).getD ""
 
 #eval IO.print fixture
 

@@ -1,4 +1,4 @@
-import Effect4.Target.TypeScript.Schema
+import Effect4.Codegen.Schema
 
 namespace Effect4Harness.SchemaGeneration
 

@@ -10,9 +10,9 @@
 set -euo pipefail
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
-surface_test="$repo_root/Effect4Test/Schema/PayloadSurface.lean"
-payload_boundary="$repo_root/test/fixtures/schema-payload-surface/RequiredPayloadBoundary.lean"
-ownership_test="$repo_root/test/fixtures/schema-payload-surface/RequiredOwnership.lean"
+surface_test="$repo_root/Test/Schema/PayloadSurface.lean"
+payload_boundary="$repo_root/Test/fixtures/schema-payload-surface/RequiredPayloadBoundary.lean"
+ownership_test="$repo_root/Test/fixtures/schema-payload-surface/RequiredOwnership.lean"
 
 if [[ $# -ne 0 ]]; then
   printf 'FAIL schema payload surface gate accepts no arguments; its source is not overridable\n' >&2
@@ -59,7 +59,7 @@ run_fixed_module() {
   )
 }
 
-run_fixed_module Effect4Test.Schema.PayloadSurface
+run_fixed_module Test.Schema.PayloadSurface
 printf 'PASS elaborated payload carrier shapes match the contracted declaration surface\n'
 
 run_fixed_module Effect4.Schema.Payload

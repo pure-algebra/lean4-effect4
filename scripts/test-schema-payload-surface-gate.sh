@@ -7,7 +7,7 @@ set -euo pipefail
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 gate="$repo_root/scripts/check-schema-payload-surface.sh"
-fixture_root="$repo_root/test/fixtures/schema-payload-surface"
+fixture_root="$repo_root/Test/fixtures/schema-payload-surface"
 tmp_parent="${TMPDIR:-/tmp}"
 tmp_parent="${tmp_parent%/}"
 tmp_root="$(mktemp -d "$tmp_parent/effect4-payload-surface.XXXXXX")"

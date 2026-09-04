@@ -8,10 +8,10 @@ project_root="$(cd "${1:-$repo_root}" && pwd)"
 tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/effect4-source-trust.XXXXXX")"
 trap 'rm -rf -- "$tmp_root"' EXIT
 
-cp "$project_root/Effect4Test/Audit/AxiomGate.lean" "$tmp_root/SourceTrustTokenizer.lean"
+cp "$project_root/Test/Audit/AxiomGate.lean" "$tmp_root/SourceTrustTokenizer.lean"
 cat >>"$tmp_root/SourceTrustTokenizer.lean" <<'LEAN'
 
-namespace Effect4Test.Audit
+namespace Test.Audit
 
 run_elab do
   let some fixtureDirectory ← liftM <| IO.getEnv "EFFECT4_SOURCE_TRUST_FIXTURES"
@@ -55,9 +55,9 @@ run_elab do
   unless failures.isEmpty do
     throwError "source tokenizer regression(s):\n{String.intercalate "\n" failures.toList}"
 
-end Effect4Test.Audit
+end Test.Audit
 LEAN
 
 cd "$project_root"
-EFFECT4_SOURCE_TRUST_FIXTURES="$repo_root/test/fixtures/trust-gate" \
+EFFECT4_SOURCE_TRUST_FIXTURES="$repo_root/Test/fixtures/trust-gate" \
   lake env lean "$tmp_root/SourceTrustTokenizer.lean"

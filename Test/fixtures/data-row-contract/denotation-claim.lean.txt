@@ -1,6 +1,0 @@
-
-namespace Effect4.Row
-
-def normalization_preserves_denotation : Prop := True
-
-end Effect4.Row

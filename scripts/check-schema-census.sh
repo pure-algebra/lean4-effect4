@@ -3,7 +3,7 @@
 #
 # Lexically compares the persisted tag spellings in an Effect
 # `SchemaRepresentation.ts` against the spelling set exposed by the `tagName`
-# definitions in `Effect4/Schema/Representation.lean`.
+# definitions in `src/Effect4/Schema/Representation.lean`.
 #
 # Two independent extractions are taken from the source and must agree:
 #
@@ -35,7 +35,7 @@ set -euo pipefail
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 pinned_digest="a0a7a1537cfe3a9159a80210e3de92342cc9e98651f0e8273a75ccdcccae69bc"
-lean_source="$repo_root/Effect4/Schema/Representation.lean"
+lean_source="$repo_root/src/Effect4/Schema/Representation.lean"
 
 sha256_file() {
   if command -v sha256sum >/dev/null 2>&1; then
@@ -78,7 +78,7 @@ usage: check-schema-census.sh [--dry-run] [--lean-source <file>] <path/to/Schema
 Without --dry-run the file must be the pinned rc.112 bytes.
 With --dry-run any Effect source is accepted, and the result closes nothing.
 
---lean-source <file> replaces Effect4/Schema/Representation.lean as the Lean
+--lean-source <file> replaces src/Effect4/Schema/Representation.lean as the Lean
 side of the comparison. It exists only so the reaction test can attack the
 Lean scrape, it requires --dry-run, and it closes nothing.
 USAGE

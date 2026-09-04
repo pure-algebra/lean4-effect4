@@ -1,4 +1,4 @@
-import Effect4.Target.TypeScript.EffectfulField
+import Effect4.Codegen.EffectfulField
 
 namespace Effect4.Harness.SchemaEffectfulField
 

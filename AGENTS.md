@@ -10,16 +10,15 @@ full, then open only the authority documents named for the current task.
 | `README.md` | what the product is, the application face, the source tree, how to build |
 | `docs/ARCHITECTURE.md` | module boundaries, dependency direction, the API seam |
 | `docs/DESIGN-BASIS.md` | the representation decisions (DB-01 … DB-07) and their sources |
-| `Effect4/AGENTS.md` | source ownership and the assurance route a declaration takes |
-| `docs/AGENT-ROUTING.md` | the assurance threshold: leaf receipt versus proof graph, and the graph's edges |
 | `docs/RUNTIME-COVERAGE.md` | the rc.112 runtime mechanism census, its rows, and the one coverage report format |
-| `test/contracts/` | frozen contract packets and their executable falsifiers |
-| `test/counterexamples/REGISTER.md` | stable IDs of every declaration-changing counterexample |
-| `Effect4/` | library declarations and proofs |
-| `Effect4Test/` | batteries, attacks and proof receipts; `Audit/AxiomGate.lean` is the gate |
+| `docs/SCHEMA-ANNOTATIONS.md` | the annotation data plane as the host defines it |
+| `Test/contracts/` | frozen contract packets and their executable falsifiers |
+| `Test/Counterexamples/REGISTER.md` | stable IDs of every declaration-changing counterexample |
+| `src/Effect4/` | library declarations and proofs |
+| `Test/` | batteries, attacks and proof receipts; `Audit/AxiomGate.lean` is the gate |
 | `generated/` | deterministic projections only; never hand-edited |
-| `docs/research/` | working notes and plans; not part of the product and not tracked once the tree is clean |
-| `COORDINATION.md` | live claims between concurrent sessions while more than one session edits this branch |
+| `docs/research/` (not tracked) | working notes, plans, the proof-graph ledgers and surveys; synced between machines directly |
+| `COORDINATION.md` (not tracked) | live claims between concurrent sessions, and the parity steps for the other machine |
 
 If two files appear to own the same fact, stop and repair the ownership map.
 
@@ -38,7 +37,7 @@ do not write a second program representation.
 - Every rc.112 behaviour a declaration models names the line it transcribes
   (`vendor/effect-4.0.0-rc.112/src/…`); a theorem that witnesses a census row
   names the row id in its docstring and is joined in
-  `Effect4Test/Audit/RuntimeCoverage.lean`. The theorem alone moves no number.
+  `Test/Audit/RuntimeCoverage.lean`. The theorem alone moves no number.
 - Fuel exhaustion and unanswered choices are live frontiers, never typed
   errors, causes, or refusals.
 - Full meaning is relational over explicit decisions. Determinism is claimed
@@ -52,13 +51,13 @@ do not write a second program representation.
 ## Trust
 
 - No `sorry`, `partial`, `unsafe`, `native_decide`, `axiom`, `extern`,
-  `implemented_by`. The gate audits every `Effect4.*` and `Effect4Test.*`
+  `implemented_by`. The gate audits every `Effect4.*` and `Test.*`
   declaration at `[propext, Quot.sound]`; a rendering declaration that must
   traverse a `String` is admitted by exact name in `AxiomGate.lean`, never by
   module. A battery `def` over rendered text reaches `Classical.choice`: keep
   rendered bytes inside `#guard`s.
-- Every battery file under `Effect4Test/` must be reachable from
-  `Effect4Test.lean`, or the module-closure gate refuses the build.
+- Every battery file under `Test/` must be reachable from
+  `Test/All.lean`, or the module-closure gate refuses the build.
 - Do not say "sound", "equivalent", "preserves", "fully reified", or
   "complete" without naming the exact judgment, observation, theorem or gate,
   assumptions, and remaining host boundary. A compiling finite probe is
@@ -73,15 +72,15 @@ do not write a second program representation.
   grilled plan in `docs/research/`, then lands as one commit with the gate
   green. Mechanical pieces on disjoint files may be delegated; the coordinator
   reviews, adds the root imports, runs the build and commits. An agent never
-  commits, never `git add`s, and never edits `Effect4.lean`,
-  `Effect4Test.lean`, `Effect4Test/Audit/AxiomGate.lean` or `lakefile.toml`.
+  commits, never `git add`s, and never edits `src/Effect4.lean`,
+  `Test/All.lean`, `Test/Audit/AxiomGate.lean` or `lakefile.toml`.
 - One `lake` at a time in a working tree.
 - On Windows the shell is PowerShell; the bash gate scripts run through WSL.
-- Every exported declaration keeps its ownership and assurance route
-  (`docs/AGENT-ROUTING.md`); a proof graph is mandatory only for admission or
-  refusal, judgments or denotations, interpreters or handlers, reification or
-  generated-code relations, nontrivial composition or recursive invariants,
-  and external semantic equivalence.
+- A proof graph is mandatory only for admission or refusal, judgments or
+  denotations, interpreters or handlers, reification or generated-code
+  relations, nontrivial composition or recursive invariants, and external
+  semantic equivalence; a passive finite alphabet closes with its local
+  receipts.
 - More than one session may edit this branch. Read `COORDINATION.md` before
   changing a shared surface and record a claim there; `git fetch` before a
   commit and never `git add -A` without reading `git status` first.

@@ -17,7 +17,7 @@ Three artefacts carry it:
 | Artefact | Role | Owner |
 | --- | --- | --- |
 | `generated/effect-runtime-census.tsv` | the denominator: one row per behaviour, anchored to the pinned bytes with a span digest | `scripts/generate-effect-runtime-census.sh` |
-| `Effect4Test/Audit/RuntimeCoverage.lean` | the numerator: the frozen row list with disposition, coverage state, witnesses, receipts, and exact witness statements | authored, test-side |
+| `Test/Audit/RuntimeCoverage.lean` | the numerator: the frozen row list with disposition, coverage state, witnesses, receipts, and exact witness statements | authored, test-side |
 | `scripts/check-effect-runtime-census.sh` | the gate: byte drift of the census and the join between census and Lean rows | CI step |
 
 The pinned source is `effect@4.0.0-rc.112` as vendored under
@@ -81,7 +81,7 @@ earlier session.
 
 ## How the number moves
 
-**Adding a witness** happens in `Effect4Test/Audit/RuntimeCoverage.lean` only:
+**Adding a witness** happens in `Test/Audit/RuntimeCoverage.lean` only:
 
 1. add the theorem name and its receipt to the row's `witnesses`;
 2. add the exact statement as a `#check (@…` ascription, transcribed from
@@ -104,9 +104,9 @@ per-kind counts and totals in both places, regenerate the projection with the
 recorded command, and run the gate. A digest that drifts because upstream
 changed is a deliberate re-pin: the whole pin moves together, never one row.
 
-**A new theorem in `Effect4/`** intended as a witness still passes through the
+**A new theorem in `src/Effect4/`** intended as a witness still passes through the
 normal packet discipline. The frozen surface census that used to shadow
-`Effect4/Concurrency/*` (`Effect4Test/Concurrency/FiberAssurance.lean` and its
+`src/Effect4/Machine/*` (`Test/Concurrency/FiberAssurance.lean` and its
 generated projection) was retired on 2026-09-04 with the machines it counted
 (`docs/research/2026-09-04-retire-old-machines.md`), so a concurrency
 declaration now moves only the coverage join.
@@ -118,13 +118,13 @@ census v1 and the model that closes each:
 
 | Family | Rows | Model that closes them |
 | --- | ---: | --- |
-| `cause.*`, `exit.*`, `rule.cause-has-no-structure` | 13 | `Effect4/Semantics/Cause.lean`, `Exit.lean`: flat reasons, union combine, squash, finalizer merge |
-| `scope.*`, `rule.scope-close-lifo-state-first` | 15 | `Effect4/Runtime/Scope.lean`: state machine, LIFO close, sequential and parallel close, fork linkage |
-| `fork.*`, `interrupt.accumulate`, the two fork rules | 14 | `Effect4/Deep/Fibers.lean` with `Effect4/Deep/Clauses.lean` and `Witnesses.lean`: spawn/start, the exit path, observers, races, scope links, interrupt record and apply |
+| `cause.*`, `exit.*`, `rule.cause-has-no-structure` | 13 | `src/Effect4/Machine/Cause.lean`, `Exit.lean`: flat reasons, union combine, squash, finalizer merge |
+| `scope.*`, `rule.scope-close-lifo-state-first` | 15 | `src/Effect4/Machine/Scope.lean`: state machine, LIFO close, sequential and parallel close, fork linkage |
+| `fork.*`, `interrupt.accumulate`, the two fork rules | 14 | `src/Effect4/Machine/Fibers.lean` with `src/Effect4/Machine/Clauses.lean` and `Witnesses.lean`: spawn/start, the exit path, observers, races, scope links, interrupt record and apply |
 | continuation-machine `op.*`, `frame-arm.*`, `checkpoint.*`, and the stack rules | 30 | a new continuation-stack calculus: frames with three arms, `getCont` with the ensure hook, deferred-interrupt flag, handler skipping, yield versus park |
-| `ref.*` | 10 | `Effect4/Stateful/Ref.lean`: a cell store with allocation identity, read, write, and the read-modify-write projections, including the void-typed `Ref.set` whose host value is the cell |
-| `deferred.*` | 12 | `Effect4/Stateful/Deferred.lean`: a completion store that is empty or holds exactly one effect, a registration-ordered waiter list, single completion, and interruption as an ordinary stored failure |
-| `layer.*` | 16 | `Effect4/Layer/*.lean`: build over a memo map and a scope, one build per memo map with observer counting and a last-observer finalizer, parent memo chains, merge and provide scoping, and the layer scope versus the program scope |
+| `ref.*` | 10 | `src/Effect4/Stateful/Ref.lean`: a cell store with allocation identity, read, write, and the read-modify-write projections, including the void-typed `Ref.set` whose host value is the cell |
+| `deferred.*` | 12 | `src/Effect4/Stateful/Deferred.lean`: a completion store that is empty or holds exactly one effect, a registration-ordered waiter list, single completion, and interruption as an ordinary stored failure |
+| `layer.*` | 16 | `src/Effect4/Layer/*.lean`: build over a memo map and a scope, one build per memo map with observer counting and a last-observer finalizer, parent memo chains, merge and provide scoping, and the layer scope versus the program scope |
 | the `partial` rows | 1 | `op.Failure`: the stack-frame annotation of a failure needs a `StackTrace` service key |
 
 The three `foreignBoundary` rows (`op.WithFiber`, `op.YieldableError`,

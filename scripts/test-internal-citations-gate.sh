@@ -2,7 +2,7 @@
 # Exercises whether `scripts/check-internal-citations.sh` reacts.
 #
 # This exercises the DETECTOR, not the repository. Every case runs against a
-# synthetic tree built under $TMPDIR from `test/fixtures/internal-citations/`,
+# synthetic tree built under $TMPDIR from `Test/fixtures/internal-citations/`,
 # never against the live tree, so a pass here says nothing about whether this
 # repository's real citations are correct — only that the eleven named violations
 # and invocation defects cannot return a vacuous success, and that the six
@@ -16,7 +16,7 @@ set -euo pipefail
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 gate="$repo_root/scripts/check-internal-citations.sh"
-fixture="$repo_root/test/fixtures/internal-citations/tree"
+fixture="$repo_root/Test/fixtures/internal-citations/tree"
 tmp_parent="${TMPDIR:-/tmp}"
 tmp_parent="${tmp_parent%/}"
 tmp_root="$(mktemp -d "$tmp_parent/effect4-citations-gate.XXXXXX")"
@@ -52,7 +52,6 @@ cutover_bare='SCHEMA-CUTOVER.md'
 plan='PLAN.md'
 agents='AGENTS.md'
 arch='docs/ARCHITECTURE.md'
-manifest='PORT-MANIFEST.md'
 routing='docs/AGENT-ROUTING.md'
 
 rejected=0
@@ -62,7 +61,7 @@ empty_tree() {
   local name="$1"
   local dir="$tmp_root/$name"
   rm -rf -- "$dir"
-  mkdir -p "$dir/docs" "$dir/Effect4" "$dir/Effect4Test" "$dir/test/contracts" "$dir/scripts" "$dir/harness"
+  mkdir -p "$dir/docs" "$dir/src/Effect4" "$dir/Test" "$dir/Test/contracts" "$dir/scripts" "$dir/harness"
   printf '%s' "$dir"
 }
 
@@ -131,8 +130,8 @@ expect_accept "vendor/foldlab line citations" "$dir"
 
 # A4. .lean source line citations
 dir="$(empty_tree accept-lean)"
-cp -- "$fixture/Effect4/Sample.lean" "$dir/Effect4/"
-cp -- "$fixture/Effect4Test/SampleContract.lean" "$dir/Effect4Test/"
+cp -- "$fixture/src/Effect4/Sample.lean" "$dir/src/Effect4/"
+cp -- "$fixture/Test/SampleContract.lean" "$dir/Test/"
 expect_accept ".lean source line citations" "$dir"
 
 # A5. near-miss basenames are different files and must not be flagged
@@ -141,11 +140,11 @@ dir="$(empty_tree accept-near-miss)"
   printf '# near-miss basenames\n\n'
   printf -- '- `vendor/foldlab/pinned/tree/library/cas/CORE-ABSTRACTIONS-%s:127-131`\n' "$plan"
   printf -- '- `harness/%s:12`\n' "$agents"
-  printf -- '- `Effect4/Schema/Check.lean:7`\n'
+  printf -- '- `src/Effect4/Schema/Check.lean:7`\n'
 } >"$dir/docs/near-miss.md"
 expect_accept "near-miss basenames under other paths" "$dir"
 
-# A6. the required anchored spelling for all six protected documents
+# A6. the required anchored spelling for all five protected documents
 dir="$(empty_tree accept-anchored)"
 cp -- "$fixture/docs/anchored-citations.md" "$dir/docs/"
 cp -- "$fixture/docs/host-citations.md" "$dir/docs/"
@@ -158,19 +157,19 @@ dir="$(full_tree reject-cutover-range)"
 printf 'The five wire rows are at `%s:588-592`.\n' "$cutover" >"$dir/docs/stale.md"
 expect_reject "range citation into the Schema cutover ruling" "$dir" "$cutover:588-592"
 
-# R2. the same document cited by bare basename and a single line, in Effect4/
+# R2. the same document cited by bare basename and a single line, in src/Effect4/
 dir="$(full_tree reject-cutover-bare)"
-printf '/-- see `%s:524` -/\n' "$cutover_bare" >"$dir/Effect4/Stale.lean"
+printf '/-- see `%s:524` -/\n' "$cutover_bare" >"$dir/src/Effect4/Stale.lean"
 expect_reject "bare-basename single-line citation into the cutover ruling" "$dir" "$cutover_bare:524"
 
-# R3. a citation into the plan, in Effect4Test/
+# R3. a citation into the plan, in Test/
 dir="$(full_tree reject-plan)"
-printf '/-- gate conditions at `%s:299` -/\n' "$plan" >"$dir/Effect4Test/StaleContract.lean"
+printf '/-- gate conditions at `%s:299` -/\n' "$plan" >"$dir/Test/StaleContract.lean"
 expect_reject "citation into the plan" "$dir" "$plan:299"
 
-# R4. a citation into the agent router, in test/
+# R4. a citation into the agent router, in Test/contracts/
 dir="$(full_tree reject-agents)"
-printf 'ownership repair rule at `%s:20`\n' "$agents" >"$dir/test/contracts/stale.contract.md"
+printf 'ownership repair rule at `%s:20`\n' "$agents" >"$dir/Test/contracts/stale.contract.md"
 expect_reject "citation into the agent router" "$dir" "$agents:20"
 
 # R5. a citation into the architecture ruling, in the host harness
@@ -179,15 +178,15 @@ mkdir -p "$dir/harness"
 printf '# dependency order at `%s:41-48`\n' "$arch" >"$dir/harness/stale-gate.md"
 expect_reject "citation into the architecture ruling" "$dir" "$arch:41-48"
 
-# R6. a `./`-prefixed citation into the port manifest
-dir="$(full_tree reject-manifest)"
-printf 'the gates table is at `./%s:553`\n' "$manifest" >"$dir/docs/stale-manifest.md"
-expect_reject "dot-slash-prefixed citation into the port manifest" "$dir" "$manifest:553"
+# R6. a `./`-prefixed citation into the architecture ruling
+dir="$(full_tree reject-dot-slash)"
+printf 'the gates table is at `./%s:553`\n' "$arch" >"$dir/docs/stale-dot-slash.md"
+expect_reject "dot-slash-prefixed citation into the architecture ruling" "$dir" "$arch:553"
 
 # R7. the target decides, not the host file type: a protected citation in .lean
 dir="$(full_tree reject-lean-host)"
 printf '/-- `%s:117-118` forbids a leaf from owning a host edge -/\n' "$cutover" \
-  >"$dir/Effect4/StaleHost.lean"
+  >"$dir/src/Effect4/StaleHost.lean"
 expect_reject "protected citation carried by a .lean file" "$dir" "$cutover:117-118"
 
 # R7b. the routing threshold document is mutable and authored too

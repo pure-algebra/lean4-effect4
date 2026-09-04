@@ -1,6 +1,0 @@
-
-namespace Effect4.Row
-
-def append : List Nat → List Nat → List Nat := List.append
-
-end Effect4.Row

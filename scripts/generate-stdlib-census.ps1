@@ -2,7 +2,7 @@
 #
 # One row per `export` declaration of each listed public module of the pinned
 # install, with the file's SHA-256 and the declaration's line. The census is
-# what `Effect4/StdLib/Rc112.lean` (generated here, do not edit) carries as
+# what `src/Effect4/Evidence/StdLib/Rc112.lean` (generated here, do not edit) carries as
 # data: an entry per export, addressed in the store by `[module, name]`.
 #
 # The pinned install is read, never vendored: the digest of each file is the
@@ -82,7 +82,7 @@ $enc = New-Object System.Text.UTF8Encoding $false
 # The Lean data module: chunks of two hundred so no list literal is unwieldy.
 function LeanStr($s) { '"' + ($s -replace '\\', '\\\\' -replace '"', '\"') + '"' }
 $lean = @()
-$lean += 'import Effect4.StdLib.Entry'
+$lean += 'import Effect4.Evidence.StdLib.Entry'
 $lean += ''
 $lean += '/-!'
 $lean += '# StdLib.Rc112'
@@ -118,6 +118,6 @@ $lean += "/-- The row count the census wrote. -/"
 $lean += "def count : Nat := $($rows.Count)"
 $lean += ''
 $lean += 'end Effect4.StdLib.Rc112'
-[IO.File]::WriteAllText((Join-Path $repo 'Effect4/StdLib/Rc112.lean'), ($lean -join "`n") + "`n", $enc)
+[IO.File]::WriteAllText((Join-Path $repo 'src/Effect4/Evidence/StdLib/Rc112.lean'), ($lean -join "`n") + "`n", $enc)
 "modules: $($files.Count); rows: $($rows.Count)"
 $rows | Group-Object module | ForEach-Object { "  {0,-10} {1,5}" -f $_.Name, $_.Count }

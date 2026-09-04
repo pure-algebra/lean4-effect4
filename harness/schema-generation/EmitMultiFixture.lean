@@ -1,4 +1,4 @@
-import Effect4.Target.TypeScript.Schema
+import Effect4.Codegen.Schema
 
 /-!
 Emits the two-root multi-document fixture.

@@ -1,6 +1,15 @@
 /.lake
 .DS_Store
 
+# Working notes, spikes and process files: kept on disk and synced between machines
+# directly, not through git (docs/research/2026-09-04-prod-cleanup-inventory.md, D6).
+/docs/research/
+/workshop/
+/output/
+/COORDINATION.md
+/PLAN.md
+/misty-frolicking-naur.md
+
 # Claude Code per-machine settings and agent worktrees
 .claude/settings.local.json
 .claude/worktrees/

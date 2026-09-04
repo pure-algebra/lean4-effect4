@@ -11,8 +11,9 @@
 # `#effect4_axiom_gate` reads two things from two different places.
 #
 # * The SOURCES it tokenizes and closes over come from the project root it
-#   finds by walking up from the file being elaborated (`findProjectRoot`),
-#   then walking `Effect4/` and `Effect4Test/` under it.
+#   finds by walking up from the file being elaborated (`findProjectRoot`,
+#   which looks for `lakefile.toml`), then walking `src/Effect4/`, `Test/` and
+#   `Fixtures/` under it.
 # * The DECLARATIONS it inspects come from whatever oleans `LEAN_PATH`
 #   provides, and it audits only constants that belong to some module — a
 #   constant declared in the file being elaborated has no module and is never
@@ -20,7 +21,7 @@
 #
 # So a planted defect needs a rebuild only when it has to be a *declaration*.
 # For a source token it does not: copy the sources to a scratch tree, append
-# the fixture there, and run `lake env lean <scratch>/Effect4Test.lean` from the
+# the fixture there, and run `lake env lean <scratch>/Test/All.lean` from the
 # real project. The gate walks the scratch sources and reads the real build.
 # One `lean` invocation, about three seconds, and nothing is compiled.
 #
@@ -43,7 +44,7 @@
 # against the real tree. Neither direction needs a copy: a declared module that
 # has gone green fails `lake build <module>`, and an undeclared red module is
 # refused by the closure gate itself — either it is reachable from the audit
-# root, in which case `lake build Effect4TestGreen` fails, or it is not, in
+# root, in which case `lake build Test` fails, or it is not, in
 # which case the gate names it.
 #
 # ## Stamps
@@ -52,7 +53,7 @@
 # step 0a has made the build current, the inputs are keyed (lib/stamp.sh): this
 # script and its two harnesses, the stamp and portability libraries, every
 # fixture, the gate's own source, the Lake configuration, the Lake trace of
-# every module under `Effect4/` and `Effect4Test/` (each trace hashes that
+# every module under `src/Effect4/` and `Test/` (each trace hashes that
 # module's source and its imports' traces, so together they stand for every
 # olean the gate reads), and the sources of the declared-red modules, which
 # have no trace because they never build. A hit prints the stamped summary and
@@ -71,9 +72,9 @@ done
 tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/effect4-test-trust.XXXXXX")"
 probe="$tmp_root/project"
 probe_log="$tmp_root/probe.log"
-known_red="$repo_root/test/fixtures/trust-gate/known-red.txt"
-fixtures="$repo_root/test/fixtures/trust-gate"
-audit_source="$probe/Effect4Test/Audit/AxiomGate.lean"
+known_red="$repo_root/Test/fixtures/trust-gate/known-red.txt"
+fixtures="$repo_root/Test/fixtures/trust-gate"
+audit_source="$probe/Test/Audit/AxiomGate.lean"
 planted_lib="$tmp_root/lib"
 real_build_lib="$repo_root/.lake/build/lib/lean"
 planted_module=""
@@ -99,14 +100,14 @@ step_end() {
 # --- 0. the real tree, incrementally -----------------------------------------
 
 step_begin
-if ! (cd "$repo_root" && lake build Effect4TestGreen) >"$probe_log" 2>&1; then
+if ! (cd "$repo_root" && lake build Test) >"$probe_log" 2>&1; then
   echo "FAIL the default green target does not build; the gate has nothing to say" >&2
   tail -60 "$probe_log" >&2
   exit 1
 fi
 echo "PASS default green target builds and its axiom gate accepts the real tree"
 accepted=$((accepted + 1))
-step_end "step 0a  lake build Effect4TestGreen"
+step_end "step 0a  lake build Test"
 
 # Lake reports failing targets as "- <Module>" lines after its summary marker.
 failing_targets() {
@@ -126,7 +127,12 @@ step_begin
 red_sources=()
 while IFS= read -r module; do
   [[ -n "$module" ]] || continue
-  red_sources+=("$repo_root/${module//.//}.lean")
+  # Same mapping as the gate's `modulePath`: the library lives under `src/`, the
+  # batteries and the authored fixtures at the root.
+  case "$module" in
+    Effect4|Effect4.*) red_sources+=("$repo_root/src/${module//.//}.lean") ;;
+    *) red_sources+=("$repo_root/${module//.//}.lean") ;;
+  esac
 done <<<"$declared_red"
 stamp_inputs=(
   "$repo_root/scripts/test-trust-gate.sh"
@@ -135,16 +141,16 @@ stamp_inputs=(
   "$repo_root/scripts/lib/stamp.sh"
   "$repo_root/scripts/lib/portable.sh"
   "$fixtures"
-  "$repo_root/Effect4Test/Audit/AxiomGate.lean"
+  "$repo_root/Test/Audit/AxiomGate.lean"
   "$repo_root/lakefile.toml"
   "$repo_root/lake-manifest.json"
   "$repo_root/lean-toolchain"
   "$real_build_lib/Effect4.trace"
-  "$real_build_lib/Effect4Test.trace"
+  "$real_build_lib/Test/All.trace"
 )
 while IFS= read -r trace; do
   stamp_inputs+=("$trace")
-done < <(find "$real_build_lib/Effect4" "$real_build_lib/Effect4Test" -name '*.trace')
+done < <(find "$real_build_lib/Effect4" "$real_build_lib/Test" -name '*.trace')
 stamp_inputs+=("${red_sources[@]}")
 gate_key="$(stamp_key "${stamp_inputs[@]}")"
 step_end "step 0c  key ${#stamp_inputs[@]} inputs"
@@ -179,44 +185,49 @@ step_end "step 0b  declared red set is still red"
 # --- 1. the scratch source tree ----------------------------------------------
 
 step_begin
-mkdir -p "$probe/test/fixtures/trust-gate"
-# `lean-toolchain` so that elan resolves the same compiler when a planted
-# module is compiled from inside the scratch tree.
-cp "$repo_root/Effect4.lean" "$repo_root/Effect4Test.lean" \
-  "$repo_root/lean-toolchain" "$probe/"
-cp -R "$repo_root/Effect4" "$repo_root/Effect4Test" "$probe/"
+mkdir -p "$probe/Test/fixtures/trust-gate" "$probe/src"
+# `lakefile.toml` is what `findProjectRoot` looks for, so the scratch tree is a
+# project root of its own; `lean-toolchain` so that elan resolves the same
+# compiler when a planted module is compiled from inside it.
+cp "$repo_root/lakefile.toml" "$repo_root/lean-toolchain" "$probe/"
+cp "$repo_root/src/Effect4.lean" "$probe/src/"
+cp -R "$repo_root/src/Effect4" "$probe/src/"
+cp -R "$repo_root/Test" "$probe/"
+if [[ -d "$repo_root/Fixtures" ]]; then
+  cp -R "$repo_root/Fixtures" "$probe/"
+fi
 
 # A search root that is the real build directory plus room for one more module.
 # It has to be a mirror rather than a prefix on LEAN_PATH: Lean picks the FIRST
 # search root that has a directory named after the module's root and then maps
-# every `Effect4Test.*` module under it, so a scratch directory containing only
-# `Effect4Test/Planted.olean` would shadow all 245 real oleans. Symlinks, so
+# every `Test.*` module under it, so a scratch directory containing only
+# `Test/Planted.olean` would shadow all 245 real oleans. Symlinks, so
 # nothing is copied and nothing in the real build directory is written.
-mkdir -p "$planted_lib/Effect4Test"
+mkdir -p "$planted_lib/Test"
 for entry in "$real_build_lib"/*; do
   base="$(basename "$entry")"
-  [[ "$base" == "Effect4Test" ]] && continue
+  [[ "$base" == "Test" ]] && continue
   ln -s "$entry" "$planted_lib/$base"
 done
-for entry in "$real_build_lib"/Effect4Test/*; do
-  ln -s "$entry" "$planted_lib/Effect4Test/$(basename "$entry")"
+for entry in "$real_build_lib"/Test/*; do
+  ln -s "$entry" "$planted_lib/Test/$(basename "$entry")"
 done
 # The gate reads the declared-red set from the tree it is auditing, and treats
 # a missing file as a defect rather than an empty set. The scratch tree is the
 # real one, red modules included, so it gets the real set.
-cp "$known_red" "$probe/test/fixtures/trust-gate/known-red.txt"
+cp "$known_red" "$probe/Test/fixtures/trust-gate/known-red.txt"
 cp "$audit_source" "$tmp_root/AxiomGate.lean"
-cp "$probe/Effect4Test.lean" "$tmp_root/Effect4Test.lean"
+cp "$probe/Test/All.lean" "$tmp_root/All.lean"
 real_lean_path="$(cd "$repo_root" && lake env printenv LEAN_PATH)"
 step_end "step 1   copy sources to the scratch tree"
 
 restore_probe() {
   cp "$tmp_root/AxiomGate.lean" "$audit_source"
-  cp "$tmp_root/Effect4Test.lean" "$probe/Effect4Test.lean"
+  cp "$tmp_root/All.lean" "$probe/Test/All.lean"
   if [[ -n "$planted_module" ]]; then
-    rm -f "$planted_lib/Effect4Test/${planted_module}.olean" \
-          "$planted_lib/Effect4Test/${planted_module}.ilean" \
-          "$probe/Effect4Test/${planted_module}.lean"
+    rm -f "$planted_lib/Test/${planted_module}.olean" \
+          "$planted_lib/Test/${planted_module}.ilean" \
+          "$probe/Test/${planted_module}.lean"
     planted_module=""
   fi
 }
@@ -227,13 +238,13 @@ add_root_import() {
   awk -v line="import $1" '''
     { lines[NR] = $0; if ($0 ~ /^import /) last = NR }
     END { for (i = 1; i <= NR; i++) { print lines[i]; if (i == last) print line } }
-  ''' "$probe/Effect4Test.lean" >"$probe/Effect4Test.lean.new"
-  mv "$probe/Effect4Test.lean.new" "$probe/Effect4Test.lean"
+  ''' "$probe/Test/All.lean" >"$probe/Test/All.lean.new"
+  mv "$probe/Test/All.lean.new" "$probe/Test/All.lean"
 }
 
 run_probe_root() {
   (cd "$repo_root" && LEAN_PATH="$planted_lib:$real_lean_path" \
-    lean "$probe/Effect4Test.lean") >"$probe_log" 2>&1
+    lean "$probe/Test/All.lean") >"$probe_log" 2>&1
 }
 
 expect_acceptance() {
@@ -317,31 +328,31 @@ plant_module_fixture() {
   local module="$2"
   restore_probe
   planted_module="$module"
-  cp "$fixtures/$fixture" "$probe/Effect4Test/${module}.lean"
+  cp "$fixtures/$fixture" "$probe/Test/${module}.lean"
   # From inside the scratch tree, so that `lean` derives the module name
-  # `Effect4Test.<module>` from the path relative to its root.
+  # `Test.<module>` from the path relative to its root.
   if ! (cd "$probe" && LEAN_PATH="$real_lean_path" lean \
-      -o "$planted_lib/Effect4Test/${module}.olean" \
-      "Effect4Test/${module}.lean") >"$probe_log" 2>&1; then
+      -o "$planted_lib/Test/${module}.olean" \
+      "Test/${module}.lean") >"$probe_log" 2>&1; then
     echo "FAIL the planted module $fixture does not compile" >&2
     tail -60 "$probe_log" >&2
     exit 1
   fi
-  add_root_import "Effect4Test.${module}"
+  add_root_import "Test.${module}"
 }
 
 step_begin
 plant_module_fixture opaque.lean.txt PlantedOpaque
 step_end "step 3a  compile the bodyless-opaque module"
 expect_rejection_matching \
-  "Effect4Test.PlantedOpaque.plantedBodylessOpaque is an \`opaque\` with no body" \
+  "Test.PlantedOpaque.plantedBodylessOpaque is an \`opaque\` with no body" \
   "bodyless opaque"
 
 step_begin
 plant_module_fixture unadmitted-choice.lean.txt PlantedChoice
 step_end "step 3b  compile the unadmitted-choice module"
 expect_rejection_matching \
-  "declaration Effect4Test.Audit.PlantedChoice.plantedUnadmittedChoice reaches unexpected axiom Classical.choice" \
+  "declaration Test.Audit.PlantedChoice.plantedUnadmittedChoice reaches unexpected axiom Classical.choice" \
   "unadmitted Classical.choice dependency"
 
 # The cross-module admission attack. `Skeleton.render` is exactly admitted and

@@ -15,12 +15,12 @@
 #
 # This gate extracts every `<path>.<ext>:<line>` and `<path>.<ext>:<line>-<line>`
 # citation token under the scanned trees and rejects the ones whose target is
-# one of six protected authored documents:
+# one of five protected authored documents:
 #
 #   docs/SCHEMA-CUTOVER.md    PLAN.md    AGENTS.md
-#   docs/ARCHITECTURE.md      PORT-MANIFEST.md    docs/AGENT-ROUTING.md
+#   docs/ARCHITECTURE.md      docs/AGENT-ROUTING.md
 #
-# WHAT A PASS MEANS: in the scanned trees, no citation names one of those six
+# WHAT A PASS MEANS: in the scanned trees, no citation names one of those five
 # documents together with a line number. Cite a section heading, an obligation
 # ID such as `SC-WIRE-01`, a proof-graph node such as `SCHEMA-PG-WIRE`, or a
 # short quoted phrase from the target instead.
@@ -56,8 +56,8 @@
 # nothing here, so it neither reads nor writes a stamp.
 set -euo pipefail
 
-protected_docs="docs/SCHEMA-CUTOVER.md SCHEMA-CUTOVER.md PLAN.md AGENTS.md docs/ARCHITECTURE.md ARCHITECTURE.md PORT-MANIFEST.md docs/AGENT-ROUTING.md AGENT-ROUTING.md"
-scanned_trees="Effect4 Effect4Test docs test scripts harness"
+protected_docs="docs/SCHEMA-CUTOVER.md SCHEMA-CUTOVER.md PLAN.md AGENTS.md docs/ARCHITECTURE.md ARCHITECTURE.md docs/AGENT-ROUTING.md AGENT-ROUTING.md"
+scanned_trees="src Test docs scripts harness"
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 . "$repo_root/scripts/lib/portable.sh"
@@ -76,8 +76,8 @@ while [[ $# -gt 0 ]]; do
       cat <<'USAGE'
 usage: check-internal-citations.sh [--root <dir>]
 
-Scans Effect4/, Effect4Test/, docs/, test/, scripts/, and harness/ under <dir>
-and rejects any citation that names one of the six protected authored
+Scans src/, Test/, docs/, scripts/, and harness/ under <dir>
+and rejects any citation that names one of the five protected authored
 documents together with a line number.
 
 --root defaults to this repository. Any other root reports a result about the
@@ -185,10 +185,10 @@ if [[ "$violation_count" -gt 0 ]]; then
   exit 1
 fi
 
-summary="$(printf '%s citation tokens examined in %s files, none into the 6 protected documents' \
+summary="$(printf '%s citation tokens examined in %s files, none into the 5 protected documents' \
   "$candidates" "${#files[@]}")"
 if [[ "$stamped" -eq 1 ]]; then stamp_write internal-citations "$key" "$summary"; fi
-printf 'PASS no line-numbered citation into the 6 protected authored documents\n'
+printf 'PASS no line-numbered citation into the 5 protected authored documents\n'
 printf 'PASS %s citation tokens examined in %s files across %s scanned tree(s)\n' \
   "$candidates" "${#files[@]}" "${#scan_dirs[@]}"
 if [[ "$root" == "$repo_root" ]]; then

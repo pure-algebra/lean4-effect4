@@ -6,6 +6,6 @@ decision.
 
 `REGISTER.md` will assign stable IDs and record the exact attacked statement,
 witness, evidence command, proof assumptions, forced repair, and current
-status. Lean witnesses live under `Effect4Test/Counterexamples/` and are linked
+status. Lean witnesses live under `Test/Counterexamples/` and are linked
 from the register. Negative fixtures and implementation mutants are recorded
 separately because they attack gates rather than semantic statements.

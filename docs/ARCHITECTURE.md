@@ -31,22 +31,22 @@ none of their carriers.
 
 | Area | Responsibility |
 | --- | --- |
-| `Effect4/Data` | requirement rows, JSON, lawful optics |
-| `Effect4/Semantics` | `Cause` and `Exit`, the error channel everywhere |
-| `Effect4/Concurrency` | `FiberId`; the fork, observer, scope and race vocabulary the machine speaks |
-| `Effect4/Context` | `ServiceKey`, its universe and transport |
-| `Effect4/Runtime` | the rc.112 frame alphabet and single-fiber step, the `Scope` state machine, and the frame-level facts that pin them (`LiveStack`, `ScopeRestoration`) |
-| `Effect4/Deep` | the reference fiber machine (`RunMachine`, `drive`, `replayEval`, `runSyncExit`), the stores, the Context and Layer models, the clause theorems and the witnesses |
-| `Effect4/Syntax` | `Eff`, `typeOf`, `print`, the native operation alphabet, `compile` and `interpOf` |
-| `Effect4/Api` | the one application-facing module |
-| `Effect4/Schema` | the persisted Schema data plane |
-| `Effect4/Target/TypeScript` | the pinned Effect v4 profile; the Schema and annotated-field generators |
-| `Effect4/Store`, `Effect4/Arch`, `Effect4/StdLib` | content store; architecture views; the rc.112 export census and its links to the model |
-| `Effect4/Surface`, `Effect4/Char` | surface carriers and their emitters; characterized components |
+| `src/Effect4/Data` | requirement rows, JSON, lawful optics |
+| `src/Effect4/Machine` (`Cause.lean`, `Exit.lean`) | `Cause` and `Exit`, the error channel everywhere |
+| `src/Effect4/Machine` (`Fiber.lean`, `Supervision.lean`) | `FiberId`; the fork, observer, scope and race vocabulary the machine speaks |
+| `src/Effect4/Machine` (`Key.lean`) | `ServiceKey`, its universe and transport |
+| `src/Effect4/Machine` (`Frames.lean`, `Scope*.lean`, `LiveStack.lean`) | the rc.112 frame alphabet and single-fiber step, the `Scope` state machine, and the frame-level facts that pin them (`LiveStack`, `ScopeRestoration`) |
+| `src/Effect4/Machine` (`Fibers.lean`, `Stores.lean`, `Context.lean`, `Layer.lean`, `Clauses.lean`, `Witnesses.lean`) | the reference fiber machine (`RunMachine`, `drive`, `replayEval`, `runSyncExit`), the stores, the Context and Layer models, the clause theorems and the witnesses |
+| `src/Effect4/Program` | `Eff`, `typeOf`, the native operation alphabet, `compile` and `interpOf` |
+| `src/Effect4/Api` | the one application-facing module |
+| `src/Effect4/Schema` | the persisted Schema data plane |
+| `src/Effect4/Codegen`, `src/Effect4/Ingest` | the pinned Effect v4 profile, `print`, the Schema and annotated-field generators and the surface emitters; the readers that go the other way |
+| `src/Effect4/Store`, `src/Effect4/Evidence` | content store; architecture and surface views; the rc.112 export census (`Evidence/StdLib`) and its links to the model |
+| `src/Effect4/Surface`, `src/Effect4/Evidence/Char` | surface carriers; characterized components |
 
-Tests mirror these areas under `Effect4Test/`; durable attacks live under
-`Effect4Test/Counterexamples/` with their stable IDs in
-`test/counterexamples/REGISTER.md` and their contracts under `test/contracts/`.
+Tests mirror these areas under `Test/`; durable attacks live under
+`Test/Counterexamples/` with their stable IDs in
+`Test/Counterexamples/REGISTER.md` and their contracts under `Test/contracts/`.
 
 ## The seam
 

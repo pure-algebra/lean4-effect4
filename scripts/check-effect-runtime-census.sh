@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Byte-for-byte drift gate for the Effect v4 runtime mechanism census, and the
 # join between that census and the Lean witnesses in
-# Effect4Test/Audit/RuntimeCoverage.lean.
+# Test/Audit/RuntimeCoverage.lean.
 #
 # ## Stamp (rule 9)
 #
@@ -14,7 +14,7 @@
 # each vendored file with its installed counterpart, so those twelve paths are
 # named too; absent, as they are in CI, they contribute `absent` and the key is
 # stable. The rest is the witness module and the Lake traces of its imports,
-# taken after `lake build Effect4Test.Audit.RuntimeCoverage`, the toolchain and
+# taken after `lake build Test.Audit.RuntimeCoverage`, the toolchain and
 # the manifest.
 #
 # `--dry-run` reports on a candidate and closes nothing, so it neither reads nor
@@ -26,7 +26,7 @@ repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 . "$repo_root/scripts/lib/stamp.sh"
 generator="$repo_root/scripts/generate-effect-runtime-census.sh"
 fixed_projection="$repo_root/generated/effect-runtime-census.tsv"
-coverage_rel="Effect4Test/Audit/RuntimeCoverage.lean"
+coverage_rel="Test/Audit/RuntimeCoverage.lean"
 
 mode="production"
 candidate="$fixed_projection"
@@ -93,9 +93,9 @@ if [[ "$mode" == "production" ]]; then
   (
     cd -- "$repo_root"
     unset LEAN_PATH LEAN_SRC_PATH
-    "$lake_bin" build Effect4Test.Audit.RuntimeCoverage >"$tmp_root/stamp-build.log" 2>&1
+    "$lake_bin" build Test.Audit.RuntimeCoverage >"$tmp_root/stamp-build.log" 2>&1
   ) || {
-    printf 'FAIL Effect4Test.Audit.RuntimeCoverage does not build\n' >&2
+    printf 'FAIL Test.Audit.RuntimeCoverage does not build\n' >&2
     cat "$tmp_root/stamp-build.log" >&2
     exit 1
   }
@@ -106,7 +106,7 @@ if [[ "$mode" == "production" ]]; then
     "$repo_root/scripts/lib/portable.sh"
     "$repo_root/scripts/lib/stamp.sh"
     "$repo_root/$coverage_rel"
-    "$stamp_build_lib/Effect4Test/Audit/RuntimeCoverage.trace"
+    "$stamp_build_lib/Test/Audit/RuntimeCoverage.trace"
     "$candidate"
     "$installed_src/package.json"
     "$repo_root/lakefile.toml"
@@ -145,7 +145,7 @@ fi
 (
   cd -- "$repo_root"
   unset LEAN_PATH LEAN_SRC_PATH
-  "$lake_bin" build Effect4Test.Audit.RuntimeCoverage >"$tmp_root/build.log" 2>&1
+  "$lake_bin" build Test.Audit.RuntimeCoverage >"$tmp_root/build.log" 2>&1
   "$lake_bin" env lean "$coverage_rel" >"$tmp_root/coverage.log" 2>&1
 )
 

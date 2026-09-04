@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # usage: EFFECT4_EFFECT_NODE_MODULES=<pinned node_modules> ./scripts/check-schema-effectful-field.sh
 #
-# Target host gate for `test/contracts/schema-effectful-field-typescript.contract.md`.
+# Target host gate for `Test/contracts/schema-effectful-field-typescript.contract.md`.
 # It pins the host profile, then runs `harness/schema-effectful-field/check.sh`
 # end to end: the hand-written positive file, the three named language-service
 # mutants, and the Lean-generated module under direct TypeScript, effect-tsgo,

@@ -3,6 +3,6 @@
 These nine `.tsv` files are the rc.112 host traces the M3 sequential-projection family
 (`Effect4/Concurrency/FiberFamily.lean`, `harness/trace/fiber-tail.ts`, both retired on
 2026-09-04) produced against the pinned install. They are kept because
-`Effect4/Deep/Stores.lean` and `Effect4/Deep/Witnesses.lean` cite the four race traces as
+`src/Effect4/Machine/Stores.lean` and `src/Effect4/Machine/Witnesses.lean` cite the four race traces as
 the host evidence behind the race witnesses. They are evidence, frozen: nothing regenerates
 them, and `generated/traces/` no longer has a `fiber/` directory.

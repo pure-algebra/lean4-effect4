@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Prints the one sanctioned Effect runtime coverage report, from the emitted
-# facts of Effect4Test/Audit/RuntimeCoverage.lean. See docs/RUNTIME-COVERAGE.md.
+# facts of Test/Audit/RuntimeCoverage.lean. See docs/RUNTIME-COVERAGE.md.
 # Never hand-type these numbers; run this script and paste its output.
 set -euo pipefail
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
-coverage_rel="Effect4Test/Audit/RuntimeCoverage.lean"
+coverage_rel="Test/Audit/RuntimeCoverage.lean"
 
 if [[ $# -ne 0 ]]; then
   printf 'usage: report-effect-runtime-coverage.sh\n' >&2
@@ -32,7 +32,7 @@ trap cleanup EXIT
 (
   cd -- "$repo_root"
   unset LEAN_PATH LEAN_SRC_PATH
-  "$lake_bin" build Effect4Test.Audit.RuntimeCoverage >"$tmp_root/build.log" 2>&1
+  "$lake_bin" build Test.Audit.RuntimeCoverage >"$tmp_root/build.log" 2>&1
   "$lake_bin" env lean "$coverage_rel" >"$tmp_root/coverage.log" 2>&1
 ) || {
   printf 'FAIL runtime coverage module did not build; no report can be issued\n' >&2
@@ -51,7 +51,7 @@ excluded=$((total - denominator))
 partial_ids="$(awk -F '\t' '$1 == "row" && $5 == "partial" { print $2 }' "$tmp_root/evidence.tsv" | paste -sd ' ' -)"
 commit="$(cd -- "$repo_root" && git rev-parse --short HEAD 2>/dev/null || printf 'unknown')"
 dirty=""
-if [[ -n "$(cd -- "$repo_root" && git status --porcelain -- Effect4 Effect4Test generated scripts vendor 2>/dev/null)" ]]; then
+if [[ -n "$(cd -- "$repo_root" && git status --porcelain -- src Test generated scripts vendor 2>/dev/null)" ]]; then
   dirty=" (working tree has uncommitted changes)"
 fi
 

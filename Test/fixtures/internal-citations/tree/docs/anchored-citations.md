@@ -12,4 +12,4 @@ anchor rather than a line.
   and repair the ownership map".
 - `docs/ARCHITECTURE.md` dependency-direction ordering places Protocol after
   Schema.
-- `PORT-MANIFEST.md` §Automated gates lists every gate command.
+- `docs/AGENT-ROUTING.md` §Leaf conditions lists every routing threshold.

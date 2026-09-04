@@ -171,8 +171,8 @@ failure. A live leaf may be refined by more execution without first being
 reclassified as an error.
 
 Those three laws are now theorems, not requirements, for both runners over
-`StateT σ Id` (`Effect4/Semantics/Approximation.lean`, packet
-`test/contracts/flow-approximation.contract.md`). What a bounded run *observes*
+`StateT σ Id` (`src/Effect4/Machine/Approximation.lean`, packet
+`Test/contracts/flow-approximation.contract.md`). What a bounded run *observes*
 is `observe result log`: a fuel frontier contributes `live` and the log it had
 reached, without the trailing marker and without the resumption block, and
 every other result is `terminal`. `Observation.le` orders those observations —
@@ -183,12 +183,12 @@ compatibility is `Chain.stable` (with the raw form `loop_fuel_stable`);
 coherence is `Chain.colimit` with `Chain.colimit_below`,
 `Chain.colimit_bound_mono` and `Chain.colimit_eq_of_settled`. For an admitted
 plain flow the colimit is total, `runColimitDefault`, because
-`run_fuelFor_finishes` (DB-04's own fuel argument, `Effect4/Semantics/Fuel.lean`)
+`run_fuelFor_finishes` (DB-04's own fuel argument, `src/Effect4/Machine/Fuel.lean`)
 proves the allotted fuel suffices; the region runner has no such theorem yet, so
 `runRegionsColimit` is searched below a bound and returns an `Option`. The block
 identity inside `Frontier.fuel` is deliberately not observed: it is where to
 resume, not what was seen, and a jump cycle observes the same empty log at two
-different blocks (receipt in `Effect4Test/Semantics/ApproximationContract.lean`).
+different blocks (receipt in `Test/Machine/Semantics/ApproximationContract.lean`).
 
 ### DB-05 — first-order block IDs do not require `HHandler`
 
@@ -237,7 +237,7 @@ the decomposition
 wp p post <-> wlp p post /\ total p
 ```
 
-for the chosen semantics before calling a judgment `wp`. That theorem is discharged (2026-09-03) in `Effect4/Semantics/Logic.lean`,
+for the chosen semantics before calling a judgment `wp`. That theorem is discharged (2026-09-03) in `src/Effect4/Machine/Logic.lean`,
 over the semantics D1 fixed: `Effect4.Logic.wp_iff_wlp_and_total` for every
 `Program` relative to an answer specification, and `Effect4.Flow.wp_iff` in the
 flow reading, where the partiality `total` excludes is exactly the unanswered

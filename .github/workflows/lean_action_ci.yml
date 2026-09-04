@@ -16,6 +16,11 @@ jobs:
           auto-config: false
       - name: Build production library
         run: lake build Effect4
+      # The green battery and the axiom gate: `Test` is the `Test.All` root plus
+      # exactly its import closure (lakefile.toml), so this is what runs
+      # `#effect4_axiom_gate` and the module-closure check.
+      - name: Build the green test battery
+        run: lake build Test
       - name: Self-test Effect4 trust gate
         run: ./scripts/test-trust-gate.sh
       - name: Verify Schema structural assurance join

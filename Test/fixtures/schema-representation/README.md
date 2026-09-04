@@ -64,7 +64,7 @@ generated outputs.
 
 ```sh
 EFFECT_PACKAGE_DIR=/path/to/node_modules/effect \
-  ./test/fixtures/schema-representation/run-probes.sh
+  ./Test/fixtures/schema-representation/run-probes.sh
 ```
 
 That default command is **CHECK mode**: it never writes `observed/`. It runs
@@ -78,7 +78,7 @@ all package, runtime, and determinism gates pass:
 
 ```sh
 EFFECT_PACKAGE_DIR=/path/to/node_modules/effect \
-  ./test/fixtures/schema-representation/run-probes.sh --update
+  ./Test/fixtures/schema-representation/run-probes.sh --update
 ```
 
 To run a single probe by hand:
@@ -88,7 +88,7 @@ WORK=$(mktemp -d)
 mkdir -p "$WORK/node_modules"
 ln -s "$EFFECT_PACKAGE_DIR" "$WORK/node_modules/effect"
 printf '{ "name": "probe", "private": true, "type": "module" }\n' > "$WORK/package.json"
-cp test/fixtures/schema-representation/probes/*.ts "$WORK/"
+cp Test/fixtures/schema-representation/probes/*.ts "$WORK/"
 cd "$WORK" && bun run p1-emission-order.ts
 ```
 

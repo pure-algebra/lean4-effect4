@@ -1,4 +1,4 @@
-import Effect4.Target.TypeScript.Schema
+import Effect4.Codegen.Schema
 
 /-!
 Generate the TypeScript differential fixture from Lean-owned representations.
@@ -35,7 +35,7 @@ private def caseSource (test : AdmissionCase) : String :=
   "  {\n" ++
   "    name: \"" ++ test.name ++ "\",\n" ++
   "    representation: " ++
-    Effect4.Target.TypeScript.Schema.representationSource test.representation ++ ",\n" ++
+    Effect4.Codegen.Schema.representationSource test.representation ++ ",\n" ++
   "    leanFieldAdmissible: " ++
     boolSource test.representation.fieldAdmissible ++ "\n" ++
   "  }"

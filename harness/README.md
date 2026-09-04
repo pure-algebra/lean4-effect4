@@ -64,10 +64,10 @@ for, with one file checked and Effect v4 detected in every case; then `api.ts`
 is regenerated from `harness/schema-effectful-field/Generate.lean` and executed
 against a live `UserFieldPolicy`, and the observed read/write event order is
 compared with the Lean receipt. It does not close the target edge: the frozen
-contract is `test/contracts/schema-effectful-field-typescript.contract.md`, and
-`E4-TYPE-SCHEMA-EFFECTFUL-FIELD-SPEC` stays open pending that join (the
-`PORT-MANIFEST.md` that tracked it was archived on 2026-09-04 with the Foldlab
-vendor). Nothing here holds for another service, another diagnostic,
+contract is `Test/contracts/schema-effectful-field-typescript.contract.md`, and
+`E4-TYPE-SCHEMA-EFFECTFUL-FIELD-SPEC` stays open pending that join (the port
+manifest that tracked it was archived on 2026-09-04 with the Foldlab vendor and
+is no longer in this tree). Nothing here holds for another service, another diagnostic,
 or another Effect version.
 
 `trace/` and `effect-v4-family/` were archived to branch `archive/flow-route`
@@ -95,6 +95,6 @@ Effect diagnostic provider reports one file examined, and only the restored
 unchanged bytes are executed. These are finite observations of one pinned host.
 They do not establish all schedules, eventual completion, an interpretation of
 arbitrary callbacks, or a Lean-to-host simulation; the Lean side is the
-reference machine's clauses and witnesses (`Effect4/Deep/Clauses.lean`,
-`Effect4/Deep/Witnesses.lean`), joined in
-`Effect4Test/Audit/RuntimeCoverage.lean`.
+reference machine's clauses and witnesses (`src/Effect4/Machine/Clauses.lean`,
+`src/Effect4/Machine/Witnesses.lean`), joined in
+`Test/Audit/RuntimeCoverage.lean`.
