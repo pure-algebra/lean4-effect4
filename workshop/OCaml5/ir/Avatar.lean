@@ -89,8 +89,8 @@ def a1DriveLoop : Program K where
           , branch := .stop }) ]
 
 -- Each `perform` is continued with 5, so the fiber answers 5 + 5.
-#guard (execFix2M 40000 a1DriveLoop).result == (Outcome.stopped, "10")
-#guard (execFix2M 400000 (OCaml5.Cps.f a1DriveLoop).1).result == (Outcome.stopped, "10")
+#guard (Machine.exec 40000 a1DriveLoop) == (Outcome.stopped, "10")
+#guard (Machine.exec 400000 (OCaml5.Cps.f a1DriveLoop).1) == (Outcome.stopped, "10")
 #guard !usesEffectPrimitives (OCaml5.Cps.f a1DriveLoop).1
 
 /-! ## a2: a dispatcher bucket -/
@@ -116,8 +116,8 @@ def a2Dispatcher : Program K where
                                      [.pv (v 11), .pc (.int 100)])]
           , branch := .return (v 28) }) ]
 
-#guard (execFix2M 40000 a2Dispatcher).result == (Outcome.stopped, "104")
-#guard (execFix2M 400000 (OCaml5.Cps.f a2Dispatcher).1).result == (Outcome.stopped, "104")
+#guard (Machine.exec 40000 a2Dispatcher) == (Outcome.stopped, "104")
+#guard (Machine.exec 400000 (OCaml5.Cps.f a2Dispatcher).1) == (Outcome.stopped, "104")
 
 /-! ## a3: a trap that survives a capture
 
@@ -169,9 +169,8 @@ def a3TrapSurvivesCapture : Program K where
     , (8, { params := [], body := [], branch := .raise (v 16) .normal })
     , (9, { params := [], body := [], branch := .return (v 37) }) ]
 
-#guard (execFix2M 40000 a3TrapSurvivesCapture).result == (Outcome.stopped, "7")
-#guard (execFix2M 400000 (OCaml5.Cps.f a3TrapSurvivesCapture).1).result
-         == (Outcome.stopped, "7")
+#guard (Machine.exec 40000 a3TrapSurvivesCapture) == (Outcome.stopped, "7")
+#guard (Machine.exec 400000 (OCaml5.Cps.f a3TrapSurvivesCapture).1) == (Outcome.stopped, "7")
 
 /-! ## a4: the callback path
 
@@ -225,7 +224,7 @@ def a4Callback : Program K where
                                       [.pv (v 48), .pc (.int 1)]) ]
           , branch := .return (v 49) }) ]
 
-#guard (execFix2M 40000 a4Callback).result == (Outcome.stopped, "6")
-#guard (execFix2M 400000 (OCaml5.Cps.f a4Callback).1).result == (Outcome.stopped, "6")
+#guard (Machine.exec 40000 a4Callback) == (Outcome.stopped, "6")
+#guard (Machine.exec 400000 (OCaml5.Cps.f a4Callback).1) == (Outcome.stopped, "6")
 
 end OCaml5.ir.Avatar

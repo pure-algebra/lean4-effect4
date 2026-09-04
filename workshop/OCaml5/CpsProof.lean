@@ -693,4 +693,213 @@ def SimulationSuffices (P : SimParam) (p : Program K) : Prop :=
   ∧ KSound P
   ∧ (∀ a b, R P a b → ∀ o, a.ctl = .done o → ∃ j o', (iter j b).ctl = .done o' ∧ o = o')
 
+/-! ## 4. Round three: the four shapes spike A0 asked for
+
+`docs/research/2026-09-04-spike-a0-avatar.md` §1 routes four requests to this seat. They are
+taken here in its order. The block shapes are no longer invented: `ir/RunUnderHandler.lean`
+transcribes the one the avatar's fixture actually compiles to, checked against the compiler's
+own `--debug effects` dump. -/
+
+/-! ### 4.1 (A0 P2-1) The shape `run_under_handler` compiles to
+
+The real shape, from `ir/RunUnderHandler.lean`: a closure whose entry block ends in a CPS call,
+`split_blocks` cutting it so that one block — the only member of `blocks_to_transform` — is a
+jump-closure target allocated at its immediate dominator, that block carrying a `Set_field` on
+a mutable record and a `Cond`, and one arm of the `Cond` being a block whose last instruction
+is a `%perform` **in tail position**, all of it under the `Pushtrap` of the enclosing
+`Fun.protect`.
+
+Four of the five pieces are already theorems: the split is `split_frame_agrees`, the jump
+closure at the dominator is `jumpClosures_allocated_at_idom`, the `Set_field` is
+`cpsInstr_setField` with clause (R9), and the `Pushtrap` is `push_trap_step` against
+`source_pushtrap_step`. The fifth is the tail `%perform`, and it is the one below: what
+`cps_block` emits for such a block, exactly. -/
+
+/-- An instruction `cps_instr` does not rewrite (`effects.ml:460-482` touches only
+`Let x (Closure …)` and `Let x (Apply …)`). The three instructions before the `%perform` in the
+avatar's block 305 — a constant, a `Field`, a `Block` — are all inert, and so is the
+`Set_field` of block 649. -/
+def Inert : Instr K → Prop
+  | .letIn _ (.closure _ _) => False
+  | .letIn _ (.apply _ _ _) => False
+  | _ => True
+
+theorem cpsInstr_inert (ctx : Ctx) (i : Instr K) (s : Tx) (h : Inert i) :
+    cpsInstr ctx i s = (i, s) := by
+  cases i with
+  | letIn x e => cases e <;> first | rfl | exact absurd h (by simp [Inert])
+  | _ => rfl
+
+theorem mapM_cpsInstr_inert (ctx : Ctx) :
+    ∀ (l : List (Instr K)) (s : Tx), (∀ i ∈ l, Inert i) → (l.mapM (cpsInstr ctx)) s = (l, s)
+  | [], s, _ => rfl
+  | i :: l, s, h => by
+      have hi : Inert i := h i (by simp)
+      have hl : ∀ j ∈ l, Inert j := fun j hj => h j (by simp [hj])
+      simp [List.mapM_cons, bind, StateT.bind, cpsInstr_inert ctx i s hi,
+            mapM_cpsInstr_inert ctx l s hl, pure, StateT.pure]
+
+/-- **The tail-`%perform` block, as `cps_block` rewrites it** (`effects.ml:484-598` with
+`rewrite_instr` `:519-527`). The `%perform` is in tail position, so `split_blocks` left the
+block whole (`isSplitPoint` is false for `Let x e; return x`, `:833-834`) and `rewrite_instr`
+turns it into `caml_perform_effect` with the continuation `k` supplied by the caller — one
+instruction, still in tail position. Everything before it is inert and survives verbatim.
+
+Composed with `perform_effect_step`, this says the target's single step on the rewritten block
+is `Machine.performEffect` on the same three values the source's `%perform` arm reaches, so the
+whole difference between the two runs of this block is which value plays `k`: a `frameK` on the
+source, the block's continuation closure on the target. That is clause (R1), and it is all that
+is left of this shape. -/
+theorem cpsBlock_tail_perform (ctx : Ctx) (k : Var) (pc : Addr) (ps : List Var)
+    (pre : List (Instr K)) (x eff res : Var) (s : Tx)
+    (hjc : amGetD ctx.jc.closuresOfAllocSite pc [] = [])
+    (hinert : ∀ i ∈ pre, Inert i) :
+    (cpsBlock ctx k pc
+        { params := ps
+        , body := pre ++ [.letIn x (.prim (.extern "%perform") [.pv eff])]
+        , branch := .return res } s).1
+      = { params := if ctx.blocksToTransform.mem pc then [] else ps
+        , body := pre ++ [.letIn ⟨s.nextVar⟩ (.prim (.extern "caml_perform_effect")
+                            [.pv eff, .pc (.int 0), .pv k])]
+        , branch := .return ⟨s.nextVar⟩ } := by
+  simp [cpsBlock, hjc, rewriteInstr, freshVar, bind, StateT.bind, pure, StateT.pure,
+        mapM_cpsInstr_inert ctx pre _ hinert]
+
+/-! ### 4.2 (A0 P2-2) `caml_resume_stack` at depth 1
+
+The avatar installs exactly one handler per fiber and never `reperform`s, so every fiber list
+it ever resumes has one cell. At that depth the whole of `caml_resume_stack` (`effect.js:78-91`)
+and `caml_pop_fiber` (`:96-102`) collapses to a pair of theorems, and the second is the one
+worth having: **resume-then-pop is the identity on the machine, trace apart.** -/
+
+theorem resumeStack_depth_one (m : Machine) (i : StackId) (c : FiberCell) (k : Val)
+    (h : m.getStack i = some [c]) :
+    m.resumeStack (.stackRef i) k
+      = some (c.k, { m with fiberStack := ⟨c.h, k, m.exnStack⟩ :: m.fiberStack
+                          , exnStack := c.exn
+                          , trace := .resumeStack 1 :: m.trace }) := by
+  simp [Machine.resumeStack, h, Machine.resumeCells]
+
+/-- One handler per fiber: installing it and taking it off again restores `caml_exn_stack`,
+`caml_fiber_stack` and the low-level continuation exactly. Every other component was never
+touched. This is the whole of the avatar's use of the fiber discipline. -/
+theorem resume_pop_depth_one (m : Machine) (i : StackId) (c : FiberCell) (k : Val)
+    (h : m.getStack i = some [c]) :
+    ∃ m', m.resumeStack (.stackRef i) k = some (c.k, m')
+        ∧ m'.popFiber = (k, { m with trace := .popFiber :: .resumeStack 1 :: m.trace }) := by
+  refine ⟨_, resumeStack_depth_one m i c k h, ?_⟩
+  simp [Machine.popFiber]
+
+/-! ### 4.3 (A0 P2-3) The trampoline and the back-edge check
+
+The avatar's `drive`/`flush_all` recursion is a back edge, and `generate.ml:789-799,1019` guards
+back edges with `caml_stack_check_depth()` and a `caml_trampoline_return` bounce. Which calls
+get the guard is `Effects.f`'s second answer, `cps_calls`, and `cps_branch` decides it by one
+comparison: `check` is true exactly on a **backward** edge (`effects.ml:302-304`, "only for
+backward edges, so at least once per loop iteration").
+
+The two theorems below say that, and `cpsBranch_transformed` above says the thing that matters
+for the CPS theorem: **`check` does not change the emitted `Code` at all.** It changes only
+which set the call's result variable lands in, and therefore only what `generate.ml` wraps it
+in. So the trampoline is invisible to `Code.Machine` and cannot affect `cps_preserves_outcome`;
+what it affects is whether the JavaScript engine's own stack overflows, which this machine does
+not model and which is named in §7 as out of scope. -/
+
+theorem cpsBranch_backedge_is_trampolined (ctx : Ctx) (src : Addr) (c : Cont) (s : Tx)
+    (hb : ctx.blocksToTransform.mem c.target = true) (ha : c.args ≠ [])
+    (hback : ctx.cfg.ord c.target ≤ ctx.cfg.ord src) :
+    ((cpsBranch ctx src c s).2).cpsCalls.contains ⟨s.nextVar⟩ = true := by
+  have hne : c.args.isEmpty = false := by
+    cases h : c.args with
+    | nil => exact absurd h ha
+    | cons _ _ => rfl
+  simp [cpsBranch, hb, hne, tailCall, freshVar, bind, StateT.bind, pure, StateT.pure,
+        hback, modify, modifyGet, MonadStateOf.modifyGet, StateT.modifyGet, VarSet.insert]
+  split <;> simp_all
+
+theorem cpsBranch_forward_not_trampolined (ctx : Ctx) (src : Addr) (c : Cont) (s : Tx)
+    (hb : ctx.blocksToTransform.mem c.target = true) (ha : c.args ≠ [])
+    (hfwd : ¬ (ctx.cfg.ord c.target ≤ ctx.cfg.ord src)) :
+    ((cpsBranch ctx src c s).2).cpsCalls = s.cpsCalls := by
+  have hne : c.args.isEmpty = false := by
+    cases h : c.args with
+    | nil => exact absurd h ha
+    | cons _ _ => rfl
+  simp [cpsBranch, hb, hne, tailCall, freshVar, bind, StateT.bind, pure, StateT.pure, hfwd]
+
+/-! ### 4.4 (A0 P2-4) The deviation, as an explicit hypothesis
+
+`effects.ml:19-34`: only the current continuation is passed between functions, while the
+exception handlers and the effect handlers live in the two global variables `caml_exn_stack`
+and `caml_fiber_stack`. A0's point is sharp: the avatar's `interruptRecord` mutates
+handler-side state *between* two entries into the same global stack, so a relation quantified
+over closed terms would not see it and the theorem would be about a language the avatar does
+not write.
+
+`R` is already a relation over machine *states* rather than over terms, which is the design
+decision that answers this — but it should be named, so here it is as a predicate, together
+with the one closure property that makes it usable: `R` survives an arbitrary handler-side
+mutation of the heap, provided the two sides mutate in step. That is the formal content of
+"the handler may change state between two entries", and it holds because `Set_field` is not
+rewritten by the transform (`cpsInstr_setField`) and clause (R9) is over the heaps. -/
+
+/-- The deviation itself: the two handler stacks are global, and the relation is over their
+whole contents rather than over any one continuation. -/
+def GlobalHandlerStacks (P : SimParam) (a b : Machine) : Prop :=
+    Forall₂ P.kd a.exnStack b.exnStack
+  ∧ Forall₂ (FrameRel P) a.fiberStack b.fiberStack
+
+theorem R_gives_globalHandlerStacks {P : SimParam} {a b : Machine} (h : R P a b) :
+    GlobalHandlerStacks P a b := ⟨h.exn, h.fib⟩
+
+private theorem getObj_setObj_eq (m : Machine) (j : ObjId) (o : Obj) :
+    (m.setObj j o).getObj j = some o := by
+  simp [Machine.getObj, Machine.setObj]
+
+private theorem getObj_setObj_ne (m : Machine) (i j : ObjId) (o : Obj) (h : ¬ (i = j)) :
+    (m.setObj j o).getObj i = m.getObj i := by
+  have hji : ¬ (j = i) := fun hh => h hh.symm
+  simp [Machine.getObj, Machine.setObj, hji, find?_skip_ne j i hji m.mem]
+
+private theorem Forall₂_set {α β : Type} {Rel : α → β → Prop} :
+    ∀ {l₁ : List α} {l₂ : List β} (n : Nat) {w : α} {w' : β},
+      Forall₂ Rel l₁ l₂ → Rel w w' → Forall₂ Rel (l₁.set n w) (l₂.set n w')
+  | _, _, _, _, _, .nil, _ => .nil
+  | _, _, 0, _, _, .cons _ ht, hw => .cons hw ht
+  | _, _, n + 1, _, _, .cons hh ht, hw => .cons hh (Forall₂_set n ht hw)
+
+/-- **Handler-side state may change between two entries.** If the two sides write related
+values into corresponding slots of corresponding blocks, `R` is preserved: every other clause
+is about a field `setObj` does not touch, and clause (R9) is closed under a pointwise update.
+`hinj` is the only side condition — the object correspondence must not send two source blocks
+to one target block, which is true of any correspondence built by allocation. -/
+theorem R_setField {P : SimParam} {a b : Machine} (h : R P a b)
+    (j j' : ObjId) (o o' : Obj) (n : Nat) (w w' : Val)
+    (hj : P.oid j = some j') (ha : a.getObj j = some o) (hb : b.getObj j' = some o')
+    (hw : P.vr w w')
+    (hinj : ∀ x, P.oid x = some j' → x = j) :
+    R P (a.setObj j { o with fields := o.fields.set n w })
+        (b.setObj j' { o' with fields := o'.fields.set n w' }) := by
+  refine { kk := h.kk, exn := h.exn, fib := h.fib, cnt := h.cnt, cb := h.cb, out := h.out
+         , stk := ?_, obj := ?_, vars := ?_ }
+  · intro i cs hi; exact h.stk i cs hi
+  · intro i oo hi
+    by_cases hij : i = j
+    · subst hij
+      rw [getObj_setObj_eq] at hi
+      have hoo : oo = { o with fields := o.fields.set n w } := (Option.some.inj hi).symm
+      obtain ⟨j2, o2, hj2, hb2, htag, hfs⟩ := h.obj i o ha
+      have hj2' : j2 = j' := by rw [hj] at hj2; exact (Option.some.inj hj2).symm
+      subst hj2'
+      have ho2 : o2 = o' := by rw [hb] at hb2; exact (Option.some.inj hb2).symm
+      subst ho2
+      exact ⟨j2, { o2 with fields := o2.fields.set n w' }, hj,
+             getObj_setObj_eq _ _ _, by rw [hoo]; exact htag,
+             by rw [hoo]; exact Forall₂_set n hfs hw⟩
+    · rw [getObj_setObj_ne _ _ _ _ hij] at hi
+      obtain ⟨j2, o2, hj2, hb2, htag, hfs⟩ := h.obj i oo hi
+      have hne : ¬ (j2 = j') := fun hcontra => hij (hinj i (hcontra ▸ hj2))
+      exact ⟨j2, o2, hj2, by rw [getObj_setObj_ne _ _ _ _ hne]; exact hb2, htag, hfs⟩
+  · intro y val hy; exact h.vars y val hy
+
 end OCaml5.CpsProof

@@ -81,18 +81,18 @@ def ce1 : Program K where
 -- re-raises, and the top-level trap catches — exactly `ocamlrun`'s and `node`'s 18.
 #guard Machine.exec 20000 ce1 == (Outcome.stopped, "18")
 
--- The transform's output, under the machine as O2 transcribed it: the exception escapes.
-#guard (Machine.exec 200000 (OCaml5.Cps.f ce1).1).1 == Outcome.uncaught (.int 103)
-
--- …and under the two-arm repair, it does not.
-#guard ((execFix2M 200000 (OCaml5.Cps.f ce1).1).result) == (Outcome.stopped, "18")
-#guard ((execFix2M 20000 ce1).result) == (Outcome.stopped, "18")
+-- Round two, against `Code.Machine` as O2 transcribed it, this answered
+-- `Outcome.uncaught (Val.int 103)`: the exception escaped the callback and the outer trap
+-- never saw it. Round three repaired `Machine.step`'s `raiseV` arm (report §9), so the
+-- transform's output now agrees with the source and with all three hosts.
+#guard Machine.exec 200000 (OCaml5.Cps.f ce1).1 == (Outcome.stopped, "18")
 
 /-! ## CE-2: `perform` with no handler, inside a `try`
 
-`Code.Machine.performEffect`'s root arm answers `Outcome.unhandled` and **halts**.
+`Code.Machine.performEffect`'s root arm *answered* `Outcome.unhandled` and halted, until
+round three.
 `interp.c:1327-1332` raises `Effect.Unhandled` on the performer, where the performer's own
-traps see it. `ml/uc3.ml` prints `7` under `ocamlrun`, under `ocamlopt` and under `node`. -/
+traps see it. `ir/p6_unhandled_linked.ml` prints `7` under `ocamlrun`, under `ocamlopt` and under `node`. -/
 
 def ce2 : Program K where
   start := 4
@@ -114,14 +114,13 @@ def ce2 : Program K where
     , (4, { params := [], body := []
           , branch := .pushtrap ⟨0, []⟩ (v 18) ⟨3, []⟩ }) ]
 
--- As transcribed: the source halts without printing …
-#guard (Machine.exec 20000 ce2).1 == Outcome.unhandled (.int 1)
--- … while the transform's output goes through `uncaught_effect_handler` and raises.
-#guard (Machine.exec 200000 (OCaml5.Cps.f ce2).1).1 == Outcome.uncaught (.blk 7)
-
--- Under the repair both print `7`, which is what all three hosts print for `ml/uc3.ml`.
-#guard ((execFix2M 20000 ce2).result) == (Outcome.stopped, "7")
-#guard ((execFix2M 200000 (OCaml5.Cps.f ce2).1).result) == (Outcome.stopped, "7")
+-- Round two: the source answered `Outcome.unhandled (Val.int 1)` and halted without printing,
+-- while the transform's output went through `uncaught_effect_handler` and answered
+-- `Outcome.uncaught` on an `Effect.Unhandled` block. Round three repaired
+-- `Machine.performEffect`'s root arm (report §9); both now print `7`, which is what
+-- `ocamlrun`, `ocamlopt` and `node` all print for `ir/p6_unhandled_linked.ml`.
+#guard Machine.exec 20000 ce2 == (Outcome.stopped, "7")
+#guard Machine.exec 200000 (OCaml5.Cps.f ce2).1 == (Outcome.stopped, "7")
 
 /-! ## CE-3: `rewrite_toplevel` alone does not preserve behaviour
 

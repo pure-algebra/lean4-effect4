@@ -1,11 +1,11 @@
 # Spike P2: `cps_preserves_outcome`, pass by pass
 
-Status: done, 2026-09-04. Plan: `docs/research/2026-09-03-ocaml5-deep-plan.md`, row P2 of §6.
+Status: done, 2026-09-04, three rounds; §10 is round three. Plan: `docs/research/2026-09-03-ocaml5-deep-plan.md`, row P2 of §6.
 Predecessor: `docs/research/2026-09-03-spike-o2-jsoo.md`, whose §5 states the theorem this
 spike attacks. Base commit `7729f58`; re-verified on `fa7bb5f` (spike P6 landed while this ran;
 `Code.lean` and `Cps.lean` are untouched by it). Files written: `workshop/OCaml5/CpsProof.lean`
 (new), `workshop/OCaml5/ir/Fuzz.lean`, `ir/Counterexamples.lean`, `ir/Avatar.lean`,
-`ir/p4_callback_trap.ml`,
+`ir/Avatar.lean`, `ir/RunUnderHandler.lean`, `ir/p4_callback_trap.ml`,
 `ir/p4_callback_trap.js.excerpt`, `ir/p5_unhandled_unlinked.ml`, `ir/p6_unhandled_linked.ml`,
 `ir/p4p6_hosts.txt`, and this report. `Code.lean` and `Cps.lean` were **not** edited: every
 addition is in `CpsProof.lean`, so P4 can target their current names. Nothing committed.
@@ -349,12 +349,12 @@ No `sorryAx`. `Classical.choice` appears in two of them through `by_cases` on a 
 proposition inside `simp`; it can be removed with `Decidable.byCases` if the plan wants the
 `propext`/`Quot.sound` discipline of P1's row.
 
-## 6. Proposed changes to `Code.lean` (not made)
+## 6. Proposed changes to `Code.lean` — applied in round three (§9.0)
 
 Both are one arm each, both are behaviour changes, and both are backed by executed evidence on
-three hosts. They are **not** applied, because P2 is additive-only on `Code.lean` and P4 targets
-its current names. `ir/Fuzz.lean`'s `stepFix2` is the whole of the proposed machine and the
-harness runs against it.
+three hosts. Round two left them unapplied, because P2 was additive-only on `Code.lean`; round three applied
+both with the coordinator's authorisation. **§9.0 is the record of exactly what changed.** The
+two entries below are kept as they were written, as the statement of the change.
 
 1. **`Machine.step`, the `.raiseV` arm.** On an empty `exnStack`, if `cbStack` is non-empty, pop
    the callback frame (restore `exnStack`, `fiberStack`, `k`; `jslib.js:100,107-111`) and keep
@@ -452,7 +452,202 @@ On the proof side the four shapes needed one new clause and six new theorems, al
 What the avatar shapes did *not* do is find a third defect. The two of §4.2 remain the whole
 of what the harness has found.
 
-## 9. Commands to re-run everything
+## 9. Round three: A0's four requests, and the two repairs applied
+
+Round three, 2026-09-04, on `d4484e4`. `docs/research/2026-09-04-spike-a0-avatar.md` §1 routes
+four requests to this seat and the coordinator authorised the one non-additive change: applying
+the two `Code.Machine` repairs of §6 to `Code.lean`. Both are done. Nine new theorems, all
+proved; one new `ir/` witness taken from the compiler rather than invented.
+
+### 9.0 The two repairs, applied — exactly what changed
+
+`workshop/OCaml5/Code.lean`, three edits and one guard update. Nothing else in the file moved,
+no declaration was renamed, and no signature changed, so P4 keeps every name it targets.
+
+1. **`Machine.step`, the `.raiseV` arm.** Was: an empty `exnStack` ends the run with
+   `Outcome.uncaught v`. Now: an empty `exnStack` with a non-empty `cbStack` pops the callback
+   frame — restoring `exnStack`, `fiberStack` and `k`, and logging `Event.callbackReturn` —
+   and leaves the focus at `.raiseV v`, so the exception is raised again in the caller's
+   context; only an empty `cbStack` ends the run. This is `jslib.js:100`'s `throw e` plus
+   `:107-111`'s `finally`, and it is what lets a `Pushtrap` in a non-CPS block — which
+   `generate.ml` compiles to a JavaScript `try { … } catch` *outside* the `caml_callback` call
+   — still catch. Executed counterexample: `ir/Avatar.lean`, `ir/RunUnderHandler.lean`, `ir/p4_callback_trap.ml`, 18 on all three hosts.
+2. **`Machine.performEffect`, the `[]` arm.** Was: `{ m with ctl := .done (.unhandled eff) }`.
+   Now: `m.uncaughtEffect eff contv k0`. `uncaughtEffect` was already in the file, already
+   correct, and never called on this path: it resumes whatever continuation the primitive
+   carries and *then* raises `Effect.Unhandled` inside it, which is `REPERFORMTERM`-at-the-root
+   (`interp.c:1374-1381`, `jslib.js:75-84`); with no continuation to resume — `%perform` at the
+   root, whose `contv` is `Pc (Int 0)` — `resumeStack` fails and the raise lands on the
+   performer, which is `PERFORM`-at-the-root (`:1327-1332`). One arm, both routes, and either
+   way a *raise*, so an enclosing trap sees it. Executed: `ir/p6_unhandled_linked.ml`, 7 on all
+   three hosts.
+3. **A move, forced by (2).** `unhandledExn` and `uncaughtEffect` were defined after
+   `performEffect`; they are now defined before it, in the same `namespace Machine` block that
+   already held `resumeStack` and `newObj` (their only dependencies). Bodies unchanged.
+4. **`Demo.perfRoot`'s guard.** `#guard (Machine.exec 200 perfRoot).1 == .unhandled (.int 7)`
+   became `== .uncaught (.blk 2)`, with its comment rewritten. That is the visible behaviour
+   change: `perform` at the root now *raises* an `Effect.Unhandled` block, and with no trap
+   anywhere the raise reaches an empty exception stack and an empty callback stack.
+
+`Outcome.unhandled` is now unreachable from `Machine.step`. The constructor is left in place —
+removing it is a call for the landing, not for a spike — and this is the only dead arm the
+repairs create.
+
+**Consequences elsewhere.** O2's three witnesses (`ir/Programs.lean`) still pass unchanged:
+all three install a handler, so neither repair can reach them. `CpsProof.lean` needed no
+change. The harness lost its whole "corrected machine" apparatus — `stepFix`, `stepFix2`,
+`runFix2`, `execFix2M`, `classifyFix2`, `unhandledRoute` and the `Verdict.agreeRoot` case are
+deleted, because the one machine is now the corrected one. `ir/Counterexamples.lean`'s CE-1 and
+CE-2 become regression witnesses: the pre-repair values are recorded in their comments and the
+`#guard`s assert the repaired behaviour.
+
+**Re-run.** 3500 programs, depths 2-5, on the one repaired machine:
+
+| depth | programs | result |
+| --- | --- | --- |
+| 2 | 1000 | 1000 agree |
+| 3 | 1000 | 1000 agree |
+| 4 | 1000 | 1000 agree |
+| 5 | 500 | 500 agree |
+
+Zero disagreements, zero source-side `stuck`, zero fuel exhaustion. The comparison is now
+plain equality of outcome and output, with no forgiven route.
+
+### 9.1 (A0 P2-1) The shape `run_under_handler` compiles to
+
+A0 asked for the transform proved on "a closure allocated at a dominator whose body contains a
+`%perform` in tail position under a `Pushtrap`". Rather than invent it, the avatar's own
+fixture was compiled and dumped the way O2 dumped its three witnesses:
+
+```
+$ ocamlc -c fibers_fixture.ml
+$ js_of_ocaml compile --enable effects --target-env=nodejs --pretty --debug effects \
+    fibers_fixture.cmo -o ff.js 2> ff.effects.dump
+```
+
+and the first `========` section of that dump is the closure `Fun.protect` runs — the child
+body of `fibers_fixture.ml:16-27`. It is kept as `ir/p7_run_under_handler.effects.dump` and
+`ir/p7_run_under_handler.pre.dump`, and transcribed in `ir/RunUnderHandler.lean`:
+
+```
+======== true
+==== 289 () ====   v13 = CONST{0}; v14 = {tag=0; 0 = v7; 1 = v13}; v15 = v4[0]; v17 = v16[36]
+                 * v18 = v17(v15, v14)          -- state.started <- state.started @ [code]
+                   branch 649 ()
+CPS
+==== 649 () ====   v4[0] = v18                  -- a Set_field on a mutable record
+                   v20 = 3 <= v7
+                   if v20 then 305 () else 314 ()
+==== 305 () ====   v23 = CONST{0}; v25 = v24[27]; v26 = {tag=0; 0 = v25; 1 = v23}
+                 * v27 = "%perform"(v26)        -- Effect.perform (Op_never ()), TAIL POSITION
+                   return v27
+==== 314 () ====   switch v7 {0 -> 321; 1 -> 325; 2 -> 329; 3 -> 336}
+```
+
+The transcription reproduces the compiler's own annotations, as `#guard`s:
+`agreeUpToRenaming` on the block structure (which re-derives `split_blocks`' cut of 289 at its
+CPS call), the `*` set `[18, 27]` plus the wrapper closure this transcription adds, the
+`======== true`, the single-element `blocks_to_transform`, and the one trampolined call.
+`p7Linked` supplies what the compilation unit reads out of other units — `Fun.protect`'s
+`Pushtrap`, `Stdlib`'s `@` at slot 36, the two extension constructors, and a scheduler
+`match_with` whose `effc` continues with 99 — on O2's `pNLinked` convention, and both machines
+run it to `99`.
+
+Three things the real shape has that a guessed one would not, and each is now a theorem:
+
+- **One jump closure, at the dominator.** `blocks_to_transform` is the single block 649, whose
+  immediate dominator is 289. `jumpClosures_allocated_at_idom` on a one-element set.
+- **The block the transform touches carries a `Set_field` on a mutable record.** `v4[0] = v18`
+  is `state.started <- …`. `cpsInstr_setField` says the transform leaves it alone; clause (R9)
+  and `set_field_step` say it runs identically on the two sides.
+- **The `%perform` is in tail position and survives `split_blocks` whole.** `isSplitPoint` is
+  false for `Let x e; return x` (`effects.ml:833-834`), so `rewrite_instr` rewrites block 305
+  in place. **`cpsBlock_tail_perform`** is what it rewrites it to, exactly: everything before
+  the `%perform` verbatim (`cpsInstr_inert`, `mapM_cpsInstr_inert`), then one instruction,
+  `caml_perform_effect` with the caller's `k` explicit, still in tail position. Composed with
+  `perform_effect_step`, the target's single step on that block is `Machine.performEffect` on
+  the same three values the source's `%perform` arm reaches — so the whole residual difference
+  on this shape is which value plays `k`: a `frameK` chain on the source, the block's
+  continuation closure on the target. That is clause (R1), and it is all of `R` that this shape
+  leaves open.
+
+### 9.2 (A0 P2-2) `caml_resume_stack` at depth 1
+
+The avatar installs exactly one handler per fiber and never `reperform`s, so every fiber list
+it resumes has one cell. `resumeStack_depth_one` computes `caml_resume_stack`
+(`effect.js:78-91`) at that depth in closed form, and `resume_pop_depth_one` is the one worth
+having:
+
+> **Installing a one-cell fiber list and taking it off again is the identity on the machine,
+> trace apart.** `caml_exn_stack`, `caml_fiber_stack` and the low-level continuation are
+> restored exactly, and nothing else was touched.
+
+That is the whole of the avatar's use of the fiber discipline, and it is much cheaper than the
+general chain, as A0 said it would be.
+
+### 9.3 (A0 P2-3) The trampoline and the back-edge check
+
+`cpsBranch_backedge_is_trampolined` and `cpsBranch_forward_not_trampolined`: `cps_branch` puts
+a call's result variable into `cps_calls` exactly when the edge is backward
+(`effects.ml:302-304`, "only for backward edges, so at least once per loop iteration"), which
+is the set `generate.ml:1019,789-799` wraps in `caml_stack_check_depth()` and a
+`caml_trampoline_return` bounce.
+
+The point for this theorem is the negative one, and `cpsBranch_transformed` already had it:
+**`check` does not change the emitted `Code` at all.** It changes only which set the result
+variable lands in, and therefore only what `generate.ml` wraps the call in. So the trampoline
+is invisible to `Code.Machine` and cannot affect `cps_preserves_outcome`. What it affects is
+whether the JavaScript engine's own stack overflows on `drive`/`flush_all` — which this machine
+does not model, and which §7 now names as out of scope rather than as owed. The avatar's back
+edge is exercised end to end by `ir/Avatar.lean`'s `a1DriveLoop` (§8).
+
+### 9.4 (A0 P2-4) The deviation as an explicit hypothesis
+
+`effects.ml:19-34`: only the current continuation is passed between functions, while the
+exception handlers and the effect handlers live in the two globals `caml_exn_stack` and
+`caml_fiber_stack`. A0's point is that the avatar's `interruptRecord` mutates handler-side
+state *between* two entries into the same global stack, so a relation quantified over closed
+terms would be about a language the avatar does not write.
+
+`R` is already a relation over machine *states*, which is the design decision that answers
+this; round three names it and proves the closure property that makes it usable.
+
+- `GlobalHandlerStacks P a b` is the deviation as a predicate: the relation is over the whole
+  contents of the two global stacks, not over any one continuation. `R_gives_globalHandlerStacks`
+  projects it out of `R` (and depends on no axioms at all).
+- **`R_setField`**: if the two sides write related values into corresponding slots of
+  corresponding blocks, `R` is preserved. Every other clause is about a field `setObj` does not
+  touch, and clause (R9) is closed under a pointwise update (`Forall₂_set`). The one side
+  condition is `hinj`: the object correspondence must not send two source blocks to one target
+  block — true of any correspondence built by allocation.
+
+That is the formal content of "the handler may change state between two entries, and the
+relation survives it", and it holds because `Set_field` is not rewritten by the transform.
+
+### 9.5 New theorems, `#print axioms`
+
+```
+cpsInstr_inert                     [propext]
+mapM_cpsInstr_inert                [propext, Quot.sound]
+cpsBlock_tail_perform              [propext, Quot.sound]
+resumeStack_depth_one              [propext]
+resume_pop_depth_one               [propext]
+cpsBranch_backedge_is_trampolined  [propext, Quot.sound]
+cpsBranch_forward_not_trampolined  [propext, Quot.sound]
+R_gives_globalHandlerStacks        does not depend on any axioms
+R_setField                         [propext, Quot.sound]
+```
+
+No `sorryAx`. Running total: 39 theorems proved across the three rounds.
+
+### 9.6 What round three did not change
+
+`KSound` and `ScopeAtJump` are still the two open obligations, and round three did not narrow
+either — it sharpened what they have to cover. `cpsBlock_tail_perform` reduces the avatar's
+`run_under_handler` shape to `KSound` alone; `a1DriveLoop` and the p7 shape together are the
+concrete adversaries for `ScopeAtJump`. Neither is discharged.
+
+## 10. Commands to re-run everything
 
 ```
 $ cd /Users/pooks/Dev/lean4-effect4
@@ -461,6 +656,7 @@ $ lake env lean workshop/OCaml5/ir/Programs.lean          # O2's checks, unchang
 $ lake env lean workshop/OCaml5/ir/Counterexamples.lean   # the two defects and CE-3
 $ lake env lean workshop/OCaml5/ir/Fuzz.lean              # the pinned sweeps, ~6 s
 $ lake env lean workshop/OCaml5/ir/Avatar.lean            # the four avatar shapes, §8
+$ lake env lean workshop/OCaml5/ir/RunUnderHandler.lean   # the real avatar block shape, §9.1
 ```
 
 The large sweep of §4.1 is `#eval (sweep n d fs ft, sweepFix2 n d fs ft)` in a scratch file

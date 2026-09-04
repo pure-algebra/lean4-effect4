@@ -404,7 +404,6 @@ def genEffc : Nat → List Var → Var → Var → Gen Addr
       gen fuel (pEff :: scope) pcRet
 
 end
-
 /-! ## The program, and the two runs -/
 
 /-- The top level: compute a value, print it, `Stop`. Printing is what makes the comparison
@@ -424,206 +423,6 @@ def genProgram (seed : UInt64) (fuel : Nat) : Program K :=
 def seedOf (i : Nat) : UInt64 := (UInt64.ofNat i) * 2654435761 + 1013904223
 
 def execM (fuel : Nat) (p : Program K) : Machine := Machine.run fuel (Machine.init p)
-
-/-- The one known outcome correspondence that is not equality: `perform` with no handler.
-The source program runs at the root, where `Code.Machine.performEffect` finds an empty
-`fiberStack` and answers `Outcome.unhandled` (`interp.c:1327-1332`). The transform's output is
-wrapped in `caml_callback`, whose bottom fiber is `uncaught_effect_handler` (`jslib.js:90-91`),
-so the same `perform` resumes the continuation and *raises* `Effect.Unhandled` inside it
-(`jslib.js:77-79`) — the `REPERFORMTERM`-at-the-root route of `interp.c:1374-1381`. O2 report
-§7 finding 4: jsoo has only one of the two `Unhandled` routes. -/
-def unhandledRoute (mt : Machine) : Outcome → Outcome → Bool
-  | .unhandled e, .uncaught (.blk i) =>
-    match mt.getObj i with
-    | some o => o.fields == [.prim "Effect.Unhandled", e]
-    | none => false
-  | _, _ => false
-
-inductive Verdict
-  | agree            -- the outcomes and the output are equal
-  | agreeRoot        -- equal up to the root-`Unhandled` route above
-  | disagree
-  | srcStuck         -- a generator bug: the source program is ill formed
-  | srcFuel
-  | tgtFuel
-deriving Repr, DecidableEq
-
-def classify (seed : UInt64) (depth fs ft : Nat) : Verdict :=
-  let p := genProgram seed depth
-  let ms := execM fs p
-  let mt := execM ft (OCaml5.Cps.f p).1
-  let (os, ss) := ms.result
-  let (ot, st) := mt.result
-  if os == .outOfFuel then .srcFuel
-  else if (match os with | .stuck _ => true | _ => false) then .srcStuck
-  else if ot == .outOfFuel then .tgtFuel
-  else if os == ot && ss == st then .agree
-  else if unhandledRoute mt os ot && ss == st then .agreeRoot
-  else .disagree
-
-structure Counts where
-  agree : Nat := 0
-  agreeRoot : Nat := 0
-  disagree : Nat := 0
-  srcStuck : Nat := 0
-  srcFuel : Nat := 0
-  tgtFuel : Nat := 0
-deriving Repr
-
-def Counts.add (c : Counts) : Verdict → Counts
-  | .agree => { c with agree := c.agree + 1 }
-  | .agreeRoot => { c with agreeRoot := c.agreeRoot + 1 }
-  | .disagree => { c with disagree := c.disagree + 1 }
-  | .srcStuck => { c with srcStuck := c.srcStuck + 1 }
-  | .srcFuel => { c with srcFuel := c.srcFuel + 1 }
-  | .tgtFuel => { c with tgtFuel := c.tgtFuel + 1 }
-
-/-- The sweep: `n` programs of generator depth `depth`, seeds `seedOf 0 … seedOf (n-1)`. -/
-def sweep (n depth fs ft : Nat) : Counts :=
-  (List.range n).foldl (fun c i => c.add (classify (seedOf i) depth fs ft)) {}
-
-/-- The seeds that disagree, for the shrinker. -/
-def failures (n depth fs ft : Nat) : List (Nat × Verdict) :=
-  (List.range n).filterMap (fun i =>
-    let v := classify (seedOf i) depth fs ft
-    if v == .disagree || v == .srcStuck then some (i, v) else none)
-
-/-! ## The corrected machine
-
-The first sweep found a disagreement (seeds 122 and 165 of §"the counts"), minimised in
-`ir/Counterexamples.lean` and checked against the real compiler: `ml/cb_trap.ml`, whose
-generated JavaScript is quoted in the report, prints `18` under `ocamlrun` *and* under `node`,
-while `Code.Machine` answers `uncaught 103` on the transform's output.
-
-The cause is a transcription gap, not a compiler bug. `generate.ml` compiles a `Pushtrap` in a
-**non-CPS** block to a JavaScript `try { … } catch`; only the `Pushtrap` of a *transformed*
-block becomes `caml_push_trap` on the global `caml_exn_stack` (`effects.ml:426-445`).
-`caml_callback` resets `caml_exn_stack` to `0` on the way in (`jslib.js:88`), rethrows the
-JavaScript exception when that stack is empty (`:100`), and restores the caller's stack in its
-`finally` (`:107-111`) — so a JavaScript `try/catch` *around* a `caml_callback` still catches.
-`Code.Machine` puts both kinds of trap on the one `exnStack`, so the outer one is lost.
-
-`stepFix` is the proposed one-arm repair of `Code.Machine.step`, kept here because
-`Code.lean` is additive-only for this spike: on an empty `exnStack` a raise pops the callback
-frame and re-raises in the restored context instead of halting. Everything else is `step`. -/
-
-def stepFix (m : Machine) : Machine :=
-  match m.ctl with
-  | .raiseV v =>
-    match m.exnStack with
-    | [] =>
-      match m.cbStack with
-      | [] => { m with ctl := .done (.uncaught v) }
-      -- `jslib.js:100` `throw e`, then `:107-111` `finally`: the exception leaves the
-      -- callback and is raised again in the caller's context.
-      | sv :: rest =>
-        { m with cbStack := rest, exnStack := sv.exnStack, fiberStack := sv.fiberStack
-               , k := sv.k, trace := .callbackReturn :: m.trace }
-    | h :: rest => ({ m with exnStack := rest }).applyK h v
-  | _ => m.step
-
-def runFix : Nat → Machine → Machine
-  | 0, m => match m.ctl with
-    | .done _ => m
-    | _ => { m with ctl := .done .outOfFuel }
-  | fuel + 1, m => match m.ctl with
-    | .done _ => m
-    | _ => runFix fuel (stepFix m)
-
-def execFixM (fuel : Nat) (p : Program K) : Machine := runFix fuel (Machine.init p)
-
-def classifyFix (seed : UInt64) (depth fs ft : Nat) : Verdict :=
-  let p := genProgram seed depth
-  let ms := execFixM fs p
-  let mt := execFixM ft (OCaml5.Cps.f p).1
-  let (os, ss) := ms.result
-  let (ot, st) := mt.result
-  if os == .outOfFuel then .srcFuel
-  else if (match os with | .stuck _ => true | _ => false) then .srcStuck
-  else if ot == .outOfFuel then .tgtFuel
-  else if os == ot && ss == st then .agree
-  else if unhandledRoute mt os ot && ss == st then .agreeRoot
-  else .disagree
-
-def sweepFix (n depth fs ft : Nat) : Counts :=
-  (List.range n).foldl (fun c i => c.add (classifyFix (seedOf i) depth fs ft)) {}
-
-def failuresFix (n depth fs ft : Nat) : List Nat :=
-  (List.range n).filterMap (fun i =>
-    if classifyFix (seedOf i) depth fs ft == .disagree then some i else none)
-
-/-! ## The second gap, and the fully corrected machine
-
-With `stepFix` in place the sweep still disagreed, on programs where the *source* performs at
-the root inside a `try`. `Code.Machine.performEffect`'s root arm answers
-`Outcome.unhandled eff` and **halts**; `interp.c:1327-1332` does
-`accu = caml_make_unhandled_effect_exn(accu); goto raise_exception`, an ordinary raise on the
-performer, which an enclosing trap catches. `ml/uc3.ml` runs on all three hosts —
-`ocamlrun`, `ocamlopt`, `node` — and all three print `7`, the handler's answer.
-
-(`ml/uc2.ml`, the same program without a reference to `Effect.Unhandled`, prints
-`Fatal error: exception Effect.Unhandled` under `ocamlc`/`ocamlopt` and `7` under `node`. That
-is not a semantic difference: `%perform` is an external, so a program that never mentions a
-*value* of `Stdlib.Effect` does not link `Stdlib__Effect`, its `Callback.register_exception`
-never runs, and `fiber.c:678-679` `fprintf`s and `exit(2)`s from C. Recorded in the report as a
-separate finding.)
-
-`stepFix2` adds the second repair: `perform` with an empty fiber stack takes
-`Code.Machine.uncaughtEffect` — resume the carried continuation, then raise
-`Effect.Unhandled` inside it — instead of halting. A first attempt that raised on the performer
-without resuming still disagreed at generator depth 5, on `%reperform` at the root with a
-non-empty continuation: `interp.c` has **two** routes to `Unhandled`, `PERFORM`-at-the-root
-(`:1327-1332`, raise on the performer) and `REPERFORMTERM`-at-the-root (`:1374-1381`, resume
-the continuation and raise inside it), and only the second one lets the captured fiber's traps
-see the exception. `uncaughtEffect` is both: with no continuation to resume it degenerates to
-the first. -/
-
-def isPerformInstr : Instr K → Bool
-  | .letIn _ (.prim (.extern "%perform") _)
-  | .letIn _ (.prim (.extern "%reperform") _)
-  | .letIn _ (.prim (.extern "caml_perform_effect") _) => true
-  | _ => false
-
-/-- `perform`/`reperform` with no fiber below. `Code.Machine.uncaughtEffect` already *is* the
-right arm — `jslib.js:75-84` and `interp.c:1374-1381`: resume whatever continuation the
-primitive carries, then raise `Effect.Unhandled` inside it, so the captured traps see it — but
-`Code.Machine.performEffect` never calls it and answers `Outcome.unhandled` instead. With an
-absent continuation (`%perform` at the root, `Pc (Int 0)`) `resumeStack` fails and the raise
-happens on the performer, which is `interp.c:1327-1332`. One arm, both routes. -/
-def rootPerform (m : Machine) (x : Var) (effArg contArg : PrimArg K)
-    (rest : List (Instr K)) (br : Last) : Option Machine :=
-  match m.argVal effArg, m.argVal contArg with
-  | some eff, some contv =>
-    let (k0, m) := m.contFor x rest br
-    some (m.uncaughtEffect eff contv k0)
-  | _, _ => none
-
-def stepFix2 (m : Machine) : Machine :=
-  match m.ctl with
-  | .instrs (i :: rest) br =>
-    if m.fiberStack.isEmpty then
-      match i with
-      | .letIn x (.prim (.extern "%perform") [a]) =>
-        (rootPerform m x a (.pc (.int 0)) rest br).getD (stepFix m)
-      | .letIn x (.prim (.extern "%reperform") (a :: c :: _)) =>
-        (rootPerform m x a c rest br).getD (stepFix m)
-      | .letIn _ (.prim (.extern "caml_perform_effect") [a, c, kv]) =>
-        (match m.argVal a, m.argVal c, m.argVal kv with
-         | some eff, some contv, some k0 => some (m.uncaughtEffect eff contv k0)
-         | _, _, _ => none).getD (stepFix m)
-      | _ => stepFix m
-    else stepFix m
-  | _ => stepFix m
-
-def runFix2 : Nat → Machine → Machine
-  | 0, m => match m.ctl with
-    | .done _ => m
-    | _ => { m with ctl := .done .outOfFuel }
-  | fuel + 1, m => match m.ctl with
-    | .done _ => m
-    | _ => runFix2 fuel (stepFix2 m)
-
-def execFix2M (fuel : Nat) (p : Program K) : Machine := runFix2 fuel (Machine.init p)
 
 /-! Heap indices differ between the two runs, so an outcome carrying a block is compared by
 its contents, not by its index. -/
@@ -655,10 +454,21 @@ def absOutcome (m : Machine) : Outcome → String
   | .stuck why => "stuck " ++ why
   | .outOfFuel => "outOfFuel"
 
-def classifyFix2 (seed : UInt64) (depth fs ft : Nat) : Verdict :=
+inductive Verdict
+  | agree            -- the outcomes and the output are equal
+  | disagree
+  | srcStuck         -- a generator bug: the source program is ill formed
+  | srcFuel
+  | tgtFuel
+deriving Repr, DecidableEq
+
+/-- The source program under `Code.Machine`, which reaches the `%perform`/`%reperform`/
+`%resume` arms, against `(Cps.f p).1` under the same machine, which reaches only the `caml_*`
+arms. Equality of the outcome **and** of everything the program printed. -/
+def classify (seed : UInt64) (depth fs ft : Nat) : Verdict :=
   let p := genProgram seed depth
-  let ms := execFix2M fs p
-  let mt := execFix2M ft (OCaml5.Cps.f p).1
+  let ms := execM fs p
+  let mt := execM ft (OCaml5.Cps.f p).1
   let (os, ss) := ms.result
   let (ot, st) := mt.result
   if os == .outOfFuel then .srcFuel
@@ -667,12 +477,28 @@ def classifyFix2 (seed : UInt64) (depth fs ft : Nat) : Verdict :=
   else if absOutcome ms os == absOutcome mt ot && ss == st then .agree
   else .disagree
 
-def sweepFix2 (n depth fs ft : Nat) : Counts :=
-  (List.range n).foldl (fun c i => c.add (classifyFix2 (seedOf i) depth fs ft)) {}
+structure Counts where
+  agree : Nat := 0
+  disagree : Nat := 0
+  srcStuck : Nat := 0
+  srcFuel : Nat := 0
+  tgtFuel : Nat := 0
+deriving Repr
 
-def failuresFix2 (n depth fs ft : Nat) : List Nat :=
+def Counts.add (c : Counts) : Verdict → Counts
+  | .agree => { c with agree := c.agree + 1 }
+  | .disagree => { c with disagree := c.disagree + 1 }
+  | .srcStuck => { c with srcStuck := c.srcStuck + 1 }
+  | .srcFuel => { c with srcFuel := c.srcFuel + 1 }
+  | .tgtFuel => { c with tgtFuel := c.tgtFuel + 1 }
+
+/-- The sweep: `n` programs of generator depth `depth`, seeds `seedOf 0 … seedOf (n-1)`. -/
+def sweep (n depth fs ft : Nat) : Counts :=
+  (List.range n).foldl (fun c i => c.add (classify (seedOf i) depth fs ft)) {}
+
+def failures (n depth fs ft : Nat) : List Nat :=
   (List.range n).filterMap (fun i =>
-    if classifyFix2 (seedOf i) depth fs ft == .disagree then some i else none)
+    if classify (seedOf i) depth fs ft == .disagree then some i else none)
 
 /-! ## The shrinker
 
@@ -714,16 +540,19 @@ def candidates (p : Program K) : List (Program K) :=
     ++ (List.range b.body.length).map (fun i =>
          p.setBlock pc { b with body := b.body.eraseIdx i }))).map prune
 
-/-- The property the shrinker preserves: both runs finish, the source is well formed, and the
-outcomes or the outputs differ — up to the root-`Unhandled` route, which is forgiven so that
-the shrinker chases the *other* disagreement. -/
+/-- Both sides must finish and neither may be `stuck`: a shrinking step that deletes the
+instruction binding a variable a later block reads makes the *target* stuck while the source
+raises before reaching it, and the shrinker would happily chase that artifact. A genuine
+`stuck` on the target is still counted as a disagreement by `classify`. -/
 def stillBad (p : Program K) (fs ft : Nat) : Bool :=
   let ms := execM fs p
   let mt := execM ft (OCaml5.Cps.f p).1
   let (os, ss) := ms.result
   let (ot, st) := mt.result
-  (os != .outOfFuel) && (match os with | .stuck _ => false | _ => true) && (ot != .outOfFuel)
-    && !((absOutcome ms os == absOutcome mt ot || unhandledRoute mt os ot) && ss == st)
+  (os != .outOfFuel) && (ot != .outOfFuel)
+    && (match os with | .stuck _ => false | _ => true)
+    && (match ot with | .stuck _ => false | _ => true)
+    && !(absOutcome ms os == absOutcome mt ot && ss == st)
 
 private def shrinkAux : Nat → Program K → Nat → Nat → Program K
   | 0, p, _, _ => p
@@ -735,42 +564,16 @@ private def shrinkAux : Nat → Program K → Nat → Nat → Program K
 def shrink (p : Program K) (fs ft : Nat) : Program K :=
   shrinkAux (size p + 1) (prune p) fs ft
 
-/-- Every seed whose two runs disagree on something other than the root-`Unhandled` route. -/
 def hardFailures (n depth fs ft : Nat) : List Nat :=
   (List.range n).filterMap (fun i =>
     if stillBad (genProgram (seedOf i) depth) fs ft then some i else none)
 
-/-! The same property and shrinker against the corrected machine. -/
-
-/-- Both sides must finish and neither may be `stuck`: a shrinking step that deletes the
-instruction binding a variable a later block reads makes the *target* stuck while the source
-raises before reaching it, and the shrinker would happily chase that artifact. A genuine
-`stuck` on the target is still counted as a disagreement by `classifyFix2`. -/
-def stillBadFix2 (p : Program K) (fs ft : Nat) : Bool :=
-  let ms := execFix2M fs p
-  let mt := execFix2M ft (OCaml5.Cps.f p).1
-  let (os, ss) := ms.result
-  let (ot, st) := mt.result
-  (os != .outOfFuel) && (ot != .outOfFuel)
-    && (match os with | .stuck _ => false | _ => true)
-    && (match ot with | .stuck _ => false | _ => true)
-    && !(absOutcome ms os == absOutcome mt ot && ss == st)
-
-private def shrinkAux2 : Nat → Program K → Nat → Nat → Program K
-  | 0, p, _, _ => p
-  | f + 1, p, fs, ft =>
-    match (candidates p).find? (fun q => size q < size p && stillBadFix2 q fs ft) with
-    | some q => shrinkAux2 f q fs ft
-    | none => p
-
-def shrinkFix2 (p : Program K) (fs ft : Nat) : Program K :=
-  shrinkAux2 (size p + 1) (prune p) fs ft
-
-def hardFailuresFix2 (n depth fs ft : Nat) : List Nat :=
-  (List.range n).filterMap (fun i =>
-    if stillBadFix2 (genProgram (seedOf i) depth) fs ft then some i else none)
-
 /-! ## The counts
+
+Round two ran this harness against `Code.Machine` as spike O2 transcribed it and found two
+defects, both in the machine and neither in the transform; round three applied the two repairs
+to `Code.lean` (report §9), so the driver above now runs the one machine on both sides and the
+`agreeRoot` verdict — "equal up to the root-`Unhandled` route" — is gone with the route.
 
 The numbers in the report, reproduced by
 
@@ -778,54 +581,22 @@ The numbers in the report, reproduced by
 $ lake env lean workshop/OCaml5/ir/Fuzz.lean
 ```
 
-for the pinned sweeps below, and by `#eval (sweep n d fs ft, sweepFix2 n d fs ft)` for the
-large ones (1000 programs at each of depths 2-5 and 500 at depth 6, about a minute):
+for the pinned sweeps below, and by `#eval sweep n d fs ft` for the large ones (about ten
+seconds):
 
-| depth | programs | `Code.Machine` as transcribed | with `stepFix2` |
-| --- | --- | --- | --- |
-| 2 | 1000 | 784 agree, 216 root-`Unhandled`, 0 other | 1000 agree |
-| 3 | 1000 | 679 agree, 317 root-`Unhandled`, 4 other | 1000 agree |
-| 4 | 1000 | 615 agree, 370 root-`Unhandled`, 15 other | 1000 agree |
-| 5 | 1000 | 545 agree, 428 root-`Unhandled`, 27 other | 1000 agree |
-| 6 | 500 | — | 500 agree |
-
-"agree" is equality of the outcome *and* of everything the program printed. No generated
-program was ever `stuck` on the source side and none ran out of fuel.
-
-The pinned sweeps are smaller so that elaborating this file stays quick; they are the same
-generator and the same driver. -/
-
-/-! ## The counts
-
-The numbers in the report, reproduced by
-
-```
-$ lake env lean workshop/OCaml5/ir/Fuzz.lean
-```
-
-for the pinned sweeps below, and by `#eval (sweep n d fs ft, sweepFix2 n d fs ft)` for the
-large ones (about twenty seconds):
-
-| depth | programs | `Code.Machine` as transcribed | with `stepFix2` |
-| --- | --- | --- | --- |
-| 2 | 1000 | 731 agree, 269 root-`Unhandled`, 0 other | 1000 agree |
-| 3 | 1000 | 642 agree, 355 root-`Unhandled`, 3 other | 1000 agree |
-| 4 | 1000 | 576 agree, 411 root-`Unhandled`, 13 other | 1000 agree |
-| 5 | 500 | 272 agree, 218 root-`Unhandled`, 10 other | 500 agree |
+| depth | programs | result |
+| --- | --- | --- |
+| 2 | 1000 | 1000 agree |
+| 3 | 1000 | 1000 agree |
+| 4 | 1000 | 1000 agree |
+| 5 | 500 | 500 agree |
 
 "agree" is equality of the outcome *and* of everything the program printed. No generated
-program was ever `stuck` on the source side and none ran out of fuel.
+program was ever `stuck` on the source side and none ran out of fuel. -/
 
-The pinned sweeps are smaller so that elaborating this file stays quick; they are the same
-generator and the same driver. -/
-
-#guard (sweepFix2 120 2 40000 400000).agree == 120
-#guard (sweepFix2 120 3 40000 400000).agree == 120
-#guard (sweepFix2 80 4 80000 800000).agree == 80
-#guard (sweepFix2 60 5 200000 2000000).agree == 60
-
--- The same seeds under `Code.Machine` as O2 transcribed it: the two gaps show.
-#guard (sweep 120 3 40000 400000).agreeRoot > 0
-#guard (sweep 1000 4 80000 800000).disagree == 13
+#guard (sweep 120 2 40000 400000).agree == 120
+#guard (sweep 120 3 40000 400000).agree == 120
+#guard (sweep 80 4 80000 800000).agree == 80
+#guard (sweep 60 5 200000 2000000).agree == 60
 
 end OCaml5.ir.Fuzz

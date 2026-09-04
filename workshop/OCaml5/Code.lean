@@ -511,6 +511,27 @@ def contUse (m : Machine) (c : Val) : Val × Machine :=
     | _ => (.int 0, m)
   | _ => (.int 0, m)
 
+/-- `Effect.Unhandled eff` as the runtime builds it (`jslib.js:79-82`, `fiber.c:693-703`). -/
+def unhandledExn (m : Machine) (eff : Val) : Val × Machine :=
+  m.newObj ⟨0, [.prim "Effect.Unhandled", eff]⟩
+
+/-- `jslib.js:75-84`, `uncaught_effect_handler`: resume the continuation and raise `Unhandled`
+inside it, so the captured traps see the exception. This is the `reperform`-at-the-root arm of
+`interp.c:1374-1381`. -/
+def uncaughtEffect (m : Machine) (eff contv ms : Val) : Machine :=
+  let stackv : Val := match contv with
+    | .cont i => match m.getCont i with
+      | some (some s) => .stackRef s
+      | _ => .int 0
+    | _ => .int 0
+  match m.resumeStack stackv ms with
+  | none =>
+    let (u, m) := m.unhandledExn eff
+    { m with ctl := .raiseV u }
+  | some (_, m) =>
+    let (u, m) := m.unhandledExn eff
+    { m with ctl := .raiseV u }
+
 end Machine
 
 /-! ### The step relation -/
@@ -577,9 +598,16 @@ where
 /-- `effect.js:107-120`, `caml_perform_effect`, and `interp.c:1321-1359` / `:1361-1402`. -/
 def performEffect (m : Machine) (eff : Val) (contv : Val) (k0 : Val) : Machine :=
   match m.fiberStack with
-  -- `interp.c:1327-1332`: no fiber below, so `Unhandled` on the performer. In jsoo this arm is
-  -- unreachable inside `caml_callback`, whose bottom fiber is `uncaught_effect_handler`.
-  | [] => { m with ctl := .done (.unhandled eff) }
+  -- No fiber below.  `interp.c` has **two** routes to `Unhandled` and this arm is both:
+  -- `uncaughtEffect` resumes whatever continuation the primitive carries and *then* raises
+  -- `Effect.Unhandled` inside it, which is `REPERFORMTERM`-at-the-root (`interp.c:1374-1381`)
+  -- and `jslib.js:75-84`; with no continuation to resume — `%perform` at the root, whose
+  -- `contv` is `Pc (Int 0)` — `resumeStack` fails and the raise happens on the performer,
+  -- which is `PERFORM`-at-the-root (`interp.c:1327-1332`).  Either way it is a *raise*, so an
+  -- enclosing trap catches it: `ir/p6_unhandled_linked.ml` prints `7` under `ocamlrun`,
+  -- `ocamlopt` and `node` alike.  (Spike P2 round three; before it, this arm answered
+  -- `Outcome.unhandled eff` and halted, which no host does.)
+  | [] => m.uncaughtEffect eff contv k0
   | ff :: _ =>
     -- `effect.js:109`: allocate a continuation if we do not already have one.
     let (cid, m) := match contv with
@@ -656,27 +684,6 @@ argument is a CPS call and the extra argument is the continuation (`stdlib.js:88
 def externArity : String → Option Nat
   | "caml_string_of_int" | "caml_print_string" | "caml_print_newline" => some 1
   | _ => none
-
-/-- `Effect.Unhandled eff` as the runtime builds it (`jslib.js:79-82`, `fiber.c:693-703`). -/
-def unhandledExn (m : Machine) (eff : Val) : Val × Machine :=
-  m.newObj ⟨0, [.prim "Effect.Unhandled", eff]⟩
-
-/-- `jslib.js:75-84`, `uncaught_effect_handler`: resume the continuation and raise `Unhandled`
-inside it, so the captured traps see the exception. This is the `reperform`-at-the-root arm of
-`interp.c:1374-1381`. -/
-def uncaughtEffect (m : Machine) (eff contv ms : Val) : Machine :=
-  let stackv : Val := match contv with
-    | .cont i => match m.getCont i with
-      | some (some s) => .stackRef s
-      | _ => .int 0
-    | _ => .int 0
-  match m.resumeStack stackv ms with
-  | none =>
-    let (u, m) := m.unhandledExn eff
-    { m with ctl := .raiseV u }
-  | some (_, m) =>
-    let (u, m) := m.unhandledExn eff
-    { m with ctl := .raiseV u }
 
 /-- `jslib.js:74-113`, `caml_callback`: a fresh execution context with an empty exception stack
 and a bottom fiber whose effect handler is `uncaught_effect_handler`, the identity continuation
@@ -863,7 +870,22 @@ def step (m : Machine) : Machine :=
   | .ret v => m.applyK m.k v
   | .raiseV v =>
     match m.exnStack with
-    | [] => { m with ctl := .done (.uncaught v) }
+    -- An empty `caml_exn_stack` is not the end of the run.  `caml_callback` resets the stack
+    -- on the way in (`jslib.js:88`), rethrows the JavaScript exception when it is empty
+    -- (`:100`) and restores the caller's context in its `finally` (`:107-111`) — and a
+    -- `Pushtrap` in a **non-CPS** block is compiled by `generate.ml` to a JavaScript
+    -- `try { … } catch` that sits *outside* the `caml_callback` call and catches that rethrow.
+    -- So the raise leaves the callback and is raised again in the caller's context; only an
+    -- empty callback stack ends the run.  (Spike P2 round three; before it this arm answered
+    -- `Outcome.uncaught` as soon as `exnStack` was empty, losing every trap outside a
+    -- callback.  `ir/p4_callback_trap.ml` is the executed counterexample: 18 on all three
+    -- hosts.)
+    | [] =>
+      match m.cbStack with
+      | [] => { m with ctl := .done (.uncaught v) }
+      | sv :: rest =>
+        { m with cbStack := rest, exnStack := sv.exnStack, fiberStack := sv.fiberStack
+               , k := sv.k, trace := .callbackReturn :: m.trace }
     | h :: rest => ({ m with exnStack := rest }).applyK h v
   | .applyV f args => m.applyV f args
 
@@ -943,16 +965,19 @@ def perfContinue : Program K where
             , .letIn (v 62) (.prim (.extern "%int_add") [.pc (.int 1), .pv (v 61)]) ]
           , branch := .return (v 62) }) ]
 
-/-- The same `perform` with no fiber installed: `interp.c:1327-1332`. -/
+/-- The same `perform` with no fiber installed: `interp.c:1327-1332`. The answer is an
+`Effect.Unhandled` block *raised*, not a halt — see `performEffect`'s `[]` arm. -/
 def perfRoot : Program K where
   start := 4
   freePc := 6
   blocks := perfContinue.blocks
 
 -- `1 + 41 = 42`, and the handler's answer is the whole program's answer, because
--- `%resume` in tail position hands the fiber the caller's own continuation.
+-- `%resume` in tail position hands the fiber the caller's own continuation. The second row is
+-- `perform` at the root: no trap anywhere, so the raised `Effect.Unhandled` block reaches an
+-- empty exception stack and an empty callback stack, and the run ends `uncaught`.
 #guard (Machine.exec 200 perfContinue).1 == .value (.int 42)
-#guard (Machine.exec 200 perfRoot).1 == .unhandled (.int 7)
+#guard (Machine.exec 200 perfRoot).1 == .uncaught (.blk 2)
 
 #eval Machine.exec 200 perfContinue
 #eval Machine.exec 200 perfRoot
