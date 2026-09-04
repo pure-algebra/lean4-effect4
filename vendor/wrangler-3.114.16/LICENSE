@@ -1,0 +1,12 @@
+The `wrangler` npm package declares its licence in its own `package.json` as:
+
+    "license": "MIT OR Apache-2.0"
+
+The package as published at version 3.114.16 ships no `LICENSE` file of its
+own, so this file records the declaration verbatim rather than inventing a
+licence text. The upstream texts live in the source repository:
+
+    https://github.com/cloudflare/workers-sdk  (directory packages/wrangler)
+
+Copyright (c) Cloudflare, Inc. The only file vendored here is
+`config-schema.json`, copied byte for byte and never edited.
