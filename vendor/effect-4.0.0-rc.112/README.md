@@ -53,3 +53,11 @@ cell, the completion store, and layer build and memoization.
 | `src/internal/layer.ts` | `6ad3c8e779bae54dc0b3e57cd99fcd2087354df0c673d6335619d5cd95a74187` |
 
 The included `LICENSE` is the package license.
+
+## Full source tree (vendored 2026-09-04)
+
+The complete `src/` tree of the pinned install (integrity as above; every previously vendored
+file was verified byte-identical before the copy) is now in hand for the OCaml avatar lane, so
+the port can cite any rc.112 file by line without leaving the repository. Manifest:
+`SHA256SUMS` (452 files). The census tables above still name the exact files the gates read;
+the rest is reference, never executed or imported.
