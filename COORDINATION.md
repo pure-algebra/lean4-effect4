@@ -2757,15 +2757,45 @@ connect step owns that). Publish the tag before a fresh clone resolves the pin.
 | `skills/lean-surface*/**`, `skills/README.md` (four rows), `docs/SURFACE.md`, `docs/ARCHITECTURE.md` (one row), `PLAN.md` (one paragraph) | Surface author 3c | pending |
 | `lakefile.toml` (`Effect4TestSurface` lib), `Effect4Test.lean` (Surface import lines), `COORDINATION.md` (this section) | Surface coordinator | integration |
 
-### Checkpoint, 2026-09-04 (usage exhausted mid-wave 2)
+### Checkpoint, 2026-09-04 (wave 2 complete)
 
 Wave 1a landed and repaired: `Effect4/Surface/{Kind,Facts,Annotate,Spell,Entity,JsonSchema,Emit,Views}.lean`
 (3.5k lines, 162 `#guard`s, every theorem within propext/Quot.sound), imported from `Effect4.lean`;
 `lake build Effect4` 155 jobs green. Wave 1b landed: eleven `test/contracts/surface-*.contract.md`,
 thirteen batteries under `Effect4Test/Surface/` (red until the builders land; not yet imported by
 `Effect4Test.lean`), ten counterexample files, `E4-SURFACE-CE-001..075`. Rulings from the
-reconciliation: plan §13.7. Wave 2 was interrupted: `Effect4/Surface/Api.lean` (2a) and
-`Effect4/Surface/Agent.lean` (2b) are partial but elaborate; `Deploy.lean`/`Site.lean` (2c) not
-started; the breaker's handler packet (§13.7 ruling 7) not started. Resume from plan §13.5 with
-2a–2c against the landed substrate, then the battery renames (§13.7 ruling 5), then `Effect4Test.lean`
-imports and the `Effect4TestSurface` target.
+reconciliation: plan §13.7.
+
+Wave 2 is complete. 2b landed at `75970d7` (`Agent.lean`, `Agent/Emit.lean`); 2c at `c407ab7`
+(`Deploy.lean`, `Deploy/Emit.lean`, `Site.lean`). 2a landed here: `Effect4/Surface/Api.lean`
+(1885 lines, 67 `#guard`s, 29 theorems) and `Effect4/Surface/Api/Emit.lean` (691 lines, 26
+`#guard`s, no theorem of its own). The session before this one left 2a broken mid-proof at
+`parseChars_bodyChars`; the repair replaced the closing `simp only` with `show` plus a four step
+`rw`, which both closes the goal and drops `Classical.choice`. `lake build Effect4` 160 jobs green;
+every theorem of `Api.lean` is within propext/Quot.sound, and `parseChars_bodyChars` now reaches
+`propext` alone. No `sorry`, no `native_decide`, no new axiom.
+
+Owed rows and coordinator business out of 2a:
+
+* `Path.parse? path.render = some path` stays an owed row, pinned by `#guard` only. `String.toList`
+  reaches `Classical.choice` on v4.33.1, so the path layer is written over `List Char` and the
+  round trip is the theorem `parseChars_bodyChars` at the character level.
+* The three api rules stay `emitted`; no stance is flipped. Render pins `Api/Emit.lean` reads and
+  `Effect4/Surface/Emit.lean:171-177` does not yet carry: `apiHttpApi`
+  `unstable/httpapi/HttpApiEndpoint.ts:1397-1449`, `HttpApiSchema.ts:100`, `HttpApiSchema.ts:565`;
+  `apiClient` `HttpApiClient.ts:527`; `apiOpenApi` `OpenApi.ts:299-720`, `OpenApi.ts:904-937`.
+* Entity spelling in the emitted modules is the named import
+  `import { User, NotFound } from "./entities.generated"`, not `import * as Entities`, because
+  `Spell.spellFuel` (`Effect4/Surface/Spell.lean:287`) spells a `reference` as the bare identifier.
+  A namespace import would need a second spelling inside wave 1a's module, which plan §13.6 rule 2
+  forbids. A ruling is owed if the namespace form is wanted.
+* `EndpointTy`, named in the §13.5 row for 2a, is not built. §13.2 puts `Endpoint.effTy` in
+  `Handler.lean` at wave 2d over `Effect4.Syntax.Typing`, and §2 forbids `Effect4.Surface.*`
+  importing `Effect4.Syntax.*`. That conflict is a coordinator ruling owed before 2d.
+* No Surface module beyond wave 1a's eight is reachable from `Effect4.lean`. `Api`, `Api.Emit`,
+  `Agent`, `Agent.Emit`, `Deploy`, `Deploy.Emit` and `Site` all sit outside the module-closure gate
+  at `Effect4Test.lean:138` until wave 4 wires them; 2a left the root imports alone because 2b and
+  2c did.
+
+Next: the breaker's handler packet (§13.7 ruling 7), then 2d, then the battery renames
+(§13.7 ruling 5), then `Effect4Test.lean` imports and the `Effect4TestSurface` target.
