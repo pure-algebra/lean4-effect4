@@ -174,14 +174,22 @@ def acquisitions (rows : ServiceRow) (table : List OpSpec) (interrupts : Bool)
   (if usesDecisions raw then [Skeleton.acquireService decisionsRows] else []) ++
   (if interrupts then [Skeleton.acquireService interruptsRows] else [])
 
+/-- The flow's own dispatch cases, one per declared block. Shared by the
+single-root form and the multi-root entry, so "the flow's own cases are
+untouched by the entry change" is one definition rather than a comparison
+(`skeletonEntry_blockCases` below). -/
+def blockCases (table : List OpSpec) (interrupts : Bool) (blocks : List (RawBlock String)) :
+    Option (List (Nat × List Skeleton)) :=
+  blocks.mapM fun block => do
+    let body ← skeletonBlock table interrupts block
+    pure (Lowering.blockCase block.id body)
+
 /-- The control skeleton of the dispatch form. Refuses a literal without a
 spelling or an operation outside the table (admission already refuses the
 latter). -/
 def skeletonDispatch (rows : ServiceRow) (program : FlowProgram) : Option (List Skeleton) := do
   let raw := program.flow.erase
-  let cases ← raw.blocks.mapM fun block => do
-    let body ← skeletonBlock program.table program.interrupts block
-    pure (Lowering.blockCase block.id body)
+  let cases ← blockCases program.table program.interrupts raw.blocks
   pure (acquisitions rows program.table program.interrupts raw ++ declarations raw.blocks ++
     [ Skeleton.assign (.param raw.entry 0) (.input program.param.1)
     , Skeleton.letBlockIndex "block" raw.entry
@@ -197,6 +205,193 @@ def lowerDispatch (rows : ServiceRow) (program : FlowProgram) : Option ProgDecl 
          paramType := program.param.2
          stmts := Skeleton.renderList rows body }
 
+/-! ## The three channels
+
+`declarationLine` at the end of this namespace is what these are for; the
+multi-root entry needs them one step earlier, because an exported root alias
+writes its own type rather than leaving it to inference. -/
+
+/-- The error channel of a flow: the error spellings of the family operations
+it performs, in first-use order; `never` when none. -/
+def errorChannel (rows : ServiceRow) (program : FlowProgram) : String :=
+  let spellings := program.flow.erase.blocks.foldl (init := ([] : List String)) fun acc block =>
+    match block.term with
+    | .perform operation _ _ _ =>
+        match spec? program.table operation with
+        | some spec =>
+            match (rows.row? spec.name).bind (·.error) with
+            | some (_, e) => if acc.contains e then acc else acc ++ [e]
+            | none => acc
+        | none => acc
+    | _ => acc
+  if spellings.isEmpty then "never" else String.intercalate " | " spellings
+
+/-- The requirement channel: the family when performed, `Decisions` when chosen. -/
+def requirementChannel (rows : ServiceRow) (program : FlowProgram) : String :=
+  let raw := program.flow.erase
+  let parts :=
+    (if usesFamily program.table raw then [rows.name] else []) ++
+    (if usesDecisions raw then ["Decisions"] else []) ++
+    (if program.interrupts then ["Interrupts"] else [])
+  if parts.isEmpty then "never" else String.intercalate " | " parts
+
+/-! ## The multi-root entry
+
+`workshop/Deep/fork-lowering.md` §(b). A fork names a **declared root**
+(`RawFlow.roots`), and the host has to be able to start that root with an
+argument list; ruling 3 of `docs/research/2026-09-03-deep-plan.md:29-36` says the
+lowering emits a *service call* for the fork and never `Effect.fork`, so what the
+service needs is a way into this module's own generator at a chosen root.
+
+The change is to make the generator's entry point a parameter instead of a
+constant, and to add one synthetic dispatch case per declared root
+(`Lowering.entryRootCase`, `lowering: rule.entry-root`). The flow's own block
+cases are the same list they always were, and a flow with one declared root does
+not take this path at all: `lowerRoots` is `lowerDispatch` there, byte for byte
+(`lowerDispatch_single_root_eq`). -/
+
+/-- The binder the entry request arrives in. -/
+def entryBinder : String := "entry"
+
+/-- The type of the entry request: which case to enter, and the arguments that
+case binds. The argument list is the wire's untyped `Val` list, so a root-entry
+case reads it at the parameter's declared type. -/
+def entryTy : String := "readonly [number, ReadonlyArray<unknown>]"
+
+/-- The name of the parameterised entry generator. -/
+def entryName (name : String) : String := name ++ "__entry"
+
+/-- The name a non-entry declared root is exported under. -/
+def rootName (name : String) (root : BlockId) : String :=
+  name ++ "__root" ++ toString root.value
+
+/-- The name the entry generator is re-exported under, which is what the host
+`Fibers` layer closes over (`workshop/Deep/fork-lowering.md` §(c)). -/
+def entryExportName (name : String) : String := name ++ "Entry"
+
+/-- The `Effect` type of the flow: its result, error and requirement channels,
+the three `declarationLine` prints. -/
+def effectType (rows : ServiceRow) (program : FlowProgram) : String :=
+  "Effect.Effect<" ++ program.result ++ ", " ++ errorChannel rows program ++ ", " ++
+    requirementChannel rows program ++ ">"
+
+/-- The binders a declared root is entered with: the program's own parameter for
+the entry root, and positional `p<i>` binders for every other root, since a
+non-entry root's parameters have types and no names. -/
+def rootBinders (program : FlowProgram) (block : RawBlock String) : List (String × String) :=
+  if block.id = program.flow.erase.entry then [program.param]
+  else ((List.range block.params.length).zip block.params).map
+    fun (index, ty) => ("p" ++ toString index, ty)
+
+/-- The control skeleton of the multi-root entry: the same acquisitions, the
+same declarations and the same block cases as `skeletonDispatch` -- literally
+the same `blockCases` call, so the flow's own cases are one definition and not a
+copy -- with the entry assignment and the constant block index replaced by the
+entry parameter and one synthetic case per declared root. -/
+def skeletonEntry (rows : ServiceRow) (program : FlowProgram) : Option (List Skeleton) := do
+  let raw := program.flow.erase
+  let cases ← blockCases program.table program.interrupts raw.blocks
+  let rootBlocks ← raw.roots.mapM (lookupBlock raw)
+  -- The synthetic cases live above every block id; a flow that reaches the base
+  -- has no multi-root lowering rather than a colliding case.
+  guard (raw.blocks.all fun block => block.id.value < Lowering.rootEntryBase)
+  pure (acquisitions rows program.table program.interrupts raw ++ declarations raw.blocks ++
+    [ Lowering.enterAt "block" entryBinder
+    , Lowering.dispatchLoop
+        (rootBlocks.map (fun block =>
+            Lowering.entryRootCase "block" entryBinder block.id block.params) ++ cases) ])
+
+/-- Lower an admitted graph to the parameterised entry generator. -/
+def lowerEntry (rows : ServiceRow) (program : FlowProgram) : Option ProgDecl := do
+  let body ← skeletonEntry rows program
+  pure { doc := ["Lowered from the flow `" ++ program.name ++ "` over `" ++ rows.name ++
+                 "` (dispatch form, multi-root entry)."]
+         name := entryName program.name
+         paramName := entryBinder
+         paramType := entryTy
+         stmts := Skeleton.renderList rows body }
+
+/-- `export const prog: (n: T) => Effect.Effect<…> = (n) => prog__entry([1000, [n]])`.
+
+The exported name keeps the signature it had before the flow declared a second
+root, so `declarationLine` is still the line the pinned compiler emits for it;
+the type is written rather than inferred because that is what makes the emitted
+`.d.ts` byte-equal to it (`TypeScript.Expr.lambda` has no per-parameter type, so
+the annotation lives on the constant).
+
+Shared by the plain and region dispatch forms: only the name, the doc line, the
+binders and the effect type differ. -/
+def entryAliasDecl (name entryFn doc : String) (caseIndex : Nat)
+    (binders : List (String × String)) (effect : String) : ConstDecl :=
+  { doc := [doc]
+    name := name
+    type := some ("(" ++ String.intercalate ", "
+        (binders.map fun (binder, ty) => binder ++ ": " ++ ty) ++ ") => " ++ effect)
+    value := .lambda (binders.map (·.1))
+      (.call (.ident entryFn)
+        [.arr [.int caseIndex, .arr (binders.map fun (binder, _) => .ident binder)]]) }
+
+/-- `export const progEntry = prog__entry`: the name the host layer closes over
+(`workshop/Deep/fork-lowering.md` §(c)), stable under any change to the entry
+generator's own spelling. -/
+def entryExportDecl (name : String) : ConstDecl :=
+  { doc := ["The parameterised entry of `" ++ name ++
+              "`: a declared root and its arguments."]
+    name := entryExportName name
+    value := .ident (entryName name) }
+
+/-- The doc line of a root alias: the entry root keeps the program's own name,
+so it is entered rather than "a declared root of". -/
+def rootAliasDoc (name : String) (isEntry : Bool) (block : BlockId) (form : String) : String :=
+  (if isEntry then "Enter the flow `" else "Enter the declared root of `") ++
+    name ++ "` at block " ++ toString block.value ++ " (" ++ form ++ ")."
+
+/-- The alias of one declared root of a plain flow. -/
+def rootAlias (rows : ServiceRow) (program : FlowProgram) (block : RawBlock String) : ConstDecl :=
+  let isEntry := block.id = program.flow.erase.entry
+  entryAliasDecl
+    (if isEntry then program.name else rootName program.name block.id)
+    (entryName program.name)
+    (rootAliasDoc program.name isEntry block.id "dispatch form, multi-root")
+    (Lowering.rootEntryBase + block.id.value)
+    (rootBinders program block)
+    (effectType rows program)
+
+/-- The entry re-export of a plain flow. -/
+def entryAlias (program : FlowProgram) : ConstDecl := entryExportDecl program.name
+
+/-- The declarations a flow lowers to.
+
+A flow with one declared root is the single exported generator this lowering has
+always emitted, byte for byte (`lowerDispatch_single_root_eq`). A flow with two
+or more declares the parameterised entry, one exported alias per declared root
+-- the entry root keeps the program's own name and signature -- and the entry
+re-export: `1 + |roots| + 1` declarations instead of one. -/
+def lowerRoots (rows : ServiceRow) (program : FlowProgram) : Option (List Decl) :=
+  if (program.flow.erase).roots.length ≤ 1 then
+    (lowerDispatch rows program).map fun decl => [Decl.prog decl]
+  else do
+    let entry ← lowerEntry rows program
+    let rootBlocks ← (program.flow.erase).roots.mapM (lookupBlock (program.flow.erase))
+    pure (Decl.prog entry ::
+      rootBlocks.map (fun block => Decl.const (rootAlias rows program block)) ++
+      [Decl.const (entryAlias program)])
+
+/-- **The byte-identity receipt of the entry change.** A flow with exactly one
+declared root -- which is every flow this library lowered before the fiber
+profile, and every flow in the four lowering batteries -- lowers through the
+multi-root emitter to exactly what `lowerDispatch` emits: the same single
+`ProgDecl`, hence the same bytes.
+
+Stated the way spike S3's `compileFork_eq_compileRegion`
+(`workshop/Deep/ForkFlow.lean:616-666`) is: the new path *is* the old path on
+the old inputs, so no existing golden, contract or harness fixture can move. The
+four lowering batteries are the corpus that exercises it. -/
+theorem lowerDispatch_single_root_eq (rows : ServiceRow) (program : FlowProgram)
+    (single : (program.flow.erase).roots.length ≤ 1) :
+    lowerRoots rows program = (lowerDispatch rows program).map fun decl => [Decl.prog decl] := by
+  simp only [lowerRoots, if_pos single]
+
 /-- The rules a flow exercises, in first-use order. -/
 def ruleSet (rows : ServiceRow) (program : FlowProgram) : List Rule :=
   let raw := program.flow.erase
@@ -206,7 +401,8 @@ def ruleSet (rows : ServiceRow) (program : FlowProgram) : List Rule :=
     if arity = 0 then acc else step acc .paramMove
   let start :=
     (if usesFamily program.table raw then [Rule.serviceAcquire] else []) ++
-      [.dispatchLoop, .blockCase] ++ (if program.interrupts then [Rule.interruptPoint] else [])
+      [.dispatchLoop, .blockCase] ++ (if program.interrupts then [Rule.interruptPoint] else []) ++
+      (if raw.roots.length ≤ 1 then [] else [Rule.entryRoot])
   raw.blocks.foldl (init := start) fun acc block =>
     match block.term with
     | .ret _ => step acc .flowRet
@@ -233,30 +429,6 @@ def ruleSet (rows : ServiceRow) (program : FlowProgram) : List Rule :=
     | .branch _ _ _ _ args => move (step acc .branchIf) args.length
   |> fun acc => let _ := rows; acc
 
-/-- The error channel of a flow: the error spellings of the family operations
-it performs, in first-use order; `never` when none. -/
-def errorChannel (rows : ServiceRow) (program : FlowProgram) : String :=
-  let spellings := program.flow.erase.blocks.foldl (init := ([] : List String)) fun acc block =>
-    match block.term with
-    | .perform operation _ _ _ =>
-        match spec? program.table operation with
-        | some spec =>
-            match (rows.row? spec.name).bind (·.error) with
-            | some (_, e) => if acc.contains e then acc else acc ++ [e]
-            | none => acc
-        | none => acc
-    | _ => acc
-  if spellings.isEmpty then "never" else String.intercalate " | " spellings
-
-/-- The requirement channel: the family when performed, `Decisions` when chosen. -/
-def requirementChannel (rows : ServiceRow) (program : FlowProgram) : String :=
-  let raw := program.flow.erase
-  let parts :=
-    (if usesFamily program.table raw then [rows.name] else []) ++
-    (if usesDecisions raw then ["Decisions"] else []) ++
-    (if program.interrupts then ["Interrupts"] else [])
-  if parts.isEmpty then "never" else String.intercalate " | " parts
-
 /-- The declaration line the pinned compiler must emit for the lowered flow. -/
 def declarationLine (rows : ServiceRow) (program : FlowProgram) : String :=
   "export declare const " ++ program.name ++ ": (" ++ program.param.1 ++ ": " ++ program.param.2 ++
@@ -266,20 +438,28 @@ def declarationLine (rows : ServiceRow) (program : FlowProgram) : String :=
 end Flow
 
 /-- One module of dispatch-form programs over the declared families, with the
-`Decisions` service when any program chooses. -/
+`Decisions` service when any program chooses.
+
+Each program contributes `Flow.lowerRoots`: one declaration for a single-root
+flow, byte for byte what `Flow.lowerDispatch` emitted before the entry change
+(`Flow.lowerDispatch_single_root_eq`), and `1 + |roots| + 1` for a flow that
+declares more than one root. -/
 def flowModules? (families : List (ServiceRow × List FlowProgram))
     (atoms : List Import := []) (style : Style := house0) : Option String := do
   let decls ← families.mapM fun (rows, programs) => do
-    let lowered ← programs.mapM (Flow.lowerDispatch rows)
-    pure (rows.classDecl :: rows.rowsDecl :: lowered.map Decl.prog)
+    let lowered ← programs.mapM (Flow.lowerRoots rows)
+    pure (rows.classDecl :: rows.rowsDecl :: lowered.flatten)
   let chooses := families.any fun (_, programs) =>
     programs.any fun program => Flow.usesDecisions program.flow.erase
   let interrupts := families.any fun (_, programs) => programs.any (·.interrupts)
-  let result := families.any fun (rows, _) => rows.usesResult
+  -- The `effect` namespaces are read off the rows the module declares, so the
+  -- import line names exactly what the module's own text spells.
+  let declared := (if chooses then [decisionsRows] else []) ++
+    (if interrupts then [interruptsRows] else []) ++ families.map (·.1)
   let target : Module :=
     { header := ["Generated by Effect4 (Effect v4 profile, dispatch form).", ""] ++
         hostPin.headerLines ++ ["", "Do not edit."]
-      imports := .named (["Context", "Effect"] ++ (if result then ["Result"] else [])) "effect" :: atoms
+      imports := .named (["Context", "Effect"] ++ moduleNamespaces declared atoms) "effect" :: atoms
       decls := (if chooses then [decisionsRows.classDecl, decisionsRows.rowsDecl] else []) ++
         (if interrupts then [interruptsRows.classDecl, interruptsRows.rowsDecl] else []) ++
         decls.flatten }

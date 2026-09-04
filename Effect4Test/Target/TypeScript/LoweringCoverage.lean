@@ -141,6 +141,18 @@ def rows : List Row :=
   -- written by the host gate, not by this join.
   , { rule := .performTuple, state := .pinned,
       goldens := ["job/jobRunner.clean", "job/jobRunner.requeue", "job/jobPoison.poison"],
+      host := false, property := false, typeReceipt := false, proof := none }
+  -- the multi-root entry (Skeleton.lean, `workshop/Deep/fork-lowering.md` §(b)):
+  -- one synthetic dispatch case per declared root, so the host can start a
+  -- declared root with an argument list. `absent`, and honestly so: the rule has
+  -- no golden, because no traced program declares two roots yet -- the fiber
+  -- profile's runner face is the fiber machine's packet, not this one. Its Lean
+  -- receipt is `Flow.lowerDispatch_single_root_eq`, which says a single-root
+  -- flow never takes this path, and it is NOT a `proof` entry here: it names
+  -- `lowerDispatch`, a renderer, so it reaches `Classical.choice` and the
+  -- ledger's ceiling check would refuse it. The bytes it protects are pinned in
+  -- `FiberProfileContract.lean` instead.
+  , { rule := .entryRoot, state := .absent, goldens := [],
       host := false, property := false, typeReceipt := false, proof := none } ]
 
 private def allowedAxioms : List Name := [``propext, ``Quot.sound]

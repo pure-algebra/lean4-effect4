@@ -27,7 +27,8 @@ full; the sibling lowering batteries (`RegionLowerContract`,
 their own rules and no position at all, so a rule added to one group edits this
 file and its own (survey finding H9). The order is the inductive's: the
 straight-line group, the dispatch group, Flow v3, interruption, regions, the
-structured form, and the multi-argument perform. -/
+structured form, the multi-argument perform, and the multi-root entry. A rule is
+appended, never inserted: every id below keeps the position it had. -/
 
 #guard Rule.all.map Rule.id =
   [ "service-acquire", "nullary-value", "perform-call", "perform-bind", "perform-discard"
@@ -39,8 +40,9 @@ structured form, and the multi-argument perform. -/
   , "region-enter", "region-acquire", "region-leave", "region-masked"
   , "structured-loop", "structured-merge", "structured-continue", "structured-break"
   , "dispatch-fallback"
-  , "perform-tuple" ]
-example : Rule.all.length = 29 := by decide
+  , "perform-tuple"
+  , "entry-root" ]
+example : Rule.all.length = 30 := by decide
 example : Rule.all.Nodup := Rule.all_nodup
 -- Both directions of the id map, for every rule: `all` misses none, and no id
 -- resolves to a rule outside it.

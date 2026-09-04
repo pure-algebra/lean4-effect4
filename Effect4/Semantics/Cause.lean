@@ -785,6 +785,35 @@ private theorem dedup_append {ε δ ι α : Type u} [DecidableEq ε] [DecidableE
     rw [List.cons_append, dedup_cons, ih right htail hright, List.filter_append,
       filter_ne_of_not_mem tail head hhead, List.filter_filter, hpred, List.cons_append]
 
+/-- rc.112 `hasInterrupts` (`internal/effect.ts:186`,
+`self.reasons.some(isInterruptReason)`): the cause carries at least one
+`Interrupt` reason. It is the predicate `AsyncFinalizer[contE]` reads before it
+decides whether to run its cancel effect. census: cause.reason-interrupt -/
+def hasInterrupts {ε δ ι α : Type u} (self : Cause ε δ ι α) : Bool :=
+  self.reasons.any (fun reason => reason.tag == ReasonTag.interrupt)
+
+/-- Membership form of the predicate. census: cause.reason-interrupt -/
+theorem hasInterrupts_iff {ε δ ι α : Type u} (self : Cause ε δ ι α) :
+    self.hasInterrupts = true <->
+      exists reason, reason ∈ self.reasons /\ reason.tag = ReasonTag.interrupt := by
+  simp [hasInterrupts]
+
+/-- The empty cause carries no interruption. census: cause.reason-interrupt -/
+theorem hasInterrupts_empty {ε δ ι α : Type u} :
+    (empty : Cause ε δ ι α).hasInterrupts = false := rfl
+
+/-- A single-`Fail` cause carries no interruption. census: cause.reason-interrupt -/
+theorem hasInterrupts_fail {ε δ ι α : Type u} (error : ε) :
+    (fail error : Cause ε δ ι α).hasInterrupts = false := rfl
+
+/-- A single-`Die` cause carries no interruption. census: cause.reason-interrupt -/
+theorem hasInterrupts_die {ε δ ι α : Type u} (defect : δ) :
+    (die defect : Cause ε δ ι α).hasInterrupts = false := rfl
+
+/-- `causeInterrupt` carries one. census: cause.reason-interrupt -/
+theorem hasInterrupts_interrupt {ε δ ι α : Type u} (interruptor : Option ι) :
+    (interrupt interruptor : Cause ε δ ι α).hasInterrupts = true := rfl
+
 /-- rc.112 `causeCombine`: the empty cause is an identity, otherwise a union. -/
 def combine {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
     [DecidableEq α] (self that : Cause ε δ ι α) : Cause ε δ ι α :=

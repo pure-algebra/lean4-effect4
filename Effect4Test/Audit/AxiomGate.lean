@@ -187,6 +187,12 @@ private def choiceImplementationDeclarations : List Name :=
   , ``Effect4.Target.EffectV4.Flow.lowerBest
   , ``Effect4.Target.EffectV4.Flow.lowerBlock
   , ``Effect4.Target.EffectV4.Flow.lowerDispatch
+  -- The multi-root entry (lowering lane L1, `docs/research/2026-09-03-lowering-l1-fiber-profile.md`):
+  -- the entry renderer, the per-root declarations, and the byte-identity theorem that names
+  -- a renderer. Measured by `#print axioms`; `Skeleton.lean` itself stays choice-free.
+  , ``Effect4.Target.EffectV4.Flow.lowerEntry
+  , ``Effect4.Target.EffectV4.Flow.lowerRoots
+  , ``Effect4.Target.EffectV4.Flow.lowerDispatch_single_root_eq
   , ``Effect4.Target.EffectV4.Flow.lowerStructured
   , ``Effect4.Target.EffectV4.Region.lowerBest
   , ``Effect4.Target.EffectV4.Region.lowerDispatch

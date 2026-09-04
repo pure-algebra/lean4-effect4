@@ -1,8 +1,10 @@
 /-
-Contract packet: the `Refs` family (`docs/TRACE-DAG.md`, the `refs` edge).
-Kernel receipts for the Lean face: the exact rows of each of the seven goldens
-under `generated/traces/ref/`, and the declared spellings the generated module
-is built from.
+Contract packet: the `Refs` family (`docs/TRACE-DAG.md`, the `refs` edge),
+lowering lane L3.
+
+Kernel receipts for the Lean face: the twelve rows of rc.112's `Ref` surface,
+the exact rows of each of the eleven goldens under `generated/traces/ref/`, and
+the projection lemma that says the handler *is* the Ref heap's step.
 
 These are `#guard`s, evaluated by the kernel, not proofs. Nothing here is a
 statement about the host: the same rows are compared with rc.112 by
@@ -24,16 +26,102 @@ open Effect4.RefFamily
 
 #check @Effect4.RefFamily.Refs
 #check (@Effect4.RefFamily.Refs.rows : Effect4.Target.EffectV4.ServiceRow)
+#check @Effect4.RefFamily.refStep
 #check @Effect4.RefFamily.refsLive
 #check @Effect4.RefFamily.erefsLive
 #check @Effect4.RefFamily.refGoldenLog
 
+/-! ## The twelve rows, one per rc.112 entry point -/
+
+#guard Refs.rows.name = "Refs"
+
+#guard Refs.rows.ops.map (·.name) =
+  [ "make", "get", "set", "getAndSet", "setAndGet", "update", "getAndUpdate", "updateAndGet"
+  , "modify", "getAndUpdateSome", "updateSomeAndGet", "modifySome" ]
+
+-- The declared spellings the generated module is built from. `set` answers the
+-- cell (`Ref.ts:307`, `MutableRef.ts:1067-1070`) and `update` answers `void`
+-- (`Ref.ts:1273-1276`); the pair is the whole content of
+-- `ref.set-void-returns-cell`. counterexample: E4-SEM-CE-009
+#guard Refs.rows.ops.map (fun row => (row.name, row.tsAnswer)) =
+  [ ("make", "Ref.Ref<number>"), ("get", "number"), ("set", "Ref.Ref<number>")
+  , ("getAndSet", "number"), ("setAndGet", "number"), ("update", "void")
+  , ("getAndUpdate", "number"), ("updateAndGet", "number"), ("modify", "number")
+  , ("getAndUpdateSome", "number"), ("updateSomeAndGet", "number"), ("modifySome", "number") ]
+
+-- Every read-modify-write row takes a *named* function, spelled `RefFn` on the
+-- host: DB-02 keeps a Lean function out of canonical content, so the argument
+-- is a table index and never a closure.
+#guard Refs.rows.ops.map (fun row => (row.name, row.tsParams.map Prod.snd)) =
+  [ ("make", ["number"])
+  , ("get", ["Ref.Ref<number>"])
+  , ("set", ["Ref.Ref<number>", "number"])
+  , ("getAndSet", ["Ref.Ref<number>", "number"])
+  , ("setAndGet", ["Ref.Ref<number>", "number"])
+  , ("update", ["Ref.Ref<number>", "RefFn"])
+  , ("getAndUpdate", ["Ref.Ref<number>", "RefFn"])
+  , ("updateAndGet", ["Ref.Ref<number>", "RefFn"])
+  , ("modify", ["Ref.Ref<number>", "RefFn"])
+  , ("getAndUpdateSome", ["Ref.Ref<number>", "RefFn"])
+  , ("updateSomeAndGet", ["Ref.Ref<number>", "RefFn"])
+  , ("modifySome", ["Ref.Ref<number>", "RefFn"]) ]
+
+#guard ERefs.rows.ops.map (fun row => (row.name, row.tsAnswer)) =
+  [ ("make", "Ref.Ref<number>")
+  , ("tryTake", "Result.Result<number, string>")
+  , ("get", "number") ]
+
+-- Every operation but `make` takes the handle first.
+#guard (Refs.rows.ops.filter (fun row => row.name != "make")).all
+  (fun row => row.tsParams.head?.map Prod.snd == some "Ref.Ref<number>")
+
+-- No operation of either family declares an error channel: every failure in
+-- this lane is data, and no golden of it ends `{"failure":…}`.
+#guard (Refs.rows.ops ++ ERefs.rows.ops).all (fun row => row.error.isNone)
+
+/-! ## The named functions, on both faces
+
+`RefFns` is one declaration per function: the Lean handle, the host index, and
+the row that renders it into `atoms.ts`. -/
+
+#guard RefFns.rows.map (·.name) =
+  ["fnIncr", "fnDouble", "fnTakeAndBump", "fnNoChange", "fnZeroWhenPositive"]
+
+#guard RefFns.rows.map (·.tsAnswer) = ["RefFn", "RefFn", "RefFn", "RefFn", "RefFn"]
+
+#guard RefFns.rows.map (·.body) = ["0", "1", "2", "3", "4"]
+
+-- The Lean atom and the host body name the same table position.
+#guard [fnIncr 0, fnDouble 0, fnTakeAndBump 0, fnNoChange 0, fnZeroWhenPositive 0].map
+    Effect4.Meta.Handle.index = [0, 1, 2, 3, 4]
+
+-- And reading a handle back is the identity on the table.
+#guard [RefFn.incr, RefFn.double, RefFn.takeAndBump, RefFn.noChange, RefFn.zeroWhenPositive].all
+  (fun f => RefFn.ofHandle ⟨f.index⟩ == f)
+
+/-! ## The handler is the heap's step
+
+The projection lemma of `Effect4/Stateful/RefFamily.lean`, cited here as the
+shape every golden below rests on. -/
+
+#check @Effect4.RefFamily.refsLive_is_refStep
+#check @Effect4.RefFamily.refsLive_of_step
+#check @Effect4.RefFamily.refStep_make
+#check @Effect4.RefFamily.refStep_set
+#check @Effect4.RefFamily.refStep_update
+#check @Effect4.RefFamily.set_answer_ne_update_answer
+#check @Effect4.RefFamily.refStep_setAndGet
+#check @Effect4.RefFamily.refStep_modifySome_none
+#check @Effect4.RefFamily.refStep_updateSomeAndGet_none
+#check @Effect4.RefFamily.updateSomeAndGet_ne_getAndUpdateSome
+
 /-! ## The corpus -/
 
-#guard refPrograms.length == 7
+#guard refPrograms.length == 11
 
 #guard refPrograms.map (·.name) ==
-  [ "makeGet", "setGet", "updateTwice", "modifyOld", "getAndSetOld", "twoRefs", "takeUnderflow" ]
+  [ "makeGet", "setGet", "updateTwice", "modifyOld", "getAndSetOld", "setAndGet", "updateAndGet"
+  , "someContrast", "modifySomeNoReread", "twoRefs", "takeUnderflow" ]
 
 /-! ## The rows of each golden
 
@@ -58,34 +146,32 @@ def logOf (name : String) : Effect4.Trace.Log :=
   , .op "get" (.nat 0), .answer "get" (.nat 7)
   , .done (.success (.nat 7)) ]
 
--- `ref/setGet.tsv`. `set` is declared `Unit` and answers unit. rc.112's
--- `Ref.set` resolves to the underlying `MutableRef` at runtime; the row is unit
--- because answers are recorded as typed. counterexample: E4-SEM-CE-009
+-- `ref/setGet.tsv`. `set` answers the very cell it wrote, which is what
+-- `MutableRef.set` returns (`MutableRef.ts:1067-1070`), and the read after it
+-- sees the write. counterexample: E4-SEM-CE-009
 #guard logOf "setGet" =
   [ .op "make" (.nat 7), .answer "make" (.nat 0)
-  , .op "set" (.pair (.nat 0) (.nat 9)), .answer "set" .unit
+  , .op "set" (.pair (.nat 0) (.nat 9)), .answer "set" (.nat 0)
   , .op "get" (.nat 0), .answer "get" (.nat 9)
   , .done (.success (.nat 9)) ]
 
--- `ref/updateTwice.tsv`. Two identical requests, two identical unit answers,
--- and a read that shows both landed. rc.112's `Ref.update` answers `undefined`
--- rather than the `MutableRef` its sibling `Ref.set` answers; neither runtime
--- value is what these rows are read off.
+-- `ref/updateTwice.tsv`. Two identical requests naming `fnIncr`, two identical
+-- unit answers, and a read that shows both landed. `Ref.update`'s arrow is a
+-- block, so `undefined` really is its value (`Ref.ts:1273-1276`).
 #guard logOf "updateTwice" =
   [ .op "make" (.nat 7), .answer "make" (.nat 0)
-  , .op "update" (.pair (.nat 0) (.nat 1)), .answer "update" .unit
-  , .op "update" (.pair (.nat 0) (.nat 1)), .answer "update" .unit
+  , .op "update" (.pair (.nat 0) (.nat 0)), .answer "update" .unit
+  , .op "update" (.pair (.nat 0) (.nat 0)), .answer "update" .unit
   , .op "get" (.nat 0), .answer "get" (.nat 9)
   , .done (.success (.nat 9)) ]
 
--- `ref/modifyOld.tsv`. `modify` answers the value before the write (7) and the
--- read after it shows the write (12). The amount is non-zero on purpose: the
--- answer and the new state have the same type, so nothing but this golden
--- separates them. counterexample: E4-SEM-CE-015
+-- `ref/modifyOld.tsv`. `modify` answers the function's first component (7) and
+-- the read after it shows the second (8): `fnTakeAndBump` is `a ↦ [a, a + 1]`
+-- (`Ref.ts:896-901`). counterexample: E4-SEM-CE-015
 #guard logOf "modifyOld" =
   [ .op "make" (.nat 7), .answer "make" (.nat 0)
-  , .op "modify" (.pair (.nat 0) (.nat 5)), .answer "modify" (.nat 7)
-  , .op "get" (.nat 0), .answer "get" (.nat 12)
+  , .op "modify" (.pair (.nat 0) (.nat 2)), .answer "modify" (.nat 7)
+  , .op "get" (.nat 0), .answer "get" (.nat 8)
   , .done (.success (.nat 7)) ]
 
 -- `ref/getAndSetOld.tsv`. The same separation for `getAndSet`.
@@ -95,14 +181,48 @@ def logOf (name : String) : Effect4.Trace.Log :=
   , .op "get" (.nat 0), .answer "get" (.nat 100)
   , .done (.success (.nat 7)) ]
 
+-- `ref/setAndGet.tsv`. `setAndGet` succeeds with the assignment expression, so
+-- it answers the value written and never reads the cell twice (`Ref.ts:747`).
+#guard logOf "setAndGet" =
+  [ .op "make" (.nat 7), .answer "make" (.nat 0)
+  , .op "setAndGet" (.pair (.nat 0) (.nat 9)), .answer "setAndGet" (.nat 9)
+  , .op "get" (.nat 0), .answer "get" (.nat 9)
+  , .done (.success (.nat 9)) ]
+
+-- `ref/updateAndGet.tsv`. `getAndUpdate` answers the value before the write
+-- (`Ref.ts:496-501`) and `updateAndGet` the value after it (`Ref.ts:1368`), on
+-- the same named function.
+#guard logOf "updateAndGet" =
+  [ .op "make" (.nat 7), .answer "make" (.nat 0)
+  , .op "getAndUpdate" (.pair (.nat 0) (.nat 0)), .answer "getAndUpdate" (.nat 7)
+  , .op "updateAndGet" (.pair (.nat 0) (.nat 0)), .answer "updateAndGet" (.nat 9)
+  , .done (.success (.nat 9)) ]
+
+-- `ref/someContrast.tsv`. `getAndUpdateSome` answers the value it read
+-- (`Ref.ts:635-643`); `updateSomeAndGet` on a point the partial function does
+-- not change answers that same value and writes nothing (`Ref.ts:1639-1646`).
+#guard logOf "someContrast" =
+  [ .op "make" (.nat 3), .answer "make" (.nat 0)
+  , .op "getAndUpdateSome" (.pair (.nat 0) (.nat 4)), .answer "getAndUpdateSome" (.nat 3)
+  , .op "updateSomeAndGet" (.pair (.nat 0) (.nat 4)), .answer "updateSomeAndGet" (.nat 0)
+  , .done (.success (.nat 0)) ]
+
+-- `ref/modifySomeNoReread.tsv`. On `None`, `modifySome` writes back the value
+-- `modify` already read, never a re-read (`Ref.ts:1159-1163`).
+#guard logOf "modifySomeNoReread" =
+  [ .op "make" (.nat 1), .answer "make" (.nat 0)
+  , .op "modifySome" (.pair (.nat 0) (.nat 3)), .answer "modifySome" (.nat 1)
+  , .op "get" (.nat 0), .answer "get" (.nat 1)
+  , .done (.success (.nat 1)) ]
+
 -- `ref/twoRefs.tsv`. Two handles, named 0 and 1 in creation order; a write
 -- through the first is invisible through the second.
 #guard logOf "twoRefs" =
   [ .op "make" (.nat 7), .answer "make" (.nat 0)
   , .op "make" (.nat 8), .answer "make" (.nat 1)
-  , .op "set" (.pair (.nat 0) (.nat 0)), .answer "set" .unit
+  , .op "set" (.pair (.nat 0) (.nat 0)), .answer "set" (.nat 0)
   , .op "get" (.nat 1), .answer "get" (.nat 8)
-  , .op "update" (.pair (.nat 1) (.nat 1)), .answer "update" .unit
+  , .op "update" (.pair (.nat 1) (.nat 0)), .answer "update" .unit
   , .op "get" (.nat 0), .answer "get" (.nat 0)
   , .op "get" (.nat 1), .answer "get" (.nat 9)
   , .done (.success (.nat 9)) ]
@@ -122,28 +242,10 @@ def logOf (name : String) : Effect4.Trace.Log :=
 -- A handle crosses the wire as its index and as nothing else.
 #guard Refs.encodeAnswer .make ⟨3⟩ = Effects.Trace.Val.nat 3
 
--- A request carrying a handle and a number is the pair, in that order.
+-- A request carrying a handle and a number is the pair, in that order; a
+-- request carrying two handles is the pair of their indices.
 #guard Refs.encodeParam .set (⟨2⟩, 9) = Effects.Trace.Val.pair (.nat 2) (.nat 9)
-
--- The declared spellings the generated module is built from: the handle prints
--- rc.112's own opaque type, a `Unit` answer prints `void`, and an `Except`
--- answer is data rather than an error channel.
-#guard Refs.rows.ops.map (fun row => (row.name, row.tsAnswer)) =
-  [ ("make", "Ref.Ref<number>"), ("get", "number"), ("set", "void")
-  , ("update", "void"), ("modify", "number"), ("getAndSet", "number") ]
-
-#guard ERefs.rows.ops.map (fun row => (row.name, row.tsAnswer)) =
-  [ ("make", "Ref.Ref<number>")
-  , ("tryTake", "Result.Result<number, string>")
-  , ("get", "number") ]
-
--- Every operation but `make` takes the handle first.
-#guard (Refs.rows.ops.filter (fun row => row.name != "make")).all
-  (fun row => row.tsParams.head?.map Prod.snd == some "Ref.Ref<number>")
-
--- No operation of either family declares an error channel: every failure in
--- this lane is data, and no golden of it ends `{"failure":…}`.
-#guard (Refs.rows.ops ++ ERefs.rows.ops).all (fun row => row.error.isNone)
+#guard Refs.encodeParam .update (⟨2⟩, ⟨1⟩) = Effects.Trace.Val.pair (.nat 2) (.nat 1)
 
 #guard refPrograms.all (fun entry => entry.log.all (fun event =>
   match event with

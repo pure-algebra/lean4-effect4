@@ -78,6 +78,11 @@ rule.cause-has-no-structure) -/
 #print axioms Effect4.Cause.mem_dedup
 #print axioms Effect4.Cause.dedup_nodup
 #print axioms Effect4.Cause.dedup_of_nodup
+#print axioms Effect4.Cause.hasInterrupts_iff
+#print axioms Effect4.Cause.hasInterrupts_empty
+#print axioms Effect4.Cause.hasInterrupts_fail
+#print axioms Effect4.Cause.hasInterrupts_die
+#print axioms Effect4.Cause.hasInterrupts_interrupt
 
 /-! ## A6 — causeCombine (census: cause.combine-union,
 rule.cause-has-no-structure) -/

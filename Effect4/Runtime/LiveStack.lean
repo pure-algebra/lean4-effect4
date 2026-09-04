@@ -20,23 +20,35 @@ private def prefixPop (frame : Prim ν σ β ε δ ι α)
     (result : FramePop ν σ β ε δ ι α) : FramePop ν σ β ε δ ι α :=
   { result with popped := frame :: result.popped, events := events ++ result.events }
 
-/-- Only an answering, masking OnExit can push in this profile. -/
-private theorem continuing_stack (frame : Prim ν σ β ε δ ι α)
-    (demand : Arm) (skip : Bool) (fiber : FrameFiber ν σ β ε δ ι α)
-    (continues : frame.answerOf demand (frame.ensure fiber).snd = none ∨
-      (skip && (frame.ensure fiber).fst.interrupted) = true) :
-    (frame.ensure fiber).fst.stack = fiber.stack := by
-  cases frame <;> try rfl
-  case onExit body name flag =>
-    cases demand <;> cases mask : fiber.interruptible <;> cases flag <;>
-      simp [Prim.ensure, Prim.answerOf, Prim.hasArm, Prim.arms,
-        FrameFiber.interrupted, mask] at continues ⊢
-  case setInterruptible flag =>
-    cases cause : fiber.interruptedCause <;> cases flag <;>
-      simp [Prim.ensure, cause]
+-- OWED: `continuing_stack` --- "a frame that does not answer leaves the stack
+-- alone" --- is genuinely false once `AsyncFinalizer` exists, and is therefore
+-- left out rather than restated. On a `contA` demand `AsyncFinalizer` declares
+-- no arm, so it passes, and its `contAll` has already pushed
+-- `SetInterruptible(true)` (`internal/effect.ts:1149-1154`): a passing frame
+-- can grow the stack. It was private and only ever carried the traversal's
+-- decreasing argument and two proof steps; `live_measure_lt` below replaces the
+-- first and `Runtime.ensure_stack_cases` the other two. No public statement of
+-- `test/contracts/live-stack.contract.md` depended on it.
+
+/-- `Runtime.ensure_stack_cases` as the live traversal's decreasing step: a hook
+pushes at most one frame and can only do so by clearing the interruptible flag
+it found set, so two per frame plus one while the fiber is interruptible
+strictly decreases across every hook. -/
+private theorem live_measure_lt (frame : Prim ν σ β ε δ ι α)
+    (fiber : FrameFiber ν σ β ε δ ι α) :
+    2 * (frame.ensure fiber).fst.stack.length +
+        (if (frame.ensure fiber).fst.interruptible = true then 1 else 0) <
+      2 * fiber.stack.length + 2 + (if fiber.interruptible = true then 1 else 0) := by
+  rcases ensure_stack_cases frame fiber with h | ⟨hpush, hflag, hafter⟩
+  · rw [h]
+    split <;> split <;> omega
+  · rw [hpush, hafter, hflag]
+    simp <;> omega
 
 /-- Consume the actual stack left by each hook, testing interruption after
-that hook. The decreasing argument is specific to the current Prim profile.
+that hook. A hook may grow the stack -- `AsyncFinalizer` and a masking `OnExit`
+push the restoring `SetInterruptible(true)` -- so the traversal decreases on
+`live_measure_lt`, not on the stack length alone.
 census: rule.frames-are-primitives -/
 def popLive (self : FrameFiber ν σ β ε δ ι α) (demand : Arm) (skip : Bool) :
     FramePop ν σ β ε δ ι α :=
@@ -50,12 +62,12 @@ def popLive (self : FrameFiber ν σ β ε δ ι α) (demand : Arm) (skip : Bool
       if _skipping : skip && after.fst.interrupted then
         prefixPop frame (frame.passEvents after.snd) (popLive after.fst demand skip)
       else ⟨answer, [frame], frame.passEvents after.snd, after.fst⟩
-termination_by self.stack.length
+termination_by 2 * self.stack.length + (if self.interruptible = true then 1 else 0)
 decreasing_by
-  · have kept := continuing_stack frame demand false { self with stack := rest } (Or.inl _answerEq)
-    simp [kept, _stackEq]
-  · have kept := continuing_stack frame demand skip { self with stack := rest } (Or.inr _skipping)
-    simp [kept, _stackEq]
+  all_goals
+    have step := live_measure_lt frame { self with stack := rest }
+    simp only [_stackEq, List.length_cons] at step ⊢
+    omega
 
 /-- Observe deferred interruption before the outer loop decides whether to
 discard its answer. Even a discarded answer retains its event.
@@ -86,6 +98,9 @@ private theorem ensure_appendStack (frame : Prim ν σ β ε δ ι α)
   case onExit body name flag =>
     cases mask : fiber.interruptible <;> cases flag <;>
       simp [Prim.ensure, appendStack, mask]
+  case asyncFinalizer name =>
+    cases mask : fiber.interruptible <;>
+      simp [Prim.ensure, appendStack, mask]
   case setInterruptible flag =>
     cases cause : fiber.interruptedCause <;> cases flag <;>
       simp [Prim.ensure, appendStack, cause]
@@ -96,50 +111,185 @@ private theorem clear_empty_stack (fiber : FrameFiber ν σ β ε δ ι α)
   cases empty
   rfl
 
+private theorem with_stack_self (fiber : FrameFiber ν σ β ε δ ι α) :
+    { fiber with stack := fiber.stack } = fiber := by
+  cases fiber
+  rfl
+
+/-- The detached loop's pass step as a whole result, not field by field. -/
+private theorem popFrom_pass (demand : Arm) (skip : Bool) (frame : Prim ν σ β ε δ ι α)
+    (rest : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α)
+    (continues : frame.answerOf demand (frame.ensure fiber).snd = none ∨
+      (skip && (frame.ensure fiber).fst.interrupted) = true) :
+    popFrom demand skip (frame :: rest) fiber =
+      passOn frame (frame.ensure fiber).snd (continueFrom demand skip frame rest fiber) := by
+  rcases continues with hnone | hskip
+  · simp [popFrom, continueFrom, hnone]
+  · cases hanswer : frame.answerOf demand (frame.ensure fiber).snd with
+    | none => simp [popFrom, continueFrom, hanswer]
+    | some answer => simp [popFrom, continueFrom, hanswer, hskip]
+
+/-- A hook that pushed nothing: the detached loop simply continues on the frames
+that were left, which is `Runtime.popFrom_pass_no_push` read through the scratch
+stack. -/
+private theorem popFrom_scratch_nil (demand : Arm) (skip : Bool) (frame : Prim ν σ β ε δ ι α)
+    (fiber : FrameFiber ν σ β ε δ ι α) (rest : List (Prim ν σ β ε δ ι α))
+    (_detachedEmpty : fiber.stack = [])
+    (empty : (frame.ensure fiber).fst.stack = []) :
+    popFrom demand skip ((frame.ensure fiber).fst.stack ++ rest)
+        { (frame.ensure fiber).fst with stack := [] } =
+      continueFrom demand skip frame rest fiber := by
+  have drained := passPushed_nil demand skip (frame.ensure fiber).fst empty
+  unfold continueFrom
+  rw [joinPushed_of_empty demand skip (frame.ensure fiber).fst rest _ (by rw [drained]),
+    drained, empty, List.nil_append, clear_empty_stack (frame.ensure fiber).fst empty]
+  simp
+
+private theorem answer_nonempty (frame : Prim ν σ β ε δ ι α) (demand : Arm)
+    (replacement : Option (Prim ν σ β ε δ ι α)) (answer : ContAnswer ν σ β ε δ ι α)
+    (selected : frame.answerOf demand replacement = some answer) : answer ≠ .empty := by
+  intro empty
+  subst answer
+  cases replacement <;> cases arm : frame.hasArm demand <;>
+    simp [Prim.answerOf, arm] at selected
+/-- A hook that pushed the restoring frame: the detached loop pops that frame
+next, and that is exactly the frame `passPushed` drains, so the two agree. -/
+private theorem popFrom_scratch_one (demand : Arm) (skip : Bool) (frame : Prim ν σ β ε δ ι α)
+    (fiber : FrameFiber ν σ β ε δ ι α) (rest : List (Prim ν σ β ε δ ι α))
+    (pushed : (frame.ensure fiber).fst.stack = [Prim.setInterruptible true]) :
+    popFrom demand skip ((frame.ensure fiber).fst.stack ++ rest)
+        { (frame.ensure fiber).fst with stack := [] } =
+      continueFrom demand skip frame rest fiber := by
+  have hook : FrameFiber ν σ β ε δ ι α := (frame.ensure fiber).fst
+  have hgstack : ({ (frame.ensure fiber).fst with
+      stack := ([] : List (Prim ν σ β ε δ ι α)) }).stack = [] := rfl
+  have hsiStack : ((Prim.setInterruptible true : Prim ν σ β ε δ ι α).ensure
+        { (frame.ensure fiber).fst with stack := [] }).fst.stack =
+      ({ (frame.ensure fiber).fst with stack := [] }).stack :=
+    Prim.ensure_setInterruptible_stack true _
+  have hdrainAnswer := passPushed_answer demand skip (frame.ensure fiber).fst
+    (Prim.setInterruptible true) [] pushed
+  have hdrainPopped := passPushed_popped demand skip (frame.ensure fiber).fst
+    (Prim.setInterruptible true) [] pushed
+  have hdrainEvents := passPushed_events demand skip (frame.ensure fiber).fst
+    (Prim.setInterruptible true) [] pushed
+  have hdrainFiber := passPushed_fiber demand skip (frame.ensure fiber).fst
+    (Prim.setInterruptible true) [] pushed
+  unfold continueFrom
+  rw [pushed, List.singleton_append]
+  cases selected : Prim.answerOf (Prim.setInterruptible true) demand
+      ((Prim.setInterruptible true : Prim ν σ β ε δ ι α).ensure
+        { (frame.ensure fiber).fst with stack := [] }).snd with
+  | none =>
+    have hempty : (passPushed demand skip (frame.ensure fiber).fst).answer =
+        ContAnswer.empty := by
+      rw [hdrainAnswer, selected]
+    rw [popFrom_pass demand skip (Prim.setInterruptible true) rest _ (Or.inl selected),
+      popFrom_pass_no_push demand skip (Prim.setInterruptible true) rest _ hgstack hsiStack,
+      joinPushed_of_empty demand skip (frame.ensure fiber).fst rest _ hempty,
+      hdrainPopped, hdrainEvents, hdrainFiber]
+    rfl
+  | some answer =>
+    cases guard : skip && ((Prim.setInterruptible true : Prim ν σ β ε δ ι α).ensure
+        { (frame.ensure fiber).fst with stack := [] }).fst.interrupted with
+    | true =>
+      have hempty : (passPushed demand skip (frame.ensure fiber).fst).answer =
+          ContAnswer.empty := by
+        rw [hdrainAnswer, selected]
+        simp [guard]
+      rw [popFrom_pass demand skip (Prim.setInterruptible true) rest _ (Or.inr guard),
+        popFrom_pass_no_push demand skip (Prim.setInterruptible true) rest _ hgstack hsiStack,
+        joinPushed_of_empty demand skip (frame.ensure fiber).fst rest _ hempty,
+        hdrainPopped, hdrainEvents, hdrainFiber]
+      rfl
+    | false =>
+      have hne : answer ≠ ContAnswer.empty :=
+        answer_nonempty (Prim.setInterruptible true) demand _ answer selected
+      have hans : (passPushed demand skip (frame.ensure fiber).fst).answer = answer := by
+        rw [hdrainAnswer, selected]
+        simp [guard]
+      rw [joinPushed_of_answer demand skip (frame.ensure fiber).fst rest _ answer hne hans,
+        hdrainPopped, hdrainEvents, hdrainFiber]
+      simp [popFrom, selected, guard]
+
+private theorem popLive_stack_eq_aux (demand : Arm) (skip : Bool) :
+    forall (fuel : Nat) (stack : List (Prim ν σ β ε δ ι α))
+      (fiber : FrameFiber ν σ β ε δ ι α),
+      2 * stack.length + (if fiber.interruptible = true then 1 else 0) ≤ fuel ->
+        popLive { fiber with stack := stack } demand skip =
+          popFrom demand skip stack { fiber with stack := [] } := by
+  intro fuel
+  induction fuel with
+  | zero =>
+    intro stack fiber bound
+    cases stack with
+    | nil => rw [popLive]; rfl
+    | cons frame rest =>
+      exact absurd bound (by simp only [List.length_cons]; omega)
+  | succ fuel ih =>
+    intro stack fiber bound
+    cases stack with
+    | nil => rw [popLive]; rfl
+    | cons frame rest =>
+      have hook : frame.ensure { fiber with stack := rest } =
+          (appendStack (frame.ensure { fiber with stack := [] }).fst rest,
+            (frame.ensure { fiber with stack := [] }).snd) := by
+        simpa [appendStack] using ensure_appendStack frame { fiber with stack := [] } rest
+      have step := live_measure_lt frame { fiber with stack := rest }
+      rw [hook] at step
+      have tailBound :
+          2 * (appendStack (frame.ensure { fiber with stack := [] }).fst rest).stack.length +
+            (if (appendStack (frame.ensure { fiber with stack := [] }).fst rest).interruptible
+              = true then 1 else 0) ≤ fuel := by
+        simp only [List.length_cons] at bound
+        simp only [appendStack, List.length_append] at step ⊢
+        omega
+      have tail := ih (appendStack (frame.ensure { fiber with stack := [] }).fst rest).stack
+        (appendStack (frame.ensure { fiber with stack := [] }).fst rest) tailBound
+      rw [with_stack_self (appendStack (frame.ensure { fiber with stack := [] }).fst rest)]
+        at tail
+      have split : popFrom demand skip
+            (appendStack (frame.ensure { fiber with stack := [] }).fst rest).stack
+            { appendStack (frame.ensure { fiber with stack := [] }).fst rest with stack := [] } =
+          continueFrom demand skip frame rest { fiber with stack := [] } := by
+        show popFrom demand skip
+            ((frame.ensure { fiber with stack := [] }).fst.stack ++ rest)
+            { (frame.ensure { fiber with stack := [] }).fst with stack := [] } = _
+        rcases ensure_stack_cases frame { fiber with stack := [] } with hnone | ⟨hpush, _, _⟩
+        · exact popFrom_scratch_nil demand skip frame { fiber with stack := [] } rest rfl
+            (by rw [hnone])
+        · exact popFrom_scratch_one demand skip frame { fiber with stack := [] } rest
+            (by rw [hpush])
+      rw [popLive]
+      dsimp only
+      rw [hook]
+      cases answer : frame.answerOf demand (frame.ensure { fiber with stack := [] }).snd with
+      | none =>
+        rw [popFrom_pass demand skip frame rest { fiber with stack := [] } (Or.inl answer)]
+        rw [tail, split]
+        rfl
+      | some selected =>
+        cases discard :
+            skip && (frame.ensure { fiber with stack := [] }).fst.interrupted with
+        | false =>
+          simp only [interrupted_appendStack, discard, Bool.false_eq_true, ↓reduceDIte]
+          simp [popFrom, answer, discard, appendStack]
+        | true =>
+          simp only [interrupted_appendStack, discard, ↓reduceDIte]
+          rw [popFrom_pass demand skip frame rest { fiber with stack := [] } (Or.inr discard)]
+          rw [tail, split]
+          rfl
+
 private theorem popLive_stack_eq (demand : Arm) (skip : Bool)
     (stack : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α) :
     popLive { fiber with stack := stack } demand skip =
-      popFrom demand skip stack { fiber with stack := [] } := by
-  induction stack generalizing fiber with
-  | nil => rw [popLive]; rfl
-  | cons frame rest ih =>
-    let detached : FrameFiber ν σ β ε δ ι α := { fiber with stack := [] }
-    have hook : frame.ensure { fiber with stack := rest } =
-        (appendStack (frame.ensure detached).fst rest, (frame.ensure detached).snd) := by
-      simpa [appendStack, detached] using ensure_appendStack frame detached rest
-    rw [popLive]
-    dsimp only
-    rw [hook]
-    cases answer : frame.answerOf demand (frame.ensure detached).snd with
-    | none =>
-      have empty : (frame.ensure detached).fst.stack = [] := by
-        rw [continuing_stack frame demand skip detached (Or.inl answer)]
-      have clean := clear_empty_stack (frame.ensure detached).fst empty
-      have tail := ih (frame.ensure detached).fst
-      simp only [clean] at tail
-      simp only [appendStack, empty, List.nil_append]
-      rw [tail]
-      simp [popFrom, answer, detached, prefixPop]
-    | some selected =>
-      cases discard : skip && (frame.ensure detached).fst.interrupted with
-      | false =>
-        simp only [interrupted_appendStack, discard, Bool.false_eq_true, ↓reduceDIte]
-        change _ = popFrom demand skip (frame :: rest) detached
-        simp [popFrom, answer, discard, appendStack]
-      | true =>
-        simp only [interrupted_appendStack, discard, ↓reduceDIte]
-        have empty : (frame.ensure detached).fst.stack = [] := by
-          rw [continuing_stack frame demand skip detached (Or.inr discard)]
-        have clean := clear_empty_stack (frame.ensure detached).fst empty
-        have tail := ih (frame.ensure detached).fst
-        simp only [clean] at tail
-        simp only [appendStack, empty, List.nil_append]
-        rw [tail]
-        change _ = popFrom demand skip (frame :: rest) detached
-        simp [popFrom, answer, discard, prefixPop]
+      popFrom demand skip stack { fiber with stack := [] } :=
+  popLive_stack_eq_aux demand skip _ stack fiber (Nat.le_refl _)
 
-/-- Whole-result equality on every existing primitive, arm and skip flag;
-this does not admit AsyncFinalizer. census: rule.frames-are-primitives -/
+/-- Whole-result equality on every existing primitive, arm and skip flag,
+`AsyncFinalizer` included: the restoring frame its hook pushes is popped by the
+live traversal on its next step and drained by `passPushed` on the detached
+side. census: rule.frames-are-primitives -/
 theorem popLive_eq_popFrom (self : FrameFiber ν σ β ε δ ι α)
     (demand : Arm) (skip : Bool) :
     self.popLive demand skip = popFrom demand skip self.stack { self with stack := [] } :=
@@ -197,14 +347,6 @@ private theorem skipPop_prefix (frame : Prim ν σ β ε δ ι α)
   cases flag : result.fiber.interrupted <;> cases answer : result.answer <;>
     simp [skipPop, prefixPop, flag, answer, List.append_assoc]
 
-private theorem answer_nonempty (frame : Prim ν σ β ε δ ι α) (demand : Arm)
-    (replacement : Option (Prim ν σ β ε δ ι α)) (answer : ContAnswer ν σ β ε δ ι α)
-    (selected : frame.answerOf demand replacement = some answer) : answer ≠ .empty := by
-  intro empty
-  subst answer
-  cases replacement <;> cases arm : frame.hasArm demand <;>
-    simp [Prim.answerOf, arm] at selected
-
 private theorem with_same_stack (fiber : FrameFiber ν σ β ε δ ι α)
     (stack : List (Prim ν σ β ε δ ι α)) (same : fiber.stack = stack) :
     { fiber with stack := stack } = fiber := by
@@ -212,58 +354,61 @@ private theorem with_same_stack (fiber : FrameFiber ν σ β ε δ ι α)
   cases same
   rfl
 
+private theorem popLive_stack_while_aux (demand : Arm) :
+    forall (fuel : Nat) (stack : List (Prim ν σ β ε δ ι α))
+      (fiber : FrameFiber ν σ β ε δ ι α),
+      2 * stack.length + (if fiber.interruptible = true then 1 else 0) <= fuel ->
+        popLive { fiber with stack := stack } demand true =
+          skipPop (popLive { fiber with stack := stack } demand false) demand := by
+  intro fuel
+  induction fuel with
+  | zero =>
+    intro stack fiber bound
+    cases stack with
+    | nil => simp [popLive, skipPop]
+    | cons frame rest =>
+      exact absurd bound (by simp only [List.length_cons]; omega)
+  | succ fuel ih =>
+    intro stack fiber bound
+    cases stack with
+    | nil => simp [popLive, skipPop]
+    | cons frame rest =>
+      have step := live_measure_lt frame { fiber with stack := rest }
+      have tailBound :
+          2 * (frame.ensure { fiber with stack := rest }).fst.stack.length +
+            (if (frame.ensure { fiber with stack := rest }).fst.interruptible = true then 1
+              else 0) <= fuel := by
+        simp only [List.length_cons] at bound
+        simp only at step
+        omega
+      conv => lhs; rw [popLive]
+      conv => rhs; arg 1; rw [popLive]
+      dsimp only
+      simp only [Bool.false_and, Bool.false_eq_true, ↓reduceDIte, Bool.true_and]
+      cases selected : frame.answerOf demand (frame.ensure { fiber with stack := rest }).snd with
+      | none =>
+        have tail := ih (frame.ensure { fiber with stack := rest }).fst.stack
+          (frame.ensure { fiber with stack := rest }).fst tailBound
+        rw [with_stack_self (frame.ensure { fiber with stack := rest }).fst] at tail
+        simpa only [skipPop_prefix] using congrArg
+          (prefixPop frame (frame.passEvents (frame.ensure { fiber with stack := rest }).snd))
+          tail
+      | some answer =>
+        have nonempty := answer_nonempty frame demand
+          (frame.ensure { fiber with stack := rest }).snd answer selected
+        cases flag : (frame.ensure { fiber with stack := rest }).fst.interrupted <;>
+          cases answer <;> simp_all [skipPop, prefixPop]
+
 private theorem popLive_stack_while (demand : Arm)
     (stack : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α) :
     popLive { fiber with stack := stack } demand true =
-      skipPop (popLive { fiber with stack := stack } demand false) demand := by
-  induction stack generalizing fiber with
-  | nil => simp [popLive, skipPop]
-  | cons frame rest ih =>
-    conv => lhs; rw [popLive]
-    conv => rhs; arg 1; rw [popLive]
-    dsimp only
-    simp only [Bool.false_and, Bool.false_eq_true, ↓reduceDIte, Bool.true_and]
-    let after := frame.ensure { fiber with stack := rest }
-    change (match _selected : frame.answerOf demand after.snd with
-      | none => prefixPop frame (frame.passEvents after.snd) (after.fst.popLive demand true)
-      | some answer => if _flag : after.fst.interrupted then
-          prefixPop frame (frame.passEvents after.snd) (after.fst.popLive demand true)
-        else ⟨answer, [frame], frame.passEvents after.snd, after.fst⟩) =
-      skipPop (match _selected : frame.answerOf demand after.snd with
-        | none => prefixPop frame (frame.passEvents after.snd) (after.fst.popLive demand false)
-        | some answer => ⟨answer, [frame], frame.passEvents after.snd, after.fst⟩) demand
-    cases selected : frame.answerOf demand after.snd with
-    | none =>
-      have kept : after.fst.stack = rest :=
-        continuing_stack frame demand false { fiber with stack := rest } (Or.inl selected)
-      have tail := ih after.fst
-      rw [with_same_stack after.fst rest kept] at tail
-      simpa only [skipPop_prefix] using congrArg
-        (prefixPop frame (frame.passEvents after.snd)) tail
-    | some answer =>
-      have nonempty := answer_nonempty frame demand after.snd answer selected
-      cases flag : after.fst.interrupted <;> cases answer <;>
-        simp_all [skipPop, prefixPop]
-
-private theorem ensure_deferred (frame : Prim ν σ β ε δ ι α)
-    (fiber : FrameFiber ν σ β ε δ ι α) :
-    (frame.ensure fiber).fst.deferredInterrupt = fiber.deferredInterrupt := by
-  cases frame <;> try rfl
-  case onExit body name flag =>
-    cases mask : fiber.interruptible <;> cases flag <;> simp [Prim.ensure, mask]
-  case setInterruptible flag =>
-    cases cause : fiber.interruptedCause <;> cases flag <;> simp [Prim.ensure, cause]
+      skipPop (popLive { fiber with stack := stack } demand false) demand :=
+  popLive_stack_while_aux demand _ stack fiber (Nat.le_refl _)
 
 private theorem popFrom_deferred (demand : Arm) (skip : Bool)
     (stack : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α) :
-    (popFrom demand skip stack fiber).fiber.deferredInterrupt = fiber.deferredInterrupt := by
-  induction stack generalizing fiber with
-  | nil => rfl
-  | cons frame rest ih =>
-    simp only [popFrom]
-    split
-    · split <;> simp [ih, ensure_deferred]
-    · simp [ih, ensure_deferred]
+    (popFrom demand skip stack fiber).fiber.deferredInterrupt = fiber.deferredInterrupt :=
+  popFrom_deferredInterrupt demand skip stack fiber
 
 private theorem popLive_deferred (self : FrameFiber ν σ β ε δ ι α)
     (demand : Arm) (skip : Bool) :

@@ -24,6 +24,32 @@ open Effects.Trace (Val)
 #check @Effect4.RegionSimulation.toOutcome_combine
 #check @Effect4.RegionSimulation.failuresOfCause_causeOfFailures
 
+-- Spike S4: the declarations the three compile repairs added.
+#check @Effect4.RegionSimulation.closeWalk
+#check @Effect4.RegionSimulation.regionRegistrations
+#check @Effect4.RegionSimulation.closeFinish
+#check @Effect4.RegionSimulation.closeExit
+#check @Effect4.RegionSimulation.closeFailuresOf
+#check @Effect4.RegionSimulation.regionSuspendBody
+#check @Effect4.RegionSimulation.caughtNames
+#check @Effect4.RegionSimulation.compileRegion_catchFree
+#check @Effect4.RegionSimulation.regionInterp_finalizerExit
+#check @Effect4.RegionSimulation.regionInterp_suspend_fixed
+#check @Effect4.RegionSimulation.close_success_of
+#check @Effect4.RegionSimulation.close_success_region
+#check @Effect4.RegionSimulation.unwind_to_frame
+#check @Effect4.RegionSimulation.closeFinish_eq_result?
+#check @Effect4.RegionSimulation.closeExit_reasons
+#check @Effect4.RegionSimulation.releaseFrames
+#check @Effect4.RegionSimulation.region_close_rows
+#check @Effect4.RegionSimulation.region_unwind_rows
+#check @Effect4.RegionSimulation.compileRegion_never_fails
+#check @Effect4.RegionSimulation.compileAt_zero_fuel_live
+#check @Effect4.RegionSimulation.statelessOracle_agrees
+#check @Effect4.RegionSimulation.RegionOracleAgrees
+#check @Effect4.RegionSimulation.RegionsSimulate
+#check @Effect4.RegionSimulation.RegionsSimulateExit
+
 /-! ## Separation 4: the name alphabet is data, not a function
 
 `DecidableEq (Prim …)` is the guard. It fails to elaborate the moment `ν` or
@@ -56,6 +82,7 @@ def table : List OpSpec := familyTable RCell.rows
 def opAcquire : OperationId := ⟨2⟩
 def opRelease : OperationId := ⟨3⟩
 def opBoom : OperationId := ⟨4⟩
+def opReleaseBoom : OperationId := ⟨5⟩
 
 def alphabet : FlowAlphabet String := tableAlphabet ⟨0⟩ table
 
@@ -118,15 +145,41 @@ def regionBothSucceed : RegionFlow String := regionFlow [rregion 1 none 3]
   , rblock 2 (some 1) ["number", "number"] (.leave ⟨1⟩)
   , rblock 3 none ["number"] (.plain (.ret ⟨0⟩)) ]
 
+/-- Spike S4, P1: `E4-TARGET-CE-019`'s own fixture, promoted from the
+counterexample battery to an instance of the equation. Two releases of one
+scope, the second failing, on a clean leave — the case the old nested-`onExit`
+compile got wrong. -/
+def regionReleaseFails : RegionFlow String := regionFlow [rregion 1 none 4]
+  [ rblock 0 none ["number"] (.enter ⟨1⟩ ⟨1⟩ (vars 1))
+  , rblock 1 (some 1) ["number"] (.acquire opAcquire ⟨0⟩ opRelease ⟨2⟩ (vars 1))
+  , rblock 2 (some 1) ["number", "number"] (.acquire opAcquire ⟨1⟩ opReleaseBoom ⟨3⟩ (vars 2))
+  , rblock 3 (some 1) ["number", "number", "number"] (.leave ⟨2⟩)
+  , rblock 4 none ["number"] (.plain (.ret ⟨0⟩)) ]
+
+/-- Spike S4, P3: a `performCatch` inside a region holding a resource. Its
+operation fails, the failure is caught by the machine's `contE` arm — a real
+`Cause` reaching a real frame, which is what `Effect.result` builds
+(`internal/effect.ts:3417-3420`) — and the region still closes normally. -/
+def regionCatch : RegionFlow String := regionFlow [rregion 1 none 4]
+  [ rblock 0 none ["number"] (.enter ⟨1⟩ ⟨1⟩ (vars 1))
+  , rblock 1 (some 1) ["number"]
+      (.plain (.performCatch opBoom ⟨0⟩ ⟨2⟩ (vars 1) ⟨3⟩ (vars 1)))
+  , rblock 2 (some 1) ["number", "number"] (.leave ⟨0⟩)
+  , rblock 3 (some 1) ["number", "string"] (.acquire opAcquire ⟨0⟩ opRelease ⟨5⟩ (vars 1))
+  , rblock 4 none ["number"] (.plain (.ret ⟨0⟩))
+  , rblock 5 (some 1) ["number", "number"] (.leave ⟨0⟩) ]
+
 def admit? (raw : RegionFlow String) : Option (CheckedRegionFlow alphabet) :=
   match admitRegions alphabet raw with
   | .ok flow => some flow
   | .error _ => none
 
--- All three region flows are admitted.
+-- All five region flows are admitted.
 #guard (admit? regionNested).isSome
 #guard (admit? regionTwoFail).isSome
 #guard (admit? regionBothSucceed).isSome
+#guard (admit? regionReleaseFails).isSome
+#guard (admit? regionCatch).isSome
 
 /-! ## The two sides of `regions_simulate` -/
 
@@ -196,6 +249,141 @@ theorem runnerSide_regionTwoFail :
 #guard machineSide regionTwoFail ==
   some [ .finalizer 1 (.failure (.str "boom")), .finalizer 1 (.failure (.str "boom")),
     .done (.failure (.str "boom")) ]
+
+/-! ## Spike S4: the three repairs, as receipts
+
+P1 — one scope per region. `E4-TARGET-CE-019`'s own fixture is now an instance
+of the equation: both releases of the one scope see the closing exit the runner
+gives them, and the failing release surfaces once, in the run's exit. -/
+
+theorem regions_simulate_regionReleaseFails :
+    machineSide regionReleaseFails = runnerSide regionReleaseFails := by rfl
+
+theorem runnerSide_regionReleaseFails :
+    runnerSide regionReleaseFails =
+      some [ .finalizer 1 (.success (.nat 5)), .finalizer 1 (.success (.nat 5)),
+        .done (.failure (.str "boom")) ] := by rfl
+
+#guard machineSide regionReleaseFails ==
+  some [ .finalizer 1 (.success (.nat 5)), .finalizer 1 (.success (.nat 5)),
+    .done (.failure (.str "boom")) ]
+
+/-- The registrations `statelessOracle` reports for a region are the releases
+the runner's `Frame` holds when it closes: `Effect4.Flow.Frame.releases`,
+latest registered first. -/
+def registrationsAt (raw : RegionFlow String) : Option Nat :=
+  (admit? raw).map fun flow =>
+    ((statelessOracle alphabet flow.flow answerOf).registrations
+      ⟨Flow.fuelFor flow.flow.erase [], flow.flow.entry, [.nat 5], []⟩).length
+
+theorem registrations_regionBothSucceed : registrationsAt regionBothSucceed = some 1 := by rfl
+
+theorem registrations_regionTwoFail : registrationsAt regionTwoFail = some 2 := by rfl
+
+theorem registrations_regionReleaseFails : registrationsAt regionReleaseFails = some 2 := by rfl
+
+-- A region whose body fails still reports the registrations it made before the
+-- failure, which is what the runner's `unwind` closes.
+theorem registrations_regionNested : registrationsAt regionNested = some 1 := by rfl
+
+/-- The close merge is concatenation, not union: two releases failing with the
+same error report it twice. `Cause.combine` would dedup
+(`Effect4.Cause.dedup_cons`); `Exit.asVoidAll` does not, and neither does
+rc.112's `exitAsVoidAll` (`internal/effect.ts:2025-2038`). This is
+`E4-FLOW-CE-021` at the compile's close. -/
+example : closeFinish
+      [ Effect4.Exit.failure (Effect4.Cause.fail (Val.str "boom"))
+      , Effect4.Exit.failure (Effect4.Cause.fail (Val.str "boom")) ] =
+    Effect4.Exit.failure
+      ⟨[ Effect4.Reason.fail (Val.str "boom") Effect4.ReasonAnnotations.empty
+       , Effect4.Reason.fail (Val.str "boom") Effect4.ReasonAnnotations.empty ]⟩ := rfl
+
+/-! P3 — `performCatch` as `onSuccessAndFailure`. The catch flow emits exactly
+one `RegionName.caught` name; every catch-free flow emits none, which is the
+concrete face of `compileRegion_catchFree`. -/
+
+def caughtOf (raw : RegionFlow String) : Option Nat :=
+  (admit? raw).map fun flow =>
+    (caughtNames (compileAt alphabet flow.flow
+      ⟨Flow.fuelFor flow.flow.erase [], flow.flow.entry, [.nat 5], []⟩)).length
+
+theorem regionCatch_emits_caught : caughtOf regionCatch = some 1 := by rfl
+
+theorem regionBothSucceed_catch_free : caughtOf regionBothSucceed = some 0 := by rfl
+
+theorem regionNested_catch_free : caughtOf regionNested = some 0 := by rfl
+
+theorem regionTwoFail_catch_free : caughtOf regionTwoFail = some 0 := by rfl
+
+theorem regionReleaseFails_catch_free : caughtOf regionReleaseFails = some 0 := by rfl
+
+theorem regions_simulate_regionCatch :
+    machineSide regionCatch = runnerSide regionCatch := by rfl
+
+theorem runnerSide_regionCatch :
+    runnerSide regionCatch =
+      some [ .finalizer 1 (.success (.nat 5)), .done (.success (.nat 5)) ] := by rfl
+
+#guard machineSide regionCatch ==
+  some [ .finalizer 1 (.success (.nat 5)), .done (.success (.nat 5)) ]
+
+/-! ## P4: the instances, as instances of T5 and T6
+
+`Effect4.RegionSimulation.RegionsSimulate` and `RegionsSimulateExit` are the two
+statements of `docs/research/2026-09-03-deep-flow-to-frames.md` §2.3. The five
+theorems below are instances of them, at the fuel `Flow.fuelFor` allots and the
+machine bound `regionBound` gives, with `RegionOracleAgrees` discharged by
+`statelessOracle_agrees` — so the equations are not merely "two expressions
+evaluate the same", they are T5 and T6 at these flows.
+
+T6 is the half that distinguishes the models: it is stated against
+`runRegionsCause`, which keeps the whole merged failure list, not against
+`runRegions`, which projects its head. -/
+
+/-- The checked flow of an admitted fixture. -/
+def checked (raw : RegionFlow String) (h : (admit? raw).isSome = true) :
+    CheckedRegionFlow alphabet :=
+  (admit? raw).get h
+
+/-- T5 at a fixture, with the erased graph's fuel and `regionBound`'s machine
+budget. -/
+def SimulatesAt (raw : RegionFlow String) (h : (admit? raw).isSome = true) : Prop :=
+  RegionsSimulate alphabet (checked raw h) service answerOf nameOf
+    (statelessOracle alphabet (checked raw h).flow answerOf) [] (.nat 5)
+    (Flow.fuelFor (checked raw h).flow.erase [])
+    (regionBound (Flow.fuelFor (checked raw h).flow.erase []))
+
+/-- T6 at a fixture. -/
+def SimulatesExitAt (raw : RegionFlow String) (h : (admit? raw).isSome = true) : Prop :=
+  RegionsSimulateExit alphabet (checked raw h) service answerOf nameOf
+    (statelessOracle alphabet (checked raw h).flow answerOf) [] (.nat 5)
+    (Flow.fuelFor (checked raw h).flow.erase [])
+    (regionBound (Flow.fuelFor (checked raw h).flow.erase []))
+
+theorem oracle_agrees (raw : RegionFlow String) (h : (admit? raw).isSome = true) :
+    RegionOracleAgrees alphabet (checked raw h).flow service answerOf
+      (statelessOracle alphabet (checked raw h).flow answerOf) :=
+  statelessOracle_agrees alphabet (checked raw h).flow service answerOf (fun _ _ => rfl)
+
+theorem T5_regionBothSucceed : SimulatesAt regionBothSucceed (by rfl) := fun _ _ => by rfl
+
+theorem T5_regionNested : SimulatesAt regionNested (by rfl) := fun _ _ => by rfl
+
+theorem T5_regionTwoFail : SimulatesAt regionTwoFail (by rfl) := fun _ _ => by rfl
+
+theorem T5_regionReleaseFails : SimulatesAt regionReleaseFails (by rfl) := fun _ _ => by rfl
+
+theorem T5_regionCatch : SimulatesAt regionCatch (by rfl) := fun _ _ => by rfl
+
+theorem T6_regionBothSucceed : SimulatesExitAt regionBothSucceed (by rfl) := fun _ _ => by rfl
+
+theorem T6_regionNested : SimulatesExitAt regionNested (by rfl) := fun _ _ => by rfl
+
+theorem T6_regionTwoFail : SimulatesExitAt regionTwoFail (by rfl) := fun _ _ => by rfl
+
+theorem T6_regionReleaseFails : SimulatesExitAt regionReleaseFails (by rfl) := fun _ _ => by rfl
+
+theorem T6_regionCatch : SimulatesExitAt regionCatch (by rfl) := fun _ _ => by rfl
 
 /-! ## The projection between the merged failure list and `Cause.combine` -/
 

@@ -163,10 +163,18 @@ inductive Skeleton where
   | declare (slot : Slot) (type : String)
   /-- `target = source`. -/
   | assign (target source : Slot)
+  /-- `<slot> = <entry>[1][<index>] as <type>`: bind one parameter of a declared
+  root from the entry request's argument array. The array is the wire's untyped
+  `Val` list, so the read is at the parameter's declared type
+  (`workshop/Deep/fork-lowering.md` §(b), "Type honesty"). -/
+  | rootParam (slot : Slot) (entry : String) (index : Nat) (type : String)
   /-- `let m<index> = source`: the read half of a parallel move. -/
   | letTemp (index : Nat) (source : Slot)
   /-- `let <var> = <block>`: introduce a dispatch index. -/
   | letBlockIndex (var : String) (target : BlockId)
+  /-- `let <var> = <entry>[0]`: introduce a dispatch index the *caller* names,
+  so one generator can be entered at any of its declared roots. -/
+  | letBlockIndexFrom (var : String) (entry : String)
   /-- `<var> = <block>; continue`: transfer inside the loop that owns `var`. -/
   | gotoBlock (var : String) (target : BlockId)
   /-- The body of `block` begins here. A marker: it spells nothing, and it is
@@ -250,6 +258,43 @@ def gotoIn (blockVar : String) (target : BlockId) : List Skeleton :=
 
 /-- Transfer to `target` in the top-level dispatch loop. -/
 def goto (target : BlockId) : List Skeleton := gotoIn "block" target
+
+/-- The dispatch case a declared root is entered at. The flow's own cases are
+its block ids, so the synthetic root cases start above every block id a lowered
+flow may declare, and the host's `enter([rootEntryBase + root, args])` uses the
+same base (`workshop/Deep/fork-lowering.md` §(b), §(c)). A flow with a block id
+at or above this base has no multi-root lowering; `Flow.lowerRoots` refuses it
+rather than emitting a colliding case. -/
+def rootEntryBase : Nat := 1000
+
+/-- Enter the dispatch loop at the case the entry request names rather than at
+a constant: `let block = entry[0]`. Part of `entry-root`; it carries no rule of
+its own, exactly as `gotoIn` is part of `block-case`. -/
+def enterAt (blockVar entry : String) : Skeleton :=
+  .letBlockIndexFrom blockVar entry
+
+/-- A declared root is a callable entry: one synthetic dispatch case per root,
+binding the root's parameters from the entry request's argument array and
+continuing at the root's own block.
+
+```ts
+case 1003: { b3p0 = entry[1][0] as number; block = 3; continue }
+```
+
+This is the whole of the multi-root change to the dispatch form
+(`workshop/Deep/fork-lowering.md` §(b)): entering the *same* loop at a different
+case keeps one set of parameter declarations and one switch, where a nested
+generator per root would redeclare every slot and need a nested-generator former
+`TypeScript.Stmt` does not have
+(`.lake/packages/typescript/TypeScript/Syntax.lean:127-133`).
+A flow with one declared root never emits it — `Flow.lowerDispatch_single_root_eq`
+is the receipt. lowering: rule.entry-root -/
+def entryRootCase (blockVar entry : String) (root : BlockId) (params : List String) :
+    Nat × List Skeleton :=
+  (rootEntryBase + root.value,
+    ((List.range params.length).zip params).map
+        (fun (index, type) => Skeleton.rootParam (.param root index) entry index type) ++
+      gotoIn blockVar root)
 
 /-- Pass the argument list to the target's parameters. On a self-edge every
 source is read into a temporary before any parameter is assigned, so a swap

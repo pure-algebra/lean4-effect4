@@ -60,6 +60,12 @@ inductive Rule where
   /-- A `perform` of an operation with two or more parameters: the request slot
   holds the tuple and the call destructures it (`Skeleton.lean`). -/
   | performTuple
+  /-- A declared root as a callable entry: one synthetic dispatch case per root,
+  binding the root's parameters from the entry request's argument array
+  (`Skeleton.lean`, `workshop/Deep/fork-lowering.md` §(b)). Emitted only by a
+  flow that declares two or more roots, so a single-root flow lowers to the
+  bytes it lowered to before (`Flow.lowerDispatch_single_root_eq`). -/
+  | entryRoot
 deriving DecidableEq, Repr
 
 namespace Rule
@@ -95,11 +101,13 @@ def id : Rule → String
   | structuredBreak => "structured-break"
   | dispatchFallback => "dispatch-fallback"
   | performTuple => "perform-tuple"
+  | entryRoot => "entry-root"
 
 /-- Every rule, in the order the inductive declares them: the straight-line
 group, the dispatch group, Flow v3, interruption, regions, the structured form,
-and the multi-argument perform. Nothing reads a position -- `Rule.ofId?` is the
-only lookup -- so a new rule is declared in its own group. -/
+the multi-argument perform, and the multi-root entry. Nothing reads a position
+-- `Rule.ofId?` is the only lookup -- so a new rule is declared in its own group
+and appended, never inserted. -/
 def all : List Rule :=
   [serviceAcquire, nullaryValue, performCall, performBind, performDiscard, atomCall, ret, errorAbort,
    dispatchLoop, blockCase, paramMove, flowPerform, flowAtom, flowLiteral, chooseIf, flowRet,
@@ -107,7 +115,8 @@ def all : List Rule :=
    interruptPoint,
    regionEnter, regionAcquire, regionLeave, regionMasked,
    structuredLoop, structuredMerge, structuredContinue, structuredBreak, dispatchFallback,
-   performTuple ]
+   performTuple,
+   entryRoot ]
 
 theorem all_nodup : all.Nodup := by decide
 

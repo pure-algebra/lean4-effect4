@@ -711,7 +711,10 @@ theorem render_wellScoped (rows : ServiceRow) (blocks loops : List String) (node
   match node with
   | .acquireService _ | .declare _ _ | .assign _ _ | .letTemp _ _ | .letBlockIndex _ _
   | .gotoBlock _ _ | .perform _ _ _ _ | .atom _ _ _ _ | .ret _
-  | .acquire _ _ _ _ _ _ | .leave _ | .enterBlock _ | .interruptPoint _ =>
+  | .acquire _ _ _ _ _ _ | .leave _ | .enterBlock _ | .interruptPoint _
+  -- The multi-root entry (`workshop/Deep/fork-lowering.md` §(b)): both spell one
+  -- unlabelled statement, so both are in this group.
+  | .rootParam _ _ _ _ | .letBlockIndexFrom _ _ =>
       simp [Skeleton.render, wellScopedList, wellScoped, Skel.wellScoped,
         Lowering.serviceAcquire]
   | .literal _ _ _ value =>

@@ -1545,8 +1545,10 @@ set_option linter.unusedVariables false
   Effect4.Prim.onFailure body onCause) ∨ (∃ body onValue onCause, self =
   Effect4.Prim.onSuccessAndFailure body onValue onCause) ∨ (∃ body, self =
   Effect4.Prim.exitFrame body) ∨ (∃ body finalizer flag, self = Effect4.Prim.onExit body
-  finalizer flag) ∨ (∃ flag, self = Effect4.Prim.setInterruptible flag) ∨ ∃ loop cursor, self =
-  Effect4.Prim.whileLoop loop cursor)
+  finalizer flag) ∨ (∃ flag, self = Effect4.Prim.setInterruptible flag) ∨ (∃ loop cursor, self =
+  Effect4.Prim.whileLoop loop cursor) ∨ (∃ priority, self = Effect4.Prim.yieldNowWith priority)
+  ∨ (∃ register withSignal cancel, self = Effect4.Prim.async register withSignal cancel) ∨ ∃
+  onInterrupt, self = Effect4.Prim.asyncFinalizer onInterrupt)
 
 #check (@Effect4.FrameFiber.start_eq :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (current : Effect4.Prim ν σ β ε δ ι α),
@@ -1642,11 +1644,13 @@ set_option linter.unusedVariables false
 
 #check (@Effect4.Prim.non_frames_have_no_arms :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (value : β) (cause : Effect4.Cause ε δ ι α)
-  (thunk : σ) (error : ε), Effect4.Prim.arms (Effect4.Prim.success value) = [] ∧
+  (thunk : σ) (error : ε) (priority : Nat) (register : ν) (withSignal : Bool) (cancel : Option
+  ν), Effect4.Prim.arms (Effect4.Prim.success value) = [] ∧
   Effect4.Prim.arms (Effect4.Prim.failure cause) = [] ∧ Effect4.Prim.arms (Effect4.Prim.sync
   thunk) = [] ∧ Effect4.Prim.arms (Effect4.Prim.suspend thunk) = [] ∧ Effect4.Prim.arms
   (Effect4.Prim.withFiber thunk) = [] ∧ Effect4.Prim.arms (Effect4.Prim.yieldableError error) =
-  [])
+  [] ∧ Effect4.Prim.arms (Effect4.Prim.yieldNowWith priority) = [] ∧ Effect4.Prim.arms
+  (Effect4.Prim.async register withSignal cancel) = [])
 
 #check (@Effect4.Prim.ofExit_asExit? :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (exit : Effect4.Exit β ε δ ι α),
@@ -2081,8 +2085,7 @@ set_option linter.unusedVariables false
   Effect4.FrameFiber ν σ β ε δ ι α), Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure
   frame fiber).snd = Option.none ∨ (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure
   frame fiber).fst) = Bool.true → (Effect4.FrameFiber.popFrom demand skip (frame :: rest)
-  fiber).answer = (Effect4.FrameFiber.popFrom demand skip rest (Effect4.Prim.ensure frame
-  fiber).fst).answer)
+  fiber).answer = (Effect4.FrameFiber.continueFrom demand skip frame rest fiber).answer)
 
 #check (@Effect4.FrameFiber.popFrom_continue_popped :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frame :
@@ -2090,8 +2093,8 @@ set_option linter.unusedVariables false
   Effect4.FrameFiber ν σ β ε δ ι α), Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure
   frame fiber).snd = Option.none ∨ (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure
   frame fiber).fst) = Bool.true → (Effect4.FrameFiber.popFrom demand skip (frame :: rest)
-  fiber).popped = frame :: (Effect4.FrameFiber.popFrom demand skip rest (Effect4.Prim.ensure
-  frame fiber).fst).popped)
+  fiber).popped = frame :: (Effect4.FrameFiber.continueFrom demand skip frame rest
+  fiber).popped)
 
 #check (@Effect4.FrameFiber.popFrom_continue_events :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frame :
@@ -2100,7 +2103,7 @@ set_option linter.unusedVariables false
   frame fiber).snd = Option.none ∨ (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure
   frame fiber).fst) = Bool.true → (Effect4.FrameFiber.popFrom demand skip (frame :: rest)
   fiber).events = Effect4.Prim.passEvents frame (Effect4.Prim.ensure frame fiber).snd ++
-  (Effect4.FrameFiber.popFrom demand skip rest (Effect4.Prim.ensure frame fiber).fst).events)
+  (Effect4.FrameFiber.continueFrom demand skip frame rest fiber).events)
 
 #check (@Effect4.FrameFiber.popFrom_continue_fiber :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frame :
@@ -2108,8 +2111,7 @@ set_option linter.unusedVariables false
   Effect4.FrameFiber ν σ β ε δ ι α), Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure
   frame fiber).snd = Option.none ∨ (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure
   frame fiber).fst) = Bool.true → (Effect4.FrameFiber.popFrom demand skip (frame :: rest)
-  fiber).fiber = (Effect4.FrameFiber.popFrom demand skip rest (Effect4.Prim.ensure frame
-  fiber).fst).fiber)
+  fiber).fiber = (Effect4.FrameFiber.continueFrom demand skip frame rest fiber).fiber)
 
 #check (@Effect4.FrameFiber.popFrom_answer_hasArm :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frames
@@ -2581,7 +2583,7 @@ private def censusRows : List Row :=
   , { id := "op.Failure", kind := "op", disposition := "separateCalculus", coverage := "partial"
       -- missing clause: "annotates the cause with the current stack frame" needs a fiber Context and a StackTrace service key
     , witnesses :=
-        [ w `Effect4.FrameFiber.interrupt_skips_every_handler "propext"
+        [ w `Effect4.FrameFiber.interrupt_skips_every_handler "propext,Quot.sound"
         , w `Effect4.FrameFiber.resumeCause_empty "propext"
         , w `Effect4.FrameFiber.resumeCause_frame "propext"
         , w `Effect4.FrameFiber.step_failure "propext" ] }
@@ -2734,8 +2736,8 @@ private def censusRows : List Row :=
   , { id := "checkpoint.exit-failcause-skip", kind := "checkpoint", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.FrameFiber.popFrom_continue_answer "propext"
-        , w `Effect4.FrameFiber.getCont_skip_of_no_pending_cause "propext"
-        , w `Effect4.FrameFiber.interrupt_skips_every_handler "propext" ] }
+        , w `Effect4.FrameFiber.getCont_skip_of_no_pending_cause "propext,Quot.sound"
+        , w `Effect4.FrameFiber.interrupt_skips_every_handler "propext,Quot.sound" ] }
   , { id := "checkpoint.set-fiber-interruptible", kind := "checkpoint", disposition := "owned", coverage := "green"
     , witnesses :=
         [ w `Effect4.pending_unmask_exists "propext"
@@ -3285,7 +3287,7 @@ private def censusRows : List Row :=
   , { id := "rule.interrupt-bypasses-handlers", kind := "rule", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Prim.ensure_setInterruptible_flag "propext"
-        , w `Effect4.FrameFiber.interrupt_skips_every_handler "propext"
+        , w `Effect4.FrameFiber.interrupt_skips_every_handler "propext,Quot.sound"
         , w `Effect4.FrameFiber.getCont_mask_stops_skip "propext"
         , w `Effect4.FrameFiber.step_failure "propext" ] }
   , { id := "rule.yield-is-overloaded", kind := "rule", disposition := "separateCalculus", coverage := "absent", witnesses := [] }

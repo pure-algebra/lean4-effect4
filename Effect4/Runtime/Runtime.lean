@@ -7,12 +7,19 @@ Owner: Reference execution runtime — the Effect v4 continuation-stack machine.
 
 This module implements the first-order frame machine of
 `effect@4.0.0-rc.112`: the closed three-value continuation-slot alphabet with
-its two demandable arms, the fourteen-constructor primitive syntax, the
+its two demandable arms, the seventeen-constructor primitive syntax, the
 frame-arm matrix, the `contAll` ensure hook with its answer selection and pass
-trace, the two demandable arms, the fused `getCont`/`exitFailCause` pop loop
-with its deferred-interrupt answer and its handler skipping, the five-field
-fiber state with its one-step function, bounded runner and event trace, and the
-mask combinators together with the stack side of `scoped` and `acquireRelease`.
+trace, the two demandable arms, the `getCont`/`exitFailCause` pop loop with its
+deferred-interrupt answer and its handler skipping, the five-field fiber state
+with its one-step function, bounded runner and event trace, and the mask
+combinators together with the stack side of `scoped` and `acquireRelease`.
+
+The pop loop is fused across `getCont` and `exitFailCause` and *unfused* from
+the frame list it started with: rc.112 pops from the live `_stack`, so a frame a
+`contAll` pushed is popped before the frames already below it. `AsyncFinalizer`
+is the first frame that both pushes and passes, so it forces that reading; see
+`FrameFiber.popFrom`, `popFrom_pass_no_push` and
+`popFrom_asyncFinalizer_pops_its_push`.
 
 A continuation slot stores a nominal `ν` and a thunk a nominal `σ`, never a
 stored Lean closure: `docs/DESIGN-BASIS.md` DB-02 forbids closures in canonical
@@ -87,9 +94,9 @@ theorem contAll_not_demandable : contAll ∉ demandable := by decide
 end Arm
 
 /-- The pinned rc.112 primitive syntax, one constructor per op in this packet's
-scope. `Yield`, `Async` and `AsyncFinalizer` are deliberately absent; they
-belong to the later run-loop and parking packet. A continuation slot stores a
-nominal `ν`, a thunk a nominal `σ`, and a nested body a first-order subterm. -/
+scope. The three parking ops `Yield`, `Async` and `AsyncFinalizer` are here as
+of the run-loop and parking packet. A continuation slot stores a nominal `ν`, a
+thunk a nominal `σ`, and a nested body a first-order subterm. -/
 inductive Prim (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max u v)
   /-- rc.112's `Success` exit op. -/
   | success (value : β)
@@ -120,11 +127,29 @@ inductive Prim (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max
   | setInterruptible (flag : Bool)
   /-- `While`: rc.112's `whileLoop`, driven from a cursor. -/
   | whileLoop (loop : ν) (cursor : β)
+  /-- `Yield`: rc.112's `yieldNowWith` (`internal/effect.ts:982-994`). It
+  schedules its own resume on the dispatcher at the stored priority and parks
+  behind a resume guard. It declares no continuation slot, so it is never a
+  frame. -/
+  | yieldNowWith (priority : Nat)
+  /-- `Async`: rc.112's `callbackOptions` (`internal/effect.ts:1102-1143`).
+  `register` is the nominal registration callback, `withSignal` is the
+  `AbortController` request, and `cancel` names the cancel effect the
+  registration returned, if any. rc.112 pushes an `asyncFinalizer` frame exactly
+  when `cancel` is present or a controller was created; that push belongs to the
+  run loop, which is why this constructor is a name and not a frame. -/
+  | async (register : ν) (withSignal : Bool) (cancel : Option ν)
+  /-- `AsyncFinalizer`: rc.112's parking finalizer frame
+  (`internal/effect.ts:1145-1160`). It declares `contAll` and `contE` and no
+  `contA`; `onInterrupt` names the cancel effect its `contE` runs when the cause
+  carries an interrupt. -/
+  | asyncFinalizer (onInterrupt : ν)
 deriving DecidableEq
 
 namespace Prim
 
-/-- There is no fifteenth primitive in this packet.
+/-- There is no eighteenth primitive: the fourteen frame-machine ops plus the
+three parking ops of the run-loop packet exhaust the syntax.
 census: rule.frames-are-primitives -/
 theorem cases_receipt {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
     (self : Prim ν σ β ε δ ι α) :
@@ -139,38 +164,54 @@ theorem cases_receipt {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
       (exists body, self = exitFrame body) \/
       (exists body finalizer flag, self = onExit body finalizer flag) \/
       (exists flag, self = setInterruptible flag) \/
-      exists loop cursor, self = whileLoop loop cursor := by
+      (exists loop cursor, self = whileLoop loop cursor) \/
+      (exists priority, self = yieldNowWith priority) \/
+      (exists register withSignal cancel, self = async register withSignal cancel) \/
+      exists onInterrupt, self = asyncFinalizer onInterrupt := by
   cases self with
-  | success value => exact Or.inl ⟨value, rfl⟩
-  | failure cause => exact Or.inr (Or.inl ⟨cause, rfl⟩)
-  | sync thunk => exact Or.inr (Or.inr (Or.inl ⟨thunk, rfl⟩))
-  | suspend thunk => exact Or.inr (Or.inr (Or.inr (Or.inl ⟨thunk, rfl⟩)))
-  | withFiber thunk => exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨thunk, rfl⟩))))
+  | success value =>
+    exact Or.inl ⟨value, rfl⟩
+  | failure cause =>
+    exact Or.inr <| .inl ⟨cause, rfl⟩
+  | sync thunk =>
+    exact Or.inr <| .inr <| .inl ⟨thunk, rfl⟩
+  | suspend thunk =>
+    exact Or.inr <| .inr <| .inr <| .inl ⟨thunk, rfl⟩
+  | withFiber thunk =>
+    exact Or.inr <| .inr <| .inr <| .inr <| .inl ⟨thunk, rfl⟩
   | yieldableError error =>
-    exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨error, rfl⟩)))))
+    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨error, rfl⟩
   | iterator generator cursor =>
-    exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨generator, cursor, rfl⟩))))))
+    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨generator, cursor, rfl⟩
   | onSuccess body onValue =>
-    exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
-      (Or.inl ⟨body, onValue, rfl⟩)))))))
+    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨body, onValue, rfl⟩
   | onFailure body onCause =>
-    exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
-      (Or.inl ⟨body, onCause, rfl⟩))))))))
+    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <|
+      .inl ⟨body, onCause, rfl⟩
   | onSuccessAndFailure body onValue onCause =>
-    exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
-      (Or.inl ⟨body, onValue, onCause, rfl⟩)))))))))
+    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <|
+      .inl ⟨body, onValue, onCause, rfl⟩
   | exitFrame body =>
-    exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
-      (Or.inl ⟨body, rfl⟩))))))))))
+    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <|
+      .inl ⟨body, rfl⟩
   | onExit body finalizer flag =>
-    exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
-      (Or.inr (Or.inl ⟨body, finalizer, flag, rfl⟩)))))))))))
+    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <|
+      .inr <| .inl ⟨body, finalizer, flag, rfl⟩
   | setInterruptible flag =>
-    exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
-      (Or.inr (Or.inr (Or.inl ⟨flag, rfl⟩))))))))))))
+    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <|
+      .inr <| .inr <| .inl ⟨flag, rfl⟩
   | whileLoop loop cursor =>
-    exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
-      (Or.inr (Or.inr (Or.inr ⟨loop, cursor, rfl⟩))))))))))))
+    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <|
+      .inr <| .inr <| .inr <| .inl ⟨loop, cursor, rfl⟩
+  | yieldNowWith priority =>
+    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <|
+      .inr <| .inr <| .inr <| .inr <| .inl ⟨priority, rfl⟩
+  | async register withSignal cancel =>
+    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <|
+      .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨register, withSignal, cancel, rfl⟩
+  | asyncFinalizer onInterrupt =>
+    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <|
+      .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| ⟨onInterrupt, rfl⟩
 
 end Prim
 
@@ -213,6 +254,13 @@ structure PrimInterp (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Typ
   loopDone : ν -> β
   /-- The defect payload of `defaultEvaluate`. -/
   notImplemented : δ
+  /-- The defunctionalised `flatMap(this[args](), () => failCause(cause))` of
+  `AsyncFinalizer[contE]` (`internal/effect.ts:1157`): run the named cancel
+  effect and then re-fail with the very cause that was passing. rc.112 builds a
+  closure there; DB-02 forbids storing one, so the closure becomes a name plus
+  the cause it captured, exactly the way `finalizerExit` names the outcome of a
+  finalizer instead of storing the finalizer. -/
+  cancelThenFail : ν -> Cause ε δ ι α -> Prim ν σ β ε δ ι α
 
 /-- The five `FiberImpl` fields this packet models. `_running`, `_yielded`,
 observers, children, the op budget, the dispatcher and the `Context` cache are
@@ -403,7 +451,7 @@ end FrameEvent
 namespace Prim
 
 /-- The frame-arm matrix of `docs/effect-rc112-fiber-runtime.html` section 3,
-verbatim. The six non-frame primitives declare no arm and are never pushed.
+verbatim. The eight non-frame primitives declare no arm and are never pushed.
 census: rule.frames-are-primitives -/
 def arms : Prim ν σ β ε δ ι α -> List Arm
   | onSuccess _ _ => [Arm.contA]
@@ -414,12 +462,15 @@ def arms : Prim ν σ β ε δ ι α -> List Arm
   | setInterruptible _ => [Arm.contAll]
   | whileLoop _ _ => [Arm.contA]
   | iterator _ _ => [Arm.contA]
+  | asyncFinalizer _ => [Arm.contE, Arm.contAll]
   | success _ => []
   | failure _ => []
   | sync _ => []
   | suspend _ => []
   | withFiber _ => []
   | yieldableError _ => []
+  | yieldNowWith _ => []
+  | async _ _ _ => []
 
 /-- Whether a primitive declares a slot. census: rule.frames-are-primitives -/
 def hasArm (self : Prim ν σ β ε δ ι α) (arm : Arm) : Bool := self.arms.contains arm
@@ -476,16 +527,32 @@ theorem arms_whileLoop (loop : ν) (cursor : β) :
 theorem arms_iterator (generator : ν) (cursor : β) :
     (iterator generator cursor : Prim ν σ β ε δ ι α).arms = [Arm.contA] := rfl
 
-/-- The six non-frame primitives declare no slot at all.
-census: rule.frames-are-primitives -/
-theorem non_frames_have_no_arms (value : β) (cause : Cause ε δ ι α) (thunk : σ) (error : ε) :
+/-- The parking finalizer declares the cause slot and the hook and no value
+slot: `internal/effect.ts:1145-1160` gives it `[contAll]` and `[contE]` and
+nothing else, so a `contA` pop passes it, masks, and does not answer.
+census: frame-arm.AsyncFinalizer -/
+theorem arms_asyncFinalizer (onInterrupt : ν) :
+    (asyncFinalizer onInterrupt : Prim ν σ β ε δ ι α).arms = [Arm.contE, Arm.contAll] := rfl
+
+/-- The parking finalizer declares no value slot.
+census: frame-arm.AsyncFinalizer -/
+theorem hasArm_asyncFinalizer_contA_false (onInterrupt : ν) :
+    (asyncFinalizer onInterrupt : Prim ν σ β ε δ ι α).hasArm Arm.contA = false := rfl
+
+/-- The eight non-frame primitives declare no slot at all. `Yield` and `Async`
+are among them: rc.112 gives neither a continuation slot, so neither is ever
+pushed. census: rule.frames-are-primitives -/
+theorem non_frames_have_no_arms (value : β) (cause : Cause ε δ ι α) (thunk : σ) (error : ε)
+    (priority : Nat) (register : ν) (withSignal : Bool) (cancel : Option ν) :
     (success value : Prim ν σ β ε δ ι α).arms = [] ∧
       (failure cause : Prim ν σ β ε δ ι α).arms = [] ∧
       (sync thunk : Prim ν σ β ε δ ι α).arms = [] ∧
       (suspend thunk : Prim ν σ β ε δ ι α).arms = [] ∧
       (withFiber thunk : Prim ν σ β ε δ ι α).arms = [] ∧
-      (yieldableError error : Prim ν σ β ε δ ι α).arms = [] :=
-  ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩
+      (yieldableError error : Prim ν σ β ε δ ι α).arms = [] ∧
+      (yieldNowWith priority : Prim ν σ β ε δ ι α).arms = [] ∧
+      (async register withSignal cancel : Prim ν σ β ε δ ι α).arms = [] :=
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- rc.112's `makeExit`: an exit is itself a primitive.
 census: exit.success-failure -/
@@ -509,6 +576,9 @@ def asExit? : Prim ν σ β ε δ ι α -> Option (Exit β ε δ ι α)
   | onExit _ _ _ => none
   | setInterruptible _ => none
   | whileLoop _ _ => none
+  | yieldNowWith _ => none
+  | async _ _ _ => none
+  | asyncFinalizer _ => none
 
 /-- The embedding round-trips. census: exit.success-failure -/
 theorem ofExit_asExit? (exit : Exit β ε δ ι α) :
@@ -545,6 +615,9 @@ theorem asExit?_eq_some (self : Prim ν σ β ε δ ι α) (exit : Exit β ε δ
   | onExit _ _ _ => simp [asExit?] at h
   | setInterruptible _ => simp [asExit?] at h
   | whileLoop _ _ => simp [asExit?] at h
+  | yieldNowWith _ => simp [asExit?] at h
+  | async _ _ _ => simp [asExit?] at h
+  | asyncFinalizer _ => simp [asExit?] at h
 
 /-- An exit has an `evaluate` and no continuation slot, so it is never a frame.
 census: exit.success-failure -/
@@ -559,6 +632,16 @@ def ensure : Prim ν σ β ε δ ι α -> FrameFiber ν σ β ε δ ι α ->
     FrameFiber ν σ β ε δ ι α × Option (Prim ν σ β ε δ ι α)
   | onExit _ _ finalizerInterruptible, fiber =>
     if fiber.interruptible && !finalizerInterruptible then
+      ({ fiber with
+          stack := setInterruptible true :: fiber.stack,
+          interruptible := false }, none)
+    else (fiber, none)
+  | asyncFinalizer _, fiber =>
+    -- `internal/effect.ts:1149-1154`: `if (fiber.interruptible) { fiber.interruptible
+    -- = false; fiber._stack.push(setInterruptibleTrue) }`. It masks. The body
+    -- returns nothing, so there is no replacement continuation; the frame itself
+    -- is *not* pushed back, only the restoring `SetInterruptible(true)`.
+    if fiber.interruptible then
       ({ fiber with
           stack := setInterruptible true :: fiber.stack,
           interruptible := false }, none)
@@ -582,6 +665,8 @@ def ensure : Prim ν σ β ε δ ι α -> FrameFiber ν σ β ε δ ι α ->
   | onSuccessAndFailure _ _ _, fiber => (fiber, none)
   | exitFrame _, fiber => (fiber, none)
   | whileLoop _ _, fiber => (fiber, none)
+  | yieldNowWith _, fiber => (fiber, none)
+  | async _ _ _, fiber => (fiber, none)
 
 /-- The decision rc.112 makes once `contAll` has returned: a replacement wins
 for either arm, and a frame lacking the demanded arm is skipped.
@@ -635,6 +720,34 @@ census: frame-arm.OnExit -/
 theorem ensure_onExit_no_replacement (body : Prim ν σ β ε δ ι α) (finalizer : ν) (flag : Bool)
     (fiber : FrameFiber ν σ β ε δ ι α) :
     ((onExit body finalizer flag).ensure fiber).snd = none := by
+  simp [ensure]
+  split <;> rfl
+
+/-- The parking finalizer's hook masks: `internal/effect.ts:1149-1154` clears
+`fiber.interruptible` and pushes `setInterruptibleTrue`, and returns nothing, so
+the frame is neither pushed back nor replaced by a continuation. Unlike `onExit`
+it has no "told not to" flag: rc.112 gives `asyncFinalizer` no argument beyond
+the cancel effect, so the mask is unconditional on an interruptible fiber.
+census: op.AsyncFinalizer -/
+theorem ensure_asyncFinalizer_masks (onInterrupt : ν) (fiber : FrameFiber ν σ β ε δ ι α)
+    (h : fiber.interruptible = true) :
+    (asyncFinalizer onInterrupt).ensure fiber =
+      (FrameFiber.mk fiber.current (setInterruptible true :: fiber.stack) false
+        fiber.interruptedCause fiber.deferredInterrupt, none) := by
+  simp [ensure, h]
+
+/-- An already masked fiber gets no second restoring frame, exactly as for
+`onExit`. census: op.AsyncFinalizer -/
+theorem ensure_asyncFinalizer_already_masked (onInterrupt : ν)
+    (fiber : FrameFiber ν σ β ε δ ι α) (h : fiber.interruptible = false) :
+    (asyncFinalizer onInterrupt).ensure fiber = (fiber, none) := by
+  simp [ensure, h]
+
+/-- The parking finalizer's hook never substitutes a continuation.
+census: op.AsyncFinalizer -/
+theorem ensure_asyncFinalizer_no_replacement (onInterrupt : ν)
+    (fiber : FrameFiber ν σ β ε δ ι α) :
+    ((asyncFinalizer onInterrupt).ensure fiber).snd = none := by
   simp [ensure]
   split <;> rfl
 
@@ -744,6 +857,9 @@ def armA [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
   | yieldableError _, _, _ => none
   | onFailure _ _, _, _ => none
   | setInterruptible _, _, _ => none
+  | yieldNowWith _, _, _ => none
+  | async _ _ _, _, _ => none
+  | asyncFinalizer _, _, _ => none
 
 /-- rc.112's `cont[contE](cause, fiber, exit?)`, per frame.
 census: rule.frames-are-primitives -/
@@ -758,6 +874,12 @@ def armE [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
   | onExit _ finalizer _, cause, provided =>
     some (ofExit (Exit.restoreAfterFinalizer (provided.getD (Exit.failure cause))
       (interp.finalizerExit finalizer (provided.getD (Exit.failure cause)))), [])
+  | asyncFinalizer onInterrupt, cause, _ =>
+    -- `internal/effect.ts:1155-1159`: `hasInterrupts(cause) ? flatMap(this[args](),
+    -- () => failCause(cause)) : failCause(cause)`. The cancel effect runs only
+    -- when the cause carries an interrupt, and the cause is re-raised either way.
+    some (if cause.hasInterrupts then interp.cancelThenFail onInterrupt cause
+      else failure cause, [])
   | success _, _, _ => none
   | failure _, _, _ => none
   | sync _, _, _ => none
@@ -768,9 +890,14 @@ def armE [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
   | onSuccess _ _, _, _ => none
   | setInterruptible _, _, _ => none
   | whileLoop _ _, _, _ => none
+  | yieldNowWith _, _, _ => none
+  | async _ _ _, _, _ => none
 
-/-- The trace an answering arm leaves: only `onExit` runs a finalizer.
-census: op.OnExit -/
+/-- The trace an answering arm leaves: only `onExit` runs a finalizer. The
+parking finalizer is deliberately not one of them — its `contE` *returns* the
+effect `flatMap(cancel, () => failCause(cause))` for the machine to step, where
+`onExit` runs its finalizer inside the arm through `interp.finalizerExit`. So
+nothing has run yet at the moment the arm answers. census: op.OnExit -/
 def finalizerEvents : Prim ν σ β ε δ ι α -> Exit β ε δ ι α -> List (FrameEvent ν σ β ε δ ι α)
   | onExit _ finalizer _, exit => [FrameEvent.ranFinalizer finalizer exit]
   | success _, _ => []
@@ -786,6 +913,9 @@ def finalizerEvents : Prim ν σ β ε δ ι α -> Exit β ε δ ι α -> List (
   | exitFrame _, _ => []
   | setInterruptible _, _ => []
   | whileLoop _ _, _ => []
+  | yieldNowWith _, _ => []
+  | async _ _ _, _ => []
+  | asyncFinalizer _, _ => []
 
 /-- The values a generator folds inline before it stops. census: op.Iterator -/
 def iteratorFolded (interp : PrimInterp ν σ β ε δ ι α) :
@@ -804,6 +934,9 @@ def iteratorFolded (interp : PrimInterp ν σ β ε δ ι α) :
   | onExit _ _ _, _ => []
   | setInterruptible _, _ => []
   | whileLoop _ _, _ => []
+  | yieldNowWith _, _ => []
+  | async _ _ _, _ => []
+  | asyncFinalizer _, _ => []
 
 /-- The value arm is defined exactly on the frames that declare it.
 census: rule.frames-are-primitives -/
@@ -827,6 +960,9 @@ theorem armA_isSome [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [Decidabl
   | exitFrame _ => rfl
   | onExit _ _ _ => rfl
   | setInterruptible _ => rfl
+  | yieldNowWith _ => rfl
+  | async _ _ _ => rfl
+  | asyncFinalizer _ => rfl
   | whileLoop loop cursor =>
     show (armA interp (whileLoop loop cursor) value provided).isSome = true
     cases hloop : interp.loopTest loop (interp.loopStep loop value) <;> simp [armA, hloop]
@@ -894,6 +1030,46 @@ theorem armE_setInterruptible_none [DecidableEq ε] [DecidableEq δ] [DecidableE
     [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α) (flag : Bool) (cause : Cause ε δ ι α)
     (provided : Option (Exit β ε δ ι α)) :
     (setInterruptible flag : Prim ν σ β ε δ ι α).armE interp cause provided = none := rfl
+
+/-- The parking finalizer declares no value arm: rc.112 gives it `contE` and
+`contAll` and no `contA`, which is exactly why a `contA` pop passes it after
+masking. census: frame-arm.AsyncFinalizer -/
+theorem armA_asyncFinalizer_none [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
+    [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α) (onInterrupt : ν) (value : β)
+    (provided : Option (Exit β ε δ ι α)) :
+    (asyncFinalizer onInterrupt : Prim ν σ β ε δ ι α).armA interp value provided = none := rfl
+
+/-- With an interrupt in the cause the parking finalizer runs its cancel effect
+and then re-raises the very cause that was passing: rc.112's
+`flatMap(this[args](), () => failCause(cause))`, defunctionalised as
+`interp.cancelThenFail`. census: op.AsyncFinalizer -/
+theorem armE_asyncFinalizer_interrupt [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
+    [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α) (onInterrupt : ν)
+    (cause : Cause ε δ ι α) (provided : Option (Exit β ε δ ι α))
+    (h : cause.hasInterrupts = true) :
+    (asyncFinalizer onInterrupt : Prim ν σ β ε δ ι α).armE interp cause provided =
+      some (interp.cancelThenFail onInterrupt cause, []) := by
+  simp [armE, h]
+
+/-- Without an interrupt the cancel effect does not run and the cause is
+re-raised directly: rc.112's `failCause(cause)` branch. The cancel effect is
+*not* a finalizer — a plain failure passing an `AsyncFinalizer` frame leaves it
+un-run. census: op.AsyncFinalizer -/
+theorem armE_asyncFinalizer_no_interrupt [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
+    [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α) (onInterrupt : ν)
+    (cause : Cause ε δ ι α) (provided : Option (Exit β ε δ ι α))
+    (h : cause.hasInterrupts = false) :
+    (asyncFinalizer onInterrupt : Prim ν σ β ε δ ι α).armE interp cause provided =
+      some (failure cause, []) := by
+  simp [armE, h]
+
+/-- The parking finalizer's cause arm pushes nothing and ignores the exit the
+pop supplied: rc.112 reads only the cause. census: op.AsyncFinalizer -/
+theorem armE_asyncFinalizer_pushes_nothing [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
+    [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α) (onInterrupt : ν)
+    (cause : Cause ε δ ι α) (left right : Option (Exit β ε δ ι α)) :
+    (asyncFinalizer onInterrupt : Prim ν σ β ε δ ι α).armE interp cause left =
+      (asyncFinalizer onInterrupt : Prim ν σ β ε δ ι α).armE interp cause right := rfl
 
 /-- `whileLoop` declares no cause arm. census: frame-arm.While -/
 theorem armE_whileLoop_none [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
@@ -1145,11 +1321,132 @@ theorem passEvents_ranContAll (frame : Prim ν σ β ε δ ι α)
   | none => simp [Prim.passEvents, h]
   | some next => cases next <;> simp [Prim.passEvents, h]
 
+/-- What a hook can do to the stack, read off `Prim.ensure`: it leaves it alone,
+or it pushes exactly one restoring `SetInterruptible(true)` frame, and it can
+only do that by clearing the interruptible flag it found set. `onExit` and
+`asyncFinalizer` are the two frames that push; nothing else does.
+census: rule.frames-are-primitives -/
+theorem ensure_stack_cases (frame : Prim ν σ β ε δ ι α) (fiber : FrameFiber ν σ β ε δ ι α) :
+    (frame.ensure fiber).fst.stack = fiber.stack ∨
+      ((frame.ensure fiber).fst.stack = Prim.setInterruptible true :: fiber.stack ∧
+        fiber.interruptible = true ∧ (frame.ensure fiber).fst.interruptible = false) := by
+  cases frame with
+  | onExit _ _ flag =>
+    cases hi : fiber.interruptible with
+    | false => exact Or.inl (by simp [Prim.ensure, hi])
+    | true =>
+      cases flag with
+      | false =>
+        exact Or.inr ⟨by simp [Prim.ensure, hi], by simp, by simp [Prim.ensure, hi]⟩
+      | true => exact Or.inl (by simp [Prim.ensure, hi])
+  | asyncFinalizer _ =>
+    cases hi : fiber.interruptible with
+    | false => exact Or.inl (by simp [Prim.ensure, hi])
+    | true =>
+      exact Or.inr ⟨by simp [Prim.ensure, hi], by simp, by simp [Prim.ensure, hi]⟩
+  | setInterruptible flag => exact Or.inl (Prim.ensure_setInterruptible_stack flag fiber)
+  | success _ => exact Or.inl rfl
+  | failure _ => exact Or.inl rfl
+  | sync _ => exact Or.inl rfl
+  | suspend _ => exact Or.inl rfl
+  | withFiber _ => exact Or.inl rfl
+  | yieldableError _ => exact Or.inl rfl
+  | iterator _ _ => exact Or.inl rfl
+  | onSuccess _ _ => exact Or.inl rfl
+  | onFailure _ _ => exact Or.inl rfl
+  | onSuccessAndFailure _ _ _ => exact Or.inl rfl
+  | exitFrame _ => exact Or.inl rfl
+  | whileLoop _ _ => exact Or.inl rfl
+  | yieldNowWith _ => exact Or.inl rfl
+  | async _ _ _ => exact Or.inl rfl
+
+/-- Detaching an already empty scratch stack changes nothing.
+census: rule.frames-are-primitives -/
+theorem stack_nil_eq (fiber : FrameFiber ν σ β ε δ ι α) (h : fiber.stack = []) :
+    { fiber with stack := ([] : List (Prim ν σ β ε δ ι α)) } = fiber := by
+  cases fiber
+  simp_all
+
+/-- The traversal step for a frame the pop passed: the frame is popped, its pass
+trace precedes the rest of the traversal, and the answer and the fiber are the
+ones the rest of the traversal produced. census: rule.frames-are-primitives -/
+def passOn (frame : Prim ν σ β ε δ ι α) (replacement : Option (Prim ν σ β ε δ ι α))
+    (tail : FramePop ν σ β ε δ ι α) : FramePop ν σ β ε δ ι α :=
+  FramePop.mk tail.answer (frame :: tail.popped)
+    (frame.passEvents replacement ++ tail.events) tail.fiber
+
+/-- One non-recursive step over the frames a `contAll` hook pushed. rc.112 pops
+from the live `_stack`, so a pushed frame is popped before the frames that were
+already below it; this is that pop, taken off the top of the fiber's scratch
+stack.
+
+One step is exact, and that is a theorem rather than an assumption:
+`ensure_stack_cases` says a hook either leaves the stack alone or pushes exactly
+one frame, that the frame it pushes is `SetInterruptible(true)`, and that it can
+only push from an interruptible fiber — and `ensure_setInterruptible_stack` says
+`SetInterruptible(true)` pushes nothing, so there is never a second level to
+drain. `passPushed_setInterruptible_substitutes` and
+`passPushed_setInterruptible_no_pending` state exactly what this step does to
+that one frame.
+
+`ContAnswer.empty` is the "nothing here answered" sentinel: no frame ever
+answers with it, so the pop loop reads it as "keep going". A frame that answers
+while the skip is on and the fiber is interrupted is discarded the same way the
+loop discards it, which is `exitFailCause`'s outer loop.
+census: rule.frames-are-primitives -/
+def passPushed (demand : Arm) (skip : Bool) (fiber : FrameFiber ν σ β ε δ ι α) :
+    FramePop ν σ β ε δ ι α :=
+  match fiber.stack with
+  | [] => FramePop.mk ContAnswer.empty [] [] fiber
+  | pushed :: below =>
+    FramePop.mk
+      (match Prim.answerOf pushed demand
+          (pushed.ensure { fiber with stack := below }).snd with
+        | some answer =>
+          if skip && (pushed.ensure { fiber with stack := below }).fst.interrupted then
+            ContAnswer.empty
+          else answer
+        | none => ContAnswer.empty)
+      [pushed]
+      (pushed.passEvents (pushed.ensure { fiber with stack := below }).snd)
+      (pushed.ensure { fiber with stack := below }).fst
+
+/-- What the traversal produces once a frame has been passed: the frame its hook
+pushed is popped first, and only if that frame did not answer does the traversal
+reach `tail`, the pop over the frames that were left.
+census: rule.frames-are-primitives -/
+def joinPushed (demand : Arm) (skip : Bool) (afterHook : FrameFiber ν σ β ε δ ι α)
+    (rest : List (Prim ν σ β ε δ ι α)) (tail : FramePop ν σ β ε δ ι α) :
+    FramePop ν σ β ε δ ι α :=
+  match (passPushed demand skip afterHook).answer with
+  | ContAnswer.empty =>
+    FramePop.mk tail.answer
+      ((passPushed demand skip afterHook).popped ++ tail.popped)
+      ((passPushed demand skip afterHook).events ++ tail.events)
+      tail.fiber
+  | answer =>
+    FramePop.mk answer
+      (passPushed demand skip afterHook).popped
+      (passPushed demand skip afterHook).events
+      { (passPushed demand skip afterHook).fiber with
+        stack := (passPushed demand skip afterHook).fiber.stack ++ rest }
+
 /-- rc.112's `getCont` pop loop fused with the handler-skipping loop of
-`exitFailCause`, as one structural recursion over the frame list. It recurses
-on the list and never on `fiber.stack`, because `contAll` can push.
-`docs/FRAMES-DAG.md` "Where the fusion could diverge" owns the justification
-and names `AsyncFinalizer` as the one shape a later packet must re-derive.
+`exitFailCause`, as one structural recursion over the frame list. It is
+*unfused* from that list in the one way rc.112 demands: rc.112 pops from the
+live `_stack`, so a frame a hook pushed is popped before the frames that were
+already below it. This loop therefore drains the hook's push with `passPushed`
+before it recurses, and only then continues on `rest`.
+
+`docs/FRAMES-DAG.md` "Where the fusion could diverge" named `AsyncFinalizer` as
+the one shape that forces this, and it does:
+`popFrom_asyncFinalizer_pops_its_push` is the witness that the pushed frame is
+answered inside the same pop, and `popFrom_pass_no_push` is the agreement with
+the old, list-recursive reading for every frame that pushes nothing.
+
+The recursion stays structural on the frames the pop started with, so `popFrom`
+reduces in the kernel and `decide`/`rfl` receipts over `step` and `run` keep
+working. One drain step suffices by `ensure_stack_cases`, not by assumption.
 census: rule.frames-are-primitives -/
 def popFrom (demand : Arm) (skip : Bool) :
     List (Prim ν σ β ε δ ι α) -> FrameFiber ν σ β ε δ ι α -> FramePop ν σ β ε δ ι α
@@ -1158,25 +1455,23 @@ def popFrom (demand : Arm) (skip : Bool) :
     match Prim.answerOf frame demand (frame.ensure fiber).snd with
     | some answer =>
       if skip && (frame.ensure fiber).fst.interrupted then
-        FramePop.mk (popFrom demand skip rest (frame.ensure fiber).fst).answer
-          (frame :: (popFrom demand skip rest (frame.ensure fiber).fst).popped)
-          (frame.passEvents (frame.ensure fiber).snd ++
-            (popFrom demand skip rest (frame.ensure fiber).fst).events)
-          (popFrom demand skip rest (frame.ensure fiber).fst).fiber
+        passOn frame (frame.ensure fiber).snd
+          (joinPushed demand skip (frame.ensure fiber).fst rest
+            (popFrom demand skip rest
+              (passPushed demand skip (frame.ensure fiber).fst).fiber))
       else
         FramePop.mk answer [frame] (frame.passEvents (frame.ensure fiber).snd)
           { (frame.ensure fiber).fst with
             stack := (frame.ensure fiber).fst.stack ++ rest }
     | none =>
-      FramePop.mk (popFrom demand skip rest (frame.ensure fiber).fst).answer
-        (frame :: (popFrom demand skip rest (frame.ensure fiber).fst).popped)
-        (frame.passEvents (frame.ensure fiber).snd ++
-          (popFrom demand skip rest (frame.ensure fiber).fst).events)
-        (popFrom demand skip rest (frame.ensure fiber).fst).fiber
+      passOn frame (frame.ensure fiber).snd
+        (joinPushed demand skip (frame.ensure fiber).fst rest
+          (popFrom demand skip rest
+            (passPushed demand skip (frame.ensure fiber).fst).fiber))
 
 /-- rc.112's `getCont`: answer a deferred interrupt before touching the stack,
-then run the pop loop with the stack detached so whatever `contAll` pushes
-lands on top of the frames that are left.
+then run the pop loop with the stack detached, so the fiber's own stack is the
+scratch area the hooks push onto and the loop visits those pushes next.
 census: checkpoint.getcont-deferred -/
 def getCont (self : FrameFiber ν σ β ε δ ι α) (demand : Arm) (skipInterrupted : Bool) :
     FramePop ν σ β ε δ ι α :=
@@ -1278,6 +1573,227 @@ theorem popFrom_answer_fiber (demand : Arm) (skip : Bool) (frame : Prim ν σ β
         stack := (frame.ensure fiber).fst.stack ++ rest } := by
   simp [popFrom, hanswer, hskip]
 
+/-- What the traversal continues with once a frame has been passed: the frames
+its hook pushed, on top of the frames that were left, and the hook's fiber with
+that scratch stack detached. This is where the loop is unfused from the frame
+list it started with. census: rule.frames-are-primitives -/
+def continueFrom (demand : Arm) (skip : Bool) (frame : Prim ν σ β ε δ ι α)
+    (rest : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α) :
+    FramePop ν σ β ε δ ι α :=
+  joinPushed demand skip (frame.ensure fiber).fst rest
+    (popFrom demand skip rest (passPushed demand skip (frame.ensure fiber).fst).fiber)
+
+/-- The drain over an empty scratch stack pops nothing and answers nothing.
+census: rule.frames-are-primitives -/
+theorem passPushed_nil (demand : Arm) (skip : Bool) (fiber : FrameFiber ν σ β ε δ ι α)
+    (h : fiber.stack = []) :
+    passPushed demand skip fiber = FramePop.mk ContAnswer.empty [] [] fiber := by
+  simp only [passPushed, h]
+
+/-- The drain over a pushed frame pops exactly that frame.
+census: rule.frames-are-primitives -/
+theorem passPushed_popped (demand : Arm) (skip : Bool) (fiber : FrameFiber ν σ β ε δ ι α)
+    (pushed : Prim ν σ β ε δ ι α) (below : List (Prim ν σ β ε δ ι α))
+    (h : fiber.stack = pushed :: below) :
+    (passPushed demand skip fiber).popped = [pushed] := by
+  simp only [passPushed, h]
+
+/-- The drain leaves exactly that frame's pass trace.
+census: rule.frames-are-primitives -/
+theorem passPushed_events (demand : Arm) (skip : Bool) (fiber : FrameFiber ν σ β ε δ ι α)
+    (pushed : Prim ν σ β ε δ ι α) (below : List (Prim ν σ β ε δ ι α))
+    (h : fiber.stack = pushed :: below) :
+    (passPushed demand skip fiber).events =
+      pushed.passEvents (pushed.ensure { fiber with stack := below }).snd := by
+  simp only [passPushed, h]
+
+/-- The drain hands on the fiber that frame's hook left behind.
+census: rule.frames-are-primitives -/
+theorem passPushed_fiber (demand : Arm) (skip : Bool) (fiber : FrameFiber ν σ β ε δ ι α)
+    (pushed : Prim ν σ β ε δ ι α) (below : List (Prim ν σ β ε δ ι α))
+    (h : fiber.stack = pushed :: below) :
+    (passPushed demand skip fiber).fiber =
+      (pushed.ensure { fiber with stack := below }).fst := by
+  simp only [passPushed, h]
+
+/-- The drain's answer, spelled out. census: rule.frames-are-primitives -/
+theorem passPushed_answer (demand : Arm) (skip : Bool) (fiber : FrameFiber ν σ β ε δ ι α)
+    (pushed : Prim ν σ β ε δ ι α) (below : List (Prim ν σ β ε δ ι α))
+    (h : fiber.stack = pushed :: below) :
+    (passPushed demand skip fiber).answer =
+      (match Prim.answerOf pushed demand
+          (pushed.ensure { fiber with stack := below }).snd with
+        | some answer =>
+          if skip && (pushed.ensure { fiber with stack := below }).fst.interrupted then
+            ContAnswer.empty
+          else answer
+        | none => ContAnswer.empty) := by
+  simp only [passPushed, h]
+
+/-- A drain that answers with a frame answers with a frame declaring the
+demanded arm. census: rule.frames-are-primitives -/
+theorem passPushed_answer_hasArm (demand : Arm) (skip : Bool)
+    (fiber : FrameFiber ν σ β ε δ ι α) (frame : Prim ν σ β ε δ ι α)
+    (h : (passPushed demand skip fiber).answer = ContAnswer.frame frame) :
+    frame.hasArm demand = true := by
+  cases hstack : fiber.stack with
+  | nil =>
+    rw [passPushed_nil demand skip fiber hstack] at h
+    exact absurd h (by simp)
+  | cons pushed below =>
+    rw [passPushed_answer demand skip fiber pushed below hstack] at h
+    cases hanswer : Prim.answerOf pushed demand
+        (pushed.ensure { fiber with stack := below }).snd with
+    | none =>
+      rw [hanswer] at h
+      exact absurd h (by simp)
+    | some answer =>
+      rw [hanswer] at h
+      simp only at h
+      split at h
+      · exact absurd h (by simp)
+      · have hframe := Prim.answerOf_frame_eq pushed frame demand
+          (pushed.ensure { fiber with stack := below }).snd (by rw [hanswer, h])
+        rw [hframe.1]
+        exact hframe.2
+
+/-- The drain over `SetInterruptible(true)` with a cause already recorded
+substitutes `failCause(cause)` for the demanded arm and restores the flag, which
+is rc.112's `setInterruptible[contAll]` (`internal/effect.ts:4312-4320`). This
+is the one shape a hook can push, so it is the whole correctness statement for
+the drain. census: checkpoint.set-interruptible-contall -/
+theorem passPushed_setInterruptible_substitutes (demand : Arm)
+    (fiber : FrameFiber ν σ β ε δ ι α) (below : List (Prim ν σ β ε δ ι α))
+    (cause : Cause ε δ ι α) (hstack : fiber.stack = Prim.setInterruptible true :: below)
+    (hcause : fiber.interruptedCause = some cause) :
+    passPushed demand false fiber =
+      FramePop.mk (ContAnswer.replacement (Prim.failure cause))
+        [Prim.setInterruptible true]
+        ((Prim.setInterruptible true : Prim ν σ β ε δ ι α).passEvents
+          (some (Prim.failure cause)))
+        (FrameFiber.mk fiber.current below true fiber.interruptedCause
+          fiber.deferredInterrupt) := by
+  simp only [passPushed, hstack]
+  rw [Prim.ensure_setInterruptible_substitutes cause
+    { fiber with stack := below } hcause]
+  rfl
+
+/-- The drain over `SetInterruptible(true)` with nothing recorded restores the
+flag, answers nothing, and pops the frame.
+census: checkpoint.set-interruptible-contall -/
+theorem passPushed_setInterruptible_no_pending (demand : Arm) (skip : Bool)
+    (fiber : FrameFiber ν σ β ε δ ι α) (below : List (Prim ν σ β ε δ ι α))
+    (hdemand : (Prim.setInterruptible true : Prim ν σ β ε δ ι α).hasArm demand = false)
+    (hstack : fiber.stack = Prim.setInterruptible true :: below)
+    (hcause : fiber.interruptedCause = none) :
+    passPushed demand skip fiber =
+      FramePop.mk ContAnswer.empty [Prim.setInterruptible true]
+        ((Prim.setInterruptible true : Prim ν σ β ε δ ι α).passEvents none)
+        (FrameFiber.mk fiber.current below true fiber.interruptedCause
+          fiber.deferredInterrupt) := by
+  simp only [passPushed, hstack]
+  rw [Prim.ensure_setInterruptible_no_pending true { fiber with stack := below } hcause]
+  simp only []
+  rw [Prim.answerOf_missing _ demand hdemand]
+
+/-- The traversal reaches the frames that were left exactly when the frame the
+hook pushed did not answer. census: rule.frames-are-primitives -/
+theorem joinPushed_of_empty (demand : Arm) (skip : Bool)
+    (afterHook : FrameFiber ν σ β ε δ ι α) (rest : List (Prim ν σ β ε δ ι α))
+    (tail : FramePop ν σ β ε δ ι α)
+    (h : (passPushed demand skip afterHook).answer = ContAnswer.empty) :
+    joinPushed demand skip afterHook rest tail =
+      FramePop.mk tail.answer
+        ((passPushed demand skip afterHook).popped ++ tail.popped)
+        ((passPushed demand skip afterHook).events ++ tail.events)
+        tail.fiber := by
+  simp only [joinPushed, h]
+
+/-- A frame the hook pushed that answers ends the pop, with the frames that were
+left restored beneath whatever its own hook pushed.
+census: rule.frames-are-primitives -/
+theorem joinPushed_of_answer (demand : Arm) (skip : Bool)
+    (afterHook : FrameFiber ν σ β ε δ ι α) (rest : List (Prim ν σ β ε δ ι α))
+    (tail : FramePop ν σ β ε δ ι α) (answer : ContAnswer ν σ β ε δ ι α)
+    (hne : answer ≠ ContAnswer.empty)
+    (h : (passPushed demand skip afterHook).answer = answer) :
+    joinPushed demand skip afterHook rest tail =
+      FramePop.mk answer
+        (passPushed demand skip afterHook).popped
+        (passPushed demand skip afterHook).events
+        { (passPushed demand skip afterHook).fiber with
+          stack := (passPushed demand skip afterHook).fiber.stack ++ rest } := by
+  simp only [joinPushed, h]
+
+/-- The drain's popped frame is exactly its trace's pop event.
+census: rule.frames-are-primitives -/
+theorem passPushed_popped_eq_events (demand : Arm) (skip : Bool)
+    (fiber : FrameFiber ν σ β ε δ ι α) :
+    (passPushed demand skip fiber).popped =
+      FrameEvent.poppedFrames (passPushed demand skip fiber).events := by
+  cases hstack : fiber.stack with
+  | nil =>
+    rw [passPushed_nil demand skip fiber hstack]
+    rfl
+  | cons pushed below =>
+    rw [passPushed_popped demand skip fiber pushed below hstack,
+      passPushed_events demand skip fiber pushed below hstack, passEvents_poppedFrames]
+
+/-- The hook ran on the frame the drain popped, when that frame declares it.
+census: rule.frames-are-primitives -/
+theorem passPushed_ranContAll (demand : Arm) (skip : Bool)
+    (fiber : FrameFiber ν σ β ε δ ι α) (frame : Prim ν σ β ε δ ι α)
+    (hcontAll : frame.hasArm Arm.contAll = true)
+    (hmem : frame ∈ (passPushed demand skip fiber).popped) :
+    FrameEvent.ranContAll frame ∈ (passPushed demand skip fiber).events := by
+  cases hstack : fiber.stack with
+  | nil =>
+    rw [passPushed_nil demand skip fiber hstack] at hmem
+    exact absurd hmem (by simp)
+  | cons pushed below =>
+    rw [passPushed_popped demand skip fiber pushed below hstack] at hmem
+    rw [passPushed_events demand skip fiber pushed below hstack]
+    rw [List.mem_singleton.mp hmem]
+    exact passEvents_ranContAll pushed _ (by rw [← List.mem_singleton.mp hmem]; exact hcontAll)
+
+/-- The two shapes the traversal takes after a frame has been passed: the frame
+its hook pushed did not answer and the traversal reached the frames that were
+left, or it did answer and the pop stops there.
+census: rule.frames-are-primitives -/
+theorem continueFrom_cases (demand : Arm) (skip : Bool) (frame : Prim ν σ β ε δ ι α)
+    (rest : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α) :
+    continueFrom demand skip frame rest fiber =
+        FramePop.mk
+          (popFrom demand skip rest
+            (passPushed demand skip (frame.ensure fiber).fst).fiber).answer
+          ((passPushed demand skip (frame.ensure fiber).fst).popped ++
+            (popFrom demand skip rest
+              (passPushed demand skip (frame.ensure fiber).fst).fiber).popped)
+          ((passPushed demand skip (frame.ensure fiber).fst).events ++
+            (popFrom demand skip rest
+              (passPushed demand skip (frame.ensure fiber).fst).fiber).events)
+          (popFrom demand skip rest
+            (passPushed demand skip (frame.ensure fiber).fst).fiber).fiber ∨
+      continueFrom demand skip frame rest fiber =
+        FramePop.mk (passPushed demand skip (frame.ensure fiber).fst).answer
+          (passPushed demand skip (frame.ensure fiber).fst).popped
+          (passPushed demand skip (frame.ensure fiber).fst).events
+          { (passPushed demand skip (frame.ensure fiber).fst).fiber with
+            stack := (passPushed demand skip (frame.ensure fiber).fst).fiber.stack ++ rest } := by
+  unfold continueFrom
+  cases hd : (passPushed demand skip (frame.ensure fiber).fst).answer with
+  | empty =>
+    exact Or.inl (joinPushed_of_empty demand skip (frame.ensure fiber).fst rest _ hd)
+  | deferred cause =>
+    exact Or.inr
+      (joinPushed_of_answer demand skip (frame.ensure fiber).fst rest _ _ (by simp) hd)
+  | replacement next =>
+    exact Or.inr
+      (joinPushed_of_answer demand skip (frame.ensure fiber).fst rest _ _ (by simp) hd)
+  | frame answering =>
+    exact Or.inr
+      (joinPushed_of_answer demand skip (frame.ensure fiber).fst rest _ _ (by simp) hd)
+
 /-- A frame that does not answer, or whose answer the skip discards, passes the
 answer through. census: rule.frames-are-primitives -/
 theorem popFrom_continue_answer (demand : Arm) (skip : Bool) (frame : Prim ν σ β ε δ ι α)
@@ -1285,12 +1801,12 @@ theorem popFrom_continue_answer (demand : Arm) (skip : Bool) (frame : Prim ν σ
     (h : frame.answerOf demand (frame.ensure fiber).snd = none ∨
       (skip && (frame.ensure fiber).fst.interrupted) = true) :
     (popFrom demand skip (frame :: rest) fiber).answer =
-      (popFrom demand skip rest (frame.ensure fiber).fst).answer := by
+      (continueFrom demand skip frame rest fiber).answer := by
   rcases h with hnone | hskip
-  · simp [popFrom, hnone]
+  · simp [popFrom, passOn, continueFrom, hnone]
   · cases hanswer : frame.answerOf demand (frame.ensure fiber).snd with
-    | none => simp [popFrom, hanswer]
-    | some answer => simp [popFrom, hanswer, hskip]
+    | none => simp [popFrom, passOn, continueFrom, hanswer]
+    | some answer => simp [popFrom, passOn, continueFrom, hanswer, hskip]
 
 /-- A passed frame is popped and the traversal continues.
 census: rule.frames-are-primitives -/
@@ -1299,12 +1815,12 @@ theorem popFrom_continue_popped (demand : Arm) (skip : Bool) (frame : Prim ν σ
     (h : frame.answerOf demand (frame.ensure fiber).snd = none ∨
       (skip && (frame.ensure fiber).fst.interrupted) = true) :
     (popFrom demand skip (frame :: rest) fiber).popped =
-      frame :: (popFrom demand skip rest (frame.ensure fiber).fst).popped := by
+      frame :: (continueFrom demand skip frame rest fiber).popped := by
   rcases h with hnone | hskip
-  · simp [popFrom, hnone]
+  · simp [popFrom, passOn, continueFrom, hnone]
   · cases hanswer : frame.answerOf demand (frame.ensure fiber).snd with
-    | none => simp [popFrom, hanswer]
-    | some answer => simp [popFrom, hanswer, hskip]
+    | none => simp [popFrom, passOn, continueFrom, hanswer]
+    | some answer => simp [popFrom, passOn, continueFrom, hanswer, hskip]
 
 /-- A passed frame's trace precedes the rest of the traversal's.
 census: rule.frames-are-primitives -/
@@ -1314,12 +1830,12 @@ theorem popFrom_continue_events (demand : Arm) (skip : Bool) (frame : Prim ν σ
       (skip && (frame.ensure fiber).fst.interrupted) = true) :
     (popFrom demand skip (frame :: rest) fiber).events =
       frame.passEvents (frame.ensure fiber).snd ++
-        (popFrom demand skip rest (frame.ensure fiber).fst).events := by
+        (continueFrom demand skip frame rest fiber).events := by
   rcases h with hnone | hskip
-  · simp [popFrom, hnone]
+  · simp [popFrom, passOn, continueFrom, hnone]
   · cases hanswer : frame.answerOf demand (frame.ensure fiber).snd with
-    | none => simp [popFrom, hanswer]
-    | some answer => simp [popFrom, hanswer, hskip]
+    | none => simp [popFrom, passOn, continueFrom, hanswer]
+    | some answer => simp [popFrom, passOn, continueFrom, hanswer, hskip]
 
 /-- A passed frame's hook is threaded into the rest of the traversal.
 census: rule.frames-are-primitives -/
@@ -1328,12 +1844,79 @@ theorem popFrom_continue_fiber (demand : Arm) (skip : Bool) (frame : Prim ν σ 
     (h : frame.answerOf demand (frame.ensure fiber).snd = none ∨
       (skip && (frame.ensure fiber).fst.interrupted) = true) :
     (popFrom demand skip (frame :: rest) fiber).fiber =
-      (popFrom demand skip rest (frame.ensure fiber).fst).fiber := by
+      (continueFrom demand skip frame rest fiber).fiber := by
   rcases h with hnone | hskip
-  · simp [popFrom, hnone]
+  · simp [popFrom, passOn, continueFrom, hnone]
   · cases hanswer : frame.answerOf demand (frame.ensure fiber).snd with
-    | none => simp [popFrom, hanswer]
-    | some answer => simp [popFrom, hanswer, hskip]
+    | none => simp [popFrom, passOn, continueFrom, hanswer]
+    | some answer => simp [popFrom, passOn, continueFrom, hanswer, hskip]
+
+/-- The agreement with the fused, list-recursive reading. A frame whose hook
+pushes nothing, popped from a fiber whose scratch stack is empty, continues the
+traversal on exactly the frames that were left and the hook's own fiber — which
+is what the fused loop did for every frame declared before the parking packet.
+`docs/FRAMES-DAG.md:200-211` asked for this agreement or for the loops to be
+unfused; this is the half that still agrees.
+census: rule.frames-are-primitives -/
+theorem popFrom_pass_no_push (demand : Arm) (skip : Bool) (frame : Prim ν σ β ε δ ι α)
+    (rest : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α)
+    (hstack : fiber.stack = []) (hpush : (frame.ensure fiber).fst.stack = fiber.stack) :
+    continueFrom demand skip frame rest fiber =
+      popFrom demand skip rest (frame.ensure fiber).fst := by
+  have h : (frame.ensure fiber).fst.stack = [] := by rw [hpush, hstack]
+  have hdrain := passPushed_nil demand skip (frame.ensure fiber).fst h
+  have hempty : (passPushed demand skip (frame.ensure fiber).fst).answer =
+      ContAnswer.empty := by rw [hdrain]
+  unfold continueFrom
+  rw [joinPushed_of_empty demand skip (frame.ensure fiber).fst rest _ hempty, hdrain]
+  simp
+
+/-- The other half, and the reason the loops had to be unfused. `AsyncFinalizer`
+is the shape `docs/FRAMES-DAG.md:200-211` reserved: its hook pushes and it does
+not answer a `contA` demand. rc.112 pops the frame the hook pushed *next*, so
+the restoring `SetInterruptible(true)` runs inside this very pop and, with a
+cause already recorded, substitutes `failCause(cause)` for the demanded arm. The
+fused loop would instead have carried that frame past the frames below and
+answered with whichever of them declared `contA`, one pop too late and with the
+fiber still masked. census: op.AsyncFinalizer -/
+theorem popFrom_asyncFinalizer_pops_its_push (onInterrupt : ν) (cause : Cause ε δ ι α)
+    (fiber : FrameFiber ν σ β ε δ ι α) (hstack : fiber.stack = [])
+    (hflag : fiber.interruptible = true) (hcause : fiber.interruptedCause = some cause) :
+    (popFrom Arm.contA false [Prim.asyncFinalizer onInterrupt] fiber).answer =
+        ContAnswer.replacement (Prim.failure cause) ∧
+      (popFrom Arm.contA false [Prim.asyncFinalizer onInterrupt] fiber).popped =
+        [Prim.asyncFinalizer onInterrupt, Prim.setInterruptible true] := by
+  have hpass : (Prim.asyncFinalizer onInterrupt : Prim ν σ β ε δ ι α).answerOf Arm.contA
+      ((Prim.asyncFinalizer onInterrupt : Prim ν σ β ε δ ι α).ensure fiber).snd = none := by
+    rw [Prim.ensure_asyncFinalizer_no_replacement]
+    exact Prim.answerOf_missing _ _ (Prim.hasArm_asyncFinalizer_contA_false onInterrupt)
+  have hmask := Prim.ensure_asyncFinalizer_masks onInterrupt fiber hflag
+  have hdrain : passPushed Arm.contA false
+      ((Prim.asyncFinalizer onInterrupt : Prim ν σ β ε δ ι α).ensure fiber).fst =
+      FramePop.mk (ContAnswer.replacement (Prim.failure cause))
+        [Prim.setInterruptible true]
+        ((Prim.setInterruptible true : Prim ν σ β ε δ ι α).passEvents
+          (some (Prim.failure cause)))
+        (FrameFiber.mk fiber.current fiber.stack true fiber.interruptedCause
+          fiber.deferredInterrupt) := by
+    rw [hmask]
+    exact passPushed_setInterruptible_substitutes Arm.contA _ fiber.stack cause rfl hcause
+  have hne : (ContAnswer.replacement (Prim.failure cause) : ContAnswer ν σ β ε δ ι α) ≠
+      ContAnswer.empty := by simp
+  have hinner : continueFrom Arm.contA false (Prim.asyncFinalizer onInterrupt) [] fiber =
+      FramePop.mk (ContAnswer.replacement (Prim.failure cause))
+        [Prim.setInterruptible true]
+        ((Prim.setInterruptible true : Prim ν σ β ε δ ι α).passEvents
+          (some (Prim.failure cause)))
+        (FrameFiber.mk fiber.current (fiber.stack ++ []) true fiber.interruptedCause
+          fiber.deferredInterrupt) := by
+    unfold continueFrom
+    rw [joinPushed_of_answer Arm.contA false _ [] _ _ hne (by rw [hdrain]), hdrain]
+  refine ⟨?_, ?_⟩
+  · rw [popFrom_continue_answer Arm.contA false (Prim.asyncFinalizer onInterrupt) []
+      fiber (Or.inl hpass), hinner]
+  · rw [popFrom_continue_popped Arm.contA false (Prim.asyncFinalizer onInterrupt) []
+      fiber (Or.inl hpass), hinner]
 
 private theorem popFrom_answer_hasArm_aux (demand : Arm) (skip : Bool)
     (frame : Prim ν σ β ε δ ι α) :
@@ -1344,18 +1927,26 @@ private theorem popFrom_answer_hasArm_aux (demand : Arm) (skip : Bool)
   induction frames with
   | nil =>
     intro fiber h
-    simp [popFrom] at h
+    rw [popFrom_nil] at h
+    exact absurd h (by simp)
   | cons head rest ih =>
     intro fiber h
+    have continued : (continueFrom demand skip head rest fiber).answer =
+        ContAnswer.frame frame -> frame.hasArm demand = true := by
+      intro hc
+      rcases continueFrom_cases demand skip head rest fiber with hshape | hshape <;>
+        rw [hshape] at hc
+      · exact ih _ hc
+      · exact passPushed_answer_hasArm demand skip (head.ensure fiber).fst frame hc
     cases hanswer : head.answerOf demand (head.ensure fiber).snd with
     | none =>
       rw [popFrom_continue_answer demand skip head rest fiber (Or.inl hanswer)] at h
-      exact ih (head.ensure fiber).fst h
+      exact continued h
     | some answer =>
       cases hskip : (skip && (head.ensure fiber).fst.interrupted) with
       | true =>
         rw [popFrom_continue_answer demand skip head rest fiber (Or.inr hskip)] at h
-        exact ih (head.ensure fiber).fst h
+        exact continued h
       | false =>
         rw [popFrom_answer_answer demand skip head rest fiber answer hanswer hskip] at h
         have hframe := Prim.answerOf_frame_eq head frame demand (head.ensure fiber).snd
@@ -1397,18 +1988,24 @@ private theorem popFrom_popped_eq_events_aux (demand : Arm) (skip : Bool) :
   | nil => intro fiber; rfl
   | cons head rest ih =>
     intro fiber
+    have continued : (continueFrom demand skip head rest fiber).popped =
+        FrameEvent.poppedFrames (continueFrom demand skip head rest fiber).events := by
+      rcases continueFrom_cases demand skip head rest fiber with hshape | hshape <;>
+        rw [hshape]
+      · rw [poppedFrames_append, passPushed_popped_eq_events, ih]
+      · exact passPushed_popped_eq_events demand skip (head.ensure fiber).fst
     cases hanswer : head.answerOf demand (head.ensure fiber).snd with
     | none =>
       rw [popFrom_continue_popped demand skip head rest fiber (Or.inl hanswer),
         popFrom_continue_events demand skip head rest fiber (Or.inl hanswer),
-        poppedFrames_append, passEvents_poppedFrames, ih (head.ensure fiber).fst]
+        poppedFrames_append, passEvents_poppedFrames, continued]
       rfl
     | some answer =>
       cases hskip : (skip && (head.ensure fiber).fst.interrupted) with
       | true =>
         rw [popFrom_continue_popped demand skip head rest fiber (Or.inr hskip),
           popFrom_continue_events demand skip head rest fiber (Or.inr hskip),
-          poppedFrames_append, passEvents_poppedFrames, ih (head.ensure fiber).fst]
+          poppedFrames_append, passEvents_poppedFrames, continued]
         rfl
       | false =>
         rw [popFrom_answer_popped demand skip head rest fiber answer hanswer hskip,
@@ -1432,9 +2029,20 @@ private theorem popFrom_ranContAll_aux (demand : Arm) (skip : Bool)
   induction frames with
   | nil =>
     intro fiber hmem
-    simp [popFrom] at hmem
+    rw [popFrom_nil] at hmem
+    exact absurd hmem (by simp)
   | cons head rest ih =>
     intro fiber hmem
+    have continued : frame ∈ (continueFrom demand skip head rest fiber).popped ->
+        FrameEvent.ranContAll frame ∈ (continueFrom demand skip head rest fiber).events := by
+      intro hc
+      rcases continueFrom_cases demand skip head rest fiber with hshape | hshape <;>
+        rw [hshape] at hc ⊢
+      · rcases List.mem_append.mp hc with hleft | hright
+        · exact List.mem_append_left _
+            (passPushed_ranContAll demand skip (head.ensure fiber).fst frame hcontAll hleft)
+        · exact List.mem_append_right _ (ih _ hright)
+      · exact passPushed_ranContAll demand skip (head.ensure fiber).fst frame hcontAll hc
     cases hanswer : head.answerOf demand (head.ensure fiber).snd with
     | none =>
       rw [popFrom_continue_popped demand skip head rest fiber (Or.inl hanswer)] at hmem
@@ -1442,7 +2050,7 @@ private theorem popFrom_ranContAll_aux (demand : Arm) (skip : Bool)
       rcases List.mem_cons.mp hmem with hhead | htail
       · subst hhead
         exact List.mem_append_left _ (passEvents_ranContAll frame _ hcontAll)
-      · exact List.mem_append_right _ (ih (head.ensure fiber).fst htail)
+      · exact List.mem_append_right _ (continued htail)
     | some answer =>
       cases hskip : (skip && (head.ensure fiber).fst.interrupted) with
       | true =>
@@ -1451,7 +2059,7 @@ private theorem popFrom_ranContAll_aux (demand : Arm) (skip : Bool)
         rcases List.mem_cons.mp hmem with hhead | htail
         · subst hhead
           exact List.mem_append_left _ (passEvents_ranContAll frame _ hcontAll)
-        · exact List.mem_append_right _ (ih (head.ensure fiber).fst htail)
+        · exact List.mem_append_right _ (continued htail)
       | false =>
         rw [popFrom_answer_popped demand skip head rest fiber answer hanswer hskip] at hmem
         rw [popFrom_answer_events demand skip head rest fiber answer hanswer hskip]
@@ -1484,11 +2092,16 @@ private theorem ensure_interruptedCause (frame : Prim ν σ β ε δ ι α)
   | onExit _ _ _ =>
     simp only [Prim.ensure]
     split <;> rfl
+  | asyncFinalizer _ =>
+    simp only [Prim.ensure]
+    split <;> rfl
   | setInterruptible _ =>
     simp only [Prim.ensure]
     split
     · split <;> rfl
     · rfl
+  | yieldNowWith _ => rfl
+  | async _ _ _ => rfl
   | success _ => rfl
   | failure _ => rfl
   | sync _ => rfl
@@ -1501,6 +2114,36 @@ private theorem ensure_interruptedCause (frame : Prim ν σ β ε δ ι α)
   | onSuccessAndFailure _ _ _ => rfl
   | exitFrame _ => rfl
   | whileLoop _ _ => rfl
+
+private theorem passPushed_skip_eq_of_no_cause (demand : Arm)
+    (fiber : FrameFiber ν σ β ε δ ι α) (h : fiber.interruptedCause = none) :
+    passPushed demand true fiber = passPushed demand false fiber := by
+  cases hstack : fiber.stack with
+  | nil =>
+    rw [passPushed_nil demand true fiber hstack, passPushed_nil demand false fiber hstack]
+  | cons pushed below =>
+    have hinner : (pushed.ensure { fiber with stack := below }).fst.interruptedCause = none := by
+      rw [ensure_interruptedCause]
+      exact h
+    have hint : (pushed.ensure { fiber with stack := below }).fst.interrupted = false := by
+      rw [interrupted_eq, hinner]
+      simp
+    simp [passPushed, hstack, hint]
+
+private theorem joinPushed_skip_eq (demand : Arm) (afterHook : FrameFiber ν σ β ε δ ι α)
+    (rest : List (Prim ν σ β ε δ ι α)) (tail : FramePop ν σ β ε δ ι α)
+    (h : passPushed demand true afterHook = passPushed demand false afterHook) :
+    joinPushed demand true afterHook rest tail =
+      joinPushed demand false afterHook rest tail := by
+  simp only [joinPushed, h]
+
+private theorem passPushed_interruptedCause (demand : Arm) (skip : Bool)
+    (fiber : FrameFiber ν σ β ε δ ι α) :
+    (passPushed demand skip fiber).fiber.interruptedCause = fiber.interruptedCause := by
+  cases hstack : fiber.stack with
+  | nil => rw [passPushed_nil demand skip fiber hstack]
+  | cons pushed below =>
+    rw [passPushed_fiber demand skip fiber pushed below hstack, ensure_interruptedCause]
 
 private theorem popFrom_skip_eq_of_no_cause (demand : Arm) :
     forall (frames : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α),
@@ -1516,10 +2159,13 @@ private theorem popFrom_skip_eq_of_no_cause (demand : Arm) :
     have hint : (head.ensure fiber).fst.interrupted = false := by
       rw [interrupted_eq, hinner]
       simp
+    have hdrain := passPushed_skip_eq_of_no_cause demand (head.ensure fiber).fst hinner
+    have hrec := ih (passPushed demand false (head.ensure fiber).fst).fiber
+      (by rw [passPushed_interruptedCause]; exact hinner)
     cases hanswer : head.answerOf demand (head.ensure fiber).snd with
     | none =>
       simp only [popFrom, hanswer]
-      rw [ih (head.ensure fiber).fst hinner]
+      rw [hdrain, joinPushed_skip_eq demand (head.ensure fiber).fst rest _ hdrain, hrec]
     | some answer => simp [popFrom, hanswer, hint]
 
 /-- With no interruption recorded the skip flag changes nothing at all.
@@ -1531,26 +2177,79 @@ theorem getCont_skip_of_no_pending_cause (self : FrameFiber ν σ β ε δ ι α
     getCont_eq_popFrom self demand false hdeferred]
   exact popFrom_skip_eq_of_no_cause demand self.stack _ hcause
 
+private theorem passPushed_skip_all (demand : Arm) (fiber : FrameFiber ν σ β ε δ ι α)
+    (hint : fiber.interrupted = true)
+    (hno : forall frame, frame ∈ fiber.stack -> frame.hasArm Arm.contAll = false) :
+    (passPushed demand true fiber).answer = ContAnswer.empty ∧
+      (passPushed demand true fiber).fiber.interrupted = true ∧
+      (forall frame, frame ∈ (passPushed demand true fiber).fiber.stack ->
+        frame.hasArm Arm.contAll = false) := by
+  cases hstack : fiber.stack with
+  | nil =>
+    rw [passPushed_nil demand true fiber hstack]
+    exact ⟨rfl, hint, fun frame hmem => hno frame hmem⟩
+  | cons pushed below =>
+    have hpushed : pushed.hasArm Arm.contAll = false :=
+      hno pushed (by rw [hstack]; exact List.mem_cons_self)
+    have hens : pushed.ensure { fiber with stack := below } =
+        ({ fiber with stack := below }, none) :=
+      Prim.ensure_of_no_contAll pushed { fiber with stack := below } hpushed
+    have hbelow : ({ fiber with stack := below } : FrameFiber ν σ β ε δ ι α).interrupted =
+        true := hint
+    refine ⟨?_, ?_, ?_⟩
+    · rw [passPushed_answer demand true fiber pushed below hstack]
+      simp only [hens]
+      cases hdemand : pushed.hasArm demand with
+      | false => rw [Prim.answerOf_missing pushed demand hdemand]
+      | true =>
+        rw [Prim.answerOf_arm pushed demand hdemand]
+        simp [hbelow]
+    · rw [passPushed_fiber demand true fiber pushed below hstack]
+      simp only [hens]
+      exact hbelow
+    · intro frame hmem
+      rw [passPushed_fiber demand true fiber pushed below hstack] at hmem
+      simp only [hens] at hmem
+      exact hno frame (by rw [hstack]; exact List.mem_cons_of_mem pushed hmem)
+
 private theorem popFrom_skip_all (demand : Arm) :
     forall (frames : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α),
       fiber.interrupted = true ->
-        (forall frame, frame ∈ frames -> frame.hasArm Arm.contAll = false) ->
+        (forall frame, frame ∈ fiber.stack ++ frames ->
+          frame.hasArm Arm.contAll = false) ->
           (popFrom demand true frames fiber).answer = ContAnswer.empty := by
   intro frames
   induction frames with
   | nil => intro fiber _ _; rfl
   | cons head rest ih =>
     intro fiber hint hno
+    have hhead : head.hasArm Arm.contAll = false :=
+      hno head (List.mem_append_right _ List.mem_cons_self)
     have hens : head.ensure fiber = (fiber, none) :=
-      Prim.ensure_of_no_contAll head fiber (hno head List.mem_cons_self)
+      Prim.ensure_of_no_contAll head fiber hhead
     have hcont : head.answerOf demand (head.ensure fiber).snd = none ∨
         (true && (head.ensure fiber).fst.interrupted) = true := by
       rw [hens]
       cases hdemand : head.hasArm demand with
       | false => exact Or.inl (Prim.answerOf_missing head demand hdemand)
       | true => exact Or.inr (by simpa using hint)
-    rw [popFrom_continue_answer demand true head rest fiber hcont, hens]
-    exact ih fiber hint (fun frame hmem => hno frame (List.mem_cons_of_mem head hmem))
+    have hstackNo : forall frame, frame ∈ ((head.ensure fiber).fst).stack ->
+        frame.hasArm Arm.contAll = false := by
+      intro frame hmem
+      rw [hens] at hmem
+      exact hno frame (List.mem_append_left _ hmem)
+    have hafterInt : ((head.ensure fiber).fst).interrupted = true := by
+      rw [hens]; exact hint
+    obtain ⟨hempty, hdrainInt, hdrainNo⟩ :=
+      passPushed_skip_all demand (head.ensure fiber).fst hafterInt hstackNo
+    rw [popFrom_continue_answer demand true head rest fiber hcont]
+    unfold continueFrom
+    rw [joinPushed_of_empty demand true (head.ensure fiber).fst rest _ hempty]
+    exact ih _ hdrainInt (by
+      intro other hother
+      rcases List.mem_append.mp hother with hleft | hright
+      · exact hdrainNo other hleft
+      · exact hno other (List.mem_append_right _ (List.mem_cons_of_mem head hright)))
 
 /-- Once interrupted and interruptible, the pop discards every answering `contE`
 frame, so with no frame able to flip the flag the stack simply empties and no
@@ -1587,7 +2286,9 @@ theorem getCont_mask_stops_skip (self : FrameFiber ν σ β ε δ ι α) (skip :
     (Or.inl (by
       rw [Prim.ensure_setInterruptible_false_no_replacement]
       exact Prim.answerOf_missing _ _ rfl))]
+  unfold continueFrom
   rw [ensure_setInterruptible_fst]
+  rfl
 
 /-- rc.112's `exitSucceed[evaluate]`: pop the value slot and resume. The pop
 does not skip, because only the failure path skips.
@@ -1659,7 +2360,17 @@ def resumeCause [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq 
 
 /-- One machine step, one equation per pinned op. A total function, not a
 relation: this model has no decision source, so `docs/DESIGN-BASIS.md` DB-03's
-relational requirement does not bite here. census: rule.frames-are-primitives -/
+relational requirement does not bite here.
+
+Two of the seventeen equations are a *live frontier* rather than a transition.
+`Yield` and `Async` park: rc.112 hands them to the dispatcher and the fiber
+stops until something outside it resumes. A single fiber stepped on its own has
+nothing to resume it, so this function returns the fiber unchanged and leaves
+the fixed point standing. `docs/DESIGN-BASIS.md` DB-04 makes that a frontier and
+not a failure, not a defect and not a refusal: the run loop
+(`workshop/Deep/Fibers.lean`) intercepts both primitives before it delegates to
+this step, and only what it does not intercept reaches here.
+census: rule.frames-are-primitives -/
 def step [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
     (interp : PrimInterp ν σ β ε δ ι α) (self : FrameFiber ν σ β ε δ ι α) :
     FrameStep ν σ β ε δ ι α × List (FrameEvent ν σ β ε δ ι α) :=
@@ -1706,6 +2417,11 @@ def step [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
   | Prim.setInterruptible _ =>
     (FrameStep.running
       { self with current := Prim.failure (Cause.die interp.notImplemented) }, [])
+  | Prim.asyncFinalizer _ =>
+    (FrameStep.running
+      { self with current := Prim.failure (Cause.die interp.notImplemented) }, [])
+  | Prim.yieldNowWith _ => (FrameStep.running self, [])
+  | Prim.async _ _ _ => (FrameStep.running self, [])
   | Prim.whileLoop loop cursor =>
     if interp.loopTest loop cursor then
       (FrameStep.running
@@ -1970,6 +2686,68 @@ theorem step_setInterruptible_not_evaluable [DecidableEq ε] [DecidableEq δ] [D
         (FrameFiber.mk (Prim.failure (Cause.die interp.notImplemented)) self.stack
           self.interruptible self.interruptedCause self.deferredInterrupt), []) := rfl
 
+/-- rc.112 gives `AsyncFinalizer` no `evaluate` either: it is a frame the
+`Async` op pushes, never an effect the loop threads. Reached as the current
+primitive it is a defect, exactly as `setInterruptible` is.
+census: op.AsyncFinalizer -/
+theorem step_asyncFinalizer_not_evaluable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
+    [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α) (self : FrameFiber ν σ β ε δ ι α)
+    (onInterrupt : ν) :
+    (FrameFiber.mk (Prim.asyncFinalizer onInterrupt) self.stack self.interruptible
+        self.interruptedCause self.deferredInterrupt).step interp =
+      (FrameStep.running
+        (FrameFiber.mk (Prim.failure (Cause.die interp.notImplemented)) self.stack
+          self.interruptible self.interruptedCause self.deferredInterrupt), []) := rfl
+
+/-- `Yield` parks. A fiber stepped on its own has no dispatcher to schedule its
+resume and no other fiber to run it, so the step is the identity and the fixed
+point is a live frontier under `docs/DESIGN-BASIS.md` DB-04 — never a failure,
+never a defect, never an interruption and never a refusal. The run loop
+(`workshop/Deep/Fibers.lean`) intercepts `Yield` before it delegates here.
+census: op.Yield -/
+theorem step_yieldNowWith_frontier [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
+    [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α) (self : FrameFiber ν σ β ε δ ι α)
+    (priority : Nat) :
+    (FrameFiber.mk (Prim.yieldNowWith priority) self.stack self.interruptible
+        self.interruptedCause self.deferredInterrupt).step interp =
+      (FrameStep.running
+        (FrameFiber.mk (Prim.yieldNowWith priority) self.stack self.interruptible
+          self.interruptedCause self.deferredInterrupt), []) := rfl
+
+/-- `Async` parks the same way, and for the same reason: rc.112 calls
+`register(resume, signal?)` and then returns `Yield`, so nothing inside the
+fiber advances it. `Async` also pushes the `AsyncFinalizer` frame when the
+registration returned a cancel effect or a controller was created; both the
+registration call and that push belong to the run loop, which intercepts this
+primitive. The fixed point here is the frontier, not the behaviour.
+census: op.Async -/
+theorem step_async_frontier [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
+    [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α) (self : FrameFiber ν σ β ε δ ι α)
+    (register : ν) (withSignal : Bool) (cancel : Option ν) :
+    (FrameFiber.mk (Prim.async register withSignal cancel) self.stack self.interruptible
+        self.interruptedCause self.deferredInterrupt).step interp =
+      (FrameStep.running
+        (FrameFiber.mk (Prim.async register withSignal cancel) self.stack
+          self.interruptible self.interruptedCause self.deferredInterrupt), []) := rfl
+
+/-- The two parking primitives leave the fiber exactly as it was, so `run` at
+any fuel reports the same frontier and the trace stays empty.
+census: op.Yield -/
+theorem step_parking_is_a_fixed_point [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
+    [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α) (self : FrameFiber ν σ β ε δ ι α)
+    (priority : Nat) (register : ν) (withSignal : Bool) (cancel : Option ν) :
+    (FrameFiber.mk (Prim.yieldNowWith priority) self.stack self.interruptible
+        self.interruptedCause self.deferredInterrupt).step interp =
+      (FrameStep.running
+        (FrameFiber.mk (Prim.yieldNowWith priority) self.stack self.interruptible
+          self.interruptedCause self.deferredInterrupt), []) ∧
+      (FrameFiber.mk (Prim.async register withSignal cancel) self.stack self.interruptible
+          self.interruptedCause self.deferredInterrupt).step interp =
+        (FrameStep.running
+          (FrameFiber.mk (Prim.async register withSignal cancel) self.stack
+            self.interruptible self.interruptedCause self.deferredInterrupt), []) :=
+  ⟨rfl, rfl⟩
+
 /-- A loop whose test passes pushes itself and runs its body.
 census: op.While -/
 theorem step_whileLoop_true [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
@@ -2017,6 +2795,7 @@ theorem step_ofExit_finishes [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] 
     (start (Prim.ofExit exit : Prim ν σ β ε δ ι α)).step interp =
       (FrameStep.finished exit, [FrameEvent.yielded exit]) := by
   cases exit <;> rfl
+
 
 /-- No fuel is no step. census: exit.success-failure -/
 theorem run_zero [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
@@ -2243,11 +3022,16 @@ private theorem ensure_deferredInterrupt (frame : Prim ν σ β ε δ ι α)
   | onExit _ _ _ =>
     simp only [Prim.ensure]
     split <;> rfl
+  | asyncFinalizer _ =>
+    simp only [Prim.ensure]
+    split <;> rfl
   | setInterruptible _ =>
     simp only [Prim.ensure]
     split
     · split <;> rfl
     · rfl
+  | yieldNowWith _ => rfl
+  | async _ _ _ => rfl
   | success _ => rfl
   | failure _ => rfl
   | sync _ => rfl
@@ -2261,6 +3045,14 @@ private theorem ensure_deferredInterrupt (frame : Prim ν σ β ε δ ι α)
   | exitFrame _ => rfl
   | whileLoop _ _ => rfl
 
+private theorem passPushed_deferredInterrupt (demand : Arm) (skip : Bool)
+    (fiber : FrameFiber ν σ β ε δ ι α) :
+    (passPushed demand skip fiber).fiber.deferredInterrupt = fiber.deferredInterrupt := by
+  cases hstack : fiber.stack with
+  | nil => rw [passPushed_nil demand skip fiber hstack]
+  | cons pushed below =>
+    rw [passPushed_fiber demand skip fiber pushed below hstack, ensure_deferredInterrupt]
+
 /-- A pop never records an interruption: whatever hooks it runs, the
 accumulated cause it leaves is the one it found.
 census: checkpoint.getcont-deferred -/
@@ -2272,15 +3064,18 @@ theorem popFrom_interruptedCause (demand : Arm) (skip : Bool) :
   | nil => intro fiber; rfl
   | cons head rest ih =>
     intro fiber
+    have continued : (continueFrom demand skip head rest fiber).fiber.interruptedCause =
+        fiber.interruptedCause := by
+      rcases continueFrom_cases demand skip head rest fiber with hshape | hshape <;> rw [hshape]
+      · simp only [ih, passPushed_interruptedCause, ensure_interruptedCause]
+      · simp only [passPushed_interruptedCause, ensure_interruptedCause]
     cases hanswer : head.answerOf demand (head.ensure fiber).snd with
     | none =>
-      rw [popFrom_continue_fiber demand skip head rest fiber (Or.inl hanswer), ih,
-        ensure_interruptedCause]
+      rw [popFrom_continue_fiber demand skip head rest fiber (Or.inl hanswer), continued]
     | some answer =>
       cases hskip : (skip && (head.ensure fiber).fst.interrupted) with
       | true =>
-        rw [popFrom_continue_fiber demand skip head rest fiber (Or.inr hskip), ih,
-          ensure_interruptedCause]
+        rw [popFrom_continue_fiber demand skip head rest fiber (Or.inr hskip), continued]
       | false =>
         rw [popFrom_answer_fiber demand skip head rest fiber answer hanswer hskip]
         exact ensure_interruptedCause head fiber
@@ -2296,15 +3091,18 @@ theorem popFrom_deferredInterrupt (demand : Arm) (skip : Bool) :
   | nil => intro fiber; rfl
   | cons head rest ih =>
     intro fiber
+    have continued : (continueFrom demand skip head rest fiber).fiber.deferredInterrupt =
+        fiber.deferredInterrupt := by
+      rcases continueFrom_cases demand skip head rest fiber with hshape | hshape <;> rw [hshape]
+      · simp only [ih, passPushed_deferredInterrupt, ensure_deferredInterrupt]
+      · simp only [passPushed_deferredInterrupt, ensure_deferredInterrupt]
     cases hanswer : head.answerOf demand (head.ensure fiber).snd with
     | none =>
-      rw [popFrom_continue_fiber demand skip head rest fiber (Or.inl hanswer), ih,
-        ensure_deferredInterrupt]
+      rw [popFrom_continue_fiber demand skip head rest fiber (Or.inl hanswer), continued]
     | some answer =>
       cases hskip : (skip && (head.ensure fiber).fst.interrupted) with
       | true =>
-        rw [popFrom_continue_fiber demand skip head rest fiber (Or.inr hskip), ih,
-          ensure_deferredInterrupt]
+        rw [popFrom_continue_fiber demand skip head rest fiber (Or.inr hskip), continued]
       | false =>
         rw [popFrom_answer_fiber demand skip head rest fiber answer hanswer hskip]
         exact ensure_deferredInterrupt head fiber
@@ -2357,6 +3155,24 @@ private theorem answerOf_ne_deferred (frame : Prim ν σ β ε δ ι α) (demand
       cases Option.some.inj h
       exact by simp
 
+private theorem passPushed_answer_ne_deferred (demand : Arm) (skip : Bool)
+    (fiber : FrameFiber ν σ β ε δ ι α) (cause : Cause ε δ ι α) :
+    (passPushed demand skip fiber).answer ≠ ContAnswer.deferred cause := by
+  cases hstack : fiber.stack with
+  | nil =>
+    rw [passPushed_nil demand skip fiber hstack]
+    simp
+  | cons pushed below =>
+    rw [passPushed_answer demand skip fiber pushed below hstack]
+    cases ha : Prim.answerOf pushed demand
+        (pushed.ensure { fiber with stack := below }).snd with
+    | none => simp
+    | some answer =>
+      simp only
+      split
+      · simp
+      · exact answerOf_ne_deferred pushed demand _ answer cause ha
+
 /-- Only `getCont`'s pre-stack branch can answer a deferred interrupt; the pop
 loop itself never produces that answer. census: checkpoint.getcont-deferred -/
 theorem popFrom_answer_ne_deferred (demand : Arm) (skip : Bool) (cause : Cause ε δ ι α) :
@@ -2367,15 +3183,20 @@ theorem popFrom_answer_ne_deferred (demand : Arm) (skip : Bool) (cause : Cause �
   | nil => intro fiber; simp [popFrom]
   | cons head rest ih =>
     intro fiber
+    have continued : (continueFrom demand skip head rest fiber).answer ≠
+        ContAnswer.deferred cause := by
+      rcases continueFrom_cases demand skip head rest fiber with hshape | hshape <;> rw [hshape]
+      · exact ih _
+      · exact passPushed_answer_ne_deferred demand skip (head.ensure fiber).fst cause
     cases hanswer : head.answerOf demand (head.ensure fiber).snd with
     | none =>
       rw [popFrom_continue_answer demand skip head rest fiber (Or.inl hanswer)]
-      exact ih (head.ensure fiber).fst
+      exact continued
     | some answer =>
       cases hskip : (skip && (head.ensure fiber).fst.interrupted) with
       | true =>
         rw [popFrom_continue_answer demand skip head rest fiber (Or.inr hskip)]
-        exact ih (head.ensure fiber).fst
+        exact continued
       | false =>
         rw [popFrom_answer_answer demand skip head rest fiber answer hanswer hskip]
         exact answerOf_ne_deferred head demand _ answer cause hanswer

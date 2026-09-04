@@ -13,6 +13,9 @@ import Effect4.Semantics.RegionSimulation
 import Effect4.Semantics.RegionDenotation
 import Effect4.Concurrency.FiberFamily
 import Effect4.Stateful.RefFamily
+import Effect4.Stateful.DeferredFamily
+import Effect4.Runtime.ScopeFamily
+import Effect4.Context.ContextFamily
 import Effect4.Layer.LayerFamily
 
 /-!
@@ -25,6 +28,7 @@ golden is the traced service's log plus the outcome, rendered by
 -/
 
 open Effects Effect4 Effect4.Meta Effect4.Target.EffectV4 Effect4.FiberFamily Effect4.LayerFamily
+  Effect4.DeferredFamily Effect4.ScopeFamily Effect4.ContextFamily
 
 /-! ## Golden admission: what the host can carry exactly
 
@@ -82,12 +86,6 @@ effect_atoms Atoms importing handles [JobQueue] from "./job-queue.ts" where
   -- The job runner's counter atom: naturals truncate at zero on the Lean side,
   -- and the flow never calls it at zero.
   | dec (n : Nat) : Nat ⟪ "n - 1" ⟫ := n - 1
-  -- The `Deferreds` programs' atoms.
-  | flagToNat (flag : Bool) : Nat ⟪ "flag ? 1 : 0" ⟫ := (if flag then 1 else 0)
-  | pollValue (cell : Option (Except Nat Nat)) : Nat
-      ⟪ "Option.isSome(cell) && Result.isSuccess(cell.value) ? cell.value.success : 0" ⟫ :=
-      (match cell with | Option.some (.ok value) => value | _ => 0)
-  | addNat (left : Nat) (right : Nat) : Nat ⟪ "left + right" ⟫ := left + right
   -- The job runner's ticket projection. `Jobs.next` answers a job ticket --
   -- the connection it came from and the job id -- because a flow cannot build
   -- a pair from two block slots (`E4-FLOW-CE-028`); this takes it apart again
@@ -235,384 +233,15 @@ def programs : List Entry :=
   , { name := "fallible", rows := FCell.rows, script := fallible.script, log := fgoldenLog (fallible 5) 41 }
   , { name := "probe", rows := Tri.rows, script := probe.script, log := tgoldenLog (probe 3) 41 } ]
 
-/-! ## `Scopes`: a traced family over the reified rc.112 `Scope`
+/-! ## The families that moved into the library
 
-The first family whose operations take and return an opaque host handle. The
-handle is `Handle "Scope.Closeable"` (`Effect4/Meta/Derive.lean`): the Lean
-carrier is an index, the wire value is that index, and the target prints
-rc.112's own opaque `Scope.Closeable`. The Lean face names scopes in creation
-order and the host tracer indexes the objects it is handed in first-seen order,
-which is the same order because a handle only ever leaves the host as the
-answer of the `make` that produced it.
-
-`close` answers the *keys the close ran, in order*. That is what makes LIFO,
-removal and close idempotence observable at the service level without a
-finalizer having to be an operation of its own: the model's answer is
-`Scope.closeOrder` and the host's answer is the order rc.112 actually ran them
-in. `addFinalizer` answers whether it registered (`true`) or ran the finalizer
-immediately because the scope had closed (`false`), which is rc.112
-`scopeAddFinalizerExit`'s two arms and the model's `Scope.addExit`.
-
-Refusals, recorded here and in `docs/TRACE-DAG.md`:
-
-- The finalizer strategy is not an operation. `make` is nullary and takes
-  rc.112's `"sequential"` default; the parallel strategy needs a fiber machine
-  (`Effect4Test/Audit/RuntimeCoverage.lean` `scope.close-parallel`), and this
-  lane cannot observe it.
-- `remove` has no rc.112 entry point. `effect`'s package exports map
-  `"./internal/*"` to `null`, so `scopeRemoveFinalizerUnsafe` is unreachable;
-  the host service performs the same two-arm removal over the *public* mutable
-  `Scope.state` (`Scope.ts` `State.Open`), locating the entry by the identity
-  of the finalizer it registered. The `remove` golden therefore pins the public
-  state shape and the model, not an rc.112 call. -/
-
-effect_signature Scopes where
-  | make : Handle "Scope.Closeable" ⟪ "open a new scope", "acquire a lifetime" ⟫
-  | addFinalizer (scope : Handle "Scope.Closeable") (key : Nat) : Bool
-      ⟪ "register a finalizer under a key", "true when it was registered, false when the scope had closed and it ran now" ⟫
-  | remove (scope : Handle "Scope.Closeable") (key : Nat) : Unit
-      ⟪ "unregister the finalizer under a key" ⟫
-  | close (scope : Handle "Scope.Closeable") : List Nat
-      ⟪ "close the scope", "the keys the close ran, in order" ⟫
-
-/-- The scope the model handler keeps: keys and finalizers are both `Nat`, so a
-finalizer *is* its key and `Scope.closeOrder` is exactly the answer `close`
-gives. `φ` is nominal by DB-02; what a finalizer does is the `run` argument. -/
-abbrev ScopeCarrier := Scope Nat Nat Unit Unit Unit Unit Unit
-
-/-- Every live scope, in creation order; a `Handle` indexes into it. -/
-abbrev ScopeStore := List ScopeCarrier
-
-/-- The nominal finalizer's effect. Nothing in this family observes a
-finalizer's own exit, so it is the void exit; a fallible release is the packet
-that settles the cause-merge divergence, and is refused here. -/
-def scopeRun : Nat → Exit Unit Unit Unit Unit Unit → Exit Unit Unit Unit Unit Unit :=
-  fun _ _ => Exit.void
-
-/-- The Lean handler: a thin wrapper over `Effect4/Runtime/Scope.lean`.
-`make` is `Scope.make`, `addFinalizer` is `Scope.addExit`, `remove` is
-`Scope.removeUnsafe`, `close` is `Scope.close` with `Scope.closeOrder` as its
-answer. It adds no scope semantics of its own. -/
-def scopesLive : Scopes.Service (StateT ScopeStore Id) := fun name =>
-  match name with
-  | .make => fun _ => do
-      let store ← get
-      set (store ++ [Scope.make FinalizerStrategy.sequential])
-      pure ⟨store.length⟩
-  | .addFinalizer => fun (handle, key) => do
-      let store ← get
-      match store[handle.index]? with
-      | none => pure false
-      | some scope =>
-          set (store.set handle.index (Scope.addExit scopeRun scope key key).1)
-          pure (!scope.isClosed)
-  | .remove => fun (handle, key) => do
-      let store ← get
-      match store[handle.index]? with
-      | none => pure ()
-      | some scope => set (store.set handle.index (scope.removeUnsafe key))
-  | .close => fun handle => do
-      let store ← get
-      match store[handle.index]? with
-      | none => pure []
-      | some scope =>
-          set (store.set handle.index (Scope.close scopeRun scope Exit.void).1)
-          pure scope.closeOrder
-
--- Three finalizers, closed once: the keys come back last registered first.
-effect_program scopeLifo (n : Nat) over Scopes : List Nat :=
-  let s ← Scopes.make()
-  let _ ← Scopes.addFinalizer(s, 1)
-  let _ ← Scopes.addFinalizer(s, 2)
-  let _ ← Scopes.addFinalizer(s, 3)
-  let r ← Scopes.close(s)
-  return r
-
--- Registering on a closed scope runs the finalizer now and answers `false`.
-effect_program scopeAddAfterClosed (n : Nat) over Scopes : Bool :=
-  let s ← Scopes.make()
-  let _ ← Scopes.addFinalizer(s, 1)
-  let _ ← Scopes.close(s)
-  let a ← Scopes.addFinalizer(s, 2)
-  return a
-
--- A removed key does not run.
-effect_program scopeRemove (n : Nat) over Scopes : List Nat :=
-  let s ← Scopes.make()
-  let _ ← Scopes.addFinalizer(s, 1)
-  let _ ← Scopes.addFinalizer(s, 2)
-  let _ ← Scopes.remove(s, 1)
-  let r ← Scopes.close(s)
-  return r
-
--- The second close runs nothing and answers the empty order.
-effect_program scopeCloseTwice (n : Nat) over Scopes : List Nat :=
-  let s ← Scopes.make()
-  let _ ← Scopes.addFinalizer(s, 1)
-  let _ ← Scopes.addFinalizer(s, 2)
-  let _ ← Scopes.close(s)
-  let r ← Scopes.close(s)
-  return r
-
-example : ((interpret scopesLive.toHandler (scopeLifo 0)).run [] : List Nat × ScopeStore).1
-    = [3, 2, 1] := rfl
-example : ((interpret scopesLive.toHandler (scopeAddAfterClosed 0)).run [] : Bool × ScopeStore).1
-    = false := rfl
-example : ((interpret scopesLive.toHandler (scopeRemove 0)).run [] : List Nat × ScopeStore).1
-    = [2] := rfl
-example : ((interpret scopesLive.toHandler (scopeCloseTwice 0)).run [] : List Nat × ScopeStore).1
-    = [] := rfl
-
-/-- The traced run of a scope program, with its outcome appended. -/
-def scopeGoldenLog {α : Type} [Effects.Trace.ToVal α] (program : Program Scopes.Sig α) :
-    Effect4.Trace.Log :=
-  let result : (α × Effect4.Trace.Log) × ScopeStore :=
-    ((interpret (Scopes.traced scopesLive).toHandler program).run []).run []
-  result.1.2 ++ [.done (.success (Effects.Trace.ToVal.toVal result.1.1))]
-
-/-- One scope program: its script and its golden log. -/
-structure ScopeEntry where
-  name : String
-  script : Script
-  log : Effect4.Trace.Log
-
-def scopePrograms : List ScopeEntry :=
-  [ { name := "lifo", script := scopeLifo.script, log := scopeGoldenLog (scopeLifo 0) }
-  , { name := "addAfterClosed", script := scopeAddAfterClosed.script,
-      log := scopeGoldenLog (scopeAddAfterClosed 0) }
-  , { name := "remove", script := scopeRemove.script, log := scopeGoldenLog (scopeRemove 0) }
-  , { name := "closeTwice", script := scopeCloseTwice.script,
-      log := scopeGoldenLog (scopeCloseTwice 0) } ]
-
-/-! ## The `Deferreds` family: rc.112's one-shot cells as a traced family
-
-`Deferred<A, E>` (`Deferred.ts`) starts empty, is completed at most once, and
-lets any number of fibers wait for that completion. Census rows `deferred.*`.
-
-The handle is `Handle "Deferred.Deferred<number, number>"`, the same device the
-`Scopes` and `Fibers` families use: the Lean carrier is an index, the wire
-value is that index, and the target prints rc.112's own type. The Lean face
-numbers cells in `make` order and `deferred-tail.ts` brands the objects so the
-tracer indexes them in first-seen order; the two agree because a cell only ever
-leaves the host as the answer of the `make` that produced it.
-
-Two decisions are recorded here.
-
-*`poll` answers `Option (Except Nat Nat)`, one operation, not two.* That is
-exactly the type of a cell of the table below — pending, completed with a
-value, completed with a failure — so the answer of `poll` and the state of the
-projection are the same first-order datum, and the wire form
-(`{"none":true}` / `{"some":[true, v]}` / `{"some":[false, e]}`) is read off
-the shared `ToVal` instances with nothing to document. It is a Stratum V
-spelling of depth two, `Option.Option<Result.Result<number, number>>`, and the
-first one to nest one namespace inside another; `Option` and `Result` reach the
-generated module as type-only imports, beside `Deferred`. The alternatives were
-refused: a pair `(Bool, Nat)` cannot separate a pending cell from a cell
-completed with the failure `0` without an encoding the reader must carry, and a
-`pollDone`/`pollValue` split would make `pollValue` on a pending cell a
-frontier the host does not have — rc.112's `poll` answers `None` there and
-never suspends.
-
-*A pending await is a frontier, not a failure.* `awaitValue`/`awaitError` are
-the aborting reading (`!! Nat`): on the host `Deferred.await` answers the value
-and fails with the error, and `Effect.flip` of it answers the error and fails
-with the value. Both are total on a *completed* cell only. On a pending cell
-rc.112 suspends the fiber until another fiber completes it; this projection has
-no other fiber, so the run stops there and the golden records a `frontier` — no
-`answer`, no `failed`, no outcome. Register rows `E4-SEM-CE-014` and
-`E4-SEM-CE-015`.
--/
-
-/-- The handle a `Deferreds` operation takes and returns. -/
-abbrev DeferredHandle := Handle "Deferred.Deferred<number, number>"
-
-effect_signature Deferreds where
-  | make : Handle "Deferred.Deferred<number, number>"
-      ⟪ "make a one-shot cell", "the cell's handle" ⟫
-  | succeed (cell : Handle "Deferred.Deferred<number, number>") (value : Nat) : Bool
-      ⟪ "complete it with a value", "false if it was already completed" ⟫
-  | fail (cell : Handle "Deferred.Deferred<number, number>") (error : Nat) : Bool
-      ⟪ "complete it with a failure", "false if it was already completed" ⟫
-  | isDone (cell : Handle "Deferred.Deferred<number, number>") : Bool
-      ⟪ "has it completed" ⟫
-  | poll (cell : Handle "Deferred.Deferred<number, number>") : Option (Except Nat Nat)
-      ⟪ "read it without waiting", "none while pending" ⟫
-  | awaitValue (cell : Handle "Deferred.Deferred<number, number>") : Nat !! Nat
-      ⟪ "wait for its value", "its failure, resumed here" ⟫
-  | awaitError (cell : Handle "Deferred.Deferred<number, number>") : Nat !! Nat
-      ⟪ "wait for its failure", "its value, resumed here" ⟫
-
-/-- The table the sequential projection runs over: one cell per handle, in the
-order the handles were minted. `none` is pending, `some (.ok v)` completed with
-a value, `some (.error e)` completed with a failure. It is the answer type of
-`poll`. -/
-abbrev DeferredTable := List (Option (Except Nat Nat))
-
-/-- Why a run of the sequential projection stopped before its `return`.
-`failed` is the declared error channel of `awaitValue`/`awaitError`; `pending`
-is a frontier, not a failure: the projection cannot wait. -/
-inductive Stall where
-  | failed (payload : Nat)
-  | pending (cell : DeferredHandle)
-deriving DecidableEq, Repr
-
-/-- The cell a handle names; `none` for a handle no `make` minted, which this
-projection reads as pending. -/
-def deferredCell (table : DeferredTable) (cell : DeferredHandle) : Option (Except Nat Nat) :=
-  (table[cell.index]?).getD none
-
-/-- One operation of the sequential projection: its answer or its stall, and
-the table afterwards. Completion is one-shot: the second `succeed` or `fail`
-on a cell answers `false` and leaves the table alone. -/
-def deferredStep : (name : Deferreds.Name) → Deferreds.Param name → DeferredTable →
-    Except Stall (Deferreds.Answer name) × DeferredTable
-  | .make, _, table => (.ok ⟨table.length⟩, table ++ [none])
-  | .succeed, (cell, value), table =>
-      match table[cell.index]? with
-      | some none => (.ok true, table.set cell.index (some (.ok value)))
-      | _ => (.ok false, table)
-  | .fail, (cell, error), table =>
-      match table[cell.index]? with
-      | some none => (.ok true, table.set cell.index (some (.error error)))
-      | _ => (.ok false, table)
-  | .isDone, cell, table => (.ok (deferredCell table cell).isSome, table)
-  | .poll, cell, table => (.ok (deferredCell table cell), table)
-  | .awaitValue, cell, table =>
-      match deferredCell table cell with
-      | some (.ok value) => (.ok value, table)
-      | some (.error error) => (.error (.failed error), table)
-      | none => (.error (.pending cell), table)
-  | .awaitError, cell, table =>
-      match deferredCell table cell with
-      | some (.error error) => (.ok error, table)
-      | some (.ok value) => (.error (.failed value), table)
-      | none => (.error (.pending cell), table)
-
-/-- The projection's monad. The table and the log are *below* the error
-channel, so both survive a stall; `Deferreds.tracedExcept` would not do, since
-it emits a `failed` row for every abort and a pending await has no failure to
-report. -/
-abbrev DeferredM := ExceptT Stall (StateT (DeferredTable × Effect4.Trace.Log) Id)
-
-/-- The traced sequential projection. An answered operation writes `op` then
-`answer`; an aborting one writes `op` then `failed`; a pending
-`awaitValue`/`awaitError` writes `op` and nothing else, because on the host the
-method never returns. -/
-def deferredsTraced : Deferreds.Service DeferredM := fun name param => ExceptT.mk do
-  let (table, log) ← get
-  let (result, table') := deferredStep name param table
-  set (table',
-    log ++ [Effects.Trace.Event.op (Deferreds.Name.spelling name) (Deferreds.encodeParam name param)] ++
-      (match result with
-       | .ok answer =>
-           [Effects.Trace.Event.answer (Deferreds.Name.spelling name) (Deferreds.encodeAnswer name answer)]
-       | .error (.failed payload) =>
-           [Effects.Trace.Event.failed (Deferreds.Name.spelling name) (.nat payload)]
-       | .error (.pending _) => []))
-  pure result
-
-/-- The traced run of one deferred program from the empty table, with the
-outcome appended. A pending await ends the log with `frontier` and no outcome:
-a frontier is not a failure (`E4-FLOW-CE-017`, and separation 5 of
-`docs/TRACE-DAG.md`). -/
-def deferredGoldenLog (program : Program Deferreds.Sig Nat) : Effect4.Trace.Log :=
-  let result : Except Stall Nat × (DeferredTable × Effect4.Trace.Log) :=
-    (interpret deferredsTraced.toHandler program).run.run ([], [])
-  result.2.2 ++
-    (match result.1 with
-     | .ok value => [.done (.success (.nat value))]
-     | .error (.failed payload) => [.done (.failure (.nat payload))]
-     | .error (.pending _) => [.frontier])
-
-/-! ### Pure atoms of the deferred programs -/
-
-/- `flagToNat`, `pollValue` and `addNat` are declared in `effect_atoms Atoms`
-above, so `atoms.ts` carries their host bodies from the same declaration. -/
-
-/-! ### The deferred programs -/
-
--- make, complete with a value, wait for it.
-effect_program deferredSucceedAwait (n : Nat) over Deferreds : Nat :=
-  let d ← Deferreds.make()
-  let _ ← Deferreds.succeed(d, n)
-  let v ← Deferreds.awaitValue(d)
-  return v
-
--- make, complete with a failure, wait for it on the error side.
-effect_program deferredFailAwait (n : Nat) over Deferreds : Nat :=
-  let d ← Deferreds.make()
-  let _ ← Deferreds.fail(d, n)
-  let e ← Deferreds.awaitError(d)
-  return e
-
--- Completion is one-shot: the second `succeed` answers `false` and the cell
--- keeps the first value.
-effect_program deferredDoubleComplete (n : Nat) over Deferreds : Nat :=
-  let d ← Deferreds.make()
-  let _ ← Deferreds.succeed(d, n)
-  let again ← Deferreds.succeed(d, 9)
-  return flagToNat again
-
--- `poll` before and after the completion: `none`, then `some (.ok n)`.
-effect_program deferredPollPending (n : Nat) over Deferreds : Nat :=
-  let d ← Deferreds.make()
-  let _ ← Deferreds.poll(d)
-  let _ ← Deferreds.succeed(d, n)
-  let after ← Deferreds.poll(d)
-  return pollValue after
-
--- Two cells at once: handles are distinct and each completion is its own.
-effect_program deferredTwoHandles (n : Nat) over Deferreds : Nat :=
-  let a ← Deferreds.make()
-  let b ← Deferreds.make()
-  let _ ← Deferreds.succeed(a, n)
-  let _ ← Deferreds.fail(b, 3)
-  let x ← Deferreds.awaitValue(a)
-  let y ← Deferreds.awaitError(b)
-  return addNat x y
-
--- The frontier: nothing completes the cell, so the await never answers. On
--- rc.112 the fiber suspends; the sequential projection stops.
-effect_program deferredPendingAwait (n : Nat) over Deferreds : Nat :=
-  let d ← Deferreds.make()
-  let _ ← Deferreds.isDone(d)
-  let v ← Deferreds.awaitValue(d)
-  return v
-
-/-- One deferred program: its script, its argument, and its golden log.
-
-Owed: the packet asked for a program in which a forked child completes a cell
-the parent awaits. `effect_program` binds exactly one family per program
-(`… over <family>`), and `Fibers` and `Deferreds` are two families, so the
-program cannot be spelled even now that both exist; `Fibers` has no former for
-a child that performs operations of its own (its bodies are numbers), so a
-`Fibers`-only variant cannot express it either. `deferredPendingAwait` stands
-in for it and records the half the sequential projection can see — the parent's
-await with nothing to complete it. The other half (the child's `succeed`
-resuming that await) is register row `E4-SEM-CE-015`. -/
-structure DeferredEntry where
-  name : String
-  script : Script
-  argument : Nat
-  log : Effect4.Trace.Log
-
-def deferredEntries : List DeferredEntry :=
-  [ { name := "deferredSucceedAwait", script := deferredSucceedAwait.script, argument := 7,
-      log := deferredGoldenLog (deferredSucceedAwait 7) }
-  , { name := "deferredFailAwait", script := deferredFailAwait.script, argument := 5,
-      log := deferredGoldenLog (deferredFailAwait 5) }
-  , { name := "deferredDoubleComplete", script := deferredDoubleComplete.script, argument := 4,
-      log := deferredGoldenLog (deferredDoubleComplete 4) }
-  , { name := "deferredPollPending", script := deferredPollPending.script, argument := 6,
-      log := deferredGoldenLog (deferredPollPending 6) }
-  , { name := "deferredTwoHandles", script := deferredTwoHandles.script, argument := 8,
-      log := deferredGoldenLog (deferredTwoHandles 8) }
-  , { name := "deferredPendingAwait", script := deferredPendingAwait.script, argument := 1,
-      log := deferredGoldenLog (deferredPendingAwait 1) } ]
-
-/-- The pure atoms the deferred scripts call. -/
-def deferredAtomNames : List String := ["flagToNat", "pollValue", "addNat"]
-
+`Scopes` (`Effect4/Runtime/ScopeFamily.lean`) and `Deferreds`
+(`Effect4/Stateful/DeferredFamily.lean`) used to be declared here. A script is
+not a library, so nothing under `Effect4/` could state a theorem about either,
+and `Deferreds` was written out a second time in
+`Effect4Test/Flow/DeferredsContract.lean` where the two copies could drift.
+Both are declared once now, in the library, and this module imports them
+(lowering lane L3, plan section 5 decision 3). -/
 /-! ## The Flow face: the runner (internal oracle) and the dispatch lowering -/
 
 /-- The atoms the scripts call, with their TypeScript types: the `effect_atoms`
@@ -1519,6 +1148,17 @@ def deferredGoldenText (name : String) : IO String :=
           ((entry.script.ruleSet Deferreds.rows).map Rule.id) entry.log)
   | none => throw (IO.userError s!"unknown deferred program {name}")
 
+/-- The `Contexts` family (lowering lane L3). It has no host tail yet, so its
+goldens are not written by `writeAll`; this arm exists so the host lane can
+generate them the moment `context-tail.ts` lands. -/
+def contextGoldenText (name : String) : IO String :=
+  match contextPrograms.find? (·.name == name) with
+  | some entry =>
+      admitted name entry.log
+        (Effect4.Target.TypeScript.Trace.golden ("context." ++ name) []
+          ((entry.script.ruleSet Contexts.rows).map Rule.id) entry.log)
+  | none => throw (IO.userError s!"unknown context program {name}")
+
 def refGoldenText (name : String) : IO String :=
   match Effect4.RefFamily.refPrograms.find? (·.name == name) with
   | some entry =>
@@ -1595,7 +1235,18 @@ def main (args : List String) : IO Unit := do
       match modules? families [.named ["succ", "orZero", "firstOr"] "./atoms.ts"] with
       | some source => IO.print source
       | none => throw (IO.userError "lowering refused a script")
-  | ["atoms"] => IO.print Atoms.source
+  | ["atoms"] =>
+      -- One `atoms.ts` for every family, concatenated from the `effect_atoms`
+      -- rows each family declares beside its own programs: the Lean body and
+      -- the host body of an atom come from one declaration wherever the atom
+      -- lives (`E4-TARGET-CE-025`).
+      IO.print (atomsModule
+        (Atoms.rows ++ Effect4.DeferredFamily.DeferredAtoms.rows ++
+          Effect4.ScopeFamily.ScopeAtoms.rows ++ Effect4.LayerFamily.LayerAtoms.rows ++
+          Effect4.RefFamily.RefFns.rows)
+        [TypeScript.Import.types ["JobQueue"] "./job-queue.ts",
+         TypeScript.Import.types ["RefFn"] "./ref-fns.ts",
+         TypeScript.Import.types ["Layer", "Ref"] "effect"])
   | ["masks"] => IO.print Effect4.Target.TypeScript.Trace.maskTable
   | ["golden", name] => IO.print (← goldenText name)
   | ["all", dir] => writeAll dir ""
@@ -1650,10 +1301,13 @@ def main (args : List String) : IO Unit := do
       IO.println (String.intercalate "\n" (interruptEntries.map (·.program.name)))
   | ["interrupt-golden", name] => IO.print (← interruptGoldenText name)
   | ["layer-fixture"] =>
-      -- `Ref` and `Scope` are imported as types only: the generated module
-      -- names `Ref.Ref<number>` and `Scope.Closeable` in the service shape and
-      -- never calls into either.
-      match modules? [(Layers.rows, layerPrograms.map (·.script))] [.types ["Ref", "Scope"] "effect"] with
+      -- `Layer`, `Ref`, `Scope` and `Context` are imported as types only: the
+      -- generated module names `Layer.Layer<number>`, `Layer.MemoMap`,
+      -- `Ref.Ref<number>`, `Scope.Closeable` and `Context.Context<never>` in
+      -- the service shape and never calls into any of them.
+      match modules? [(Layers.rows, layerPrograms.map (·.script))]
+          [.types ["Layer", "Ref", "Scope"] "effect",
+           .named layerAtomNames "./atoms.ts"] with
       | some source => IO.print source
       | none => throw (IO.userError "lowering refused a layer script")
   | ["layer-programs"] => IO.println (String.intercalate "\n" (layerPrograms.map (·.name)))
@@ -1664,7 +1318,9 @@ def main (args : List String) : IO Unit := do
   | ["scope-fixture"] =>
       -- `Scope` is imported as a type only: the generated module names
       -- `Scope.Closeable` in the service shape and never calls into it.
-      match modules? [(Scopes.rows, scopePrograms.map (·.script))] [.types ["Scope"] "effect"] with
+      -- `Result` is the `closeExit` argument's spelling.
+      match modules? [(Scopes.rows, scopePrograms.map (·.script))]
+          [.types ["Scope"] "effect", .named scopeAtomNames "./atoms.ts"] with
       | some source => IO.print source
       | none => throw (IO.userError "lowering refused a scope script")
   | ["scope-programs"] => IO.println (String.intercalate "\n" (scopePrograms.map (·.name)))
@@ -1800,14 +1456,30 @@ def main (args : List String) : IO Unit := do
       -- `Ref.Ref<number>` in the service shape and never calls into it.
       -- `Effect4.RefFamily` is not opened: it carries its own `succ` atom, and
       -- this module already has one for the `Cell` scripts.
+      -- `RefFn` is the named-function table `ref-fns.ts` exports; the atoms
+      -- that mint one live in `Effect4.RefFamily.RefFns` and reach `atoms.ts`
+      -- through the `atoms` arm above.
       match modules? Effect4.RefFamily.refFamilies
-          [.types ["Ref"] "effect", .named ["succ"] "./atoms.ts"] with
+          [.types ["Ref"] "effect", .types ["RefFn"] "./ref-fns.ts",
+           .named (["succ"] ++ Effect4.RefFamily.RefFns.rows.map (·.name)) "./atoms.ts"] with
       | some source => IO.print source
       | none => throw (IO.userError "lowering refused a ref script")
+  | ["context-fixture"] =>
+      -- `Context`, `Layer`, `Scope` and `Option` are imported as types only.
+      match modules? [(Contexts.rows, contextPrograms.map (·.script))]
+          [.types ["Layer", "Scope"] "effect"] with
+      | some source => IO.print source
+      | none => throw (IO.userError "lowering refused a context script")
+  | ["context-programs"] =>
+      IO.println (String.intercalate "\n" (contextPrograms.map (·.name)))
+  | ["context-golden", name] => IO.print (← contextGoldenText name)
+  | ["context-types"] =>
+      for entry in contextPrograms do
+        IO.println (entry.name ++ "\t" ++ Script.declarationLine Contexts.rows entry.script)
   | ["ref-programs"] =>
       IO.println (String.intercalate "\n" (Effect4.RefFamily.refPrograms.map (·.name)))
   | ["ref-golden", name] => IO.print (← refGoldenText name)
   | ["ref-types"] =>
       for entry in Effect4.RefFamily.refPrograms do
         IO.println (entry.name ++ "\t" ++ Script.declarationLine entry.rows entry.script)
-  | _ => throw (IO.userError "usage: Generate.lean all <dir> [<provenance-file>] | fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle | fiber-fixture | fiber-programs | fiber-golden <program> | fiber-types | job-fixture | job-programs | job-golden <program> <golden> | job-types | job-queues | deferred-fixture | deferred-programs | deferred-golden <program> | deferred-types | ref-fixture | ref-programs | ref-golden <program> | ref-types | atoms | layer-fixture | layer-programs | layer-golden <program> | layer-types")
+  | _ => throw (IO.userError "usage: Generate.lean all <dir> [<provenance-file>] | fixture | masks | golden <program> | programs | types | flow-programs | flow-golden <program> <tape> | oracle | flow-fixture | structured-fixture | flow-types | scope-fixture | scope-programs | scope-golden <program> | scope-types | region-frontier | admission-probe | frame-trace | interrupt-programs | interrupt-golden <program> | region-oracle | fiber-fixture | fiber-programs | fiber-golden <program> | fiber-types | job-fixture | job-programs | job-golden <program> <golden> | job-types | job-queues | deferred-fixture | deferred-programs | deferred-golden <program> | deferred-types | ref-fixture | ref-programs | ref-golden <program> | ref-types | context-fixture | context-programs | context-golden <program> | context-types | atoms | layer-fixture | layer-programs | layer-golden <program> | layer-types")

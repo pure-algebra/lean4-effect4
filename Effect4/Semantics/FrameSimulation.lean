@@ -238,6 +238,9 @@ def tapeInterp (root : Program (Flow.Sig a) Val) (tape : Tape) : Table where
   loopStep := fun _ value => value
   loopDone := fun _ => Val.unit
   notImplemented := ()
+  -- No `asyncFinalizer` frame is ever emitted by `compile` (the fragment is closed, below),
+  -- so the cancel arm is never consulted; the honest filler re-fails with the passing cause.
+  cancelThenFail := fun _ cause => Effect4.Prim.failure cause
 
 end
 

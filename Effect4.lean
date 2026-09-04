@@ -39,6 +39,7 @@ import Effect4.Context.Key
 import Effect4.Context.Service
 import Effect4.Context.Environment
 import Effect4.Context.Requirement
+import Effect4.Context.ContextFamily
 import Effect4.Layer.Description
 import Effect4.Layer.Build
 import Effect4.Layer.Provision
@@ -46,6 +47,7 @@ import Effect4.Layer.Memo
 import Effect4.Layer.Laws
 import Effect4.Layer.LayerFamily
 import Effect4.Runtime.Scope
+import Effect4.Runtime.ScopeFamily
 import Effect4.Runtime.ScopeMachine
 import Effect4.Runtime.ScopeRestoration
 import Effect4.Runtime.Resource
@@ -65,6 +67,7 @@ import Effect4.Concurrency.FiberFamily
 import Effect4.Stateful.Ref
 import Effect4.Stateful.RefFamily
 import Effect4.Stateful.Deferred
+import Effect4.Stateful.DeferredFamily
 import Effect4.Stateful.Queue
 import Effect4.Stateful.PubSub
 import Effect4.Stateful.SubscriptionRef

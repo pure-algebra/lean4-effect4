@@ -63,13 +63,13 @@ alphabet is closed and carries no payload. -/
 /-! F1: the primitive syntax (census: op.Success, op.Failure, op.Sync,
 op.Suspend, op.WithFiber, op.YieldableError, op.Iterator, op.OnSuccess,
 op.OnFailure, op.OnSuccessAndFailure, op.Exit, op.OnExit, op.SetInterruptible,
-op.While).
+op.While, op.Yield, op.Async, op.AsyncFinalizer).
 
 One constructor per pinned op. `ν` is the externally admitted continuation-name
 alphabet and `σ` the thunk-name alphabet: a continuation slot is a nominal name,
-never a stored Lean closure (DB-02). Nested bodies are first-order subterms, and
-`Yield`, `Async` and `AsyncFinalizer` are deliberately absent — they belong to
-the later run-loop and parking packet. -/
+never a stored Lean closure (DB-02). Nested bodies are first-order subterms.
+`Yield`, `Async` and `AsyncFinalizer` were reserved for the run-loop and parking
+packet and are here now, as first-order names. -/
 
 #check (@Effect4.Prim :
   Type u → Type u → Type v → Type u → Type u → Type u → Type u → Type (max u v))
@@ -122,6 +122,16 @@ the later run-loop and parking packet. -/
 #check (@Effect4.Prim.whileLoop :
   {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → ν → β → Effect4.Prim ν σ β ε δ ι α)
 
+#check (@Effect4.Prim.yieldNowWith :
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Nat → Effect4.Prim ν σ β ε δ ι α)
+
+#check (@Effect4.Prim.async :
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → ν → Bool → Option ν → Effect4.Prim ν σ β
+  ε δ ι α)
+
+#check (@Effect4.Prim.asyncFinalizer :
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → ν → Effect4.Prim ν σ β ε δ ι α)
+
 -- census: rule.frames-are-primitives
 #check (@Effect4.Prim.cases_receipt :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Prim ν σ β ε δ ι α), (∃
@@ -133,8 +143,10 @@ the later run-loop and parking packet. -/
   Effect4.Prim.onFailure body onCause) ∨ (∃ body onValue onCause, self =
   Effect4.Prim.onSuccessAndFailure body onValue onCause) ∨ (∃ body, self =
   Effect4.Prim.exitFrame body) ∨ (∃ body finalizer flag, self = Effect4.Prim.onExit body
-  finalizer flag) ∨ (∃ flag, self = Effect4.Prim.setInterruptible flag) ∨ ∃ loop cursor, self =
-  Effect4.Prim.whileLoop loop cursor)
+  finalizer flag) ∨ (∃ flag, self = Effect4.Prim.setInterruptible flag) ∨ (∃ loop cursor, self =
+  Effect4.Prim.whileLoop loop cursor) ∨ (∃ priority, self = Effect4.Prim.yieldNowWith priority)
+  ∨ (∃ register withSignal cancel, self = Effect4.Prim.async register withSignal cancel) ∨ ∃
+  onInterrupt, self = Effect4.Prim.asyncFinalizer onInterrupt)
 
 /-! F1b: the generator outcome (census: op.Iterator, frame-arm.Iterator).
 
@@ -172,7 +184,8 @@ keeps first-order identity and decidable equality. -/
   → Effect4.Cause ε δ ι α → Effect4.Prim ν σ β ε δ ι α) → (σ → β) → (σ → Effect4.Prim ν σ β ε δ
   ι α) → (ν → Effect4.Exit β ε δ ι α → Effect4.Exit Unit ε δ ι α) → (Effect4.Exit β ε δ ι α → β)
   → (ν → β → List β × Effect4.IterStep ν σ β ε δ ι α) → (ν → β → Bool) → (ν → β → Effect4.Prim ν
-  σ β ε δ ι α) → (ν → β → β) → (ν → β) → δ → Effect4.PrimInterp ν σ β ε δ ι α)
+  σ β ε δ ι α) → (ν → β → β) → (ν → β) → δ → (ν → Effect4.Cause ε δ ι α → Effect4.Prim ν σ β ε δ
+  ι α) → Effect4.PrimInterp ν σ β ε δ ι α)
 
 #check (@Effect4.PrimInterp.contA :
   {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.PrimInterp ν σ β ε δ ι α → ν → β
@@ -218,6 +231,10 @@ keeps first-order identity and decidable equality. -/
 
 #check (@Effect4.PrimInterp.notImplemented :
   {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.PrimInterp ν σ β ε δ ι α → δ)
+
+#check (@Effect4.PrimInterp.cancelThenFail :
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.PrimInterp ν σ β ε δ ι α → ν →
+  Effect4.Cause ε δ ι α → Effect4.Prim ν σ β ε δ ι α)
 
 /-! F2: the fiber state this packet models (census: rule.frames-are-primitives).
 
@@ -502,14 +519,26 @@ none and are never pushed. -/
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (generator : ν) (cursor : β),
   Effect4.Prim.arms (Effect4.Prim.iterator generator cursor) = [Effect4.Arm.contA])
 
+-- census: frame-arm.AsyncFinalizer
+#check (@Effect4.Prim.arms_asyncFinalizer :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (onInterrupt : ν), Effect4.Prim.arms
+  (Effect4.Prim.asyncFinalizer onInterrupt) = [Effect4.Arm.contE, Effect4.Arm.contAll])
+
+-- census: frame-arm.AsyncFinalizer
+#check (@Effect4.Prim.hasArm_asyncFinalizer_contA_false :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (onInterrupt : ν), Effect4.Prim.hasArm
+  (Effect4.Prim.asyncFinalizer onInterrupt) Effect4.Arm.contA = Bool.false)
+
 -- census: rule.frames-are-primitives
 #check (@Effect4.Prim.non_frames_have_no_arms :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (value : β) (cause : Effect4.Cause ε δ ι α)
-  (thunk : σ) (error : ε), Effect4.Prim.arms (Effect4.Prim.success value) = [] ∧
+  (thunk : σ) (error : ε) (priority : Nat) (register : ν) (withSignal : Bool) (cancel : Option
+  ν), Effect4.Prim.arms (Effect4.Prim.success value) = [] ∧
   Effect4.Prim.arms (Effect4.Prim.failure cause) = [] ∧ Effect4.Prim.arms (Effect4.Prim.sync
   thunk) = [] ∧ Effect4.Prim.arms (Effect4.Prim.suspend thunk) = [] ∧ Effect4.Prim.arms
   (Effect4.Prim.withFiber thunk) = [] ∧ Effect4.Prim.arms (Effect4.Prim.yieldableError error) =
-  [])
+  [] ∧ Effect4.Prim.arms (Effect4.Prim.yieldNowWith priority) = [] ∧ Effect4.Prim.arms
+  (Effect4.Prim.async register withSignal cancel) = [])
 
 /-! F3b: an Exit is itself a primitive that can be stepped
 (census: exit.success-failure). -/
@@ -630,6 +659,26 @@ checkpoint.set-interruptible-contall, rule.frames-are-primitives). -/
   (Effect4.Prim.setInterruptible flag) fiber = (Effect4.FrameFiber.mk fiber.current fiber.stack
   flag fiber.interruptedCause fiber.deferredInterrupt, Option.none))
 
+-- census: op.AsyncFinalizer
+#check (@Effect4.Prim.ensure_asyncFinalizer_masks :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (onInterrupt : ν) (fiber :
+  Effect4.FrameFiber ν σ β ε δ ι α), fiber.interruptible = Bool.true → Effect4.Prim.ensure
+  (Effect4.Prim.asyncFinalizer onInterrupt) fiber = (Effect4.FrameFiber.mk fiber.current
+  (Effect4.Prim.setInterruptible Bool.true :: fiber.stack) Bool.false fiber.interruptedCause
+  fiber.deferredInterrupt, Option.none))
+
+-- census: op.AsyncFinalizer
+#check (@Effect4.Prim.ensure_asyncFinalizer_already_masked :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (onInterrupt : ν) (fiber :
+  Effect4.FrameFiber ν σ β ε δ ι α), fiber.interruptible = Bool.false → Effect4.Prim.ensure
+  (Effect4.Prim.asyncFinalizer onInterrupt) fiber = (fiber, Option.none))
+
+-- census: op.AsyncFinalizer
+#check (@Effect4.Prim.ensure_asyncFinalizer_no_replacement :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (onInterrupt : ν) (fiber :
+  Effect4.FrameFiber ν σ β ε δ ι α), (Effect4.Prim.ensure (Effect4.Prim.asyncFinalizer
+  onInterrupt) fiber).snd = Option.none)
+
 -- census: rule.frames-are-primitives
 #check (@Effect4.Prim.answerOf_replacement :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (frame next : Effect4.Prim ν σ β ε δ ι α)
@@ -743,6 +792,40 @@ frame-arm.*). -/
   α) (body : Effect4.Prim ν σ β ε δ ι α) (onCause : ν) (value : β) (provided : Option
   (Effect4.Exit β ε δ ι α)), Effect4.Prim.armA interp (Effect4.Prim.onFailure body onCause)
   value provided = Option.none)
+
+-- census: frame-arm.AsyncFinalizer
+#check (@Effect4.Prim.armA_asyncFinalizer_none :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (onInterrupt : ν) (value : β) (provided : Option (Effect4.Exit β ε δ ι α)),
+  Effect4.Prim.armA interp (Effect4.Prim.asyncFinalizer onInterrupt) value provided =
+  Option.none)
+
+-- census: op.AsyncFinalizer
+#check (@Effect4.Prim.armE_asyncFinalizer_interrupt :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (onInterrupt : ν) (cause : Effect4.Cause ε δ ι α) (provided : Option (Effect4.Exit β ε δ ι
+  α)), Effect4.Cause.hasInterrupts cause = Bool.true → Effect4.Prim.armE interp
+  (Effect4.Prim.asyncFinalizer onInterrupt) cause provided = Option.some (interp.cancelThenFail
+  onInterrupt cause, []))
+
+-- census: op.AsyncFinalizer
+#check (@Effect4.Prim.armE_asyncFinalizer_no_interrupt :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (onInterrupt : ν) (cause : Effect4.Cause ε δ ι α) (provided : Option (Effect4.Exit β ε δ ι
+  α)), Effect4.Cause.hasInterrupts cause = Bool.false → Effect4.Prim.armE interp
+  (Effect4.Prim.asyncFinalizer onInterrupt) cause provided = Option.some (Effect4.Prim.failure
+  cause, []))
+
+-- census: op.AsyncFinalizer
+#check (@Effect4.Prim.armE_asyncFinalizer_pushes_nothing :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (onInterrupt : ν) (cause : Effect4.Cause ε δ ι α) (left right : Option (Effect4.Exit β ε δ
+  ι α)), Effect4.Prim.armE interp (Effect4.Prim.asyncFinalizer onInterrupt) cause left =
+  Effect4.Prim.armE interp (Effect4.Prim.asyncFinalizer onInterrupt) cause right)
 
 -- census: frame-arm.SetInterruptible
 #check (@Effect4.Prim.armA_setInterruptible_none :
@@ -975,12 +1058,79 @@ checkpoint.exit-failcause-skip, rule.frames-are-primitives,
 rule.interrupt-bypasses-handlers, op.Success, op.Failure).
 
 `popFrom` is rc.112's `getCont` pop loop fused with the handler-skipping loop of
-`exitFailCause`; `docs/FRAMES-DAG.md` records why the two loops are one
-structural recursion here and where that could diverge. -/
+`exitFailCause`, and *unfused* from the frame list it started with: rc.112 pops
+from the live `_stack`, so a frame a `contAll` pushed is popped before the
+frames already below it. `docs/FRAMES-DAG.md:200-211` reserved that obligation
+for the packet that adds `AsyncFinalizer`; `popFrom_pass_no_push` is the half
+that still agrees with the old, list-recursive reading and
+`popFrom_asyncFinalizer_pops_its_push` is the half that does not. -/
 
 #check (@Effect4.FrameFiber.popFrom :
   {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.Arm → Bool → List (Effect4.Prim ν
   σ β ε δ ι α) → Effect4.FrameFiber ν σ β ε δ ι α → Effect4.FramePop ν σ β ε δ ι α)
+
+#check (@Effect4.FrameFiber.passOn :
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.Prim ν σ β ε δ ι α → Option
+  (Effect4.Prim ν σ β ε δ ι α) → Effect4.FramePop ν σ β ε δ ι α → Effect4.FramePop ν σ β ε δ ι
+  α)
+
+#check (@Effect4.FrameFiber.continueFrom :
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.Arm → Bool → Effect4.Prim ν σ β ε
+  δ ι α → List (Effect4.Prim ν σ β ε δ ι α) → Effect4.FrameFiber ν σ β ε δ ι α →
+  Effect4.FramePop ν σ β ε δ ι α)
+
+-- census: rule.frames-are-primitives
+#check (@Effect4.FrameFiber.stack_nil_eq :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (fiber : Effect4.FrameFiber ν σ β ε δ ι α),
+  fiber.stack = [] → Effect4.FrameFiber.mk fiber.current [] fiber.interruptible
+  fiber.interruptedCause fiber.deferredInterrupt = fiber)
+
+-- census: rule.frames-are-primitives
+#check (@Effect4.FrameFiber.ensure_stack_cases :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (frame : Effect4.Prim ν σ β ε δ ι α) (fiber :
+  Effect4.FrameFiber ν σ β ε δ ι α), (Effect4.Prim.ensure frame fiber).fst.stack = fiber.stack ∨
+  (Effect4.Prim.ensure frame fiber).fst.stack = Effect4.Prim.setInterruptible Bool.true ::
+  fiber.stack ∧ fiber.interruptible = Bool.true ∧ (Effect4.Prim.ensure frame
+  fiber).fst.interruptible = Bool.false)
+
+#check (@Effect4.FrameFiber.passPushed :
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.Arm → Bool → Effect4.FrameFiber ν
+  σ β ε δ ι α → Effect4.FramePop ν σ β ε δ ι α)
+
+#check (@Effect4.FrameFiber.joinPushed :
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.Arm → Bool → Effect4.FrameFiber ν
+  σ β ε δ ι α → List (Effect4.Prim ν σ β ε δ ι α) → Effect4.FramePop ν σ β ε δ ι α →
+  Effect4.FramePop ν σ β ε δ ι α)
+
+-- census: checkpoint.set-interruptible-contall
+#check (@Effect4.FrameFiber.passPushed_setInterruptible_substitutes :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (fiber :
+  Effect4.FrameFiber ν σ β ε δ ι α) (below : List (Effect4.Prim ν σ β ε δ ι α)) (cause :
+  Effect4.Cause ε δ ι α), fiber.stack = Effect4.Prim.setInterruptible Bool.true :: below →
+  fiber.interruptedCause = Option.some cause → Effect4.FrameFiber.passPushed demand Bool.false
+  fiber = Effect4.FramePop.mk (Effect4.ContAnswer.replacement (Effect4.Prim.failure cause))
+  [Effect4.Prim.setInterruptible Bool.true] (Effect4.Prim.passEvents
+  (Effect4.Prim.setInterruptible Bool.true) (Option.some (Effect4.Prim.failure cause)))
+  (Effect4.FrameFiber.mk fiber.current below Bool.true fiber.interruptedCause
+  fiber.deferredInterrupt))
+
+-- census: rule.frames-are-primitives
+#check (@Effect4.FrameFiber.popFrom_pass_no_push :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frame :
+  Effect4.Prim ν σ β ε δ ι α) (rest : List (Effect4.Prim ν σ β ε δ ι α)) (fiber :
+  Effect4.FrameFiber ν σ β ε δ ι α), fiber.stack = [] → (Effect4.Prim.ensure frame
+  fiber).fst.stack = fiber.stack → Effect4.FrameFiber.continueFrom demand skip frame rest fiber
+  = Effect4.FrameFiber.popFrom demand skip rest (Effect4.Prim.ensure frame fiber).fst)
+
+-- census: op.AsyncFinalizer
+#check (@Effect4.FrameFiber.popFrom_asyncFinalizer_pops_its_push :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (onInterrupt : ν) (cause : Effect4.Cause ε δ
+  ι α) (fiber : Effect4.FrameFiber ν σ β ε δ ι α), fiber.stack = [] → fiber.interruptible =
+  Bool.true → fiber.interruptedCause = Option.some cause → (Effect4.FrameFiber.popFrom
+  Effect4.Arm.contA Bool.false [Effect4.Prim.asyncFinalizer onInterrupt] fiber).answer =
+  Effect4.ContAnswer.replacement (Effect4.Prim.failure cause) ∧ (Effect4.FrameFiber.popFrom
+  Effect4.Arm.contA Bool.false [Effect4.Prim.asyncFinalizer onInterrupt] fiber).popped =
+  [Effect4.Prim.asyncFinalizer onInterrupt, Effect4.Prim.setInterruptible Bool.true])
 
 #check (@Effect4.FrameFiber.getCont :
   {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.FrameFiber ν σ β ε δ ι α →
@@ -1077,8 +1227,7 @@ structural recursion here and where that could diverge. -/
   Effect4.FrameFiber ν σ β ε δ ι α), Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure
   frame fiber).snd = Option.none ∨ (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure
   frame fiber).fst) = Bool.true → (Effect4.FrameFiber.popFrom demand skip (frame :: rest)
-  fiber).answer = (Effect4.FrameFiber.popFrom demand skip rest (Effect4.Prim.ensure frame
-  fiber).fst).answer)
+  fiber).answer = (Effect4.FrameFiber.continueFrom demand skip frame rest fiber).answer)
 
 -- census: rule.frames-are-primitives
 #check (@Effect4.FrameFiber.popFrom_continue_popped :
@@ -1087,8 +1236,8 @@ structural recursion here and where that could diverge. -/
   Effect4.FrameFiber ν σ β ε δ ι α), Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure
   frame fiber).snd = Option.none ∨ (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure
   frame fiber).fst) = Bool.true → (Effect4.FrameFiber.popFrom demand skip (frame :: rest)
-  fiber).popped = frame :: (Effect4.FrameFiber.popFrom demand skip rest (Effect4.Prim.ensure
-  frame fiber).fst).popped)
+  fiber).popped = frame :: (Effect4.FrameFiber.continueFrom demand skip frame rest
+  fiber).popped)
 
 -- census: rule.frames-are-primitives
 #check (@Effect4.FrameFiber.popFrom_continue_events :
@@ -1098,7 +1247,7 @@ structural recursion here and where that could diverge. -/
   frame fiber).snd = Option.none ∨ (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure
   frame fiber).fst) = Bool.true → (Effect4.FrameFiber.popFrom demand skip (frame :: rest)
   fiber).events = Effect4.Prim.passEvents frame (Effect4.Prim.ensure frame fiber).snd ++
-  (Effect4.FrameFiber.popFrom demand skip rest (Effect4.Prim.ensure frame fiber).fst).events)
+  (Effect4.FrameFiber.continueFrom demand skip frame rest fiber).events)
 
 -- census: rule.frames-are-primitives
 #check (@Effect4.FrameFiber.popFrom_continue_fiber :
@@ -1107,8 +1256,7 @@ structural recursion here and where that could diverge. -/
   Effect4.FrameFiber ν σ β ε δ ι α), Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure
   frame fiber).snd = Option.none ∨ (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure
   frame fiber).fst) = Bool.true → (Effect4.FrameFiber.popFrom demand skip (frame :: rest)
-  fiber).fiber = (Effect4.FrameFiber.popFrom demand skip rest (Effect4.Prim.ensure frame
-  fiber).fst).fiber)
+  fiber).fiber = (Effect4.FrameFiber.continueFrom demand skip frame rest fiber).fiber)
 
 -- census: rule.frames-are-primitives
 #check (@Effect4.FrameFiber.popFrom_answer_hasArm :
@@ -1444,6 +1592,36 @@ op.While, exit.success-failure). -/
   self.interruptedCause self.deferredInterrupt) = (Effect4.FrameStep.running
   (Effect4.FrameFiber.mk (Effect4.Prim.failure (Effect4.Cause.die interp.notImplemented))
   self.stack self.interruptible self.interruptedCause self.deferredInterrupt), []))
+
+-- census: op.AsyncFinalizer
+#check (@Effect4.FrameFiber.step_asyncFinalizer_not_evaluable :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (onInterrupt : ν), Effect4.FrameFiber.step interp
+  (Effect4.FrameFiber.mk (Effect4.Prim.asyncFinalizer onInterrupt) self.stack self.interruptible
+  self.interruptedCause self.deferredInterrupt) = (Effect4.FrameStep.running
+  (Effect4.FrameFiber.mk (Effect4.Prim.failure (Effect4.Cause.die interp.notImplemented))
+  self.stack self.interruptible self.interruptedCause self.deferredInterrupt), []))
+
+-- census: op.Yield
+#check (@Effect4.FrameFiber.step_yieldNowWith_frontier :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (priority : Nat), Effect4.FrameFiber.step interp
+  (Effect4.FrameFiber.mk (Effect4.Prim.yieldNowWith priority) self.stack self.interruptible
+  self.interruptedCause self.deferredInterrupt) = (Effect4.FrameStep.running
+  (Effect4.FrameFiber.mk (Effect4.Prim.yieldNowWith priority) self.stack self.interruptible
+  self.interruptedCause self.deferredInterrupt), []))
+
+-- census: op.Async
+#check (@Effect4.FrameFiber.step_async_frontier :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
+  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
+  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (register : ν) (withSignal : Bool) (cancel :
+  Option ν), Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk (Effect4.Prim.async register
+  withSignal cancel) self.stack self.interruptible self.interruptedCause self.deferredInterrupt)
+  = (Effect4.FrameStep.running (Effect4.FrameFiber.mk (Effect4.Prim.async register withSignal
+  cancel) self.stack self.interruptible self.interruptedCause self.deferredInterrupt), []))
 
 -- census: op.While
 #check (@Effect4.FrameFiber.step_whileLoop_true :

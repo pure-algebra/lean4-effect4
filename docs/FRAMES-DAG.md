@@ -197,18 +197,27 @@ declares, and could disagree for one shape it does not.
   `skipInterrupted` is set: `Effect4.FrameFiber.getCont_skip_clears_deferred`
   freezes that, and the discarded answer carried the same accumulated cause, so
   no observation is lost.
-- **The one shape that could diverge.** A frame that *pushes during `contAll`*
-  and *does not answer the demanded arm* would, in rc.112, have its pushed frame
-  popped next; in the fused loop the push is threaded through the fiber and
-  restored on top of the frames that are left. No frame in this packet is that
-  shape: `OnExit` pushes and always answers both arms; `SetInterruptible` never
-  pushes. The first frame that is that shape is `AsyncFinalizer`, which declares
-  `contE` and `contAll` and no `contA` (`internal/effect.ts:1145-1160`), so a
-  `contA` demand passes it, masks, and does not answer. `AsyncFinalizer` is
-  explicitly out of this packet. The later run-loop and parking packet that adds
-  it **must** revisit `popFrom` and either prove the fusion still agrees or
-  unfuse the loops. This is recorded as `FRAME-FB-ASYNC-FINALIZER` and is the
-  single most likely place for a reviewer to disagree with this model.
+- **The one shape that could diverge, and did.** A frame that *pushes during
+  `contAll`* and *does not answer the demanded arm* has, in rc.112, its pushed
+  frame popped next; the original fused loop threaded the push through the fiber
+  and restored it on top of the frames that were left. `AsyncFinalizer` is that
+  shape: it declares `contE` and `contAll` and no `contA`
+  (`internal/effect.ts:1145-1160`), so a `contA` demand passes it, masks, and does
+  not answer. The run-loop packet (spike S1, 2026-09-03,
+  `docs/research/2026-09-03-spike-s1-prim-parking.md` §2) added it as a `Prim`
+  constructor and found that the fusion does **not** agree: on every successful
+  async resume rc.112 pops the pushed `SetInterruptible(true)` next and answers
+  `replacement (failCause cause)` when a cause is pending, while the fused loop
+  answered with whichever frame below declared `contA`, still masked and with a
+  stray restoring frame on the stack. `popFrom` is therefore unfused, still
+  structurally recursive on the frame list and axiom-free: a passed frame's push
+  is drained by one `passPushed` step (`joinPushed`, `continueFrom`) before the
+  recursion on the rest, and `ensure_stack_cases` proves a hook pushes at most one
+  frame, `setInterruptible true`, which never pushes, so one level is exact by
+  theorem. `FRAME-FB-ASYNC-FINALIZER` is discharged by unfusing, not by
+  agreement: `popFrom_pass_no_push` keeps the fused reading for every frame that
+  pushes nothing, and `popFrom_asyncFinalizer_pops_its_push` records the
+  divergence. `E4-RUN-CE-024`'s repair column carries the same fact.
 
 ## Census rows this packet targets
 

@@ -218,16 +218,113 @@ def declarationLine (rows : ServiceRow) (program : RegionProgram) : String :=
     ") => Effect.Effect<" ++ program.result ++ ", " ++ errorChannel rows program ++ ", " ++
     requirementChannel rows program ++ ">;"
 
+/-! ## The multi-root entry, for a region flow
+
+The same change `Flow` got (`FlowLower.lean`, `workshop/Deep/fork-lowering.md`
+§(b)), for the form the fiber profile's programs actually take: spike S3's
+witnesses and its compile are over `RegionFlow`
+(`workshop/Deep/ForkFlow.lean`), so a fork that names a declared root names one
+of *these* roots.
+
+One extra refusal, which the plain form has no way to need: **a declared root
+must sit outside every region.** The top-level dispatch loop runs exactly the
+blocks whose label is `none` (`skeletonCases … none "block"`); a region's blocks
+live in a nested generator with a block variable of their own, so a synthetic
+case at the top level cannot continue at one. Admission already refuses an
+*entry* inside a region (`Effects.RegionClause.entryInside`); this refuses the
+rest, by returning `none` rather than emitting a case that jumps nowhere. -/
+
+/-- The `Effect` type of a region flow: its three channels, as
+`declarationLine` prints them. -/
+def effectType (rows : ServiceRow) (program : RegionProgram) : String :=
+  "Effect.Effect<" ++ program.result ++ ", " ++ errorChannel rows program ++ ", " ++
+    requirementChannel rows program ++ ">"
+
+/-- The binders a declared root is entered with: the program's own parameter for
+the entry root, positional `p<i>` binders for every other. -/
+def rootBinders (program : RegionProgram) (block : RegionBlock String) : List (String × String) :=
+  if block.id = program.flow.flow.entry then [program.param]
+  else ((List.range block.params.length).zip block.params).map
+    fun (index, ty) => ("p" ++ toString index, ty)
+
+/-- The control skeleton of the multi-root entry: the same acquisitions, the
+same declarations and the same cases as `skeletonDispatch` -- literally the same
+`skeletonCases` call -- with the entry assignment and the constant block index
+replaced by the entry parameter and one synthetic case per declared root. -/
+def skeletonEntry (rows : ServiceRow) (program : RegionProgram) : Option (List Skeleton) := do
+  let flow := program.flow.flow
+  let cases ← skeletonCases rows program.table program.interrupts program.masked flow
+    (flow.regions.length + 1) none "block"
+  let rootBlocks ← flow.roots.mapM flow.block?
+  guard (rootBlocks.all fun block => block.region.isNone)
+  guard (flow.blocks.all fun block => block.id.value < Lowering.rootEntryBase)
+  pure (acquisitions rows program.table program.interrupts flow ++ declarations flow ++
+    [ Lowering.enterAt "block" Flow.entryBinder
+    , Lowering.dispatchLoop
+        (rootBlocks.map (fun block =>
+            Lowering.entryRootCase "block" Flow.entryBinder block.id block.params) ++ cases) ])
+
+/-- Lower an admitted region flow to the parameterised entry generator. -/
+def lowerEntry (rows : ServiceRow) (program : RegionProgram) : Option ProgDecl := do
+  let body ← skeletonEntry rows program
+  pure { doc := ["Lowered from the region flow `" ++ program.name ++ "` over `" ++ rows.name ++
+                 "` (dispatch form, multi-root entry, nested scopes)."]
+         name := Flow.entryName program.name
+         paramName := Flow.entryBinder
+         paramType := Flow.entryTy
+         stmts := Skeleton.renderList rows body }
+
+/-- The alias of one declared root of a region flow. -/
+def rootAlias (rows : ServiceRow) (program : RegionProgram) (block : RegionBlock String) :
+    ConstDecl :=
+  let isEntry := block.id = program.flow.flow.entry
+  Flow.entryAliasDecl
+    (if isEntry then program.name else Flow.rootName program.name block.id)
+    (Flow.entryName program.name)
+    (Flow.rootAliasDoc program.name isEntry block.id "dispatch form, multi-root, nested scopes")
+    (Lowering.rootEntryBase + block.id.value)
+    (rootBinders program block)
+    (effectType rows program)
+
+/-- The declarations a region flow lowers to: the single exported generator for
+one declared root, byte for byte (`lowerDispatch_single_root_eq`), and the
+parameterised entry plus one alias per root plus the entry re-export for two or
+more. -/
+def lowerRoots (rows : ServiceRow) (program : RegionProgram) : Option (List Decl) :=
+  if (program.flow.flow).roots.length ≤ 1 then
+    (lowerDispatch rows program).map fun decl => [Decl.prog decl]
+  else do
+    let entry ← lowerEntry rows program
+    let rootBlocks ← (program.flow.flow).roots.mapM (program.flow.flow).block?
+    pure (Decl.prog entry ::
+      rootBlocks.map (fun block => Decl.const (rootAlias rows program block)) ++
+      [Decl.const (Flow.entryExportDecl program.name)])
+
+/-- **The byte-identity receipt of the entry change, for region flows.** The
+same statement as `Flow.lowerDispatch_single_root_eq` and for the same reason:
+every region flow this library lowered before the fiber profile -- every one in
+`RegionLowerContract`, `StructuredLowerContract` and the job goldens -- declares
+exactly one root, so none of their bytes can move. -/
+theorem lowerDispatch_single_root_eq (rows : ServiceRow) (program : RegionProgram)
+    (single : (program.flow.flow).roots.length ≤ 1) :
+    lowerRoots rows program = (lowerDispatch rows program).map fun decl => [Decl.prog decl] := by
+  simp only [lowerRoots, if_pos single]
+
 end Region
 
 /-- One module of dispatch-form programs, plain flows and region flows, over
-the declared families; `Decisions` and `Regions` are declared when used. -/
+the declared families; `Decisions` and `Regions` are declared when used.
+
+Each program contributes `lowerRoots`: one declaration for a single-root flow,
+byte for byte what `lowerDispatch` emitted before the entry change
+(`Flow.lowerDispatch_single_root_eq`, `Region.lowerDispatch_single_root_eq`), and
+`1 + |roots| + 1` for a flow that declares more than one root. -/
 def regionModules? (families : List (ServiceRow × List FlowProgram × List RegionProgram))
     (atoms : List Import := []) (style : Style := house0) : Option String := do
   let decls ← families.mapM fun (rows, programs, regionPrograms) => do
-    let lowered ← programs.mapM (Flow.lowerDispatch rows)
-    let loweredRegions ← regionPrograms.mapM (Region.lowerDispatch rows)
-    pure (rows.classDecl :: rows.rowsDecl :: (lowered ++ loweredRegions).map Decl.prog)
+    let lowered ← programs.mapM (Flow.lowerRoots rows)
+    let loweredRegions ← regionPrograms.mapM (Region.lowerRoots rows)
+    pure (rows.classDecl :: rows.rowsDecl :: (lowered ++ loweredRegions).flatten)
   let chooses := families.any fun (_, programs, regionPrograms) =>
     programs.any (fun program => Flow.usesDecisions program.flow.erase) ||
     regionPrograms.any fun program => Region.usesChoose program.flow.flow
@@ -235,12 +332,16 @@ def regionModules? (families : List (ServiceRow × List FlowProgram × List Regi
     regionPrograms.any fun program => !program.flow.flow.regions.isEmpty
   let interrupts := families.any fun (_, programs, regionPrograms) =>
     programs.any (·.interrupts) || regionPrograms.any (·.interrupts)
-  let result := families.any fun (rows, _, _) => rows.usesResult
+  -- `Exit` used to be added by an `if regions` here; it now arrives with the
+  -- `Regions` class, which is the only row that spells it, so the import line
+  -- is a function of the module's own declared rows.
+  let declared := (if chooses then [decisionsRows] else []) ++
+    (if regions then [regionsRows] else []) ++
+    (if interrupts then [interruptsRows] else []) ++ families.map (·.1)
   let target : Module :=
     { header := ["Generated by Effect4 (Effect v4 profile, dispatch form).", ""] ++
         hostPin.headerLines ++ ["", "Do not edit."]
-      imports := .named (["Context", "Effect"] ++ (if regions then ["Exit"] else []) ++
-        (if result then ["Result"] else [])) "effect" :: atoms
+      imports := .named (["Context", "Effect"] ++ moduleNamespaces declared atoms) "effect" :: atoms
       decls := (if chooses then [decisionsRows.classDecl, decisionsRows.rowsDecl] else []) ++
         (if regions then [regionsRows.classDecl, regionsRows.rowsDecl] else []) ++
         (if interrupts then [interruptsRows.classDecl, interruptsRows.rowsDecl] else []) ++

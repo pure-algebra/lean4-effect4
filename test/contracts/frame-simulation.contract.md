@@ -131,15 +131,15 @@ is the raw user error, through `run_liftFail`.
    `variable` lines move from `Alphabet.{0,0} Ty` to `FlowAlphabet.{0,0} Ty`,
    `Flow.Sig a` resolves through the enclosing namespace, and every theorem
    statement is unchanged.
-7. **`enter` does not compile to `onExit`.** Fence C compiles `enter` to
-   `Prim.onSuccess body ν` and only `acquire` to `Prim.onExit`. The reason is
-   forced, not stylistic: the row `enter`/`leave` writes has **no** frame-machine
-   shadow — `FrameEvent.toTrace` sends everything but `ranFinalizer` and
-   `yielded` to `none` — so compiling `enter` to `Prim.onExit` would manufacture
-   a `finalizer` row the runner never writes, and the masked traces would differ
-   on every region. `acquire`'s `Prim.onExit … false` is rc.112's `scopedFrame`,
-   which is what `Effect.acquireRelease` lowers to, and the frames stack in
-   registration order so they pop latest-first: the order
+7. **`enter` does not compile to `onExit`.** *(Amended by spike S4; see
+   "Spike S4 amendment" below.)* Fence C compiles `enter` to a frame that emits
+   no `ranFinalizer` event and only a registered release to `Prim.onExit`. The
+   reason is forced, not stylistic: the row `enter`/`leave` writes has **no**
+   frame-machine shadow — `FrameEvent.toTrace` sends everything but
+   `ranFinalizer` and `yielded` to `none` — so compiling `enter` to
+   `Prim.onExit` would manufacture a `finalizer` row the runner never writes,
+   and the masked traces would differ on every region. The release frames stack
+   in registration order so they pop latest-first: the order
    `E4-TARGET-CE-012..014` pin for the host and `Frame.toScope_closeOrder`
    proves for the runner.
 8. **The name alphabet of fence C carries the run point.** `ν := RegionName`,
@@ -179,22 +179,26 @@ related by the projection `failuresOfCause` — the direction that is a total
 function — with `causeOfFailures` as its section and
 `failuresOfCause_causeOfFailures` as the retraction.
 
-Two things stay open, and they are different in kind.
+Two things stayed open at the original landing, and they are different in kind.
+Spike S4 closed the first and left the second.
 
-1. **A failing release is a real divergence, not a proof gap.**
-   `closeReleases` gives every release of one close the *same* closing exit,
-   while the machine threads the exit each finalizer restores, so on a close
-   whose first release fails the two disagree on the second release's
-   `finalizer` row. Both general theorems therefore carry `hfin`: every
-   finalizer succeeds. That is exactly the hypothesis `regionReleaseFails`
-   violates, which is also why that flow has no host golden
-   (`E4-TARGET-CE-012`). Closing it means deciding which emitter is right and
-   re-pinning the neighbour of `E4-FLOW-CE-019`.
-2. **The general induction needs a second copy of the runner.** The runner's
-   `leave` continues at `row.continue_` with the fuel and decision tape it holds
-   *at the leave*, while the frame `enter` pushes is named at the *enter*.
-   Closing it needs a `leaveConfig` that walks a region body to its close under
-   the oracle, plus a proof that it agrees with the runner — its own fence.
+1. **A failing release is a real divergence, not a proof gap.** *(Closed by
+   spike S4, packet P1.)* `closeReleases` gives every release of one close the
+   *same* closing exit, while the machine used to thread the exit each finalizer
+   restores, so on a close whose first release failed the two disagreed on the
+   second release's `finalizer` row. Both general theorems therefore carried
+   `hfin`: every finalizer succeeds. P1 removed the divergence rather than the
+   hypothesis; see the amendment below.
+2. **The general induction needs a second copy of the runner.** *(Still open.)*
+   The runner's `leave` continues at `row.continue_` with the fuel and decision
+   tape it holds *at the leave*, while the frame `enter` pushes is named at the
+   *enter*. Closing it needs a `leaveConfig` that walks a region body to its
+   close under the oracle, plus a proof that it agrees with the runner — its own
+   fence. Spike S4 spelled the function (`RegionSimulation.closeWalk`) and named
+   the obligation (`RegionSimulation.RegionOracleAgrees.registrations`); the
+   proof that the walk *is* the runner is packet P4's remainder, and
+   `Effect4Test/Counterexamples/Target/RegionSimulationBoundary.lean`'s
+   `tapeAfterRegion_diverges` is the minimal witness that it is not free.
 
 `harness/trace/Generate.lean frame-trace` prints both sides of the equation for
 every region program, so the pair can be pinned as a golden without waiting for
@@ -335,3 +339,96 @@ node test/counterexamples/target/region-simulation-boundary.mjs /absolute/path/t
 The Lean file prints an axiom receipt for every theorem. Root imports,
 generated register projections, package builds, runtime coverage and the new
 production execution component remain separate coordinator-owned work.
+
+## Spike S4 amendment, 2026-09-03
+
+Owner: `docs/research/2026-09-03-spike-s4-compile.md`, packets P1, P2, P3 and
+the P4 statements. Fence C is `Effect4/Semantics/RegionSimulation.lean`; nothing
+outside it, its two batteries, its axiom report and four register rows changed.
+No frozen surface moved: `Prim`, `PrimInterp`, `FrameEvent` and
+`test/contracts/frames.contract.md` are untouched, and no census row changes
+state.
+
+**Ruling 7 is amended, not withdrawn.** Its argument stands — a region compiled
+to `Prim.onExit` would manufacture a `finalizer` row neither the runner nor the
+host writes — and it now forces a *different* frame. A region is one scope
+(rc.112 `internal/effect.ts:3938-3947`, closed at `:3815-3827` with
+`exitAsVoidAll` at `:3826`, `:2025-2038`), and its frame answers both arms, so
+`enter` compiles to
+
+```text
+Prim.onSuccessAndFailure body (RegionName.regionCont region enterPoint)
+                              (RegionName.close   region enterPoint)
+```
+
+which declares `contA` and `contE` and emits no `ranFinalizer`. Each registered
+release keeps a `Prim.onExit … false` frame, but only as the emitter of the
+`finalizer` row rc.112's release lambda writes
+(`regions.finalizer(1, exit)` inside `Effect.acquireRelease`'s release,
+`:3971-3987`); its `finalizerExit` is constantly `Exit.success ()`
+(`regionInterp_finalizerExit`), so **no release's outcome is ever fed into the
+exit another release observes**. The scope's own result is `closeExit`:
+`ScopeMachine`'s zero/one/many policy (`closeFinish_nil`, `closeFinish_single`,
+`closeFinish_many`, bridged to `ScopeMachine.result?` by
+`closeFinish_eq_result?`) over `Exit.asVoidAll` of the registered releases'
+exits, applied once and restored once. `closeExit_reasons` says its reasons are
+exactly the runner's `closeFailures` list, in close order, duplicates kept —
+concatenation, not `Cause.combine`'s dedup.
+
+Consequently `unwind_failure` and `close_success` no longer carry a global
+`hfin`. Their premise is per name (`FinalizersVoid interp (unwindNames stack)`,
+`FinalizersVoid interp (closeNames frames)`), and `regionInterp` discharges it
+outright: `unwind_failure_region`, `close_success_region_compiled` and the new
+`unwind_to_frame_region` have **no** restriction on failing releases.
+`E4-TARGET-CE-019`'s repair column closes and `E4-FLOW-CE-020` is re-read on
+both halves.
+
+**A live frontier is now live.** The eight arms that sent exhausted source fuel,
+a missing block, a stuck plan, an exhausted or mismatched tape, a malformed
+`acquire` or a malformed `leave` to `Prim.failure Cause.empty` emit
+`Prim.suspend point`. `compileRegion_not_failure` proves the compile emits no
+`Prim.failure` at all; `run_suspend_fixed` and `compileAt_zero_fuel_live` prove
+the machine then answers `FrameStep.running` at every fuel with an empty trace,
+which is DB-04's frontier. The finalisation half of `E4-TARGET-CE-020`/`-021`
+closes. **The classification half does not**: a tape mismatch is a refusal on
+the runner and a live suspension on the machine, and this mask cannot tell them
+apart (`mismatched_decision_is_refusal` against
+`mismatched_decision_machine_is_live`). That is T8, packet P5.
+
+**`performCatch` is `onSuccessAndFailure`.** `Effect.result` is `matchEager` →
+`matchCause` → `matchCauseEffect` = `OnSuccessAndFailure`
+(`internal/effect.ts:3417-3420`, `:3450-3460`), so the caught perform compiles
+to `Prim.onSuccessAndFailure (Prim.suspend point) (RegionName.cont point)
+(RegionName.caught point)`, the suspension returns the answer as a *primitive*
+so a failing answer is a real `Cause`, and `armE` resumes at the failure
+successor. `compileRegion_catchFree` is the statement that this costs a
+catch-free flow nothing: no `RegionName.caught` name is emitted, so every
+existing receipt is about a program P3 did not touch. Every continuation
+`regionInterp` produces is itself a `compileRegion` output, so the theorem
+covers the dynamic continuations too.
+
+**What is claimed about the general theorem.** `RegionsSimulate` (T5) and
+`RegionsSimulateExit` (T6) are stated as `Prop`s with `RegionOracleAgrees`
+naming their hypothesis, and are **proved at five flows**, not in general:
+`regionBothSucceed`, `regionNested`, `regionTwoFail`, `regionReleaseFails` (the
+`E4-TARGET-CE-019` fixture) and `regionCatch` (a `performCatch` inside a region
+holding a resource), each at `Flow.fuelFor`'s runner fuel and `regionBound`'s
+machine budget, each by kernel evaluation, with `RegionOracleAgrees` discharged
+by `statelessOracle_agrees`. T6 is stated against `runRegionsCause`, so it is
+the merged failure list and not the wire projection. The remaining obligation is
+one clause: `RegionOracleAgrees.registrations`, i.e. that `closeWalk` is the
+runner. `unrestricted_finite_agreement_false` is still proved — from
+`tapeAfterRegion`, the `leaveConfig` witness, rather than from a failing
+release, exhausted fuel or an unanswered decision.
+
+### Spike S4 verification
+
+```text
+lake env lean Effect4/Semantics/RegionSimulation.lean
+lake env lean Effect4Test/Semantics/RegionSimulationContract.lean
+lake env lean Effect4Test/Semantics/RegionSimulationAxiomReport.lean
+lake env lean Effect4Test/Counterexamples/Target/RegionSimulationBoundary.lean
+lake build Effect4.Semantics.RegionSimulation \
+  Effect4Test.Semantics.RegionSimulationContract \
+  Effect4Test.Counterexamples.Target.RegionSimulationBoundary
+```

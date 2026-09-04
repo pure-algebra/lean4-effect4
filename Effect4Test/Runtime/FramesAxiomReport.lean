@@ -55,6 +55,8 @@ rule.frames-are-primitives) -/
 #print axioms Effect4.Prim.arms_setInterruptible
 #print axioms Effect4.Prim.arms_whileLoop
 #print axioms Effect4.Prim.arms_iterator
+#print axioms Effect4.Prim.arms_asyncFinalizer
+#print axioms Effect4.Prim.hasArm_asyncFinalizer_contA_false
 #print axioms Effect4.Prim.non_frames_have_no_arms
 
 /-! ## F3b — an Exit is a steppable primitive (census: exit.success-failure) -/
@@ -78,6 +80,9 @@ frame-arm.SetInterruptible, op.SetInterruptible, checkpoint.set-interruptible-co
 #print axioms Effect4.Prim.ensure_setInterruptible_substitutes
 #print axioms Effect4.Prim.ensure_setInterruptible_false_no_replacement
 #print axioms Effect4.Prim.ensure_setInterruptible_no_pending
+#print axioms Effect4.Prim.ensure_asyncFinalizer_masks
+#print axioms Effect4.Prim.ensure_asyncFinalizer_already_masked
+#print axioms Effect4.Prim.ensure_asyncFinalizer_no_replacement
 #print axioms Effect4.Prim.answerOf_replacement
 #print axioms Effect4.Prim.answerOf_arm
 #print axioms Effect4.Prim.answerOf_missing
@@ -98,6 +103,10 @@ op.OnExit, op.Iterator, op.While) -/
 #print axioms Effect4.Prim.armE_setInterruptible_none
 #print axioms Effect4.Prim.armE_whileLoop_none
 #print axioms Effect4.Prim.armE_iterator_none
+#print axioms Effect4.Prim.armA_asyncFinalizer_none
+#print axioms Effect4.Prim.armE_asyncFinalizer_interrupt
+#print axioms Effect4.Prim.armE_asyncFinalizer_no_interrupt
+#print axioms Effect4.Prim.armE_asyncFinalizer_pushes_nothing
 #print axioms Effect4.Prim.armA_exitFrame_provided
 #print axioms Effect4.Prim.armA_exitFrame_none
 #print axioms Effect4.Prim.armE_exitFrame_provided
@@ -145,6 +154,17 @@ rule.frames-are-primitives, rule.interrupt-bypasses-handlers) -/
 #print axioms Effect4.FrameFiber.passEvents_poppedFrames
 #print axioms Effect4.FrameFiber.popFrom_popped_eq_events
 #print axioms Effect4.FrameFiber.popFrom_ranContAll
+#print axioms Effect4.FrameFiber.stack_nil_eq
+#print axioms Effect4.FrameFiber.ensure_stack_cases
+#print axioms Effect4.FrameFiber.passPushed_nil
+#print axioms Effect4.FrameFiber.passPushed_answer_hasArm
+#print axioms Effect4.FrameFiber.passPushed_setInterruptible_substitutes
+#print axioms Effect4.FrameFiber.passPushed_setInterruptible_no_pending
+#print axioms Effect4.FrameFiber.joinPushed_of_empty
+#print axioms Effect4.FrameFiber.joinPushed_of_answer
+#print axioms Effect4.FrameFiber.continueFrom_cases
+#print axioms Effect4.FrameFiber.popFrom_pass_no_push
+#print axioms Effect4.FrameFiber.popFrom_asyncFinalizer_pops_its_push
 #print axioms Effect4.FrameFiber.getCont_ranContAll
 #print axioms Effect4.FrameFiber.getCont_skip_of_no_pending_cause
 #print axioms Effect4.FrameFiber.interrupt_skips_every_handler
@@ -172,6 +192,10 @@ rule.frames-are-primitives, rule.interrupt-bypasses-handlers) -/
 #print axioms Effect4.FrameFiber.step_exitFrame
 #print axioms Effect4.FrameFiber.step_onExit
 #print axioms Effect4.FrameFiber.step_setInterruptible_not_evaluable
+#print axioms Effect4.FrameFiber.step_asyncFinalizer_not_evaluable
+#print axioms Effect4.FrameFiber.step_yieldNowWith_frontier
+#print axioms Effect4.FrameFiber.step_async_frontier
+#print axioms Effect4.FrameFiber.step_parking_is_a_fixed_point
 #print axioms Effect4.FrameFiber.step_whileLoop_true
 #print axioms Effect4.FrameFiber.step_whileLoop_false
 #print axioms Effect4.FrameFiber.step_iterator

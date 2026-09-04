@@ -124,9 +124,21 @@ both, so a module carrying it imports both. -/
 def mentions (needle haystack : String) : Bool := (haystack.splitOn needle).length > 1
 
 /-- The `effect` namespaces a list of rendered spellings needs, in import
-order. -/
+order.
+
+The needle list is fixed and alphabetical, so the import line is a function of
+the spellings and nothing else. `Exit` and `Fiber` join `Option` and `Result`
+here because the region rows spell `Exit.Exit<unknown, unknown>`
+(`RegionLower.lean`, `regionsRows`) and the fiber profile spells
+`Fiber.Fiber<A, E>` (`FiberProfile.lean`, `handleTy`); before this they were
+added by hand at the module emitter, or not at all. Adding one is safe for a
+module that does not name it -- the test is by occurrence -- and a caller that
+already binds the name in its own imports subtracts it through
+`neededNamespaces`, which is how the harness's `Fibers` and `Deferreds`
+fixtures import `Fiber`, `Option` and `Result` as types only. -/
 def namespacesOf (spellings : List String) : List String :=
-  ["Option", "Result"].filter fun name => spellings.any (mentions (name ++ "."))
+  ["Exit", "Fiber", "Option", "Result"].filter fun name =>
+    spellings.any (mentions (name ++ "."))
 
 end Spelling
 
@@ -506,6 +518,19 @@ ones the supplied imports already bind. -/
 def neededNamespaces (spellings : List String) (atoms : List Import) : List String :=
   let bound := importedNames atoms
   (Spelling.namespacesOf spellings).filter fun name => !bound.contains name
+
+/-- The `effect` namespaces a generated *flow* module needs: the ones the rows
+it declares actually spell, minus the ones its supplied imports already bind.
+
+`declared` is every `ServiceRow` the module emits a class for -- the families,
+and `Decisions`, `Regions` and `Interrupts` exactly when they are declared. That
+is what makes the import line a function of the module's own text: `Exit` arrives
+with the `Regions` class, which is the only row that spells it, rather than from
+a separate `if regions` at the emitter; `Result`, `Option` and `Fiber` arrive
+with whichever family row spells them. A module that names none of them imports
+`Context` and `Effect` and nothing else, exactly as before. -/
+def moduleNamespaces (declared : List ServiceRow) (atoms : List Import) : List String :=
+  neededNamespaces (declared.flatMap ServiceRow.spellings) atoms
 
 /-- The generated module: header with the host pin, the `effect` import, the
 service class, and the lowered programs. -/

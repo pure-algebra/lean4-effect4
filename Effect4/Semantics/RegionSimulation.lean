@@ -1,5 +1,6 @@
 import Effect4.Semantics.FrameSimulation
 import Effect4.Flow.Region
+import Effect4.Runtime.ScopeMachine
 import Effect4.Target.TypeScript.Simulation
 
 /-!
@@ -10,15 +11,65 @@ runner of `Effect4/Flow/Region.lean` and the rc.112 frame machine of
 `Effect4/Runtime/Runtime.lean`, under the mask that keeps `finalizer` and
 `done`.
 
-**Current boundary (2026-09-03).** The independent amendment in
-`test/contracts/frame-simulation.contract.md` supersedes the unrestricted
-region equation proposed below. `E4-TARGET-CE-019` through `E4-TARGET-CE-021`
-prove that this compiler differs from the region runner on a failing release,
-fuel exhaustion and unanswered decisions. The replacement must independently
-execute scope registrations and closing, and preserve suspended state in a
-finite-prefix simulation. A source replay hidden in an oracle does not close
-that obligation. The existing restricted lemmas and concrete receipts remain
-valid; this module does not establish the general region connection.
+**Spike S4 (2026-09-03) landed three compile repairs in this file.** They are
+`docs/research/2026-09-03-deep-flow-to-frames.md` §2.2's ▲ items P1, P2 and P3,
+and they discharge the repair columns of `E4-TARGET-CE-019`, the finalisation
+half of `E4-TARGET-CE-020`/`-021`, and the compile half of `E4-FLOW-CE-020`.
+
+* **P1 — one scope per region.** A region is *one* scope, not a nest of
+  independent caller-side `OnExit` frames. rc.112 closes that one scope with
+  `exitAsVoidAll` (`vendor/effect-4.0.0-rc.112/src/internal/effect.ts:3826`,
+  the loop at `:3815-3827`), which hands **every** registered release the same
+  original closing exit and combines the collected exits only after the loop;
+  `Effect.acquireRelease` registers on that scope and pushes no frame of its own
+  (`:3971-3987`). So the region's `enter` now compiles to *one*
+  `Prim.onSuccessAndFailure`, whose value name is `RegionName.regionCont` and
+  whose cause name is `RegionName.close`, and the close result is
+  `closeExit` — the three-arm `ScopeMachine.finish` of the oracle's release
+  exits in `Scope.closeOrder`. Each registered release keeps an
+  `onExit` frame whose only job is the `finalizer` row rc.112's release lambda
+  writes (`regions.finalizer(1, exit)`), and whose `finalizerExit` is
+  `Exit.success ()` — so no release's outcome is ever fed into the exit the
+  next release sees. That is `Effect4.Flow.closeReleases` (`Region.lean:134-145`)
+  and `Effect4.ScopeMachine.request_uses_original` (`ScopeMachine.lean:100`).
+  Because `finalizerExit` is now constantly `Exit.success ()`, the `hfin`
+  premise of `unwind_failure`/`close_success` is *discharged* for every compiled
+  run (`regionInterp_finalizerExit`), and the two theorems are restated with a
+  per-name premise instead of a global one.
+
+  Why the region frame is not a `Prim.onExit`: ruling 7 of
+  `test/contracts/frame-simulation.contract.md` already forces it. The only
+  `FrameEvent` with a service-level shadow other than `yielded` is
+  `ranFinalizer`, and `Prim.onExit` is the only primitive that emits one, so a
+  region compiled to `Prim.onExit` would manufacture one `finalizer` row per
+  region that neither the runner nor the host writes. `Prim.onSuccessAndFailure`
+  answers both arms (rc.112's scope-closing `OnExit` answers both) and emits no
+  row.
+
+* **P2 — a live frontier stays live.** The eight arms that sent exhausted
+  fuel, a missing block, a stuck plan, an exhausted or mismatched tape, or a
+  malformed `acquire`/`leave` to `Prim.failure Cause.empty` now emit
+  `Prim.suspend point`, whose `suspendBody` is itself, so `FrameFiber.step` is a
+  fixed point (`Runtime.lean` `step_suspend`, `step_parking_is_a_fixed_point`)
+  and `FrameFiber.run` answers `FrameStep.running` with no event at all. A live
+  frontier is distinct from typed failure and from refusal — `docs/DESIGN-BASIS.md`
+  DB-04, `Runtime.lean:2435-2439`. The *classification* half (T8: telling live
+  suspension, refusal and completion apart) is packet P5 and is **not** closed
+  here: a `mismatch` refusal also compiles to a live suspension.
+
+* **P3 — `performCatch` is `onSuccessAndFailure`.** `Effect.result` is
+  `matchEager` → `matchCause` → `matchCauseEffect` = `OnSuccessAndFailure`
+  (`internal/effect.ts:3417-3420`, `:3450-3460`). The caught perform compiles to
+  `Prim.onSuccessAndFailure (Prim.sync-shaped body) (RegionName.cont point)
+  (RegionName.caught point)`, the body is a `Prim.suspend` whose `suspendBody`
+  is `Prim.failure (Cause.fail error)` on an erroring answer, and the machine's
+  `armE` resumes at the failure successor. The old sleight of hand — the error
+  resolved inside `contA` so that no frame ever saw a `Cause` — is gone.
+  `compileRegion_catchFree` is the S3-shaped statement that this costs a
+  catch-free flow nothing: no `RegionName.caught` name is emitted.
+
+  (The constructor is spelled `caught` rather than `catch` because `catch` is a
+  `do`-notation token in Lean 4.)
 
 `Effect4/Semantics/FrameSimulation.lean` (fence B) proves the *value* half
 against `Effects.interpret` and closes with the note that the finalizer half
@@ -33,8 +84,8 @@ where a release fails under a failing body", because `closeFrame` kept only the
 first release failure. Packet D2 changed that: `closeFrame` now returns the
 *merged* failure list in close order (`Effect4.Flow.closeFrame_failure_merge`,
 against `Exit.asVoidAll`), and `fail` reports `error :: (rest ++ closing)`. So
-the machine's `Cause.combine bodyCause finalizerCause` and the runner's list are
-related by a projection, not divergent:
+the machine's merged cause and the runner's list are related by a projection,
+not divergent:
 
 * `causeOfFailures` sends a failure list to the cause whose reasons are those
   errors, unannotated, in order — a section;
@@ -45,39 +96,16 @@ The direction that is a *function* is `failuresOfCause`. `causeOfFailures` is no
 surjective — a cause carrying a `die` or an `interrupt` reason has no failure
 list preimage — so the projection only ever goes cause-to-list.
 
-**The empty-annotation hypothesis of
-`docs/research/2026-09-03-frame-simulation.md` section 5(b) is not needed for
-the theorems below, and the reason is sharper than "we avoided it".**
-`Cause.combine self that` is `dedup (self.reasons ++ that.reasons)` when both
-are non-empty, and `Cause.dedup` keeps the *first* occurrence
-(`Effect4.Cause.dedup_cons`), so the head of a combined cause is the head of the
-body's cause whatever the annotations are. `Exit.toOutcome` reads the first
-`fail` reason (`Effect4/Target/TypeScript/Simulation.lean`). Hence
-`toOutcome_combine` below: the merge is invisible to the wire, on the nose,
-with no hypothesis on `ReasonAnnotations`. Section 5(b) stays live only for a
-statement that compares whole *causes* rather than their wire projection; no
-theorem here does.
-
-## The compilation, and why it is the host's shape
-
-`compileRegion` emits exactly what `Effect4/Target/TypeScript/RegionLower.lean`
-lowers to:
-
-* `enter` becomes `Prim.onSuccess body ν` — the `Effect.scoped(Effect.onExit(…))`
-  wrapper whose value continues at the region's `continue_` block. It pushes no
-  finalizer, because the row it writes is `leave`, and `leave` has **no**
-  frame-machine shadow: `FrameEvent.toTrace` sends every event but
-  `ranFinalizer` and `yielded` to `none`. Compiling `enter` to `Prim.onExit`
-  would manufacture a `finalizer` row the runner never writes.
-* `acquire` becomes the `sync` gadget of fence B followed by
-  `Prim.onExit rest (RegionName.fin region point) false` — rc.112's
-  `Prim.scopedFrame` — so the release is a *named* finalizer, and the frames
-  stack in registration order. `leave` compiles to `Prim.success value`, and
-  the machine pops the `onExit` frames latest-registered first, each running its
-  finalizer against the closing exit. That is the order
-  `E4-TARGET-CE-012..014` pin for the host and `Frame.toScope_closeOrder`
-  proves for the runner.
-* a plain `perform` becomes the fence-B gadget `onSuccess (sync point) (cont point)`.
+**Since P1 the close merge is concatenation, never `Cause.combine`.**
+`Cause.combine` is `dedup` of the concatenation, and rc.112's `causeCombine`
+dedups by structural equality including annotations (`internal/effect.ts:242-258`)
+while `exitAsVoidAll` does not dedup at all (`:2025-2038`). A scope close is the
+second one. `closeExit` therefore goes through `Exit.asVoidAll`, and the region's
+cause arm appends the closing reasons to the body's rather than combining them —
+which is what `E4-FLOW-CE-021` and `merge_is_concatenation_not_union` pin.
+`toOutcome_combine` below is retained because it is what makes the *wire*
+insensitive to whichever merge is used, with no hypothesis on
+`ReasonAnnotations`.
 
 ## Separation 4, restated for this module
 
@@ -97,38 +125,25 @@ therefore unambiguous without a separate occurrence index.
 
 Proved, in full generality: `unwind_failure` (a failing exit propagating
 through an arbitrary fragment stack runs exactly the finalizers that stack
-names, in pop order, all against the same exit, and yields that exit) and
-`close_success` (a closing value runs the `onExit` frames above the answering
-`onSuccess` frame and then answers it). Those two are the finalizer half of the
-machine, and they are what `regions_simulate` is assembled from.
+names, in pop order, all against the same exit, and yields that exit),
+`unwind_to_frame` (the same up to the first frame that declares a cause arm —
+the region's scope frame), `close_success_of` and its two corollaries (a closing
+value runs the `onExit` frames above the frame that answers it, latest
+registered first, all against the same exit), and `regionInterp_finalizerExit`,
+which discharges all three theorems' premise for every compiled run.
 
-Owed, and deliberately not stated as a definition without a proof — the general
-theorem, whose exact wording is:
-
-```text
-theorem regions_simulate
-    (alphabet : FlowAlphabet Ty) (flow : CheckedRegionFlow alphabet)
-    (service : RegionService alphabet Id) (nameOf : alphabet.Op -> String)
-    (oracle : RegionOracle) (tape input) (fuel' fuel : Nat)
-    (hOracle : <the oracle answers what the service answers along this run>)
-    (hfuel : regionBound fuel' <= fuel) :
-    FrameEvent.traceOf RegionName.regionOf id id (fun _ => Val.unit)
-        (FrameFiber.run (regionInterp alphabet flow.flow oracle) fuel
-          (FrameFiber.start (compileAt alphabet flow.flow
-            ⟨fuel', flow.flow.entry, [input], tape⟩))).2
-      = Effects.Trace.project finalizerAndOutcomeMask
-          (((Effect4.Flow.runRegions fuel' flow service nameOf tape input).run []).2)
-```
-
-What blocks it is not the failure payload — that ruling is settled above — but
-the induction: the runner's `leave` continues at `row.continue_` with the fuel
-and the decision tape it holds *at the leave*, while the frame `enter` pushes
-is named at the *enter*. Closing it needs a `leaveConfig` function that walks
-the region body to its close under the oracle and a proof that it agrees with
-the runner, which is a second copy of the runner and its own fence. The
-instances on `regionNested`, `regionTwoFail` and `regionBothSucceed` are closed
-by evaluation in `Effect4Test/Semantics/RegionSimulationContract.lean`, and the
-harness prints both sides of the equation for every region program
+Owed — the general theorem. `RegionsSimulate` and `RegionsSimulateExit` below
+state T5 and T6 of `docs/research/2026-09-03-deep-flow-to-frames.md` §2.3 as
+`Prop`s, with `RegionOracleAgrees` naming the missing induction: the agreement
+between `oracle.registrations` and the runner's `Frame.releases`, and between
+the configuration a region's continuation resumes at and the one the runner
+holds at the `leave`. `closeWalk` is the `leaveConfig` function that obligation
+needs, spelled here so the instances evaluate; the proof that it agrees with
+`Effect4.Flow.regionLoop` is packet P4's remaining obligation and is not in this
+file. The instances on `regionNested`, `regionTwoFail`, `regionBothSucceed` and
+`releaseFails` are closed by evaluation in
+`Effect4Test/Semantics/RegionSimulationContract.lean`, and the harness prints
+both sides of the equation for every region program
 (`harness/trace/Generate.lean frame-trace`).
 -/
 
@@ -158,24 +173,51 @@ deriving DecidableEq
 inductive RegionName where
   /-- The continuation of the operation the block at `point` performs. -/
   | cont (point : Config)
-  /-- The continuation of the region opened at `point`: its `continue_` block. -/
+  /-- The failure successor of the `performCatch` at `point`: the cause name of
+  the `onSuccessAndFailure` frame `Effect.result` builds
+  (`internal/effect.ts:3417-3420`). Spelled `caught` because `catch` is a
+  `do`-notation token. -/
+  | caught (point : Config)
+  /-- The value name of the scope frame the region opened at `point` pushes: its
+  `continue_` block, reached once the scope has closed. -/
   | regionCont (region : Nat) (point : Config)
-  /-- The release the `acquire` at `point` registered on `region`'s scope. -/
+  /-- The cause name of that same scope frame: the region's close on a failing
+  body. One per region, never one per registration
+  (`internal/effect.ts:3815-3827`). -/
+  | close (region : Nat) (point : Config)
+  /-- The release the `acquire` at `point` registered on `region`'s scope. Its
+  frame writes the `finalizer` row rc.112's release lambda writes and leaves the
+  closing exit untouched. -/
   | fin (region : Nat) (point : Config)
 deriving DecidableEq
 
 /-- The region a name belongs to, for `FrameEvent.toTrace`. Only `fin` names
-ever reach it: a `ranFinalizer` event carries no other constructor. -/
+ever reach it: a `ranFinalizer` event carries no other constructor, because
+`fin` is the only name a `Prim.onExit` in a compiled program carries. -/
 def RegionName.regionOf : RegionName -> Nat
   | RegionName.cont _ => 0
+  | RegionName.caught _ => 0
   | RegionName.regionCont region _ => region
+  | RegionName.close region _ => region
   | RegionName.fin region _ => region
+
+/-- The run point a name belongs to. -/
+def RegionName.point : RegionName -> Config
+  | RegionName.cont point => point
+  | RegionName.caught point => point
+  | RegionName.regionCont _ point => point
+  | RegionName.close _ point => point
+  | RegionName.fin _ point => point
 
 /-- The fragment's cause carrier, as fence B fixes it. -/
 abbrev Err := Effect4.Cause Val Unit Unit Unit
 
 /-- The fragment's exit carrier. -/
 abbrev Res := Effect4.Exit Val Val Unit Unit Unit
+
+/-- The exit a scope's release reports: `Unit`-valued, as `Scope.closeExitsM`
+takes it. -/
+abbrev Cleanup := Effect4.Exit Unit Val Unit Unit Unit
 
 /-- The compiled region program. -/
 abbrev Code := Effect4.Prim RegionName Config Val Val Unit Unit Unit
@@ -209,6 +251,26 @@ def finalizerAndOutcomeMask : Effects.Trace.Mask :=
   { ops := false, answers := false, decisions := false, regions := false,
     finalizers := true, outcome := true, frontier := false }
 
+/-! ## The projection between a merged cause and the runner's failure list
+
+`Effect4.Flow.Failures` is `List Val`, in close order, first failure first
+(`closeFrame_failure_merge`). `Effect4.Cause` is a list of `Reason`s. The two
+are related by a section and a retraction, and only the retraction is a
+function on all of `Cause`. They are declared here because P1's close result and
+P3's caught error both read them. -/
+
+/-- A failure list as a cause: one unannotated `fail` reason per failure, in
+order. A section, not a bijection. -/
+def causeOfFailures (failures : Effect4.Flow.Failures) : Err :=
+  ⟨failures.map (fun error => Effect4.Reason.fail error Effect4.ReasonAnnotations.empty)⟩
+
+/-- A cause as a failure list: its `fail` errors, in reason order. **This is the
+direction that is a function**: it is total on `Cause`, whereas
+`causeOfFailures` misses every cause carrying a `die` or an `interrupt`
+reason. It is exactly the projection `Effect4.Flow.exitErrors` takes. -/
+def failuresOfCause (cause : Err) : Effect4.Flow.Failures :=
+  cause.reasons.filterMap Effect4.Reason.error?
+
 /-! ## The oracle
 
 `PrimInterp` is a record of pure total functions, so the machine has nowhere to
@@ -217,13 +279,23 @@ supplies them. Here the key is the *point* rather than an occurrence index,
 because `Config.fuel` already distinguishes occurrences. -/
 
 /-- What the service answers along one run: at each point, the answer of the
-operation that point performs, and, for an `acquire`, the answer of the release
-it registers when its scope closes. -/
+operation that point performs; for an `acquire`, the answer of the release it
+registers when its scope closes; and, for an `enter`, the acquire points that
+region's scope holds when it closes — `Scope.closeOrder`, latest registered
+first (`Effect4.Flow.Frame.toScope_closeOrder`).
+
+`registrations` is P1's new field. `docs/research/2026-09-03-deep-flow-to-frames.md`
+§2.2 recommends exactly this shape: an oracle field whose agreement with the
+runner's `Frame.releases` is a *stated hypothesis* rather than a second copy of
+the runner buried in the compile. -/
 structure RegionOracle where
   /-- The answer of the operation performed at this point. -/
   answer : Config -> Except Val Val
   /-- The answer of the release the `acquire` at this point registered. -/
   release : Config -> Except Val Val
+  /-- The acquire points the region entered at this point has registered when it
+  closes, latest registered first. -/
+  registrations : Config -> List Config
 
 section Shapes
 
@@ -297,24 +369,239 @@ def releaseOp (point : Config) : Option alphabet.Op :=
 
 end Shapes
 
+/-! ## `leaveConfig`, spelled
+
+The module header used to record the general induction as blocked on "a
+`leaveConfig` function that walks a region body to its close under the oracle".
+`closeWalk` is that function. It mirrors `compileRegion`'s recursion arm for
+arm — including the fuel and tape a nested region's continuation resumes with —
+so every `Config` it records is *the same name* the compile emits. It is used
+only to give `statelessOracle` a computable `registrations` field; the general
+theorem carries the agreement as `RegionOracleAgrees` rather than assuming this
+walk is the runner. -/
+
+/-- The acquire points a region body registers on its own scope, latest
+registered first, and the value its `leave` hands on when it reaches one. A body
+that fails, runs out of fuel, or stops on a frontier still reports the
+registrations it made — which is exactly the runner's `Frame.releases` at the
+moment `unwind` closes the frame. -/
+def closeWalk {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
+    (answer : Config -> Except Val Val) :
+    Nat -> BlockId -> Effect4.Flow.Env -> Effect4.Flow.Tape -> List Config ->
+      List Config × Option Val
+  | 0, _, _, _, acc => (acc, none)
+  | fuel + 1, block, env, tape, acc =>
+    match flow.block? block with
+    | none => (acc, none)
+    | some current =>
+      match current.term with
+      | .plain term =>
+        match Effect4.Flow.plan alphabet
+            { id := current.id, params := current.params, term := term } env tape with
+        | .jump target env' => closeWalk alphabet flow answer fuel target env' tape acc
+        | .choose _ _ target env' rest => closeWalk alphabet flow answer fuel target env' rest acc
+        | .perform _ _ target env' =>
+          match answer ⟨fuel + 1, block, env, tape⟩ with
+          | .ok value => closeWalk alphabet flow answer fuel target (env' ++ [value]) tape acc
+          | .error _ => (acc, none)
+        | .performCatch _ _ target env' onError errorEnv =>
+          match answer ⟨fuel + 1, block, env, tape⟩ with
+          | .ok value => closeWalk alphabet flow answer fuel target (env' ++ [value]) tape acc
+          | .error error =>
+            closeWalk alphabet flow answer fuel onError (errorEnv ++ [error]) tape acc
+        | _ => (acc, none)
+      | .enter region body args =>
+        match Effect4.Flow.readArgs env args with
+        | none => (acc, none)
+        | some values =>
+          match (closeWalk alphabet flow answer fuel body values tape []).snd with
+          | none => (acc, none)
+          | some value =>
+            match flow.row? region with
+            | none => (acc, none)
+            | some row => closeWalk alphabet flow answer fuel row.continue_ [value] tape acc
+      | .acquire _ _ _ _ _ =>
+        match performCont alphabet flow ⟨fuel + 1, block, env, tape⟩,
+            answer ⟨fuel + 1, block, env, tape⟩ with
+        | some (target, env', _), .ok value =>
+          closeWalk alphabet flow answer fuel target (env' ++ [value]) tape
+            (⟨fuel + 1, block, env, tape⟩ :: acc)
+        | _, _ => (acc, none)
+      | .leave value =>
+        match env[value.index]? with
+        | some v => (acc, some v)
+        | none => (acc, none)
+
+/-- The registrations of the region whose `enter` is at `point`. -/
+def regionRegistrations {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
+    (answer : Config -> Except Val Val) (point : Config) : List Config :=
+  match flow.block? point.block with
+  | none => []
+  | some current =>
+    match current.term with
+    | .enter _ body args =>
+      match Effect4.Flow.readArgs point.env args with
+      | some values =>
+        (closeWalk alphabet flow answer (point.fuel - 1) body values point.tape []).fst
+      | none => []
+    | _ => []
+
+/-! ## One scope per region: the close result
+
+`Effect4.ScopeMachine.finish` is `private` to its module, so its three arms are
+spelled again here and `closeFinish_eq_result?` is the bridge. The three arms
+matter: at exactly one finalizer the scope returns that finalizer's own exit
+*unmerged* (`Effect4.Scope.closeResult_single`), which `E4-RUN-CE-009` exists to
+forbid flattening. -/
+
+/-- The exit one registered release reports to its region's scope. -/
+def releaseExitOf (oracle : RegionOracle) (point : Config) : Cleanup :=
+  match oracle.release point with
+  | .ok _ => Effect4.Exit.void
+  | .error error => Effect4.Exit.failure (Effect4.Cause.fail error)
+
+/-- The exits a region's registrations report, in close order. -/
+def releaseExitsOf (oracle : RegionOracle) (points : List Config) : List Cleanup :=
+  points.map (releaseExitOf oracle)
+
+/-- `Effect4.ScopeMachine`'s zero/one/many close policy. -/
+def closeFinish : List Cleanup -> Cleanup
+  | [] => Effect4.Exit.void
+  | [only] => only
+  | first :: second :: rest => Effect4.Exit.asVoidAll (first :: second :: rest)
+
+/-- The one exit a region's scope produces: rc.112's `exitAsVoidAll` over the
+release exits it collected (`internal/effect.ts:3826`, `:2025-2038`), through
+`ScopeMachine`'s three-arm policy. -/
+def closeExit (oracle : RegionOracle) (points : List Config) : Cleanup :=
+  closeFinish (releaseExitsOf oracle points)
+
+/-- The failures a region's close reports, in close order — the runner's
+`Effect4.Flow.closeFailures`. -/
+def closeFailuresOf (oracle : RegionOracle) (points : List Config) : Effect4.Flow.Failures :=
+  points.filterMap fun point =>
+    match oracle.release point with
+    | .ok _ => none
+    | .error error => some error
+
+/-- Zero registrations close on the void exit. census: scope.close-merge -/
+theorem closeFinish_nil : closeFinish [] = Effect4.Exit.void := rfl
+
+/-- **Exactly one registration closes on that finalizer's own exit, unmerged.**
+This is `Effect4.Scope.closeResult_single`, and `E4-RUN-CE-009` exists to forbid
+flattening it into the many-arm. census: scope.close-merge -/
+theorem closeFinish_single (only : Cleanup) : closeFinish [only] = only := rfl
+
+/-- Two or more registrations close on rc.112's `exitAsVoidAll`
+(`internal/effect.ts:2025-2038`). census: scope.exit-as-void-all -/
+theorem closeFinish_many (first second : Cleanup) (rest : List Cleanup) :
+    closeFinish (first :: second :: rest) = Effect4.Exit.asVoidAll (first :: second :: rest) := rfl
+
+/-- The bridge to the residual close machine: on a completed close,
+`Effect4.ScopeMachine.result?` is `closeFinish` of the captured replies. The
+`ScopeMachine` spelling of the three arms is `private` to its module, so
+`closeFinish` restates it and this theorem says the two agree.
+census: scope.close-merge -/
+theorem closeFinish_eq_result? {κ φ : Type}
+    (machine : Effect4.ScopeMachine.State κ φ Val Val Unit Unit Unit)
+    (h : machine.phase = Effect4.ScopeMachine.Phase.complete) :
+    Effect4.ScopeMachine.result? machine =
+      some (closeFinish (machine.captured.map Prod.snd)) := by
+  unfold Effect4.ScopeMachine.result?
+  rw [h]
+  cases hcaptured : machine.captured.map Prod.snd with
+  | nil => rfl
+  | cons first tail =>
+    cases tail with
+    | nil => rfl
+    | cons second more => rfl
+
+/-- The reasons the release exits contribute, in close order. -/
+private theorem releaseExits_reasons (oracle : RegionOracle) :
+    forall points : List Config,
+      (releaseExitsOf oracle points).flatMap Effect4.Exit.causeReasons =
+        (causeOfFailures (closeFailuresOf oracle points)).reasons := by
+  intro points
+  induction points with
+  | nil => rfl
+  | cons point rest ih =>
+    have hstep : (releaseExitsOf oracle (point :: rest)).flatMap Effect4.Exit.causeReasons =
+        (releaseExitOf oracle point).causeReasons ++
+          (releaseExitsOf oracle rest).flatMap Effect4.Exit.causeReasons := rfl
+    rw [hstep, ih]
+    cases hrel : oracle.release point with
+    | ok value =>
+      have hhead : (releaseExitOf oracle point).causeReasons = [] := by
+        simp only [releaseExitOf, hrel]
+        rfl
+      have htail : closeFailuresOf oracle (point :: rest) = closeFailuresOf oracle rest := by
+        simp only [closeFailuresOf, List.filterMap_cons, hrel]
+      rw [hhead, htail, List.nil_append]
+    | error error =>
+      have hhead : (releaseExitOf oracle point).causeReasons =
+          [Effect4.Reason.fail error Effect4.ReasonAnnotations.empty] := by
+        simp only [releaseExitOf, hrel]
+        rfl
+      have htail : closeFailuresOf oracle (point :: rest) =
+          error :: closeFailuresOf oracle rest := by
+        simp only [closeFailuresOf, List.filterMap_cons, hrel]
+      rw [hhead, htail]
+      rfl
+
+/-- **The close is `asVoidAll`, not `Cause.combine`.** The reasons a region's
+close carries are exactly its failure list, in close order, duplicates kept —
+which is `Effect4.Flow.closeFrame_failure_merge` on the runner side and
+`Exit.asVoidAll_keeps_duplicates` on the scope side.
+census: scope.exit-as-void-all -/
+theorem closeExit_reasons (oracle : RegionOracle) (points : List Config) :
+    (closeExit oracle points).causeReasons =
+      (causeOfFailures (closeFailuresOf oracle points)).reasons := by
+  have hflat := releaseExits_reasons oracle points
+  cases points with
+  | nil => rfl
+  | cons first rest =>
+    cases rest with
+    | nil =>
+      simp only [releaseExitsOf, List.map_cons, List.map_nil, List.flatMap_cons,
+        List.flatMap_nil, List.append_nil] at hflat
+      exact hflat
+    | cons second more =>
+      show (Effect4.Exit.asVoidAll (releaseExitsOf oracle (first :: second :: more))).causeReasons
+        = _
+      rw [Effect4.Exit.asVoidAll_reasons]
+      exact hflat
+
+/-- A close with no failing release is a successful close.
+census: scope.close-merge -/
+theorem closeExit_success_iff (oracle : RegionOracle) (points : List Config)
+    (h : closeFailuresOf oracle points = []) :
+    (closeExit oracle points).causeReasons = [] := by
+  rw [closeExit_reasons, h]
+  rfl
+
 /-! ## The compilation -/
 
 /-- The region-aware compilation into the frame machine.
 
-`enter` pushes the region frame (`Effect.scoped(Effect.onExit(…))`, whose value
-continues at `continue_`), `acquire` performs its operation and pushes the
-`onExit` frame whose finalizer is its release (`Effect.acquireRelease`), and
-`leave` yields the closing value, which pops through those frames
-latest-registered first. A shape the runner refuses — a missing block, a stuck
-plan, an exhausted or mismatched tape, a malformed `acquire` — compiles to the
-empty failure, which is unreachable on any run the theorem speaks about,
-because such a run does not finish. -/
+`enter` pushes the region's **one** scope frame — rc.112's
+`Effect.scoped(Effect.onExit(…))` at `internal/effect.ts:3938-3947`, whose value
+continues at `continue_` and whose cause arm closes the scope; `acquire`
+performs its operation and, in `regionInterp.contA`, registers a release frame
+whose only observation is the `finalizer` row rc.112's release lambda writes
+(`internal/effect.ts:3971-3987` registers on the scope and pushes no frame of
+its own); `leave` yields the closing value, which pops through the release
+frames latest registered first, every one of them against the *same* exit.
+
+A shape the runner refuses or has not reached — a missing block, a stuck plan,
+an exhausted or mismatched tape, a malformed `acquire`, exhausted fuel —
+compiles to `Prim.suspend point`, a live frontier (P2). It is never an exit:
+`docs/DESIGN-BASIS.md` DB-04. -/
 def compileRegion {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty) :
     Nat -> BlockId -> Effect4.Flow.Env -> Effect4.Flow.Tape -> Code
-  | 0, _, _, _ => Effect4.Prim.failure Effect4.Cause.empty
+  | 0, block, env, tape => Effect4.Prim.suspend ⟨0, block, env, tape⟩
   | fuel + 1, block, env, tape =>
     match flow.block? block with
-    | none => Effect4.Prim.failure Effect4.Cause.empty
+    | none => Effect4.Prim.suspend ⟨fuel + 1, block, env, tape⟩
     | some current =>
       match current.term with
       | .plain term =>
@@ -326,55 +613,274 @@ def compileRegion {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty
           Effect4.Prim.onSuccess (Effect4.Prim.sync ⟨fuel + 1, block, env, tape⟩)
             (RegionName.cont ⟨fuel + 1, block, env, tape⟩)
         | .performCatch _ _ _ _ _ _ =>
-          Effect4.Prim.onSuccess (Effect4.Prim.sync ⟨fuel + 1, block, env, tape⟩)
+          Effect4.Prim.onSuccessAndFailure (Effect4.Prim.suspend ⟨fuel + 1, block, env, tape⟩)
             (RegionName.cont ⟨fuel + 1, block, env, tape⟩)
+            (RegionName.caught ⟨fuel + 1, block, env, tape⟩)
         | .choose _ _ target env' rest => compileRegion alphabet flow fuel target env' rest
-        | .stuck => Effect4.Prim.failure Effect4.Cause.empty
-        | .exhausted _ => Effect4.Prim.failure Effect4.Cause.empty
-        | .mismatch _ _ => Effect4.Prim.failure Effect4.Cause.empty
+        | .stuck => Effect4.Prim.suspend ⟨fuel + 1, block, env, tape⟩
+        | .exhausted _ => Effect4.Prim.suspend ⟨fuel + 1, block, env, tape⟩
+        | .mismatch _ _ => Effect4.Prim.suspend ⟨fuel + 1, block, env, tape⟩
       | .enter region body args =>
         match Effect4.Flow.readArgs env args with
         | some values =>
-          Effect4.Prim.onSuccess (compileRegion alphabet flow fuel body values tape)
+          Effect4.Prim.onSuccessAndFailure (compileRegion alphabet flow fuel body values tape)
             (RegionName.regionCont region.value ⟨fuel + 1, block, env, tape⟩)
-        | none => Effect4.Prim.failure Effect4.Cause.empty
+            (RegionName.close region.value ⟨fuel + 1, block, env, tape⟩)
+        | none => Effect4.Prim.suspend ⟨fuel + 1, block, env, tape⟩
       | .acquire _ _ _ _ _ =>
         match performCont alphabet flow ⟨fuel + 1, block, env, tape⟩ with
         | some _ =>
           Effect4.Prim.onSuccess (Effect4.Prim.sync ⟨fuel + 1, block, env, tape⟩)
             (RegionName.cont ⟨fuel + 1, block, env, tape⟩)
-        | none => Effect4.Prim.failure Effect4.Cause.empty
+        | none => Effect4.Prim.suspend ⟨fuel + 1, block, env, tape⟩
       | .leave value =>
         match env[value.index]? with
         | some v => Effect4.Prim.success v
-        | none => Effect4.Prim.failure Effect4.Cause.empty
+        | none => Effect4.Prim.suspend ⟨fuel + 1, block, env, tape⟩
 
 /-- The compilation at a point. It is `compileRegion` with the point's four
 fields spread out; the fuel is the first argument so the recursion is
 structural and the compiled program is kernel-reducible, which is what the
-receipts on the three region programs evaluate. -/
+receipts on the four region programs evaluate. -/
 def compileAt {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
     (point : Config) : Code :=
   compileRegion alphabet flow point.fuel point.block point.env point.tape
 
-/-- The externally supplied meaning of every name. `contA` is computed from the
-flow — a name is a point, and the flow says what happens there — and only the
-service's answers come from the oracle. `contE` is the identity on causes: the
-fragment has no `onFailure` frame, so no compiled run ever consults it; it is
-the inert filler fence B's `tapeInterp` uses. -/
+/-- Whether a primitive is a failure. Used only to state P2's general law. -/
+def isFailure : Code -> Bool
+  | Effect4.Prim.failure _ => true
+  | _ => false
+
+/-- **P2's general law: the compile never manufactures a failure.** Every arm of
+`compileRegion` emits `success`, `suspend`, `onSuccess` or `onSuccessAndFailure`
+and nothing else, so no shape the runner refuses or has not reached can become
+an exit. This is the statement `E4-TARGET-CE-020` attacked — "compiling
+exhausted source fuel to an empty failure preserves a live region run" — refuted
+at the root rather than restricted: there is no empty failure to compile to.
+census: op.Suspend -/
+theorem compileRegion_not_failure {Ty : Type} (alphabet : FlowAlphabet Ty)
+    (flow : RegionFlow Ty) :
+    forall (fuel : Nat) (block : BlockId) (env : Effect4.Flow.Env) (tape : Effect4.Flow.Tape),
+      isFailure (compileRegion alphabet flow fuel block env tape) = false := by
+  intro fuel
+  induction fuel with
+  | zero => intro block env tape; rfl
+  | succ fuel ih =>
+    intro block env tape
+    cases hblock : flow.block? block with
+    | none => simp only [compileRegion, hblock, isFailure]
+    | some current =>
+      cases hterm : current.term with
+      | plain term =>
+        cases hplan : Effect4.Flow.plan alphabet
+            { id := current.id, params := current.params, term := term } env tape with
+        | ret value => simp only [compileRegion, hblock, hterm, hplan, isFailure]
+        | jump target env' => simp only [compileRegion, hblock, hterm, hplan, ih]
+        | perform op request target env' =>
+          simp only [compileRegion, hblock, hterm, hplan, isFailure]
+        | performCatch op request target env' onError errorEnv =>
+          simp only [compileRegion, hblock, hterm, hplan, isFailure]
+        | choose site branch target env' rest =>
+          simp only [compileRegion, hblock, hterm, hplan, ih]
+        | stuck => simp only [compileRegion, hblock, hterm, hplan, isFailure]
+        | exhausted site => simp only [compileRegion, hblock, hterm, hplan, isFailure]
+        | mismatch expected actual =>
+          simp only [compileRegion, hblock, hterm, hplan, isFailure]
+      | enter region body args =>
+        cases hargs : Effect4.Flow.readArgs env args with
+        | none => simp only [compileRegion, hblock, hterm, hargs, isFailure]
+        | some values => simp only [compileRegion, hblock, hterm, hargs, isFailure]
+      | acquire operation request release target args =>
+        cases hcont : performCont alphabet flow ⟨fuel + 1, block, env, tape⟩ with
+        | none => simp only [compileRegion, hblock, hterm, hcont, isFailure]
+        | some triple => simp only [compileRegion, hblock, hterm, hcont, isFailure]
+      | leave value =>
+        cases hval : env[value.index]? with
+        | none => simp only [compileRegion, hblock, hterm, hval, isFailure]
+        | some v => simp only [compileRegion, hblock, hterm, hval, isFailure]
+
+/-- The same, as an inequation. census: op.Suspend -/
+theorem compileRegion_never_fails {Ty : Type} (alphabet : FlowAlphabet Ty)
+    (flow : RegionFlow Ty) (fuel : Nat) (block : BlockId) (env : Effect4.Flow.Env)
+    (tape : Effect4.Flow.Tape) (cause : Err) :
+    compileRegion alphabet flow fuel block env tape ≠ Effect4.Prim.failure cause := by
+  intro h
+  have hfalse := compileRegion_not_failure alphabet flow fuel block env tape
+  rw [h] at hfalse
+  exact absurd hfalse (by simp [isFailure])
+
+/-- The `caught` names a compiled program carries. P3 is the only arm that
+emits one. -/
+def caughtNames : Code -> List Config
+  | Effect4.Prim.onSuccessAndFailure body _ (RegionName.caught point) =>
+    point :: caughtNames body
+  | Effect4.Prim.onSuccessAndFailure body _ _ => caughtNames body
+  | Effect4.Prim.onSuccess body _ => caughtNames body
+  | Effect4.Prim.onFailure body _ => caughtNames body
+  | Effect4.Prim.onExit body _ _ => caughtNames body
+  | Effect4.Prim.exitFrame body => caughtNames body
+  | _ => []
+
+/-- **P3 costs a catch-free flow nothing.** This is spike S3's
+`compileFork_eq_compileRegion` shape: on a flow no configuration of which plans
+a `performCatch`, the compile emits no `RegionName.caught` name, so every
+existing receipt — the region instances, the boundary battery, the harness's
+`frame-trace` output — is about programs P3 did not touch. It covers the
+continuations `regionInterp` produces as well, because every one of them is
+itself a `compileRegion` output.
+census: op.OnSuccessAndFailure -/
+theorem compileRegion_catchFree {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
+    (hfree : forall point, catchCont alphabet flow point = none) :
+    forall (fuel : Nat) (block : BlockId) (env : Effect4.Flow.Env) (tape : Effect4.Flow.Tape),
+      caughtNames (compileRegion alphabet flow fuel block env tape) = [] := by
+  intro fuel
+  induction fuel with
+  | zero => intro block env tape; rfl
+  | succ fuel ih =>
+    intro block env tape
+    cases hblock : flow.block? block with
+    | none => simp only [compileRegion, hblock, caughtNames]
+    | some current =>
+      cases hterm : current.term with
+      | plain term =>
+        cases hplan : Effect4.Flow.plan alphabet
+            { id := current.id, params := current.params, term := term } env tape with
+        | ret value => simp only [compileRegion, hblock, hterm, hplan, caughtNames]
+        | jump target env' => simp only [compileRegion, hblock, hterm, hplan, ih]
+        | perform op request target env' =>
+          simp only [compileRegion, hblock, hterm, hplan, caughtNames]
+        | performCatch op request target env' onError errorEnv =>
+          have hcatch := hfree ⟨fuel + 1, block, env, tape⟩
+          simp only [catchCont, hblock, hterm, hplan] at hcatch
+          exact nomatch hcatch
+        | choose site branch target env' rest =>
+          simp only [compileRegion, hblock, hterm, hplan, ih]
+        | stuck => simp only [compileRegion, hblock, hterm, hplan, caughtNames]
+        | exhausted site => simp only [compileRegion, hblock, hterm, hplan, caughtNames]
+        | mismatch expected actual =>
+          simp only [compileRegion, hblock, hterm, hplan, caughtNames]
+      | enter region body args =>
+        cases hargs : Effect4.Flow.readArgs env args with
+        | none => simp only [compileRegion, hblock, hterm, hargs, caughtNames]
+        | some values =>
+          simp only [compileRegion, hblock, hterm, hargs, caughtNames, ih]
+      | acquire operation request release target args =>
+        cases hcont : performCont alphabet flow ⟨fuel + 1, block, env, tape⟩ with
+        | none => simp only [compileRegion, hblock, hterm, hcont, caughtNames]
+        | some triple => simp only [compileRegion, hblock, hterm, hcont, caughtNames]
+      | leave value =>
+        cases hval : env[value.index]? with
+        | none => simp only [compileRegion, hblock, hterm, hval, caughtNames]
+        | some v => simp only [compileRegion, hblock, hterm, hval, caughtNames]
+
+/-- What a `Prim.suspend` thunk returns. P2 and P3 share the constructor and
+split on the point: at a `performCatch` point with fuel to spend it is the
+answer *as a primitive*, so the machine's `armE` sees a real `Cause`
+(`internal/effect.ts:3417-3420`); everywhere else it is the suspension itself,
+so the step is a fixed point and the frontier stays live (DB-04). -/
+def regionSuspendBody {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
+    (oracle : RegionOracle) (point : Config) : Code :=
+  match catchCont alphabet flow point with
+  | none => Effect4.Prim.suspend point
+  | some _ =>
+    match point.fuel with
+    | 0 => Effect4.Prim.suspend point
+    | _ + 1 =>
+      match oracle.answer point with
+      | .ok value => Effect4.Prim.success value
+      | .error error => Effect4.Prim.failure (Effect4.Cause.fail error)
+
+/-- At a frontier point the suspension returns itself. -/
+theorem regionSuspendBody_frontier {Ty : Type} (alphabet : FlowAlphabet Ty)
+    (flow : RegionFlow Ty) (oracle : RegionOracle) (point : Config)
+    (h : catchCont alphabet flow point = none) :
+    regionSuspendBody alphabet flow oracle point = Effect4.Prim.suspend point := by
+  simp only [regionSuspendBody, h]
+
+/-- At a `performCatch` point with fuel to spend the suspension returns the
+answer as a primitive, so a failing answer becomes a machine-level `Cause`. -/
+theorem regionSuspendBody_catch {Ty : Type} (alphabet : FlowAlphabet Ty)
+    (flow : RegionFlow Ty) (oracle : RegionOracle) (fuel : Nat) (block : BlockId)
+    (env : Effect4.Flow.Env) (tape : Effect4.Flow.Tape) (onError : BlockId)
+    (errorEnv : Effect4.Flow.Env)
+    (h : catchCont alphabet flow ⟨fuel + 1, block, env, tape⟩ = some (onError, errorEnv)) :
+    regionSuspendBody alphabet flow oracle ⟨fuel + 1, block, env, tape⟩ =
+      (match oracle.answer ⟨fuel + 1, block, env, tape⟩ with
+        | .ok value => Effect4.Prim.success value
+        | .error error => Effect4.Prim.failure (Effect4.Cause.fail error)) := by
+  simp only [regionSuspendBody, h]
+
+/-- At a point whose source fuel is spent the suspension returns itself, whether
+or not the block is a `performCatch`. -/
+theorem regionSuspendBody_zero {Ty : Type} (alphabet : FlowAlphabet Ty)
+    (flow : RegionFlow Ty) (oracle : RegionOracle) (point : Config) (h : point.fuel = 0) :
+    regionSuspendBody alphabet flow oracle point = Effect4.Prim.suspend point := by
+  cases hcatch : catchCont alphabet flow point with
+  | none => simp only [regionSuspendBody, hcatch]
+  | some pair => simp only [regionSuspendBody, hcatch, h]
+
+/-- A suspension whose body is itself is a step fixed point that writes no
+event. rc.112 has no opcode here: the runner has simply not reached the block.
+census: op.Suspend -/
+theorem step_suspend_fixed (interp : Table) (point : Config) (stack : List Code) (flag : Bool)
+    (h : interp.suspendBody point = Effect4.Prim.suspend point) :
+    (Effect4.FrameFiber.mk (Effect4.Prim.suspend point) stack flag none false).step interp =
+      (Effect4.FrameStep.running
+        (Effect4.FrameFiber.mk (Effect4.Prim.suspend point) stack flag none false), []) := by
+  show (Effect4.FrameStep.running
+      (Effect4.FrameFiber.mk (interp.suspendBody point) stack flag none false), []) = _
+  rw [h]
+
+/-- So the bounded runner answers `FrameStep.running` at *every* fuel, with an
+empty trace: a live frontier, never an exit (`docs/DESIGN-BASIS.md` DB-04).
+census: op.Suspend -/
+theorem run_suspend_fixed (interp : Table) (point : Config) (stack : List Code) (flag : Bool)
+    (h : interp.suspendBody point = Effect4.Prim.suspend point) :
+    forall fuel,
+      Effect4.FrameFiber.run interp fuel
+          (Effect4.FrameFiber.mk (Effect4.Prim.suspend point) stack flag none false) =
+        (Effect4.FrameStep.running
+          (Effect4.FrameFiber.mk (Effect4.Prim.suspend point) stack flag none false), []) := by
+  intro fuel
+  induction fuel with
+  | zero => rfl
+  | succ n ih =>
+    rw [Effect4.FrameFiber.run_succ_running interp _ _ n _
+      (step_suspend_fixed interp point stack flag h), ih]
+    rfl
+
+/-- The externally supplied meaning of every name. `contA` and `contE` are
+computed from the flow — a name is a point, and the flow says what happens
+there — and only the service's answers, the release outcomes and the
+registrations come from the oracle.
+
+Three fields carry the spike's repairs.
+
+* `finalizerExit` is **constantly `Exit.success ()`** (P1). A registered release
+  reports its outcome to its region's *scope*, never to the caller-side
+  composite `Exit.restoreAfterFinalizer`, so no release's failure is ever fed
+  into the exit the next release observes
+  (`internal/effect.ts:3815-3827`; `Effect4.ScopeMachine.request_uses_original`).
+  The whole close is `closeExit`, applied once, by the region's scope frame.
+* `suspendBody` is the identity into `Prim.suspend` at every frontier point
+  (P2), so `FrameFiber.run` stays `FrameStep.running` for ever and writes no
+  event; and at a `performCatch` point it is the answer as a *primitive*, so the
+  machine's `armE` sees a real `Cause` (P3).
+* `contE` routes a `caught` name to the `performCatch`'s failure successor and a
+  `close` name to the region's scope close, appending the closing reasons to the
+  body's — concatenation, as `Exit.asVoidAll` concatenates
+  (`internal/effect.ts:2025-2038`), never `Cause.combine`, which dedups
+  (`:242-258`). -/
 def regionInterp {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
     (oracle : RegionOracle) : Table where
+  -- No `asyncFinalizer` frame is ever emitted by the compile, so the cancel arm is never
+  -- consulted; the honest filler re-fails with the passing cause.
+  cancelThenFail := fun _ cause => Effect4.Prim.failure cause
   contA := fun name value =>
     match name with
     | RegionName.cont point =>
       match oracle.answer point with
-      | .error error =>
-        -- Flow v3: a `performCatch` names where its failure continues, so the
-        -- error does not become a machine failure and no frame unwinds.
-        match catchCont alphabet flow point with
-        | some (onError, errorEnv) =>
-          compileRegion alphabet flow (point.fuel - 1) onError (errorEnv ++ [error]) point.tape
-        | none => Effect4.Prim.failure (Effect4.Cause.fail error)
+      | .error error => Effect4.Prim.failure (Effect4.Cause.fail error)
       | .ok _ =>
         match performCont alphabet flow point with
         | some (target, env', none) =>
@@ -383,77 +889,224 @@ def regionInterp {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
           Effect4.Prim.onExit
             (compileRegion alphabet flow (point.fuel - 1) target (env' ++ [value]) point.tape)
             (RegionName.fin region point) false
-        | none => Effect4.Prim.failure Effect4.Cause.empty
+        | none => Effect4.Prim.suspend point
     | RegionName.regionCont region point =>
-      match flow.row? ⟨region⟩ with
-      | some row =>
-        compileRegion alphabet flow (point.fuel - 1) row.continue_ [value] point.tape
-      | none => Effect4.Prim.failure Effect4.Cause.empty
-    | RegionName.fin _ _ => Effect4.Prim.failure Effect4.Cause.empty
-  contE := fun _ cause => Effect4.Prim.failure cause
+      match closeExit oracle (oracle.registrations point) with
+      | Effect4.Exit.failure closing => Effect4.Prim.failure closing
+      | Effect4.Exit.success _ =>
+        match flow.row? ⟨region⟩ with
+        | some row =>
+          compileRegion alphabet flow (point.fuel - 1) row.continue_ [value] point.tape
+        | none => Effect4.Prim.suspend point
+    -- The value arm of a `caught`, `close` or `fin` name is never demanded: the
+    -- first two are cause names and the third is an `onExit` finalizer.
+    | RegionName.caught point => Effect4.Prim.suspend point
+    | RegionName.close _ point => Effect4.Prim.suspend point
+    | RegionName.fin _ point => Effect4.Prim.suspend point
+  contE := fun name cause =>
+    match name with
+    | RegionName.caught point =>
+      match catchCont alphabet flow point, (failuresOfCause cause).head? with
+      | some (onError, errorEnv), some error =>
+        compileRegion alphabet flow (point.fuel - 1) onError (errorEnv ++ [error]) point.tape
+      | _, _ => Effect4.Prim.failure cause
+    | RegionName.close _ point =>
+      match closeExit oracle (oracle.registrations point) with
+      | Effect4.Exit.success _ => Effect4.Prim.failure cause
+      | Effect4.Exit.failure closing =>
+        Effect4.Prim.failure ⟨cause.reasons ++ closing.reasons⟩
+    | _ => Effect4.Prim.failure cause
   syncValue := fun point =>
     match oracle.answer point with
     | .ok value => value
     | .error _ => Val.unit
-  finalizerExit := fun name _ =>
-    match name with
-    | RegionName.fin _ point =>
-      match oracle.release point with
-      | .ok _ => Effect4.Exit.success ()
-      | .error error => Effect4.Exit.failure (Effect4.Cause.fail error)
-    | _ => Effect4.Exit.success ()
-  suspendBody := fun _ => Effect4.Prim.failure Effect4.Cause.empty
+  finalizerExit := fun _ _ => Effect4.Exit.success ()
+  suspendBody := regionSuspendBody alphabet flow oracle
   reifyExit := fun _ => Val.unit
   iterNext := fun _ _ => ([], Effect4.IterStep.done Val.unit)
   loopTest := fun _ _ => false
-  loopBody := fun _ _ => Effect4.Prim.failure Effect4.Cause.empty
+  loopBody := fun name _ => Effect4.Prim.suspend name.point
   loopStep := fun _ value => value
   loopDone := fun _ => Val.unit
   notImplemented := ()
 
+/-- **P1's premise, discharged.** Every finalizer of a compiled region run
+succeeds, because a registered release reports to its region's scope and not to
+the caller-side composite. This is what removes the `hfin` restriction from
+`unwind_failure` and `close_success` on every compiled run, and it is the
+`E4-TARGET-CE-019` repair in one line: no release's failure can reach the exit
+another release observes. rc.112: `internal/effect.ts:3815-3827`.
+census: scope.close-sequential -/
+theorem regionInterp_finalizerExit {Ty : Type} (alphabet : FlowAlphabet Ty)
+    (flow : RegionFlow Ty) (oracle : RegionOracle) (name : RegionName) (exit : Res) :
+    (regionInterp alphabet flow oracle).finalizerExit name exit = Effect4.Exit.success () := rfl
+
+/-- **P2's fixed point.** A frontier residual steps to itself and writes no
+event, so `FrameFiber.run` answers `FrameStep.running` at every fuel: a live
+frontier, never an exit (`docs/DESIGN-BASIS.md` DB-04). rc.112 has no opcode
+here at all — the runner simply has not reached the block.
+census: op.Suspend -/
+theorem regionInterp_suspend_fixed {Ty : Type} (alphabet : FlowAlphabet Ty)
+    (flow : RegionFlow Ty) (oracle : RegionOracle) (point : Config)
+    (hfrontier : catchCont alphabet flow point = none) (stack : List Code)
+    (flag : Bool) :
+    (Effect4.FrameFiber.mk (Effect4.Prim.suspend point) stack flag none false).step
+        (regionInterp alphabet flow oracle) =
+      (Effect4.FrameStep.running
+        (Effect4.FrameFiber.mk (Effect4.Prim.suspend point) stack flag none false), []) := by
+  exact step_suspend_fixed (regionInterp alphabet flow oracle) point stack flag
+    (regionSuspendBody_frontier alphabet flow oracle point hfrontier)
+
+/-- **P2, at the top of a run.** A configuration whose source fuel is spent
+compiles to a suspension, and the machine stays on it for ever, writing nothing:
+`FrameStep.running` at every machine fuel. That is a live frontier under
+`docs/DESIGN-BASIS.md` DB-04 and not an exit, which is exactly what
+`E4-TARGET-CE-020` demanded and what the old `Prim.failure Cause.empty` denied
+(its `Exit.toOutcome` was `.interrupted`). census: op.Suspend -/
+theorem compileAt_zero_fuel_live {Ty : Type} (alphabet : FlowAlphabet Ty)
+    (flow : RegionFlow Ty) (oracle : RegionOracle) (block : BlockId)
+    (env : Effect4.Flow.Env) (tape : Effect4.Flow.Tape) (fuel : Nat) :
+    Effect4.FrameFiber.run (regionInterp alphabet flow oracle) fuel
+        (Effect4.FrameFiber.start (compileAt alphabet flow ⟨0, block, env, tape⟩)) =
+      (Effect4.FrameStep.running
+        (Effect4.FrameFiber.start (compileAt alphabet flow ⟨0, block, env, tape⟩)), []) :=
+  run_suspend_fixed (regionInterp alphabet flow oracle) ⟨0, block, env, tape⟩ [] true
+    (regionSuspendBody_zero alphabet flow oracle ⟨0, block, env, tape⟩ rfl) fuel
+
 /-- The oracle of a service that does not read or write its own state: the
 answer at a point is what the service returns for the operation that point
-performs, and a release's answer is what it returns for the release operation
-on the resource the `acquire` produced. This is the `stateless` hypothesis of
-`Effect4.Flow.closeFrame_failure_closeResult`, in oracle form. -/
+performs. -/
+def statelessAnswer {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
+    (answerOf : alphabet.Op -> Val -> Except Val Val) (point : Config) : Except Val Val :=
+  match performOp alphabet flow point with
+  | some (op, request) => answerOf op request
+  | none => .ok Val.unit
+
+/-- The release outcome of the `acquire` at a point, statelessly: the release
+operation applied to the resource the `acquire` produced. -/
+def statelessRelease {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
+    (answerOf : alphabet.Op -> Val -> Except Val Val) (point : Config) : Except Val Val :=
+  match performOp alphabet flow point, releaseOp alphabet flow point with
+  | some (op, request), some releaser =>
+    match answerOf op request with
+    | .ok resource => answerOf releaser resource
+    | .error error => .error error
+  | _, _ => .ok Val.unit
+
+/-- The oracle of a service that does not read or write its own state. This is
+the `stateless` hypothesis of `Effect4.Flow.closeFrame_failure_closeResult`, in
+oracle form; P1's `registrations` field is computed by `closeWalk`. -/
 def statelessOracle {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
     (answerOf : alphabet.Op -> Val -> Except Val Val) : RegionOracle where
-  answer point :=
-    match performOp alphabet flow point with
-    | some (op, request) => answerOf op request
-    | none => .ok Val.unit
-  release point :=
-    match performOp alphabet flow point, releaseOp alphabet flow point with
-    | some (op, request), some releaser =>
-      match answerOf op request with
-      | .ok resource => answerOf releaser resource
-      | .error error => .error error
-    | _, _ => .ok Val.unit
+  answer := statelessAnswer alphabet flow answerOf
+  release := statelessRelease alphabet flow answerOf
+  registrations := regionRegistrations alphabet flow (statelessAnswer alphabet flow answerOf)
 
-/-- The machine fuel a region run needs. The runner spends one unit per block;
-a block costs the machine at most four steps (push the `OnSuccess` frame, run
-the `Sync` and pop it, push the `OnExit` frame an `acquire` registers, and one
-for the frame a close pops), and one more step yields the exit. -/
+/-- The machine fuel a region run needs, re-derived after P1. The runner spends
+one unit per block, and a block costs the machine at most four steps:
+
+* `jump`, `choose` — nothing, the compile recurses;
+* `perform` — two (push the `OnSuccess` frame; run the `Sync` and pop it);
+* `performCatch` — three (push the `OnSuccessAndFailure` frame; run the
+  `Suspend`; pop and answer);
+* `acquire` — three (the two above, then push the release's `OnExit` frame),
+  plus the one step that pops that frame at the close;
+* `enter` — one (push the region's one scope frame), plus the one step in which
+  that frame answers at the close;
+* `ret`, and a `leave` that empties the stack — one.
+
+P1 did not lower the constant: the release frames stay, because they are what
+writes the `finalizer` row rc.112's release lambda writes
+(`internal/effect.ts:3971-3987`). What P1 removed is the *nesting*, not the
+frame count. -/
 def regionBound (runnerFuel : Nat) : Nat := 4 * runnerFuel + 1
 
-/-! ## The projection between `Cause.combine` and the runner's merged list
+/-! ## The general theorem, stated
 
-`Effect4.Flow.Failures` is `List Val`, in close order, first failure first
-(`closeFrame_failure_merge`). `Effect4.Cause` is a list of `Reason`s. The two
-are related by a section and a retraction, and only the retraction is a
-function on all of `Cause`. -/
+T5 and T6 of `docs/research/2026-09-03-deep-flow-to-frames.md` §2.3, as `Prop`s
+so that the shapes elaborate against the built library and the instances below
+are instances *of them*. `RegionOracleAgrees` is the exact remaining obligation:
+the agreement between the oracle and the runner along one run. Its first two
+clauses are the ordinary answer agreement `hOracle` of the flow note; the third
+is the missing induction — that `oracle.registrations` is the runner's
+`Frame.releases` at the moment the frame closes. -/
 
-/-- A failure list as a cause: one unannotated `fail` reason per failure, in
-order. A section, not a bijection. -/
-def causeOfFailures (failures : Effect4.Flow.Failures) : Err :=
-  ⟨failures.map (fun error => Effect4.Reason.fail error Effect4.ReasonAnnotations.empty)⟩
+/-- The oracle answers what the service answers, and its `registrations` field
+is the runner's `Frame.releases`. The third clause is what a proof of
+`RegionsSimulate` still owes; `closeWalk` computes a candidate for it and
+`statelessOracle` installs that candidate. -/
+structure RegionOracleAgrees {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
+    (service : Effect4.Flow.RegionService alphabet Id)
+    (answerOf : alphabet.Op -> Val -> Except Val Val) (oracle : RegionOracle) : Prop where
+  /-- The service is stateless on this alphabet. -/
+  handle : forall op request, service.handle op request = answerOf op request
+  /-- The oracle answers a point with the service's answer for the operation
+  that point performs. -/
+  answer : forall point, oracle.answer point = statelessAnswer alphabet flow answerOf point
+  /-- The oracle's release outcome is the service's answer to the release
+  operation on the acquired resource. -/
+  release : forall point, oracle.release point = statelessRelease alphabet flow answerOf point
+  /-- **The missing induction.** The registrations the oracle reports for a
+  region are the releases the runner's `Frame` holds when that frame closes, in
+  `Scope.closeOrder`. -/
+  registrations : forall point,
+    oracle.registrations point =
+      regionRegistrations alphabet flow (statelessAnswer alphabet flow answerOf) point
 
-/-- A cause as a failure list: its `fail` errors, in reason order. **This is the
-direction that is a function**: it is total on `Cause`, whereas
-`causeOfFailures` misses every cause carrying a `die` or an `interrupt`
-reason. It is exactly the projection `Effect4.Flow.exitErrors` takes. -/
-def failuresOfCause (cause : Err) : Effect4.Flow.Failures :=
-  cause.reasons.filterMap Effect4.Reason.error?
+/-- `statelessOracle` satisfies three of the four clauses by construction; the
+fourth is the service's own statelessness. So the only content of
+`RegionOracleAgrees` at this oracle is the `registrations` *definition* being
+right, which is the obligation `closeWalk` discharges for the instances and the
+general theorem still owes. census: scope.close-sequential -/
+theorem statelessOracle_agrees {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
+    (service : Effect4.Flow.RegionService alphabet Id)
+    (answerOf : alphabet.Op -> Val -> Except Val Val)
+    (hservice : forall op request, service.handle op request = answerOf op request) :
+    RegionOracleAgrees alphabet flow service answerOf (statelessOracle alphabet flow answerOf) :=
+  { handle := hservice, answer := fun _ => rfl, release := fun _ => rfl,
+    registrations := fun _ => rfl }
+
+/-- **T5, the trace equation.** The frame machine's projected service-level
+trace equals the runner's log under the mask that keeps `finalizer` and `done`.
+Stated as a `Prop` because its proof is packet P4's remaining obligation; the
+instances in `Effect4Test/Semantics/RegionSimulationContract.lean` are the
+cases that are closed. -/
+def RegionsSimulate {Ty : Type} [DecidableEq Ty] (alphabet : FlowAlphabet Ty)
+    (flow : CheckedRegionFlow alphabet)
+    (service : Effect4.Flow.RegionService alphabet Id)
+    (answerOf : alphabet.Op -> Val -> Except Val Val)
+    (nameOf : alphabet.Op -> String) (oracle : RegionOracle)
+    (tape : Effect4.Flow.Tape) (input : Val) (fuel' fuel : Nat) : Prop :=
+  RegionOracleAgrees alphabet flow.flow service answerOf oracle ->
+  regionBound fuel' <= fuel ->
+  traceOfRun (Effect4.FrameFiber.run (regionInterp alphabet flow.flow oracle) fuel
+      (Effect4.FrameFiber.start
+        (compileAt alphabet flow.flow ⟨fuel', flow.flow.entry, [input], tape⟩))).2
+    = Effects.Trace.project finalizerAndOutcomeMask
+        (((Effect4.Flow.runRegions fuel' flow service nameOf tape input).run []).2)
+
+/-- **T6, the exit equation.** The exit the machine finishes with is the
+runner's result, with the *merged* failure list `runRegionsCause` keeps rather
+than the head `runRegions` projects. `causeOfFailures` is the section
+`failuresOfCause` retracts, and `toOutcome_combine` is why T5 is insensitive to
+the merge while T6 is not. Stated as a `Prop` for the same reason as T5. -/
+def RegionsSimulateExit {Ty : Type} [DecidableEq Ty] (alphabet : FlowAlphabet Ty)
+    (flow : CheckedRegionFlow alphabet)
+    (service : Effect4.Flow.RegionService alphabet Id)
+    (answerOf : alphabet.Op -> Val -> Except Val Val)
+    (nameOf : alphabet.Op -> String) (oracle : RegionOracle)
+    (tape : Effect4.Flow.Tape) (input : Val) (fuel' fuel : Nat) : Prop :=
+  RegionOracleAgrees alphabet flow.flow service answerOf oracle ->
+  regionBound fuel' <= fuel ->
+  (Effect4.FrameFiber.run (regionInterp alphabet flow.flow oracle) fuel
+      (Effect4.FrameFiber.start
+        (compileAt alphabet flow.flow ⟨fuel', flow.flow.entry, [input], tape⟩))).1
+    = Effect4.FrameStep.finished
+        (match ((Effect4.Flow.runRegionsCause fuel' flow service nameOf tape input).run []).1 with
+          | ((.done value, _), _) => Effect4.Exit.success value
+          | ((_, _), failures) => Effect4.Exit.failure (causeOfFailures failures))
+
+/-! ## The retraction and the wire projection -/
 
 /-- The retraction: reading a failure list back off the cause it builds returns
 it unchanged. -/
@@ -502,6 +1155,21 @@ theorem toOutcome_combine (self that : Err) (error : Val)
       Outcome.failure error := by
   obtain ⟨tail, htail⟩ := combine_reasons_cons self that _ rest h
   simp only [Effect4.Exit.toOutcome, htail]
+  rfl
+
+/-- The same, for the *concatenation* P1's close arm uses. A region's close
+appends the closing reasons to the body's, so the wire still reads the body's
+first failure — and, unlike `Cause.combine`, duplicates survive
+(`Exit.asVoidAll_keeps_duplicates`, `E4-FLOW-CE-021`).
+census: scope.exit-as-void-all -/
+theorem toOutcome_append (self closing : Err) (error : Val)
+    (annotations : Effect4.ReasonAnnotations Unit)
+    (rest : List (Effect4.Reason Val Unit Unit Unit))
+    (h : self.reasons = Effect4.Reason.fail error annotations :: rest) :
+    Effect4.Exit.toOutcome (β := Val) id id (fun _ => Val.unit)
+        (Effect4.Exit.failure ⟨self.reasons ++ closing.reasons⟩) =
+      Outcome.failure error := by
+  simp only [Effect4.Exit.toOutcome, h, List.cons_append]
   rfl
 
 /-! ## The two machine transitions the compiled shape uses at a close
@@ -566,16 +1234,16 @@ def unwindable : List Code -> Bool
   | Effect4.Prim.setInterruptible flag :: rest => flag && unwindable rest
   | _ :: _ => false
 
-/-- The finalizers a *closing value* runs before the region frame answers: the
-`onExit` frames above the first frame that declares a `contA` arm. -/
+/-- The finalizers a *closing exit* runs before the frame that answers it: the
+`onExit` frames above it. -/
 def closeNames : List Code -> List RegionName
   | Effect4.Prim.onExit _ name _ :: rest => name :: closeNames rest
   | Effect4.Prim.setInterruptible _ :: rest => closeNames rest
   | _ => []
 
-/-- The frames a *closing value* runs before the region frame answers, and the
-shapes that segment may take: `onExit` frames and the mask frames their
-`ensure` pushes, and nothing else. -/
+/-- The frames a *closing exit* runs before the answering frame, and the shapes
+that segment may take: `onExit` frames and the mask frames their `ensure`
+pushes, and nothing else. -/
 def closeable : List Code -> Bool
   | [] => true
   | Effect4.Prim.onExit _ _ flag :: rest => !flag && closeable rest
@@ -584,11 +1252,14 @@ def closeable : List Code -> Bool
 
 /-! ## The finalizer half of the machine
 
-Two theorems, both general: a failing exit propagating through a fragment
-stack, and a closing value propagating to the frame that answers it. They are
-what `regions_simulate` is assembled from, and they are stated over an
-arbitrary stack rather than over a compiled one, so nothing about
-`compileRegion` is assumed. -/
+Three theorems, all general: a failing exit propagating through a whole
+fragment stack, a failing exit propagating to the frame that answers it, and a
+closing value propagating to the frame that answers it. They are what the
+general theorem is assembled from, and they are stated over an arbitrary stack
+rather than over a compiled one, so nothing about `compileRegion` is assumed.
+
+Their premise is now *per name* rather than global, which is what P1's shape
+needs and what makes `regionInterp_finalizerExit` discharge it outright. -/
 
 /-- The wire outcome of an exit, at this module's carriers. -/
 def outcomeOf (exit : Res) : Outcome Val :=
@@ -597,6 +1268,11 @@ def outcomeOf (exit : Res) : Outcome Val :=
 /-- The service-level row a named finalizer writes against an exit. -/
 def finalizerRow (exit : Res) (name : RegionName) : Effect4.Trace.Event :=
   Effects.Trace.Event.finalizer name.regionOf (outcomeOf exit)
+
+/-- Every finalizer of `names` leaves the exit it observed untouched. -/
+def FinalizersVoid (interp : Table) (names : List RegionName) : Prop :=
+  forall name, name ∈ names ->
+    forall exit, interp.finalizerExit name exit = Effect4.Exit.success ()
 
 /-- Two machine observations agree: the same step outcome, and the same
 projected service-level trace. Frame pushes, pops and `contAll` runs have no
@@ -776,10 +1452,20 @@ private theorem popFrom_passed (demand : Effect4.Arm) (skip : Bool) (current : C
         (Effect4.FrameFiber.mk current [] flagIn none false))
       (Effect4.FrameFiber.popFrom demand skip stack
         (Effect4.FrameFiber.mk current [] flagOut none false)) := by
+  -- The passed frame pushes nothing (`hens` keeps the empty scratch stack), so the unfused
+  -- traversal continues exactly where the fused one did (`popFrom_pass_no_push`).
+  have hpush : (frame.ensure (Effect4.FrameFiber.mk current [] flagIn none false)).fst.stack =
+      (Effect4.FrameFiber.mk current [] flagIn none false).stack := by
+    rw [hens]
+  have hcont := Effect4.FrameFiber.popFrom_pass_no_push demand skip frame stack
+    (Effect4.FrameFiber.mk current [] flagIn none false) rfl hpush
   refine ⟨?_, ?_, ?_⟩
-  · rw [Effect4.FrameFiber.popFrom_continue_answer demand skip frame stack _ (Or.inl hnone), hens]
-  · rw [Effect4.FrameFiber.popFrom_continue_fiber demand skip frame stack _ (Or.inl hnone), hens]
-  · rw [Effect4.FrameFiber.popFrom_continue_events demand skip frame stack _ (Or.inl hnone), hens]
+  · rw [Effect4.FrameFiber.popFrom_continue_answer demand skip frame stack _ (Or.inl hnone),
+      hcont, hens]
+  · rw [Effect4.FrameFiber.popFrom_continue_fiber demand skip frame stack _ (Or.inl hnone),
+      hcont, hens]
+  · rw [Effect4.FrameFiber.popFrom_continue_events demand skip frame stack _ (Or.inl hnone),
+      hcont, hens]
     simp only [traceOfRun, Effect4.FrameEvent.traceOf, List.filterMap_append] at hpass ⊢
     rw [hpass, List.nil_append]
 
@@ -829,15 +1515,39 @@ private theorem step_empty_failure (interp : Table) (cause : Err) :
       (Effect4.FrameStep.finished (Effect4.Exit.failure cause),
         [Effect4.FrameEvent.yielded (Effect4.Exit.failure cause)]) := rfl
 
-/-- The `onSuccess` frame a region opens answers the closing value with its
+/-- The `onSuccess` frame a fragment opens answers the closing value with its
 named continuation, under the stack that was below it. -/
-private theorem step_onSuccess_answers (interp : Table) (value : Val) (body : Code)
+theorem step_onSuccess_answers (interp : Table) (value : Val) (body : Code)
     (name : RegionName) (rest : List Code) :
     (Effect4.FrameFiber.mk (Effect4.Prim.success value)
         (Effect4.Prim.onSuccess body name :: rest) true none false).step interp =
       (Effect4.FrameStep.running
         (Effect4.FrameFiber.mk (interp.contA name value) rest true none false),
         [Effect4.FrameEvent.popped (Effect4.Prim.onSuccess body name)]) := rfl
+
+/-- The scope frame a region opens answers the closing value with its value
+name. rc.112: the value arm of `Effect.scoped`'s frame
+(`internal/effect.ts:3938-3947`). census: op.OnSuccessAndFailure -/
+theorem step_onSuccessAndFailure_answers (interp : Table) (value : Val) (body : Code)
+    (name causeName : RegionName) (rest : List Code) :
+    (Effect4.FrameFiber.mk (Effect4.Prim.success value)
+        (Effect4.Prim.onSuccessAndFailure body name causeName :: rest) true none false).step
+        interp =
+      (Effect4.FrameStep.running
+        (Effect4.FrameFiber.mk (interp.contA name value) rest true none false),
+        [Effect4.FrameEvent.popped (Effect4.Prim.onSuccessAndFailure body name causeName)]) := rfl
+
+/-- The same frame answers a failing exit with its cause name — the region's
+scope close. rc.112: `internal/effect.ts:3450-3460`.
+census: op.OnSuccessAndFailure -/
+theorem step_onSuccessAndFailure_answers_cause (interp : Table) (cause : Err) (body : Code)
+    (name causeName : RegionName) (rest : List Code) :
+    (Effect4.FrameFiber.mk (Effect4.Prim.failure cause)
+        (Effect4.Prim.onSuccessAndFailure body name causeName :: rest) true none false).step
+        interp =
+      (Effect4.FrameStep.running
+        (Effect4.FrameFiber.mk (interp.contE causeName cause) rest true none false),
+        [Effect4.FrameEvent.popped (Effect4.Prim.onSuccessAndFailure body name causeName)]) := rfl
 
 /-- A successful finalizer restores the exit it observed, on the nose. -/
 private theorem restore_success (exit : Res) :
@@ -848,13 +1558,16 @@ private theorem restore_success (exit : Res) :
 runs exactly the finalizers that stack names, in pop order, every one of them
 against the *same* exit — which is the runner's `closeReleases`, whose
 `finalizer` row carries the closing exit for every release of one close — and
-then yields that exit. `hfin` is the hypothesis that no release fails; it is
-what `regionReleaseFails` violates and why that flow has no host golden
-(`E4-TARGET-CE-012`), and the failing-release case is recorded as owed in the
-module header. -/
-theorem unwind_failure (interp : Table) (cause : Err)
-    (hfin : forall name exit, interp.finalizerExit name exit = Effect4.Exit.success ()) :
+then yields that exit.
+
+The premise is now per name (`FinalizersVoid`) rather than a global `hfin`.
+After P1 it is discharged outright for every compiled run by
+`regionInterp_finalizerExit`, which is why `unwind_failure_region` below carries
+no restriction at all: that is `E4-TARGET-CE-019`'s repair column.
+census: scope.close-sequential -/
+theorem unwind_failure (interp : Table) (cause : Err) :
     forall (stack : List Code), unwindable stack = true ->
+      FinalizersVoid interp (unwindNames stack) ->
       forall fuel, (unwindNames stack).length + 1 <= fuel ->
         (Effect4.FrameFiber.run interp fuel
             (Effect4.FrameFiber.mk (Effect4.Prim.failure cause) stack true none false)).fst =
@@ -866,7 +1579,7 @@ theorem unwind_failure (interp : Table) (cause : Err)
   intro stack
   induction stack with
   | nil =>
-    intro _ fuel hfuel
+    intro _ _ fuel hfuel
     have hnames : (unwindNames ([] : List Code)).length = 0 := rfl
     rw [hnames] at hfuel
     obtain ⟨k, hk⟩ := Nat.exists_eq_add_of_le hfuel
@@ -875,11 +1588,12 @@ theorem unwind_failure (interp : Table) (cause : Err)
     rw [Effect4.FrameFiber.run_succ_finished interp _ k _ _ (step_empty_failure interp cause)]
     exact ⟨rfl, rfl⟩
   | cons frame rest ih =>
-    intro hstack fuel hfuel
+    intro hstack hfin fuel hfuel
     cases frame
     case onSuccess body name =>
       have hrest : unwindable rest = true := by
         simpa [unwindable] using hstack
+      have hfinRest : FinalizersVoid interp (unwindNames rest) := hfin
       have hnames : unwindNames (Effect4.Prim.onSuccess body name :: rest) = unwindNames rest := rfl
       rw [hnames] at hfuel ⊢
       obtain ⟨k, hk⟩ := Nat.exists_eq_add_of_le hfuel
@@ -888,7 +1602,7 @@ theorem unwind_failure (interp : Table) (cause : Err)
       obtain ⟨hf, hs⟩ := run_congr interp _ _ (k + (unwindNames rest).length)
         (step_onSuccess_passed interp cause body name rest)
       rw [hf, hs]
-      exact ih hrest _ (by omega)
+      exact ih hrest hfinRest _ (by omega)
     case setInterruptible flag =>
       have hflag : flag = true := by
         cases flag with
@@ -897,6 +1611,7 @@ theorem unwind_failure (interp : Table) (cause : Err)
       subst hflag
       have hrest : unwindable rest = true := by
         simpa [unwindable] using hstack
+      have hfinRest : FinalizersVoid interp (unwindNames rest) := hfin
       have hnames : unwindNames (Effect4.Prim.setInterruptible true :: rest) = unwindNames rest :=
         rfl
       rw [hnames] at hfuel ⊢
@@ -906,7 +1621,7 @@ theorem unwind_failure (interp : Table) (cause : Err)
       obtain ⟨hf, hs⟩ := run_congr interp _ _ (k + (unwindNames rest).length)
         (step_mask_passed interp cause rest true)
       rw [hf, hs]
-      exact ih hrest _ (by omega)
+      exact ih hrest hfinRest _ (by omega)
     case onExit body name flag =>
       have hflag : flag = false := by
         cases flag with
@@ -915,6 +1630,15 @@ theorem unwind_failure (interp : Table) (cause : Err)
       subst hflag
       have hrest : unwindable rest = true := by
         simpa [unwindable] using hstack
+      have hfinHere : forall exit, interp.finalizerExit name exit = Effect4.Exit.success () :=
+        hfin name (by
+          show name ∈ name :: unwindNames rest
+          exact List.Mem.head _)
+      have hfinRest : FinalizersVoid interp (unwindNames rest) := by
+        intro other hother
+        exact hfin other (by
+          show other ∈ name :: unwindNames rest
+          exact List.Mem.tail _ hother)
       have hnames : unwindNames (Effect4.Prim.onExit body name false :: rest) =
         name :: unwindNames rest := rfl
       rw [hnames] at hfuel ⊢
@@ -932,7 +1656,7 @@ theorem unwind_failure (interp : Table) (cause : Err)
             [Effect4.FrameEvent.popped (Effect4.Prim.onExit body name false),
               Effect4.FrameEvent.ranContAll (Effect4.Prim.onExit body name false),
               Effect4.FrameEvent.ranFinalizer name (Effect4.Exit.failure cause)]) := by
-        rw [step_onExit_failure interp cause body name rest, hfin]
+        rw [step_onExit_failure interp cause body name rest, hfinHere]
         rfl
       rw [Effect4.FrameFiber.run_succ_running interp _ _
         (k + (unwindNames rest).length + 1) _ hstep]
@@ -941,7 +1665,7 @@ theorem unwind_failure (interp : Table) (cause : Err)
           (Effect4.Prim.setInterruptible true :: rest) false none false)
         (Effect4.FrameFiber.mk (Effect4.Prim.failure cause) rest true none false)
         (k + (unwindNames rest).length) (step_mask_passed interp cause rest false)
-      obtain ⟨hrf, hrs⟩ := ih hrest (k + (unwindNames rest).length + 1) (by omega)
+      obtain ⟨hrf, hrs⟩ := ih hrest hfinRest (k + (unwindNames rest).length + 1) (by omega)
       refine ⟨?_, ?_⟩
       · show (Effect4.FrameFiber.run interp (k + (unwindNames rest).length + 1) _).fst = _
         rw [hf, hrf]
@@ -957,35 +1681,43 @@ theorem unwind_failure (interp : Table) (cause : Err)
         rfl
     all_goals simp [unwindable] at hstack
 
-/-- **The close theorem.** A closing value runs the `onExit` frames above the
-frame that answers it, latest-registered first, every one of them against the
-closing exit, and then the region frame answers with its named continuation
-under the stack that was below it. -/
-theorem close_success (interp : Table) (value : Val)
-    (hfin : forall name exit, interp.finalizerExit name exit = Effect4.Exit.success ())
-    (body : Code) (name : RegionName) (rest : List Code) :
+/-- **The close theorem, over any answering frame.** A closing value runs the
+`onExit` frames above the frame that answers it, latest registered first, every
+one of them against the closing exit, and then that frame answers with its named
+continuation under the stack that was below it.
+
+`hanswer` is what pins the answering frame; both `Prim.onSuccess` and
+`Prim.onSuccessAndFailure` satisfy it by `rfl`, which is what lets the region's
+one scope frame (P1) reuse this proof unchanged.
+census: scope.close-sequential -/
+theorem close_success_of (interp : Table) (value : Val) (answering : Code) (name : RegionName)
+    (rest : List Code)
+    (hanswer : (Effect4.FrameFiber.mk (Effect4.Prim.success value)
+        (answering :: rest) true none false).step interp =
+      (Effect4.FrameStep.running
+        (Effect4.FrameFiber.mk (interp.contA name value) rest true none false),
+        [Effect4.FrameEvent.popped answering])) :
     forall (frames : List Code), closeable frames = true ->
+      FinalizersVoid interp (closeNames frames) ->
       (Effect4.FrameFiber.run interp ((closeNames frames).length + 1)
           (Effect4.FrameFiber.mk (Effect4.Prim.success value)
-            (frames ++ Effect4.Prim.onSuccess body name :: rest) true none false)).fst =
+            (frames ++ answering :: rest) true none false)).fst =
         Effect4.FrameStep.running
           (Effect4.FrameFiber.mk (interp.contA name value) rest true none false) /\
       traceOfRun (Effect4.FrameFiber.run interp ((closeNames frames).length + 1)
           (Effect4.FrameFiber.mk (Effect4.Prim.success value)
-            (frames ++ Effect4.Prim.onSuccess body name :: rest) true none false)).snd =
+            (frames ++ answering :: rest) true none false)).snd =
         (closeNames frames).map (finalizerRow (Effect4.Exit.success value)) := by
   intro frames
   induction frames with
   | nil =>
-    intro _
+    intro _ _
     rw [show (closeNames ([] : List Code)).length + 1 = 0 + 1 from rfl,
-      show ([] : List Code) ++ Effect4.Prim.onSuccess body name :: rest =
-        Effect4.Prim.onSuccess body name :: rest from rfl,
-      Effect4.FrameFiber.run_succ_running interp _ _ 0 _
-        (step_onSuccess_answers interp value body name rest)]
+      show ([] : List Code) ++ answering :: rest = answering :: rest from rfl,
+      Effect4.FrameFiber.run_succ_running interp _ _ 0 _ hanswer]
     exact ⟨rfl, rfl⟩
   | cons frame more ih =>
-    intro hframes
+    intro hframes hfin
     cases frame
     case setInterruptible flag =>
       have hflag : flag = true := by
@@ -995,24 +1727,24 @@ theorem close_success (interp : Table) (value : Val)
       subst hflag
       have hmore : closeable more = true := by
         simpa [closeable] using hframes
+      have hfinMore : FinalizersVoid interp (closeNames more) := hfin
       have hnames : closeNames (Effect4.Prim.setInterruptible true :: more) = closeNames more := rfl
       rw [hnames]
       obtain ⟨hf, hs⟩ := run_congr interp _ _ ((closeNames more).length)
-        (step_mask_passed_success interp value (more ++ Effect4.Prim.onSuccess body name :: rest)
-          true)
+        (step_mask_passed_success interp value (more ++ answering :: rest) true)
       show (Effect4.FrameFiber.run interp ((closeNames more).length + 1)
             (Effect4.FrameFiber.mk (Effect4.Prim.success value)
               (Effect4.Prim.setInterruptible true ::
-                (more ++ Effect4.Prim.onSuccess body name :: rest)) true none false)).fst =
+                (more ++ answering :: rest)) true none false)).fst =
             Effect4.FrameStep.running
               (Effect4.FrameFiber.mk (interp.contA name value) rest true none false) /\
           traceOfRun (Effect4.FrameFiber.run interp ((closeNames more).length + 1)
             (Effect4.FrameFiber.mk (Effect4.Prim.success value)
               (Effect4.Prim.setInterruptible true ::
-                (more ++ Effect4.Prim.onSuccess body name :: rest)) true none false)).snd =
+                (more ++ answering :: rest)) true none false)).snd =
             (closeNames more).map (finalizerRow (Effect4.Exit.success value))
       rw [hf, hs]
-      exact ih hmore
+      exact ih hmore hfinMore
     case onExit finBody finName flag =>
       have hflag : flag = false := by
         cases flag with
@@ -1023,32 +1755,37 @@ theorem close_success (interp : Table) (value : Val)
         simpa [closeable] using hframes
       have hnames : closeNames (Effect4.Prim.onExit finBody finName false :: more) =
         finName :: closeNames more := rfl
+      have hfinHere : forall exit, interp.finalizerExit finName exit = Effect4.Exit.success () :=
+        hfin finName (by
+          show finName ∈ finName :: closeNames more
+          exact List.Mem.head _)
+      have hfinMore : FinalizersVoid interp (closeNames more) := by
+        intro other hother
+        exact hfin other (by
+          show other ∈ finName :: closeNames more
+          exact List.Mem.tail _ hother)
       rw [hnames]
       rw [show (finName :: closeNames more).length + 1 = (closeNames more).length + 1 + 1 by
         simp [List.length_cons]]
       have hstep : (Effect4.FrameFiber.mk (Effect4.Prim.success value)
-          ((Effect4.Prim.onExit finBody finName false :: more) ++
-            Effect4.Prim.onSuccess body name :: rest) true none false).step interp =
+          ((Effect4.Prim.onExit finBody finName false :: more) ++ answering :: rest)
+            true none false).step interp =
           (Effect4.FrameStep.running
             (Effect4.FrameFiber.mk (Effect4.Prim.success value)
               (Effect4.Prim.setInterruptible true ::
-                (more ++ Effect4.Prim.onSuccess body name :: rest)) false none false),
+                (more ++ answering :: rest)) false none false),
             [Effect4.FrameEvent.popped (Effect4.Prim.onExit finBody finName false),
               Effect4.FrameEvent.ranContAll (Effect4.Prim.onExit finBody finName false),
               Effect4.FrameEvent.ranFinalizer finName (Effect4.Exit.success value)]) := by
-        rw [show (Effect4.Prim.onExit finBody finName false :: more) ++
-              Effect4.Prim.onSuccess body name :: rest =
-            Effect4.Prim.onExit finBody finName false ::
-              (more ++ Effect4.Prim.onSuccess body name :: rest) from rfl,
-          step_onExit_success interp value finBody finName
-            (more ++ Effect4.Prim.onSuccess body name :: rest), hfin]
+        rw [show (Effect4.Prim.onExit finBody finName false :: more) ++ answering :: rest =
+            Effect4.Prim.onExit finBody finName false :: (more ++ answering :: rest) from rfl,
+          step_onExit_success interp value finBody finName (more ++ answering :: rest), hfinHere]
         rfl
       rw [Effect4.FrameFiber.run_succ_running interp _ _
         ((closeNames more).length + 1) _ hstep]
       obtain ⟨hf, hs⟩ := run_congr interp _ _ ((closeNames more).length)
-        (step_mask_passed_success interp value (more ++ Effect4.Prim.onSuccess body name :: rest)
-          false)
-      obtain ⟨hrf, hrs⟩ := ih hmore
+        (step_mask_passed_success interp value (more ++ answering :: rest) false)
+      obtain ⟨hrf, hrs⟩ := ih hmore hfinMore
       refine ⟨?_, ?_⟩
       · show (Effect4.FrameFiber.run interp ((closeNames more).length + 1) _).fst = _
         rw [hf, hrf]
@@ -1060,9 +1797,319 @@ theorem close_success (interp : Table) (value : Val)
             (Effect4.FrameFiber.run interp ((closeNames more).length + 1)
               (Effect4.FrameFiber.mk (Effect4.Prim.success value)
                 (Effect4.Prim.setInterruptible true ::
-                  (more ++ Effect4.Prim.onSuccess body name :: rest)) false none false)).snd) =
+                  (more ++ answering :: rest)) false none false)).snd) =
           _ from hs, hrs]
         rfl
     all_goals simp [closeable] at hframes
+
+/-- **The close theorem** at an `onSuccess` answering frame — the shape fence C
+had before P1, restated with the per-name premise. -/
+theorem close_success (interp : Table) (value : Val) (body : Code) (name : RegionName)
+    (rest : List Code) :
+    forall (frames : List Code), closeable frames = true ->
+      FinalizersVoid interp (closeNames frames) ->
+      (Effect4.FrameFiber.run interp ((closeNames frames).length + 1)
+          (Effect4.FrameFiber.mk (Effect4.Prim.success value)
+            (frames ++ Effect4.Prim.onSuccess body name :: rest) true none false)).fst =
+        Effect4.FrameStep.running
+          (Effect4.FrameFiber.mk (interp.contA name value) rest true none false) /\
+      traceOfRun (Effect4.FrameFiber.run interp ((closeNames frames).length + 1)
+          (Effect4.FrameFiber.mk (Effect4.Prim.success value)
+            (frames ++ Effect4.Prim.onSuccess body name :: rest) true none false)).snd =
+        (closeNames frames).map (finalizerRow (Effect4.Exit.success value)) :=
+  close_success_of interp value (Effect4.Prim.onSuccess body name) name rest
+    (step_onSuccess_answers interp value body name rest)
+
+/-- **The close theorem at a region's scope frame.** Exactly `close_success`,
+with rc.112's `Effect.scoped` frame in place of the plain `OnSuccess`: every
+release of the one scope observes the same closing exit, and then the scope
+frame answers. census: scope.close-sequential -/
+theorem close_success_region (interp : Table) (value : Val) (body : Code)
+    (name causeName : RegionName) (rest : List Code) :
+    forall (frames : List Code), closeable frames = true ->
+      FinalizersVoid interp (closeNames frames) ->
+      (Effect4.FrameFiber.run interp ((closeNames frames).length + 1)
+          (Effect4.FrameFiber.mk (Effect4.Prim.success value)
+            (frames ++ Effect4.Prim.onSuccessAndFailure body name causeName :: rest)
+            true none false)).fst =
+        Effect4.FrameStep.running
+          (Effect4.FrameFiber.mk (interp.contA name value) rest true none false) /\
+      traceOfRun (Effect4.FrameFiber.run interp ((closeNames frames).length + 1)
+          (Effect4.FrameFiber.mk (Effect4.Prim.success value)
+            (frames ++ Effect4.Prim.onSuccessAndFailure body name causeName :: rest)
+            true none false)).snd =
+        (closeNames frames).map (finalizerRow (Effect4.Exit.success value)) :=
+  close_success_of interp value (Effect4.Prim.onSuccessAndFailure body name causeName) name rest
+    (step_onSuccessAndFailure_answers interp value body name causeName rest)
+
+/-- **The unwind theorem up to the frame that answers.** A failing exit runs the
+`onExit` frames above the first frame declaring a cause arm, every one against
+the *same* exit, and then that frame answers with its named cause continuation.
+This is the failure-side dual of `close_success_of`, and it is what a region's
+scope frame needs: on a failing body the releases still write their rows and the
+scope still merges once. census: scope.close-sequential -/
+theorem unwind_to_frame (interp : Table) (cause : Err) (answering : Code)
+    (causeName : RegionName) (rest : List Code)
+    (hanswer : (Effect4.FrameFiber.mk (Effect4.Prim.failure cause)
+        (answering :: rest) true none false).step interp =
+      (Effect4.FrameStep.running
+        (Effect4.FrameFiber.mk (interp.contE causeName cause) rest true none false),
+        [Effect4.FrameEvent.popped answering])) :
+    forall (frames : List Code), closeable frames = true ->
+      FinalizersVoid interp (closeNames frames) ->
+      (Effect4.FrameFiber.run interp ((closeNames frames).length + 1)
+          (Effect4.FrameFiber.mk (Effect4.Prim.failure cause)
+            (frames ++ answering :: rest) true none false)).fst =
+        Effect4.FrameStep.running
+          (Effect4.FrameFiber.mk (interp.contE causeName cause) rest true none false) /\
+      traceOfRun (Effect4.FrameFiber.run interp ((closeNames frames).length + 1)
+          (Effect4.FrameFiber.mk (Effect4.Prim.failure cause)
+            (frames ++ answering :: rest) true none false)).snd =
+        (closeNames frames).map (finalizerRow (Effect4.Exit.failure cause)) := by
+  intro frames
+  induction frames with
+  | nil =>
+    intro _ _
+    rw [show (closeNames ([] : List Code)).length + 1 = 0 + 1 from rfl,
+      show ([] : List Code) ++ answering :: rest = answering :: rest from rfl,
+      Effect4.FrameFiber.run_succ_running interp _ _ 0 _ hanswer]
+    exact ⟨rfl, rfl⟩
+  | cons frame more ih =>
+    intro hframes hfin
+    cases frame
+    case setInterruptible flag =>
+      have hflag : flag = true := by
+        cases flag with
+        | true => rfl
+        | false => simp [closeable] at hframes
+      subst hflag
+      have hmore : closeable more = true := by
+        simpa [closeable] using hframes
+      have hfinMore : FinalizersVoid interp (closeNames more) := hfin
+      have hnames : closeNames (Effect4.Prim.setInterruptible true :: more) = closeNames more := rfl
+      rw [hnames]
+      obtain ⟨hf, hs⟩ := run_congr interp _ _ ((closeNames more).length)
+        (step_mask_passed interp cause (more ++ answering :: rest) true)
+      show (Effect4.FrameFiber.run interp ((closeNames more).length + 1)
+            (Effect4.FrameFiber.mk (Effect4.Prim.failure cause)
+              (Effect4.Prim.setInterruptible true ::
+                (more ++ answering :: rest)) true none false)).fst =
+            Effect4.FrameStep.running
+              (Effect4.FrameFiber.mk (interp.contE causeName cause) rest true none false) /\
+          traceOfRun (Effect4.FrameFiber.run interp ((closeNames more).length + 1)
+            (Effect4.FrameFiber.mk (Effect4.Prim.failure cause)
+              (Effect4.Prim.setInterruptible true ::
+                (more ++ answering :: rest)) true none false)).snd =
+            (closeNames more).map (finalizerRow (Effect4.Exit.failure cause))
+      rw [hf, hs]
+      exact ih hmore hfinMore
+    case onExit finBody finName flag =>
+      have hflag : flag = false := by
+        cases flag with
+        | false => rfl
+        | true => simp [closeable] at hframes
+      subst hflag
+      have hmore : closeable more = true := by
+        simpa [closeable] using hframes
+      have hnames : closeNames (Effect4.Prim.onExit finBody finName false :: more) =
+        finName :: closeNames more := rfl
+      have hfinHere : forall exit, interp.finalizerExit finName exit = Effect4.Exit.success () :=
+        hfin finName (by
+          show finName ∈ finName :: closeNames more
+          exact List.Mem.head _)
+      have hfinMore : FinalizersVoid interp (closeNames more) := by
+        intro other hother
+        exact hfin other (by
+          show other ∈ finName :: closeNames more
+          exact List.Mem.tail _ hother)
+      rw [hnames]
+      rw [show (finName :: closeNames more).length + 1 = (closeNames more).length + 1 + 1 by
+        simp [List.length_cons]]
+      have hstep : (Effect4.FrameFiber.mk (Effect4.Prim.failure cause)
+          ((Effect4.Prim.onExit finBody finName false :: more) ++ answering :: rest)
+            true none false).step interp =
+          (Effect4.FrameStep.running
+            (Effect4.FrameFiber.mk (Effect4.Prim.failure cause)
+              (Effect4.Prim.setInterruptible true ::
+                (more ++ answering :: rest)) false none false),
+            [Effect4.FrameEvent.popped (Effect4.Prim.onExit finBody finName false),
+              Effect4.FrameEvent.ranContAll (Effect4.Prim.onExit finBody finName false),
+              Effect4.FrameEvent.ranFinalizer finName (Effect4.Exit.failure cause)]) := by
+        rw [show (Effect4.Prim.onExit finBody finName false :: more) ++ answering :: rest =
+            Effect4.Prim.onExit finBody finName false :: (more ++ answering :: rest) from rfl,
+          step_onExit_failure interp cause finBody finName (more ++ answering :: rest), hfinHere]
+        rfl
+      rw [Effect4.FrameFiber.run_succ_running interp _ _
+        ((closeNames more).length + 1) _ hstep]
+      obtain ⟨hf, hs⟩ := run_congr interp _ _ ((closeNames more).length)
+        (step_mask_passed interp cause (more ++ answering :: rest) false)
+      obtain ⟨hrf, hrs⟩ := ih hmore hfinMore
+      refine ⟨?_, ?_⟩
+      · show (Effect4.FrameFiber.run interp ((closeNames more).length + 1) _).fst = _
+        rw [hf, hrf]
+      · show traceOfRun (_ ++ (Effect4.FrameFiber.run interp ((closeNames more).length + 1) _).snd)
+          = _
+        simp only [traceOfRun, Effect4.FrameEvent.traceOf, List.filterMap_append]
+        rw [show (List.filterMap
+            (Effect4.FrameEvent.toTrace RegionName.regionOf id id (fun _ => Val.unit))
+            (Effect4.FrameFiber.run interp ((closeNames more).length + 1)
+              (Effect4.FrameFiber.mk (Effect4.Prim.failure cause)
+                (Effect4.Prim.setInterruptible true ::
+                  (more ++ answering :: rest)) false none false)).snd) =
+          _ from hs, hrs]
+        rfl
+    all_goals simp [closeable] at hframes
+
+/-! ## The three theorems on a compiled run, with no premise at all
+
+This is the concrete content of P1: for `regionInterp` the premise of all three
+theorems above is `rfl`, so the failing-release restriction `E4-TARGET-CE-019`
+attacked is gone rather than assumed away. -/
+
+/-- `unwind_failure` on a compiled run, unrestricted.
+census: scope.close-sequential -/
+theorem unwind_failure_region {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
+    (oracle : RegionOracle) (cause : Err) (stack : List Code) (hstack : unwindable stack = true)
+    (fuel : Nat) (hfuel : (unwindNames stack).length + 1 <= fuel) :
+    (Effect4.FrameFiber.run (regionInterp alphabet flow oracle) fuel
+        (Effect4.FrameFiber.mk (Effect4.Prim.failure cause) stack true none false)).fst =
+      Effect4.FrameStep.finished (Effect4.Exit.failure cause) /\
+    traceOfRun (Effect4.FrameFiber.run (regionInterp alphabet flow oracle) fuel
+        (Effect4.FrameFiber.mk (Effect4.Prim.failure cause) stack true none false)).snd =
+      (unwindNames stack).map (finalizerRow (Effect4.Exit.failure cause)) ++
+        [Effects.Trace.Event.done (outcomeOf (Effect4.Exit.failure cause))] :=
+  unwind_failure (regionInterp alphabet flow oracle) cause stack hstack
+    (fun _ _ _ => rfl) fuel hfuel
+
+/-- `close_success_region` on a compiled run, unrestricted: **every release of
+one region's scope observes the same closing exit**, which is
+`E4-TARGET-CE-019`'s and `E4-FLOW-CE-020`'s repair.
+census: scope.close-sequential -/
+theorem close_success_region_compiled {Ty : Type} (alphabet : FlowAlphabet Ty)
+    (flow : RegionFlow Ty) (oracle : RegionOracle) (value : Val) (body : Code)
+    (name causeName : RegionName) (rest frames : List Code)
+    (hframes : closeable frames = true) :
+    (Effect4.FrameFiber.run (regionInterp alphabet flow oracle) ((closeNames frames).length + 1)
+        (Effect4.FrameFiber.mk (Effect4.Prim.success value)
+          (frames ++ Effect4.Prim.onSuccessAndFailure body name causeName :: rest)
+          true none false)).fst =
+      Effect4.FrameStep.running
+        (Effect4.FrameFiber.mk ((regionInterp alphabet flow oracle).contA name value)
+          rest true none false) /\
+    traceOfRun (Effect4.FrameFiber.run (regionInterp alphabet flow oracle)
+        ((closeNames frames).length + 1)
+        (Effect4.FrameFiber.mk (Effect4.Prim.success value)
+          (frames ++ Effect4.Prim.onSuccessAndFailure body name causeName :: rest)
+          true none false)).snd =
+      (closeNames frames).map (finalizerRow (Effect4.Exit.success value)) :=
+  close_success_region (regionInterp alphabet flow oracle) value body name causeName rest
+    frames hframes (fun _ _ _ => rfl)
+
+/-! ## P1 as a general law: one scope, N rows, one exit
+
+The stack a region's registrations leave above its scope frame, and what the
+close writes through it. This is the general statement `E4-TARGET-CE-019`
+demanded: *every* release of the one scope observes the same closing exit,
+whatever the other releases do, for every registration list. -/
+
+/-- The release frames a region's registrations leave above its scope frame,
+latest registered first — the order `Effect4.Flow.Frame.toScope_closeOrder`
+proves for the runner. -/
+def releaseFrames (region : Nat) (bodyOf : Config -> Code) : List Config -> List Code
+  | [] => []
+  | point :: rest =>
+    Effect4.Prim.onExit (bodyOf point) (RegionName.fin region point) false ::
+      releaseFrames region bodyOf rest
+
+/-- Those frames name exactly the registrations. -/
+theorem closeNames_releaseFrames (region : Nat) (bodyOf : Config -> Code)
+    (points : List Config) :
+    closeNames (releaseFrames region bodyOf points) = points.map (RegionName.fin region) := by
+  induction points with
+  | nil => rfl
+  | cons point rest ih =>
+    show RegionName.fin region point :: closeNames (releaseFrames region bodyOf rest) = _
+    rw [ih, List.map_cons]
+
+/-- And they are a closing segment. -/
+theorem closeable_releaseFrames (region : Nat) (bodyOf : Config -> Code)
+    (points : List Config) : closeable (releaseFrames region bodyOf points) = true := by
+  induction points with
+  | nil => rfl
+  | cons point rest ih =>
+    show (!false && closeable (releaseFrames region bodyOf rest)) = true
+    rw [ih]
+    rfl
+
+/-- **P1, in general.** A region's close writes one `finalizer region` row per
+registration, in `Scope.closeOrder`, and every one of them carries the *same*
+closing exit — the exit the scope was closed with, never one another release
+has already altered. rc.112: `internal/effect.ts:3815-3827` runs every finalizer
+with the same `exit_` and combines the collected exits only after the loop.
+census: scope.close-sequential -/
+theorem region_close_rows {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
+    (oracle : RegionOracle) (value : Val) (region : Nat) (bodyOf : Config -> Code)
+    (points : List Config) (body : Code) (name causeName : RegionName) (rest : List Code) :
+    traceOfRun (Effect4.FrameFiber.run (regionInterp alphabet flow oracle) (points.length + 1)
+        (Effect4.FrameFiber.mk (Effect4.Prim.success value)
+          (releaseFrames region bodyOf points ++
+            Effect4.Prim.onSuccessAndFailure body name causeName :: rest)
+          true none false)).snd =
+      points.map (fun _ =>
+        Effects.Trace.Event.finalizer region (outcomeOf (Effect4.Exit.success value))) := by
+  have hnames := closeNames_releaseFrames region bodyOf points
+  have hlen : (closeNames (releaseFrames region bodyOf points)).length = points.length := by
+    rw [hnames, List.length_map]
+  have hclose := close_success_region_compiled alphabet flow oracle value body name causeName rest
+    (releaseFrames region bodyOf points) (closeable_releaseFrames region bodyOf points)
+  rw [hlen] at hclose
+  rw [hclose.2, hnames, List.map_map]
+  rfl
+
+/-- `unwind_to_frame` on a compiled run, unrestricted.
+census: scope.close-sequential -/
+theorem unwind_to_frame_region {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
+    (oracle : RegionOracle) (cause : Err) (body : Code) (name causeName : RegionName)
+    (rest frames : List Code) (hframes : closeable frames = true) :
+    (Effect4.FrameFiber.run (regionInterp alphabet flow oracle) ((closeNames frames).length + 1)
+        (Effect4.FrameFiber.mk (Effect4.Prim.failure cause)
+          (frames ++ Effect4.Prim.onSuccessAndFailure body name causeName :: rest)
+          true none false)).fst =
+      Effect4.FrameStep.running
+        (Effect4.FrameFiber.mk ((regionInterp alphabet flow oracle).contE causeName cause)
+          rest true none false) /\
+    traceOfRun (Effect4.FrameFiber.run (regionInterp alphabet flow oracle)
+        ((closeNames frames).length + 1)
+        (Effect4.FrameFiber.mk (Effect4.Prim.failure cause)
+          (frames ++ Effect4.Prim.onSuccessAndFailure body name causeName :: rest)
+          true none false)).snd =
+      (closeNames frames).map (finalizerRow (Effect4.Exit.failure cause)) :=
+  unwind_to_frame (regionInterp alphabet flow oracle) cause
+    (Effect4.Prim.onSuccessAndFailure body name causeName) causeName rest
+    (step_onSuccessAndFailure_answers_cause (regionInterp alphabet flow oracle) cause body name
+      causeName rest)
+    frames hframes (fun _ _ _ => rfl)
+
+/-- The failure side of `region_close_rows`: a failing body still writes one row
+per registration, all carrying the failing exit, before the region's scope frame
+merges once. census: scope.close-sequential -/
+theorem region_unwind_rows {Ty : Type} (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
+    (oracle : RegionOracle) (cause : Err) (region : Nat) (bodyOf : Config -> Code)
+    (points : List Config) (body : Code) (name causeName : RegionName) (rest : List Code) :
+    traceOfRun (Effect4.FrameFiber.run (regionInterp alphabet flow oracle) (points.length + 1)
+        (Effect4.FrameFiber.mk (Effect4.Prim.failure cause)
+          (releaseFrames region bodyOf points ++
+            Effect4.Prim.onSuccessAndFailure body name causeName :: rest)
+          true none false)).snd =
+      points.map (fun _ =>
+        Effects.Trace.Event.finalizer region (outcomeOf (Effect4.Exit.failure cause))) := by
+  have hnames := closeNames_releaseFrames region bodyOf points
+  have hlen : (closeNames (releaseFrames region bodyOf points)).length = points.length := by
+    rw [hnames, List.length_map]
+  have hunwind := unwind_to_frame_region alphabet flow oracle cause body name causeName rest
+    (releaseFrames region bodyOf points) (closeable_releaseFrames region bodyOf points)
+  rw [hlen] at hunwind
+  rw [hunwind.2, hnames, List.map_map]
+  rfl
 
 end Effect4.RegionSimulation

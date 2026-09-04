@@ -104,7 +104,16 @@ inductive Outcome where
 
 /-! ## 2. The simple nodes -/
 
-/-- The nodes that only move values: no effect, no control, no failure. -/
+/-- The nodes that only move values: no effect, no control, no failure.
+
+The two multi-root entry nodes (`rootParam`, `letBlockIndexFrom`) are
+deliberately *not* here. They read the entry request, and this machine has no
+model of one: its `vals` is a `Slot → Val` and the entry request is a host
+argument, not a slot. They therefore stop the machine at a `stuck` frontier of
+the block last entered, exactly as the three region nodes do and for the same
+reason (`workshop/Deep/fork-lowering.md` §(b); the emitted program's fork is a
+host service call and its scheduler behaviour is a host receipt, never the
+subject of a theorem). -/
 def simple? (m : Machine) : Skeleton → Option Machine
   | .acquireService _ => some m
   | .declare _ _ => some m

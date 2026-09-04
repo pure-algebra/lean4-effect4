@@ -69,13 +69,14 @@ theorem resumeClosedScope_failure_pending (interp : PrimInterp ν τ β ε δ ι
       some (continued.1,
         [.popped (.setInterruptible true), .ranContAll (.setInterruptible true), .substituted pending]
           ++ continued.2) := by
-  simp only [resumeClosedScope, completed, Option.map_some, Prim.ofExit, FrameFiber.step]
-  simp only [FrameFiber.resumeCause, FrameFiber.getCont, Bool.false_and, Bool.false_eq_true, ↓reduceIte]
-  simp only [FrameFiber.popFrom, Prim.ensure, Prim.answerOf, Prim.passEvents,
-    Prim.hasArm, Prim.arms, FrameFiber.interrupted]
-  simp only [Option.isSome_some, Bool.and_self, ↓reduceIte]
-  split <;> simp_all [List.append_assoc]
-  split <;> simp_all
+  -- The unfused traversal (`continueFrom`/`joinPushed`/`passPushed`) is unfolded with the
+  -- rest: the restoring frame pushes nothing, so the drain is empty and the traversal
+  -- continues on `rest` exactly as before.
+  simp [resumeClosedScope, completed, Prim.ofExit, FrameFiber.step, FrameFiber.resumeCause,
+    FrameFiber.getCont, FrameFiber.popFrom, FrameFiber.continueFrom, FrameFiber.joinPushed,
+    FrameFiber.passPushed, FrameFiber.passOn, Prim.ensure, Prim.answerOf, Prim.passEvents,
+    Prim.hasArm, Prim.arms, FrameFiber.interrupted, List.append_assoc]
+  split <;> (try simp_all [List.append_assoc]) <;> (split <;> simp_all [List.append_assoc])
 
 /-- The actual stateful close and adapter agree with existing closeExitsM, exact restoration and the real frame step. census: scope.close-sequential -/
 theorem resumeClosedScope_complete
@@ -111,13 +112,11 @@ theorem resumeClosedScope_success_no_pending
      some (continued.1,
        [.popped (.setInterruptible true), .ranContAll (.setInterruptible true)]
         ++ continued.2)) := by
-  simp only [resumeClosedScope, completed, Option.map_some, Prim.ofExit, FrameFiber.step]
-  simp only [FrameFiber.resumeValue, FrameFiber.getCont, Bool.false_and, Bool.false_eq_true, ↓reduceIte]
-  simp only [FrameFiber.popFrom, Prim.ensure, Prim.answerOf, Prim.passEvents,
-    Prim.hasArm, Prim.arms, FrameFiber.interrupted]
-  simp only [List.contains_cons, List.contains_nil, Bool.or_false]
-  split <;> simp_all [List.append_assoc]
-  split <;> simp_all
+  simp [resumeClosedScope, completed, Prim.ofExit, FrameFiber.step, FrameFiber.resumeValue,
+    FrameFiber.getCont, FrameFiber.popFrom, FrameFiber.continueFrom, FrameFiber.joinPushed,
+    FrameFiber.passPushed, FrameFiber.passOn, Prim.ensure, Prim.answerOf, Prim.passEvents,
+    Prim.hasArm, Prim.arms, FrameFiber.interrupted, List.append_assoc]
+  split <;> (try simp_all [List.append_assoc]) <;> (split <;> simp_all [List.append_assoc])
 
 /-- Nested uninterruptible adds no restoring frame when an outer mask remains active. census: scope.acquire-release -/
 theorem resumeClosedScope_already_masked

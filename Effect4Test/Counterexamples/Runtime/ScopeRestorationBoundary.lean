@@ -38,6 +38,7 @@ def interp : PrimInterp Nat Nat Nat Nat Nat Nat Nat where
   loopStep := fun _ value => value
   loopDone := fun _ => 0
   notImplemented := 999
+  cancelThenFail := fun _ cause => .failure cause
 
 def referenceResume (machine : M) (fiber : F) :=
   (ScopeMachine.restore? machine).map fun exit =>

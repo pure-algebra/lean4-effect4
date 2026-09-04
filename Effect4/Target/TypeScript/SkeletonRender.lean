@@ -70,6 +70,21 @@ def callOf (rows : ServiceRow) (spec : OpSpec) (request : Slot) : Expr :=
   else if spec.arity == 1 then performCall rows.receiver spec.name [request.expr]
   else performCall rows.receiver spec.name (tupleArgs request.path spec.arity)
 
+/-- The dispatch case the entry request names: `entry[0]`. Spelled here rather
+than in the IR because it is a projection of a binder, the same shape
+`tupleArgs` spells and the same reason -- projecting off an arbitrary expression
+is not something this fragment can build (`E4-TARGET-CE-026`). -/
+def entryCaseRead (entry : String) : Expr := .ident (entry ++ "[0]")
+
+/-- One argument of the entry request, read at the declared type of the root
+parameter it binds: `entry[1][2] as number`. `entry[1]` is
+`ReadonlyArray<unknown>` -- the wire's untyped `Val` list surfacing on the host
+(`docs/research/2026-09-03-deep-plan.md:106-107`, packet P7's refusal) -- so the
+read is a type assertion, and `TypeScript.Expr` has no assertion former: it is
+spelled into the projection, exactly as `tupleArgs` spells `b2p0[1][0]`. -/
+def entryArgRead (entry : String) (index : Nat) (type : String) : Expr :=
+  .ident (entry ++ "[1][" ++ toString index ++ "] as " ++ type)
+
 end Lowering
 
 /-! ## 2. The printer -/
@@ -83,8 +98,11 @@ def render (rows : ServiceRow) : Skeleton → List Stmt
   | .acquireService row => [Lowering.serviceAcquire row]
   | .declare slot type => [.letDefinite slot.name type]
   | .assign target source => [.assign target.name source.expr]
+  | .rootParam slot entry index type =>
+      [.assign slot.name (Lowering.entryArgRead entry index type)]
   | .letTemp index source => [.letInit (Slot.temp index).name source.expr]
   | .letBlockIndex var target => [.letInit var (.int target.value)]
+  | .letBlockIndexFrom var entry => [.letInit var (Lowering.entryCaseRead entry)]
   | .gotoBlock var target => [.assign var (.int target.value), .continueTo none]
   | .enterBlock _ => []
   | .dispatchLoop var cases =>

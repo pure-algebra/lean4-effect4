@@ -308,6 +308,28 @@ example {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ] [DecidableEq ι
   [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
   (list : List (Reason ε δ ι α)), list.Nodup -> Cause.dedup list = list)
 
+/-! A5b: `hasInterrupts` (census: cause.reason-interrupt).
+
+rc.112's `internal/effect.ts:186`, `self.reasons.some(isInterruptReason)`. It is
+the predicate `AsyncFinalizer[contE]` reads before deciding whether to run its
+cancel effect. -/
+
+#check (@Cause.hasInterrupts : forall {ε δ ι α : Type u},
+  Cause ε δ ι α -> Bool)
+
+#check (@Cause.hasInterrupts_iff : forall {ε δ ι α : Type u}
+  (self : Cause ε δ ι α), self.hasInterrupts = true <->
+    exists reason, reason ∈ self.reasons /\ reason.tag = ReasonTag.interrupt)
+#check (@Cause.hasInterrupts_empty : forall {ε δ ι α : Type u},
+  (Cause.empty : Cause ε δ ι α).hasInterrupts = false)
+#check (@Cause.hasInterrupts_fail : forall {ε δ ι α : Type u} (error : ε),
+  (Cause.fail error : Cause ε δ ι α).hasInterrupts = false)
+#check (@Cause.hasInterrupts_die : forall {ε δ ι α : Type u} (defect : δ),
+  (Cause.die defect : Cause ε δ ι α).hasInterrupts = false)
+#check (@Cause.hasInterrupts_interrupt : forall {ε δ ι α : Type u}
+  (interruptor : Option ι),
+  (Cause.interrupt interruptor : Cause ε δ ι α).hasInterrupts = true)
+
 /-! A6: `causeCombine` (census: cause.combine-union,
 rule.cause-has-no-structure). -/
 

@@ -117,14 +117,16 @@ theorem legacy_discards_deferred_event :
     FrameEvent.deferred richCause ∉ (self.getCont .contE true).events := by
   decide
 
-/-- E4-RUN-CE-024: for the present fourteen constructors, a hook cannot push
-while failing to answer the requested arm. The source's AsyncFinalizer has
-exactly that additional shape; it is not encoded as an existing constructor.
-Its decisive host prefix witness remains a separate required receipt. -/
+/-- E4-RUN-CE-024, re-read after the run-loop packet made `AsyncFinalizer` a
+constructor: for every *other* constructor, a hook cannot push while failing to
+answer the requested arm. `AsyncFinalizer` is exactly the additional shape the row
+named, and it is now reachable (`asyncFinalizer_pushes_without_answering` below),
+which is why the pop loop had to be unfused (`FrameFiber.popFrom_asyncFinalizer_pops_its_push`). -/
 theorem current_profile_no_answer_keeps_stack
     {ν σ ε δ ι α : Type} {β : Type}
     (frame : Prim ν σ β ε δ ι α) (demand : Arm)
     (fiber : FrameFiber ν σ β ε δ ι α)
+    (notAsync : ∀ onInterrupt, frame ≠ Prim.asyncFinalizer onInterrupt)
     (missing : Prim.answerOf frame demand (frame.ensure fiber).snd = none) :
     (frame.ensure fiber).fst.stack = fiber.stack := by
   cases frame <;> try rfl
@@ -133,6 +135,22 @@ theorem current_profile_no_answer_keeps_stack
       simp [Prim.answerOf, Prim.ensure, Prim.hasArm, Prim.arms, mask] at missing
   case setInterruptible flag =>
     cases cause : fiber.interruptedCause <;> cases flag <;> simp [Prim.ensure, cause]
+  case asyncFinalizer onInterrupt =>
+    exact absurd rfl (notAsync onInterrupt)
+
+/-- E4-RUN-CE-024, the positive half: on an interruptible fiber `AsyncFinalizer`
+answers no `contA` and its hook pushes the restoring frame anyway. -/
+theorem asyncFinalizer_pushes_without_answering
+    {ν σ ε δ ι α : Type} {β : Type}
+    (onInterrupt : ν) (fiber : FrameFiber ν σ β ε δ ι α)
+    (interruptible : fiber.interruptible = true) :
+    Prim.answerOf (Prim.asyncFinalizer onInterrupt) Arm.contA
+        ((Prim.asyncFinalizer onInterrupt : Prim ν σ β ε δ ι α).ensure fiber).snd = none ∧
+      ((Prim.asyncFinalizer onInterrupt : Prim ν σ β ε δ ι α).ensure fiber).fst.stack =
+        Prim.setInterruptible true :: fiber.stack := by
+  constructor
+  · simp [Prim.answerOf, Prim.ensure, Prim.hasArm, Prim.arms, interruptible]
+  · simp [Prim.ensure, interruptible]
 
 #print axioms arm_shape_does_not_identify_payload
 #print axioms answer_only_misses_current
@@ -143,5 +161,6 @@ theorem current_profile_no_answer_keeps_stack
 #print axioms masked_deferred_distinguishes_inner_and_legacy
 #print axioms legacy_discards_deferred_event
 #print axioms current_profile_no_answer_keeps_stack
+#print axioms asyncFinalizer_pushes_without_answering
 
 end Effect4Test.Counterexamples.Runtime.LiveStack
