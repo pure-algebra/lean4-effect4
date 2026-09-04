@@ -134,3 +134,31 @@ trust boundaries, and every host row is evidence. The machine models OCaml 5.1.1
 and js_of_ocaml 5.7.1 with `--enable effects`; other OCaml versions, `--effects=double-translation`
 and wasm_of_ocaml are other targets. Nothing here relates to Effect4's `RunMachine` except
 through O4. Nothing here edits `effects`, `Effect4/`, or the `Deep` spike tree.
+
+## 6. Round two: closing the correspondence (2026-09-03, late)
+
+Ruling: the target is a proved chain, and where a proof is out of reach, executed evidence at
+scale on the exact same objects. The chain, as objects that exist after round one:
+
+```
+OCaml source text  ──ocamlc/ocamlopt/ocamlrun (trusted)──▶ native rows
+   ▲ render (P5)                                              ║ must agree (executed, ruling 7)
+OCaml5.Term ──▶ M_T, the runtime machine (O1)  ═══ bisimulation (P3) ═══▶ M_T^jsoo, the effect.js discipline over Term
+   │ compile (P4)
+OCaml5.Code ──▶ M_C direct style (O2) ═══ cps_preserves_outcome (P2) ═══▶ M_C plain on the CPS output ──generate.ml (unmodelled)──▶ JS
+```
+
+Trust boundaries stay named: `ocamlc`, `ocamlopt`, `js_of_ocaml`'s `parse_bytecode` and
+`generate.ml`, the JavaScript engine. Everything between them is a Lean object.
+
+| Id | Spike | Files | Done when |
+| --- | --- | --- | --- |
+| P1 | **The run invariant.** A well-formedness invariant on `Machine` (heap indices in range, `current` live, parent chains acyclic and terminating, continuation slots point at live stacks with `parent = none` at the tail) preserved by `step`; an induction principle over `run`; then the O1 report §5 blocked theorems discharged: `outermost_terminates`, `trap_survives_capture`, `reperform_root_raises_in_performer`, the `Stdlib` behavioural corollaries (`deepContinue`/`deepDiscontinue`/`deepMatchWith` behave as `effect.ml` states), and O5's `admissibleAt` monotonicity | `workshop/OCaml5/Effect.lean` (additive only: no renames, no changes to existing defs or theorems, so P3 and P5 keep importing it), `workshop/OCaml5/Invariant.lean` (new) | every listed theorem proved with `propext`/`Quot.sound` only, or its exact remaining obligation stated |
+| P2 | **The CPS theorem.** `cps_preserves_outcome` (O2 report §5) attacked pass by pass: `rewrite_toplevel`, `split_blocks`, `remove_empty_blocks` each preserve the direct-style machine's outcome; `cps_transform` by a simulation relation between a direct-style configuration and a CPS configuration (continuation frames ↔ continuation closures, traps ↔ `caml_push_trap` entries, fibers ↔ fibers); proved for the block shapes the transform emits, and where the general theorem resists, a property harness: a random `Code` program generator over the effect fragment, both machines, thousands of programs, any disagreement minimised and reported | `workshop/OCaml5/Code.lean` and `Cps.lean` (additive only), `workshop/OCaml5/CpsProof.lean` (new), `workshop/OCaml5/ir/*` | each pass-level theorem proved or its obligation stated; the simulation relation defined and preserved by every emitted block shape that can be closed; the harness run with counts |
+| P3 | **Native ↔ jsoo discipline, one carrier.** A second machine over `OCaml5.Term`, `MachineJ`, that is `effect.js` literally: global `caml_exn_stack`, `caml_fiber_stack {h, r:{k,x,e}}`, continuations as fiber lists outermost-first, `caml_perform_effect`/`caml_resume_stack`/`caml_pop_fiber`/`caml_alloc_stack`, no `last_fiber`, no `caml_drop_continuation`; then O2 report §6.1's relation proved as a bisimulation between `Machine.step` and `MachineJ.step` under the hypothesis that every exception is an OCaml `raise`; the 13 witnesses run on `MachineJ` too | `workshop/OCaml5/EffectJsoo.lean` (new), `workshop/OCaml5/Witnesses.lean` (additive) | the relation is preserved by every transition pair, or the failing pair is exhibited as a witness program and run on the real hosts |
+| P4 | **Term → Code.** A compiler from `OCaml5.Term` to `OCaml5.Code` for the effect fragment, mirroring `bytegen.ml` + `parse_bytecode.ml` in shape (closures as `Closure`, traps as `Pushtrap`/`Poptrap`, the four primitives as the externs), with agreement checked by `#eval` on every witness (Term under `M_T` = compiled Code under `M_C`) and against O2's transcribed `ir/` programs; proof as a stretch | `workshop/OCaml5/Compile.lean` (new) | agreement on all 13 witnesses and the 3 `ir/` programs; the simulation statement written down; runs after P2 lands, or against P2's frozen names |
+| P5 | **Lean emits OCaml.** `Term.render : Term → String` producing OCaml 5 source that `ocamlc` accepts, a random `Term` generator over the effect fragment, and a runner that compiles each generated program on the three hosts and compares the rows with `M_T`'s; hundreds of programs; every disagreement minimised and kept as a witness | `workshop/OCaml5/Render.lean`, `Fuzz.lean` (new), `workshop/OCaml5/tools/fuzz.sh`, `workshop/OCaml5/fuzz/*` | the generator runs, the hosts and the machine agree on every generated program, or the disagreements are reported with minimised sources |
+
+P1, P2, P3 and P5 run in parallel (four Lean processes; `Invariant`, `CpsProof`, `EffectJsoo`,
+`Render`/`Fuzz` are separate modules). P4 follows P2. Owners import, never edit, another
+spike's file; additive-only rules on shared files are absolute.
