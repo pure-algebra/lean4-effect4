@@ -7,8 +7,6 @@
 
 open Deep_fibers
 
-let state : st = { started = []; cleanups = [] }
-
 (* The child body table, the same numeric table the Lean face and `fiber-tail.ts` carry:
    0 succeeds with 11, 1 with 22, 2 fails with 1, 3 fails with 2, anything else is
    `Effect.never`. Every body appends its code to `started` when it is given the processor
@@ -24,6 +22,21 @@ let body (code : int) : unit -> value =
       | 1 -> Vnat 22
       | 2 -> raise (Efail_exn 1)
       | 3 -> raise (Efail_exn 2)
+      (* Round three: body 5 masks itself across a yield, so an interrupt recorded while it
+         is parked is delivered only when it restores interruptibility (M2). *)
+      | 5 ->
+        ignore (Effect.perform (Op_set_interruptible false));
+        ignore (Effect.perform (Op_yield_now 0));
+        state.started <- state.started @ [ 6 ];
+        ignore (Effect.perform (Op_set_interruptible true));
+        Effect.perform (Op_never ())
+      (* Round three: body 6 completes the Deferred at handle 0, which its program makes
+         before forking. This is the one arm no committed golden reaches:
+         `RunInterp.registerAsync` parks the awaiting parent and `dueResumes` resumes it
+         synchronously inside the completing `sync` (M1). *)
+      | 6 ->
+        ignore (Effect.perform (Op_def_succeed (0, 42)));
+        Vnat 0
       | _ -> Effect.perform (Op_never ()))
 
 let () = body_of_code := body

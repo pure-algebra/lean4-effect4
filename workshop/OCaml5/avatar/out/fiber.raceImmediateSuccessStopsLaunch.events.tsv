@@ -1,0 +1,53 @@
+format	effect4-trace-golden-v1
+generator	workshop/OCaml5/avatar/build-avatar.sh	sha256=afe814c209a98bdc04ab2d0785022be188b9f9b8e6f2135e83ac0aed181faa9b
+regenerate	./workshop/OCaml5/avatar/build-avatar.sh
+input	workshop/OCaml5/avatar/deep_fibers.ml	sha256=afe814c209a98bdc04ab2d0785022be188b9f9b8e6f2135e83ac0aed181faa9b
+input	workshop/OCaml5/avatar/avatar_trace.ml	sha256=afe814c209a98bdc04ab2d0785022be188b9f9b8e6f2135e83ac0aed181faa9b
+input	workshop/OCaml5/avatar/fibers_fixture.ml	sha256=afe814c209a98bdc04ab2d0785022be188b9f9b8e6f2135e83ac0aed181faa9b
+input	workshop/OCaml5/avatar/store_fixtures.ml	sha256=afe814c209a98bdc04ab2d0785022be188b9f9b8e6f2135e83ac0aed181faa9b
+input	workshop/OCaml5/avatar/extra_fixture.ml	sha256=afe814c209a98bdc04ab2d0785022be188b9f9b8e6f2135e83ac0aed181faa9b
+pin	effects	a4ee7a14248ee5976039b73039319efa87834986
+format	effect4-trace-v1
+face	ocaml
+program	fiber.raceImmediateSuccessStopsLaunch
+tape	0:1,1:0
+rules	service-acquire,perform-call,perform-bind,nullary-value,perform-discard,ret
+op	fork	0
+decide	0	true
+answer	fork	0
+op	fork	1
+decide	1	false
+answer	fork	1
+op	started	[]
+answer	started	[0, []]
+op	interrupt	1
+answer	interrupt	[]
+done	{"success":[0, []]}
+#	started	0
+#	forked	0	1	false
+#	scheduledTask	0	0	start(1)
+#	scheduledTask	0	0	resume(0,0)
+#	parkedOn	0	0
+#	ranTask	0	start(1)
+#	started	1
+#	exited	1	{"success":11}
+#	observerFired	1	untrackChild(0)
+#	ranTask	0	resume(0,0)
+#	resumedWith	0	0
+#	started	0
+#	forked	0	2	false
+#	scheduledTask	0	0	start(2)
+#	interruptRecorded	0	2
+#	parkedOn	0	1
+#	started	2
+#	exited	2	{"interrupted":true}
+#	observerFired	2	untrackChild(0)
+#	observerFired	2	countdown(0,1)
+#	resumedWith	0	1
+#	started	0
+#	exited	0	{"success":[0, []]}
+#	ranTask	0	start(2)
+#	finished	true	stuck	-
+#	fiber	0	status	done	observers	0	children	[]
+#	fiber	1	status	done	observers	0	children	[]
+#	fiber	2	status	done	observers	0	children	[]

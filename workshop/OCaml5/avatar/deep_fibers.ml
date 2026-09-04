@@ -64,7 +64,10 @@ end
 type value =
   | Vunit
   | Vnat of int
+  | Vbool of bool
+  | Vstring of string
   | Vhandle of int
+  | Vpair of value * value
   | Vnone
   | Vsome of value
   | Vlist of value list
@@ -82,6 +85,9 @@ let cause_combine a b =
   { reasons = a.reasons @ b.reasons; annotations = a.annotations @ b.annotations }
 
 let cause_annotate c extra = { c with annotations = c.annotations @ extra }
+
+let cause_has_interrupt c =
+  List.exists (function Rinterrupt _ -> true | _ -> false) c.reasons
 
 let cause_fail_of c =
   List.fold_left (fun acc r -> match (acc, r) with None, Rfail e -> Some e | _ -> acc) None
@@ -287,8 +293,61 @@ type race = {
   mutable accepted : exitv option;
 }
 
-(* The store `St` of this profile: the two arrays the fixture's bodies append to. *)
-type st = { mutable started : int list; mutable cleanups : int list }
+(* The store `St`. Round two carried the two arrays the fiber fixture's bodies append to;
+   round three adds the three stores of spike S2 (`2026-09-03-spike-s2-stores-witnesses.md`):
+   the Ref heap, the Deferred store (`completion : Option Prim`, waiter tokens) and the
+   ScopeStore, plus the queue `RunInterp.dueResumes` (`Fibers.lean:414`) reads. *)
+type ref_cell = { mutable cell : int }
+
+type deferred_cell = {
+  mutable completion : exitv option;
+  mutable waiters : (int * int) list;  (* fiber, token, in registration order *)
+}
+
+type scope_cell = {
+  mutable scope_open : bool;
+  mutable finalizers : int list;  (* most recently added first: rc.112 closes LIFO *)
+  mutable ran : int list;
+}
+
+type st = {
+  mutable started : int list;
+  mutable cleanups : int list;
+  refs : (int, ref_cell) Hashtbl.t;
+  mutable next_ref : int;
+  deferreds : (int, deferred_cell) Hashtbl.t;
+  mutable next_deferred : int;
+  scopes : (int, scope_cell) Hashtbl.t;
+  mutable next_scope : int;
+  mutable due : (int * int * answer) list;
+}
+
+let state : st =
+  { started = []; cleanups = []; refs = Hashtbl.create 8; next_ref = 0;
+    deferreds = Hashtbl.create 8; next_deferred = 0; scopes = Hashtbl.create 8; next_scope = 0;
+    due = [] }
+
+(* The wire's handle space: `registerHandle`/`handleIndex` in `harness/trace/tracer.ts`.
+   An object never reaches the wire; it is encoded as its index in first-seen order, over
+   every handle kind at once. *)
+let handles : (string * int, int) Hashtbl.t = Hashtbl.create 16
+let handle_owner : (int, string * int) Hashtbl.t = Hashtbl.create 16
+let next_handle = ref 0
+
+let handle_index kind id =
+  match Hashtbl.find_opt handles (kind, id) with
+  | Some h -> h
+  | None ->
+    let h = !next_handle in
+    incr next_handle;
+    Hashtbl.replace handles (kind, id) h;
+    Hashtbl.replace handle_owner h (kind, id);
+    h
+
+let handle_target kind h =
+  match Hashtbl.find_opt handle_owner h with
+  | Some (k, id) when k = kind -> id
+  | _ -> failwith (Printf.sprintf "handle %d is not a %s" h kind)
 
 (* `RunMachine` (`:349`), field for field. *)
 type run_machine = {
@@ -301,11 +360,21 @@ type run_machine = {
   state : st;
   mutable trace : run_event list;
   mutable stuck : stuck option;
+  (* Not a Lean field: the OCaml spelling of the fuel argument `drive` threads. `exec`
+     writes the fuel it was given here so that an arm resumed inside `continue k` can pass
+     the same fuel to the nested `drive` Lean's `Outcome.continue_` arm would have run
+     (DIVERGENCE 4). *)
+  mutable drive_fuel : int;
 }
 
 let machine_empty state =
   { fibers = []; races = []; next_id = 0; next_token = 0; next_race = 0;
-    middleware_installed = false; state; trace = []; stuck = None }
+    middleware_installed = false; state; trace = []; stuck = None; drive_fuel = 0 }
+
+(* The fuel and round bounds the entries use. Lean's `drive` costs one fuel per command and
+   `flushAll` one round per sweep of the armed dispatchers. *)
+let default_fuel = 100000
+let default_rounds = 1000
 
 let fiber_opt m id = List.find_opt (fun f -> f.id = id) m.fibers
 
@@ -352,6 +421,35 @@ type _ Effect.t +=
   | Op_cleanups : unit -> value Effect.t       (* Prim.sync, RunInterp.syncState *)
   | Op_yield_now : int -> value Effect.t       (* Prim.yieldNowWith *)
   | Op_never : unit -> value Effect.t          (* Prim.async, never resumed *)
+  (* Round three: the remaining `WithFiberAction` arms that `countdownPark` reaches. *)
+  | Op_await_all : int list -> value Effect.t          (* WithFiberAction.awaitAll *)
+  | Op_interrupt_all : int list -> value Effect.t      (* WithFiberAction.interruptAll *)
+  | Op_snapshot_children : unit -> value Effect.t      (* WithFiberAction.snapshotChildren *)
+  | Op_await_new_children : value -> value Effect.t    (* WithFiberAction.awaitNewChildren *)
+  | Op_set_interruptible : bool -> value Effect.t      (* WithFiberAction.setInterruptible *)
+  | Op_refuse : string -> value Effect.t               (* WithFiberAction.refuse, S3 §5.2 *)
+  (* The `Refs` and `ERefs` families: `Prim.sync` through `RunInterp.syncState`. *)
+  | Op_ref_make : int -> value Effect.t
+  | Op_ref_get : int -> value Effect.t
+  | Op_ref_set : int * int -> value Effect.t
+  | Op_ref_update : int * int -> value Effect.t
+  | Op_ref_modify : int * int -> value Effect.t
+  | Op_ref_get_and_set : int * int -> value Effect.t
+  | Op_ref_try_take : int * int -> value Effect.t
+  (* The `Deferreds` family: `syncState` for the five synchronous rows, `registerAsync` and
+     `dueResumes` for the two awaits. *)
+  | Op_def_make : unit -> value Effect.t
+  | Op_def_succeed : int * int -> value Effect.t
+  | Op_def_fail : int * int -> value Effect.t
+  | Op_def_is_done : int -> value Effect.t
+  | Op_def_poll : int -> value Effect.t
+  | Op_def_await_value : int -> value Effect.t
+  | Op_def_await_error : int -> value Effect.t
+  (* The `Scopes` family: `syncState` over the ScopeStore. *)
+  | Op_scope_make : unit -> value Effect.t
+  | Op_scope_add : int * int -> value Effect.t
+  | Op_scope_remove : int * int -> value Effect.t
+  | Op_scope_close : int -> value Effect.t
 
 (* A typed failure raised by a fiber body: `Prim.yieldableError`. *)
 exception Efail_exn of int
@@ -372,6 +470,7 @@ type row =
   | Rfailed of string * int
   | Rdecide of int * bool
   | Rdone of exitv
+  | Rfrontier
 
 let sink : row list ref = ref []
 let push_row r = sink := !sink @ [ r ]
@@ -547,9 +646,23 @@ and exit_fiber m (f : run_fiber) (exit_ : exitv) : cmd list =
     emit m [ ChildrenInterrupted (f.id, f.children) ];
     f.finalizing <- Some exit_;
     (match countdown_park m f f.children (RcontinueWith exit_) with
-     | Some _ -> ()
-     | None -> f.finalizing <- None);
-    nested
+     | Some token ->
+       (* Lean resumes the fiber with `restoreName exit`, so the frame machine walks back to
+          the same exit with `finalizing` set. The avatar's stack is already gone by the time
+          `retc`/`exnc` runs (`doReturnToParent_frees`, O1 `:1078`), so the resumption is a
+          machine-level closure that re-enters `exit_fiber`; `finalizing` being set now sends
+          it down the second branch. *)
+       f.frame.control <-
+         Suspended
+           { ktoken = token;
+             kresume =
+               (fun _ ->
+                 let more = exit_fiber m f exit_ in
+                 drive m m.drive_fuel more) }
+     | None ->
+       (* Nothing was live: the countdown's continuation applies at once. *)
+       f.finalizing <- None);
+    if f.finalizing = None then nested @ [ Cevaluate f.id ] else nested
   end
   else begin
     (* :619-627 *)
@@ -567,16 +680,20 @@ and exit_fiber m (f : run_fiber) (exit_ : exitv) : cmd list =
     nested
   end
 
-(* `drive` (`:1025`). *)
-and drive m (cmds : cmd list) : unit =
-  match cmds with
-  | [] -> ()
-  | _ when m.stuck <> None -> ()
-  | c :: rest ->
-    exec m c;
-    drive m rest
+(* `drive` (`:1025`). Each command costs one fuel; exhaustion is a live frontier, and so is
+   a stuck machine. The fuel argument is Lean's, and `m.drive_fuel` carries it to the arms
+   that run nested commands from inside `continue k`. *)
+and drive m fuel (cmds : cmd list) : unit =
+  match (fuel, cmds) with
+  | 0, _ -> ()
+  | _, [] -> ()
+  | _, _ when m.stuck <> None -> ()
+  | _, c :: rest ->
+    exec m (fuel - 1) c;
+    drive m (fuel - 1) rest
 
-and exec m (c : cmd) : unit =
+and exec m fuel (c : cmd) : unit =
+  m.drive_fuel <- fuel;
   match c with
   | Cevaluate id -> (
     (* :599-628 *)
@@ -589,7 +706,7 @@ and exec m (c : cmd) : unit =
         f.current_op_count <- 0;
         f.parked <- NotParked;
         emit m [ Started id ];
-        run_control m f
+        run_control m fuel f
       end)
   | Cresume (id, token, answer) -> (
     (* :602-606, :1121 *)
@@ -611,19 +728,24 @@ and exec m (c : cmd) : unit =
         | _ -> ())
       | _ -> () (* the token guard: a stale resume is dropped *)))
   | Claunch _ -> ()  (* the race arm refuses in this pass *)
-  | CdrainDue -> ()  (* `RunInterp.dueResumes` is empty in this St *)
+  | CdrainDue ->
+    (* `RunInterp.dueResumes` (`:414`): the resumes the store owes now, in registration
+       order, resumed synchronously inside the completing `sync` (M1). *)
+    let due = m.state.due in
+    m.state.due <- [];
+    List.iter (fun (target, token, answer) -> exec m fuel (Cresume (target, token, answer))) due
 
 (* What `Cmd.evaluate` finds in `current`. *)
-and run_control m (f : run_fiber) : unit =
+and run_control m fuel (f : run_fiber) : unit =
   match f.frame.control with
   | Program body ->
     f.frame.control <- Onstack;
-    run_under_handler m f body
+    run_under_handler m fuel f body
   | Failing cause ->
     (* current = Prim.failure over an empty stack: the frame machine's `resumeCause` walks
        nothing and finishes. The body never ran, so no finalizer frame exists. *)
     f.frame.control <- Onstack;
-    finish m f (Efailure cause)
+    finish m fuel f (Efailure cause)
   | Suspended k ->
     (* An interrupt applied to a parked fiber: Lean reaches the stack through
        `current := Prim.failure accumulated`; OCaml's spelling is `discontinue`. *)
@@ -632,18 +754,18 @@ and run_control m (f : run_fiber) : unit =
   | Onstack | Ended -> ()
 
 (* `retc` / `exnc`: this fiber's own stack has finished. *)
-and finish m (f : run_fiber) (exit_ : exitv) : unit =
+and finish m fuel (f : run_fiber) (exit_ : exitv) : unit =
   f.running <- false;
   let nested = exit_fiber m f exit_ in
-  drive m nested
+  drive m fuel nested
 
 (* The scheduler handler: `match_with` over the fiber body. Every `effc` arm is one
    `iteration` arm of `Fibers.lean:683`. *)
-and run_under_handler m (f : run_fiber) (body : unit -> value) : unit =
+and run_under_handler m fuel (f : run_fiber) (body : unit -> value) : unit =
   let open Effect.Deep in
   match_with body ()
     {
-      retc = (fun v -> finish m f (Esuccess v));
+      retc = (fun v -> finish m fuel f (Esuccess v));
       exnc =
         (fun e ->
           let exit_ =
@@ -652,7 +774,7 @@ and run_under_handler m (f : run_fiber) (body : unit -> value) : unit =
             | Einterrupt_exn c -> Efailure c
             | other -> Efailure (cause_die (Printexc.to_string other))
           in
-          finish m f exit_);
+          finish m fuel f exit_);
       effc =
         (fun (type a) (eff : a Effect.t) : ((a, unit) continuation -> unit) option ->
           match eff with
@@ -676,6 +798,117 @@ and run_under_handler m (f : run_fiber) (body : unit -> value) : unit =
           | Op_yield_now p ->
             Some (fun k -> arm_yield m f p { ret = continue k; thr = discontinue k })
           | Op_never () -> Some (fun k -> arm_never m f { ret = continue k; thr = discontinue k })
+          | Op_await_all hs ->
+            Some (fun k -> arm_await_all m f hs { ret = continue k; thr = discontinue k })
+          | Op_interrupt_all hs ->
+            Some (fun k -> arm_interrupt_all m f hs { ret = continue k; thr = discontinue k })
+          | Op_snapshot_children () ->
+            Some (fun k -> arm_snapshot_children m f { ret = continue k; thr = discontinue k })
+          | Op_await_new_children snap ->
+            Some (fun k -> arm_await_new_children m f snap { ret = continue k; thr = discontinue k })
+          | Op_set_interruptible flag ->
+            Some (fun k -> arm_set_interruptible m f flag { ret = continue k; thr = discontinue k })
+          | Op_refuse name ->
+            Some (fun k -> arm_refuse m f name { ret = continue k; thr = discontinue k })
+          | Op_ref_make n ->
+            Some (fun k -> arm_ref_make m f n { ret = continue k; thr = discontinue k })
+          | Op_ref_get h ->
+            Some (fun k ->
+                arm_state m f "get" (Vhandle h)
+                  (fun st -> Vnat (ref_cell st h).cell) { ret = continue k; thr = discontinue k })
+          | Op_ref_set (h, v) ->
+            Some (fun k ->
+                arm_state m f "set" (Vpair (Vhandle h, Vnat v))
+                  (fun st -> (ref_cell st h).cell <- v; Vunit)
+                  { ret = continue k; thr = discontinue k })
+          | Op_ref_update (h, a) ->
+            Some (fun k ->
+                arm_state m f "update" (Vpair (Vhandle h, Vnat a))
+                  (fun st -> let c = ref_cell st h in c.cell <- c.cell + a; Vunit)
+                  { ret = continue k; thr = discontinue k })
+          | Op_ref_modify (h, a) ->
+            Some (fun k ->
+                arm_state m f "modify" (Vpair (Vhandle h, Vnat a))
+                  (fun st -> let c = ref_cell st h in let before = c.cell in
+                             c.cell <- before + a; Vnat before)
+                  { ret = continue k; thr = discontinue k })
+          | Op_ref_get_and_set (h, v) ->
+            Some (fun k ->
+                arm_state m f "getAndSet" (Vpair (Vhandle h, Vnat v))
+                  (fun st -> let c = ref_cell st h in let before = c.cell in
+                             c.cell <- v; Vnat before)
+                  { ret = continue k; thr = discontinue k })
+          | Op_ref_try_take (h, a) ->
+            Some (fun k ->
+                arm_state m f "tryTake" (Vpair (Vhandle h, Vnat a))
+                  (fun st ->
+                    let c = ref_cell st h in
+                    if c.cell >= a then begin c.cell <- c.cell - a; Vpair (Vbool true, Vnat c.cell) end
+                    else Vpair (Vbool false, Vstring "underflow"))
+                  { ret = continue k; thr = discontinue k })
+          | Op_def_make () ->
+            Some (fun k -> arm_def_make m f { ret = continue k; thr = discontinue k })
+          | Op_def_succeed (h, v) ->
+            Some (fun k ->
+                arm_def_complete m f "succeed" h (Esuccess (Vnat v)) (Vnat v)
+                  { ret = continue k; thr = discontinue k })
+          | Op_def_fail (h, e) ->
+            Some (fun k ->
+                arm_def_complete m f "fail" h (Efailure (cause_fail e)) (Vnat e)
+                  { ret = continue k; thr = discontinue k })
+          | Op_def_is_done h ->
+            Some (fun k ->
+                arm_state m f "isDone" (Vhandle h)
+                  (fun st -> Vbool ((deferred_cell st h).completion <> None))
+                  { ret = continue k; thr = discontinue k })
+          | Op_def_poll h ->
+            Some (fun k ->
+                arm_state m f "poll" (Vhandle h)
+                  (fun st ->
+                    match (deferred_cell st h).completion with
+                    | None -> Vnone
+                    | Some (Esuccess v) -> Vsome (Vpair (Vbool true, v))
+                    | Some (Efailure c) ->
+                      Vsome (Vpair (Vbool false,
+                                    match cause_fail_of c with Some e -> Vnat e | None -> Vunit)))
+                  { ret = continue k; thr = discontinue k })
+          | Op_def_await_value h ->
+            Some (fun k -> arm_def_await m f h `Value { ret = continue k; thr = discontinue k })
+          | Op_def_await_error h ->
+            Some (fun k -> arm_def_await m f h `Error { ret = continue k; thr = discontinue k })
+          | Op_scope_make () ->
+            Some (fun k -> arm_scope_make m f { ret = continue k; thr = discontinue k })
+          | Op_scope_add (h, key) ->
+            Some (fun k ->
+                arm_state m f "addFinalizer" (Vpair (Vhandle h, Vnat key))
+                  (fun st ->
+                    let sc = scope_cell st h in
+                    if sc.scope_open then begin sc.finalizers <- key :: sc.finalizers; Vbool true end
+                    else begin sc.ran <- sc.ran @ [ key ]; Vbool false end)
+                  { ret = continue k; thr = discontinue k })
+          | Op_scope_remove (h, key) ->
+            Some (fun k ->
+                arm_state m f "remove" (Vpair (Vhandle h, Vnat key))
+                  (fun st ->
+                    let sc = scope_cell st h in
+                    if sc.scope_open then
+                      sc.finalizers <- List.filter (fun x -> x <> key) sc.finalizers;
+                    Vunit)
+                  { ret = continue k; thr = discontinue k })
+          | Op_scope_close h ->
+            Some (fun k ->
+                arm_state m f "close" (Vhandle h)
+                  (fun st ->
+                    let sc = scope_cell st h in
+                    if not sc.scope_open then Vlist []
+                    else begin
+                      let ran = sc.finalizers in
+                      sc.finalizers <- [];
+                      sc.scope_open <- false;
+                      sc.ran <- sc.ran @ ran;
+                      Vlist (List.map (fun key -> Vnat key) ran)
+                    end)
+                  { ret = continue k; thr = discontinue k })
           | _ -> None);
     }
 
@@ -698,12 +931,12 @@ and arm_fork m f code daemon (ko : kops) : unit =
     if not daemon then m.middleware_installed <- true;
     let child = spawn m f (!body_of_code code) ~daemon in
     let nested = start m f child ~immediately:false in
-    let handle = child - 1 in
+    let handle = handle_index "fiber" child in
     let site = Tape.site () in
     let branch = Tape.decide () in
     push_row (Rdecide (site, branch));
     push_row (Ranswer (name, Vhandle handle));
-    drive m nested;
+    drive m m.drive_fuel nested;
     (* On `true` the parent spends one primitive with the scheduler armed, so the run loop
        takes the processor away and drains its queue: `Prim.yieldNowWith 0`. *)
     if branch then park_yield m f 0 (fun () -> ko.ret (Vhandle handle))
@@ -757,7 +990,7 @@ and arm_join m f handle (ko : kops) : unit =
   if prelude_or_fail m f ko then ()
   else begin
     push_row (Rop ("join", Vhandle handle));
-    let target = handle + 1 in
+    let target = handle_target "fiber" handle in
     match fiber_opt m target with
     | None -> halt m (UnknownFiber target)
     | Some t -> (
@@ -809,7 +1042,7 @@ and arm_await m f handle which (ko : kops) : unit =
       | `Error, Efailure c -> (
         match cause_fail_of c with Some x -> Vsome (Vnat x) | None -> Vnone)
     in
-    let target = handle + 1 in
+    let target = handle_target "fiber" handle in
     match fiber_opt m target with
     | None -> halt m (UnknownFiber target)
     | Some t -> (
@@ -845,7 +1078,7 @@ and arm_interrupt m f handle (ko : kops) : unit =
   if prelude_or_fail m f ko then ()
   else begin
     push_row (Rop ("interrupt", Vhandle handle));
-    let target = handle + 1 in
+    let target = handle_target "fiber" handle in
     match fiber_opt m target with
     | None -> halt m (UnknownFiber target)
     | Some t ->
@@ -865,9 +1098,9 @@ and arm_interrupt m f handle (ko : kops) : unit =
                      ko.ret Vunit
                    | Acause c -> ko.thr (Einterrupt_exn c)) };
          f.running <- false;
-         drive m nested
+         drive m m.drive_fuel nested
        | None ->
-         drive m nested;
+         drive m m.drive_fuel nested;
          push_row (Ranswer ("interrupt", Vunit));
          ko.ret Vunit)
   end
@@ -879,13 +1112,271 @@ and arm_sync m f name (read : st -> int list) (ko : kops) : unit =
     push_row (Rop (name, Vunit));
     let v = Vlist (List.map (fun n -> Vnat n) (read m.state)) in
     push_row (Ranswer (name, v));
+    drive m m.drive_fuel [ CdrainDue ];
     ko.ret v
   end
+
+(* The general `Prim.sync` arm: `RunInterp.syncState` answers a value and the resumes the
+   store owes are drained on the spot (`iteration`'s `some (state, value)` arm, M1). *)
+and arm_state m f name (request : value) (compute : st -> value) (ko : kops) : unit =
+  if prelude_or_fail m f ko then ()
+  else begin
+    push_row (Rop (name, request));
+    let v = compute m.state in
+    push_row (Ranswer (name, v));
+    drive m m.drive_fuel [ CdrainDue ];
+    ko.ret v
+  end
+
+(* ------------------------------------------------- the remaining fiber arms *)
+
+(* `WithFiberAction.awaitAll` (`:5318-5322`): a countdown over the targets' exits, answered
+   as the list of exits. *)
+and arm_await_all m f (hs : int list) (ko : kops) : unit =
+  if prelude_or_fail m f ko then ()
+  else begin
+    push_row (Rop ("awaitAll", Vlist (List.map (fun h -> Vhandle h) hs)));
+    let targets = List.map (handle_target "fiber") hs in
+    match countdown_park m f targets RexitsValue with
+    | Some token ->
+      f.frame.control <-
+        Suspended { ktoken = token; kresume = (fun a -> answer_countdown "awaitAll" ko a) };
+      f.running <- false
+    | None ->
+      let exits = List.filter_map (fun t -> (fiber_exn m t).exit_) targets in
+      answer_countdown "awaitAll" ko (resume_prim RexitsValue exits)
+  end
+
+(* `WithFiberAction.interruptAll` (`:895`, `:913`): record on every target first, then await
+   them all. *)
+and arm_interrupt_all m f (hs : int list) (ko : kops) : unit =
+  if prelude_or_fail m f ko then ()
+  else begin
+    push_row (Rop ("interruptAll", Vlist (List.map (fun h -> Vhandle h) hs)));
+    let targets = List.map (handle_target "fiber") hs in
+    let nested =
+      List.fold_left
+        (fun acc t ->
+          match fiber_opt m t with
+          | None -> acc
+          | Some g ->
+            let apply_now = interrupt_record m (Some f.id) [] g in
+            emit m [ InterruptRecorded (Some f.id, t) ];
+            acc @ if apply_now then [ Cevaluate t ] else [])
+        [] targets
+    in
+    match countdown_park m f targets Rvoid with
+    | Some token ->
+      f.frame.control <-
+        Suspended { ktoken = token; kresume = (fun a -> answer_countdown "interruptAll" ko a) };
+      f.running <- false;
+      drive m m.drive_fuel nested
+    | None ->
+      drive m m.drive_fuel nested;
+      push_row (Ranswer ("interruptAll", Vunit));
+      ko.ret Vunit
+  end
+
+(* `WithFiberAction.snapshotChildren` (`:5318`). *)
+and arm_snapshot_children m f (ko : kops) : unit =
+  if prelude_or_fail m f ko then ()
+  else begin
+    push_row (Rop ("childrenSnapshot", Vunit));
+    let v = Vlist (List.map (fun c -> Vhandle (handle_index "fiber" c)) f.children) in
+    push_row (Ranswer ("childrenSnapshot", v));
+    ko.ret v
+  end
+
+(* `WithFiberAction.awaitNewChildren snapshot`: await the children added since. *)
+and arm_await_new_children m f (snapshot : value) (ko : kops) : unit =
+  if prelude_or_fail m f ko then ()
+  else begin
+    push_row (Rop ("awaitChildren", snapshot));
+    let seen =
+      match snapshot with
+      | Vlist items ->
+        List.map (function Vhandle h -> handle_target "fiber" h | _ -> -1) items
+      | _ -> []
+    in
+    let fresh = List.filter (fun c -> not (List.mem c seen)) f.children in
+    match countdown_park m f fresh Rvoid with
+    | Some token ->
+      f.frame.control <-
+        Suspended { ktoken = token; kresume = (fun a -> answer_countdown "awaitChildren" ko a) };
+      f.running <- false
+    | None ->
+      push_row (Ranswer ("awaitChildren", Vunit));
+      ko.ret Vunit
+  end
+
+(* What a finished countdown answers with. *)
+and answer_countdown name (ko : kops) (a : answer) : unit =
+  match a with
+  | Aval v ->
+    push_row (Ranswer (name, v));
+    ko.ret v
+  | Acause c -> fail_op name ko c
+
+(* `WithFiberAction.setInterruptible` (`:4302-4310`, `:4331-4352`, M2): set the flag, and on
+   restoring interruptibility fail now if a cause is pending. Answers the previous flag, so a
+   program can spell rc.112's `uninterruptible` as a bracket. *)
+and arm_set_interruptible m f (flag : bool) (ko : kops) : unit =
+  if prelude_or_fail m f ko then ()
+  else begin
+    let previous = f.frame.interruptible in
+    f.frame.interruptible <- flag;
+    if flag then
+      match f.frame.interrupted_cause with
+      | Some cause ->
+        (* `FrameFiber.ensure` on `setInterruptible true` with a recorded cause returns the
+           replacement continuation `failure cause` (`Runtime.lean:650-653`). *)
+        f.running <- false;
+        ko.thr (Einterrupt_exn cause)
+      | None -> ko.ret (Vbool previous)
+    else ko.ret (Vbool previous)
+  end
+
+(* `WithFiberAction.refuse` (S3 §5.2): the interp refuses this thunk and the fiber fails
+   with the cause, visibly. Every `WithFiberAction` arm this pass does not implement is
+   reached through here, so an unimplemented arm refuses rather than differing. *)
+and arm_refuse m f (name : string) (ko : kops) : unit =
+  if prelude_or_fail m f ko then ()
+  else begin
+    f.running <- false;
+    ko.thr (Einterrupt_exn (cause_die ("unimplemented WithFiberAction: " ^ name)))
+  end
+
+(* ------------------------------------------------------ the store arms (S2) *)
+
+and arm_ref_make m f (initial : int) (ko : kops) : unit =
+  if prelude_or_fail m f ko then ()
+  else begin
+    push_row (Rop ("make", Vnat initial));
+    let id = m.state.next_ref in
+    m.state.next_ref <- id + 1;
+    Hashtbl.replace m.state.refs id { cell = initial };
+    let v = Vhandle (handle_index "ref" id) in
+    push_row (Ranswer ("make", v));
+    ko.ret v
+  end
+
+and arm_def_make m f (ko : kops) : unit =
+  if prelude_or_fail m f ko then ()
+  else begin
+    push_row (Rop ("make", Vunit));
+    let id = m.state.next_deferred in
+    m.state.next_deferred <- id + 1;
+    Hashtbl.replace m.state.deferreds id { completion = None; waiters = [] };
+    let v = Vhandle (handle_index "deferred" id) in
+    push_row (Ranswer ("make", v));
+    ko.ret v
+  end
+
+and arm_scope_make m f (ko : kops) : unit =
+  if prelude_or_fail m f ko then ()
+  else begin
+    push_row (Rop ("make", Vunit));
+    let id = m.state.next_scope in
+    m.state.next_scope <- id + 1;
+    Hashtbl.replace m.state.scopes id { scope_open = true; finalizers = []; ran = [] };
+    let v = Vhandle (handle_index "scope" id) in
+    push_row (Ranswer ("make", v));
+    ko.ret v
+  end
+
+(* A Deferred completion: the first one wins, and the waiters it owes are queued for
+   `dueResumes` in registration order (`Deferred.ts:1655-1659`, M1). *)
+and arm_def_complete m f name h (exit_ : exitv) (_payload : value) (ko : kops) : unit =
+  if prelude_or_fail m f ko then ()
+  else begin
+    push_row (Rop (name, Vpair (Vhandle h,
+                                match exit_ with
+                                | Esuccess v -> v
+                                | Efailure c -> (match cause_fail_of c with
+                                                 | Some e -> Vnat e
+                                                 | None -> Vunit))));
+    let cell = deferred_cell m.state h in
+    let fresh = cell.completion = None in
+    if fresh then begin
+      cell.completion <- Some exit_;
+      m.state.due <-
+        m.state.due @ List.map (fun (fid, token) -> (fid, token, Aval Vunit)) cell.waiters;
+      cell.waiters <- []
+    end;
+    (* Lean's `iteration` delivers the `sync`'s value into the frame and runs `Cmd.drainDue`
+       as a nested command *before* the completing fiber continues, so the waiter it woke
+       runs first. The service `answer` row is what the host face emits when the effect
+       completes, i.e. after that nested work -- hence the drain before the row. *)
+    drive m m.drive_fuel [ CdrainDue ];
+    push_row (Ranswer (name, Vbool fresh));
+    ko.ret (Vbool fresh)
+  end
+
+(* `Deferred.await` and its flip: answered at once when the cell is settled, otherwise a
+   `Prim.async` whose `registerAsync` adds the waiter and parks (`:1109-1143`). *)
+and arm_def_await m f h which (ko : kops) : unit =
+  if prelude_or_fail m f ko then ()
+  else begin
+    let name = match which with `Value -> "awaitValue" | `Error -> "awaitError" in
+    push_row (Rop (name, Vhandle h));
+    let answer_now () =
+      let cell = deferred_cell m.state h in
+      match (which, cell.completion) with
+      | `Value, Some (Esuccess v) ->
+        push_row (Ranswer (name, v));
+        ko.ret v
+      | `Value, Some (Efailure c) -> fail_op name ko c
+      | `Error, Some (Efailure c) ->
+        let v = match cause_fail_of c with Some e -> Vnat e | None -> Vunit in
+        push_row (Ranswer (name, v));
+        ko.ret v
+      | `Error, Some (Esuccess v) -> fail_op name ko (cause_fail (match v with Vnat n -> n | _ -> 0))
+      | _, None -> ()
+    in
+    let cell = deferred_cell m.state h in
+    if cell.completion <> None then answer_now ()
+    else begin
+      let token = fresh_token m in
+      cell.waiters <- cell.waiters @ [ (f.id, token) ];
+      run_fiber_park f
+        { token; waiting_on = None; remaining = 0; collected = []; resume_with = Rvoid };
+      emit m [ ParkedOn (f.id, token) ];
+      f.frame.control <-
+        Suspended
+          { ktoken = token;
+            kresume =
+              (fun a ->
+                match a with
+                | Aval _ -> answer_now ()
+                | Acause c -> ko.thr (Einterrupt_exn c)) };
+      f.running <- false
+    end
+  end
+
+(* The three store lookups. A handle naming no cell is a stuck machine, not a silent
+   default: `Stuck` is what a state rc.112 cannot reach becomes here (DB-04). *)
+and ref_cell (st : st) h =
+  let (_, id) = try Hashtbl.find handle_owner h with Not_found -> ("ref", -1) in
+  match Hashtbl.find_opt st.refs id with
+  | Some c -> c
+  | None -> failwith (Printf.sprintf "unknown ref handle %d" h)
+
+and deferred_cell (st : st) h =
+  let (_, id) = try Hashtbl.find handle_owner h with Not_found -> ("deferred", -1) in
+  match Hashtbl.find_opt st.deferreds id with
+  | Some c -> c
+  | None -> failwith (Printf.sprintf "unknown deferred handle %d" h)
+
+and scope_cell (st : st) h =
+  let (_, id) = try Hashtbl.find handle_owner h with Not_found -> ("scope", -1) in
+  match Hashtbl.find_opt st.scopes id with
+  | Some c -> c
+  | None -> failwith (Printf.sprintf "unknown scope handle %d" h)
 
 (* ------------------------------------------------------------------- runtime entries *)
 
 (* `stepDecision.fire` (`Scheduler.ts:225-233`): drain once, run the tasks in order. *)
-let fire m owner =
+let fire m fuel owner =
   match fiber_opt m owner with
   | None -> ()
   | Some o ->
@@ -894,29 +1385,30 @@ let fire m owner =
       (fun task ->
         emit m [ RanTask (owner, task) ];
         match task with
-        | Tstart child -> drive m [ Cevaluate child; CdrainDue ]
-        | Tresume (target, token, answer) -> drive m [ Cresume (target, token, answer); CdrainDue ])
+        | Tstart child -> drive m fuel [ Cevaluate child; CdrainDue ]
+        | Tresume (target, token, answer) ->
+          drive m fuel [ Cresume (target, token, answer); CdrainDue ])
       tasks
 
 (* `stepDecision.flushAll`: armed dispatchers in fiber order until none is armed. *)
-let rec flush_all m rounds =
+let rec flush_all m fuel rounds =
   if rounds = 0 then ()
   else
     let armed = List.filter (fun f -> f.dispatcher.armed) m.fibers in
     if armed = [] || m.stuck <> None then ()
     else begin
-      List.iter (fun f -> fire m f.id) armed;
-      flush_all m (rounds - 1)
+      List.iter (fun f -> fire m fuel f.id) armed;
+      flush_all m fuel (rounds - 1)
     end
 
 (* `stepDecision` (`:1108`). *)
-let step_decision m = function
-  | Dfire owner -> fire m owner
-  | Dflush -> flush_all m 1000
-  | Devaluate id -> drive m [ Cevaluate id; CdrainDue ]
+let step_decision m fuel = function
+  | Dfire owner -> fire m fuel owner
+  | Dflush -> flush_all m fuel default_rounds
+  | Devaluate id -> drive m fuel [ Cevaluate id; CdrainDue ]
   | DyieldVerdict (id, verdict) -> (
     match fiber_opt m id with Some f -> f.yield_override <- Some verdict | None -> ())
-  | DanswerAsync (id, token, answer) -> drive m [ Cresume (id, token, answer); CdrainDue ]
+  | DanswerAsync (id, token, answer) -> drive m fuel [ Cresume (id, token, answer); CdrainDue ]
   | DinterruptFrom (interruptor, annotations, target) -> (
     match fiber_opt m target with
     | None -> ()
@@ -924,36 +1416,49 @@ let step_decision m = function
       let apply_now = interrupt_record m interruptor annotations t in
       emit m [ InterruptRecorded (interruptor, target) ];
       if t.frame.deferred_interrupt && t.running then emit m [ InterruptDeferred target ];
-      if apply_now then drive m [ Cevaluate target; CdrainDue ])
+      if apply_now then drive m fuel [ Cevaluate target; CdrainDue ])
   | DinstallMiddleware -> m.middleware_installed <- true
 
 (* `runFork` (`:1184`): one root fiber, evaluated synchronously on the caller stack. *)
-let run_fork m (program : unit -> value) : int =
+let run_fork m fuel (program : unit -> value) : int =
   let root = m.next_id in
   let fiber = run_fiber_make root program true (max_int, false) () in
   m.fibers <- m.fibers @ [ fiber ];
   m.next_id <- m.next_id + 1;
-  drive m [ Cevaluate root; CdrainDue ];
+  drive m fuel [ Cevaluate root; CdrainDue ];
   root
 
 (* `runCallback` (`:1194`): `runFork` plus an exit observer under `key`. *)
-let run_callback m (program : unit -> value) (key : int) : int =
+let run_callback m fuel (program : unit -> value) (key : int) : int =
   let root = m.next_id in
   let fiber = run_fiber_make root program true (max_int, false) () in
   fiber.observers <- [ Callback key ];
   m.fibers <- m.fibers @ [ fiber ];
   m.next_id <- m.next_id + 1;
-  drive m [ Cevaluate root; CdrainDue ];
+  drive m fuel [ Cevaluate root; CdrainDue ];
   root
 
 (* `runSyncExit` (`:1205`): `runFork`, flush, and the `AsyncFiberError` defect when the root
    survives the flush. *)
-let run_sync_exit m (program : unit -> value) : exitv =
-  let root = run_fork m program in
-  step_decision m Dflush;
+let run_sync_exit m fuel (program : unit -> value) : exitv =
+  let root = run_fork m fuel program in
+  step_decision m fuel Dflush;
   match (fiber_exn m root).exit_ with
   | Some e -> e
   | None -> Efailure (cause_die "AsyncFiberError")
+
+(* `replayEval`'s three results (`:1164`) over the one tape the trace faces use: a run that
+   ends with the root exited is `finished`; one that reaches quiescence with the root still
+   parked is `frontier` (`harness/trace/tracer.ts:434-442` writes the same row when its
+   stall deadline fires); a stuck machine is `stuck`. *)
+type replay_result = Rfinished of exitv | Rfrontier | Rstuck of stuck
+
+let run_program m fuel (program : unit -> value) : replay_result =
+  let root = run_fork m fuel program in
+  step_decision m fuel Dflush;
+  match m.stuck with
+  | Some why -> Rstuck why
+  | None -> ( match (fiber_exn m root).exit_ with Some e -> Rfinished e | None -> Rfrontier)
 
 (* `promiseOutcome` (`:1216`). *)
 let promise_outcome (e : exitv) : (value, cause) result =

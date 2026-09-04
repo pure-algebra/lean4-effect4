@@ -1,0 +1,29 @@
+format	effect4-trace-golden-v1
+generator	workshop/OCaml5/avatar/build-avatar.sh	sha256=afe814c209a98bdc04ab2d0785022be188b9f9b8e6f2135e83ac0aed181faa9b
+regenerate	./workshop/OCaml5/avatar/build-avatar.sh
+input	workshop/OCaml5/avatar/deep_fibers.ml	sha256=afe814c209a98bdc04ab2d0785022be188b9f9b8e6f2135e83ac0aed181faa9b
+input	workshop/OCaml5/avatar/avatar_trace.ml	sha256=afe814c209a98bdc04ab2d0785022be188b9f9b8e6f2135e83ac0aed181faa9b
+input	workshop/OCaml5/avatar/fibers_fixture.ml	sha256=afe814c209a98bdc04ab2d0785022be188b9f9b8e6f2135e83ac0aed181faa9b
+input	workshop/OCaml5/avatar/store_fixtures.ml	sha256=afe814c209a98bdc04ab2d0785022be188b9f9b8e6f2135e83ac0aed181faa9b
+input	workshop/OCaml5/avatar/extra_fixture.ml	sha256=afe814c209a98bdc04ab2d0785022be188b9f9b8e6f2135e83ac0aed181faa9b
+pin	effects	a4ee7a14248ee5976039b73039319efa87834986
+format	effect4-trace-v1
+face	ocaml
+program	ref.twoRefs
+tape	
+rules	service-acquire,perform-call,perform-bind,atom-call,perform-discard,ret
+op	make	7
+answer	make	0
+op	make	8
+answer	make	1
+op	set	[0, 0]
+answer	set	[]
+op	get	1
+answer	get	8
+op	update	[1, 1]
+answer	update	[]
+op	get	0
+answer	get	0
+op	get	1
+answer	get	9
+done	{"success":9}

@@ -1,0 +1,40 @@
+format	effect4-trace-golden-v1
+generator	workshop/OCaml5/avatar/build-avatar.sh	sha256=afe814c209a98bdc04ab2d0785022be188b9f9b8e6f2135e83ac0aed181faa9b
+regenerate	./workshop/OCaml5/avatar/build-avatar.sh
+input	workshop/OCaml5/avatar/deep_fibers.ml	sha256=afe814c209a98bdc04ab2d0785022be188b9f9b8e6f2135e83ac0aed181faa9b
+input	workshop/OCaml5/avatar/avatar_trace.ml	sha256=afe814c209a98bdc04ab2d0785022be188b9f9b8e6f2135e83ac0aed181faa9b
+input	workshop/OCaml5/avatar/fibers_fixture.ml	sha256=afe814c209a98bdc04ab2d0785022be188b9f9b8e6f2135e83ac0aed181faa9b
+input	workshop/OCaml5/avatar/store_fixtures.ml	sha256=afe814c209a98bdc04ab2d0785022be188b9f9b8e6f2135e83ac0aed181faa9b
+input	workshop/OCaml5/avatar/extra_fixture.ml	sha256=afe814c209a98bdc04ab2d0785022be188b9f9b8e6f2135e83ac0aed181faa9b
+pin	effects	a4ee7a14248ee5976039b73039319efa87834986
+format	effect4-trace-v1
+face	ocaml
+program	fiber.awaitValueDistinctFromJoinEffect
+tape	0:1
+rules	service-acquire,perform-call,perform-bind,error-abort,ret
+op	fork	2
+decide	0	true
+answer	fork	0
+op	awaitValue	0
+answer	awaitValue	{"none":true}
+op	awaitError	0
+answer	awaitError	{"some":1}
+op	join	0
+failed	join	1
+done	{"failure":1}
+#	started	0
+#	forked	0	1	false
+#	scheduledTask	0	0	start(1)
+#	scheduledTask	0	0	resume(0,0)
+#	parkedOn	0	0
+#	ranTask	0	start(1)
+#	started	1
+#	exited	1	{"failure":1}
+#	observerFired	1	untrackChild(0)
+#	ranTask	0	resume(0,0)
+#	resumedWith	0	0
+#	started	0
+#	exited	0	{"failure":1}
+#	finished	true	stuck	-
+#	fiber	0	status	done	observers	0	children	[]
+#	fiber	1	status	done	observers	0	children	[]

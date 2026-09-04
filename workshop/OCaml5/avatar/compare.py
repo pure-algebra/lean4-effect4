@@ -52,6 +52,8 @@ def main():
     ap.add_argument("--goldens", required=True)
     ap.add_argument("--face", required=True)
     ap.add_argument("--suffix", default=".ocaml.tsv")
+    ap.add_argument("--prefix", default="")
+    ap.add_argument("--reference", default="lean")
     args = ap.parse_args()
 
     masks = parse_masks(open(args.masks).read())
@@ -61,8 +63,12 @@ def main():
         if not name.endswith(".tsv"):
             continue
         program = name[:-4]
+        if args.prefix and program.startswith(args.prefix):
+            program = program[len(args.prefix):]
+        if args.reference != "lean" and program.endswith(".ocaml"):
+            program = program[: -len(".ocaml")]
         gold_header, gold_rows = parse_trace(open(os.path.join(args.goldens, name)).read())
-        face_path = os.path.join(args.face, program + args.suffix)
+        face_path = os.path.join(args.face, args.prefix + program + args.suffix)
         if not os.path.exists(face_path):
             print(f"trace {program} MISSING {face_path}")
             failed += 1
@@ -84,7 +90,7 @@ def main():
                       f"DIVERGES at row {i}")
                 print(f"  expected: {expected[i] if i < len(expected) else '<end>'}")
                 print(f"  actual:   {actual[i] if i < len(actual) else '<end>'}")
-    print(f"compare: {total_ok} ok, {failed} failed")
+    print(f"compare[{args.reference}]: {total_ok} ok, {failed} failed")
     sys.exit(1 if failed else 0)
 
 

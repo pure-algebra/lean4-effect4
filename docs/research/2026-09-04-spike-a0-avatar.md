@@ -376,3 +376,182 @@ Nine programs, one service family, one tape shape, no `raceAll`, no scope store,
 avatar's op counter is not rc.112's. Nothing is proved; everything above the executed rows is
 a design. And the avatar's `drive` is partial where Lean's is total — a fuel argument is the
 first thing a Lean statement of it would need back.
+
+---
+
+# Round three (packet A2)
+
+Appended 2026-09-04, after A0 landed as `d4484e4`. Same ownership: `workshop/OCaml5/avatar/*`
+only, no `harness/`, `scripts/` or Lean edit, nothing committed. Files added: `store_fixtures.ml`,
+`extra_fixture.ml`, `extra_rc112.mjs` (11 files, 2,431 lines).
+
+## 8. Headline
+
+**Four families, 26 goldens, 78 mask comparisons, no divergence.** The avatar now answers the
+`Refs`/`ERefs`, `Deferreds` and `Scopes` alphabets as well as `Fibers`, and is a third face of
+all four committed golden families:
+
+```
+$ ./workshop/OCaml5/avatar/build-avatar.sh
+=== three OCaml hosts agree (bytecode / native / js_of_ocaml --enable effects)
+… 32 programs, all AGREE, 0 DISAGREE
+=== ocaml face vs lean golden, under every mask
+compare[lean]: 27 ok, 0 failed     (fiber, 9 goldens)
+compare[lean]: 21 ok, 0 failed     (ref, 7 goldens)
+compare[lean]: 18 ok, 0 failed     (deferred, 6 goldens)
+compare[lean]: 12 ok, 0 failed     (scope, 4 goldens)
+=== rc.112 host face vs lean golden, through the estate's own runner
+… 78 lines, all ok
+=== the extra family: avatar vs rc.112 (no Lean golden exists)
+rc112 snapshotAwaitNewChildren: no rc.112 surface, avatar-only
+rc112 refusesUnimplementedArm: no rc.112 surface, avatar-only
+compare[rc112]: 10 ok, 2 failed
+```
+
+Per family and mask: **fiber 9×3, ref 7×3, deferred 6×3, scope 4×3 = 78 ok, 0 failed**, matched
+row for row by the rc.112 face at 78 ok. The one failure block is the `extra` family and is
+diagnosed in §11. Exit status is 1 only because of it.
+
+## 9. The remaining `WithFiberAction` arms
+
+`awaitAll`, `interruptAll`, `snapshotChildren` and `awaitNewChildren` are four `countdown_park`
+calls (`deep_fibers.ml:960`, `:986`, `:1017`, `:1027`); `setInterruptible` is the mask
+(`:1057`); `refuse` is S3 §5.2 (`:1076`). No committed golden reaches any of them, so round three
+adds an **`extra` family** whose reference is rc.112 directly: `extra_rc112.mjs` is a standalone
+mirror (not a copy of, and not an import of, `harness/trace/fiber-tail.ts`) emitting the same row
+alphabet over the pinned `effect@4.0.0-rc.112`. There is no decision tape; the handover is an
+explicit `yield` service row, which both faces spell as one `Effect.yieldNow`.
+
+| Witness | Arm | Avatar vs rc.112 |
+| --- | --- | --- |
+| `awaitAllTwo` | `awaitAll` over two queued children | 3/3 masks ok |
+| `interruptAllTwo` | `interruptAll` over two parked children | 3/3 masks ok |
+| `maskedYieldKeepsRunning` | `setInterruptible` (M2) | 3/3 masks ok |
+| `siblingCompletesDeferred` | `registerAsync` + `dueResumes` (M1) | `outcome` ok, `m1`/`m2` diverge by one row (§11) |
+| `snapshotAwaitNewChildren` | `snapshotChildren` + `awaitNewChildren` | avatar-only: rc.112 fuses both into `Effect.awaitAllChildren` and exposes no unfused surface — the REFUSAL `harness/trace/fibers-tail.ts:33-35` already records |
+| `refusesUnimplementedArm` | `refuse` | avatar-only by construction |
+
+`maskedYieldKeepsRunning` is the one that earns its place. Child body 5 pushes `started 5`, masks
+itself, yields, pushes `started 6`, unmasks, then parks forever; the parent yields, then
+`interruptAll`s it while it is parked *and masked*. Both faces answer `started [5, [6, []]]` and
+`cleanups [5, []]`: the interrupt was recorded and not applied at the yield park, the child ran
+past it, and it landed when interruptibility was restored. Without the mask the answer would be
+`[5, []]`. The machine trace shows it directly
+(`out/extra.maskedYieldKeepsRunning.events.tsv`): `interruptRecorded 0 1` with no `started 1`
+after it, then `ranTask 1 resume(1,1)` — the child's *own* yield resume — and only then
+`exited 1 {"interrupted":true}`.
+
+`refusesUnimplementedArm` is the answer to "every arm still unimplemented must refuse, never
+differ". Sixteen of the eighteen `WithFiberAction` arms have no effect constructor at all, so a
+program naming one does not compile; the two that are reachable at run time — `Claunch` (race)
+and `DropScopeFinalizer` — are a no-op and a `Stuck` respectively; and `Op_refuse` is Lean's own
+`WithFiberAction.refuse`, whose outcome the avatar now prints as
+`done {"defect":"unimplemented WithFiberAction: raceAll"}`. That row exposed a round-two bug: the
+wire had only two outcome arms, so a die-only cause would have rendered `{"interrupted":true}`.
+`avatar_trace.ml:32` now has all four in `tracer.ts:110-121`'s precedence (Fail, then Interrupt,
+then Die). **Nothing in the fiber goldens reached it; the refusal arm did.**
+
+That refusal also reached `exitFiber`'s *first* branch for the first time — the children prologue
+(`Fibers.lean:993-1004`), transcribed in round two but never executed. It was wrong: the exit
+path parked on the children countdown with no way to resume, because `retc`/`exnc` run after the
+fiber's stack is freed (`doReturnToParent_frees`, O1 `:1078`), so there is no continuation to
+capture. `deep_fibers.ml:551` now parks on a machine-level closure that re-enters `exit_fiber`
+with `finalizing` set, which is the OCaml spelling of Lean resuming with `restoreName exit`.
+
+## 10. The three store families
+
+`store_fixtures.ml` carries the 17 programs of `harness/trace/{ref,deferred,scope}-fixture.ts`
+against the three S2 stores now in `st` (`deep_fibers.ml:290`): the Ref heap, the Deferred store
+(`completion`, waiter tokens) and the ScopeStore, plus the `dueResumes` queue. Every Ref and
+Scope row is a `Prim.sync` through `RunInterp.syncState`; the two Deferred awaits are a
+`Prim.async` whose `registerAsync` adds the waiter and parks, and every completion queues its
+waiters for `Cmd.drainDue`, which is now a real arm (`:611`) rather than a no-op.
+
+Three things the round-three goldens forced, each a fidelity gain:
+
+1. **The wire's handle space is one first-seen counter across every kind** (`tracer.ts:41-50`),
+   not one per family. Round two used `child - 1`; `handle_index`/`handle_target`
+   (`deep_fibers.ml:322`) now do what the `WeakMap` does, which is why
+   `siblingCompletesDeferred` can number a Deferred `0` and a fiber `1` in one run.
+2. **`Generate.lean` lowers each program at its own `n`.** The deferred goldens are lowered at
+   7, 5, 4, 6 and 8; the ref goldens all at 7. The table is `store_fixtures.ml:163`.
+3. **A parked-forever root is `frontier`, not an outcome.** `deferredPendingAwait` awaits a cell
+   nothing completes. The harness writes `frontier` when its stall deadline fires
+   (`tracer.ts:434-442`); the avatar writes it when the machine reaches quiescence with the root
+   unexited — `replayEval`'s three results (`Fibers.lean:1164`) are now the entry
+   (`run_program`, `deep_fibers.ml:1290`). Deterministic where the host face needs a timeout.
+
+## 11. The one divergence, and its arm
+
+`extra.siblingCompletesDeferred`, masks `m1` and `m2`, at the last row:
+
+```
+  expected (rc.112): done   {"success":42}
+  actual   (avatar): answer succeed  true
+```
+
+Both faces agree on every row up to and including `answer awaitValue 42`, which is the M1 claim:
+`op awaitValue 0` (parent parks) · `op succeed [0, 42]` · `answer awaitValue 42` — the parent is
+resumed *synchronously inside* the child's completion, before the completing effect answers.
+The avatar then prints one row rc.112 does not.
+
+**The arm.** rc.112 emits the service `answer` row from a separate `Effect.tap` primitive, so the
+run loop's interrupt check (`internal/effect.ts:639-642`) sits between the completion's value and
+the row; the root has already exited by then and interrupted its tracked child, so the tap never
+runs and the row is lost. The avatar pushes the row from inside `arm_def_complete`, where nothing
+can pre-empt it. **This is a tracing-instrumentation difference, not a machine difference** — the
+machine trace shows the same transitions in the same order — but it is observable in the row
+stream, so it is recorded rather than papered over.
+
+The fix, deferred to A3 because it touches every answer row: model each service `answer` row as a
+further primitive, running `iteration_prelude` before pushing it. That is faithful (it is what the
+TS face's extra `tap` primitive is) and it cannot change the 78 passing comparisons, because the
+prelude only fires on a `deferred_interrupt`, which requires an interrupt recorded on a *running*
+fiber, and no golden in the four families has one.
+
+Round three also found and fixed a real ordering bug in the same arm: the completion's `answer`
+row was pushed *before* `Cmd.drainDue`, where Lean's `iteration` runs the drain as a nested
+command before the completing fiber continues (`Fibers.lean:759-762`). `deep_fibers.ml:1206` now
+drains first.
+
+## 12. Divergence 7, narrowed but not closed
+
+`drive`, `fire`, `flush_all`, `step_decision`, `run_fork`, `run_callback`, `run_sync_exit` and the
+new `run_program` all take an explicit fuel argument in Lean's shape: one fuel per command,
+`flushAll` bounded separately by rounds, and each nested `drive` given the entry's fuel exactly as
+Lean's `fire` gives every task the same `fuel`. `m.drive_fuel` carries it to the arms that run
+nested commands from inside `continue k`.
+
+**No golden changed.** At the default fuel of 100,000 all 78 comparisons are as before. Swept
+downward over all 26 goldens (rows compared against the default-fuel run):
+
+| fuel | programs whose rows differ |
+| --- | --- |
+| 1 | 5 (`emptyRacePendingUntilInterrupted`, `parentInterruptDuringChildWait`, `parentPublishesAfterChildCleanup`, `raceImmediateSuccessStopsLaunch`, `raceReentrantEmptySetBypasses`) |
+| 2 | 1 |
+| 3 | 3 |
+| ≥4 | 0 |
+
+Every one of the five is a program whose interrupt path issues a nested `Cmd.evaluate`; starving
+it leaves the machine at a frontier, which is what a spent fuel should be (DB-04). The
+non-monotonicity between 2 and 3 is not a bug: each `drive` call receives the entry's fuel afresh,
+so how far a given budget reaches depends on how the commands are grouped — a property Lean's
+`fire` has too.
+
+**What the fuel does not bound**, and this is the honest limit: `Cmd.loop` has no OCaml existence
+(DIVERGENCE 2), so `continue k` runs a fiber to its next `perform` outside any fuel. A fuel of 1
+still finishes `raceAllFailuresRetainOrder`. The fuel therefore bounds the *command list*, not the
+*per-fiber iteration*. A3's simulation statement must either quantify over Lean's fuel on one side
+and quiescence on the other, or introduce a second bound on the OCaml side — the per-fiber op
+counter `iteration_prelude` already maintains is the natural candidate, and it is the same
+counter rc.112 uses for its yield budget. Divergence 7 is narrowed from "no fuel at all" to "fuel
+of the right shape, weaker strength", and its residue is now a named obligation for A3 rather
+than an absence.
+
+## 13. Standing limits
+
+No `raceAll` (`Claunch` is still a no-op and no race is ever created), no scope *linkage*
+(`linkScope`, `forkIn`, `forkScoped`, `runIn` have no arm; `DropScopeFinalizer` halts), no
+context, no layer family, no async registration beyond the Deferred waiter, and no yield-budget
+comparison. `RunInterp` is still not a record (DIVERGENCE 5). Nothing above the executed rows is
+proved. A3 remains the next packet.

@@ -15,22 +15,37 @@ let () =
   let rules = getenv "EFFECT4_RULES" "" in
   let pin = getenv "EFFECT4_PIN" "" in
   let sha = getenv "EFFECT4_SHA" "" in
+  let family = getenv "EFFECT4_FAMILY" "fiber" in
+  let table =
+    match family with
+    | "fiber" -> Fibers_fixture.programs
+    | "ref" -> Store_fixtures.ref_programs
+    | "deferred" -> Store_fixtures.deferred_programs
+    | "scope" -> Store_fixtures.scope_programs
+    | "extra" -> Extra_fixture.programs
+    | other -> failwith ("unknown family " ^ other)
+  in
   let program =
-    match List.assoc_opt name Fibers_fixture.programs with
+    match List.assoc_opt name table with
     | Some p -> p
     | None -> failwith ("unknown program " ^ name)
   in
   Tape.load tape;
-  let m = machine_empty Fibers_fixture.state in
-  let exit_ = run_sync_exit m program in
-  push_row (Rdone exit_);
+  let m = machine_empty state in
+  let fuel = int_of_string (getenv "EFFECT4_FUEL" (string_of_int default_fuel)) in
+  (match run_program m fuel program with
+   | Rfinished e -> push_row (Rdone e)
+   | Rfrontier -> push_row Rfrontier
+   | Rstuck _ -> push_row Rfrontier);
   let head =
     Avatar_trace.header ~generator_sha:sha
       ~inputs:
         [ ("workshop/OCaml5/avatar/deep_fibers.ml", sha);
           ("workshop/OCaml5/avatar/avatar_trace.ml", sha);
-          ("workshop/OCaml5/avatar/fibers_fixture.ml", sha) ]
-      ~pin ~program:("fiber." ^ name) ~tape ~rules
+          ("workshop/OCaml5/avatar/fibers_fixture.ml", sha);
+          ("workshop/OCaml5/avatar/store_fixtures.ml", sha);
+          ("workshop/OCaml5/avatar/extra_fixture.ml", sha) ]
+      ~pin ~program:(family ^ "." ^ name) ~tape ~rules
   in
   List.iter print_endline head;
   List.iter (fun r -> print_endline (Avatar_trace.render_row r)) !sink;

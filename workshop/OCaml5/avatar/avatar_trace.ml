@@ -10,18 +10,30 @@ let rec wire (v : value) : string =
   match v with
   | Vunit -> "[]"
   | Vnat n -> string_of_int n
+  | Vbool b -> if b then "true" else "false"
+  | Vstring str -> "\"" ^ String.concat "\\\"" (String.split_on_char '"' str) ^ "\""
   | Vhandle h -> string_of_int h
+  | Vpair (a, b) -> "[" ^ wire a ^ ", " ^ wire b ^ "]" 
   | Vnone -> "{\"none\":true}"
   | Vsome v -> "{\"some\":" ^ wire v ^ "}"
   | Vlist items -> List.fold_right (fun item acc -> "[" ^ wire item ^ ", " ^ acc ^ "]") items "[]"
 
+(* `Trace.outcome` (`Effect4/Target/TypeScript/Trace.lean:70-74`) has four arms, and
+   `tracer.ts:110-121` fixes the precedence: a `Fail` reason first, then any `Interrupt`,
+   then a `Die`. Round two only had two arms, which would have mis-rendered a die-only
+   cause; nothing in the fiber goldens reached it, and the refusal arm now does. *)
 let wire_exit (e : exitv) : string =
   match e with
   | Esuccess v -> "{\"success\":" ^ wire v ^ "}"
   | Efailure c -> (
     match cause_fail_of c with
     | Some err -> "{\"failure\":" ^ string_of_int err ^ "}"
-    | None -> "{\"interrupted\":true}")
+    | None ->
+      if cause_has_interrupt c then "{\"interrupted\":true}"
+      else
+        match List.find_opt (function Rdie _ -> true | _ -> false) c.reasons with
+        | Some (Rdie d) -> "{\"defect\":" ^ wire (Vstring d) ^ "}"
+        | _ -> "{\"interrupted\":true}")
 
 let render_row (r : row) : string =
   match r with
@@ -30,6 +42,7 @@ let render_row (r : row) : string =
   | Rfailed (name, e) -> Printf.sprintf "failed\t%s\t%d" name e
   | Rdecide (site, branch) -> Printf.sprintf "decide\t%d\t%s" site (if branch then "true" else "false")
   | Rdone e -> Printf.sprintf "done\t%s" (wire_exit e)
+  | Rfrontier -> "frontier" 
 
 (* The header block of `generated/traces/*.tsv`, with `face ocaml`. The provenance rows name
    the avatar's own generator and inputs; `pin`, `program`, `tape` and `rules` are the
