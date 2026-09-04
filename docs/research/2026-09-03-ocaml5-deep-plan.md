@@ -54,7 +54,12 @@ the debugger's trap barriers, stack caching and GC, backtraces, `caml_callback` 
 3. **Bytecode and native are one machine.** `interp.c` and `amd64.S` are two presentations of
    `fiber.c`'s data; the plan claims one step relation and checks every witness on both
    (`ocamlc` + `ocamlrun`, and `ocamlopt` where installed). A behavioural difference between the
-   two is a finding, not a modelling choice.
+   two is a finding, not a modelling choice. **Finding (P3, witness 14, `w14-root-leak.ml`):**
+   the continuation `%reperform` takes at the root is nulled by `interp.c:1376` but not by
+   `arm64.S`/`amd64.S`'s `do_perform` root path nor by js_of_ocaml's `caml_callback`; bytecode
+   answers `Continuation_already_resumed`, native resumes a freed stack, js_of_ocaml resumes the
+   fiber a second time. Unreachable from `Stdlib.Effect` (the forwarded continuation is never
+   handed to user code); the ruling holds on the Stdlib fragment and is false on raw `%reperform`.
 4. **First-order everywhere.** Stacks, handlers and continuations are heap indices with nominal
    identity; a `Cont_tag` block is `Option StackId`, `none` after `caml_continuation_use_noexc`;
    a freed stack is `none` in the stack heap. No Lean function is stored in a state.
