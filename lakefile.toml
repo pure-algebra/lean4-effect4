@@ -105,6 +105,10 @@ rev = "c906b15dc3e94ebac0c10056270fbb345a1d2b6e"
 name = "Effect4TestStore"
 globs = ["Effect4Test.Store.+"]
 
+[[lean_lib]]
+name = "Effect4TestArch"
+globs = ["Effect4Test.Arch.+"]
+
 # Design spike for docs/research/2026-09-03-ocaml5-deep-plan.md: OCaml 5 effect handlers and
 # js_of_ocaml's effects pass as a reference machine. Not a default target, not an audited
 # source; the landing home is a sibling package of `effects`.

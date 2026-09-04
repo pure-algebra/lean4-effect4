@@ -89,6 +89,16 @@ import Effect4.Deep.Witnesses
 import Effect4.Deep.ForkFlow
 import Effect4.Deep.Context
 import Effect4.Deep.Layer
+-- The middle tier (2026-09-04): architecture views as Effect Schema documents
+-- with payloads projected from the proof carriers, the JSON canonical form that
+-- makes schemas store content, the structural acceptance checker, and the
+-- pinned standard library as store entries with checked links to the model.
+import Effect4.Arch.JsonCanonical
+import Effect4.Arch.Accepts
+import Effect4.Arch.Views
+import Effect4.StdLib.Entry
+import Effect4.StdLib.Rc112
+import Effect4.StdLib.Links
 import Effect4.Meta.Derive
 
 /-!
