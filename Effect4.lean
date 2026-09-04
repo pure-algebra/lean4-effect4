@@ -98,6 +98,11 @@ import Effect4.Arch.Views
 import Effect4.StdLib.Entry
 import Effect4.StdLib.Rc112
 import Effect4.StdLib.Links
+-- The AST relation (docs/research/2026-09-04-ast-relation-plan.md), lane A1:
+-- the Effect TS program syntax `Eff` and its typing, first-order and
+-- decidable throughout; the printer, the compile and the parser follow.
+import Effect4.Syntax.Eff
+import Effect4.Syntax.Typing
 import Effect4.Meta.Derive
 
 /-!
