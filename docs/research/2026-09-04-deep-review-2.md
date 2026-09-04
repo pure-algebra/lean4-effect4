@@ -90,6 +90,22 @@ close-state-first, single-finalizer-unmerged and strategy split (`:3779-3827`), 
    unchanged (`w4_completion_resumes_on_the_spot`).
 3. The park redesign R2-3/R2-4/R2-12/R2-13 (join, await, awaitAll and the race as `Async`
    parks with cancels; input-order exits; masked settle), with witnesses for each.
+   **Landed 2026-09-04.** Three `RunInterp` hooks: `parkCancelName` (the fiber-observer
+   parks' cleanup, program `WithFiberAction.dropObservers token`), `raceCancelName race`
+   (program `WithFiberAction.cancelRace race`: `interruptEach` over the race's live entrants
+   with the running fiber's id, then the await), `raceSettle live exit` (the stores'
+   `raceSettleProgram`: `uninterruptible(interruptAll live)` then `restore exit`, or the exit
+   alone). The join arm, `countdownPark` and the race arm push
+   `asyncFinalizer (cancelName base fiber token)`. `countdownPark` walks its targets in input
+   order (`countdownWalk`), observes one at a time, and `Pending` carries `waitingOn` and the
+   `remaining` list; `fireObserver`'s countdown arm continues the walk. `settleRace` only
+   resumes the host with the settle program. `interruptEach` moved into `Fibers.lean` and is
+   the one fold every interrupt site runs. Witnesses `w14_join_cleanup_drops_the_observer`,
+   `w12_awaitAll_input_order`, `w3_host_interrupt_cancels_entrants`,
+   `w3_settle_interrupts_the_parked_loser`; register rows `E4-RUN-CE-032/033/034`. Every
+   earlier witness holds unchanged, W3's four race goldens included. The fork-flow interp
+   fills the three hooks with its frontier name and the bare exit (no flow races; a join
+   park's cleanup there is visible as the compile's frontier marker).
 4. The fork family R2-7, R2-8, R2-11 and the scheduler R2-14/R2-15.
 5. The trace-level four with R4.
 

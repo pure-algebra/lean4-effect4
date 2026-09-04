@@ -973,10 +973,15 @@ def forkInterp (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
   syncState := fun _ _ => none
   registerAsync := fun _ _ _ state => (state, none)
   dueResumes := fun state => ([], state)
-  -- No `Prim.async` is ever compiled, so no `asyncFinalizer` frame is ever pushed and
-  -- neither cancel name is ever read; the fillers are the identity and a frontier name.
+  -- No `Prim.async` is ever compiled, so no `asyncFinalizer` frame is ever pushed by one;
+  -- a join park does push its cleanup frame (R2-3), whose name the profile cannot spell —
+  -- a frontier name, so an interrupted joiner's cancel is visible as the compile's own
+  -- frontier marker rather than silent. No flow races.
   cancelName := fun name _ _ => name
   abortName := RegionName.fin 0 ⟨0, ⟨0⟩, [], []⟩
+  parkCancelName := RegionName.fin 0 ⟨0, ⟨0⟩, [], []⟩
+  raceCancelName := fun _ => RegionName.fin 0 ⟨0, ⟨0⟩, [], []⟩
+  raceSettle := fun _ exit => Effect4.Prim.ofExit exit
   finalizerProgram := fun _ _ => none
   -- `restoreName`/`mergeName` are read only by the middleware exit path and a settled
   -- race, neither of which a witness here reaches. A `fin` name compiles to the empty

@@ -2663,9 +2663,22 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
                         children := t.children, dispatcher := t.dispatcher, context := t.context }).emit
                   [Effect4.Deep.RunEvent.parkedOn g.id m.nextToken],
               fiber :=
-                g.park
-                  { token := m.nextToken, waitingOn := Option.some target, remaining := 0, collected := [],
-                    resumeWith := Effect4.Deep.Resume.void, failFast := Bool.false, outstanding := [] },
+                ({ id := g.id,
+                      frame :=
+                        have __src := g.frame;
+                        { current := __src.current,
+                          stack :=
+                            Effect4.Prim.asyncFinalizer (interp.cancelName interp.parkCancelName g.id m.nextToken) ::
+                              g.frame.stack,
+                          interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
+                          deferredInterrupt := __src.deferredInterrupt },
+                      running := g.running, parked := g.parked, pending := g.pending, finalizing := g.finalizing,
+                      exit := g.exit, currentOpCount := g.currentOpCount, maxOpsBeforeYield := g.maxOpsBeforeYield,
+                      preventYield := g.preventYield, yieldOverride := g.yieldOverride, observers := g.observers,
+                      children := g.children, dispatcher := g.dispatcher, context := g.context } :
+                    Effect4.Deep.RunFiber ν σ β ε δ ι α χ).park
+                  { token := m.nextToken, waitingOn := Option.some target, remaining := [], collected := [],
+                    resumeWith := Effect4.Deep.Resume.void, failFast := Bool.false },
               yielding := yielding, outcome := Effect4.Deep.Outcome.parked, nested := [] })
 
 #check (@Effect4.Deep.evaluatePrim_join_unknown :
@@ -3829,16 +3842,28 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
         { id := raceId, host := e.snd.fst.id, token := token, state := Effect4.Supervision.RaceAllState.initial e.snd.snd,
           settled := Bool.false };
       have m :=
-        (have __src := e.fst;
-            ({ fibers := __src.fibers, races := e.fst.races ++ [race], nextId := __src.nextId,
-               nextToken := __src.nextToken, nextRace := __src.nextRace, middlewareInstalled := __src.middlewareInstalled,
-               state := __src.state, trace := __src.trace, stuck := __src.stuck }
-              : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St)).emit
+        Effect4.Deep.RunMachine.emit
+          (have __src := e.fst;
+            { fibers := __src.fibers, races := e.fst.races ++ [race], nextId := __src.nextId,
+              nextToken := __src.nextToken, nextRace := __src.nextRace, middlewareInstalled := __src.middlewareInstalled,
+              state := __src.state, trace := __src.trace, stuck := __src.stuck })
           [Effect4.Deep.RunEvent.raceStarted raceId e.snd.fst.id e.snd.snd];
+      have h := e.snd.fst;
+      have name := interp.cancelName (interp.raceCancelName raceId) h.id token;
       have g :=
-        e.snd.fst.park
-          { token := token, waitingOn := Option.none, remaining := 0, collected := [],
-            resumeWith := Effect4.Deep.Resume.void, failFast := Bool.false, outstanding := [] };
+        ({ id := h.id,
+              frame :=
+                have __src := h.frame;
+                { current := __src.current, stack := Effect4.Prim.asyncFinalizer name :: h.frame.stack,
+                  interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
+                  deferredInterrupt := __src.deferredInterrupt },
+              running := h.running, parked := h.parked, pending := h.pending, finalizing := h.finalizing, exit := h.exit,
+              currentOpCount := h.currentOpCount, maxOpsBeforeYield := h.maxOpsBeforeYield,
+              preventYield := h.preventYield, yieldOverride := h.yieldOverride, observers := h.observers,
+              children := h.children, dispatcher := h.dispatcher, context := h.context } :
+            Effect4.Deep.RunFiber ν σ β ε δ ι α χ).park
+          { token := token, waitingOn := Option.none, remaining := [], collected := [],
+            resumeWith := Effect4.Deep.Resume.void, failFast := Bool.false };
       { machine := m.emit [Effect4.Deep.RunEvent.parkedOn g.id token], fiber := g, yielding := yielding,
         outcome := Effect4.Deep.Outcome.parked, nested := List.map (Effect4.Deep.Cmd.launch raceId) e.snd.snd })
 
@@ -4139,17 +4164,21 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
           ((acc.fst.update r.fst).emit [Effect4.Deep.RunEvent.interruptRecorded (Option.some who) t],
             acc.snd ++ if r.snd = Bool.true then [Effect4.Deep.Cmd.evaluate t] else [])))
 
-#check (@Effect4.Deep.fireObserver_countdown_last :
+#check (@Effect4.Deep.fireObserver_countdown_done :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
     {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
     [inst_3 : DecidableEq α] (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (id : Effect4.FiberId)
     (exit : Effect4.Exit β ε δ ι α)
     (acc : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St × List (Effect4.Deep.Cmd ν σ β ε δ ι α)) (waiter : Effect4.FiberId)
-    (token : Nat) (w : Effect4.Deep.RunFiber ν σ β ε δ ι α χ) (p : Effect4.Deep.Pending ν β ε δ ι α),
+    (token : Nat) (w : Effect4.Deep.RunFiber ν σ β ε δ ι α χ) (p : Effect4.Deep.Pending ν β ε δ ι α)
+    (exits : List (Effect4.Exit β ε δ ι α)),
     acc.fst.fiber? waiter = Option.some w →
       List.find? (fun q => Decidable.decide (q.token = token)) w.pending = Option.some p →
         p.failFast = Bool.false →
-          p.remaining ≤ 1 →
+          Effect4.Deep.countdownWalk
+                (acc.fst.emit [Effect4.Deep.RunEvent.observerFired id (Effect4.Deep.Observer.countdown waiter token)])
+                p.remaining (p.collected ++ [exit]) =
+              (exits, Option.none) →
             Effect4.Deep.fireObserver interp id exit acc (Effect4.Deep.Observer.countdown waiter token) =
               ((acc.fst.emit
                       [Effect4.Deep.RunEvent.observerFired id (Effect4.Deep.Observer.countdown waiter token)]).update
@@ -4158,9 +4187,8 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
                       List.map
                         (fun q =>
                           if q.token = token then
-                            { token := q.token, waitingOn := q.waitingOn, remaining := 0,
-                              collected := p.collected ++ [exit], resumeWith := q.resumeWith, failFast := q.failFast,
-                              outstanding := [] }
+                            { token := q.token, waitingOn := Option.none, remaining := [], collected := exits,
+                              resumeWith := q.resumeWith, failFast := q.failFast }
                           else q)
                         w.pending,
                     finalizing := w.finalizing, exit := w.exit, currentOpCount := w.currentOpCount,
@@ -4169,30 +4197,40 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
                     dispatcher := w.dispatcher, context := w.context },
                 acc.snd ++
                   [Effect4.Deep.Cmd.resume waiter token
-                      (Effect4.Deep.countdownPark.resumePrim interp p.resumeWith (p.collected ++ [exit]))]))
+                      (Effect4.Deep.countdownPark.resumePrim interp p.resumeWith exits)]))
 
-#check (@Effect4.Deep.fireObserver_countdown_more :
+#check (@Effect4.Deep.fireObserver_countdown_next :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
     {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
     [inst_3 : DecidableEq α] (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (id : Effect4.FiberId)
     (exit : Effect4.Exit β ε δ ι α)
     (acc : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St × List (Effect4.Deep.Cmd ν σ β ε δ ι α)) (waiter : Effect4.FiberId)
-    (token : Nat) (w : Effect4.Deep.RunFiber ν σ β ε δ ι α χ) (p : Effect4.Deep.Pending ν β ε δ ι α),
+    (token : Nat) (w : Effect4.Deep.RunFiber ν σ β ε δ ι α χ) (p : Effect4.Deep.Pending ν β ε δ ι α)
+    (exits : List (Effect4.Exit β ε δ ι α)) (next : Effect4.FiberId) (rest : List Effect4.FiberId),
     acc.fst.fiber? waiter = Option.some w →
       List.find? (fun q => Decidable.decide (q.token = token)) w.pending = Option.some p →
         p.failFast = Bool.false →
-          ¬p.remaining ≤ 1 →
+          Effect4.Deep.countdownWalk
+                (acc.fst.emit [Effect4.Deep.RunEvent.observerFired id (Effect4.Deep.Observer.countdown waiter token)])
+                p.remaining (p.collected ++ [exit]) =
+              (exits, Option.some (next, rest)) →
             Effect4.Deep.fireObserver interp id exit acc (Effect4.Deep.Observer.countdown waiter token) =
-              ((acc.fst.emit
-                      [Effect4.Deep.RunEvent.observerFired id (Effect4.Deep.Observer.countdown waiter token)]).update
+              (((acc.fst.emit
+                          [Effect4.Deep.RunEvent.observerFired id (Effect4.Deep.Observer.countdown waiter token)]).modify
+                      next fun g =>
+                      { id := g.id, frame := g.frame, running := g.running, parked := g.parked, pending := g.pending,
+                        finalizing := g.finalizing, exit := g.exit, currentOpCount := g.currentOpCount,
+                        maxOpsBeforeYield := g.maxOpsBeforeYield, preventYield := g.preventYield,
+                        yieldOverride := g.yieldOverride,
+                        observers := g.observers ++ [Effect4.Deep.Observer.countdown waiter token],
+                        children := g.children, dispatcher := g.dispatcher, context := g.context }).update
                   { id := w.id, frame := w.frame, running := w.running, parked := w.parked,
                     pending :=
                       List.map
                         (fun q =>
                           if q.token = token then
-                            { token := q.token, waitingOn := q.waitingOn, remaining := q.remaining - 1,
-                              collected := p.collected ++ [exit], resumeWith := q.resumeWith, failFast := q.failFast,
-                              outstanding := List.filter (fun t => Decidable.decide (t ≠ id)) p.outstanding }
+                            { token := q.token, waitingOn := Option.some next, remaining := rest, collected := exits,
+                              resumeWith := q.resumeWith, failFast := q.failFast }
                           else q)
                         w.pending,
                     finalizing := w.finalizing, exit := w.exit, currentOpCount := w.currentOpCount,
@@ -4388,8 +4426,8 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
           else g;
         have g :=
           g.park
-            { token := token, waitingOn := Option.none, remaining := 0, collected := [],
-              resumeWith := Effect4.Deep.Resume.void, failFast := Bool.false, outstanding := [] };
+            { token := token, waitingOn := Option.none, remaining := [], collected := [],
+              resumeWith := Effect4.Deep.Resume.void, failFast := Bool.false };
         { machine := m.emit [Effect4.Deep.RunEvent.parkedOn g.id token], fiber := g, yielding := yielding,
           outcome := Effect4.Deep.Outcome.parked, nested := [] })
 
@@ -4564,6 +4602,249 @@ command run after what the thunk owed; the exit path is a command too. -/
       Effect4.Deep.settle id rest it =
         (it.machine.update it.fiber, it.nested ++ [Effect4.Deep.Cmd.finish id exit] ++ rest))
 
+
+/-! Repair step 3 of the second review, 2026-09-04 (R2-3/4/12/13): the fiber-observer parks and
+the race park push their cleanups as `AsyncFinalizer` frames; a countdown walks its targets in
+input order; a settled race resumes its host with the masked cleanup program. -/
+
+#check (@Effect4.Deep.withFiber_dropObservers :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
+    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
+    [inst_3 : DecidableEq α] (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St)
+    (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Deep.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (token : Nat),
+    Effect4.Deep.evaluatePrim.withFiber interp m f yielding (Effect4.Deep.WithFiberAction.dropObservers token) =
+      {
+        machine :=
+          {
+            fibers :=
+              List.map
+                (fun g =>
+                  { id := g.id, frame := g.frame, running := g.running, parked := g.parked, pending := g.pending,
+                    finalizing := g.finalizing, exit := g.exit, currentOpCount := g.currentOpCount,
+                    maxOpsBeforeYield := g.maxOpsBeforeYield, preventYield := g.preventYield,
+                    yieldOverride := g.yieldOverride,
+                    observers :=
+                      List.filter
+                        (fun x =>
+                          match x with
+                          | Effect4.Deep.Observer.resumeAwait waiter t mode => Decidable.decide (t ≠ token)
+                          | Effect4.Deep.Observer.countdown waiter t => Decidable.decide (t ≠ token)
+                          | x => Bool.true)
+                        g.observers,
+                    children := g.children, dispatcher := g.dispatcher, context := g.context })
+                m.fibers,
+            races := m.races, nextId := m.nextId, nextToken := m.nextToken, nextRace := m.nextRace,
+            middlewareInstalled := m.middlewareInstalled, state := m.state, trace := m.trace, stuck := m.stuck },
+        fiber :=
+          { id := f.id,
+            frame :=
+              have __src := f.frame;
+              { current := Effect4.Prim.success interp.voidValue, stack := __src.stack,
+                interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
+                deferredInterrupt := __src.deferredInterrupt },
+            running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
+            currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield, preventYield := f.preventYield,
+            yieldOverride := f.yieldOverride, observers := f.observers, children := f.children,
+            dispatcher := f.dispatcher, context := f.context },
+        yielding := yielding, outcome := Effect4.Deep.Outcome.continue_, nested := [] })
+
+#check (@Effect4.Deep.Witnesses.w14_join_cleanup_drops_the_observer :
+  Option.map List.length
+        (Effect4.Deep.Witnesses.stackOf Effect4.Deep.Witnesses.w14Parked 2) =
+      Option.some 1 ∧
+    Effect4.Deep.Witnesses.observersOf Effect4.Deep.Witnesses.w14Parked 1 =
+        Option.some [Effect4.Deep.Observer.resumeAwait { value := 2 } 1 Effect4.Supervision.ObserverMode.joinEffect] ∧
+      Effect4.Deep.Witnesses.parkedOf Effect4.Deep.Witnesses.w14Parked 2 = Option.some (Effect4.Deep.Parked.withGuard 1) ∧
+        Effect4.Deep.Witnesses.observersOf Effect4.Deep.Witnesses.w14Cancelled 1 = Option.some [] ∧
+          Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w14Cancelled 2 =
+              Option.some (Effect4.Deep.Witnesses.interruptedBy { value := 0 } { value := 2 }) ∧
+            Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w14Cancelled 1 = Option.none ∧
+              Effect4.Deep.Witnesses.interruptRows Effect4.Deep.Witnesses.w14Cancelled = [(Option.some 0, 2)])
+
+#check (@Effect4.Deep.countdownWalk_nil :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St)
+    (exits : List (Effect4.Exit β ε δ ι α)), Effect4.Deep.countdownWalk m [] exits = (exits, Option.none))
+
+#check (@Effect4.Deep.countdownWalk_exited :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St)
+    (t : Effect4.FiberId) (rest : List Effect4.FiberId) (exits : List (Effect4.Exit β ε δ ι α))
+    (g : Effect4.Deep.RunFiber ν σ β ε δ ι α χ) (exit : Effect4.Exit β ε δ ι α),
+    m.fiber? t = Option.some g →
+      g.exit = Option.some exit →
+        Effect4.Deep.countdownWalk m (t :: rest) exits = Effect4.Deep.countdownWalk m rest (exits ++ [exit]))
+
+#check (@Effect4.Deep.countdownWalk_live :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St)
+    (t : Effect4.FiberId) (rest : List Effect4.FiberId) (exits : List (Effect4.Exit β ε δ ι α))
+    (g : Effect4.Deep.RunFiber ν σ β ε δ ι α χ),
+    m.fiber? t = Option.some g →
+      g.exit = Option.none → Effect4.Deep.countdownWalk m (t :: rest) exits = (exits, Option.some (t, rest)))
+
+#check (@Effect4.Deep.countdownPark_none_live :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
+    {St : Type (max u v)} [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+    (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St)
+    (f : Effect4.Deep.RunFiber ν σ β ε δ ι α χ) (targets : List Effect4.FiberId) (resumeWith : Effect4.Deep.Resume ν)
+    (failFast : Bool) (exits : List (Effect4.Exit β ε δ ι α)),
+    Effect4.Deep.countdownWalk
+          { fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken + 1,
+            nextRace := m.nextRace, middlewareInstalled := m.middlewareInstalled, state := m.state, trace := m.trace,
+            stuck := m.stuck }
+          targets [] =
+        (exits, Option.none) →
+      Effect4.Deep.countdownPark interp m f targets resumeWith failFast =
+        ({ fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken + 1, nextRace := m.nextRace,
+            middlewareInstalled := m.middlewareInstalled, state := m.state, trace := m.trace, stuck := m.stuck },
+          { id := f.id,
+            frame :=
+              have __src := f.frame;
+              { current := Effect4.Deep.countdownPark.resumePrim interp resumeWith exits, stack := __src.stack,
+                interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
+                deferredInterrupt := __src.deferredInterrupt },
+            running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
+            currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield, preventYield := f.preventYield,
+            yieldOverride := f.yieldOverride, observers := f.observers, children := f.children,
+            dispatcher := f.dispatcher, context := f.context },
+          Bool.false))
+
+#check (@Effect4.Deep.countdownPark_parks :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St)
+    (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Deep.RunFiber ν σ β ε δ ι α χ)
+    (targets : List Effect4.FiberId) (resumeWith : Effect4.Deep.Resume ν) (failFast : Bool)
+    (exits : List (Effect4.Exit β ε δ ι α)) (target : Effect4.FiberId) (remaining : List Effect4.FiberId),
+    Effect4.Deep.countdownWalk
+          { fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken + 1,
+            nextRace := m.nextRace, middlewareInstalled := m.middlewareInstalled, state := m.state, trace := m.trace,
+            stuck := m.stuck }
+          targets [] =
+        (exits, Option.some (target, remaining)) →
+      Effect4.Deep.countdownPark interp m f targets resumeWith failFast =
+        have m' : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St :=
+          { fibers := m.fibers, races := m.races, nextId := m.nextId, nextToken := m.nextToken + 1,
+            nextRace := m.nextRace, middlewareInstalled := m.middlewareInstalled, state := m.state, trace := m.trace,
+            stuck := m.stuck };
+        have name := interp.cancelName interp.parkCancelName f.id m.nextToken;
+        have g :=
+          ({ id := f.id,
+                frame :=
+                  have __src := f.frame;
+                  { current := __src.current, stack := Effect4.Prim.asyncFinalizer name :: f.frame.stack,
+                    interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
+                    deferredInterrupt := __src.deferredInterrupt },
+                running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing,
+                exit := f.exit, currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield,
+                preventYield := f.preventYield, yieldOverride := f.yieldOverride, observers := f.observers,
+                children := f.children, dispatcher := f.dispatcher, context := f.context } :
+              Effect4.Deep.RunFiber ν σ β ε δ ι α χ).park
+            { token := m.nextToken, waitingOn := Option.some target, remaining := remaining, collected := exits,
+              resumeWith := resumeWith, failFast := failFast };
+        ((m'.modify target fun g =>
+                { id := g.id, frame := g.frame, running := g.running, parked := g.parked, pending := g.pending,
+                  finalizing := g.finalizing, exit := g.exit, currentOpCount := g.currentOpCount,
+                  maxOpsBeforeYield := g.maxOpsBeforeYield, preventYield := g.preventYield,
+                  yieldOverride := g.yieldOverride,
+                  observers := g.observers ++ [Effect4.Deep.Observer.countdown f.id m.nextToken], children := g.children,
+                  dispatcher := g.dispatcher, context := g.context }).emit
+            [Effect4.Deep.RunEvent.parkedOn f.id m.nextToken],
+          g, Bool.true))
+
+#check (@Effect4.Deep.Witnesses.w12_awaitAll_input_order :
+  Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w12InputOrder 0 =
+      Option.some
+        (Effect4.Exit.success
+          (Effect4.Deep.stores.exitsValue
+            [Effect4.Exit.success (Effect4.Deep.Val.nat 3), Effect4.Exit.success (Effect4.Deep.Val.nat 4)])) ∧
+    Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w12InputOrderParked 2 =
+        Option.some (Effect4.Exit.success (Effect4.Deep.Val.nat 4)) ∧
+      Effect4.Deep.Witnesses.observersOf Effect4.Deep.Witnesses.w12InputOrderParked 1 =
+          Option.some
+            [Effect4.Deep.Observer.untrackChild { value := 0 }, Effect4.Deep.Observer.countdown { value := 0 } 0] ∧
+        Effect4.Deep.Witnesses.observersOf Effect4.Deep.Witnesses.w12InputOrderParked 2 = Option.some [] ∧
+          Effect4.Deep.Witnesses.parkedOf Effect4.Deep.Witnesses.w12InputOrderParked 0 =
+            Option.some (Effect4.Deep.Parked.withGuard 0))
+
+#check (@Effect4.Deep.settleRace_eq :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St)
+    (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St) (acc : List (Effect4.Deep.Cmd ν σ β ε δ ι α)) (raceId : Nat)
+    (race : Effect4.Deep.Race β ε δ ι α) (state : Effect4.Supervision.RaceAllState β ε δ ι α)
+    (accepted : Effect4.Exit β ε δ ι α),
+    Effect4.Deep.settleRace interp m acc raceId race state accepted =
+      ((m.updateRace
+              { id := race.id, host := race.host, token := race.token, state := race.state, settled := Bool.true }).emit
+          [Effect4.Deep.RunEvent.raceSettled raceId accepted],
+        acc ++ [Effect4.Deep.Cmd.resume race.host race.token (interp.raceSettle state.live accepted)]))
+
+#check (@Effect4.Deep.withFiber_cancelRace :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St)
+    (f : Effect4.Deep.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (raceId : Nat) (race : Effect4.Deep.Race β ε δ ι α),
+    m.race? raceId = Option.some race →
+      Effect4.Deep.evaluatePrim.withFiber interp m f yielding (Effect4.Deep.WithFiberAction.cancelRace raceId) =
+        have r := Effect4.Deep.interruptEach interp f.id (interp.stackAnnotations f.id) race.state.live (m, []);
+        have p := Effect4.Deep.countdownPark interp r.fst f race.state.live Effect4.Deep.Resume.void;
+        { machine := p.fst, fiber := p.snd.fst, yielding := yielding,
+          outcome :=
+            match p.fst.stuck with
+            | Option.some why => Effect4.Deep.Outcome.stuck why
+            | Option.none =>
+              if p.snd.snd = Bool.true then Effect4.Deep.Outcome.parked else Effect4.Deep.Outcome.continue_,
+          nested := r.snd })
+
+#check (@Effect4.Deep.withFiber_cancelRace_unknown :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
+    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
+    [inst_3 : DecidableEq α] (interp : Effect4.Deep.RunInterp ν σ β ε δ ι α χ St)
+    (m : Effect4.Deep.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Deep.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (raceId : Nat),
+    m.race? raceId = Option.none →
+      Effect4.Deep.evaluatePrim.withFiber interp m f yielding (Effect4.Deep.WithFiberAction.cancelRace raceId) =
+        { machine := m,
+          fiber :=
+            { id := f.id,
+              frame :=
+                have __src := f.frame;
+                { current := Effect4.Prim.success interp.voidValue, stack := __src.stack,
+                  interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
+                  deferredInterrupt := __src.deferredInterrupt },
+              running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
+              currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield,
+              preventYield := f.preventYield, yieldOverride := f.yieldOverride, observers := f.observers,
+              children := f.children, dispatcher := f.dispatcher, context := f.context },
+          yielding := yielding, outcome := Effect4.Deep.Outcome.continue_, nested := [] })
+
+#check (@Effect4.Deep.Witnesses.w3_host_interrupt_cancels_entrants :
+  Option.map List.length
+        (Effect4.Deep.Witnesses.stackOf Effect4.Deep.Witnesses.w3HostParked 0) =
+      Option.some 1 ∧
+    Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w3HostParked 1 = Option.none ∧
+      Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w3HostInterrupted 1 =
+          Option.some
+            (Effect4.Deep.Witnesses.interruptedWith { value := 0 } { value := 1 }
+              (Effect4.Deep.stores.stackAnnotations { value := 0 })) ∧
+        Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w3HostInterrupted 0 =
+            Option.some (Effect4.Deep.Witnesses.interruptedBy { value := 0 } { value := 0 }) ∧
+          Effect4.Deep.Witnesses.interruptRows Effect4.Deep.Witnesses.w3HostInterrupted =
+              [(Option.some 0, 0), (Option.some 0, 1)] ∧
+            Effect4.Deep.Witnesses.raceRows Effect4.Deep.Witnesses.w3HostInterrupted = [[0, 0, 1], [2, 0]])
+
+#check (@Effect4.Deep.Witnesses.w3_settle_interrupts_the_parked_loser :
+  Effect4.Deep.Witnesses.exitOf
+        Effect4.Deep.Witnesses.w3ParkedLoser 0 =
+      Option.some (Effect4.Exit.success (Effect4.Deep.Val.nat 2)) ∧
+    Effect4.Deep.Witnesses.exitOf Effect4.Deep.Witnesses.w3ParkedLoser 1 =
+        Option.some
+          (Effect4.Deep.Witnesses.interruptedWith { value := 0 } { value := 1 }
+            (Effect4.Deep.stores.stackAnnotations { value := 0 })) ∧
+      Effect4.Deep.Witnesses.interruptRows Effect4.Deep.Witnesses.w3ParkedLoser = [(Option.some 0, 1)] ∧
+        Effect4.Deep.Witnesses.raceRows Effect4.Deep.Witnesses.w3ParkedLoser = [[0, 0, 1], [0, 0, 2], [2, 0]])
+
 end StatementSnapshot
 
 /-! ## The frozen census join -/
@@ -4649,7 +4930,9 @@ private def censusRows : List Row :=
         [ w `Effect4.Prim.armE_asyncFinalizer_interrupt "propext"
         , w `Effect4.Prim.armE_asyncFinalizer_no_interrupt "propext"
         , w `Effect4.FrameFiber.popFrom_asyncFinalizer_pops_its_push "propext"
-        , w `Effect4.Prim.ensure_asyncFinalizer_masks "propext" ] }
+        , w `Effect4.Prim.ensure_asyncFinalizer_masks "propext"
+        , w `Effect4.Deep.withFiber_dropObservers "propext,Quot.sound"
+        , w `Effect4.Deep.Witnesses.w14_join_cleanup_drops_the_observer "propext,Quot.sound" ] }
   , { id := "op.Iterator", kind := "op", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Prim.armA_iterator_done "propext"
@@ -4784,7 +5067,9 @@ private def censusRows : List Row :=
     , witnesses :=
         [ w `Effect4.Deep.interruptRecord_parked_applies "propext,Quot.sound"
         , w `Effect4.Prim.armE_asyncFinalizer_interrupt "propext"
-        , w `Effect4.FrameFiber.popFrom_asyncFinalizer_pops_its_push "propext" ] }
+        , w `Effect4.FrameFiber.popFrom_asyncFinalizer_pops_its_push "propext"
+        , w `Effect4.Deep.Witnesses.w14_join_cleanup_drops_the_observer "propext,Quot.sound"
+        , w `Effect4.Deep.Witnesses.w3_host_interrupt_cancels_entrants "propext,Quot.sound" ] }
   , { id := "checkpoint.exit-failcause-skip", kind := "checkpoint", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.FrameFiber.popFrom_continue_answer "propext"
@@ -4883,15 +5168,26 @@ private def censusRows : List Row :=
         , w `Effect4.Deep.Witnesses.w3_empty_until_interrupted "propext,Quot.sound"
         , w `Effect4.Deep.Witnesses.w3_immediate_success_stops_launch "propext,Quot.sound"
         , w `Effect4.Deep.Witnesses.w3_failure_allows_next_launch "propext,Quot.sound"
-        , w `Effect4.Deep.Witnesses.w3_all_failures_retain_order "propext,Quot.sound" ] }
+        , w `Effect4.Deep.Witnesses.w3_all_failures_retain_order "propext,Quot.sound"
+        , w `Effect4.Deep.settleRace_eq "none"
+        , w `Effect4.Deep.withFiber_cancelRace "propext,Quot.sound"
+        , w `Effect4.Deep.withFiber_cancelRace_unknown "propext,Quot.sound"
+        , w `Effect4.Deep.Witnesses.w3_host_interrupt_cancels_entrants "propext,Quot.sound"
+        , w `Effect4.Deep.Witnesses.w3_settle_interrupts_the_parked_loser "propext,Quot.sound" ] }
   , { id := "fork.await-all-children", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Deep.withFiber_snapshotChildren "propext,Quot.sound"
         , w `Effect4.Deep.withFiber_awaitNewChildren "propext,Quot.sound"
-        , w `Effect4.Deep.fireObserver_countdown_last "propext,Quot.sound"
-        , w `Effect4.Deep.fireObserver_countdown_more "propext,Quot.sound"
+        , w `Effect4.Deep.fireObserver_countdown_done "propext,Quot.sound"
+        , w `Effect4.Deep.fireObserver_countdown_next "propext,Quot.sound"
         , w `Effect4.Deep.Witnesses.w5_await_all_children_awaits_only_new "propext,Quot.sound"
-        , w `Effect4.Deep.Witnesses.w12_awaitAll_answers_the_exits "propext,Quot.sound" ] }
+        , w `Effect4.Deep.Witnesses.w12_awaitAll_answers_the_exits "propext,Quot.sound"
+        , w `Effect4.Deep.countdownWalk_nil "none"
+        , w `Effect4.Deep.countdownWalk_exited "propext"
+        , w `Effect4.Deep.countdownWalk_live "propext"
+        , w `Effect4.Deep.countdownPark_none_live "propext"
+        , w `Effect4.Deep.countdownPark_parks "none"
+        , w `Effect4.Deep.Witnesses.w12_awaitAll_input_order "propext,Quot.sound" ] }
   , { id := "fork.fiber-run-in", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Supervision.ScopeMode.cases_receipt "propext"
@@ -4906,12 +5202,15 @@ private def censusRows : List Row :=
         [ w `Effect4.Supervision.ObserverMode.cases_receipt "propext"
         , w `Effect4.Deep.evaluatePrim_join_done "propext,Quot.sound"
         , w `Effect4.Deep.evaluatePrim_join_live "propext,Quot.sound"
-        , w `Effect4.Deep.evaluatePrim_join_unknown "propext,Quot.sound" ] }
+        , w `Effect4.Deep.evaluatePrim_join_unknown "propext,Quot.sound"
+        , w `Effect4.Deep.Witnesses.w14_join_cleanup_drops_the_observer "propext,Quot.sound" ] }
   , { id := "fork.await", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Supervision.ObserverMode.cases_receipt "propext"
         , w `Effect4.Deep.evaluatePrim_join_done "propext,Quot.sound"
-        , w `Effect4.Deep.evaluatePrim_join_live "propext,Quot.sound" ] }
+        , w `Effect4.Deep.evaluatePrim_join_live "propext,Quot.sound"
+        , w `Effect4.Deep.withFiber_dropObservers "propext,Quot.sound"
+        , w `Effect4.Deep.Witnesses.w14_join_cleanup_drops_the_observer "propext,Quot.sound" ] }
   , { id := "fork.interrupt", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Supervision.interruptCause_eq "propext,Quot.sound"
@@ -4930,8 +5229,9 @@ private def censusRows : List Row :=
         , w `Effect4.Deep.interruptEach_nil "propext,Quot.sound"
         , w `Effect4.Deep.interruptEach_cons "propext,Quot.sound"
         , w `Effect4.Deep.interruptEach_known "propext,Quot.sound"
-        , w `Effect4.Deep.fireObserver_countdown_last "propext,Quot.sound"
-        , w `Effect4.Deep.fireObserver_countdown_more "propext,Quot.sound" ] }
+        , w `Effect4.Deep.fireObserver_countdown_done "propext,Quot.sound"
+        , w `Effect4.Deep.fireObserver_countdown_next "propext,Quot.sound"
+        , w `Effect4.Deep.countdownPark_parks "none" ] }
   , { id := "scope.states", kind := "scope", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.ScopeState.cases_receipt "none"
@@ -5043,8 +5343,8 @@ private def censusRows : List Row :=
         , w `Effect4.Scope.closeResult_reasons "propext"
         , w `Effect4.Deep.closeSeqChain_merges "none"
         , w `Effect4.Deep.closeParChain_awaits_all "none"
-        , w `Effect4.Deep.fireObserver_countdown_last "propext,Quot.sound"
-        , w `Effect4.Deep.fireObserver_countdown_more "propext,Quot.sound"
+        , w `Effect4.Deep.fireObserver_countdown_done "propext,Quot.sound"
+        , w `Effect4.Deep.fireObserver_countdown_next "propext,Quot.sound"
         , w `Effect4.Deep.Witnesses.w6_parallel_forks_and_merges "propext,Quot.sound"
         , w `Effect4.Deep.Witnesses.w12_awaitAll_answers_the_exits "propext,Quot.sound" ] }
   , { id := "scope.exit-as-void-all", kind := "scope", disposition := "separateCalculus", coverage := "green"
@@ -5979,8 +6279,8 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Deep.interruptEach_nil
   , `Effect4.Deep.interruptEach_cons
   , `Effect4.Deep.interruptEach_known
-  , `Effect4.Deep.fireObserver_countdown_last
-  , `Effect4.Deep.fireObserver_countdown_more
+  , `Effect4.Deep.fireObserver_countdown_done
+  , `Effect4.Deep.fireObserver_countdown_next
   , `Effect4.Deep.Witnesses.w5_await_all_children_awaits_only_new
   , `Effect4.Deep.Witnesses.w12_awaitAll_answers_the_exits
   , `Effect4.Deep.Witnesses.w6_runIn_closed_scope_uses_no_caller_annotations
@@ -6002,6 +6302,19 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Deep.Witnesses.w13_sync_meets_the_finalizer_program
   , `Effect4.Deep.drive_finish
   , `Effect4.Deep.settle_finished
+  , `Effect4.Deep.withFiber_dropObservers
+  , `Effect4.Deep.Witnesses.w14_join_cleanup_drops_the_observer
+  , `Effect4.Deep.countdownWalk_nil
+  , `Effect4.Deep.countdownWalk_exited
+  , `Effect4.Deep.countdownWalk_live
+  , `Effect4.Deep.countdownPark_none_live
+  , `Effect4.Deep.countdownPark_parks
+  , `Effect4.Deep.Witnesses.w12_awaitAll_input_order
+  , `Effect4.Deep.settleRace_eq
+  , `Effect4.Deep.withFiber_cancelRace
+  , `Effect4.Deep.withFiber_cancelRace_unknown
+  , `Effect4.Deep.Witnesses.w3_host_interrupt_cancels_entrants
+  , `Effect4.Deep.Witnesses.w3_settle_interrupts_the_parked_loser
   ]
 
 private def expectedRowTotal : Nat := 137

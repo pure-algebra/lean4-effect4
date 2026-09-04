@@ -65,6 +65,12 @@ def exitOf (m : M) (id : Nat) : Option ExitV := (m.fiber? ⟨id⟩).bind RunFibe
 /-- The parking state of fiber `id`. -/
 def parkedOf (m : M) (id : Nat) : Option Parked := (m.fiber? ⟨id⟩).map RunFiber.parked
 
+/-- The observers registered on fiber `id`. -/
+def observersOf (m : M) (id : Nat) : Option (List Observer) := (m.fiber? ⟨id⟩).map RunFiber.observers
+
+/-- The frames on fiber `id`'s stack. -/
+def stackOf (m : M) (id : Nat) : Option (List Program) := (m.fiber? ⟨id⟩).map fun f => f.frame.stack
+
 /-- The interrupt cause the machine records for `target` interrupted by `who`, with the
 caller's annotations on top: `interruptUnsafe` annotates from the target's own stack frame
 (`internal/effect.ts:579-580`) and then from the caller's argument (`:582-583`). -/
@@ -815,6 +821,42 @@ theorem w12_awaitAll_answers_the_exits :
           Exit.failure (Cause.fail (Err.tag 5))])) := by
   decide
 
+/-- R2-4: the first child parks and the second finishes at once, so `2` exits before `1`; the
+tape then answers `1`'s park. -/
+def w12InputOrder : M :=
+  replay Stores.empty
+    (ProgName.seqOf
+      (ProgName.forkOnly (ProgName.park 1) deferredChild)
+      (ProgName.seqOf
+        (ProgName.forkOnly (ProgName.value (Val.nat 4)) deferredChild)
+        (ProgName.awaitFibers [⟨1⟩, ⟨2⟩])))
+    [RunDecision.evaluate ⟨0⟩, RunDecision.fire ⟨0⟩,
+      RunDecision.answerAsync ⟨1⟩ 1 (Prim.success (Val.nat 3))]
+
+/-- The same before the answer: the awaiter observes `1` only (`fiberAwaitAll` attaches one
+observer at a time, `:802`), and `2`, already exited, carries none. -/
+def w12InputOrderParked : M :=
+  replay Stores.empty
+    (ProgName.seqOf
+      (ProgName.forkOnly (ProgName.park 1) deferredChild)
+      (ProgName.seqOf
+        (ProgName.forkOnly (ProgName.value (Val.nat 4)) deferredChild)
+        (ProgName.awaitFibers [⟨1⟩, ⟨2⟩])))
+    [RunDecision.evaluate ⟨0⟩, RunDecision.fire ⟨0⟩]
+
+/-- R2-4 (`E4-RUN-CE-033`): `fiberAwaitAll` walks its fibers in input order, one observer at
+a time (`:794-808`), and answers the exits in *input* order — `1`'s exit first although `2`
+exited first. While `1` is live it is the only fiber observed. -/
+theorem w12_awaitAll_input_order :
+    exitOf w12InputOrder 0 =
+        some (Exit.success (stores.exitsValue
+          [Exit.success (Val.nat 3), Exit.success (Val.nat 4)])) ∧
+      exitOf w12InputOrderParked 2 = some (Exit.success (Val.nat 4)) ∧
+      observersOf w12InputOrderParked 1 = some [Observer.untrackChild ⟨0⟩, Observer.countdown ⟨0⟩ 0] ∧
+      observersOf w12InputOrderParked 2 = some [] ∧
+      parkedOf w12InputOrderParked 0 = some (Parked.withGuard 0) := by
+  decide
+
 /-! ## W13 — an unknown scope key halts the machine (M7)
 
 `AGENTS.md`: an unanswered choice is a live frontier, never a typed error, cause or refusal.
@@ -1017,6 +1059,75 @@ theorem w13_sync_meets_the_finalizer_program :
       parkedOf w13SyncUnderOnExit 0 = some (Parked.withGuard 0) ∧
       exitOf w13SyncUnderOnExitAnswered 0 = some (Exit.success (Val.bool true)) ∧
       finalizerRuns w13SyncUnderOnExitAnswered 0 = 1 := by
+  decide
+
+/-! ## W14 — a join park's cleanup drops the observer (R2-3)
+
+`fiberJoin`/`fiberAwait` are `callback`s whose registration returns
+`sync(self.addObserver(resume))` (`internal/effect.ts:773`, `:821`) — the splice-out cleanup,
+pushed as an `AsyncFinalizer` frame at park time (`:1128-1141`). An interrupted joiner fails
+through that frame, whose `contE` runs the cleanup and re-fails (`:1155-1159`). -/
+
+/-- A daemon `1` parked on an external async, and a daemon `2` joining it. -/
+def w14Program : ProgName :=
+  ProgName.seqOf (ProgName.forkOnly (ProgName.park 1) daemonChild)
+    (ProgName.forkOnly (ProgName.joinFiber ⟨1⟩ Supervision.ObserverMode.joinEffect) daemonChild)
+
+def w14Parked : M := replay Stores.empty w14Program [RunDecision.evaluate ⟨0⟩]
+
+def w14Cancelled : M :=
+  replay Stores.empty w14Program
+    [RunDecision.evaluate ⟨0⟩, RunDecision.interruptFrom (some ⟨0⟩) ReasonAnnotations.empty ⟨2⟩]
+
+/-- R2-3 (`E4-RUN-CE-032`): the parked joiner holds one frame — the cleanup — and its target
+carries the resume observer; the interrupt fails through the frame, the cleanup drops that
+observer, the joiner re-fails with the interrupt, and the target is untouched. -/
+theorem w14_join_cleanup_drops_the_observer :
+    (stackOf w14Parked 2).map List.length = some 1 ∧
+      observersOf w14Parked 1 = some [Observer.resumeAwait ⟨2⟩ 1 Supervision.ObserverMode.joinEffect] ∧
+      parkedOf w14Parked 2 = some (Parked.withGuard 1) ∧
+      observersOf w14Cancelled 1 = some [] ∧
+      exitOf w14Cancelled 2 = some (interruptedBy ⟨0⟩ ⟨2⟩) ∧
+      exitOf w14Cancelled 1 = none ∧
+      interruptRows w14Cancelled = [(some 0, 2)] := by
+  decide
+
+/-! ## W3, continued — the race park's cleanup and the masked settle (R2-12, R2-13) -/
+
+/-- One entrant that parks: the host is interrupted while it is live. -/
+def w3HostInterrupted : M :=
+  replay Stores.empty (ProgName.raceOf RaceName.parkOnly)
+    [RunDecision.evaluate ⟨0⟩, RunDecision.interruptFrom (some ⟨0⟩) ReasonAnnotations.empty ⟨0⟩]
+
+def w3HostParked : M :=
+  replay Stores.empty (ProgName.raceOf RaceName.parkOnly) [RunDecision.evaluate ⟨0⟩]
+
+/-- A parked loser and an immediate winner: the settle's cleanup runs on the host. -/
+def w3ParkedLoser : M :=
+  replay Stores.empty (ProgName.raceOf RaceName.parkThenSuccess) [RunDecision.evaluate ⟨0⟩]
+
+/-- R2-13 (`E4-RUN-CE-034`): the racing host holds the race's cleanup frame; interrupted, it
+fails through it, and `fiberInterruptAll(fibers)` interrupts the live entrant with the host's
+id and stack annotations, then the host re-fails with its own interrupt. The entrant's exit
+settles the race whose host is no longer waiting: the resume is dropped. -/
+theorem w3_host_interrupt_cancels_entrants :
+    (stackOf w3HostParked 0).map List.length = some 1 ∧
+      exitOf w3HostParked 1 = none ∧
+      exitOf w3HostInterrupted 1 = some (interruptedWith ⟨0⟩ ⟨1⟩ (stores.stackAnnotations ⟨0⟩)) ∧
+      exitOf w3HostInterrupted 0 = some (interruptedBy ⟨0⟩ ⟨0⟩) ∧
+      interruptRows w3HostInterrupted = [(some 0, 0), (some 0, 1)] ∧
+      raceRows w3HostInterrupted = [[0, 0, 1], [2, 0]] := by
+  decide
+
+/-- R2-12: the winner resumes the host with
+`flatMap(uninterruptible(fiberInterruptAll(live)), () => exit)` (`:1510-1514`): the host itself
+interrupts the parked loser (its id, its stack annotations) and awaits it, then exits with the
+winner's value. -/
+theorem w3_settle_interrupts_the_parked_loser :
+    exitOf w3ParkedLoser 0 = some (Exit.success (Val.nat 2)) ∧
+      exitOf w3ParkedLoser 1 = some (interruptedWith ⟨0⟩ ⟨1⟩ (stores.stackAnnotations ⟨0⟩)) ∧
+      interruptRows w3ParkedLoser = [(some 0, 1)] ∧
+      raceRows w3ParkedLoser = [[0, 0, 1], [0, 0, 2], [2, 0]] := by
   decide
 
 /-! ## The five forbidden examples -/

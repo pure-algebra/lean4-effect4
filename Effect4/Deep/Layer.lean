@@ -247,6 +247,10 @@ inductive Name
   | neverRegister
   /-- `RunInterp.abortName`. -/
   | abortController
+  /-- `RunInterp.parkCancelName`: a fiber-observer park's cleanup (R2-3). -/
+  | cancelPark
+  /-- `RunInterp.raceCancelName`: never reached here — no layer program races. -/
+  | cancelRace (race : Nat)
   /-- `RunInterp.cancelName base waiter token` (M3). -/
   | withWaiter (base : Name) (waiter : FiberId) (token : Nat)
   /-- `PrimInterp.cancelThenFail`'s tail (`:1157`). -/
@@ -349,6 +353,8 @@ inductive ActionName
   | closeScope (scope : Nat) (exit : ExitV)
   | setInterruptible (body : ProgName) (flag : Bool)
   | refuse (cause : CauseV)
+  /-- A fiber-observer park's cleanup (R2-3). -/
+  | dropObservers (token : Nat)
 deriving DecidableEq
 
 /-- Every thunk name. -/
@@ -1191,6 +1197,8 @@ def contEOf : Name → CauseV → Program
 def cancelProgram : Name → Program
   | Name.withWaiter (Name.cancelAwait cell) waiter token =>
     syncOp (SyncOp.deferredAwaitCleanup cell waiter token)
+  | Name.withWaiter Name.cancelPark _ token =>
+    Prim.withFiber (Thunk.act (ActionName.dropObservers token))
   | _ => Prim.success Val.unit
 
 /-- `WithFiberAction` from a name. -/
@@ -1208,6 +1216,7 @@ def actionOf (table : LayerTable) : ActionName → WithFiberAction Name Thunk Va
   | ActionName.closeScope scope exit => WithFiberAction.closeScope scope exit
   | ActionName.setInterruptible body flag => WithFiberAction.setInterruptible (progOf table body) flag
   | ActionName.refuse cause => WithFiberAction.refuse cause
+  | ActionName.dropObservers token => WithFiberAction.dropObservers token
 
 /-! ## The interp -/
 
@@ -1247,6 +1256,10 @@ def interp (table : LayerTable) : RunInterp Name Thunk Val Err Defect FiberId An
     (due, { state with deferreds := deferreds })
   cancelName := fun base fiber token => Name.withWaiter base fiber token
   abortName := Name.abortController
+  parkCancelName := Name.cancelPark
+  raceCancelName := Name.cancelRace
+  -- no layer program races, so a settle is never built; the exit alone is the honest filler
+  raceSettle := fun _ exit => Prim.ofExit exit
   finalizerProgram := fun
     | Name.finalizerName fin, exit => some (finProgram fin exit)
     | _, _ => none

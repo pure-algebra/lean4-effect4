@@ -70,21 +70,19 @@ inductive Resume (ν : Type u)
   | continueWith (name : ν)
 deriving DecidableEq
 
-/-- One outstanding park. An `Async` registration (`:1117-1140`) carries whether it pushed an
-`AsyncFinalizer` frame; a countdown park (`fiberAwaitAll`, `awaitAllChildren`, the exit
-path's child interruption, race cleanup) carries how many observers must still fire, the
-exits collected so far (M6), and what resumes it. -/
+/-- One outstanding park. A join or await (`:5291`, `:5304`) waits on one fiber; a countdown
+park (`fiberAwaitAll`, `:779-811`; `awaitAllChildren`; the exit path's child interruption)
+walks its targets *in input order*, one observer at a time (R2-4): `waitingOn` is the target
+observed now, `remaining` the targets not yet visited, `collected` the exits so far (M6). -/
 structure Pending (ν : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max u v) where
   token : Nat
   waitingOn : Option FiberId
-  remaining : Nat
+  remaining : List FiberId
   collected : List (Exit β ε δ ι α)
   resumeWith : Resume ν
   /-- `Effect.all`/`forEach` with concurrency: the first failing exit interrupts the
-  outstanding targets (S5 §7.4, `Layer.ts:1597-1598`); the countdown still waits for them. -/
+  remaining targets (S5 §7.4, `Layer.ts:1597-1598`); the countdown still waits for them. -/
   failFast : Bool
-  /-- The targets still outstanding, for a fail-fast interruption. -/
-  outstanding : List FiberId
 deriving DecidableEq
 
 /-- Every `addObserver` shape (`:565`): join and await (`:561-562`), the child's untrack
@@ -256,6 +254,13 @@ inductive WithFiberAction (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type 
   | closeScope (scope : Nat) (exit : Exit β ε δ ι α)
   /-- The interp refuses this thunk: the fiber fails with `cause`, visibly (S3 §5.2). -/
   | refuse (cause : Cause ε δ ι α)
+  /-- A fiber-observer park's cleanup (`fiberAwait`/`fiberJoin`'s `sync(addObserver(…))`
+  return, `:773`, `:821`; `fiberAwaitAll`'s `cancel?.()`, `:812`): drop every observer that
+  would resume this park's `token`, wherever it is (R2-3). -/
+  | dropObservers (token : Nat)
+  /-- The race park's cleanup (`fiberInterruptAll(fibers)`, `:1530`): interrupt the race's
+  live entrants with the running fiber's id and await them (R2-13). -/
+  | cancelRace (race : Nat)
 deriving DecidableEq
 
 /-! ## Events, races, the machine, the decisions, the interp -/
@@ -364,6 +369,17 @@ structure RunInterp (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St
   /-- The cancel name of an `Async` with a signal but no cancel effect: abort the
   controller (`:1134-1140`). -/
   abortName : ν
+  /-- The base cancel name of a fiber-observer park — `fiberJoin`/`fiberAwait`'s
+  `sync(self.addObserver(…))` (`:773`, `:821`) and `fiberAwaitAll`'s `sync(() => cancel?.())`
+  (`:812`); under `cancelName` its program is `WithFiberAction.dropObservers token` (R2-3). -/
+  parkCancelName : ν
+  /-- The base cancel name of a race park: `fiberInterruptAll(fibers)` (`:1530`); its program
+  is `WithFiberAction.cancelRace race` (R2-13). -/
+  raceCancelName : Nat → ν
+  /-- What a settled race resumes its host with (`:1510-1514`):
+  `flatMap(uninterruptible(fiberInterruptAll(live)), () => exit)`, or `exit` alone when no
+  entrant is live (R2-12). -/
+  raceSettle : List FiberId → Exit β ε δ ι α → Prim ν σ β ε δ ι α
   /-- An `OnExit` finalizer that is a *program*, run as one (`:4021`), rather than the pure
   `finalizerExit` shortcut of the frame machine; `none` keeps the shortcut. -/
   finalizerProgram : ν → Exit β ε δ ι α → Option (Prim ν σ β ε δ ι α)
@@ -529,26 +545,58 @@ def interruptRecord (interp : RunInterp ν σ β ε δ ι α χ St) (interruptor
             frame := { f.frame with current := Prim.failure accumulated } }, true)
     else (f, false)
 
-/-- Register the observers of a countdown park over `targets` and park `f` on it; a target
-that has already exited counts at once, its exit collected (`:561-562`, M6). Returns whether
-the fiber actually parked; when nothing was live the continuation is applied at once. -/
+/-- `interruptUnsafe` on each target in list order (`fiberInterruptAll`, `:892-896`;
+`fiberInterruptAllAs`, `:910-913`; the exit path's children, `:5449`): recorded with `who`
+and the *caller's* stack annotations `extra` (R2-5); a target that applies now is evaluated
+as a command, in list order. An unknown target is skipped. -/
+def interruptEach (interp : RunInterp ν σ β ε δ ι α χ St) (who : FiberId)
+    (extra : ReasonAnnotations α) (targets : List FiberId)
+    (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)) :
+    RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α) :=
+  targets.foldl (fun (a : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)) t =>
+      match a.1.fiber? t with
+      | none => a
+      | some g =>
+        let (g, applyNow) := interruptRecord interp (some who) extra g
+        let m := (a.1.update g).emit [RunEvent.interruptRecorded (some who) t]
+        (m, a.2 ++ (if applyNow then [Cmd.evaluate t] else []))) acc
+
+/-- `fiberAwaitAll`'s walk (`:794-808`, R2-4): the targets in input order, an exited one's
+exit collected at once (`:797-800`), until the first live one, which is the one to observe
+(`:802`), with the targets after it; or every exit when none is live (`:806`). A target the
+machine does not hold is skipped. -/
+def countdownWalk (m : RunMachine ν σ β ε δ ι α χ St) :
+    List FiberId → List (Exit β ε δ ι α) →
+      List (Exit β ε δ ι α) × Option (FiberId × List FiberId)
+  | [], exits => (exits, none)
+  | t :: rest, exits =>
+    match m.fiber? t with
+    | none => countdownWalk m rest exits
+    | some g =>
+      match g.exit with
+      | some exit => countdownWalk m rest (exits ++ [exit])
+      | none => (exits, some (t, rest))
+
+/-- A countdown park over `targets` (`fiberAwaitAll`, `:779-813`, as a `callback`): walk the
+targets in input order; when one is live, observe it, push the park's cleanup as an
+`AsyncFinalizer` frame (`:812`, `:1128-1141`; R2-3) and park; when none is, the continuation
+is applied at once (`:806`, resumed before the callback yields). Returns whether the fiber
+actually parked. -/
 def countdownPark (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
     (f : RunFiber ν σ β ε δ ι α χ) (targets : List FiberId) (resumeWith : Resume ν)
     (failFast : Bool := false) :
     RunMachine ν σ β ε δ ι α χ St × RunFiber ν σ β ε δ ι α χ × Bool :=
   let token := m.nextToken
   let m := { m with nextToken := m.nextToken + 1 }
-  let exited := targets.filterMap fun t => (m.fiber? t).bind RunFiber.exit
-  let live := targets.filter fun t =>
-    match m.fiber? t with
-    | some g => g.exit.isNone
-    | none => false
-  if live.isEmpty then
-    (m, { f with frame := { f.frame with current := resumePrim interp resumeWith exited } }, false)
-  else
-    let m := live.foldl (fun m t =>
-        m.modify t fun g => { g with observers := g.observers ++ [Observer.countdown f.id token] }) m
-    let f := f.park ⟨token, none, live.length, exited, resumeWith, failFast, live⟩
+  match countdownWalk m targets [] with
+  | (exits, none) =>
+    (m, { f with frame := { f.frame with current := resumePrim interp resumeWith exits } }, false)
+  | (exits, some (target, remaining)) =>
+    let m := m.modify target fun g =>
+      { g with observers := g.observers ++ [Observer.countdown f.id token] }
+    let name := interp.cancelName interp.parkCancelName f.id token
+    let f := { f with frame := { f.frame with stack := Prim.asyncFinalizer name :: f.frame.stack } }
+    let f := f.park ⟨token, some target, remaining, exits, resumeWith, failFast⟩
     (m.emit [RunEvent.parkedOn f.id token], f, true)
 where
   /-- What a finished countdown continues with. -/
@@ -675,7 +723,7 @@ def injectYield (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ 
     let f := { f with
       yieldOverride := none
       dispatcher := (f.dispatcher.enqueue 0 (Task.resume f.id token f.frame.current)) }
-    let f := f.park ⟨token, none, 0, [], Resume.void, false, []⟩
+    let f := f.park ⟨token, none, [], [], Resume.void, false⟩
     some ⟨m.emit [RunEvent.yieldInjected f.id f.currentOpCount, RunEvent.parkedOn f.id token],
       f, true, Outcome.parked, []⟩
   else none
@@ -695,7 +743,7 @@ def evaluatePrim (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine
         frame := { f.frame with current := Prim.success interp.voidValue }
         dispatcher :=
           (f.dispatcher.enqueue priority (Task.resume f.id token (Prim.success interp.voidValue))) }
-      let f := f.park ⟨token, none, 0, [], Resume.void, false, []⟩
+      let f := f.park ⟨token, none, [], [], Resume.void, false⟩
       ⟨m.emit [RunEvent.parkedOn f.id token], f, yielding, Outcome.parked, []⟩
     | Prim.async register withSignal cancel =>                          -- :1109-1143
       let token := m.nextToken
@@ -712,7 +760,7 @@ def evaluatePrim (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine
             let name := interp.cancelName (cancel.getD interp.abortName) f.id token
             { f with frame := { f.frame with stack := Prim.asyncFinalizer name :: f.frame.stack } }
           else f
-        let f := f.park ⟨token, none, 0, [], Resume.void, false, []⟩
+        let f := f.park ⟨token, none, [], [], Resume.void, false⟩
         ⟨m.emit [RunEvent.parkedOn f.id token], f, yielding, Outcome.parked, []⟩
     | _ =>
       match interp.parkOf f.frame.current with
@@ -732,7 +780,12 @@ def evaluatePrim (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine
             let m := { m with nextToken := m.nextToken + 1 }
             let m := m.update
               { t with observers := t.observers ++ [Observer.resumeAwait f.id token mode] }
-            let f := f.park ⟨token, some target, 0, [], Resume.void, false, []⟩
+            -- a `callback` park: the registration's `sync(addObserver(…))` return is the
+            -- cancel, pushed as an `AsyncFinalizer` frame (`:773`, `:821`, `:1128-1141`; R2-3)
+            let name := interp.cancelName interp.parkCancelName f.id token
+            let f := { f with frame :=
+              { f.frame with stack := Prim.asyncFinalizer name :: f.frame.stack } }
+            let f := f.park ⟨token, some target, [], [], Resume.void, false⟩
             ⟨m.emit [RunEvent.parkedOn f.id token], f, yielding, Outcome.parked, []⟩
       | none =>
         match f.frame.current with
@@ -847,15 +900,9 @@ where
       if target = f.id then ⟨m, answer f interp.voidValue, yielding, Outcome.continue_, []⟩
       else interruptThenJoin interp m f yielding target (some f.id)
     | WithFiberAction.interruptAll targets interruptor =>
-      let who := interruptor.getD f.id
-      let (m, nested) := targets.foldl (fun (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)) t =>
-          match acc.1.fiber? t with
-          | none => acc
-          | some g =>
-            -- the caller's stack annotations, whoever the interruptor is (`:892-895`, `:910-913`)
-            let (g, applyNow) := interruptRecord interp (some who) (interp.stackAnnotations f.id) g
-            let m := (acc.1.update g).emit [RunEvent.interruptRecorded (some who) t]
-            (m, acc.2 ++ (if applyNow then [Cmd.evaluate t] else []))) (m, [])
+      -- the caller's stack annotations, whoever the interruptor is (`:892-895`, `:910-913`)
+      let (m, nested) :=
+        interruptEach interp (interruptor.getD f.id) (interp.stackAnnotations f.id) targets (m, [])
       let (m, f, parked) := countdownPark interp m f targets Resume.void
       ⟨m, f, yielding, outcomeOf m parked, nested⟩
     | WithFiberAction.awaitAll targets =>
@@ -888,8 +935,12 @@ where
         ⟨raceId, f.id, token, Supervision.RaceAllState.initial ids, false⟩
       let m := { m with races := m.races ++ [race] }
       let m := m.emit [RunEvent.raceStarted raceId f.id ids]
+      -- the race is a `callback` whose registration returns `fiberInterruptAll(fibers)`
+      -- (`:1530`): that cancel is pushed as an `AsyncFinalizer` frame (R2-13)
+      let name := interp.cancelName (interp.raceCancelName raceId) f.id token
+      let f := { f with frame := { f.frame with stack := Prim.asyncFinalizer name :: f.frame.stack } }
       -- the empty race stays pending until interrupted; a non-empty one launches in order
-      let f := f.park ⟨token, none, 0, [], Resume.void, false, []⟩
+      let f := f.park ⟨token, none, [], [], Resume.void, false⟩
       ⟨m.emit [RunEvent.parkedOn f.id token], f, yielding, Outcome.parked,
         ids.map (Cmd.launch raceId)⟩
     | WithFiberAction.setInterruptible body false =>                    -- :4302-4310 (M2)
@@ -917,6 +968,24 @@ where
     | WithFiberAction.refuse cause =>                                   -- S3 §5.2
       ⟨m, { f with frame := { f.frame with current := Prim.failure cause } }, yielding,
         Outcome.continue_, []⟩
+    | WithFiberAction.dropObservers token =>                            -- :773, :812, :821 (R2-3)
+      -- the park's cleanup: no observer anywhere resumes this token any more
+      let m := { m with fibers := m.fibers.map fun g =>
+        { g with observers := g.observers.filter fun
+            | Observer.resumeAwait _ t _ => t ≠ token
+            | Observer.countdown _ t => t ≠ token
+            | _ => true } }
+      ⟨m, answer f interp.voidValue, yielding, Outcome.continue_, []⟩
+    | WithFiberAction.cancelRace raceId =>                              -- :1530 (R2-13)
+      -- `fiberInterruptAll(fibers)` over the entrants still live: the host's id and stack
+      -- annotations, then the await over them
+      match m.race? raceId with
+      | none => ⟨m, answer f interp.voidValue, yielding, Outcome.continue_, []⟩
+      | some race =>
+        let (m, nested) :=
+          interruptEach interp f.id (interp.stackAnnotations f.id) race.state.live (m, [])
+        let (m, f, parked) := countdownPark interp m f race.state.live Resume.void
+        ⟨m, f, yielding, outcomeOf m parked, nested⟩
   /-- `fiberInterrupt` (`:859`): record with `interruptor`, then await the target. -/
   interruptThenJoin (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
       (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (target : FiberId)
@@ -956,7 +1025,7 @@ def fireObserver (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId) 
     match interp.dropFinalizer scope key m.state with
     | none => (m.halt (Stuck.unknownScope scope), acc.2)
     | some state => ({ m with state := state }, acc.2)
-  | Observer.countdown waiter token =>                                 -- M6: collect the exit
+  | Observer.countdown waiter token =>                                 -- :802-805 (M6, R2-4)
     match m.fiber? waiter with
     | none => (m, acc.2)
     | some w =>
@@ -964,31 +1033,29 @@ def fireObserver (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId) 
       | none => (m, acc.2)
       | some p =>
         let collected := p.collected ++ [exit]
-        let outstanding := p.outstanding.filter fun t => t ≠ id
         -- fail-fast (`Effect.all` with concurrency): the first failing exit interrupts every
-        -- outstanding target with the awaiter's id; the countdown still waits for them
+        -- remaining target with the awaiter's id; the countdown still waits for them
         let firstFailure := p.failFast && !exit.isSuccess && p.collected.all Exit.isSuccess
         let (m, nested) :=
           if firstFailure then
-            outstanding.foldl (fun (a : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)) t =>
-                match a.1.fiber? t with
-                | none => a
-                | some g =>
-                  let (g, applyNow) :=
-                    interruptRecord interp (some waiter) (interp.stackAnnotations waiter) g
-                  let m := (a.1.update g).emit [RunEvent.interruptRecorded (some waiter) t]
-                  (m, a.2 ++ (if applyNow then [Cmd.evaluate t] else []))) (m, [])
+            interruptEach interp waiter (interp.stackAnnotations waiter) p.remaining (m, [])
           else (m, [])
-        if p.remaining <= 1 then
-          let w := { w with pending := w.pending.map fun q =>
-            if q.token = token then { q with remaining := 0, collected := collected, outstanding := [] } else q }
-          (m.update w,
-            acc.2 ++ nested ++
-              [Cmd.resume waiter token (countdownPark.resumePrim interp p.resumeWith collected)])
-        else
+        -- the walk goes on from the next target (`loop()`, `:804`)
+        match countdownWalk m p.remaining collected with
+        | (exits, none) =>                                             -- :806
           let w := { w with pending := w.pending.map fun q =>
             if q.token = token then
-              { q with remaining := q.remaining - 1, collected := collected, outstanding := outstanding }
+              { q with waitingOn := none, remaining := [], collected := exits }
+            else q }
+          (m.update w,
+            acc.2 ++ nested ++
+              [Cmd.resume waiter token (countdownPark.resumePrim interp p.resumeWith exits)])
+        | (exits, some (next, rest)) =>                                -- :802
+          let m := m.modify next fun g =>
+            { g with observers := g.observers ++ [Observer.countdown waiter token] }
+          let w := { w with pending := w.pending.map fun q =>
+            if q.token = token then
+              { q with waitingOn := some next, remaining := rest, collected := exits }
             else q }
           (m.update w, acc.2 ++ nested)
   | Observer.raceCallback raceId =>
@@ -1000,29 +1067,12 @@ def fireObserver (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId) 
       let m := m.updateRace race
       match state.accepted, race.settled with
       | some accepted, false =>
-        -- settle: interrupt the live entrants with the host's id, then resume the host
+        -- settle (`:1510-1514`, R2-12): the host is resumed with
+        -- `flatMap(uninterruptible(fiberInterruptAll(live)), () => exit)` — it interrupts
+        -- and awaits the live entrants itself, under a mask — or with the exit alone
         let m := m.updateRace { race with settled := true }
         let m := m.emit [RunEvent.raceSettled raceId accepted]
-        let (m, nested) := state.live.foldl
-          (fun (a : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)) entrant =>
-            match a.1.fiber? entrant with
-            | none => a
-            | some e =>
-              let (e, applyNow) :=
-                interruptRecord interp (some race.host) (interp.stackAnnotations race.host) e
-              let m := (a.1.update e).emit [RunEvent.interruptRecorded (some race.host) entrant]
-              (m, a.2 ++ (if applyNow then [Cmd.evaluate entrant] else []))) (m, [])
-        -- the host is resumed after the losers have been awaited: a countdown over them
-        match m.fiber? race.host with
-        | none => (m, acc.2 ++ nested)
-        | some host =>
-          let host := { host with
-            parked := Parked.notParked
-            pending := host.pending.filter fun p => p.token ≠ race.token }
-          let (m, host, parked) := countdownPark interp m host state.live
-            (Resume.continueWith (interp.restoreName accepted))
-          if parked then (m.update host, acc.2 ++ nested)
-          else (m.update host, acc.2 ++ nested ++ [Cmd.evaluate race.host])
+        (m, acc.2 ++ [Cmd.resume race.host race.token (interp.raceSettle state.live accepted)])
       | _, _ => (m, acc.2)
   | Observer.callback key => (m.emit [RunEvent.callback key exit], acc.2)
 
@@ -1034,16 +1084,9 @@ def exitFiber (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν
     (f : RunFiber ν σ β ε δ ι α χ) (exit : Exit β ε δ ι α) :
     RunMachine ν σ β ε δ ι α χ St × RunFiber ν σ β ε δ ι α χ × Bool × List (Cmd ν σ β ε δ ι α) :=
   if m.middlewareInstalled && f.finalizing.isNone && !f.children.isEmpty then
-    let (m, nested) := f.children.foldl
-      (fun (a : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)) child =>
-        match a.1.fiber? child with
-        | none => a
-        | some c =>
-          -- `fiberInterruptAll(children)` under `withFiber(parent)`: the parent's stack
-          -- annotations (`:892-895`, R2-5)
-          let (c, applyNow) := interruptRecord interp (some f.id) (interp.stackAnnotations f.id) c
-          let m := (a.1.update c).emit [RunEvent.interruptRecorded (some f.id) child]
-          (m, a.2 ++ (if applyNow then [Cmd.evaluate child] else []))) (m, [])
+    -- `fiberInterruptAll(children)` under `withFiber(parent)`: the parent's stack
+    -- annotations (`:892-895`, R2-5)
+    let (m, nested) := interruptEach interp f.id (interp.stackAnnotations f.id) f.children (m, [])
     let m := m.emit [RunEvent.childrenInterrupted f.id f.children]
     -- the loop returned an exit: `_deferredInterrupt = false` (`:659`, R2-2)
     let f := { f with finalizing := some exit, frame := { f.frame with deferredInterrupt := false } }

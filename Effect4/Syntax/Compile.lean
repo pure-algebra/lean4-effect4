@@ -234,6 +234,8 @@ def embedAction : WithFiberAction Name Thunk Val Err Defect FiberId Ann Ctx → 
   | .getId => .getId
   | .closeScope s e => .closeScope s e
   | .refuse c => .refuse c
+  | .dropObservers t => .dropObservers t
+  | .cancelRace r => .cancelRace r
 
 /-! ## The compile -/
 
@@ -683,6 +685,10 @@ def interpOf (root : NativeEff) :
     let (due, deferreds) := state.deferreds.drainDue
     (due.map fun d => (d.1, d.2.1, embed d.2.2), { state with deferreds := deferreds })
   cancelName := fun base fiber token => EffName.withWaiter base fiber token
+  -- the parks' cleanups and the settled race's program are the stores' own, embedded
+  parkCancelName := EffName.store Name.cancelPark
+  raceCancelName := fun race => EffName.store (Name.cancelRace race)
+  raceSettle := fun live exit => embed (raceSettleProgram live exit)
   abortName := EffName.abort
   finalizerProgram := fun name exit =>
     match name with

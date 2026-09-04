@@ -135,7 +135,7 @@ theorem injectYield_fires (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFi
     ({ f with
         yieldOverride := none
         dispatcher := f.dispatcher.enqueue 0 (Task.resume f.id m.nextToken f.frame.current) }).park
-      ⟨m.nextToken, none, 0, [], Resume.void, false, []⟩,
+      ⟨m.nextToken, none, [], [], Resume.void, false⟩,
     true, Outcome.parked, []⟩, ?_, rfl, rfl, rfl, rfl, rfl, rfl⟩
   simp [injectYield, hp, hv]
   rfl
@@ -599,8 +599,10 @@ theorem evaluatePrim_join_done (interp : RunInterp ν σ β ε δ ι α χ St)
         Outcome.continue_, []⟩ := by
   simp only [evaluatePrim, hpark, ht, hexit]
 
-/-- A join or await on a live target registers an observer on it and parks behind a fresh
-guard (`:5291`, `:5304`, `:565`). census: fork.await -/
+/-- A join or await on a live target registers an observer on it, pushes the park's cleanup
+as an `AsyncFinalizer` frame (the `callback`'s `sync(self.addObserver(…))` return, `:773`,
+`:821`, `:1128-1141`; R2-3) and parks behind a fresh guard (`:5291`, `:5304`, `:565`).
+census: fork.await -/
 theorem evaluatePrim_join_live (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
     (thunk : σ) (target : FiberId) (mode : Supervision.ObserverMode)
@@ -612,7 +614,9 @@ theorem evaluatePrim_join_live (interp : RunInterp ν σ β ε δ ι α χ St)
       ⟨({ m with nextToken := m.nextToken + 1 }.update
           { t with observers := t.observers ++ [Observer.resumeAwait g.id m.nextToken mode] }).emit
           [RunEvent.parkedOn g.id m.nextToken],
-        g.park ⟨m.nextToken, some target, 0, [], Resume.void, false, []⟩, yielding, Outcome.parked, []⟩ := by
+        ({ g with frame := { g.frame with
+            stack := Prim.asyncFinalizer (interp.cancelName interp.parkCancelName g.id m.nextToken) :: g.frame.stack } }).park
+          ⟨m.nextToken, some target, [], [], Resume.void, false⟩, yielding, Outcome.parked, []⟩ := by
   simp only [evaluatePrim, hpark, ht, hlive]
   try rfl
 
@@ -777,22 +781,9 @@ theorem stuck_emit (m : RunMachine ν σ β ε δ ι α χ St) (events : List (R
 
 end RunMachine
 
-/-- One interrupt request over a list of targets, in list order (`fiberInterruptAll`, `:5449`;
-the exit path's children, `:613-617`; a settled race's losers): each known target is recorded
-with `who` as the interruptor and no extra annotations, and the ones that apply now are queued
-for evaluation in the same order. The machine inlines this fold at each of its sites; the
-definition is the fold, so the site equations are reflexive. -/
-def interruptEach (interp : RunInterp ν σ β ε δ ι α χ St) (who : FiberId)
-    (extra : ReasonAnnotations α) (targets : List FiberId)
-    (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)) :
-    RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α) :=
-  targets.foldl (fun (a : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)) t =>
-      match a.1.fiber? t with
-      | none => a
-      | some g =>
-        let (g, applyNow) := interruptRecord interp (some who) extra g
-        let m := (a.1.update g).emit [RunEvent.interruptRecorded (some who) t]
-        (m, a.2 ++ (if applyNow then [Cmd.evaluate t] else []))) acc
+/-! `interruptEach` (`Fibers.lean`) is the one interrupt fold every site runs: the exit path's
+children (`:613-617`), `fiberInterruptAll` (`:892-896`), a fail-fast countdown, a race
+cleanup. -/
 
 /-- No targets, nothing recorded. census: fork.interrupt-all -/
 theorem interruptEach_nil (interp : RunInterp ν σ β ε δ ι α χ St) (who : FiberId)
@@ -966,7 +957,8 @@ theorem countdownPark_finalizing (interp : RunInterp ν σ β ε δ ι α χ St)
     (resumeWith : Resume ν) (failFast : Bool) :
     (countdownPark interp m f targets resumeWith failFast).2.1.finalizing = f.finalizing := by
   simp only [countdownPark]
-  split <;> rfl
+  rcases countdownWalk { m with nextToken := m.nextToken + 1 } targets [] with
+    ⟨exits, _ | ⟨target, remaining⟩⟩ <;> rfl
 
 /-- While the children are awaited the parent remembers the exit it is finalizing (`:615`),
 so the second pass through the exit path stores rather than re-interrupts.
@@ -1019,65 +1011,118 @@ theorem fireObserver_dropScopeFinalizer (interp : RunInterp ν σ β ε δ ι α
           state := state }, acc.2) := by
   simp [fireObserver, RunMachine.state_emit, h]
 
-/-- The last target of a countdown resumes the awaiter with every collected exit, in
-completion order (`fiberAwaitAll`, `:779`; `:5449`, the explicit await after the requests).
-census: fork.interrupt-all -/
-theorem fireObserver_countdown_last (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId)
-    (exit : Exit β ε δ ι α) (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α))
-    (waiter : FiberId) (token : Nat) (w : RunFiber ν σ β ε δ ι α χ) (p : Pending ν β ε δ ι α)
-    (hw : acc.1.fiber? waiter = some w) (hp : w.pending.find? (fun q => q.token = token) = some p)
-    (hff : p.failFast = false) (hrem : p.remaining ≤ 1) :
-    fireObserver interp id exit acc (Observer.countdown waiter token) =
-      ((acc.1.emit [RunEvent.observerFired id (Observer.countdown waiter token)]).update
-          { w with pending := w.pending.map fun q =>
-              if q.token = token then
-                { q with remaining := 0, collected := p.collected ++ [exit], outstanding := [] }
-              else q },
-        acc.2 ++ [Cmd.resume waiter token
-          (countdownPark.resumePrim interp p.resumeWith (p.collected ++ [exit]))]) := by
-  simp [fireObserver, RunMachine.fiber?_emit, hw, hp, hff, hrem]
+/-- `fiberAwaitAll`'s walk (`:794-808`, R2-4) on an empty list: every exit, nothing to
+observe. census: fork.await-all-children -/
+theorem countdownWalk_nil (m : RunMachine ν σ β ε δ ι α χ St) (exits : List (Exit β ε δ ι α)) :
+    countdownWalk m [] exits = (exits, none) := rfl
 
-/-- Before the last target, a countdown collects the exit, forgets the target and waits on.
-census: fork.interrupt-all -/
-theorem fireObserver_countdown_more (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId)
+/-- An exited target's exit is collected in place and the walk goes on (`:797-800`).
+census: fork.await-all-children -/
+theorem countdownWalk_exited (m : RunMachine ν σ β ε δ ι α χ St) (t : FiberId)
+    (rest : List FiberId) (exits : List (Exit β ε δ ι α)) (g : RunFiber ν σ β ε δ ι α χ)
+    (exit : Exit β ε δ ι α) (hg : m.fiber? t = some g) (hexit : g.exit = some exit) :
+    countdownWalk m (t :: rest) exits = countdownWalk m rest (exits ++ [exit]) := by
+  simp [countdownWalk, hg, hexit]
+
+/-- The first live target stops the walk: it is the one to observe, with the targets after
+it (`:802`). census: fork.await-all-children -/
+theorem countdownWalk_live (m : RunMachine ν σ β ε δ ι α χ St) (t : FiberId)
+    (rest : List FiberId) (exits : List (Exit β ε δ ι α)) (g : RunFiber ν σ β ε δ ι α χ)
+    (hg : m.fiber? t = some g) (hlive : g.exit = none) :
+    countdownWalk m (t :: rest) exits = (exits, some (t, rest)) := by
+  simp [countdownWalk, hg, hlive]
+
+/-- A countdown with no live target answers the exits at once, in input order (`:806`),
+without parking. census: fork.await-all-children -/
+theorem countdownPark_none_live (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (targets : List FiberId)
+    (resumeWith : Resume ν) (failFast : Bool) (exits : List (Exit β ε δ ι α))
+    (hwalk : countdownWalk { m with nextToken := m.nextToken + 1 } targets [] = (exits, none)) :
+    countdownPark interp m f targets resumeWith failFast =
+      ({ m with nextToken := m.nextToken + 1 },
+        { f with frame := { f.frame with current := countdownPark.resumePrim interp resumeWith exits } },
+        false) := by
+  simp [countdownPark, hwalk]
+
+/-- A countdown with a live target observes that one target only, pushes the park's cleanup
+as an `AsyncFinalizer` frame (`:812`, `:1128-1141`; R2-3), and parks with the rest of the
+walk pending (`:802`; R2-4). census: fork.await-all-children -/
+theorem countdownPark_parks (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (targets : List FiberId)
+    (resumeWith : Resume ν) (failFast : Bool) (exits : List (Exit β ε δ ι α)) (target : FiberId)
+    (remaining : List FiberId)
+    (hwalk : countdownWalk { m with nextToken := m.nextToken + 1 } targets [] =
+      (exits, some (target, remaining))) :
+    countdownPark interp m f targets resumeWith failFast =
+      (let m' : RunMachine ν σ β ε δ ι α χ St := { m with nextToken := m.nextToken + 1 }
+       let name := interp.cancelName interp.parkCancelName f.id m.nextToken
+       let g := ({ f with frame := { f.frame with stack := Prim.asyncFinalizer name :: f.frame.stack } }).park
+         ⟨m.nextToken, some target, remaining, exits, resumeWith, failFast⟩
+       ((m'.modify target fun g => { g with observers := g.observers ++ [Observer.countdown f.id m.nextToken] }).emit
+          [RunEvent.parkedOn f.id m.nextToken], g, true)) := by
+  simp only [countdownPark, hwalk]
+  try rfl
+
+/-- The observed target's exit is collected and the walk goes on; when nothing after it is
+live the awaiter is resumed with every exit, in input order (`:806`, `:779`; `:5449`, the
+explicit await after the requests). census: fork.await-all-children -/
+theorem fireObserver_countdown_done (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId)
     (exit : Exit β ε δ ι α) (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α))
     (waiter : FiberId) (token : Nat) (w : RunFiber ν σ β ε δ ι α χ) (p : Pending ν β ε δ ι α)
+    (exits : List (Exit β ε δ ι α))
     (hw : acc.1.fiber? waiter = some w) (hp : w.pending.find? (fun q => q.token = token) = some p)
-    (hff : p.failFast = false) (hrem : ¬ p.remaining ≤ 1) :
+    (hff : p.failFast = false)
+    (hwalk : countdownWalk (acc.1.emit [RunEvent.observerFired id (Observer.countdown waiter token)])
+      p.remaining (p.collected ++ [exit]) = (exits, none)) :
     fireObserver interp id exit acc (Observer.countdown waiter token) =
       ((acc.1.emit [RunEvent.observerFired id (Observer.countdown waiter token)]).update
           { w with pending := w.pending.map fun q =>
               if q.token = token then
-                { q with
-                  remaining := q.remaining - 1
-                  collected := p.collected ++ [exit]
-                  outstanding := p.outstanding.filter fun t => t ≠ id }
+                { q with waitingOn := none, remaining := [], collected := exits }
+              else q },
+        acc.2 ++ [Cmd.resume waiter token (countdownPark.resumePrim interp p.resumeWith exits)]) := by
+  simp [fireObserver, RunMachine.fiber?_emit, hw, hp, hff, hwalk]
+
+/-- … and when a later target is live, the countdown moves its one observer to it
+(`:802`, `loop()` at `:804`). census: fork.await-all-children -/
+theorem fireObserver_countdown_next (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId)
+    (exit : Exit β ε δ ι α) (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α))
+    (waiter : FiberId) (token : Nat) (w : RunFiber ν σ β ε δ ι α χ) (p : Pending ν β ε δ ι α)
+    (exits : List (Exit β ε δ ι α)) (next : FiberId) (rest : List FiberId)
+    (hw : acc.1.fiber? waiter = some w) (hp : w.pending.find? (fun q => q.token = token) = some p)
+    (hff : p.failFast = false)
+    (hwalk : countdownWalk (acc.1.emit [RunEvent.observerFired id (Observer.countdown waiter token)])
+      p.remaining (p.collected ++ [exit]) = (exits, some (next, rest))) :
+    fireObserver interp id exit acc (Observer.countdown waiter token) =
+      (((acc.1.emit [RunEvent.observerFired id (Observer.countdown waiter token)]).modify next
+          (fun g => { g with observers := g.observers ++ [Observer.countdown waiter token] })).update
+          { w with pending := w.pending.map fun q =>
+              if q.token = token then
+                { q with waitingOn := some next, remaining := rest, collected := exits }
               else q },
         acc.2) := by
-  simp [fireObserver, RunMachine.fiber?_emit, hw, hp, hff, hrem]
+  simp [fireObserver, RunMachine.fiber?_emit, hw, hp, hff, hwalk]
 
-/-- The settling arm of a race callback (`:5620-5635`): the race is marked settled, the live
-entrants are interrupted with the host's id, and the host is taken off its race guard to await
-them on a countdown that continues with the accepted exit's restoring frame; when nothing is
-live the host is evaluated at once. -/
+/-- The settling arm of a race callback (`:1503-1514`, R2-12): the race is marked settled and
+the host is resumed on its race guard with `interp.raceSettle live accepted` —
+`flatMap(uninterruptible(fiberInterruptAll(live)), () => exit)`, so the host interrupts and
+awaits the live entrants itself, under a mask; or the exit alone when none is live. -/
 def settleRace (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
     (acc : List (Cmd ν σ β ε δ ι α)) (raceId : Nat) (race : Race β ε δ ι α)
     (state : Supervision.RaceAllState β ε δ ι α) (accepted : Exit β ε δ ι α) :
     RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α) :=
   let m := m.updateRace { race with settled := true }
   let m := m.emit [RunEvent.raceSettled raceId accepted]
-  let (m, nested) :=
-    interruptEach interp race.host (interp.stackAnnotations race.host) state.live (m, [])
-  match m.fiber? race.host with
-  | none => (m, acc ++ nested)
-  | some host =>
-    let host := { host with
-      parked := Parked.notParked
-      pending := host.pending.filter fun p => p.token ≠ race.token }
-    let (m, host, parked) := countdownPark interp m host state.live
-      (Resume.continueWith (interp.restoreName accepted))
-    if parked then (m.update host, acc ++ nested)
-    else (m.update host, acc ++ nested ++ [Cmd.evaluate race.host])
+  (m, acc ++ [Cmd.resume race.host race.token (interp.raceSettle state.live accepted)])
+
+/-- The settle resumes the host, and nothing else: no entrant is touched until the host runs
+the program it was resumed with (`:1510-1514`). census: fork.race-all -/
+theorem settleRace_eq (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+    (acc : List (Cmd ν σ β ε δ ι α)) (raceId : Nat) (race : Race β ε δ ι α)
+    (state : Supervision.RaceAllState β ε δ ι α) (accepted : Exit β ε δ ι α) :
+    settleRace interp m acc raceId race state accepted =
+      ((m.updateRace { race with settled := true }).emit [RunEvent.raceSettled raceId accepted],
+        acc ++ [Cmd.resume race.host race.token (interp.raceSettle state.live accepted)]) := rfl
 
 /-- The first accepted callback settles the race: the frozen bookkeeping accepts, the race was
 not yet settled, and the settling arm runs over the updated race. census: fork.race-all -/
@@ -1353,9 +1398,10 @@ theorem raceEntrant_options (interp : RunInterp ν σ β ε δ ι α χ St) (rac
        (s.1.modify s.2.2 fun c => { c with observers := c.observers ++ [Observer.raceCallback raceId] },
         s.2.1, acc.2.2 ++ [s.2.2])) := rfl
 
-/-- `raceAll` (`:5560-5640`): the entrants exist as fibers before any launch, the race is
-recorded with its host and guard, the host parks on the guard, and the launches are commands
-in entrant order; the empty race stays parked until the host is interrupted.
+/-- `raceAll` (`:1490-1531`): the entrants exist as fibers before any launch, the race is
+recorded with its host and guard, the host pushes the race's cleanup (`fiberInterruptAll(fibers)`,
+`:1530`; R2-13) as an `AsyncFinalizer` frame and parks on the guard, and the launches are
+commands in entrant order; the empty race stays parked until the host is interrupted.
 census: fork.race-all -/
 theorem withFiber_raceAll (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
@@ -1369,9 +1415,52 @@ theorem withFiber_raceAll (interp : RunInterp ν σ β ε δ ι α χ St)
          ⟨raceId, e.2.1.id, token, Supervision.RaceAllState.initial e.2.2, false⟩
        let m := RunMachine.emit { e.1 with races := e.1.races ++ [race] }
          [RunEvent.raceStarted raceId e.2.1.id e.2.2]
-       let g := e.2.1.park ⟨token, none, 0, [], Resume.void, false, []⟩
+       let h := e.2.1
+       let name := interp.cancelName (interp.raceCancelName raceId) h.id token
+       let g := ({ h with frame := { h.frame with stack := Prim.asyncFinalizer name :: h.frame.stack } }).park
+         ⟨token, none, [], [], Resume.void, false⟩
        ⟨m.emit [RunEvent.parkedOn g.id token], g, yielding, Outcome.parked,
         e.2.2.map (Cmd.launch raceId)⟩) := rfl
+
+/-- A park's cleanup (`:773`, `:812`, `:821`; R2-3): every observer that would resume this
+token, on any fiber, is dropped, and the cleanup answers void. census: fork.await -/
+theorem withFiber_dropObservers (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (token : Nat) :
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.dropObservers token) =
+      ⟨{ m with fibers := m.fibers.map fun g =>
+          { g with observers := g.observers.filter fun
+              | Observer.resumeAwait _ t _ => t ≠ token
+              | Observer.countdown _ t => t ≠ token
+              | _ => true } },
+        { f with frame := { f.frame with current := Prim.success interp.voidValue } },
+        yielding, Outcome.continue_, []⟩ := rfl
+
+/-- The race park's cleanup (`fiberInterruptAll(fibers)`, `:1530`; R2-13): the entrants still
+live are interrupted with the running fiber's id and stack annotations, and awaited.
+census: fork.race-all -/
+theorem withFiber_cancelRace (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (raceId : Nat) (race : Race β ε δ ι α) (hr : m.race? raceId = some race) :
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.cancelRace raceId) =
+      (let r := interruptEach interp f.id (interp.stackAnnotations f.id) race.state.live (m, [])
+       let p := countdownPark interp r.1 f race.state.live Resume.void
+       ⟨p.1, p.2.1, yielding,
+        (match p.1.stuck with
+          | some why => Outcome.stuck why
+          | none => if p.2.2 then Outcome.parked else Outcome.continue_),
+        r.2⟩) := by
+  simp only [evaluatePrim.withFiber, hr]
+  try rfl
+
+/-- A cleanup for a race the machine does not hold answers void. census: fork.race-all -/
+theorem withFiber_cancelRace_unknown (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (raceId : Nat) (hr : m.race? raceId = none) :
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.cancelRace raceId) =
+      ⟨m, { f with frame := { f.frame with current := Prim.success interp.voidValue } },
+        yielding, Outcome.continue_, []⟩ := by
+  simp [evaluatePrim.withFiber, hr]
 
 /-- `Async` whose register answers at once (`:1120-1126`): the store is updated, the answer is
 the fiber's next primitive, and the resumes the store now owes are drained. census: op.Async -/
@@ -1407,7 +1496,7 @@ theorem evaluatePrim_async_parks (interp : RunInterp ν σ β ε δ ι α χ St)
               stack := Prim.asyncFinalizer
                 (interp.cancelName (cancel.getD interp.abortName) g.id token) :: g.frame.stack } }
          else g
-       let g := g.park ⟨token, none, 0, [], Resume.void, false, []⟩
+       let g := g.park ⟨token, none, [], [], Resume.void, false⟩
        ⟨m.emit [RunEvent.parkedOn g.id token], g, yielding, Outcome.parked, []⟩) := by
   simp only [evaluatePrim, hreg]
   try rfl

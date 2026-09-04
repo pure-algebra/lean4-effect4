@@ -263,6 +263,12 @@ inductive RaceName
   /-- Two failures, retained in order
   (`test/fixtures/traces/fiber-m3/raceAllFailuresRetainOrder.tsv`). -/
   | failThenFail
+  /-- One entrant that parks on an external async: the host's interrupt reaches it through
+  the race park's cleanup (`internal/effect.ts:1530`, R2-13). -/
+  | parkOnly
+  /-- A parked loser and an immediate winner: the settle interrupts the loser on the host,
+  under a mask (`:1510-1514`, R2-12). -/
+  | parkThenSuccess
 deriving DecidableEq, Repr
 
 /-- The declared program names. Names are data; `progOf` is the interpretation. A program name
@@ -319,6 +325,10 @@ inductive ProgName
   | closeScopeOf (scope : Nat) (exit : ExitV)
   /-- `awaitAllChildren(body)` (`:5314-5322`). -/
   | awaitAllNew (body : ProgName)
+  /-- `fiberInterruptAll(targets)` (`:889-896`): the settled race's cleanup half (R2-12). -/
+  | interruptFibers (targets : List FiberId)
+  /-- `fiberJoin`/`fiberAwait` on an existing handle (`:5291`, `:5304`). -/
+  | joinFiber (target : FiberId) (mode : Supervision.ObserverMode)
 deriving DecidableEq
 
 /-- The continuation, finalizer, registration and cancel names. All three of rc.112's
@@ -355,6 +365,12 @@ inductive Name
   /-- `RunInterp.abortName`: the cancel of an `Async` that asked for a controller and returned
   no cancel effect (`internal/effect.ts:1134-1140`). -/
   | abortController
+  /-- `RunInterp.parkCancelName`: a fiber-observer park's cleanup (`fiberJoin`/`fiberAwait`,
+  `:773`, `:821`; `fiberAwaitAll`, `:812`), R2-3. -/
+  | cancelPark
+  /-- `RunInterp.raceCancelName race`: the race park's cleanup, `fiberInterruptAll(fibers)`
+  (`:1530`), R2-13. -/
+  | cancelRace (race : Nat)
   /-- `RunInterp.cancelName base waiter token` (M3): the cancel name with the identity of the
   fiber that parked and the token it parked on, which is what `_await`'s cleanup needs to
   splice the right resume out (`Deferred.ts:181-184`). -/
@@ -400,6 +416,10 @@ inductive ActionName
   | setInterruptible (body : ProgName) (flag : Bool)
   /-- The interp refuses this thunk (S3 §5.2). -/
   | refuse (cause : CauseV)
+  /-- A fiber-observer park's cleanup (R2-3). -/
+  | dropObservers (token : Nat)
+  /-- The race park's cleanup (R2-13). -/
+  | cancelRace (race : Nat)
 deriving DecidableEq
 
 /-- Every thunk name: the one park the frame alphabet does not spell (`join`/`await`; yield
@@ -1035,6 +1055,8 @@ def raceEntrants : RaceName → List ProgName
     [ProgName.failCause (Cause.fail (Err.tag 1)), ProgName.value (Val.nat 9)]
   | RaceName.failThenFail =>
     [ProgName.failCause (Cause.fail (Err.tag 1)), ProgName.failCause (Cause.fail (Err.tag 2))]
+  | RaceName.parkOnly => [ProgName.park 1]
+  | RaceName.parkThenSuccess => [ProgName.park 1, ProgName.value (Val.nat 2)]
 
 /-- The program a scope finalizer *name* runs (`internal/effect.ts:4021`: an `OnExit`
 finalizer is a program, run as one). -/
@@ -1105,13 +1127,31 @@ def progOf : ProgName → Program
   | ProgName.awaitAllNew body =>
     Prim.onSuccess (Prim.withFiber (Thunk.act ActionName.snapshotChildren))
       (Name.snapshotThen body)
+  | ProgName.interruptFibers targets =>
+    Prim.withFiber (Thunk.act (ActionName.interruptAll targets none))
+  | ProgName.joinFiber target mode => Prim.suspend (Thunk.park (ParkKind.join target mode))
+
+/-- What a settled race resumes its host with (`internal/effect.ts:1510-1514`, R2-12):
+`flatMap(uninterruptible(fiberInterruptAll(live)), () => exit)`, or `exit` when no entrant is
+live. `Name.restore exit` is the `() => exit` (its contA discards the value). -/
+def raceSettleProgram (live : List FiberId) (exit : ExitV) : Program :=
+  if live.isEmpty then Prim.ofExit exit
+  else
+    Prim.onSuccess
+      (Prim.withFiber (Thunk.act (ActionName.setInterruptible (ProgName.interruptFibers live) false)))
+      (Name.restore exit)
 
 /-- The cancel effect a cancel *name* runs. `cancelName` attached the parked fiber's identity
 and its resume token, so `_await`'s cleanup can splice exactly that resume out
-(`Deferred.ts:178-185`, M3). -/
+(`Deferred.ts:178-185`, M3); a fiber-observer park's cleanup drops the observers of that token
+(R2-3); a race park's cleanup interrupts the race's live entrants (R2-13). -/
 def cancelProgram : Name → Program
   | Name.withWaiter (Name.cancelAwait cell) waiter token =>
     Prim.sync (Thunk.op (SyncOp.deferredAwaitCleanup cell waiter token))
+  | Name.withWaiter Name.cancelPark _ token =>
+    Prim.withFiber (Thunk.act (ActionName.dropObservers token))
+  | Name.withWaiter (Name.cancelRace race) _ _ =>
+    Prim.withFiber (Thunk.act (ActionName.cancelRace race))
   | _ => Prim.success Val.unit
 
 /-- The sequential close chain (`internal/effect.ts:3813-3818`): the finalizers in
@@ -1260,6 +1300,8 @@ def actionOf : ActionName → WithFiberAction Name Thunk Val Err Defect FiberId 
   | ActionName.setInterruptible body flag =>
     WithFiberAction.setInterruptible (progOf body) flag
   | ActionName.refuse cause => WithFiberAction.refuse cause
+  | ActionName.dropObservers token => WithFiberAction.dropObservers token
+  | ActionName.cancelRace race => WithFiberAction.cancelRace race
 
 /-! ## The interp -/
 
@@ -1335,6 +1377,9 @@ def stores : RunInterp Name Thunk Val Err Defect FiberId Ann Ctx Stores where
     (due, { state with deferreds := deferreds })
   cancelName := fun base fiber token => Name.withWaiter base fiber token
   abortName := Name.abortController
+  parkCancelName := Name.cancelPark
+  raceCancelName := Name.cancelRace
+  raceSettle := raceSettleProgram
   finalizerProgram := fun
     | Name.finalizerName fin, exit => some (finProgram fin exit)
     | _, _ => none
