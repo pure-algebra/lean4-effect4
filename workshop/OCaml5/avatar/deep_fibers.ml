@@ -307,59 +307,17 @@ type race = {
   mutable cleanup_needed : bool;
 }
 
-(* The store `St`. Round two carried the two arrays the fiber fixture's bodies append to;
-   round three adds the three stores of spike S2 (`2026-09-03-spike-s2-stores-witnesses.md`):
-   the Ref heap, the Deferred store (`completion : Option Prim`, waiter tokens) and the
-   ScopeStore, plus the queue `RunInterp.dueResumes` (`Fibers.lean:414`) reads. *)
-type ref_cell = { mutable cell : int }
-
-type deferred_cell = {
-  mutable completion : exitv option;
-  mutable waiters : (int * int) list;  (* fiber, token, in registration order *)
-}
-
-type scope_cell = {
-  mutable scope_open : bool;
-  mutable finalizers : int list;  (* most recently added first: rc.112 closes LIFO *)
-  mutable ran : int list;
-}
-
-(* The Layer memo world (`docs/ENVIRONMENT-DAG.md` M4b, `harness/trace/layer-tail.ts`): four
-   declared layers, 0/1/2 memoised through one memo map and 3 = `Layer.fresh(layer 1)`,
-   which constructs on every build and counts against base 1. The memo map's entries live
-   in the root scope, so closing it drops them. *)
-type layer_state = {
-  counts : (int, int) Hashtbl.t;          (* base -> how many times its construction ran *)
-  memo : (int, int) Hashtbl.t;            (* layer id -> the service it replays *)
-  mutable root_open : bool;
-  mutable registered : int list;          (* services whose finalizer is on the root, LIFO *)
-  mutable release_log : int list;         (* every service released so far, oldest first *)
-  service_scope : (int, int) Hashtbl.t;   (* service -> the layer scope of its construction *)
-  mutable next_service : int;
-  mutable next_layer_scope : int;
-}
-
+(* The store the *fixture* owns: the two arrays the fiber family's bodies append to. The
+   three stores of `Deep.Stores` -- the Ref heap, the Deferred store and the ScopeStore --
+   used to be improvised here as three hashtables of ints; they are the real `Stores.lean`
+   carriers now and they live in `deep_stores.ml`, reached through `interp` above, because
+   `Deep.Stores` is the module that declares them. *)
 type st = {
   mutable started : int list;
   mutable cleanups : int list;
-  refs : (int, ref_cell) Hashtbl.t;
-  mutable next_ref : int;
-  deferreds : (int, deferred_cell) Hashtbl.t;
-  mutable next_deferred : int;
-  scopes : (int, scope_cell) Hashtbl.t;
-  mutable next_scope : int;
-  mutable due : (int * int * answer) list;
-  layers : layer_state;
 }
 
-let state : st =
-  { started = []; cleanups = []; refs = Hashtbl.create 8; next_ref = 0;
-    deferreds = Hashtbl.create 8; next_deferred = 0; scopes = Hashtbl.create 8; next_scope = 0;
-    due = [];
-    layers =
-      { counts = Hashtbl.create 8; memo = Hashtbl.create 8; root_open = true; registered = [];
-        release_log = []; service_scope = Hashtbl.create 8; next_service = 0;
-        next_layer_scope = 0 } }
+let state : st = { started = []; cleanups = [] }
 
 (* The wire's handle space: `registerHandle`/`handleIndex` in `harness/trace/tracer.ts`.
    An object never reaches the wire; it is encoded as its index in first-seen order, over
@@ -444,14 +402,33 @@ type run_decision =
   | DinterruptFrom of int option * string list * int
   | DinstallMiddleware
 
+(* ------------------------------------------------------------ what is not ported
+
+   The seat rule: anything this avatar does not implement refuses at run time with the Lean
+   declaration's name in the message, rather than differing silently. *)
+exception Not_ported of string
+
+let refuse (lean_name : string) : 'a =
+  raise (Not_ported ("not ported: " ^ lean_name))
+
 (* ------------------------------------------------------------- the service alphabet
 
    The `Fibers` family's eight operations (`harness/trace/fiber-fixture.ts`), plus the two
    machine-level parks the bodies need. Each is a `Prim` the Lean `iteration` intercepts:
    `Op_yield_now` is `Prim.yieldNowWith`, `Op_never` is a `Prim.async` registering no resume,
    and the six fiber operations are `Prim.withFiber` thunks whose `RunInterp.withFiberOf` is
-   the named `WithFiberAction`. *)
+   the named `WithFiberAction`.
+
+   The store half is not here. `RunMachine` is parametric in `St` and in the `RunInterp` over
+   it (`Fibers.lean:349`, `:386`), and `Deep.Stores` supplies both (`Stores.lean:1002`,
+   `:1293`); OCaml has no forward reference, so the machine declares `σ` as an *extensible*
+   variant, which is what a type parameter it never inspects amounts to, and `deep_stores.ml`
+   extends it. Every `Prim.sync (Thunk.op …)`, every `Prim.async` the store answers and every
+   `Prim.withFiber (Thunk.act …)` the store owns arrives as one `Op_store`. *)
+type store_request = ..
+
 type _ Effect.t +=
+  | Op_store : store_request -> value Effect.t
   | Op_fork : int * bool -> value Effect.t     (* WithFiberAction.fork *)
   | Op_join : int -> value Effect.t            (* ParkKind.join _ MJoin *)
   | Op_await_value : int -> value Effect.t     (* ParkKind.join _ MAwait *)
@@ -468,33 +445,8 @@ type _ Effect.t +=
   | Op_await_new_children : value -> value Effect.t    (* WithFiberAction.awaitNewChildren *)
   | Op_set_interruptible : bool -> value Effect.t      (* WithFiberAction.setInterruptible *)
   | Op_refuse : string -> value Effect.t               (* WithFiberAction.refuse, S3 §5.2 *)
-  (* The `Refs` and `ERefs` families: `Prim.sync` through `RunInterp.syncState`. *)
-  | Op_ref_make : int -> value Effect.t
-  | Op_ref_get : int -> value Effect.t
-  | Op_ref_set : int * int -> value Effect.t
-  | Op_ref_update : int * int -> value Effect.t
-  | Op_ref_modify : int * int -> value Effect.t
-  | Op_ref_get_and_set : int * int -> value Effect.t
-  | Op_ref_try_take : int * int -> value Effect.t
-  (* The `Deferreds` family: `syncState` for the five synchronous rows, `registerAsync` and
-     `dueResumes` for the two awaits. *)
-  | Op_def_make : unit -> value Effect.t
-  | Op_def_succeed : int * int -> value Effect.t
-  | Op_def_fail : int * int -> value Effect.t
-  | Op_def_is_done : int -> value Effect.t
-  | Op_def_poll : int -> value Effect.t
-  | Op_def_await_value : int -> value Effect.t
-  | Op_def_await_error : int -> value Effect.t
-  (* The `Scopes` family: `syncState` over the ScopeStore. *)
-  | Op_scope_make : unit -> value Effect.t
-  | Op_scope_add : int * int -> value Effect.t
-  | Op_scope_remove : int * int -> value Effect.t
-  | Op_scope_close : int -> value Effect.t
-  (* The `Layers` family: `syncState` over the memo world. *)
-  | Op_layer_build : int -> value Effect.t
-  | Op_layer_provide_count : int -> value Effect.t
-  | Op_layer_scope_of : int -> value Effect.t
-  | Op_layer_close : unit -> value Effect.t
+  (* The `Refs`, `ERefs`, `Deferreds` and `Scopes` families are `Op_store` requests that
+     `deep_stores.ml` declares and answers, over the `Deep.Stores` carriers. *)
   (* `WithFiberAction.raceAll` (`Fibers.lean:866-880`). Round five. *)
   | Op_race_all : int list -> value Effect.t
 
@@ -503,6 +455,50 @@ exception Efail_exn of int
 
 (* What a `discontinue` at a park delivers: `Prim.failure accumulated`. *)
 exception Einterrupt_exn of cause
+
+(* ------------------------------------------------------------------------ `RunInterp`
+
+   `RunInterp` (`Fibers.lean:386`), the machine's second parameter. A0 §3 DIVERGENCE 5 said
+   it is "not a record: its 25 meanings are handler-arm code"; it is a record now, for the
+   slots the machine itself calls. The rest of the arms are still code, because the avatar's
+   `ν`/`σ` are OCaml control rather than names (DIVERGENCE 1) -- what a `contA` name means is
+   the continuation `continue k` resumes.
+
+   `St` is `unit` here: the store is a module-level record in `deep_stores.ml` and Lean's
+   `RunMachine.update`/`modify` are the identity over `mutable` fields (DIVERGENCE 3), so
+   every slot below takes the arguments Lean's takes minus the store and answers the answer
+   minus the store. `Option St` becomes `bool`/`option`, `Prim` becomes a thunk. *)
+type run_interp = {
+  (* `RunInterp.syncState` (`Fibers.lean:400`), `registerAsync` (`:406`) and the
+     `withFiberOf` (`:398`) arms the store owns, at one entry point: `σ` is `store_request`,
+     which the machine cannot inspect. The arm answers through `ko` because a store
+     operation may park (`Deferred.await`). *)
+  mutable store_arm : run_machine -> run_fiber -> store_request -> kops -> unit;
+  (* `RunInterp.dueResumes` (`Fibers.lean:414`). *)
+  mutable due_resumes : unit -> (int * int * answer) list;
+  (* `RunInterp.scopeStatus` (`Fibers.lean:427`): `None` unknown, `Some None` open,
+     `Some (Some exit)` closed. *)
+  mutable scope_status : int -> exitv option option;
+  (* `RunInterp.scopeLinkFiber` (`Fibers.lean:431`): mode, scope, key, fiber. `false` is
+     Lean's `none`, i.e. the scope is unknown. *)
+  mutable scope_link_fiber : int -> int -> int -> int -> bool;
+  (* `RunInterp.dropFinalizer` (`Fibers.lean:434`): scope, key. *)
+  mutable drop_finalizer : int -> int -> bool;
+  (* `RunInterp.closeScope` (`Fibers.lean:440`): scope, exit, the closer's `interruptible`,
+     the closer's id. `None` is Lean's `none` (an unknown scope, M7). *)
+  mutable close_scope : int -> exitv -> bool -> int -> (unit -> value) option;
+}
+
+(* The refusing default. Every slot names the `RunInterp` field it stands for, so a program
+   that reaches an uninstalled store fails with that name rather than differing. *)
+let interp : run_interp ref =
+  ref
+    { store_arm = (fun _ _ _ _ -> refuse "Effect4.Deep.RunInterp.syncState");
+      due_resumes = (fun () -> []);
+      scope_status = (fun _ -> None);
+      scope_link_fiber = (fun _ _ _ _ -> false);
+      drop_finalizer = (fun _ _ -> false);
+      close_scope = (fun _ _ _ _ -> None) }
 
 (* The body of a child, resolved through the fixture's table -- a fork names a declared
    root, never a closure (`fork-lowering.md` §(b)). Set by the fixture module. *)
@@ -672,8 +668,11 @@ let rec fire_observer m (id : int) (exit_ : exitv) (acc : cmd list) (o : observe
      | Some p -> p.children <- List.filter (fun c -> c <> id) p.children
      | None -> ());
     acc
-  | DropScopeFinalizer (scope, _key) ->
-    halt m (UnknownScope scope);
+  | DropScopeFinalizer (scope, key) ->
+    (* `forkIn`'s key-dropping observer (`internal/effect.ts:5370-5372`) through
+       `RunInterp.dropFinalizer` (`:434`); `none` is `Stuck.unknownScope` (M7). Round six:
+       this arm used to halt unconditionally, which is why Deep W6 had no avatar member. *)
+    if not (!interp.drop_finalizer scope key) then halt m (UnknownScope scope);
     acc
   | Countdown (waiter, token) -> (
     match fiber_opt m waiter with
@@ -856,9 +855,9 @@ and exec m fuel (c : cmd) : unit =
       end)
   | CdrainDue ->
     (* `RunInterp.dueResumes` (`:414`): the resumes the store owes now, in registration
-       order, resumed synchronously inside the completing `sync` (M1). *)
-    let due = m.state.due in
-    m.state.due <- [];
+       order, resumed synchronously inside the completing `sync` (M1). The store is
+       `deep_stores.ml`'s; the slot is Lean's field. *)
+    let due = !interp.due_resumes () in
     List.iter (fun (target, token, answer) -> exec m fuel (Cresume (target, token, answer))) due
 
 (* What `Cmd.evaluate` finds in `current`. *)
@@ -939,120 +938,13 @@ and run_under_handler m fuel (f : run_fiber) (body : unit -> value) : unit =
             Some (fun k -> dispatch k (fun ko -> arm_set_interruptible m f flag ko))
           | Op_refuse name ->
             Some (fun k -> dispatch k (fun ko -> arm_refuse m f name ko))
-          | Op_ref_make n ->
-            Some (fun k -> dispatch k (fun ko -> arm_ref_make m f n ko))
-          | Op_ref_get h ->
-            Some (fun k -> dispatch k (fun ko -> arm_state m f "get" (Vhandle h)
-                  (fun st -> Vnat (ref_cell st h).cell) ko))
-          | Op_ref_set (h, v) ->
-            Some (fun k -> dispatch k (fun ko -> arm_state m f "set" (Vpair (Vhandle h, Vnat v))
-                  (fun st -> (ref_cell st h).cell <- v; Vunit) ko))
-          | Op_ref_update (h, a) ->
-            Some (fun k -> dispatch k (fun ko -> arm_state m f "update" (Vpair (Vhandle h, Vnat a))
-                  (fun st -> let c = ref_cell st h in c.cell <- c.cell + a; Vunit) ko))
-          | Op_ref_modify (h, a) ->
-            Some (fun k -> dispatch k (fun ko -> arm_state m f "modify" (Vpair (Vhandle h, Vnat a))
-                  (fun st -> let c = ref_cell st h in let before = c.cell in
-                             c.cell <- before + a; Vnat before) ko))
-          | Op_ref_get_and_set (h, v) ->
-            Some (fun k -> dispatch k (fun ko -> arm_state m f "getAndSet" (Vpair (Vhandle h, Vnat v))
-                  (fun st -> let c = ref_cell st h in let before = c.cell in
-                             c.cell <- v; Vnat before) ko))
-          | Op_ref_try_take (h, a) ->
-            Some (fun k -> dispatch k (fun ko -> arm_state m f "tryTake" (Vpair (Vhandle h, Vnat a))
-                  (fun st ->
-                    let c = ref_cell st h in
-                    if c.cell >= a then begin c.cell <- c.cell - a; Vpair (Vbool true, Vnat c.cell) end
-                    else Vpair (Vbool false, Vstring "underflow")) ko))
-          | Op_def_make () ->
-            Some (fun k -> dispatch k (fun ko -> arm_def_make m f ko))
-          | Op_def_succeed (h, v) ->
-            Some (fun k -> dispatch k (fun ko -> arm_def_complete m f "succeed" h (Esuccess (Vnat v)) (Vnat v) ko))
-          | Op_def_fail (h, e) ->
-            Some (fun k -> dispatch k (fun ko -> arm_def_complete m f "fail" h (Efailure (cause_fail e)) (Vnat e) ko))
-          | Op_def_is_done h ->
-            Some (fun k -> dispatch k (fun ko -> arm_state m f "isDone" (Vhandle h)
-                  (fun st -> Vbool ((deferred_cell st h).completion <> None)) ko))
-          | Op_def_poll h ->
-            Some (fun k -> dispatch k (fun ko -> arm_state m f "poll" (Vhandle h)
-                  (fun st ->
-                    match (deferred_cell st h).completion with
-                    | None -> Vnone
-                    | Some (Esuccess v) -> Vsome (Vpair (Vbool true, v))
-                    | Some (Efailure c) ->
-                      Vsome (Vpair (Vbool false,
-                                    match cause_fail_of c with Some e -> Vnat e | None -> Vunit))) ko))
-          | Op_def_await_value h ->
-            Some (fun k -> dispatch k (fun ko -> arm_def_await m f h `Value ko))
-          | Op_def_await_error h ->
-            Some (fun k -> dispatch k (fun ko -> arm_def_await m f h `Error ko))
-          | Op_scope_make () ->
-            Some (fun k -> dispatch k (fun ko -> arm_scope_make m f ko))
-          | Op_scope_add (h, key) ->
-            Some (fun k -> dispatch k (fun ko -> arm_state m f "addFinalizer" (Vpair (Vhandle h, Vnat key))
-                  (fun st ->
-                    let sc = scope_cell st h in
-                    if sc.scope_open then begin sc.finalizers <- key :: sc.finalizers; Vbool true end
-                    else begin sc.ran <- sc.ran @ [ key ]; Vbool false end) ko))
-          | Op_scope_remove (h, key) ->
-            Some (fun k -> dispatch k (fun ko -> arm_state m f "remove" (Vpair (Vhandle h, Vnat key))
-                  (fun st ->
-                    let sc = scope_cell st h in
-                    if sc.scope_open then
-                      sc.finalizers <- List.filter (fun x -> x <> key) sc.finalizers;
-                    Vunit) ko))
-          | Op_scope_close h ->
-            Some (fun k -> dispatch k (fun ko -> arm_state m f "close" (Vhandle h)
-                  (fun st ->
-                    let sc = scope_cell st h in
-                    if not sc.scope_open then Vlist []
-                    else begin
-                      let ran = sc.finalizers in
-                      sc.finalizers <- [];
-                      sc.scope_open <- false;
-                      sc.ran <- sc.ran @ ran;
-                      Vlist (List.map (fun key -> Vnat key) ran)
-                    end) ko))
+          | Op_store req ->
+            (* Every `Deep.Stores` operation: `syncState`, `registerAsync` and the
+               `withFiberOf` arms the store owns (`Stores.lean:1337-1352`). The machine
+               cannot inspect `σ`, so the whole arm is the interp's. *)
+            Some (fun k -> dispatch k (fun ko -> !interp.store_arm m f req ko))
           | Op_race_all codes ->
             Some (fun k -> dispatch k (fun ko -> arm_race_all m f codes ko))
-          | Op_layer_build layer ->
-            Some (fun k -> dispatch k (fun ko -> arm_layer_build m f layer ko))
-          | Op_layer_provide_count base ->
-            Some (fun k ->
-                dispatch k (fun ko ->
-                    arm_state m f "provideCount" (Vnat base)
-                      (fun st ->
-                        Vnat (match Hashtbl.find_opt st.layers.counts base with
-                              | Some n -> n
-                              | None -> 0))
-                      ko))
-          | Op_layer_scope_of h ->
-            Some (fun k ->
-                dispatch k (fun ko ->
-                    arm_state m f "scopeOf" (Vhandle h)
-                      (fun st ->
-                        let service = handle_target "service" h in
-                        match Hashtbl.find_opt st.layers.service_scope service with
-                        | Some sc -> Vhandle (handle_index "layerScope" sc)
-                        | None -> failwith "no layer scope for that service")
-                      ko))
-          | Op_layer_close () ->
-            Some (fun k ->
-                dispatch k (fun ko ->
-                    arm_state m f "close" Vunit
-                      (fun st ->
-                        let ls = st.layers in
-                        if not ls.root_open then Vlist []
-                        else begin
-                          let released = ls.registered in
-                          ls.registered <- [];
-                          ls.root_open <- false;
-                          (* The memo map's entries live in the root scope. *)
-                          Hashtbl.reset ls.memo;
-                          ls.release_log <- ls.release_log @ released;
-                          Vlist (List.map (fun sv -> Vhandle (handle_index "service" sv)) released)
-                        end)
-                      ko))
           | _ -> None);
     }
 
@@ -1283,11 +1175,13 @@ and arm_sync m f name (read : st -> int list) (ko : kops) : unit =
   end
 
 (* The general `Prim.sync` arm: `RunInterp.syncState` answers a value and the resumes the
-   store owes are drained on the spot (`iteration`'s `some (state, value)` arm, M1). *)
-and arm_state m f name (request : value) (compute : st -> value) (ko : kops) : unit =
+   store owes are drained on the spot (`iteration`'s `some (state, value)` arm, M1). The
+   store is `deep_stores.ml`'s, so `compute` closes over it rather than taking it: `St` is
+   not a field of the machine here (DIVERGENCE 3). *)
+and arm_state m f name (request : value) (compute : unit -> value) (ko : kops) : unit =
   begin
     push_row (Rop (name, request));
-    let v = compute m.state in
+    let v = compute () in
     drive m m.drive_fuel [ CdrainDue ];
     answer_row m f name v ko
   end
@@ -1442,148 +1336,12 @@ and arm_refuse m f (name : string) (ko : kops) : unit =
     ko.thr (Einterrupt_exn (cause_die ("unimplemented WithFiberAction: " ^ name)))
   end
 
-(* ------------------------------------------------------ the store arms (S2) *)
+(* ---------------------------------------- the store arms: `deep_stores.ml`, `deep_layer.ml`
 
-(* `Layer.buildWithMemoMap(layer, memoMap, root)` answering `Context.get(context, Tag)`:
-   the service object, which the memo entry replays unchanged on a hit
-   (`harness/trace/layer-tail.ts:114-121`). Layer 3 is `Layer.fresh(layer 1)`, so it misses
-   the memo every time and counts against base 1. *)
-and arm_layer_build m f (layer : int) (ko : kops) : unit =
-  begin
-    push_row (Rop ("build", Vnat layer));
-    let ls = m.state.layers in
-    let base = if layer = 3 then 1 else layer in
-    let fresh = layer = 3 in
-    let service =
-      match (if fresh then None else Hashtbl.find_opt ls.memo layer) with
-      | Some service -> service                                        (* the memo hit *)
-      | None ->
-        Hashtbl.replace ls.counts base
-          (1 + match Hashtbl.find_opt ls.counts base with Some n -> n | None -> 0);
-        let service = ls.next_service in
-        ls.next_service <- service + 1;
-        let layer_scope = ls.next_layer_scope in
-        ls.next_layer_scope <- layer_scope + 1;
-        Hashtbl.replace ls.service_scope service layer_scope;
-        (* The construction registers its release finalizer on its own layer scope, which
-           `memoMapBuild` forked from the root. A scope forked from a closed root is already
-           closed, so the finalizer runs on the spot and the next `close` sees nothing. *)
-        if ls.root_open then ls.registered <- service :: ls.registered
-        else ls.release_log <- ls.release_log @ [ service ];
-        if not fresh then Hashtbl.replace ls.memo layer service;
-        service
-    in
-    answer_row m f "build" (Vhandle (handle_index "service" service)) ko
-  end
-
-and arm_ref_make m f (initial : int) (ko : kops) : unit =
-  begin
-    push_row (Rop ("make", Vnat initial));
-    let id = m.state.next_ref in
-    m.state.next_ref <- id + 1;
-    Hashtbl.replace m.state.refs id { cell = initial };
-    answer_row m f "make" (Vhandle (handle_index "ref" id)) ko
-  end
-
-and arm_def_make m f (ko : kops) : unit =
-  begin
-    push_row (Rop ("make", Vunit));
-    let id = m.state.next_deferred in
-    m.state.next_deferred <- id + 1;
-    Hashtbl.replace m.state.deferreds id { completion = None; waiters = [] };
-    answer_row m f "make" (Vhandle (handle_index "deferred" id)) ko
-  end
-
-and arm_scope_make m f (ko : kops) : unit =
-  begin
-    push_row (Rop ("make", Vunit));
-    let id = m.state.next_scope in
-    m.state.next_scope <- id + 1;
-    Hashtbl.replace m.state.scopes id { scope_open = true; finalizers = []; ran = [] };
-    answer_row m f "make" (Vhandle (handle_index "scope" id)) ko
-  end
-
-(* A Deferred completion: the first one wins, and the waiters it owes are queued for
-   `dueResumes` in registration order (`Deferred.ts:1655-1659`, M1). *)
-and arm_def_complete m f name h (exit_ : exitv) (_payload : value) (ko : kops) : unit =
-  begin
-    push_row (Rop (name, Vpair (Vhandle h,
-                                match exit_ with
-                                | Esuccess v -> v
-                                | Efailure c -> (match cause_fail_of c with
-                                                 | Some e -> Vnat e
-                                                 | None -> Vunit))));
-    let cell = deferred_cell m.state h in
-    let fresh = cell.completion = None in
-    if fresh then begin
-      cell.completion <- Some exit_;
-      m.state.due <-
-        m.state.due @ List.map (fun (fid, token) -> (fid, token, Aval Vunit)) cell.waiters;
-      cell.waiters <- []
-    end;
-    (* Lean's `iteration` delivers the `sync`'s value into the frame and runs `Cmd.drainDue`
-       as a nested command *before* the completing fiber continues, so the waiter it woke
-       runs first. The service `answer` row is what the host face emits when the effect
-       completes, i.e. after that nested work -- hence the drain before the row. *)
-    drive m m.drive_fuel [ CdrainDue ];
-    answer_row m f name (Vbool fresh) ko
-  end
-
-(* `Deferred.await` and its flip: answered at once when the cell is settled, otherwise a
-   `Prim.async` whose `registerAsync` adds the waiter and parks (`:1109-1143`). *)
-and arm_def_await m f h which (ko : kops) : unit =
-  begin
-    let name = match which with `Value -> "awaitValue" | `Error -> "awaitError" in
-    push_row (Rop (name, Vhandle h));
-    let answer_now () =
-      let cell = deferred_cell m.state h in
-      match (which, cell.completion) with
-      | `Value, Some (Esuccess v) -> answer_row m f name v ko
-      | `Value, Some (Efailure c) -> fail_op name ko c
-      | `Error, Some (Efailure c) ->
-        answer_row m f name (match cause_fail_of c with Some e -> Vnat e | None -> Vunit) ko
-      | `Error, Some (Esuccess v) -> fail_op name ko (cause_fail (match v with Vnat n -> n | _ -> 0))
-      | _, None -> ()
-    in
-    let cell = deferred_cell m.state h in
-    if cell.completion <> None then answer_now ()
-    else begin
-      let token = fresh_token m in
-      cell.waiters <- cell.waiters @ [ (f.id, token) ];
-      run_fiber_park f
-        { token; waiting_on = None; remaining = 0; collected = []; resume_with = Rvoid };
-      emit m [ ParkedOn (f.id, token) ];
-      f.frame.control <-
-        Suspended
-          { ktoken = token;
-            kresume =
-              (fun a ->
-                match a with
-                | Aval _ -> answer_now ()
-                | Acause c -> ko.thr (Einterrupt_exn c)) };
-      f.running <- false
-    end
-  end
-
-(* The three store lookups. A handle naming no cell is a stuck machine, not a silent
-   default: `Stuck` is what a state rc.112 cannot reach becomes here (DB-04). *)
-and ref_cell (st : st) h =
-  let (_, id) = try Hashtbl.find handle_owner h with Not_found -> ("ref", -1) in
-  match Hashtbl.find_opt st.refs id with
-  | Some c -> c
-  | None -> failwith (Printf.sprintf "unknown ref handle %d" h)
-
-and deferred_cell (st : st) h =
-  let (_, id) = try Hashtbl.find handle_owner h with Not_found -> ("deferred", -1) in
-  match Hashtbl.find_opt st.deferreds id with
-  | Some c -> c
-  | None -> failwith (Printf.sprintf "unknown deferred handle %d" h)
-
-and scope_cell (st : st) h =
-  let (_, id) = try Hashtbl.find handle_owner h with Not_found -> ("scope", -1) in
-  match Hashtbl.find_opt st.scopes id with
-  | Some c -> c
-  | None -> failwith (Printf.sprintf "unknown scope handle %d" h)
+   `arm_ref_make`, `arm_def_make`, `arm_scope_make`, `arm_def_complete`, `arm_def_await` and
+   the three `*_cell` lookups were here, improvising the three stores as hashtables of ints.
+   They are `deep_stores.ml`'s now, on the `Stores.lean` carriers, installed into `interp`
+   above. `arm_layer_build` follows into `deep_layer.ml`. *)
 
 (* ------------------------------------------------------------------- runtime entries *)
 

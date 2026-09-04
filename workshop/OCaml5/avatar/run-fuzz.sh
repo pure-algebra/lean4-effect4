@@ -17,7 +17,8 @@ rm -rf "$out/fuzzbuild" "$out/fuzzts" "$out/fuzz_rc" "$here/out/fuzz"
 mkdir -p "$out/fuzzbuild" "$out/fuzzts" "$out/fuzz_rc" "$here/out/fuzz"
 cp "$here"/*.ml "$out/fuzzbuild/"; cp "$out/build/corpus_data.ml" "$out/fuzzbuild/"
 cp "$fuzz/corpus_fixture.ml" "$out/fuzzbuild/"
-( cd "$out/fuzzbuild" && "$oc/ocamlc" -o avatar-fuzz.byte deep_fibers.ml avatar_trace.ml \
+( cd "$out/fuzzbuild" && "$oc/ocamlc" -o avatar-fuzz.byte deep_fibers.ml deep_stores.ml \
+    deep_layer.ml avatar_trace.ml \
     fibers_fixture.ml store_fixtures.ml extra_fixture.ml corpus_dsl.ml corpus_data.ml \
     corpus_run.ml corpus_fixture.ml fuzz_register.ml avatar_main.ml ) || exit 1
 cp "$fuzz/corpus-fixture.ts" "$here/fuzz_rc112_tail.ts" "$out/fuzzts/"

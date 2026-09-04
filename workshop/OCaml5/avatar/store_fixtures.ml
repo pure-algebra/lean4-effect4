@@ -6,19 +6,21 @@
    handlers are the avatar's `RunInterp.syncState` arms over the three S2 stores. *)
 
 open Deep_fibers
+open Deep_stores
+open Deep_layer
 
 let handle = function Vhandle h -> h | _ -> failwith "not a handle"
 let nat = function Vnat n -> n | _ -> failwith "not a nat"
 
 (* ---------------------------------------------------------------- Refs / ERefs *)
 
-let ref_make n = Effect.perform (Op_ref_make n)
-let ref_get r = Effect.perform (Op_ref_get (handle r))
-let ref_set r v = ignore (Effect.perform (Op_ref_set (handle r, v)))
-let ref_update r a = ignore (Effect.perform (Op_ref_update (handle r, a)))
-let ref_modify r a = Effect.perform (Op_ref_modify (handle r, a))
-let ref_get_and_set r v = Effect.perform (Op_ref_get_and_set (handle r, v))
-let ref_try_take r a = Effect.perform (Op_ref_try_take (handle r, a))
+let ref_make n = Effect.perform (Op_store (Rref_make n))
+let ref_get r = Effect.perform (Op_store (Rref_get (handle r)))
+let ref_set r v = ignore (Effect.perform (Op_store (Rref_set (handle r, v))))
+let ref_update r a = ignore (Effect.perform (Op_store (Rref_update (handle r, a))))
+let ref_modify r a = Effect.perform (Op_store (Rref_modify (handle r, a)))
+let ref_get_and_set r v = Effect.perform (Op_store (Rref_get_and_set (handle r, v)))
+let ref_try_take r a = Effect.perform (Op_store (Rref_try_take (handle r, a)))
 
 (* `Generate.lean` lowers each program at its own `n`; the ref family is lowered at 7 and
    each deferred program at the value its golden's first request row carries. *)
@@ -68,13 +70,13 @@ let ref_take_underflow () =
 
 (* ---------------------------------------------------------------- Deferreds *)
 
-let def_make () = Effect.perform (Op_def_make ())
-let def_succeed d v = Effect.perform (Op_def_succeed (handle d, v))
-let def_fail d e = Effect.perform (Op_def_fail (handle d, e))
-let def_is_done d = Effect.perform (Op_def_is_done (handle d))
-let def_poll d = Effect.perform (Op_def_poll (handle d))
-let def_await_value d = Effect.perform (Op_def_await_value (handle d))
-let def_await_error d = Effect.perform (Op_def_await_error (handle d))
+let def_make () = Effect.perform (Op_store Rdef_make)
+let def_succeed d v = Effect.perform (Op_store (Rdef_succeed (handle d, v)))
+let def_fail d e = Effect.perform (Op_store (Rdef_fail (handle d, e)))
+let def_is_done d = Effect.perform (Op_store (Rdef_is_done (handle d)))
+let def_poll d = Effect.perform (Op_store (Rdef_poll (handle d)))
+let def_await_value d = Effect.perform (Op_store (Rdef_await_value (handle d)))
+let def_await_error d = Effect.perform (Op_store (Rdef_await_error (handle d)))
 
 (* The pure atoms of `harness/trace/atoms.ts`. *)
 let flag_to_nat = function Vbool true -> Vnat 1 | _ -> Vnat 0
@@ -121,10 +123,10 @@ let deferred_pending_await n () =
 
 (* ---------------------------------------------------------------- Scopes *)
 
-let scope_make () = Effect.perform (Op_scope_make ())
-let scope_add s key = Effect.perform (Op_scope_add (handle s, key))
-let scope_remove s key = ignore (Effect.perform (Op_scope_remove (handle s, key)))
-let scope_close s = Effect.perform (Op_scope_close (handle s))
+let scope_make () = Effect.perform (Op_store Rscope_make)
+let scope_add s key = Effect.perform (Op_store (Rscope_add (handle s, key)))
+let scope_remove s key = ignore (Effect.perform (Op_store (Rscope_remove (handle s, key))))
+let scope_close s = Effect.perform (Op_store (Rscope_close (handle s)))
 
 let scope_lifo () =
   let s = scope_make () in
@@ -173,10 +175,10 @@ let scope_programs : (string * (unit -> value)) list =
 
 (* ---------------------------------------------------------------- Layers *)
 
-let layer_build k = Effect.perform (Op_layer_build k)
-let layer_provide_count base = Effect.perform (Op_layer_provide_count base)
-let layer_scope_of h = Effect.perform (Op_layer_scope_of (handle h))
-let layer_close () = Effect.perform (Op_layer_close ())
+let layer_build k = Effect.perform (Op_store (Rlayer_build k))
+let layer_provide_count base = Effect.perform (Op_store (Rlayer_provide_count base))
+let layer_scope_of h = Effect.perform (Op_store (Rlayer_scope_of (handle h)))
+let layer_close () = Effect.perform (Op_store Rlayer_close)
 
 let layer_build_once () =
   ignore (layer_build 0);

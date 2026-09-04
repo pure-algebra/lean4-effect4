@@ -6,6 +6,7 @@
    `body`, keyed by the numeric code the golden's `op fork <code>` row carries. *)
 
 open Deep_fibers
+open Deep_stores
 
 (* The child body table, the same numeric table the Lean face and `fiber-tail.ts` carry:
    0 succeeds with 11, 1 with 22, 2 fails with 1, 3 fails with 2, anything else is
@@ -35,7 +36,7 @@ let body (code : int) : unit -> value =
          `RunInterp.registerAsync` parks the awaiting parent and `dueResumes` resumes it
          synchronously inside the completing `sync` (M1). *)
       | 6 ->
-        ignore (Effect.perform (Op_def_succeed (0, 42)));
+        ignore (Effect.perform (Op_store (Rdef_succeed (0, 42))));
         Vnat 0
       | _ -> Effect.perform (Op_never ()))
 
