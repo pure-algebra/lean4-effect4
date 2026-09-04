@@ -1,0 +1,63 @@
+format	effect4-trace-golden-v1
+generator	workshop/OCaml5/avatar/build-avatar.sh	sha256=6f5060014a9f83f6c6bd8adc4876009eb594d18a852dcf120d7ecbae998298cf
+regenerate	./workshop/OCaml5/avatar/build-avatar.sh
+input	workshop/OCaml5/avatar/deep_fibers.ml	sha256=6f5060014a9f83f6c6bd8adc4876009eb594d18a852dcf120d7ecbae998298cf
+input	workshop/OCaml5/avatar/avatar_trace.ml	sha256=6f5060014a9f83f6c6bd8adc4876009eb594d18a852dcf120d7ecbae998298cf
+input	workshop/OCaml5/avatar/fibers_fixture.ml	sha256=6f5060014a9f83f6c6bd8adc4876009eb594d18a852dcf120d7ecbae998298cf
+pin	effects	a4ee7a14248ee5976039b73039319efa87834986
+format	effect4-trace-v1
+face	ocaml
+program	fiber.parentInterruptDuringChildWait
+tape	0:1,1:1
+rules	service-acquire,perform-call,perform-bind,perform-discard,ret
+op	fork	0
+decide	0	true
+answer	fork	0
+op	interrupt	0
+answer	interrupt	[]
+op	awaitValue	0
+answer	awaitValue	{"some":11}
+op	fork	4
+decide	1	true
+answer	fork	1
+op	interrupt	1
+answer	interrupt	[]
+op	awaitValue	1
+answer	awaitValue	{"none":true}
+done	{"success":{"none":true}}
+#	started	0
+#	forked	0	1	false
+#	scheduledTask	0	0	start(1)
+#	scheduledTask	0	0	resume(0,0)
+#	parkedOn	0	0
+#	ranTask	0	start(1)
+#	started	1
+#	exited	1	{"success":11}
+#	observerFired	1	untrackChild(0)
+#	ranTask	0	resume(0,0)
+#	resumedWith	0	0
+#	started	0
+#	interruptRecorded	0	1
+#	forked	0	2	false
+#	scheduledTask	0	0	start(2)
+#	scheduledTask	0	0	resume(0,2)
+#	parkedOn	0	2
+#	ranTask	0	start(2)
+#	started	2
+#	parkedOn	2	3
+#	ranTask	0	resume(0,2)
+#	resumedWith	0	2
+#	started	0
+#	interruptRecorded	0	2
+#	parkedOn	0	4
+#	started	2
+#	exited	2	{"interrupted":true}
+#	observerFired	2	untrackChild(0)
+#	observerFired	2	countdown(0,4)
+#	resumedWith	0	4
+#	started	0
+#	exited	0	{"success":{"none":true}}
+#	finished	true	stuck	-
+#	fiber	0	status	done	observers	0	children	[]
+#	fiber	1	status	done	observers	0	children	[]
+#	fiber	2	status	done	observers	0	children	[]

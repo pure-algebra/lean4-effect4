@@ -1,0 +1,27 @@
+format	effect4-trace-golden-v1
+generator	workshop/OCaml5/avatar/build-avatar.sh	sha256=6f5060014a9f83f6c6bd8adc4876009eb594d18a852dcf120d7ecbae998298cf
+regenerate	./workshop/OCaml5/avatar/build-avatar.sh
+input	workshop/OCaml5/avatar/deep_fibers.ml	sha256=6f5060014a9f83f6c6bd8adc4876009eb594d18a852dcf120d7ecbae998298cf
+input	workshop/OCaml5/avatar/avatar_trace.ml	sha256=6f5060014a9f83f6c6bd8adc4876009eb594d18a852dcf120d7ecbae998298cf
+input	workshop/OCaml5/avatar/fibers_fixture.ml	sha256=6f5060014a9f83f6c6bd8adc4876009eb594d18a852dcf120d7ecbae998298cf
+pin	effects	a4ee7a14248ee5976039b73039319efa87834986
+format	effect4-trace-v1
+face	ocaml
+program	fiber.parentInterruptDuringChildWait
+tape	0:1,1:1
+rules	service-acquire,perform-call,perform-bind,perform-discard,ret
+op	fork	0
+decide	0	true
+answer	fork	0
+op	interrupt	0
+answer	interrupt	[]
+op	awaitValue	0
+answer	awaitValue	{"some":11}
+op	fork	4
+decide	1	true
+answer	fork	1
+op	interrupt	1
+answer	interrupt	[]
+op	awaitValue	1
+answer	awaitValue	{"none":true}
+done	{"success":{"none":true}}

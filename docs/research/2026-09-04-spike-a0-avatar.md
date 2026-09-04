@@ -1,0 +1,378 @@
+# Spike A0: OCaml 5 as an avatar for the JavaScript fiber runtime
+
+Status: feasibility probe, 2026-09-04. Base commit `fa7bb5f` (`main`). Files owned and
+written: `workshop/OCaml5/avatar/*` (8 files, 1,656 lines) and this report. No Lean edit, no
+`harness/trace` or `scripts` edit, nothing committed. Build products under the session
+scratchpad `…/scratchpad/a0/`.
+
+Toolchain: OCaml 5.1.1 (`~/.opam/default/bin`), js_of_ocaml 5.7.1
+(`effect4_of_ocaml/_build/toolchains/ocaml5-jsoo-5.7.1`, `compile --enable effects
+--target-env=nodejs`), node v22.23.2, effect 4.0.0-rc.112 at the estate's pin.
+
+## 0. Headline
+
+**The avatar is a third face of the estate's own trace gate, and it agrees.**
+`workshop/Deep/Fibers.lean` was transcribed carrier by carrier into OCaml 5 effect handlers
+and run against the nine committed fiber goldens under all three masks of
+`generated/traces/masks.tsv`. Result: **27 of 27 mask comparisons ok** for the OCaml face,
+**27 of 27** for the rc.112 host face run through the estate's own runner in the same
+script, and **9 of 9 programs byte-identical** across `ocamlrun`, `ocamlopt` and
+js_of_ocaml effects mode. No divergence, so no divergence needs a reason. This is not parity
+with rc.112 — nine programs over one service family is a probe — but it is the first time an
+OCaml artefact has stood in the same comparison as rc.112 against a Lean golden.
+
+**The crux is answered, and it is a No.** A `perform` inside an OCaml callback invoked from
+JavaScript does **not** reach an OCaml handler installed outside the JS call — not in the
+plain case and not in the nested case where the OCaml stack beneath the JS frame is one
+`caml_resume_stack` reinstalled. Both raise `Stdlib.Effect.Unhandled`. P6 §B's reading of
+`jslib.js:70-113` is confirmed by execution. This bounds the avatar design: **JavaScript may
+call into the avatar, but only at a fiber boundary, never inside one.**
+
+## 1. Requests to P1 / P2 / P3 / P5
+
+In priority order per seat. Each is stated so it can be routed as written.
+
+### P5 — the Lean → OCaml renderer (highest leverage: the avatar should be generated)
+
+1. **Render a Lean `structure` as an OCaml record with `mutable` fields, same field order.**
+   Input `Deep.RunFiber` (`workshop/Deep/Fibers.lean:157`, 15 fields); output the record at
+   `workshop/OCaml5/avatar/deep_fibers.ml:188`. Field-name mangling must be a total,
+   injective, documented function (`exit` → `exit_`, camel → snake), because the simulation
+   relation is stated field by field.
+2. **Render a Lean `inductive` as an OCaml variant, same constructor order, arity for
+   arity.** Inputs: `Observer` (`:93`, 6), `RunEvent` (`:305`, 23), `RunDecision` (`:362`, 7),
+   `Cmd` (`:526`, 5), `WithFiberAction` (`:258`, 18). This is the bulk of the transcription
+   and the part a human should never retype.
+3. **Render a `let rec`/`where`-block of total Lean functions over those carriers as a
+   mutually recursive OCaml `let rec … and …` group**, with the pure-update→mutation
+   rewrite (`{ f with x := v }` on a linear occurrence → `f.x <- v`) as a named, checkable
+   pass. `fireObserver` (`:923`), `exitFiber` (`:992`) and `interruptRecord` (`:550`) are the
+   three to cover first; they are 120 Lean lines and 90 OCaml lines and were the fiddliest
+   part of this spike.
+4. **A differential fuzzer over the rendered module**: generate `RunDecision` tapes, run
+   `replayEval` in Lean and the rendered OCaml, compare `RunMachine.trace` projections. The
+   avatar already prints its `RunEvent` trace (`EFFECT4_EVENTS=1`, see
+   `workshop/OCaml5/avatar/out/*.events.tsv`), so the comparison surface exists.
+5. **Do not render `Prim`/`FrameFiber.step`.** That is DIVERGENCE 1: the renderer must emit
+   a *hole* for `frame.current`/`frame.stack` and let the avatar's hand-written handler fill
+   it, or the whole point is lost.
+
+### P3 — the native/jsoo bisimulation over `OCaml5.Term`
+
+1. **Cover `discontinue` at a park with handler-side state read between the park and the
+   discontinue.** The avatar's interrupt path is: park (`perform`), the *scheduler* mutates
+   `frame.interruptedCause` and `parked`, then `discontinue`. The bisimulation must let the
+   handler's state change between capture and resumption; a relation quantified only over
+   closed terms will not see it.
+2. **Cover a continuation resumed from inside another fiber's `retc`.** `exitFiber` fires
+   observers, and an observer's `Cmd.resume` runs `continue k` on a *different* stack from
+   inside the ending stack's return handler (`deep_fibers.ml:635`, `:534`). Witness 10 of O1
+   is the nearest existing case; this is its two-stack version.
+3. **Cover `Fun.protect ~finally` on the discontinued path** — the avatar's `onExit`
+   finalizer (`fibers_fixture.ml:19`). O1's `w03-cancelled` has it; the bisimulation should
+   name it, since every Effect `onExit`/`ensuring` lowering depends on it.
+4. **A witness for the token guard versus OCaml's own one-shot guard.** The avatar carries
+   *both*: `Parked.withGuard token` (`Fibers.lean:62`) and `Cont_tag` nulling. A resume that
+   the token drops must never reach `continue`, and a resume the token admits must never hit
+   `Continuation_already_resumed`. Statement: for every reachable machine state, at most one
+   of the two guards ever fires, and it is always the token.
+5. **State the jsoo side of the arity change.** Executed here: a two-argument OCaml closure
+   has JS `length = 3` under `--enable effects` and `length = 2` without it
+   (`out/jsprobe.out:1` vs `out/jsprobe-noeffects.out:1`). The bisimulation's value relation
+   must be indexed by the transform, not by the source.
+
+### P2 — the jsoo CPS theorem on `OCaml5.Code`/`Cps`
+
+1. **Prove the transform on the block shape a scheduler `match_with` produces**: a closure
+   allocated at a dominator whose body contains a `%perform` in tail position under a
+   `Pushtrap` — that is what `run_under_handler` (`deep_fibers.ml:642`) compiles to, and it
+   is the only shape the avatar needs.
+2. **Cover `caml_resume_stack` reinstalling a handler chain of depth 1.** The avatar
+   installs exactly one handler per fiber and never `reperform`s; the theorem restricted to
+   depth 1 is enough for the avatar and much cheaper than the general chain.
+3. **Cover the trampoline and the stack-depth check on back edges**, because the avatar's
+   `drive`/`flush_all` recursion is a back edge that `generate.ml` guards.
+4. **State the deviation the header records** (only the current continuation is passed; the
+   exception and effect handlers are two global stacks) as an explicit hypothesis, since the
+   avatar's `interruptRecord` mutates handler-side state *between* two entries into the same
+   global stack.
+
+### P1 — the run invariant and theorems on `OCaml5.Effect`
+
+1. **"A fiber parked by `perform` is resumed at most once."** Exact statement wanted: for a
+   machine `m` and a token `t`, if `Machine.step` ever reaches `doResume` on the continuation
+   captured at `t`, then no later state of the run reaches `doResume` on it. This is
+   `takeCont_twice` (`Effect.lean:947`) lifted from the heap block to the run.
+2. **"A stack that ends fires its `handle_value`/`handle_exn` exactly once, and the stack is
+   freed first."** `doReturnToParent_frees` (`:1078`) plus a run-level uniqueness. This is
+   the OCaml half of the Deep obligation "`exitFiber` fires each observer exactly once"
+   (O4 §3), and the avatar relies on it: `exit_fiber` clears `observers` *after* the fold
+   (`deep_fibers.ml:565`).
+3. **"A `perform` under a handler installed outside a `caml_callback` boundary is
+   `Unhandled`."** This spike executed it (C1, C2 below); P1 should state it on the machine,
+   because it is the load-bearing negative result for the whole avatar design.
+4. **A lemma that `discontinue` into a stack carrying a `trap` runs the trap before the
+   parent's `handle_exn`.** The avatar's cleanup ordering (`cleanups` before `exited`, seen
+   in `out/parentPublishesAfterChildCleanup.events.tsv`) is exactly this.
+
+## 2. What was transcribed, what was substituted, what refuses
+
+`workshop/Deep/Fibers.lean` → `workshop/OCaml5/avatar/deep_fibers.ml`, 960 lines.
+
+| Lean carrier | Line | OCaml | Line | State |
+| --- | --- | --- | --- | --- |
+| `ParkKind`, `Parked`, `Resume`, `Pending` | :56, :62, :68, :81 | same, field for field | :96–:111 | transcribed |
+| `Observer` (6 shapes) | :93 | `observer` | :114 | transcribed |
+| `Task`, `Bucket`, `Dispatcher` + `insert`/`enqueue`/`drain` | :104–:145 | same | :128–:157 | transcribed |
+| `FrameFiber` (5 fields) | `Runtime.lean:269` | `frame_fiber` | :177 | 3 fields transcribed, 2 substituted (DIVERGENCE 1) |
+| `RunFiber` (15 fields), `make`, `park`, `status` | :157, :225, :246, :180 | `run_fiber` | :188–:245 | transcribed |
+| `RunEvent` (23 arms) | :305 | `run_event` | :251 | transcribed |
+| `Stuck`, `Race`, `RunMachine` (9 fields) | :332, :339, :349 | same | :276–:305 | transcribed (`Race` as a record only) |
+| `Cmd`, `RunDecision` | :526, :362 | same | :326, :329 | `Cmd` minus `loop` (DIVERGENCE 2); `RunDecision` all 7 |
+| `interruptRecord` | :550 | `interrupt_record` | :387 | transcribed (3-way split, DIVERGENCE 8) |
+| `countdownPark` + `resumePrim` | :576 | `countdown_park` | :428 | transcribed |
+| `spawn`, `start` | :622, :644 | same | :450, :463 | transcribed |
+| `iteration` prelude (:639–652) | :683 | `iteration_prelude` | :479 | transcribed |
+| `iteration`'s park arms | :683 | `arm_yield`, `arm_never`, `arm_join`, `arm_await` | :729–:843 | transcribed |
+| `fireObserver` (6 arms) | :923 | `fire_observer` | :500 | 5 transcribed, `raceCallback` refuses |
+| `exitFiber` (both branches) | :992 | `exit_fiber` | :534 | transcribed |
+| `drive` (5 arms) | :1025 | `drive`/`exec` | :571, :579 | 4 transcribed, `launch` refuses |
+| `stepDecision`, `fire`, `flushAll` | :1108 | same | :913, :888, :902 | transcribed |
+| `runFork`, `runCallback`, `runSyncExit`, `promiseOutcome` | :1184–:1216 | same | :931–:959 | transcribed |
+| `WithFiberAction.fork`, `.interrupt` (`interruptThenJoin`) | :258 | `arm_fork`, `arm_interrupt` | :692, :844 | transcribed |
+| `WithFiberAction` other 16 arms | :258 | — | — | **not present**: no arm, so a program using one fails to compile rather than differing silently |
+| `linkScope`, the scope store | :656 | — | — | **stub refuses**: `DropScopeFinalizer` halts with `Stuck.unknownScope` (:530) |
+| `Race` bookkeeping, `Cmd.launch` | :339, :1082 | — | — | **stub refuses**: no race is ever created; `Claunch` is a no-op |
+| `RunInterp` (25 fields) | :386 | — | — | **substituted** (DIVERGENCE 5): the meanings are the handler arms |
+| `replayEval`, `Step` | :1164 | — | — | not written; `step_decision` is there, the fold is one line |
+| `toCore`, `toSup`, `toSched` | :202–:220, :491 | `run_fiber_status` only | :237 | partial |
+| `Prim`, `FrameFiber.step`/`popFrom`/`armA`/`armE` | `Runtime.lean` | — | — | **substituted** (DIVERGENCE 1): the OCaml 5 stack |
+
+Nothing in the "not present" or "refuses" rows is reachable from the nine goldens.
+
+## 3. The eight divergences
+
+1. **The frame pair.** `FrameFiber.current : Prim` and `.stack : List Prim` become
+   `control : Program of (unit -> value) | Onstack | Suspended of kont | Failing of cause |
+   Ended` (`deep_fibers.ml:162`). The other three `FrameFiber` fields are literal. *This is
+   the substitution the thesis is about* and the only field pair whose relation is not an
+   equality.
+2. **`Cmd.loop` has no OCaml existence.** `continue k` runs the fiber to its next `perform`,
+   so one `Cmd.loop` is not one OCaml step. `iteration`'s prelude runs at the head of every
+   arm. Consequence, recorded: **the op counter counts performs, not `Prim` nodes**, so the
+   yield-injection budget is not comparable. The fiber family is the one family
+   `check-trace-host.sh:191` already runs with no yield-every-op form, so nothing compared
+   here depends on it.
+3. **In place.** `RunMachine.update`/`modify` are the identity over `mutable` fields.
+4. **Nested commands run inline.** `retc`/`exnc` execute on the *resumed* stack, not inside
+   the `match_with` that installed them, so a returned command list would be dropped;
+   `finish` (`:635`) drives them at the point Lean's `drive` would.
+5. **`RunInterp` is not a record.** Its 25 meanings are handler-arm code plus the fixture's
+   root table. Cost: the avatar cannot be re-instantiated at another alphabet without
+   editing arms. This is O4 §2's "host state, but cheaper … at the cost of leaving the
+   first-order discipline", and it is the one thing a P5 renderer should refuse to do.
+6. **`awaitError` re-reads the target's exit.** `RunInterp.exitValue _ MAwait` loses the
+   typed error, which `awaitError` needs, so `arm_await` reads it back from the exited
+   fiber (`:829`). The loss is the one `ForkFlow.lean:330-338` already records.
+7. **No fuel.** Lean's `drive` is fuel-bounded and total; the OCaml one is general
+   recursion. `flush_all` keeps a round bound of 1000.
+8. **`current := Prim.failure` is three OCaml cases.** A parked fiber is discontinued by the
+   `Cmd.evaluate` the record returns true for; an unstarted one becomes `Failing`; a running
+   one defers. Lean writes one assignment because a program is data there.
+
+## 4. Evidence
+
+```
+$ ./workshop/OCaml5/avatar/build-avatar.sh
+=== three OCaml hosts agree (bytecode / native / js_of_ocaml --enable effects)
+hosts awaitValueDistinctFromJoinEffect AGREE          (9 programs, all AGREE)
+=== ocaml face vs lean golden, under every mask
+trace fiber.awaitValueDistinctFromJoinEffect mask outcome ok (1 rows)
+trace fiber.awaitValueDistinctFromJoinEffect mask m1 ok (9 rows)
+trace fiber.awaitValueDistinctFromJoinEffect mask m2 ok (10 rows)
+… compare: 27 ok, 0 failed
+=== rc.112 host face vs lean golden, through the estate's own runner
+… 27 lines, all ok
+$ echo $?
+0
+```
+
+The comparison rule is not re-invented: `workshop/OCaml5/avatar/compare.py` is a
+transcription of `effect4-tools/packages/harness/trace.mjs`'s `parseGolden`, `parseMasks`,
+`keeps`, `project` and the divergence loop, so the third face is judged by the rule the gate
+applies. The rc.112 face is produced by invoking that runner itself with
+`--tail fiber-tail.ts`. **No file under `harness/trace/` or `scripts/` was modified.** The
+one harness change a landing would need is one row:
+
+```diff
+--- a/scripts/check-trace-host.sh
++++ b/scripts/check-trace-host.sh
+@@ host_family fiber     fiber-tail.ts     "$here/receipts/fiber"          whole no  -- "$traces"/fiber/*.tsv
++# The OCaml avatar as a third face of the same goldens (spike A0).
++ocaml_family "$here/receipts/ocaml/fiber" -- "$traces"/fiber/*.tsv
+```
+
+with `ocaml_family` calling `workshop/OCaml5/avatar/build-avatar.sh` per golden and
+`compare.py` for the mask sweep — plus a `stamp_ocaml_inputs` naming the eight avatar files
+and the two toolchain binaries, since gates must be incremental.
+
+The avatar also prints its own machine trace in the `RunEvent` alphabet, which is the
+evidence that the internals are the Deep carriers and not a paraphrase
+(`out/parentPublishesAfterChildCleanup.events.tsv`, abridged):
+
+```
+started 0 · forked 0 1 false · scheduledTask 0 0 start(1) · scheduledTask 0 0 resume(0,0)
+parkedOn 0 0 · ranTask 0 start(1) · started 1 · parkedOn 1 1 · ranTask 0 resume(0,0)
+resumedWith 0 0 · started 0 · interruptRecorded 0 1 · parkedOn 0 2 · started 1
+exited 1 {"interrupted":true} · observerFired 1 untrackChild(0) · observerFired 1 countdown(0,2)
+resumedWith 0 2 · started 0 · exited 0 {"success":[4, []]}
+```
+
+Every row is a `RunEvent` constructor of `Fibers.lean:305`, in the order the Lean machine
+would emit it.
+
+## 5. JS closures, both ways
+
+`workshop/OCaml5/avatar/jsprobe.ml` + `jsprobe_runtime.js`, output `out/jsprobe.out`
+(effects mode) and `out/jsprobe-noeffects.out` (negative control).
+
+**A — OCaml closure exported to JS, called back with a JS closure argument.** Works.
+`caml_js_wrap_callback` (`jslib.js:304-318`) wraps a two-argument OCaml closure; JS calls it
+with `(7, jsClosure)`; the OCaml body calls the JS closure through `f(x)` and gets `107`
+back; JS sees the OCaml return `108` and its own captured variable at `107`.
+
+**B — a real JS `function` held in OCaml state, called from inside an effect handler.**
+Works. The JS closure lives in an OCaml `ref`, is called after `perform (Ask 4)` has been
+answered by the handler, mutates its captured variable, and the mutation is visible to
+OCaml afterwards (`B:counter-before 0` … `B:counter-after 40`).
+
+**C — the crux: `perform` inside an OCaml callback invoked from JS.** Fails, both ways.
+
+```
+C1:before  ·  C:js-invoking-ocaml-thunk  ·  C1:caught-in-ocaml Stdlib.Effect.Unhandled(Jsprobe.Ask(1))
+C2:before  ·  H:handled Ask 2  ·  C2:resumed 20   ← the outer handler is live and has answered
+C2:caught-in-ocaml Stdlib.Effect.Unhandled(Jsprobe.Ask(3))
+C3:before  ·  H:handled Ask 5  ·  C3:returned 50  ← control: no JS in the middle, handled
+```
+
+C2 is the nested case the task asked for: the JS call happens *inside a resumed
+continuation*, so the OCaml stack under the JS frame is one `caml_resume_stack` reinstalled
+— and the perform still does not find the handler. The mechanism is exactly P6 §B's reading:
+`caml_callback`'s effects variant (`jslib.js:70-113`) saves and replaces `caml_stack_depth`,
+`caml_exn_stack` and `caml_fiber_stack`, installing a fresh one-frame fiber whose only
+handler is `uncaught_effect_handler`. **Resuming a continuation across the boundary works
+(P6's `p6_await`); performing a fresh effect across it does not.**
+
+**D — the value profile at the boundary** (extends O3 §7). Under `--enable effects` a
+two-argument OCaml closure has `typeof=function`, no `.l`, and JS `length = 3` — the extra
+CPS continuation argument; `caml_call_gen` on it throws `c is not a function`, both for full
+and for partial application; `caml_js_wrap_callback` works and its wrapper has `length = 0`.
+Without the transform, the same closure has `length = 2`, `caml_call_gen` gives `7` for the
+full application and a partial with `.l = 1`. **The effects transform changes the JS arity
+of every CPS-transformed closure**, so `caml_call_gen` is not the boundary calling
+convention in effects mode — `caml_js_wrap_callback` is. This is a new falsifier for a value
+profile that says "closures carry an arity in `.l`".
+
+## 6. The design
+
+### (a) The avatar architecture
+
+Native (an OCaml 5 effect operation): fork's fresh stack, park (`perform`), resume
+(`continue`), interrupt-at-a-park (`discontinue`), the finalizer unwind
+(`Fun.protect`/trap). Handler-side state (an OCaml record the scheduler owns): everything
+else — the whole of `RunFiber` except `frame.current`/`.stack`, the dispatcher with its
+priority buckets and armed flag, the observer table, `Pending`'s countdown bookkeeping, the
+mask fields, the decision tape, the store. That is exactly O4 §2's bill, and this spike
+executed it: 13 of the 15 `RunFiber` fields are literal OCaml fields, and the scheduler
+handler (`deep_fibers.ml:642`) is one `match_with` per fiber with nine `effc` arms, one per
+intercepted `Prim`.
+
+### (b) The proof architecture
+
+| Edge | Statement | Status today |
+| --- | --- | --- |
+| `Deep.RunMachine` ≈ avatar record | field-to-field on 13 of 15 `RunFiber` fields and all 9 `RunMachine` fields; `frame.current`/`.stack` related to an `OCaml5.Machine` stack by "denotes the same `Prim` sequence" | **unmodelled**; executed agreement on 27 mask comparisons |
+| avatar record ≈ `OCaml5.Machine` running the avatar's OCaml source | the OCaml source is a `Term`; `Machine.run` is its semantics | **stated** (O1 built the machine); the avatar's source is not yet a `Term` — that is P5 |
+| `OCaml5.Machine` ≈ jsoo-compiled `Code` | the CPS theorem, FSCD 2017 restated on the block IR | **stated** (P2) |
+| native ≈ jsoo | bisimulation over `Term` | **stated** (P3); **executed** here, 9/9 byte-identical |
+| Lean golden ≈ avatar rows | the mask comparison | **executed**, 27/27 |
+| Lean golden ≈ rc.112 rows | the estate's existing gate | **executed**, 27/27 |
+
+Trust boundaries left, unchanged and named: `ocamlc` (source → bytecode),
+`parse_bytecode.ml` (bytecode → `Code`), `generate.ml` (`Code` → JS), and the engine. What
+the chain *buys* over today is that "the JS runtime" stops being an unmodelled host and
+becomes a Lean object with three named compilers between it and the bytes — the asymmetry
+the relevance note already argued (`2026-09-03-ocaml-jsoo-relevance.md` §5): a 933-line pass
+with a paper behind it and a 192-line runtime, against a runtime the census
+reverse-engineers row by row.
+
+The single most valuable next theorem is the first row: it is unmodelled, it is the one the
+whole thesis rests on, and this spike shows the relation is *almost* an identity — 13 fields
+of 15.
+
+### (c) What "a JS runtime representation" would mean for the lowering
+
+Three options, and the probe rules one out.
+
+1. **Emit OCaml for the avatar, compile with jsoo, and have the emitted TypeScript call the
+   compiled bundle.** Viable, and the C-probe constrains it: the TypeScript may call *into*
+   the bundle only at a fiber boundary (`runFork`, `runCallback`, `runPromise`), never with a
+   JS callback that will perform. That is not a restriction in practice, because rc.112's own
+   host surface is exactly those four entries (`Fibers.lean:1184-1216`).
+2. **Keep emitting TypeScript and use the avatar only as a second model.** Cheapest, and it
+   is what this spike already is: the avatar is a face of the gate, not a deliverable.
+3. **Emit OCaml for user programs too.** Blocked by the value boundary, not by the runtime:
+   every crossing value needs a representation witness per payload type (O3; P6 §"Typing at
+   the boundary"; `Effect4/Schema/Value.lean:110-142` where "a promise is inadmissible").
+
+The two host models stay as they are: **O3's value profile** for what crosses, and **P6's
+Promise host** for when. P6's `Await` bridge is the avatar's `Prim.async`: the avatar's
+`arm_never` (`deep_fibers.ml:737`) is a park with no registration, and `RunInterp.registerAsync`
+is precisely "attach `.then` with two wrapped OCaml closures". The two spikes compose without
+a new carrier.
+
+### (d) The JS-closure question, precisely
+
+**Representable by the avatar** (executed): an OCaml closure exported to JS and called with
+JS arguments including JS closures; a JS closure stored in OCaml state and called from
+anywhere on the OCaml side, including inside an effect handler; a JS closure's captured
+mutable variable, observed before and after; jsoo's closure representation and its arity,
+including the fact that the effects transform changes it.
+
+**Not representable without a JavaScript semantics** (unchanged by this spike): prototype
+chains and `this`; getters and Proxy traps on the objects a callback receives (P6 named the
+`then` getter as out of profile); exceptions thrown by foreign code that re-enter OCaml —
+they arrive as JS values with no `Cause` and no reason, and the avatar would have to `die`
+them; and, newly executed here, **a foreign callback that performs**: any design where
+JavaScript hands the runtime a closure expected to behave like an Effect is refused by
+`caml_callback`'s fiber replacement. `Effect.promise`'s two-argument `.then`
+(`internal/effect.ts:1051-1059`) is on the right side of that line — it resumes, it does not
+perform.
+
+### (e) Generating the avatar from Lean
+
+Hand-writing 960 lines of transcription is the wrong long-run answer and the P5 request list
+above is the right one. The shape: a `Deep.Render` module in `workshop/` that walks the
+`Fibers.lean` declarations and emits `deep_fibers.ml`, with a hole for DIVERGENCE 1 and a
+per-declaration receipt so a drift gate can say "the avatar is the transcription of
+`Fibers.lean` at this hash". P5 already renders `OCaml5.Term` to OCaml source, so the
+renderer exists; what it lacks is records, variants and mutual recursion over them.
+
+### (f) The first three packets
+
+| # | Packet | Files owned | Done when |
+| --- | --- | --- | --- |
+| A1 | **The avatar as a fourth gate face.** `ocaml_family` in `check-trace-host.sh` with an incremental stamp over the eight avatar files and the two toolchain binaries; receipts under `harness/trace/receipts/ocaml/`; the avatar's `RunEvent` trace stored beside each receipt. | `scripts/check-trace-host.sh`, `scripts/lib/stamp.sh`, `workshop/OCaml5/avatar/*` | the sweep runs the three faces and the OCaml one is stamped, not re-run when nothing changed |
+| A2 | **The remaining `WithFiberAction` arms and the `Deferred`/`Ref` families.** `awaitAll`, `interruptAll`, `snapshotChildren`, `awaitNewChildren` (all four are `countdown_park` calls, already written), then `setInterruptible` with the mask, then the `Refs` and `Deferreds` families as a second and third service alphabet against `generated/traces/{ref,deferred}/*.tsv`. | `workshop/OCaml5/avatar/*` only | the ref and deferred goldens have an OCaml face at the same 3 masks; every unimplemented arm still refuses rather than differing |
+| A3 | **The simulation relation, stated.** `workshop/Deep/AvatarRelation.lean`: a Lean `structure` relating `RunFiber` to the avatar record field by field, with `frame.current`/`.stack` related through `OCaml5.Machine`'s stack, and the four `RunDecision` arms the fiber family uses proved to preserve it. | `workshop/Deep/AvatarRelation.lean` | the relation is stated over both records, and `interruptRecord` and `exitFiber` are proved to preserve it |
+
+A2 before A3 deliberately: the relation should be stated once, against an avatar whose arm
+set has stopped moving.
+
+## 7. Honest limits
+
+Nine programs, one service family, one tape shape, no `raceAll`, no scope store, no
+`Deferred`, no `Ref`, no context, no async registration, no yield-budget comparison. The
+avatar's op counter is not rc.112's. Nothing is proved; everything above the executed rows is
+a design. And the avatar's `drive` is partial where Lean's is total — a fuel argument is the
+first thing a Lean statement of it would need back.
