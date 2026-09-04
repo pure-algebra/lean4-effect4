@@ -10,6 +10,8 @@
 #   tools/fuzz.sh surface                render the A0 shape probe (OCaml5.Ml) and check it
 #   tools/fuzz.sh avatar                 render the avatar carriers, compile them, diff vs A0
 #   tools/fuzz.sh tapes SEED COUNT LEN   generate RunDecision tapes and type-check them
+#   tools/fuzz.sh corpus [FIRST COUNT]   generate the round-four program corpus under fuzz/corpus
+#   tools/fuzz.sh corpus-smoke [SAMPLE]  compile the corpus: ocamlc for the .ml, tsc for the .ts
 #   tools/fuzz.sh run FIRST COUNT SIZE   generate seeds FIRST… and check COUNT of them
 #   tools/fuzz.sh shrink SEED SIZE       minimise the disagreement of one seed
 #
@@ -31,6 +33,8 @@ OCAMLOPT=${OCAMLOPT:-/Users/pooks/.opam/default/bin/ocamlopt}
 OCAMLRUN=${OCAMLRUN:-/Users/pooks/.opam/default/bin/ocamlrun}
 JSOO=${JSOO:-/Users/pooks/Dev/effect4_of_ocaml/_build/toolchains/ocaml5-jsoo-5.7.1/_build/default/vendor/js_of_ocaml-compiler.5.7.1/compiler/bin-js_of_ocaml/js_of_ocaml.exe}
 NODE=${NODE:-node}
+NODE_MODULES=${EFFECT4_EFFECT_NODE_MODULES:-$HOME/Dev/foldlab/library/effects/node_modules}
+TSC=${TSC:-$NODE_MODULES/.bin/tsc}
 P5_BUILD=${P5_BUILD:-/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/d87ba830-2e63-4750-815f-2679b36f870a/scratchpad/p5}
 P5_JOBS=${P5_JOBS:-8}
 LEANRUN="lake env lean --run workshop/OCaml5/Fuzz.lean"
@@ -144,6 +148,89 @@ case "${1:-}" in
     check_block observer      '^type observer ='        '^  \| Callback of int$'
     check_block run_event     '^type run_event ='       '^  \| Exited of int \* exitv$'
     check_block run_decision  '^type run_decision ='    '^  \| DinstallMiddleware$'
+    ;;
+
+  corpus)
+    first=${2:-400000}; count=${3:-220}
+    cdir="$REPO/workshop/OCaml5/fuzz/corpus"
+    rm -rf "$cdir"; mkdir -p "$cdir"
+    ( cd "$REPO" && $LEANRUN corpus "$cdir" "$first" "$count" ) || exit 1
+    echo "corpus at $cdir"
+    ;;
+
+  corpus-smoke)
+    sample=${2:-20}
+    cdir="$REPO/workshop/OCaml5/fuzz/corpus"
+    sdir="$P5_BUILD/corpus"
+    rm -rf "$sdir"; mkdir -p "$sdir/ml" "$sdir/ts"
+    total=$(ls -d "$cdir"/p* 2>/dev/null | wc -l | tr -d ' ')
+    echo "corpus: $total programs"
+
+    # (a) OCaml. The aggregate module holds every generated program, so one `ocamlc -c` of it
+    #     typechecks the whole corpus against the avatar; the sample then checks that each
+    #     per-program `fixture.ml` compiles on its own.
+    cp "$REPO"/workshop/OCaml5/avatar/*.ml "$sdir/ml/" 2>/dev/null
+    rm -f "$sdir/ml/jsprobe.ml"
+    cp "$cdir/corpus_fixture.ml" "$sdir/ml/"
+    if ( cd "$sdir/ml" && "$OCAMLC" -c deep_fibers.ml avatar_trace.ml fibers_fixture.ml \
+           store_fixtures.ml extra_fixture.ml ) >"$sdir/avatar.build" 2>&1; then
+      echo "ocamlc avatar modules   OK"
+    else
+      echo "ocamlc avatar modules   FAILED"; sed -n '1,20p' "$sdir/avatar.build"
+    fi
+    if ( cd "$sdir/ml" && "$OCAMLC" -c corpus_fixture.ml ) >"$sdir/agg.build" 2>&1; then
+      echo "ocamlc corpus_fixture   OK ($total programs in one module)"
+    else
+      echo "ocamlc corpus_fixture   FAILED"; sed -n '1,20p' "$sdir/agg.build"
+    fi
+    ok=0; bad=0
+    for d in $(ls -d "$cdir"/p* | head -"$sample"); do
+      cp "$d/fixture.ml" "$sdir/ml/fixture.ml"
+      if ( cd "$sdir/ml" && "$OCAMLC" -c fixture.ml ) >"$sdir/one.build" 2>&1; then
+        ok=$((ok+1))
+      else
+        bad=$((bad+1)); echo "  ocamlc $(basename "$d") FAILED"; sed -n '1,8p' "$sdir/one.build"
+      fi
+    done
+    echo "ocamlc per-program      $ok of $((ok+bad)) sampled"
+
+    # (b) TypeScript, against the harness's compiler options.
+    if [ ! -x "$TSC" ]; then
+      echo "tsc                     SKIP (no $TSC)"
+    else
+      ln -s "$NODE_MODULES" "$sdir/ts/node_modules"
+      cp "$cdir/corpus-fixture.ts" "$sdir/ts/"
+      files='"corpus-fixture.ts"'
+      for d in $(ls -d "$cdir"/p* | head -"$sample"); do
+        n=$(basename "$d")
+        cp "$d/fixture.ts" "$sdir/ts/$n.ts"
+        files="$files, \"$n.ts\""
+      done
+      cat > "$sdir/ts/tsconfig.json" <<TSEOF
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext", "DOM"],
+    "types": [],
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true
+  },
+  "files": [$files]
+}
+TSEOF
+      if ( cd "$sdir/ts" && "$TSC" -p tsconfig.json ) >"$sdir/ts.build" 2>&1; then
+        echo "tsc corpus-fixture      OK ($total programs) + $sample sampled fixtures"
+      else
+        echo "tsc                     FAILED"; sed -n '1,20p' "$sdir/ts.build"
+      fi
+    fi
     ;;
 
   tapes)

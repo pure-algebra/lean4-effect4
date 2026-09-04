@@ -1,0 +1,14 @@
+{
+  "name": "p400110",
+  "seed": 400110,
+  "operations": 15,
+  "forks": 3,
+  "families": ["fiber", "ref", "scope"],
+  "usesExtra": true,
+  "tape": "0:1,1:0,2:0",
+  "rules": "service-acquire,perform-call,perform-bind,nullary-value,perform-discard,ret",
+  "wireProgram": "corpus.p400110",
+  "ocamlEntry": "corpus_p400110",
+  "tsEntry": "corpus_p400110",
+  "opFamilies": ["fiber", "fiber", "fiber", "fiber", "fiber", "fiber", "ref", "fiber", "fiber", "fiber", "fiber", "scope", "fiber", "fiber", "fiber"]
+}

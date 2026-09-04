@@ -15,7 +15,10 @@ estate's target moved to an OCaml avatar of the Effect runtime (spike A0): a gen
 *declaration* surface, so that the avatar's OCaml is generated from the Lean carriers rather than
 hand-written. §11 is the third, answering A0's five requests once its report existed: the
 description layer that drives that surface from the real `Deep` carriers, and the diff against
-A0's hand-written file.
+A0's hand-written file. §12 is the fourth: a random *program* generator over the alphabet the
+avatar answers, each program rendered twice — the avatar's OCaml fixture and the harness's
+TypeScript fixture — from one Lean description, with rc.112 through the estate harness as the
+oracle.
 
 This closes the top edge of the plan's §6 diagram. Round one had `Term ─▶ M_T` and a hand-written
 OCaml file per witness, related by a human transcribing one into the other. P5 replaces the human:
@@ -526,6 +529,8 @@ $ ./workshop/OCaml5/tools/fuzz.sh witnesses
 $ ./workshop/OCaml5/tools/fuzz.sh surface
 $ ./workshop/OCaml5/tools/fuzz.sh avatar                # round three
 $ ./workshop/OCaml5/tools/fuzz.sh tapes 7 60 8          # round three
+$ ./workshop/OCaml5/tools/fuzz.sh corpus 400000 220     # round four
+$ ./workshop/OCaml5/tools/fuzz.sh corpus-smoke 60       # round four
 $ ./workshop/OCaml5/tools/fuzz.sh run 100000 250 4      # … 600000 150 9
 $ ./workshop/OCaml5/tools/fuzz.sh shrink 100010 4
 $ ./workshop/OCaml5/tools/fuzz.sh _one workshop/OCaml5/fuzz/min/drop-min.ml
@@ -759,3 +764,161 @@ each side.
    It is green as this is written, and every claim in §11 was re-run on it. Additive-only on a
    shared file is not enough: an *import* added to a shared file is not additive for that file's
    consumers, and the plan's parallel-spike rule should say so.
+
+## 12. Round four: a program corpus, rendered twice
+
+The user's round-four instruction: the corpus must be far larger and nastier, and **request 4 is
+unblocked by changing the reference** — rc.112 itself, through the estate harness, is the oracle,
+not `replayEval`. That is the right move. §11.6 recorded two blockers, and both were about
+`replayEval`: the avatar has no `RunDecision` entry point, and importing `Deep.Fibers` would
+couple this spike to a file two other spikes are editing. With rc.112 as the reference neither
+matters: the comparison is `avatar` vs `rc.112` on programs generated here, and the tape is the
+one both faces already read — `site:branch`, `deep_fibers.ml:48-58` and `fiber-tail.ts`'s
+`decide`.
+
+### 12.1 The alphabet
+
+One Lean description per program, over what the avatar answers (`deep_fibers.ml`'s `Effect.t`)
+intersected with what the estate's *generated* fixtures declare, so both renderings land in a
+shape the existing runners consume:
+
+| family | operations | OCaml wrappers | TypeScript service |
+| --- | --- | --- | --- |
+| fiber | `fork`, `forkDetach`, `join`, `awaitValue`, `awaitError`, `interrupt`, `started`, `cleanups` | `Fibers_fixture` | `Fibers` (`fiber-fixture.ts`) |
+| fiber, extra | `yieldNow`, `interruptAll`, `awaitAll` | `Extra_fixture` | declared on `Fibers` here |
+| ref | `make`, `get`, `set`, `update`, `modify`, `getAndSet` | `Store_fixtures` | `Refs` (`ref-fixture.ts`) |
+| deferred | `make`, `succeed`, `fail`, `isDone`, `poll`, `awaitValue`, `awaitError` | `Store_fixtures` | `Deferreds` |
+| scope | `make`, `addFinalizer`, `remove`, `close` | `Store_fixtures` | `Scopes` |
+| layer | `build`, `provideCount`, `scopeOf`, `close` | `Store_fixtures` | `Layers` |
+
+Three rows are in the avatar and in rc.112 (`Effect.yieldNowWith`, `Fiber.interruptAll`,
+`Fiber.awaitAll`) but not in the generated fiber fixture's service; a program using one is flagged
+`usesExtra` in its `meta.json`, and the generated `fixture.ts` declares them on `Fibers` so the
+file typechecks as it stands. `Op_ref_try_take` is in the avatar and not in `ref-fixture.ts`, so
+it is out.
+
+Two of the brief's asks enter through the **shared child-body table** rather than as operations,
+because that is where the estate puts them and a fork names a declared root, never a closure:
+
+* **masks** — body 5 masks itself across a yield and takes the interrupt only when it restores
+  interruptibility (M2, `fibers_fixture.ml:28-35`). 26 forks in the corpus draw it;
+* **a deferred completed by a sibling or a daemon** — body 6 completes the `Deferred` at handle
+  0 (`:36-40`), the one shape M1 is about. 14 forks draw it, and the generator only draws it once
+  the program has made a deferred, so the handle exists.
+
+`raceAll` is **not** generated: the avatar refuses it (`Op_refuse "raceAll"`,
+`extra_fixture.ml:75`), so every such program would be a refusal on one side and a race on the
+other. That is a gap in the avatar, not in the generator, and it is recorded here rather than
+papered over.
+
+### 12.2 One description, two renderings
+
+`Corpus.Op` is 31 constructors and every operand is a **variable number**, so a program is
+self-contained and well-scoped by construction: the generator only draws an operand from the
+handles of the right kind the program has already bound. `Prog.wellScoped` decides it anyway, and
+a `#guard` runs it over thirty consecutive seeds of the committed schedule — a badly scoped
+program would be a type error on *both* sides, and the corpus is meant to compile unattended.
+
+`Op.ocaml` renders the avatar's fixture spelling, qualified (`Fibers_fixture.fork 0`,
+`Store_fixtures.ref_modify v3 4`, `Extra_fixture.await_all [ v0; v2 ]`), so a generated module is
+one more entry in `build-avatar.sh`'s module list and needs no edit to any other file. A binding
+nothing later reads is named `_vN`, which is how `fibers_fixture.ml` spells its own
+(`let _a = fork 0`) and what keeps `ocamlc` warning-free.
+
+`Op.ts` renders the generated fixtures' spelling, with nullary rows as *properties*
+(`fibers.started`, `deferreds.make`, `layers.close`) exactly as `fiber-fixture.ts` and its
+siblings declare them, and the `Context.Service` declarations and `Rows` tables are copied from
+those files verbatim.
+
+Both bodies come from the one `ops` list in one pass, so they cannot drift: `#guard`s check that
+the OCaml body has one line per operation and the TypeScript body one `yield*` per operation plus
+one per service acquired.
+
+### 12.3 The corpus
+
+```
+$ ./workshop/OCaml5/tools/fuzz.sh corpus 400000 220
+corpus 220 programs, 5158 operations, 721 forks, 155 using the extra rows
+```
+
+`workshop/OCaml5/fuzz/corpus/<name>/{fixture.ml,fixture.ts,tape,meta.json}`, 220 directories, plus
+three files a runner links rather than 220: `corpus_fixture.ml` (every program and the `programs`
+table `avatar_main.ml` looks a name up in), `corpus-fixture.ts` (the five services once, then
+every program, then `corpusPrograms`), and `index.tsv`. 4.6 MB in all.
+
+The seed schedule is `400000 … 400219` and the size of a program is a fixed function of its seed
+(`5 + (seed * 7 + 3) % 36`), so the whole corpus is two numbers: nothing is stored that a
+regeneration would not reproduce byte for byte.
+
+| | |
+| --- | --- |
+| programs | 220 |
+| operations | 5158, min 6, median 23, max 41 |
+| forks | 721, at most 11 in one program; 127 of them daemons (`forkDetach`) |
+| tape entries | 721, one per fork, `site:branch` |
+| programs using all five families | 47 |
+| programs using the extra rows | 155 |
+| child bodies drawn | 0 (207), 1 (167), 2 (101), 3 (90), 4 (116), 5 (26), 6 (14) |
+
+Every operation of every family is exercised dozens of times: `ref` 547 operations, `deferred`
+500, `scope` 296, `layer` 287, `fiber` 3528, and no single store row fewer than 22.
+
+### 12.4 The smoke check
+
+```
+$ ./workshop/OCaml5/tools/fuzz.sh corpus-smoke 60
+corpus: 220 programs
+ocamlc avatar modules   OK
+ocamlc corpus_fixture   OK (220 programs in one module)
+ocamlc per-program      60 of 60 sampled
+tsc corpus-fixture      OK (220 programs) + 60 sampled fixtures
+```
+
+The aggregates are the strong half: one `ocamlc -c corpus_fixture.ml` against the avatar's own
+modules typechecks **every** generated OCaml program at once, and one `tsc` run over
+`corpus-fixture.ts` typechecks every generated TypeScript program at once. The sample then checks
+that each per-program file also stands alone. `ocamlc` is OCaml 5.1.1 with default warnings, not
+`-w -a`, and the corpus is warning-free. `tsc` is the estate's own
+(`node_modules/.bin/tsc`, `@effect/tsgo`) under the harness's compiler options — `strict`,
+`exactOptionalPropertyTypes`, `noUncheckedIndexedAccess`, `verbatimModuleSyntax`, bundler
+resolution; the `@effect/language-service` plugin block is dropped because it is a
+language-service plugin and `tsc` does not run it. The check was confirmed to have teeth by
+introducing a deliberate type error and watching it fail.
+
+### 12.5 What A0 needs to run it
+
+Two additions, both small and both on the runner's side of the ownership line:
+
+1. **OCaml.** Add `corpus_fixture.ml` to `build-avatar.sh`'s module list after
+   `extra_fixture.ml` and a `| "corpus" -> Corpus_fixture.programs` arm to `avatar_main.ml`'s
+   family table. Each program's tape is in its directory and in `index.tsv`; the rules string in
+   `meta.json` is the fiber family's.
+2. **TypeScript.** A tail over `corpus-fixture.ts` that provides the services a program needs —
+   `Fibers` as `fiber-tail.ts` builds it, plus `Refs`/`Deferreds`/`Scopes`/`Layers` from their own
+   tails — and picks the program out of `corpusPrograms`. The three `usesExtra` rows are
+   `Effect.yieldNowWith`, `Fiber.interruptAll` and `Fiber.awaitAll`; `fibers-tail.ts` already
+   spells the last two.
+
+The wire header each program expects is in its `meta.json`: `program corpus.<name>`, its `tape`,
+and the rules string.
+
+### 12.6 Limits, stated
+
+1. **Nested forks are not expressible.** A fork names a declared root from a fixed table, so a
+   child cannot fork; the corpus's nesting is the parent's fork tree over that table, not
+   arbitrary depth. Changing that means generating child bodies too, and a child body has to
+   exist identically on both faces — a bigger change to the fixture format than this round is.
+2. **`raceAll` is absent**, because the avatar refuses it (§12.1).
+3. **Masks are body 5 only.** `Op_set_interruptible` exists in the avatar but rc.112's
+   counterpart is a *region* (`Effect.uninterruptible`), not a flag, so a flag-shaped operation
+   has no faithful TypeScript rendering. Body 5 is the shape both faces already agree on.
+4. **The corpus is fiber-heavy** by design (3528 of 5158 operations), because the fiber family is
+   where the machine lives. The store families are the interleaving, and the weights are one
+   line each in `Corpus.genOp` if a different mix is wanted.
+5. **Programs may park.** A `join` on a never-settling child, or an `awaitAll` over one, parks —
+   which the harness turns into a frontier, as `emptyRacePendingUntilInterrupted` already is.
+   That is deliberate and is the interesting half of the corpus, but it means a run needs the
+   budget and stall settings the goldens use rather than a naive timeout.
+6. **The corpus is not run here.** P5 generates and compiles both sides; A0 runs them and
+   compares. Nothing in this section claims agreement — only that 220 programs exist, that they
+   are well-scoped, and that both renderings compile.
