@@ -669,4 +669,640 @@ theorem promiseOutcome_eq (value : β) (cause : Cause ε δ ι α) :
 theorem promiseOutcome_failure (cause : Cause ε δ ι α) :
     promiseOutcome (Exit.failure cause : Exit β ε δ ι α) = Except.error cause.squash := rfl
 
+/-! ## Second pass (2026-09-04): the exit path, the observers, the races and the fork arms
+
+These clauses close the rows that were witnessed only by the retired supervision calculus:
+`fork.child`, `fork.detach`, `fork.in`, `fork.scoped`, `fork.race-all`, `fork.interrupt`,
+`fork.interrupt-all`, `interrupt.accumulate`, `rule.only-fork-child-tracks`,
+`rule.children-interrupted-after-exit`, the three `scope.close-*` rows and `op.Async`. The
+branches of `exitFiber` and the settling arm of a race callback are named as definitions so
+that a clause can be a projection of a branch rather than a hypothesis-laden equation. -/
+
+namespace RunMachine
+
+/-- Emitting events touches only the trace. -/
+theorem fiber?_emit (m : RunMachine ν σ β ε δ ι α χ St) (events : List (RunEvent ν σ β ε δ ι α χ))
+    (id : FiberId) : (m.emit events).fiber? id = m.fiber? id := rfl
+
+theorem race?_emit (m : RunMachine ν σ β ε δ ι α χ St) (events : List (RunEvent ν σ β ε δ ι α χ))
+    (id : Nat) : (m.emit events).race? id = m.race? id := rfl
+
+theorem state_emit (m : RunMachine ν σ β ε δ ι α χ St) (events : List (RunEvent ν σ β ε δ ι α χ)) :
+    (m.emit events).state = m.state := rfl
+
+theorem stuck_emit (m : RunMachine ν σ β ε δ ι α χ St) (events : List (RunEvent ν σ β ε δ ι α χ)) :
+    (m.emit events).stuck = m.stuck := rfl
+
+end RunMachine
+
+/-- One interrupt request over a list of targets, in list order (`fiberInterruptAll`, `:5449`;
+the exit path's children, `:613-617`; a settled race's losers): each known target is recorded
+with `who` as the interruptor and no extra annotations, and the ones that apply now are queued
+for evaluation in the same order. The machine inlines this fold at each of its sites; the
+definition is the fold, so the site equations are reflexive. -/
+def interruptEach (interp : RunInterp ν σ β ε δ ι α χ St) (who : FiberId) (targets : List FiberId)
+    (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)) :
+    RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α) :=
+  targets.foldl (fun (a : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)) t =>
+      match a.1.fiber? t with
+      | none => a
+      | some g =>
+        let (g, applyNow) := interruptRecord interp (some who) ReasonAnnotations.empty g
+        let m := (a.1.update g).emit [RunEvent.interruptRecorded (some who) t]
+        (m, a.2 ++ (if applyNow then [Cmd.evaluate t] else []))) acc
+
+/-- No targets, nothing recorded. census: fork.interrupt-all -/
+theorem interruptEach_nil (interp : RunInterp ν σ β ε δ ι α χ St) (who : FiberId)
+    (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)) :
+    interruptEach interp who [] acc = acc := rfl
+
+/-- The requests are executed in list order: the head first, then the rest over the machine
+the head left (`:5449`, `for (const child of fibers) child.unsafeInterrupt(...)`).
+census: fork.interrupt-all -/
+theorem interruptEach_cons (interp : RunInterp ν σ β ε δ ι α χ St) (who t : FiberId)
+    (ts : List FiberId) (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)) :
+    interruptEach interp who (t :: ts) acc =
+      interruptEach interp who ts
+        (match acc.1.fiber? t with
+          | none => acc
+          | some g =>
+            let r := interruptRecord interp (some who) ReasonAnnotations.empty g
+            ((acc.1.update r.1).emit [RunEvent.interruptRecorded (some who) t],
+              acc.2 ++ (if r.2 then [Cmd.evaluate t] else []))) := rfl
+
+/-- A known target is recorded with `who` and no annotations, and evaluated now only when the
+record applies now (`interruptRecord`). census: fork.interrupt-all -/
+theorem interruptEach_known (interp : RunInterp ν σ β ε δ ι α χ St) (who t : FiberId)
+    (ts : List FiberId) (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α))
+    (g : RunFiber ν σ β ε δ ι α χ) (h : acc.1.fiber? t = some g) :
+    interruptEach interp who (t :: ts) acc =
+      interruptEach interp who ts
+        (let r := interruptRecord interp (some who) ReasonAnnotations.empty g
+         ((acc.1.update r.1).emit [RunEvent.interruptRecorded (some who) t],
+           acc.2 ++ (if r.2 then [Cmd.evaluate t] else []))) := by
+  simp only [interruptEach_cons, h]
+
+/-- The children clause of the exit path (`:613-617`): with the middleware installed and
+tracked children, every child is interrupted with the parent's id, in child order, the parent
+remembers the exit it is finalizing and parks on a countdown over the children, to continue
+with the restoring frame of that exit. -/
+def exitInterruptChildren (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (exit : Exit β ε δ ι α) :
+    RunMachine ν σ β ε δ ι α χ St × RunFiber ν σ β ε δ ι α χ × Bool × List (Cmd ν σ β ε δ ι α) :=
+  let (m, nested) := interruptEach interp f.id f.children (m, [])
+  let m := m.emit [RunEvent.childrenInterrupted f.id f.children]
+  let f := { f with finalizing := some exit }
+  let (m, f, parked) :=
+    countdownPark interp m f f.children (Resume.continueWith (interp.restoreName exit))
+  (m, f, parked, nested)
+
+/-- The store clause of the exit path (`:619-627`): the exit is stored, the stack, the
+children, the parks and the context are cleared, every observer fires in index order, and the
+observer list is emptied. -/
+def exitStore (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+    (f : RunFiber ν σ β ε δ ι α χ) (exit : Exit β ε δ ι α) :
+    RunMachine ν σ β ε δ ι α χ St × RunFiber ν σ β ε δ ι α χ × Bool × List (Cmd ν σ β ε δ ι α) :=
+  let f := stored interp f exit
+  let m := (m.update f).emit [RunEvent.exited f.id exit]
+  let (m, nested) := f.observers.foldl (fireObserver interp f.id exit) (m, [])
+  let f := { f with observers := [] }
+  (m.update f, f, false, nested)
+where
+  /-- The fiber as the exit path stores it, before its observers fire. -/
+  stored (interp : RunInterp ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ)
+      (exit : Exit β ε δ ι α) : RunFiber ν σ β ε δ ι α χ :=
+    { f with
+      exit := some exit
+      finalizing := none
+      frame := { f.frame with stack := [] }
+      children := []
+      parked := Parked.notParked
+      pending := []
+      context := interp.emptyContext }
+
+/-- The exit path is the two clauses, chosen by the middleware, the finalizing flag and the
+tracked children (`:611-627`). census: rule.children-interrupted-after-exit -/
+theorem exitFiber_eq (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+    (f : RunFiber ν σ β ε δ ι α χ) (exit : Exit β ε δ ι α) :
+    exitFiber interp m f exit =
+      if m.middlewareInstalled && f.finalizing.isNone && !f.children.isEmpty then
+        exitInterruptChildren interp m f exit
+      else exitStore interp m f exit := rfl
+
+/-- Without the middleware the exit is stored at once: the children survive (`:611`).
+census: fork.child -/
+theorem exitFiber_no_middleware (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (exit : Exit β ε δ ι α)
+    (h : m.middlewareInstalled = false) :
+    exitFiber interp m f exit = exitStore interp m f exit := by
+  rw [exitFiber_eq]; simp [h]
+
+/-- A fiber with no tracked children stores its exit at once, whatever the middleware: a
+daemon child is not tracked (`spawn_daemon_untracked`), so a parent's exit never reaches it
+(`:613`). census: fork.detach -/
+theorem exitFiber_no_children (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (exit : Exit β ε δ ι α)
+    (h : f.children = []) :
+    exitFiber interp m f exit = exitStore interp m f exit := by
+  rw [exitFiber_eq]; simp [h]
+
+/-- A fiber already finalizing stores the exit it is now given (`:612`): the countdown's
+continuation is that exit's restoring frame, and an interrupt that lands while the children
+are awaited replaces the body's exit with its own failure. census:
+rule.children-interrupted-after-exit -/
+theorem exitFiber_finalizing (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (exit body : Exit β ε δ ι α)
+    (h : f.finalizing = some body) :
+    exitFiber interp m f exit = exitStore interp m f exit := by
+  rw [exitFiber_eq]; simp [h]
+
+/-- With the middleware installed, not finalizing, and tracked children, the children clause
+runs (`:613`). census: rule.children-interrupted-after-exit -/
+theorem exitFiber_children (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (exit : Exit β ε δ ι α)
+    (hm : m.middlewareInstalled = true) (hf : f.finalizing = none)
+    (hc : f.children.isEmpty = false) :
+    exitFiber interp m f exit = exitInterruptChildren interp m f exit := by
+  rw [exitFiber_eq]; simp [hm, hf, hc]
+
+/-- The stored fiber: exit set, stack, children, parks, context and observers cleared
+(`:619-627`). census: fork.child -/
+theorem exitStore_fiber (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+    (f : RunFiber ν σ β ε δ ι α χ) (exit : Exit β ε δ ι α) :
+    (exitStore interp m f exit).2.1 = { exitStore.stored interp f exit with observers := [] } := rfl
+
+/-- The stored fiber's fields, one by one. census: fork.child -/
+theorem exitStore_fields (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+    (f : RunFiber ν σ β ε δ ι α χ) (exit : Exit β ε δ ι α) :
+    (exitStore interp m f exit).2.1.exit = some exit ∧
+      (exitStore interp m f exit).2.1.finalizing = none ∧
+      (exitStore interp m f exit).2.1.frame.stack = [] ∧
+      (exitStore interp m f exit).2.1.children = [] ∧
+      (exitStore interp m f exit).2.1.parked = Parked.notParked ∧
+      (exitStore interp m f exit).2.1.pending = [] ∧
+      (exitStore interp m f exit).2.1.context = interp.emptyContext ∧
+      (exitStore interp m f exit).2.1.observers = [] ∧
+      (exitStore interp m f exit).2.2.1 = false :=
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+/-- The exit path's commands are what the observers asked for, fired in index order over the
+machine that already holds the stored fiber (`:621-623`). census: fork.child -/
+theorem exitStore_fires (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+    (f : RunFiber ν σ β ε δ ι α χ) (exit : Exit β ε δ ι α) :
+    (exitStore interp m f exit).2.2.2 =
+      (f.observers.foldl (fireObserver interp f.id exit)
+        ((m.update (exitStore.stored interp f exit)).emit [RunEvent.exited f.id exit], [])).2 := rfl
+
+/-- The children clause, spelled out: the interrupt fold over exactly the tracked children,
+the `childrenInterrupted` event, then the countdown over them with the restoring
+continuation. census: rule.children-interrupted-after-exit -/
+theorem exitInterruptChildren_eq (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (exit : Exit β ε δ ι α) :
+    exitInterruptChildren interp m f exit =
+      (let r := interruptEach interp f.id f.children (m, [])
+       let p := countdownPark interp (r.1.emit [RunEvent.childrenInterrupted f.id f.children])
+         { f with finalizing := some exit } f.children
+         (Resume.continueWith (interp.restoreName exit))
+       (p.1, p.2.1, p.2.2, r.2)) := rfl
+
+/-- The commands the children clause owes are the interrupt fold's: the children that apply
+now, in child order. census: fork.detach -/
+theorem exitInterruptChildren_interrupts (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (exit : Exit β ε δ ι α) :
+    (exitInterruptChildren interp m f exit).2.2.2 =
+      (interruptEach interp f.id f.children (m, [])).2 := rfl
+
+/-- A countdown keeps the fiber's finalizing flag, parked or not. -/
+theorem countdownPark_finalizing (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (targets : List FiberId)
+    (resumeWith : Resume ν) (failFast : Bool) :
+    (countdownPark interp m f targets resumeWith failFast).2.1.finalizing = f.finalizing := by
+  simp only [countdownPark]
+  split <;> rfl
+
+/-- While the children are awaited the parent remembers the exit it is finalizing (`:615`),
+so the second pass through the exit path stores rather than re-interrupts.
+census: rule.children-interrupted-after-exit -/
+theorem exitInterruptChildren_finalizing (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (exit : Exit β ε δ ι α) :
+    (exitInterruptChildren interp m f exit).2.1.finalizing = some exit := by
+  simp only [exitInterruptChildren_eq, countdownPark_finalizing]
+
+/-- A finished countdown that continues with a name resumes with the collected exits fed to
+that name (`:617`, the parent's `flatMap(awaitAllChildren, () => exit)`).
+census: rule.children-interrupted-after-exit -/
+theorem resumePrim_continueWith (interp : RunInterp ν σ β ε δ ι α χ St) (name : ν)
+    (exits : List (Exit β ε δ ι α)) :
+    countdownPark.resumePrim interp (Resume.continueWith name) exits =
+      Prim.onSuccess (Prim.success (interp.exitsValue exits)) name := rfl
+
+/-- Installing the middleware is a flag on the machine (`FiberMiddleware`, `:611`).
+census: fork.child -/
+theorem stepDecision_installMiddleware (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) :
+    stepDecision interp fuel m RunDecision.installMiddleware = { m with middlewareInstalled := true } :=
+  rfl
+
+/-- A child's completion resumes its awaiter with the exit in the awaiter's mode
+(`:561-562`, `:5291`, `:5304`): the resume is a command, run synchronously. census: fork.child -/
+theorem fireObserver_resumeAwait (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId)
+    (exit : Exit β ε δ ι α) (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α))
+    (waiter : FiberId) (token : Nat) (mode : Supervision.ObserverMode) :
+    fireObserver interp id exit acc (Observer.resumeAwait waiter token mode) =
+      (acc.1.emit [RunEvent.observerFired id (Observer.resumeAwait waiter token mode)],
+        acc.2 ++ [Cmd.resume waiter token (interp.exitValue exit mode)]) := rfl
+
+/-- A tracked child's completion removes it from its parent's children (`:5281`).
+census: rule.only-fork-child-tracks -/
+theorem fireObserver_untrackChild (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId)
+    (exit : Exit β ε δ ι α) (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α))
+    (parent : FiberId) :
+    fireObserver interp id exit acc (Observer.untrackChild parent) =
+      ((acc.1.emit [RunEvent.observerFired id (Observer.untrackChild parent)]).modify parent
+          (fun p => { p with children := p.children.filter fun c => c ≠ id }), acc.2) := rfl
+
+/-- A scope-linked fiber's completion drops its keyed finalizer from the scope (`:5370-5372`).
+census: fork.in -/
+theorem fireObserver_dropScopeFinalizer (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId)
+    (exit : Exit β ε δ ι α) (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α))
+    (scope key : Nat) (state : St) (h : interp.dropFinalizer scope key acc.1.state = some state) :
+    fireObserver interp id exit acc (Observer.dropScopeFinalizer scope key) =
+      ({ acc.1.emit [RunEvent.observerFired id (Observer.dropScopeFinalizer scope key)] with
+          state := state }, acc.2) := by
+  simp [fireObserver, RunMachine.state_emit, h]
+
+/-- The last target of a countdown resumes the awaiter with every collected exit, in
+completion order (`fiberAwaitAll`, `:779`; `:5449`, the explicit await after the requests).
+census: fork.interrupt-all -/
+theorem fireObserver_countdown_last (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId)
+    (exit : Exit β ε δ ι α) (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α))
+    (waiter : FiberId) (token : Nat) (w : RunFiber ν σ β ε δ ι α χ) (p : Pending ν β ε δ ι α)
+    (hw : acc.1.fiber? waiter = some w) (hp : w.pending.find? (fun q => q.token = token) = some p)
+    (hff : p.failFast = false) (hrem : p.remaining ≤ 1) :
+    fireObserver interp id exit acc (Observer.countdown waiter token) =
+      ((acc.1.emit [RunEvent.observerFired id (Observer.countdown waiter token)]).update
+          { w with pending := w.pending.map fun q =>
+              if q.token = token then
+                { q with remaining := 0, collected := p.collected ++ [exit], outstanding := [] }
+              else q },
+        acc.2 ++ [Cmd.resume waiter token
+          (countdownPark.resumePrim interp p.resumeWith (p.collected ++ [exit]))]) := by
+  simp [fireObserver, RunMachine.fiber?_emit, hw, hp, hff, hrem]
+
+/-- Before the last target, a countdown collects the exit, forgets the target and waits on.
+census: fork.interrupt-all -/
+theorem fireObserver_countdown_more (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId)
+    (exit : Exit β ε δ ι α) (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α))
+    (waiter : FiberId) (token : Nat) (w : RunFiber ν σ β ε δ ι α χ) (p : Pending ν β ε δ ι α)
+    (hw : acc.1.fiber? waiter = some w) (hp : w.pending.find? (fun q => q.token = token) = some p)
+    (hff : p.failFast = false) (hrem : ¬ p.remaining ≤ 1) :
+    fireObserver interp id exit acc (Observer.countdown waiter token) =
+      ((acc.1.emit [RunEvent.observerFired id (Observer.countdown waiter token)]).update
+          { w with pending := w.pending.map fun q =>
+              if q.token = token then
+                { q with
+                  remaining := q.remaining - 1
+                  collected := p.collected ++ [exit]
+                  outstanding := p.outstanding.filter fun t => t ≠ id }
+              else q },
+        acc.2) := by
+  simp [fireObserver, RunMachine.fiber?_emit, hw, hp, hff, hrem]
+
+/-- The settling arm of a race callback (`:5620-5635`): the race is marked settled, the live
+entrants are interrupted with the host's id, and the host is taken off its race guard to await
+them on a countdown that continues with the accepted exit's restoring frame; when nothing is
+live the host is evaluated at once. -/
+def settleRace (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+    (acc : List (Cmd ν σ β ε δ ι α)) (raceId : Nat) (race : Race β ε δ ι α)
+    (state : Supervision.RaceAllState β ε δ ι α) (accepted : Exit β ε δ ι α) :
+    RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α) :=
+  let m := m.updateRace { race with settled := true }
+  let m := m.emit [RunEvent.raceSettled raceId accepted]
+  let (m, nested) := interruptEach interp race.host state.live (m, [])
+  match m.fiber? race.host with
+  | none => (m, acc ++ nested)
+  | some host =>
+    let host := { host with
+      parked := Parked.notParked
+      pending := host.pending.filter fun p => p.token ≠ race.token }
+    let (m, host, parked) := countdownPark interp m host state.live
+      (Resume.continueWith (interp.restoreName accepted))
+    if parked then (m.update host, acc ++ nested)
+    else (m.update host, acc ++ nested ++ [Cmd.evaluate race.host])
+
+/-- The first accepted callback settles the race: the frozen bookkeeping accepts, the race was
+not yet settled, and the settling arm runs over the updated race. census: fork.race-all -/
+theorem fireObserver_raceCallback_settles (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId)
+    (exit : Exit β ε δ ι α) (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α))
+    (raceId : Nat) (race : Race β ε δ ι α) (accepted : Exit β ε δ ι α)
+    (hr : acc.1.race? raceId = some race)
+    (hacc : (Supervision.raceComplete race.state id exit).accepted = some accepted)
+    (hset : race.settled = false) :
+    fireObserver interp id exit acc (Observer.raceCallback raceId) =
+      (let state := Supervision.raceComplete race.state id exit
+       let race := { race with state := state }
+       settleRace interp
+         ((acc.1.emit [RunEvent.observerFired id (Observer.raceCallback raceId)]).updateRace race)
+         acc.2 raceId race state accepted) := by
+  simp only [fireObserver, RunMachine.race?_emit, hr, hacc, hset]
+  try rfl
+
+/-- A callback after the race has settled only updates the frozen bookkeeping: the first
+accepted result is stable (`race_first_accepted_stable`). census: fork.race-all -/
+theorem fireObserver_raceCallback_late (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId)
+    (exit : Exit β ε δ ι α) (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α))
+    (raceId : Nat) (race : Race β ε δ ι α)
+    (hr : acc.1.race? raceId = some race) (hset : race.settled = true) :
+    fireObserver interp id exit acc (Observer.raceCallback raceId) =
+      ((acc.1.emit [RunEvent.observerFired id (Observer.raceCallback raceId)]).updateRace
+        { race with state := Supervision.raceComplete race.state id exit }, acc.2) := by
+  simp only [fireObserver, RunMachine.race?_emit, hr, hset]
+  cases (Supervision.raceComplete race.state id exit).accepted <;> rfl
+
+/-- A callback that does not yet accept (a loser before the winner) only updates the frozen
+bookkeeping. census: fork.race-all -/
+theorem fireObserver_raceCallback_pending (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId)
+    (exit : Exit β ε δ ι α) (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α))
+    (raceId : Nat) (race : Race β ε δ ι α)
+    (hr : acc.1.race? raceId = some race)
+    (hacc : (Supervision.raceComplete race.state id exit).accepted = none) :
+    fireObserver interp id exit acc (Observer.raceCallback raceId) =
+      ((acc.1.emit [RunEvent.observerFired id (Observer.raceCallback raceId)]).updateRace
+        { race with state := Supervision.raceComplete race.state id exit }, acc.2) := by
+  simp only [fireObserver, RunMachine.race?_emit, hr, hacc]
+
+/-- A launch after the race has accepted does not start the entrant: it is interrupted with
+the host's id and kept (M8; `raceSkipped`). census: fork.race-all -/
+theorem drive_launch_skipped (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) (raceId : Nat) (entrant : FiberId)
+    (rest : List (Cmd ν σ β ε δ ι α)) (race : Race β ε δ ι α) (accepted : Exit β ε δ ι α)
+    (e : RunFiber ν σ β ε δ ι α χ) (hs : m.stuck = none) (hr : m.race? raceId = some race)
+    (hacc : race.state.accepted = some accepted) (he : m.fiber? entrant = some e) :
+    drive interp (fuel + 1) m (Cmd.launch raceId entrant :: rest) =
+      (let r := interruptRecord interp (some race.host) ReasonAnnotations.empty e
+       drive interp fuel
+         ((m.update r.1).emit [RunEvent.raceSkipped raceId entrant,
+           RunEvent.interruptRecorded (some race.host) entrant])
+         ((if r.2 then [Cmd.evaluate entrant] else []) ++ rest)) := by
+  simp [drive, hs, hr, hacc, he]
+
+/-- A launch before the race has accepted moves the entrant from unstarted to live and
+evaluates it: the shared set is the race's live list at that moment. census: fork.race-all -/
+theorem drive_launch_runs (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) (raceId : Nat) (entrant : FiberId)
+    (rest : List (Cmd ν σ β ε δ ι α)) (race : Race β ε δ ι α)
+    (hs : m.stuck = none) (hr : m.race? raceId = some race) (hacc : race.state.accepted = none) :
+    drive interp (fuel + 1) m (Cmd.launch raceId entrant :: rest) =
+      drive interp fuel
+        ((m.updateRace { race with state :=
+            { race.state with
+              unstarted := race.state.unstarted.filter fun e => e ≠ entrant
+              live := race.state.live ++ [entrant] } }).emit [RunEvent.raceLaunched raceId entrant])
+        (Cmd.evaluate entrant :: rest) := by
+  simp [drive, hs, hr, hacc]
+
+/-- `fork` (`:5264-5284`): spawn with the options as given, start by `startImmediately`, and
+answer the child's handle. census: fork.child -/
+theorem withFiber_fork (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+    (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (program : Prim ν σ β ε δ ι α)
+    (options : Supervision.ForkOptions) :
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.fork program options) =
+      (let s := spawn interp m f program options
+       let t := start s.1 s.2.1 s.2.2 options.startImmediately
+       ⟨t.1, { t.2.1 with frame := { t.2.1.frame with
+          current := Prim.success (interp.fiberValue s.2.2) } },
+        yielding, Outcome.continue_, t.2.2⟩) := rfl
+
+/-- `forkIn` (`:5364-5378`): the child is a daemon of its parent, linked to the supplied
+scope by number with the parent as interruptor and the parent's stack annotations, then
+started. census: fork.in -/
+theorem withFiber_forkIn (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+    (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (program : Prim ν σ β ε δ ι α)
+    (options : Supervision.ForkOptions) (scope key : Nat) :
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkIn program options scope key) =
+      (let s := spawn interp m f program { options with daemon := true }
+       let l := linkScope interp s.1 Supervision.ScopeMode.forkIn scope key s.2.2 (some s.2.1.id)
+         (interp.stackAnnotations s.2.1.id)
+       let t := start l.1 s.2.1 s.2.2 options.startImmediately
+       ⟨t.1, { t.2.1 with frame := { t.2.1.frame with
+          current := Prim.success (interp.fiberValue s.2.2) } },
+        yielding,
+        (match t.1.stuck with
+          | some why => Outcome.stuck why
+          | none => Outcome.continue_),
+        l.2 ++ t.2.2⟩) := rfl
+
+/-- `forkScoped` (`:5400-5406`) resolves the ambient `Scope` service of the parent's context
+and is then `forkIn` on it. census: fork.scoped -/
+theorem withFiber_forkScoped_ambient (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (key scope : Nat)
+    (h : interp.ambientScope f.context = some scope) :
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkScoped program options key) =
+      (let s := spawn interp m f program { options with daemon := true }
+       let l := linkScope interp s.1 Supervision.ScopeMode.forkIn scope key s.2.2 (some s.2.1.id)
+         (interp.stackAnnotations s.2.1.id)
+       let t := start l.1 s.2.1 s.2.2 options.startImmediately
+       ⟨t.1, { t.2.1 with frame := { t.2.1.frame with
+          current := Prim.success (interp.fiberValue s.2.2) } },
+        yielding,
+        (match t.1.stuck with
+          | some why => Outcome.stuck why
+          | none => Outcome.continue_),
+        l.2 ++ t.2.2⟩) := by
+  simp only [evaluatePrim.withFiber, h]
+  try rfl
+
+/-- Without an ambient `Scope` service `forkScoped` is the `notImplemented` defect: the
+service is required (`:5400`). census: fork.scoped -/
+theorem withFiber_forkScoped_none (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (key : Nat)
+    (h : interp.ambientScope f.context = none) :
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkScoped program options key) =
+      ⟨m, { f with frame := { f.frame with
+          current := Prim.failure (Cause.die interp.notImplemented) } },
+        yielding, Outcome.continue_, []⟩ := by
+  simp only [evaluatePrim.withFiber, h]
+
+/-- Linking to an open scope registers the keyed finalizer in the store and the key-dropping
+observer on the fiber (`:5369-5372`, `:5458`). census: fork.in -/
+theorem linkScope_open (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (mode : Supervision.ScopeMode) (scope key : Nat)
+    (target : FiberId) (interruptor : Option FiberId) (extra : ReasonAnnotations α) (state : St)
+    (hopen : interp.scopeStatus scope m.state = some none)
+    (hlink : interp.scopeLinkFiber mode scope key target m.state = some state) :
+    linkScope interp m mode scope key target interruptor extra =
+      (RunMachine.emit
+        (RunMachine.modify { m with state := state } target fun t =>
+          { t with observers := t.observers ++ [Observer.dropScopeFinalizer scope key] })
+        [RunEvent.scopeLinked mode scope key target], []) := by
+  simp [linkScope, hopen, hlink]
+
+/-- Closing a scope installs the store's close program as the closer's current primitive
+(`Scope.close`): the sequential strategy's chain awaits each finalizer through its exit and
+the parallel strategy's forks run on this machine. census: scope.close-sequential -/
+theorem withFiber_closeScope (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (scope : Nat) (exit : Exit β ε δ ι α) (state : St) (program : Prim ν σ β ε δ ι α)
+    (h : interp.closeScope scope exit f.frame.interruptible f.id m.state = some (state, program)) :
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.closeScope scope exit) =
+      ⟨{ m with state := state }, { f with frame := { f.frame with current := program } },
+        yielding, Outcome.continue_, []⟩ := by
+  simp [evaluatePrim.withFiber, h]
+
+/-- Closing an unknown scope halts the machine (M7). census: scope.close-sequential -/
+theorem withFiber_closeScope_unknown (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (scope : Nat) (exit : Exit β ε δ ι α)
+    (h : interp.closeScope scope exit f.frame.interruptible f.id m.state = none) :
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.closeScope scope exit) =
+      ⟨m, f, yielding, Outcome.stuck (Stuck.unknownScope scope), []⟩ := by
+  simp [evaluatePrim.withFiber, h]
+
+/-- `fiberInterrupt` (`:859`): record with the caller as interruptor, then await the target.
+census: fork.interrupt -/
+theorem withFiber_interrupt (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (target : FiberId) :
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.interrupt target) =
+      evaluatePrim.interruptThenJoin interp m f yielding target (some f.id) := rfl
+
+/-- Interrupting oneself through the scoped entry is a void no-op (`:868`).
+census: fork.interrupt -/
+theorem withFiber_interruptScoped_self (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool) :
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.interruptScoped f.id) =
+      ⟨m, { f with frame := { f.frame with current := Prim.success interp.voidValue } },
+        yielding, Outcome.continue_, []⟩ := by
+  simp [evaluatePrim.withFiber]
+
+/-- Any other target through the scoped entry is the plain interrupt-then-await.
+census: fork.interrupt -/
+theorem withFiber_interruptScoped_other (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (target : FiberId) (h : target ≠ f.id) :
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.interruptScoped target) =
+      evaluatePrim.interruptThenJoin interp m f yielding target (some f.id) := by
+  simp [evaluatePrim.withFiber, h]
+
+/-- The request is delivered synchronously (the record, and the evaluation it may owe now),
+and the caller then awaits the target on a countdown (`:859`, `interrupt` then `await`).
+census: fork.interrupt -/
+theorem interruptThenJoin_eq (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (target : FiberId) (interruptor : Option FiberId) (t : RunFiber ν σ β ε δ ι α χ)
+    (ht : m.fiber? target = some t) :
+    evaluatePrim.interruptThenJoin interp m f yielding target interruptor =
+      (let r := interruptRecord interp interruptor ReasonAnnotations.empty t
+       let m := (m.update r.1).emit [RunEvent.interruptRecorded interruptor target]
+       let p := countdownPark interp m f [target] Resume.void
+       ⟨p.1, p.2.1, yielding, (if p.2.2 then Outcome.parked else Outcome.continue_),
+        if r.2 then [Cmd.evaluate target] else []⟩) := by
+  simp only [evaluatePrim.interruptThenJoin, ht]
+  try rfl
+
+/-- An unknown target is stuck (S3 §5.1). census: fork.interrupt -/
+theorem interruptThenJoin_unknown (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (target : FiberId) (interruptor : Option FiberId) (ht : m.fiber? target = none) :
+    evaluatePrim.interruptThenJoin interp m f yielding target interruptor =
+      ⟨m, f, yielding, Outcome.stuck (Stuck.unknownFiber target), []⟩ := by
+  simp [evaluatePrim.interruptThenJoin, ht]
+
+/-- `fiberInterruptAll` (`:5445-5451`): every request in list order with the given
+interruptor (the caller by default), then one explicit await over all of them.
+census: fork.interrupt-all -/
+theorem withFiber_interruptAll (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (targets : List FiberId) (interruptor : Option FiberId) :
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.interruptAll targets interruptor) =
+      (let r := interruptEach interp (interruptor.getD f.id) targets (m, [])
+       let p := countdownPark interp r.1 f targets Resume.void
+       ⟨p.1, p.2.1, yielding,
+        (match p.1.stuck with
+          | some why => Outcome.stuck why
+          | none => if p.2.2 then Outcome.parked else Outcome.continue_),
+        r.2⟩) := rfl
+
+/-- One entrant of a `raceAll` (`:5560-5575`): spawned as an immediate daemon that inherits
+the host's mask, with the race callback as its observer, and appended to the entrant list. -/
+def raceEntrant (interp : RunInterp ν σ β ε δ ι α χ St) (raceId : Nat)
+    (acc : RunMachine ν σ β ε δ ι α χ St × RunFiber ν σ β ε δ ι α χ × List FiberId)
+    (program : Prim ν σ β ε δ ι α) :
+    RunMachine ν σ β ε δ ι α χ St × RunFiber ν σ β ε δ ι α χ × List FiberId :=
+  let (m, f, child) := spawn interp acc.1 acc.2.1 program ⟨true, true, Supervision.MaskMode.inherit⟩
+  let m := m.modify child fun c =>
+    { c with observers := c.observers ++ [Observer.raceCallback raceId] }
+  (m, f, acc.2.2 ++ [child])
+
+/-- The entrant's fork options, read off the definition: immediate, daemon, inherited mask.
+census: rule.only-fork-child-tracks -/
+theorem raceEntrant_options (interp : RunInterp ν σ β ε δ ι α χ St) (raceId : Nat)
+    (acc : RunMachine ν σ β ε δ ι α χ St × RunFiber ν σ β ε δ ι α χ × List FiberId)
+    (program : Prim ν σ β ε δ ι α) :
+    raceEntrant interp raceId acc program =
+      (let s := spawn interp acc.1 acc.2.1 program ⟨true, true, Supervision.MaskMode.inherit⟩
+       (s.1.modify s.2.2 fun c => { c with observers := c.observers ++ [Observer.raceCallback raceId] },
+        s.2.1, acc.2.2 ++ [s.2.2])) := rfl
+
+/-- `raceAll` (`:5560-5640`): the entrants exist as fibers before any launch, the race is
+recorded with its host and guard, the host parks on the guard, and the launches are commands
+in entrant order; the empty race stays parked until the host is interrupted.
+census: fork.race-all -/
+theorem withFiber_raceAll (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (entrants : List (Prim ν σ β ε δ ι α)) :
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.raceAll entrants) =
+      (let raceId := m.nextRace
+       let token := m.nextToken
+       let m := { m with nextRace := m.nextRace + 1, nextToken := m.nextToken + 1 }
+       let e := entrants.foldl (raceEntrant interp raceId) (m, f, [])
+       let race : Race β ε δ ι α :=
+         ⟨raceId, e.2.1.id, token, Supervision.RaceAllState.initial e.2.2, false⟩
+       let m := RunMachine.emit { e.1 with races := e.1.races ++ [race] }
+         [RunEvent.raceStarted raceId e.2.1.id e.2.2]
+       let g := e.2.1.park ⟨token, none, 0, [], Resume.void, false, []⟩
+       ⟨m.emit [RunEvent.parkedOn g.id token], g, yielding, Outcome.parked,
+        e.2.2.map (Cmd.launch raceId)⟩) := rfl
+
+/-- `Async` whose register answers at once (`:1120-1126`): the store is updated, the answer is
+the fiber's next primitive, and the resumes the store now owes are drained. census: op.Async -/
+theorem evaluatePrim_async_immediate (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (register : ν) (withSignal : Bool) (cancel : Option ν) (state : St)
+    (next : Prim ν σ β ε δ ι α)
+    (hreg : interp.registerAsync register f.id m.nextToken m.state = (state, some next)) :
+    let g : RunFiber ν σ β ε δ ι α χ :=
+      { f with frame := { f.frame with current := Prim.async register withSignal cancel } }
+    evaluatePrim interp m g yielding =
+      ⟨{ m with state := state, nextToken := m.nextToken + 1 },
+        { g with frame := { g.frame with current := next } }, yielding, Outcome.continue_,
+        [Cmd.drainDue]⟩ := by
+  simp only [evaluatePrim, hreg]
+  try rfl
+
+/-- `Async` whose register parks (`:1128-1141`): the fiber parks on the fresh guard, and the
+`AsyncFinalizer` frame carrying the cancel name is pushed exactly when there is a signal or a
+cancel effect, so an interrupt while parked runs the cancel through the frame's `contE`.
+census: op.Async -/
+theorem evaluatePrim_async_parks (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (register : ν) (withSignal : Bool) (cancel : Option ν) (state : St)
+    (hreg : interp.registerAsync register f.id m.nextToken m.state = (state, none)) :
+    let g : RunFiber ν σ β ε δ ι α χ :=
+      { f with frame := { f.frame with current := Prim.async register withSignal cancel } }
+    evaluatePrim interp m g yielding =
+      (let token := m.nextToken
+       let m := { m with state := state, nextToken := m.nextToken + 1 }
+       let g := if withSignal || cancel.isSome then
+           { g with frame := { g.frame with
+              stack := Prim.asyncFinalizer
+                (interp.cancelName (cancel.getD interp.abortName) g.id token) :: g.frame.stack } }
+         else g
+       let g := g.park ⟨token, none, 0, [], Resume.void, false, []⟩
+       ⟨m.emit [RunEvent.parkedOn g.id token], g, yielding, Outcome.parked, []⟩) := by
+  simp only [evaluatePrim, hreg]
+  try rfl
+
 end Effect4.Deep
