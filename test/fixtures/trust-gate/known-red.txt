@@ -59,3 +59,11 @@ Effect4Test.Counterexamples.Surface.Site
 Effect4Test.Counterexamples.Surface.Ingest
 Effect4Test.Counterexamples.Surface.Emit
 Effect4Test.Counterexamples.Surface.Derive
+
+# The Handler packet that plan §13.7 ruling 7 requires before wave 2d builds.
+# Frozen from §13.2 alone; red until Effect4/Surface/Handler.lean exists, whose
+# module path is itself a coordinator ruling (§13.2 puts Endpoint.effTy over
+# Effect4.Syntax.Typing, and §2 forbids Effect4.Surface.* importing it).
+# Both elaborated with `lake env lean` on 2026-09-04 and observed to fail.
+Effect4Test.Surface.HandlerFitsContract
+Effect4Test.Counterexamples.Surface.HandlerFits

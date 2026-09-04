@@ -2839,3 +2839,52 @@ and `Effect4.Surface.Model`, both from the §14 meta API. They are owed builder 
 
 `lake build Effect4` 160 jobs green. `lake build Effect4TestGreen` reaches the
 gate and passes the closure check.
+
+### The Handler breaker packet, and what the gate found behind the closure, 2026-09-04
+
+The packet §13.7 ruling 7 requires before wave 2d is frozen:
+`test/contracts/surface-handler-fits.contract.md` (548 lines),
+`Effect4Test/Surface/HandlerFitsContract.lean` (365),
+`Effect4Test/Counterexamples/Surface/HandlerFits.lean` (663), and
+`E4-SURFACE-CE-088` to `-110` in the register. Frozen from §13.2 alone: the
+breaker did not read `Effect4/Surface/`, which is the point of the role. Both
+Lean files are declared red; nineteen of their guards use only landed carriers
+and evaluate green today.
+
+**Two handler contracts now exist, and one must govern.** The dispatch said this
+packet was new and that `075` was the last register row. Both were false:
+`test/contracts/surface-handler.contract.md` was landed by the wave-1b breaker in
+`9f9e0e6`, is 269 lines, and claims `E4-SURFACE-CE-076` to `-087`, none of which
+were ever written into `REGISTER.md`. The repository's own record is what misled
+the dispatch: the checkpoint above says the handler packet is "not started",
+`surface-api.contract.md` says handlers have no contract in that packet, and the
+register has no row for that block. Three places say it does not exist; the file
+does. The new packet was moved to `-fits` paths and `088` upward so the orphan
+block stays free, and the prior contract was restored byte-identical to HEAD.
+The two agree on subject and pins and disagree on six points, tabulated in the
+new contract. A coordinator ruling is owed on which governs.
+
+Findings needing a ruling, in the breaker's order of sharpness: `fits` as
+equality refuses §13.2's own typed stub, since rc.112's handler slot is
+subsumption, not equality (`Effect.ts:117`, `HttpApiEndpoint.ts:584-586`); both
+relations are frozen with a theorem between them. The §13.2 versus §2 placement
+conflict crosses the fence twice, because `EffTy.requires` is
+`Effect4.Deep.Env.Requirement`; the recommendation is a third module depending on
+both. `Ty.join` has no laws (`Eff.lean` proves one theorem); seven are owed to
+the `Syntax` lane. There is no service-name to `ServiceKey` function anywhere,
+so `effTy` cannot be a function of the endpoint alone. `Signature Op` has two
+function fields, so `Handler` as §13.2 spells it has no `DecidableEq`, no `json`
+and no store address. A multi-success endpoint's answer is unreachable from any
+control construct. Fifteen `Refusal` constructors are named and not added.
+
+**The axiom gate ran for the first time and found twelve declarations over the
+ceiling**, all in `Effect4/Surface/`, none in `Effect4/Char/`. Three root causes:
+`refOfPointer` (`JsonSchema.lean:552`) reads a `$ref` with `String.splitOn`,
+which carries `Classical.choice` on this toolchain, and `ofJsonSchema`,
+`toolOfJson`, `toolsOfJson` and `ofMcpToolsList` inherit it; `docsWorkerLines`
+(`Deploy/Emit.lean:779`) splits a rendered module on newlines for its `#guard`;
+and `Path.parse?` is the owed row wave 2a already recorded. `Site.lean:105`
+(`splitOnSlash : List UInt8 → List (List UInt8)`) is the sanctioned pattern, and
+`Api.lean:233-241` states the rule. The gate's exemption list is not widened
+here: an exemption is a trust decision and belongs to a ruling, not to
+integration.
