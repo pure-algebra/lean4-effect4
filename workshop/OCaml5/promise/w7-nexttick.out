@@ -1,0 +1,10 @@
+["S:sync-tail",
+ "P:p1",
+ "P:p2",
+ "Q:q1",
+ "N:n1",
+ "N:n2",
+ "N:n1-from-p1",
+ "N:n2-nested",
+ "T:timeout0",
+ "I:immediate"]

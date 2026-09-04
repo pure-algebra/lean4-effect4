@@ -1,0 +1,9 @@
+["K:enter",
+ "S:settling",
+ "S:sync-tail",
+ "JS:first-then v0",
+ "K:resumed-1 v0",
+ "JS:third-then v0",
+ "K:resumed-2 v0!",
+ "K:discontinued bad",
+ "K:done"]
