@@ -703,7 +703,7 @@ is `#guard`ed on.
 -/
 
 /-- An identified, described semantic bag, the shape §15.3's DSL will write. -/
-def described (identifier description : String) : Annotations :=
+def describedBag (identifier description : String) : Annotations :=
   descriptionKey.append description (identifierKey.append identifier none)
 
 /-- A kinded struct with no annotations of its own. -/
@@ -717,7 +717,7 @@ def getUserTool : Tool shopDomain.refs where
   parameters := ⟨structOf [Schema.property "id" Schema.string], by decide⟩
   success := ⟨Schema.reference "User", by decide⟩
   failure := some ⟨structOf [Schema.property "message" Schema.string], by decide⟩
-  annotations := described "get_user" "Fetch one shop customer by id."
+  annotations := describedBag "get_user" "Fetch one shop customer by id."
 
 /-- The `list_users` tool: no declared failure, an array result. -/
 def listUsersTool : Tool shopDomain.refs where
@@ -725,20 +725,20 @@ def listUsersTool : Tool shopDomain.refs where
   parameters := ⟨structOf [Schema.property "limit" Schema.number true], by decide⟩
   success := ⟨Schema.array (Schema.reference "User"), by decide⟩
   failure := none
-  annotations := described "list_users" "List the shop's customers."
+  annotations := describedBag "list_users" "List the shop's customers."
 
 /-- The customers resource. -/
 def usersResource : Resource where
   uri := "shop://users"
   name := "users"
   mimeType := some "application/json"
-  annotations := described "users" "Every customer of the shop, as JSON."
+  annotations := describedBag "users" "Every customer of the shop, as JSON."
 
 /-- The greeting prompt: one required and one optional argument. -/
 def greetPrompt : Prompt where
   name := "greet_user"
   arguments := [("userId", true), ("tone", false)]
-  annotations := described "greet_user" "Greet a customer by name."
+  annotations := describedBag "greet_user" "Greet a customer by name."
 
 /-- The fixture agent server. -/
 def shopServer : McpServer shopDomain.refs where
@@ -747,7 +747,7 @@ def shopServer : McpServer shopDomain.refs where
   tools := [getUserTool, listUsersTool]
   resources := [usersResource]
   prompts := [greetPrompt]
-  annotations := described "shop" "The shop's agent surface."
+  annotations := describedBag "shop" "The shop's agent surface."
 
 /-- The fixture server is well-formed, by the kernel. -/
 theorem shopServer_wellFormed : McpServer.WellFormed shopServer := by decide
