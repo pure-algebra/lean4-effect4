@@ -191,13 +191,16 @@ def scopeRows (m : M) : List (List Nat) :=
     | RunEvent.scopeClosedOnLink scope fiber => some [1, scope, fiber.value]
     | _ => none
 
-/-- The `raceLaunched` (`0`), `raceSkipped` (`1`) and `raceSettled` (`2`) rows. -/
+/-- The `raceLaunched` (`0`) and `raceSettled` (`2`) rows. (`1` was `raceSkipped`, retired
+with R2-11: an unlaunched entrant is never forked, so nothing is skipped.) -/
 def raceRows (m : M) : List (List Nat) :=
   m.trace.filterMap fun
     | RunEvent.raceLaunched race entrant => some [0, race, entrant.value]
-    | RunEvent.raceSkipped race entrant => some [1, race, entrant.value]
     | RunEvent.raceSettled race _ => some [2, race]
     | _ => none
+
+/-- How many entrants of race `race` were never forked. -/
+def unlaunchedOf (m : M) (race : Nat) : Option Nat := (m.race? race).map fun r => r.programs.length
 
 /-- The `resumedWith` (`0`) and `exited` (`1`) rows, in trace order: enough to see *when* a
 Deferred completion's waiters were resumed relative to the completing fiber's own exit (M1). -/
@@ -386,19 +389,18 @@ theorem w3_empty_is_a_frontier :
 theorem w3_empty_until_interrupted :
     exitOf w3EmptyInterrupted 0 = some (interruptedBy ⟨0⟩ ⟨0⟩) := by decide
 
-/-- `test/fixtures/traces/fiber-m3/raceImmediateSuccessStopsLaunch.tsv`: the first entrant's success
-settles the race, and the second entrant is never launched (row `1` is `raceSkipped`). Since M8
-the unlaunched entrant is *interrupted with the host's id and kept*, as the golden's
-`op interrupt 1` row and `Supervision.RaceAllState` both have it — not deleted; since R2-5 the
-interrupt carries the host's stack annotations, as every `fiberInterruptAll` does (`:892-895`).
-R2-11 (the entrant is never created in rc.112) is owed to repair step 4. -/
+/-- `test/fixtures/traces/fiber-m3/raceImmediateSuccessStopsLaunch.tsv` (host face, `answer
+started [0, []]`): the first entrant's success settles the race, and the second entrant is
+*never forked* — the register loop breaks once done (`:1527`, R2-11, `E4-RUN-CE-035`): two
+fibers exist, one entrant program is left unlaunched, and nothing is interrupted. M8 had kept
+a spawned-then-interrupted fiber for it, on the strength of a Lean-face golden. -/
 theorem w3_immediate_success_stops_launch :
     exitOf w3StopsLaunch 0 = some (Exit.success (Val.nat 1)) ∧
-      raceRows w3StopsLaunch = [[0, 0, 1], [2, 0], [1, 0, 2]] ∧
-      fiberCount w3StopsLaunch = 3 ∧
-      interruptRows w3StopsLaunch = [(some 0, 2)] ∧
-      exitOf w3StopsLaunch 2 =
-        some (interruptedWith ⟨0⟩ ⟨2⟩ (stores.stackAnnotations ⟨0⟩)) := by
+      raceRows w3StopsLaunch = [[0, 0, 1], [2, 0]] ∧
+      fiberCount w3StopsLaunch = 2 ∧
+      unlaunchedOf w3StopsLaunch 0 = some 1 ∧
+      interruptRows w3StopsLaunch = [] ∧
+      exitOf w3StopsLaunch 2 = none := by
   decide
 
 /-- `test/fixtures/traces/fiber-m3/raceFailureAllowsNextLaunch.tsv`: a failure does not settle the
@@ -557,12 +559,40 @@ theorem w5_daemon_child_survives_parent_exit :
       exitOf w5Daemon 0 = some (Exit.success Val.unit) := by
   decide
 
+/-- `awaitAllChildren` around a body that forks a child and then *fails*: the await is
+`onExit`'s finalizer (`:5319-5333`, R2-7, `E4-RUN-CE-037`), so it runs on the failure too —
+the parent parks until the child is started and exits, and the child ends by its own exit,
+not by the parent's. -/
+def w5AwaitAllChildrenFails : M :=
+  replay Stores.empty
+    (ProgName.awaitAllNew
+      (ProgName.seqOf (ProgName.forkOnly (ProgName.value (Val.nat 5)) deferredChild)
+        (ProgName.failCause (Cause.fail Err.boom))))
+    [RunDecision.evaluate ⟨0⟩]
+
+def w5AwaitAllChildrenFailsFired : M :=
+  replay Stores.empty
+    (ProgName.awaitAllNew
+      (ProgName.seqOf (ProgName.forkOnly (ProgName.value (Val.nat 5)) deferredChild)
+        (ProgName.failCause (Cause.fail Err.boom))))
+    [RunDecision.evaluate ⟨0⟩, RunDecision.fire ⟨0⟩]
+
+theorem w5_await_all_children_on_failure :
+    exitOf w5AwaitAllChildrenFails 0 = none ∧
+      exitOf w5AwaitAllChildrenFails 1 = none ∧
+      parkedOf w5AwaitAllChildrenFails 0 = some (Parked.withGuard 0) ∧
+      exitOf w5AwaitAllChildrenFailsFired 1 = some (Exit.success (Val.nat 5)) ∧
+      exitOf w5AwaitAllChildrenFailsFired 0 = some (Exit.failure (Cause.fail Err.boom)) ∧
+      finalizerRuns w5AwaitAllChildrenFailsFired 0 = 1 := by
+  decide
+
 /-- `awaitAllChildren` awaits only the children added during its body: the pre-existing parked
 child `1` is not awaited (the parent exits although `1` never does) — it is then interrupted
 by the parent's exit path, as any tracked child is (R2-6). -/
 theorem w5_await_all_children_awaits_only_new :
     exitOf w5AwaitAllChildren 2 = some (Exit.success (Val.nat 5)) ∧
-      exitOf w5AwaitAllChildren 0 = some (Exit.success Val.unit) ∧
+      -- `awaitAllChildren(self)` answers the body's own value (`onExit`, R2-7): the handle
+      exitOf w5AwaitAllChildren 0 = some (Exit.success (Val.fiber ⟨2⟩)) ∧
       childrenInterruptedRows w5AwaitAllChildren = [(0, [1])] ∧
       exitOf w5AwaitAllChildren 1 =
         some (interruptedWith ⟨0⟩ ⟨1⟩ (stores.stackAnnotations ⟨0⟩)) := by
@@ -661,10 +691,33 @@ theorem w6_runIn_closed_scope_uses_no_caller_annotations :
       exitOf w6ClosedRunIn 0 = some (Exit.success Val.unit) := by
   decide
 
-/-- A child that exits normally drops its scope key. -/
+/-- R2-8 (`E4-RUN-CE-036`): `forkIn` forks and, when immediate, *runs* the child first, and
+links only a child that has not exited (`:5366-5376`): an immediately finished child is never
+linked — no `scopeLinked` row, no key to drop. -/
 theorem w6_child_exit_drops_key :
     exitOf w6DropsKey 1 = some (Exit.success (Val.nat 3)) ∧
+      scopeRows w6DropsKey = [] ∧
       scopeKeys w6DropsKey 0 = some [] := by
+  decide
+
+/-- The same child started on the parent's dispatcher: it has not run when the link happens,
+so it is linked; its later exit drops the key. -/
+def w6DeferredLinked : M :=
+  replay scopeState
+    (ProgName.forkInScope (ProgName.value (Val.nat 3)) ⟨false, true, Supervision.MaskMode.inherit⟩ 0 100)
+    [RunDecision.evaluate ⟨0⟩]
+
+def w6DeferredLinkedFired : M :=
+  replay scopeState
+    (ProgName.forkInScope (ProgName.value (Val.nat 3)) ⟨false, true, Supervision.MaskMode.inherit⟩ 0 100)
+    [RunDecision.evaluate ⟨0⟩, RunDecision.fire ⟨0⟩]
+
+theorem w6_deferred_child_is_linked :
+    scopeRows w6DeferredLinked = [[0, 0, 0, 100, 1]] ∧
+      scopeKeys w6DeferredLinked 0 = some [100] ∧
+      exitOf w6DeferredLinked 1 = none ∧
+      exitOf w6DeferredLinkedFired 1 = some (Exit.success (Val.nat 3)) ∧
+      scopeKeys w6DeferredLinkedFired 0 = some [] := by
   decide
 
 /-- The self-interruptor is skipped: no interrupt is recorded and the close succeeds. -/

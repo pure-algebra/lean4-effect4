@@ -281,9 +281,8 @@ inductive RunEvent (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) : Ty
   | finalizerProgram (fiber : FiberId) (finalizer : ν) (exit : Exit β ε δ ι α)
   | scopeLinked (mode : Supervision.ScopeMode) (scope : Nat) (key : Nat) (fiber : FiberId)
   | scopeClosedOnLink (scope : Nat) (fiber : FiberId)
-  | raceStarted (race : Nat) (host : FiberId) (entrants : List FiberId)
+  | raceStarted (race : Nat) (host : FiberId) (entrants : Nat)
   | raceLaunched (race : Nat) (entrant : FiberId)
-  | raceSkipped (race : Nat) (entrant : FiberId)
   | raceSettled (race : Nat) (exit : Exit β ε δ ι α)
   | contextSet (fiber : FiberId) (context : χ)
   | callback (key : Nat) (exit : Exit β ε δ ι α)
@@ -297,14 +296,18 @@ inductive Stuck
   | unknownScope (scope : Nat)
 deriving DecidableEq, Repr
 
-/-- One `raceAll` in flight: its host, the host's park token, and the frozen bookkeeping of
-`Supervision.RaceAllState`, reused as is. -/
-structure Race (β : Type v) (ε δ ι α : Type u) : Type (max u v) where
+/-- One `raceAll` in flight: its host, the host's park token, the frozen bookkeeping of
+`Supervision.RaceAllState` (reused as is; `unstarted` stays empty, since an entrant has no id
+before its launch), and the entrants not yet forked. -/
+structure Race (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max u v) where
   id : Nat
   host : FiberId
   token : Nat
   state : Supervision.RaceAllState β ε δ ι α
   settled : Bool
+  /-- The entrants not yet forked, in order: rc.112 forks one per iteration of its register
+  loop and breaks once done (`:1520-1528`, R2-11), so a skipped entrant never exists. -/
+  programs : List (Prim ν σ β ε δ ι α)
 
 /-- The process: every live fiber, the races, the id and token counters, the global
 middleware latch (`:6656-6658`), the service state the stores live in, the trace, and the
@@ -312,7 +315,7 @@ stuck marker. -/
 structure RunMachine (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St : Type (max u v)) :
     Type (max u v) where
   fibers : List (RunFiber ν σ β ε δ ι α χ)
-  races : List (Race β ε δ ι α)
+  races : List (Race ν σ β ε δ ι α)
   nextId : Nat
   nextToken : Nat
   nextRace : Nat
@@ -457,10 +460,10 @@ def modify (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId)
 def halt (m : RunMachine ν σ β ε δ ι α χ St) (why : Stuck) : RunMachine ν σ β ε δ ι α χ St :=
   { m with stuck := some why }
 
-def race? (m : RunMachine ν σ β ε δ ι α χ St) (id : Nat) : Option (Race β ε δ ι α) :=
+def race? (m : RunMachine ν σ β ε δ ι α χ St) (id : Nat) : Option (Race ν σ β ε δ ι α) :=
   m.races.find? fun r => r.id = id
 
-def updateRace (m : RunMachine ν σ β ε δ ι α χ St) (r : Race β ε δ ι α) :
+def updateRace (m : RunMachine ν σ β ε δ ι α χ St) (r : Race ν σ β ε δ ι α) :
     RunMachine ν σ β ε δ ι α χ St :=
   { m with races := m.races.map fun s => if s.id = r.id then r else s }
 
@@ -505,9 +508,15 @@ inductive Cmd (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max 
   | finish (fiber : FiberId) (exit : Exit β ε δ ι α)
   /-- `resume(effect)` (`:1121`): unpark on the token and evaluate. -/
   | resume (fiber : FiberId) (token : Nat) (answer : Prim ν σ β ε δ ι α)
-  /-- One race entrant's immediate launch; once the race is settled the entrant is
-  interrupted instead (M8). -/
-  | launch (race : Nat) (entrant : FiberId)
+  /-- One iteration of `raceAll`'s register loop (`:1520-1528`, R2-11): fork and run the
+  next entrant, unless the race is done — then the loop has broken and no more entrant is
+  ever forked. -/
+  | launch (race : Nat)
+  /-- `forkIn`'s link, after the child has been forked and, when immediate, run
+  (`:5366-5376`, R2-8): `linkScope` as a command, so the child is re-read and one that has
+  exited is not linked. -/
+  | link (mode : Supervision.ScopeMode) (scope : Nat) (key : Nat) (target : FiberId)
+      (interruptor : Option FiberId) (extra : ReasonAnnotations α)
   /-- Drain the resumes the store owes. -/
   | drainDue
 
@@ -659,6 +668,16 @@ def start (m : RunMachine ν σ β ε δ ι α χ St) (parent : RunFiber ν σ �
   else
     let parent := { parent with dispatcher := parent.dispatcher.enqueue 0 (Task.start child) }
     (m.emit [RunEvent.scheduledTask parent.id 0 (Task.start child)], parent, [])
+
+/-- One entrant of a `raceAll`, forked at its launch (`forkUnsafe(parent, effect, true, true,
+false)`, `:1521`): an immediate daemon, interruptible (R2-10), with the race callback as its
+observer (`:1523`). -/
+def launchEntrant (interp : RunInterp ν σ β ε δ ι α χ St) (raceId : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) (host : RunFiber ν σ β ε δ ι α χ)
+    (program : Prim ν σ β ε δ ι α) : RunMachine ν σ β ε δ ι α χ St × FiberId :=
+  let (m, _, child) := spawn interp m host program ⟨true, true, Supervision.MaskMode.interruptible⟩
+  (m.modify child fun c => { c with observers := c.observers ++ [Observer.raceCallback raceId] },
+    child)
 
 /-- Link a fiber to a scope (`forkIn`, `:5364-5378`; `fiberRunIn`, `:5447-5461`): open, a
 keyed finalizer of the mode's shape and the key-dropping observer; closed, an immediate
@@ -873,19 +892,21 @@ where
       let (m, f, nested) := start m f child options.startImmediately
       ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_, nested⟩
     | WithFiberAction.forkIn program options scope key =>
+      -- fork and, when immediate, run first; the link follows (`:5366-5376`, R2-8), and
+      -- `linkScope` links only a child that has not exited (R2-9)
       let (m, f, child) := spawn interp m f program { options with daemon := true }
-      let (m, nested) := linkScope interp m Supervision.ScopeMode.forkIn scope key child
-        (some f.id) (interp.stackAnnotations f.id)
       let (m, f, started) := start m f child options.startImmediately
-      ⟨m, answer f (interp.fiberValue child), yielding, outcomeOf m false, nested ++ started⟩
+      ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_,
+        started ++ [Cmd.link Supervision.ScopeMode.forkIn scope key child (some f.id)
+          (interp.stackAnnotations f.id)]⟩
     | WithFiberAction.forkScoped program options key =>
       match interp.ambientScope f.context with
       | some scope =>
         let (m, f, child) := spawn interp m f program { options with daemon := true }
-        let (m, nested) := linkScope interp m Supervision.ScopeMode.forkIn scope key child
-          (some f.id) (interp.stackAnnotations f.id)
         let (m, f, started) := start m f child options.startImmediately
-        ⟨m, answer f (interp.fiberValue child), yielding, outcomeOf m false, nested ++ started⟩
+        ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_,
+          started ++ [Cmd.link Supervision.ScopeMode.forkIn scope key child (some f.id)
+            (interp.stackAnnotations f.id)]⟩
       | none =>
         ⟨m, { f with frame := { f.frame with
             current := Prim.failure (Cause.die interp.missingScope) } },
@@ -921,28 +942,20 @@ where
       let raceId := m.nextRace
       let token := m.nextToken
       let m := { m with nextRace := m.nextRace + 1, nextToken := m.nextToken + 1 }
-      -- entrants exist as fibers before any launch; a launch is a command
-      let (m, f, ids) := entrants.foldl
-        (fun (acc : RunMachine ν σ β ε δ ι α χ St × RunFiber ν σ β ε δ ι α χ × List FiberId) program =>
-          -- `forkUnsafe(parent, effect, true, true, false)`: immediate, daemon, and
-          -- *interruptible* — `uninterruptible = false` (`:1521`, R2-10)
-          let (m, f, child) := spawn interp acc.1 acc.2.1 program
-            ⟨true, true, Supervision.MaskMode.interruptible⟩
-          let m := m.modify child fun c =>
-            { c with observers := c.observers ++ [Observer.raceCallback raceId] }
-          (m, f, acc.2.2 ++ [child])) (m, f, [])
-      let race : Race β ε δ ι α :=
-        ⟨raceId, f.id, token, Supervision.RaceAllState.initial ids, false⟩
+      -- the entrants are forked one per iteration of the register loop, in order, and the
+      -- loop breaks once done (`:1520-1528`, R2-11): each iteration is a `launch` command
+      let race : Race ν σ β ε δ ι α :=
+        ⟨raceId, f.id, token,
+          { Supervision.RaceAllState.initial [] with remaining := entrants.length }, false, entrants⟩
       let m := { m with races := m.races ++ [race] }
-      let m := m.emit [RunEvent.raceStarted raceId f.id ids]
+      let m := m.emit [RunEvent.raceStarted raceId f.id entrants.length]
       -- the race is a `callback` whose registration returns `fiberInterruptAll(fibers)`
       -- (`:1530`): that cancel is pushed as an `AsyncFinalizer` frame (R2-13)
       let name := interp.cancelName (interp.raceCancelName raceId) f.id token
       let f := { f with frame := { f.frame with stack := Prim.asyncFinalizer name :: f.frame.stack } }
-      -- the empty race stays pending until interrupted; a non-empty one launches in order
+      -- the empty race stays pending until interrupted
       let f := f.park ⟨token, none, [], [], Resume.void, false⟩
-      ⟨m.emit [RunEvent.parkedOn f.id token], f, yielding, Outcome.parked,
-        ids.map (Cmd.launch raceId)⟩
+      ⟨m.emit [RunEvent.parkedOn f.id token], f, yielding, Outcome.parked, [Cmd.launch raceId]⟩
     | WithFiberAction.setInterruptible body false =>                    -- :4302-4310 (M2)
       ⟨m, { f with frame := { f.frame.uninterruptible with current := body } },
         yielding, Outcome.continue_, []⟩
@@ -1172,26 +1185,28 @@ def drive (interp : RunInterp ν σ β ε δ ι α χ St) :
             drive interp fuel m (Cmd.evaluate id :: rest)
           else drive interp fuel m rest
         | Parked.notParked => drive interp fuel m rest
-    | Cmd.launch raceId entrant =>
+    | Cmd.launch raceId =>                                             -- :1520-1528 (R2-11)
       match m.race? raceId with
-      | some race =>
-        if race.state.accepted.isSome then                             -- M8: interrupt, do not delete
-          match m.fiber? entrant with
-          | none => drive interp fuel m rest
-          | some e =>
-            let (e, applyNow) :=
-              interruptRecord interp (some race.host) (interp.stackAnnotations race.host) e
-            let m := (m.update e).emit [RunEvent.raceSkipped raceId entrant,
-              RunEvent.interruptRecorded (some race.host) entrant]
-            drive interp fuel m ((if applyNow then [Cmd.evaluate entrant] else []) ++ rest)
-        else
-          let m := m.updateRace { race with state :=
-            { race.state with
-              unstarted := race.state.unstarted.filter fun e => e ≠ entrant
-              live := race.state.live ++ [entrant] } }
-          drive interp fuel (m.emit [RunEvent.raceLaunched raceId entrant])
-            (Cmd.evaluate entrant :: rest)
       | none => drive interp fuel m rest
+      | some race =>
+        match race.programs with
+        | [] => drive interp fuel m rest
+        | program :: more =>
+          -- `if (done) break` (`:1527`): once accepted, no further entrant is ever forked
+          if race.state.accepted.isSome then drive interp fuel m rest
+          else
+            match m.fiber? race.host with
+            | none => drive interp fuel m rest
+            | some host =>
+              let (m, child) := launchEntrant interp raceId m host program
+              let m := m.updateRace { race with
+                programs := more
+                state := { race.state with live := race.state.live ++ [child] } }
+              drive interp fuel (m.emit [RunEvent.raceLaunched raceId child])
+                (Cmd.evaluate child :: Cmd.launch raceId :: rest)
+    | Cmd.link mode scope key target interruptor extra =>              -- :5366-5376 (R2-8)
+      let (m, nested) := linkScope interp m mode scope key target interruptor extra
+      drive interp fuel m (nested ++ rest)
     | Cmd.finish id exit =>                                            -- :611-628
       match m.fiber? id with
       | none => drive interp fuel m rest

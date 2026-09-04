@@ -107,6 +107,21 @@ close-state-first, single-finalizer-unmerged and strategy split (`:3779-3827`), 
    fills the three hooks with its frontier name and the bare exit (no flow races; a join
    park's cleanup there is visible as the compile's frontier marker).
 4. The fork family R2-7, R2-8, R2-11 and the scheduler R2-14/R2-15.
+   **R2-7, R2-8, R2-11 landed 2026-09-04.** R2-7: `Name.snapshotThen` compiles to
+   `Prim.onExit body (finalizerName (FinName.awaitNewChildren snapshot)) false`; the await
+   runs on any exit, under the finalizer mask, and the body's own value is answered
+   (`Name.awaitNew` retired). R2-8: `forkIn`/`forkScoped` spawn, start, and then queue
+   `Cmd.link` after the start commands, so an immediately finished child is never linked.
+   R2-11: `Race.programs` holds the entrants still to fork; `Cmd.launch race` is one
+   iteration of the register loop (`launchEntrant`, `evaluate`, the next launch) and forks
+   nothing once accepted; `RunEvent.raceSkipped` retired, `raceStarted` carries the count.
+   Witnesses `w5_await_all_children_on_failure`, `w6_deferred_child_is_linked`,
+   `w3_immediate_success_stops_launch` (restated: two fibers, one program unlaunched);
+   register rows `E4-RUN-CE-035/036/037`. Trace-level remainder R2-11b: an entrant that
+   wins synchronously during registration makes rc.112's `Async` return the exit without
+   parking (`:1120-1126`), where the model parks the host and resumes it on the spot —
+   `parkedOn`/`resumedWith` rows and the race's cleanup frame differ, outcomes agree; owed
+   to R4 with R2-16..19.
 5. The trace-level four with R4.
 
 Every closed finding lands as a clause in `Effect4/Deep/Clauses.lean`, a witness in

@@ -123,6 +123,9 @@ inductive FinName
   | detachFromParent (parent : Nat) (key : Nat)
   /-- An ordinary release, observable through the exit it produces. -/
   | release (label : Nat) (fails : Bool)
+  /-- `awaitAllChildren`'s finalizer (`internal/effect.ts:5319-5333`, R2-7): await the
+  children added since the snapshot, on any exit, under the finalizer mask. -/
+  | awaitNewChildren (snapshot : List FiberId)
   /-- A release that parks on an external async before it completes: the observable a masked
   finalizer needs, since `onExit`'s `contAll` masks the fiber while the finalizer runs
   (`Effect4/Runtime/Runtime.lean:560-565`, rc.112 `internal/effect.ts:4021`). -/
@@ -351,9 +354,8 @@ inductive Name
   | constant (value : Val)
   /-- contA on a reified `Exit`: turn it back into an effect. -/
   | exitOfValue
-  /-- contA: `awaitAllChildren`'s exit half over the snapshot (`:5318-5322`). -/
-  | awaitNew (snapshot : List FiberId)
-  /-- contA on the snapshot value: run the body, then await the children added since. -/
+  /-- contA on the snapshot value: `onExit(self, …)` — run the body, and on any exit await
+  the children added since (`:5319-5333`, R2-7). -/
   | snapshotThen (body : ProgName)
   /-- `register(resume, signal)` for `Deferred.await` (`Deferred.ts:173-177`). -/
   | registerAwait (cell : DeferredKey)
@@ -1073,6 +1075,8 @@ def finProgram : FinName → ExitV → Program
     if fails then Prim.failure (Cause.fail (Err.tag label)) else Prim.success Val.unit
   | FinName.parkThen slot, _ =>
     Prim.async (Name.externalRegister slot) false none
+  | FinName.awaitNewChildren snapshot, _ =>
+    Prim.withFiber (Thunk.act (ActionName.awaitNewChildren snapshot))
 
 /-- The stored primitive a `Completion` names. `done exit = completeWith (Prim.ofExit exit)`
 (`Deferred.ts:570-571`); `ofRefGet` is a non-exit effect, stored and not run (`:456-461`). -/
@@ -1253,11 +1257,12 @@ def contAOf : Name → Val → Program
   | Name.exitOfValue, Val.exitOk value => Prim.success value
   | Name.exitOfValue, Val.exitErr cause => Prim.failure cause
   | Name.exitOfValue, _ => Prim.failure (Cause.die Defect.badName)
-  | Name.awaitNew snapshot, _ =>
-    Prim.withFiber (Thunk.act (ActionName.awaitNewChildren snapshot))
   | Name.snapshotThen body, Val.fibers snapshot =>
-    Prim.onSuccess (progOf body) (Name.awaitNew snapshot)
-  | Name.snapshotThen body, _ => Prim.onSuccess (progOf body) (Name.awaitNew [])
+    -- `onExit(self, _ => asVoid(fiberAwaitAll(new children)))` (`:5319-5333`, R2-7): awaited
+    -- on any exit, under the finalizer mask
+    Prim.onExit (progOf body) (Name.finalizerName (FinName.awaitNewChildren snapshot)) false
+  | Name.snapshotThen body, _ =>
+    Prim.onExit (progOf body) (Name.finalizerName (FinName.awaitNewChildren [])) false
   | Name.closeSeq rest exit captured, _ => closeSeqChain rest exit captured
   | Name.closePar rest exit forked masked, Val.fiber id =>
     closeParChain masked rest exit (forked ++ [id])

@@ -120,11 +120,10 @@ def scopeRows (m : MC) : List (List Nat) :=
     | RunEvent.scopeClosedOnLink scope fiber => some [1, scope, fiber.value]
     | _ => none
 
-/-- The `raceLaunched` (`0`), `raceSkipped` (`1`) and `raceSettled` (`2`) rows. -/
+/-- The `raceLaunched` (`0`) and `raceSettled` (`2`) rows. -/
 def raceRows (m : MC) : List (List Nat) :=
   m.trace.filterMap fun
     | RunEvent.raceLaunched race entrant => some [0, race, entrant.value]
-    | RunEvent.raceSkipped race entrant => some [1, race, entrant.value]
     | RunEvent.raceSettled race _ => some [2, race]
     | _ => none
 
@@ -318,9 +317,8 @@ def pJoinFailing : NativeEff :=
 
 /-! ## `raceAll`: W3's `successThenSecond`
 
-The first entrant's success settles the race and the second is never launched; since M8 the
-unlaunched entrant is interrupted with the host's id (and, R2-5, the host's stack annotations)
-and kept. -/
+The first entrant's success settles the race and the second is never forked (the register
+loop breaks once done, `:1527`; R2-11): two fibers, nothing interrupted. -/
 
 def pRace : NativeEff :=
   .withFiber (.raceAll (.cons (.succeed (.lit (.nat 1)))
@@ -328,10 +326,10 @@ def pRace : NativeEff :=
 
 #guard (typeOf nativeSignature pRace).isSome
 #guard exitOf (replayEff pRace [evaluateRoot]) 0 = some (Exit.success (Val.nat 1))
-#guard raceRows (replayEff pRace [evaluateRoot]) = [[0, 0, 1], [2, 0], [1, 0, 2]]
-#guard fiberCount (replayEff pRace [evaluateRoot]) = 3
-#guard interruptRows (replayEff pRace [evaluateRoot]) = [(some 0, 2)]
-#guard exitOf (replayEff pRace [evaluateRoot]) 2 = some (interruptedFrom ⟨0⟩ ⟨2⟩)
+#guard raceRows (replayEff pRace [evaluateRoot]) = [[0, 0, 1], [2, 0]]
+#guard fiberCount (replayEff pRace [evaluateRoot]) = 2
+#guard interruptRows (replayEff pRace [evaluateRoot]) = []
+#guard exitOf (replayEff pRace [evaluateRoot]) 2 = none
 
 /-! ## The children middleware: W5's shape
 
