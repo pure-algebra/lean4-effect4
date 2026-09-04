@@ -2799,3 +2799,43 @@ Owed rows and coordinator business out of 2a:
 
 Next: the breaker's handler packet (§13.7 ruling 7), then 2d, then the battery renames
 (§13.7 ruling 5), then `Effect4Test.lean` imports and the `Effect4TestSurface` target.
+
+### The module closure repaired, 2026-09-04
+
+`Effect4.lean` now reaches every green module in the tree, so
+`#effect4_axiom_gate` runs instead of aborting on the first unreachable file.
+Twenty-six modules were outside it: the seven Surface carriers of waves 2a to
+2c, the eighteen files of the characterized-components lane
+(`Effect4/Char/`, whose connect step deliberately left the root alone, per
+`workshop/Char/10-connect/A-core.md`), and `Effect4/Store/Pin.lean`. All
+twenty-six carry zero `sorry`, zero `axiom` and zero `native_decide`. The Char
+files were untracked as well as unimported, so a clean checkout of the previous
+commit could not have built this root; they are committed here.
+
+Wiring the seven carriers into one environment surfaced three name collisions
+that no build could have caught while the modules were mutually unreachable,
+each a case of plan §13.6 rule 2 (one canonical spelling per fact):
+
+* `describedBag` was declared at the top of `Effect4.Surface` by both `Api.lean`
+  and `Agent.lean`. Both are fixture helpers for their own `#guard` battery and
+  neither is read outside its module, so both are now `private`. One canonical
+  spelling in `Annotate.lean` is owed before wave 3a's DSL needs it.
+* `identifierIn` and `descriptionIn` were declared by both `Api.lean` and
+  `Deploy.lean`, and are read across modules (`Api/Emit.lean` reads Api's,
+  `Site.lean` reads Deploy's). Both copies are deleted and the pair is hoisted
+  into `Annotate.lean` beside `bagValue?`, which is where the keys already live.
+  Additive: no wave 1a declaration changed.
+
+The twenty-four frozen breaker batteries of wave 1b are declared in
+`test/fixtures/trust-gate/known-red.txt`, which is the sanctioned mechanism for
+a red phase and keeps the closure check's teeth. Every entry was elaborated with
+`lake env lean` and observed to fail before it was written down; the set is
+clean in both of the gate's directions (nothing declared is imported, nothing
+declared is missing a source file). They stay declared until §13.7 ruling 5's
+repair restates them against the vocabulary `Facts.lean` carries.
+
+Two modules the batteries import do not exist in any wave: `Effect4.Surface.Derive`
+and `Effect4.Surface.Model`, both from the §14 meta API. They are owed builder work.
+
+`lake build Effect4` 160 jobs green. `lake build Effect4TestGreen` reaches the
+gate and passes the closure check.

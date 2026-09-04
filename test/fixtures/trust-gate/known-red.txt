@@ -25,3 +25,37 @@
 # Effect4Test.Concurrency.RaceRepresentativeContract (the binary race closure packet)
 # were declared here from their birth; both lanes were retired on 2026-09-04 with
 # their batteries deleted, so the list is empty and the all-green control holds.
+
+# The Surface library's frozen breaker packet (wave 1b of
+# docs/research/2026-09-04-surface-library-plan.md, plus the Handler packet that
+# plan §13.7 ruling 7 requires before wave 2d builds). The breaker froze these
+# from the plan alone, without reading Effect4/Surface/, which is the whole point
+# of the role; they are red until §13.7 ruling 5's repair lands, which restates
+# them clause for clause against the vocabulary Facts.lean actually carries. That
+# repair, the Effect4Test.lean import lines and the Effect4TestSurface target are
+# the coordinator's wave 4. Each entry below was elaborated with
+# `lake env lean` on 2026-09-04 and observed to fail.
+Effect4Test.Surface.Fixtures
+Effect4Test.Surface.FactsContract
+Effect4Test.Surface.KindContract
+Effect4Test.Surface.EntityContract
+Effect4Test.Surface.JsonSchemaContract
+Effect4Test.Surface.ApiContract
+Effect4Test.Surface.AgentContract
+Effect4Test.Surface.DeployContract
+Effect4Test.Surface.SiteContract
+Effect4Test.Surface.IngestContract
+Effect4Test.Surface.EmitContract
+Effect4Test.Surface.DeriveContract
+Effect4Test.Surface.SurfaceAxiomReport
+Effect4Test.Counterexamples.Surface.Facts
+Effect4Test.Counterexamples.Surface.Kind
+Effect4Test.Counterexamples.Surface.Entity
+Effect4Test.Counterexamples.Surface.JsonSchema
+Effect4Test.Counterexamples.Surface.Api
+Effect4Test.Counterexamples.Surface.Agent
+Effect4Test.Counterexamples.Surface.Deploy
+Effect4Test.Counterexamples.Surface.Site
+Effect4Test.Counterexamples.Surface.Ingest
+Effect4Test.Counterexamples.Surface.Emit
+Effect4Test.Counterexamples.Surface.Derive

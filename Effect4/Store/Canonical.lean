@@ -16,12 +16,19 @@ the payload length as eight big-endian bytes, then the payload. Framing is
 what makes concatenation injective — a pair's two halves cannot bleed into
 each other — and the tag is what keeps `some x` and `[x]` apart.
 
-Nothing here traverses a Lean `String`: a string is encoded through its
-character list (`String.toList` is the structure projection `data`) and each
-character through its code point, because the standard `String` folds carry
-`Classical.choice` through the proof backing UTF-8 decoding and this tree's
-axiom gate refuses that for a semantic definition
-(`Effect4Test/Audit/AxiomGate.lean`). A natural number is its base-256 digits,
+A string is its UTF-8 bytes, `s.toUTF8.data.toList`, read as a projection: on
+this toolchain a `String` *is* a valid UTF-8 `ByteArray`, so taking those bytes
+costs no axiom, while a character-level traversal (`toList`, `foldr`) decodes
+through a proof that reaches `Classical.choice`, which this tree's axiom gate
+refuses for a semantic definition (`Effect4Test/Audit/AxiomGate.lean`). An
+earlier revision encoded a string through its character list and each character
+through its code point, for the reason reversed: that story is wrong on this
+toolchain, and the code stopped following it. Corrected 2026-09-04, after the
+stale paragraph led a reading agent to report a second, non-existent string
+encoder. `Effect4Test/Arch/ArchContract.lean:134` receipts the outcome: this
+instance and `Effect4.Arch.jsonBytes` take the same route and both print as
+depending on no axioms, so a string has one canonical encoding in this tree and
+a `Json` payload addresses through it. A natural number is its base-256 digits,
 big-endian, computed with the number itself as the fuel so the recursion is
 structural.
 -/
@@ -34,10 +41,6 @@ abbrev Bytes := List UInt8
 /-- `n` as eight big-endian bytes, `n mod 2^64`. Lengths are what it is used for. -/
 def be64 (n : Nat) : Bytes :=
   [56, 48, 40, 32, 24, 16, 8, 0].map fun shift => UInt8.ofNat ((n >>> shift) % 256)
-
-/-- `n` as four big-endian bytes, `n mod 2^32`. Code points are what it is used for. -/
-def be32 (n : Nat) : Bytes :=
-  [24, 16, 8, 0].map fun shift => UInt8.ofNat ((n >>> shift) % 256)
 
 /-- Base-256 digits, big-endian, no leading zero byte; `0` is the empty digit
 string. The number is its own fuel, so the recursion is structural. -/

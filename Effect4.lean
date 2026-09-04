@@ -9,6 +9,7 @@ import Effect4.Store.Canonical
 import Effect4.Store.Digest
 import Effect4.Store.Trie
 import Effect4.Store.Store
+import Effect4.Store.Pin
 import Effect4.Flow.Region
 import Effect4.Flow.Decision
 import Effect4.Flow.Interrupt
@@ -110,8 +111,17 @@ import Effect4.StdLib.Links
 -- store content; `JsonSchema` is draft 2020-12 in both directions on one
 -- fragment, read off rc.112's own compiler; `Emit` is the rule census and the
 -- stance, where every rule is `emitted` until its receipt lands; and `Views` is
--- the surface store. The Api, Agent, Deploy, Site and Ingest rows of the plan's
--- §2 follow in waves 2a-2c.
+-- the surface store.
+--
+-- Waves 2a to 2c are the carriers the plan's §2 names. `Api` is the HTTP
+-- surface, its responses indexed by status and its path algebra decided over
+-- `List Char` (the `String` spelling of the round trip is an owed row, because
+-- `String.toList` reaches `Classical.choice` on this toolchain), and `Api.Emit`
+-- renders the rc.112 `HttpApi` module, its client and the OpenAPI 3.1 document.
+-- `Agent` is the MCP surface and `Agent.Emit` its tools listing. `Deploy` and
+-- `Deploy.Emit` are the worker and its bindings, read against the vendored
+-- wrangler schema. `Site` is the static carrier. `Ingest` has no module of its
+-- own: `ofMcpToolsList` and `ofWrangler` live with the emitters that read them.
 import Effect4.Surface.Kind
 import Effect4.Surface.Facts
 import Effect4.Surface.Annotate
@@ -120,6 +130,26 @@ import Effect4.Surface.Entity
 import Effect4.Surface.JsonSchema
 import Effect4.Surface.Emit
 import Effect4.Surface.Views
+import Effect4.Surface.Api
+import Effect4.Surface.Api.Emit
+import Effect4.Surface.Agent
+import Effect4.Surface.Agent.Emit
+import Effect4.Surface.Deploy
+import Effect4.Surface.Deploy.Emit
+import Effect4.Surface.Site
+-- The characterized components lane (workshop/Char/): a component is its kinds,
+-- its failure set and the order they induce, so a lossy table still gets `order`
+-- from one generic theorem rather than a hand-written word induction. `Queue` is
+-- the first port, the rc.112 `Queue.ts` step emitted arm by arm and checked
+-- against the source theorems it claims, with its reachability invariant, its
+-- crash reading, its graded axes, and its acceptance and mutant-kill suites
+-- decided in the kernel so a survivor is a build failure. `Conformance`,
+-- `Manifest` and `Evidence` are the lane's census, its component table and its
+-- receipts.
+import Effect4.Char.Conformance
+import Effect4.Char.Manifest
+import Effect4.Char.Queue.Grade
+import Effect4.Char.Queue.Mutants
 -- The AST relation (docs/research/2026-09-04-ast-relation-plan.md), lane A1:
 -- the Effect TS program syntax `Eff` and its typing, first-order and
 -- decidable throughout; the printer, the compile and the parser follow.

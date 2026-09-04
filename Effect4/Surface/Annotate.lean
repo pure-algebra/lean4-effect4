@@ -386,6 +386,16 @@ def Representation.bag? (representation : Representation) : Option Annotations :
 def bagValue? {A : Type} (key : AnnotationKey A) (bag : Annotations) : Option A :=
   (key.getAll bag).head?
 
+/-- The `identifier` of a bag, when it carries one. The one canonical spelling:
+`Api.lean`, `Deploy.lean` and `Site.lean` all read identity through this. -/
+def identifierIn (annotations : Annotations) : Option String :=
+  bagValue? identifierKey annotations
+
+/-- The `description` of a bag, when it carries one. The one canonical spelling:
+`Api.lean`, `Deploy.lean` and `Site.lean` all read description through this. -/
+def descriptionIn (annotations : Annotations) : Option String :=
+  bagValue? descriptionKey annotations
+
 /-- The first value of a key on a representation's root bag. -/
 def Representation.valueOf? {A : Type} (key : AnnotationKey A)
     (representation : Representation) : Option A :=

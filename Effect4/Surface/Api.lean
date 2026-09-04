@@ -744,26 +744,18 @@ deriving DecidableEq
 `Effect4/Surface/Annotate.lean`, never from a second field on a carrier.
 -/
 
-/-- The `identifier` on a bag, when it carries one. -/
-def identifierIn (annotations : Annotations) : Option String :=
-  match annotations with
-  | none => none
-  | some bag => bagValue? identifierKey (some bag)
-
-/-- The `description` on a bag, when it carries one. -/
-def descriptionIn (annotations : Annotations) : Option String :=
-  match annotations with
-  | none => none
-  | some bag => bagValue? descriptionKey (some bag)
-
 /-- The `title` on a bag, when it carries one. -/
 def titleIn (annotations : Annotations) : Option String :=
   match annotations with
   | none => none
   | some bag => bagValue? titleKey (some bag)
 
-/-- Build the bag the clauses require: an `identifier` and a `description`. -/
-def describedBag (identity description : String) : Annotations :=
+/-- Build the bag the clauses require: an `identifier` and a `description`.
+
+Fixture-local: `Effect4/Surface/Agent.lean` carries the same construction for its
+own battery. One canonical spelling in `Annotate.lean` is owed before wave 3a's
+DSL needs it (plan §13.6 rule 2). -/
+private def describedBag (identity description : String) : Annotations :=
   descriptionKey.append description (identifierKey.singleton identity)
 
 /-! ## Well-formedness, as named clauses

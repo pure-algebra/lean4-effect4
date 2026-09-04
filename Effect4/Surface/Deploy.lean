@@ -111,14 +111,6 @@ page field needs. -/
 def descriptionBag (text : String) : Annotations :=
   descriptionKey.singleton text
 
-/-- The `identifier` of a bag, when it has one. -/
-def identifierIn (annotations : Annotations) : Option String :=
-  bagValue? identifierKey annotations
-
-/-- The `description` of a bag, when it has one. -/
-def descriptionIn (annotations : Annotations) : Option String :=
-  bagValue? descriptionKey annotations
-
 /-- A string, or JSON `null` when there is none: the one spelling of an optional
 string in this area's view payloads. -/
 def optionalStr : Option String → Json

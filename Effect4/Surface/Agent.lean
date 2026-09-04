@@ -702,8 +702,12 @@ object would not survive the `tools/list` round trip of
 is `#guard`ed on.
 -/
 
-/-- An identified, described semantic bag, the shape §15.3's DSL will write. -/
-def describedBag (identifier description : String) : Annotations :=
+/-- An identified, described semantic bag, the shape §15.3's DSL will write.
+
+Fixture-local: `Effect4/Surface/Api.lean` carries the same construction for its
+own battery. One canonical spelling in `Annotate.lean` is owed before wave 3a's
+DSL needs it (plan §13.6 rule 2). -/
+private def describedBag (identifier description : String) : Annotations :=
   descriptionKey.append description (identifierKey.append identifier none)
 
 /-- A kinded struct with no annotations of its own. -/
