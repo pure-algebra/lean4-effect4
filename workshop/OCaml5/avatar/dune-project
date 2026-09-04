@@ -1,0 +1,7 @@
+(lang dune 3.0)
+; Seat F1, 2026-09-04: the avatar as a dune project in the `effect4` opam switch
+; (OCaml 5.1.1, js_of_ocaml 5.7.1 pinned -- the modelled runtimes; packages plan §1 and §3).
+; The shell build (`build-avatar.sh`) stays the reference until this build is green on all
+; three hosts; `build-dune.sh` runs it with an out-of-tree build directory.
+(name effect4-avatar)
+(generate_opam_files false)

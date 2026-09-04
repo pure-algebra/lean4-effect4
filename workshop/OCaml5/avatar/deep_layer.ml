@@ -54,7 +54,7 @@ type Deep_fibers.store_request +=
    the service object, which the memo entry replays unchanged on a hit
    (`harness/trace/layer-tail.ts:114-121`). Layer 3 is `Layer.fresh(layer 1)`, so it misses
    the memo every time and counts against base 1. *)
-let arm_layer_build m f (layer : int) (ko : kops) : unit =
+let arm_layer_build m f (layer : int) (ko : value kops) : unit =
   begin
     push_row (Rop ("build", Vnat layer));
     let ls = layers in
@@ -82,7 +82,7 @@ let arm_layer_build m f (layer : int) (ko : kops) : unit =
     answer_row m f "build" (Vhandle (handle_index "service" service)) ko
   end
 
-let layer_arm m f (req : Deep_fibers.store_request) (ko : kops) : unit =
+let layer_arm m f (req : Deep_fibers.store_request) (ko : value kops) : unit =
   match req with
   | Rlayer_build layer -> arm_layer_build m f layer ko
   | Rlayer_provide_count base ->

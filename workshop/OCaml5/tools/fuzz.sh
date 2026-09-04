@@ -172,8 +172,11 @@ case "${1:-}" in
     cp "$REPO"/workshop/OCaml5/avatar/*.ml "$sdir/ml/" 2>/dev/null
     rm -f "$sdir/ml/jsprobe.ml"
     cp "$cdir/corpus_fixture.ml" "$sdir/ml/"
-    if ( cd "$sdir/ml" && "$OCAMLC" -c deep_fibers.ml avatar_trace.ml fibers_fixture.ml \
-           store_fixtures.ml extra_fixture.ml ) >"$sdir/avatar.build" 2>&1; then
+    # Seat W1: `deep_stores.ml` and `deep_layer.ml` are the ports of `Effect4/Deep/Stores.lean`
+    # and `Layer.lean`, and the fixtures link against them.
+    if ( cd "$sdir/ml" && "$OCAMLC" -c deep_fibers.ml deep_stores.ml deep_layer.ml \
+           avatar_trace.ml fibers_fixture.ml store_fixtures.ml extra_fixture.ml ) \
+         >"$sdir/avatar.build" 2>&1; then
       echo "ocamlc avatar modules   OK"
     else
       echo "ocamlc avatar modules   FAILED"; sed -n '1,20p' "$sdir/avatar.build"

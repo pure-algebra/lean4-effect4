@@ -101,6 +101,14 @@ type exitv = Esuccess of value | Efailure of cause
 type observer_mode = MJoin | MAwait
 type park_kind = Pjoin of int * observer_mode
 
+(* `Supervision.MaskMode` and `Supervision.ForkOptions`
+   (`Effect4/Concurrency/Supervision.lean:15-21`): the mask a fork applies (`:5272`) and the
+   three options `spawn` reads. Seat F1 moved them here from `deep_stores.ml`, because
+   `spawn` (`Fibers.lean:631`) takes the options now rather than a `daemon` flag alone
+   (report row W1-5, closed). *)
+type mask_mode = Minterruptible | Muninterruptible | Minherit
+type fork_options = { start_immediately : bool; daemon : bool; mask_mode : mask_mode }
+
 (* `Parked` (`:62`): rc.112 `_yielded` absent, or the resume guard as a token. *)
 type parked = NotParked | WithGuard of int
 
@@ -126,9 +134,13 @@ type observer =
   | Callback of int
 
 (* The answer a resume carries. Lean carries a whole `Prim`; every `Prim` the machine builds
-   in that position is `Prim.success v` or `Prim.failure c`, so the OCaml answer is
-   restricted to those two. *)
-type answer = Aval of value | Acause of cause
+   in that position is `Prim.success v`, `Prim.failure c` or -- for a countdown that
+   collected exits (`Resume.exitsValue`, M6) -- `Prim.success (interp.exitsValue exits)`,
+   so the OCaml answer is restricted to those three. `Aexits` carries the exits themselves,
+   not a value: the wire projection (`answer_countdown`, raw values) and the Lean-alphabet
+   projection (`Deep_stores.exits_val`, `Val.exitOk`/`exitErr`) are each applied at their
+   own site, which closes report row W1-7. *)
+type answer = Aval of value | Acause of cause | Aexits of exitv list
 
 (* `Task` (`:104`), `Bucket` (`:110`), `Dispatcher` (`:117`). *)
 type task = Tstart of int | Tresume of int * int * answer
@@ -177,7 +189,7 @@ and kont = { ktoken : int; kresume : answer -> unit }
 (* The two halves of a captured one-shot continuation, closed over at the `effc` branch so
    that no GADT-refined type crosses into the mutually recursive machine functions:
    `ret v` is `ko.ret v`, `thr e` is `Effect.Deep.discontinue k e`. *)
-type kops = { ret : value -> unit; thr : exn -> unit }
+type 'a kops = { ret : 'a -> unit; thr : exn -> unit }
 
 (* `FrameFiber` (`Runtime.lean:269`), five fields. *)
 type frame_fiber = {
@@ -211,7 +223,7 @@ type run_fiber = {
   (* Not a Lean field: a `raceAll` host is resumed either by its own race token or by the
      settle path's countdown token, and the OCaml continuation has to survive both. Lean
      keeps the program in `frame.current` instead (DIVERGENCE 1). *)
-  mutable race_answer : kops option;
+  mutable race_answer : value kops option;
   mutable observers : observer list;
   mutable children : int list;
   mutable dispatcher : dispatcher;
@@ -381,7 +393,14 @@ let fiber_exn m id =
   | Some f -> f
   | None -> failwith (Printf.sprintf "unknown fiber %d" id)
 
-let emit m events = m.trace <- m.trace @ events
+(* Seat F1: a probe. `deep_clauses.ml` states a clause as a predicate over the machine at
+   the moment an event is emitted (Lean's `RunMachine.emit` is the one place the trace
+   grows, `Fibers.lean:476`); the hook sees the live machine, which is the snapshot at that
+   step under DIVERGENCE 3. The default does nothing and the goldens never install one. *)
+let on_event : (run_machine -> run_event -> unit) ref = ref (fun _ _ -> ())
+
+let emit m events =
+  List.iter (fun e -> m.trace <- m.trace @ [ e ]; !on_event m e) events
 let halt m why = m.stuck <- Some why
 
 (* `RunMachine.finished` (`:504`). *)
@@ -449,6 +468,27 @@ type _ Effect.t +=
      `deep_stores.ml` declares and answers, over the `Deep.Stores` carriers. *)
   (* `WithFiberAction.raceAll` (`Fibers.lean:866-880`). Round five. *)
   | Op_race_all : int list -> value Effect.t
+  (* Seat F1: the Lean alphabet's own arms, taken by `Deep_stores.prog_of` -- a fork whose
+     body is a program rather than a fixture code, the scope-linked forks, the join by
+     mode, the exits-answering await, and `closeScope`. None pushes a wire row: they are
+     the `Stores.lean` programs, which no golden lowers to. *)
+  | Op_fork_prog : (unit -> value) * fork_options -> value Effect.t      (* WithFiberAction.fork *)
+  | Op_fork_in : (unit -> value) * fork_options * int * int -> value Effect.t  (* .forkIn *)
+  | Op_fork_scoped : (unit -> value) * fork_options * int -> value Effect.t    (* .forkScoped *)
+  | Op_run_in : int * int * int -> value Effect.t                          (* .runIn *)
+  | Op_join_on : int * observer_mode -> value Effect.t                     (* ParkKind.join *)
+  | Op_await_fibers : int list -> exitv list Effect.t                      (* .awaitAll, exits *)
+  | Op_interrupt_fiber : int -> value Effect.t                             (* .interrupt, by id *)
+  | Op_interrupt_scoped : int -> value Effect.t                            (* .interruptScoped *)
+  | Op_race_all_prog : (unit -> value) list -> value Effect.t              (* .raceAll *)
+  | Op_close_scope : int * exitv -> value Effect.t                         (* .closeScope *)
+  | Op_get_id : unit -> value Effect.t                                     (* .getId *)
+  (* `Prim.onExit`'s `contAll` (`Runtime.lean:631-640`, `ensure`): the exit has met the
+     frame; the finalizer program is about to run. Emits `finalizerProgram`, masks the fiber
+     when it was interruptible and answers the previous flag, so the fiber-side wrapper can
+     restore it -- Lean's pushed `setInterruptible true` frame. One primitive, one
+     iteration, as `finalizerOr` (`Fibers.lean:795`) is. *)
+  | Op_on_exit_enter : string * exitv * bool -> value Effect.t
 
 (* A typed failure raised by a fiber body: `Prim.yieldableError`. *)
 exception Efail_exn of int
@@ -473,7 +513,7 @@ type run_interp = {
      `withFiberOf` (`:398`) arms the store owns, at one entry point: `σ` is `store_request`,
      which the machine cannot inspect. The arm answers through `ko` because a store
      operation may park (`Deferred.await`). *)
-  mutable store_arm : run_machine -> run_fiber -> store_request -> kops -> unit;
+  mutable store_arm : run_machine -> run_fiber -> store_request -> value kops -> unit;
   (* `RunInterp.dueResumes` (`Fibers.lean:414`). *)
   mutable due_resumes : unit -> (int * int * answer) list;
   (* `RunInterp.scopeStatus` (`Fibers.lean:427`): `None` unknown, `Some None` open,
@@ -487,6 +527,10 @@ type run_interp = {
   (* `RunInterp.closeScope` (`Fibers.lean:440`): scope, exit, the closer's `interruptible`,
      the closer's id. `None` is Lean's `none` (an unknown scope, M7). *)
   mutable close_scope : int -> exitv -> bool -> int -> (unit -> value) option;
+  (* `RunInterp.stackAnnotations` (`Fibers.lean:457`): what `currentStackFrame` contributes
+     to an interrupt cause (`:579-580`). `Deep_stores.stack_annotations_of` is the
+     `Stores.lean:1283` meaning; the default is the avatar's older spelling. *)
+  mutable stack_annotations : int -> string list;
 }
 
 (* The refusing default. Every slot names the `RunInterp` field it stands for, so a program
@@ -498,7 +542,20 @@ let interp : run_interp ref =
       scope_status = (fun _ -> None);
       scope_link_fiber = (fun _ _ _ _ -> false);
       drop_finalizer = (fun _ _ -> false);
-      close_scope = (fun _ _ _ _ -> None) }
+      close_scope = (fun _ _ _ _ -> None);
+      stack_annotations = (fun id -> [ Printf.sprintf "stack:%d" id ]) }
+
+(* The program a `withFiber` arm installs as the fiber's next primitive (Lean:
+   `current := program`, `Fibers.lean:939-941` for `closeScope`). The avatar's frame is the
+   OCaml stack (DIVERGENCE 1), so the arm leaves the program here and the fiber-side
+   wrapper runs it on its own stack the moment it is resumed; one fiber runs at a time and
+   the resume is synchronous, so the slot is never contended. *)
+let current_program : (unit -> value) option ref = ref None
+
+let take_current_program () : unit -> value =
+  match !current_program with
+  | Some p -> current_program := None; p
+  | None -> fun () -> Vunit
 
 (* The body of a child, resolved through the fixture's table -- a fork names a declared
    root, never a closure (`fork-lowering.md` §(b)). Set by the fixture module. *)
@@ -534,7 +591,7 @@ let interrupt_record _m interruptor (extra : string list) (f : run_fiber) : bool
   if f.exit_ <> None then false (* :575-577 *)
   else begin
     let cause =
-      cause_annotate (cause_interrupt interruptor) ((Printf.sprintf "stack:%d" f.id) :: extra)
+      cause_annotate (cause_interrupt interruptor) (!interp.stack_annotations f.id @ extra)
     in
     let accumulated =
       match f.frame.interrupted_cause with (* :585-587 *)
@@ -565,7 +622,7 @@ let interrupt_record _m interruptor (extra : string list) (f : run_fiber) : bool
 (* `countdownPark.resumePrim` (`:598`). *)
 let resume_prim resume_with (exits : exitv list) : answer =
   match resume_with with
-  | RexitsValue -> Aval (Vlist (List.map (function Esuccess v -> v | Efailure _ -> Vnone) exits))
+  | RexitsValue -> Aexits exits
   | Rvoid -> Aval Vunit
   | RcontinueWith e -> ( match e with Esuccess v -> Aval v | Efailure c -> Acause c)
 
@@ -623,21 +680,44 @@ let race_complete (r : race) (child : int) (exit_ : exitv) : unit =
 
 let race_opt m id = List.find_opt (fun r -> r.rid = id) m.races
 
-(* `spawn` (`:622`): mask by the options, the parent's context, tracked unless daemon. *)
-let spawn m (parent : run_fiber) (program : unit -> value) ~daemon : int =
-  let child_id = m.next_id in
-  let child =
-    run_fiber_make child_id program parent.frame.interruptible
-      (!max_ops_before_yield, !prevent_yield) ()
+(* `spawnChild` (`Clauses.lean:432`): the child `forkUnsafe` constructs (`:5264-5284`) -- the
+   next id, the parent's context and budget, the mask by the options (`:5272`), and the
+   untrack observer unless daemon. Not yet appended to the machine. *)
+let spawn_child m (parent : run_fiber) (program : unit -> value) (options : fork_options) :
+    run_fiber =
+  let child_interruptible =
+    match options.mask_mode with
+    | Minterruptible -> true
+    | Muninterruptible -> false
+    | Minherit -> parent.frame.interruptible
   in
-  if not daemon then begin
-    child.observers <- [ UntrackChild parent.id ];
-    parent.children <- parent.children @ [ child_id ]
-  end;
+  let child =
+    run_fiber_make m.next_id program child_interruptible
+      (!max_ops_before_yield, !prevent_yield) parent.context
+  in
+  if not options.daemon then child.observers <- [ UntrackChild parent.id ];
+  child
+
+(* `spawn` (`:631`): the child takes the next id and is appended to the machine, the id
+   counter advances, and the parent tracks it unless daemon (`:5280-5281`). *)
+let spawn m (parent : run_fiber) (program : unit -> value) (options : fork_options) : int =
+  let child_id = m.next_id in
+  let child = spawn_child m parent program options in
+  if not options.daemon then parent.children <- parent.children @ [ child_id ];
   m.fibers <- m.fibers @ [ child ];
   m.next_id <- m.next_id + 1;
-  emit m [ Forked (parent.id, child_id, daemon) ];
+  emit m [ Forked (parent.id, child_id, options.daemon) ];
   child_id
+
+(* The fixture's fork: deferred start, inherited mask (`ForkOptions ⟨false, daemon, inherit⟩`). *)
+let fixture_fork_options ~daemon : fork_options =
+  { start_immediately = false; daemon; mask_mode = Minherit }
+
+(* A stuck machine (M7, S3 §5.1): the reason is recorded and the fiber stops running, as
+   Lean's `Outcome.stuck` arm of `drive` leaves it (`Fibers.lean:1129`). *)
+let stuck m (f : run_fiber) why : unit =
+  f.running <- false;
+  halt m why
 
 (* `start` (`:644`): immediately on the caller stack, or deferred at priority 0 (`:5277`). *)
 let start m (parent : run_fiber) (child : int) ~immediately : cmd list =
@@ -656,6 +736,75 @@ let exit_value (e : exitv) (mode : observer_mode) : answer =
 
 (* Round four: `iteration_prelude` is gone; `guard` below is the whole prelude, and it can
    now park, so the yield injection is a transition rather than an event. *)
+
+(* `interruptEach` (`Clauses.lean:703`): one interrupt request over a list of targets, in
+   list order (`fiberInterruptAll`, `:5449`; the exit path's children, `:613-617`; a settled
+   race's losers). Each known target is recorded with `who` as the interruptor and no extra
+   annotations, and the ones that apply now are queued for evaluation in the same order.
+   The Lean machine inlines this fold at each site; the avatar used to as well, and now
+   names it, so the site equations are reflexive here too. *)
+let interrupt_each m (who : int) (targets : int list) (acc : cmd list) : cmd list =
+  List.fold_left
+    (fun acc t ->
+      match fiber_opt m t with
+      | None -> acc
+      | Some g ->
+        let apply_now = interrupt_record m (Some who) [] g in
+        emit m [ InterruptRecorded (Some who, t) ];
+        acc @ if apply_now then [ Cevaluate t ] else [])
+    acc targets
+
+(* `linkScope` (`Fibers.lean:665`): link a fiber to a scope (`forkIn`, `:5364-5378`;
+   `fiberRunIn`, `:5447-5461`). Open: the keyed finalizer of the mode's shape through
+   `RunInterp.scopeLinkFiber` and the key-dropping observer; closed: an immediate interrupt
+   with `interruptor` and the caller's annotations (`:5374`, M5/M10); unknown: stuck (M7).
+   `mode` is `Supervision.ScopeMode` as an int: 0 `forkIn`, 1 `fiberRunIn` (the
+   substitution table of `Render.lean`). *)
+let link_scope m (mode : int) (scope : int) (key : int) (target : int)
+    (interruptor : int option) (extra : string list) : cmd list =
+  match !interp.scope_status scope with
+  | None -> halt m (UnknownScope scope); []
+  | Some (Some _) -> (
+    match fiber_opt m target with
+    | None -> halt m (UnknownFiber target); []
+    | Some t ->
+      let apply_now = interrupt_record m interruptor extra t in
+      emit m [ ScopeClosedOnLink (scope, target); InterruptRecorded (interruptor, target) ];
+      if apply_now then [ Cevaluate target ] else [])
+  | Some None ->
+    if not (!interp.scope_link_fiber mode scope key target) then begin
+      halt m (UnknownScope scope); []
+    end
+    else begin
+      (match fiber_opt m target with
+       | Some t -> t.observers <- t.observers @ [ DropScopeFinalizer (scope, key) ]
+       | None -> ());
+      emit m [ ScopeLinked (scope, key, target) ];
+      []
+    end
+
+(* ----------------------------------------------- the run-loop top, split as Lean's is
+   (`dd1bc93`: `runloopTop`, `countOp`, `yieldVerdict`, `injectYield`). `guard` below is
+   their composition, as `iteration` (`Fibers.lean:963`) is. *)
+
+(* `runloopTop` (`:692`; rc.112 `:639-642`): a deferred interrupt is cleared and the
+   current primitive becomes the pending cause's failure. The avatar answers the cause to
+   throw, since the current primitive is the OCaml stack (DIVERGENCE 1). *)
+let runloop_top (f : run_fiber) : cause option =
+  if f.frame.deferred_interrupt then begin
+    f.frame.deferred_interrupt <- false;
+    Some (frame_pending_cause f.frame)
+  end
+  else None
+
+(* `countOp` (`:699`; `:643`). *)
+let count_op (f : run_fiber) : unit = f.current_op_count <- f.current_op_count + 1
+
+(* `yieldVerdict` (`:704`; `Scheduler.ts:174-176`, override `:78-81`). *)
+let yield_verdict (f : run_fiber) : bool =
+  match f.yield_override with
+  | Some v -> v
+  | None -> f.current_op_count >= f.max_ops_before_yield
 
 (* ------------------------------------------------------------- exit, observers, drive *)
 
@@ -681,6 +830,8 @@ let rec fire_observer m (id : int) (exit_ : exitv) (acc : cmd list) (o : observe
       match List.find_opt (fun p -> p.token = token) w.pending with
       | None -> acc
       | Some p ->
+        (* M6: collect the exit; the last target resumes the awaiter with every collected
+           exit in completion order (`fireObserver_countdown_last`, `_more`). *)
         p.collected <- p.collected @ [ exit_ ];
         if p.remaining <= 1 then begin
           p.remaining <- 0;
@@ -699,19 +850,10 @@ let rec fire_observer m (id : int) (exit_ : exitv) (acc : cmd list) (o : observe
        | Some accepted, false ->
          (* settle: interrupt the live entrants with the host's id, then resume the host
             after they have been awaited -- a countdown over them (`:1108-1130`). *)
+         (* `settleRace` (`Clauses.lean:975`). *)
          r.settled <- true;
          emit m [ RaceSettled (race_id, accepted) ];
-         let nested =
-           List.fold_left
-             (fun a entrant ->
-               match fiber_opt m entrant with
-               | None -> a
-               | Some e ->
-                 let apply_now = interrupt_record m (Some r.host) [] e in
-                 emit m [ InterruptRecorded (Some r.host, entrant) ];
-                 a @ if apply_now then [ Cevaluate entrant ] else [])
-             [] r.live
-         in
+         let nested = interrupt_each m r.host r.live [] in
          (match fiber_opt m r.host with
           | None -> acc @ nested
           | Some host ->
@@ -734,20 +876,19 @@ let rec fire_observer m (id : int) (exit_ : exitv) (acc : cmd list) (o : observe
     emit m [ CallbackEv (key, exit_) ];
     acc
 
-(* `exitFiber` (`:992`). *)
+(* `exitFiber` (`:1057`): the two clauses, chosen by the middleware, the finalizing flag and
+   the tracked children (`exitFiber_eq`, `Clauses.lean:785`). *)
 and exit_fiber m (f : run_fiber) (exit_ : exitv) : cmd list =
-  if m.middleware_installed && f.finalizing = None && f.children <> [] then begin
-    let nested =
-      List.fold_left
-        (fun acc child ->
-          match fiber_opt m child with
-          | None -> acc
-          | Some c ->
-            let apply_now = interrupt_record m (Some f.id) [] c in
-            emit m [ InterruptRecorded (Some f.id, child) ];
-            acc @ if apply_now then [ Cevaluate child ] else [])
-        [] f.children
-    in
+  if m.middleware_installed && f.finalizing = None && f.children <> [] then
+    exit_interrupt_children m f exit_
+  else exit_store m f exit_
+
+(* `exitInterruptChildren` (`Clauses.lean:749`; `:613-617`): every tracked child is
+   interrupted with the parent's id in child order, the parent remembers the exit it is
+   finalizing and parks on a countdown over the children, to continue with that exit. *)
+and exit_interrupt_children m (f : run_fiber) (exit_ : exitv) : cmd list =
+  begin
+    let nested = interrupt_each m f.id f.children [] in
     emit m [ ChildrenInterrupted (f.id, f.children) ];
     f.finalizing <- Some exit_;
     (match countdown_park m f f.children (RcontinueWith exit_) with
@@ -769,8 +910,12 @@ and exit_fiber m (f : run_fiber) (exit_ : exitv) : cmd list =
        f.finalizing <- None);
     if f.finalizing = None then nested @ [ Cevaluate f.id ] else nested
   end
-  else begin
-    (* :619-627 *)
+
+(* `exitStore` (`Clauses.lean:762`; `:619-627`): the exit is stored, the stack, the
+   children, the parks and the context are cleared, every observer fires in index order,
+   and the observer list is emptied. *)
+and exit_store m (f : run_fiber) (exit_ : exitv) : cmd list =
+  begin
     f.exit_ <- Some exit_;
     f.finalizing <- None;
     f.frame.control <- Ended;
@@ -905,7 +1050,12 @@ and run_under_handler m fuel (f : run_fiber) (body : unit -> value) : unit =
           (* One primitive, one `runLoop` iteration: `guard` runs `iteration`'s prelude
              (`internal/effect.ts:638-652`) before the arm, and the arm is a thunk because
              rc.112's yield injection re-evaluates the *same* primitive after the yield. *)
-          let dispatch (k : (value, unit) continuation) (arm : kops -> unit) : unit =
+          let dispatch (k : (value, unit) continuation) (arm : value kops -> unit) : unit =
+            let ko = { ret = continue k; thr = discontinue k } in
+            guard m f ko (fun () -> arm ko)
+          in
+          let dispatch_exits (k : (exitv list, unit) continuation)
+              (arm : exitv list kops -> unit) : unit =
             let ko = { ret = continue k; thr = discontinue k } in
             guard m f ko (fun () -> arm ko)
           in
@@ -945,6 +1095,30 @@ and run_under_handler m fuel (f : run_fiber) (body : unit -> value) : unit =
             Some (fun k -> dispatch k (fun ko -> !interp.store_arm m f req ko))
           | Op_race_all codes ->
             Some (fun k -> dispatch k (fun ko -> arm_race_all m f codes ko))
+          | Op_fork_prog (program, options) ->
+            Some (fun k -> dispatch k (fun ko -> arm_fork_prog m f program options ko))
+          | Op_fork_in (program, options, scope, key) ->
+            Some (fun k -> dispatch k (fun ko -> arm_fork_in m f program options scope key ko))
+          | Op_fork_scoped (program, options, key) ->
+            Some (fun k -> dispatch k (fun ko -> arm_fork_scoped m f program options key ko))
+          | Op_run_in (target, scope, key) ->
+            Some (fun k -> dispatch k (fun ko -> arm_run_in m f target scope key ko))
+          | Op_join_on (target, mode) ->
+            Some (fun k -> dispatch k (fun ko -> arm_join_on m f target mode ko))
+          | Op_await_fibers targets ->
+            Some (fun k -> dispatch_exits k (fun ko -> arm_await_fibers m f targets ko))
+          | Op_interrupt_fiber target ->
+            Some (fun k -> dispatch k (fun ko -> arm_interrupt_then_join m f target (Some f.id) ko))
+          | Op_interrupt_scoped target ->
+            Some (fun k -> dispatch k (fun ko -> arm_interrupt_scoped m f target ko))
+          | Op_race_all_prog programs ->
+            Some (fun k -> dispatch k (fun ko -> arm_race_all_prog m f programs ko))
+          | Op_close_scope (scope, exit_) ->
+            Some (fun k -> dispatch k (fun ko -> arm_close_scope m f scope exit_ ko))
+          | Op_get_id () ->
+            Some (fun k -> dispatch k (fun ko -> ko.ret (Vhandle (handle_index "fiber" f.id))))
+          | Op_on_exit_enter (name, exit_, fin_interruptible) ->
+            Some (fun k -> dispatch k (fun ko -> arm_on_exit_enter m f name exit_ fin_interruptible ko))
           | _ -> None);
     }
 
@@ -959,51 +1133,53 @@ and run_under_handler m fuel (f : run_fiber) (body : unit -> value) : unit =
 
    Round four makes this a real transition: it can park. Round three only emitted the
    `yieldInjected` event and carried on, so the budget was unobservable. *)
-and guard m (f : run_fiber) (ko : kops) (body : unit -> unit) : unit =
-  if f.frame.deferred_interrupt then begin
-    f.frame.deferred_interrupt <- false;
+and guard : 'a. run_machine -> run_fiber -> 'a kops -> (unit -> unit) -> unit =
+ fun m f ko body ->
+  match runloop_top f with                                             (* :639-642 *)
+  | Some cause ->
     f.running <- false;
-    ko.thr (Einterrupt_exn (frame_pending_cause f.frame))
+    ko.thr (Einterrupt_exn cause)
+  | None ->
+    count_op f;                                                        (* :643 *)
+    if not (inject_yield m f (fun () -> guard m f ko body) (fun c -> ko.thr (Einterrupt_exn c)))
+    then body ()
+
+(* `injectYield` (`Fibers.lean:710`; `:644-652`): at most once per entry (the `yielding`
+   latch), never under `PreventSchedulerYield`, and only on the verdict. The fiber parks
+   behind a resume guard whose task carries its current primitive at priority 0 -- here the
+   thunk `again`, since the same primitive runs again after the yield. Answers whether it
+   fired. *)
+and inject_yield m (f : run_fiber) (again : unit -> unit) (on_cause : cause -> unit) : bool =
+  if (not f.yielding) && (not f.prevent_yield) && yield_verdict f then begin
+    f.yielding <- true;
+    f.yield_override <- None;
+    emit m [ YieldInjected (f.id, f.current_op_count) ];
+    park_yield m f 0 again on_cause;
+    true
   end
-  else begin
-    f.current_op_count <- f.current_op_count + 1;
-    let verdict =
-      match f.yield_override with
-      | Some v -> v
-      | None -> f.current_op_count >= f.max_ops_before_yield
-    in
-    if (not f.yielding) && (not f.prevent_yield) && verdict then begin
-      f.yielding <- true;
-      f.yield_override <- None;
-      emit m [ YieldInjected (f.id, f.current_op_count) ];
-      park_yield m f 0
-        (fun () -> guard m f ko body)
-        (fun c -> ko.thr (Einterrupt_exn c))
-    end
-    else body ()
-  end
+  else false
 
 (* The service `answer` row is a further primitive. rc.112's traced service wraps the
    method's effect in `Effect.tap` (`harness/trace/tracer.ts:288-291`), so a whole run-loop
    iteration -- interrupt check, op count, yield check -- sits between the operation's value
    and the row. Round three pushed the row from inside the arm, where nothing could pre-empt
    it, which is the one divergence `extra.siblingCompletesDeferred` reported. *)
-and answer_then m (f : run_fiber) name (v : value) (ko : kops) (k : unit -> unit) : unit =
+and answer_then m (f : run_fiber) name (v : value) (ko : value kops) (k : unit -> unit) : unit =
   guard m f ko (fun () ->
       push_row (Ranswer (name, v));
       k ())
 
-and answer_row m (f : run_fiber) name (v : value) (ko : kops) : unit =
+and answer_row m (f : run_fiber) name (v : value) (ko : value kops) : unit =
   answer_then m f name v ko (fun () -> ko.ret v)
 
 (* `WithFiberAction.fork` (`:5264-5284`) followed by `start` (`:5277`). *)
-and arm_fork m f code daemon (ko : kops) : unit =
+and arm_fork m f code daemon (ko : value kops) : unit =
   begin
     let name = if daemon then "forkDetach" else "fork" in
     push_row (Rop (name, Vnat code));
     (* rc.112 adds the `interruptChildren` middleware in `Effect.forkChild` (`:612-614`). *)
     if not daemon then m.middleware_installed <- true;
-    let child = spawn m f (!body_of_code code) ~daemon in
+    let child = spawn m f (!body_of_code code) (fixture_fork_options ~daemon) in
     let nested = start m f child ~immediately:false in
     let handle = handle_index "fiber" child in
     let site = Tape.site () in
@@ -1032,16 +1208,16 @@ and park_yield m f priority (on_value : unit -> unit) (on_cause : cause -> unit)
   f.frame.control <-
     Suspended
       { ktoken = token;
-        kresume = (fun a -> match a with Aval _ -> on_value () | Acause c -> on_cause c) };
+        kresume = (fun a -> match a with Aval _ | Aexits _ -> on_value () | Acause c -> on_cause c) };
   f.running <- false
 
-and arm_yield m f priority (ko : kops) : unit =
+and arm_yield m f priority (ko : value kops) : unit =
   park_yield m f priority
       (fun () -> ko.ret Vunit)
       (fun c -> ko.thr (Einterrupt_exn c))
 
 (* `Prim.async` registering no resume: rc.112's `Effect.never`. *)
-and arm_never m f (ko : kops) : unit =
+and arm_never m f (ko : value kops) : unit =
   begin
     let token = fresh_token m in
     run_fiber_park f
@@ -1054,12 +1230,13 @@ and arm_never m f (ko : kops) : unit =
             (fun a ->
               match a with
               | Aval v -> ko.ret v
+              | Aexits _ -> ko.ret Vunit
               | Acause c -> ko.thr (Einterrupt_exn c)) };
     f.running <- false
   end
 
 (* `ParkKind.join _ MJoin` (`:5291`): the child's exit continues this fiber as an effect. *)
-and arm_join m f handle (ko : kops) : unit =
+and arm_join m f handle (ko : value kops) : unit =
   begin
     push_row (Rop ("join", Vhandle handle));
     let target = handle_target "fiber" handle in
@@ -1081,6 +1258,7 @@ and arm_join m f handle (ko : kops) : unit =
                 (fun a ->
                   match a with
                   | Aval v -> answer_row m f "join" v ko
+                  | Aexits _ -> answer_row m f "join" Vunit ko
                   | Acause c -> fail_op "join" ko c) })
   end
 
@@ -1090,7 +1268,7 @@ and answer_join m f ko (e : exitv) : unit =
   | Efailure c -> fail_op "join" ko c
 
 (* A service operation that fails: the `failed` row, then the cause into the fiber. *)
-and fail_op name (ko : kops) (c : cause) : unit =
+and fail_op name (ko : value kops) (c : cause) : unit =
   (* Only a typed failure gets a `failed` row: `traceService`'s `Effect.tapError`
      (`harness/trace/tracer.ts:291`) fires on the error channel, and an interruption is not
      on it. Round five: the avatar used to fabricate `failed <op> 0` for an interrupted
@@ -1099,7 +1277,7 @@ and fail_op name (ko : kops) (c : cause) : unit =
   ko.thr (Einterrupt_exn c)
 
 (* `awaitValue` / `awaitError`: both `Fiber.await` (`:5304`), projected. *)
-and arm_await m f handle which (ko : kops) : unit =
+and arm_await m f handle which (ko : value kops) : unit =
   begin
     let name = match which with `Value -> "awaitValue" | `Error -> "awaitError" in
     push_row (Rop (name, Vhandle handle));
@@ -1138,7 +1316,7 @@ and arm_await m f handle which (ko : kops) : unit =
   end
 
 (* `WithFiberAction.interrupt` (`:859`) = `interruptThenJoin`. *)
-and arm_interrupt m f handle (ko : kops) : unit =
+and arm_interrupt m f handle (ko : value kops) : unit =
   begin
     push_row (Rop ("interrupt", Vhandle handle));
     let target = handle_target "fiber" handle in
@@ -1156,7 +1334,7 @@ and arm_interrupt m f handle (ko : kops) : unit =
                kresume =
                  (fun a ->
                    match a with
-                   | Aval _ -> answer_row m f "interrupt" Vunit ko
+                   | Aval _ | Aexits _ -> answer_row m f "interrupt" Vunit ko
                    | Acause c -> ko.thr (Einterrupt_exn c)) };
          f.running <- false;
          drive m m.drive_fuel nested
@@ -1166,7 +1344,7 @@ and arm_interrupt m f handle (ko : kops) : unit =
   end
 
 (* `Prim.sync` through `RunInterp.syncState` (M1). *)
-and arm_sync m f name (read : st -> int list) (ko : kops) : unit =
+and arm_sync m f name (read : st -> int list) (ko : value kops) : unit =
   begin
     push_row (Rop (name, Vunit));
     let v = Vlist (List.map (fun n -> Vnat n) (read m.state)) in
@@ -1178,7 +1356,7 @@ and arm_sync m f name (read : st -> int list) (ko : kops) : unit =
    store owes are drained on the spot (`iteration`'s `some (state, value)` arm, M1). The
    store is `deep_stores.ml`'s, so `compute` closes over it rather than taking it: `St` is
    not a field of the machine here (DIVERGENCE 3). *)
-and arm_state m f name (request : value) (compute : unit -> value) (ko : kops) : unit =
+and arm_state m f name (request : value) (compute : unit -> value) (ko : value kops) : unit =
   begin
     push_row (Rop (name, request));
     let v = compute () in
@@ -1190,7 +1368,7 @@ and arm_state m f name (request : value) (compute : unit -> value) (ko : kops) :
 
 (* `WithFiberAction.awaitAll` (`:5318-5322`): a countdown over the targets' exits, answered
    as the list of exits. *)
-and arm_await_all m f (hs : int list) (ko : kops) : unit =
+and arm_await_all m f (hs : int list) (ko : value kops) : unit =
   begin
     push_row (Rop ("awaitAll", Vlist (List.map (fun h -> Vhandle h) hs)));
     let targets = List.map (handle_target "fiber") hs in
@@ -1206,21 +1384,11 @@ and arm_await_all m f (hs : int list) (ko : kops) : unit =
 
 (* `WithFiberAction.interruptAll` (`:895`, `:913`): record on every target first, then await
    them all. *)
-and arm_interrupt_all m f (hs : int list) (ko : kops) : unit =
+and arm_interrupt_all m f (hs : int list) (ko : value kops) : unit =
   begin
     push_row (Rop ("interruptAll", Vlist (List.map (fun h -> Vhandle h) hs)));
     let targets = List.map (handle_target "fiber") hs in
-    let nested =
-      List.fold_left
-        (fun acc t ->
-          match fiber_opt m t with
-          | None -> acc
-          | Some g ->
-            let apply_now = interrupt_record m (Some f.id) [] g in
-            emit m [ InterruptRecorded (Some f.id, t) ];
-            acc @ if apply_now then [ Cevaluate t ] else [])
-        [] targets
-    in
+    let nested = interrupt_each m f.id targets [] in
     match countdown_park m f targets Rvoid with
     | Some token ->
       f.frame.control <-
@@ -1235,21 +1403,36 @@ and arm_interrupt_all m f (hs : int list) (ko : kops) : unit =
 (* `WithFiberAction.raceAll` (`Fibers.lean:866-880`): the entrants exist as fibers before any
    launch, each carrying a `raceCallback` observer; the host parks on the race token and each
    launch is a command. The empty race stays pending until interrupted. *)
-and arm_race_all m f (codes : int list) (ko : kops) : unit =
+and arm_race_all m f (codes : int list) (ko : value kops) : unit =
   begin
     push_row (Rop ("raceAll", Vlist (List.map (fun c -> Vnat c) codes)));
+    (* The wire rows wrap the Lean-alphabet arm: the answer row, and the `failed` row for a
+       typed failure. *)
+    let ko' =
+      { ret = (fun v -> answer_row m f "raceAll" v ko);
+        thr = (fun e -> match e with Einterrupt_exn c -> fail_op "raceAll" ko c | e -> ko.thr e) }
+    in
+    arm_race_all_prog m f (List.map (fun code -> !body_of_code code) codes) ko'
+  end
+
+(* `raceEntrant` (`Clauses.lean:1230`; `:5560-5575`): one entrant, spawned as an immediate
+   daemon that inherits the host's mask, with the race callback as its observer. *)
+and race_entrant m f (race_id : int) (program : unit -> value) : int =
+  let child = spawn m f program { start_immediately = true; daemon = true; mask_mode = Minherit } in
+  let c = fiber_exn m child in
+  c.observers <- c.observers @ [ RaceCallback race_id ];
+  child
+
+(* `WithFiberAction.raceAll` over programs (`Fibers.lean:912-929`): the entrants exist as
+   fibers before any launch, the race is recorded with its host and guard, the host parks
+   on the guard, and the launches are commands in entrant order; the empty race stays parked
+   until the host is interrupted. *)
+and arm_race_all_prog m f (programs : (unit -> value) list) (ko : value kops) : unit =
+  begin
     let race_id = m.next_race in
     let token = fresh_token m in
     m.next_race <- race_id + 1;
-    let ids =
-      List.map
-        (fun code ->
-          let child = spawn m f (!body_of_code code) ~daemon:true in
-          let c = fiber_exn m child in
-          c.observers <- c.observers @ [ RaceCallback race_id ];
-          child)
-        codes
-    in
+    let ids = List.map (race_entrant m f race_id) programs in
     let r =
       { rid = race_id; host = f.id; rtoken = token; settled = false; live = []; unstarted = ids;
         remaining = List.length ids; failures = []; accepted = None; cleanup_needed = false }
@@ -1273,11 +1456,12 @@ and race_answer m (f : run_fiber) (a : answer) : unit =
   | Some ko ->
     f.race_answer <- None;
     (match a with
-     | Aval v -> answer_row m f "raceAll" v ko
-     | Acause c -> fail_op "raceAll" ko c)
+     | Aval v -> ko.ret v
+     | Aexits exits -> ko.ret (Vlist (List.map (function Esuccess v -> v | Efailure _ -> Vnone) exits))
+     | Acause c -> ko.thr (Einterrupt_exn c))
 
 (* `WithFiberAction.snapshotChildren` (`:5318`). *)
-and arm_snapshot_children m f (ko : kops) : unit =
+and arm_snapshot_children m f (ko : value kops) : unit =
   begin
     push_row (Rop ("childrenSnapshot", Vunit));
     let v = Vlist (List.map (fun c -> Vhandle (handle_index "fiber" c)) f.children) in
@@ -1285,7 +1469,7 @@ and arm_snapshot_children m f (ko : kops) : unit =
   end
 
 (* `WithFiberAction.awaitNewChildren snapshot`: await the children added since. *)
-and arm_await_new_children m f (snapshot : value) (ko : kops) : unit =
+and arm_await_new_children m f (snapshot : value) (ko : value kops) : unit =
   begin
     push_row (Rop ("awaitChildren", snapshot));
     let seen =
@@ -1303,16 +1487,173 @@ and arm_await_new_children m f (snapshot : value) (ko : kops) : unit =
     | None -> answer_row m f "awaitChildren" Vunit ko
   end
 
-(* What a finished countdown answers with. *)
-and answer_countdown m f name (ko : kops) (a : answer) : unit =
+(* What a finished countdown answers with. The wire's `awaitAll` row carries the raw
+   values of the collected exits (`Resume.exitsValue` projected the fixture's way; a failed
+   exit is `none`), which is the projection `resume_prim` used to bake in. *)
+and answer_countdown m f name (ko : value kops) (a : answer) : unit =
   match a with
   | Aval v -> answer_row m f name v ko
+  | Aexits exits ->
+    answer_row m f name (Vlist (List.map (function Esuccess v -> v | Efailure _ -> Vnone) exits)) ko
   | Acause c -> fail_op name ko c
+
+(* ------------------------------------------------ the Lean alphabet's arms (seat F1) *)
+
+(* `WithFiberAction.fork` (`Fibers.lean:848-851`; `withFiber_fork`): spawn with the options
+   as given, start by `startImmediately`, and answer the child's handle. *)
+and arm_fork_prog m f (program : unit -> value) (options : fork_options) (ko : value kops) : unit =
+  begin
+    let child = spawn m f program options in
+    let nested = start m f child ~immediately:options.start_immediately in
+    let handle = Vhandle (handle_index "fiber" child) in
+    drive m m.drive_fuel nested;
+    ko.ret handle
+  end
+
+(* `WithFiberAction.forkIn` (`:852-857`; `:5364-5378`): the child is a daemon of its parent,
+   linked to the supplied scope with the parent as interruptor and the parent's stack
+   annotations (M10), then started. *)
+and arm_fork_in m f (program : unit -> value) (options : fork_options) (scope : int) (key : int)
+    (ko : value kops) : unit =
+  begin
+    let child = spawn m f program { options with daemon = true } in
+    let nested = link_scope m 0 scope key child (Some f.id) (!interp.stack_annotations f.id) in
+    if m.stuck <> None then f.running <- false
+    else begin
+      let started = start m f child ~immediately:options.start_immediately in
+      drive m m.drive_fuel (nested @ started);
+      ko.ret (Vhandle (handle_index "fiber" child))
+    end
+  end
+
+(* `WithFiberAction.forkScoped` (`:858-869`; `:5400-5406`): `forkIn` on the ambient `Scope`
+   service of the parent's context. `χ` is `unit` in this profile (A0 §18), so there is no
+   ambient scope and the arm is the `notImplemented` defect (`withFiber_forkScoped_none`).
+   The `_ambient` clause has no avatar instance; the report says so. *)
+and arm_fork_scoped m f (_program : unit -> value) (_options : fork_options) (_key : int)
+    (ko : value kops) : unit =
+  begin
+    f.running <- false;
+    ko.thr (Einterrupt_exn (cause_die "notImplemented"))
+  end
+
+(* `WithFiberAction.runIn` (`:870-873`; `:5447-5461`): an existing fiber is linked to a scope
+   as a run-in with no caller annotations, and the caller answers void. *)
+and arm_run_in m f (target : int) (scope : int) (key : int) (ko : value kops) : unit =
+  begin
+    let nested = link_scope m 1 scope key target (Some target) [] in
+    if m.stuck <> None then f.running <- false
+    else begin
+      drive m m.drive_fuel nested;
+      ko.ret Vunit
+    end
+  end
+
+(* `ParkKind.join target mode` (`:759-774`; `:5291`, `:5304`): on an exited target the exit
+   at once in the mode's shape; on a live one an observer and a park behind a fresh guard;
+   on an unknown one stuck. The observer's answer is `exit_value exit mode`. *)
+and arm_join_on m f (target : int) (mode : observer_mode) (ko : value kops) : unit =
+  begin
+    let deliver (a : answer) =
+      match a with
+      | Aval v -> ko.ret v
+      | Aexits _ -> ko.ret Vunit
+      | Acause c -> ko.thr (Einterrupt_exn c)
+    in
+    match fiber_opt m target with
+    | None -> stuck m f (UnknownFiber target)
+    | Some t -> (
+      match t.exit_ with
+      | Some e -> deliver (exit_value e mode)
+      | None ->
+        let token = fresh_token m in
+        t.observers <- t.observers @ [ ResumeAwait (f.id, token, mode) ];
+        run_fiber_park f
+          { token; waiting_on = Some target; remaining = 0; collected = []; resume_with = Rvoid };
+        emit m [ ParkedOn (f.id, token) ];
+        f.frame.control <- Suspended { ktoken = token; kresume = deliver };
+        f.running <- false)
+  end
+
+(* `WithFiberAction.awaitAll` (`:891-893`; `fiberAwaitAll`, `:779`): a countdown over the
+   targets' exits, answered as the exits themselves (M6). *)
+and arm_await_fibers m f (targets : int list) (ko : exitv list kops) : unit =
+  begin
+    let deliver (a : answer) =
+      match a with
+      | Aexits exits -> ko.ret exits
+      | Aval _ -> ko.ret []
+      | Acause c -> ko.thr (Einterrupt_exn c)
+    in
+    match countdown_park m f targets RexitsValue with
+    | Some token ->
+      f.frame.control <- Suspended { ktoken = token; kresume = deliver };
+      f.running <- false
+    | None ->
+      let exits = List.filter_map (fun t -> (fiber_exn m t).exit_) targets in
+      deliver (resume_prim RexitsValue exits)
+  end
+
+(* `interruptThenJoin` (`Fibers.lean:947`; `fiberInterrupt`, `:859`): record with
+   `interruptor`, then await the target on a countdown. No wire row. *)
+and arm_interrupt_then_join m f (target : int) (interruptor : int option) (ko : value kops) : unit =
+  begin
+    match fiber_opt m target with
+    | None -> stuck m f (UnknownFiber target)
+    | Some t ->
+      let apply_now = interrupt_record m interruptor [] t in
+      emit m [ InterruptRecorded (interruptor, target) ];
+      let nested = if apply_now then [ Cevaluate target ] else [] in
+      (match countdown_park m f [ target ] Rvoid with
+       | Some token ->
+         f.frame.control <-
+           Suspended
+             { ktoken = token;
+               kresume =
+                 (fun a ->
+                   match a with
+                   | Aval _ | Aexits _ -> ko.ret Vunit
+                   | Acause c -> ko.thr (Einterrupt_exn c)) };
+         f.running <- false;
+         drive m m.drive_fuel nested
+       | None ->
+         drive m m.drive_fuel nested;
+         ko.ret Vunit)
+  end
+
+(* `WithFiberAction.interruptScoped` (`:875-877`; `:5369-5371`): interrupt unless the
+   interruptor is the target itself, which answers void. *)
+and arm_interrupt_scoped m f (target : int) (ko : value kops) : unit =
+  if target = f.id then ko.ret Vunit else arm_interrupt_then_join m f target (Some f.id) ko
+
+(* `WithFiberAction.closeScope` (`:939-943`): the store's close program becomes the closer's
+   current primitive; an unknown scope halts the machine (M7). *)
+and arm_close_scope m f (scope : int) (exit_ : exitv) (ko : value kops) : unit =
+  begin
+    match !interp.close_scope scope exit_ f.frame.interruptible f.id with
+    | None -> stuck m f (UnknownScope scope)
+    | Some program ->
+      current_program := Some program;
+      ko.ret Vunit
+  end
+
+(* `Prim.onExit`'s `contAll` (`Runtime.lean:631-640`, `ensure`) as the `finalizerOr` arm of
+   `evaluatePrim` (`Fibers.lean:795-822`) sees it: the finalizer program is named in the
+   trace, and the fiber is masked when it was interruptible and the finalizer was not told
+   it may be interrupted. Answers the previous flag. *)
+and arm_on_exit_enter m f (name : string) (exit_ : exitv) (fin_interruptible : bool)
+    (ko : value kops) : unit =
+  begin
+    emit m [ FinalizerProgram (f.id, name, exit_) ];
+    let previous = f.frame.interruptible in
+    if previous && not fin_interruptible then f.frame.interruptible <- false;
+    ko.ret (Vbool previous)
+  end
 
 (* `WithFiberAction.setInterruptible` (`:4302-4310`, `:4331-4352`, M2): set the flag, and on
    restoring interruptibility fail now if a cause is pending. Answers the previous flag, so a
    program can spell rc.112's `uninterruptible` as a bracket. *)
-and arm_set_interruptible m f (flag : bool) (ko : kops) : unit =
+and arm_set_interruptible m f (flag : bool) (ko : value kops) : unit =
   begin
     let previous = f.frame.interruptible in
     f.frame.interruptible <- flag;
@@ -1330,7 +1671,7 @@ and arm_set_interruptible m f (flag : bool) (ko : kops) : unit =
 (* `WithFiberAction.refuse` (S3 §5.2): the interp refuses this thunk and the fiber fails
    with the cause, visibly. Every `WithFiberAction` arm this pass does not implement is
    reached through here, so an unimplemented arm refuses rather than differing. *)
-and arm_refuse m f (name : string) (ko : kops) : unit =
+and arm_refuse m f (name : string) (ko : value kops) : unit =
   begin
     f.running <- false;
     ko.thr (Einterrupt_exn (cause_die ("unimplemented WithFiberAction: " ^ name)))
@@ -1430,6 +1771,38 @@ let run_program m fuel (program : unit -> value) : replay_result =
   | Some why -> Rstuck why
   | None -> ( match (fiber_exn m root).exit_ with Some e -> Rfinished e | None -> Rfrontier)
 
-(* `promiseOutcome` (`:1216`). *)
-let promise_outcome (e : exitv) : (value, cause) result =
-  match e with Esuccess v -> Ok v | Efailure c -> Error c
+(* `Cause.squash` at this alphabet (`Effect4/Concurrency/Cause.lean`, `Squashed`): the first
+   typed failure wins, else the first defect, else an interruption. *)
+type squashed = Sq_error of int | Sq_die of string | Sq_interrupt
+
+let squash (c : cause) : squashed =
+  match cause_fail_of c with
+  | Some e -> Sq_error e
+  | None -> (
+    match List.find_opt (function Rdie _ -> true | _ -> false) c.reasons with
+    | Some (Rdie d) -> Sq_die d
+    | _ -> Sq_interrupt)
+
+(* `promiseOutcome` (`:1281`): `runPromiseExitWith` resolves with the exit, `runPromiseWith`
+   rejects with `causeSquash`. *)
+let promise_outcome (e : exitv) : (value, squashed) result =
+  match e with Esuccess v -> Ok v | Efailure c -> Error (squash c)
+
+(* `replayEval` (`:1229`): replay a decision tape (DB-03). A stuck machine stops the replay
+   with its reason; a finished one is `finished`; anything else is a live frontier. *)
+let rec replay_eval m fuel (tape : run_decision list) : replay_result =
+  match tape with
+  | [] -> (
+    match m.stuck with
+    | Some why -> Rstuck why
+    | None ->
+      if machine_finished m then
+        Rfinished
+          (match m.fibers with { exit_ = Some e; _ } :: _ -> e | _ -> Esuccess Vunit)
+      else Rfrontier)
+  | decision :: rest -> (
+    match m.stuck with
+    | Some why -> Rstuck why
+    | None ->
+      step_decision m fuel decision;
+      replay_eval m fuel rest)
