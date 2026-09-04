@@ -97,6 +97,8 @@ Run the narrow new contract, axiom report and counterexample module, then the
 unchanged frame battery and the default package build. The builder's
 `scripts/check-live-stack.mjs` and `scripts/test-live-stack-mutations.mjs`
 must retain exact command results, source/tool identities, controls and
-semantic-rejection results. The new register rows change an existing
-fiber-assurance input digest; regenerating that separately owned projection
-is not part of the breaker fence.
+semantic-rejection results. The new register rows changed an existing
+fiber-assurance input digest; regenerating that separately owned projection was
+not part of the breaker fence, and the projection itself
+(`generated/fiber-assurance.tsv`) was deleted on 2026-09-04 with the machines it
+counted (`docs/research/2026-09-04-retire-old-machines.md`).

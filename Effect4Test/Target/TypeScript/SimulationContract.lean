@@ -1,7 +1,7 @@
 /-
 Contract packet: `test/contracts/trace-patched-host.contract.md` (P-T11, light
-ceremony D2), Lean half: the projections from the frame machine's and the
-scheduler's alphabets into the service-level trace alphabet. No simulation is
+ceremony D2), Lean half: the projections from the frame machine's alphabet
+into the service-level trace alphabet. No simulation is
 claimed; the projections give a future bridge theorem its statement.
 -/
 
@@ -14,7 +14,6 @@ open Effect4 Effects.Trace
 #check @Effect4.Exit.toOutcome
 #check @Effect4.FrameEvent.toTrace
 #check @Effect4.FrameEvent.traceOf
-#check @Effect4.Event.toTrace
 #check @Effect4.FrameEvent.traceOf_nil
 #check @Effect4.FrameEvent.toTrace_popped
 #check @Effect4.FrameEvent.traceOf_finalizers
@@ -44,10 +43,5 @@ example :
       , .ranFinalizer "a" (.success 5), .yielded (.success 5) ] =
     [ .finalizer 2 (.success (.nat 5)), .finalizer 1 (.success (.nat 5)), .done (.success (.nat 5)) ] := by
   decide
-
--- A scheduler completion projects to the outcome; a scheduling event to nothing.
-example : Event.toTrace (τ := Nat) (fun n => .success (.nat n)) (.completed ⟨0⟩ 7) =
-    some (.done (.success (.nat 7))) := by decide
-example : Event.toTrace (τ := Nat) (fun n => .success (.nat n)) (.scheduled ⟨0⟩) = none := by decide
 
 end Effect4Test.Target.TypeScript.SimulationContract

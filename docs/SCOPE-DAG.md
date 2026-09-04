@@ -162,7 +162,7 @@ further down.
 
 | Stable public type | Owning module | Kind | Relationship | Pin | Assurance route |
 | --- | --- | --- | --- | --- | --- |
-| `Effect4.FinalizerStrategy` | `Runtime/Scope.lean` | canonical finite alphabet | the closed rc.112 close-strategy label; no other alphabet claims this role, and it is **not** a scheduler policy carrier — `Effect4.SchedulerDecision` in `Effect4/Concurrency/Scheduler.lean` owns scheduling choices and is a separate calculus | `internal/effect.ts:3915` (`scopeMakeUnsafe` default), `Scope.ts:99-187` | leaf receipts linked to `SCOPE-PG.construction` |
+| `Effect4.FinalizerStrategy` | `Runtime/Scope.lean` | canonical finite alphabet | the closed rc.112 close-strategy label; no other alphabet claims this role, and it is **not** a scheduler policy carrier — scheduling choices are owned by a separate calculus, `Effect4.SchedulerDecision` in `Effect4/Concurrency/Scheduler.lean` until that module was retired on 2026-09-04 (`docs/research/2026-09-04-retire-old-machines.md`), and the reference machine `Effect4/Deep/Fibers.lean` since | `internal/effect.ts:3915` (`scopeMakeUnsafe` default), `Scope.ts:99-187` | leaf receipts linked to `SCOPE-PG.construction` |
 | `Effect4.ScopeState` | `Runtime/Scope.lean` | canonical carrier | canonical scope-state machine; the three `open*` constructors are the three inhabited shapes of rc.112's one `Open` record under its own XOR invariant, made unconstructible-otherwise rather than checked | `Scope.ts:99-187` (`State.Empty`, `State.Open`, `State.Closed`) | `SCOPE-PG` |
 | `Effect4.Scope` | `Runtime/Scope.lean` | canonical carrier | canonical scope; separate calculus from `Effect4.Exit` (a result observation, reused here unchanged), from `Effect4.Data.Row` (a finite set, order-erasing), and from `Effect4.ReasonAnnotations` (a `String`-keyed annotation map owned by Semantics) | `Scope.ts:99-187`, `internal/effect.ts:3769-3922` | `SCOPE-PG` |
 | `Effect4.Exit` | `Semantics/Exit.lean` | **reused, not re-declared** | already canonical, owned by `docs/CAUSE-DAG.md` `CAUSE-L4-EXIT`; this packet adds no arm, no view, and no adapter | `Exit.ts:118-157` | `CAUSE-PG-FLAT` (unchanged) |
@@ -313,11 +313,13 @@ its reason.
 ## The generated assurance join is a later obligation
 
 This packet writes no generated projection and edits no file under
-`generated/`, `Effect4Test/Audit/`, or `Effect4Test/Concurrency/`, except that
-appending rows to `test/counterexamples/REGISTER.md` changes an input digest
-pinned by `generated/fiber-assurance.tsv`, which is regenerated with its
-recorded command in the same commit. Three joins remain open after the builder
-turns the battery green:
+`generated/`, `Effect4Test/Audit/`, or `Effect4Test/Concurrency/`. At the freeze,
+appending rows to `test/counterexamples/REGISTER.md` changed an input digest
+pinned by `generated/fiber-assurance.tsv`, which was regenerated with its
+recorded command in the same commit; that projection and its scripts were
+deleted on 2026-09-04 with the machines they counted
+(`docs/research/2026-09-04-retire-old-machines.md`). Three joins remain open
+after the builder turns the battery green:
 
 1. **The Effect runtime coverage join.** A theorem in `Effect4/` moves no
    coverage number by itself. Each witness must be added to the matching row in

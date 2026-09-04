@@ -120,8 +120,10 @@ receipt and the host run are placed side by side; no simulation between them is
 proved here.
 
 `fiber-supervision/` records finite host observations of fork, race, daemon and
-tracked children, and parent cleanup ordering. Run
-`./scripts/check-fiber-supervision-host.sh`; it installs nothing.
+tracked children, and parent cleanup ordering. Its runner
+`scripts/check-fiber-supervision-host.sh` was retired on 2026-09-04 with the
+supervision calculus; the cases are `fiber-supervision/runtime-check.ts`, run
+against the host the pin names, installing nothing.
 [`fiber-supervision/README.md`](fiber-supervision/README.md) owns the case
 list. The pin is [`host-pin.json`](fiber-supervision/host-pin.json), the same
 rc.112 profile as the trace harness: upstream `2600f62f…`, 2,341 files,
@@ -136,6 +138,7 @@ intentionally wrong assignment is rejected and its restoration accepted, the
 Effect diagnostic provider reports one file examined, and only the restored
 unchanged bytes are executed. These are finite observations of one pinned host.
 They do not establish all schedules, eventual completion, an interpretation of
-arbitrary callbacks, or a Lean-to-host simulation; the Lean statements and
-their trust receipts belong to `test/contracts/fiber-supervision.contract.md`
-and its proof graph.
+arbitrary callbacks, or a Lean-to-host simulation; the Lean side is the
+reference machine's clauses and witnesses (`Effect4/Deep/Clauses.lean`,
+`Effect4/Deep/Witnesses.lean`), joined in
+`Effect4Test/Audit/RuntimeCoverage.lean`.

@@ -62,9 +62,6 @@ def stuckOf (m : M) : Option Stuck := m.stuck
 /-- The exit of fiber `id`, if it has one. -/
 def exitOf (m : M) (id : Nat) : Option ExitV := (m.fiber? ⟨id⟩).bind RunFiber.exit
 
-/-- The computed lifecycle phase of fiber `id` (`RunFiber.status`). -/
-def statusOf (m : M) (id : Nat) : Option FiberStatus := (m.fiber? ⟨id⟩).map RunFiber.status
-
 /-- The parking state of fiber `id`. -/
 def parkedOf (m : M) (id : Nat) : Option Parked := (m.fiber? ⟨id⟩).map RunFiber.parked
 
@@ -979,39 +976,6 @@ theorem db07_store_survives_failure :
     exitOf dbSeven 0 = some (Exit.failure (Cause.fail Err.boom)) ∧
       dbSeven.state.refs = [Val.nat 5] := by
   decide
-
-/-! ## The two projections compute
-
-`RunMachine.toSched` and `RunFiber.toSup` are the plan's reuse route: the old `Scheduler.Machine`
-and the old `Supervision.Fiber` are *computed* from the new record, never stored beside it. -/
-
-/-- The scheduler projection of W1: the deferred start becomes `Event.scheduled`, and the two
-exits become `Event.completed`, in the order they happened. -/
-theorem toSched_computes :
-    (RunMachine.toSched w1DeferredJoin).trace =
-      [Event.scheduled ⟨1⟩,
-        Event.completed ⟨1⟩ (Exit.success (Val.nat 42)),
-        Event.completed ⟨0⟩ (Exit.success (Val.nat 42))] := rfl
-
-/-- The supervision projection of W1's child: `done`, its exit as the terminal observation, no
-children, no subscriptions, and no recorded interrupt. -/
-theorem toSup_computes :
-    (w1DeferredJoin.fiber? ⟨1⟩).map (fun f => f.toSup.core.status) = some FiberStatus.done ∧
-      (w1DeferredJoin.fiber? ⟨1⟩).map (fun f => f.toSup.core.terminal) =
-        some (some (Exit.success (Val.nat 42))) ∧
-      (w1DeferredJoin.fiber? ⟨1⟩).map (fun f => f.toSup.children) = some [] ∧
-      (w1DeferredJoin.fiber? ⟨1⟩).map (fun f => f.toSup.subscriptions) = some [] ∧
-      (w1DeferredJoin.fiber? ⟨1⟩).map (fun f => f.toSup.interrupted) = some none := by
-  decide
-
-/-- W2's child, projected: interrupted, with the recorded cause on the supervision face. -/
-theorem toSup_records_the_interrupt :
-    (w2.fiber? ⟨1⟩).map (fun f => f.toSup.interrupted) =
-      some (some (Supervision.interruptCause stores.encodeFiber (some ⟨0⟩)
-        (stores.stackAnnotations ⟨1⟩))) := by
-  decide
-
-
 
 
 

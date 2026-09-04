@@ -117,35 +117,44 @@ or cause carrier. Nothing here imports or mentions `Effect4/Concurrency/`.
 
 ## Required semantic separations
 
-1. **This is not a second `FiberState`/`Machine`.**
-   `Effect4/Concurrency/Scheduler.lean` owns `Effect4.Machine`,
-   `Effect4.FiberState`, `Effect4.Step` and `Effect4.SchedulerDecision`: a
-   *relational* scheduler over a fiber map, with statuses, masks, cleanup
-   states, pending-interrupt bits, terminal observations and an event trace,
-   whose meaning is a `Step` relation over `SchedulerDecision` tapes.
-   `Effect4.FrameFiber` is a *single* fiber's continuation stack: five fields,
-   no fiber id, no status, no map, no decision, and a total one-step function
-   rather than a relation. The two are separate calculi with no conversion
-   claimed in either direction, because they answer different questions — which
-   fiber runs next, versus which frame answers the value this fiber just
-   produced. A later packet that wants a fiber whose body is a frame machine
-   must state that embedding explicitly; nothing here does.
+1. **This is not a second fiber machine.**
+   The relational scheduler that used to stand on the other side of this
+   separation — `Effect4/Concurrency/Scheduler.lean`, owner of `Effect4.Machine`,
+   `Effect4.FiberState`, `Effect4.Step` and `Effect4.SchedulerDecision` — was
+   retired on 2026-09-04
+   (`docs/research/2026-09-04-retire-old-machines.md`). The multi-fiber partner is
+   now the reference machine `Effect4/Deep/Fibers.lean`: a fiber map with
+   statuses, masks, observers, scope links, races and a run trace.
+   `Effect4.FrameFiber` is still a *single* fiber's continuation stack: five
+   fields, no fiber id, no status, no map, and a total one-step function. The two
+   remain separate calculi, because they answer different questions — which fiber
+   runs next, versus which frame answers the value this fiber just produced. The
+   embedding is now stated, and stated there rather than here: `Effect4/Deep`
+   imports this module, runs a `FrameFiber` as one fiber's body, and records the
+   stack's own alphabet per fiber as `Effect4.Deep.RunEvent.frame`. Nothing in
+   this packet mentions or converts to the machine above it.
 2. **No dependency on Concurrency.** `Effect4/Runtime/Runtime.lean` imports
    `Effect4.Semantics.Exit` (hence `Effect4.Semantics.Cause`) and nothing else
    from Effect4. `docs/ARCHITECTURE.md` "Dependency direction" places Runtime
-   above Semantics, and `Effect4/Concurrency/Supervision.lean` already depends on
-   `Effect4/Runtime/Scope.lean`, so the edge runs Concurrency → Runtime. An
-   import of `Effect4/Concurrency/Interrupt.lean` would reverse it.
+   above Semantics; since 2026-09-04 `Effect4/Concurrency/Supervision.lean`
+   depends on `Effect4/Semantics/Exit.lean` only, and `Effect4/Deep` imports both
+   it and this module, so the only edge between the two runs Deep → Runtime and
+   Deep → Concurrency. An import of `Effect4/Concurrency/` here (when
+   `Interrupt.lean` still existed, of its mask alphabet; it was deleted on
+   2026-09-04) would put a dependency where none is needed.
 3. **The mask vocabulary is shared by correspondence, not by carrier.**
-   `Effect4.InterruptMask` (`unmasked | masked`) is the concurrency-side mask
-   alphabet. Separation 2 forbids importing it here, so this model uses rc.112's
-   own spelling: a `Bool` field `interruptible`, exactly as
+   `Effect4.InterruptMask` (`unmasked | masked`) was the concurrency-side mask
+   alphabet; it was deleted with `Effect4/Concurrency/Interrupt.lean` on
+   2026-09-04 (`docs/research/2026-09-04-retire-old-machines.md`). Separation 2
+   forbade importing it here in any case, so this model uses rc.112's own
+   spelling: a `Bool` field `interruptible`, exactly as
    `FiberImpl.interruptible` (`internal/effect.ts:529`).
    `Effect4.FrameFiber.masked` is the named observation that carries the shared
-   word, and the intended correspondence is
-   `masked = true ↔ InterruptMask.masked`. That correspondence is **not claimed
-   here**: it is a later bridge obligation, recorded as `FRAME-PG.bridges`, and
-   it must be stated in whichever packet is allowed to see both carriers.
+   word. There is now one mask carrier and no second one to bridge to: the
+   surviving concurrency-side name is `Supervision.MaskMode`, the fork-boundary
+   *choice*, which `Effect4/Deep/ForkFlow.lean` resolves by reading
+   `frame.interruptible` directly. `FRAME-PG.bridges` is discharged by that
+   reading rather than by a correspondence claimed here.
 4. **A continuation is a name, not a computation.** DB-02 closes the pure
    fragment at the reification boundary, and DB-05's no-`HHandler` ruling is
    conditional on exactly this: a scoped operation stores stable first-order
@@ -164,13 +173,17 @@ or cause carrier. Nothing here imports or mentions `Effect4/Concurrency/`.
    `FrameFiber.run` is a bounded runner: `FrameStep.running` at exhausted fuel is
    a live frontier under DB-04, never a failure, never a refusal, and never an
    interruption. This packet mints no refusal carrier and no frontier carrier.
-7. **`FrameEvent` is not `Effect4.Event`.** `Effect4/Concurrency/Scheduler.lean`
-   owns `Effect4.Event`, the scheduler's trace alphabet (fiber starts, mask
-   entries, interrupt deliveries). `Effect4.FrameEvent` is the stack's trace
+7. **`FrameEvent` is not the run trace.** `Effect4.Event`, the retired
+   scheduler's trace alphabet (fiber starts, mask entries, interrupt
+   deliveries), went with `Effect4/Concurrency/Scheduler.lean` on 2026-09-04.
+   The run trace is now `Effect4.Deep.RunEvent` in `Effect4/Deep/Fibers.lean`
+   (forks, starts, task scheduling, parks and resumes, interrupt records,
+   observers, scope links, races). `Effect4.FrameEvent` is the stack's trace
    alphabet (frames popped, `contAll` run, frames pushed, finalizers run,
-   continuations substituted, the deferred answer, the yielded exit). They have
-   no common constructor, no conversion and no shared owner; the same argument
-   as separation 1 applies.
+   continuations substituted, the deferred answer, the yielded exit). They share
+   no constructor, and the one relation between them runs the way separation 1
+   describes: `RunEvent.frame` carries a `FrameEvent` tagged with the fiber that
+   produced it. Nothing here converts in the other direction.
 8. **The two loops are fused, deliberately.** rc.112 has two nested loops:
    `getCont`'s `while (true) { pop; contAll; answer? }`
    (`internal/effect.ts:688-697`) and `exitFailCause`'s
@@ -283,14 +296,14 @@ further down.
 | `Effect4.Prim` | `Runtime/Runtime.lean` | canonical carrier | canonical first-order primitive syntax; **not** `Effect4.Program` (a higher-order proof carrier, DB-01) and **not** `Effect4.CheckedFlow` (the general reifiable graph, DB-02) — this is the pinned rc.112 op family only, with no admission judgment, no block ids and no cycles | `internal/core.ts:365-563`, `internal/effect.ts:928-946, 1356-1379, 1662-1689, 2474-2501, 3426-3465, 3620-3637, 4001-4029, 4302-4367, 4623-4645` | `FRAME-PG` |
 | `Effect4.IterStep` | `Runtime/Runtime.lean` | canonical finite alphabet | the three outcomes that stop a generator's inline fold | `internal/effect.ts:1362-1377` | leaf receipts linked to `FRAME-PG.construction` |
 | `Effect4.PrimInterp` | `Runtime/Runtime.lean` | `separate-calculus` parameter record | the externally supplied meaning of a continuation name; a *parameter*, never canonical program content, and therefore carrying no `DecidableEq`. Sibling of the `run` argument of `Effect4.Scope.close` | `internal/effect.ts:1682, 2492, 3452-3456, 4021` | `FRAME-PG.semantics` |
-| `Effect4.FrameFiber` | `Runtime/Runtime.lean` | canonical carrier | the single-fiber continuation state; `separate-calculus` from `Effect4.FiberState` and `Effect4.Machine` in `Effect4/Concurrency/Scheduler.lean` (a relational scheduler over a fiber map) — see separation 1. No conversion, embedding or erasure is claimed | `internal/effect.ts:505-550` (the five modelled fields only) | `FRAME-PG` |
+| `Effect4.FrameFiber` | `Runtime/Runtime.lean` | canonical carrier | the single-fiber continuation state; `separate-calculus` from the multi-fiber machine, now `Effect4.Deep.RunMachine` in `Effect4/Deep/Fibers.lean` (`Effect4.FiberState`/`Effect4.Machine` in `Effect4/Concurrency/Scheduler.lean` retired 2026-09-04) — see separation 1. This packet claims no conversion; `Effect4/Deep` runs a `FrameFiber` as one fiber's body | `internal/effect.ts:505-550` (the five modelled fields only) | `FRAME-PG` |
 | `Effect4.ContAnswer` | `Runtime/Runtime.lean` | canonical finite alphabet | what a pop answers: the deferred continuation, a replacement, the answering frame, or nothing | `internal/effect.ts:680-698, 737-744` | leaf receipts linked to `FRAME-PG.semantics` |
-| `Effect4.FrameEvent` | `Runtime/Runtime.lean` | canonical finite alphabet | the stack's trace alphabet; `separate-calculus` from `Effect4.Event` in `Effect4/Concurrency/Scheduler.lean` — see separation 7 | authored; the trace is an Effect4 observation, not an rc.112 value | leaf receipts linked to `FRAME-PG.semantics` |
+| `Effect4.FrameEvent` | `Runtime/Runtime.lean` | canonical finite alphabet | the stack's trace alphabet; `separate-calculus` from the run trace, now `Effect4.Deep.RunEvent` in `Effect4/Deep/Fibers.lean`, which wraps it per fiber as `RunEvent.frame` (`Effect4.Event` in `Effect4/Concurrency/Scheduler.lean` retired 2026-09-04) — see separation 7 | authored; the trace is an Effect4 observation, not an rc.112 value | leaf receipts linked to `FRAME-PG.semantics` |
 | `Effect4.FramePop` | `Runtime/Runtime.lean` | canonical carrier | the four observations of one pop | `internal/effect.ts:680-698` | `FRAME-PG.semantics` |
 | `Effect4.FrameStep` | `Runtime/Runtime.lean` | canonical finite alphabet | one step either continues or finishes with an Exit; `FrameStep.running` at exhausted `run` fuel is a live frontier under DB-04, never a failure | `internal/effect.ts:653-668` | leaf receipts linked to `FRAME-PG.semantics` |
 | `Effect4.Exit` | `Semantics/Exit.lean` | **reused, not re-declared** | already canonical, owned by `docs/CAUSE-DAG.md` `CAUSE-L4-EXIT`; this packet adds no arm, no view and no adapter, and `Prim.ofExit`/`Prim.asExit?` are the embedding both directions of `exit.success-failure`'s "each is itself a primitive" | `Exit.ts:118-157` | `CAUSE-PG-FLAT` (unchanged) |
 | `Effect4.Cause` | `Semantics/Cause.lean` | **reused, not re-declared** | already canonical, owned by `docs/CAUSE-DAG.md` `CAUSE-L2-CAUSE`; the finalizer merge of `op.OnExit` is exactly `Effect4.Exit.restoreAfterFinalizer` over `Cause.combine` | `internal/core.ts:138-176`, `internal/effect.ts:3800-3804` | `CAUSE-PG-FLAT` (unchanged) |
-| `Effect4.InterruptMask` | `Concurrency/Interrupt.lean` | **named, not imported** | the concurrency-side mask alphabet. Separation 3: the dependency direction forbids importing it, so this model uses rc.112's own `Bool`, and the correspondence is a later bridge obligation | `internal/effect.ts:529` | not claimed here |
+| `Effect4.InterruptMask` | `Concurrency/Interrupt.lean` (retired 2026-09-04) | **named, not imported** | was the concurrency-side mask alphabet. Separation 3: the dependency direction forbade importing it, so this model uses rc.112's own `Bool`; with the carrier gone this model's `interruptible` is the only mask state, and `Supervision.MaskMode` reads it at the fork boundary | `internal/effect.ts:529` | not claimed here |
 
 The duplicate-prevention check run before freezing was
 
@@ -305,11 +318,15 @@ grep -rnE '^\s*namespace\s+(Prim|Arm|Frame[A-Za-z]*|ContAnswer|PrimInterp|IterSt
 
 It found no `Prim`, `Arm`, `IterStep`, `PrimInterp`, `FrameFiber`, `ContAnswer`,
 `FrameEvent`, `FramePop` or `FrameStep` declaration or namespace anywhere under
-`Effect4/`. It did find `Effect4.Machine`, `Effect4.FiberState`, `Effect4.Step`,
-`Effect4.StepResult` and `Effect4.Event` in `Effect4/Concurrency/Scheduler.lean`
-and `Effect4.Supervision.Fiber` in `Effect4/Concurrency/Supervision.lean`;
-separations 1 and 7 record why this packet is not a second spelling of any of
-them, and why it deliberately does not reuse those names.
+`Effect4/`. At the freeze it did find `Effect4.Machine`, `Effect4.FiberState`,
+`Effect4.Step`, `Effect4.StepResult` and `Effect4.Event` in
+`Effect4/Concurrency/Scheduler.lean` and `Effect4.Supervision.Fiber` in
+`Effect4/Concurrency/Supervision.lean`; separations 1 and 7 record why this
+packet is not a second spelling of any of them, and why it deliberately does not
+reuse those names. All six of those declarations were retired on 2026-09-04
+(`docs/research/2026-09-04-retire-old-machines.md`); rerun today the check would
+find only the reference machine's own names in `Effect4/Deep/Fibers.lean`, and
+the separations read against those.
 
 ### Public declaration records
 
@@ -361,7 +378,7 @@ needed exactly three.
 | `FRAME-FB-STACK-ANNOTATION` | `op.Failure` | `exitFailCause[evaluate]` annotates the cause with `fiber.currentStackFrame` under `StackTraceKey` before popping, and passes `undefined` instead of `this` when it did (`internal/core.ts:531-546`). | Authored refusal row. `currentStackFrame` is a `Context` reference refreshed by `setContext`; no `Context` is modelled here. The consequence is recorded honestly: `op.Failure` stays **partial**, and the model always supplies the failure primitive as the pop's exit argument, which is rc.112's un-annotated branch. |
 | `FRAME-FB-ASYNC-FINALIZER` | `checkpoint.exit-failcause-skip`, `rule.frames-are-primitives` | `AsyncFinalizer` declares `contE` and `contAll` and no `contA` (`internal/effect.ts:1145-1160`), so a `contA` demand runs its mask hook, pushes a restoring frame, and continues popping. It is the first frame that pushes during `contAll` without answering. | Authored refusal row, and an obligation on the next packet. `Effect4.FrameFiber.popFrom` fuses rc.112's two loops and restores `contAll` pushes on top of the frames that are left; that agrees with rc.112 for every frame declared here and must be re-derived when `AsyncFinalizer` lands. See "Where the fusion could diverge". |
 | `FRAME-FB-NONNULL` | `checkpoint.getcont-deferred`, `checkpoint.set-interruptible-contall` | rc.112 reads the accumulated cause with the non-null assertion `fiber._interruptedCause!` in `deferredInterruptCont` (`internal/effect.ts:738-743`) and in `setInterruptible[contAll]` (`:4319`). | Authored refusal row. `Effect4.FrameFiber.pendingCause` is total and answers `Cause.empty` in the state the assertion claims is unreachable. `Effect4.FrameFiber.pendingCause_none` states that reading plainly rather than hiding it; the invariant that a deferred interrupt always has a cause is not proved here, because nothing in this packet *records* an interrupt — that is the supervision packet's `interrupt.unsafe-entry`. |
-| `FRAME-FB-MASK-CARRIER` | `checkpoint.set-fiber-interruptible`, `frame-arm.SetInterruptible` | `Effect4.InterruptMask` is the project's mask alphabet and lives in `Effect4/Concurrency/`. | Authored separation, not a loss to rc.112: the model matches rc.112's own `Bool`. The obligation is the correspondence `FrameFiber.masked = true ↔ InterruptMask.masked`, which cannot be stated from this side of the dependency edge. Recorded on `FRAME-PG.bridges`. |
+| `FRAME-FB-MASK-CARRIER` | `checkpoint.set-fiber-interruptible`, `frame-arm.SetInterruptible` | `Effect4.InterruptMask` was the project's mask alphabet and lived in `Effect4/Concurrency/Interrupt.lean`. | Authored separation, not a loss to rc.112: the model matches rc.112's own `Bool`. The obligation was the correspondence `FrameFiber.masked = true ↔ InterruptMask.masked`, which could not be stated from this side of the dependency edge. It is discharged by deletion: `InterruptMask` was retired on 2026-09-04 (`docs/research/2026-09-04-retire-old-machines.md`), `interruptible` here is the only mask state, and `Effect4/Deep/ForkFlow.lean` reads it directly. |
 
 ## Declaration and proof graph
 
@@ -453,12 +470,14 @@ reason.
 ## The generated assurance join is a later obligation
 
 This packet writes no generated projection and edits no file under `generated/`,
-`Effect4Test/Audit/` or `Effect4Test/Concurrency/`, except that appending rows to
-`test/counterexamples/REGISTER.md` and `test/counterexamples/runtime/ATTACKS.md`
-changes an input digest pinned by `generated/fiber-assurance.tsv`. That
-projection is **not** regenerated in this commit, because a concurrent lane owns
-`scripts/generate-fiber-assurance.sh`; `./scripts/check-fiber-assurance.sh` will
-report a stale projection until that lane lands and the generator is run once.
+`Effect4Test/Audit/` or `Effect4Test/Concurrency/`. At the freeze, appending rows
+to `test/counterexamples/REGISTER.md` and `test/counterexamples/runtime/ATTACKS.md`
+changed an input digest pinned by `generated/fiber-assurance.tsv`, and that
+projection was left stale for a concurrent lane to regenerate. The digest, its
+generator and its checker no longer exist: `generated/fiber-assurance.tsv`,
+`scripts/generate-fiber-assurance.sh` and `scripts/check-fiber-assurance.sh` were
+deleted on 2026-09-04 with the machines they projected
+(`docs/research/2026-09-04-retire-old-machines.md`), so nothing here is stale.
 Three joins remain open after the builder turns the battery green:
 
 1. **The Effect runtime coverage join.** A theorem in `Effect4/` moves no
@@ -492,8 +511,11 @@ Every operation in this packet is a total first-order function over finite data,
 parameterised by one externally supplied record of total functions. There is no
 relation, no choice and no decision source, and therefore no determinism theorem
 to state: determinism is a property of the carrier here, not a result. This is
-the deliberate complement of `Effect4/Concurrency/Scheduler.lean`, whose meaning
-*is* relational because scheduling is a decision source (DB-03). The one place a
+the deliberate complement of the scheduling side, whose meaning *is* a decision
+source (DB-03): that side was `Effect4/Concurrency/Scheduler.lean`'s relation
+until 2026-09-04, and is now the reference machine `Effect4/Deep/Fibers.lean`,
+which makes the decision explicit as a task queue rather than a relation. The one
+place a
 budget appears is `FrameFiber.run`, whose exhausted fuel is a live frontier under
 DB-04 and is never reclassified as failure, defect, interruption or refusal.
 

@@ -126,7 +126,7 @@ obligations pass, as do the fifteen registered finite counterexamples
 (`E4-CONC-CE-012` through `E4-CONC-CE-026`). `PORT-MANIFEST.md` mirrors the 27
 type/judgment dispositions, and the existing Fiber assurance join includes
 all 705 compiler-owned declarations, 19 exact shapes, and three finite leaves.
-`docs/SUPERVISION-IMPLEMENTATION.md` records verification and boundaries.
+`docs/SUPERVISION-IMPLEMENTATION.md` recorded verification and boundaries until the supervision calculus was retired on 2026-09-04 (`docs/research/2026-09-04-retire-old-machines.md`).
 The generated supervision graph closes six local edges while source bridges,
 target interpretation, and binding the full repository trust receipt remain
 required-open. All fifteen related runtime rows remain partial. The independent

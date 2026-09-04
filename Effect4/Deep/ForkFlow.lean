@@ -1524,11 +1524,9 @@ def fiberSummary (result : ForkReplay) : List (Nat × Bool) :=
 def interruptPendingOf (result : ForkReplay) (fiber : FiberId) : Bool :=
   (((machineOf result).fiber? fiber).map Effect4.Deep.RunFiber.interruptPending).getD false
 
-/-- Whether a fiber is masked (`RunFiber.mask`, `Fibers.lean:189-190`). -/
+/-- Whether a fiber is masked: the frame's `interruptible` flag, negated. -/
 def maskedOf (result : ForkReplay) (fiber : FiberId) : Bool :=
-  match ((machineOf result).fiber? fiber).map Effect4.Deep.RunFiber.mask with
-  | some Effect4.InterruptMask.masked => true
-  | _ => false
+  (((machineOf result).fiber? fiber).map fun f => !f.frame.interruptible).getD false
 
 /-- Whether an exit is a failure carrying an interrupt. -/
 def exitInterrupted : Option Res → Bool

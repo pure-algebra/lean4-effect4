@@ -40,7 +40,8 @@ proves compatibility with its existing CAS-specific types and observations.
 | `Effect4/Context` | stable keys, service requirements and environments |
 | `Effect4/Layer` | dependency graphs, acquisition, provision, composition and scoped release |
 | `Effect4/Runtime` | interpreters, scopes, managed runtimes and execution boundaries |
-| `Effect4/Concurrency` | fibers, scheduling, interruption, races and supervision |
+| `Effect4/Concurrency` | fiber identity and the fork/observer/scope/race vocabulary shared with `Effect4/Deep` |
+| `Effect4/Deep` | the reference fiber machine over the rc.112 frames, its stores, witnesses, fork-flow compile, Context and Layer models |
 | `Effect4/Stateful` | Ref, Deferred, Queue and coordination primitives |
 | `Effect4/Channel` | Channel/Stream/Sink/Pull/Take calculi and embeddings |
 | `Effect4/Schedule` | pure recurrence descriptions and effectful stepping boundaries |
