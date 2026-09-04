@@ -271,6 +271,32 @@ the fragment lacked: `Expr.generator` (`function* () { … }`), `Expr.cond` (`t 
 | `scoped b` / `acquireRelease a r` | `Effect.scoped(b)` / `Effect.acquireRelease(a, (a{n}, a{n+1}) => r)` |
 | refused | `choose` (flows only); the internal actions `interruptScoped`, `awaitAllFailFast`, `snapshotChildren`, `awaitNewChildren`, `setContext` (no public spelling with the same frame shape) |
 
+### 5.2 The parser is two layers, and the theorem lives at the tree (fixed 2026-09-04)
+
+Every string function on this toolchain reaches `Classical.choice` (`String.toList`,
+`foldl`, `toNat?`, the order; `Render.expr` through `escapeString`), so a theorem whose
+proof unfolds a string function is outside the gate. R1 is therefore stated over the
+fragment's tree, where `print` lands:
+
+* `Effect4/Syntax/Read.lean`: `readEff : Signature → Nat → TypeScript.Expr → Except
+  ReadRefusal (Eff Op)`, the inverse of `print` constructor by constructor (the `Nat` is the
+  binder count, so `a{n}` is read back as `var n`; a row is recognised by its spelling and
+  trailing names through a `Signature.opOfSpelling : String → Option Op`); `readStmts`
+  over `List TypeScript.Stmt`; numbers in identifiers read from `String.toUTF8` bytes, never
+  `String.toNat?`. Theorems `read_print : readEff sig n (print sig n e) = .ok e` (by
+  structural induction over the mutual family, the printer's and reader's cases in step)
+  and `read_exact : readEff sig n x = .ok e → print sig n e = .ok x` (the reader accepts
+  exactly the printer's image). Both at `propext`/`Quot.sound`: the tree has no strings
+  beyond identifier equality, which is choice-free.
+* `TypeScript.Parse` (lean4-typescript, or `Effect4/Syntax/Lex.lean` until D5 is decided):
+  bytes → `TypeScript.Expr` for the rendered fragment, deterministic, ASCII-only; its
+  exactness against `Render` is a receipt admitted by exact declaration, like the three
+  `StructureLaws` printer lemmas, because `Render` is on the wrong side of the string
+  boundary (`Effect4/Target/TypeScript/SkeletonRender.lean`'s header).
+
+`string → AST` is then `parseBytes ≫ readEff`; `AST → {IR, flow, atoms, prose}` is
+`compile`, `ofFlow`'s inverse where one exists, `Term`'s atoms, and the arms table.
+
 ## 6. Reading real Effect code (the recognizer route)
 
 For programs we did not print — the way to "control Effect in Lean" over an

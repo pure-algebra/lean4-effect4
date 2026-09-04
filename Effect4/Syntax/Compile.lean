@@ -368,17 +368,18 @@ def localBinds : Stmts NativeOp → Nat → Nat
   | .cons _ t, k + 1 => localBinds t k
   | _, _ => 0
 
-/-- Split a program counter into the block it stands in and the position within it: the
-trailing `1`s are the position. -/
-def splitRev : List Nat → List Nat × Nat
-  | 1 :: rest =>
-    let (block, k) := splitRev rest
-    (block, k + 1)
-  | rest => (rest, 0)
+/-- Split a program counter into the block it stands in and the position within it. A
+program counter is `1^k₀ ++ [0, s₁] ++ 1^k₁ ++ … ++ [0, sₙ] ++ 1^kₙ`: a run of `1`s is the
+position in a list, `0` descends into the head statement and the next index selects its
+block. Read from the front, so an else block's selector `[0, 1]` is never mistaken for a
+position (finding A3-2, 2026-09-04). -/
+def walkPc : List Nat → List Nat → Nat → List Nat × Nat
+  | [], block, k => (block, k)
+  | 1 :: rest, block, k => walkPc rest block (k + 1)
+  | 0 :: sel :: rest, block, k => walkPc rest (block ++ List.replicate k 1 ++ [0, sel]) 0
+  | _ :: rest, block, k => walkPc rest block k
 
-def splitPc (pc : List Nat) : List Nat × Nat :=
-  let (block, k) := splitRev pc.reverse
-  (block.reverse, k)
+def splitPc (pc : List Nat) : List Nat × Nat := walkPc pc [] 0
 
 /-- The statements of the block at `block` (a path to a `stmts` node under the generator's
 body). -/
@@ -570,7 +571,7 @@ def contAOf (root : NativeEff) : EffName → Val → NCode
 /-- `cont[contE](cause, fiber)`. -/
 def contEOf (root : NativeEff) : EffName → CauseV → NCode
   | .caught p, cause => resolve root (p.childWith 1 (Val.exitErr cause))
-  | .onCause p, cause => resolve root (p.childWith 1 (Val.exitErr cause))
+  | .onCause p, cause => resolve root (p.childWith 2 (Val.exitErr cause))
   | .restore exit, cause => Prim.ofExit (Exit.restoreAfterFinalizer exit (Exit.failure cause))
   | .merge exit, cause => Prim.ofExit (Exit.restoreAfterFinalizer exit (Exit.failure cause))
   | .constant v, _ => Prim.success v
