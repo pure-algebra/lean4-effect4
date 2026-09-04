@@ -79,11 +79,12 @@ def printCause : CauseTerm → TypeScript.Expr
 bare `spelling` (the service route's nullary rows), a call row on a `unit` request is
 `spelling()`, and every other call row is `spelling(request)`. -/
 def printRow (row : Row) (request : Term) : TypeScript.Expr :=
+  let trailing := row.trailing.map TypeScript.Expr.ident
   match row.shape with
   | .value => .ident row.spelling
   | .call =>
-    if row.request = Ty.unit then .call (.ident row.spelling) []
-    else .call (.ident row.spelling) [printTerm request]
+    if row.request = Ty.unit then .call (.ident row.spelling) trailing
+    else .call (.ident row.spelling) (printTerm request :: trailing)
 
 /-- The fork options object rc.112's fork family takes:
 `{ startImmediately: b, uninterruptible: true | false | "inherit" }`. `daemon` is not a

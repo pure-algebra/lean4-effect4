@@ -3764,7 +3764,7 @@ reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over
             { id := f.id,
               frame :=
                 have __src := f.frame;
-                { current := Effect4.Prim.failure (Effect4.Cause.die interp.notImplemented), stack := __src.stack,
+                { current := Effect4.Prim.failure (Effect4.Cause.die interp.missingScope), stack := __src.stack,
                   interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
                   deferredInterrupt := __src.deferredInterrupt },
               running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,

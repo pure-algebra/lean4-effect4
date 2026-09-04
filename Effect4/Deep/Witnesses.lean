@@ -95,6 +95,8 @@ def reasonCode : Reason Err Defect FiberId Ann → Nat
   | Reason.die Defect.notImplemented _ => 200
   | Reason.die Defect.asyncFiber _ => 201
   | Reason.die Defect.badName _ => 202
+  | Reason.die Defect.missingService _ => 203
+  | Reason.die (Defect.user n) _ => 210 + n
   | Reason.interrupt none _ => 300
   | Reason.interrupt (some i) _ => 310 + i.value
 

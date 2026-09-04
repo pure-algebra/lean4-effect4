@@ -1113,15 +1113,16 @@ theorem withFiber_forkScoped_ambient (interp : RunInterp ν σ β ε δ ι α χ
   simp only [evaluatePrim.withFiber, h]
   try rfl
 
-/-- Without an ambient `Scope` service `forkScoped` is the `notImplemented` defect: the
-service is required (`:5400`). census: fork.scoped -/
+/-- Without an ambient `Scope` service `forkScoped` dies with the `missingScope` defect: the
+service is required (`:5400`, `Context.get` throws `ServiceNotFound`); it is not the
+"unimplemented step" defect (finding S1-1, 2026-09-04). census: fork.scoped -/
 theorem withFiber_forkScoped_none (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
     (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (key : Nat)
     (h : interp.ambientScope f.context = none) :
     evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkScoped program options key) =
       ⟨m, { f with frame := { f.frame with
-          current := Prim.failure (Cause.die interp.notImplemented) } },
+          current := Prim.failure (Cause.die interp.missingScope) } },
         yielding, Outcome.continue_, []⟩ := by
   simp only [evaluatePrim.withFiber, h]
 

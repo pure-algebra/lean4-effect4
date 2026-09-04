@@ -1003,6 +1003,7 @@ def forkInterp (alphabet : FlowAlphabet Ty) (flow : RegionFlow Ty)
   encodeFiber := fun _ => ()
   stackAnnotations := fun _ => Effect4.ReasonAnnotations.empty
   asyncFiberError := ()
+  missingScope := ()
 
 /-- The oracle a forking flow runs against: the profile's operations answer `ok unit` —
 their value is minted by the machine, not by a service, and `contA` continues with the

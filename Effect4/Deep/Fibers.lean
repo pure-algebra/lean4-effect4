@@ -408,6 +408,10 @@ structure RunInterp (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St
   stackAnnotations : FiberId → ReasonAnnotations α
   /-- `AsyncFiberError`, the defect of a fiber that survives `runSync`'s flush. -/
   asyncFiberError : δ
+  /-- The defect of `forkScoped` with no ambient `Scope` service: rc.112's `Context.get`
+  throws `ServiceNotFound` (`:5400-5406`). Named apart from `notImplemented`, which is the
+  "unimplemented step" of `defaultEvaluate` (finding S1-1, 2026-09-04). -/
+  missingScope : δ
 
 /-! ## Machine operations -/
 
@@ -803,7 +807,7 @@ where
         ⟨m, answer f (interp.fiberValue child), yielding, outcomeOf m false, nested ++ started⟩
       | none =>
         ⟨m, { f with frame := { f.frame with
-            current := Prim.failure (Cause.die interp.notImplemented) } },
+            current := Prim.failure (Cause.die interp.missingScope) } },
           yielding, Outcome.continue_, []⟩
     | WithFiberAction.runIn target scope key =>
       let (m, nested) := linkScope interp m Supervision.ScopeMode.fiberRunIn scope key target

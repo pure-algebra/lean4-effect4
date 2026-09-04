@@ -47,7 +47,10 @@ end EffTy
 (parameter types and answer), and the `Scope` service key of this signature. -/
 structure Signature (Op : Type) where
   rowOf : Op → Row
-  atomOf : String → Option (List Ty × Ty)
+  /-- The answer type of a pure atom applied to arguments of the given types; `none` refuses
+  the application. Atoms are typed by their arguments so a polymorphic atom (`pair`) is one
+  name. -/
+  atomOf : String → List Ty → Option Ty
   scopeKey : ServiceKey
 
 variable {Op : Type}
@@ -58,9 +61,8 @@ mutual
     | .var index => env[index]?
     | .lit value => some value.ty
     | .app atom args => do
-      let (params, answer) ← sig.atomOf atom
       let tys ← termsTy sig env args
-      if tys = params then some answer else none
+      sig.atomOf atom tys
   def termsTy (sig : Signature Op) (env : TyEnv) : Terms → Option (List Ty)
     | .nil => some []
     | .cons head tail => do

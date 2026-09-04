@@ -1285,6 +1285,7 @@ def interp (table : LayerTable) : RunInterp Name Thunk Val Err Defect FiberId An
   encodeFiber := id
   stackAnnotations := fun _ => ReasonAnnotations.empty
   asyncFiberError := Defect.asyncFiber
+  missingScope := Defect.serviceNotFound scopeKey
 
 /-- The four hooks of `Deep.Context` are read verbatim. -/
 theorem interp_hooks (table : LayerTable) : HooksAgree (interp table) := ⟨rfl, rfl, rfl, rfl⟩

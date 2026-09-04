@@ -104,6 +104,8 @@ import Effect4.StdLib.Links
 import Effect4.Syntax.Eff
 import Effect4.Syntax.Typing
 import Effect4.Syntax.Print
+import Effect4.Syntax.Native
+import Effect4.Syntax.Compile
 import Effect4.Meta.Derive
 
 /-!

@@ -199,6 +199,9 @@ structure Row where
   (`Ref.get`), the receiver's method on the service route (`refs.get`). -/
   spelling : String
   shape : RowShape := .call
+  /-- Literal arguments printed after the request: the pure function of a read-modify-write
+  row (`Ref.update(ref, incr)`), a scope's strategy. Names, never values. -/
+  trailing : List String := []
   kind : RowKind
   request : Ty
   answer : Ty

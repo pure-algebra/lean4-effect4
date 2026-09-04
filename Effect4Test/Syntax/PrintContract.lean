@@ -32,18 +32,25 @@ open TypeScript.Render (expr constDecl)
 /-- The three rows of the battery's perform alphabet: a call row whose request is a handle,
 a value row whose request is `unit`, and an async row. -/
 def rowOf : Fin 3 → Row
-  | 0 => ⟨"get", "Ref.get", .call, .sync, .handle "Ref.Ref<number>", .nat, .never, [],
+  | 0 => ⟨"get", "Ref.get", .call, [], .sync, .handle "Ref.Ref<number>", .nat, .never, [],
            "Ref.ts:200"⟩
-  | 1 => ⟨"count", "cell.count", .value, .sync, .unit, .nat, .never, [], "Ref.ts:210"⟩
-  | 2 => ⟨"await", "Deferred.await", .call, .async,
+  | 1 => ⟨"count", "cell.count", .value, [], .sync, .unit, .nat, .never, [], "Ref.ts:210"⟩
+  | 2 => ⟨"await", "Deferred.await", .call, [], .async,
            .handle "Deferred.Deferred<number, never>", .nat, .never, [], "Deferred.ts:120"⟩
+
+/-- A read-modify-write row: its pure function prints after the request. -/
+def updateRow : Row :=
+  ⟨"update", "Ref.update", .call, ["incr"], .sync, .handle "Ref.Ref<number>", .unit, .never, [],
+    "Ref.ts:1273-1276"⟩
+
+#guard expr house0 0 (printRow updateRow (.var 0)) = "Ref.update(a0, incr)"
 
 /-- The battery's signature. `atomOf` declares one pure atom, `succ : number -> number`;
 the printer never consults it (an atom prints as its own name) but `Signature` carries it
 for `typeOf`. -/
 def sig : Signature (Fin 3) :=
   { rowOf := rowOf
-  , atomOf := fun atom => if atom = "succ" then some ([Ty.nat], Ty.nat) else none
+  , atomOf := fun atom args => if atom = "succ" ∧ args = [Ty.nat] then some Ty.nat else none
   , scopeKey := ⟨⟨0⟩, ⟨0⟩⟩ }
 
 /-! ## Exits, thunks and rows -/

@@ -82,6 +82,11 @@ inductive Defect
   | notImplemented
   | asyncFiber
   | badName
+  /-- `Context.get` on a missing service (`forkScoped` with no ambient `Scope`,
+  `internal/effect.ts:5400-5406`); finding S1-1, 2026-09-04. -/
+  | missingService
+  /-- A user defect, `Effect.die(d)` with a numeric payload (the `Eff` compile's `die`). -/
+  | user (payload : Nat)
 deriving DecidableEq, Repr
 
 /-- The cause-annotation value alphabet; `stackAnnotations` contributes none
@@ -1369,6 +1374,7 @@ def stores : RunInterp Name Thunk Val Err Defect FiberId Ann Ctx Stores where
   encodeFiber := id
   stackAnnotations := stackAnnotationsOf
   asyncFiberError := Defect.asyncFiber
+  missingScope := Defect.missingService
 
 /-! ### The remaining `deferred.*` clauses, as facts about the compiled program -/
 
