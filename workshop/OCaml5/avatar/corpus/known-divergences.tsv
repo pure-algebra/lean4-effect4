@@ -5,4 +5,5 @@
 #   avatar-open       a real avatar defect, minimised and named, not yet repaired
 #   tracing           where a row is emitted, not what the machine did
 # An avatar bug that has been repaired never appears here.
-hYieldStorm	rc112-behaviour	the child's three yields and the parent's three interleave one step differently: rc.112's dispatcher drains its queue once per host task, the avatar's flush drains per armed fiber. Row 11 of m1.
+# 2026-09-04, seat F3: `hYieldStorm` (rc112-behaviour, the cross-dispatcher flush order) closed by
+# R2-14/R2-15 (`8a51d95`, `RunMachine.armed`): 447 ok / 0 unclassified / 0 classified. No row remains.

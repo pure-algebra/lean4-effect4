@@ -420,7 +420,7 @@ let clauses : clause list =
             let m = setup () in
             fire m fuel 99;
             expect (m.trace = [] && m.fibers = []) "a fire on an unknown owner did something") };
-    { name = "fire_eq"; lean = "Clauses.lean:206"; census = [ "scheduler.host-loop" ];
+    { name = "fire_eq"; lean = "Clauses.lean:207"; census = [ "scheduler.host-loop" ];
       check =
         Both
           ( (fun () ->
@@ -445,7 +445,15 @@ let clauses : clause list =
                 | Some o -> expect (not o.dispatcher.armed) "ranTask while the owner is still armed: the drain was not taken once"
                 | None -> fail "ranTask on an unknown owner")
               | _ -> ok ) };
-    { name = "flushAll_idle"; lean = "Clauses.lean:223"; census = [ "scheduler.flush" ];
+    { name = "RunMachine.arm_new"; lean = "Clauses.lean:224"; census = [ "scheduler.dispatcher-arming" ];
+      check = Pure (fun () -> let m = setup () in m.armed <- [ 3 ]; arm m 5; expect (m.armed = [ 3; 5 ]) "a new callback was not scheduled behind those already scheduled") };
+    { name = "RunMachine.arm_known"; lean = "Clauses.lean:232"; census = [ "scheduler.dispatcher-arming" ];
+      check = Pure (fun () -> let m = setup () in m.armed <- [ 3; 5 ]; arm m 3; expect (m.armed = [ 3; 5 ]) "a later task changed the order of the schedule") };
+    { name = "RunMachine.arm_fields"; lean = "Clauses.lean:239"; census = [ "scheduler.dispatcher-arming" ];
+      check = Pure (fun () -> let m = setup () in let f = add_fiber m in let n = m.next_token and t = m.trace in arm m f.id; expect (List.length m.fibers = 1 && (List.hd m.fibers).id = f.id && m.next_token = n && m.trace = t) "arming changed more than the schedule") };
+    { name = "RunMachine.disarm_eq"; lean = "Clauses.lean:244"; census = [ "scheduler.host-loop" ];
+      check = Pure (fun () -> let m = setup () in m.armed <- [ 3; 5; 3 ]; disarm m 3; expect (m.armed = [ 5 ]) "a callback that ran is still scheduled") };
+    { name = "flushAll_idle"; lean = "Clauses.lean:248"; census = [ "scheduler.flush" ];
       check =
         Pure
           (fun () ->
@@ -453,26 +461,40 @@ let clauses : clause list =
             ignore (add_fiber m);
             flush_all m fuel 10;
             expect (m.trace = []) "a flush with no armed dispatcher ran something") };
-    { name = "flushAll_round"; lean = "Clauses.lean:231"; census = [ "scheduler.flush" ];
+    { name = "flushAll_round"; lean = "Clauses.lean:257"; census = [ "scheduler.flush" ];
       check =
         Pure
           (fun () ->
+            (* R2-15: one callback per round, the head of the schedule, in arming order *)
             let m = setup () in
             let a = add_fiber m and b = add_fiber m in
-            let ca = add_fiber m and cb = add_fiber m in
-            Dispatcher.enqueue b.dispatcher 0 (Tstart cb.id);
-            Dispatcher.enqueue a.dispatcher 0 (Tstart ca.id);
-            flush_all m fuel 10;
-            let owners = List.filter_map (function RanTask (own, _) -> Some own | _ -> None) m.trace in
-            expect (owners = [ a.id; b.id ]) "armed dispatchers were not fired in fiber order") };
-    { name = "budget_defaults"; lean = "Clauses.lean:245"; census = [ "scheduler.max-ops-default" ];
+            Dispatcher.enqueue b.dispatcher 0 (Tresume (b.id, 7, Aval Vunit)); arm m b.id;
+            Dispatcher.enqueue a.dispatcher 0 (Tresume (a.id, 8, Aval Vunit)); arm m a.id;
+            flush_all m fuel 1;
+            all [ expect (List.filter (function RanTask _ -> true | _ -> false) m.trace = [ RanTask (b.id, Tresume (b.id, 7, Aval Vunit)) ]) "the round did not fire the head of the schedule only";
+                  expect (m.armed = [ a.id ]) "the fired callback is still scheduled, or the rest was touched" ]) };
+    { name = "flushRoot_idle"; lean = "Clauses.lean:266"; census = [ "entry.run-sync-exit-with" ];
+      check = Pure (fun () -> let m = setup () in let r = add_fiber m in flush_root m fuel r.id 3; expect (m.trace = []) "a root dispatcher holding no task ran something") };
+    { name = "flushRoot_round"; lean = "Clauses.lean:274"; census = [ "entry.run-sync-exit-with" ];
+      check =
+        Pure
+          (fun () ->
+            (* R2-14: the root's dispatcher is flushed; a child's own is not *)
+            let m = setup () in
+            let r = add_fiber m and c = add_fiber m in
+            Dispatcher.enqueue r.dispatcher 0 (Tstart c.id); arm m r.id;
+            Dispatcher.enqueue c.dispatcher 0 (Tresume (c.id, 9, Aval Vunit)); arm m c.id;
+            flush_root m fuel r.id 3;
+            all [ expect (has_event (fun e -> e = RanTask (r.id, Tstart c.id)) m) "the root's task did not run";
+                  expect (List.length (List.concat_map (fun b -> b.tasks) c.dispatcher.buckets) = 1 && m.armed = [ c.id ]) "the child's own dispatcher was flushed, or its callback cancelled" ]) };
+    { name = "budget_defaults"; lean = "Clauses.lean:285"; census = [ "scheduler.max-ops-default" ];
       check =
         Pure
           (fun () ->
             expect (default_budget = 2048 && empty_ctx.max_ops_before_yield = 2048 && not empty_ctx.prevent_yield)
               "the budget defaults are not 2048 / false") };
     (* ------------------------------------------- yield now and the resume guard *)
-    { name = "evaluatePrim_yieldNowWith"; lean = "Clauses.lean:256"; census = [ "scheduler.yield-now-resume-guard" ];
+    { name = "evaluatePrim_yieldNowWith"; lean = "Clauses.lean:296"; census = [ "scheduler.yield-now-resume-guard" ];
       check =
         Pure
           (fun () ->
@@ -485,11 +507,11 @@ let clauses : clause list =
             all [ expect (f.parked = WithGuard token) "not parked behind the fresh guard";
                   expect (task = Some (Tresume (f.id, token, Aval Vunit))) "the resume is not queued at the given priority with the void success";
                   expect (m.next_token = token + 1) "the token counter did not advance" ]) };
-    { name = "drive_loop_parked"; lean = "Clauses.lean:274"; census = [ "rule.yield-is-overloaded" ];
+    { name = "drive_loop_parked"; lean = "Clauses.lean:314"; census = [ "rule.yield-is-overloaded" ];
       check = Refused "`Cmd.loop` has no OCaml existence: `continue k` runs the fiber to its next `perform` (DIVERGENCE 2)" };
-    { name = "drive_loop_continues"; lean = "Clauses.lean:288"; census = [ "rule.yield-is-overloaded" ];
+    { name = "drive_loop_continues"; lean = "Clauses.lean:328"; census = [ "rule.yield-is-overloaded" ];
       check = Refused "`Cmd.loop` has no OCaml existence (DIVERGENCE 2)" };
-    { name = "evaluatePrim_sync_answers"; lean = "Clauses.lean:303"; census = [ "op.Sync" ];
+    { name = "evaluatePrim_sync_answers"; lean = "Clauses.lean:343"; census = [ "op.Sync" ];
       check =
         Pure
           (fun () ->
@@ -508,9 +530,9 @@ let clauses : clause list =
             all [ expect resumed_first "the resumes the thunk owes did not run before the pop";
                   expect (!order = [ `Ret (Vbool true) ]) "the thunk's value was not delivered after them";
                   expect (w.exit_ = Some (Esuccess (Vnat 7))) "the waiter did not finish inside the completion" ]) };
-    { name = "evaluatePrim_sync_pure"; lean = "Clauses.lean:317"; census = [ "op.Sync" ];
+    { name = "evaluatePrim_sync_pure"; lean = "Clauses.lean:357"; census = [ "op.Sync" ];
       check = Refused "every `SyncOp` of the avatar's alphabet is a store step (`sync_op_step` is total on `sync_op`, `Stores.lean:1160`), so the pure `syncValue` fallback has no instance; the `deliver` it shares is checked by `settle_answered`" };
-    { name = "settle_answered"; lean = "Clauses.lean:329"; census = [ "op.Sync" ];
+    { name = "settle_answered"; lean = "Clauses.lean:369"; census = [ "op.Sync" ];
       check =
         Pure
           (fun () ->
@@ -528,7 +550,7 @@ let clauses : clause list =
             deliver f ko2 (Vnat 4);
             all [ expect (!got = [ Ret (Vnat 3) ] && f.current_op_count = ops) "a plain delivery did not answer the value, or counted an op";
                   expect (!got2 = [ Thr (Einterrupt_exn the_cause) ] && not f.frame.deferred_interrupt) "a delivery under a deferred interrupt did not fail with it and clear the flag" ]) };
-    { name = "settle_finished"; lean = "Clauses.lean:337"; census = [ "rule.children-interrupted-after-exit" ];
+    { name = "settle_finished"; lean = "Clauses.lean:377"; census = [ "rule.children-interrupted-after-exit" ];
       check =
         Pure
           (fun () ->
@@ -545,9 +567,9 @@ let clauses : clause list =
             exec m fuel (Cevaluate w.id);
             exec m fuel (Cevaluate c.id);
             expect (resume_and_exit_order_of m = [ [ 0; w.id; 0 ]; [ 1; c.id ]; [ 0; w.id; 1 ]; [ 1; w.id ] ]) "the nested resumes did not precede the completer's exit path, or the waiter was not resumed by it") };
-    { name = "drive_loop_answered"; lean = "Clauses.lean:345"; census = [ "op.Sync" ];
+    { name = "drive_loop_answered"; lean = "Clauses.lean:385"; census = [ "op.Sync" ];
       check = Refused "`Cmd.loop` and `Cmd.deliver` have no OCaml existence (DIVERGENCE 2): the answered iteration is the store arm's `drive [CdrainDue]; deliver`, checked by `evaluatePrim_sync_answers` and `settle_answered`" };
-    { name = "drive_deliver"; lean = "Clauses.lean:360"; census = [ "op.Sync" ];
+    { name = "drive_deliver"; lean = "Clauses.lean:400"; census = [ "op.Sync" ];
       check =
         Pure
           (fun () ->
@@ -559,7 +581,7 @@ let clauses : clause list =
             exec m fuel (Cevaluate f.id);
             all [ expect (has_event (fun e -> e = FinalizerProgram (f.id, "release(9,false)", Esuccess (Vbool true))) m) "the finalizer program under the sync did not run with the thunk's success";
                   expect (f.exit_ = Some (Esuccess (Vbool true))) "the thunk's exit was not restored after the finalizer" ]) };
-    { name = "drive_finish"; lean = "Clauses.lean:372"; census = [ "fork.child" ];
+    { name = "drive_finish"; lean = "Clauses.lean:412"; census = [ "fork.child" ];
       check =
         Pure
           (fun () ->
@@ -572,7 +594,7 @@ let clauses : clause list =
             finish m fuel f (Esuccess (Vnat 1));
             all [ expect ((not f.running) && f.exit_ = Some (Esuccess (Vnat 1))) "the fiber did not exit with its loop over";
                   expect (m.trace = [ Exited (f.id, Esuccess (Vnat 1)); ObserverFired (f.id, Callback 5); CallbackEv (5, Esuccess (Vnat 1)) ]) "the exit path's commands differ" ]) };
-    { name = "drive_resume_wrong_token"; lean = "Clauses.lean:384"; census = [ "scheduler.yield-now-resume-guard" ];
+    { name = "drive_resume_wrong_token"; lean = "Clauses.lean:424"; census = [ "scheduler.yield-now-resume-guard" ];
       check =
         Pure
           (fun () ->
@@ -582,7 +604,7 @@ let clauses : clause list =
             exec m fuel (Cresume (t.id, 4, Aval Vunit));
             all [ expect (!got = []) "a resume on the wrong token reached the continuation";
                   expect (t.parked = WithGuard 5 && m.trace = []) "a dropped resume changed the fiber" ]) };
-    { name = "drive_resume_guard"; lean = "Clauses.lean:394"; census = [ "scheduler.yield-now-resume-guard" ];
+    { name = "drive_resume_guard"; lean = "Clauses.lean:434"; census = [ "scheduler.yield-now-resume-guard" ];
       check =
         Both
           ( (fun () ->
@@ -601,7 +623,7 @@ let clauses : clause list =
                               "resumedWith while still parked or with the pending entry kept"
                 | None -> fail "resumedWith on an unknown fiber")
               | _ -> ok ) };
-    { name = "drive_resume_not_parked"; lean = "Clauses.lean:408"; census = [ "scheduler.yield-now-resume-guard" ];
+    { name = "drive_resume_not_parked"; lean = "Clauses.lean:448"; census = [ "scheduler.yield-now-resume-guard" ];
       check =
         Pure
           (fun () ->
@@ -612,7 +634,7 @@ let clauses : clause list =
             exec m fuel (Cresume (t.id, 5, Aval Vunit));
             expect (!got = [] && m.trace = []) "a resume on an unparked fiber was not dropped") };
     (* ------------------------------------------- the interrupt entry *)
-    { name = "interruptRecord_exited"; lean = "Clauses.lean:418"; census = [ "interrupt.unsafe-entry" ];
+    { name = "interruptRecord_exited"; lean = "Clauses.lean:458"; census = [ "interrupt.unsafe-entry" ];
       check =
         Pure
           (fun () ->
@@ -621,7 +643,7 @@ let clauses : clause list =
             f.exit_ <- Some (Esuccess Vunit);
             let apply = interrupt_record m (Some 0) [] f in
             expect ((not apply) && f.frame.interrupted_cause = None) "an interrupt after the exit did something") };
-    { name = "interruptRecord_records"; lean = "Clauses.lean:436"; census = [ "rule.record-and-apply-separate" ];
+    { name = "interruptRecord_records"; lean = "Clauses.lean:476"; census = [ "rule.record-and-apply-separate" ];
       check =
         Both
           ( (fun () ->
@@ -641,7 +663,7 @@ let clauses : clause list =
                   | None -> fail "interruptRecorded but no cause recorded")
                 | _ -> ok)
               | _ -> ok ) };
-    { name = "interruptRecord_accumulates"; lean = "Clauses.lean:447"; census = [ "interrupt.accumulate" ];
+    { name = "interruptRecord_accumulates"; lean = "Clauses.lean:487"; census = [ "interrupt.accumulate" ];
       check =
         Pure
           (fun () ->
@@ -652,7 +674,7 @@ let clauses : clause list =
             ignore (interrupt_record m (Some 3) [] f);
             let fresh = cause_annotate (cause_interrupt (Some 3)) (!interp.stack_annotations f.id) in
             expect (f.frame.interrupted_cause = Some (cause_combine the_cause fresh)) "successive interruptors do not combine") };
-    { name = "interruptRecord_running_defers"; lean = "Clauses.lean:460"; census = [ "rule.record-and-apply-separate" ];
+    { name = "interruptRecord_running_defers"; lean = "Clauses.lean:500"; census = [ "rule.record-and-apply-separate" ];
       check =
         Both
           ( (fun () ->
@@ -668,7 +690,7 @@ let clauses : clause list =
                 | Some f -> expect (f.running && f.frame.deferred_interrupt) "interruptDeferred on an idle fiber"
                 | None -> fail "interruptDeferred on an unknown fiber")
               | _ -> ok ) };
-    { name = "interruptRecord_idle_applies"; lean = "Clauses.lean:472"; census = [ "rule.record-and-apply-separate" ];
+    { name = "interruptRecord_idle_applies"; lean = "Clauses.lean:512"; census = [ "rule.record-and-apply-separate" ];
       check =
         Pure
           (fun () ->
@@ -681,7 +703,7 @@ let clauses : clause list =
             all [ expect apply "an idle interruptible fiber was not applied now";
                   expect (f.parked = NotParked && f.pending = []) "not unparked / pending not dropped";
                   expect (f.frame.control = Failing expected) "the current primitive is not the accumulated cause's failure" ]) };
-    { name = "interruptRecord_masked"; lean = "Clauses.lean:486"; census = [ "rule.record-and-apply-separate" ];
+    { name = "interruptRecord_masked"; lean = "Clauses.lean:526"; census = [ "rule.record-and-apply-separate" ];
       check =
         Pure
           (fun () ->
@@ -692,7 +714,7 @@ let clauses : clause list =
                   expect (f.frame.interrupted_cause <> None) "a masked fiber did not record";
                   expect ((not f.frame.deferred_interrupt) && (match f.frame.control with Program _ -> true | _ -> false))
                     "a masked fiber's frame changed" ]) };
-    { name = "interruptRecord_parked_applies"; lean = "Clauses.lean:501"; census = [ "checkpoint.post-yield-cancel" ];
+    { name = "interruptRecord_parked_applies"; lean = "Clauses.lean:541"; census = [ "checkpoint.post-yield-cancel" ];
       check =
         Pure
           (fun () ->
@@ -704,7 +726,7 @@ let clauses : clause list =
             all [ expect (apply && f.parked = NotParked && f.pending = []) "a parked fiber was not applied now";
                   expect (match !got with [ Acause _ ] -> true | _ -> false) "the park was not discontinued with the cause" ]) };
     (* ------------------------------------------- fork *)
-    { name = "spawn_eq"; lean = "Clauses.lean:529"; census = [ "fork.unsafe" ];
+    { name = "spawn_eq"; lean = "Clauses.lean:569"; census = [ "fork.unsafe" ];
       check =
         Both
           ( (fun () ->
@@ -723,7 +745,7 @@ let clauses : clause list =
                 | Some p, Some _ -> expect (List.mem child p.children = not daemon) "forked: tracking disagrees with daemon"
                 | _ -> fail "forked names an unknown fiber")
               | _ -> ok ) };
-    { name = "spawnChild_fields"; lean = "Clauses.lean:540"; census = [ "fork.unsafe" ];
+    { name = "spawnChild_fields"; lean = "Clauses.lean:580"; census = [ "fork.unsafe" ];
       check =
         Pure
           (fun () ->
@@ -734,7 +756,7 @@ let clauses : clause list =
             all [ expect (a.id = m.next_id) "the child's id is not the next id";
                   expect (a.frame.interruptible && (not b.frame.interruptible) && not c.frame.interruptible) "the mask by options differs";
                   expect (a.observers = [ UntrackChild p.id ] && c.observers = []) "the untrack observer disagrees with daemon" ]) };
-    { name = "spawn_daemon_untracked"; lean = "Clauses.lean:556"; census = [ "rule.only-fork-child-tracks" ];
+    { name = "spawn_daemon_untracked"; lean = "Clauses.lean:596"; census = [ "rule.only-fork-child-tracks" ];
       check =
         Pure
           (fun () ->
@@ -742,7 +764,7 @@ let clauses : clause list =
             let p = add_fiber m in
             ignore (spawn m p (fun () -> Vunit) (fixture_fork_options ~daemon:true));
             expect (p.children = []) "a daemon joined the parent's children") };
-    { name = "start_eq"; lean = "Clauses.lean:565"; census = [ "rule.start-is-asymmetric" ];
+    { name = "start_eq"; lean = "Clauses.lean:605"; census = [ "rule.start-is-asymmetric" ];
       check =
         Pure
           (fun () ->
@@ -753,7 +775,7 @@ let clauses : clause list =
             all [ expect (now = [ Cevaluate 7 ]) "an immediate start is not an `evaluate` command";
                   expect (later = [] && m.trace = [ ScheduledTask (p.id, 0, Tstart 8) ]) "a deferred start is not a start task at priority 0";
                   expect (List.map (fun b -> (b.priority, b.tasks)) p.dispatcher.buckets = [ (0, [ Tstart 8 ]) ]) "the deferred start is not on the parent's dispatcher" ]) };
-    { name = "runFork_eq"; lean = "Clauses.lean:576"; census = [ "entry.run-fork-with" ];
+    { name = "runFork_eq"; lean = "Clauses.lean:616"; census = [ "entry.run-fork-with" ];
       check =
         Pure
           (fun () ->
@@ -765,7 +787,7 @@ let clauses : clause list =
                   expect (f.frame.interruptible && f.max_ops_before_yield = !max_ops_before_yield) "the root's mask or budget differ";
                   expect (!seen && List.nth_opt m.trace 0 = Some (Started root)) "the root was not evaluated at once" ]) };
     (* ------------------------------------------- join and await *)
-    { name = "evaluatePrim_join_done"; lean = "Clauses.lean:590"; census = [ "fork.join" ];
+    { name = "evaluatePrim_join_done"; lean = "Clauses.lean:630"; census = [ "fork.join" ];
       check =
         Pure
           (fun () ->
@@ -779,7 +801,7 @@ let clauses : clause list =
             all [ expect (!got1 = [ Ret Vnone ]) "`await` on an exited target is not the exit as a value";
                   expect (match !got2 with [ Thr (Einterrupt_exn c) ] -> c = the_cause | _ -> false) "`join` on an exited target is not the exit as an effect";
                   expect (f.parked = NotParked && m.trace = []) "a join on an exited target parked" ]) };
-    { name = "evaluatePrim_join_live"; lean = "Clauses.lean:606"; census = [ "fork.await" ];
+    { name = "evaluatePrim_join_live"; lean = "Clauses.lean:646"; census = [ "fork.await" ];
       check =
         Both
           ( (fun () ->
@@ -798,7 +820,7 @@ let clauses : clause list =
                 | Some f -> expect (f.parked = WithGuard token) "parkedOn without the guard"
                 | None -> fail "parkedOn on an unknown fiber")
               | _ -> ok ) };
-    { name = "evaluatePrim_join_unknown"; lean = "Clauses.lean:625"; census = [ "fork.join" ];
+    { name = "evaluatePrim_join_unknown"; lean = "Clauses.lean:665"; census = [ "fork.join" ];
       check =
         Pure
           (fun () ->
@@ -808,7 +830,7 @@ let clauses : clause list =
             arm_join_on m f 42 MJoin ko;
             expect (m.stuck = Some (UnknownFiber 42) && !got = []) "a join on an unknown handle is not stuck") };
     (* ------------------------------------------- children *)
-    { name = "withFiber_snapshotChildren"; lean = "Clauses.lean:638"; census = [ "fork.await-all-children" ];
+    { name = "withFiber_snapshotChildren"; lean = "Clauses.lean:678"; census = [ "fork.await-all-children" ];
       check =
         Pure
           (fun () ->
@@ -820,7 +842,7 @@ let clauses : clause list =
             arm_snapshot_children m f ko;
             let expected = Vlist [ Vhandle (handle_index "fiber" a); Vhandle (handle_index "fiber" b) ] in
             expect (!got = [ Ret expected ]) "the snapshot is not the tracked children as a value") };
-    { name = "withFiber_awaitNewChildren"; lean = "Clauses.lean:646"; census = [ "fork.await-all-children" ];
+    { name = "withFiber_awaitNewChildren"; lean = "Clauses.lean:686"; census = [ "fork.await-all-children" ];
       check =
         Pure
           (fun () ->
@@ -832,7 +854,7 @@ let clauses : clause list =
             arm_await_new_children m f (Vlist [ Vhandle (handle_index "fiber" a) ]) ko;
             let has_countdown g = List.exists (function Countdown (w, _) -> w = f.id | _ -> false) (fiber_exn m g).observers in
             expect ((not (has_countdown a)) && has_countdown b) "the countdown is not over the children added since the snapshot only") };
-    { name = "withFiber_runIn"; lean = "Clauses.lean:658"; census = [ "fork.fiber-run-in" ];
+    { name = "withFiber_runIn"; lean = "Clauses.lean:698"; census = [ "fork.fiber-run-in" ];
       check =
         Pure
           (fun () ->
@@ -845,7 +867,7 @@ let clauses : clause list =
                   expect (List.mem (DropScopeFinalizer (0, 100)) t.observers) "the run-in fiber carries no key-dropping observer";
                   expect (scope_keys 0 = [ 100 ]) "the keyed finalizer was not registered";
                   expect (m.trace = [ ScopeLinked (0, 100, t.id) ]) "the link's event differs" ]) };
-    { name = "linkScope_closed"; lean = "Clauses.lean:671"; census = [ "fork.fiber-run-in" ];
+    { name = "linkScope_closed"; lean = "Clauses.lean:711"; census = [ "fork.fiber-run-in" ];
       check =
         Pure
           (fun () ->
@@ -856,7 +878,7 @@ let clauses : clause list =
             all [ expect (cmds = [ Cevaluate t.id ]) "the closed link did not apply the interrupt now";
                   expect (m.trace = [ ScopeClosedOnLink (1, t.id); InterruptRecorded (Some 0, t.id) ]) "the closed link's events differ";
                   expect (match t.frame.interrupted_cause with Some c -> List.mem "caller" c.annotations | None -> false) "the caller's annotations are missing" ]) };
-    { name = "linkScope_unknown"; lean = "Clauses.lean:684"; census = [ "fork.fiber-run-in" ];
+    { name = "linkScope_unknown"; lean = "Clauses.lean:724"; census = [ "fork.fiber-run-in" ];
       check =
         Pure
           (fun () ->
@@ -865,14 +887,14 @@ let clauses : clause list =
             let cmds = link_scope m 0 99 100 t.id (Some 0) [] in
             expect (cmds = [] && m.stuck = Some (UnknownScope 99)) "an unknown scope did not halt the machine") };
     (* ------------------------------------------- the runtime entries *)
-    { name = "runCallback_eq"; lean = "Clauses.lean:695"; census = [ "entry.run-callback-with" ];
+    { name = "runCallback_eq"; lean = "Clauses.lean:735"; census = [ "entry.run-callback-with" ];
       check =
         Pure
           (fun () ->
             let m = setup () in
             let root = run_callback m fuel (fun () -> Vnat 3) 77 in
             expect (has_event (fun e -> e = ObserverFired (root, Callback 77)) m) "the root does not carry the callback observer under its key") };
-    { name = "fireObserver_callback"; lean = "Clauses.lean:708"; census = [ "entry.run-callback-with" ];
+    { name = "fireObserver_callback"; lean = "Clauses.lean:748"; census = [ "entry.run-callback-with" ];
       check =
         Both
           ( (fun () ->
@@ -885,7 +907,7 @@ let clauses : clause list =
                 expect (List.nth_opt m.trace (i - 1) = Some (ObserverFired (List.length m.fibers - List.length m.fibers + (match List.nth_opt m.trace (i - 1) with Some (ObserverFired (f, _)) -> f | _ -> -1), Callback key)))
                   "callback not delivered by its observer"
               | _ -> ok ) };
-    { name = "stepDecision_abort"; lean = "Clauses.lean:716"; census = [ "entry.abort-signal" ];
+    { name = "stepDecision_abort"; lean = "Clauses.lean:756"; census = [ "entry.abort-signal" ];
       check =
         Pure
           (fun () ->
@@ -895,33 +917,33 @@ let clauses : clause list =
             step_decision m fuel (DinterruptFrom (None, [], t.id));
             all [ expect (List.nth_opt m.trace 0 = Some (InterruptRecorded (None, t.id))) "the abort is not an interrupt with no interruptor";
                   expect (match !got with [ Acause c ] -> List.mem (Rinterrupt None) c.reasons | _ -> false) "the abort did not apply now to the parked fiber" ]) };
-    { name = "runSyncExit_exited"; lean = "Clauses.lean:730"; census = [ "entry.run-sync-exit-with" ];
+    { name = "runSyncExit_exited"; lean = "Clauses.lean:771"; census = [ "entry.run-sync-exit-with" ];
       check =
         Pure
           (fun () ->
             let m = setup () in
             expect (run_sync_exit m fuel (fun () -> Vnat 3) = Esuccess (Vnat 3)) "the root's exit is not the answer") };
-    { name = "runSyncExit_survives"; lean = "Clauses.lean:740"; census = [ "entry.async-fiber-error" ];
+    { name = "runSyncExit_survives"; lean = "Clauses.lean:783"; census = [ "entry.async-fiber-error" ];
       check =
         Pure
           (fun () ->
             let m = setup () in
             expect (run_sync_exit m fuel (fun () -> Effect.perform (Op_never ())) = Efailure (cause_die "AsyncFiberError"))
               "a root that survives the flush is not the `AsyncFiberError` defect") };
-    { name = "promiseOutcome_eq"; lean = "Clauses.lean:749"; census = [ "entry.run-promise-exit-with" ];
+    { name = "promiseOutcome_eq"; lean = "Clauses.lean:793"; census = [ "entry.run-promise-exit-with" ];
       check =
         Pure
           (fun () ->
             expect (promise_outcome (Esuccess (Vnat 1)) = Ok (Vnat 1) && promise_outcome (Efailure the_cause) = Error (Sq_error 7))
               "resolve/reject differ from the exit and its squash") };
-    { name = "promiseOutcome_failure"; lean = "Clauses.lean:755"; census = [ "entry.run-promise-with" ];
+    { name = "promiseOutcome_failure"; lean = "Clauses.lean:799"; census = [ "entry.run-promise-with" ];
       check =
         Pure
           (fun () ->
             expect (promise_outcome (Efailure (cause_combine (cause_fail 4) (cause_die "badName"))) = Error (Sq_error 4))
               "the squash is not the first typed failure") };
     (* ------------------------------------------- second pass: emit *)
-    { name = "fiber?_emit"; lean = "Clauses.lean:770"; census = [];
+    { name = "fiber?_emit"; lean = "Clauses.lean:814"; census = [];
       check =
         Pure
           (fun () ->
@@ -929,7 +951,7 @@ let clauses : clause list =
             let f = add_fiber m in
             emit m [ Started 0 ];
             expect (match fiber_opt m f.id with Some g -> g == f | None -> false) "emit touched the fiber table") };
-    { name = "race?_emit"; lean = "Clauses.lean:773"; census = [];
+    { name = "race?_emit"; lean = "Clauses.lean:817"; census = [];
       check =
         Pure
           (fun () ->
@@ -937,7 +959,7 @@ let clauses : clause list =
             let before = m.races in
             emit m [ Started 0 ];
             expect (m.races == before) "emit touched the races") };
-    { name = "state_emit"; lean = "Clauses.lean:776"; census = [];
+    { name = "state_emit"; lean = "Clauses.lean:820"; census = [];
       check =
         Pure
           (fun () ->
@@ -945,7 +967,7 @@ let clauses : clause list =
             let before = (store.refs, List.length store.scopes.entries, m.state.started) in
             emit m [ Started 0 ];
             expect (before = (store.refs, List.length store.scopes.entries, m.state.started)) "emit touched the store") };
-    { name = "stuck_emit"; lean = "Clauses.lean:779"; census = [];
+    { name = "stuck_emit"; lean = "Clauses.lean:823"; census = [];
       check =
         Pure
           (fun () ->
@@ -954,14 +976,14 @@ let clauses : clause list =
             emit m [ Started 0 ];
             expect (m.stuck = Some (UnknownScope 9)) "emit touched the stuck marker") };
     (* ------------------------------------------- interruptEach *)
-    { name = "interruptEach_nil"; lean = "Clauses.lean:789"; census = [ "fork.interrupt-all" ];
+    { name = "interruptEach_nil"; lean = "Clauses.lean:833"; census = [ "fork.interrupt-all" ];
       check =
         Pure
           (fun () ->
             let m = setup () in
             let cmds = interrupt_each m 0 [] [] [ CdrainDue ] in
             expect (cmds = [ CdrainDue ] && m.trace = []) "an empty request list recorded something") };
-    { name = "interruptEach_cons"; lean = "Clauses.lean:797"; census = [ "fork.interrupt-all" ];
+    { name = "interruptEach_cons"; lean = "Clauses.lean:841"; census = [ "fork.interrupt-all" ];
       check =
         Pure
           (fun () ->
@@ -973,7 +995,7 @@ let clauses : clause list =
             let cmds = interrupt_each m who.id [] [ a.id; 99; b.id ] [] in
             all [ expect (m.trace = [ InterruptRecorded (Some who.id, a.id); InterruptRecorded (Some who.id, b.id) ]) "the requests did not run in list order, skipping the unknown";
                   expect (cmds = [ Cevaluate a.id ]) "only the target that applies now is queued" ]) };
-    { name = "interruptEach_known"; lean = "Clauses.lean:812"; census = [ "fork.interrupt-all" ];
+    { name = "interruptEach_known"; lean = "Clauses.lean:856"; census = [ "fork.interrupt-all" ];
       check =
         Pure
           (fun () ->
@@ -989,7 +1011,7 @@ let clauses : clause list =
             in
             expect (a.frame.interrupted_cause = Some expected) "a known target is not recorded with `who` and the caller's annotations") };
     (* ------------------------------------------- the exit path *)
-    { name = "exitFiber_eq"; lean = "Clauses.lean:863"; census = [ "rule.children-interrupted-after-exit" ];
+    { name = "exitFiber_eq"; lean = "Clauses.lean:907"; census = [ "rule.children-interrupted-after-exit" ];
       check =
         Pure
           (fun () ->
@@ -1007,7 +1029,7 @@ let clauses : clause list =
             let b = m2.trace = [ Exited (q.id, Esuccess Vunit) ] in
             all [ expect (a && List.length (trace_after m n) > 0) "with the middleware and tracked children the children clause did not run";
                   expect b "without them the exit was not stored at once" ]) };
-    { name = "exitFiber_no_middleware"; lean = "Clauses.lean:872"; census = [ "fork.child" ];
+    { name = "exitFiber_no_middleware"; lean = "Clauses.lean:916"; census = [ "fork.child" ];
       check =
         Pure
           (fun () ->
@@ -1018,7 +1040,7 @@ let clauses : clause list =
             ignore (exit_fiber m p (Esuccess Vunit));
             all [ expect (p.exit_ = Some (Esuccess Vunit)) "the exit was not stored at once";
                   expect ((fiber_exn m c).exit_ = None && not (has_event (function InterruptRecorded _ -> true | _ -> false) m)) "the children did not survive" ]) };
-    { name = "exitFiber_no_children"; lean = "Clauses.lean:881"; census = [ "fork.detach" ];
+    { name = "exitFiber_no_children"; lean = "Clauses.lean:925"; census = [ "fork.detach" ];
       check =
         Pure
           (fun () ->
@@ -1029,7 +1051,7 @@ let clauses : clause list =
             ignore (park_recorder (fiber_exn m d) 0);
             ignore (exit_fiber m p (Esuccess Vunit));
             expect (p.exit_ = Some (Esuccess Vunit) && (fiber_exn m d).exit_ = None) "a daemon child was reached by its parent's exit") };
-    { name = "exitFiber_finalizing"; lean = "Clauses.lean:891"; census = [];
+    { name = "exitFiber_finalizing"; lean = "Clauses.lean:935"; census = [];
       check =
         Pure
           (fun () ->
@@ -1040,7 +1062,7 @@ let clauses : clause list =
             p.finalizing <- Some (Esuccess (Vnat 1));
             ignore (exit_fiber m p (Efailure the_cause));
             expect (p.exit_ = Some (Efailure the_cause) && p.finalizing = None) "a finalizing fiber did not store the exit it is now given") };
-    { name = "exitFiber_children"; lean = "Clauses.lean:899"; census = [ "rule.children-interrupted-after-exit" ];
+    { name = "exitFiber_children"; lean = "Clauses.lean:943"; census = [ "rule.children-interrupted-after-exit" ];
       check =
         Both
           ( (fun () ->
@@ -1058,7 +1080,7 @@ let clauses : clause list =
                 | Some p -> expect (m.middleware_installed && p.children = children && p.exit_ = None) "childrenInterrupted without the middleware, or with other children, or after the exit"
                 | None -> fail "childrenInterrupted on an unknown parent")
               | _ -> ok ) };
-    { name = "exitStore_fiber"; lean = "Clauses.lean:908"; census = [ "fork.child" ];
+    { name = "exitStore_fiber"; lean = "Clauses.lean:952"; census = [ "fork.child" ];
       check =
         Pure
           (fun () ->
@@ -1067,7 +1089,7 @@ let clauses : clause list =
             f.observers <- [ Callback 1; Callback 2 ];
             ignore (exit_store m f (Esuccess Vunit));
             expect (f.observers = []) "the observer list was not emptied") };
-    { name = "exitStore_fields"; lean = "Clauses.lean:913"; census = [ "fork.child" ];
+    { name = "exitStore_fields"; lean = "Clauses.lean:957"; census = [ "fork.child" ];
       check =
         Both
           ( (fun () ->
@@ -1093,7 +1115,7 @@ let clauses : clause list =
                               "exited with the fiber not stored as the exit path stores it"
                 | None -> fail "exited on an unknown fiber")
               | _ -> ok ) };
-    { name = "exitStore_fires"; lean = "Clauses.lean:929"; census = [ "fork.child" ];
+    { name = "exitStore_fires"; lean = "Clauses.lean:973"; census = [ "fork.child" ];
       check =
         Both
           ( (fun () ->
@@ -1111,7 +1133,7 @@ let clauses : clause list =
                 | Some f -> expect (f.exit_ <> None) "an observer fired before its fiber's exit was stored"
                 | None -> ok)
               | _ -> ok ) };
-    { name = "exitInterruptChildren_eq"; lean = "Clauses.lean:938"; census = [ "rule.children-interrupted-after-exit" ];
+    { name = "exitInterruptChildren_eq"; lean = "Clauses.lean:982"; census = [ "rule.children-interrupted-after-exit" ];
       check =
         Pure
           (fun () ->
@@ -1131,7 +1153,7 @@ let clauses : clause list =
                   expect ((fiber_exn m c).frame.interrupted_cause
                           = Some (cause_annotate (cause_interrupt (Some p.id)) (!interp.stack_annotations c @ !interp.stack_annotations p.id)))
                     "the child was not interrupted with the parent's stack annotations" ]) };
-    { name = "exitInterruptChildren_interrupts"; lean = "Clauses.lean:949"; census = [ "fork.detach" ];
+    { name = "exitInterruptChildren_interrupts"; lean = "Clauses.lean:993"; census = [ "fork.detach" ];
       check =
         Pure
           (fun () ->
@@ -1143,7 +1165,7 @@ let clauses : clause list =
             (fiber_exn m b).running <- true;
             let cmds = exit_interrupt_children m p (Esuccess Vunit) in
             expect (cmds = [ Cevaluate a ]) "the owed commands are not the fold's apply-now children in child order") };
-    { name = "countdownPark_finalizing"; lean = "Clauses.lean:955"; census = [];
+    { name = "countdownPark_finalizing"; lean = "Clauses.lean:999"; census = [];
       check =
         Pure
           (fun () ->
@@ -1153,7 +1175,7 @@ let clauses : clause list =
             ignore (countdown_park m f [ t.id ] Rvoid ~on_answer:(fun _ -> ()));
             ignore (countdown_park m f [] Rvoid ~on_answer:(fun _ -> ()));
             expect (f.finalizing = Some (Esuccess (Vnat 2))) "a countdown changed the finalizing flag") };
-    { name = "exitInterruptChildren_finalizing"; lean = "Clauses.lean:966"; census = [ "rule.children-interrupted-after-exit" ];
+    { name = "exitInterruptChildren_finalizing"; lean = "Clauses.lean:1010"; census = [ "rule.children-interrupted-after-exit" ];
       check =
         Both
           ( (fun () ->
@@ -1171,7 +1193,7 @@ let clauses : clause list =
                   expect (f.finalizing <> None) "the exit path parked without remembering its exit"
                 | _ -> ok)
               | _ -> ok ) };
-    { name = "resumePrim_continueWith"; lean = "Clauses.lean:974"; census = [ "rule.children-interrupted-after-exit" ];
+    { name = "resumePrim_continueWith"; lean = "Clauses.lean:1018"; census = [ "rule.children-interrupted-after-exit" ];
       check =
         Pure
           (fun () ->
@@ -1180,14 +1202,14 @@ let clauses : clause list =
             expect (resume_prim (RcontinueWith (Esuccess (Vnat 4))) [ Esuccess Vunit ] = Aval (Vnat 4)
                     && resume_prim (RcontinueWith (Efailure the_cause)) [] = Acause the_cause)
               "the finished countdown does not continue with the restored exit") };
-    { name = "stepDecision_installMiddleware"; lean = "Clauses.lean:981"; census = [ "fork.child" ];
+    { name = "stepDecision_installMiddleware"; lean = "Clauses.lean:1025"; census = [ "fork.child" ];
       check =
         Pure
           (fun () ->
             let m = setup () in
             step_decision m fuel DinstallMiddleware;
             expect (m.middleware_installed && m.trace = []) "installing the middleware is not a flag") };
-    { name = "fireObserver_resumeAwait"; lean = "Clauses.lean:988"; census = [ "fork.child" ];
+    { name = "fireObserver_resumeAwait"; lean = "Clauses.lean:1032"; census = [ "fork.child" ];
       check =
         Pure
           (fun () ->
@@ -1195,7 +1217,7 @@ let clauses : clause list =
             let cmds = fire_observer m 4 (Efailure the_cause) [ CdrainDue ] (ResumeAwait (2, 6, MJoin)) in
             expect (cmds = [ CdrainDue; Cresume (2, 6, Acause the_cause) ] && m.trace = [ ObserverFired (4, ResumeAwait (2, 6, MJoin)) ])
               "the awaiter is not resumed with the exit in its mode, as a command") };
-    { name = "fireObserver_untrackChild"; lean = "Clauses.lean:997"; census = [ "rule.only-fork-child-tracks" ];
+    { name = "fireObserver_untrackChild"; lean = "Clauses.lean:1041"; census = [ "rule.only-fork-child-tracks" ];
       check =
         Both
           ( (fun () ->
@@ -1211,7 +1233,7 @@ let clauses : clause list =
                 | Some p -> expect (p.exit_ <> None || List.mem id p.children) "untrackChild fired for a child a live parent did not track"
                 | None -> ok)
               | _ -> ok ) };
-    { name = "fireObserver_dropScopeFinalizer"; lean = "Clauses.lean:1006"; census = [ "fork.in" ];
+    { name = "fireObserver_dropScopeFinalizer"; lean = "Clauses.lean:1050"; census = [ "fork.in" ];
       check =
         Pure
           (fun () ->
@@ -1222,13 +1244,13 @@ let clauses : clause list =
             let cmds = fire_observer m 1 (Esuccess Vunit) [] (DropScopeFinalizer (0, 100)) in
             expect (cmds = [] && scope_keys 0 = [ 101 ] && m.stuck = None) "the keyed finalizer was not dropped from the scope") };
     (* ------------------------------------------- the countdown walk (2f77f7d, R2-3/R2-4) *)
-    { name = "countdownWalk_nil"; lean = "Clauses.lean:1016"; census = [ "fork.await-all-children" ];
+    { name = "countdownWalk_nil"; lean = "Clauses.lean:1060"; census = [ "fork.await-all-children" ];
       check =
         Pure
           (fun () ->
             let m = setup () in
             expect (countdown_walk m [] [ Esuccess (Vnat 1) ] = ([ Esuccess (Vnat 1) ], None)) "an empty walk did not answer the exits with nothing to observe") };
-    { name = "countdownWalk_exited"; lean = "Clauses.lean:1021"; census = [ "fork.await-all-children" ];
+    { name = "countdownWalk_exited"; lean = "Clauses.lean:1065"; census = [ "fork.await-all-children" ];
       check =
         Pure
           (fun () ->
@@ -1236,14 +1258,14 @@ let clauses : clause list =
             let t = add_fiber m and u = add_fiber m in
             t.exit_ <- Some (Esuccess (Vnat 7));
             expect (countdown_walk m [ t.id; u.id ] [] = countdown_walk m [ u.id ] [ Esuccess (Vnat 7) ]) "an exited target's exit was not collected in place") };
-    { name = "countdownWalk_live"; lean = "Clauses.lean:1029"; census = [ "fork.await-all-children" ];
+    { name = "countdownWalk_live"; lean = "Clauses.lean:1073"; census = [ "fork.await-all-children" ];
       check =
         Pure
           (fun () ->
             let m = setup () in
             let t = add_fiber m and u = add_fiber m in
             expect (countdown_walk m [ t.id; u.id ] [ Esuccess (Vnat 7) ] = ([ Esuccess (Vnat 7) ], Some (t.id, [ u.id ]))) "the first live target did not stop the walk with the rest after it") };
-    { name = "countdownPark_none_live"; lean = "Clauses.lean:1037"; census = [ "fork.await-all-children" ];
+    { name = "countdownPark_none_live"; lean = "Clauses.lean:1081"; census = [ "fork.await-all-children" ];
       check =
         Pure
           (fun () ->
@@ -1255,7 +1277,7 @@ let clauses : clause list =
             let r = countdown_park m f [ t.id; u.id ] RexitsValue ~on_answer:(fun _ -> ()) in
             all [ expect (r = Cdone [ Esuccess (Vnat 1); Efailure the_cause ]) "with no live target the exits were not answered at once, in input order";
                   expect (m.next_token = token + 1 && f.parked = NotParked && m.trace = []) "the token was not minted, or the fiber parked" ]) };
-    { name = "countdownPark_parks"; lean = "Clauses.lean:1050"; census = [ "fork.await-all-children" ];
+    { name = "countdownPark_parks"; lean = "Clauses.lean:1094"; census = [ "fork.await-all-children" ];
       check =
         Pure
           (fun () ->
@@ -1284,7 +1306,7 @@ let clauses : clause list =
                   expect pending_ok "the pending does not carry the observed target, the rest of the walk and the exits so far";
                   expect event_ok "no parkedOn event";
                   expect cleaned "the park's cleanup did not drop the countdown observer" ]) };
-    { name = "fireObserver_countdown_done"; lean = "Clauses.lean:1069"; census = [ "fork.await-all-children" ];
+    { name = "fireObserver_countdown_done"; lean = "Clauses.lean:1113"; census = [ "fork.await-all-children" ];
       check =
         Pure
           (fun () ->
@@ -1297,7 +1319,7 @@ let clauses : clause list =
             let p = List.hd w.pending in
             all [ expect (cmds = [ Cresume (w.id, 2, Aexits [ Esuccess (Vnat 1); Efailure the_cause; Esuccess (Vnat 2) ]) ]) "when nothing after the observed target is live the awaiter is not resumed with every exit in input order";
                   expect (p.waiting_on = None && p.remaining = [] && p.collected = [ Esuccess (Vnat 1); Efailure the_cause; Esuccess (Vnat 2) ]) "the pending entry was not closed" ]) };
-    { name = "fireObserver_countdown_next"; lean = "Clauses.lean:1088"; census = [ "fork.await-all-children" ];
+    { name = "fireObserver_countdown_next"; lean = "Clauses.lean:1132"; census = [ "fork.await-all-children" ];
       check =
         Pure
           (fun () ->
@@ -1310,7 +1332,7 @@ let clauses : clause list =
             expect (cmds = [] && u.observers = [ Countdown (w.id, 2) ] && p.waiting_on = Some u.id && p.remaining = [] && p.collected = [ Esuccess (Vnat 5) ] && w.parked = WithGuard 2)
               "the countdown did not move its one observer to the next live target") };
     (* ------------------------------------------- races *)
-    { name = "settleRace_eq"; lean = "Clauses.lean:1120"; census = [ "fork.race-all" ];
+    { name = "settleRace_eq"; lean = "Clauses.lean:1164"; census = [ "fork.race-all" ];
       check =
         Pure
           (fun () ->
@@ -1327,7 +1349,7 @@ let clauses : clause list =
             all [ expect (match cmds with [ Cresume (h, tok, Aprogram _) ] -> h = host.id && tok = r.rtoken | _ -> false) "the settle did not resume the host with the settle program on its race guard";
                   expect (trace_after m n = [ ObserverFired (e1, RaceCallback r.rid); RaceSettled (r.rid, Esuccess (Vnat 1)) ]) "the settle emitted more than the observer and raceSettled";
                   expect (host.parked = WithGuard r.rtoken && not (has_event (function InterruptRecorded _ -> true | _ -> false) m)) "an entrant was touched by the settle" ]) };
-    { name = "fireObserver_raceCallback_settles"; lean = "Clauses.lean:1129"; census = [ "fork.race-all" ];
+    { name = "fireObserver_raceCallback_settles"; lean = "Clauses.lean:1173"; census = [ "fork.race-all" ];
       check =
         Both
           ( (fun () ->
@@ -1357,7 +1379,7 @@ let clauses : clause list =
                 | Some r -> expect (r.settled && r.accepted <> None) "raceSettled on an unsettled race"
                 | None -> fail "raceSettled on an unknown race")
               | _ -> ok ) };
-    { name = "fireObserver_raceCallback_late"; lean = "Clauses.lean:1146"; census = [ "fork.race-all" ];
+    { name = "fireObserver_raceCallback_late"; lean = "Clauses.lean:1190"; census = [ "fork.race-all" ];
       check =
         Pure
           (fun () ->
@@ -1373,7 +1395,7 @@ let clauses : clause list =
             let cmds = fire_observer m e2 (Efailure the_cause) [] (RaceCallback r.rid) in
             all [ expect (cmds = [] && trace_after m n = [ ObserverFired (e2, RaceCallback r.rid) ]) "a late callback did more than update the bookkeeping";
                   expect (r.accepted = Some (Esuccess (Vnat 1)) && not (List.mem e2 r.live)) "the first accepted result did not stay stable" ]) };
-    { name = "fireObserver_raceCallback_pending"; lean = "Clauses.lean:1158"; census = [ "fork.race-all" ];
+    { name = "fireObserver_raceCallback_pending"; lean = "Clauses.lean:1202"; census = [ "fork.race-all" ];
       check =
         Pure
           (fun () ->
@@ -1387,7 +1409,7 @@ let clauses : clause list =
             let cmds = fire_observer m e1 (Efailure the_cause) [] (RaceCallback r.rid) in
             all [ expect (cmds = [] && trace_after m n = [ ObserverFired (e1, RaceCallback r.rid) ]) "a loser before the winner did more than update the bookkeeping";
                   expect (r.accepted = None && (not r.settled) && r.failures = the_cause.reasons) "the frozen bookkeeping differs" ]) };
-    { name = "drive_launch_done"; lean = "Clauses.lean:1171"; census = [ "fork.race-all" ];
+    { name = "drive_launch_done"; lean = "Clauses.lean:1215"; census = [ "fork.race-all" ];
       check =
         Pure
           (fun () ->
@@ -1399,7 +1421,7 @@ let clauses : clause list =
             let n = m.next_id in
             exec m fuel (Claunch 0);
             expect (m.next_id = n && m.trace = [] && r.programs <> []) "a launch after acceptance forked an entrant") };
-    { name = "drive_launch_exhausted"; lean = "Clauses.lean:1181"; census = [ "fork.race-all" ];
+    { name = "drive_launch_exhausted"; lean = "Clauses.lean:1225"; census = [ "fork.race-all" ];
       check =
         Pure
           (fun () ->
@@ -1410,7 +1432,7 @@ let clauses : clause list =
             let n = m.next_id in
             exec m fuel (Claunch 0);
             expect (m.next_id = n && m.trace = []) "a launch with no entrant left did something") };
-    { name = "drive_launch_runs"; lean = "Clauses.lean:1191"; census = [ "fork.race-all" ];
+    { name = "drive_launch_runs"; lean = "Clauses.lean:1235"; census = [ "fork.race-all" ];
       check =
         Both
           ( (fun () ->
@@ -1433,7 +1455,7 @@ let clauses : clause list =
                 | Some r -> expect (List.mem entrant r.live && r.accepted = None) "raceLaunched with the entrant not live, or after acceptance"
                 | None -> fail "raceLaunched on an unknown race")
               | _ -> ok ) };
-    { name = "drive_link"; lean = "Clauses.lean:1210"; census = [ "fork.in" ];
+    { name = "drive_link"; lean = "Clauses.lean:1254"; census = [ "fork.in" ];
       check =
         Pure
           (fun () ->
@@ -1448,7 +1470,7 @@ let clauses : clause list =
             all [ expect (t.observers = [ DropScopeFinalizer (0, 100) ] && scope_keys 0 = [ 100 ]) "a live child was not linked by the command";
                   expect (u.observers = [] && scope_keys 0 = [ 100 ]) "an exited child was linked" ]) };
     (* ------------------------------------------- the fork arms *)
-    { name = "withFiber_fork"; lean = "Clauses.lean:1222"; census = [ "fork.child" ];
+    { name = "withFiber_fork"; lean = "Clauses.lean:1266"; census = [ "fork.child" ];
       check =
         Pure
           (fun () ->
@@ -1467,7 +1489,7 @@ let clauses : clause list =
                   expect ((fiber_exn m child2).exit_ <> None) "an immediate start did not run the child now";
                   expect (f.children = [ child ]) "tracking differs from the options";
                   expect ((not latched_by_daemon) && m.middleware_installed) "a non-daemon fork did not latch the middleware, or a daemon one did (R2-6)" ]) };
-    { name = "withFiber_forkIn"; lean = "Clauses.lean:1237"; census = [ "fork.in" ];
+    { name = "withFiber_forkIn"; lean = "Clauses.lean:1281"; census = [ "fork.in" ];
       check =
         Both
           ( (fun () ->
@@ -1488,9 +1510,9 @@ let clauses : clause list =
                 | Some t -> expect (List.mem (DropScopeFinalizer (scope, key)) t.observers) "scopeLinked without the key-dropping observer"
                 | None -> fail "scopeLinked on an unknown fiber")
               | _ -> ok ) };
-    { name = "withFiber_forkScoped_ambient"; lean = "Clauses.lean:1251"; census = [ "fork.scoped" ];
+    { name = "withFiber_forkScoped_ambient"; lean = "Clauses.lean:1295"; census = [ "fork.scoped" ];
       check = Refused "`χ = unit`: the avatar's context carries no ambient `Scope` service (A0 §18), so the `_ambient` arm has no instance" };
-    { name = "withFiber_forkScoped_none"; lean = "Clauses.lean:1269"; census = [ "fork.scoped" ];
+    { name = "withFiber_forkScoped_none"; lean = "Clauses.lean:1313"; census = [ "fork.scoped" ];
       check =
         Pure
           (fun () ->
@@ -1500,7 +1522,7 @@ let clauses : clause list =
             arm_fork_scoped m f (fun () -> Vunit) (fixture_fork_options ~daemon:false) 100 ko;
             (* S1-1: `RunInterp.missingScope`, not the "unimplemented step" defect *)
             expect (match !got with [ Thr (Einterrupt_exn c) ] -> c = cause_die "missingService" | _ -> false) "without an ambient scope the fork is not the `missingScope` defect") };
-    { name = "linkScope_open"; lean = "Clauses.lean:1281"; census = [ "fork.in" ];
+    { name = "linkScope_open"; lean = "Clauses.lean:1325"; census = [ "fork.in" ];
       check =
         Pure
           (fun () ->
@@ -1511,7 +1533,7 @@ let clauses : clause list =
             let fin = match scope_store_entry_at store.scopes 0 with Some e -> List.map snd (scope_finalizers e.scope) | None -> [] in
             all [ expect (cmds = [] && fin = [ FininterruptFiber (t.id, true) ]) "the keyed self-guarded finalizer was not registered";
                   expect (t.observers = [ DropScopeFinalizer (0, 100) ] && m.trace = [ ScopeLinked (0, 100, t.id) ]) "the observer or the event is missing" ]) };
-    { name = "linkScope_open_exited"; lean = "Clauses.lean:1296"; census = [ "fork.fiber-run-in" ];
+    { name = "linkScope_open_exited"; lean = "Clauses.lean:1340"; census = [ "fork.fiber-run-in" ];
       check =
         Pure
           (fun () ->
@@ -1523,7 +1545,7 @@ let clauses : clause list =
             let cmds = link_scope m 0 0 100 t.id (Some 0) [] in
             all [ expect (cmds = [] && m.trace = [] && m.stuck = None) "an exited target produced commands, events or a halt";
                   expect (t.observers = [] && scope_keys 0 = []) "an exited target was linked: a key or an observer was left" ]) };
-    { name = "withFiber_closeScope"; lean = "Clauses.lean:1308"; census = [ "scope.close-sequential" ];
+    { name = "withFiber_closeScope"; lean = "Clauses.lean:1352"; census = [ "scope.close-sequential" ];
       check =
         Pure
           (fun () ->
@@ -1535,7 +1557,7 @@ let clauses : clause list =
             all [ expect (!current_program <> None) "the close program was not installed as the closer's next primitive";
                   expect (!got = [ Ret Vunit ]) "the closer was not resumed";
                   expect (scope_store_status store.scopes 0 = Some (Some (Esuccess Vunit))) "the state was not written first" ]) };
-    { name = "withFiber_closeScope_unknown"; lean = "Clauses.lean:1318"; census = [ "scope.close-sequential" ];
+    { name = "withFiber_closeScope_unknown"; lean = "Clauses.lean:1362"; census = [ "scope.close-sequential" ];
       check =
         Pure
           (fun () ->
@@ -1544,7 +1566,7 @@ let clauses : clause list =
             let ko, got = recorder () in
             arm_close_scope m f 99 (Esuccess Vunit) ko;
             expect (m.stuck = Some (UnknownScope 99) && !got = []) "closing an unknown scope did not halt the machine") };
-    { name = "withFiber_interrupt"; lean = "Clauses.lean:1328"; census = [ "fork.interrupt" ];
+    { name = "withFiber_interrupt"; lean = "Clauses.lean:1372"; census = [ "fork.interrupt" ];
       check =
         Pure
           (fun () ->
@@ -1555,7 +1577,7 @@ let clauses : clause list =
             let token = m.next_token in
             arm_interrupt_then_join m f t.id (Some f.id) ko;
             expect (m.trace = [ InterruptRecorded (Some f.id, t.id); ParkedOn (f.id, token) ]) "`interrupt` is not record-with-the-caller then await") };
-    { name = "withFiber_interruptScoped_self"; lean = "Clauses.lean:1336"; census = [ "fork.interrupt" ];
+    { name = "withFiber_interruptScoped_self"; lean = "Clauses.lean:1380"; census = [ "fork.interrupt" ];
       check =
         Pure
           (fun () ->
@@ -1564,7 +1586,7 @@ let clauses : clause list =
             let ko, got = recorder () in
             arm_interrupt_scoped m f f.id ko;
             expect (!got = [ Ret Vunit ] && m.trace = [] && f.frame.interrupted_cause = None) "interrupting oneself through the scoped entry is not a void no-op") };
-    { name = "withFiber_interruptScoped_other"; lean = "Clauses.lean:1345"; census = [ "fork.interrupt" ];
+    { name = "withFiber_interruptScoped_other"; lean = "Clauses.lean:1389"; census = [ "fork.interrupt" ];
       check =
         Pure
           (fun () ->
@@ -1574,7 +1596,7 @@ let clauses : clause list =
             let ko, _ = recorder () in
             arm_interrupt_scoped m f t.id ko;
             expect (List.nth_opt m.trace 0 = Some (InterruptRecorded (Some f.id, t.id))) "another target through the scoped entry is not the plain interrupt") };
-    { name = "interruptThenJoin_eq"; lean = "Clauses.lean:1355"; census = [ "fork.interrupt" ];
+    { name = "interruptThenJoin_eq"; lean = "Clauses.lean:1399"; census = [ "fork.interrupt" ];
       check =
         Pure
           (fun () ->
@@ -1591,7 +1613,7 @@ let clauses : clause list =
                   expect (t.exit_ = Some (Efailure (cause_annotate (cause_interrupt (Some f.id)) (!interp.stack_annotations t.id @ !interp.stack_annotations f.id))))
                     "the target's cause does not carry the caller's annotations";
                   expect (!got = [ Ret Vunit ]) "the caller was not resumed after the target's exit" ]) };
-    { name = "interruptThenJoin_unknown"; lean = "Clauses.lean:1369"; census = [ "fork.interrupt" ];
+    { name = "interruptThenJoin_unknown"; lean = "Clauses.lean:1413"; census = [ "fork.interrupt" ];
       check =
         Pure
           (fun () ->
@@ -1600,7 +1622,7 @@ let clauses : clause list =
             let ko, got = recorder () in
             arm_interrupt_then_join m f 42 (Some f.id) ko;
             expect (m.stuck = Some (UnknownFiber 42) && !got = []) "an unknown target is not stuck") };
-    { name = "withFiber_interruptAll"; lean = "Clauses.lean:1379"; census = [ "fork.interrupt-all" ];
+    { name = "withFiber_interruptAll"; lean = "Clauses.lean:1423"; census = [ "fork.interrupt-all" ];
       check =
         Pure
           (fun () ->
@@ -1618,7 +1640,7 @@ let clauses : clause list =
                   (* R2-5: each target carries the caller's annotations (`:892-895`) *)
                   expect (a.frame.interrupted_cause = Some (cause_annotate (cause_interrupt (Some f.id)) (!interp.stack_annotations a.id @ !interp.stack_annotations f.id)))
                     "the targets do not carry the caller's annotations" ]) };
-    { name = "launchEntrant_eq"; lean = "Clauses.lean:1395"; census = [ "rule.only-fork-child-tracks" ];
+    { name = "launchEntrant_eq"; lean = "Clauses.lean:1439"; census = [ "rule.only-fork-child-tracks" ];
       check =
         Pure
           (fun () ->
@@ -1628,7 +1650,7 @@ let clauses : clause list =
             let e = launch_entrant m f 5 (fun () -> Vunit) in
             let c = fiber_exn m e in
             expect (f.children = [] && c.frame.interruptible && c.observers = [ RaceCallback 5 ]) "the entrant is not an immediate, interruptible daemon with the race callback") };
-    { name = "withFiber_raceAll"; lean = "Clauses.lean:1408"; census = [ "fork.race-all" ];
+    { name = "withFiber_raceAll"; lean = "Clauses.lean:1452"; census = [ "fork.race-all" ];
       check =
         Both
           ( (fun () ->
@@ -1656,7 +1678,7 @@ let clauses : clause list =
                 | _ -> fail "raceStarted names an unknown race or host")
               | _ -> ok ) };
     (* ------------------------------------------- Async *)
-    { name = "withFiber_dropObservers"; lean = "Clauses.lean:1428"; census = [ "fork.await" ];
+    { name = "withFiber_dropObservers"; lean = "Clauses.lean:1472"; census = [ "fork.await" ];
       check =
         Pure
           (fun () ->
@@ -1669,7 +1691,7 @@ let clauses : clause list =
             ko.ret Vunit;
             all [ expect (t.observers = [ Countdown (f.id, 5); UntrackChild f.id ] && u.observers = [ Callback 1 ]) "the observers of that token were not dropped on every fiber, and only those";
                   expect (!got = [ Ret Vunit ]) "the cleanup did not answer void" ]) };
-    { name = "withFiber_cancelRace"; lean = "Clauses.lean:1443"; census = [ "fork.race-all" ];
+    { name = "withFiber_cancelRace"; lean = "Clauses.lean:1487"; census = [ "fork.race-all" ];
       check =
         Pure
           (fun () ->
@@ -1687,7 +1709,7 @@ let clauses : clause list =
             all [ expect (List.filter (function InterruptRecorded _ -> true | _ -> false) (trace_after m n) = [ InterruptRecorded (Some host.id, e1); InterruptRecorded (Some host.id, e2) ]) "the live entrants were not interrupted in order with the host's id";
                   expect ((fiber_exn m e1).exit_ = Some (Efailure (cause_annotate (cause_interrupt (Some host.id)) (!interp.stack_annotations e1 @ !interp.stack_annotations host.id)))) "an entrant's cause does not carry the host's annotations";
                   expect !done_ "the await over the entrants was not answered once they exited" ]) };
-    { name = "withFiber_cancelRace_unknown"; lean = "Clauses.lean:1458"; census = [ "fork.race-all" ];
+    { name = "withFiber_cancelRace_unknown"; lean = "Clauses.lean:1502"; census = [ "fork.race-all" ];
       check =
         Pure
           (fun () ->
@@ -1696,7 +1718,7 @@ let clauses : clause list =
             let done_ = ref false in
             cancel_race m f 42 ~on_done:(fun () -> done_ := true);
             expect (!done_ && m.trace = []) "a cleanup for an unknown race did not answer void at once") };
-    { name = "evaluatePrim_async_immediate"; lean = "Clauses.lean:1468"; census = [ "op.Async" ];
+    { name = "evaluatePrim_async_immediate"; lean = "Clauses.lean:1512"; census = [ "op.Async" ];
       check =
         Pure
           (fun () ->
@@ -1710,7 +1732,7 @@ let clauses : clause list =
             all [ expect (!got = [ Ret (Vnat 9) ]) "a register that answers at once did not install the answer";
                   expect (f.parked = NotParked && m.next_token = token + 1) "the fiber parked, or the token did not advance";
                   expect (store.deferreds.due = []) "the store's due resumes were not drained" ]) };
-    { name = "evaluatePrim_async_parks"; lean = "Clauses.lean:1486"; census = [ "op.Async" ];
+    { name = "evaluatePrim_async_parks"; lean = "Clauses.lean:1530"; census = [ "op.Async" ];
       check =
         Pure
           (fun () ->

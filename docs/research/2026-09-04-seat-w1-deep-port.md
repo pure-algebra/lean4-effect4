@@ -493,10 +493,13 @@ W1-2 (`Completion` in the slot), `Err.boom` = code 100, `Defect.asyncFiber` = th
 divergences closed, (3) the PARK section landed with its guard/one-shot probe, (3b) re-diffed arm
 for arm against `2f77f7d` (R2-3/4/12/13), (3c) **re-diffed against `57924eb`** (R2-7/8/11: the
 fork family — `awaitAllChildren` as `onExit`, `forkIn`'s link after the start as `Clink`, the
-race's register loop as `Claunch race` forking one entrant per iteration). Base `57924eb` (Mac =
-PC; step 4b pending on the PC — re-diff again when it lands). Counts: clauses **126 = 126**
-(121 hold, 0 fail, 5 not portable), witnesses **60 = 60** (59 hold, 0 fail, 1 not portable),
-run-clauses 34/0, park-guard violations **0**, census 84 of 130 rows IDENTICAL. After `2f77f7d`
+race's register loop as `Claunch race` forking one entrant per iteration), (3d) **re-diffed
+against `8a51d95`** (R2-14/15, the host's schedule: the arming queue `RunMachine.armed`,
+`arm`/`disarm`, `flushAll` in arming order one callback per round, `runSyncExit` flushing the
+root's dispatcher only through `flushRoot`). Base `8a51d95` (`625a207` is docs only; Mac = PC).
+Counts: clauses **132 = 132** (127 hold, 0 fail, 5 not portable), witnesses **62 = 62** (61
+hold, 0 fail, 1 not portable), run-clauses 35/0, park-guard violations **0**, census 84 of 130
+rows IDENTICAL. After `2f77f7d`
 (F2.7): goldens 21/18/12/24 twice, extra 12/12, corpus **445 ok / 0 unclassified / 2 classified**
 (only `hYieldStorm`, R2-14/15, remains; `cAwaitAllTwoGenerations` and `dRaceThenInterruptHost`
 closed by the park re-diff and their rows dropped), hosts agree 31 + 158, dune green and
@@ -545,7 +548,9 @@ had the same bug.
 | R2-7 | `awaitAllChildren` is `onExit(self, …)` (`:5314-5333`): the new children are awaited on any exit, under the finalizer mask, and the body's own value is answered | `57924eb`: `Name.snapshotThen` compiles to `Prim.onExit body (finalizerName (FinName.awaitNewChildren snapshot)) false`; `Name.awaitNew` retired | **yes** — `PawaitAllNew` was `snapshot; body; await` (a failing body never awaited) and answered void | `prog_of (PawaitAllNew …)` is `on_exit_program body (FinawaitNewChildren snapshot)`; `fin_program`/`fin_name_string` gain the arm; `FinName` regenerated (6), `Name` (21) | `Stores.lean` `progOf`/`finProgram`; `Fibers.lean:894-901` |
 | R2-8 | `forkIn` forks and, when immediate, runs the child first, then links only a child that has not exited (`:5366-5376`) | `Cmd.link` after the start commands; `linkScope` skips an exited target (R2-9) | **yes** — `arm_fork_in` linked before starting | `Clink (mode, scope, key, target, interruptor, extra)` as a command after `start`; `exec (Clink …)` = `link_scope` | `Fibers.lean:513-517`, `:894-901`, `:1206-1208` |
 | R2-11 | entrants are forked one per iteration of the register loop, which breaks once done (`:1520-1528`): a skipped entrant never exists | `Race.programs`, `Cmd.launch race` as one iteration (`launchEntrant`, evaluate, the next launch), `raceSkipped` retired, `raceStarted` carries the count | **yes** — every entrant was spawned before any launch (M8) | `race.programs`; `Claunch race_id` forks/records/evaluates the next entrant and re-issues itself; `RaceStarted (race, host, count)`; `launch_entrant` | `Fibers.lean:299-310`, `:672-680`, `:942-958`, `:1188-1205` |
-| R2-11b (trace-level), R2-14/15 (root-only flush, arming order) | owed to R4 / Lean repair step 4b | the avatar matches the current Lean; `hYieldStorm` stays classified | none until Lean lands | `deep-review-2.md` §"Order of repair" 4 |
+| R2-14 | `runSyncExit` flushes the *root's* dispatcher only (`:5542`); dispatchers are per fiber | `8a51d95`: `flushRoot` | **yes** — `run_sync_exit` flushed every armed dispatcher | `flush_root m fuel root rounds`; `run_sync_exit` calls it | `Fibers.lean:1288-1298`, `:1349-1359` |
+| R2-15 | dispatchers arm a `setImmediate`/microtask in arming order and the host runs them in that order (`Scheduler.ts:207-212`) | `RunMachine.armed`, `arm`/`disarm`; `start`, `injectYield`, `yieldNowWith` arm; `fire` disarms; `flushAll` fires the head of the schedule one per round | **yes** — `flush_all` fired every armed dispatcher in fiber order | `run_machine.armed`, `arm`, `disarm`; `start`/`park_yield` arm; `fire` disarms; `flush_all` re-spelled | `Fibers.lean:323-327`, `:492-500`, `:683`, `:762`, `:782`, `:1263-1287` |
+| R2-11b (trace-level) | owed to R4 | not visible at the avatar | — | `deep-review-2.md` §"Order of repair" 5 |
 | R2-16…19 (trace-level) | owed to R4 | not visible at the avatar (no frame stream) | — | ibid. 5 |
 
 Two further divergences the review's *class* ("state rc.112 keeps that the model abstracted")
@@ -611,7 +616,7 @@ divergences DIVERGENCE 1–4 of A0 §3), **divergent** (with the row that shows 
 | `exitFiber`, `exitInterruptChildren`, `exitStore` | `:1005-1064` | `exit_fiber`, `exit_interrupt_children`, `exit_store` | identical (R2-2, R2-5) |
 | `fireObserver` (six shapes) | `:925-1003` | `fire_observer` | identical, fail-fast included (F2.5) |
 | `linkScope` open / closed / unknown | `:600-636` | `link_scope` | identical (R2-9) |
-| `runFork`, `runCallback`, `runSyncExit`, `promiseOutcome` | `:1237-1280` | same names | identical; `runSyncExit` flushes every armed dispatcher, as Lean does (R2-14 owed) |
+| `runFork`, `runCallback`, `runSyncExit`, `promiseOutcome` | `:1323-1367` | same names | identical (R2-14: the root's dispatcher only) |
 | `Resume.continueWith restoreName` at the exit path's countdown | `:545-548` | the `kresume` closure that re-enters `exit_fiber` | divergent, trace-level only: Lean's resume runs one iteration (an op is counted) before the restoring frame; the avatar re-enters the exit path directly. No row shows it (no golden budgets the exit path) |
 
 ## F2.2 Consistency: scope behaviour
@@ -647,14 +652,16 @@ divergences DIVERGENCE 1–4 of A0 §3), **divergent** (with the row that shows 
 | --- | --- | --- | --- |
 | `Dispatcher.insert/enqueue/drain` (ascending priority, FIFO, arm on enqueue, drain once) | `Fibers.lean:120-149` | `Dispatcher.*` | identical (the six `Dispatcher.*` clauses hold); `Lib/Deque.lean:406-428` is the projection onto `Buckets` (Q4 below) |
 | `fire` (`runTasks`: drain once, `drainDue` after each task) | `:1186-1198` | `fire` | identical |
-| `flushAll` in fiber order until none armed | `:1199-1206` | `flush_all` | identical to Lean; rc.112 differs (R2-14/15 owed; `hYieldStorm`) |
+| `flushAll`: the scheduled callbacks in arming order, one per round | `:1280-1287` | `flush_all` over `m.armed` | identical (R2-15) |
+| `flushRoot`, `runSyncExit`'s root-only flush | `:1288-1298`, `:1349-1359` | `flush_root`, `run_sync_exit` | identical (R2-14) |
+| `RunMachine.arm`/`disarm` at `start`, the yield parks and `fire` | `:492-500`, `:683`, `:762`, `:782`, `:1270` | `arm`/`disarm` at the same sites | identical |
 | `yieldNowWith`: resume task at the priority, park behind the token, `voidValue` | `:693-701` | `park_yield` | identical |
 | `Task.start` deferred at priority 0; `Task.resume` | `:590-616` | identical | identical |
 | the per-entry latch `yielding`, cleared by `Cmd.evaluate` | `:683`, `:1103` | `f.yielding` (a fiber field, DIVERGENCE 2) | identical |
 | `yieldOverride` (the tape's verdict), `preventYield`, `maxOpsBeforeYield` from the budget pair | `:704-720`, `:226-233` | same fields; `EFFECT4_MAX_OPS` | identical |
 | the op count: one per `runLoop` iteration over a `Prim` | `:699` | one per perform | divergent (DIVERGENCE 2); shown by the fiber family at `MAX_OPS=3` (E4-SEM-CE-011, refused by the estate too); the ref/deferred/scope/layer families at `MAX_OPS=3` are 21/18/12/24 |
 | a resume is one iteration (loop top, op count, verdict) before the answer meets the frame | `:1128-1129` | `guard` on every Lean-alphabet resume (F2.5 (4)); the fixture's `answer_row` iteration | identical since F2 for `join`/`awaitAll`/`interrupt`/`async`; the race host's resume and the exit path's countdown resume still deliver without an iteration (trace-level; no row) |
-| `runSyncExit` flush | `:1268-1275` | `run_sync_exit` | identical to Lean |
+| `runSyncExit` | `:1349-1359` | `run_sync_exit` | identical (R2-14) |
 
 ## F2.5 The PARK section (`deep_fibers.ml`, banner "PARK -- seat F2")
 
@@ -829,3 +836,146 @@ store step), `withFiber_forkScoped_ambient` (`χ = unit`); witness
 10. `known-divergences.tsv` now holds one row (`hYieldStorm`, R2-14/15). The two
     `avatar-open` rows (F2-1/F2-2) and the two `rc112-behaviour` rows closed by `2f77f7d`
     were dropped; the coordinator may want the closures as register rows.
+
+---
+
+# Seat F3, 2026-09-04
+
+**STATUS:** wound down at `625a207` (Mac; the PC still editing). Part A delivered:
+`docs/research/2026-09-04-seat-f3-ocaml-platform-critique.md` (2,927 words, recommendation and
+three packets in §0/§6). Part B: (1) the re-diff against `625a207` was landed on this Mac by a
+concurrent session while F3 was reading (step (3d) above, R2-14/R2-15, mtimes 05:54–05:56);
+F3 **verified** it arm for arm rather than redoing it, and ran every battery on the result —
+all green, the last classified corpus divergence closed (F3.1, F3.2). (2) Packet 1's second
+half, the Deep-file drift gate, landed (`deep-pins.tsv`, `pin-deep.sh`, wired into
+`run-witnesses.sh`; F3.3). Packet 2 was *started* as a measured probe: a syntax-level
+Lean→OCaml transpiler over `Fibers.lean`'s `Prim`-free group renders 23 defs with zero syntax
+residue (`transpile-deep.{lean,sh}`, `out/transpile-probe.ml`; F3.4). (3) F2's open items
+(deriving/`%expect`, `Map`/`Deque`) not started. Nothing committed; every owned file compiles
+on disk; `build-avatar.sh`, `run-witnesses.sh`, `run-corpus.sh`, `build-dune.sh witnesses`
+exit 0.
+
+## F3.1 The re-diff against `625a207`, verified
+
+`625a207` is docs only; the Deep change is `8a51d95` (step 4b). Checked arm for arm, the
+concurrent edit against the Lean lines:
+
+| Lean | line | avatar | status |
+| --- | --- | --- | --- |
+| `RunMachine.armed` | `Fibers.lean:323-327` | `run_machine.armed : int list` (`deep_fibers.ml:424-429`) | identical |
+| `RunMachine.arm` / `disarm` | `:492-500` | `arm` / `disarm` (`:446-448`) | identical (`List.mem` guard, append; filter) |
+| `start` arms the parent on a deferred start | `:683-686` | `start` (`:939-944`) | identical |
+| `injectYield` / `yieldNowWith` arm the fiber | `:762`, `:782` | `park_yield` (`:1484-1489`; both sites go through it) | identical |
+| `fire` disarms after the drain, before the tasks | `:1263-1275` | `fire` (`:2043-2058`) | identical |
+| `flushAll`: head of the schedule, one per round | `:1279-1286` | `flush_all` (`:2061-2074`) | identical |
+| `flushRoot`: the root's dispatcher while it holds tasks | `:1290-1298` | `flush_root` (`:2076-2090`) | identical |
+| `runSyncExit` through `flushRoot` at `fuel` rounds | `:1352-1359` | `run_sync_exit` (`:2129-2137`) | identical |
+| `RunDecision.flush` at `fuel` rounds | `:1243` | `Dflush -> flush_all m fuel default_rounds` (1000) | **F3-1**, divergent bound: the avatar's flush is bounded by 1000 rounds, Lean's by `fuel` (400 in the witnesses, 100,000 on the trace face); invisible unless a program needs more than 400 flush rounds — none does. One-line fix, left for the file's current editor |
+| clauses `RunMachine.arm_new/_known/_fields`, `disarm_eq`, `flushRoot_idle/_round`, `fire_eq`, `flushAll_idle/_round`, `start_eq`, `runSyncExit_*` restated | `Clauses.lean:207-281`, `:605`, `:771-790` | `deep_clauses.ml:423-500`, `:745`, `:898-910` | ported; 132 = 132 |
+| witnesses `w8_sync_child_yield_is_async`, `w15_flush_runs_callbacks_in_arming_order` | `Witnesses.lean:1017-1038`, `:1066-1094` | `deep_witnesses.ml:382-393`, `:1238-1263` | ported; 62 = 62 |
+| census rows `scheduler.dispatcher-arming`, `run-tasks-drain-once`, `flush`, `entry.run-sync-exit-with`, `entry.async-fiber-error` | `RuntimeCoverage.lean` (`E4-RUN-CE-038/039`) | `deep_census.ml` | IDENTICAL, 84 of 130 |
+| ForkFlow/Layer changes in 4a (`parkCancelName`, `raceCancelName`, `raceSettle`, `missingScope`, Layer `Name.cancelPark`/`cancelRace`, `ActionName.dropObservers`) | `ForkFlow.lean:973-1011`, `Layer.lean:247-254`, `:353-357`, `:1197-1200`, `:1216-1219`, `:1256-1263` | `deep_forkflow.ml` refuses the compile by name; `deep_layer.ml` refuses `contAOf`/`cancelProgram` structurally (W1-9) | nothing to port: the changed arms are inside the refused half |
+| R2-11b, R2-16..19 | trace-level, owed to R4 | no frame stream on the avatar | not visible (critique §3.1) |
+
+Also re-checked and unchanged: F2-2's fork-options reading (`Witnesses.lean:239-251` still
+says `inherit`; a Lean edit for the coordinator, critique §5.7).
+
+## F3.2 Conformance against rc.112 at the checkpoint (full `build-avatar.sh`, exit 0)
+
+```
+goldens vs lean, every mask         ref 21/21  deferred 18/18  scope 12/12  layer 24/24   (75 pairs)
+goldens at EFFECT4_MAX_OPS=3         ref 21/21  deferred 18/18  scope 12/12  layer 24/24   (75 pairs)
+rc.112 face vs lean golden           all ok, through effect4-tools/trace.mjs (default and MAX_OPS=3)
+three OCaml hosts                    25 goldens + 6 extra + 158 corpus: bytecode = native = jsoo, 0 DISAGREE
+extra family vs rc.112               12 ok, 0 unclassified, 0 classified
+corpus vs rc.112 (158 programs)      avatar ok=158; rc112 ok=149 skipped=5 nonterminating=4
+                                     compare[rc112]: 447 ok, 0 unclassified, 0 classified
+clauses                              132 = 132 Clauses.lean theorems: 127 hold, 0 fail, 5 not portable
+witnesses                            62 = 62 Witnesses.lean theorems: 61 hold, 0 fail, 1 not portable
+run-clauses 35/0; park-guard 0; deep_census.ml IDENTICAL (84 of 130); deep-pins: at the re-diffed revision
+dune (effect4 switch: 5.1.1, dune 3.24.2, jsoo 5.7.1)   hosts AGREE; report IDENTICAL to the shell build's
+```
+
+`hYieldStorm` — the one row `known-divergences.tsv` still carried (the cross-dispatcher flush
+order, `Fibers.lean`'s recorded assumption) — agrees with rc.112 on all three masks now that
+the schedule is arming-ordered (R2-15): 445/0/2 → **447/0/0**. The row is retired with a
+dated note; the file holds no divergence. Register rows `E4-RUN-CE-038/039` already carry
+the closure on the Lean side.
+
+## F3.3 The drift gate (packet 1, second half)
+
+`avatar/deep-pins.tsv` records the SHA-256 of the nine Lean files the avatar is a port of
+(`Effect4/Deep/*.lean`, `Runtime.lean`, `RuntimeCoverage.lean`) at the revision it was last
+re-diffed against; `avatar/pin-deep.sh` compares them with the tree (`--write` re-records
+after a re-diff) and `run-witnesses.sh` now fails on a mismatch (`DEEP_PIN=skip` reports
+without failing, for a checkout knowingly mid-re-diff). Rationale: the count gate catches a
+theorem added or removed, not an arm re-spelled under the same name (R2-10 was one word);
+the daemon measures citation drift but nothing failed on it (critique §5.1). Property: a
+green report names the Deep revision it is green *against*.
+
+## F3.4 The transpiler probe (packet 2, started and measured)
+
+`avatar/transpile-deep.lean` (+ `.sh`; `lean --run` over the built oleans, the
+`render-deep.sh` fallback, since `lake env` still dies on this Mac): parses `Fibers.lean` with
+Lean's parser (`importModules … (loadExts := true)` under `enableInitializersExecution`, which
+is what makes `[]`, `⟨⟩`, `{ with }` parse outside the frontend), translates the surface
+syntax of the named `def`s to `Ml.Syntax`, applies `Ml.Passes.mutate` to the names declared
+linear plus a tail form it lacks (`tailUpdate`: a def *returning* the updated linear record
+becomes field writes answering the record), and renders. The decisions are tables, not
+inference: constructors, renames, `List`/`Option` dot-calls, anonymous-constructor hints,
+linear names, and one DIVERGENCE-3 rewrite (`update`/`modify` in place).
+
+Result on the `Prim`-free group: **23 defs, 0 syntax holes** (`out/transpile-probe.ml`,
+286 lines): `insert`, `enqueue`, `drain`, `empty`, `arm`, `disarm`, `countdownWalk`,
+`runloopTop`, `countOp`, `yieldVerdict`, `interruptEach`, `start`, `launchEntrant`, `spawn`,
+`linkScope`, `stepDecision` with `fire`/`flushAll`/`flushRoot` as its `where`-group (the
+R2-14/15 functions, rendered from the Lean text), `interruptRecord`, `injectYield`,
+`countdownPark` (one `frame:stack` hole — the `asyncFinalizer` push), `fireObserver`,
+`exitFiber`, `settle`, `drive`. `Dispatcher.insert/enqueue/drain/empty`, `arm`, `disarm`,
+`countdown_walk`, `count_op`, `yield_verdict` read as the hand port modulo layout.
+
+What the probe measured, which is the packet's price list:
+
+1. **The API-shape convention is the one decision.** Lean's functions return the machine
+   (`emit m es : RunMachine`, `start … : M × Fiber × List Cmd`); the avatar's mutate and
+   return `unit` (`emit`, `Dispatcher.enqueue`, `fire`). Generated code keeps Lean's
+   signatures, so `let m = emit m […] in` does not link against today's `deep_fibers.ml`.
+   Either the avatar's statement-shaped functions answer the record (`; m`, a mechanical
+   change) or the generator drops the rebind. Until it is settled the generated group compiles
+   against a prelude, not in place.
+2. **`RunInterp` fields the avatar has not got** (`interp.budgetOf`, `interp.stackAnnotations`
+   on the record, `RunFiber.make`'s budget pair): DIVERGENCE 5's remaining half surfaces as
+   unbound names, exactly where the hand port improvised (`!max_ops_before_yield`).
+3. **The frame hole is reached where expected**: `runloopTop`'s `current := Prim.failure …`
+   (rendered, wrong), `countdownPark`'s `stack` push (flagged). The hole detector flags reads
+   of `current`/`stack`; a write through `{ f.frame with current := … }` is not yet flagged —
+   the first fix of the next step.
+4. **Residue classes are tables**: every failure so far was a missing table row
+   (`Supervision.MaskMode.*`, `RunFiber.make`, a hygienic binder name, a short-name
+   constructor fallback capturing `fire`) — an afternoon each, none structural.
+
+**Exact next step (packet 2, day 2):** settle item 1 by making the avatar's `emit`,
+`Dispatcher.enqueue`/`drain`, `start`, `fire` answer their record (or the generator rebind
+nothing); then a differential harness in `avatar/` that links `out/transpile-probe.ml`
+behind `deep_fibers.ml` and replays W9/W15/W8 through the generated `fire`/`flush_all`/
+`flush_root`/`run_sync_exit` and the Dispatcher clauses through the generated
+`insert`/`enqueue`/`drain`, comparing traces with the hand port; then the write-flag for the
+frame hole. Done-when as the critique's §6 packet 2: the group renders and links, and
+`transpile-deep.sh --residue` is in `run-witnesses.sh` with its holes pinned.
+
+## F3.5 Files (nothing committed)
+
+```
+docs/research/2026-09-04-seat-f3-ocaml-platform-critique.md   NEW  (Part A)
+workshop/OCaml5/avatar/deep-pins.tsv                          NEW  (the pinned digests)
+workshop/OCaml5/avatar/pin-deep.sh                            NEW  (the gate)
+workshop/OCaml5/avatar/run-witnesses.sh                       +6   (runs the gate)
+workshop/OCaml5/avatar/corpus/known-divergences.tsv           hYieldStorm retired with a note
+workshop/OCaml5/avatar/transpile-deep.lean, transpile-deep.sh NEW  (the probe)
+workshop/OCaml5/avatar/out/transpile-probe.ml                 NEW  (its output, 23 defs)
+workshop/OCaml5/avatar/out/*                                  regenerated by build-avatar.sh
+```
+
+The step-(3d) edits to `deep_fibers.ml`, `deep_clauses.ml`, `deep_witnesses.ml`,
+`deep_census.ml` and the F2 STATUS paragraph above are the concurrent session's, verified here
+and not touched.

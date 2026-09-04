@@ -26,9 +26,9 @@ op	yield	[]
 answer	yield	[]
 op	yield	[]
 answer	yield	[]
-op	awaitValue	0
-answer	yield	[]
 op	yield	[]
+answer	yield	[]
+op	awaitValue	0
 answer	yield	[]
 answer	awaitValue	{"some":1}
 op	started	[]

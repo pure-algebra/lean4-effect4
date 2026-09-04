@@ -56,4 +56,9 @@ fi
 if [ "$(awk -F'\t' '$1=="witnesses"{print $6}' byte.tsv)" != "0" ]; then
   echo "witness statements FAIL on the avatar:"; grep -B1 '^  statement	FAILS' byte.tsv; status=1
 fi
+# Seat F3: the Deep-file drift gate (`deep-pins.tsv`). A re-spelled arm under an unchanged
+# theorem count is invisible to the counts above; the content hash is not. `DEEP_PIN=skip`
+# reports without failing, for a checkout that is knowingly mid-re-diff.
+if [ "${DEEP_PIN:-}" = "skip" ]; then "$here/pin-deep.sh" || true
+else "$here/pin-deep.sh" || status=1; fi
 exit $status

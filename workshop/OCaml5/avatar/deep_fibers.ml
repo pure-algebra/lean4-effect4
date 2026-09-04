@@ -421,6 +421,11 @@ type run_machine = {
   mutable next_token : int;
   mutable next_race : int;
   mutable middleware_installed : bool;
+  (* `RunMachine.armed` (`Fibers.lean:323-327`, `8a51d95`; R2-15): the host callbacks
+     scheduled and not yet run, in arming order -- a dispatcher arms itself with
+     `setImmediate` the first time a task is scheduled on it (`Scheduler.ts:207-212`), and
+     the host runs those callbacks in the order they were armed. *)
+  mutable armed : int list;
   state : st;
   mutable trace : run_event list;
   mutable stuck : stuck option;
@@ -433,7 +438,14 @@ type run_machine = {
 
 let machine_empty state =
   { fibers = []; races = []; next_id = 0; next_token = 0; next_race = 0;
-    middleware_installed = false; state; trace = []; stuck = None; drive_fuel = 0 }
+    middleware_installed = false; armed = []; state; trace = []; stuck = None; drive_fuel = 0 }
+
+(* `RunMachine.arm` (`Fibers.lean:492-496`): the first task scheduled on `owner`'s dispatcher
+   arms it behind those already scheduled; a later task joins the armed callback.
+   `RunMachine.disarm` (`:498-500`): the callback ran. *)
+let arm m (owner : int) : unit =
+  if not (List.mem owner m.armed) then m.armed <- m.armed @ [ owner ]
+let disarm m (owner : int) : unit = m.armed <- List.filter (fun x -> x <> owner) m.armed
 
 (* The fuel and round bounds the entries use. Lean's `drive` costs one fuel per command and
    `flushAll` one round per sweep of the armed dispatchers. *)
@@ -927,6 +939,7 @@ let start m (parent : run_fiber) (child : int) ~immediately : cmd list =
   if immediately then [ Cevaluate child ]
   else begin
     Dispatcher.enqueue parent.dispatcher 0 (Tstart child);
+    arm m parent.id;                                                   (* :683, R2-15 *)
     emit m [ ScheduledTask (parent.id, 0, Tstart child) ];
     []
   end
@@ -1471,6 +1484,7 @@ and arm_fork m f code daemon (ko : value kops) : unit =
 and park_yield m f priority (on_value : unit -> unit) (on_cause : cause -> unit) : unit =
   let token = fresh_token m in
   Dispatcher.enqueue f.dispatcher priority (Tresume (f.id, token, Aval Vunit));
+  arm m f.id;                                                          (* :762, :782, R2-15 *)
   emit m [ ScheduledTask (f.id, priority, Tresume (f.id, token, Aval Vunit)) ];
   run_fiber_park f
     { token; waiting_on = None; remaining = []; collected = []; resume_with = Rvoid; fail_fast = false };
@@ -2026,12 +2040,15 @@ let () = resume_iteration_ref := (fun m f ~on_cause body -> resume_iteration m f
 
 (* ------------------------------------------------------------------- runtime entries *)
 
-(* `stepDecision.fire` (`Scheduler.ts:225-233`): drain once, run the tasks in order. *)
+(* `stepDecision.fire` (`Fibers.lean:1263-1276`; the host callback of `owner`'s dispatcher,
+   `afterScheduled`, `Scheduler.ts:214-217`): it is no longer scheduled (`disarm`), and
+   `runTasks` (`:225-233`) drains once and runs the tasks in order. *)
 let fire m fuel owner =
   match fiber_opt m owner with
   | None -> ()
   | Some o ->
     let tasks = Dispatcher.drain o.dispatcher in
+    disarm m owner;
     List.iter
       (fun task ->
         emit m [ RanTask (owner, task) ];
@@ -2041,16 +2058,36 @@ let fire m fuel owner =
           drive m fuel [ Cresume (target, token, answer); CdrainDue ])
       tasks
 
-(* `stepDecision.flushAll`: armed dispatchers in fiber order until none is armed. *)
+(* `stepDecision.flushAll` (`Fibers.lean:1280-1287`, `8a51d95`; R2-15): the host's event
+   loop -- the scheduled callbacks in arming order, one per round, a callback re-armed
+   during a round going to the back (`setImmediate` FIFO, `Scheduler.ts:207-212`), until
+   none is scheduled. Fiber order was an assumption, recorded, and wrong. *)
 let rec flush_all m fuel rounds =
   if rounds = 0 then ()
   else
-    let armed = List.filter (fun f -> f.dispatcher.armed) m.fibers in
-    if armed = [] || m.stuck <> None then ()
-    else begin
-      List.iter (fun f -> fire m fuel f.id) armed;
-      flush_all m fuel (rounds - 1)
-    end
+    match m.armed with
+    | [] -> ()
+    | owner :: _ ->
+      if m.stuck <> None then ()
+      else begin
+        fire m fuel owner;
+        flush_all m fuel (rounds - 1)
+      end
+
+(* `stepDecision.flushRoot` (`Fibers.lean:1288-1298`; `MixedSchedulerDispatcher.flush`,
+   `Scheduler.ts:238-246`) on one dispatcher: while it holds tasks, cancel its scheduled
+   callback and run them; `runSyncExit` flushes the *root's* dispatcher only (`:5542`, R2-14). *)
+let rec flush_root m fuel root rounds =
+  if rounds = 0 then ()
+  else
+    match fiber_opt m root with
+    | None -> ()
+    | Some o ->
+      if o.dispatcher.buckets = [] || m.stuck <> None then ()
+      else begin
+        fire m fuel root;
+        flush_root m fuel root (rounds - 1)
+      end
 
 (* `stepDecision` (`:1108`). *)
 let step_decision m fuel = function
@@ -2089,11 +2126,12 @@ let run_callback m fuel (program : unit -> value) (key : int) : int =
   drive m fuel [ Cevaluate root; CdrainDue ];
   root
 
-(* `runSyncExit` (`:1205`): `runFork`, flush, and the `AsyncFiberError` defect when the root
-   survives the flush. *)
+(* `runSyncExit` (`Fibers.lean:1349-1359`; `:5535-5545`): `runFork`, the *root's* dispatcher
+   flushed (`fiber._dispatcher?.flush()`, `:5542`; R2-14 -- a child's own dispatcher is
+   not), and the `AsyncFiberError` defect when the root has not exited. *)
 let run_sync_exit m fuel (program : unit -> value) : exitv =
   let root = run_fork m fuel program in
-  step_decision m fuel Dflush;
+  flush_root m fuel root fuel;
   match (fiber_exn m root).exit_ with
   | Some e -> e
   | None -> Efailure (cause_die "AsyncFiberError")

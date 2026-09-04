@@ -213,16 +213,22 @@ let rows : row list =
     { id = "scheduler.dispatcher-arming"; kind = "scheduler"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Deep.Dispatcher.enqueue_arms";
-          "Effect4.Deep.Dispatcher.drain_disarms" ] };
+          "Effect4.Deep.Dispatcher.drain_disarms";
+          "Effect4.Deep.RunMachine.arm_new";
+          "Effect4.Deep.RunMachine.arm_known";
+          "Effect4.Deep.RunMachine.arm_fields";
+          "Effect4.Deep.Witnesses.w15_flush_runs_callbacks_in_arming_order" ] };
     { id = "scheduler.run-tasks-drain-once"; kind = "scheduler"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Deep.Dispatcher.drain_eq";
           "Effect4.Deep.Dispatcher.drain_disarms";
-          "Effect4.Deep.fire_eq" ] };
+          "Effect4.Deep.fire_eq";
+          "Effect4.Deep.RunMachine.disarm_eq" ] };
     { id = "scheduler.flush"; kind = "scheduler"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Deep.flushAll_idle";
-          "Effect4.Deep.flushAll_round" ] };
+          "Effect4.Deep.flushAll_round";
+          "Effect4.Deep.Witnesses.w15_flush_runs_callbacks_in_arming_order" ] };
     { id = "scheduler.yield-now-resume-guard"; kind = "scheduler"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Deep.evaluatePrim_yieldNowWith";
@@ -254,10 +260,14 @@ let rows : row list =
     { id = "entry.run-sync-exit-with"; kind = "entry"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Deep.runSyncExit_exited";
-          "Effect4.Deep.runSyncExit_survives" ] };
+          "Effect4.Deep.runSyncExit_survives";
+          "Effect4.Deep.flushRoot_idle";
+          "Effect4.Deep.flushRoot_round";
+          "Effect4.Deep.Witnesses.w8_sync_child_yield_is_async" ] };
     { id = "entry.async-fiber-error"; kind = "entry"; disposition = "separateCalculus"; coverage = "green";
       deep =
-        [ "Effect4.Deep.runSyncExit_survives" ] };
+        [ "Effect4.Deep.runSyncExit_survives";
+          "Effect4.Deep.Witnesses.w8_sync_child_yield_is_async" ] };
     { id = "rule.yield-is-overloaded"; kind = "rule"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Deep.drive_loop_parked";
