@@ -49,6 +49,20 @@ roots = ["Effect4Gen.Main", "Effect4Gen.Check"]
 globs = ["Effect4Gen.Main", "Effect4Gen.Check"]
 moreLeanArgs = ["-M6144"]
 
+# The Effect4-side `--run` drivers (`src/Tools/`): thin `main`s over library modules that
+# cross to bytes — `Tools.TsGen`, the TypeScript estate's generated files (schemas, JSON
+# writers, the profile) from the closed world `OCaml5.Eff.World` reads, and `Tools.Corpus`,
+# the printed corpus with Lean's round-trip beside each program. A tool is `IO` over the
+# library and is not the library: the root `Tools` is a sibling of `Effect4`, outside the
+# axiom gate's `Effect4.*` / `Test.*` audit and imported by nothing. `lake build Tools`
+# type-checks the drivers so they cannot rot; `lake env lean -M4096 --run src/Tools/<X>.lean …`
+# runs one. The OCaml estate's drivers stay under `OCaml5.Tools`.
+[[lean_lib]]
+name = "Tools"
+srcDir = "src"
+globs = ["Tools.+"]
+moreLeanArgs = ["-M6144"]
+
 # The green battery: the audit root and its import closure.
 [[lean_lib]]
 name = "Test"

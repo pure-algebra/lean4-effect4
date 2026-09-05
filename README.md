@@ -38,7 +38,9 @@ caller does.
 | `src/Effect4/Surface` | the surface carriers (entities, HTTP API, MCP agent, deployment, site) |
 | `Test/` | one battery per area; `Test/Audit/AxiomGate.lean` audits every declaration; `RuntimeCoverage.lean` joins the rc.112 mechanism census to the machine witnesses |
 | `src/OCaml5` | the Lean half of the OCaml estate: the OCaml 5 handler machine and the js_of_ocaml machine with their theorems, the OCaml language model, library carriers with laws, the LCNF → OCaml backend, the Machine carriers described and rendered, the route-1 bridge, and the `--run` drivers |
+| `src/Tools` | the Effect4-side `--run` drivers (lake library `Tools`), `IO` over the library and outside the gate: `TsGen` writes the TypeScript estate's generated files from the Lean environment, `Corpus` writes the printed corpus with Lean's round-trip beside each program; the OCaml estate's drivers stay under `src/OCaml5/Tools` |
 | `ocaml/` | the OCaml estate as one dune workspace: the avatar (the machine as OCaml 5 effect handlers, three hosts), the daemon `effect4d`, the route-1 link and host core, the generated machine of the LCNF route, and `Eff` as an OCaml library (`ocaml/README.md`) |
+| `ts/eff` | the `Eff` IR as a TypeScript library: one hand-written function from TypeScript text (oxc-parser) into Effect Schema nodes (`read.ts`), everything else generated from Lean as `.gen.ts` (the schemas, their JSON, the row profile); checked as a differential against Lean's reader over the printed corpus (`ts/eff/README.md`) |
 | `harness/truth` | the Lean-vs-rc.112 exit differential over the program corpus |
 
 The Flow route of earlier work — the Effects-flow language, its runner and
@@ -63,7 +65,9 @@ exceptions, and every battery file must be reachable from `Test/All.lean`.
 A narrower sweep is a per-area target (`lake build TestMachine`,
 `TestProgram`, `TestSchema`, …). Run one `lake` at a time. `lake build OCaml5`
 builds the Lean half of the OCaml estate; the OCaml half is `dune build` in
-`ocaml/` under the `effect4` opam switch (`ocaml/README.md`).
+`ocaml/` under the `effect4` opam switch (`ocaml/README.md`). `lake build Tools`
+type-checks the `--run` drivers under `src/Tools/`; one runs as
+`lake env lean -M4096 --run src/Tools/<Driver>.lean …`.
 
 The gates beyond the build (bash; on Windows run them through WSL):
 
@@ -71,6 +75,8 @@ The gates beyond the build (bash; on Windows run them through WSL):
 ./scripts/test-trust-gate.sh                       # the gate's own self-test
 ./scripts/check-effect-runtime-census.sh           # the rc.112 mechanism census join
 ./scripts/test-schema-structural-assurance-gate.sh # the Schema assurance projection
+./scripts/check-ts-eff.sh                          # ts/eff/*.gen.ts are what Lean emits
+./scripts/check-ts-eff-corpus.sh                   # the TypeScript reader = Lean's reader (bun)
 ./scripts/sweep.sh --hermetic                      # every hermetic gate, stamped
 ```
 

@@ -19,9 +19,9 @@
 # itself, so this is a property of the gates rather than of the list. Then
 # hermetic before host: the Lean-only gates need no node and no installed
 # Effect, and they are the ones CI can run. Since the trace, lowering and
-# family lanes were archived to branch `archive/flow-route` on 2026-09-04,
-# every remaining gate is hermetic and there is no host lane; the `host` column
-# and the `--hermetic` filter are kept for the gates that come back.
+# family lanes were archived to branch `archive/flow-route` on 2026-09-04 the
+# host lane was empty; since 2026-09-05 it holds `ts-eff-corpus`, the TypeScript
+# reader against Lean's reader over the printed corpus (needs bun).
 #
 # ## Stamps
 #
@@ -63,6 +63,8 @@ gate_table() {
   cat <<'GATES'
 hermetic|internal-citations|scripts/check-internal-citations.sh
 hermetic|effect-runtime-census|scripts/check-effect-runtime-census.sh
+hermetic|ts-eff|scripts/check-ts-eff.sh
+host|ts-eff-corpus|scripts/check-ts-eff-corpus.sh
 GATES
 }
 

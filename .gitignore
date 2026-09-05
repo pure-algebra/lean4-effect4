@@ -28,6 +28,9 @@
 /harness/truth/lean.out.log
 /harness/truth/lean.err.log
 
+# The TypeScript estate (`ts/`) is tracked; its installs are not.
+/ts/**/node_modules/
+
 # The OCaml estate (`ocaml/`, one dune workspace) is tracked; dune's build directories,
 # the per-machine generated link flags (absolute paths of this machine's Lean install,
 # written by ocaml/link/tools/lean-flags.sh) and any node install are not.

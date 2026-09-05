@@ -1,0 +1,19 @@
+{
+  "name": "effect4-eff",
+  "private": true,
+  "type": "module",
+  "description": "The Eff program IR as a TypeScript library: Schema nodes, the reader from oxc's AST into them, and the JSON shape shared with Lean and OCaml.",
+  "scripts": {
+    "check": "bun run check.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "effect": "4.0.0-rc.112",
+    "oxc-parser": "0.147.0"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.1",
+    "typescript": "5.9.2"
+  }
+}
