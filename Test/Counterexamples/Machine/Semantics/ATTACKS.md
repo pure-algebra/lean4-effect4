@@ -1,10 +1,10 @@
 # Semantics cause and exit attacks
 
 These attacks belong to the `Effect4.Cause` / `Effect4.Exit` first-order data
-packet frozen by [`test/contracts/cause-exit.contract.md`](../../contracts/cause-exit.contract.md)
-and [`docs/CAUSE-DAG.md`](../../../docs/CAUSE-DAG.md). Stable IDs live in
+packet frozen by [`Test/contracts/cause-exit.contract.md`](../../contracts/cause-exit.contract.md)
+and [`docs/research/CAUSE-DAG.md`](../../../docs/CAUSE-DAG.md). Stable IDs live in
 [`../REGISTER.md`](../REGISTER.md); the executable Lean witnesses live in
-`Effect4Test/Counterexamples/Semantics/CauseExit.lean` and are a self-contained
+`Test/Counterexamples/Machine/Semantics/CauseExit.lean` and are a self-contained
 breaker model that stays green while the production surface is absent.
 
 The pinned source is `effect@4.0.0-rc.112` under
@@ -53,7 +53,7 @@ The pinned source is `effect@4.0.0-rc.112` under
   `Cause.squash_emptyCause_iff`, and the ground receipt
   `Cause.squash_fail_over_die`. The arms are stated as partition tests, not
   positional tests. Census row `cause.squash`; see the census-summary note in
-  `docs/CAUSE-DAG.md` for the fourth arm.
+  `docs/research/CAUSE-DAG.md` for the fourth arm.
 
 ## E4-SEM-CE-004 — silent annotation overwrite
 
@@ -112,7 +112,7 @@ The pinned source is `effect@4.0.0-rc.112` under
   is not a presentation detail.
 - **CLASS:** over-canonicalization.
 - **FIXED-BY:** `Cause` retains an ordered `List`, `Cause.combine_order` states
-  the operand-order-preserving union, and `docs/CAUSE-DAG.md` separation 2
+  the operand-order-preserving union, and `docs/research/CAUSE-DAG.md` separation 2
   records that `Row` is not reused. Census rows `cause.combine-union`,
   `cause.squash`.
 
@@ -120,12 +120,12 @@ The pinned source is `effect@4.0.0-rc.112` under
 
 - **BROKE:** the host harness carrying its own list of masks, or comparing raw
   traces, so that "agreement" drifts from the Lean projection.
-- **WITNESS:** `scripts/test-trace-goldens-gate.sh` mutant `removed-masks`: a
+- **WITNESS:** `git:c407ab7:scripts/test-trace-goldens-gate.sh` mutant `removed-masks`: a
   mask table without rows is refused as `mask table drift`;
   `agreement_is_per_mask` in lean4-effects shows two traces equal under `m1`
   and different raw.
 - **CLASS:** claim scope.
-- **FIXED-BY:** `generated/traces/masks.tsv` is a projection of
+- **FIXED-BY:** `git:c407ab7:generated/traces/masks.tsv` is a projection of
   `Effect4.Trace.maskTable`; `effect4-trace` projects both sides with that
   table and reports per mask.
 
@@ -138,14 +138,14 @@ The pinned source is `effect@4.0.0-rc.112` under
   `done {"failure":[]}` instead of `answer put []`.
 - **CLASS:** declared-versus-actual host type.
 - **FIXED-BY:** `ServiceRow.rowsDecl` carries each operation's answer spelling
-  and `wireAnswer` records a `void` answer as unit; `docs/TRACE-DAG.md`
+  and `wireAnswer` records a `void` answer as unit; `docs/research/TRACE-DAG.md`
   separation 7.
 
 ## E4-SEM-CE-016 — a memoized rebuild as a second construction
 
 - **BROKE:** reading `build` as "run the layer", so every build constructs,
   answers a fresh handle, and raises the construction count.
-- **WITNESS:** `Effect4Test/Counterexamples/Semantics/Layers.lean`: a memo hit
+- **WITNESS:** `git:c407ab7:Effect4Test/Counterexamples/Semantics/Layers.lean`: a memo hit
   leaves the store untouched and answers the handle already bound. The
   `buildMemo` golden is two builds and one handle; `freshRebuild` and
   `freshRegion` are the contrast that makes it a choice, because layer 3 is
@@ -154,7 +154,7 @@ The pinned source is `effect@4.0.0-rc.112` under
 - **CLASS:** identity confusion (a layer value versus a construction).
 - **FIXED-BY:** `build` answers the memo table when the layer is memoized and
   the scope is open; only a construction raises `provideCount` or takes a
-  handle. `harness/trace/layer-tail.ts` reads both back off rc.112: the memo
+  handle. `git:c407ab7:harness/trace/layer-tail.ts` reads both back off rc.112: the memo
   entry replays the built context, and the *service* object inside it is the
   identity — the `Context` wrapper is not, because `buildWithMemoMap` maps
   `Context.add(CurrentMemoMap, …)` over it on every build. Census rows
@@ -165,7 +165,7 @@ The pinned source is `effect@4.0.0-rc.112` under
 
 - **BROKE:** releasing constructed layers in the order they were built, or
   leaving the order unstated because "a scope closes what it owns".
-- **WITNESS:** `Effect4Test/Counterexamples/Semantics/Layers.lean`: `close`
+- **WITNESS:** `git:c407ab7:Effect4Test/Counterexamples/Semantics/Layers.lean`: `close`
   answers `live.reverse`, and on three live layers that list differs from the
   construction order. The `releaseOrder` and `freshRelease` goldens answer
   `[1, [0, []]]`, and the host agrees under `outcome`, `m1` and `m2` at a large
@@ -180,7 +180,7 @@ The pinned source is `effect@4.0.0-rc.112` under
 
 - **BROKE:** treating `close` as "drop the memo table", so the next build is an
   ordinary first build.
-- **WITNESS:** `Effect4Test/Counterexamples/Semantics/Layers.lean`: after
+- **WITNESS:** `git:c407ab7:Effect4Test/Counterexamples/Semantics/Layers.lean`: after
   `close`, a build raises the count and takes a new handle but joins neither
   the memo table nor the live set. The `rebuildAfterClose` golden shows the
   rebuild answering a second handle and the second `close` answering the empty
@@ -205,8 +205,8 @@ The pinned source is `effect@4.0.0-rc.112` under
   layer is a build function, not a handle.
 - **CLASS:** claim scope.
 - **FIXED-BY:** the row is registered as a refusal;
-  `Effect4/Layer/LayerFamily.lean` records all three in its module comment,
-  `docs/TRACE-DAG.md` lists them among the things agreement does not
+  `git:c407ab7:Effect4/Layer/LayerFamily.lean` records all three in its module comment,
+  `docs/research/TRACE-DAG.md` lists them among the things agreement does not
   establish, and the battery pins only what is claimed: two builds, one live
   entry, one release, and a four-operation surface.
 

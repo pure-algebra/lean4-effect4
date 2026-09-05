@@ -8,7 +8,7 @@ import Effect4.Store.Digest
 Implements `docs/research/2026-09-04-surface-library-plan.md` §15.
 
 The semantic layer is never optional. The estate already has the typed
-annotation data plane (`Effect4/Schema/Annotations.lean`: `AnnotationKey` with
+annotation data plane (`src/Effect4/Schema/Annotations.lean`: `AnnotationKey` with
 its `Lawful` partial isomorphism, the lawful `nodeAnnotations` optional), and
 rc.112 reads `title`, `description`, `identifier` and `examples` off the same
 bags when it emits JSON Schema and OpenAPI. So the semantic layer here is a set
@@ -286,7 +286,7 @@ exactness of the key is bought by the re-encode guard in `markKey.decode`.
 
 The `source` array is refused unless it is thirty-two bytes, because a `Digest`
 carries `length_eq` and there is no other way to build one. That check is
-`Effect4/Store/Node.lean:82`'s `Digest.ofBytes?` spelled here, because this
+`src/Effect4/Store/Node.lean:82`'s `Digest.ofBytes?` spelled here, because this
 module sits below `Store/Node.lean` and imports only `Store/Digest.lean`. -/
 def parse? : Json → Option SurfaceMark
   | .obj
@@ -405,6 +405,26 @@ def identifierIn (annotations : Annotations) : Option String :=
 `Api.lean`, `Deploy.lean` and `Site.lean` all read description through this. -/
 def descriptionIn (annotations : Annotations) : Option String :=
   bagValue? descriptionKey annotations
+
+/-- A carrier exposing its existing root annotation bag. -/
+class Annotated (α : Type) where
+  annotations : α → Annotations
+
+variable {α : Type}
+
+/-- The identifier carried by the annotation bag. -/
+def identifierOf [Annotated α] (value : α) : Option String :=
+  identifierIn (Annotated.annotations value)
+
+/-- The description carried by the annotation bag. -/
+def descriptionOf [Annotated α] (value : α) : Option String :=
+  descriptionIn (Annotated.annotations value)
+
+/-- Whether the existing bag carries an identifier. -/
+def identified [Annotated α] (value : α) : Bool := (identifierOf value).isSome
+
+/-- Whether the existing bag carries a description. -/
+def described [Annotated α] (value : α) : Bool := (descriptionOf value).isSome
 
 /-- The first value of a key on a representation's root bag. -/
 def Representation.valueOf? {A : Type} (key : AnnotationKey A)

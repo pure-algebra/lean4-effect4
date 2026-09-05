@@ -30,7 +30,7 @@ Every constructor names the section of the OCaml 5.1.1 manual it renders.
 * **Untyped.** The surface will happily describe a module `ocamlc` rejects. `OCaml5.Ml.Check`
   narrows that: it decides the well-formedness properties a renderer can decide (scoping, arity,
   duplicate labels, the `effc` rule, the `reperform` tail-position rule), and the rest is an
-  executed check — `tools/ml-check.sh` renders and compiles.
+  executed check — `ocaml/tools/ml-check.sh` renders and compiles.
 -/
 
 namespace OCaml5.Ml

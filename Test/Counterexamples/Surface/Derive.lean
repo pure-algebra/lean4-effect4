@@ -1,13 +1,13 @@
 /-
 Executable witnesses for `E4-SURFACE-CE-071` through `E4-SURFACE-CE-075`.
 
-Contract: `test/contracts/surface-derive.contract.md`. Frozen by the wave-1b
-breaker before `Effect4/Surface/Derive.lean` exists (wave 2e); red until the
+Contract: `Test/contracts/surface-derive.contract.md`. Frozen by the wave-1b
+breaker before `src/Effect4/Codegen/App.lean` exists (wave 2e); red until the
 builder lands it.
 
 Three of the five rows are **compile-negatives**: the attack is a term that
 must fail to elaborate, and Lean has no `#guard` for that. Per
-`Test/AGENTS.md` each rejected declaration is recorded verbatim in its
+`AGENTS.md` each rejected declaration is recorded verbatim in its
 docstring, and uncommenting it must fail. The positive control beside it is a
 real definition, so the pair is decisive: the capability accepts the good
 value and the same syntax on the bad value does not compile.
@@ -161,7 +161,7 @@ in this file or in `Test/Surface/DeriveContract.lean`, and the
 claim.
 
 Forced repair: a derivation with no theorem is an owed row named in
-`test/contracts/surface-derive.contract.md`, not a landed function.
+`Test/contracts/surface-derive.contract.md`, not a landed function.
 -/
 def derivedDeleteUser : Endpoint shopRefs := identifiedUser.deleteEndpoint "users"
 

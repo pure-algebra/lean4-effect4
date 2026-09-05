@@ -3,20 +3,20 @@
 Status: FROZEN / RED, breaker-authored 2026-09-02
 
 Implementation fence:
-`Effect4/Runtime/Runtime.lean`
+`src/Effect4/Machine/Frames.lean`
 
 Lean battery:
-`Effect4Test/Runtime/FramesContract.lean`
+`Test/Machine/Runtime/FramesContract.lean`
 
 Axiom report:
-`Effect4Test/Runtime/FramesAxiomReport.lean`
+`Test/Machine/Runtime/FramesAxiomReport.lean`
 
 Counterexamples: `E4-RUN-CE-010` through `E4-RUN-CE-021` in
-`test/counterexamples/REGISTER.md`; witnesses in
-`Effect4Test/Counterexamples/Runtime/Frames.lean`; attack shapes in
-`test/counterexamples/runtime/ATTACKS.md`
+`Test/Counterexamples/REGISTER.md`; witnesses in
+`Test/Counterexamples/Machine/Runtime/Frames.lean`; attack shapes in
+`git:c407ab7:test/counterexamples/runtime/ATTACKS.md`
 
-Proof graph: `FRAME-PG-STACK` in `docs/FRAMES-DAG.md`
+Proof graph: `FRAME-PG-STACK` in `docs/research/FRAMES-DAG.md`
 
 Pinned source: `effect@4.0.0-rc.112` under `vendor/effect-4.0.0-rc.112/src/`.
 Reading: `docs/effect-rc112-fiber-runtime.html` sections 1-4.
@@ -38,7 +38,7 @@ compatibility claim and no code-generation claim.
 It does **not** claim that `Effect4.Prim` is equivalent to rc.112's `Primitive`
 or that `Effect4.FrameFiber` is equivalent to `FiberImpl`. It claims that each
 named clause of each named census row in the per-row table of
-`docs/FRAMES-DAG.md` has an exact theorem over the Effect4 model, and it names,
+`docs/research/FRAMES-DAG.md` has an exact theorem over the Effect4 model, and it names,
 in six `FRAME-FB-*` rows of that document, exactly what was dropped or deferred:
 the raw fiber handover, the host `Error` class identity, the finalizer's own
 frame activity, the stack-frame cause annotation, the `AsyncFinalizer` pop
@@ -67,12 +67,12 @@ assigned census rows are declared **partial**; see the per-row table.
 ## REQUIRES
 
 1. Lean core and Std at the repository's pinned toolchain. No Mathlib.
-2. `Effect4/Runtime/Runtime.lean` imports `Effect4.Semantics.Exit` and nothing
+2. `src/Effect4/Machine/Frames.lean` imports `Effect4.Semantics.Exit` and nothing
    else from Effect4. It must not import `Effect4/Concurrency/` — including
-   `Effect4/Concurrency/Interrupt.lean` and, emphatically,
-   `Effect4/Concurrency/Scheduler.lean` — nor `Effect4/Layer/`,
-   `Effect4/Channel/`, `Effect4/Context/`, or `Effect4/Runtime/Scope.lean`.
-   `docs/ARCHITECTURE.md` "Dependency direction" and `docs/FRAMES-DAG.md`
+   `src/Effect4/Machine/Supervision.lean` and, emphatically,
+   `src/Effect4/Machine/Fibers.lean` — nor `Effect4/Layer/`,
+   `Effect4/Channel/`, `Effect4/Context/`, or `src/Effect4/Machine/Scope.lean`.
+   `docs/ARCHITECTURE.md` "Dependency direction" and `docs/research/FRAMES-DAG.md`
    separations 1-3 own the reasons.
 3. `ν`, `σ`, and the four cause alphabets `ε`, `δ`, `ι`, `α`, plus the value
    alphabet `β`, are opaque parameters. No constructor, decidable equality,
@@ -84,7 +84,7 @@ assigned census rows are declared **partial**; see the per-row table.
    `FrameFiber.step` and `FrameFiber.run`. They appear nowhere else.
 4. `Effect4.Exit`, `Effect4.Cause`, `Effect4.Reason` and
    `Effect4.ReasonAnnotations` are consumed exactly as
-   `test/contracts/cause-exit.contract.md` froze them. This packet declares no
+   `Test/contracts/cause-exit.contract.md` froze them. This packet declares no
    new exit or cause carrier, adds no arm to either, and claims exactly one
    adapter, `Prim.ofExit`/`Prim.asExit?`.
 5. `DecidableEq` is derived, never classical. `Classical.choice`,
@@ -93,7 +93,7 @@ assigned census rows are declared **partial**; see the per-row table.
    public theorem is `propext` and `Quot.sound`.
 6. Universe policy: `ν`, `σ`, `ε`, `δ`, `ι`, `α` live in one explicit `Type u`;
    the value alphabet `β` lives in `Type v`, and every carrier lands in
-   `Type (max u v)`. This is exactly the shape `Effect4/Semantics/Exit.lean`
+   `Type (max u v)`. This is exactly the shape `src/Effect4/Machine/Exit.lean`
    already uses for `Exit (β : Type v) (ε δ ι α : Type u)`, and the two universes
    are inherited from it rather than chosen here.
 7. Every recursive definition is structurally recursive. `FrameFiber.popFrom`
@@ -110,12 +110,12 @@ roles, result types and theorem propositions are frozen by the Lean battery's
 Lean shown here is a reading aid. Every theorem in the battery also carries a
 `census:` tag naming the census rows it witnesses; the builder carries that tag
 into the declaration's docstring, as
-`docs/RUNTIME-COVERAGE.md` and `Effect4/AGENTS.md` require.
+`docs/RUNTIME-COVERAGE.md` and `AGENTS.md` require.
 
 ### Existing-type and duplicate-prevention rows
 
 The twelve rows — nine native, two reuse, one named-not-imported — with their
-owners, relationships, pins and assurance routes are in `docs/FRAMES-DAG.md`
+owners, relationships, pins and assurance routes are in `docs/research/FRAMES-DAG.md`
 "Existing-type rows", together with the per-declaration records for every
 definition. They are not restated here.
 
@@ -171,7 +171,7 @@ close `exit.success-failure`'s open clause.
 A continuation slot stores a nominal `ν`. A nested body stores a `Prim` subterm,
 because rc.112's `onSuccess[args]` holds the inner *effect* and a subterm is
 first-order, inspectable and decidable where a closure is none of those.
-`docs/FRAMES-DAG.md` separation 5 owns that distinction.
+`docs/research/FRAMES-DAG.md` separation 5 owns that distinction.
 
 `exitFrame` carries rc.112's op name `Exit`; the Lean spelling avoids colliding
 with `Effect4.Exit`. `whileLoop` carries rc.112's constructor name.
@@ -202,7 +202,7 @@ structure PrimInterp (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) where
 
 `PrimInterp` is a **parameter**, never canonical program content. It carries no
 `DecidableEq` and never enters `Prim` or `FrameFiber`, which is what keeps both
-first-order. `docs/FRAMES-DAG.md` "Scope" justifies the record over stored
+first-order. `docs/research/FRAMES-DAG.md` "Scope" justifies the record over stored
 closures, a relation, and loose function arguments, and justifies `iterNext`'s
 `List β` prefix and the `notImplemented` defect individually.
 
@@ -429,7 +429,7 @@ FrameFiber.popFrom demand skip (frame :: rest) fiber =
 ```
 
 `skipInterrupted` is `true` on the failure path only. The loop is rc.112's two
-nested loops fused into one structural recursion; `docs/FRAMES-DAG.md` "Where the
+nested loops fused into one structural recursion; `docs/research/FRAMES-DAG.md` "Where the
 fusion could diverge" owns the justification, the deferred-interrupt equivalence,
 and the one frame shape — `AsyncFinalizer` — that the next packet must re-derive.
 
@@ -484,7 +484,7 @@ applied only when `acquireRelease` was asked for an interruptible acquire —
 stands for `exit => { restore context; scopeCloseUnsafe(scope, exit) }`, masked
 because `onExitPrimitive` is called with no third argument. The *scope* side of
 the same census row is `Effect4.Scope.runScoped`, owned by
-`test/contracts/scope.contract.md`; this packet does not import it, does not
+`Test/contracts/scope.contract.md`; this packet does not import it, does not
 duplicate it, and claims no relation between the two.
 
 ## ENSURES — public theorem spine
@@ -774,7 +774,7 @@ class identities are refused.
 
 The clause-by-clause table, including which clauses are left to the run-loop,
 context and supervision packets and the expected coverage state of each of the
-thirty-one rows after the join, is in `docs/FRAMES-DAG.md` "Census rows this
+thirty-one rows after the join, is in `docs/research/FRAMES-DAG.md` "Census rows this
 packet targets". It is not duplicated here, because two copies of a clause map is
 exactly the ownership error `AGENTS.md` forbids.
 
@@ -809,7 +809,7 @@ this packet.
 | `E4-RUN-CE-021` | the raw `FiberImpl` and the host `Error` class can be modelled | refuse both by theorem; model the effect each produces and nothing about the host object |
 
 The twenty-three witnesses are finite self-contained breaker models in
-`Effect4Test/Counterexamples/Runtime/Frames.lean`. They prove the attacks, not
+`Test/Counterexamples/Machine/Runtime/Frames.lean`. They prove the attacks, not
 the production laws, and they remain executable after the repair lands.
 
 ## Trust and acceptance
@@ -839,8 +839,8 @@ lake build Effect4Test.Counterexamples.Runtime.Frames
 exits zero, while
 
 ```sh
-lake env lean -DmaxErrors=10000 Effect4Test/Runtime/FramesContract.lean
-lake env lean -DmaxErrors=10000 Effect4Test/Runtime/FramesAxiomReport.lean
+lake env lean -DmaxErrors=10000 Test/Machine/Runtime/FramesContract.lean
+lake env lean -DmaxErrors=10000 Test/Machine/Runtime/FramesAxiomReport.lean
 ```
 
 both exit nonzero with *only* unknown-identifier and unknown-constant
@@ -856,8 +856,8 @@ The builder phase requires all three files plus the complete project test suite
 to exit zero, with `#print axioms` receipts inside `propext`/`Quot.sound` for
 every one of the one hundred and forty-nine public theorems. It does not
 authorize any coverage-number change: the runtime-coverage join in
-`Effect4Test/Audit/RuntimeCoverage.lean` is a separate packet with a separate
-claim, as recorded in `docs/FRAMES-DAG.md`.
+`Test/Audit/RuntimeCoverage.lean` is a separate packet with a separate
+claim, as recorded in `docs/research/FRAMES-DAG.md`.
 
 ## Open questions
 

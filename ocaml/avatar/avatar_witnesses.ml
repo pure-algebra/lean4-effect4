@@ -9,19 +9,21 @@ open Deep_fibers
 open Deep_clauses
 
 let census_of_witness (name : string) : Deep_census.row list =
-  List.filter (fun (r : Deep_census.row) -> List.mem ("Effect4.Deep.Witnesses." ^ name) r.deep) Deep_census.rows
+  List.filter (fun (r : Deep_census.row) -> List.mem ("Effect4.Machine.Witnesses." ^ name) r.deep) Deep_census.rows
 
 let clauses_of_rows (rows : Deep_census.row list) : (string * clause option) list =
   let names =
     List.sort_uniq compare
       (List.concat_map
          (fun (r : Deep_census.row) ->
-           List.filter (fun n -> not (String.length n > 24 && String.sub n 0 24 = "Effect4.Deep.Witnesses.")) r.deep)
+           List.filter (fun n -> not (String.starts_with ~prefix:"Effect4.Machine.Witnesses." n)) r.deep)
          rows)
   in
   List.map
     (fun n ->
-      let short = if String.length n > 13 && String.sub n 0 13 = "Effect4.Deep." then String.sub n 13 (String.length n - 13) else n in
+      let prefix = "Effect4.Machine." in
+      let offset = String.length prefix in
+      let short = if String.starts_with ~prefix n then String.sub n offset (String.length n - offset) else n in
       (n, find short))
     names
 
@@ -33,7 +35,7 @@ let verdict_string = function
   | Not_portable why -> "NOT PORTABLE: " ^ why
 
 let () =
-  print_endline "== deep_clauses: one entry per `Effect4/Deep/Clauses.lean` theorem, evaluated on the avatar";
+  print_endline "== deep_clauses: one entry per `src/Effect4/Machine/Clauses.lean` theorem, evaluated on the avatar";
   let holds = ref 0 and fails = ref 0 and refused = ref 0 in
   List.iter
     (fun c ->
@@ -42,8 +44,9 @@ let () =
       Printf.printf "clause\t%s\t%s\t%s\t%s\n" c.name c.lean (String.concat "," c.census) (verdict_string v))
     clauses;
   Printf.printf "clauses\t%d\tholds\t%d\tfails\t%d\tnot-portable\t%d\n" count !holds !fails !refused;
+  List.iter (fun c -> Printf.printf "environment-clause\t%s\t%s\n" c.name (verdict_string (evaluate c))) environment_clauses;
   print_endline "";
-  print_endline "== deep_witnesses: one entry per `Effect4/Deep/Witnesses.lean` theorem, run through the avatar";
+  print_endline "== deep_witnesses: one entry per `src/Effect4/Machine/Witnesses.lean` theorem, run through the avatar";
   let w_ok = ref 0 and w_bad = ref 0 and w_refused = ref 0 in
   let run_holds = ref 0 and run_fails = ref 0 in
   List.iter

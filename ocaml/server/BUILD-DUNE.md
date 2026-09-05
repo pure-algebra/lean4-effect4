@@ -3,7 +3,7 @@
 `effect4d` is built by dune since 2026-09-04, from the workspace `ocaml/`
 (`dune-project`, `dune-workspace`, `dune` there; `avatar/dune` and `server/dune` below it).
 One `dune build` produces the three hosts from one module list. `build-server.sh` and
-`tests/run-tests.sh` are the earlier shell build and stay for reference; nothing runs them.
+`tests/run-tests.sh` were the earlier shell build and were retired on 2026-09-05; git retains their history.
 
 ## 1. One command, on either machine
 
@@ -92,7 +92,7 @@ dune workspace, which dune cannot declare a dependency on — so the arm-map and
 depend on `(universe)` instead. They re-run on every build (about a second) and read the
 Lean files through `%{workspace_root}/../../../src/Effect4/Machine`; downstream
 compilation re-runs only when their output changes. Citations resolve against all sixteen
-Machine modules (`Effect4/Deep/*.lean` moved there in Prod cleanup 3), `Fibers.lean` first;
+Machine modules (`src/Effect4/Machine/*.lean` moved there in Prod cleanup 3), `Fibers.lean` first;
 paths in the answers read `src/Effect4/Machine/….lean`.
 
 The three `..` are not decoration. `%{workspace_root}` expands to the *build context* root
@@ -165,7 +165,7 @@ Not exercised, and why:
 - `--tcp` on the bytecode host (the test client drives TCP on native only; same code).
 - `W2_AVATAR_REV` builds from a git revision: no longer possible (§2).
 - The estate's own gate (`avatar/compare.py` against `generated/traces`,
-  `scripts/check-trace-host.sh`): the goldens are archived; the test client's own
+  `git:c407ab7:scripts/check-trace-host.sh`): the goldens are archived; the test client's own
   comparison against the vendored copies stands in.
 - `why` against an rc.112 reference produced by `avatar/corpus_rc112.mjs`: needs the
   effect node_modules; the test client plants its own divergence instead.
@@ -206,5 +206,5 @@ A silent drop in `checks:` is the signature of a face directory that has moved.
 
 The arm map resolved against `src/Effect4/Machine/*.lean` (all sixteen modules) carries
 62 `exact`, 48 `byLine` (unverified) and 8 `unresolved` citation tokens; README §7.8's
-16/12/4 counted the avatar of `b60fe28` against `Effect4/Deep/*.lean` and is superseded by
+16/12/4 counted the avatar of `b60fe28` against `src/Effect4/Machine/*.lean` and is superseded by
 what `explain` and `version` report.

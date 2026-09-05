@@ -6,7 +6,7 @@ import Effect4.Codegen.Emit
 Rule `surface.entity.constructor` (`Rule.entityConstructor`), the `entities.generated.ts` of
 the Surface plan's §13.4 and the module every other TypeScript artefact imports its entity
 constants from (`import { User, NotFound } from "./entities.generated"`). This is the row
-`Effect4/Surface/Entity.lean` records as owed: the persisted-document module needs no order
+`src/Effect4/Surface/Entity.lean` records as owed: the persisted-document module needs no order
 because each document carries its own references table, while a constant that names another
 constant must come after it.
 

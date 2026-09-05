@@ -4,7 +4,7 @@ import Effect4.Machine.Frames
 /-!
 # Frame-machine runtime kernel dependency report
 
-Every authored public theorem named by `test/contracts/frames.contract.md` is
+Every authored public theorem named by `Test/contracts/frames.contract.md` is
 listed exactly once, in contract order. The accepted ceiling is no dependency,
 `propext`, or `propext` with `Quot.sound`; `Classical.choice` and
 project-local axioms are not admitted.

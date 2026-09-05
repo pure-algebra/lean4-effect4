@@ -26,12 +26,12 @@ its clauses so a later capability can ask for exactly the clauses it needs.
 
 ## Where things live, and why here
 
-* `Pin` is §5's, but `SurfaceMark` (`Effect4/Surface/Annotate.lean`) carries a
+* `Pin` is §5's, but `SurfaceMark` (`src/Effect4/Surface/Annotate.lean`) carries a
   `List Pin` and `Annotate` sits below `Emit` in the import order, so the
   declaration is here and `Emit.lean` uses it. `Emit.lean` remains the owner of
   the rule census that reads it.
 * `Stance` is §4.1's, but `SurfaceMark` carries one for the same reason.
-  `Effect4/Surface/Entity.lean` remains the owner of `Entity.stance`.
+  `src/Effect4/Surface/Entity.lean` remains the owner of `Entity.stance`.
 * `Refusal` is one inductive for the whole area. Its first group is the
   well-formedness clauses of §14.2; its second is the JSON Schema ingest of
   §4.3, which the plan also calls a closed `Refusal`. Keeping them apart would
@@ -215,8 +215,8 @@ inductive Refusal where
   | handlerUnknownEndpoint (handler : String)
   | serviceUnknown (app service : String)
   -- Wave 2c, appended: two clauses of §4.6 and §4.7 that §14.2's list did not
-  -- name. Both are carried by `Effect4/Surface/Deploy.lean` and
-  -- `Effect4/Surface/Site.lean`.
+  -- name. Both are carried by `src/Effect4/Surface/Deploy.lean` and
+  -- `src/Effect4/Surface/Site.lean`.
   /-- A `cloudflarePages` deployment declares no build output directory. -/
   | buildOutputDirMissing (deployment : String)
   /-- A page's route is not a legal path template. -/

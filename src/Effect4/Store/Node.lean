@@ -434,7 +434,7 @@ example : ∃ n m : Node, n ≠ m ∧ (fun _ => ()) (Node.encode n) = (fun _ => 
 the refusals are the version, the kind byte, a short spec and a trailing byte. -/
 
 /-- A sample node: the census entry filed as an export under the zero spec. -/
-def sampleNode : Node := ⟨0, .«export», zeroDigest, sampleEntry⟩
+private def sampleNode : Node := ⟨0, .«export», zeroDigest, sampleEntry⟩
 
 #guard sampleNode.encode.length = 108
 #guard sampleNode.encode.take 2 = [0, 2]

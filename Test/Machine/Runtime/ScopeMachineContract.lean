@@ -6,7 +6,7 @@ import Effects.Trace
 set_option synthInstance.maxSize 2048
 
 /-!
-Independent scope-close stepping packet: `test/contracts/scope-machine.contract.md`.
+Independent scope-close stepping packet: `Test/contracts/scope-machine.contract.md`.
 Existing-owner controls remain executable while the new production module is absent.
 The surface and behavior sections require the actual independently stepping machine.
 -/

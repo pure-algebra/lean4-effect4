@@ -70,7 +70,7 @@ import OCaml5.Lcnf.Dump
 import OCaml5.Lcnf.Naming
 import OCaml5.Lcnf.Types
 import OCaml5.Lcnf.Translate
--- The syntax-level transpiler of `Effect4/Machine/Fibers.lean` (F3's derived-avatar probe);
+-- The syntax-level transpiler of `src/Effect4/Machine/Fibers.lean` (F3's derived-avatar probe);
 -- `Tools/TranspileDeep.lean` is the driver.
 import OCaml5.Avatar.Transpile
 -- Route 1: the Lean machine held by OCaml as an opaque value (`@[export]`ed session API

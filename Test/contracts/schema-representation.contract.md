@@ -3,13 +3,13 @@
 Status: FROZEN breaker packet, 2026-08-31; its pre-implementation revision is
 required to be RED, and fired findings are recorded below
 
-Ruling input: `docs/SCHEMA-CUTOVER.md`, "Frozen rc.112 persisted census"
+Ruling input: `docs/research/SCHEMA-CUTOVER.md`, "Frozen rc.112 persisted census"
 
-Implementation fence: `Effect4/Schema/Representation.lean`
+Implementation fence: `src/Effect4/Schema/Representation.lean`
 
-Battery: `Effect4Test/Schema/RepresentationContract.lean`
+Battery: `Test/Schema/RepresentationContract.lean`
 
-Counterexamples: `test/counterexamples/REGISTER.md`, rows
+Counterexamples: `Test/Counterexamples/REGISTER.md`, rows
 `E4-SCHEMA-CE-017` through `E4-SCHEMA-CE-019`, with executable witnesses in
 `Effect4Test/Counterexamples/Schema/`
 
@@ -22,7 +22,7 @@ the case-sensitive wire spelling of each member.
 It deliberately does **not** freeze the payload carrier. `Representation`
 itself, its per-tag persisted fields, `Check`, annotations, `Document`, and
 `MultiDocument` remain unopened. In the obligation graph of
-`docs/SCHEMA-CUTOVER.md` this packet targets the tag portion of `SC-REP-02`
+`docs/research/SCHEMA-CUTOVER.md` this packet targets the tag portion of `SC-REP-02`
 (`Nodup` and lexical source completeness) and the tag portion of `SC-REP-03`
 (structural equality and the exact dependent recursor). Those edges remain
 open while this breaker packet is red. `SC-REP-01` (payload declaration and
@@ -48,7 +48,7 @@ not each receive an otherwise empty graph.
 
 ## Source authority and its limit
 
-The census is taken from the frozen table in `docs/SCHEMA-CUTOVER.md`, whose
+The census is taken from the frozen table in `docs/research/SCHEMA-CUTOVER.md`, whose
 authority pins are `effect@4.0.0-rc.112` and upstream revision
 `2600f62f4532026928454dcea8d1c48557b3f942`.
 
@@ -190,7 +190,7 @@ length. What `E4-SCHEMA-CE-019` refutes is the weaker belief that
 Obligation 4 is likewise **not** independent of obligation 5. Given
 `ofTagName_tagName`, injectivity follows in three lines: rewrite
 `a.tagName = b.tagName` inside `ofTagName a.tagName = some a` and read `a = b`
-off the resulting `some b = some a`. `Effect4/Schema/Representation.lean`
+off the resulting `some b = some a`. `src/Effect4/Schema/Representation.lean`
 proves it exactly that way and its docstring says so. Obligation 4 is listed
 separately because it is the statement a consumer of the wire layer cites, and
 because it survives a later reformulation of recognition; it is not listed
@@ -215,9 +215,9 @@ licenses any claim about how a full representation decodes.
   coverage.
 
 `E4-SCHEMA-CE-001` through `E4-SCHEMA-CE-016`, reserved by
-`docs/SCHEMA-CUTOVER.md`, attack the payload, denotation, codec, and wire
+`docs/research/SCHEMA-CUTOVER.md`, attack the payload, denotation, codec, and wire
 layers. They are owned by later packets and are **not** discharged here. See
-`test/counterexamples/schema/ATTACKS.md`.
+`Test/Counterexamples/Schema/ATTACKS.md`.
 
 ## Decrease, frame, and trust
 
@@ -250,7 +250,7 @@ prose named a narrower set than the receipt.
 ## Source-extraction evidence obligation
 
 The `SC-REP-CENSUS-PIN` evidence edge is closed **only for lexical extraction
-at the named pin**. `./scripts/check-schema-census.sh` extracted 22
+at the named pin**. `scripts/check-schema-census.sh` extracted 22
 representation tag spellings and 2 check tag spellings from the pinned
 `SchemaRepresentation.ts`; that extracted set agrees with the set frozen by
 this packet. Constructor and census order are frozen separately by the exact
@@ -259,7 +259,7 @@ denotation, or generated-host fidelity.
 
 The gate reports pin-matched evidence only when the supplied file matches the
 pinned digest, and refuses other bytes unless `--dry-run` is given. Its drift
-detection is exercised by `./scripts/test-schema-census-gate.sh`, whose finite
+detection is exercised by `git:c407ab7:scripts/test-schema-census-gate.sh`, whose finite
 suite shows that ten specified defects are rejected, including a tag copied
 across the nominal family boundary. This is detector
 reaction evidence, not an exhaustive theorem about every possible defect.
@@ -269,14 +269,14 @@ reaction evidence, not an exhaustive theorem about every possible defect.
 The breaker records the intended red state with:
 
 ```text
-lake env lean Effect4Test/Schema/RepresentationContract.lean
+lake env lean Test/Schema/RepresentationContract.lean
 ```
 
 It must fail only because the frozen declarations do not yet exist. After
 implementation, acceptance additionally requires:
 
 ```text
-lake env lean Effect4Test/Schema/RepresentationContract.lean
+lake env lean Test/Schema/RepresentationContract.lean
 lake clean && lake build
 ```
 
@@ -362,7 +362,7 @@ permute. Roughly 3.6e14 spelling maps satisfied the entire packet, and every
 one of them but the intended map emits a wrong persisted `_tag`.
 
 WITNESS: the `spelling-permutation` mutant of
-`scripts/test-schema-alphabet-mutations.sh`. It remains source-buildable, it
+`git:c407ab7:scripts/test-schema-alphabet-mutations.sh`. It remains source-buildable, it
 was verified to pass the pre-repair battery and every counterexample module,
 and it is killed by the repaired battery.
 
@@ -373,12 +373,12 @@ strictly weaker statement.
 
 FIXED-BY: ENSURES obligation 7 and a new paragraph under D2 state the per-tag
 scope and why the ordered equation cannot carry it.
-`Effect4Test/Schema/RepresentationContract.lean` gains 22 pointwise `tagName`
+`Test/Schema/RepresentationContract.lean` gains 22 pointwise `tagName`
 examples and 22 pointwise `ofTagName` examples. The companion packet's battery
 gains the same treatment for its spelled alphabets. The mutation gate carries
 the permutation as its fifth specified mutant. No implementation declaration
 changed: every pointwise obligation was already true of
-`Effect4/Schema/Representation.lean`, so no wire-format defect was live.
+`src/Effect4/Schema/Representation.lean`, so no wire-format defect was live.
 
 ### `tagName_injective` non-independence was left unstated
 
@@ -388,7 +388,7 @@ paragraph later left obligations 4 and 5 side by side with no relation stated,
 implying that injectivity is separate content.
 
 LAW: `tagName_injective` follows from `ofTagName_tagName` in three lines, and
-`Effect4/Schema/Representation.lean` proves it that way and says so in its
+`src/Effect4/Schema/Representation.lean` proves it that way and says so in its
 docstring. The companion packet's `UnionMode.modeName_injective` and
 `CheckTag.tagName_injective` are derived identically.
 

@@ -3,7 +3,7 @@ The `shop` fixture domain, written as plain Lean terms.
 
 Frozen by the wave-1b breaker from `docs/research/2026-09-04-surface-library-plan.md`
 §6, §13.1 and §15 so that the batteries, the counterexample witnesses, the DSL
-battery and `harness/surface/EmitFixture.lean` all read one set of rows. The
+battery and `Test/Surface/Fixtures.lean` all read one set of rows. The
 DSL wave checks its commands produce these very values by
 `#guard <dsl> = <fixture>`; nothing here may depend on `Effect4.Meta.Surface`.
 
@@ -21,7 +21,7 @@ The semantic layer of plan §15 is not optional, so every root bag carries
 `identifier` and `description`, and every property of every entity carries a
 `description` because `shop` is an `active` domain. The bags are written as
 raw `AnnotationEntry` lists with the rc.112 key strings so this file does not
-depend on the spelling wave 1a gives them in `Effect4/Surface/Annotate.lean`.
+depend on the spelling wave 1a gives them in `src/Effect4/Surface/Annotate.lean`.
 -/
 
 import Effect4.Surface.Kind

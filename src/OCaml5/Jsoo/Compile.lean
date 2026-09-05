@@ -21,7 +21,7 @@ OCaml5.Code ──▶ M_C direct style (O2) ═══ P2 ═══▶ M_C plain 
 `compile : Term Nat → Code.Program Code.K` is `bytegen.ml` composed with
 `parse_bytecode.ml`, in the sense that its output is the block IR js_of_ocaml has in hand
 when `Effects.f` runs — the IR `--debug main` prints (`driver.ml:128-130`), transcribed for
-three real programs in `src/OCaml5/ir/Programs.lean`. Everything below cites the line of
+three real programs in `src/OCaml5/Ir/Programs.lean`. Everything below cites the line of
 `bytegen.ml`, `parse_bytecode.ml` or `code.ml` it mirrors.
 
 Imports are read-only: `Effect`, `Compiler`, `Code` and `Cps` are owned by O1/O5, O2 and P2.

@@ -2,7 +2,7 @@ import Effect4.Program.Config
 
 /-!
 Fresh kernel dependency report for the configuration algebra
-(`Effect4/Program/Config.lean`; plan `docs/research/2026-09-04-production-standards-spike.md`
+(`src/Effect4/Program/Config.lean`; plan `docs/research/2026-09-04-production-standards-spike.md`
 §4 and §10).
 
 Coordinator-owned, appended from the `#print axioms` output at each landing. Every theorem

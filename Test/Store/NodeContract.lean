@@ -12,11 +12,11 @@ meta-schema's 92,462-byte payload, the genesis address `2794d9…2926`, the entr
 
 `Templates.Entry` files as `export` content here rather than in the library: nothing in `src/`
 carries this four-field shape (the census entry gained a `source : Ref Source` field at the
-landing, `Evidence/StdLib/Entry.lean`), so the illustration's kind belongs with the
+landing, `StdLib/Entry.lean`), so the illustration's kind belongs with the
 illustration. `Store/Val.lean`'s `sampleEntry` is its value tree, which is why the §6 and §6a
 numbers still hold.
 
-Measured 2026-09-05 (lane B, `workshop/Cas/NOTES-B.md`): the whole file, genesis guards
+Measured 2026-09-05 (lane B, `docs/research/2026-09-05-workshop-cas/NOTES-B.md`): the whole file, genesis guards
 included, elaborates in seconds — `#guard` evaluates the compiled `Decidable` instance rather
 than reducing it in the kernel, so a SHA-256 over ninety-two kilobytes costs a fraction of a
 second and the §6a addresses are guarded, not printed.

@@ -4,7 +4,7 @@ import Effect4.Machine.Exit
 # Fiber vocabulary shared with the reference machine
 
 This module owns the fiber vocabulary the reference machine
-`Effect4/Deep/Fibers.lean` uses: the mask mode, the fork options, the observer
+`src/Effect4/Machine/Fibers.lean` uses: the mask mode, the fork options, the observer
 mode, the scope mode, the frozen race bookkeeping `raceComplete`, and the
 interrupt cause. The controller calculus this module used to hold was retired
 on 2026-09-04 with `docs/research/2026-09-04-retire-old-machines.md`.

@@ -1,8 +1,8 @@
 /-
-Contract packet: `test/contracts/scope.contract.md`
+Contract packet: `Test/contracts/scope.contract.md`
 
 Breaker-owned red battery. The implementation phase must not edit this file.
-It is red until `Effect4/Runtime/Scope.lean` declares the frozen surface.
+It is red until `src/Effect4/Machine/Scope.lean` declares the frozen surface.
 
 Every public declaration is frozen by an exact `#check (@name : proposition)`
 ascription so no weaker statement satisfies this contract. Names are written
@@ -572,7 +572,7 @@ order. -/
     self.isClosed = true -> Effect4.Scope.closeResult run self exit = Effect4.Exit.void)
 /-! The strategy label selects no observation this model exposes. The temporal
 difference between "sequential" and "parallel" belongs to the fiber machine,
-which this packet does not model; `docs/SCOPE-DAG.md` records the two rows that
+which this packet does not model; `docs/research/SCOPE-DAG.md` records the two rows that
 stay `partial` because of it. -/
 #check (@Effect4.Scope.close_strategy_irrelevant :
   forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}

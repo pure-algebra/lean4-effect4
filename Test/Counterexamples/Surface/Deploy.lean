@@ -2,8 +2,8 @@
 Executable witnesses for `E4-SURFACE-CE-043` through `E4-SURFACE-CE-049` and
 `E4-SURFACE-CE-067`.
 
-Contract: `test/contracts/surface-deploy.contract.md`. Frozen by the wave-1b
-breaker before `Effect4/Surface/Deploy.lean` exists; red until the builder
+Contract: `Test/contracts/surface-deploy.contract.md`. Frozen by the wave-1b
+breaker before `src/Effect4/Surface/Deploy.lean` exists; red until the builder
 lands it.
 
 Pin: `wrangler` 3.114.16 `config-schema.json`, vendored under

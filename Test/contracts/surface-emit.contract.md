@@ -3,13 +3,13 @@
 Status: breaker packet, red, 2026-09-04 (wave 1b of
 `docs/research/2026-09-04-surface-library-plan.md` §5)
 
-Implementation (owed): `Effect4/Surface/Emit.lean`
+Implementation (owed): `src/Effect4/Codegen/Emit.lean`
 
-Battery: `Effect4Test/Surface/EmitContract.lean`
+Battery: `Test/Surface/EmitContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-058`, `E4-SURFACE-CE-059`, `E4-SURFACE-CE-070`
 
-Witnesses: `Effect4Test/Counterexamples/Surface/Emit.lean`
+Witnesses: `Test/Counterexamples/Surface/Emit.lean`
 
 ## Purpose
 
@@ -92,7 +92,7 @@ finding 4 of the wave-1b report.
 4. The docstring tag census: the set of `-- surface: rule.<id>` tags in
    `Effect4/Surface/` equals `Rule.all.map Rule.id`, in both directions. This
    observation is a shell check, not a Lean one: it reuses the tokenizer of
-   `scripts/check-lowering-coverage.sh` (`E4-SURFACE-CE-059`).
+   `git:c407ab7:scripts/check-lowering-coverage.sh` (`E4-SURFACE-CE-059`).
 
 ## Acceptance conditions
 

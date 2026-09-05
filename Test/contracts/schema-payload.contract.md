@@ -5,21 +5,21 @@ the fixed production payload-surface and ownership gate is green. Cutover and
 semantic closure remain OPEN. Its pre-implementation revision is required to
 be RED, and fired findings are recorded below
 
-Ruling input: `docs/SCHEMA-CUTOVER.md`, "Frozen rc.112 persisted census",
+Ruling input: `docs/research/SCHEMA-CUTOVER.md`, "Frozen rc.112 persisted census",
 "Verified persisted-field snapshot", and the obligation graph
 
-Layer below: `test/contracts/schema-representation.contract.md` and
-`test/contracts/schema-subalphabets.contract.md` (the frozen 22-tag alphabet
+Layer below: `Test/contracts/schema-representation.contract.md` and
+`Test/contracts/schema-subalphabets.contract.md` (the frozen 22-tag alphabet
 and the five closed sub-alphabets)
 
 Implementation fence:
 
 ```text
-Effect4/Data/Json.lean              Float64, Json                       (new)
-Effect4/Schema/Payload.lean         scalar and parameterized records    (new)
-Effect4/Schema/Representation.lean  Representation / Check carrier      (extend)
-Effect4/Schema/Document.lean        Document, MultiDocument, toMulti    (open)
-Effect4/Schema/Check.lean           persisted field admission           (open)
+src/Effect4/Data/Json.lean              Float64, Json                       (new)
+src/Effect4/Schema/Payload.lean         scalar and parameterized records    (new)
+src/Effect4/Schema/Representation.lean  Representation / Check carrier      (extend)
+src/Effect4/Schema/Document.lean        Document, MultiDocument, toMulti    (open)
+src/Effect4/Schema/Check.lean           persisted field admission           (open)
 ```
 
 The chain must import downward (`Check` -> `Document` -> `Representation` ->
@@ -27,11 +27,11 @@ The chain must import downward (`Check` -> `Document` -> `Representation` ->
 every declaration this packet names. `Effect4.Schema.Value` is reserved for
 the later denotation/value layer and owns none of D0-D7.
 
-Battery: `Effect4Test/Schema/PayloadContract.lean`
+Battery: `Test/Schema/PayloadContract.lean`
 
-Counterexamples: `test/counterexamples/REGISTER.md`, rows
+Counterexamples: `Test/Counterexamples/REGISTER.md`, rows
 `E4-SCHEMA-CE-026` through `E4-SCHEMA-CE-042`, with attack shapes in
-`test/counterexamples/schema/ATTACKS.md`
+`Test/Counterexamples/Schema/ATTACKS.md`
 
 ## Claim boundary
 
@@ -41,7 +41,7 @@ non-recursive scalar and record types it is built from, the tag projection
 that ties it back to the alphabet, and the field-admission predicate that
 matches the pinned rc.112 field constraints.
 
-In the obligation graph of `docs/SCHEMA-CUTOVER.md` this packet targets:
+In the obligation graph of `docs/research/SCHEMA-CUTOVER.md` this packet targets:
 
 - `SC-REP-01` — declaration and persisted-field snapshot. The persisted-field
   *snapshot* half is already recorded in the ruling; this packet adds the Lean
@@ -78,7 +78,7 @@ necessary condition and nothing more. The table is in "Reserved rows" below.
 
 ## Obligation IDs
 
-Reused from the graph in `docs/SCHEMA-CUTOVER.md`, because the graph already
+Reused from the graph in `docs/research/SCHEMA-CUTOVER.md`, because the graph already
 names them:
 
 | ID | This packet's share |
@@ -86,7 +86,7 @@ names them:
 | `SC-REP-01` | the Lean declaration half; the persisted-field snapshot half is the ruling's, re-verified here line by line |
 | `SC-REP-03` | the payload half — decidable structural equality on `Representation`, `Check`, `Json`, `Float64`. The recursor half is **not** claimed; see D5 |
 | `SC-REP-04` | persisted/decode-side field admission, its Boolean companion, exact constructor equations, and their agreement; no issue or refusal carrier is implied |
-| `SC-REP-FIELD-PIN` | referenced, not advanced. `./scripts/check-schema-fields.sh` minted it; this packet deliberately supplies no Lean cross-check, see (c) |
+| `SC-REP-FIELD-PIN` | referenced, not advanced. `scripts/check-schema-fields.sh` minted it; this packet deliberately supplies no Lean cross-check, see (c) |
 
 No new `SC-REP-*` identifier is minted. Payload/alphabet agreement belongs to
 the existing `SC-REP-01` declaration and `SC-REP-03` structural-elimination
@@ -120,9 +120,9 @@ before implementation is admitted.
 
 ## Entry-gate position, stated rather than assumed
 
-`docs/SCHEMA-CUTOVER.md` lists six entry-gate conditions and says conditions 2
+`docs/research/SCHEMA-CUTOVER.md` lists six entry-gate conditions and says conditions 2
 through 5 gate the payload carrier, the denotation, and the codec calculus.
-Conditions 2 through 5 are **not** satisfied: `Effect4/Data/Row.lean` is a
+Conditions 2 through 5 are **not** satisfied: `src/Effect4/Data/Row.lean` is a
 stub, there is no Program-based Getter, no four-index codec, and no Lean owner
 for the later checked issue boundaries.
 
@@ -177,7 +177,7 @@ Three limits bind every citation below.
    owed: nothing in this repository runs them, and no Lean declaration is
    joined to them.
 
-`./scripts/check-schema-fields.sh` independently extracts the persisted field
+`scripts/check-schema-fields.sh` independently extracts the persisted field
 spellings from the same pinned file and compares them to a frozen table. Its
 own header records that it is a single-route lexical extraction with no
 Lean-side carrier to cross-check against. This packet declares the Lean carrier
@@ -206,7 +206,7 @@ keyword tags `:969`, `Literal :1000`, `UniqueSymbol :1010`, `Enum :1015`,
 `Objects :1054`, and `Union :1060` are exact.
 
 The drift is small and changes no field name or shape. It is recorded rather
-than repaired in place because `docs/SCHEMA-CUTOVER.md` is outside this
+than repaired in place because `docs/research/SCHEMA-CUTOVER.md` is outside this
 packet's fence. Every citation in *this* file is the re-read number.
 
 ## The three open questions
@@ -251,7 +251,7 @@ proposal drew from its dichotomy — that `Schema.Number` at these two sites is
 "effectively finite on the wire" and the ruling's bullet needs a scope
 qualifier — does not follow, and the ruling's bullet stands unqualified.
 
-Executed confirmation, `test/fixtures/schema-representation/README.md` §2b/2c,
+Executed confirmation, `Test/fixtures/schema-representation/README.md` §2b/2c,
 §2e, §2a, §2f, §2g, with capture
 `observed/02-numeric-domains.observed.txt`:
 
@@ -329,7 +329,7 @@ characterise the string domain, and they are not run by `lake build`.
 
 **This cannot be answered from the pin, and the reason is not that the pin is
 silent.** `SC-REP-03` is an Effect4 obligation named in
-`docs/SCHEMA-CUTOVER.md`; it is a statement about a Lean carrier that does not
+`docs/research/SCHEMA-CUTOVER.md`; it is a statement about a Lean carrier that does not
 exist yet. The pin can constrain the answer but cannot supply it.
 
 What the pin does say: JavaScript `===` equates `+0` and `-0` and disequates
@@ -379,7 +379,7 @@ envelope's `type`/`value` keys, and the envelope's discriminator values — and
 `E4-SCHEMA-CE-018` already established that a Lean constructor name does not
 determine a persisted spelling.
 
-The ruling already assigns them. `docs/SCHEMA-CUTOVER.md` §5 gives the Schema
+The ruling already assigns them. `docs/research/SCHEMA-CUTOVER.md` §5 gives the Schema
 wire adapter, under the `Effect4Rc112` profile identity in
 `Effect4.Protocol.Profile`, "the 22-tag JSON shape, document envelopes,
 annotation pruning, global-symbol encoding, normalization, source coverage, and
@@ -401,13 +401,13 @@ function to this fence breaks the battery, which is the signal to move it to
 its real owner rather than let it accrete here.
 
 Until that owner exists, `SC-REP-FIELD-PIN` — the obligation
-`./scripts/check-schema-fields.sh` reports on — remains a **single-route
+`scripts/check-schema-fields.sh` reports on — remains a **single-route
 lexical extraction**. The census gate's two-route cross-check has no analogue
 for fields yet, and this packet does not supply one. `E4-SCHEMA-CE-039` records
 the deferral so it cannot be lost.
 
 The one spelling family already owned elsewhere is the `_tag` string, frozen by
-`test/contracts/schema-representation.contract.md` as
+`Test/contracts/schema-representation.contract.md` as
 `RepresentationTag.tagName` and `CheckTag.tagName`, and the `anyOf`/`oneOf`
 mode *values*, frozen as `UnionMode.modeName`. The key `mode` is a field key
 and is therefore deferred with the rest.
@@ -428,7 +428,7 @@ no entry survives, and `AnnotationsSchema` (`:939-948`) encodes through
 `SchemaGetter.passthroughSubtype()` (`:941`) with no pruning step, so `{}`
 decodes fine. Absent and empty are therefore distinct raw inputs with the same
 canonical form. Executed
-(`test/fixtures/schema-representation/README.md` §4c): when nothing survives
+(`Test/fixtures/schema-representation/README.md` §4c): when nothing survives
 pruning the `annotations` key **disappears** from the emitted node and is never
 emitted as `{}`. A carrier that cannot hold both gives `SC-WIRE-04` nothing to
 normalize and makes `SC-WIRE-03`'s `encode (decode acceptedBytes) =
@@ -507,7 +507,7 @@ routes 1 and 2. See `E4-SCHEMA-CE-033`.
 2. `Effect4.RepresentationTag`, `Effect4.CheckTag`, `Effect4.UnionMode`,
    `Effect4.LiteralKind`, `Effect4.EnumValueKind`, `Effect4.PropertyKeyKind`,
    and `Effect4.EnumValueKind.toLiteralKind` as already frozen in
-   `Effect4/Schema/Representation.lean`.
+   `src/Effect4/Schema/Representation.lean`.
 3. No dependency on `Effect4.Algebra`, `Effect4.Flow`, `Effect4.Data.Row`,
    `Effect4.Context`, or `Effect4.Protocol`. The payload layer is index-free,
    row-free, requirement-free, and issue-carrier-free.
@@ -1053,7 +1053,7 @@ the production gate remains intentionally red until the builder establishes
 the frozen `Effect4.Schema.Payload` ownership boundary.
 
 The same gate must materialize the exact `payloadBoundaryImportProbe` frozen
-in `Effect4Test/Schema/PayloadContract.lean` as a fresh module whose only
+in `Test/Schema/PayloadContract.lean` as a fresh module whose only
 library import is `Effect4.Schema.Payload`. It must establish all of the
 following mechanically:
 
@@ -1104,7 +1104,7 @@ than presented as red evidence.
 ## Reserved rows
 
 `E4-SCHEMA-CE-001` through `E4-SCHEMA-CE-016` are reserved by
-`docs/SCHEMA-CUTOVER.md` for the payload, denotation, codec, and wire layers.
+`docs/research/SCHEMA-CUTOVER.md` for the payload, denotation, codec, and wire layers.
 **This packet discharges none of them.** Its relationship to each:
 
 | ID | Payload role | Discharged by |
@@ -1139,7 +1139,7 @@ discharging it: `E4-SCHEMA-CE-011` is **encode-only**, and the word
 same entry. `annotations: {}` decodes but is never produced by encode (`:936`
 omits it), so `encode ∘ decode` canonicalizes rather than acting as the
 identity on that field. Executed detail
-(`test/fixtures/schema-representation/README.md` §4a-§4e): pruning is
+(`Test/fixtures/schema-representation/README.md` §4a-§4e): pruning is
 per-**entry** and whole-tree — one bad leaf anywhere under an entry drops the
 entire entry, a cyclic value drops it, a DAG survives and is flattened into
 copies, `NaN` and `Infinity` are dropped even though they are `typeof
@@ -1150,8 +1150,8 @@ inputs. The wire packet must state the row directionally and per-position.
 ## Falsification battery
 
 `E4-SCHEMA-CE-026` through `E4-SCHEMA-CE-042`. Attack shapes are in
-`test/counterexamples/schema/ATTACKS.md`; the register rows are in
-`test/counterexamples/REGISTER.md`.
+`Test/Counterexamples/Schema/ATTACKS.md`; the register rows are in
+`Test/Counterexamples/REGISTER.md`.
 
 ## Decrease, frame, and trust
 
@@ -1174,7 +1174,7 @@ records the actual receipt for every exported theorem.
 The breaker records the intended red state with:
 
 ```text
-lake env lean -DmaxErrors=10000 --json Effect4Test/Schema/PayloadContract.lean
+lake env lean -DmaxErrors=10000 --json Test/Schema/PayloadContract.lean
 ```
 
 It must fail only with `lean.unknownIdentifier` diagnostics naming the frozen
@@ -1198,20 +1198,20 @@ optional verbose variant.
 After implementation, acceptance additionally requires:
 
 ```text
-lake env lean Effect4Test/Schema/PayloadContract.lean
+lake env lean Test/Schema/PayloadContract.lean
 lake clean && lake build
-./scripts/test-trust-gate.sh
-./scripts/check-vendor-foldlab.sh
-./scripts/check-schema-fields.sh <pinned SchemaRepresentation.ts>
-./scripts/check-schema-payload-surface.sh      # REQUIRED; must turn green in the builder
-./scripts/test-schema-payload-surface-gate.sh  # REQUIRED; four mutations above
+scripts/test-trust-gate.sh
+git:c407ab7:scripts/check-vendor-foldlab.sh
+scripts/check-schema-fields.sh <pinned SchemaRepresentation.ts>
+scripts/check-schema-payload-surface.sh      # REQUIRED; must turn green in the builder
+scripts/test-schema-payload-surface-gate.sh  # REQUIRED; four mutations above
 ```
 
 The surface commands are present. The reaction test currently kills all four
 specified declaration mutations and rejects both source-override routes. The
 production command is an explicit green blocker: before the builder move it
 passes the elaborated shape table and then fails because
-`Effect4/Schema/Payload.lean` does not yet exist. The builder must make that
+`src/Effect4/Schema/Payload.lean` does not yet exist. The builder must make that
 same fixed command green without editing this contract or its Lean battery,
 then record the axiom receipt.
 
@@ -1219,14 +1219,14 @@ then record the axiom receipt.
 
 ### `E4-SCHEMA-CE-025` was stated without naming the rc.112 layer
 
-BROKE: `test/counterexamples/schema/ATTACKS.md` and
-`docs/SCHEMA-CUTOVER.md` said "rc.112 **accepts** all of: a `$ref` naming no
+BROKE: `Test/Counterexamples/Schema/ATTACKS.md` and
+`docs/research/SCHEMA-CUTOVER.md` said "rc.112 **accepts** all of: a `$ref` naming no
 table entry; a self alias `A -> A`; a two-step alias cycle `A -> B -> A`; a
 structural cycle with no `Suspend` on the path; and a dead table entry nothing
 points at."
 
 LAW: the sealed pin
-`vendor/foldlab/pinned/tree/library/effects/test/SchemaReferencesPin.test.ts`
+`git:c407ab7:vendor/foldlab/pinned/tree/library/effects/test/SchemaReferencesPin.test.ts`
 (SHA-256 `73b28e60505f219903cbdcb5e390e1a201df469a5b91f17269f45a19064106cb`)
 defines its acceptance predicate at `:67-75` as a try/catch around
 `SchemaRepresentation.fromJson` — the **document codec** only; its own comment
@@ -1250,7 +1250,7 @@ not deleted. The directional consequence is unchanged and strengthened: the
 host side of "Effect4-admitted implies host-accepted" must now name its layer
 too. The construction-versus-forcing mechanism at `:19-31` and `:26-27` is also
 the first executable-in-principle handle on `SC-DOC-06` in this checkout, and
-`Effect4/Schema/Document.lean` currently records that no such witness exists.
+`src/Effect4/Schema/Document.lean` currently records that no such witness exists.
 
 ### "an rc.112 `Representation` value is encodable" is false as written
 
@@ -1310,7 +1310,7 @@ CLASS: model. A range predicate over one JSON type is wrong in both directions:
 it admits a literal `NaN` that must be refused and refuses an enum `"NaN"` that
 must be accepted.
 
-FIXED-BY: the row's forced repair is restated in `test/counterexamples/REGISTER.md`
+FIXED-BY: the row's forced repair is restated in `Test/Counterexamples/REGISTER.md`
 to name the union `number | "NaN" | "Infinity" | "-Infinity"` and the four
 domains; the stable ID and verdict are unchanged. `E4-SCHEMA-CE-028` carries the
 value-level split. The decoded-side consequence for *this* packet is the total

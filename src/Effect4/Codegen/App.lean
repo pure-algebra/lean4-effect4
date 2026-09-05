@@ -297,7 +297,7 @@ three; the tools are the same two, over the world.
 namespace App
 
 /-- The domains of the fixture application. -/
-def shopDomains : List Domain := [shopApiDomain]
+private def shopDomains : List Domain := [shopApiDomain]
 
 /-- Its closed world: `Address`, `User` and `NotFound`, re-homed. -/
 def shopWorld : Domain := App.world shopDomains
@@ -305,7 +305,7 @@ def shopWorld : Domain := App.world shopDomains
 /-- `get_user`, over the world: one text parameter, an entity as its result, a declared
 failure. Parameter schemas carry no annotations, for the reason `Surface/Agent.lean` gives:
 the JSON Schema ingest admits no annotation keywords. -/
-def shopGetUserTool : Tool shopWorld.refs where
+private def shopGetUserTool : Tool shopWorld.refs where
   name := "get_user"
   parameters := ⟨Schema.struct [Schema.property "id" Schema.string], by decide⟩
   success := ⟨Schema.reference "User", by decide⟩
@@ -313,7 +313,7 @@ def shopGetUserTool : Tool shopWorld.refs where
   annotations := rootBag "get_user" "Fetch one shop customer by id."
 
 /-- `list_users`, over the world: no declared failure, an array result. -/
-def shopListUsersTool : Tool shopWorld.refs where
+private def shopListUsersTool : Tool shopWorld.refs where
   name := "list_users"
   parameters := ⟨Schema.struct [Schema.property "limit" Schema.number true], by decide⟩
   success := ⟨Schema.array (Schema.reference "User"), by decide⟩
@@ -321,14 +321,14 @@ def shopListUsersTool : Tool shopWorld.refs where
   annotations := rootBag "list_users" "List the shop's customers."
 
 /-- The customers resource. -/
-def shopUsersResource : Resource where
+private def shopUsersResource : Resource where
   uri := "shop://users"
   name := "users"
   mimeType := some "application/json"
   annotations := rootBag "users" "Every customer of the shop, as JSON."
 
 /-- The greeting prompt: one required and one optional argument. -/
-def shopGreetPrompt : Prompt where
+private def shopGreetPrompt : Prompt where
   name := "greet_user"
   arguments := [("userId", true), ("tone", false)]
   annotations := rootBag "greet_user" "Greet a customer by name."

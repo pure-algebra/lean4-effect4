@@ -1,7 +1,7 @@
 /-
-Contract: `test/contracts/surface-ingest.contract.md`.
+Contract: `Test/contracts/surface-ingest.contract.md`.
 
-Frozen by the wave-1b breaker before `Effect4/Surface/Ingest.lean` exists,
+Frozen by the wave-1b breaker before `Effect4.Surface.Ingest (planned module; the packet remains red)` exists,
 from `docs/research/2026-09-04-surface-library-plan.md` §4.8 alone. Red until
 the builder lands the module.
 

@@ -20,7 +20,7 @@ declarations that witness those behaviours.
 
 The census keys are *observed runtime behaviours*, never "function X exists".
 This module holds the frozen row list — one row per census id, carrying the
-`PORT-MANIFEST.md` disposition, the declared coverage state, and the witness
+disposition defined in `docs/RUNTIME-COVERAGE.md`, the declared coverage state, and the witness
 declarations with their expected kernel dependency receipts. It fails the
 build on a missing witness, a witness that is not a theorem, an axiom receipt
 drift, a duplicate id, or an inconsistent disposition/coverage pairing.
@@ -33,8 +33,8 @@ the ascriptions cannot be deleted without failing the gate.
 
 Nothing here adds to or removes from the `Effect4` surface. Since
 2026-09-04 the fiber rows are witnessed by the reference machine
-(`Effect4/Deep/Clauses.lean`, `Witnesses.lean`, `Stores.lean`, `Layer.lean`)
-and the frame machine (`Effect4/Runtime/Runtime.lean`); the retired
+(`src/Effect4/Machine/Clauses.lean`, `Witnesses.lean`, `Stores.lean`, `Layer.lean`)
+and the frame machine (`src/Effect4/Machine/Frames.lean`); the retired
 scheduler and supervision calculi cite nothing here any more.
 -/
 
@@ -52,7 +52,7 @@ open Effect4
 any statement is a `type mismatch` at the offending line. -/
 
 /-! The Cause/Exit model witnesses. Statements are transcribed from the frozen
-ascriptions of `Test/Semantics/CauseExitContract.lean`. -/
+ascriptions of `Test/Machine/Semantics/CauseExitContract.lean`. -/
 
 #check (@Effect4.Cause.eq_iff : forall {ε δ ι α : Type u} (left right : Cause ε δ ι α),
   left = right <-> left.reasons = right.reasons)
@@ -314,7 +314,7 @@ ascriptions of `Test/Semantics/CauseExitContract.lean`. -/
   (Exit.void : Exit Unit ε δ ι α) = Exit.success ())
 
 /-! The Scope model witnesses. Statements are transcribed from the frozen
-ascriptions of `Test/Runtime/ScopeContract.lean`. -/
+ascriptions of `Test/Machine/Runtime/ScopeContract.lean`. -/
 
 #check (@Effect4.ScopeState.cases_receipt :
   forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
@@ -951,7 +951,7 @@ SUPERVISION-PG-RC112; every joined runtime row is partial. -/
   forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (child : Effect4.FiberId) (cause : Effect4.Cause ε δ ι α), child ∈ s.live -> s.accepted = none -> 1 < s.remaining -> Effect4.Supervision.raceComplete s child (.failure cause) = {s with live := s.live.filter (fun id => decide (id ≠ child)), remaining := s.remaining - 1, failures := s.failures ++ cause.reasons})
 
 /-! The frame-machine witnesses. Statements are transcribed from the frozen
-ascriptions of `Test/Runtime/FramesContract.lean`.
+ascriptions of `Test/Machine/Runtime/FramesContract.lean`.
 
 The `Effect4.Prim` and `Effect4.FrameFiber` telescopes carry seven type
 parameters, and many of these statements quantify over all seven while naming
@@ -1981,8 +1981,8 @@ set_option linter.unusedVariables false
   host left = host right)
 
 
-/-! The reference machine's clauses (`Effect4/Deep/Clauses.lean`), the stores
-(`Effect4/Deep/Stores.lean`), the Layer model (`Effect4/Deep/Layer.lean`), the runtime's
+/-! The reference machine's clauses (`src/Effect4/Machine/Clauses.lean`), the stores
+(`src/Effect4/Machine/Stores.lean`), the Layer model (`src/Effect4/Machine/Layer.lean`), the runtime's
 `AsyncFinalizer` frame and the context family's two defaults, joined on 2026-09-04. Printed
 by the elaborator with full names and re-elaborated here, so a drift is a type mismatch. -/
 
@@ -3399,8 +3399,8 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
 
 
 /-! Second pass, 2026-09-04: the exit path, the observers, the races and the fork arms of the
-reference machine (`Effect4/Deep/Clauses.lean`), and the concrete witnesses over it
-(`Effect4/Deep/Witnesses.lean`), whose statements decide by evaluation. -/
+reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witnesses over it
+(`src/Effect4/Machine/Witnesses.lean`), whose statements decide by evaluation. -/
 
 #check (@Effect4.Machine.exitFiber_eq :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
@@ -5652,8 +5652,8 @@ private def censusRows : List Row :=
         , w `Effect4.Machine.injectYield_fires "propext"
         , w `Effect4.Machine.iteration_injected "propext,Quot.sound" ] }
     -- The Ref and Deferred rows are carried by the reference machine's stores
-    -- (`Effect4/Deep/Stores.lean`) and the Layer rows by its Layer model
-    -- (`Effect4/Deep/Layer.lean`) since 2026-09-04. The five `derivedExpansion`
+    -- (`src/Effect4/Machine/Stores.lean`) and the Layer rows by its Layer model
+    -- (`src/Effect4/Machine/Layer.lean`) since 2026-09-04. The five `derivedExpansion`
     -- rows are the ones the pinned source itself defines in terms of another
     -- pinned operation; the rest are `separateCalculus`.
   , { id := "ref.make", kind := "ref", disposition := "separateCalculus", coverage := "green"

@@ -8,7 +8,7 @@ where both exist; the census store holds one node per row and is reached by one 
 link resolves and names declared model elements.
 
 What the CAS-trait landing moved (`docs/research/2026-09-04-cas-trait-plan.md`, lane C's
-`workshop/Cas/NOTES-C.md`): `digestOf x` is `Canonical.digest x` for a payload and
+`docs/research/2026-09-05-workshop-cas/NOTES-C.md`): `digestOf x` is `Canonical.digest x` for a payload and
 `address x` for a node; `rc112 : Store Entry` with its ids and trie is gone, and the census is
 the heterogeneous `StdLib.store` — the genesis, three schema documents, twenty-one `Source`
 nodes, 1,835 `Entry` nodes and one `tree` node, 1,861 in all, under the root `stdlib/rc112`;
@@ -18,7 +18,7 @@ its `sha256` is a `Digest`, not a hexadecimal string; `storeJson` takes the stor
 because a payload is readable only through the spec its node cites and that is the reader's
 business, not the view's.
 
-Cost, measured 2026-09-05 (lane B, `workshop/Cas/NOTES-B.md`): the census store is a fold of
+Cost, measured 2026-09-05 (lane B, `docs/research/2026-09-05-workshop-cas/NOTES-B.md`): the census store is a fold of
 1,835 puts whose admission does a linear lookup each, so reducing it is the expensive guard in
 this file; it and the two view stores together were 22 s in a `lake env lean -M 3072` probe,
 which is what the module's own build time below is spent on. It is guarded rather than stated
@@ -27,10 +27,10 @@ because "one node per row, no two rows colliding" is the census's whole claim.
 Doc comments cannot precede `#guard`, so the receipts carry line comments.
 -/
 
-import Effect4.Evidence.StdLib.Links
-import Effect4.Evidence.Views
+import Effect4.StdLib.Links
+import Effect4.Arch.Views
 import Effect4.Evidence.SurfaceViews
-import Effect4.Schema.Accepts
+import Effect4.Arch.Accepts
 
 namespace Test.Arch.ArchContract
 

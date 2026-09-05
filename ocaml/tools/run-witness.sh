@@ -15,12 +15,9 @@
 
 set -u
 
-OCAMLC=${OCAMLC:-/Users/pooks/.opam/default/bin/ocamlc}
-OCAMLOPT=${OCAMLOPT:-/Users/pooks/.opam/default/bin/ocamlopt}
-OCAMLRUN=${OCAMLRUN:-/Users/pooks/.opam/default/bin/ocamlrun}
-JSOO=${JSOO:-/Users/pooks/Dev/effect4_of_ocaml/_build/toolchains/ocaml5-jsoo-5.7.1/_build/default/vendor/js_of_ocaml-compiler.5.7.1/compiler/bin-js_of_ocaml/js_of_ocaml.exe}
-NODE=${NODE:-node}
-O1_BUILD=${O1_BUILD:-/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/d87ba830-2e63-4750-815f-2679b36f870a/scratchpad/o1}
+. "$(dirname "$0")/lib/toolchain.sh"
+effect4_toolchain || exit 1
+O1_BUILD=${O1_BUILD:-${TMPDIR:-/tmp}/effect4-o1_build}
 
 status=0
 

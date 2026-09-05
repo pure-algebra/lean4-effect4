@@ -1,14 +1,14 @@
 /-
-Contract packet: `test/contracts/environment-context-key.contract.md`
+Contract packet: `Test/contracts/environment-context-key.contract.md`
 
 Breaker-owned red battery for environment-slice node L0, fence `F-KEY`
-(`Effect4/Context/Key.lean`). The implementation phase must not edit this file.
+(`src/Effect4/Machine/Key.lean`). The implementation phase must not edit this file.
 It is red until the frozen context-key declarations exist.
 
 Every obligation is ascribed at its exact proposition and supplied by name with
 `@`, so a declaration that carries the frozen name but a weaker statement does
 not satisfy the battery. Names are written fully qualified rather than through
-`open Effect4`, because during the red phase `Effect4/Context/Key.lean` is an
+`open Effect4`, because during the red phase `src/Effect4/Machine/Key.lean` is an
 empty stub that opens no namespace, and `open` of an absent namespace would
 produce a failure that is not an unresolved frozen name.
 

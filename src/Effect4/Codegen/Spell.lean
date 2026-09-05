@@ -1,3 +1,4 @@
+import Effect4.Data.Ascii
 import Effect4.Surface.Annotate
 import Effect4.Schema.Dimension
 import TypeScript
@@ -15,7 +16,7 @@ The relation between the two renderings is a **host receipt, not a theorem**:
 `SchemaRepresentation.toJson(SchemaRepresentation.toRepresentation(<spelled>.ast))`
 deep-equals the emitted document JSON of the same representation, for every fixture, run at
 the pin. Until that receipt lands every rule that spells a schema is `emitted`
-(`Effect4/Codegen/Rule.lean`).
+(`src/Effect4/Codegen/Rule.lean`).
 
 | | |
 | --- | --- |
@@ -41,7 +42,7 @@ shapes, and why each is refused:
 * `schema.protoKey`: an annotation payload with a `__proto__` key, which `Codegen.Schema`
   spells with `Object.fromEntries` and this fragment does not;
 * `schema.checkUnknown`, `schema.checkPattern`: `checks` outside the named library of
-  `Effect4/Schema/Authoring.lean`, and `isPattern` even though it is in that library, because
+  `src/Effect4/Schema/Authoring.lean`, and `isPattern` even though it is in that library, because
   the target fragment has no regular-expression former and `new RegExp(…)` cannot be
   spelled without smuggling `new` through an identifier;
 * `schema.checkGroup`, `schema.checkSchemas`, `schema.checkAnnotated`, `schema.checkAborting`:
@@ -61,7 +62,7 @@ shapes, and why each is refused:
 ## Tagged unions
 
 A sum type is `anyOf` of `objects` whose first property is `_tag`, a required string
-literal (`variant?` recognises the shape, `Effect4/Schema/Authoring.lean`'s `tagged` and
+literal (`variant?` recognises the shape, `src/Effect4/Schema/Authoring.lean`'s `tagged` and
 `variant` write it). It spells **structurally**, `Schema.Union([Schema.Struct({ "_tag":
 Schema.Literal("Circle"), … }), …])`, and not as `Schema.TaggedUnion`: rc.112's `tag` is
 `Literal(...).pipe(withConstructorDefault(...))` (`Schema.ts:6100-6102`), and whether that
@@ -75,7 +76,7 @@ reads `_tag` at the type level and needs nothing more.
 word list verbatim, but its traversal is `name.toUTF8.toList`, and `ByteArray.toList` does
 not reduce in the kernel on this toolchain: a `decide` over it gets stuck rather than
 answering. `identifier` below takes the same bytes by the route
-`Effect4/Store/Canonical.lean` takes, `s.toUTF8.data.toList`, which reduces and reaches no
+`src/Effect4/Store/Canonical.lean` takes, `(Data.Ascii.bytesOf s)`, which reduces and reaches no
 axiom. The two agree on every input by inspection and the equality is an owed row, not a
 theorem. The three functions stay in `Effect4.Surface` because the carriers' clauses read
 them; they are the Surface lane's byte profile, housed here until its `Bytes.lean`.
@@ -103,7 +104,7 @@ cannot drift; only the traversal differs, for the kernel-reduction reason in thi
 header.
 -/
 def identifier (name : String) : Bool :=
-  match name.toUTF8.data.toList with
+  match (Data.Ascii.bytesOf name) with
   | [] => false
   | first :: rest =>
     identifierStart first && rest.all identifierContinue &&
@@ -152,7 +153,7 @@ private def nullaryCheck (name : String) : Except Refusal Expr :=
 /--
 The rc.112 constructor call for one persisted check id.
 
-The ids are `Effect4/Schema/Authoring.lean`'s named library; the constructor names are read
+The ids are `src/Effect4/Schema/Authoring.lean`'s named library; the constructor names are read
 off rc.112 `Schema.ts` (`isTrimmed` at `:6763`, `isStringFinite` at `:6925`, `isStringBigInt`
 at `:6967`, `isStringSymbol` at `:7003`, `isStartsWith` at `:7340`, `isEndsWith` at `:7394`,
 `isIncludes` at `:7449`, `isUppercased` at `:7506`, `isLowercased` at `:7560`, `isCapitalized`

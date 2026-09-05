@@ -1,5 +1,5 @@
 (* The wire form of the shared trace alphabet, transcribed from
-   `Effect4/Target/TypeScript/Trace.lean:60-75` and matched against `harness/trace/tracer.ts`
+   `git:c407ab7:Effect4/Target/TypeScript/Trace.lean:60-75` and matched against `git:c407ab7:harness/trace/tracer.ts`
    (`wire`). Unit is `[]`, a list is right-nested pairs closed by unit, a handle is its index
    in first-seen order, `none` is `{"none":true}`, `some v` is `{"some":v}`; outcomes are
    `{"success":v}`, `{"failure":e}`, `{"interrupted":true}`. *)
@@ -18,7 +18,7 @@ let rec wire (v : value) : string =
   | Vsome v -> "{\"some\":" ^ wire v ^ "}"
   | Vlist items -> List.fold_right (fun item acc -> "[" ^ wire item ^ ", " ^ acc ^ "]") items "[]"
 
-(* `Trace.outcome` (`Effect4/Target/TypeScript/Trace.lean:70-74`) has four arms, and
+(* `Trace.outcome` (`git:c407ab7:Effect4/Target/TypeScript/Trace.lean:70-74`) has four arms, and
    `tracer.ts:110-121` fixes the precedence: a `Fail` reason first, then any `Interrupt`,
    then a `Die`. Round two only had two arms, which would have mis-rendered a die-only
    cause; nothing in the fiber goldens reached it, and the refusal arm now does. *)

@@ -6,9 +6,9 @@ host targets. This separation is the basis for the library; the cited
 literature motivates its interfaces but does not prove that Effect4 models
 Effect TypeScript or any host runtime.
 
-Status: adopted architecture, 2026-08-31. The generic algebra is implemented.
-The first-order flow, recursive semantics, logic, resource machine, target
-lowering, and Foldlab compatibility theorems remain proof obligations.
+Status: decision record begun 2026-08-31, reviewed 2026-09-05. Each DB row
+below carries its current disposition. Flow-specific derivations describe the
+archived route; current program syntax is `Eff` in `src/Effect4/Program/Eff.lean`.
 
 ## Re-review ruling
 
@@ -42,12 +42,14 @@ the project toolchain. API shapes were therefore checked again in the local
 | `Lean/Environment.lean` | `ee364e4788ce0560c87f621eeb3c4c3dfec62e8db4e15e099fd80e6adc533b86` | persistent and asynchronous extension state is an implementation concern; canonical export order is owned by Effect4 |
 | `Lean/Expr.lean` | `b9a91d9d170201c2a3622b9c55d694466f54e0e1b8f6068a2d296ff98650169c` | metavariables and elaborator expressions stop at the meta boundary |
 
-This is a refinement ruling, not a completed semantic claim. The first-order
-Flow, logic, runtime, target, and compatibility rows below remain open.
+This refinement ruling records the original obligations. Current dispositions
+and the scope of historical receipts are stated on each DB row below.
 
 ## Semantic decomposition
 
-Effect4 keeps four observations of a program distinct.
+The original Flow design separated the following four observations. This
+historical table is superseded on the program-data side by DB-02; the current
+module boundaries are in `docs/ARCHITECTURE.md`.
 
 | Face | Purpose | Identity and evidence |
 | --- | --- | --- |
@@ -65,7 +67,9 @@ program data.
 
 ### DB-01 — `Program` is the well-founded higher-order proof carrier
 
-Since 2026-09-02 the algebra is owned by lean4-effects `v0.1.0` (`5611c3a`) (`docs/EFFECTS-SPLIT-PLAN.md`); this section states the shape Effect4 builds on. The implemented algebra has the following shape:
+Status: adopted; the algebra is owned by the pinned `effects` dependency.
+
+Since 2026-09-02 the algebra is owned by lean4-effects `v0.1.0` (`5611c3a`) (`docs/research/EFFECTS-SPLIT-PLAN.md` (untracked working note)); this section states the shape Effect4 builds on. The implemented algebra has the following shape:
 
 ```text
 Signature.Op     : Type uOp
@@ -102,6 +106,10 @@ signature map or universe lift requires its own contract and coherence laws.
 
 ### DB-02 — `Flow` is the sole reifiable program representation
 
+Status: superseded by `Eff` in `src/Effect4/Program/Eff.lean`; the Flow route
+is retained at `606918e` in main's history and on branch `archive/flow-route`.
+The paragraphs below record the superseded design, not the current domain model.
+
 Canonical programs use a first-order graph with stable block, operation,
 region, and decision identifiers. Admission has the shape:
 
@@ -125,6 +133,8 @@ foreign boundary or receive a profile refusal. This policy prevents an
 uninspectable escape from being mislabeled as full reification.
 
 ### DB-03 — open nondeterminism and divergence are relational
+
+Status: adopted; current judgments are over the Machine configurations and explicit decisions.
 
 The denotation is a family of judgments over configurations, explicit
 decision tapes, observable events, and terminal outcomes. With no tape fixed,
@@ -153,6 +163,8 @@ case, the unpinned denotation remains relational.
 
 ### DB-04 — fixed fuel is an approximation, not a denotation
 
+Status: adopted as a constraint; the Flow-specific receipts below are historical.
+
 A bounded runner may report completion, an observable terminal result, or a
 live frontier. A live frontier is distinct from typed failure, defect,
 interruption, and profile refusal. In particular, fuel exhaustion must not be
@@ -171,8 +183,8 @@ failure. A live leaf may be refined by more execution without first being
 reclassified as an error.
 
 Those three laws are now theorems, not requirements, for both runners over
-`StateT σ Id` (`src/Effect4/Machine/Approximation.lean`, packet
-`Test/contracts/flow-approximation.contract.md`). What a bounded run *observes*
+`StateT σ Id` (`git:c407ab7:Effect4/Semantics/Approximation.lean`; battery
+`git:c407ab7:Effect4Test/Semantics/ApproximationContract.lean`). What a bounded run *observes*
 is `observe result log`: a fuel frontier contributes `live` and the log it had
 reached, without the trailing marker and without the resumption block, and
 every other result is `terminal`. `Observation.le` orders those observations —
@@ -183,14 +195,16 @@ compatibility is `Chain.stable` (with the raw form `loop_fuel_stable`);
 coherence is `Chain.colimit` with `Chain.colimit_below`,
 `Chain.colimit_bound_mono` and `Chain.colimit_eq_of_settled`. For an admitted
 plain flow the colimit is total, `runColimitDefault`, because
-`run_fuelFor_finishes` (DB-04's own fuel argument, `src/Effect4/Machine/Fuel.lean`)
+`run_fuelFor_finishes` (DB-04's own fuel argument, `git:c407ab7:Effect4/Semantics/Fuel.lean`)
 proves the allotted fuel suffices; the region runner has no such theorem yet, so
 `runRegionsColimit` is searched below a bound and returns an `Option`. The block
 identity inside `Frontier.fuel` is deliberately not observed: it is where to
 resume, not what was seen, and a jump cycle observes the same empty log at two
-different blocks (receipt in `Test/Machine/Semantics/ApproximationContract.lean`).
+different blocks (receipt in `git:606918eb73daefcc235a261fce879bf910f2471e:Effect4Test/Semantics/ApproximationContract.lean`).
 
 ### DB-05 — first-order block IDs do not require `HHandler`
+
+Status: adopted for first-order children; the block terminology below belongs to the archived route.
 
 [Higher-order effect frameworks](https://arxiv.org/abs/2302.01415) show why an
 operation that accepts an actual computation needs more structure than an
@@ -220,6 +234,8 @@ defunctionalization or introduce a separately justified higher-order calculus.
 
 ### DB-06 — EffHOL contributes the logic layer, not the carrier
 
+Status: adopted as a design constraint; the proof receipts below belong to the archived route.
+
 [EffHOL](https://arxiv.org/abs/2506.09458) parameterizes effectful realizability
 by a monad and a program modality. That organization supports a logic over
 Effect4 computations after the computational semantics is fixed. It does not
@@ -237,7 +253,7 @@ the decomposition
 wp p post <-> wlp p post /\ total p
 ```
 
-for the chosen semantics before calling a judgment `wp`. That theorem is discharged (2026-09-03) in `src/Effect4/Machine/Logic.lean`,
+for the chosen semantics before calling a judgment `wp`. That theorem is discharged (2026-09-03) in `git:c407ab7:Effect4/Semantics/Logic.lean`,
 over the semantics D1 fixed: `Effect4.Logic.wp_iff_wlp_and_total` for every
 `Program` relative to an answer specification, and `Effect4.Flow.wp_iff` in the
 flow reading, where the partiality `total` excludes is exactly the unanswered
@@ -247,6 +263,8 @@ through T1/T2. The paper's constructive soundness theorem is evidence about
 EffHOL, not a proof of Effect4's instance.
 
 ### DB-07 — runtime state remains observable on failure
+
+Status: adopted.
 
 The reference runtime floor uses `EStateM` or an equivalent result type whose
 error arm retains state. Lean's law
@@ -274,6 +292,8 @@ decisions, and managed-runtime disposal.
 
 ### DB-08 — `Expr` is a metaprogramming input only
 
+Status: restated in `AGENTS.md`, Representation rules (canonical program content).
+
 Lean's [`Expr`](https://lean-lang.org/doc/api/Lean/Expr.html) represents kernel
 and elaborator expressions, including metadata and metavariables. Effect4 may
 inspect an elaborated `Expr`, but it must emit a checked first-order
@@ -293,6 +313,8 @@ theorems. Its output is an axiom receipt, not a semantic correctness proof and
 not evidence about generated TypeScript behavior.
 
 ### DB-09 — Effect TypeScript is a versioned target profile
+
+Status: restated in `AGENTS.md`, Representation rules (target profile).
 
 The semantic authority for the first target profile is the Effect source tree
 at commit
@@ -334,6 +356,8 @@ Generation must prove or test separate claims:
 No one gate discharges the others.
 
 ### DB-10 — PolyFun is pinned prior art, not a public dependency
+
+Status: adopted as prior art, not an Effect4 proof receipt.
 
 The isolated audit of
 [`Verified-zkEVM/PolyFun` at `3937f7ff0830cca33d6b35a24aef55bcbe3b6bc9`](https://github.com/Verified-zkEVM/PolyFun/tree/3937f7ff0830cca33d6b35a24aef55bcbe3b6bc9)

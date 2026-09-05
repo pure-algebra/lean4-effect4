@@ -36,7 +36,7 @@ namespace OCaml5
 universe u
 
 /-- One row printed by an instrumented witness. The spelling is fixed by
-`tools/run-witness.sh`: tab-separated, first cell the event kind. -/
+`ocaml/tools/run-witness.sh`: tab-separated, first cell the event kind. -/
 abbrev Row := String
 
 /-- A witness: the source file, the rows each of the three hosts printed, and the term the Lean

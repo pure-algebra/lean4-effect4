@@ -168,6 +168,6 @@ def main (args : List String) : IO Unit := do
 end OCaml5.Fuzz
 
 
-/-- `lake env lean --run src/OCaml5/Fuzz.lean …`, which is how `tools/fuzz.sh` drives
+/-- `lake env lean --run src/OCaml5/Fuzz.lean …`, which is how `ocaml/tools/fuzz.sh` drives
 this module. -/
 def main (args : List String) : IO Unit := OCaml5.Fuzz.main args

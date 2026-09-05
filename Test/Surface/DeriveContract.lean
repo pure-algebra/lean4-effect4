@@ -1,8 +1,8 @@
 /-
-Contract: `test/contracts/surface-derive.contract.md`.
+Contract: `Test/contracts/surface-derive.contract.md`.
 
-Frozen by the wave-1b breaker before `Effect4/Surface/Derive.lean` and
-`Effect4/Surface/Model.lean` exist, from
+Frozen by the wave-1b breaker before `src/Effect4/Codegen/App.lean` and
+`Effect4.Surface.Model (planned module; the packet remains red)` exist, from
 `docs/research/2026-09-04-surface-library-plan.md` §14.3-§14.7. Red until the
 builder lands the modules (wave 2e).
 
@@ -13,9 +13,9 @@ Identified shop)` elaborates exactly when the auto-params discharge, so the
 definition itself is the receipt.
 
 A **compile-negative** is a term that must NOT elaborate. Lean has no `#guard`
-for that, so per `Test/AGENTS.md` the rejected declaration is recorded
+for that, so per `AGENTS.md` the rejected declaration is recorded
 verbatim in a comment beside the mutant it names and in
-`test/contracts/surface-derive.contract.md`; uncommenting it must fail, and a
+`Test/contracts/surface-derive.contract.md`; uncommenting it must fail, and a
 reviewer checks that by hand at landing.
 
 The derivation theorems are **used**, never restated. A battery that proved

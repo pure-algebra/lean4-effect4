@@ -1,3 +1,4 @@
+import Effect4.Data.Ascii
 import Effect4.Surface.Entity
 
 /-!
@@ -9,18 +10,18 @@ An **agent server** is one more surface: a name, a version, a list of tools
 whose parameters and results are kinded schemas, a list of resources and a list
 of prompts. Nothing here is a protocol implementation; the carrier is the
 first-order description that the toolkit module and the `tools/list`,
-`resources/list` and `prompts/list` payloads of `Effect4/Surface/Agent/Emit.lean`
+`resources/list` and `prompts/list` payloads of `src/Effect4/Codegen/Mcp.lean`
 are projections of.
 
-The shape is `Effect4/Arch/Views.lean`'s and `Effect4/Surface/Entity.lean`'s: a
+The shape is `src/Effect4/Arch/Views.lean`'s and `src/Effect4/Surface/Entity.lean`'s: a
 first-order structure, a `check` that is a list of named clauses read left to
-right and answers the *first* refusal (`Effect4/Surface/Facts.lean`), a
+right and answers the *first* refusal (`src/Effect4/Surface/Refusal.lean`), a
 `WellFormed` that is `check = .ok ()` and therefore one `Decidable` equation, a
 `wellFormed_iff` proving it equal to the conjunction of the clauses so a later
 capability can ask for exactly the ones it needs, a `json` projection, and a
 `Document` view with an `Arch.accepts` receipt. The hand `Canonical` instance
 that used to close the module went with the CAS trait: `Canonical` is now a
-class with three laws over the value tree (`Effect4/Store/Canonical.lean`),
+class with three laws over the value tree (`src/Effect4/Store/Canonical.lean`),
 derived rather than written, and nothing read this one.
 
 ## Semantics live in bags, never in a field
@@ -28,7 +29,7 @@ derived rather than written, and nothing read this one.
 §15.3 binds: an MCP tool's `description` **is** its `description` annotation.
 So no carrier here has a description field, and `Tool.descriptionOf`,
 `Resource.descriptionOf`, `Prompt.descriptionOf` and `McpServer.descriptionOf`
-all read `Effect4/Surface/Annotate.lean`'s `descriptionKey` off the value's own
+all read `src/Effect4/Surface/Annotate.lean`'s `descriptionKey` off the value's own
 bag through `bagValue?`. `identifier` is read the same way and both are
 required by §15.2, so a tool with no meaning is ill-formed by the same
 mechanism as one with an illegal name.
@@ -45,8 +46,8 @@ rc.112's own wire schema types a tool name as `Schema.String` and nothing more
 rc.112. It is the Model Context Protocol's, at the protocol versions this
 release declares (`unstable/ai/McpProtocol.ts:24`, `"2024-11-05" |
 "2025-03-26" | "2025-06-18" | "2025-11-25"`): `^[A-Za-z0-9_-]{1,64}$`. It is
-decided over UTF-8 bytes by the route `Effect4/Surface/Spell.lean`'s
-`identifier` takes, `name.toUTF8.data.toList`, because `ByteArray.toList` does
+decided over UTF-8 bytes by the route `src/Effect4/Codegen/Spell.lean`'s
+`identifier` takes, `(Data.Ascii.bytesOf name)`, because `ByteArray.toList` does
 not reduce in the kernel on this toolchain and a `decide` over it would get
 stuck rather than answer.
 
@@ -54,7 +55,7 @@ That grammar is *wider* than a legal TypeScript binding: `get-user` is a legal
 tool name and not a legal identifier. The toolkit emitter therefore refuses a
 tool whose name it cannot spell as a constant, rather than this module
 narrowing the wire grammar to the target's; the refusal row is named in
-`Effect4/Surface/Agent/Emit.lean`.
+`src/Effect4/Codegen/Mcp.lean`.
 
 | | |
 | --- | --- |
@@ -64,7 +65,7 @@ narrowing the wire grammar to the target's; the refusal row is named in
 | Structure | a three-part free monoid (tools, resources, prompts) over one server record; every clause is a `Bool` and the check is the `firstRefusal` fold |
 | Payoff | the three duplicate-name throws an MCP registration would make at run time become one decidable clause each, and every emitted description has exactly one source |
 | Anti-vacuity | the `shopServer` fixture: `decide` receipts for `WellFormed`, an `Arch.accepts` receipt for the view, and one refusing `#guard` per clause |
-| Generation | none here; `Effect4/Surface/Agent/Emit.lean` owns the two rules |
+| Generation | none here; `src/Effect4/Codegen/Mcp.lean` owns the two rules |
 
 ## What is deliberately not here
 
@@ -110,7 +111,7 @@ character count therefore agree on every admitted name and the `{1,64}` bound
 is exact.
 -/
 def mcpToolName (name : String) : Bool :=
-  let bytes := name.toUTF8.data.toList
+  let bytes := (Data.Ascii.bytesOf name)
   !bytes.isEmpty && bytes.length ≤ 64 && bytes.all mcpNameByte
 
 /-! ## The carriers -/
@@ -126,7 +127,7 @@ rc.112 defaults it to `Schema.Never` (`Tool.ts:1268`), which is a different
 statement from a declared failure type.
 
 No `DecidableEq` and no `Repr`: `Sch` carries a proof field, exactly as
-`Effect4/Surface/Kind.lean` records, so the compared and stored content is the
+`src/Effect4/Surface/Kind.lean` records, so the compared and stored content is the
 `json` projection below.
 -/
 structure Tool (refs : List ReferenceEntry) where
@@ -196,42 +197,48 @@ structure McpServer (refs : List ReferenceEntry) where
 
 /-! ## Semantics, read only through the bags -/
 
+instance {refs : List ReferenceEntry} : Annotated (Tool refs) := ⟨fun value => value.annotations⟩
+
 namespace Tool
 
 variable {refs : List ReferenceEntry}
 
 /-- The tool's `identifier`. -/
-def identifierOf (tool : Tool refs) : Option String :=
-  bagValue? identifierKey tool.annotations
+abbrev identifierOf (tool : Tool refs) : Option String :=
+  Effect4.Surface.identifierOf tool
 
 /-- The tool's `description`. This *is* the MCP `description` of §15.3; there
 is no second spelling. -/
-def descriptionOf (tool : Tool refs) : Option String :=
-  bagValue? descriptionKey tool.annotations
+abbrev descriptionOf (tool : Tool refs) : Option String :=
+  Effect4.Surface.descriptionOf tool
 
 end Tool
+
+instance : Annotated (Resource) := ⟨fun value => value.annotations⟩
 
 namespace Resource
 
 /-- The resource's `identifier`. -/
-def identifierOf (resource : Resource) : Option String :=
-  bagValue? identifierKey resource.annotations
+abbrev identifierOf (resource : Resource) : Option String :=
+  Effect4.Surface.identifierOf resource
 
 /-- The resource's `description`. -/
-def descriptionOf (resource : Resource) : Option String :=
-  bagValue? descriptionKey resource.annotations
+abbrev descriptionOf (resource : Resource) : Option String :=
+  Effect4.Surface.descriptionOf resource
 
 end Resource
+
+instance : Annotated (Prompt) := ⟨fun value => value.annotations⟩
 
 namespace Prompt
 
 /-- The prompt's `identifier`. -/
-def identifierOf (prompt : Prompt) : Option String :=
-  bagValue? identifierKey prompt.annotations
+abbrev identifierOf (prompt : Prompt) : Option String :=
+  Effect4.Surface.identifierOf prompt
 
 /-- The prompt's `description`. -/
-def descriptionOf (prompt : Prompt) : Option String :=
-  bagValue? descriptionKey prompt.annotations
+abbrev descriptionOf (prompt : Prompt) : Option String :=
+  Effect4.Surface.descriptionOf prompt
 
 /-- The argument names, in declaration order. -/
 def argumentNames (prompt : Prompt) : List String :=
@@ -239,17 +246,19 @@ def argumentNames (prompt : Prompt) : List String :=
 
 end Prompt
 
+instance {refs : List ReferenceEntry} : Annotated (McpServer refs) := ⟨fun value => value.annotations⟩
+
 namespace McpServer
 
 variable {refs : List ReferenceEntry}
 
 /-- The server's `identifier`. -/
-def identifierOf (server : McpServer refs) : Option String :=
-  bagValue? identifierKey server.annotations
+abbrev identifierOf (server : McpServer refs) : Option String :=
+  Effect4.Surface.identifierOf server
 
 /-- The server's `description`. -/
-def descriptionOf (server : McpServer refs) : Option String :=
-  bagValue? descriptionKey server.annotations
+abbrev descriptionOf (server : McpServer refs) : Option String :=
+  Effect4.Surface.descriptionOf server
 
 /-- The tool names, in registration order. -/
 def toolNames (server : McpServer refs) : List String :=
@@ -275,10 +284,12 @@ variable {refs : List ReferenceEntry}
 def nameLegal (tool : Tool refs) : Bool := mcpToolName tool.name
 
 /-- Clause (§15.2): the bag carries an `identifier`. -/
-def identified (tool : Tool refs) : Bool := tool.identifierOf.isSome
+abbrev identified (tool : Tool refs) : Bool :=
+  Effect4.Surface.identified tool
 
 /-- Clause (§15.2): the bag carries a `description`. -/
-def described (tool : Tool refs) : Bool := tool.descriptionOf.isSome
+abbrev described (tool : Tool refs) : Bool :=
+  Effect4.Surface.described tool
 
 /-- The clauses of a tool, in the order a check reads them. The server name is
 carried only so a refusal can say which server the tool was registered on. -/
@@ -327,10 +338,12 @@ end Tool
 namespace Resource
 
 /-- Clause (§15.2): the bag carries an `identifier`. -/
-def identified (resource : Resource) : Bool := resource.identifierOf.isSome
+abbrev identified (resource : Resource) : Bool :=
+  Effect4.Surface.identified resource
 
 /-- Clause (§15.2): the bag carries a `description`. -/
-def described (resource : Resource) : Bool := resource.descriptionOf.isSome
+abbrev described (resource : Resource) : Bool :=
+  Effect4.Surface.described resource
 
 /-- The clauses of a resource, in the order a check reads them. -/
 def clauses (resource : Resource) : List (Bool × Refusal) :=
@@ -372,10 +385,12 @@ end Resource
 namespace Prompt
 
 /-- Clause (§15.2): the bag carries an `identifier`. -/
-def identified (prompt : Prompt) : Bool := prompt.identifierOf.isSome
+abbrev identified (prompt : Prompt) : Bool :=
+  Effect4.Surface.identified prompt
 
 /-- Clause (§15.2): the bag carries a `description`. -/
-def described (prompt : Prompt) : Bool := prompt.descriptionOf.isSome
+abbrev described (prompt : Prompt) : Bool :=
+  Effect4.Surface.described prompt
 
 /-- Clause: no argument name is declared twice. -/
 def argumentsDistinct (prompt : Prompt) : Bool := namesUnique prompt.argumentNames
@@ -439,10 +454,12 @@ def promptNamesDistinct (server : McpServer refs) : Bool :=
   namesUnique server.promptNames
 
 /-- Clause (§15.2): the bag carries an `identifier`. -/
-def identified (server : McpServer refs) : Bool := server.identifierOf.isSome
+abbrev identified (server : McpServer refs) : Bool :=
+  Effect4.Surface.identified server
 
 /-- Clause (§15.2): the bag carries a `description`. -/
-def described (server : McpServer refs) : Bool := server.descriptionOf.isSome
+abbrev described (server : McpServer refs) : Bool :=
+  Effect4.Surface.described server
 
 /-- The server's own clauses, in the order a check reads them. -/
 def clauses (server : McpServer refs) : List (Bool × Refusal) :=
@@ -680,7 +697,7 @@ def mcpServerRep : Representation :=
     , Schema.property "prompts" (Schema.array (Schema.reference "McpPrompt")) ]
 
 /-- The agent-server view, for registration at `["surface", "mcp"]`. The
-registration itself is `Effect4/Surface/Views.lean`'s and is not made here. -/
+registration itself is `src/Effect4/Evidence/SurfaceViews.lean`'s and is not made here. -/
 def mcpDoc : Document :=
   { representation := mcpServerRep
     references :=
@@ -695,13 +712,13 @@ Every fixture carries its semantics, because §15.2 makes a row without one
 ill-formed. Tool parameter schemas are deliberately annotation-free: §4.3's
 JSON Schema ingest admits no annotation keywords, so an annotated parameter
 object would not survive the `tools/list` round trip of
-`Effect4/Surface/Agent/Emit.lean`, and the fixture is the thing that round trip
+`src/Effect4/Codegen/Mcp.lean`, and the fixture is the thing that round trip
 is `#guard`ed on.
 -/
 
 /-- An identified, described semantic bag, the shape §15.3's DSL will write.
 
-Fixture-local: `Effect4/Surface/Api.lean` carries the same construction for its
+Fixture-local: `src/Effect4/Surface/Api.lean` carries the same construction for its
 own battery. One canonical spelling in `Annotate.lean` is owed before wave 3a's
 DSL needs it (plan §13.6 rule 2). -/
 private def describedBag (identifier description : String) : Annotations :=

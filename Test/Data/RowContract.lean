@@ -1,8 +1,8 @@
 /-
-Contract packet: `test/contracts/data-row.contract.md`
+Contract packet: `Test/contracts/data-row.contract.md`
 
 Breaker-owned red battery for proof graph `DATA-PG-ROW`, node `DATA-ROW`, and
-production fence `F-ROW` (`Effect4/Data/Row.lean`). The builder must make this
+production fence `F-ROW` (`src/Effect4/Data/Row.lean`). The builder must make this
 file green without editing it. Until then the empty breadth stub makes every
 positive declaration check fail by unresolved frozen name.
 

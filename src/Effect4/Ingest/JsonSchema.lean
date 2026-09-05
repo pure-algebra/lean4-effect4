@@ -1,3 +1,4 @@
+import Effect4.Data.Ascii
 import Effect4.Ingest.Ingest
 import Effect4.Codegen.JsonSchema
 
@@ -5,14 +6,14 @@ import Effect4.Codegen.JsonSchema
 # Ingest.JsonSchema — draft 2020-12, read backwards
 
 Rule `surface.entity.jsonSchema` (`Rule.entityJsonSchema`) inverted: the `json` artefact
-`Effect4/Codegen/JsonSchema.lean` emits comes in, the carrier comes out. Every arm below is
+`src/Effect4/Codegen/JsonSchema.lean` emits comes in, the carrier comes out. Every arm below is
 one arm of that emitter read backwards, and every refusal is a constructor of the one
-alphabet (`Effect4/Surface/Refusal.lean`'s `jsonSchema*` group), so a `#surface_check` and a
+alphabet (`src/Effect4/Surface/Refusal.lean`'s `jsonSchema*` group), so a `#surface_check` and a
 `#surface_fit` see the ingest clauses beside the well-formedness ones.
 
 | | |
 | --- | --- |
-| Carrier | none of its own: the refusals are `Effect4/Surface/Refusal.lean`'s `Refusal` |
+| Carrier | none of its own: the refusals are `src/Effect4/Surface/Refusal.lean`'s `Refusal` |
 | Operations | `ofJsonSchema`, `ofJsonSchemaFuel`, `ofJsonSchemaDocument`; the `Ingest .entityJsonSchema` instance |
 | Laws | none proved. The round trip is the `#guard`s below and an **owed** theorem, named below |
 | Structure | a fuel-bounded partial function `Json ⇀ Representation`, a section of the emitter up to the quotient below |
@@ -31,7 +32,7 @@ with the enum compaction of `:519-534` read backwards into a literal or a union 
 
 ## The two refusals the byte route adds
 
-`refOfPointer` reads the pointer over `pointer.toUTF8.data.toList` and rebuilds the key with
+`refOfPointer` reads the pointer over `(Data.Ascii.bytesOf pointer)` and rebuilds the key with
 `Char.ofNat`/`String.ofList`, because `String.splitOn` reaches `Classical.choice` on this
 toolchain and the axiom gate refuses it. That route is exact below 128 and has nothing to
 say above it, so:
@@ -41,8 +42,8 @@ say above it, so:
 * a token with a non-ASCII byte is refused.
 
 Every reference key an `Entity` puts in a document is its name, and `Entity.nameLegal` asks
-that name for `Effect4/Codegen/Spell.lean`'s `identifier`, whose bytes are ASCII
-(`Effect4/Surface/Api.lean`, `identifier_bytes`); so no document this tree emits from an
+that name for `src/Effect4/Codegen/Spell.lean`'s `identifier`, whose bytes are ASCII
+(`src/Effect4/Surface/Api.lean`, `identifier_bytes`); so no document this tree emits from an
 entity can hit either refusal. A hand-built `Document` with such a reference key, and ingest
 of a *foreign* document with such a `$defs` key, do hit them. That is the honest cost of the
 ceiling rather than a claim about JSON Schema.
@@ -112,18 +113,6 @@ private def afterPrefix : List UInt8 → List UInt8 → Option (List UInt8)
   | wanted :: wantedRest, byte :: bytesRest =>
     if wanted == byte then afterPrefix wantedRest bytesRest else none
 
-/-- Read ASCII bytes back as characters, refusing the first byte that is not
-ASCII. `Char.ofNat` agrees with the UTF-8 decoding exactly below 128, and both
-it and `String.ofList` reach no axiom on this toolchain. -/
-private def asciiChars? : List UInt8 → Option (List Char)
-  | [] => some []
-  | byte :: rest =>
-    if byte < 128 then
-      match asciiChars? rest with
-      | some tail => some (Char.ofNat byte.toNat :: tail)
-      | none => none
-    else none
-
 /--
 Read a `$ref` pointer back as a reference, over UTF-8 bytes.
 
@@ -135,13 +124,13 @@ narrowings are this module's header.
 -/
 private def refOfPointer (pointer : String) : Except Refusal Representation :=
   let refused : Except Refusal Representation := .error (.jsonSchemaUnsupportedReference pointer)
-  match afterPrefix defsPointerPrefix pointer.toUTF8.data.toList with
+  match afterPrefix defsPointerPrefix (Data.Ascii.bytesOf pointer) with
   | none => refused
   | some [] => refused
   | some token =>
     if token.any (fun byte => byte == 47 || byte == 126) then refused
     else
-      match asciiChars? token with
+      match Data.Ascii.asciiChars? token with
       | some characters => .ok (Schema.reference (String.ofList characters))
       | none => refused
 

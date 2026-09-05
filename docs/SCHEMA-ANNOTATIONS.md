@@ -96,7 +96,7 @@ const UserId = Schema.String.pipe(
 )
 ```
 
-`./scripts/check-schema-annotations.sh` typechecks these combinators with the
+`scripts/check-schema-annotations.sh` typechecks these combinators with the
 unpatched TypeScript compiler, requests strict diagnostics from the Effect
 language service, executes the fixture, and confirms that JSON-valued custom
 dimensions survive `SchemaRepresentation.toRepresentation` and

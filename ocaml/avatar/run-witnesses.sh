@@ -81,6 +81,7 @@ else echo "clauses: $have_clauses entries != $lean_clauses Clauses.lean theorems
 if [ "$lean_witnesses" = "$have_witnesses" ]; then echo "witnesses: $have_witnesses entries = $lean_witnesses Witnesses.lean theorems"
 else echo "witnesses: $have_witnesses entries != $lean_witnesses Witnesses.lean theorems"; status=1; fi
 python3 "$here/extract-census.py" --check || status=1
+python3 "$here/check-witness-names.py" "$out/byte.tsv" || status=1
 
 grep -E '^clauses|^witnesses|^run-clauses|^park-guard' "$out/byte.tsv"
 # Seat F2: the park guard/one-shot probe must be silent on every run.
@@ -89,6 +90,12 @@ if [ "$(awk -F'\t' '$1=="park-guard"{print $3}' "$out/byte.tsv")" != "0" ]; then
 fi
 if [ "$(awk -F'\t' '$1=="witnesses"{print $6}' "$out/byte.tsv")" != "0" ]; then
   echo "witness statements FAIL on the avatar:"; grep -B1 '^  statement	FAILS' "$out/byte.tsv"; status=1
+fi
+if grep -q 'FAILS' "$out/byte.tsv"; then
+  echo "clause or witness probe FAILS on the avatar"; status=1
+fi
+if [ "$(awk -F'\t' '$1=="run-clauses"{print $3}' "$out/byte.tsv")" -eq 0 ]; then
+  echo "FAIL no census-joined run clause was exercised"; status=1
 fi
 # Seat F3: the Deep-file drift gate (`deep-pins.tsv`). A re-spelled arm under an unchanged
 # theorem count is invisible to the counts above; the content hash is not. `DEEP_PIN=skip`

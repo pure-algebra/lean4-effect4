@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# usage: EFFECT4_EFFECT_NODE_MODULES=<pinned node_modules> ./scripts/check-schema-effectful-field.sh
+# usage: EFFECT4_EFFECT_NODE_MODULES=<pinned node_modules> scripts/check-schema-effectful-field.sh
 #
 # Target host gate for `Test/contracts/schema-effectful-field-typescript.contract.md`.
 # It pins the host profile, then runs `harness/schema-effectful-field/check.sh`
@@ -10,7 +10,7 @@ set -euo pipefail
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 harness_dir="$project_root/harness/schema-effectful-field"
-node_modules="${EFFECT4_EFFECT_NODE_MODULES:-$project_root/../foldlab/library/effects/node_modules}"
+node_modules="${EFFECT4_EFFECT_NODE_MODULES:-$project_root/harness/schema-host/node_modules}"
 
 if [[ ! -d "$node_modules/effect" ]]; then
   echo "schema effectful-field harness: set EFFECT4_EFFECT_NODE_MODULES to the exact pinned node_modules directory" >&2

@@ -3,16 +3,16 @@
 Status: breaker packet, red, 2026-09-04 (wave 1b of
 `docs/research/2026-09-04-surface-library-plan.md`, §4.4 as revised by §13.1)
 
-Implementation (owed): `Effect4/Surface/Api.lean`, `Effect4/Surface/Api/Emit.lean`
+Implementation (owed): `src/Effect4/Surface/Api.lean`, `src/Effect4/Codegen/Target.lean`
 
-Battery: `Effect4Test/Surface/ApiContract.lean`
+Battery: `Test/Surface/ApiContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-016` through `E4-SURFACE-CE-037`,
 `E4-SURFACE-CE-065`
 
-Witnesses: `Effect4Test/Counterexamples/Surface/Api.lean`
+Witnesses: `Test/Counterexamples/Surface/Api.lean`
 
-Shared: `test/contracts/surface-facts.contract.md` owns the `Refusal`
+Shared: `Test/contracts/surface-facts.contract.md` owns the `Refusal`
 alphabet; this contract owns the endpoint, group and API clause names and
 their order.
 
@@ -165,7 +165,7 @@ theorem Endpoint.wellFormed_params_match {refs} (e : Endpoint refs) :
 theorem Api.routes_nodup {refs} (a : Api refs) :
     Api.WellFormed a → (Api.routes a).Nodup
 
--- Effect4/Surface/Api/Emit.lean
+-- src/Effect4/Codegen/Target.lean
 def httpApiModule {refs} (a : Api refs) (dom : Domain) : Option TypeScript.Module
 def clientModule {refs} (a : Api refs) : Option TypeScript.Module
 def openApi {refs} (a : Api refs) (dom : Domain) : Option Effect4.Json
@@ -281,5 +281,5 @@ v1 *emitters* handle everything the carrier expresses: `multipart`,
 emits nothing. It does not model middlewares, annotations beyond the two
 mandatory keys, `disableCodecs`, or the string-tree codec transformation
 rc.112 applies to params, query and headers. It does not model handlers;
-`Effect4/Surface/Handler.lean` (plan §13.2) is wave 2d and has no contract in
+`src/Effect4/Surface/Handler.lean` (plan §13.2) is wave 2d and has no contract in
 this packet, which is finding 9 of the wave-1b report.

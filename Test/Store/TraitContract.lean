@@ -1,5 +1,5 @@
 /-
-Contract: traits as typed annotation nodes and their resolution (`Effect4/Store/Traits.lean`).
+Contract: traits as typed annotation nodes and their resolution (`src/Effect4/Store/Traits.lean`).
 
 Frozen: the four rules of `docs/research/2026-09-04-cas-trait-facts.md` §5, Q8. A trait is an
 `annotation` node (kind 6) whose payload is content — a subject, a value, and an optional

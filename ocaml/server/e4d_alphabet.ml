@@ -1,7 +1,7 @@
 (* The daemon's own service alphabet.
 
    The estate describes a host boundary as a family of operations with an `OpSpec` row each
-   (`Effect4/Target/TypeScript/ScriptFlow.lean:39`: `name`, `kind`, `requestTy`, `answerTy`,
+   (`git:c407ab7:Effect4/Target/TypeScript/ScriptFlow.lean:39`: `name`, `kind`, `requestTy`, `answerTy`,
    `errorTy`, `params`). The daemon *is* a host boundary, so its request set is written in
    that shape and not in prose: `families` answers the five service families in `OpSpec`
    rows, and `schema` answers the daemon's own requests in the same rows, so a caller reads

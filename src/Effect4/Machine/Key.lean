@@ -4,9 +4,9 @@ import Std
 # First-order context keys
 
 Owner: the environment slice's `L0` identity node, fence `F-KEY` in
-`docs/ENVIRONMENT-DAG.md`. Its contract packet is
-`test/contracts/environment-context-key.contract.md` and its red battery is
-`Test/Environment/ContextKeyContract.lean`.
+`docs/research/ENVIRONMENT-DAG.md`. Its contract packet is
+`Test/contracts/environment-context-key.contract.md` and its red battery is
+`Test/Machine/Environment/ContextKeyContract.lean`.
 
 A context key is **first-order data**. `ServiceKey` is a `Type` at universe
 zero: the ordered pair of a nominal `ServiceName` and a first-order
@@ -173,7 +173,7 @@ The non-strict key order: strictly below, or equal.
 `Std`'s order hierarchy is stated over `LE`, not over `LT`. `Std.IsPreorder`,
 `Std.IsPartialOrder`, and `Std.IsLinearOrder` all quantify over `≤`, and
 `Std.LawfulOrderLT` exists precisely to demand that a supplied `<` agrees with
-that `≤`. `test/contracts/data-row.contract.md` quantifies every row operation
+that `≤`. `Test/contracts/data-row.contract.md` quantifies every row operation
 over `Std.IsLinearOrder` and `Std.LawfulOrderLT`, so a canonical row over keys
 cannot be spelled from `DecidableEq` and `LT` alone. That packet assigns the
 missing instances to this node rather than to the row.
@@ -315,7 +315,7 @@ end ServiceKey
 A supplied reading of first-order service type codes as Lean types.
 
 This is a trusted boundary object of exactly the kind `Effect4.FlowAlphabet`
-already is in `Effect4/Flow/Block.lean`, whose docstring records that executable
+already is in `git:cd750aca903f8ca5417bc7a29253035dec743594:Effect4/Flow/Block.lean`, whose docstring records that executable
 lookup stays in the trusted semantic environment "so no host function enters
 canonical flow content". The same sentence applies here: a universe is a Lean
 function, it is deliberately outside the first-order frame, and it may not be

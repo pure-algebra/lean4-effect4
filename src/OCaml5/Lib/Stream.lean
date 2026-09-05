@@ -15,10 +15,10 @@ builds one; `Runner` consumes one against a bounded buffer, which is where back-
 ## The state of `Effect4/Channel` (checked, 2026-09-04)
 
 There is no `Effect4/Channel/`. The only `Channel` modules in the tree are
-`vendor/foldlab/pinned/tree/formal/effect-core-v1/EffectCore/Channel/Core.lean` and
+`git:c407ab7:vendor/foldlab/pinned/tree/formal/effect-core-v1/EffectCore/Channel/Core.lean` and
 `.../Channel/Stream.lean`, both of which are **reserved empty module boundaries** — eleven lines
 of docstring, `namespace EffectCore.Channel`, `end`. The only other trace of the shapes is the
-rc.112 census in `Effect4/StdLib/Rc112.lean:32-34,1301-…`, which pins the digests of
+rc.112 census in `src/Effect4/StdLib/Rc112.lean:32-34,1301-…`, which pins the digests of
 `src/Stream.ts`, `src/Sink.ts` and `src/Channel.ts` and lists their exports. So the shapes here
 are taken from **rc.112's own vocabulary** (`Take`, `Pull`, `Channel`, `Sink`, `Stream`), not
 from an existing Lean carrier, and this module is the first Lean carrier for them.
@@ -39,7 +39,7 @@ from an existing Lean carrier, and this module is the first Lean carrier for the
 
 ## What each definition stands for
 
-| here | rc.112 (`effect` rc.112, pinned in `Effect4/StdLib/Rc112.lean`) | Eio / Core |
+| here | rc.112 (`effect` rc.112, pinned in `src/Effect4/StdLib/Rc112.lean`) | Eio / Core |
 | --- | --- | --- |
 | `Take` | `Take.ts`: `Chunk` / `End` / `Failure`, plus `pending` for "the pull's effect has not resolved" | — |
 | `Channel` | `Channel.ts`: a program that emits chunks downstream and terminates once | Eio's `Flow.source` (covered: `emit` is a `read`, `halt none` is `End_of_file`) |

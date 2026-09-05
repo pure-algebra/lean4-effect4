@@ -1,8 +1,8 @@
 /-
 Executable witnesses for `E4-SURFACE-CE-001` through `E4-SURFACE-CE-005`.
 
-Contract: `test/contracts/surface-kind.contract.md`. Frozen by the wave-1b
-breaker before `Effect4/Surface/Kind.lean` exists; red until the builder lands
+Contract: `Test/contracts/surface-kind.contract.md`. Frozen by the wave-1b
+breaker before `src/Effect4/Surface/Kind.lean` exists; red until the builder lands
 it. Each attack is a named `def` whose docstring carries its id, the statement
 it attacks and the repair it forces; the executable check is the `#guard` that
 follows it.

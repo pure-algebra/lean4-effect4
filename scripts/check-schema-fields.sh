@@ -55,7 +55,7 @@ Without --dry-run the file must be the pinned rc.112 bytes.
 With --dry-run any Effect source is accepted, and the result closes nothing.
 
 --expect <file> replaces the frozen table with one read from <file>. It exists
-only so the reaction test in scripts/test-schema-fields-gate.sh can exercise
+only so the reaction test in git:c407ab7:scripts/test-schema-fields-gate.sh can exercise
 this detector hermetically, it requires --dry-run, and it closes nothing.
 USAGE
       exit 0

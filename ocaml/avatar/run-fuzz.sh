@@ -8,22 +8,26 @@ set -uo pipefail
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 # <repo>/ocaml/avatar -> <repo>. The estate lived under `workshop/OCaml5/` until 2026-09-04.
 repo=$(CDPATH= cd -- "$here/../.." && pwd)
-out=${A0_BUILD:-${TMPDIR:-/tmp}/effect4-avatar-fuzz}
-oc=${OCAML5_BIN:-$(dirname "$(command -v ocamlc || echo /nonexistent/ocamlc)")}
+ . "$repo/ocaml/tools/lib/toolchain.sh"
+effect4_toolchain || exit 1
 fuzz="$repo/ocaml/probes/fuzz/corpus"
-masks="$repo/generated/traces/masks.tsv"
+masks="$repo/ocaml/server/generated/traces/masks.tsv"
 [ -f "$fuzz/index.tsv" ] || { echo "SKIP no P5 corpus at $fuzz"; exit 0; }
-
-rm -rf "$out/fuzzbuild" "$out/fuzzts" "$out/fuzz_rc" "$here/out/fuzz"
+(cd "$repo/ocaml" && dune build avatar/effect4_avatar.cma) || exit 1
+bin="$repo/ocaml/_build/default/avatar"
+scratch_parent=${A0_BUILD:-${TMPDIR:-/tmp}}
+mkdir -p "$scratch_parent"
+out=$(mktemp -d "$scratch_parent/effect4-fuzz.XXXXXX")
+trap 'rm -rf -- "$out"' EXIT
 mkdir -p "$out/fuzzbuild" "$out/fuzzts" "$out/fuzz_rc" "$here/out/fuzz"
-cp "$here"/*.ml "$out/fuzzbuild/"; cp "$out/build/corpus_data.ml" "$out/fuzzbuild/"
-cp "$fuzz/corpus_fixture.ml" "$out/fuzzbuild/"
-( cd "$out/fuzzbuild" && "$oc/ocamlc" -o avatar-fuzz.byte deep_fibers.ml deep_stores.ml \
-    deep_layer.ml avatar_trace.ml \
-    fibers_fixture.ml store_fixtures.ml extra_fixture.ml corpus_dsl.ml corpus_data.ml \
-    corpus_run.ml corpus_fixture.ml fuzz_register.ml avatar_main.ml ) || exit 1
+cp "$fuzz/corpus_fixture.ml" "$here/fuzz_register.ml" "$here/avatar_main.ml" "$out/fuzzbuild/"
+# Link dune's library: the module inventory and dependency order have one owner.
+( cd "$out/fuzzbuild" && "$OCAMLC" -I "$bin/.effect4_avatar.objs/byte" -linkall \
+    "$bin/effect4_avatar.cma" corpus_fixture.ml fuzz_register.ml avatar_main.ml \
+    -o avatar-fuzz.byte ) || exit 1
+if [ "${1:-}" = --build-only ]; then echo 'PASS fuzz driver links the dune avatar library'; exit 0; fi
 cp "$fuzz/corpus-fixture.ts" "$here/fuzz_rc112_tail.ts" "$out/fuzzts/"
-ln -sfn "${EFFECT4_EFFECT_NODE_MODULES:-$HOME/Dev/foldlab/library/effects/node_modules}" \
+ln -sfn "${EFFECT4_EFFECT_NODE_MODULES:-$repo/ts/eff/node_modules}" \
   "$out/fuzzts/node_modules"
 echo '{"type":"module"}' > "$out/fuzzts/package.json"
 
@@ -31,10 +35,10 @@ a_ok=0; a_bad=0; r_ok=0; r_bad=0
 for p in $(awk -F'\t' 'NR>1{print $1}' "$fuzz/index.tsv"); do
   tape=$(cat "$fuzz/$p/tape" 2>/dev/null)
   if ( cd "$out/fuzzbuild" && EFFECT4_FAMILY=fuzz EFFECT4_PROGRAM="$p" EFFECT4_TAPE="$tape" \
-         timeout 15 "$oc/ocamlrun" ./avatar-fuzz.byte ) > "$here/out/fuzz/$p.ocaml.tsv" 2>/dev/null
+         timeout 15 "$OCAMLRUN" ./avatar-fuzz.byte ) > "$here/out/fuzz/$p.ocaml.tsv" 2>/dev/null
   then a_ok=$((a_ok+1)); else a_bad=$((a_bad+1)); rm -f "$here/out/fuzz/$p.ocaml.tsv"; fi
   if ( cd "$out/fuzzts" && EFFECT4_PROGRAM="$p" EFFECT4_TAPE="$tape" \
-         timeout 15 node --experimental-strip-types --no-warnings fuzz_rc112_tail.ts ) \
+         timeout 15 "$NODE" --experimental-strip-types --no-warnings fuzz_rc112_tail.ts ) \
        > "$out/fuzz_rc/$p.tsv" 2>/dev/null
   then r_ok=$((r_ok+1)); else r_bad=$((r_bad+1)); rm -f "$out/fuzz_rc/$p.tsv"; fi
 done

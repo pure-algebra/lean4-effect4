@@ -8,12 +8,21 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      LEAN_NUM_THREADS: 2
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # Historical citation receipts resolve against immutable commits.
       - uses: leanprover/lean-action@v1
         with:
           auto-config: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Install the pinned surface compiler
+        run: bun install --frozen-lockfile --cwd ts/eff
       - name: Build production library
         run: lake build Effect4
       # The green battery and the axiom gate: `Test` is the `Test.All` root plus
@@ -23,18 +32,20 @@ jobs:
         run: lake build Test
       - name: Self-test Effect4 trust gate
         run: ./scripts/test-trust-gate.sh
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+      - name: Install the pinned Schema host profile
+        run: npm ci --prefix harness/schema-host --no-audit --no-fund
       - name: Verify Schema structural assurance join
+        env:
+          EFFECT4_EFFECT_NODE_MODULES: ${{ github.workspace }}/harness/schema-host/node_modules
         run: ./scripts/test-schema-structural-assurance-gate.sh
       - name: Verify Effect runtime census join
         run: ./scripts/check-effect-runtime-census.sh
-      # The hermetic lane of the sweep: the internal-citations and
-      # effect-runtime-census gates, which regenerate from Lean and compare
-      # bytes and need no node and no installed Effect package. Gates ran
-      # nowhere but a hand-driven local sweep until wave 0, which is why drift
-      # gates could stay red on main without anyone noticing (survey finding
-      # H5). They are portable since scripts/lib/portable.sh replaced
-      # `shasum -a 256` and `sed -i ''` (finding H36). The census above is
-      # inside the subset too and hits its stamp the second time, so it costs
-      # nothing to leave both.
+      - name: Test citation detector reactions
+        run: python3 scripts/test-source-citations.py && bash scripts/test-internal-citations-gate.sh
+      # The pinned-source lane includes surface extraction using the compiler above;
+      # it does not execute the Effect host runtime or require an OCaml switch.
       - name: Sweep the hermetic gates
         run: ./scripts/sweep.sh --hermetic

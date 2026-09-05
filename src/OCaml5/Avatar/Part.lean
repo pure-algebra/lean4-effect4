@@ -7,7 +7,7 @@ import OCaml5.Ml.Reflect
 `ocaml/avatar/`: the hand descriptions of its carriers (`OCaml5.Ml.Reflect`), the twins
 `Tools/Describe.lean` read off the Lean environment (`OCaml5.Avatar.Derived.*`), and the block
 rendered into the file. `OCaml5.Avatar.parts` lists the parts; `Tools/RenderDeep.lean` prints a
-part's block, `tools/fuzz.sh avatar` compiles and diffs it, and `OCaml5.Avatar.Check` compares
+part's block, `ocaml/tools/fuzz.sh avatar` compiles and diffs it, and `OCaml5.Avatar.Check` compares
 every guarded hand description with its derived twin.
 
 **Depends on.** `OCaml5.Ml.Reflect`.

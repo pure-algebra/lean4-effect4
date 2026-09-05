@@ -1,8 +1,8 @@
 # First-order Flow admission attacks
 
-Packet: `test/contracts/flow-admission.contract.md`
+Packet: `git:c407ab7:test/contracts/flow-admission.contract.md`
 
-Battery: `Effect4Test/Flow/AdmissionContract.lean` (v1; retired 2026-09-02 with the Flow v2 re-freeze in lean4-effects v0.4.0, whose batteries are `EffectsTest/Flow/FlowV2Contract.lean` and `EffectsTest/Counterexamples/Flow/FlowV2.lean`)
+Battery: `git:c95171106b732e590fbfbd5b68308c70aa6e338d:Effect4Test/Flow/AdmissionContract.lean` (v1; retired 2026-09-02 with the Flow v2 re-freeze in lean4-effects v0.4.0, whose batteries are `EffectsTest/Flow/FlowV2Contract.lean` and `EffectsTest/Counterexamples/Flow/FlowV2.lean`)
 
 These are durable semantic attacks. They are retained after the implementation
 turns the breaker battery green.
@@ -68,7 +68,7 @@ whole-document rather than root-reachable-only.
 
 `CheckedFlow.raw` and `CheckedFlow.wf` are public observations, not an external
 construction license. The paired compile-negatives in
-`Effect4Test/Flow/PrivacyContract.lean` ask Lean to resolve
+`git:c95171106b732e590fbfbd5b68308c70aa6e338d:Effect4Test/Flow/PrivacyContract.lean` ask Lean to resolve
 `CheckedFlow.mk` and to build the record from a separate importing module.
 Both forms must remain unavailable, so callers can obtain a checked value only
 through `admit`. Making the constructor public removes both expected

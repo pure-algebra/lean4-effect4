@@ -97,8 +97,8 @@ $manifest = @(
     # The census (lane C): sources first, because `Entry.source : Ref Source` needs the kind.
     # No appended guards: `Links.lean` and `Rc112.lean` exercise the laws over the real census.
     Name    = 'StdLib'
-    Imports = 'Effect4.Evidence.StdLib.Entry'
-    Out     = 'src\Effect4\Evidence\StdLib\Derived.lean'
+    Imports = 'Effect4.StdLib.Entry'
+    Out     = 'src\Effect4\StdLib\Derived.lean'
     Guards  = ''
     Kinds   = @('Effect4.StdLib.Source=source', 'Effect4.StdLib.Entry=export')
     Types   = @('Effect4.StdLib.ExportKind', 'Effect4.StdLib.Source', 'Effect4.StdLib.Entry')
@@ -109,8 +109,8 @@ $manifest = @(
     # non-recursive sum reader is fixed (see NOTES-X.md, open item 1). The acceptance guards are
     # `#guard`s in the room, not an appended fragment.
     Name    = 'Char'
-    Imports = 'Effect4.Evidence.Char.Conformance.Surface'
-    Out     = 'src\Effect4\Evidence\Char\Derived.lean'
+    Imports = 'Effect4.Char.Conformance.Surface'
+    Out     = 'src\Effect4\Char\Derived.lean'
     Guards  = ''
     Kinds   = @('Effect4.Char.Evidence=annotation', 'Effect4.Char.Claim=annotation',
                 'Effect4.Char.Manifest=component', 'Effect4.Char.Target=annotation',

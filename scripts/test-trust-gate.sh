@@ -12,8 +12,7 @@
 #
 # * The SOURCES it tokenizes and closes over come from the project root it
 #   finds by walking up from the file being elaborated (`findProjectRoot`,
-#   which looks for `lakefile.toml`), then walking `src/Effect4/`, `Test/` and
-#   `Fixtures/` under it.
+#   which looks for `lakefile.toml`), then walking `src/Effect4/` and `Test/`.
 # * The DECLARATIONS it inspects come from whatever oleans `LEAN_PATH`
 #   provides, and it audits only constants that belong to some module — a
 #   constant declared in the file being elaborated has no module and is never
@@ -109,15 +108,6 @@ echo "PASS default green target builds and its axiom gate accepts the real tree"
 accepted=$((accepted + 1))
 step_end "step 0a  lake build Test"
 
-# Lake reports failing targets as "- <Module>" lines after its summary marker.
-failing_targets() {
-  awk '''
-    /^Some required targets logged failures:/ { collecting = 1; next }
-    collecting && /^- / { print substr($0, 3); next }
-    collecting && $0 !~ /^- / { collecting = 0 }
-  ''' "$1" | LC_ALL=C sort -u
-}
-
 declared_red="$( { [[ -f "$known_red" ]] && grep -v '''^[[:space:]]*#''' "$known_red" \
   | grep -v '''^[[:space:]]*$''' || true; } | LC_ALL=C sort -u )"
 
@@ -161,20 +151,16 @@ fi
 
 step_begin
 if [[ -n "$declared_red" ]]; then
-  # One invocation, exactly the declared modules. A module that has gone green
-  # builds and is absent from the failing set, which is the "stale entry"
-  # direction. The other direction — an undeclared red module — is the closure
-  # gate's own job, and step 0a just ran it.
-  # shellcheck disable=SC2086
-  (cd "$repo_root" && lake build $declared_red) >"$probe_log" 2>&1 || true
-  observed_red="$(failing_targets "$probe_log")"
-  if [[ "$observed_red" != "$declared_red" ]]; then
-    echo "FAIL the declared red set does not match the modules that actually fail" >&2
-    echo "--- declared red but actually green; remove the stale entry ---" >&2
-    comm -13 <(printf '''%s\n''' "$observed_red") <(printf '''%s\n''' "$declared_red") >&2
-    tail -60 "$probe_log" >&2
-    exit 1
-  fi
+  # Lake's failed-target summary omits dependents blocked by a red import. That
+  # omission is not evidence that those dependents compiled. Elaborate each source
+  # directly against the green closure so every declared-red entry is tested.
+  while IFS= read -r module; do
+    source="${module//.//}.lean"
+    if (cd "$repo_root" && lake env lean -M4096 "$source") >"$probe_log" 2>&1; then
+      echo "FAIL declared red but actually green; remove the stale entry: $module" >&2
+      exit 1
+    fi
+  done <<< "$declared_red"
   echo "PASS every module declared red in known-red.txt is still red"
 else
   echo "PASS no module is declared red"
@@ -193,9 +179,6 @@ cp "$repo_root/lakefile.toml" "$repo_root/lean-toolchain" "$probe/"
 cp "$repo_root/src/Effect4.lean" "$probe/src/"
 cp -R "$repo_root/src/Effect4" "$probe/src/"
 cp -R "$repo_root/Test" "$probe/"
-if [[ -d "$repo_root/Fixtures" ]]; then
-  cp -R "$repo_root/Fixtures" "$probe/"
-fi
 
 # A search root that is the real build directory plus room for one more module.
 # It has to be a mirror rather than a prefix on LEAN_PATH: Lean picks the FIRST

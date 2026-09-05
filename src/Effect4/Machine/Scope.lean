@@ -24,10 +24,10 @@ carrier and imports only `Effect4.Semantics.Exit`.
 
 Pinned source: `vendor/effect-4.0.0-rc.112/src/Scope.ts` 99-187 and
 `internal/effect.ts` 3769-3922 and 3937-3987. The frozen surface is
-`test/contracts/scope.contract.md`, held by the battery
-`Test/Runtime/ScopeContract.lean` and the axiom report
-`Test/Runtime/ScopeAxiomReport.lean`. The proof graph is
-`docs/SCOPE-DAG.md`.
+`Test/contracts/scope.contract.md`, held by the battery
+`Test/Machine/Runtime/ScopeContract.lean` and the axiom report
+`Test/Machine/Runtime/ScopeAxiomReport.lean`. The proof graph is
+`docs/research/SCOPE-DAG.md`.
 -/
 
 namespace Effect4
@@ -35,7 +35,7 @@ namespace Effect4
 universe u v
 
 /-- rc.112's `"sequential" | "parallel"` close label. It carries no scheduler
-payload: `docs/SCOPE-DAG.md` separation 7 records why. -/
+payload: `docs/research/SCOPE-DAG.md` separation 7 records why. -/
 inductive FinalizerStrategy
   /-- Finalizers are awaited one after another. -/
   | sequential
@@ -1017,7 +1017,7 @@ theorem closeResult_closed (run : φ -> Exit β ε δ ι α -> Exit Unit ε δ �
 
 /-- The strategy label selects no observation this model exposes. The temporal
 difference between "sequential" and "parallel" belongs to the fiber machine,
-which this packet does not model; `docs/SCOPE-DAG.md` keeps the two rows
+which this packet does not model; `docs/research/SCOPE-DAG.md` keeps the two rows
 `partial` for it. census: scope.close-parallel -/
 theorem close_strategy_irrelevant (run : φ -> Exit β ε δ ι α -> Exit Unit ε δ ι α)
     (state : ScopeState κ φ β ε δ ι α) (exit : Exit β ε δ ι α) :

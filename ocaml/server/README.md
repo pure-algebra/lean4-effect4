@@ -2,7 +2,7 @@
 
 `effect4d` is one OCaml executable that runs Effect programs on the avatar
 (`ocaml/avatar/`, the OCaml 5 transcription of `src/Effect4/Machine/*.lean`, called
-`Effect4/Deep/*.lean` until "Prod cleanup 3") and answers questions about the runs, over
+`src/Effect4/Machine/*.lean` until "Prod cleanup 3") and answers questions about the runs, over
 newline-delimited JSON.
 
 It is built for three hosts from one module list:
@@ -23,8 +23,8 @@ tools/dune-test.sh                     # build, then every test on every host th
 ```
 
 The build is dune's since 2026-09-04: `BUILD-DUNE.md` is the account (what changed from
-`build-server.sh`, the generated modules, the archived inputs). `build-server.sh` and
-`tests/run-tests.sh` are the earlier shell build, kept for reference. The avatar is not
+the earlier shell build, the generated modules, the archived inputs). The two
+superseded shell build/test drivers were retired on 2026-09-05. The avatar is not
 copied into this directory: `effect4d_lib` links the avatar's own library by its public name
 `effect4-avatar`, and dune compiles those fifteen modules once (BUILD-DUNE.md §4).
 
@@ -162,7 +162,7 @@ to write to a file.
 ## 3. The row vocabulary
 
 The rows are the estate's, verbatim, one TSV line per row
-(`Effect4/Target/TypeScript/Trace.lean`, `harness/trace/tracer.ts`):
+(`git:c407ab7:Effect4/Target/TypeScript/Trace.lean`, `git:c407ab7:harness/trace/tracer.ts`):
 
 ```
 op	<name>	<request>
@@ -209,7 +209,7 @@ for the `WithFiberAction` arms no committed golden reaches). `programs` lists ev
 ## 5. The requests
 
 The full alphabet is answered by `schema`, in the estate's `OpSpec` shape
-(`Effect4/Target/TypeScript/ScriptFlow.lean:39`: `name`, `kind`, `requestTy`, `answerTy`,
+(`git:c407ab7:Effect4/Target/TypeScript/ScriptFlow.lean:39`: `name`, `kind`, `requestTy`, `answerTy`,
 `errorTy`, `params`) — the daemon is a host boundary and describes itself the way the estate
 describes one. What follows is prose for the same 19 rows.
 
@@ -464,7 +464,6 @@ dune                     the build: the four generated modules, effect4d_lib ove
                          avatar's library `effect4-avatar`, the three hosts (BUILD-DUNE.md)
 tools/dune-build.sh      build all three hosts, into ocaml/_build
 tools/dune-test.sh       build, then every test on every host this machine reaches
-build-server.sh          the earlier shell build, superseded by `dune`; reference only
 e4d_json.ml              a minimal JSON value, parser and printer  (-> Yojson)
 e4d_wire.ml              the trace wire: headers, row kinds, masks, projection, comparison
 e4d_protocol.ml          the request and response carriers, and their codec  (-> deriving)
@@ -481,7 +480,6 @@ server_runtime.js        the four JavaScript externals of the jsoo build
 tools/gen_armmap.py      the avatar's dispatch tables, row names and citations
 tools/gen_families.py    the five families' OpSpec rows, from the harness fixtures
 tools/gen_pins.py        the pin, the per-file digests, the build note
-tests/run-tests.sh       the shell build's test driver, superseded by tools/dune-test.sh
 tests/test_client.py     the protocol, on every request, program, property and host
 tests/lib_test.ml        the library surface, no wire (OCaml)
 tests/node_module_demo.mjs   the jsoo build required as a node module (JavaScript)

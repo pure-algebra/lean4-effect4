@@ -37,12 +37,12 @@ own `Bool` rather than a separate mask alphabet.
 Pinned source: `vendor/effect-4.0.0-rc.112/src/internal/core.ts` 365-583 and
 `internal/effect.ts` 505-550, 653-698, 737-744, 928-946, 1356-1379, 1662-1689,
 2474-2501, 3426-3465, 4001-4029, 4302-4367 and 4623-4645. The frozen surface is
-`test/contracts/frames.contract.md`, held by the battery
-`Test/Runtime/FramesContract.lean` and the axiom report
-`Test/Runtime/FramesAxiomReport.lean`. The proof graph is
-`docs/FRAMES-DAG.md`; the registered attacks are `E4-RUN-CE-010` through
+`Test/contracts/frames.contract.md`, held by the battery
+`Test/Machine/Runtime/FramesContract.lean` and the axiom report
+`Test/Machine/Runtime/FramesAxiomReport.lean`. The proof graph is
+`docs/research/FRAMES-DAG.md`; the registered attacks are `E4-RUN-CE-010` through
 `E4-RUN-CE-021`, witnessed in
-`Test/Counterexamples/Runtime/Frames.lean`.
+`Test/Counterexamples/Machine/Runtime/Frames.lean`.
 -/
 
 namespace Effect4
@@ -1448,7 +1448,7 @@ live `_stack`, so a frame a hook pushed is popped before the frames that were
 already below it. This loop therefore drains the hook's push with `passPushed`
 before it recurses, and only then continues on `rest`.
 
-`docs/FRAMES-DAG.md` "Where the fusion could diverge" named `AsyncFinalizer` as
+`docs/research/FRAMES-DAG.md` "Where the fusion could diverge" named `AsyncFinalizer` as
 the one shape that forces this, and it does:
 `popFrom_asyncFinalizer_pops_its_push` is the witness that the pushed frame is
 answered inside the same pop, and `popFrom_pass_no_push` is the agreement with
@@ -1865,7 +1865,7 @@ theorem popFrom_continue_fiber (demand : Arm) (skip : Bool) (frame : Prim ν σ 
 pushes nothing, popped from a fiber whose scratch stack is empty, continues the
 traversal on exactly the frames that were left and the hook's own fiber — which
 is what the fused loop did for every frame declared before the parking packet.
-`docs/FRAMES-DAG.md:200-211` asked for this agreement or for the loops to be
+`docs/research/FRAMES-DAG.md:200-211` asked for this agreement or for the loops to be
 unfused; this is the half that still agrees.
 census: rule.frames-are-primitives -/
 theorem popFrom_pass_no_push (demand : Arm) (skip : Bool) (frame : Prim ν σ β ε δ ι α)
@@ -1882,7 +1882,7 @@ theorem popFrom_pass_no_push (demand : Arm) (skip : Bool) (frame : Prim ν σ β
   simp
 
 /-- The other half, and the reason the loops had to be unfused. `AsyncFinalizer`
-is the shape `docs/FRAMES-DAG.md:200-211` reserved: its hook pushes and it does
+is the shape `docs/research/FRAMES-DAG.md:200-211` reserved: its hook pushes and it does
 not answer a `contA` demand. rc.112 pops the frame the hook pushed *next*, so
 the restoring `SetInterruptible(true)` runs inside this very pop and, with a
 cause already recorded, substitutes `failCause(cause)` for the demanded arm. The
@@ -2378,7 +2378,7 @@ stops until something outside it resumes. A single fiber stepped on its own has
 nothing to resume it, so this function returns the fiber unchanged and leaves
 the fixed point standing. `docs/DESIGN-BASIS.md` DB-04 makes that a frontier and
 not a failure, not a defect and not a refusal: the run loop
-(`workshop/Deep/Fibers.lean`) intercepts both primitives before it delegates to
+(`src/Effect4/Machine/Fibers.lean`) intercepts both primitives before it delegates to
 this step, and only what it does not intercept reaches here.
 census: rule.frames-are-primitives -/
 def step [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
@@ -2713,7 +2713,7 @@ theorem step_asyncFinalizer_not_evaluable [DecidableEq ε] [DecidableEq δ] [Dec
 resume and no other fiber to run it, so the step is the identity and the fixed
 point is a live frontier under `docs/DESIGN-BASIS.md` DB-04 — never a failure,
 never a defect, never an interruption and never a refusal. The run loop
-(`workshop/Deep/Fibers.lean`) intercepts `Yield` before it delegates here.
+(`src/Effect4/Machine/Fibers.lean`) intercepts `Yield` before it delegates here.
 census: op.Yield -/
 theorem step_yieldNowWith_frontier [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
     [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α) (self : FrameFiber ν σ β ε δ ι α)
@@ -3010,7 +3010,7 @@ and "Fuel adequacy"). Nothing in this module ever *writes* `interruptedCause`:
 answering frame is never skipped by `popFrom`, and `getCont` never answers the
 deferred interrupt.
 
-`FRAME-FB-NONNULL` (`docs/FRAMES-DAG.md`) becomes **vacuous on that fragment**:
+`FRAME-FB-NONNULL` (`docs/research/FRAMES-DAG.md`) becomes **vacuous on that fragment**:
 the state in which `pendingCause` answers `Cause.empty` where rc.112 asserts
 `_interruptedCause!` is not reachable from `start` by `step`. The row is *not*
 retired. The invariant is a fragment fact, not a model fact: the supervision

@@ -1,7 +1,7 @@
 /-
-Contract: `test/contracts/surface-deploy.contract.md`.
+Contract: `Test/contracts/surface-deploy.contract.md`.
 
-Frozen by the wave-1b breaker before `Effect4/Surface/Deploy.lean` exists,
+Frozen by the wave-1b breaker before `src/Effect4/Surface/Deploy.lean` exists,
 from `docs/research/2026-09-04-surface-library-plan.md` §4.6 alone. Red until
 the builder lands the module.
 

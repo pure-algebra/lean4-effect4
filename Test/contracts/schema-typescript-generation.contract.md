@@ -2,13 +2,13 @@
 
 Status: implementation slice, 2026-08-31
 
-Implementation: `Effect4/Target/TypeScript/Schema.lean`
+Implementation: `src/Effect4/Codegen/Schema.lean`
 
-Battery: `Effect4Test/Target/TypeScript/SchemaGenerationContract.lean`
+Battery: `Test/Codegen/SchemaGenerationContract.lean`
 
 Host harness: `scripts/check-schema-typescript-generation.sh`
 
-Coverage corpus: `Effect4Test/Target/TypeScript/SchemaGenerationCoverage.lean`
+Coverage corpus: `Test/Codegen/SchemaGenerationCoverage.lean`
 
 ## Boundary
 

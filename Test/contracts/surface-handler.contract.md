@@ -4,19 +4,19 @@ Status: breaker packet, red, 2026-09-04 (wave 1b, for wave 2d of
 `docs/research/2026-09-04-surface-library-plan.md` §13.2, under the rulings of
 §13.7)
 
-Implementation (owed): `Effect4/Surface/Handler.lean`
+Implementation (owed): `src/Effect4/Surface/Handler.lean`
 
-Battery: `Effect4Test/Surface/HandlerContract.lean`
+Battery: `Test/Surface/HandlerFitsContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-076` through `E4-SURFACE-CE-087`
 
-Witnesses: `Effect4Test/Counterexamples/Surface/Handler.lean`
+Witnesses: `Test/Counterexamples/Surface/HandlerFits.lean`
 
-Reads: `Effect4/Syntax/Typing.lean` (`Ty`, `EffTy`, `Signature`, `typeOf`,
-`EffTy.joinAnswer`), `Effect4/Syntax/Eff.lean` (`Eff`, `Row`, `Ty.join`,
-`Ty.key`), `Effect4/Syntax/Print.lean` (`print`, `PrintRefusal`, `printDecl`)
+Reads: `src/Effect4/Program/Typing.lean` (`Ty`, `EffTy`, `Signature`, `typeOf`,
+`EffTy.joinAnswer`), `src/Effect4/Program/Eff.lean` (`Eff`, `Row`, `Ty.join`,
+`Ty.key`), `src/Effect4/Codegen/Print.lean` (`print`, `PrintRefusal`, `printDecl`)
 
-Shared: `test/contracts/surface-facts.contract.md` owns the `Refusal`
+Shared: `Test/contracts/surface-facts.contract.md` owns the `Refusal`
 alphabet; this contract adds six constructors and owns their clause order.
 
 Pins: rc.112 `unstable/httpapi/HttpApiBuilder.ts:126` (`group`), `:441`
@@ -235,7 +235,7 @@ Graph edge `SURFACE-PG-HANDLER`, obligations:
 | --- | --- |
 | identity | `answerTy`/`errorTy`/`effTy` pinned against exact `Ty` and `EffTy` values on the fixtures, including the union's member order |
 | admission | `Handler.fits` true on the fitting handler, false on each of the four mutants, and false whenever `effTy` refuses |
-| bridges | the `requires`/`ServiceKey` join to `surface-deploy.contract.md`, and the `Signature`/`typeOf` join to `Effect4/Syntax/Typing.lean` |
+| bridges | the `requires`/`ServiceKey` join to `surface-deploy.contract.md`, and the `Signature`/`typeOf` join to `src/Effect4/Program/Typing.lean` |
 | targets | `handlersModule` refusals; the emitted bytes and their typecheck are the harness's, and the rule stays `RuleStance.emitted` |
 | counterexamples | `E4-SURFACE-CE-076` through `E4-SURFACE-CE-087` |
 

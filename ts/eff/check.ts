@@ -4,7 +4,7 @@
 //
 //   bun run check.ts <dir> [<dir>…] [--oracle <dir>]
 //
-// The oracle files are written by `src/Tools/ImageCorpus.lean`: the program Lean's own
+// The oracle files are written by `tools/Tools/Corpus.lean`: the program Lean's own
 // reader gets back after the printer (`Api.roundTrip`). A match is this reader agreeing with
 // Lean's reader on that program. Exit status 1 on any mismatch or any refusal of a program
 // that has an oracle.

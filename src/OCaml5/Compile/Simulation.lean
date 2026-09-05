@@ -159,7 +159,7 @@ reduce cheaply: its state carries association lists, strings and the whole block
 the eleven instances below cost thirty. Measured, not guessed:
 
 ```
-$ lean src/OCaml5/compile/Simulation.lean -o /tmp/Sim.olean
+$ lean src/OCaml5/Compile/Simulation.lean -o /tmp/Sim.olean
    30767131504  peak memory footprint
 ```
 

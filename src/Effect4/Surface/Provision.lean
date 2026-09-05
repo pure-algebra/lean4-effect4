@@ -11,7 +11,7 @@ the join's home in the algebra; the file sits under `Surface/` because it is the
 `Surface` imports `Program` (`docs/ARCHITECTURE.md`).
 
 **The thesis, in one sentence.** A cloud deployment — the `Deployment` carrier of
-`Effect4/Surface/Deploy.lean`, which is a wrangler configuration — *is* a closed layer: its
+`src/Effect4/Surface/Deploy.lean`, which is a wrangler configuration — *is* a closed layer: its
 bindings are the platform's provisions (`Layer.succeed` leaves), its `provides` rows are
 services built from those bindings (`Layer.effect` leaves that read one binding), the
 deployment is `servicesLayer.pipe(Layer.provideMerge(bindingsLayer))`, and the string-level
@@ -19,17 +19,17 @@ deployment law `Deployment.satisfies` is a shadow of the row law `LayerTy.provid
 
 What this module adds, and what it deliberately reuses:
 
-* **Reused, never re-declared.** Everything of `Effect4/Program/Provision.lean`: `LayerTy` and its
+* **Reused, never re-declared.** Everything of `src/Effect4/Program/Provision.lean`: `LayerTy` and its
   provision algebra (`provide`, `provideMerge`, `merge`, `Closed`, `provide_closed`),
   `LayerTerm` and `LayerTerm.mergeAll`, `layerTy`, `bodyRequires`, `litVal`, the
   specification `build` with its `LeafSem` hook, `specKeys`, and the machine probes
   `lower`, `buildSucceeds`, `buildServices`, `provideThenService`. Everything of
-  `Effect4/Surface/Deploy.lean`: `Deployment`, `Binding`, `builtinProvider`,
+  `src/Effect4/Surface/Deploy.lean`: `Deployment`, `Binding`, `builtinProvider`,
   `Deployment.bindingNames`, `Deployment.provided`, `Deployment.ProvidersKnown`,
   `Deployment.mountedRequirements`, `Deployment.RequirementsMet`, `Deployment.satisfies`
   and the `docs` fixture. Nothing here re-states a row law: `Row.diff`, `Row.union`,
   `Row.mem_diff`, `Row.diff_eq_empty_iff_subset` are the ones already proved.
-* **A name table.** `ServiceKey` is a pair of `Nat`s (`Effect4/Machine/Key.lean`), and a
+* **A name table.** `ServiceKey` is a pair of `Nat`s (`src/Effect4/Machine/Key.lean`), and a
   wrangler binding is a `String`. `indexOf`/`keyOf` are the model's stand-in for rc.112's
   tag-string identity (`Context.ts:32-41`, `Context.Service("…")`, read off its uses at
   `internal/effect.ts:2069`): a name is a service exactly when the table lists it, and its
@@ -70,7 +70,7 @@ bindings, and that strictness is a lint, not a soundness clause.
 
 Avoiding `scopeKey` alone needs only `i+1`. The machine reserves **four** key names —
 `scopeKey` 0, `maxOpsKey` 1, `preventYieldKey` 2, `currentMemoMapKey` 3
-(`Effect4/Machine/Context.lean:912-922`) — and at `i+1` the `docs` table below mints all
+(`src/Effect4/Machine/Context.lean:912-922`) — and at `i+1` the `docs` table below mints all
 three of the others. That is not a naming clash; two of the three are live defects, and the
 machine exhibits them:
 
@@ -96,7 +96,7 @@ has to be given the reserved set rather than a hard-coded offset.
 `#guard`s below show the seeded and unseeded folds agree on every row), but it costs one
 extra memoized description and one extra `mergeAll` fork level per side, and the `docs`
 fixture then does not finish inside the fixed 512-step budget of
-`Effect4/Program/Provision.lean`'s `runOver` — `buildSucceeds` answers `some false` where the unseeded fold answers `some true`.
+`src/Effect4/Program/Provision.lean`'s `runOver` — `buildSucceeds` answers `some false` where the unseeded fold answers `some true`.
 Both receipts are `#guard`s below. The unseeded fold is also the closer reading of
 `Layer.mergeAll(l, …)` (`Layer.ts:1652`), whose first argument is a layer. Whether the
 machine's build of the seeded fold merely needs more fuel, or is quadratic in the fold's
@@ -123,7 +123,7 @@ def indexOf : List String → String → Option Nat
   | entry :: rest, name => if entry == name then some 0 else (indexOf rest name).map (· + 1)
 
 /-- The number of key names the machine reserves: `scopeKey` 0, `maxOpsKey` 1,
-`preventYieldKey` 2, `currentMemoMapKey` 3 (`Effect4/Machine/Context.lean:912-922`). -/
+`preventYieldKey` 2, `currentMemoMapKey` 3 (`src/Effect4/Machine/Context.lean:912-922`). -/
 def reservedKeys : Nat := 4
 
 /-- The key a name mints: its position **shifted past the reserved keys**, so no name can
@@ -576,7 +576,7 @@ theorem deploymentLayer_shape (names : List String) (dep : Surface.Deployment)
 /-- **A deployment whose providers are known is a closed layer.** `Layer<ROut, E, never>`:
 nothing is left for the host to supply, which is the sentence `Effect.provide(program,
 layer)` type-checks by and the sentence `wrangler deploy` is checked by. The route is
-`LayerTy.provide_closed` (`Effect4/Program/Provision.lean`) over `Row.diff_eq_empty_iff_subset`, with
+`LayerTy.provide_closed` (`src/Effect4/Program/Provision.lean`) over `Row.diff_eq_empty_iff_subset`, with
 `Deployment.ProvidersKnown` putting every provider among the bindings. -/
 theorem deploymentLayer_closed (names : List String) (dep : Surface.Deployment)
     (l : LayerTerm DeployOp) (h : deploymentLayer names dep = some l)
@@ -750,7 +750,7 @@ def fB (i : Nat) : LayerTerm DeployOp := bindingLeaf ⟨⟨i⟩, ⟨i⟩⟩ i
 /-! ### Refusals are data -/
 
 /-- The typo of `Deployment.check`'s `providerUnknown` clause. -/
-def docsTypo : Surface.Deployment := { Surface.docsDeployment with provides := [("Db", "DBB")] }
+private def docsTypo : Surface.Deployment := { Surface.docsDeployment with provides := [("Db", "DBB")] }
 
 -- the surface refuses it by a constructor
 #guard Surface.Deployment.check docsTypo == .error (.providerUnknown "docs" "Db" "DBB")

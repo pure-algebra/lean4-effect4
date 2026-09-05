@@ -3,17 +3,17 @@
 Status: breaker packet, red, 2026-09-04 (wave 1b of
 `docs/research/2026-09-04-surface-library-plan.md` §4.6)
 
-Implementation (owed): `Effect4/Surface/Deploy.lean`
+Implementation (owed): `src/Effect4/Surface/Deploy.lean`
 
-Battery: `Effect4Test/Surface/DeployContract.lean`
+Battery: `Test/Surface/DeployContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-043` through `E4-SURFACE-CE-049`,
 `E4-SURFACE-CE-067`
 
-Shared: `test/contracts/surface-facts.contract.md` owns the `Refusal`
+Shared: `Test/contracts/surface-facts.contract.md` owns the `Refusal`
 alphabet.
 
-Witnesses: `Effect4Test/Counterexamples/Surface/Deploy.lean`
+Witnesses: `Test/Counterexamples/Surface/Deploy.lean`
 
 Pins: `wrangler` 3.114.16 `config-schema.json` (vendored under
 `vendor/wrangler-3.114.16/`, SHA-256 recorded there), rc.112

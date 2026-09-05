@@ -1,4 +1,4 @@
-(* `Effect4/Deep/Witnesses.lean` → `deep_witnesses.ml`: the executable witnesses, one OCaml
+(* `src/Effect4/Machine/Witnesses.lean` → `deep_witnesses.ml`: the executable witnesses, one OCaml
    entry per Lean theorem, in the Lean order, each running the machine(s) the theorem reads
    through the avatar (`replay` over an explicit decision tape, as `replayEval` does) and
    stating the theorem at the avatar's alphabet.
@@ -9,7 +9,7 @@
    is mutable and every run starts from reset global state (`Deep_clauses.setup`). A
    witness theorem is a record: the machines it reads, run under the clause probe, and its
    statement as a check over the snapshots. The clauses a witness exercises are read off the
-   census join (`deep_census.ml`): the rows that cite `Effect4.Deep.Witnesses.<name>`, and
+   census join (`deep_census.ml`): the rows that cite `Effect4.Machine.Witnesses.<name>`, and
    the `Clauses.lean` clauses those rows cite -- the same join `RuntimeCoverage.lean` makes.
 
    Where the statement depends on the value alphabet, the avatar's spelling is used and the

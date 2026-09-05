@@ -1,8 +1,8 @@
 # Schema attack shapes
 
-Contract packet: `test/contracts/schema-representation.contract.md`
+Contract packet: `Test/contracts/schema-representation.contract.md`
 
-Ruling input: `docs/SCHEMA-CUTOVER.md`
+Ruling input: `docs/research/SCHEMA-CUTOVER.md`
 
 These rows attack the Schema tag census. Payload, denotation, codec, and wire
 attacks are reserved below and belong to later packets.
@@ -33,7 +33,7 @@ replacement and any constructor-order swap. A later parameterised form must
 therefore be an explicit view with conversion laws, not a replacement carrier.
 
 Executable witness:
-`Effect4Test/Counterexamples/Schema/SemanticTagSeparation.lean`.
+`Test/Counterexamples/Schema/SemanticTagSeparation.lean`.
 
 ## Wire spelling drift — `E4-SCHEMA-CE-018`
 
@@ -52,7 +52,7 @@ The battery pins the exact string for the divergent rows and requires
 injectivity law and a partial-inverse pair, not by a naming convention.
 
 Executable witness:
-`Effect4Test/Counterexamples/Schema/WireSpellingDrift.lean`.
+`Test/Counterexamples/Schema/WireSpellingDrift.lean`.
 
 ## Length is not coverage — `E4-SCHEMA-CE-019`
 
@@ -71,11 +71,11 @@ it holds under any permutation of the listing and cannot be satisfied by
 reordering.
 
 Executable witness:
-`Effect4Test/Counterexamples/Schema/CensusCoverage.lean`.
+`Test/Counterexamples/Schema/CensusCoverage.lean`.
 
 ## Order is not precedence
 
-`docs/SCHEMA-CUTOVER.md` states that the census is a membership census, not a
+`docs/research/SCHEMA-CUTOVER.md` states that the census is a membership census, not a
 claim that its source order is parser precedence. The exact ordered list and
 recursor are frozen as source/API identity, but no semantic or coverage
 theorem interprets a position as precedence. This is a standing constraint on
@@ -98,7 +98,7 @@ embedding, then witnesses that the embedding is injective and reaches neither
 nothing.
 
 Executable witness:
-`Effect4Test/Counterexamples/Schema/KindAlphabetSeparation.lean`.
+`Test/Counterexamples/Schema/KindAlphabetSeparation.lean`.
 
 ## Excluded values given constructors — `E4-SCHEMA-CE-021`, `E4-SCHEMA-CE-022`
 
@@ -129,12 +129,12 @@ which is a real rc.112 census member. The tag and the literal payload kind are
 different alphabets and conflating them is its own error.
 
 Executable witnesses:
-`Effect4Test/Counterexamples/Schema/NoNullLiteralKind.lean` and
-`Effect4Test/Counterexamples/Schema/NoLocalSymbolPropertyKey.lean`.
+`Test/Counterexamples/Schema/NoNullLiteralKind.lean` and
+`Test/Counterexamples/Schema/NoLocalSymbolPropertyKey.lean`.
 
 ## Reserved attacks
 
-`docs/SCHEMA-CUTOVER.md` reserves sixteen stable IDs for the payload,
+`docs/research/SCHEMA-CUTOVER.md` reserves sixteen stable IDs for the payload,
 denotation, codec, and wire layers. They are listed here so the IDs are not
 reused, and they are **not** discharged by the census packet:
 
@@ -163,7 +163,7 @@ The `Suspend` question that was open when these rows were reserved is now
 (`:988`). The persisted field is already first-order data, so no host closure
 is ever stored. The named source pin and lexical census edge are resolved; this
 does not close the payload carrier, bridge, or denotation. See
-`docs/SCHEMA-CUTOVER.md`.
+`docs/research/SCHEMA-CUTOVER.md`.
 
 ## Numeric domains — `E4-SCHEMA-CE-023`
 
@@ -187,7 +187,7 @@ A populated references table does not mean the document is recursive. A
 *shared but non-recursive* name allocates a table entry, and the resulting
 document contains no `Suspend` at all. Evidence is the first-party executable
 pin sealed in the vendor at
-`vendor/foldlab/pinned/tree/library/effects/test/SchemaReferencesPin.test.ts`
+`git:c407ab7:vendor/foldlab/pinned/tree/library/effects/test/SchemaReferencesPin.test.ts`
 (SHA-256 `73b28e60505f219903cbdcb5e390e1a201df469a5b91f17269f45a19064106cb`).
 
 Recursion is a `Suspend` on a reference path, not a non-empty table. No
@@ -226,9 +226,9 @@ constrains the pointer, not the table key.
 
 # Payload carrier attacks
 
-Contract packet: `test/contracts/schema-payload.contract.md`
+Contract packet: `Test/contracts/schema-payload.contract.md`
 
-Battery: `Effect4Test/Schema/PayloadContract.lean`
+Battery: `Test/Schema/PayloadContract.lean`
 
 These rows attack the recursive first-order payload tree that hangs off the
 22-tag census: its constructors, its scalars, its tag projection, its documents,
@@ -436,7 +436,7 @@ under `Filter.representation.schemas`.
 twin and its expected result directly from the Lean witness. Effect
 `4.0.0-rc.112` refuses it at
 `["representation"]["checks"][0]["representation"]["schemas"][0]["$ref"]`;
-`./scripts/check-schema-annotations.sh` executes that assertion with the direct
+`scripts/check-schema-annotations.sh` executes that assertion with the direct
 TypeScript compiler and the Effect language service.
 
 ## Silence is not absence — `E4-SCHEMA-CE-034`
@@ -539,7 +539,7 @@ The packet's answer is to defer, explicitly, to the wire-profile packet
 (`SC-WIRE-01`/`SC-WIRE-02`), which the ruling already gives the JSON shape, and
 to enforce the non-claim: `Representation.persistedFieldName` and
 `Representation.fieldKeyName` must not resolve inside the payload fence. Until
-that owner exists, `SC-REP-FIELD-PIN` — what `./scripts/check-schema-fields.sh`
+that owner exists, `SC-REP-FIELD-PIN` — what `scripts/check-schema-fields.sh`
 reports on — is a single-route lexical extraction with no Lean cross-check, and
 the script says so itself.
 
@@ -567,7 +567,7 @@ too early. A dead entry is never visited because only references reachable from
 a root are revived (`SchemaRepresentation.ts:1250`).
 
 That mechanism is a pin-level handle on `SC-DOC-06` — guardedness decides
-constructibility, not productivity — which `Effect4/Schema/Document.lean`
+constructibility, not productivity — which `src/Effect4/Schema/Document.lean`
 currently records as having no witness in this checkout. It is a host
 observation, not a Lean theorem, and it does not close that edge.
 
@@ -643,7 +643,7 @@ constructor equations and both rebuild identity theorems; the finite witness
 makes the easy-to-miss routes executable.
 
 Executable witness:
-`Effect4Test/Counterexamples/Schema/RecursiveElimination.lean`.
+`Test/Counterexamples/Schema/RecursiveElimination.lean`.
 
 ## No focus is not a focus containing none — `E4-SCHEMA-CE-044`
 
@@ -657,7 +657,7 @@ that case to `none` makes it observationally equal to `.string none []`.
 so a stored `none` is `some none`. Replacement on `Reference` is a no-op rather
 than an invented field.
 
-Executable witness: `Effect4Test/Counterexamples/Schema/AnnotationDataPlane.lean`.
+Executable witness: `Test/Counterexamples/Schema/AnnotationDataPlane.lean`.
 
 ## Node annotations are not property annotations — `E4-SCHEMA-CE-053`
 
@@ -668,7 +668,7 @@ marker location: `nodeOnly` discovers nothing, while `propertyOnly` discovers
 the marked property.
 
 Executable witness:
-`Effect4Test/Counterexamples/Schema/EffectfulFieldProperties.lean`.
+`Test/Counterexamples/Schema/EffectfulFieldProperties.lean`.
 
 ## A root property scan is not recursive discovery — `E4-SCHEMA-CE-054`
 
@@ -683,7 +683,7 @@ Schema function. Route exhaustion remains owned by the general fold's public
 constructor equations and rebuild theorem.
 
 Executable witness:
-`Effect4Test/Counterexamples/Schema/EffectfulFieldProperties.lean`.
+`Test/Counterexamples/Schema/EffectfulFieldProperties.lean`.
 
 ## Property names do not identify occurrences — `E4-SCHEMA-CE-055`
 
@@ -697,7 +697,7 @@ The inventory keeps the complete existing `PropertySignature` paired with its
 and order without adding a discovery carrier.
 
 Executable witness:
-`Effect4Test/Counterexamples/Schema/EffectfulFieldProperties.lean`.
+`Test/Counterexamples/Schema/EffectfulFieldProperties.lean`.
 
 ## First match is not an annotation traversal — `E4-SCHEMA-CE-045`
 
@@ -712,7 +712,7 @@ entry key, list length, duplicates, ordering, and unrelated entries. Typed
 keys may reject individual payloads, but they do not remove or rewrite those
 malformed same-key entries.
 
-Executable witness: `Effect4Test/Counterexamples/Schema/AnnotationDataPlane.lean`.
+Executable witness: `Test/Counterexamples/Schema/AnnotationDataPlane.lean`.
 
 ## Typed success is not exact raw admission — `E4-SCHEMA-CE-049`
 
@@ -722,7 +722,7 @@ beside malformed or duplicate raw evidence could appear to be a single typed
 value. Effectful-field admission reads the complete raw `payloadsAt` list and
 requires exactly one canonical payload.
 
-Executable witness: `Effect4Test/Counterexamples/Schema/EffectfulField.lean`.
+Executable witness: `Test/Counterexamples/Schema/EffectfulField.lean`.
 
 ## Operation numbers are local to an alphabet — `E4-SCHEMA-CE-050`
 
@@ -730,7 +730,7 @@ Two alphabets can both contain operations numbered 11 and 12. Resolution
 therefore compares the existing alphabet identity before both operation
 identities. This layer assigns no service or refusal meaning.
 
-Executable witness: `Effect4Test/Counterexamples/Schema/EffectfulField.lean`.
+Executable witness: `Test/Counterexamples/Schema/EffectfulField.lean`.
 
 ## Effectful modify reads the effect, not stale source data — `E4-SCHEMA-CE-051`
 
@@ -738,7 +738,7 @@ Using `Lens.get source` to choose the new value makes the read annotation
 decorative. Correct `modify` starts with the declared read operation; the
 retained stale-source substitute starts immediately with a write.
 
-Executable witness: `Effect4Test/Counterexamples/Schema/EffectfulField.lean`.
+Executable witness: `Test/Counterexamples/Schema/EffectfulField.lean`.
 
 ## A pure lens update erases the write effect — `E4-SCHEMA-CE-052`
 
@@ -746,7 +746,7 @@ The desired local value alone is insufficient. The retained `set` program has
 the declared write as its root operation, while the pure lens replacement has
 no root operation. The interpreter theorem fixes the same ordering.
 
-Executable witness: `Effect4Test/Counterexamples/Schema/EffectfulField.lean`.
+Executable witness: `Test/Counterexamples/Schema/EffectfulField.lean`.
 
 ## One codec inverse does not reconstruct raw data — `E4-SCHEMA-CE-046`
 
@@ -763,7 +763,7 @@ Schema data exactly unchanged. `AnnotationKey.Lawful` therefore also requires
 typed-value equality. No second Schema carrier or normalization layer is
 introduced.
 
-Executable witness: `Effect4Test/Counterexamples/Schema/AnnotationDataPlane.lean`.
+Executable witness: `Test/Counterexamples/Schema/AnnotationDataPlane.lean`.
 
 ## Node annotations are not the recursive data plane — `E4-SCHEMA-CE-047`
 
@@ -780,7 +780,7 @@ element, object, property, and property type. This attaches to
 `E4-SCHEMA-CE-043`: that row closes the general recursor, while this row fixes
 the annotation algebra and its ordering on top of it.
 
-Executable witness: `Effect4Test/Counterexamples/Schema/AnnotationDataPlane.lean`.
+Executable witness: `Test/Counterexamples/Schema/AnnotationDataPlane.lean`.
 
 ## Reachability is not structural annotation data — `E4-SCHEMA-CE-048`
 
@@ -795,4 +795,4 @@ the root only. `Document.annotationBags` sees the root and all three entries in
 stored order. `MultiDocument.annotationBags` likewise visits every root in
 order before every table entry. Neither traversal resolves a key.
 
-Executable witness: `Effect4Test/Counterexamples/Schema/AnnotationDataPlane.lean`.
+Executable witness: `Test/Counterexamples/Schema/AnnotationDataPlane.lean`.

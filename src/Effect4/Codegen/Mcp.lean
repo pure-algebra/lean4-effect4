@@ -4,7 +4,7 @@ import Effect4.Codegen.JsonSchema
 # Codegen.Mcp — the toolkit module and the MCP list payloads
 
 Design: `docs/research/2026-09-04-codegen-api-design.md` §4, the `mcpToolkit` and
-`mcpToolsList` rows. Two rules of the census (`Effect4/Codegen/Rule.lean`) live here:
+`mcpToolsList` rows. Two rules of the census (`src/Effect4/Codegen/Rule.lean`) live here:
 
 | rule | id | target | emitter |
 | --- | --- | --- | --- |
@@ -14,7 +14,7 @@ Design: `docs/research/2026-09-04-codegen-api-design.md` §4, the `mcpToolkit` a
 Both are `emitted`, not `modeled`: no host receipt has landed, and
 `Rule.modeled_has_receipt` keeps the stance honest.
 
-**The reader half is `Effect4/Ingest/Mcp.lean`.** `ofMcpToolsList`, the parsers it is built
+**The reader half is `src/Effect4/Ingest/Mcp.lean`.** `ofMcpToolsList`, the parsers it is built
 from, `toolFingerprint`, the `Ingest .mcpToolsList` instance, the quotient the round trip is
 up to and the round-trip guards all live there; nothing in this module reads back what it
 writes.
@@ -59,15 +59,15 @@ is left out rather than emitted as `null`, which is what `Schema.optional` reads
   constructor.
 * **`notABinding "surface.mcp.toolkit" name`.** A name the toolkit module must bind as a
   top-level constant and cannot: a tool name (`get-user` is a legal MCP name and not a legal
-  TypeScript identifier, `Effect4/Surface/Agent.lean`), a resource name, a prompt name, or
+  TypeScript identifier, `src/Effect4/Surface/Agent.lean`), a resource name, a prompt name, or
   the server's own name. The module refuses rather than inventing a mangling, because a
   mangled constant is a second spelling of the value's identity.
 * **`refusedShape "surface.mcp.toolkit" shape site`**, `shape ∈ Rule.refuses .mcpToolkit`
-  (`= Rule.schemaShapes`). A schema slot `Effect4/Codegen/Spell.lean` has no constructor
+  (`= Rule.schemaShapes`). A schema slot `src/Effect4/Codegen/Spell.lean` has no constructor
   spelling for; `site` is `<tool>.parameters`, `<tool>.success` or `<tool>.failure`, so the
   caller reads which slot of which tool was refused.
 * **`refusedShape "surface.mcp.toolsList" shape site`**, `shape ∈ Rule.refuses .mcpToolsList`
-  (`= Rule.jsonSchemaShapes`). A schema `Effect4/Codegen/JsonSchema.lean` will not compile;
+  (`= Rule.jsonSchemaShapes`). A schema `src/Effect4/Codegen/JsonSchema.lean` will not compile;
   `site` is the tool's name for its own `inputSchema` and the reference key for a `$defs`
   entry.
 
@@ -91,7 +91,7 @@ document collects a definition only for a reference it actually meets, so the de
 emitted here are the references reachable from the parameters, not the whole domain.
 
 The syntactic walk and its de-duplication are the layer's one pair, `Codegen.referenceKeys`
-and `Codegen.dedupe` (`Effect4/Codegen/Spell.lean`); this module adds only the closure over
+and `Codegen.dedupe` (`src/Effect4/Codegen/Spell.lean`); this module adds only the closure over
 the table.
 -/
 
@@ -222,7 +222,7 @@ def promptsListJson (dom : Domain) (server : McpServer dom.refs) : Json :=
 Qualify an entity constant with the namespace the generated module imports it
 under.
 
-`Effect4/Codegen/Spell.lean` spells a `reference` as the bare identifier of the
+`src/Effect4/Codegen/Spell.lean` spells a `reference` as the bare identifier of the
 entity, because it does not know how the referring module names the entity
 module. Here it is `import * as Entities from "./entities.generated"`, so every
 bare identifier that is a key of the table becomes `Entities.<Name>`. The walk

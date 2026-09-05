@@ -363,7 +363,7 @@ def inv1 (m : M) : Bool :=
 
 /-- 2. Exit once. At most one `exited` row per fiber, and a fiber that has an exit holds an
 empty stack, no pending park, no observer, no child and the empty context — every field
-`exitFiber` clears (`Effect4/Deep/Fibers.lean:1013-1024`). -/
+`exitFiber` clears (`src/Effect4/Machine/Fibers.lean:1013-1024`). -/
 def inv2 (m : M) : Bool :=
   noRepeat (exitedIds m) &&
     m.fibers.all fun f =>
@@ -489,7 +489,7 @@ the printable projection is the invariant index:
 /-! ## Finding S1-1 — `forkScoped` with no ambient `Scope` service answers a defect
 
 `WithFiberAction.forkScoped` reads the ambient scope off the fiber's context
-(`Effect4/Deep/Fibers.lean:796-807`); `stores.ambientScope` is `Ctx.ambientScope`, and
+(`src/Effect4/Machine/Fibers.lean:796-807`); `stores.ambientScope` is `Ctx.ambientScope`, and
 `emptyCtx.ambientScope` is `none`. The arm then fails the fiber with
 `Cause.die interp.notImplemented`.
 

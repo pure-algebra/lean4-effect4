@@ -1,4 +1,5 @@
 import Lean
+import Test.Support.Environment
 import Lean.Util.CollectAxioms
 import Effect4.Data.Row
 
@@ -23,45 +24,13 @@ open Lean Meta Elab Command
 
 namespace Test.Data.RowAssurance
 
+open Test.Support.Environment
+
 private def failJoin (detail : MessageData) : CommandElabM α :=
-  throwError m!"data-row assurance mismatch: {detail}"
+  Test.Support.Environment.failJoin "data-row assurance mismatch" detail
 
 private def failHypotheses (detail : MessageData) : TermElabM α :=
   throwError m!"data-row assurance mismatch: {detail}"
-
-private def declarationOwner? (environment : Environment) (name : Name) : Option Name := do
-  if let some moduleIndex := environment.getModuleIdxFor? name then
-    environment.header.moduleNames[moduleIndex]?
-  else if environment.contains name then
-    some environment.mainModule
-  else
-    none
-
-private def declarationsOwnedBy (environment : Environment) (owner : Name) : List Name :=
-  environment.constants.toList.foldl (init := []) fun declarations entry =>
-    let name := entry.1
-    if !name.isInternal && declarationOwner? environment name == some owner then
-      name :: declarations
-    else
-      declarations
-
-private def checkOwners (expectedOwner : Name) (names : List Name) : CommandElabM Unit := do
-  let environment ← getEnv
-  for name in names do
-    unless environment.contains name do
-      failJoin m!"missing declaration {name}"
-    let actualOwner := declarationOwner? environment name
-    unless actualOwner == some expectedOwner do
-      failJoin m!"owner drift for {name}: expected {expectedOwner}, found {actualOwner}"
-
-private def checkExactModuleSurface
-    (expectedOwner : Name) (expected : List Name) : CommandElabM Unit := do
-  checkOwners expectedOwner expected
-  let actual := declarationsOwnedBy (← getEnv) expectedOwner
-  let unexpected := actual.filter fun name => !expected.contains name
-  let missing := expected.filter fun name => !actual.contains name
-  unless unexpected.isEmpty && missing.isEmpty do
-    failJoin m!"owned declaration census for {expectedOwner}: unexpected {unexpected}; missing {missing}"
 
 private def expectedOwnedDeclarations : List Name :=
   [ `Effect4.Ascending
@@ -388,8 +357,8 @@ private def checkForbiddenDuplicates : CommandElabM Unit := do
       failJoin m!"forbidden {defect} declaration is present: {name}"
 
 private def checkDataRowAssurance : CommandElabM Unit := do
-  checkExactModuleSurface `Effect4.Data.Row expectedOwnedDeclarations
-  checkOwners `Effect4.Data.Row (authoredApiDeclarations.map Prod.fst)
+  checkExactModuleSurface "data-row assurance mismatch" `Effect4.Data.Row expectedOwnedDeclarations
+  checkOwners "data-row assurance mismatch" `Effect4.Data.Row (authoredApiDeclarations.map Prod.fst)
   checkTheoremReceipts
   checkAxiomReceipts
   checkForbiddenDuplicates
@@ -438,12 +407,12 @@ elab_rules : command
 elab_rules : command
   | `(#effect4_check_exact_current_module_surface [$names:ident,*]) => do
       let environment ← getEnv
-      checkExactModuleSurface environment.mainModule
+      checkExactModuleSurface "data-row assurance mismatch" environment.mainModule
         (names.getElems.map Syntax.getId).toList
 
 elab_rules : command
   | `(#effect4_check_data_declaration_owners $owner:ident [$names:ident,*]) =>
-      checkOwners owner.getId (names.getElems.map Syntax.getId).toList
+      checkOwners "data-row assurance mismatch" owner.getId (names.getElems.map Syntax.getId).toList
 
 #effect4_check_data_row_assurance
 #effect4_emit_data_row_assurance

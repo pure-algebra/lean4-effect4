@@ -2,8 +2,8 @@
 ; executables (the trace face and the witness report), each in the three modes of ruling 7:
 ; bytecode, native, and js_of_ocaml under `--enable effects` (the modelled backend, 5.7.1).
 ;
-; `corpus_data.ml` is generated from `corpus/programs.txt` exactly as `build-avatar.sh`
-; generates it, so the corpus is compiled in and there is no file to open under jsoo.
+; `corpus_data.ml` is generated from `corpus/programs.txt` by the rule below,
+; so the corpus is compiled in and there is no file to open under jsoo.
 ; `jsprobe.ml` (the JS-boundary probe, built with `-no-check-prims` and its own runtime),
 ; `fuzz_register.ml` (links P5's generated `corpus_fixture.ml`, which `run-fuzz.sh` copies in)
 ; and the `server/` directory (seat W2) are outside this build.

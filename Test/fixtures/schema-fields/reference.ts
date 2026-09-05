@@ -1,4 +1,4 @@
-// Synthetic fixture for `scripts/test-schema-fields-gate.sh`.
+// Synthetic fixture for `scripts/check-schema-fields.sh`.
 //
 // This is NOT Effect source and is NOT evidence about rc.112 field spellings.
 // It reproduces the six declaration shapes the field extractor recognises —

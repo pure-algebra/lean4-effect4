@@ -3,7 +3,7 @@ import Effect4.Machine.Frames
 /-!
 # Live continuation-stack traversal
 
-The independent packet in `test/contracts/live-stack.contract.md` owns the
+The independent packet in `git:c407ab7:test/contracts/live-stack.contract.md` owns the
 additive public surface. The primitive, fiber, result and event carriers
 remain owned by `Runtime.lean`. Every recursive call consumes the actual
 post-hook stack; the existing detached traversal occurs only in proofs.
@@ -28,7 +28,7 @@ private def prefixPop (frame : Prim ν σ β ε δ ι α)
 -- can grow the stack. It was private and only ever carried the traversal's
 -- decreasing argument and two proof steps; `live_measure_lt` below replaces the
 -- first and `Runtime.ensure_stack_cases` the other two. No public statement of
--- `test/contracts/live-stack.contract.md` depended on it.
+-- `git:c407ab7:test/contracts/live-stack.contract.md` depended on it.
 
 /-- `Runtime.ensure_stack_cases` as the live traversal's decreasing step: a hook
 pushes at most one frame and can only do so by clearing the interruptible flag

@@ -2,7 +2,7 @@
 
 This packet freezes an independently stepping interpreter of the existing
 sequential `Scope.closeExitsM` fold. The separate builder owns
-`Effect4/Runtime/ScopeMachine.lean`. A close retains its original exit, writes
+`src/Effect4/Machine/ScopeMachine.lean`. A close retains its original exit, writes
 the closed scope before exposing a callback request, captures every actual
 response, and can pause between requests without completing or losing work.
 
@@ -52,7 +52,7 @@ packet is specialized to explicit stateful callbacks.
 ## Frozen operations
 
 Exact constructor/function ascriptions and the ten theorem statements are
-in `Effect4Test/Runtime/ScopeMachineContract.lean`.
+in `Test/Machine/Runtime/ScopeMachineContract.lean`.
 
 `start scope original` first saves `scope.closeOrder`, then retains
 `scope.closeState original`, the supplied original exit, that pending list,
@@ -157,8 +157,8 @@ existing owner is accepted. The separate builder preserves this packet.
 ## Verification
 
 ```text
-lake env lean Effect4Test/Runtime/ScopeMachineContract.lean
-lake env lean Effect4Test/Runtime/ScopeMachineAxiomReport.lean
+lake env lean Test/Machine/Runtime/ScopeMachineContract.lean
+lake env lean Test/Machine/Runtime/ScopeMachineAxiomReport.lean
 ```
 
 Before implementation, the missing production import is recorded separately
@@ -182,9 +182,9 @@ Existing semantic references were unchanged during the packet:
 
 | Owner | SHA-256 |
 | --- | --- |
-| `Effect4/Runtime/Scope.lean` | `b54b62b214b3f3e2f764000305c3f2dacdc8d6ce5771444d6c7400d3d982a9d5` |
-| `Effect4/Semantics/Exit.lean` | `a4a4c024ad54a8ab6e52acc1493183349bb532e668af0ed7c2512fa134161383` |
-| `Effect4/Semantics/Cause.lean` | `fc7d008f2955a5ea812717a77e2f3e3d187980c924fc0cb25d5014644c7f7196` |
+| `src/Effect4/Machine/Scope.lean` | `b54b62b214b3f3e2f764000305c3f2dacdc8d6ce5771444d6c7400d3d982a9d5` |
+| `src/Effect4/Machine/Exit.lean` | `a4a4c024ad54a8ab6e52acc1493183349bb532e668af0ed7c2512fa134161383` |
+| `src/Effect4/Machine/Cause.lean` | `fc7d008f2955a5ea812717a77e2f3e3d187980c924fc0cb25d5014644c7f7196` |
 
 Scratch preparation and logs are in `/tmp/effect4-scope-machine-breaker`.
 `prepare.py` derives the isolated copies from the exact packet source.

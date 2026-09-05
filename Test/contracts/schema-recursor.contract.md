@@ -2,10 +2,10 @@
 
 Status: **Pass-B FROZEN; implementation REQUIRED-BLOCKED**. The production
 fence is the `SC-REP-03-RECURSOR` addition to
-`Effect4/Schema/Representation.lean`. The breaker-owned Lean battery is
-`Effect4Test/Schema/RepresentationFoldContract.lean`; the retained executable
+`src/Effect4/Schema/Representation.lean`. The breaker-owned Lean battery is
+`Test/Schema/RepresentationFoldContract.lean`; the retained executable
 attack is
-`Effect4Test/Counterexamples/Schema/RecursiveElimination.lean`. A builder must
+`Test/Counterexamples/Schema/RecursiveElimination.lean`. A builder must
 make both files green without editing this packet, the battery, or the attack.
 
 This packet closes only the general nondependent-elimination share of
@@ -282,9 +282,9 @@ The current production fence has no fold declarations. The breaker command is:
 
 ```text
 lake env lean -DmaxErrors=10000 --json \
-  Effect4Test/Schema/RepresentationFoldContract.lean
+  Test/Schema/RepresentationFoldContract.lean
 lake env lean -DmaxErrors=10000 --json \
-  Effect4Test/Counterexamples/Schema/RecursiveElimination.lean
+  Test/Counterexamples/Schema/RecursiveElimination.lean
 ```
 
 At freeze both commands must exit nonzero because the public algebra, folds,

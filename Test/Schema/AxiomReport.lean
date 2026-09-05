@@ -47,7 +47,7 @@ Fresh kernel dependency report for all six Schema representation alphabets.
 
 /-!
 Payload carrier, sections D0 and D1 of
-`test/contracts/schema-payload.contract.md`: the binary64 payload datum and
+`Test/contracts/schema-payload.contract.md`: the binary64 payload datum and
 the raw JSON tree. Private recursive scaffolding is intentionally absent; the
 report covers the exported graph obligations and leaf receipts.
 -/

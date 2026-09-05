@@ -1,4 +1,5 @@
 import Lean
+import Test.Support.Environment
 import Lean.Util.CollectAxioms
 import Effect4.Machine.Key
 
@@ -12,7 +13,7 @@ text.  That census includes compiler-generated structural companions.  The
 25-name frozen Context Key API and the 14-name additive Std bridge API are
 reported separately.  The checker verifies every allocated owner, checks the
 contracted and bridge theorem declarations, and confirms the axiom-free
-receipt recorded by `Test/Environment/AxiomReport.lean`.
+receipt recorded by `Test/Machine/Environment/AxiomReport.lean`.
 
 `ServiceName`, `ServiceTypeCode`, and `ServiceKey` remain one passive leaf.
 `ServiceUniverse` is recorded against the existing Context graph edge
@@ -33,42 +34,10 @@ open Lean Meta Elab Command
 
 namespace Test.Environment.ContextKeyAssurance
 
+open Test.Support.Environment
+
 private def failJoin (detail : MessageData) : CommandElabM α :=
-  throwError m!"environment context-key evidence mismatch: {detail}"
-
-private def declarationOwner? (environment : Environment) (name : Name) : Option Name := do
-  if let some moduleIndex := environment.getModuleIdxFor? name then
-    environment.header.moduleNames[moduleIndex]?
-  else if environment.contains name then
-    some environment.mainModule
-  else
-    none
-
-private def declarationsOwnedBy (environment : Environment) (owner : Name) : List Name :=
-  environment.constants.toList.foldl (init := []) fun declarations entry =>
-    let name := entry.1
-    if !name.isInternal && declarationOwner? environment name == some owner then
-      name :: declarations
-    else
-      declarations
-
-private def checkOwners (expectedOwner : Name) (names : List Name) : CommandElabM Unit := do
-  let environment ← getEnv
-  for name in names do
-    unless environment.contains name do
-      failJoin m!"missing declaration {name}"
-    let actualOwner := declarationOwner? environment name
-    unless actualOwner == some expectedOwner do
-      failJoin m!"owner drift for {name}: expected {expectedOwner}, found {actualOwner}"
-
-private def checkExactModuleSurface
-    (expectedOwner : Name) (expected : List Name) : CommandElabM Unit := do
-  checkOwners expectedOwner expected
-  let actual := declarationsOwnedBy (← getEnv) expectedOwner
-  let unexpected := actual.filter fun name => !expected.contains name
-  let missing := expected.filter fun name => !actual.contains name
-  unless unexpected.isEmpty && missing.isEmpty do
-    failJoin m!"owned declaration census for {expectedOwner}: unexpected {unexpected}; missing {missing}"
+  Test.Support.Environment.failJoin "environment context-key evidence mismatch" detail
 
 private def expectedOwnedDeclarations : List Name :=
   [ `Effect4.ServiceKey
@@ -356,9 +325,9 @@ private def checkAxiomReceipts : CommandElabM Unit := do
       failJoin m!"axiom receipt for {name}: expected none, found {axioms.toList}"
 
 private def checkContextKeyAssurance : CommandElabM Unit := do
-  checkExactModuleSurface `Effect4.Context.Key expectedOwnedDeclarations
-  checkOwners `Effect4.Context.Key (contractedApiDeclarations.map Prod.fst)
-  checkOwners `Effect4.Context.Key orderBridgeApiDeclarations
+  checkExactModuleSurface "environment context-key evidence mismatch" `Effect4.Context.Key expectedOwnedDeclarations
+  checkOwners "environment context-key evidence mismatch" `Effect4.Context.Key (contractedApiDeclarations.map Prod.fst)
+  checkOwners "environment context-key evidence mismatch" `Effect4.Context.Key orderBridgeApiDeclarations
   checkTheoremReceipts
   checkAxiomReceipts
   checkOrderBridgeReceipts
@@ -431,11 +400,11 @@ elab_rules : command
 elab_rules : command
   | `(#effect4_check_exact_current_module_surface [$names:ident,*]) => do
       let environment ← getEnv
-      checkExactModuleSurface environment.mainModule
+      checkExactModuleSurface "environment context-key evidence mismatch" environment.mainModule
         (names.getElems.map Syntax.getId).toList
 
 elab_rules : command
   | `(#effect4_check_context_declaration_owners $owner:ident [$names:ident,*]) =>
-      checkOwners owner.getId (names.getElems.map Syntax.getId).toList
+      checkOwners "environment context-key evidence mismatch" owner.getId (names.getElems.map Syntax.getId).toList
 
 end Test.Environment.ContextKeyAssurance

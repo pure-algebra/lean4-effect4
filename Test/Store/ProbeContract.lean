@@ -1,5 +1,5 @@
 /-
-Contract: the spike's probe battery, kept whole (`workshop/Cas/Cas/Probe.lean`).
+Contract: the spike's probe battery, kept whole (`Test/Store/ProbeContract.lean`).
 
 Frozen: what the spike guarded that the node, word and trait contracts beside this file do not
 — the store in which the facts note's §6 stand-in spec resolves, and `p42` as a program node.

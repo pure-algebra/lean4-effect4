@@ -104,7 +104,7 @@ stamp_report() {
 # stamp_lean_traces <lean-source>...   the Lake trace of every `Effect4` or
 # `Test` module these sources import.
 #
-# A harness driver such as `harness/trace/Generate.lean` is elaborated by
+# A harness driver such as `git:c407ab7:harness/trace/Generate.lean` is elaborated by
 # `lake env lean --run`, so it is never a compiled module and has no trace of
 # its own; what it reads is its own bytes -- which the caller lists directly --
 # and the oleans of its imports. A module's trace is Lake's hash of that
@@ -145,7 +145,7 @@ stamp_fact() {
 #
 # Three package manifests, named by their absolute path, so that pointing
 # EFFECT4_EFFECT_NODE_MODULES at a different installation is a different key
-# even when the versions agree; `harness/trace/host-pin.json`, which carries
+# even when the versions agree; `git:c407ab7:harness/trace/host-pin.json`, which carries
 # the SHA-256 of the whole 2,341-file Effect tree and the upstream commit, so a
 # re-pin is a change; and the node version, which the receipts record and the
 # run loop's yield behaviour depends on.

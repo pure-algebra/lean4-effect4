@@ -1,7 +1,7 @@
 /-
-Contract: `test/contracts/surface-jsonschema.contract.md`.
+Contract: `Test/contracts/surface-jsonschema.contract.md`.
 
-Frozen by the wave-1b breaker before `Effect4/Surface/JsonSchema.lean` exists,
+Frozen by the wave-1b breaker before `src/Effect4/Codegen/JsonSchema.lean` exists,
 from `docs/research/2026-09-04-surface-library-plan.md` §4.3 alone. Red until
 the builder lands the module.
 

@@ -1,5 +1,5 @@
 import Effect4.Schema.Authoring
-import Effect4.Data.JsonNumber
+import Effect4.Arch.JsonNumber
 import Effect4.Store.Kind
 import Effect4.Store.Digest
 
@@ -37,7 +37,7 @@ fixed-width scalar (`{root := named "UInt64", defs := [("UInt64", nat)]}`) rende
 `number` with an identifier, as Q5 asks. The two annotation keys are restated here with the
 shape of `src/Effect4/Surface/Annotate.lean:73-91` (`identifierKey`) and `:345-351`
 (`markKey`), because that module sits above the store. The printer's number rule,
-`Json.ofNat` over `binary64OfNat`, is `Effect4.Data.JsonNumber`'s (`src/Effect4/Data/JsonNumber.lean`,
+`Json.ofNat` over `binary64OfNat`, is `Effect4.Arch.JsonNumber`'s (`src/Effect4/Arch/JsonNumber.lean`,
 namespace `Effect4.Arch`), the one JSON-number rule every printer of the tree reads.
 -/
 
@@ -481,7 +481,7 @@ end
 /-- The printer of a shape document: the value under the root, names from the table. -/
 def ShapeDoc.print (doc : ShapeDoc) (v : Val) : Json := printIn doc.defs doc.root v
 
-/-! ## The census entry, guarded: the shape of `Evidence/StdLib/Entry.lean:23-49` -/
+/-! ## The census entry, guarded: the shape of `StdLib/Entry.lean:23-49` -/
 
 /-- The document of the census entry, as the generator would write it. -/
 def entryDoc : ShapeDoc :=

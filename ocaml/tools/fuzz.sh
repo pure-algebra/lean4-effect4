@@ -27,17 +27,14 @@
 
 set -u
 
-REPO=$(cd "$(dirname "$0")/../../.." && pwd)
-OCAMLC=${OCAMLC:-/Users/pooks/.opam/default/bin/ocamlc}
-OCAMLOPT=${OCAMLOPT:-/Users/pooks/.opam/default/bin/ocamlopt}
-OCAMLRUN=${OCAMLRUN:-/Users/pooks/.opam/default/bin/ocamlrun}
-JSOO=${JSOO:-/Users/pooks/Dev/effect4_of_ocaml/_build/toolchains/ocaml5-jsoo-5.7.1/_build/default/vendor/js_of_ocaml-compiler.5.7.1/compiler/bin-js_of_ocaml/js_of_ocaml.exe}
-NODE=${NODE:-node}
+REPO=$(cd "$(dirname "$0")/../.." && pwd)
+. "$(dirname "$0")/lib/toolchain.sh"
+effect4_toolchain || exit 1
 NODE_MODULES=${EFFECT4_EFFECT_NODE_MODULES:-$HOME/Dev/foldlab/library/effects/node_modules}
 TSC=${TSC:-$NODE_MODULES/.bin/tsc}
-P5_BUILD=${P5_BUILD:-/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/d87ba830-2e63-4750-815f-2679b36f870a/scratchpad/p5}
+P5_BUILD=${P5_BUILD:-${TMPDIR:-/tmp}/effect4-p5_build}
 P5_JOBS=${P5_JOBS:-8}
-LEANRUN="lake env lean --run src/OCaml5/Fuzz.lean"
+LEANRUN="lake env lean -M4096 --run src/OCaml5/Fuzz.lean"
 
 # ---------------------------------------------------------------------------
 # check ONE rendered program: $1 is the .ml, its .rows sibling holds Machine.rows.
@@ -172,7 +169,7 @@ case "${1:-}" in
     cp "$REPO"/ocaml/avatar/*.ml "$sdir/ml/" 2>/dev/null
     rm -f "$sdir/ml/jsprobe.ml"
     cp "$cdir/corpus_fixture.ml" "$sdir/ml/"
-    # Seat W1: `deep_stores.ml` and `deep_layer.ml` are the ports of `Effect4/Deep/Stores.lean`
+    # Seat W1: `deep_stores.ml` and `deep_layer.ml` are the ports of `src/Effect4/Machine/Stores.lean`
     # and `Layer.lean`, and the fixtures link against them.
     if ( cd "$sdir/ml" && "$OCAMLC" -c deep_fibers.ml deep_stores.ml deep_layer.ml \
            avatar_trace.ml fibers_fixture.ml store_fixtures.ml extra_fixture.ml ) \

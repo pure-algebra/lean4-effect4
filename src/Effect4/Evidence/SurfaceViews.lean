@@ -1,12 +1,12 @@
 import Effect4.Codegen.Rule
-import Effect4.Evidence.StdLib.Derived
+import Effect4.StdLib.Derived
 
 /-!
 # Surface.Views: the surface store
 
 Implements `docs/research/2026-09-04-surface-library-plan.md` §2's `Views.lean` row: every
 surface as a named `Document` plus the store they are addressed and named in. The shape is
-`Effect4/Evidence/Views.lean`'s, and for the same reason: a view is a `Document`, a `Document`
+`src/Effect4/Arch/Views.lean`'s, and for the same reason: a view is a `Document`, a `Document`
 is store content at kind `schema` (`Store/Genesis.lean:34`), and a name is a binding in a
 `tree` node.
 
@@ -29,10 +29,10 @@ nothing else changes.
 A document's address is `sha256` of its node bytes, and its node's spec is the address of the
 schema node of `(shape Document).document` — the meta-schema, ninety-two kilobytes of value
 tree (the facts note §6a). A `decide` or a `#guard` about `viewStore`'s nodes would therefore
-hash that in the kernel, and no such receipt is claimed here; `Effect4/Evidence/Views.lean`
+hash that in the kernel, and no such receipt is claimed here; `src/Effect4/Arch/Views.lean`
 builds its own store the same way and claims nothing about it either, and lane B measures what
 a battery can afford. The receipts that do hold are about `views`, which is a plain list of
-names and documents, and about the documents themselves, which `Effect4/Surface/Entity.lean`
+names and documents, and about the documents themselves, which `src/Effect4/Surface/Entity.lean`
 gives `Arch.accepts` receipts for.
 -/
 

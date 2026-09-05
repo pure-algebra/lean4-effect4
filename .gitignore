@@ -1,12 +1,13 @@
 /.lake
 .DS_Store
+__pycache__/
 
 # Working notes, spikes and process files: kept on disk and synced between machines
 # directly, not through git (docs/research/2026-09-04-prod-cleanup-inventory.md, D6).
 /docs/research/
 /workshop/
 /output/
-/COORDINATION.md
+/COORDINATION*.md
 /PLAN.md
 /misty-frolicking-naur.md
 
@@ -23,10 +24,12 @@
 # is tracked; its bun install and its copy of the archived trace lane are not.
 /harness/*
 !/harness/truth/
+!/harness/schema-host/
 /harness/truth/node_modules/
 /harness/truth/archive/
 /harness/truth/lean.out.log
 /harness/truth/lean.err.log
+/harness/truth/truth-check-*/
 
 # The TypeScript estate (`ts/`) is tracked; its installs are not.
 /ts/**/node_modules/
@@ -38,3 +41,5 @@
 /ocaml/**/node_modules/
 /ocaml/link/c_flags.sexp
 /ocaml/link/lean_flags.sexp
+
+/harness/schema-host/node_modules/

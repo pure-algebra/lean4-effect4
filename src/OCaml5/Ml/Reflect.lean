@@ -374,7 +374,7 @@ def toTypeDecls (ds : List TypeDesc) : Decl := .types (ds.map toTypeDecl)
 
 `toTypeDecl` goes Lean → OCaml. This goes **OCaml → Lean**: given a type declaration as
 `Ml.Syntax` data — from a signature written here, or, once the `effect4` switch exists, parsed
-out of a real `.mli` by `tools/ml-check.sh`'s ppxlib lane — it produces the `TypeDesc` a Lean
+out of a real `.mli` by `ocaml/tools/ml-check.sh`'s ppxlib lane — it produces the `TypeDesc` a Lean
 carrier would be described by. That is what lets a library type be *named* in Lean rather than
 retyped, and it is the same description the forward direction consumes, so the two compose.
 

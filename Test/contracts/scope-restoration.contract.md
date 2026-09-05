@@ -3,7 +3,7 @@
 This packet freezes a local adapter from completed ScopeMachine cleanup to
 the real FrameFiber.step. The independent breaker owns this contract, its
 battery, axiom report, counterexample file and finite host reproducer. The
-separate builder owns `Effect4/Runtime/ScopeRestoration.lean`.
+separate builder owns `src/Effect4/Machine/ScopeRestoration.lean`.
 
 No carrier is added. ScopeMachine, Scope, Runtime, Prim, PrimInterp, FrameFiber,
 FrameStep, FrameEvent, Exit and Cause remain their existing owners. No old
@@ -82,7 +82,7 @@ or claim an interpretation of arbitrary host callback objects.
 ## Frozen universal obligations
 
 Exact parameter order, universes, hypotheses and conclusions are ascribed
-in `Effect4Test/Runtime/ScopeRestorationContract.lean`. Nine public
+in `Test/Machine/Runtime/ScopeRestorationContract.lean`. Nine public
 theorems are required:
 
 | Theorem | Exact obligation |
@@ -112,7 +112,7 @@ before failure. The adapter never reconstructs captures from a final cause.
 
 ## Independent attacks and finite host evidence
 
-`Effect4Test/Counterexamples/Runtime/ScopeRestorationBoundary.lean` imports
+`Test/Counterexamples/Machine/Runtime/ScopeRestorationBoundary.lean` imports
 only existing ScopeMachine and Runtime. It remains executable when the new
 adapter is absent. Stable new rows are:
 
@@ -159,9 +159,9 @@ terminal outcome are checked.
 ## Verification and trust
 
 ```text
-lake env lean Effect4Test/Counterexamples/Runtime/ScopeRestorationBoundary.lean
-lake env lean Effect4Test/Runtime/ScopeRestorationContract.lean
-lake env lean Effect4Test/Runtime/ScopeRestorationAxiomReport.lean
+lake env lean Test/Counterexamples/Machine/Runtime/ScopeRestorationBoundary.lean
+lake env lean Test/Machine/Runtime/ScopeRestorationContract.lean
+lake env lean Test/Machine/Runtime/ScopeRestorationAxiomReport.lean
 node harness/trace/scope-restoration.mjs /path/to/node_modules/effect
 ```
 
@@ -185,11 +185,11 @@ repository base during final validation was
 
 | Existing owner | SHA-256 |
 | --- | --- |
-| Effect4/Runtime/Runtime.lean | f51ad546ce01022624f1d871dd63bb31b99ba87d2e076293b78429a94c887e33 |
-| Effect4/Runtime/ScopeMachine.lean | 1189173bca2b6b76e114bc178d1945463e0e862e0faca3d0ed91cf04ddb95979 |
-| Effect4/Runtime/Scope.lean | b54b62b214b3f3e2f764000305c3f2dacdc8d6ce5771444d6c7400d3d982a9d5 |
-| Effect4/Semantics/Exit.lean | a4a4c024ad54a8ab6e52acc1493183349bb532e668af0ed7c2512fa134161383 |
-| Effect4/Semantics/Cause.lean | fc7d008f2955a5ea812717a77e2f3e3d187980c924fc0cb25d5014644c7f7196 |
+| src/Effect4/Machine/Frames.lean | f51ad546ce01022624f1d871dd63bb31b99ba87d2e076293b78429a94c887e33 |
+| src/Effect4/Machine/ScopeMachine.lean | 1189173bca2b6b76e114bc178d1945463e0e862e0faca3d0ed91cf04ddb95979 |
+| src/Effect4/Machine/Scope.lean | b54b62b214b3f3e2f764000305c3f2dacdc8d6ce5771444d6c7400d3d982a9d5 |
+| src/Effect4/Machine/Exit.lean | a4a4c024ad54a8ab6e52acc1493183349bb532e668af0ed7c2512fa134161383 |
+| src/Effect4/Machine/Cause.lean | fc7d008f2955a5ea812717a77e2f3e3d187980c924fc0cb25d5014644c7f7196 |
 
 Source/runtime digests, relative to the installed package:
 

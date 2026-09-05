@@ -1,5 +1,5 @@
 /-
-Retained attacks for `test/contracts/schema-effectful-field.contract.md`.
+Retained attacks for `Test/contracts/schema-effectful-field.contract.md`.
 -/
 
 import Effect4.Schema.EffectfulField

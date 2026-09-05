@@ -35,8 +35,8 @@ A *receipt* becomes a named `theorem` where it is cited. A receipt that leaves
 no constant cannot be named by an axiom report, joined by
 `Test/Audit/RuntimeCoverage.lean`, or listed by a proof-graph trust
 edge: it is checked once at its declaration site and then vanishes. The six
-DB-06 modality receipts in `Test/Semantics/LogicContract.lean` and the
-per-program receipt `Effect4/Meta/Derive.lean` emits for every `effect_program`
+DB-06 modality receipts in `git:c407ab7:Effect4Test/Semantics/LogicContract.lean` and the
+per-program receipt `git:c407ab7:Effect4/Meta/Derive.lean` emits for every `effect_program`
 were `example`s and are theorems now.
 
 ## The ruling on `opaque`
@@ -48,7 +48,7 @@ denotes it, and hiding the unfolding costs the ceiling nothing.
 for the missing value (`Lean/Elab/DefView.lean`), so the constant denotes an
 arbitrary inhabitant nobody chose: it is an uninterpreted symbol wearing a
 definition's clothes, and every receipt stated about it is a receipt about
-nothing. `Effect4/AGENTS.md` already requires an authored admission for an
+nothing. `AGENTS.md` already requires an authored admission for an
 opaque trust boundary; this is the enforcement.
 
 The refusal is a declaration-level check rather than a token, because the
@@ -86,6 +86,7 @@ private def auditImplementationModules : List Name :=
   , `Test.Schema.PayloadSurface
   , `Test.Schema.StructuralAssurance
   , `Test.Data.RowAssurance
+  , `Test.Support.Environment
   , `Test.Machine.Environment.ContextKeyAssurance
   , `Test.Audit.RuntimeCoverage
   ]
@@ -106,7 +107,7 @@ the gate is what says so rather than a comment.
 
 `Skeleton.lean` has since been split (survey finding H28): the renderer and the
 two call builders it needs moved to
-`Effect4/Target/TypeScript/SkeletonRender.lean`, so the `String`-free IR and its
+`git:c407ab7:Effect4/Target/TypeScript/SkeletonRender.lean`, so the `String`-free IR and its
 two bridge theorems are a module with *no* declaration reaching
 `Classical.choice`, and the boundary is a file boundary as well as a list of
 names. The crossings kept their names, so this list did not move.
@@ -128,7 +129,7 @@ That is an implementation fact about rendering, not a semantic admission: every
 admission and structured-lowering declaration in the same modules stays at the
 semantic/test ceiling, and this list is what says which is which. The field
 receipt's statement itself uses the renderer and `String.contains`; it is not a
-semantic admission theorem. `docs/TYPESCRIPT-TARGET-DAG.md` records this
+semantic admission theorem. `docs/research/TYPESCRIPT-TARGET-DAG.md` records this
 implementation boundary.
 
 `#effect4_print_choice_reachers` prints this list and the private one below.
@@ -367,11 +368,9 @@ private def isSynthesizedOpaqueBody (value : Expr) : Bool :=
   | _ => false
 
 private def belongsToAuditedTree (moduleName : Name) : Bool :=
-  (`Effect4).isPrefixOf moduleName || (`Test).isPrefixOf moduleName ||
-    (`Fixtures).isPrefixOf moduleName
+  (`Effect4).isPrefixOf moduleName || (`Test).isPrefixOf moduleName
 
-/-- Where a module's source lives: the library under `src/`, the batteries and the
-authored fixtures at the root (`lakefile.toml`). -/
+/-- Where a module's source lives: the library under `src/`, the batteries at the root (`lakefile.toml`). -/
 private def modulePath (projectRoot : System.FilePath) (moduleName : Name) : System.FilePath :=
   if (`Effect4).isPrefixOf moduleName then
     (Lean.modToFilePath (projectRoot / "src") moduleName "lean").normalize
@@ -526,10 +525,7 @@ private def auditedSources (projectRoot : System.FilePath) : IO (Array System.Fi
   let tests ← (projectRoot / "Test").walkDir
   let tests := tests.filter fun path =>
     path.extension == some "lean" && !path.toString.startsWith fixturesRoot
-  let fixturesDir := projectRoot / "Fixtures"
-  let fixtures ← if ← fixturesDir.pathExists then fixturesDir.walkDir else pure #[]
-  let fixtures := fixtures.filter fun path => path.extension == some "lean"
-  return effect4 ++ tests ++ fixtures |>.push (projectRoot / "src" / "Effect4.lean")
+  return effect4 ++ tests |>.push (projectRoot / "src" / "Effect4.lean")
 
 open Lean Elab Command in
 elab "#effect4_axiom_gate" : command => do

@@ -471,7 +471,7 @@ def tsService : String → String
      "  readonly awaitAll: (fibers: ReadonlyArray<Fiber.Fiber<number, number>>) => Effect.Effect<void>",
      "}>()(\"Fibers\") {}", ""]
   | "ref" => String.intercalate "\n"
-    ["/** Service `Refs` (`harness/trace/ref-fixture.ts`). */",
+    ["/** Service `Refs` (`git:c407ab7:harness/trace/ref-fixture.ts`). */",
      "export class Refs extends Context.Service<Refs, {",
      "  readonly make: (initial: number) => Effect.Effect<Ref.Ref<number>>",
      "  readonly get: (ref: Ref.Ref<number>) => Effect.Effect<number>",
@@ -481,7 +481,7 @@ def tsService : String → String
      "  readonly getAndSet: (ref: Ref.Ref<number>, value: number) => Effect.Effect<number>",
      "}>()(\"Refs\") {}", ""]
   | "deferred" => String.intercalate "\n"
-    ["/** Service `Deferreds` (`harness/trace/deferred-fixture.ts`). */",
+    ["/** Service `Deferreds` (`git:c407ab7:harness/trace/deferred-fixture.ts`). */",
      "export class Deferreds extends Context.Service<Deferreds, {",
      "  readonly make: Effect.Effect<Deferred.Deferred<number, number>>",
      "  readonly succeed: (cell: Deferred.Deferred<number, number>, value: number) => Effect.Effect<boolean>",
@@ -492,7 +492,7 @@ def tsService : String → String
      "  readonly awaitError: (cell: Deferred.Deferred<number, number>) => Effect.Effect<number, number>",
      "}>()(\"Deferreds\") {}", ""]
   | "scope" => String.intercalate "\n"
-    ["/** Service `Scopes` (`harness/trace/scope-fixture.ts`). */",
+    ["/** Service `Scopes` (`git:c407ab7:harness/trace/scope-fixture.ts`). */",
      "export class Scopes extends Context.Service<Scopes, {",
      "  readonly make: Effect.Effect<Scope.Closeable>",
      "  readonly addFinalizer: (scope: Scope.Closeable, key: number) => Effect.Effect<boolean>",
@@ -500,7 +500,7 @@ def tsService : String → String
      "  readonly close: (scope: Scope.Closeable) => Effect.Effect<ReadonlyArray<number>>",
      "}>()(\"Scopes\") {}", ""]
   | _ => String.intercalate "\n"
-    ["/** Service `Layers` (`harness/trace/layer-fixture.ts`). */",
+    ["/** Service `Layers` (`git:c407ab7:harness/trace/layer-fixture.ts`). */",
      "export class Layers extends Context.Service<Layers, {",
      "  readonly build: (layer: number) => Effect.Effect<Ref.Ref<number>>",
      "  readonly provideCount: (layer: number) => Effect.Effect<number>",
@@ -613,7 +613,7 @@ end Corpus
 
 /-! ### Checks
 
-The corpus itself is checked by compiling it (`tools/fuzz.sh corpus-smoke`, both sides). What is
+The corpus itself is checked by compiling it (`ocaml/tools/fuzz.sh corpus-smoke`, both sides). What is
 pinned here is what has to hold for that to mean anything: the programs are well-scoped, the tape
 has exactly one entry per fork, and every program ends on a value. -/
 

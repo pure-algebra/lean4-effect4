@@ -1,9 +1,9 @@
 # Data row attacks
 
 This is the durable narrative companion to
-`Effect4Test/Data/RowContract.lean`. Stable IDs are allocated in
-`test/counterexamples/REGISTER.md`. The production fence is solely
-`Effect4/Data/Row.lean`; no attack here defines another public row or order.
+`Test/Data/RowContract.lean`. Stable IDs are allocated in
+`Test/Counterexamples/REGISTER.md`. The production fence is solely
+`src/Effect4/Data/Row.lean`; no attack here defines another public row or order.
 
 ## Raw-list carrier and forged canonicality — `E4-DATA-CE-001`
 
@@ -26,7 +26,7 @@ proof-free raw-list route.
 
 Foldlab provenance: late `s2/T016.lean` supplies the adopted `ascending_ext`
 proof shape and the independent agreement/canonicality examples. Its digest is
-in `vendor/foldlab/LATE-MANIFEST.tsv`; it is `evidenceOnly`.
+in `git:c407ab7:vendor/foldlab/LATE-MANIFEST.tsv`; it is `evidenceOnly`.
 
 ## Order-preserving dedup is not normalization — `E4-DATA-CE-002`
 

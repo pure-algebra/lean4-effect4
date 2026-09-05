@@ -3,16 +3,16 @@
 Status: FROZEN breaker packet, 2026-08-31; its pre-implementation revision is
 required to be RED, and fired findings are recorded below
 
-Ruling input: `docs/SCHEMA-CUTOVER.md`, "Frozen rc.112 persisted census"
+Ruling input: `docs/research/SCHEMA-CUTOVER.md`, "Frozen rc.112 persisted census"
 
-Companion packet: `test/contracts/schema-representation.contract.md`
+Companion packet: `Test/contracts/schema-representation.contract.md`
 
-Implementation fence: `Effect4/Schema/Representation.lean`, declarations
+Implementation fence: `src/Effect4/Schema/Representation.lean`, declarations
 disjoint from the tag-census packet
 
-Battery: `Effect4Test/Schema/SubAlphabetContract.lean`
+Battery: `Test/Schema/SubAlphabetContract.lean`
 
-Counterexamples: `test/counterexamples/REGISTER.md`, rows
+Counterexamples: `Test/Counterexamples/REGISTER.md`, rows
 `E4-SCHEMA-CE-020` through `E4-SCHEMA-CE-022`, with executable witnesses in
 `Effect4Test/Counterexamples/Schema/`
 
@@ -64,7 +64,7 @@ is the point at which it earns its own proof graph.
 
 ## Why one file fence with two packets
 
-Both packets fence `Effect4/Schema/Representation.lean` because the tag layer
+Both packets fence `src/Effect4/Schema/Representation.lean` because the tag layer
 has one owner. Their declaration sets are disjoint: the census packet owns
 `RepresentationTag` and its laws, and this packet owns the five sub-alphabets
 and theirs. Neither packet's battery references the other's declarations
@@ -122,7 +122,7 @@ For `EnumValueKind`, additionally:
 Obligation 4 is **not** independent of obligation 5. For both spelled
 alphabets, injectivity follows from the round-trip law in three lines: rewrite
 `a.name = b.name` inside `ofName a.name = some a` and read `a = b` off the
-resulting `some b = some a`. `Effect4/Schema/Representation.lean` derives
+resulting `some b = some a`. `src/Effect4/Schema/Representation.lean` derives
 `UnionMode.modeName_injective` and `CheckTag.tagName_injective` exactly that
 way. Obligation 4 is listed separately because it is the statement a consumer
 of a spelling cites and because it survives a later reformulation of
@@ -166,7 +166,7 @@ fails. An unspellable value needs no later rule to reject it.
 ## Acceptance commands
 
 ```text
-lake env lean Effect4Test/Schema/SubAlphabetContract.lean
+lake env lean Test/Schema/SubAlphabetContract.lean
 lake clean && lake build
 ```
 
@@ -219,10 +219,10 @@ CLASS: specification design. Every ENSURES proposition held; they collectively
 stated less than the packet's claim boundary promised.
 
 FIXED-BY: a new paragraph after the ENSURES list states the per-member scope.
-`Effect4Test/Schema/SubAlphabetContract.lean` gains eight pointwise spelling
+`Test/Schema/SubAlphabetContract.lean` gains eight pointwise spelling
 examples for `UnionMode` and `CheckTag` and three exact census listings for the
 unspelled alphabets. No implementation declaration changed: every pointwise
-obligation was already true of `Effect4/Schema/Representation.lean`.
+obligation was already true of `src/Effect4/Schema/Representation.lean`.
 
 ### Injectivity non-independence was left unstated
 
@@ -232,7 +232,7 @@ cites `E4-SCHEMA-CE-019` for the analogous correction on obligations 1 to 3.
 
 LAW: `UnionMode.modeName_injective` and `CheckTag.tagName_injective` are each
 derived from their round-trip law in three lines in
-`Effect4/Schema/Representation.lean`, not proved by pairwise comparison.
+`src/Effect4/Schema/Representation.lean`, not proved by pairwise comparison.
 `EnumValueKind.toLiteralKind_injective` is genuinely separate — it has no
 round-trip law and is proved by exhaustive case analysis.
 

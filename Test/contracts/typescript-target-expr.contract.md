@@ -2,14 +2,14 @@
 
 Status: implemented port, 2026-08-31
 
-Implementation: `Effect4/Target/TypeScript/Expr.lean` and
-`Effect4/Target/TypeScript/Render.lean`
+Implementation: `the TypeScript.Syntax module in the pinned typescript package` and
+`the TypeScript.Render module in the pinned typescript package`
 
-Lean battery: `Effect4Test/Target/TypeScript/ExprContract.lean`
+Lean battery: `Test/Codegen/ExprContract.lean`
 
 Counterexamples: `E4-TARGET-CE-001` through `E4-TARGET-CE-004`
 
-Proof graph: `docs/TYPESCRIPT-TARGET-DAG.md`
+Proof graph: `docs/research/TYPESCRIPT-TARGET-DAG.md`
 
 ## Source and boundary
 

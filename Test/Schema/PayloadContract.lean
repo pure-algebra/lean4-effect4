@@ -1,5 +1,5 @@
 /-
-Contract packet: `test/contracts/schema-payload.contract.md`
+Contract packet: `Test/contracts/schema-payload.contract.md`
 
 Breaker-owned red battery for the Schema representation PAYLOAD carrier — the
 recursive first-order tree that hangs off the frozen 22-tag census. The
@@ -1273,7 +1273,7 @@ end AbsentConstructors
 
 /-!
 The durable executable attacks for this packet live beside their rows in
-`test/counterexamples/schema/ATTACKS.md`. Rows whose evidence is the pinned
+`Test/Counterexamples/Schema/ATTACKS.md`. Rows whose evidence is the pinned
 rc.112 bytes — `E4-SCHEMA-CE-028` .. `-034`, `-036`, `-037`, `-040`, `-042` —
 have no Lean witness by construction: they are facts about a TypeScript source
 at a fixed digest, and the corresponding executable host vectors are owed under

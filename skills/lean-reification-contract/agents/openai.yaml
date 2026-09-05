@@ -1,4 +1,0 @@
-interface:
-  display_name: "Reification contract"
-  short_description: "Freeze source scope and correctness obligations"
-  default_prompt: "Use $lean-reification-contract to define or validate the source profile, observations, and exact proof contract for this work."

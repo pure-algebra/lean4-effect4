@@ -13,9 +13,8 @@ argument names and types) against the twin `Tools/Describe.lean` read off the en
 
 **Properties.**
 * **Every guarded description is a row**; a missing twin is a `DIFF`, not a skip — *by construction*.
-* **The report is the same 58 rows** the pre-refactor guard printed, in the same order — *tested*
-  (the `#eval` below; 48 of 58 agree, the ten open rows are the overlay vocabulary of
-  `ocaml/README.md` §"Owed at landing").
+* **Projection counts are pinned by the guards below**; the report names every disagreement.
+  The open rows are the overlay vocabulary recorded in `ocaml/README.md`.
 -/
 
 namespace OCaml5.Avatar.Check
@@ -171,6 +170,9 @@ def report (tag : String) (hand derived : String) : IO Unit :=
   else IO.println s!"DIFF {tag}\n  hand    {hand}\n  derived {derived}"
 
 #guard (parts.map (·.name)).eraseDups.length == parts.length
+
+#guard (parts.flatMap Part.rows).length == 58
+#guard ((parts.flatMap Part.rows).filter (fun r => r.2.1 == r.2.2)).length == 48
 
 #eval do
   let rows := parts.flatMap Part.rows

@@ -1,7 +1,7 @@
 /-
-Contract: `test/contracts/surface-entity.contract.md`.
+Contract: `Test/contracts/surface-entity.contract.md`.
 
-Frozen by the wave-1b breaker before `Effect4/Surface/Entity.lean` exists,
+Frozen by the wave-1b breaker before `src/Effect4/Surface/Entity.lean` exists,
 from `docs/research/2026-09-04-surface-library-plan.md` §4.1-§4.2 alone. Red
 until the builder lands the module.
 
@@ -11,7 +11,7 @@ generated file. Every mutant below is named after its attack, carries its
 `E4-SURFACE-CE-nnn` id, and pins the **exact refusal** its clause returns
 rather than a Boolean: a battery that pinned `= false` would pass for a
 carrier that refused the right term for the wrong reason. The clause order is
-frozen in `test/contracts/surface-entity.contract.md` because `check` returns
+frozen in `Test/contracts/surface-entity.contract.md` because `check` returns
 the first refusal. The witnesses live in
 `Test/Counterexamples/Surface/Entity.lean`.
 -/
@@ -174,7 +174,7 @@ theorem shop_entities_wf : ∀ e ∈ shop.entities, Entity.WellFormed shop e :=
 
 Without this theorem a capability that proves three clauses could not be
 related to `WellFormed`, and every derivation theorem of
-`test/contracts/surface-derive.contract.md` would have to re-derive the whole
+`Test/contracts/surface-derive.contract.md` would have to re-derive the whole
 check. -/
 
 theorem user_clauses :

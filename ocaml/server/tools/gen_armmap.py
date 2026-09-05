@@ -27,7 +27,7 @@ Five tables are emitted:
                constructor.
 
 Citations resolve against every Lean module of the machine (`src/Effect4/Machine/*.lean`
-since "Prod cleanup 3", `Effect4/Deep/*.lean` before it), not only `Fibers.lean`: seat W1's
+since "Prod cleanup 3", `src/Effect4/Machine/*.lean` before it), not only `Fibers.lean`: seat W1's
 port moved the store arms into `deep_stores.ml`, whose arms cite `Stores.lean`. A bare `:N`
 resolves against the *home* module of the avatar file it was written in (`deep_stores.ml`
 -> `Stores.lean`), which is the avatar's own convention.
@@ -47,7 +47,7 @@ def ocaml_string(s):
 
 
 def read(path):
-    with open(path) as handle:
+    with open(path, encoding="utf-8") as handle:
         return handle.read()
 
 
@@ -236,7 +236,7 @@ def lean_files(argument):
     if os.path.isdir(argument):
         names = sorted(name for name in os.listdir(argument) if name.endswith(".lean"))
         names.sort(key=lambda name: (name != "Fibers.lean", name))
-        return [os.path.join(argument, name) for name in names]
+        return [os.path.join(argument, name).replace("\\", "/") for name in names]
     return argument.split(",")
 
 

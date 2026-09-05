@@ -1,5 +1,5 @@
 /-
-Contract packet: `test/contracts/schema-representation.contract.md`
+Contract packet: `Test/contracts/schema-representation.contract.md`
 
 Breaker-owned red battery. The implementation phase must not edit this file.
 It is red until the Schema representation tag census declarations exist.
@@ -114,7 +114,7 @@ end SurfaceSnapshot
 section SourceCensus
 
 /-- The exact case-sensitive rc.112 `_tag` spellings, in the frozen order of
-the census table in `docs/SCHEMA-CUTOVER.md`. -/
+the census table in `docs/research/SCHEMA-CUTOVER.md`. -/
 def expectedTagNames : List String :=
   ["Declaration", "Reference", "Suspend",
    "Null", "Undefined", "Void", "Never", "Unknown", "Any",

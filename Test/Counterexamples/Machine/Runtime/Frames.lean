@@ -10,7 +10,7 @@ production surface is still absent, and they must keep proving the attack after
 the repaired declarations land.
 
 Each theorem is finite and proves only the named attack. None of them is a
-production law; the frozen laws live in `test/contracts/frames.contract.md`.
+production law; the frozen laws live in `Test/contracts/frames.contract.md`.
 
 Pinned source: `effect@4.0.0-rc.112` under `vendor/effect-4.0.0-rc.112/src/`.
 Reading: `docs/effect-rc112-fiber-runtime.html` sections 1-4.
@@ -625,7 +625,7 @@ theorem yieldable_error_evaluates_to_its_own_failure :
 
 /-! ## E4-RUN-CE-027 — a generator's progress is not a function of its name and the last answer
 
-Found on 2026-09-04 by writing a two-`yield*` `Effect.gen` as `Effect4/Syntax/Eff.lean` data
+Found on 2026-09-04 by writing a two-`yield*` `Effect.gen` as `src/Effect4/Program/Eff.lean` data
 (`docs/research/2026-09-04-eff-compile.md` §0). rc.112's `Iterator[contA]` calls
 `this[args].next(value)` on a generator *object*, which advances
 (`internal/effect.ts:1362-1377`). The arm the frames pinned pushed the frame back with the

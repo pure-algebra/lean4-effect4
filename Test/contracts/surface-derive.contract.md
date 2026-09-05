@@ -3,15 +3,15 @@
 Status: breaker packet, red, 2026-09-04 (wave 1b, for wave 2e of
 `docs/research/2026-09-04-surface-library-plan.md` §14.3-§14.7)
 
-Implementation (owed): `Effect4/Surface/Derive.lean`, `Effect4/Surface/Model.lean`
+Implementation (owed): `src/Effect4/Codegen/App.lean`, `Effect4.Surface.Model (planned module; the packet remains red)`
 
-Battery: `Effect4Test/Surface/DeriveContract.lean`
+Battery: `Test/Surface/DeriveContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-071` through `E4-SURFACE-CE-075`
 
-Witnesses: `Effect4Test/Counterexamples/Surface/Derive.lean`
+Witnesses: `Test/Counterexamples/Surface/Derive.lean`
 
-Depends on: `test/contracts/surface-facts.contract.md` (the lifted clauses and
+Depends on: `Test/contracts/surface-facts.contract.md` (the lifted clauses and
 each carrier's `wellFormed_iff`)
 
 ## Purpose
@@ -109,7 +109,7 @@ theorem Creatable.crudGroup_wf {dom} (c : Creatable dom) (plural : String) :
 theorem Identified.getEndpoint_paramsMatchPath {dom} (i : Identified dom) (plural : String) :
     Endpoint.ParamsMatchPath (i.getEndpoint plural)
 
--- Effect4/Surface/Model.lean
+-- Effect4.Surface.Model (planned module; the packet remains red)
 def Model.Store (key entity : Type) : Type := List (key × entity)
 def Model.Store.get {key entity} [DecidableEq key] :
     Model.Store key entity → key → Option entity
@@ -142,7 +142,7 @@ def Identified.contracts {dom} (i : Identified dom) : List Contract
 1. **Elaboration.** `({ entity := userEntity } : Identified shop)` elaborates
    or it does not. A capability constructed on a value whose facts hold is a
    positive receipt; one on a value whose facts fail is a **compile-negative**
-   and is recorded as such per `Effect4Test/AGENTS.md`: the battery keeps the
+   and is recorded as such per `AGENTS.md`: the battery keeps the
    rejected term in a comment beside the mutant it names, because a failing
    elaboration cannot be a `#guard`.
 2. `Endpoint.check dom.refs (i.getEndpoint "users") = .ok ()`, a `#guard`.

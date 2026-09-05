@@ -2,8 +2,8 @@
 Executable witnesses for `E4-SURFACE-CE-009` through `E4-SURFACE-CE-015`,
 `E4-SURFACE-CE-062`, `E4-SURFACE-CE-063` and `E4-SURFACE-CE-064`.
 
-Contract: `test/contracts/surface-entity.contract.md`. Frozen by the wave-1b
-breaker before `Effect4/Surface/Entity.lean` exists; red until the builder
+Contract: `Test/contracts/surface-entity.contract.md`. Frozen by the wave-1b
+breaker before `src/Effect4/Surface/Entity.lean` exists; red until the builder
 lands it.
 -/
 

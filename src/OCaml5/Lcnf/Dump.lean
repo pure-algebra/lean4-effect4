@@ -16,7 +16,7 @@ persistent extension, `PhaseExt.lean:112,162`) and `PrettyPrinter.ppDecl'` (`:21
   (`Passes.lean:66-74`) wrote when the module was built, after `normalizeFVarIds`, so a dump
   is deterministic across runs and machines — *by construction*.
 * `sketch` is total on pure-phase `Code` and names every constructor of `Code .pure`,
-  `LetValue .pure`, `Arg .pure` and `Alt .pure` — *tested* (`tools/LcnfDump.lean` on the
+  `LetValue .pure`, `Arg .pure` and `Alt .pure` — *tested* (`src/OCaml5/Tools/LcnfDump.lean` on the
   `Dispatcher` and `RunMachine` functions of `Effect4.Machine.Fibers`).
 * Neither entry point mutates the environment: both are read-only `CoreM` — *by
   construction* (`ppMono` runs the printer under `runCompilerWithoutModifyingState`).

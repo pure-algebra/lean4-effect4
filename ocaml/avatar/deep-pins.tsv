@@ -2,12 +2,16 @@
 # `run-witnesses.sh` compares these against the working tree and fails on a mismatch, so a
 # stale avatar cannot report green: re-diff arm for arm, then `avatar/pin-deep.sh --write`.
 # base 625a207 (Deep files as of 8a51d95), re-diff (3d) of seat F2 / verification by seat F3.
-Effect4/Deep/Fibers.lean	47706360aeb84aa4ee8368ca31eda77a1dcfb8c5000be63160c9c3fa310183c2
-Effect4/Deep/Stores.lean	2249f8e2dfceb1ccda774663b4d3af733d346a2a6c31b88286c9e2f1f0967a9b
-Effect4/Deep/Context.lean	15cc1375985019d1450f19e40e495aa3397791aae800face483840e3df7d1711
-Effect4/Deep/Layer.lean	6b4284329f12a009bf0d651c0e7a80dd928dc213b912d77513327d20b807047f
-Effect4/Deep/ForkFlow.lean	7f9eb91aa6e9cf46ba30f9bd8f05a1cfca25d4f6f10241dd3cd594264523c286
-Effect4/Deep/Clauses.lean	1c1f310623f34fcaf81bd8e2c593ce577195ebe0eb2656077ec54b347e4f7ff9
-Effect4/Deep/Witnesses.lean	bcf8733ddd6b60d35b2069749c6c00d1137bd92cfbcecc6fb9ef007d8bcf4217
-Effect4/Runtime/Runtime.lean	f883181af2f9d1f5d576fcd7de2e0d15ebe023272df657ee725e43e9933fbc2b
-Effect4Test/Audit/RuntimeCoverage.lean	3a8e35a3dcb467af41f116701bae99245249cb5e0b5b5369b591e7310b08ea16
+# Cleanup re-diff: 8a51d95 to d00cade and the 2026-09-05 path cleanup. Machine arms
+# unchanged modulo imports, namespaces, whitespace and citations. The retired LayerFamily
+# forgetful bridge is absent; budget_defaults moved to Env.hooks_empty. ForkFlow is archived.
+# The census is re-extracted and live clause/witness names are checked, not just counts.
+src/Effect4/Machine/Fibers.lean	1f93088fbf2f762e8d10d0c3e39b9995cbab76914c75c9f4586adc87b143b269
+src/Effect4/Machine/Stores.lean	ed197b933d7f3264d196049a28733bdfc92cc8ebe75d4500b1ff36e2fafa3be0
+src/Effect4/Machine/Context.lean	d3a825845bb5eb42073b50443eed93321908479284089ba0ee6a282134de20fd
+src/Effect4/Machine/Layer.lean	81bd462f9577846d79d1cb0fc5f84e531fb010b3c1afb68060c32175ff10e6c1
+git:c407ab7:Effect4/Deep/ForkFlow.lean	7f9eb91aa6e9cf46ba30f9bd8f05a1cfca25d4f6f10241dd3cd594264523c286
+src/Effect4/Machine/Clauses.lean	46e098be2be95a7df62cb456b6af0a3e121f79f940223e166543dbe3a0d384e9
+src/Effect4/Machine/Witnesses.lean	d11e8bab460b100cae1e7ee0816f224c946255d3bb3bb18b9f1686e663e09e38
+src/Effect4/Machine/Frames.lean	e7fab0c5a072fca93bd9a23a4460f3a9c3cfd5f38c1100269cf1329b84a79a03
+Test/Audit/RuntimeCoverage.lean	8812cce7a8a62d18519264c2a280abbe35497118244319f223fcbed318681f22

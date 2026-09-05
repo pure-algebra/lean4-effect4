@@ -6,7 +6,7 @@ import Std
 Owner: the binary64 payload datum and the raw JSON tree of the Schema
 representation payload carrier.
 
-Contract packet: `test/contracts/schema-payload.contract.md`, sections D0 and
+Contract packet: `Test/contracts/schema-payload.contract.md`, sections D0 and
 D1. Battery: `Test/Schema/PayloadContract.lean`. This module declares
 the two leaf types the payload tree hangs off; it declares no representation
 node, no admission clause, and no codec.

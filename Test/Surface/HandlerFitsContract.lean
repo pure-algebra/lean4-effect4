@@ -1,8 +1,8 @@
 /-
-Contract: `test/contracts/surface-handler-fits.contract.md`.
+Contract: `Test/contracts/surface-handler-fits.contract.md`.
 
 A prior contract for the same subject exists at
-`test/contracts/surface-handler.contract.md` (commit `9f9e0e6`) and rules the
+`Test/contracts/surface-handler.contract.md` (commit `9f9e0e6`) and rules the
 central question the other way: it keeps `Handler.fits` as exact `EffTy`
 equality and keeps the typed stub out of the `Handler` carrier entirely. Which
 packet governs is finding H-0 and a coordinator ruling.
@@ -22,14 +22,14 @@ Pin: `effect` 4.0.0-rc.112, `node_modules/effect/src`:
 The module path of the owed import is finding H-1 of this packet's report and
 is **not** frozen: plan §2 forbids `Effect4.Surface.*` from importing
 `Effect4.Program.*` and `Effect4.Machine.*`, while plan §13.2 puts
-`Endpoint.effTy : Endpoint refs → EffTy` in `Effect4/Surface/Handler.lean`
+`Endpoint.effTy : Endpoint refs → EffTy` in `src/Effect4/Surface/Handler.lean`
 over both. Everything below is stated in namespace `Effect4.Surface`, which
 every candidate resolution can honour, so a ruling changes the marked import
 line and nothing else in this file.
 
 The first section uses only landed carriers and is green today. It pins the
 `Ty.join` facts that `Endpoint.errorTy?` rests on and that
-`Effect4/Syntax/Eff.lean` does not prove (finding H-3): that file has exactly
+`src/Effect4/Program/Eff.lean` does not prove (finding H-3): that file has exactly
 one theorem, `render_ofSpelling`, so the order-independence of a join fold is
 evidence at instances here and an owed universal theorem there.
 

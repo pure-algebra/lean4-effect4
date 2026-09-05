@@ -317,7 +317,7 @@ Lean half is no longer beside these files), the check count in the head and in �
 
 ## 9.1 The move, and what the path rewrite missed
 
-`workshop/OCaml5/link` → `ocaml/link`, `workshop/OCaml5/link/Bridge.lean` →
+`workshop/OCaml5/link` → `ocaml/link`, `src/OCaml5/Bridge.lean` →
 `src/OCaml5/Bridge.lean`. The tools carried two paths that the rewrite did not reach; both
 were fatal from the new home, and both are computed, not written out, which is why a
 string rewrite could not see them:

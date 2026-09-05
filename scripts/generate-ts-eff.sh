@@ -6,7 +6,7 @@
 #   ts/eff/profile.gen.ts  the image profile: address, reserved heads, and one entry per
 #                          native operation (the operation and its row as nodes), stamped
 #
-#   ./scripts/generate-ts-eff.sh [<dir>]      default ts/eff
+#   scripts/generate-ts-eff.sh [<dir>]      default ts/eff
 #
 # A generator, not a gate (scripts/lib/stamp.sh, "Generators are not stamped"): it builds
 # `Tools.TsGen`, the one Lean module it runs, and writes. The byte-for-byte drift gate over the
@@ -30,4 +30,4 @@ if ! lake build Tools.TsGen >"$build_log" 2>&1; then
 fi
 rm -f "$build_log"
 
-lean_run src/Tools/TsGen.lean "$out"
+lean_run tools/Tools/TsGen.lean "$out"

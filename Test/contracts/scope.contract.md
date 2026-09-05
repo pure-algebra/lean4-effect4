@@ -3,20 +3,20 @@
 Status: FROZEN / RED, breaker-authored 2026-09-01
 
 Implementation fence:
-`Effect4/Runtime/Scope.lean`
+`src/Effect4/Machine/Scope.lean`
 
 Lean battery:
-`Effect4Test/Runtime/ScopeContract.lean`
+`Test/Machine/Runtime/ScopeContract.lean`
 
 Axiom report:
-`Effect4Test/Runtime/ScopeAxiomReport.lean`
+`Test/Machine/Runtime/ScopeAxiomReport.lean`
 
 Counterexamples: `E4-RUN-CE-001` through `E4-RUN-CE-009` in
-`test/counterexamples/REGISTER.md`; witnesses in
-`Effect4Test/Counterexamples/Runtime/Scope.lean`; attack shapes in
-`test/counterexamples/runtime/ATTACKS.md`
+`Test/Counterexamples/REGISTER.md`; witnesses in
+`Test/Counterexamples/Machine/Runtime/Scope.lean`; attack shapes in
+`git:c407ab7:test/counterexamples/runtime/ATTACKS.md`
 
-Proof graph: `SCOPE-PG-STATE` in `docs/SCOPE-DAG.md`
+Proof graph: `SCOPE-PG-STATE` in `docs/research/SCOPE-DAG.md`
 
 Pinned source: `effect@4.0.0-rc.112` under `vendor/effect-4.0.0-rc.112/src/`.
 Reading: `docs/effect-rc112-fiber-runtime.html` section 6.
@@ -37,7 +37,7 @@ Effect TypeScript compatibility claim and no code-generation claim.
 
 It does **not** claim that `Effect4.Scope` is equivalent to rc.112's `Scope`.
 It claims that each named clause of each named census row in the per-row table
-of `docs/SCOPE-DAG.md` has an exact theorem over the Effect4 model, and it
+of `docs/research/SCOPE-DAG.md` has an exact theorem over the Effect4 model, and it
 names, in four `SCOPE-FB-*` rows of that document, exactly what was dropped:
 host key freshness, host state-object identity, the meaning of a finalizer
 name, and the whole fiber machine. Six of the fifteen assigned census rows are
@@ -62,7 +62,7 @@ declared **partial**; see the per-row table.
 ## REQUIRES
 
 1. Lean core and Std at the repository's pinned toolchain. No Mathlib.
-2. `Effect4/Runtime/Scope.lean` imports `Effect4.Semantics.Exit` and nothing
+2. `src/Effect4/Machine/Scope.lean` imports `Effect4.Semantics.Exit` and nothing
    else from Effect4. It must not import `Effect4/Concurrency/`,
    `Effect4/Layer/`, `Effect4/Channel/`, `Effect4/Context/`, or any other area
    beside or above Runtime in `docs/ARCHITECTURE.md` "Dependency direction".
@@ -73,7 +73,7 @@ declared **partial**; see the per-row table.
    only on the operations that compare keys.
 4. `Effect4.Exit`, `Effect4.Cause`, `Effect4.Reason`, and
    `Effect4.ReasonAnnotations` are consumed exactly as
-   `test/contracts/cause-exit.contract.md` froze them. This packet declares no
+   `Test/contracts/cause-exit.contract.md` froze them. This packet declares no
    new exit or cause carrier, adds no arm to either, and claims no conversion,
    view, or adapter.
 5. `DecidableEq` is derived, never classical. `Classical.choice`,
@@ -82,7 +82,7 @@ declared **partial**; see the per-row table.
    public theorem is `propext` and `Quot.sound`.
 6. Universe policy: `κ`, `φ`, `ε`, `δ`, `ι`, `α` live in one explicit
    `Type u`; the exit value `β` lives in `Type v`. This is exactly the shape
-   `Effect4/Semantics/Exit.lean` already uses for `Exit (β : Type v)
+   `src/Effect4/Machine/Exit.lean` already uses for `Exit (β : Type v)
    (ε δ ι α : Type u)`, and the two universes are inherited from it rather than
    chosen here.
 7. Auxiliary lemmas beyond the list below are permitted but must be `private`,
@@ -101,7 +101,7 @@ operation compares keys, then the explicit arguments.
 ### Existing-type and duplicate-prevention rows
 
 The five rows — three native, two reuse — with their owners, relationships,
-pins, and assurance routes are in `docs/SCOPE-DAG.md` "Existing-type rows",
+pins, and assurance routes are in `docs/research/SCOPE-DAG.md` "Existing-type rows",
 together with the per-declaration records for every definition. They are not
 restated here.
 
@@ -117,7 +117,7 @@ FinalizerStrategy.all : List FinalizerStrategy
 ```
 
 rc.112's `"sequential" | "parallel"` union. It is a label with no scheduler
-payload; `docs/SCOPE-DAG.md` separation 7 records why.
+payload; `docs/research/SCOPE-DAG.md` separation 7 records why.
 
 ### D1 — the scope state machine
 
@@ -196,7 +196,7 @@ every non-`Open` scope.
 `Exit<any, any>` and a `Closed` state stores that exit, so the closing exit's
 value type has to be fixed somewhere. Fixing it at the scope is the cheapest
 faithful choice; erasing it to `Exit Unit` would have needed a `Exit.asVoid`
-that `Effect4/Semantics/Exit.lean` does not declare and this packet must not
+that `src/Effect4/Machine/Exit.lean` does not declare and this packet must not
 add.
 
 ### D3 — the keyed insertion-ordered finalizer table
@@ -226,7 +226,7 @@ duplicate-free, which the `Nodup`-preservation receipts establish rather than
 assume. `Effect4.Data.Row` is not reused (it is the canonical finite *set*:
 order-erasing, duplicate-erasing, value-less) and neither is
 `Effect4.ReasonAnnotations` (a `String`-keyed annotation map with a different
-owner, key domain, and merge). See `docs/SCOPE-DAG.md` separation 4.
+owner, key domain, and merge). See `docs/research/SCOPE-DAG.md` separation 4.
 
 ### D4 — registration, removal, close, fork, brackets
 
@@ -268,7 +268,7 @@ promise, and `close_reentrant_add` says what a finalizer observes.
 
 `Scope.runScoped` carries rc.112's `scoped` name. `scoped` is a Lean keyword,
 so `Effect4.Scope.scoped` would need `«scoped»` at roughly ten ascription
-sites; the rename is recorded in `docs/SCOPE-DAG.md`'s declaration table.
+sites; the rename is recorded in `docs/research/SCOPE-DAG.md`'s declaration table.
 `runScoped` takes the body's registration trace as first-order data rather than
 a computation, which is the same defunctionalization DB-05 requires of every
 scoped operation.
@@ -664,7 +664,7 @@ scope that has already closed must run the release now, not leak it.
 
 The clause-by-clause table, including which clauses are left to the
 fork/supervision and continuation-machine packets and the expected coverage
-state of each of the fifteen rows after the join, is in `docs/SCOPE-DAG.md`
+state of each of the fifteen rows after the join, is in `docs/research/SCOPE-DAG.md`
 "Census rows this packet targets". It is not duplicated here, because two
 copies of a clause map is exactly the ownership error `AGENTS.md` forbids.
 
@@ -692,7 +692,7 @@ not be re-witnessed.
 | `E4-RUN-CE-009` | close always merges through `exitAsVoidAll` | keep the three arms: nothing, the single finalizer's own exit, and the merge. A single finalizer failing with an empty cause fails the close |
 
 The nine witnesses are finite self-contained breaker models in
-`Effect4Test/Counterexamples/Runtime/Scope.lean`. They prove the attacks, not
+`Test/Counterexamples/Machine/Runtime/Scope.lean`. They prove the attacks, not
 the production laws, and they remain executable after the repair lands.
 
 ## Trust and acceptance
@@ -722,8 +722,8 @@ lake build Effect4Test.Counterexamples.Runtime.Scope
 exits zero, while
 
 ```sh
-lake env lean -DmaxErrors=10000 Effect4Test/Runtime/ScopeContract.lean
-lake env lean -DmaxErrors=10000 Effect4Test/Runtime/ScopeAxiomReport.lean
+lake env lean -DmaxErrors=10000 Test/Machine/Runtime/ScopeContract.lean
+lake env lean -DmaxErrors=10000 Test/Machine/Runtime/ScopeAxiomReport.lean
 ```
 
 both exit nonzero with *only* unknown-identifier and unknown-constant
@@ -738,8 +738,8 @@ The builder phase requires all three files plus the complete project test suite
 to exit zero, with `#print axioms` receipts inside `propext`/`Quot.sound` for
 every one of the ninety-eight public theorems. It does not authorize any
 coverage-number change: the runtime-coverage join in
-`Effect4Test/Audit/RuntimeCoverage.lean` is a separate packet with a separate
-claim, as recorded in `docs/SCOPE-DAG.md`.
+`Test/Audit/RuntimeCoverage.lean` is a separate packet with a separate
+claim, as recorded in `docs/research/SCOPE-DAG.md`.
 
 ## Open questions
 

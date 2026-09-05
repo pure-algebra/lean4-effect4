@@ -5,18 +5,18 @@ import Effect4.Codegen.Worker
 # Ingest.Wrangler — the wrangler configuration, read backwards
 
 Design: `docs/research/2026-09-04-codegen-api-design.md` §3.4 and the `deployWrangler` row of
-§4; the projection this inverts is `Effect4/Codegen/Worker.lean`'s `wranglerJson`, and the
+§4; the projection this inverts is `src/Effect4/Codegen/Worker.lean`'s `wranglerJson`, and the
 Surface plan's §4.8 is the row that asked for it.
 
 One rule is read here, `deployWrangler` (`surface.deploy.wrangler`), against the pin
 `vendor/wrangler-3.114.16/config-schema.json`, SHA-256
 `3f7bca5c73d039698e6ffc6f7fa6849c9eef453edf129172e640186b495ea7bb`. The emitter, the worker
-entry and the key table with its schema line numbers are `Effect4/Codegen/Worker.lean`'s;
+entry and the key table with its schema line numbers are `src/Effect4/Codegen/Worker.lean`'s;
 nothing here emits.
 
 | | |
 | --- | --- |
-| Carrier | none of its own: `Deployment` and `Binding` are `Effect4/Surface/Deploy.lean`'s |
+| Carrier | none of its own: `Deployment` and `Binding` are `src/Effect4/Surface/Deploy.lean`'s |
 | Operations | `wranglerKeys`, `environmentKeys`, `consumerKeys`, `ofWrangler`, `Binding.isSecret`, `Binding.withoutAnnotations`, `EnvironmentOverride.wranglerCarried`, `Deployment.wranglerCarried`; the `Ingest .deployWrangler` instance |
 | Laws | `wranglerRoundTrip`, stated and owed. The round trip is a `#guard` over the fixtures at the named quotient; the theorem is an owed row |
 | Structure | a partial inverse `Json ⇀ Deployment`, exact on the fragment `wranglerCarried` names |
@@ -55,7 +55,7 @@ fixture receipt is `ingest .deployWrangler dom (wranglerJson docs) = .ok docs.wr
 
 1. **every annotation bag**, the deployment's and every binding's, top level and named
    environment alike, because the configuration is JSON and JSON has no comments
-   (`Effect4/Codegen/Worker.lean`'s "Descriptions go nowhere" paragraph, and
+   (`src/Effect4/Codegen/Worker.lean`'s "Descriptions go nowhere" paragraph, and
    `RawConfig.additionalProperties = false`, schema line 1256);
 2. **`serves`**, because which apis a worker serves is a fact about the code, not about the
    configuration;
@@ -70,7 +70,7 @@ fixture receipt is `ingest .deployWrangler dom (wranglerJson docs) = .ok docs.wr
    secrets) to `none` so the receipt is an equality.
 
 Three shapes are read *lossily* rather than dropped, and they are the number codec's, stated
-in `Effect4/Surface/Deploy.lean`'s header: a `head_sampling_rate` a foreign configuration
+in `src/Effect4/Surface/Deploy.lean`'s header: a `head_sampling_rate` a foreign configuration
 wrote is rounded to the nearest per mille; a rate outside `[2^-10, 1]` is refused, not
 clamped; an integer-valued key that is not a natural below `2^53` is refused, not truncated.
 On everything `wranglerJson` writes, all three are the identity.
@@ -78,7 +78,7 @@ On everything `wranglerJson` writes, all three are the identity.
 `wranglerCarried` is the identity on binding *order*, and `wranglerJson` writes bindings
 grouped by kind, so the receipt holds exactly when the deployment's bindings — and each
 override's — are already in that group order. The `docs` fixture is
-(`Effect4/Surface/Deploy.lean` says so where it is defined); a deployment that interleaves
+(`src/Effect4/Surface/Deploy.lean` says so where it is defined); a deployment that interleaves
 kinds round-trips only up to that regrouping. Both the theorem and the regrouping lemma are
 owed rows, named here rather than assumed.
 
@@ -361,7 +361,7 @@ private def boolAt (path : String) : Json → Except Refusal Bool
   | _ => .error (.wranglerMalformed path)
 
 /-- A JSON number holding a natural, or a malformed refusal. A fractional, negative or
-too-large number is refused rather than truncated; see `Effect4/Surface/Deploy.lean`'s
+too-large number is refused rather than truncated; see `src/Effect4/Surface/Deploy.lean`'s
 `natOfBits`. -/
 private def natAt (path : String) : Json → Except Refusal Nat
   | .number value =>
@@ -371,7 +371,7 @@ private def natAt (path : String) : Json → Except Refusal Nat
   | _ => .error (.wranglerMalformed path)
 
 /-- A JSON number holding a sampling rate, read to the nearest per mille. A rate outside
-`[2^-10, 1]` is refused, not clamped; see `Effect4/Surface/Deploy.lean`'s `perMilleOfBits`. -/
+`[2^-10, 1]` is refused, not clamped; see `src/Effect4/Surface/Deploy.lean`'s `perMilleOfBits`. -/
 private def rateAt (path : String) : Json → Except Refusal Nat
   | .number value =>
     match perMilleOfBits value.bits with
@@ -677,7 +677,7 @@ private def environmentsOf (entries : List (String × Json)) :
 /--
 Read a wrangler configuration into a deployment.
 
-Total on the fragment `Effect4/Codegen/Worker.lean`'s key table names, refusing everything
+Total on the fragment `src/Effect4/Codegen/Worker.lean`'s key table names, refusing everything
 else by name. The host is `cloudflarePages` exactly when `pages_build_output_dir` is present,
 which is the rule the schema itself states at line 1788; `serves`, `provides` and every
 annotation bag come back empty, because the configuration does not carry them.
@@ -905,7 +905,7 @@ private def everyKind : Deployment :=
 
 /-! ## Anti-vacuity: every key this lane added
 
-`Effect4/Codegen/Worker.lean`'s `docsEveryKey` is the fixture the emitter's golden pins, so
+`src/Effect4/Codegen/Worker.lean`'s `docsEveryKey` is the fixture the emitter's golden pins, so
 the round trip below is read against a configuration whose every byte is already written
 down: one `compatibility_flags`, one cron, one nine-key consumer, one tail consumer, both
 sampling rates, `limits`, `placement`, `logpush`, and one `env.prod` whose non-inherited half

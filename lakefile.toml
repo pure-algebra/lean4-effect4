@@ -36,54 +36,39 @@ moreLeanArgs = ["-M6144"]
 name = "Effect4Gen"
 srcDir = "tools"
 roots = ["Effect4Gen.Main", "Effect4Gen.Check"]
-globs = ["Effect4Gen.Main", "Effect4Gen.Check"]
 moreLeanArgs = ["-M6144"]
 
-# The Effect4-side `--run` drivers (`src/Tools/`): thin `main`s over library modules that
+# The Effect4-side `--run` drivers (`tools/Tools/`): thin `main`s over library modules that
 # cross to bytes — `Tools.TsGen`, the TypeScript estate's generated files (schemas, JSON
 # writers, the profile) from the closed world `OCaml5.Eff.World` reads, and `Tools.Corpus`,
 # the printed corpus with Lean's round-trip beside each program. A tool is `IO` over the
 # library and is not the library: the root `Tools` is a sibling of `Effect4`, outside the
 # axiom gate's `Effect4.*` / `Test.*` audit and imported by nothing. `lake build Tools`
-# type-checks the drivers so they cannot rot; `lake env lean -M4096 --run src/Tools/<X>.lean …`
+# type-checks the drivers so they cannot rot; `lake env lean -M4096 --run tools/Tools/<X>.lean …`
 # runs one. The OCaml estate's drivers stay under `OCaml5.Tools`.
 [[lean_lib]]
 name = "Tools"
-srcDir = "src"
+srcDir = "tools"
 globs = ["Tools.+"]
 moreLeanArgs = ["-M6144"]
 
 # The green battery: the audit root and its import closure.
 [[lean_lib]]
 name = "Test"
-roots = ["Test.All"]
-globs = ["Test.All"]
+# The import-only root reaches Test.All. Owning the root makes every Test import
+# buildable on a fresh checkout without globbing the intentionally red batteries.
+roots = ["Test"]
+globs = ["Test"]
 moreLeanArgs = ["-M6144"]
 
-# The red-inclusive battery: every module under `Test/`, including any frozen breaker
-# battery expected to fail. Build it to see the whole tree; it is not a gate.
-[[lean_lib]]
-name = "TestAll"
-globs = ["Test.+"]
-moreLeanArgs = ["-M6144"]
-
-# Per-area batteries, one per `Test/` directory, so a narrow sweep is
+# The five independently green area batteries; a narrow sweep is
 # `lake build TestSchema` rather than a whole-tree build. The globs are `.+`,
 # submodules only: `.*` would also select the directory's own module, which
 # does not exist.
-[[lean_lib]]
-name = "TestApi"
-globs = ["Test.Api.+"]
-moreLeanArgs = ["-M6144"]
 
 [[lean_lib]]
 name = "TestSchema"
 globs = ["Test.Schema.+"]
-moreLeanArgs = ["-M6144"]
-
-[[lean_lib]]
-name = "TestSurface"
-globs = ["Test.Surface.+"]
 moreLeanArgs = ["-M6144"]
 
 [[lean_lib]]
@@ -102,33 +87,8 @@ globs = ["Test.Codegen.+"]
 moreLeanArgs = ["-M6144"]
 
 [[lean_lib]]
-name = "TestIngest"
-globs = ["Test.Ingest.+"]
-moreLeanArgs = ["-M6144"]
-
-[[lean_lib]]
-name = "TestData"
-globs = ["Test.Data.+"]
-moreLeanArgs = ["-M6144"]
-
-[[lean_lib]]
 name = "TestStore"
 globs = ["Test.Store.+"]
-moreLeanArgs = ["-M6144"]
-
-[[lean_lib]]
-name = "TestEvidence"
-globs = ["Test.Evidence.+"]
-moreLeanArgs = ["-M6144"]
-
-[[lean_lib]]
-name = "TestAudit"
-globs = ["Test.Audit.+"]
-moreLeanArgs = ["-M6144"]
-
-[[lean_lib]]
-name = "TestCounterexamples"
-globs = ["Test.Counterexamples.+"]
 moreLeanArgs = ["-M6144"]
 
 # The generic effect algebra, morphisms, transport, families, and the shared trace

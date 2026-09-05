@@ -1,4 +1,4 @@
-(* `Effect4/Deep/Clauses.lean` → `deep_clauses.ml`: the mechanism clauses of the reference
+(* `src/Effect4/Machine/Clauses.lean` → `deep_clauses.ml`: the mechanism clauses of the reference
    machine, one OCaml entry per Lean theorem, in the Lean order, each with the line it is the
    port of and the census rows it is tagged with (`census:` in the Lean docstring).
 
@@ -487,7 +487,7 @@ let clauses : clause list =
             flush_root m fuel r.id 3;
             all [ expect (has_event (fun e -> e = RanTask (r.id, Tstart c.id)) m) "the root's task did not run";
                   expect (List.length (List.concat_map (fun b -> b.tasks) c.dispatcher.buckets) = 1 && m.armed = [ c.id ]) "the child's own dispatcher was flushed, or its callback cancelled" ]) };
-    { name = "budget_defaults"; lean = "Clauses.lean:285"; census = [ "scheduler.max-ops-default" ];
+    { name = "Env.hooks_empty"; lean = "Context.lean:hooks_empty"; census = [ "scheduler.max-ops-default" ];
       check =
         Pure
           (fun () ->
@@ -1753,12 +1753,18 @@ let clauses : clause list =
                   expect (after = [] && (match !got with [ Thr (Einterrupt_exn _) ] -> true | _ -> false)) "the interrupt while parked did not run the cancel and re-fail" ]) };
   ]
 
+(* The budget-default receipt moved from Clauses to Context when the old ContextFamily
+   was retired. Keep executing its probe; count it against its actual owner. *)
+let clauses, environment_clauses =
+  List.partition (fun c -> c.name <> "Env.hooks_empty") clauses
+
 let count = List.length clauses
 
-let find (name : string) : clause option = List.find_opt (fun c -> c.name = name) clauses
+let find (name : string) : clause option =
+  List.find_opt (fun c -> c.name = name) (clauses @ environment_clauses)
 
 (* The Lean name of a clause as the census cites it. *)
-let lean_name (c : clause) : string = "Effect4.Deep." ^ c.name
+let lean_name (c : clause) : string = "Effect4.Machine." ^ c.name
 
 (* Evaluate the once-only part of a clause. *)
 let evaluate (c : clause) : verdict =

@@ -9,7 +9,7 @@
 # edited continuously, so a document name plus a line number silently
 # retargets whenever a section above it grows or shrinks, and the citing
 # sentence keeps asserting a claim the target no longer makes. That has already
-# happened here: a proof-graph reallocation in `docs/SCHEMA-CUTOVER.md` moved
+# happened here: a proof-graph reallocation in `docs/research/SCHEMA-CUTOVER.md` moved
 # the five `SC-WIRE-*` obligation rows, and citations elsewhere in the tree were
 # left pointing at unrelated prose without any file being edited.
 #
@@ -17,8 +17,8 @@
 # citation token under the scanned trees and rejects the ones whose target is
 # one of five protected authored documents:
 #
-#   docs/SCHEMA-CUTOVER.md    PLAN.md    AGENTS.md
-#   docs/ARCHITECTURE.md      docs/AGENT-ROUTING.md
+#   docs/research/SCHEMA-CUTOVER.md    PLAN.md    AGENTS.md
+#   docs/ARCHITECTURE.md      the former agent-routing document
 #
 # WHAT A PASS MEANS: in the scanned trees, no citation names one of those five
 # documents together with a line number. Cite a section heading, an obligation
@@ -43,8 +43,8 @@
 #     are skipped wherever they appear, because none of those trees is authored
 #     here: `vendor/` is read-only pinned evidence whose internal citations
 #     belong to its own repository, and the other two are an installed
-#     dependency and a transient copy of one, which `harness/AGENTS.md` already
-#     rules out as canonical evidence. They are pruned rather than filtered
+#     dependency and a transient copy of one, which the repository router
+#     excludes from canonical evidence. They are pruned rather than filtered
 #     file by file: `harness/trace/patched/_copy/` alone holds the 2,341 files
 #     of the patched rc.112 tree, four times this repository's own text.
 #
@@ -56,8 +56,10 @@
 # nothing here, so it neither reads nor writes a stamp.
 set -euo pipefail
 
-protected_docs="docs/SCHEMA-CUTOVER.md SCHEMA-CUTOVER.md PLAN.md AGENTS.md docs/ARCHITECTURE.md ARCHITECTURE.md docs/AGENT-ROUTING.md AGENT-ROUTING.md"
-scanned_trees="src Test docs scripts harness"
+# The retired router name remains detector input, not a live document citation.
+retired_router_name="AGENT-ROUTING.md"
+protected_docs="docs/research/SCHEMA-CUTOVER.md SCHEMA-CUTOVER.md PLAN.md AGENTS.md docs/ARCHITECTURE.md ARCHITECTURE.md docs/${retired_router_name} ${retired_router_name}"
+scanned_trees="src Test tools ocaml ts docs scripts harness generated"
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 . "$repo_root/scripts/lib/portable.sh"
@@ -116,7 +118,7 @@ while IFS= read -r candidate; do
   esac
   files+=("$candidate")
 done < <(find "${scan_dirs[@]}" \
-    \( -type d \( -name vendor -o -name node_modules -o -name _copy \) -prune \) -o \
+    \( -type d \( -name vendor -o -name node_modules -o -name _copy -o -name research -o -name _build -o -name .lake \) -prune \) -o \
     -type f -print \
   | LC_ALL=C sort \
   | tr '\n' '\0' \

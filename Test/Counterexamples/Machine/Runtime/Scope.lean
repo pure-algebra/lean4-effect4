@@ -9,7 +9,7 @@ production surface is still absent, and they must keep proving the attack after
 the repaired declarations land.
 
 Each theorem is finite and proves only the named attack. None of them is a
-production law; the frozen laws live in `test/contracts/scope.contract.md`.
+production law; the frozen laws live in `Test/contracts/scope.contract.md`.
 
 Pinned source: `effect@4.0.0-rc.112` under `vendor/effect-4.0.0-rc.112/src/`.
 Reading: `docs/effect-rc112-fiber-runtime.html` section 6.

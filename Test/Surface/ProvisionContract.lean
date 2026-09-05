@@ -6,7 +6,7 @@ import Effect4.Surface.Provision
 closed layer, frozen
 
 Plan: `docs/research/2026-09-04-provision-algebra.md` §4–§5 and §9 (R4, R6). The modules
-under contract are `Effect4/Surface/Middleware.lean` and `Effect4/Surface/Provision.lean`.
+under contract are `src/Effect4/Surface/Middleware.lean` and `src/Effect4/Surface/Provision.lean`.
 
 Every obligation is ascribed at its exact proposition and supplied by name with `@`, so a
 declaration that keeps the frozen name but weakens the statement fails here. The `#guard`s
@@ -121,7 +121,7 @@ theorem forged_provider_types_as_honest :
 
 end Receipts
 
-/-! ## D2 — a deployment as a closed layer (`Effect4/Surface/Provision.lean`) -/
+/-! ## D2 — a deployment as a closed layer (`src/Effect4/Surface/Provision.lean`) -/
 
 section DeploymentJoin
 

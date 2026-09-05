@@ -2,10 +2,10 @@
 
 Status: **Pass-B FROZEN; implementation REQUIRED-BLOCKED**.
 
-Production fence: `Effect4/Schema/EffectfulField.lean`, plus its import in
+Production fence: `src/Effect4/Schema/EffectfulField.lean`, plus its import in
 `Effect4.lean`. Breaker battery:
-`Effect4Test/Schema/EffectfulFieldContract.lean`. Retained attacks:
-`Effect4Test/Counterexamples/Schema/EffectfulField.lean` and
+`Test/Schema/EffectfulFieldContract.lean`. Retained attacks:
+`Test/Counterexamples/Schema/EffectfulField.lean` and
 `E4-SCHEMA-CE-049` through `E4-SCHEMA-CE-052`.
 
 This is the first additive consumer of the Schema annotation data plane. It
@@ -216,8 +216,8 @@ or either breaker battery.
 At freeze time production declares none of the names above. The breaker runs:
 
 ```text
-lake env lean -DmaxErrors=10000 Effect4Test/Schema/EffectfulFieldContract.lean
-lake env lean -DmaxErrors=10000 Effect4Test/Counterexamples/Schema/EffectfulField.lean
+lake env lean -DmaxErrors=10000 Test/Schema/EffectfulFieldContract.lean
+lake env lean -DmaxErrors=10000 Test/Counterexamples/Schema/EffectfulField.lean
 ```
 
 Both must be clean red because of the missing production surface, not because

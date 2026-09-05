@@ -9,7 +9,7 @@ or the residue table with `--residue`:
 
 The file defaults to `src/Effect4/Machine/Fibers.lean`, relative to the repository root, which
 is where `ocaml/avatar/transpile-deep.sh` runs it. A thin driver: the tables and the translation
-are `src/OCaml5/Transpile.lean`.
+are `src/OCaml5/Avatar/Transpile.lean`.
 -/
 import OCaml5.Avatar.Transpile
 

@@ -145,7 +145,7 @@ def traceWellFormed : List Ev → List FiberId → Bool
   | _ :: rest, seen => traceWellFormed rest seen
 
 /-- Pass A forbidden example 3: `SetInterruptible` evaluated as `current` is the
-`defaultEvaluate` defect (`Effect4/Runtime/Runtime.lean:1706-1708`), so no witness fiber may
+`defaultEvaluate` defect (`src/Effect4/Machine/Frames.lean:1706-1708`), so no witness fiber may
 exit with it. -/
 def noNotImplementedDefect (m : M) : Bool :=
   m.fibers.all fun f =>
@@ -327,7 +327,7 @@ theorem w1_join_is_an_effect :
 
 Pass A positive example 2. `onExit`'s `contAll` masks the fiber and pushes the restoring
 `SetInterruptible true` frame while the finalizer program runs
-(`Effect4/Runtime/Runtime.lean:560-565`, rc.112 `internal/effect.ts:4021`, `:4312-4319`). An
+(`src/Effect4/Machine/Frames.lean:560-565`, rc.112 `internal/effect.ts:4021`, `:4312-4319`). An
 interrupt arriving in that window is recorded and not applied, and is delivered by the unmask
 frame's `contAll` when the finalizer's exit passes it. -/
 
@@ -381,7 +381,7 @@ def w3NextLaunch : M :=
 def w3AllFail : M :=
   replay Stores.empty (ProgName.raceOf RaceName.failThenFail) [RunDecision.evaluate ⟨0⟩]
 
-/-- `test/fixtures/traces/fiber-m3/emptyRacePendingUntilInterrupted.tsv`: the empty race is a live
+/-- `Test/fixtures/traces/fiber-m3/emptyRacePendingUntilInterrupted.tsv`: the empty race is a live
 frontier — the host stays parked on its race token and the machine holds only that fiber. -/
 theorem w3_empty_is_a_frontier :
     exitOf w3EmptyPending 0 = none ∧ parkedOf w3EmptyPending 0 = some (Parked.withGuard 0) ∧
@@ -392,7 +392,7 @@ theorem w3_empty_is_a_frontier :
 theorem w3_empty_until_interrupted :
     exitOf w3EmptyInterrupted 0 = some (interruptedBy ⟨0⟩ ⟨0⟩) := by decide
 
-/-- `test/fixtures/traces/fiber-m3/raceImmediateSuccessStopsLaunch.tsv` (host face, `answer
+/-- `Test/fixtures/traces/fiber-m3/raceImmediateSuccessStopsLaunch.tsv` (host face, `answer
 started [0, []]`): the first entrant's success settles the race, and the second entrant is
 *never forked* — the register loop breaks once done (`:1527`, R2-11, `E4-RUN-CE-035`): two
 fibers exist, one entrant program is left unlaunched, and nothing is interrupted. M8 had kept
@@ -406,14 +406,14 @@ theorem w3_immediate_success_stops_launch :
       exitOf w3StopsLaunch 2 = none := by
   decide
 
-/-- `test/fixtures/traces/fiber-m3/raceFailureAllowsNextLaunch.tsv`: a failure does not settle the
+/-- `Test/fixtures/traces/fiber-m3/raceFailureAllowsNextLaunch.tsv`: a failure does not settle the
 race, so the next entrant is launched and its success wins. -/
 theorem w3_failure_allows_next_launch :
     exitOf w3NextLaunch 0 = some (Exit.success (Val.nat 9)) ∧
       raceRows w3NextLaunch = [[0, 0, 1], [0, 0, 2], [2, 0]] := by
   decide
 
-/-- `test/fixtures/traces/fiber-m3/raceAllFailuresRetainOrder.tsv`: an all-failed race fails with the
+/-- `Test/fixtures/traces/fiber-m3/raceAllFailuresRetainOrder.tsv`: an all-failed race fails with the
 retained causes, in launch order. -/
 theorem w3_all_failures_retain_order :
     exitOf w3AllFail 0 =

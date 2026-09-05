@@ -1,7 +1,7 @@
 # The avatar re-diffed against the Lean model of 2026-09-04
 
 Four places where `src/Effect4/Machine/{Fibers,Stores}.lean` moved and the avatar
-(`ocaml/avatar/`) and its hand descriptions (`src/OCaml5/Render.lean`) had not.
+(`ocaml/avatar/`) and its hand descriptions (`src/OCaml5/Avatar/Part.lean`) had not.
 Lean is the authority. Everything below was checked on this machine (Windows 11, WSL Ubuntu,
 OCaml 5.1.1 / dune 3.24 / js_of_ocaml 5.7.1, Windows `node` v22.23.2, Lean v4.33.1).
 
@@ -64,7 +64,7 @@ the DIVERGENCE 2 note only spoke about `Cmd.loop`, and the `cmd` comment cited
 * `ocaml/avatar/deep_fibers.ml:17-47` — DIVERGENCE 2 rewritten as the arm-by-arm
   table above (it also drops the stale mention of `iteration_prelude`, which no longer exists);
   `:511-517` — the `cmd` comment cites `Fibers.lean:511-537` and the decision.
-* `src/OCaml5/Render.lean:938-970` — `Avatar.cmd` lists the eight Lean arms in Lean order:
+* `src/OCaml5/Avatar/Part.lean:938-970` — `Avatar.cmd` lists the eight Lean arms in Lean order:
   `loop`, `deliver`, `finish` carry `comment := "DIVERGENCE 2: absent from deep_fibers.ml (…)"`
   (the existing `CtorDesc.comment` mechanism; no argument is erased, the arms are rendered arity
   for arity as the request asks), `launch` has the one argument `race : Nat`, `link` has
@@ -202,19 +202,14 @@ this sentence).
 
 ### (a) dune, witnesses, hosts
 
-Baseline (before any edit; `tools/witnesses-before.txt`, native): 429 `HOLDS`, 0 `FAILS`;
-`clauses 132 holds 127 fails 0 not-portable 5`; `witnesses 62 holds 61 fails 0 not-portable 1`;
-`run-clauses holds 35 fails 0`; `park-guard violations 0`.
-
-After (final binaries; `tools/witnesses-after.txt`, `-byte.txt`, `-jsoo.txt`):
-* native (`avatar_witnesses.exe`): 429 `HOLDS`, 0 `FAILS`; `clauses 132 holds 127 fails 0
-  not-portable 5`; `witnesses 62 holds 61 fails 0 not-portable 1`; `run-clauses holds 35
-  fails 0`; `park-guard violations 0` — `diff witnesses-before.txt witnesses-after.txt` is
-  empty (0 lines: not one row moved);
-* bytecode (`ocamlrun avatar_witnesses.bc`): byte-identical to native;
-* js_of_ocaml (`node avatar_witnesses.bc.js`, Windows node): byte-identical to native
-  (`cmp` silent), i.e. **hosts witnesses AGREE (bytecode = native = js_of_ocaml)**;
-* the native report is also byte-identical to the committed `out/witnesses.report.tsv`.
+The four recorded runs (before, native after, bytecode after, js_of_ocaml after)
+were byte-identical. The retained report is `ocaml/avatar/tools/witnesses-after.txt`,
+SHA-256 `9d59bcb48e75c4d56a259cfc05dfa419d267ae001436587d71592b2efe2fb657`.
+The bytecode and js_of_ocaml failfast demonstrations also matched the retained
+`ocaml/avatar/tools/failfast-demo-native.txt`, SHA-256
+`68805ab4db69207e2b5b8ece2294abb1b37bc69b6938b211cd824d7a48049e90`.
+These are historical bounded host receipts; current witnesses are checked by
+`scripts/check-ocaml.sh avatar-witnesses`.
 
 `dune build --root .` succeeds in all three modes (byte, exe, js). The `--root .` matters: see
 "environment findings".
@@ -226,7 +221,7 @@ pre-dune binary names, so the comparison was re-spelled in `tools/`: `run-corpus
 (native + bytecode, WSL), `run-corpus-jsoo.ps1` (js_of_ocaml under the Windows `node`),
 `run-corpus-rc112.ps1` (`corpus_rc112.mjs` over the vendored package at
 `C:\Users\kokok\Dev\effect4-host\node_modules`, passed as a `file://` URL) and
-`compare-faces.sh` (event rows only, program by program). `generated/traces/masks.tsv` is not in
+`compare-faces.sh` (event rows only, program by program). `git:c407ab7:generated/traces/masks.tsv` is not in
 this checkout, so `compare.py` ran under `tools/masks.tsv`, one mask keeping every row kind (the
 strictest projection it can apply).
 
@@ -341,10 +336,10 @@ trace showed as `waiting(0)` with no countdown firing; fixed with `handle_target
 
 ## Files touched
 
-`src/OCaml5/Render.lean` (the four descriptions and their guards only);
+`src/OCaml5/Avatar/Part.lean` (the four descriptions and their guards only);
 `ocaml/avatar/{deep_fibers,deep_stores,deep_layer,deep_witnesses,deep_clauses,extra_fixture}.ml`;
 new under `ocaml/avatar/tools/`: `run-corpus-wsl.sh`, `run-corpus-jsoo.ps1`,
 `run-corpus-rc112.ps1`, `compare-faces.sh`, `render-diff.py`, `masks.tsv`, the `witnesses-*.txt`,
 `derivedcheck-*.txt`, `failfast-demo-*.txt`, `corpus-vs-rc112.txt` evidence files, and this
-report. Nothing under `link/`, `server/`, `Derived/`, `DerivedCheck.lean`, `tools/Describe.lean`,
+report. Nothing under `link/`, `server/`, `Derived/`, `DerivedCheck.lean`, `src/OCaml5/Tools/Describe.lean`,
 `lakefile.toml`, `Effect4.lean`, `Test/` or `src/` was edited; no git command that writes was run.

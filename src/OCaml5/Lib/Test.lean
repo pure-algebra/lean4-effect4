@@ -183,7 +183,7 @@ def sx : Sexp := .list [.atom "run", .list [.atom "fib", .atom "10"], .atom "a\"
 /-- A probe `StructDesc`, in declaration order. -/
 def probeStruct : Ml.StructDesc :=
   { leanName := "Probe"
-    site := "src/OCaml5/LibTest.lean"
+    site := "src/OCaml5/Lib/Test.lean"
     subst := []
     fields :=
       [ { leanName := "id", leanTy := Ml.LTy.nat }
@@ -200,7 +200,7 @@ def probeStruct : Ml.StructDesc :=
 /-- A probe `InductiveDesc`, in declaration order. -/
 def probeInductive : Ml.InductiveDesc :=
   { leanName := "Colour"
-    site := "src/OCaml5/LibTest.lean"
+    site := "src/OCaml5/Lib/Test.lean"
     subst := []
     ctors := [{ leanName := "red" }, { leanName := "green" }, { leanName := "blue" }] }
 

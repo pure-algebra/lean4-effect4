@@ -2,8 +2,8 @@
 Executable witnesses for `E4-SURFACE-CE-058`, `E4-SURFACE-CE-059` and
 `E4-SURFACE-CE-070`.
 
-Contract: `test/contracts/surface-emit.contract.md`. Frozen by the wave-1b
-breaker before `Effect4/Surface/Emit.lean` exists; red until the builder lands
+Contract: `Test/contracts/surface-emit.contract.md`. Frozen by the wave-1b
+breaker before `src/Effect4/Codegen/Emit.lean` exists; red until the builder lands
 it.
 -/
 
@@ -46,7 +46,7 @@ theorem no_modeled_without_receipt :
 `Rule.all` is a hand-written list, and an emitter added to
 `Effect4/Surface/` without a row is invisible to the stance table, to the gate
 and to every report. The lowering lane already met this and answered it with a
-tag census over the source (`scripts/check-lowering-coverage.sh`), checked in
+tag census over the source (`git:c407ab7:scripts/check-lowering-coverage.sh`), checked in
 both directions: every `-- surface: rule.<id>` tag is in `Rule.all.map
 Rule.id`, and every id has a tag.
 

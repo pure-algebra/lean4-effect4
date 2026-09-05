@@ -3,14 +3,14 @@
 Status: breaker packet, red, 2026-09-04 (wave 1b, for waves 1a and 2e of
 `docs/research/2026-09-04-surface-library-plan.md` §14.2, §14.6, §15.2)
 
-Implementation (owed): `Effect4/Surface/Facts.lean`
+Implementation (owed): `src/Effect4/Surface/Refusal.lean`
 
 Battery: every `Effect4Test/Surface/*Contract.lean` (the refusal each clause
 returns is pinned beside the mutant that triggers it)
 
 Counterexamples: `E4-SURFACE-CE-060`, `E4-SURFACE-CE-061`
 
-Witnesses: `Effect4Test/Counterexamples/Surface/Facts.lean`
+Witnesses: `Test/Counterexamples/Surface/Facts.lean`
 
 ## Purpose
 

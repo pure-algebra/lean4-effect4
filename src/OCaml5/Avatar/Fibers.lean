@@ -10,7 +10,7 @@ import OCaml5.Avatar.Derived.Fibers
 `src/Effect4/Machine/Fibers.lean`: the substitution table, the two records and five variants of
 A0's requests 1, 2 and 5, the two request-3 functions written pure and rendered through
 `Ml.mutate`, the compile-check module, and the `RunDecision` tape wire (request 4). `generated`
-is what `tools/fuzz.sh avatar` renders, compiles on three hosts and diffs against the file.
+is what `ocaml/tools/fuzz.sh avatar` renders, compiles on three hosts and diffs against the file.
 
 **Depends on.** `OCaml5.Ml.Reflect`, `OCaml5.Ml.Passes`, `OCaml5.Avatar.Part`,
 `OCaml5.Avatar.Derived.Fibers` (the twins).
@@ -20,7 +20,7 @@ is what `tools/fuzz.sh avatar` renders, compiles on three hosts and diffs agains
   the holes reach the output as `HOLE` comments — *tested* (the `#guard`s below).
 * **The mangling is injective** on every name rendered here — *tested*.
 * **The pass fired on every update** of the request-3 functions: `residue` is empty — *tested*.
-* **Byte-identical to the hand-written file** — *tested* (`tools/fuzz.sh avatar`), executed.
+* **Byte-identical to the hand-written file** — *tested* (`ocaml/tools/fuzz.sh avatar`), executed.
 -/
 
 namespace OCaml5.Avatar
@@ -31,7 +31,7 @@ open OCaml5.Ml
 
 `ocaml/avatar/deep_fibers.ml` transcribed `src/Effect4/Machine/Fibers.lean` by hand. These
 are the descriptions that generate the carriers A0's request 1 and request 2 name, against the
-one substitution table below. `tools/fuzz.sh avatar` renders them, compiles the result, and diffs
+one substitution table below. `ocaml/tools/fuzz.sh avatar` renders them, compiles the result, and diffs
 it against A0's file. -/
 
 namespace Fibers
@@ -75,7 +75,7 @@ private def taskL : LTy :=
 
 /-! ### Request 5: `FrameFiber`, with the `Prim` pair as a hole
 
-`Effect4/Runtime/Runtime.lean:269`, five fields. `current : Prim …` and `stack : List (Prim …)`
+`src/Effect4/Machine/Frames.lean:269`, five fields. `current : Prim …` and `stack : List (Prim …)`
 are DIVERGENCE 1 — the OCaml 5 stack itself — and the renderer refuses them. `control` is the
 substitute the hand-written module fills. -/
 def frameFiber : StructDesc where
@@ -391,7 +391,7 @@ def interruptRecordDecl : Decl :=
 declaring them, because the avatar declares them. `checkModule` closes it — the supporting
 carriers `deep_fibers.ml` spells above the generated ones, and the four helpers
 `interrupt_record` calls, `frame_fail` among them, which is the hand-written filling of the hole
-the renderer left. `tools/fuzz.sh avatar` compiles it on all three hosts. -/
+the renderer left. `ocaml/tools/fuzz.sh avatar` compiles it on all three hosts. -/
 
 /-- The carriers `deep_fibers.ml` declares before the generated ones, in its spelling, so that
 the generated fragment type-checks in isolation. Not generated, and not claimed to be. -/
@@ -455,7 +455,7 @@ def checkModule : List Decl := preamble ++ generatedTypes ++ helpers ++ generate
 
 
 /-- The generated part of the avatar: the carriers of requests 1, 2 and 5, and the functions of
-request 3. `tools/fuzz.sh avatar` renders this, compiles it against a small hand-written
+request 3. `ocaml/tools/fuzz.sh avatar` renders this, compiles it against a small hand-written
 preamble, and diffs each carrier against `deep_fibers.ml`. -/
 def generated : List Decl := generatedTypes ++ generatedFns
 
@@ -487,7 +487,7 @@ def tapePreamble : List Decl :=
    .rawD "let cause_fail e = { reasons = [ Rfail e ]; annotations = [] }"]
 
 /-- A tape module: the alphabet, the generated `run_decision`, and the tapes as OCaml literals.
-`tools/fuzz.sh tapes` compiles it on all three hosts, which is what makes "every generated tape
+`ocaml/tools/fuzz.sh tapes` compiles it on all three hosts, which is what makes "every generated tape
 is a well-typed `run_decision list`" a fact rather than a claim. -/
 def tapeModule (tapes : List (List Expr)) : List Decl :=
   tapePreamble ++ [runDecision.header, runDecision.decl] ++
@@ -509,7 +509,7 @@ end Fibers
 
 /-! ### Checks: names, order, arity, holes
 
-The rendered text is checked against `deep_fibers.ml` itself by `tools/fuzz.sh avatar`, which
+The rendered text is checked against `deep_fibers.ml` itself by `ocaml/tools/fuzz.sh avatar`, which
 diffs the real file rather than a copy of it. What is pinned here is everything that must hold
 for that diff to be meaningful. -/
 

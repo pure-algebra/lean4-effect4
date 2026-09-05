@@ -4,7 +4,7 @@ import Effect4.Program.Provision
 # Provision contract — the requirement algebra and the layer signature, frozen
 
 Plan: `docs/research/2026-09-04-provision-algebra.md` §2–§3, §9 (R2). The module under
-contract is `Effect4/Program/Provision.lean` (spiked as `workshop/Provision/Provision.lean`).
+contract is `src/Effect4/Program/Provision.lean` (spiked as `src/Effect4/Program/Provision.lean`).
 
 Every obligation below is ascribed at its exact proposition and supplied by name with `@`
 or with its type arguments fixed, so a declaration that keeps the frozen name but weakens

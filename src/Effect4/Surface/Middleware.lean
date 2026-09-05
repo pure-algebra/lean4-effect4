@@ -20,14 +20,14 @@ What this module adds, and what it deliberately reuses:
 * **Reused, never re-declared.** `Row.diff` and its laws, `LayerTy` and the provision
   algebra (`provide`, `provideMerge`, `merge`, `orDie`, `Closed`), `LayerTerm`, `layerTy`,
   `docsSig`, `DocsOp`, and the two witness keys `dbKey`/`rateKey` — all from
-  `Effect4/Program/Provision.lean`. `Requirement := Row ServiceKey` and the row laws
-  are `Effect4/Machine/Context.lean` and `Effect4/Data/Row.lean`. `Security` and
-  `ApiKeyLocation` are the surface's own carriers (`Effect4/Surface/Api.lean:913-978`),
+  `src/Effect4/Program/Provision.lean`. `Requirement := Row ServiceKey` and the row laws
+  are `src/Effect4/Machine/Context.lean` and `src/Effect4/Data/Row.lean`. `Security` and
+  `ApiKeyLocation` are the surface's own carriers (`src/Effect4/Surface/Api.lean:913-978`),
   not new ones.
 * **`Middleware`, the carrier.** The four rows of `HttpApiMiddleware.Service`'s config —
   `requires`, `provides`, `error`, `security` (`HttpApiMiddleware.ts:320-346`,
   `:339-345`) — as first-order data, with `DecidableEq` throughout. The `Endpoint` row
-  the surface already carries (`Effect4/Surface/Api.lean:1110-1113`: `security : List
+  the surface already carries (`src/Effect4/Surface/Api.lean:1110-1113`: `security : List
   Security`, `requires : List String`) is the syntactic face of the same thing; the
   connection between the two is an **owed row**, because `Endpoint.requires` is a list of
   service *names* and this algebra runs on `ServiceKey`s, and no name-to-key map exists
@@ -66,9 +66,9 @@ open Effect4.Program.Provision
 
 /-! ## The keys
 
-Four fixed `ServiceKey`s extend the witness alphabet of `Effect4/Program/Provision.lean` (`dbKey` `10`,
+Four fixed `ServiceKey`s extend the witness alphabet of `src/Effect4/Program/Provision.lean` (`dbKey` `10`,
 `rateKey` `11`, `dbBinding` `20`, `rateBinding` `21`). As everywhere in this estate a key
-is a `Nat` name paired with a `Nat` code (`Effect4/Machine/Key.lean`); the numbers are
+is a `Nat` name paired with a `Nat` code (`src/Effect4/Machine/Key.lean`); the numbers are
 allocation, not spelling. -/
 
 /-- `HttpServerRequest` — the request service the router provides
@@ -467,11 +467,11 @@ theorem currentUser_survives_logging :
 
 /-! ### The boundary: `PROV-FB-KEY-FORGERY`
 
-A `ServiceKey` is first-order data (`Effect4/Machine/Key.lean`), so `currentUserKey` is a
+A `ServiceKey` is first-order data (`src/Effect4/Machine/Key.lean`), so `currentUserKey` is a
 pair of `Nat`s that any term may name. `forgedProvider` is a deployment layer that provides
 `CurrentUser` from a literal — no request read, no credential, no scheme — and `layerTy`
 types it exactly as the security middleware's provision is typed. This is the
-`LAYER-FB-LAYER-IDENTITY` shape of `Effect4/Machine/Layer.lean:33-40`, one level up:
+`LAYER-FB-LAYER-IDENTITY` shape of `src/Effect4/Machine/Layer.lean:33-40`, one level up:
 identity there is *allocation* identity of a layer object, identity here is the *object
 identity of the tag* (`Context.ts:32-41`), and neither is structural, so neither is
 representable in a first-order model.

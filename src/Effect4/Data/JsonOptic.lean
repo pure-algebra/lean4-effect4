@@ -4,7 +4,7 @@ import Effect4.Data.Optic
 /-!
 # Data.JsonOptic — the optic at a key of a JSON object, with its laws
 
-The generated optics module (`Effect4/Codegen/Optics.lean`, rule `surface.entity.optics`)
+The generated optics module (`src/Effect4/Data/JsonOptic.lean`, rule `surface.entity.optics`)
 emits `Optic.id<S>().key("p")` per property of an entity. Its Lean model is `Json.key "p"`: on
 the encoded side of a schema, a property is a key of a JSON object, and the optic that reads
 and writes it is a stable `Optional` over `Json` whose four equations

@@ -1,9 +1,9 @@
 // The rc.112 reference for the avatar's `extra` family: the five `WithFiberAction` arms no
 // committed golden reaches. Round three of spike A0.
 //
-// This is NOT a copy of `harness/trace/fiber-tail.ts` and does not import it: it is a
+// This is NOT a copy of `git:606918eb73daefcc235a261fce879bf910f2471e:harness/trace/fibers-tail.ts` and does not import it: it is a
 // standalone mirror that emits the same row alphabet (`Effects/Trace.lean`,
-// `harness/trace/tracer.ts`), so the avatar has a reference for arms the estate has no
+// `git:c407ab7:harness/trace/tracer.ts`), so the avatar has a reference for arms the estate has no
 // golden for. It imports `effect` at the estate's pin by absolute path and touches nothing
 // under `harness/` or `scripts/`.
 //

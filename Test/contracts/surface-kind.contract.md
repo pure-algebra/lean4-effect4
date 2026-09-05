@@ -3,14 +3,14 @@
 Status: breaker packet, red, 2026-09-04 (wave 1b of
 `docs/research/2026-09-04-surface-library-plan.md`, §3 as revised by §13.1)
 
-Implementation (owed): `Effect4/Surface/Kind.lean` (four kinds in wave 1a,
+Implementation (owed): `src/Effect4/Surface/Kind.lean` (four kinds in wave 1a,
 extended in place to seven in wave 2a)
 
-Battery: `Effect4Test/Surface/KindContract.lean`
+Battery: `Test/Surface/KindContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-001` through `E4-SURFACE-CE-005`
 
-Witnesses: `Effect4Test/Counterexamples/Surface/Kind.lean`
+Witnesses: `Test/Counterexamples/Surface/Kind.lean`
 
 ## Purpose
 
@@ -148,8 +148,8 @@ judgment, a denotation or an interpreter, so neither opens a proof graph.
 
 The receipts are the constructor census (one admitted and one refused
 representative per kind), the eight theorems above with `#print axioms`
-receipts in `Effect4Test/Surface/SurfaceAxiomReport.lean`, and the slot
-ascriptions of `Effect4Test/Surface/ApiContract.lean`.
+receipts in `Test/Surface/SurfaceAxiomReport.lean`, and the slot
+ascriptions of `Test/Surface/ApiContract.lean`.
 
 The leaf attaches to `SURFACE-PG-EMIT` through the `JsonRepresentable`
 precondition every emitter requires, and to `SURFACE-PG-FACTS` through the

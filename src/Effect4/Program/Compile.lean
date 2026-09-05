@@ -14,7 +14,7 @@ of the program, so "the table is the AST" is a definition.
 What this cut compiles: every constructor of `Eff` except `acquireRelease` (the scope store
 holds `FinName`s, a closed alphabet with no place for a compiled release yet) and the rows
 of kind `program` (the Layer and Context models); those compile to the frontier. `choose` is
-answered by the point's tape. The stores are `Effect4/Deep/Stores.lean`'s, unchanged: the
+answered by the point's tape. The stores are `src/Effect4/Machine/Stores.lean`'s, unchanged: the
 store-touching arms of `interpOf` call the same `syncOpStep`, `DeferredStore.register`,
 `storesCloseScope` and `cancelProgram`-shaped functions (`docs/research/2026-09-04-eff-compile.md`
 G5); only the alphabet is new.

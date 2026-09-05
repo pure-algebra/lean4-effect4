@@ -1,12 +1,12 @@
 /-
 Executable witnesses for `E4-SURFACE-CE-088` through `E4-SURFACE-CE-110`.
 
-Contract: `test/contracts/surface-handler-fits.contract.md`. Frozen by the
+Contract: `Test/contracts/surface-handler-fits.contract.md`. Frozen by the
 handler breaker (plan §13.7 ruling 7) before the handler module exists; red
 until wave 2d lands it.
 
 A prior contract for the same subject exists at
-`test/contracts/surface-handler.contract.md` (commit `9f9e0e6`), claiming
+`Test/contracts/surface-handler.contract.md` (commit `9f9e0e6`), claiming
 `E4-SURFACE-CE-076` through `E4-SURFACE-CE-087`, which is why these rows start
 at `088`. See finding H-0.
 
@@ -110,7 +110,7 @@ not from any handler's.
 /-!
 `E4-SURFACE-CE-090`. Attacked statement: "`requires` as the service keys of
 the named services", with the handler's whole `typeOf` requirement compared
-against it. `Effect4/Syntax/Typing.lean`'s `acquireRelease` and `forkScoped`
+against it. `src/Effect4/Program/Typing.lean`'s `acquireRelease` and `forkScoped`
 add `sig.scopeKey` to the requirement, and a row may declare it directly, so
 any handler that opens a resource requires `Scope` on top of `Db`. rc.112
 removes `Scope.Scope` twice: once from a handler's `R` through
@@ -156,7 +156,7 @@ were not commutative and associative then listing `404` before `429` and `429`
 before `404` would give two different endpoint types and the same handler
 would fit one endpoint and not the other.
 
-`Effect4/Syntax/Eff.lean` proves exactly one theorem, `render_ofSpelling`, and
+`src/Effect4/Program/Eff.lean` proves exactly one theorem, `render_ofSpelling`, and
 none about `join`. The property does hold: `join` sorts its members by the
 injective `Ty.key` and drops duplicates. But it holds by inspection, not by
 receipt.
@@ -250,7 +250,7 @@ def noSuccess : Endpoint shopRefs := { getUser with success := [] }
 an endpoint declares a `200 User` and a `201 Address`. Its answer is then
 `Address | User`. No `Eff` control construct can produce that answer:
 `branch`, `catchCause`, `matchCause`, `choose` and `raceAll` all merge answers
-through `EffTy.joinAnswer` (`Effect4/Syntax/Typing.lean:38-42`), which is
+through `EffTy.joinAnswer` (`src/Effect4/Program/Typing.lean:38-42`), which is
 `none` unless the two answers are equal or one is `never`, and a `gen` with
 two `return`s of different types is refused the same way. So the *only* way to
 inhabit a multi-success endpoint's type is a single row that already answers
@@ -511,7 +511,7 @@ def duplicateOpName : Handler :=
 /--
 `E4-SURFACE-CE-105`. Attacked statement: "emission is `Syntax.Print.print` of
 the body into the `handle` slot". `fits` says nothing about printability.
-`Effect4/Syntax/Print.lean` refuses two classes of program by name: `choose`,
+`src/Effect4/Codegen/Print.lean` refuses two classes of program by name: `choose`,
 which is a flows-only constructor with no Effect combinator, and five internal
 fiber actions with no public rc.112 export. Both are well typed. So a handler
 can fit its endpoint perfectly and emit nothing at all, and a generator that
@@ -534,7 +534,7 @@ def unprintableBody : Handler :=
 
 /--
 `E4-SURFACE-CE-107`. Attacked statement: `Handler.fits : … → Bool` as the
-packet's observation. `test/contracts/surface-facts.contract.md` is explicit
+packet's observation. `Test/contracts/surface-facts.contract.md` is explicit
 that "a battery that pinned `= false` would pass for a carrier that refused
 the right term for the wrong reason", and `fits` is exactly such a Boolean: it
 collapses four distinct failures (no answer type, an ill-typed body, a wrong
@@ -598,7 +598,7 @@ responses later is a visible change with a place to land.
 /--
 `E4-SURFACE-CE-108`. Recorded gap, and finding H-1. Plan §2: "`Effect4.Surface.*`
 … does **not** import `Effect4.Char.*`, `Effect4.Machine.*`, `Effect4.Program.*`,
-or anything under `Effect4.Runtime`." Plan §13.2: "`Effect4/Surface/Handler.lean`
+or anything under `Effect4.Runtime`." Plan §13.2: "`src/Effect4/Surface/Handler.lean`
 (wave 2d; imports `Effect4.Program.Typing` and `.Print`)". `EffTy` is
 `Effect4.Program` and its `requires` field is `Effect4.Machine.Env.Requirement`,
 so §13.2 crosses the fence twice.
@@ -640,7 +640,7 @@ and nothing finer, which is what `E4-SURFACE-CE-097` measures.
 `E4-SURFACE-CE-110`. Recorded gap, and finding H-4. Plan §13.2: "with
 `requires` as the service keys of the named services". `Endpoint.requires` is
 `List String`; a `ServiceKey` is `⟨ServiceName, ServiceTypeCode⟩`, two `Nat`s
-(`Effect4/Context/Key.lean`), and that file says outright that `Nat` rather
+(`src/Effect4/Machine/Key.lean`), and that file says outright that `Nat` rather
 than `String` "is an ordering decision" and that codes are never minted from
 names. So there is no function from a service name to a key anywhere in the
 estate, and `Endpoint.effTy` cannot be a function of the endpoint alone.

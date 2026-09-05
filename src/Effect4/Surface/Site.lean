@@ -1,3 +1,4 @@
+import Effect4.Data.Ascii
 import Effect4.Surface.Deploy
 
 /-!
@@ -12,13 +13,13 @@ form it posts. The declarations are what a client emitter and a route table are
 functions of, and `Site.resolves` is the fact that joins them to a real api:
 every endpoint a page names exists, and a form's endpoint takes a payload.
 
-Like `Effect4/Surface/Deploy.lean`, this module does **not** import
-`Effect4/Surface/Api.lean` (wave 2a, written beside this one). An endpoint is
+Like `src/Effect4/Surface/Deploy.lean`, this module does **not** import
+`src/Effect4/Surface/Api.lean` (wave 2a, written beside this one). An endpoint is
 named by the triple `(api, group, endpoint)` and the endpoint table is an
 argument, so the fact is decidable as soon as the table is and the two modules
 do not have to land in one order.
 
-It imports `Effect4/Surface/Deploy.lean` for one reason only: the ASCII word
+It imports `src/Effect4/Surface/Deploy.lean` for one reason only: the ASCII word
 alphabet (`asciiWordStart`, `asciiWordContinue`) that a binding name and a path
 parameter share, plus the three shared bag helpers (`rootBag`,
 `descriptionBag`, `optionalStr`). Duplicating those four bytes of predicate in
@@ -38,7 +39,7 @@ refuses.
 ## The path template check, and the row it owes
 
 `pathTemplateLegal` decides a route over UTF-8 bytes, the route
-`Effect4/Store/Utf8.lean` takes and `Effect4/Surface/Spell.lean` takes,
+`src/Effect4/Store/Utf8.lean` takes and `src/Effect4/Codegen/Spell.lean` takes,
 because `ByteArray.toList` does not reduce in the kernel on this toolchain. It
 admits exactly:
 
@@ -115,7 +116,7 @@ def splitOnSlash : List UInt8 → List (List UInt8)
 exactly what is admitted, and names the agreement with wave 2a's `Path.parse?`
 as an owed row. -/
 def pathTemplateLegal (route : String) : Bool :=
-  match route.toUTF8.data.toList with
+  match (Data.Ascii.bytesOf route) with
   | [] => false
   | first :: rest =>
     first == 47 && (rest.isEmpty || (splitOnSlash rest).all pathSegmentLegal)
@@ -128,7 +129,7 @@ One page of a site.
 `uses` and `form` name endpoints by the triple `(api, group, endpoint)`; the
 triple is the api module's own coordinates, and `Site.resolves` is where it is
 checked against a real table. There is no `title` field: §15.3 puts the title
-and the prose in `annotations`, read through `Effect4/Surface/Annotate.lean`'s
+and the prose in `annotations`, read through `src/Effect4/Surface/Annotate.lean`'s
 keys.
 -/
 structure Page where
@@ -153,16 +154,20 @@ structure Site where
   annotations : Annotations := none
 deriving DecidableEq
 
+instance : Annotated (Page) := ⟨fun value => value.annotations⟩
+
 namespace Page
 
 /-- Clause: the route is a legal path template. -/
 def routeLegal (page : Page) : Bool := pathTemplateLegal page.route
 
 /-- Clause (§15.2): the page's bag carries an `identifier`. -/
-def identified (page : Page) : Bool := (identifierIn page.annotations).isSome
+abbrev identified (page : Page) : Bool :=
+  Effect4.Surface.identified page
 
 /-- Clause (§15.2): the page's bag carries a `description`. -/
-def described (page : Page) : Bool := (descriptionIn page.annotations).isSome
+abbrev described (page : Page) : Bool :=
+  Effect4.Surface.described page
 
 /-- Every endpoint the page names: the ones it reads, and the one its form
 posts to. The one place the two are read together. -/
@@ -202,6 +207,8 @@ theorem wellFormed_iff (site : String) (page : Page) :
 
 end Page
 
+instance : Annotated (Site) := ⟨fun value => value.annotations⟩
+
 namespace Site
 
 /-- Every route, in declaration order. -/
@@ -212,10 +219,12 @@ module is named after it. -/
 def nameLegal (site : Site) : Bool := identifier site.name
 
 /-- Clause (§15.2): the root bag carries an `identifier`. -/
-def identified (site : Site) : Bool := (identifierIn site.annotations).isSome
+abbrev identified (site : Site) : Bool :=
+  Effect4.Surface.identified site
 
 /-- Clause (§15.2): the root bag carries a `description`. -/
-def described (site : Site) : Bool := (descriptionIn site.annotations).isSome
+abbrev described (site : Site) : Bool :=
+  Effect4.Surface.described site
 
 /-- Clause: no two pages share a route. -/
 def routesDistinct (site : Site) : Bool := namesUnique site.routes
@@ -436,7 +445,7 @@ def pageRep : Representation :=
 
 /-- The site view, for registration at `["surface", "site"]`.
 
-`Effect4/Surface/Views.lean` is wave 1a's and this wave does not edit it; the
+`src/Effect4/Evidence/SurfaceViews.lean` is wave 1a's and this wave does not edit it; the
 registration of this document is an owed row. -/
 def siteDoc : Document :=
   { representation :=
@@ -483,7 +492,7 @@ Site `DocsWeb`: pages `/`, `/docs` (uses `docs.list`), `/docs/:slug` (uses
 /-- The endpoint table the docs api of §13.3 yields. A later wave computes this
 from `Api.endpointTable`; here it is the fixture the site law is checked
 against. `feedback.create` is the one endpoint with a payload. -/
-def docsEndpointTable : List (String × String × String × Bool) :=
+private def docsEndpointTable : List (String × String × String × Bool) :=
   [ ("DocsApi", "health", "get", false)
   , ("DocsApi", "docs", "list", false)
   , ("DocsApi", "docs", "get", false)

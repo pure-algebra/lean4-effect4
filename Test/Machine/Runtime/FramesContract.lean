@@ -1,8 +1,8 @@
 /-
-Contract packet: `test/contracts/frames.contract.md`
+Contract packet: `Test/contracts/frames.contract.md`
 
 Breaker-owned red battery. The implementation phase must not edit this file.
-It is red until `Effect4/Runtime/Runtime.lean` declares the frozen surface.
+It is red until `src/Effect4/Machine/Frames.lean` declares the frozen surface.
 
 Every public declaration is frozen by an exact `#check (@name : proposition)`
 ascription so no weaker statement satisfies this contract. Names are written
@@ -153,7 +153,7 @@ packet and are here now, as first-order names. -/
 rc.112's `Iterator` frame drives a JavaScript generator in a `while (true)` loop
 that folds every `Success` exit inline. The maximal run of inline values and the
 outcome that ended it are supplied as first-order data by `PrimInterp.iterNext`;
-`docs/FRAMES-DAG.md` records why. -/
+`docs/research/FRAMES-DAG.md` records why. -/
 
 #check (@Effect4.IterStep :
   Type u → Type u → Type v → Type u → Type u → Type u → Type u → Type (max u v))
@@ -1074,7 +1074,7 @@ rule.interrupt-bypasses-handlers, op.Success, op.Failure).
 `popFrom` is rc.112's `getCont` pop loop fused with the handler-skipping loop of
 `exitFailCause`, and *unfused* from the frame list it started with: rc.112 pops
 from the live `_stack`, so a frame a `contAll` pushed is popped before the
-frames already below it. `docs/FRAMES-DAG.md:200-211` reserved that obligation
+frames already below it. `docs/research/FRAMES-DAG.md:200-211` reserved that obligation
 for the packet that adds `AsyncFinalizer`; `popFrom_pass_no_push` is the half
 that still agrees with the old, list-recursive reading and
 `popFrom_asyncFinalizer_pops_its_push` is the half that does not. -/
@@ -1849,7 +1849,7 @@ checkpoint.getcont-deferred, checkpoint.exit-failcause-skip,
 exit.success-failure).
 
 Fence A of packet D4, `docs/research/2026-09-03-frame-simulation.md`. Nothing in
-`Effect4/Runtime/Runtime.lean` writes `interruptedCause`, so
+`src/Effect4/Machine/Frames.lean` writes `interruptedCause`, so
 `interruptedCause = none` together with `deferredInterrupt = false` is a `step`
 invariant, and under it the pop loop never skips an answering frame and
 `getCont` never answers a deferred interrupt. `FRAME-FB-NONNULL` is *vacuous* on

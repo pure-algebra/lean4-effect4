@@ -1,3 +1,4 @@
+import Effect4.Data.Ascii
 import Effect4.Surface.Entity
 
 /-!
@@ -11,7 +12,7 @@ slots rc.112 decodes from the request line, at most one payload, a list of
 success responses and a list of error responses indexed by status, the security
 schemes it demands, the service names its handler will need, and its annotation
 bag. A **group** is a prefixed list of endpoints; an **api** is a prefixed list
-of groups. Well-formedness follows `Effect4/Surface/Facts.lean`: `check` is a
+of groups. Well-formedness follows `src/Effect4/Surface/Refusal.lean`: `check` is a
 list of named clauses read left to right and answers the *first* refusal,
 `WellFormed` is `check = .ok ()`, and `wellFormed_iff` proves it equal to the
 conjunction of its clauses.
@@ -54,7 +55,7 @@ exist.
 | Structure | a three-level finite tree whose only cross-level law is route distinctness, decided on the rendered `(method, fullPath)` pair |
 | Payoff | retires the construction-time throws of `HttpApiEndpoint.ts:1134-1310` as a class, and gives the client, server and OpenAPI emitters one row set to read |
 | Anti-vacuity | the `shopApi` fixture: `decide` receipts for `WellFormed`, an `Arch.accepts` receipt for the view, and one refused mutant per clause |
-| Generation | none here; `Effect4/Surface/Api/Emit.lean` owns the three rules |
+| Generation | none here; `src/Effect4/Codegen/Target.lean` owns the three rules |
 
 ## Rulings applied (plan §13.7, coordinator, 2026-09-04)
 
@@ -99,12 +100,16 @@ set_option autoImplicit false
 
 namespace Effect4.Surface
 
+export Effect4.Data.Ascii (charOfByte asciiChars? val_charOfByte charOfByte_inj
+  asciiChars?_map encodeChar_charOfByte flatMap_charOfByte byteArray_eq_of_data
+  ofList_charOfByte utf8_append)
+
 open Effect4 Effect4.Schema
 open Effect4.Arch (accepts)
 
 /-! ## Comparing kinded schemas
 
-`Effect4/Surface/Kind.lean` gives `Sch` no `DecidableEq`, because its second
+`src/Effect4/Surface/Kind.lean` gives `Sch` no `DecidableEq`, because its second
 field is a proof and the carrier that is stored and addressed is `rep`. The
 carriers below are ordinary rows that happen to hold a `Sch`, and the estate
 asks every carrier for a `DecidableEq`, so the instance is supplied here: two
@@ -240,8 +245,8 @@ not. So:
 * `Path.render` and `Segment.spelled` use only the clean primitives, and are
   therefore usable inside `Endpoint.check`, `Api.check` and every theorem about
   them;
-* `Path.parse?` walks `text.toUTF8.data.toList` through `asciiChars?`, the byte
-  route `Effect4/Surface/Spell.lean` and `Effect4/Surface/Site.lean` take, and
+* `Path.parse?` walks `(Data.Ascii.bytesOf text)` through `asciiChars?`, the byte
+  route `src/Effect4/Codegen/Spell.lean` and `src/Effect4/Surface/Site.lean` take, and
   reaches no axiom. It refuses a byte above 127: `Char.ofNat` is exact below
   128 and says nothing above it, and rebuilding a non-ASCII `String` from bytes
   needs a decoder this tree does not have. A route template carrying such a
@@ -282,7 +287,7 @@ The segment is in the fragment `render` and `parse?` invert on.
 A literal is non-empty, does not begin with `:` (which would re-read as a
 parameter), is not the router wildcard `*`, holds no `/`, and is ASCII. A
 parameter's name is a legal generated binding, which is ASCII already: every
-byte `Effect4/Surface/Spell.lean`'s `identifierStart` and `identifierContinue`
+byte `src/Effect4/Codegen/Spell.lean`'s `identifierStart` and `identifierContinue`
 admit is below 128, and `identifier_bytes` is the theorem. Decided over UTF-8
 bytes, by the route that module takes: `:` is 58 and `/` is 47.
 
@@ -294,7 +299,7 @@ invert on, and `Path.parse?_render` is the theorem that says the rest of it is.
 -/
 def spelled : Segment → Bool
   | .literal text =>
-    match text.toUTF8.data.toList with
+    match (Data.Ascii.bytesOf text) with
     | [] => false
     | first :: rest =>
       first != 58 && !(text == "*") &&
@@ -398,42 +403,16 @@ def parseChars : List Char → Option Path
     else none
 
 /--
-The character an ASCII byte denotes.
-
-`Char.ofNat` agrees with the UTF-8 decoding exactly below 128 and reaches no
-axiom; `charOfByte_inj` is the injectivity that makes it a reader rather than a
-guess, and `encodeChar_charOfByte` is the encoding half.
--/
-def charOfByte (byte : UInt8) : Char := Char.ofNat byte.toNat
-
-/--
-Read ASCII bytes back as characters, refusing the first byte that is not ASCII.
-
-With `String.ofList`, which reaches no axiom either, this is the whole route
-from a `String`'s content to its characters that stays inside the axiom
-ceiling. Above 128 it has nothing to say and refuses, which is what makes
-`Path.parse?` an ASCII reader; this module's header says so.
--/
-def asciiChars? : List UInt8 → Option (List Char)
-  | [] => some []
-  | byte :: rest =>
-    if byte < 128 then
-      match asciiChars? rest with
-      | some tail => some (charOfByte byte :: tail)
-      | none => none
-    else none
-
-/--
 Read a path template. Refuses anything that does not begin with `/`, an empty
 segment, the router wildcard `*`, a parameter name that is not a legal
 generated binding, and any template carrying a byte above 127.
 
-The walk to characters is `text.toUTF8.data.toList` through `asciiChars?`, the
-byte route `Effect4/Surface/Spell.lean` and `Effect4/Surface/Site.lean` already
+The walk to characters is `(Data.Ascii.bytesOf text)` through `asciiChars?`, the
+byte route `src/Effect4/Codegen/Spell.lean` and `src/Effect4/Surface/Site.lean` already
 take, because `String.toList` reaches `Classical.choice` on this toolchain.
 -/
 def Path.parse? (text : String) : Option Path :=
-  match asciiChars? text.toUTF8.data.toList with
+  match asciiChars? (Data.Ascii.bytesOf text) with
   | some characters => parseChars characters
   | none => none
 
@@ -556,76 +535,9 @@ whole section inside the ceiling: a theorem that mentioned it would inherit its
 `Classical.choice` and the gate would refuse the theorem.
 -/
 
-/-- Below 128 `Char.ofNat` is exact: the character's code point is the byte. -/
-theorem val_charOfByte {byte : UInt8} (h : byte.toNat < 128) :
-    (charOfByte byte).val.toNat = byte.toNat := by
-  rw [charOfByte, Char.ofNat, dif_pos (by unfold Nat.isValidChar; omega)]
-  rfl
-
-/-- Distinct ASCII bytes denote distinct characters. -/
-theorem charOfByte_inj {a b : UInt8} (ha : a.toNat < 128) (hb : b.toNat < 128)
-    (h : charOfByte a = charOfByte b) : a = b := by
-  have step := congrArg (fun character => (Char.val character).toNat) h
-  simp only [val_charOfByte ha, val_charOfByte hb] at step
-  exact UInt8.toNat_inj.mp step
-
-/-- On an all-ASCII byte list the reader is total, and reads byte by byte. -/
-theorem asciiChars?_map : ∀ {bs : List UInt8}, bs.all (fun byte => byte < 128) = true →
-    asciiChars? bs = some (bs.map charOfByte) := by
-  intro bs
-  induction bs with
-  | nil => intro _; rfl
-  | cons byte rest ih =>
-    intro h
-    simp only [List.all_cons, Bool.and_eq_true, decide_eq_true_eq] at h
-    simp only [asciiChars?, if_pos h.1, ih h.2, List.map_cons]
-
-/-- An ASCII character encodes back to the one byte it came from. This is
-`String.utf8EncodeChar`'s own first branch, taken rather than cited: the core
-lemma `String.utf8EncodeChar_eq_singleton` reaches `Classical.choice`. -/
-theorem encodeChar_charOfByte {byte : UInt8} (h : byte.toNat < 128) :
-    String.utf8EncodeChar (charOfByte byte) = [byte] := by
-  unfold charOfByte String.utf8EncodeChar
-  simp only [show (Char.ofNat byte.toNat).val.toNat = byte.toNat from val_charOfByte h]
-  rw [if_pos (Nat.le_of_lt_succ h), UInt8.ofNat_toNat]
-
-/-- The reader is a section of UTF-8 encoding on ASCII bytes. -/
-theorem flatMap_charOfByte : ∀ {bs : List UInt8}, bs.all (fun byte => byte < 128) = true →
-    (bs.map charOfByte).flatMap String.utf8EncodeChar = bs := by
-  intro bs
-  induction bs with
-  | nil => intro _; rfl
-  | cons byte rest ih =>
-    intro h
-    simp only [List.all_cons, Bool.and_eq_true, decide_eq_true_eq] at h
-    have hb : byte.toNat < 128 := UInt8.lt_iff_toNat_lt.mp h.1
-    rw [List.map_cons, List.flatMap_cons, encodeChar_charOfByte hb, ih h.2,
-      List.cons_append, List.nil_append]
-
-/-- A byte array is its data. -/
-theorem byteArray_eq_of_data {first second : ByteArray} (h : first.data = second.data) :
-    first = second := by
-  cases first; cases second; simp_all
-
-/-- The retraction: reading an all-ASCII `String`'s bytes and spelling the
-characters back returns the `String` it started from. -/
-theorem ofList_charOfByte {text : String}
-    (h : (text.toUTF8.data.toList).all (fun byte => byte < 128) = true) :
-    String.ofList ((text.toUTF8.data.toList).map charOfByte) = text := by
-  rw [← String.toByteArray_inj, String.toByteArray_ofList, List.utf8Encode,
-    flatMap_charOfByte h]
-  exact byteArray_eq_of_data (by rw [List.data_toByteArray, Array.toArray_toList]; rfl)
-
-/-- Concatenation of `String`s is concatenation of their bytes. -/
-theorem utf8_append (first second : String) :
-    (first ++ second).toUTF8.data.toList =
-      first.toUTF8.data.toList ++ second.toUTF8.data.toList := by
-  rw [String.toUTF8_eq_toByteArray, String.toByteArray_append, ByteArray.toList_data_append]
-  rfl
-
 /-! ### The identifier profile is ASCII, and holds no separator
 
-These three are facts about `Effect4/Surface/Spell.lean`'s byte profile, proved
+These three are facts about `src/Effect4/Codegen/Spell.lean`'s byte profile, proved
 here because this is the module that consumes them: `Segment.spelled` asks a
 `param` name for `identifier` alone, and the round trip needs to know that a
 name so admitted carries no `/` and nothing above 127. The header's "identifier
@@ -681,7 +593,7 @@ private theorem byte_ok {byte : UInt8} (h : byte.toNat < 128 ∧ byte.toNat ≠ 
 /-- Every byte of a legal generated binding is ASCII and is not `/`. This is the
 implication this module's header used to owe. -/
 theorem identifier_bytes {name : String} (h : identifier name = true) :
-    (name.toUTF8.data.toList).all (fun byte => byte != 47 && byte < 128) = true := by
+    ((Data.Ascii.bytesOf name)).all (fun byte => byte != 47 && byte < 128) = true := by
   unfold identifier at h
   split at h
   · exact absurd h (by simp)
@@ -731,7 +643,7 @@ theorem map_charOfByte_noSlash {bs : List UInt8}
 
 /-- The bytes of a segment's spelling. -/
 def spellingBytes (segment : Segment) : List UInt8 :=
-  segment.spelling.toUTF8.data.toList
+  (Data.Ascii.bytesOf segment.spelling)
 
 /-- The characters of a segment's spelling. -/
 def spellingChars (segment : Segment) : List Char := (spellingBytes segment).map charOfByte
@@ -748,7 +660,7 @@ theorem spellingBytes_ok {segment : Segment} (h : segment.spelled = true) :
     · exact absurd h (by simp)
     · rename_i first rest heq
       simp only [Bool.and_eq_true] at h
-      show (text.toUTF8.data.toList).all _ = true
+      show ((Data.Ascii.bytesOf text)).all _ = true
       rw [heq]
       exact h.2
   | param name =>
@@ -772,7 +684,7 @@ theorem segmentOf?_spellingChars {segment : Segment} (h : segment.spelled = true
       simp only [Bool.and_eq_true] at h
       obtain ⟨⟨notColon, notStar⟩, all⟩ := h
       have chars : spellingChars (.literal text) = charOfByte first :: rest.map charOfByte := by
-        show (text.toUTF8.data.toList).map charOfByte = _
+        show ((Data.Ascii.bytesOf text)).map charOfByte = _
         rw [heq, List.map_cons]
       have spelledBack : String.ofList (charOfByte first :: rest.map charOfByte) = text := by
         rw [← chars]
@@ -794,11 +706,12 @@ theorem segmentOf?_spellingChars {segment : Segment} (h : segment.spelled = true
   | param name =>
     have bytes := identifier_bytes h
     have chars : spellingChars (.param name) =
-        ':' :: (name.toUTF8.data.toList).map charOfByte := by
+        ':' :: ((Data.Ascii.bytesOf name)).map charOfByte := by
       show ((":" ++ name).toUTF8.data.toList).map charOfByte = _
       rw [utf8_append, bytes_colon, List.cons_append, List.nil_append, List.map_cons,
         charOfByte_colon]
-    have spelledBack : String.ofList ((name.toUTF8.data.toList).map charOfByte) = name :=
+      rfl
+    have spelledBack : String.ofList (((Data.Ascii.bytesOf name)).map charOfByte) = name :=
       ofList_charOfByte (all_lt_of_all_ok bytes)
     rw [chars]
     simp only [segmentOf?]
@@ -1146,7 +1059,7 @@ deriving DecidableEq
 /-! ## Reading the semantic layer
 
 §15.3: emitters and clauses read semantics only through the annotation keys of
-`Effect4/Surface/Annotate.lean`, never from a second field on a carrier.
+`src/Effect4/Surface/Annotate.lean`, never from a second field on a carrier.
 -/
 
 /-- The `title` on a bag, when it carries one. -/
@@ -1157,7 +1070,7 @@ def titleIn (annotations : Annotations) : Option String :=
 
 /-- Build the bag the clauses require: an `identifier` and a `description`.
 
-Fixture-local: `Effect4/Surface/Agent.lean` carries the same construction for its
+Fixture-local: `src/Effect4/Surface/Agent.lean` carries the same construction for its
 own battery. One canonical spelling in `Annotate.lean` is owed before wave 3a's
 DSL needs it (plan §13.6 rule 2). -/
 private def describedBag (identity description : String) : Annotations :=
@@ -1209,6 +1122,8 @@ def slotNames (refs : List ReferenceEntry) (slot : Option (Sch refs .text)) : Li
   | none => []
   | some schema => propertyNames ((objectProperties? refs 64 schema.rep).getD [])
 
+instance {refs : List ReferenceEntry} : Annotated (Endpoint refs) := ⟨fun value => value.annotations⟩
+
 namespace Endpoint
 
 variable {refs : List ReferenceEntry}
@@ -1239,12 +1154,12 @@ def responses (endpoint : Endpoint refs) : List (Response refs) :=
 def idLegal (endpoint : Endpoint refs) : Bool := identifier endpoint.id
 
 /-- Clause (§15.2): the annotation bag carries an `identifier`. -/
-def identified (endpoint : Endpoint refs) : Bool :=
-  (identifierIn endpoint.annotations).isSome
+abbrev identified (endpoint : Endpoint refs) : Bool :=
+  Effect4.Surface.identified endpoint
 
 /-- Clause (§15.2): the annotation bag carries a `description`. -/
-def described (endpoint : Endpoint refs) : Bool :=
-  (descriptionIn endpoint.annotations).isSome
+abbrev described (endpoint : Endpoint refs) : Bool :=
+  Effect4.Surface.described endpoint
 
 /-- Clause: no path parameter name occurs twice. -/
 def pathParamsDistinct (endpoint : Endpoint refs) : Bool :=
@@ -1510,6 +1425,8 @@ theorem wellFormed_iff (endpoint : Endpoint refs) :
 
 end Endpoint
 
+instance {refs : List ReferenceEntry} : Annotated (Group refs) := ⟨fun value => value.annotations⟩
+
 namespace Group
 
 variable {refs : List ReferenceEntry}
@@ -1518,10 +1435,12 @@ variable {refs : List ReferenceEntry}
 def idLegal (group : Group refs) : Bool := identifier group.id
 
 /-- Clause (§15.2): the annotation bag carries an `identifier`. -/
-def identified (group : Group refs) : Bool := (identifierIn group.annotations).isSome
+abbrev identified (group : Group refs) : Bool :=
+  Effect4.Surface.identified group
 
 /-- Clause (§15.2): the annotation bag carries a `description`. -/
-def described (group : Group refs) : Bool := (descriptionIn group.annotations).isSome
+abbrev described (group : Group refs) : Bool :=
+  Effect4.Surface.described group
 
 /-- The ids of the group's endpoints, in order. -/
 def endpointIds (group : Group refs) : List String := group.endpoints.map Endpoint.id
@@ -1612,6 +1531,8 @@ def Endpoint.fullPath {refs : List ReferenceEntry}
     (api : Api refs) (group : Group refs) (endpoint : Endpoint refs) : Path :=
   Path.prefixWith api.pathPrefix (Path.prefixWith group.pathPrefix endpoint.path)
 
+instance {refs : List ReferenceEntry} : Annotated (Api refs) := ⟨fun value => value.annotations⟩
+
 namespace Api
 
 variable {refs : List ReferenceEntry}
@@ -1620,10 +1541,12 @@ variable {refs : List ReferenceEntry}
 def idLegal (api : Api refs) : Bool := identifier api.id
 
 /-- Clause (§15.2): the annotation bag carries an `identifier`. -/
-def identified (api : Api refs) : Bool := (identifierIn api.annotations).isSome
+abbrev identified (api : Api refs) : Bool :=
+  Effect4.Surface.identified api
 
 /-- Clause (§15.2): the annotation bag carries a `description`. -/
-def described (api : Api refs) : Bool := (descriptionIn api.annotations).isSome
+abbrev described (api : Api refs) : Bool :=
+  Effect4.Surface.described api
 
 /-- The ids of the api's groups, in order. -/
 def groupIds (api : Api refs) : List String := api.groups.map Group.id
@@ -1947,7 +1870,7 @@ def apiDoc : Document :=
 
 /-! ## Anti-vacuity: the `shop` api
 
-The domain is `Effect4/Surface/Entity.lean`'s `shopDomain`, extended with the
+The domain is `src/Effect4/Surface/Entity.lean`'s `shopDomain`, extended with the
 tagged error entity `NotFound` the plan's §13.3 table asks every api to have.
 Every row carries its semantics, because §15.2 makes a row without one
 ill-formed.

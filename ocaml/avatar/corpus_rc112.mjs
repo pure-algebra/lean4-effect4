@@ -2,16 +2,22 @@
 //
 // It parses `corpus/programs.txt` -- the very text `corpus_dsl.ml` parses -- and interprets
 // each step as the rc.112 call the avatar's arm transcribes, emitting the same row alphabet
-// (`Effects/Trace.lean`, `harness/trace/tracer.ts`). Nothing under `harness/` is imported or
+// (`Effects/Trace.lean`, `git:c407ab7:harness/trace/tracer.ts`). Nothing under `harness/` is imported or
 // edited; the wire encoding, the first-seen handle counter, the tape and the stall deadline
 // are transcribed here so the two faces are independent implementations of one text.
 import * as process from "node:process"
 import { readFileSync } from "node:fs"
+import { dirname, join, resolve } from "node:path"
+import { fileURLToPath, pathToFileURL } from "node:url"
 
-const nm = process.env.EFFECT4_NODE_MODULES ??
-  `${process.env.HOME}/Dev/foldlab/library/effects/node_modules`
+const selected = process.env.EFFECT4_EFFECT_NODE_MODULES ?? process.env.EFFECT4_NODE_MODULES ??
+  resolve(dirname(fileURLToPath(import.meta.url)), "../../ts/eff/node_modules")
+const nm = selected.startsWith("file:") ? fileURLToPath(selected) : selected
+if (JSON.parse(readFileSync(join(nm, "effect/package.json"), "utf8")).version !== "4.0.0-rc.112") {
+  throw new Error("The corpus requires effect@4.0.0-rc.112")
+}
 const { Deferred, Effect, Exit, Fiber, Layer, Context, Ref, Scope, Scheduler } =
-  await import(`${nm}/effect/dist/index.js`)
+  await import(pathToFileURL(join(nm, "effect/dist/index.js")).href)
 
 // --------------------------------------------------------------------- the DSL parser
 const parseArg = (t) => {
@@ -140,7 +146,7 @@ const declaredLayers = [
 const memoMap = Layer.makeMemoMapUnsafe()
 const layerRoot = Scope.makeUnsafe()
 
-// The scope family's own bookkeeping (`harness/trace/scope-tail.ts`).
+// The scope family's own bookkeeping (`git:c407ab7:harness/trace/scope-tail.ts`).
 const scopeRunLog = new WeakMap()
 const scopeRegistered = new WeakMap()
 

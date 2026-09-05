@@ -4,11 +4,11 @@ Status: breaker packet, red, 2026-09-04 (plan §13.7 ruling 7, for wave 2d of
 `docs/research/2026-09-04-surface-library-plan.md` §13.2)
 
 **Collision notice, read first.** A contract for this subject already exists at
-`test/contracts/surface-handler.contract.md`, landed in commit `9f9e0e6` by the
+`Test/contracts/surface-handler.contract.md`, landed in commit `9f9e0e6` by the
 wave-1b breaker, claiming `E4-SURFACE-CE-076` through `E4-SURFACE-CE-087`. The
 repository's own coordination record says it does not: `COORDINATION.md`'s
 checkpoint says "the breaker's handler packet (§13.7 ruling 7) not started",
-`test/contracts/surface-api.contract.md` says handlers have "no contract in
+`Test/contracts/surface-api.contract.md` says handlers have "no contract in
 this packet", and `REGISTER.md` at that commit ends at `E4-SURFACE-CE-075` with
 no row for `076` through `087`. This packet was dispatched on that record. It
 is therefore filed beside the prior contract rather than over it, its rows
@@ -19,14 +19,14 @@ disagreement. Which packet governs is a coordinator ruling (finding H-0).
 Implementation (owed): the handler module. **Its path is the subject of finding
 H-1 and is not frozen here**; the namespace is. See "Placement" below.
 
-Battery: `Effect4Test/Surface/HandlerFitsContract.lean`
+Battery: `Test/Surface/HandlerFitsContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-088` through `E4-SURFACE-CE-110`
 
-Witnesses: `Effect4Test/Counterexamples/Surface/HandlerFits.lean`
+Witnesses: `Test/Counterexamples/Surface/HandlerFits.lean`
 
-Shared: `test/contracts/surface-facts.contract.md` owns the `Refusal`
-alphabet; `test/contracts/surface-api.contract.md` owns `Endpoint`, `Group`,
+Shared: `Test/contracts/surface-facts.contract.md` owns the `Refusal`
+alphabet; `Test/contracts/surface-api.contract.md` owns `Endpoint`, `Group`,
 `Api`, `Response` and `ResponseBody`. This contract owns the handler carrier,
 the endpoint's type projections, the fit relation and their clause order.
 
@@ -35,10 +35,10 @@ Pin: `effect` 4.0.0-rc.112, `node_modules/effect/src`:
 `unstable/http/HttpRouter.ts`, `Effect.ts`.
 
 Landed carriers this contract joins onto, read but not edited:
-`Effect4/Syntax/Eff.lean` (`Ty`, `Row`, `Eff`, `Term`), `Effect4/Syntax/Typing.lean`
-(`EffTy`, `Signature`, `typeOf`), `Effect4/Syntax/Print.lean` (`print`,
-`PrintRefusal`), `Effect4/Deep/Context.lean` (`Requirement`),
-`Effect4/Context/Key.lean` (`ServiceKey`), `Effect4/Data/Row.lean` (`Row.Subset`).
+`src/Effect4/Program/Eff.lean` (`Ty`, `Row`, `Eff`, `Term`), `src/Effect4/Program/Typing.lean`
+(`EffTy`, `Signature`, `typeOf`), `src/Effect4/Codegen/Print.lean` (`print`,
+`PrintRefusal`), `src/Effect4/Machine/Context.lean` (`Requirement`),
+`src/Effect4/Machine/Key.lean` (`ServiceKey`), `src/Effect4/Data/Row.lean` (`Row.Subset`).
 
 ## Purpose
 
@@ -74,7 +74,7 @@ program content. This contract replaces the field with a first-order
 `Alphabet` and derives the `Signature` from it (`E4-SURFACE-CE-098`), which is
 also what resolves the service-key gap: `Endpoint.requires` holds `String`s
 and `Requirement` holds `ServiceKey`s, which are pairs of `Nat`
-(`Effect4/Context/Key.lean`), and nothing in the slice maps one to the other
+(`src/Effect4/Machine/Key.lean`), and nothing in the slice maps one to the other
 (`E4-SURFACE-CE-110`).
 
 ## Placement, and why this contract does not fix it
@@ -82,7 +82,7 @@ and `Requirement` holds `ServiceKey`s, which are pairs of `Nat`
 Plan §2 says `Effect4.Surface.*` "does **not** import `Effect4.Char.*`,
 `Effect4.Deep.*`, `Effect4.Syntax.*`, or anything under `Effect4.Runtime`".
 Plan §13.2 puts `Endpoint.effTy : Endpoint refs → EffTy` in
-`Effect4/Surface/Handler.lean` over `Effect4.Syntax.Typing`. `EffTy` is
+`src/Effect4/Surface/Handler.lean` over `Effect4.Syntax.Typing`. `EffTy` is
 `Effect4.Syntax`, and its `requires` field is `Effect4.Deep.Env.Requirement`,
 so §13.2 breaks §2 on two edges at once. That is finding H-1 and it needs a
 ruling, not a breaker's decision (`E4-SURFACE-CE-108`).
@@ -317,7 +317,7 @@ def Handler.printBody (h : Handler) :
 `Endpoint.errorTy?` folds `Ty.join` over a list, and `Handler.fits` compares
 the result by `DecidableEq`. The answer is independent of the order of
 `e.errors` only if `Ty.join` is commutative, associative and idempotent with
-`.never` as its unit. Those theorems do not exist: `Effect4/Syntax/Eff.lean`
+`.never` as its unit. Those theorems do not exist: `src/Effect4/Program/Eff.lean`
 has exactly one theorem, `render_ofSpelling`. They belong to the `Syntax`
 lane, which this packet does not own, so they are **owed rows**, and the
 battery pins them at the fixture instances by `#guard` instead
@@ -348,7 +348,7 @@ battery pins them at the fixture instances by `#guard` instead
    `Op` index type breaks the witness file.
 
 `EffTy` derives `DecidableEq` and **not** `Repr`
-(`Effect4/Syntax/Typing.lean:27-32`), so every receipt above is a `#guard` on
+(`src/Effect4/Program/Typing.lean:27-32`), so every receipt above is a `#guard` on
 an equation and none is an `#eval`. A builder who wants the failure printed
 adds `Repr` to `EffTy` in the `Syntax` lane; this packet does not.
 
@@ -424,7 +424,7 @@ typechecks either way".
 ## Refusal constructors this contract needs and `Facts.lean` does not have
 
 Fifteen, all appended, none removed or reordered. The coordinator adds them;
-this packet does not edit `Effect4/Surface/Facts.lean`.
+this packet does not edit `src/Effect4/Surface/Refusal.lean`.
 
 ```lean
   -- handler (plan §13.2, wave 2d)
@@ -447,7 +447,7 @@ this packet does not edit `Effect4/Surface/Facts.lean`.
 
 `handlerRequirementUnprovided` carries the offending `ServiceKey` as its two
 `Nat` components rather than a name, because a `ServiceKey` **is** two `Nat`s
-(`Effect4/Context/Key.lean`) and has no string spelling anywhere in the
+(`src/Effect4/Machine/Key.lean`) and has no string spelling anywhere in the
 estate. That is the price of finding H-4 and it is visible in the alphabet
 rather than hidden.
 
@@ -476,7 +476,7 @@ rather than hidden.
 ## Assurance allocation
 
 Graph edge `SURFACE-PG-HANDLER`, with leaf receipts underneath. It is a
-graph-bearing packet under `docs/AGENT-ROUTING.md`: `Handler.fits` is an
+graph-bearing packet under `git:c407ab7:docs/AGENT-ROUTING.md`: `Handler.fits` is an
 admission and refusal judgment over a typed program, and `Handlers.complete`
 is a generated-code relation.
 

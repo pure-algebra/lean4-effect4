@@ -4,7 +4,7 @@ import TypeScript.Render
 /-!
 # Api contract — the application face, crossed the way a caller crosses it
 
-`Effect4/Api.lean` is the one module an application imports. This battery uses nothing but
+`src/Effect4/Api.lean` is the one module an application imports. This battery uses nothing but
 its interface: a program is typed, printed, compiled and run through `Effect4.Api`, and the
 Schema syntax is rendered through the pinned package. Rendered bytes appear only inside
 `#guard`s (a battery definition over a rendered `String` reaches `Classical.choice`).
@@ -13,7 +13,7 @@ Schema syntax is rendered through the pinned package. Rendered bytes appear only
 namespace Test.Api.ApiContract
 
 open Effect4 Effect4.Api
-open Effect4.Machine (Val)
+open Effect4.Api (Val)
 open TypeScript (house0)
 open TypeScript.Render (expr)
 

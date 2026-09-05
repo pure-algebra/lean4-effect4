@@ -2,9 +2,9 @@
 
 Status: implementation slice, 2026-08-31
 
-Implementation: `Effect4/Schema/Authoring.lean`
+Implementation: `src/Effect4/Schema/Authoring.lean`
 
-Battery: `Effect4Test/Schema/AuthoringContract.lean`
+Battery: `Test/Schema/AuthoringContract.lean`
 
 ## Purpose
 

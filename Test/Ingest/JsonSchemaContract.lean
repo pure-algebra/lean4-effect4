@@ -5,7 +5,7 @@ import Effect4.Ingest.JsonSchema
 
 Design: `docs/research/2026-09-04-codegen-api-design.md` §3.4 and §6 ("`Test/Ingest/*`, one
 per reader: the round trip at its quotient"). The quotient itself is named in
-`Effect4/Ingest/JsonSchema.lean`'s header: an entity's name, key, version, stance and every
+`src/Effect4/Ingest/JsonSchema.lean`'s header: an entity's name, key, version, stance and every
 annotation are not on the wire, and the representation comes back as `canonical` of what
 went out.
 
@@ -74,7 +74,7 @@ def plainDomain : Domain := { name := "plain", entities := [plainAddress], activ
 
 /-! ## `canonical`, as a receipt
 
-The three collapses `Effect4/Ingest/JsonSchema.lean`'s header names: `toJsonSchema` is not
+The three collapses `src/Effect4/Ingest/JsonSchema.lean`'s header names: `toJsonSchema` is not
 injective, so the round trip is an identity only up to the representative the reader picks.
 -/
 

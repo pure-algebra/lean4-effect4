@@ -7,7 +7,7 @@
 # must produce the same bytes; the truth lane's exported files (`harness/truth/generated`)
 # are read too, with the same oracles by name. `bun test` runs the pinned cases.
 #
-#   ./scripts/check-ts-eff-corpus.sh
+#   scripts/check-ts-eff-corpus.sh
 #
 # Host lane: needs `bun` and the pinned install under ts/eff/node_modules
 # (`bun install --frozen-lockfile` runs when it is absent).
@@ -28,8 +28,12 @@ repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 gate=ts-eff-corpus
 cd "$repo_root"
 
-command -v bun >/dev/null 2>&1 || { printf 'FAIL %s: bun is not on PATH (host lane)\n' "$gate" >&2; exit 1; }
-bun_version="$(bun --version)"
+bun_cmd="$(command -v bun || command -v bun.exe || true)"
+[ -n "$bun_cmd" ] || { printf 'FAIL %s: bun is not on PATH (host lane)\n' "$gate" >&2; exit 1; }
+bun_path() {
+  case "$bun_cmd" in *.exe) wslpath -w "$1" ;; *) printf '%s' "$1" ;; esac
+}
+bun_version="$("$bun_cmd" --version)"
 
 build_log="$(mktemp "${TMPDIR:-/tmp}/effect4-ts-eff-corpus-build.XXXXXX")"
 if ! lake build Tools.Corpus >"$build_log" 2>&1; then
@@ -66,11 +70,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
-corpus_line="$(lean_run src/Tools/Corpus.lean "$tmp_root" 400 4)"
+corpus_line="$(lean_run tools/Tools/Corpus.lean "$tmp_root" 400 4)"
 
 cd "$repo_root/ts/eff"
 if [[ ! -d node_modules ]]; then
-  bun install --frozen-lockfile >"$tmp_root/install.log" 2>&1 || {
+  "$bun_cmd" install --frozen-lockfile >"$tmp_root/install.log" 2>&1 || {
     printf 'FAIL %s: bun install --frozen-lockfile failed\n' "$gate" >&2
     cat "$tmp_root/install.log" >&2
     exit 1
@@ -78,7 +82,7 @@ if [[ ! -d node_modules ]]; then
 fi
 
 check_out="$tmp_root/check.log"
-if ! bun run check.ts "$tmp_root" "$repo_root/harness/truth/generated" --oracle "$tmp_root" >"$check_out" 2>&1; then
+if ! "$bun_cmd" run check.ts "$(bun_path "$tmp_root")" "$(bun_path "$repo_root/harness/truth/generated")" --oracle "$(bun_path "$tmp_root")" >"$check_out" 2>&1; then
   printf 'FAIL %s: the reader disagrees with Lean on the corpus\n' "$gate" >&2
   cat "$check_out" >&2
   exit 1
@@ -86,7 +90,7 @@ fi
 check_line="$(sed -n '1p' "$check_out")"
 
 test_out="$tmp_root/test.log"
-if ! bun test >"$test_out" 2>&1; then
+if ! "$bun_cmd" test >"$test_out" 2>&1; then
   printf 'FAIL %s: bun test failed\n' "$gate" >&2
   cat "$test_out" >&2
   exit 1

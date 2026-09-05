@@ -2,7 +2,7 @@ import Effect4.Codegen.Read
 import Effect4.Api
 
 /-!
-Fresh kernel dependency report for the reader (`Effect4/Codegen/Read.lean`; plan
+Fresh kernel dependency report for the reader (`src/Effect4/Codegen/Read.lean`; plan
 `docs/research/2026-09-04-a4-reader-plan.md`). The reader's receipts are `read_print` and
 `read_exact`, the round trips pinned in `Test/Codegen/ReadContract.lean`, and the native
 lawfulness `nativeLawful`; this file is the axiom receipt. The binder injectivity goes

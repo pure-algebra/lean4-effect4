@@ -10,12 +10,12 @@ Status: design spike, 2026-09-03. Module `Deep.Context` of the non-default `Deep
 (`lakefile.toml`, `srcDir = "workshop"`); built with `lake build Deep.Context`. Plan:
 `docs/research/2026-09-03-deep-plan.md` row S5, rows M4a/M4b of §2 as split by
 `docs/research/2026-09-03-deep-plan-review.md` findings 6 and 7. Order:
-`docs/ENVIRONMENT-DAG.md` L1 (`Context/Requirement`, `Context/Service`) then L2
+`docs/research/ENVIRONMENT-DAG.md` L1 (`Context/Requirement`, `Context/Service`) then L2
 (`Context/Environment`). Report: `docs/research/2026-09-03-spike-s5-context-layer.md`.
 
 Reused, never re-declared: `Effect4.ServiceKey`, `ServiceUniverse`, `ServiceKey.Carrier`,
-`ServiceKey.transport`, `ServiceUniverse.exists_carrier_collision` (`Effect4/Context/Key.lean`),
-`Effect4.Row` (`Effect4/Data/Row.lean`), `Effects.Program` (`.lake/packages/effects`).
+`ServiceKey.transport`, `ServiceUniverse.exists_carrier_collision` (`src/Effect4/Machine/Key.lean`),
+`Effect4.Row` (`src/Effect4/Data/Row.lean`), `Effects.Program` (`.lake/packages/effects`).
 
 **Source.** rc.112's `Context.ts` and `Result.ts` are not in the vendored tree
 (`vendor/effect-4.0.0-rc.112/src/` has neither). The `Context` model below is read off its
@@ -31,7 +31,7 @@ existing key; identity versus data equality in `updateContext`'s `prevContext ==
 `:2090`), the docstring says so.
 
 **Two levels.** Everything up to `Context.interpret_agree` is generic in a supplied
-`ServiceUniverse U`, as `docs/ENVIRONMENT-DAG.md` requires. The machine instantiation is at
+`ServiceUniverse U`, as `docs/research/ENVIRONMENT-DAG.md` requires. The machine instantiation is at
 `ValU`, the constant universe whose every carrier is the one first-order value alphabet `Val` —
 which is exactly the `exists_carrier_collision` witness, so type identity recovers nothing here
 by construction. `Ctx := Context ValU` is the `χ` of `Deep.Fibers`; `ambientScope`, `budgetOf`,
@@ -56,7 +56,7 @@ universe u
 /-! ## M4a — `Context/Requirement` (L1, fence F-REQ)
 
 `PLAN.md` §"environment" row 4: "Make `Requirement` an alias or named view of `Row ServiceKey`",
-no second row carrier. `docs/ENVIRONMENT-DAG.md` open question 2 is settled the same way. -/
+no second row carrier. `docs/research/ENVIRONMENT-DAG.md` open question 2 is settled the same way. -/
 
 /-- A requirement row: the canonical set of service keys a program needs. An alias of the one
 row carrier, so every `Row` law is a `Requirement` law with no restatement. -/
@@ -81,7 +81,7 @@ end Requirement
 /-! ## M4a — `Context/Service` (L1, fence F-SVC)
 
 The edge `Context/Key → Context/Service` carries the interpretation triple `ServiceUniverse`,
-`ServiceKey.Carrier`, `ServiceKey.transport` (`docs/ENVIRONMENT-DAG.md` edge table). A service is
+`ServiceKey.Carrier`, `ServiceKey.transport` (`docs/research/ENVIRONMENT-DAG.md` edge table). A service is
 a key bound to a value of its carrier under a *supplied* universe: first-order at the key, with
 the universe in the trusted-boundary position `Effect4.FlowAlphabet` occupies. -/
 
@@ -95,7 +95,7 @@ structure Service (U : ServiceUniverse.{u}) : Type u where
 /-- The service-access signature: one operation per key, rc.112's `Effect.service(tag)` /
 `Context.Tag` as an effect (`internal/effect.ts:2069-2070`: `withFiber(fiber =>
 fromOption(Context.getOption(fiber.context, service)))`), whose answer is the key's carrier.
-`PLAN.md:207`: "Prefer a derived `ServiceSignature U` and `request = Program.perform` over a
+`PLAN.md`, environment / Service: "Prefer a derived `ServiceSignature U` and `request = Program.perform` over a
 duplicate service program." -/
 abbrev serviceSig (U : ServiceUniverse.{u}) : Effects.Signature.{0, u} where
   Op := ServiceKey
@@ -106,7 +106,7 @@ abbrev ServiceProgram (U : ServiceUniverse.{u}) (A : Type u) : Type u :=
   Effects.Program (serviceSig U) A
 
 /-- `Program.UsesOnly r p`: every operation `p` can perform, along every answer, names a key of
-`r`. A predicate over the well-founded tree, not a computed row: `PLAN.md:207` forbids claiming a
+`r`. A predicate over the well-founded tree, not a computed row: `PLAN.md`, environment / Service, forbids claiming a
 finite `Program.requirements` for higher-order continuations. -/
 inductive UsesOnly {U : ServiceUniverse.{u}} {A : Type u} (r : Requirement) :
     ServiceProgram U A → Prop
@@ -165,7 +165,7 @@ end UsesOnlyLaws
 to a supplied universe, and nothing forces two callers to agree on one. `UniverseAgreement U V r`
 is what agreement on a row *would* be; no declaration of this module, and none of `Deep.Layer`,
 proves an instance of it or consumes one. It is named so the edge stays visible, not to close it
-(`docs/ENVIRONMENT-DAG.md:23-25`, `Effect4/Context/Key.lean:35-38`). -/
+(`docs/research/ENVIRONMENT-DAG.md:23-25`, `src/Effect4/Machine/Key.lean:35-38`). -/
 def UniverseAgreement (U V : ServiceUniverse.{u}) (r : Requirement) : Prop :=
   ∀ key : ServiceKey, key ∈ r → ServiceKey.Carrier U key = ServiceKey.Carrier V key
 
@@ -173,7 +173,7 @@ def UniverseAgreement (U V : ServiceUniverse.{u}) (r : Requirement) : Prop :=
 
 An insertion-ordered map from `ServiceKey` to values with unique keys, rc.112's `Context` as a
 JavaScript `Map` keyed by the tag. The uniqueness invariant is a proof field, as
-`Effect4.ReasonAnnotations` (`Effect4/Semantics/Cause.lean:28-33`) does it, so no operation can
+`Effect4.ReasonAnnotations` (`src/Effect4/Machine/Cause.lean:28-33`) does it, so no operation can
 build a duplicate. -/
 
 /-- The environment. -/
@@ -486,7 +486,7 @@ def interpret (self : Context U) {A : Type u} : ServiceProgram U A → Option A
   | .pure value => some value
   | .vis key next => (self.get? key).bind fun value => interpret self (next value)
 
-/-! ### `ENV-PG-CONTEXT`: the eleven laws of `PLAN.md:208`
+/-! ### `ENV-PG-CONTEXT`: the eleven laws of `PLAN.md`, environment / Context
 
 "pointwise extensionality, lookup at the same and distinct keys, merge associativity and
 identities, shadowing, satisfaction for empty/singleton/union, weakening, handler agreement, and
@@ -1037,7 +1037,7 @@ structure HooksAgree {ν σ : Type} {St : Type}
   empty : interp.emptyContext = Context.empty
   value : interp.contextValue = encode
 
-/-! ## The seven counterexample classes of `PLAN.md:208`
+/-! ## The seven counterexample classes of `PLAN.md`, environment counterexamples
 
 "nominal collision, carrier collision, mixed universes, missing lookups, right-biased
 noncommutativity, hidden defaults, and proof-free casts" — each as an executable `example` at
@@ -1155,7 +1155,7 @@ example : Context.Equiv orderAB orderBA ∧ orderAB ≠ orderBA := by
 
 end Counterexamples
 
-/-! ## Separation gates at this instantiation (`docs/FRAMES-DAG.md` separation 4) -/
+/-! ## Separation gates at this instantiation (`docs/research/FRAMES-DAG.md` separation 4) -/
 
 example : DecidableEq Val := inferInstance
 example : DecidableEq Ctx := inferInstance

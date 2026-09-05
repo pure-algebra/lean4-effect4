@@ -13,7 +13,7 @@ Model reading: `docs/research/2026-09-03-deep-state-models.md` §2 and §3. Repo
 This file supplies the `St` that `Deep.Fibers` is parametric in, and the `RunInterp` over it,
 at concrete first-order alphabets. Nothing here is a closure: every function-valued argument of
 rc.112 is a *name* plus a total interpretation, as `PrimInterp` already is
-(`Effect4/Runtime/Runtime.lean:188-215`, DB-02).
+(`src/Effect4/Machine/Frames.lean:188-215`, DB-02).
 
 The three stores:
 
@@ -22,7 +22,7 @@ The three stores:
 * `DeferredStore` — `Deferred.ts`. A completion slot that is `none` or exactly one *primitive*,
   a registration-ordered waiter list of `(FiberId × token)`, and the resume queue a completion
   owes (`Deferred.ts:1655-1659`).
-* `ScopeStore` — keyed `Effect4.Scope`s, reused unchanged (`Effect4/Runtime/Scope.lean`),
+* `ScopeStore` — keyed `Effect4.Scope`s, reused unchanged (`src/Effect4/Machine/Scope.lean`),
   over a finalizer *name* alphabet that includes "interrupt fiber `f`" (`internal/effect.ts:5370`)
   and "close child scope `s`" (`:3833-3844`), so `scopeStatus`, `scopeLinkFiber`,
   `dropFinalizer` and `closeScope` are store operations.
@@ -49,7 +49,7 @@ open Effect4
 
 Keys are structures over `Nat` at `Type 0`. rc.112 mints fresh *objects*; the index is the
 model's stand-in and owes a refusal row of the `SCOPE-FB-KEY-IDENTITY` shape
-(`Effect4/Runtime/Scope.lean:318`, `docs/SCOPE-DAG.md:226`). -/
+(`src/Effect4/Machine/Scope.lean:318`, `docs/research/SCOPE-DAG.md:226`). -/
 
 /-- A cell of the Ref heap. `Ref.ts:142-146` allocates a fresh `MutableRef` object; the index
 is the model's stand-in. -/
@@ -67,7 +67,7 @@ deriving DecidableEq, Repr, Inhabited
 /-! ## The alphabets
 
 Every alphabet is first-order and derives `DecidableEq`, which the separation gates of
-`Deep.Fibers` (`docs/FRAMES-DAG.md` separation 4) need at this instantiation. -/
+`Deep.Fibers` (`docs/research/FRAMES-DAG.md` separation 4) need at this instantiation. -/
 
 /-- The typed error alphabet. -/
 inductive Err
@@ -111,7 +111,7 @@ deriving DecidableEq, Repr
 
 /-- The scope finalizer *name* alphabet. `Effect4.Scope` stores a `φ`; giving `φ` these arms is
 what lets a finalizer name *mean* an operation on another scope or on a fiber — the open half of
-`SCOPE-FB-FINALIZER-MEANING` (`docs/SCOPE-DAG.md:228`). -/
+`SCOPE-FB-FINALIZER-MEANING` (`docs/research/SCOPE-DAG.md:228`). -/
 inductive FinName
   /-- `forkIn`'s keyed fiber finalizer (`internal/effect.ts:5369-5371`): interrupt the child
   unless the interruptor is the child itself. `skipSelf = false` is `fiberRunIn` (`:5458`). -/
@@ -128,7 +128,7 @@ inductive FinName
   | awaitNewChildren (snapshot : List FiberId)
   /-- A release that parks on an external async before it completes: the observable a masked
   finalizer needs, since `onExit`'s `contAll` masks the fiber while the finalizer runs
-  (`Effect4/Runtime/Runtime.lean:560-565`, rc.112 `internal/effect.ts:4021`). -/
+  (`src/Effect4/Machine/Frames.lean:560-565`, rc.112 `internal/effect.ts:4021`). -/
   | parkThen (slot : Nat)
 deriving DecidableEq, Repr
 
@@ -255,16 +255,16 @@ inductive, whose `DecidableEq` handler refuses (state note §3.5); a race is the
 `raceEntrants` gives it meaning. -/
 inductive RaceName
   /-- `raceAll([])`: pending until interrupted
-  (`test/fixtures/traces/fiber-m3/emptyRacePendingUntilInterrupted.tsv`). -/
+  (`Test/fixtures/traces/fiber-m3/emptyRacePendingUntilInterrupted.tsv`). -/
   | empty
   /-- An immediate success followed by a second entrant that is never launched
-  (`test/fixtures/traces/fiber-m3/raceImmediateSuccessStopsLaunch.tsv`). -/
+  (`Test/fixtures/traces/fiber-m3/raceImmediateSuccessStopsLaunch.tsv`). -/
   | successThenSecond
   /-- A failure followed by a success
-  (`test/fixtures/traces/fiber-m3/raceFailureAllowsNextLaunch.tsv`). -/
+  (`Test/fixtures/traces/fiber-m3/raceFailureAllowsNextLaunch.tsv`). -/
   | failThenSuccess
   /-- Two failures, retained in order
-  (`test/fixtures/traces/fiber-m3/raceAllFailuresRetainOrder.tsv`). -/
+  (`Test/fixtures/traces/fiber-m3/raceAllFailuresRetainOrder.tsv`). -/
   | failThenFail
   /-- One entrant that parks on an external async: the host's interrupt reaches it through
   the race park's cleanup (`internal/effect.ts:1530`, R2-13). -/
@@ -886,7 +886,7 @@ def finExit : FinName → ExitV → VoidExitV
 structure ScopeEntry where
   /-- The store key. -/
   key : Nat
-  /-- The frozen scope state machine (`Effect4/Runtime/Scope.lean`). -/
+  /-- The frozen scope state machine (`src/Effect4/Machine/Scope.lean`). -/
   scope : ScopeV
 deriving DecidableEq
 
@@ -1435,7 +1435,7 @@ theorem completionPrim_ofExit (exit : ExitV) :
 
 /-- `deferred.done-is-complete-with`: an `Exit` completion is shared — every awaiter is resumed
 with the same primitive, and that primitive reads back as the same exit
-(`Effect4/Runtime/Runtime.lean:514`). census: deferred.done-is-complete-with -/
+(`src/Effect4/Machine/Frames.lean:514`). census: deferred.done-is-complete-with -/
 theorem doneWith_shared (exit : ExitV) :
     (completionPrim (Completion.ofExit exit)).asExit? = some exit :=
   Prim.ofExit_asExit? exit
@@ -1650,7 +1650,7 @@ theorem interruptFiber_compiles_to_interruptScoped (fiber : FiberId) (exit : Exi
 
 /-! ## Separation gates at this instantiation
 
-`docs/FRAMES-DAG.md` separation 4: names stay data. The gates of `Deep.Fibers` must keep
+`docs/research/FRAMES-DAG.md` separation 4: names stay data. The gates of `Deep.Fibers` must keep
 holding when the alphabets are the concrete ones above. -/
 
 example : DecidableEq Val := inferInstance

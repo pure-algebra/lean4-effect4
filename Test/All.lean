@@ -1,3 +1,4 @@
+import Test.Support.Environment
 import Test.Schema.AxiomReport
 import Test.Data.OpticContract
 import Test.Schema.AnnotationDataPlaneContract

@@ -7,7 +7,7 @@ Status: scaffold, 2026-09-03. Module `OCaml5.Code`. Plan:
 A transcription of `compiler/lib/code.ml:242-372` (js_of_ocaml 5.7.1): SSA blocks with
 parameters, `Let`-bound expressions, and the eight terminators. Constants are a parameter `κ`
 so the value profile (`OCaml5.Value`) is chosen once, by the machine. `Effects.RawFlow` in the
-`effects` package was modelled on this IR (`test/contracts/flow-v2.contract.md:43`); the
+`effects` package was modelled on this IR (`the Flow v2 contract of the external Effects package:43`); the
 additions here are closures, first-class application, `Pushtrap`/`Poptrap` and `Switch`.
 
 Owed by O2: a machine that runs a `Program` with the three effect externs as primitives under

@@ -2,7 +2,7 @@ import Effect4.Schema.EffectfulField
 
 /-!
 Retained attacks for
-`test/contracts/schema-effectful-field-properties.contract.md`.
+`Test/contracts/schema-effectful-field-properties.contract.md`.
 -/
 
 namespace Test.Counterexamples.Schema.EffectfulFieldProperties

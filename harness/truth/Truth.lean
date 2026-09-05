@@ -37,7 +37,7 @@ Manifest (`format: effect4-truth-manifest-v1`), one entry per program:
 * `runSync`: `Api.runSync p fuel` — `Effect.runSyncExit`'s exit, and `sync`, whether the
   program settled inside it (its exit is not the `AsyncFiberError` defect).
 
-The value wire (also `harness/truth/NOTES.md` §3): `unit` ↦ `null`, `nat` ↦ number,
+The value wire: `unit` ↦ `null`, `nat` ↦ number,
 `bool` ↦ boolean, a tuple / exit list ↦ JSON array, `fiber k` ↦ `{"fiber":k}`,
 `cell k` ↦ `{"ref":k}`, `promise k` ↦ `{"deferred":k}`, `scopeHandle k` ↦ `{"scope":k}`,
 `context` ↦ `{"context":true}`, a reified exit ↦ `{"success":v}` / `{"failure":cause}`; a

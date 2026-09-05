@@ -5,7 +5,7 @@ import Effect4.Ingest.Mcp
 
 Design: `docs/research/2026-09-04-codegen-api-design.md` §3.4 and §6 ("`Test/Ingest/*`, one
 per reader: the round trip at its quotient"). The quotient is named in
-`Effect4/Ingest/Mcp.lean`'s header, and `toolFingerprint` is the part of a tool the
+`src/Effect4/Ingest/Mcp.lean`'s header, and `toolFingerprint` is the part of a tool the
 `tools/list` fragment carries in both directions: the name, the parameter representation and
 the description.
 

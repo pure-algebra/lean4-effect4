@@ -3,7 +3,7 @@
 # ts/eff/{eff,json,profile}.gen.ts: the tracked files must be exactly what
 # scripts/generate-ts-eff.sh writes from the current Lean environment.
 #
-#   ./scripts/check-ts-eff.sh
+#   scripts/check-ts-eff.sh
 #
 # ## Stamp (rule 9)
 #
@@ -72,7 +72,7 @@ trap cleanup EXIT
 summary="$("$generator" "$tmp_root" | sed -n '1p')"
 for f in "${files[@]}"; do
   if ! cmp -s -- "$tmp_root/$f" "ts/eff/$f"; then
-    printf 'FAIL %s: ts/eff/%s is not what Lean emits; run ./scripts/generate-ts-eff.sh\n' "$gate" "$f" >&2
+    printf 'FAIL %s: ts/eff/%s is not what Lean emits; run scripts/generate-ts-eff.sh\n' "$gate" "$f" >&2
     diff -u -- "ts/eff/$f" "$tmp_root/$f" >&2 | head -60 || true
     exit 1
   fi

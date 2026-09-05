@@ -6,7 +6,7 @@ Frozen by the wave-1b breaker. Red until the builder lands
 packets name appears here, together with the functions their acceptance
 conditions observe, so the trust boundary of this slice is one file.
 
-The ceiling is `propext` and `Quot.sound`. `Effect4/Meta/Surface.lean` is out
+The ceiling is `propext` and `Quot.sound`. `Test/Audit/AxiomGate.lean` is out
 of scope for this report: the DSL is `MetaM` and takes the exemptions
 `Test/Audit/AxiomGate.lean` records, in the wave that lands it.
 

@@ -562,7 +562,7 @@ def candidateCount (seed size : Nat) (path : List Nat) : Nat :=
 /-! ## The minimised disagreements
 
 What the campaign of `docs/research/2026-09-03-spike-p5-fuzz.md` found, minimised by
-`tools/fuzz.sh shrink` and pinned here with all four row lists. `path` is the shrink path, so
+`ocaml/tools/fuzz.sh shrink` and pinned here with all four row lists. `path` is the shrink path, so
 `stepsOf seed size path` regenerates the term and `#guard` checks that it does.
 
 There is **no Lean-vs-host disagreement** to pin: on all 1360 generated programs the Lean machine
@@ -646,7 +646,7 @@ def disagreements : List Disagreement := [dropMin, dropCaught]
 /-! ### Checks
 
 Executed on 2026-09-03 with OCaml 5.1.1 (`ocamlc`/`ocamlrun`, `ocamlopt`), js_of_ocaml 5.7.1
-under node v22.23.2, by `tools/fuzz.sh`; the row lists above are transcribed from that run and
+under node v22.23.2, by `ocaml/tools/fuzz.sh`; the row lists above are transcribed from that run and
 the guards below hold the Lean side to them. -/
 
 -- The machine reproduces the row list recorded for it.

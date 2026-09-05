@@ -7,11 +7,11 @@
 # run, which is how two drift gates stayed red on main without anyone noticing
 # (survey findings H34 and H5).
 #
-#   ./scripts/sweep.sh                 every gate; stop at the first failure
-#   ./scripts/sweep.sh --keep-going    run them all and report at the end
-#   ./scripts/sweep.sh --hermetic      the host-free subset, which is what CI runs
-#   ./scripts/sweep.sh --force         ignore every stamp and re-run everything
-#   ./scripts/sweep.sh --list          print the table and exit
+#   scripts/sweep.sh                 every gate; stop at the first failure
+#   scripts/sweep.sh --keep-going    run them all and report at the end
+#   scripts/sweep.sh --hermetic      the host-free subset, which is what CI runs
+#   scripts/sweep.sh --force         ignore every stamp and re-run everything
+#   scripts/sweep.sh --list          print the table and exit
 #
 # ## Order
 #
@@ -44,11 +44,13 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . "$repo_root/scripts/lib/portable.sh"
 
 hermetic_only=0
+ocaml_only=0
 keep_going=0
 list_only=0
 for argument in "$@"; do
   case "$argument" in
     --hermetic)   hermetic_only=1 ;;
+    --ocaml)      ocaml_only=1 ;;
     --keep-going) keep_going=1 ;;
     --force)      export EFFECT4_FORCE=1 ;;
     --list)       list_only=1 ;;
@@ -57,14 +59,22 @@ for argument in "$@"; do
   esac
 done
 
-# lane|name|command, in the order they run. `lane` is `hermetic` when the gate
-# needs no node and no installed Effect package, and `host` when it does.
+# lane|name|command, in dependency order. Hermetic gates use pinned repository inputs;
+# surface extraction also needs the pinned TypeScript compiler and Node. Host gates
+# execute the Effect runtime; OCaml gates need the named opam switch.
 gate_table() {
   cat <<'GATES'
+hermetic|armmap-citations|scripts/check-armmap-citations.sh
+hermetic|source-citations|scripts/check-source-citations.sh
 hermetic|internal-citations|scripts/check-internal-citations.sh
 hermetic|effect-runtime-census|scripts/check-effect-runtime-census.sh
 hermetic|ts-eff|scripts/check-ts-eff.sh
+hermetic|rc112-surface|scripts/check-rc112-surface.sh
 host|ts-eff-corpus|scripts/check-ts-eff-corpus.sh
+host|truth|scripts/check-truth.sh
+ocaml|avatar-witnesses|scripts/check-ocaml.sh avatar-witnesses
+ocaml|daemon-protocol|scripts/check-ocaml.sh daemon-protocol
+ocaml|dune-tests|scripts/check-ocaml.sh dune-tests
 GATES
 }
 
@@ -72,6 +82,7 @@ if [ "$list_only" -eq 1 ]; then
   printf '%-24s %-9s %s\n' gate lane command
   while IFS='|' read -r lane name command; do
     if [ "$hermetic_only" -eq 1 ] && [ "$lane" != hermetic ]; then continue; fi
+    if [ "$ocaml_only" -eq 1 ] && [ "$lane" != ocaml ]; then continue; fi
     printf '%-24s %-9s %s\n' "$name" "$lane" "$command"
   done < <(gate_table)
   exit 0
@@ -88,13 +99,17 @@ hits=0
 sweep_start="$(date +%s)"
 scope="every gate"
 if [ "$hermetic_only" -eq 1 ]; then scope="the hermetic subset"; fi
+if [ "$ocaml_only" -eq 1 ]; then scope="the OCaml subset"; fi
 echo "sweep: $scope, one process at a time"
 
 while IFS='|' read -r lane name command; do
   if [ "$hermetic_only" -eq 1 ] && [ "$lane" != hermetic ]; then continue; fi
+  if [ "$ocaml_only" -eq 1 ] && [ "$lane" != ocaml ]; then continue; fi
   log="$logs/$name.log"
   start="$(date +%s)"
-  if ( cd "$repo_root" && "./$command" ) >"$log" 2>&1; then status=PASS; else status=FAIL; fi
+  read -r -a gate_command <<< "$command"
+  if ( cd "$repo_root" && bash "${gate_command[@]}" ) </dev/null >"$log" 2>&1; then status=PASS; else status=FAIL; fi
+  if [ "$status" = PASS ] && grep -q "^SKIP " "$log"; then status=SKIP; fi
   seconds="$(( $(date +%s) - start ))"
   # A gate that hit its stamp says so in the line `stamp_report` prints.
   if grep -Fq 'skipped (EFFECT4_FORCE=1 re-runs)' "$log"; then
@@ -125,4 +140,8 @@ if [ "$failed" -gt 0 ]; then
   echo "FAIL $failed of $ran gates failed; logs under .lake/sweep-logs/" >&2
   exit 1
 fi
-echo "PASS $scope is green"
+if grep -q $'\tSKIP\t' "$summary"; then
+  echo "PASS executed gates; skipped gates are listed in the summary"
+else
+  echo "PASS $scope is green"
+fi

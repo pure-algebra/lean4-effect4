@@ -198,7 +198,7 @@ let json_of_step (s : Corpus_dsl.step) : E4d_json.t =
       ("publish", match s.Corpus_dsl.publish with Some g -> Int g | None -> Null) ]
 
 (* The value alphabet the wire describes (`avatar_trace.ml:9-19`, transcribed from
-   `Effect4/Target/TypeScript/Trace.lean:60-75`). One list, so `inspect` can say what a row's
+   `git:c407ab7:Effect4/Target/TypeScript/Trace.lean:60-75`). One list, so `inspect` can say what a row's
    request or answer can be without the caller reading the OCaml. *)
 let value_alphabet =
   [ ("unit", "[]"); ("nat", "an integer"); ("bool", "true / false");

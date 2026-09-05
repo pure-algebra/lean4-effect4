@@ -49,7 +49,7 @@ namespace OCaml5.Promise
 
 /-! ## Values
 
-First-order and closed, per the O3 value profile (`src/OCaml5/Value.lean`). The only
+First-order and closed, per the O3 value profile (`src/OCaml5/Runtime/Value.lean`). The only
 object identities that cross the boundary are the three heap indices. `Val.err` carries an
 already-rendered message because the spec's fresh `TypeError` is an object this carrier does
 not have a heap for; `PROMISE-HOST-CONTRACT.md` records the same restriction. -/

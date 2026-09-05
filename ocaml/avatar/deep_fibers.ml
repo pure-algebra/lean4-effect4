@@ -1,4 +1,4 @@
-(* The avatar: `workshop/Deep/Fibers.lean` transcribed into OCaml 5 effect handlers.
+(* The avatar: `src/Effect4/Machine/Fibers.lean` transcribed into OCaml 5 effect handlers.
 
    Spike A0, 2026-09-04. One OCaml module for the one Lean file. Every carrier keeps the
    Lean name, the Lean field order and the Lean arm order; every arm cites the same rc.112
@@ -57,7 +57,7 @@
 
 (* ------------------------------------------------------------------------- the tape *)
 
-(* The decision tape, in the golden's own spelling (`harness/trace/fiber-tail.ts`). *)
+(* The decision tape, in the golden's own spelling (`git:606918eb73daefcc235a261fce879bf910f2471e:harness/trace/fibers-tail.ts`). *)
 module Tape = struct
   let entries : (int * bool) list ref = ref []
   let cursor = ref 0
@@ -86,7 +86,7 @@ end
 
 (* ------------------------------------------------------------------ values and causes *)
 
-(* The one value alphabet the trace wire describes (`Effect4/Target/TypeScript/Trace.lean`). *)
+(* The one value alphabet the trace wire describes (`git:c407ab7:Effect4/Target/TypeScript/Trace.lean`). *)
 type value =
   | Vunit
   | Vnat of int
@@ -128,7 +128,7 @@ type observer_mode = MJoin | MAwait
 type park_kind = Pjoin of int * observer_mode
 
 (* `Supervision.MaskMode` and `Supervision.ForkOptions`
-   (`Effect4/Concurrency/Supervision.lean:15-21`): the mask a fork applies (`:5272`) and the
+   (`src/Effect4/Machine/Supervision.lean:15-21`): the mask a fork applies (`:5272`) and the
    three options `spawn` reads. Seat F1 moved them here from `deep_stores.ml`, because
    `spawn` (`Fibers.lean:631`) takes the options now rather than a `daemon` flag alone
    (report row W1-5, closed). *)
@@ -419,7 +419,7 @@ type st = {
 
 let state : st = { started = []; cleanups = [] }
 
-(* The wire's handle space: `registerHandle`/`handleIndex` in `harness/trace/tracer.ts`.
+(* The wire's handle space: `registerHandle`/`handleIndex` in `git:c407ab7:harness/trace/tracer.ts`.
    An object never reaches the wire; it is encoded as its index in first-seen order, over
    every handle kind at once. *)
 let handles : (string * int, int) Hashtbl.t = Hashtbl.create 16
@@ -481,7 +481,7 @@ let default_fuel = 100000
 let default_rounds = 1000
 
 (* `Scheduler.MaxOpsBeforeYield` as the host tails read it (`EFFECT4_MAX_OPS`,
-   `harness/trace/fiber-tail.ts:74`). rc.112 caches it on the fiber at `setContext`
+   `git:606918eb73daefcc235a261fce879bf910f2471e:harness/trace/fibers-tail.ts:74`). rc.112 caches it on the fiber at `setContext`
    (`internal/effect.ts:726-727`), which is what `RunFiber.make`'s budget pair is. *)
 let max_ops_before_yield = ref max_int
 let prevent_yield = ref false
@@ -542,7 +542,7 @@ let refuse (lean_name : string) : 'a =
 
 (* ------------------------------------------------------------- the service alphabet
 
-   The `Fibers` family's eight operations (`harness/trace/fiber-fixture.ts`), plus the two
+   The `Fibers` family's eight operations (`git:606918eb73daefcc235a261fce879bf910f2471e:harness/trace/fibers-fixture.stub.ts`), plus the two
    machine-level parks the bodies need. Each is a `Prim` the Lean `iteration` intercepts:
    `Op_yield_now` is `Prim.yieldNowWith`, `Op_never` is a `Prim.async` registering no resume,
    and the six fiber operations are `Prim.withFiber` thunks whose `RunInterp.withFiberOf` is
@@ -660,7 +660,7 @@ type run_interp = {
    that reaches an uninstalled store fails with that name rather than differing. *)
 let interp : run_interp ref =
   ref
-    { store_arm = (fun _ _ _ _ -> refuse "Effect4.Deep.RunInterp.syncState");
+    { store_arm = (fun _ _ _ _ -> refuse "Effect4.Machine.RunInterp.syncState");
       due_resumes = (fun () -> []);
       scope_status = (fun _ -> None);
       scope_link_fiber = (fun _ _ _ _ -> false);
@@ -878,7 +878,7 @@ let countdown_park ?(fail_fast = false) m (f : run_fiber) (targets : int list) r
     f.running <- false;
     Cparked token
 
-(* `Supervision.raceComplete` (`Effect4/Concurrency/Supervision.lean:407-420`): a callback
+(* `Supervision.raceComplete` (`src/Effect4/Machine/Supervision.lean:407-420`): a callback
    preserves the first accepted result while updating the live bookkeeping. *)
 let race_complete (r : race) (child : int) (exit_ : exitv) : unit =
   if List.mem child r.live then begin
@@ -938,7 +938,7 @@ let spawn m (parent : run_fiber) (program : unit -> value) (options : fork_optio
   emit m [ Forked (parent.id, child_id, options.daemon) ];
   child_id
 
-(* The fixture's fork (`harness/trace/fibers-tail.ts`, `corpus_rc112.mjs:242-244`:
+(* The fixture's fork (`git:c407ab7:harness/trace/fibers-tail.ts`, `corpus_rc112.mjs:242-244`:
    `Effect.forkChild(body, { startImmediately: false })` / `Effect.forkDetach(...)`):
    deferred start, and the mask rc.112 gives a fork that names none --
    `options?.uninterruptible ?? false` (`:5258`) and `forkUnsafe`'s own default
@@ -1473,7 +1473,7 @@ and inject_yield m (f : run_fiber) (again : unit -> unit) (on_cause : cause -> u
   else false
 
 (* The service `answer` row is a further primitive. rc.112's traced service wraps the
-   method's effect in `Effect.tap` (`harness/trace/tracer.ts:288-291`), so a whole run-loop
+   method's effect in `Effect.tap` (`git:c407ab7:harness/trace/tracer.ts:288-291`), so a whole run-loop
    iteration -- interrupt check, op count, yield check -- sits between the operation's value
    and the row. Round three pushed the row from inside the arm, where nothing could pre-empt
    it, which is the one divergence `extra.siblingCompletesDeferred` reported. *)
@@ -1650,7 +1650,7 @@ and answer_join m f ko (e : exitv) : unit =
 (* A service operation that fails: the `failed` row, then the cause into the fiber. *)
 and fail_op name (ko : value kops) (c : cause) : unit =
   (* Only a typed failure gets a `failed` row: `traceService`'s `Effect.tapError`
-     (`harness/trace/tracer.ts:291`) fires on the error channel, and an interruption is not
+     (`git:c407ab7:harness/trace/tracer.ts:291`) fires on the error channel, and an interruption is not
      on it. Round five: the avatar used to fabricate `failed <op> 0` for an interrupted
      operation, which rc.112 never emits. *)
   (match cause_fail_of c with Some e -> push_row (Rfailed (name, e)) | None -> ());
@@ -2199,7 +2199,7 @@ let run_sync_exit m fuel (program : unit -> value) : exitv =
 
 (* `replayEval`'s three results (`:1164`) over the one tape the trace faces use: a run that
    ends with the root exited is `finished`; one that reaches quiescence with the root still
-   parked is `frontier` (`harness/trace/tracer.ts:434-442` writes the same row when its
+   parked is `frontier` (`git:c407ab7:harness/trace/tracer.ts:434-442` writes the same row when its
    stall deadline fires); a stuck machine is `stuck`. *)
 type replay_result = Rfinished of exitv | Rfrontier | Rstuck of stuck
 
@@ -2210,7 +2210,7 @@ let run_program m fuel (program : unit -> value) : replay_result =
   | Some why -> Rstuck why
   | None -> ( match (fiber_exn m root).exit_ with Some e -> Rfinished e | None -> Rfrontier)
 
-(* `Cause.squash` at this alphabet (`Effect4/Concurrency/Cause.lean`, `Squashed`): the first
+(* `Cause.squash` at this alphabet (`src/Effect4/Machine/Cause.lean`, `Squashed`): the first
    typed failure wins, else the first defect, else an interruption. *)
 type squashed = Sq_error of int | Sq_die of string | Sq_interrupt
 

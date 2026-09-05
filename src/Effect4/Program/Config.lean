@@ -5,7 +5,7 @@ import Effect4.Machine.Key
 # Program.Config — configuration as a provider algebra, a reader, and a requirement row
 
 Design: `docs/research/2026-09-04-production-standards-spike.md` §4 (the algebra) and §10 (the
-lane's findings against the source); spiked as `workshop/Config/Config.lean`. The batteries
+lane's findings against the source); spiked as `docs/research/2026-09-05-workshop-config/Config.lean`. The batteries
 are `Test/Program/ConfigContract.lean` (the frozen statements and the six register rows
 `E4-CONF-CE-001..006`) and `Test/Program/ConfigAxiomReport.lean`.
 
@@ -22,7 +22,7 @@ walk over a `String` is a supplied hook rather than an unfolded definition. `Str
 every function that *iterates* a `String` — `String.toNat?`, `toUpper`, `splitOn`, `toList`,
 `length` — reaches `Classical.choice`, because the iteration is well-founded recursion over
 `String.Pos`. So the scalar codecs live in `Scalars` (§4), which `eval` takes as a parameter
-the way `Effect4/Program/Provision.lean` takes `LeafSem`: `stdScalars` is the rc.112
+the way `src/Effect4/Program/Provision.lean` takes `LeafSem`: `stdScalars` is the rc.112
 instantiation, it appears in the `#guard`s, and it appears in no theorem.
 
 Three places where the model deliberately parts company with rc.112, each pinned below:
@@ -629,7 +629,7 @@ deriving DecidableEq, Repr
 
 /-- The scalar codecs, supplied rather than unfolded: reading a `Nat` out of a `String` walks
 the string, and every such walk reaches `Classical.choice` on this toolchain. This is the
-trusted-boundary position `LeafSem` occupies in `Effect4/Program/Provision.lean`. -/
+trusted-boundary position `LeafSem` occupies in `src/Effect4/Program/Provision.lean`. -/
 structure Scalars where
   /-- `Config.number` at `Int` (`Config.ts:1192-1220`). -/
   natOf : String → Option Nat
@@ -1204,7 +1204,7 @@ private def dotenv : List (String × Tmpl String) :=
 What a term may read is a finite set of paths; what a source supplies is another. The
 residual is `Row.diff` of the two through an index table, and it is empty exactly when the
 term is fully provided — the same shape as `Layer`'s `Exclude<RIn, ROut>`
-(`Effect4/Program/Provision.lean`), and the table is the interpretation.
+(`src/Effect4/Program/Provision.lean`), and the table is the interpretation.
 
 The row element is `ServiceKey`, not `Nat`. `Row α` needs `Std.IsLinearOrder α` and
 `Std.LawfulOrderLT α`, and *core's* instances for `Nat` reach `Classical.choice`: measured
@@ -1212,8 +1212,8 @@ on 2026-09-04, `Row.diff_eq_empty_iff_subset` is `[propext, Quot.sound]` generic
 `[propext, Classical.choice, Quot.sound]` the moment it is instantiated at `Nat`, while
 `Row.normalize` and `Row.diff` themselves stay clean. `ServiceKey`'s order is hand-proved
 from `Nat.lt_trichotomy` and friends at the library's ceiling
-(`Effect4/Machine/Key.lean:270-290`), which is what a row over it costs — nothing. This is
-the same reason `Requirement := Row ServiceKey` in `Effect4/Machine/Context.lean`. -/
+(`src/Effect4/Machine/Key.lean:270-290`), which is what a row over it costs — nothing. This is
+the same reason `Requirement := Row ServiceKey` in `src/Effect4/Machine/Context.lean`. -/
 
 /-- The paths a term may load from the prefix `q`. -/
 def reads {Name : Type} (q : Path Name) : ConfigTerm Name → List (Path Name)
@@ -1445,7 +1445,7 @@ def providedRow {Name : Type} [DecidableEq Name] (table : List (Path Name))
   Row.normalize ((provided entries).filterMap (fun p => (indexOf table p).map keyOf))
 
 /-- What is still owed: the configuration's requirement row, in the very carrier
-`Effect4/Machine/Context.lean` calls `Requirement`. -/
+`src/Effect4/Machine/Context.lean` calls `Requirement`. -/
 def residual {Name : Type} [DecidableEq Name] (table : List (Path Name)) (q : Path Name)
     (c : ConfigTerm Name) (entries : List (Path Name × String)) : Row ServiceKey :=
   Row.diff (readsRow table q c) (providedRow table entries)
@@ -1464,7 +1464,7 @@ theorem residual_empty_of_subset {Name : Type} [DecidableEq Name] (table : List 
 --   Row.normalize, Row.diff (generic)               [propext, Quot.sound]
 --   Row.diff_eq_empty_iff_subset at `Nat`           [propext, Classical.choice, Quot.sound]
 -- Core's `Nat` order instances are the whole difference, so no theorem here mentions
--- `Row Nat`. `Effect4/Machine/Key.lean` is what a clean row over positions costs.
+-- `Row Nat`. `src/Effect4/Machine/Key.lean` is what a clean row over positions costs.
 
 /-! ### Anti-vacuity: the docs-style example
 

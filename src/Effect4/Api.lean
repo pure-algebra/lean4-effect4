@@ -14,11 +14,11 @@ import Effect4.Ingest.Mcp
 One module, the whole pipeline, small interface:
 
 ```
- Effect TS text  ⇄  Program (Eff)  →  NCode (rc.112 frames)  →  Deep machine
+ Effect TS text  ⇄  Program (Eff)  →  NCode (rc.112 frames)  →  Machine
    print/read        compile                                     replay / runSync
 ```
 
-* `Program` is the Eff AST over the native operation alphabet (`Effect4/Syntax/Eff.lean`,
+* `Program` is the Eff AST over the native operation alphabet (`src/Effect4/Program/Eff.lean`,
   `Native.lean`): first-order, decidable, no Lean function inside.
 * `typeOf` / `wellTyped` type a program against the native signature.
 * `print` / `printDecl` answer TypeScript **syntax** (`TypeScript.Expr`, `ConstDecl`),
@@ -45,13 +45,18 @@ One module, the whole pipeline, small interface:
   in the gate as `Effect4.Codegen.Artefact.render`, and the reason the rest of this face
   never returns text.
 
-Everything else in the library is implementation behind this seam. Callers and tests cross
-it the same way; `Test/Api/ApiContract.lean` is the receipt.
+Applications import `Effect4.Api` for programs and the modules under `Effect4.Surface`
+for the carriers they emit from. Batteries test modules at their own boundaries;
+`Test/Api/ApiContract.lean` exercises the application seam.
 -/
 
 namespace Effect4.Api
 
 open Effect4 Effect4.Machine Effect4.Program
+
+export Effect4.Machine (Val Err Defect Ann Ctx Stores ExitV Stuck RunEvent RunDecision)
+export Effect4 (FiberId)
+export Effect4.Program (EffName EffThunk)
 
 /-- A program: the Eff AST over the native operation alphabet. -/
 abbrev Program := NativeEff
@@ -69,7 +74,7 @@ def print (program : Program) : Except PrintRefusal TypeScript.Expr :=
   Program.print nativeSignature 0 program
 
 /-- A program back from one TypeScript expression, at the empty environment: the inverse of
-`print` on the trees `print` produces (`Effect4/Codegen/Read.lean`, `read_print` and
+`print` on the trees `print` produces (`src/Effect4/Codegen/Read.lean`, `read_print` and
 `read_exact`), a `ReadRefusal` on every other tree. -/
 def read (expression : TypeScript.Expr) : Except ReadRefusal Program :=
   Program.readEff nativeSignature nativeSpell 0 expression

@@ -5,7 +5,7 @@ import Effect4.Api
 
 Plan: `docs/research/2026-09-05-image-parser-spike.md` §2 (the corpus) and §7 (P3). This is
 the seeded generator of `Eff NativeOp` programs the spike ran its parser over, moved out of
-`workshop/ImageParser/GenImage.lean` and into the tree, where it is the corpus every
+`Test/Program/Gen.lean` and into the tree, where it is the corpus every
 printer and reader claim runs over. The workshop file is now a `--run` driver that imports
 this module and writes the bytes; the generator itself lives here.
 
@@ -13,7 +13,7 @@ this module and writes the bytes; the generator itself lives here.
 
 Every `Eff` constructor the printer accepts — everything but `choose` and the five internal
 fiber actions (`interruptScoped`, `awaitAllFailFast`, `snapshotChildren`, `awaitNewChildren`,
-`setContext`), which `Effect4/Codegen/Print.lean` refuses by design. The coverage pins below
+`setContext`), which `src/Effect4/Codegen/Print.lean` refuses by design. The coverage pins below
 are one `#guard` per constructor of each family, plus two negative pins saying the refused
 arms occur nowhere in the corpus — which is why the zero-refusal pin holds: the generator has
 no arm that draws them, not one seed that happened to miss them.
@@ -22,7 +22,7 @@ no arm that draws them, not one seed that happened to miss them.
 
 `pick` is the 64-bit LCG of the spike, taken modulo `2 ^ 63` with the low 16 bits dropped, and
 program `i` at depth `d` is `(genEff 0 d).run ⟨1000003 * (i + 1) + 17⟩`. The arithmetic and the
-*order* of the draws are the reproducibility contract: `workshop/ImageParser/GenImage.lean`
+*order* of the draws are the reproducibility contract: `Test/Program/Gen.lean`
 rendered from this module reproduces the spike's 400 files byte for byte, and any change to a
 branch probability or to the sequence of `pick` calls inside an arm is a different corpus.
 
@@ -78,7 +78,7 @@ The pure atoms of the native route with their arities, and the read-modify-write
 names. Both are `getD`-read, so an out-of-range draw (which the moduli make impossible) is a
 default rather than a panic. -/
 
-/-- `Effect4/Program/Native.lean` `nativeAtom`, name and arity. -/
+/-- `src/Effect4/Program/Native.lean` `nativeAtom`, name and arity. -/
 def atoms : List (String × Nat) :=
   [("succ", 1), ("pred", 1), ("isZero", 1), ("not", 1), ("add", 2), ("lt", 2), ("eq", 2),
    ("pair", 2), ("fst", 1), ("snd", 1)]

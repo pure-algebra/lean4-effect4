@@ -6,7 +6,7 @@ import Effect4.Schema.Document
 Owner: Schema persisted/decode-side structural field admission.
 
 This module declares `SC-REP-04`'s persisted/decode-side field-admission
-judgment from `test/contracts/schema-payload.contract.md` D7, its Boolean
+judgment from `Test/contracts/schema-payload.contract.md` D7, its Boolean
 companion, their agreement, exact constructor equations, and retained positive
 and negative witnesses.
 
@@ -15,8 +15,8 @@ profile identity. `SC-PROFILE-01` through `SC-PROFILE-03` remain unopened, and
 the rest of this file's original navigation notes still apply to them.
 
 The annotations below are navigation and scope, not declarations. Obligation
-names are those of the graph in `docs/SCHEMA-CUTOVER.md`; counterexample rows
-are those of `test/counterexamples/REGISTER.md`.
+names are those of the graph in `docs/research/SCHEMA-CUTOVER.md`; counterexample rows
+are those of `Test/Counterexamples/REGISTER.md`.
 
 ## Ownership
 
@@ -28,7 +28,7 @@ judgment here is only a false proposition.
 Naming hazard, recorded rather than silently resolved: rc.112 also has a
 persisted node family called `Check` (`Filter | FilterGroup`). That is a
 representation node, and its tag alphabet already lives in
-`Effect4/Schema/Representation.lean` as `CheckTag`. The mutually recursive
+`src/Effect4/Schema/Representation.lean` as `CheckTag`. The mutually recursive
 `Representation`/`Check` payload family must be declared together in
 `Schema.Representation`; this module consumes that family and must not add a
 second `Check` or `CheckTag` carrier.
@@ -85,7 +85,7 @@ internal/schema/toRepresentation.ts
 ```
 
 The first three digests are the `installed` column of the authority table in
-`docs/SCHEMA-CUTOVER.md`. `SchemaRepresentation.ts` and `SchemaAST.ts` are byte
+`docs/research/SCHEMA-CUTOVER.md`. `SchemaRepresentation.ts` and `SchemaAST.ts` are byte
 matches with the pinned upstream revision; `Schema.ts` is **not** a byte match
 upstream, so every `Schema.ts:NNN` citation below is a citation of the
 *installed* bytes only. `Filter.ts` and `internal/schema/toRepresentation.ts`
@@ -194,7 +194,7 @@ requires `Schema.NonEmptyString` (`:918`). Observed: a check whose
 `Expected a value with a length of at least 1` at path
 `["representation"]["checks"][0]["representation"]["id"]`. This is the same
 class of hazard as `Filter.representation` presence: a model that reads the
-interface admits documents rc.112 rejects. `docs/SCHEMA-CUTOVER.md` records
+interface admits documents rc.112 rejects. `docs/research/SCHEMA-CUTOVER.md` records
 the codec spelling `id : NonEmptyString` but lists only the presence
 divergence, so the non-emptiness divergence is added here.
 
@@ -249,7 +249,7 @@ several checks as *siblings* on the node rather than as a group;
 
 ### `Filter` is a `checks`-leaf but **not** a representation-leaf
 
-`docs/SCHEMA-CUTOVER.md` states, as pinned fact 2 of its six, that "`Filter`
+`docs/research/SCHEMA-CUTOVER.md` states, as pinned fact 2 of its six, that "`Filter`
 has **no** `checks` field; it is a leaf. Only `FilterGroup` recurses". The
 first clause is exact. **The word "leaf" and the word "only" are too strong**,
 and this annotation narrows them.
@@ -301,7 +301,7 @@ For comparison, the same divergence exists one family over:
 
 ### The divergence is reachable from inside rc.112, not only from a bad model
 
-This is the sharpening worth recording. `docs/SCHEMA-CUTOVER.md` frames the
+This is the sharpening worth recording. `docs/research/SCHEMA-CUTOVER.md` frames the
 divergence as a modelling hazard — "a model that reads optionality off the
 interfaces admits two document shapes rc.112 rejects". True, and there is more
 to it: **rc.112's own lowering path produces one of those shapes.**
@@ -333,7 +333,7 @@ For this module that means: **`Filter.representation` presence is an admission
 condition on the persisted form, and the live `Representation` type is not a
 subset of the encodable ones.** Any Effect4 statement of the form "an rc.112
 `Representation` value is encodable" is false as written. The claimable
-direction is the one `docs/SCHEMA-CUTOVER.md` already fixes for `SC-CAS-*`:
+direction is the one `docs/research/SCHEMA-CUTOVER.md` already fixes for `SC-CAS-*`:
 Effect4-admitted implies host-accepted, never the converse.
 
 `SchemaRepresentation.ts:1126` records the encode-side refusal in prose:
@@ -439,7 +439,7 @@ key. Observed: `{ _tag: "String" }` is refused with `Missing key` at
 `["representation"]["checks"]`, while `{ _tag: "String", checks: [] }` decodes.
 The same holds for `Suspend`.
 
-### Verifying the two claims `docs/SCHEMA-CUTOVER.md` marks special
+### Verifying the two claims `docs/research/SCHEMA-CUTOVER.md` marks special
 
 **`Suspend`: the claim is correct.** `checks: Schema.Tuple([])` (`:987`) is
 present and exactly empty, and the interface says `readonly []` (`:161`).
@@ -448,7 +448,7 @@ refused, reported as `Expected no excess property` at
 `["representation"]["checks"][0]` — the empty-tuple arity, not a check error.
 A `Suspend` with `checks: []` decodes; a `Suspend` with the key missing is
 refused. This agrees with the sealed rc.112 pin already cited in
-`docs/SCHEMA-CUTOVER.md`.
+`docs/research/SCHEMA-CUTOVER.md`.
 
 **`Reference`: the claim is correct as stated about fields, and needs one
 qualification about admission.** `Reference` is exactly `_tag` and `$ref`
@@ -462,13 +462,13 @@ defaults to `"ignore"` and strips undeclared properties
 (`SchemaAST.ts:474-480`). The same silent drop was observed for a spurious
 `checks` key on a `Filter` and a spurious `aborted` key on a `FilterGroup`.
 
-Neither claim in `docs/SCHEMA-CUTOVER.md` is wrong. The qualification matters
+Neither claim in `docs/research/SCHEMA-CUTOVER.md` is wrong. The qualification matters
 anyway, because it is exactly the standing claim-scope rule that document
 already fixes: rc.112 accepts more than Effect4 will. If this module refuses a
 `Reference` bearing an `annotations` key, that refusal is an **Effect4 profile
 refusal and must never be described as an rc.112 refusal.**
 
-A note on a neighbouring `docs/SCHEMA-CUTOVER.md` row, recorded because it was
+A note on a neighbouring `docs/research/SCHEMA-CUTOVER.md` row, recorded because it was
 observed while verifying `Suspend`. That document says the beta.103 behaviour
 where lowering forces the thunk and cuts recursion by emitting a `Reference`
 into the references table is "**not** yet verified at rc.112". Observed at
@@ -505,7 +505,7 @@ makes the stakes concrete. Its declared members include `toJsonSchema` and
 hint carrying further callbacks (`:17262-17264`), and a `representation` whose
 `schemas` are live `SchemaAST.AST` values (`:17219-17221`). None of that is
 JSON. It is precisely the executable content that
-`docs/SCHEMA-CUTOVER.md` names when it rules that Effect's runtime
+`docs/research/SCHEMA-CUTOVER.md` names when it rules that Effect's runtime
 `SchemaAST.AST` is not persisted Schema content.
 
 ### The codec, and what it does in each direction
@@ -541,7 +541,7 @@ that direction. Observed: decoding a node whose `annotations` holds a function
 value, or an `undefined` value, is refused with `Expected JSON value` at the
 offending key path.
 
-So `docs/SCHEMA-CUTOVER.md`'s ruling — "unsupported entries are pruned and an
+So `docs/research/SCHEMA-CUTOVER.md`'s ruling — "unsupported entries are pruned and an
 empty result is omitted" — is **correct for encode and does not describe
 decode**, where the same entry is a refusal. `E4-SCHEMA-CE-011` must fix a
 direction before it can be discharged; the two directions have different
@@ -575,7 +575,7 @@ by the same finiteness restriction as an annotation value.
 **produced** by encode (`:936` omits instead). Observed: a document carrying
 `annotations: {}` survives `fromJson` unchanged and re-encodes with the key
 absent. So `encode ∘ decode` is a canonicalising map on this field and not the
-identity — which is the shape `docs/SCHEMA-CUTOVER.md` already requires of
+identity — which is the shape `docs/research/SCHEMA-CUTOVER.md` already requires of
 `SC-WIRE-03`, stated there as `encode (decode acceptedBytes) =
 canonicalize acceptedBytes`. This observation is one witness consistent with
 that requirement on one input. It is not a proof of it, and it discharges

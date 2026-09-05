@@ -8,7 +8,7 @@ const here = resolve(fileURLToPath(new URL(".", import.meta.url)))
 const repository = resolve(here, "../..")
 const nodeModules = resolve(
   process.env.EFFECT4_EFFECT_NODE_MODULES ??
-    join(here, "../../../foldlab/library/effects/node_modules")
+    join(repository, "harness/schema-host/node_modules")
 )
 
 const packageVersion = (name) =>

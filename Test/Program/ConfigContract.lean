@@ -5,7 +5,7 @@ import Effect4.Program.Config
 
 Plan: `docs/research/2026-09-04-production-standards-spike.md` §4 (the algebra) and §10 (the
 six register rows and their pairs). The module under contract is
-`Effect4/Program/Config.lean` (spiked as `workshop/Config/Config.lean`).
+`src/Effect4/Program/Config.lean` (spiked as `docs/research/2026-09-05-workshop-config/Config.lean`).
 
 Every obligation below is ascribed at its exact proposition and supplied by name with `@`, so
 a declaration that keeps the frozen name but weakens the statement fails here
@@ -14,7 +14,7 @@ register rows restated as `#guard`s beside their positive controls; a row whose 
 not walk a `String` is *also* a theorem by `decide`, and a row that reaches the source through
 `fromEnvRecord` or `configCase` stays a `#guard` on purpose — `String.toNat?`, `toUpper` and
 `splitOn` reach `Classical.choice` on this toolchain, which is the whole reason `Scalars` is a
-parameter (`Effect4/Program/Config.lean` §4). Never `native_decide`, never `sorry`.
+parameter (`src/Effect4/Program/Config.lean` §4). Never `native_decide`, never `sorry`.
 
 The counterexample witnesses are restated here rather than imported: every one of them is
 `private` in the module.
@@ -44,7 +44,7 @@ open Effect4.Program.Config
 
 /-! ## C1 — the provider algebra
 
-`Provider`, `load`, `mapInput`, `nested`, `orElse`: `Effect4/Program/Config.lean` §1. -/
+`Provider`, `load`, `mapInput`, `nested`, `orElse`: `src/Effect4/Program/Config.lean` §1. -/
 
 section C1
 
@@ -110,7 +110,7 @@ end C1
 /-! ## C2 — the reader
 
 `eval`, its combinators, and the transfer law between the two `nested`s:
-`Effect4/Program/Config.lean` §4. -/
+`src/Effect4/Program/Config.lean` §4. -/
 
 section C2
 
@@ -161,7 +161,7 @@ end C2
 
 /-! ## C3 — substitution
 
-`Tmpl` and `expand`: `Effect4/Program/Config.lean` §5. -/
+`Tmpl` and `expand`: `src/Effect4/Program/Config.lean` §5. -/
 
 section C3
 
@@ -183,7 +183,7 @@ end C3
 /-! ## C4 — the requirement row
 
 `reads`, `provided`, `readsRow`, `providedRow`, `residual`:
-`Effect4/Program/Config.lean` §6. -/
+`src/Effect4/Program/Config.lean` §6. -/
 
 section C4
 

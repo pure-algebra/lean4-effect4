@@ -1,10 +1,11 @@
+import Effect4.Data.Ascii
 import Effect4.Codegen.Emit
 
 /-!
 # Codegen.JsonSchema — draft 2020-12, the emit half
 
 Rule `surface.entity.jsonSchema` (`Rule.entityJsonSchema`), the `json` artefact of an entity
-under its domain. The reader that inverts it is `Effect4/Ingest/JsonSchema.lean`.
+under its domain. The reader that inverts it is `src/Effect4/Ingest/JsonSchema.lean`.
 
 `toJsonSchema` is read off rc.112's own compiler, not invented: the public entry
 is `SchemaRepresentation.toJsonSchemaDocument`
@@ -39,7 +40,7 @@ restricted here to an annotation-only right operand (`appendAnnotations`).
 
 | | |
 | --- | --- |
-| Carrier | none of its own: the refusals are `Effect4/Surface/Refusal.lean`'s `Refusal` |
+| Carrier | none of its own: the refusals are `src/Effect4/Surface/Refusal.lean`'s `Refusal` |
 | Operations | `toJsonSchema`, `toJsonSchemaFuel`, `Document.jsonSchema`, `Entity.jsonSchema`; the `Emit .entityJsonSchema` instance |
 | Laws | none proved. The round trip is the reader's `#guard`s and an **owed** theorem, named below |
 | Structure | a fuel-bounded partial function over one fragment, every refusal a named shape |
@@ -98,7 +99,7 @@ shape name.
 ## The owed row
 
 `ofJsonSchema_toJsonSchema` is **not proved**, and the reader it speaks of now lives in
-`Effect4/Ingest/JsonSchema.lean` with the quotient stated beside it. The obstruction is
+`src/Effect4/Ingest/JsonSchema.lean` with the quotient stated beside it. The obstruction is
 stated, not hidden: `toJsonSchema` is not injective on the fragment (`Any` and `Unknown`
 both emit `{}`; `Void`, `Undefined` and `Null` all emit `{"type":"null"}`;
 `ObjectKeyword` and an empty `objects` both emit the object/array `anyOf`), so
@@ -214,7 +215,7 @@ An empty result is `none`, as at `:68`.
 The `expected`/`generateDescriptions` fallback of `:37` and the
 `includeAnnotationKey` sweep of `:56-66` both depend on the options record,
 which this module does not take: it compiles at the default options. The key names
-are the ones `Effect4/Surface/Annotate.lean` gives typed `AnnotationKey`s; they
+are the ones `src/Effect4/Surface/Annotate.lean` gives typed `AnnotationKey`s; they
 are spelled literally here because rc.112's own list
 (`internal/schema/annotations.ts:28-38`) is what fixes their order.
 -/
@@ -466,7 +467,7 @@ private def unionSchema (go : Representation → Except Refusal Json)
 
 /-- A reference key with no JSON Pointer escaping to do. -/
 def pointerToken? (name : String) : Option String :=
-  if (name.toUTF8.data.toList).any (fun byte => byte == 47 || byte == 126) then none
+  if ((Data.Ascii.bytesOf name)).any (fun byte => byte == 47 || byte == 126) then none
   else some name
 
 /-- The node's own compilation, before annotations and checks

@@ -3,17 +3,17 @@
 Status: breaker packet, red, 2026-09-04 (wave 1b of
 `docs/research/2026-09-04-surface-library-plan.md` §4.7)
 
-Implementation (owed): `Effect4/Surface/Site.lean`
+Implementation (owed): `src/Effect4/Surface/Site.lean`
 
-Battery: `Effect4Test/Surface/SiteContract.lean`
+Battery: `Test/Surface/SiteContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-050` through `E4-SURFACE-CE-052`,
 `E4-SURFACE-CE-068`
 
-Shared: `test/contracts/surface-facts.contract.md` owns the `Refusal`
+Shared: `Test/contracts/surface-facts.contract.md` owns the `Refusal`
 alphabet.
 
-Witnesses: `Effect4Test/Counterexamples/Surface/Site.lean`
+Witnesses: `Test/Counterexamples/Surface/Site.lean`
 
 ## Purpose
 

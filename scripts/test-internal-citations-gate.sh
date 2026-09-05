@@ -47,12 +47,12 @@ find "$fixture" -type f -print0 | LC_ALL=C sort -z | xargs -0 cksum >"$fixture_b
 
 # The five protected documents, held as data so this file carries no literal
 # line-numbered citation into any of them.
-cutover='docs/SCHEMA-CUTOVER.md'
+cutover='docs/research/SCHEMA-CUTOVER.md'
 cutover_bare='SCHEMA-CUTOVER.md'
 plan='PLAN.md'
 agents='AGENTS.md'
 arch='docs/ARCHITECTURE.md'
-routing='docs/AGENT-ROUTING.md'
+routing='docs/''AGENT-ROUTING.md'
 
 rejected=0
 accepted=0
@@ -205,8 +205,8 @@ expect_reject "total extraction failure" "$dir" 'extracted no citation tokens'
 # R9. a root with none of the scanned trees must be refused, not passed
 dir="$tmp_root/reject-no-trees"
 rm -rf -- "$dir"
-mkdir -p "$dir/generated"
-printf 'nothing to scan here\n' >"$dir/generated/README.md"
+mkdir -p "$dir/unscanned"
+printf 'nothing to scan here\n' >"$dir/unscanned/README.md"
 expect_reject "root with no scanned tree" "$dir" 'none of the scanned trees'
 
 # R10. a stray positional argument must be refused, not silently ignored

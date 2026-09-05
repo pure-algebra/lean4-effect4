@@ -214,29 +214,29 @@ def laws : List Law :=
        ++ "constructor-by-constructor diff uses" },
    { name := "Effect.perform_transfers",
      statement := "perform e in a fiber with a handler for e transfers to that handler's effc",
-     site := some "src/OCaml5/Effect.lean (Machine.step, the perform clause)" },
+     site := some "src/OCaml5/Runtime/Effect.lean (Machine.step, the perform clause)" },
    { name := "Effect.unhandled_raises",
      statement := "perform e with no handler raises Effect.Unhandled e",
-     site := some "src/OCaml5/Effect.lean (ExnId.unhandled)" },
+     site := some "src/OCaml5/Runtime/Effect.lean (ExnId.unhandled)" },
    { name := "Deep.match_with_pure",
      statement := "match_with f x h = h.retc (f x) when f performs nothing",
-     site := some "src/OCaml5/Effect.lean (Stdlib.deepMatchWith)" },
+     site := some "src/OCaml5/Runtime/Effect.lean (Stdlib.deepMatchWith)" },
    { name := "Deep.continuation_one_shot",
      statement := "resuming a continuation twice raises Effect.Continuation_already_resumed",
-     site := some "src/OCaml5/Effect.lean (ExnId.continuationAlreadyResumed)" },
+     site := some "src/OCaml5/Runtime/Effect.lean (ExnId.continuationAlreadyResumed)" },
    { name := "Deep.try_with_is_match_with",
      statement := "try_with is match_with with the identity retc and a re-raising exnc "
        ++ "(effect.ml:84-91)",
-     site := some "src/OCaml5/Effect.lean (Stdlib.deepTryWith)" },
+     site := some "src/OCaml5/Runtime/Effect.lean (Stdlib.deepTryWith)" },
    { name := "Deep.continue_resumes",
      statement := "continue k v resumes the fiber at its perform with v",
-     site := some "src/OCaml5/Effect.lean (Stdlib.deepContinue)" },
+     site := some "src/OCaml5/Runtime/Effect.lean (Stdlib.deepContinue)" },
    { name := "Deep.discontinue_raises",
      statement := "discontinue k e resumes the fiber by raising e at its perform",
-     site := some "src/OCaml5/Effect.lean (Stdlib.deepDiscontinue)" },
+     site := some "src/OCaml5/Runtime/Effect.lean (Stdlib.deepDiscontinue)" },
    { name := "Shallow.continue_with_no_reinstall",
      statement := "continue_with k v h resumes with v under h, and h is not reinstalled",
-     site := some "src/OCaml5/Effect.lean (Stdlib.shallowContinueWith)" },
+     site := some "src/OCaml5/Runtime/Effect.lean (Stdlib.shallowContinueWith)" },
    { name := "Switch.run_waits",
      statement := "run f returns only after every fiber forked on the switch has finished" },
    { name := "Switch.fail_cancels", statement := "a failing fiber cancels the switch" },
@@ -402,7 +402,7 @@ def libOption : LibModule where
   path := "Base.Option"
   doc := "the option type"
   types := ["t"]
-  carrier := some "src/OCaml5/Value.lean (Value.none, Value.some)"
+  carrier := some "src/OCaml5/Runtime/Value.lean (Value.none, Value.some)"
   values :=
     [{ name := "is_some", ty := arr (Ty.option tA) Ty.bool },
      { name := "value", ty := .arrow (Ty.option tA) (.larrow (.lbl "default") tA tA),
@@ -452,7 +452,7 @@ def libInt : LibModule where
   path := "Base.Int"
   doc := "63-bit integers"
   types := ["t"]
-  carrier := some "src/OCaml5/Value.lean (Value.int)"
+  carrier := some "src/OCaml5/Runtime/Value.lean (Value.int)"
   values :=
     [{ name := "to_string", ty := arr Ty.int Ty.string },
      { name := "of_string", ty := arr Ty.string Ty.int },
@@ -522,7 +522,7 @@ def libEffect : LibModule where
   path := "Effect"
   doc := "OCaml 5's effect handlers"
   types := ["t"]
-  carrier := some "src/OCaml5/Effect.lean (Term.perform, Machine.step)"
+  carrier := some "src/OCaml5/Runtime/Effect.lean (Term.perform, Machine.step)"
   values :=
     [{ name := "perform", ty := .arrow (Ty.effect tA) tA,
        lawNames := ["Effect.perform_transfers", "Effect.unhandled_raises"] }]
@@ -533,7 +533,7 @@ def libEffectDeep : LibModule where
   doc := "deep handlers: the continuation carries its own handler"
   types := ["continuation", "handler", "effect_handler"]
   carrier :=
-    some "src/OCaml5/Effect.lean (Stdlib.deepMatchWith, deepContinue, deepDiscontinue)"
+    some "src/OCaml5/Runtime/Effect.lean (Stdlib.deepMatchWith, deepContinue, deepDiscontinue)"
   values :=
     [{ name := "match_with", ty := .anon,
        lawNames := ["Deep.match_with_pure", "Deep.continuation_one_shot"] },
@@ -547,7 +547,7 @@ def libEffectShallow : LibModule where
   path := "Effect.Shallow"
   doc := "shallow handlers: the resumer supplies the handler"
   types := ["continuation", "handler", "fiber"]
-  carrier := some "src/OCaml5/Effect.lean (Stdlib.shallowFiber, shallowContinueWith)"
+  carrier := some "src/OCaml5/Runtime/Effect.lean (Stdlib.shallowFiber, shallowContinueWith)"
   values :=
     [{ name := "fiber", ty := .anon },
      { name := "continue_with", ty := .anon,
@@ -927,7 +927,7 @@ def usageOf (m : Module) : Usage :=
 #guard estateProfile.modelled.map (·.1) ==
   ["Base.Option", "Base.Int", "Effect", "Effect.Deep", "Effect.Shallow"]
 
--- Every law of the three `Effect` modules has a site in `src/OCaml5/Effect.lean`, and no
+-- Every law of the three `Effect` modules has a site in `src/OCaml5/Runtime/Effect.lean`, and no
 -- other law has one. Being *modelled* and having a *proved law* are two different things:
 -- `Base.Option` has a carrier (`Value.none`/`Value.some`) and none of its laws is a theorem yet.
 #guard [libEffect, libEffectDeep, libEffectShallow].all
@@ -935,7 +935,7 @@ def usageOf (m : Module) : Usage :=
                                      | some l => l.site.isSome
                                      | none => false))
 -- 34 of the 55 laws are nobody's theorem yet. The 21 that are: the eight effect-handler laws
--- (`src/OCaml5/Effect.lean`) and W4's thirteen `Map.*` (`src/OCaml5/Lib/Map.lean`),
+-- (`src/OCaml5/Runtime/Effect.lean`) and W4's thirteen `Map.*` (`src/OCaml5/Lib/Map.lean`),
 -- whose names are cited from that file and not invented here.
 #guard unprovenLaws.length == 34
 #guard laws.length == 55

@@ -4,9 +4,9 @@ import Effect4.Machine.Scope
 # Scope-close request/response execution
 
 Owner: the residual execution of existing `Scope.closeExitsM`.
-Frozen packet: `test/contracts/scope-machine.contract.md` at `e5a2bdb`.
-Assurance: `docs/SCOPE-DAG.md`, Scope close stepping, contributing to the
-Scope side of `docs/TRACE-DAG.md`'s still-open frame-simulation edge.
+Frozen packet: `Test/contracts/scope-machine.contract.md` at `e5a2bdb`.
+Assurance: `docs/research/SCOPE-DAG.md`, Scope close stepping, contributing to the
+Scope side of `docs/research/TRACE-DAG.md`'s still-open frame-simulation edge.
 
 A machine stores operation names, the original closing exit, pending work and
 actual captured replies. It closes the retained Scope before exposing a

@@ -6,7 +6,7 @@
  * Usage: node scripts/surface-export.mjs [--ts <dir>] [--out generated] [--src <dir>]
  *
  *   --ts   directory of the `typescript` package to load (classic JS compiler API);
- *          default C:/Users/kokok/Dev/vsco-loupe/node_modules/typescript (5.9.3).
+ *          default ts/eff/node_modules/typescript (pinned by ts/eff/package.json).
  *          The repo's own harness/truth/node_modules/typescript is 7.x and may lack the JS API.
  *   --out  output directory, relative to the repository root; default `generated`.
  *   --src  the vendored source tree; default `vendor/effect-4.0.0-rc.112/src`.
@@ -20,6 +20,7 @@
  * produce byte-identical outputs.
  */
 
+import { createHash } from "node:crypto"
 import { createRequire } from "node:module"
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { dirname, join, resolve as presolve, sep } from "node:path"
@@ -40,12 +41,33 @@ const opt = (flag, dflt) => {
 }
 
 const REPO = presolve(dirname(fileURLToPath(import.meta.url)), "..")
-const TS_DIR = opt("--ts", "C:/Users/kokok/Dev/vsco-loupe/node_modules/typescript")
+const TS_DIR = opt("--ts", process.env.EFFECT4_TYPESCRIPT_DIR ?? join(REPO, "ts/eff/node_modules/typescript"))
 const OUT_DIR = presolve(REPO, opt("--out", "generated"))
 const SRC = presolve(REPO, opt("--src", join("vendor", "effect-4.0.0-rc.112", "src")))
 
 const require = createRequire(import.meta.url)
 const ts = require(TS_DIR)
+const expectedTs = JSON.parse(readFileSync(join(REPO, "ts/eff/package.json"), "utf8")).devDependencies.typescript
+if (ts.version !== expectedTs) throw new Error(`TypeScript ${ts.version}; expected ${expectedTs}`)
+const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex")
+const inputPins = readFileSync(join(REPO, "vendor/effect-4.0.0-rc.112/SHA256SUMS"), "utf8")
+  .trim().split(/\r?\n/).map((line) => {
+    const [digest, file] = line.trim().split(/\s+/)
+    const actual = sha256(readFileSync(join(SRC, "..", file)))
+    if (actual !== digest) throw new Error(`Off-pin input: ${file}`)
+    return { file: `vendor/effect-4.0.0-rc.112/${file}`, sha256: digest }
+  })
+const receipt = {
+  format: "rc112-surface-v1", generator: "scripts/surface-export.mjs",
+  generatorSha256: sha256(readFileSync(fileURLToPath(import.meta.url))),
+  regenerate: "node scripts/surface-export.mjs", typescript: ts.version, inputs: inputPins
+}
+const receiptLines = [
+  `# GENERATED format=${receipt.format}; generator=${receipt.generator}; sha256=${receipt.generatorSha256}`,
+  `# regenerate: ${receipt.regenerate}; typescript=${receipt.typescript}`,
+  ...inputPins.map((p) => `# input=${p.file} sha256=${p.sha256}`)
+].join("\n") + "\n"
+
 
 const PACKAGE = "effect"
 const VERSION = "4.0.0-rc.112"
@@ -264,7 +286,7 @@ for (const f of files) {
     if (ts.isImportDeclaration(st)) spec = st.moduleSpecifier
     else if (ts.isExportDeclaration(st) && st.moduleSpecifier) spec = st.moduleSpecifier
     if (!spec || !ts.isStringLiteral(spec)) continue
-    const ck = `${dirname(f)} ${spec.text}`
+    const ck = `${dirname(f)}\0${spec.text}`
     let r = resolveCache.get(ck)
     if (r === undefined) {
       r = ts.resolveModuleName(spec.text, f, compilerOptions, ts.sys)
@@ -1223,7 +1245,7 @@ const summary = {
   diagnosticsCount
 }
 
-const meta = { package: PACKAGE, version: VERSION, generator: "scripts/surface-export.mjs" }
+const meta = { package: PACKAGE, version: VERSION, ...receipt }
 
 // stable JSON key order: `meta`, `summary`, `rows`; rows use COLUMNS order.
 const jsonRows = finalRows.map((r) => {
@@ -1285,9 +1307,9 @@ const summaryText = lines.join("\n") + "\n"
 
 mkdirSync(OUT_DIR, { recursive: true })
 const write = (name, body) => writeFileSync(join(OUT_DIR, name), body, { encoding: "utf8" })
-write("rc112-surface.tsv", tsv)
+write("rc112-surface.tsv", receiptLines + tsv)
 write("rc112-surface.json", json)
-write("rc112-surface.summary.txt", summaryText)
+write("rc112-surface.summary.txt", receiptLines + summaryText)
 
 process.stdout.write(summaryText)
 process.stdout.write(`\nunresolved import examples: ${unresolvedExamples.slice(0, 6).join(", ")}\n`)

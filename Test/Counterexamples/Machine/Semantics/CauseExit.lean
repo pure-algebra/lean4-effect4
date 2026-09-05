@@ -10,7 +10,7 @@ proving the attack after the repaired declarations land.
 
 Each theorem is finite and proves only the named attack. None of them is a
 production law; the frozen laws live in
-`test/contracts/cause-exit.contract.md`.
+`Test/contracts/cause-exit.contract.md`.
 -/
 
 set_option autoImplicit false

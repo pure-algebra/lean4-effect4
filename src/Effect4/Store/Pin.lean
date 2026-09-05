@@ -31,7 +31,7 @@ the address is the store's `address` over the node bytes. The span digest is a
 `Digest` in the carrier — a foreign hash, checked by recomputation and never
 resolved against the store (the facts note, Q4) — and frames as thirty-two bytes.
 
-Hash level 0 (`workshop/Char/02-pins/01-pin-entity.md`, section 4): the pin
+Hash level 0 (`docs/research/2026-09-05-workshop-char/02-pins/01-pin-entity.md`, section 4): the pin
 theorem characterizes a collision and assumes nothing about `sha256`. The
 level-1 statement takes injectivity as a named premise that is never
 discharged in this tree. Level 2 is not stated.

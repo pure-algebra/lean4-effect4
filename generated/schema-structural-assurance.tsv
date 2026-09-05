@@ -1,37 +1,37 @@
 format	effect4-schema-structural-assurance-v1
-generator	scripts/generate-schema-structural-assurance.sh	sha256=ad1d43ac56e2ddf9c6b35fad28c5d03a6cd3b3f42901fdc99ba781b67ddda592
+generator	scripts/generate-schema-structural-assurance.sh	sha256=e29ac5928c9c404e3fbd3519b15bd46fd9eedf309f4dc1e3719c458cb13dd61c
 regenerate	./scripts/generate-schema-structural-assurance.sh > generated/schema-structural-assurance.tsv
-input	Effect4/Data/Optic.lean	sha256=0a02907cd4e994ff180c2d11b090f7948481dc888812d85bdb892fb7c0adf78f
-input	Effect4/Data/Json.lean	sha256=49c8596a6a84ee3d35e1b1def69f3d665a559340effb2237996ecd4ec953c75e
-input	Effect4/Schema/Payload.lean	sha256=77dc812193a79c389d2a69e4ce3f6a3461c966e6487b273ae673258e4b65d18e
-input	Effect4/Schema/Representation.lean	sha256=a1037e5b38ae0eaf1c04efb46ea137d44569b7321b61dc73550d042023ce4fc3
-input	Effect4/Schema/Annotations.lean	sha256=94fdb0e002c79fbaddd00f862f184f822373a0d33dda947ecb85443b3bd2beb7
-input	Effect4/Schema/Document.lean	sha256=16ac1aaf3f7abff54b53f1fda0091969635a0bf4aad97f2e09bfdc0921f7e364
-input	Effect4/Schema/Check.lean	sha256=49c40a2d14d5a18e04484403995ff236db0860a15f1c985e00e73ce0fbede9fe
-input	Effect4/Target/TypeScript/Schema.lean	sha256=eee62e67b1602e1e86e4c64c009fbd3a1374d8a855484d76b98bd2e64fd86198
-input	Effect4/Schema/EffectfulField.lean	sha256=2c54ef3ce3f1a60442b40c5cffe7bf850bd1bdc669cd7a6915bc9dd7666052b9
-input	test/contracts/schema-representation.contract.md	sha256=a2b85dd7ce72a8f74abfedeccb1142d7a85fa9913820fa8412c1410489ab90ee
-input	test/contracts/schema-subalphabets.contract.md	sha256=1b3d298d732be54c47108dafe914639bb5167eecc1d6b3dd27d50591fed65555
-input	test/contracts/schema-payload.contract.md	sha256=aa7d193d778cbc8e1c6ddb616d14ed7fc856889178d201439a4e36f550000f89
-input	test/contracts/schema-recursor.contract.md	sha256=c70ff82cf5b55e18516e78db1f6720441920225390ad90e99e3e3c2dd115a4d3
-input	test/contracts/schema-annotations.contract.md	sha256=0414c65d3c1120d6be286d79a7cdd7b0334e97517604dde60795b9f9813726f8
-input	test/contracts/schema-effectful-field.contract.md	sha256=7703abd3d4533387faf5c0e482da8008e4c390f2a7a6145ad6b22879d51d03d2
-input	test/contracts/schema-effectful-field-properties.contract.md	sha256=9c23feccc4762a50c2fa2806079758843ce40c460927020c4a0c870cfaa83f7c
-battery	Effect4Test/Schema/RepresentationContract.lean	sha256=fed90a2b7174a41546003dc77f248d8838935fd4ecef707e868a4705f85bcd61	required-closed
-battery	Effect4Test/Schema/SubAlphabetContract.lean	sha256=a57ed694dabe08754f28d32dc57252c49044e0c7a85ff13592eb8f968cefdf8a	required-closed
-battery	Effect4Test/Schema/PayloadContract.lean	sha256=e80d4be2f6385228aa87766d61ad4056fef68f947d0347cc15e1ac9279c6d27f	required-closed
-battery	Effect4Test/Schema/RepresentationFoldContract.lean	sha256=4de2a571131c843e83a036fcb518b45b2f1272caf3ec1467e601bc7e4510396b	required-closed
-battery	Effect4Test/Data/OpticContract.lean	sha256=b65b86534af75ec8067bda3cb3a96bd58bf8dc541a3b28dd55ddd6b7608a8bc5	required-closed
-battery	Effect4Test/Schema/AnnotationDataPlaneContract.lean	sha256=1b2aa06d0940a6e48d2c4cdbacc6a9cb67745113d78ce07ee03bcae0090fcb67	required-closed
-battery	Effect4Test/Schema/EffectfulFieldContract.lean	sha256=9293f80d81b41fb9d2e85c25f6e62bc2da9b889e8b7e9f57dce4f744265333b4	required-closed
-battery	Effect4Test/Schema/EffectfulFieldPropertiesContract.lean	sha256=504911bba1a85bf1aa5a07244ca415b510d5917d4b027c197ad355ed8d8d0eb3	required-closed
-input	Effect4Test/Schema/PayloadSurface.lean	sha256=039055e0302c7747e63a9ac8e3b63635e6a212c6ad18a60caabd6dfb44a20df8
-counterexample-battery	Effect4Test/Counterexamples/Schema/RecursiveElimination.lean	sha256=6625927071bd376f3088f2086c50f03d6440c3921e1fac94f7968d54e20197d9	required-closed
-counterexample-battery	Effect4Test/Counterexamples/Schema/AnnotationDataPlane.lean	sha256=7cc4b2518165952dfbd8bcde720025d1f4c589f2af1d0a177ba9a2112857694b	required-closed
-counterexample-battery	Effect4Test/Counterexamples/Schema/EffectfulField.lean	sha256=1a9c34f81e531faf4fb2c44aa7a27bb20fbab9c16ebf91e638fc4ca6d3cef6f1	required-closed
-counterexample-battery	Effect4Test/Counterexamples/Schema/EffectfulFieldProperties.lean	sha256=3a63c61023f4d0b1cd74fa2911dabd277a99693492a5b2efa45ecf9a2aa4cabd	required-closed
-input	Effect4Test/Schema/StructuralAssurance.lean	sha256=16562e535ac9c58bdf7339efdd7e1ca470c56503ee0d324a41dcafd5ebd7ad73
-input	Effect4Test/Schema/AxiomReport.lean	sha256=2cdf8949fc4d2222ff4f28e28c1400d69e916f6745ecc7167f042ba0e6688bec
+input	src/Effect4/Data/Optic.lean	sha256=0a02907cd4e994ff180c2d11b090f7948481dc888812d85bdb892fb7c0adf78f
+input	src/Effect4/Data/Json.lean	sha256=aedfb6ccf23396bc817a9d722a8319c76d13206a06679fcb6941af20c33f7e6e
+input	src/Effect4/Schema/Payload.lean	sha256=77dc812193a79c389d2a69e4ce3f6a3461c966e6487b273ae673258e4b65d18e
+input	src/Effect4/Schema/Representation.lean	sha256=4a24b87cb4e164a68ddb91b21fb495a0d8c9cdc7c9d6d28f0318efc5145c692c
+input	src/Effect4/Schema/Annotations.lean	sha256=94fdb0e002c79fbaddd00f862f184f822373a0d33dda947ecb85443b3bd2beb7
+input	src/Effect4/Schema/Document.lean	sha256=bb21ae7f9d2ed9a51305376f6d8050704455f85f323b43448f93ce229e06cefd
+input	src/Effect4/Schema/Check.lean	sha256=cf63447dc0c7a4a7899e1806992e9e4ab82079ee9a9fd0d00bb49089ff524592
+input	src/Effect4/Codegen/Schema.lean	sha256=635eda65903c35d9d3f6efe75d9626065be4c44773b72ffb4c66cf8b1a7f9513
+input	src/Effect4/Schema/EffectfulField.lean	sha256=2c54ef3ce3f1a60442b40c5cffe7bf850bd1bdc669cd7a6915bc9dd7666052b9
+input	Test/contracts/schema-representation.contract.md	sha256=4eae40b849ef18e910bf404715203571bf93e38a0daffefa64b2a2877cb36ff8
+input	Test/contracts/schema-subalphabets.contract.md	sha256=71a13678df38c08f9f6396b3b623b7ab227645019e9794371cb2144d14fd5e55
+input	Test/contracts/schema-payload.contract.md	sha256=352b87a75767a89e52da18e4df8c58f4059646e02be60f7fc55bbaecaa45310a
+input	Test/contracts/schema-recursor.contract.md	sha256=3069714f714268ecac1be87d73f029ccab725623f285344f01a42e07fd6b201a
+input	Test/contracts/schema-annotations.contract.md	sha256=ca44fbb7613b9453ece6bd3de4d318edbce2d83ffc1ec0d1c3648178ba9e53a7
+input	Test/contracts/schema-effectful-field.contract.md	sha256=b232dba0e24333277927765528ccd30ed71014bd9a8256f6a41abbe97a6d1ea4
+input	Test/contracts/schema-effectful-field-properties.contract.md	sha256=407adca2a7ff3df00bafe4ee87c4af0e9aae7a84b4f181e4ace86364139fae51
+battery	Test/Schema/RepresentationContract.lean	sha256=00519bb36e017e54ed6a978bf6cf02e14bc9eb72d9054f0d58e91dc458b71e4b	required-closed
+battery	Test/Schema/SubAlphabetContract.lean	sha256=76721ee29d9e80d6f6ce01f6b608eebec80caf455a9d22001e5fac383ee1a45b	required-closed
+battery	Test/Schema/PayloadContract.lean	sha256=9de20e7d3d8c8827a56c54b6974c95dcfec222f1a4d5c42d94453fa78ee3d241	required-closed
+battery	Test/Schema/RepresentationFoldContract.lean	sha256=10acc010fc6f3528645ff5b32c12672a14ae3d66290c7eb99cbc76a068f98f6a	required-closed
+battery	Test/Data/OpticContract.lean	sha256=ca09c2622cf889e11140fd40c3e15a34123b3269d23944655137bbde0eda93f9	required-closed
+battery	Test/Schema/AnnotationDataPlaneContract.lean	sha256=e379cca01e3396ecfb19cacc6657e8df057b322fa5532273e5e3f5c8cf30805f	required-closed
+battery	Test/Schema/EffectfulFieldContract.lean	sha256=d6a3c91c99aa6618949f572b88019270bb30870b6253328ae4bcbe4feeee4635	required-closed
+battery	Test/Schema/EffectfulFieldPropertiesContract.lean	sha256=f608eae2137c734f5263c16ad424e26d449f15f079f388b07d756ac7fec62060	required-closed
+input	Test/Schema/PayloadSurface.lean	sha256=27a005bc9bcaa25cd6ef14c95bfd23ed6f303ba99fd6c9df29bcc6b82606e4e7
+counterexample-battery	Test/Counterexamples/Schema/RecursiveElimination.lean	sha256=9f83ea02b0c5785485c94792180052fd8d344f6ae3da4e2f2485d114d790c9c1	required-closed
+counterexample-battery	Test/Counterexamples/Schema/AnnotationDataPlane.lean	sha256=9874b7aeddb8018c0fd9f8c6ec954a57e71b7473c8f6009f23d6ff5e742066b5	required-closed
+counterexample-battery	Test/Counterexamples/Schema/EffectfulField.lean	sha256=5ca30e43dd44030522ee1088690fd1e0d584abbbad24d921bab42889c7e3b9d2	required-closed
+counterexample-battery	Test/Counterexamples/Schema/EffectfulFieldProperties.lean	sha256=b63832555fde83374317f876db5cb4679f3deaed8569f65063461fdfe8f4d543	required-closed
+input	Test/Schema/StructuralAssurance.lean	sha256=ffed6855d865216305a6d6141db22f293c745289834a9217b54cc8e27ce4956d
+input	Test/Schema/AxiomReport.lean	sha256=12600617824343e7b12cbb2584fe515bc45b600c73e7a7b04b17b8c1672c3676
 source-pin	effect@4.0.0-rc.112	vendor/effect-4.0.0-rc.112/src/SchemaRepresentation.ts	sha256=a0a7a1537cfe3a9159a80210e3de92342cc9e98651f0e8273a75ccdcccae69bc	required-closed
 gate	SC-REP-CENSUS-PIN	scripts/check-schema-census.sh	required-closed
 gate	SC-REP-FIELD-PIN	scripts/check-schema-fields.sh	required-closed
@@ -39,45 +39,45 @@ gate	SCHEMA-PAYLOAD-SURFACE	scripts/check-schema-payload-surface.sh	required-clo
 detector	SCHEMA-PAYLOAD-SURFACE-REACTION	scripts/test-schema-payload-surface-gate.sh	13-of-13	required-closed
 gate	SCHEMA-ANNOTATION-HOST	scripts/check-schema-annotations.sh	required-closed
 gate	SCHEMA-EFFECTFUL-FIELD-HOST	scripts/check-schema-effectful-field.sh	required-closed
-counterexample	E4-SCHEMA-CE-017	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-018	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-019	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-020	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-021	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-022	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-023	PINNED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-024	PINNED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-025	PINNED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-026	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-027	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-028	PINNED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-029	PINNED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-030	PINNED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-031	PINNED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-032	PINNED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-033	PINNED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-034	PINNED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-035	PINNED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-036	PINNED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-037	PINNED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-038	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-039	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-040	PINNED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-041	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-042	PINNED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-043	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-044	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-045	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-046	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-047	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-048	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-049	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-050	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-051	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-052	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-053	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-054	SEEDED	test/counterexamples/REGISTER.md	required-closed
-counterexample	E4-SCHEMA-CE-055	SEEDED	test/counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-017	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-018	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-019	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-020	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-021	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-022	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-023	PINNED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-024	PINNED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-025	PINNED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-026	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-027	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-028	PINNED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-029	PINNED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-030	PINNED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-031	PINNED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-032	PINNED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-033	PINNED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-034	PINNED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-035	PINNED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-036	PINNED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-037	PINNED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-038	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-039	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-040	PINNED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-041	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-042	PINNED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-043	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-044	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-045	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-046	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-047	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-048	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-049	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-050	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-051	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-052	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-053	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-054	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
+counterexample	E4-SCHEMA-CE-055	SEEDED	Test/Counterexamples/REGISTER.md	required-closed
 owned-declaration	Effect4.Lens	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Lens.Lawful	Effect4.Data.Optic	DATA-PG-OPTIC
 owned-declaration	Effect4.Lens.Lawful.casesOn	Effect4.Data.Optic	DATA-PG-OPTIC

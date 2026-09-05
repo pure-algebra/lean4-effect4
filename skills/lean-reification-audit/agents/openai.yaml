@@ -1,4 +1,0 @@
-interface:
-  display_name: "Reification audit"
-  short_description: "Audit claims across program and runtime boundaries"
-  default_prompt: "Use $lean-reification-audit to determine which correctness claims these artifacts and checks actually support."

@@ -4,7 +4,7 @@ import Effect4.Machine.Fibers
 # Deep.Clauses
 
 Owner: the mechanism clauses of the reference machine — one theorem per rc.112 arm,
-cited by line as the census rows are, over the machine `Effect4/Deep/Fibers.lean` defines.
+cited by line as the census rows are, over the machine `src/Effect4/Machine/Fibers.lean` defines.
 
 These are the witnesses the runtime census joins to (`Test/Audit/RuntimeCoverage.lean`)
 for the fiber-side rows: the run-loop top, the per-entry budget and its one yield injection,
@@ -280,7 +280,7 @@ theorem flushRoot_round (interp : RunInterp ν σ β ε δ ι α χ St) (fuel ro
 
 /-! The two budget references default to `2048` and `false` (`Scheduler.ts:269-272`,
 `:295-298`); the machine reads them through `RunInterp.budgetOf`, and the defaults are
-`Effect4.Machine.Env.hooks_empty` (`Effect4/Deep/Context.lean`). -/
+`Effect4.Machine.Env.hooks_empty` (`src/Effect4/Machine/Context.lean`). -/
 
 /-! ## Yield now, and the resume guard -/
 

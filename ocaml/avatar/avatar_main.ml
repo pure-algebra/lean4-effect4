@@ -1,7 +1,7 @@
 (* The avatar's entry point: one program, one tape, one TSV on stdout.
 
    Reads `EFFECT4_PROGRAM`, `EFFECT4_TAPE`, `EFFECT4_RULES`, `EFFECT4_PIN` and
-   `EFFECT4_SHA` from the environment the way `harness/trace/fiber-tail.ts` does, and prints
+   `EFFECT4_SHA` from the environment the way `git:606918eb73daefcc235a261fce879bf910f2471e:harness/trace/fibers-tail.ts` does, and prints
    the estate's golden shape with `face ocaml`. `EFFECT4_EVENTS=1` prints the machine's own
    `RunEvent` trace after the rows, commented out with a leading `#`. *)
 

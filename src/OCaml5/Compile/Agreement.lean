@@ -26,7 +26,7 @@ so this module imports only `OCaml5.Witnesses` and nothing of P3's in-flight tre
 `Machine.rows` is the trace filtered to `Event.emitted`. `Code.Machine` has no trace of rows:
 `Term.emit` compiles to `caml_print_string "row\n"`, so the rows are the printed output split
 on the newlines, which is the projection an instrumented host program itself is read through
-(`tools/run-witness.sh`). -/
+(`ocaml/tools/run-witness.sh`). -/
 
 namespace OCaml5.Compile.Agreement
 

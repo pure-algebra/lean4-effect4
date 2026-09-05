@@ -11,8 +11,8 @@ is the definition. Numbers come from the gate, never from memory.
 ## Quick start
 
 ```bash
-./scripts/report-effect-runtime-coverage.sh      # the only report format
-./scripts/check-effect-runtime-census.sh         # the gate; must PASS before any claim
+scripts/report-effect-runtime-coverage.sh      # the only report format
+scripts/check-effect-runtime-census.sh         # the gate; must PASS before any claim
 ```
 
 Paste the report block verbatim with its commit line. Do not compute
@@ -28,9 +28,9 @@ percentages, do not round, do not call a row covered unless it is `green`.
 
 ## Workflow: add a witness
 
-Only `Effect4Test/Audit/RuntimeCoverage.lean` changes.
+Only `Test/Audit/RuntimeCoverage.lean` changes.
 
-- [ ] The theorem exists in `Effect4/`, is a `theorem`, and `#print axioms`
+- [ ] The theorem exists in `src/Effect4/`, is a `theorem`, and `#print axioms`
       shows only `propext` and/or `Quot.sound`.
 - [ ] Add `w \`Name "receipt"` to the row's `witnesses`.
 - [ ] Add `#check (@Name : …)` in `StatementSnapshot`, transcribed from
@@ -39,7 +39,7 @@ Only `Effect4Test/Audit/RuntimeCoverage.lean` changes.
 - [ ] Set the row's coverage: `green` only if every clause of the census
       summary line has a theorem; otherwise `partial` and note what is missing.
 - [ ] `expectedRowTotal` and `expectedDenominator` still true.
-- [ ] `lake build Effect4Test.Audit.RuntimeCoverage` then the gate.
+- [ ] `lake build Test.Audit.RuntimeCoverage` then the gate.
 
 ## Workflow: add or re-pin a census row
 
@@ -50,7 +50,7 @@ Only `scripts/generate-effect-runtime-census.sh` and the Lean row list change.
 - [ ] Compute the span digest with `sed -n 'a,bp' file | shasum -a 256`.
 - [ ] Add the Lean row: same id and kind, a manifest disposition, `absent`,
       no witness. Update per-kind counts and totals in both places.
-- [ ] `./scripts/generate-effect-runtime-census.sh > generated/effect-runtime-census.tsv`
+- [ ] `scripts/generate-effect-runtime-census.sh > generated/effect-runtime-census.tsv`
 - [ ] Gate passes. An upstream re-pin moves the whole vendored pin, its
       README digests, and every span digest together, in one commit.
 
@@ -58,9 +58,9 @@ Only `scripts/generate-effect-runtime-census.sh` and the Lean row list change.
 
 - Add a witness that is a `def`, a finite probe, or a model-integrity lemma.
 - Edit `generated/effect-runtime-census.tsv` by hand.
-- Cite the frozen surface census in `Effect4Test/Concurrency/FiberAssurance.lean`:
-  it, its two scripts and `generated/fiber-assurance.tsv` were retired on
+- Cite the frozen surface census in the retired FiberAssurance battery:
+  it, its two scripts and its projection were retired on
   2026-09-04 with the machines they counted, so a declaration under
-  `Effect4/Concurrency/` now moves only the coverage join. Freeze a surface by
+  `src/Effect4/Machine/` now moves only the coverage join. Freeze a surface by
   its `#check` ascription snapshot in the join instead.
 - Describe coverage as compatibility or equivalence with Effect.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Seat F3: the Deep-file drift gate. The avatar is a port of `Effect4/Deep/*.lean` at one
+# Seat F3: the Deep-file drift gate. The avatar is a port of `src/Effect4/Machine/*.lean` at one
 # revision; `deep-pins.tsv` records the SHA-256 of every Lean file it was re-diffed against.
 #
 #   pin-deep.sh            # check: exit 1 naming every file whose digest moved
@@ -17,25 +17,34 @@ pins="$here/deep-pins.tsv"
 if command -v shasum > /dev/null 2>&1; then sha() { shasum -a 256 "$@"; }
 else sha() { sha256sum "$@"; }; fi
 files=$(grep -v '^#' "$pins" | cut -f1)
+digest_of() {
+  case "$1" in
+    git:*) git -C "$repo" show "${1#git:}" | sha | cut -d' ' -f1 ;;
+    *) sha "$repo/$1" | cut -d' ' -f1 ;;
+  esac
+}
 if [ "${1:-}" = "--write" ]; then
   header=$(grep '^#' "$pins")
-  { echo "$header"; (cd "$repo" && sha $files | awk '{print $2"\t"$1}'); } > "$pins.tmp" \
-    && mv "$pins.tmp" "$pins"
+  { echo "$header"; for file in $files; do
+      have=$(digest_of "$file") || exit 1
+      printf '%s\t%s\n' "$file" "$have"
+    done; } > "$pins.tmp" || exit 1
+  mv "$pins.tmp" "$pins"
   echo "deep-pins.tsv: RECORDED $(echo "$files" | wc -l | tr -d ' ') digests"
   exit 0
 fi
 status=0
 while IFS=$'\t' read -r file want; do
   case "$file" in \#*|"") continue ;; esac
-  if [ ! -f "$repo/$file" ]; then
-    # The pinned paths are the ones the last re-diff used. `Effect4/Deep/*.lean` became
+  if [[ "$file" != git:* ]] && [ ! -f "$repo/$file" ]; then
+    # The pinned paths are the ones the last re-diff used. `src/Effect4/Machine/*.lean` became
     # `src/Effect4/Machine/*.lean` in "Prod cleanup 3" and ForkFlow.lean was archived, so a
     # missing file means the pin table predates that move, not that a file was lost.
     echo "deep-pins: $file MISSING under $repo (the Lean machine moved to"
     echo "           src/Effect4/Machine/; re-diff the avatar, then pin-deep.sh --write)"
     status=1; continue
   fi
-  have=$(cd "$repo" && sha "$file" | cut -d' ' -f1)
+  have=$(digest_of "$file") || { status=1; continue; }
   if [ "$have" != "$want" ]; then
     echo "deep-pins: $file CHANGED since the avatar was re-diffed (pinned ${want:0:12}, tree ${have:0:12})"
     status=1

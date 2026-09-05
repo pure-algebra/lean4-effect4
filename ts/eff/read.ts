@@ -4,7 +4,7 @@
 //     │ parseSync           text → oxc's ESTree                             (oxc-parser)
 //     │ programExprOf       the one expression a program file holds          § 2
 //     │ exprOf              ESTree → the fragment the Lean printer emits      § 2
-//     │ readEff(0, ·)       fragment → Eff, Effect4/Codegen/Read.lean clause for clause   § 3
+//     │ readEff(0, ·)       fragment → Eff, src/Effect4/Codegen/Read.lean clause for clause   § 3
 //     └ decodeEff           the node checked against the schema             (eff.gen.ts)
 //
 // Everything else in this package is generated from Lean: the nodes (eff.gen.ts), their

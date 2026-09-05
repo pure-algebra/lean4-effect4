@@ -5,7 +5,7 @@ import Effect4.Machine.Frames
 # Scope cleanup resumed through the frame machine
 
 Owner: the local ScopeMachine-to-FrameFiber connection frozen by
-`test/contracts/scope-restoration.contract.md` at `945f729`.
+`Test/contracts/scope-restoration.contract.md` at `945f729`.
 The only executable adapter maps the existing completed restored exit through
 existing `FrameFiber.step`; it adds no carrier, evaluator, source runner or
 interruption policy. Existing ScopeMachine owns actual cleanup execution and
@@ -18,8 +18,8 @@ become pending interruption immediately; a failing exit follows the real
 failure-arm skip through the remaining continuation. The recorded substituted
 event observes the hook even when its replacement is skipped.
 
-Scope/Frame/D4 graph connections are recorded in `docs/SCOPE-DAG.md` and
-`docs/TRACE-DAG.md`. This local composition does not establish general region
+Scope/Frame/D4 graph connections are recorded in `docs/research/SCOPE-DAG.md` and
+`docs/research/TRACE-DAG.md`. This local composition does not establish general region
 compilation, arbitrary finalizer-program execution, scheduling, interrupt-tape
 lowering, or host equivalence. The separate 40-case host probe is finite
 source-pinned evidence, with fallible-release and legal-defect cases labelled.

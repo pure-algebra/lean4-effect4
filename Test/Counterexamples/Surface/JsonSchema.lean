@@ -2,8 +2,8 @@
 Executable witnesses for `E4-SURFACE-CE-006`, `E4-SURFACE-CE-007` and
 `E4-SURFACE-CE-008`.
 
-Contract: `test/contracts/surface-jsonschema.contract.md`. Frozen by the
-wave-1b breaker before `Effect4/Surface/JsonSchema.lean` exists; red until the
+Contract: `Test/contracts/surface-jsonschema.contract.md`. Frozen by the
+wave-1b breaker before `src/Effect4/Codegen/JsonSchema.lean` exists; red until the
 builder lands it.
 -/
 

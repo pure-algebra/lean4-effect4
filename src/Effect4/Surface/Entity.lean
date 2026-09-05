@@ -1,13 +1,13 @@
 import Effect4.Codegen.Spell
 import Effect4.Codegen.Schema
-import Effect4.Schema.Accepts
-import Effect4.Data.JsonNumber
+import Effect4.Arch.Accepts
+import Effect4.Arch.JsonNumber
 
 /-!
 # Surface.Entity: entities, domains, and their projections
 
 Implements `docs/research/2026-09-04-surface-library-plan.md` §4.1 and §4.2
-(the constructor spelling itself lives in `Effect4/Surface/Spell.lean`).
+(the constructor spelling itself lives in `src/Effect4/Codegen/Spell.lean`).
 
 An **entity** is a named struct representation with identity fields, a version,
 a stance and a domain. A **domain** is a closed set of entities, one of which
@@ -16,21 +16,21 @@ may be marked active: the source of truth the application reads and writes.
 every emitter reads, so an entity refers to another by `Schema.reference name`
 and the closed world is the domain.
 
-Each carrier follows `Effect4/Arch/Views.lean`: a first-order structure, a
+Each carrier follows `src/Effect4/Arch/Views.lean`: a first-order structure, a
 `json` projection, and a `Document` view whose `Arch.accepts` receipt is a
 `#guard` on the fixtures below. There is no `Canonical` instance: the CAS trait
 made `Canonical` a class with three laws over the value tree
-(`Effect4/Store/Canonical.lean`), the generator derives it, and nothing read the
+(`src/Effect4/Store/Canonical.lean`), the generator derives it, and nothing read the
 hand instance this module used to carry.
 Well-formedness follows §14.2 instead of a bare `Bool`: `check` is a list of
 named clauses read left to right and answers the *first* refusal
-(`Effect4/Surface/Facts.lean`), `WellFormed` is `check = .ok ()`, and
+(`src/Effect4/Surface/Refusal.lean`), `WellFormed` is `check = .ok ()`, and
 `wellFormed_iff` proves that equal to the conjunction of the clauses so a later
 capability can ask for exactly the ones it needs. The semantic clauses of §15.2
 are two of them: a root bag with no `identifier` or no `description` is
 ill-formed, by the same mechanism as a key that is not a property.
 
-`Stance` and `Pin` are declared in `Effect4/Surface/Facts.lean` because
+`Stance` and `Pin` are declared in `src/Effect4/Surface/Refusal.lean` because
 `SurfaceMark` carries them and `Annotate` sits below this module; this module
 remains the owner of `Entity.stance`.
 
@@ -63,21 +63,21 @@ set_option autoImplicit false
 
 /-! ## The persisted form of a representation
 
-`Representation.toJson?` was `Effect4/Store/JsonCanonical.lean:84-85` until the CAS trait
+`Representation.toJson?` was `git:d594249cb033e5d75ec39f750dbfefc9ec90eda1:src/Effect4/Store/JsonCanonical.lean:84-85` until the CAS trait
 retired that module with its JSON tag alphabet
 (`docs/research/2026-09-04-cas-trait-plan.md` §6). Only the number helpers moved out, to
-`Effect4/Data/JsonNumber.lean`; the persisted form itself has three readers, all in this
+`src/Effect4/Arch/JsonNumber.lean`; the persisted form itself has three readers, all in this
 library — `Entity.json` below, `Api.repJson` and `Agent.persistedJson`, both of which import
 this module — so it lands here, in the namespace it always had, and those readers still spell
 it `Arch.Representation.toJson?`. Its sibling `Document.toJson?` has one reader,
-`Test/Evidence/ArchContract.lean:78`, which reaches it through `Effect4/Evidence/Views.lean`
+`Test/Evidence/ArchContract.lean:78`, which reaches it through `src/Effect4/Arch/Views.lean`
 and never through this library; it is owed there. -/
 
 namespace Effect4.Arch
 
 /-- The persisted JSON form of a representation: `Codegen.Schema.representation` spells it as
 target syntax and `reifyJson?` reads that syntax back as `Json`, the same form the generated
-module hands to `SchemaRepresentation.fromJson` (`Effect4/Target/TypeScript/Schema.lean`). One
+module hands to `SchemaRepresentation.fromJson` (`src/Effect4/Codegen/Schema.lean`). One
 persisted form, written once. `reifyJson?` covers exactly the syntax that speller emits, so the
 `Option` is `some` in practice; no claim of totality is made here, and every reader answers
 `null` for a `none`. -/
@@ -601,14 +601,14 @@ def domainDoc : Document :=
 /-! ## Generation -/
 
 /-- The persisted-document module for one entity: the gated spelling of
-`Effect4/Target/TypeScript/Schema.lean`. `none` when the name is not a legal
+`src/Effect4/Codegen/Schema.lean`. `none` when the name is not a legal
 binding or the document is not generation-ready.
 
 surface: rule.surface.entity.document -/
 def Entity.tsModule (dom : Domain) (entity : Entity) : Option TypeScript.Module :=
   Codegen.Schema.module? entity.name (entity.document dom)
 
-/-- The constructor spelling of one entity (`Effect4/Surface/Spell.lean`).
+/-- The constructor spelling of one entity (`src/Effect4/Codegen/Spell.lean`).
 
 surface: rule.surface.entity.constructor -/
 def Entity.tsConstructor (dom : Domain) (entity : Entity) : Option TypeScript.Expr :=

@@ -9,8 +9,8 @@ Landed 2026-09-04 from the `workshop/Provision` spike (lane C). Plan and grill:
 `docs/research/2026-09-04-provision-algebra.md` §9 (R9); axiom report
 `Test/Codegen/LayerPrintAxiomReport.lean`.
 
-`Effect4/Codegen/Print.lean` takes an `Eff` program into `TypeScript.Expr`; this module takes
-a `LayerTerm` (`Effect4/Program/Provision.lean`) into the same fragment. The thesis is one sentence: **a layer
+`src/Effect4/Codegen/Print.lean` takes an `Eff` program into `TypeScript.Expr`; this module takes
+a `LayerTerm` (`src/Effect4/Program/Provision.lean`) into the same fragment. The thesis is one sentence: **a layer
 term prints as the rc.112 combinators it transcribes, as syntax, never as text.** Every arm of
 `printLayer` names the `vendor/effect-4.0.0-rc.112/src/Layer.ts` line it spells, and the arms
 are the constructors of `LayerTerm`, one for one:
@@ -62,11 +62,11 @@ namespace Effect4.Program.Provision
 open Effect4.Machine.Env (Requirement)
 
 -- Boolean equality on a printer answer is `Effect4.Codegen.instBEqExcept`
--- (`Effect4/Codegen/Spell.lean`): every `#guard` on a printed answer below reads it.
+-- (`src/Effect4/Codegen/Spell.lean`): every `#guard` on a printed answer below reads it.
 
 /-! ## Key spellings as data
 
-A `ServiceKey` is a nominal `Nat` pair (`Effect4/Machine/Key.lean`); the target spelling of the
+A `ServiceKey` is a nominal `Nat` pair (`src/Effect4/Machine/Key.lean`); the target spelling of the
 service it names is the class identifier the service route emits,
 `class Db extends Context.Service<Db, Shape>()("Db")`
 (`src/Effect4/Codegen/Profile.lean:143-149`). So a key prints as `.ident name`, and the map from
@@ -95,7 +95,7 @@ end KeyNames
 
 /-- Why the layer printer declined a term. `unnamedKey` is the one refusal this module owns: a
 key with no spelling has no `.ident` and the printer does not mint one. `body` is
-`Program.PrintRefusal` carried out of a program body verbatim (`Effect4/Codegen/Print.lean`),
+`Program.PrintRefusal` carried out of a program body verbatim (`src/Effect4/Codegen/Print.lean`),
 so the two refusal alphabets compose without a string anywhere. -/
 inductive LayerPrintRefusal
   | unnamedKey (key : ServiceKey)
@@ -221,7 +221,7 @@ def rowType (names : KeyNames) (r : Requirement) : Option String :=
   unionType names r.elems
 
 /-- `Layer.Layer<ROut, E, RIn>` (`Layer.ts:54`). The error column is `Ty.render`, the same
-spelling `Effect4/Program/Eff.lean` gives every other type; the two row columns are `rowType`,
+spelling `src/Effect4/Program/Eff.lean` gives every other type; the two row columns are `rowType`,
 so an unnamed key anywhere in either row leaves the declaration untyped rather than guessed. -/
 def layerType (names : KeyNames) (t : LayerTy) : Option String :=
   match rowType names t.out, rowType names t.requires with
@@ -249,7 +249,7 @@ def printAppDecl (name : String) (sig : Signature Op) (names : KeyNames) (app : 
   | some t, .ok value => some (Program.printDecl name t value)
   | _, _ => none
 
-/-! ## Receipts: the docs deployment of `Effect4/Program/Provision.lean`, printed
+/-! ## Receipts: the docs deployment of `src/Effect4/Program/Provision.lean`, printed
 
 The witnesses are the ones the algebra was proved over — two platform bindings, two services
 built from them, and the `POST /feedback` handler that needs both. Every pin below is on
@@ -345,7 +345,7 @@ def appExpr : TypeScript.Expr :=
 /-! ### `fresh` and `orDie`
 
 `orDie` prints (`Layer.ts:3327` is a public export) even though the machine lowering refuses it:
-`Effect4/Program/Provision.lean` pins `lower docsSig (.orDie servicesLayer) = none`, because the `LayerDesc`
+`src/Effect4/Program/Provision.lean` pins `lower docsSig (.orDie servicesLayer) = none`, because the `LayerDesc`
 alphabet has no description for a `catchCause` frame at this pin. Printing and lowering are two
 different alphabets over the same term, and only lowering is short one. -/
 

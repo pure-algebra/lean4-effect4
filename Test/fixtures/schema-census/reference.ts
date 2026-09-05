@@ -1,4 +1,4 @@
-// Synthetic fixture for `scripts/test-schema-census-gate.sh`.
+// Synthetic fixture for `scripts/check-schema-census.sh`.
 //
 // This is NOT Effect source and is NOT evidence about the rc.112 census. It
 // reproduces the two call shapes and the two closed union declarations the

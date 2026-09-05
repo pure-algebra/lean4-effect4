@@ -3,16 +3,16 @@
 Status: breaker packet, red, 2026-09-04 (wave 1b of
 `docs/research/2026-09-04-surface-library-plan.md` §4.8)
 
-Implementation (owed): `Effect4/Surface/Ingest.lean`
+Implementation (owed): `Effect4.Surface.Ingest (planned module; the packet remains red)`
 
-Battery: `Effect4Test/Surface/IngestContract.lean`
+Battery: `Test/Surface/IngestContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-053` through `E4-SURFACE-CE-057`,
 `E4-SURFACE-CE-069`, and
 `E4-SURFACE-CE-007`, `E4-SURFACE-CE-008` (shared with
 `surface-jsonschema.contract.md`)
 
-Witnesses: `Effect4Test/Counterexamples/Surface/Ingest.lean`
+Witnesses: `Test/Counterexamples/Surface/Ingest.lean`
 
 ## Purpose
 
@@ -31,7 +31,7 @@ exists to prevent; `E4-SURFACE-CE-008` is that attack.
 All in namespace `Effect4.Surface`.
 
 `Refusal` is the one closed alphabet of
-`test/contracts/surface-facts.contract.md`; the constructors this module uses
+`Test/contracts/surface-facts.contract.md`; the constructors this module uses
 are `unknownKeyword`, `unsupportedContentType`, `unsupportedRefTarget`,
 `unsupportedMethod`, `unsupportedParameterLocation`, `unsupportedBindingKind`,
 `unsupportedShape`, `streamingResponse`, `recursiveSchema`,
@@ -116,7 +116,7 @@ provided every counterexample below still observes only the `.error` side.
 
 Graph edge `SURFACE-PG-INGEST`. A decoder from an external wire form is
 admission and refusal plus an external-agreement claim, which is squarely on
-the graph route of `Effect4/AGENTS.md`.
+the graph route of `AGENTS.md`.
 
 | obligation | evidence at landing |
 | --- | --- |

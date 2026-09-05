@@ -1,9 +1,9 @@
 # Data row contract packet
 
 Status: **Pass-B FROZEN; implementation REQUIRED-BLOCKED**. The production
-fence `F-ROW` is solely `Effect4/Data/Row.lean`, which remains an empty breadth
+fence `F-ROW` is solely `src/Effect4/Data/Row.lean`, which remains an empty breadth
 stub at freeze. The breaker-owned Lean battery is
-`Effect4Test/Data/RowContract.lean`. Its proof graph is `DATA-PG-ROW`.
+`Test/Data/RowContract.lean`. Its proof graph is `DATA-PG-ROW`.
 
 This packet freezes one reusable data structure: a finite row with exactly one
 canonical list spelling. It does not interpret a requirement, analyze a
@@ -165,8 +165,8 @@ mechanically.
 ## Counterexamples and rejected designs
 
 The stable rows are `E4-DATA-CE-001` through `E4-DATA-CE-009` in
-`test/counterexamples/REGISTER.md`; full attack shapes are in
-`test/counterexamples/data/ATTACKS.md`.
+`Test/Counterexamples/REGISTER.md`; full attack shapes are in
+`Test/Counterexamples/Data/ATTACKS.md`.
 
 - A raw list is not a checked row: equal membership does not imply raw-list
   equality, canonicality and agreement are independent, and unchecked
@@ -209,7 +209,7 @@ project and the fixed battery was run unchanged:
 
 ```text
 lake build Effect4.Data.Row
-lake env lean -DmaxErrors=100 Effect4Test/Data/RowContract.lean
+lake env lean -DmaxErrors=100 Test/Data/RowContract.lean
 ```
 
 Both commands exited 0. The scratch source itself is deliberately not part of
@@ -237,7 +237,7 @@ headline lemmas.
 The frozen empty-stub command is:
 
 ```text
-lake env lean -DmaxErrors=10000 --json Effect4Test/Data/RowContract.lean
+lake env lean -DmaxErrors=10000 --json Test/Data/RowContract.lean
 ```
 
 The frozen battery SHA-256 is
@@ -263,10 +263,10 @@ implementation turns green.
 After implementation, acceptance requires all of:
 
 ```text
-lake env lean Effect4Test/Data/RowContract.lean
+lake env lean Test/Data/RowContract.lean
 lake clean && lake build
-./scripts/test-data-row-contract-reactions.sh
-./scripts/test-trust-gate.sh
+git:c407ab7:scripts/test-data-row-contract-reactions.sh
+scripts/test-trust-gate.sh
 ```
 
 plus the exported-theorem axiom report, independent assurance, and the

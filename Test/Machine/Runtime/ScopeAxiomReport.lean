@@ -4,7 +4,7 @@ import Effect4.Machine.Scope
 /-!
 # Scope runtime kernel dependency report
 
-Every authored public theorem named by `test/contracts/scope.contract.md` is
+Every authored public theorem named by `Test/contracts/scope.contract.md` is
 listed exactly once, in contract order. The accepted ceiling is no dependency,
 `propext`, or `propext` with `Quot.sound`; `Classical.choice` and
 project-local axioms are not admitted.

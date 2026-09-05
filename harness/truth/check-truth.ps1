@@ -7,7 +7,7 @@
      (one lean process, memory-capped, the whole process tree killed on timeout — the
      2026-09-04 rule), unless -SkipLean reuses the manifest on disk.
   2. Makes sure `harness/truth/node_modules` is a junction to the pinned installation's
-     `node_modules` (`C:\Users\kokok\Dev\effect4-host`, effect@4.0.0-rc.112), so `effect`
+     `node_modules` (EFFECT4_EFFECT_NODE_MODULES, effect@4.0.0-rc.112), so `effect`
      resolves from inside the repo; verifies the pinned version.
   3. Runs `bun run <abs>/harness/truth/run-truth.ts` from the pinned installation's directory.
      The runner writes `result.json` / `result.md` and prints the table.
@@ -31,14 +31,16 @@ param(
 $ErrorActionPreference = "Stop"
 $repo = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $truth = Join-Path $repo "harness\truth"
-$host_ = "C:\Users\kokok\Dev\effect4-host"
+$target = $env:EFFECT4_EFFECT_NODE_MODULES
+if (-not $target) { throw "Set EFFECT4_EFFECT_NODE_MODULES to the pinned node_modules directory" }
+$host_ = Split-Path $target -Parent
 $manifest = Join-Path $truth "corpus.json"
 
 # --- 1. the Lean face -------------------------------------------------------------------
 if (-not $SkipLean) {
   $out = Join-Path $truth "lean.out.log"; $err = Join-Path $truth "lean.err.log"
   Write-Host "== Lean: harness/truth/Truth.lean -> harness/truth/corpus.json"
-  $p = Start-Process -FilePath "lake" -WorkingDirectory $repo -NoNewWindow -PassThru `
+  $p = Start-Process -FilePath "lake" -WorkingDirectory $repo -WindowStyle Hidden -PassThru `
     -ArgumentList @("env", "lean", "-M4096", "--run", "harness/truth/Truth.lean", "harness/truth/corpus.json") `
     -RedirectStandardOutput $out -RedirectStandardError $err
   # Touch the handle now: under Windows PowerShell 5.1 a -PassThru process whose handle was
@@ -57,11 +59,14 @@ if (-not (Test-Path $manifest)) { Write-Host "no manifest at $manifest"; exit 3 
 
 # --- 2. the pinned installation ---------------------------------------------------------
 $link = Join-Path $truth "node_modules"
-$target = Join-Path $host_ "node_modules"
 if (-not (Test-Path $target)) { Write-Host "pinned installation missing: $target"; exit 2 }
 if (-not (Test-Path $link)) {
   New-Item -ItemType Junction -Path $link -Target $target | Out-Null
   Write-Host "created junction $link -> $target"
+}
+$resolvedModules = ([IO.DirectoryInfo]::new($link)).ResolveLinkTarget($true)
+if (-not $resolvedModules -or $resolvedModules.FullName -ne ([IO.DirectoryInfo]::new($target)).FullName) {
+  throw "harness/truth/node_modules selects a different installation; use its path or relink explicitly"
 }
 $version = (Get-Content (Join-Path $target "effect\package.json") | ConvertFrom-Json).version
 if ($version -ne "4.0.0-rc.112") { Write-Host "effect is $version, not 4.0.0-rc.112"; exit 2 }

@@ -1,4 +1,4 @@
-# The estate's `generated/traces/masks.tsv` is not in this checkout (2026-09-04), so the corpus
+# The estate's `git:c407ab7:generated/traces/masks.tsv` is not in this checkout (2026-09-04), so the corpus
 # comparison runs under the one mask that keeps every row: ops, answers, decisions, regions,
 # finalizers, outcome, frontier. It is the strictest projection `compare.py` can apply.
 mask	all	1	1	1	1	1	1	1

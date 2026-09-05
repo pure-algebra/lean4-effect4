@@ -1,8 +1,8 @@
 /-
-Contract packet: `test/contracts/cause-exit.contract.md`
+Contract packet: `Test/contracts/cause-exit.contract.md`
 
 Breaker-owned red battery. The implementation phase must not edit this file.
-It is red until `Effect4/Semantics/Cause.lean` and `Effect4/Semantics/Exit.lean`
+It is red until `src/Effect4/Machine/Cause.lean` and `src/Effect4/Machine/Exit.lean`
 declare the frozen surface.
 
 Every public declaration is frozen by an exact `#check (@name : proposition)`

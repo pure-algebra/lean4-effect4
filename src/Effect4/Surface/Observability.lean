@@ -27,7 +27,7 @@ The module is in three parts, and only the middle one is a payoff:
   The identifiers are `List UInt8` and never `String` in a theorem: the `String` faces are
   executable and appear only in `#guard`s, because every function that *iterates* a
   `String` on this toolchain reaches `Classical.choice` (the module docstring of
-  `Effect4/Program/Config.lean` records the measurement). The round trip is therefore
+  `src/Effect4/Program/Config.lean` records the measurement). The round trip is therefore
   stated on the structured codec, `decodeW3c (encodeW3c s) = some s`.
 
 | | |
@@ -48,7 +48,7 @@ does not have.
 
 | row | what rc.112 has | what is here, and why |
 | --- | --- | --- |
-| `OBS-FB-001` | `doubleValue: number` (`OtlpResource.ts:208-210`, `:248`); `HistogramState`'s `buckets`/`min`/`max`/`sum` and `SummaryState`'s `quantiles`/`min`/`max`/`sum` are `number` (`Metric.ts:711-717`, `:898-904`) | **no `Float` in any carrier.** `AttrValue` has `str`, `int`, `bool`, `arr` — the four branches `unknownToAttributeValue` can produce for an integer or a bigint (`:199-207`) — and a non-integral `number` attribute is *unrepresentable*, not silently rounded. The metric states carry `Int`. Lean's `Float` has no `DecidableEq` and its `BEq` is IEEE equality (`Effect4/Data/Json.lean` records the same ruling for the payload datum), so a `Float` field would cost every `deriving DecidableEq` below |
+| `OBS-FB-001` | `doubleValue: number` (`OtlpResource.ts:208-210`, `:248`); `HistogramState`'s `buckets`/`min`/`max`/`sum` and `SummaryState`'s `quantiles`/`min`/`max`/`sum` are `number` (`Metric.ts:711-717`, `:898-904`) | **no `Float` in any carrier.** `AttrValue` has `str`, `int`, `bool`, `arr` — the four branches `unknownToAttributeValue` can produce for an integer or a bigint (`:199-207`) — and a non-integral `number` attribute is *unrepresentable*, not silently rounded. The metric states carry `Int`. Lean's `Float` has no `DecidableEq` and its `BEq` is IEEE equality (`src/Effect4/Data/Json.lean` records the same ruling for the payload datum), so a `Float` field would cost every `deriving DecidableEq` below |
 | `OBS-FB-002` | `Span.end`, `.attribute`, `.event`, `.addLinks` (`Tracer.ts:384-387`); `Tracer.make(options)` returns its argument (`Tracer.ts:455`) | **methods are host closures.** They are *operations* on a span, not fields of one, and a first-order record cannot hold them. `Span` below has the ten data fields of `Tracer.ts:372-383` and none of the four methods; `event` in particular means the OTLP `events` array (`OtlpTracer.ts:395`, `:402-407`) has no source inside this carrier |
 | `OBS-FB-003` | `Logger.Options.cause : Cause<unknown>`, `.fiber : Fiber<unknown, unknown>`, `.date : Date` (`Logger.ts:101-107`); `SpanStatus.exit : Exit<unknown, unknown>` (`Tracer.ts:98`) | **opaque spellings.** `cause` is a rendered `String`, `fiber` is reduced to `fiberId : Nat`, `date` is the ISO-8601 `String`, and an ended span's `exit` is reduced to `exitOk : Bool` — exactly the bit `OtlpTracer.ts:438-440` reads out of it when it picks a `StatusCode` |
 | `OBS-FB-004` | `AnyValue.kvlistValue`, `.bytesValue` (`OtlpResource.ts:253-255`); the `default:` branch formatting an arbitrary value (`:215-218`); `arrayValue`'s recursion (`:187-192`) | **`unknown` is not a carrier.** rc.112's own converter never produces `kvlistValue` or `bytesValue`, so neither is a constructor here; a value of no other type becomes a `str` in rc.112 by calling `format`, which is a host function and is not modelled. `AttrValue.arr` holds `AttrScalar`s, so an array **of arrays** is unrepresentable: the recursive spelling defeats `deriving DecidableEq` on this toolchain, and a carrier without decidable equality would cost every `#guard` in §2 and §6 |
@@ -70,7 +70,7 @@ in §8's `String` faces:
 parseHexId  w3c  b3  xb3  fromHeaders
 ```
 
-They are the analogue of `Effect4/Program/Config.lean`'s `stdScalars`/`fromEnvRecord` and
+They are the analogue of `src/Effect4/Program/Config.lean`'s `stdScalars`/`fromEnvRecord` and
 belong in the gate's pinned choice list for the same reason: they are witnesses, no theorem
 mentions them, and the structured codec (`encodeW3c`/`decodeW3c`/`splitN`) that the round
 trip *is* about is clean. `toHeaders` is clean — `String.append` and `String.ofList` do not
@@ -721,7 +721,7 @@ def observabilityEnvNames : List String :=
 cannot absorb: a `withDefault` fills an absence (`Config.ts:847-852`), an `option` turns it
 into `none` (`:887-888`), and an `orElse`'s absence falls through to its fallback
 (`:570-572`), so none of the three can make a group absent by itself. The two lemmas below
-are local copies of private lemmas of `Effect4/Program/Config.lean`; they are restated here
+are local copies of private lemmas of `src/Effect4/Program/Config.lean`; they are restated here
 rather than exported because they say nothing about configuration, only about the shape of
 `recover` and `zipRes`.
 
@@ -858,7 +858,7 @@ theorem observability_required :
 
 /-! ### The residual row
 
-`E4-CONF-CE-002` of `Effect4/Program/Config.lean` is the reason the provider here is
+`E4-CONF-CE-002` of `src/Effect4/Program/Config.lean` is the reason the provider here is
 `fromRecord` over one-segment paths and not `fromEnvRecord`: rc.112's env provider answers a
 flat name at the joined spelling as well as at the split trie (`ConfigProvider.ts:1227` vs
 `:1206-1207`), and the model keeps only the trie. `OTEL_SERVICE_NAME` is a read at *one*
@@ -879,7 +879,7 @@ def requiredRow (c : ConfigTerm String) : Row ServiceKey :=
   Row.normalize ((required [] c).filterMap (fun p => (indexOf observabilityTable p).map keyOf))
 
 /-- **The operator contract of the observability stack is this residual**: what the
-deployment still owes, in the very carrier `Effect4/Machine/Context.lean` calls
+deployment still owes, in the very carrier `src/Effect4/Machine/Context.lean` calls
 `Requirement`. -/
 def obsResidual (env : List (String × String)) : Row ServiceKey :=
   Row.diff (requiredRow observabilityReads) (providedRow observabilityTable (flatEntries env))
@@ -894,7 +894,7 @@ theorem obsResidual_empty_of_subset (env : List (String × String))
 
 /-- **Absence names an unprovided path**, at the observability row: an absent read of the
 stack is not a mystery, it is the name of an environment variable nobody set. This is
-`Effect4/Program/Config.lean`'s `absent_names_missing` instantiated here, and it is the
+`src/Effect4/Program/Config.lean`'s `absent_names_missing` instantiated here, and it is the
 other half of `required_nil_never_absent`. -/
 theorem observability_absent_names_missing (S : Scalars) (env : List (String × String))
     (e : ConfigError String)
@@ -1079,7 +1079,7 @@ theorem decodeW3c_version_ne (ver : UInt8) (rest : List UInt8) (h : ver ≠ 0) :
 
 /-! ### The hex spelling and the `String` faces
 
-The codec itself is the store's, `Effect4/Store/Digest.lean:204-207`: one hexadecimal codec in
+The codec itself is the store's, `src/Effect4/Store/Digest.lean:204-207`: one hexadecimal codec in
 the estate, proved there (`bytesOfHex_hexOfBytes` round trips, `hexOfBytes_bytesOfHex` is exact
 up to case), read here through two thin faces because a trace header is a `String` and an
 identifier is a byte list. The two names below keep their spellings and their guards; what they

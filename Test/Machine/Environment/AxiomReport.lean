@@ -3,7 +3,7 @@ import Effect4.Machine.Key
 /-!
 Fresh kernel dependency report for the environment slice.
 
-This file is **coordinator-owned**. `docs/ENVIRONMENT-DAG.md` keeps it out of
+This file is **coordinator-owned**. `docs/research/ENVIRONMENT-DAG.md` keeps it out of
 every builder's fence on purpose: in the preceding Schema slice a shared
 receipts file sat inside one builder's fence, two obligations landed after that
 builder had measured its work and finished, and the receipts for them were

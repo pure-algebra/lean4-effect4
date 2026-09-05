@@ -112,7 +112,7 @@ let run_steps (steps : step list) : value =
   !last
 
 (* Install the program's root table. A code the program does not declare falls back to the
-   standard body table of `harness/trace/fiber-tail.ts`, so a corpus program can reuse the
+   standard body table of `git:606918eb73daefcc235a261fce879bf910f2471e:harness/trace/fibers-tail.ts`, so a corpus program can reuse the
    golden bodies (0 succeeds 11, 1 succeeds 22, 2 fails 1, 3 fails 2, 4 never). *)
 let install (p : prog) : unit =
   Array.fill globals 0 (Array.length globals) Vunit;

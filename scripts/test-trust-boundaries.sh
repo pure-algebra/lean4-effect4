@@ -8,7 +8,8 @@ tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/effect4-trust-boundaries.XXXXXX")"
 trap 'rm -rf -- "$tmp_root"' EXIT
 
 {
-  printf 'import Test.Schema.StructuralAssurance\n'
+  # Private admission resolution needs every named owner present in the environment.
+  printf 'import Test.Schema.StructuralAssurance\nimport Test.Program.ConfigContract\n'
   cat "$project_root/Test/Audit/AxiomGate.lean"
   cat "$repo_root/Test/fixtures/trust-gate/implementation-boundaries.lean.txt"
 } > "$tmp_root/ImplementationBoundaries.lean"

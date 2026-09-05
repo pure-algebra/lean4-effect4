@@ -1,4 +1,0 @@
-interface:
-  display_name: "Reification targets"
-  short_description: "Check generated programs and runtime boundaries"
-  default_prompt: "Use $lean-reification-target to connect this program representation to its generated artifacts and runtime observations."

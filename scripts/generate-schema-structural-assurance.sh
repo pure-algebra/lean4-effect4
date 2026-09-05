@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Deterministic join for the implemented structural Schema proof graph shares.
+# Input pins re-recorded after the 2026-09-05 citation-only cleanup; declarations
+# and contract obligations are unchanged. Regeneration runs every receipt below.
 set -euo pipefail
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -50,38 +52,38 @@ battery_rels=(
 
 expected_source_shas=(
   0a02907cd4e994ff180c2d11b090f7948481dc888812d85bdb892fb7c0adf78f
-  dbe62398e265ebdc65838dca37110f62059a59b9b855f8c38fb2765f38dbb7be
+  aedfb6ccf23396bc817a9d722a8319c76d13206a06679fcb6941af20c33f7e6e
   77dc812193a79c389d2a69e4ce3f6a3461c966e6487b273ae673258e4b65d18e
-  1869039c17a6e3fc5e2d9c52be0043e7c6ed211b52cf31fbfb2645258e8e607f
+  4a24b87cb4e164a68ddb91b21fb495a0d8c9cdc7c9d6d28f0318efc5145c692c
   94fdb0e002c79fbaddd00f862f184f822373a0d33dda947ecb85443b3bd2beb7
-  16ac1aaf3f7abff54b53f1fda0091969635a0bf4aad97f2e09bfdc0921f7e364
-  49c40a2d14d5a18e04484403995ff236db0860a15f1c985e00e73ce0fbede9fe
+  bb21ae7f9d2ed9a51305376f6d8050704455f85f323b43448f93ce229e06cefd
+  cf63447dc0c7a4a7899e1806992e9e4ab82079ee9a9fd0d00bb49089ff524592
   635eda65903c35d9d3f6efe75d9626065be4c44773b72ffb4c66cf8b1a7f9513
   2c54ef3ce3f1a60442b40c5cffe7bf850bd1bdc669cd7a6915bc9dd7666052b9
 )
 expected_contract_shas=(
-  a2b85dd7ce72a8f74abfedeccb1142d7a85fa9913820fa8412c1410489ab90ee
-  1b3d298d732be54c47108dafe914639bb5167eecc1d6b3dd27d50591fed65555
-  aa7d193d778cbc8e1c6ddb616d14ed7fc856889178d201439a4e36f550000f89
-  c70ff82cf5b55e18516e78db1f6720441920225390ad90e99e3e3c2dd115a4d3
-  0414c65d3c1120d6be286d79a7cdd7b0334e97517604dde60795b9f9813726f8
-  7703abd3d4533387faf5c0e482da8008e4c390f2a7a6145ad6b22879d51d03d2
-  9c23feccc4762a50c2fa2806079758843ce40c460927020c4a0c870cfaa83f7c
+  4eae40b849ef18e910bf404715203571bf93e38a0daffefa64b2a2877cb36ff8
+  71a13678df38c08f9f6396b3b623b7ab227645019e9794371cb2144d14fd5e55
+  352b87a75767a89e52da18e4df8c58f4059646e02be60f7fc55bbaecaa45310a
+  3069714f714268ecac1be87d73f029ccab725623f285344f01a42e07fd6b201a
+  ca44fbb7613b9453ece6bd3de4d318edbce2d83ffc1ec0d1c3648178ba9e53a7
+  b232dba0e24333277927765528ccd30ed71014bd9a8256f6a41abbe97a6d1ea4
+  407adca2a7ff3df00bafe4ee87c4af0e9aae7a84b4f181e4ace86364139fae51
 )
 expected_battery_shas=(
-  561d8395ef6abaae34939102aafcfbc9306bb0856f4c6fad0b0e4c61cb9cb154
-  97a204641b1c9251bb9b287fbb0aabe26e09558855ccad4002eacda7d1db4b70
-  a595a7791b8a229df55d07998c4d5492f2ee33b9233e872a2afccf6f4f290e39
-  4963cf08b0c444c703c1ae8799da1e93675dbdd0ecfb30b950b5cab6e1ec361b
-  c46a328a5313aca41eafa03f37bc0cb97a5ffafb613d7d79bc64f531985db0b6
-  c67bdea9214d874f45d205dbec0b76ddb616adf28b3bc84c0380a9d78ca6b494
-  a2950bcfab175c12b14e6ec276b803d1353d2063444bf5537a5c2e5ca3b14fe4
-  b7c2a50fa76d1b04bf5e4ba0ce846309d6500e91c1130cd1a13117b2b51c8418
+  00519bb36e017e54ed6a978bf6cf02e14bc9eb72d9054f0d58e91dc458b71e4b
+  76721ee29d9e80d6f6ce01f6b608eebec80caf455a9d22001e5fac383ee1a45b
+  9de20e7d3d8c8827a56c54b6974c95dcfec222f1a4d5c42d94453fa78ee3d241
+  10acc010fc6f3528645ff5b32c12672a14ae3d66290c7eb99cbc76a068f98f6a
+  ca09c2622cf889e11140fd40c3e15a34123b3269d23944655137bbde0eda93f9
+  e379cca01e3396ecfb19cacc6657e8df057b322fa5532273e5e3f5c8cf30805f
+  d6a3c91c99aa6618949f572b88019270bb30870b6253328ae4bcbe4feeee4635
+  f608eae2137c734f5263c16ad424e26d449f15f079f388b07d756ac7fec62060
 )
 expected_recursor_attack_sha="9f83ea02b0c5785485c94792180052fd8d344f6ae3da4e2f2485d114d790c9c1"
 expected_annotation_attack_sha="9874b7aeddb8018c0fd9f8c6ec954a57e71b7473c8f6009f23d6ff5e742066b5"
-expected_effectful_attack_sha="9790aa004684a1f31b44606e1c604c5c11bbd1f9d95ed65980e621f06d7983ec"
-expected_effectful_properties_attack_sha="76d53609077fb0e5644201552c96afc50213d90c776e132a580e615e2398bb0c"
+expected_effectful_attack_sha="5ca30e43dd44030522ee1088690fd1e0d584abbbad24d921bab42889c7e3b9d2"
+expected_effectful_properties_attack_sha="b63832555fde83374317f876db5cb4679f3deaed8569f65063461fdfe8f4d543"
 expected_surface_sha="27a005bc9bcaa25cd6ef14c95bfd23ed6f303ba99fd6c9df29bcc6b82606e4e7"
 expected_pin_sha="a0a7a1537cfe3a9159a80210e3de92342cc9e98651f0e8273a75ccdcccae69bc"
 
@@ -152,6 +154,13 @@ tmp_root="$(mktemp -d "$tmp_parent/effect4-schema-structural-assurance.XXXXXX")"
 cleanup() {
   local cleanup_rc=$?
   set +e
+  if [[ "$cleanup_rc" -ne 0 ]]; then
+    for log in "$tmp_root"/*.log; do
+      [[ -f "$log" ]] || continue
+      printf -- "--- %s ---\n" "$(basename "$log")" >&2
+      tail -30 "$log" >&2
+    done
+  fi
   case "$tmp_root" in
     "$tmp_parent"/effect4-schema-structural-assurance.*) rm -rf -- "$tmp_root" ;;
     *) printf 'FAIL refusing to remove unexpected path: %s\n' "$tmp_root" >&2; cleanup_rc=1 ;;

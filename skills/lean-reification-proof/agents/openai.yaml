@@ -1,4 +1,0 @@
-interface:
-  display_name: "Reification proofs"
-  short_description: "Prove frozen reification obligations in Lean"
-  default_prompt: "Use $lean-reification-proof to complete this frozen obligation while preserving its meaning and checking proof trust."

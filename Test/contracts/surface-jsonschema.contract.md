@@ -3,13 +3,13 @@
 Status: breaker packet, red, 2026-09-04 (wave 1b of
 `docs/research/2026-09-04-surface-library-plan.md` §4.3)
 
-Implementation (owed): `Effect4/Surface/JsonSchema.lean`
+Implementation (owed): `src/Effect4/Codegen/JsonSchema.lean`
 
-Battery: `Effect4Test/Surface/JsonSchemaContract.lean`
+Battery: `Test/Surface/JsonSchemaContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-006` through `E4-SURFACE-CE-008`
 
-Witnesses: `Effect4Test/Counterexamples/Surface/JsonSchema.lean`
+Witnesses: `Test/Counterexamples/Surface/JsonSchema.lean`
 
 ## Purpose
 
@@ -53,7 +53,7 @@ would never be reached by dot notation on a document value; the name is frozen
 here as `documentJsonSchema`. See finding 5 of the wave-1b report.
 
 `Refusal` is the ingest refusal alphabet frozen in
-`test/contracts/surface-ingest.contract.md`; this module contributes the
+`Test/contracts/surface-ingest.contract.md`; this module contributes the
 constructors `unknownKeyword`, `unsupportedRefTarget` and `unsupportedShape`
 and adds none of its own.
 
@@ -104,7 +104,7 @@ and adds none of its own.
 
 Graph edge. This is a codec pair between two carriers with a named quotient,
 which is exactly the "generated-code relations" and "external semantic
-equivalence" threshold of `Effect4/AGENTS.md`. The edge is
+equivalence" threshold of `AGENTS.md`. The edge is
 `SURFACE-PG-JSONSCHEMA`, with three obligations:
 
 | obligation | evidence at landing |

@@ -2,15 +2,15 @@
 """Generate `e4d_families_data.ml`: the five service families and their `OpSpec` rows.
 
 The rows are read out of the committed `harness/trace/*fixture*.ts` modules, which
-`scripts/check-trace-host.sh` regenerates from `harness/trace/Generate.lean` and refuses if
+`git:c407ab7:scripts/check-trace-host.sh` regenerates from `git:c407ab7:harness/trace/Generate.lean` and refuses if
 they have drifted -- so the daemon's `families` answer is the Lean family table, reached
 through the one artefact both faces already agree on, and not a second copy of it.
 
-  fiber     FibersRows        harness/trace/fibers-fixture.stub.ts
-  ref       RefsRows          harness/trace/ref-fixture.ts
-  deferred  DeferredsRows     harness/trace/deferred-fixture.ts
-  scope     ScopesRows        harness/trace/scope-fixture.ts
-  layer     LayersRows        harness/trace/layer-fixture.ts
+  fiber     FibersRows        git:c407ab7:harness/trace/fibers-fixture.stub.ts
+  ref       RefsRows          git:c407ab7:harness/trace/ref-fixture.ts
+  deferred  DeferredsRows     git:c407ab7:harness/trace/deferred-fixture.ts
+  scope     ScopesRows        git:c407ab7:harness/trace/scope-fixture.ts
+  layer     LayersRows        git:c407ab7:harness/trace/layer-fixture.ts
 
 `extra` and `corpus` are not families: `extra` is the avatar's own set of programs for the
 `WithFiberAction` arms no committed golden reaches, and `corpus` is the adversarial corpus,

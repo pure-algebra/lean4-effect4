@@ -2,7 +2,7 @@
 #
 # One row per `export` declaration of each listed public module of the pinned
 # install, with the file's SHA-256 and the declaration's line. The census is
-# what `src/Effect4/Evidence/StdLib/Rc112.lean` (generated here, do not edit) carries as
+# what `src/Effect4/StdLib/Rc112.lean` (generated here, do not edit) carries as
 # data: a `Source` per file and an `Entry` per export, each entry pointing at
 # its file's node through `source : Ref Source`.
 #
@@ -17,13 +17,17 @@
 #
 # Usage: pwsh scripts/generate-stdlib-census.ps1 [-Install <node_modules/effect>]
 param(
-  [string]$Install = 'C:\Users\kokok\Dev\effect4-host\node_modules\effect',
+  [string]$Install = '',
   [string[]]$Modules = @('Effect', 'Ref', 'Deferred', 'Scope', 'Layer', 'Context', 'Fiber',
     'Exit', 'Cause', 'Option', 'Result', 'Schema', 'Queue', 'PubSub', 'Stream', 'Sink',
     'Channel', 'Schedule', 'Duration', 'Runtime', 'Scheduler')
 )
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
+if (-not $Install) {
+  $modulesPath = if ($env:EFFECT4_EFFECT_NODE_MODULES) { $env:EFFECT4_EFFECT_NODE_MODULES } else { Join-Path $repo 'ts/eff/node_modules' }
+  $Install = Join-Path $modulesPath 'effect'
+}
 $expectedVersion = '4.0.0-rc.112'
 $pkg = Get-Content (Join-Path $Install 'package.json') -Raw | ConvertFrom-Json
 if ($pkg.version -ne $expectedVersion) { throw "pinned install is $($pkg.version), expected $expectedVersion" }
@@ -89,7 +93,7 @@ $enc = New-Object System.Text.UTF8Encoding $false
 # The Lean data module: chunks of two hundred so no list literal is unwieldy.
 function LeanStr($s) { '"' + ($s -replace '\\', '\\\\' -replace '"', '\"') + '"' }
 $lean = @()
-$lean += 'import Effect4.Evidence.StdLib.Derived'
+$lean += 'import Effect4.StdLib.Derived'
 $lean += ''
 $lean += '/-!'
 $lean += '# StdLib.Rc112'
@@ -170,6 +174,6 @@ $lean += '#print axioms rawEntries'
 $lean += '#print axioms entries'
 $lean += ''
 $lean += 'end Effect4.StdLib.Rc112'
-[IO.File]::WriteAllText((Join-Path $repo 'src/Effect4/Evidence/StdLib/Rc112.lean'), ($lean -join "`n") + "`n", $enc)
+[IO.File]::WriteAllText((Join-Path $repo 'src/Effect4/StdLib/Rc112.lean'), ($lean -join "`n") + "`n", $enc)
 "modules: $($files.Count); rows: $($rows.Count)"
 $rows | Group-Object module | ForEach-Object { "  {0,-10} {1,5}" -f $_.Name, $_.Count }

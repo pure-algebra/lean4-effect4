@@ -3,7 +3,7 @@ set -euo pipefail
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 harness_dir="$project_root/harness/schema-annotations"
-node_modules="${EFFECT4_EFFECT_NODE_MODULES:-$project_root/../foldlab/library/effects/node_modules}"
+node_modules="${EFFECT4_EFFECT_NODE_MODULES:-$project_root/harness/schema-host/node_modules}"
 
 if [[ ! -d "$node_modules/effect" ]]; then
   echo "schema annotation harness: set EFFECT4_EFFECT_NODE_MODULES to the exact pinned node_modules directory" >&2

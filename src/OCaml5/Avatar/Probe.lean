@@ -5,7 +5,7 @@ import OCaml5.Ml.Render
 
 **What it is.** The shape probe of spike A0: a slice of `src/Effect4/Machine/Fibers.lean` written
 out in `OCaml5.Ml.Syntax`, one `Decl` per Lean declaration, so the Lean → OCaml mapping could be
-seen before the avatar committed to it. `tools/fuzz.sh surface` renders `sample`, compiles it with
+seen before the avatar committed to it. `ocaml/tools/fuzz.sh surface` renders `sample`, compiles it with
 `ocamlc`, `ocamlopt` and `js_of_ocaml`, runs it on all three and compares the rows with
 `sampleRows`.
 
@@ -15,7 +15,7 @@ seen before the avatar committed to it. `tools/fuzz.sh surface` renders `sample`
 * **Pinned text.** The rendered strings are pinned by the `#guard`s below: if one changes, the
   module the hosts compiled is no longer the one this file renders — *tested*.
 * **Executed acceptance.** Being OCaml is decided by the hosts, not here — *tested*
-  (`tools/fuzz.sh surface`).
+  (`ocaml/tools/fuzz.sh surface`).
 -/
 
 namespace OCaml5.Avatar
@@ -45,7 +45,7 @@ The parameter discipline: a Lean carrier's `Type u` parameters become OCaml type
 parameter a constructor cannot determine is dropped (OCaml rejects an unused type parameter in a
 variant, Lean does not), which is why `Task` here is `'b task` and not `('nu, 'b) task`.
 
-Executed check: `tools/fuzz.sh surface` renders `deepSample`, compiles it with `ocamlc`,
+Executed check: `ocaml/tools/fuzz.sh surface` renders `deepSample`, compiles it with `ocamlc`,
 `ocamlopt` and `js_of_ocaml`, and runs it on all three. -/
 
 namespace Probe
@@ -216,14 +216,14 @@ def sample : List Decl :=
    runFiberDecl, stuckDecl, effectsDecl] ++ freshIdDecls ++
   [enqueueDecl, statusDecl, runDecl, mainDecl]
 
-/-- The rows the probe prints, checked by `tools/fuzz.sh surface`. -/
+/-- The rows the probe prints, checked by `ocaml/tools/fuzz.sh surface`. -/
 def sampleRows : List String := ["waiting", "2"]
 
 end Probe
 
 /-! ### Checks
 
-`ocamlc` acceptance is executed (`tools/fuzz.sh surface`), so what is pinned here is the text: if
+`ocamlc` acceptance is executed (`ocaml/tools/fuzz.sh surface`), so what is pinned here is the text: if
 one of these strings changes, the module that was compiled is no longer the module this file
 renders. -/
 

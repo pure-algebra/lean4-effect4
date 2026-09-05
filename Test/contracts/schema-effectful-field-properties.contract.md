@@ -3,9 +3,9 @@
 Status: **FROZEN / RED**.
 
 Production fence: additive declarations in
-`Effect4/Schema/EffectfulField.lean`. Breaker battery:
-`Effect4Test/Schema/EffectfulFieldPropertiesContract.lean`. Retained attacks:
-`Effect4Test/Counterexamples/Schema/EffectfulFieldProperties.lean` and
+`src/Effect4/Schema/EffectfulField.lean`. Breaker battery:
+`Test/Schema/EffectfulFieldPropertiesContract.lean`. Retained attacks:
+`Test/Counterexamples/Schema/EffectfulFieldProperties.lean` and
 `E4-SCHEMA-CE-053` through `E4-SCHEMA-CE-055`.
 
 ## Purpose
@@ -92,8 +92,8 @@ multi-route witness. It must not duplicate the general fold proof graph.
 ## Acceptance
 
 ```sh
-lake env lean Effect4Test/Schema/EffectfulFieldPropertiesContract.lean
-lake env lean Effect4Test/Counterexamples/Schema/EffectfulFieldProperties.lean
+lake env lean Test/Schema/EffectfulFieldPropertiesContract.lean
+lake env lean Test/Counterexamples/Schema/EffectfulFieldProperties.lean
 ```
 
 Before production these commands must fail only because the four frozen

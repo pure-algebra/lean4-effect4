@@ -6,7 +6,7 @@ import Effect4.Schema.Annotations
 `docs/SCHEMA-ANNOTATIONS.md` gives the host side a `withCodegen` combinator whose payload is
 a codegen dimension: what a schema should become in generated code, over and above what its
 representation says. This module is the Lean side of that key, typed and lawful like the
-rc.112 standard keys of `Effect4/Surface/Annotate.lean`, and read by the emitters:
+rc.112 standard keys of `src/Effect4/Surface/Annotate.lean`, and read by the emitters:
 
 * `typeName` is the name generated code binds the schema to when it is not an entity;
 * `brand`, when present, is the nominal narrowing: `Schema.String.pipe(Schema.brand("UserId"))`
@@ -15,7 +15,7 @@ rc.112 standard keys of `Effect4/Surface/Annotate.lean`, and read by the emitter
   which is exactly what rc.112 says of `brand`.
 
 The host record also carries `version`. It is deliberately not a field here: a `Nat` has no
-kernel-reducible lawful encoding into `Json` in this tree (`Effect4/Surface/Annotate.lean`'s
+kernel-reducible lawful encoding into `Json` in this tree (`src/Effect4/Surface/Annotate.lean`'s
 header records the same decision for `SurfaceMark`), and codegen reads nothing off it. A bag
 whose payload carries other fields does not decode, by exactness; the row that reconciles
 the two records is `binary64OfNat`'s inverse and its theorem, owed.

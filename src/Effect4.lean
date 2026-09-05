@@ -1,8 +1,9 @@
 -- The core alphabet: requirement rows, JSON, optics, and the optic at a key of a JSON
 -- object with its laws (the model of every generated `Optic.id<S>().key(…)`).
 import Effect4.Data.Row
+import Effect4.Data.Ascii
 import Effect4.Data.Json
-import Effect4.Data.JsonNumber
+import Effect4.Arch.JsonNumber
 import Effect4.Data.Optic
 import Effect4.Data.JsonOptic
 -- The content-addressed store as one trait (docs/research/2026-09-04-cas-trait-plan.md,
@@ -45,12 +46,6 @@ import Effect4.Schema.Document
 import Effect4.Schema.Check
 import Effect4.Schema.Authoring
 import Effect4.Schema.Dimension
-import Effect4.Schema.Pins.Value
-import Effect4.Schema.Pins.Getter
-import Effect4.Schema.Pins.Transformation
-import Effect4.Schema.Pins.Codec
-import Effect4.Schema.Pins.Registry
-import Effect4.Schema.Pins.Foreign
 -- Service keys, the rc.112 scope state machine, the frame alphabet (`Prim`,
 -- `PrimInterp`, `FrameFiber`), and the frame-level facts that still pin it.
 import Effect4.Machine.Key
@@ -86,11 +81,12 @@ import Effect4.Machine.Layer
 -- checker, and the pinned standard library as store entries. A schema is store
 -- content through the store's own derived `Canonical Document` above; no JSON
 -- alphabet of its own.
-import Effect4.Schema.Accepts
-import Effect4.Evidence.Views
-import Effect4.Evidence.StdLib.Entry
-import Effect4.Evidence.StdLib.Derived
-import Effect4.Evidence.StdLib.Rc112
+import Effect4.Arch.Accepts
+import Effect4.Arch.Views
+import Effect4.StdLib.Entry
+import Effect4.StdLib.Derived
+import Effect4.StdLib.Rc112
+import Effect4.StdLib.Links
 -- The Surface library (docs/research/2026-09-04-surface-library-plan.md), wave
 -- 1a: the substrate. `Kind` is the typed embedding, a representation with a
 -- kernel-checked kind, so an ill-kinded slot of a surface is unrepresentable
@@ -164,11 +160,11 @@ import Effect4.Codegen.App
 -- decided in the kernel so a survivor is a build failure. `Conformance`,
 -- `Manifest` and `Evidence` are the lane's census, its component table and its
 -- receipts.
-import Effect4.Evidence.Char.Conformance
-import Effect4.Evidence.Char.Derived
-import Effect4.Evidence.Char.Manifest
-import Effect4.Evidence.Char.Queue.Grade
-import Effect4.Evidence.Char.Queue.Mutants
+import Effect4.Char.Conformance
+import Effect4.Char.Derived
+import Effect4.Char.Manifest
+import Effect4.Char.Queue.Grade
+import Effect4.Char.Queue.Mutants
 -- The AST relation (docs/research/2026-09-04-ast-relation-plan.md), lane A1:
 -- the Effect TS program syntax `Eff` and its typing, first-order and
 -- decidable throughout; the printer, the compile and the parser follow. `Eff`

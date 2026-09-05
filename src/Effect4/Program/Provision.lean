@@ -10,11 +10,11 @@ Landed 2026-09-04 from the `workshop/Provision` spike. Plan and grill:
 What this module adds to the tree, and what it deliberately reuses:
 
 * **Reused, never re-declared.** `Requirement := Row ServiceKey` and the eleven context
-  laws (`Effect4/Machine/Context.lean`), `Ty`/`EffTy`/`typeOf` (`Effect4/Program/Typing.lean`),
+  laws (`src/Effect4/Machine/Context.lean`), `Ty`/`EffTy`/`typeOf` (`src/Effect4/Program/Typing.lean`),
   and the whole rc.112 Layer machine — `LayerTable`, `LayerDesc`, `Construction`, `progOf`,
-  `interp`, `runSyncExit` (`Effect4/Machine/Layer.lean`). The machine is the semantics; this
+  `interp`, `runSyncExit` (`src/Effect4/Machine/Layer.lean`). The machine is the semantics; this
   module is the *typed face* over it and the *specification* it refines.
-* **`Row.diff`** (`Effect4/Data/Row.lean`, landed with this module). `Exclude<R, ROut>`
+* **`Row.diff`** (`src/Effect4/Data/Row.lean`, landed with this module). `Exclude<R, ROut>`
   is set difference, and `Layer.provide`'s requirement row is `RIn | Exclude<RIn2, ROut>`
   (`vendor/effect-4.0.0-rc.112/src/Layer.ts:2089`); every law below is a membership law
   over `mem_diff` and `mem_union`.
@@ -160,7 +160,7 @@ theorem provide_provide_rows (l d₁ d₂ : LayerTy) :
     simp [hL, hO₁, hO₂, hR₁, hR₂]
 
 /-- `merge` is commutative on the rows. What is *not* commutative is the built context
-(`Effect4/Machine/Context.lean`, counterexample CE 5: `merge` is right-biased), and the
+(`src/Effect4/Machine/Context.lean`, counterexample CE 5: `merge` is right-biased), and the
 witnesses below exhibit two layers with this same signature that build different contexts.
 The type does not see provider order; the run does. -/
 theorem merge_rows_comm (a b : LayerTy) :
@@ -346,7 +346,7 @@ theorem appTy_requires {Op : Type} (sig : Signature Op) (app : App Op) (l : Laye
 
 /-- **An app is closed exactly when its layer is closed and covers the program.** The
 right-hand side is what a deployment checks; the left-hand side is what `printDecl`
-(`Effect4/Codegen/Print.lean`) needs for the two-parameter `Effect.Effect<A, E>` spelling. -/
+(`src/Effect4/Codegen/Print.lean`) needs for the two-parameter `Effect.Effect<A, E>` spelling. -/
 theorem appTy_closed_iff {Op : Type} (sig : Signature Op) (app : App Op) (l : LayerTy) (p : EffTy)
     (hl : layerTy sig app.layer = some l) (hp : typeOf sig app.program = some p) :
     (appTy sig app).map EffTy.requires = some Requirement.empty ↔
@@ -603,7 +603,7 @@ theorem satisfiesRefs_of_hard (refs : Refs) (ctx : Ctx) (r soft : Requirement)
 
 /-! ## `lower` — the refinement into the rc.112 Layer machine
 
-A term lowers into a `LayerTable` (`Effect4/Machine/Layer.lean`) and the id of its root. The
+A term lowers into a `LayerTable` (`src/Effect4/Machine/Layer.lean`) and the id of its root. The
 leaves lower on the fragment the machine's `Construction` alphabet admits: a `succeed` is
 `fromBuildUnsafe(succeed(context))` (`Layer.ts:1129-1130`, an `atom`), an `effect` is
 `fromBuildMemo` (`:1481`, `memoized`) over a body that is one `perform` reading one service

@@ -1,7 +1,7 @@
 /-
-Contract: `test/contracts/surface-facts.contract.md`.
+Contract: `Test/contracts/surface-facts.contract.md`.
 
-Frozen by the wave-1b breaker before `Effect4/Surface/Facts.lean` exists, from
+Frozen by the wave-1b breaker before `src/Effect4/Surface/Refusal.lean` exists, from
 `docs/research/2026-09-04-surface-library-plan.md` §14.2, §14.6 and §15.2.
 Red until the builder lands the module.
 

@@ -8,8 +8,6 @@ Fiber identity, the one name the reference machine and the old calculi share.
 
 namespace Effect4
 
-universe u
-
 /-- Nominal identity within one scheduler machine. -/
 structure FiberId where
   value : Nat

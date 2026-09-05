@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-# Build the effect4_eff library alone, in its own build root (ocaml/eff/_build),
-# so it never contends with the ocaml/ workspace build another lane drives.
-set -uo pipefail
+# The eff area in the repository's one dune workspace (effect4 opam switch).
+set -euo pipefail
 eval "$(opam env --switch=effect4 --set-switch)"
-cd /mnt/c/Users/kokok/Dev/lean4-effect4/ocaml/eff || exit 1
-dune build --root . 2>&1
-echo "=== build exit: $? ==="
+cd "$(dirname "$0")/../.."
+dune build eff

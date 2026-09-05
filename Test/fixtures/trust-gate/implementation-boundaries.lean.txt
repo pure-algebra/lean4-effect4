@@ -1,4 +1,4 @@
--- Append to the current AxiomGate source after importing StructuralAssurance.
+-- Append to the current AxiomGate source after importing StructuralAssurance and ConfigContract.
 -- These checks inspect its private policy rows without adding a public API.
 
 namespace Effect4.Codegen.EffectfulField

@@ -13,7 +13,7 @@ copies when `Effect4Gen` refuses a type — today a bare parameterised one (`REP
 open item lane X hit on `GSet α`, `Fact L C` and `Vector L C`). `Test/Store/NodeContract.lean`
 files `Templates.Entry` as `export` content and addresses it.
 
-Dropped from the spike's `workshop/Cas/Cas/Templates.lean`: the hand `Canonical Float64` and
+Dropped from the spike's `Test/Store/Templates.lean`: the hand `Canonical Float64` and
 `Canonical Json`. Both are derived now, in `src/Effect4/Store/Derived/Json.lean`, and a second
 instance in the same environment is an ambiguity rather than a template. The nested-recursion
 receipts that exercised them are kept below against the derived instance; the printer and
@@ -36,7 +36,7 @@ namespace Templates
 constructor's declaration position, `ofVal` one alternative per position; `ofVal_toVal` is
 `cases` then `rfl`, `ofVal_exact` a `split` closed by `injection`, and `fits` is `decide`. -/
 
-/-- The declaration kinds the census recognises (`Evidence/StdLib/Entry.lean`, `ExportKind`). -/
+/-- The declaration kinds the census recognises (`StdLib/Entry.lean`, `ExportKind`). -/
 inductive ExportKind where
   | const
   | function
@@ -96,7 +96,7 @@ fields and `(shape F).defs` to the table, so `fits` lifts each field's own law w
 `acceptsIn_mono_of_subset` into the enclosing table. -/
 
 /-- One export of a pinned module: the shape of the census entry before it gained its
-`source : Ref Source` field (`Evidence/StdLib/Entry.lean`, `Entry`). Its `toVal` is the facts
+`source : Ref Source` field (`StdLib/Entry.lean`, `Entry`). Its `toVal` is the facts
 note §6 payload, so its bytes are `Store/Val.lean`'s `sampleEntry`. -/
 structure Entry where
   module : String

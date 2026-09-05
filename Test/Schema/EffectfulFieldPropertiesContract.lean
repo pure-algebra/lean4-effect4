@@ -4,7 +4,7 @@ import Effect4.Schema.EffectfulField
 # Effectful-field property discovery surface
 
 Breaker-owned declaration and reduction battery for
-`test/contracts/schema-effectful-field-properties.contract.md`.
+`Test/contracts/schema-effectful-field-properties.contract.md`.
 -/
 
 namespace Test.Schema.EffectfulFieldPropertiesContract

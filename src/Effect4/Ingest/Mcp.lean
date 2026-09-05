@@ -5,18 +5,18 @@ import Effect4.Codegen.Mcp
 # Ingest.Mcp — the `tools/list` payload, read backwards
 
 Design: `docs/research/2026-09-04-codegen-api-design.md` §3.4 and the `mcpToolsList` row of
-§4. The projection this inverts is `Effect4/Codegen/Mcp.lean`'s `toolsListJson`
+§4. The projection this inverts is `src/Effect4/Codegen/Mcp.lean`'s `toolsListJson`
 (`unstable/ai/McpSchema.ts:1604-1610`, whose entries are `McpSchema.Tool` at `:1559-1596`);
 the toolkit module, the other two list payloads and the pinned spelling table are that
 module's, and nothing here emits.
 
 One rule is read here, `mcpToolsList` (`surface.mcp.toolsList`). The schema fragment the
-`inputSchema` of an entry is read on is `Effect4/Ingest/JsonSchema.lean`'s, exactly:
+`inputSchema` of an entry is read on is `src/Effect4/Ingest/JsonSchema.lean`'s, exactly:
 `ofJsonSchema`, with its own refusals and its own quotient.
 
 | | |
 | --- | --- |
-| Carrier | none of its own: `Tool` and `McpServer` are `Effect4/Surface/Agent.lean`'s |
+| Carrier | none of its own: `Tool` and `McpServer` are `src/Effect4/Surface/Agent.lean`'s |
 | Operations | `toolsPath`, `toolOfJson`, `toolsOfJson`, `ofMcpToolsList`, `toolFingerprint`; the `Ingest .mcpToolsList` instance |
 | Laws | `kindCheck_unknown_json`. The round trip is a `#guard` on the fixture at the quotient named below; the general theorem is an **owed** row |
 | Structure | a partial function `Json ⇀ List (Tool refs)`, a section of the emitter up to that quotient |
@@ -27,7 +27,7 @@ One rule is read here, `mcpToolsList` (`surface.mcp.toolsList`). The schema frag
 ## The quotient the round trip is up to
 
 `toolsListJson` then `ofMcpToolsList` is **not** the identity on `Tool`, and the drop is
-named here the way `Effect4/Ingest/JsonSchema.lean` names its own:
+named here the way `src/Effect4/Ingest/JsonSchema.lean` names its own:
 
 * `success` and `failure` are not on the `tools/list` wire in the fragment emitted there, so
   the decoded tool carries `success := Schema.unknown` and `failure := none`;
@@ -37,12 +37,12 @@ named here the way `Effect4/Ingest/JsonSchema.lean` names its own:
   annotation-free struct of admitted property types. A parameter object whose nodes carry
   `description` or `title` is emitted with those keywords and then **refused** on the way
   back, because the ingest fragment admits no annotation keyword; lifting that is
-  `Effect4/Ingest/JsonSchema.lean`'s row, not this one;
+  `src/Effect4/Ingest/JsonSchema.lean`'s row, not this one;
 * at the server level the wire carries the tools and nothing else, so the decoded server has
   an empty name, an empty version, no resources, no prompts and no annotation bag. Every
   field of `McpServer` is required, so those are the empty values rather than absent fields;
   the decoded server is therefore *not* `McpServer.WellFormed`, exactly as the decoded entity
-  of `Effect4/Ingest/JsonSchema.lean` is not `Entity.WellFormed`, and for the same reason:
+  of `src/Effect4/Ingest/JsonSchema.lean` is not `Entity.WellFormed`, and for the same reason:
   what the wire does not carry is not invented.
 
 So the `#guard` below compares `(name, parameters.rep, descriptionOf)`, which is exactly the
@@ -138,7 +138,7 @@ def toolsOfJson (refs : List ReferenceEntry) : Nat → List Json →
 
 /--
 Read a `tools/list` payload back as surface rows, on the fragment
-`Effect4/Ingest/JsonSchema.lean` admits.
+`src/Effect4/Ingest/JsonSchema.lean` admits.
 
 Total on that fragment, refusing the rest by constructor. The quotient it is an inverse up
 to is named in this module's header.

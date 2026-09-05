@@ -5,7 +5,7 @@ import Effect4.Ingest.Wrangler
 
 Design: `docs/research/2026-09-04-codegen-api-design.md` §3.4 and §6 ("`Test/Ingest/*`, one
 per reader: the round trip at its quotient"). The quotient is
-`Ingest.Wrangler.Deployment.wranglerCarried`, and `Effect4/Ingest/Wrangler.lean`'s header
+`Ingest.Wrangler.Deployment.wranglerCarried`, and `src/Effect4/Ingest/Wrangler.lean`'s header
 names the four things it drops: every annotation bag, `serves`, `provides`, and every
 `secret` binding.
 
@@ -49,7 +49,7 @@ open Effect4 Effect4.Surface Effect4.Codegen Effect4.Ingest
 
 /-! ## The quotient, part by part
 
-Each drop of `Effect4/Ingest/Wrangler.lean`'s header as its own receipt, so a change to
+Each drop of `src/Effect4/Ingest/Wrangler.lean`'s header as its own receipt, so a change to
 `wranglerCarried` fails on the clause it changed rather than on one opaque equality.
 -/
 

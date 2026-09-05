@@ -1,4 +1,0 @@
-interface:
-  display_name: "Lean program reification"
-  short_description: "Connect program data, proofs, and execution"
-  default_prompt: "Use $lean-reification to identify and complete the next justified stage of this program-reification task."

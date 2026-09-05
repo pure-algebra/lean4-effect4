@@ -2,10 +2,10 @@
 
 Status: **Pass-B FROZEN; implementation RED**.
 
-Production fence: `Effect4/Target/TypeScript/EffectfulField.lean`, the exact
+Production fence: `src/Effect4/Codegen/EffectfulField.lean`, the exact
 additive target declarations below, and import lines only. Breaker batteries:
-`Effect4Test/Target/TypeScript/EffectfulFieldContract.lean` and
-`Effect4Test/Counterexamples/Target/EffectfulField.lean`. Host oracle:
+`Test/Codegen/EffectfulFieldContract.lean` and
+`git:c407ab7:Effect4Test/Counterexamples/Target/EffectfulField.lean`. Host oracle:
 `harness/schema-effectful-field/check.sh`.
 
 This packet lowers the already-owned `EffectfulFieldSpec` stored in one
@@ -143,6 +143,9 @@ diagnostics. Trivial record projections remain leaf receipts.
 Narrow red commands:
 
 ```text
-lake env lean -DmaxErrors=10000 Effect4Test/Target/TypeScript/EffectfulFieldContract.lean
-lake env lean -DmaxErrors=10000 Effect4Test/Counterexamples/Target/EffectfulField.lean
+lake env lean -DmaxErrors=10000 Test/Codegen/EffectfulFieldContract.lean
 ```
+
+The second original battery is archived at
+`git:c407ab7:Effect4Test/Counterexamples/Target/EffectfulField.lean`; its
+command belongs to that historical checkout.

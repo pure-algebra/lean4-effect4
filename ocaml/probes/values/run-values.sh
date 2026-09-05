@@ -10,14 +10,11 @@
 # Build products go to a scratch directory, never into the repository.
 set -eu
 
-OCAMLC=${OCAMLC:-/Users/pooks/.opam/default/bin/ocamlc}
-OCAMLOPT=${OCAMLOPT:-/Users/pooks/.opam/default/bin/ocamlopt}
-OCAMLRUN=${OCAMLRUN:-/Users/pooks/.opam/default/bin/ocamlrun}
-JSOO=${JSOO:-/Users/pooks/Dev/effect4_of_ocaml/_build/toolchains/ocaml5-jsoo-5.7.1/_build/default/vendor/js_of_ocaml-compiler.5.7.1/compiler/bin-js_of_ocaml/js_of_ocaml.exe}
-NODE=${NODE:-node}
+. "$(dirname "$0")/../../tools/lib/toolchain.sh"
+effect4_toolchain || exit 1
 
 HERE=$(cd "$(dirname "$0")" && pwd)
-BUILD=${BUILD:-/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/d87ba830-2e63-4750-815f-2679b36f870a/scratchpad/o3/build}
+BUILD=${BUILD:-${TMPDIR:-/tmp}/effect4-build}
 OUT="$HERE/out"
 
 mkdir -p "$BUILD" "$OUT"

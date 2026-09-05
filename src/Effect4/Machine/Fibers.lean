@@ -20,11 +20,11 @@ entrants instead of deleting them (M8), and M9 (the old alphabet's missing suspe
 is moot since the projections were retired.
 
 One source of truth. A `RunFiber` holds the frame machine's five fields
-(`Effect4/Runtime/Runtime.lean`, reused unchanged), the parking state, the exit, the
+(`src/Effect4/Machine/Frames.lean`, reused unchanged), the parking state, the exit, the
 supervision fields, and the per-fiber dispatcher. The scheduler and supervision calculi this
 machine replaced were retired on 2026-09-04
 (`docs/research/2026-09-04-retire-old-machines.md`); only their vocabulary
-(`Effect4/Concurrency/Supervision.lean`) remains.
+(`src/Effect4/Machine/Supervision.lean`) remains.
 
 Every arm names the rc.112 line it transcribes (`vendor/effect-4.0.0-rc.112/src/`,
 `internal/effect.ts` unless another file is named). Where rc.112 leaves a choice to the
@@ -1367,7 +1367,7 @@ def promiseOutcome (exit : Exit β ε δ ι α) : Except (Squashed ε δ) β :=
 
 end Machine
 
-/-! ## Separation gates (`docs/FRAMES-DAG.md` separation 4): names stay data. -/
+/-! ## Separation gates (`docs/research/FRAMES-DAG.md` separation 4): names stay data. -/
 
 example {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
     [DecidableEq ν] [DecidableEq σ] [DecidableEq β] [DecidableEq ε] [DecidableEq δ]

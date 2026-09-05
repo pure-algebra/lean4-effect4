@@ -956,7 +956,7 @@ let dispatch (s : session) (request : E4d_json.t) : session * (string * E4d_json
               ("journal", Int journal_bound);
               ("maxOpenStreams", Int max_open_streams);
               ("maxStreamItems", Int max_stream_items) ] );
-        ("shape", Str "Effect4/Target/TypeScript/ScriptFlow.lean:39 OpSpec") ]
+        ("shape", Str "git:c407ab7:Effect4/Target/TypeScript/ScriptFlow.lean:39 OpSpec") ]
   | "streams" ->
     keep
       [ ("streams", List (List.map (fun (_, st) -> E4d_stream.json_of_head st) s.streams));

@@ -1,5 +1,5 @@
 /-
-Contract packet: `test/contracts/schema-annotations.contract.md`
+Contract packet: `Test/contracts/schema-annotations.contract.md`
 
 Breaker-owned red battery for `DATA-PG-OPTIC`. The builder must make this file
 green without editing it.

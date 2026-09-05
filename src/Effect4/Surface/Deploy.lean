@@ -1,6 +1,7 @@
+import Effect4.Data.Ascii
 import Effect4.Codegen.Spell
-import Effect4.Schema.Accepts
-import Effect4.Data.JsonNumber
+import Effect4.Arch.Accepts
+import Effect4.Arch.JsonNumber
 
 /-!
 # Surface.Deploy: hosts, bindings and deployments
@@ -8,24 +9,24 @@ import Effect4.Data.JsonNumber
 Implements `docs/research/2026-09-04-surface-library-plan.md` §4.6, with the
 reference application's deployment of §13.3 as the fixture. The wrangler
 configuration and the Pages worker entry that project this carrier live in
-`Effect4/Surface/Deploy/Emit.lean`.
+`src/Effect4/Codegen/Worker.lean`.
 
 A **deployment** is the late binding the operator asked for: one API lowers to
 more than one host, and a deployment is the row that says which host, with
 which bindings, serving which apis, providing which services. Nothing here
-imports `Effect4/Surface/Api.lean`: a `Mount` names an api by its id and a path
+imports `src/Effect4/Surface/Api.lean`: a `Mount` names an api by its id and a path
 template by its text, and the join to the real endpoint table is done by
 `Deployment.satisfies`, which takes the table as an argument. That is what
 keeps this module buildable beside the api module rather than behind it, and it
 is the same shape §14.2 gives every cross-carrier fact.
 
-Each carrier follows `Effect4/Arch/Views.lean` and `Effect4/Surface/Entity.lean`:
+Each carrier follows `src/Effect4/Arch/Views.lean` and `src/Effect4/Surface/Entity.lean`:
 a first-order structure, a `json` projection, a `Document` view whose
 `Arch.accepts` receipt is a `#guard` on the fixture, and a well-formedness
 built from §14.2's named clauses so that `check` answers the *first* refusal
 and `wellFormed_iff` proves `WellFormed` equal to the conjunction of the
 clauses. The hand `Canonical` instance is gone with the CAS trait: the class
-now carries three laws over the value tree (`Effect4/Store/Canonical.lean`) and
+now carries three laws over the value tree (`src/Effect4/Store/Canonical.lean`) and
 is derived, and nothing read this one.
 
 | | |
@@ -36,12 +37,12 @@ is derived, and nothing read this one.
 | Structure | a host-indexed record whose bindings are a finite named alphabet; `satisfies` is a relation between that alphabet and a requirement table, not a field |
 | Payoff | the requirement-to-binding join is decidable before anything is emitted, and the four hosts' entry rules (`main`, `pages_build_output_dir`) stop being prose in a README |
 | Anti-vacuity | the `docs` fixture of §13.3: `decide` receipts for `WellFormed` and `Satisfies`, an `Arch.accepts` receipt for the view, and one refusing `#guard` per clause |
-| Generation | `Effect4/Surface/Deploy/Emit.lean`: `wranglerJson` (rule `surface.deploy.wrangler`), `workerModule` (rule `surface.deploy.worker`) |
+| Generation | `src/Effect4/Codegen/Worker.lean`: `wranglerJson` (rule `surface.deploy.wrangler`), `workerModule` (rule `surface.deploy.worker`) |
 
 ## The three byte checks, and exactly what they check
 
-`Effect4/Surface/Spell.lean`'s `identifier` decides a generated binding name
-over `name.toUTF8.data.toList`, because `ByteArray.toList` does not reduce in
+`src/Effect4/Codegen/Spell.lean`'s `identifier` decides a generated binding name
+over `(Data.Ascii.bytesOf name)`, because `ByteArray.toList` does not reduce in
 the kernel on this toolchain. The three checks here take the same route for the
 same reason, and each is a *different* alphabet, so none of them is `identifier`
 under another name:
@@ -72,8 +73,8 @@ is `providerUnknown docs Db DBB` rather than a runtime `undefined`.
 ## What is deliberately not here
 
 * **A path type.** `Mount.at_` and `Deployment.routes` are strings.
-  `Effect4/Surface/Api.lean` (wave 2a) owns `Path` and its parser, and this
-  module is written beside it, not behind it. `Effect4/Surface/Site.lean` owns
+  `src/Effect4/Surface/Api.lean` (wave 2a) owns `Path` and its parser, and this
+  module is written beside it, not behind it. `src/Effect4/Surface/Site.lean` owns
   the byte-level template check the two must agree on; that agreement is an
   owed row, not a theorem.
 * **Secrets in the configuration.** `Binding.secret` is a binding the code may
@@ -88,7 +89,7 @@ is `providerUnknown docs Db DBB` rather than a runtime `undefined`.
   `analytics_engine_datasets`, `browser`, `cloudchamber`, `containers.app`,
   `define`, `dispatch_namespaces`, `hyperdrive`, `images`,
   `mtls_certificates`, `pipelines`, `send_email`, `unsafe`, `vectorize` and
-  `workflows` are outside the modelled fragment; `Effect4/Ingest/Wrangler.lean`
+  `workflows` are outside the modelled fragment; `src/Effect4/Ingest/Wrangler.lean`
   refuses each of them by name rather than dropping it.
 
 ## Named environments, and the one rule that is not "override"
@@ -124,8 +125,8 @@ The schema gives `observability.head_sampling_rate` (`:1232-1235`) and its
 `logs` twin (`:1242-1245`) as a bare JSON `number`, and `limits.cpu_ms`
 (`UserLimits`, `:3263-3275`), the queue consumer's five counters (`:1857-1895`)
 and nothing else in this fragment as numbers too. `Json.number` carries a
-`Float64`, which is a raw binary64 datum (`Effect4/Data/Json.lean:136-148`) with
-no arithmetic and no `ofNat`; `Effect4/Data/JsonNumber.lean:38-46` gives
+`Float64`, which is a raw binary64 datum (`src/Effect4/Data/Json.lean:136-148`) with
+no arithmetic and no `ofNat`; `src/Effect4/Arch/JsonNumber.lean:38-46` gives
 `binary64OfNat`, exact below 2^53, and nothing for a fraction.
 
 So the **rate is carried as a per-mille `Nat`** and `binary64OfPerMille` builds
@@ -133,7 +134,7 @@ the binary64 of `n/1000` directly out of bits: the shift that puts `n * 2^k /
 1000` in `[2^52, 2^53)`, a round-half-up on the remainder, and the biased
 exponent `1075 - k`. It reaches no `Float` primitive, and `perMilleOfBits`
 inverts it by the same arithmetic. The quotient, stated once and repeated in
-`Effect4/Ingest/Wrangler.lean`'s header:
+`src/Effect4/Ingest/Wrangler.lean`'s header:
 
 * a rate the *emitter* wrote round-trips exactly, because `perMilleOfBits
   (binary64OfPerMille n) = n` on `0..1000` (the `#guard`s below sample it);
@@ -165,7 +166,7 @@ open Effect4.Arch (accepts)
 
 /-! ## Annotation bags for carriers that are not representations
 
-`Effect4/Surface/Annotate.lean` writes the semantic layer onto a
+`src/Effect4/Surface/Annotate.lean` writes the semantic layer onto a
 `Representation`'s root bag. A `Deployment` is not a representation, so it
 carries an `Annotations` of its own and reads it through the same keys. These
 two helpers are the only spellings of a bag in this area, so §15.3's rule (the
@@ -196,11 +197,11 @@ def workerNameByte (byte : UInt8) : Bool :=
 
 /-- Cloudflare's worker name, `^[a-z0-9-]{1,63}$`, decided over UTF-8 bytes. -/
 def workerName (name : String) : Bool :=
-  let bytes := name.toUTF8.data.toList
+  let bytes := (Data.Ascii.bytesOf name)
   !bytes.isEmpty && bytes.length ≤ 63 && bytes.all workerNameByte
 
 /-- An ASCII word start byte: `A-Z`, `a-z`, `_`. Shared with
-`Effect4/Surface/Site.lean`, whose path parameters have the same shape. -/
+`src/Effect4/Surface/Site.lean`, whose path parameters have the same shape. -/
 def asciiWordStart (byte : UInt8) : Bool :=
   (65 ≤ byte && byte ≤ 90) || (97 ≤ byte && byte ≤ 122) || byte == 95
 
@@ -210,7 +211,7 @@ def asciiWordContinue (byte : UInt8) : Bool :=
 
 /-- `^[A-Za-z_][A-Za-z0-9_]*$`, decided over UTF-8 bytes. -/
 def asciiWord (name : String) : Bool :=
-  match name.toUTF8.data.toList with
+  match (Data.Ascii.bytesOf name) with
   | [] => false
   | first :: rest => asciiWordStart first && rest.all asciiWordContinue
 
@@ -231,7 +232,7 @@ month in 01..12 and a day in 01..31.
 The calendar is not checked; see this module's header for the exact list.
 -/
 def compatibilityDateLegal (date : String) : Bool :=
-  match date.toUTF8.data.toList with
+  match (Data.Ascii.bytesOf date) with
   | [year0, year1, year2, year3, dash0, month0, month1, dash1, day0, day1] =>
     digitByte year0 && digitByte year1 && digitByte year2 && digitByte year3 &&
       dash0 == 45 && digitByte month0 && digitByte month1 && dash1 == 45 &&
@@ -408,9 +409,11 @@ def annotations : Binding → Annotations
   | .service _ _ annotations => annotations
   | .durableObject _ _ annotations => annotations
 
+instance : Annotated Binding := ⟨Binding.annotations⟩
+
 /-- The binding's description, read off its bag through the §15.1 key. -/
-def descriptionOf (binding : Binding) : Option String :=
-  descriptionIn binding.annotations
+abbrev descriptionOf (binding : Binding) : Option String :=
+  Effect4.Surface.descriptionOf binding
 
 /-- The binding as a JSON value: the view's payload. -/
 def json (binding : Binding) : Json :=
@@ -430,7 +433,7 @@ end Binding
 `Json.number` carries a raw binary64 datum and the estate has no `Float`; these
 five declarations are the whole of what this area needs from a JSON number, and
 they are built out of `Nat` shifts and divisions so that they reach no `Float`
-primitive, exactly as `Effect4/Data/JsonNumber.lean:27-46` does for a
+primitive, exactly as `src/Effect4/Arch/JsonNumber.lean:27-46` does for a
 natural. The module header states the quotient each one carries.
 -/
 
@@ -501,7 +504,7 @@ The natural a binary64 holds exactly, or `none`.
 `zero` is `0`; a normal datum is a natural exactly when its significand's low
 `1075 - exponent` bits are clear. Anything fractional, negative, at or above
 `2^53`, subnormal or non-finite is refused rather than truncated, which is the
-half of `Effect4/Data/JsonNumber.lean:38`'s `binary64OfNat` this area needs
+half of `src/Effect4/Arch/JsonNumber.lean:38`'s `binary64OfNat` this area needs
 back.
 -/
 def natOfBits (bits : UInt64) : Option Nat :=
@@ -517,7 +520,7 @@ def natOfBits (bits : UInt64) : Option Nat :=
     let mantissa := significandBit + significand
     if mantissa % (1 <<< shift) == 0 then some (mantissa >>> shift) else none
 
-/-- A JSON number holding a natural, at `Effect4/Data/JsonNumber.lean:46`'s
+/-- A JSON number holding a natural, at `src/Effect4/Arch/JsonNumber.lean:46`'s
 spelling. -/
 def natJson (n : Nat) : Json := Effect4.Arch.Json.ofNat n
 
@@ -563,7 +566,7 @@ and `Deployment.bindingNames` does not see them.
 
 `queue` is the schema's one `required` key (`:1897-1899`). Every counter is a
 `number` in the schema and a `Nat` here; a fractional or negative one is refused
-by `Effect4/Ingest/Wrangler.lean` rather than truncated.
+by `src/Effect4/Ingest/Wrangler.lean` rather than truncated.
 -/
 structure QueueConsumer where
   /-- `queue` (`:1880-1883`): the queue this consumer consumes from. -/
@@ -627,7 +630,7 @@ down.
 `bindings` holds the whole of the non-inherited binding tables at once
 (`kv_namespaces`, `d1_databases`, `r2_buckets`, `queues.producers`, `vars`,
 `services`, `durable_objects`), because the top level does too; `some []` and
-`none` therefore write the same configuration, and `Effect4/Ingest/Wrangler.lean`
+`none` therefore write the same configuration, and `src/Effect4/Ingest/Wrangler.lean`
 names that in its quotient.
 -/
 structure EnvironmentOverride where
@@ -679,7 +682,7 @@ def cronFieldsOf : List UInt8 → Bool → Nat → Nat
 /-- Exactly five whitespace-separated fields; see the section header for what
 this deliberately does not check. -/
 def cronLegal (expr : String) : Bool :=
-  cronFieldsOf expr.toUTF8.data.toList false 0 == 5
+  cronFieldsOf (Data.Ascii.bytesOf expr) false 0 == 5
 
 /-! ## Mounts -/
 
@@ -763,6 +766,8 @@ structure Deployment where
   annotations : Annotations := none
 deriving DecidableEq
 
+instance : Annotated (Deployment) := ⟨fun value => value.annotations⟩
+
 namespace Deployment
 
 /-! ### The clauses -/
@@ -771,10 +776,12 @@ namespace Deployment
 def nameLegal (dep : Deployment) : Bool := workerName dep.name
 
 /-- Clause (§15.2): the root bag carries an `identifier`. -/
-def identified (dep : Deployment) : Bool := (identifierIn dep.annotations).isSome
+abbrev identified (dep : Deployment) : Bool :=
+  Effect4.Surface.identified dep
 
 /-- Clause (§15.2): the root bag carries a `description`. -/
-def described (dep : Deployment) : Bool := (descriptionIn dep.annotations).isSome
+abbrev described (dep : Deployment) : Bool :=
+  Effect4.Surface.described dep
 
 /-- Every binding's name, in declaration order. -/
 def bindingNames (dep : Deployment) : List String := dep.bindings.map Binding.name
@@ -814,10 +821,10 @@ def firstUnknownProvider (dep : Deployment) : Option (String × String) :=
 /-! ### The five clauses the added keys bring
 
 Four of the five refuse by `wranglerMalformed <path>`, naming the schema path
-rather than the offending value: `Effect4/Surface/Refusal.lean`'s alphabet has no
+rather than the offending value: `src/Effect4/Surface/Refusal.lean`'s alphabet has no
 constructor for these clauses, and an offending `Nat` would need `Nat.repr`
 inside a value a `#guard` evaluates, which
-`Effect4/Ingest/Wrangler.lean`'s header rules out. A constructor per clause is an
+`src/Effect4/Ingest/Wrangler.lean`'s header rules out. A constructor per clause is an
 owed row on `Refusal`, not a defect of the clause.
 
 Three of the five are **this model's**, not the schema's, and say so.
@@ -1192,7 +1199,7 @@ def provideRep : Representation :=
 
 /-- The deployment view, for registration at `["surface", "deploy"]`.
 
-`Effect4/Surface/Views.lean` is wave 1a's and this wave does not edit it; the
+`src/Effect4/Evidence/SurfaceViews.lean` is wave 1a's and this wave does not edit it; the
 registration of this document is an owed row. -/
 def deployDoc : Document :=
   { representation :=
@@ -1441,7 +1448,7 @@ module header's table, one row at a time.
 -/
 
 /-- The fixture's `prod` environment. -/
-def docsProdOverride : EnvironmentOverride :=
+private def docsProdOverride : EnvironmentOverride :=
   { bindings :=
       some [ .d1 "DB" "docs-prod" "1b2c3d4e-5f60-4718-8293-a4b5c6d7e8f9" none
            , .var "SITE_URL" "https://docs.example.com" none ]

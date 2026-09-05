@@ -3,20 +3,20 @@
 Status: breaker packet, red, 2026-09-04 (wave 1b of
 `docs/research/2026-09-04-surface-library-plan.md` §4.1-§4.2)
 
-Implementation (owed): `Effect4/Surface/Entity.lean`
+Implementation (owed): `src/Effect4/Surface/Entity.lean`
 
-Battery: `Effect4Test/Surface/EntityContract.lean`
+Battery: `Test/Surface/EntityContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-009` through `E4-SURFACE-CE-015`,
 `E4-SURFACE-CE-062`, `E4-SURFACE-CE-063`
 
-Shared: `test/contracts/surface-facts.contract.md` owns the `Refusal`
+Shared: `Test/contracts/surface-facts.contract.md` owns the `Refusal`
 alphabet; this contract owns the entity and domain clause names and their
 order.
 
-Witnesses: `Effect4Test/Counterexamples/Surface/Entity.lean`
+Witnesses: `Test/Counterexamples/Surface/Entity.lean`
 
-Fixtures: `Effect4Test/Surface/Fixtures.lean` (the `shop` domain: `User` keyed
+Fixtures: `Test/Surface/Fixtures.lean` (the `shop` domain: `User` keyed
 by `id`, `Address`, `NotFound`)
 
 ## Purpose
@@ -127,7 +127,7 @@ def spell (refs : List Effect4.ReferenceEntry) :
 entity classification of §4.1 and the emitter classification of §5 `Stance` in
 one namespace; the two are different alphabets and both are public, so this
 packet freezes `EntityStance` here and reserves `Stance` for
-`Effect4/Surface/Emit.lean`. See finding 1 of the wave-1b report.
+`src/Effect4/Codegen/Emit.lean`. See finding 1 of the wave-1b report.
 
 ## Observations
 
@@ -168,7 +168,7 @@ packet freezes `EntityStance` here and reserves `Stance` for
 - The annotation keys are the exact rc.112 bag key strings `"identifier"`,
   `"title"`, `"description"`, `"documentation"`, `"examples"`, `"default"`,
   `"deprecated"` (`Schema.ts:17105` and the surrounding annotation record).
-  Wave 1a publishes them as `AnnotationKey`s in `Effect4/Surface/Annotate.lean`;
+  Wave 1a publishes them as `AnnotationKey`s in `src/Effect4/Surface/Annotate.lean`;
   the fixtures of this packet write the raw `AnnotationEntry` list so the
   battery does not depend on that module's spelling.
 - `spell` returns `none`, never a partial or `Decl.raw` spelling, for a
@@ -187,7 +187,7 @@ positive and negative guards, the two theorems, axiom report).
 
 `spell` is a second rendering of a carrier that already has a canonical
 rendering (`Target.TypeScript.Schema.module?`, the persisted-document
-spelling). Per `Effect4/AGENTS.md` a second representation requires an
+spelling). Per `AGENTS.md` a second representation requires an
 explicit relation. That relation is **not** a Lean theorem in this packet: it
 is the host receipt named in the plan §7,
 `toJson(toRepresentation(<spelled>.ast))` deep-equals the emitted document

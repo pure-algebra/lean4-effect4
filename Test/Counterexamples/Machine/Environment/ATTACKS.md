@@ -1,14 +1,14 @@
 # Environment slice attacks
 
-Packet: `test/contracts/environment-context-key.contract.md`
+Packet: `Test/contracts/environment-context-key.contract.md`
 
-Battery: `Effect4Test/Environment/ContextKeyContract.lean`
+Battery: `Test/Machine/Environment/ContextKeyContract.lean`
 
 These are durable semantic attacks on the environment slice. They are retained
 after the implementation turns the breaker battery green.
 
 Rows `E4-ENV-CE-001` through `E4-ENV-CE-006` belong to node `L0`
-(`Effect4/Context/Key.lean`, fence `F-KEY`) in `docs/ENVIRONMENT-DAG.md`. Later
+(`src/Effect4/Machine/Key.lean`, fence `F-KEY`) in `docs/research/ENVIRONMENT-DAG.md`. Later
 nodes take later IDs; none of these six is discharged by a later node without
 being restated here.
 
@@ -22,7 +22,7 @@ It is superficially the stronger design: `get : Environment → Key α → Optio
 is well typed by construction. It fails for four reasons that are not about
 taste.
 
-- A key is canonical content. `docs/ENVIRONMENT-DAG.md` makes a requirement a
+- A key is canonical content. `docs/research/ENVIRONMENT-DAG.md` makes a requirement a
   row over keys, and a Lean `Type` inside canonical content is what `AGENTS.md`,
   "Representation rules", forbids.
 - `PORT-MANIFEST.md`, "Canonical row extraction", freezes canonical row order as
@@ -82,7 +82,7 @@ The compile-negative on `ServiceUniverse.code` records the absent inverse.
 
 ## Order-free key — `E4-ENV-CE-004`
 
-The attacked statement is the edge description in `docs/ENVIRONMENT-DAG.md`
+The attacked statement is the edge description in `docs/research/ENVIRONMENT-DAG.md`
 itself: that the `Context/Key → Context/Requirement` edge carries "key identity
 and `DecidableEq`".
 

@@ -578,7 +578,7 @@ to `Code.lean` (report §9), so the driver above now runs the one machine on bot
 The numbers in the report, reproduced by
 
 ```
-$ lake env lean src/OCaml5/ir/Fuzz.lean
+$ lake env lean src/OCaml5/Ir/Fuzz.lean
 ```
 
 for the pinned sweeps below, and by `#eval sweep n d fs ft` for the large ones (about ten

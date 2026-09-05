@@ -5,8 +5,8 @@ import Effect4.Machine.Stores
 # Syntax.Native — the native row alphabet over the stores (lane A3, first cut)
 
 Plan: `docs/research/2026-09-04-eff-compile.md` §1-§2. The native route performs the
-standard library's store operations (`Effect4/StdLib/Links.lean`: `Ref.*`, `Deferred.*`,
-`Scope.make`) against the reference machine's stores (`Effect4/Deep/Stores.lean`). This
+standard library's store operations (`src/Effect4/StdLib/Links.lean`: `Ref.*`, `Deferred.*`,
+`Scope.make`) against the reference machine's stores (`src/Effect4/Machine/Stores.lean`). This
 module owns:
 
 * `NativeOp`, the positions of that table, each with its `Row` (spelling, shape, kind, the
@@ -29,7 +29,7 @@ open Effect4 Effect4.Machine
 /-! ## Values -/
 
 /-- A tuple of values, spelled with the reified-exit list cells: a `List Val` field would make
-`Val` a nested inductive (`Effect4/Deep/Stores.lean`, state note §3.5), and `exitNil`/`exitCons`
+`Val` a nested inductive (`src/Effect4/Machine/Stores.lean`, state note §3.5), and `exitNil`/`exitCons`
 are the list cells the alphabet already has. -/
 def Val.tuple : List Val → Val
   | [] => Val.exitNil

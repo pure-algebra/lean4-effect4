@@ -1,11 +1,11 @@
 # Schema annotation data-plane and optic contract
 
 Status: **Pass-B FROZEN; implementation REQUIRED-BLOCKED**. The production
-fences are `Effect4/Data/Optic.lean`, `Effect4/Schema/Annotations.lean`, and an
-additive document-traversal section in `Effect4/Schema/Document.lean`.
-The breaker-owned batteries are `Effect4Test/Data/OpticContract.lean` and
-`Effect4Test/Schema/AnnotationDataPlaneContract.lean`; the retained attacks
-are in `Effect4Test/Counterexamples/Schema/AnnotationDataPlane.lean`.
+fences are `src/Effect4/Data/Optic.lean`, `src/Effect4/Schema/Annotations.lean`, and an
+additive document-traversal section in `src/Effect4/Schema/Document.lean`.
+The breaker-owned batteries are `Test/Data/OpticContract.lean` and
+`Test/Schema/AnnotationDataPlaneContract.lean`; the retained attacks
+are in `Test/Counterexamples/Schema/AnnotationDataPlane.lean`.
 
 This packet exposes the existing annotation data as composable views. It does
 not add a second Schema carrier, resolve document references, assign
@@ -269,9 +269,9 @@ document-wide traversal obligations.
 The breaker ran, from the project root:
 
 ```text
-lake env lean -DmaxErrors=10000 --json Effect4Test/Data/OpticContract.lean
-lake env lean -DmaxErrors=10000 --json Effect4Test/Schema/AnnotationDataPlaneContract.lean
-lake env lean -DmaxErrors=10000 --json Effect4Test/Counterexamples/Schema/AnnotationDataPlane.lean
+lake env lean -DmaxErrors=10000 --json Test/Data/OpticContract.lean
+lake env lean -DmaxErrors=10000 --json Test/Schema/AnnotationDataPlaneContract.lean
+lake env lean -DmaxErrors=10000 --json Test/Counterexamples/Schema/AnnotationDataPlane.lean
 ```
 
 All three exited 1 against the production state at freeze time. The first optic battery emitted 69
@@ -295,7 +295,7 @@ The revised optic battery is red with exactly two errors, both the missing
 Frozen battery hashes:
 
 ```text
-b65b86534af75ec8067bda3cb3a96bd58bf8dc541a3b28dd55ddd6b7608a8bc5  Effect4Test/Data/OpticContract.lean
-1b2aa06d0940a6e48d2c4cdbacc6a9cb67745113d78ce07ee03bcae0090fcb67  Effect4Test/Schema/AnnotationDataPlaneContract.lean
-969e2e613043a6990d47e2530bd36d5165a95eb987effaca4be748d60dad6058  Effect4Test/Counterexamples/Schema/AnnotationDataPlane.lean
+b65b86534af75ec8067bda3cb3a96bd58bf8dc541a3b28dd55ddd6b7608a8bc5  Test/Data/OpticContract.lean
+1b2aa06d0940a6e48d2c4cdbacc6a9cb67745113d78ce07ee03bcae0090fcb67  Test/Schema/AnnotationDataPlaneContract.lean
+969e2e613043a6990d47e2530bd36d5165a95eb987effaca4be748d60dad6058  Test/Counterexamples/Schema/AnnotationDataPlane.lean
 ```

@@ -1,5 +1,5 @@
 /-
-Contract packet: `test/contracts/schema-subalphabets.contract.md`
+Contract packet: `Test/contracts/schema-subalphabets.contract.md`
 
 Breaker-owned battery for the five closed sub-alphabets of the persisted
 representation. The implementation phase must not edit this file.

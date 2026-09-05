@@ -6,7 +6,7 @@ import Effect4.Schema.Annotations
 Owner: Named declarations, references, and guarded documents.
 
 This module now declares the two document **containers** of
-`test/contracts/schema-payload.contract.md` D6 and nothing else. Every
+`Test/contracts/schema-payload.contract.md` D6 and nothing else. Every
 semantic object it is assigned below — the reference graph, guardedness,
 productivity, the memoized checker — is still unopened, and its public surface
 is frozen only after the owning contract and counterexample packet.
@@ -16,8 +16,8 @@ string, `$ref` is not resolved against it, and no theorem below is worded as a
 termination, reachability, or dead-entry result.
 
 The annotations below are navigation and scope, not declarations. Obligation
-names are those of the graph in `docs/SCHEMA-CUTOVER.md`; counterexample rows
-are those of `test/counterexamples/REGISTER.md`.
+names are those of the graph in `docs/research/SCHEMA-CUTOVER.md`; counterexample rows
+are those of `Test/Counterexamples/REGISTER.md`.
 
 ## Ownership
 
@@ -60,7 +60,7 @@ still have no value, because `Suspend` is a delay and not a constructor: a
 recursive occurrence under one is deferred, not broken. Vendored commentary
 records three documents said to pass guardedness while Effect's validator
 diverges or overflows
-(`vendor/foldlab/pinned/tree/library/cas/Cas/Schema/Guarded.lean:29-50`), but
+(`git:c407ab7:vendor/foldlab/pinned/tree/library/cas/Cas/Schema/Guarded.lean:29-50`), but
 this checkout does not yet contain their executable witness. Treat the claim
 as a counterexample obligation, not established evidence. Neither this module
 nor `Schema/Value.lean` may word `SC-DEN-07` or `SC-DEN-08` as a termination
@@ -179,7 +179,7 @@ The single-root embedding does not reach every multi-root document.
 
 The witness carries **two** roots rather than none. An empty-root witness would
 conflate this nominal one-root/many-root distinction with the separate
-non-empty-root admission clause of `Effect4/Schema/Check.lean`, and
+non-empty-root admission clause of `src/Effect4/Schema/Check.lean`, and
 `MultiDocument.fieldAdmissible_two_roots` records that this witness is itself
 field-admissible.
 -/

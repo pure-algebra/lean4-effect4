@@ -1,7 +1,7 @@
 import Effect4.Codegen.Layer
 
 /-!
-Fresh kernel dependency report for the layer printer (`Effect4/Codegen/Layer.lean`; plan
+Fresh kernel dependency report for the layer printer (`src/Effect4/Codegen/Layer.lean`; plan
 `docs/research/2026-09-04-provision-algebra.md` §9, R9). The printer's receipts are the
 `#guard`s in the module itself, on `TypeScript.Expr`/`ConstDecl` syntax; this file is the
 axiom receipt. The three `String`-building definitions (`unionType`, `rowType`, `layerType`)

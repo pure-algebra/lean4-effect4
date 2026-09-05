@@ -17,7 +17,7 @@ receipt lands and `Rule.receipt` names it.
 
 | | |
 | --- | --- |
-| Carrier | none of its own: `Deployment` is `Effect4/Surface/Deploy.lean`'s and `Module` is the target package's |
+| Carrier | none of its own: `Deployment` is `src/Effect4/Surface/Deploy.lean`'s and `Module` is the target package's |
 | Operations | `wranglerJson`, `workerModule`, `Deployment.workerModule`; the two `Emit` instances |
 | Laws | none claimed. `emit x = .ok _ → Deployment.check x = .ok ()` holds by construction: both emitters open with the check |
 | Structure | a partial function `Deployment ⇀ Json` whose every refusal is a constructor, and a total function `Deployment → Module` |
@@ -25,7 +25,7 @@ receipt lands and `Rule.receipt` names it.
 | Anti-vacuity | the `docs` fixture: the whole emitted configuration pinned as one `#guard`, one refusal per emitter clause, the worker's rendered lines pinned whole |
 | Generation | this module *is* generation |
 
-**The reader half is `Effect4/Ingest/Wrangler.lean`.** `ofWrangler`, the parsers it is built
+**The reader half is `src/Effect4/Ingest/Wrangler.lean`.** `ofWrangler`, the parsers it is built
 from, `Binding.isSecret`, `Binding.withoutAnnotations`, the named quotient
 `Deployment.wranglerCarried`, the `Ingest .deployWrangler` instance and the round-trip
 guards all live there; nothing in this module reads back what it writes.
@@ -70,7 +70,7 @@ therefore emits **exactly** the bytes it emitted before they existed, and the
 version, key for key and value for value.
 
 **The numbers.** `head_sampling_rate` is carried per mille and written as the
-fraction (`50 ↦ 0.05`) by `Effect4/Surface/Deploy.lean`'s `perMilleJson`; every
+fraction (`50 ↦ 0.05`) by `src/Effect4/Surface/Deploy.lean`'s `perMilleJson`; every
 other number is a `Nat` written by `natJson`. Neither reaches a `Float`
 primitive; the quotient each carries is that module's header.
 
@@ -86,7 +86,7 @@ says a description is read from it; the wrangler configuration is JSON, JSON has
 comments, and the `.jsonc` spelling wrangler also accepts is a second serialization this
 module does not emit. So `wranglerJson` drops every description, and the reader cannot
 recover one. That is the first component of the quotient
-`Effect4/Ingest/Wrangler.lean` names, and it is a fact about JSON, not an omission to be
+`src/Effect4/Ingest/Wrangler.lean` names, and it is a fact about JSON, not an omission to be
 fixed by inventing a `description` key wrangler would reject
 (`RawConfig.additionalProperties = false`, line 1256).
 
@@ -118,7 +118,7 @@ Four spellings the `TypeScript` package's fragment does not have, all visible in
 rendered output and all recorded as owed rows on that package rather than smoothed over:
 
 * **`new`.** `new URL(request.url)` is spelled by putting `new URL` in an `Expr.ident` and
-  calling it. `Effect4/Codegen/Spell.lean` refuses that move inside *its* fragment, and
+  calling it. `src/Effect4/Codegen/Spell.lean` refuses that move inside *its* fragment, and
   this module is not that fragment; the honest reading is that `TypeScript.Expr` owes a
   `new` former, and until it has one this line is the one place `new` is smuggled through
   an identifier.
@@ -220,7 +220,7 @@ private def optEntry (key : String) (value : Option Json) : List (String × Json
 private def boolEntry (key : String) (value : Option Bool) : List (String × Json) :=
   optEntry key (value.map Json.bool)
 
-/-- An optional integer key, at `Effect4/Store/JsonCanonical.lean:81`'s binary64. -/
+/-- An optional integer key, at `src/Effect4/Arch/JsonNumber.lean:81`'s binary64. -/
 private def natEntry (key : String) (value : Option Nat) : List (String × Json) :=
   optEntry key (value.map natJson)
 
@@ -317,7 +317,7 @@ The key order is the top level's, and every field is written exactly when the ov
 it. The binding tables come out of the override's one `bindings` list, grouped by kind the
 same way the top level groups them, so an override whose `bindings` is `some []` writes no
 group key at all — the one place the emitter cannot tell `some []` from `none`, named in
-`Effect4/Ingest/Wrangler.lean`'s quotient.
+`src/Effect4/Ingest/Wrangler.lean`'s quotient.
 -/
 private def overrideJson (over : EnvironmentOverride) : Json :=
   let bindings := over.bindings.getD []
@@ -505,7 +505,7 @@ instance : Emit .deployWorker :=
 /-! ## Anti-vacuity: the docs app of the plan's §13.3 -/
 
 /-- The emitted configuration of the fixture deployment, for the guards that read into it. -/
-def docsWranglerJson : Json := (wranglerJson docsDeployment).toOption.getD .null
+private def docsWranglerJson : Json := (wranglerJson docsDeployment).toOption.getD .null
 
 -- The whole emitted configuration, pinned. Key order, key spelling and value shape are all
 -- a function of the rows, so this one `#guard` is the rule's golden.
@@ -679,7 +679,7 @@ def docsEveryKey : Deployment :=
 /-! ### The worker entry -/
 
 /-- The worker entry of the fixture deployment. -/
-def docsWorkerModule : TypeScript.Module := Deployment.workerModule docsDeployment
+private def docsWorkerModule : TypeScript.Module := Deployment.workerModule docsDeployment
 
 /-!
 The receipt on the rendered entry is one equation, not a walk over split lines.
@@ -692,7 +692,7 @@ line no window named can no longer appear.
 
 /-- The worker entry the renderer must produce, one `String` per line: the header and the
 imports. -/
-def docsWorkerHeaderLines : List String :=
+private def docsWorkerHeaderLines : List String :=
   [ "/**"
   , " * Generated by Effect4 Surface: the Cloudflare Pages advanced-mode entry."
   , " *"
@@ -707,7 +707,7 @@ def docsWorkerHeaderLines : List String :=
   , "" ]
 
 /-- The worker entry's two constants, at the rc.112 spellings. -/
-def docsWorkerConstantLines : List String :=
+private def docsWorkerConstantLines : List String :=
   [ "/** The HTTP router layer of DocsApi. */"
   , "export const DocsApiLayer = HttpApiBuilder.layer(DocsApi)"
   , ""
@@ -717,7 +717,7 @@ def docsWorkerConstantLines : List String :=
   , "" ]
 
 /-- The entry itself: the mount test, and the assets fall-through. -/
-def docsWorkerEntryLines : List String :=
+private def docsWorkerEntryLines : List String :=
   [ "/** The Pages entry: the mounted apis, then the static assets. */"
   , "export const worker = {"
   , "  fetch: (request, env) => {"
@@ -733,7 +733,7 @@ def docsWorkerEntryLines : List String :=
   , "" ]
 
 /-- The whole worker entry, line by line. -/
-def docsWorkerLines : List String :=
+private def docsWorkerLines : List String :=
   docsWorkerHeaderLines ++ docsWorkerConstantLines ++ docsWorkerEntryLines
 
 -- the render, pinned whole: every line above, in order, joined by newlines

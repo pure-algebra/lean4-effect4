@@ -4,7 +4,7 @@
    same five programs over `effect@4.0.0-rc.112` and prints the same rows. Three programs are
    marked avatar-only in the report, and say why:
      `snapshotAwaitNewChildren` -- rc.112 fuses the two halves into `Effect.awaitAllChildren`
-       and exposes no unfused surface (the REFUSAL `harness/trace/fibers-tail.ts:33-35`
+       and exposes no unfused surface (the REFUSAL `git:c407ab7:harness/trace/fibers-tail.ts:33-35`
        already records), so only the outcome is comparable;
      `refusesUnimplementedArm` -- it is a refusal by construction;
      `awaitAllFailFast` -- rc.112 reaches the arm only inside `Effect.all`/`forEach` with

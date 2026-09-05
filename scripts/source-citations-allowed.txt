@@ -1,0 +1,2 @@
+# Exact planned module, tracked by the frozen red Handler batteries.
+src/Effect4/Surface/Handler.lean	Test/fixtures/trust-gate/known-red.txt

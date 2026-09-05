@@ -1,5 +1,5 @@
 /-
-Contract packet: `test/contracts/schema-effectful-field.contract.md`.
+Contract packet: `Test/contracts/schema-effectful-field.contract.md`.
 
 Breaker-owned red battery for `SCHEMA-PG-EFFECTFUL-FIELD`. The builder makes
 this file green without editing it.

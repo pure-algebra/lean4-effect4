@@ -3,17 +3,17 @@
 Status: FROZEN breaker packet, 2026-08-31; its pre-implementation revision is
 required to be RED, and fired findings are recorded below
 
-Ruling input: `docs/ENVIRONMENT-DAG.md`, node `L0` and its open question 1,
+Ruling input: `docs/research/ENVIRONMENT-DAG.md`, node `L0` and its open question 1,
 "Is a context key a first-order identity with `DecidableEq`, or does it carry a
 type index?"
 
-Implementation fence: `F-KEY` = `Effect4/Context/Key.lean`
+Implementation fence: `F-KEY` = `src/Effect4/Machine/Key.lean`
 
-Battery: `Effect4Test/Environment/ContextKeyContract.lean`
+Battery: `Test/Machine/Environment/ContextKeyContract.lean`
 
-Counterexamples: `test/counterexamples/REGISTER.md`, rows `E4-ENV-CE-001`
+Counterexamples: `Test/Counterexamples/REGISTER.md`, rows `E4-ENV-CE-001`
 through `E4-ENV-CE-006`, with attack shapes in
-`test/counterexamples/environment/ATTACKS.md`
+`git:c407ab7:test/counterexamples/environment/ATTACKS.md`
 
 ## The ruling
 
@@ -31,7 +31,7 @@ object, never canonical content.
 
 1. `AGENTS.md`, "Representation rules", requires that canonical program content
    be first-order data and that Lean functions not be stored program syntax. A
-   key is canonical content: `docs/ENVIRONMENT-DAG.md` makes a requirement a row
+   key is canonical content: `docs/research/ENVIRONMENT-DAG.md` makes a requirement a row
    over keys, and a requirement row is authored, compared, and — at P10 — lowered
    to a target. A `Key : Type u → Type` puts a Lean `Type` inside that content.
 2. The row lane needs more than `DecidableEq`. `PORT-MANIFEST.md`, "Canonical
@@ -97,7 +97,7 @@ It does **not** freeze, and makes no claim about:
   stated or proved here, and the choice is an ordering ruling rather than a
   derived result;
 - any persisted or wire spelling of a key. `ServiceName` is a `Nat`, and this
-  slice serializes nothing — `docs/ENVIRONMENT-DAG.md`, "Non-edges", records
+  slice serializes nothing — `docs/research/ENVIRONMENT-DAG.md`, "Non-edges", records
   that Schema does not gate it. A later wire profile owns tag strings, exactly
   as `E4-SCHEMA-CE-039` assigns persisted key spellings away from a carrier;
 - compatibility with Effect's `Context.Tag`, in either direction;
@@ -108,17 +108,17 @@ requirement.
 
 ## Upstream edge status
 
-`docs/ENVIRONMENT-DAG.md` draws one inbound edge, `Data/Row → Context/Key`, and
+`docs/research/ENVIRONMENT-DAG.md` draws one inbound edge, `Data/Row → Context/Key`, and
 describes `Data/Row.lean` as existing and closed with `DATA-ROW-01/02/03`
 already closed.
 
-That is not the state of the tree. `Effect4/Data/Row.lean` is an empty breadth
-stub with no declaration, `Effect4/Schema/Getter.lean` records `DATA-ROW-01/02/03`
+That is not the state of the tree. `src/Effect4/Data/Row.lean` is an empty breadth
+stub with no declaration, `docs/research/SCHEMA-CUTOVER.md` records `DATA-ROW-01/02/03`
 as open, and `PORT-MANIFEST.md`, "Canonical row extraction", says in its "Open"
 paragraph that no declaration may enter the row module before a breaker freezes
 the `DATA-ROW` contract.
 
-This packet is therefore built with **no inbound edge**: `Effect4/Context/Key.lean`
+This packet is therefore built with **no inbound edge**: `src/Effect4/Machine/Key.lean`
 imports nothing from `Effect4.Data.Row`, and the builder must not add such an
 import. Nothing at `L0` needs one: a key is an identity, and every obligation
 below is stated over key values alone. The row carrier is what
@@ -129,7 +129,7 @@ section records the observation rather than editing that document.
 
 ## Edge content this packet widens
 
-`docs/ENVIRONMENT-DAG.md` says the `Context/Key → Context/Service` edge carries
+`docs/research/ENVIRONMENT-DAG.md` says the `Context/Key → Context/Service` edge carries
 "key identity only". This packet puts `ServiceUniverse`, `ServiceKey.Carrier`,
 and `ServiceKey.transport` on that edge as well.
 
@@ -163,10 +163,10 @@ Packet-local obligation IDs, used by the ENSURES list below, are `ENV-KEY-01`
 through `ENV-KEY-04` mapping to declaration groups D1 through D4. They are
 packet-local on purpose: this slice has no cutover document of its own yet, and
 minting slice-wide IDs here would put a fact in this file that
-`docs/ENVIRONMENT-DAG.md` or a later environment cutover ruling should own.
+`docs/research/ENVIRONMENT-DAG.md` or a later environment cutover ruling should own.
 
-The axiom receipt for this node belongs in `Effect4Test/Environment/AxiomReport.lean`,
-which `docs/ENVIRONMENT-DAG.md` places outside every builder's fence. The
+The axiom receipt for this node belongs in `Test/Machine/Environment/AxiomReport.lean`,
+which `docs/research/ENVIRONMENT-DAG.md` places outside every builder's fence. The
 builder does not create or edit it; the coordinator appends the receipt when
 `L0` closes.
 
@@ -187,7 +187,7 @@ builder does not create or edit it; the coordinator appends the receipt when
    Mathlib, so no `Fintype` and no order typeclass hierarchy; the order laws are
    proved directly over `Nat`.
 2. No dependency on `Effect4.Data.Row`, `Effect4.Algebra`, `Effect4.Flow`, or
-   `Effect4.Schema`. `Effect4/Context/Key.lean` is free-standing; `import Std`
+   `Effect4.Schema`. `src/Effect4/Machine/Key.lean` is free-standing; `import Std`
    is permitted and nothing else.
 3. Every declaration is safe and total. The repository trust gate rejects
    `unsafe`, `partial`, and `sorry`.
@@ -303,7 +303,7 @@ theorem ServiceUniverse.exists_carrier_collision :
 
 `ServiceUniverse` is the trusted supplied reading of codes. It is a boundary
 object of exactly the kind `Effect4.FlowAlphabet` already is in
-`Effect4/Flow/Block.lean`, whose docstring calls it a "trusted semantic
+`git:cd750aca903f8ca5417bc7a29253035dec743594:Effect4/Flow/Block.lean`, whose docstring calls it a "trusted semantic
 environment" so that "no host function enters canonical flow content". The same
 sentence applies here, and the `ServiceKey.rec` snapshot is what mechanically
 keeps the universe out of the key.
@@ -428,7 +428,7 @@ the attacked design.
 - `E4-ENV-CE-006`: a service value may cross service type codes without an
   equality proof.
 
-Attack shapes are in `test/counterexamples/environment/ATTACKS.md`. No
+Attack shapes are in `git:c407ab7:test/counterexamples/environment/ATTACKS.md`. No
 `E4-ENV-CE-*` row is discharged by a later node without being restated there;
 these six are this node's.
 
@@ -508,22 +508,22 @@ diagnostics.
 The breaker records the intended red state with:
 
 ```text
-lake env lean Effect4Test/Environment/ContextKeyContract.lean
+lake env lean Test/Machine/Environment/ContextKeyContract.lean
 ```
 
 It must fail only because the frozen declarations do not yet exist: every
 diagnostic is `error(lean.unknownIdentifier)` naming one of the twenty-five
 frozen names. While that is true, `Effect4Test.Environment.ContextKeyContract`
 is listed in `test/fixtures/trust-gate/known-red.txt` so
-`./scripts/test-trust-gate.sh` can excise it and still exercise its planted
+`scripts/test-trust-gate.sh` can excise it and still exercise its planted
 declarations against a green tree.
 
 After implementation, acceptance additionally requires:
 
 ```text
-lake env lean Effect4Test/Environment/ContextKeyContract.lean
+lake env lean Test/Machine/Environment/ContextKeyContract.lean
 lake clean && lake build
-./scripts/test-trust-gate.sh
+scripts/test-trust-gate.sh
 ```
 
 and the removal of the `known-red.txt` entry, which the gate itself demands: a
@@ -566,7 +566,7 @@ observation.
 
 **WITNESS.** The delivered implementation reaches neither `propext` nor
 `Quot.sound`; all 23 exported constants are axiom-free, receipted in
-`Effect4Test/Environment/AxiomReport.lean`.
+`Test/Machine/Environment/AxiomReport.lean`.
 
 **CLASS.** Trust-paragraph scope written from one implementation rather than
 from the obligation.

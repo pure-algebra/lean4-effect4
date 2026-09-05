@@ -6,17 +6,17 @@ Implementation fence:
 `Effect4/Semantics/{Cause,Exit}.lean`
 
 Lean battery:
-`Effect4Test/Semantics/CauseExitContract.lean`
+`Test/Machine/Semantics/CauseExitContract.lean`
 
 Axiom report:
-`Effect4Test/Semantics/CauseExitAxiomReport.lean`
+`Test/Machine/Semantics/CauseExitAxiomReport.lean`
 
 Counterexamples: `E4-SEM-CE-001` through `E4-SEM-CE-007` in
-`test/counterexamples/REGISTER.md`; witnesses in
-`Effect4Test/Counterexamples/Semantics/CauseExit.lean`; attack shapes in
-`test/counterexamples/semantics/ATTACKS.md`
+`Test/Counterexamples/REGISTER.md`; witnesses in
+`Test/Counterexamples/Machine/Semantics/CauseExit.lean`; attack shapes in
+`git:c407ab7:test/counterexamples/semantics/ATTACKS.md`
 
-Proof graph: `CAUSE-PG-FLAT` in `docs/CAUSE-DAG.md`
+Proof graph: `CAUSE-PG-FLAT` in `docs/research/CAUSE-DAG.md`
 
 Pinned source: `effect@4.0.0-rc.112` under `vendor/effect-4.0.0-rc.112/src/`.
 Reading: `docs/effect-rc112-fiber-runtime.html` section 8.
@@ -35,7 +35,7 @@ makes no Effect TypeScript compatibility claim and no code-generation claim.
 It does **not** claim that `Effect4.Cause` is equivalent to rc.112's `Cause`.
 It claims that each named clause of each named census row below has an exact
 theorem over the Effect4 model, and it names, in three `CAUSE-FB-*` rows of
-`docs/CAUSE-DAG.md`, exactly what was dropped: the `WeakMap` host-identity
+`docs/research/CAUSE-DAG.md`, exactly what was dropped: the `WeakMap` host-identity
 annotation memory, reference equality on annotation maps and on the combine
 short circuit, and the host `Error` message bytes of the last two squash arms.
 
@@ -56,7 +56,7 @@ short circuit, and the host `Error` message bytes of the last two squash arms.
 ## REQUIRES
 
 1. Lean core and Std at the repository's pinned toolchain. No Mathlib.
-2. `Effect4/Semantics/Cause.lean` and `Effect4/Semantics/Exit.lean` import
+2. `src/Effect4/Machine/Cause.lean` and `src/Effect4/Machine/Exit.lean` import
    nothing from `Effect4/Concurrency/`, `Effect4/Runtime/`, `Effect4/Layer/`,
    `Effect4/Channel/`, or any other area above Semantics in
    `docs/ARCHITECTURE.md` "Dependency direction". `Exit.lean` may import
@@ -70,7 +70,7 @@ short circuit, and the host `Error` message bytes of the last two squash arms.
    public theorem is `propext` and `Quot.sound`.
 5. Universe policy: one explicit `universe u`; every alphabet is `Type u`. See
    the open question at the end of this file.
-6. `Effect4.Annotations` is already owned by `Effect4/Schema/Payload.lean`.
+6. `Effect4.Annotations` is already owned by `src/Effect4/Schema/Payload.lean`.
    This packet's annotation carrier is therefore `Effect4.ReasonAnnotations`,
    and no conversion between the two is declared.
 
@@ -84,7 +84,7 @@ Lean shown here is a reading aid.
 ### Existing-type and duplicate-prevention rows
 
 The six rows, their owners, relationships, pins, and assurance routes are in
-`docs/CAUSE-DAG.md` "Existing-type rows". They are not restated here.
+`docs/research/CAUSE-DAG.md` "Existing-type rows". They are not restated here.
 
 ### D0 — annotations
 
@@ -108,7 +108,7 @@ spelling is unconstructible, and `keysNodup` is the only admission boundary.
 
 `Effect4.Data.Row` is not reused: it is the canonical finite *set*, stores no
 values, needs a lawful order on its element type, and erases both order and
-duplicates. See `docs/CAUSE-DAG.md` separation 3.
+duplicates. See `docs/research/CAUSE-DAG.md` separation 3.
 
 ### D1 — the reason alphabet
 
@@ -207,7 +207,7 @@ Exit.asVoidAll              : List (Exit β ε δ ι α) -> Exit Unit ε δ ι �
 `vendor/effect-4.0.0-rc.112/src/internal/effect.ts:298-309` ends with
 `return new globalThis.Error("Empty cause")` after the three partition tests.
 The `cause.squash` census summary names only the first three; both are
-recorded in `docs/CAUSE-DAG.md` under "Census-summary note", and every clause
+recorded in `docs/research/CAUSE-DAG.md` under "Census-summary note", and every clause
 of the current summary still has a theorem.
 
 `Squashed` carries no annotations and has no inverse. It is a lossy projection
@@ -608,7 +608,7 @@ and explicitly deferred for its second.
 | `E4-SEM-CE-007` | a canonical finite set (`Effect4.Data.Row`) can carry a cause | retain operand order; `combine` is not commutative and order changes `squash` |
 
 The seven witnesses are finite self-contained breaker models in
-`Effect4Test/Counterexamples/Semantics/CauseExit.lean`. They prove the attacks,
+`Test/Counterexamples/Machine/Semantics/CauseExit.lean`. They prove the attacks,
 not the production laws, and they remain executable after the repair lands.
 
 ## Trust and acceptance
@@ -632,14 +632,14 @@ is a `String`:
 The breaker phase is accepted when
 
 ```sh
-lake env lean Effect4Test/Counterexamples/Semantics/CauseExit.lean
+lake env lean Test/Counterexamples/Machine/Semantics/CauseExit.lean
 ```
 
 exits zero, while
 
 ```sh
-lake env lean Effect4Test/Semantics/CauseExitContract.lean
-lake env lean Effect4Test/Semantics/CauseExitAxiomReport.lean
+lake env lean Test/Machine/Semantics/CauseExitContract.lean
+lake env lean Test/Machine/Semantics/CauseExitAxiomReport.lean
 ```
 
 both exit nonzero with *only* unknown-identifier and unknown-constant
@@ -652,14 +652,14 @@ green.
 The builder phase requires all three files plus the complete project test suite
 to exit zero, with `#print axioms` receipts inside `propext`/`Quot.sound` for
 every public theorem. It does not authorize any coverage-number change: the
-runtime-coverage join in `Effect4Test/Audit/RuntimeCoverage.lean` is a separate
-packet with a separate claim, as recorded in `docs/CAUSE-DAG.md`.
+runtime-coverage join in `Test/Audit/RuntimeCoverage.lean` is a separate
+packet with a separate claim, as recorded in `docs/research/CAUSE-DAG.md`.
 
 ## Open question
 
 **One universe or four.** The frozen signatures put `ε`, `δ`, `ι`, `α`, and the
 exit value `β` in a single `Type u`. This matches the house style of
-`Effect4/Concurrency/Scheduler.lean` and `Effect4/Data/Row.lean`, keeps the
+`src/Effect4/Machine/Fibers.lean` and `src/Effect4/Data/Row.lean`, keeps the
 five-parameter ascriptions readable, and admits every instantiation the near
 packets need (`ι := Effect4.FiberId`, `α := Effect4.Json`, `ε` a user error
 type). It forbids mixing universes across the five parameters — for example an

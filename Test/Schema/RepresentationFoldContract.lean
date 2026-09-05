@@ -1,5 +1,5 @@
 /-
-Contract packet: `test/contracts/schema-recursor.contract.md`
+Contract packet: `Test/contracts/schema-recursor.contract.md`
 
 Breaker-owned red battery for
 `SCHEMA-PG-PAYLOAD/SC-REP-03-RECURSOR`. The builder must make this file green

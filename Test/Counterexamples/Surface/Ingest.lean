@@ -2,8 +2,8 @@
 Executable witnesses for `E4-SURFACE-CE-053` through `E4-SURFACE-CE-057` and
 `E4-SURFACE-CE-069`.
 
-Contract: `test/contracts/surface-ingest.contract.md`. Frozen by the wave-1b
-breaker before `Effect4/Surface/Ingest.lean` exists; red until the builder
+Contract: `Test/contracts/surface-ingest.contract.md`. Frozen by the wave-1b
+breaker before `Effect4.Surface.Ingest (planned module; the packet remains red)` exists; red until the builder
 lands it.
 
 Every JSON fixture here is built from string keys and string values only, so

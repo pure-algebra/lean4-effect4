@@ -22,7 +22,7 @@ Three artefacts carry it:
 
 The pinned source is `effect@4.0.0-rc.112` as vendored under
 `vendor/effect-4.0.0-rc.112/src/`; the generator refuses any other bytes.
-The reading of that source is `docs/effect-rc112-fiber-runtime.html`.
+The reading of that source is `docs/research/effect-rc112-fiber-runtime.html` (untracked working note).
 
 ## Vocabulary
 
@@ -31,7 +31,7 @@ The reading of that source is `docs/effect-rc112-fiber-runtime.html`.
 `ref`, `deferred`, `layer`. A row id is `<kind>.<kebab-name>` and is stable
 for the life of the census.
 
-**Disposition** is the `PORT-MANIFEST.md` vocabulary and answers who owns the
+**Disposition** is defined here and answers who owns the
 behaviour's carrier. `targetOnly`, `excludedInternal`, and `evidenceOnly`
 rows are outside the denominator and may carry no witness. Every other
 disposition counts. `owned` rows must carry at least one witness.
@@ -59,7 +59,7 @@ exact statement is frozen in the module's `StatementSnapshot` section by
 The only sanctioned way to state coverage is the line produced by
 
 ```bash
-./scripts/report-effect-runtime-coverage.sh
+scripts/report-effect-runtime-coverage.sh
 ```
 
 which runs the Lean emit and prints, from the emitted `coverage` row:
@@ -89,7 +89,7 @@ earlier session.
    order;
 3. change the row's coverage state only if the green criterion is met;
 4. keep `expectedRowTotal` and `expectedDenominator` true;
-5. run `./scripts/check-effect-runtime-census.sh`.
+5. run `scripts/check-effect-runtime-census.sh`.
 
 The module fails the build on a missing witness, a non-theorem, a statement
 mismatch, an axiom drift, a duplicate id, an owned row without a witness, a
@@ -106,9 +106,9 @@ changed is a deliberate re-pin: the whole pin moves together, never one row.
 
 **A new theorem in `src/Effect4/`** intended as a witness still passes through the
 normal packet discipline. The frozen surface census that used to shadow
-`src/Effect4/Machine/*` (`Test/Concurrency/FiberAssurance.lean` and its
+`src/Effect4/Machine/*` (`git:b60fe28cecc1db30844eda87f638b1d09bbf6477:Effect4Test/Concurrency/FiberAssurance.lean` and its
 generated projection) was retired on 2026-09-04 with the machines it counted
-(`docs/research/2026-09-04-retire-old-machines.md`), so a concurrency
+(`docs/research/2026-09-04-retire-old-machines.md` (untracked working note)), so a concurrency
 declaration now moves only the coverage join.
 
 ## Path to full coverage
@@ -122,8 +122,8 @@ census v1 and the model that closes each:
 | `scope.*`, `rule.scope-close-lifo-state-first` | 15 | `src/Effect4/Machine/Scope.lean`: state machine, LIFO close, sequential and parallel close, fork linkage |
 | `fork.*`, `interrupt.accumulate`, the two fork rules | 14 | `src/Effect4/Machine/Fibers.lean` with `src/Effect4/Machine/Clauses.lean` and `Witnesses.lean`: spawn/start, the exit path, observers, races, scope links, interrupt record and apply |
 | continuation-machine `op.*`, `frame-arm.*`, `checkpoint.*`, and the stack rules | 30 | a new continuation-stack calculus: frames with three arms, `getCont` with the ensure hook, deferred-interrupt flag, handler skipping, yield versus park |
-| `ref.*` | 10 | `src/Effect4/Stateful/Ref.lean`: a cell store with allocation identity, read, write, and the read-modify-write projections, including the void-typed `Ref.set` whose host value is the cell |
-| `deferred.*` | 12 | `src/Effect4/Stateful/Deferred.lean`: a completion store that is empty or holds exactly one effect, a registration-ordered waiter list, single completion, and interruption as an ordinary stored failure |
+| `ref.*` | 10 | `src/Effect4/Machine/Stores.lean`: a cell store with allocation identity, read, write, and the read-modify-write projections, including the void-typed `Ref.set` whose host value is the cell |
+| `deferred.*` | 12 | `src/Effect4/Machine/Stores.lean`: a completion store that is empty or holds exactly one effect, a registration-ordered waiter list, single completion, and interruption as an ordinary stored failure |
 | `layer.*` | 16 | `src/Effect4/Layer/*.lean`: build over a memo map and a scope, one build per memo map with observer counting and a last-observer finalizer, parent memo chains, merge and provide scoping, and the layer scope versus the program scope |
 | the `partial` rows | 1 | `op.Failure`: the stack-frame annotation of a failure needs a `StackTrace` service key |
 

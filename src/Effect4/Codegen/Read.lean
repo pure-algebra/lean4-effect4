@@ -6,7 +6,7 @@ import Effect4.Program.Native
 
 Plan: `docs/research/2026-09-04-a4-reader-plan.md`, under
 `docs/research/2026-09-04-ast-relation-plan.md` §5.2. `readEff` is the inverse of `print`
-(`Effect4/Codegen/Print.lean`) constructor by constructor, over the same target fragment
+(`src/Effect4/Codegen/Print.lean`) constructor by constructor, over the same target fragment
 (`TypeScript.Expr`, `TypeScript.Stmt`): it takes a tree the printer could have produced
 back to the `Eff` that produced it, and refuses by name every tree the printer never
 produces. `ReadRefusal` is the closed refusal alphabet; a refusal is data, never a guess.

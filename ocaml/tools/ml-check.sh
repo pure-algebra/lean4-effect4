@@ -39,18 +39,15 @@
 
 set -u
 
-REPO=$(cd "$(dirname "$0")/../../.." && pwd)
-OCAMLC=${OCAMLC:-/Users/pooks/.opam/default/bin/ocamlc}
-OCAMLOPT=${OCAMLOPT:-/Users/pooks/.opam/default/bin/ocamlopt}
-OCAMLRUN=${OCAMLRUN:-/Users/pooks/.opam/default/bin/ocamlrun}
-JSOO=${JSOO:-/Users/pooks/Dev/effect4_of_ocaml/_build/toolchains/ocaml5-jsoo-5.7.1/_build/default/vendor/js_of_ocaml-compiler.5.7.1/compiler/bin-js_of_ocaml/js_of_ocaml.exe}
-NODE=${NODE:-node}
-P5_BUILD=${P5_BUILD:-/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/d87ba830-2e63-4750-815f-2679b36f870a/scratchpad/p5}
+REPO=$(cd "$(dirname "$0")/../.." && pwd)
+. "$(dirname "$0")/lib/toolchain.sh"
+effect4_toolchain || exit 1
+P5_BUILD=${P5_BUILD:-${TMPDIR:-/tmp}/effect4-p5_build}
 
 dir="$P5_BUILD/ml"
 rm -rf "$dir"; mkdir -p "$dir" || exit 1
 
-( cd "$REPO" && lake env lean --run src/OCaml5/MlTest.lean "$dir" ) || exit 1
+( cd "$REPO" && lake env lean -M4096 --run src/OCaml5/MlTest.lean "$dir" ) || exit 1
 
 status=0
 

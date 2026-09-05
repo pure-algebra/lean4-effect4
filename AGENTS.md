@@ -7,9 +7,9 @@ full, then open only the authority documents named for the current task.
 
 | Path | Owns |
 | --- | --- |
-| `README.md` | what the product is, the application face, the source tree, how to build |
-| `docs/ARCHITECTURE.md` | module boundaries, dependency direction, the API seam |
-| `docs/DESIGN-BASIS.md` | the representation decisions (DB-01 … DB-07) and their sources |
+| `README.md` | what the product is, the application face, how to build |
+| `docs/ARCHITECTURE.md` | the source tree, module boundaries, dependency direction, the API seam |
+| `docs/DESIGN-BASIS.md` | the representation decisions (DB-01 … DB-10), their status and sources |
 | `docs/RUNTIME-COVERAGE.md` | the rc.112 runtime mechanism census, its rows, and the one coverage report format |
 | `docs/SCHEMA-ANNOTATIONS.md` | the annotation data plane as the host defines it |
 | `Test/contracts/` | frozen contract packets and their executable falsifiers |
@@ -25,9 +25,9 @@ If two files appear to own the same fact, stop and repair the ownership map.
 ## What the tree is
 
 The product is Effect codegen (`README.md`): `Eff` is the one program IR,
-`Effect4.Api` the one module an application imports, the Deep machine the
+`Effect4.Api` the program interface an application imports, the Machine module the
 semantics under it, Schema the data plane beside it. The Flow route of
-earlier work lives on branch `archive/flow-route`; do not re-import it, and
+earlier work is at `606918e` in main's history, also on branch `archive/flow-route`; do not re-import it, and
 do not write a second program representation. The OCaml estate (`ocaml/`, one
 dune workspace, and its Lean half `src/OCaml5`, lake library `OCaml5`) is
 held to `ocaml/STANDARDS.md`: libraries with thin drivers, a property list at

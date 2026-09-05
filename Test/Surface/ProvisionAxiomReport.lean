@@ -3,7 +3,7 @@ import Effect4.Surface.Provision
 
 /-!
 Fresh kernel dependency report for the surface half of the provision algebra
-(`Effect4/Surface/Middleware.lean`, `Effect4/Surface/Provision.lean`; plan
+(`src/Effect4/Surface/Middleware.lean`, `src/Effect4/Surface/Provision.lean`; plan
 `docs/research/2026-09-04-provision-algebra.md` §4–§5). Coordinator-owned.
 -/
 

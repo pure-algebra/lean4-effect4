@@ -1,7 +1,7 @@
 /-
-Contract: `test/contracts/surface-emit.contract.md`.
+Contract: `Test/contracts/surface-emit.contract.md`.
 
-Frozen by the wave-1b breaker before `Effect4/Surface/Emit.lean` exists, from
+Frozen by the wave-1b breaker before `src/Effect4/Codegen/Emit.lean` exists, from
 `docs/research/2026-09-04-surface-library-plan.md` §5 alone. Red until the
 builder lands the module.
 

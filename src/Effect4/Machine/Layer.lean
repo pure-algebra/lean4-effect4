@@ -34,7 +34,7 @@ scopeKey)` (`:807` through `internal/effect.ts:670-674`), never a typed error.
 `LayerId` into a declared `LayerTable` is the model's stand-in: identity is allocation identity, two
 declared ids are two objects even when their descriptions agree, and the model cannot stop a
 program from forging an id. That is the `LAYER-FB-LAYER-IDENTITY` refusal of the
-`SCOPE-FB-KEY-IDENTITY` shape (`Effect4/Runtime/Scope.lean:314-320`), stated as
+`SCOPE-FB-KEY-IDENTITY` shape (`src/Effect4/Machine/Scope.lean:314-320`), stated as
 `layerId_identity_not_structural` below. `forEach` with `concurrency: layers.length`
 (`:1597-1598`) is `mergeForkAll` over `ActionName.awaitAllFailFast`: the machine interrupts the
 outstanding siblings with the awaiter's id on the first failing exit and still awaits them.
@@ -561,7 +561,7 @@ def lookup (w : MemoWorld) (layer : LayerId) : Nat → MemoMapId → Option (Mem
 def get (w : MemoWorld) (layer : LayerId) (id : MemoMapId) : Option (MemoMapId × MemoEntry) :=
   lookup w layer (w.length + 1) id
 
-/-- `LAYER-FB-LAYER-IDENTITY`, the `SCOPE-FB-KEY-IDENTITY` shape (`Effect4/Runtime/Scope.lean:314-320`):
+/-- `LAYER-FB-LAYER-IDENTITY`, the `SCOPE-FB-KEY-IDENTITY` shape (`src/Effect4/Machine/Scope.lean:314-320`):
 the memo map is keyed by `LayerId`, which is allocation identity, never by the layer's
 description. Inserting under one id leaves every other id's entry untouched, however the
 `LayerTable` describes the two — rc.112 keys on the layer object (`Layer.ts:411`, `:438`). The
@@ -2006,14 +2006,14 @@ def w11 : ProgName := ProgName.launch ⟨0⟩
 `scoped` must close its scope whether or not another `OnExit` frame sits under it. The first
 `Deep.Fibers.finalizerOr` took the program-finalizer path only when the stack's **head** was
 `Prim.onExit`, while the frame machine delivers an exit to the frame `getCont` answers with,
-skipping frames that do not declare the demanded arm (`Effect4/Runtime/Runtime.lean:2300`,
+skipping frames that do not declare the demanded arm (`src/Effect4/Machine/Frames.lean:2300`,
 `getCont Arm.contA false`). An inner `onExit`'s `ensure` pushes exactly such a mask-restoring
 frame (`Runtime.lean:697-703`), so the outer `OnExit` was reached by a pass and answered by the
 pure shortcut `armA`; two adjacent `OnExit` frames ran one finalizer program, not two. Every
 `Layer` build sits under `updateContext`'s restoring frame (`internal/effect.ts:2092`), so
 every `scoped(build …)` had this shape. `finalizerOr` now consults `getCont` with the same
 demand and skip as `resumeValue`/`resumeCause` and intercepts the answering frame
-(`Effect4/Deep/Fibers.lean`, `finalizerOr`), so rc.112's behaviour — both finalizer programs
+(`src/Effect4/Machine/Fibers.lean`, `finalizerOr`), so rc.112's behaviour — both finalizer programs
 run, both scopes close (`internal/effect.ts:4021`) — is what the witnesses below pin. -/
 
 /-- How many `OnExit` finalizer *programs* a run actually ran. -/

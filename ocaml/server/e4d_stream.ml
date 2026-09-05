@@ -7,7 +7,7 @@
 
    The shape mirrors rc.112's `Channel`, which is a pull of chunks with a done value
    (`Channel.fromPull`, `Channel.transformPull`, `Channel.DefaultChunkSize` --
-   `Effect4/StdLib/Rc112.lean:1636-1642`): a pull answers either a chunk and a continuation,
+   `src/Effect4/StdLib/Rc112.lean:1636-1642`): a pull answers either a chunk and a continuation,
    or a halt carrying the done value, or a failure. The continuation here is the next cursor,
    which is what makes it a carrier: `pull : t -> int -> t * item` is a total function of two
    first-order arguments, so its Lean counterpart is a `List`, an index and a bound, and

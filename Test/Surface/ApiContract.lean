@@ -1,8 +1,8 @@
 /-
-Contract: `test/contracts/surface-api.contract.md`.
+Contract: `Test/contracts/surface-api.contract.md`.
 
-Frozen by the wave-1b breaker before `Effect4/Surface/Api.lean` and
-`Effect4/Surface/Api/Emit.lean` exist, from
+Frozen by the wave-1b breaker before `src/Effect4/Surface/Api.lean` and
+`src/Effect4/Codegen/Target.lean` exist, from
 `docs/research/2026-09-04-surface-library-plan.md` §4.4 as revised by §13.1.
 Red until the builder lands the modules.
 

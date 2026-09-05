@@ -1,7 +1,7 @@
 import TypeScript
 
 /-!
-Contract packet: `test/contracts/typescript-target-expr.contract.md`
+Contract packet: `Test/contracts/typescript-target-expr.contract.md`
 
 This battery freezes the retained Foldlab syntax surface and representative
 fixed-layout bytes. It makes no target-typing or simulation claim.

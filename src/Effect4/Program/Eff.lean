@@ -19,14 +19,14 @@ AST is first-order throughout: values are `Term`s over positional variables (dec
 the flows' convention, every node passes its whole scope forward and an answer is appended),
 programs carried by fiber actions are `Eff` subterms, and there is no Lean function anywhere
 inside it. `DecidableEq` is derived for every type here; the separation-4 gate
-(`docs/FRAMES-DAG.md`) is the `example`s at the end.
+(`docs/research/FRAMES-DAG.md`) is the `example`s at the end.
 
 Two sequencing forms on purpose (§2.1): `bind` is `Effect.flatMap`, an `OnSuccess` frame;
 `gen` is `Effect.gen(function* () { … })`, one `Iterator` primitive. They print differently
 and compile differently, and that difference is what the host relation (R4) is stated over.
 
 `Option (Eff Op)` and `List (Eff Op)` fields would make the block a nested inductive, whose
-`DecidableEq` handler this tree refuses (`Effect4/Deep/Stores.lean`, state note §3.5); the
+`DecidableEq` handler this tree refuses (`src/Effect4/Machine/Stores.lean`, state note §3.5); the
 list-shaped fields are the mutual cons-types `Terms`, `Stmts` and `Effs`, and the optional
 cancel of a callback is a second constructor.
 -/
@@ -152,12 +152,12 @@ end Ty
 
 `Eff` is parameterised by `Op`, the positions of a table of rows. The service route's
 table is a family's rows; the native route's is the standard-library links
-(`Effect4/StdLib/Links.lean`) whose model reference is a store operation, an async
+(`src/Effect4/StdLib/Links.lean`) whose model reference is a store operation, an async
 registration, or a Layer/Context program. `Row` is what typing and the compile read off a
 position. -/
 
 inductive RowKind
-  /-- A `sync` thunk that reads or writes a store (`Effect4/Deep/Stores.lean` `SyncOp`). -/
+  /-- A `sync` thunk that reads or writes a store (`src/Effect4/Machine/Stores.lean` `SyncOp`). -/
   | sync
   /-- An `Async` whose registration is a store operation (`Deferred.await`). -/
   | async
@@ -351,7 +351,7 @@ def arms : List Arm :=
   , ⟨"yieldError", "yield* new E()", "Prim.yieldableError", "internal/effect.ts:1226"⟩
   , ⟨"sync", "Effect.sync", "Prim.sync", "internal/effect.ts:929"⟩
   , ⟨"suspend", "Effect.suspend", "Prim.suspend", "internal/effect.ts:1093"⟩
-  , ⟨"perform", "yield* op(x) (by the row's kind)", "Prim.sync | Prim.async | a nested body", "Effect4/StdLib/Links.lean"⟩
+  , ⟨"perform", "yield* op(x) (by the row's kind)", "Prim.sync | Prim.async | a nested body", "src/Effect4/StdLib/Links.lean"⟩
   , ⟨"bind", "Effect.flatMap", "Prim.onSuccess", "internal/effect.ts:1590"⟩
   , ⟨"gen", "Effect.gen(function* () { … })", "Prim.iterator", "internal/effect.ts:1184"⟩
   , ⟨"catchCause", "Effect.catchCause", "Prim.onFailure", "internal/effect.ts:2417"⟩

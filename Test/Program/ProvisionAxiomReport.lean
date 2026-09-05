@@ -2,7 +2,7 @@ import Effect4.Program.Provision
 
 /-!
 Fresh kernel dependency report for the provision algebra
-(`Effect4/Program/Provision.lean`; plan `docs/research/2026-09-04-provision-algebra.md`).
+(`src/Effect4/Program/Provision.lean`; plan `docs/research/2026-09-04-provision-algebra.md`).
 
 Coordinator-owned, appended from the `#print axioms` output at each landing. Every theorem
 below is expected at the ceiling `propext`/`Quot.sound`; the gate

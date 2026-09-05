@@ -9,8 +9,8 @@ Owner: the rc.112 persisted representation alphabet.
 This module owns the *tag* layer of Effect4's Schema representation: the exact
 22-member persisted alphabet, its canonical census listing, and the
 case-sensitive wire spelling of each member. Its contract packet is
-`test/contracts/schema-representation.contract.md` and its ruling input is the
-frozen census table in `docs/SCHEMA-CUTOVER.md`.
+`Test/contracts/schema-representation.contract.md` and its ruling input is the
+frozen census table in `docs/research/SCHEMA-CUTOVER.md`.
 
 The payload carrier is deliberately not declared here. `Representation`
 itself, its per-tag persisted fields, `Check`, annotations, `Document`, and
@@ -514,18 +514,18 @@ Owner: the rc.112 persisted representation *payload* — the recursive
 first-order tree that hangs off the 22-tag census above, the non-recursive
 scalar and record types it is built from, and the tag projection that ties the
 two layers together. Its contract packet is
-`test/contracts/schema-payload.contract.md` and its battery is
+`Test/contracts/schema-payload.contract.md` and its battery is
 `Test/Schema/PayloadContract.lean`.
 
 The alphabet section above closes its own `namespace Effect4` block. That
-section is frozen and guarded by `scripts/test-schema-alphabet-mutations.sh`;
+section is frozen and guarded by `git:c407ab7:scripts/test-schema-alphabet-mutations.sh`;
 nothing below changes a declaration in it.
 
 ## Scope
 
 A carrier value is syntax. Nothing here says what it accepts, represents,
-resolves to, or encodes as. Field admission is `Effect4/Schema/Check.lean`,
-documents are `Effect4/Schema/Document.lean`, and reference resolution,
+resolves to, or encodes as. Field admission is `src/Effect4/Schema/Check.lean`,
+documents are `src/Effect4/Schema/Document.lean`, and reference resolution,
 guardedness, denotation, codecs, and wire form are all unopened. This module
 also claims **no** persisted field-key spelling: binder names below are
 internal, `$ref` is carried as `ReferenceKey.value`, and the spellings belong

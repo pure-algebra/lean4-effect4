@@ -10,7 +10,7 @@ Four checks, in the order the seat brief asks for them.
 
 **(a) Every syntax form renders text `ocamlc` accepts.** `fixture` below is one `Ml.Module` that
 uses every constructor of `Ml.Syntax` — every type form, every pattern, every expression, every
-structure item, signatures, functors, attributes — and `tools/ml-check.sh` renders it with
+structure item, signatures, functors, attributes — and `ocaml/tools/ml-check.sh` renders it with
 `main`, compiles it with `ocamlc`, `ocamlopt` and `js_of_ocaml`, runs it, and diffs its output
 against `expectedRows` pinned here. Rendering is checked in Lean; being OCaml is checked by
 OCaml.
@@ -19,7 +19,7 @@ Two forms are deliberately absent from the fixture and are checked elsewhere:
 
 * `Expr.reperform`. The raw `%reperform` primitive is typed over `last_fiber`, which
   `stdlib/effect.ml` does not export, so no ordinary compilation unit can name it. The
-  declaration that *can* is `OCaml5.Render.fixedPrelude`, and `tools/fuzz.sh witnesses` compiles
+  declaration that *can* is `OCaml5.Render.fixedPrelude`, and `ocaml/tools/fuzz.sh witnesses` compiles
   and runs it on all three hosts. What `MlTest` checks about `reperform` is the tail-position
   rule, which is a `Check` property and is checked below.
 * `Ty.asVar`, the `(t as 'a)` constraint. It is legal only where the equation is not cyclic, and
@@ -27,7 +27,7 @@ Two forms are deliberately absent from the fixture and are checked elsewhere:
   It renders (`Ml/Render.lean`'s `#guard`s) and is not compiled.
 
 **(b) The five avatar carriers still render byte-identical.** That is
-`tools/fuzz.sh avatar`, unchanged, which cuts each carrier out of
+`ocaml/tools/fuzz.sh avatar`, unchanged, which cuts each carrier out of
 `ocaml/avatar/deep_fibers.ml` and out of the generated module and runs `diff`. It is
 not repeated here: a copy of the file inside Lean would be the thing the check exists to avoid.
 
@@ -372,7 +372,7 @@ def shallowDecls : List Decl :=
 
 /-! ### The driver -/
 
-/-- Every row the fixture prints, in order. `tools/ml-check.sh` diffs the program's stdout
+/-- Every row the fixture prints, in order. `ocaml/tools/ml-check.sh` diffs the program's stdout
 against this list, so a change in what the fixture *computes* is caught as well as a change in
 what it renders. -/
 def expectedRows : List String :=
@@ -531,7 +531,7 @@ def badModules : List (String × String × Module) :=
 The plan's ruling is that every generated carrier carries
 `[@@deriving sexp, compare, equal, hash, fields, variants]`, which plain `ocamlc` cannot compile:
 the attribute needs `ppx_jane`. So the derivers are a **second fixture**, written to
-`ml_deriving.ml` and compiled by `tools/ml-check.sh`'s ppx lane — which SKIPs until the `effect4`
+`ml_deriving.ml` and compiled by `ocaml/tools/ml-check.sh`'s ppx lane — which SKIPs until the `effect4`
 opam switch exists. `Check` knows what the attribute puts in scope
 (`Profile.derivedNames`), so `probe` below calls `compare_point` and `equal_color` with nothing
 declaring them and the checker is satisfied. -/
@@ -675,7 +675,7 @@ def outOfProfile : List (String × String × Module) :=
 
 `Reflect.ofTypeDecl` is the other direction: an OCaml declaration, as signature data, becomes the
 `TypeDesc` a Lean carrier is stated against. Here it is on a slice of `Base.Deque`'s interface,
-written as `Ml.Syntax` data. Once the `effect4` switch exists, `tools/ml-check.sh`'s ppxlib lane
+written as `Ml.Syntax` data. Once the `effect4` switch exists, `ocaml/tools/ml-check.sh`'s ppxlib lane
 is what turns a real `.mli` into this data. -/
 
 def dequeSig : ModTy :=
@@ -711,7 +711,7 @@ def dequeSig : ModTy :=
 
 /-! ## Emitting the fixture
 
-`tools/ml-check.sh <dir>` runs this and then compiles what it writes. -/
+`ocaml/tools/ml-check.sh <dir>` runs this and then compiles what it writes. -/
 
 /-- Write `ml_fixture.ml` and `ml_fixture.rows` into the directory named by the first
 argument. -/
@@ -742,5 +742,5 @@ def emit (args : List String) : IO Unit := do
 end OCaml5.MlTest
 
 /-- `lake env lean --run src/OCaml5/MlTest.lean <dir>`, which is what
-`tools/ml-check.sh` invokes. -/
+`ocaml/tools/ml-check.sh` invokes. -/
 def main (args : List String) : IO Unit := OCaml5.MlTest.emit args

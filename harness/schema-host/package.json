@@ -1,0 +1,17 @@
+{
+  "name": "effect4-schema-host",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "dependencies": {
+    "@effect/tsgo": "0.38.0",
+    "effect": "4.0.0-rc.112",
+    "typescript": "7.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "26.4.1"
+  },
+  "scripts": {
+    "prepare": "effect-tsgo patch --typescript"
+  }
+}

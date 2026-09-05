@@ -49,7 +49,7 @@ apart from one that does not; a `raw` is not itself a diagnostic.
 `ocamlc` compiles `%reperform` to `Kreperformterm` when its continuation `is_tailcall`, and calls
 `fatal_error` otherwise (`bytegen.ml:796-804`). `tailPositions` below is the transcription of
 which subterms inherit the polarity, and it is the same table as
-`src/OCaml5/Compiler.lean`'s `admissibleAt` — the two are separate on purpose. `Compiler`
+`src/OCaml5/Runtime/Compiler.lean`'s `admissibleAt` — the two are separate on purpose. `Compiler`
 decides it for `OCaml5.Term`, the untyped machine language of the P5 spike, and imports the
 spike's whole effect machinery to do it; this decides it for `Ml.Expr`, and imports nothing.
 A package that is to stand on its own cannot depend on a spike's term language, so the notion is

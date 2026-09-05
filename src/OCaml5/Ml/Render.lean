@@ -11,7 +11,7 @@ a total function of the syntax alone. Two properties follow, and they are the wh
 * **Equal syntax gives equal bytes.** `render` is a `Module → String`; there is no configuration,
   no environment, no ordering by a hash, and no wall clock. Two runs of the same generator on the
   same day and on different machines produce the same file, which is what makes
-  `tools/fuzz.sh avatar`'s byte diff against a hand-written file meaningful.
+  `ocaml/tools/fuzz.sh avatar`'s byte diff against a hand-written file meaningful.
 * **Fixed layout.** Where a line break goes is a property of the *form*, not of a width budget:
   a record or variant with `wideAt` or more members is one member per line, everything else is
   one line, and nested expressions are indented by their `ind` depth. There is no reflowing pass,
@@ -741,7 +741,7 @@ def Module.fileName (m : Module) : String := m.name ++ ".ml"
 /-! ## Checks
 
 The rendering is checked three ways: by `#guard` here on the shapes whose bytes are pinned, by
-`OCaml5.MlTest` on a fixture that exercises every constructor, and by `tools/ml-check.sh`, which
+`OCaml5.MlTest` on a fixture that exercises every constructor, and by `ocaml/tools/ml-check.sh`, which
 compiles that fixture with `ocamlc`. Only the last can say the text is *OCaml*; the first two say
 it is the text this file is supposed to produce. -/
 

@@ -64,7 +64,7 @@ lean_run() {
   local out err status
   out="$(mktemp "${TMPDIR:-/tmp}/effect4-lean-out.XXXXXX")"
   err="$(mktemp "${TMPDIR:-/tmp}/effect4-lean-err.XXXXXX")"
-  lake env lean --run "$lean_file" "$@" >"$out" 2>"$err" && status=0 || status=$?
+  lake env lean -M4096 --run "$lean_file" "$@" >"$out" 2>"$err" && status=0 || status=$?
   if [ "$status" -ne 0 ]; then
     printf 'FAIL %s: lean --run %s %s failed (exit %s)\n' \
       "${PORTABLE_SCRIPT_NAME:-$(basename -- "$0")}" "$lean_file" "$*" "$status" >&2

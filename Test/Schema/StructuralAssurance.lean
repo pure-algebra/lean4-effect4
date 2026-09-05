@@ -1,4 +1,5 @@
 import Lean
+import Test.Support.Environment
 import Lean.Util.CollectAxioms
 import Effect4.Data.Optic
 import Effect4.Schema.Document
@@ -24,16 +25,10 @@ open Lean Meta Elab Command
 
 namespace Test.Schema.StructuralAssurance
 
-private def failJoin (detail : MessageData) : CommandElabM α :=
-  throwError m!"Schema structural assurance mismatch: {detail}"
+open Test.Support.Environment
 
-private def declarationOwner? (environment : Environment) (name : Name) : Option Name := do
-  if let some moduleIndex := environment.getModuleIdxFor? name then
-    environment.header.moduleNames[moduleIndex]?
-  else if environment.contains name then
-    some environment.mainModule
-  else
-    none
+private def failJoin (detail : MessageData) : CommandElabM α :=
+  Test.Support.Environment.failJoin "Schema structural assurance mismatch" detail
 
 private def sourceModules : List Name :=
   [ `Effect4.Data.Optic
@@ -45,17 +40,6 @@ private def sourceModules : List Name :=
   , `Effect4.Schema.Check
   , `Effect4.Schema.EffectfulField
   ]
-
-private def declarationsOwnedBy (environment : Environment) (owner : Name) : List Name :=
-  environment.constants.toList.foldl (init := []) fun declarations entry =>
-    let name := entry.1
-    if !name.isInternal && declarationOwner? environment name == some owner then
-      name :: declarations
-    else
-      declarations
-
-private def sortedNames (names : List Name) : List Name :=
-  names.mergeSort fun left right => left.toString < right.toString
 
 private def routeFor (owner name : Name) : String :=
   let text := name.toString

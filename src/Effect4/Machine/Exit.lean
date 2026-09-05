@@ -13,9 +13,9 @@ cause alphabets, the void exit, the success and cause observations, the
 
 Pinned source: `vendor/effect-4.0.0-rc.112/src/internal/effect.ts` 2024-2038,
 3800-3804, and 4023-4028. The frozen surface is
-`test/contracts/cause-exit.contract.md`, held by the battery
-`Test/Semantics/CauseExitContract.lean` and the axiom report
-`Test/Semantics/CauseExitAxiomReport.lean`.
+`Test/contracts/cause-exit.contract.md`, held by the battery
+`Test/Machine/Semantics/CauseExitContract.lean` and the axiom report
+`Test/Machine/Semantics/CauseExitAxiomReport.lean`.
 -/
 
 namespace Effect4

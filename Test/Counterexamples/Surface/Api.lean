@@ -2,8 +2,8 @@
 Executable witnesses for `E4-SURFACE-CE-016` through `E4-SURFACE-CE-037` and
 `E4-SURFACE-CE-065`.
 
-Contract: `test/contracts/surface-api.contract.md`. Frozen by the wave-1b
-breaker before `Effect4/Surface/Api.lean` exists; red until the builder lands
+Contract: `Test/contracts/surface-api.contract.md`. Frozen by the wave-1b
+breaker before `src/Effect4/Surface/Api.lean` exists; red until the builder lands
 it.
 
 Pin: `effect` 4.0.0-rc.112,

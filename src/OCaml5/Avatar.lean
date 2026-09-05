@@ -12,7 +12,7 @@ import OCaml5.Avatar.ForkFlow
 **What it is.** The avatar's generated half as one value: `parts`, one `Part` per OCaml module
 of `ocaml/avatar/` (`OCaml5.Avatar.Part`). Everything a driver or a check needs is read off it:
 `Tools/RenderDeep.lean` prints `(find? name).generated`, `OCaml5.Avatar.Check` compares
-`guarded` with `derived` part by part, `tools/fuzz.sh avatar` compiles `Fibers.checkModule`.
+`guarded` with `derived` part by part, `ocaml/tools/fuzz.sh avatar` compiles `Fibers.checkModule`.
 
 **Depends on.** The six part modules and `OCaml5.Avatar.Part`.
 

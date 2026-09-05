@@ -24,10 +24,10 @@ it here subjects none of its declarations to the ceiling and adds no trust. What
 a build edge: `TestStore` now needs `Effect4Gen.Check` compiled.
 
 The paths are relative to the repository root, which is the working directory `lake` gives
-every `lean` it runs. Measured 2026-09-05 (lane B, `workshop/Cas/NOTES-B.md`): five files,
+every `lean` it runs. Measured 2026-09-05 (lane B, `docs/research/2026-09-05-workshop-cas/NOTES-B.md`): five files,
 forty-one shapes, twelve seconds and 877 MB in a `lake env lean -M 3072` probe.
 
-`src/Effect4/Evidence/Char/Derived.lean` joined the list at the landing's gate (2026-09-05),
+`src/Effect4/Char/Derived.lean` joined the list at the landing's gate (2026-09-05),
 once its manifest row was in `scripts/generate-derived.ps1` and the generator's n-ary sum
 reader let `Evidence` be generated with the rest of the room.
 -/
@@ -37,8 +37,8 @@ import Effect4.Store.Derived.Json
 import Effect4.Store.Derived.Schema
 import Effect4.Program.Derived
 import Effect4.Store.PinDerived
-import Effect4.Evidence.StdLib.Derived
-import Effect4.Evidence.Char.Derived
+import Effect4.StdLib.Derived
+import Effect4.Char.Derived
 
 namespace Test.Store.DerivedCheck
 
@@ -50,8 +50,8 @@ def derivedFiles : List String :=
   , "src/Effect4/Store/Derived/Schema.lean"
   , "src/Effect4/Program/Derived.lean"
   , "src/Effect4/Store/PinDerived.lean"
-  , "src/Effect4/Evidence/StdLib/Derived.lean"
-  , "src/Effect4/Evidence/Char/Derived.lean" ]
+  , "src/Effect4/StdLib/Derived.lean"
+  , "src/Effect4/Char/Derived.lean" ]
 
 open Lean Meta in
 #eval show MetaM Unit from do

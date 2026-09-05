@@ -187,7 +187,7 @@ The park guard being silent is the interesting one: **no continuation was resume
 no park was left dangling under the CPS-to-wasm effect implementation** — the same one-shot
 discipline the OCaml 5 native runtime and `effect.js` give.
 
-The three pre-existing red gates of `ocaml/avatar/run-witnesses.sh` (the `Effect4.Deep.*`
+The three pre-existing red gates of `ocaml/avatar/run-witnesses.sh` (the `Effect4.Machine.*`
 census keys, the 132-vs-131 clause count, the stale `deep-pins.tsv`) are **not** re-run here
 and are **not** this lane's: they are drifts in the avatar's Lean-side joins, identical on
 all four hosts, listed at `ocaml/avatar/README.md` §7 and `ocaml/README.md` §"Owed at

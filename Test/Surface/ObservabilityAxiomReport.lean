@@ -2,7 +2,7 @@ import Effect4.Surface.Observability
 
 /-!
 Fresh kernel dependency report for the observability surface
-(`Effect4/Surface/Observability.lean`; plan `docs/research/2026-09-04-production-standards-spike.md`
+(`src/Effect4/Surface/Observability.lean`; plan `docs/research/2026-09-04-production-standards-spike.md`
 §3 rows 4–6, lane L5).
 
 Coordinator-owned, appended from the `#print axioms` output at each landing. Every theorem
