@@ -89,6 +89,7 @@ import Effect4.Machine.Layer
 import Effect4.Schema.Accepts
 import Effect4.Evidence.Views
 import Effect4.Evidence.StdLib.Entry
+import Effect4.Evidence.StdLib.Derived
 import Effect4.Evidence.StdLib.Rc112
 -- The Surface library (docs/research/2026-09-04-surface-library-plan.md), wave
 -- 1a: the substrate. `Kind` is the typed embedding, a representation with a
@@ -164,6 +165,7 @@ import Effect4.Codegen.App
 -- `Manifest` and `Evidence` are the lane's census, its component table and its
 -- receipts.
 import Effect4.Evidence.Char.Conformance
+import Effect4.Evidence.Char.Derived
 import Effect4.Evidence.Char.Manifest
 import Effect4.Evidence.Char.Queue.Grade
 import Effect4.Evidence.Char.Queue.Mutants

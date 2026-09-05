@@ -775,8 +775,19 @@ def emitPlain (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit := do
       let c := m.ctors[ci]!
       if c.args.isEmpty then
         emit s!"  | .ctor {ci} [] => some .{c.name}"
-      else
+      else if c.args.size == 1 then
         emit s!"  | .ctor {ci} [v0] => ({rawOf st c.args[0]!.2 "v0"}).map .{c.name}"
+      else
+        -- A case of arity two or more reads like the recursive emitter's `raw` (above): one
+        -- `match` over every argument's reader. Found by lane X on `Effect4.Char.Evidence`
+        -- (2026-09-05): the single-argument form was emitted whatever the arity.
+        emitJoin s!"  | .ctor {ci} ["
+          (c.args.toList.mapIdx fun i (_, sl) => rawPat st sl s!"v{i}") ", " "] =>" "      "
+        emitJoin "    match "
+          (c.args.toList.mapIdx fun i (_, sl) => rawOf st sl s!"v{i}") ", " " with" "        "
+        emitJoin "    | " (c.args.toList.mapIdx fun i _ => s!"some a{i}") ", "
+          s!" => some (.{c.name}{argBinders c})" "      "
+        emitJoin "    | " (c.args.toList.map fun _ => "_") ", " " => none" "      "
     emit "  | _ => none"
   emit ""
   if isStructLike then
@@ -820,6 +831,28 @@ def emitPlain (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit := do
     emit "       subst hj"
     emit "       simp only [toVal]"
     emit "       rw [Canonical.ofVal_exact hx])"
+    -- One alternative per arity of two or more present in the sum. The inner `match` is split;
+    -- `injection` closes every failing arm (`none = some a`) and reduces the success arm; the
+    -- success arm's `b`s and `h`s (the order `split` introduces them) are named and rewritten;
+    -- `done` makes a wrong-arity alternative fail and fall through. No nested `first`: its
+    -- last alternative would run with error recovery and admit the goal with a `sorry`
+    -- (measured 2026-09-05 on `Effect4.Char.Evidence`, arities 2 and 3 mixed).
+    let arities := ((m.ctors.toList.map fun c => c.args.size).filter (· ≥ 2)).eraseDups
+    for n in arities do
+      let bs := String.intercalate " " ((List.range n).map fun i => s!"b{i}")
+      let hs := String.intercalate " " ((List.range n).map fun i => s!"h{i}")
+      let rws := String.intercalate ", " ((List.range n).map fun i => s!"Canonical.ofVal_exact h{i}")
+      -- `split` puts the success arm first and compiles the wildcard into one or more arms
+      -- with `h : none = some a`; `injection … with` would refuse a name on those, so the
+      -- success arm is focused and the rest closed by `nomatch`.
+      emit "    | (split at h"
+      emit s!"       · rename_i {bs} {hs}"
+      emit "         injection h with h"
+      emit "         subst h"
+      emit "         simp only [toVal]"
+      emit s!"         rw [{rws}]"
+      emit "         done"
+      emit "       all_goals exact nomatch h)"
     emit "    | exact nomatch h"
   emit ""
   for i in [0:nf] do

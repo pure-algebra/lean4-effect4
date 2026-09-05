@@ -93,9 +93,37 @@ inductive Val where
   | ctor (index : Nat) (args : List Val)
   /-- A reference to a node: the kind byte, then the address bytes. -/
   | ref (kind : UInt8) (digest : Bytes)
-deriving Repr, Inhabited
+deriving Inhabited
 
 namespace Val
+
+/-! ## Printing
+
+A structural `Repr`, written by hand: `deriving Repr` on a `List`-nested inductive produces a
+`partial` definition, which the trust gate (`Test/Audit/AxiomGate.lean`, the ruling on
+`opaque`) refuses as a bodyless `opaque` denoting an arbitrary inhabitant. Found at the
+landing's gate, 2026-09-05. -/
+
+mutual
+/-- The value as the Lean syntax that builds it. -/
+def render : Val → String
+  | .unit => "Val.unit"
+  | .bool b => s!"(Val.bool {b})"
+  | .nat n => s!"(Val.nat {n})"
+  | .str s => s!"(Val.str {s.quote})"
+  | .bytes bs => s!"(Val.bytes {bs})"
+  | .list xs => s!"(Val.list [{", ".intercalate (renderList xs)}])"
+  | .pair a b => s!"(Val.pair {render a} {render b})"
+  | .none => "Val.none"
+  | .some a => s!"(Val.some {render a})"
+  | .ctor i args => s!"(Val.ctor {i} [{", ".intercalate (renderList args)}])"
+  | .ref k d => s!"(Val.ref {k} {d})"
+def renderList : List Val → List String
+  | [] => []
+  | x :: xs => render x :: renderList xs
+end
+
+instance instRepr : Repr Val := ⟨fun v _ => Std.Format.text (render v)⟩
 
 mutual
 /-- The canonical bytes of a value: the frames of `Canonical.lean:88-112`, `Wire.lean:35-36`. -/

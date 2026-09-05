@@ -99,7 +99,7 @@ set_option autoImplicit false
 
 namespace Effect4.Surface
 
-open Effect4 Effect4.Schema Effect4.Store
+open Effect4 Effect4.Schema
 open Effect4.Arch (accepts)
 
 /-! ## Comparing kinded schemas
@@ -1944,9 +1944,6 @@ def apiDoc : Document :=
   { representation := apiRep
     references :=
       [ ⟨"Response", responseRep⟩, ⟨"Endpoint", endpointRep⟩, ⟨"Group", groupRep⟩ ] }
-
-/-- An api is addressed by the canonical bytes of its view payload. -/
-instance {refs : List ReferenceEntry} : Canonical (Api refs) := ⟨fun api => encode api.json⟩
 
 /-! ## Anti-vacuity: the `shop` api
 

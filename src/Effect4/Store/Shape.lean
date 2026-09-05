@@ -73,7 +73,42 @@ inductive Shape where
   | anyRef
   /-- A shape defined in the document's table. -/
   | named (name : String)
-deriving Repr, Inhabited
+deriving Inhabited
+
+namespace Shape
+
+/-! A structural `Repr`, by hand, for the same reason `Val`'s is (`Store/Val.lean`): the
+derived one on a nested inductive is a `partial` definition the trust gate refuses. -/
+
+mutual
+/-- The shape as the Lean syntax that builds it. -/
+def render : Shape → String
+  | .unit => "Shape.unit"
+  | .bool => "Shape.bool"
+  | .nat => "Shape.nat"
+  | .string => "Shape.string"
+  | .bytes => "Shape.bytes"
+  | .digest => "Shape.digest"
+  | .list item => s!"(Shape.list {render item})"
+  | .option item => s!"(Shape.option {render item})"
+  | .pair a b => s!"(Shape.pair {render a} {render b})"
+  | .struct name fields => s!"(Shape.struct {name.quote} [{", ".intercalate (renderFields fields)}])"
+  | .sum name cases => s!"(Shape.sum {name.quote} [{", ".intercalate (renderCases cases)}])"
+  | .ref k => s!"(Shape.ref .{k.name})"
+  | .anyRef => "Shape.anyRef"
+  | .named name => s!"(Shape.named {name.quote})"
+def renderFields : List (String × Shape) → List String
+  | [] => []
+  | (n, s) :: rest => s!"({n.quote}, {render s})" :: renderFields rest
+def renderCases : List (String × List (String × Shape)) → List String
+  | [] => []
+  | (n, fields) :: rest =>
+    s!"({n.quote}, [{", ".intercalate (renderFields fields)}])" :: renderCases rest
+end
+
+instance instRepr : Repr Shape := ⟨fun s _ => Std.Format.text (render s)⟩
+
+end Shape
 
 /-- A root shape and the table its `named` shapes resolve in. -/
 structure ShapeDoc where

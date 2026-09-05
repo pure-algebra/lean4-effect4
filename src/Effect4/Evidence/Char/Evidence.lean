@@ -1,6 +1,5 @@
-import Effect4.Evidence.Char.Core
-import Effect4.Store.Digest
-import Effect4.Store.JsonCanonical
+import Effect4.Evidence.Char.Conformance.Receipt
+import Effect4.Store.PinDerived
 
 /-!
 # Char.Evidence
@@ -24,9 +23,20 @@ function of an evidence count (`supported_not_by_count`). "Composition meets"
 is the other direction, `meet`, which the registry takes along a usage path.
 
 Ruling R5: `Claim` and `Evidence` stay typed all the way down so the kernel can
-decide them; their store payload is still the JSON projection through the one
-`Canonical Json` instance. `Claim.evidence` holds addresses, not values, so a
-theorem cited by four claims is one store entry, and `supported` takes the
+decide them. Their store payload is no longer a JSON projection: under Q1 the
+address is the digest of the carrier's own structural bytes, so both file under
+kind `annotation` through the instances generated in
+`Evidence/Char/Derived.lean`, and `json` as an identity function is retired with
+the JSON tag alphabet. The printer, when one is wanted, is `Canonical.print`,
+read off the same shape the spec is.
+
+Q4 retypes every pointer these two carry. `Evidence.pin` names a pinned span by
+`Ref Pin`, not by a hex string; `Evidence.fixture` names the vector by an
+`AnyRef` at kind `vector` (a monomorphic `Evidence` cannot name the `Fact L C`
+the node carries) and the receipt by `Ref Receipt`; `thm` and `decided` keep a
+`Digest` for the frozen statement, because that is a foreign hash — it names no
+node and is checked by recomputation. `Claim.evidence` holds `Ref Evidence`, so
+a theorem cited by four claims is one store node, and `supported` takes the
 resolver as an argument rather than naming a registry type.
 
 Rungs and vocabulary: `docs/research/2026-09-04-characterized-components-api-synthesis.md`
@@ -34,10 +44,11 @@ section 2.5; the record and the theorems:
 `workshop/Char/05-registry/03-claims-held-and-monotonicity.md`.
 -/
 
+set_option autoImplicit false
+
 namespace Effect4.Char
 
 open Effect4.Store
-open Effect4.Arch
 
 /-- The three rungs a claim can reach, as a chain. -/
 inductive Rung where
@@ -148,18 +159,21 @@ end RungOrHeld
 
 /-- What a claim can rest on. The rung is a function of the constructor. -/
 inductive Evidence where
-  /-- A span of pinned source, by its span digest, and the name of the `#guard`
-  that decided the pin's well-formedness. Reaches `pinned`. -/
-  | pin (spanSha256 guard : String)
-  /-- A replay fixture, by the id of the vector and the digest of its receipt.
-  Reaches `replayed`, whatever the corpus size: replay never turns a claim green. -/
-  | fixture (id sha256 : String)
+  /-- A span of pinned source, by reference to its `Pin` node, and the name of the
+  `#guard` that decided the pin's well-formedness. Reaches `pinned`. -/
+  | pin (span : Ref Pin) (guard : String)
+  /-- A replay fixture, by reference to the vector's node (untyped, at kind
+  `vector`) and to its receipt. Reaches `replayed`, whatever the corpus size:
+  replay never turns a claim green. -/
+  | fixture (vector : AnyRef) (receipt : Ref Receipt)
   /-- A theorem, by name, with its canonical axiom receipt and the digest of its
-  frozen ascription text. Reaches `proved`. -/
-  | thm (name axioms statementSha256 : String)
-  /-- A kernel `decide` over a named finite domain. Reaches `proved`, and obliges
-  the claim's residual to name the domain. -/
-  | decided (name domain statementSha256 : String)
+  frozen ascription text — a foreign hash, checked by recomputation, never
+  resolved. Reaches `proved`. -/
+  | thm (name axioms : String) (statement : Digest)
+  /-- A kernel `decide` over a named finite domain, with the same frozen
+  statement digest. Reaches `proved`, and obliges the claim's residual to name
+  the domain. -/
+  | decided (name domain : String) (statement : Digest)
   /-- A premise taken on trust, written down. Reaches no rung. -/
   | assumed (premise : String)
 deriving DecidableEq, Repr, Inhabited
@@ -190,28 +204,7 @@ def isAssumed : Evidence → Bool
 theorem rung_eq_none_iff (e : Evidence) : e.rung = none ↔ e.isAssumed = true := by
   cases e <;> simp [rung, isAssumed]
 
-/-- The record as store content, per ruling R5: a tagged object whose keys are
-in constructor-argument order. -/
-def json : Evidence → Json
-  | .pin spanSha256 guard =>
-      .obj [("_tag", .str "pin"), ("spanSha256", .str spanSha256), ("guard", .str guard)]
-  | .fixture id sha256 =>
-      .obj [("_tag", .str "fixture"), ("id", .str id), ("sha256", .str sha256)]
-  | .thm name axioms statementSha256 =>
-      .obj [ ("_tag", .str "thm"), ("name", .str name), ("axioms", .str axioms)
-           , ("statementSha256", .str statementSha256) ]
-  | .decided name domain statementSha256 =>
-      .obj [ ("_tag", .str "decided"), ("name", .str name), ("domain", .str domain)
-           , ("statementSha256", .str statementSha256) ]
-  | .assumed premise =>
-      .obj [("_tag", .str "assumed"), ("premise", .str premise)]
-
-/-- The address: the digest of the payload through the one `Canonical Json`. -/
-def address (e : Evidence) : Digest := digestOf e.json
-
 end Evidence
-
-instance : Canonical Evidence := ⟨fun e => encode e.json⟩
 
 /-- The rung a list of evidence supports: the join over the list, HELD when it
 is empty. A monoid homomorphism from `(List Evidence, ++, [])`. -/
@@ -269,7 +262,7 @@ length. -/
 theorem supported_not_by_count :
     ∃ u v : List Evidence, u.length < v.length ∧
       RungOrHeld.le (supportedOf v) (supportedOf u) = true :=
-  ⟨[.thm "t" "none" "s"], [.assumed "a", .assumed "b"], by decide, by decide⟩
+  ⟨[.thm "t" "none" zeroDigest], [.assumed "a", .assumed "b"], by decide, by decide⟩
 
 /-- What kind of statement a claim makes. A closed vocabulary. -/
 inductive ClaimKind where
@@ -302,8 +295,8 @@ structure Claim where
   summary : String
   /-- The declared rung. `none` is HELD. -/
   rung : RungOrHeld
-  /-- The addresses of the evidence records, in a fixed order. -/
-  evidence : List Digest
+  /-- The evidence records by reference, in a fixed order. -/
+  evidence : List (Ref Evidence)
   /-- Where the evidence stops. Authored. -/
   residual : String
 deriving DecidableEq, Repr, Inhabited
@@ -313,49 +306,86 @@ namespace Claim
 /-- A claim written down but not asserted. -/
 def held (c : Claim) : Bool := c.rung.isNone
 
-/-- The rung the claim's evidence supports, given the resolver from address to
-record. An address the resolver does not know contributes nothing. -/
-def supported (c : Claim) (evidenceAt : Digest → Option Evidence) : RungOrHeld :=
+/-- The rung the claim's evidence supports, given the resolver from reference to
+record. A reference the resolver does not know contributes nothing; the store's
+`get` at kind `annotation` is the resolver a registry supplies. -/
+def supported (c : Claim) (evidenceAt : Ref Evidence → Option Evidence) : RungOrHeld :=
   supportedOf (c.evidence.filterMap evidenceAt)
 
 /-- The decidable half of coherence: the declared rung is at most the supported one. -/
-def coherent (c : Claim) (evidenceAt : Digest → Option Evidence) : Bool :=
+def coherent (c : Claim) (evidenceAt : Ref Evidence → Option Evidence) : Bool :=
   RungOrHeld.le c.rung (c.supported evidenceAt)
 
 /-- **A claim never outranks its evidence.** Definitionally the coherence check;
 stated as a theorem because it is the sentence the registry's reader looks for. -/
-theorem not_outranks (c : Claim) (evidenceAt : Digest → Option Evidence)
+theorem not_outranks (c : Claim) (evidenceAt : Ref Evidence → Option Evidence)
     (h : c.coherent evidenceAt = true) :
     RungOrHeld.le c.rung (c.supported evidenceAt) = true := h
 
 /-- Every record a claim resolves is at most the claim's support. -/
-theorem evidence_le_supported (c : Claim) (evidenceAt : Digest → Option Evidence)
+theorem evidence_le_supported (c : Claim) (evidenceAt : Ref Evidence → Option Evidence)
     (e : Evidence) (h : e ∈ c.evidence.filterMap evidenceAt) :
     RungOrHeld.le e.rung (c.supported evidenceAt) = true :=
   le_supportedOf_of_mem h
 
-/-- The trie name: `["claim", component, verbOrStar, id]`. -/
-def path (c : Claim) : Path :=
+/-- The name a claim binds: `["claim", component, verbOrStar, id]`. Names left the store with
+the trie (Q3), so this is a plain list of segments, and a name space is a `tree` node whose
+entries are these lists joined and an `AnyRef`. -/
+def path (c : Claim) : List String :=
   ["claim", c.component, c.verb.getD "*", c.id]
-
-/-- The claim as store content, per ruling R5. Evidence crosses as hex addresses. -/
-def json (c : Claim) : Json :=
-  .obj
-    [ ("type", .str "claim")
-    , ("id", .str c.id)
-    , ("component", .str c.component)
-    , ("verb", match c.verb with | some v => .str v | none => .null)
-    , ("kind", .str c.kind.spelling)
-    , ("summary", .str c.summary)
-    , ("rung", .str c.rung.spelling)
-    , ("evidence", .arr (c.evidence.map fun d => Json.str d.hex))
-    , ("residual", .str c.residual) ]
-
-/-- The address: the digest of the payload through the one `Canonical Json`. -/
-def address (c : Claim) : Digest := digestOf c.json
 
 end Claim
 
-instance : Canonical Claim := ⟨fun c => encode c.json⟩
+end Effect4.Char
+
+namespace Effect4.Char
+
+open Effect4.Store
+
+-- The `pin` reference is refused at another kind: `Ref Pin` reads only the `source` byte.
+#guard Canonical.decode (α := Ref Pin) (Val.encode (.ref 6 zeroDigest.bytes)) = none
+
+/-! ## Receipts -/
+
+#print axioms Rung.spelling
+#print axioms Rung.rank
+#print axioms RungOrHeld.rank
+#print axioms RungOrHeld.spelling
+#print axioms RungOrHeld.le
+#print axioms RungOrHeld.join
+#print axioms RungOrHeld.meet
+#print axioms RungOrHeld.rank_injective
+#print axioms RungOrHeld.le_iff
+#print axioms RungOrHeld.rank_join
+#print axioms RungOrHeld.rank_meet
+#print axioms RungOrHeld.join_comm
+#print axioms RungOrHeld.join_assoc
+#print axioms RungOrHeld.join_idem
+#print axioms RungOrHeld.join_bot
+#print axioms RungOrHeld.bot_join
+#print axioms RungOrHeld.le_refl
+#print axioms RungOrHeld.le_trans
+#print axioms RungOrHeld.le_join_left
+#print axioms RungOrHeld.le_join_right
+#print axioms RungOrHeld.meet_le_left
+#print axioms RungOrHeld.meet_le_right
+#print axioms RungOrHeld.join_le_join
+#print axioms Evidence.rung
+#print axioms Evidence.tag
+#print axioms Evidence.isAssumed
+#print axioms Evidence.rung_eq_none_iff
+#print axioms supportedOf
+#print axioms supportedOf_append
+#print axioms le_supportedOf_of_mem
+#print axioms supportedOf_mono
+#print axioms supported_none_of_all_assumed
+#print axioms supported_not_by_count
+#print axioms ClaimKind.spelling
+#print axioms Claim.held
+#print axioms Claim.supported
+#print axioms Claim.coherent
+#print axioms Claim.not_outranks
+#print axioms Claim.evidence_le_supported
+#print axioms Claim.path
 
 end Effect4.Char

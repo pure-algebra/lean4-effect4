@@ -21,9 +21,10 @@ at the meta-schema and so needs no `decide`).
 
 The numbers this fixes under version byte 0 are the facts note's §6a: the genesis address
 `2794d9…2926` (`specOf Document`), the census entry's spec `268ee1…aa7c` and its address
-`1c3c94…72eb`. They are stated by the battery (`Test/Store/NodeContract.lean`), not here: a
-kernel `decide` over a SHA-256 of ninety-two kilobytes is not a receipt worth its cost in a
-library module, and a library module prints nothing.
+`1c3c94…72eb`. They are guarded by the battery (`Test/Store/NodeContract.lean`), not here: a
+library module prints nothing. The guard is cheap — `#guard` evaluates the compiled decision
+procedure, not the kernel, so the SHA-256 of the ninety-two-kilobyte meta-schema decides in
+about two seconds (lane B's measurement, 2026-09-05).
 -/
 
 set_option autoImplicit false

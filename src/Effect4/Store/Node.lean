@@ -73,29 +73,20 @@ structure AnyRef where
   digest : Digest
 deriving DecidableEq, Repr
 
+/-- A name space as store content: name → reference pairs, in the order the namer wrote them.
+The payload of every node at kind `tree` (`Store/Kind.lean:45`); the entries are `AnyRef`
+because a name space binds targets of several kinds, and each binding is an edge admission
+resolves at the kind it carries. Its `Canonical` and `Content` instances are generated beside
+`Pin`'s (`Store/PinDerived.lean`). Moved here from the census module at the landing. -/
+structure Tree where
+  /-- The bindings, in order; a name occurs once. -/
+  bindings : List (String × AnyRef)
+deriving DecidableEq, Repr, Inhabited
+
 /-- The canonical trait plus the kind the carrier files under. -/
 class Content (α : Type) extends Canonical α where
   /-- The kind byte's row for every node carrying an `α`. -/
   kind : Kind
-
-/-- A digest from exactly thirty-two bytes; the one length check the codecs share. -/
-def Digest.ofBytes? (bs : Bytes) : Option Digest :=
-  if h : bs.length = 32 then some ⟨bs, h⟩ else none
-
-theorem Digest.ofBytes?_bytes (d : Digest) : Digest.ofBytes? d.bytes = some d := by
-  cases d with
-  | mk bs hl =>
-    show (if h : bs.length = 32 then some (Digest.mk bs h) else none) = some (Digest.mk bs hl)
-    rw [dif_pos hl]
-
-theorem Digest.ofBytes?_exact {bs : Bytes} {d : Digest} (h : Digest.ofBytes? bs = some d) :
-    d.bytes = bs := by
-  unfold Digest.ofBytes? at h
-  split at h
-  · injection h with h
-    subst h
-    rfl
-  · exact nomatch h
 
 /-- A typed reference frames as `ref` with its carrier's kind byte; reading refuses another kind
 byte or a digest that is not thirty-two bytes. -/
@@ -480,9 +471,6 @@ def sampleNode : Node := ⟨0, .«export», zeroDigest, sampleEntry⟩
 #print axioms Ref.ext
 #print axioms Ref.instDecidableEq
 #print axioms instDecidableEqAnyRef
-#print axioms Digest.ofBytes?
-#print axioms Digest.ofBytes?_bytes
-#print axioms Digest.ofBytes?_exact
 #print axioms instCanonicalRef
 #print axioms instCanonicalAnyRef
 #print axioms instDecidableEqNode

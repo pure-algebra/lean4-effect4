@@ -83,12 +83,43 @@ $manifest = @(
       'Effect4.Program.CauseTerm', 'Effect4.Program.Eff@Effect4.Program.NativeOp')
   },
   [pscustomobject]@{
+    # `Tree` is the store's own carrier (a name space as content, `Store/Node.lean`); its
+    # instance is emitted here beside `Pin`'s so no area above the store supplies a store type's
+    # instance (coordinator, 2026-09-05, after lane C's note).
     Name    = 'Pin'
     Imports = 'Effect4.Store.Pin,Effect4.Store.Node'
     Out     = 'src\Effect4\Store\PinDerived.lean'
     Guards  = 'tools\Effect4Gen\guards\pin.lean'
-    Kinds   = @('Effect4.Store.Pin=source')
-    Types   = @('Effect4.Store.PinRole', 'Effect4.Store.Pin')
+    Kinds   = @('Effect4.Store.Pin=source', 'Effect4.Store.Tree=tree')
+    Types   = @('Effect4.Store.PinRole', 'Effect4.Store.Pin', 'Effect4.Store.Tree')
+  },
+  [pscustomobject]@{
+    # The census (lane C): sources first, because `Entry.source : Ref Source` needs the kind.
+    # No appended guards: `Links.lean` and `Rc112.lean` exercise the laws over the real census.
+    Name    = 'StdLib'
+    Imports = 'Effect4.Evidence.StdLib.Entry'
+    Out     = 'src\Effect4\Evidence\StdLib\Derived.lean'
+    Guards  = ''
+    Kinds   = @('Effect4.StdLib.Source=source', 'Effect4.StdLib.Entry=export')
+    Types   = @('Effect4.StdLib.ExportKind', 'Effect4.StdLib.Source', 'Effect4.StdLib.Entry')
+  },
+  [pscustomobject]@{
+    # The Char room (lane X). `Implementation`, `Receipt` and `Label` are hand instances in the
+    # room (ordering: they sit below `Char/Evidence.lean`); `Evidence` joins this group once the
+    # non-recursive sum reader is fixed (see NOTES-X.md, open item 1). The acceptance guards are
+    # `#guard`s in the room, not an appended fragment.
+    Name    = 'Char'
+    Imports = 'Effect4.Evidence.Char.Conformance.Surface'
+    Out     = 'src\Effect4\Evidence\Char\Derived.lean'
+    Guards  = ''
+    Kinds   = @('Effect4.Char.Evidence=annotation', 'Effect4.Char.Claim=annotation',
+                'Effect4.Char.Manifest=component', 'Effect4.Char.Target=annotation',
+                'Effect4.Char.Characterized=annotation')
+    Types   = @(
+      'Effect4.Char.Rung', 'Effect4.Char.ClaimKind', 'Effect4.Char.Evidence', 'Effect4.Char.Claim',
+      'Effect4.Char.Entry', 'Effect4.Char.Grade', 'Effect4.Char.Verb', 'Effect4.Char.GradeRow',
+      'Effect4.Char.Manifest', 'Effect4.Char.Failure@String', 'Effect4.Char.Target',
+      'Effect4.Char.ClaimRung', 'Effect4.Char.Characterized')
   }
 )
 

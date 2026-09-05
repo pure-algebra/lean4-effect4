@@ -282,7 +282,12 @@ def encode (mark : SurfaceMark) : Json :=
         | none => .null) ]
 
 /-- A left inverse of `encode`. It is deliberately not a right inverse: the
-exactness of the key is bought by the re-encode guard in `markKey.decode`. -/
+exactness of the key is bought by the re-encode guard in `markKey.decode`.
+
+The `source` array is refused unless it is thirty-two bytes, because a `Digest`
+carries `length_eq` and there is no other way to build one. That check is
+`Effect4/Store/Node.lean:82`'s `Digest.ofBytes?` spelled here, because this
+module sits below `Store/Node.lean` and imports only `Store/Digest.lean`. -/
 def parse? : Json → Option SurfaceMark
   | .obj
       [ ("kind", .str kind)
@@ -300,9 +305,13 @@ def parse? : Json → Option SurfaceMark
       | .null =>
         some ⟨markKind, domain, name, version.bits, markStance, factNames, pinRows, none⟩
       | .arr bytes =>
-        (bytesOf? bytes).map fun digestBytes =>
-          ⟨markKind, domain, name, version.bits, markStance, factNames, pinRows,
-            some ⟨digestBytes⟩⟩
+        match bytesOf? bytes with
+        | some digestBytes =>
+          if h : digestBytes.length = 32 then
+            some ⟨markKind, domain, name, version.bits, markStance, factNames, pinRows,
+              some ⟨digestBytes, h⟩⟩
+          else none
+        | none => none
       | _ => none
     | _, _, _, _ => none
   | _ => none
@@ -335,9 +344,10 @@ theorem parse?_encode (mark : SurfaceMark) : parse? mark.encode = some mark := b
       simp [encode, parse?, MarkKind.ofName?_name, Stance.ofName?_name,
         stringsOf?_map, pinsOf?_map, Float64.ofBits]
     | some digest =>
-      cases digest
-      simp [encode, parse?, MarkKind.ofName?_name, Stance.ofName?_name,
-        stringsOf?_map, pinsOf?_map, bytesOf?_map, Float64.ofBits]
+      cases digest with
+      | mk digestBytes hlen =>
+        simp [encode, parse?, MarkKind.ofName?_name, Stance.ofName?_name,
+          stringsOf?_map, pinsOf?_map, bytesOf?_map, Float64.ofBits, hlen]
 
 end SurfaceMark
 

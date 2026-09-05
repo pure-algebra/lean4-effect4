@@ -633,10 +633,34 @@ def probeStore : Store := afterPut (afterPut Store.empty probeSchema) probeEntry
     | .error _ => false
   | .error _ => false)
 
+/-! ## The total combinators a fold needs -/
+
+section
+variable [Content Document]
+
+/-- The store after an admitted put; the store unchanged when admission refused. A store built
+children-first admits every put, and a refusal shows as a missing node rather than as an error,
+which is what a battery counts. Moved here from the census module at the landing: three
+families build stores by folding this. -/
+def putOr {α : Type} [Content α] (store : Store) (value : α) : Store :=
+  match store.put value with
+  | .ok (_, _, moved) => moved
+  | .error _ => store
+
+end
+
+/-- The store after an admitted root move; the store unchanged when the move refused. -/
+def putRootOr (store : Store) (root : Root) : Store :=
+  match store.putRoot root with
+  | .ok moved => moved
+  | .error _ => store
+
 /-! ## Receipts -/
 
 #print axioms RootKind.name
 #print axioms Store.empty
+#print axioms putOr
+#print axioms putRootOr
 #print axioms findIn
 #print axioms Store.find
 #print axioms Store.getNode

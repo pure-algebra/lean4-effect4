@@ -315,10 +315,36 @@ hex codec both ways, and the facts note §6 payload digest of the census entry. 
 #guard (sha256 (Val.encode sampleEntry)).hex =
   "8fab161870afe7d35c681679cf5dced52845b5ebef2b84b6c85e4b49d00661fa"
 
+/-! ## A digest from bytes -/
+
+/-- A digest from exactly thirty-two bytes; the one length check the codecs share. Moved here
+from `Store/Node.lean` at the landing (2026-09-05) so a module that needs only a `Digest`
+(`Surface/Annotate.lean`) never imports the node layer. -/
+def Digest.ofBytes? (bs : Bytes) : Option Digest :=
+  if h : bs.length = 32 then some ⟨bs, h⟩ else none
+
+theorem Digest.ofBytes?_bytes (d : Digest) : Digest.ofBytes? d.bytes = some d := by
+  cases d with
+  | mk bs hl =>
+    show (if h : bs.length = 32 then some (Digest.mk bs h) else none) = some (Digest.mk bs hl)
+    rw [dif_pos hl]
+
+theorem Digest.ofBytes?_exact {bs : Bytes} {d : Digest} (h : Digest.ofBytes? bs = some d) :
+    d.bytes = bs := by
+  unfold Digest.ofBytes? at h
+  split at h
+  · injection h with h
+    subst h
+    rfl
+  · exact nomatch h
+
 /-! ## Receipts -/
 
 #print axioms Digest.ext
 #print axioms Digest.instDecidableEq
+#print axioms Digest.ofBytes?
+#print axioms Digest.ofBytes?_bytes
+#print axioms Digest.ofBytes?_exact
 #print axioms sha256_bytes_length
 #print axioms sha256
 #print axioms hexDigit

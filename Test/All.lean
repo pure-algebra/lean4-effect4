@@ -51,7 +51,13 @@ import Test.Counterexamples.Machine.Runtime.Frames
 import Test.Machine.Runtime.LiveStackContract
 import Test.Machine.Runtime.LiveStackAxiomReport
 import Test.Counterexamples.Machine.Runtime.LiveStack
+import Test.Store.Templates
 import Test.Store.StoreContract
+import Test.Store.NodeContract
+import Test.Store.WordContract
+import Test.Store.TraitContract
+import Test.Store.ProbeContract
+import Test.Store.DerivedCheck
 import Test.Evidence.ArchContract
 import Test.Codegen.PrintContract
 import Test.Codegen.ReadContract
