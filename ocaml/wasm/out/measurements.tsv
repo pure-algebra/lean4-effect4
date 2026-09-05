@@ -1,0 +1,12 @@
+size witnesses	jsoo	avatar_witnesses.bc.js	4628870 B
+size witnesses	native	avatar_witnesses.exe	3792800 B
+size witnesses	bytecode	avatar_witnesses.bc	3154000 B
+size witnesses	wasm-cps	avatar_witnesses.bc.wasm.js + .assets	44745 B loader + 2814431 B assets (1414085 B of .wasm)
+size main	wasm-cps	avatar_main.bc.wasm.js + .assets	44735 B loader + 2808066 B assets (1410282 B of .wasm)
+size main	jsoo	avatar_main.bc.js	4240017 B
+witnesses best-of-3	native	avatar_witnesses.exe (in WSL)	72 ms
+witnesses best-of-3	wasm-cps	node avatar_witnesses.bc.wasm.js	264 ms
+witnesses best-of-3	jsoo	node avatar_witnesses.bc.js	252 ms
+corpus 158	wasm-cps	node avatar_main.bc.wasm.js x158	37.4 s
+corpus 158	jsoo	node avatar_main.bc.js x158	32.7 s
+corpus 158	native	avatar_main.exe x158 (in WSL)	2 s

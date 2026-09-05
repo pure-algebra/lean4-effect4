@@ -1,0 +1,35 @@
+format	effect4-trace-golden-v1
+generator	ocaml/avatar/build-avatar.sh	sha256=
+regenerate	./ocaml/avatar/build-avatar.sh
+input	ocaml/avatar/deep_fibers.ml	sha256=
+input	ocaml/avatar/avatar_trace.ml	sha256=
+input	ocaml/avatar/fibers_fixture.ml	sha256=
+input	ocaml/avatar/store_fixtures.ml	sha256=
+input	ocaml/avatar/extra_fixture.ml	sha256=
+input	ocaml/avatar/corpus_run.ml	sha256=
+input	ocaml/avatar/corpus/programs.txt	sha256=
+pin	effects	
+format	effect4-trace-v1
+face	ocaml
+program	corpus.fRefTwoWritersHandover
+tape	0:1,1:1
+rules	
+op	make	0
+answer	make	0
+op	fork	10
+decide	0	true
+answer	fork	1
+op	update	[0, 1]
+answer	update	[]
+op	get	0
+answer	get	1
+op	fork	11
+decide	1	true
+answer	fork	2
+op	update	[0, 10]
+answer	update	[]
+op	get	0
+answer	get	11
+op	get	0
+answer	get	11
+done	{"success":11}

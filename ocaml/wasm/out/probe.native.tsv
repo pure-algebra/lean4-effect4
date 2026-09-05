@@ -1,0 +1,16 @@
+backend_type	Native
+int_size	63
+word_size	64
+max_int	4611686018427387903
+min_int	-4611686018427387904
+max_int_hex	3fffffffffffffff
+big_endian	false
+max_string_length	144115188075855863
+max_array_length	18014398509481983
+succ_max_int	-4611686018427387904
+shift_62	-4611686018427387904
+compare_ints	1
+float_repr	0.33333333333333331
+float_to_int	1000000000000000000
+string_compare	-1
+effect_roundtrip	42

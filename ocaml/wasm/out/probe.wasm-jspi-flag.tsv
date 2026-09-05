@@ -1,0 +1,15 @@
+backend_type	Other wasm_of_ocaml
+int_size	31
+word_size	32
+max_int	1073741823
+min_int	-1073741824
+max_int_hex	3fffffff
+big_endian	false
+max_string_length	1073741819
+max_array_length	268435455
+succ_max_int	-1073741824
+shift_62	-1073741824
+compare_ints	1
+float_repr	0.33333333333333331
+float_to_int	-1
+string_compare	-1

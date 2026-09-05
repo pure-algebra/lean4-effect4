@@ -1,0 +1,16 @@
+backend_type	Other js_of_ocaml
+int_size	32
+word_size	32
+max_int	2147483647
+min_int	-2147483648
+max_int_hex	7fffffff
+big_endian	false
+max_string_length	2147483643
+max_array_length	536870911
+succ_max_int	-2147483648
+shift_62	1073741824
+compare_ints	1
+float_repr	0.33333333333333331
+float_to_int	-2147483648
+string_compare	-1
+effect_roundtrip	42

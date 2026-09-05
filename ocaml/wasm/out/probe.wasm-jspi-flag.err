@@ -1,0 +1,1 @@
+Fatal error: exception Failure("Effect handlers are not supported: the JavaScript Promise Integration API is not enabled")

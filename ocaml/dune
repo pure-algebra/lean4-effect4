@@ -9,6 +9,8 @@
 ;   eff/     the Eff program IR as an OCaml library (typed embedding, wire, checker)
 ;
 ; Not built from here: link/ (route 1, links the Lean machine's static libraries and is
-; built by link/tools/build.sh after the Lean half compiles), probes/ (single-file probes
-; and corpora with their own shell builds), goldens/ (data).
+; built by link/tools/build.sh after the Lean half compiles), wasm/ (the fourth host: the
+; avatar under wasm_of_ocaml in the effect4-wasm switch, built out of tree by
+; wasm/tools/build-wasm.sh), probes/ (single-file probes and corpora with their own shell
+; builds), goldens/ (data).
 (dirs avatar server gen eff)
