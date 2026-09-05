@@ -1,5 +1,4 @@
 import Effect4.Store.Digest
-import Effect4.Store.JsonCanonical
 
 /-!
 # Store.Pin
@@ -21,14 +20,16 @@ are the lines joined by a newline with a trailing newline, exactly what
 `sed -n 'a,bp' file` prints, so the digest here and the digest the census
 generator computes in shell (`scripts/generate-effect-runtime-census.sh:355`)
 are the same number. A line is taken as its UTF-8 bytes, a projection that
-costs no axiom (`Effect4/Store/Canonical.lean`, the string instance).
+costs no axiom (`Store/Canonical.lean`, the string instance).
 
-Ruling R4 puts this entity in `Effect4/Store/`, never under `Effect4/Char/`.
-Ruling R5 makes its store payload `Json`: the address is `digestOf` of the
-JSON projection through the one `Canonical Json` instance
-(`Effect4/Arch/JsonCanonical.lean`), and no `Canonical Pin` instance exists.
-The span digest is a `Digest` in the carrier and its lowercase hex in the
-payload, which is the one decode step R5 accepts.
+The pin is store content through its derived instance, `Store/PinDerived.lean`:
+`Canonical Pin` written by `Effect4Gen` from this structure (constructor 0, the
+fields in declaration order) and `Content Pin` at kind `source`
+(`docs/research/2026-09-04-cas-trait-plan.md` §3). Nothing here projects to JSON
+and nothing here names an address: the printer is derived from the shape, and
+the address is the store's `address` over the node bytes. The span digest is a
+`Digest` in the carrier — a foreign hash, checked by recomputation and never
+resolved against the store (the facts note, Q4) — and frames as thirty-two bytes.
 
 Hash level 0 (`workshop/Char/02-pins/01-pin-entity.md`, section 4): the pin
 theorem characterizes a collision and assumes nothing about `sha256`. The
@@ -36,9 +37,9 @@ level-1 statement takes injectivity as a named premise that is never
 discharged in this tree. Level 2 is not stated.
 -/
 
-namespace Effect4.Store
+set_option autoImplicit false
 
-open Effect4.Arch
+namespace Effect4.Store
 
 /-- Whether the pinned declaration is exported by its module. A label on the
 pin, carried in the payload; not part of what the anchor is derived from. -/
@@ -128,36 +129,15 @@ theorem holds_of_injective (hInj : Function.Injective sha256) (p : Pin)
     upstream = p.spanBytes :=
   hInj (h.trans (p.spanDigest_eq_of_wellFormed hWF).symm)
 
-/-- The pin as store content, per ruling R5. The entity type is the `type`
-field. Offsets cross as JSON numbers, exact below 2^53. The digest crosses as
-lowercase hex. Keys are in declaration order and are never sorted. -/
-def json (p : Pin) : Json :=
-  .obj
-    [ ("type", .str "pin")
-    , ("package", .str p.package)
-    , ("version", .str p.version)
-    , ("file", .str p.file)
-    , ("declaration", .str p.declaration)
-    , ("role", .str p.role.spelling)
-    , ("anchor", .str p.anchor)
-    , ("offsetStart", Json.ofNat p.offsetStart)
-    , ("offsetEnd", Json.ofNat p.offsetEnd)
-    , ("spanSha256", .str p.spanDigest.hex)
-    , ("text", .arr (p.text.map Json.str)) ]
-
-/-- The address: the digest of the JSON payload through the one `Canonical Json`. -/
-def address (p : Pin) : Digest := digestOf p.json
-
-/-- The content name, derived from the address and so never rebound:
-`["pin", package, version, file, spanHex]`. The role name a component binds,
-`["char", component, verb, role]`, is the component's to bind and rebind. -/
-def contentPath (p : Pin) : Path :=
-  ["pin", p.package, p.version, p.file, p.spanDigest.hex]
-
-/-- Equal pins have equal addresses; the converse is never assumed. -/
-theorem address_congr {p q : Pin} (h : p = q) : p.address = q.address :=
-  congrArg address h
-
 end Pin
+
+/-! ## Receipts -/
+
+#print axioms PinRole.spelling
+#print axioms Pin.spanBytes
+#print axioms Pin.isWellFormed
+#print axioms Pin.spanDigest_eq_of_wellFormed
+#print axioms Pin.holds_or_collision
+#print axioms Pin.holds_of_injective
 
 end Effect4.Store

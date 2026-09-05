@@ -2,17 +2,35 @@
 -- object with its laws (the model of every generated `Optic.id<S>().key(…)`).
 import Effect4.Data.Row
 import Effect4.Data.Json
+import Effect4.Data.JsonNumber
 import Effect4.Data.Optic
 import Effect4.Data.JsonOptic
--- The generic content-addressed store (2026-09-04): canonical bytes, a proved
--- SHA-256 address, ids by insertion, names by path trie. The substrate every
--- ingested surface — a standard library, a schema surface, a code blob and
--- the syntax read from it — is modelled in as data.
-import Effect4.Store.Canonical
+-- The content-addressed store as one trait (docs/research/2026-09-04-cas-trait-plan.md,
+-- landed 2026-09-05), in dependency order: the digit strings and the strict UTF-8 of the
+-- byte codec; the value tree `Val` with its one exact codec; the SHA-256 digest and the one
+-- hex codec; the kind table; the shape language with the spec `Document` and the JSON
+-- printer derived from it; the `Canonical` trait, its laws as fields, and the primitives;
+-- the node (`version ∷ kind ∷ spec ∷ payload`), the typed `Ref` and the address lattice
+-- proved once; the store with admission and roots; words (replay, closure, the layered
+-- read, the outbox, verify); traits as annotation nodes; the generated instances of `Json`
+-- and of the Schema carriers; the genesis (`Content Document`, so the meta-schema is the
+-- zero-spec node); the pin and its generated instance at kind `source`.
+import Effect4.Store.Digits
+import Effect4.Store.Utf8
+import Effect4.Store.Val
 import Effect4.Store.Digest
-import Effect4.Store.Trie
+import Effect4.Store.Kind
+import Effect4.Store.Shape
+import Effect4.Store.Canonical
+import Effect4.Store.Node
 import Effect4.Store.Store
+import Effect4.Store.Word
+import Effect4.Store.Traits
+import Effect4.Store.Derived.Json
+import Effect4.Store.Derived.Schema
+import Effect4.Store.Genesis
 import Effect4.Store.Pin
+import Effect4.Store.PinDerived
 -- The error channel everywhere.
 import Effect4.Machine.Cause
 import Effect4.Machine.Exit
@@ -64,10 +82,10 @@ import Effect4.Machine.Witnesses
 import Effect4.Machine.Context
 import Effect4.Machine.Layer
 -- The middle tier (2026-09-04): architecture views as Effect Schema documents
--- with payloads projected from the proof carriers, the JSON canonical form that
--- makes schemas store content, the structural acceptance checker, and the
--- pinned standard library as store entries.
-import Effect4.Store.JsonCanonical
+-- with payloads projected from the proof carriers, the structural acceptance
+-- checker, and the pinned standard library as store entries. A schema is store
+-- content through the store's own derived `Canonical Document` above; no JSON
+-- alphabet of its own.
 import Effect4.Schema.Accepts
 import Effect4.Evidence.Views
 import Effect4.Evidence.StdLib.Entry
@@ -176,9 +194,13 @@ import Effect4.Surface.Observability
 -- The layer printer: a `LayerTerm` and an `App` as the rc.112 `Layer.*` / `Effect.provide`
 -- combinators, syntax never text, with the declared `Layer.Layer<ROut, E, RIn>` types.
 import Effect4.Codegen.Layer
--- The canonical bytes of a program and the exact decoder (2026-09-04): how a
--- program crosses the store, the OCaml host and the daemon, and comes back as
--- exactly itself. `ocaml/eff` implements the same rule in OCaml.
+-- The canonical bytes of a program (2026-09-04; one trait since 2026-09-05): the
+-- generated `Canonical (Eff NativeOp)` and its family, then the Wire face over
+-- it — `encodeProgram`, `decodeProgram`, the round trip and exactness as
+-- theorems, the corpus held to the goldens — so a program crosses the store,
+-- the OCaml host and the daemon and comes back as exactly itself. `ocaml/eff`
+-- implements the same rule in OCaml.
+import Effect4.Program.Derived
 import Effect4.Program.Wire
 -- The application face: one module, the whole pipeline (type, print, compile,
 -- run; the Schema syntax), answering syntax and never text. Import this.

@@ -29,6 +29,26 @@ roots = ["OCaml5"]
 globs = ["OCaml5", "OCaml5.MlTest", "OCaml5.Tools.+"]
 moreLeanArgs = ["-M6144"]
 
+# The CAS-trait spike (docs/research/2026-09-04-cas-trait-plan.md §8, temporary): the store
+# substrate rewritten under `workshop/Cas`, in namespace `Effect4.Store`, importing nothing from
+# the old `src/Effect4/Store`. The hunk leaves with the landing.
+[[lean_lib]]
+name = "Cas"
+srcDir = "workshop/Cas"
+roots = ["Cas"]
+globs = ["Cas", "Cas.+"]
+moreLeanArgs = ["-M6144"]
+
+# The generator of `Canonical` instances and its projection guard
+# (docs/research/2026-09-04-cas-trait-plan.md §4): `--run` tools over `Lean.Meta`, not part
+# of any audited library; the emitted files carry their own receipts.
+[[lean_lib]]
+name = "Effect4Gen"
+srcDir = "tools"
+roots = ["Effect4Gen.Main", "Effect4Gen.Check"]
+globs = ["Effect4Gen.Main", "Effect4Gen.Check"]
+moreLeanArgs = ["-M6144"]
+
 # The green battery: the audit root and its import closure.
 [[lean_lib]]
 name = "Test"
