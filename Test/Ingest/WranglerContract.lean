@@ -142,7 +142,14 @@ def everyKind : Deployment :=
     (.obj
       [ ("name", .str "docs"), ("compatibility_date", .str "2026-09-04")
       , ("queues", .obj [("consumers", .arr [])]) ])) ==
-  some (.wranglerUnsupportedBinding "queues.consumers")
+  none
+-- Lane L6 (2026-09-04) lifted the `queues.consumers` refusal: consumers now read as
+-- `Deployment.consumers`; an unknown key under `queues` is still refused by name.
+#guard refusal? (ingest .deployWrangler shopDomain
+    (.obj
+      [ ("name", .str "docs"), ("compatibility_date", .str "2026-09-04")
+      , ("queues", .obj [("dead_letter", .arr [])]) ])) ==
+  some (.wranglerUnsupportedBinding "queues.dead_letter")
 
 #guard refusal? (ingest .deployWrangler shopDomain
     (.obj
