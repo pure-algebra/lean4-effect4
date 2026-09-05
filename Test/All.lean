@@ -64,6 +64,7 @@ import Test.Program.ProvisionContract
 import Test.Program.ProvisionAxiomReport
 import Test.Program.ConfigContract
 import Test.Program.ConfigAxiomReport
+import Test.Surface.ObservabilityAxiomReport
 import Test.Surface.ProvisionContract
 import Test.Surface.ProvisionAxiomReport
 import Test.Codegen.LayerPrintAxiomReport

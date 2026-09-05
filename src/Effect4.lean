@@ -169,6 +169,10 @@ import Effect4.Program.Provision
 -- its tri-state resolution, dotenv substitution with fuel, and the configuration requirement
 -- row (`docs/research/2026-09-04-production-standards-spike.md` §4).
 import Effect4.Program.Config
+-- The observability surface at the pin: the OTLP resource, span, log and metric records as
+-- first-order carriers, the four exporters' `OTEL_*` reads as one `ConfigTerm` whose residual
+-- is the operator contract, and W3C/b3 trace-context propagation as a codec with a round trip.
+import Effect4.Surface.Observability
 -- The layer printer: a `LayerTerm` and an `App` as the rc.112 `Layer.*` / `Effect.provide`
 -- combinators, syntax never text, with the declared `Layer.Layer<ROut, E, RIn>` types.
 import Effect4.Codegen.Layer

@@ -52,6 +52,34 @@ cited by line against that copy:
 | `services` | 2014 | array of `{ binding, service }` |
 | `durable_objects.bindings` | 1494, 252 | array of `{ name, class_name }` |
 | `routes` | 1967 | array of `Route` (3199); only the string leg is emitted |
+| `compatibility_flags` | 1380 | array of string |
+| `queues.consumers` | 1852-1903 | array of the nine-key consumer row |
+| `triggers.crons` | 2091-2103 | `{ crons: string[] }` |
+| `observability` | 1784, `Observability` 1225-1255 | `{ enabled?, head_sampling_rate?, logs? }` |
+| `limits` | 1687, `UserLimits` 3263-3275 | `{ cpu_ms }` |
+| `placement` | 1815-1834 | `{ mode: "off" \| "smart", hint? }` |
+| `tail_consumers` | 2076, `TailConsumer` 3238-3254 | array of `{ service, environment? }` |
+| `logpush` | 1725 | boolean |
+| `env` | 1510-1518 | object of environment name to `RawEnvironment` (2326) |
+
+**The compatibility law.** Every key added after the first thirteen is written
+only when the deployment's field is away from its default — an absent `Option`,
+an empty `List`, an empty environment table. A deployment that uses none of them
+therefore emits **exactly** the bytes it emitted before they existed, and the
+`docs` golden below is that law's witness: it is unchanged from the thirteen-key
+version, key for key and value for value.
+
+**The numbers.** `head_sampling_rate` is carried per mille and written as the
+fraction (`50 ↦ 0.05`) by `Effect4/Surface/Deploy.lean`'s `perMilleJson`; every
+other number is a `Nat` written by `natJson`. Neither reaches a `Float`
+primitive; the quotient each carries is that module's header.
+
+**`env.<name>`.** `overrideJson` writes one object per named environment, in the
+same key order the top level uses and with the same "present fields only" rule,
+except that an *inherited* key's `Option` distinguishes `some []` from `none`
+and is written as an empty array in the first case. That is what makes
+"`routes` is overridden to nothing" expressible, and it is why the override's
+list fields are `Option (List _)` and not `List _`.
 
 **Descriptions go nowhere in this artifact.** A binding carries an annotation bag and §15.3
 says a description is read from it; the wrangler configuration is JSON, JSON has no
@@ -175,14 +203,169 @@ rather than an empty array. -/
 private def groupEntry (key : String) (rows : List Json) : List (String × Json) :=
   if rows.isEmpty then [] else [(key, .arr rows)]
 
+/-! ### The keys beyond the binding tables
+
+Every one of these writes nothing at its field's default, which is the compatibility law
+this module's header states. The four typed wrappers exist so the "present fields only" rule
+is one function rather than one `match` per key.
+-/
+
+/-- One key, written only when its value is present. -/
+private def optEntry (key : String) (value : Option Json) : List (String × Json) :=
+  match value with
+  | some payload => [(key, payload)]
+  | none => []
+
+/-- An optional boolean key. -/
+private def boolEntry (key : String) (value : Option Bool) : List (String × Json) :=
+  optEntry key (value.map Json.bool)
+
+/-- An optional integer key, at `Effect4/Store/JsonCanonical.lean:81`'s binary64. -/
+private def natEntry (key : String) (value : Option Nat) : List (String × Json) :=
+  optEntry key (value.map natJson)
+
+/-- An optional string key. -/
+private def strEntry (key : String) (value : Option String) : List (String × Json) :=
+  optEntry key (value.map Json.str)
+
+/-- An optional sampling rate, carried per mille and written as the fraction. -/
+private def rateEntry (key : String) (value : Option Nat) : List (String × Json) :=
+  optEntry key (value.map perMilleJson)
+
+/-- A string array written only when it is non-empty. -/
+private def strListEntry (key : String) (values : List String) : List (String × Json) :=
+  if values.isEmpty then [] else [(key, .arr (values.map Json.str))]
+
+/-- `queues.consumers` row: `queue` and eight optional keys (schema lines 1852-1903). -/
+private def consumerRow (consumer : QueueConsumer) : Json :=
+  .obj
+    ([("queue", .str consumer.queue)] ++
+      strEntry "dead_letter_queue" consumer.deadLetterQueue ++
+      natEntry "max_batch_size" consumer.maxBatchSize ++
+      natEntry "max_batch_timeout" consumer.maxBatchTimeout ++
+      natEntry "max_concurrency" consumer.maxConcurrency ++
+      natEntry "max_retries" consumer.maxRetries ++
+      natEntry "retry_delay" consumer.retryDelay ++
+      natEntry "visibility_timeout_ms" consumer.visibilityTimeoutMs ++
+      strEntry "type" consumer.consumerType)
+
+/-- `tail_consumers` row: `{ service, environment? }` (lines 3238-3254). -/
+private def tailConsumerRow (consumer : TailConsumer) : Json :=
+  .obj ([("service", .str consumer.service)] ++ strEntry "environment" consumer.environment)
+
+/-- `observability.logs` (lines 1236-1252). -/
+private def observabilityLogsJson (logs : ObservabilityLogs) : Json :=
+  .obj
+    (boolEntry "enabled" logs.enabled ++
+      rateEntry "head_sampling_rate" logs.headSamplingRate ++
+      boolEntry "invocation_logs" logs.invocationLogs)
+
+/-- `observability` (`Observability`, lines 1225-1255). -/
+private def observabilityJson (observability : Observability) : Json :=
+  .obj
+    (boolEntry "enabled" observability.enabled ++
+      rateEntry "head_sampling_rate" observability.headSamplingRate ++
+      optEntry "logs" (observability.logs.map observabilityLogsJson))
+
+/-- `placement` (lines 1815-1834); `mode` is the required key. -/
+private def placementJson (placement : Placement) : Json :=
+  .obj ([("mode", .str placement.mode)] ++ strEntry "hint" placement.hint)
+
+/-- `limits` (`UserLimits`, lines 3263-3275); `cpu_ms` is the definition's one key. -/
+private def limitsJson (limits : Limits) : Json :=
+  .obj [("cpu_ms", natJson limits.cpuMs)]
+
+/-- `triggers` (lines 2091-2103), written only when there is a cron to write. -/
+private def triggersEntry (crons : List String) : List (String × Json) :=
+  if crons.isEmpty then []
+  else [("triggers", .obj [("crons", .arr (crons.map Json.str))])]
+
+/-- `queues` (lines 1844-1917) at the top level: the producer bindings, then the consumer
+rows, each written only when it has rows, and the whole key absent when both are empty. -/
+private def queuesEntry (producers consumers : List Json) : List (String × Json) :=
+  if producers.isEmpty && consumers.isEmpty then []
+  else
+    [("queues", .obj
+      ((if producers.isEmpty then [] else [("producers", .arr producers)]) ++
+        (if consumers.isEmpty then [] else [("consumers", .arr consumers)])))]
+
+/-- `queues` inside an `env.<name>` object: the producers are still written only when
+non-empty (they come out of the override's one binding list), but the consumers are an
+`Option`, so `some []` writes `"consumers": []` and `none` writes nothing. -/
+private def envQueuesEntry (producers : List Json)
+    (consumers : Option (List QueueConsumer)) : List (String × Json) :=
+  let producerEntry := if producers.isEmpty then [] else [("producers", .arr producers)]
+  let consumerEntry :=
+    match consumers with
+    | none => []
+    | some rows => [("consumers", .arr (rows.map consumerRow))]
+  if producerEntry.isEmpty && consumerEntry.isEmpty then []
+  else [("queues", .obj (producerEntry ++ consumerEntry))]
+
+/-- An optional string array inside an override: `some []` is an empty array, `none` is no
+key at all. That is how "this environment has no routes" is said. -/
+private def optStrListEntry (key : String) (values : Option (List String)) :
+    List (String × Json) :=
+  match values with
+  | none => []
+  | some items => [(key, .arr (items.map Json.str))]
+
+/--
+One `env.<name>` object (`RawEnvironment`, schema line 2326).
+
+The key order is the top level's, and every field is written exactly when the override has
+it. The binding tables come out of the override's one `bindings` list, grouped by kind the
+same way the top level groups them, so an override whose `bindings` is `some []` writes no
+group key at all — the one place the emitter cannot tell `some []` from `none`, named in
+`Effect4/Ingest/Wrangler.lean`'s quotient.
+-/
+private def overrideJson (over : EnvironmentOverride) : Json :=
+  let bindings := over.bindings.getD []
+  let vars := bindings.filterMap varField
+  .obj
+    (strEntry "compatibility_date" over.compatibilityDate ++
+      optStrListEntry "compatibility_flags" over.compatibilityFlags ++
+      groupEntry "kv_namespaces" (bindings.filterMap kvRow) ++
+      groupEntry "d1_databases" (bindings.filterMap d1Row) ++
+      groupEntry "r2_buckets" (bindings.filterMap r2Row) ++
+      envQueuesEntry (bindings.filterMap queueRow) over.consumers ++
+      (if vars.isEmpty then [] else [("vars", .obj vars)]) ++
+      groupEntry "services" (bindings.filterMap serviceRow) ++
+      (let durables := bindings.filterMap durableRow
+       if durables.isEmpty then []
+       else [("durable_objects", .obj [("bindings", .arr durables)])]) ++
+      optStrListEntry "routes" over.routes ++
+      (match over.crons with
+        | none => []
+        | some crons => [("triggers", .obj [("crons", .arr (crons.map Json.str))])]) ++
+      optEntry "observability" (over.observability.map observabilityJson) ++
+      optEntry "limits" (over.limits.map limitsJson) ++
+      optEntry "placement" (over.placement.map placementJson) ++
+      (match over.tailConsumers with
+        | none => []
+        | some rows => [("tail_consumers", .arr (rows.map tailConsumerRow))]) ++
+      boolEntry "logpush" over.logpush)
+
+/-- `env` (lines 1510-1518): one object per named environment, in declaration order.
+Absent when there are no named environments. -/
+private def envEntry (environments : List (String × EnvironmentOverride)) :
+    List (String × Json) :=
+  if environments.isEmpty then []
+  else [("env", .obj (environments.map fun row => (row.1, overrideJson row.2)))]
+
 /--
 The wrangler configuration of a deployment.
 
 The deployment's own refusal when it is not well formed, and
 `hostNotConfigured "surface.deploy.wrangler" host` for a host wrangler does not configure.
 Key order is the schema's reading order and is a function of the rows: `$schema`, `name`,
-`main`, `compatibility_date`, `pages_build_output_dir`, then the binding groups in the order
-this module's header tables them, then `routes`.
+`main`, `compatibility_date`, `compatibility_flags`, `pages_build_output_dir`, then the
+binding groups in the order this module's header tables them, then `routes`, `triggers`,
+`observability`, `limits`, `placement`, `tail_consumers`, `logpush` and `env`.
+
+Every key after `routes` is written only when its field is away from its default, so a
+deployment that uses none of them emits what it emitted before they existed; the `docs`
+golden below is that law's witness.
 
 surface: rule.surface.deploy.wrangler
 -/
@@ -197,22 +380,29 @@ def wranglerJson (dep : Deployment) : Except Refusal Json := do
       , ("name", .str dep.name) ] ++
       (match dep.main with | some main => [("main", .str main)] | none => []) ++
       [("compatibility_date", .str dep.compatibilityDate)] ++
+      strListEntry "compatibility_flags" dep.compatibilityFlags ++
       (match dep.buildOutputDir with
         | some dir => [("pages_build_output_dir", .str dir)]
         | none => []) ++
       groupEntry "kv_namespaces" (dep.bindings.filterMap kvRow) ++
       groupEntry "d1_databases" (dep.bindings.filterMap d1Row) ++
       groupEntry "r2_buckets" (dep.bindings.filterMap r2Row) ++
-      (let producers := dep.bindings.filterMap queueRow
-       if producers.isEmpty then []
-       else [("queues", .obj [("producers", .arr producers)])]) ++
+      queuesEntry (dep.bindings.filterMap queueRow) (dep.consumers.map consumerRow) ++
       (if vars.isEmpty then [] else [("vars", .obj vars)]) ++
       groupEntry "services" (dep.bindings.filterMap serviceRow) ++
       (let durables := dep.bindings.filterMap durableRow
        if durables.isEmpty then []
        else [("durable_objects", .obj [("bindings", .arr durables)])]) ++
       (if dep.routes.isEmpty then []
-       else [("routes", .arr (dep.routes.map Json.str))])))
+       else [("routes", .arr (dep.routes.map Json.str))]) ++
+      triggersEntry dep.crons ++
+      optEntry "observability" (dep.observability.map observabilityJson) ++
+      optEntry "limits" (dep.limits.map limitsJson) ++
+      optEntry "placement" (dep.placement.map placementJson) ++
+      (if dep.tailConsumers.isEmpty then []
+       else [("tail_consumers", .arr (dep.tailConsumers.map tailConsumerRow))]) ++
+      boolEntry "logpush" dep.logpush ++
+      envEntry dep.environments))
 
 /-! ## The Pages worker entry -/
 
@@ -319,6 +509,11 @@ def docsWranglerJson : Json := (wranglerJson docsDeployment).toOption.getD .null
 
 -- The whole emitted configuration, pinned. Key order, key spelling and value shape are all
 -- a function of the rows, so this one `#guard` is the rule's golden.
+--
+-- **This is also the compatibility law's witness.** It is byte for byte the golden the
+-- thirteen-key emitter answered, unchanged by `compatibility_flags`, `queues.consumers`,
+-- `triggers`, `observability`, `limits`, `placement`, `tail_consumers`, `logpush` and `env`,
+-- because the `docs` fixture leaves every one of them at its default.
 #guard wranglerJson docsDeployment ==
   .ok (.obj
     [ ("$schema", .str "node_modules/wrangler/config-schema.json")
@@ -353,6 +548,133 @@ def docsWranglerJson : Json := (wranglerJson docsDeployment).toOption.getD .null
 -- and a deployment that is not well-formed answers the carrier's own refusal, unwrapped
 #guard refusal? (wranglerJson { docsDeployment with main := none }) ==
   some (.mainMissing "docs")
+
+/-! ### The compatibility law, stated as a comparison rather than as prose
+
+One field at a time: the emitted configuration of the fixture with a new field at its
+default is the emitted configuration of the fixture. Nine `#guard`s, one per added key, so a
+key that starts writing at its default fails on its own line.
+-/
+
+#guard wranglerJson { docsDeployment with compatibilityFlags := [] } ==
+  wranglerJson docsDeployment
+#guard wranglerJson { docsDeployment with crons := [] } == wranglerJson docsDeployment
+#guard wranglerJson { docsDeployment with consumers := [] } == wranglerJson docsDeployment
+#guard wranglerJson { docsDeployment with tailConsumers := [] } == wranglerJson docsDeployment
+#guard wranglerJson { docsDeployment with observability := none } == wranglerJson docsDeployment
+#guard wranglerJson { docsDeployment with limits := none } == wranglerJson docsDeployment
+#guard wranglerJson { docsDeployment with placement := none } == wranglerJson docsDeployment
+#guard wranglerJson { docsDeployment with logpush := none } == wranglerJson docsDeployment
+#guard wranglerJson { docsDeployment with environments := [] } == wranglerJson docsDeployment
+
+-- and each one does write when it is not at its default
+#guard wranglerJson { docsDeployment with logpush := some false } != wranglerJson docsDeployment
+#guard wranglerJson { docsDeployment with crons := ["0 3 * * *"] } != wranglerJson docsDeployment
+
+/-! ### The added keys, emitted
+
+The fixture with every added key set once, so the spelling of each is pinned as literal
+JSON: the per-mille rates as the fractions `0.05` and `0.5`, the nine-key consumer row, and
+one `env.prod` object whose non-inherited half is re-listed and whose inherited half is not.
+-/
+
+/-- The `docs` deployment with every key this lane added, once. -/
+def docsEveryKey : Deployment :=
+  { docsEnvDeployment with
+    compatibilityFlags := ["nodejs_compat"]
+    crons := ["0 3 * * *"]
+    consumers :=
+      [ { queue := "jobs"
+          deadLetterQueue := some "jobs-dlq"
+          maxBatchSize := some 10
+          maxBatchTimeout := some 30
+          maxConcurrency := some 4
+          maxRetries := some 3
+          retryDelay := some 60
+          visibilityTimeoutMs := some 30000
+          consumerType := some "worker" } ]
+    tailConsumers := [{ service := "tail-worker", environment := some "production" }]
+    observability :=
+      some
+        { enabled := some true
+          headSamplingRate := some 50
+          logs :=
+            some
+              { enabled := some true
+                headSamplingRate := some 500
+                invocationLogs := some false } }
+    limits := some { cpuMs := 30000 }
+    placement := some { mode := "smart", hint := some "wnam" }
+    logpush := some true }
+
+#guard Deployment.check docsEveryKey == .ok ()
+
+#guard wranglerJson docsEveryKey ==
+  .ok (.obj
+    [ ("$schema", .str "node_modules/wrangler/config-schema.json")
+    , ("name", .str "docs")
+    , ("main", .str "dist/_worker.js")
+    , ("compatibility_date", .str "2026-09-04")
+    , ("compatibility_flags", .arr [.str "nodejs_compat"])
+    , ("pages_build_output_dir", .str "dist")
+    , ("kv_namespaces", .arr
+        [ .obj [ ("binding", .str "RATE")
+               , ("id", .str "8f1c4b2d9e0a4f5b8c7d6e5f4a3b2c1d") ] ])
+    , ("d1_databases", .arr
+        [ .obj [ ("binding", .str "DB")
+               , ("database_name", .str "docs")
+               , ("database_id", .str "9a7c6b5d-4e3f-4a2b-8c1d-0e9f8a7b6c5d") ] ])
+    , ("queues", .obj
+        [ ("consumers", .arr
+            [ .obj
+                [ ("queue", .str "jobs")
+                , ("dead_letter_queue", .str "jobs-dlq")
+                , ("max_batch_size", natJson 10)
+                , ("max_batch_timeout", natJson 30)
+                , ("max_concurrency", natJson 4)
+                , ("max_retries", natJson 3)
+                , ("retry_delay", natJson 60)
+                , ("visibility_timeout_ms", natJson 30000)
+                , ("type", .str "worker") ] ]) ])
+    , ("vars", .obj
+        [ ("SITE_URL", .str "https://docs.example.org")
+        , ("BUILD_COMMIT", .str "0000000") ])
+    , ("triggers", .obj [("crons", .arr [.str "0 3 * * *"])])
+    , ("observability", .obj
+        [ ("enabled", .bool true)
+        , ("head_sampling_rate", perMilleJson 50)
+        , ("logs", .obj
+            [ ("enabled", .bool true)
+            , ("head_sampling_rate", perMilleJson 500)
+            , ("invocation_logs", .bool false) ]) ])
+    , ("limits", .obj [("cpu_ms", natJson 30000)])
+    , ("placement", .obj [("mode", .str "smart"), ("hint", .str "wnam")])
+    , ("tail_consumers", .arr
+        [ .obj [("service", .str "tail-worker"), ("environment", .str "production")] ])
+    , ("logpush", .bool true)
+    , ("env", .obj
+        [ ("prod", .obj
+            [ ("d1_databases", .arr
+                [ .obj [ ("binding", .str "DB")
+                       , ("database_name", .str "docs-prod")
+                       , ("database_id", .str "1b2c3d4e-5f60-4718-8293-a4b5c6d7e8f9") ] ])
+            , ("vars", .obj [("SITE_URL", .str "https://docs.example.com")])
+            , ("routes", .arr [.str "docs.example.com/*"])
+            , ("logpush", .bool true) ]) ]) ])
+
+-- the two rates, spelled as the standard's own bit patterns rather than as anything this
+-- module computed: `0.05` and `0.5`
+#guard perMilleJson 50 == Json.number (Float64.ofBits (0x3FA999999999999A : UInt64))
+#guard perMilleJson 500 == Json.number (Float64.ofBits (0x3FE0000000000000 : UInt64))
+
+-- an override that overrides an inherited key to *nothing* writes an empty array, which is
+-- the one thing `none` could not say
+#guard (wranglerJson
+    { docsDeployment with environments := [("prod", { routes := some [] })] }).toOption.bind
+    (fun config => match config with
+      | .obj entries => (entries.find? fun entry => entry.1 == "env").map Prod.snd
+      | _ => none) ==
+  some (.obj [("prod", .obj [("routes", .arr [])])])
 
 /-! ### The worker entry -/
 

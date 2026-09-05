@@ -178,6 +178,14 @@ private def choiceImplementationDeclarations : List Name :=
   , ``Effect4.Program.Config.configCase
   , ``Effect4.Program.Config.segCase
   , ``Effect4.Program.Config.Provider.constantCase
+  -- The trace-context header parsers (`unstable/http/HttpTraceContext.ts:63-139`): hex ids
+  -- and `-`-separated b3 fields are read through `String.toList`/`splitOn`. The structured
+  -- codec (`encodeW3c`/`decodeW3c`) and its round-trip theorem stay at the ceiling.
+  , ``Effect4.Surface.Observability.parseHexId
+  , ``Effect4.Surface.Observability.w3c
+  , ``Effect4.Surface.Observability.b3
+  , ``Effect4.Surface.Observability.xb3
+  , ``Effect4.Surface.Observability.fromHeaders
   ]
 
 /-- Private rendering helpers are identified by exact owner and original name,
