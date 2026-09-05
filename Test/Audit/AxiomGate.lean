@@ -166,6 +166,18 @@ private def choiceImplementationDeclarations : List Name :=
   , ``Effect4.Codegen.JsonText.renderEntries
   , ``Effect4.Codegen.renderJson
   , ``Effect4.Codegen.Artefact.render
+  -- The configuration algebra's `String`-side instantiations
+  -- (`docs/research/2026-09-04-production-standards-spike.md` §10, finding 1): the rc.112
+  -- scalar codecs (`String.toNat?`), the `_`-splitting env embedding (`String.splitOn`),
+  -- and `constantCase` (`String.toUpper` over `toList`). Every theorem of the module is
+  -- parametric in the name type and takes these as supplied hooks; nothing here is a law.
+  , ``Effect4.Program.Config.stdScalars
+  , ``Effect4.Program.Config.segOfString
+  , ``Effect4.Program.Config.splitUnderscore
+  , ``Effect4.Program.Config.fromEnvRecord
+  , ``Effect4.Program.Config.configCase
+  , ``Effect4.Program.Config.segCase
+  , ``Effect4.Program.Config.Provider.constantCase
   ]
 
 /-- Private rendering helpers are identified by exact owner and original name,
@@ -173,6 +185,15 @@ never a namespace prefix or Lean's unstable private-name counter. -/
 private def choiceImplementationPrivateDeclarations : List (Name × Name) :=
   [ (`Effect4.Codegen.EffectfulField,
       `Effect4.Codegen.EffectfulField.directionalRowsPresent)
+  -- The `E4-CONF-CE-006` witnesses (`constantCase` then `nested`, and the reverse) and the
+  -- residual receipt's env entries, in the module and in its contract battery; each is an
+  -- executable over `fromEnvRecord`, checked by `#guard`, never by a theorem.
+  , (`Effect4.Program.Config, `Effect4.Program.Config.ce006Late)
+  , (`Effect4.Program.Config, `Effect4.Program.Config.ce006Early)
+  , (`Effect4.Program.Config, `Effect4.Program.Config.entriesOf)
+  , (`Test.Program.ConfigContract, `Test.Program.ConfigContract.ce006Late)
+  , (`Test.Program.ConfigContract, `Test.Program.ConfigContract.ce006Early)
+  , (`Test.Program.ConfigContract, `Test.Program.ConfigContract.entriesOf)
   ]
 
 private def forbiddenAxioms : List Name :=
