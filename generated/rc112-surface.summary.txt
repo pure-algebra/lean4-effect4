@@ -1,0 +1,53 @@
+Effect rc.112 interface surface snapshot
+package effect version 4.0.0-rc.112 generator scripts/surface-export.mjs
+
+files 341; exported statements 7527; rows 7988
+rows by kind: other=4111 Effect=1757 value=1155 Stream=347 Layer=256 key=194 member=137 Config=31
+rows by unit: value=7295 member=499 key=194
+effectful rows 2391; data-last rows 1523; Scope in R 228
+
+row grade (all rows): other=4111 value=1155 handle=1029 param=957 ty=405 key=194 member=137
+row grade (effectful): handle=1029 param=957 ty=405
+row grade [stable]: other=3031 param=809 handle=477 value=466 ty=349 member=61 key=54
+row grade [testing]: handle=6 param=4 ty=4 value=3
+row grade [unstable/ai]: value=224 other=70 handle=58 key=22 param=7 ty=7 member=5
+row grade [unstable/cli]: other=233 value=33 handle=6 ty=5 key=3 param=2
+row grade [unstable/cluster]: handle=108 value=76 other=36 key=21 param=9 ty=9 member=8
+row grade [unstable/devtools]: value=21 handle=4 param=3 ty=2 key=1 member=1
+row grade [unstable/encoding]: other=44 value=10 member=2 handle=1
+row grade [unstable/eventlog]: handle=69 value=56 key=16 other=13 param=9 member=2 ty=2
+row grade [unstable/http]: other=340 handle=88 value=78 param=26 key=25 ty=2 member=1
+row grade [unstable/httpapi]: other=68 value=51 key=14 handle=9 param=6 ty=1
+row grade [unstable/observability]: handle=13 param=7 other=5 member=3 key=2 value=2 ty=1
+row grade [unstable/persistence]: handle=75 value=21 other=10 key=8 member=1
+row grade [unstable/process]: other=20 handle=8 value=3 key=1 member=1
+row grade [unstable/reactivity]: other=114 param=40 member=30 value=15 handle=7 key=2 ty=1
+row grade [unstable/rpc]: handle=43 other=23 value=20 member=11 key=7 param=6 ty=6
+row grade [unstable/schema]: other=30 value=14
+row grade [unstable/socket]: value=18 other=12 handle=9 key=5
+row grade [unstable/sql]: other=40 value=19 handle=16 key=4 param=2 member=1
+row grade [unstable/workers]: value=13 handle=7 other=7 key=4 member=4 ty=3
+row grade [unstable/workflow]: param=27 handle=25 other=15 ty=13 value=12 member=6 key=5
+
+R shape: never=1037 union=619 param=444 single=194 Exclude=56 other=41
+R class: adds=314 neutral=306 discharges=50 transforms=44 closes=8 replaces=6
+E class: neutral=315 adds=247 transforms=83 closes=77 replaces=5 discharges=1
+
+keys by kind: service=114 reference=80
+references with defaultValue 80; services with defaultValue 0; fiberCached 13
+
+files reading Config.<prim>("NAME") (5), 41 distinct names:
+  unstable/cluster/ShardingConfig.ts: availableShardGroups;entityMailboxCapacity;entityMaxIdleTime;entityMessagePollInterval;entityRegistrationTimeout;entityReplyPollInterval;entityTerminationTimeout;host;listenHost;listenPort;maxResidentEntities;port;preemptiveShutdown;refreshAssignmentsInterval;runnerHealthCheckInterval;runnerShardWeight;sendRetryInterval;shardGroups;shardLockDisableAdvisory;shardLockExpiration;shardLockRefreshInterval;shardsPerGroup;simulateRemoteSerialization;unprocessedMessageBatchSize
+  unstable/observability/OtlpLogger.ts: OTEL_BLRP_EXPORT_TIMEOUT;OTEL_BLRP_MAX_EXPORT_BATCH_SIZE;OTEL_BLRP_SCHEDULE_DELAY;OTEL_EXPORTER_OTLP_LOGS_TIMEOUT;OTEL_EXPORTER_OTLP_TIMEOUT;OTEL_SDK_DISABLED
+  unstable/observability/OtlpMetrics.ts: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE;OTEL_EXPORTER_OTLP_METRICS_TIMEOUT;OTEL_EXPORTER_OTLP_TIMEOUT;OTEL_METRIC_EXPORT_INTERVAL;OTEL_METRIC_EXPORT_TIMEOUT;OTEL_SDK_DISABLED
+  unstable/observability/OtlpResource.ts: OTEL_RESOURCE_ATTRIBUTES;OTEL_SERVICE_NAME;OTEL_SERVICE_VERSION
+  unstable/observability/OtlpTracer.ts: OTEL_BSP_EXPORT_TIMEOUT;OTEL_BSP_MAX_EXPORT_BATCH_SIZE;OTEL_BSP_SCHEDULE_DELAY;OTEL_EXPORTER_OTLP_TIMEOUT;OTEL_EXPORTER_OTLP_TRACES_TIMEOUT;OTEL_SDK_DISABLED
+
+type source: syntactic=5288 checker=2700 (rows before dedupe 8049; emitted checker 2703, syntactic 5346)
+declarations the checker could not type: 0
+checker rows whose type is any/unknown/error/{}: 6
+  Config.ts:1405 fail = unknown
+  Inspectable.ts:153 toJson = unknown
+  Pipeable.ts:564 pipeArguments = unknown
+export * statements skipped: 1
+diagnostics: unresolved imports 5, syntactic 0, total 5
