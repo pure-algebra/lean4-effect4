@@ -1,4 +1,4 @@
-import Effect4.Store.Store
+import Effect4.Store.Canonical
 
 /-!
 # Conformance.GSet: the grow-only set
@@ -18,7 +18,7 @@ mechanical: the question "did this extension invalidate anything" has the answer
 
 | | |
 | --- | --- |
-| Carrier | `GSet α`, a `List α` with `DecidableEq α`, `deriving DecidableEq, Repr`, `Canonical` when `α` is |
+| Carrier | `GSet α`, a `List α` with `DecidableEq α`, `deriving DecidableEq, Repr`; `Canonical` and `Content` when `α` is canonical (`Evidence/Char/Canonical.lean`) |
 | Operations | `empty`, `insert`, `join`, `ofList`, `has`, `size` |
 | Laws | `has_join`; `join_comm`, `join_assoc`, `join_idem`, `join_empty_left`, `join_empty_right`; `sub_join_left`, `sub_join_right`, `join_mono`, `join_sub`, `join_of_sub`; `ofList_mono`; `nodup_join` |
 | Structure | the free join-semilattice on `α` (finite subsets under union): a commutative idempotent monoid with unit `empty`, ordered by `Sub`; a G-Set CRDT |
@@ -30,6 +30,11 @@ The laws are stated up to `Equiv` (same members), because insertion order is
 state, not meaning; the address of a set is the address of its list state, a
 limit recorded in `workshop/Char/10-conformance/08-open-questions.md`. Nothing
 here hashes: sets are keyed by the value, so the kernel decides membership.
+
+The canonical instance is not here. `GSet α` is a generic carrier, and
+`Effect4Gen` does not yet take a bare parameter, so its instance is hand-written
+with the other generic ones in `Effect4/Evidence/Char/Canonical.lean`, on the
+`Prod`/`List` templates of `Effect4/Store/Canonical.lean:486-601`.
 -/
 
 set_option autoImplicit false
@@ -247,7 +252,49 @@ theorem nodup_ofList (xs : List α) : nodupL (ofList xs).elems = true :=
 
 end GSet
 
-/-- A set is store content when its elements are: the encoding of its list state. -/
-instance {α : Type} [Canonical α] : Canonical (GSet α) := ⟨fun s => encode s.elems⟩
+/-! ## Receipts -/
+
+#print axioms GSet.hasL
+#print axioms GSet.hasL_append
+#print axioms GSet.hasL_iff_mem
+#print axioms GSet.empty
+#print axioms GSet.has
+#print axioms GSet.insert
+#print axioms GSet.join
+#print axioms GSet.ofList
+#print axioms GSet.size
+#print axioms GSet.has_empty
+#print axioms GSet.has_insert
+#print axioms GSet.has_foldl
+#print axioms GSet.has_join
+#print axioms GSet.has_ofList
+#print axioms GSet.has_of_mem
+#print axioms GSet.mem_of_has
+#print axioms GSet.mem_ofList
+#print axioms GSet.subB
+#print axioms GSet.sub_of_subB
+#print axioms GSet.subB_of_sub
+#print axioms GSet.equiv_trans
+#print axioms GSet.sub_trans
+#print axioms GSet.sub_of_equiv
+#print axioms GSet.join_comm
+#print axioms GSet.join_assoc
+#print axioms GSet.join_idem
+#print axioms GSet.join_empty_left
+#print axioms GSet.join_empty_right
+#print axioms GSet.sub_join_left
+#print axioms GSet.sub_join_right
+#print axioms GSet.join_mono
+#print axioms GSet.join_equiv
+#print axioms GSet.join_sub
+#print axioms GSet.join_of_sub
+#print axioms GSet.ofList_mono
+#print axioms GSet.ofList_append
+#print axioms GSet.nodupL
+#print axioms GSet.nodupL_append_single
+#print axioms GSet.nodup_insert
+#print axioms GSet.nodup_foldl
+#print axioms GSet.nodup_join
+#print axioms GSet.nodup_ofList
 
 end Effect4.Char

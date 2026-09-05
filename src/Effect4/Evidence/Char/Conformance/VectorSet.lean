@@ -1,5 +1,4 @@
-import Effect4.Evidence.Char.Conformance.GSet
-import Effect4.Evidence.Char.Conformance.Vector
+import Effect4.Evidence.Char.Canonical
 
 /-!
 # Conformance.VectorSet: the grow-only set of vectors
@@ -21,12 +20,17 @@ mutant once killed stays killed under every extension.
 | | |
 | --- | --- |
 | Carrier | `VectorSet L C := GSet (Fact L C × Provenance)` |
-| Operations | `holds`, `tagged`, `facts`, `tagsOf`, `vectors`, `factCount`, `address`, `kills`, `killer`, `soundB` |
+| Operations | `holds`, `tagged`, `facts`, `tagsOf`, `vectors`, `factCount`, `kills`, `killer`, `soundB`; the address is the store's `address`, at kind `vector` |
 | Laws | `sound_join`, `sound_ofList`, `sound_of_sub`, `sound_of_soundB`, `soundB_of_sound`, `kills_mono`, `facts_mem`, `facts_mono` |
 | Structure | the G-Set of `Conformance/GSet.lean` at one carrier; `Sound` is a predicate closed under the join, i.e. an ideal of the semilattice |
 | Payoff | deletes the per-generator soundness argument and the "is the mutant still dead after we added vectors" question |
 | Anti-vacuity | `Conformance/Cell.lean`: a set that kills a mutant, and a smaller set that does not (`enumeration_alone_spares_lossy`) |
 | Generation | populated only by the generators of `Conformance/Generators.lean` |
+
+The set's own address is `Effect4.Store.address vs`, the node address of its list state under
+kind `vector` (`Evidence/Char/Canonical.lean`), and the old `VectorSet.address`, which was
+`digestOf` — a payload digest under an address's name — is retired with the eight other
+address helpers of the facts note §2.
 -/
 
 set_option autoImplicit false
@@ -62,11 +66,6 @@ def vectors (vs : VectorSet L C) : List (Vector L C) :=
 
 /-- The number of facts held (the number of fixture rows). -/
 def factCount (vs : VectorSet L C) : Nat := vs.facts.length
-
-/-- The address of the set: `digestOf` its list state. What a `Manifest` carries. -/
-def address [Effect4.Store.Canonical L] [Effect4.Store.Canonical C] (vs : VectorSet L C) :
-    Effect4.Store.Digest :=
-  Effect4.Store.digestOf vs
 
 /-- **Soundness of a set**: every fact held is the model's own fact for its word. -/
 def Sound (M : Machine S L) (R : Reading S L C) (clients : List C) (vs : VectorSet L C) : Prop :=
@@ -142,5 +141,25 @@ theorem facts_mono {vs vs' : VectorSet L C} (hsub : GSet.Sub vs vs') {f : Fact L
   exact facts_mem.2 ⟨p, GSet.mem_of_has (hsub _ (GSet.has_of_mem hp))⟩
 
 end VectorSet
+
+/-! ## Receipts -/
+
+#print axioms VectorSet.holds
+#print axioms VectorSet.tagged
+#print axioms VectorSet.facts
+#print axioms VectorSet.tagsOf
+#print axioms VectorSet.vectors
+#print axioms VectorSet.factCount
+#print axioms VectorSet.soundB
+#print axioms VectorSet.sound_of_soundB
+#print axioms VectorSet.soundB_of_sound
+#print axioms VectorSet.sound_join
+#print axioms VectorSet.sound_ofList
+#print axioms VectorSet.sound_of_sub
+#print axioms VectorSet.kills
+#print axioms VectorSet.killer
+#print axioms VectorSet.kills_mono
+#print axioms VectorSet.facts_mem
+#print axioms VectorSet.facts_mono
 
 end Effect4.Char

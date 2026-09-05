@@ -1,4 +1,4 @@
-import Effect4.Evidence.Char.Conformance.Surface
+import Effect4.Evidence.Char.Derived
 import Effect4.Evidence.Char.Conformance.Compose
 
 /-!
@@ -16,7 +16,16 @@ by one; it is the substrate's own test. The Queue is instantiated by lane A's
 modules, and the recipe is in `workshop/Char/10-conformance/06-three-function-surface.md`.
 
 Every `theorem` here is `by decide` over the machine alone (no hashing); every
-`#guard` that mentions a digest evaluates in the interpreter.
+`#guard` that mentions an address evaluates in the interpreter, where a node
+address costs one pass over the genesis (`Store/Node.lean`, `specFor`).
+
+This module sits **below** `Evidence/Char/Derived.lean`: it needs `Content Target`
+and `Content Implementation` to address its own target, and those are derived
+there. Its alphabet `Label` is therefore the one monomorphic carrier of the room
+whose instance cannot be generated — the generated file would have to import this
+module to see it, and this module imports the generated file — so `Label`'s
+instance is hand, written exactly as `Effect4Gen` writes a sum with one argument
+per case (`Store/PinDerived.lean:26-68`, `Program/Derived.lean:29-67`).
 -/
 
 set_option autoImplicit false
@@ -33,11 +42,75 @@ inductive Label where
   | clear
 deriving DecidableEq, Repr, Inhabited
 
-instance : Canonical Label := ⟨fun l =>
-  match l with
-  | .put i => encode ((0 : Nat), i)
-  | .take i => encode ((1 : Nat), i)
-  | .clear => encode ((2 : Nat), (0 : Nat))⟩
+end Effect4.Char.Cell
+
+/-! ## `Canonical Label`, in the generator's shape -/
+
+namespace Effect4.Store
+
+namespace CharCellLabelC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.sum "Label"
+     [("put", [("item", (shape _root_.Nat).root)]),
+      ("take", [("item", (shape _root_.Nat).root)]),
+      ("clear", [])],
+   (shape _root_.Nat).defs⟩
+
+def toVal : _root_.Effect4.Char.Cell.Label → Val
+  | .put a0 => .ctor 0 [Canonical.toVal a0]
+  | .take a0 => .ctor 1 [Canonical.toVal a0]
+  | .clear => .ctor 2 []
+
+def ofVal : Val → Option (_root_.Effect4.Char.Cell.Label)
+  | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.Nat) v0).map .put
+  | .ctor 1 [v0] => (Canonical.ofVal (α := _root_.Nat) v0).map .take
+  | .ctor 2 [] => some .clear
+  | _ => none
+
+set_option linter.unusedSimpArgs false in
+theorem ofVal_toVal (a : _root_.Effect4.Char.Cell.Label) : ofVal (toVal a) = some a := by
+  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+
+theorem ofVal_exact {v : Val} {a : _root_.Effect4.Char.Cell.Label} (h : ofVal v = some a) :
+    v = toVal a := by
+  unfold ofVal at h
+  split at h
+  all_goals first
+    | (injection h with h; subst h; rfl)
+    | (rename_i w
+       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+       subst hj
+       simp only [toVal]
+       rw [Canonical.ofVal_exact hx])
+    | exact nomatch h
+
+theorem lift_Nat (x : _root_.Nat) :
+    acceptsIn shapeDoc.defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => hp) _ _ (Canonical.fits x)
+
+theorem fits (a : _root_.Effect4.Char.Cell.Label) : shapeDoc.accepts (toVal a) = true := by
+  cases a with
+  | «put» a0 =>
+    exact accepts_sum _ _ _ 0 "put" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0) (acceptsFields_nil _))
+  | «take» a0 =>
+    exact accepts_sum _ _ _ 1 "take" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0) (acceptsFields_nil _))
+  | «clear» =>
+    exact accepts_sum _ _ _ 2 "clear" [] [] rfl (acceptsFields_nil _)
+
+instance instCanonical : Canonical (_root_.Effect4.Char.Cell.Label) :=
+  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+end CharCellLabelC
+
+end Effect4.Store
+
+namespace Effect4.Char.Cell
+
+open Effect4.Store
+open Effect4.Char
 
 /-- The state: the slot. -/
 abbrev State := Option Nat
@@ -96,12 +169,20 @@ def suite : Suite Label Unit :=
   , { name := "take-empty-refused", labels := [.take 1], accept := false }
   , { name := "put-full-refused", labels := [.put 1, .put 2], accept := false } ]
 
+/-- The cell's implementation pin set. Its `pins` are stand-in span digests: the cell has no
+pinned source, so they are payload digests of two strings, as the old `digestOf "cell-pin"`
+was. -/
+def impl : Implementation :=
+  { package := "effect", version := "4.0.0-rc.112", pins := [Canonical.digest "cell-pin"],
+    driver := "runSync", host := "absent" }
+
+/-- The cell has no manifest node, so `model` is a stand-in reference over the payload digest
+of a string — exactly what the old `digestOf "cell-model"` was, now typed as what it points
+at. `implementation` is a real address: `impl` is a value this module holds. -/
 def target : Target :=
   { component := "cell"
-    model := digestOf "cell-model"
-    implementation :=
-      { package := "effect", version := "4.0.0-rc.112", pins := [digestOf "cell-pin"],
-        driver := "runSync", host := "absent" }
+    model := ⟨Canonical.digest "cell-model"⟩
+    implementation := address impl
     failure := { name := "F-none", excluded := ["clear"], escapes := [] } }
 
 /-- The whole characterization at depth 3. -/
@@ -197,8 +278,52 @@ def characterized : Characterized :=
 
 #guard characterized.component = "cell"
 #guard characterized.claims.map (·.rung.spelling) = ["replayed", "replayed"]
+#guard characterized.vectors.kind = .vector
 #guard (vs.toFixture target).traces.length = 60
 #guard (vs.toFixture target).schema = 3
 #guard (vs.toFixture target).producer = "Effect4.Char"
+
+/-! ### The kinds, as landed -/
+
+#guard Content.kind Manifest = .component
+#guard Content.kind Implementation = .source
+#guard [Content.kind Receipt, Content.kind Claim, Content.kind Evidence, Content.kind Target,
+    Content.kind Characterized].all fun k => k = .annotation
+#guard [Content.kind (VectorSet Label Unit), Content.kind (Vector Label Unit),
+    Content.kind (Fact Label Unit)].all fun k => k = .vector
+
+/-! ## Receipts -/
+
+#print axioms cell
+#print axioms reading
+#print axioms dupMachine
+#print axioms lossyMachine
+#print axioms dup
+#print axioms lossy
+#print axioms alpha
+#print axioms suite
+#print axioms impl
+#print axioms target
+#print axioms vs
+#print axioms suite_passes
+#print axioms dup_killed
+#print axioms dup_survives_some
+#print axioms lossy_killed
+#print axioms lossy_survives_some
+#print axioms enumeration_kills_dup
+#print axioms refusals_kill_lossy
+#print axioms enumeration_alone_spares_lossy
+#print axioms wordsUpTo_sizes
+#print axioms complete_example
+#print axioms selfReceipts
+#print axioms dupReceipts
+#print axioms vsProd
+#print axioms characterized
+#print axioms Effect4.Store.CharCellLabelC.toVal
+#print axioms Effect4.Store.CharCellLabelC.ofVal
+#print axioms Effect4.Store.CharCellLabelC.ofVal_toVal
+#print axioms Effect4.Store.CharCellLabelC.ofVal_exact
+#print axioms Effect4.Store.CharCellLabelC.fits
+#print axioms Effect4.Store.CharCellLabelC.instCanonical
 
 end Effect4.Char.Cell

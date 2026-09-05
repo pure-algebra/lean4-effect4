@@ -1,4 +1,5 @@
 import Effect4.Program.Config
+import Effect4.Store.Digest
 
 /-!
 # Surface.Observability — the signal records, the exporter configuration row, and the
@@ -1078,47 +1079,26 @@ theorem decodeW3c_version_ne (ver : UInt8) (rest : List UInt8) (h : ver ≠ 0) :
 
 /-! ### The hex spelling and the `String` faces
 
-Everything below walks a `String` and is therefore *executable only*: `String.toList` and
+The codec itself is the store's, `Effect4/Store/Digest.lean:204-207`: one hexadecimal codec in
+the estate, proved there (`bytesOfHex_hexOfBytes` round trips, `hexOfBytes_bytesOfHex` is exact
+up to case), read here through two thin faces because a trace header is a `String` and an
+identifier is a byte list. The two names below keep their spellings and their guards; what they
+no longer keep is a second nibble table.
+
+Everything after them walks a `String` and is therefore *executable only*: `String.toList` and
 `String.splitOn` reach `Classical.choice` on this toolchain, so no theorem mentions them.
 They are pinned by `#guard`s, which is what the note's §5 calls the "probed" column. -/
 
-private def hexLower : List Char :=
-  ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f']
-
-private def hexUpper : List Char :=
-  ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F']
-
-/-- The lower-case hex digit of a nibble; rc.112 renders ids lower-case. -/
-def hexDigit (n : Nat) : Char := hexLower.getD (n % 16) '0'
-
-private def hexIndex : List Char → Nat → Char → Option Nat
-  | [], _, _ => none
-  | d :: rest, i, c => if d = c then some i else hexIndex rest (i + 1) c
-
-/-- The nibble a hex digit denotes, either case: rc.112's identifier regexps carry the `i`
-flag (`HttpTraceContext.ts:123-124`). -/
-def hexValue (c : Char) : Option Nat :=
-  match hexIndex hexLower 0 c with
-  | some n => some n
-  | none => hexIndex hexUpper 0 c
-
-/-- One octet as two lower-case hex digits. -/
-def hexOfByte (b : UInt8) : String :=
-  String.ofList [hexDigit (b.toNat / 16), hexDigit (b.toNat % 16)]
-
-/-- An identifier as its hex spelling. -/
+/-- An identifier as its hex spelling: the store's printer, which writes lower case, which is
+what rc.112 renders. -/
 def hexOfBytes (bs : List UInt8) : String :=
-  bs.foldl (fun s b => s ++ hexOfByte b) ""
+  String.ofList (Effect4.Store.hexOfBytes bs)
 
 /-- The octets a hex spelling denotes; an odd number of digits, or a non-hex digit, is
-refused. -/
-def bytesOfHex : List Char → Option (List UInt8)
-  | [] => some []
-  | [_] => none
-  | a :: b :: rest =>
-      match hexValue a, hexValue b, bytesOfHex rest with
-      | some x, some y, some tl => some (UInt8.ofNat (x * 16 + y) :: tl)
-      | _, _, _ => none
+refused, and either case is read, because rc.112's identifier regexps carry the `i` flag
+(`HttpTraceContext.ts:123-124`). The store's reader, exactly. -/
+def bytesOfHex (cs : List Char) : Option (List UInt8) :=
+  Effect4.Store.bytesOfHex cs
 
 /-- An identifier of exactly `n` octets, or nothing: the structural reading of
 `/^[0-9a-f]{32}$/i` and `/^[0-9a-f]{16}$/i` (`HttpTraceContext.ts:123-124`, `:147`). -/

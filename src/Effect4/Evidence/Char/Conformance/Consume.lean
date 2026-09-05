@@ -1,13 +1,15 @@
-import Effect4.Evidence.Char.Conformance.VectorSet
+import Effect4.Evidence.Char.Manifest
 
 /-!
-# Conformance.Consume: the target, the receipt, and `consume`
+# Conformance.Consume: the target and `consume`
 
-Owner: the check against an implementation. A `Target` names what is being
-conformed to (component, model digest, pin set, failure model). A `Receipt` is a
-named `Bool` over first-order data, keyed by a vector's address and the
-implementation pin set's address. `consume` replays a vector set through an oracle and joins the receipts
-in; it is idempotent and monotone in both arguments.
+Owner: the check against an implementation. A `Target` names what is being conformed to: the
+component, the **reference** to its manifest, the **reference** to the implementation pin set,
+and the failure model. `consume` replays a vector set through an oracle and joins the receipts
+in; it is idempotent and monotone in both arguments. The two carriers a receipt is keyed by,
+`Implementation` and `Receipt`, are declared in `Conformance/Receipt.lean`, below
+`Char/Evidence.lean`, because `Evidence.fixture` names a `Receipt` and `Target` names a
+`Manifest`; that module's header has the ordering argument.
 
 Where it sits in the semantic compiler: the **back end**. The intermediate
 representation goes in, addressed evidence comes out. Lean holds one oracle,
@@ -21,19 +23,20 @@ lookup, and "did the mutant move the fixture" and "did the driver assert" are on
 
 | | |
 | --- | --- |
-| Carrier | `Implementation`, `Target`, `Receipt`, `Receipts := GSet Receipt`; all `deriving DecidableEq, Repr`, `Canonical` |
-| Operations | `Implementation.addr`, `Target.addr`, `Target.pin`, `Receipt.addr`, `receiptOf`, `consume`, `replayAgainst`, `Receipts.verdict`, `Receipts.failures`, `Receipt.asFixtureEvidence` |
+| Carrier | `Target`; `Implementation`, `Receipt`, `Receipts := GSet Receipt` next door; all `deriving DecidableEq, Repr`, all `Content` |
+| Operations | `Target.pin`, `receiptOf`, `consume`, `replayAgainst`, `Receipts.verdict`, `Receipts.failures`, `Receipt.asFixtureEvidence`; the address of any of them is the store's `address` |
 | Laws | `consume_mono_receipts`, `consume_idem`, `consume_mono_left`, `consume_mono_right`, `receiptOf_replayAgainst_holds`, `self_replay_holds`, `consume_self_verdict` |
 | Structure | `consume T o rs vs = rs ⊔ ofList (o '' facts vs)`: the join with the image of an oracle; the receipts form the G-Set of `Conformance/GSet.lean`; `verdict` is the fold of `holds` under `&&`, the meet of the two-element lattice |
 | Payoff | deletes receipt bookkeeping, the second run of a replay already made, and a separate kill checker for the harness |
 | Anti-vacuity | `Conformance/Cell.lean`: a self-replay with verdict `true` beside a mutant replay with verdict `false` and ten named failures |
 | Generation | receipts are emitted by `consume` or by the generated driver; `Target` is derived from the manifest and the pin table |
 
-A receipt that holds is the `replayed` rung's evidence and never more: it
-projects to the `(id, sha256)` pair `Evidence.fixture` takes in `05-registry`. A
-failing receipt is a finding, not evidence. Two receipts for one vector and one
-pin set with different verdicts are both kept and the verdict is then `false`: a
-replay that is not deterministic is a finding, never a green.
+The four address helpers this module used to carry — `Implementation.addr`, `Target.addr`,
+`Receipt.addr` and `Vector.addr` next door — are gone: a node's address is `Effect4.Store.address`
+and nothing else (facts note §2, "two spellings and two meanings"). So are the two hand
+instances it declared for types it does not own: `Canonical Digest` is the store's
+(`Store/Canonical.lean:435`) and `Canonical (Failure String)` is generated in
+`Evidence/Char/Derived.lean`.
 -/
 
 set_option autoImplicit false
@@ -42,108 +45,49 @@ namespace Effect4.Char
 
 open Effect4.Store
 
-instance : Canonical Digest := ⟨fun d => encode d.bytes⟩
-
-instance : Canonical (Failure String) := ⟨fun F => encode (F.name, F.excluded, F.escapes)⟩
-
-/-- **The implementation pin set**: the bytes and the run mode a receipt is about,
-and nothing about the model. Its address is the `pin` key of every receipt. The
-model digest is deliberately outside it: a vector is a fact that carries its own
-expectation, so extending the alphabet moves the manifest and leaves every old
-receipt keyed as it was. Driver bytes are also outside it, for the same reason. -/
-structure Implementation where
-  /-- The package, e.g. `"effect"`. -/
-  package : String
-  /-- The version, e.g. `"4.0.0-rc.112"`. -/
-  version : String
-  /-- Span digests of the pinned verbs, in verb order. -/
-  pins : List Digest
-  /-- The run mode the determinism argument of `04-harness/03` is made for: `"runSync"`. -/
-  driver : String
-  /-- The host pin (the node version, or `"absent"`). -/
-  host : String
-deriving DecidableEq, Repr
-
-instance : Canonical Implementation :=
-  ⟨fun i => encode (i.package, i.version, i.pins, i.driver, i.host)⟩
-
-/-- The address of the pin set: the `pin` key of a receipt. -/
-def Implementation.addr (i : Implementation) : Digest := digestOf i
-
 /-- **The conformance target**: which component, which model, which implementation,
 under which failure model. Its address names the whole in `Characterized`; a
-receipt is keyed by `implementation.addr` alone. -/
+receipt is keyed by the implementation reference alone. -/
 structure Target where
   /-- The component id, e.g. `"queue"`. -/
   component : String
-  /-- The address of the component's manifest (its model digest). -/
-  model : Digest
-  /-- The implementation pin set. -/
-  implementation : Implementation
+  /-- The component's manifest, by reference: the node the model is. -/
+  model : Ref Manifest
+  /-- The implementation pin set, by reference. -/
+  implementation : Ref Implementation
   /-- The failure model, with kinds spelled (`Failure.excludedSpelled` in Core). -/
   failure : Failure String
 deriving DecidableEq, Repr
 
-instance : Canonical Target :=
-  ⟨fun t => encode (t.component, t.model, t.implementation, t.failure)⟩
+/-- The receipt key on the implementation side. It is the field, now that the field is the
+reference: a target and its receipts agree on one address with no digest recomputed. -/
+def Target.pin (t : Target) : Ref Implementation := t.implementation
 
-/-- The address. Derived, never stored. -/
-def Target.addr (t : Target) : Digest := digestOf t
-
-/-- The receipt key on the implementation side. -/
-def Target.pin (t : Target) : Digest := t.implementation.addr
-
-/-- **A receipt**: a named `Bool` over first-order data, keyed by the vector's
-address and the implementation pin set's address. The shape of
-`06-gates/01-decidable-receipt.md` with the two keys added; the TypeScript
-driver emits this exact shape. -/
-structure Receipt where
-  /-- Always `"replay"` here; the gate's obligation vocabulary. -/
-  obligation : String
-  /-- `digestOf` the fact. -/
-  vector : Digest
-  /-- `Implementation.addr`: the pin set, never the model and never the driver bytes. -/
-  pin : Digest
-  /-- The verdict. -/
-  holds : Bool
-  /-- What was compared and, on `false`, what was found. Never a summary. -/
-  detail : String
-deriving DecidableEq, Repr
-
-instance : Canonical Receipt :=
-  ⟨fun r => encode (r.obligation, r.vector, r.pin, r.holds, r.detail)⟩
-
-/-- The address of a receipt: what `Evidence.fixture` names. -/
-def Receipt.addr (r : Receipt) : Digest := digestOf r
-
-/-- The grow-only set of receipts. -/
-abbrev Receipts := GSet Receipt
-
-/-- The gate: the fold of `holds` under `&&`. -/
-def Receipts.verdict (rs : Receipts) : Bool := rs.elems.all Receipt.holds
-
-/-- The failing receipts, for the diagnostic. -/
-def Receipts.failures (rs : Receipts) : List Receipt := rs.elems.filter fun r => !r.holds
-
-/-- **The receipt is the `replayed` rung's evidence.** A holding receipt projects
-to the `(id, sha256)` pair `Evidence.fixture` takes in `Effect4/Char/Evidence.lean`:
-`id` is the vector's address and `sha256` is the receipt's own address, which
-carries the pin key inside it. A failing receipt is evidence of nothing; it is a
-finding. A receipt never reaches `proved`. -/
-def Receipt.asFixtureEvidence (r : Receipt) : Option (String × String) :=
-  if r.holds then some (r.vector.hex, r.addr.hex) else none
+theorem Target.pin_eq (t : Target) : t.pin = t.implementation := rfl
 
 section Consume
 
 variable {S L C : Type} [DecidableEq L] [DecidableEq C] [Canonical L] [Canonical C]
 
-/-- One receipt: the oracle's verdict on one fact, keyed by fact and pin set. -/
+/-- One receipt: the oracle's verdict on one fact, keyed by the fact's node and the pin set's
+node. The vector key is `anyRef f`, the fact's address at kind `vector`, because a `Receipt`
+is monomorphic and cannot name `Fact L C`. -/
 def receiptOf (T : Target) (replay : Fact L C → Bool) (f : Fact L C) : Receipt :=
   { obligation := "replay"
-    vector := digestOf f
+    vector := anyRef f
     pin := T.pin
     holds := replay f
     detail := s!"{T.component}: word of length {f.word.length}, accept={f.accept}" }
+
+set_option linter.unusedSectionVars false in
+/-- The vector key of a receipt is the fact's own reference, at kind `vector`. -/
+theorem receiptOf_vector (T : Target) (replay : Fact L C → Bool) (f : Fact L C) :
+    (receiptOf T replay f).vector = anyRef f := rfl
+
+set_option linter.unusedSectionVars false in
+/-- The pin key of a receipt is the target's implementation reference. -/
+theorem receiptOf_pin (T : Target) (replay : Fact L C → Bool) (f : Fact L C) :
+    (receiptOf T replay f).pin = T.implementation := rfl
 
 /-- **Consume.** Replay every fact of a vector set through an oracle and join the
 receipts in. `join` with the image of a function, so it is idempotent and
@@ -216,5 +160,22 @@ theorem consume_self_verdict (T : Target) (M : Machine S L) (R : Reading S L C)
   exact self_replay_holds T M R clients hs f hf
 
 end Consume
+
+/-! ## Receipts -/
+
+#print axioms Target.pin
+#print axioms Target.pin_eq
+#print axioms receiptOf
+#print axioms receiptOf_vector
+#print axioms receiptOf_pin
+#print axioms consume
+#print axioms consume_mono_receipts
+#print axioms consume_idem
+#print axioms consume_mono_left
+#print axioms consume_mono_right
+#print axioms replayAgainst
+#print axioms receiptOf_replayAgainst_holds
+#print axioms self_replay_holds
+#print axioms consume_self_verdict
 
 end Effect4.Char

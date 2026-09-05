@@ -27,7 +27,7 @@ first call more input and joining, never by editing a vector.
 
 | | |
 | --- | --- |
-| Carrier | `Characterized`, `ClaimRung`, `Fixture L C`, `FixtureRow L C`; all `deriving DecidableEq, Repr`, `Canonical` |
+| Carrier | `Characterized`, `ClaimRung`, `Fixture L C`, `FixtureRow L C`; all `deriving DecidableEq, Repr`; `Characterized` and `ClaimRung` are `Canonical` through `Evidence/Char/Derived.lean`, `Characterized` at kind `annotation` |
 | Operations | `characterize`, `extend`, `Characterized.ofParts`, `VectorSet.toFixture` |
 | Laws | `characterize_sound`, `characterize_mono_depth`, `characterize_mono_tests`, `characterize_mono_mutants`, `characterize_mono_alpha`, `extend_keeps`, `extend_adds`, `extend_sound`, `toFixture_rows` |
 | Structure | `characterize` is a join of the four generators, hence monotone in every input and sound; `extend` is `GSet.join` |
@@ -135,39 +135,53 @@ end Surface
 /-! ## Phase 1 characterized, and its projections -/
 
 /-- One claim id and the rung it sits on. The rung is the registry's typed
-`RungOrHeld` (`Effect4/Char/Evidence.lean`; R5 keeps `Claim`, `Evidence`, `Grade`
-typed), and its canonical bytes are its spelling, so this row and the registry
-agree on one encoding. -/
+`RungOrHeld` (`Effect4/Evidence/Char/Evidence.lean`; R5 keeps `Claim`, `Evidence`,
+`Grade` typed), and it is now encoded as the value it is — an `Option Rung`, two
+constructors deep — rather than as its spelling, so this row and the registry
+agree on one encoding without a string in the middle. -/
 structure ClaimRung where
   claim : String
   rung : RungOrHeld
 deriving DecidableEq, Repr, Inhabited
 
-instance : Canonical ClaimRung := ⟨fun c => encode (c.claim, c.rung.spelling)⟩
+/-- **Phase 1 characterized.** A component, the reference to its target, to its
+vector set, to its receipts, and the rung per claim. The fixture and the
+registry `Fixture` entity are projections of the set the `vectors` reference
+names, never a second encoding.
 
-/-- **Phase 1 characterized.** A component, the address of its target, of its
-vector set, of its receipts, and the rung per claim. The fixture and the
-registry `Fixture` entity are projections of the set the `vectors` address
-names, never a second encoding. -/
+`vectors` is an `AnyRef` at kind `vector`: `Characterized` is monomorphic and
+cannot name the `L` and `C` of the set it points at. `target` and `receipts` are
+typed, because `Target` and `Receipts := GSet Receipt` are monomorphic. -/
 structure Characterized where
   component : String
-  target : Digest
-  vectors : Digest
-  receipts : Digest
+  target : Ref Target
+  /-- The vector set's node, at kind `vector`; untyped for want of `L` and `C`. -/
+  vectors : AnyRef
+  receipts : Ref Receipts
   claims : List ClaimRung
 deriving DecidableEq, Repr
 
-instance : Canonical Characterized :=
-  ⟨fun c => encode (c.component, c.target, c.vectors, c.receipts, c.claims)⟩
+/-- Build the phase 1 record from the three values it addresses.
 
-/-- Build the phase 1 record from the three values it addresses. -/
-def Characterized.ofParts {L C : Type} [Canonical L] [Canonical C] (T : Target)
-    (vs : VectorSet L C) (rs : Receipts) (claims : List ClaimRung) : Characterized :=
+`Content Target` and `Canonical Receipt` are section variables, not imports: both
+instances are derived in `Evidence/Char/Derived.lean`, which is below this module,
+and this is the device of `Store/Node.lean:330`, where everything needing
+`Canonical Document` waits the same way. -/
+def Characterized.ofParts {L C : Type} [Canonical L] [Canonical C] [Content Target]
+    [Canonical Receipt] (T : Target) (vs : VectorSet L C) (rs : Receipts)
+    (claims : List ClaimRung) : Characterized :=
   { component := T.component
-    target := T.addr
-    vectors := vs.address
-    receipts := digestOf rs
+    target := address T
+    vectors := anyRef vs
+    receipts := address rs
     claims := claims }
+
+/-- The vector reference a phase 1 record carries is at kind `vector`, whatever the
+component: what `Receipt.vector` is keyed by and what the fixture projects from. -/
+theorem Characterized.ofParts_vectors_kind {L C : Type} [Canonical L] [Canonical C]
+    [Content Target] [Canonical Receipt] (T : Target) (vs : VectorSet L C) (rs : Receipts)
+    (claims : List ClaimRung) : (Characterized.ofParts T vs rs claims).vectors.kind = .vector :=
+  rfl
 
 /-- One fixture row: `04-harness/01-fixture-format.md` schema 3, generic over the
 component. `accept` and `readings` are the fact's fields; `name` is the first
@@ -198,8 +212,8 @@ first-seen order, tags spelled. Nothing is re-encoded: the row's `word`,
 def VectorSet.toFixture {L C : Type} [DecidableEq L] [DecidableEq C] (T : Target)
     (vs : VectorSet L C) : Fixture L C :=
   { component := T.component
-    manifest := T.model.hex
-    pin := T.pin.hex
+    manifest := T.model.digest.hex
+    pin := T.pin.digest.hex
     traces := (vs.vectors.zipIdx.map fun (v, i) =>
       { name := (v.tags.head?.map Provenance.spell).getD "vector" ++ "#" ++ toString i
         word := v.fact.word
@@ -211,5 +225,22 @@ def VectorSet.toFixture {L C : Type} [DecidableEq L] [DecidableEq C] (T : Target
 theorem VectorSet.toFixture_rows {L C : Type} [DecidableEq L] [DecidableEq C] (T : Target)
     (vs : VectorSet L C) : (vs.toFixture T).traces.length = vs.factCount := by
   simp [VectorSet.toFixture, VectorSet.vectors, VectorSet.factCount]
+
+/-! ## Receipts -/
+
+#print axioms characterize
+#print axioms extend
+#print axioms extend_keeps
+#print axioms extend_adds
+#print axioms extend_sound
+#print axioms characterize_sound
+#print axioms characterize_mono_depth
+#print axioms characterize_mono_tests
+#print axioms characterize_mono_mutants
+#print axioms characterize_mono_alpha
+#print axioms Characterized.ofParts
+#print axioms Characterized.ofParts_vectors_kind
+#print axioms VectorSet.toFixture
+#print axioms VectorSet.toFixture_rows
 
 end Effect4.Char

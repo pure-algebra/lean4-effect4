@@ -17,8 +17,11 @@ first-order structure, a `check` that is a list of named clauses read left to
 right and answers the *first* refusal (`Effect4/Surface/Facts.lean`), a
 `WellFormed` that is `check = .ok ()` and therefore one `Decidable` equation, a
 `wellFormed_iff` proving it equal to the conjunction of the clauses so a later
-capability can ask for exactly the ones it needs, a `json` projection, a
-`Document` view with an `Arch.accepts` receipt, and a `Canonical` instance.
+capability can ask for exactly the ones it needs, a `json` projection, and a
+`Document` view with an `Arch.accepts` receipt. The hand `Canonical` instance
+that used to close the module went with the CAS trait: `Canonical` is now a
+class with three laws over the value tree (`Effect4/Store/Canonical.lean`),
+derived rather than written, and nothing read this one.
 
 ## Semantics live in bags, never in a field
 
@@ -87,7 +90,7 @@ set_option autoImplicit false
 
 namespace Effect4.Surface
 
-open Effect4 Effect4.Schema Effect4.Store
+open Effect4 Effect4.Schema
 open Effect4.Arch (accepts)
 
 /-! ## The MCP tool-name grammar, over bytes -/
@@ -685,12 +688,6 @@ def mcpDoc : Document :=
       , ⟨"McpResource", mcpResourceRep⟩
       , ⟨"McpPromptArgument", mcpPromptArgumentRep⟩
       , ⟨"McpPrompt", mcpPromptRep⟩ ] }
-
-/-! ## Content -/
-
-/-- An agent server is addressed by the canonical bytes of its view payload. -/
-instance {refs : List ReferenceEntry} : Canonical (McpServer refs) :=
-  ⟨fun server => encode server.json⟩
 
 /-! ## Anti-vacuity: the `shop` agent server over `shopDomain`
 

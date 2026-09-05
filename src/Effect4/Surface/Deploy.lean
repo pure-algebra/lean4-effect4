@@ -1,6 +1,6 @@
 import Effect4.Codegen.Spell
 import Effect4.Schema.Accepts
-import Effect4.Store.JsonCanonical
+import Effect4.Data.JsonNumber
 
 /-!
 # Surface.Deploy: hosts, bindings and deployments
@@ -21,10 +21,12 @@ is the same shape §14.2 gives every cross-carrier fact.
 
 Each carrier follows `Effect4/Arch/Views.lean` and `Effect4/Surface/Entity.lean`:
 a first-order structure, a `json` projection, a `Document` view whose
-`Arch.accepts` receipt is a `#guard` on the fixture, a `Canonical` instance, and
-a well-formedness built from §14.2's named clauses so that `check` answers the
-*first* refusal and `wellFormed_iff` proves `WellFormed` equal to the
-conjunction of the clauses.
+`Arch.accepts` receipt is a `#guard` on the fixture, and a well-formedness
+built from §14.2's named clauses so that `check` answers the *first* refusal
+and `wellFormed_iff` proves `WellFormed` equal to the conjunction of the
+clauses. The hand `Canonical` instance is gone with the CAS trait: the class
+now carries three laws over the value tree (`Effect4/Store/Canonical.lean`) and
+is derived, and nothing read this one.
 
 | | |
 | --- | --- |
@@ -123,7 +125,7 @@ The schema gives `observability.head_sampling_rate` (`:1232-1235`) and its
 (`UserLimits`, `:3263-3275`), the queue consumer's five counters (`:1857-1895`)
 and nothing else in this fragment as numbers too. `Json.number` carries a
 `Float64`, which is a raw binary64 datum (`Effect4/Data/Json.lean:136-148`) with
-no arithmetic and no `ofNat`; `Effect4/Store/JsonCanonical.lean:73-81` gives
+no arithmetic and no `ofNat`; `Effect4/Data/JsonNumber.lean:38-46` gives
 `binary64OfNat`, exact below 2^53, and nothing for a fraction.
 
 So the **rate is carried as a per-mille `Nat`** and `binary64OfPerMille` builds
@@ -158,7 +160,7 @@ set_option autoImplicit false
 
 namespace Effect4.Surface
 
-open Effect4 Effect4.Schema Effect4.Store
+open Effect4 Effect4.Schema
 open Effect4.Arch (accepts)
 
 /-! ## Annotation bags for carriers that are not representations
@@ -428,7 +430,7 @@ end Binding
 `Json.number` carries a raw binary64 datum and the estate has no `Float`; these
 five declarations are the whole of what this area needs from a JSON number, and
 they are built out of `Nat` shifts and divisions so that they reach no `Float`
-primitive, exactly as `Effect4/Store/JsonCanonical.lean:61-81` does for a
+primitive, exactly as `Effect4/Data/JsonNumber.lean:27-46` does for a
 natural. The module header states the quotient each one carries.
 -/
 
@@ -499,7 +501,7 @@ The natural a binary64 holds exactly, or `none`.
 `zero` is `0`; a normal datum is a natural exactly when its significand's low
 `1075 - exponent` bits are clear. Anything fractional, negative, at or above
 `2^53`, subnormal or non-finite is refused rather than truncated, which is the
-half of `Effect4/Store/JsonCanonical.lean:73`'s `binary64OfNat` this area needs
+half of `Effect4/Data/JsonNumber.lean:38`'s `binary64OfNat` this area needs
 back.
 -/
 def natOfBits (bits : UInt64) : Option Nat :=
@@ -515,7 +517,7 @@ def natOfBits (bits : UInt64) : Option Nat :=
     let mantissa := significandBit + significand
     if mantissa % (1 <<< shift) == 0 then some (mantissa >>> shift) else none
 
-/-- A JSON number holding a natural, at `Effect4/Store/JsonCanonical.lean:81`'s
+/-- A JSON number holding a natural, at `Effect4/Data/JsonNumber.lean:46`'s
 spelling. -/
 def natJson (n : Nat) : Json := Effect4.Arch.Json.ofNat n
 
@@ -1211,9 +1213,6 @@ def deployDoc : Document :=
         , Schema.property "description" (Schema.anyOf Schema.string [Schema.null]) ]
     references :=
       [ ⟨"Binding", bindingRep⟩, ⟨"Mount", mountRep⟩, ⟨"Provide", provideRep⟩ ] }
-
-/-- A deployment is addressed by the canonical bytes of its view payload. -/
-instance : Canonical Deployment := ⟨fun dep => encode dep.json⟩
 
 /-! ## Anti-vacuity: the docs app deployment of the plan's §13.3
 

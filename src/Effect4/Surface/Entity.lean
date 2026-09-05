@@ -1,6 +1,7 @@
 import Effect4.Codegen.Spell
+import Effect4.Codegen.Schema
 import Effect4.Schema.Accepts
-import Effect4.Store.JsonCanonical
+import Effect4.Data.JsonNumber
 
 /-!
 # Surface.Entity: entities, domains, and their projections
@@ -16,8 +17,11 @@ every emitter reads, so an entity refers to another by `Schema.reference name`
 and the closed world is the domain.
 
 Each carrier follows `Effect4/Arch/Views.lean`: a first-order structure, a
-`json` projection, a `Document` view whose `Arch.accepts` receipt is a `#guard`
-on the fixtures below, and a `Canonical` instance so the value is store content.
+`json` projection, and a `Document` view whose `Arch.accepts` receipt is a
+`#guard` on the fixtures below. There is no `Canonical` instance: the CAS trait
+made `Canonical` a class with three laws over the value tree
+(`Effect4/Store/Canonical.lean`), the generator derives it, and nothing read the
+hand instance this module used to carry.
 Well-formedness follows §14.2 instead of a bare `Bool`: `check` is a list of
 named clauses read left to right and answers the *first* refusal
 (`Effect4/Surface/Facts.lean`), `WellFormed` is `check = .ok ()`, and
@@ -57,9 +61,34 @@ remains the owner of `Entity.stance`.
 
 set_option autoImplicit false
 
+/-! ## The persisted form of a representation
+
+`Representation.toJson?` was `Effect4/Store/JsonCanonical.lean:84-85` until the CAS trait
+retired that module with its JSON tag alphabet
+(`docs/research/2026-09-04-cas-trait-plan.md` §6). Only the number helpers moved out, to
+`Effect4/Data/JsonNumber.lean`; the persisted form itself has three readers, all in this
+library — `Entity.json` below, `Api.repJson` and `Agent.persistedJson`, both of which import
+this module — so it lands here, in the namespace it always had, and those readers still spell
+it `Arch.Representation.toJson?`. Its sibling `Document.toJson?` has one reader,
+`Test/Evidence/ArchContract.lean:78`, which reaches it through `Effect4/Evidence/Views.lean`
+and never through this library; it is owed there. -/
+
+namespace Effect4.Arch
+
+/-- The persisted JSON form of a representation: `Codegen.Schema.representation` spells it as
+target syntax and `reifyJson?` reads that syntax back as `Json`, the same form the generated
+module hands to `SchemaRepresentation.fromJson` (`Effect4/Target/TypeScript/Schema.lean`). One
+persisted form, written once. `reifyJson?` covers exactly the syntax that speller emits, so the
+`Option` is `some` in practice; no claim of totality is made here, and every reader answers
+`null` for a `none`. -/
+def Representation.toJson? (value : Representation) : Option Json :=
+  Codegen.Schema.reifyJson? (Codegen.Schema.representation value)
+
+end Effect4.Arch
+
 namespace Effect4.Surface
 
-open Effect4 Effect4.Schema Effect4.Store
+open Effect4 Effect4.Schema
 open Effect4.Arch (accepts)
 
 /-! ## The carriers -/
@@ -522,9 +551,10 @@ def Entity.document (dom : Domain) (entity : Entity) : Document :=
 /-- The entity as a JSON value: the view's payload.
 
 The `representation` field carries the *persisted* form of the schema
-(`Effect4/Arch/JsonCanonical.lean`), the same bytes the generated module hands
-to `SchemaRepresentation.fromJson`; the view declares it `unknown`, because its
-own shape is the Schema representation's business, not this view's. -/
+(`Arch.Representation.toJson?` at the head of this module), the same bytes the
+generated module hands to `SchemaRepresentation.fromJson`; the view declares it
+`unknown`, because its own shape is the Schema representation's business, not
+this view's. -/
 def Entity.json (entity : Entity) : Json :=
   .obj
     [ ("name", .str entity.name)
@@ -567,14 +597,6 @@ def domainDoc : Document :=
         , Schema.property "active" Schema.boolean
         , Schema.property "entities" (Schema.array (Schema.reference "Entity")) ]
     references := [⟨"Entity", entityRep⟩] }
-
-/-! ## Content -/
-
-/-- An entity is addressed by the canonical bytes of its view payload. -/
-instance : Canonical Entity := ⟨fun entity => encode entity.json⟩
-
-/-- A domain is addressed by the canonical bytes of its view payload. -/
-instance : Canonical Domain := ⟨fun dom => encode dom.json⟩
 
 /-! ## Generation -/
 

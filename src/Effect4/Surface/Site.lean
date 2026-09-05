@@ -38,7 +38,7 @@ refuses.
 ## The path template check, and the row it owes
 
 `pathTemplateLegal` decides a route over UTF-8 bytes, the route
-`Effect4/Store/Canonical.lean` takes and `Effect4/Surface/Spell.lean` takes,
+`Effect4/Store/Utf8.lean` takes and `Effect4/Surface/Spell.lean` takes,
 because `ByteArray.toList` does not reduce in the kernel on this toolchain. It
 admits exactly:
 
@@ -76,7 +76,7 @@ set_option autoImplicit false
 
 namespace Effect4.Surface
 
-open Effect4 Effect4.Schema Effect4.Store
+open Effect4 Effect4.Schema
 open Effect4.Arch (accepts)
 
 /-! ## Path templates -/
@@ -446,9 +446,6 @@ def siteDoc : Document :=
         , Schema.property "identifier" (Schema.anyOf Schema.string [Schema.null])
         , Schema.property "description" (Schema.anyOf Schema.string [Schema.null]) ]
     references := [⟨"EndpointRef", endpointRefRep⟩, ⟨"Page", pageRep⟩] }
-
-/-- A site is addressed by the canonical bytes of its view payload. -/
-instance : Canonical Site := ⟨fun site => encode site.json⟩
 
 /-! ## Generation -/
 
