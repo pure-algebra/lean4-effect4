@@ -1,4 +1,4 @@
-import OCaml5.Effect
+import OCaml5.Runtime.Effect
 
 /-!
 # OCaml 5 spike: witnesses

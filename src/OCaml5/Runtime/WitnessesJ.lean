@@ -1,5 +1,5 @@
-import OCaml5.Witnesses
-import OCaml5.EffectJsoo
+import OCaml5.Runtime.Witnesses
+import OCaml5.Runtime.EffectJsoo
 
 /-!
 # OCaml 5 spike P3: the witnesses on the `effect.js` machine

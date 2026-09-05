@@ -1,5 +1,5 @@
-import OCaml5.Compile
-import OCaml5.Witnesses
+import OCaml5.Jsoo.Compile
+import OCaml5.Runtime.Witnesses
 
 /-!
 # Spike P4: the chain `Term → Code → CPS`, executed

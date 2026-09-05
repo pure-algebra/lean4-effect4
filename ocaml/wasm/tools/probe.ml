@@ -1,4 +1,4 @@
-(* The value profile of a host, for `src/OCaml5/Value.lean`'s `Backend` row (`:49-58`:
+(* The value profile of a host, for `src/OCaml5/Runtime/Value.lean`'s `Backend` row (`:49-58`:
    `native | jsoo`, `intBits` 63/32). The wasm column is owed before any value crosses the
    wasm boundary (host-frontier note §4.3 step 4).
 

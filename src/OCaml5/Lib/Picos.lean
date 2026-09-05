@@ -1,4 +1,4 @@
-import OCaml5.Effect
+import OCaml5.Runtime.Effect
 
 /-!
 # `OCaml5.Lib.Picos` — Computation, Trigger and Ivar as terms of the OCaml 5 machine

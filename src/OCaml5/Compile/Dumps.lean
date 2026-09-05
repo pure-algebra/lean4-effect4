@@ -1,4 +1,4 @@
-import OCaml5.Compile
+import OCaml5.Jsoo.Compile
 import OCaml5.Ir.Programs
 
 /-!

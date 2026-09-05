@@ -1,4 +1,4 @@
-import OCaml5.Cps
+import OCaml5.Jsoo.Cps
 
 /-!
 # OCaml 5 spike P2: the property harness

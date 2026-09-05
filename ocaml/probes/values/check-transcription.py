@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-# O3 (values): check that every observation transcribed into src/OCaml5/Value.lean is
+# O3 (values): check that every observation transcribed into src/OCaml5/Runtime/Value.lean is
 # byte for byte the row that values/out/*.tsv holds. The Lean `#guard`s check that the profile
 # PREDICTS the transcribed rows; this checks that the transcribed rows are the OBSERVED ones.
 # Run from the repository root, after values/run-values.sh.
 import re, sys
-src = open('src/OCaml5/Value.lean', encoding='utf-8').read()
+src = open('src/OCaml5/Runtime/Value.lean', encoding='utf-8').read()
 obs = {}
 for line in open('ocaml/probes/values/out/all.tsv', encoding='utf-8').read().splitlines()[1:]:
     w,k,n,b,j,jn = line.split('\t')

@@ -1,4 +1,4 @@
-import OCaml5.Code
+import OCaml5.Jsoo.Code
 
 /-!
 # OCaml 5 spike: the partial CPS transform

@@ -1,4 +1,4 @@
-import OCaml5.Cps
+import OCaml5.Jsoo.Cps
 
 /-!
 # OCaml 5 spike O2: the js_of_ocaml witnesses

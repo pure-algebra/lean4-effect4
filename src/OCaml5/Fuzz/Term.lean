@@ -1,4 +1,4 @@
-import OCaml5.Render
+import OCaml5.Runtime.Render
 import OCaml5.Fuzz.Gen
 
 /-!

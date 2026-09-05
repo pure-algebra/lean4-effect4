@@ -1,7 +1,7 @@
-import OCaml5.Effect
-import OCaml5.Compiler
-import OCaml5.Code
-import OCaml5.Cps
+import OCaml5.Runtime.Effect
+import OCaml5.Runtime.Compiler
+import OCaml5.Jsoo.Code
+import OCaml5.Jsoo.Cps
 
 /-!
 # OCaml 5 spike P4: the missing edge, `Term → Code`

@@ -1,6 +1,6 @@
-import OCaml5.Effect
-import OCaml5.Compiler
-import OCaml5.Witnesses
+import OCaml5.Runtime.Effect
+import OCaml5.Runtime.Compiler
+import OCaml5.Runtime.Witnesses
 import OCaml5.Ml.Identifier
 import OCaml5.Ml.Syntax
 import OCaml5.Ml.Render

@@ -3,21 +3,21 @@
 -- `--run` drivers under `OCaml5.Tools` each declare a `main` and are globbed by the
 -- lakefile instead of imported.
 
--- The OCaml 5 runtime reification: the `Stdlib.Effect` handler machine and its invariants,
+-- `Runtime/`: the OCaml 5 runtime reification: the `Stdlib.Effect` handler machine and its invariants,
 -- the js_of_ocaml `effect.js` machine and the native ≈ jsoo relation, jsoo's block IR, the
 -- Term → Code compiler, the CPS pass, backend-relative values, the Promise host.
-import OCaml5.Code
-import OCaml5.Effect
-import OCaml5.Promise
-import OCaml5.Value
-import OCaml5.Witnesses
-import OCaml5.EffectJsoo
-import OCaml5.Compiler
-import OCaml5.Cps
-import OCaml5.CpsProof
-import OCaml5.Invariant
-import OCaml5.WitnessesJ
-import OCaml5.Compile
+import OCaml5.Jsoo.Code
+import OCaml5.Runtime.Effect
+import OCaml5.Runtime.Promise
+import OCaml5.Runtime.Value
+import OCaml5.Runtime.Witnesses
+import OCaml5.Runtime.EffectJsoo
+import OCaml5.Runtime.Compiler
+import OCaml5.Jsoo.Cps
+import OCaml5.Jsoo.CpsProof
+import OCaml5.Runtime.Invariant
+import OCaml5.Runtime.WitnessesJ
+import OCaml5.Jsoo.Compile
 import OCaml5.Compile.Agreement
 import OCaml5.Compile.Dumps
 import OCaml5.Compile.Fuzz
@@ -27,7 +27,7 @@ import OCaml5.Ir.Fuzz
 import OCaml5.Ir.Avatar
 import OCaml5.Ir.Counterexamples
 import OCaml5.Ir.RunUnderHandler
--- The OCaml language model: typed syntax, the canonical printer, the profile checker, the
+-- `Ml/`: the OCaml language model: typed syntax, the canonical printer, the profile checker, the
 -- Lean → OCaml type reflection, the `{ f with }` → mutation pass.
 import OCaml5.Ml.Identifier
 import OCaml5.Ml.Syntax
@@ -46,12 +46,12 @@ import OCaml5.Lib.Stream
 import OCaml5.Lib.Eio
 import OCaml5.Lib.Picos
 import OCaml5.Lib.Deque
-import OCaml5.LibTest
+import OCaml5.Lib.Test
 -- The `Term` → OCaml renderer, the avatar's generated half (`OCaml5.Avatar`: one `Part` per
 -- avatar module, its descriptions, its derived twins and the projection guard `Check`), and
 -- the program fuzz (`Fuzz` declares the driver's `main`; `MlTest`, the language model's own
 -- battery, declares another and is built through the lakefile's glob instead of imported here).
-import OCaml5.Render
+import OCaml5.Runtime.Render
 import OCaml5.Avatar
 import OCaml5.Avatar.Check
 import OCaml5.Fuzz.Gen
@@ -72,7 +72,7 @@ import OCaml5.Lcnf.Types
 import OCaml5.Lcnf.Translate
 -- The syntax-level transpiler of `Effect4/Machine/Fibers.lean` (F3's derived-avatar probe);
 -- `Tools/TranspileDeep.lean` is the driver.
-import OCaml5.Transpile
+import OCaml5.Avatar.Transpile
 -- Route 1: the Lean machine held by OCaml as an opaque value (`@[export]`ed session API
 -- over `Effect4.Api`; `ocaml/link` links the static library).
 import OCaml5.Bridge

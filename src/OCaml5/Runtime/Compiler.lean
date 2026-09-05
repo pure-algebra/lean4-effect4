@@ -1,4 +1,4 @@
-import OCaml5.Witnesses
+import OCaml5.Runtime.Witnesses
 
 /-!
 # OCaml 5 spike: the compiler layer

@@ -1,5 +1,5 @@
-import OCaml5.Effect
-import OCaml5.Compiler
+import OCaml5.Runtime.Effect
+import OCaml5.Runtime.Compiler
 
 /-!
 # OCaml 5 spike: the run-level invariant and the induction principle

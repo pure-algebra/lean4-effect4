@@ -42,17 +42,17 @@ The Lean half, `src/OCaml5/`:
 
 | module | what it is |
 | --- | --- |
-| `Effect`, `Invariant`, `Witnesses` | the OCaml 5 `Stdlib.Effect` handler machine (65 arms) and its theorems: well-formedness, one-shot, the chain discipline, both `Unhandled` routes |
-| `EffectJsoo`, `WitnessesJ` | the js_of_ocaml `effect.js` machine and the native ≈ jsoo relation |
-| `Code`, `Compiler`, `Compile`, `Compile/*`, `Cps`, `CpsProof`, `Ir/*` | jsoo's block IR, Term → Code, the CPS pass and its proofs, the compile battery (agreement, dumps, fuzz, simulation), the avatar IR and its counterexamples |
-| `Value`, `Promise` | backend-relative values and the Promise / microtask host |
+| `Runtime/{Effect,Invariant,Witnesses}` | the OCaml 5 `Stdlib.Effect` handler machine (65 arms) and its theorems: well-formedness, one-shot, the chain discipline, both `Unhandled` routes |
+| `Runtime/{EffectJsoo,WitnessesJ}` | the js_of_ocaml `effect.js` machine and the native ≈ jsoo relation |
+| `Runtime/Compiler`, `Jsoo/{Code,Cps,CpsProof,Compile}`, `Compile/*`, `Ir/*` | jsoo's block IR, Term → Code, the CPS pass and its proofs, the compile battery (agreement, dumps, fuzz, simulation), the avatar IR and its counterexamples |
+| `Runtime/{Value,Promise}` | backend-relative values and the Promise / microtask host |
 | `Ml/*` | the OCaml language model: typed syntax, the canonical printer, the profile checker (an allowlist of constructs and library signatures), Lean structure/inductive → OCaml type reflection, the `{ f with }` → mutation pass |
 | `Lib/*` | Lean carriers with laws for the libraries the avatar and daemon use (`Map`, `Set`, `Deque`, `Order`, `Sexp`, `Stream`, `Eio`, `Picos`, `Derived`); `Lib/Deque` projects onto `Effect4.Machine.Dispatcher` by `rfl` |
-| `Render` | `Term.render`: one `Term` as one OCaml 5 compilation unit over the raw effect primitives |
+| `Runtime/Render` | `Term.render`: one `Term` as one OCaml 5 compilation unit over the raw effect primitives |
 | `Avatar`, `Avatar/*` | the avatar's generated half as one value: `Avatar.parts`, one `Part` per avatar module (`Fibers`, `Stores`, `Context`, `Layer`, `ForkFlow`) with its hand descriptions, its derived twins (`Avatar/Derived/*`, generated) and its generated block; `Avatar/Probe` (the A0 shape probe); `Avatar/Check` (the pinned counts and the projection guard, hand vs derived) |
 | `Eff/*` | the `Eff` program IR as OCaml: the closed world read off the environment (`World`), the emitters of the `eff/` library (`Emit`), the goldens and corpus (`Goldens`) |
 | `Fuzz`, `Fuzz/*` | the fuzz driver and its generators: the PRNG (`Gen`), the random `Term` generator, filter and shrinker (`Term`), the avatar-alphabet program corpus rendered twice (`Corpus`), the `RunDecision` tapes (`Tape`) |
-| `Transpile` | F3's syntax-level transpiler of `Effect4/Machine/Fibers.lean` defs to `Ml.Syntax`: the tables, the translation, the residue |
+| `Avatar/Transpile` | F3's syntax-level transpiler of `Effect4/Machine/Fibers.lean` defs to `Ml.Syntax`: the tables, the translation, the residue |
 | `Lcnf/*` | the LCNF → OCaml backend: dump, naming, types, the translation rules and the builtin table |
 | `Bridge` | the route-1 session API exported to C |
 | `Tools/*` | the `--run` drivers, each a thin `main` over a library module: `Describe` (derive descriptions into `Avatar/Derived`), `RenderDeep` (print an `Avatar.Part`'s block), `TranspileDeep` (over `Transpile`), `LcnfDump`/`LcnfGen` (route 2), `EffGen` (over `Eff`), `EffWire` (the wire goldens) |
@@ -69,7 +69,7 @@ Highest fidelity first (`2026-09-04-ocaml-estate-and-parity.md` §4f):
    `e4_stubs.c`, a stated trust boundary, not model code);
 2. Lean's compiler IR translated to OCaml — `gen/` (all three hosts, typed, value-threaded,
    no handlers; fidelity = the compiler's minus a small rule table);
-3. a syntax-level transpiler — `src/OCaml5/Transpile.lean` (readable, re-does elaboration
+3. a syntax-level transpiler — `src/OCaml5/Avatar/Transpile.lean` (readable, re-does elaboration
    decisions);
 4. a hand port with descriptions and an overlay — `avatar/` (the right mechanism only where
    representation differs on purpose).
@@ -121,7 +121,7 @@ Node is the Windows one (`node.exe`, reachable from WSL through interop); the sc
   differential against the avatar; a readability pass;
 * `eff/`: the two theorems its report states (erase ⇒ `wellTyped`; encode/decode exactness);
 * the OCaml hosts as the third column of `harness/truth`;
-* a `Backend.wasm` row with `intBits := 31` in `src/OCaml5/Value.lean` (the fourth host's
+* a `Backend.wasm` row with `intBits := 31` in `src/OCaml5/Runtime/Value.lean` (the fourth host's
   integers are i31ref), and the daemon's four `server_runtime.js` externals as wasm imports
   before the daemon can run there;
 * the avatar ↔ Lean machine relation (A3).
