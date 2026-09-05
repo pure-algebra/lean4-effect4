@@ -164,6 +164,11 @@ import Effect4.Program.Compile
 -- `App` (`Effect.provide`), the build specification with its totality theorem, and the
 -- lowering into the Layer machine with the docs deployment as its witness.
 import Effect4.Program.Provision
+-- Configuration as an algebra: rc.112's `ConfigProvider` in its `makeSource`/`makeOrElse`
+-- normal form (a fallback monoid under a path-transformation action), the `Config` reader with
+-- its tri-state resolution, dotenv substitution with fuel, and the configuration requirement
+-- row (`docs/research/2026-09-04-production-standards-spike.md` §4).
+import Effect4.Program.Config
 -- The layer printer: a `LayerTerm` and an `App` as the rc.112 `Layer.*` / `Effect.provide`
 -- combinators, syntax never text, with the declared `Layer.Layer<ROut, E, RIn>` types.
 import Effect4.Codegen.Layer
