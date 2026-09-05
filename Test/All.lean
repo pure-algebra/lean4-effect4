@@ -54,6 +54,9 @@ import Test.Counterexamples.Machine.Runtime.LiveStack
 import Test.Store.StoreContract
 import Test.Evidence.ArchContract
 import Test.Codegen.PrintContract
+import Test.Codegen.ReadContract
+import Test.Codegen.ReadAxiomReport
+import Test.Program.Gen
 import Test.Codegen.RuleContract
 import Test.Codegen.AppContract
 import Test.Ingest.JsonSchemaContract

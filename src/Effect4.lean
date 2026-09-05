@@ -175,6 +175,7 @@ import Effect4.Evidence.Char.Queue.Mutants
 import Effect4.Program.Eff
 import Effect4.Program.Typing
 import Effect4.Codegen.Print
+import Effect4.Codegen.Read
 import Effect4.Program.Native
 import Effect4.Program.Compile
 -- The provision algebra (docs/research/2026-09-04-provision-algebra.md): `Row.diff`, the

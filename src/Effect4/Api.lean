@@ -1,6 +1,7 @@
 import Effect4.Program.Compile
 import Effect4.Program.Wire
 import Effect4.Codegen.Print
+import Effect4.Codegen.Read
 import Effect4.Codegen.Schema
 import Effect4.Codegen.App
 import Effect4.Ingest.JsonSchema
@@ -66,6 +67,23 @@ def wellTyped (program : Program) : Bool := (typeOf program).isSome
 /-- The program as one TypeScript expression, at the empty environment. -/
 def print (program : Program) : Except PrintRefusal TypeScript.Expr :=
   Program.print nativeSignature 0 program
+
+/-- A program back from one TypeScript expression, at the empty environment: the inverse of
+`print` on the trees `print` produces (`Effect4/Codegen/Read.lean`, `read_print` and
+`read_exact`), a `ReadRefusal` on every other tree. -/
+def read (expression : TypeScript.Expr) : Except ReadRefusal Program :=
+  Program.readEff nativeSignature nativeSpell 0 expression
+
+/-- Whether the printer keeps the program whole, so that `read` of its printing is the program
+itself; what it loses is documented on `Effect4.Program.readable`. -/
+def readable (program : Program) : Bool :=
+  Program.readable nativeSignature nativeSpell 0 program
+
+/-- `read` after `print`: the program itself when it is `readable` and the printer accepts
+it (`Effect4.Program.roundTrip_eq`), and otherwise the program the printer kept, which prints
+the same (`read_exact`). -/
+def roundTrip (program : Program) : Except ReadRefusal Program :=
+  Program.roundTrip nativeSignature nativeSpell 0 program
 
 /-! ## Bytes: how a program crosses a boundary -/
 
