@@ -1,10 +1,10 @@
-import OCaml5.compile.Agreement
-import OCaml5.Fuzz
+import OCaml5.Compile.Agreement
+import OCaml5.Fuzz.Term
 
 /-!
 # Spike P4: the compiler on P5's generated corpus
 
-Status: spike P4, 2026-09-04. Module `OCaml5.compile.Fuzz`. Report:
+Status: spike P4, 2026-09-04. Module `OCaml5.Compile.Fuzz`. Report:
 `docs/research/2026-09-04-spike-p4-compile.md`.
 
 `OCaml5.Fuzz` (spike P5) is a random `Term` generator over the effect fragment: deep handlers
@@ -19,9 +19,9 @@ carries a heap identity no host could print. A kept term is then classified here
 is inside `compile`'s domain (§"Two gaps" of `OCaml5.Compile`) and whether the three runs agree.
 -/
 
-namespace OCaml5.compile.Fz
+namespace OCaml5.Compile.Fuzz
 
-open OCaml5 OCaml5.compile
+open OCaml5 OCaml5.Compile.Agreement
 
 /-- One of five verdicts on a seed. -/
 inductive V where
@@ -102,4 +102,4 @@ def outsideSeeds (first count size : Nat) : List Nat :=
 #eval (outsideSeeds 1 120 4, outsideSeeds 1000 120 5, outsideSeeds 5000 120 6,
        outsideSeeds 9000 140 3)
 
-end OCaml5.compile.Fz
+end OCaml5.Compile.Fuzz

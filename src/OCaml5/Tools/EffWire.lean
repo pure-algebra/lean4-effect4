@@ -19,7 +19,7 @@ def hexOfByte (b : UInt8) : String :=
   let digits := "0123456789abcdef".toList
   let hi := digits[b.toNat / 16]!
   let lo := digits[b.toNat % 16]!
-  String.mk [hi, lo]
+  String.ofList [hi, lo]
 
 def hex (bs : List UInt8) : String := String.join (bs.map hexOfByte)
 

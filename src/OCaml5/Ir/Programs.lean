@@ -3,7 +3,7 @@ import OCaml5.Cps
 /-!
 # OCaml 5 spike O2: the js_of_ocaml witnesses
 
-Status: 2026-09-03. Module `OCaml5.ir.Programs`. Plan:
+Status: 2026-09-03. Module `OCaml5.Ir.Programs`. Plan:
 `docs/research/2026-09-03-ocaml5-deep-plan.md`, spike O2. Report:
 `docs/research/2026-09-03-spike-o2-jsoo.md`.
 
@@ -35,7 +35,7 @@ builtins keeps them subject to the same transform as everything else, which is w
 agreement check of §4 mean anything.
 -/
 
-namespace OCaml5.ir
+namespace OCaml5.Ir.Programs
 
 open OCaml5.Code OCaml5.Cps
 
@@ -1195,4 +1195,4 @@ report's comparison against `p1_perform_continue.js`. -/
 #eval IO.println (Print.program (OCaml5.Cps.f p1).1)
 #eval IO.println (Print.program (OCaml5.Cps.f p3).1)
 
-end OCaml5.ir
+end OCaml5.Ir.Programs

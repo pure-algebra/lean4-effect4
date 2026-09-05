@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Seat W1: render one avatar module's carriers from `OCaml5.Ml.Deep.*` and diff them against
+# Render one avatar module's carriers from `OCaml5.Avatar.parts` (src/OCaml5/Avatar/*.lean) and diff them against
 # the block the avatar file carries. The diff is against the real file, not a copy, so the
 # claim decays the moment either side changes -- which is the point (P5 §11).
 #

@@ -1,12 +1,12 @@
-import OCaml5.ir.Fuzz
+import OCaml5.Ir.Fuzz
 
 /-!
 # OCaml 5 spike P2: the block shapes the Effect avatar produces
 
-Status: 2026-09-04. Module `OCaml5.ir.Avatar`. Report:
+Status: 2026-09-04. Module `OCaml5.Ir.Avatar`. Report:
 `docs/research/2026-09-03-spike-p2-cps-theorem.md` §9.
 
-The estate's target is an OCaml avatar of the Effect runtime — `workshop/Deep/Fibers.lean`
+The estate's target is an OCaml avatar of the Effect runtime — `src/Effect4/Machine/Fibers.lean`
 transcribed into OCaml 5 effects and compiled by js_of_ocaml — so the CPS theorem is the last
 edge of the chain to JavaScript. These are the four block shapes that avatar produces, written
 out by hand so that each is a pinned `#guard` rather than a seed, and generated as cases 10-13
@@ -27,9 +27,9 @@ loop header dominates the loop body, the body's jump closure is allocated in the
 the value the body reads (`vcur`) is bound in the header's activation.
 -/
 
-namespace OCaml5.ir.Avatar
+namespace OCaml5.Ir.Avatar
 
-open OCaml5.Code OCaml5.Cps OCaml5.ir.Fuzz
+open OCaml5.Code OCaml5.Cps OCaml5.Ir.Fuzz
 
 private def v (n : Nat) : Var := ⟨n⟩
 
@@ -227,4 +227,4 @@ def a4Callback : Program K where
 #guard (Machine.exec 40000 a4Callback) == (Outcome.stopped, "6")
 #guard (Machine.exec 400000 (OCaml5.Cps.f a4Callback).1) == (Outcome.stopped, "6")
 
-end OCaml5.ir.Avatar
+end OCaml5.Ir.Avatar

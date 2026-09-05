@@ -4,7 +4,7 @@ import OCaml5.Witnesses
 /-!
 # Spike P4: the chain `Term → Code → CPS`, executed
 
-Status: spike P4, 2026-09-04. Module `OCaml5.compile.Agreement`. Report:
+Status: spike P4, 2026-09-04. Module `OCaml5.Compile.Agreement`. Report:
 `docs/research/2026-09-04-spike-p4-compile.md`.
 
 Three runs of one term, checked against each other:
@@ -28,7 +28,7 @@ so this module imports only `OCaml5.Witnesses` and nothing of P3's in-flight tre
 on the newlines, which is the projection an instrumented host program itself is read through
 (`tools/run-witness.sh`). -/
 
-namespace OCaml5.compile
+namespace OCaml5.Compile.Agreement
 
 open OCaml5 OCaml5.Code
 
@@ -398,4 +398,4 @@ transform. -/
     let (n, a, b, c) := verdict w
     s!"{n}\tterm={a}\tjsoo={b}\tcps={c}\tinDomain={inDomain w.term}")))
 
-end OCaml5.compile
+end OCaml5.Compile.Agreement

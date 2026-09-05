@@ -4,8 +4,7 @@ import OCaml5.Compiler
 /-!
 # OCaml 5 spike: the run-level invariant and the induction principle
 
-Status: spike P1, 2026-09-03. Module `OCaml5.Invariant` of the non-default `OCaml5` library
-(`lakefile.toml`, `srcDir = "workshop"`). Plan:
+Status: spike P1, 2026-09-03. Module `OCaml5.Invariant` of the `OCaml5` library. Plan:
 `docs/research/2026-09-03-ocaml5-deep-plan.md` §6 row P1. Report:
 `docs/research/2026-09-03-spike-p1-invariant.md`.
 

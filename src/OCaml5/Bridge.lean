@@ -18,7 +18,7 @@ Exports (Lean's C ABI: `lean_object*` arguments are owned unless marked `@&`):
     e4_snapshot      : Session → String
 -/
 
-namespace Bridge
+namespace OCaml5.Bridge
 
 open Effect4 Effect4.Api Effect4.Machine Effect4.Program
 
@@ -87,7 +87,7 @@ def bytesOfHex : List Char → Option (List UInt8)
 
 def hexOfBytes (bs : List UInt8) : String :=
   let digits := "0123456789abcdef".toList
-  String.mk (bs.foldr (fun b acc => digits[b.toNat / 16]! :: digits[b.toNat % 16]! :: acc) [])
+  String.ofList (bs.foldr (fun b acc => digits[b.toNat / 16]! :: digits[b.toNat % 16]! :: acc) [])
 
 /-- The session name: the program's table name, `bytes` for a decoded program, or
 `!refused:<reason>` when `e4_load_hex` could not load (the machine is then `p42`'s). -/
@@ -236,4 +236,4 @@ def snapshot (s : Session) : String :=
   let events := m.trace.map fun e => "  · " ++ eventTag e
   "\n".intercalate (head :: fibers ++ [store, "  trace:"] ++ events)
 
-end Bridge
+end OCaml5.Bridge

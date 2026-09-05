@@ -1,9 +1,9 @@
-import OCaml5.compile.Agreement
+import OCaml5.Compile.Agreement
 
 /-!
 # Spike P4: the simulation statement, and the pure fragment
 
-Status: spike P4, 2026-09-04. Module `OCaml5.compile.Simulation`. Report:
+Status: spike P4, 2026-09-04. Module `OCaml5.Compile.Simulation`. Report:
 `docs/research/2026-09-04-spike-p4-compile.md` §6.
 
 `compile_correct` is written down exactly (§1); the two lemmas that reduce it to a pair of
@@ -14,14 +14,14 @@ here is `sorry`, `axiom`, `partial`, `unsafe` or `native_decide`; the unproved a
 *statements*, `Prop`-valued definitions with no proof claimed.
 -/
 
-namespace OCaml5.compile
+namespace OCaml5.Compile.Simulation
 
-open OCaml5 OCaml5.Code
+open OCaml5 OCaml5.Code OCaml5.Compile.Agreement
 
 /-! ## 1. The statement
 
 The two machines have different carriers, so the theorem is stated through the two projections
-of `OCaml5.compile.Agreement`: `outcomeMatches` on outcomes, `rowsOfOutput` on the printed
+of `OCaml5.Compile.Agreement`: `outcomeMatches` on outcomes, `rowsOfOutput` on the printed
 output. The existential over `fuel'` is what makes this a simulation rather than a lockstep
 bisimulation: one `Machine` step is many `Code.Machine` steps, and how many depends on the
 term. -/
@@ -79,7 +79,7 @@ def NotStuck (t : Term Nat) : Prop :=
     (Code.Machine.exec fuel' (Compile.compile t)).1 ≠ Code.Outcome.stuck why
 
 /-- **The theorem P4 owes.** Executed on 15 witnesses, 10 `Stdlib` builder shapes and 455
-generated programs (`OCaml5.compile.Agreement`, `OCaml5.compile.Fuzz`); proved below for the
+generated programs (`OCaml5.Compile.Agreement`, `OCaml5.Compile.Fuzz`); proved below for the
 pure fragment; the remaining arms are §4. -/
 def CompileCorrectOnFragment : Prop :=
   ∀ t : Term Nat, Fragment t = true → NotStuck t → CompileCorrect t
@@ -325,4 +325,4 @@ def ShallowArm : Prop :=
   ∀ (t : Term Nat), Compiler.Admissible t = true → usesNoGap t = false → NotStuck t →
     CompileCorrect t
 
-end OCaml5.compile
+end OCaml5.Compile.Simulation

@@ -1,10 +1,10 @@
 import OCaml5.Compile
-import OCaml5.ir.Programs
+import OCaml5.Ir.Programs
 
 /-!
 # Spike P4: `compile`'s output against js_of_ocaml's own
 
-Status: spike P4, 2026-09-04. Module `OCaml5.compile.Dumps`. Report:
+Status: spike P4, 2026-09-04. Module `OCaml5.Compile.Dumps`. Report:
 `docs/research/2026-09-04-spike-p4-compile.md`.
 
 Two comparisons, one executed on the real tools and one machine-checked in Lean.
@@ -40,7 +40,7 @@ whether it is in tail position in `Code.Machine.contFor`'s sense — which is wh
 blocks end in a CPS call after `Cps.f`, and so is what P2's theorem is about.
 -/
 
-namespace OCaml5.compile.Dumps
+namespace OCaml5.Compile.Dumps
 
 open OCaml5 OCaml5.Code
 
@@ -163,9 +163,9 @@ private def codeVal (t : Term Nat) : Code.Outcome := (Code.Machine.exec 200000 (
 #guard codeVal t3 == .value (.int 7)
 
 /- …and the real IR, run by `ir/Programs.lean`'s own machine, prints those three integers. -/
-#guard Code.Machine.exec 20000 ir.p1Linked == (Code.Outcome.stopped, "42\n")
-#guard Code.Machine.exec 20000 ir.p2Linked == (Code.Outcome.stopped, "84\n")
-#guard Code.Machine.exec 20000 ir.p3Linked == (Code.Outcome.stopped, "7\n")
+#guard Code.Machine.exec 20000 Ir.Programs.p1Linked == (Code.Outcome.stopped, "42\n")
+#guard Code.Machine.exec 20000 Ir.Programs.p2Linked == (Code.Outcome.stopped, "84\n")
+#guard Code.Machine.exec 20000 Ir.Programs.p3Linked == (Code.Outcome.stopped, "7\n")
 
 /-! ### Check 1: the same effect primitives
 
@@ -179,7 +179,7 @@ output) and `p3Linked` a dead `continue`. -/
 #guard sortedNames (sites (Compile.compile t1)) ==
   ["%perform", "%reperform", "%resume", "%resume", "caml_alloc_stack",
    "caml_continuation_use_noexc"]
-#guard sortedNames (sites ir.p1Linked) ==
+#guard sortedNames (sites Ir.Programs.p1Linked) ==
   ["%perform", "%reperform", "%resume", "%resume", "%resume", "caml_alloc_stack",
    "caml_continuation_use_noexc", "caml_continuation_use_noexc"]
 
@@ -194,8 +194,8 @@ output) and `p3Linked` a dead `continue`. -/
 
 /- The difference is exactly the dead half of the linked `Deep`: one extra
 `caml_continuation_use_noexc` and one extra `%resume` in each of the three. -/
-#guard (sortedNames (sites ir.p1Linked)).length == (sortedNames (sites (Compile.compile t1))).length + 2
-#guard (sortedNames (sites ir.p3Linked)).length == (sortedNames (sites (Compile.compile t3))).length + 2
+#guard (sortedNames (sites Ir.Programs.p1Linked)).length == (sortedNames (sites (Compile.compile t1))).length + 2
+#guard (sortedNames (sites Ir.Programs.p3Linked)).length == (sortedNames (sites (Compile.compile t3))).length + 2
 
 /-! ### Check 2: where the primitives sit
 
@@ -212,26 +212,26 @@ def sitesOf (p : Program K) (n : String) : List (String × Bool) :=
 
 /- `%resume` in tail position, in both, everywhere. -/
 #guard (sitesOf (Compile.compile t1) "%resume").all (fun s => s == ("return", true))
-#guard (sitesOf ir.p1Linked "%resume").all (fun s => s == ("return", true))
+#guard (sitesOf Ir.Programs.p1Linked "%resume").all (fun s => s == ("return", true))
 #guard (sitesOf (Compile.compile t2) "%resume").all (fun s => s == ("return", true))
 #guard (sitesOf (Compile.compile t3) "%resume").all (fun s => s == ("return", true))
-#guard (sitesOf ir.p3Linked "%resume").all (fun s => s == ("return", true))
+#guard (sitesOf Ir.Programs.p3Linked "%resume").all (fun s => s == ("return", true))
 
 /- `%reperform` in tail position, in both. This is the `bytegen.ml:800-804` clause holding at
 the IR level as well as at the `Term` level. -/
 #guard (sitesOf (Compile.compile t1) "%reperform").all (fun s => s == ("return", true))
-#guard (sitesOf ir.p1Linked "%reperform").all (fun s => s == ("return", true))
+#guard (sitesOf Ir.Programs.p1Linked "%reperform").all (fun s => s == ("return", true))
 #guard (sitesOf (Compile.compile t2) "%reperform").all (fun s => s == ("return", true))
 
 /- `caml_alloc_stack` in a returning block, in both: `let s = alloc_stack … in runstack s …`
 is one block (`effect.ml:78-79`). -/
 #guard (sitesOf (Compile.compile t1) "caml_alloc_stack").all (fun s => s == ("return", false))
-#guard (sitesOf ir.p1Linked "caml_alloc_stack").all (fun s => s == ("return", false))
+#guard (sitesOf Ir.Programs.p1Linked "caml_alloc_stack").all (fun s => s == ("return", false))
 
 /- The one deviation, isolated: the `caml_continuation_use_noexc` that feeds a guarded
 `%resume`. -/
 #guard (sitesOf (Compile.compile t1) "caml_continuation_use_noexc") == [("cond", false)]
-#guard (sitesOf ir.p1Linked "caml_continuation_use_noexc") ==
+#guard (sitesOf Ir.Programs.p1Linked "caml_continuation_use_noexc") ==
   [("return", false), ("return", false)]
 
 /-! ### Check 3: `%perform`, and where the trap sits
@@ -242,15 +242,15 @@ goes (`interp.c:940-950`). `compile` reproduces both, and reproduces `p3`'s sing
 `Pushtrap`/`Poptrap` pair. -/
 
 #guard sitesOf (Compile.compile t1) "%perform" == [("return", false)]
-#guard sitesOf ir.p1Linked "%perform" == [("return", false)]
+#guard sitesOf Ir.Programs.p1Linked "%perform" == [("return", false)]
 
 #guard sitesOf (Compile.compile t3) "%perform" == [("poptrap", false)]
-#guard sitesOf ir.p3Linked "%perform" == [("poptrap", false)]
+#guard sitesOf Ir.Programs.p3Linked "%perform" == [("poptrap", false)]
 
 #guard trapKinds (Compile.compile t3) == ["pushtrap", "poptrap"]
-#guard trapKinds ir.p3Linked == ["pushtrap", "poptrap"]
+#guard trapKinds Ir.Programs.p3Linked == ["pushtrap", "poptrap"]
 #guard trapKinds (Compile.compile t1) == []
-#guard trapKinds ir.p1Linked == []
+#guard trapKinds Ir.Programs.p1Linked == []
 
 /-! ### Check 4: the freshly dumped witnesses
 
@@ -301,15 +301,15 @@ return and raise routes — and neither does the compiled program. -/
 What the report quotes. -/
 
 #eval IO.println s!"compile t1 {sites (Compile.compile t1)}"
-#eval IO.println s!"p1Linked   {sites ir.p1Linked}"
+#eval IO.println s!"p1Linked   {sites Ir.Programs.p1Linked}"
 #eval IO.println s!"compile t2 {sites (Compile.compile t2)}"
-#eval IO.println s!"p2Linked   {sites ir.p2Linked}"
+#eval IO.println s!"p2Linked   {sites Ir.Programs.p2Linked}"
 #eval IO.println s!"compile t3 {sites (Compile.compile t3)}"
-#eval IO.println s!"p3Linked   {sites ir.p3Linked}"
+#eval IO.println s!"p3Linked   {sites Ir.Programs.p3Linked}"
 
 /-! `compile t1` in the compiler's own printed syntax (`code.ml:461-556`), for the report's
 side-by-side against `p1_perform_continue.pre.dump`. -/
 
 #eval IO.println (Print.program (Compile.compile t1))
 
-end OCaml5.compile.Dumps
+end OCaml5.Compile.Dumps

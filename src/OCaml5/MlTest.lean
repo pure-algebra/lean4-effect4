@@ -1,4 +1,5 @@
-import OCaml5.Render
+import OCaml5.Ml.Check
+import OCaml5.Avatar
 
 /-!
 # OCaml5.MlTest — the battery for the `OCaml5.Ml` API
@@ -693,11 +694,11 @@ def dequeSig : ModTy :=
 
 /-! ## (d) The identifier mangling round-trips -/
 
-#guard (Ml.Avatar.runFiber.fields.map (·.leanName)).all
+#guard (Avatar.Fibers.runFiber.fields.map (·.leanName)).all
   (fun n => unmangleField (mangleField n) == n)
-#guard (Ml.Avatar.frameFiber.fields.map (·.leanName)).all
+#guard (Avatar.Fibers.frameFiber.fields.map (·.leanName)).all
   (fun n => unmangleField (mangleField n) == n)
-#guard (Ml.Avatar.inductives.flatMap (fun d => d.ctors.flatMap (fun c =>
+#guard (Avatar.Fibers.inductives.flatMap (fun d => d.ctors.flatMap (fun c =>
           c.args.map (·.leanName)))).all
   (fun n => unmangleField (mangleField n) == n)
 #guard ["exit", "type", "currentOpCount", "a_b", "aB", "x'", "ABC", "", "let", "a__b",

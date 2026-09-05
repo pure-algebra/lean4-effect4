@@ -4,7 +4,7 @@
 
    Seat F2, 2026-09-04. Report: `docs/research/2026-09-04-seat-w1-deep-port.md` §F2.10.
 
-   The carriers below the banner are GENERATED from `OCaml5.Ml.Deep.ForkFlow` in
+   The carriers below the banner are GENERATED from `OCaml5.Avatar.ForkFlow` in
    `src/OCaml5/Render.lean` (`render-deep.sh forkflow`). `Val` here is
    `Effects.Trace.Val` (`Effects/Trace.lean:41-50`: `str`, `nat`, `bool`, `pair`, `unit`,
    `none`, `some`), which the wire `value` spells one for one -- the one alphabet the trace

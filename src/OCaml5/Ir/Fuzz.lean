@@ -3,7 +3,7 @@ import OCaml5.Cps
 /-!
 # OCaml 5 spike P2: the property harness
 
-Status: 2026-09-03. Module `OCaml5.ir.Fuzz`. Plan:
+Status: 2026-09-03. Module `OCaml5.Ir.Fuzz`. Plan:
 `docs/research/2026-09-03-ocaml5-deep-plan.md`, row P2 of §6. Report:
 `docs/research/2026-09-03-spike-p2-cps-theorem.md`.
 
@@ -24,7 +24,7 @@ on half of them), `%perform` in non-tail position, `caml_alloc_stack` + `%resume
 `continue`, `discontinue`, `%reperform`, and dropping the continuation.
 -/
 
-namespace OCaml5.ir.Fuzz
+namespace OCaml5.Ir.Fuzz
 
 open OCaml5.Code OCaml5.Cps
 
@@ -599,4 +599,4 @@ program was ever `stuck` on the source side and none ran out of fuel. -/
 #guard (sweep 80 4 80000 800000).agree == 80
 #guard (sweep 60 5 200000 2000000).agree == 60
 
-end OCaml5.ir.Fuzz
+end OCaml5.Ir.Fuzz

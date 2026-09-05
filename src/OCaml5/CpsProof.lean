@@ -456,7 +456,7 @@ theorem resume_stack_step (m : Machine) (k' stack kv : Var) (rest : List (Instr 
 
 /-! ### 2.3 The shapes the Effect avatar produces
 
-The estate's target is an OCaml avatar of the Effect runtime (`workshop/Deep/Fibers.lean`
+The estate's target is an OCaml avatar of the Effect runtime (`src/Effect4/Machine/Fibers.lean`
 transcribed into OCaml 5 effects and compiled by js_of_ocaml), so the shapes that matter most
 are the ones its scheduler produces. Four of them, and what each needs beyond §2.1.
 

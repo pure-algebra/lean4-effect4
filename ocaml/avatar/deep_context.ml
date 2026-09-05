@@ -5,7 +5,7 @@
 
    Seat F2, 2026-09-04. Report: `docs/research/2026-09-04-seat-w1-deep-port.md` §F2.9.
 
-   The carriers below the banner are GENERATED from `OCaml5.Ml.Deep.Context` in
+   The carriers below the banner are GENERATED from `OCaml5.Avatar.Context` in
    `src/OCaml5/Render.lean` (`render-deep.sh context`). Substitutions, each a row of the
    report: `Context.keysNodup` (`Context.lean:184`) is a *proof* and is ERASED (F2-L2) -- `add`
    and `mergeEntries` keep the keys unique by construction, which is what the proof states;

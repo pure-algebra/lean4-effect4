@@ -3,7 +3,7 @@
 
    Seat W1, 2026-09-04. Report: `docs/research/2026-09-04-seat-w1-deep-port.md`.
 
-   The carriers below the banner are GENERATED from `OCaml5.Ml.Deep.Stores` in
+   The carriers below the banner are GENERATED from `OCaml5.Avatar.Stores` in
    `src/OCaml5/Render.lean` — same field order, same constructor order, same arity —
    and are not to be edited here. The functions are hand-ported arm for arm, each with the
    `Stores.lean` line it is the port of. Anything not ported calls `Deep_fibers.refuse` with

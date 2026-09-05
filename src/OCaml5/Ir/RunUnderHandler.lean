@@ -1,9 +1,9 @@
-import OCaml5.ir.Fuzz
+import OCaml5.Ir.Fuzz
 
 /-!
 # OCaml 5 spike P2: the block shape the avatar's `run_under_handler` compiles to
 
-Status: 2026-09-04. Module `OCaml5.ir.RunUnderHandler`. Report:
+Status: 2026-09-04. Module `OCaml5.Ir.RunUnderHandler`. Report:
 `docs/research/2026-09-03-spike-p2-cps-theorem.md` §10.1. Request P2-1 of
 `docs/research/2026-09-04-spike-a0-avatar.md` §1.
 
@@ -72,7 +72,7 @@ compilation unit — so `p7Linked` supplies it, exactly as spike O2's `pNLinked`
 `Stdlib.Effect.Deep`. Everything the machine runs is `Code`, subject to the same transform.
 -/
 
-namespace OCaml5.ir.RunUnderHandler
+namespace OCaml5.Ir.RunUnderHandler
 
 open OCaml5.Code OCaml5.Cps
 
@@ -272,4 +272,4 @@ def p7Linked : Program K where
 #guard Machine.exec 400000 (OCaml5.Cps.f p7Linked).1 == (Outcome.stopped, "99")
 #guard !usesEffectPrimitives (OCaml5.Cps.f p7Linked).1
 
-end OCaml5.ir.RunUnderHandler
+end OCaml5.Ir.RunUnderHandler

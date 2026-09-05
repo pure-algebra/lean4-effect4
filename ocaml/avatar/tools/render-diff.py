@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """The diff half of `render-deep.sh`, as a file: compare (or, with `--write`, replace) the
-generated carrier block of an avatar module with a rendering of `OCaml5.Ml.Deep.*`.
+generated carrier block of an avatar module with a rendering of `OCaml5.Avatar.parts` (src/OCaml5/Avatar/*.lean).
 
     render-diff.py <deep_stores.ml> <stores.gen.ml> [--write]
 

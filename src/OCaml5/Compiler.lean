@@ -3,8 +3,7 @@ import OCaml5.Witnesses
 /-!
 # OCaml 5 spike: the compiler layer
 
-Status: spike O5, 2026-09-03. Module `OCaml5.Compiler` of the non-default `OCaml5` library
-(`lakefile.toml`, `srcDir = "workshop"`). Plan:
+Status: spike O5, 2026-09-03. Module `OCaml5.Compiler` of the `OCaml5` library. Plan:
 `docs/research/2026-09-03-ocaml5-deep-plan.md` (§0 layer L3, §3 row O5).
 Report: `docs/research/2026-09-03-spike-o5-compiler.md`. Predecessor: spike O1
 (`docs/research/2026-09-03-spike-o1-runtime-machine.md`), whose §7 hands this file three items.

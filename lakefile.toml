@@ -17,8 +17,8 @@ moreLeanArgs = ["-M6144"]
 
 # The OCaml estate's Lean half (ocaml/README.md): the OCaml 5 / js_of_ocaml runtime
 # reification and its theorems, the OCaml language model (`OCaml5.Ml`), the library
-# carriers (`OCaml5.Lib`), the LCNF→OCaml backend (`OCaml5.Lcnf`), the Machine descriptions
-# and their derived twins, the route-1 bridge (`OCaml5.Bridge`, `@[export]`ed for
+# carriers (`OCaml5.Lib`), the LCNF→OCaml backend (`OCaml5.Lcnf`), the avatar's descriptions
+# and their derived twins (`OCaml5.Avatar`), the `Eff` IR emitters (`OCaml5.Eff`), the route-1 bridge (`OCaml5.Bridge`, `@[export]`ed for
 # ocaml/link), and the `--run` drivers under `OCaml5.Tools`. The root module imports every
 # library module; the drivers (`Tools.*`, and the two batteries `Fuzz` and `MlTest`) each
 # declare a top-level `main`, so they are globbed separately rather than imported together.

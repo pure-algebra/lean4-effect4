@@ -18,15 +18,15 @@ import OCaml5.CpsProof
 import OCaml5.Invariant
 import OCaml5.WitnessesJ
 import OCaml5.Compile
-import OCaml5.compile.Agreement
-import OCaml5.compile.Dumps
-import OCaml5.compile.Fuzz
-import OCaml5.compile.Simulation
-import OCaml5.ir.Programs
-import OCaml5.ir.Fuzz
-import OCaml5.ir.Avatar
-import OCaml5.ir.Counterexamples
-import OCaml5.ir.RunUnderHandler
+import OCaml5.Compile.Agreement
+import OCaml5.Compile.Dumps
+import OCaml5.Compile.Fuzz
+import OCaml5.Compile.Simulation
+import OCaml5.Ir.Programs
+import OCaml5.Ir.Fuzz
+import OCaml5.Ir.Avatar
+import OCaml5.Ir.Counterexamples
+import OCaml5.Ir.RunUnderHandler
 -- The OCaml language model: typed syntax, the canonical printer, the profile checker, the
 -- Lean → OCaml type reflection, the `{ f with }` → mutation pass.
 import OCaml5.Ml.Identifier
@@ -47,24 +47,32 @@ import OCaml5.Lib.Eio
 import OCaml5.Lib.Picos
 import OCaml5.Lib.Deque
 import OCaml5.LibTest
--- The Machine carriers rendered to OCaml (the avatar's generated half) and the program
--- fuzz (`Fuzz` declares the driver's `main`; `MlTest`, the language model's own battery,
--- declares another and is built through the lakefile's glob instead of imported here).
+-- The `Term` → OCaml renderer, the avatar's generated half (`OCaml5.Avatar`: one `Part` per
+-- avatar module, its descriptions, its derived twins and the projection guard `Check`), and
+-- the program fuzz (`Fuzz` declares the driver's `main`; `MlTest`, the language model's own
+-- battery, declares another and is built through the lakefile's glob instead of imported here).
 import OCaml5.Render
+import OCaml5.Avatar
+import OCaml5.Avatar.Check
+import OCaml5.Fuzz.Gen
+import OCaml5.Fuzz.Term
+import OCaml5.Fuzz.Corpus
+import OCaml5.Fuzz.Tape
 import OCaml5.Fuzz
+-- The `Eff` program IR as an OCaml library (`ocaml/eff`): the closed world, the emitters,
+-- the goldens. `Tools/EffGen.lean` is the driver.
+import OCaml5.Eff.World
+import OCaml5.Eff.Emit
+import OCaml5.Eff.Goldens
 -- The LCNF → OCaml backend (route 2 of the fidelity ladder): Lean's mono-phase compiler IR
 -- as typed OCaml.
 import OCaml5.Lcnf.Dump
 import OCaml5.Lcnf.Naming
 import OCaml5.Lcnf.Types
 import OCaml5.Lcnf.Translate
--- The Machine descriptions derived from the environment, and the projection guard that
--- compares them with the hand descriptions in `OCaml5.Render`.
-import OCaml5.Derived.Fibers
-import OCaml5.Derived.Stores
-import OCaml5.Derived.Context
-import OCaml5.Derived.Layer
-import OCaml5.DerivedCheck
+-- The syntax-level transpiler of `Effect4/Machine/Fibers.lean` (F3's derived-avatar probe);
+-- `Tools/TranspileDeep.lean` is the driver.
+import OCaml5.Transpile
 -- Route 1: the Lean machine held by OCaml as an opaque value (`@[export]`ed session API
 -- over `Effect4.Api`; `ocaml/link` links the static library).
 import OCaml5.Bridge

@@ -288,6 +288,13 @@ def InductiveDesc.typeDecl (d : InductiveDesc) : TypeDecl :=
 /-- The variant as a structure item. -/
 def InductiveDesc.decl (d : InductiveDesc) : Decl := .types [d.typeDecl]
 
+/-- Rename the single type a `StructDesc.decl`/`InductiveDesc.decl` produces, for a carrier whose
+OCaml name is a decision of the target module rather than of the Lean type (`St` → `st` beside
+`Deep_stores.st`). -/
+def renameDecl (n : String) : Decl → Decl
+  | .types [td] => .types [{ td with name := n }]
+  | d => d
+
 /-- The Lean arity of each constructor, and the OCaml one; equal unless an argument is erased. -/
 def InductiveDesc.arities (d : InductiveDesc) : List (String × Nat × Nat) :=
   d.ctors.map fun c =>

@@ -6,7 +6,7 @@ Status: spike P6, 2026-09-03. Module `OCaml5.Promise`. Plan:
 `docs/research/2026-09-03-spike-p6-promises.md`.
 
 The estate models Promises at exactly one point: `promiseOutcome`
-(`workshop/Deep/Fibers.lean:1216`), the `causeSquash` projection of a fiber exit. That is the
+(`src/Effect4/Machine/Fibers.lean:1216`), the `causeSquash` projection of a fiber exit. That is the
 *sink*. This module is the other half -- the host object graph and the job queue that decide
 *when* anything happens -- as a first-order, fuel-bounded carrier with no `sorry`, no `axiom`
 and no `partial`.

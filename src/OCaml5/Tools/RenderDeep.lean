@@ -1,18 +1,17 @@
 /-
-Seat W1's render driver: `OCaml5.Ml.Deep.*` → the generated carrier block of one avatar
-module. Run through `render-deep.sh`, which also diffs the result against the block the
-avatar file carries, exactly as `tools/fuzz.sh avatar` diffs `deep_fibers.ml`.
+RenderDeep — print the generated block of one avatar part (`OCaml5.Avatar.parts`):
 
-Not a lake module: `ocaml/avatar` is not a `srcDir` of any `lean_lib`
-(`lakefile.toml`), so this file is only ever run with `lake env lean --run`.
+    lake env lean --run src/OCaml5/Tools/RenderDeep.lean stores|layer|context|forkflow|fibers
+
+`ocaml/avatar/render-deep.sh` runs it and diffs the block against the one the avatar file
+carries (`--write` replaces it). A thin driver: the descriptions are `OCaml5.Avatar.*`.
 -/
-import OCaml5.Render
+import OCaml5.Avatar
 open OCaml5.Ml
 
 def main (args : List String) : IO Unit := do
-  match args.getD 0 "stores" with
-  | "stores" => IO.println (moduleText Deep.Stores.generated)
-  | "layer" => IO.println (moduleText Deep.Layer.generated)
-  | "context" => IO.println (moduleText Deep.Context.generated)
-  | "forkflow" => IO.println (moduleText Deep.ForkFlow.generated)
-  | other => throw (IO.userError s!"seat W1: no description set named {other}")
+  let name := args.getD 0 "stores"
+  match OCaml5.Avatar.find? name with
+  | some p => IO.println (moduleText p.generated)
+  | none => throw (IO.userError s!"RenderDeep: no avatar part named {name}; \
+the parts are {OCaml5.Avatar.parts.map (·.name)}")

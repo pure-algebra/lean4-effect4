@@ -1,8 +1,7 @@
 /-!
 # OCaml 5 spike: the effect-handler runtime machine
 
-Status: spike O1, 2026-09-03. Module `OCaml5.Effect` of the non-default `OCaml5` library
-(`lakefile.toml`, `srcDir = "workshop"`). Plan: `docs/research/2026-09-03-ocaml5-deep-plan.md`.
+Status: spike O1, 2026-09-03. Module `OCaml5.Effect` of the `OCaml5` library. Plan: `docs/research/2026-09-03-ocaml5-deep-plan.md`.
 Report: `docs/research/2026-09-03-spike-o1-runtime-machine.md`.
 
 This is a reification of the OCaml 5.1.1 **runtime**, not of the `Stdlib.Effect` wrapper. The

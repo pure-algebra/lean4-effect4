@@ -5,7 +5,7 @@
    Seat W1 (checkpoint stub), seat F2 (the port), 2026-09-04. Report:
    `docs/research/2026-09-04-seat-w1-deep-port.md` §F2.8.
 
-   The carriers below the banner are GENERATED from `OCaml5.Ml.Deep.Layer` in
+   The carriers below the banner are GENERATED from `OCaml5.Avatar.Layer` in
    `src/OCaml5/Render.lean` (`render-deep.sh layer`) -- same field order, same
    constructor order, same arity -- and are not to be edited here. The ruling on the name
    collision with `deep_stores.ml` (F1.4 step 2, taken): the types keep the Lean names inside

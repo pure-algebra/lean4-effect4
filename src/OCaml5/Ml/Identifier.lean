@@ -191,11 +191,19 @@ function under two names because OCaml's `value-name` and `field-name` are one l
 (§11.4). -/
 def valueName (s : String) : String := mangleField s
 
-/-- A Lean type name as an OCaml type name: the same code, minus the leading `_` an initial
-capital produces. Injective on names whose first character is an uppercase ASCII letter. -/
-def typeName (s : String) : String :=
+/-- The type-name code before the reserved-name escape: the field code minus the leading `_` an
+initial capital produces. -/
+private def typeNameCore (s : String) : String :=
   let e := mangleCore s
   if e.startsWith "_" then (e.drop 1).toString else e
+
+/-- A Lean type name as an OCaml type name: the same code as a field, minus the leading `_` an
+initial capital produces, and — as for `mangleField` — one `_` appended when the result is a
+reserved word (`Val` → `val_`: `val` is a keyword, `avatar/deep_stores.ml`). Injective on names
+whose first character is an uppercase ASCII letter. -/
+def typeName (s : String) : String :=
+  let e := typeNameCore s
+  if reservedNames.contains e then e ++ "_" else e
 
 /-- A Lean constructor name as an OCaml constructor name. With an empty prefix the initial is
 capitalised (`resumeAwait` → `ResumeAwait`); with a prefix the prefix supplies the required
@@ -211,7 +219,7 @@ def ctorName (pfx : String) (s : String) : String :=
 
 /-- A Lean namespace or structure name as an OCaml module name: `typeName`, capitalised back.
 `RunFiber` → `Run_fiber`, so that a module and the type it defines are distinguishable. -/
-def moduleName (s : String) : String := ctorName "" (typeName s)
+def moduleName (s : String) : String := ctorName "" (typeNameCore s)
 
 /-- A Lean universe or type parameter as an OCaml type variable, without the `'`. Lean spells
 its carrier parameters with Greek letters, which are not OCaml identifier characters, so the

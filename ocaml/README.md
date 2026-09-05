@@ -44,14 +44,18 @@ The Lean half, `src/OCaml5/`:
 | --- | --- |
 | `Effect`, `Invariant`, `Witnesses` | the OCaml 5 `Stdlib.Effect` handler machine (65 arms) and its theorems: well-formedness, one-shot, the chain discipline, both `Unhandled` routes |
 | `EffectJsoo`, `WitnessesJ` | the js_of_ocaml `effect.js` machine and the native ≈ jsoo relation |
-| `Code`, `Compiler`, `Compile`, `compile/*`, `Cps`, `CpsProof`, `ir/*` | jsoo's block IR, Term → Code, the CPS pass and its proofs, the avatar IR and its counterexamples |
+| `Code`, `Compiler`, `Compile`, `Compile/*`, `Cps`, `CpsProof`, `Ir/*` | jsoo's block IR, Term → Code, the CPS pass and its proofs, the compile battery (agreement, dumps, fuzz, simulation), the avatar IR and its counterexamples |
 | `Value`, `Promise` | backend-relative values and the Promise / microtask host |
 | `Ml/*` | the OCaml language model: typed syntax, the canonical printer, the profile checker (an allowlist of constructs and library signatures), Lean structure/inductive → OCaml type reflection, the `{ f with }` → mutation pass |
 | `Lib/*` | Lean carriers with laws for the libraries the avatar and daemon use (`Map`, `Set`, `Deque`, `Order`, `Sexp`, `Stream`, `Eio`, `Picos`, `Derived`); `Lib/Deque` projects onto `Effect4.Machine.Dispatcher` by `rfl` |
-| `Render`, `Derived/*`, `DerivedCheck` | the Machine carriers described and rendered to OCaml (the avatar's generated half), the descriptions derived from the environment, and the projection guard between them |
+| `Render` | `Term.render`: one `Term` as one OCaml 5 compilation unit over the raw effect primitives |
+| `Avatar`, `Avatar/*` | the avatar's generated half as one value: `Avatar.parts`, one `Part` per avatar module (`Fibers`, `Stores`, `Context`, `Layer`, `ForkFlow`) with its hand descriptions, its derived twins (`Avatar/Derived/*`, generated) and its generated block; `Avatar/Probe` (the A0 shape probe); `Avatar/Check` (the pinned counts and the projection guard, hand vs derived) |
+| `Eff/*` | the `Eff` program IR as OCaml: the closed world read off the environment (`World`), the emitters of the `eff/` library (`Emit`), the goldens and corpus (`Goldens`) |
+| `Fuzz`, `Fuzz/*` | the fuzz driver and its generators: the PRNG (`Gen`), the random `Term` generator, filter and shrinker (`Term`), the avatar-alphabet program corpus rendered twice (`Corpus`), the `RunDecision` tapes (`Tape`) |
+| `Transpile` | F3's syntax-level transpiler of `Effect4/Machine/Fibers.lean` defs to `Ml.Syntax`: the tables, the translation, the residue |
 | `Lcnf/*` | the LCNF → OCaml backend: dump, naming, types, the translation rules and the builtin table |
 | `Bridge` | the route-1 session API exported to C |
-| `Tools/*` | the `--run` drivers: `Describe` (derive descriptions), `RenderDeep`/`TranspileDeep` (the avatar's generated half and F3's syntax-level transpiler), `LcnfDump`/`LcnfGen` (route 2), `EffGen` (the `eff/` library), `EffWire` (the wire goldens) |
+| `Tools/*` | the `--run` drivers, each a thin `main` over a library module: `Describe` (derive descriptions into `Avatar/Derived`), `RenderDeep` (print an `Avatar.Part`'s block), `TranspileDeep` (over `Transpile`), `LcnfDump`/`LcnfGen` (route 2), `EffGen` (over `Eff`), `EffWire` (the wire goldens) |
 
 `harness/truth/` (tracked beside this estate) is the Lean-vs-rc.112 exit differential over
 the program corpus (`run-truth.ts`, bun, `check-truth.ps1`, `Truth.lean`); the OCaml hosts
@@ -65,7 +69,7 @@ Highest fidelity first (`2026-09-04-ocaml-estate-and-parity.md` §4f):
    `e4_stubs.c`, a stated trust boundary, not model code);
 2. Lean's compiler IR translated to OCaml — `gen/` (all three hosts, typed, value-threaded,
    no handlers; fidelity = the compiler's minus a small rule table);
-3. a syntax-level transpiler — `Tools/TranspileDeep.lean` (readable, re-does elaboration
+3. a syntax-level transpiler — `src/OCaml5/Transpile.lean` (readable, re-does elaboration
    decisions);
 4. a hand port with descriptions and an overlay — `avatar/` (the right mechanism only where
    representation differs on purpose).
@@ -94,17 +98,17 @@ Node is the Windows one (`node.exe`, reachable from WSL through interop); the sc
 
 | generated | generator | command |
 | --- | --- | --- |
-| the carrier blocks of `avatar/deep_{stores,layer,context,forkflow}.ml` | `src/OCaml5/Render.lean` | `avatar/render-deep.sh <mode> [--write]` |
+| the carrier blocks of `avatar/deep_{stores,layer,context,forkflow}.ml` | `src/OCaml5/Avatar/*.lean` (`Avatar.parts`) | `avatar/render-deep.sh <mode> [--write]` |
 | `server/e4d_{masks_data,families_data,armmap,pins}.ml` | dune rules in `server/dune` (python3) | `dune build server` |
 | `gen/machine_gen.ml`, `gen/fibers_gen.ml` | `src/OCaml5/Tools/LcnfGen.lean` | the command in each file's header |
 | `eff/eff_{types,wire,json,native}.ml`, `eff/eff_manifest.txt`, `eff/goldens/*` | `src/OCaml5/Tools/EffGen.lean` | `lake env lean -M4096 --run src/OCaml5/Tools/EffGen.lean ocaml/eff` |
 | `goldens/eff/*` | `src/OCaml5/Tools/EffWire.lean` | `lake env lean -M4096 --run src/OCaml5/Tools/EffWire.lean` |
-| `src/OCaml5/Derived/*.lean` | `src/OCaml5/Tools/Describe.lean` | `lake env lean -M4096 --run src/OCaml5/Tools/Describe.lean --module <Machine module>` |
+| `src/OCaml5/Avatar/Derived/*.lean` | `src/OCaml5/Tools/Describe.lean` | the command in each file's second line (`--module OCaml5.Avatar.Derived.<X> def=Full.Name …`) |
 | `link/*.sexp` | `link/tools/lean-flags.sh` | run by `link/tools/build.sh` |
 
 ## Owed at landing (2026-09-04)
 
-* the ten remaining `DerivedCheck` rows (pair aliases, parameter instantiation, dependent
+* the ten remaining `Avatar.Check` projection rows (pair aliases, parameter instantiation, dependent
   and proof fields, abbrev spelling: the overlay vocabulary of the estate note §4b);
 * the avatar's witness gate (`avatar/run-witnesses.sh`) is red on three drifts older than
   the move and reported rather than hidden: `deep_census.ml`, `deep_clauses.ml` and

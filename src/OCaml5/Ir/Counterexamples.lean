@@ -1,13 +1,13 @@
-import OCaml5.ir.Fuzz
+import OCaml5.Ir.Fuzz
 
 /-!
 # OCaml 5 spike P2: the counterexamples the harness found
 
-Status: 2026-09-04. Module `OCaml5.ir.Counterexamples`. Report:
+Status: 2026-09-04. Module `OCaml5.Ir.Counterexamples`. Report:
 `docs/research/2026-09-03-spike-p2-cps-theorem.md`.
 
 Three pinned programs. The first two are minimisations of disagreements the property harness
-(`OCaml5.ir.Fuzz`) found between the source program under `Code.Machine` and its
+(`OCaml5.Ir.Fuzz`) found between the source program under `Code.Machine` and its
 `Cps.f` transform under the same machine; each was checked against the real toolchain
 (`ocamlc`/`ocamlrun`, `ocamlopt`, and `js_of_ocaml` 5.7.1 + `node`) by writing the OCaml
 equivalent, and each is a **transcription gap in `Code.Machine`**, not a bug in the transform.
@@ -17,9 +17,9 @@ Both machine gaps are repaired by `Fuzz.stepFix2`, which differs from `Code.Mach
 exactly two arms; with it the harness agrees on every program it generates.
 -/
 
-namespace OCaml5.ir.Counterexamples
+namespace OCaml5.Ir.Counterexamples
 
-open OCaml5.Code OCaml5.Cps OCaml5.ir.Fuzz
+open OCaml5.Code OCaml5.Cps OCaml5.Ir.Fuzz
 
 private def v (n : Nat) : Var := ⟨n⟩
 
@@ -149,4 +149,4 @@ private def afterToplevel (p : Program K) : Program K :=
 #guard (Machine.exec 200 (afterToplevel ce3)).1 == Outcome.stuck "apply: arity 1 vs 2"
 #guard Machine.exec 400 (OCaml5.Cps.f ce3).1 == (Outcome.value (.int 42), "")
 
-end OCaml5.ir.Counterexamples
+end OCaml5.Ir.Counterexamples
