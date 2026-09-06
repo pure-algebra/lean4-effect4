@@ -83,6 +83,7 @@ import Effect4.Machine.StoresLaws
 import Effect4.Machine.Approximation
 import Effect4.Machine.Behaviour
 import Effect4.Machine.Scheduling
+import Effect4.Machine.Handles
 import Effect4.Machine.Witnesses
 import Effect4.Machine.Context
 import Effect4.Machine.Layer
@@ -200,6 +201,8 @@ import Effect4.Program.Agreement.Machine
 -- heap steps to a typed answer and keeps the heap typed (`answer_typed`, `progress`).
 import Effect4.Program.Progress
 import Effect4.Program.Sched
+import Effect4.Program.DenoteR
+import Effect4.Program.Handles
 -- The provision algebra (docs/research/2026-09-04-provision-algebra.md): `Row.diff`, the
 -- layer signature `LayerTy` and its laws, the layer term `LayerTerm` over `Eff` bodies,
 -- `App` (`Effect.provide`), the build specification with its totality theorem, and the

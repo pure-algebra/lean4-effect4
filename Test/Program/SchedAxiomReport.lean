@@ -11,6 +11,8 @@ below is expected at the ceiling `propext`/`Quot.sound`; the gate
 
 -- The signature.
 #print axioms Effect4.Program.Sched.FiberOp
+#print axioms Effect4.Program.Sched.FiberOp.answer
+#print axioms Effect4.Program.Sched.FiberOp.defaultAnswer
 #print axioms Effect4.Program.Sched.FiberSig
 #print axioms Effect4.Program.Sched.RSig
 #print axioms Effect4.Program.Sched.RSig_op

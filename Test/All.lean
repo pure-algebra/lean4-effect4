@@ -60,6 +60,8 @@ import Test.Machine.Runtime.BehaviourContract
 import Test.Machine.Runtime.BehaviourAxiomReport
 import Test.Machine.Runtime.CompletionContract
 import Test.Machine.Runtime.CompletionAxiomReport
+import Test.Machine.Runtime.HandlesContract
+import Test.Machine.Runtime.HandlesAxiomReport
 import Test.Machine.Runtime.SchedulerCoreContract
 import Test.Machine.Runtime.SchedulerCoreAxiomReport
 import Test.Machine.Runtime.SchedulingContract
@@ -92,6 +94,8 @@ import Test.Program.ProgressContract
 import Test.Program.ProgressAxiomReport
 import Test.Program.SchedContract
 import Test.Program.SchedAxiomReport
+import Test.Program.DenoteRContract
+import Test.Program.DenoteRAxiomReport
 import Test.Program.ProvisionContract
 import Test.Program.ProvisionAxiomReport
 import Test.Program.ConfigContract
