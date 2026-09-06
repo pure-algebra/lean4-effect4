@@ -199,6 +199,7 @@ import Effect4.Program.Agreement.Machine
 -- The first join of the value typing and the stores' laws: a typed request against a typed
 -- heap steps to a typed answer and keeps the heap typed (`answer_typed`, `progress`).
 import Effect4.Program.Progress
+import Effect4.Program.Sched
 -- The provision algebra (docs/research/2026-09-04-provision-algebra.md): `Row.diff`, the
 -- layer signature `LayerTy` and its laws, the layer term `LayerTerm` over `Eff` bodies,
 -- `App` (`Effect.provide`), the build specification with its totality theorem, and the
