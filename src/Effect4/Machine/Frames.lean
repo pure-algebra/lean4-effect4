@@ -217,7 +217,8 @@ end Prim
 
 /-- What stopped a generator's inline fold: a final value, a cause, or an
 effect that has to leave the arm. -/
-inductive IterStep (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max u v)
+inductive IterStep (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
+    (κ : Type (max u v) := Prim ν σ β ε δ ι α) : Type (max u v)
   /-- The generator returned. -/
   | done (value : β)
   /-- The generator yielded a failed exit. -/
@@ -227,31 +228,32 @@ inductive IterStep (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type 
   calls `this[args].next(value)` on a generator *object*, which moves; the frame
   pushed back under the yielded effect therefore carries the advanced
   generator, as the object does (`internal/effect.ts:1362-1377`). -/
-  | resume (next : Prim ν σ β ε δ ι α) (continueAs : ν)
+  | resume (next : κ) (continueAs : ν)
 deriving DecidableEq
 
 /-- The externally supplied meaning of a continuation name. It is a
 *parameter*, never canonical program content: it carries no `DecidableEq` and
 never enters `Prim` or `FrameFiber`. -/
-structure PrimInterp (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max u v) where
+structure PrimInterp (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
+    (κ : Type (max u v) := Prim ν σ β ε δ ι α) : Type (max u v) where
   /-- `cont[contA](value, fiber)`. -/
-  contA : ν -> β -> Prim ν σ β ε δ ι α
+  contA : ν -> β -> κ
   /-- `cont[contE](cause, fiber)`. -/
-  contE : ν -> Cause ε δ ι α -> Prim ν σ β ε δ ι α
+  contE : ν -> Cause ε δ ι α -> κ
   /-- The value a `sync` thunk produces. -/
   syncValue : σ -> β
   /-- The primitive a `suspend` or `withFiber` thunk returns. -/
-  suspendBody : σ -> Prim ν σ β ε δ ι α
+  suspendBody : σ -> κ
   /-- The outcome exit of a named finalizer, `FRAME-FB-FINALIZER-EFFECT`. -/
   finalizerExit : ν -> Exit β ε δ ι α -> Exit Unit ε δ ι α
   /-- How an `Exit` becomes a value of the one value alphabet. -/
   reifyExit : Exit β ε δ ι α -> β
   /-- The maximal inline run of a generator and the outcome that ended it. -/
-  iterNext : ν -> β -> List β × IterStep ν σ β ε δ ι α
+  iterNext : ν -> β -> List β × IterStep ν σ β ε δ ι α κ
   /-- `whileLoop`'s predicate. -/
   loopTest : ν -> β -> Bool
   /-- `whileLoop`'s body. -/
-  loopBody : ν -> β -> Prim ν σ β ε δ ι α
+  loopBody : ν -> β -> κ
   /-- `whileLoop`'s cursor step: from the current cursor and the body's answer,
   as rc.112's `step(value)` reads the closure it mutates. -/
   loopStep : ν -> β -> β -> β
@@ -265,7 +267,7 @@ structure PrimInterp (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Typ
   closure there; DB-02 forbids storing one, so the closure becomes a name plus
   the cause it captured, exactly the way `finalizerExit` names the outcome of a
   finalizer instead of storing the finalizer. -/
-  cancelThenFail : ν -> Cause ε δ ι α -> Prim ν σ β ε δ ι α
+  cancelThenFail : ν -> Cause ε δ ι α -> κ
 
 /-- The five `FiberImpl` fields this packet models. `_running`, `_yielded`,
 observers, children, the op budget, the dispatcher and the `Context` cache are

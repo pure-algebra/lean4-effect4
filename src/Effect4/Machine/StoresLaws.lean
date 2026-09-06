@@ -501,7 +501,8 @@ theorem syncOpStep_deferredPoll (s : Stores) (cell : DeferredKey) :
       (s.deferreds.poll cell).map (fun slot => (s, Val.bool slot.isSome)) := rfl
 
 /-- `Stores.lean:1217-1219`. -/
-theorem syncOpStep_deferredCompleteWith (s : Stores) (cell : DeferredKey) (c : Completion) :
+theorem syncOpStep_deferredCompleteWith (s : Stores) (cell : DeferredKey)
+    (c : Completion Val Err Defect FiberId Ann) :
     syncOpStep (SyncOp.deferredCompleteWith cell c) s =
       some ({ s with deferreds := (s.deferreds.complete cell (completionPrim c)).1 },
         Val.bool (s.deferreds.complete cell (completionPrim c)).2) := rfl

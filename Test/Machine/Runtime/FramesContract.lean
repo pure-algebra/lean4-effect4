@@ -156,18 +156,19 @@ outcome that ended it are supplied as first-order data by `PrimInterp.iterNext`;
 `docs/research/FRAMES-DAG.md` records why. -/
 
 #check (@Effect4.IterStep :
-  Type u → Type u → Type v → Type u → Type u → Type u → Type u → Type (max u v))
+  Type u → Type u → Type v → Type u → Type u → Type u → Type u → Type (max u v) → Type (max u v))
 
 #check (@Effect4.IterStep.done :
-  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → β → Effect4.IterStep ν σ β ε δ ι α)
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → {κ : Type (max u v)} →
+    β → Effect4.IterStep ν σ β ε δ ι α κ)
 
 #check (@Effect4.IterStep.halt :
-  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.Cause ε δ ι α → Effect4.IterStep
-  ν σ β ε δ ι α)
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → {κ : Type (max u v)} →
+    Effect4.Cause ε δ ι α → Effect4.IterStep ν σ β ε δ ι α κ)
 
 #check (@Effect4.IterStep.resume :
-  {ν σ : Type u} →
-    {β : Type v} → {ε δ ι α : Type u} → Effect4.Prim ν σ β ε δ ι α → ν → Effect4.IterStep ν σ β ε δ ι α)
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → {κ : Type (max u v)} →
+    κ → ν → Effect4.IterStep ν σ β ε δ ι α κ)
 
 /-! F1c: the externally supplied interpretation (census: op.Sync, op.Suspend,
 op.Iterator, op.Exit, op.OnExit, op.While).
@@ -177,75 +178,79 @@ The one parameter that says what a name *does*, the same shape
 keeps first-order identity and decidable equality. -/
 
 #check (@Effect4.PrimInterp :
-  Type u → Type u → Type v → Type u → Type u → Type u → Type u → Type (max u v))
+  Type u → Type u → Type v → Type u → Type u → Type u → Type u → Type (max u v) → Type (max u v))
 
 #check (@Effect4.PrimInterp.mk :
   {ν σ : Type u} →
     {β : Type v} →
       {ε δ ι α : Type u} →
-        (ν → β → Effect4.Prim ν σ β ε δ ι α) →
-          (ν → Effect4.Cause ε δ ι α → Effect4.Prim ν σ β ε δ ι α) →
+        {κ : Type (max u v)} →
+        (ν → β → κ) →
+          (ν → Effect4.Cause ε δ ι α → κ) →
             (σ → β) →
-              (σ → Effect4.Prim ν σ β ε δ ι α) →
+              (σ → κ) →
                 (ν → Effect4.Exit β ε δ ι α → Effect4.Exit Unit ε δ ι α) →
                   (Effect4.Exit β ε δ ι α → β) →
-                    (ν → β → List β × Effect4.IterStep ν σ β ε δ ι α) →
+                    (ν → β → List β × Effect4.IterStep ν σ β ε δ ι α κ) →
                       (ν → β → Bool) →
-                        (ν → β → Effect4.Prim ν σ β ε δ ι α) →
+                        (ν → β → κ) →
                           (ν → β → β → β) →
                             (ν → β) →
                               δ →
-                                (ν → Effect4.Cause ε δ ι α → Effect4.Prim ν σ β ε δ ι α) →
-                                  Effect4.PrimInterp ν σ β ε δ ι α)
+                                (ν → Effect4.Cause ε δ ι α → κ) →
+                                  Effect4.PrimInterp ν σ β ε δ ι α κ)
 
 #check (@Effect4.PrimInterp.contA :
-  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.PrimInterp ν σ β ε δ ι α → ν → β
-  → Effect4.Prim ν σ β ε δ ι α)
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → {κ : Type (max u v)} →
+    Effect4.PrimInterp ν σ β ε δ ι α κ → ν → β → κ)
 
 #check (@Effect4.PrimInterp.contE :
-  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.PrimInterp ν σ β ε δ ι α → ν →
-  Effect4.Cause ε δ ι α → Effect4.Prim ν σ β ε δ ι α)
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → {κ : Type (max u v)} →
+    Effect4.PrimInterp ν σ β ε δ ι α κ → ν → Effect4.Cause ε δ ι α → κ)
 
 #check (@Effect4.PrimInterp.syncValue :
-  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.PrimInterp ν σ β ε δ ι α → σ → β)
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → {κ : Type (max u v)} →
+    Effect4.PrimInterp ν σ β ε δ ι α κ → σ → β)
 
 #check (@Effect4.PrimInterp.suspendBody :
-  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.PrimInterp ν σ β ε δ ι α → σ →
-  Effect4.Prim ν σ β ε δ ι α)
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → {κ : Type (max u v)} →
+    Effect4.PrimInterp ν σ β ε δ ι α κ → σ → κ)
 
 #check (@Effect4.PrimInterp.finalizerExit :
-  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.PrimInterp ν σ β ε δ ι α → ν →
-  Effect4.Exit β ε δ ι α → Effect4.Exit Unit ε δ ι α)
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → {κ : Type (max u v)} →
+    Effect4.PrimInterp ν σ β ε δ ι α κ → ν → Effect4.Exit β ε δ ι α → Effect4.Exit Unit ε δ ι α)
 
 #check (@Effect4.PrimInterp.reifyExit :
-  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.PrimInterp ν σ β ε δ ι α →
-  Effect4.Exit β ε δ ι α → β)
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → {κ : Type (max u v)} →
+    Effect4.PrimInterp ν σ β ε δ ι α κ → Effect4.Exit β ε δ ι α → β)
 
 #check (@Effect4.PrimInterp.iterNext :
-  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.PrimInterp ν σ β ε δ ι α → ν → β
-  → List β × Effect4.IterStep ν σ β ε δ ι α)
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → {κ : Type (max u v)} →
+    Effect4.PrimInterp ν σ β ε δ ι α κ → ν → β → List β × Effect4.IterStep ν σ β ε δ ι α κ)
 
 #check (@Effect4.PrimInterp.loopTest :
-  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.PrimInterp ν σ β ε δ ι α → ν → β
-  → Bool)
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → {κ : Type (max u v)} →
+    Effect4.PrimInterp ν σ β ε δ ι α κ → ν → β → Bool)
 
 #check (@Effect4.PrimInterp.loopBody :
-  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.PrimInterp ν σ β ε δ ι α → ν → β
-  → Effect4.Prim ν σ β ε δ ι α)
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → {κ : Type (max u v)} →
+    Effect4.PrimInterp ν σ β ε δ ι α κ → ν → β → κ)
 
 #check (@Effect4.PrimInterp.loopStep :
-  {ν σ : Type u} →
-    {β : Type v} → {ε δ ι α : Type u} → Effect4.PrimInterp ν σ β ε δ ι α → ν → β → β → β)
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → {κ : Type (max u v)} →
+    Effect4.PrimInterp ν σ β ε δ ι α κ → ν → β → β → β)
 
 #check (@Effect4.PrimInterp.loopDone :
-  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.PrimInterp ν σ β ε δ ι α → ν → β)
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → {κ : Type (max u v)} →
+    Effect4.PrimInterp ν σ β ε δ ι α κ → ν → β)
 
 #check (@Effect4.PrimInterp.notImplemented :
-  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.PrimInterp ν σ β ε δ ι α → δ)
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → {κ : Type (max u v)} →
+    Effect4.PrimInterp ν σ β ε δ ι α κ → δ)
 
 #check (@Effect4.PrimInterp.cancelThenFail :
-  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.PrimInterp ν σ β ε δ ι α → ν →
-  Effect4.Cause ε δ ι α → Effect4.Prim ν σ β ε δ ι α)
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → {κ : Type (max u v)} →
+    Effect4.PrimInterp ν σ β ε δ ι α κ → ν → Effect4.Cause ε δ ι α → κ)
 
 /-! F2: the fiber state this packet models (census: rule.frames-are-primitives).
 

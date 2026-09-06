@@ -81,6 +81,8 @@ import Effect4.Machine.StoresLaws
 -- splitting law, the trace that only grows, the order on replay results, sufficiency and
 -- stability, and the least sufficient fuel under a bound.
 import Effect4.Machine.Approximation
+import Effect4.Machine.Behaviour
+import Effect4.Machine.Scheduling
 import Effect4.Machine.Witnesses
 import Effect4.Machine.Context
 import Effect4.Machine.Layer

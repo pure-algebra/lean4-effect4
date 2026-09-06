@@ -67,6 +67,8 @@ The accepted ceiling is no dependency, `propext`, or `propext` with `Quot.sound`
 #print axioms Effect4.Machine.drive_extends
 #print axioms Effect4.Machine.drive_trace_extends
 #print axioms Effect4.Machine.fire_extends
+#print axioms Effect4.Machine.fireStep_extends
+#print axioms Effect4.Machine.fireTasks_extends
 #print axioms Effect4.Machine.fire_trace_extends
 #print axioms Effect4.Machine.flushAll_extends
 #print axioms Effect4.Machine.flushAll_trace_extends
@@ -88,6 +90,7 @@ The accepted ceiling is no dependency, `propext`, or `propext` with `Quot.sound`
 #print axioms Effect4.Machine.ReplayResult.le_antisymm_terminal
 #print axioms Effect4.Machine.ReplayResult.frontier_le
 #print axioms Effect4.Machine.replayEval_nil_machine
+#print axioms Effect4.Machine.replayEval_single_machine
 
 /-! ## APPROX/receipts — what a decision ran, and whether its fuel sufficed -/
 
@@ -97,12 +100,15 @@ The accepted ceiling is no dependency, `propext`, or `propext` with `Quot.sound`
 #print axioms Effect4.Machine.taskCmds
 #print axioms Effect4.Machine.fireStep
 #print axioms Effect4.Machine.fireState
-#print axioms Effect4.Machine.fireTasks_eq
+#print axioms Effect4.Machine.fireTasks_stopped
 #print axioms Effect4.Machine.fire_eq_fireState
 #print axioms Effect4.Machine.fireTasks_false
 #print axioms Effect4.Machine.fireTasks_stable
 #print axioms Effect4.Machine.fireState_stable
 #print axioms Effect4.Machine.fire_stable
+#print axioms Effect4.Machine.fireTasks_trace_mono
+#print axioms Effect4.Machine.fire_trace_mono
+#print axioms Effect4.Machine.flushAll_trace_mono
 #print axioms Effect4.Machine.flushAllState
 #print axioms Effect4.Machine.flushAll_eq_flushAllState
 #print axioms Effect4.Machine.flushAllState_stable
@@ -120,12 +126,15 @@ The accepted ceiling is no dependency, `propext`, or `propext` with `Quot.sound`
 /-! ## APPROX/laws — sufficiency, stability, monotonicity, the colimit -/
 
 #print axioms Effect4.Machine.Suffices
+#print axioms Effect4.Machine.Suffices_of_replay_terminal
 #print axioms Effect4.Machine.replay_stable
 #print axioms Effect4.Machine.Suffices_mono
 #print axioms Effect4.Machine.Suffices_of_le
 #print axioms Effect4.Machine.replay_obs_mono_of_suffices
 #print axioms Effect4.Machine.SingleLoop
 #print axioms Effect4.Machine.stepDecision_trace_mono
+#print axioms Effect4.Machine.stepDecision_trace_mono_all
+#print axioms Effect4.Machine.replay_obs_mono
 #print axioms Effect4.Machine.stepDecision_stuck_stable
 #print axioms Effect4.Machine.replay_frontier_mono_single
 #print axioms Effect4.Machine.replay_stuck_mono_single

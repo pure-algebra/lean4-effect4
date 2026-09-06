@@ -2348,20 +2348,9 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
     (owner : Effect4.FiberId) (o : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
     m.fiber? owner = Option.some o →
       Effect4.Machine.stepDecision.fire interp fuel m owner =
-        List.foldl
-          (fun m task =>
-            have m := m.emit [Effect4.Machine.RunEvent.ranTask owner task];
-            match task with
-            | Effect4.Machine.Task.start child =>
-              Effect4.Machine.drive interp fuel m [Effect4.Machine.Cmd.evaluate child, Effect4.Machine.Cmd.drainDue]
-            | Effect4.Machine.Task.resume target token answer =>
-              Effect4.Machine.drive interp fuel m [Effect4.Machine.Cmd.resume target token answer, Effect4.Machine.Cmd.drainDue])
-          ((m.update
-                (Effect4.Machine.RunFiber.mk o.id o.frame o.running o.parked o.pending o.finalizing o.exit o.currentOpCount
-                  o.maxOpsBeforeYield o.preventYield o.yieldOverride o.observers o.children o.dispatcher.drain.snd
-                  o.context)).disarm
-            owner)
-          o.dispatcher.drain.fst)
+        (List.foldl (Effect4.Machine.fireStep interp fuel owner)
+          ((m.update { o with dispatcher := o.dispatcher.drain.snd }).disarm owner, true)
+          o.dispatcher.drain.fst).fst)
 
 #check (@Effect4.Machine.flushAll_idle :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
@@ -2377,6 +2366,7 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
     (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (owner : Effect4.FiberId) (rest : List Effect4.FiberId),
     m.armed = owner :: rest →
       m.stuck = Option.none →
+        (Effect4.Machine.fireState interp fuel m owner).snd = true →
         Effect4.Machine.stepDecision.flushAll interp fuel (rounds + 1) m =
           Effect4.Machine.stepDecision.flushAll interp fuel rounds (Effect4.Machine.stepDecision.fire interp fuel m owner))
 
@@ -4816,6 +4806,7 @@ arming order, and `runSyncExit` flushes the root's dispatcher only. -/
     m.fiber? root = Option.some o →
       o.dispatcher.buckets.isEmpty = Bool.false →
         m.stuck = Option.none →
+          (Effect4.Machine.fireState interp fuel m root).snd = true →
           Effect4.Machine.stepDecision.flushRoot interp fuel root (rounds + 1) m =
             Effect4.Machine.stepDecision.flushRoot interp fuel root rounds
               (Effect4.Machine.stepDecision.fire interp fuel m root))

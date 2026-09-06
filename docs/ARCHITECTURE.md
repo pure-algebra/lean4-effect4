@@ -41,9 +41,11 @@ none of their carriers.
 | `src/Effect4/Data` | requirement rows, JSON, lawful optics |
 | `src/Effect4/Machine` (`Cause.lean`, `Exit.lean`) | `Cause` and `Exit`, the error channel everywhere |
 | `src/Effect4/Machine` (`Fiber.lean`, `Supervision.lean`) | `FiberId`; the fork, observer, scope and race vocabulary the machine speaks |
+| `src/Effect4/Machine` (`Completion.lean`) | the external answer data and Ref key, below both the scheduler and stores |
 | `src/Effect4/Machine` (`Key.lean`) | `ServiceKey`, its universe and transport |
 | `src/Effect4/Machine` (`Frames.lean`, `Scope*.lean`, `LiveStack.lean`) | the rc.112 frame alphabet and single-fiber step, the `Scope` state machine, and the frame-level facts that pin them (`LiveStack`, `ScopeRestoration`) |
 | `src/Effect4/Machine` (`Fibers.lean`, `Stores.lean`, `Context.lean`, `Layer.lean`, `Clauses.lean`, `Witnesses.lean`) | the reference fiber machine (`RunMachine`, `drive`, `replayEval`, `runSyncExit`), the stores, the Context and Layer models, the clause theorems and the witnesses |
+| `src/Effect4/Machine` (`Approximation.lean`, `Behaviour.lean`, `Scheduling.lean`) | resumable fuel laws and stopping receipts; exits-and-stores observations at sufficient budgets; finite fairness under valid queued owners and sufficient command fuel |
 | `src/Effect4/Program` | `Eff`, `typeOf`, the native operation alphabet, `compile` and `interpOf`; `Provision` — the requirement algebra (`Row.diff`), the layer signature `LayerTy` and its laws, the layer term `LayerTerm` with `Eff` bodies, `App` (`Effect.provide`), the build specification and its totality theorem, and the lowering into the Layer machine (`docs/research/2026-09-04-provision-algebra.md` (untracked working note)); `Config` — rc.112's `ConfigProvider` as a fallback monoid under a path-transformation action, the `Config` reader with its tri-state resolution, dotenv substitution with fuel, and the configuration requirement row (`docs/research/2026-09-04-production-standards-spike.md` (untracked working note)) |
 | `src/Effect4/Api` | the one application-facing module |
 | `src/Effect4/Schema` | the persisted Schema data plane |
@@ -91,6 +93,13 @@ alphabet for what rc.112 evaluates; the machine's relational meaning over
 explicit decision tapes, with `replayEval` as its fuel-bounded simulator; and
 the executable witnesses and host receipts as bounded evidence. No bounded
 runner is promoted into the meaning merely because it executes.
+
+The scheduler records accept code, saved-state and frame-event parameters.
+`FiberCore` and `FiberEvaluator` are interpretation parameters, with the original
+frame machine as the default instance. This shares the command loop without
+changing `Eff` as canonical program content. An algebra-carrier integration
+fixture exercises the same loop; the later term evaluator and simulation remain
+outside this slice. The decision tape carries Completion data at every instance.
 
 ## What is not here
 

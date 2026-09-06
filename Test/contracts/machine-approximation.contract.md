@@ -1,10 +1,12 @@
 # Machine approximation contract packet
 
-Status: FROZEN / GREEN, authored and landed 2026-09-05. The module landed with its battery
-and its report; every theorem below is proved, and the four rows are SEEDED.
+Status: first-slice amendment, 2026-09-06. The original packet landed on 2026-09-05.
+The command loop stays resumable; tasks, flush rounds and replay decisions now stop
+at the first unfinished unit. Rows 002–004 are repaired, with their regression guards.
 
-Implementation fence (one new module; no existing module changes beyond the root import
-lists): `src/Effect4/Machine/Approximation.lean`.
+Amendment fence: `Machine/{Fibers,Clauses,Approximation}.lean`, the affected
+`Program/Agreement/Machine.lean` proofs, their batteries and receipts, and the
+runtime-coverage statement ascriptions. The public `run_eq_meaning` is unchanged.
 
 Lean battery: `Test/Machine/Runtime/ApproximationContract.lean`.
 
@@ -23,34 +25,30 @@ Machine under contract: `src/Effect4/Machine/Fibers.lean` — `drive`, `stepDeci
 
 ## Claim boundary
 
-This packet freezes four bounded facts about the Lean loop and refuses two by name.
+This packet states four facts about the Lean loop; the two original refusals are repaired.
 
 1. `drive` is the machine half of a loop that keeps its residual commands (`driveState`), and
    that loop splits: fuel `a + b` is fuel `a`, then fuel `b` on what fuel `a` left. A loop whose
    commands were exhausted, or which halted, never changes with more fuel.
 2. The trace of a machine only grows through every helper `drive` reaches, through `drive`,
    through each decision and through `replayEval`. No interp hook returns a machine, so no
-   choice an interp makes can shrink a trace.
-3. On one loop, fuel is monotone: more fuel extends the trace. The decisions that run one
-   loop or none (`evaluate`, `answerAsync`, `interruptFrom`, `yieldVerdict`,
-   `installMiddleware`) inherit it.
+   choice of the concrete frame instance's `RunInterp` can shrink a trace.
+   D1's arbitrary `FiberEvaluator` instead needs the explicit command-step
+   premise of `drive_extends_of_step` and `drive_trace_mono_of_step`.
+3. Fuel is monotone on loops, tasks, flushes and whole replay tapes: more fuel extends
+   the trace of a frontier. A terminal replay result stays exactly the same.
 4. A preorder on replay results (`frontier m` below whatever extends `m.trace`; `finished`
    and `stuck` below themselves), a decidable sufficiency predicate on a tape, stability under
-   it, monotonicity under it, the frontier and stuck halves of monotonicity on a one-decision
+   it, unrestricted replay monotonicity, terminal-implies-sufficiency, the frontier and stuck halves on a one-decision
    tape, and a bounded search for the least sufficient fuel whose answer does not depend on
    the bound.
 
-Refused by name:
-
-* `APPROX-FB-REFRESH` — fuel is not monotone across a fuel refresh: `fire` gives every task
-  the full fuel, `flushAll` and `flushRoot` every round, `replayEval` every decision. A loop
-  cut short is followed by the next unit of work on the half-done machine, and its events
-  land where the finished loop's would have. Rows `E4-APPROX-CE-003` and `E4-APPROX-CE-004`.
-  Across a refresh, monotonicity is stated only under `Suffices`, where it is stability.
-* `APPROX-FB-FINISHED` — `finished` at an insufficient fuel is not proved terminal. Every
-  fiber has exited, but a residual `Cmd.drainDue` may change the store through
-  `interp.dueResumes`. `replay_stable` carries `Suffices`, not the outcome. Row
-  `E4-APPROX-CE-002`.
+Retired refusals: `APPROX-FB-REFRESH` (rows 003/004) and `APPROX-FB-FINISHED`
+(row 002). The stopping receipts now govern execution. `Suffices` still means command
+sufficiency: an empty tape may leave waiting fibers, so its converse to
+`Suffices_of_replay_terminal` is false (`E4-BEH-CE-002`). The replay order compares
+frontiers by trace only; it cannot project arbitrary frontiers to exits and stores
+(`E4-BEH-CE-001`).
 
 Not here: the `fuelFor` allotment for `Eff` programs (the review's fourth theorem); any
 statement about rc.112; anything called a bisimulation. These are theorems about the Lean
@@ -116,6 +114,10 @@ The laws over `replayEval`:
     `replay_frontier_mono_single`, `replay_stuck_mono_single`.
 20. `leastUpTo` with `_none`, `_sound`, `_le`, `_least`, `_isSome`, `_bound_mono`;
     `leastSufficient` with the same six; `replay_colimit`; `replay_colimit_eq_of_sufficient`.
+21. `fireTasks_stopped`, `fireTasks_trace_mono`, `fire_trace_mono`,
+    `flushAll_trace_mono`, `stepDecision_trace_mono_all`.
+22. `Suffices_of_replay_terminal : (replayEval interp n tape m).terminal = true → Suffices interp n tape m = true`.
+23. `replay_obs_mono : n ≤ n' → le (replayEval interp n tape m) (replayEval interp n' tape m)`.
 
 ## Algebra and dependency spine
 
@@ -138,14 +140,13 @@ Dependencies: `Effect4.Machine.Fibers` (the machine), `Effect4.Machine.Clauses`
 | ID | Status | Attacked statement | Witness | Forced repair |
 | --- | --- | --- | --- | --- |
 | `E4-APPROX-CE-001` | SEEDED | The loop is stable in fuel without a side condition | `pBindSync` under `evaluate`: fuel `1` records one event and leaves two commands, fuel `2` records two | `drive_stable_of_done` carries `(driveState …).2 = []` |
-| `E4-APPROX-CE-002` | SEEDED | The outcome `finished` means the fuel sufficed | `pSucceed` at fuel `3` is `finished` with `[drainDue, drainDue]` unrun and `Suffices … 3 = false`; `pYieldNow` under `[evaluate, flush]` is `finished` from `5` and sufficient from `7` | `replay_stable` carries `Suffices`, not the outcome (`APPROX-FB-FINISHED`) |
-| `E4-APPROX-CE-003` | SEEDED | The fuel chain is monotone along a tape | `pBindSync` under `[evaluate, interruptFrom none ∅ root]`: the traces at fuel `1` and `2` are not prefixes of each other | monotonicity is stated on one loop (`stepDecision_trace_mono`) and along a tape under `Suffices` (`APPROX-FB-REFRESH`) |
-| `E4-APPROX-CE-004` | SEEDED | `fire` is monotone in fuel | two `start` tasks on the root's dispatcher fired at fuel `1` and `2`: the traces are not prefixes of each other, since the second task runs after the first was cut short | `fireState`'s receipt is false at both; `fire_stable` carries it |
+| `E4-APPROX-CE-002` | REPAIRED | The outcome `finished` means the fuel sufficed | `pSucceed` at fuel `3` has an exit and two drains left; replay now returns a frontier | `Suffices_of_replay_terminal` |
+| `E4-APPROX-CE-003` | REPAIRED | The fuel chain is monotone along a tape | `pBindSync` under `[evaluate, interruptFrom none ∅ root]`: at fuel `1` and `2` the interrupt no longer runs | `replay_obs_mono` for every tape |
+| `E4-APPROX-CE-004` | REPAIRED | `fire` is monotone in fuel | two queued starts, fuel `1` and `2`: the second task no longer runs after the first runs out of fuel | `fire_trace_mono` for every budget |
 
 ## Falsifiers
 
-Each row is a pair of guards in the battery: the witness as stated and the statement the
-repair makes true. A change that lets a row's attacked statement hold must change both
-guards. A change to `drive` that makes fuel exhaustion sticky (a frontier marker, as the
-archived Flow runner had) would turn rows `003` and `004` green and is the one repair this
-packet would welcome; it is not made here.
+The battery retains the original small programs at the original budgets, with the
+repaired expectations. It also crosses task and replay boundaries at budgets 0–25.
+These guards are finite regressions; the universally quantified laws above are the
+proofs. Exhaustion does not become sticky inside `driveState`, so splitting still holds.

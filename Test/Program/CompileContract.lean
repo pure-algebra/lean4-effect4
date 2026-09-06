@@ -568,7 +568,7 @@ def pMasked : NativeEff :=
 def maskTapePending : List DC := [evaluateRoot, interruptChild]
 
 def maskTapeAnswered : List DC :=
-  [evaluateRoot, interruptChild, RunDecision.answerAsync ⟨1⟩ 0 (Prim.success Val.unit)]
+  [evaluateRoot, interruptChild, RunDecision.answerAsync ⟨1⟩ 0 (.ofExit (.success Val.unit))]
 
 #guard (typeOf nativeSignature pMasked).isSome
 #guard exitOf (replayEff pMasked maskTapePending) 1 = none

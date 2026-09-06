@@ -56,6 +56,14 @@ import Test.Machine.Runtime.StoresLawsContract
 import Test.Machine.Runtime.StoresLawsAxiomReport
 import Test.Machine.Runtime.ApproximationContract
 import Test.Machine.Runtime.ApproximationAxiomReport
+import Test.Machine.Runtime.BehaviourContract
+import Test.Machine.Runtime.BehaviourAxiomReport
+import Test.Machine.Runtime.CompletionContract
+import Test.Machine.Runtime.CompletionAxiomReport
+import Test.Machine.Runtime.SchedulerCoreContract
+import Test.Machine.Runtime.SchedulerCoreAxiomReport
+import Test.Machine.Runtime.SchedulingContract
+import Test.Machine.Runtime.SchedulingAxiomReport
 import Test.Store.Templates
 import Test.Store.StoreContract
 import Test.Store.NodeContract

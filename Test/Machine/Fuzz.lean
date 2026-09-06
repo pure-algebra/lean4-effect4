@@ -261,7 +261,7 @@ def decisions : List D :=
   , RunDecision.flush
   , RunDecision.installMiddleware
   , RunDecision.yieldVerdict ⟨0⟩ true
-  , RunDecision.answerAsync ⟨0⟩ 0 (Prim.success Val.unit)
+  , RunDecision.answerAsync ⟨0⟩ 0 (Completion.ofExit (Exit.success Val.unit))
   , RunDecision.interruptFrom (some ⟨0⟩) ReasonAnnotations.empty ⟨1⟩
   , RunDecision.interruptFrom none ReasonAnnotations.empty ⟨0⟩
   ]

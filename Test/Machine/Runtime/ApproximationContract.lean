@@ -26,19 +26,14 @@ Register rows (`Test/Counterexamples/REGISTER.md`):
 * `E4-APPROX-CE-001` — the loop is stable in fuel without a side condition. Refuted: `pBindSync`
   at fuel `1` and `2` differ (one more event) while fuel `1` leaves two commands unrun;
   `drive_stable_of_done` carries the residual `(driveState …).2 = []`.
-* `E4-APPROX-CE-002` — the outcome `finished` means the fuel sufficed. Refuted: `pSucceed`
-  at fuel `3` is `finished` with `[drainDue, drainDue]` unrun and `Suffices … 3 = false`;
-  `pYieldNow` under the ordinary tape is `finished` from fuel `5` and sufficient from `7`.
-  `replay_stable` carries `Suffices`, not the outcome (`APPROX-FB-FINISHED`).
-* `E4-APPROX-CE-003` — the fuel chain is monotone along a tape. Refuted: under
-  `[evaluate, interruptFrom none ∅ root]` the traces at fuel `1` and `2` are not prefixes of
-  each other, because the interrupt lands where the loop stopped. Monotonicity is stated on
-  one loop (`stepDecision_trace_mono`) and along the tape only under `Suffices`
-  (`APPROX-FB-REFRESH`).
-* `E4-APPROX-CE-004` — `fire` is monotone in fuel. Refuted: a dispatcher holding two `start`
-  tasks fired at fuel `1` and `2` gives traces that are not prefixes of each other, since the
-  second task runs after the first was cut short; `fireState`'s receipt is false at both and
-  `fire_stable` carries it.
+* `E4-APPROX-CE-002` — repaired by stopping replay when commands remain. A recorded fiber
+  exit with unfinished drains now produces a frontier. Terminal replay implies sufficiency
+  (`Suffices_of_replay_terminal`); sufficiency alone can still leave waiting fibers.
+* `E4-APPROX-CE-003` — repaired by stopping before the next tape decision when a loop
+  exhausts its fuel. The interrupt waits, so the traces at fuel `1` and `2` are prefixes.
+  `replay_obs_mono` proves the order for every tape and every pair of ordered budgets.
+* `E4-APPROX-CE-004` — repaired by stopping the dispatcher snapshot at its first unfinished
+  task. The second child remains unstarted; `fire_trace_mono` covers all budgets.
 -/
 
 set_option autoImplicit false
@@ -126,6 +121,16 @@ variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
     ∀ (tape : List (RunDecision ν σ β ε δ ι α)) (m : RunMachine ν σ β ε δ ι α χ St),
     Suffices interp n tape m = true →
     ReplayResult.le (replayEval interp n tape m) (replayEval interp n' tape m))
+
+#check (Effect4.Machine.replay_obs_mono :
+  ∀ (interp : RunInterp ν σ β ε δ ι α χ St) {n n' : Nat}, n ≤ n' →
+    ∀ (tape : List (RunDecision ν σ β ε δ ι α)) (m : RunMachine ν σ β ε δ ι α χ St),
+    ReplayResult.le (replayEval interp n tape m) (replayEval interp n' tape m))
+
+#check (Effect4.Machine.Suffices_of_replay_terminal :
+  ∀ (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
+    (tape : List (RunDecision ν σ β ε δ ι α)) (m : RunMachine ν σ β ε δ ι α χ St),
+    (replayEval interp fuel tape m).terminal = true → Suffices interp fuel tape m = true)
 
 #check (Effect4.Machine.replay_frontier_mono_single :
   ∀ (interp : RunInterp ν σ β ε δ ι α χ St) {n n' : Nat}, n ≤ n' →
@@ -283,10 +288,10 @@ section Trace
 -- a chain of frontiers, each trace a prefix of the next (`drive_trace_mono`)
 #guard (List.range 8).all fun f =>
   (runAt pBindSync f [Api.evaluate]).trace.isPrefixOf (runAt pBindSync (f + 1) [Api.evaluate]).trace
-#guard (List.range 6).all fun f => tag (runAt pBindSync f [Api.evaluate]).outcome == 1
-#guard tag (runAt pBindSync 6 [Api.evaluate]).outcome == 0
--- the frontier at fuel `2` is below the finished result at `6`: the order's frontier arm
-#guard (runAt pBindSync 2 [Api.evaluate]).trace.isPrefixOf (runAt pBindSync 6 [Api.evaluate]).trace
+#guard (List.range 8).all fun f => tag (runAt pBindSync f [Api.evaluate]).outcome == 1
+#guard tag (runAt pBindSync 8 [Api.evaluate]).outcome == 0
+-- the frontier at fuel `2` is below the finished result at `8`: the order's frontier arm
+#guard (runAt pBindSync 2 [Api.evaluate]).trace.isPrefixOf (runAt pBindSync 8 [Api.evaluate]).trace
 -- every decision extends the trace it starts from (`stepDecision_trace_extends`)
 #guard let m := (runAt pBindSync 2 [Api.evaluate]).machine
   m.trace.isPrefixOf (stepDecision (interpOf pBindSync) 3 m interruptRoot).trace
@@ -338,22 +343,22 @@ section Rows
 #guard (loopAt pBindSync 8).2 = 0
 #guard sameMachine (loopAt pBindSync 8).1 (loopAt pBindSync 9).1
 
--- E4-APPROX-CE-002: `finished` is not "the fuel sufficed"
-#guard tag (runAt pSucceed 3 [Api.evaluate]).outcome == 0
+-- E4-APPROX-CE-002, repaired: recorded exits with unfinished drains are frontiers
+#guard tag (runAt pSucceed 3 [Api.evaluate]).outcome == 1
 #guard (loopAt pSucceed 3).2 = 2
 #guard sufficesAt pSucceed 3 [Api.evaluate] = false
 #guard sufficesAt pSucceed 5 [Api.evaluate] = true
-#guard tag (runAt pYieldNow 5 [Api.evaluate, Api.flush]).outcome == 0
+#guard tag (runAt pYieldNow 5 [Api.evaluate, Api.flush]).outcome == 1
 #guard sufficesAt pYieldNow 5 [Api.evaluate, Api.flush] = false
 #guard sufficesAt pYieldNow 7 [Api.evaluate, Api.flush] = true
-#guard tag (runAt pTwoDeferred 16 [Api.evaluate, Api.flush]).outcome == 0
+#guard tag (runAt pTwoDeferred 16 [Api.evaluate, Api.flush]).outcome == 1
 #guard sufficesAt pTwoDeferred 16 [Api.evaluate, Api.flush] = false
 
--- E4-APPROX-CE-003: the chain is not monotone along a tape
-#guard (runAt pBindSync 1 [Api.evaluate, interruptRoot]).trace.length = 3
-#guard (runAt pBindSync 2 [Api.evaluate, interruptRoot]).trace.length = 4
-#guard !((runAt pBindSync 1 [Api.evaluate, interruptRoot]).trace.isPrefixOf
-  (runAt pBindSync 2 [Api.evaluate, interruptRoot]).trace)
+-- E4-APPROX-CE-003, repaired: the interrupt waits behind unfinished evaluation
+#guard (runAt pBindSync 1 [Api.evaluate, interruptRoot]).trace.length = 1
+#guard (runAt pBindSync 2 [Api.evaluate, interruptRoot]).trace.length = 2
+#guard (runAt pBindSync 1 [Api.evaluate, interruptRoot]).trace.isPrefixOf
+  (runAt pBindSync 2 [Api.evaluate, interruptRoot]).trace
 #guard !((runAt pBindSync 2 [Api.evaluate, interruptRoot]).trace.isPrefixOf
   (runAt pBindSync 1 [Api.evaluate, interruptRoot]).trace)
 -- the same tape under `Suffices` is stable
@@ -361,7 +366,7 @@ section Rows
 #guard sameMachine (runAt pBindSync 8 [Api.evaluate, interruptRoot]).machine
   (runAt pBindSync 9 [Api.evaluate, interruptRoot]).machine
 
--- E4-APPROX-CE-004: `fire` is not monotone in fuel across its tasks
+-- E4-APPROX-CE-004, repaired: the later task waits behind the unfinished child
 /-- The machine after the root's `evaluate`: the root parked on its await, two `start`
 tasks on its dispatcher, the dispatcher armed. -/
 def twoTasks : Api.Machine := (runAt pTwoDeferred 400 [Api.evaluate]).machine
@@ -371,9 +376,9 @@ def fireAt (f : Nat) : Api.Machine :=
 #guard (twoTasks.fiber? Api.root).map (fun o => (o.dispatcher.drain).1.length) = some 2
 #guard twoTasks.armed.length = 1
 #guard tag (runAt pTwoDeferred 400 [Api.evaluate]).outcome == 1
-#guard (fireAt 1).trace.length = 14
-#guard (fireAt 2).trace.length = 16
-#guard !((fireAt 1).trace.isPrefixOf (fireAt 2).trace)
+#guard (fireAt 1).trace.length = 12
+#guard (fireAt 2).trace.length = 13
+#guard (fireAt 1).trace.isPrefixOf (fireAt 2).trace
 #guard !((fireAt 2).trace.isPrefixOf (fireAt 1).trace)
 -- both still extend the machine they fired from (`fire_trace_extends`)
 #guard twoTasks.trace.isPrefixOf (fireAt 1).trace
@@ -384,6 +389,12 @@ def fireAt (f : Nat) : Api.Machine :=
 #guard (fireState (interpOf pTwoDeferred) 400 twoTasks Api.root).2 = true
 #guard (fireAt 400).trace == (fireAt 401).trace
 #guard sameMachine (fireAt 400) (fireAt 401)
+
+-- Monotonicity across the task boundary and the replay boundary, including exhaustion.
+#guard (List.range 25).all fun f => (fireAt f).trace.isPrefixOf (fireAt (f + 1)).trace
+#guard (List.range 25).all fun f =>
+  (runAt pTwoDeferred f [Api.evaluate, Api.flush, interruptRoot]).trace.isPrefixOf
+    (runAt pTwoDeferred (f + 1) [Api.evaluate, Api.flush, interruptRoot]).trace
 
 end Rows
 

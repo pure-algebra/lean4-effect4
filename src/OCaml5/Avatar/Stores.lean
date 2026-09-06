@@ -136,10 +136,12 @@ def ctx : StructDesc where
      { leanName := "maxOpsBeforeYield", leanTy := .nat },
      { leanName := "preventYield", leanTy := .bool }]
 
-/-- `Completion` (`Stores.lean:184`), prefix `Co`. -/
+/-- `Completion` (`Machine/Completion.lean`), prefix `Co`; the avatar fixes
+the value and cause parameters to its existing exit alphabet. -/
 def completion : InductiveDesc where
-  leanName := "Completion"; site := "Stores.lean:184"; ctorPrefix := "Co"; subst := subst
-  ctors := [{ leanName := "ofExit", args := [⟨"exit", exitL, false⟩] },
+  leanName := "Completion"; site := "Completion.lean"; ctorPrefix := "Co"; subst := subst
+  ctors := [{ leanName := "ofExit",
+              args := [⟨"exit", .app "Exit" [.nm "β", .nm "ε", .nm "δ", .nm "ι", .nm "α"], false⟩] },
             { leanName := "ofRefGet", args := [⟨"cell", .nm "RefKey", false⟩] }]
 
 /-- `SyncOp` (`Stores.lean:193`), 23 constructors, prefix `S`. -/

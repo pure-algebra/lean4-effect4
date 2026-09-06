@@ -1,27 +1,26 @@
 import Effect4.Machine.Frames
 import Effect4.Machine.Supervision
+import Effect4.Machine.Completion
 
 /-!
-# Deep spike: the program-carrying fiber machine
+# The program-carrying fiber machine
 
-Status: design spike, 2026-09-03, third pass. Module `Deep.Fibers` of the non-default `Deep`
-library (`lakefile.toml`, `srcDir = "workshop"`); built with `lake build Deep.Fibers`.
-Contract: `docs/research/2026-09-03-fiber-machine-pass-a.md`. Plan:
-`docs/research/2026-09-03-deep-plan.md`. This pass folds in every finding of the three
-spikes (`2026-09-03-spike-s1-prim-parking.md`, `-s2-stores-witnesses.md`,
-`-s3-fork-flow.md`): the three park primitives are `Prim` constructors now (S1), the
-`AsyncFinalizer` frame is pushed where rc.112 pushes it, a stuck machine is observable rather
-than a silent spin (S3 §5.1), the interp can refuse a thunk (S3 §5.2), a stateful `sync`
-drains the resumes it owes on the spot (S2 M1), a program can mask its own fiber (M2), a
-cancel name knows the waiter it splices out (M3), scope linking knows its mode (M4), an
-interrupt carries the caller's annotations (M5), a countdown collects the exits it awaited
-(M6), the scope hooks can say "unknown" (M7), a settled race interrupts its unlaunched
-entrants instead of deleting them (M8), and M9 (the old alphabet's missing suspended phase)
-is moot since the projections were retired.
+The first runtime slice separates code, saved execution state and frame-event
+payload. `FiberCore` and `FiberEvaluator` are interpreter parameters. The default
+instances use the existing frame machine in `Frames.lean`; the scheduler does
+not inspect code or require its decidable equality. External answers are
+Completion data, interpreted by `RunInterp.answerCode`.
 
-One source of truth. A `RunFiber` holds the frame machine's five fields
-(`src/Effect4/Machine/Frames.lean`, reused unchanged), the parking state, the exit, the
-supervision fields, and the per-fiber dispatcher. The scheduler and supervision calculi this
+The command loop retains its residue. Dispatcher snapshots, flush rounds and
+replay stop at the first unfinished command budget. The laws live in
+`Approximation.lean`, and the exact boundaries in
+`Test/contracts/machine-{approximation,completion,scheduler-core}.contract.md`.
+`CORE-FB-TRACE` requires an invariant for arbitrary evaluators that return a
+machine; `CORE-FB-SIMULATION` reserves the later algebra simulation. The concrete
+frame instance's clauses and trace laws remain checked separately.
+
+A `RunFiber` holds its saved state, parking state, exit, supervision fields and
+per-fiber dispatcher. The scheduler and supervision calculi this
 machine replaced were retired on 2026-09-04
 (`docs/research/2026-09-04-retire-old-machines.md`); only their vocabulary
 (`src/Effect4/Machine/Supervision.lean`) remains.
@@ -29,8 +28,8 @@ machine replaced were retired on 2026-09-04
 Every arm names the rc.112 line it transcribes (`vendor/effect-4.0.0-rc.112/src/`,
 `internal/effect.ts` unless another file is named). Where rc.112 leaves a choice to the
 host, the machine takes a `RunDecision` from a tape. Tape exhaustion and fuel exhaustion
-are live frontiers (DB-04); so is a stuck machine, which is what a state rc.112 cannot reach
-(a join on a handle the machine does not hold, an unknown scope key) becomes here, observably.
+are live frontiers (DB-04). A stuck marker records a state rc.112 cannot reach
+(a join on a handle the machine does not hold, an unknown scope key).
 The error channel is `Cause ε δ ι α` and `Exit` everywhere.
 -/
 
@@ -100,32 +99,35 @@ deriving DecidableEq
 
 /-- The two task shapes ever enqueued: a deferred child start (`:5277`) and a yield resume
 (`:986`). Everything else resumes synchronously through `resume(effect)` (`:1121`). -/
-inductive Task (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max u v)
+inductive Task (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
+    (κ : Type (max u v) := Prim ν σ β ε δ ι α) : Type (max u v)
   | start (child : FiberId)
-  | resume (target : FiberId) (token : Nat) (answer : Prim ν σ β ε δ ι α)
+  | resume (target : FiberId) (token : Nat) (answer : κ)
 deriving DecidableEq
 
 /-- `Scheduler.ts:105-131`: buckets in ascending priority, FIFO within a bucket. -/
-structure Bucket (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max u v) where
+structure Bucket (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
+    (κ : Type (max u v) := Prim ν σ β ε δ ι α) : Type (max u v) where
   priority : Nat
-  tasks : List (Task ν σ β ε δ ι α)
+  tasks : List (Task ν σ β ε δ ι α κ)
 deriving DecidableEq
 
 /-- One `MixedSchedulerDispatcher` (`Scheduler.ts:188-233`); every fiber lazily owns one
 (`:552-555`). `armed` is "the host callback is scheduled" (`Scheduler.ts:207-212`). -/
-structure Dispatcher (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max u v) where
-  buckets : List (Bucket ν σ β ε δ ι α)
+structure Dispatcher (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
+    (κ : Type (max u v) := Prim ν σ β ε δ ι α) : Type (max u v) where
+  buckets : List (Bucket ν σ β ε δ ι α κ)
   armed : Bool
 deriving DecidableEq
 
 namespace Dispatcher
 
-variable {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
+variable {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} {κ : Type (max u v)}
 
-def empty : Dispatcher ν σ β ε δ ι α := ⟨[], false⟩
+def empty : Dispatcher ν σ β ε δ ι α κ := ⟨[], false⟩
 
-def insert (priority : Nat) (task : Task ν σ β ε δ ι α) :
-    List (Bucket ν σ β ε δ ι α) → List (Bucket ν σ β ε δ ι α)
+def insert (priority : Nat) (task : Task ν σ β ε δ ι α κ) :
+    List (Bucket ν σ β ε δ ι α κ) → List (Bucket ν σ β ε δ ι α κ)
   | [] => [⟨priority, [task]⟩]
   | bucket :: rest =>
     if bucket.priority = priority then ⟨bucket.priority, bucket.tasks ++ [task]⟩ :: rest
@@ -133,19 +135,67 @@ def insert (priority : Nat) (task : Task ν σ β ε δ ι α) :
     else bucket :: insert priority task rest
 
 /-- `Scheduler.ts:105-131` plus arming on the first task (`:207-212`). -/
-def enqueue (d : Dispatcher ν σ β ε δ ι α) (priority : Nat) (task : Task ν σ β ε δ ι α) :
-    Dispatcher ν σ β ε δ ι α :=
+def enqueue (d : Dispatcher ν σ β ε δ ι α κ) (priority : Nat) (task : Task ν σ β ε δ ι α κ) :
+    Dispatcher ν σ β ε δ ι α κ :=
   ⟨insert priority task d.buckets, true⟩
 
 /-- `runTasks` drains the snapshot once (`Scheduler.ts:225-233`): a task enqueued during
 the drain waits for the next host task. -/
-def drain (d : Dispatcher ν σ β ε δ ι α) :
-    List (Task ν σ β ε δ ι α) × Dispatcher ν σ β ε δ ι α :=
+def drain (d : Dispatcher ν σ β ε δ ι α κ) :
+    List (Task ν σ β ε δ ι α κ) × Dispatcher ν σ β ε δ ι α κ :=
   ((d.buckets.map Bucket.tasks).flatten, ⟨[], false⟩)
 
 end Dispatcher
 
 /-! ## The fiber -/
+
+/-- The operations on a fiber's saved execution state. Code and saved state
+are separate types: a resume carries code, while a running fiber also retains
+its continuations and interrupt flags. This record is an interpreter parameter,
+never stored program content. -/
+class FiberCore (ν : Type u) (β : Type v) (ε δ ι α : Type u)
+    (κ : Type (max u v)) (φ : outParam (Type (max u v))) : Type (max u v) where
+  current : φ → κ
+  answerWith : φ → κ → φ
+  start : κ → Bool → φ
+  interruptible : φ → Bool
+  interruptedCause : φ → Option (Cause ε δ ι α)
+  deferredInterrupt : φ → Bool
+  recordCause : φ → Cause ε δ ι α → φ
+  setDeferred : φ → Bool → φ
+  pendingFailure : φ → φ
+  pushAsyncFinalizer : ν → φ → φ
+  clearStack : φ → φ
+  success : β → κ
+  failure : Cause ε δ ι α → κ
+  onSuccess : κ → ν → κ
+
+-- These are transparent interpreter operations, so concrete clause proofs
+-- reduce through the frame instance just as they reduced its fields before D1.
+attribute [reducible] FiberCore.current FiberCore.answerWith FiberCore.start
+  FiberCore.interruptible FiberCore.interruptedCause FiberCore.deferredInterrupt
+  FiberCore.recordCause FiberCore.setDeferred FiberCore.pendingFailure
+  FiberCore.pushAsyncFinalizer FiberCore.clearStack FiberCore.success
+  FiberCore.failure FiberCore.onSuccess
+
+/-- The existing five-field frame machine supplies the concrete core. -/
+@[reducible] instance frameCore {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} :
+    FiberCore ν β ε δ ι α (Prim ν σ β ε δ ι α) (FrameFiber ν σ β ε δ ι α) where
+  current := FrameFiber.current
+  answerWith := fun f code => { f with current := code }
+  start := fun code flag => { FrameFiber.start code with interruptible := flag }
+  interruptible := FrameFiber.interruptible
+  interruptedCause := FrameFiber.interruptedCause
+  deferredInterrupt := FrameFiber.deferredInterrupt
+  recordCause := fun f cause => { f with interruptedCause := some cause }
+  setDeferred := fun f flag => { f with deferredInterrupt := flag }
+  pendingFailure := fun f =>
+    { f with deferredInterrupt := false, current := Prim.failure f.pendingCause }
+  pushAsyncFinalizer := fun name f => { f with stack := Prim.asyncFinalizer name :: f.stack }
+  clearStack := fun f => { f with stack := [] }
+  success := Prim.success
+  failure := Prim.failure
+  onSuccess := Prim.onSuccess
 
 /-- rc.112 `FiberImpl` (`:505-555`), seventeen fields read through one record. `frame` is
 the five-field machine of `Runtime.lean`; `running` (`:537`), `parked` (`:536`), `pending`,
@@ -153,9 +203,11 @@ the five-field machine of `Runtime.lean`; `running` (`:537`), `parked` (`:536`),
 (`:533`), the op counter and the two `Context`-cached budget fields (`:530`, `:549-550`),
 `yieldOverride` (the tape's `shouldYield`, `Scheduler.ts:78-81`), `observers` (`:532`),
 `children` (`:534`), `dispatcher` (`:552`) and `context` (`:541`) are the rest. -/
-structure RunFiber (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) : Type (max u v) where
+structure RunFiber (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u)
+    (κ : Type (max u v) := Prim ν σ β ε δ ι α)
+    (φ : Type (max u v) := FrameFiber ν σ β ε δ ι α) : Type (max u v) where
   id : FiberId
-  frame : FrameFiber ν σ β ε δ ι α
+  frame : φ
   running : Bool
   parked : Parked
   pending : List (Pending ν β ε δ ι α)
@@ -167,23 +219,24 @@ structure RunFiber (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) : Ty
   yieldOverride : Option Bool
   observers : List Observer
   children : List FiberId
-  dispatcher : Dispatcher ν σ β ε δ ι α
+  dispatcher : Dispatcher ν σ β ε δ ι α κ
   context : χ
 deriving DecidableEq
 
 namespace RunFiber
 
 variable {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
+variable {κ φ : Type (max u v)} [core : FiberCore ν β ε δ ι α κ φ]
 
-def interruptPending (f : RunFiber ν σ β ε δ ι α χ) : Bool :=
-  f.frame.deferredInterrupt || f.frame.interruptedCause.isSome
+def interruptPending (f : RunFiber ν σ β ε δ ι α χ κ φ) : Bool :=
+  core.deferredInterrupt f.frame || (core.interruptedCause f.frame).isSome
 
 /-- `new FiberImpl(context, interruptible)` (`:512-514`) with the modelled fields; the
 budget fields are read off the context as `setContext` does (`:726-727`). -/
-def make (id : FiberId) (current : Prim ν σ β ε δ ι α) (interruptible : Bool)
-    (budget : Nat × Bool) (context : χ) : RunFiber ν σ β ε δ ι α χ where
+def make (id : FiberId) (current : κ) (interruptible : Bool)
+    (budget : Nat × Bool) (context : χ) : RunFiber ν σ β ε δ ι α χ κ φ where
   id := id
-  frame := { FrameFiber.start current with interruptible := interruptible }
+  frame := core.start current interruptible
   running := false
   parked := Parked.notParked
   pending := []
@@ -199,7 +252,8 @@ def make (id : FiberId) (current : Prim ν σ β ε δ ι α) (interruptible : B
   context := context
 
 /-- Park on `p.token`, remembering what resumes it. -/
-def park (f : RunFiber ν σ β ε δ ι α χ) (p : Pending ν β ε δ ι α) : RunFiber ν σ β ε δ ι α χ :=
+def park (f : RunFiber ν σ β ε δ ι α χ κ φ) (p : Pending ν β ε δ ι α) :
+    RunFiber ν σ β ε δ ι α χ κ φ :=
   { f with parked := Parked.withGuard p.token, pending := f.pending ++ [p] }
 
 end RunFiber
@@ -208,14 +262,15 @@ end RunFiber
 
 rc.112 reaches the raw fiber only through `withFiber` (`:1147`); every fiber-level
 operation is one of these shapes. A parameter of the interp names which one a thunk is. -/
-inductive WithFiberAction (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) : Type (max u v)
+inductive WithFiberAction (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u)
+    (κ : Type (max u v) := Prim ν σ β ε δ ι α) : Type (max u v)
   /-- `forkUnsafe` (`:5264-5284`): `forkChild`, `forkDetach`, `forkDaemon` by options. -/
-  | fork (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions)
+  | fork (program : κ) (options : Supervision.ForkOptions)
   /-- `forkIn` (`:5364-5378`): a daemon linked to a scope by a keyed, self-guarded finalizer. -/
-  | forkIn (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (scope : Nat)
+  | forkIn (program : κ) (options : Supervision.ForkOptions) (scope : Nat)
       (key : Nat)
   /-- `forkScoped` (`:5400-5406`): `forkIn` on the ambient `Scope` service. -/
-  | forkScoped (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (key : Nat)
+  | forkScoped (program : κ) (options : Supervision.ForkOptions) (key : Nat)
   /-- `fiberRunIn` (`:5447-5461`): bind an existing fiber to a scope by an unguarded finalizer. -/
   | runIn (target : FiberId) (scope : Nat) (key : Nat)
   /-- `fiberInterrupt` (`:859`): record with the running fiber's id, then await the target. -/
@@ -238,10 +293,10 @@ inductive WithFiberAction (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type 
   | awaitNewChildren (snapshot : List FiberId)
   /-- `raceAll`: immediate daemons in order until an observed success, failures in order,
   the empty race pending until interrupted (`Supervision.RaceAllState`). -/
-  | raceAll (entrants : List (Prim ν σ β ε δ ι α))
+  | raceAll (entrants : List κ)
   /-- `uninterruptible`/`interruptible` bodies (`:4302-4310`, `:4331-4352`): set the flag,
   push the restoring frame, and fail now if a cause is pending (M2). -/
-  | setInterruptible (body : Prim ν σ β ε δ ι α) (flag : Bool)
+  | setInterruptible (body : κ) (flag : Bool)
   /-- `setContext` (`:709-727`): the context and its two cached budget fields. -/
   | setContext (context : χ)
   /-- `fiber.context` as a value (`getContext`, `:2153`). -/
@@ -265,19 +320,21 @@ deriving DecidableEq
 
 /-! ## Events, races, the machine, the decisions, the interp -/
 
-inductive RunEvent (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) : Type (max u v)
+inductive RunEvent (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u)
+    (κ : Type (max u v) := Prim ν σ β ε δ ι α)
+    (η : Type (max u v) := FrameEvent ν σ β ε δ ι α) : Type (max u v)
   | forked (parent child : FiberId) (daemon : Bool)
   | started (fiber : FiberId)
-  | scheduledTask (owner : FiberId) (priority : Nat) (task : Task ν σ β ε δ ι α)
-  | ranTask (owner : FiberId) (task : Task ν σ β ε δ ι α)
+  | scheduledTask (owner : FiberId) (priority : Nat) (task : Task ν σ β ε δ ι α κ)
+  | ranTask (owner : FiberId) (task : Task ν σ β ε δ ι α κ)
   | yieldInjected (fiber : FiberId) (atOp : Nat)
   | parkedOn (fiber : FiberId) (token : Nat)
-  | resumedWith (fiber : FiberId) (token : Nat) (answer : Prim ν σ β ε δ ι α)
+  | resumedWith (fiber : FiberId) (token : Nat) (answer : κ)
   | interruptRecorded (interruptor : Option FiberId) (target : FiberId)
   | interruptDeferred (target : FiberId)
   | childrenInterrupted (parent : FiberId) (children : List FiberId)
   | observerFired (fiber : FiberId) (observer : Observer)
-  | frame (fiber : FiberId) (event : FrameEvent ν σ β ε δ ι α)
+  | frame (fiber : FiberId) (event : η)
   | finalizerProgram (fiber : FiberId) (finalizer : ν) (exit : Exit β ε δ ι α)
   | scopeLinked (mode : Supervision.ScopeMode) (scope : Nat) (key : Nat) (fiber : FiberId)
   | scopeClosedOnLink (scope : Nat) (fiber : FiberId)
@@ -299,7 +356,8 @@ deriving DecidableEq, Repr
 /-- One `raceAll` in flight: its host, the host's park token, the frozen bookkeeping of
 `Supervision.RaceAllState` (reused as is; `unstarted` stays empty, since an entrant has no id
 before its launch), and the entrants not yet forked. -/
-structure Race (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max u v) where
+structure Race (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
+    (κ : Type (max u v) := Prim ν σ β ε δ ι α) : Type (max u v) where
   id : Nat
   host : FiberId
   token : Nat
@@ -307,15 +365,18 @@ structure Race (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max
   settled : Bool
   /-- The entrants not yet forked, in order: rc.112 forks one per iteration of its register
   loop and breaks once done (`:1520-1528`, R2-11), so a skipped entrant never exists. -/
-  programs : List (Prim ν σ β ε δ ι α)
+  programs : List κ
 
 /-- The process: every live fiber, the races, the id and token counters, the global
 middleware latch (`:6656-6658`), the service state the stores live in, the trace, and the
 stuck marker. -/
-structure RunMachine (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St : Type (max u v)) :
+structure RunMachine (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St : Type (max u v))
+    (κ : Type (max u v) := Prim ν σ β ε δ ι α)
+    (φ : Type (max u v) := FrameFiber ν σ β ε δ ι α)
+    (η : Type (max u v) := FrameEvent ν σ β ε δ ι α) :
     Type (max u v) where
-  fibers : List (RunFiber ν σ β ε δ ι α χ)
-  races : List (Race ν σ β ε δ ι α)
+  fibers : List (RunFiber ν σ β ε δ ι α χ κ φ)
+  races : List (Race ν σ β ε δ ι α κ)
   nextId : Nat
   nextToken : Nat
   nextRace : Nat
@@ -326,7 +387,7 @@ structure RunMachine (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (S
   they were armed (R2-15). -/
   armed : List FiberId
   state : St
-  trace : List (RunEvent ν σ β ε δ ι α χ)
+  trace : List (RunEvent ν σ β ε δ ι α χ κ η)
   stuck : Option Stuck
 
 /-- The decisions rc.112 leaves to the host or the caller (Pass A §1). -/
@@ -340,8 +401,9 @@ inductive RunDecision (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Ty
   | evaluate (fiber : FiberId)
   /-- (b) an override of `shouldYield` for the fiber's next injection check. -/
   | yieldVerdict (fiber : FiberId) (verdict : Bool)
-  /-- (c) an external `resume(effect)` (`:1121`) for a parked async. -/
-  | answerAsync (fiber : FiberId) (token : Nat) (answer : Prim ν σ β ε δ ι α)
+  /-- (c) an external answer for a parked async (`:1121`). D6 restricts the
+  tape to the existing Completion data; the interpreter supplies its code. -/
+  | answerAsync (fiber : FiberId) (token : Nat) (answer : Completion β ε δ ι α)
   /-- (d) `interruptUnsafe(fiberId, annotations)` (`:574`): the interruptor the wire drops
   and the caller's annotations (M5); `none` is `runFork`'s abort signal (`:5427-5429`). -/
   | interruptFrom (interruptor : Option FiberId) (annotations : ReasonAnnotations α)
@@ -355,22 +417,25 @@ deriving DecidableEq
 classifications the frame machine cannot make, and the values the machine has to mint. A
 parameter, never canonical content. -/
 structure RunInterp (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St : Type (max u v))
-    extends PrimInterp ν σ β ε δ ι α where
+    (κ : Type (max u v) := Prim ν σ β ε δ ι α)
+    extends PrimInterp ν σ β ε δ ι α κ where
   /-- Which primitives are a `join`/`await` park (the frame alphabet has no constructor), or
   a refused one: a `join` whose request is not a fiber handle fails with the cause the
   interp gives it rather than falling through to the oracle (S3 §9). -/
-  parkOf : Prim ν σ β ε δ ι α → Option (Except (Cause ε δ ι α) ParkKind)
+  parkOf : κ → Option (Except (Cause ε δ ι α) ParkKind)
   /-- What a `withFiber` thunk does. -/
-  withFiberOf : σ → Option (WithFiberAction ν σ β ε δ ι α χ)
+  withFiberOf : σ → Option (WithFiberAction ν σ β ε δ ι α χ κ)
   /-- A `sync` thunk that reads or writes the service state; `none` falls back to the pure
   `syncValue`. Ref, Deferred and Scope operations live here. -/
   syncState : σ → St → Option (St × β)
   /-- `register(resume, signal)` (`:1117`): update the store (a waiter added), and either
   resume synchronously with a primitive (`:1120-1126`) or park. -/
-  registerAsync : ν → FiberId → Nat → St → St × Option (Prim ν σ β ε δ ι α)
+  registerAsync : ν → FiberId → Nat → St → St × Option κ
+  /-- Interpret the external completion in this machine's code alphabet. -/
+  answerCode : Completion β ε δ ι α → κ
   /-- Resumes the store owes now (a completed Deferred's waiters, in registration order,
   `Deferred.ts:1655-1659`); resumed synchronously, inside the completing `sync` (M1). -/
-  dueResumes : St → List (FiberId × Nat × Prim ν σ β ε δ ι α) × St
+  dueResumes : St → List (FiberId × Nat × κ) × St
   /-- Attach the waiter's identity to a cancel name, so the `AsyncFinalizer` frame's
   `contE` can splice the waiter out (`Deferred.ts:181-184`, M3). -/
   cancelName : ν → FiberId → Nat → ν
@@ -387,10 +452,10 @@ structure RunInterp (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St
   /-- What a settled race resumes its host with (`:1510-1514`):
   `flatMap(uninterruptible(fiberInterruptAll(live)), () => exit)`, or `exit` alone when no
   entrant is live (R2-12). -/
-  raceSettle : List FiberId → Exit β ε δ ι α → Prim ν σ β ε δ ι α
+  raceSettle : List FiberId → Exit β ε δ ι α → κ
   /-- An `OnExit` finalizer that is a *program*, run as one (`:4021`), rather than the pure
   `finalizerExit` shortcut of the frame machine; `none` keeps the shortcut. -/
-  finalizerProgram : ν → Exit β ε δ ι α → Option (Prim ν σ β ε δ ι α)
+  finalizerProgram : ν → Exit β ε δ ι α → Option κ
   /-- The continuation names for `flatMap(finalizer(exit), () => exit)` and its failure
   arm (`Exit.restoreAfterFinalizer`, `Exit.mergeFinalizer`): names are data. -/
   restoreName : Exit β ε δ ι α → ν
@@ -406,7 +471,7 @@ structure RunInterp (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St
   through its exit; parallel forks daemons that inherit the closing fiber's mask and merges
   every exit by `exitAsVoidAll`. Arguments: scope, exit, the closer's `interruptible`, the
   closer's id; `none` when the scope is unknown (M7). -/
-  closeScope : Nat → Exit β ε δ ι α → Bool → FiberId → St → Option (St × Prim ν σ β ε δ ι α)
+  closeScope : Nat → Exit β ε δ ι α → Bool → FiberId → St → Option (St × κ)
   /-- The ambient `Scope` service of a context (`forkScoped`, `:5400-5406`). -/
   ambientScope : χ → Option Nat
   /-- `MaxOpsBeforeYield` and `PreventSchedulerYield` read off a context (`:726-727`). -/
@@ -417,7 +482,7 @@ structure RunInterp (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St
   contextValue : χ → β
   /-- What a resumed awaiter continues with: the exit as a value (`await`, `:5304`) or as
   an effect (`join`, `:5291`). -/
-  exitValue : Exit β ε δ ι α → Supervision.ObserverMode → Prim ν σ β ε δ ι α
+  exitValue : Exit β ε δ ι α → Supervision.ObserverMode → κ
   /-- The fiber handle a fork answers with. -/
   fiberValue : FiberId → β
   /-- A list of handles as a value (`awaitAllChildren`'s snapshot). -/
@@ -442,42 +507,44 @@ structure RunInterp (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St
 namespace RunMachine
 
 variable {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+variable {κ φ η : Type (max u v)}
 
-def fiber? (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId) :
-    Option (RunFiber ν σ β ε δ ι α χ) :=
+def fiber? (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (id : FiberId) :
+    Option (RunFiber ν σ β ε δ ι α χ κ φ) :=
   m.fibers.find? fun f => f.id = id
 
-def update (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) :
-    RunMachine ν σ β ε δ ι α χ St :=
+def update (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (f : RunFiber ν σ β ε δ ι α χ κ φ) :
+    RunMachine ν σ β ε δ ι α χ St κ φ η :=
   { m with fibers := m.fibers.map fun g => if g.id = f.id then f else g }
 
-def emit (m : RunMachine ν σ β ε δ ι α χ St) (events : List (RunEvent ν σ β ε δ ι α χ)) :
-    RunMachine ν σ β ε δ ι α χ St :=
+def emit (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (events : List (RunEvent ν σ β ε δ ι α χ κ η)) :
+    RunMachine ν σ β ε δ ι α χ St κ φ η :=
   { m with trace := m.trace ++ events }
 
-def modify (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId)
-    (k : RunFiber ν σ β ε δ ι α χ → RunFiber ν σ β ε δ ι α χ) :
-    RunMachine ν σ β ε δ ι α χ St :=
+def modify (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (id : FiberId)
+    (k : RunFiber ν σ β ε δ ι α χ κ φ → RunFiber ν σ β ε δ ι α χ κ φ) :
+    RunMachine ν σ β ε δ ι α χ St κ φ η :=
   match m.fiber? id with
   | none => m
   | some f => m.update (k f)
 
-def halt (m : RunMachine ν σ β ε δ ι α χ St) (why : Stuck) : RunMachine ν σ β ε δ ι α χ St :=
+def halt (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (why : Stuck) :
+    RunMachine ν σ β ε δ ι α χ St κ φ η :=
   { m with stuck := some why }
 
-def race? (m : RunMachine ν σ β ε δ ι α χ St) (id : Nat) : Option (Race ν σ β ε δ ι α) :=
+def race? (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (id : Nat) : Option (Race ν σ β ε δ ι α κ) :=
   m.races.find? fun r => r.id = id
 
-def updateRace (m : RunMachine ν σ β ε δ ι α χ St) (r : Race ν σ β ε δ ι α) :
-    RunMachine ν σ β ε δ ι α χ St :=
+def updateRace (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (r : Race ν σ β ε δ ι α κ) :
+    RunMachine ν σ β ε δ ι α χ St κ φ η :=
   { m with races := m.races.map fun s => if s.id = r.id then r else s }
 
 /-- Every fiber has exited. -/
-def finished (m : RunMachine ν σ β ε δ ι α χ St) : Bool :=
+def finished (m : RunMachine ν σ β ε δ ι α χ St κ φ η) : Bool :=
   m.fibers.all fun f => f.exit.isSome
 
 /-- A fresh machine over a store. -/
-def empty (state : St) : RunMachine ν σ β ε δ ι α χ St where
+def empty (state : St) : RunMachine ν σ β ε δ ι α χ St κ φ η where
   fibers := []
   races := []
   nextId := 0
@@ -492,11 +559,13 @@ def empty (state : St) : RunMachine ν σ β ε δ ι α χ St where
 /-- A task was scheduled on `owner`'s dispatcher: the first one arms it — a host callback is
 scheduled behind those already scheduled (`Scheduler.ts:207-212`); later tasks join the
 armed callback. -/
-def arm (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId) : RunMachine ν σ β ε δ ι α χ St :=
+def arm (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (owner : FiberId) :
+    RunMachine ν σ β ε δ ι α χ St κ φ η :=
   { m with armed := if m.armed.contains owner then m.armed else m.armed ++ [owner] }
 
 /-- The host callback of `owner` ran: it is no longer scheduled. -/
-def disarm (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId) : RunMachine ν σ β ε δ ι α χ St :=
+def disarm (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (owner : FiberId) :
+    RunMachine ν σ β ε δ ι α χ St κ φ η :=
   { m with armed := m.armed.filter fun x => x ≠ owner }
 
 end RunMachine
@@ -508,7 +577,8 @@ fiber's evaluate, is a command: an immediate fork's start (`:5270-5271`), a `res
 (`:1121`), a Deferred completion's waiters (`Deferred.ts:1655-1659`), a race launch. The loop
 runs commands with fuel, and re-reads a fiber from the machine after every nested command,
 so a fiber that was interrupted or resumed while another ran is never a stale local. -/
-inductive Cmd (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max u v)
+inductive Cmd (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
+    (κ : Type (max u v) := Prim ν σ β ε δ ι α) : Type (max u v)
   /-- `evaluate` (`:599-628`) on a fiber that is not running. -/
   | evaluate (fiber : FiberId)
   /-- Continue a running fiber's `runLoop` with the injection latch. -/
@@ -523,7 +593,7 @@ inductive Cmd (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max 
   have recorded an interrupt on it. -/
   | finish (fiber : FiberId) (exit : Exit β ε δ ι α)
   /-- `resume(effect)` (`:1121`): unpark on the token and evaluate. -/
-  | resume (fiber : FiberId) (token : Nat) (answer : Prim ν σ β ε δ ι α)
+  | resume (fiber : FiberId) (token : Nat) (answer : κ)
   /-- One iteration of `raceAll`'s register loop (`:1520-1528`, R2-11): fork and run the
   next entrant, unless the race is done — then the loop has broken and no more entrant is
   ever forked. -/
@@ -540,6 +610,7 @@ section Machine
 
 variable {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
 variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+variable {κ φ η : Type (max u v)} [core : FiberCore ν β ε δ ι α κ φ]
 
 /-- `interruptUnsafe(fiberId, annotations)` (`:574-595`) on one fiber, without the
 apply-now re-entry, which the loop performs as a command. The cause is annotated from the
@@ -547,9 +618,9 @@ target's stack frame and from the caller (`:578-584`, M5). Returns the fiber and
 evaluate it now. When the fiber was parked on an `Async` that pushed an `AsyncFinalizer`,
 applying the interrupt means failing through that frame, whose `contE` runs the cancel
 (`:1155-1159`) — the frame machine does that; nothing here has to. -/
-def interruptRecord (interp : RunInterp ν σ β ε δ ι α χ St) (interruptor : Option FiberId)
-    (extra : ReasonAnnotations α) (f : RunFiber ν σ β ε δ ι α χ) :
-    RunFiber ν σ β ε δ ι α χ × Bool :=
+def interruptRecord (interp : RunInterp ν σ β ε δ ι α χ St κ) (interruptor : Option FiberId)
+    (extra : ReasonAnnotations α) (f : RunFiber ν σ β ε δ ι α χ κ φ) :
+    RunFiber ν σ β ε δ ι α χ κ φ × Bool :=
   if f.exit.isSome then (f, false)                                     -- :575-577
   else
     let cause : Cause ε δ ι α :=
@@ -557,28 +628,28 @@ def interruptRecord (interp : RunInterp ν σ β ε δ ι α χ St) (interruptor
         (Supervision.interruptCause interp.encodeFiber interruptor (interp.stackAnnotations f.id))
         extra false
     let accumulated : Cause ε δ ι α :=
-      match f.frame.interruptedCause with                              -- :585-587
+      match core.interruptedCause f.frame with                         -- :585-587
       | none => cause
       | some previous => Cause.combine previous cause
-    let f := { f with frame := { f.frame with interruptedCause := some accumulated } }
-    if f.frame.interruptible then                                      -- :588
-      if f.running then ({ f with frame := { f.frame with deferredInterrupt := true } }, false)
+    let f := { f with frame := core.recordCause f.frame accumulated }
+    if core.interruptible f.frame then                                 -- :588
+      if f.running then ({ f with frame := core.setDeferred f.frame true }, false)
       else                                                             -- :591-594
         ({ f with
             parked := Parked.notParked
             pending := []
-            frame := { f.frame with current := Prim.failure accumulated } }, true)
+            frame := core.answerWith f.frame (core.failure accumulated) }, true)
     else (f, false)
 
 /-- `interruptUnsafe` on each target in list order (`fiberInterruptAll`, `:892-896`;
 `fiberInterruptAllAs`, `:910-913`; the exit path's children, `:5449`): recorded with `who`
 and the *caller's* stack annotations `extra` (R2-5); a target that applies now is evaluated
 as a command, in list order. An unknown target is skipped. -/
-def interruptEach (interp : RunInterp ν σ β ε δ ι α χ St) (who : FiberId)
+def interruptEach (interp : RunInterp ν σ β ε δ ι α χ St κ) (who : FiberId)
     (extra : ReasonAnnotations α) (targets : List FiberId)
-    (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)) :
-    RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α) :=
-  targets.foldl (fun (a : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)) t =>
+    (acc : RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ)) :
+    RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ) :=
+  targets.foldl (fun (a : RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ)) t =>
       match a.1.fiber? t with
       | none => a
       | some g =>
@@ -590,7 +661,7 @@ def interruptEach (interp : RunInterp ν σ β ε δ ι α χ St) (who : FiberId
 exit collected at once (`:797-800`), until the first live one, which is the one to observe
 (`:802`), with the targets after it; or every exit when none is live (`:806`). A target the
 machine does not hold is skipped. -/
-def countdownWalk (m : RunMachine ν σ β ε δ ι α χ St) :
+def countdownWalk (m : RunMachine ν σ β ε δ ι α χ St κ φ η) :
     List FiberId → List (Exit β ε δ ι α) →
       List (Exit β ε δ ι α) × Option (FiberId × List FiberId)
   | [], exits => (exits, none)
@@ -607,30 +678,30 @@ targets in input order; when one is live, observe it, push the park's cleanup as
 `AsyncFinalizer` frame (`:812`, `:1128-1141`; R2-3) and park; when none is, the continuation
 is applied at once (`:806`, resumed before the callback yields). Returns whether the fiber
 actually parked. -/
-def countdownPark (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
-    (f : RunFiber ν σ β ε δ ι α χ) (targets : List FiberId) (resumeWith : Resume ν)
+def countdownPark (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (targets : List FiberId) (resumeWith : Resume ν)
     (failFast : Bool := false) :
-    RunMachine ν σ β ε δ ι α χ St × RunFiber ν σ β ε δ ι α χ × Bool :=
+    RunMachine ν σ β ε δ ι α χ St κ φ η × RunFiber ν σ β ε δ ι α χ κ φ × Bool :=
   let token := m.nextToken
   let m := { m with nextToken := m.nextToken + 1 }
   match countdownWalk m targets [] with
   | (exits, none) =>
-    (m, { f with frame := { f.frame with current := resumePrim interp resumeWith exits } }, false)
+    (m, { f with frame := core.answerWith f.frame (resumePrim interp resumeWith exits) }, false)
   | (exits, some (target, remaining)) =>
     let m := m.modify target fun g =>
       { g with observers := g.observers ++ [Observer.countdown f.id token] }
     let name := interp.cancelName interp.parkCancelName f.id token
-    let f := { f with frame := { f.frame with stack := Prim.asyncFinalizer name :: f.frame.stack } }
+    let f := { f with frame := core.pushAsyncFinalizer name f.frame }
     let f := f.park ⟨token, some target, remaining, exits, resumeWith, failFast⟩
     (m.emit [RunEvent.parkedOn f.id token], f, true)
 where
   /-- What a finished countdown continues with. -/
-  resumePrim (interp : RunInterp ν σ β ε δ ι α χ St) (resumeWith : Resume ν)
-      (exits : List (Exit β ε δ ι α)) : Prim ν σ β ε δ ι α :=
+  resumePrim (interp : RunInterp ν σ β ε δ ι α χ St κ) (resumeWith : Resume ν)
+      (exits : List (Exit β ε δ ι α)) : κ :=
     match resumeWith with
-    | Resume.exitsValue => Prim.success (interp.exitsValue exits)
-    | Resume.void => Prim.success interp.voidValue
-    | Resume.continueWith name => Prim.onSuccess (Prim.success (interp.exitsValue exits)) name
+    | Resume.exitsValue => core.success (interp.exitsValue exits)
+    | Resume.void => core.success interp.voidValue
+    | Resume.continueWith name => core.onSuccess (core.success (interp.exitsValue exits)) name
 
 /-- Where one `runLoop` iteration left the fiber. -/
 inductive Outcome (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max u v)
@@ -645,26 +716,29 @@ deriving DecidableEq
 
 /-- The result of one iteration: the machine, the fiber, the latch, where it left off, and
 the commands to run synchronously before continuing. -/
-structure Iter (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St : Type (max u v)) :
+structure Iter (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St : Type (max u v))
+    (κ : Type (max u v) := Prim ν σ β ε δ ι α)
+    (φ : Type (max u v) := FrameFiber ν σ β ε δ ι α)
+    (η : Type (max u v) := FrameEvent ν σ β ε δ ι α) :
     Type (max u v) where
-  machine : RunMachine ν σ β ε δ ι α χ St
-  fiber : RunFiber ν σ β ε δ ι α χ
+  machine : RunMachine ν σ β ε δ ι α χ St κ φ η
+  fiber : RunFiber ν σ β ε δ ι α χ κ φ
   yielding : Bool
   outcome : Outcome ν σ β ε δ ι α
-  nested : List (Cmd ν σ β ε δ ι α)
+  nested : List (Cmd ν σ β ε δ ι α κ)
 
 /-- Create a child over the parent (`:5264-5284`): mask by the options (`:5272`), the
 parent's context (`:5273`), tracked unless daemon (`:5280-5281`). -/
-def spawn (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
-    (parent : RunFiber ν σ β ε δ ι α χ) (program : Prim ν σ β ε δ ι α)
+def spawn (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (parent : RunFiber ν σ β ε δ ι α χ κ φ) (program : κ)
     (options : Supervision.ForkOptions) :
-    RunMachine ν σ β ε δ ι α χ St × RunFiber ν σ β ε δ ι α χ × FiberId :=
+    RunMachine ν σ β ε δ ι α χ St κ φ η × RunFiber ν σ β ε δ ι α χ κ φ × FiberId :=
   let childId : FiberId := ⟨m.nextId⟩
   let childInterruptible :=
     match options.maskMode with
     | Supervision.MaskMode.interruptible => true
     | Supervision.MaskMode.uninterruptible => false
-    | Supervision.MaskMode.inherit => parent.frame.interruptible
+    | Supervision.MaskMode.inherit => core.interruptible parent.frame
   let child := RunFiber.make childId program childInterruptible
     (interp.budgetOf parent.context) parent.context
   let child :=
@@ -677,9 +751,9 @@ def spawn (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ 
 
 /-- Start a spawned child: now, on the caller's stack (`:5270-5271`), or deferred onto the
 parent's dispatcher at priority 0 (`:5277`). -/
-def start (m : RunMachine ν σ β ε δ ι α χ St) (parent : RunFiber ν σ β ε δ ι α χ)
+def start (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (parent : RunFiber ν σ β ε δ ι α χ κ φ)
     (child : FiberId) (immediately : Bool) :
-    RunMachine ν σ β ε δ ι α χ St × RunFiber ν σ β ε δ ι α χ × List (Cmd ν σ β ε δ ι α) :=
+    RunMachine ν σ β ε δ ι α χ St κ φ η × RunFiber ν σ β ε δ ι α χ κ φ × List (Cmd ν σ β ε δ ι α κ) :=
   if immediately then (m, parent, [Cmd.evaluate child])
   else
     let parent := { parent with dispatcher := parent.dispatcher.enqueue 0 (Task.start child) }
@@ -688,9 +762,9 @@ def start (m : RunMachine ν σ β ε δ ι α χ St) (parent : RunFiber ν σ �
 /-- One entrant of a `raceAll`, forked at its launch (`forkUnsafe(parent, effect, true, true,
 false)`, `:1521`): an immediate daemon, interruptible (R2-10), with the race callback as its
 observer (`:1523`). -/
-def launchEntrant (interp : RunInterp ν σ β ε δ ι α χ St) (raceId : Nat)
-    (m : RunMachine ν σ β ε δ ι α χ St) (host : RunFiber ν σ β ε δ ι α χ)
-    (program : Prim ν σ β ε δ ι α) : RunMachine ν σ β ε δ ι α χ St × FiberId :=
+def launchEntrant (interp : RunInterp ν σ β ε δ ι α χ St κ) (raceId : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (host : RunFiber ν σ β ε δ ι α χ κ φ)
+    (program : κ) : RunMachine ν σ β ε δ ι α χ St κ φ η × FiberId :=
   let (m, _, child) := spawn interp m host program ⟨true, true, Supervision.MaskMode.interruptible⟩
   (m.modify child fun c => { c with observers := c.observers ++ [Observer.raceCallback raceId] },
     child)
@@ -699,10 +773,10 @@ def launchEntrant (interp : RunInterp ν σ β ε δ ι α χ St) (raceId : Nat)
 keyed finalizer of the mode's shape and the key-dropping observer; closed, an immediate
 interrupt with `interruptor` and the interruptor's own stack annotations (`:5374`, M5);
 unknown, stuck (M7). -/
-def linkScope (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+def linkScope (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (mode : Supervision.ScopeMode) (scope key : Nat) (target : FiberId)
     (interruptor : Option FiberId) (extra : ReasonAnnotations α) :
-    RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α) :=
+    RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ) :=
   match interp.scopeStatus scope m.state with
   | none => (m.halt (Stuck.unknownScope scope), [])
   | some (some _) =>                                                   -- closed: :5374, :5454
@@ -732,32 +806,31 @@ def linkScope (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν
 
 /-- The top of a `runLoop` iteration (`:639-642`): a deferred interrupt is cleared and the
 current primitive is replaced by the pending cause's failure. -/
-def runloopTop (f : RunFiber ν σ β ε δ ι α χ) : RunFiber ν σ β ε δ ι α χ :=
-  if f.frame.deferredInterrupt then
-    { f with frame :=
-        { f.frame with deferredInterrupt := false, current := Prim.failure f.frame.pendingCause } }
+def runloopTop (f : RunFiber ν σ β ε δ ι α χ κ φ) : RunFiber ν σ β ε δ ι α χ κ φ :=
+  if core.deferredInterrupt f.frame then
+    { f with frame := core.pendingFailure f.frame }
   else f
 
 /-- The op counter (`:643`). -/
-def countOp (f : RunFiber ν σ β ε δ ι α χ) : RunFiber ν σ β ε δ ι α χ :=
+def countOp (f : RunFiber ν σ β ε δ ι α χ κ φ) : RunFiber ν σ β ε δ ι α χ κ φ :=
   { f with currentOpCount := f.currentOpCount + 1 }
 
 /-- `shouldYield` (`Scheduler.ts:174-176`): the op count has reached the budget — under the
 tape's override (`Scheduler.ts:78-81`), which answers instead when present. -/
-def yieldVerdict (f : RunFiber ν σ β ε δ ι α χ) : Bool :=
+def yieldVerdict (f : RunFiber ν σ β ε δ ι α χ κ φ) : Bool :=
   f.yieldOverride.getD (decide (f.currentOpCount >= f.maxOpsBeforeYield))
 
 /-- Yield injection (`:644-652`): at most once per entry (the `yielding` latch), never under
 `PreventSchedulerYield`, and only on the verdict. The fiber parks behind a resume guard
 whose task carries its current primitive at priority 0. -/
-def injectYield (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ)
-    (yielding : Bool) : Option (Iter ν σ β ε δ ι α χ St) :=
+def injectYield (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (f : RunFiber ν σ β ε δ ι α χ κ φ)
+    (yielding : Bool) : Option (Iter ν σ β ε δ ι α χ St κ φ η) :=
   if !yielding && !f.preventYield && yieldVerdict f then
     let token := m.nextToken
     let m := { m with nextToken := m.nextToken + 1 }
     let f := { f with
       yieldOverride := none
-      dispatcher := (f.dispatcher.enqueue 0 (Task.resume f.id token f.frame.current)) }
+      dispatcher := (f.dispatcher.enqueue 0 (Task.resume f.id token (core.current f.frame))) }
     let f := f.park ⟨token, none, [], [], Resume.void, false⟩
     some ⟨(m.arm f.id).emit [RunEvent.yieldInjected f.id f.currentOpCount, RunEvent.parkedOn f.id token],
       f, true, Outcome.parked, []⟩
@@ -872,7 +945,7 @@ where
         -- restoring frame) and the stack below it (`Runtime.lean:1463-1465`).
         let fiber := { pop.fiber with
           current := Prim.onSuccessAndFailure program (interp.restoreName exit) (interp.mergeName exit) }
-        ⟨m.emit (pop.events.map (RunEvent.frame f.id) ++ [RunEvent.finalizerProgram f.id fin exit]),
+        ⟨m.emit (pop.events.map (RunEvent.frame.{u, v} f.id) ++ [RunEvent.finalizerProgram f.id fin exit]),
           { f with frame := fiber }, yielding, Outcome.continue_, []⟩
       | none => stepFrame interp m f yielding
     | _ => stepFrame interp m f yielding
@@ -885,7 +958,7 @@ where
       (yielding : Bool) (next : FrameStep ν σ β ε δ ι α)
       (events : List (FrameEvent ν σ β ε δ ι α)) (nested : List (Cmd ν σ β ε δ ι α)) :
       Iter ν σ β ε δ ι α χ St :=
-    let m := m.emit (events.map (RunEvent.frame f.id))
+    let m := m.emit (events.map (RunEvent.frame.{u, v} f.id))
     match next with
     | FrameStep.running frame => ⟨m, { f with frame := frame }, yielding, Outcome.continue_, nested⟩
     | FrameStep.finished exit => ⟨m, f, yielding, Outcome.finished exit, nested⟩
@@ -1029,25 +1102,41 @@ where
       let (m, f, parked) := countdownPark interp m f [target] Resume.void
       ⟨m, f, yielding, (if parked then Outcome.parked else Outcome.continue_), nested⟩
 
+/-- Evaluation is an interpreter parameter, separate from saved-state operations.
+The shared scheduler never inspects code or stores this function in the machine. -/
+class FiberEvaluator (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St : Type (max u v))
+    (κ φ : Type (max u v)) (η : outParam (Type (max u v))) : Type (max u v) where
+  evaluate : RunInterp ν σ β ε δ ι α χ St κ → RunMachine ν σ β ε δ ι α χ St κ φ η →
+    RunFiber ν σ β ε δ ι α χ κ φ → Bool → Iter ν σ β ε δ ι α χ St κ φ η
+
+attribute [reducible] FiberEvaluator.evaluate
+
+/-- The original primitive evaluator is the concrete instance of the shared loop. -/
+@[reducible] instance frameEvaluator : FiberEvaluator ν σ β ε δ ι α χ St
+    (Prim ν σ β ε δ ι α) (FrameFiber ν σ β ε δ ι α) (FrameEvent ν σ β ε δ ι α) where
+  evaluate := evaluatePrim
+
+variable [evaluator : FiberEvaluator ν σ β ε δ ι α χ St κ φ η]
+
 /-- One `runLoop` iteration (`:638-668`) on fiber `f` in machine `m`; `yielding` is the
 per-entry injection latch (`:634`, `:648`): the top of the loop, the op counter, then either
 a yield injection or the evaluation of the current primitive. -/
-def iteration (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
-    (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool) : Iter ν σ β ε δ ι α χ St :=
+def iteration (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) : Iter ν σ β ε δ ι α χ St κ φ η :=
   let f := countOp (runloopTop f)
   match injectYield m f yielding with
   | some it => it
-  | none => evaluatePrim interp m f yielding
+  | none => evaluator.evaluate interp m f yielding
 
 /-- Fire one observer (`:621-623`) of fiber `id`, which has exited with `exit`. Resumes
 are synchronous (`:1121`), so they come back as commands. -/
-def fireObserver (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId) (exit : Exit β ε δ ι α)
-    (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)) (observer : Observer) :
-    RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α) :=
+def fireObserver (interp : RunInterp ν σ β ε δ ι α χ St κ) (id : FiberId) (exit : Exit β ε δ ι α)
+    (acc : RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ)) (observer : Observer) :
+    RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ) :=
   let m := acc.1.emit [RunEvent.observerFired id observer]
   match observer with
   | Observer.resumeAwait waiter token mode =>                          -- :561-562, :5291, :5304
-    (m, acc.2 ++ [Cmd.resume waiter token (interp.exitValue exit mode)])
+    (m, acc.2 ++ [Cmd.resume.{u, v} waiter token (interp.exitValue exit mode)])
   | Observer.untrackChild parent =>                                    -- :5281
     (m.modify parent fun p => { p with children := p.children.filter fun c => c ≠ id }, acc.2)
   | Observer.dropScopeFinalizer scope key =>                           -- :5370-5372
@@ -1078,7 +1167,7 @@ def fireObserver (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId) 
             else q }
           (m.update w,
             acc.2 ++ nested ++
-              [Cmd.resume waiter token (countdownPark.resumePrim interp p.resumeWith exits)])
+              [Cmd.resume.{u, v} waiter token (countdownPark.resumePrim (core := core) interp p.resumeWith exits)])
         | (exits, some (next, rest)) =>                                -- :802
           let m := m.modify next fun g =>
             { g with observers := g.observers ++ [Observer.countdown waiter token] }
@@ -1101,7 +1190,7 @@ def fireObserver (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId) 
         -- and awaits the live entrants itself, under a mask — or with the exit alone
         let m := m.updateRace { race with settled := true }
         let m := m.emit [RunEvent.raceSettled raceId accepted]
-        (m, acc.2 ++ [Cmd.resume race.host race.token (interp.raceSettle state.live accepted)])
+        (m, acc.2 ++ [Cmd.resume.{u, v} race.host race.token (interp.raceSettle state.live accepted)])
       | _, _ => (m, acc.2)
   | Observer.callback key => (m.emit [RunEvent.callback key exit], acc.2)
 
@@ -1109,16 +1198,17 @@ def fireObserver (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId) 
 children are interrupted with the parent's id and awaited before the exit is stored
 (`:613-617`, `awaitAllChildren`); then the exit is stored, every observer fires in index
 order, and the fiber is cleared, its context emptied (`:619-627`). -/
-def exitFiber (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
-    (f : RunFiber ν σ β ε δ ι α χ) (exit : Exit β ε δ ι α) :
-    RunMachine ν σ β ε δ ι α χ St × RunFiber ν σ β ε δ ι α χ × Bool × List (Cmd ν σ β ε δ ι α) :=
+def exitFiber (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (exit : Exit β ε δ ι α) :
+    RunMachine ν σ β ε δ ι α χ St κ φ η × RunFiber ν σ β ε δ ι α χ κ φ × Bool ×
+      List (Cmd ν σ β ε δ ι α κ) :=
   if m.middlewareInstalled && f.finalizing.isNone && !f.children.isEmpty then
     -- `fiberInterruptAll(children)` under `withFiber(parent)`: the parent's stack
     -- annotations (`:892-895`, R2-5)
     let (m, nested) := interruptEach interp f.id (interp.stackAnnotations f.id) f.children (m, [])
     let m := m.emit [RunEvent.childrenInterrupted f.id f.children]
     -- the loop returned an exit: `_deferredInterrupt = false` (`:659`, R2-2)
-    let f := { f with finalizing := some exit, frame := { f.frame with deferredInterrupt := false } }
+    let f := { f with finalizing := some exit, frame := core.setDeferred f.frame false }
     let (m, f, parked) :=
       countdownPark interp m f f.children (Resume.continueWith (interp.restoreName exit))
     (m, f, parked, nested)
@@ -1126,7 +1216,7 @@ def exitFiber (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν
     let f := { f with                                                  -- :619-627
       exit := some exit
       finalizing := none
-      frame := { f.frame with stack := [], deferredInterrupt := false }
+      frame := core.setDeferred (core.clearStack f.frame) false
       children := []
       parked := Parked.notParked
       pending := []
@@ -1139,8 +1229,8 @@ def exitFiber (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν
 /-- What the loop does with where an iteration (or a delivery) left fiber `id`: the machine
 to continue in and the commands to run before `rest`. A stuck fiber halts the machine and
 leaves nothing to run. -/
-def settle (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α)) (it : Iter ν σ β ε δ ι α χ St) :
-    RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α) :=
+def settle (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α κ)) (it : Iter ν σ β ε δ ι α χ St κ φ η) :
+    RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ) :=
   match it.outcome with
   | Outcome.continue_ =>
     (it.machine.update it.fiber, it.nested ++ [Cmd.loop id it.yielding] ++ rest)
@@ -1155,161 +1245,224 @@ def settle (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α)) (it : Iter ν
   | Outcome.stuck why =>
     ((it.machine.update { it.fiber with running := false }).halt why, [])
 
-/-- The command loop. Each command costs one fuel; exhaustion is a live frontier, and so is
-a stuck machine, which stops the loop with its reason recorded. -/
-def drive (interp : RunInterp ν σ β ε δ ι α χ St) :
-    Nat → RunMachine ν σ β ε δ ι α χ St → List (Cmd ν σ β ε δ ι α) →
-      RunMachine ν σ β ε δ ι α χ St
-  | 0, m, _ => m
-  | _ + 1, m, [] => m
-  | fuel + 1, m, cmd :: rest =>
-    if m.stuck.isSome then m else
-    match cmd with
-    | Cmd.evaluate id =>                                               -- :599-628
-      match m.fiber? id with
-      | none => drive interp fuel m rest
-      | some f =>
-        if f.exit.isSome || f.running then drive interp fuel m rest      -- :600-601
+/-- One command, returning the commands it leaves. This is also the step used
+by the resumable fuel laws in `Machine.Approximation`. The clauses transcribe
+`internal/effect.ts:599-628` (entry and exit), `:933-934` (delivery), `:1121-1126`
+(resume), `:1520-1528` (race launch), and `:5366-5376` (scope linking). -/
+def driveStep (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η) :
+    Cmd ν σ β ε δ ι α κ → List (Cmd ν σ β ε δ ι α κ) →
+      RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ)
+  | Cmd.evaluate id, rest =>                                          -- :599-628
+    match m.fiber? id with
+    | none => (m, rest)
+    | some f =>
+      if f.exit.isSome || f.running then (m, rest)
+      else
+        let f := { f with running := true, currentOpCount := 0, parked := Parked.notParked }
+        ((m.update f).emit [RunEvent.started id], Cmd.loop id false :: rest)
+  | Cmd.loop id yielding, rest =>
+    match m.fiber? id with
+    | none => (m, rest)
+    | some f => settle id rest (iteration interp m f yielding)
+  | Cmd.deliver id yielding, rest =>                                  -- :933-934, R2-1
+    match m.fiber? id with
+    | none => (m, rest)
+    | some f => settle id rest (evaluator.evaluate interp m f yielding)
+  | Cmd.resume id token answer, rest =>                               -- :602-606, :1121
+    match m.fiber? id with
+    | none => (m, rest)
+    | some t =>
+      match t.parked with
+      | Parked.withGuard parkedToken =>
+        if parkedToken = token then
+          let t := { t with
+            parked := Parked.notParked
+            pending := t.pending.filter fun p => p.token ≠ token
+            frame := core.answerWith t.frame answer }
+          ((m.update t).emit [RunEvent.resumedWith id token answer], Cmd.evaluate id :: rest)
+        else (m, rest)
+      | Parked.notParked => (m, rest)
+  | Cmd.launch raceId, rest =>                                        -- :1520-1528, R2-11
+    match m.race? raceId with
+    | none => (m, rest)
+    | some race =>
+      match race.programs with
+      | [] => (m, rest)
+      | program :: more =>
+        if race.state.accepted.isSome then (m, rest)
         else
-          let f := { f with running := true, currentOpCount := 0, parked := Parked.notParked }
-          let m := (m.update f).emit [RunEvent.started id]
-          drive interp fuel m (Cmd.loop id false :: rest)
-    | Cmd.loop id yielding =>
-      match m.fiber? id with
-      | none => drive interp fuel m rest
-      | some f =>
-        let (m, cmds) := settle id rest (iteration interp m f yielding)
-        drive interp fuel m cmds
-    | Cmd.deliver id yielding =>                                       -- :933-934, R2-1
-      match m.fiber? id with
-      | none => drive interp fuel m rest
-      | some f =>
-        let (m, cmds) := settle id rest (evaluatePrim interp m f yielding)
-        drive interp fuel m cmds
-    | Cmd.resume id token answer =>                                    -- :602-606, :1121
-      match m.fiber? id with
-      | none => drive interp fuel m rest
-      | some t =>
-        match t.parked with
-        | Parked.withGuard parkedToken =>
-          if parkedToken = token then
-            let t := { t with
-              parked := Parked.notParked
-              pending := t.pending.filter fun p => p.token ≠ token
-              frame := { t.frame with current := answer } }
-            let m := (m.update t).emit [RunEvent.resumedWith id token answer]
-            drive interp fuel m (Cmd.evaluate id :: rest)
-          else drive interp fuel m rest
-        | Parked.notParked => drive interp fuel m rest
-    | Cmd.launch raceId =>                                             -- :1520-1528 (R2-11)
-      match m.race? raceId with
-      | none => drive interp fuel m rest
-      | some race =>
-        match race.programs with
-        | [] => drive interp fuel m rest
-        | program :: more =>
-          -- `if (done) break` (`:1527`): once accepted, no further entrant is ever forked
-          if race.state.accepted.isSome then drive interp fuel m rest
-          else
-            match m.fiber? race.host with
-            | none => drive interp fuel m rest
-            | some host =>
-              let (m, child) := launchEntrant interp raceId m host program
-              let m := m.updateRace { race with
-                programs := more
-                state := { race.state with live := race.state.live ++ [child] } }
-              drive interp fuel (m.emit [RunEvent.raceLaunched raceId child])
-                (Cmd.evaluate child :: Cmd.launch raceId :: rest)
-    | Cmd.link mode scope key target interruptor extra =>              -- :5366-5376 (R2-8)
-      let (m, nested) := linkScope interp m mode scope key target interruptor extra
-      drive interp fuel m (nested ++ rest)
-    | Cmd.finish id exit =>                                            -- :611-628
-      match m.fiber? id with
-      | none => drive interp fuel m rest
-      | some f =>
-        let (m, f, parked, nested) := exitFiber interp m { f with running := false } exit
-        let m := m.update f
-        drive interp fuel m (nested ++ (if parked then [] else [Cmd.drainDue]) ++ rest)
-    | Cmd.drainDue =>
-      let (due, state) := interp.dueResumes m.state
-      let m := { m with state := state }
-      drive interp fuel m ((due.map fun d => Cmd.resume d.1 d.2.1 d.2.2) ++ rest)
+          match m.fiber? race.host with
+          | none => (m, rest)
+          | some host =>
+            let (m, child) := launchEntrant interp raceId m host program
+            let m := m.updateRace { race with
+              programs := more
+              state := { race.state with live := race.state.live ++ [child] } }
+            (m.emit [RunEvent.raceLaunched raceId child],
+              Cmd.evaluate child :: Cmd.launch raceId :: rest)
+  | Cmd.link mode scope key target interruptor extra, rest =>          -- :5366-5376, R2-8
+    let (m, nested) := linkScope interp m mode scope key target interruptor extra
+    (m, nested ++ rest)
+  | Cmd.finish id exit, rest =>                                       -- :611-628
+    match m.fiber? id with
+    | none => (m, rest)
+    | some f =>
+      let (m, f, parked, nested) := exitFiber interp m { f with running := false } exit
+      (m.update f, nested ++ (if parked then [] else [Cmd.drainDue]) ++ rest)
+  | Cmd.drainDue, rest =>
+    let (due, state) := interp.dueResumes m.state
+    ({ m with state := state }, (due.map fun d => Cmd.resume d.1 d.2.1 d.2.2) ++ rest)
 
-/-- One tape decision. -/
-def stepDecision (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
-    (m : RunMachine ν σ β ε δ ι α χ St) : RunDecision ν σ β ε δ ι α →
-      RunMachine ν σ β ε δ ι α χ St
-  | RunDecision.fire owner => fire interp fuel m owner
-  | RunDecision.flush => flushAll interp fuel fuel m
-  | RunDecision.evaluate id => drive interp fuel m [Cmd.evaluate id, Cmd.drainDue]
+/-- The command loop with its residue. Exhaustion remains resumable here; the
+task, round and replay boundaries stop when that residue is unfinished. -/
+def driveState (interp : RunInterp ν σ β ε δ ι α χ St κ) :
+    Nat → RunMachine ν σ β ε δ ι α χ St κ φ η → List (Cmd ν σ β ε δ ι α κ) →
+      RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ)
+  | 0, m, cmds => (m, cmds)
+  | _ + 1, m, [] => (m, [])
+  | fuel + 1, m, cmd :: rest =>
+    if m.stuck.isSome then (m, cmd :: rest)
+    else
+      let next := driveStep interp m cmd rest
+      driveState interp fuel next.1 next.2
+
+/-- The machine projection of the one resumable command loop. Exhaustion leaves
+the commands in `driveState`; callers that cross a work boundary use its receipt. -/
+def drive (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (cmds : List (Cmd ν σ β ε δ ι α κ)) :
+    RunMachine ν σ β ε δ ι α χ St κ φ η := (driveState interp fuel m cmds).1
+
+/-- The loop stopped for a reason other than fuel. -/
+def settled (r : RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ)) : Bool :=
+  r.2.isEmpty || r.1.stuck.isSome
+
+/-- A dispatcher task and its synchronous due-resume drain. -/
+def taskCmds : Task ν σ β ε δ ι α κ → List (Cmd ν σ β ε δ ι α κ)
+  | Task.start child => [Cmd.evaluate child, Cmd.drainDue]
+  | Task.resume target token answer => [Cmd.resume target token answer, Cmd.drainDue]
+
+/-- Once a task exhausts its budget, later tasks in the snapshot do not run. -/
+def fireStep (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) (owner : FiberId)
+    (acc : RunMachine ν σ β ε δ ι α χ St κ φ η × Bool) (task : Task ν σ β ε δ ι α κ) :
+    RunMachine ν σ β ε δ ι α χ St κ φ η × Bool :=
+  if acc.2 then
+    let r := driveState interp fuel (acc.1.emit [RunEvent.ranTask owner task]) (taskCmds task)
+    (r.1, settled r)
+  else acc
+
+/-- Drain one dispatcher snapshot in order (`Scheduler.ts:214-233`), stopping
+at the first task whose command budget runs out. -/
+def fireState (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (owner : FiberId) :
+    RunMachine ν σ β ε δ ι α χ St κ φ η × Bool :=
+  match m.fiber? owner with
+  | none => (m, true)
+  | some o =>
+    (o.dispatcher.drain).1.foldl (fireStep interp fuel owner)
+      ((m.update { o with dispatcher := (o.dispatcher.drain).2 }).disarm owner, true)
+
+/-- Run armed dispatchers in FIFO order (`Scheduler.ts:207-212`). The model's
+fuel frontier stops this flush before another round can run. -/
+def flushAllState (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) :
+    Nat → RunMachine ν σ β ε δ ι α χ St κ φ η → RunMachine ν σ β ε δ ι α χ St κ φ η × Bool
+  | 0, m => (m, m.armed.isEmpty || m.stuck.isSome)
+  | rounds + 1, m =>
+    match m.armed with
+    | [] => (m, true)
+    | owner :: _ =>
+      if m.stuck.isSome then (m, true)
+      else
+        let r := fireState interp fuel m owner
+        if r.2 then flushAllState interp fuel rounds r.1 else r
+
+/-- The root-only sync flush (`Scheduler.ts:238-246`), with the same stopping
+rule as the host flush. -/
+def flushRootState (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) (root : FiberId) :
+    Nat → RunMachine ν σ β ε δ ι α χ St κ φ η → RunMachine ν σ β ε δ ι α χ St κ φ η × Bool
+  | 0, m =>
+    match m.fiber? root with
+    | none => (m, true)
+    | some o => (m, o.dispatcher.buckets.isEmpty || m.stuck.isSome)
+  | rounds + 1, m =>
+    match m.fiber? root with
+    | none => (m, true)
+    | some o =>
+      if o.dispatcher.buckets.isEmpty || m.stuck.isSome then (m, true)
+      else
+        let r := fireState interp fuel m root
+        if r.2 then flushRootState interp fuel root rounds r.1 else r
+
+/-- One decision and its command-sufficiency receipt. A false receipt is a
+fuel frontier; it is not a failure of the running program. -/
+def stepDecisionState (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) : RunDecision ν σ β ε δ ι α →
+      RunMachine ν σ β ε δ ι α χ St κ φ η × Bool
+  | RunDecision.fire owner => fireState interp fuel m owner
+  | RunDecision.flush => flushAllState interp fuel fuel m
+  | RunDecision.evaluate id => loop (driveState interp fuel m [Cmd.evaluate id, Cmd.drainDue])
   | RunDecision.yieldVerdict id verdict =>
-    m.modify id fun f => { f with yieldOverride := some verdict }
+    (m.modify id fun f => { f with yieldOverride := some verdict }, true)
   | RunDecision.answerAsync id token answer =>
-    drive interp fuel m [Cmd.resume id token answer, Cmd.drainDue]
+    loop (driveState interp fuel m [Cmd.resume id token (interp.answerCode answer), Cmd.drainDue])
   | RunDecision.interruptFrom interruptor annotations target =>
     match m.fiber? target with
-    | none => m
+    | none => (m, true)
     | some t =>
       let (t, applyNow) := interruptRecord interp interruptor annotations t
       let m := m.emit [RunEvent.interruptRecorded interruptor target]
-      let m := if t.frame.deferredInterrupt && t.running then
+      let m := if core.deferredInterrupt t.frame && t.running then
         m.emit [RunEvent.interruptDeferred target] else m
       let m := m.update t
-      if applyNow then drive interp fuel m [Cmd.evaluate target, Cmd.drainDue] else m
-  | RunDecision.installMiddleware => { m with middlewareInstalled := true }
+      if applyNow then loop (driveState interp fuel m [Cmd.evaluate target, Cmd.drainDue]) else (m, true)
+  | RunDecision.installMiddleware => ({ m with middlewareInstalled := true }, true)
 where
+  /-- A command loop's receipt. -/
+  loop (r : RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ)) :
+      RunMachine ν σ β ε δ ι α χ St κ φ η × Bool := (r.1, settled r)
+
+/-- The public decision entry is the machine projection of its receipt. -/
+def stepDecision (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (decision : RunDecision ν σ β ε δ ι α) :
+    RunMachine ν σ β ε δ ι α χ St κ φ η := (stepDecisionState interp fuel m decision).1
+
+namespace stepDecision
+
   /-- The host callback of `owner`'s dispatcher (`afterScheduled`, `Scheduler.ts:214-217`):
   it is no longer scheduled, and `runTasks` (`:225-233`) drains once and runs in order. -/
-  fire (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : RunMachine ν σ β ε δ ι α χ St)
-      (owner : FiberId) : RunMachine ν σ β ε δ ι α χ St :=
-    match m.fiber? owner with
-    | none => m
-    | some o =>
-      let (tasks, dispatcher) := o.dispatcher.drain
-      let m := (m.update { o with dispatcher := dispatcher }).disarm owner
-      tasks.foldl (fun m task =>
-          let m := m.emit [RunEvent.ranTask owner task]
-          match task with
-          | Task.start child => drive interp fuel m [Cmd.evaluate child, Cmd.drainDue]
-          | Task.resume target token answer =>
-            drive interp fuel m [Cmd.resume target token answer, Cmd.drainDue]) m
+  def fire (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+      (owner : FiberId) : RunMachine ν σ β ε δ ι α χ St κ φ η :=
+    (fireState interp fuel m owner).1
   /-- The host's event loop: the scheduled callbacks in arming order, one per round, a
   callback re-armed during a round going to the back (`setImmediate` FIFO,
   `Scheduler.ts:207-212`; R2-15), until none is scheduled. -/
-  flushAll (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) :
-      Nat → RunMachine ν σ β ε δ ι α χ St → RunMachine ν σ β ε δ ι α χ St
-    | 0, m => m
-    | rounds + 1, m =>
-      match m.armed with
-      | [] => m
-      | owner :: _ =>
-        if m.stuck.isSome then m else flushAll interp fuel rounds (fire interp fuel m owner)
+  def flushAll (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) :
+      Nat → RunMachine ν σ β ε δ ι α χ St κ φ η → RunMachine ν σ β ε δ ι α χ St κ φ η :=
+    fun rounds m => (flushAllState interp fuel rounds m).1
   /-- `MixedSchedulerDispatcher.flush` (`Scheduler.ts:238-246`) on one dispatcher: while it
   holds tasks, cancel its scheduled callback and run them; `runSyncExit` flushes the *root's*
   dispatcher only (`:5542`, R2-14). -/
-  flushRoot (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (root : FiberId) :
-      Nat → RunMachine ν σ β ε δ ι α χ St → RunMachine ν σ β ε δ ι α χ St
-    | 0, m => m
-    | rounds + 1, m =>
-      match m.fiber? root with
-      | none => m
-      | some o =>
-        if o.dispatcher.buckets.isEmpty || m.stuck.isSome then m
-        else flushRoot interp fuel root rounds (fire interp fuel m root)
+  def flushRoot (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) (root : FiberId) :
+      Nat → RunMachine ν σ β ε δ ι α χ St κ φ η → RunMachine ν σ β ε δ ι α χ St κ φ η :=
+    fun rounds m => (flushRootState interp fuel root rounds m).1
+
+end stepDecision
 
 /-! ## Replay and the runtime entries -/
 
-inductive ReplayResult (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St : Type (max u v)) :
+inductive ReplayResult (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St : Type (max u v))
+    (κ : Type (max u v) := Prim ν σ β ε δ ι α)
+    (φ : Type (max u v) := FrameFiber ν σ β ε δ ι α)
+    (η : Type (max u v) := FrameEvent ν σ β ε δ ι α) :
     Type (max u v)
-  | finished (machine : RunMachine ν σ β ε δ ι α χ St)
-  | frontier (machine : RunMachine ν σ β ε δ ι α χ St)
-  | stuck (why : Stuck) (machine : RunMachine ν σ β ε δ ι α χ St)
+  | finished (machine : RunMachine ν σ β ε δ ι α χ St κ φ η)
+  | frontier (machine : RunMachine ν σ β ε δ ι α χ St κ φ η)
+  | stuck (why : Stuck) (machine : RunMachine ν σ β ε δ ι α χ St κ φ η)
 
 /-- Replay a decision tape (DB-03: the meaning is the relation over tapes; this is its
 fuel-bounded simulator, DB-04). -/
-def replayEval (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) :
-    List (RunDecision ν σ β ε δ ι α) → RunMachine ν σ β ε δ ι α χ St →
-      ReplayResult ν σ β ε δ ι α χ St
+def replayEval (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) :
+    List (RunDecision ν σ β ε δ ι α) → RunMachine ν σ β ε δ ι α χ St κ φ η →
+      ReplayResult ν σ β ε δ ι α χ St κ φ η
   | [], m =>
     match m.stuck with
     | some why => ReplayResult.stuck why m
@@ -1317,19 +1470,21 @@ def replayEval (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) :
   | decision :: tape, m =>
     match m.stuck with
     | some why => ReplayResult.stuck why m
-    | none => replayEval interp fuel tape (stepDecision interp fuel m decision)
+    | none =>
+      let r := stepDecisionState interp fuel m decision
+      if r.2 then replayEval interp fuel tape r.1 else ReplayResult.frontier r.1
 
 /-- The relation the plan calls the meaning: one decision, one step. -/
-def Step (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
-    (before : RunMachine ν σ β ε δ ι α χ St) (decision : RunDecision ν σ β ε δ ι α)
-    (after : RunMachine ν σ β ε δ ι α χ St) : Prop :=
+def Step (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
+    (before : RunMachine ν σ β ε δ ι α χ St κ φ η) (decision : RunDecision ν σ β ε δ ι α)
+    (after : RunMachine ν σ β ε δ ι α χ St κ φ η) : Prop :=
   after = stepDecision interp fuel before decision
 
 /-- `runForkWith` (`:5410-5430`): one root fiber over the caller context, evaluated
 synchronously on the caller stack; the abort signal is the tape's `interruptFrom none`. -/
-def runFork (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
-    (m : RunMachine ν σ β ε δ ι α χ St) (program : Prim ν σ β ε δ ι α) (context : χ) :
-    RunMachine ν σ β ε δ ι α χ St × FiberId :=
+def runFork (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (program : κ) (context : χ) :
+    RunMachine ν σ β ε δ ι α χ St κ φ η × FiberId :=
   let root : FiberId := ⟨m.nextId⟩
   let fiber := RunFiber.make root program true (interp.budgetOf context) context
   let m := { m with fibers := m.fibers ++ [fiber], nextId := m.nextId + 1 }
@@ -1337,9 +1492,9 @@ def runFork (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
 
 /-- `runCallbackWith` (`:5470-5490`): `runFork` plus an exit observer under `key`; the
 returned interruptor is the tape's `interruptFrom (some caller) _ root`. -/
-def runCallback (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
-    (m : RunMachine ν σ β ε δ ι α χ St) (program : Prim ν σ β ε δ ι α) (context : χ)
-    (key : Nat) : RunMachine ν σ β ε δ ι α χ St × FiberId :=
+def runCallback (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (program : κ) (context : χ)
+    (key : Nat) : RunMachine ν σ β ε δ ι α χ St κ φ η × FiberId :=
   let root : FiberId := ⟨m.nextId⟩
   let fiber := RunFiber.make root program true (interp.budgetOf context) context
   let fiber := { fiber with observers := [Observer.callback key] }
@@ -1349,9 +1504,9 @@ def runCallback (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
 /-- `runSyncExitWith` (`:5535-5545`): `runFork` on the sync scheduler, the *root's*
 dispatcher flushed (`fiber._dispatcher?.flush()`, `:5542`; R2-14 — a child's own dispatcher
 is not), and the `AsyncFiberError` defect when the root has not exited. -/
-def runSyncExit (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
-    (m : RunMachine ν σ β ε δ ι α χ St) (program : Prim ν σ β ε δ ι α) (context : χ) :
-    RunMachine ν σ β ε δ ι α χ St × Exit β ε δ ι α :=
+def runSyncExit (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (program : κ) (context : χ) :
+    RunMachine ν σ β ε δ ι α χ St κ φ η × Exit β ε δ ι α :=
   let (m, root) := runFork interp fuel m program context
   let m := stepDecision.flushRoot interp fuel root fuel m
   match (m.fiber? root).bind RunFiber.exit with

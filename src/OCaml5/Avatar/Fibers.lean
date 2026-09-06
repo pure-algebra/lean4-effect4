@@ -56,6 +56,9 @@ def subst : Subst :=
    ("Dispatcher", Ty.named "dispatcher"),
    ("Task", Ty.named "task"),
    ("Prim", Ty.named "answer"),
+   ("κ", Ty.named "answer"),
+   ("φ", Ty.named "frame_fiber"),
+   ("η", Ty.string),
    ("Cause", Ty.named "cause"),
    ("FrameEvent", Ty.string),
    ("ReasonAnnotations", Ty.list Ty.string),
@@ -70,6 +73,8 @@ private def fid : LTy := .nm "FiberId"
 private def exitL : LTy := .app "Exit" [.nm "β", .nm "ε", .nm "δ", .nm "ι", .nm "α"]
 private def primL : LTy :=
   .app "Prim" [.nm "ν", .nm "σ", .nm "β", .nm "ε", .nm "δ", .nm "ι", .nm "α"]
+-- D1 fixes the code/state/event parameters to the avatar's existing profile.
+private def codeL : LTy := .nm "κ"
 private def taskL : LTy :=
   .app "Task" [.nm "ν", .nm "σ", .nm "β", .nm "ε", .nm "δ", .nm "ι", .nm "α"]
 
@@ -105,7 +110,7 @@ def runFiber : StructDesc where
   subst := subst
   fields :=
     [{ leanName := "id", leanTy := fid },
-     { leanName := "frame", leanTy := .app "FrameFiber" [.nm "ν"] },
+     { leanName := "frame", leanTy := .nm "φ" },
      { leanName := "running", leanTy := .bool, isMutable := true },
      { leanName := "parked", leanTy := .nm "Parked", isMutable := true },
      { leanName := "pending", leanTy := .lst (.app "Pending" [.nm "ν"]), isMutable := true },
@@ -177,7 +182,7 @@ def runEvent : InductiveDesc where
      { leanName := "yieldInjected", args := [⟨"fiber", fid, false⟩, ⟨"atOp", .nat, false⟩] },
      { leanName := "parkedOn", args := [⟨"fiber", fid, false⟩, ⟨"token", .nat, false⟩] },
      { leanName := "resumedWith",
-       args := [⟨"fiber", fid, false⟩, ⟨"token", .nat, false⟩, ⟨"answer", primL, false⟩] },
+       args := [⟨"fiber", fid, false⟩, ⟨"token", .nat, false⟩, ⟨"answer", codeL, false⟩] },
      { leanName := "interruptRecorded",
        args := [⟨"interruptor", .opt fid, false⟩, ⟨"target", fid, false⟩] },
      { leanName := "interruptDeferred", args := [⟨"target", fid, false⟩] },
@@ -186,7 +191,7 @@ def runEvent : InductiveDesc where
      { leanName := "observerFired",
        args := [⟨"fiber", fid, false⟩, ⟨"observer", .nm "Observer", false⟩] },
      { leanName := "frame", ocamlName := Option.some "FrameEv",
-       args := [⟨"fiber", fid, false⟩, ⟨"event", .nm "FrameEvent", false⟩] },
+       args := [⟨"fiber", fid, false⟩, ⟨"event", .nm "η", false⟩] },
      { leanName := "finalizerProgram",
        args := [⟨"fiber", fid, false⟩, ⟨"finalizer", .nm "ν", false⟩, ⟨"exit", exitL, false⟩] },
      { leanName := "scopeLinked",
@@ -203,7 +208,10 @@ def runEvent : InductiveDesc where
        args := [⟨"key", .nat, false⟩, ⟨"exit", exitL, false⟩] },
      { leanName := "exited", args := [⟨"fiber", fid, false⟩, ⟨"exit", exitL, false⟩] }]
 
-/-- `RunDecision` (`Fibers.lean:362`), seven constructors, prefix `D`. -/
+/-- The avatar's seven-constructor tape, prefix `D`. `D6-FB-AVATAR-ANSWER`:
+the Lean tape now carries Completion, while `deep_fibers.ml` still accepts
+exit-only answers. Keep this projection mismatch visible; mapping Completion
+to `answer` would hide the unsupported `ofRefGet` case. -/
 def runDecision : InductiveDesc where
   leanName := "RunDecision"
   site := "Fibers.lean:362"
@@ -246,7 +254,7 @@ def cmd : InductiveDesc where
      { leanName := "finish", args := [⟨"fiber", fid, false⟩, ⟨"exit", exitL, false⟩],
        comment := Option.some "DIVERGENCE 2: absent from deep_fibers.ml (the function `finish`)" },
      { leanName := "resume",
-       args := [⟨"fiber", fid, false⟩, ⟨"token", .nat, false⟩, ⟨"answer", primL, false⟩] },
+       args := [⟨"fiber", fid, false⟩, ⟨"token", .nat, false⟩, ⟨"answer", codeL, false⟩] },
      { leanName := "launch", args := [⟨"race", .nat, false⟩] },
      { leanName := "link",
        args := [⟨"mode", .nm "Supervision.ScopeMode", false⟩, ⟨"scope", .nat, false⟩,
@@ -268,12 +276,12 @@ def withFiberAction : InductiveDesc where
   subst := subst
   ctors :=
     [{ leanName := "fork",
-       args := [⟨"program", primL, true⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩] },
+       args := [⟨"program", codeL, true⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩] },
      { leanName := "forkIn",
-       args := [⟨"program", primL, true⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩,
+       args := [⟨"program", codeL, true⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩,
                 ⟨"scope", .nat, false⟩, ⟨"key", .nat, false⟩] },
      { leanName := "forkScoped",
-       args := [⟨"program", primL, true⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩,
+       args := [⟨"program", codeL, true⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩,
                 ⟨"key", .nat, false⟩] },
      { leanName := "runIn",
        args := [⟨"target", fid, false⟩, ⟨"scope", .nat, false⟩, ⟨"key", .nat, false⟩] },
@@ -285,9 +293,9 @@ def withFiberAction : InductiveDesc where
      { leanName := "awaitAllFailFast", args := [⟨"targets", .lst fid, false⟩] },
      { leanName := "snapshotChildren" },
      { leanName := "awaitNewChildren", args := [⟨"snapshot", .lst fid, false⟩] },
-     { leanName := "raceAll", args := [⟨"entrants", .lst primL, true⟩] },
+     { leanName := "raceAll", args := [⟨"entrants", .lst codeL, true⟩] },
      { leanName := "setInterruptible",
-       args := [⟨"body", primL, true⟩, ⟨"flag", .bool, false⟩] },
+       args := [⟨"body", codeL, true⟩, ⟨"flag", .bool, false⟩] },
      { leanName := "setContext", args := [⟨"context", .nm "χ", false⟩] },
      { leanName := "getContext" },
      { leanName := "getId" },

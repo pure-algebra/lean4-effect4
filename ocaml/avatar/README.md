@@ -199,7 +199,11 @@ need `lean`, and the `OCaml5` oleans are another lane's — last recorded 48/58 
 
 ## 7. What is owed
 
-1. **The ten remaining `DerivedCheck` `DIFF` rows** (`tools/drift-report.md` §(c)):
+1. **The eleven remaining projection `DIFF` rows.** The runtime slice of
+   2026-09-06 adds `Fibers.runDecision`: the Lean tape carries Completion,
+   while this avatar still has an exit-only answer. `D6-FB-AVATAR-ANSWER` pins
+   that mismatch in `OCaml5.Avatar.Check`. The ten earlier rows
+   (`tools/drift-report.md` §(c)) are:
    `Stores.scopeState`, `Stores.deferredStore`, `Context.service`, `Context.context`,
    `Context.reference`, `Context.val`, `Layer.construction`, `Layer.name`,
    `Layer.scopeState`, `Layer.memoMap`. They are the pair-alias, parameter, proof-field and

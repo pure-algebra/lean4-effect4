@@ -71,7 +71,7 @@ theorem drive_evaluate_enters (interp : RunInterp ν σ β ε δ ι α χ St) (f
         ((m.update { f with running := true, currentOpCount := 0, parked := Parked.notParked }).emit
           [RunEvent.started id])
         (Cmd.loop id false :: rest) := by
-  simp [drive, hs, hf, hexit, hrun]
+  simp [drive, driveState, driveStep, hs, hf, hexit, hrun]
 
 /-- `evaluate` on a fiber that has exited is a no-op (`:600`).
 census: rule.budget-per-runloop-entry -/
@@ -80,7 +80,7 @@ theorem drive_evaluate_exited (interp : RunInterp ν σ β ε δ ι α χ St) (f
     (rest : List (Cmd ν σ β ε δ ι α)) (hs : m.stuck = none) (hf : m.fiber? id = some f)
     (hexit : f.exit.isSome = true) :
     drive interp (fuel + 1) m (Cmd.evaluate id :: rest) = drive interp fuel m rest := by
-  simp [drive, hs, hf, hexit]
+  simp [drive, driveState, driveStep, hs, hf, hexit]
 
 /-- `evaluate` on a running fiber is a no-op (`:601`). census: rule.budget-per-runloop-entry -/
 theorem drive_evaluate_running (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
@@ -88,7 +88,7 @@ theorem drive_evaluate_running (interp : RunInterp ν σ β ε δ ι α χ St) (
     (rest : List (Cmd ν σ β ε δ ι α)) (hs : m.stuck = none) (hf : m.fiber? id = some f)
     (hrun : f.running = true) :
     drive interp (fuel + 1) m (Cmd.evaluate id :: rest) = drive interp fuel m rest := by
-  simp [drive, hs, hf, hrun]
+  simp [drive, driveState, driveStep, hs, hf, hrun]
 
 /-- The scheduler's verdict by default: the op count has reached the budget
 (`Scheduler.ts:174-176`). census: scheduler.should-yield -/
@@ -196,7 +196,7 @@ theorem Dispatcher.drain_disarms (d : Dispatcher ν σ β ε δ ι α) : (d.drai
 theorem fire_unknown (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId) (h : m.fiber? owner = none) :
     stepDecision.fire interp fuel m owner = m := by
-  unfold stepDecision.fire
+  unfold stepDecision.fire fireState
   rw [h]
 
 /-- The host's callback (`Scheduler.ts:214-217`, the tape's `fire`): the owner's dispatcher
@@ -207,16 +207,10 @@ theorem fire_eq (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId) (o : RunFiber ν σ β ε δ ι α χ)
     (h : m.fiber? owner = some o) :
     stepDecision.fire interp fuel m owner =
-      (o.dispatcher.drain).1.foldl (fun m task =>
-          let m := m.emit [RunEvent.ranTask owner task]
-          match task with
-          | Task.start child => drive interp fuel m [Cmd.evaluate child, Cmd.drainDue]
-          | Task.resume target token answer =>
-            drive interp fuel m [Cmd.resume target token answer, Cmd.drainDue])
-        ((m.update { o with dispatcher := (o.dispatcher.drain).2 }).disarm owner) := by
-  unfold stepDecision.fire
+      ((o.dispatcher.drain).1.foldl (fireStep interp fuel owner)
+        ((m.update { o with dispatcher := (o.dispatcher.drain).2 }).disarm owner, true)).1 := by
+  unfold stepDecision.fire fireState
   rw [h]
-  rfl
 
 /-- The first task scheduled on a dispatcher arms it: a host callback is scheduled behind
 those already scheduled (`Scheduler.ts:207-212`, R2-15). census: scheduler.dispatcher-arming -/
@@ -247,7 +241,7 @@ theorem RunMachine.disarm_eq (m : RunMachine ν σ β ε δ ι α χ St) (owner 
 theorem flushAll_idle (interp : RunInterp ν σ β ε δ ι α χ St) (fuel rounds : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St) (h : m.armed = []) :
     stepDecision.flushAll interp fuel (rounds + 1) m = m := by
-  simp [stepDecision.flushAll, h]
+  simp [stepDecision.flushAll, flushAllState, h]
 
 /-- The event loop runs the scheduled callbacks in arming order, one per round: the head of
 the schedule fires, and the loop goes round on what it left (`setImmediate` FIFO,
@@ -255,10 +249,11 @@ the schedule fires, and the loop goes round on what it left (`setImmediate` FIFO
 census: scheduler.flush -/
 theorem flushAll_round (interp : RunInterp ν σ β ε δ ι α χ St) (fuel rounds : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId) (rest : List FiberId)
-    (h : m.armed = owner :: rest) (hs : m.stuck = none) :
+    (h : m.armed = owner :: rest) (hs : m.stuck = none)
+    (hf : (fireState interp fuel m owner).2 = true) :
     stepDecision.flushAll interp fuel (rounds + 1) m =
       stepDecision.flushAll interp fuel rounds (stepDecision.fire interp fuel m owner) := by
-  simp [stepDecision.flushAll, h, hs]
+  simp [stepDecision.flushAll, flushAllState, stepDecision.fire, h, hs, hf]
 
 /-- `MixedSchedulerDispatcher.flush` (`Scheduler.ts:238-246`) on a dispatcher holding no
 task runs nothing. census: entry.run-sync-exit-with -/
@@ -266,17 +261,17 @@ theorem flushRoot_idle (interp : RunInterp ν σ β ε δ ι α χ St) (fuel rou
     (root : FiberId) (m : RunMachine ν σ β ε δ ι α χ St) (o : RunFiber ν σ β ε δ ι α χ)
     (h : m.fiber? root = some o) (hb : o.dispatcher.buckets = []) :
     stepDecision.flushRoot interp fuel root (rounds + 1) m = m := by
-  simp [stepDecision.flushRoot, h, hb]
+  simp [stepDecision.flushRoot, flushRootState, h, hb]
 
 /-- … and while it holds tasks its callback is cancelled and they run, round after round.
 census: entry.run-sync-exit-with -/
 theorem flushRoot_round (interp : RunInterp ν σ β ε δ ι α χ St) (fuel rounds : Nat)
     (root : FiberId) (m : RunMachine ν σ β ε δ ι α χ St) (o : RunFiber ν σ β ε δ ι α χ)
     (h : m.fiber? root = some o) (hb : o.dispatcher.buckets.isEmpty = false)
-    (hs : m.stuck = none) :
+    (hs : m.stuck = none) (hf : (fireState interp fuel m root).2 = true) :
     stepDecision.flushRoot interp fuel root (rounds + 1) m =
       stepDecision.flushRoot interp fuel root rounds (stepDecision.fire interp fuel m root) := by
-  simp [stepDecision.flushRoot, h, hb, hs]
+  simp [stepDecision.flushRoot, flushRootState, stepDecision.fire, h, hb, hs, hf]
 
 /-! The two budget references default to `2048` and `false` (`Scheduler.ts:269-272`,
 `:295-298`); the machine reads them through `RunInterp.budgetOf`, and the defaults are
@@ -315,7 +310,7 @@ theorem drive_loop_parked (interp : RunInterp ν σ β ε δ ι α χ St) (fuel 
         ((iteration interp m f yielding).machine.update
           { (iteration interp m f yielding).fiber with running := false })
         ((iteration interp m f yielding).nested ++ rest) := by
-  simp [drive, settle, hs, hf, h]
+  simp [drive, driveState, driveStep, settle, hs, hf, h]
 
 /-- … and where the iteration continues, the loop goes on with the latch it answered
 (`:648`, `:667`). census: rule.yield-is-overloaded -/
@@ -329,7 +324,7 @@ theorem drive_loop_continues (interp : RunInterp ν σ β ε δ ι α χ St) (fu
         ((iteration interp m f yielding).machine.update (iteration interp m f yielding).fiber)
         ((iteration interp m f yielding).nested ++
           [Cmd.loop id (iteration interp m f yielding).yielding] ++ rest) := by
-  simp [drive, settle, hs, hf, h]
+  simp [drive, driveState, driveStep, settle, hs, hf, h]
 
 /-- `Sync[evaluate]` (`:931-935`): the thunk runs against the store first, its value becomes
 the fiber's `current`, the resumes it owes are the nested `drainDue`, and the pop is owed
@@ -386,7 +381,7 @@ theorem drive_loop_answered (interp : RunInterp ν σ β ε δ ι α χ St) (fue
         ((iteration interp m f yielding).machine.update (iteration interp m f yielding).fiber)
         ((iteration interp m f yielding).nested ++
           [Cmd.deliver id (iteration interp m f yielding).yielding] ++ rest) := by
-  simp [drive, settle, hs, hf, h]
+  simp [drive, driveState, driveStep, settle, hs, hf, h]
 
 /-- The delivery (`:933-934`): the answer is evaluated as the fiber's `current` — no loop
 top, no op count — so its `getCont` sees what the nested commands recorded, and an `OnExit`
@@ -398,7 +393,7 @@ theorem drive_deliver (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Na
     drive interp (fuel + 1) m (Cmd.deliver id yielding :: rest) =
       drive interp fuel (settle id rest (evaluatePrim interp m f yielding)).1
         (settle id rest (evaluatePrim interp m f yielding)).2 := by
-  simp [drive, hs, hf]
+  simp [drive, driveState, driveStep, hs, hf]
 
 /-- The exit path as a command (`:611-628`): the fiber is re-read, its loop is over, and
 what `exitFiber` leaves to run precedes a drain of the store's owed resumes unless the fiber
@@ -411,7 +406,7 @@ theorem drive_finish (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat
       (let r := exitFiber interp m { f with running := false } exit
        drive interp fuel (r.1.update r.2.1)
          (r.2.2.2 ++ (if r.2.2.1 then [] else [Cmd.drainDue]) ++ rest)) := by
-  simp [drive, hs, hf]
+  simp [drive, driveState, driveStep, hs, hf]
 
 /-- The resume guard (`:990-993`, `:1121`): a resume whose token is not the guard the fiber
 is parked behind is dropped. census: scheduler.yield-now-resume-guard -/
@@ -421,7 +416,7 @@ theorem drive_resume_wrong_token (interp : RunInterp ν σ β ε δ ι α χ St)
     (hs : m.stuck = none) (ht : m.fiber? id = some t) (hp : t.parked = Parked.withGuard guard)
     (hne : guard ≠ token) :
     drive interp (fuel + 1) m (Cmd.resume id token answer :: rest) = drive interp fuel m rest := by
-  simp [drive, hs, ht, hp, hne]
+  simp [drive, driveState, driveStep, hs, ht, hp, hne]
 
 /-- A resume on the right guard unparks the fiber, drops the pending entry, installs the
 answer and evaluates (`:1121-1126`). census: scheduler.yield-now-resume-guard -/
@@ -436,7 +431,7 @@ theorem drive_resume_guard (interp : RunInterp ν σ β ε δ ι α χ St) (fuel
             pending := t.pending.filter fun p => p.token ≠ token
             frame := { t.frame with current := answer } }).emit [RunEvent.resumedWith id token answer])
         (Cmd.evaluate id :: rest) := by
-  simp [drive, hs, ht, hp]
+  simp [drive, driveState, driveStep, hs, ht, hp]
 
 /-- A resume on a fiber that is not parked is dropped. census: scheduler.yield-now-resume-guard -/
 theorem drive_resume_not_parked (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
@@ -444,7 +439,7 @@ theorem drive_resume_not_parked (interp : RunInterp ν σ β ε δ ι α χ St) 
     (answer : Prim ν σ β ε δ ι α) (t : RunFiber ν σ β ε δ ι α χ) (rest : List (Cmd ν σ β ε δ ι α))
     (hs : m.stuck = none) (ht : m.fiber? id = some t) (hp : t.parked = Parked.notParked) :
     drive interp (fuel + 1) m (Cmd.resume id token answer :: rest) = drive interp fuel m rest := by
-  simp [drive, hs, ht, hp]
+  simp [drive, driveState, driveStep, hs, ht, hp]
 
 /-! ## The interrupt entry -/
 
@@ -473,6 +468,8 @@ theorem interruptRecord_records (interp : RunInterp ν σ β ε δ ι α χ St)
     (interruptRecord interp interruptor extra f).1.frame.interruptedCause =
       some (interruptCauseOf interp interruptor extra f) := by
   unfold interruptRecord interruptCauseOf
+  dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
+    FiberCore.answerWith, FiberCore.failure, FiberCore.setDeferred, frameCore]
   simp only [h, Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
   cases f.frame.interruptedCause <;> simp only <;> split <;> (try split) <;> rfl
 
@@ -497,6 +494,8 @@ theorem interruptRecord_running_defers (interp : RunInterp ν σ β ε δ ι α 
     (interruptRecord interp interruptor extra f).2 = false ∧
       (interruptRecord interp interruptor extra f).1.frame.deferredInterrupt = true := by
   unfold interruptRecord
+  dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
+    FiberCore.answerWith, FiberCore.failure, FiberCore.setDeferred, frameCore]
   simp only [h, Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
   cases f.frame.interruptedCause <;> simp [hi, hr]
 
@@ -512,6 +511,8 @@ theorem interruptRecord_idle_applies (interp : RunInterp ν σ β ε δ ι α χ
       (interruptRecord interp interruptor extra f).1.frame.current =
         Prim.failure (interruptCauseOf interp interruptor extra f) := by
   unfold interruptRecord interruptCauseOf
+  dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
+    FiberCore.answerWith, FiberCore.failure, FiberCore.setDeferred, frameCore]
   simp only [h, Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
   cases f.frame.interruptedCause <;> simp [hi, hr]
 
@@ -525,6 +526,8 @@ theorem interruptRecord_masked (interp : RunInterp ν σ β ε δ ι α χ St)
         f.frame.deferredInterrupt ∧
       (interruptRecord interp interruptor extra f).1.frame.current = f.frame.current := by
   unfold interruptRecord
+  dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
+    FiberCore.answerWith, FiberCore.failure, FiberCore.setDeferred, frameCore]
   simp only [h, Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
   cases f.frame.interruptedCause <;> simp [hi]
 
@@ -757,7 +760,8 @@ theorem stepDecision_abort (interp : RunInterp ν σ β ε δ ι α χ St) (fuel
          m.emit [RunEvent.interruptDeferred target] else m
        let m := m.update r.1
        if r.2 then drive interp fuel m [Cmd.evaluate target, Cmd.drainDue] else m) := by
-  simp [stepDecision, ht]
+  simp only [stepDecision, stepDecisionState, stepDecisionState.loop, drive, ht]
+  split <;> rfl
 
 /-- `runSyncExitWith` (`:5535-5545`): the root is forked and the *root's* dispatcher flushed
 (`fiber._dispatcher?.flush()`, `:5542`; R2-14); the root's exit is the answer.
@@ -842,7 +846,10 @@ theorem interruptEach_cons (interp : RunInterp ν σ β ε δ ι α χ St) (who 
           | some g =>
             let r := interruptRecord interp (some who) extra g
             ((acc.1.update r.1).emit [RunEvent.interruptRecorded (some who) t],
-              acc.2 ++ (if r.2 then [Cmd.evaluate t] else []))) := rfl
+          acc.2 ++ (if r.2 then [Cmd.evaluate t] else []))) := by
+  simp only [interruptEach, List.foldl_cons]
+  congr 1
+  split <;> simp_all
 
 /-- A known target is recorded with `who` and the caller's annotations (`:892-895`: the
 caller's `fiberStackAnnotations`, whoever the interruptor is), and evaluated now only when
@@ -1213,7 +1220,7 @@ theorem drive_launch_done (interp : RunInterp ν σ β ε δ ι α χ St) (fuel 
     (hs : m.stuck = none) (hr : m.race? raceId = some race)
     (hp : race.programs = program :: more) (hacc : race.state.accepted = some accepted) :
     drive interp (fuel + 1) m (Cmd.launch raceId :: rest) = drive interp fuel m rest := by
-  simp [drive, hs, hr, hp, hacc]
+  simp [drive, driveState, driveStep, hs, hr, hp, hacc]
 
 /-- A launch with no entrant left is the end of the register loop. census: fork.race-all -/
 theorem drive_launch_exhausted (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
@@ -1221,7 +1228,7 @@ theorem drive_launch_exhausted (interp : RunInterp ν σ β ε δ ι α χ St) (
     (race : Race ν σ β ε δ ι α) (hs : m.stuck = none) (hr : m.race? raceId = some race)
     (hp : race.programs = []) :
     drive interp (fuel + 1) m (Cmd.launch raceId :: rest) = drive interp fuel m rest := by
-  simp [drive, hs, hr, hp]
+  simp [drive, driveState, driveStep, hs, hr, hp]
 
 /-- A launch before the race has accepted forks the next entrant over the host, adds it to
 the live set, evaluates it now (`forkUnsafe(…, true, …)`, `:1521`) and goes round again
@@ -1241,7 +1248,7 @@ theorem drive_launch_runs (interp : RunInterp ν σ β ε δ ι α χ St) (fuel 
             state := { race.state with live := race.state.live ++ [l.2] } }).emit
            [RunEvent.raceLaunched raceId l.2])
          (Cmd.evaluate l.2 :: Cmd.launch raceId :: rest)) := by
-  simp [drive, hs, hr, hp, hacc, hh]
+  simp [drive, driveState, driveStep, hs, hr, hp, hacc, hh]
 
 /-- `forkIn`'s link as a command (`:5366-5376`, R2-8): `linkScope` over the re-read child,
 whatever it owes first. census: fork.in -/
@@ -1252,7 +1259,7 @@ theorem drive_link (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
     drive interp (fuel + 1) m (Cmd.link mode scope key target interruptor extra :: rest) =
       (let l := linkScope interp m mode scope key target interruptor extra
        drive interp fuel l.1 (l.2 ++ rest)) := by
-  simp [drive, hs]
+  simp [drive, driveState, driveStep, hs]
 
 /-- `fork` (`:5264-5284`): a non-daemon fork installs the interrupt-children middleware
 (`forkChild`, `:5253`), then spawn with the options as given, start by `startImmediately`, and
@@ -1539,5 +1546,90 @@ theorem evaluatePrim_async_parks (interp : RunInterp ν σ β ε δ ι α χ St)
        ⟨m.emit [RunEvent.parkedOn g.id token], g, yielding, Outcome.parked, []⟩) := by
   simp only [evaluatePrim, hreg]
   try rfl
+
+/-! ## Command equations retaining unfinished work
+
+These are the same command clauses above, with the residual command list retained
+for the fuel receipts used by replay and the program agreement proof.
+-/
+
+theorem driveState_evaluate_enters (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId) (f : RunFiber ν σ β ε δ ι α χ)
+    (rest : List (Cmd ν σ β ε δ ι α)) (hs : m.stuck = none) (hf : m.fiber? id = some f)
+    (hexit : f.exit = none) (hrun : f.running = false) :
+    driveState interp (fuel + 1) m (Cmd.evaluate id :: rest) =
+      driveState interp fuel
+        ((m.update { f with running := true, currentOpCount := 0, parked := Parked.notParked }).emit
+          [RunEvent.started id])
+        (Cmd.loop id false :: rest) := by
+  simp [driveState, driveStep, hs, hf, hexit, hrun]
+
+theorem driveState_loop_parked (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId) (yielding : Bool)
+    (f : RunFiber ν σ β ε δ ι α χ) (rest : List (Cmd ν σ β ε δ ι α))
+    (hs : m.stuck = none) (hf : m.fiber? id = some f)
+    (h : (iteration interp m f yielding).outcome = Outcome.parked) :
+    driveState interp (fuel + 1) m (Cmd.loop id yielding :: rest) =
+      driveState interp fuel
+        ((iteration interp m f yielding).machine.update
+          { (iteration interp m f yielding).fiber with running := false })
+        ((iteration interp m f yielding).nested ++ rest) := by
+  simp [driveState, driveStep, settle, hs, hf, h]
+
+theorem driveState_loop_continues (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId) (yielding : Bool)
+    (f : RunFiber ν σ β ε δ ι α χ) (rest : List (Cmd ν σ β ε δ ι α))
+    (hs : m.stuck = none) (hf : m.fiber? id = some f)
+    (h : (iteration interp m f yielding).outcome = Outcome.continue_) :
+    driveState interp (fuel + 1) m (Cmd.loop id yielding :: rest) =
+      driveState interp fuel
+        ((iteration interp m f yielding).machine.update (iteration interp m f yielding).fiber)
+        ((iteration interp m f yielding).nested ++
+          [Cmd.loop id (iteration interp m f yielding).yielding] ++ rest) := by
+  simp [driveState, driveStep, settle, hs, hf, h]
+
+theorem driveState_loop_answered (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId) (yielding : Bool)
+    (f : RunFiber ν σ β ε δ ι α χ) (rest : List (Cmd ν σ β ε δ ι α))
+    (hs : m.stuck = none) (hf : m.fiber? id = some f)
+    (h : (iteration interp m f yielding).outcome = Outcome.answered) :
+    driveState interp (fuel + 1) m (Cmd.loop id yielding :: rest) =
+      driveState interp fuel
+        ((iteration interp m f yielding).machine.update (iteration interp m f yielding).fiber)
+        ((iteration interp m f yielding).nested ++
+          [Cmd.deliver id (iteration interp m f yielding).yielding] ++ rest) := by
+  simp [driveState, driveStep, settle, hs, hf, h]
+
+theorem driveState_deliver (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId) (yielding : Bool)
+    (f : RunFiber ν σ β ε δ ι α χ) (rest : List (Cmd ν σ β ε δ ι α))
+    (hs : m.stuck = none) (hf : m.fiber? id = some f) :
+    driveState interp (fuel + 1) m (Cmd.deliver id yielding :: rest) =
+      driveState interp fuel (settle id rest (evaluatePrim interp m f yielding)).1
+        (settle id rest (evaluatePrim interp m f yielding)).2 := by
+  simp [driveState, driveStep, hs, hf]
+
+theorem driveState_finish (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId) (exit : Exit β ε δ ι α)
+    (f : RunFiber ν σ β ε δ ι α χ) (rest : List (Cmd ν σ β ε δ ι α))
+    (hs : m.stuck = none) (hf : m.fiber? id = some f) :
+    driveState interp (fuel + 1) m (Cmd.finish id exit :: rest) =
+      (let r := exitFiber interp m { f with running := false } exit
+       driveState interp fuel (r.1.update r.2.1)
+         (r.2.2.2 ++ (if r.2.2.1 then [] else [Cmd.drainDue]) ++ rest)) := by
+  simp [driveState, driveStep, hs, hf]
+
+theorem driveState_resume_guard (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId) (token : Nat)
+    (answer : Prim ν σ β ε δ ι α) (t : RunFiber ν σ β ε δ ι α χ) (rest : List (Cmd ν σ β ε δ ι α))
+    (hs : m.stuck = none) (ht : m.fiber? id = some t) (hp : t.parked = Parked.withGuard token) :
+    driveState interp (fuel + 1) m (Cmd.resume id token answer :: rest) =
+      driveState interp fuel
+        ((m.update { t with
+            parked := Parked.notParked
+            pending := t.pending.filter fun p => p.token ≠ token
+            frame := { t.frame with current := answer } }).emit [RunEvent.resumedWith id token answer])
+        (Cmd.evaluate id :: rest) := by
+  simp [driveState, driveStep, hs, ht, hp]
 
 end Effect4.Machine

@@ -126,7 +126,7 @@ def parseDecision (s : String) : Option Api.Decision :=
     -- answer:<fiber>:<token>:<nat> — an external resume with a success value
     match ((s.drop 7).toString.splitOn ":").map String.toNat? with
     | [some f, some t, some v] =>
-      some (RunDecision.answerAsync ⟨f⟩ t (Prim.success (Val.nat v)))
+      some (RunDecision.answerAsync ⟨f⟩ t (Completion.ofExit (Exit.success (Val.nat v))))
     | _ => none
   else none
 

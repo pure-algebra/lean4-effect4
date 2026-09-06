@@ -1253,6 +1253,11 @@ def interp (table : LayerTable) : RunInterp Name Thunk Val Err Defect FiberId An
   dueResumes := fun state =>
     let (due, deferreds) := state.deferreds.drainDue
     (due, { state with deferreds := deferreds })
+  -- The Layer profile has no Ref heap. Its external answers admit exits only;
+  -- the Ref-read completion is the existing unsupported-operation defect.
+  answerCode := fun
+    | Completion.ofExit exit => Prim.ofExit exit
+    | Completion.ofRefGet _ => Prim.failure (Cause.die Defect.notImplemented)
   cancelName := fun base fiber token => Name.withWaiter base fiber token
   abortName := Name.abortController
   parkCancelName := Name.cancelPark

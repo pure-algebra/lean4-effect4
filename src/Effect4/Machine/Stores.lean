@@ -45,19 +45,6 @@ namespace Effect4.Machine
 
 open Effect4
 
-/-! ## Keys
-
-Keys are structures over `Nat` at `Type 0`. rc.112 mints fresh *objects*; the index is the
-model's stand-in and owes a refusal row of the `SCOPE-FB-KEY-IDENTITY` shape
-(`src/Effect4/Machine/Scope.lean:318`, `docs/research/SCOPE-DAG.md:226`). -/
-
-/-- A cell of the Ref heap. `Ref.ts:142-146` allocates a fresh `MutableRef` object; the index
-is the model's stand-in. -/
-structure RefKey where
-  /-- Allocation order. -/
-  index : Nat
-deriving DecidableEq, Repr, Inhabited
-
 /-- A cell of the Deferred store (`Deferred.ts:140-145`). -/
 structure DeferredKey where
   /-- Allocation order. -/
@@ -67,7 +54,8 @@ deriving DecidableEq, Repr, Inhabited
 /-! ## The alphabets
 
 Every alphabet is first-order and derives `DecidableEq`, which the separation gates of
-`Deep.Fibers` (`docs/research/FRAMES-DAG.md` separation 4) need at this instantiation. -/
+`Deep.Fibers` (`docs/research/FRAMES-DAG.md` separation 4) need at this instantiation.
+The generic Completion data and its Ref key are shared through `Machine.Completion`. -/
 
 /-- The typed error alphabet. -/
 inductive Err
@@ -184,18 +172,6 @@ abbrev ExitV := Exit Val Err Defect FiberId Ann
 /-- The exit carrier a finalizer produces (`combineFinalizerCause`, `internal/effect.ts:3800-3804`). -/
 abbrev VoidExitV := Exit Unit Err Defect FiberId Ann
 
-/-- What a `completeWith` stores. rc.112 assigns the argument *effect* to `self.effect` and
-never runs it (`Deferred.ts:456-461` into `:1650`); `done` is `completeWith` itself (`:570-571`),
-so an `Exit` completion is the `ofExit` arm. `ofRefGet` is a genuinely non-exit completion — a
-`sync` read of a Ref cell — which is what makes
-`deferred.complete-with-stores-effect` say something. -/
-inductive Completion
-  /-- `done(self, exit)` = `completeWith(self, exit)` (`Deferred.ts:570-571`). -/
-  | ofExit (exit : ExitV)
-  /-- `completeWith(self, Ref.get(cell))`: an effect, stored and not run. -/
-  | ofRefGet (cell : RefKey)
-deriving DecidableEq
-
 /-- Every `sync` thunk that touches a store. One arm per rc.112 operation, named with its
 arguments; `syncState` gives them meaning. -/
 inductive SyncOp
@@ -234,7 +210,7 @@ inductive SyncOp
   | deferredPoll (cell : DeferredKey)
   /-- `Deferred.completeWith` (`Deferred.ts:456-461`) and, through it, `done`, `succeed`,
   `fail`, `failCause`, `die` (`:570-571`, `:1514`, `:669`, `:877`, `:1087`). -/
-  | deferredCompleteWith (cell : DeferredKey) (completion : Completion)
+  | deferredCompleteWith (cell : DeferredKey) (completion : Completion Val Err Defect FiberId Ann)
   /-- `Deferred.interruptWith` (`Deferred.ts:1332-1337`): `failCause` of `causeInterrupt(id)`. -/
   | deferredInterruptWith (cell : DeferredKey) (interruptor : FiberId)
   /-- `_await`'s cleanup (`Deferred.ts:178-185`): splice this waiter out; a no-op once
@@ -1080,7 +1056,7 @@ def finProgram : FinName → ExitV → Program
 
 /-- The stored primitive a `Completion` names. `done exit = completeWith (Prim.ofExit exit)`
 (`Deferred.ts:570-571`); `ofRefGet` is a non-exit effect, stored and not run (`:456-461`). -/
-def completionPrim : Completion → Program
+def completionPrim : Completion Val Err Defect FiberId Ann → Program
   | Completion.ofExit exit => Prim.ofExit exit
   | Completion.ofRefGet cell => Prim.sync (Thunk.op (SyncOp.refGet cell))
 
@@ -1380,6 +1356,7 @@ def stores : RunInterp Name Thunk Val Err Defect FiberId Ann Ctx Stores where
   dueResumes := fun state =>
     let (due, deferreds) := state.deferreds.drainDue
     (due, { state with deferreds := deferreds })
+  answerCode := completionPrim
   cancelName := fun base fiber token => Name.withWaiter base fiber token
   abortName := Name.abortController
   parkCancelName := Name.cancelPark

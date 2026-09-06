@@ -341,7 +341,7 @@ def w2 : M :=
   replay Stores.empty (ProgName.forkOnly w2Child daemonChild)
     [RunDecision.evaluate ⟨0⟩,
       RunDecision.interruptFrom (some ⟨0⟩) ReasonAnnotations.empty ⟨1⟩,
-      RunDecision.answerAsync ⟨1⟩ 0 (Prim.success Val.unit)]
+      RunDecision.answerAsync ⟨1⟩ 0 (Completion.ofExit (Exit.success Val.unit))]
 
 /-- The cause is recorded against the masked child and, when the finalizer's exit passes the
 unmask frame, delivered: the child exits with the interrupt cause carrying the interruptor. -/
@@ -789,7 +789,7 @@ def w10Masked : M :=
   replay Stores.empty (ProgName.forkOnly w10MaskedChild daemonChild)
     [RunDecision.evaluate ⟨0⟩,
       RunDecision.interruptFrom (some ⟨0⟩) ReasonAnnotations.empty ⟨1⟩,
-      RunDecision.answerAsync ⟨1⟩ 0 (Prim.success Val.unit)]
+      RunDecision.answerAsync ⟨1⟩ 0 (Completion.ofExit (Exit.success Val.unit))]
 
 /-- Without the answer the interrupt is recorded and *not* applied: the fiber is still parked,
 because it masked itself. -/
@@ -887,7 +887,7 @@ def w12InputOrder : M :=
         (ProgName.forkOnly (ProgName.value (Val.nat 4)) deferredChild)
         (ProgName.awaitFibers [⟨1⟩, ⟨2⟩])))
     [RunDecision.evaluate ⟨0⟩, RunDecision.fire ⟨0⟩,
-      RunDecision.answerAsync ⟨1⟩ 1 (Prim.success (Val.nat 3))]
+      RunDecision.answerAsync ⟨1⟩ 1 (Completion.ofExit (Exit.success (Val.nat 3)))]
 
 /-- The same before the answer: the awaiter observes `1` only (`fiberAwaitAll` attaches one
 observer at a time, `:802`), and `2`, already exited, carries none. -/
@@ -1077,11 +1077,11 @@ def w15Program : ProgName :=
 
 def w15Armed : M :=
   replay Stores.empty w15Program
-    [RunDecision.evaluate ⟨0⟩, RunDecision.answerAsync ⟨1⟩ 0 (Prim.success Val.unit)]
+    [RunDecision.evaluate ⟨0⟩, RunDecision.answerAsync ⟨1⟩ 0 (Completion.ofExit (Exit.success Val.unit))]
 
 def w15Flushed : M :=
   replay Stores.empty w15Program
-    [RunDecision.evaluate ⟨0⟩, RunDecision.answerAsync ⟨1⟩ 0 (Prim.success Val.unit),
+    [RunDecision.evaluate ⟨0⟩, RunDecision.answerAsync ⟨1⟩ 0 (Completion.ofExit (Exit.success Val.unit)),
       RunDecision.flush]
 
 /-- `E4-RUN-CE-039`: the schedule is `[2, 1]` — `2` armed before `1` — and the flush runs `2`'s
@@ -1136,7 +1136,7 @@ def w13SyncUnderOnExitAnswered : M :=
       (ProgName.syncOp (SyncOp.deferredCompleteWith ⟨0⟩
         (Completion.ofExit (Exit.success (Val.nat 7)))))
       (FinName.parkThen 1) false)
-    [RunDecision.evaluate ⟨0⟩, RunDecision.answerAsync ⟨0⟩ 0 (Prim.success Val.unit)]
+    [RunDecision.evaluate ⟨0⟩, RunDecision.answerAsync ⟨0⟩ 0 (Completion.ofExit (Exit.success Val.unit))]
 
 /-- The interrupt the waiter records on the completer, while the completer is inside its
 `sync`, is what the `onExit` frame under that `sync` sees: its finalizer runs once, with the
@@ -1268,7 +1268,8 @@ theorem forbidden_interrupt_while_running (who : Option FiberId)
     (hmask : f.frame.interruptible = true) :
     (interruptRecord stores who extra f).2 = false ∧
       (interruptRecord stores who extra f).1.frame.deferredInterrupt = true := by
-  simp [interruptRecord, hexit, hrunning, hmask]
+  simp [interruptRecord, FiberCore.interruptedCause, FiberCore.recordCause,
+    FiberCore.interruptible, FiberCore.setDeferred, hexit, hrunning, hmask]
 
 /-- Forbidden 3: a `SetInterruptible` frame *evaluated as `current`* is `defaultEvaluate`'s
 defect, never a mask change — the mask change is the frame's `contAll` on the way out. -/
@@ -1334,5 +1335,3 @@ alone) — the receipt `docs/RUNTIME-COVERAGE.md:52-55` requires of a witness. T
 `sorry`, no `native_decide` and no custom axiom anywhere in this spike. -/
 
 end Effect4.Machine.Witnesses
-
-

@@ -172,7 +172,11 @@ def report (tag : String) (hand derived : String) : IO Unit :=
 #guard (parts.map (·.name)).eraseDups.length == parts.length
 
 #guard (parts.flatMap Part.rows).length == 58
-#guard ((parts.flatMap Part.rows).filter (fun r => r.2.1 == r.2.2)).length == 48
+-- D6-FB-AVATAR-ANSWER: Completion is wider than the avatar's exit-only tape.
+-- Pin this specific new disagreement as well as the existing projection count.
+#guard proj (.induct Fibers.runDecision) !=
+  projUnder (.induct Fibers.runDecision) (.induct Derived.Fibers.runDecision)
+#guard ((parts.flatMap Part.rows).filter (fun r => r.2.1 == r.2.2)).length == 47
 
 #eval do
   let rows := parts.flatMap Part.rows

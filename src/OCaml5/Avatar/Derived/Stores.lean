@@ -7,7 +7,7 @@ open OCaml5.Ml
 
 def refKey : StructDesc where
   leanName := "RefKey"
-  site := "Stores.lean:54"
+  site := "Completion.lean:20"
   subst := []
   leanParams := []
   fields :=
@@ -15,7 +15,7 @@ def refKey : StructDesc where
 
 def deferredKey : StructDesc where
   leanName := "DeferredKey"
-  site := "Stores.lean:61"
+  site := "Stores.lean:48"
   subst := []
   leanParams := []
   fields :=
@@ -23,7 +23,7 @@ def deferredKey : StructDesc where
 
 def err : InductiveDesc where
   leanName := "Err"
-  site := "Stores.lean:72"
+  site := "Stores.lean:60"
   subst := []
   leanParams := []
   ctors :=
@@ -32,7 +32,7 @@ def err : InductiveDesc where
 
 def defect : InductiveDesc where
   leanName := "Defect"
-  site := "Stores.lean:78"
+  site := "Stores.lean:66"
   subst := []
   leanParams := []
   ctors :=
@@ -44,7 +44,7 @@ def defect : InductiveDesc where
 
 def fnName : InductiveDesc where
   leanName := "FnName"
-  site := "Stores.lean:96"
+  site := "Stores.lean:84"
   subst := []
   leanParams := []
   ctors :=
@@ -56,7 +56,7 @@ def fnName : InductiveDesc where
 
 def finName : InductiveDesc where
   leanName := "FinName"
-  site := "Stores.lean:112"
+  site := "Stores.lean:100"
   subst := []
   leanParams := []
   ctors :=
@@ -69,7 +69,7 @@ def finName : InductiveDesc where
 
 def ctx : StructDesc where
   leanName := "Ctx"
-  site := "Stores.lean:135"
+  site := "Stores.lean:123"
   subst := []
   leanParams := []
   fields :=
@@ -79,16 +79,16 @@ def ctx : StructDesc where
 
 def completion : InductiveDesc where
   leanName := "Completion"
-  site := "Stores.lean:187"
+  site := "Completion.lean:25"
   subst := []
-  leanParams := []
+  leanParams := ["β", "ε", "δ", "ι", "α"]
   ctors :=
-    [{ leanName := "ofExit", args := [{ leanName := "exit", leanTy := .nm "ExitV" }] },
+    [{ leanName := "ofExit", args := [{ leanName := "exit", leanTy := .app "Exit" [.nm "β", .nm "ε", .nm "δ", .nm "ι", .nm "α"] }] },
      { leanName := "ofRefGet", args := [{ leanName := "cell", leanTy := .nm "RefKey" }] }]
 
 def syncOp : InductiveDesc where
   leanName := "SyncOp"
-  site := "Stores.lean:199"
+  site := "Stores.lean:175"
   subst := []
   leanParams := []
   ctors :=
@@ -108,7 +108,7 @@ def syncOp : InductiveDesc where
      { leanName := "deferredMake", args := [] },
      { leanName := "deferredIsDone", args := [{ leanName := "cell", leanTy := .nm "DeferredKey" }] },
      { leanName := "deferredPoll", args := [{ leanName := "cell", leanTy := .nm "DeferredKey" }] },
-     { leanName := "deferredCompleteWith", args := [{ leanName := "cell", leanTy := .nm "DeferredKey" }, { leanName := "completion", leanTy := .nm "Completion" }] },
+     { leanName := "deferredCompleteWith", args := [{ leanName := "cell", leanTy := .nm "DeferredKey" }, { leanName := "completion", leanTy := .app "Completion" [.nm "Val", .nm "Err", .nm "Defect", .nm "FiberId", .nm "Ann"] }] },
      { leanName := "deferredInterruptWith", args := [{ leanName := "cell", leanTy := .nm "DeferredKey" }, { leanName := "interruptor", leanTy := .nm "FiberId" }] },
      { leanName := "deferredAwaitCleanup", args := [{ leanName := "cell", leanTy := .nm "DeferredKey" }, { leanName := "waiter", leanTy := .nm "FiberId" }, { leanName := "token", leanTy := .nm "Nat" }] },
      { leanName := "scopeMake", args := [{ leanName := "strategy", leanTy := .nm "FinalizerStrategy" }] },
@@ -118,7 +118,7 @@ def syncOp : InductiveDesc where
 
 def raceName : InductiveDesc where
   leanName := "RaceName"
-  site := "Stores.lean:253"
+  site := "Stores.lean:229"
   subst := []
   leanParams := []
   ctors :=
@@ -131,7 +131,7 @@ def raceName : InductiveDesc where
 
 def progName : InductiveDesc where
   leanName := "ProgName"
-  site := "Stores.lean:277"
+  site := "Stores.lean:253"
   subst := []
   leanParams := []
   ctors :=
@@ -162,7 +162,7 @@ def progName : InductiveDesc where
 
 def name : InductiveDesc where
   leanName := "Name"
-  site := "Stores.lean:337"
+  site := "Stores.lean:313"
   subst := []
   leanParams := []
   ctors :=
@@ -190,7 +190,7 @@ def name : InductiveDesc where
 
 def actionName : InductiveDesc where
   leanName := "ActionName"
-  site := "Stores.lean:398"
+  site := "Stores.lean:374"
   subst := []
   leanParams := []
   ctors :=
@@ -216,7 +216,7 @@ def actionName : InductiveDesc where
 
 def thunk : InductiveDesc where
   leanName := "Thunk"
-  site := "Stores.lean:427"
+  site := "Stores.lean:403"
   subst := []
   leanParams := []
   ctors :=
@@ -257,7 +257,7 @@ def scope : StructDesc where
 
 def deferredCell : StructDesc where
   leanName := "DeferredCell"
-  site := "Stores.lean:678"
+  site := "Stores.lean:654"
   subst := []
   leanParams := []
   fields :=
@@ -266,7 +266,7 @@ def deferredCell : StructDesc where
 
 def deferredStore : StructDesc where
   leanName := "DeferredStore"
-  site := "Stores.lean:687"
+  site := "Stores.lean:663"
   subst := []
   leanParams := []
   fields :=
@@ -275,7 +275,7 @@ def deferredStore : StructDesc where
 
 def scopeEntry : StructDesc where
   leanName := "ScopeEntry"
-  site := "Stores.lean:885"
+  site := "Stores.lean:861"
   subst := []
   leanParams := []
   fields :=
@@ -284,7 +284,7 @@ def scopeEntry : StructDesc where
 
 def scopeStore : StructDesc where
   leanName := "ScopeStore"
-  site := "Stores.lean:893"
+  site := "Stores.lean:869"
   subst := []
   leanParams := []
   fields :=
@@ -292,7 +292,7 @@ def scopeStore : StructDesc where
 
 def stores : StructDesc where
   leanName := "Stores"
-  site := "Stores.lean:1028"
+  site := "Stores.lean:1004"
   subst := []
   leanParams := []
   fields :=
