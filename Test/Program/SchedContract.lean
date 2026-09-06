@@ -7,9 +7,10 @@ import Test.Program.CompileContract
 Packet: `Test/contracts/program-sched.contract.md`; module `src/Effect4/Program/Sched.lean`
 (slice two, R1 of `docs/research/2026-09-05-slices-2-3-worksheets.md`). These guards pin
 the shape of `RSig` (the store signature on the left, the fiber signature on the right, one
-value or exit per answer), the placeholder nature of the right half, and `meaning_via_rsig` on the
-contract programs: the straight-line denotation injected on the left means, under the
-summed handler, what `meaning` says. Every pin is a `#guard` over first-order values.
+value, exit or boundary-entry answer), the placeholder nature of the right half, and
+`meaning_via_rsig` on the contract programs: the straight-line denotation injected on
+the left means, under the summed handler, what `meaning` says. Every pin is a `#guard`
+over first-order values.
 -/
 
 set_option autoImplicit false
@@ -25,9 +26,13 @@ open Test.Syntax.CompileContract (pSucceed pBindSync pFail pCatch pOnExit pRefSe
 example : RSig.Op = (SyncOp ⊕ FiberOp) := rfl
 example (o : SyncOp) : RSig.Answer (Sum.inl o) = Val := rfl
 example (o : FiberOp) : RSig.Answer (Sum.inr o) = o.answer := rfl
-example (p : Point) : RSig.Answer (.inr (.mask false p)) = ExitV := rfl
+example (body : Body) : RSig.Answer (.inr (.mask false body)) = ExitV := rfl
+example (p : Point) : RSig.Answer (.inr (.fork (.at_ p) scopedChild)) = Val := rfl
 example (id : FiberId) : RSig.Answer (.inr (.await id .joinEffect)) = ExitV := rfl
 example (id : FiberId) : RSig.Answer (.inr (.await id .awaitValue)) = Val := rfl
+example (kind : GuardKind) : RSig.Answer (.inr (.guard_ kind)) = Option ExitV := rfl
+example (ex : ExitV) : RSig.Answer (.inr (.unguard ex)) = ExitV := rfl
+example (ex : ExitV) : RSig.Answer (.inr (.finishFinalizer ex)) = ExitV := rfl
 
 -- E4-SCHED-CE-002: the scout's proposed collision is false; success adds `exitOk`.
 theorem exit_encoding_distinguishes (c : CauseV) :
@@ -62,6 +67,15 @@ def forkWithoutScope : NativeEff := .withFiber (.forkScoped pSucceed scopedChild
 #guard decide (FiberOp.yieldNow 0 = FiberOp.yieldNow 0) = true
 #guard decide (FiberOp.await ⟨1⟩ Supervision.ObserverMode.awaitValue =
   FiberOp.await ⟨1⟩ Supervision.ObserverMode.joinEffect) = false
+#guard decide (Body.at_ ⟨[], [], 0, []⟩ = Body.interruptFibers []) = false
+#guard decide (Body.fin (.release 1 false) (.success .unit) =
+  Body.fin (.release 1 false) (.success .unit)) = true
+#guard decide (FiberOp.guard_ (.onExit false) = FiberOp.guard_ .onSuccess) = false
+#guard decide (FiberOp.unguard (.success .unit) = FiberOp.finishFinalizer (.success .unit)) = false
+#guard (FiberOp.guard_ .all).defaultAnswer = none
+#guard (FiberOp.unguard (.failure (Cause.fail Err.boom))).defaultAnswer =
+  .failure (Cause.fail Err.boom)
+#guard (FiberOp.finishFinalizer (.success (.nat 7))).defaultAnswer = .success (.nat 7)
 
 /-! ## The store half under the summed handler -/
 

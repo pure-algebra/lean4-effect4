@@ -202,6 +202,7 @@ import Effect4.Program.Agreement.Machine
 import Effect4.Program.Progress
 import Effect4.Program.Sched
 import Effect4.Program.DenoteR
+import Effect4.Program.RuntimeR
 import Effect4.Program.Handles
 -- The provision algebra (docs/research/2026-09-04-provision-algebra.md): `Row.diff`, the
 -- layer signature `LayerTy` and its laws, the layer term `LayerTerm` over `Eff` bodies,

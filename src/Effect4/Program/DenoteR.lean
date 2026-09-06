@@ -5,7 +5,8 @@ import Effect4.Program.Agreement
 # Bounded denotation over stores and fibers (R2)
 
 Contract: `Test/contracts/program-denote-r.contract.md`. Design and authorized
-corrections: `docs/research/2026-09-06-w3-r2-continuation.md`.
+corrections: `docs/research/2026-09-06-w3-r2-continuation.md` and
+`docs/research/2026-09-06-r3-r4-implementation.md`.
 
 `denoteR` unfolds the existing `Eff` at a `Point`. Its leading structural budget
 bounds this unfolding; `Point.fuel` separately retains the compile's fuel. A
@@ -14,12 +15,13 @@ the compile's program-counter navigation and environment truncation, but does
 not run compiled code to obtain a meaning. `inlineYield` records exactly which
 yielded source forms expose an immediate exit before the iterator resumes.
 
-The straight fragment restricts to `Denote.denote` when both budgets cover its
-depth. Fiber nodes are an interface for the later term scheduler, not a handler
+After explicit control erasure the straight fragment restricts to `Denote.denote`
+when both budgets cover its depth. The raw terms retain handler and cleanup
+boundaries (`E4-SCHED-CE-004`). Fiber nodes are the term scheduler's interface, not a handler
 semantics or a simulation theorem. In particular the placeholder `rHandler`
 must not be used to interpret a frontier as a finished result (`RDEN-FB-HANDLER`).
-Scope and mask nodes carry bodies by address; their execution and interruption
-rules belong to R3/R4 (`RDEN-FB-SCHEDULER`). Program rows and acquisition/release
+Scope and mask nodes carry addressed or synthesized bodies; their execution and
+interruption rules live in R3/R4 (`RDEN-FB-SCHEDULER`). Program rows and acquisition/release
 remain unsupported frontiers, as in `compileEff` (`RDEN-FB-UNSUPPORTED`).
 -/
 
@@ -37,6 +39,54 @@ def pending (reason : FrontierReason) (at_ : ResumePoint) : RProgram :=
 def seqR (k : Val → RProgram) : ExitV → RProgram
   | .success v => k v
   | .failure c => .pure (.failure c)
+
+/-- Retain a continuation boundary. The normal branch closes it explicitly;
+an interrupted body resumes through the saved exit branch instead. -/
+def guardR (kind : GuardKind) (body : RProgram) : RProgram :=
+  .vis (.inr (.guard_ kind)) fun
+    | none => body.bind fun ex => .vis (.inr (.unguard ex)) Effects.Program.pure
+    | some ex => .pure ex
+
+/-- An exit finalizer has its own boundary, then restores the body's exit and mask.
+The runtime implements the mask; erasure below removes only these control markers. -/
+def onExitR (body : RProgram) (fin : ExitV → RProgram)
+    (interruptible : Bool := false) : RProgram :=
+  (guardR (.onExit interruptible) body).bind fun ex =>
+    (guardR .all (fin ex)).bind fun fex =>
+      .vis (.inr (.finishFinalizer (Exit.restoreAfterFinalizer ex (finVoid fex))))
+        Effects.Program.pure
+
+/-- Forget control boundaries for the store meaning, retaining every other operation.
+This is an erasure, not a scheduler or a handler for interruption. -/
+def controlErasure : Effects.Handler RSig (Effects.Program RSig) where
+  handle
+    | .inr (.guard_ _) => .pure none
+    | .inr (.unguard ex) | .inr (.finishFinalizer ex) => .pure ex
+    | op => .vis op Effects.Program.pure
+
+def eraseControl {A : Type} (program : Effects.Program RSig A) : Effects.Program RSig A :=
+  Effects.interpret controlErasure program
+
+theorem eraseControl_pure {A : Type} (a : A) :
+    eraseControl (Effects.Program.pure a) = .pure a := rfl
+
+theorem eraseControl_bind {A B : Type} (p : Effects.Program RSig A)
+    (k : A → Effects.Program RSig B) :
+    eraseControl (p.bind k) = (eraseControl p).bind (fun a => eraseControl (k a)) :=
+  Effects.interpret_bind controlErasure p k
+
+theorem eraseControl_guardR (kind : GuardKind) (body : RProgram) :
+    eraseControl (guardR kind body) = eraseControl body := by
+  change eraseControl (body.bind fun ex => .vis (.inr (.unguard ex)) Effects.Program.pure) = _
+  rw [eraseControl_bind]
+  exact Effects.Program.bind_pure_right _
+
+theorem eraseControl_onExitR (body : RProgram) (fin : ExitV → RProgram) (flag : Bool) :
+    eraseControl (onExitR body fin flag) =
+      (eraseControl body).bind fun ex => (eraseControl (fin ex)).bind fun fex =>
+        .pure (Exit.restoreAfterFinalizer ex (finVoid fex)) := by
+  simp only [onExitR, eraseControl_bind, eraseControl_guardR]
+  rfl
 
 /-- Race entrants use the same list-node addresses as `actionAt.entrants`. -/
 def entrantPoints : Effs NativeOp → Point → List Point
@@ -56,7 +106,7 @@ def denoteAction (root : NativeEff) (p : Point) : RProgram :=
   | some action =>
     match action with
     | .fork _ options =>
-      .vis (.inr (.fork ((p.child 0).child 0) options)) fun v => .pure (.success v)
+      .vis (.inr (.fork (.at_ ((p.child 0).child 0)) options)) fun v => .pure (.success v)
     | .forkIn _ options scope key =>
       .vis (.inr (.forkIn ((p.child 0).child 0) options scope key)) fun v => .pure (.success v)
     | .forkScoped _ options key =>
@@ -76,7 +126,7 @@ def denoteAction (root : NativeEff) (p : Point) : RProgram :=
       .vis (.inr (.awaitNewChildren snapshot)) fun v => .pure (.success v)
     | .raceAll _ => .vis (.inr (.raceAll (racePoints root p))) Effects.Program.pure
     | .setInterruptible _ flag =>
-      .vis (.inr (.mask flag (p.child 0))) Effects.Program.pure
+      .vis (.inr (.mask flag (.at_ (p.child 0)))) Effects.Program.pure
     | .setContext ctx => .vis (.inr (.setContext ctx)) fun v => .pure (.success v)
     | .getContext => .vis (.inr .getContext) fun v => .pure (.success v)
     | .getId => .vis (.inr .getId) fun v => .pure (.success v)
@@ -159,24 +209,23 @@ mutual
             | none => .pure badShapeExit
           | .async => denoteAsync request p
           | .program => pending .unsupported (.effect p)
-        | .bind a b => (denoteR root n a (p.child 0)).bind
+        | .bind a b => (guardR .onSuccess (denoteR root n a (p.child 0))).bind
           (seqR fun v => denoteR root n b (p.childWith 1 v))
         | .branch test a b =>
           match evalTerm p.env test with
           | some (.bool true) => denoteR root n a (p.child 0)
           | some (.bool false) => denoteR root n b (p.child 1)
           | _ => .pure badShapeExit
-        | .exit b => (denoteR root n b (p.child 0)).bind fun ex =>
+        | .exit b => (guardR .all (denoteR root n b (p.child 0))).bind fun ex =>
           .pure (.success (reifyExitVal ex))
-        | .catchCause b h => (denoteR root n b (p.child 0)).bind fun
+        | .catchCause b h => (guardR .onFailure (denoteR root n b (p.child 0))).bind fun
           | .success v => .pure (.success v)
           | .failure c => denoteR root n h (p.childWith 1 (.exitErr c))
-        | .matchCause b v c => (denoteR root n b (p.child 0)).bind fun
+        | .matchCause b v c => (guardR .all (denoteR root n b (p.child 0))).bind fun
           | .success x => denoteR root n v (p.childWith 1 x)
           | .failure cause => denoteR root n c (p.childWith 2 (.exitErr cause))
-        | .onExit b f => (denoteR root n b (p.child 0)).bind fun ex =>
-          (denoteR root n f (p.childWith 1 (reifyExitVal ex))).bind fun fex =>
-            .pure (Exit.restoreAfterFinalizer ex (finVoid fex))
+        | .onExit b f => onExitR (denoteR root n b (p.child 0)) fun ex =>
+          denoteR root n f (p.childWith 1 (reifyExitVal ex))
         | .gen _ => denoteGen root n p p.fuel [] p.env
         | .whileLoop initial _ _ _ =>
           match evalTerm p.env initial with
@@ -245,7 +294,7 @@ mutual
       | some (.success value) =>
         denoteGen root n p fuel (pc ++ [1]) (if bind then env ++ [value] else env)
       | some (.failure cause) => .pure (.failure cause)
-      | none => (denoteR root n e q).bind (seqR fun value =>
+      | none => (guardR .onSuccess (denoteR root n e q)).bind (seqR fun value =>
         denoteGen root n { p with env } p.fuel (pc ++ [1])
           (if bind then env ++ [value] else env))
 
@@ -258,7 +307,7 @@ mutual
       | none => .pure (.success .unit)
       | some (test, step, body) =>
         if evalTerm (p.env ++ [cursor]) test = some (.bool true) then
-          (denoteR root n body (p.childWith 0 cursor)).bind (seqR fun value =>
+          (guardR .onSuccess (denoteR root n body (p.childWith 0 cursor))).bind (seqR fun value =>
             denoteLoop root n p ((evalTerm (p.env ++ [cursor, value]) step).getD cursor))
         else .pure (.success .unit)
 end
@@ -276,7 +325,8 @@ theorem denoteR_compile_zero (root e : NativeEff) (n : Nat) (p : Point) (h : p.f
 theorem denoteR_bind (root : NativeEff) (n : Nat) (a b : NativeEff) (p : Point)
     (h : p.fuel ≠ 0) :
     denoteR root (n + 1) (.bind a b) p =
-      (denoteR root n a (p.child 0)).bind (seqR fun v => denoteR root n b (p.childWith 1 v)) := by
+      (guardR .onSuccess (denoteR root n a (p.child 0))).bind
+        (seqR fun v => denoteR root n b (p.childWith 1 v)) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
   | succ f => rw [denoteR, hf]
@@ -385,7 +435,7 @@ termination_by structural e
 
 theorem denoteR_straight (root : NativeEff) (n : Nat) (e : NativeEff) (p : Point)
     (hs : Straight e = true) (hn : Agreement.depth e ≤ n) (hp : Agreement.depth e ≤ p.fuel) :
-    denoteR root n e p = Effects.Program.inl (denote e p.env) := by
+    eraseControl (denoteR root n e p) = Effects.Program.inl (denote e p.env) := by
   induction n generalizing e p with
   | zero =>
     have impossible : False := by have := Agreement.depth_pos e; omega
@@ -412,7 +462,8 @@ theorem denoteR_straight (root : NativeEff) (n : Nat) (e : NativeEff) (p : Point
         have ha := ih a (p.child 0) hab.1
           (by simp only [Agreement.depth] at hn; omega)
           (by simp only [Agreement.depth] at hp; simp only [Point.child]; omega)
-        rw [denoteR_bind root n a b p hpos, ha, denote, Effects.Program.inl_bind]
+        rw [denoteR_bind root n a b p hpos, eraseControl_bind, eraseControl_guardR,
+          ha, denote, Effects.Program.inl_bind]
         congr 1
         funext ex
         cases ex with
@@ -443,15 +494,16 @@ theorem denoteR_straight (root : NativeEff) (n : Nat) (e : NativeEff) (p : Point
         have hb := ih b (p.child 0) hs
           (by simp only [Agreement.depth] at hn; omega)
           (by simp only [Agreement.depth] at hp; simp only [Point.child]; omega)
-        rw [denoteR, hf, hb, denote, Effects.Program.inl_bind]
+        rw [denoteR, hf, eraseControl_bind, eraseControl_guardR,
+          hb, denote, Effects.Program.inl_bind]
         rfl
       | catchCause b h =>
         have hbh := Straight.catchCause hs
         have hb := ih b (p.child 0) hbh.1
           (by simp only [Agreement.depth] at hn; omega)
           (by simp only [Agreement.depth] at hp; simp only [Point.child]; omega)
-        rw [denoteR, hf, hb, denote, Effects.Program.inl_bind]
-        dsimp only
+        rw [denoteR, hf, eraseControl_bind, eraseControl_guardR,
+          hb, denote, Effects.Program.inl_bind]
         congr 1
         funext ex
         cases ex with
@@ -465,8 +517,8 @@ theorem denoteR_straight (root : NativeEff) (n : Nat) (e : NativeEff) (p : Point
         have hb := ih b (p.child 0) hparts.1
           (by simp only [Agreement.depth] at hn; omega)
           (by simp only [Agreement.depth] at hp; simp only [Point.child]; omega)
-        rw [denoteR, hf, hb, denote, Effects.Program.inl_bind]
-        dsimp only
+        rw [denoteR, hf, eraseControl_bind, eraseControl_guardR,
+          hb, denote, Effects.Program.inl_bind]
         congr 1
         funext ex
         cases ex with
@@ -483,8 +535,7 @@ theorem denoteR_straight (root : NativeEff) (n : Nat) (e : NativeEff) (p : Point
         have hb := ih b (p.child 0) hparts.1
           (by simp only [Agreement.depth] at hn; omega)
           (by simp only [Agreement.depth] at hp; simp only [Point.child]; omega)
-        rw [denoteR, hf, hb, denote, Effects.Program.inl_bind]
-        dsimp only
+        rw [denoteR, hf, eraseControl_onExitR, hb, denote, Effects.Program.inl_bind]
         congr 1
         funext ex
         have hfin := ih fin (p.childWith 1 (reifyExitVal ex)) hparts.2
@@ -499,7 +550,8 @@ theorem denoteR_straight (root : NativeEff) (n : Nat) (e : NativeEff) (p : Point
 theorem meaning_denoteR_straight (root : NativeEff) (n : Nat) (e : NativeEff) (p : Point)
     (hs : Straight e = true) (hn : Agreement.depth e ≤ n) (hp : Agreement.depth e ≤ p.fuel)
     (stores : Stores) :
-    (Effects.interpret rHandler (denoteR root n e p)).run stores = meaning e p.env stores := by
+    (Effects.interpret rHandler (eraseControl (denoteR root n e p))).run stores =
+      meaning e p.env stores := by
   rw [denoteR_straight root n e p hs hn hp]
   exact meaning_via_rsig e p.env stores
 

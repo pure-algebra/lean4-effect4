@@ -1,11 +1,13 @@
 # Program sched contract packet
 
-Status: FROZEN / GREEN, authored and landed 2026-09-06 (slice two, R1 of
+Status: FROZEN / GREEN, amended for R3/R4, authored 2026-09-06 (slice two, R1 of
 `docs/research/2026-09-05-slices-2-3-worksheets.md`; plan
 `docs/research/2026-09-05-runtime-proof-graph.md` §3, Layer R). The module landed with its
-battery and its report; every theorem below is proved. R2 amends the answer family
-and adds residual frontier addresses under the owner's 2026-09-06 correction.
-The corrected signature, battery and dependency receipts pass their narrow build.
+battery and its report; every theorem below is proved. The owner authorized R2's
+dependent answers and residual frontier addresses, then the R3/R4 correction
+retaining handler/cleanup boundaries and naming synthesized bodies. The signature,
+battery and dependency receipts pass their focused build and the coordinator's
+whole-tree gate. Final receipt: `docs/research/2026-09-06-r3-r4-implementation.md`.
 
 Implementation: `src/Effect4/Program/Sched.lean`; its R2 consumer and corrected
 denotation contract are `Program/DenoteR.lean` and `program-denote-r.contract.md`.
@@ -23,18 +25,23 @@ Depends on: `src/Effect4/Program/Denote.lean` (`StoreSig`, `storeHandler`, `deno
 
 This packet freezes the *signature* the term scheduler's fibers speak and one fact about
 its store half. It does not give the fiber operations a semantics: that is the term
-scheduler itself (worksheet R3–R4, owed), a state machine over the fiber machine's
+scheduler itself (`Program/RuntimeR.lean`, worksheet R3–R4), a state machine over the fiber machine's
 decisions, bookkeeping and stores, not a handler into `StateT Stores Id`.
 
 1. `FiberOp` is first-order and decidable. It covers the fiber-level arms of the
    machine's `evaluatePrim`, alongside addressed scope/body operations and frontiers.
-   Every operation that encloses a program carries a
-   `Point`, never a program (positivity; and the compile holds compiled code at the same
-   address).
+   Fork and mask carry `Body`, whose three first-order constructors name a source
+   `Point`, a store finalizer with its exit, or the fibers of a synthesized interrupt-all
+   body. Other enclosing operations retain source points. None carries a program.
+   `GuardKind` names success, failure, both-arm and exit-finalizer boundaries;
+   `guard_`, `unguard` and `finishFinalizer` retain their explicit entry and exit
+   markers for the evaluator. The R2 packet defines the erasure that removes them
+   when proving agreement with the existing straight denotation.
 2. `RSig = Signature.sum StoreSig FiberSig` at universe `.{0, 0}`, `RSig.Op = SyncOp ⊕
    FiberOp`. Store answers are `Val`; fiber answers are `FiberOp.answer`: `ExitV` for
    masks, scopes, scope close, acquisition/release, races, effect joins, async,
-   scoped forks and frontiers, `Val` for the other
+   scoped forks, frontiers and the two closing control markers; `Option ExitV` for
+   boundary entry (`none` enters, `some exit` resumes outside); `Val` for the other
    operations. These shape equations are by `rfl`. This replaces R1's all-`Val` claim
    so operations that deliver exits do not need an extra decoding convention.
    The scout's claimed encoding collision was false: `E4-SCHED-CE-002` retains the
@@ -45,7 +52,8 @@ decisions, bookkeeping and stores, not a handler into `StateT Stores Id`.
    one-node program (`perform_inl_bind`).
 4. `interpret_inl_store`: the straight-line denotation injected on the left means, under
    the summed handler, what it means under the store handler; `meaning_via_rsig`
-   recovers `meaning`. This is the target `denoteR_straight` (R2) lands on.
+   recovers `meaning`. This is the target `denoteR_straight` (R2) reaches after
+   explicit control erasure.
 
 Refused by name (in the module header): `SCHED-FB-FIBER-HANDLER`, the placeholder
 `fiberRefusal` is not a semantics of the fiber operations; `SCHED-FB-REFUSE`,
@@ -63,8 +71,14 @@ Refused by name (in the module header): `SCHED-FB-FIBER-HANDLER`, the placeholde
 
 | id | status | claim attacked | witness | disposition |
 | --- | --- | --- | --- | --- |
-| `E4-SCHED-CE-001` | SEEDED | The summed handler is a semantics of the fiber operations | `rHandler.handle (.inr FiberOp.getId)` on the empty store answers `unit` and leaves the store: a `getId` that names no fiber | the right half is a placeholder (`SCHED-FB-FIBER-HANDLER`); the fiber operations are interpreted by the term scheduler, owed |
+| `E4-SCHED-CE-001` | SEEDED | The summed handler is a semantics of the fiber operations | `rHandler.handle (.inr FiberOp.getId)` on the empty store answers `unit` and leaves the store: a `getId` that names no fiber | the right half is a placeholder (`SCHED-FB-FIBER-HANDLER`); the fiber operations are interpreted by `Program/RuntimeR.lean` |
 | `E4-SCHED-CE-002` | SEEDED | The R2 scout's proposed exit-encoding collision | The battery proves the proposed images differ, and `exitOfVal (reifyExitVal ex) = some ex` for every exit | correct the rationale: dependent exit answers give a direct interface; encoding was already reversible |
+
+The R3/R4 cleanup counterexample is pinned in `DenoteRContract`:
+`cleanup_boundary_distinct` proves different raw boundaries for cleanup and an
+ordinary success continuation, while their erased terms coincide. Its reference
+machine execution is recorded in the coordinator's R3/R4 contract correction.
+This is why control markers must remain in the scheduler's term.
 
 ## Falsifiers
 

@@ -1,8 +1,9 @@
 import Effect4.Program.DenoteR
 import Test.Program.CompileContract
 
-/-! R2 finite probes and universal statement pins. The observer runs store nodes only;
-it stops at every fiber node, including frontiers. It never uses `fiberRefusal`.
+/-! R2 finite probes and universal statement pins. The store observer first erases
+control markers, then stops at every remaining fiber node, including frontiers.
+Raw probes retain the handler and cleanup markers. Neither uses `fiberRefusal`.
 Packet: `Test/contracts/program-denote-r.contract.md`. -/
 
 set_option autoImplicit false
@@ -20,15 +21,19 @@ inductive Observation
 deriving DecidableEq
 
 /-- A finite store-only observer; reaching a fiber operation leaves it unanswered. -/
-def observe : Nat → RProgram → Stores → Observation
+def observeRaw : Nat → RProgram → Stores → Observation
   | 0, _, _ => .exhausted
   | n + 1, program, stores =>
     match program with
     | .pure ex => .done ex stores
     | .vis (.inl op) k =>
       let (value, stores') := (storeHandler.handle op).run stores
-      observe n (k value) stores'
+      observeRaw n (k value) stores'
     | .vis (.inr op) _ => .waiting op stores
+
+/-- The former store-only meaning after removing explicit control boundaries. -/
+def observe (fuel : Nat) (program : RProgram) (stores : Stores) : Observation :=
+  observeRaw fuel (eraseControl program) stores
 
 def rootPoint (fuel : Nat := 80) (env : List Val := []) (choices : List Bool := []) : Point :=
   ⟨[], env, fuel, choices⟩
@@ -86,7 +91,7 @@ def writeThenFail : NativeEff :=
 def branchFork : NativeEff :=
   .branch (.lit (.bool false)) pFail (.withFiber (.fork pSucceed deferredChild))
 #guard operation? (result branchFork) =
-  some (.fork ⟨[1, 0, 0], [], 77, []⟩ deferredChild)
+  some (.fork (.at_ ⟨[1, 0, 0], [], 77, []⟩) deferredChild)
 
 def scopedFork : NativeEff := .withFiber (.forkScoped pSucceed scopedChild)
 #guard operation? (result scopedFork) = some (.forkScoped ⟨[0, 0], [], 78, []⟩ scopedChild 80)
@@ -95,8 +100,8 @@ def forkInTerm : NativeEff := .withFiber (.forkIn pSucceed deferredChild (.var 0
 #guard operation? (observe 5 (unfolded forkInTerm 10 8 [.scopeHandle 3]) Stores.empty) =
   some (.forkIn ⟨[0, 0], [.scopeHandle 3], 6, []⟩ deferredChild 3 8)
 
-#guard operation? (result (.uninterruptible pFail)) = some (.mask false ⟨[0], [], 79, []⟩)
-#guard operation? (result (.interruptible pFail)) = some (.mask true ⟨[0], [], 79, []⟩)
+#guard operation? (result (.uninterruptible pFail)) = some (.mask false (.at_ ⟨[0], [], 79, []⟩))
+#guard operation? (result (.interruptible pFail)) = some (.mask true (.at_ ⟨[0], [], 79, []⟩))
 #guard operation? (result (.scoped pSucceed)) = some (.scoped ⟨[0], [], 79, []⟩ 0)
 #guard ((stores? (result (.scoped pSucceed))).map fun s => s.scopes.entries.length) = some 1
 
@@ -161,9 +166,50 @@ def endlessLoop : NativeEff := .whileLoop (.lit (.nat 0)) (.lit (.bool true)) (.
 #guard operation? (observe 30 (unfolded endlessLoop 1 80) Stores.empty) =
   some (.frontier .unfoldingFuel (.loop (rootPoint) (.nat 0)))
 
+-- Cleanup and an ordinary success continuation retain different boundary data.
+-- Their old, erased terms coincide, so the distinction must remain in denoteR.
+def cleanupUnit : NativeEff :=
+  .bind (.perform .refMake (.lit (.nat 9))) (.succeed (.lit .unit))
+def ensured : NativeEff := .onExit (.yieldNow 0) cleanupUnit
+def sequenced : NativeEff := .bind (.yieldNow 0) cleanupUnit
+
+#guard operation? (observeRaw 1 (unfolded ensured) Stores.empty) =
+  some (.guard_ (.onExit false))
+#guard operation? (observeRaw 1 (unfolded sequenced) Stores.empty) =
+  some (.guard_ .onSuccess)
+#guard operation? (observeRaw 1 (unfolded (.catchCause pFail pSucceed)) Stores.empty) =
+  some (.guard_ .onFailure)
+#guard operation? (observeRaw 1 (unfolded (.exit pFail)) Stores.empty) =
+  some (.guard_ .all)
+
+theorem cleanup_boundary_distinct : unfolded ensured ≠ unfolded sequenced := by
+  intro h
+  have heads := congrArg (fun p => operation? (observeRaw 1 p Stores.empty)) h
+  change some (FiberOp.guard_ (.onExit false)) = some (.guard_ .onSuccess) at heads
+  cases heads
+
+example : eraseControl (unfolded ensured) = eraseControl (unfolded sequenced) := rfl
+
+-- Erasure only removes boundary bookkeeping. Fiber work and live frontiers stay visible.
+#guard operation? (observeRaw 1 (eraseControl (unfolded ensured)) Stores.empty) =
+  some (.yieldNow 0)
+#guard operation? (observeRaw 1 (eraseControl (guardR .all
+  (.vis (.inr .getId) (fun v => .pure (.success v))))) Stores.empty) = some .getId
+#guard operation? (observeRaw 1 (eraseControl (guardR .onSuccess
+  (pending .compileFuel (.effect (rootPoint 0))))) Stores.empty) =
+  some (.frontier .compileFuel (.effect (rootPoint 0)))
+#guard observeRaw 1 (eraseControl (.vis (.inr (.unguard (.failure (Cause.fail Err.boom))))
+  Effects.Program.pure)) Stores.empty = .done (.failure (Cause.fail Err.boom)) Stores.empty
+#guard observeRaw 1 (eraseControl (.vis (.inr (.finishFinalizer (.success (.nat 7))))
+  Effects.Program.pure)) Stores.empty = .done (.success (.nat 7)) Stores.empty
+
 #check (@denoteR_straight : ∀ (root : NativeEff) (n : Nat) (e : NativeEff) (p : Point),
   Straight e = true → Agreement.depth e ≤ n → Agreement.depth e ≤ p.fuel →
-  denoteR root n e p = Effects.Program.inl (denote e p.env))
+  eraseControl (denoteR root n e p) = Effects.Program.inl (denote e p.env))
+#check (@meaning_denoteR_straight : ∀ (root : NativeEff) (n : Nat) (e : NativeEff) (p : Point),
+  Straight e = true → Agreement.depth e ≤ n → Agreement.depth e ≤ p.fuel → ∀ stores : Stores,
+  (Effects.interpret rHandler (eraseControl (denoteR root n e p))).run stores =
+    meaning e p.env stores)
 #check (@inlineYield_eq_headExit : ∀ (e : NativeEff) (p : Point),
   inlineYield e p = headExit (compileEff e p))
 

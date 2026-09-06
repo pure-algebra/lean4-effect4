@@ -96,6 +96,9 @@ import Test.Program.SchedContract
 import Test.Program.SchedAxiomReport
 import Test.Program.DenoteRContract
 import Test.Program.DenoteRAxiomReport
+import Test.Program.RuntimeRContract
+import Test.Program.RuntimeRShapesContract
+import Test.Program.RuntimeRAxiomReport
 import Test.Program.ProvisionContract
 import Test.Program.ProvisionAxiomReport
 import Test.Program.ConfigContract

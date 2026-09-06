@@ -2,7 +2,7 @@ import Effect4.Program.Denote
 import Effects.Algebra.Sum
 
 /-!
-# Program.Sched — the term scheduler's signature (R1, amended for R2)
+# Program.Sched — the term scheduler's signature (R1, amended for R2–R4)
 
 Plan: `docs/research/2026-09-05-runtime-proof-graph.md` §3 (Layer R, the term scheduler);
 worksheet: `docs/research/2026-09-05-slices-2-3-worksheets.md` (R1); strategy:
@@ -14,16 +14,15 @@ This module declares the signature the term scheduler's fibers speak: the store 
 fiber-level arm of the machine's `evaluatePrim` (`src/Effect4/Machine/Fibers.lean`, the
 `withFiber` arms, the join and async parks, the yield), alongside addressed scope/body
 operations and live frontiers, summed by `Effects.Signature.sum`.
-Every operation that encloses a program (`fork`, `mask`, `scoped`, `acquireRelease`,
-`raceAll`) carries a `Point`, an address into the root program with its environment, and
-never a program: a program-valued operation parameter is not a positive inductive
-definition (the graph note, core math §5), and it is also what the compile does, which
-holds a compiled `Prim` at the same address.
+Enclosing operations carry source points; `fork` and `mask` also admit the two
+first-order synthesized `Body` shapes used by store finalization. Control markers
+retain continuation boundaries across suspension. No operation stores a semantic
+program or a function: `Eff` remains the only source representation.
 
 What is proved here is only the store half: the straight-line denotation injected on the
 left of the sum has, under the summed handler, exactly the meaning `Denote.lean` gives it
 (`meaning_via_rsig`, through the algebra's `interpret_inl`). The fiber operations have no
-handler here on purpose: the term scheduler (`Sched`, owed: worksheet R3–R4) interprets
+handler here on purpose: the term scheduler (`RuntimeR`, worksheet R3–R4) interprets
 them as a state machine over the same decisions, bookkeeping and stores as the fiber
 machine, not as a `Handler` into `StateT Stores Id`. `fiberRefusal` below answers every
 fiber operation with a default answer and exists only so that the summed handler is total; no
@@ -62,10 +61,26 @@ inductive ResumePoint
   | loop (point : Point) (cursor : Val)
 deriving DecidableEq
 
-/-- Fiber operations plus addressed scope/body operations and bounded frontiers.
-Enclosing operations carry a `Point`; a frontier also retains its residual control. -/
+/-- Addressed source bodies and the two synthesized bodies used by the stores.
+`Stores.raceSettleProgram` and `closeParChain` have no source point. -/
+inductive Body
+  | at_ (point : Point)
+  | fin (name : FinName) (exit : ExitV)
+  | interruptFibers (live : List FiberId)
+deriving DecidableEq
+
+/-- Continuation slots retained across suspension. These are control data, not
+stored functions or a second program syntax. `onExit` runs its cleanup masked. -/
+inductive GuardKind
+  | onSuccess
+  | onFailure
+  | all
+  | onExit (finalizerInterruptible : Bool)
+deriving DecidableEq
+
+/-- Fiber operations plus addressed bodies, control boundaries and live frontiers. -/
 inductive FiberOp : Type
-  | fork (child : Point) (options : Supervision.ForkOptions)
+  | fork (child : Body) (options : Supervision.ForkOptions)
   | forkIn (child : Point) (options : Supervision.ForkOptions) (scope : Nat) (key : Nat)
   | forkScoped (child : Point) (options : Supervision.ForkOptions) (key : Nat)
   | await (target : FiberId) (mode : Supervision.ObserverMode)
@@ -76,7 +91,7 @@ inductive FiberOp : Type
   | interrupt (target : FiberId)
   | interruptScoped (target : FiberId)
   | interruptAll (targets : List FiberId) (interruptor : Option FiberId)
-  | mask (flag : Bool) (body : Point)
+  | mask (flag : Bool) (body : Body)
   | scoped (body : Point) (scope : Nat)
   | closeScope (scope : Nat) (exit : ExitV)
   | acquireRelease (acquire : Point) (release : Point)
@@ -91,12 +106,18 @@ inductive FiberOp : Type
   | dropObservers (token : Nat)
   | refuse (cause : Cause Err Defect FiberId Ann)
   | frontier (reason : FrontierReason) (resumeAt : ResumePoint)
+  /-- `none` enters the body; `some exit` resumes outside its saved boundary. -/
+  | guard_ (kind : GuardKind)
+  | unguard (exit : ExitV)
+  | finishFinalizer (exit : ExitV)
 deriving DecidableEq
 
 /-- Operations that deliver an exit answer directly with that exit, while value-returning
 operations retain `Val`. R2's answer amendment is recorded in the packet; the scout's
 claimed collision in `reifyExitVal` is false (`E4-SCHED-CE-002`). -/
 abbrev FiberOp.answer : FiberOp → Type
+  | .guard_ _ => Option ExitV
+  | .unguard _ | .finishFinalizer _ => ExitV
   | .mask _ _ | .scoped _ _ | .closeScope _ _ | .acquireRelease _ _ | .raceAll _
   | .async _ _ | .forkScoped _ _ _ | .frontier _ _ => ExitV
   | .await _ .joinEffect => ExitV
@@ -104,6 +125,8 @@ abbrev FiberOp.answer : FiberOp → Type
 
 /-- Only a total placeholder for the store-lift theorem; never a fiber semantics. -/
 def FiberOp.defaultAnswer : (op : FiberOp) → op.answer
+  | .guard_ _ => none
+  | .unguard ex | .finishFinalizer ex => ex
   | .mask _ _ | .scoped _ _ | .closeScope _ _ | .acquireRelease _ _ | .raceAll _
   | .async _ _ | .forkScoped _ _ _ | .frontier _ _ => Exit.success Val.unit
   | .await _ .joinEffect => Exit.success Val.unit
