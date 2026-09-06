@@ -52,6 +52,10 @@ import Test.Counterexamples.Machine.Runtime.Frames
 import Test.Machine.Runtime.LiveStackContract
 import Test.Machine.Runtime.LiveStackAxiomReport
 import Test.Counterexamples.Machine.Runtime.LiveStack
+import Test.Machine.Runtime.StoresLawsContract
+import Test.Machine.Runtime.StoresLawsAxiomReport
+import Test.Machine.Runtime.ApproximationContract
+import Test.Machine.Runtime.ApproximationAxiomReport
 import Test.Store.Templates
 import Test.Store.StoreContract
 import Test.Store.NodeContract
@@ -70,6 +74,14 @@ import Test.Ingest.JsonSchemaContract
 import Test.Ingest.WranglerContract
 import Test.Ingest.McpContract
 import Test.Program.CompileContract
+import Test.Program.TypedContract
+import Test.Program.TypedAxiomReport
+import Test.Program.DenoteContract
+import Test.Program.DenoteAxiomReport
+import Test.Program.AgreementContract
+import Test.Program.AgreementAxiomReport
+import Test.Program.ProgressContract
+import Test.Program.ProgressAxiomReport
 import Test.Program.ProvisionContract
 import Test.Program.ProvisionAxiomReport
 import Test.Program.ConfigContract

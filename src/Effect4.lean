@@ -73,6 +73,14 @@ import Effect4.Codegen.EffectfulField
 import Effect4.Machine.Fibers
 import Effect4.Machine.Clauses
 import Effect4.Machine.Stores
+-- The stores' laws (slice 1, lane 2): the growth order, validity of values and operations,
+-- the heap invariant, and that a valid operation steps, grows the store and answers a valid
+-- value.
+import Effect4.Machine.StoresLaws
+-- The fuel laws over the live fiber machine (G2): the loop with its residue and the
+-- splitting law, the trace that only grows, the order on replay results, sufficiency and
+-- stability, and the least sufficient fuel under a bound.
+import Effect4.Machine.Approximation
 import Effect4.Machine.Witnesses
 import Effect4.Machine.Context
 import Effect4.Machine.Layer
@@ -176,6 +184,19 @@ import Effect4.Codegen.Print
 import Effect4.Codegen.Read
 import Effect4.Program.Native
 import Effect4.Program.Compile
+-- The compile's ground (docs/research/2026-09-05-slice-1-compile-ground.md; packet
+-- `Test/contracts/program-denotation.contract.md`): the value typing of the native cut and
+-- that typed terms evaluate; the straight-line denotation into the `Effects` algebra over the
+-- store signature; and the agreement — a plain program run by `Api.run` finishes with its
+-- meaning's exit and stores (`run_eq_meaning`), through the frame machine's local run and the
+-- fiber machine's command loop over one fiber.
+import Effect4.Program.Typed
+import Effect4.Program.Denote
+import Effect4.Program.Agreement
+import Effect4.Program.Agreement.Machine
+-- The first join of the value typing and the stores' laws: a typed request against a typed
+-- heap steps to a typed answer and keeps the heap typed (`answer_typed`, `progress`).
+import Effect4.Program.Progress
 -- The provision algebra (docs/research/2026-09-04-provision-algebra.md): `Row.diff`, the
 -- layer signature `LayerTy` and its laws, the layer term `LayerTerm` over `Eff` bodies,
 -- `App` (`Effect.provide`), the build specification with its totality theorem, and the
