@@ -131,6 +131,12 @@ namespace NativeOp
 /-- The handle types this cut spells: cells hold numbers, deferreds carry numbers and fail
 with numbers (the error alphabet's `Err.tag`). -/
 def refTy : Ty := .handle "Ref.Ref<number>"
+/-- The type arguments of the `Deferred` handle this cut spells, in order. They are what
+`Deferred.make` must be *called* with: the export's own parameters have defaults
+(`Deferred<unknown, never>`), so without them the host types the cell at those defaults and
+rejects every later use at this row's declared types (`E4-CHECK-CE-013`,
+`Deferred.ts:171`). -/
+def deferredTypeArgs : List String := ["number", "number"]
 def deferredTy : Ty := .handle "Deferred.Deferred<number, number>"
 
 /-- The printed name of a pure function, `Ref.update(ref, incr)`. -/
@@ -143,64 +149,64 @@ def fnSpelling : FnName → String
 
 /-- The row of each operation. -/
 def row : NativeOp → Row
-  | refMake => ⟨"refMake", "Ref.make", .call, [], .sync, .nat, refTy, .never, [], "Ref.ts:173"⟩
-  | refGet => ⟨"refGet", "Ref.get", .call, [], .sync, refTy, .nat, .never, [], "Ref.ts:200"⟩
+  | refMake => ⟨"refMake", "Ref.make", .call, [], .sync, .nat, refTy, .never, [], "Ref.ts:173", []⟩
+  | refGet => ⟨"refGet", "Ref.get", .call, [], .sync, refTy, .nat, .never, [], "Ref.ts:200", []⟩
   | refSet =>
-    ⟨"refSet", "Ref.set", .tupleCall, [], .sync, .prod refTy .nat, refTy, .never, [], "Ref.ts:306-307"⟩
+    ⟨"refSet", "Ref.set", .tupleCall, [], .sync, .prod refTy .nat, refTy, .never, [], "Ref.ts:306-307", []⟩
   | refGetAndSet =>
     ⟨"refGetAndSet", "Ref.getAndSet", .tupleCall, [], .sync, .prod refTy .nat, .nat, .never, [],
-      "Ref.ts:399-404"⟩
+      "Ref.ts:399-404", []⟩
   | refSetAndGet =>
     ⟨"refSetAndGet", "Ref.setAndGet", .tupleCall, [], .sync, .prod refTy .nat, .nat, .never, [],
-      "Ref.ts:747"⟩
+      "Ref.ts:747", []⟩
   | refUpdate f =>
     ⟨"refUpdate", "Ref.update", .call, [fnSpelling f], .sync, refTy, .unit, .never, [],
-      "Ref.ts:1273-1276"⟩
+      "Ref.ts:1273-1276", []⟩
   | refGetAndUpdate f =>
     ⟨"refGetAndUpdate", "Ref.getAndUpdate", .call, [fnSpelling f], .sync, refTy, .nat, .never, [],
-      "Ref.ts:496-501"⟩
+      "Ref.ts:496-501", []⟩
   | refUpdateAndGet f =>
     ⟨"refUpdateAndGet", "Ref.updateAndGet", .call, [fnSpelling f], .sync, refTy, .nat, .never, [],
-      "Ref.ts:1368"⟩
+      "Ref.ts:1368", []⟩
   | refUpdateSome f =>
     ⟨"refUpdateSome", "Ref.updateSome", .call, [fnSpelling f], .sync, refTy, .unit, .never, [],
-      "Ref.ts:1502-1508"⟩
+      "Ref.ts:1502-1508", []⟩
   | refGetAndUpdateSome f =>
     ⟨"refGetAndUpdateSome", "Ref.getAndUpdateSome", .call, [fnSpelling f], .sync, refTy, .nat,
-      .never, [], "Ref.ts:635-643"⟩
+      .never, [], "Ref.ts:635-643", []⟩
   | refUpdateSomeAndGet f =>
     ⟨"refUpdateSomeAndGet", "Ref.updateSomeAndGet", .call, [fnSpelling f], .sync, refTy, .nat,
-      .never, [], "Ref.ts:1639-1646"⟩
+      .never, [], "Ref.ts:1639-1646", []⟩
   | refModify f =>
     ⟨"refModify", "Ref.modify", .call, [fnSpelling f], .sync, refTy, .nat, .never, [],
-      "Ref.ts:896-901"⟩
+      "Ref.ts:896-901", []⟩
   | refModifySome f =>
     ⟨"refModifySome", "Ref.modifySome", .call, [fnSpelling f], .sync, refTy, .nat, .never, [],
-      "Ref.ts:1159-1163"⟩
+      "Ref.ts:1159-1163", []⟩
   | deferredMake =>
     ⟨"deferredMake", "Deferred.make", .call, [], .sync, .unit, deferredTy, .never, [],
-      "Deferred.ts:171"⟩
+      "Deferred.ts:171", deferredTypeArgs⟩
   | deferredIsDone =>
     ⟨"deferredIsDone", "Deferred.isDone", .call, [], .sync, deferredTy, .bool, .never, [],
-      "Deferred.ts:1382"⟩
+      "Deferred.ts:1382", []⟩
   | deferredPoll =>
     ⟨"deferredPoll", "Deferred.poll", .call, [], .sync, deferredTy, .bool, .never, [],
-      "Deferred.ts:1414-1416"⟩
+      "Deferred.ts:1414-1416", []⟩
   | deferredSucceed =>
     ⟨"deferredSucceed", "Deferred.succeed", .tupleCall, [], .sync, .prod deferredTy .nat, .bool, .never,
-      [], "Deferred.ts:1514"⟩
+      [], "Deferred.ts:1514", []⟩
   | deferredFail =>
     ⟨"deferredFail", "Deferred.fail", .tupleCall, [], .sync, .prod deferredTy .nat, .bool, .never, [],
-      "Deferred.ts:669"⟩
+      "Deferred.ts:669", []⟩
   | deferredAwait =>
     ⟨"deferredAwait", "Deferred.await", .call, [], .async, deferredTy, .nat, .nat, [],
-      "Deferred.ts:173-186"⟩
+      "Deferred.ts:173-186", []⟩
   | scopeMake .sequential =>
     ⟨"scopeMake", "Scope.make", .call, [], .sync, .unit, Ty.scope, .never, [],
-      "internal/effect.ts:3914-3922"⟩
+      "internal/effect.ts:3914-3922", []⟩
   | scopeMake .parallel =>
     ⟨"scopeMake", "Scope.make", .call, ["\"parallel\""], .sync, .unit, Ty.scope, .never, [],
-      "internal/effect.ts:3914-3922"⟩
+      "internal/effect.ts:3914-3922", []⟩
 
 /-- The store operation a row runs on a request value; `none` is a request of the wrong
 shape, which the compile turns into the `badName` defect (`Deep.Stores` does the same for a

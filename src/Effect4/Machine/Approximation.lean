@@ -327,9 +327,9 @@ theorem countdownPark_grows {interp : RunInterp ν σ β ε δ ι α χ St}
   (repeat' split) <;> trace_leaf
 
 theorem linkScope_grows {interp : RunInterp ν σ β ε δ ι α χ St} {m : RunMachine ν σ β ε δ ι α χ St}
-    {mode : Supervision.ScopeMode} {scope key : Nat} {target : FiberId}
+    {mode : Supervision.ScopeMode} {scope : Nat} {target : FiberId}
     {interruptor : Option FiberId} {extra : ReasonAnnotations α} :
-    Grows m (linkScope interp m mode scope key target interruptor extra) := by
+    Grows m (linkScope interp m mode scope target interruptor extra) := by
   unfold Grows linkScope
   try dsimp only
   (repeat' split) <;> trace_leaf

@@ -738,15 +738,15 @@ deriving DecidableEq, Repr
 
 def DocsOp.row : DocsOp → Row
   | .makeDb =>
-    ⟨"makeDb", "makeDb", .call, [], .sync, .unit, .handle "Db", .never, [dbBinding], "docs app"⟩
+    ⟨"makeDb", "makeDb", .call, [], .sync, .unit, .handle "Db", .never, [dbBinding], "docs app", []⟩
   | .makeRate =>
     ⟨"makeRate", "makeRate", .call, [], .sync, .unit, .handle "RateLimit", .never, [rateBinding],
-      "docs app"⟩
+      "docs app", []⟩
   | .insertFeedback =>
     ⟨"insertFeedback", "db.insertFeedback", .call, [], .sync, .nat, .unit, .never, [dbKey],
-      "docs app"⟩
+      "docs app", []⟩
   | .rateCheck =>
-    ⟨"rateCheck", "rateLimit.check", .call, [], .sync, .unit, .bool, .never, [rateKey], "docs app"⟩
+    ⟨"rateCheck", "rateLimit.check", .call, [], .sync, .unit, .bool, .never, [rateKey], "docs app", []⟩
 
 def docsSig : Signature DocsOp := ⟨DocsOp.row, fun _ _ => none, scopeKey⟩
 

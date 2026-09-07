@@ -94,7 +94,7 @@ def interp : I where
   restoreName := fun _ => ()
   mergeName := fun _ => ()
   scopeStatus := fun _ _ => none
-  scopeLinkFiber := fun _ _ _ _ _ => none
+  scopeLinkFiber := fun _ _ _ _ => none
   dropFinalizer := fun _ _ _ => none
   closeScope := fun _ _ _ _ _ => none
   ambientScope := fun _ => none

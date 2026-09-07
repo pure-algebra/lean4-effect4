@@ -516,9 +516,9 @@ theorem actionAt_shape {root : NativeEff} {p : Point} {a : ActionTerm NativeOp}
     (hact : actionAt root p = some act) :
     (∀ program options, act = .fork program options →
       program = resolve root ((p.child 0).child 0)) ∧
-    (∀ program options scope key, act = .forkIn program options scope key →
+    (∀ program options scope, act = .forkIn program options scope →
       program = resolve root ((p.child 0).child 0)) ∧
-    (∀ program options key, act ≠ .forkScoped program options key) ∧
+    (∀ program options, act ≠ .forkScoped program options) ∧
     (∀ entrants, act = .raceAll entrants →
       ∃ es, a = .raceAll es ∧ entrants = actionAt.entrants es ((p.child 0).child 0)) ∧
     (∀ body flag, act ≠ .setInterruptible body flag) ∧
@@ -527,7 +527,7 @@ theorem actionAt_shape {root : NativeEff} {p : Point} {a : ActionTerm NativeOp}
   simp only [actionAt, h, Option.some.injEq] at hact
   subst hact
   cases a <;> dsimp only <;> (repeat' split) <;>
-    refine ⟨fun _ _ heq => ?_, fun _ _ _ _ heq => ?_, fun _ _ _ heq => ?_, fun _ heq => ?_,
+    refine ⟨fun _ _ heq => ?_, fun _ _ _ heq => ?_, fun _ _ heq => ?_, fun _ heq => ?_,
       fun _ _ heq => ?_, fun heq => ?_, fun _ heq => ?_⟩ <;>
     cases heq <;> first | rfl | exact ⟨_, rfl, rfl⟩ | exact ⟨_, _, rfl⟩
 
@@ -852,9 +852,9 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
         cases v
         case scopeHandle s =>
           show CodeMeans root (Prim.withFiber (.forkInAt p s))
-            (prepareR completed (.vis (.inr (.forkIn ((p.child 0).child 0) options s p.fuel))
+            (prepareR completed (.vis (.inr (.forkIn ((p.child 0).child 0) options s))
               fun v => .pure (.success v)))
-          refine CodeMeans.actForkIn _ (resolve root ((p.child 0).child 0)) options _ s p.fuel _
+          refine CodeMeans.actForkIn _ (resolve root ((p.child 0).child 0)) options _ s _
             ?_ ?_ (successV root)
           · show forkScopedAt root p s = _
             simp [forkScopedAt, h]
@@ -872,11 +872,11 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
       | fork program options =>
         obtain rfl := hs.1 program options rfl
         exact CodeMeans.actFork _ _ _ _ _ ht (hres _ hw00) (successV root)
-      | forkIn program options scope key =>
-        obtain rfl := hs.2.1 program options scope key rfl
-        exact CodeMeans.actForkIn _ _ _ _ _ _ _ ht (hres _ hw00) (successV root)
-      | forkScoped program options key => exact absurd rfl (hs.2.2.1 program options key)
-      | runIn target scope key => exact CodeMeans.actRunIn _ _ _ _ _ ht (successV root)
+      | forkIn program options scope =>
+        obtain rfl := hs.2.1 program options scope rfl
+        exact CodeMeans.actForkIn _ _ _ _ _ _ ht (hres _ hw00) (successV root)
+      | forkScoped program options => exact absurd rfl (hs.2.2.1 program options)
+      | runIn target scope => exact CodeMeans.actRunIn _ _ _ _ ht (successV root)
       | interrupt target => exact CodeMeans.actInterrupt _ _ _ ht delivers_seqR_pure
       | interruptAs target who => exact CodeMeans.actInterruptAs _ _ _ _ ht delivers_seqR_pure
       | interruptScoped target => exact CodeMeans.actInterruptScoped _ _ _ ht delivers_seqR_pure

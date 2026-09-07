@@ -282,16 +282,18 @@ inductive WithFiberAction (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type 
     (κ : Type (max u v) := Prim ν σ β ε δ ι α) : Type (max u v)
   /-- `forkUnsafe` (`:5264-5284`): `forkChild`, `forkDetach`, `forkDaemon` by options. -/
   | fork (program : κ) (options : Supervision.ForkOptions)
-  /-- `forkIn` (`:5364-5378`): a daemon linked to a scope by a keyed, self-guarded finalizer. -/
+  /-- `forkIn` (`:5364-5378`): a daemon linked to a scope by a keyed, self-guarded finalizer.
+  The key is allocated by the store at the executed registration (`:5366`), so no identity
+  is carried in the action. -/
   | forkIn (program : κ) (options : Supervision.ForkOptions) (scope : Nat)
-      (key : Nat)
   /-- `forkScoped` (`:5400-5406`): `forkIn` on the ambient `Scope` service. -/
-  | forkScoped (program : κ) (options : Supervision.ForkOptions) (key : Nat)
+  | forkScoped (program : κ) (options : Supervision.ForkOptions)
   /-- The `Scope` service read (`Context.ts:423`, `effect.ts:3929`): the ambient scope's
   handle as a value, or the `missingScope` defect (source-repairs §20). -/
   | ambientScope
-  /-- `fiberRunIn` (`:5447-5461`): bind an existing fiber to a scope by an unguarded finalizer. -/
-  | runIn (target : FiberId) (scope : Nat) (key : Nat)
+  /-- `fiberRunIn` (`:5447-5461`): bind an existing fiber to a scope by an unguarded
+  finalizer, under a key the store allocates at the registration (`:5457`). -/
+  | runIn (target : FiberId) (scope : Nat)
   /-- `fiberInterrupt` (`:857`): the public `withFiber` that returns `fiberInterruptAs(target,
   fiber.id)` as the next counted program (source-repairs §19, D6b). -/
   | interrupt (target : FiberId)
@@ -510,8 +512,11 @@ structure RunInterp (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St
   /-- The scope store: `none` unknown; `some none` open; `some (some exit)` closed. -/
   scopeStatus : Nat → St → Option (Option (Exit β ε δ ι α))
   /-- Register the keyed fiber finalizer of `forkIn` (self-guarded, `:5370`) or
-  `fiberRunIn` (unguarded, `:5458`); `none` when the scope is unknown (M4, M7). -/
-  scopeLinkFiber : Supervision.ScopeMode → Nat → Nat → FiberId → St → Option St
+  `fiberRunIn` (unguarded, `:5458`), allocating the registration identity the way the
+  source allocates `const key = {}` at each registration (`:5366`, `:5457`), and answering
+  it beside the updated store; `none` when the scope is unknown (M4, M7).
+  `E4-CHECK-CE-016`. -/
+  scopeLinkFiber : Supervision.ScopeMode → Nat → FiberId → St → Option (St × Nat)
   /-- `forkIn`'s key-dropping observer (`:5370-5372`); `none` when the scope is unknown. -/
   dropFinalizer : Nat → Nat → St → Option St
   /-- The close program of a scope for its strategy: sequential awaits each finalizer
@@ -687,8 +692,9 @@ inductive Cmd (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
   | closeParAwait (host : FiberId) (yielding : Bool) (fibers : List FiberId)
   /-- `forkIn`'s link, after the child has been forked and, when immediate, run
   (`:5366-5376`, R2-8): `linkScope` as a command, so the child is re-read and one that has
-  exited is not linked. -/
-  | link (mode : Supervision.ScopeMode) (scope : Nat) (key : Nat) (target : FiberId)
+  exited is not linked. The registration identity is not carried here: the store allocates
+  it at the executed registration (`const key = {}`, `:5366`; `E4-CHECK-CE-016`). -/
+  | link (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
       (interruptor : Option FiberId) (extra : ReasonAnnotations α)
   /-- Drain the resumes the store owes. -/
   | drainDue
@@ -899,11 +905,12 @@ def forkFinalizers (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMa
     (m, child :: children)
 
 /-- Link a fiber to a scope (`forkIn`, `:5364-5378`; `fiberRunIn`, `:5447-5461`): open, a
-keyed finalizer of the mode's shape and the key-dropping observer; closed, an immediate
+keyed finalizer of the mode's shape under the identity the store allocates for this
+registration, and the observer that drops exactly that identity; closed, an immediate
 interrupt with `interruptor` and the interruptor's own stack annotations (`:5374`, M5);
 unknown, stuck (M7). -/
 def linkScope (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
-    (mode : Supervision.ScopeMode) (scope key : Nat) (target : FiberId)
+    (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
     (interruptor : Option FiberId) (extra : ReasonAnnotations α) :
     RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ) :=
   match interp.scopeStatus scope m.state with
@@ -925,9 +932,9 @@ def linkScope (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine
     | some t =>
       if t.exit.isSome then (m, [])
       else
-        match interp.scopeLinkFiber mode scope key target m.state with
+        match interp.scopeLinkFiber mode scope target m.state with
         | none => (m.halt (Stuck.unknownScope scope), [])
-        | some state =>
+        | some (state, key) =>
           let m := { m with state := state }
           let m := m.modify target fun t =>
             { t with observers := t.observers ++ [Observer.dropScopeFinalizer scope key] }
@@ -1143,21 +1150,21 @@ where
       -- (`:5279-5282`, D6b)
       ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_,
         nested ++ (if options.daemon then [] else [Cmd.trackChild parent child])⟩
-    | WithFiberAction.forkIn program options scope key =>
+    | WithFiberAction.forkIn program options scope =>
       -- fork and, when immediate, run first; the link follows (`:5366-5376`, R2-8), and
       -- `linkScope` links only a child that has not exited (R2-9)
       let (m, f, child) := spawn interp m f program { options with daemon := true }
       let (m, f, started) := start m f child options.startImmediately
       ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_,
-        started ++ [Cmd.link Supervision.ScopeMode.forkIn scope key child (some f.id)
+        started ++ [Cmd.link Supervision.ScopeMode.forkIn scope child (some f.id)
           (interp.stackAnnotations f.id)]⟩
-    | WithFiberAction.forkScoped program options key =>
+    | WithFiberAction.forkScoped program options =>
       match interp.ambientScope f.context with
       | some scope =>
         let (m, f, child) := spawn interp m f program { options with daemon := true }
         let (m, f, started) := start m f child options.startImmediately
         ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_,
-          started ++ [Cmd.link Supervision.ScopeMode.forkIn scope key child (some f.id)
+          started ++ [Cmd.link Supervision.ScopeMode.forkIn scope child (some f.id)
             (interp.stackAnnotations f.id)]⟩
       | none =>
         ⟨m, { f with frame := { f.frame with
@@ -1170,8 +1177,8 @@ where
         ⟨m, { f with frame := { f.frame with
             current := Prim.failure (Cause.die interp.missingScope) } },
           yielding, Outcome.continue_, []⟩
-    | WithFiberAction.runIn target scope key =>
-      let (m, nested) := linkScope interp m Supervision.ScopeMode.fiberRunIn scope key target
+    | WithFiberAction.runIn target scope =>
+      let (m, nested) := linkScope interp m Supervision.ScopeMode.fiberRunIn scope target
         (some target) ReasonAnnotations.empty
       ⟨m, answer f interp.voidValue, yielding, outcomeOf m false, nested⟩
     | WithFiberAction.interrupt target =>                              -- :857, D6b
@@ -1338,9 +1345,9 @@ def dropObservers (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMac
   ⟨m, answer f interp.voidValue, yielding, Outcome.continue_, []⟩
 
 def runIn (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
-    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (target : FiberId) (scope key : Nat)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (target : FiberId) (scope : Nat)
     (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer) : Iter ν σ β ε δ ι α χ St κ φ η :=
-  let (m, nested) := linkScope interp m Supervision.ScopeMode.fiberRunIn scope key target
+  let (m, nested) := linkScope interp m Supervision.ScopeMode.fiberRunIn scope target
     (some target) ReasonAnnotations.empty
   ⟨m, answer f interp.voidValue, yielding, outcomeOf m false, nested⟩
 
@@ -1357,24 +1364,24 @@ def fork (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν �
 
 def forkIn (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (program : κ)
-    (options : Supervision.ForkOptions) (scope key : Nat)
+    (options : Supervision.ForkOptions) (scope : Nat)
     (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer) : Iter ν σ β ε δ ι α χ St κ φ η :=
   let (m, f, child) := spawn interp m f program { options with daemon := true }
   let (m, f, started) := start m f child options.startImmediately
   ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_,
-    started ++ [Cmd.link Supervision.ScopeMode.forkIn scope key child (some f.id)
+    started ++ [Cmd.link Supervision.ScopeMode.forkIn scope child (some f.id)
       (interp.stackAnnotations f.id)]⟩
 
 def forkScoped (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (program : κ)
-    (options : Supervision.ForkOptions) (key : Nat)
+    (options : Supervision.ForkOptions)
     (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer) : Iter ν σ β ε δ ι α χ St κ φ η :=
   match interp.ambientScope f.context with
   | some scope =>
     let (m, f, child) := spawn interp m f program { options with daemon := true }
     let (m, f, started) := start m f child options.startImmediately
     ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_,
-      started ++ [Cmd.link Supervision.ScopeMode.forkIn scope key child (some f.id)
+      started ++ [Cmd.link Supervision.ScopeMode.forkIn scope child (some f.id)
         (interp.stackAnnotations f.id)]⟩
   | none =>
     ⟨m, { f with frame := core.answerWith f.frame (core.failure (Cause.die interp.missingScope)) },
@@ -1854,8 +1861,8 @@ def driveStep (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine
       let frame := core.pushIterator interp.closeDoneName interp.voidValue f.frame
       let f := { f with frame := core.answerWith frame (interp.parkCode (ParkKind.awaitAll fibers)) }
       settle f.id rest ⟨m, f, yielding, Outcome.continue_, []⟩
-  | Cmd.link mode scope key target interruptor extra, rest =>          -- :5366-5376, R2-8
-    let (m, nested) := linkScope interp m mode scope key target interruptor extra
+  | Cmd.link mode scope target interruptor extra, rest =>              -- :5366-5376, R2-8
+    let (m, nested) := linkScope interp m mode scope target interruptor extra
     (m, nested ++ rest)
   | Cmd.finish id exit, rest =>                                       -- :611-628
     match m.fiber? id with

@@ -291,13 +291,14 @@ inductive ProgName
       (mode : Supervision.ObserverMode)
   /-- `forkUnsafe` alone (`:5264-5284`). -/
   | forkOnly (child : ProgName) (options : Supervision.ForkOptions)
-  /-- `forkIn` (`:5364-5378`). -/
-  | forkInScope (child : ProgName) (options : Supervision.ForkOptions) (scope : Nat) (key : Nat)
+  /-- `forkIn` (`:5364-5378`). The registration identity is not part of the name: the store
+  allocates it at the executed registration (`:5366`, `E4-CHECK-CE-016`). -/
+  | forkInScope (child : ProgName) (options : Supervision.ForkOptions) (scope : Nat)
   /-- `fiberRunIn` (`:5447-5461`): bind an *existing* fiber to a scope. Its closed-scope arm
   interrupts with `self.id` and no caller annotations (`:5454`), unlike `forkIn`'s (M10). -/
-  | runInScope (target : FiberId) (scope : Nat) (key : Nat)
+  | runInScope (target : FiberId) (scope : Nat)
   /-- `forkScoped` (`:5400-5406`). -/
-  | forkScopedOf (child : ProgName) (options : Supervision.ForkOptions) (key : Nat)
+  | forkScopedOf (child : ProgName) (options : Supervision.ForkOptions)
   /-- `raceAll` (`Supervision.RaceAllState`). -/
   | raceOf (race : RaceName)
   /-- `scopeClose(scope, exit)` from the fiber (`internal/effect.ts:3826` via the store). -/
@@ -379,12 +380,12 @@ deriving DecidableEq
 cannot, so the alphabet carries `ProgName` and `withFiberOf` expands. -/
 inductive ActionName
   | fork (program : ProgName) (options : Supervision.ForkOptions)
-  | forkIn (program : ProgName) (options : Supervision.ForkOptions) (scope : Nat) (key : Nat)
-  | forkScoped (program : ProgName) (options : Supervision.ForkOptions) (key : Nat)
+  | forkIn (program : ProgName) (options : Supervision.ForkOptions) (scope : Nat)
+  | forkScoped (program : ProgName) (options : Supervision.ForkOptions)
   /-- The `Scope` service read (`Context.ts:423`, source-repairs §20): the ambient scope's
   handle as a value. -/
   | ambientScope
-  | runIn (target : FiberId) (scope : Nat) (key : Nat)
+  | runIn (target : FiberId) (scope : Nat)
   | interrupt (target : FiberId)
   /-- `fiberInterruptAs(target, who)` (`internal/effect.ts:871-884`): what the public
   interrupt's `withFiber` returns (source-repairs §19, D6b). -/
@@ -958,6 +959,192 @@ def closeResultOf (self : ScopeStore) (key : Nat) (exit : ExitV) : VoidExitV :=
   | none => Exit.void
   | some entry => Effect4.Scope.closeResult finExit entry.scope exit
 
+/-! ### The registration-key bound
+
+rc.112 allocates a brand new object for every open-scope registration (`const key = {}`,
+`internal/effect.ts:5366-5372` for `forkIn`/`forkScoped` and `:5457-5460` for
+`fiberRunIn`). A `Nat` key cannot be new by construction, so freshness is a property of the
+*store*: every registration key any scope holds is below the store's supply, so the supply's
+current value is a key no scope holds. `E4-CHECK-CE-016`. -/
+
+/-- Every registration key any scope in this store holds is below `n`. -/
+def KeysBelow (self : ScopeStore) (n : Nat) : Prop :=
+  ∀ e ∈ self.entries, ∀ k ∈ e.scope.finalizerKeys, k < n
+
+theorem KeysBelow.mono {self : ScopeStore} {n m : Nat} (h : KeysBelow self n) (hle : n ≤ m) :
+    KeysBelow self m := fun e he k hk => Nat.lt_of_lt_of_le (h e he k hk) hle
+
+/-- What the bound is for: the bound itself is a key no scope in the store holds. -/
+theorem KeysBelow.fresh {self : ScopeStore} {n : Nat} (h : KeysBelow self n) :
+    ∀ e ∈ self.entries, n ∉ e.scope.finalizerKeys :=
+  fun e he hmem => Nat.lt_irrefl _ (h e he n hmem)
+
+/-- A scope carrying no closing exit is not closed. -/
+private theorem not_closed_of_closingExit_none {sc : ScopeV} (h : sc.closingExit? = none) :
+    sc.isClosed = false := by
+  show sc.state.isClosed = false
+  cases hstate : sc.state with
+  | empty => rfl
+  | openEmpty => rfl
+  | openInline _ _ => rfl
+  | openMap _ => rfl
+  | closed ex =>
+    rw [show sc.closingExit? = some ex by
+      show sc.state.closingExit? = _; rw [hstate]; rfl] at h
+    cases h
+
+/-- An entry of a `setEntry` result is the replacement or one of the originals. -/
+theorem mem_setEntry {self : ScopeStore} {entry e : ScopeEntry}
+    (he : e ∈ (self.setEntry entry).entries) : e = entry ∨ e ∈ self.entries := by
+  obtain ⟨g, hg, rfl⟩ := List.mem_map.mp he
+  by_cases hk : g.key = entry.key
+  · exact Or.inl (by rw [if_pos hk])
+  · exact Or.inr (by rw [if_neg hk]; exact hg)
+
+/-- An entry found under a key carries that key. -/
+theorem key_of_entryAt {self : ScopeStore} {key : Nat} {entry : ScopeEntry}
+    (h : self.entryAt key = some entry) : entry.key = key := by
+  have := List.find?_eq_some_iff_getElem.mp h
+  simpa using this.1
+
+/-- Replacing an entry's scope leaves it findable under the same key. -/
+theorem setEntry_entryAt (self : ScopeStore) {key : Nat} {entry : ScopeEntry} (sc : ScopeV)
+    (h : self.entryAt key = some entry) :
+    (self.setEntry { entry with scope := sc }).entryAt key =
+      some { entry with scope := sc } := by
+  have hkey : entry.key = key := key_of_entryAt h
+  show List.find? (fun e => decide (e.key = key))
+    (self.entries.map (fun e => if e.key = entry.key then { entry with scope := sc } else e)) = _
+  rw [List.find?_map]
+  have hcomp : ((fun e => decide (e.key = key)) ∘
+      (fun e => if e.key = entry.key then { entry with scope := sc } else e)) =
+      (fun e : ScopeEntry => decide (e.key = key)) := by
+    funext e
+    show decide ((if e.key = entry.key then { entry with scope := sc } else e).key = key) =
+      decide (e.key = key)
+    by_cases hk : e.key = entry.key
+    · rw [if_pos hk, hk]
+    · rw [if_neg hk]
+  rw [hcomp,
+    show List.find? (fun e => decide (e.key = key)) self.entries = some entry from h,
+    Option.map_some]
+  rw [if_pos (rfl : entry.key = entry.key)]
+
+/-- Registering a key the scope does not hold appends it: the whole prior registration list
+is kept. With `Scope.tableInsert`'s replace-on-equal-key semantics this is exactly what a
+*fresh* identity buys, and its failure is `E4-CHECK-CE-016`. census: scope.add-finalizer -/
+theorem addFinalizer_appends {self : ScopeStore} {scope key : Nat} {entry : ScopeEntry}
+    {fin : FinName} (hentry : self.entryAt scope = some entry)
+    (hopen : entry.scope.isClosed = false) (hkey : key ∉ entry.scope.finalizerKeys) :
+    ((self.addFinalizer scope key fin).1.entryAt scope).map (fun e => e.scope.finalizers) =
+      some (entry.scope.finalizers ++ [(key, fin)]) := by
+  unfold addFinalizer
+  rw [hentry]
+  dsimp only
+  rw [Effect4.Scope.addExit_open _ _ _ _ hopen]
+  dsimp only
+  rw [setEntry_entryAt _ _ hentry, Option.map_some]
+  dsimp only
+  rw [Effect4.Scope.addUnsafe_finalizers _ _ _ hopen hkey]
+
+/-- The observer removes exactly the registration it was given: dropping the key its own
+registration allocated restores the scope's registration list unchanged.
+census: scope.remove-finalizer -/
+theorem removeFinalizer_addFinalizer_self {self : ScopeStore} {scope key : Nat}
+    {entry : ScopeEntry} {fin : FinName} (hentry : self.entryAt scope = some entry)
+    (hopen : entry.scope.isClosed = false) (hkey : key ∉ entry.scope.finalizerKeys) :
+    (((self.addFinalizer scope key fin).1.removeFinalizer scope key).entryAt scope).map
+      (fun e => e.scope.finalizers) = some entry.scope.finalizers := by
+  unfold addFinalizer
+  rw [hentry]
+  dsimp only
+  rw [Effect4.Scope.addExit_open _ _ _ _ hopen]
+  dsimp only
+  unfold removeFinalizer
+  rw [setEntry_entryAt _ _ hentry]
+  dsimp only
+  rw [setEntry_entryAt _ _ (setEntry_entryAt _ _ hentry), Option.map_some]
+  dsimp only
+  rw [Effect4.Scope.removeUnsafe_addUnsafe_self _ _ _ hopen hkey]
+
+/-- Registration adds at most the key it was given, so a bound that already covers the store
+and the new key covers the result. -/
+theorem keysBelow_addFinalizer_bound {self : ScopeStore} {n m scope key : Nat} {fin : FinName}
+    (hb : KeysBelow self n) (hn : n ≤ m) (hkey : key < m) :
+    KeysBelow (self.addFinalizer scope key fin).1 m := by
+  unfold addFinalizer
+  cases hentry : self.entryAt scope with
+  | none => exact hb.mono hn
+  | some entry =>
+    have hmem : entry ∈ self.entries := List.mem_of_find?_eq_some hentry
+    dsimp only
+    intro e he k hk
+    rcases mem_setEntry he with rfl | he
+    · dsimp only at hk
+      unfold Effect4.Scope.addExit at hk
+      cases hclose : entry.scope.closingExit? with
+      | some ex =>
+        rw [hclose] at hk
+        exact Nat.lt_of_lt_of_le (hb entry hmem k hk) hn
+      | none =>
+        rw [hclose] at hk
+        dsimp only at hk
+        rcases List.mem_cons.mp
+            (Effect4.Scope.addUnsafe_keys_subset entry.scope key fin hk) with hk | hk
+        · exact hk ▸ hkey
+        · exact Nat.lt_of_lt_of_le (hb entry hmem k hk) hn
+    · exact Nat.lt_of_lt_of_le (hb e he k hk) hn
+
+/-- Registering at the supply's own value keeps the bound, one higher: the new key is the
+only one added, and it is `n`. -/
+theorem keysBelow_addFinalizer {self : ScopeStore} {n scope : Nat} {fin : FinName}
+    (hb : KeysBelow self n) : KeysBelow (self.addFinalizer scope n fin).1 (n + 1) :=
+  keysBelow_addFinalizer_bound hb (Nat.le_succ n) (Nat.lt_succ_self n)
+
+/-- Removal keeps the bound: removal only removes. -/
+theorem keysBelow_removeFinalizer {self : ScopeStore} {n scope key : Nat}
+    (hb : KeysBelow self n) : KeysBelow (self.removeFinalizer scope key) n := by
+  unfold removeFinalizer
+  cases hentry : self.entryAt scope with
+  | none => exact hb
+  | some entry =>
+    have hmem : entry ∈ self.entries := List.mem_of_find?_eq_some hentry
+    dsimp only
+    intro e he k hk
+    rcases mem_setEntry he with rfl | he
+    · exact hb entry hmem k
+        (((Effect4.Scope.removeUnsafe_finalizers_sublist entry.scope key).map Prod.fst).subset hk)
+    · exact hb e he k hk
+
+/-- A newly made scope holds no registrations, so the bound survives. -/
+theorem keysBelow_make {self : ScopeStore} {n key : Nat} {strategy : FinalizerStrategy}
+    (hb : KeysBelow self n) : KeysBelow (self.make key strategy) n := by
+  intro e he k hk
+  rcases List.mem_append.mp he with he | he
+  · exact hb e he k hk
+  · rw [List.mem_singleton] at he
+    subst he
+    cases hk
+
+/-- Closing a scope keeps the bound: `closeState` replaces the state, never adding a key. -/
+theorem keysBelow_closeState {self : ScopeStore} {n key : Nat} {exit : ExitV}
+    (hb : KeysBelow self n) : KeysBelow (self.closeState key exit) n := by
+  unfold closeState
+  cases hentry : self.entryAt key with
+  | none => exact hb
+  | some entry =>
+    dsimp only
+    intro e he k hk
+    rcases mem_setEntry he with rfl | he
+    · dsimp only at hk
+      unfold Effect4.Scope.closeState at hk
+      by_cases hc : entry.scope.isClosed = true
+      · rw [if_pos hc] at hk
+        exact hb entry (List.mem_of_find?_eq_some hentry) k hk
+      · rw [if_neg hc] at hk
+        cases hk
+    · exact hb e he k hk
+
 end ScopeStore
 
 /-- `exitAsVoidAll` (`internal/effect.ts:2024-2038`) at the value alphabet: the concatenated
@@ -1050,6 +1237,15 @@ namespace Stores
 /-- An empty service state. -/
 def empty : Stores := ⟨[], ⟨[], []⟩, ⟨[]⟩, 0⟩
 
+/-- The registration-identity invariant (`E4-CHECK-CE-016`): every registration key any
+scope holds is below the store's fresh-name supply, so `nextName` is a key no scope holds.
+The runtime carries this through `Sched.StoresOk`. -/
+def ScopeKeysFresh (self : Stores) : Prop := self.scopes.KeysBelow self.nextName
+
+theorem scopeKeysFresh_empty : ScopeKeysFresh empty := by
+  intro e he
+  cases he
+
 end Stores
 
 /-! ## Names into programs
@@ -1141,12 +1337,12 @@ def progOf : ProgName → Program
     Prim.onSuccess (Prim.withFiber (Thunk.act (ActionName.fork child options)))
       (Name.joinOn mode)
   | ProgName.forkOnly child options => Prim.withFiber (Thunk.act (ActionName.fork child options))
-  | ProgName.forkInScope child options scope key =>
-    Prim.withFiber (Thunk.act (ActionName.forkIn child options scope key))
-  | ProgName.runInScope target scope key =>
-    Prim.withFiber (Thunk.act (ActionName.runIn target scope key))
-  | ProgName.forkScopedOf child options key =>
-    Prim.withFiber (Thunk.act (ActionName.forkScoped child options key))
+  | ProgName.forkInScope child options scope =>
+    Prim.withFiber (Thunk.act (ActionName.forkIn child options scope))
+  | ProgName.runInScope target scope =>
+    Prim.withFiber (Thunk.act (ActionName.runIn target scope))
+  | ProgName.forkScopedOf child options =>
+    Prim.withFiber (Thunk.act (ActionName.forkScoped child options))
   | ProgName.raceOf race => Prim.withFiber (Thunk.act (ActionName.raceAll race))
   | ProgName.closeScopeOf scope exit =>
     Prim.withFiber (Thunk.act (ActionName.closeScope scope exit))
@@ -1248,7 +1444,11 @@ def syncOpStep : SyncOp → Stores → Option (Stores × Val)
       Val.scopeHandle st.nextName)
   | SyncOp.scopeAdd scope key finalizer, st =>
     let (scopes, _) := st.scopes.addFinalizer scope key finalizer
-    some ({ st with scopes := scopes }, Val.unit)
+    -- the supply dominates every key the store holds, so an identity allocated later can
+    -- never collide with one this registration accepted (`E4-CHECK-CE-016`). No admitted
+    -- `NativeOp` names this operation (`Program/Native.lean`, `syncOpOf`); it is reachable
+    -- only through the stores' own alphabet, where the caller chooses the key.
+    some ({ st with scopes := scopes, nextName := max st.nextName (key + 1) }, Val.unit)
   | SyncOp.scopeRemove scope key, st =>
     some ({ st with scopes := st.scopes.removeFinalizer scope key }, Val.unit)
   | SyncOp.scopeIsClosed scope, st =>
@@ -1297,12 +1497,12 @@ def contEOf : Name → CauseV → Program
 /-- `WithFiberAction` from a name. -/
 def actionOf : ActionName → WithFiberAction Name Thunk Val Err Defect FiberId Ann Ctx
   | ActionName.fork program options => WithFiberAction.fork (progOf program) options
-  | ActionName.forkIn program options scope key =>
-    WithFiberAction.forkIn (progOf program) options scope key
-  | ActionName.forkScoped program options key =>
-    WithFiberAction.forkScoped (progOf program) options key
+  | ActionName.forkIn program options scope =>
+    WithFiberAction.forkIn (progOf program) options scope
+  | ActionName.forkScoped program options =>
+    WithFiberAction.forkScoped (progOf program) options
   | ActionName.ambientScope => WithFiberAction.ambientScope
-  | ActionName.runIn target scope key => WithFiberAction.runIn target scope key
+  | ActionName.runIn target scope => WithFiberAction.runIn target scope
   | ActionName.interrupt target => WithFiberAction.interrupt target
   | ActionName.interruptAs target who => WithFiberAction.interruptAs target who
   | ActionName.interruptScoped target => WithFiberAction.interruptScoped target
@@ -1418,18 +1618,22 @@ def stores : RunInterp Name Thunk Val Err Defect FiberId Ann Ctx Stores where
   restoreName := Name.restore
   mergeName := Name.merge
   scopeStatus := fun scope state => state.scopes.status scope
-  scopeLinkFiber := fun mode scope key fiber state =>
+  scopeLinkFiber := fun mode scope fiber state =>
     match state.scopes.entryAt scope with
     | none => none
     | some _ =>
       -- `forkIn` registers the self-guarded finalizer (`:5370`), `fiberRunIn` the unguarded
-      -- one (`:5458`) — M4
+      -- one (`:5458`) — M4. The identity is allocated here, from the store's own supply,
+      -- because the source allocates `const key = {}` at each registration (`:5366`,
+      -- `:5457`) — `E4-CHECK-CE-016`.
       let skipSelf :=
         match mode with
         | Supervision.ScopeMode.forkIn => true
         | Supervision.ScopeMode.fiberRunIn => false
-      some { state with
-        scopes := (state.scopes.addFinalizer scope key (FinName.interruptFiber fiber skipSelf)).1 }
+      some ({ state with
+        scopes := (state.scopes.addFinalizer scope state.nextName
+          (FinName.interruptFiber fiber skipSelf)).1,
+        nextName := state.nextName + 1 }, state.nextName)
   dropFinalizer := fun scope key state =>
     match state.scopes.entryAt scope with
     | none => none
@@ -1645,31 +1849,137 @@ theorem scopeStore_forkChild_names (self : ScopeStore) (parentKey childKey share
   simp [ScopeStore.forkChild, h, Effect4.Scope.fork, hopen]
 
 /-- `scope.fork-linkage`: the fiber finalizer `forkIn` registers is the self-guarded
-"interrupt fiber `f`" name (`internal/effect.ts:5370`).
+"interrupt fiber `f`" name (`internal/effect.ts:5370`), under the identity this registration
+allocates from the store's own supply (`const key = {}`, `:5366`).
 census: scope.fork-linkage, fork.scope-linkage -/
-theorem scopeLinkFiber_name (scope key : Nat) (fiber : FiberId) (state : Stores)
+theorem scopeLinkFiber_name (scope : Nat) (fiber : FiberId) (state : Stores)
     (entry : ScopeEntry) (h : state.scopes.entryAt scope = some entry) :
-    stores.scopeLinkFiber Supervision.ScopeMode.forkIn scope key fiber state =
-      some { state with
+    stores.scopeLinkFiber Supervision.ScopeMode.forkIn scope fiber state =
+      some ({ state with
         scopes :=
-          (state.scopes.addFinalizer scope key (FinName.interruptFiber fiber true)).1 } := by
+          (state.scopes.addFinalizer scope state.nextName
+            (FinName.interruptFiber fiber true)).1,
+        nextName := state.nextName + 1 }, state.nextName) := by
   simp [stores, h]
 
-/-- M4: `fiberRunIn` registers the *unguarded* finalizer (`internal/effect.ts:5458`).
-census: scope.fork-linkage -/
-theorem scopeLinkFiber_runIn_name (scope key : Nat) (fiber : FiberId) (state : Stores)
+/-- M4: `fiberRunIn` registers the *unguarded* finalizer (`internal/effect.ts:5458`), under
+its own freshly allocated identity (`:5457`). census: scope.fork-linkage -/
+theorem scopeLinkFiber_runIn_name (scope : Nat) (fiber : FiberId) (state : Stores)
     (entry : ScopeEntry) (h : state.scopes.entryAt scope = some entry) :
-    stores.scopeLinkFiber Supervision.ScopeMode.fiberRunIn scope key fiber state =
-      some { state with
+    stores.scopeLinkFiber Supervision.ScopeMode.fiberRunIn scope fiber state =
+      some ({ state with
         scopes :=
-          (state.scopes.addFinalizer scope key (FinName.interruptFiber fiber false)).1 } := by
+          (state.scopes.addFinalizer scope state.nextName
+            (FinName.interruptFiber fiber false)).1,
+        nextName := state.nextName + 1 }, state.nextName) := by
   simp [stores, h]
 
 /-- M7 again: linking into an unknown scope is a frontier. -/
-theorem scopeLinkFiber_unknown (mode : Supervision.ScopeMode) (scope key : Nat)
+theorem scopeLinkFiber_unknown (mode : Supervision.ScopeMode) (scope : Nat)
     (fiber : FiberId) (state : Stores) (h : state.scopes.entryAt scope = none) :
-    stores.scopeLinkFiber mode scope key fiber state = none := by
+    stores.scopeLinkFiber mode scope fiber state = none := by
   simp [stores, h]
+
+/-! ### The registration identity is fresh (`E4-CHECK-CE-016`)
+
+`internal/effect.ts:5366-5372` and `:5457-5460` allocate a brand new key object at every
+executed registration; the theorems below are that protocol at this store. They are stated
+against the store's *whole* scope table under one reachable-state invariant, not about two
+chosen keys. -/
+
+/-- Registration answers the supply's current value and advances the supply. -/
+theorem scopeLinkFiber_allocates (mode : Supervision.ScopeMode) (scope : Nat)
+    (fiber : FiberId) {state state' : Stores} {key : Nat}
+    (h : stores.scopeLinkFiber mode scope fiber state = some (state', key)) :
+    key = state.nextName ∧ state'.nextName = state.nextName + 1 := by
+  dsimp only [stores] at h
+  cases hentry : state.scopes.entryAt scope with
+  | none => rw [hentry] at h; cases h
+  | some entry =>
+    rw [hentry] at h
+    dsimp only at h
+    obtain ⟨h₁, h₂⟩ := Prod.mk.inj (Option.some.inj h)
+    exact ⟨h₂.symm, by rw [← h₁]⟩
+
+/-- Under the invariant the allocated identity is held by *no* scope in the store — not the
+target's, not another scope's, and not a slot an earlier removal freed. -/
+theorem scopeLinkFiber_fresh (mode : Supervision.ScopeMode) (scope : Nat) (fiber : FiberId)
+    {state state' : Stores} {key : Nat} (hfresh : state.ScopeKeysFresh)
+    (h : stores.scopeLinkFiber mode scope fiber state = some (state', key)) :
+    ∀ e ∈ state.scopes.entries, key ∉ e.scope.finalizerKeys := by
+  obtain ⟨rfl, -⟩ := scopeLinkFiber_allocates mode scope fiber h
+  exact hfresh.fresh
+
+/-- Registration preserves the invariant, so the next registration is fresh again. -/
+theorem scopeLinkFiber_keysFresh (mode : Supervision.ScopeMode) (scope : Nat) (fiber : FiberId)
+    {state state' : Stores} {key : Nat} (hfresh : state.ScopeKeysFresh)
+    (h : stores.scopeLinkFiber mode scope fiber state = some (state', key)) :
+    state'.ScopeKeysFresh := by
+  dsimp only [stores] at h
+  cases hentry : state.scopes.entryAt scope with
+  | none => rw [hentry] at h; cases h
+  | some entry =>
+    rw [hentry] at h
+    dsimp only at h
+    obtain ⟨h₁, -⟩ := Prod.mk.inj (Option.some.inj h)
+    subst h₁
+    exact ScopeStore.keysBelow_addFinalizer hfresh
+
+/-- Hence the registration appends: the whole prior registration list is kept, and no earlier
+registration is replaced. This is the defect `E4-CHECK-CE-016` recorded — a repeated compile
+point used to supply an equal key, and `Scope.tableInsert` correctly replaced it.
+census: scope.add-finalizer -/
+theorem scopeLinkFiber_appends (mode : Supervision.ScopeMode) (scope : Nat) (fiber : FiberId)
+    {state state' : Stores} {key : Nat} {entry : ScopeEntry}
+    (hfresh : state.ScopeKeysFresh) (hentry : state.scopes.entryAt scope = some entry)
+    (hopen : entry.scope.isClosed = false)
+    (h : stores.scopeLinkFiber mode scope fiber state = some (state', key)) :
+    ∃ fin, ((state'.scopes.entryAt scope).map (fun e => e.scope.finalizers)) =
+      some (entry.scope.finalizers ++ [(key, fin)]) := by
+  have hkey : key ∉ entry.scope.finalizerKeys := by
+    obtain ⟨rfl, -⟩ := scopeLinkFiber_allocates mode scope fiber h
+    exact hfresh.fresh entry (List.mem_of_find?_eq_some hentry)
+  dsimp only [stores] at h
+  rw [hentry] at h
+  cases mode with
+  | forkIn =>
+    dsimp only at h
+    obtain ⟨hs, hk⟩ := Prod.mk.inj (Option.some.inj h)
+    subst hs; subst hk
+    exact ⟨_, ScopeStore.addFinalizer_appends hentry hopen hkey⟩
+  | fiberRunIn =>
+    dsimp only at h
+    obtain ⟨hs, hk⟩ := Prod.mk.inj (Option.some.inj h)
+    subst hs; subst hk
+    exact ⟨_, ScopeStore.addFinalizer_appends hentry hopen hkey⟩
+
+/-- The observer removes exactly the registration it was given: dropping the key this
+registration allocated restores the scope's registration list unchanged, even though other
+registrations may have arrived in between (they are all under different keys).
+census: scope.remove-finalizer -/
+theorem dropFinalizer_removes_its_own (mode : Supervision.ScopeMode) (scope : Nat)
+    (fiber : FiberId) {state state' : Stores} {key : Nat} {entry : ScopeEntry}
+    (hfresh : state.ScopeKeysFresh) (hentry : state.scopes.entryAt scope = some entry)
+    (hopen : entry.scope.isClosed = false)
+    (h : stores.scopeLinkFiber mode scope fiber state = some (state', key)) :
+    ((state'.scopes.removeFinalizer scope key).entryAt scope).map
+      (fun e => e.scope.finalizers) = some entry.scope.finalizers := by
+  have hkey : key ∉ entry.scope.finalizerKeys := by
+    obtain ⟨rfl, -⟩ := scopeLinkFiber_allocates mode scope fiber h
+    exact hfresh.fresh entry (List.mem_of_find?_eq_some hentry)
+  dsimp only [stores] at h
+  rw [hentry] at h
+  cases mode with
+  | forkIn =>
+    dsimp only at h
+    obtain ⟨hs, hk⟩ := Prod.mk.inj (Option.some.inj h)
+    subst hs; subst hk
+    exact ScopeStore.removeFinalizer_addFinalizer_self hentry hopen hkey
+  | fiberRunIn =>
+    dsimp only at h
+    obtain ⟨hs, hk⟩ := Prod.mk.inj (Option.some.inj h)
+    subst hs; subst hk
+    exact ScopeStore.removeFinalizer_addFinalizer_self hentry hopen hkey
 
 /-- The fiber finalizer compiles to `WithFiberAction.interruptScoped`, whose machine arm is
 "interrupt unless the interruptor is the fiber itself, then await" (`:5369-5371`).

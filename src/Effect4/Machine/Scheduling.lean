@@ -92,9 +92,9 @@ theorem countdown_queue {interp : RunInterp ν σ β ε δ ι α χ St}
   (repeat' split) <;> queue_leaf
 
 theorem link_queue {interp : RunInterp ν σ β ε δ ι α χ St} {m : RunMachine ν σ β ε δ ι α χ St}
-    {mode : Supervision.ScopeMode} {scope key : Nat} {target : FiberId}
+    {mode : Supervision.ScopeMode} {scope : Nat} {target : FiberId}
     {interruptor : Option FiberId} {extra : ReasonAnnotations α} :
-    QueueKeeps m (linkScope interp m mode scope key target interruptor extra).1 := by
+    QueueKeeps m (linkScope interp m mode scope target interruptor extra).1 := by
   unfold linkScope
   dsimp only
   (repeat' split) <;> queue_leaf

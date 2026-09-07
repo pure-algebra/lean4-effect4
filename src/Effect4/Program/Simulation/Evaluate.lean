@@ -704,7 +704,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
       rw [hf'.id, hm.nextToken, hm.state]
       exact registerAsync_await root _ cell g₂.id m₂.nextToken m₂.state
     have hreg₂ := registerAsyncR_await root m₂.completedExits cell g₂.id m₂.nextToken m₂.state
-    have hd := deferredOk_register (hm.state ▸ hok.state : DeferredOk m₂.state.deferreds) cell g₂.id
+    have hd := deferredOk_register (hm.state ▸ hok.state.1 : DeferredOk m₂.state.deferreds) cell g₂.id
       m₂.nextToken
     simp only [hreg₂]
     generalize hr : m₂.state.deferreds.register cell g₂.id m₂.nextToken = r at hreg₁ hd ⊢
@@ -717,7 +717,8 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
       simp only [Bool.true_or, ↓reduceIte]
       rw [hm.nextToken]
       refine iterRel_prepare ⟨machineOk_emit
-          (machineOk_withStateToken (s := { m₂.state with deferreds := d }) hok hd.1 _) _,
+          (machineOk_withStateToken (s := { m₂.state with deferreds := d }) hok
+            ⟨hd.1, hm.state ▸ hok.state.2⟩ _) _,
         BMeans.emit (hm.withStateToken _ _) _ _, ((hf'.saveAnswer hk).withFrame ?_).park _, rfl, rfl,
         ListRel.nil⟩
       rw [hf'.id]
@@ -726,7 +727,8 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
       rw [evaluatePrim_async_some root _ m₁ f₁ y hc₁ hreg₁]
       dsimp only
       rw [hm.nextToken]
-      refine iterRelP_prepare ⟨machineOk_withStateToken (s := { m₂.state with deferreds := d }) hok hd.1 _,
+      refine iterRelP_prepare ⟨machineOk_withStateToken (s := { m₂.state with deferreds := d }) hok
+          ⟨hd.1, hm.state ▸ hok.state.2⟩ _,
         hm.withStateToken _ _,
         (hf'.saveAnswer hk).withFrame (means_answerWith (hf'.saveAnswer hk).means
           ((stored_means root (hd.2 prog rfl)).prepare _)), rfl, rfl,
@@ -794,15 +796,15 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
   | actFork t program options body k ht hc hk =>
     rw [evaluateNative_action root m₁ f₁ y hc₁ ht, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
     exact iterRel_prepare (fork_rel root _ hok hm hf' y hc options (answerRel_core root hk))
-  | actForkIn t program options q scope key k ht hc hk =>
+  | actForkIn t program options q scope k ht hc hk =>
     rw [evaluateNative_action root m₁ f₁ y hc₁ ht, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
-    exact iterRel_prepare (forkIn_rel root _ hok hm hf' y hc options scope key (answerRel_core root hk))
+    exact iterRel_prepare (forkIn_rel root _ hok hm hf' y hc options scope (answerRel_core root hk))
   | actAmbientScope t k ht hk =>
     rw [evaluateNative_action root m₁ f₁ y hc₁ ht, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
     exact iterRel_prepare (ambientScope_rel root _ hok hm hf' y (answerRel_core root hk))
-  | actRunIn t target scope key k ht hk =>
+  | actRunIn t target scope k ht hk =>
     rw [evaluateNative_action root m₁ f₁ y hc₁ ht, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
-    exact iterRel_prepare (runIn_rel root _ hok hm hf' y target scope key (answerRel_core root hk))
+    exact iterRel_prepare (runIn_rel root _ hok hm hf' y target scope (answerRel_core root hk))
   | actInterrupt t target k ht hk =>
     rw [evaluateNative_action root m₁ f₁ y hc₁ ht, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
     exact iterRel_prepare (interrupt_rel root _ hok hm (hf'.saveAnswer hk) y target)
@@ -921,7 +923,11 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     unfold enterScoped
     dsimp only
     rw [hm.state, hf'.context]
-    refine iterRelP_prepare ⟨machineOk_stateOf hok (storesOk_of_deferreds rfl (hm.state ▸ hok.state)),
+    -- the scoped entry makes a fresh scope with an empty registration table and advances
+    -- the supply past its handle, so the registration-key bound survives
+    refine iterRelP_prepare ⟨machineOk_stateOf hok
+        ⟨(hm.state ▸ hok.state).1,
+          (ScopeStore.keysBelow_make (hm.state ▸ hok.state).2).mono (Nat.le_succ _)⟩,
       hm.stateOf _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
     refine FMeans.mk' hf'.id hf'.parked rfl hf'.running hf'.pending hf'.finalizing hf'.exit hf'.opCount rfl rfl
       hf'.yieldOverride hf'.observers hf'.children hf'.dispatcher

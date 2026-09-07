@@ -393,6 +393,19 @@ theorem scopeCloseSnapshot_deferreds {scope : Nat} {ex : ExitV} {s st : Stores}
     simp [hentry] at h
     rw [← h.1]
 
+/-- The close writes the state (`internal/effect.ts:3784`) but registers nothing, so the
+registration-key bound survives. -/
+theorem scopeCloseSnapshot_scopes {scope : Nat} {ex : ExitV} {s st : Stores}
+    {strategy : FinalizerStrategy} {order : List FinName}
+    (h : scopeCloseSnapshot scope ex s = some (st, strategy, order)) :
+    st.scopes = s.scopes.closeState scope ex ∧ st.nextName = s.nextName := by
+  unfold scopeCloseSnapshot at h
+  cases hentry : s.scopes.entryAt scope with
+  | none => simp [hentry] at h
+  | some entry =>
+    simp [hentry] at h
+    exact ⟨by rw [← h.1], by rw [← h.1]⟩
+
 theorem storesOk_closeScopeUnsafe {scope : Nat} {ex : ExitV} {flag : Bool} {s s' : Stores}
     {program : Option Program} (hs : StoresOk s)
     (h : storesCloseScopeUnsafe scope ex flag s = some (s', program)) : StoresOk s' := by
@@ -402,7 +415,12 @@ theorem storesOk_closeScopeUnsafe {scope : Nat} {ex : ExitV} {flag : Bool} {s s'
   | some r =>
     obtain ⟨st, strategy, order⟩ := r
     simp [hsnap] at h
-    exact storesOk_of_deferreds (h.1 ▸ scopeCloseSnapshot_deferreds hsnap) hs
+    obtain ⟨hsc, hnm⟩ := scopeCloseSnapshot_scopes hsnap
+    have hdef : s'.deferreds = s.deferreds := h.1 ▸ scopeCloseSnapshot_deferreds hsnap
+    refine ⟨by unfold DeferredOk; rw [hdef]; exact hs.1, ?_⟩
+    show ScopeStore.KeysBelow s'.scopes s'.nextName
+    rw [← h.1, hsc, hnm]
+    exact ScopeStore.keysBelow_closeState hs.2
 
 /-! ## The delivery agreement -/
 

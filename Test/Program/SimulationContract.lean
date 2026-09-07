@@ -135,16 +135,24 @@ theorem straight_pRefSet_sufficient :
   (letI := evaluatorFor pOnExit; Suffices (interpOf pOnExit) 1 [Api.evaluate, Api.flush] (Api.load pOnExit fuel)))
 #guard !(decide (2 * steps pOnExit + 6 ≤ 1))
 
-/-! ## E4-CHECK-CE-016: repeated scoped forks share a registration key
+/-! ## E4-CHECK-CE-016: every executed scope registration has its own identity
 
-This is a retained defect, not source-conformance acceptance. The same fork runs
-twice in a loop with the same Point.fuel, so its second scope registration replaces
-the first. Pinned rc.112 allocates a fresh key on every registration
-(`internal/effect.ts:5366-5372`) and interrupts both children at scope close.
-The one-iteration control and two-iteration failure below use sufficient command
-fuel. Passing these guards records the current bug; the repair must replace the
-two-iteration expectation with all three fibers finished and rerun the emitted
-host witness in the audit record.
+The defect this witness recorded: the same `forkScoped` ran twice in a loop under one
+`Point.fuel`, so its second scope registration replaced the first, and the first child kept
+running past the scope's close — `[true, false, true]` on both Lean machines against
+`[true, true, true]` on pinned rc.112.
+
+Repaired 2026-09-07. The registration identity is allocated by the store at each executed
+registration, as `internal/effect.ts:5366-5372` (`forkIn`/`forkScoped`) and `:5457-5460`
+(`fiberRunIn`) allocate `const key = {}`; the compile no longer mints one from a point.
+The general laws are `Machine.scopeLinkFiber_allocates`, `_fresh`, `_keysFresh`, `_appends`
+and `Machine.dropFinalizer_removes_its_own` over the reachable-state invariant
+`Stores.ScopeKeysFresh`, which `Sched.StoresOk` carries through the whole replay; the
+ground receipts are `Machine.Witnesses.w6_two_links_have_two_keys` and its siblings.
+
+The guards below are the repaired result at compile fuel 40, command fuel 400, scheduler
+budget 2048 and `[evaluate, flush]`, with the command fuel receipt still true. These compare
+Lean machines only (`RSTEP-FB-HOST`); the host half is the audit record's emitted witness.
 -/
 
 namespace ScopeRegistrationCollision
@@ -160,14 +168,24 @@ def repeated (n : Nat) : NativeEff :=
 
 theorem typed_one : Api.wellTyped (repeated 1) = true := by decide
 theorem typed_two : Api.wellTyped (repeated 2) = true := by decide
+theorem typed_three : Api.wellTyped (repeated 3) = true := by decide
 
 #guard (Api.print (repeated 2)).isOk
+#guard (Api.print (repeated 3)).isOk
 #guard (frameRun (repeated 1) [Api.evaluate, Api.flush]).machine.fibers.map
   (fun f => f.exit.isSome) == [true, true]
 #guard (frameRun (repeated 2) [Api.evaluate, Api.flush]).machine.fibers.map
-  (fun f => f.exit.isSome) == [true, false, true]
+  (fun f => f.exit.isSome) == [true, true, true]
 #guard (termRun (repeated 2) [Api.evaluate, Api.flush]).machine.fibers.map
-  (fun f => f.exit.isSome) == [true, false, true]
+  (fun f => f.exit.isSome) == [true, true, true]
+-- three iterations, so the repair is not a two-registration special case
+#guard (frameRun (repeated 3) [Api.evaluate, Api.flush]).machine.fibers.map
+  (fun f => f.exit.isSome) == [true, true, true, true]
+#guard (termRun (repeated 3) [Api.evaluate, Api.flush]).machine.fibers.map
+  (fun f => f.exit.isSome) == [true, true, true, true]
+#guard (letI := evaluatorFor (repeated 3);
+  Suffices (interpOf (repeated 3)) 400 [Api.evaluate, Api.flush]
+    (frameLoad (repeated 3) 40 2048))
 #guard (letI := evaluatorFor (repeated 2);
   Suffices (interpOf (repeated 2)) 400 [Api.evaluate, Api.flush]
     (frameLoad (repeated 2) 40 2048))

@@ -49,29 +49,35 @@ structure InterpAgree (i₁ : FInterp) (i₂ : RInterp) : Prop where
   stackAnnotations : i₁.stackAnnotations = i₂.stackAnnotations
   scopeStatus : i₁.scopeStatus = i₂.scopeStatus
   scopeLinkFiber : i₁.scopeLinkFiber = i₂.scopeLinkFiber
-  linkOk : ∀ mode scope key fiber s s', StoresOk s →
-    i₁.scopeLinkFiber mode scope key fiber s = some s' → StoresOk s'
+  linkOk : ∀ mode scope fiber s s' key, StoresOk s →
+    i₁.scopeLinkFiber mode scope fiber s = some (s', key) → StoresOk s'
 
-theorem scopeLinkFiber_ok (root : NativeEff) (mode : Supervision.ScopeMode) (scope key : Nat)
-    (fiber : FiberId) (s s' : Stores) (hs : StoresOk s)
-    (h : (interpOf root).scopeLinkFiber mode scope key fiber s = some s') : StoresOk s' := by
+/-- Registration keeps the loop's store invariant: the deferred half is untouched, and the
+registration-key bound survives because the allocated key is the supply's own value
+(`Machine.scopeLinkFiber_keysFresh`, `E4-CHECK-CE-016`). -/
+theorem scopeLinkFiber_ok (root : NativeEff) (mode : Supervision.ScopeMode) (scope : Nat)
+    (fiber : FiberId) (s s' : Stores) (key : Nat) (hs : StoresOk s)
+    (h : (interpOf root).scopeLinkFiber mode scope fiber s = some (s', key)) : StoresOk s' := by
+  have hstores : stores.scopeLinkFiber mode scope fiber s = some (s', key) := h
+  refine ⟨?_, scopeLinkFiber_keysFresh mode scope fiber hs.2 hstores⟩
   dsimp only [interpOf] at h
   cases hentry : s.scopes.entryAt scope with
   | none => rw [hentry] at h; cases h
   | some entry =>
     rw [hentry] at h
     dsimp only at h
-    rw [← Option.some.inj h]
-    exact storesOk_of_deferreds rfl hs
+    unfold DeferredOk
+    rw [← (Prod.mk.inj (Option.some.inj h)).1]
+    exact hs.1
 
 theorem interpAgree_at (root : NativeEff) (c c' : List (FiberId × ExitV)) :
     InterpAgree (interpAt root c) (interpRAt root c') :=
-  ⟨rfl, rfl, rfl, rfl, fun mode scope key fiber s s' hs h =>
-    scopeLinkFiber_ok root mode scope key fiber s s' hs h⟩
+  ⟨rfl, rfl, rfl, rfl, fun mode scope fiber s s' key hs h =>
+    scopeLinkFiber_ok root mode scope fiber s s' key hs h⟩
 
 theorem interpAgree_of (root : NativeEff) : InterpAgree (interpOf root) (interpR root) :=
-  ⟨rfl, rfl, rfl, rfl, fun mode scope key fiber s s' hs h =>
-    scopeLinkFiber_ok root mode scope key fiber s s' hs h⟩
+  ⟨rfl, rfl, rfl, rfl, fun mode scope fiber s s' key hs h =>
+    scopeLinkFiber_ok root mode scope fiber s s' key hs h⟩
 
 /-! ## Recording an interrupt -/
 
@@ -330,10 +336,10 @@ theorem registerRace_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (h
 
 theorem linkScope_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp} (hi : InterpAgree i₁ i₂)
     {m₁ : FMachine} {m₂ : RState} (hok : MachineOk StoresOk m₁) (hm : BMeans root m₁ m₂)
-    (mode : Supervision.ScopeMode) (scope key : Nat) (target : FiberId) (interruptor : Option FiberId)
+    (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId) (interruptor : Option FiberId)
     (extra : ReasonAnnotations Ann) :
-    CmdsRel root (linkScope i₁ m₁ mode scope key target interruptor extra)
-      (linkScope i₂ m₂ mode scope key target interruptor extra) := by
+    CmdsRel root (linkScope i₁ m₁ mode scope target interruptor extra)
+      (linkScope i₂ m₂ mode scope target interruptor extra) := by
   unfold linkScope
   rw [hi.scopeStatus, hm.state]
   cases i₂.scopeStatus scope m₂.state with
@@ -371,11 +377,12 @@ theorem linkScope_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp} (hi :
         | false =>
           simp only [Bool.false_eq_true, ↓reduceIte]
           rw [hi.scopeLinkFiber]
-          cases hlink : i₂.scopeLinkFiber mode scope key target m₂.state with
+          cases hlink : i₂.scopeLinkFiber mode scope target m₂.state with
           | none => exact ⟨machineOk_halt hok _, hm.halt _, ListRel.nil⟩
-          | some state =>
+          | some res =>
+            obtain ⟨state, key⟩ := res
             have hs : StoresOk state :=
-              hi.linkOk mode scope key target m₂.state state (hm.state ▸ hok.state)
+              hi.linkOk mode scope target m₂.state state key (hm.state ▸ hok.state)
                 (by rw [hi.scopeLinkFiber]; exact hlink)
             dsimp only [CmdsRel]
             refine ⟨machineOk_emit (machineOk_modify (machineOk_stateOf hok hs) target ?_) _,
@@ -484,16 +491,16 @@ theorem dropObservers_rel (token : Nat) {a₁ : FAnswer} {a₂ : RAnswer} (ha : 
     rw [← hg.observers]
     exact hg.withObservers _
 
-theorem runIn_rel (target : FiberId) (scope key : Nat) {a₁ : FAnswer} {a₂ : RAnswer}
+theorem runIn_rel (target : FiberId) (scope : Nat) {a₁ : FAnswer} {a₂ : RAnswer}
     (ha : AnswerRel root a₁ a₂) :
-    IterRel root (FiberAction.runIn (interpAt root c) m₁ f₁ y target scope key a₁)
-      (FiberAction.runIn (interpRAt root c) m₂ f₂ y target scope key a₂) := by
+    IterRel root (FiberAction.runIn (interpAt root c) m₁ f₁ y target scope a₁)
+      (FiberAction.runIn (interpRAt root c) m₂ f₂ y target scope a₂) := by
   unfold FiberAction.runIn
   have hl := linkScope_rel root (interpAgree_at root c c) hok hm Supervision.ScopeMode.fiberRunIn scope
-    key target (some target) ReasonAnnotations.empty
-  generalize linkScope (interpAt root c) m₁ Supervision.ScopeMode.fiberRunIn scope key target (some target)
+    target (some target) ReasonAnnotations.empty
+  generalize linkScope (interpAt root c) m₁ Supervision.ScopeMode.fiberRunIn scope target (some target)
     ReasonAnnotations.empty = r₁ at hl ⊢
-  generalize linkScope (interpRAt root c) m₂ Supervision.ScopeMode.fiberRunIn scope key target (some target)
+  generalize linkScope (interpRAt root c) m₂ Supervision.ScopeMode.fiberRunIn scope target (some target)
     ReasonAnnotations.empty = r₂ at hl ⊢
   obtain ⟨n₁, cs₁⟩ := r₁
   obtain ⟨n₂, cs₂⟩ := r₂
@@ -549,10 +556,10 @@ theorem fork_rel {p₁ : NCode} {p₂ : RProgram} (hp : CodeMeans root p₁ p₂
       ListRel.append hn (ListRel.cons ⟨hf.id, rfl⟩ ListRel.nil)⟩
 
 theorem forkIn_rel {p₁ : NCode} {p₂ : RProgram} (hp : CodeMeans root p₁ p₂)
-    (options : Supervision.ForkOptions) (scope key : Nat) {a₁ : FAnswer} {a₂ : RAnswer}
+    (options : Supervision.ForkOptions) (scope : Nat) {a₁ : FAnswer} {a₂ : RAnswer}
     (ha : AnswerRel root a₁ a₂) :
-    IterRel root (FiberAction.forkIn (interpAt root c) m₁ f₁ y p₁ options scope key a₁)
-      (FiberAction.forkIn (interpRAt root c) m₂ f₂ y p₂ options scope key a₂) := by
+    IterRel root (FiberAction.forkIn (interpAt root c) m₁ f₁ y p₁ options scope a₁)
+      (FiberAction.forkIn (interpRAt root c) m₂ f₂ y p₂ options scope a₂) := by
   unfold FiberAction.forkIn
   have hs := spawn_rel root (i₁ := interpAt root c) (i₂ := interpRAt root c) rfl hok hm hf hp { options with daemon := true }
   generalize spawn (interpAt root c) m₁ f₁ p₁ { options with daemon := true } = s₁ at hs ⊢
@@ -572,7 +579,7 @@ theorem forkIn_rel {p₁ : NCode} {p₂ : RProgram} (hp : CodeMeans root p₁ p�
   dsimp only at hok'' hm'' hf'' hn
   dsimp only
   refine ⟨hok'', hm'', ha _ _ _ hf'', rfl, rfl,
-    ListRel.append hn (ListRel.cons ⟨rfl, rfl, rfl, rfl, congrArg some hf''.id, ?_⟩ ListRel.nil)⟩
+    ListRel.append hn (ListRel.cons ⟨rfl, rfl, rfl, congrArg some hf''.id, ?_⟩ ListRel.nil)⟩
   show stackAnnotationsOf tf₁.id = stackAnnotationsOf tf₂.id
   rw [hf''.id]
 

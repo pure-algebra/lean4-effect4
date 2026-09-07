@@ -190,6 +190,12 @@ structure Row where
   requires : List ServiceKey := []
   /-- The rc.112 file and lines the row transcribes. -/
   cite : String
+  /-- Explicit type arguments the export must be called with, target type spellings, in
+  order: `Deferred.make<number, number>()`. A row whose answer handle is generic and whose
+  arguments do not determine it needs them, or the host infers the parameter's default and
+  every later use of the handle is typed at that default instead
+  (`E4-CHECK-CE-013`). Empty means the call is printed and read without type arguments. -/
+  typeArgs : List String := []
 deriving DecidableEq, Repr
 
 /-! ## Values -/

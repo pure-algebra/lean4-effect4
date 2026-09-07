@@ -277,9 +277,11 @@ def cmd : InductiveDesc where
      -- §20 (2026-09-07): the parallel close's await, yielded under the generator's frame
      { leanName := "closeParAwait",
        args := [⟨"host", fid, false⟩, ⟨"yielding", .bool, false⟩, ⟨"fibers", .lst fid, false⟩] },
+     -- E4-CHECK-CE-016 (2026-09-07): the registration identity is allocated by the store at
+     -- the registration (`internal/effect.ts:5366`), so the command carries none
      { leanName := "link",
        args := [⟨"mode", .nm "Supervision.ScopeMode", false⟩, ⟨"scope", .nat, false⟩,
-                ⟨"key", .nat, false⟩, ⟨"target", fid, false⟩, ⟨"interruptor", .opt fid, false⟩,
+                ⟨"target", fid, false⟩, ⟨"interruptor", .opt fid, false⟩,
                 ⟨"extra", .app "ReasonAnnotations" [.nm "α"], false⟩] },
      { leanName := "drainDue" }]
 
@@ -300,16 +302,16 @@ def withFiberAction : InductiveDesc where
   ctors :=
     [{ leanName := "fork",
        args := [⟨"program", codeL, true⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩] },
+     -- E4-CHECK-CE-016 (2026-09-07): no registration identity in the action either
      { leanName := "forkIn",
        args := [⟨"program", codeL, true⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩,
-                ⟨"scope", .nat, false⟩, ⟨"key", .nat, false⟩] },
+                ⟨"scope", .nat, false⟩] },
      { leanName := "forkScoped",
-       args := [⟨"program", codeL, true⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩,
-                ⟨"key", .nat, false⟩] },
+       args := [⟨"program", codeL, true⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩] },
      -- §20 (2026-09-07): the `Scope` service read, `forkScoped`'s first half
      { leanName := "ambientScope" },
      { leanName := "runIn",
-       args := [⟨"target", fid, false⟩, ⟨"scope", .nat, false⟩, ⟨"key", .nat, false⟩] },
+       args := [⟨"target", fid, false⟩, ⟨"scope", .nat, false⟩] },
      { leanName := "interrupt", args := [⟨"target", fid, false⟩] },
      -- D6b (2026-09-07): `fiberInterruptAs`, what the public interrupt returns
      { leanName := "interruptAs", args := [⟨"target", fid, false⟩, ⟨"who", fid, false⟩] },

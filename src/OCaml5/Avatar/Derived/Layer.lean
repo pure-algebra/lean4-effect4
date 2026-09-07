@@ -218,7 +218,7 @@ def actionName : InductiveDesc where
   leanParams := []
   ctors :=
     [{ leanName := "fork", args := [{ leanName := "program", leanTy := .nm "ProgName" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }] },
-     { leanName := "forkScoped", args := [{ leanName := "program", leanTy := .nm "ProgName" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }, { leanName := "key", leanTy := .nm "Nat" }] },
+     { leanName := "forkScoped", args := [{ leanName := "program", leanTy := .nm "ProgName" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }] },
      { leanName := "interrupt", args := [{ leanName := "target", leanTy := .nm "FiberId" }] },
      { leanName := "interruptAs", args := [{ leanName := "target", leanTy := .nm "FiberId" }, { leanName := "who", leanTy := .nm "FiberId" }] },
      { leanName := "interruptScoped", args := [{ leanName := "target", leanTy := .nm "FiberId" }] },

@@ -153,21 +153,21 @@ theorem frame_dropObservers (token : Nat) :
     evaluatePrim.withFiber interp m f y (.dropObservers token) =
       FiberAction.dropObservers interp m f y token := rfl
 
-theorem frame_runIn (target : FiberId) (scope key : Nat) :
-    evaluatePrim.withFiber interp m f y (.runIn target scope key) =
-      FiberAction.runIn interp m f y target scope key := rfl
+theorem frame_runIn (target : FiberId) (scope : Nat) :
+    evaluatePrim.withFiber interp m f y (.runIn target scope) =
+      FiberAction.runIn interp m f y target scope := rfl
 
 theorem frame_fork (program : NCode) (options : Supervision.ForkOptions) :
     evaluatePrim.withFiber interp m f y (.fork program options) =
       FiberAction.fork interp m f y program options := rfl
 
-theorem frame_forkIn (program : NCode) (options : Supervision.ForkOptions) (scope key : Nat) :
-    evaluatePrim.withFiber interp m f y (.forkIn program options scope key) =
-      FiberAction.forkIn interp m f y program options scope key := rfl
+theorem frame_forkIn (program : NCode) (options : Supervision.ForkOptions) (scope : Nat) :
+    evaluatePrim.withFiber interp m f y (.forkIn program options scope) =
+      FiberAction.forkIn interp m f y program options scope := rfl
 
-theorem frame_forkScoped (program : NCode) (options : Supervision.ForkOptions) (key : Nat) :
-    evaluatePrim.withFiber interp m f y (.forkScoped program options key) =
-      FiberAction.forkScoped interp m f y program options key := rfl
+theorem frame_forkScoped (program : NCode) (options : Supervision.ForkOptions) :
+    evaluatePrim.withFiber interp m f y (.forkScoped program options) =
+      FiberAction.forkScoped interp m f y program options := rfl
 
 theorem frame_refuse (cause : CauseV) :
     evaluatePrim.withFiber interp m f y (.refuse cause) = FiberAction.refuse m f y cause := rfl
@@ -785,7 +785,7 @@ inductive CmdShape
   | observe (fiber : FiberId) (exit : ExitV) (observer : Observer)
   | exitDone (fiber : FiberId)
   | closeParAwait (host : FiberId) (yielding : Bool) (fibers : List FiberId)
-  | link (scope : Nat) (key : Nat) (target : FiberId)
+  | link (scope : Nat) (target : FiberId)
   | drainDue
 deriving DecidableEq
 
@@ -805,7 +805,7 @@ def cmdShape {κ : Type} : Cmd EffName EffThunk Val Err Defect FiberId Ann κ �
   | .observe fiber ex observer => .observe fiber ex observer
   | .exitDone fiber => .exitDone fiber
   | .closeParAwait host y fibers => .closeParAwait host y fibers
-  | .link _ scope key target _ _ => .link scope key target
+  | .link _ scope target _ _ => .link scope target
   | .drainDue => .drainDue
 
 def frameStoreStep (root : NativeEff) (m : Api.Machine)

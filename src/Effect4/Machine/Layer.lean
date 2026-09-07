@@ -342,7 +342,7 @@ deriving DecidableEq
 /-- What a `withFiber` thunk names; `actionOf` expands the program names. -/
 inductive ActionName
   | fork (program : ProgName) (options : Supervision.ForkOptions)
-  | forkScoped (program : ProgName) (options : Supervision.ForkOptions) (key : Nat)
+  | forkScoped (program : ProgName) (options : Supervision.ForkOptions)
   | interrupt (target : FiberId)
   /-- `fiberInterruptAs`, what the public interrupt's `withFiber` returns (source-repairs §19,
   D6b): the shared machine constructs it through `RunInterp.interruptAsCode`. -/
@@ -1215,8 +1215,8 @@ def cancelProgram : Name → Program
 /-- `WithFiberAction` from a name. -/
 def actionOf (table : LayerTable) : ActionName → WithFiberAction Name Thunk Val Err Defect FiberId Ann Ctx
   | ActionName.fork program options => WithFiberAction.fork (progOf table program) options
-  | ActionName.forkScoped program options key =>
-    WithFiberAction.forkScoped (progOf table program) options key
+  | ActionName.forkScoped program options =>
+    WithFiberAction.forkScoped (progOf table program) options
   | ActionName.interrupt target => WithFiberAction.interrupt target
   | ActionName.interruptAs target who => WithFiberAction.interruptAs target who
   | ActionName.interruptScoped target => WithFiberAction.interruptScoped target
@@ -1303,7 +1303,9 @@ def interp (table : LayerTable) : RunInterp Name Thunk Val Err Defect FiberId An
   restoreName := Name.restore
   mergeName := Name.merge
   scopeStatus := fun scope state => state.scopes.status scope
-  scopeLinkFiber := fun mode scope key fiber state =>
+  -- the registration identity is allocated here, from the same `nextName` supply this store
+  -- already uses for `SyncOp.scopeAdd`'s finalizer keys (`const key = {}`, `:5366`, `:5457`)
+  scopeLinkFiber := fun mode scope fiber state =>
     match state.scopes.entryAt scope with
     | none => none
     | some entry =>
@@ -1311,9 +1313,10 @@ def interp (table : LayerTable) : RunInterp Name Thunk Val Err Defect FiberId An
         match mode with
         | Supervision.ScopeMode.forkIn => true
         | Supervision.ScopeMode.fiberRunIn => false
-      some { state with
-        scopes := state.scopes.setEntry
-          { entry with scope := entry.scope.addUnsafe key (FinName.interruptFiber fiber skipSelf) } }
+      let registered := entry.scope.addUnsafe state.nextName (FinName.interruptFiber fiber skipSelf)
+      some ({ state with
+        scopes := state.scopes.setEntry { entry with scope := registered },
+        nextName := state.nextName + 1 }, state.nextName)
   dropFinalizer := fun scope key state =>
     match state.scopes.entryAt scope with
     | none => none

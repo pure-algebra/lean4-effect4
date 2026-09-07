@@ -2795,10 +2795,10 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
     (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (target : Effect4.FiberId) (scope key : Nat),
-    Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.runIn target scope key) =
+    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (target : Effect4.FiberId) (scope : Nat),
+    Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.runIn target scope) =
       have r :=
-        Effect4.Machine.linkScope interp m Effect4.Supervision.ScopeMode.fiberRunIn scope key target (Option.some target)
+        Effect4.Machine.linkScope interp m Effect4.Supervision.ScopeMode.fiberRunIn scope target (Option.some target)
           Effect4.ReasonAnnotations.empty;
       { machine := r.fst,
         fiber :=
@@ -2823,12 +2823,12 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
     (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (mode : Effect4.Supervision.ScopeMode) (scope key : Nat) (target : Effect4.FiberId)
+    (mode : Effect4.Supervision.ScopeMode) (scope : Nat) (target : Effect4.FiberId)
     (interruptor : Option Effect4.FiberId) (extra : Effect4.ReasonAnnotations α) (exit : Effect4.Exit β ε δ ι α)
     (t : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
     interp.scopeStatus scope m.state = Option.some (Option.some exit) →
       m.fiber? target = Option.some t →
-        Effect4.Machine.linkScope interp m mode scope key target interruptor extra =
+        Effect4.Machine.linkScope interp m mode scope target interruptor extra =
           have r := Effect4.Machine.interruptRecord interp interruptor extra t;
           ((m.update r.fst).emit
               [Effect4.Machine.RunEvent.scopeClosedOnLink scope target,
@@ -2839,10 +2839,10 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
     (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (mode : Effect4.Supervision.ScopeMode) (scope key : Nat) (target : Effect4.FiberId)
+    (mode : Effect4.Supervision.ScopeMode) (scope : Nat) (target : Effect4.FiberId)
     (interruptor : Option Effect4.FiberId) (extra : Effect4.ReasonAnnotations α),
     interp.scopeStatus scope m.state = Option.none →
-      Effect4.Machine.linkScope interp m mode scope key target interruptor extra =
+      Effect4.Machine.linkScope interp m mode scope target interruptor extra =
         (m.halt (Effect4.Machine.Stuck.unknownScope scope), []))
 
 #check (@Effect4.FrameFiber.step_async_frontier :
@@ -2931,14 +2931,17 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
       ([], Effect4.Machine.stepOfExit (Effect4.Machine.mergeExits exits)))
 
 #check (@Effect4.Machine.scopeLinkFiber_name :
-  ∀ (scope key : Nat) (fiber : Effect4.FiberId) (state : Effect4.Machine.Stores)
+  ∀ (scope : Nat) (fiber : Effect4.FiberId) (state : Effect4.Machine.Stores)
     (entry : Effect4.Machine.ScopeEntry),
     state.scopes.entryAt scope = Option.some entry →
-      Effect4.Machine.stores.scopeLinkFiber Effect4.Supervision.ScopeMode.forkIn scope key fiber state =
+      Effect4.Machine.stores.scopeLinkFiber Effect4.Supervision.ScopeMode.forkIn scope fiber state =
         Option.some
-          { refs := state.refs, deferreds := state.deferreds,
-            scopes := (state.scopes.addFinalizer scope key (Effect4.Machine.FinName.interruptFiber fiber Bool.true)).fst,
-            nextName := state.nextName })
+          ({ refs := state.refs, deferreds := state.deferreds,
+              scopes :=
+                (state.scopes.addFinalizer scope state.nextName
+                    (Effect4.Machine.FinName.interruptFiber fiber Bool.true)).fst,
+              nextName := state.nextName + 1 },
+            state.nextName))
 
 #check (@Effect4.Machine.scopeStore_forkChild_names :
   ∀ (self : Effect4.Machine.ScopeStore) (parentKey childKey sharedKey : Nat)
@@ -3719,9 +3722,9 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
     (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
     (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (program : Effect4.Prim ν σ β ε δ ι α)
-    (options : Effect4.Supervision.ForkOptions) (scope key : Nat),
+    (options : Effect4.Supervision.ForkOptions) (scope : Nat),
     Effect4.Machine.evaluatePrim.withFiber interp m f yielding
-        (Effect4.Machine.WithFiberAction.forkIn program options scope key) =
+        (Effect4.Machine.WithFiberAction.forkIn program options scope) =
       have s :=
         Effect4.Machine.spawn interp m f program
           { startImmediately := options.startImmediately, daemon := Bool.true, maskMode := options.maskMode };
@@ -3742,21 +3745,21 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
         yielding := yielding, outcome := Effect4.Machine.Outcome.continue_,
         nested :=
           t.snd.snd ++
-            [Effect4.Machine.Cmd.link Effect4.Supervision.ScopeMode.forkIn scope key s.snd.snd (Option.some t.snd.fst.id)
+            [Effect4.Machine.Cmd.link Effect4.Supervision.ScopeMode.forkIn scope s.snd.snd (Option.some t.snd.fst.id)
                 (interp.stackAnnotations t.snd.fst.id)] })
 
 #check (@Effect4.Machine.linkScope_open :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
     (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (mode : Effect4.Supervision.ScopeMode) (scope key : Nat) (target : Effect4.FiberId)
-    (interruptor : Option Effect4.FiberId) (extra : Effect4.ReasonAnnotations α) (state : St)
+    (mode : Effect4.Supervision.ScopeMode) (scope : Nat) (target : Effect4.FiberId)
+    (interruptor : Option Effect4.FiberId) (extra : Effect4.ReasonAnnotations α) (state : St) (key : Nat)
     (t : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
     interp.scopeStatus scope m.state = Option.some Option.none →
       m.fiber? target = Option.some t →
         t.exit = Option.none →
-          interp.scopeLinkFiber mode scope key target m.state = Option.some state →
-            Effect4.Machine.linkScope interp m mode scope key target interruptor extra =
+          interp.scopeLinkFiber mode scope target m.state = Option.some (state, key) →
+            Effect4.Machine.linkScope interp m mode scope target interruptor extra =
               (((Effect4.Machine.RunMachine.mk m.fibers m.races m.nextId m.nextToken m.nextRace m.middlewareInstalled m.armed
                           state m.trace m.stuck).modify
                       target fun t =>
@@ -3771,12 +3774,12 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
     (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (mode : Effect4.Supervision.ScopeMode) (scope key : Nat) (target : Effect4.FiberId)
+    (mode : Effect4.Supervision.ScopeMode) (scope : Nat) (target : Effect4.FiberId)
     (interruptor : Option Effect4.FiberId) (extra : Effect4.ReasonAnnotations α)
     (t : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (exit : Effect4.Exit β ε δ ι α),
     interp.scopeStatus scope m.state = Option.some Option.none →
       m.fiber? target = Option.some t →
-        t.exit = Option.some exit → Effect4.Machine.linkScope interp m mode scope key target interruptor extra = (m, []))
+        t.exit = Option.some exit → Effect4.Machine.linkScope interp m mode scope target interruptor extra = (m, []))
 
 #check (@Effect4.Machine.fireObserver_dropScopeFinalizer :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
@@ -3813,7 +3816,7 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
 
 #check (@Effect4.Machine.Witnesses.w6_link_then_close :
   Effect4.Machine.Witnesses.scopeRows Effect4.Machine.Witnesses.w6LinkThenClose =
-      [[0, 0, 0, 100, 1]] ∧
+      [[0, 0, 0, 102, 1]] ∧
     Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w6LinkThenClose 1 =
         Option.some
           (Effect4.Machine.Witnesses.interruptedWith { value := 0 } { value := 1 }
@@ -3845,10 +3848,10 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
     {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
     [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
     (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (program : Effect4.Prim ν σ β ε δ ι α) (options : Effect4.Supervision.ForkOptions) (key scope : Nat),
+    (program : Effect4.Prim ν σ β ε δ ι α) (options : Effect4.Supervision.ForkOptions) (scope : Nat),
     interp.ambientScope f.context = Option.some scope →
       Effect4.Machine.evaluatePrim.withFiber interp m f yielding
-          (Effect4.Machine.WithFiberAction.forkScoped program options key) =
+          (Effect4.Machine.WithFiberAction.forkScoped program options) =
         have s :=
           Effect4.Machine.spawn interp m f program
             { startImmediately := options.startImmediately, daemon := Bool.true, maskMode := options.maskMode };
@@ -3869,7 +3872,7 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
           yielding := yielding, outcome := Effect4.Machine.Outcome.continue_,
           nested :=
             t.snd.snd ++
-              [Effect4.Machine.Cmd.link Effect4.Supervision.ScopeMode.forkIn scope key s.snd.snd (Option.some t.snd.fst.id)
+              [Effect4.Machine.Cmd.link Effect4.Supervision.ScopeMode.forkIn scope s.snd.snd (Option.some t.snd.fst.id)
                   (interp.stackAnnotations t.snd.fst.id)] })
 
 #check (@Effect4.Machine.withFiber_forkScoped_none :
@@ -3877,10 +3880,10 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
     {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
     [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
     (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (program : Effect4.Prim ν σ β ε δ ι α) (options : Effect4.Supervision.ForkOptions) (key : Nat),
+    (program : Effect4.Prim ν σ β ε δ ι α) (options : Effect4.Supervision.ForkOptions),
     interp.ambientScope f.context = Option.none →
       Effect4.Machine.evaluatePrim.withFiber interp m f yielding
-          (Effect4.Machine.WithFiberAction.forkScoped program options key) =
+          (Effect4.Machine.WithFiberAction.forkScoped program options) =
         { machine := m,
           fiber :=
             { id := f.id,
@@ -5090,19 +5093,19 @@ input order; a settled race resumes its host with the masked cleanup program. -/
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
     (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (mode : Effect4.Supervision.ScopeMode) (scope key : Nat) (target : Effect4.FiberId)
+    (mode : Effect4.Supervision.ScopeMode) (scope : Nat) (target : Effect4.FiberId)
     (interruptor : Option Effect4.FiberId) (extra : Effect4.ReasonAnnotations α)
     (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
     m.stuck = Option.none →
-      Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.link mode scope key target interruptor extra :: rest) =
-        have l := Effect4.Machine.linkScope interp m mode scope key target interruptor extra;
+      Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.link mode scope target interruptor extra :: rest) =
+        have l := Effect4.Machine.linkScope interp m mode scope target interruptor extra;
         Effect4.Machine.drive interp fuel l.fst (l.snd ++ rest))
 
 #check (@Effect4.Machine.Witnesses.w6_deferred_child_is_linked :
   Effect4.Machine.Witnesses.scopeRows
         Effect4.Machine.Witnesses.w6DeferredLinked =
-      [[0, 0, 0, 100, 1]] ∧
-    Effect4.Machine.Witnesses.scopeKeys Effect4.Machine.Witnesses.w6DeferredLinked 0 = Option.some [100] ∧
+      [[0, 0, 0, 102, 1]] ∧
+    Effect4.Machine.Witnesses.scopeKeys Effect4.Machine.Witnesses.w6DeferredLinked 0 = Option.some [102] ∧
       Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w6DeferredLinked 1 = Option.none ∧
         Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w6DeferredLinkedFired 1 =
             Option.some (Effect4.Exit.success (Effect4.Machine.Val.nat 3)) ∧

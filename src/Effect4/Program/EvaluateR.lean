@@ -223,14 +223,14 @@ def evaluateFiberR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool
     FiberAction.join interp m f yielding target mode
   | .fork child options =>
     FiberAction.fork interp m f yielding (bodyR interp child) options (answerWith next)
-  | .forkIn child options scope key =>
-    FiberAction.forkIn interp m f yielding (bodyR interp (.at_ child)) options scope key
+  | .forkIn child options scope =>
+    FiberAction.forkIn interp m f yielding (bodyR interp (.at_ child)) options scope
       (answerWith next)
-  | .forkScoped child options key =>
-    FiberAction.forkScoped interp m f yielding (bodyR interp (.at_ child)) options key
+  | .forkScoped child options =>
+    FiberAction.forkScoped interp m f yielding (bodyR interp (.at_ child)) options
       (fun f v => answerR f (next (.success v)))
-  | .runIn target scope key =>
-    FiberAction.runIn interp m f yielding target scope key (answerWith next)
+  | .runIn target scope =>
+    FiberAction.runIn interp m f yielding target scope (answerWith next)
   | .interrupt target =>
     FiberAction.interrupt interp m (saveAnswerR f (seqR next)) yielding target
   | .interruptAs target who =>

@@ -208,7 +208,7 @@ inductive EffThunk
   | park (kind : ParkKind)
   | act (p : Point)
   /-- `forkScoped`'s `forkIn` on the handle its service read answered (§20): the child and
-  options at the point, the scope, and the point's fuel as the finalizer key. -/
+  options at the point, and the scope. -/
   | forkInAt (p : Point) (scope : Nat)
   | getCtx
   | setCtx (context : Ctx)
@@ -262,9 +262,9 @@ def embedStep : IterStep Name Thunk Val Err Defect FiberId Ann Program →
 /-- The embedding of a stores action. -/
 def embedAction : WithFiberAction Name Thunk Val Err Defect FiberId Ann Ctx → NAction
   | .fork p o => .fork (embed p) o
-  | .forkIn p o s k => .forkIn (embed p) o s k
-  | .forkScoped p o k => .forkScoped (embed p) o k
-  | .runIn t s k => .runIn t s k
+  | .forkIn p o s => .forkIn (embed p) o s
+  | .forkScoped p o => .forkScoped (embed p) o
+  | .runIn t s => .runIn t s
   | .interrupt t => .interrupt t
   | .interruptAs t who => .interruptAs t who
   | .interruptScoped t => .interruptScoped t
@@ -554,13 +554,13 @@ def actionAt (root : NativeEff) (p : Point) : Option NAction :=
       | .forkIn _ options scope =>
         match evalTerm p.env scope with
         | some (Val.scopeHandle s) =>
-          WithFiberAction.forkIn (resolve root (q.child 0)) options s p.fuel
+          WithFiberAction.forkIn (resolve root (q.child 0)) options s
         | _ => refuse
       -- the `Scope` service read (`Context.ts:423`, §20); `forkScopedAt` is the `forkIn` half
       | .forkScoped _ _ => WithFiberAction.ambientScope
       | .runIn target scope =>
         match evalTerm p.env target, evalTerm p.env scope with
-        | some (Val.fiber id), some (Val.scopeHandle s) => WithFiberAction.runIn id s p.fuel
+        | some (Val.fiber id), some (Val.scopeHandle s) => WithFiberAction.runIn id s
         | _, _ => refuse
       | .interrupt target =>
         match evalTerm p.env target with
@@ -612,12 +612,13 @@ where
     | .cons h t, q => compileEff h (q.child 0) :: entrants t (q.child 1)
 
 /-- `forkScoped`'s second half (`forkIn(self, scope, options)`, `internal/effect.ts:5406`; §20)
-at a `forkScoped` node: the child compiled at the action's program, the node's options, the
-handle the service read answered, and the point's fuel as the finalizer key. -/
+at a `forkScoped` node: the child compiled at the action's program, the node's options and the
+handle the service read answered. The compile does not mint a registration identity — the
+store allocates one per executed registration, as `:5366` does (`E4-CHECK-CE-016`). -/
 def forkScopedAt (root : NativeEff) (p : Point) (scope : Nat) : Option NAction :=
   match Node.at_ (Node.eff root) p.path with
   | some (Node.eff (.withFiber (.forkScoped _ options))) =>
-    some (WithFiberAction.forkIn (resolve root ((p.child 0).child 0)) options scope p.fuel)
+    some (WithFiberAction.forkIn (resolve root ((p.child 0).child 0)) options scope)
   | _ => none
 
 /-- `cont[contA](value, fiber)`. -/
@@ -793,7 +794,9 @@ def interpOf (root : NativeEff) :
   restoreName := EffName.restore
   mergeName := EffName.merge
   scopeStatus := fun scope state => state.scopes.status scope
-  scopeLinkFiber := fun mode scope key fiber state =>
+  -- the registration identity is the store's, allocated at the executed registration
+  -- (`const key = {}`, `internal/effect.ts:5366`, `:5457`); `E4-CHECK-CE-016`
+  scopeLinkFiber := fun mode scope fiber state =>
     match state.scopes.entryAt scope with
     | none => none
     | some _ =>
@@ -801,8 +804,10 @@ def interpOf (root : NativeEff) :
         match mode with
         | Supervision.ScopeMode.forkIn => true
         | Supervision.ScopeMode.fiberRunIn => false
-      some { state with
-        scopes := (state.scopes.addFinalizer scope key (FinName.interruptFiber fiber skipSelf)).1 }
+      some ({ state with
+        scopes := (state.scopes.addFinalizer scope state.nextName
+          (FinName.interruptFiber fiber skipSelf)).1,
+        nextName := state.nextName + 1 }, state.nextName)
   dropFinalizer := fun scope key state =>
     match state.scopes.entryAt scope with
     | none => none

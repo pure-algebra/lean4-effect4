@@ -63,9 +63,9 @@ theorem cmeans_exitDone (root : NativeEff) {a b : FiberId} (h : a = b) :
     CMeans root (.exitDone a) (.exitDone b) := h
 theorem cmeans_closeParAwait (root : NativeEff) (h : FiberId) (y : Bool) (fs : List FiberId) :
     CMeans root (.closeParAwait h y fs) (.closeParAwait h y fs) := ⟨rfl, rfl, rfl⟩
-theorem cmeans_link (root : NativeEff) (md : Supervision.ScopeMode) (s k : Nat) (t : FiberId)
+theorem cmeans_link (root : NativeEff) (md : Supervision.ScopeMode) (s : Nat) (t : FiberId)
     (i : Option FiberId) (x : ReasonAnnotations Ann) :
-    CMeans root (.link md s k t i x) (.link md s k t i x) := ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩
+    CMeans root (.link md s t i x) (.link md s t i x) := ⟨rfl, rfl, rfl, rfl, rfl⟩
 theorem cmeans_drainDue (root : NativeEff) : CMeans root .drainDue .drainDue := trivial
 
 theorem listRel_observe (root : NativeEff) {a b : FiberId} (hab : a = b) (exit : ExitV) :
@@ -173,13 +173,15 @@ theorem pendingOk_countdownEntry {w₁ : FRun} (hw : PendingOk w₁) {w₂ : RFi
     (fun q => ?_) (by rw [hpend])
   split <;> rfl
 
+/-- The observer's removal keeps the loop's store invariant: removal only removes, so the
+registration-key bound survives (`E4-CHECK-CE-016`). -/
 theorem dropFinalizer_ok (root : NativeEff) (scope key : Nat) {s s' : Stores} (hs : StoresOk s)
     (h : (interpOf root).dropFinalizer scope key s = some s') : StoresOk s' := by
   dsimp only [interpOf] at h
   split at h
   · cases h
   · rw [← Option.some.inj h]
-    exact storesOk_of_deferreds rfl hs
+    exact ⟨hs.1, ScopeStore.keysBelow_removeFinalizer hs.2⟩
 
 theorem dueResumes_frame (root : NativeEff) (s : Stores) :
     (interpOf root).dueResumes s =
@@ -902,15 +904,15 @@ theorem drive_closeParAwait (host : FiberId) (y : Bool) (fibers : List FiberId) 
           (parkCode_means root (ParkKind.awaitAll fibers))), rfl, rfl, ListRel.nil⟩
       (pendingOk_of_fields (pendingOk_of_fiber? hok h₁) rfl) hf.id hr
 
-theorem drive_link (mode : Supervision.ScopeMode) (scope key : Nat) (target : FiberId)
+theorem drive_link (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
     (interruptor : Option FiberId) (extra : ReasonAnnotations Ann) :
     letI := evaluatorFor root
     letI := termEvaluatorFor root
-    CmdsRel root (driveStep (interpOf root) m₁ (.link mode scope key target interruptor extra) r₁)
-      (driveStep (interpR root) m₂ (.link mode scope key target interruptor extra) r₂) := by
+    CmdsRel root (driveStep (interpOf root) m₁ (.link mode scope target interruptor extra) r₁)
+      (driveStep (interpR root) m₂ (.link mode scope target interruptor extra) r₂) := by
   simp only [driveStep]
   exact CmdsRel.appendRest
-    (linkScope_rel root (interpAgree_of root) hok hm mode scope key target interruptor extra) hr
+    (linkScope_rel root (interpAgree_of root) hok hm mode scope target interruptor extra) hr
 
 theorem drive_drainDue :
     letI := evaluatorFor root
@@ -918,7 +920,7 @@ theorem drive_drainDue :
     CmdsRel root (driveStep (interpOf root) m₁ .drainDue r₁) (driveStep (interpR root) m₂ .drainDue r₂) := by
   simp only [driveStep]
   have hs : StoresOk m₂.state := hm.state ▸ hok.state
-  have hd := deferredOk_drainDue hs
+  have hd := deferredOk_drainDue hs.1
   rw [hm.state]
   show CmdsRel root
     ({ m₁ with state := ((interpOf root).dueResumes m₂.state).2 },
@@ -928,7 +930,8 @@ theorem drive_drainDue :
   rw [dueResumes_frame, dueResumes_term]
   dsimp only
   exact CmdsRel.mk'
-    (machineOk_stateOf (s := { m₂.state with deferreds := (m₂.state.deferreds.drainDue).2 }) hok hd.1)
+    (machineOk_stateOf (s := { m₂.state with deferreds := (m₂.state.deferreds.drainDue).2 }) hok
+      ⟨hd.1, hs.2⟩)
     (hm.stateOf _) (ListRel.append (drain_rel root _ hd.2) hr)
 
 end Commands
@@ -1004,10 +1007,10 @@ theorem stepAgrees (root : NativeEff) :
     cases c₂ <;> try exact (hc : False).elim
     rcases hc with ⟨rfl, rfl, rfl⟩
     exact drive_closeParAwait root hok hm hr _ _ _
-  | link mode scope key target interruptor extra =>
+  | link mode scope target interruptor extra =>
     cases c₂ <;> try exact (hc : False).elim
-    rcases hc with ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩
-    exact drive_link root hok hm hr _ _ _ _ _ _
+    rcases hc with ⟨rfl, rfl, rfl, rfl, rfl⟩
+    exact drive_link root hok hm hr _ _ _ _ _
   | drainDue =>
     cases c₂ <;> try exact (hc : False).elim
     exact drive_drainDue root hok hm hr

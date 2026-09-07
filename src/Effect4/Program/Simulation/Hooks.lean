@@ -34,15 +34,30 @@ def DeferredOk (d : DeferredStore) : Prop :=
   (∀ cell ∈ d.cells, ∀ p, cell.completion = some p → CompletionShaped p) ∧
     ∀ e ∈ d.due, CompletionShaped e.2.2
 
-/-- The store predicate the loop carries (`MachineOk`). -/
-def StoresOk (s : Stores) : Prop := DeferredOk s.deferreds
+/-- The store predicate the loop carries (`MachineOk`): every deferred cell holds a
+completion, and every registration key any scope holds is below the store's fresh-name supply.
+
+The second conjunct is the registration-identity invariant of `E4-CHECK-CE-016`. Because
+`MachineOk StoresOk` is carried through `spawn`, `evaluatePrim`, `fireObserver`, `driveStep`,
+`driveState`, `flushAll` and `replayEval`, it holds at *every reachable* registration, which
+is what makes the key `scopeLinkFiber` allocates fresh each time — not merely at the initial
+store, and not merely for two chosen keys. -/
+def StoresOk (s : Stores) : Prop := DeferredOk s.deferreds ∧ s.ScopeKeysFresh
 
 theorem storesOk_empty : StoresOk Stores.empty :=
-  ⟨fun _ h => by simp [Stores.empty] at h, fun _ h => by simp [Stores.empty] at h⟩
+  ⟨⟨fun _ h => by simp [Stores.empty] at h, fun _ h => by simp [Stores.empty] at h⟩,
+    Stores.scopeKeysFresh_empty⟩
 
-theorem storesOk_of_deferreds {s s' : Stores} (h : s'.deferreds = s.deferreds) (hs : StoresOk s) :
+/-- The invariant's registration half, on the store a `MachineOk` machine carries. -/
+theorem StoresOk.keysFresh {s : Stores} (h : StoresOk s) : s.ScopeKeysFresh := h.2
+
+theorem storesOk_of_deferreds {s s' : Stores} (h : s'.deferreds = s.deferreds)
+    (hscopes : s'.scopes = s.scopes) (hname : s'.nextName = s.nextName) (hs : StoresOk s) :
     StoresOk s' := by
-  unfold StoresOk; rw [h]; exact hs
+  refine ⟨by unfold DeferredOk; rw [h]; exact hs.1, ?_⟩
+  show ScopeStore.KeysBelow s'.scopes s'.nextName
+  rw [hscopes, hname]
+  exact hs.2
 
 theorem deferredOk_cellAt {d : DeferredStore} (hd : DeferredOk d) {cell : DeferredKey}
     {c : DeferredCell} (h : d.cellAt cell = some c) :
@@ -124,7 +139,7 @@ theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresO
   cases o with
   | deferredMake =>
     have h' := Prod.mk.inj (Option.some.inj h)
-    rw [← h'.1]; exact deferredOk_make hs
+    rw [← h'.1]; exact ⟨deferredOk_make hs.1, hs.2⟩
   | deferredIsDone cell =>
     simp only [syncOpStep, Option.map_eq_some_iff] at h
     obtain ⟨_, _, hf⟩ := h
@@ -135,30 +150,37 @@ theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresO
     rw [← (Prod.mk.inj hf).1]; exact hs
   | deferredCompleteWith cell completion =>
     have h' := Prod.mk.inj (Option.some.inj h)
-    rw [← h'.1]; exact deferredOk_complete hs cell ⟨completion, rfl⟩
+    rw [← h'.1]; exact ⟨deferredOk_complete hs.1 cell ⟨completion, rfl⟩, hs.2⟩
   | deferredInterruptWith cell interruptor =>
     have h' := Prod.mk.inj (Option.some.inj h)
-    rw [← h'.1]; exact deferredOk_complete hs cell (completionShaped_ofExit _)
+    rw [← h'.1]; exact ⟨deferredOk_complete hs.1 cell (completionShaped_ofExit _), hs.2⟩
   | deferredAwaitCleanup cell waiter token =>
     have h' := Prod.mk.inj (Option.some.inj h)
-    rw [← h'.1]; exact deferredOk_cancel hs cell waiter token
+    rw [← h'.1]; exact ⟨deferredOk_cancel hs.1 cell waiter token, hs.2⟩
   | scopeMake strategy =>
+    -- a new scope holds no registrations, and the supply advances past its handle
     have h' := Prod.mk.inj (Option.some.inj h)
-    rw [← h'.1]; exact storesOk_of_deferreds rfl hs
+    rw [← h'.1]
+    exact ⟨hs.1, (ScopeStore.keysBelow_make hs.2).mono (Nat.le_succ _)⟩
   | scopeAdd scope key finalizer =>
+    -- the caller's key is dominated by the advanced supply
     have h' := Prod.mk.inj (Option.some.inj h)
-    rw [← h'.1]; exact storesOk_of_deferreds rfl hs
+    rw [← h'.1]
+    exact ⟨hs.1, ScopeStore.keysBelow_addFinalizer_bound hs.2 (Nat.le_max_left _ _)
+      (Nat.lt_of_lt_of_le (Nat.lt_succ_self key) (Nat.le_max_right _ _))⟩
   | scopeRemove scope key =>
     have h' := Prod.mk.inj (Option.some.inj h)
-    rw [← h'.1]; exact storesOk_of_deferreds rfl hs
+    rw [← h'.1]
+    exact ⟨hs.1, ScopeStore.keysBelow_removeFinalizer hs.2⟩
   | scopeIsClosed scope =>
     simp only [syncOpStep, Option.map_eq_some_iff] at h
     obtain ⟨_, _, hf⟩ := h
     rw [← (Prod.mk.inj hf).1]; exact hs
   | _ =>
+    -- every remaining operation is a `refStep`: only the heap changes
     simp only [syncOpStep, Option.map_eq_some_iff] at h
     obtain ⟨_, _, hf⟩ := h
-    rw [← (Prod.mk.inj hf).1]; exact storesOk_of_deferreds rfl hs
+    rw [← (Prod.mk.inj hf).1]; exact storesOk_of_deferreds rfl rfl rfl hs
 
 /-! ## Code-valued hooks -/
 

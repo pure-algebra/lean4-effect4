@@ -212,8 +212,8 @@ def CmdMeans (C : κ₁ → κ₂ → Prop) :
   | .observe f e o, .observe f' e' o' => f = f' ∧ e = e' ∧ o = o'
   | .exitDone f, .exitDone f' => f = f'
   | .closeParAwait h y fs, .closeParAwait h' y' fs' => h = h' ∧ y = y' ∧ fs = fs'
-  | .link md s k t i x, .link md' s' k' t' i' x' =>
-      md = md' ∧ s = s' ∧ k = k' ∧ t = t' ∧ i = i' ∧ x = x'
+  | .link md s t i x, .link md' s' t' i' x' =>
+      md = md' ∧ s = s' ∧ t = t' ∧ i = i' ∧ x = x'
   | .drainDue, .drainDue => True
   | _, _ => False
 

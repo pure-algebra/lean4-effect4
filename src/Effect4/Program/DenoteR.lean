@@ -168,12 +168,12 @@ the action are represented by their source addresses, never stored as `Prim`. -/
 def denoteFiberAction (root : NativeEff) (p : Point) : NAction → RProgram
   | .fork _ options =>
     .vis (.inr (.fork (.at_ ((p.child 0).child 0)) options)) fun v => .pure (.success v)
-  | .forkIn _ options scope key =>
-    .vis (.inr (.forkIn ((p.child 0).child 0) options scope key)) fun v => .pure (.success v)
-  | .forkScoped _ options key =>
-    .vis (.inr (.forkScoped ((p.child 0).child 0) options key)) Effects.Program.pure
-  | .runIn target scope key =>
-    .vis (.inr (.runIn target scope key)) fun v => .pure (.success v)
+  | .forkIn _ options scope =>
+    .vis (.inr (.forkIn ((p.child 0).child 0) options scope)) fun v => .pure (.success v)
+  | .forkScoped _ options =>
+    .vis (.inr (.forkScoped ((p.child 0).child 0) options)) Effects.Program.pure
+  | .runIn target scope =>
+    .vis (.inr (.runIn target scope)) fun v => .pure (.success v)
   | .interrupt target => .vis (.inr (.interrupt target)) fun v => .pure (.success v)
   | .interruptAs target who => .vis (.inr (.interruptAs target who)) fun v => .pure (.success v)
   | .interruptScoped target =>
@@ -203,7 +203,7 @@ def denoteFiberAction (root : NativeEff) (p : Point) : NAction → RProgram
     | some (.eff (.withFiber (.forkScoped _ options))) =>
       (guardR .onSuccess (fiberValR .ambientScope rfl)).bind (seqR fun
         | .scopeHandle s =>
-          .vis (.inr (.forkIn ((p.child 0).child 0) options s p.fuel)) fun v => .pure (.success v)
+          .vis (.inr (.forkIn ((p.child 0).child 0) options s)) fun v => .pure (.success v)
         | _ => .pure badShapeExit)
     | _ => .pure badShapeExit
   -- the parallel close's step is a store program, never a source node

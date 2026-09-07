@@ -617,26 +617,32 @@ def selfScope : ScopeEntry :=
   ⟨2, (Effect4.Scope.make FinalizerStrategy.sequential :
         ScopeV).addUnsafe 101 (FinName.interruptFiber ⟨0⟩ true)⟩
 
+/-- The supply is above every registration key the three scopes already hold
+(`Stores.ScopeKeysFresh`), which is what makes the next allocated identity fresh. -/
 def scopeState : Stores :=
-  { Stores.empty with scopes := ⟨[openScope, closedScope, selfScope]⟩ }
+  { Stores.empty with scopes := ⟨[openScope, closedScope, selfScope]⟩, nextName := 102 }
+
+theorem scopeState_keysFresh : scopeState.ScopeKeysFresh := by
+  show ∀ e ∈ scopeState.scopes.entries, ∀ k ∈ e.scope.finalizerKeys, k < scopeState.nextName
+  decide
 
 /-- `forkIn` on an open scope registers the keyed finalizer; closing the scope interrupts the
 child. -/
 def w6LinkThenClose : M :=
   replay scopeState
-    (ProgName.seqOf (ProgName.forkInScope (ProgName.park 1) scopedChild 0 100)
+    (ProgName.seqOf (ProgName.forkInScope (ProgName.park 1) scopedChild 0)
       (ProgName.closeScopeOf 0 (Exit.success Val.unit)))
     [RunDecision.evaluate ⟨0⟩]
 
 /-- `forkIn` on a closed scope interrupts the child immediately with the parent's id
 (`:5374`). -/
 def w6ClosedScope : M :=
-  replay scopeState (ProgName.forkInScope (ProgName.park 1) scopedChild 1 100)
+  replay scopeState (ProgName.forkInScope (ProgName.park 1) scopedChild 1)
     [RunDecision.evaluate ⟨0⟩]
 
 /-- The child's exit drops the key (`:5372`). -/
 def w6DropsKey : M :=
-  replay scopeState (ProgName.forkInScope (ProgName.value (Val.nat 3)) scopedChild 0 100)
+  replay scopeState (ProgName.forkInScope (ProgName.value (Val.nat 3)) scopedChild 0)
     [RunDecision.evaluate ⟨0⟩]
 
 /-- Closing a scope whose fiber finalizer names the closing fiber itself: the finalizer is
@@ -649,7 +655,7 @@ def w6SelfInterruptorSkipped : M :=
 is interrupted by the closer (`fiberInterrupt`, with the closer's stack annotations, `:880-883`;
 R2-5), the key is dropped by the child's exit observer, and the scope ends `Closed`. -/
 theorem w6_link_then_close :
-    scopeRows w6LinkThenClose = [[0, 0, 0, 100, 1]] ∧
+    scopeRows w6LinkThenClose = [[0, 0, 0, 102, 1]] ∧
       exitOf w6LinkThenClose 1 =
         some (interruptedWith ⟨0⟩ ⟨1⟩ (stores.stackAnnotations ⟨0⟩)) ∧
       scopeKeys w6LinkThenClose 0 = some [] ∧
@@ -672,7 +678,7 @@ does differently. -/
 def w6ClosedRunIn : M :=
   replay scopeState
     (ProgName.seqOf (ProgName.forkOnly (ProgName.park 1) immediateChild)
-      (ProgName.runInScope ⟨1⟩ 1 100))
+      (ProgName.runInScope ⟨1⟩ 1))
     [RunDecision.evaluate ⟨0⟩]
 
 /-- On a closed scope `forkIn` interrupts the child at once, with the *parent's* id and — since
@@ -707,17 +713,17 @@ theorem w6_child_exit_drops_key :
 so it is linked; its later exit drops the key. -/
 def w6DeferredLinked : M :=
   replay scopeState
-    (ProgName.forkInScope (ProgName.value (Val.nat 3)) ⟨false, true, Supervision.MaskMode.inherit⟩ 0 100)
+    (ProgName.forkInScope (ProgName.value (Val.nat 3)) ⟨false, true, Supervision.MaskMode.inherit⟩ 0)
     [RunDecision.evaluate ⟨0⟩]
 
 def w6DeferredLinkedFired : M :=
   replay scopeState
-    (ProgName.forkInScope (ProgName.value (Val.nat 3)) ⟨false, true, Supervision.MaskMode.inherit⟩ 0 100)
+    (ProgName.forkInScope (ProgName.value (Val.nat 3)) ⟨false, true, Supervision.MaskMode.inherit⟩ 0)
     [RunDecision.evaluate ⟨0⟩, RunDecision.fire ⟨0⟩]
 
 theorem w6_deferred_child_is_linked :
-    scopeRows w6DeferredLinked = [[0, 0, 0, 100, 1]] ∧
-      scopeKeys w6DeferredLinked 0 = some [100] ∧
+    scopeRows w6DeferredLinked = [[0, 0, 0, 102, 1]] ∧
+      scopeKeys w6DeferredLinked 0 = some [102] ∧
       exitOf w6DeferredLinked 1 = none ∧
       exitOf w6DeferredLinkedFired 1 = some (Exit.success (Val.nat 3)) ∧
       scopeKeys w6DeferredLinkedFired 0 = some [] := by
@@ -727,6 +733,111 @@ theorem w6_deferred_child_is_linked :
 theorem w6_self_interruptor_skipped :
     interruptRows w6SelfInterruptorSkipped = [] ∧
       exitOf w6SelfInterruptorSkipped 0 = some (Exit.success Val.unit) := by
+  decide
+
+/-! ### W6a — every executed registration has its own identity (`E4-CHECK-CE-016`)
+
+rc.112 allocates `const key = {}` per registration (`internal/effect.ts:5366-5372`,
+`:5457-5460`). These are the ground receipts under the general laws
+(`Stores.scopeLinkFiber_allocates`, `_fresh`, `_keysFresh`, `_appends`,
+`dropFinalizer_removes_its_own`): the second registration into one scope neither shares the
+first's key nor replaces its cleanup obligation. -/
+
+/-- Two `forkIn`s into the same open scope, from one parent. -/
+def w6TwoLinks : M :=
+  replay scopeState
+    (ProgName.seqOf (ProgName.forkInScope (ProgName.park 1) scopedChild 0)
+      (ProgName.forkInScope (ProgName.park 2) scopedChild 0))
+    [RunDecision.evaluate ⟨0⟩]
+
+/-- Both children are registered, under two different identities, and both obligations stand.
+Under the old scheme the compile point supplied one key for both and the second registration
+replaced the first. -/
+theorem w6_two_links_have_two_keys :
+    scopeRows w6TwoLinks = [[0, 0, 0, 102, 1], [0, 0, 0, 103, 2]] ∧
+      scopeKeys w6TwoLinks 0 = some [102, 103] ∧
+      exitOf w6TwoLinks 1 = none ∧
+      exitOf w6TwoLinks 2 = none := by
+  decide
+
+/-- Both children are still parked, so closing the scope must interrupt *both*. -/
+def w6TwoLinksClosed : M :=
+  replay scopeState
+    (ProgName.seqOf (ProgName.forkInScope (ProgName.park 1) scopedChild 0)
+      (ProgName.seqOf (ProgName.forkInScope (ProgName.park 2) scopedChild 0)
+        (ProgName.closeScopeOf 0 (Exit.success Val.unit))))
+    [RunDecision.evaluate ⟨0⟩]
+
+theorem w6_close_interrupts_both_children :
+    exitOf w6TwoLinksClosed 1 =
+        some (interruptedWith ⟨0⟩ ⟨1⟩ (stores.stackAnnotations ⟨0⟩)) ∧
+      exitOf w6TwoLinksClosed 2 =
+        some (interruptedWith ⟨0⟩ ⟨2⟩ (stores.stackAnnotations ⟨0⟩)) ∧
+      scopeKeys w6TwoLinksClosed 0 = some [] ∧
+      scopeClosed w6TwoLinksClosed 0 = some true := by
+  decide
+
+/-- Three registrations: the identities keep advancing, and the third does not reuse the
+first or the second. -/
+def w6ThreeLinks : M :=
+  replay scopeState
+    (ProgName.seqOf (ProgName.forkInScope (ProgName.park 1) scopedChild 0)
+      (ProgName.seqOf (ProgName.forkInScope (ProgName.park 2) scopedChild 0)
+        (ProgName.forkInScope (ProgName.park 3) scopedChild 0)))
+    [RunDecision.evaluate ⟨0⟩]
+
+theorem w6_three_links_have_three_keys :
+    scopeKeys w6ThreeLinks 0 = some [102, 103, 104] ∧
+      exitOf w6ThreeLinks 1 = none ∧
+      exitOf w6ThreeLinks 2 = none ∧
+      exitOf w6ThreeLinks 3 = none := by
+  decide
+
+/-- A registration whose child finishes drops *its own* key, and the next registration takes
+a new identity rather than the freed one: an old observer can never remove a later
+registration. -/
+def w6RemoveThenRegister : M :=
+  replay scopeState
+    (ProgName.seqOf (ProgName.forkInScope (ProgName.value (Val.nat 3)) deferredChild 0)
+      (ProgName.forkInScope (ProgName.park 2) scopedChild 0))
+    [RunDecision.evaluate ⟨0⟩, RunDecision.fire ⟨0⟩]
+
+theorem w6_freed_key_is_not_reused :
+    scopeRows w6RemoveThenRegister = [[0, 0, 0, 102, 1], [0, 0, 0, 103, 2]] ∧
+      scopeKeys w6RemoveThenRegister 0 = some [103] ∧
+      exitOf w6RemoveThenRegister 1 = some (Exit.success (Val.nat 3)) ∧
+      exitOf w6RemoveThenRegister 2 = none := by
+  decide
+
+/-- The same live fiber run into the same scope twice (`fiberRunIn`, `:5457-5460`), with the
+caller left parked so both registrations are still live. -/
+def w6RepeatedRunIn : M :=
+  replay scopeState
+    (ProgName.seqOf (ProgName.forkOnly (ProgName.park 1) immediateChild)
+      (ProgName.seqOf (ProgName.runInScope ⟨1⟩ 0)
+        (ProgName.seqOf (ProgName.runInScope ⟨1⟩ 0) (ProgName.park 5))))
+    [RunDecision.evaluate ⟨0⟩]
+
+/-- One fiber registered twice holds two obligations, not one. -/
+theorem w6_repeated_runIn_registers_twice :
+    scopeRows w6RepeatedRunIn = [[0, 1, 0, 102, 1], [0, 1, 0, 103, 1]] ∧
+      scopeKeys w6RepeatedRunIn 0 = some [102, 103] ∧
+      exitOf w6RepeatedRunIn 1 = none := by
+  decide
+
+/-- The same two registrations, with the caller allowed to finish: its exit interrupts the
+child, and the child's two observers drop exactly the two identities they were given. -/
+def w6RepeatedRunInClosed : M :=
+  replay scopeState
+    (ProgName.seqOf (ProgName.forkOnly (ProgName.park 1) immediateChild)
+      (ProgName.seqOf (ProgName.runInScope ⟨1⟩ 0) (ProgName.runInScope ⟨1⟩ 0)))
+    [RunDecision.evaluate ⟨0⟩]
+
+theorem w6_repeated_runIn_drops_both :
+    scopeRows w6RepeatedRunInClosed = [[0, 1, 0, 102, 1], [0, 1, 0, 103, 1]] ∧
+      scopeKeys w6RepeatedRunInClosed 0 = some [] ∧
+      exitOf w6RepeatedRunInClosed 1 =
+        some (interruptedWith ⟨0⟩ ⟨1⟩ (stores.stackAnnotations ⟨0⟩)) := by
   decide
 
 /-! ## W6b — the two close strategies -/
@@ -924,7 +1035,7 @@ def w13UnknownScope : M :=
 
 /-- `forkIn` into a scope no allocation minted. -/
 def w13UnknownLink : M :=
-  replay scopeState (ProgName.forkInScope (ProgName.park 1) scopedChild 99 100)
+  replay scopeState (ProgName.forkInScope (ProgName.park 1) scopedChild 99)
     [RunDecision.evaluate ⟨0⟩]
 
 /-- Both halt with `Stuck.unknownScope`, the replay lands on the `stuck` arm, and the fiber
@@ -939,7 +1050,7 @@ theorem w13_unknown_scope_is_stuck :
 /-- Linking into an unknown scope halts the same way. -/
 theorem w13_unknown_link_is_stuck :
     stuckOf w13UnknownLink = some (Stuck.unknownScope 99) ∧
-      replayArm scopeState (ProgName.forkInScope (ProgName.park 1) scopedChild 99 100)
+      replayArm scopeState (ProgName.forkInScope (ProgName.park 1) scopedChild 99)
         [RunDecision.evaluate ⟨0⟩] = 2 := by
   decide
 

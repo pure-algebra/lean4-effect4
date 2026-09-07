@@ -529,10 +529,13 @@ theorem syncOpStep_scopeMake (s : Stores) (strategy : FinalizerStrategy) :
       some ({ s with scopes := s.scopes.make s.nextName strategy, nextName := s.nextName + 1 },
         Val.scopeHandle s.nextName) := rfl
 
-/-- `Stores.lean:1230-1232`. -/
+/-- `Stores.lean:1230-1232`. The supply is advanced past the caller's key, so an identity
+allocated later cannot collide with one this registration accepted (`E4-CHECK-CE-016`). -/
 theorem syncOpStep_scopeAdd (s : Stores) (scope key : Nat) (fin : FinName) :
     syncOpStep (SyncOp.scopeAdd scope key fin) s =
-      some ({ s with scopes := (s.scopes.addFinalizer scope key fin).1 }, Val.unit) := rfl
+      some ({ s with
+        scopes := (s.scopes.addFinalizer scope key fin).1
+        nextName := max s.nextName (key + 1) }, Val.unit) := rfl
 
 /-- `Stores.lean:1233-1234`. -/
 theorem syncOpStep_scopeRemove (s : Stores) (scope key : Nat) :
@@ -583,7 +586,7 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
     simp only [syncOpStep_scopeAdd, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
     exact ⟨Nat.le_refl _, Nat.le_refl _,
-      fun k hk => ScopeStore.entryAt_addFinalizer_isSome _ _ _ _ k hk, Nat.le_refl _⟩
+      fun k hk => ScopeStore.entryAt_addFinalizer_isSome _ _ _ _ k hk, Nat.le_max_left _ _⟩
   | scopeRemove scope key =>
     simp only [syncOpStep_scopeRemove, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h

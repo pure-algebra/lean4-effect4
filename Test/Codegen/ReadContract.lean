@@ -30,12 +30,12 @@ open Effect4.Program
 read-modify-write row whose pure function trails the request. -/
 def rowOf : Fin 4 → Row
   | 0 => ⟨"get", "Ref.get", .call, [], .sync, .handle "Ref.Ref<number>", .nat, .never, [],
-           "Ref.ts:200"⟩
-  | 1 => ⟨"count", "cell.count", .value, [], .sync, .unit, .nat, .never, [], "Ref.ts:210"⟩
+           "Ref.ts:200", []⟩
+  | 1 => ⟨"count", "cell.count", .value, [], .sync, .unit, .nat, .never, [], "Ref.ts:210", []⟩
   | 2 => ⟨"await", "Deferred.await", .call, [], .async,
-           .handle "Deferred.Deferred<number, never>", .nat, .never, [], "Deferred.ts:120"⟩
+           .handle "Deferred.Deferred<number, never>", .nat, .never, [], "Deferred.ts:120", []⟩
   | 3 => ⟨"update", "Ref.update", .call, ["incr"], .sync, .handle "Ref.Ref<number>", .unit,
-           .never, [], "Ref.ts:1273-1276"⟩
+           .never, [], "Ref.ts:1273-1276", []⟩
 
 def sig : Signature (Fin 4) :=
   { rowOf := rowOf
@@ -84,11 +84,50 @@ The fixture shares one export spelling between a synchronous row without trailin
 names and an asynchronous row with two trailing names. It exercises the generic
 reader independently of the native table. -/
 
+/-! ## `E4-CHECK-CE-013`: a row's declared type arguments
+
+rc.112's `Deferred.make` has defaulted type parameters, so a bare call types the handle at
+those defaults and every later use is rejected. A row that declares type arguments prints and
+reads them, and only them: a bare call of that row and a call carrying the wrong arguments
+are both outside the readable image. -/
+
+def genericSig : Signature Bool :=
+  { rowOf := fun _ =>
+      ⟨"make", "Deferred.make", .call, [], .sync, .unit,
+        .handle "Deferred.Deferred<number, number>", .never, [], "Deferred.ts:171",
+        ["number", "number"]⟩
+  , atomOf := fun _ _ => none, scopeKey := ⟨⟨0⟩, ⟨0⟩⟩ }
+
+def genericSpell (s : String) (names : List String) : Option Bool :=
+  if s = "Deferred.make" ∧ names = [] then some true else none
+
+-- the printed head carries the declared arguments, and reads back to the row
+#guard TypeScript.Render.expr TypeScript.house0 0
+  (printRow (genericSig.rowOf true) (.lit .unit)) = "Deferred.make<number, number>()"
+
+#guard roundTrip genericSig genericSpell 0 (.perform true (.lit .unit))
+  = .ok (.perform true (.lit .unit))
+
+-- the bare call names this row but omits what it declares, so it is refused rather than
+-- read as some other program: `Deferred.make()` is exactly the emission `E4-CHECK-CE-013`
+-- rejects
+#guard (readEff genericSig genericSpell 0 (.call (.ident "Deferred.make") [])).isOk = false
+
+-- wrong type arguments, and an empty argument list, are refused
+#guard (readEff genericSig genericSpell 0
+  (.call (.generic (.ident "Deferred.make") ["number"]) [])).isOk = false
+#guard (readEff genericSig genericSpell 0
+  (.call (.generic (.ident "Deferred.make") []) [])).isOk = false
+
+-- and a row that declares none still refuses a call that carries some
+#guard (readEff sig spell 1
+  (.call (.generic (.ident "Ref.get") ["number"]) [.ident "a0"])).isOk = false
+
 def tupleRowOf : Bool → Row
   | false => ⟨"tuple", "Fixture.tuple", .tupleCall, [], .sync,
-      .prod .nat .nat, .nat, .never, [], "§14 tuple-call fixture"⟩
+      .prod .nat .nat, .nat, .never, [], "§14 tuple-call fixture", []⟩
   | true => ⟨"tupleAsync", "Fixture.tuple", .tupleCall, ["first", "second"], .async,
-      .prod .nat .nat, .nat, .never, [], "§14 tuple-call fixture with trailing names"⟩
+      .prod .nat .nat, .nat, .never, [], "§14 tuple-call fixture with trailing names", []⟩
 
 def tupleSig : Signature Bool :=
   { rowOf := tupleRowOf, atomOf := fun _ _ => none, scopeKey := ⟨⟨0⟩, ⟨0⟩⟩ }
@@ -360,11 +399,15 @@ open Effect4.Api in
 #guard roundTrip sig spell 0 (.withFiber (.fork (.succeed (.lit (.nat 1))) ⟨true, true, .inherit⟩))
   = .ok (.withFiber (.fork (.succeed (.lit (.nat 1))) ⟨true, true, .inherit⟩))
 
-#guard roundTrip sig spell 1 (.withFiber (.forkIn (.succeed (.lit (.nat 1))) ⟨true, false, .inherit⟩ (.var 0)))
-  = .ok (.withFiber (.forkIn (.succeed (.lit (.nat 1))) ⟨true, false, .inherit⟩ (.var 0)))
+-- `Effect.forkIn` and `Effect.forkScoped` fork a *daemon* in rc.112
+-- (`internal/effect.ts:5366` passes `true` for `forkUnsafe`'s `daemon`, `:5264-5269`;
+-- `:5406` routes `forkScoped` through `forkIn`), so that is the image they read back into
+-- and round-trip on (`E4-CHECK-CE-015`).
+#guard roundTrip sig spell 1 (.withFiber (.forkIn (.succeed (.lit (.nat 1))) ⟨true, true, .inherit⟩ (.var 0)))
+  = .ok (.withFiber (.forkIn (.succeed (.lit (.nat 1))) ⟨true, true, .inherit⟩ (.var 0)))
 
-#guard roundTrip sig spell 0 (.withFiber (.forkScoped (.succeed (.lit (.nat 1))) ⟨true, false, .interruptible⟩))
-  = .ok (.withFiber (.forkScoped (.succeed (.lit (.nat 1))) ⟨true, false, .interruptible⟩))
+#guard roundTrip sig spell 0 (.withFiber (.forkScoped (.succeed (.lit (.nat 1))) ⟨true, true, .interruptible⟩))
+  = .ok (.withFiber (.forkScoped (.succeed (.lit (.nat 1))) ⟨true, true, .interruptible⟩))
 
 /-! ## `withFiber`: the handle actions -/
 
@@ -463,11 +506,20 @@ A `daemon` flag on a scoped fork has no field in the options object; a `perform`
 of a `unit`-request row or a value row is dropped. Each is `readable = false`, and the reader
 answers the program the printer kept. -/
 
-#guard readable sig spell 0 (.withFiber (.forkScoped (.succeed (.lit (.nat 1))) ⟨true, true, .inherit⟩))
+-- The retained negative: a *non-daemon* `forkIn`/`forkScoped` action has no rc.112 spelling,
+-- so it is outside the readable image and the reader answers the daemon program the printed
+-- text means. The refusal is kept, only its side is the source's (`E4-CHECK-CE-015`).
+#guard readable sig spell 0 (.withFiber (.forkScoped (.succeed (.lit (.nat 1))) ⟨true, false, .inherit⟩))
   = false
 
-#guard roundTrip sig spell 0 (.withFiber (.forkScoped (.succeed (.lit (.nat 1))) ⟨true, true, .inherit⟩))
-  = .ok (.withFiber (.forkScoped (.succeed (.lit (.nat 1))) ⟨true, false, .inherit⟩))
+#guard roundTrip sig spell 0 (.withFiber (.forkScoped (.succeed (.lit (.nat 1))) ⟨true, false, .inherit⟩))
+  = .ok (.withFiber (.forkScoped (.succeed (.lit (.nat 1))) ⟨true, true, .inherit⟩))
+
+#guard readable sig spell 1 (.withFiber (.forkIn (.succeed (.lit (.nat 1))) ⟨true, false, .inherit⟩ (.var 0)))
+  = false
+
+#guard roundTrip sig spell 1 (.withFiber (.forkIn (.succeed (.lit (.nat 1))) ⟨true, false, .inherit⟩ (.var 0)))
+  = .ok (.withFiber (.forkIn (.succeed (.lit (.nat 1))) ⟨true, true, .inherit⟩ (.var 0)))
 
 #guard readable sig spell 1 (.callback 0 (.var 0)) = false
 
@@ -509,7 +561,10 @@ one comes back unchanged, so on this corpus `readable` is exact, not merely suff
 -- 324 before source-repairs §18; the fourteen generated programs whose tuple-row request
 -- is neither a `pair` application nor a single-identifier term left the readable image
 -- with the direct argument-list shape (`requestReadable`), and still print the same tree.
-#guard ((Test.Program.Gen.corpus 400 4).filter Effect4.Api.readable).length = 310
+-- 310 -> 327 with `E4-CHECK-CE-015`: `Effect.forkIn`/`Effect.forkScoped` fork a daemon in
+-- rc.112, so the seventeen corpus programs whose scoped fork carries `daemon = true` are in
+-- the readable image and the non-daemon ones took their place outside it.
+#guard ((Test.Program.Gen.corpus 400 4).filter Effect4.Api.readable).length = 327
 
 #guard (Test.Program.Gen.corpus 400 4).all fun p =>
   !Effect4.Api.readable p || decide (Effect4.Api.roundTrip p = .ok p)

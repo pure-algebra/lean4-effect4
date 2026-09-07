@@ -35,15 +35,15 @@ open TypeScript.Render (expr constDecl)
 a value row whose request is `unit`, and an async row. -/
 def rowOf : Fin 3 → Row
   | 0 => ⟨"get", "Ref.get", .call, [], .sync, .handle "Ref.Ref<number>", .nat, .never, [],
-           "Ref.ts:200"⟩
-  | 1 => ⟨"count", "cell.count", .value, [], .sync, .unit, .nat, .never, [], "Ref.ts:210"⟩
+           "Ref.ts:200", []⟩
+  | 1 => ⟨"count", "cell.count", .value, [], .sync, .unit, .nat, .never, [], "Ref.ts:210", []⟩
   | 2 => ⟨"await", "Deferred.await", .call, [], .async,
-           .handle "Deferred.Deferred<number, never>", .nat, .never, [], "Deferred.ts:120"⟩
+           .handle "Deferred.Deferred<number, never>", .nat, .never, [], "Deferred.ts:120", []⟩
 
 /-- A read-modify-write row: its pure function prints after the request. -/
 def updateRow : Row :=
   ⟨"update", "Ref.update", .call, ["incr"], .sync, .handle "Ref.Ref<number>", .unit, .never, [],
-    "Ref.ts:1273-1276"⟩
+    "Ref.ts:1273-1276", []⟩
 
 #guard expr house0 0 (printRow updateRow (.var 0)) = "Ref.update(a0, incr)"
 
@@ -51,7 +51,17 @@ def updateRow : Row :=
 have no trailing names; this fixture checks the generic row convention. -/
 def tupleRow : Row :=
   ⟨"tuple", "Fixture.tuple", .tupleCall, ["first", "second"], .sync,
-    .prod .nat .nat, .nat, .never, [], "§14 tuple-call fixture"⟩
+    .prod .nat .nat, .nat, .never, [], "§14 tuple-call fixture", []⟩
+
+/-- A row that declares explicit type arguments: the export's own parameters have defaults,
+so the call must carry them or the host types the answer at those defaults
+(`E4-CHECK-CE-013`). -/
+def genericRow : Row :=
+  ⟨"make", "Deferred.make", .call, [], .sync, .unit,
+    .handle "Deferred.Deferred<number, number>", .never, [], "Deferred.ts:171",
+    ["number", "number"]⟩
+
+#guard expr house0 0 (printRow genericRow (.lit .unit)) = "Deferred.make<number, number>()"
 
 -- A saved tuple is read once per component; a `pair` prints its components
 -- (source-repairs §18).
@@ -88,8 +98,8 @@ def tupleRow : Row :=
     (.bind (.perform .deferredMake (.lit .unit))
       (.bind (.succeed (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))
         (.perform .deferredSucceed (.var 1))))).map (expr house0 0) =
-  .ok ("Effect.flatMap(Deferred.make(), (a0) => Effect.flatMap(Effect.succeed(pair(a0, 7)), " ++
-    "(a1) => Deferred.succeed(fst(a1), snd(a1))))")
+  .ok ("Effect.flatMap(Deferred.make<number, number>(), (a0) => " ++
+    "Effect.flatMap(Effect.succeed(pair(a0, 7)), (a1) => Deferred.succeed(fst(a1), snd(a1))))")
 
 /-- The battery's signature. `atomOf` declares one pure atom, `succ : number -> number`;
 the printer never consults it (an atom prints as its own name) but `Signature` carries it

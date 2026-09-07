@@ -244,7 +244,8 @@ def name : InductiveDesc where
 def actionName : InductiveDesc where
   leanName := "ActionName"; site := "Layer.lean:341"; ctorPrefix := "La"; subst := subst
   ctors := [{ leanName := "fork", args := [⟨"program", progL, false⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩] },
-            { leanName := "forkScoped", args := [⟨"program", progL, false⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩, ⟨"key", .nat, false⟩] },
+            -- E4-CHECK-CE-016 (2026-09-07): the store allocates the registration identity
+            { leanName := "forkScoped", args := [⟨"program", progL, false⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩] },
             { leanName := "interrupt", args := [⟨"target", fid, false⟩] },
             -- D6b (2026-09-07): the interrupt's return and the child-exit middleware's program
             { leanName := "interruptAs", args := [⟨"target", fid, false⟩, ⟨"who", fid, false⟩] },

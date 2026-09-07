@@ -105,19 +105,27 @@ def printTupleArgs (request : Term) : List TypeScript.Expr :=
   | some (x, y) => [printTerm x, printTerm y]
   | none => [.call (.ident "fst") [printTerm request], .call (.ident "snd") [printTerm request]]
 
+/-- A row's called head: its `spelling`, applied to the declared type arguments when it has
+any. rc.112's `Deferred.make` has defaulted type parameters, so the arguments alone do not
+determine the handle's types and the call must carry them (`E4-CHECK-CE-013`). -/
+def printRowHead (row : Row) : TypeScript.Expr :=
+  match row.typeArgs with
+  | [] => .ident row.spelling
+  | args => .generic (.ident row.spelling) args
+
 /-- A row's operation, by the row's declared shape and request type: a value row is the
 bare `spelling` (the service route's nullary rows), a call row on a `unit` request is
 `spelling()`, and every other call row is `spelling(request)`. A tuple-call row receives
 `printTupleArgs` of its request as two ordinary arguments, then the declared trailing
-names. -/
+names. A row that declares type arguments carries them on the head. -/
 def printRow (row : Row) (request : Term) : TypeScript.Expr :=
   let trailing := row.trailing.map TypeScript.Expr.ident
   match row.shape with
   | .value => .ident row.spelling
   | .call =>
-    if row.request = Ty.unit then .call (.ident row.spelling) trailing
-    else .call (.ident row.spelling) (printTerm request :: trailing)
-  | .tupleCall => .call (.ident row.spelling) (printTupleArgs request ++ trailing)
+    if row.request = Ty.unit then .call (printRowHead row) trailing
+    else .call (printRowHead row) (printTerm request :: trailing)
+  | .tupleCall => .call (printRowHead row) (printTupleArgs request ++ trailing)
 
 /-- The fork options object rc.112's fork family takes:
 `{ startImmediately: b, uninterruptible: true | false | "inherit" }`. `daemon` is not a

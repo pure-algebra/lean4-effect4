@@ -280,10 +280,14 @@ names otherwise; a tuple-call row's is its two request arguments followed by the
 names. The three readings are tried in that order, and `LawfulSpelling` is what makes at
 most one succeed. -/
 def readRowCall (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
-    (s : String) (args : List Expr) : Option (Except ReadRefusal (Eff Op)) :=
+    (s : String) (typeArgs : List String) (args : List Expr) : Option (Except ReadRefusal (Eff Op)) :=
+  -- the call's type arguments must be exactly the ones the row declares: a row that needs
+  -- them refuses a bare call, and a row that declares none refuses a call that carries any
+  -- (`E4-CHECK-CE-013`)
   match (idents? args).bind (spell s) with
   | some op =>
-    some (if (sig.rowOf op).shape = .call ∧ (sig.rowOf op).request = Ty.unit then
+    some (if (sig.rowOf op).shape = .call ∧ (sig.rowOf op).request = Ty.unit ∧
+        (sig.rowOf op).typeArgs = typeArgs then
       .ok (rowAnswer (sig.rowOf op) op (.lit .unit))
     else .error (.arity s))
   | none =>
@@ -291,7 +295,8 @@ def readRowCall (sig : Signature Op) (spell : String → List String → Option 
     | request :: rest =>
       match (idents? rest).bind (spell s) with
       | some op =>
-        some (if (sig.rowOf op).shape = .call ∧ (sig.rowOf op).request ≠ Ty.unit then
+        some (if (sig.rowOf op).shape = .call ∧ (sig.rowOf op).request ≠ Ty.unit ∧
+            (sig.rowOf op).typeArgs = typeArgs then
           (readTerm n request).map (rowAnswer (sig.rowOf op) op)
         else .error (.arity s))
       | none =>
@@ -299,7 +304,8 @@ def readRowCall (sig : Signature Op) (spell : String → List String → Option 
         | second :: names =>
           match (idents? names).bind (spell s) with
           | some op =>
-            some (if (sig.rowOf op).shape = .tupleCall then
+            some (if (sig.rowOf op).shape = .tupleCall ∧
+                (sig.rowOf op).typeArgs = typeArgs then
               (readTupleArgs n request second).map (rowAnswer (sig.rowOf op) op)
             else .error (.arity s))
           | none => none
@@ -344,9 +350,17 @@ mutual
       match headOf s with
       | some h => readHead sig spell n h args
       | none =>
-        match readRowCall sig spell n s args with
+        match readRowCall sig spell n s [] args with
         | some answer => answer
         | none => (readTerms n args).map fun ts => .yieldError (.app s ts)
+    -- a call carrying explicit type arguments is a row call and nothing else: no reserved
+    -- head and no atom application is printed with them. An *empty* argument list is not a
+    -- spelling the printer emits, so it falls through to the shape refusal
+    -- (`E4-CHECK-CE-013`).
+    | .call (.generic (.ident s) (ta :: tas)) args =>
+      match readRowCall sig spell n s (ta :: tas) args with
+      | some answer => answer
+      | none => .error (.unknownHead s)
     | _ => .error (.shape "expression")
   termination_by structural x
 
@@ -416,14 +430,19 @@ mutual
       let p ← readEff sig spell n program
       let o ← readForkOptions true options
       .ok (.withFiber (.fork p o))
+    -- `forkIn` and `forkScoped` are *daemon* forks in rc.112: `internal/effect.ts:5366`
+    -- passes `true` for `forkUnsafe`'s `daemon` parameter (`:5264-5269`), and `forkScoped`
+    -- is `flatMap(scope, scope => forkIn(self, scope, options))` (`:5406`). The printed
+    -- options object therefore carries no daemon field to recover — the export's own
+    -- meaning fixes it. `E4-CHECK-CE-015`.
     | .forkIn, [program, scope, options] => do
       let p ← readEff sig spell n program
       let s ← readTerm n scope
-      let o ← readForkOptions false options
+      let o ← readForkOptions true options
       .ok (.withFiber (.forkIn p o s))
     | .forkScoped, [program, options] => do
       let p ← readEff sig spell n program
-      let o ← readForkOptions false options
+      let o ← readForkOptions true options
       .ok (.withFiber (.forkScoped p o))
     | .withFiber, args => readRunIn n args
     | .interrupt, [target] => (readTerm n target).map fun t => .withFiber (.interrupt t)
@@ -639,9 +658,13 @@ mutual
   def readableAction (sig : Signature Op) (spell : String → List String → Option Op)
       (n : Nat) : ActionTerm Op → Bool
     | .fork program _ => readable sig spell n program
+    -- rc.112's `forkIn`/`forkScoped` fork a daemon (`internal/effect.ts:5366`, `:5406`), so
+    -- the readable image is the one the export means: `daemon = true`. A non-daemon
+    -- `forkIn` action has no rc.112 spelling and stays outside the readable domain
+    -- (`E4-CHECK-CE-015`).
     | .forkIn program options scope =>
-      readable sig spell n program && !options.daemon && scope.scoped n
-    | .forkScoped program options => readable sig spell n program && !options.daemon
+      readable sig spell n program && options.daemon && scope.scoped n
+    | .forkScoped program options => readable sig spell n program && options.daemon
     | .runIn target scope => target.scoped n && scope.scoped n
     | .interrupt target => target.scoped n
     | .interruptScoped _ => false
@@ -1002,7 +1025,7 @@ theorem print_not_cond {sig : Signature Op} {n : Nat} {e : Eff Op} {t a b : Expr
 
 theorem readRowCall_none {sig : Signature Op} {spell : String → List String → Option Op} {n : Nat}
     {atom : String} {args : Terms} (h : noRow spell atom args = true) :
-    readRowCall sig spell n atom (printTerms args) = none := by
+    readRowCall sig spell n atom [] (printTerms args) = none := by
   cases args with
   | nil =>
     simp only [noRow, Bool.and_true, Option.isNone_iff_eq_none] at h
@@ -1029,7 +1052,8 @@ theorem readRowCall_none {sig : Signature Op} {spell : String → List String �
 theorem readRowCall_unit {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op)
     (hshape : (sig.rowOf op).shape = .call) (hreq : (sig.rowOf op).request = Ty.unit) :
-    readRowCall sig spell n (sig.rowOf op).spelling ((sig.rowOf op).trailing.map Expr.ident)
+    readRowCall sig spell n (sig.rowOf op).spelling (sig.rowOf op).typeArgs
+        ((sig.rowOf op).trailing.map Expr.ident)
       = some (.ok (rowAnswer (sig.rowOf op) op (.lit .unit))) := by
   unfold readRowCall
   rw [idents?_map, Option.bind_some, hl.spell_row]
@@ -1038,7 +1062,7 @@ theorem readRowCall_unit {sig : Signature Op} {spell : String → List String �
 theorem readRowCall_request {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (r : Term)
     (hshape : (sig.rowOf op).shape = .call) (hreq : (sig.rowOf op).request ≠ Ty.unit) :
-    readRowCall sig spell n (sig.rowOf op).spelling
+    readRowCall sig spell n (sig.rowOf op).spelling (sig.rowOf op).typeArgs
         (printTerm r :: (sig.rowOf op).trailing.map Expr.ident)
       = some ((readTerm n (printTerm r)).map (rowAnswer (sig.rowOf op) op)) := by
   have key : ∀ x, (∀ op', x ∉ (sig.rowOf op').trailing) →
@@ -1108,7 +1132,7 @@ theorem readRowCall_tuple {sig : Signature Op} {spell : String → List String �
     (hshape : (sig.rowOf op).shape = .tupleCall)
     (hx : ∀ op' v, x = .ident v → v ∉ (sig.rowOf op').trailing)
     (hy : ∀ op' v, y = .ident v → v ∉ (sig.rowOf op').trailing) :
-    readRowCall sig spell n (sig.rowOf op).spelling
+    readRowCall sig spell n (sig.rowOf op).spelling (sig.rowOf op).typeArgs
         (x :: y :: (sig.rowOf op).trailing.map Expr.ident)
       = some ((readTupleArgs n x y).map (rowAnswer (sig.rowOf op) op)) := by
   have key : ∀ (names : List String) (v : String), (∀ op', v ∉ (sig.rowOf op').trailing) →
@@ -1145,6 +1169,28 @@ theorem readRowCall_tuple {sig : Signature Op} {spell : String → List String �
   rw [idents?_map, Option.bind_some, hl.spell_row]
   simp [hshape]
 
+/-- The reader's two call arms agree on a row's printed head: with no declared type
+arguments it is a plain `spelling(...)` call, and with them a `spelling<T…>(...)` call; both
+route to `readRowCall` at the row's own type arguments (`E4-CHECK-CE-013`). -/
+theorem readEff_printRowHead {sig : Signature Op} {spell : String → List String → Option Op}
+    {n : Nat} (op : Op) (args : List Expr) (answer : Except ReadRefusal (Eff Op))
+    (hhead : headOf (sig.rowOf op).spelling = none)
+    (hrow : readRowCall sig spell n (sig.rowOf op).spelling (sig.rowOf op).typeArgs args
+      = some answer) :
+    readEff sig spell n (.call (printRowHead (sig.rowOf op)) args) = answer := by
+  unfold printRowHead
+  cases htargs : (sig.rowOf op).typeArgs with
+  | nil =>
+    rw [htargs] at hrow
+    unfold readEff
+    rw [hhead]
+    dsimp only
+    rw [hrow]
+  | cons a rest =>
+    rw [htargs] at hrow
+    unfold readEff
+    rw [hrow]
+
 /-- A row prints and reads back to `rowAnswer`. -/
 theorem read_printRow {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (r : Term)
@@ -1165,16 +1211,12 @@ theorem read_printRow {sig : Signature Op} {spell : String → List String → O
     by_cases hreq : (sig.rowOf op).request = Ty.unit
     · rw [readable_row_unit hshape hreq h]
       simp only [printRow, hshape, hreq, if_true]
-      unfold readEff
-      simp [hhead, readRowCall_unit hl op hshape hreq]
+      rw [readEff_printRowHead op _ _ hhead (readRowCall_unit hl op hshape hreq)]
     · simp only [printRow, hshape, hreq, if_false]
-      unfold readEff
-      simp [hhead, readRowCall_request hl op r hshape hreq,
-        readTerm_printTerm r (readable_row_request hshape hreq h)]
+      rw [readEff_printRowHead op _ _ hhead (readRowCall_request hl op r hshape hreq)]
+      simp [readTerm_printTerm r (readable_row_request hshape hreq h)]
   | tupleCall =>
     simp only [printRow, hshape]
-    unfold readEff
-    simp only [hhead]
     simp only [requestReadable, hshape] at h
     rcases hpa : pairArgs? r with _ | ⟨x, y⟩
     · simp only [hpa] at h
@@ -1182,8 +1224,8 @@ theorem read_printRow {sig : Signature Op} {spell : String → List String → O
       | var i =>
         simp only at h
         simp only [printTupleArgs, hpa, printTerm, List.cons_append, List.nil_append]
-        rw [readRowCall_tuple hl op _ _ hshape (fun _ _ hx => by cases hx)
-          (fun _ _ hy => by cases hy)]
+        rw [readEff_printRowHead op _ _ hhead (readRowCall_tuple hl op _ _ hshape
+          (fun _ _ hx => by cases hx) (fun _ _ hy => by cases hy))]
         have hv : readTerm n (.ident (Var.name i)) = .ok (.var i) :=
           readTerm_printTerm (.var i) h
         simp [readTupleArgs, savedVar?, hv]
@@ -1191,8 +1233,8 @@ theorem read_printRow {sig : Signature Op} {spell : String → List String → O
         cases value with
         | unit =>
           simp only [printTupleArgs, hpa, printTerm, printLit, List.cons_append, List.nil_append]
-          rw [readRowCall_tuple hl op _ _ hshape (fun _ _ hx => by cases hx)
-            (fun _ _ hy => by cases hy)]
+          rw [readEff_printRowHead op _ _ hhead (readRowCall_tuple hl op _ _ hshape
+            (fun _ _ hx => by cases hx) (fun _ _ hy => by cases hy))]
           have hv : readTerm n (.ident "undefined") = .ok (.lit .unit) :=
             readTerm_printTerm (.lit .unit) rfl
           simp [readTupleArgs, savedVar?, hv]
@@ -1202,9 +1244,9 @@ theorem read_printRow {sig : Signature Op} {spell : String → List String → O
       obtain ⟨⟨hx, hy⟩, hsv⟩ := h
       obtain rfl := pairArgs?_some hpa
       simp only [printTupleArgs, hpa, List.cons_append, List.nil_append]
-      rw [readRowCall_tuple hl op _ _ hshape
+      rw [readEff_printRowHead op _ _ hhead (readRowCall_tuple hl op _ _ hshape
         (fun op' v hv => printTerm_ident_not_trailing hl x op' v hv)
-        (fun op' v hv => printTerm_ident_not_trailing hl y op' v hv)]
+        (fun op' v hv => printTerm_ident_not_trailing hl y op' v hv))]
       simp [readTupleArgs, hsv, readTerm_printTerm x hx, readTerm_printTerm y hy]
 
 mutual
@@ -1669,7 +1711,7 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
         obtain ⟨names, hnames, hsp⟩ := Option.bind_eq_some_iff.mp hA
         obtain ⟨hs, htr⟩ := hl.row_of_spell _ _ _ hsp
         rw [print_rowAnswer, idents?_exact hnames]
-        simp [printRow, hc.1, hc.2, hs, htr]
+        simp [printRow, printRowHead, hc.1, hc.2.1, hc.2.2, hs, htr]
       · cases hrow
     · split at hrow
       · split at hrow
@@ -1683,7 +1725,7 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
               Option.bind_eq_some_iff.mp ‹(idents? _).bind (spell atom) = some _›
             obtain ⟨hs, htr⟩ := hl.row_of_spell _ _ _ hsp
             rw [print_rowAnswer, idents?_exact hnames]
-            simp [printRow, hc.1, hc.2, hs, htr, readTerm_exact _ hr]
+            simp [printRow, printRowHead, hc.1, hc.2.1, hc.2.2, hs, htr, readTerm_exact _ hr]
           · cases hrow
         · split at hrow
           · split at hrow
@@ -1697,7 +1739,7 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
                   Option.bind_eq_some_iff.mp ‹(idents? _).bind (spell atom) = some _›
                 obtain ⟨hs, htr⟩ := hl.row_of_spell _ _ _ hsp
                 rw [print_rowAnswer, idents?_exact hnames]
-                simp [printRow, hshape, hs, htr, readTupleArgs_exact hr]
+                simp [printRow, printRowHead, hshape.1, hshape.2, hs, htr, readTupleArgs_exact hr]
               · cases hrow
             · cases hrow
           · cases hrow
@@ -1707,44 +1749,100 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
     unfold readEff at h; simp only [hh, hrow, map_eq_ok] at h
     obtain ⟨ts, hts, rfl⟩ := h
     simp [print, printTerm, readTerms_exact args hts]
+  -- the generic-head call arm: a row call carrying the row's own type arguments
+  -- (`E4-CHECK-CE-013`). It prints back through `printRowHead`'s non-empty branch.
   case case13 =>
-    intro t n h1 h2 h3 h4 h5 e h
+    intro n atom ta tas args answer hrow e h
+    unfold readEff at h; simp only [hrow] at h
+    subst h
+    unfold readRowCall at hrow
+    split at hrow
+    · rename_i op hA
+      simp only [Option.some.injEq] at hrow
+      split at hrow
+      · rename_i hc
+        cases hrow
+        obtain ⟨names, hnames, hsp⟩ := Option.bind_eq_some_iff.mp hA
+        obtain ⟨hs, htr⟩ := hl.row_of_spell _ _ _ hsp
+        rw [print_rowAnswer, idents?_exact hnames]
+        simp [printRow, printRowHead, hc.1, hc.2.1, hc.2.2, hs, htr]
+      · cases hrow
+    · split at hrow
+      · split at hrow
+        · simp only [Option.some.injEq] at hrow
+          split at hrow
+          · rename_i hc
+            simp only [map_eq_ok] at hrow
+            obtain ⟨r, hr, he⟩ := hrow
+            subst he
+            obtain ⟨names, hnames, hsp⟩ :=
+              Option.bind_eq_some_iff.mp ‹(idents? _).bind (spell atom) = some _›
+            obtain ⟨hs, htr⟩ := hl.row_of_spell _ _ _ hsp
+            rw [print_rowAnswer, idents?_exact hnames]
+            simp [printRow, printRowHead, hc.1, hc.2.1, hc.2.2, hs, htr, readTerm_exact _ hr]
+          · cases hrow
+        · split at hrow
+          · split at hrow
+            · simp only [Option.some.injEq] at hrow
+              split at hrow
+              · rename_i hshape
+                simp only [map_eq_ok] at hrow
+                obtain ⟨r, hr, he⟩ := hrow
+                subst he
+                obtain ⟨names, hnames, hsp⟩ :=
+                  Option.bind_eq_some_iff.mp ‹(idents? _).bind (spell atom) = some _›
+                obtain ⟨hs, htr⟩ := hl.row_of_spell _ _ _ hsp
+                rw [print_rowAnswer, idents?_exact hnames]
+                simp [printRow, printRowHead, hshape.1, hshape.2, hs, htr, readTupleArgs_exact hr]
+              · cases hrow
+            · cases hrow
+          · cases hrow
+      · cases hrow
+  -- no row of the table has this head with type arguments: the reader refuses, so there is
+  -- nothing to print back
+  case case14 =>
+    intro n atom ta tas args hrow e h
+    unfold readEff at h; simp only [hrow] at h
+    cases h
+  case case15 =>
+    intros
+    rename_i e h
     unfold readEff at h
     split at h <;> close_arm h
   -- readHead
-  case case14 =>
-    intro n v e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨t, ht, rfl⟩ := h
-    simp [print, readTerm_exact v ht, Head.spelling]
-  case case15 =>
-    intro n v e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨t, ht, rfl⟩ := h
-    simp [print, readTerm_exact v ht, Head.spelling]
   case case16 =>
+    intro n v e h
+    unfold readHead at h; simp only [map_eq_ok] at h
+    obtain ⟨t, ht, rfl⟩ := h
+    simp [print, readTerm_exact v ht, Head.spelling]
+  case case17 =>
+    intro n v e h
+    unfold readHead at h; simp only [map_eq_ok] at h
+    obtain ⟨t, ht, rfl⟩ := h
+    simp [print, readTerm_exact v ht, Head.spelling]
+  case case18 =>
     intro n c e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨t, ht, rfl⟩ := h
     simp [print, readCause_exact c ht, Head.spelling]
-  case case17 =>
+  case case19 =>
     intro n t e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨t', ht, rfl⟩ := h
     simp [print, readTerm_exact t ht, Head.spelling]
-  case case18 =>
+  case case20 =>
     intro n t a b iha ihb e h
     unfold readHead at h; simp only [bind_eq_ok] at h
     obtain ⟨test, htest, x, hx, y, hy, he⟩ := h
     cases he
     simp [print, iha x hx, ihb y hy, readTerm_exact t htest, Head.spelling]
-  case case19 =>
+  case case21 =>
     intro n body hnc ih e h
     unfold readHead at h
     cases body <;> first
       | exact (hnc _ _ _ rfl).elim
       | (simp only [map_eq_ok] at h; obtain ⟨b', hb', rfl⟩ := h; simp [print, ih _ hb', Head.spelling])
-  case case20 =>
+  case case22 =>
     intro n cursor initial loop fw test fb body fs answer cursor' step hc ih e h
     obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩ := hc
     unfold readHead at h
@@ -1753,35 +1851,35 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
     cases he
     simp [print, ih b hb, readTerm_exact initial hi, readTerm_exact test ht, readTerm_exact step hs,
       Head.spelling]
-  case case21 =>
+  case case23 =>
     intro n cursor initial loop fw test fb body fs answer cursor' step hc e h
     unfold readHead at h; simp [hc] at h
-  case case22 =>
+  case case24 =>
     intro n first rest ih1 ih2 e h
     unfold readHead at h
     simp only [if_true, bind_eq_ok] at h
     obtain ⟨f, hf, r, hr, he⟩ := h
     cases he
     simp [print, ih1 f hf, ih2 r hr, Head.spelling]
-  case case23 =>
+  case case25 =>
     intro n first x rest hx e h
     unfold readHead at h; simp [hx] at h
-  case case24 =>
+  case case26 =>
     intro n body ih e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨ss, hss, rfl⟩ := h
     simp [print, ih ss hss, Head.spelling]
-  case case25 =>
+  case case27 =>
     intro n body handler ih1 ih2 e h
     unfold readHead at h
     simp only [if_true, bind_eq_ok] at h
     obtain ⟨b, hb, hd, hhd, he⟩ := h
     cases he
     simp [print, ih1 b hb, ih2 hd hhd, Head.spelling]
-  case case26 =>
+  case case28 =>
     intro n body x handler hx e h
     unfold readHead at h; simp [hx] at h
-  case case27 =>
+  case case29 =>
     intro n body ff x onCause fs y onValue hc ih1 ih2 ih3 e h
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hc
     unfold readHead at h
@@ -1789,125 +1887,125 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
     obtain ⟨b, hb, v, hv, c, hc, he⟩ := h
     cases he
     simp [print, ih1 b hb, ih2 v hv, ih3 c hc, Head.spelling]
-  case case28 =>
+  case case30 =>
     intro n body ff x onCause fs y onValue hc e h
     unfold readHead at h; simp [hc] at h
-  case case29 =>
+  case case31 =>
     intro n body finalizer ih1 ih2 e h
     unfold readHead at h
     simp only [if_true, bind_eq_ok] at h
     obtain ⟨b, hb, f, hf, he⟩ := h
     cases he
     simp [print, ih1 b hb, ih2 f hf, Head.spelling]
-  case case30 =>
+  case case32 =>
     intro n body x finalizer hx e h
     unfold readHead at h; simp [hx] at h
-  case case31 =>
-    intro n body ih e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨b, hb, rfl⟩ := h
-    simp [print, ih b hb, Head.spelling]
-  case case32 =>
-    intro n body ih e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨b, hb, rfl⟩ := h
-    simp [print, ih b hb, Head.spelling]
   case case33 =>
     intro n body ih e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨b, hb, rfl⟩ := h
     simp [print, ih b hb, Head.spelling]
   case case34 =>
+    intro n body ih e h
+    unfold readHead at h; simp only [map_eq_ok] at h
+    obtain ⟨b, hb, rfl⟩ := h
+    simp [print, ih b hb, Head.spelling]
+  case case35 =>
+    intro n body ih e h
+    unfold readHead at h; simp only [map_eq_ok] at h
+    obtain ⟨b, hb, rfl⟩ := h
+    simp [print, ih b hb, Head.spelling]
+  case case36 =>
     intro n k hk e h
     unfold readHead at h; simp only [hk, if_true] at h; cases h
     simp [print, Int.toNat_of_nonneg hk, Head.spelling]
-  case case35 =>
+  case case37 =>
     intro n k hk e h
     unfold readHead at h; simp [hk] at h
-  case case36 =>
-    intro n fiber e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨t, ht, rfl⟩ := h
-    simp [print, readTerm_exact fiber ht, Head.spelling]
-  case case37 =>
-    intro n fiber e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨t, ht, rfl⟩ := h
-    simp [print, readTerm_exact fiber ht, Head.spelling]
   case case38 =>
-    intro n program options ih e h
-    unfold readHead at h; simp only [bind_eq_ok] at h
-    obtain ⟨p, hp, o, ho, he⟩ := h
-    cases he
-    obtain ⟨hpo, hd⟩ := readForkOptions_exact ho
-    simp [print, printAction, ih p hp, hpo, hd, Head.spelling]
+    intro n fiber e h
+    unfold readHead at h; simp only [map_eq_ok] at h
+    obtain ⟨t, ht, rfl⟩ := h
+    simp [print, readTerm_exact fiber ht, Head.spelling]
   case case39 =>
+    intro n fiber e h
+    unfold readHead at h; simp only [map_eq_ok] at h
+    obtain ⟨t, ht, rfl⟩ := h
+    simp [print, readTerm_exact fiber ht, Head.spelling]
+  case case40 =>
     intro n program options ih e h
     unfold readHead at h; simp only [bind_eq_ok] at h
     obtain ⟨p, hp, o, ho, he⟩ := h
     cases he
     obtain ⟨hpo, hd⟩ := readForkOptions_exact ho
     simp [print, printAction, ih p hp, hpo, hd, Head.spelling]
-  case case40 =>
+  case case41 =>
+    intro n program options ih e h
+    unfold readHead at h; simp only [bind_eq_ok] at h
+    obtain ⟨p, hp, o, ho, he⟩ := h
+    cases he
+    obtain ⟨hpo, hd⟩ := readForkOptions_exact ho
+    simp [print, printAction, ih p hp, hpo, hd, Head.spelling]
+  case case42 =>
     intro n program scope options ih e h
     unfold readHead at h; simp only [bind_eq_ok] at h
     obtain ⟨p, hp, s, hs, o, ho, he⟩ := h
     cases he
     obtain ⟨hpo, _⟩ := readForkOptions_exact ho
     simp [print, printAction, ih p hp, readTerm_exact scope hs, hpo, Head.spelling]
-  case case41 =>
+  case case43 =>
     intro n program options ih e h
     unfold readHead at h; simp only [bind_eq_ok] at h
     obtain ⟨p, hp, o, ho, he⟩ := h
     cases he
     obtain ⟨hpo, _⟩ := readForkOptions_exact ho
     simp [print, printAction, ih p hp, hpo, Head.spelling]
-  case case42 =>
+  case case44 =>
     intro n args e h
     simp only [readHead] at h
     exact readRunIn_exact h
-  case case43 =>
+  case case45 =>
     intro n target e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨t, ht, rfl⟩ := h
     simp [print, printAction, readTerm_exact target ht, Head.spelling]
-  case case44 =>
-    intro n targets e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨t, ht, rfl⟩ := h
-    simp [print, printAction, readTerm_exact targets ht, Head.spelling]
-  case case45 =>
-    intro n targets who e h
-    unfold readHead at h; simp only [bind_eq_ok] at h
-    obtain ⟨t, ht, w, hw, he⟩ := h
-    cases he
-    simp [print, printAction, readTerm_exact targets ht, readTerm_exact who hw, Head.spelling]
   case case46 =>
     intro n targets e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨t, ht, rfl⟩ := h
     simp [print, printAction, readTerm_exact targets ht, Head.spelling]
   case case47 =>
+    intro n targets who e h
+    unfold readHead at h; simp only [bind_eq_ok] at h
+    obtain ⟨t, ht, w, hw, he⟩ := h
+    cases he
+    simp [print, printAction, readTerm_exact targets ht, readTerm_exact who hw, Head.spelling]
+  case case48 =>
+    intro n targets e h
+    unfold readHead at h; simp only [map_eq_ok] at h
+    obtain ⟨t, ht, rfl⟩ := h
+    simp [print, printAction, readTerm_exact targets ht, Head.spelling]
+  case case49 =>
     intro n entrants ih e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨es, hes, rfl⟩ := h
     simp [print, printAction, ih es hes, Head.spelling]
-  case case48 =>
+  case case50 =>
     intro n e h
     unfold readHead at h; simp at h; subst h
     simp [print, printAction, Head.spelling]
-  case case49 =>
+  case case51 =>
     intro n scope exit e h
     unfold readHead at h; simp only [bind_eq_ok] at h
     obtain ⟨s, hs, x, hx, he⟩ := h
     cases he
     simp [print, printAction, readTerm_exact scope hs, readTerm_exact exit hx, Head.spelling]
-  case case50 =>
+  case case52 =>
     intro n body ih e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨b, hb, rfl⟩ := h
     simp [print, ih b hb, Head.spelling]
-  case case51 =>
+  case case53 =>
     intro n acquire x y release hxy ih1 ih2 e h
     obtain ⟨rfl, rfl⟩ := hxy
     unfold readHead at h
@@ -1915,77 +2013,77 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
     obtain ⟨a, ha, r, hr, he⟩ := h
     cases he
     simp [print, ih1 a ha, ih2 r hr, Head.spelling]
-  case case52 =>
+  case case54 =>
     intro n acquire x y release hne e h
     unfold readHead at h; simp [hne] at h
-  case case53 => intro t n e h; unfold readHead at h; simp at h
-  case case54 => intro t n e h; unfold readHead at h; simp at h
   case case55 => intro t n e h; unfold readHead at h; simp at h
   case case56 => intro t n e h; unfold readHead at h; simp at h
   case case57 => intro t n e h; unfold readHead at h; simp at h
   case case58 => intro t n e h; unfold readHead at h; simp at h
   case case59 => intro t n e h; unfold readHead at h; simp at h
-  case case60 =>
+  case case60 => intro t n e h; unfold readHead at h; simp at h
+  case case61 => intro t n e h; unfold readHead at h; simp at h
+  case case62 =>
     intro n hd t
     intros
     rename_i e h
     unfold readHead at h
     split at h <;> close_arm h
   -- readEffs
-  case case61 =>
+  case case63 =>
     intro n es h
     unfold readEffs at h; simp at h; subst h; rfl
-  case case62 =>
+  case case64 =>
     intro n x rest ih1 ih2 es h
     unfold readEffs at h; simp only [bind_eq_ok] at h
     obtain ⟨e, he, es', hes', hes⟩ := h
     cases hes
     simp [printEffs, ih1 e he, ih2 es' hes']
   -- readStmts
-  case case63 =>
+  case case65 =>
     intro n ss h
     unfold readStmts at h; simp at h; subst h; rfl
-  case case64 =>
+  case case66 =>
     intro n value rest ih1 ih2 ss h
     unfold readStmts at h
     simp only [if_true, bind_eq_ok] at h
     obtain ⟨e, he, tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, ih1 e he, ih2 tail htail]
-  case case65 =>
+  case case67 =>
     intro n x value rest hx ss h
     unfold readStmts at h; simp [hx] at h
-  case case66 =>
+  case case68 =>
     intro n value rest ih1 ih2 ss h
     unfold readStmts at h; simp only [bind_eq_ok] at h
     obtain ⟨e, he, tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, ih1 e he, ih2 tail htail]
-  case case67 =>
+  case case69 =>
     intro n value rest ih ss h
     unfold readStmts at h; simp only [bind_eq_ok] at h
     obtain ⟨v, hv, tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, readTerm_exact value hv, ih tail htail]
-  case case68 =>
+  case case70 =>
     intro n test thenB elseB rest ih1 ih2 ih3 ss h
     unfold readStmts at h; simp only [bind_eq_ok] at h
     obtain ⟨t, ht, a, ha, b, hb, tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, readTerm_exact test ht, ih1 a ha, ih2 b hb, ih3 tail htail]
-  case case69 =>
+  case case71 =>
     intro n body rest ih1 ih2 ss h
     unfold readStmts at h; simp only [bind_eq_ok] at h
     obtain ⟨b, hb, tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, ih1 b hb, ih2 tail htail]
-  case case70 =>
+  case case72 =>
     intro n rest ih ss h
     unfold readStmts at h; simp only [bind_eq_ok] at h
     obtain ⟨tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, ih tail htail]
-  case case71 =>
+  case case73 =>
     intro n head tail
     intros
     rename_i ss h

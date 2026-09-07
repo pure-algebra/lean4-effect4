@@ -97,9 +97,9 @@ theorem fork_pendingOk (program : NCode) (options : Supervision.ForkOptions) {a 
   dsimp only at hst
   exact ha _ _ (pendingOk_of_fields hf hst)
 
-theorem forkIn_pendingOk (program : NCode) (options : Supervision.ForkOptions) (scope key : Nat)
+theorem forkIn_pendingOk (program : NCode) (options : Supervision.ForkOptions) (scope : Nat)
     {a : FAnswer} (ha : ∀ g v, PendingOk g → PendingOk (a g v)) :
-    PendingOk (FiberAction.forkIn i m f y program options scope key a).fiber := by
+    PendingOk (FiberAction.forkIn i m f y program options scope a).fiber := by
   unfold FiberAction.forkIn
   dsimp only
   have hs : (spawn i m f program { options with daemon := true }).2.1 = f := rfl
@@ -113,9 +113,9 @@ theorem forkIn_pendingOk (program : NCode) (options : Supervision.ForkOptions) (
   dsimp only at hst
   exact ha _ _ (pendingOk_of_fields hf hst)
 
-theorem forkScoped_pendingOk (program : NCode) (options : Supervision.ForkOptions) (key : Nat)
+theorem forkScoped_pendingOk (program : NCode) (options : Supervision.ForkOptions)
     {a : FAnswer} (ha : ∀ g v, PendingOk g → PendingOk (a g v)) :
-    PendingOk (FiberAction.forkScoped i m f y program options key a).fiber := by
+    PendingOk (FiberAction.forkScoped i m f y program options a).fiber := by
   unfold FiberAction.forkScoped
   split
   · dsimp only
@@ -131,11 +131,11 @@ theorem forkScoped_pendingOk (program : NCode) (options : Supervision.ForkOption
     exact ha _ _ (pendingOk_of_fields hf hst)
   · exact pendingOk_of_fields hf rfl
 
-theorem runIn_pendingOk (target : FiberId) (scope key : Nat) {a : FAnswer}
+theorem runIn_pendingOk (target : FiberId) (scope : Nat) {a : FAnswer}
     (ha : ∀ g v, PendingOk g → PendingOk (a g v)) :
-    PendingOk (FiberAction.runIn i m f y target scope key a).fiber := by
+    PendingOk (FiberAction.runIn i m f y target scope a).fiber := by
   unfold FiberAction.runIn
-  generalize linkScope i m Supervision.ScopeMode.fiberRunIn scope key target (some target)
+  generalize linkScope i m Supervision.ScopeMode.fiberRunIn scope target (some target)
     ReasonAnnotations.empty = r
   obtain ⟨rm, rc⟩ := r
   exact ha _ _ hf
@@ -175,13 +175,13 @@ theorem withFiber_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (
     fun _ _ hg => pendingOk_of_fields hg rfl
   cases action with
   | fork program options => exact fork_pendingOk i m f y hf program options hcore
-  | forkIn program options scope key => exact forkIn_pendingOk i m f y hf program options scope key hcore
-  | forkScoped program options key => exact forkScoped_pendingOk i m f y hf program options key hcore
+  | forkIn program options scope => exact forkIn_pendingOk i m f y hf program options scope hcore
+  | forkScoped program options => exact forkScoped_pendingOk i m f y hf program options hcore
   | ambientScope =>
     unfold evaluatePrim.withFiber
     dsimp only
     split <;> exact pendingOk_of_fields hf rfl
-  | runIn target scope key => exact runIn_pendingOk i m f y hf target scope key hcore
+  | runIn target scope => exact runIn_pendingOk i m f y hf target scope hcore
   | interrupt target => exact pendingOk_of_fields hf rfl
   | interruptAs target who => exact interruptAs_pendingOk i m f y target who hf
   | interruptScoped target =>

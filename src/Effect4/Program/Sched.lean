@@ -86,8 +86,8 @@ deriving DecidableEq
 frontiers. -/
 inductive FiberOp : Type
   | fork (child : Body) (options : Supervision.ForkOptions)
-  | forkIn (child : Point) (options : Supervision.ForkOptions) (scope : Nat) (key : Nat)
-  | forkScoped (child : Point) (options : Supervision.ForkOptions) (key : Nat)
+  | forkIn (child : Point) (options : Supervision.ForkOptions) (scope : Nat)
+  | forkScoped (child : Point) (options : Supervision.ForkOptions)
   | await (target : FiberId) (mode : Supervision.ObserverMode)
   | awaitAll (targets : List FiberId)
   | awaitAllFailFast (targets : List FiberId)
@@ -116,7 +116,7 @@ inductive FiberOp : Type
   | setContext (ctx : Ctx)
   | snapshotChildren
   | awaitNewChildren (snapshot : List FiberId)
-  | runIn (target : FiberId) (scope : Nat) (key : Nat)
+  | runIn (target : FiberId) (scope : Nat)
   | dropObservers (token : Nat)
   | refuse (cause : Cause Err Defect FiberId Ann)
   /-- The `Scope` service read (`Context.ts:423`; source-repairs §20): the ambient scope's
@@ -156,7 +156,7 @@ abbrev FiberOp.answer : FiberOp → Type
   | .unguard _ | .finishFinalizer _ => ExitV
   | .scoped _ | .scopeExit _ _ _
   | .mask _ _ | .closeScope _ _ | .acquireRelease _ _ | .raceAll _ | .raceRegister _
-  | .async _ _ | .forkScoped _ _ _ | .frontier _ _ | .gen _ | .loop _ _ | .closeIter _ _ _ => ExitV
+  | .async _ _ | .forkScoped _ _ | .frontier _ _ | .gen _ | .loop _ _ | .closeIter _ _ _ => ExitV
   | .await _ .joinEffect => ExitV
   | _ => Val
 
@@ -167,14 +167,14 @@ def FiberOp.defaultAnswer : (op : FiberOp) → op.answer
   | .unguard ex | .finishFinalizer ex => ex
   | .scoped _ | .scopeExit _ _ _
   | .mask _ _ | .closeScope _ _ | .acquireRelease _ _ | .raceAll _ | .raceRegister _
-  | .async _ _ | .forkScoped _ _ _ | .frontier _ _ | .gen _ | .loop _ _ | .closeIter _ _ _ =>
+  | .async _ _ | .forkScoped _ _ | .frontier _ _ | .gen _ | .loop _ _ | .closeIter _ _ _ =>
     Exit.success Val.unit
   | .await _ .joinEffect => Exit.success Val.unit
   | .await _ .awaitValue => Val.unit
-  | .fork _ _ | .forkIn _ _ _ _ | .awaitAll _ | .awaitAllFailFast _
+  | .fork _ _ | .forkIn _ _ _ | .awaitAll _ | .awaitAllFailFast _
   | .yieldNow _ | .interrupt _ | .interruptAs _ _ | .interruptScoped _ | .interruptAll _ _
   | .cancelRace _ | .getId | .getContext | .setContext _ | .snapshotChildren
-  | .awaitNewChildren _ | .runIn _ _ _ | .dropObservers _ | .refuse _
+  | .awaitNewChildren _ | .runIn _ _ | .dropObservers _ | .refuse _
   | .suspend _ | .sync _ | .ambientScope | .closeWalk _ _ _ => Val.unit
 
 /-- The answer type is selected by the operation. -/

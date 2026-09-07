@@ -378,15 +378,16 @@ def pDaemon : NativeEff :=
 
 The scope is made by the `sync` the compile binds first, the context is provided, the child is
 linked to the scope by a keyed fiber finalizer, the body ends with the child's handle, and the
-scope's close interrupts the child. The finalizer key is the `withFiber` point's fuel (`398`
-under `fuel = 400`: two `bind` children below the root), which is what makes it pinnable. -/
+scope's close interrupts the child. The finalizer key is the identity the store allocates at
+this registration (`E4-CHECK-CE-016`, `internal/effect.ts:5366`): the scoped entry takes name
+`0` for the scope handle, so the registration takes `1`. -/
 
 def pScoped : NativeEff :=
   .scoped (.bind (.perform .deferredMake (.lit .unit))
     (.withFiber (.forkScoped (.callback .deferredAwait (.var 0)) scopedChild)))
 
 #guard (typeOf nativeSignature pScoped).isSome
-#guard scopeRows (replayEff pScoped [evaluateRoot]) = [[0, 0, 0, 398, 1]]
+#guard scopeRows (replayEff pScoped [evaluateRoot]) = [[0, 0, 0, 1, 1]]
 #guard exitOf (replayEff pScoped [evaluateRoot]) 1 = some (interruptedFrom ⟨0⟩ ⟨1⟩)
 #guard exitOf (replayEff pScoped [evaluateRoot]) 0 = some (Exit.success (Val.fiber ⟨1⟩))
 #guard fiberCount (replayEff pScoped [evaluateRoot]) = 2

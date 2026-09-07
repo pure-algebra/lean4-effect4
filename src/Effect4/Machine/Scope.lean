@@ -402,6 +402,20 @@ private theorem tableInsert_mem_keys [DecidableEq κ] (table : List (κ × φ)) 
 private theorem nodup_singleton {γ : Type u} (value : γ) : ([value] : List γ).Nodup :=
   List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩
 
+/-- Insertion adds at most the inserted key. census: scope.add-finalizer -/
+theorem tableInsert_keys_subset [DecidableEq κ] (table : List (κ × φ)) (key : κ)
+    (finalizer : φ) :
+    (tableInsert table key finalizer).map Prod.fst ⊆ key :: table.map Prod.fst := by
+  by_cases hmem : key ∈ table.map Prod.fst
+  · rw [tableInsert_keys_of_mem table key finalizer hmem]
+    exact fun x hx => List.mem_cons_of_mem _ hx
+  · rw [tableInsert_new table key finalizer hmem, List.map_append, List.map_singleton]
+    intro x hx
+    rcases List.mem_append.mp hx with hx | hx
+    · exact List.mem_cons_of_mem _ hx
+    · rw [List.mem_singleton] at hx
+      exact hx ▸ List.mem_cons_self
+
 /-- A duplicate-free key list stays duplicate-free. census: scope.add-finalizer -/
 theorem tableInsert_nodup [DecidableEq κ] (table : List (κ × φ)) (key : κ) (finalizer : φ)
     (h : (table.map Prod.fst).Nodup) :
@@ -608,6 +622,22 @@ theorem addUnsafe_keys_nodup [DecidableEq κ] (self : Scope κ φ β ε δ ι α
     (self.addUnsafe key finalizer).finalizerKeys.Nodup :=
   addState_keys_nodup self.state key finalizer h
 
+/-- Registration adds at most the key it was given: whether the slot was free or occupied,
+every key the result holds was already registered or is this one.
+census: scope.add-finalizer -/
+theorem addUnsafe_keys_subset [DecidableEq κ] (self : Scope κ φ β ε δ ι α) (key : κ)
+    (finalizer : φ) :
+    (self.addUnsafe key finalizer).finalizerKeys ⊆ key :: self.finalizerKeys := by
+  show (addState self.state key finalizer).entries.map Prod.fst ⊆
+    key :: (self.state.entries.map Prod.fst)
+  cases hstate : self.state with
+  | empty => exact fun x hx => hx
+  | openEmpty => exact fun x hx => hx
+  | closed _ => exact fun x hx => List.mem_cons_of_mem _ hx
+  | openInline existingKey existing =>
+    exact fun x hx => tableInsert_keys_subset [(existingKey, existing)] key finalizer hx
+  | openMap table => exact fun x hx => tableInsert_keys_subset table key finalizer hx
+
 /-- rc.112 `scopeAddFinalizerExit`: register while open, run now when closed.
 census: scope.add-after-closed -/
 def addExit [DecidableEq κ] (run : φ -> Exit β ε δ ι α -> Exit Unit ε δ ι α)
@@ -770,6 +800,26 @@ theorem removeUnsafe_keys_nodup [DecidableEq κ] (self : Scope κ φ β ε δ ι
       exact List.nodup_nil
     · rw [if_neg hhit]
       exact nodup_singleton existingKey
+
+/-- Removal only removes: every registration the result still holds was already
+registered, in the same order. The observer that drops its own key therefore leaves
+every other registration where it was. census: scope.remove-finalizer -/
+theorem removeUnsafe_finalizers_sublist [DecidableEq κ] (self : Scope κ φ β ε δ ι α) (key : κ) :
+    (self.removeUnsafe key).finalizers.Sublist self.finalizers := by
+  show (removeState self.state key).entries.Sublist self.state.entries
+  cases hstate : self.state with
+  | empty => exact List.Sublist.refl _
+  | openEmpty => exact List.Sublist.refl _
+  | closed _ => exact List.Sublist.refl _
+  | openMap table => exact List.filter_sublist
+  | openInline existingKey existing =>
+    show (if existingKey = key then ScopeState.openEmpty
+      else ScopeState.openInline existingKey existing).entries.Sublist _
+    by_cases hhit : existingKey = key
+    · rw [if_pos hhit]
+      exact List.nil_sublist _
+    · rw [if_neg hhit]
+      exact List.Sublist.refl _
 
 /-! ### Closing -/
 
@@ -1154,6 +1204,16 @@ private theorem removeState_addState [DecidableEq κ] (state : ScopeState κ φ 
       tableRemove_append_self table key finalizer hkey]
     rfl
   | closed _ => exact Bool.noConfusion hclosed
+
+/-- The observer removes exactly the registration it was given: removing a key that was
+freshly registered restores the registration list unchanged. This is the low-level half of
+the rc.112 `const key = {}` protocol (`internal/effect.ts:5366-5372`, `:5457-5460`), where
+the observer closes over the key its own registration allocated. census:
+scope.remove-finalizer -/
+theorem removeUnsafe_addUnsafe_self [DecidableEq κ] (self : Scope κ φ β ε δ ι α) (key : κ)
+    (finalizer : φ) (hclosed : self.isClosed = false) (hkey : key ∉ self.finalizerKeys) :
+    ((self.addUnsafe key finalizer).removeUnsafe key).finalizers = self.finalizers :=
+  removeState_addState self.state key finalizer hclosed hkey
 
 /-- Removing the shared key restores the parent's registration list exactly: the
 child's own finalizer can detach it. census: scope.fork-linkage -/

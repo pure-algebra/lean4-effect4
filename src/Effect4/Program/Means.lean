@@ -220,19 +220,19 @@ inductive CodeMeans (root : NativeEff) : NCode → RProgram → Prop
       (hk : ∀ v, CodeMeans root (Prim.success v) (k v)) :
       CodeMeans root (Prim.withFiber t) (.vis (.inr (.fork body options)) k)
   | actForkIn (t : EffThunk) (program : NCode) (options : Supervision.ForkOptions) (q : Point)
-      (scope key : Nat) (k : Val → RProgram)
-      (ht : (interpOf root).withFiberOf t = some (.forkIn program options scope key))
+      (scope : Nat) (k : Val → RProgram)
+      (ht : (interpOf root).withFiberOf t = some (.forkIn program options scope))
       (hc : CodeMeans root program (denoteAt root q))
       (hk : ∀ v, CodeMeans root (Prim.success v) (k v)) :
-      CodeMeans root (Prim.withFiber t) (.vis (.inr (.forkIn q options scope key)) k)
+      CodeMeans root (Prim.withFiber t) (.vis (.inr (.forkIn q options scope)) k)
   | actAmbientScope (t : EffThunk) (k : Val → RProgram)
       (ht : (interpOf root).withFiberOf t = some .ambientScope)
       (hk : ∀ v, CodeMeans root (Prim.success v) (k v)) :
       CodeMeans root (Prim.withFiber t) (.vis (.inr .ambientScope) k)
-  | actRunIn (t : EffThunk) (target : FiberId) (scope key : Nat) (k : Val → RProgram)
-      (ht : (interpOf root).withFiberOf t = some (.runIn target scope key))
+  | actRunIn (t : EffThunk) (target : FiberId) (scope : Nat) (k : Val → RProgram)
+      (ht : (interpOf root).withFiberOf t = some (.runIn target scope))
       (hk : ∀ v, CodeMeans root (Prim.success v) (k v)) :
-      CodeMeans root (Prim.withFiber t) (.vis (.inr (.runIn target scope key)) k)
+      CodeMeans root (Prim.withFiber t) (.vis (.inr (.runIn target scope)) k)
   | actInterrupt (t : EffThunk) (target : FiberId) (k : Val → RProgram)
       (ht : (interpOf root).withFiberOf t = some (.interrupt target)) (hk : Delivers (seqR k)) :
       CodeMeans root (Prim.withFiber t) (.vis (.inr (.interrupt target)) k)
@@ -620,10 +620,10 @@ theorem CodeMeans.bindTail {root : NativeEff} {c : NCode} {r : RProgram} (h : Co
   | racePark race k hk => exact CodeMeans.racePark race _ (delivers_bind hk ht)
   | awaitAllPark targets k hk => exact CodeMeans.awaitAllPark targets _ (delivers_seqR_bind hk ht)
   | actFork t' program options body k ht' hc hk ihc ihk => exact CodeMeans.actFork t' program options body _ ht' hc ihk
-  | actForkIn t' program options q scope key k ht' hc hk ihc ihk =>
-    exact CodeMeans.actForkIn t' program options q scope key _ ht' hc ihk
+  | actForkIn t' program options q scope k ht' hc hk ihc ihk =>
+    exact CodeMeans.actForkIn t' program options q scope _ ht' hc ihk
   | actAmbientScope t' k ht' hk ihk => exact CodeMeans.actAmbientScope t' _ ht' ihk
-  | actRunIn t' target scope key k ht' hk ihk => exact CodeMeans.actRunIn t' target scope key _ ht' ihk
+  | actRunIn t' target scope k ht' hk ihk => exact CodeMeans.actRunIn t' target scope _ ht' ihk
   | actInterrupt t' target k ht' hk => exact CodeMeans.actInterrupt t' target _ ht' (delivers_seqR_bind hk ht)
   | actInterruptAs t' target who k ht' hk =>
     exact CodeMeans.actInterruptAs t' target who _ ht' (delivers_seqR_bind hk ht)
@@ -717,10 +717,10 @@ theorem CodeMeans.prepare {root : NativeEff} {c : NCode} {r : RProgram} (h : Cod
   | racePark race k hk => exact CodeMeans.racePark race k hk
   | awaitAllPark targets k hk => exact CodeMeans.awaitAllPark targets k hk
   | actFork t program options body k ht hc hk _ _ => exact CodeMeans.actFork t program options body k ht hc hk
-  | actForkIn t program options q scope key k ht hc hk _ _ =>
-    exact CodeMeans.actForkIn t program options q scope key k ht hc hk
+  | actForkIn t program options q scope k ht hc hk _ _ =>
+    exact CodeMeans.actForkIn t program options q scope k ht hc hk
   | actAmbientScope t k ht hk _ => exact CodeMeans.actAmbientScope t k ht hk
-  | actRunIn t target scope key k ht hk _ => exact CodeMeans.actRunIn t target scope key k ht hk
+  | actRunIn t target scope k ht hk _ => exact CodeMeans.actRunIn t target scope k ht hk
   | actInterrupt t target k ht hk => exact CodeMeans.actInterrupt t target k ht hk
   | actInterruptAs t target who k ht hk => exact CodeMeans.actInterruptAs t target who k ht hk
   | actInterruptScoped t target k ht hk => exact CodeMeans.actInterruptScoped t target k ht hk

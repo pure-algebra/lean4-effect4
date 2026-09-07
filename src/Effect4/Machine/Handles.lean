@@ -158,9 +158,9 @@ def ProgName.keys : ProgName → List Handle
   | ProgName.seqOf first second => first.keys ++ second.keys
   | ProgName.forkThen child _ _ => child.keys
   | ProgName.forkOnly child _ => child.keys
-  | ProgName.forkInScope child _ scope _ => Handle.scope scope :: child.keys
-  | ProgName.runInScope target scope _ => [Handle.fiber target, Handle.scope scope]
-  | ProgName.forkScopedOf child _ _ => child.keys
+  | ProgName.forkInScope child _ scope => Handle.scope scope :: child.keys
+  | ProgName.runInScope target scope => [Handle.fiber target, Handle.scope scope]
+  | ProgName.forkScopedOf child _ => child.keys
   | ProgName.raceOf _ => []
   | ProgName.closeScopeOf scope exit => Handle.scope scope :: exitKeys exit
   | ProgName.awaitAllNew body => body.keys
@@ -195,10 +195,10 @@ def Name.keys : Name → List Handle
 /-- The handles of a `withFiber` action name. -/
 def ActionName.keys : ActionName → List Handle
   | ActionName.fork program _ => program.keys
-  | ActionName.forkIn program _ scope _ => Handle.scope scope :: program.keys
-  | ActionName.forkScoped program _ _ => program.keys
+  | ActionName.forkIn program _ scope => Handle.scope scope :: program.keys
+  | ActionName.forkScoped program _ => program.keys
   | ActionName.ambientScope => []
-  | ActionName.runIn target scope _ => [Handle.fiber target, Handle.scope scope]
+  | ActionName.runIn target scope => [Handle.fiber target, Handle.scope scope]
   | ActionName.interrupt target => [Handle.fiber target]
   -- the interruptor is cause data, not a dereferenced handle (`E4-HANDLE-CE-002`)
   | ActionName.interruptAs target _ => [Handle.fiber target]
@@ -260,10 +260,10 @@ def programKeys : Program → List Handle := primKeys Name.keys Thunk.keys
 def WithFiberAction.keys (nk : ν → List Handle) (sk : σ → List Handle) :
     WithFiberAction ν σ Val Err Defect FiberId Ann Ctx → List Handle
   | WithFiberAction.fork program _ => primKeys nk sk program
-  | WithFiberAction.forkIn program _ scope _ => Handle.scope scope :: primKeys nk sk program
-  | WithFiberAction.forkScoped program _ _ => primKeys nk sk program
+  | WithFiberAction.forkIn program _ scope => Handle.scope scope :: primKeys nk sk program
+  | WithFiberAction.forkScoped program _ => primKeys nk sk program
   | WithFiberAction.ambientScope => []
-  | WithFiberAction.runIn target scope _ => [Handle.fiber target, Handle.scope scope]
+  | WithFiberAction.runIn target scope => [Handle.fiber target, Handle.scope scope]
   | WithFiberAction.interrupt target => [Handle.fiber target]
   | WithFiberAction.interruptAs target _ => [Handle.fiber target]
   | WithFiberAction.interruptScoped target => [Handle.fiber target]
@@ -544,8 +544,8 @@ structure KeyBounded (nk : ν → List Handle) (sk : σ → List Handle)
   mergeName : ∀ e, nk (interp.mergeName e) ⊆ exitKeys e
   scopeStatus : ∀ scope s, (interp.scopeStatus scope s).isSome = true →
     (s.scopes.entryAt scope).isSome = true
-  scopeLinkFiber : ∀ mode scope key fiber s s' ids,
-    interp.scopeLinkFiber mode scope key fiber s = some s' →
+  scopeLinkFiber : ∀ mode scope fiber s s' key ids,
+    interp.scopeLinkFiber mode scope fiber s = some (s', key) →
     Ok ⟨ids, s⟩ (Handle.fiber fiber :: s.keys) → s.le s' ∧ Ok ⟨ids, s'⟩ s'.keys
   dropFinalizer : ∀ scope key s s' ids, interp.dropFinalizer scope key s = some s' →
     Ok ⟨ids, s⟩ s.keys → s.le s' ∧ Ok ⟨ids, s'⟩ s'.keys
@@ -1838,12 +1838,12 @@ theorem launchEntrant_minted (interp : RunInterp ν σ Val Err Defect FiberId An
 
 theorem linkScope_minted (hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores) (mode : Supervision.ScopeMode)
-    (scope key : Nat) (target : FiberId) (interruptor : Option FiberId) (extra : ReasonAnnotations Ann)
+    (scope : Nat) (target : FiberId) (interruptor : Option FiberId) (extra : ReasonAnnotations Ann)
     (hm : MintedIn m (m.keys nk sk)) :
-    m.world.le (linkScope interp m mode scope key target interruptor extra).1.world ∧
-      MintedIn (linkScope interp m mode scope key target interruptor extra).1
-        ((linkScope interp m mode scope key target interruptor extra).1.keys nk sk ++
-          cmdsKeys nk sk (linkScope interp m mode scope key target interruptor extra).2) := by
+    m.world.le (linkScope interp m mode scope target interruptor extra).1.world ∧
+      MintedIn (linkScope interp m mode scope target interruptor extra).1
+        ((linkScope interp m mode scope target interruptor extra).1.keys nk sk ++
+          cmdsKeys nk sk (linkScope interp m mode scope target interruptor extra).2) := by
   unfold linkScope
   split
   · refine ⟨by rw [world_halt]; exact World.le_refl _, ?_⟩
@@ -1878,14 +1878,14 @@ theorem linkScope_minted (hb : KeyBounded nk sk interp ambient)
         · refine ⟨by rw [world_halt]; exact World.le_refl _, ?_⟩
           simp only [MintedIn, world_halt, keys_halt, cmdsKeys, List.flatMap_nil, List.append_nil]
           exact hm
-        · next state hstate =>
+        · next state key hstate =>
           have htid : (Handle.fiber target).existsIn m.world = true := fiber?_id_exists ht
           have hsk : Ok ⟨m.fibers.map RunFiber.id, m.state⟩ (Handle.fiber target :: m.state.keys) := by
             refine Ok_cons.mpr ⟨htid, ?_⟩
             refine Ok_of_subset ?_ hm
             simp only [RunMachine.keys]
             sub_tac
-          obtain ⟨hsle, hsok⟩ := hb.scopeLinkFiber mode scope key target m.state state _ hstate hsk
+          obtain ⟨hsle, hsok⟩ := hb.scopeLinkFiber mode scope target m.state state key _ hstate hsk
           have hle : m.world.le ({ m with state := state } : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores).world :=
             ⟨fun _ h => h, hsle⟩
           refine ⟨by rw [world_emit, world_modify]; exact hle, ?_⟩
@@ -2691,11 +2691,11 @@ theorem withFiber_fork_minted (hb : KeyBounded nk sk interp ambient)
 theorem withFiber_forkIn_minted (hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
-    (program : Prim ν σ Val Err Defect FiberId Ann) (options : Supervision.ForkOptions) (scope key : Nat)
+    (program : Prim ν σ Val Err Defect FiberId Ann) (options : Supervision.ForkOptions) (scope : Nat)
     (hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++
-      (WithFiberAction.forkIn program options scope key).keys nk sk)) :
+      (WithFiberAction.forkIn program options scope).keys nk sk)) :
     IterMinted nk sk m
-      (evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkIn program options scope key)) := by
+      (evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkIn program options scope)) := by
   simp only [evaluatePrim.withFiber]
   try dsimp only
   generalize hS : spawn interp m f program { options with daemon := true } = S
@@ -2708,11 +2708,11 @@ theorem withFiber_forkIn_minted (hb : KeyBounded nk sk interp ambient)
 theorem withFiber_forkScoped_minted (hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
-    (program : Prim ν σ Val Err Defect FiberId Ann) (options : Supervision.ForkOptions) (key : Nat)
+    (program : Prim ν σ Val Err Defect FiberId Ann) (options : Supervision.ForkOptions)
     (hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++
-      (WithFiberAction.forkScoped program options key).keys nk sk)) :
+      (WithFiberAction.forkScoped program options).keys nk sk)) :
     IterMinted nk sk m
-      (evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkScoped program options key)) := by
+      (evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkScoped program options)) := by
   simp only [evaluatePrim.withFiber]
   try dsimp only
   split
@@ -2730,15 +2730,15 @@ theorem withFiber_forkScoped_minted (hb : KeyBounded nk sk interp ambient)
 
 theorem withFiber_runIn_minted (hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
-    (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool) (target : FiberId) (scope key : Nat)
+    (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool) (target : FiberId) (scope : Nat)
     (hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++
-      (WithFiberAction.runIn target scope key).keys nk sk)) :
-    IterMinted nk sk m (evaluatePrim.withFiber interp m f yielding (WithFiberAction.runIn target scope key)) := by
+      (WithFiberAction.runIn target scope).keys nk sk)) :
+    IterMinted nk sk m (evaluatePrim.withFiber interp m f yielding (WithFiberAction.runIn target scope)) := by
   unfold IterMinted
   simp only [evaluatePrim.withFiber]
-  obtain ⟨hle, hok⟩ := linkScope_minted nk sk hb m Supervision.ScopeMode.fiberRunIn scope key target
+  obtain ⟨hle, hok⟩ := linkScope_minted nk sk hb m Supervision.ScopeMode.fiberRunIn scope target
     (some target) ReasonAnnotations.empty (Ok_of_subset (by sub_tac) hm)
-  generalize hL : linkScope interp m Supervision.ScopeMode.fiberRunIn scope key target (some target)
+  generalize hL : linkScope interp m Supervision.ScopeMode.fiberRunIn scope target (some target)
     ReasonAnnotations.empty = L at hle hok ⊢
   refine ⟨hle, ?_⟩
   simp only [MintedIn]
@@ -3146,10 +3146,10 @@ theorem withFiber_minted (hb : KeyBounded nk sk interp ambient)
     IterMinted nk sk m (evaluatePrim.withFiber interp m f yielding action) := by
   cases action with
   | fork program options => exact withFiber_fork_minted nk sk hb m f yielding program options hm
-  | forkIn program options scope key =>
-    exact withFiber_forkIn_minted nk sk hb m f yielding program options scope key hm
-  | forkScoped program options key => exact withFiber_forkScoped_minted nk sk hb m f yielding program options key hm
-  | runIn target scope key => exact withFiber_runIn_minted nk sk hb m f yielding target scope key hm
+  | forkIn program options scope =>
+    exact withFiber_forkIn_minted nk sk hb m f yielding program options scope hm
+  | forkScoped program options => exact withFiber_forkScoped_minted nk sk hb m f yielding program options hm
+  | runIn target scope => exact withFiber_runIn_minted nk sk hb m f yielding target scope hm
   | interrupt target => exact withFiber_interrupt_minted nk sk hb m f yielding target hm
   | interruptAs target who => exact withFiber_interruptAs_minted nk sk hb m f yielding target who hm
   | interruptScoped target => exact withFiber_interruptScoped_minted nk sk hb m f yielding target hm
@@ -3806,19 +3806,19 @@ theorem driveStep_registrationDone_minted (hb : KeyBounded nk sk interp)
         exact ⟨hle, hS⟩
 
 theorem driveStep_link_minted (hb : KeyBounded nk sk interp)
-    (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores) (mode : Supervision.ScopeMode) (scope key : Nat)
+    (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores) (mode : Supervision.ScopeMode) (scope : Nat)
     (target : FiberId) (interruptor : Option FiberId) (extra : ReasonAnnotations Ann)
     (rest : List (Cmd ν σ Val Err Defect FiberId Ann))
-    (hm : MintedIn m (m.keys nk sk ++ cmdsKeys nk sk (Cmd.link mode scope key target interruptor extra :: rest))) :
-    StepMinted nk sk m (driveStep interp m (Cmd.link mode scope key target interruptor extra) rest) := by
+    (hm : MintedIn m (m.keys nk sk ++ cmdsKeys nk sk (Cmd.link mode scope target interruptor extra :: rest))) :
+    StepMinted nk sk m (driveStep interp m (Cmd.link mode scope target interruptor extra) rest) := by
   unfold StepMinted
   simp only [driveStep]
-  obtain ⟨hle, hok⟩ := linkScope_minted nk sk hb m mode scope key target interruptor extra
+  obtain ⟨hle, hok⟩ := linkScope_minted nk sk hb m mode scope target interruptor extra
     (Ok_of_subset (by sub_tac) hm)
-  generalize hLdef : linkScope interp m mode scope key target interruptor extra = L at hle hok ⊢
+  generalize hLdef : linkScope interp m mode scope target interruptor extra = L at hle hok ⊢
   refine ⟨hle, ?_⟩
   have hall : Ok L.1.world (L.1.keys nk sk ++ cmdsKeys nk sk L.2 ++
-      (m.keys nk sk ++ cmdsKeys nk sk (Cmd.link mode scope key target interruptor extra :: rest))) :=
+      (m.keys nk sk ++ cmdsKeys nk sk (Cmd.link mode scope target interruptor extra :: rest))) :=
     Ok_append.mpr ⟨hok, Ok_mono hle hm⟩
   refine Ok_of_subset ?_ hall
   sub_tac
@@ -4144,8 +4144,8 @@ theorem driveStep_minted_of_evaluator (hb : KeyBounded nk sk interp)
   | exitDone id => exact driveStep_exitDone_minted nk sk hb m id rest hm
   | closeParAwait host yielding fibers =>
     exact driveStep_closeParAwait_minted nk sk hb m host yielding fibers rest hm
-  | link mode scope key target interruptor extra =>
-    exact driveStep_link_minted nk sk hb m mode scope key target interruptor extra rest hm
+  | link mode scope target interruptor extra =>
+    exact driveStep_link_minted nk sk hb m mode scope target interruptor extra rest hm
   | finish id exit => exact driveStep_finish_minted nk sk hb m id exit rest hm
   | drainDue => exact driveStep_drainDue_minted nk sk hb m rest hm
 
@@ -4604,9 +4604,9 @@ theorem progOf_keys : ∀ n : ProgName, programKeys (progOf n) ⊆ n.keys
   | ProgName.seqOf first second => by simp only [progOf]; sub_tac using (progOf_keys first)
   | ProgName.forkThen child options mode => by simp only [progOf]; sub_tac
   | ProgName.forkOnly child options => by simp only [progOf]; sub_tac
-  | ProgName.forkInScope child options scope key => by simp only [progOf]; sub_tac
-  | ProgName.runInScope target scope key => by simp only [progOf]; sub_tac
-  | ProgName.forkScopedOf child options key => by simp only [progOf]; sub_tac
+  | ProgName.forkInScope child options scope => by simp only [progOf]; sub_tac
+  | ProgName.runInScope target scope => by simp only [progOf]; sub_tac
+  | ProgName.forkScopedOf child options => by simp only [progOf]; sub_tac
   | ProgName.raceOf race => by simp only [progOf]; sub_tac
   | ProgName.closeScopeOf scope exit => by simp only [progOf]; sub_tac
   | ProgName.awaitAllNew body => by simp only [progOf]; sub_tac
@@ -4705,8 +4705,8 @@ theorem actionOf_keys (action : ActionName) :
     (actionOf action).keys Name.keys Thunk.keys ⊆ action.keys := by
   cases action with
   | fork program options => simp only [actionOf]; sub_tac using (progOf_keys program)
-  | forkIn program options scope key => simp only [actionOf]; sub_tac using (progOf_keys program)
-  | forkScoped program options key => simp only [actionOf]; sub_tac using (progOf_keys program)
+  | forkIn program options scope => simp only [actionOf]; sub_tac using (progOf_keys program)
+  | forkScoped program options => simp only [actionOf]; sub_tac using (progOf_keys program)
   | interruptAs target who => simp only [actionOf]; sub_tac
   | raceAll race =>
     simp only [actionOf, WithFiberAction.keys, ActionName.keys]
@@ -4714,7 +4714,7 @@ theorem actionOf_keys (action : ActionName) :
       raceEntrants_keys race]
     exact List.nil_subset _
   | setInterruptible body flag => simp only [actionOf]; sub_tac using (progOf_keys body)
-  | runIn target scope key => simp only [actionOf]; sub_tac
+  | runIn target scope => simp only [actionOf]; sub_tac
   | interrupt target => simp only [actionOf]; sub_tac
   | interruptScoped target => simp only [actionOf]; sub_tac
   | interruptAll targets interruptor => simp only [actionOf]; sub_tac
@@ -5412,22 +5412,23 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
   scopeStatus scope s h := by
     simp only [stores, ScopeStore.status, Option.isSome_map] at h
     exact h
-  scopeLinkFiber mode scope key fiber s s' ids h hok := by
+  scopeLinkFiber mode scope fiber s s' key ids h hok := by
     simp only [stores] at h
     split at h
     · cases h
-    · simp only [Option.some.injEq] at h
-      subst h
-      have hle : s.le { s with scopes := (s.scopes.addFinalizer scope key
-          (FinName.interruptFiber fiber (match mode with
-            | Supervision.ScopeMode.forkIn => true
-            | Supervision.ScopeMode.fiberRunIn => false))).1 } :=
-        ⟨Nat.le_refl _, Nat.le_refl _, fun k hk => ScopeStore.entryAt_addFinalizer_isSome _ _ _ _ k hk,
-          Nat.le_refl _⟩
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨hs, hkey⟩ := h
+      subst hkey
+      -- the registration allocates from the supply, so `nextName` only grows
+      have hle : s.le s' := by
+        rw [← hs]
+        exact ⟨Nat.le_refl _, Nat.le_refl _,
+          fun k hk => ScopeStore.entryAt_addFinalizer_isSome _ _ _ _ k hk, Nat.le_succ _⟩
       refine ⟨hle, ?_⟩
       have hok' := Ok_mono (World.le_of_state hle) hok
       refine Ok_of_subset ?_ hok'
-      sub_tac using (ScopeStore.addFinalizer_keys s.scopes scope key _)
+      rw [← hs]
+      sub_tac using (ScopeStore.addFinalizer_keys s.scopes scope s.nextName _)
   dropFinalizer scope key s s' ids h hok := by
     simp only [stores] at h
     split at h

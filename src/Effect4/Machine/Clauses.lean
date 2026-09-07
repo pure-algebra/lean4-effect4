@@ -728,9 +728,9 @@ theorem withFiber_awaitNewChildren (interp : RunInterp ν σ β ε δ ι α χ S
 caller annotations, and the caller answers void. census: fork.fiber-run-in -/
 theorem withFiber_runIn (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (target : FiberId) (scope key : Nat) :
-    evaluatePrim.withFiber interp m f yielding (WithFiberAction.runIn target scope key) =
-      (let r := linkScope interp m Supervision.ScopeMode.fiberRunIn scope key target (some target)
+    (target : FiberId) (scope : Nat) :
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.runIn target scope) =
+      (let r := linkScope interp m Supervision.ScopeMode.fiberRunIn scope target (some target)
         ReasonAnnotations.empty
        ⟨r.1, { f with frame := { f.frame with current := Prim.success interp.voidValue } }, yielding,
         (match r.1.stuck with
@@ -740,11 +740,11 @@ theorem withFiber_runIn (interp : RunInterp ν σ β ε δ ι α χ St)
 /-- Linking to a closed scope interrupts the fiber at once (`:5374`, `:5454`).
 census: fork.fiber-run-in -/
 theorem linkScope_closed (interp : RunInterp ν σ β ε δ ι α χ St)
-    (m : RunMachine ν σ β ε δ ι α χ St) (mode : Supervision.ScopeMode) (scope key : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) (mode : Supervision.ScopeMode) (scope : Nat)
     (target : FiberId) (interruptor : Option FiberId) (extra : ReasonAnnotations α)
     (exit : Exit β ε δ ι α) (t : RunFiber ν σ β ε δ ι α χ)
     (hclosed : interp.scopeStatus scope m.state = some (some exit)) (ht : m.fiber? target = some t) :
-    linkScope interp m mode scope key target interruptor extra =
+    linkScope interp m mode scope target interruptor extra =
       (let r := interruptRecord interp interruptor extra t
        ((m.update r.1).emit [RunEvent.scopeClosedOnLink scope target,
           RunEvent.interruptRecorded interruptor target],
@@ -753,10 +753,10 @@ theorem linkScope_closed (interp : RunInterp ν σ β ε δ ι α χ St)
 
 /-- An unknown scope halts the machine (M7). census: fork.fiber-run-in -/
 theorem linkScope_unknown (interp : RunInterp ν σ β ε δ ι α χ St)
-    (m : RunMachine ν σ β ε δ ι α χ St) (mode : Supervision.ScopeMode) (scope key : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) (mode : Supervision.ScopeMode) (scope : Nat)
     (target : FiberId) (interruptor : Option FiberId) (extra : ReasonAnnotations α)
     (h : interp.scopeStatus scope m.state = none) :
-    linkScope interp m mode scope key target interruptor extra = (m.halt (Stuck.unknownScope scope), []) := by
+    linkScope interp m mode scope target interruptor extra = (m.halt (Stuck.unknownScope scope), []) := by
   simp [linkScope, h]
 
 /-! ## The runtime entries -/
@@ -1342,11 +1342,11 @@ theorem drive_registrationDone_parks (interp : RunInterp ν σ β ε δ ι α χ
 /-- `forkIn`'s link as a command (`:5366-5376`, R2-8): `linkScope` over the re-read child,
 whatever it owes first. census: fork.in -/
 theorem drive_link (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
-    (m : RunMachine ν σ β ε δ ι α χ St) (mode : Supervision.ScopeMode) (scope key : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) (mode : Supervision.ScopeMode) (scope : Nat)
     (target : FiberId) (interruptor : Option FiberId) (extra : ReasonAnnotations α)
     (rest : List (Cmd ν σ β ε δ ι α)) (hs : m.stuck = none) :
-    drive interp (fuel + 1) m (Cmd.link mode scope key target interruptor extra :: rest) =
-      (let l := linkScope interp m mode scope key target interruptor extra
+    drive interp (fuel + 1) m (Cmd.link mode scope target interruptor extra :: rest) =
+      (let l := linkScope interp m mode scope target interruptor extra
        drive interp fuel l.1 (l.2 ++ rest)) := by
   simp [drive, driveState, driveStep, hs]
 
@@ -1372,29 +1372,29 @@ interruptor and the parent's stack annotations — by a command after its start,
 immediately finished child is never linked (`:5366-5376`, R2-8). census: fork.in -/
 theorem withFiber_forkIn (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
     (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (program : Prim ν σ β ε δ ι α)
-    (options : Supervision.ForkOptions) (scope key : Nat) :
-    evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkIn program options scope key) =
+    (options : Supervision.ForkOptions) (scope : Nat) :
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkIn program options scope) =
       (let s := spawn interp m f program { options with daemon := true }
        let t := start s.1 s.2.1 s.2.2 options.startImmediately
        ⟨t.1, { t.2.1 with frame := { t.2.1.frame with
           current := Prim.success (interp.fiberValue s.2.2) } },
         yielding, Outcome.continue_,
-        t.2.2 ++ [Cmd.link Supervision.ScopeMode.forkIn scope key s.2.2 (some t.2.1.id)
+        t.2.2 ++ [Cmd.link Supervision.ScopeMode.forkIn scope s.2.2 (some t.2.1.id)
           (interp.stackAnnotations t.2.1.id)]⟩) := rfl
 
 /-- `forkScoped` (`:5400-5406`) resolves the ambient `Scope` service of the parent's context
 and is then `forkIn` on it. census: fork.scoped -/
 theorem withFiber_forkScoped_ambient (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (key scope : Nat)
+    (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (scope : Nat)
     (h : interp.ambientScope f.context = some scope) :
-    evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkScoped program options key) =
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkScoped program options) =
       (let s := spawn interp m f program { options with daemon := true }
        let t := start s.1 s.2.1 s.2.2 options.startImmediately
        ⟨t.1, { t.2.1 with frame := { t.2.1.frame with
           current := Prim.success (interp.fiberValue s.2.2) } },
         yielding, Outcome.continue_,
-        t.2.2 ++ [Cmd.link Supervision.ScopeMode.forkIn scope key s.2.2 (some t.2.1.id)
+        t.2.2 ++ [Cmd.link Supervision.ScopeMode.forkIn scope s.2.2 (some t.2.1.id)
           (interp.stackAnnotations t.2.1.id)]⟩) := by
   simp only [evaluatePrim.withFiber, h]
   try rfl
@@ -1404,9 +1404,9 @@ service is required (`:5400`, `Context.get` throws `ServiceNotFound`); it is not
 "unimplemented step" defect (finding S1-1, 2026-09-04). census: fork.scoped -/
 theorem withFiber_forkScoped_none (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (key : Nat)
+    (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions)
     (h : interp.ambientScope f.context = none) :
-    evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkScoped program options key) =
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkScoped program options) =
       ⟨m, { f with frame := { f.frame with
           current := Prim.failure (Cause.die interp.missingScope) } },
         yielding, Outcome.continue_, []⟩ := by
@@ -1415,13 +1415,13 @@ theorem withFiber_forkScoped_none (interp : RunInterp ν σ β ε δ ι α χ St
 /-- Linking to an open scope registers the keyed finalizer in the store and the key-dropping
 observer on the fiber (`:5369-5372`, `:5458`). census: fork.in -/
 theorem linkScope_open (interp : RunInterp ν σ β ε δ ι α χ St)
-    (m : RunMachine ν σ β ε δ ι α χ St) (mode : Supervision.ScopeMode) (scope key : Nat)
-    (target : FiberId) (interruptor : Option FiberId) (extra : ReasonAnnotations α) (state : St)
-    (t : RunFiber ν σ β ε δ ι α χ)
+    (m : RunMachine ν σ β ε δ ι α χ St) (mode : Supervision.ScopeMode) (scope : Nat)
+    (target : FiberId) (interruptor : Option FiberId) (extra : ReasonAnnotations α)
+    (state : St) (key : Nat) (t : RunFiber ν σ β ε δ ι α χ)
     (hopen : interp.scopeStatus scope m.state = some none)
     (ht : m.fiber? target = some t) (hlive : t.exit = none)
-    (hlink : interp.scopeLinkFiber mode scope key target m.state = some state) :
-    linkScope interp m mode scope key target interruptor extra =
+    (hlink : interp.scopeLinkFiber mode scope target m.state = some (state, key)) :
+    linkScope interp m mode scope target interruptor extra =
       (RunMachine.emit
         (RunMachine.modify { m with state := state } target fun t =>
           { t with observers := t.observers ++ [Observer.dropScopeFinalizer scope key] })
@@ -1430,12 +1430,12 @@ theorem linkScope_open (interp : RunInterp ν σ β ε δ ι α χ St)
 
 /-- An exited fiber is not linked (`:5367`, `:5451-5452`; R2-9). census: fork.fiber-run-in -/
 theorem linkScope_open_exited (interp : RunInterp ν σ β ε δ ι α χ St)
-    (m : RunMachine ν σ β ε δ ι α χ St) (mode : Supervision.ScopeMode) (scope key : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) (mode : Supervision.ScopeMode) (scope : Nat)
     (target : FiberId) (interruptor : Option FiberId) (extra : ReasonAnnotations α)
     (t : RunFiber ν σ β ε δ ι α χ) (exit : Exit β ε δ ι α)
     (hopen : interp.scopeStatus scope m.state = some none)
     (ht : m.fiber? target = some t) (hexited : t.exit = some exit) :
-    linkScope interp m mode scope key target interruptor extra = (m, []) := by
+    linkScope interp m mode scope target interruptor extra = (m, []) := by
   simp [linkScope, hopen, ht, hexited]
 
 /-- Closing a scope installs the store's close program as the closer's current primitive

@@ -151,9 +151,9 @@ def progName : InductiveDesc where
      { leanName := "seqOf", args := [{ leanName := "first", leanTy := .nm "ProgName" }, { leanName := "second", leanTy := .nm "ProgName" }] },
      { leanName := "forkThen", args := [{ leanName := "child", leanTy := .nm "ProgName" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }, { leanName := "mode", leanTy := .nm "Supervision.ObserverMode" }] },
      { leanName := "forkOnly", args := [{ leanName := "child", leanTy := .nm "ProgName" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }] },
-     { leanName := "forkInScope", args := [{ leanName := "child", leanTy := .nm "ProgName" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }, { leanName := "scope", leanTy := .nm "Nat" }, { leanName := "key", leanTy := .nm "Nat" }] },
-     { leanName := "runInScope", args := [{ leanName := "target", leanTy := .nm "FiberId" }, { leanName := "scope", leanTy := .nm "Nat" }, { leanName := "key", leanTy := .nm "Nat" }] },
-     { leanName := "forkScopedOf", args := [{ leanName := "child", leanTy := .nm "ProgName" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }, { leanName := "key", leanTy := .nm "Nat" }] },
+     { leanName := "forkInScope", args := [{ leanName := "child", leanTy := .nm "ProgName" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }, { leanName := "scope", leanTy := .nm "Nat" }] },
+     { leanName := "runInScope", args := [{ leanName := "target", leanTy := .nm "FiberId" }, { leanName := "scope", leanTy := .nm "Nat" }] },
+     { leanName := "forkScopedOf", args := [{ leanName := "child", leanTy := .nm "ProgName" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }] },
      { leanName := "raceOf", args := [{ leanName := "race", leanTy := .nm "RaceName" }] },
      { leanName := "closeScopeOf", args := [{ leanName := "scope", leanTy := .nm "Nat" }, { leanName := "exit", leanTy := .nm "ExitV" }] },
      { leanName := "awaitAllNew", args := [{ leanName := "body", leanTy := .nm "ProgName" }] },
@@ -164,7 +164,7 @@ def progName : InductiveDesc where
 
 def name : InductiveDesc where
   leanName := "Name"
-  site := "Stores.lean:321"
+  site := "Stores.lean:322"
   subst := []
   leanParams := []
   ctors :=
@@ -191,15 +191,15 @@ def name : InductiveDesc where
 
 def actionName : InductiveDesc where
   leanName := "ActionName"
-  site := "Stores.lean:378"
+  site := "Stores.lean:379"
   subst := []
   leanParams := []
   ctors :=
     [{ leanName := "fork", args := [{ leanName := "program", leanTy := .nm "ProgName" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }] },
-     { leanName := "forkIn", args := [{ leanName := "program", leanTy := .nm "ProgName" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }, { leanName := "scope", leanTy := .nm "Nat" }, { leanName := "key", leanTy := .nm "Nat" }] },
-     { leanName := "forkScoped", args := [{ leanName := "program", leanTy := .nm "ProgName" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }, { leanName := "key", leanTy := .nm "Nat" }] },
+     { leanName := "forkIn", args := [{ leanName := "program", leanTy := .nm "ProgName" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }, { leanName := "scope", leanTy := .nm "Nat" }] },
+     { leanName := "forkScoped", args := [{ leanName := "program", leanTy := .nm "ProgName" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }] },
      { leanName := "ambientScope", args := [] },
-     { leanName := "runIn", args := [{ leanName := "target", leanTy := .nm "FiberId" }, { leanName := "scope", leanTy := .nm "Nat" }, { leanName := "key", leanTy := .nm "Nat" }] },
+     { leanName := "runIn", args := [{ leanName := "target", leanTy := .nm "FiberId" }, { leanName := "scope", leanTy := .nm "Nat" }] },
      { leanName := "interrupt", args := [{ leanName := "target", leanTy := .nm "FiberId" }] },
      { leanName := "interruptAs", args := [{ leanName := "target", leanTy := .nm "FiberId" }, { leanName := "who", leanTy := .nm "FiberId" }] },
      { leanName := "interruptScoped", args := [{ leanName := "target", leanTy := .nm "FiberId" }] },
@@ -220,7 +220,7 @@ def actionName : InductiveDesc where
 
 def thunk : InductiveDesc where
   leanName := "Thunk"
-  site := "Stores.lean:417"
+  site := "Stores.lean:418"
   subst := []
   leanParams := []
   ctors :=
@@ -261,7 +261,7 @@ def scope : StructDesc where
 
 def deferredCell : StructDesc where
   leanName := "DeferredCell"
-  site := "Stores.lean:668"
+  site := "Stores.lean:669"
   subst := []
   leanParams := []
   fields :=
@@ -270,7 +270,7 @@ def deferredCell : StructDesc where
 
 def deferredStore : StructDesc where
   leanName := "DeferredStore"
-  site := "Stores.lean:677"
+  site := "Stores.lean:678"
   subst := []
   leanParams := []
   fields :=
@@ -279,7 +279,7 @@ def deferredStore : StructDesc where
 
 def scopeEntry : StructDesc where
   leanName := "ScopeEntry"
-  site := "Stores.lean:875"
+  site := "Stores.lean:876"
   subst := []
   leanParams := []
   fields :=
@@ -288,7 +288,7 @@ def scopeEntry : StructDesc where
 
 def scopeStore : StructDesc where
   leanName := "ScopeStore"
-  site := "Stores.lean:883"
+  site := "Stores.lean:884"
   subst := []
   leanParams := []
   fields :=
@@ -296,7 +296,7 @@ def scopeStore : StructDesc where
 
 def stores : StructDesc where
   leanName := "Stores"
-  site := "Stores.lean:1036"
+  site := "Stores.lean:1223"
   subst := []
   leanParams := []
   fields :=
