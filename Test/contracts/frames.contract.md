@@ -2,6 +2,13 @@
 
 Status: FROZEN / RED, breaker-authored 2026-09-02
 
+Constructor amendment frozen 2026-09-06, under the owner's D7 repair
+authorization: `onSuccessConst` represents the constant continuation of the
+existing `OnSuccess` operation. D1, D4, D8, F1 and F11 below include that
+amendment and the three parking constructors already admitted by the run-loop
+packet. This changes the exhaustive syntax receipt; it adds no host operation
+or census row. The original packet's other claim boundaries remain its own.
+
 Implementation fence:
 `src/Effect4/Machine/Frames.lean`
 
@@ -149,26 +156,33 @@ inductive Prim (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max
   | yieldableError (error : ε)
   | iterator (generator : ν) (cursor : β)
   | onSuccess (body : Prim …) (onValue : ν)
+  | onSuccessConst (body next : Prim …)
   | onFailure (body : Prim …) (onCause : ν)
   | onSuccessAndFailure (body : Prim …) (onValue : ν) (onCause : ν)
   | exitFrame (body : Prim …)
   | onExit (body : Prim …) (finalizer : ν) (finalizerInterruptible : Bool)
   | setInterruptible (flag : Bool)
   | whileLoop (loop : ν) (cursor : β)
+  | yieldNowWith (priority : Nat)
+  | async (register : ν) (withSignal : Bool) (cancel : Option ν)
+  | asyncFinalizer (onInterrupt : ν)
 deriving DecidableEq
 ```
 
-One constructor per pinned op in this packet's scope. Three deliberate absences:
-`Yield`, `Async` and `AsyncFinalizer` belong to the later run-loop and parking
-packet, and adding them is an additive change to this inductive that that packet
-must make consciously — together with the `popFrom` obligation recorded as
-`FRAME-FB-ASYNC-FINALIZER`.
+Eighteen data constructors represent seventeen pinned host operations.
+`Yield`, `Async` and `AsyncFinalizer` were added by the run-loop and parking
+packet, together with its live-stack pop obligation. `onSuccessConst` is a
+second data instance of `OnSuccess`: rc.112's automatic yield builds
+`flatMap(yieldNow, () => previous)` at `internal/effect.ts:649-655`. Its `next`
+field holds that saved program directly. No new `Eff` syntax, fiber field or
+second stack accompanies this constructor.
 
 `success` and `failure` are the two rc.112 `Exit` ops; they *are* primitives, and
 `Prim.ofExit` / `Prim.asExit?` are the embedding and its partial inverse that
 close `exit.success-failure`'s open clause.
 
-A continuation slot stores a nominal `ν`. A nested body stores a `Prim` subterm,
+A continuation slot stores a nominal `ν` or, for the constant instance, a
+`Prim` subterm. A nested body stores a `Prim` subterm,
 because rc.112's `onSuccess[args]` holds the inner *effect* and a subterm is
 first-order, inspectable and decidable where a closure is none of those.
 `docs/research/FRAMES-DAG.md` separation 5 owns that distinction.
@@ -296,6 +310,7 @@ Frozen exactly as `docs/effect-rc112-fiber-runtime.html` section 3 states it:
 | Frame | `contA` | `contE` | `contAll` |
 | --- | --- | --- | --- |
 | `onSuccess` | yes | — | — |
+| `onSuccessConst` | yes | — | — |
 | `onFailure` | — | yes | — |
 | `onSuccessAndFailure` | yes | yes | — |
 | `exitFrame` | yes | yes | — |
@@ -303,8 +318,10 @@ Frozen exactly as `docs/effect-rc112-fiber-runtime.html` section 3 states it:
 | `iterator` | yes | — | — |
 | `onExit` | yes | yes | yes |
 | `setInterruptible` | — | — | yes |
+| `asyncFinalizer` | — | yes | yes |
 
-`success`, `failure`, `sync`, `suspend`, `withFiber` and `yieldableError` declare
+`success`, `failure`, `sync`, `suspend`, `withFiber`, `yieldableError`,
+`yieldNowWith` and `async` declare
 no arm and are never pushed. `Prim.isFrame` is exactly "declares at least one
 arm", which is the first half of `rule.frames-are-primitives`.
 
@@ -450,10 +467,13 @@ FrameFiber.run : [DecidableEq ε δ ι α] -> PrimInterp … -> Nat -> FrameFibe
 demands `contE` with `skipInterrupted := true`. That asymmetry is
 `rule.interrupt-bypasses-handlers` in one line: only the failure path skips.
 
-The fourteen `step` equations are one per constructor.
+The eighteen `step` equations are one per data constructor.
 `Success` supplies itself as the pop's exit argument, `Sync` supplies nothing,
-`Failure` supplies itself. The five pushing frames push themselves and continue
-with their body. `setInterruptible` as a *current* primitive is a defect, because
+`Failure` supplies itself. The six pushing frames push themselves and continue
+with their body, including `onSuccessConst`. Its success arm returns `next`
+without consulting the supplied value or the interpreter. `Yield` and `Async`
+are live frontiers in this frame-only evaluator; their actual parking belongs
+to the shared run loop. `setInterruptible` as a *current* primitive is a defect, because
 rc.112 gives it no `evaluate` and `defaultEvaluate` returns
 `exitDie("Effect.evaluate: Not implemented")`.
 
@@ -502,11 +522,11 @@ Arm.demandable_eq          : Arm.demandable = [Arm.contA, Arm.contE]
 Arm.contAll_not_demandable : Arm.contAll ∉ Arm.demandable
 ```
 
-### F1 — the syntax (census: op.Success .. op.While)
+### F1 — the syntax (census: op.Success .. op.AsyncFinalizer)
 
-`Prim.cases_receipt` is the fourteen-way exhaustive receipt. There is no
-fifteenth op in this packet, and `Yield`, `Async` and `AsyncFinalizer` are
-deliberately not among the fourteen.
+`Prim.cases_receipt` is the eighteen-way exhaustive receipt. The constant
+`OnSuccess` case immediately follows the named `OnSuccess` case. This is a
+constructor count, not a claim of an eighteenth host operation.
 
 ### F2 — the fiber state (census: rule.frames-are-primitives)
 
@@ -769,6 +789,53 @@ what Effect4 admits, so a host distinction outside that data is not
 representable. `E4-RUN-CE-021` exhibits both pairs. The *behaviours* stay
 modelled — `step_withFiber` and `step_yieldableError` — and only the object and
 class identities are refused.
+
+### F11 — constant OnSuccess (D7 amendment, census: op.OnSuccess,
+frame-arm.OnSuccess)
+
+Pinned rule: `vendor/effect-4.0.0-rc.112/src/internal/effect.ts:649-655` stores
+`previous` in the constant continuation of `flatMap(yieldNow, () => previous)`.
+The constructor and these seven public equations are the authorized amendment:
+
+```lean
+Prim.arms_onSuccessConst : (onSuccessConst body next).arms = [contA]
+Prim.ensure_onSuccessConst : (onSuccessConst body next).ensure fiber = (fiber, none)
+Prim.armA_onSuccessConst :
+  (onSuccessConst body next).armA interp value provided = some (next, [])
+Prim.armE_onSuccessConst_none :
+  (onSuccessConst body next).armE interp cause provided = none
+FrameFiber.step_onSuccessConst :
+  (mk (onSuccessConst body next) self.stack self.interruptible
+    self.interruptedCause self.deferredInterrupt).step interp =
+  (running (mk body (onSuccessConst body next :: self.stack) self.interruptible
+    self.interruptedCause self.deferredInterrupt), [pushed (onSuccessConst body next)])
+FrameFiber.resumeValue_onSuccessConst : self.deferredInterrupt = false →
+  ({ self with stack := onSuccessConst body next :: self.stack }).resumeValue
+    interp value provided =
+  (running { self with current := next }, [popped (onSuccessConst body next)])
+FrameFiber.step_success_onSuccessConst : self.deferredInterrupt = false →
+  (mk (success value) (onSuccessConst body next :: self.stack) self.interruptible
+    self.interruptedCause self.deferredInterrupt).step interp =
+  (running { self with current := next }, [popped (onSuccessConst body next)])
+```
+
+The battery fixes the complete quantified types with exact ascriptions. The
+last two equations leave the older stack, pending cause and interruptible flag
+unrestricted; success does not enable the failure path's handler skip. A
+deferred interrupt remains a separate earlier branch of `getCont`.
+
+The local battery also checks ten finite cases: constant value/cause arms,
+entry above an older handler, success with a pending cause, a deferred interrupt
+leaving both frames untouched, failure reaching the older handler, two nested
+returns in order, and cleanup before mask restoration and the older handler.
+The existing pop algorithm owns these traversals. This amendment introduces no
+new traversal and proves no scheduler checkpoint or TypeScript host claim.
+
+The proof dependencies are the constructor's arm/ensure/step equations, then
+the existing success-pop and failure-pass rules. The coordinator's D7 work
+joins them to the ordinary Yield/resume phases, handle-key closure, trace
+extension and the command/replay laws. Those joins and their full gate are
+outside this local constructor fence.
 
 ## Census row to obligation map
 

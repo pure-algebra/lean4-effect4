@@ -20,6 +20,9 @@ ceiling. -/
 #print axioms Effect4.Program.Sched.eraseControl_onExitR
 #print axioms Effect4.Program.Sched.eraseControl_suspendR
 #print axioms Effect4.Program.Sched.eraseControl_sync
+#print axioms Effect4.Program.Sched.constructR
+#print axioms Effect4.Program.Sched.prepareR
+#print axioms Effect4.Program.Sched.eraseControl_constructR
 #print axioms Effect4.Program.Sched.denoteAction
 #print axioms Effect4.Program.Sched.denoteAsync
 #print axioms Effect4.Program.Sched.inlineYield

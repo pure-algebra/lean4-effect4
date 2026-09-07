@@ -4,6 +4,10 @@ Contract packet: `Test/contracts/frames.contract.md`
 Breaker-owned red battery. The implementation phase must not edit this file.
 It is red until `src/Effect4/Machine/Frames.lean` declares the frozen surface.
 
+Owner-approved D7 constructor amendment, 2026-09-06: the frozen section 6 of
+`docs/research/2026-09-06-p3-source-repairs.md` authorizes the constant
+`OnSuccess` constructor, its exhaustive receipt and the local F11 checks below.
+
 Every public declaration is frozen by an exact `#check (@name : proposition)`
 ascription so no weaker statement satisfies this contract. Names are written
 fully qualified; this module deliberately does not `open Effect4`, so a
@@ -65,9 +69,11 @@ op.Suspend, op.WithFiber, op.YieldableError, op.Iterator, op.OnSuccess,
 op.OnFailure, op.OnSuccessAndFailure, op.Exit, op.OnExit, op.SetInterruptible,
 op.While, op.Yield, op.Async, op.AsyncFinalizer).
 
-One constructor per pinned op. `ν` is the externally admitted continuation-name
-alphabet and `σ` the thunk-name alphabet: a continuation slot is a nominal name,
-never a stored Lean closure (DB-02). Nested bodies are first-order subterms.
+Eighteen data constructors represent seventeen pinned ops: `onSuccessConst`
+is the constant instance of `OnSuccess` used by automatic yielding. `ν` is the
+externally admitted continuation-name alphabet and `σ` the thunk-name alphabet.
+A continuation is a nominal name or a constant program subterm, never a stored
+Lean closure (DB-02). Nested bodies are first-order subterms.
 `Yield`, `Async` and `AsyncFinalizer` were reserved for the run-loop and parking
 packet and are here now, as first-order names. -/
 
@@ -99,6 +105,10 @@ packet and are here now, as first-order names. -/
 #check (@Effect4.Prim.onSuccess :
   {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.Prim ν σ β ε δ ι α → ν →
   Effect4.Prim ν σ β ε δ ι α)
+
+#check (@Effect4.Prim.onSuccessConst :
+  {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.Prim ν σ β ε δ ι α →
+  Effect4.Prim ν σ β ε δ ι α → Effect4.Prim ν σ β ε δ ι α)
 
 #check (@Effect4.Prim.onFailure :
   {ν σ : Type u} → {β : Type v} → {ε δ ι α : Type u} → Effect4.Prim ν σ β ε δ ι α → ν →
@@ -139,7 +149,8 @@ packet and are here now, as first-order names. -/
   thunk, self = Effect4.Prim.sync thunk) ∨ (∃ thunk, self = Effect4.Prim.suspend thunk) ∨ (∃
   thunk, self = Effect4.Prim.withFiber thunk) ∨ (∃ error, self = Effect4.Prim.yieldableError
   error) ∨ (∃ generator cursor, self = Effect4.Prim.iterator generator cursor) ∨ (∃ body
-  onValue, self = Effect4.Prim.onSuccess body onValue) ∨ (∃ body onCause, self =
+  onValue, self = Effect4.Prim.onSuccess body onValue) ∨
+  (∃ body next, self = Effect4.Prim.onSuccessConst body next) ∨ (∃ body onCause, self =
   Effect4.Prim.onFailure body onCause) ∨ (∃ body onValue onCause, self =
   Effect4.Prim.onSuccessAndFailure body onValue onCause) ∨ (∃ body, self =
   Effect4.Prim.exitFrame body) ∨ (∃ body finalizer flag, self = Effect4.Prim.onExit body
@@ -1971,5 +1982,177 @@ sayable without contradicting DB-04. -/
   (events : List (Effect4.FrameEvent ν σ β ε δ ι α)), m ≤ n →
   Effect4.FrameFiber.run interp m self = (Effect4.FrameStep.finished exit, events) →
   Effect4.FrameFiber.run interp n self = (Effect4.FrameStep.finished exit, events))
+
+/-! F11: the frozen D7 constant `OnSuccess` amendment.
+
+rc.112 `internal/effect.ts:649-655` injects `flatMap(yieldNow, () => previous)`.
+These local checks concern the wrapper's ordinary frame behavior. They do not
+claim the run loop injects or parks at the correct checkpoint. -/
+
+-- census: frame-arm.OnSuccess
+#check (@Effect4.Prim.arms_onSuccessConst :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
+  (body next : Effect4.Prim ν σ β ε δ ι α),
+  (Effect4.Prim.onSuccessConst body next).arms = [Effect4.Arm.contA])
+
+-- census: frame-arm.OnSuccess
+#check (@Effect4.Prim.ensure_onSuccessConst :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
+  (body next : Effect4.Prim ν σ β ε δ ι α) (fiber : Effect4.FrameFiber ν σ β ε δ ι α),
+  (Effect4.Prim.onSuccessConst body next).ensure fiber = (fiber, none))
+
+-- census: op.OnSuccess
+#check (@Effect4.Prim.armA_onSuccessConst :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
+  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (interp : Effect4.PrimInterp ν σ β ε δ ι α)
+  (body next : Effect4.Prim ν σ β ε δ ι α) (value : β)
+  (provided : Option (Effect4.Exit β ε δ ι α)),
+  (Effect4.Prim.onSuccessConst body next).armA interp value provided = some (next, []))
+
+-- census: frame-arm.OnSuccess
+#check (@Effect4.Prim.armE_onSuccessConst_none :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
+  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (interp : Effect4.PrimInterp ν σ β ε δ ι α)
+  (body next : Effect4.Prim ν σ β ε δ ι α) (cause : Effect4.Cause ε δ ι α)
+  (provided : Option (Effect4.Exit β ε δ ι α)),
+  (Effect4.Prim.onSuccessConst body next).armE interp cause provided = none)
+
+-- census: op.OnSuccess
+#check (@Effect4.FrameFiber.step_onSuccessConst :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
+  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (interp : Effect4.PrimInterp ν σ β ε δ ι α) (self : Effect4.FrameFiber ν σ β ε δ ι α)
+  (body next : Effect4.Prim ν σ β ε δ ι α),
+  (Effect4.FrameFiber.mk (Effect4.Prim.onSuccessConst body next) self.stack self.interruptible
+      self.interruptedCause self.deferredInterrupt).step interp =
+    (Effect4.FrameStep.running
+      (Effect4.FrameFiber.mk body (Effect4.Prim.onSuccessConst body next :: self.stack)
+        self.interruptible self.interruptedCause self.deferredInterrupt),
+      [Effect4.FrameEvent.pushed (Effect4.Prim.onSuccessConst body next)]))
+
+-- census: op.OnSuccess
+#check (@Effect4.FrameFiber.resumeValue_onSuccessConst :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
+  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (interp : Effect4.PrimInterp ν σ β ε δ ι α) (self : Effect4.FrameFiber ν σ β ε δ ι α)
+  (body next : Effect4.Prim ν σ β ε δ ι α) (value : β)
+  (provided : Option (Effect4.Exit β ε δ ι α)), self.deferredInterrupt = false →
+  ({ self with stack := Effect4.Prim.onSuccessConst body next :: self.stack }).resumeValue
+      interp value provided =
+    (Effect4.FrameStep.running { self with current := next },
+      [Effect4.FrameEvent.popped (Effect4.Prim.onSuccessConst body next)]))
+
+-- census: op.OnSuccess
+#check (@Effect4.FrameFiber.step_success_onSuccessConst :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
+  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (interp : Effect4.PrimInterp ν σ β ε δ ι α) (self : Effect4.FrameFiber ν σ β ε δ ι α)
+  (body next : Effect4.Prim ν σ β ε δ ι α) (value : β), self.deferredInterrupt = false →
+  (Effect4.FrameFiber.mk (Effect4.Prim.success value)
+      (Effect4.Prim.onSuccessConst body next :: self.stack) self.interruptible
+      self.interruptedCause self.deferredInterrupt).step interp =
+    (Effect4.FrameStep.running { self with current := next },
+      [Effect4.FrameEvent.popped (Effect4.Prim.onSuccessConst body next)]))
+
+private abbrev ConstPrim := Effect4.Prim Nat Nat Nat Nat Nat Nat Nat
+private abbrev ConstFiber := Effect4.FrameFiber Nat Nat Nat Nat Nat Nat Nat
+
+private def constInterp : Effect4.PrimInterp Nat Nat Nat Nat Nat Nat Nat where
+  contA := fun name value => .success (name + value)
+  contE := fun name _ => .success name
+  syncValue := id
+  suspendBody := fun name => .success name
+  finalizerExit := fun _ _ => .success ()
+  reifyExit := fun _ => 0
+  iterNext := fun _ value => ([], .done value)
+  loopTest := fun _ _ => false
+  loopBody := fun name _ => .success name
+  loopStep := fun _ cursor _ => cursor
+  loopDone := fun _ => 0
+  notImplemented := 0
+  cancelThenFail := fun _ cause => .failure cause
+
+private def savedConst : ConstPrim := .onSuccessConst (.yieldNowWith 0) (.success 27)
+private def olderHandler : ConstPrim := .onFailure (.success 0) 13
+private def constCleanup : ConstPrim := .onExit (.success 0) 31 false
+
+-- The saved program is data and does not depend on the delivered value or exit.
+#guard savedConst.armA constInterp 99 (some (.failure (.fail 7))) = some (.success 27, [])
+#guard savedConst.armE constInterp (.fail 7) none = none
+
+-- Enter the wrapper above an existing handler; controls and saved code survive.
+#guard (Effect4.FrameFiber.mk savedConst [olderHandler] false (some (.fail 42)) true).step
+    constInterp =
+  (Effect4.FrameStep.running
+    (Effect4.FrameFiber.mk (.yieldNowWith 0) [savedConst, olderHandler] false
+      (some (.fail 42)) true), [Effect4.FrameEvent.pushed savedConst])
+
+-- Success does not take the failure path's skip, even with an interrupt pending.
+#guard (Effect4.FrameFiber.mk (.success 99) [savedConst, olderHandler] true
+      (some (.fail 42)) false).step constInterp =
+  (Effect4.FrameStep.running
+    (Effect4.FrameFiber.mk (.success 27) [olderHandler] true (some (.fail 42)) false),
+    [Effect4.FrameEvent.popped savedConst])
+
+-- A deferred interrupt wins before touching either the constant frame or its tail.
+#guard (Effect4.FrameFiber.mk (.success 99) [savedConst, olderHandler] true
+      (some (.fail 42)) true).step constInterp =
+  (Effect4.FrameStep.running
+    (Effect4.FrameFiber.mk (.failure (.fail 42)) [savedConst, olderHandler] true
+      (some (.fail 42)) false), [Effect4.FrameEvent.deferred (.fail 42)])
+
+-- Failure discards the constant continuation and reaches the older cause handler.
+#guard (Effect4.FrameFiber.mk (.failure (.fail 7))
+      [savedConst, olderHandler, .setInterruptible false] true none false).step constInterp =
+  (Effect4.FrameStep.running
+    (Effect4.FrameFiber.mk (.success 13) [.setInterruptible false] true none false),
+    [Effect4.FrameEvent.popped savedConst, Effect4.FrameEvent.popped olderHandler])
+
+-- Nested saved programs return in stack order, one success per return.
+private def outerConst : ConstPrim := .onSuccessConst (.yieldNowWith 0) (.success 41)
+private def nestedConstFiber : ConstFiber :=
+  Effect4.FrameFiber.mk (.success 1) [savedConst, outerConst, olderHandler] true none false
+
+#guard nestedConstFiber.run constInterp 1 =
+  (Effect4.FrameStep.running
+    (Effect4.FrameFiber.mk (.success 27) [outerConst, olderHandler] true none false),
+    [Effect4.FrameEvent.popped savedConst])
+#guard nestedConstFiber.run constInterp 2 =
+  (Effect4.FrameStep.running
+    (Effect4.FrameFiber.mk (.success 41) [olderHandler] true none false),
+    [Effect4.FrameEvent.popped savedConst, Effect4.FrameEvent.popped outerConst])
+
+-- The older cleanup still runs once and restores its mask above the older handler.
+private def cleanupConstFiber : ConstFiber :=
+  Effect4.FrameFiber.mk (.failure (.fail 7)) [savedConst, constCleanup, olderHandler]
+    true none false
+
+#guard cleanupConstFiber.step constInterp =
+  (Effect4.FrameStep.running
+    (Effect4.FrameFiber.mk (.failure (.fail 7)) [.setInterruptible true, olderHandler]
+      false none false),
+    [Effect4.FrameEvent.popped savedConst, Effect4.FrameEvent.popped constCleanup,
+      Effect4.FrameEvent.ranContAll constCleanup,
+      Effect4.FrameEvent.ranFinalizer 31 (.failure (.fail 7))])
+#guard cleanupConstFiber.run constInterp 2 =
+  (Effect4.FrameStep.running
+    (Effect4.FrameFiber.mk (.success 13) [] true none false),
+    [Effect4.FrameEvent.popped savedConst, Effect4.FrameEvent.popped constCleanup,
+      Effect4.FrameEvent.ranContAll constCleanup,
+      Effect4.FrameEvent.ranFinalizer 31 (.failure (.fail 7)),
+      Effect4.FrameEvent.popped (.setInterruptible true),
+      Effect4.FrameEvent.ranContAll (.setInterruptible true),
+      Effect4.FrameEvent.popped olderHandler])
+
+#print axioms Effect4.Prim.cases_receipt
+#print axioms Effect4.Prim.arms_onSuccessConst
+#print axioms Effect4.Prim.ensure_onSuccessConst
+#print axioms Effect4.Prim.armA_onSuccessConst
+#print axioms Effect4.Prim.armE_onSuccessConst_none
+#print axioms Effect4.FrameFiber.step_onSuccessConst
+#print axioms Effect4.FrameFiber.resumeValue_onSuccessConst
+#print axioms Effect4.FrameFiber.step_success_onSuccessConst
 
 end Test.Runtime.FramesContract

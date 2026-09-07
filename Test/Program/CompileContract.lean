@@ -64,6 +64,7 @@ def spawn (root : NativeEff) : MC := spawnTape root []
 three `ReplayResult` arms answer the machine; `stuckOf` and `replayArm` are how a pin observes
 which arm it landed on. -/
 def replayEffTape (root : NativeEff) (decisions : List Bool) (tape : List DC) : MC :=
+  letI := evaluatorFor root
   match replayEval (interpOf root) fuel tape (spawnTape root decisions) with
   | ReplayResult.finished m => m
   | ReplayResult.frontier m => m
@@ -74,6 +75,7 @@ def replayEff (root : NativeEff) (tape : List DC) : MC := replayEffTape root [] 
 
 /-- The arm the tape landed on: `0` finished, `1` frontier, `2` stuck. -/
 def replayArm (root : NativeEff) (decisions : List Bool) (tape : List DC) : Nat :=
+  letI := evaluatorFor root
   match replayEval (interpOf root) fuel tape (spawnTape root decisions) with
   | ReplayResult.finished _ => 0
   | ReplayResult.frontier _ => 1

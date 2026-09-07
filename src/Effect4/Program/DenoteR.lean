@@ -46,6 +46,22 @@ def seqR (k : Val → RProgram) : ExitV → RProgram
   | .success v => k v
   | .failure c => .pure (.failure c)
 
+/-- Invoke a source callback against the completed exits visible at invocation.
+The query is administrative and is consumed by `prepareR`, not the run loop. -/
+def constructR (k : List (FiberId × ExitV) → RProgram) : RProgram :=
+  .vis (.inr .construction) k
+
+/-- Resolve construction queries in freshly built code, including the eager body
+of a guard. Its saved exit callback is constructed only when that callback runs.
+Counted operations retain their continuations untouched. -/
+def prepareR (completed : List (FiberId × ExitV)) : RProgram → RProgram
+  | .pure ex => .pure ex
+  | .vis (.inr .construction) k => prepareR completed (k completed)
+  | .vis (.inr (.guard_ kind)) k => .vis (.inr (.guard_ kind)) fun
+    | none => prepareR completed (k none)
+    | some ex => k (some ex)
+  | .vis op k => .vis op k
+
 /-- Retain a continuation boundary. The normal branch closes it explicitly;
 an interrupted body resumes through the saved exit branch instead. -/
 def guardR (kind : GuardKind) (body : RProgram) : RProgram :=
@@ -53,14 +69,22 @@ def guardR (kind : GuardKind) (body : RProgram) : RProgram :=
     | none => body.bind fun ex => .vis (.inr (.unguard ex)) Effects.Program.pure
     | some ex => .pure ex
 
+/-- The optional cleanup effect returned by an OnExit callback follows the
+same ordinary handlers as `Machine.finalizerCode` (`internal/effect.ts:4021-4029`). -/
+def finalizerR (ex : ExitV) (cleanup : RProgram) : RProgram :=
+    (guardR .onSuccess
+      (match ex with
+       | .success _ => cleanup
+       | .failure _ => (guardR .onFailure cleanup).bind fun
+           | .success v => .pure (.success v)
+           | .failure c => .pure (Exit.restoreAfterFinalizer ex (.failure c)))).bind (seqR fun _ =>
+      .vis (.inr (.finishFinalizer ex)) Effects.Program.pure)
+
 /-- An exit finalizer has its own boundary, then restores the body's exit and mask.
 The runtime implements the mask; erasure below removes only these control markers. -/
 def onExitR (body : RProgram) (fin : ExitV → RProgram)
     (interruptible : Bool := false) : RProgram :=
-  (guardR (.onExit interruptible) body).bind fun ex =>
-    (guardR .all (fin ex)).bind fun fex =>
-      .vis (.inr (.finishFinalizer (Exit.restoreAfterFinalizer ex (finVoid fex))))
-        Effects.Program.pure
+  (guardR (.onExit interruptible) body).bind fun ex => finalizerR ex (fin ex)
 
 /-- The counted checkpoint that returns code: `Suspend` at `p`. -/
 def suspendR (p : Point) (body : RProgram) : RProgram :=
@@ -78,6 +102,7 @@ def fiberValR (op : FiberOp) (h : op.answer = Val) : RProgram :=
 other operation. This is an erasure, not a scheduler or a handler for interruption. -/
 def controlErasure : Effects.Handler RSig (Effects.Program RSig) where
   handle
+    | .inr .construction => .pure []
     | .inr (.guard_ _) => .pure none
     | .inr (.unguard ex) | .inr (.finishFinalizer ex) => .pure ex
     | .inr (.suspend _) => .pure Val.unit
@@ -105,14 +130,28 @@ theorem eraseControl_onExitR (body : RProgram) (fin : ExitV → RProgram) (flag 
     eraseControl (onExitR body fin flag) =
       (eraseControl body).bind fun ex => (eraseControl (fin ex)).bind fun fex =>
         .pure (Exit.restoreAfterFinalizer ex (finVoid fex)) := by
-  simp only [onExitR, eraseControl_bind, eraseControl_guardR]
-  rfl
+  simp only [onExitR, finalizerR, eraseControl_bind, eraseControl_guardR]
+  congr 1
+  funext ex
+  cases ex with
+  | success v =>
+    congr 1
+    funext fex
+    cases fex <;> rfl
+  | failure cause =>
+    simp only [eraseControl_bind, eraseControl_guardR, Effects.Program.bind_assoc]
+    congr 1
+    funext fex
+    cases fex <;> rfl
 
 theorem eraseControl_suspendR (p : Point) (body : RProgram) :
     eraseControl (suspendR p body) = eraseControl body := rfl
 
 theorem eraseControl_sync (v : Val) (k : Val → RProgram) :
     eraseControl (.vis (.inr (.sync v)) k) = eraseControl (k v) := rfl
+
+theorem eraseControl_constructR (k : List (FiberId × ExitV) → RProgram) :
+    eraseControl (constructR k) = eraseControl (k []) := rfl
 
 /-- Race entrants use the same list-node addresses as `actionAt.entrants`. -/
 def entrantPoints : Effs NativeOp → Point → List Point
@@ -124,44 +163,58 @@ def racePoints (root : NativeEff) (p : Point) : List Point :=
   | some (.eff (.withFiber (.raceAll es))) => entrantPoints es ((p.child 0).child 0)
   | _ => []
 
-/-- The fiber action selected by the actual point lookup. Program-valued fields of
-`actionAt` are represented by their source addresses, never stored as `Prim`. A point
-that names no action is the frame machine's `suspendBody` refusal after its counted
-step. -/
+/-- The term of the fiber action `actionAt` answers at a point. Program-valued fields of
+the action are represented by their source addresses, never stored as `Prim`. -/
+def denoteFiberAction (root : NativeEff) (p : Point) : NAction → RProgram
+  | .fork _ options =>
+    .vis (.inr (.fork (.at_ ((p.child 0).child 0)) options)) fun v => .pure (.success v)
+  | .forkIn _ options scope key =>
+    .vis (.inr (.forkIn ((p.child 0).child 0) options scope key)) fun v => .pure (.success v)
+  | .forkScoped _ options key =>
+    .vis (.inr (.forkScoped ((p.child 0).child 0) options key)) Effects.Program.pure
+  | .runIn target scope key =>
+    .vis (.inr (.runIn target scope key)) fun v => .pure (.success v)
+  | .interrupt target => .vis (.inr (.interrupt target)) fun v => .pure (.success v)
+  | .interruptAs target who => .vis (.inr (.interruptAs target who)) fun v => .pure (.success v)
+  | .interruptScoped target =>
+    .vis (.inr (.interruptScoped target)) fun v => .pure (.success v)
+  | .interruptAll targets who =>
+    .vis (.inr (.interruptAll targets who)) fun v => .pure (.success v)
+  | .awaitAll targets => .vis (.inr (.awaitAll targets)) fun v => .pure (.success v)
+  | .awaitAllFailFast targets =>
+    .vis (.inr (.awaitAllFailFast targets)) fun v => .pure (.success v)
+  | .snapshotChildren => .vis (.inr .snapshotChildren) fun v => .pure (.success v)
+  | .awaitNewChildren snapshot =>
+    .vis (.inr (.awaitNewChildren snapshot)) fun v => .pure (.success v)
+  | .raceAll _ => .vis (.inr (.raceAll (racePoints root p))) Effects.Program.pure
+  | .setInterruptible _ flag =>
+    .vis (.inr (.mask flag (.at_ (p.child 0)))) Effects.Program.pure
+  | .setContext ctx => .vis (.inr (.setContext ctx)) fun v => .pure (.success v)
+  | .getContext => .vis (.inr .getContext) fun v => .pure (.success v)
+  | .getId => .vis (.inr .getId) fun v => .pure (.success v)
+  | .closeScope scope ex => .vis (.inr (.closeScope scope ex)) Effects.Program.pure
+  | .refuse cause => .vis (.inr (.refuse cause)) fun v => .pure (.success v)
+  | .dropObservers token => .vis (.inr (.dropObservers token)) fun v => .pure (.success v)
+  | .cancelRace race => .vis (.inr (.cancelRace race)) fun v => .pure (.success v)
+  -- `forkScoped` is `flatMap(scope, scope => forkIn(self, scope, options))` (`:5381-5406`,
+  -- §20): the counted service read, then `forkIn` on the handle it answered
+  | .ambientScope =>
+    match Node.at_ (.eff root) p.path with
+    | some (.eff (.withFiber (.forkScoped _ options))) =>
+      (guardR .onSuccess (fiberValR .ambientScope rfl)).bind (seqR fun
+        | .scopeHandle s =>
+          .vis (.inr (.forkIn ((p.child 0).child 0) options s p.fuel)) fun v => .pure (.success v)
+        | _ => .pure badShapeExit)
+    | _ => .pure badShapeExit
+  -- the parallel close's step is a store program, never a source node
+  | .closePar _ => .pure badShapeExit
+
+/-- The fiber action selected by the actual point lookup. A point that names no action is
+the frame machine's `suspendBody` refusal after its counted step. -/
 def denoteAction (root : NativeEff) (p : Point) : RProgram :=
   match actionAt root p with
   | none => suspendR p (.pure outsideExit)
-  | some action =>
-    match action with
-    | .fork _ options =>
-      .vis (.inr (.fork (.at_ ((p.child 0).child 0)) options)) fun v => .pure (.success v)
-    | .forkIn _ options scope key =>
-      .vis (.inr (.forkIn ((p.child 0).child 0) options scope key)) fun v => .pure (.success v)
-    | .forkScoped _ options key =>
-      .vis (.inr (.forkScoped ((p.child 0).child 0) options key)) Effects.Program.pure
-    | .runIn target scope key =>
-      .vis (.inr (.runIn target scope key)) fun v => .pure (.success v)
-    | .interrupt target => .vis (.inr (.interrupt target)) fun v => .pure (.success v)
-    | .interruptScoped target =>
-      .vis (.inr (.interruptScoped target)) fun v => .pure (.success v)
-    | .interruptAll targets who =>
-      .vis (.inr (.interruptAll targets who)) fun v => .pure (.success v)
-    | .awaitAll targets => .vis (.inr (.awaitAll targets)) fun v => .pure (.success v)
-    | .awaitAllFailFast targets =>
-      .vis (.inr (.awaitAllFailFast targets)) fun v => .pure (.success v)
-    | .snapshotChildren => .vis (.inr .snapshotChildren) fun v => .pure (.success v)
-    | .awaitNewChildren snapshot =>
-      .vis (.inr (.awaitNewChildren snapshot)) fun v => .pure (.success v)
-    | .raceAll _ => .vis (.inr (.raceAll (racePoints root p))) Effects.Program.pure
-    | .setInterruptible _ flag =>
-      .vis (.inr (.mask flag (.at_ (p.child 0)))) Effects.Program.pure
-    | .setContext ctx => .vis (.inr (.setContext ctx)) fun v => .pure (.success v)
-    | .getContext => .vis (.inr .getContext) fun v => .pure (.success v)
-    | .getId => .vis (.inr .getId) fun v => .pure (.success v)
-    | .closeScope scope ex => .vis (.inr (.closeScope scope ex)) Effects.Program.pure
-    | .refuse cause => .vis (.inr (.refuse cause)) fun v => .pure (.success v)
-    | .dropObservers token => .vis (.inr (.dropObservers token)) fun v => .pure (.success v)
-    | .cancelRace race => .vis (.inr (.cancelRace race)) fun v => .pure (.success v)
+  | some action => denoteFiberAction root p action
 
 /-- Async registration answers with an exit; failure is not a successful error value.
 The request and registration name retain the exact `Deferred.await` decoding. -/
@@ -176,7 +229,7 @@ def denoteAsync (request : Term) (p : Point) : RProgram :=
 /-- A yielded source form with an immediate `Prim.success` or `Prim.failure` head.
 `sync`, `yieldError` with a valid argument, and compound frames are not inline exits;
 `exit` of an immediate exit is that exit's success (`internal/effect.ts:3621-3622`), and
-a loop never is (its compile is a `Suspend`). The definition inspects source data only;
+a loop never is (its compile is a `Suspend`). The definition inspects source data and the point's captured completed exits;
 its compiler-head equation is checked below. -/
 def inlineYield : NativeEff → Point → Option ExitV
   | e, p =>
@@ -202,8 +255,8 @@ def inlineYield : NativeEff → Point → Option ExitV
       | .async => match (evalTerm p.env request).bind NativeOp.awaitCellOf with
         | some _ => none | none => some badShapeExit
       | _ => some badShapeExit
-    | .awaitFiber target _ => match evalTerm p.env target with
-      | some (.fiber _) => none | _ => some badShapeExit
+    | .awaitFiber target mode => match evalTerm p.env target with
+      | some (.fiber id) => p.awaitExit id mode | _ => some badShapeExit
     | .exit b => (inlineYield b (p.child 0)).map fun ex => .success (reifyExitVal ex)
     | .choose _ left right => match p.tape with
       | true :: rest => inlineYield left { p with path := p.path ++ [0], tape := rest }
@@ -233,7 +286,8 @@ def denoteR (root : NativeEff) : NativeEff → Point → RProgram
       -- `Prim.sync (pure p)`: the value through the `answered` phase.
       | .sync t => .vis (.inr (.sync ((evalTerm p.env t).getD Val.unit))) fun v => .pure (.success v)
       -- `Prim.suspend (body child)`: the counted step, then the body.
-      | .suspend b => suspendR p (denoteR root b (p.child 0))
+      | .suspend b => suspendR p (constructR fun completed =>
+          denoteR root b ({ p with completed }.child 0))
       | .perform op request =>
         match (NativeOp.row op).kind with
         | .sync =>
@@ -243,11 +297,12 @@ def denoteR (root : NativeEff) : NativeEff → Point → RProgram
         | .async => denoteAsync request p
         | .program => pending .unsupported p
       | .bind a b => (guardR .onSuccess (denoteR root a (p.child 0))).bind
-          (seqR fun v => denoteR root b (p.childWith 1 v))
+          (seqR fun v => constructR fun completed =>
+            denoteR root b ({ p with completed }.childWith 1 v))
       -- `Prim.suspend (body p)`, decided by `suspendBodyAt`: the counted step, then the branch.
-      | .branch test a b => suspendR p (match evalTerm p.env test with
-          | some (.bool true) => denoteR root a (p.child 0)
-          | some (.bool false) => denoteR root b (p.child 1)
+      | .branch test a b => suspendR p (constructR fun completed => match evalTerm p.env test with
+          | some (.bool true) => denoteR root a ({ p with completed }.child 0)
+          | some (.bool false) => denoteR root b ({ p with completed }.child 1)
           | _ => .pure badShapeExit)
       -- `Effect.exit` folds an immediate exit; otherwise the both-arm boundary.
       | .exit b =>
@@ -257,45 +312,41 @@ def denoteR (root : NativeEff) : NativeEff → Point → RProgram
             .pure (.success (reifyExitVal ex))
       | .catchCause b h => (guardR .onFailure (denoteR root b (p.child 0))).bind fun
         | .success v => .pure (.success v)
-        | .failure c => denoteR root h (p.childWith 1 (.exitErr c))
+        | .failure c => constructR fun completed =>
+            denoteR root h ({ p with completed }.childWith 1 (.exitErr c))
       | .matchCause b v c => (guardR .all (denoteR root b (p.child 0))).bind fun
-        | .success x => denoteR root v (p.childWith 1 x)
-        | .failure cause => denoteR root c (p.childWith 2 (.exitErr cause))
+        | .success x => constructR fun completed =>
+            denoteR root v ({ p with completed }.childWith 1 x)
+        | .failure cause => constructR fun completed =>
+            denoteR root c ({ p with completed }.childWith 2 (.exitErr cause))
       | .onExit b f => onExitR (denoteR root b (p.child 0)) fun ex =>
-          denoteR root f (p.childWith 1 (reifyExitVal ex))
+          constructR fun completed => denoteR root f ({ p with completed }.childWith 1 (reifyExitVal ex))
       -- `Prim.suspend (body p)` then `Prim.iterator (gen p [] false) unit`: the entry.
       | .gen _ => suspendR p (.vis (.inr (.gen p)) Effects.Program.pure)
       -- `Prim.suspend (body p)` then `Prim.whileLoop (loop p) cursor`: the entry.
       | .whileLoop initial _ _ _ => suspendR p (match evalTerm p.env initial with
           | some cursor => .vis (.inr (.loop p cursor)) Effects.Program.pure
           | none => .pure badShapeExit)
-      | .yieldNow priority => .vis (.inr (.yieldNow priority)) fun _ => .pure (.success .unit)
+      -- `Prim.yieldNowWith`: the park answers the void value, which the continuation passes
+      -- on (the frame resumes with `success void`; an answer is never discarded)
+      | .yieldNow priority => .vis (.inr (.yieldNow priority)) fun v => .pure (.success v)
       | .callback op request =>
         match (NativeOp.row op).kind with
         | .async => denoteAsync request p
         | _ => .pure badShapeExit
       | .awaitFiber target mode =>
         match evalTerm p.env target with
-        | some (.fiber id) => match mode with
-          | .joinEffect => .vis (.inr (.await id .joinEffect)) Effects.Program.pure
-          | .awaitValue => .vis (.inr (.await id .awaitValue)) fun v => .pure (.success v)
+        | some (.fiber id) =>
+          match p.awaitExit id mode with
+          | some exit => .pure exit
+          | none => match mode with
+            | .joinEffect => .vis (.inr (.await id .joinEffect)) Effects.Program.pure
+            | .awaitValue => .vis (.inr (.await id .awaitValue)) fun v => .pure (.success v)
         | _ => .pure badShapeExit
       | .uninterruptible _ | .interruptible _ | .withFiber _ => denoteAction root p
-      -- `onSuccess (sync scopeMake) (scopeOpen p)` and the context and close frames the
-      -- compile's `scopeOpen`, `scopeProvide` and `scopeBody` names answer, as terms.
-      | .scoped b =>
-        (guardR .onSuccess (storeR (.scopeMake .sequential))).bind (seqR fun
-          | .scopeHandle scope =>
-            onExitR
-              ((guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun
-                | .context previous =>
-                  (guardR .onSuccess
-                      (fiberValR (.setContext { previous with ambientScope := some scope }) rfl)).bind
-                    (seqR fun _ => onExitR (denoteR root b (p.child 0))
-                      (fun _ => fiberValR (.setContext previous) rfl))
-                | _ => .pure badShapeExit))
-              (fun ex => .vis (.inr (.closeScope scope ex)) Effects.Program.pure)
-          | _ => .pure badShapeExit)
+      -- `scoped` is one WithFiber whose eager body is child 0
+      -- (`internal/effect.ts:3938-3948`). Context restoration is callback glue.
+      | .scoped _ => .vis (.inr (.scoped (p.child 0))) Effects.Program.pure
       | .acquireRelease _ _ => pending .unsupported p
       | .choose _ left right =>
         match p.tape with
@@ -313,13 +364,15 @@ theorem denoteR_zero (root e : NativeEff) (p : Point) (h : p.fuel = 0) :
 theorem denoteR_bind (root : NativeEff) (a b : NativeEff) (p : Point) (h : p.fuel ≠ 0) :
     denoteR root (.bind a b) p =
       (guardR .onSuccess (denoteR root a (p.child 0))).bind
-        (seqR fun v => denoteR root b (p.childWith 1 v)) := by
+        (seqR fun v => constructR fun completed =>
+          denoteR root b ({ p with completed }.childWith 1 v)) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
   | succ f => rw [denoteR, hf]
 
 theorem denoteR_suspend (root : NativeEff) (b : NativeEff) (p : Point) (h : p.fuel ≠ 0) :
-    denoteR root (.suspend b) p = suspendR p (denoteR root b (p.child 0)) := by
+    denoteR root (.suspend b) p = suspendR p (constructR fun completed =>
+      denoteR root b ({ p with completed }.child 0)) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
   | succ f => rw [denoteR, hf]
@@ -327,9 +380,9 @@ theorem denoteR_suspend (root : NativeEff) (b : NativeEff) (p : Point) (h : p.fu
 theorem denoteR_branch (root : NativeEff) (t : Term) (a b : NativeEff) (p : Point)
     (h : p.fuel ≠ 0) :
     denoteR root (.branch t a b) p =
-      suspendR p (match evalTerm p.env t with
-        | some (.bool true) => denoteR root a (p.child 0)
-        | some (.bool false) => denoteR root b (p.child 1)
+      suspendR p (constructR fun completed => match evalTerm p.env t with
+        | some (.bool true) => denoteR root a ({ p with completed }.child 0)
+        | some (.bool false) => denoteR root b ({ p with completed }.child 1)
         | _ => .pure badShapeExit) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
@@ -394,7 +447,9 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
     inlineYield e p = headExit (compileEff e p) := by
   cases hf : p.fuel with
   | zero =>
-    cases e <;> simp only [inlineYield, compileEff, hf, ↓reduceIte, frontier, headExit]
+    cases e <;> first
+      | (simp only [inlineYield, compileEff, hf, ↓reduceIte, frontier, headExit]; done)
+      | (rename_i a; cases a <;> simp only [inlineYield, compileEff, hf, ↓reduceIte, frontier, headExit])
   | succ f =>
     cases e with
     | choose site a b =>
@@ -435,10 +490,21 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
       cases evalTerm p.env target with
       | none => rfl
-      | some v => cases v <;> rfl
+      | some v =>
+        cases v with
+        | fiber id =>
+          simp only
+          cases hx : p.awaitExit id mode with
+          | none => rfl
+          | some ex => cases ex <;> rfl
+        | _ => rfl
+    -- a `forkScoped` node compiles to its wrapper's `OnSuccess` (§20); every other action
+    -- to the `WithFiber`; neither is an immediate exit
+    | withFiber a =>
+      cases a <;> simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte, headExit]
     | sync _ | suspend _ | bind _ _ | gen _ | catchCause _ _ | matchCause _ _ _
     | onExit _ _ | uninterruptible _ | interruptible _ | branch _ _ _ | whileLoop _ _ _ _
-    | yieldNow _ | withFiber _ | «scoped» _ | acquireRelease _ _ =>
+    | yieldNow _ | «scoped» _ | acquireRelease _ _ =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte, headExit, frontier]
 termination_by structural e
 
@@ -555,8 +621,8 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
     | zero => exact (fuel_ne_zero_of_depth hp hf).elim
     | succ f =>
       simp only [denoteR, hf]
-      rw [eraseControl_suspendR, denote]
-      exact denoteR_straight root b (p.child 0) hs
+      rw [eraseControl_suspendR, eraseControl_constructR, denote]
+      exact denoteR_straight root b ({ p with fuel := f + 1, completed := [] }.child 0) hs
         (by simp only [Agreement.depth] at hp; simp only [Point.child]; omega)
   | .perform op request, p, hs, hp => by
     cases hf : p.fuel with
@@ -577,20 +643,20 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
     cases ex with
     | failure c => rfl
     | success v =>
-      exact denoteR_straight root b (p.childWith 1 v) hab.2
+      exact denoteR_straight root b ({ p with completed := [] }.childWith 1 v) hab.2
         (by simp only [Agreement.depth] at hp; simp only [Point.childWith]; omega)
   | .branch test a b, p, hs, hp => by
     have hpos : p.fuel ≠ 0 := by have := Agreement.depth_pos (.branch test a b); omega
     have hab := Straight.branch hs
-    rw [denoteR_branch root test a b p hpos, eraseControl_suspendR, denote]
+    rw [denoteR_branch root test a b p hpos, eraseControl_suspendR, eraseControl_constructR, denote]
     split
     · rename_i ht
       rw [ht]
-      exact denoteR_straight root a (p.child 0) hab.1
+      exact denoteR_straight root a ({ p with completed := [] }.child 0) hab.1
         (by simp only [Agreement.depth] at hp; simp only [Point.child]; omega)
     · rename_i ht
       rw [ht]
-      exact denoteR_straight root b (p.child 1) hab.2
+      exact denoteR_straight root b ({ p with completed := [] }.child 1) hab.2
         (by simp only [Agreement.depth] at hp; simp only [Point.child]; omega)
     · split
       · contradiction
@@ -626,7 +692,7 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
       cases ex with
       | success v => rfl
       | failure c =>
-        exact denoteR_straight root h (p.childWith 1 (.exitErr c)) hbh.2
+        exact denoteR_straight root h ({ p with fuel := f + 1, completed := [] }.childWith 1 (.exitErr c)) hbh.2
           (by simp only [Agreement.depth] at hp; simp only [Point.childWith]; omega)
   | .matchCause b v c, p, hs, hp => by
     cases hf : p.fuel with
@@ -641,10 +707,10 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
       funext ex
       cases ex with
       | success value =>
-        exact denoteR_straight root v (p.childWith 1 value) hparts.2.1
+        exact denoteR_straight root v ({ p with fuel := f + 1, completed := [] }.childWith 1 value) hparts.2.1
           (by simp only [Agreement.depth] at hp; simp only [Point.childWith]; omega)
       | failure cause =>
-        exact denoteR_straight root c (p.childWith 2 (.exitErr cause)) hparts.2.2
+        exact denoteR_straight root c ({ p with fuel := f + 1, completed := [] }.childWith 2 (.exitErr cause)) hparts.2.2
           (by simp only [Agreement.depth] at hp; simp only [Point.childWith]; omega)
   | .onExit b fin, p, hs, hp => by
     cases hf : p.fuel with
@@ -656,9 +722,10 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
       rw [denoteR, hf, eraseControl_onExitR, hb, denote, Effects.Program.inl_bind]
       congr 1
       funext ex
-      have hfin := denoteR_straight root fin (p.childWith 1 (reifyExitVal ex)) hparts.2
+      have hfin := denoteR_straight root fin ({ p with completed := [] }.childWith 1 (reifyExitVal ex)) hparts.2
         (by simp only [Agreement.depth] at hp; simp only [Point.childWith]; omega)
-      rw [hfin, Effects.Program.inl_bind]
+      simp only [hf] at hfin
+      rw [eraseControl_constructR, hfin, Effects.Program.inl_bind]
       rfl
   | .gen _, _, hs, _ | .uninterruptible _, _, hs, _ | .interruptible _, _, hs, _
   | .whileLoop _ _ _ _, _, hs, _ | .yieldNow _, _, hs, _ | .callback _ _, _, hs, _

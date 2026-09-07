@@ -360,6 +360,7 @@ def tyJs : Effect4.Program.Ty → String
 def shapeJs : Effect4.Program.RowShape → String
   | .call => lit "call"
   | .value => lit "value"
+  | .tupleCall => lit "tupleCall"
 
 def kindJs : Effect4.Program.RowKind → String
   | .sync => lit "sync"
@@ -478,10 +479,15 @@ def main (args : List String) : IO Unit := do
   let address := " + ".intercalate
     (Effect4.Codegen.Profile.hostPin.libraries ++ ["lean4-typescript@" ++ tsRev])
   let printed := identLiterals (← IO.FS.readFile "src/Effect4/Codegen/Print.lean")
-  let extraInPrint := missingFrom printed Effect4.Program.reserved
-  let extraInHeads := missingFrom Effect4.Program.reserved printed
+  -- readRunIn consumes Effect.void only as its fixed block return, not as an
+  -- effect head, and printTupleArgs spells a saved tuple request's components with
+  -- the fst/snd atoms (source-repairs §18). Check those nested literals in both
+  -- directions as well.
+  let expectedIdents := Effect4.Program.reserved ++ ["Effect.void", "fst", "snd"]
+  let extraInPrint := missingFrom printed expectedIdents
+  let extraInHeads := missingFrom expectedIdents printed
   unless extraInPrint.isEmpty && extraInHeads.isEmpty do
-    throw (IO.userError s!"TsGen: the reader's heads and Print.lean's `.ident` literals differ: in Print.lean only {extraInPrint}; in reserved only {extraInHeads}")
+    throw (IO.userError s!"TsGen: the reader's heads/nested return literal and Print.lean's `.ident` literals differ: in Print.lean only {extraInPrint}; in reserved only {extraInHeads}")
   -- write
   IO.FS.createDirAll out
   let schemas := emitSchemas fs

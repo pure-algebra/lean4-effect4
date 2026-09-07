@@ -665,10 +665,14 @@ def lower {Op : Type} (sig : Signature Op) (l : LayerTerm Op) : Option (LayerTab
 
 /-! ## Running a lowered term through the machine -/
 
-/-- Run a program over a table on the sync scheduler, from the empty store and context. -/
+/-- Run a program over a table on the sync scheduler, from the empty store and context. The
+command budget is 1024: since source-repairs §19 (D6b) every tracked child's exit path is
+its observer commands, the clearing and the drain, and tracking is a command, so the docs
+deployment's provide-then-service run needs 528 commands where 512 sufficed before; at
+1024 the `Layer.empty`-seeded fold of `Surface/Provision.lean` also finishes. -/
 def runOver (table : LayerTable) (program : ProgName) :
     Effect4.Machine.Layers.LayerMachine × Effect4.Machine.Env.ExitV :=
-  Effect4.Machine.runSyncExit (Effect4.Machine.Layers.interp table) 512
+  Effect4.Machine.runSyncExit (Effect4.Machine.Layers.interp table) 1024
     (Effect4.Machine.RunMachine.empty Effect4.Machine.Layers.St.empty)
     (Effect4.Machine.Layers.progOf table program) Context.empty
 

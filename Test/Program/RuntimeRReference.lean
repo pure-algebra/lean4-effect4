@@ -241,4 +241,97 @@ def compileZero : ReplayResult EffName EffThunk Val Err Defect FiberId Ann Ctx S
 #guard (compileZero.machine.fiber? Api.root).bind RunFiber.exit = none
 #guard compileZero.machine.stuck = none
 
+-- 15. D6b (source-repairs §19): ordered interruption and its `asVoid(fiberAwait…)` return.
+-- Variables are numbered by binding depth from the root. The pinned host runs are
+-- `docs/research/probes/p3-d6/host-d6b.json`; `RuntimeRContract` pins the counts.
+def doneDaemon : NativeEff := .withFiber (.fork (.succeed (.lit (.nat 42))) immediateDaemon)
+/-- The public interrupt of a finished daemon: the inner `fiberInterruptAs` records nothing,
+`fiberAwait` folds to the exit, `asVoid` answers void. -/
+def interruptDone : NativeEff := .bind doneDaemon (.withFiber (.interrupt (.var 0)))
+/-- The public interrupt of a live daemon: the record runs the target to its interrupted
+exit before the await is constructed, so the await folds too. -/
+def interruptLive : NativeEff := .bind (.withFiber (.fork (.yieldNow 0) immediateDaemon))
+  (.withFiber (.interrupt (.var 0)))
+/-- `Fiber.interruptAll` over two finished daemons (a handle pair, `E4-CHECK-CE-014`). -/
+def interruptAllDone : NativeEff := .bind doneDaemon (.bind doneDaemon
+  (.withFiber (.interruptAll (.app "pair" (.cons (.var 0) (.cons (.var 1) .nil))) none)))
+/-- The source witness of `probes/p3-d6/p03_source.ts`: interrupting `a` runs its finalizer,
+which completes the cell `b` awaits, so `b` exits successfully before its own record. -/
+def orderedInterrupt : NativeEff :=
+  .bind (.perform .deferredMake (.lit .unit))
+    (.bind (.perform .deferredMake (.lit .unit))
+      (.bind (.withFiber (.fork
+          (.onExit (.callback .deferredAwait (.var 1))
+            (.perform .deferredSucceed (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 9)) .nil)))))
+          immediateDaemon))
+        (.bind (.withFiber (.fork (.callback .deferredAwait (.var 0)) immediateDaemon))
+          (.withFiber (.interruptAll (.app "pair" (.cons (.var 2) (.cons (.var 3) .nil))) none)))))
+/-- A parent exits with a live tracked child (`forkChild`): the child-exit middleware
+re-enters the parent, which interrupts and awaits the child before its exit is published. -/
+def middlewareChild : NativeEff :=
+  .bind (.perform .deferredMake (.lit .unit))
+    (.bind (.withFiber (.fork (.callback .deferredAwait (.var 0)) ⟨true, false, .inherit⟩))
+      (.succeed (.lit .unit)))
+
+#guard (run interruptDone startTape).exit = some (.success .unit)
+#guard fiberExit (run interruptDone startTape) 1 = some (.success (.nat 42))
+#guard (run interruptLive startTape).exit = some (.success .unit)
+#guard fiberExit (run interruptLive startTape) 1 =
+  some (Test.Syntax.CompileContract.interruptedFrom Api.root ⟨1⟩)
+#guard (run interruptAllDone startTape).exit = some (.success .unit)
+#guard (run interruptAllDone startTape).fiberCount = 3
+#guard (run orderedInterrupt startTape).exit = some (.success .unit)
+#guard fiberExit (run orderedInterrupt startTape) 1 =
+  some (Test.Syntax.CompileContract.interruptedFrom Api.root ⟨1⟩)
+#guard fiberExit (run orderedInterrupt startTape) 2 = some (.success (.nat 9))
+#guard (run middlewareChild startTape).exit = some (.success .unit)
+#guard fiberExit (run middlewareChild startTape) 1 =
+  some (Test.Syntax.CompileContract.interruptedFrom Api.root ⟨1⟩)
+#guard (run middlewareChild startTape).fiberCount = 2
+
+-- 16. §20 (source-repairs): `forkScoped`'s `flatMap(scope, forkIn)` wrapper and the
+-- multiple-finalizer close through `scopeCloseFinalizers`' generator. The pinned host runs
+-- are `docs/research/probes/p3-d4/host-d4c.json`; `RuntimeRContract` pins the counts.
+def scopedDaemon : Supervision.ForkOptions := ⟨true, true, .inherit⟩
+/-- The scoped block's value is the forked handle; the finished child removed its own
+finalizer, so the close finds an empty scope. -/
+def forkScopedDone : NativeEff :=
+  .scoped (.withFiber (.forkScoped (.succeed (.lit (.nat 1))) scopedDaemon))
+/-- One live scoped child, interrupted by the closing root through its one finalizer. -/
+def seqOne : NativeEff := .scoped (.bind (.perform .deferredMake (.lit .unit))
+  (.bind (.withFiber (.forkScoped (.callback .deferredAwait (.var 0)) scopedDaemon))
+    (.succeed (.lit .unit))))
+/-- Two live scoped children, interrupted in close order by the root's sequential walk. -/
+def seqTwo : NativeEff := .scoped (.bind (.perform .deferredMake (.lit .unit))
+  (.bind (.withFiber (.forkScoped (.callback .deferredAwait (.var 0)) scopedDaemon))
+    (.bind (.withFiber (.forkScoped (.callback .deferredAwait (.var 0)) scopedDaemon))
+      (.succeed (.lit .unit)))))
+/-- A parallel scope closed with an exit value: the two finalizer daemons (3 and 4, forked in
+close order) interrupt the second and the first child respectively, then both are awaited. -/
+def parTwo : NativeEff :=
+  .bind (.perform (.scopeMake .parallel) (.lit .unit))
+    (.bind (.perform .deferredMake (.lit .unit))
+      (.bind (.withFiber (.forkIn (.callback .deferredAwait (.var 1)) scopedDaemon (.var 0)))
+        (.bind (.withFiber (.forkIn (.callback .deferredAwait (.var 1)) scopedDaemon (.var 0)))
+          (.bind (.exit (.succeed (.lit .unit))) (.withFiber (.closeScope (.var 0) (.var 4)))))))
+
+#guard (run forkScopedDone startTape).exit = some (.success (.fiber ⟨1⟩))
+#guard fiberExit (run forkScopedDone startTape) 1 = some (.success (.nat 1))
+#guard scopeClosed (run forkScopedDone startTape) = some true
+#guard (run seqOne startTape).exit = some (.success .unit)
+#guard fiberExit (run seqOne startTape) 1 =
+  some (Test.Syntax.CompileContract.interruptedFrom Api.root ⟨1⟩)
+#guard (run seqTwo startTape).exit = some (.success .unit)
+#guard (run seqTwo startTape).fiberCount = 3
+#guard fiberExit (run seqTwo startTape) 1 =
+  some (Test.Syntax.CompileContract.interruptedFrom Api.root ⟨1⟩)
+#guard fiberExit (run seqTwo startTape) 2 =
+  some (Test.Syntax.CompileContract.interruptedFrom Api.root ⟨2⟩)
+#guard (run parTwo startTape).exit = some (.success .unit)
+#guard (run parTwo startTape).fiberCount = 5
+#guard fiberExit (run parTwo startTape) 1 = some (Test.Syntax.CompileContract.interruptedFrom ⟨4⟩ ⟨1⟩)
+#guard fiberExit (run parTwo startTape) 2 = some (Test.Syntax.CompileContract.interruptedFrom ⟨3⟩ ⟨2⟩)
+#guard fiberExit (run parTwo startTape) 3 = some (.success .unit)
+#guard fiberExit (run parTwo startTape) 4 = some (.success .unit)
+
 end Test.Program.RuntimeRReference

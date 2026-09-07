@@ -7,7 +7,7 @@ open OCaml5.Ml
 
 def frameFiber : StructDesc where
   leanName := "FrameFiber"
-  site := "Frames.lean:272"
+  site := "Frames.lean:283"
   subst := []
   leanParams := ["ν", "σ", "β", "ε", "δ", "ι", "α"]
   fields :=
@@ -19,7 +19,7 @@ def frameFiber : StructDesc where
 
 def runFiber : StructDesc where
   leanName := "RunFiber"
-  site := "Fibers.lean:200"
+  site := "Fibers.lean:216"
   subst := []
   leanParams := ["ν", "σ", "β", "ε", "δ", "ι", "α", "χ", "κ", "φ"]
   fields :=
@@ -41,7 +41,7 @@ def runFiber : StructDesc where
 
 def observer : InductiveDesc where
   leanName := "Observer"
-  site := "Fibers.lean:87"
+  site := "Fibers.lean:94"
   subst := []
   leanParams := []
   ctors :=
@@ -54,7 +54,7 @@ def observer : InductiveDesc where
 
 def runEvent : InductiveDesc where
   leanName := "RunEvent"
-  site := "Fibers.lean:323"
+  site := "Fibers.lean:351"
   subst := []
   leanParams := ["ν", "σ", "β", "ε", "δ", "ι", "α", "χ", "κ", "η"]
   ctors :=
@@ -82,7 +82,7 @@ def runEvent : InductiveDesc where
 
 def runDecision : InductiveDesc where
   leanName := "RunDecision"
-  site := "Fibers.lean:393"
+  site := "Fibers.lean:426"
   subst := []
   leanParams := ["ν", "σ", "β", "ε", "δ", "ι", "α"]
   ctors :=
@@ -96,7 +96,7 @@ def runDecision : InductiveDesc where
 
 def cmd : InductiveDesc where
   leanName := "Cmd"
-  site := "Fibers.lean:580"
+  site := "Fibers.lean:636"
   subst := []
   leanParams := ["ν", "σ", "β", "ε", "δ", "ι", "α", "κ"]
   ctors :=
@@ -106,20 +106,31 @@ def cmd : InductiveDesc where
      { leanName := "finish", args := [{ leanName := "fiber", leanTy := .nm "FiberId" }, { leanName := "exit", leanTy := .app "Exit" [.nm "β", .nm "ε", .nm "δ", .nm "ι", .nm "α"] }] },
      { leanName := "resume", args := [{ leanName := "fiber", leanTy := .nm "FiberId" }, { leanName := "token", leanTy := .nm "Nat" }, { leanName := "answer", leanTy := .nm "κ" }] },
      { leanName := "launch", args := [{ leanName := "race", leanTy := .nm "Nat" }] },
+     { leanName := "enrollRace", args := [{ leanName := "race", leanTy := .nm "Nat" }, { leanName := "child", leanTy := .nm "FiberId" }] },
+     { leanName := "registrationDone", args := [{ leanName := "race", leanTy := .nm "Nat" }, { leanName := "yielding", leanTy := .nm "Bool" }] },
+     { leanName := "interruptTarget", args := [{ leanName := "target", leanTy := .nm "FiberId" }, { leanName := "who", leanTy := .opt (.nm "FiberId") }, { leanName := "extra", leanTy := .app "ReasonAnnotations" [.nm "α"] }] },
+     { leanName := "afterInterrupt", args := [{ leanName := "host", leanTy := .nm "FiberId" }, { leanName := "yielding", leanTy := .nm "Bool" }, { leanName := "kind", leanTy := .nm "ParkKind" }] },
+     { leanName := "raceCancel", args := [{ leanName := "race", leanTy := .nm "Nat" }, { leanName := "host", leanTy := .nm "FiberId" }, { leanName := "yielding", leanTy := .nm "Bool" }, { leanName := "remaining", leanTy := .lst (.nm "FiberId") }, { leanName := "visited", leanTy := .lst (.nm "FiberId") }] },
+     { leanName := "trackChild", args := [{ leanName := "parent", leanTy := .nm "FiberId" }, { leanName := "child", leanTy := .nm "FiberId" }] },
+     { leanName := "observe", args := [{ leanName := "fiber", leanTy := .nm "FiberId" }, { leanName := "exit", leanTy := .app "Exit" [.nm "β", .nm "ε", .nm "δ", .nm "ι", .nm "α"] }, { leanName := "observer", leanTy := .nm "Observer" }] },
+     { leanName := "exitDone", args := [{ leanName := "fiber", leanTy := .nm "FiberId" }] },
+     { leanName := "closeParAwait", args := [{ leanName := "host", leanTy := .nm "FiberId" }, { leanName := "yielding", leanTy := .nm "Bool" }, { leanName := "fibers", leanTy := .lst (.nm "FiberId") }] },
      { leanName := "link", args := [{ leanName := "mode", leanTy := .nm "Supervision.ScopeMode" }, { leanName := "scope", leanTy := .nm "Nat" }, { leanName := "key", leanTy := .nm "Nat" }, { leanName := "target", leanTy := .nm "FiberId" }, { leanName := "interruptor", leanTy := .opt (.nm "FiberId") }, { leanName := "extra", leanTy := .app "ReasonAnnotations" [.nm "α"] }] },
      { leanName := "drainDue", args := [] }]
 
 def withFiberAction : InductiveDesc where
   leanName := "WithFiberAction"
-  site := "Fibers.lean:265"
+  site := "Fibers.lean:281"
   subst := []
   leanParams := ["ν", "σ", "β", "ε", "δ", "ι", "α", "χ", "κ"]
   ctors :=
     [{ leanName := "fork", args := [{ leanName := "program", leanTy := .nm "κ" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }] },
      { leanName := "forkIn", args := [{ leanName := "program", leanTy := .nm "κ" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }, { leanName := "scope", leanTy := .nm "Nat" }, { leanName := "key", leanTy := .nm "Nat" }] },
      { leanName := "forkScoped", args := [{ leanName := "program", leanTy := .nm "κ" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }, { leanName := "key", leanTy := .nm "Nat" }] },
+     { leanName := "ambientScope", args := [] },
      { leanName := "runIn", args := [{ leanName := "target", leanTy := .nm "FiberId" }, { leanName := "scope", leanTy := .nm "Nat" }, { leanName := "key", leanTy := .nm "Nat" }] },
      { leanName := "interrupt", args := [{ leanName := "target", leanTy := .nm "FiberId" }] },
+     { leanName := "interruptAs", args := [{ leanName := "target", leanTy := .nm "FiberId" }, { leanName := "who", leanTy := .nm "FiberId" }] },
      { leanName := "interruptScoped", args := [{ leanName := "target", leanTy := .nm "FiberId" }] },
      { leanName := "interruptAll", args := [{ leanName := "targets", leanTy := .lst (.nm "FiberId") }, { leanName := "interruptor", leanTy := .opt (.nm "FiberId") }] },
      { leanName := "awaitAll", args := [{ leanName := "targets", leanTy := .lst (.nm "FiberId") }] },
@@ -132,6 +143,7 @@ def withFiberAction : InductiveDesc where
      { leanName := "getContext", args := [] },
      { leanName := "getId", args := [] },
      { leanName := "closeScope", args := [{ leanName := "scope", leanTy := .nm "Nat" }, { leanName := "exit", leanTy := .app "Exit" [.nm "β", .nm "ε", .nm "δ", .nm "ι", .nm "α"] }] },
+     { leanName := "closePar", args := [{ leanName := "finalizers", leanTy := .lst (.nm "κ") }] },
      { leanName := "refuse", args := [{ leanName := "cause", leanTy := .app "Cause" [.nm "ε", .nm "δ", .nm "ι", .nm "α"] }] },
      { leanName := "dropObservers", args := [{ leanName := "token", leanTy := .nm "Nat" }] },
      { leanName := "cancelRace", args := [{ leanName := "race", leanTy := .nm "Nat" }] }]

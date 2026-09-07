@@ -62,13 +62,18 @@ def scopeState : Stores := { Stores.empty with
 #guard shapeAgrees (finProgram (.detachFromParent 0 1) (.success .unit))
   (denoteFin (.detachFromParent 0 1) (.success .unit)) scopeState
 
--- Failure accounting is ordered in both close chains and preserves all releases.
+-- Failure accounting is ordered in both close walks (source-repairs §20: the generator of
+-- `scopeCloseFinalizers`, sequential through the `Exit` primitive, parallel as immediate
+-- daemons awaited together) and preserves all releases.
 def releases : List FinName := [.release 7 true, .release 8 false, .release 9 true]
 def failed : ExitV := .failure (Cause.fail (.tag 3))
-#guard shapeAgrees (closeSeqChain releases failed []) (denoteCloseSeq releases failed [])
-#guard shapeAgrees (closeParChain true releases failed []) (denoteClosePar true releases failed [])
-#guard shapeAgrees (closeParChain false releases failed []) (denoteClosePar false releases failed [])
-#guard rootExit (runShape (denoteCloseSeq releases failed [])) =
+#guard shapeAgrees (Prim.suspend (Thunk.body (.closeWalk .sequential releases failed)))
+  (closeWalkR .sequential releases failed)
+#guard shapeAgrees (Prim.suspend (Thunk.body (.closeWalk .parallel releases failed)))
+  (closeWalkR .parallel releases failed)
+#guard rootExit (runShape (closeWalkR .sequential releases failed)) =
+  some (.failure ⟨(Cause.fail (Err.tag 7)).reasons ++ (Cause.fail (Err.tag 9)).reasons⟩)
+#guard rootExit (runShape (closeWalkR .parallel releases failed)) =
   some (.failure ⟨(Cause.fail (Err.tag 7)).reasons ++ (Cause.fail (Err.tag 9)).reasons⟩)
 
 -- Both Completion shapes and the exact stored-code decoder, including a live refusal.
@@ -91,8 +96,10 @@ def failed : ExitV := .failure (Cause.fail (.tag 3))
 #guard rootExit (runShape (restoreR (.pure (.success .unit)) (.restore failed))) = some failed
 #guard rootExit (runShape (restoreR (.pure (.success .unit)) (.constant .unit))) =
   some Effect4.Program.Denote.outsideExit
+-- the cleanup-end marker delivers its exit through the saved slots, as the frame's
+-- `Prim.ofExit` does (P3 walk agreement); with no slot it is the fiber's exit
 #guard rootExit (runShape (.vis (.inr (.finishFinalizer (.success .unit))) Effects.Program.pure)) =
-  some Effect4.Program.Denote.badShapeExit
+  some (.success .unit)
 
 -- Existing source fixtures exercise every straight handler, generator control,
 -- loop cursor, stateful failure and malformed fallback on a fixed tape.
@@ -122,16 +129,20 @@ def interruptedAgrees (source : NativeEff) : Bool :=
 -- child interrupts the completing parent, so its later write must not run and
 -- its finalizer must run. This exercises the `answered`/`deliver` split itself.
 def dueInterrupt : NativeEff :=
-  let child : NativeEff := .bind (.callback .deferredAwait (.var 1))
-    (.withFiber (.interrupt (.var 0)))
+  let child : NativeEff := .bind (.callback .deferredAwait (.var 0))
+    (.withFiber (.interrupt (.var 1)))
   let done : NativeEff := .perform .deferredSucceed
-    (.app "pair" (.cons (.var 1) (.cons (.lit .unit) .nil)))
+    (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 1)) .nil)))
   let parent : NativeEff := .onExit (.bind done (.perform .refMake (.lit (.nat 99))))
     (.perform .refMake (.lit (.nat 9)))
-  .bind (.withFiber .getId) (.bind (.perform .deferredMake (.lit .unit))
-    (.bind (.withFiber (.fork child ⟨true, true, .inherit⟩)) parent))
-#guard sourceAgrees dueInterrupt
-#guard (Api.replay dueInterrupt 400 tape).stores.refs = [.nat 9]
-#guard (replayR dueInterrupt 400 tape).machine.state.refs = [.nat 9]
+  .bind (.perform .deferredMake (.lit .unit))
+    (.bind (.withFiber (.fork parent ⟨false, true, .inherit⟩))
+      (.bind (.withFiber (.fork child ⟨true, true, .inherit⟩))
+        (.awaitFiber (.var 1) .joinEffect)))
+#guard Api.wellTyped dueInterrupt && Api.readable dueInterrupt
+#guard obs (Api.replay dueInterrupt 400 [Api.evaluate, Api.flush]).machine =
+  obsR (replayR dueInterrupt 400 [Api.evaluate, Api.flush]).machine
+#guard (Api.replay dueInterrupt 400 [Api.evaluate, Api.flush]).stores.refs = [.nat 9]
+#guard (replayR dueInterrupt 400 [Api.evaluate, Api.flush]).machine.state.refs = [.nat 9]
 
 end Test.Program.RuntimeRShapesContract

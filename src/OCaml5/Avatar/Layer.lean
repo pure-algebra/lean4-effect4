@@ -206,6 +206,8 @@ def name : InductiveDesc where
             { leanName := "closeSeq", args := [⟨"remaining", .lst (.nm "FinName"), false⟩, ⟨"exit", exitL, false⟩, ⟨"captured", .lst (.nm "ReasonV"), false⟩] },
             { leanName := "closePar", args := [⟨"remaining", .lst (.nm "FinName"), false⟩, ⟨"exit", exitL, false⟩, ⟨"forked", .lst fid, false⟩, ⟨"closerInterruptible", .bool, false⟩] },
             { leanName := "mergeAwaitedExits" },
+            -- §20 (2026-09-07): `RunInterp.closeDoneName`, never reached by a layer program
+            { leanName := "closeParDone" },
             { leanName := "afterScopeAdd", args := [⟨"fin", .nm "FinName", false⟩] },
             { leanName := "updateThen", args := [⟨"update", .nm "ContextUpdate", false⟩, ⟨"body", progL, false⟩] },
             { leanName := "bodyThen", args := [⟨"body", progL, false⟩, ⟨"prev", ctxL, false⟩] },
@@ -244,7 +246,10 @@ def actionName : InductiveDesc where
   ctors := [{ leanName := "fork", args := [⟨"program", progL, false⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩] },
             { leanName := "forkScoped", args := [⟨"program", progL, false⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩, ⟨"key", .nat, false⟩] },
             { leanName := "interrupt", args := [⟨"target", fid, false⟩] },
+            -- D6b (2026-09-07): the interrupt's return and the child-exit middleware's program
+            { leanName := "interruptAs", args := [⟨"target", fid, false⟩, ⟨"who", fid, false⟩] },
             { leanName := "interruptScoped", args := [⟨"target", fid, false⟩] },
+            { leanName := "interruptAll", args := [⟨"targets", .lst fid, false⟩] },
             { leanName := "awaitAll", args := [⟨"targets", .lst fid, false⟩] },
             { leanName := "awaitAllFailFast", args := [⟨"targets", .lst fid, false⟩] },
             { leanName := "setContext", args := [⟨"context", ctxL, false⟩] },
@@ -258,7 +263,9 @@ def thunk : InductiveDesc where
   leanName := "Thunk"; site := "Layer.lean:361"; ctorPrefix := "Lt"; subst := subst
   ctors := [{ leanName := "act", args := [⟨"action", .nm "ActionName", false⟩] },
             { leanName := "op", args := [⟨"operation", .nm "SyncOp", false⟩] },
-            { leanName := "body", args := [⟨"program", progL, false⟩] }]
+            { leanName := "body", args := [⟨"program", progL, false⟩] },
+            -- D6b (2026-09-07): the join and await-all parks an interrupt's return constructs
+            { leanName := "park", args := [⟨"kind", .nm "ParkKind", false⟩] }]
 /-- `ScopeState` (`Scope.lean:71`) at Layer's `FinName`, prefix `Lss`. -/
 def scopeState : InductiveDesc where
   leanName := "ScopeState"; site := "Scope.lean:71 at Layer.lean:437"; ctorPrefix := "Lss"; subst := subst

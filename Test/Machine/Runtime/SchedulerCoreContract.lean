@@ -5,8 +5,8 @@ import Effects.Algebra.Program
 # The shared scheduler at an algebra instance
 
 D1: these finite runs use the actual `Effects.Program` carrier, whose
-continuations have no decidable equality. The fixture has one operation: read
-and increment a natural-number store. It exercises the production command loop,
+continuations have no decidable equality. The fixture has store and yield
+operations. It exercises the production command loop,
 resume guard, yield dispatcher and interrupt path. It is not `evaluateR` and
 does not claim a relation to compiled Eff or the host (`CORE-FB-SIMULATION`).
 -/
@@ -17,7 +17,7 @@ namespace Test.Runtime.SchedulerCoreContract
 
 open Effect4 Effect4.Machine
 
-abbrev Sig : Effects.Signature.{0, 0} := ⟨Unit, fun _ => Nat⟩
+abbrev Sig : Effects.Signature.{0, 0} := ⟨Bool, fun _ => Nat⟩
 abbrev X := Exit Nat Unit Unit FiberId Unit
 abbrev Code := Effects.Program Sig X
 
@@ -27,11 +27,12 @@ structure Saved where
   interruptedCause : Option (Cause Unit Unit FiberId Unit)
   deferredInterrupt : Bool
   finalizers : List Unit
+  answers : List (Nat → Code)
 
 instance algebraCore : FiberCore Unit Nat Unit Unit FiberId Unit Code Saved where
   current := Saved.current
   answerWith := fun f code => { f with current := code }
-  start := fun code flag => ⟨code, flag, none, false, []⟩
+  start := fun code flag => ⟨code, flag, none, false, [], []⟩
   interruptible := Saved.interruptible
   interruptedCause := Saved.interruptedCause
   deferredInterrupt := Saved.deferredInterrupt
@@ -42,10 +43,13 @@ instance algebraCore : FiberCore Unit Nat Unit Unit FiberId Unit Code Saved wher
       current := .pure (.failure (f.interruptedCause.getD Cause.empty))
       deferredInterrupt := false }
   pushAsyncFinalizer := fun name f => { f with finalizers := name :: f.finalizers }
-  clearStack := fun f => { f with finalizers := [] }
+  -- the algebra fixture has no generator frames (§20): the push is the identity
+  pushIterator := fun _ _ f => f
+  clearStack := fun f => { f with finalizers := [], answers := [] }
   success := fun value => .pure (.success value)
   failure := fun cause => .pure (.failure cause)
   onSuccess := fun code _ => code
+  yieldBefore := fun code => .vis true (fun _ => code)
 
 abbrev M := RunMachine Unit Unit Nat Unit Unit FiberId Unit Unit Nat Code Saved Unit
 abbrev F := RunFiber Unit Unit Nat Unit Unit FiberId Unit Unit Code Saved
@@ -53,7 +57,7 @@ abbrev I := RunInterp Unit Unit Nat Unit Unit FiberId Unit Unit Nat Code
 abbrev D := RunDecision Unit Unit Nat Unit Unit FiberId Unit
 abbrev C := Cmd Unit Unit Nat Unit Unit FiberId Unit Code
 
-def readNext : Code := .vis () (fun n => .pure (.success n))
+def readNext : Code := .vis false (fun n => .pure (.success n))
 
 def interp : I where
   contA := fun _ v => .pure (.success v)
@@ -70,6 +74,10 @@ def interp : I where
   cancelThenFail := fun _ c => .pure (.failure c)
   notImplemented := ()
   parkOf := fun _ => none
+  parkCode := fun _ => readNext
+  interruptCode := fun _ => readNext
+  interruptAsCode := fun _ _ => readNext
+  interruptAllCode := fun _ => readNext
   withFiberOf := fun _ => none
   syncState := fun _ _ => none
   registerAsync := fun _ _ _ s => (s, none)
@@ -81,7 +89,7 @@ def interp : I where
   abortName := ()
   parkCancelName := ()
   raceCancelName := fun _ => ()
-  raceSettle := fun _ exit => .pure exit
+  raceSettle := fun _ _ exit => .pure exit
   finalizerProgram := fun _ _ => none
   restoreName := fun _ => ()
   mergeName := fun _ => ()
@@ -95,9 +103,12 @@ def interp : I where
   contextValue := fun _ => 0
   exitValue := fun exit _ => .pure exit
   fiberValue := FiberId.value
+  fiberIdValue := FiberId.value
   fibersValue := List.length
   exitsValue := List.length
   voidValue := 0
+  scopeValue := fun _ => 0
+  closeDoneName := ()
   encodeFiber := id
   stackAnnotations := fun _ => ReasonAnnotations.empty
   asyncFiberError := ()
@@ -105,12 +116,21 @@ def interp : I where
 
 instance algebraEvaluator : FiberEvaluator Unit Unit Nat Unit Unit FiberId Unit Unit Nat
     Code Saved Unit where
-  evaluate := fun _ m f yielding =>
+  evaluate := fun i m f yielding =>
     match f.frame.current with
-    | .pure exit => ⟨m, f, yielding, .finished exit, []⟩
-    | .vis _ next =>
+    | .pure (.success value) =>
+      match f.frame.answers with
+      | [] => ⟨m, f, yielding, .finished (.success value), []⟩
+      | next :: rest =>
+        ⟨m, { f with frame := { f.frame with current := next value, answers := rest } },
+          yielding, .continue_, []⟩
+    | .pure (.failure cause) => ⟨m, f, yielding, .finished (.failure cause), []⟩
+    | .vis false next =>
       ⟨{ m with state := m.state + 1 }, { f with frame := { f.frame with current := next m.state } },
         yielding, .continue_, []⟩
+    | .vis true next =>
+      FiberAction.yieldNow i m
+        { f with frame := { f.frame with answers := next :: f.frame.answers } } yielding 0
 
 def initial : M :=
   { (RunMachine.empty 7 : M) with
@@ -139,8 +159,11 @@ theorem stableTape (k : Nat) :
     replayEval interp (20 + k) tape initial = replayEval interp 20 tape initial :=
   replay_stable interp 20 tape initial (by decide) k
 
--- The scheduler injects a yield, saves algebra code on a task, then resumes it.
+-- This algebra supplies its own yield code through the core. Its adapter retains
+-- the continuation while the shared dispatcher resumes with a success answer.
 def yielding : M := initial.modify ⟨0⟩ fun f => { f with yieldOverride := some true }
+#guard exitOf (replayEval interp 20 [.evaluate ⟨0⟩] yielding).machine = none
+#guard (replayEval interp 20 [.evaluate ⟨0⟩] yielding).machine.armed = [⟨0⟩]
 #guard exitOf (replayEval interp 20 tape yielding).machine = some (.success 7)
 #guard (replayEval interp 20 tape yielding).machine.armed.isEmpty
 

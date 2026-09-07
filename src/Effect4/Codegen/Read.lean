@@ -69,7 +69,7 @@ inductive Head
   | yieldNowWith | join | await | forkChild | forkDetach | forkIn | forkScoped | runIn
   | interrupt | interruptAll | interruptAllAs | awaitAll | raceAll | context | fiberId
   | scopeClose | scoped | acquireRelease | causeFail | causeDie | causeInterrupt
-  | causeCombine | undefined
+  | causeCombine | undefined | withFiber
 deriving DecidableEq, Repr
 
 /-- The spelling of each head, exactly as `print` emits it. -/
@@ -111,6 +111,7 @@ def Head.spelling : Head → String
   | .causeInterrupt => "Cause.interrupt"
   | .causeCombine => "Cause.combine"
   | .undefined => "undefined"
+  | .withFiber => "Effect.withFiber"
 
 /-- Every head, once. -/
 def heads : List Head :=
@@ -119,7 +120,7 @@ def heads : List Head :=
   , .yieldNowWith, .join, .await, .forkChild, .forkDetach, .forkIn, .forkScoped, .runIn
   , .interrupt, .interruptAll, .interruptAllAs, .awaitAll, .raceAll, .context, .fiberId
   , .scopeClose, .scoped, .acquireRelease, .causeFail, .causeDie, .causeInterrupt
-  , .causeCombine, .undefined ]
+  , .causeCombine, .undefined, .withFiber ]
 
 /-- Every spelling the printer reserves: a row's spelling and a term's atom must avoid
 these. -/
@@ -242,8 +243,42 @@ def readRowValue (sig : Signature Op) (spell : String → List String → Option
     else .error (.arity s)
   | none => .error (.unknownIdent s)
 
+/-- The saved variable whose two components a tuple-call row receives, when its two
+arguments are exactly `fst(a)` and `snd(a)` of one identifier `a` (source-repairs §18). -/
+def savedVar? : Expr → Expr → Option String
+  | .call (.ident f) [.ident v], .call (.ident g) [.ident w] =>
+    if f = "fst" ∧ g = "snd" ∧ v = w then some v else none
+  | _, _ => none
+
+theorem savedVar?_some {x y : Expr} {v : String} (h : savedVar? x y = some v) :
+    x = .call (.ident "fst") [.ident v] ∧ y = .call (.ident "snd") [.ident v] := by
+  unfold savedVar? at h
+  split at h
+  · split at h
+    · rename_i hc
+      simp only [Option.some.injEq] at h
+      subst h
+      obtain ⟨rfl, rfl, rfl⟩ := hc
+      exact ⟨rfl, rfl⟩
+    · cases h
+  · cases h
+
+/-- The request of a tuple-call row from its two arguments: the components of one saved
+variable read back as that variable, any other two terms as their `pair` application. -/
+def readTupleArgs (n : Nat) (x y : Expr) : Except ReadRefusal Term :=
+  match savedVar? x y with
+  | some v => readTerm n (.ident v)
+  | none => do
+    let a ← readTerm n x
+    let b ← readTerm n y
+    .ok (.app "pair" (.cons a (.cons b .nil)))
+
 /-- A call as a call row; `none` when no row of the table has this head and argument
-shape, so the caller may read an atom application instead. -/
+shape, so the caller may read an atom application instead. A call row's argument list is
+the trailing names alone on a `unit` request, and the request followed by the trailing
+names otherwise; a tuple-call row's is its two request arguments followed by the trailing
+names. The three readings are tried in that order, and `LawfulSpelling` is what makes at
+most one succeed. -/
 def readRowCall (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
     (s : String) (args : List Expr) : Option (Except ReadRefusal (Eff Op)) :=
   match (idents? args).bind (spell s) with
@@ -259,8 +294,29 @@ def readRowCall (sig : Signature Op) (spell : String → List String → Option 
         some (if (sig.rowOf op).shape = .call ∧ (sig.rowOf op).request ≠ Ty.unit then
           (readTerm n request).map (rowAnswer (sig.rowOf op) op)
         else .error (.arity s))
-      | none => none
+      | none =>
+        match rest with
+        | second :: names =>
+          match (idents? names).bind (spell s) with
+          | some op =>
+            some (if (sig.rowOf op).shape = .tupleCall then
+              (readTupleArgs n request second).map (rowAnswer (sig.rowOf op) op)
+            else .error (.arity s))
+          | none => none
+        | [] => none
     | [] => none
+
+/-- The canonical adapter for the synchronous rc.112 `Fiber.runIn` export. The
+callback adds no binder, links the fiber once, and returns the unit effect. -/
+def readRunIn (n : Nat) (args : List Expr) : Except ReadRefusal (Eff Op) :=
+  match args with
+  | [.arrowBlock [] [.exprStmt (.call (.ident runIn) [target, scope]), .ret (.ident unit)]] =>
+    if runIn = "Fiber.runIn" ∧ unit = "Effect.void" then do
+      let t ← readTerm n target
+      let s ← readTerm n scope
+      .ok (.withFiber (.runIn t s))
+    else .error (.shape "runIn")
+  | _ => .error (.shape "runIn")
 
 /-! ## Effects -/
 
@@ -369,10 +425,7 @@ mutual
       let p ← readEff sig spell n program
       let o ← readForkOptions false options
       .ok (.withFiber (.forkScoped p o))
-    | .runIn, [target, scope] => do
-      let t ← readTerm n target
-      let s ← readTerm n scope
-      .ok (.withFiber (.runIn t s))
+    | .withFiber, args => readRunIn n args
     | .interrupt, [target] => (readTerm n target).map fun t => .withFiber (.interrupt t)
     | .interruptAll, [targets] =>
       (readTerm n targets).map fun t => .withFiber (.interruptAll t none)
@@ -493,16 +546,32 @@ readings `readRowCall` tries. -/
 def noRow (spell : String → List String → Option Op) (atom : String) (args : Terms) : Bool :=
   ((args.names?).bind (spell atom)).isNone &&
     match args with
-    | .cons _ rest => ((rest.names?).bind (spell atom)).isNone
+    | .cons _ rest =>
+      ((rest.names?).bind (spell atom)).isNone &&
+        match rest with
+        | .cons _ names => ((names.names?).bind (spell atom)).isNone
+        | .nil => true
     | .nil => true
 
 /-- What the printer keeps of a row's request: nothing on a value row or a `unit` request
-(the request must then be exactly the unit literal), the term otherwise. -/
+(the request must then be exactly the unit literal), the term otherwise. A tuple-call
+row keeps a `pair` application of scoped components or a scoped variable; a `pair` whose
+printed components spell the saved-variable form `fst(a)`, `snd(a)` reads back as that
+variable and is outside the image (source-repairs §18). -/
 def requestReadable (row : Row) (n : Nat) (request : Term) : Bool :=
   match row.shape with
   | .value => decide (request = .lit .unit)
   | .call =>
     if row.request = Ty.unit then decide (request = .lit .unit) else request.scoped n
+  | .tupleCall =>
+    match pairArgs? request with
+    | some (x, y) => x.scoped n && y.scoped n && (savedVar? (printTerm x) (printTerm y)).isNone
+    | none =>
+      -- the requests whose printed form is one identifier: a binder, or `undefined`
+      match request with
+      | .var _ => request.scoped n
+      | .lit .unit => true
+      | _ => false
 
 mutual
   /-- The program is one the printer keeps whole: variables in scope, rows performed on the
@@ -917,11 +986,13 @@ theorem print_not_cond {sig : Signature Op} {n : Nat} {e : Eff Op} {t a b : Expr
     split at hp
     · simp at hp
     · split at hp <;> simp at hp
+    · simp at hp
   case callback op r =>
     simp only [print, printRow, Except.ok.injEq] at hp
     split at hp
     · simp at hp
     · split at hp <;> simp at hp
+    · simp at hp
   case awaitFiber f m => cases m <;> simp [print] at hp
   case withFiber act =>
     cases act
@@ -937,11 +1008,23 @@ theorem readRowCall_none {sig : Signature Op} {spell : String → List String �
     simp only [noRow, Bool.and_true, Option.isNone_iff_eq_none] at h
     unfold readRowCall; rw [idents?_printTerms, h]; simp [printTerms]
   | cons t rest =>
-    simp only [noRow, Bool.and_eq_true, Option.isNone_iff_eq_none] at h
-    unfold readRowCall
-    rw [idents?_printTerms, h.1]
-    simp only [printTerms]
-    rw [idents?_printTerms, h.2]
+    cases rest with
+    | nil =>
+      simp only [noRow, Bool.and_eq_true, Bool.and_true, Option.isNone_iff_eq_none] at h
+      unfold readRowCall
+      rw [idents?_printTerms (.cons t .nil), h.1]
+      simp only [printTerms]
+      rw [show idents? ([] : List Expr) = Terms.nil.names? from rfl, h.2]
+    | cons u names =>
+      simp only [noRow, Bool.and_eq_true, Option.isNone_iff_eq_none] at h
+      unfold readRowCall
+      rw [idents?_printTerms (.cons t (.cons u names)), h.1]
+      rw [printTerms.eq_2]
+      dsimp only
+      rw [idents?_printTerms (.cons u names), h.2.1]
+      rw [printTerms.eq_2]
+      dsimp only
+      rw [idents?_printTerms names, h.2.2]
 
 theorem readRowCall_unit {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op)
@@ -999,6 +1082,69 @@ theorem readable_row_request {row : Row} {n : Nat} {r : Term} (hshape : row.shap
     (hreq : row.request ≠ Ty.unit) (h : requestReadable row n r = true) : r.scoped n = true := by
   simp only [requestReadable, hshape, hreq, if_false] at h; exact h
 
+/-- A printed term is an identifier only as a binder or as `undefined`, never as a trailing
+name of any row. -/
+theorem printTerm_ident_not_trailing {sig : Signature Op}
+    {spell : String → List String → Option Op} (hl : LawfulSpelling sig spell) (r : Term)
+    (op : Op) (v : String) (h : printTerm r = .ident v) : v ∉ (sig.rowOf op).trailing := by
+  cases r with
+  | var i =>
+    simp only [printTerm, Expr.ident.injEq] at h
+    subst h
+    exact hl.trailing_ne_name op i
+  | lit value =>
+    cases value with
+    | unit =>
+      simp only [printTerm, printLit, Expr.ident.injEq] at h
+      subst h
+      exact hl.trailing_ne_undefined op
+    | nat _ | bool _ | str _ => simp [printTerm, printLit] at h
+  | app _ _ => simp [printTerm] at h
+
+/-- The tuple reading of a row: two arguments that are not trailing names, then the row's
+trailing names, read through `readTupleArgs`. -/
+theorem readRowCall_tuple {sig : Signature Op} {spell : String → List String → Option Op}
+    (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (x y : Expr)
+    (hshape : (sig.rowOf op).shape = .tupleCall)
+    (hx : ∀ op' v, x = .ident v → v ∉ (sig.rowOf op').trailing)
+    (hy : ∀ op' v, y = .ident v → v ∉ (sig.rowOf op').trailing) :
+    readRowCall sig spell n (sig.rowOf op).spelling
+        (x :: y :: (sig.rowOf op).trailing.map Expr.ident)
+      = some ((readTupleArgs n x y).map (rowAnswer (sig.rowOf op) op)) := by
+  have key : ∀ (names : List String) (v : String), (∀ op', v ∉ (sig.rowOf op').trailing) →
+      spell (sig.rowOf op).spelling (v :: names) = none := by
+    intro names v hv
+    cases hsp : spell (sig.rowOf op).spelling (v :: names) with
+    | none => rfl
+    | some op' =>
+      exfalso
+      obtain ⟨_, htr⟩ := hl.row_of_spell _ _ _ hsp
+      exact hv op' (htr ▸ List.mem_cons_self)
+  have hA : ((idents? (x :: y :: (sig.rowOf op).trailing.map Expr.ident)).bind
+      (spell (sig.rowOf op).spelling)) = none := by
+    cases x
+    case ident v =>
+      cases y
+      case ident w =>
+        simp only [idents?, idents?_map, Option.map_some, Option.bind_some]
+        exact key _ v (fun op' => hx op' v rfl)
+      all_goals simp [idents?]
+    all_goals simp [idents?]
+  have hB : ((idents? (y :: (sig.rowOf op).trailing.map Expr.ident)).bind
+      (spell (sig.rowOf op).spelling)) = none := by
+    cases y
+    case ident w =>
+      simp only [idents?, idents?_map, Option.map_some, Option.bind_some]
+      exact key _ w (fun op' => hy op' w rfl)
+    all_goals simp [idents?]
+  unfold readRowCall
+  rw [hA]
+  dsimp only
+  rw [hB]
+  dsimp only
+  rw [idents?_map, Option.bind_some, hl.spell_row]
+  simp [hshape]
+
 /-- A row prints and reads back to `rowAnswer`. -/
 theorem read_printRow {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (r : Term)
@@ -1025,6 +1171,41 @@ theorem read_printRow {sig : Signature Op} {spell : String → List String → O
       unfold readEff
       simp [hhead, readRowCall_request hl op r hshape hreq,
         readTerm_printTerm r (readable_row_request hshape hreq h)]
+  | tupleCall =>
+    simp only [printRow, hshape]
+    unfold readEff
+    simp only [hhead]
+    simp only [requestReadable, hshape] at h
+    rcases hpa : pairArgs? r with _ | ⟨x, y⟩
+    · simp only [hpa] at h
+      cases r with
+      | var i =>
+        simp only at h
+        simp only [printTupleArgs, hpa, printTerm, List.cons_append, List.nil_append]
+        rw [readRowCall_tuple hl op _ _ hshape (fun _ _ hx => by cases hx)
+          (fun _ _ hy => by cases hy)]
+        have hv : readTerm n (.ident (Var.name i)) = .ok (.var i) :=
+          readTerm_printTerm (.var i) h
+        simp [readTupleArgs, savedVar?, hv]
+      | lit value =>
+        cases value with
+        | unit =>
+          simp only [printTupleArgs, hpa, printTerm, printLit, List.cons_append, List.nil_append]
+          rw [readRowCall_tuple hl op _ _ hshape (fun _ _ hx => by cases hx)
+            (fun _ _ hy => by cases hy)]
+          have hv : readTerm n (.ident "undefined") = .ok (.lit .unit) :=
+            readTerm_printTerm (.lit .unit) rfl
+          simp [readTupleArgs, savedVar?, hv]
+        | nat _ | bool _ | str _ => simp at h
+      | app _ _ => simp at h
+    · simp only [hpa, Bool.and_eq_true, Option.isNone_iff_eq_none] at h
+      obtain ⟨⟨hx, hy⟩, hsv⟩ := h
+      obtain rfl := pairArgs?_some hpa
+      simp only [printTupleArgs, hpa, List.cons_append, List.nil_append]
+      rw [readRowCall_tuple hl op _ _ hshape
+        (fun op' v hv => printTerm_ident_not_trailing hl x op' v hv)
+        (fun op' v hv => printTerm_ident_not_trailing hl y op' v hv)]
+      simp [readTupleArgs, hsv, readTerm_printTerm x hx, readTerm_printTerm y hy]
 
 mutual
 theorem read_print {sig : Signature Op} {spell : String → List String → Option Op}
@@ -1307,8 +1488,8 @@ theorem read_print_action {sig : Signature Op} {spell : String → List String �
     simp only [readableAction, Bool.and_eq_true] at hr
     simp only [printAction, Except.ok.injEq] at hp; subst hp
     unfold readEff readHead
-    simp [headOf_lit .runIn "Fiber.runIn" rfl, readTerm_printTerm target hr.1,
-      readTerm_printTerm scope hr.2]
+    simp [headOf_lit .withFiber "Effect.withFiber" rfl, readRunIn,
+      readTerm_printTerm target hr.1, readTerm_printTerm scope hr.2]
   | .interrupt target, hr, hp => by
     simp only [readableAction] at hr
     simp only [printAction, Except.ok.injEq] at hp; subst hp
@@ -1363,6 +1544,43 @@ end
 theorem print_rowAnswer (sig : Signature Op) (n : Nat) (op : Op) (r : Term) :
     print sig n (rowAnswer (sig.rowOf op) op r) = .ok (printRow (sig.rowOf op) r) := by
   unfold rowAnswer; split <;> simp [print]
+
+/-- The tuple reading reconstructs its two arguments: a saved variable prints as its two
+component reads, any other pair as the printed components. -/
+theorem readTupleArgs_exact {n : Nat} {x y : Expr} {r : Term}
+    (h : readTupleArgs n x y = .ok r) : printTupleArgs r = [x, y] := by
+  unfold readTupleArgs at h
+  split at h
+  · rename_i v hv
+    obtain ⟨rfl, rfl⟩ := savedVar?_some hv
+    have hp := readTerm_exact (.ident v) h
+    have hpa : pairArgs? r = none := by
+      cases r with
+      | var _ => rfl
+      | lit _ => rfl
+      | app _ _ => simp [printTerm] at hp
+    simp [printTupleArgs, hpa, hp]
+  · simp only [bind_eq_ok] at h
+    obtain ⟨a, ha, b, hb, he⟩ := h
+    cases he
+    simp [printTupleArgs, pairArgs?, readTerm_exact x ha, readTerm_exact y hb]
+
+/-- An accepted runIn adapter reconstructs both scoped terms and its exact block. -/
+theorem readRunIn_exact {sig : Signature Op} {n : Nat} {args : List Expr} {e : Eff Op}
+    (h : readRunIn n args = .ok e) :
+    print sig n e = .ok (.call (.ident "Effect.withFiber") args) := by
+  unfold readRunIn at h
+  split at h
+  · rename_i runIn target scope unit
+    split at h
+    · rename_i heads
+      obtain ⟨rfl, rfl⟩ := heads
+      simp only [bind_eq_ok] at h
+      obtain ⟨t, ht, s, hs, he⟩ := h
+      cases he
+      simp [print, printAction, readTerm_exact target ht, readTerm_exact scope hs]
+    · cases h
+  · cases h
 
 
 section ReadExact
@@ -1467,7 +1685,22 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
             rw [print_rowAnswer, idents?_exact hnames]
             simp [printRow, hc.1, hc.2, hs, htr, readTerm_exact _ hr]
           · cases hrow
-        · cases hrow
+        · split at hrow
+          · split at hrow
+            · simp only [Option.some.injEq] at hrow
+              split at hrow
+              · rename_i hshape
+                simp only [map_eq_ok] at hrow
+                obtain ⟨r, hr, he⟩ := hrow
+                subst he
+                obtain ⟨names, hnames, hsp⟩ :=
+                  Option.bind_eq_some_iff.mp ‹(idents? _).bind (spell atom) = some _›
+                obtain ⟨hs, htr⟩ := hl.row_of_spell _ _ _ hsp
+                rw [print_rowAnswer, idents?_exact hnames]
+                simp [printRow, hshape, hs, htr, readTupleArgs_exact hr]
+              · cases hrow
+            · cases hrow
+          · cases hrow
       · cases hrow
   case case12 =>
     intro n atom args hh hrow e h
@@ -1630,11 +1863,9 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
     obtain ⟨hpo, _⟩ := readForkOptions_exact ho
     simp [print, printAction, ih p hp, hpo, Head.spelling]
   case case42 =>
-    intro n target scope e h
-    unfold readHead at h; simp only [bind_eq_ok] at h
-    obtain ⟨t, ht, s, hs, he⟩ := h
-    cases he
-    simp [print, printAction, readTerm_exact target ht, readTerm_exact scope hs, Head.spelling]
+    intro n args e h
+    simp only [readHead] at h
+    exact readRunIn_exact h
   case case43 =>
     intro n target e h
     unfold readHead at h; simp only [map_eq_ok] at h

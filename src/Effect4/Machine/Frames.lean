@@ -7,7 +7,7 @@ Owner: Reference execution runtime — the Effect v4 continuation-stack machine.
 
 This module implements the first-order frame machine of
 `effect@4.0.0-rc.112`: the closed three-value continuation-slot alphabet with
-its two demandable arms, the seventeen-constructor primitive syntax, the
+its two demandable arms, eighteen data constructors for seventeen host ops, the
 frame-arm matrix, the `contAll` ensure hook with its answer selection and pass
 trace, the two demandable arms, the `getCont`/`exitFailCause` pop loop with its
 deferred-interrupt answer and its handler skipping, the five-field fiber state
@@ -21,8 +21,8 @@ is the first frame that both pushes and passes, so it forces that reading; see
 `FrameFiber.popFrom`, `popFrom_pass_no_push` and
 `popFrom_asyncFinalizer_pops_its_push`.
 
-A continuation slot stores a nominal `ν` and a thunk a nominal `σ`, never a
-stored Lean closure: `docs/DESIGN-BASIS.md` DB-02 forbids closures in canonical
+A continuation slot stores a nominal `ν` or a constant `Prim` continuation,
+and a thunk a nominal `σ`, never a stored Lean closure: `docs/DESIGN-BASIS.md` DB-02 forbids closures in canonical
 program content. A nested body is a first-order `Prim` subterm, because rc.112's
 `onSuccess[args]` holds the inner *effect* and a subterm is inspectable,
 decidable and serialisable where a closure is none of those. What a name *does*
@@ -93,8 +93,9 @@ theorem contAll_not_demandable : contAll ∉ demandable := by decide
 
 end Arm
 
-/-- The pinned rc.112 primitive syntax, one constructor per op in this packet's
-scope. The three parking ops `Yield`, `Async` and `AsyncFinalizer` are here as
+/-- The pinned rc.112 primitive syntax. `onSuccessConst` is a constant instance
+of the existing `OnSuccess` op, used by the injected yield at `internal/effect.ts:651`.
+The three parking ops `Yield`, `Async` and `AsyncFinalizer` are here as
 of the run-loop and parking packet. A continuation slot stores a nominal `ν`, a
 thunk a nominal `σ`, and a nested body a first-order subterm. -/
 inductive Prim (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max u v)
@@ -114,6 +115,10 @@ inductive Prim (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max
   | iterator (generator : ν) (cursor : β)
   /-- `OnSuccess`: run the body, then the named value continuation. -/
   | onSuccess (body : Prim ν σ β ε δ ι α) (onValue : ν)
+  /-- `OnSuccess` with a constant continuation program: rc.112 injects
+  `flatMap(yieldNow, () => previous)` at `internal/effect.ts:649-655`. Both the
+  body and the saved continuation are first-order subterms. -/
+  | onSuccessConst (body next : Prim ν σ β ε δ ι α)
   /-- `OnFailure`: run the body, then the named cause continuation. -/
   | onFailure (body : Prim ν σ β ε δ ι α) (onCause : ν)
   /-- `OnSuccessAndFailure`: both continuations, assigned per instance. -/
@@ -148,8 +153,8 @@ deriving DecidableEq
 
 namespace Prim
 
-/-- There is no eighteenth primitive: the fourteen frame-machine ops plus the
-three parking ops of the run-loop packet exhaust the syntax.
+/-- The eighteen data constructors exhaust the syntax: seventeen pinned host
+ops, with `onSuccessConst` another instance of `OnSuccess` (`internal/effect.ts:651`).
 census: rule.frames-are-primitives -/
 theorem cases_receipt {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
     (self : Prim ν σ β ε δ ι α) :
@@ -159,6 +164,7 @@ theorem cases_receipt {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
       (exists error, self = yieldableError error) \/
       (exists generator cursor, self = iterator generator cursor) \/
       (exists body onValue, self = onSuccess body onValue) \/
+      (exists body next, self = onSuccessConst body next) \/
       (exists body onCause, self = onFailure body onCause) \/
       (exists body onValue onCause, self = onSuccessAndFailure body onValue onCause) \/
       (exists body, self = exitFrame body) \/
@@ -170,48 +176,53 @@ theorem cases_receipt {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
       exists onInterrupt, self = asyncFinalizer onInterrupt := by
   cases self with
   | success value =>
-    exact Or.inl ⟨value, rfl⟩
+    exact Or.inl <| ⟨value, rfl⟩
   | failure cause =>
-    exact Or.inr <| .inl ⟨cause, rfl⟩
+    exact Or.inr <| Or.inl <| ⟨cause, rfl⟩
   | sync thunk =>
-    exact Or.inr <| .inr <| .inl ⟨thunk, rfl⟩
+    exact Or.inr <| Or.inr <| Or.inl <| ⟨thunk, rfl⟩
   | suspend thunk =>
-    exact Or.inr <| .inr <| .inr <| .inl ⟨thunk, rfl⟩
+    exact Or.inr <| Or.inr <| Or.inr <| Or.inl <| ⟨thunk, rfl⟩
   | withFiber thunk =>
-    exact Or.inr <| .inr <| .inr <| .inr <| .inl ⟨thunk, rfl⟩
+    exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inl <| ⟨thunk, rfl⟩
   | yieldableError error =>
-    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨error, rfl⟩
+    exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inl <| ⟨error, rfl⟩
   | iterator generator cursor =>
-    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨generator, cursor, rfl⟩
+    exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inl <| ⟨generator, cursor, rfl⟩
   | onSuccess body onValue =>
-    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨body, onValue, rfl⟩
+    exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inl <|
+      ⟨body, onValue, rfl⟩
+  | onSuccessConst body next =>
+    exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inl <|
+      ⟨body, next, rfl⟩
   | onFailure body onCause =>
-    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <|
-      .inl ⟨body, onCause, rfl⟩
+    exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+      Or.inl <| ⟨body, onCause, rfl⟩
   | onSuccessAndFailure body onValue onCause =>
-    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <|
-      .inl ⟨body, onValue, onCause, rfl⟩
+    exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+      Or.inr <| Or.inl <| ⟨body, onValue, onCause, rfl⟩
   | exitFrame body =>
-    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <|
-      .inl ⟨body, rfl⟩
+    exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+      Or.inr <| Or.inr <| Or.inl <| ⟨body, rfl⟩
   | onExit body finalizer flag =>
-    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <|
-      .inr <| .inl ⟨body, finalizer, flag, rfl⟩
+    exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+      Or.inr <| Or.inr <| Or.inr <| Or.inl <| ⟨body, finalizer, flag, rfl⟩
   | setInterruptible flag =>
-    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <|
-      .inr <| .inr <| .inl ⟨flag, rfl⟩
+    exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+      Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inl <| ⟨flag, rfl⟩
   | whileLoop loop cursor =>
-    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <|
-      .inr <| .inr <| .inr <| .inl ⟨loop, cursor, rfl⟩
+    exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+      Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inl <| ⟨loop, cursor, rfl⟩
   | yieldNowWith priority =>
-    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <|
-      .inr <| .inr <| .inr <| .inr <| .inl ⟨priority, rfl⟩
+    exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+      Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inl <| ⟨priority, rfl⟩
   | async register withSignal cancel =>
-    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <|
-      .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨register, withSignal, cancel, rfl⟩
+    exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+      Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inl <|
+      ⟨register, withSignal, cancel, rfl⟩
   | asyncFinalizer onInterrupt =>
-    exact Or.inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <|
-      .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| ⟨onInterrupt, rfl⟩
+    exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+      Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| ⟨onInterrupt, rfl⟩
 
 end Prim
 
@@ -463,6 +474,7 @@ verbatim. The eight non-frame primitives declare no arm and are never pushed.
 census: rule.frames-are-primitives -/
 def arms : Prim ν σ β ε δ ι α -> List Arm
   | onSuccess _ _ => [Arm.contA]
+  | onSuccessConst _ _ => [Arm.contA]
   | onFailure _ _ => [Arm.contE]
   | onSuccessAndFailure _ _ _ => [Arm.contA, Arm.contE]
   | exitFrame _ => [Arm.contA, Arm.contE]
@@ -504,6 +516,11 @@ theorem isFrame_iff (self : Prim ν σ β ε δ ι α) : self.isFrame = true ↔
 /-- `onSuccess` answers the value slot only. census: frame-arm.OnSuccess -/
 theorem arms_onSuccess (body : Prim ν σ β ε δ ι α) (onValue : ν) :
     (onSuccess body onValue).arms = [Arm.contA] := rfl
+
+/-- The constant continuation uses the existing `OnSuccess` value slot
+(`internal/effect.ts:651`). census: frame-arm.OnSuccess -/
+theorem arms_onSuccessConst (body next : Prim ν σ β ε δ ι α) :
+    (onSuccessConst body next).arms = [Arm.contA] := rfl
 
 /-- `onFailure` answers the cause slot only. census: frame-arm.OnFailure -/
 theorem arms_onFailure (body : Prim ν σ β ε δ ι α) (onCause : ν) :
@@ -578,6 +595,7 @@ def asExit? : Prim ν σ β ε δ ι α -> Option (Exit β ε δ ι α)
   | yieldableError _ => none
   | iterator _ _ => none
   | onSuccess _ _ => none
+  | onSuccessConst _ _ => none
   | onFailure _ _ => none
   | onSuccessAndFailure _ _ _ => none
   | exitFrame _ => none
@@ -617,6 +635,7 @@ theorem asExit?_eq_some (self : Prim ν σ β ε δ ι α) (exit : Exit β ε δ
   | yieldableError _ => simp [asExit?] at h
   | iterator _ _ => simp [asExit?] at h
   | onSuccess _ _ => simp [asExit?] at h
+  | onSuccessConst _ _ => simp [asExit?] at h
   | onFailure _ _ => simp [asExit?] at h
   | onSuccessAndFailure _ _ _ => simp [asExit?] at h
   | exitFrame _ => simp [asExit?] at h
@@ -669,6 +688,7 @@ def ensure : Prim ν σ β ε δ ι α -> FrameFiber ν σ β ε δ ι α ->
   | yieldableError _, fiber => (fiber, none)
   | iterator _ _, fiber => (fiber, none)
   | onSuccess _ _, fiber => (fiber, none)
+  | onSuccessConst _ _, fiber => (fiber, none)
   | onFailure _ _, fiber => (fiber, none)
   | onSuccessAndFailure _ _ _, fiber => (fiber, none)
   | exitFrame _, fiber => (fiber, none)
@@ -699,6 +719,12 @@ def passEvents (frame : Prim ν σ β ε δ ι α) (replacement : Option (Prim �
 theorem ensure_of_no_contAll (frame : Prim ν σ β ε δ ι α) (fiber : FrameFiber ν σ β ε δ ι α)
     (h : frame.hasArm Arm.contAll = false) : frame.ensure fiber = (fiber, none) := by
   cases frame <;> first | rfl | exact Bool.noConfusion h
+
+/-- The injected constant `OnSuccess` has no ensure hook
+(`internal/effect.ts:651`). census: frame-arm.OnSuccess -/
+theorem ensure_onSuccessConst (body next : Prim ν σ β ε δ ι α)
+    (fiber : FrameFiber ν σ β ε δ ι α) :
+    (onSuccessConst body next).ensure fiber = (fiber, none) := rfl
 
 /-- An `onExit` hook masks the fiber and pushes the restoring frame.
 census: frame-arm.OnExit -/
@@ -841,6 +867,7 @@ def armA [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
     Prim ν σ β ε δ ι α -> β -> Option (Exit β ε δ ι α) ->
       Option (Prim ν σ β ε δ ι α × List (Prim ν σ β ε δ ι α))
   | onSuccess _ onValue, value, _ => some (interp.contA onValue value, [])
+  | onSuccessConst _ next, _, _ => some (next, [])
   | onSuccessAndFailure _ onValue _, value, _ => some (interp.contA onValue value, [])
   | exitFrame _, value, provided =>
     some (success (interp.reifyExit (provided.getD (Exit.success value))), [])
@@ -896,6 +923,7 @@ def armE [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
   | yieldableError _, _, _ => none
   | iterator _ _, _, _ => none
   | onSuccess _ _, _, _ => none
+  | onSuccessConst _ _, _, _ => none
   | setInterruptible _, _, _ => none
   | whileLoop _ _, _, _ => none
   | yieldNowWith _, _, _ => none
@@ -916,6 +944,7 @@ def finalizerEvents : Prim ν σ β ε δ ι α -> Exit β ε δ ι α -> List (
   | yieldableError _, _ => []
   | iterator _ _, _ => []
   | onSuccess _ _, _ => []
+  | onSuccessConst _ _, _ => []
   | onFailure _ _, _ => []
   | onSuccessAndFailure _ _ _, _ => []
   | exitFrame _, _ => []
@@ -936,6 +965,7 @@ def iteratorFolded (interp : PrimInterp ν σ β ε δ ι α) :
   | withFiber _, _ => []
   | yieldableError _, _ => []
   | onSuccess _ _, _ => []
+  | onSuccessConst _ _, _ => []
   | onFailure _ _, _ => []
   | onSuccessAndFailure _ _ _, _ => []
   | exitFrame _, _ => []
@@ -963,6 +993,7 @@ theorem armA_isSome [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [Decidabl
     show (armA interp (iterator generator cursor) value provided).isSome = true
     cases hiter : (interp.iterNext generator value).snd <;> simp [armA, hiter]
   | onSuccess _ _ => rfl
+  | onSuccessConst _ _ => rfl
   | onFailure _ _ => rfl
   | onSuccessAndFailure _ _ _ => rfl
   | exitFrame _ => rfl
@@ -991,6 +1022,13 @@ theorem armA_onSuccess [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [Decid
     (provided : Option (Exit β ε δ ι α)) :
     (onSuccess body onValue).armA interp value provided =
       some (interp.contA onValue value, []) := rfl
+
+/-- The injected `OnSuccess` resumes its saved program independently of the
+yield's answer (`internal/effect.ts:651`). census: op.OnSuccess -/
+theorem armA_onSuccessConst [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+    (interp : PrimInterp ν σ β ε δ ι α) (body next : Prim ν σ β ε δ ι α) (value : β)
+    (provided : Option (Exit β ε δ ι α)) :
+    (onSuccessConst body next).armA interp value provided = some (next, []) := rfl
 
 /-- `matchCauseEffect` assigns the value arm on the instance.
 census: op.OnSuccessAndFailure -/
@@ -1021,6 +1059,14 @@ theorem armE_onSuccess_none [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [
     (interp : PrimInterp ν σ β ε δ ι α) (body : Prim ν σ β ε δ ι α) (onValue : ν)
     (cause : Cause ε δ ι α) (provided : Option (Exit β ε δ ι α)) :
     (onSuccess body onValue).armE interp cause provided = none := rfl
+
+/-- The constant `OnSuccess` does not intercept failure
+(`internal/effect.ts:651`). census: frame-arm.OnSuccess -/
+theorem armE_onSuccessConst_none [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
+    [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α)
+    (body next : Prim ν σ β ε δ ι α) (cause : Cause ε δ ι α)
+    (provided : Option (Exit β ε δ ι α)) :
+    (onSuccessConst body next).armE interp cause provided = none := rfl
 
 /-- `onFailure` declares no value arm. census: frame-arm.OnFailure -/
 theorem armA_onFailure_none [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
@@ -1365,6 +1411,7 @@ theorem ensure_stack_cases (frame : Prim ν σ β ε δ ι α) (fiber : FrameFib
   | yieldableError _ => exact Or.inl rfl
   | iterator _ _ => exact Or.inl rfl
   | onSuccess _ _ => exact Or.inl rfl
+  | onSuccessConst _ _ => exact Or.inl rfl
   | onFailure _ _ => exact Or.inl rfl
   | onSuccessAndFailure _ _ _ => exact Or.inl rfl
   | exitFrame _ => exact Or.inl rfl
@@ -2122,6 +2169,7 @@ private theorem ensure_interruptedCause (frame : Prim ν σ β ε δ ι α)
   | yieldableError _ => rfl
   | iterator _ _ => rfl
   | onSuccess _ _ => rfl
+  | onSuccessConst _ _ => rfl
   | onFailure _ _ => rfl
   | onSuccessAndFailure _ _ _ => rfl
   | exitFrame _ => rfl
@@ -2336,6 +2384,22 @@ def resumeValue [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq 
         (self.getCont Arm.contA false).events ++
           [FrameEvent.yielded (provided.getD (Exit.success value))])
 
+/-- A success pops the injected constant `OnSuccess` and resumes its saved
+program with exactly the older stack (`internal/effect.ts:651`). Pending causes
+do not enable failure-path skipping; a deferred interrupt must be absent.
+census: op.OnSuccess -/
+theorem resumeValue_onSuccessConst [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
+    [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α)
+    (self : FrameFiber ν σ β ε δ ι α) (body next : Prim ν σ β ε δ ι α)
+    (value : β) (provided : Option (Exit β ε δ ι α))
+    (hdeferred : self.deferredInterrupt = false) :
+    ({ self with stack := Prim.onSuccessConst body next :: self.stack }).resumeValue
+        interp value provided =
+      (FrameStep.running { self with current := next },
+        [FrameEvent.popped (Prim.onSuccessConst body next)]) := by
+  simp [resumeValue, getCont, hdeferred, popFrom, Prim.answerOf, Prim.ensure,
+    Prim.hasArm, Prim.arms, Prim.passEvents, Prim.armA, Prim.finalizerEvents]
+
 /-- rc.112's `exitFailCause[evaluate]`: pop the cause slot, skipping every
 handler while the fiber is interrupted and interruptible.
 census: op.Failure -/
@@ -2374,7 +2438,7 @@ def resumeCause [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq 
 relation: this model has no decision source, so `docs/DESIGN-BASIS.md` DB-03's
 relational requirement does not bite here.
 
-Two of the seventeen equations are a *live frontier* rather than a transition.
+Two of the eighteen constructor equations are a *live frontier* rather than a transition.
 `Yield` and `Async` park: rc.112 hands them to the dispatcher and the fiber
 stops until something outside it resumes. A single fiber stepped on its own has
 nothing to resume it, so this function returns the fiber unchanged and leaves
@@ -2406,6 +2470,10 @@ def step [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
     (FrameStep.running
       { self with current := body, stack := Prim.onSuccess body onValue :: self.stack },
       [FrameEvent.pushed (Prim.onSuccess body onValue)])
+  | Prim.onSuccessConst body next =>
+    (FrameStep.running
+      { self with current := body, stack := Prim.onSuccessConst body next :: self.stack },
+      [FrameEvent.pushed (Prim.onSuccessConst body next)])
   | Prim.onFailure body onCause =>
     (FrameStep.running
       { self with current := body, stack := Prim.onFailure body onCause :: self.stack },
@@ -2638,6 +2706,32 @@ theorem step_onSuccess [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [Decid
         (FrameFiber.mk body (Prim.onSuccess body onValue :: self.stack) self.interruptible
           self.interruptedCause self.deferredInterrupt),
         [FrameEvent.pushed (Prim.onSuccess body onValue)]) := rfl
+
+/-- The injected constant `OnSuccess` pushes itself above the older stack and
+enters the yield body (`internal/effect.ts:649-655`). census: op.OnSuccess -/
+theorem step_onSuccessConst [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
+    [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α)
+    (self : FrameFiber ν σ β ε δ ι α) (body next : Prim ν σ β ε δ ι α) :
+    (FrameFiber.mk (Prim.onSuccessConst body next) self.stack self.interruptible
+        self.interruptedCause self.deferredInterrupt).step interp =
+      (FrameStep.running
+        (FrameFiber.mk body (Prim.onSuccessConst body next :: self.stack) self.interruptible
+          self.interruptedCause self.deferredInterrupt),
+        [FrameEvent.pushed (Prim.onSuccessConst body next)]) := rfl
+
+/-- Evaluating a success returns through the injected constant `OnSuccess`,
+without touching the older stack or interrupt controls
+(`internal/effect.ts:651`). census: op.OnSuccess -/
+theorem step_success_onSuccessConst [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
+    [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α)
+    (self : FrameFiber ν σ β ε δ ι α) (body next : Prim ν σ β ε δ ι α) (value : β)
+    (hdeferred : self.deferredInterrupt = false) :
+    (FrameFiber.mk (Prim.success value) (Prim.onSuccessConst body next :: self.stack)
+        self.interruptible self.interruptedCause self.deferredInterrupt).step interp =
+      (FrameStep.running { self with current := next },
+        [FrameEvent.popped (Prim.onSuccessConst body next)]) := by
+  exact resumeValue_onSuccessConst interp { self with current := Prim.success value }
+    body next value (some (Exit.success value)) hdeferred
 
 /-- `OnFailure` pushes itself and continues with its body.
 census: op.OnFailure -/
@@ -3052,6 +3146,7 @@ private theorem ensure_deferredInterrupt (frame : Prim ν σ β ε δ ι α)
   | yieldableError _ => rfl
   | iterator _ _ => rfl
   | onSuccess _ _ => rfl
+  | onSuccessConst _ _ => rfl
   | onFailure _ _ => rfl
   | onSuccessAndFailure _ _ _ => rfl
   | exitFrame _ => rfl

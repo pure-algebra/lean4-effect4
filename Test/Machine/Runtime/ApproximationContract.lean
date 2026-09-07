@@ -314,7 +314,9 @@ section Colimit
 #guard leastAt pBindSync [Api.evaluate] 20 = some 8
 #guard leastAt pBindSync [Api.evaluate, interruptRoot] 20 = some 8
 #guard leastAt pYieldNow [Api.evaluate, Api.flush] 50 = some 7
-#guard leastAt pTwoDeferred [Api.evaluate, Api.flush] 80 = some 20
+-- D6b: each tracked child's exit path is now `observe`, `exitDone` and the drain, and the
+-- tracking itself is a command, so the two-child join settles at 30 commands (20 before).
+#guard leastAt pTwoDeferred [Api.evaluate, Api.flush] 80 = some 30
 -- sufficiency is upward closed, and false below the least
 #guard sufficesAt pSucceed 4 [Api.evaluate] = false
 #guard sufficesAt pSucceed 5 [Api.evaluate] = true
@@ -324,9 +326,9 @@ section Colimit
 #guard sameMachine (runAt pYieldNow 7 [Api.evaluate, Api.flush]).machine
   (runAt pYieldNow 40 [Api.evaluate, Api.flush]).machine
 #guard (runAt pYieldNow 7 [Api.evaluate, Api.flush]).exit == some (Exit.success (Val.nat 5))
-#guard sameMachine (runAt pTwoDeferred 20 [Api.evaluate, Api.flush]).machine
+#guard sameMachine (runAt pTwoDeferred 30 [Api.evaluate, Api.flush]).machine
   (runAt pTwoDeferred 400 [Api.evaluate, Api.flush]).machine
-#guard (runAt pTwoDeferred 20 [Api.evaluate, Api.flush]).exit == some (Exit.success (Val.nat 1))
+#guard (runAt pTwoDeferred 30 [Api.evaluate, Api.flush]).exit == some (Exit.success (Val.nat 1))
 
 end Colimit
 

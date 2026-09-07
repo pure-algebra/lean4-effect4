@@ -168,7 +168,7 @@ def interruptedFromNowhere : Api.Run :=
 -- Race settlement reads both the accepted exit and the live entrants. The duplicate
 -- winner is bookkeeping only. These probes pin the precise collected positions.
 def raceCarrier (state : Supervision.RaceAllState Val Err Defect FiberId Ann) : Api.Machine :=
-  { Api.load waiting 80 with races := [⟨0, Api.root, 0, state, false, []⟩] }
+  { Api.load waiting 80 with races := [⟨0, Api.root, 0, state, false, [], false⟩] }
 
 #guard Minted (raceCarrier (Supervision.RaceAllState.initial []))
 #guard !(Minted (raceCarrier { Supervision.RaceAllState.initial [] with
@@ -194,5 +194,9 @@ theorem waiting_answered_minted :
 theorem forkJoin_minted :
     Minted (Api.replay pForkJoin 80 [Api.evaluate, RunDecision.fire Api.root]).machine :=
   handles_minted pForkJoin 80 _ [] ⟨load_minted pForkJoin 80, by decide⟩
+
+-- E4-CHECK-CE-010: numeric interruptor provenance is not a dereferenced handle.
+example (cell : DeferredKey) (id : FiberId) :
+    (SyncOp.deferredInterruptWith cell id).keys = [Handle.promise cell] := rfl
 
 end Test.Runtime.HandlesContract

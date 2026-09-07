@@ -899,6 +899,7 @@ let rec emit_row_shape (b : Buffer.t) (v : row_shape) : unit =
   match v with
   | Row_shape_call -> Eff_frame.emit_ctor b 0 (fun _ -> ())
   | Row_shape_value -> Eff_frame.emit_ctor b 1 (fun _ -> ())
+  | Row_shape_tupleCall -> Eff_frame.emit_ctor b 2 (fun _ -> ())
 
 let encode_row_shape (v : row_shape) : string = Eff_frame.to_string emit_row_shape v
 
@@ -911,6 +912,8 @@ let rec decode_row_shape (s : string) (pos : int) (limit : int) : (row_shape * i
       if p = e then Some (Row_shape_call, next) else None
     | 1 ->
       if p = e then Some (Row_shape_value, next) else None
+    | 2 ->
+      if p = e then Some (Row_shape_tupleCall, next) else None
     | _ -> None)
 
 let decode_row_shape_exact (s : string) : row_shape option = Eff_frame.exact decode_row_shape s

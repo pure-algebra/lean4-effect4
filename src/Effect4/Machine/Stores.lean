@@ -306,8 +306,16 @@ inductive ProgName
   | awaitAllNew (body : ProgName)
   /-- `fiberInterruptAll(targets)` (`:889-896`): the settled race's cleanup half (R2-12). -/
   | interruptFibers (targets : List FiberId)
+  /-- The masked cleanup half of a settled race: `fiberInterruptAll(fibers)` over the race's
+  live set *at cleanup time* (`internal/effect.ts:1510-1514`, D6a). -/
+  | cancelRace (race : Nat)
   /-- `fiberJoin`/`fiberAwait` on an existing handle (`:5291`, `:5304`). -/
   | joinFiber (target : FiberId) (mode : Supervision.ObserverMode)
+  /-- `scopeCloseFinalizers(scope, exit)` (`internal/effect.ts:3806-3827`, source-repairs
+  §20): the close of two or more finalizers, a `fnUntraced` generator walked by the counted
+  `Iterator` — sequential through the `Exit` primitive per finalizer, parallel as immediate
+  daemons awaited together. -/
+  | closeWalk (strategy : FinalizerStrategy) (order : List FinName) (exit : ExitV)
 deriving DecidableEq
 
 /-- The continuation, finalizer, registration and cancel names. All three of rc.112's
@@ -322,7 +330,7 @@ inductive Name
   | seq (next : ProgName)
   /-- contA on a `Val.fiber`: park as `join` (`:5291`) or `await` (`:5304`). -/
   | joinOn (mode : Supervision.ObserverMode)
-  /-- contA on a `Val.fiber`: `Deferred.interrupt`'s second half (`Deferred.ts:1231-1232`). -/
+  /-- contA on a numeric ID (`Val.nat`): `Deferred.interrupt`'s second half (`Deferred.ts:1231-1232`). -/
   | interruptWith (cell : DeferredKey)
   /-- contA on a reified `Exit`: `into`'s completion (`Deferred.ts:1781`). -/
   | doneInto (cell : DeferredKey)
@@ -358,17 +366,13 @@ inductive Name
   | reFail (cause : CauseV)
   /-- A scope finalizer name, carried by an `OnExit` frame. -/
   | finalizerName (fin : FinName)
-  /-- The sequential close chain (`internal/effect.ts:3817-3818`): the remaining finalizers,
-  the closing exit, and the reasons captured so far. -/
+  /-- The sequential close generator (`internal/effect.ts:3813-3818`, §20), the iterator
+  frame's name: the remaining finalizers, the closing exit, and the reasons captured so far. -/
   | closeSeq (remaining : List FinName) (exit : ExitV)
       (captured : List (Reason Err Defect FiberId Ann))
-  /-- The parallel close chain (`internal/effect.ts:3819-3821`): the remaining finalizers, the
-  closing exit, the fibers forked so far, and the closing fiber's inherited mask. -/
-  | closePar (remaining : List FinName) (exit : ExitV) (forked : List FiberId)
-      (closerInterruptible : Bool)
-  /-- The merge of the exits a countdown collected (`internal/effect.ts:3826`, M6): applied to
-  the `exitsValue` the `awaitAll` park answered with. -/
-  | mergeAwaitedExits
+  /-- The parallel close generator under its await (`internal/effect.ts:3823-3826`, §20; M6):
+  the frame's next step is `exitAsVoidAll` of the exits the `awaitAll` park answered with. -/
+  | closeParDone
 deriving DecidableEq
 
 /-- What a `withFiber` thunk names. The machine's `WithFiberAction` carries `Prim`s; a thunk
@@ -377,8 +381,14 @@ inductive ActionName
   | fork (program : ProgName) (options : Supervision.ForkOptions)
   | forkIn (program : ProgName) (options : Supervision.ForkOptions) (scope : Nat) (key : Nat)
   | forkScoped (program : ProgName) (options : Supervision.ForkOptions) (key : Nat)
+  /-- The `Scope` service read (`Context.ts:423`, source-repairs §20): the ambient scope's
+  handle as a value. -/
+  | ambientScope
   | runIn (target : FiberId) (scope : Nat) (key : Nat)
   | interrupt (target : FiberId)
+  /-- `fiberInterruptAs(target, who)` (`internal/effect.ts:871-884`): what the public
+  interrupt's `withFiber` returns (source-repairs §19, D6b). -/
+  | interruptAs (target : FiberId) (who : FiberId)
   | interruptScoped (target : FiberId)
   | interruptAll (targets : List FiberId) (interruptor : Option FiberId)
   | awaitAll (targets : List FiberId)
@@ -398,6 +408,10 @@ inductive ActionName
   | dropObservers (token : Nat)
   /-- The race park's cleanup (R2-13). -/
   | cancelRace (race : Nat)
+  /-- The parallel close's generator step (`internal/effect.ts:3819-3824`, §20): every
+  finalizer of the close order, at the closing exit, forked as an immediate daemon in the
+  closer's mask, then awaited under the generator's frame. -/
+  | closePar (order : List FinName) (exit : ExitV)
 deriving DecidableEq
 
 /-- Every thunk name: the one park the frame alphabet does not spell (`join`/`await`; yield
@@ -957,6 +971,24 @@ def voidAllOf (reasons : List (Reason Err Defect FiberId Ann)) : ExitV :=
 def mergeExits (exits : List ExitV) : ExitV :=
   voidAllOf (exits.flatMap Exit.causeReasons)
 
+/-- A generator that returns or yields an exit inline (`internal/effect.ts:1362-1372`): the
+step a value exit ends with, and the step a failure exit halts with. -/
+def stepOfExit {ν σ κ : Type} : ExitV → IterStep ν σ Val Err Defect FiberId Ann κ
+  | Exit.success value => IterStep.done value
+  | Exit.failure cause => IterStep.halt cause
+
+/-- `exitAsVoidAll` yielded inline at the end of `scopeCloseFinalizers` (`:3826`, `:2024-2038`;
+§20): the generator returns `void` when no reason was captured and yields the combined
+failure otherwise. -/
+def closeDone {ν σ κ : Type} : List (Reason Err Defect FiberId Ann) → IterStep ν σ Val Err Defect FiberId Ann κ
+  | [] => IterStep.done Val.unit
+  | reason :: rest => IterStep.halt ⟨reason :: rest⟩
+
+/-- The inline merge is `exitAsVoidAll` as a step. census: scope.close-merge -/
+theorem closeDone_eq {ν σ κ : Type} (reasons : List (Reason Err Defect FiberId Ann)) :
+    (closeDone reasons : IterStep ν σ Val Err Defect FiberId Ann κ) = stepOfExit (voidAllOf reasons) := by
+  cases reasons <;> rfl
+
 /-- The value-alphabet merge agrees with `Exit.asVoidAll` on which reasons it carries.
 census: scope.exit-as-void-all -/
 theorem mergeExits_reasons (exits : List ExitV) :
@@ -1054,6 +1086,20 @@ def finProgram : FinName → ExitV → Program
   | FinName.awaitNewChildren snapshot, _ =>
     Prim.withFiber (Thunk.act (ActionName.awaitNewChildren snapshot))
 
+/-- One step of the sequential close generator (`internal/effect.ts:3813-3818`, §20). The value
+delivered to the iterator frame is the previous finalizer's reified exit — the answer of the
+`Exit` primitive around it (`:3621-3637`) — or the entry cursor; its reasons are captured, a
+failing finalizer never aborting the walk. The next finalizer is yielded under `Exit`, in
+close order; with none left the walk ends with `exitAsVoidAll` inline (`:3826`). -/
+def closeSeqStep (remaining : List FinName) (exit : ExitV)
+    (captured : List (Reason Err Defect FiberId Ann)) (value : Val) :
+    IterStep Name Thunk Val Err Defect FiberId Ann Program :=
+  let captured := captured ++ reasonsOfVal value
+  match remaining with
+  | [] => closeDone captured
+  | fin :: rest =>
+    IterStep.resume (Prim.exitFrame (finProgram fin exit)) (Name.closeSeq rest exit captured)
+
 /-- The stored primitive a `Completion` names. `done exit = completeWith (Prim.ofExit exit)`
 (`Deferred.ts:570-571`); `ofRefGet` is a non-exit effect, stored and not run (`:456-461`). -/
 def completionPrim : Completion Val Err Defect FiberId Ann → Program
@@ -1110,16 +1156,25 @@ def progOf : ProgName → Program
   | ProgName.interruptFibers targets =>
     Prim.withFiber (Thunk.act (ActionName.interruptAll targets none))
   | ProgName.joinFiber target mode => Prim.suspend (Thunk.park (ParkKind.join target mode))
+  | ProgName.cancelRace race => Prim.withFiber (Thunk.act (ActionName.cancelRace race))
+  -- the counted `Iterator` entry of `scopeCloseFinalizers` (`:3806-3827`, §20): the sequential
+  -- generator from its first finalizer, or the parallel step as the one action
+  | ProgName.closeWalk FinalizerStrategy.sequential order exit =>
+    Prim.iterator (Name.closeSeq order exit []) Val.unit
+  | ProgName.closeWalk FinalizerStrategy.parallel order exit =>
+    Prim.withFiber (Thunk.act (ActionName.closePar order exit))
 
 /-- What a settled race resumes its host with (`internal/effect.ts:1510-1514`, R2-12):
-`flatMap(uninterruptible(fiberInterruptAll(live)), () => exit)`, or `exit` when no entrant is
-live. `Name.restore exit` is the `() => exit` (its contA discards the value). -/
-def raceSettleProgram (live : List FiberId) (exit : ExitV) : Program :=
-  if live.isEmpty then Prim.ofExit exit
-  else
+`exit` when the winning callback saw no live entrant, otherwise
+`flatMap(uninterruptible(fiberInterruptAll(fibers)), () => exit)` over the race's live set
+at cleanup time, which `ProgName.cancelRace` names (D6a). `Name.restore exit` is the
+`() => exit` (its contA discards the value). -/
+def raceSettleProgram (race : Nat) (cleanupNeeded : Bool) (exit : ExitV) : Program :=
+  if cleanupNeeded then
     Prim.onSuccess
-      (Prim.withFiber (Thunk.act (ActionName.setInterruptible (ProgName.interruptFibers live) false)))
+      (Prim.withFiber (Thunk.act (ActionName.setInterruptible (ProgName.cancelRace race) false)))
       (Name.restore exit)
+  else Prim.ofExit exit
 
 /-- The cancel effect a cancel *name* runs. `cancelName` attached the parked fiber's identity
 and its resume token, so `_await`'s cleanup can splice exactly that resume out
@@ -1134,49 +1189,37 @@ def cancelProgram : Name → Program
     Prim.withFiber (Thunk.act (ActionName.cancelRace race))
   | _ => Prim.success Val.unit
 
-/-- The sequential close chain (`internal/effect.ts:3813-3818`): the finalizers in
-`closeOrder`, each awaited through its own exit — `exit(finalizer(exit_))` never throws — with
-the captured reasons merged by `exitAsVoidAll` at the end (`:3826`). -/
-def closeSeqChain : List FinName → ExitV →
-    List (Reason Err Defect FiberId Ann) → Program
-  | [], _, captured => Prim.ofExit (voidAllOf captured)
-  | fin :: rest, exit, captured =>
-    Prim.onSuccessAndFailure (finProgram fin exit)
-      (Name.closeSeq rest exit captured) (Name.closeSeq rest exit captured)
+/-- The state and captured finalizers of `scopeCloseUnsafe`
+(`internal/effect.ts:3782-3797`). A closed scope has an empty close order; closing
+it again retains its recorded exit. Both code representations use this snapshot. -/
+def scopeCloseSnapshot (scope : Nat) (exit : ExitV) (state : Stores) :
+    Option (Stores × FinalizerStrategy × List FinName) := do
+  let entry ← state.scopes.entryAt scope
+  return ({ state with scopes := state.scopes.closeState scope exit },
+    entry.scope.strategy, entry.scope.closeOrder)
 
-/-- The parallel close chain (`internal/effect.ts:3819-3821`): each finalizer is forked as an
-*immediate daemon* whose mask is the closing fiber's, then all of them are awaited together
-(`:3823-3824`) and every exit merged (`:3826`). Since M6 the merge reads the exits the
-countdown collected, not a store side-channel. -/
-def closeParChain (closerInterruptible : Bool) :
-    List FinName → ExitV → List FiberId → Program
-  | [], _, forked =>
-    Prim.onSuccess (Prim.withFiber (Thunk.act (ActionName.awaitAll forked)))
-      Name.mergeAwaitedExits
-  | fin :: rest, exit, forked =>
-    Prim.onSuccess
-      (Prim.withFiber (Thunk.act (ActionName.fork (ProgName.finalizerOf fin exit)
-        ⟨true, true,
-          if closerInterruptible then Supervision.MaskMode.interruptible
-          else Supervision.MaskMode.uninterruptible⟩)))
-      (Name.closePar rest exit forked closerInterruptible)
+/-- Unsafe close may return no effect (`internal/effect.ts:3782-3797`). A single finalizer is
+returned directly; two or more are `scopeCloseFinalizers` (`:3806-3827`, §20): the counted
+`fnUntraced` suspend whose body is the counted `Iterator` walk (`ProgName.closeWalk`). The
+closer's mask is what the parallel walk's daemons inherit at their fork, so it is not part of
+the program. `Effect4.Scope.closeState` runs first: the state is written before any finalizer
+program is built (`:3784`). -/
+def storesCloseScopeUnsafe (scope : Nat) (exit : ExitV) (_closerInterruptible : Bool)
+    (state : Stores) : Option (Stores × Option Program) := do
+  let (state, strategy, order) ← scopeCloseSnapshot scope exit state
+  return (state, match order with
+    | [] => none
+    | [fin] => some (finProgram fin exit)
+    | _ => some (Prim.suspend (Thunk.body (ProgName.closeWalk strategy order exit))))
 
-/-- The close program of a scope, by its strategy. `Effect4.Scope.closeState` runs first, so the
-state is written before any finalizer program is built (`internal/effect.ts:3784`), and the
-close of an already closed scope is void. `none` is an unknown scope key, which the machine
-turns into `Stuck.unknownScope` — a live frontier, never a cause (M7). -/
+/-- `Scope.close(scope, exit)` (`internal/effect.ts:3775-3776`): `scopeCloseUnsafe(...) ??
+void_` — the unsafe close's program, or void when it returns none (an empty or already
+closed scope). `none` is an unknown scope key, which the machine turns into
+`Stuck.unknownScope` — a live frontier, never a cause (M7). -/
 def storesCloseScope (scope : Nat) (exit : ExitV) (closerInterruptible : Bool)
     (state : Stores) : Option (Stores × Program) :=
-  match state.scopes.entryAt scope with
-  | none => none
-  | some entry =>
-    if entry.scope.isClosed then some (state, Prim.success Val.unit)
-    else
-      let order := entry.scope.closeOrder
-      let state := { state with scopes := state.scopes.closeState scope exit }
-      match entry.scope.strategy with
-      | FinalizerStrategy.sequential => some (state, closeSeqChain order exit [])
-      | FinalizerStrategy.parallel => some (state, closeParChain closerInterruptible order exit [])
+  (storesCloseScopeUnsafe scope exit closerInterruptible state).map fun r =>
+    (r.1, r.2.getD (Prim.success Val.unit))
 
 /-! ## The store steps under `Prim.sync` -/
 
@@ -1221,8 +1264,8 @@ def contAOf : Name → Val → Program
   | Name.seq next, _ => progOf next
   | Name.joinOn mode, Val.fiber id => Prim.suspend (Thunk.park (ParkKind.join id mode))
   | Name.joinOn _, _ => Prim.failure (Cause.die Defect.badName)
-  | Name.interruptWith cell, Val.fiber id =>
-    Prim.sync (Thunk.op (SyncOp.deferredInterruptWith cell id))
+  | Name.interruptWith cell, Val.nat id =>
+    Prim.sync (Thunk.op (SyncOp.deferredInterruptWith cell ⟨id⟩))
   | Name.interruptWith _, _ => Prim.failure (Cause.die Defect.badName)
   | Name.doneInto cell, Val.exitOk value =>
     Prim.sync (Thunk.op (SyncOp.deferredCompleteWith cell (Completion.ofExit (Exit.success value))))
@@ -1239,11 +1282,6 @@ def contAOf : Name → Val → Program
     Prim.onExit (progOf body) (Name.finalizerName (FinName.awaitNewChildren snapshot)) false
   | Name.snapshotThen body, _ =>
     Prim.onExit (progOf body) (Name.finalizerName (FinName.awaitNewChildren [])) false
-  | Name.closeSeq rest exit captured, _ => closeSeqChain rest exit captured
-  | Name.closePar rest exit forked masked, Val.fiber id =>
-    closeParChain masked rest exit (forked ++ [id])
-  | Name.closePar rest exit forked masked, _ => closeParChain masked rest exit forked
-  | Name.mergeAwaitedExits, value => Prim.ofExit (voidAllOf (reasonsOfVal value))
   | Name.reFail cause, _ => Prim.failure cause
   | _, value => Prim.success value
 
@@ -1253,8 +1291,6 @@ def contEOf : Name → CauseV → Program
     Prim.ofExit (Exit.restoreAfterFinalizer exit (Exit.failure cause))
   | Name.merge exit, cause =>
     Prim.ofExit (Exit.restoreAfterFinalizer exit (Exit.failure cause))
-  | Name.closeSeq rest exit captured, cause =>
-    closeSeqChain rest exit (captured ++ cause.reasons)
   | Name.constant value, _ => Prim.success value
   | _, cause => Prim.failure cause
 
@@ -1265,8 +1301,10 @@ def actionOf : ActionName → WithFiberAction Name Thunk Val Err Defect FiberId 
     WithFiberAction.forkIn (progOf program) options scope key
   | ActionName.forkScoped program options key =>
     WithFiberAction.forkScoped (progOf program) options key
+  | ActionName.ambientScope => WithFiberAction.ambientScope
   | ActionName.runIn target scope key => WithFiberAction.runIn target scope key
   | ActionName.interrupt target => WithFiberAction.interrupt target
+  | ActionName.interruptAs target who => WithFiberAction.interruptAs target who
   | ActionName.interruptScoped target => WithFiberAction.interruptScoped target
   | ActionName.interruptAll targets interruptor =>
     WithFiberAction.interruptAll targets interruptor
@@ -1283,6 +1321,8 @@ def actionOf : ActionName → WithFiberAction Name Thunk Val Err Defect FiberId 
   | ActionName.refuse cause => WithFiberAction.refuse cause
   | ActionName.dropObservers token => WithFiberAction.dropObservers token
   | ActionName.cancelRace race => WithFiberAction.cancelRace race
+  -- the parallel walk's step: the finalizer programs at the closing exit, in close order (§20)
+  | ActionName.closePar order exit => WithFiberAction.closePar (order.map fun fin => finProgram fin exit)
 
 /-! ## The interp -/
 
@@ -1329,7 +1369,12 @@ def stores : RunInterp Name Thunk Val Err Defect FiberId Ann Ctx Stores where
     | Name.finalizerName fin, exit => finExit fin exit
     | _, _ => Exit.void
   reifyExit := reifyExitVal
-  iterNext := fun _ value => ([], IterStep.done value)
+  -- the close generators (`scopeCloseFinalizers`, `:3806-3827`, §20): the sequential walk's
+  -- step, and the parallel walk's inline merge of the exits its await answered
+  iterNext := fun
+    | Name.closeSeq remaining exit captured, value => ([], closeSeqStep remaining exit captured value)
+    | Name.closeParDone, value => ([], closeDone (reasonsOfVal value))
+    | _, value => ([], IterStep.done value)
   loopTest := fun _ _ => false
   loopBody := fun _ value => Prim.success value
   loopStep := fun _ _ value => value
@@ -1341,6 +1386,11 @@ def stores : RunInterp Name Thunk Val Err Defect FiberId Ann Ctx Stores where
   parkOf := fun
     | Prim.suspend (Thunk.park kind) => some (Except.ok kind)
     | _ => none
+  parkCode := fun kind => Prim.suspend (Thunk.park kind)
+  -- the interrupt programs are the named `withFiber` actions (source-repairs §19, D6b)
+  interruptCode := fun target => Prim.withFiber (Thunk.act (ActionName.interrupt target))
+  interruptAsCode := fun target who => Prim.withFiber (Thunk.act (ActionName.interruptAs target who))
+  interruptAllCode := fun targets => Prim.withFiber (Thunk.act (ActionName.interruptAll targets none))
   withFiberOf := fun
     | Thunk.act action => some (actionOf action)
     | _ => none
@@ -1395,9 +1445,12 @@ def stores : RunInterp Name Thunk Val Err Defect FiberId Ann Ctx Stores where
     | Supervision.ObserverMode.awaitValue => Prim.success (reifyExitVal exit)
     | Supervision.ObserverMode.joinEffect => Prim.ofExit exit
   fiberValue := Val.fiber
+  fiberIdValue := fun fiber => Val.nat fiber.value
   fibersValue := Val.fibers
   exitsValue := exitsVal
   voidValue := Val.unit
+  scopeValue := Val.scopeHandle
+  closeDoneName := Name.closeParDone
   encodeFiber := id
   stackAnnotations := stackAnnotationsOf
   asyncFiberError := Defect.asyncFiber
@@ -1442,7 +1495,7 @@ theorem interruptDeferred_spelling (cell : DeferredKey) :
 /-- `deferred.interrupt`: the continuation applied to the running fiber's own id delegates to
 `interruptWith` with that id. census: deferred.interrupt -/
 theorem interruptDeferred_delegates (cell : DeferredKey) (id : FiberId) :
-    contAOf (Name.interruptWith cell) (Val.fiber id) =
+    contAOf (Name.interruptWith cell) (Val.nat id.value) =
       Prim.sync (Thunk.op (SyncOp.deferredInterruptWith cell id)) := rfl
 
 /-- `deferred.into-uninterruptible`: the body runs under an `Exit` frame, so an interrupted body
@@ -1498,62 +1551,63 @@ theorem deferredPoll_no_write (st : Stores) (cell : DeferredKey) :
 
 /-! ### The `scope.*` clauses this store makes statable -/
 
-/-- `scope.close-lifo`: the close order is the materialised registration list, backwards, and
-the close program runs the finalizers in exactly that order.
+/-- `scope.close-lifo`, `scope.close-sequential`: two or more finalizers close through the
+generator `scopeCloseFinalizers` (`internal/effect.ts:3806-3827`, §20). The counted
+`fnUntraced` suspend returns the counted `Iterator` over the close order — the materialised
+registration list, backwards — from its first finalizer, with nothing captured yet.
 census: scope.close-lifo, scope.close-sequential -/
-theorem closeSeqChain_order (fin : FinName) (rest : List FinName) (exit : ExitV)
-    (captured : List (Reason Err Defect FiberId Ann)) :
-    closeSeqChain (fin :: rest) exit captured =
-      Prim.onSuccessAndFailure (finProgram fin exit)
-        (Name.closeSeq rest exit captured) (Name.closeSeq rest exit captured) := rfl
+theorem closeWalk_sequential (order : List FinName) (exit : ExitV) :
+    progOf (ProgName.closeWalk FinalizerStrategy.sequential order exit) =
+      Prim.iterator (Name.closeSeq order exit []) Val.unit := rfl
 
-/-- `scope.close-sequential`: a failing finalizer does not abort the loop; its reasons are
-captured and the chain continues with the next finalizer.
+/-- `scope.close-sequential`: each step of the sequential walk yields the next finalizer of the
+close order under the `Exit` primitive (`:3617`, `:3621-3637`), whose reified exit is what the
+frame delivers to the next step; the reasons of the delivered value are captured first.
+census: scope.close-lifo, scope.close-sequential -/
+theorem closeSeq_step (fin : FinName) (rest : List FinName) (exit : ExitV)
+    (captured : List (Reason Err Defect FiberId Ann)) (value : Val) :
+    stores.iterNext (Name.closeSeq (fin :: rest) exit captured) value =
+      ([], IterStep.resume (Prim.exitFrame (finProgram fin exit))
+        (Name.closeSeq rest exit (captured ++ reasonsOfVal value))) := rfl
+
+/-- `scope.close-sequential`: a failing finalizer does not abort the walk; the reasons of its
+reified failure exit are captured and the walk continues with the next finalizer.
 census: scope.close-sequential -/
-theorem closeSeqChain_captures (rest : List FinName) (exit : ExitV)
+theorem closeSeq_captures (rest : List FinName) (exit : ExitV)
     (captured : List (Reason Err Defect FiberId Ann)) (cause : CauseV) :
-    contEOf (Name.closeSeq rest exit captured) cause =
-      closeSeqChain rest exit (captured ++ cause.reasons) := rfl
+    stores.iterNext (Name.closeSeq rest exit captured) (Val.exitErr cause) =
+      ([], closeSeqStep rest exit (captured ++ cause.reasons) Val.unit) := by
+  cases rest <;> simp [stores, closeSeqStep, reasonsOfVal]
 
-/-- `scope.close-merge`: an empty remainder merges the captured reasons by the `exitAsVoidAll`
-shape. census: scope.close-merge -/
-theorem closeSeqChain_merges (exit : ExitV)
-    (captured : List (Reason Err Defect FiberId Ann)) :
-    closeSeqChain [] exit captured = Prim.ofExit (voidAllOf captured) := rfl
+/-- `scope.close-merge`: with no finalizer left the walk ends with `exitAsVoidAll` of the
+captured reasons, yielded inline (`:3826`, `:2024-2038`): the generator returns `void`, or
+halts with the combined failure. census: scope.close-merge -/
+theorem closeSeq_merges (exit : ExitV) (captured : List (Reason Err Defect FiberId Ann))
+    (value : Val) :
+    stores.iterNext (Name.closeSeq [] exit captured) value =
+      ([], closeDone (captured ++ reasonsOfVal value)) := rfl
 
-/-- `scope.close-parallel`: each finalizer is forked as an *immediate daemon* whose mask is the
-closing fiber's. census: scope.close-parallel -/
-theorem closeParChain_forks_immediate_daemon (fin : FinName) (rest : List FinName)
-    (exit : ExitV) (forked : List FiberId) :
-    closeParChain true (fin :: rest) exit forked =
-      Prim.onSuccess
-        (Prim.withFiber (Thunk.act (ActionName.fork (ProgName.finalizerOf fin exit)
-          ⟨true, true, Supervision.MaskMode.interruptible⟩)))
-        (Name.closePar rest exit forked true) := rfl
+/-- `scope.close-parallel`: the parallel walk's `Iterator` entry is the one action that forks
+every finalizer of the close order, at the closing exit (`:3819-3821`).
+census: scope.close-parallel -/
+theorem closeWalk_parallel (order : List FinName) (exit : ExitV) :
+    progOf (ProgName.closeWalk FinalizerStrategy.parallel order exit) =
+      Prim.withFiber (Thunk.act (ActionName.closePar order exit)) := rfl
 
-/-- `scope.close-parallel`: a masked closer's finalizer daemons are masked too. -/
-theorem closeParChain_inherits_mask (fin : FinName) (rest : List FinName)
-    (exit : ExitV) (forked : List FiberId) :
-    closeParChain false (fin :: rest) exit forked =
-      Prim.onSuccess
-        (Prim.withFiber (Thunk.act (ActionName.fork (ProgName.finalizerOf fin exit)
-          ⟨true, true, Supervision.MaskMode.uninterruptible⟩)))
-        (Name.closePar rest exit forked false) := rfl
+/-- `scope.close-parallel`: the parallel step's programs are the finalizer programs at the
+closing exit, in close order; the machine forks each as an immediate daemon inheriting the
+closer's mask (`withFiber_closePar`, `forkFinalizers_cons`). census: scope.close-parallel -/
+theorem actionOf_closePar (order : List FinName) (exit : ExitV) :
+    actionOf (ActionName.closePar order exit) =
+      WithFiberAction.closePar (order.map fun fin => finProgram fin exit) := rfl
 
-/-- `scope.close-merge`: the parallel finalizer fibers are awaited together and every exit is
-merged. census: scope.close-merge -/
-theorem closeParChain_awaits_all (exit : ExitV) (forked : List FiberId) :
-    closeParChain true [] exit forked =
-      Prim.onSuccess (Prim.withFiber (Thunk.act (ActionName.awaitAll forked)))
-        Name.mergeAwaitedExits := rfl
-
-/-- `scope.close-merge` (M6): the merge the close answers is `exitAsVoidAll` of exactly the
-exits the countdown collected — no store side-channel. -/
-theorem mergeAwaitedExits_is_asVoidAll (exits : List ExitV) :
-    contAOf Name.mergeAwaitedExits (stores.exitsValue exits) =
-      Prim.ofExit (mergeExits exits) := by
-  show Prim.ofExit (voidAllOf (reasonsOfVal (exitsVal exits))) = _
-  rw [mergeAwaited_eq_mergeExits]
+/-- `scope.close-merge` (M6, §20): the parallel walk's done step, delivered the exits its await
+answered, is `exitAsVoidAll` of exactly those exits — no store side-channel. -/
+theorem closeParDone_is_asVoidAll (exits : List ExitV) :
+    stores.iterNext Name.closeParDone (stores.exitsValue exits) =
+      ([], stepOfExit (mergeExits exits)) := by
+  show ([], closeDone (reasonsOfVal (exitsVal exits))) = _
+  rw [closeDone_eq, mergeAwaited_eq_mergeExits]
 
 /-- `scope.close-state-first`: the state is written before any finalizer program is built, so
 the written state cannot depend on what a finalizer does.
@@ -1565,16 +1619,15 @@ theorem storesCloseScope_state_first (scope : Nat) (exit : ExitV) (state : Store
       some { state with scopes := state.scopes.closeState scope exit } ∧
     (storesCloseScope scope exit false state).map Prod.fst =
       some { state with scopes := state.scopes.closeState scope exit } := by
-  constructor <;>
-    · simp only [storesCloseScope, h, hopen, Bool.false_eq_true, if_false]
-      split <;> rfl
+  have _ := hopen
+  constructor <;> simp [storesCloseScope, storesCloseScopeUnsafe, scopeCloseSnapshot, h]
 
 /-- M7: an unknown scope key is a frontier, not a cause — the hook answers `none` and the
 machine halts with `Stuck.unknownScope`. -/
 theorem storesCloseScope_unknown (scope : Nat) (exit : ExitV) (masked : Bool) (state : Stores)
     (h : state.scopes.entryAt scope = none) :
     storesCloseScope scope exit masked state = none := by
-  simp [storesCloseScope, h]
+  simp [storesCloseScope, storesCloseScopeUnsafe, scopeCloseSnapshot, h]
 
 /-- `scope.fork-linkage`: the linked names *are* `scopeClose(child, exit)` on the parent side
 and `scopeRemoveFinalizerUnsafe(parent, key)` on the child side, under one shared key — the

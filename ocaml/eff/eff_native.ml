@@ -81,11 +81,11 @@ let row_of : native_op -> row = function
   | Native_op_refGet ->
     { row_name = "refGet"; row_spelling = "Ref.get"; row_shape = Row_shape_call; row_trailing = []; row_kind = Row_kind_sync; row_request = (Ty_handle "Ref.Ref<number>"); row_answer = Ty_nat; row_error = Ty_never; row_requires = []; row_cite = "Ref.ts:200" }
   | Native_op_refSet ->
-    { row_name = "refSet"; row_spelling = "Ref.set"; row_shape = Row_shape_call; row_trailing = []; row_kind = Row_kind_sync; row_request = (Ty_prod ((Ty_handle "Ref.Ref<number>"), Ty_nat)); row_answer = (Ty_handle "Ref.Ref<number>"); row_error = Ty_never; row_requires = []; row_cite = "Ref.ts:306-307" }
+    { row_name = "refSet"; row_spelling = "Ref.set"; row_shape = Row_shape_tupleCall; row_trailing = []; row_kind = Row_kind_sync; row_request = (Ty_prod ((Ty_handle "Ref.Ref<number>"), Ty_nat)); row_answer = (Ty_handle "Ref.Ref<number>"); row_error = Ty_never; row_requires = []; row_cite = "Ref.ts:306-307" }
   | Native_op_refGetAndSet ->
-    { row_name = "refGetAndSet"; row_spelling = "Ref.getAndSet"; row_shape = Row_shape_call; row_trailing = []; row_kind = Row_kind_sync; row_request = (Ty_prod ((Ty_handle "Ref.Ref<number>"), Ty_nat)); row_answer = Ty_nat; row_error = Ty_never; row_requires = []; row_cite = "Ref.ts:399-404" }
+    { row_name = "refGetAndSet"; row_spelling = "Ref.getAndSet"; row_shape = Row_shape_tupleCall; row_trailing = []; row_kind = Row_kind_sync; row_request = (Ty_prod ((Ty_handle "Ref.Ref<number>"), Ty_nat)); row_answer = Ty_nat; row_error = Ty_never; row_requires = []; row_cite = "Ref.ts:399-404" }
   | Native_op_refSetAndGet ->
-    { row_name = "refSetAndGet"; row_spelling = "Ref.setAndGet"; row_shape = Row_shape_call; row_trailing = []; row_kind = Row_kind_sync; row_request = (Ty_prod ((Ty_handle "Ref.Ref<number>"), Ty_nat)); row_answer = Ty_nat; row_error = Ty_never; row_requires = []; row_cite = "Ref.ts:747" }
+    { row_name = "refSetAndGet"; row_spelling = "Ref.setAndGet"; row_shape = Row_shape_tupleCall; row_trailing = []; row_kind = Row_kind_sync; row_request = (Ty_prod ((Ty_handle "Ref.Ref<number>"), Ty_nat)); row_answer = Ty_nat; row_error = Ty_never; row_requires = []; row_cite = "Ref.ts:747" }
   | (Native_op_refUpdate Fn_name_incr) ->
     { row_name = "refUpdate"; row_spelling = "Ref.update"; row_shape = Row_shape_call; row_trailing = ["incr"]; row_kind = Row_kind_sync; row_request = (Ty_handle "Ref.Ref<number>"); row_answer = Ty_unit; row_error = Ty_never; row_requires = []; row_cite = "Ref.ts:1273-1276" }
   | (Native_op_refUpdate Fn_name_double) ->
@@ -173,9 +173,9 @@ let row_of : native_op -> row = function
   | Native_op_deferredPoll ->
     { row_name = "deferredPoll"; row_spelling = "Deferred.poll"; row_shape = Row_shape_call; row_trailing = []; row_kind = Row_kind_sync; row_request = (Ty_handle "Deferred.Deferred<number, number>"); row_answer = Ty_bool; row_error = Ty_never; row_requires = []; row_cite = "Deferred.ts:1414-1416" }
   | Native_op_deferredSucceed ->
-    { row_name = "deferredSucceed"; row_spelling = "Deferred.succeed"; row_shape = Row_shape_call; row_trailing = []; row_kind = Row_kind_sync; row_request = (Ty_prod ((Ty_handle "Deferred.Deferred<number, number>"), Ty_nat)); row_answer = Ty_bool; row_error = Ty_never; row_requires = []; row_cite = "Deferred.ts:1514" }
+    { row_name = "deferredSucceed"; row_spelling = "Deferred.succeed"; row_shape = Row_shape_tupleCall; row_trailing = []; row_kind = Row_kind_sync; row_request = (Ty_prod ((Ty_handle "Deferred.Deferred<number, number>"), Ty_nat)); row_answer = Ty_bool; row_error = Ty_never; row_requires = []; row_cite = "Deferred.ts:1514" }
   | Native_op_deferredFail ->
-    { row_name = "deferredFail"; row_spelling = "Deferred.fail"; row_shape = Row_shape_call; row_trailing = []; row_kind = Row_kind_sync; row_request = (Ty_prod ((Ty_handle "Deferred.Deferred<number, number>"), Ty_nat)); row_answer = Ty_bool; row_error = Ty_never; row_requires = []; row_cite = "Deferred.ts:669" }
+    { row_name = "deferredFail"; row_spelling = "Deferred.fail"; row_shape = Row_shape_tupleCall; row_trailing = []; row_kind = Row_kind_sync; row_request = (Ty_prod ((Ty_handle "Deferred.Deferred<number, number>"), Ty_nat)); row_answer = Ty_bool; row_error = Ty_never; row_requires = []; row_cite = "Deferred.ts:669" }
   | Native_op_deferredAwait ->
     { row_name = "deferredAwait"; row_spelling = "Deferred.await"; row_shape = Row_shape_call; row_trailing = []; row_kind = Row_kind_async; row_request = (Ty_handle "Deferred.Deferred<number, number>"); row_answer = Ty_nat; row_error = Ty_nat; row_requires = []; row_cite = "Deferred.ts:173-186" }
   | (Native_op_scopeMake Finalizer_strategy_sequential) ->

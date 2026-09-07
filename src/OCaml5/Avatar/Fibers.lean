@@ -256,13 +256,36 @@ def cmd : InductiveDesc where
      { leanName := "resume",
        args := [⟨"fiber", fid, false⟩, ⟨"token", .nat, false⟩, ⟨"answer", codeL, false⟩] },
      { leanName := "launch", args := [⟨"race", .nat, false⟩] },
+     -- D6a (2026-09-07): the register loop's enrollment after the entrant's immediate run,
+     -- and the return of the registration
+     { leanName := "enrollRace", args := [⟨"race", .nat, false⟩, ⟨"child", fid, false⟩] },
+     { leanName := "registrationDone", args := [⟨"race", .nat, false⟩, ⟨"yielding", .bool, false⟩] },
+     -- D6b (2026-09-07): ordered interruption, its return, the race cleanup's Set walk,
+     -- post-run child tracking, and the exit path's ordered observers and clearing
+     { leanName := "interruptTarget",
+       args := [⟨"target", fid, false⟩, ⟨"who", .opt fid, false⟩,
+                ⟨"extra", .app "ReasonAnnotations" [.nm "α"], false⟩] },
+     { leanName := "afterInterrupt",
+       args := [⟨"host", fid, false⟩, ⟨"yielding", .bool, false⟩, ⟨"kind", .nm "ParkKind", false⟩] },
+     { leanName := "raceCancel",
+       args := [⟨"race", .nat, false⟩, ⟨"host", fid, false⟩, ⟨"yielding", .bool, false⟩,
+                ⟨"remaining", .lst fid, false⟩, ⟨"visited", .lst fid, false⟩] },
+     { leanName := "trackChild", args := [⟨"parent", fid, false⟩, ⟨"child", fid, false⟩] },
+     { leanName := "observe",
+       args := [⟨"fiber", fid, false⟩, ⟨"exit", exitL, false⟩, ⟨"observer", .nm "Observer", false⟩] },
+     { leanName := "exitDone", args := [⟨"fiber", fid, false⟩] },
+     -- §20 (2026-09-07): the parallel close's await, yielded under the generator's frame
+     { leanName := "closeParAwait",
+       args := [⟨"host", fid, false⟩, ⟨"yielding", .bool, false⟩, ⟨"fibers", .lst fid, false⟩] },
      { leanName := "link",
        args := [⟨"mode", .nm "Supervision.ScopeMode", false⟩, ⟨"scope", .nat, false⟩,
                 ⟨"key", .nat, false⟩, ⟨"target", fid, false⟩, ⟨"interruptor", .opt fid, false⟩,
                 ⟨"extra", .app "ReasonAnnotations" [.nm "α"], false⟩] },
      { leanName := "drainDue" }]
 
-/-- `WithFiberAction` (`Fibers.lean:211`), 20 constructors, prefix `W`: the seventeen of
+/-- `WithFiberAction` (`Fibers.lean:211`), 23 constructors since §20's `ambientScope` and
+`closePar` (2026-09-07), 21 since D6b's `interruptAs`
+(2026-09-07), prefix `W`: the seventeen of
 `e77282d`, `dropObservers` and `cancelRace` (`2f77f7d`, R2-3/R2-13), and `awaitAllFailFast`
 (`Effect.all`/`forEach` with concurrency, `Layer.ts:1597-1598`) — the last three caught up by the
 drift re-diff of 2026-09-04. Every `Prim` argument is an *action's program*, not an answer, so
@@ -283,9 +306,13 @@ def withFiberAction : InductiveDesc where
      { leanName := "forkScoped",
        args := [⟨"program", codeL, true⟩, ⟨"options", .nm "Supervision.ForkOptions", false⟩,
                 ⟨"key", .nat, false⟩] },
+     -- §20 (2026-09-07): the `Scope` service read, `forkScoped`'s first half
+     { leanName := "ambientScope" },
      { leanName := "runIn",
        args := [⟨"target", fid, false⟩, ⟨"scope", .nat, false⟩, ⟨"key", .nat, false⟩] },
      { leanName := "interrupt", args := [⟨"target", fid, false⟩] },
+     -- D6b (2026-09-07): `fiberInterruptAs`, what the public interrupt returns
+     { leanName := "interruptAs", args := [⟨"target", fid, false⟩, ⟨"who", fid, false⟩] },
      { leanName := "interruptScoped", args := [⟨"target", fid, false⟩] },
      { leanName := "interruptAll",
        args := [⟨"targets", .lst fid, false⟩, ⟨"interruptor", .opt fid, false⟩] },
@@ -300,6 +327,8 @@ def withFiberAction : InductiveDesc where
      { leanName := "getContext" },
      { leanName := "getId" },
      { leanName := "closeScope", args := [⟨"scope", .nat, false⟩, ⟨"exit", exitL, false⟩] },
+     -- §20 (2026-09-07): the parallel close's generator step over the finalizer programs
+     { leanName := "closePar", args := [⟨"finalizers", .lst codeL, true⟩] },
      { leanName := "refuse", args := [⟨"cause", .app "Cause" [.nm "ε"], false⟩] },
      { leanName := "dropObservers", args := [⟨"token", .nat, false⟩] },
      { leanName := "cancelRace", args := [⟨"race", .nat, false⟩] }]
@@ -566,16 +595,20 @@ for that diff to be meaningful. -/
 -- Request 2: constructor order and arity, per carrier.
 -- (`Fibers.lean` of 2026-09-04: `RunEvent` 21 since `raceSkipped` retired, `Cmd` 8 with
 -- `deliver`/`finish`/`link`, `WithFiberAction` 20 with `awaitAllFailFast`/`dropObservers`/
--- `cancelRace`.)
+-- `cancelRace`; `Cmd` 10 since D6a's `enrollRace`/`registrationDone` of 2026-09-07, 16 and
+-- `WithFiberAction` 21 since D6b's ordered interruption of the same day; `Cmd` 17 and
+-- `WithFiberAction` 23 since §20's service read and parallel close step of the same day.)
 #guard Fibers.observer.ctors.length == 6
 #guard Fibers.runEvent.ctors.length == 21
 #guard Fibers.runDecision.ctors.length == 7
-#guard Fibers.cmd.ctors.length == 8
-#guard Fibers.withFiberAction.ctors.length == 20
--- The three `Cmd` arms with no OCaml existence say so; the five others do not.
+#guard Fibers.cmd.ctors.length == 17
+#guard Fibers.withFiberAction.ctors.length == 23
+-- The three `Cmd` arms with no OCaml existence say so; the fourteen others do not.
 #guard (Fibers.cmd.ctors.filter (·.comment.isSome)).map (·.leanName) == ["loop", "deliver", "finish"]
 #guard Fibers.cmd.ctors.map (CtorDesc.ocaml "C") ==
-  ["Cevaluate", "Cloop", "Cdeliver", "Cfinish", "Cresume", "Claunch", "Clink", "CdrainDue"]
+  ["Cevaluate", "Cloop", "Cdeliver", "Cfinish", "Cresume", "Claunch", "CenrollRace",
+   "CregistrationDone", "CinterruptTarget", "CafterInterrupt", "CraceCancel", "CtrackChild",
+   "Cobserve", "CexitDone", "CcloseParAwait", "Clink", "CdrainDue"]
 
 -- Arity for arity, except the erasures, which are named.
 #guard Fibers.inductives.all
@@ -584,7 +617,7 @@ for that diff to be meaningful. -/
 #guard Fibers.observer.erasures == []
 #guard Fibers.runDecision.erasures == []
 #guard (Fibers.withFiberAction.erasures.map (·.1)) ==
-  ["fork", "forkIn", "forkScoped", "raceAll", "setInterruptible"]
+  ["fork", "forkIn", "forkScoped", "raceAll", "setInterruptible", "closePar"]
 
 -- The names `deep_fibers.ml` actually uses.
 #guard Fibers.observer.ctors.map (CtorDesc.ocaml "") ==

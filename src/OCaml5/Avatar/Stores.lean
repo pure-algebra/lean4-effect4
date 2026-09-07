@@ -196,7 +196,8 @@ def raceName : InductiveDesc where
             { leanName := "failThenSuccess" }, { leanName := "failThenFail" },
             { leanName := "parkOnly" }, { leanName := "parkThenSuccess" }]
 
-/-- `ProgName` (`Stores.lean:265`), 22 constructors, prefix `P`. -/
+/-- `ProgName` (`Stores.lean:265`), 26 constructors since §20's `closeWalk` (2026-09-07),
+prefix `P`. -/
 def progName : InductiveDesc where
   leanName := "ProgName"; site := "Stores.lean:265"; ctorPrefix := "P"; subst := subst
   ctors :=
@@ -241,10 +242,17 @@ def progName : InductiveDesc where
      { leanName := "awaitAllNew", args := [⟨"body", .nm "ProgName", false⟩] },
      -- `2f77f7d` (seat F2): the settle's cleanup half and a join on an existing handle
      { leanName := "interruptFibers", args := [⟨"targets", .lst fid, false⟩] },
+     -- D6a (2026-09-07): the settled race's masked cleanup, named by the race
+     { leanName := "cancelRace", args := [⟨"race", .nat, false⟩] },
      { leanName := "joinFiber",
-       args := [⟨"target", fid, false⟩, ⟨"mode", .nm "Supervision.ObserverMode", false⟩] }]
+       args := [⟨"target", fid, false⟩, ⟨"mode", .nm "Supervision.ObserverMode", false⟩] },
+     -- §20 (2026-09-07): `scopeCloseFinalizers`, the multiple-finalizer close's generator walk
+     { leanName := "closeWalk",
+       args := [⟨"strategy", .nm "FinalizerStrategy", false⟩, ⟨"order", .lst (.nm "FinName"), false⟩,
+                ⟨"exit", exitL, false⟩] }]
 
-/-- `Name` (`Stores.lean:321`), 20 constructors, prefix `N`. -/
+/-- `Name` (`Stores.lean:321`), 20 constructors since §20 retired the parallel chain's two
+names for `closeParDone` (2026-09-07), prefix `N`. -/
 def name : InductiveDesc where
   leanName := "Name"; site := "Stores.lean:321"; ctorPrefix := "N"; subst := subst
   ctors :=
@@ -272,12 +280,12 @@ def name : InductiveDesc where
      { leanName := "closeSeq",
        args := [⟨"remaining", .lst (.nm "FinName"), false⟩, ⟨"exit", exitL, false⟩,
                 ⟨"captured", .lst (.nm "Reason"), false⟩] },
-     { leanName := "closePar",
-       args := [⟨"remaining", .lst (.nm "FinName"), false⟩, ⟨"exit", exitL, false⟩,
-                ⟨"forked", .lst fid, false⟩, ⟨"closerInterruptible", .bool, false⟩] },
-     { leanName := "mergeAwaitedExits" }]
+     -- §20 (2026-09-07): the parallel close generator under its await; `closePar` and
+     -- `mergeAwaitedExits` retired with the chains
+     { leanName := "closeParDone" }]
 
-/-- `ActionName` (`Stores.lean:377`), 17 constructors, prefix `A`. Arm for arm with
+/-- `ActionName` (`Stores.lean:377`), 22 constructors since §20's `ambientScope` and
+`closePar` (2026-09-07), prefix `A`. Arm for arm with
 `Fibers.lean`'s `WithFiberAction` (`Ml.Avatar.withFiberAction`), except that every `Prim`
 argument is a `ProgName` here — which is the whole point of the name alphabet. -/
 def actionName : InductiveDesc where
@@ -293,9 +301,13 @@ def actionName : InductiveDesc where
      { leanName := "forkScoped",
        args := [⟨"program", .nm "ProgName", false⟩,
                 ⟨"options", .nm "Supervision.ForkOptions", false⟩, ⟨"key", .nat, false⟩] },
+     -- §20 (2026-09-07): the `Scope` service read, `forkScoped`'s first half
+     { leanName := "ambientScope" },
      { leanName := "runIn",
        args := [⟨"target", fid, false⟩, ⟨"scope", .nat, false⟩, ⟨"key", .nat, false⟩] },
      { leanName := "interrupt", args := [⟨"target", fid, false⟩] },
+     -- D6b (2026-09-07): `fiberInterruptAs`, what the public interrupt returns
+     { leanName := "interruptAs", args := [⟨"target", fid, false⟩, ⟨"who", fid, false⟩] },
      { leanName := "interruptScoped", args := [⟨"target", fid, false⟩] },
      { leanName := "interruptAll",
        args := [⟨"targets", .lst fid, false⟩, ⟨"interruptor", .opt fid, false⟩] },
@@ -312,7 +324,9 @@ def actionName : InductiveDesc where
      { leanName := "refuse", args := [⟨"cause", causeL, false⟩] },
      -- `2f77f7d` (seat F2): the two park cleanups (R2-3, R2-13)
      { leanName := "dropObservers", args := [⟨"token", .nat, false⟩] },
-     { leanName := "cancelRace", args := [⟨"race", .nat, false⟩] }]
+     { leanName := "cancelRace", args := [⟨"race", .nat, false⟩] },
+     -- §20 (2026-09-07): the parallel close's generator step
+     { leanName := "closePar", args := [⟨"order", .lst (.nm "FinName"), false⟩, ⟨"exit", exitL, false⟩] }]
 
 /-- `Thunk` (`Stores.lean:403`), prefix `T`. -/
 def thunk : InductiveDesc where

@@ -94,13 +94,16 @@ has to be given the reserved set rather than a hard-coded offset.
 `mergeLeaves` folds a non-empty leaf list with its own head, not with `emptyLayer`, and uses
 `emptyLayer` only for the empty list. Seeding with `Layer.empty` is the same *type* (the
 `#guard`s below show the seeded and unseeded folds agree on every row), but it costs one
-extra memoized description and one extra `mergeAll` fork level per side, and the `docs`
-fixture then does not finish inside the fixed 512-step budget of
-`src/Effect4/Program/Provision.lean`'s `runOver` — `buildSucceeds` answers `some false` where the unseeded fold answers `some true`.
-Both receipts are `#guard`s below. The unseeded fold is also the closer reading of
-`Layer.mergeAll(l, …)` (`Layer.ts:1652`), whose first argument is a layer. Whether the
-machine's build of the seeded fold merely needs more fuel, or is quadratic in the fold's
-depth, is the owed row; this module measures, it does not diagnose.
+extra memoized description and one extra `mergeAll` fork level per side. Under the earlier
+512-command budget of `src/Effect4/Program/Provision.lean`'s `runOver` the seeded `docs`
+fixture did not finish (`buildSucceeds` answered `some false` where the unseeded fold
+answered `some true`), and the owed question was whether it merely needed more fuel. It
+did: since source-repairs §19 (D6b) makes every tracked child's exit path a run of
+commands, the plain docs provide-then-service run itself needs 528 commands, `runOver`
+runs 1024, and at that budget the seeded fold builds too (the `#guard` below). The fold
+stays unseeded because that is the closer reading of `Layer.mergeAll(l, …)`
+(`Layer.ts:1652`), whose first argument is a layer; this module measures, it does not
+diagnose.
 
 Every rc.112 line named here is in `vendor/effect-4.0.0-rc.112/src/`.
 -/
@@ -218,8 +221,9 @@ def serviceLeaves (names : List String) :
 
 /-- `Layer.mergeAll(l, …)` (`Layer.ts:1652`), with `Layer.empty` for the empty list so the
 function is total and the empty deployment still lowers. Seeding the *non-empty* fold with
-`emptyLayer` gives the same rows and a build the machine does not finish inside `runOver`'s
-fixed budget; see the header's owed row and the `#guard`s in the witness section. -/
+`emptyLayer` gives the same rows and a costlier build (it did not finish inside the earlier
+512-command budget; it does inside `runOver`'s 1024); see the header's row and the
+`#guard`s in the witness section. -/
 def mergeLeaves : List (LayerTerm DeployOp) → LayerTerm DeployOp
   | [] => emptyLayer
   | l :: rest => LayerTerm.mergeAll l rest
@@ -731,14 +735,16 @@ def fB (i : Nat) : LayerTerm DeployOp := bindingLeaf ⟨⟨i⟩, ⟨i⟩⟩ i
 #guard buildSucceeds deploySig (LayerTerm.provideMerge (fS 4) (fB 4)) = some true
 
 -- **Why the fold is not seeded with `Layer.empty`.** The seeded and unseeded folds have the
--- same rows, and the seeded one does not finish inside `runOver`'s fixed 512-step budget.
+-- same rows; the seeded one did not finish inside the earlier 512-command budget and does
+-- inside `runOver`'s 1024 (source-repairs §19), so the fold stays unseeded for the reading
+-- of `Layer.mergeAll`, not for the budget.
 #guard (layerTy deploySig (LayerTerm.mergeAll emptyLayer [fS 4, fS 5])).map LayerTy.out =
   (layerTy deploySig (mergeLeaves [fS 4, fS 5])).map LayerTy.out
 #guard (layerTy deploySig (LayerTerm.mergeAll emptyLayer [fS 4, fS 5])).map LayerTy.requires =
   (layerTy deploySig (mergeLeaves [fS 4, fS 5])).map LayerTy.requires
 #guard buildSucceeds deploySig (LayerTerm.provideMerge
     (LayerTerm.mergeAll emptyLayer [fS 4, fS 5])
-    (LayerTerm.mergeAll emptyLayer [fB 4, fB 5])) = some false
+    (LayerTerm.mergeAll emptyLayer [fB 4, fB 5])) = some true
 #guard buildSucceeds deploySig
     (LayerTerm.provideMerge (mergeLeaves [fS 4, fS 5]) (mergeLeaves [fB 4, fB 5])) = some true
 

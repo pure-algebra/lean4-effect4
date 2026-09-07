@@ -145,6 +145,7 @@ structure Run where
 /-- Replay a host decision tape against the program. -/
 def replay (program : Program) (fuel : Nat) (tape : List Decision) (choices : List Bool := []) :
     Run :=
+  letI := evaluatorFor program
   match replayEval (interpOf program) fuel tape (load program fuel choices) with
   | ReplayResult.finished m => ⟨Outcome.finished, m⟩
   | ReplayResult.frontier m => ⟨Outcome.frontier, m⟩
@@ -163,6 +164,7 @@ def run (program : Program) (fuel : Nat) (choices : List Bool := []) : Run :=
 /-- `Effect.runSyncExit`: the root evaluated on the caller's stack, its dispatcher flushed,
 and the `AsyncFiberError` defect when it has not exited. -/
 def runSync (program : Program) (fuel : Nat) (choices : List Bool := []) : Machine × ExitV :=
+  letI := evaluatorFor program
   runSyncExit (interpOf program) fuel (RunMachine.empty Stores.empty)
     (compile program fuel choices) emptyCtx
 

@@ -116,7 +116,7 @@ constructor's argument types.
 | `Effs` | `effs` | nil cons |
 | `ActionTerm` | `action_term` | fork forkIn forkScoped runIn interrupt interruptScoped interruptAll awaitAll awaitAllFailFast snapshotChildren awaitNewChildren raceAll setContext getContext getId closeScope |
 | `RowKind` | `row_kind` | sync async program |
-| `RowShape` | `row_shape` | call value |
+| `RowShape` | `row_shape` | call value tupleCall |
 | `ServiceName` / `ServiceTypeCode` / `ServiceKey` / `Row` / `EffTy` | *(structures)* | see `eff_manifest.txt` for the field order |
 
 Tags: `bool=1 nat=2 string=3 list=4 pair=5 none=6 some=7 bytes=8 unit=9 ctor=10`.

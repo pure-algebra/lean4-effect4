@@ -195,6 +195,7 @@ let rec json_row_shape (v : row_shape) : Eff_json_text.t =
   match v with
   | Row_shape_call -> Eff_json_text.Array [Eff_json_text.String "call"]
   | Row_shape_value -> Eff_json_text.Array [Eff_json_text.String "value"]
+  | Row_shape_tupleCall -> Eff_json_text.Array [Eff_json_text.String "tupleCall"]
 
 let print_row_shape (v : row_shape) : string = Eff_json_text.render (json_row_shape v)
 

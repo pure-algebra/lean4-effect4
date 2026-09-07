@@ -31,8 +31,10 @@ decisions, bookkeeping and stores, not a handler into `StateT Stores Id`.
 1. `FiberOp` is first-order and decidable. It covers the fiber-level arms of the
    machine's `evaluatePrim`, alongside addressed body operations, the checkpoints and
    frontiers. Fork and mask carry `Body`, whose three first-order constructors name a
-   source `Point`, a store finalizer with its exit, or the fibers of a synthesized
-   interrupt-all body. Other enclosing operations retain source points. None carries a
+   source `Point`, a store finalizer with its exit, or the race whose settled cleanup
+   a synthesized mask body runs (`Body.raceCleanup`, source-repairs §16 D6a; it
+   replaced the winner-time fiber list of `Body.interruptFibers`). Other enclosing
+   operations retain source points. None carries a
    program. `GuardKind` names success, failure, both-arm and exit-finalizer boundaries;
    `guard_`, `unguard` and `finishFinalizer` retain their explicit entry and exit
    markers for the evaluator. Since P2 (2026-09-06, `docs/research/2026-09-06-p0-fable-record.md`
@@ -40,11 +42,30 @@ decisions, bookkeeping and stores, not a handler into `StateT Stores Id`.
    no store or fiber work of its own: `suspend` (the counted step that returns code,
    `Suspend`), `sync` (a pure thunk's value through the `answered` phase), and the
    initial entries `gen` and `loop` of a generator and of a cursor loop, whose later
-   iterations run inside the body's delivery. `scoped` is no longer an operation: the
-   denotation spells it as the compile does. A frontier carries its reason and point;
-   the unfolding-budget reason and the residual generator/loop addresses are gone with
-   the budget. The R2 packet defines the erasure that removes the markers and
-   checkpoints when proving agreement with the existing straight denotation.
+   iterations run inside the body's delivery. Under source-repairs §12, `scoped`
+   is one counted entry at its eager body point; `scopeExit` is stateful callback
+   glue carrying the prior context, scope and body exit. Both answer ExitV. Under
+   source-repairs §16 (D6a), `raceRegister race` is the counted Async registration
+   of a race: the race entry allocates its bookkeeping and returns this operation
+   as the host's next program, and evaluating it runs the entrants and either
+   continues with the accepted exit or parks under the cleanup guard. It answers
+   ExitV. Under §19 (D6b), `interruptAs target who` is `fiberInterruptAs`: the
+   program the public `interrupt` entry returns, evaluated by the shared record-and-
+   delegate helper; it answers `Val`, and the `asVoid(fiberAwait)` return it installs
+   flows through the saved answer slot. A frontier carries its reason and point;
+   Under §20, `ambientScope` is the counted `Scope` service read (`Context.ts:423`)
+   that `forkScoped`'s `flatMap(scope, forkIn)` wrapper runs first, answering the
+   handle as a `Val`; `closeWalk strategy order exit` is the counted `fnUntraced`
+   suspend of `scopeCloseFinalizers` (two or more finalizers), answering unit, and
+   `closeIter strategy order exit` its counted `Iterator` entry, answering the walk's
+   exit: sequentially the generator runs through the term's iterator hook at
+   `.store (Name.closeSeq …)` with each finalizer under the term's own `Exit` guard
+   (`exitR`); in parallel the step forks every finalizer as an immediate daemon
+   (`FiberAction.closePar`) and the shared `closeParAwait` command yields the await under
+   the generator's frame (`ScopeFrame.iter (.store .closeParDone)`). A frontier carries
+   its reason and point; the unfolding-budget reason and the residual generator/loop
+   addresses are gone with the budget. The R2 packet defines the erasure that removes the
+   markers and checkpoints when proving agreement with the existing straight denotation.
 2. `RSig = Signature.sum StoreSig FiberSig` at universe `.{0, 0}`, `RSig.Op = SyncOp ⊕
    FiberOp`. Store answers are `Val`; fiber answers are `FiberOp.answer`: `ExitV` for
    masks, scope close, acquisition/release, races, effect joins, async, scoped forks,
@@ -68,6 +89,13 @@ Refused by name (in the module header): `SCHED-FB-FIBER-HANDLER`, the placeholde
 `FiberOp.refuse` carries the machine's refusal defect so `denoteR` can name it.
 
 ## ENSURES
+
+D5 construction amendment (2026-09-06): `FiberOp.construction` is an
+administrative query whose answer is `List (FiberId × ExitV)` and whose default
+answer is `[]`. It introduces neither an Eff constructor nor a host operation.
+`prepareR` answers it before the next counted evaluator step, as specified in
+the denotation/runtime packets. Its answer and default equations are pinned in
+`SchedContract`. The other dependent answer types remain unchanged.
 
 1. `RSig_op`, `RSig_answer_inl`, `RSig_answer_inr` — the shape, by `rfl`.
 2. `perform_inl_bind` — `bind (perform (.inl op)) k = vis (.inl op) k`, by `rfl`.

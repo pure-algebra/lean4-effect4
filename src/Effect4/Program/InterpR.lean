@@ -78,10 +78,18 @@ def restoreR (code : RProgram) (name : EffName) : RProgram :=
   pendingFailure := fun f =>
     { f with current := .pure (.failure f.pendingCause), deferredInterrupt := false }
   pushAsyncFinalizer := fun name f => { f with stack := .asyncFinalizer name :: f.stack }
+  -- the generator's own frame under the effect a command yields on its behalf (§20); the
+  -- term's iterator frame carries no cursor
+  pushIterator := fun name _ f => { f with stack := .iter name :: f.stack }
   clearStack := fun f => { f with stack := [] }
   success := fun v => .pure (.success v)
   failure := fun c => .pure (.failure c)
   onSuccess := restoreR
+  -- the injected `Yield` passes its void answer on, as the frame's `Prim.yieldNowWith 0`
+  -- resumes with `success void`; the constant continuation then discards it
+  yieldBefore := fun previous =>
+    (guardR .onSuccess (.vis (.inr (.yieldNow 0)) fun v => .pure (.success v))).bind
+      (seqR fun _ => previous)
 
 abbrev RState := RunMachine EffName EffThunk Val Err Defect FiberId Ann Ctx Stores RProgram RSaved Unit
 abbrev RFiber := RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx RProgram RSaved
@@ -124,45 +132,58 @@ theorem denoteStored_completion (answer : Completion Val Err Defect FiberId Ann)
   | ofExit ex => cases ex <;> rfl
   | ofRefGet _ => rfl
 
-/-- `closeSeqChain`: collect failed finalizers in order and continue after each exit. -/
-def denoteCloseSeq : List FinName → ExitV → List (Reason Err Defect FiberId Ann) → RProgram
-  | [], _, captured => .pure (voidAllOf captured)
-  | fin :: rest, ex, captured => (guardR .all (denoteFin fin ex)).bind fun
-    | .success _ => denoteCloseSeq rest ex captured
-    | .failure c => denoteCloseSeq rest ex (captured ++ c.reasons)
+/-- The `Exit` primitive around a finalizer (`internal/effect.ts:3617`, `:3621-3637`): the
+term's both-arm boundary, answering the reified exit; it never fails. -/
+def exitR (body : RProgram) : RProgram :=
+  (guardR .all body).bind fun ex => .pure (.success (reifyExitVal ex))
 
-/-- `closeParChain`: immediate daemons inherit the closer's mask, then all exits merge. -/
-def denoteClosePar (interruptible : Bool) : List FinName → ExitV → List FiberId → RProgram
-  | [], _, forked =>
-    (guardR .onSuccess (fiberValR (.awaitAll forked) rfl)).bind
-      (seqR fun value => .pure (voidAllOf (reasonsOfVal value)))
-  | fin :: rest, ex, forked =>
-    (guardR .onSuccess (fiberValR (.fork (.fin fin ex)
-      ⟨true, true, if interruptible then .interruptible else .uninterruptible⟩) rfl)).bind
-      (seqR fun value => denoteClosePar interruptible rest ex
-        (match value with | .fiber id => forked ++ [id] | _ => forked))
+/-- `Stores.closeSeqStep` at the term instance (§20): the sequential close generator's step,
+its finalizer under the term's own `Exit` guard. -/
+def closeSeqStepR (remaining : List FinName) (exit : ExitV)
+    (captured : List (Reason Err Defect FiberId Ann)) (value : Val) :
+    IterStep EffName EffThunk Val Err Defect FiberId Ann RProgram :=
+  let captured := captured ++ reasonsOfVal value
+  match remaining with
+  | [] => closeDone captured
+  | fin :: rest =>
+    IterStep.resume (exitR (denoteFin fin exit)) (.store (.closeSeq rest exit captured))
 
+/-- `scopeCloseFinalizers` at the term instance (§20): the counted `fnUntraced` suspend, then
+the counted `Iterator` entry of the walk. -/
+def closeWalkR (strategy : FinalizerStrategy) (order : List FinName) (ex : ExitV) : RProgram :=
+  .vis (.inr (.closeWalk strategy order ex)) fun _ =>
+    .vis (.inr (.closeIter strategy order ex)) Effects.Program.pure
+
+/-- Unsafe close shares its state snapshot with the native frame adapter and
+distinguishes no returned effect from a successful returned effect
+(`internal/effect.ts:3782-3797`). A single finalizer is returned directly; two or more are
+the generator walk (§20). The closer's mask is inherited at the daemons' fork. -/
+def closeScopeUnsafeR (scope : Nat) (ex : ExitV) (_interruptible : Bool)
+    (state : Stores) : Option (Stores × Option RProgram) := do
+  let (state, strategy, order) ← scopeCloseSnapshot scope ex state
+  return (state, match order with
+    | [] => none
+    | [fin] => some (denoteFin fin ex)
+    | _ => some (closeWalkR strategy order ex))
+
+/-- `Scope.close(scope, exit)` (`:3775-3776`): the unsafe close's program, or void. -/
 def closeScopeR (scope : Nat) (ex : ExitV) (interruptible : Bool)
     (state : Stores) : Option (Stores × RProgram) :=
-  match state.scopes.entryAt scope with
-  | none => none
-  | some entry =>
-    if entry.scope.isClosed then some (state, .pure (.success .unit))
-    else
-      let state := { state with scopes := state.scopes.closeState scope ex }
-      some (state, match entry.scope.strategy with
-        | .sequential => denoteCloseSeq entry.scope.closeOrder ex []
-        | .parallel => denoteClosePar interruptible entry.scope.closeOrder ex [])
+  (closeScopeUnsafeR scope ex interruptible state).map fun r =>
+    (r.1, r.2.getD (.pure (.success .unit)))
 
 def denoteBody (root : NativeEff) : Body → RProgram
   | .at_ p => denoteAt root p
   | .fin fin ex => denoteFin fin ex
-  | .interruptFibers live => fiberValR (.interruptAll live none) rfl
+  | .raceCleanup race => fiberValR (.cancelRace race) rfl
 
-def denoteRaceSettle (live : List FiberId) (ex : ExitV) : RProgram :=
-  if live.isEmpty then .pure ex else
-    (guardR .onSuccess (.vis (.inr (.mask false (.interruptFibers live))) Effects.Program.pure)).bind
+/-- `Stores.raceSettleProgram` at the term instance: the exit alone, or the masked
+race-named cleanup then the exit (`internal/effect.ts:1510-1514`, D6a). -/
+def denoteRaceSettle (race : Nat) (cleanupNeeded : Bool) (ex : ExitV) : RProgram :=
+  if cleanupNeeded then
+    (guardR .onSuccess (.vis (.inr (.mask false (.raceCleanup race))) Effects.Program.pure)).bind
       (seqR fun _ => .pure ex)
+  else .pure ex
 
 def denoteStoreCancel : Name → RProgram
   | .withWaiter (.cancelAwait cell) waiter token => storeR (.deferredAwaitCleanup cell waiter token)
@@ -239,6 +260,10 @@ def interpR (root : NativeEff) : RInterp where
   iterNext := fun name value =>
     match name with
     | .gen p pc bind => walkR root p p.fuel pc (if bind then p.env ++ [value] else p.env) []
+    -- the close generators (§20): the sequential walk's step, and the parallel walk's inline
+    -- merge of the exits its await answered
+    | .store (.closeSeq remaining exit captured) => ([], closeSeqStepR remaining exit captured value)
+    | .store .closeParDone => ([], closeDone (reasonsOfVal value))
     | _ => ([], .done value)
   loopTest := (interpOf root).loopTest
   loopBody := fun name cursor =>
@@ -251,6 +276,16 @@ def interpR (root : NativeEff) : RInterp where
   cancelThenFail := fun name cause =>
     (guardR .onSuccess (denoteCancel name)).bind (seqR fun _ => .pure (.failure cause))
   parkOf := fun _ => none
+  -- the named parks as term operations: a race's registration and the two join modes
+  parkCode := fun
+    | .race race => .vis (.inr (.raceRegister race)) Effects.Program.pure
+    | .join target .joinEffect => .vis (.inr (.await target .joinEffect)) Effects.Program.pure
+    | .join target .awaitValue => .vis (.inr (.await target .awaitValue)) fun v => .pure (.success v)
+    | .awaitAll targets => .vis (.inr (.awaitAll targets)) fun v => .pure (.success v)
+  -- the interrupt programs as term operations (source-repairs §19, D6b)
+  interruptCode := fun target => fiberValR (.interrupt target) rfl
+  interruptAsCode := fun target who => fiberValR (.interruptAs target who) rfl
+  interruptAllCode := fun targets => fiberValR (.interruptAll targets none) rfl
   withFiberOf := fun _ => none
   syncState := fun _ _ => none
   registerAsync := fun name fiber token state =>
@@ -289,12 +324,32 @@ def interpR (root : NativeEff) : RInterp where
     | .awaitValue => .success (reifyExitVal ex)
     | .joinEffect => ex)
   fiberValue := Val.fiber
+  fiberIdValue := fun fiber => Val.nat fiber.value
   fibersValue := Val.fibers
   exitsValue := exitsVal
   voidValue := .unit
+  scopeValue := Val.scopeHandle
+  closeDoneName := .store .closeParDone
   encodeFiber := id
   stackAnnotations := stackAnnotationsOf
   asyncFiberError := .asyncFiber
   missingScope := .missingService
+
+/-- Generator/loop callbacks see the current construction view before their
+inline-exit test. Addressed eager bodies still use their captured point. -/
+def interpRAt (root : NativeEff) (completed : List (FiberId × ExitV)) : RInterp :=
+  { interpR root with
+    iterNext := fun name value => match name with
+      | .gen p pc bind => walkR root { p with completed } p.fuel pc
+          (if bind then p.env ++ [value] else p.env) []
+      | .store (.closeSeq remaining exit captured) => ([], closeSeqStepR remaining exit captured value)
+      | .store .closeParDone => ([], closeDone (reasonsOfVal value))
+      | _ => ([], .done value)
+    loopBody := fun name cursor => match name with
+      | .loop p => denoteAt root ({ p with completed }.childWith 0 cursor)
+      | _ => .pure (.success cursor)
+    finalizerProgram := fun name ex => match name with
+      | .fin p => some (denoteAt root ({ p with completed }.childWith 1 (reifyExitVal ex)))
+      | _ => (interpR root).finalizerProgram name ex }
 
 end Effect4.Program.Sched

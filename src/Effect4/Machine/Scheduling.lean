@@ -99,12 +99,27 @@ theorem link_queue {interp : RunInterp ν σ β ε δ ι α χ St} {m : RunMachi
   dsimp only
   (repeat' split) <;> queue_leaf
 
+/-- The parallel close's forks (§20) only append fibers. -/
+theorem forkFinalizers_queue {interp : RunInterp ν σ β ε δ ι α χ St}
+    {host : RunFiber ν σ β ε δ ι α χ} :
+    ∀ {m : RunMachine ν σ β ε δ ι α χ St} {programs : List (Prim ν σ β ε δ ι α)},
+      QueueKeeps m (forkFinalizers interp m host programs).1
+  | m, [] => queue_refl m
+  | m, program :: rest => by
+    unfold forkFinalizers
+    try dsimp only
+    exact queue_trans
+      (spawn_queue (interp := interp) (m := m) (f := host) (p := program)
+        (o := ⟨true, true, Supervision.MaskMode.inherit⟩))
+      (forkFinalizers_queue (interp := interp) (host := host) (programs := rest))
+
 macro "queue_hops" i:term : tactic => `(tactic| first
   | exact spawn_queue (interp := $i)
   | exact start_queue (_interp := $i)
   | exact interrupts_queue (interp := $i)
   | exact countdown_queue (interp := $i)
-  | exact link_queue (interp := $i))
+  | exact link_queue (interp := $i)
+  | exact forkFinalizers_queue (interp := $i))
 
 theorem launch_queue {interp : RunInterp ν σ β ε δ ι α χ St} {race : Nat}
     {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ} {p : Prim ν σ β ε δ ι α} :
@@ -142,7 +157,7 @@ theorem observers_queue {interp : RunInterp ν σ β ε δ ι α χ St} {id : Fi
 theorem exit_queue {interp : RunInterp ν σ β ε δ ι α χ St} {m : RunMachine ν σ β ε δ ι α χ St}
     {f : RunFiber ν σ β ε δ ι α χ} {exit : Exit β ε δ ι α} :
     QueueKeeps m (exitFiber interp m f exit).1 := by
-  unfold exitFiber
+  unfold exitFiber exitFiber.exitInterruptChildren exitFiber.exitStore
   dsimp only
   (repeat' split) <;> queue_chain with
     (first | queue_hops interp | exact observers_queue (interp := interp))
@@ -170,13 +185,14 @@ theorem finalizer_queue {interp : RunInterp ν σ β ε δ ι α χ St}
   dsimp only
   (repeat' split) <;> first | queue_leaf; done | exact stepFrame_queue (interp := interp)
 
-theorem interruptJoin_queue {interp : RunInterp ν σ β ε δ ι α χ St}
+/-- `fiberInterruptAs` only records (D6b); the target's run and the return are commands. -/
+theorem interruptAs_queue {interp : RunInterp ν σ β ε δ ι α χ St}
     {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ} {yielding : Bool}
-    {target : FiberId} {interruptor : Option FiberId} :
-    QueueKeeps m (evaluatePrim.interruptThenJoin interp m f yielding target interruptor).machine := by
-  unfold evaluatePrim.interruptThenJoin
+    {target who : FiberId} :
+    QueueKeeps m (evaluatePrim.interruptAs interp m f yielding target who).machine := by
+  unfold evaluatePrim.interruptAs
   dsimp only
-  (repeat' split) <;> queue_chain with queue_hops interp
+  (repeat' split) <;> queue_leaf
 
 theorem withFiber_queue {interp : RunInterp ν σ β ε δ ι α χ St}
     {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ} {yielding : Bool}
@@ -185,8 +201,16 @@ theorem withFiber_queue {interp : RunInterp ν σ β ε δ ι α χ St}
   unfold evaluatePrim.withFiber
   dsimp only
   (repeat' split) <;> first
-    | exact interruptJoin_queue (interp := interp)
+    | exact interruptAs_queue (interp := interp)
     | queue_chain with queue_hops interp
+
+/-- A race's registration only marks the race (D6a). -/
+theorem registerRace_queue {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ}
+    {yielding : Bool} {raceId : Nat} :
+    QueueKeeps m (registerRace m f yielding raceId).machine := by
+  unfold registerRace
+  try dsimp only
+  split <;> queue_leaf
 
 theorem evaluate_queue {interp : RunInterp ν σ β ε δ ι α χ St}
     {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ} {yielding : Bool} :
@@ -197,7 +221,9 @@ theorem evaluate_queue {interp : RunInterp ν σ β ε δ ι α χ St}
     | exact withFiber_queue (interp := interp)
     | exact stepFrame_queue (interp := interp)
     | exact finalizer_queue (interp := interp)
+    | exact registerRace_queue
     | queue_leaf; done
+    | queue_chain with queue_hops interp
 
 theorem iteration_queue {interp : RunInterp ν σ β ε δ ι α χ St}
     {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ} {yielding : Bool} :
@@ -205,7 +231,7 @@ theorem iteration_queue {interp : RunInterp ν σ β ε δ ι α χ St}
   unfold iteration
   dsimp only
   split
-  · next it h => exact inject_queue h
+  · next it h => exact queue_trans (inject_queue h) (evaluate_queue (interp := interp))
   · exact evaluate_queue (interp := interp)
 
 theorem settle_queue {id : FiberId} {rest : List (Cmd ν σ β ε δ ι α)} {it : Iter ν σ β ε δ ι α χ St} :
@@ -213,13 +239,14 @@ theorem settle_queue {id : FiberId} {rest : List (Cmd ν σ β ε δ ι α)} {it
   unfold settle
   (repeat' split) <;> queue_leaf
 
+set_option maxHeartbeats 1600000 in
 theorem driveStep_queue {interp : RunInterp ν σ β ε δ ι α χ St} {m : RunMachine ν σ β ε δ ι α χ St}
     {cmd : Cmd ν σ β ε δ ι α} {rest : List (Cmd ν σ β ε δ ι α)} :
     QueueKeeps m (driveStep interp m cmd rest).1 := by
   cases cmd <;> simp only [driveStep] <;> (repeat' split) <;> first
     | exact queue_trans (iteration_queue (interp := interp)) settle_queue
     | exact queue_trans (evaluate_queue (interp := interp)) settle_queue
-    | queue_chain with (first | queue_hops interp | exact launch_queue (interp := interp) | exact exit_queue (interp := interp))
+    | queue_chain with (first | queue_hops interp | exact launch_queue (interp := interp) | exact exit_queue (interp := interp) | exact observer_queue (interp := interp) | exact settle_queue)
 
 theorem drive_queue {interp : RunInterp ν σ β ε δ ι α χ St} {fuel : Nat}
     {m : RunMachine ν σ β ε δ ι α χ St} {cmds : List (Cmd ν σ β ε δ ι α)} :

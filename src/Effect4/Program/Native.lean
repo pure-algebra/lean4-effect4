@@ -146,12 +146,12 @@ def row : NativeOp → Row
   | refMake => ⟨"refMake", "Ref.make", .call, [], .sync, .nat, refTy, .never, [], "Ref.ts:173"⟩
   | refGet => ⟨"refGet", "Ref.get", .call, [], .sync, refTy, .nat, .never, [], "Ref.ts:200"⟩
   | refSet =>
-    ⟨"refSet", "Ref.set", .call, [], .sync, .prod refTy .nat, refTy, .never, [], "Ref.ts:306-307"⟩
+    ⟨"refSet", "Ref.set", .tupleCall, [], .sync, .prod refTy .nat, refTy, .never, [], "Ref.ts:306-307"⟩
   | refGetAndSet =>
-    ⟨"refGetAndSet", "Ref.getAndSet", .call, [], .sync, .prod refTy .nat, .nat, .never, [],
+    ⟨"refGetAndSet", "Ref.getAndSet", .tupleCall, [], .sync, .prod refTy .nat, .nat, .never, [],
       "Ref.ts:399-404"⟩
   | refSetAndGet =>
-    ⟨"refSetAndGet", "Ref.setAndGet", .call, [], .sync, .prod refTy .nat, .nat, .never, [],
+    ⟨"refSetAndGet", "Ref.setAndGet", .tupleCall, [], .sync, .prod refTy .nat, .nat, .never, [],
       "Ref.ts:747"⟩
   | refUpdate f =>
     ⟨"refUpdate", "Ref.update", .call, [fnSpelling f], .sync, refTy, .unit, .never, [],
@@ -187,10 +187,10 @@ def row : NativeOp → Row
     ⟨"deferredPoll", "Deferred.poll", .call, [], .sync, deferredTy, .bool, .never, [],
       "Deferred.ts:1414-1416"⟩
   | deferredSucceed =>
-    ⟨"deferredSucceed", "Deferred.succeed", .call, [], .sync, .prod deferredTy .nat, .bool, .never,
+    ⟨"deferredSucceed", "Deferred.succeed", .tupleCall, [], .sync, .prod deferredTy .nat, .bool, .never,
       [], "Deferred.ts:1514"⟩
   | deferredFail =>
-    ⟨"deferredFail", "Deferred.fail", .call, [], .sync, .prod deferredTy .nat, .bool, .never, [],
+    ⟨"deferredFail", "Deferred.fail", .tupleCall, [], .sync, .prod deferredTy .nat, .bool, .never, [],
       "Deferred.ts:669"⟩
   | deferredAwait =>
     ⟨"deferredAwait", "Deferred.await", .call, [], .async, deferredTy, .nat, .nat, [],

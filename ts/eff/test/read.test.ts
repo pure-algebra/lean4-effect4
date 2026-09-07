@@ -23,11 +23,16 @@ const refusal = (source: string): Refusal => {
 }
 
 describe("the profile", () => {
-  test("has the reader's 37 heads and one entry per NativeOp value", () => {
-    expect(heads.length).toBe(37)
+  test("has the reader's 38 heads and one entry per NativeOp value", () => {
+    expect(heads.length).toBe(38)
     expect(rows.length).toBe(53)
     expect(new Set(rows.map((e) => e.row.spelling)).size).toBe(20)
     expect(new Set(rows.map((e) => JSON.stringify(e.op))).size).toBe(53)
+  })
+  test("only the five product-request exports use tuple calls", () => {
+    expect(rows.filter((e) => e.row.shape === "tupleCall").map((e) => e.row.name)).toEqual([
+      "refSet", "refGetAndSet", "refSetAndGet", "deferredSucceed", "deferredFail",
+    ])
   })
 })
 
@@ -72,6 +77,96 @@ describe("rows: the shape the grammar could not decide", () => {
   test("an unknown call whose arguments are all terms is an atom application, yielded", () => {
     expect(json("add(1, 2)")).toBe('["yieldError",["app","add",["cons",["lit",["nat",1]],["cons",["lit",["nat",2]],["nil"]]]]]')
     expect(json("Effect.map(1)")).toBe('["yieldError",["app","Effect.map",["cons",["lit",["nat",1]],["nil"]]]]')
+  })
+})
+
+describe("tuple calls", () => {
+  const tupleRows = [
+    ["Ref.set", "refSet"],
+    ["Ref.getAndSet", "refGetAndSet"],
+    ["Ref.setAndGet", "refSetAndGet"],
+    ["Deferred.succeed", "deferredSucceed"],
+    ["Deferred.fail", "deferredFail"],
+  ] as const
+  const pair = ["app", "pair", ["cons", ["lit", ["nat", 1]], ["cons", ["lit", ["nat", 7]], ["nil"]]]]
+
+  for (const [spelling, op] of tupleRows) {
+    test(`${spelling} reads its two arguments into its operation and pair request`, () => {
+      expect(JSON.parse(json(`${spelling}(1, 7)`))).toEqual(["perform", [op], pair])
+    })
+    test(`${spelling} refuses its former one-request call`, () => {
+      expect(refusal(`${spelling}(pair(1, 7))`)).toEqual({ _tag: "arity", head: spelling })
+    })
+    test(`${spelling} refuses the former Reflect.apply wrapper`, () => {
+      expect(refusal(`Reflect.apply(${spelling}, undefined, pair(1, 7))`)).toEqual({ _tag: "unknownIdent", name: spelling })
+    })
+  }
+
+  test("a saved tuple request reads its two component reads as the same bound variable", () => {
+    expect(JSON.parse(json("Effect.flatMap(Effect.succeed(pair(1, 7)), (a0) => Ref.set(fst(a0), snd(a0)))"))).toEqual([
+      "bind", ["succeed", pair], ["perform", ["refSet"], ["var", 0]],
+    ])
+  })
+  test("components of two different identifiers are an ordinary pair", () => {
+    expect(JSON.parse(json("Effect.flatMap(Effect.succeed(pair(1, 7)), (a0) => Effect.flatMap(Effect.succeed(pair(2, 8)), (a1) => Ref.set(fst(a0), snd(a1))))"))).toEqual([
+      "bind", ["succeed", pair],
+      ["bind", ["succeed", ["app", "pair", ["cons", ["lit", ["nat", 2]], ["cons", ["lit", ["nat", 8]], ["nil"]]]]],
+        ["perform", ["refSet"], ["app", "pair", ["cons", ["app", "fst", ["cons", ["var", 0], ["nil"]]], ["cons", ["app", "snd", ["cons", ["var", 1], ["nil"]]], ["nil"]]]]]],
+    ])
+  })
+  test("tuple requests retain ordinary scope checks", () => {
+    expect(refusal("Ref.set(fst(a0), snd(a0))")).toEqual({ _tag: "unknownIdent", name: "a0" })
+    expect(refusal("Ref.set(a0, 7)")).toEqual({ _tag: "unknownIdent", name: "a0" })
+  })
+  test("a call row does not accept the tuple reading", () => {
+    expect(refusal("Ref.get(1, 2)")).toEqual({ _tag: "arity", head: "Ref.get" })
+  })
+  test("three plain arguments are an atom application, not a row", () => {
+    expect(JSON.parse(json("Ref.set(1, 7, 8)"))).toEqual([
+      "yieldError", ["app", "Ref.set", ["cons", ["lit", ["nat", 1]], ["cons", ["lit", ["nat", 7]], ["cons", ["lit", ["nat", 8]], ["nil"]]]]],
+    ])
+  })
+  test("Reflect.apply is no head: a bare mention is an unknown identifier", () => {
+    expect(refusal("Reflect.apply")).toEqual({ _tag: "unknownIdent", name: "Reflect.apply" })
+  })
+  test("ordinary dotted atom calls retain their existing reading", () => {
+    expect(JSON.parse(json("foo.concat(1)"))).toEqual([
+      "yieldError", ["app", "foo.concat", ["cons", ["lit", ["nat", 1]], ["nil"]]],
+    ])
+  })
+})
+
+describe("the synchronous runIn adapter", () => {
+  test("its callback adds no binder and returns the runIn action", () => {
+    expect(JSON.parse(json("Effect.flatMap(Effect.succeed(1), (a0) => Effect.flatMap(Effect.succeed(2), (a1) => Effect.withFiber(() => { Fiber.runIn(a0, a1); return Effect.void })))"))).toEqual([
+      "bind", ["succeed", ["lit", ["nat", 1]]],
+      ["bind", ["succeed", ["lit", ["nat", 2]]], ["withFiber", ["runIn", ["var", 0], ["var", 1]]]],
+    ])
+  })
+  test("the former raw synchronous call stays reserved and refused", () => {
+    expect(refusal("Fiber.runIn(1, 2)")).toEqual({ _tag: "arity", head: "Fiber.runIn" })
+  })
+  test("the wrapper preserves scope checking", () => {
+    expect(refusal("Effect.withFiber(() => { Fiber.runIn(a0, 2); return Effect.void })")).toEqual({ _tag: "unknownIdent", name: "a0" })
+    expect(refusal("Effect.withFiber(() => { Fiber.runIn(1, a0); return Effect.void })")).toEqual({ _tag: "unknownIdent", name: "a0" })
+  })
+  for (const callback of [
+    "(a0) => { Fiber.runIn(1, 2); return Effect.void }",
+    "() => { Fiber.runIn(1, 2); Fiber.runIn(1, 2); return Effect.void }",
+    "() => { Fiber.runIn(1, 2); return Effect.succeed(undefined) }",
+    "() => { Fiber.interrupt(1, 2); return Effect.void }",
+    "() => { Fiber.runIn(1); return Effect.void }",
+    "() => { return Effect.void; Fiber.runIn(1, 2) }",
+    "() => { return Effect.void }",
+    "() => Fiber.runIn(1, 2)",
+    "() => { Fiber.runIn(1, 2); return Effect.void }, 0",
+  ]) {
+    test(`refuses a different callback shape: ${callback}`, () => {
+      expect(refusal(`Effect.withFiber(${callback})`)).toEqual({ _tag: "shape", what: "runIn" })
+    })
+  }
+  test("adding expression statements does not admit them in a generator", () => {
+    expect(refusal("Effect.gen(function* () { Fiber.runIn(1, 2); return 0 })")).toEqual({ _tag: "unsupportedStmt" })
   })
 })
 

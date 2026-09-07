@@ -78,6 +78,157 @@ theorem lawful : LawfulSpelling sig spell where
     exact name_notin _ (h op) i
   trailing_ne_undefined := by decide
 
+/-! ## Tuple-call rows: the canonical wrapper, scoping and trailing-name order
+
+The fixture shares one export spelling between a synchronous row without trailing
+names and an asynchronous row with two trailing names. It exercises the generic
+reader independently of the native table. -/
+
+def tupleRowOf : Bool → Row
+  | false => ⟨"tuple", "Fixture.tuple", .tupleCall, [], .sync,
+      .prod .nat .nat, .nat, .never, [], "§14 tuple-call fixture"⟩
+  | true => ⟨"tupleAsync", "Fixture.tuple", .tupleCall, ["first", "second"], .async,
+      .prod .nat .nat, .nat, .never, [], "§14 tuple-call fixture with trailing names"⟩
+
+def tupleSig : Signature Bool :=
+  { rowOf := tupleRowOf, atomOf := fun _ _ => none, scopeKey := ⟨⟨0⟩, ⟨0⟩⟩ }
+
+def tupleSpell (s : String) (names : List String) : Option Bool :=
+  if s = "Fixture.tuple" ∧ names = [] then some false
+  else if s = "Fixture.tuple" ∧ names = ["first", "second"] then some true
+  else none
+
+theorem tupleLawful : LawfulSpelling tupleSig tupleSpell where
+  spell_row := by decide
+  row_of_spell := by
+    intro s names op h
+    unfold tupleSpell at h
+    split at h
+    · rename_i hc; cases h; exact ⟨hc.1.symm, hc.2.symm⟩
+    · split at h
+      · rename_i hc; cases h; exact ⟨hc.1.symm, hc.2.symm⟩
+      · cases h
+  value_trailing := by decide
+  spelling_ne_name := by
+    intro op i
+    cases op <;> exact (Var.name_ne (by decide) i).symm
+  spelling_not_reserved := by decide
+  trailing_ne_name := by
+    intro op i
+    cases op <;> exact name_notin _ (by decide) i
+  trailing_ne_undefined := by decide
+
+-- The wrapper head is gone: `Reflect.apply` is an ordinary unknown atom (source-repairs §18).
+#guard headOf "Reflect.apply" = none
+
+#guard roundTrip tupleSig tupleSpell 1 (.perform false (.var 0)) =
+  .ok (.perform false (.var 0))
+
+#guard roundTrip tupleSig tupleSpell 1 (.callback true (.var 0)) =
+  .ok (.callback true (.var 0))
+
+#guard roundTrip tupleSig tupleSpell 0
+    (.perform false (.app "pair" (.cons (.lit (.nat 2)) (.cons (.lit (.nat 7)) .nil)))) =
+  .ok (.perform false (.app "pair" (.cons (.lit (.nat 2)) (.cons (.lit (.nat 7)) .nil))))
+
+#guard roundTrip tupleSig tupleSpell 1
+    (.callback true (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil)))) =
+  .ok (.callback true (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))
+
+-- A pair of one variable's components prints as the variable and reads back as it:
+-- outside the readable image, by `requestReadable`.
+#guard requestReadable (tupleRowOf false) 1
+    (.app "pair" (.cons (.app "fst" (.cons (.var 0) .nil))
+      (.cons (.app "snd" (.cons (.var 0) .nil)) .nil))) = false
+
+#guard roundTrip tupleSig tupleSpell 1
+    (.perform false (.app "pair" (.cons (.app "fst" (.cons (.var 0) .nil))
+      (.cons (.app "snd" (.cons (.var 0) .nil)) .nil)))) = .ok (.perform false (.var 0))
+
+-- Tuple rows retain their request; request metadata does not introduce a new loss.
+#guard requestReadable { tupleRowOf false with request := .unit } 1 (.var 0) = true
+
+#guard requestReadable (tupleRowOf false) 1 (.var 1) = false
+-- `undefined` prints as one identifier, like a binder, so its component reads read back.
+#guard requestReadable (tupleRowOf false) 1 (.lit .unit) = true
+#guard roundTrip tupleSig tupleSpell 1 (.perform false (.lit .unit)) =
+  .ok (.perform false (.lit .unit))
+#guard requestReadable (tupleRowOf false) 1 (.lit (.nat 7)) = false
+#guard requestReadable (tupleRowOf false) 1
+    (.app "pair" (.cons (.var 0) (.cons (.var 1) .nil))) = false
+
+-- The saved-variable spelling reads as the variable, under the ordinary scope check.
+#guard readEff tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple")
+    [.call (.ident "fst") [.ident "a1"], .call (.ident "snd") [.ident "a1"]]) =
+  .error (.unknownIdent "a1")
+
+#guard readEff tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple")
+    [.call (.ident "fst") [.ident "a0"], .call (.ident "snd") [.ident "a0"],
+      .ident "first", .ident "second"]) =
+  .ok (.callback true (.var 0))
+
+-- Components of two different identifiers are an ordinary pair.
+#guard readEff tupleSig tupleSpell 2 (.call (.ident "Fixture.tuple")
+    [.call (.ident "fst") [.ident "a0"], .call (.ident "snd") [.ident "a1"]]) =
+  .ok (.perform false (.app "pair" (.cons (.app "fst" (.cons (.var 0) .nil))
+    (.cons (.app "snd" (.cons (.var 1) .nil)) .nil))))
+
+#guard readEff tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple") [.ident "a0", .int 7]) =
+  .ok (.perform false (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))
+
+-- Trailing names are matched exactly and in order: a misordered suffix is no row, so the
+-- call is read as an atom application and refused on its first non-term.
+#guard readEff tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple")
+    [.ident "a0", .int 7, .ident "second", .ident "first"]) =
+  .error (.unknownIdent "second")
+
+-- The former one-request call, a one-argument call with trailing names, and three
+-- plain arguments are not tuple readings.
+#guard readEff tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple") [.ident "a0"]) =
+  .error (.arity "Fixture.tuple")
+
+#guard readEff tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple")
+    [.ident "a0", .ident "first", .ident "second"]) = .error (.arity "Fixture.tuple")
+
+#guard readEff tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple") [.ident "a0", .int 7, .int 8]) =
+  .ok (.yieldError (.app "Fixture.tuple"
+    (.cons (.var 0) (.cons (.lit (.nat 7)) (.cons (.lit (.nat 8)) .nil)))))
+
+-- A call row does not accept the tuple reading.
+#guard readEff sig spell 1 (.call (.ident "Ref.get") [.ident "a0", .int 1]) =
+  .error (.arity "Ref.get")
+
+-- The former wrapper is an unknown atom whose first argument is no term.
+#guard readEff tupleSig tupleSpell 1 (.call (.ident "Reflect.apply")
+    [.ident "Fixture.tuple", .ident "undefined", .ident "a0"]) =
+  .error (.unknownIdent "Fixture.tuple")
+
+#guard readEff tupleSig tupleSpell 0 (.ident "Reflect.apply") =
+  .error (.unknownIdent "Reflect.apply")
+
+#guard readable tupleSig tupleSpell 0 (.yieldError (.app "Reflect.apply" .nil)) = true
+
+-- Every old native one-request tuple call is rejected by the row parser.
+#guard [NativeOp.refSet, .refGetAndSet, .refSetAndGet, .deferredSucceed, .deferredFail].all
+    fun op => decide (readEff nativeSignature nativeSpell 1
+      (.call (.ident op.row.spelling)
+        [.call (.ident "pair") [.ident "a0", .int 7]]) = .error (.arity op.row.spelling))
+
+#guard [NativeOp.refSet, .refGetAndSet, .refSetAndGet, .deferredSucceed, .deferredFail].all
+    fun op => decide (roundTrip nativeSignature nativeSpell 1
+      (.perform op (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil)))) =
+      .ok (.perform op (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil)))))
+
+-- A native request tuple may pass through a bound variable before the call.
+open Effect4.Api in
+#guard roundTrip
+    (.bind (.perform .deferredMake (.lit .unit))
+      (.bind (.succeed (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))
+        (.perform .deferredSucceed (.var 1)))) =
+  .ok (.bind (.perform .deferredMake (.lit .unit))
+    (.bind (.succeed (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))
+      (.perform .deferredSucceed (.var 1))))
+
 /-! ## Exits, thunks and rows -/
 
 #guard roundTrip sig spell 0 (.succeed (.lit (.nat 1)))
@@ -220,6 +371,50 @@ theorem lawful : LawfulSpelling sig spell where
 #guard roundTrip sig spell 2 (.withFiber (.runIn (.var 0) (.var 1)))
   = .ok (.withFiber (.runIn (.var 0) (.var 1)))
 
+-- The runIn adapter adds no binder to either source term's lexical environment.
+#guard roundTrip sig spell 2 (.bind (.succeed (.var 0))
+    (.withFiber (.runIn (.var 2) (.var 1)))) =
+  .ok (.bind (.succeed (.var 0)) (.withFiber (.runIn (.var 2) (.var 1))))
+
+#guard headOf "Effect.withFiber" = some .withFiber
+
+#guard readEff sig spell 2 (.call (.ident "Effect.withFiber")
+    [.arrowBlock [] [.exprStmt (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]),
+      .ret (.ident "Effect.void")]]) = .ok (.withFiber (.runIn (.var 0) (.var 1)))
+
+#guard readEff sig spell 2 (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]) =
+  .error (.arity "Fiber.runIn")
+
+#guard readEff sig spell 2 (.call (.ident "Effect.withFiber")
+    [.arrowBlock ["a2"] [.exprStmt (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]),
+      .ret (.ident "Effect.void")]]) = .error (.shape "runIn")
+
+#guard readEff sig spell 2 (.call (.ident "Effect.withFiber")
+    [.arrowBlock [] [.exprStmt (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]),
+      .exprStmt (.ident "extra"), .ret (.ident "Effect.void")]]) = .error (.shape "runIn")
+
+#guard readEff sig spell 2 (.call (.ident "Effect.withFiber")
+    [.arrowBlock [] [.exprStmt (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]),
+      .ret (.ident "undefined")]]) = .error (.shape "runIn")
+
+#guard readEff sig spell 2 (.call (.ident "Effect.withFiber")
+    [.arrowBlock [] [.exprStmt (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]),
+      .ret (.call (.ident "Effect.succeed") [.ident "undefined"])]]) = .error (.shape "runIn")
+
+#guard readEff sig spell 2 (.call (.ident "Effect.withFiber")
+    [.arrowBlock [] [.exprStmt (.call (.ident "Fiber.other") [.ident "a0", .ident "a1"]),
+      .ret (.ident "Effect.void")]]) = .error (.shape "runIn")
+
+#guard readEff sig spell 2 (.call (.ident "Effect.withFiber")
+    [.arrow none (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"])]) =
+  .error (.shape "runIn")
+
+#guard readEff sig spell 0 (.call (.ident "Effect.withFiber")
+    [.arrowBlock [] [.exprStmt (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]),
+      .ret (.ident "Effect.void")]]) = .error (.unknownIdent "a0")
+
+#guard readable sig spell 0 (.yieldError (.app "Effect.withFiber" .nil)) = false
+
 #guard roundTrip sig spell 1 (.withFiber (.interrupt (.var 0)))
   = .ok (.withFiber (.interrupt (.var 0)))
 
@@ -311,7 +506,10 @@ one comes back unchanged, so on this corpus `readable` is exact, not merely suff
 
 #guard (Test.Program.Gen.corpus 400 4).length = 400
 
-#guard ((Test.Program.Gen.corpus 400 4).filter Effect4.Api.readable).length = 324
+-- 324 before source-repairs §18; the fourteen generated programs whose tuple-row request
+-- is neither a `pair` application nor a single-identifier term left the readable image
+-- with the direct argument-list shape (`requestReadable`), and still print the same tree.
+#guard ((Test.Program.Gen.corpus 400 4).filter Effect4.Api.readable).length = 310
 
 #guard (Test.Program.Gen.corpus 400 4).all fun p =>
   !Effect4.Api.readable p || decide (Effect4.Api.roundTrip p = .ok p)

@@ -27,7 +27,7 @@
 //   Effs (Effect4.Program.Effs, ReadonlyArray<Eff>): nil cons(head: Eff, tail: ReadonlyArray<Eff>)
 //   ActionTerm (Effect4.Program.ActionTerm, tagged union): fork(program: Eff, options: ForkOptions) forkIn(program: Eff, options: ForkOptions, scope: Term) forkScoped(program: Eff, options: ForkOptions) runIn(target: Term, scope: Term) interrupt(target: Term) interruptScoped(target: Term) interruptAll(targets: Term, interruptor: Term | null) awaitAll(targets: Term) awaitAllFailFast(targets: Term) snapshotChildren awaitNewChildren(snapshot: Term) raceAll(entrants: ReadonlyArray<Eff>) setContext(context: Term) getContext getId closeScope(scope: Term, exit: Term)
 //   RowKind (Effect4.Program.RowKind, literals): sync async program
-//   RowShape (Effect4.Program.RowShape, literals): call value
+//   RowShape (Effect4.Program.RowShape, literals): call value tupleCall
 //   ServiceName (Effect4.ServiceName, struct): mk(value: number)
 //   ServiceTypeCode (Effect4.ServiceTypeCode, struct): mk(value: number)
 //   ServiceKey (Effect4.ServiceKey, struct): mk(name: ServiceName, service: ServiceTypeCode)
@@ -288,7 +288,7 @@ export const ActionTerm = Schema.TaggedUnion({
 export const RowKind = Schema.Literals(["sync", "async", "program"])
 export type RowKind = typeof RowKind.Type
 
-export const RowShape = Schema.Literals(["call", "value"])
+export const RowShape = Schema.Literals(["call", "value", "tupleCall"])
 export type RowShape = typeof RowShape.Type
 
 export const ServiceName = Schema.Struct({

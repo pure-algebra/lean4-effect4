@@ -26,8 +26,9 @@ conventions remain authoritative. `Eff` is the only stored program representatio
 The counted checkpoints the host spends where the term has no work of its own are
 explicit: `suspendR` in front of a suspension, a decided branch, a yieldable
 error's failure and the generator and loop entries, and `sync` for a pure thunk's
-value; `scoped` is spelled as the compile spells it, a scope-store operation under
-a success boundary and then the context and close frames.
+value. Under source-repairs §12, `scoped` is one fiber entry at its eager body
+point. The runtime installs the existing OnExit guard, restores context in its
+exit callback and distinguishes unsafe close's absent and returned effects.
 
 Since 2026-09-06 (`E4-CHECK-CE-001`) `exit b` folds to the reified exit when
 `inlineYield` classifies `b` at the child point as an immediate exit, as the
@@ -40,12 +41,17 @@ compile is now a `Suspend` (`E4-CHECK-CE-003`).
 handler, both-arm handler, or exit finalizer. `guard_ kind` answers `none`
 to enter the body and `some exit` to resume outside its saved boundary;
 `unguard exit` closes the normal body path. `onExitR` retains the finalizer
-boundary and ends with `finishFinalizer exit` after the finalizer result is
-merged. The evaluator owns interruption and mask restoration at these markers.
+boundary. Under the D4 source correction, its cleanup has an ordinary success
+guard, with an inner failure guard only when the body failed. Successful
+cleanup ends through `finishFinalizer`; propagated cleanup failure passes the
+success guard and consumes the saved mask in the existing pop. This retains
+the false cleanup delimiter and the erased `restoreAfterFinalizer` meaning.
+The evaluator owns interruption and mask restoration at these markers.
 
-`controlErasure` removes only these control markers: entry answers `none`,
-and the closing markers answer with their carried exit. It retains every
-other store and fiber operation. `eraseControl` interprets that handler and
+`controlErasure` removes control markers and checkpoints: entry answers `none`,
+closing markers answer with their carried exit, suspend answers unit, and sync
+answers its carried value. D5's construction query answers the empty view.
+It retains the other store and fiber operations. `eraseControl` interprets that handler and
 commutes with `pure` and `bind`. This erasure is the observation used by the
 straight-fragment theorem; it is not an interruption or scheduler semantics.
 
@@ -60,9 +66,12 @@ Mask, scope, winner and effect-join operations answer with `ExitV`. Async, scope
 forks and scope close also answer with exits because their computations can
 fail. Value operations retain `Val`; boundary entry uses `Option ExitV`.
 Fork and mask bodies use the first-order `Body`: an existing source point,
-a store finalizer name with an exit, or a list of fibers to interrupt. Other
-source bodies keep their points. A scoped node carries the allocated
-scope id, and a `forkIn` node carries the actual link key. The existing exit
+a store finalizer name with an exit, or the race whose settled cleanup the
+masked body runs (`Body.raceCleanup`, denoted by the store's `cancelRace`
+program; source-repairs §16 D6a). Other
+source bodies keep their points. A scoped entry carries its body point; its
+administrative exit callback carries the allocated scope and previous context.
+A `forkIn` node carries the actual link key. The existing exit
 encoding was already reversible; the scout's collision claim was false.
 
 The generator walk (`InterpR.walkR`, the term instance of the compile's
@@ -74,6 +83,26 @@ inline source success even when its denotation is pure. The source classifier
 source term and point.
 
 ## ENSURES
+
+D5 construction amendment (2026-09-06): `Point.completed` is a captured,
+first-order list of completed fiber exits. Both `denoteR.awaitFiber` and
+`inlineYield` use `Point.awaitExit`, matching the compiler's eager join/await
+fold. An Async built while its target was live keeps its registration and
+subsequent exit checkpoint even if the target later finishes.
+
+`constructR` requests a fresh view only at source suspension, selected branch,
+success/cause callback and finalizer invocation. `prepareR` structurally
+answers such queries and prepares a guard's eager body branch; it retains
+the saved exit callback and stops at counted operations. Eager mask/fork
+bodies retain their captured view. Generator/loop hooks take the same fresh
+view before constructing and classifying the next body. The root's view is
+empty. `eraseControl_constructR` answers `[]`, so `denoteR_straight` and
+`meaning_denoteR_straight` retain their exact statements and assumptions.
+
+The public straight-run proof port and full D5 repaired-tree gate pass:
+282 jobs, fresh audit of 276 modules / 39,483 declarations at the unchanged
+ceiling, forced census and the nine-program emitted truth battery. The wider
+P3 simulation and remaining source repairs are still open.
 
 1. `denoteR_zero` retains the compile-fuel frontier at the point.
 2. `denoteR_bind`, `denoteR_suspend`, `denoteR_branch`, `denoteR_exit`,
@@ -113,11 +142,17 @@ scope exit and break, inline versus resumed yield budgets, and loop cursors.
 
 `cleanup_boundary_distinct` proves that the unfolded `onExit (yieldNow 0)
 cleanupUnit` differs from `bind (yieldNow 0) cleanupUnit`. Raw guards inspect
-their distinct `onExit` and `onSuccess` markers, while the erased terms are
-equal. This is the contract repair prompted by the reference machine running
-cleanup after interruption only in the first program. The store observer now
-erases control markers explicitly; separate raw probes confirm that erasure
-retains yield, other fiber operations and live frontiers.
+their distinct `onExit` and `onSuccess` markers, while the erased runs agree:
+the same yield first, and once the yield answers the void value the same
+cleanup, stores and exit (`afterYield`). Since P3 (2026-09-07) the yield's
+continuation passes its answer on, as `Prim.yieldNowWith` resumes with the void
+value, so the erased trees are no longer literally equal — the `onExit` side
+restores the answered exit, the `bind` side the unit its cleanup returns — and
+the former `rfl` pin is the run comparison. This is the contract repair prompted
+by the reference machine running cleanup after interruption only in the first
+program. The store observer now erases control markers explicitly; separate raw
+probes confirm that erasure retains yield, other fiber operations and live
+frontiers.
 
 `RDEN-FB-HANDLER`: `rHandler` is a placeholder on fibers and frontiers.
 `RDEN-FB-SCHEDULER`: R2 constructs the operation tree. It does not implement
@@ -131,3 +166,21 @@ frontiers, as they are in `compileEff`; this packet adds no support for them.
 Gate: all batteries reachable from `Test/All.lean`, whole-tree
 `lake build Effect4 Test`, no new axiom allowances. Expected ceiling:
 `[propext, Quot.sound]`. No host equivalence or coverage increase is claimed.
+
+
+D5 construction-data amendment (2026-09-06): the point also captures completed
+fiber exits as first-order data. `Point.awaitExit` is shared by the compiler,
+`inlineYield`, and `denoteR`: a join/await of a target already exited in that
+captured view is a pure exit; otherwise it remains the existing runtime await
+operation. An eager `exit` or generator head must see that same classification.
+Eager child points retain the view. Refreshing source callbacks is a separate
+runtime obligation of this repair; a fixed-view denotation is not a theorem
+about arbitrary host construction timing.
+
+Source-repairs §20 amendment (2026-09-07): a `forkScoped` node denotes as the
+counted `Scope` service read (`FiberOp.ambientScope`, under the wrapper's
+`onSuccess` guard) bound to `forkIn` on the handle it answers; the store observer
+sees the read first and, answered with a handle, the `forkIn` of the child at the
+node's options keyed by the point's fuel (`DenoteRContract` `scopedFork`,
+`replyScope`). `inlineYield_eq_headExit` keeps its statement: neither compile
+shape of a `withFiber` node is an immediate exit.

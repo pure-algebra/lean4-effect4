@@ -15,7 +15,7 @@ Effect4.Program.Stmts (stmts) inductive: nil cons(stmt,stmts)
 Effect4.Program.Effs (effs) inductive: nil cons(eff,effs)
 Effect4.Program.ActionTerm (action_term) inductive: fork(eff,fork_options) forkIn(eff,fork_options,term) forkScoped(eff,fork_options) runIn(term,term) interrupt(term) interruptScoped(term) interruptAll(term,term option) awaitAll(term) awaitAllFailFast(term) snapshotChildren awaitNewChildren(term) raceAll(effs) setContext(term) getContext getId closeScope(term,term)
 Effect4.Program.RowKind (row_kind) inductive: sync async program
-Effect4.Program.RowShape (row_shape) inductive: call value
+Effect4.Program.RowShape (row_shape) inductive: call value tupleCall
 Effect4.ServiceName (service_name) structure: value:int
 Effect4.ServiceTypeCode (service_type_code) structure: value:int
 Effect4.ServiceKey (service_key) structure: name:service_name service:service_type_code

@@ -11,14 +11,13 @@ These finite checks do not prove R5, general simulation or host correspondence.
 
 The comparison includes all exits and complete stores (including Deferred
 waiters and due resumes), replay outcome, parking, interrupt causes, deferred
-flags, contexts, and allocation counters. Interruptibility is compared on live
-fibers. It omits saved code, stack representation, trace, and local step counts.
+flags, contexts, and allocation counters. Interruptibility is compared on every
+fiber. It omits saved code, stack representation, trace, and local step counts.
 
-`RSTEP-FB-TERMINAL-MASK`: the frame machine's `finishFrame` keeps the incoming
-fiber on `FrameStep.finished` (`Machine/Fibers.lean:963-964`); the pop's restored
-mask is discarded. `deliverR` keeps the returned saved state. The unused flag
-can therefore differ after exit, and two literal pins below document that
-difference. Every other control field is still compared on all fibers.
+The repaired `finishFrame` retains the final pop's saved state, including the
+mask while `Cmd.finish` is still pending. Control comparison includes masks
+on both live and exited fibers; it still omits the representation of code and
+stacks, which the P3 relation must supply.
 -/
 
 set_option autoImplicit false
@@ -33,7 +32,7 @@ open Test.Program.RuntimeRReference
 structure FiberControl where
   id : FiberId
   parked : Parked
-  interruptible : Option Bool
+  interruptible : Bool
   interruptedCause : Option CauseV
   deferredInterrupt : Bool
   context : Ctx
@@ -41,12 +40,12 @@ deriving DecidableEq
 
 def frameControl (m : Api.Machine) : List FiberControl :=
   m.fibers.map fun f => ⟨f.id, f.parked,
-    if f.exit.isSome then none else some f.frame.interruptible,
+    f.frame.interruptible,
     f.frame.interruptedCause, f.frame.deferredInterrupt, f.context⟩
 
 def termControl (m : RState) : List FiberControl :=
   m.fibers.map fun f => ⟨f.id, f.parked,
-    if f.exit.isSome then none else some f.frame.interruptible,
+    f.frame.interruptible,
     f.frame.interruptedCause, f.frame.deferredInterrupt, f.context⟩
 
 def termOutcome : RReplay → Api.Outcome
@@ -115,11 +114,11 @@ def termCompileZero : RReplay :=
 #guard termControl termCompileZero.machine = frameControl compileZero.machine
 #guard termOutcome termCompileZero = .frontier
 
--- RSTEP-FB-TERMINAL-MASK: the frame's retained terminal flag is stale after pop.
-#guard RuntimeRReference.interruptible (RuntimeRReference.run waiting failureTape) = some false
+-- The final pop retains the restored mask, including after fiber exit.
+#guard RuntimeRReference.interruptible (RuntimeRReference.run waiting failureTape) = some true
 #guard ((replayR waiting budget failureTape).machine.fiber? Api.root).map
   (fun f => f.frame.interruptible) = some true
-#guard RuntimeRReference.interruptible (RuntimeRReference.run scopedContext startTape) = some false
+#guard RuntimeRReference.interruptible (RuntimeRReference.run scopedContext startTape) = some true
 #guard ((replayR scopedContext budget startTape).machine.fiber? Api.root).map
   (fun f => f.frame.interruptible) = some true
 
@@ -179,23 +178,38 @@ theorem frame_closeScope (scope : Nat) (exit : ExitV) :
   rcases hc : interp.closeScope scope exit f.frame.interruptible f.id m.state with _ | ⟨state, program⟩ <;>
     simp only [evaluatePrim.withFiber, FiberAction.closeScope, FiberCore.interruptible, frameCore, hc]
 
-theorem frame_interruptThenJoin (target : FiberId) (interruptor : Option FiberId) :
-    evaluatePrim.interruptThenJoin interp m f y target interruptor =
-      FiberAction.interruptThenJoin interp m f y target interruptor := by
-  rcases hm : m.fiber? target with _ | t <;>
-    simp only [evaluatePrim.interruptThenJoin, FiberAction.interruptThenJoin, hm]
-
+-- D6b: the public interrupt answers the `fiberInterruptAs` program; that program's arm records
+-- and delegates; the scoped finalizer answers void on itself, else the public program.
 theorem frame_interrupt (target : FiberId) :
     evaluatePrim.withFiber interp m f y (.interrupt target) =
-      FiberAction.interruptThenJoin interp m f y target (some f.id) := by
-  simp only [evaluatePrim.withFiber]
-  exact frame_interruptThenJoin interp m f y target (some f.id)
+      FiberAction.interrupt interp m f y target := rfl
 
-theorem frame_interruptScoped (target : FiberId) (h : target ≠ f.id) :
+theorem frame_interruptAs (target who : FiberId) :
+    evaluatePrim.withFiber interp m f y (.interruptAs target who) =
+      FiberAction.interruptAs interp m f y target who := by
+  rcases hm : m.fiber? target with _ | t <;>
+    simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs, FiberAction.interruptAs, hm]
+
+theorem frame_interruptScoped (target : FiberId) :
     evaluatePrim.withFiber interp m f y (.interruptScoped target) =
-      FiberAction.interruptThenJoin interp m f y target (some f.id) := by
-  simp only [evaluatePrim.withFiber, h, ↓reduceIte]
-  exact frame_interruptThenJoin interp m f y target (some f.id)
+      FiberAction.interruptScoped interp m f y target := by
+  by_cases h : target = f.id
+  · simp only [evaluatePrim.withFiber, FiberAction.interruptScoped, FiberAction.coreAnswer,
+      FiberCore.answerWith, FiberCore.success, frameCore, h, ↓reduceIte]
+  · simp only [evaluatePrim.withFiber, FiberAction.interruptScoped, FiberCore.answerWith, frameCore, h,
+      ↓reduceIte]
+
+-- §20: the `Scope` service read answers the handle or dies; the parallel close's step
+-- delegates to the shared forks and the await command
+theorem frame_ambientScope :
+    evaluatePrim.withFiber interp m f y .ambientScope = FiberAction.ambientScope interp m f y := by
+  rcases h : interp.ambientScope f.context with _ | scope <;>
+    simp only [evaluatePrim.withFiber, FiberAction.ambientScope, FiberAction.coreAnswer,
+      FiberCore.answerWith, FiberCore.success, FiberCore.failure, frameCore, h]
+
+theorem frame_closePar (finalizers : List NCode) :
+    evaluatePrim.withFiber interp m f y (.closePar finalizers) =
+      FiberAction.closePar interp m f y finalizers := rfl
 
 theorem frame_interruptAll (targets : List FiberId) (who : Option FiberId) :
     evaluatePrim.withFiber interp m f y (.interruptAll targets who) =
@@ -219,7 +233,7 @@ theorem frame_cancelRace (raceId : Nat) :
   rcases hr : m.race? raceId with _ | race
   · simp only [evaluatePrim.withFiber, FiberAction.cancelRace, FiberAction.coreAnswer,
       FiberCore.answerWith, FiberCore.success, frameCore, hr]
-  · simp only [evaluatePrim.withFiber, FiberAction.cancelRace, FiberAction.outcomeOf, hr]
+  · simp only [evaluatePrim.withFiber, FiberAction.cancelRace, hr]
 
 theorem frame_raceAll (entrants : List NCode) :
     evaluatePrim.withFiber interp m f y (.raceAll entrants) =
@@ -290,8 +304,10 @@ def startCmds : List (Cmd EffName EffThunk Val Err Defect FiberId Ann NCode) :=
 def startCmdsR : List RCmd := [Cmd.evaluate Api.root, Cmd.drainDue]
 
 def frameDrive (e : NativeEff) (cmdFuel : Nat) (b : Nat := 2048) :=
+  letI := evaluatorFor e
   driveState (interpOf e) cmdFuel (frameLoad e 40 b) startCmds
 def termDrive (e : NativeEff) (cmdFuel : Nat) (b : Nat := 2048) :=
+  letI := termEvaluatorFor e
   driveState (interpR e) cmdFuel (termLoad e 40 b) startCmdsR
 
 def frameCount (e : NativeEff) : List Nat := (frameDrive e 400).1.fibers.map (·.currentOpCount)
@@ -310,8 +326,10 @@ where
     | k + 1, i => if settled (termDrive e i) then some i else go k (i + 1)
 
 def frameRun (e : NativeEff) (t : List Api.Decision) (b : Nat := 2048) :=
+  letI := evaluatorFor e
   replayEval (interpOf e) 400 t (frameLoad e 40 b)
 def termRun (e : NativeEff) (t : List Api.Decision) (b : Nat := 2048) :=
+  letI := termEvaluatorFor e
   replayEval (interpR e) 400 t (termLoad e 40 b)
 
 def frameObs (e : NativeEff) (t : List Api.Decision := [Api.evaluate, Api.flush]) : Obs :=
@@ -322,6 +340,38 @@ def termObs (e : NativeEff) (t : List Api.Decision := [Api.evaluate, Api.flush])
 /-- Observation, counted operations and the least settling command budget agree. -/
 def lockstep (e : NativeEff) : Bool :=
   termObs e = frameObs e && termCount e = frameCount e && termCmds e = frameCmds e
+
+-- E4-CHECK-CE-005: source construction can fold a completed join. A join
+-- constructed while live keeps its Async form through a later mask/fork entry.
+def constructionChild : NativeEff := .succeed (.lit (.nat 42))
+def constructionFork (immediate : Bool) : NativeEff :=
+  .withFiber (.fork constructionChild { immediateDaemon with startImmediately := immediate })
+def constructionJoin : NativeEff := .awaitFiber (.var 0) .joinEffect
+def constructionDirect : NativeEff := .bind (constructionFork true) constructionJoin
+def constructionGen : NativeEff := .bind (constructionFork true)
+  (.gen (.cons (.bindYield constructionJoin) (.cons (.ret (.var 1)) .nil)))
+def constructionExit : NativeEff := .bind (constructionFork true) (.exit constructionJoin)
+def constructionLive : NativeEff := .bind (constructionFork false) constructionJoin
+def constructionMask : NativeEff := .bind (constructionFork false) (.uninterruptible constructionJoin)
+def constructionForkBody : NativeEff := .bind (constructionFork false)
+  (.withFiber (.fork constructionJoin immediateDaemon))
+
+def constructionRows : List NativeEff :=
+  [constructionDirect, constructionGen, constructionExit,
+   constructionLive, constructionMask, constructionForkBody]
+
+#guard constructionRows.all (fun e => Api.wellTyped e && Api.readable e)
+#guard constructionRows.all lockstep
+#guard [constructionDirect, constructionGen, constructionExit].map frameCount = [[4, 1], [6, 1], [4, 1]]
+
+def constructionViewsAgree : Bool := constructionRows.all fun e =>
+  [2048, 4, 6].all fun b => [[Api.evaluate], [Api.evaluate, Api.flush]].all fun tape =>
+    let frame := (frameRun e tape b).machine
+    let term := (termRun e tape b).machine
+    obs frame = obs term && frameControl frame = termControl term &&
+      frame.fibers.map (·.currentOpCount) = term.fibers.map (·.currentOpCount)
+
+#guard constructionViewsAgree
 
 def one : Term := .lit (.nat 1)
 def pureSync : NativeEff := .sync one
@@ -337,6 +387,113 @@ def matchSuccess : NativeEff :=
 def matchFailure : NativeEff :=
   .matchCause (.fail (.lit (.nat 7))) (.succeed one) (.succeed (.lit (.nat 2)))
 def onExitPure : NativeEff := .onExit (.succeed one) (.succeed (.lit .unit))
+
+-- E4-CHECK-CE-009: source OnExit pays an ordinary success frame, and only
+-- a failed body adds the failure frame that combines a failing cleanup.
+def finalizerTimingRows : List NativeEff :=
+  [.onExit (.succeed one) (.succeed (.lit .unit)),
+   .onExit (.fail one) (.succeed (.lit .unit)),
+   .onExit (.succeed one) (.fail (.lit (.nat 2))),
+   .onExit (.fail one) (.fail (.lit (.nat 2)))]
+
+theorem finalizer_success_code (root : NativeEff) (value : Val) (code : NCode) :
+    finalizerCode (interpOf root) (.success value) code =
+      Prim.onSuccess code (.restore (.success value)) := rfl
+
+theorem finalizer_failure_code (root : NativeEff) (cause : CauseV) (code : NCode) :
+    finalizerCode (interpOf root) (.failure cause) code =
+      Prim.onSuccess (Prim.onFailure code (.merge (.failure cause)))
+        (.restore (.failure cause)) := rfl
+
+#guard finalizerTimingRows.all (fun e => Api.wellTyped e && Api.readable e)
+#guard finalizerTimingRows.all lockstep
+#guard finalizerTimingRows.map frameCount = [[5], [6], [4], [6]]
+#guard finalizerTimingRows.map termCount = [[5], [6], [4], [6]]
+
+def finalizerTimingViews : Bool := finalizerTimingRows.all fun e =>
+  [2048, 4, 6].all fun b => [[Api.evaluate], [Api.evaluate, Api.flush]].all fun tape =>
+    let frame := (frameRun e tape b).machine
+    let term := (termRun e tape b).machine
+    obs frame = obs term && frameControl frame = termControl term &&
+      frame.fibers.map (·.currentOpCount) = term.fibers.map (·.currentOpCount) &&
+      (letI := evaluatorFor e
+       Suffices (interpOf e) 400 tape (frameLoad e 40 b)) &&
+      (letI := termEvaluatorFor e
+       Suffices (interpR e) 400 tape (termLoad e 40 b))
+
+#guard finalizerTimingViews
+#guard ((frameRun (.onExit (.fail one) (.succeed (.lit .unit))) [Api.evaluate] 6).machine.fiber?
+  Api.root).map (·.exit) = some none
+#guard ((termRun (.onExit (.fail one) (.succeed (.lit .unit))) [Api.evaluate] 6).machine.fiber?
+  Api.root).map (·.exit) = some none
+
+-- E4-CHECK-CE-004: entry allocates and installs context in one WithFiber;
+-- empty close restores it during the body's delivery and returns no effect.
+def scopedTimingRows : List NativeEff :=
+  [.scoped (.succeed one), .scoped (.fail one),
+   .scoped (.scoped (.succeed one)),
+   .bind (constructionFork false) (.scoped constructionJoin),
+   .bind (constructionFork true) (.scoped constructionJoin)]
+
+#guard scopedTimingRows.all (fun e => Api.wellTyped e && Api.readable e)
+#guard scopedTimingRows.all lockstep
+#guard (scopedTimingRows.take 3).map frameCount = [[4], [4], [7]]
+#guard (scopedTimingRows.take 3).map termCount = [[4], [4], [7]]
+
+def scopedTimingViews : Bool := scopedTimingRows.all fun e =>
+  [2048, 4, 6].all fun b => [[Api.evaluate], [Api.evaluate, Api.flush]].all fun tape =>
+    let frame := (frameRun e tape b).machine
+    let term := (termRun e tape b).machine
+    obs frame = obs term && frameControl frame = termControl term &&
+      frame.fibers.map (·.context) = term.fibers.map (·.context) &&
+      frame.fibers.map (·.currentOpCount) = term.fibers.map (·.currentOpCount) &&
+      (letI := evaluatorFor e
+       Suffices (interpOf e) 400 tape (frameLoad e 40 b)) &&
+      (letI := termEvaluatorFor e
+       Suffices (interpR e) 400 tape (termLoad e 40 b))
+
+#guard scopedTimingViews
+
+/-- Finite command-prefix checks also compare the state before settlement,
+including allocation and context restoration in their source-defined step. -/
+def scopedPrefixViews : Bool := scopedTimingRows.all fun e =>
+  (List.range 80).all fun fuel =>
+    let frame := (frameDrive e fuel).1
+    let term := (termDrive e fuel).1
+    obs frame = obs term && frameControl frame = termControl term &&
+      frame.fibers.map (·.context) = term.fibers.map (·.context) &&
+      frame.fibers.map (·.currentOpCount) = term.fibers.map (·.currentOpCount)
+
+#guard scopedPrefixViews
+#guard ((frameRun (.scoped (.succeed one)) [Api.evaluate] 4).machine.fiber? Api.root).map (·.exit) =
+  some none
+#guard ((termRun (.scoped (.succeed one)) [Api.evaluate] 4).machine.fiber? Api.root).map (·.exit) =
+  some none
+#guard ((frameRun (.scoped (.scoped (.succeed one))) [Api.evaluate]).machine.fiber?
+  Api.root).map (·.context) = some emptyCtx
+#guard (frameRun (.scoped (.scoped (.succeed one))) [Api.evaluate]).machine.state.scopes.entries.all
+  (fun entry => entry.scope.isClosed)
+
+/-- A completing store thunk must run its waiter before the scoped callback:
+the waiter interrupts this still-running owner, so the scope closes with that
+interruption rather than the thunk's success. -/
+def scopedCompletionInterrupt : NativeEff :=
+  .bind (.perform .deferredMake (.lit .unit))
+    (.bind (.withFiber (.fork
+      (.scoped (.perform .deferredSucceed (.app "pair" (.cons (.var 0) (.cons one .nil)))))
+      { immediateDaemon with startImmediately := false }))
+      (.bind (.withFiber (.fork
+        (.bind (.callback .deferredAwait (.var 0)) (.withFiber (.interrupt (.var 1))))
+        immediateDaemon))
+        (.awaitFiber (.var 1) .joinEffect)))
+
+#guard Api.wellTyped scopedCompletionInterrupt && Api.readable scopedCompletionInterrupt
+#guard lockstep scopedCompletionInterrupt
+#guard (frameRun scopedCompletionInterrupt [Api.evaluate, Api.flush]).machine.state.scopes.status 0 =
+  some (some (Witnesses.interruptedWith ⟨2⟩ ⟨1⟩ (stores.stackAnnotations ⟨2⟩)))
+#guard (termRun scopedCompletionInterrupt [Api.evaluate, Api.flush]).machine.state.scopes.status 0 =
+  some (some (Witnesses.interruptedWith ⟨2⟩ ⟨1⟩ (stores.stackAnnotations ⟨2⟩)))
+
 def onExitRef : NativeEff :=
   .bind (.perform .refMake (.lit (.nat 0)))
     (.bind (.onExit (.succeed one) (.perform (.refUpdate FnName.incr) (.var 0)))
@@ -352,6 +509,30 @@ def maskedInner : NativeEff := .uninterruptible (.interruptible (.succeed one))
 def branchT : NativeEff := .branch (.lit (.bool true)) (.succeed one) (.succeed (.lit (.nat 2)))
 def yieldErr : NativeEff := .yieldError (.lit (.nat 3))
 def getIdP : NativeEff := .withFiber .getId
+/-- E4-CHECK-CE-010: Effect.fiberId is a number, so admitted arithmetic can use it.
+Pinned `internal/effect.ts:1092–1100`. Logical root ID is Api.root = 0. -/
+def getIdSucc : NativeEff := .bind getIdP
+  (.succeed (.app "succ" (.cons (.var 0) .nil)))
+#guard Api.wellTyped getIdSucc && Api.readable getIdSucc
+#guard (Api.replay getIdSucc 100 [Api.evaluate]).exit = some (.success (.nat 1))
+#guard (obsR (replayR getIdSucc 100 [Api.evaluate]).machine).exits =
+  [(Api.root, some (.success (.nat 1)))]
+#guard lockstep getIdSucc
+
+/-- The optional interruptor is numeric provenance, including unallocated IDs.
+The snapshot operation is admitted but lies outside the printer profile. -/
+def numericInterruptor : NativeEff := .bind (.withFiber .snapshotChildren)
+  (.withFiber (.interruptAll (.var 0) (some (.lit (.nat 99)))))
+#guard Api.wellTyped numericInterruptor
+#guard (Api.replay numericInterruptor 100 [Api.evaluate]).exit = some (.success .unit)
+#guard (obsR (replayR numericInterruptor 100 [Api.evaluate]).machine).exits =
+  [(Api.root, some (.success .unit))]
+
+theorem native_id_value (root : NativeEff) (fiber : FiberId) :
+    (interpOf root).fiberIdValue fiber = Val.nat fiber.value ∧
+    (interpR root).fiberIdValue fiber = Val.nat fiber.value ∧
+    (interpOf root).fiberValue fiber = Val.fiber fiber ∧
+    (interpR root).fiberValue fiber = Val.fiber fiber := ⟨rfl, rfl, rfl, rfl⟩
 def genInline : NativeEff := .gen (.cons (.bindYield (.succeed one)) (.cons (.ret (.var 0)) .nil))
 def genResumed : NativeEff :=
   .gen (.cons (.bindYield store) (.cons (.bindYield (.perform .refGet (.var 0))) (.cons (.ret (.var 1)) .nil)))
@@ -416,6 +597,38 @@ def yieldNowThen : NativeEff := .bind (.yieldNow 0) (.succeed (.lit (.nat 5)))
 #guard termCount genInline = [3] ∧ termCount genResumed = [5] ∧ termCount genFail = [3]
 #guard termCount whileThree = [6] ∧ termCount whileZero = [3] ∧ termCount whileFailing = [3]
 
+-- E4-CHECK-CE-008: an outer source suspension returns the child's full code.
+-- Actual Api.print output on rc.112 counts both suspensions; source evidence is
+-- docs/research/probes/p012-review/emitted-host-results.json at acfc2fc.
+#guard Api.wellTyped (.suspend genInline)
+#guard Api.wellTyped (.suspend whileThree)
+#guard Api.wellTyped (.suspend branchT)
+#guard lockstep (.suspend genInline)
+#guard lockstep (.suspend whileThree)
+#guard lockstep (.suspend branchT)
+#guard frameCount (.suspend genInline) = [4]
+#guard frameCount (.suspend whileThree) = [7]
+#guard frameCount (.suspend branchT) = [3]
+
+-- D6a/D6b (source-repairs §§16, 19): the pinned host counts of `probes/p3-d6/host-d6b.json`
+-- on the race and interrupt rows, agreed by both models — the winner-time cleanup
+-- (`raceWinner`, `capturedLiveRace`), the public interrupt's `fiberInterruptAs` return
+-- (`interruptDone`, `interruptLive`), ordered interrupt-all with its `asVoid(fiberAwaitAll)`
+-- return (`interruptAllDone`, `orderedInterrupt`) and the counted child-exit middleware
+-- entry (`middlewareChild`).
+#guard lockstep Test.Program.RuntimeRReference.raceWinner
+#guard lockstep Test.Program.RuntimeRReference.interruptDone
+#guard lockstep Test.Program.RuntimeRReference.interruptLive
+#guard lockstep Test.Program.RuntimeRReference.interruptAllDone
+#guard lockstep Test.Program.RuntimeRReference.orderedInterrupt
+#guard lockstep Test.Program.RuntimeRReference.middlewareChild
+#guard frameCount Test.Program.RuntimeRReference.raceWinner = [12, 4, 1]
+#guard frameCount Test.Program.RuntimeRReference.interruptDone = [8, 1]
+#guard frameCount Test.Program.RuntimeRReference.interruptLive = [8, 1]
+#guard frameCount Test.Program.RuntimeRReference.interruptAllDone = [11, 1, 1]
+#guard frameCount Test.Program.RuntimeRReference.orderedInterrupt = [15, 8, 1]
+#guard frameCount Test.Program.RuntimeRReference.middlewareChild = [7, 4]
+
 -- The audit's ten local command pairs now agree; the store's answer slot is gone.
 #guard (frameCmds pureSync, termCmds pureSync) = (some 6, some 6)
 #guard (frameCmds store, termCmds store) = (some 7, some 7)
@@ -436,16 +649,82 @@ def rootExit {κ φ η : Type}
     (r : ReplayResult EffName EffThunk Val Err Defect FiberId Ann Ctx Stores κ φ η) :
     Option ExitV := (r.machine.fiber? Api.root).bind RunFiber.exit
 
+/-- The saved final-pop state is retained before the exit command commits it. -/
+theorem finished_pop_state (m : Api.Machine)
+    (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (y : Bool)
+    (ex : ExitV) (events : List (FrameEvent EffName EffThunk Val Err Defect FiberId Ann))
+    (nested : List (Cmd EffName EffThunk Val Err Defect FiberId Ann)) :
+    evaluatePrim.finishFrame m f y (.finished ex) events nested =
+      ⟨m.emit (events.map (RunEvent.frame f.id)),
+        { f with frame := frameExitState f.frame }, y, .finished ex, nested⟩ := rfl
+
+/-- The old terminal-only mask exception missed this live, unfinished command
+boundary (`E4-RTERM-CE-005`). Both machines now retain the completed pop. -/
+theorem pending_finish_controls :
+    (frameDrive uninterruptibleOne 3).1.fibers.map (·.frame.interruptible) = [true] ∧
+    (termDrive uninterruptibleOne 3).1.fibers.map (·.frame.interruptible) = [true] ∧
+    (frameDrive uninterruptibleOne 3).1.fibers.map (·.frame.stack.isEmpty) = [true] ∧
+    (termDrive uninterruptibleOne 3).1.fibers.map (·.frame.stack.isEmpty) = [true] ∧
+    (frameDrive uninterruptibleOne 3).1.fibers.map (·.frame.deferredInterrupt) = [false] ∧
+    (termDrive uninterruptibleOne 3).1.fibers.map (·.frame.deferredInterrupt) = [false] ∧
+    (frameDrive uninterruptibleOne 3).1.fibers.map (·.exit) = [none] ∧
+    (termDrive uninterruptibleOne 3).1.fibers.map (·.exit) = [none] ∧
+    (frameDrive uninterruptibleOne 3).2 = [.finish Api.root (.success (.nat 1)), .drainDue] ∧
+    (termDrive uninterruptibleOne 3).2 = [.finish Api.root (.success (.nat 1)), .drainDue] :=
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+#print axioms finished_pop_state
+#print axioms pending_finish_controls
+
+-- The old frame compiler finished this source at budget 7 while the term and host
+-- parked. Equal sufficient command budgets now retain the same live observation.
+#guard rootExit (frameRun (.suspend whileThree) [Api.evaluate] 7) = none
+#guard rootExit (termRun (.suspend whileThree) [Api.evaluate] 7) = none
+#guard obs (frameRun (.suspend whileThree) [Api.evaluate] 7).machine =
+  obsR (termRun (.suspend whileThree) [Api.evaluate] 7).machine
+
 -- Budget two: sync exits, suspend and the skipped catch park on both machines; the
 -- folded exit finishes, as the host does.
 #guard rootExit (termRun pureSync [Api.evaluate] 2) = some (.success (.nat 1))
 #guard rootExit (termRun suspended [Api.evaluate] 2) = none
 #guard parkedRoot (termRun suspended [Api.evaluate] 2) = some (.withGuard 0)
-#guard rootExit (termRun suspended [Api.evaluate, Api.flush] 2) = some (.success (.nat 1))
+-- At this small budget the resume answer spends count one; count two injects
+-- again before the saved Success. The finite flush reaches its live frontier.
+#guard rootExit (termRun suspended [Api.evaluate, Api.flush] 2) = none
+#guard rootExit (frameRun suspended [Api.evaluate, Api.flush] 2) = none
+#guard (frameDrive suspended 400 2).1.fibers.map (·.currentOpCount) = [3]
+#guard (termDrive suspended 400 2).1.fibers.map (·.currentOpCount) = [3]
+#guard (frameDrive suspended 400 1).1.fibers.map (·.currentOpCount) = [2]
+#guard (termDrive suspended 400 1).1.fibers.map (·.currentOpCount) = [2]
+#guard obs (frameRun suspended [Api.evaluate, Api.flush] 2).machine =
+  obsR (termRun suspended [Api.evaluate, Api.flush] 2).machine
 #guard rootExit (termRun skippedHandler [Api.evaluate] 2) = none
 #guard rootExit (frameRun skippedHandler [Api.evaluate] 2) = none
 #guard rootExit (termRun exitSucceed [Api.evaluate] 2) = some (.success (.exitOk (.nat 1)))
 #guard rootExit (frameRun exitSucceed [Api.evaluate] 2) = some (.success (.exitOk (.nat 1)))
+
+-- An interrupt above an injected yield still runs cleanup and skips the outer
+-- cause handler while interruption remains pending (internal/core.ts:539-545).
+def injectedCleanup : NativeEff :=
+  .onExit (.suspend (.succeed (.lit (.nat 1)))) (.perform .refMake (.lit (.nat 9)))
+def injectedCaught : NativeEff := .catchCause injectedCleanup (.succeed (.lit (.nat 99)))
+def injectedInterruptTape : List Api.Decision :=
+  [Api.evaluate, .interruptFrom (some ⟨1⟩) ReasonAnnotations.empty Api.root, Api.flush]
+#guard Api.wellTyped injectedCleanup && Api.wellTyped injectedCaught
+#guard rootExit (frameRun injectedCleanup injectedInterruptTape 3) =
+  some (Witnesses.interruptedBy ⟨1⟩ Api.root)
+#guard rootExit (termRun injectedCleanup injectedInterruptTape 3) =
+  some (Witnesses.interruptedBy ⟨1⟩ Api.root)
+#guard (frameRun injectedCleanup injectedInterruptTape 3).machine.state.refs = [.nat 9]
+#guard obs (frameRun injectedCleanup injectedInterruptTape 3).machine =
+  obsR (termRun injectedCleanup injectedInterruptTape 3).machine
+#guard rootExit (frameRun injectedCaught injectedInterruptTape 4) =
+  some (Witnesses.interruptedBy ⟨1⟩ Api.root)
+#guard rootExit (termRun injectedCaught injectedInterruptTape 4) =
+  some (Witnesses.interruptedBy ⟨1⟩ Api.root)
+#guard (frameRun injectedCaught injectedInterruptTape 4).machine.state.refs = [.nat 9]
+#guard obs (frameRun injectedCaught injectedInterruptTape 4).machine =
+  obsR (termRun injectedCaught injectedInterruptTape 4).machine
 
 -- The wave-2 audit's scheduling witnesses: a context budget of six supplied through
 -- Completion, then a sync; both machines now finish.
@@ -497,6 +776,15 @@ inductive CmdShape
   | finish (fiber : FiberId) (exit : ExitV)
   | resume (fiber : FiberId) (token : Nat)
   | launch (race : Nat)
+  | enrollRace (race : Nat) (child : FiberId)
+  | registrationDone (race : Nat) (yielding : Bool)
+  | interruptTarget (target : FiberId) (who : Option FiberId)
+  | afterInterrupt (host : FiberId) (yielding : Bool) (kind : ParkKind)
+  | raceCancel (race : Nat) (host : FiberId) (yielding : Bool) (remaining visited : List FiberId)
+  | trackChild (parent child : FiberId)
+  | observe (fiber : FiberId) (exit : ExitV) (observer : Observer)
+  | exitDone (fiber : FiberId)
+  | closeParAwait (host : FiberId) (yielding : Bool) (fibers : List FiberId)
   | link (scope : Nat) (key : Nat) (target : FiberId)
   | drainDue
 deriving DecidableEq
@@ -508,6 +796,15 @@ def cmdShape {κ : Type} : Cmd EffName EffThunk Val Err Defect FiberId Ann κ �
   | .finish id ex => .finish id ex
   | .resume id token _ => .resume id token
   | .launch race => .launch race
+  | .enrollRace race child => .enrollRace race child
+  | .registrationDone race y => .registrationDone race y
+  | .interruptTarget target who _ => .interruptTarget target who
+  | .afterInterrupt host y kind => .afterInterrupt host y kind
+  | .raceCancel race host y remaining visited => .raceCancel race host y remaining visited
+  | .trackChild parent child => .trackChild parent child
+  | .observe fiber ex observer => .observe fiber ex observer
+  | .exitDone fiber => .exitDone fiber
+  | .closeParAwait host y fibers => .closeParAwait host y fibers
   | .link _ scope key target _ _ => .link scope key target
   | .drainDue => .drainDue
 
@@ -528,9 +825,9 @@ theorem store_step_rel (root : NativeEff) (m : Api.Machine) (m' : RState)
       (termStoreStep root m' f' op k y).nested.map cmdShape ∧
     (frameStoreStep root m f op y).machine.state = (termStoreStep root m' f' op k y).machine.state := by
   unfold frameStoreStep termStoreStep
-  simp only [evaluatePrim, evaluateR, interpOf]
+  simp only [evaluatePrim, evaluateR, evaluateRawR, prepareR, answerR, interpOf]
   rw [hs]
-  rcases syncOpStep op m'.state with _ | ⟨state, value⟩ <;> simp [cmdShape, hs]
+  rcases syncOpStep op m'.state with _ | ⟨state, value⟩ <;> simp [prepareIterR, cmdShape, hs]
 
 -- The loaded state uses the existing generic observation and first-order tape.
 example (program : NativeEff) (fuel : Nat) (choices : List Bool) :
@@ -540,5 +837,98 @@ example (program : NativeEff) (fuel : Nat) (choices : List Bool) :
 example (program : NativeEff) (answer : Completion Val Err Defect FiberId Ann) :
     (interpR program).answerCode answer = denoteCompletion answer :=
   interpR_answerCode program answer
+
+/-! ## D6a/D6b: a deferred interrupt recorded during a race's registration
+
+`internal/effect.ts:662-667`: when the registration returns `Yield` but a nested run
+recorded a deferred interrupt, the host clears its yield guard and continues the same entry
+through the next loop top, which fails it with the recorded cause; the cancel frame the
+registration pushed is still on the stack and runs. No emitted program can interrupt its
+own host from inside the registration, so this row is assembled by hand: the empty race is
+driven until its registration is about to return (the queue head is `registrationDone`),
+the interrupt is recorded on the running host, and the drive continues. -/
+
+section DeferredRegistration
+
+def raceEmptyRegistering :=
+  letI := evaluatorFor Test.Program.RuntimeRReference.raceEmpty
+  driveState (interpOf Test.Program.RuntimeRReference.raceEmpty) 4
+    (frameLoad Test.Program.RuntimeRReference.raceEmpty 40 2048) startCmds
+
+-- the host is running its entry, unparked, two counted ops in (`WithFiber`, `Async`), and the
+-- registration's return is the next command
+#guard raceEmptyRegistering.2.map cmdShape = [.registrationDone 0 false, .drainDue]
+#guard (raceEmptyRegistering.1.fiber? Api.root).map
+  (fun f => (f.running, f.frame.deferredInterrupt, f.parked, f.currentOpCount)) =
+    some (true, false, .notParked, 2)
+
+def raceEmptyDeferred :=
+  letI := evaluatorFor Test.Program.RuntimeRReference.raceEmpty
+  match raceEmptyRegistering.1.fiber? Api.root with
+  | none => raceEmptyRegistering
+  | some host =>
+    let recorded := interruptRecord (interpOf Test.Program.RuntimeRReference.raceEmpty) (some ⟨9⟩)
+      ReasonAnnotations.empty host
+    driveState (interpOf Test.Program.RuntimeRReference.raceEmpty) 400
+      (raceEmptyRegistering.1.update recorded.1) raceEmptyRegistering.2
+
+-- the record defers (the host is running), the return clears the guard instead of parking,
+-- the next loop top fails the host with the recorded cause, the cancel frame runs, and the
+-- host exits interrupted in the same entry with every command consumed
+#guard (raceEmptyRegistering.1.fiber? Api.root).map (fun host =>
+  (interruptRecord (interpOf Test.Program.RuntimeRReference.raceEmpty) (some ⟨9⟩)
+    ReasonAnnotations.empty host).2) = some false
+#guard raceEmptyDeferred.2 = []
+#guard raceEmptyDeferred.1.stuck = none
+#guard (raceEmptyDeferred.1.fiber? Api.root).bind RunFiber.exit =
+  some (Witnesses.interruptedBy ⟨9⟩ Api.root)
+#guard (raceEmptyDeferred.1.fiber? Api.root).map
+  (fun f => (f.parked, f.frame.deferredInterrupt, f.frame.stack.length, f.currentOpCount)) =
+    some (.notParked, false, 0, 10)
+
+end DeferredRegistration
+
+section SourceRepairs20
+
+-- source-repairs §20 (2026-09-07): `forkScoped`'s `flatMap(scope, forkIn)` wrapper and the
+-- multiple-finalizer close through `scopeCloseFinalizers`' generator, sequential and
+-- parallel. The four rows are the discovery rows of `probes/p3-d4/p10_manifest.lean`; the
+-- pinned host run is `probes/p3-d4/host-d4c.json`. Variables are numbered by binding depth
+-- from the root. The rows are well typed and printed; none reads back (a reader gap).
+def scopedDaemon : Supervision.ForkOptions := ⟨true, true, .inherit⟩
+/-- The scoped entry, the wrapper's `OnSuccess`/`Service`/`Success`, `forkIn`, the child's own
+count, and the close of a scope whose one finalizer the finished child already removed. -/
+def forkScopedDone : NativeEff := .scoped (.withFiber (.forkScoped (.succeed one) scopedDaemon))
+/-- One live scoped child: the close runs its one finalizer directly. -/
+def seqOne : NativeEff := .scoped (.bind (.perform .deferredMake (.lit .unit))
+  (.bind (.withFiber (.forkScoped (.callback .deferredAwait (.var 0)) scopedDaemon))
+    (.succeed (.lit .unit))))
+/-- Two live scoped children: the close walks two finalizers through the sequential
+generator, each under the `Exit` primitive. -/
+def seqTwo : NativeEff := .scoped (.bind (.perform .deferredMake (.lit .unit))
+  (.bind (.withFiber (.forkScoped (.callback .deferredAwait (.var 0)) scopedDaemon))
+    (.bind (.withFiber (.forkScoped (.callback .deferredAwait (.var 0)) scopedDaemon))
+      (.succeed (.lit .unit)))))
+/-- A parallel scope with two live `forkIn` children closed with an exit value: one generator
+step forks both finalizers as immediate daemons and awaits them. -/
+def parTwo : NativeEff :=
+  .bind (.perform (.scopeMake .parallel) (.lit .unit))
+    (.bind (.perform .deferredMake (.lit .unit))
+      (.bind (.withFiber (.forkIn (.callback .deferredAwait (.var 1)) scopedDaemon (.var 0)))
+        (.bind (.withFiber (.forkIn (.callback .deferredAwait (.var 1)) scopedDaemon (.var 0)))
+          (.bind (.exit (.succeed (.lit .unit))) (.withFiber (.closeScope (.var 0) (.var 4)))))))
+
+def sourceRepairs20Rows : List NativeEff := [forkScopedDone, seqOne, seqTwo, parTwo]
+#guard sourceRepairs20Rows.all Api.wellTyped
+#guard sourceRepairs20Rows.all lockstep
+-- the host's counts (`host-d4c.json`, budget 2048): the eight of the wrapper's row, the
+-- nineteen with one direct finalizer, the thirty-eight through the sequential generator, and
+-- the eighteen of the parallel step with its two six-op daemons
+#guard sourceRepairs20Rows.map frameCount = [[8, 1], [19, 4], [38, 4, 4], [18, 4, 4, 6, 6]]
+#guard sourceRepairs20Rows.map termCount = [[8, 1], [19, 4], [38, 4, 4], [18, 4, 4, 6, 6]]
+#guard sourceRepairs20Rows.map frameCmds = [some 17, some 40, some 74, some 75]
+#guard sourceRepairs20Rows.map termCmds = [some 17, some 40, some 74, some 75]
+
+end SourceRepairs20
 
 end Test.Program.RuntimeRContract

@@ -83,8 +83,8 @@ def pOnExitFails : NativeEff := .onExit (.succeed (.lit (.nat 1))) (.fail (.lit 
 #guard steps pCatch = 2
 #guard steps pRefSet = 7
 #guard steps pBranchTrue = 1
-#guard steps pOnExit = 11
-#guard steps pNestedFinalizer = 8
+#guard steps pOnExit = 12
+#guard steps pNestedFinalizer = 10
 #guard depth pNestedFinalizer = 3
 
 -- The contract's fuel covers every plain program's depth and commands, and the budget its

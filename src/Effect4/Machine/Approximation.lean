@@ -334,13 +334,28 @@ theorem linkScope_grows {interp : RunInterp ν σ β ε δ ι α χ St} {m : Run
   try dsimp only
   (repeat' split) <;> trace_leaf
 
+/-- The parallel close's forks (§20): one spawn per finalizer, each extending the last. -/
+theorem forkFinalizers_grows {interp : RunInterp ν σ β ε δ ι α χ St}
+    {host : RunFiber ν σ β ε δ ι α χ} :
+    ∀ {m : RunMachine ν σ β ε δ ι α χ St} {programs : List (Prim ν σ β ε δ ι α)},
+      Grows m (forkFinalizers interp m host programs)
+  | m, [] => Grows.refl m []
+  | m, program :: rest => by
+    unfold Grows forkFinalizers
+    try dsimp only
+    exact Extends.trans
+      (spawn_grows (interp := interp) (m := m) (parent := host) (program := program)
+        (options := ⟨true, true, Supervision.MaskMode.inherit⟩))
+      (forkFinalizers_grows (interp := interp) (host := host) (programs := rest))
+
 /-- The hops through the leaves. -/
 macro "hops_leaf" : tactic => `(tactic| first
   | exact spawn_grows
   | exact start_grows
   | exact interruptEach_grows
   | exact countdownPark_grows
-  | exact linkScope_grows)
+  | exact linkScope_grows
+  | exact forkFinalizers_grows)
 
 theorem launchEntrant_grows {interp : RunInterp ν σ β ε δ ι α χ St} {raceId : Nat}
     {m : RunMachine ν σ β ε δ ι α χ St} {host : RunFiber ν σ β ε δ ι α χ}
@@ -349,7 +364,7 @@ theorem launchEntrant_grows {interp : RunInterp ν σ β ε δ ι α χ St} {rac
   try dsimp only
   trace_chain with hops_leaf
 
-/-- `injectYield` emits or answers nothing. -/
+/-- `injectYield` extends the diagnostic trace and changes no store observation. -/
 theorem injectYield_extends {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ}
     {yielding : Bool} {it : Iter ν σ β ε δ ι α χ St} (h : injectYield m f yielding = some it) :
     Extends m it.machine := by
@@ -386,17 +401,19 @@ macro "hops_observers" : tactic => `(tactic| first
 theorem exitFiber_grows {interp : RunInterp ν σ β ε δ ι α χ St} {m : RunMachine ν σ β ε δ ι α χ St}
     {f : RunFiber ν σ β ε δ ι α χ} {exit : Exit β ε δ ι α} :
     Grows m (exitFiber interp m f exit) := by
-  unfold Grows exitFiber
+  unfold Grows exitFiber exitFiber.exitInterruptChildren exitFiber.exitStore
   try dsimp only
   (repeat' split) <;> trace_chain with hops_observers
 
-/-- The hops through everything a command reaches. -/
-macro "hops_cmd" : tactic => `(tactic| first
-  | hops_observers
-  | exact launchEntrant_grows
-  | exact exitFiber_grows)
-
 /-! ### `evaluatePrim` and its arms -/
+
+/-- A race's registration only marks the race (D6a). -/
+theorem registerRace_extends {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ}
+    {yielding : Bool} {raceId : Nat} :
+    Extends m (registerRace m f yielding raceId).machine := by
+  unfold registerRace
+  try dsimp only
+  split <;> trace_leaf
 
 theorem finishFrame_extends {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ}
     {yielding : Bool} {next : FrameStep ν σ β ε δ ι α} {events : List (FrameEvent ν σ β ε δ ι α)}
@@ -421,13 +438,14 @@ theorem finalizerOr_extends {interp : RunInterp ν σ β ε δ ι α χ St}
   try dsimp only
   (repeat' split) <;> first | trace_leaf; done | exact stepFrame_extends
 
-theorem interruptThenJoin_extends {interp : RunInterp ν σ β ε δ ι α χ St}
+/-- `fiberInterruptAs` only records (D6b); the target's run and the return are commands. -/
+theorem interruptAs_extends {interp : RunInterp ν σ β ε δ ι α χ St}
     {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ} {yielding : Bool}
-    {target : FiberId} {interruptor : Option FiberId} :
-    Extends m (evaluatePrim.interruptThenJoin interp m f yielding target interruptor).machine := by
-  unfold evaluatePrim.interruptThenJoin
+    {target who : FiberId} :
+    Extends m (evaluatePrim.interruptAs interp m f yielding target who).machine := by
+  unfold evaluatePrim.interruptAs
   try dsimp only
-  (repeat' split) <;> trace_chain with hops_leaf
+  (repeat' split) <;> trace_leaf
 
 theorem withFiber_extends {interp : RunInterp ν σ β ε δ ι α χ St}
     {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ} {yielding : Bool}
@@ -436,7 +454,7 @@ theorem withFiber_extends {interp : RunInterp ν σ β ε δ ι α χ St}
   unfold evaluatePrim.withFiber
   try dsimp only
   (repeat' split) <;> first
-    | exact interruptThenJoin_extends
+    | exact interruptAs_extends
     | trace_chain with hops_leaf
 
 theorem evaluatePrim_extends {interp : RunInterp ν σ β ε δ ι α χ St}
@@ -448,7 +466,9 @@ theorem evaluatePrim_extends {interp : RunInterp ν σ β ε δ ι α χ St}
     | exact withFiber_extends
     | exact stepFrame_extends
     | exact finalizerOr_extends
+    | exact registerRace_extends
     | trace_leaf; done
+    | trace_chain with hops_leaf
 
 theorem iteration_extends {interp : RunInterp ν σ β ε δ ι α χ St}
     {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ} {yielding : Bool} :
@@ -456,7 +476,7 @@ theorem iteration_extends {interp : RunInterp ν σ β ε δ ι α χ St}
   unfold iteration
   try dsimp only
   split
-  · next it h => exact injectYield_extends h
+  · next it h => exact Extends.trans (injectYield_extends h) evaluatePrim_extends
   · exact evaluatePrim_extends
 
 /-! ### The loop -/
@@ -465,6 +485,16 @@ theorem settle_grows {id : FiberId} {rest : List (Cmd ν σ β ε δ ι α)} {it
     Grows it.machine (settle id rest it) := by
   unfold Grows settle
   (repeat' split) <;> trace_leaf
+
+/-- The hops of one command: the observer folds, a single fired observer (an entrant's
+enrollment, D6a), an entrant's launch, the exit path, and a settle from an iteration the
+command built itself (the registration's return, D6a). -/
+macro "hops_cmd" : tactic => `(tactic| first
+  | hops_observers
+  | exact fireObserver_grows
+  | exact launchEntrant_grows
+  | exact exitFiber_grows
+  | exact settle_grows)
 
 theorem driveStep_grows {interp : RunInterp ν σ β ε δ ι α χ St} {m : RunMachine ν σ β ε δ ι α χ St}
     {cmd : Cmd ν σ β ε δ ι α} {rest : List (Cmd ν σ β ε δ ι α)} :

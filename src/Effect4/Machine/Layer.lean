@@ -264,6 +264,9 @@ inductive Name
       (closerInterruptible : Bool)
   /-- `exitAsVoidAll` of the awaited exits (`:3826`, M6). -/
   | mergeAwaitedExits
+  /-- `RunInterp.closeDoneName` (source-repairs §20): the parallel close generator under its
+  await; never reached here — the layer profile keeps its close chains. -/
+  | closeParDone
   /-- `scopeAddFinalizerExit`'s answer (`:3851-3857`): registered, or run the finalizer now. -/
   | afterScopeAdd (fin : FinName)
   /-- `updateContext` (`:2087-2096`), on the previous context value. -/
@@ -341,7 +344,14 @@ inductive ActionName
   | fork (program : ProgName) (options : Supervision.ForkOptions)
   | forkScoped (program : ProgName) (options : Supervision.ForkOptions) (key : Nat)
   | interrupt (target : FiberId)
+  /-- `fiberInterruptAs`, what the public interrupt's `withFiber` returns (source-repairs §19,
+  D6b): the shared machine constructs it through `RunInterp.interruptAsCode`. -/
+  | interruptAs (target : FiberId) (who : FiberId)
   | interruptScoped (target : FiberId)
+  /-- `fiberInterruptAll(children)`, the child-exit middleware's program (`internal/effect.ts:613-617`,
+  D6b): constructed through `RunInterp.interruptAllCode` when a layer fiber exits with tracked
+  children. -/
+  | interruptAll (targets : List FiberId)
   | awaitAll (targets : List FiberId)
   /-- `forEach` with `concurrency: layers.length` (`Layer.ts:1597-1598`): the first failing
   sibling interrupts the outstanding ones. -/
@@ -356,11 +366,13 @@ inductive ActionName
   | dropObservers (token : Nat)
 deriving DecidableEq
 
-/-- Every thunk name. -/
+/-- Every thunk name. The park names the join and await-all parks an interrupt's return
+constructs (D6b); a layer program still races nothing, and `parkCode` refuses the race park. -/
 inductive Thunk
   | act (action : ActionName)
   | op (operation : SyncOp)
   | body (program : ProgName)
+  | park (kind : ParkKind)
 deriving DecidableEq
 
 /-- The program carrier at this instantiation. -/
@@ -1206,7 +1218,9 @@ def actionOf (table : LayerTable) : ActionName → WithFiberAction Name Thunk Va
   | ActionName.forkScoped program options key =>
     WithFiberAction.forkScoped (progOf table program) options key
   | ActionName.interrupt target => WithFiberAction.interrupt target
+  | ActionName.interruptAs target who => WithFiberAction.interruptAs target who
   | ActionName.interruptScoped target => WithFiberAction.interruptScoped target
+  | ActionName.interruptAll targets => WithFiberAction.interruptAll targets none
   | ActionName.awaitAll targets => WithFiberAction.awaitAll targets
   | ActionName.awaitAllFailFast targets => WithFiberAction.awaitAllFailFast targets
   | ActionName.setContext context => WithFiberAction.setContext context
@@ -1230,14 +1244,33 @@ def interp (table : LayerTable) : RunInterp Name Thunk Val Err Defect FiberId An
     | _ => Prim.failure (Cause.die Defect.notImplemented)
   finalizerExit := fun _ _ => Exit.void
   reifyExit := reifyExitVal
-  iterNext := fun _ value => ([], IterStep.done value)
+  -- the parallel close generator's inline `exitAsVoidAll` (§20), should a machine command ever
+  -- push it; no layer program reaches it
+  iterNext := fun
+    | Name.closeParDone, value =>
+      ([], match reasonsOfVal value with
+        | [] => IterStep.done Val.unit
+        | reason :: rest => IterStep.halt ⟨reason :: rest⟩)
+    | _, value => ([], IterStep.done value)
   loopTest := fun _ _ => false
   loopBody := fun _ value => Prim.success value
   loopStep := fun _ _ value => value
   loopDone := fun _ => Val.unit
   notImplemented := Defect.notImplemented
   cancelThenFail := fun name cause => Prim.onSuccess (cancelProgram name) (Name.reFail cause)
-  parkOf := fun _ => none
+  parkOf := fun
+    | Prim.suspend (Thunk.park kind) => some (Except.ok kind)
+    | _ => none
+  -- the join and await-all parks an interrupt's return constructs (D6b); no layer program
+  -- races, so the race park keeps its explicit unused-race refusal
+  parkCode := fun
+    | ParkKind.race _ => Prim.failure (Cause.die Defect.notImplemented)
+    | kind => Prim.suspend (Thunk.park kind)
+  -- the interrupt programs are the named `withFiber` actions (D6b): the public interrupt, its
+  -- `fiberInterruptAs` return, and the child-exit middleware's `fiberInterruptAll`
+  interruptCode := fun target => Prim.withFiber (Thunk.act (ActionName.interrupt target))
+  interruptAsCode := fun target who => Prim.withFiber (Thunk.act (ActionName.interruptAs target who))
+  interruptAllCode := fun targets => Prim.withFiber (Thunk.act (ActionName.interruptAll targets))
   withFiberOf := fun
     | Thunk.act action => some (actionOf table action)
     | _ => none
@@ -1263,7 +1296,7 @@ def interp (table : LayerTable) : RunInterp Name Thunk Val Err Defect FiberId An
   parkCancelName := Name.cancelPark
   raceCancelName := Name.cancelRace
   -- no layer program races, so a settle is never built; the exit alone is the honest filler
-  raceSettle := fun _ exit => Prim.ofExit exit
+  raceSettle := fun _ _ exit => Prim.ofExit exit
   finalizerProgram := fun
     | Name.finalizerName fin, exit => some (finProgram fin exit)
     | _, _ => none
@@ -1296,9 +1329,12 @@ def interp (table : LayerTable) : RunInterp Name Thunk Val Err Defect FiberId An
     | Supervision.ObserverMode.awaitValue => Prim.success (reifyExitVal exit)
     | Supervision.ObserverMode.joinEffect => Prim.ofExit exit
   fiberValue := Val.fiber
+  fiberIdValue := fun fiber => Val.nat fiber.value
   fibersValue := Val.fibers
   exitsValue := exitsVal
   voidValue := Val.unit
+  scopeValue := Val.scopeHandle
+  closeDoneName := Name.closeParDone
   encodeFiber := id
   stackAnnotations := fun _ => ReasonAnnotations.empty
   asyncFiberError := Defect.asyncFiber

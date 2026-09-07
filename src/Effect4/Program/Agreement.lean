@@ -10,14 +10,14 @@ over the stores from *any* outer stack `K`, reaches the exit and the stores its 
 predicts, and continues from there exactly as the run from that exit would. The machine's
 command loop over one fiber is related to this local run in `Program/Agreement/Machine.lean`.
 
-`Plain` is `Denote.Straight` without `onExit`: the `onExit` frame's finalizer runs under a
-mask whose restoring frame the pop leaves on the stack (`Frames.lean`, `ensure`), which the
-local run of this module does not yet model; it is the first row owed after this landing.
+`Plain` is `Denote.Straight`, including `onExit`. Its finalizer runs under a mask,
+then the restoring frame returns to the body's interruption mode.
 
 The local step is the machine's `evaluatePrim` on a fiber of the fragment: a `sync` thunk
 answers through the store (`Fibers.lean:831-843`), and every other plain primitive is the
 frame machine's `step` (`Fibers.lean:848`, `stepFrame`). Names get their meaning from
-`interpOf root` (`Compile.lean:625`).
+`interpAt root []`: the running one-fiber machine has no completed fiber. Lazy callbacks
+refresh their captured point to that empty view; eager bodies retain their point.
 -/
 
 set_option autoImplicit false
@@ -125,7 +125,7 @@ def steps : NativeEff → Nat
   | .exit b => steps b + 2
   | .catchCause b h => steps b + steps h + 2
   | .matchCause b v c => steps b + steps v + steps c + 2
-  | .onExit b f => steps b + steps f + 4
+  | .onExit b f => steps b + steps f + 5
   | _ => 0
 
 theorem depth_pos (e : NativeEff) : 1 ≤ depth e := by
@@ -136,8 +136,8 @@ theorem depth_pos (e : NativeEff) : 1 ≤ depth e := by
 abbrev NFiber := FrameFiber EffName EffThunk Val Err Defect FiberId Ann
 abbrev NInterp := PrimInterp EffName EffThunk Val Err Defect FiberId Ann
 
-/-- The frame machine's interp of a root program: `interpOf` forgets its store half. -/
-def primOf (root : NativeEff) : NInterp := (interpOf root).toPrimInterp
+/-- The local run uses the completed-exit view of a live one-fiber machine. -/
+def primOf (root : NativeEff) : NInterp := (interpAt root []).toPrimInterp
 
 /-- A fiber of the fragment: no cause recorded, no interrupt deferred, interruptible unless
 it is running a finalizer under the `onExit` mask (`Frames.lean`, `ensure`). -/
@@ -179,19 +179,33 @@ def resumeOf (root : NativeEff) (ex : ExitV) (pop : NPop) : NStep :=
       FrameStep.running { pop.fiber with current := next, stack := pushed ++ pop.fiber.stack }
     | none => FrameStep.finished ex
 
-/-- What an exit does with its pop, as the machine's `finalizerOr` does it
-(`Fibers.lean:859-878`): an `onExit` frame whose finalizer is a program runs that program
-under the frame's mask, with the restoring and merging continuations; anything else is the
-frame machine's own answer. -/
+/-- What an exit does with its pop, as the machine's `finalizerOr` does it:
+an `onExit` program finalizer runs under the mask through the shared `finalizerCode`.
+The success frame restores the body exit; only a failed body adds the failure handler
+(`internal/effect.ts:3800-3804,4019-4030`). Otherwise use the frame machine's answer. -/
 def exitFrom (root : NativeEff) (ex : ExitV) (pop : NPop) (s : Stores) : LocalStep :=
   match pop.answer with
   | ContAnswer.frame (Prim.onExit _ fin _) =>
-    match (interpOf root).finalizerProgram fin ex with
+    match (interpAt root []).finalizerProgram fin ex with
     | some program =>
       .running { pop.fiber with
-        current := Prim.onSuccessAndFailure program (EffName.restore ex) (EffName.merge ex) } s
+        current := finalizerCode (interpAt root []) ex program } s
     | none => ofFrameStep (resumeOf root ex pop) s
   | _ => ofFrameStep (resumeOf root ex pop) s
+
+/-- An answering `onExit` always leaves a running local step, including the
+static finalizer fallback. A locally finished step therefore cannot take the
+native scoped-exit branch. -/
+theorem exitFrom_finished_not_onExit (root : NativeEff) (ex : ExitV) (pop : NPop)
+    (s : Stores) (finished : ExitV) (s' : Stores)
+    (h : exitFrom root ex pop s = .finished finished s')
+    (body : NCode) (fin : EffName) (flag : Bool) :
+    pop.answer ≠ ContAnswer.frame (Prim.onExit body fin flag) := by
+  intro hanswer
+  cases hfin : (interpAt root []).finalizerProgram fin ex
+  · cases ex <;>
+      simp [exitFrom, hanswer, hfin, ofFrameStep, resumeOf, Prim.armA, Prim.armE] at h
+  · simp [exitFrom, hanswer, hfin] at h
 
 /-- One local step (`evaluatePrim` on a fiber of the fragment): a store `sync` answers
 through `syncOpStep` with the machine's `Val.unit` fallback (`Fibers.lean:837-843`), a pure
@@ -317,7 +331,7 @@ theorem step_yieldableError (e : Err) (K : List NCode) (i : Bool) (s : Stores) :
 
 theorem step_suspend (thunk : EffThunk) (K : List NCode) (i : Bool) (s : Stores) :
     localStep root (fiberOf (Prim.suspend thunk) K i) s =
-      .running (fiberOf (suspendBodyAt root thunk) K i) s := rfl
+      .running (fiberOf ((interpAt root []).suspendBody thunk) K i) s := rfl
 
 theorem step_sync_pure (p : Point) (K : List NCode) (i : Bool) (s : Stores) :
     localStep root (fiberOf (Prim.sync (EffThunk.pure p)) K i) s =
@@ -339,14 +353,14 @@ theorem step_exit_empty (ex : ExitV) (i : Bool) (s : Stores) :
 theorem step_success_onSuccess (v : Val) (body : NCode) (n : EffName) (K : List NCode)
     (i : Bool) (s : Stores) :
     localStep root (fiberOf (Prim.success v) (Prim.onSuccess body n :: K) i) s =
-      .running (fiberOf (contAOf root n v) K i) s := by
+      .running (fiberOf ((interpAt root []).contA n v) K i) s := by
   cases i <;> rfl
 
 /-- A value meets its `OnSuccessAndFailure` frame: the value arm. -/
 theorem step_success_onSuccessAndFailure (v : Val) (body : NCode) (n₁ n₂ : EffName)
     (K : List NCode) (i : Bool) (s : Stores) :
     localStep root (fiberOf (Prim.success v) (Prim.onSuccessAndFailure body n₁ n₂ :: K) i) s =
-      .running (fiberOf (contAOf root n₁ v) K i) s := by
+      .running (fiberOf ((interpAt root []).contA n₁ v) K i) s := by
   cases i <;> rfl
 
 /-- A value meets the `Exit` frame: the reified success. -/
@@ -360,14 +374,14 @@ theorem step_success_exitFrame (v : Val) (body : NCode) (K : List NCode) (i : Bo
 theorem step_failure_onFailure (c : CauseV) (body : NCode) (n : EffName) (K : List NCode)
     (i : Bool) (s : Stores) :
     localStep root (fiberOf (Prim.failure c) (Prim.onFailure body n :: K) i) s =
-      .running (fiberOf (contEOf root n c) K i) s := by
+      .running (fiberOf ((interpAt root []).contE n c) K i) s := by
   cases i <;> rfl
 
 /-- A cause meets its `OnSuccessAndFailure` frame: the cause arm. -/
 theorem step_failure_onSuccessAndFailure (c : CauseV) (body : NCode) (n₁ n₂ : EffName)
     (K : List NCode) (i : Bool) (s : Stores) :
     localStep root (fiberOf (Prim.failure c) (Prim.onSuccessAndFailure body n₁ n₂ :: K) i) s =
-      .running (fiberOf (contEOf root n₂ c) K i) s := by
+      .running (fiberOf ((interpAt root []).contE n₂ c) K i) s := by
   cases i <;> rfl
 
 /-- A cause meets the `Exit` frame: the reified failure. -/
@@ -383,14 +397,13 @@ def maskStack : Bool → List NCode → List NCode
   | true, K => Prim.setInterruptible true :: K
   | false, K => K
 
-/-- An exit meets an `onExit` frame whose finalizer is a program: the frame is popped, the
-mask set, and the finalizer runs with the restoring and merging continuations
-(`Fibers.lean:867-875`, `Compile.lean:695`). -/
+/-- An exit meets an `onExit` program finalizer: the frame is popped, the mask is set,
+and the shared exit-dependent wrapper runs (`internal/effect.ts:4019-4030`). -/
 theorem step_ofExit_onExit (ex : ExitV) (body : NCode) (p : Point) (K : List NCode) (i : Bool)
     (s : Stores) :
     localStep root (fiberOf (Prim.ofExit ex) (Prim.onExit body (EffName.fin p) false :: K) i) s =
-      .running (fiberOf (Prim.onSuccessAndFailure
-          (resolve root (p.childWith 1 (reifyExitVal ex))) (EffName.restore ex) (EffName.merge ex))
+      .running (fiberOf (finalizerCode (interpAt root []) ex
+          (resolve root ({ p with completed := [] }.childWith 1 (reifyExitVal ex))))
         (maskStack i K) false) s := by
   cases ex <;> cases i <;> rfl
 
@@ -544,7 +557,7 @@ theorem compileEff_sync (t : Term) (hf : p.fuel = k + 1) :
   simp [compileEff, hf]
 
 theorem compileEff_suspend (b : NativeEff) (hf : p.fuel = k + 1) :
-    compileEff (.suspend b) p = Prim.suspend (EffThunk.body (p.child 0)) := by
+    compileEff (.suspend b) p = Prim.suspend (EffThunk.body p) := by
   simp [compileEff, hf]
 
 theorem compileEff_perform_sync (op : NativeOp) (r : Term) (hf : p.fuel = k + 1)
@@ -642,15 +655,23 @@ theorem suspendBodyAt_branch_bad {root : NativeEff} {q : Point} {k : Nat} {t : T
       | exact absurd hv (ht _)
       | simp [suspendBodyAt, hf, h, hv]
 
+/-- A source suspension returns the whole child program; it does not execute the
+child's own suspension. The child lookup is established independently by `at_child`. -/
+theorem suspendBodyAt_suspend {root : NativeEff} {q : Point} {k : Nat} {b : NativeEff}
+    (hf : q.fuel = k + 1) (h : Node.at_ (Node.eff root) q.path = some (Node.eff (.suspend b))) :
+    suspendBodyAt root (EffThunk.body q) = resolve root (q.child 0) := by
+  simp only [suspendBodyAt, hf, h]
+
 theorem suspendBodyAt_of_at {root : NativeEff} {q : Point} {k : Nat} {e : NativeEff}
     (hf : q.fuel = k + 1) (h : Node.at_ (Node.eff root) q.path = some (Node.eff e))
     (hnb : ∀ t a b, e ≠ .branch t a b) (hng : ∀ ss, e ≠ .gen ss)
-    (hnw : ∀ i t s b, e ≠ .whileLoop i t s b) :
+    (hnw : ∀ i t s b, e ≠ .whileLoop i t s b) (hns : ∀ b, e ≠ .suspend b) :
     suspendBodyAt root (EffThunk.body q) = compileEff e q := by
   cases e <;> first
     | exact absurd rfl (hnb _ _ _)
     | exact absurd rfl (hng _)
     | exact absurd rfl (hnw _ _ _ _)
+    | exact absurd rfl (hns _)
     | simp [suspendBodyAt, hf, h]
 
 /-- A plain body whose compiled head is already an exit has that exit as its meaning, at
@@ -922,22 +943,18 @@ theorem localRun_compile (root : NativeEff) :
     rw [syncValueAt_pure h] at hs
     exact ⟨1, Nat.le_refl _, Reaches.step hs⟩
   | .suspend b, p, K, i, s, hpl, h, hd => by
-    have hb : Node.at_ (Node.eff root) (p.child 0).path = some (Node.eff b) := at_child h 0
-    have hdb : depth b ≤ (p.child 0).fuel := by
+    have hb : Node.at_ (Node.eff root) ({ p with completed := [] }.child 0).path = some (Node.eff b) := at_child h 0
+    have hdb : depth b ≤ ({ p with completed := [] }.child 0).fuel := by
       show depth b ≤ p.fuel - 1
       simp only [depth] at hd
       omega
-    obtain ⟨c, hc, hr⟩ := localRun_compile root b (p.child 0) K i s (Plain.suspend hpl) hb hdb
+    obtain ⟨c, hc, hr⟩ := localRun_compile root b ({ p with completed := [] }.child 0) K i s (Plain.suspend hpl) hb hdb
     rw [Point.child_env] at hr
     rw [meaning_suspend, compileEff_suspend b (fuel_succ hd)]
-    cases hbr : isBranch b
-    · have hs := step_suspend root (EffThunk.body (p.child 0)) K i s
-      rw [suspendBodyAt_of_at (fuel_succ hdb) hb (not_branch_of_isBranch_false hbr)
-        (Plain.not_gen (Plain.suspend hpl)) (Plain.not_whileLoop (Plain.suspend hpl))] at hs
-      exact ⟨1 + c, by simp only [steps]; omega, (Reaches.step hs).trans hr⟩
-    · obtain ⟨t, a, b', rfl⟩ := eq_branch_of_isBranch hbr
-      rw [compileEff_branch t a b' (fuel_succ hdb)] at hr
-      exact ⟨c, by simp only [steps] at hc ⊢; omega, hr⟩
+    have hs := step_suspend root (EffThunk.body p) K i s
+    simp only [interpAt] at hs
+    rw [suspendBodyAt_suspend (q := { p with completed := [] }) (fuel_succ hd) h, resolve_of_at hb] at hs
+    exact ⟨1 + c, by simp only [steps]; omega, (Reaches.step hs).trans hr⟩
   | .perform op r, p, K, i, s, hpl, _, hd => by
     have hkind := Plain.perform_sync hpl
     rw [compileEff_perform_sync op r (fuel_succ hd) hkind]
@@ -974,17 +991,18 @@ theorem localRun_compile (root : NativeEff) :
     rw [hma] at hra
     cases ex with
     | success v =>
-      have hb : Node.at_ (Node.eff root) (p.childWith 1 v).path = some (Node.eff b) :=
+      have hb : Node.at_ (Node.eff root) ({ p with completed := [] }.childWith 1 v).path = some (Node.eff b) :=
         at_childWith h 1 v
-      have hfb : depth b ≤ (p.childWith 1 v).fuel := by
+      have hfb : depth b ≤ ({ p with completed := [] }.childWith 1 v).fuel := by
         show depth b ≤ p.fuel - 1
         simp only [depth] at hd
         have := Nat.le_max_right (depth a) (depth b)
         omega
-      obtain ⟨cb, hcb, hrb⟩ := localRun_compile root b (p.childWith 1 v) K i s' hpb hb hfb
+      obtain ⟨cb, hcb, hrb⟩ := localRun_compile root b ({ p with completed := [] }.childWith 1 v) K i s' hpb hb hfb
       rw [Point.childWith_env] at hrb
       have hpop := Reaches.step
         (step_success_onSuccess root v (compileEff a (p.child 0)) (EffName.cont p) K i s')
+      simp only [interpAt] at hpop
       rw [contAOf_cont, resolve_of_at hb] at hpop
       exact ⟨1 + ca + 1 + cb, by simp only [steps]; omega,
         ((hpush.trans hra).trans hpop).trans hrb⟩
@@ -994,35 +1012,36 @@ theorem localRun_compile (root : NativeEff) :
       exact ⟨1 + ca + 0, by simp only [steps]; omega, (hpush.trans hra).trans hpass⟩
   | .branch t a b, p, K, i, s, hpl, h, hd => by
     obtain ⟨hpa, hpb⟩ := Plain.branch hpl
-    have ha : Node.at_ (Node.eff root) (p.child 0).path = some (Node.eff a) := at_child h 0
-    have hb : Node.at_ (Node.eff root) (p.child 1).path = some (Node.eff b) := at_child h 1
-    have hfa : depth a ≤ (p.child 0).fuel := by
+    have ha : Node.at_ (Node.eff root) ({ p with completed := [] }.child 0).path = some (Node.eff a) := at_child h 0
+    have hb : Node.at_ (Node.eff root) ({ p with completed := [] }.child 1).path = some (Node.eff b) := at_child h 1
+    have hfa : depth a ≤ ({ p with completed := [] }.child 0).fuel := by
       show depth a ≤ p.fuel - 1
       simp only [depth] at hd
       have := Nat.le_max_left (depth a) (depth b)
       omega
-    have hfb : depth b ≤ (p.child 1).fuel := by
+    have hfb : depth b ≤ ({ p with completed := [] }.child 1).fuel := by
       show depth b ≤ p.fuel - 1
       simp only [depth] at hd
       have := Nat.le_max_right (depth a) (depth b)
       omega
     rw [compileEff_branch t a b (fuel_succ hd)]
     have hs := step_suspend root (EffThunk.body p) K i s
+    simp only [interpAt] at hs
     rcases hbo : boolOf (evalTerm p.env t) with _ | flag
     · have hbad := boolOf_none hbo
-      rw [suspendBodyAt_branch_bad (fuel_succ hd) h hbad] at hs
+      rw [suspendBodyAt_branch_bad (q := { p with completed := [] }) (fuel_succ hd) h hbad] at hs
       rw [meaning_branch_bad t a b p.env s hbad]
       exact ⟨1, by simp only [steps]; omega, Reaches.step hs⟩
     · have ht := boolOf_some hbo
       cases flag
-      · obtain ⟨c, hc, hr⟩ := localRun_compile root b (p.child 1) K i s hpb hb hfb
+      · obtain ⟨c, hc, hr⟩ := localRun_compile root b ({ p with completed := [] }.child 1) K i s hpb hb hfb
         rw [Point.child_env] at hr
-        rw [suspendBodyAt_branch_false (fuel_succ hd) h ht, resolve_of_at hb] at hs
+        rw [suspendBodyAt_branch_false (q := { p with completed := [] }) (fuel_succ hd) h ht, resolve_of_at hb] at hs
         rw [meaning_branch_false t a b p.env s ht]
         exact ⟨1 + c, by simp only [steps]; omega, (Reaches.step hs).trans hr⟩
-      · obtain ⟨c, hc, hr⟩ := localRun_compile root a (p.child 0) K i s hpa ha hfa
+      · obtain ⟨c, hc, hr⟩ := localRun_compile root a ({ p with completed := [] }.child 0) K i s hpa ha hfa
         rw [Point.child_env] at hr
-        rw [suspendBodyAt_branch_true (fuel_succ hd) h ht, resolve_of_at ha] at hs
+        rw [suspendBodyAt_branch_true (q := { p with completed := [] }) (fuel_succ hd) h ht, resolve_of_at ha] at hs
         rw [meaning_branch_true t a b p.env s ht]
         exact ⟨1 + c, by simp only [steps]; omega, (Reaches.step hs).trans hr⟩
   | .exit b, p, K, i, s, hpl, h, hd => by
@@ -1068,18 +1087,19 @@ theorem localRun_compile (root : NativeEff) :
         step_success_pass_onFailure root v (compileEff b (p.child 0)) (EffName.caught p) K i s)
       exact ⟨1 + cb + 0, by simp only [steps]; omega, (hpush.trans hrb).trans hpass⟩
     | failure c =>
-      have hh' : Node.at_ (Node.eff root) (p.childWith 1 (Val.exitErr c)).path =
-          some (Node.eff hh) := at_childWith h 1 _
-      have hfh : depth hh ≤ (p.childWith 1 (Val.exitErr c)).fuel := by
+      have hh' : Node.at_ (Node.eff root) ({ p with completed := [] }.childWith 1 (Val.exitErr c)).path =
+          some (Node.eff hh) := at_childWith h 1 (Val.exitErr c)
+      have hfh : depth hh ≤ ({ p with completed := [] }.childWith 1 (Val.exitErr c)).fuel := by
         show depth hh ≤ p.fuel - 1
         simp only [depth] at hd
         have := Nat.le_max_right (depth b) (depth hh)
         omega
       obtain ⟨ch, hch, hrh⟩ :=
-        localRun_compile root hh (p.childWith 1 (Val.exitErr c)) K i s' hph hh' hfh
+        localRun_compile root hh ({ p with completed := [] }.childWith 1 (Val.exitErr c)) K i s' hph hh' hfh
       rw [Point.childWith_env] at hrh
       have hpop := Reaches.step
         (step_failure_onFailure root c (compileEff b (p.child 0)) (EffName.caught p) K i s')
+      simp only [interpAt] at hpop
       rw [contEOf_caught, resolve_of_at hh'] at hpop
       exact ⟨1 + cb + 1 + ch, by simp only [steps]; omega,
         ((hpush.trans hrb).trans hpop).trans hrh⟩
@@ -1102,35 +1122,37 @@ theorem localRun_compile (root : NativeEff) :
     rw [hmb] at hrb
     cases ex with
     | success x =>
-      have hv' : Node.at_ (Node.eff root) (p.childWith 1 x).path = some (Node.eff v) :=
+      have hv' : Node.at_ (Node.eff root) ({ p with completed := [] }.childWith 1 x).path = some (Node.eff v) :=
         at_childWith h 1 x
-      have hfv : depth v ≤ (p.childWith 1 x).fuel := by
+      have hfv : depth v ≤ ({ p with completed := [] }.childWith 1 x).fuel := by
         show depth v ≤ p.fuel - 1
         simp only [depth] at hd
         have h₁ := Nat.le_max_right (depth b) (max (depth v) (depth c))
         have h₂ := Nat.le_max_left (depth v) (depth c)
         omega
-      obtain ⟨cv, hcv, hrv⟩ := localRun_compile root v (p.childWith 1 x) K i s' hpv hv' hfv
+      obtain ⟨cv, hcv, hrv⟩ := localRun_compile root v ({ p with completed := [] }.childWith 1 x) K i s' hpv hv' hfv
       rw [Point.childWith_env] at hrv
       have hpop := Reaches.step (step_success_onSuccessAndFailure root x
         (compileEff b (p.child 0)) (EffName.onValue p) (EffName.onCause p) K i s')
+      simp only [interpAt] at hpop
       rw [contAOf_onValue, resolve_of_at hv'] at hpop
       exact ⟨1 + cb + 1 + cv, by simp only [steps]; omega,
         ((hpush.trans hrb).trans hpop).trans hrv⟩
     | failure cause =>
-      have hc' : Node.at_ (Node.eff root) (p.childWith 2 (Val.exitErr cause)).path =
-          some (Node.eff c) := at_childWith h 2 _
-      have hfc : depth c ≤ (p.childWith 2 (Val.exitErr cause)).fuel := by
+      have hc' : Node.at_ (Node.eff root) ({ p with completed := [] }.childWith 2 (Val.exitErr cause)).path =
+          some (Node.eff c) := at_childWith h 2 (Val.exitErr cause)
+      have hfc : depth c ≤ ({ p with completed := [] }.childWith 2 (Val.exitErr cause)).fuel := by
         show depth c ≤ p.fuel - 1
         simp only [depth] at hd
         have h₁ := Nat.le_max_right (depth b) (max (depth v) (depth c))
         have h₂ := Nat.le_max_right (depth v) (depth c)
         omega
       obtain ⟨cc, hcc, hrc⟩ :=
-        localRun_compile root c (p.childWith 2 (Val.exitErr cause)) K i s' hpc hc' hfc
+        localRun_compile root c ({ p with completed := [] }.childWith 2 (Val.exitErr cause)) K i s' hpc hc' hfc
       rw [Point.childWith_env] at hrc
       have hpop := Reaches.step (step_failure_onSuccessAndFailure root cause
         (compileEff b (p.child 0)) (EffName.onValue p) (EffName.onCause p) K i s')
+      simp only [interpAt] at hpop
       rw [contEOf_onCause, resolve_of_at hc'] at hpop
       exact ⟨1 + cb + 1 + cc, by simp only [steps]; omega,
         ((hpush.trans hrb).trans hpop).trans hrc⟩
@@ -1152,36 +1174,85 @@ theorem localRun_compile (root : NativeEff) :
     rw [hmb] at hrb
     dsimp only
     -- the body's exit meets the frame: the finalizer runs under the mask
-    have hf' : Node.at_ (Node.eff root) (p.childWith 1 (reifyExitVal ex)).path =
-        some (Node.eff f) := at_childWith h 1 _
-    have hff : depth f ≤ (p.childWith 1 (reifyExitVal ex)).fuel := by
+    have hf' : Node.at_ (Node.eff root) ({ p with completed := [] }.childWith 1 (reifyExitVal ex)).path =
+        some (Node.eff f) := at_childWith h 1 (reifyExitVal ex)
+    have hff : depth f ≤ ({ p with completed := [] }.childWith 1 (reifyExitVal ex)).fuel := by
       show depth f ≤ p.fuel - 1
       simp only [depth] at hd
       have := Nat.le_max_right (depth b) (depth f)
       omega
     have hmeet := Reaches.step (step_ofExit_onExit root ex (compileEff b (p.child 0)) p K i s')
     rw [resolve_of_at hf'] at hmeet
-    have hpush₂ := Reaches.step (step_push_onSuccessAndFailure root
-      (compileEff f (p.childWith 1 (reifyExitVal ex))) (EffName.restore ex) (EffName.merge ex)
-      (maskStack i K) false s')
-    obtain ⟨cf, hcf, hrf⟩ := localRun_compile root f (p.childWith 1 (reifyExitVal ex))
-      (Prim.onSuccessAndFailure (compileEff f (p.childWith 1 (reifyExitVal ex)))
-        (EffName.restore ex) (EffName.merge ex) :: maskStack i K) false s' hpf hf' hff
-    rw [Point.childWith_env] at hrf
-    rcases hmf : meaning f (p.env ++ [reifyExitVal ex]) s' with ⟨fex, s''⟩
-    rw [hmf] at hrf
-    -- the finalizer's exit meets its frame, then the mask lifts
-    have hfin := Reaches.step (step_ofExit_finalizer root ex fex
-      (compileEff f (p.childWith 1 (reifyExitVal ex))) (maskStack i K) false s'')
-    have hunmask : Reaches root 0
-        (fiberOf (Prim.ofExit (Exit.restoreAfterFinalizer ex (finVoid fex))) (maskStack i K)
-          false) s''
-        (fiberOf (Prim.ofExit (Exit.restoreAfterFinalizer ex (finVoid fex))) K i) s'' := by
+    have hunmask (result : ExitV) (state : Stores) : Reaches root 0
+        (fiberOf (Prim.ofExit result) (maskStack i K) false) state
+        (fiberOf (Prim.ofExit result) K i) state := by
       cases i
-      · exact Reaches.refl root _ s''
-      · exact Reaches.same s'' (fun s => step_ofExit_pass_setInterruptible root _ K false s)
-    exact ⟨1 + cb + 1 + 1 + cf + 1 + 0, by simp only [steps]; omega,
-      (((((hpush.trans hrb).trans hmeet).trans hpush₂).trans hrf).trans hfin).trans hunmask⟩
+      · exact Reaches.refl root _ state
+      · exact Reaches.same state (fun s => step_ofExit_pass_setInterruptible root _ K false s)
+    cases ex with
+    | success value =>
+      let program := compileEff f ({ p with completed := [] }.childWith 1
+        (reifyExitVal (.success value)))
+      let restore := EffName.restore (.success value)
+      have hpush₂ := Reaches.step
+        (step_push_onSuccess root program restore (maskStack i K) false s')
+      obtain ⟨cf, hcf, hrf⟩ := localRun_compile root f
+        ({ p with completed := [] }.childWith 1 (reifyExitVal (.success value)))
+        (Prim.onSuccess program restore :: maskStack i K) false s' hpf hf' hff
+      rw [Point.childWith_env] at hrf
+      rcases hmf : meaning f (p.env ++ [reifyExitVal (.success value)]) s' with ⟨fex, s''⟩
+      rw [hmf] at hrf
+      cases fex with
+      | success finValue =>
+        have hfin := Reaches.step
+          (step_success_onSuccess root finValue program restore (maskStack i K) false s'')
+        change Reaches root 1 _ s'' (fiberOf (Prim.success value) (maskStack i K) false) s'' at hfin
+        exact ⟨1 + cb + 1 + 1 + cf + 1 + 0, by simp only [steps]; omega,
+          (((((hpush.trans hrb).trans hmeet).trans hpush₂).trans hrf).trans hfin).trans
+            (hunmask (.success value) s'')⟩
+      | failure finCause =>
+        -- There is no failure continuation after a successful body.
+        have hpass := Reaches.same s'' (fun s =>
+          step_failure_pass_onSuccess root finCause program restore (maskStack i K) false s)
+        exact ⟨1 + cb + 1 + 1 + cf + 0 + 0, by simp only [steps]; omega,
+          (((((hpush.trans hrb).trans hmeet).trans hpush₂).trans hrf).trans hpass).trans
+            (hunmask (.failure finCause) s'')⟩
+    | failure cause =>
+      let program := compileEff f ({ p with completed := [] }.childWith 1
+        (reifyExitVal (.failure cause)))
+      let restore := EffName.restore (.failure cause)
+      let merge := EffName.merge (.failure cause)
+      let outer := Prim.onSuccess (Prim.onFailure program merge) restore
+      have hpush₂ := Reaches.step
+        (step_push_onSuccess root (Prim.onFailure program merge) restore (maskStack i K) false s')
+      have hpush₃ := Reaches.step
+        (step_push_onFailure root program merge (outer :: maskStack i K) false s')
+      obtain ⟨cf, hcf, hrf⟩ := localRun_compile root f
+        ({ p with completed := [] }.childWith 1 (reifyExitVal (.failure cause)))
+        (Prim.onFailure program merge :: outer :: maskStack i K) false s' hpf hf' hff
+      rw [Point.childWith_env] at hrf
+      rcases hmf : meaning f (p.env ++ [reifyExitVal (.failure cause)]) s' with ⟨fex, s''⟩
+      rw [hmf] at hrf
+      cases fex with
+      | success finValue =>
+        have hpass := Reaches.same s'' (fun s =>
+          step_success_pass_onFailure root finValue program merge (outer :: maskStack i K) false s)
+        have hfin := Reaches.step (step_success_onSuccess root finValue
+          (Prim.onFailure program merge) restore (maskStack i K) false s'')
+        change Reaches root 1 _ s'' (fiberOf (Prim.failure cause) (maskStack i K) false) s'' at hfin
+        exact ⟨1 + cb + 1 + 1 + 1 + cf + 0 + 1 + 0, by simp only [steps]; omega,
+          (((((((hpush.trans hrb).trans hmeet).trans hpush₂).trans hpush₃).trans hrf).trans hpass).trans hfin).trans
+            (hunmask (.failure cause) s'')⟩
+      | failure finCause =>
+        have hmerge := Reaches.step
+          (step_failure_onFailure root finCause program merge (outer :: maskStack i K) false s'')
+        change Reaches root 1 _ s''
+          (fiberOf (Prim.failure (Cause.combine cause finCause)) (outer :: maskStack i K) false) s'' at hmerge
+        have hpass := Reaches.same s'' (fun s => step_failure_pass_onSuccess root
+          (Cause.combine cause finCause) (Prim.onFailure program merge) restore (maskStack i K) false s)
+        exact ⟨1 + cb + 1 + 1 + 1 + cf + 1 + 0 + 0, by simp only [steps]; omega,
+          (((((((hpush.trans hrb).trans hmeet).trans hpush₂).trans hpush₃).trans hrf).trans hmerge).trans hpass).trans
+            (hunmask (.failure (Cause.combine cause finCause)) s'')⟩
   | .gen _, _, _, _, _, hpl, _, _
   | .uninterruptible _, _, _, _, _, hpl, _, _
   | .interruptible _, _, _, _, _, hpl, _, _

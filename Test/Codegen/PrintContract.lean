@@ -1,4 +1,5 @@
 import Effect4.Codegen.Print
+import Effect4.Program.Native
 import TypeScript.Render
 
 /-!
@@ -13,13 +14,14 @@ on a layout change alike.
 
 Everything is inlined inside the `#guard`s on purpose: a battery definition that folds over
 a rendered `String` reaches `Classical.choice` through Lean's UTF-8 decoding proof and would
-put this module outside the tree's axiom ceiling. The three definitions below are the
+put this module outside the tree's axiom ceiling. The definitions below are the
 alphabet only — rows, atoms and a scope key — and hold string *literals* without traversing
 one. `#guard` itself leaves no declaration for the gate to audit.
 
 The alphabet is `Fin 3`: a call row on a handle request (`Ref.get`), a nullary value row
 (`cell.count`, the service route's shape), and an async row (`Deferred.await`), which is
-exactly the three ways `printRow` can answer.
+the original row sample. The tuple-call tests below cover its separate argument-list
+convention, both native rows and a fixture with trailing names.
 -/
 
 namespace Test.Syntax.PrintContract
@@ -44,6 +46,50 @@ def updateRow : Row :=
     "Ref.ts:1273-1276"⟩
 
 #guard expr house0 0 (printRow updateRow (.var 0)) = "Ref.update(a0, incr)"
+
+/-- A tuple-call fixture with two ordered trailing names. Native tuple calls currently
+have no trailing names; this fixture checks the generic row convention. -/
+def tupleRow : Row :=
+  ⟨"tuple", "Fixture.tuple", .tupleCall, ["first", "second"], .sync,
+    .prod .nat .nat, .nat, .never, [], "§14 tuple-call fixture"⟩
+
+-- A saved tuple is read once per component; a `pair` prints its components
+-- (source-repairs §18).
+#guard expr house0 0 (printRow tupleRow (.var 0)) =
+  "Fixture.tuple(fst(a0), snd(a0), first, second)"
+
+#guard expr house0 0 (printRow tupleRow
+    (.app "pair" (.cons (.lit (.nat 2)) (.cons (.lit (.nat 7)) .nil)))) =
+  "Fixture.tuple(2, 7, first, second)"
+
+-- A request that is neither a pair nor a variable is outside the readable image and
+-- still prints, once per component.
+#guard expr house0 0 (printRow tupleRow (.app "requestOnce" .nil)) =
+  "Fixture.tuple(fst(requestOnce()), snd(requestOnce()), first, second)"
+
+-- A product request does not change the calling convention of an ordinary call row.
+#guard expr house0 0 (printRow { tupleRow with shape := .call }
+    (.app "pair" (.cons (.lit (.nat 2)) (.cons (.lit (.nat 7)) .nil)))) =
+  "Fixture.tuple(pair(2, 7), first, second)"
+
+-- All five corrected native exports receive the pair's components as their two
+-- arguments, the pinned two-argument signatures the host infers its types from.
+#guard ([NativeOp.refSet, .refGetAndSet, .refSetAndGet, .deferredSucceed, .deferredFail].map
+    fun op => expr house0 0 (printRow op.row
+      (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))) =
+  [ "Ref.set(a0, 7)"
+  , "Ref.getAndSet(a0, 7)"
+  , "Ref.setAndGet(a0, 7)"
+  , "Deferred.succeed(a0, 7)"
+  , "Deferred.fail(a0, 7)" ]
+
+-- The tuple may be saved in a variable; its components are read from the binder.
+#guard (print nativeSignature 0
+    (.bind (.perform .deferredMake (.lit .unit))
+      (.bind (.succeed (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))
+        (.perform .deferredSucceed (.var 1))))).map (expr house0 0) =
+  .ok ("Effect.flatMap(Deferred.make(), (a0) => Effect.flatMap(Effect.succeed(pair(a0, 7)), " ++
+    "(a1) => Deferred.succeed(fst(a1), snd(a1))))")
 
 /-- The battery's signature. `atomOf` declares one pure atom, `succ : number -> number`;
 the printer never consults it (an atom prints as its own name) but `Signature` carries it
@@ -224,7 +270,12 @@ def sig : Signature (Fin 3) :=
 /-! ## `withFiber`: the handle actions -/
 
 #guard (print sig 2 (.withFiber (.runIn (.var 0) (.var 1)))).map (expr house0 0)
-  = .ok "Fiber.runIn(a0, a1)"
+  = .ok "Effect.withFiber(() => {\n  Fiber.runIn(a0, a1)\n  return Effect.void\n})"
+
+-- Both source terms occur once, inside the callback that performs the scope link.
+#guard (print sig 0 (.withFiber (.runIn (.app "targetOnce" .nil)
+    (.app "scopeOnce" .nil)))).map (expr house0 0) =
+  .ok "Effect.withFiber(() => {\n  Fiber.runIn(targetOnce(), scopeOnce())\n  return Effect.void\n})"
 
 #guard (print sig 1 (.withFiber (.interrupt (.var 0)))).map (expr house0 0)
   = .ok "Fiber.interrupt(a0)"

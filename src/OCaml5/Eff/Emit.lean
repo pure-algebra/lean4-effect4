@@ -265,6 +265,7 @@ def kindO : RowKind → String
 def shapeO : RowShape → String
   | .call => octor "row_shape" "call"
   | .value => octor "row_shape" "value"
+  | .tupleCall => octor "row_shape" "tupleCall"
 
 def keyO (k : ServiceKey) : String :=
   "{ " ++ ofield "service_key" "name" ++ " = { " ++ ofield "service_name" "value" ++ " = " ++

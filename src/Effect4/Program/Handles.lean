@@ -19,8 +19,8 @@ API:
 * `handles_minted`: `Minted (Api.load …) ∧ AnswersValid … → Minted (Api.replay …).machine`.
 
 What is proved about the compile: the code a point compiles to names only the handles in
-the point's environment (`compileEff_keys`, `resolve_keys`), the generator walker keeps to its
-environment (`runStmts_keys`), a `withFiber` action names only what its point's terms
+the point's captured exits and environment (`compileEff_keys`, `resolve_keys`), the generator
+walker keeps to those captured exits and its environment (`runStmts_keys`), a `withFiber` action names only what its point's terms
 evaluate to (`actionAt_keys`), and the embedded stores' programs carry the stores' own keys
 (`embed_keys`). The ruling in force is the valid-input premise: `AnswersValid` is a premise of
 the theorem, and replay admission is unchanged (`E4-HANDLE-CE-001`).
@@ -37,8 +37,27 @@ open Agreement
 
 /-! ## The native alphabet's handles -/
 
-/-- The handles a point holds: the values in scope. -/
-def Point.keys (p : Point) : List Handle := p.env.flatMap Val.keys
+/-- The handles a point holds: captured exit values, then values in scope.
+The captured fiber IDs are lookup keys, not dereferenced handles. -/
+def Point.keys (p : Point) : List Handle :=
+  p.completed.flatMap (fun entry => exitKeys entry.2) ++ p.env.flatMap Val.keys
+
+theorem Point.env_keys_subset (p : Point) : p.env.flatMap Val.keys ⊆ p.keys :=
+  List.subset_append_right _ _
+
+/-- The eager join/await answer uses only the captured exit's value handles.
+Both observer modes follow the same construction lookup (`internal/effect.ts:767-769,814-816`). -/
+theorem Point.awaitExit_keys (p : Point) (target : FiberId) (mode : Supervision.ObserverMode)
+    (exit : ExitV) (h : p.awaitExit target mode = some exit) : exitKeys exit ⊆ p.keys := by
+  unfold Point.awaitExit at h
+  obtain ⟨entry, hfind, hexit⟩ := Option.map_eq_some_iff.mp h
+  have hentry := List.mem_of_find?_eq_some hfind
+  have hkeys : exitKeys entry.2 ⊆ p.keys := by
+    intro key hkey
+    exact List.mem_append_left _ (List.mem_flatMap.mpr ⟨entry, hentry, hkey⟩)
+  cases mode <;> simp only at hexit <;> subst exit
+  · simpa only [exitKeys, Machine.reifyExitVal_keys] using hkeys
+  · exact hkeys
 
 /-- The handles a name of the compiled alphabet carries. -/
 def EffName.keys : EffName → List Handle
@@ -59,8 +78,10 @@ def EffName.keys : EffName → List Handle
   | .scopeOpen p => p.keys
   | .scopeProvide p scope => Handle.scope scope :: p.keys
   | .scopeBody p previous => p.keys ++ previous.keys
+  | .scopedExit previous scope => Handle.scope scope :: previous.keys
   | .scopeClose scope => [Handle.scope scope]
   | .restoreCtx previous => previous.keys
+  | .forkScopedIn p => p.keys
   | .constant v => v.keys
   | .store name => name.keys
 
@@ -71,6 +92,7 @@ def EffThunk.keys : EffThunk → List Handle
   | .op operation => operation.keys
   | .park kind => kind.keys
   | .act p => p.keys
+  | .forkInAt p scope => Handle.scope scope :: p.keys
   | .getCtx => []
   | .setCtx context => context.keys
   | .closeScope scope exit => Handle.scope scope :: exitKeys exit
@@ -92,7 +114,8 @@ macro_rules
 theorem Point.child_keys (p : Point) (i : Nat) : (p.child i).keys = p.keys := rfl
 
 theorem Point.childWith_keys (p : Point) (i : Nat) (v : Val) : (p.childWith i v).keys = p.keys ++ v.keys := by
-  simp only [Point.keys, Point.childWith, List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.append_nil]
+  simp only [Point.keys, Point.childWith, List.flatMap_append, List.flatMap_cons, List.flatMap_nil,
+    List.append_nil, List.append_assoc]
 
 theorem Point.childWith2_keys (p : Point) (i : Nat) (v w : Val) :
     (p.childWith2 i v w).keys = p.keys ++ v.keys ++ w.keys := by
@@ -110,6 +133,7 @@ theorem embed_keys : ∀ p : Program, primKeys EffName.keys EffThunk.keys (embed
   | .yieldableError _ => rfl
   | .iterator _ _ => rfl
   | .onSuccess body n => by simp only [embed, primKeys, EffName.keys, embed_keys body]
+  | .onSuccessConst body next => by simp only [embed, primKeys, embed_keys body, embed_keys next]
   | .onFailure body n => by simp only [embed, primKeys, EffName.keys, embed_keys body]
   | .onSuccessAndFailure body a e => by simp only [embed, primKeys, EffName.keys, embed_keys body]
   | .exitFrame body => by simp only [embed, primKeys, embed_keys body]
@@ -125,6 +149,25 @@ theorem embed_programKeys (p : Program) : nativeKeys (embed p) = programKeys p :
 theorem embedAction_keys (a : WithFiberAction Name Thunk Val Err Defect FiberId Ann Ctx) :
     (embedAction a).keys EffName.keys EffThunk.keys = a.keys Name.keys Thunk.keys := by
   cases a <;> simp only [embedAction, WithFiberAction.keys, embed_keys, List.flatMap_map]
+
+/-- An embedded generator step ends exactly when the stores' step ends (§20). -/
+theorem embedStep_done {s : IterStep Name Thunk Val Err Defect FiberId Ann Program} {r : Val}
+    (h : embedStep s = IterStep.done r) : s = IterStep.done r := by
+  cases s with
+  | done v => simp only [embedStep, IterStep.done.injEq] at h; rw [h]
+  | halt c => simp only [embedStep] at h; cases h
+  | resume next n => simp only [embedStep] at h; cases h
+
+/-- An embedded generator step yields exactly the stores' yielded code and name, embedded. -/
+theorem embedStep_resume {s : IterStep Name Thunk Val Err Defect FiberId Ann Program} {next : NCode}
+    {n' : EffName} (h : embedStep s = IterStep.resume next n') :
+    ∃ next0 n0, s = IterStep.resume next0 n0 ∧ next = embed next0 ∧ n' = .store n0 := by
+  cases s with
+  | done v => simp only [embedStep] at h; cases h
+  | halt c => simp only [embedStep] at h; cases h
+  | resume next0 n0 =>
+    simp only [embedStep, IterStep.resume.injEq] at h
+    exact ⟨next0, n0, rfl, h.1.symm, h.2.symm⟩
 
 /-! ## Terms evaluate inside their environment -/
 
@@ -175,6 +218,10 @@ theorem evalTerms_keys (ts : Terms) (env : List Val) (vs : List Val) (h : evalTe
     exact List.append_subset.mpr ⟨evalTerm_keys head env v1 hv1, evalTerms_keys tail env rest hrest⟩
 termination_by structural ts
 end
+
+theorem evalTerm_point_keys (t : Term) (p : Point) (v : Val) (h : evalTerm p.env t = some v) :
+    v.keys ⊆ p.keys :=
+  List.Subset.trans (evalTerm_keys t p.env v h) p.env_keys_subset
 
 theorem exitOfVal_keys (v : Val) (e : ExitV) (h : exitOfVal v = some e) : exitKeys e ⊆ v.keys := by
   cases v <;> simp only [exitOfVal] at h <;> cases h <;> exact List.Subset.refl _
@@ -295,18 +342,44 @@ theorem compileEff_callback (register : NativeOp) (r : Term) (hf : p.fuel = k + 
 theorem compileEff_awaitFiber (fiber : Term) (mode : Supervision.ObserverMode) (hf : p.fuel = k + 1) :
     compileEff (.awaitFiber fiber mode) p =
       (match evalTerm p.env fiber with
-       | some (Val.fiber id) => Prim.suspend (EffThunk.park (ParkKind.join id mode))
+       | some (Val.fiber id) =>
+         match p.awaitExit id mode with
+         | some exit => Prim.ofExit exit
+         | none => Prim.suspend (EffThunk.park (ParkKind.join id mode))
        | _ => badShape) := by
   simp [compileEff, hf]; rfl
 
-theorem compileEff_withFiber (a : ActionTerm NativeOp) (hf : p.fuel = k + 1) :
+/-- Every action but `forkScoped` compiles to its `WithFiber` at the point. -/
+theorem compileEff_withFiber (a : ActionTerm NativeOp) (hf : p.fuel = k + 1)
+    (hnot : ∀ child options, a ≠ .forkScoped child options) :
     compileEff (.withFiber a) p = Prim.withFiber (EffThunk.act p) := by
+  cases a <;> first
+    | (simp [compileEff, hf]; done)
+    | exact absurd rfl (hnot _ _)
+
+/-- `forkScoped` is `flatMap(scope, scope => forkIn(self, scope, options))`
+(`internal/effect.ts:5381-5406`, source-repairs §20): the counted `Service` read at the
+action under the wrapper's `OnSuccess`, whose continuation is `forkIn` on the handle
+(`contAOf_forkScopedIn`). census: fork.scoped -/
+theorem compileEff_forkScoped (child : NativeEff) (options : Supervision.ForkOptions)
+    (hf : p.fuel = k + 1) :
+    compileEff (.withFiber (.forkScoped child options)) p =
+      Prim.onSuccess (Prim.withFiber (EffThunk.act p)) (EffName.forkScopedIn p) := by
   simp [compileEff, hf]
 
+/-- The wrapper's continuation on the handle the service read answered is `forkIn` on it
+(§20); on anything else the shape is wrong. census: fork.scoped -/
+theorem contAOf_forkScopedIn (root : NativeEff) (scope : Nat) :
+    Program.contAOf root (EffName.forkScopedIn p) (Val.scopeHandle scope) =
+      Prim.withFiber (EffThunk.forkInAt p scope) := rfl
+
+/-- The `forkIn` half reads the child, the options and the point's fuel off the `forkScoped`
+node, on the handle the read answered (§20). census: fork.scoped -/
+theorem withFiberOf_forkInAt (root : NativeEff) (scope : Nat) :
+    (interpOf root).withFiberOf (EffThunk.forkInAt p scope) = forkScopedAt root p scope := rfl
+
 theorem compileEff_scoped (b : NativeEff) (hf : p.fuel = k + 1) :
-    compileEff (.scoped b) p =
-      Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.scopeMake FinalizerStrategy.sequential)))
-        (EffName.scopeOpen p) := by
+    compileEff (.scoped b) p = Prim.withFiber (EffThunk.act p) := by
   simp [compileEff, hf]
 
 theorem compileEff_acquireRelease (a r : NativeEff) (hf : p.fuel = k + 1) :
@@ -330,7 +403,7 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
     · rw [compileEff_zero _ hf]; exact frontier_keys p
     · rw [compileEff_succeed v hf]
       split
-      · next val hval => exact evalTerm_keys v p.env val hval
+      · next val hval => exact evalTerm_point_keys v p val hval
       · exact List.nil_subset _
   | .fail e, p => by
     rcases hf : p.fuel with _ | k
@@ -361,14 +434,14 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
         · next val hval =>
           split
           · next operation hop =>
-            exact List.Subset.trans (syncOpOf_keys op val operation hop) (evalTerm_keys r p.env val hval)
+            exact List.Subset.trans (syncOpOf_keys op val operation hop) (evalTerm_point_keys r p val hval)
           · exact List.nil_subset _
         · exact List.nil_subset _
       · split
         · next cell hcell =>
           obtain ⟨val, hval, hc⟩ := Option.bind_eq_some_iff.mp hcell
           have hmem := awaitCellOf_keys val cell hc
-          have hval' := evalTerm_keys r p.env val hval
+          have hval' := evalTerm_point_keys r p val hval
           have hcellKeys : [Handle.promise cell] ⊆ p.keys := by
             intro key hkey
             obtain rfl := List.mem_singleton.mp hkey
@@ -442,7 +515,7 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
         · next cell hcell =>
           obtain ⟨val, hval, hc⟩ := Option.bind_eq_some_iff.mp hcell
           have hmem := awaitCellOf_keys val cell hc
-          have hval' := evalTerm_keys r p.env val hval
+          have hval' := evalTerm_point_keys r p val hval
           have hcellKeys : [Handle.promise cell] ⊆ p.keys := by
             intro key hkey
             obtain rfl := List.mem_singleton.mp hkey
@@ -455,12 +528,23 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
     · rw [compileEff_zero _ hf]; exact frontier_keys p
     · rw [compileEff_awaitFiber fiber mode hf]
       split
-      · next id hid => exact evalTerm_keys fiber p.env (Val.fiber id) hid
+      · next id hid =>
+        split
+        · next exit hexit =>
+          rw [← exitKeys_eq_nativeKeys_ofExit]
+          exact p.awaitExit_keys id mode exit hexit
+        · exact evalTerm_point_keys fiber p (Val.fiber id) hid
       · exact List.nil_subset _
   | .withFiber a, p => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; exact frontier_keys p
-    · rw [compileEff_withFiber a hf]; exact List.Subset.refl _
+    · cases a with
+      | forkScoped child options =>
+        rw [compileEff_forkScoped child options hf]
+        sub_tac
+      | _ =>
+        rw [compileEff_withFiber _ hf (by intro _ _ h; cases h)]
+        exact List.Subset.refl _
   | .scoped b, p => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; exact frontier_keys p
@@ -491,7 +575,7 @@ theorem entrants_keys (root : NativeEff) : ∀ (es : Effs NativeOp) (q : Point),
     simp only [actionAt.entrants, List.flatMap_cons]
     exact List.append_subset.mpr ⟨compileEff_keys h (q.child 0), entrants_keys root t (q.child 1)⟩
 
-/-! ## The generator walker keeps to its environment -/
+/-! ## The generator walker keeps to its captured exits and environment -/
 
 theorem blockExit_env (root : NativeEff) (p : Point) (pc : List Nat) (env : List Val) (pc' : List Nat)
     (env' : List Val) (h : blockExit root p pc env = some (pc', env')) : env' ⊆ env := by
@@ -513,15 +597,22 @@ theorem loopExit_env (root : NativeEff) : ∀ (depth : Nat) (p : Point) (pc : Li
       | exact List.Subset.trans (loopExit_env root depth _ _ _ _ _ h) (List.take_subset _ _)
       | exact loopExit_env root depth _ _ _ _ _ h
 
-/-- What a generator step may name, given a bound `E` on the environment's handles. -/
+/-- What a generator step may name, given a bound `E` on its point's handles. -/
 def StepKeys (E : List Handle) : IterStep EffName EffThunk Val Err Defect FiberId Ann → Prop
   | IterStep.done r => r.keys ⊆ E
   | IterStep.resume next n' => nativeKeys next ++ EffName.keys n' ⊆ E
   | IterStep.halt _ => True
 
+theorem Point.withEnv_keys_subset (p : Point) (env env' : List Val) (h : env' ⊆ env) :
+    ({ p with env := env' } : Point).keys ⊆ ({ p with env := env } : Point).keys := by
+  apply List.append_subset.mpr
+  exact ⟨List.subset_append_left _ _,
+    List.Subset.trans (flatMap_subset_of_subset h) (List.subset_append_right _ _)⟩
+
 mutual
 theorem runStmts_keys (root : NativeEff) (p : Point) (E : List Handle) :
-    ∀ (fuel : Nat) (pc : List Nat) (env folded : List Val), env.flatMap Val.keys ⊆ E →
+    ∀ (fuel : Nat) (pc : List Nat) (env folded : List Val),
+      ({ p with env := env } : Point).keys ⊆ E →
       StepKeys E (runStmts root p fuel pc env folded).2
   | 0, pc, env, folded, henv => by
     simp only [runStmts, StepKeys]
@@ -533,7 +624,8 @@ theorem runStmts_keys (root : NativeEff) (p : Point) (E : List Handle) :
       · simp only [StepKeys]; exact List.nil_subset _
       · next pc' env' hexit =>
         exact runStmts_keys root p E fuel pc' env' folded
-          (List.Subset.trans (flatMap_subset_of_subset (blockExit_env root p pc env pc' env' hexit)) henv)
+          (List.Subset.trans (p.withEnv_keys_subset env env'
+            (blockExit_env root p pc env pc' env' hexit)) henv)
     · next s _ _ =>
       split
       · exact yieldOf_keys root p E fuel _ true pc env folded henv
@@ -542,7 +634,7 @@ theorem runStmts_keys (root : NativeEff) (p : Point) (E : List Handle) :
         split
         · next value hvalue =>
           simp only [StepKeys]
-          exact List.Subset.trans (evalTerm_keys _ env value hvalue) henv
+          exact List.Subset.trans (evalTerm_point_keys _ { p with env := env } value hvalue) henv
         · simp only [StepKeys]
       · split
         · exact runStmts_keys root p E fuel _ env folded henv
@@ -552,13 +644,14 @@ theorem runStmts_keys (root : NativeEff) (p : Point) (E : List Handle) :
       · split
         · next pc' env' hexit =>
           exact runStmts_keys root p E fuel pc' env' folded
-            (List.Subset.trans (flatMap_subset_of_subset (loopExit_env root _ p pc env pc' env' hexit)) henv)
+            (List.Subset.trans (p.withEnv_keys_subset env env'
+              (loopExit_env root _ p pc env pc' env' hexit)) henv)
         · simp only [StepKeys]
     · simp only [StepKeys]
 termination_by fuel _ _ _ _ => (fuel, 0)
 
 theorem yieldOf_keys (root : NativeEff) (p : Point) (E : List Handle) (fuel : Nat) (e : NativeEff) (bind : Bool)
-    (pc : List Nat) (env folded : List Val) (henv : env.flatMap Val.keys ⊆ E) :
+    (pc : List Nat) (env folded : List Val) (henv : ({ p with env := env } : Point).keys ⊆ E) :
     StepKeys E (runStmts.yieldOf root p e bind fuel pc env folded).2 := by
   simp only [runStmts.yieldOf]
   have hcode := compileEff_keys e { p with path := p.path ++ [0] ++ pc ++ [0, 0], env := env, fuel := fuel + 1 }
@@ -567,11 +660,11 @@ theorem yieldOf_keys (root : NativeEff) (p : Point) (E : List Handle) (fuel : Na
     rw [hvalue] at hcode
     refine runStmts_keys root p E fuel _ _ _ ?_
     cases bind
-    · change env.flatMap Val.keys ⊆ E
-      exact henv
-    · change (env ++ [value]).flatMap Val.keys ⊆ E
-      simp only [List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.append_nil]
-      exact List.append_subset.mpr ⟨henv, List.Subset.trans hcode henv⟩
+    · exact henv
+    · change ({ p with env := env ++ [value] } : Point).keys ⊆ E
+      have hvalue : value.keys ⊆ E := List.Subset.trans hcode henv
+      simpa only [Point.keys, List.flatMap_append, List.flatMap_cons, List.flatMap_nil,
+        List.append_nil, List.append_assoc] using List.append_subset.mpr ⟨henv, hvalue⟩
   · simp only [StepKeys]
   ·
     simp only [StepKeys]
@@ -638,9 +731,10 @@ theorem actionAt_keys (root : NativeEff) (p : Point) (a : NAction) (h : actionAt
         sub_tac using (resolve_keys root _)
       · subst h; exact List.nil_subset _
     | forkScoped prog options =>
+      -- the service read names nothing (§20); `forkScopedAt_keys` bounds the `forkIn` half
       simp only [] at h
       subst h
-      exact resolve_keys root _
+      exact List.nil_subset _
     | runIn target scope =>
       simp only [] at h
       split at h
@@ -672,15 +766,13 @@ theorem actionAt_keys (root : NativeEff) (p : Point) (a : NAction) (h : actionAt
       · rename_i ids hids
         obtain ⟨v, hv, hh⟩ := Option.bind_eq_some_iff.mp hids
         have hids' : ids.map Handle.fiber ⊆ p.keys :=
-          List.Subset.trans (handlesOf_keys v ids hh) (evalTerm_keys targets p.env v hv)
+          List.Subset.trans (handlesOf_keys v ids hh) (evalTerm_point_keys targets p v hv)
         split at h
         · subst h
           sub_tac using hids'
         · rename_i who _
           split at h
-          · rename_i id hid
-            subst h
-            have h1 := evalTerm_fiber_mem who p.env id hid
+          · subst h
             sub_tac using hids'
           · subst h; exact List.nil_subset _
       · subst h; exact List.nil_subset _
@@ -690,7 +782,7 @@ theorem actionAt_keys (root : NativeEff) (p : Point) (a : NAction) (h : actionAt
       · rename_i ids hids
         obtain ⟨v, hv, hh⟩ := Option.bind_eq_some_iff.mp hids
         subst h
-        exact List.Subset.trans (handlesOf_keys v ids hh) (evalTerm_keys targets p.env v hv)
+        exact List.Subset.trans (handlesOf_keys v ids hh) (evalTerm_point_keys targets p v hv)
       · subst h; exact List.nil_subset _
     | awaitAllFailFast targets =>
       simp only [] at h
@@ -698,7 +790,7 @@ theorem actionAt_keys (root : NativeEff) (p : Point) (a : NAction) (h : actionAt
       · rename_i ids hids
         obtain ⟨v, hv, hh⟩ := Option.bind_eq_some_iff.mp hids
         subst h
-        exact List.Subset.trans (handlesOf_keys v ids hh) (evalTerm_keys targets p.env v hv)
+        exact List.Subset.trans (handlesOf_keys v ids hh) (evalTerm_point_keys targets p v hv)
       · subst h; exact List.nil_subset _
     | snapshotChildren =>
       simp only [] at h
@@ -710,7 +802,7 @@ theorem actionAt_keys (root : NativeEff) (p : Point) (a : NAction) (h : actionAt
       · rename_i ids hids
         obtain ⟨v, hv, hh⟩ := Option.bind_eq_some_iff.mp hids
         subst h
-        exact List.Subset.trans (handlesOf_keys v ids hh) (evalTerm_keys snapshot p.env v hv)
+        exact List.Subset.trans (handlesOf_keys v ids hh) (evalTerm_point_keys snapshot p v hv)
       · subst h; exact List.nil_subset _
     | raceAll es =>
       simp only [] at h
@@ -721,7 +813,7 @@ theorem actionAt_keys (root : NativeEff) (p : Point) (a : NAction) (h : actionAt
       split at h
       · rename_i ctx hctx
         subst h
-        exact evalTerm_keys context p.env (Val.context ctx) hctx
+        exact evalTerm_point_keys context p (Val.context ctx) hctx
       · subst h; exact List.nil_subset _
     | getContext =>
       simp only [] at h
@@ -738,18 +830,33 @@ theorem actionAt_keys (root : NativeEff) (p : Point) (a : NAction) (h : actionAt
         subst h
         have h1 := evalTerm_scope_mem scope p.env s hs
         obtain ⟨v, hv, hev⟩ := Option.bind_eq_some_iff.mp hexit
-        have h2 : exitKeys e ⊆ p.keys := List.Subset.trans (exitOfVal_keys v e hev) (evalTerm_keys exit p.env v hv)
+        have h2 : exitKeys e ⊆ p.keys := List.Subset.trans (exitOfVal_keys v e hev) (evalTerm_point_keys exit p v hv)
         sub_tac using h2
       · subst h; exact List.nil_subset _
   · cases h
 
 /-! ## The hooks of `interpOf` are key-bounded -/
 
+/-- `forkScoped`'s `forkIn` half (§20) names the handle the service read answered and the
+child's point. -/
+theorem forkScopedAt_keys (root : NativeEff) (p : Point) (scope : Nat) (a : NAction)
+    (h : forkScopedAt root p scope = some a) :
+    a.keys EffName.keys EffThunk.keys ⊆ (EffThunk.forkInAt p scope).keys := by
+  unfold forkScopedAt at h
+  split at h
+  · simp only [Option.some.injEq] at h
+    subst h
+    simp only [WithFiberAction.keys, EffThunk.keys]
+    sub_tac using (resolve_keys root ((p.child 0).child 0))
+  · cases h
+
 theorem contAOf_native_keys (root : NativeEff) (n : EffName) (v : Val) :
     nativeKeys (Program.contAOf root n v) ⊆ n.keys ++ v.keys := by
   cases n with
   | cont p => simp only [Program.contAOf]; sub_tac using (resolve_keys root (p.childWith 1 v))
   | onValue p => simp only [Program.contAOf]; sub_tac using (resolve_keys root (p.childWith 1 v))
+  | forkScopedIn p =>
+    cases v <;> simp only [Program.contAOf] <;> sub_tac norm [Point.keys, EffName.keys, EffThunk.keys]
   | restore exit => simp only [Program.contAOf, primKeys_ofExit]; sub_tac
   | merge exit => simp only [Program.contAOf, primKeys_ofExit]; sub_tac
   | reFail cause => simp only [Program.contAOf]; exact List.nil_subset _
@@ -763,7 +870,7 @@ theorem contAOf_native_keys (root : NativeEff) (n : EffName) (v : Val) :
   | abort => simp only [Program.contAOf]; exact List.nil_subset _
   | store name => simp only [Program.contAOf, nativeKeys, embed_keys]; exact Machine.contAOf_keys name v
   | caught p | onCause p | fin p | gen p pc bind | loop p | registerAwait cell | cancelAwait cell
-  | withWaiter base waiter token | scopeClose scope | restoreCtx previous =>
+  | withWaiter base waiter token | scopedExit previous scope | scopeClose scope | restoreCtx previous =>
     simp only [Program.contAOf]; sub_tac
 
 theorem contEOf_native_keys (root : NativeEff) (n : EffName) (cause : CauseV) :
@@ -781,7 +888,7 @@ theorem contEOf_native_keys (root : NativeEff) (n : EffName) (cause : CauseV) :
   | store name => simp only [Program.contEOf, nativeKeys, embed_keys]; exact Machine.contEOf_keys name cause
   | cont p | onValue p | fin p | gen p pc bind | loop p | registerAwait cell | cancelAwait cell
   | withWaiter base waiter token | abort | reFail c | scopeOpen p | scopeProvide p s | scopeBody p previous
-  | scopeClose scope | restoreCtx previous =>
+  | scopedExit previous scope | scopeClose scope | restoreCtx previous | forkScopedIn p =>
     simp only [Program.contEOf]; exact List.nil_subset _
 
 theorem cancelProgramOf_keys (n : EffName) : nativeKeys (cancelProgramOf n) ⊆ n.keys := by
@@ -800,9 +907,9 @@ theorem syncValueAt_keys (root : NativeEff) (t : EffThunk) : (syncValueAt root t
     · rename_i term _
       cases hval : evalTerm p.env term with
       | none => exact List.nil_subset _
-      | some val => exact evalTerm_keys term p.env val hval
+      | some val => exact evalTerm_point_keys term p val hval
     · exact List.nil_subset _
-  | body _ | op _ | park _ | act _ | getCtx | setCtx _ | closeScope _ _ | store _ =>
+  | body _ | op _ | park _ | act _ | forkInAt _ _ | getCtx | setCtx _ | closeScope _ _ | store _ =>
     simp only [syncValueAt]; exact List.nil_subset _
 
 theorem suspendBodyAt_keys (root : NativeEff) (t : EffThunk) : nativeKeys (suspendBodyAt root t) ⊆ t.keys := by
@@ -812,13 +919,14 @@ theorem suspendBodyAt_keys (root : NativeEff) (t : EffThunk) : nativeKeys (suspe
     split
     · exact frontier_keys p
     · split
+      · exact resolve_keys root (p.child 0)
       · split
         · exact resolve_keys root (p.child 0)
         · exact resolve_keys root (p.child 1)
         · exact List.nil_subset _
       · sub_tac
       · split
-        · next cursor hcursor => sub_tac using (evalTerm_keys _ p.env cursor hcursor)
+        · next cursor hcursor => sub_tac using (evalTerm_point_keys _ p cursor hcursor)
         · exact List.nil_subset _
       · exact compileEff_keys _ p
       · exact List.nil_subset _
@@ -826,15 +934,28 @@ theorem suspendBodyAt_keys (root : NativeEff) (t : EffThunk) : nativeKeys (suspe
     cases thunk with
     | body program => simp only [suspendBodyAt, nativeKeys, embed_keys]; exact Machine.progOf_keys program
     | park _ | act _ | op _ => simp only [suspendBodyAt]; exact List.nil_subset _
-  | pure _ | op _ | park _ | act _ | getCtx | setCtx _ | closeScope _ _ =>
+  | pure _ | op _ | park _ | act _ | forkInAt _ _ | getCtx | setCtx _ | closeScope _ _ =>
     simp only [suspendBodyAt]; exact List.nil_subset _
 
 theorem env_bind_keys (p : Point) (v : Val) (bind : Bool) :
     (if bind then p.env ++ [v] else p.env).flatMap Val.keys ⊆ p.keys ++ v.keys := by
-  cases bind
-  · exact List.subset_append_left _ _
-  · show (p.env ++ [v]).flatMap Val.keys ⊆ p.env.flatMap Val.keys ++ v.keys
+  cases bind with
+  | false =>
+    change p.env.flatMap Val.keys ⊆ p.keys ++ v.keys
+    exact List.Subset.trans p.env_keys_subset (List.subset_append_left _ _)
+  | true =>
+    change (p.env ++ [v]).flatMap Val.keys ⊆ p.keys ++ v.keys
     simp only [List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.append_nil]
+    exact List.append_subset.mpr
+      ⟨List.Subset.trans p.env_keys_subset (List.subset_append_left _ _), List.subset_append_right _ _⟩
+
+theorem point_bind_keys (p : Point) (v : Val) (bind : Bool) :
+    ({ p with env := if bind then p.env ++ [v] else p.env } : Point).keys ⊆ p.keys ++ v.keys := by
+  cases bind with
+  | false => exact List.subset_append_left _ _
+  | true =>
+    change (p.childWith 0 v).keys ⊆ p.keys ++ v.keys
+    rw [Point.childWith_keys]
     exact List.Subset.refl _
 
 theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThunk.keys (interpOf root) where
@@ -848,12 +969,18 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     | gen p pc bind =>
       simp only [interpOf] at h
       have hs := runStmts_keys root p (p.keys ++ v.keys) p.fuel pc (if bind then p.env ++ [v] else p.env) []
-        (env_bind_keys p v bind)
+        (point_bind_keys p v bind)
       rw [h] at hs
       exact hs
+    | store name =>
+      -- the stores' generators (a scope's close walk, §20), embedded
+      simp only [interpOf] at h
+      have hs := stores_keyBounded.iterNext_done name v r (embedStep_done h)
+      simpa only [EffName.keys, List.nil_append] using hs
     | cont p | caught p | onValue p | onCause p | fin p | restore e | merge e | loop p | registerAwait cell
     | cancelAwait cell | withWaiter base waiter token | abort | reFail c | scopeOpen p | scopeProvide p s
-    | scopeBody p previous | scopeClose scope | restoreCtx previous | constant w | store name =>
+    | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
+    | forkScopedIn p =>
       simp only [interpOf, IterStep.done.injEq] at h
       subst h
       exact List.subset_append_right _ _
@@ -862,19 +989,26 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     | gen p pc bind =>
       simp only [interpOf] at h
       have hs := runStmts_keys root p (p.keys ++ v.keys) p.fuel pc (if bind then p.env ++ [v] else p.env) []
-        (env_bind_keys p v bind)
+        (point_bind_keys p v bind)
       rw [h] at hs
       exact hs
+    | store name =>
+      simp only [interpOf] at h
+      obtain ⟨next0, n0, hstep, rfl, rfl⟩ := embedStep_resume h
+      have hs := stores_keyBounded.iterNext_resume name v next0 n0 hstep
+      simpa only [nativeKeys, embed_keys, EffName.keys, List.nil_append] using hs
     | cont p | caught p | onValue p | onCause p | fin p | restore e | merge e | loop p | registerAwait cell
     | cancelAwait cell | withWaiter base waiter token | abort | reFail c | scopeOpen p | scopeProvide p s
-    | scopeBody p previous | scopeClose scope | restoreCtx previous | constant w | store name =>
+    | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
+    | forkScopedIn p =>
       simp only [interpOf] at h; cases h
   loopBody n c := by
     cases n with
     | loop p => simp only [interpOf]; sub_tac using (resolve_keys root (p.childWith 0 c))
     | cont p | caught p | onValue p | onCause p | fin p | restore e | merge e | gen p pc bind | registerAwait cell
     | cancelAwait cell | withWaiter base waiter token | abort | reFail c' | scopeOpen p | scopeProvide p s
-    | scopeBody p previous | scopeClose scope | restoreCtx previous | constant w | store name =>
+    | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
+    | store name | forkScopedIn p =>
       simp only [interpOf]; sub_tac
   loopStep n c v := by
     cases n with
@@ -891,7 +1025,8 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
       · sub_tac
     | cont p | caught p | onValue p | onCause p | fin p | restore e | merge e | gen p pc bind | registerAwait cell
     | cancelAwait cell | withWaiter base waiter token | abort | reFail c' | scopeOpen p | scopeProvide p s
-    | scopeBody p previous | scopeClose scope | restoreCtx previous | constant w | store name =>
+    | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
+    | store name | forkScopedIn p =>
       simp only [interpOf]; sub_tac
   loopDone n := by simp only [interpOf]; exact List.nil_subset _
   cancelThenFail n c := by
@@ -909,9 +1044,22 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
       subst h
       mem_tac [EffThunk.keys, Thunk.keys, ParkKind.keys]
     · cases h
+  parkOfAwaitAll code targets h := by
+    simp only [interpOf] at h
+    split at h
+    · rename_i kind
+      simp only [Option.some.injEq, Except.ok.injEq] at h
+      subst h
+      sub_tac
+    · rename_i kind
+      simp only [Option.some.injEq, Except.ok.injEq] at h
+      subst h
+      sub_tac
+    · cases h
   withFiberOf t a h := by
     cases t with
     | act p => simp only [interpOf] at h; exact actionAt_keys root p a h
+    | forkInAt p scope => simp only [interpOf] at h; exact forkScopedAt_keys root p scope a h
     | getCtx => simp only [interpOf, Option.some.injEq] at h; subst h; exact List.nil_subset _
     | setCtx ctx => simp only [interpOf, Option.some.injEq] at h; subst h; exact List.Subset.refl _
     | closeScope scope exit => simp only [interpOf, Option.some.injEq] at h; subst h; exact List.Subset.refl _
@@ -935,7 +1083,8 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
         simp only [interpOf] at h
         exact ⟨syncOpStep_le operation s s' v h, syncOpStep_keys operation s s' v ids h hok⟩
       | park _ | act _ | body _ => simp only [interpOf] at h; cases h
-    | pure _ | body _ | park _ | act _ | getCtx | setCtx _ | closeScope _ _ => simp only [interpOf] at h; cases h
+    | pure _ | body _ | park _ | act _ | forkInAt _ _ | getCtx | setCtx _ | closeScope _ _ =>
+      simp only [interpOf] at h; cases h
   registerAsync n fiber token s ids hok := by
     have reg : ∀ cell, Ok ⟨ids, s⟩ ([Handle.promise cell] ++ s.keys) →
         s.le { s with deferreds := (s.deferreds.register cell fiber token).1 } ∧
@@ -964,12 +1113,13 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
       | registerAwait cell => simp only [interpOf]; exact reg cell hok
       | restore _ | merge _ | seq _ | joinOn _ | interruptWith _ | doneInto _ | constant _ | exitOfValue
       | snapshotThen _ | cancelAwait _ | externalRegister _ | abortController | cancelPark | cancelRace _
-      | withWaiter _ _ _ | reFail _ | finalizerName _ | closeSeq _ _ _ | closePar _ _ _ _ | mergeAwaitedExits =>
+      | withWaiter _ _ _ | reFail _ | finalizerName _ | closeSeq _ _ _ | closeParDone =>
         simp only [interpOf]
         exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
     | cont p | caught p | onValue p | onCause p | fin p | restore e | merge e | gen p pc bind | loop p
     | cancelAwait cell | withWaiter base waiter token' | abort | reFail c | scopeOpen p | scopeProvide p sc
-    | scopeBody p previous | scopeClose scope | restoreCtx previous | constant w =>
+    | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
+    | forkScopedIn p =>
       simp only [interpOf]
       exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
   answerCode c := by simp only [interpOf]; rw [embed_keys]; exact Machine.completionPrim_keys c
@@ -993,7 +1143,12 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
   abortName := rfl
   parkCancelName := rfl
   raceCancelName race := rfl
-  raceSettle live exit := by simp only [interpOf]; rw [embed_keys]; exact Machine.raceSettleProgram_keys live exit
+  parkCode kind := by simp only [interpOf]; sub_tac
+  interruptCode target := by simp only [interpOf]; rw [embed_keys]; sub_tac
+  interruptAsCode target who := by simp only [interpOf]; rw [embed_keys]; sub_tac
+  interruptAllCode targets := by simp only [interpOf]; rw [embed_keys]; sub_tac
+  raceSettle race cleanupNeeded exit := by
+    simp only [interpOf]; rw [embed_keys]; exact Machine.raceSettleProgram_keys race cleanupNeeded exit
   finalizerProgram n e p h := by
     simp only [interpOf] at h
     split at h
@@ -1039,9 +1194,253 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     | awaitValue => simp only [interpOf, primKeys, Machine.reifyExitVal_keys]; exact List.Subset.refl _
     | joinEffect => simp only [interpOf, primKeys_ofExit]; exact List.Subset.refl _
   fiberValue id := List.Subset.refl _
+  fiberIdValue _ := List.nil_subset _
   fibersValue ids := List.Subset.refl _
   exitsValue exits := by simp only [interpOf, Machine.exitsVal_keys]; exact List.Subset.refl _
   voidValue := rfl
+  scopeValue scope := by simp only [interpOf]; exact List.Subset.refl _
+  closeDoneName := rfl
+  ambientScope ctx scope h := by
+    simp only [interpOf] at h
+    simp only [Ctx.keys, h, List.mem_singleton]
+
+/-! ## Fresh source construction over machine-owned exits -/
+
+theorem Point.withCompleted_keys (p : Point) (completed : List (FiberId × ExitV)) :
+    ({ p with completed } : Point).keys ⊆
+      completed.flatMap (fun entry => exitKeys entry.2) ++ p.keys := by
+  sub_tac
+
+/-- Source callbacks can additionally use the completed-exit values supplied by
+the evaluator. Eager code remains bounded by its captured point. -/
+theorem interpAt_keyBounded (root : NativeEff) (completed : List (FiberId × ExitV)) :
+    KeyBounded EffName.keys EffThunk.keys (interpAt root completed)
+      (completed.flatMap fun entry => exitKeys entry.2) where
+  contA n v := by
+    cases n <;> simp only [interpAt]
+    all_goals exact List.Subset.trans (contAOf_native_keys root _ v) (by sub_tac)
+  contE n c := by
+    cases n <;> simp only [interpAt]
+    all_goals exact List.Subset.trans (contEOf_native_keys root _ c) (by sub_tac)
+  suspendBody t := by
+    cases t <;> simp only [interpAt]
+    all_goals exact List.Subset.trans (suspendBodyAt_keys root _) (by sub_tac)
+  iterNext_done n v r h := by
+    cases n with
+    | gen p pc bind =>
+      simp only [interpAt] at h
+      have hs := runStmts_keys root { p with completed }
+        (completed.flatMap (fun entry => exitKeys entry.2) ++ p.keys ++ v.keys)
+        p.fuel pc (if bind then p.env ++ [v] else p.env) []
+        (List.Subset.trans (point_bind_keys { p with completed } v bind) (by sub_tac))
+      rw [h] at hs
+      simpa only [StepKeys, EffName.keys, List.append_assoc] using hs
+    | store name =>
+      simp only [interpAt] at h
+      have hs := stores_keyBounded.iterNext_done name v r (embedStep_done h)
+      simp only [List.nil_append] at hs
+      exact List.Subset.trans hs (List.subset_append_right _ _)
+    | _ =>
+      simp only [interpAt, IterStep.done.injEq] at h
+      subst h
+      sub_tac
+  iterNext_resume n v next n' h := by
+    cases n with
+    | gen p pc bind =>
+      simp only [interpAt] at h
+      have hs := runStmts_keys root { p with completed }
+        (completed.flatMap (fun entry => exitKeys entry.2) ++ p.keys ++ v.keys)
+        p.fuel pc (if bind then p.env ++ [v] else p.env) []
+        (List.Subset.trans (point_bind_keys { p with completed } v bind) (by sub_tac))
+      rw [h] at hs
+      simpa only [StepKeys, EffName.keys, List.append_assoc] using hs
+    | store name =>
+      simp only [interpAt] at h
+      obtain ⟨next0, n0, hstep, rfl, rfl⟩ := embedStep_resume h
+      have hs := stores_keyBounded.iterNext_resume name v next0 n0 hstep
+      simp only [List.nil_append] at hs
+      simp only [embed_keys, EffName.keys]
+      exact List.Subset.trans hs (List.subset_append_right _ _)
+    | _ => simp only [interpAt] at h; cases h
+  loopBody n c := by
+    cases n with
+    | loop p =>
+      exact List.Subset.trans
+        (resolve_keys root ({ p with completed }.childWith 0 c)) (by sub_tac)
+    | _ => simp only [interpAt]; sub_tac
+  finalizerProgram n e code h := by
+    cases n with
+    | fin p =>
+      simp only [interpAt, Option.some.injEq] at h
+      subst code
+      refine List.Subset.trans (resolve_keys root _) ?_
+      rw [Point.childWith_keys, Machine.reifyExitVal_keys]
+      sub_tac
+    | _ =>
+      simp only [interpAt] at h
+      exact List.Subset.trans ((interpOf_keyBounded root).finalizerProgram _ e code h)
+        (List.subset_append_right _ _)
+  syncValue := (interpOf_keyBounded root).syncValue
+  reifyExit := (interpOf_keyBounded root).reifyExit
+  loopStep := (interpOf_keyBounded root).loopStep
+  loopDone := (interpOf_keyBounded root).loopDone
+  cancelThenFail := (interpOf_keyBounded root).cancelThenFail
+  parkOf := (interpOf_keyBounded root).parkOf
+  parkCode := (interpOf_keyBounded root).parkCode
+  parkOfAwaitAll := (interpOf_keyBounded root).parkOfAwaitAll
+  interruptCode := (interpOf_keyBounded root).interruptCode
+  interruptAsCode := (interpOf_keyBounded root).interruptAsCode
+  interruptAllCode := (interpOf_keyBounded root).interruptAllCode
+  withFiberOf := (interpOf_keyBounded root).withFiberOf
+  syncState := (interpOf_keyBounded root).syncState
+  registerAsync := (interpOf_keyBounded root).registerAsync
+  answerCode := (interpOf_keyBounded root).answerCode
+  dueResumes := (interpOf_keyBounded root).dueResumes
+  cancelName := (interpOf_keyBounded root).cancelName
+  abortName := (interpOf_keyBounded root).abortName
+  parkCancelName := (interpOf_keyBounded root).parkCancelName
+  raceCancelName := (interpOf_keyBounded root).raceCancelName
+  raceSettle := (interpOf_keyBounded root).raceSettle
+  restoreName := (interpOf_keyBounded root).restoreName
+  mergeName := (interpOf_keyBounded root).mergeName
+  scopeStatus := (interpOf_keyBounded root).scopeStatus
+  scopeLinkFiber := (interpOf_keyBounded root).scopeLinkFiber
+  dropFinalizer := (interpOf_keyBounded root).dropFinalizer
+  closeScope := (interpOf_keyBounded root).closeScope
+  emptyContext := (interpOf_keyBounded root).emptyContext
+  contextValue := (interpOf_keyBounded root).contextValue
+  exitValue := (interpOf_keyBounded root).exitValue
+  fiberValue := (interpOf_keyBounded root).fiberValue
+  fiberIdValue := (interpOf_keyBounded root).fiberIdValue
+  fibersValue := (interpOf_keyBounded root).fibersValue
+  exitsValue := (interpOf_keyBounded root).exitsValue
+  voidValue := (interpOf_keyBounded root).voidValue
+  scopeValue := (interpOf_keyBounded root).scopeValue
+  closeDoneName := (interpOf_keyBounded root).closeDoneName
+  ambientScope := (interpOf_keyBounded root).ambientScope
+
+/-- Ordinary native evaluation uses only the machine's existing completed exits. -/
+theorem evaluatePrimAt_minted (root : NativeEff) (m : Api.Machine)
+    (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (yielding : Bool)
+    (hm : MintedIn m
+      (Handle.fiber f.id :: m.keys EffName.keys EffThunk.keys ++ f.keys EffName.keys EffThunk.keys)) :
+    IterMinted EffName.keys EffThunk.keys m
+      (evaluatePrim (interpAt root m.completedExits) m f yielding) := by
+  apply evaluatePrim_minted_with_ambient EffName.keys EffThunk.keys
+    (interpAt_keyBounded root m.completedExits) m f yielding
+  apply Ok_append.mpr
+  refine ⟨?_, hm⟩
+  exact Ok_of_subset (RunMachine.completedExits_keys EffName.keys EffThunk.keys m)
+    (Ok_of_subset (by sub_tac) hm)
+
+/-! ## Atomic scoped entry and exit
+
+The close snapshot's and the unsafe close's key bounds (`scopeCloseSnapshot_keys`,
+`storesCloseScopeUnsafe_keys`) live with the stores' interpreter in `Machine/Handles`
+since §20, where the stores' own `closeScope` bound needs them. -/
+
+/-- Scoped entry allocates its scope and carries the already captured body and
+previous context (`internal/effect.ts:3938-3948`). -/
+theorem enterScoped_minted (root : NativeEff) (p : Point) (m : Api.Machine)
+    (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (yielding : Bool)
+    (hm : MintedIn m
+      (m.keys EffName.keys EffThunk.keys ++ f.keys EffName.keys EffThunk.keys ++ p.keys)) :
+    IterMinted EffName.keys EffThunk.keys m (enterScoped root p m f yielding) := by
+  let state := { m.state with
+    scopes := m.state.scopes.make m.state.nextName .sequential
+    nextName := m.state.nextName + 1 }
+  have hstep : syncOpStep (.scopeMake .sequential) m.state =
+      some (state, .scopeHandle m.state.nextName) := rfl
+  have hle := syncOpStep_le _ _ _ _ hstep
+  have hworld : m.world.le ⟨m.fibers.map RunFiber.id, state⟩ := World.le_of_state hle
+  have hnew := syncOpStep_keys _ _ _ _ (m.fibers.map RunFiber.id) hstep
+    (Ok_of_subset (by sub_tac) hm)
+  have hold := Ok_mono hworld hm
+  unfold enterScoped IterMinted
+  refine ⟨hworld, ?_⟩
+  refine Ok_of_subset ?_ (Ok_append.mpr ⟨hold, hnew⟩)
+  sub_tac using (resolve_keys root (p.child 0))
+    norm [state, Ctx.keys, Point.keys, Point.child, EffName.keys, EffThunk.keys]
+
+/-- Scoped exit uses the answering frame's captured context and the scope's stored
+finalizers, after applying the real pop (`internal/effect.ts:3944-3947`). -/
+theorem exitScoped_minted (root : NativeEff) (m : Api.Machine)
+    (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (yielding : Bool) (exit : ExitV)
+    (hm : MintedIn m
+      (Handle.fiber f.id :: m.keys EffName.keys EffThunk.keys ++
+        f.keys EffName.keys EffThunk.keys ++ exitKeys exit)) :
+    IterMinted EffName.keys EffThunk.keys m (exitScoped root m f yielding exit) := by
+  unfold exitScoped
+  dsimp only
+  split
+  · next body previous scope flag hpop =>
+    have hg := getCont_answer_frame_keys EffName.keys EffThunk.keys f.frame _ _ _ hpop
+    simp only [primKeys, List.append_subset] at hg
+    have hF : Ok m.world (frameKeys EffName.keys EffThunk.keys f.frame) :=
+      Ok_of_subset (by sub_tac) hm
+    have hname : Ok m.world (Handle.scope scope :: previous.keys) := Ok_of_subset hg.1.2 hF
+    have hpopf := Ok_of_subset hg.2 hF
+    have hall := Ok_append.mpr ⟨Ok_append.mpr ⟨hm, hname⟩, hpopf⟩
+    split
+    · unfold IterMinted
+      refine ⟨by rw [world_emit]; exact World.le_refl _, ?_⟩
+      simp only [MintedIn]
+      rw [world_emit]
+      refine Ok_of_subset ?_ hall
+      sub_tac
+    · next state program hclose =>
+      obtain ⟨hle, hkeys⟩ := storesCloseScopeUnsafe_keys scope exit _ m.state state program hclose
+      have hworld : m.world.le ⟨m.fibers.map RunFiber.id, state⟩ := World.le_of_state hle
+      have hold := Ok_mono hworld hall
+      have hclosed : Ok ⟨m.fibers.map RunFiber.id, state⟩
+          (program.toList.flatMap programKeys ++ state.keys) :=
+        Ok_of_subset hkeys (Ok_mono hworld (Ok_of_subset (by sub_tac) hm))
+      cases program with
+      | none =>
+        unfold IterMinted
+        refine ⟨hworld, ?_⟩
+        refine Ok_of_subset ?_ (Ok_append.mpr ⟨hold, hclosed⟩)
+        sub_tac norm [primKeys_ofExit]
+      | some program =>
+        unfold IterMinted
+        refine ⟨hworld, ?_⟩
+        refine Ok_of_subset ?_ (Ok_append.mpr ⟨hold, hclosed⟩)
+        cases exit <;> simp only [finalizerCode, interpAt, interpOf] <;>
+          sub_tac norm [embed_keys]
+  · exact evaluatePrimAt_minted root m f yielding (Ok_of_subset (by sub_tac) hm)
+
+/-- The native evaluator's scoped cases and ordinary callback cases share one
+handle conclusion; the command/replay proof is unchanged. -/
+theorem evaluateNative_minted (root : NativeEff) (m : Api.Machine)
+    (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (yielding : Bool)
+    (hm : MintedIn m
+      (Handle.fiber f.id :: m.keys EffName.keys EffThunk.keys ++ f.keys EffName.keys EffThunk.keys)) :
+    IterMinted EffName.keys EffThunk.keys m (evaluateNative root m f yielding) := by
+  unfold evaluateNative
+  split
+  · next p hcurrent =>
+    split
+    · apply enterScoped_minted root p m f yielding
+      refine Ok_of_subset ?_ hm
+      sub_tac norm [hcurrent]
+    · exact evaluatePrimAt_minted root m f yielding hm
+  · next value hcurrent =>
+    apply exitScoped_minted root m f yielding (.success value)
+    refine Ok_of_subset ?_ hm
+    sub_tac norm [hcurrent]
+  · next cause hcurrent =>
+    apply exitScoped_minted root m f yielding (.failure cause)
+    refine Ok_of_subset ?_ hm
+    sub_tac norm [hcurrent]
+  · exact evaluatePrimAt_minted root m f yielding hm
+
+/-- The runtime view and native scope protocol use only existing or freshly
+allocated handles. The shared evaluator transport gives the public replay claim. -/
+theorem evaluatorFor_minted (root : NativeEff) :
+    letI := evaluatorFor root
+    EvaluatorMinted EffName.keys EffThunk.keys (interpOf root) := by
+  intro m f yielding hm
+  exact evaluateNative_minted root m f yielding (Ok_of_subset (by sub_tac) hm)
 
 /-! ## The public statement -/
 
@@ -1057,15 +1456,19 @@ loaded program, every `answerAsync` names handles that exist in the machine it a
 Decidable; replay admission is unchanged. -/
 def AnswersValid (program : Api.Program) (fuel : Nat) (tape : List Api.Decision) (choices : List Bool := []) :
     Prop :=
+  letI := evaluatorFor program
   AnswersValidAt (interpOf program) fuel tape (Api.load program fuel choices)
 
 instance (program : Api.Program) (fuel : Nat) (tape : List Api.Decision) (choices : List Bool) :
-    Decidable (AnswersValid program fuel tape choices) :=
-  inferInstanceAs (Decidable (AnswersValidAt (interpOf program) fuel tape (Api.load program fuel choices)))
+    Decidable (AnswersValid program fuel tape choices) := by
+  unfold AnswersValid
+  infer_instance
 
 theorem Api.replay_machine (program : Api.Program) (fuel : Nat) (tape : List Api.Decision) (choices : List Bool) :
+    letI := evaluatorFor program
     (Api.replay program fuel tape choices).machine =
       (replayEval (interpOf program) fuel tape (Api.load program fuel choices)).machine := by
+  letI := evaluatorFor program
   unfold Api.replay
   cases replayEval (interpOf program) fuel tape (Api.load program fuel choices) <;> rfl
 
@@ -1091,7 +1494,9 @@ external answers are valid stays minted. -/
 theorem handles_minted (program : Api.Program) (fuel : Nat) (tape : List Api.Decision) (choices : List Bool)
     (h : Minted (Api.load program fuel choices) ∧ AnswersValid program fuel tape choices) :
     Minted (Api.replay program fuel tape choices).machine := by
+  letI := evaluatorFor program
   rw [Api.replay_machine]
-  exact (replayEval_minted EffName.keys EffThunk.keys (interpOf_keyBounded program) fuel tape _ h.2 h.1).2
+  exact (replayEval_minted_of_evaluator EffName.keys EffThunk.keys (interpOf_keyBounded program)
+    (evaluatorFor_minted program) fuel tape _ h.2 h.1).2
 
 end Effect4.Program

@@ -110,6 +110,7 @@ type Expr =
   | { readonly _tag: "int"; readonly value: number }
   | { readonly _tag: "bool"; readonly value: boolean }
   | { readonly _tag: "call"; readonly fn: Expr; readonly args: ReadonlyArray<Expr> }
+  | { readonly _tag: "method"; readonly base: Expr; readonly name: string; readonly args: ReadonlyArray<Expr> }
   | { readonly _tag: "object"; readonly fields: ReadonlyArray<readonly [string, Expr]> }
   | { readonly _tag: "arr"; readonly items: ReadonlyArray<Expr> }
   /** `() => body` */
@@ -126,6 +127,7 @@ type TsStmt =
   /** `const name = yield* value` */
   | { readonly _tag: "constYield"; readonly name: string; readonly value: Expr }
   | { readonly _tag: "ret"; readonly value: Expr }
+  | { readonly _tag: "exprStmt"; readonly value: Expr }
   /** `yield* value` */
   | { readonly _tag: "yieldDiscard"; readonly value: Expr }
   /** `let name = value` */
@@ -290,12 +292,13 @@ const exprOf = (raw: Node): Read<Expr> => {
   }
 }
 
-const exprsOf = (items: ReadonlyArray<unknown>, where: string): Read<ReadonlyArray<Expr>> => {
+const exprsOf = (items: ReadonlyArray<unknown>, where: string,
+  read: (node: Node, index: number) => Read<Expr> = exprOf): Read<ReadonlyArray<Expr>> => {
   const out: Expr[] = []
-  for (const item of items) {
+  for (const [i, item] of items.entries()) {
     if (!isNode(item)) return refuse({ _tag: "node", type: item === null ? "hole" : typeof item, where })
     if (item.type === "SpreadElement") return unsupported(item, where)
-    const e = exprOf(item)
+    const e = read(item, i)
     if (failed(e)) return again(e)
     out.push(e.success)
   }
@@ -343,7 +346,7 @@ const stmtOf = (n: Node): Read<TsStmt> => {
         if (failed(v)) return again(v)
         return ok({ _tag: "assign", name: left.name, value: v.success })
       }
-      return unsupported(inner, "statement expression")
+      return Result.map(exprOf(inner), (value): TsStmt => ({ _tag: "exprStmt", value }))
     }
     case "ReturnStatement": {
       const argument = nodeAt(n, "argument")
@@ -535,22 +538,61 @@ const readRowValue = (s: string): Read<Eff> => {
 }
 
 /**
+ * The saved variable whose two components a tuple-call row receives, when its two
+ * arguments are exactly `fst(a)` and `snd(a)` of one identifier `a` (Lean `savedVar?`).
+ */
+const savedVar = (x: Expr, y: Expr): string | undefined => {
+  if (x._tag !== "call" || x.fn._tag !== "ident" || x.fn.name !== "fst" || x.args.length !== 1) return undefined
+  if (y._tag !== "call" || y.fn._tag !== "ident" || y.fn.name !== "snd" || y.args.length !== 1) return undefined
+  const [v] = x.args
+  const [w] = y.args
+  if (v?._tag !== "ident" || w?._tag !== "ident" || v.name !== w.name) return undefined
+  return v.name
+}
+
+/**
+ * The request of a tuple-call row from its two arguments: the components of one saved
+ * variable read back as that variable, any other two terms as their `pair` application
+ * (Lean `readTupleArgs`).
+ */
+const readTupleArgs = (n: number, x: Expr, y: Expr): Read<Term> => {
+  const v = savedVar(x, y)
+  if (v !== undefined) return readTerm(n, { _tag: "ident", name: v })
+  const a = readTerm(n, x)
+  if (failed(a)) return again(a)
+  const b = readTerm(n, y)
+  if (failed(b)) return again(b)
+  return ok({ _tag: "app", atom: "pair", args: [a.success, b.success] })
+}
+
+/**
  * A call as a call row; `undefined` when no row of the table has this head and argument
  * shape, so the caller may read an atom application instead. A call row's argument list is
  * the trailing names alone on a `unit` request, and the request followed by the trailing
- * names otherwise; both readings are tried, and the table lets at most one succeed.
+ * names otherwise; a tuple-call row's is its two request arguments followed by the trailing
+ * names. The three readings are tried in that order, and the table lets at most one succeed
+ * (Lean `readRowCall`).
  */
 const readRowCall = (n: number, s: string, args: ReadonlyArray<Expr>): Read<Eff> | undefined => {
   const all = namesOf(args)
   const asTrailing = all ? spell(s, all) : undefined
-  if (asTrailing) return !isValueRow(asTrailing) && unitRequest(asTrailing) ? ok(rowAnswer(asTrailing, unit)) : refuse({ _tag: "arity", head: s })
+  if (asTrailing) return asTrailing.row.shape === "call" && unitRequest(asTrailing) ? ok(rowAnswer(asTrailing, unit)) : refuse({ _tag: "arity", head: s })
   const [request, ...rest] = args
   if (request === undefined) return undefined
   const restNames = namesOf(rest)
   const withRequest = restNames ? spell(s, restNames) : undefined
-  if (!withRequest) return undefined
-  return !isValueRow(withRequest) && !unitRequest(withRequest)
-    ? Result.map(readTerm(n, request), (t) => rowAnswer(withRequest, t))
+  if (withRequest) {
+    return withRequest.row.shape === "call" && !unitRequest(withRequest)
+      ? Result.map(readTerm(n, request), (t) => rowAnswer(withRequest, t))
+      : refuse({ _tag: "arity", head: s })
+  }
+  const [second, ...names] = rest
+  if (second === undefined) return undefined
+  const tupleNames = namesOf(names)
+  const asTuple = tupleNames ? spell(s, tupleNames) : undefined
+  if (!asTuple) return undefined
+  return asTuple.row.shape === "tupleCall"
+    ? Result.map(readTupleArgs(n, request, second), (t) => rowAnswer(asTuple, t))
     : refuse({ _tag: "arity", head: s })
 }
 
@@ -747,7 +789,22 @@ const readForkIn: HeadReader = (n, args) => {
   return ok(withFiber({ _tag: "forkIn", program: p.success, options: o.success, scope: s.success }))
 }
 const readForkScoped: HeadReader = fork("Effect.forkScoped", false, (program, options) => ({ _tag: "forkScoped", program, options }))
-const readRunIn: HeadReader = terms2("Fiber.runIn", (target, scope) => withFiber({ _tag: "runIn", target, scope }))
+/** The callback binds nothing and contains exactly one synchronous link, then Effect.void. */
+const readRunIn: HeadReader = (n, args) => {
+  const shape = refuse({ _tag: "shape", what: "runIn" })
+  const [callback] = args
+  if (args.length !== 1 || callback?._tag !== "arrowBlock" || callback.params.length !== 0 ||
+      callback.body.length !== 2) return shape
+  const [link, done] = callback.body
+  if (link?._tag !== "exprStmt" || link.value._tag !== "call" || link.value.fn._tag !== "ident" ||
+      link.value.fn.name !== "Fiber.runIn" || link.value.args.length !== 2 || done?._tag !== "ret" ||
+      done.value._tag !== "ident" || done.value.name !== "Effect.void") return shape
+  const target = readTerm(n, link.value.args[0]!)
+  if (failed(target)) return again(target)
+  const scope = readTerm(n, link.value.args[1]!)
+  if (failed(scope)) return again(scope)
+  return ok(withFiber({ _tag: "runIn", target: target.success, scope: scope.success }))
+}
 const readInterrupt: HeadReader = term("Fiber.interrupt", (target) => withFiber({ _tag: "interrupt", target }))
 const readInterruptAll: HeadReader = term("Fiber.interruptAll", (targets) => withFiber({ _tag: "interruptAll", targets, interruptor: null }))
 const readInterruptAllAs: HeadReader = terms2("Fiber.interruptAllAs", (targets, who) => withFiber({ _tag: "interruptAll", targets, interruptor: who }))
@@ -799,7 +856,7 @@ const headReaders: Record<Head, HeadReader> = {
   "Effect.forkDetach": readForkDetach,
   "Effect.forkIn": readForkIn,
   "Effect.forkScoped": readForkScoped,
-  "Fiber.runIn": readRunIn,
+  "Fiber.runIn": () => arity("Fiber.runIn"),
   "Fiber.interrupt": readInterrupt,
   "Fiber.interruptAll": readInterruptAll,
   "Fiber.interruptAllAs": readInterruptAllAs,
@@ -815,6 +872,7 @@ const headReaders: Record<Head, HeadReader> = {
   "Cause.interrupt": notHere("Cause.interrupt"),
   "Cause.combine": notHere("Cause.combine"),
   "undefined": notHere("undefined"),
+  "Effect.withFiber": readRunIn,
 }
 
 /** A generator body, statement by statement, with the binder counts of the printer. */

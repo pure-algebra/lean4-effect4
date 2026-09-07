@@ -116,6 +116,10 @@ structure Point where
   fuel : Nat
   /-- The decisions left, for `choose` sites. -/
   tape : List Bool
+  /-- Completed fibers observed when this code was constructed. Eager bodies
+  retain this first-order view (`internal/effect.ts:767-777,814-822`); source
+  callbacks construct new code with the view at their own invocation. -/
+  completed : List (FiberId × ExitV) := []
 deriving DecidableEq
 
 namespace Point
@@ -130,6 +134,18 @@ def childWith (p : Point) (i : Nat) (v : Val) : Point :=
 
 def childWith2 (p : Point) (i : Nat) (v w : Val) : Point :=
   { p with path := p.path ++ [i], env := p.env ++ [v, w], fuel := p.fuel - 1 }
+
+/-- A join/await constructed after target exit is already an Exit
+(`internal/effect.ts:767-769,814-816`). An absent entry retains the Async form. -/
+def awaitExit (p : Point) (target : FiberId) (mode : Supervision.ObserverMode) : Option ExitV :=
+  (p.completed.find? fun entry => entry.1 = target).map fun entry =>
+    match mode with
+    | .joinEffect => entry.2
+    | .awaitValue => .success (reifyExitVal entry.2)
+
+theorem awaitExit_empty (p : Point) (target : FiberId) (mode : Supervision.ObserverMode)
+    (h : p.completed = []) : p.awaitExit target mode = none := by
+  simp [awaitExit, h]
 
 end Point
 
@@ -166,10 +182,16 @@ inductive EffName
   | scopeProvide (p : Point) (scope : Nat)
   /-- `scoped`: the context was set; run the body under the restoring finalizer. -/
   | scopeBody (p : Point) (previous : Ctx)
+  /-- The scoped exit callback restores this context and closes the captured scope
+  within the exiting delivery (`internal/effect.ts:3944-3947`). -/
+  | scopedExit (previous : Ctx) (scope : Nat)
   /-- The finalizer that closes a scope with the body's exit. -/
   | scopeClose (scope : Nat)
   /-- The finalizer that restores a context. -/
   | restoreCtx (previous : Ctx)
+  /-- `forkScoped`'s continuation on the scope handle the `Scope` service read answered:
+  `forkIn` on it (`internal/effect.ts:5406`, source-repairs §20). -/
+  | forkScopedIn (p : Point)
   | constant (v : Val)
   /-- A name of the stores' own alphabet: the programs the stores build (a scope's close
   chain, a completion, a finalizer name) embed as they are. -/
@@ -185,6 +207,9 @@ inductive EffThunk
   | op (operation : SyncOp)
   | park (kind : ParkKind)
   | act (p : Point)
+  /-- `forkScoped`'s `forkIn` on the handle its service read answered (§20): the child and
+  options at the point, the scope, and the point's fuel as the finalizer key. -/
+  | forkInAt (p : Point) (scope : Nat)
   | getCtx
   | setCtx (context : Ctx)
   | closeScope (scope : Nat) (exit : ExitV)
@@ -215,6 +240,7 @@ def embed : Program → NCode
   | .yieldableError e => .yieldableError e
   | .iterator g c => .iterator (.store g) c
   | .onSuccess body n => .onSuccess (embed body) (.store n)
+  | .onSuccessConst body next => .onSuccessConst (embed body) (embed next)
   | .onFailure body n => .onFailure (embed body) (.store n)
   | .onSuccessAndFailure body a e => .onSuccessAndFailure (embed body) (.store a) (.store e)
   | .exitFrame body => .exitFrame (embed body)
@@ -225,6 +251,14 @@ def embed : Program → NCode
   | .async r s c => .async (.store r) s (c.map EffName.store)
   | .asyncFinalizer n => .asyncFinalizer (.store n)
 
+/-- The embedding of a stores generator step (a scope's close walk, §20): the next code and
+the advanced generator embed. -/
+def embedStep : IterStep Name Thunk Val Err Defect FiberId Ann Program →
+    IterStep EffName EffThunk Val Err Defect FiberId Ann NCode
+  | IterStep.done v => IterStep.done v
+  | IterStep.halt c => IterStep.halt c
+  | IterStep.resume next n => IterStep.resume (embed next) (.store n)
+
 /-- The embedding of a stores action. -/
 def embedAction : WithFiberAction Name Thunk Val Err Defect FiberId Ann Ctx → NAction
   | .fork p o => .fork (embed p) o
@@ -232,6 +266,7 @@ def embedAction : WithFiberAction Name Thunk Val Err Defect FiberId Ann Ctx → 
   | .forkScoped p o k => .forkScoped (embed p) o k
   | .runIn t s k => .runIn t s k
   | .interrupt t => .interrupt t
+  | .interruptAs t who => .interruptAs t who
   | .interruptScoped t => .interruptScoped t
   | .interruptAll ts who => .interruptAll ts who
   | .awaitAll ts => .awaitAll ts
@@ -247,6 +282,8 @@ def embedAction : WithFiberAction Name Thunk Val Err Defect FiberId Ann Ctx → 
   | .refuse c => .refuse c
   | .dropObservers t => .dropObservers t
   | .cancelRace r => .cancelRace r
+  | .ambientScope => .ambientScope
+  | .closePar fins => .closePar (fins.map embed)
 
 /-! ## The compile -/
 
@@ -311,7 +348,10 @@ def compileEff : NativeEff → Point → NCode
         | some val => Prim.yieldableError (errOf val)
         | none => badShape
       | .sync _ => Prim.sync (EffThunk.pure p)
-      | .suspend _ => Prim.suspend (EffThunk.body (p.child 0))
+      -- The thunk names this suspension, not its child: executing the outer
+      -- `suspend` must return the child's complete code, including any suspension
+      -- that `Effect.gen` or the printed loop constructs (`internal/effect.ts:1175-1196`).
+      | .suspend _ => Prim.suspend (EffThunk.body p)
       | .perform op request =>
         match (NativeOp.row op).kind with
         | .sync =>
@@ -360,12 +400,17 @@ def compileEff : NativeEff → Point → NCode
         | _ => badShape
       | .awaitFiber fiber mode =>
         match evalTerm p.env fiber with
-        | some (Val.fiber id) => Prim.suspend (EffThunk.park (ParkKind.join id mode))
+        | some (Val.fiber id) =>
+          match p.awaitExit id mode with
+          | some exit => Prim.ofExit exit
+          | none => Prim.suspend (EffThunk.park (ParkKind.join id mode))
         | _ => badShape
+      -- `forkScoped` is `flatMap(scope, scope => forkIn(self, scope, options))` (`:5381-5406`,
+      -- §20): the counted `Service` read at the action, then `forkIn` on its handle
+      | .withFiber (.forkScoped _ _) =>
+        Prim.onSuccess (Prim.withFiber (EffThunk.act p)) (EffName.forkScopedIn p)
       | .withFiber _ => Prim.withFiber (EffThunk.act p)
-      | .scoped _ =>
-        Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.scopeMake FinalizerStrategy.sequential)))
-          (EffName.scopeOpen p)
+      | .scoped _ => Prim.withFiber (EffThunk.act p)
       | .acquireRelease _ _ => frontier p
       | .choose _ left right =>
         match p.tape with
@@ -511,8 +556,8 @@ def actionAt (root : NativeEff) (p : Point) : Option NAction :=
         | some (Val.scopeHandle s) =>
           WithFiberAction.forkIn (resolve root (q.child 0)) options s p.fuel
         | _ => refuse
-      | .forkScoped _ options =>
-        WithFiberAction.forkScoped (resolve root (q.child 0)) options p.fuel
+      -- the `Scope` service read (`Context.ts:423`, §20); `forkScopedAt` is the `forkIn` half
+      | .forkScoped _ _ => WithFiberAction.ambientScope
       | .runIn target scope =>
         match evalTerm p.env target, evalTerm p.env scope with
         | some (Val.fiber id), some (Val.scopeHandle s) => WithFiberAction.runIn id s p.fuel
@@ -532,7 +577,7 @@ def actionAt (root : NativeEff) (p : Point) : Option NAction :=
           | none => WithFiberAction.interruptAll ids none
           | some who =>
             match evalTerm p.env who with
-            | some (Val.fiber id) => WithFiberAction.interruptAll ids (some id)
+            | some (Val.nat id) => WithFiberAction.interruptAll ids (some ⟨id⟩)
             | _ => refuse
         | none => refuse
       | .awaitAll targets =>
@@ -566,6 +611,15 @@ where
     | .nil, _ => []
     | .cons h t, q => compileEff h (q.child 0) :: entrants t (q.child 1)
 
+/-- `forkScoped`'s second half (`forkIn(self, scope, options)`, `internal/effect.ts:5406`; §20)
+at a `forkScoped` node: the child compiled at the action's program, the node's options, the
+handle the service read answered, and the point's fuel as the finalizer key. -/
+def forkScopedAt (root : NativeEff) (p : Point) (scope : Nat) : Option NAction :=
+  match Node.at_ (Node.eff root) p.path with
+  | some (Node.eff (.withFiber (.forkScoped _ options))) =>
+    some (WithFiberAction.forkIn (resolve root ((p.child 0).child 0)) options scope p.fuel)
+  | _ => none
+
 /-- `cont[contA](value, fiber)`. -/
 def contAOf (root : NativeEff) : EffName → Val → NCode
   | .cont p, v => resolve root (p.childWith 1 v)
@@ -573,6 +627,8 @@ def contAOf (root : NativeEff) : EffName → Val → NCode
   | .restore exit, _ => Prim.ofExit exit
   | .merge exit, _ => Prim.ofExit exit
   | .reFail cause, _ => Prim.failure cause
+  | .forkScopedIn p, Val.scopeHandle s => Prim.withFiber (EffThunk.forkInAt p s)
+  | .forkScopedIn _, _ => badShape
   | .scopeOpen p, Val.scopeHandle s =>
     Prim.onExit (Prim.onSuccess (Prim.withFiber EffThunk.getCtx) (EffName.scopeProvide p s))
       (EffName.scopeClose s) false
@@ -625,6 +681,7 @@ def suspendBodyAt (root : NativeEff) : EffThunk → NCode
     | 0 => frontier p
     | _ + 1 =>
       match Node.at_ (Node.eff root) p.path with
+      | some (Node.eff (.suspend _)) => resolve root (p.child 0)
       | some (Node.eff (.branch test _ _)) =>
         match evalTerm p.env test with
         | some (Val.bool true) => resolve root (p.child 0)
@@ -660,6 +717,8 @@ def interpOf (root : NativeEff) :
   iterNext := fun name value =>
     match name with
     | .gen p pc bind => runStmts root p p.fuel pc (if bind then p.env ++ [value] else p.env) []
+    -- the stores' generators (a scope's close walk, §20), their steps embedded
+    | .store n => ((stores.iterNext n value).1, embedStep (stores.iterNext n value).2)
     | _ => ([], IterStep.done value)
   loopTest := fun name cursor =>
     match name with
@@ -686,8 +745,16 @@ def interpOf (root : NativeEff) :
     | Prim.suspend (EffThunk.park kind) => some (Except.ok kind)
     | Prim.suspend (EffThunk.store (Thunk.park kind)) => some (Except.ok kind)
     | _ => none
+  parkCode := fun kind => Prim.suspend (EffThunk.park kind)
+  -- the interrupt programs are the stores' named actions, embedded (source-repairs §19, D6b)
+  interruptCode := fun target => embed (Prim.withFiber (Thunk.act (ActionName.interrupt target)))
+  interruptAsCode := fun target who =>
+    embed (Prim.withFiber (Thunk.act (ActionName.interruptAs target who)))
+  interruptAllCode := fun targets =>
+    embed (Prim.withFiber (Thunk.act (ActionName.interruptAll targets none)))
   withFiberOf := fun
     | EffThunk.act p => actionAt root p
+    | EffThunk.forkInAt p scope => forkScopedAt root p scope
     | EffThunk.getCtx => some WithFiberAction.getContext
     | EffThunk.setCtx context => some (WithFiberAction.setContext context)
     | EffThunk.closeScope scope exit => some (WithFiberAction.closeScope scope exit)
@@ -714,7 +781,7 @@ def interpOf (root : NativeEff) :
   -- the parks' cleanups and the settled race's program are the stores' own, embedded
   parkCancelName := EffName.store Name.cancelPark
   raceCancelName := fun race => EffName.store (Name.cancelRace race)
-  raceSettle := fun live exit => embed (raceSettleProgram live exit)
+  raceSettle := fun race cleanupNeeded exit => embed (raceSettleProgram race cleanupNeeded exit)
   abortName := EffName.abort
   finalizerProgram := fun name exit =>
     match name with
@@ -751,16 +818,122 @@ def interpOf (root : NativeEff) :
     | Supervision.ObserverMode.awaitValue => Prim.success (reifyExitVal exit)
     | Supervision.ObserverMode.joinEffect => Prim.ofExit exit
   fiberValue := Val.fiber
+  fiberIdValue := fun fiber => Val.nat fiber.value
   fibersValue := Val.fibers
   exitsValue := exitsVal
   voidValue := Val.unit
+  scopeValue := Val.scopeHandle
+  closeDoneName := EffName.store Name.closeParDone
   encodeFiber := id
   stackAnnotations := stackAnnotationsOf
   asyncFiberError := Defect.asyncFiber
   missingScope := Defect.missingService
 
+/-- Native source callbacks construct their code from the exits visible when
+invoked (`internal/effect.ts:767-777,814-822`). Eager action bodies and the scoped
+administrative callbacks keep the view captured in their point. -/
+def interpAt (root : NativeEff) (completed : List (FiberId × ExitV)) :
+    RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores :=
+  { interpOf root with
+    contA := fun name value => contAOf root (match name with
+      | .cont p => .cont { p with completed }
+      | .onValue p => .onValue { p with completed }
+      | name => name) value
+    contE := fun name cause => contEOf root (match name with
+      | .caught p => .caught { p with completed }
+      | .onCause p => .onCause { p with completed }
+      | name => name) cause
+    suspendBody := fun thunk => suspendBodyAt root (match thunk with
+      | .body p => .body { p with completed }
+      | thunk => thunk)
+    iterNext := fun name value => match name with
+      | .gen p pc bind => runStmts root { p with completed } p.fuel pc
+          (if bind then p.env ++ [value] else p.env) []
+      | .store n => ((stores.iterNext n value).1, embedStep (stores.iterNext n value).2)
+      | _ => ([], .done value)
+    loopBody := fun name cursor => match name with
+      | .loop p => resolve root ({ p with completed }.childWith 0 cursor)
+      | _ => Prim.success cursor
+    finalizerProgram := fun name exit => match name with
+      | .fin p => some (resolve root ({ p with completed }.childWith 1 (reifyExitVal exit)))
+      | _ => (interpOf root).finalizerProgram name exit }
+
+/-- Atomic scoped entry (`internal/effect.ts:3938-3948`). Its body was already
+constructed, so its point retains the captured completed-exit view. -/
+def enterScoped (root : NativeEff) (p : Point)
+    (m : RunMachine EffName EffThunk Val Err Defect FiberId Ann Ctx Stores)
+    (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (yielding : Bool) :
+    Iter EffName EffThunk Val Err Defect FiberId Ann Ctx Stores :=
+  let scope := m.state.nextName
+  let state := { m.state with
+    scopes := m.state.scopes.make scope .sequential, nextName := scope + 1 }
+  let context := { f.context with ambientScope := some scope }
+  let current := Prim.onExit (resolve root (p.child 0)) (.scopedExit f.context scope) false
+  let f := { f with
+    context := context
+    maxOpsBeforeYield := context.maxOpsBeforeYield
+    preventYield := context.preventYield
+    frame := { f.frame with current } }
+  ⟨{ m with state }, f, yielding, .continue_, []⟩
+
+/-- The scoped callback runs after the real pop, including any passed mask
+frames, and restores context before constructing unsafe close's optional effect
+(`internal/effect.ts:3944-3947`). Ordinary exits reuse the primitive evaluator. -/
+def exitScoped (root : NativeEff)
+    (m : RunMachine EffName EffThunk Val Err Defect FiberId Ann Ctx Stores)
+    (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (yielding : Bool)
+    (exit : ExitV) : Iter EffName EffThunk Val Err Defect FiberId Ann Ctx Stores :=
+  let interp := interpAt root m.completedExits
+  let pop := f.frame.getCont
+    (match exit with | .success _ => .contA | .failure _ => .contE)
+    (match exit with | .success _ => false | .failure _ => true)
+  match pop.answer with
+  | .frame (.onExit _ (.scopedExit previous scope) _) =>
+    let f := { f with
+      frame := pop.fiber
+      context := previous
+      maxOpsBeforeYield := previous.maxOpsBeforeYield
+      preventYield := previous.preventYield }
+    let m := m.emit (pop.events.map (RunEvent.frame f.id))
+    match storesCloseScopeUnsafe scope exit f.frame.interruptible m.state with
+    | none => ⟨m, f, yielding, .stuck (.unknownScope scope), []⟩
+    | some (state, program) =>
+      let m := { m with state }
+      let m := match program with
+        | none => m
+        | some _ => m.emit [RunEvent.finalizerProgram f.id (.scopedExit previous scope) exit]
+      let current := match program with
+        | none => Prim.ofExit exit
+        | some code => finalizerCode interp exit (embed code)
+      ⟨m, { f with frame := { f.frame with current } }, yielding, .continue_, []⟩
+  | _ => evaluatePrim interp m f yielding
+
+/-- Native source actions use the shared loop's stateful evaluator seam. Only
+scoped entry and its exit callback need state in addition to the source hooks. -/
+def evaluateNative (root : NativeEff)
+    (m : RunMachine EffName EffThunk Val Err Defect FiberId Ann Ctx Stores)
+    (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (yielding : Bool) :
+    Iter EffName EffThunk Val Err Defect FiberId Ann Ctx Stores :=
+  match f.frame.current with
+  | .withFiber (.act p) =>
+    match Node.at_ (.eff root) p.path with
+    | some (.eff (.scoped _)) => enterScoped root p m f yielding
+    | _ => evaluatePrim (interpAt root m.completedExits) m f yielding
+  | .success v => exitScoped root m f yielding (.success v)
+  | .failure c => exitScoped root m f yielding (.failure c)
+  | _ => evaluatePrim (interpAt root m.completedExits) m f yielding
+
+/-- Native callbacks use the construction view and scoped protocol of this
+evaluation. The command loop retains `interpOf` for bookkeeping and stores. -/
+@[reducible] def evaluatorFor (root : NativeEff) :
+    FiberEvaluator EffName EffThunk Val Err Defect FiberId Ann Ctx Stores NCode
+      (FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+      (FrameEvent EffName EffThunk Val Err Defect FiberId Ann) where
+  evaluate := fun _ => evaluateNative root
+
 /-- The root point of a program: the empty path, no values, the fuel and the tape. -/
-def rootPoint (fuel : Nat) (tape : List Bool := []) : Point := ⟨[], [], fuel, tape⟩
+def rootPoint (fuel : Nat) (tape : List Bool := []) : Point :=
+  { path := [], env := [], fuel, tape }
 
 /-- The compiled root. -/
 def compile (root : NativeEff) (fuel : Nat) (tape : List Bool := []) : NCode :=

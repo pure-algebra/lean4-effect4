@@ -90,6 +90,16 @@ value of this cut inhabits (`TYPED-FB-INT`, `TYPED-FB-STRING`).
 
 ## ENSURES
 
+D5 evaluator amendment (2026-09-06): `Api.run` and replay select the frame
+evaluator that refreshes source construction against completed fibers. The
+straight local interpretation uses `interpAt root []`; straight programs
+have no fork or external completion, and start with the empty view. The
+Agreement connects that local interpretation to the selected evaluator while
+retaining the displayed public theorem and `2 * steps e + 6` bound. Its focused
+battery passes 87 guards, including the 2100-bind case that yields twice;
+69 dependency receipts and the full D5 gate pass. This amendment changes no
+public premise or admitted fragment.
+
 The three lanes owe exactly these public facts. Every theorem is at `propext`/`Quot.sound`.
 
 Lane 1, `Effect4.Program`:
@@ -150,33 +160,56 @@ The agreement, `Effect4.Program.Agreement` (two modules, landed with the lanes):
     exit has that exit as its meaning at unchanged stores, which is what the fold case of
     `localRun_compile` reaches. The same correction (`E4-CHECK-CE-002`, `-003`) compiles
     `gen` and `whileLoop` to a `Suspend` at their point, answered by `suspendBodyAt`;
-    neither is plain, so `suspendBodyAt_of_at` now also excludes them
-    (`Plain.not_gen`, `Plain.not_whileLoop`) and nothing else here changes.
+    neither is plain, so `suspendBodyAt_of_at` excludes them
+    (`Plain.not_gen`, `Plain.not_whileLoop`). The authorized `E4-CHECK-CE-008`
+    correction makes a source `suspend` name its own point. Its thunk returns
+    `resolve root (p.child 0)` by `suspendBodyAt_suspend`, retaining any suspension
+    in the child. `suspendBodyAt_of_at` excludes source `suspend` too; the
+    `localRun_compile` suspend case uses the own-point clause and no longer
+    needs a special branch-body case. The final straight agreement statement
+    and its budget bound are unchanged.
 28. `PlainCode`/`PlainFrame` and `Quiet`: the compile of a plain program is plain code, every
     subterm of a plain root is plain, the hooks of `interpOf` answer plain code, the local
     step keeps the fiber plain, and every `syncOpStep` keeps the stores quiet (no resume
     owed, no waiter), so `Cmd.drainDue` is the identity.
-29. `finalizerOr_plain`: no plain stack answers an `onExit` frame, so `evaluatePrim` on a
-    plain fiber is the frame machine's `step`.
+29. Historical first-landing `finalizerOr_plain` excluded OnExit from plain
+    stacks. After its admission, `evaluatePrim_localStep` relates the actual
+    program-finalizer path as well as the pure frame step.
 30. `drive_localRun`: the command loop over the one fiber `Api.load` makes does what the
     local run does, at most two commands per local step, from any op count and any resume
     token: it owes the exit path, or — when the count reaches `defaultBudget` first — a
-    yield with the rest of the run still to do, at least `defaultBudget - 1` steps fewer
-    (`Owes`).
+    yield with the rest of the run still to do (`Owes` records the bound from
+    its incoming count). After the D7 resume step, each further round removes
+    at least `defaultBudget - 2` local steps.
 31. `run_eq_meaning`, above — since the same evening on `Straight` itself: `Plain` gained
     `onExit` and `Plain_eq_Straight`; the local step's exit arm `exitFrom` mirrors the
     machine's `finalizerOr`, the fiber carries its interruptible flag, and `maskStack` is the
     restoring frame the mask leaves (`E4-DEN-CE-004` repaired). And since the same night
     with no budget hypothesis (`E4-DEN-CE-005` repaired): `drive_loop_yield` — at the loop
-    with the count at the budget the root parks behind a fresh token with its primitive
-    queued on its own dispatcher (`Myield`); `fire_Myield` — `flush` fires that dispatcher,
-    the one task resumes the root on its guard and re-enters the loop at count zero;
+    with the count at the budget the loop enters the injected constant OnSuccess,
+    then Yield parks behind a fresh token (`Myield`). Its dispatcher carries
+    success unit, and the ordinary stack holds the saved primitive.
+    `fire_Myield_answer` fires that dispatcher and enters at count zero;
+    `fire_Myield` delivers the success through the saved frame and returns to
+    the program at count one;
     `flushAll_Myield` — the rounds of `flush` reach the exited machine, by induction on the
-    rounds, each round that yields again having spent at least `defaultBudget - 1` steps of
+    rounds, each round that yields again having spent at least `defaultBudget - 2` steps of
     the run; `replay_Mexit` — the tape `[evaluate, flush]` ends in the exited machine of the
-    meaning on either road.
+    meaning on either road. The internal flush bound pays one extra command
+    (`2 * n + 6`); the public `2 * steps e + 6` bound remains unchanged.
 
 The first join, `Effect4.Program.Progress` (landed the same evening):
+
+D4 OnExit amendment (2026-09-06, checked): the local exit step uses
+`finalizerCode`, with an ordinary success frame around cleanup, and an inner
+failure frame only when the body failed. The structural `steps` measure now
+adds 5 for OnExit (formerly 4) to cover that source checkpoint. The public
+formula `2 * steps e + 6` remains, with a correspondingly larger numerical
+premise for those programs. The old arbitrary combined-frame algebra law
+`step_ofExit_finalizer` stays valid; it no longer describes the generated
+cleanup wrapper. The local/command proof port and repaired-tree gate pass:
+282 jobs, 276 modules / 39,572 declarations at the unchanged ceiling/boundary.
+This closes the wrapper correction, not the remaining scoped or P3 obligations.
 
 32. `Stores.HeapNat`: every cell of the heap holds a `.nat`; decidable; `Stores.empty` has it.
 33. `answer_typed`: on a `HeapNat` store, a typed request decoded through `syncOpOf` that

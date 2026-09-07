@@ -462,14 +462,17 @@ let ctor_names_row_kind : string list = ["sync"; "async"; "program"]
 type row_shape =
   | Row_shape_call
   | Row_shape_value
+  | Row_shape_tupleCall
 
 let ctor_index_row_shape : row_shape -> int = function
   | Row_shape_call -> 0
   | Row_shape_value -> 1
+  | Row_shape_tupleCall -> 2
 let ctor_name_row_shape : row_shape -> string = function
   | Row_shape_call -> "call"
   | Row_shape_value -> "value"
-let ctor_names_row_shape : string list = ["call"; "value"]
+  | Row_shape_tupleCall -> "tupleCall"
+let ctor_names_row_shape : string list = ["call"; "value"; "tupleCall"]
 
 
 type service_name = {

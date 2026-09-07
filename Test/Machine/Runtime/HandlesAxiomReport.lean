@@ -10,7 +10,12 @@ of the Lean frame machine, under the explicit starting-state and external-answer
 #print axioms Effect4.Machine.KeyBounded
 #print axioms Effect4.Machine.syncOpStep_keys
 #print axioms Effect4.Machine.stores_keyBounded
+#print axioms Effect4.Machine.frameExitState_keys
 #print axioms Effect4.Machine.evaluatePrim_minted
+#print axioms Effect4.Machine.RunMachine.completedExits_keys
+#print axioms Effect4.Machine.evaluatePrim_minted_with_ambient
+#print axioms Effect4.Machine.EvaluatorMinted
+#print axioms Effect4.Machine.replayEval_minted_of_evaluator
 #print axioms Effect4.Machine.driveState_minted
 #print axioms Effect4.Machine.fireState_minted
 #print axioms Effect4.Machine.flushAllState_minted
@@ -20,6 +25,9 @@ of the Lean frame machine, under the explicit starting-state and external-answer
 #print axioms Effect4.Program.runStmts_keys
 #print axioms Effect4.Program.actionAt_keys
 #print axioms Effect4.Program.interpOf_keyBounded
+#print axioms Effect4.Program.Point.awaitExit_keys
+#print axioms Effect4.Program.interpAt_keyBounded
+#print axioms Effect4.Program.evaluatorFor_minted
 #print axioms Effect4.Program.Minted
 #print axioms Effect4.Program.AnswersValid
 #print axioms Effect4.Program.load_minted

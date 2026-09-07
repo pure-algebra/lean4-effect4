@@ -50,6 +50,13 @@ deriving instance DecidableEq for Except
 (`:561-562`). `yieldNowWith` and `Async` are `Prim` constructors (S1). -/
 inductive ParkKind
   | join (target : FiberId) (mode : Supervision.ObserverMode)
+  /-- `raceAll`'s counted `Async` registration (`:1493-1531`): returned by the race's
+  `WithFiber` entry and evaluated on the next counted iteration (source-repairs §16, D6a). -/
+  | race (race : Nat)
+  /-- `fiberAwaitAll(targets)` (`:779-813`): always a `callback`, resumed synchronously with
+  the exits when no target is live; the park `asVoid` wraps after an interrupt-all
+  (source-repairs §19, D6b). -/
+  | awaitAll (targets : List FiberId)
 deriving DecidableEq
 
 /-- rc.112 `_yielded`: absent, or the resume guard `resumed = true` (`:990-992`, `:1128-1130`),
@@ -165,18 +172,25 @@ class FiberCore (ν : Type u) (β : Type v) (ε δ ι α : Type u)
   setDeferred : φ → Bool → φ
   pendingFailure : φ → φ
   pushAsyncFinalizer : ν → φ → φ
+  /-- Push an iterator frame named `ν` with a cursor: the generator's own frame under the
+  effect it yields (`internal/effect.ts:1366`), used when a command yields the effect on the
+  generator's behalf (the parallel close's await, source-repairs §20). -/
+  pushIterator : ν → β → φ → φ
   clearStack : φ → φ
   success : β → κ
   failure : Cause ε δ ι α → κ
   onSuccess : κ → ν → κ
+  /-- The existing OnSuccess operation with a constant continuation, used by
+  runLoop's `flatMap(yieldNow, () => previous)` (`effect.ts:647-651`). -/
+  yieldBefore : κ → κ
 
 -- These are transparent interpreter operations, so concrete clause proofs
 -- reduce through the frame instance just as they reduced its fields before D1.
 attribute [reducible] FiberCore.current FiberCore.answerWith FiberCore.start
   FiberCore.interruptible FiberCore.interruptedCause FiberCore.deferredInterrupt
   FiberCore.recordCause FiberCore.setDeferred FiberCore.pendingFailure
-  FiberCore.pushAsyncFinalizer FiberCore.clearStack FiberCore.success
-  FiberCore.failure FiberCore.onSuccess
+  FiberCore.pushAsyncFinalizer FiberCore.pushIterator FiberCore.clearStack FiberCore.success
+  FiberCore.failure FiberCore.onSuccess FiberCore.yieldBefore
 
 /-- The existing five-field frame machine supplies the concrete core. -/
 @[reducible] instance frameCore {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} :
@@ -192,10 +206,12 @@ attribute [reducible] FiberCore.current FiberCore.answerWith FiberCore.start
   pendingFailure := fun f =>
     { f with deferredInterrupt := false, current := Prim.failure f.pendingCause }
   pushAsyncFinalizer := fun name f => { f with stack := Prim.asyncFinalizer name :: f.stack }
+  pushIterator := fun name cursor f => { f with stack := Prim.iterator name cursor :: f.stack }
   clearStack := fun f => { f with stack := [] }
   success := Prim.success
   failure := Prim.failure
   onSuccess := Prim.onSuccess
+  yieldBefore := fun previous => Prim.onSuccessConst (Prim.yieldNowWith 0) previous
 
 /-- rc.112 `FiberImpl` (`:505-555`), seventeen fields read through one record. `frame` is
 the five-field machine of `Runtime.lean`; `running` (`:537`), `parked` (`:536`), `pending`,
@@ -271,15 +287,23 @@ inductive WithFiberAction (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type 
       (key : Nat)
   /-- `forkScoped` (`:5400-5406`): `forkIn` on the ambient `Scope` service. -/
   | forkScoped (program : κ) (options : Supervision.ForkOptions) (key : Nat)
+  /-- The `Scope` service read (`Context.ts:423`, `effect.ts:3929`): the ambient scope's
+  handle as a value, or the `missingScope` defect (source-repairs §20). -/
+  | ambientScope
   /-- `fiberRunIn` (`:5447-5461`): bind an existing fiber to a scope by an unguarded finalizer. -/
   | runIn (target : FiberId) (scope : Nat) (key : Nat)
-  /-- `fiberInterrupt` (`:859`): record with the running fiber's id, then await the target. -/
+  /-- `fiberInterrupt` (`:857`): the public `withFiber` that returns `fiberInterruptAs(target,
+  fiber.id)` as the next counted program (source-repairs §19, D6b). -/
   | interrupt (target : FiberId)
-  /-- A scope's fiber finalizer (`:5369-5371`): interrupt unless the interruptor is the
-  fiber itself, then await. -/
+  /-- `fiberInterruptAs(target, who)` (`:871-884`, D6b): record with `who`, evaluate an idle
+  target now, then return `asVoid(fiberAwait(target))`, constructed after that run. -/
+  | interruptAs (target : FiberId) (who : FiberId)
+  /-- A scope's fiber finalizer (`:5368`, `withFiberId`): void when the interruptor is the
+  fiber itself, otherwise the public interrupt program (D6b). -/
   | interruptScoped (target : FiberId)
-  /-- `fiberInterruptAll` / `fiberInterruptAllAs` (`:895`, `:913`): record on every target
-  first, then await them all. `none` means the running fiber's own id. -/
+  /-- `fiberInterruptAll` / `fiberInterruptAllAs` (`:888-915`): each target recorded and, when
+  idle, run before the next, in list order; then `asVoid(fiberAwaitAll(targets))` (D6b).
+  `none` means the running fiber's own id. -/
   | interruptAll (targets : List FiberId) (interruptor : Option FiberId)
   /-- `fiberAwaitAll` (`:779`, `:5318-5322`): a countdown over the targets' exits, answered
   as the list of exits. -/
@@ -307,6 +331,10 @@ inductive WithFiberAction (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type 
   program for the scope's strategy; the closing fiber's mask is inherited by a parallel
   strategy's daemons. -/
   | closeScope (scope : Nat) (exit : Exit β ε δ ι α)
+  /-- The parallel close's generator step (`:3819-3824`, source-repairs §20): every finalizer
+  program forked as an immediate daemon in the closer's mask and run, then the await over
+  them yielded under the generator's frame. -/
+  | closePar (finalizers : List κ)
   /-- The interp refuses this thunk: the fiber fails with `cause`, visibly (S3 §5.2). -/
   | refuse (cause : Cause ε δ ι α)
   /-- A fiber-observer park's cleanup (`fiberAwait`/`fiberJoin`'s `sync(addObserver(…))`
@@ -351,6 +379,8 @@ silent spin; a frontier must be a frontier). -/
 inductive Stuck
   | unknownFiber (id : FiberId)
   | unknownScope (scope : Nat)
+  /-- A race park naming no race: outside the admitted construction image (D6a). -/
+  | unknownRace (race : Nat)
 deriving DecidableEq, Repr
 
 /-- One `raceAll` in flight: its host, the host's park token, the frozen bookkeeping of
@@ -366,6 +396,9 @@ structure Race (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
   /-- The entrants not yet forked, in order: rc.112 forks one per iteration of its register
   loop and breaks once done (`:1520-1528`, R2-11), so a skipped entrant never exists. -/
   programs : List κ
+  /-- The registration has not returned: a callback buffers its first answer instead of
+  resuming the host (`:1120-1126`, D6a). -/
+  registering : Bool
 
 /-- The process: every live fiber, the races, the id and token counters, the global
 middleware latch (`:6656-6658`), the service state the stores live in, the trace, and the
@@ -423,6 +456,18 @@ structure RunInterp (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St
   a refused one: a `join` whose request is not a fiber handle fails with the cause the
   interp gives it rather than falling through to the oracle (S3 §9). -/
   parkOf : κ → Option (Except (Cause ε δ ι α) ParkKind)
+  /-- Construct a named park as code, without evaluating its registration: the race's
+  `Async` is what its `WithFiber` entry returns (`:1493`, D6a). -/
+  parkCode : ParkKind → κ
+  /-- The public `fiberInterrupt(target)` program (`:857`): what a scope's fiber finalizer
+  returns for another fiber (source-repairs §19, D6b). -/
+  interruptCode : FiberId → κ
+  /-- `fiberInterruptAs(target, who)` (`:871-884`): what the public interrupt's `withFiber`
+  returns (D6b). -/
+  interruptAsCode : FiberId → FiberId → κ
+  /-- `fiberInterruptAll(targets)` (`:888-898`): the child-exit middleware's program under
+  `flatMap(…, () => exit)` (`:613-617`, D6b). -/
+  interruptAllCode : List FiberId → κ
   /-- What a `withFiber` thunk does. -/
   withFiberOf : σ → Option (WithFiberAction ν σ β ε δ ι α χ κ)
   /-- A `sync` thunk that reads or writes the service state; `none` falls back to the pure
@@ -449,10 +494,12 @@ structure RunInterp (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St
   /-- The base cancel name of a race park: `fiberInterruptAll(fibers)` (`:1530`); its program
   is `WithFiberAction.cancelRace race` (R2-13). -/
   raceCancelName : Nat → ν
-  /-- What a settled race resumes its host with (`:1510-1514`):
-  `flatMap(uninterruptible(fiberInterruptAll(live)), () => exit)`, or `exit` alone when no
-  entrant is live (R2-12). -/
-  raceSettle : List FiberId → Exit β ε δ ι α → κ
+  /-- What a settled race resumes its host with (`:1510-1514`, R2-12): the exit alone when
+  the winning callback saw no live entrant, otherwise
+  `flatMap(uninterruptible(fiberInterruptAll(fibers)), () => exit)` over the race's live
+  set *at cleanup time*, so the cleanup is named by the race, not by a winner-time list
+  (D6a). Arguments: the race, the callback's `cleanupNeeded`, the accepted exit. -/
+  raceSettle : Nat → Bool → Exit β ε δ ι α → κ
   /-- An `OnExit` finalizer that is a *program*, run as one (`:4021`), rather than the pure
   `finalizerExit` shortcut of the frame machine; `none` keeps the shortcut. -/
   finalizerProgram : ν → Exit β ε δ ι α → Option κ
@@ -485,12 +532,21 @@ structure RunInterp (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St
   exitValue : Exit β ε δ ι α → Supervision.ObserverMode → κ
   /-- The fiber handle a fork answers with. -/
   fiberValue : FiberId → β
+  /-- The numeric ID supplied by `withFiberId` (`internal/effect.ts:1092–1100`).
+  Separate from the fork handle: `Effect.fiberId` answers a number. -/
+  fiberIdValue : FiberId → β
   /-- A list of handles as a value (`awaitAllChildren`'s snapshot). -/
   fibersValue : List FiberId → β
   /-- A list of exits as a value (`fiberAwaitAll`, `:779`; M6). -/
   exitsValue : List (Exit β ε δ ι α) → β
   /-- `exitVoid` as a value (`:988`). -/
   voidValue : β
+  /-- A scope handle as a value: what the `Scope` service read answers (`forkScoped`'s
+  `flatMap(scope, …)`, `:5406`; source-repairs §20). -/
+  scopeValue : Nat → β
+  /-- The iterator name whose step is `exitAsVoidAll` of the awaited exits (`:2024-2038`,
+  `:3823-3826`): the parallel close's generator frame under its await (§20). -/
+  closeDoneName : ν
   /-- The interruptor's encoding into the cause's `ι` (`Supervision.interruptCause`). -/
   encodeFiber : FiberId → ι
   /-- What `currentStackFrame` contributes to an interrupt cause (`:579-580`). -/
@@ -598,6 +654,37 @@ inductive Cmd (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
   next entrant, unless the race is done — then the loop has broken and no more entrant is
   ever forked. -/
   | launch (race : Nat)
+  /-- An entrant's enrollment after its immediate run returned (`:1522-1526`, D6a): it joins
+  the live set and its race observer is attached, or fired now when it has exited. -/
+  | enrollRace (race : Nat) (child : FiberId)
+  /-- The return of a race's `Async` registration (`:1120-1141`, D6a): a buffered answer
+  continues the host's entry, no answer parks it. -/
+  | registrationDone (race : Nat) (yielding : Bool)
+  /-- One `interruptUnsafe(who, extra)` (`:574-595`, D6b): the target is re-read and recorded,
+  and an idle interruptible target is evaluated before the next command. -/
+  | interruptTarget (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations α)
+  /-- The return of an interrupt (`:884`, `:896`, D6b): after the targets' own runs, the host
+  continues its entry with `asVoid` of the await code — a join folded to the target's exit
+  when it has one, else the park named by `kind`. -/
+  | afterInterrupt (host : FiberId) (yielding : Bool) (kind : ParkKind)
+  /-- A race cleanup's Set walk (`:889-896` over `fibers` at `:1512`, D6b): the next target
+  still live in the race is recorded and run, a target already gone is skipped, and the
+  empty walk returns `asVoid(fiberAwaitAll(visited))`. -/
+  | raceCancel (race : Nat) (host : FiberId) (yielding : Bool) (remaining : List FiberId)
+      (visited : List FiberId)
+  /-- `forkUnsafe`'s tracking (`:5279-5282`, D6b): after the child's immediate run or its
+  scheduling, a child that has not exited joins the parent's children with its untrack
+  observer. -/
+  | trackChild (parent : FiberId) (child : FiberId)
+  /-- One exit observer (`:621-623`, D6b): fired on the current machine, what it owes runs
+  before the next observer. -/
+  | observe (fiber : FiberId) (exit : Exit β ε δ ι α) (observer : Observer)
+  /-- The end of the exit path (`:624-627`, D6b): observers, stack, children and context are
+  cleared after every observer has run. -/
+  | exitDone (fiber : FiberId)
+  /-- The parallel close's await (`:3823-3824`, §20): after the finalizer daemons' immediate
+  runs, the host yields `fiberAwaitAll(fibers)` under its generator frame. -/
+  | closeParAwait (host : FiberId) (yielding : Bool) (fibers : List FiberId)
   /-- `forkIn`'s link, after the child has been forked and, when immediate, run
   (`:5366-5376`, R2-8): `linkScope` as a command, so the child is re-read and one that has
   exited is not linked. -/
@@ -712,6 +799,10 @@ inductive Outcome (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Type (
   /-- A `Sync` ran its thunk (`:932`): the value is the fiber's `current`, the resumes the
   thunk owes are the nested commands, and the pop (`:933`) is owed after them (R2-1). -/
   | answered
+  /-- Nested synchronous work decides what the fiber continues with when it returns
+  (a race's registration, `:1117-1141`): the host stays running with its count and latch,
+  and the nested commands end in the command that continues it (D6a). -/
+  | commands
 deriving DecidableEq
 
 /-- The result of one iteration: the machine, the fiber, the latch, where it left off, and
@@ -727,6 +818,36 @@ structure Iter (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St : Ty
   outcome : Outcome ν σ β ε δ ι α
   nested : List (Cmd ν σ β ε δ ι α κ)
 
+/-- `raceAll`'s `WithFiber` (`:1493`): allocate the race's bookkeeping and its host's park
+token, and return the counted `Async` registration as the next program. Nothing is forked
+or parked here; the registration is the next counted iteration (source-repairs §16, D6a). -/
+def beginRace (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (entrants : List κ) :
+    Iter ν σ β ε δ ι α χ St κ φ η :=
+  let raceId := m.nextRace
+  let token := m.nextToken
+  let m := { m with nextRace := m.nextRace + 1, nextToken := m.nextToken + 1 }
+  let race : Race ν σ β ε δ ι α κ :=
+    ⟨raceId, f.id, token,
+      { Supervision.RaceAllState.initial [] with remaining := entrants.length },
+      false, entrants, false⟩
+  let m := { m with races := m.races ++ [race] }
+  let f := { f with frame := core.answerWith f.frame (interp.parkCode (ParkKind.race raceId)) }
+  ⟨m.emit [RunEvent.raceStarted raceId f.id entrants.length], f, yielding, Outcome.continue_, []⟩
+
+/-- The `Async` registration of a race (`:1117-1141`, `:1520-1528`): mark the race
+registering and delegate to the register loop, then to the return of the registration,
+which continues with a buffered answer or parks. The host stays running, with its count
+and latch. A park naming no race is stuck (D6a). -/
+def registerRace (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (raceId : Nat) :
+    Iter ν σ β ε δ ι α χ St κ φ η :=
+  match m.race? raceId with
+  | none => ⟨m, f, yielding, Outcome.stuck (Stuck.unknownRace raceId), []⟩
+  | some race =>
+    ⟨m.updateRace { race with registering := true }, f, yielding, Outcome.commands,
+      [Cmd.launch raceId, Cmd.registrationDone raceId yielding]⟩
+
 /-- Create a child over the parent (`:5264-5284`): mask by the options (`:5272`), the
 parent's context (`:5273`), tracked unless daemon (`:5280-5281`). -/
 def spawn (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
@@ -741,11 +862,8 @@ def spawn (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν 
     | Supervision.MaskMode.inherit => core.interruptible parent.frame
   let child := RunFiber.make childId program childInterruptible
     (interp.budgetOf parent.context) parent.context
-  let child :=
-    if options.daemon then child
-    else { child with observers := [Observer.untrackChild parent.id] }
-  let parent := { parent with
-    children := (if options.daemon then parent.children else parent.children ++ [childId]) }
+  -- tracking (`:5279-5282`) is `Cmd.trackChild`, after the child's immediate run or its
+  -- scheduling (source-repairs §19, D6b); the parent is returned unchanged
   let m := { m with fibers := m.fibers ++ [child], nextId := m.nextId + 1 }
   (m.emit [RunEvent.forked parent.id childId options.daemon], parent, childId)
 
@@ -760,14 +878,25 @@ def start (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (parent : RunFibe
     ((m.arm parent.id).emit [RunEvent.scheduledTask parent.id 0 (Task.start child)], parent, [])
 
 /-- One entrant of a `raceAll`, forked at its launch (`forkUnsafe(parent, effect, true, true,
-false)`, `:1521`): an immediate daemon, interruptible (R2-10), with the race callback as its
-observer (`:1523`). -/
-def launchEntrant (interp : RunInterp ν σ β ε δ ι α χ St κ) (raceId : Nat)
+false)`, `:1521`): an immediate daemon, interruptible (R2-10). Its race observer is attached
+by `Cmd.enrollRace` only after its immediate run has returned (`:1522-1526`, D6a). -/
+def launchEntrant (interp : RunInterp ν σ β ε δ ι α χ St κ) (_raceId : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (host : RunFiber ν σ β ε δ ι α χ κ φ)
     (program : κ) : RunMachine ν σ β ε δ ι α χ St κ φ η × FiberId :=
   let (m, _, child) := spawn interp m host program ⟨true, true, Supervision.MaskMode.interruptible⟩
-  (m.modify child fun c => { c with observers := c.observers ++ [Observer.raceCallback raceId] },
-    child)
+  (m, child)
+
+/-- The parallel close's forks (`forkUnsafe(parent, finalizer(exit_), true, true, "inherit")`,
+`:3820`, §20): every finalizer program as an immediate daemon that inherits the closer's
+mask, in close order, without tracking. Their runs are the commands the caller issues; the
+children are returned in fork order. -/
+def forkFinalizers (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (host : RunFiber ν σ β ε δ ι α χ κ φ) : List κ → RunMachine ν σ β ε δ ι α χ St κ φ η × List FiberId
+  | [] => (m, [])
+  | program :: rest =>
+    let (m, _, child) := spawn interp m host program ⟨true, true, Supervision.MaskMode.inherit⟩
+    let (m, children) := forkFinalizers interp m host rest
+    (m, child :: children)
 
 /-- Link a fiber to a scope (`forkIn`, `:5364-5378`; `fiberRunIn`, `:5447-5461`): open, a
 keyed finalizer of the mode's shape and the key-dropping observer; closed, an immediate
@@ -821,20 +950,39 @@ def yieldVerdict (f : RunFiber ν σ β ε δ ι α χ κ φ) : Bool :=
   f.yieldOverride.getD (decide (f.currentOpCount >= f.maxOpsBeforeYield))
 
 /-- Yield injection (`:644-652`): at most once per entry (the `yielding` latch), never under
-`PreventSchedulerYield`, and only on the verdict. The fiber parks behind a resume guard
-whose task carries its current primitive at priority 0. -/
+`PreventSchedulerYield`, and only on the verdict. Install the source's constant
+success continuation around Yield; `iteration` evaluates that wrapper at the
+already charged checkpoint. The ordinary Yield arm parks on the next iteration. -/
 def injectYield (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (f : RunFiber ν σ β ε δ ι α χ κ φ)
     (yielding : Bool) : Option (Iter ν σ β ε δ ι α χ St κ φ η) :=
   if !yielding && !f.preventYield && yieldVerdict f then
-    let token := m.nextToken
-    let m := { m with nextToken := m.nextToken + 1 }
     let f := { f with
       yieldOverride := none
-      dispatcher := (f.dispatcher.enqueue 0 (Task.resume f.id token (core.current f.frame))) }
-    let f := f.park ⟨token, none, [], [], Resume.void, false⟩
-    some ⟨(m.arm f.id).emit [RunEvent.yieldInjected f.id f.currentOpCount, RunEvent.parkedOn f.id token],
-      f, true, Outcome.parked, []⟩
+      frame := core.answerWith f.frame (core.yieldBefore (core.current f.frame)) }
+    some ⟨m.emit [RunEvent.yieldInjected f.id f.currentOpCount],
+      f, true, Outcome.continue_, []⟩
   else none
+
+/-- The saved state after a frame step returns an exit. The actual exiting
+operation determines the pop: Failure skips interrupted handlers, while Success
+and Sync demand the value arm (`internal/core.ts:508-516,539-545`). The pure
+projection retains `getCont`'s mutations (`internal/effect.ts:688-697`). -/
+def frameExitState (frame : FrameFiber ν σ β ε δ ι α) : FrameFiber ν σ β ε δ ι α :=
+  match frame.current with
+  | Prim.failure _ => (frame.getCont Arm.contE true).fiber
+  | _ => (frame.getCont Arm.contA false).fiber
+
+/-- `onExitPrimitive` returns `flatMap(cleanup, () => exit)`. Only a failed
+body wraps cleanup with `combineFinalizerCause`'s failure handler
+(`internal/effect.ts:3800-3804,4019-4030`). A cleanup failure after success
+passes the ordinary success frame without another continuation step. -/
+def finalizerCode (interp : RunInterp ν σ β ε δ ι α χ St)
+    (exit : Exit β ε δ ι α) (program : Prim ν σ β ε δ ι α) : Prim ν σ β ε δ ι α :=
+  Prim.onSuccess
+    (match exit with
+     | .success _ => program
+     | .failure _ => Prim.onFailure program (interp.mergeName exit))
+    (interp.restoreName exit)
 
 /-- Evaluate the current primitive (`current[evaluate](this)`, `:655`), with the fiber-level
 arms rc.112 keeps out of the frame machine: the two parks the alphabet spells (`Yield`,
@@ -875,6 +1023,13 @@ def evaluatePrim (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine
       | some (Except.error cause) =>                                   -- a refused park
         ⟨m, { f with frame := { f.frame with current := Prim.failure cause } }, yielding,
           Outcome.continue_, []⟩
+      | some (Except.ok (ParkKind.race raceId)) =>                     -- :1493, :1117-1141
+        registerRace m f yielding raceId
+      | some (Except.ok (ParkKind.awaitAll targets)) =>                -- :779-813, D6b
+        -- `fiberAwaitAll`'s `callback`: the countdown; resumed synchronously with the exits
+        -- when no target is live (`:806`), the next counted op of the same entry
+        let (m, f, parked) := countdownPark interp m f targets Resume.exitsValue
+        ⟨m, f, yielding, (if parked then Outcome.parked else Outcome.continue_), []⟩
       | some (Except.ok (ParkKind.join target mode)) =>                -- :5291, :5304
         match m.fiber? target with
         | none => ⟨m, f, yielding, Outcome.stuck (Stuck.unknownFiber target), []⟩   -- S3 §5.1
@@ -944,7 +1099,7 @@ where
         -- `pop.fiber` already carries the answering frame's `ensure` (the mask and its
         -- restoring frame) and the stack below it (`Runtime.lean:1463-1465`).
         let fiber := { pop.fiber with
-          current := Prim.onSuccessAndFailure program (interp.restoreName exit) (interp.mergeName exit) }
+          current := finalizerCode interp exit program }
         ⟨m.emit (pop.events.map (RunEvent.frame.{u, v} f.id) ++ [RunEvent.finalizerProgram f.id fin exit]),
           { f with frame := fiber }, yielding, Outcome.continue_, []⟩
       | none => stepFrame interp m f yielding
@@ -961,7 +1116,11 @@ where
     let m := m.emit (events.map (RunEvent.frame.{u, v} f.id))
     match next with
     | FrameStep.running frame => ⟨m, { f with frame := frame }, yielding, Outcome.continue_, nested⟩
-    | FrameStep.finished exit => ⟨m, f, yielding, Outcome.finished exit, nested⟩
+    | FrameStep.finished exit =>
+      -- `getCont` mutates the fiber even when no continuation remains
+      -- (internal/effect.ts:688-697); retain its mask and drained stack through
+      -- the pending `Cmd.finish` boundary. The pure walk emits no events here.
+      ⟨m, { f with frame := frameExitState f.frame }, yielding, Outcome.finished exit, nested⟩
   /-- Every `withFiber` action. -/
   withFiber (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
       (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
@@ -977,9 +1136,13 @@ where
       -- `forkChild` installs the interrupt-children middleware for the process
       -- (`interruptChildrenPatch()`, `:5253`, `:6656-6658`); `forkDetach` does not (R2-6)
       let m := if options.daemon then m else { m with middlewareInstalled := true }
+      let parent := f.id
       let (m, f, child) := spawn interp m f program options
       let (m, f, nested) := start m f child options.startImmediately
-      ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_, nested⟩
+      -- a non-daemon child is tracked after its immediate run or its scheduling
+      -- (`:5279-5282`, D6b)
+      ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_,
+        nested ++ (if options.daemon then [] else [Cmd.trackChild parent child])⟩
     | WithFiberAction.forkIn program options scope key =>
       -- fork and, when immediate, run first; the link follows (`:5366-5376`, R2-8), and
       -- `linkScope` links only a child that has not exited (R2-9)
@@ -1000,21 +1163,36 @@ where
         ⟨m, { f with frame := { f.frame with
             current := Prim.failure (Cause.die interp.missingScope) } },
           yielding, Outcome.continue_, []⟩
+    | WithFiberAction.ambientScope =>                                   -- Context.ts:423, §20
+      match interp.ambientScope f.context with
+      | some scope => ⟨m, answer f (interp.scopeValue scope), yielding, Outcome.continue_, []⟩
+      | none =>
+        ⟨m, { f with frame := { f.frame with
+            current := Prim.failure (Cause.die interp.missingScope) } },
+          yielding, Outcome.continue_, []⟩
     | WithFiberAction.runIn target scope key =>
       let (m, nested) := linkScope interp m Supervision.ScopeMode.fiberRunIn scope key target
         (some target) ReasonAnnotations.empty
       ⟨m, answer f interp.voidValue, yielding, outcomeOf m false, nested⟩
-    | WithFiberAction.interrupt target =>
-      interruptThenJoin interp m f yielding target (some f.id)
-    | WithFiberAction.interruptScoped target =>
+    | WithFiberAction.interrupt target =>                              -- :857, D6b
+      -- the public `withFiber` returns `fiberInterruptAs(target, fiber.id)`
+      ⟨m, { f with frame := { f.frame with current := interp.interruptAsCode target f.id } },
+        yielding, Outcome.continue_, []⟩
+    | WithFiberAction.interruptAs target who =>                        -- :871-884, D6b
+      interruptAs interp m f yielding target who
+    | WithFiberAction.interruptScoped target =>                        -- :5368, D6b
       if target = f.id then ⟨m, answer f interp.voidValue, yielding, Outcome.continue_, []⟩
-      else interruptThenJoin interp m f yielding target (some f.id)
-    | WithFiberAction.interruptAll targets interruptor =>
-      -- the caller's stack annotations, whoever the interruptor is (`:892-895`, `:910-913`)
-      let (m, nested) :=
-        interruptEach interp (interruptor.getD f.id) (interp.stackAnnotations f.id) targets (m, [])
-      let (m, f, parked) := countdownPark interp m f targets Resume.void
-      ⟨m, f, yielding, outcomeOf m parked, nested⟩
+      else
+        ⟨m, { f with frame := { f.frame with current := interp.interruptCode target } },
+          yielding, Outcome.continue_, []⟩
+    | WithFiberAction.interruptAll targets interruptor =>              -- :888-915, D6b
+      -- each target's `interruptUnsafe` in list order, each before the next, with the
+      -- caller's stack annotations whoever the interruptor is (`:892-895`, `:910-913`);
+      -- then `asVoid(fiberAwaitAll(targets))`, constructed after those runs
+      ⟨m, f, yielding, Outcome.commands,
+        (targets.map fun t =>
+          Cmd.interruptTarget t (some (interruptor.getD f.id)) (interp.stackAnnotations f.id)) ++
+          [Cmd.afterInterrupt f.id yielding (ParkKind.awaitAll targets)]⟩
     | WithFiberAction.awaitAll targets =>
       let (m, f, parked) := countdownPark interp m f targets Resume.exitsValue
       ⟨m, f, yielding, outcomeOf m parked, []⟩
@@ -1027,24 +1205,10 @@ where
       let fresh := f.children.filter fun c => !(snapshot.contains c)
       let (m, f, parked) := countdownPark interp m f fresh Resume.void
       ⟨m, f, yielding, outcomeOf m parked, []⟩
-    | WithFiberAction.raceAll entrants =>
-      let raceId := m.nextRace
-      let token := m.nextToken
-      let m := { m with nextRace := m.nextRace + 1, nextToken := m.nextToken + 1 }
-      -- the entrants are forked one per iteration of the register loop, in order, and the
-      -- loop breaks once done (`:1520-1528`, R2-11): each iteration is a `launch` command
-      let race : Race ν σ β ε δ ι α :=
-        ⟨raceId, f.id, token,
-          { Supervision.RaceAllState.initial [] with remaining := entrants.length }, false, entrants⟩
-      let m := { m with races := m.races ++ [race] }
-      let m := m.emit [RunEvent.raceStarted raceId f.id entrants.length]
-      -- the race is a `callback` whose registration returns `fiberInterruptAll(fibers)`
-      -- (`:1530`): that cancel is pushed as an `AsyncFinalizer` frame (R2-13)
-      let name := interp.cancelName (interp.raceCancelName raceId) f.id token
-      let f := { f with frame := { f.frame with stack := Prim.asyncFinalizer name :: f.frame.stack } }
-      -- the empty race stays pending until interrupted
-      let f := f.park ⟨token, none, [], [], Resume.void, false⟩
-      ⟨m.emit [RunEvent.parkedOn f.id token], f, yielding, Outcome.parked, [Cmd.launch raceId]⟩
+    | WithFiberAction.raceAll entrants =>                               -- :1493, D6a
+      -- the `WithFiber` returns the counted `Async` registration; the register loop, the
+      -- cancel frame and the park belong to that later iteration (source-repairs §16)
+      beginRace interp m f yielding entrants
     | WithFiberAction.setInterruptible body false =>                    -- :4302-4310 (M2)
       ⟨m, { f with frame := { f.frame.uninterruptible with current := body } },
         yielding, Outcome.continue_, []⟩
@@ -1060,13 +1224,19 @@ where
     | WithFiberAction.getContext =>
       ⟨m, answer f (interp.contextValue f.context), yielding, Outcome.continue_, []⟩
     | WithFiberAction.getId =>
-      ⟨m, answer f (interp.fiberValue f.id), yielding, Outcome.continue_, []⟩
+      ⟨m, answer f (interp.fiberIdValue f.id), yielding, Outcome.continue_, []⟩
     | WithFiberAction.closeScope scope exit =>
       match interp.closeScope scope exit f.frame.interruptible f.id m.state with
       | none => ⟨m, f, yielding, Outcome.stuck (Stuck.unknownScope scope), []⟩   -- M7
       | some (state, program) =>
         ⟨{ m with state := state }, { f with frame := { f.frame with current := program } },
           yielding, Outcome.continue_, []⟩
+    | WithFiberAction.closePar finalizers =>                            -- :3819-3824, §20
+      -- the generator step: every finalizer forked as an immediate daemon in the closer's mask
+      -- and run now; then the await over them, yielded under the generator's frame
+      let (m, children) := forkFinalizers interp m f finalizers
+      ⟨m, f, yielding, Outcome.commands,
+        children.map Cmd.evaluate ++ [Cmd.closeParAwait f.id yielding children]⟩
     | WithFiberAction.refuse cause =>                                   -- S3 §5.2
       ⟨m, { f with frame := { f.frame with current := Prim.failure cause } }, yielding,
         Outcome.continue_, []⟩
@@ -1078,29 +1248,27 @@ where
             | Observer.countdown _ t => t ≠ token
             | _ => true } }
       ⟨m, answer f interp.voidValue, yielding, Outcome.continue_, []⟩
-    | WithFiberAction.cancelRace raceId =>                              -- :1530 (R2-13)
-      -- `fiberInterruptAll(fibers)` over the entrants still live: the host's id and stack
-      -- annotations, then the await over them
+    | WithFiberAction.cancelRace raceId =>                              -- :1530, :1512 (R2-13, D6b)
+      -- `fiberInterruptAll(fibers)` over the race's live Set at cleanup time: the walk is a
+      -- command, so an entrant an earlier target's run finishes is skipped
       match m.race? raceId with
       | none => ⟨m, answer f interp.voidValue, yielding, Outcome.continue_, []⟩
       | some race =>
-        let (m, nested) :=
-          interruptEach interp f.id (interp.stackAnnotations f.id) race.state.live (m, [])
-        let (m, f, parked) := countdownPark interp m f race.state.live Resume.void
-        ⟨m, f, yielding, outcomeOf m parked, nested⟩
-  /-- `fiberInterrupt` (`:859`): record with `interruptor`, then await the target. -/
-  interruptThenJoin (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
-      (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (target : FiberId)
-      (interruptor : Option FiberId) : Iter ν σ β ε δ ι α χ St :=
+        ⟨m, f, yielding, Outcome.commands, [Cmd.raceCancel raceId f.id yielding race.state.live []]⟩
+  /-- `fiberInterruptAs(target, who)` (`:871-884`, D6b): record with `who` and the caller's
+  stack annotations (`:880-883`, R2-5); an idle interruptible target runs now, and
+  `asVoid(fiberAwait(target))` is constructed after that run, as the nested commands. -/
+  interruptAs (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+      (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (target who : FiberId) :
+      Iter ν σ β ε δ ι α χ St :=
     match m.fiber? target with
     | none => ⟨m, f, yielding, Outcome.stuck (Stuck.unknownFiber target), []⟩
     | some t =>
-      -- `fiberInterruptAs` passes the caller's stack annotations (`:880-883`, R2-5)
-      let (t, applyNow) := interruptRecord interp interruptor (interp.stackAnnotations f.id) t
-      let m := (m.update t).emit [RunEvent.interruptRecorded interruptor target]
-      let nested := if applyNow then [Cmd.evaluate target] else []
-      let (m, f, parked) := countdownPark interp m f [target] Resume.void
-      ⟨m, f, yielding, (if parked then Outcome.parked else Outcome.continue_), nested⟩
+      let (t, applyNow) := interruptRecord interp (some who) (interp.stackAnnotations f.id) t
+      let m := (m.update t).emit [RunEvent.interruptRecorded (some who) target]
+      ⟨m, f, yielding, Outcome.commands,
+        (if applyNow then [Cmd.evaluate target] else []) ++
+          [Cmd.afterInterrupt f.id yielding (ParkKind.join target Supervision.ObserverMode.awaitValue)]⟩
 
 /-! ## Shared fiber actions
 
@@ -1139,7 +1307,7 @@ def outcomeOf (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (parked : Boo
 def getId (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool)
     (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer) : Iter ν σ β ε δ ι α χ St κ φ η :=
-  ⟨m, answer f (interp.fiberValue f.id), yielding, Outcome.continue_, []⟩
+  ⟨m, answer f (interp.fiberIdValue f.id), yielding, Outcome.continue_, []⟩
 
 def getContext (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool)
@@ -1181,9 +1349,11 @@ def fork (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν �
     (options : Supervision.ForkOptions)
     (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer) : Iter ν σ β ε δ ι α χ St κ φ η :=
   let m := if options.daemon then m else { m with middlewareInstalled := true }
+  let parent := f.id
   let (m, f, child) := spawn interp m f program options
   let (m, f, nested) := start m f child options.startImmediately
-  ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_, nested⟩
+  ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_,
+    nested ++ (if options.daemon then [] else [Cmd.trackChild parent child])⟩
 
 def forkIn (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (program : κ)
@@ -1210,6 +1380,25 @@ def forkScoped (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachin
     ⟨m, { f with frame := core.answerWith f.frame (core.failure (Cause.die interp.missingScope)) },
       yielding, Outcome.continue_, []⟩
 
+/-- The `Scope` service read (§20): the ambient scope's handle, or the `missingScope` defect. -/
+def ambientScope (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool)
+    (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer) : Iter ν σ β ε δ ι α χ St κ φ η :=
+  match interp.ambientScope f.context with
+  | some scope => ⟨m, answer f (interp.scopeValue scope), yielding, Outcome.continue_, []⟩
+  | none =>
+    ⟨m, { f with frame := core.answerWith f.frame (core.failure (Cause.die interp.missingScope)) },
+      yielding, Outcome.continue_, []⟩
+
+/-- The parallel close's generator step (§20): fork every finalizer as an immediate daemon in
+the closer's mask, run them, then yield the await over them under the generator's frame. -/
+def closePar (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (finalizers : List κ) :
+    Iter ν σ β ε δ ι α χ St κ φ η :=
+  let (m, children) := forkFinalizers interp m f finalizers
+  ⟨m, f, yielding, Outcome.commands,
+    children.map Cmd.evaluate ++ [Cmd.closeParAwait f.id yielding children]⟩
+
 def refuse (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (f : RunFiber ν σ β ε δ ι α χ κ φ)
     (yielding : Bool) (cause : Cause ε δ ι α) : Iter ν σ β ε δ ι α χ St κ φ η :=
   ⟨m, { f with frame := core.answerWith f.frame (core.failure cause) }, yielding,
@@ -1224,25 +1413,48 @@ def closeScope (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachin
     ⟨{ m with state := state }, { f with frame := core.answerWith f.frame program },
       yielding, Outcome.continue_, []⟩
 
-def interruptThenJoin (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
-    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (target : FiberId)
-    (interruptor : Option FiberId) : Iter ν σ β ε δ ι α χ St κ φ η :=
+/-- The public `fiberInterrupt(target)` (`:857`, D6b): its `withFiber` returns
+`fiberInterruptAs(target, self)` as the next counted program. -/
+def interrupt (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (target : FiberId) :
+    Iter ν σ β ε δ ι α χ St κ φ η :=
+  ⟨m, { f with frame := core.answerWith f.frame (interp.interruptAsCode target f.id) },
+    yielding, Outcome.continue_, []⟩
+
+/-- `fiberInterruptAs(target, who)` (`:871-884`, D6b): record with `who` and the caller's
+stack annotations; an idle interruptible target runs now, and `asVoid(fiberAwait(target))`
+is constructed after that run, as the nested commands. -/
+def interruptAs (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (target who : FiberId) :
+    Iter ν σ β ε δ ι α χ St κ φ η :=
   match m.fiber? target with
   | none => ⟨m, f, yielding, Outcome.stuck (Stuck.unknownFiber target), []⟩
   | some t =>
-    let (t, applyNow) := interruptRecord interp interruptor (interp.stackAnnotations f.id) t
-    let m := (m.update t).emit [RunEvent.interruptRecorded interruptor target]
-    let nested := if applyNow then [Cmd.evaluate target] else []
-    let (m, f, parked) := countdownPark interp m f [target] Resume.void
-    ⟨m, f, yielding, (if parked then Outcome.parked else Outcome.continue_), nested⟩
+    let (t, applyNow) := interruptRecord interp (some who) (interp.stackAnnotations f.id) t
+    let m := (m.update t).emit [RunEvent.interruptRecorded (some who) target]
+    ⟨m, f, yielding, Outcome.commands,
+      (if applyNow then [Cmd.evaluate target] else []) ++
+        [Cmd.afterInterrupt f.id yielding (ParkKind.join target Supervision.ObserverMode.awaitValue)]⟩
 
+/-- A scope's fiber finalizer (`:5368`, D6b): void on the fiber itself, otherwise the public
+interrupt program. -/
+def interruptScoped (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (target : FiberId)
+    (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer) : Iter ν σ β ε δ ι α χ St κ φ η :=
+  if target = f.id then ⟨m, answer f interp.voidValue, yielding, Outcome.continue_, []⟩
+  else
+    ⟨m, { f with frame := core.answerWith f.frame (interp.interruptCode target) },
+      yielding, Outcome.continue_, []⟩
+
+/-- `fiberInterruptAll` / `fiberInterruptAllAs` (`:888-915`, D6b): each target recorded and,
+when idle, run before the next, in list order; then `asVoid(fiberAwaitAll(targets))`. -/
 def interruptAll (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (targets : List FiberId)
     (interruptor : Option FiberId) : Iter ν σ β ε δ ι α χ St κ φ η :=
-  let (m, nested) :=
-    interruptEach interp (interruptor.getD f.id) (interp.stackAnnotations f.id) targets (m, [])
-  let (m, f, parked) := countdownPark interp m f targets Resume.void
-  ⟨m, f, yielding, outcomeOf m parked, nested⟩
+  ⟨m, f, yielding, Outcome.commands,
+    (targets.map fun t =>
+      Cmd.interruptTarget t (some (interruptor.getD f.id)) (interp.stackAnnotations f.id)) ++
+      [Cmd.afterInterrupt f.id yielding (ParkKind.awaitAll targets)]⟩
 
 def awaitAll (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (targets : List FiberId)
@@ -1263,26 +1475,12 @@ def cancelRace (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachin
   match m.race? raceId with
   | none => ⟨m, answer f interp.voidValue, yielding, Outcome.continue_, []⟩
   | some race =>
-    let (m, nested) :=
-      interruptEach interp f.id (interp.stackAnnotations f.id) race.state.live (m, [])
-    let (m, f, parked) := countdownPark interp m f race.state.live Resume.void
-    ⟨m, f, yielding, outcomeOf m parked, nested⟩
+    ⟨m, f, yielding, Outcome.commands, [Cmd.raceCancel raceId f.id yielding race.state.live []]⟩
 
 def raceAll (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (entrants : List κ) :
     Iter ν σ β ε δ ι α χ St κ φ η :=
-  let raceId := m.nextRace
-  let token := m.nextToken
-  let m := { m with nextRace := m.nextRace + 1, nextToken := m.nextToken + 1 }
-  let race : Race ν σ β ε δ ι α κ :=
-    ⟨raceId, f.id, token,
-      { Supervision.RaceAllState.initial [] with remaining := entrants.length }, false, entrants⟩
-  let m := { m with races := m.races ++ [race] }
-  let m := m.emit [RunEvent.raceStarted raceId f.id entrants.length]
-  let name := interp.cancelName (interp.raceCancelName raceId) f.id token
-  let f := { f with frame := core.pushAsyncFinalizer name f.frame }
-  let f := f.park ⟨token, none, [], [], Resume.void, false⟩
-  ⟨m.emit [RunEvent.parkedOn f.id token], f, yielding, Outcome.parked, [Cmd.launch raceId]⟩
+  beginRace interp m f yielding entrants
 
 def yieldNow (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (priority : Nat) :
@@ -1327,6 +1525,12 @@ class FiberEvaluator (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (S
 
 attribute [reducible] FiberEvaluator.evaluate
 
+/-- Exits visible to code constructed now (`internal/effect.ts:767-769,814-816`).
+The projection works at either code alphabet and carries only first-order data. -/
+def RunMachine.completedExits (m : RunMachine ν σ β ε δ ι α χ St κ φ η) :
+    List (FiberId × Exit β ε δ ι α) :=
+  m.fibers.filterMap fun f => f.exit.map fun ex => (f.id, ex)
+
 /-- The original primitive evaluator is the concrete instance of the shared loop. -/
 @[reducible] instance frameEvaluator : FiberEvaluator ν σ β ε δ ι α χ St
     (Prim ν σ β ε δ ι α) (FrameFiber ν σ β ε δ ι α) (FrameEvent ν σ β ε δ ι α) where
@@ -1335,13 +1539,13 @@ attribute [reducible] FiberEvaluator.evaluate
 variable [evaluator : FiberEvaluator ν σ β ε δ ι α χ St κ φ η]
 
 /-- One `runLoop` iteration (`:638-668`) on fiber `f` in machine `m`; `yielding` is the
-per-entry injection latch (`:634`, `:648`): the top of the loop, the op counter, then either
-a yield injection or the evaluation of the current primitive. -/
+per-entry injection latch (`:634`, `:648`): the top of the loop, the op counter,
+an optional yield wrapper, then evaluation at that same checkpoint. -/
 def iteration (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) : Iter ν σ β ε δ ι α χ St κ φ η :=
   let f := countOp (runloopTop f)
   match injectYield m f yielding with
-  | some it => it
+  | some it => evaluator.evaluate interp it.machine it.fiber it.yielding
   | none => evaluator.evaluate interp m f yielding
 
 /-- Fire one observer (`:621-623`) of fiber `id`, which has exited with `exit`. Resumes
@@ -1401,46 +1605,92 @@ def fireObserver (interp : RunInterp ν σ β ε δ ι α χ St κ) (id : FiberI
       let m := m.updateRace race
       match state.accepted, race.settled with
       | some accepted, false =>
-        -- settle (`:1510-1514`, R2-12): the host is resumed with
-        -- `flatMap(uninterruptible(fiberInterruptAll(live)), () => exit)` — it interrupts
-        -- and awaits the live entrants itself, under a mask — or with the exit alone
+        -- settle (`:1503-1514`, R2-12): while the registration is still running the first
+        -- accepted answer is only buffered (`:1120-1126`) and `registrationDone` takes it up;
+        -- after a real park the host is resumed on its guard with `raceSettle`, which
+        -- interrupts and awaits the live entrants under a mask when the winning callback
+        -- saw a nonempty live set, or is the exit alone (D6a)
         let m := m.updateRace { race with settled := true }
         let m := m.emit [RunEvent.raceSettled raceId accepted]
-        (m, acc.2 ++ [Cmd.resume.{u, v} race.host race.token (interp.raceSettle state.live accepted)])
+        (m, acc.2 ++ (if race.registering then [] else
+          [Cmd.resume.{u, v} race.host race.token
+            (interp.raceSettle raceId state.cleanupNeeded accepted)]))
       | _, _ => (m, acc.2)
   | Observer.callback key => (m.emit [RunEvent.callback key exit], acc.2)
 
-/-- The exit path (`:611-627`): with the middleware installed and tracked children, the
-children are interrupted with the parent's id and awaited before the exit is stored
-(`:613-617`, `awaitAllChildren`); then the exit is stored, every observer fires in index
-order, and the fiber is cleared, its context emptied (`:619-627`). -/
+/-- `asVoid(code)` (`:1467`): `flatMap(code, _ => exitVoid)`, the restoring continuation at
+the void exit (D6b). -/
+def asVoidCode (interp : RunInterp ν σ β ε δ ι α χ St κ) (code : κ) : κ :=
+  core.onSuccess code (interp.restoreName (Exit.success interp.voidValue))
+
+/-- The await an interrupt returns, constructed after the targets' own runs (D6b):
+`fiberAwait(target)` folds to the target's exit when it has one (`:767-769`), otherwise it
+is the join park; `fiberAwaitAll(targets)` is always its park (`:779`). -/
+def awaitCode (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η) :
+    ParkKind → κ
+  | ParkKind.join target mode =>
+    match (m.fiber? target).bind RunFiber.exit with
+    | some exit => interp.exitValue exit mode
+    | none => interp.parkCode (ParkKind.join target mode)
+  | kind => interp.parkCode kind
+
+/-- The published fiber (`:619`, D6b): the exit stored, the finalizing flag and the parks
+cleared, the loop's deferred flag false (`:659`, R2-2), not running. Stack, children,
+observers and context are cleared by `exitDone` after the observers have run. -/
+def RunFiber.publish (f : RunFiber ν σ β ε δ ι α χ κ φ) (exit : Exit β ε δ ι α) :
+    RunFiber ν σ β ε δ ι α χ κ φ :=
+  { f with
+    exit := some exit
+    finalizing := none
+    running := false
+    frame := core.setDeferred f.frame false
+    parked := Parked.notParked
+    pending := [] }
+
+/-- The cleared fiber (`:624-627`): observers, stack, children and context emptied. -/
+def RunFiber.cleared (interp : RunInterp ν σ β ε δ ι α χ St κ) (f : RunFiber ν σ β ε δ ι α χ κ φ) :
+    RunFiber ν σ β ε δ ι α χ κ φ :=
+  { f with
+    observers := []
+    frame := core.clearStack f.frame
+    children := []
+    context := interp.emptyContext }
+
+/-- The exit path (`:611-627`, D6b) as the commands it owes. With the middleware installed
+and tracked children, `evaluate` re-enters the fiber with
+`flatMap(fiberInterruptAll(children), () => exit)` (`:613-617`): the fiber remembers the
+exit it is finalizing, and the re-entry is a new counted entry. Otherwise the exit is
+published and each observer runs to completion before the next (`:619-623`); the fiber is
+cleared after the last (`:624-627`), at once when it has no observer. -/
 def exitFiber (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (f : RunFiber ν σ β ε δ ι α χ κ φ) (exit : Exit β ε δ ι α) :
-    RunMachine ν σ β ε δ ι α χ St κ φ η × RunFiber ν σ β ε δ ι α χ κ φ × Bool ×
-      List (Cmd ν σ β ε δ ι α κ) :=
+    RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ) :=
   if m.middlewareInstalled && f.finalizing.isNone && !f.children.isEmpty then
-    -- `fiberInterruptAll(children)` under `withFiber(parent)`: the parent's stack
-    -- annotations (`:892-895`, R2-5)
-    let (m, nested) := interruptEach interp f.id (interp.stackAnnotations f.id) f.children (m, [])
-    let m := m.emit [RunEvent.childrenInterrupted f.id f.children]
-    -- the loop returned an exit: `_deferredInterrupt = false` (`:659`, R2-2)
-    let f := { f with finalizing := some exit, frame := core.setDeferred f.frame false }
-    let (m, f, parked) :=
-      countdownPark interp m f f.children (Resume.continueWith (interp.restoreName exit))
-    (m, f, parked, nested)
-  else
-    let f := { f with                                                  -- :619-627
-      exit := some exit
-      finalizing := none
-      frame := core.setDeferred (core.clearStack f.frame) false
-      children := []
-      parked := Parked.notParked
-      pending := []
-      context := interp.emptyContext }
+    exitInterruptChildren interp m f exit
+  else exitStore interp m f exit
+where
+  /-- The children clause (`:613-617`): the middleware's program installed, the loop's
+  deferred flag cleared (`:659`, R2-2), the fiber finalizing, and the counted re-entry. -/
+  exitInterruptChildren (interp : RunInterp ν σ β ε δ ι α χ St κ)
+      (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (f : RunFiber ν σ β ε δ ι α χ κ φ)
+      (exit : Exit β ε δ ι α) : RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ) :=
+    let code := core.onSuccess (interp.interruptAllCode f.children) (interp.restoreName exit)
+    let f := { f with
+      finalizing := some exit
+      running := false
+      frame := core.answerWith (core.setDeferred f.frame false) code }
+    ((m.update f).emit [RunEvent.childrenInterrupted f.id f.children], [Cmd.evaluate f.id])
+  /-- The store clause (`:619-627`): publish, then one `observe` per observer in index order,
+  `exitDone` and the due drain; a fiber with no observer is cleared in this step. -/
+  exitStore (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+      (f : RunFiber ν σ β ε δ ι α χ κ φ) (exit : Exit β ε δ ι α) :
+      RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ) :=
+    let f := f.publish exit
     let m := (m.update f).emit [RunEvent.exited f.id exit]
-    let (m, nested) := f.observers.foldl (fireObserver interp f.id exit) (m, [])
-    let f := { f with observers := [] }
-    (m.update f, f, false, nested)
+    match f.observers with
+    | [] => (m.update (f.cleared interp), [Cmd.drainDue])
+    | observers =>
+      (m, observers.map (Cmd.observe f.id exit) ++ [Cmd.exitDone f.id, Cmd.drainDue])
 
 /-- What the loop does with where an iteration (or a delivery) left fiber `id`: the machine
 to continue in and the commands to run before `rest`. A stuck fiber halts the machine and
@@ -1452,8 +1702,15 @@ def settle (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α κ)) (it : Iter
     (it.machine.update it.fiber, it.nested ++ [Cmd.loop id it.yielding] ++ rest)
   | Outcome.answered =>                                                -- :932-933, R2-1
     (it.machine.update it.fiber, it.nested ++ [Cmd.deliver id it.yielding] ++ rest)
-  | Outcome.parked =>                                                  -- :667, :608-610
-    (it.machine.update { it.fiber with running := false }, it.nested ++ rest)
+  | Outcome.parked =>                                                  -- :662-667, :608-610
+    -- a deferred interrupt recorded by this iteration's nested work clears the yield guard
+    -- and continues the same entry; the next loop top fails the fiber with its cause
+    if core.deferredInterrupt it.fiber.frame then
+      (it.machine.update { it.fiber with parked := Parked.notParked, pending := [] },
+        it.nested ++ [Cmd.loop id it.yielding] ++ rest)
+    else (it.machine.update { it.fiber with running := false }, it.nested ++ rest)
+  | Outcome.commands =>                                                -- :1117-1126, D6a
+    (it.machine.update it.fiber, it.nested ++ rest)
   | Outcome.finished exit =>
     -- M1: what the last primitive owes synchronously (a completion's waiters) runs
     -- before this fiber's exit path, as it does on rc.112's stack
@@ -1511,11 +1768,92 @@ def driveStep (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine
           | none => (m, rest)
           | some host =>
             let (m, child) := launchEntrant interp raceId m host program
-            let m := m.updateRace { race with
-              programs := more
-              state := { race.state with live := race.state.live ++ [child] } }
+            let m := m.updateRace { race with programs := more }
             (m.emit [RunEvent.raceLaunched raceId child],
-              Cmd.evaluate child :: Cmd.launch raceId :: rest)
+              Cmd.evaluate child :: Cmd.enrollRace raceId child :: Cmd.launch raceId :: rest)
+  | Cmd.enrollRace raceId child, rest =>                              -- :1522-1526, D6a
+    -- after the entrant's immediate run returned: join the live set, then attach the race
+    -- observer, which fires now when the entrant has already exited (`:557-559`)
+    match m.race? raceId, m.fiber? child with
+    | some race, some c =>
+      let m := m.updateRace { race with state :=
+        { race.state with live := race.state.live ++ [child] } }
+      match c.exit with
+      | some exit =>
+        let (m, nested) := fireObserver interp child exit (m, []) (Observer.raceCallback raceId)
+        (m, nested ++ rest)
+      | none =>
+        (m.modify child fun c => { c with observers := c.observers ++ [Observer.raceCallback raceId] },
+          rest)
+    | _, _ => (m, rest)
+  | Cmd.registrationDone raceId yielding, rest =>                     -- :1120-1141, D6a
+    -- the registration returns: a buffered answer continues the same entry with the settle
+    -- program; no answer pushes the cancel frame and parks, subject to a deferred interrupt
+    match m.race? raceId with
+    | none => (m, rest)
+    | some race =>
+      let m := m.updateRace { race with registering := false }
+      match m.fiber? race.host with
+      | none => (m, rest)
+      | some f =>
+        match race.state.accepted with
+        | some exit =>
+          let code := interp.raceSettle raceId race.state.cleanupNeeded exit
+          let f := { f with frame := core.answerWith f.frame code }
+          settle f.id rest ⟨m, f, yielding, Outcome.continue_, []⟩
+        | none =>
+          let name := interp.cancelName (interp.raceCancelName raceId) f.id race.token
+          let f := { f with frame := core.pushAsyncFinalizer name f.frame }
+          let f := f.park ⟨race.token, none, [], [], Resume.void, false⟩
+          settle f.id rest ⟨m.emit [RunEvent.parkedOn f.id race.token], f, yielding, Outcome.parked, []⟩
+  | Cmd.interruptTarget target who extra, rest =>                     -- :574-595, D6b
+    match m.fiber? target with
+    | none => (m, rest)
+    | some g =>
+      let (g, applyNow) := interruptRecord interp who extra g
+      ((m.update g).emit [RunEvent.interruptRecorded who target],
+        (if applyNow then [Cmd.evaluate target] else []) ++ rest)
+  | Cmd.afterInterrupt host yielding kind, rest =>                    -- :884, :896, D6b
+    match m.fiber? host with
+    | none => (m, rest)
+    | some f =>
+      let f := { f with frame := core.answerWith f.frame (asVoidCode interp (awaitCode interp m kind)) }
+      settle f.id rest ⟨m, f, yielding, Outcome.continue_, []⟩
+  | Cmd.raceCancel raceId host yielding remaining visited, rest =>    -- :889-896 at :1512, D6b
+    match remaining with
+    | [] => (m, Cmd.afterInterrupt host yielding (ParkKind.awaitAll visited) :: rest)
+    | t :: more =>
+      match m.race? raceId with
+      | none => (m, Cmd.afterInterrupt host yielding (ParkKind.awaitAll visited) :: rest)
+      | some race =>
+        if t ∈ race.state.live then
+          (m, Cmd.interruptTarget t (some host) (interp.stackAnnotations host) ::
+            Cmd.raceCancel raceId host yielding more (visited ++ [t]) :: rest)
+        else (m, Cmd.raceCancel raceId host yielding more visited :: rest)
+  | Cmd.trackChild parent child, rest =>                              -- :5279-5282, D6b
+    match m.fiber? child with
+    | none => (m, rest)
+    | some c =>
+      if c.exit.isSome then (m, rest)
+      else
+        ((m.modify parent fun p => { p with children := p.children ++ [child] }).modify child
+          fun c => { c with observers := c.observers ++ [Observer.untrackChild parent] }, rest)
+  | Cmd.observe id exit observer, rest =>                             -- :621-623, D6b
+    let (m, nested) := fireObserver interp id exit (m, []) observer
+    (m, nested ++ rest)
+  | Cmd.exitDone id, rest =>                                          -- :624-627, D6b
+    match m.fiber? id with
+    | none => (m, rest)
+    | some f => (m.update (f.cleared interp), rest)
+  | Cmd.closeParAwait host yielding fibers, rest =>                    -- :3823-3826, §20
+    -- the generator yields `fiberAwaitAll(fibers)` under its own frame, whose next step is
+    -- `exitAsVoidAll` of the exits the await answers
+    match m.fiber? host with
+    | none => (m, rest)
+    | some f =>
+      let frame := core.pushIterator interp.closeDoneName interp.voidValue f.frame
+      let f := { f with frame := core.answerWith frame (interp.parkCode (ParkKind.awaitAll fibers)) }
+      settle f.id rest ⟨m, f, yielding, Outcome.continue_, []⟩
   | Cmd.link mode scope key target interruptor extra, rest =>          -- :5366-5376, R2-8
     let (m, nested) := linkScope interp m mode scope key target interruptor extra
     (m, nested ++ rest)
@@ -1523,8 +1861,8 @@ def driveStep (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine
     match m.fiber? id with
     | none => (m, rest)
     | some f =>
-      let (m, f, parked, nested) := exitFiber interp m { f with running := false } exit
-      (m.update f, nested ++ (if parked then [] else [Cmd.drainDue]) ++ rest)
+      let (m, cmds) := exitFiber interp m { f with running := false } exit
+      (m, cmds ++ rest)
   | Cmd.drainDue, rest =>
     let (due, state) := interp.dueResumes m.state
     ({ m with state := state }, (due.map fun d => Cmd.resume d.1 d.2.1 d.2.2) ++ rest)

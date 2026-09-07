@@ -18,6 +18,12 @@ through the bytes of `Nat.repr` on purpose: the string layer's own injectivity l
 #print axioms Effect4.Program.readCause
 #print axioms Effect4.Program.readForkOptions
 #print axioms Effect4.Program.readRowCall
+#print axioms Effect4.Program.printRow
+#print axioms Effect4.Program.savedVar?
+#print axioms Effect4.Program.readTupleArgs
+#print axioms Effect4.Program.printTupleArgs
+#print axioms Effect4.Program.readRunIn
+#print axioms Effect4.Program.requestReadable
 #print axioms Effect4.Program.readEff
 #print axioms Effect4.Program.readHead
 #print axioms Effect4.Program.readStmts
@@ -27,6 +33,12 @@ through the bytes of `Nat.repr` on purpose: the string layer's own injectivity l
 #print axioms Effect4.Program.readTerm_printTerm
 #print axioms Effect4.Program.readTerm_exact
 #print axioms Effect4.Program.print_not_cond
+#print axioms Effect4.Program.printTerm_ident_not_trailing
+#print axioms Effect4.Program.readRowCall_tuple
+#print axioms Effect4.Program.read_printRow
+#print axioms Effect4.Program.savedVar?_some
+#print axioms Effect4.Program.readTupleArgs_exact
+#print axioms Effect4.Program.readRunIn_exact
 #print axioms Effect4.Program.read_print
 #print axioms Effect4.Program.read_exact_all
 #print axioms Effect4.Program.read_exact

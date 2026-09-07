@@ -58,7 +58,7 @@ The accepted ceiling is no dependency, `propext`, or `propext` with `Quot.sound`
 #print axioms Effect4.Machine.finishFrame_extends
 #print axioms Effect4.Machine.stepFrame_extends
 #print axioms Effect4.Machine.finalizerOr_extends
-#print axioms Effect4.Machine.interruptThenJoin_extends
+#print axioms Effect4.Machine.interruptAs_extends
 #print axioms Effect4.Machine.withFiber_extends
 #print axioms Effect4.Machine.evaluatePrim_extends
 #print axioms Effect4.Machine.iteration_extends

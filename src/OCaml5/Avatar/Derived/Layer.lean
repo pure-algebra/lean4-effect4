@@ -176,6 +176,7 @@ def name : InductiveDesc where
      { leanName := "closeSeq", args := [{ leanName := "remaining", leanTy := .lst (.nm "FinName") }, { leanName := "exit", leanTy := .nm "ExitV" }, { leanName := "captured", leanTy := .lst (.app "Reason" [.nm "Err", .nm "Defect", .nm "FiberId", .nm "Ann"]) }] },
      { leanName := "closePar", args := [{ leanName := "remaining", leanTy := .lst (.nm "FinName") }, { leanName := "exit", leanTy := .nm "ExitV" }, { leanName := "forked", leanTy := .lst (.nm "FiberId") }, { leanName := "closerInterruptible", leanTy := .nm "Bool" }] },
      { leanName := "mergeAwaitedExits", args := [] },
+     { leanName := "closeParDone", args := [] },
      { leanName := "afterScopeAdd", args := [{ leanName := "fin", leanTy := .nm "FinName" }] },
      { leanName := "updateThen", args := [{ leanName := "update", leanTy := .nm "ContextUpdate" }, { leanName := "body", leanTy := .nm "ProgName" }] },
      { leanName := "bodyThen", args := [{ leanName := "body", leanTy := .nm "ProgName" }, { leanName := "prev", leanTy := .nm "Ctx" }] },
@@ -212,14 +213,16 @@ def name : InductiveDesc where
 
 def actionName : InductiveDesc where
   leanName := "ActionName"
-  site := "Layer.lean:339"
+  site := "Layer.lean:342"
   subst := []
   leanParams := []
   ctors :=
     [{ leanName := "fork", args := [{ leanName := "program", leanTy := .nm "ProgName" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }] },
      { leanName := "forkScoped", args := [{ leanName := "program", leanTy := .nm "ProgName" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }, { leanName := "key", leanTy := .nm "Nat" }] },
      { leanName := "interrupt", args := [{ leanName := "target", leanTy := .nm "FiberId" }] },
+     { leanName := "interruptAs", args := [{ leanName := "target", leanTy := .nm "FiberId" }, { leanName := "who", leanTy := .nm "FiberId" }] },
      { leanName := "interruptScoped", args := [{ leanName := "target", leanTy := .nm "FiberId" }] },
+     { leanName := "interruptAll", args := [{ leanName := "targets", leanTy := .lst (.nm "FiberId") }] },
      { leanName := "awaitAll", args := [{ leanName := "targets", leanTy := .lst (.nm "FiberId") }] },
      { leanName := "awaitAllFailFast", args := [{ leanName := "targets", leanTy := .lst (.nm "FiberId") }] },
      { leanName := "setContext", args := [{ leanName := "context", leanTy := .nm "Ctx" }] },
@@ -232,13 +235,14 @@ def actionName : InductiveDesc where
 
 def thunk : InductiveDesc where
   leanName := "Thunk"
-  site := "Layer.lean:359"
+  site := "Layer.lean:369"
   subst := []
   leanParams := []
   ctors :=
     [{ leanName := "act", args := [{ leanName := "action", leanTy := .nm "ActionName" }] },
      { leanName := "op", args := [{ leanName := "operation", leanTy := .nm "SyncOp" }] },
-     { leanName := "body", args := [{ leanName := "program", leanTy := .nm "ProgName" }] }]
+     { leanName := "body", args := [{ leanName := "program", leanTy := .nm "ProgName" }] },
+     { leanName := "park", args := [{ leanName := "kind", leanTy := .nm "ParkKind" }] }]
 
 def scopeState : InductiveDesc where
   leanName := "ScopeState"
@@ -263,7 +267,7 @@ def scope : StructDesc where
 
 def scopeEntry : StructDesc where
   leanName := "ScopeEntry"
-  site := "Layer.lean:444"
+  site := "Layer.lean:456"
   subst := []
   leanParams := []
   fields :=
@@ -272,7 +276,7 @@ def scopeEntry : StructDesc where
 
 def scopeStore : StructDesc where
   leanName := "ScopeStore"
-  site := "Layer.lean:449"
+  site := "Layer.lean:461"
   subst := []
   leanParams := []
   fields :=
@@ -280,7 +284,7 @@ def scopeStore : StructDesc where
 
 def memoEntry : StructDesc where
   leanName := "MemoEntry"
-  site := "Layer.lean:491"
+  site := "Layer.lean:503"
   subst := []
   leanParams := []
   fields :=
@@ -292,7 +296,7 @@ def memoEntry : StructDesc where
 
 def memoMap : StructDesc where
   leanName := "MemoMap"
-  site := "Layer.lean:505"
+  site := "Layer.lean:517"
   subst := []
   leanParams := []
   fields :=
@@ -302,7 +306,7 @@ def memoMap : StructDesc where
 
 def st : StructDesc where
   leanName := "St"
-  site := "Layer.lean:619"
+  site := "Layer.lean:631"
   subst := []
   leanParams := []
   fields :=

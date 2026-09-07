@@ -40,9 +40,11 @@ Lean field order, and the mangling round-trip on every field name. -/
 #guard Stores.completion.ctors.length == 2
 #guard Stores.syncOp.ctors.length == 23
 #guard Stores.raceName.ctors.length == 6
-#guard Stores.progName.ctors.length == 24
-#guard Stores.name.ctors.length == 21
-#guard Stores.actionName.ctors.length == 19
+-- §20 (2026-09-07): `ProgName` +`closeWalk`, `Name` −`closePar`/`mergeAwaitedExits` +`closeParDone`,
+-- `ActionName` +`ambientScope`/`closePar`.
+#guard Stores.progName.ctors.length == 26
+#guard Stores.name.ctors.length == 20
+#guard Stores.actionName.ctors.length == 22
 #guard Stores.thunk.ctors.length == 4
 #guard Stores.finalizerStrategy.ctors.length == 2
 #guard Stores.scopeState.ctors.length == 5
@@ -96,9 +98,9 @@ Lean field order, and the mangling round-trip on every field name. -/
 #guard Layer.finName.ctors.length == 11
 #guard Layer.syncOp.ctors.length == 10
 #guard Layer.progName.ctors.length == 27
-#guard Layer.name.ctors.length == 49
-#guard Layer.actionName.ctors.length == 13
-#guard Layer.thunk.ctors.length == 3
+#guard Layer.name.ctors.length == 50
+#guard Layer.actionName.ctors.length == 15
+#guard Layer.thunk.ctors.length == 4
 #guard ForkFlow.fiberOp.ctors.length == 12
 #guard ForkFlow.forkRefusal.ctors.length == 6
 #guard ForkFlow.forkRequest.fields.map (·.ocaml) == ["root", "args", "daemon", "region"]

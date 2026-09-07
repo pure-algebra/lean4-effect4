@@ -23,12 +23,15 @@ generator's and the loop's initial entries, whose later iterations the walk runs
 inside the body's delivery through the `iter` and `loop` slots.
 
 `RSTEP-FB-FRONTIER`: no compile, choice or unsupported frontier is answered; it
-retains its term and consumes only the command budget. `RSTEP-FB-PROTOCOL` names an
-unmatched cleanup-end marker, which generated `onExitR` never emits. The finite
-comparisons of the batteries are not the later simulation (`RSTEP-FB-SIMULATION`).
-`RSTEP-FB-TERMINAL-MASK`: the reference `finishFrame` discards a final pop's
-saved state; this evaluator retains it. The exited fiber's mask can differ.
-The observation excludes that bit, and comparisons check it on live fibers.
+retains its term and consumes only the command budget. The cleanup-end marker
+`finishFinalizer` delivers the finalizer's exit through the saved slots exactly as the
+frame's `Prim.ofExit` does after a finalizer's restoring continuation: the recorded
+`finalizerMask` slot restores the mask on the way out (P3 walk agreement, 2026-09-07; the
+earlier refusal of an unmatched marker, `RSTEP-FB-PROTOCOL`, diverged from the frame). The
+finite comparisons of the batteries are not the later simulation (`RSTEP-FB-SIMULATION`).
+The repaired reference keeps the final pop's saved state through `Cmd.finish`.
+The term already retained that state. General code/stack correspondence is
+still the P3 obligation, not a consequence of this local correction.
 -/
 
 set_option autoImplicit false
@@ -46,7 +49,7 @@ def GuardKind.hasExitArm (kind : GuardKind) (ex : ExitV) : Bool :=
 def bodyR (interp : RInterp) : Body → RProgram
   | .at_ p => interp.suspendBody (.body p)
   | .fin fin ex => denoteFin fin ex
-  | .interruptFibers live => fiberValR (.interruptAll live none) rfl
+  | .raceCleanup race => fiberValR (.cancelRace race) rfl
 
 /-- Walk saved slots in the same order as `getCont`: run hooks before testing
 the demanded arm, re-read the mask for failure skipping, and visit a cleanup's
@@ -146,36 +149,40 @@ def answerWith (next : Val → RProgram) :
     FiberAction.Answer EffName EffThunk Val Err Defect FiberId Ann Ctx RProgram RSaved :=
   fun f v => answerR f (next v)
 
-/-- After a cleanup's mask is restored, its continuation is delivered like an adapter's. -/
-def finishWith (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool)
-    (code : RProgram) : RIter :=
-  match code with
-  | .pure ex' =>
-    let (frame, done) := popR interp ex' f.frame.stack f.frame
-    ⟨m, { f with frame }, yielding, outcomeOfWalk done, []⟩
-  | .vis (.inr (.unguard ex')) _ =>
-    let (frame, done) := popR interp ex' f.frame.stack f.frame
-    ⟨m, { f with frame }, yielding, outcomeOfWalk done, []⟩
-  | code => ⟨m, answerR f code, yielding, .continue_, []⟩
-
 /-- One fiber operation. A value computed here resumes the continuation directly; an
 answer that arrives as code saves the answer slot first. -/
 def evaluateFiberR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool)
     (op : FiberOp) (next : op.answer → RProgram) : RIter :=
   match op with
+  | .construction =>
+    -- `evaluateR` removes this head before dispatching a counted operation.
+    ⟨m, answerR f (prepareR m.completedExits (next m.completedExits)), yielding, .continue_, []⟩
+  | .scoped body =>
+    -- `internal/effect.ts:3938-3948`: make/install in the WithFiber, then return
+    -- OnExit around the already constructed body; do not refresh its point.
+    let scope := m.state.nextName
+    let state := { m.state with
+      scopes := m.state.scopes.make scope .sequential, nextName := scope + 1 }
+    let previous := f.context
+    let context := { previous with ambientScope := some scope }
+    let f := { f with
+      context := context
+      maxOpsBeforeYield := context.maxOpsBeforeYield
+      preventYield := context.preventYield }
+    let code := (guardR (.onExit false) (bodyR interp (.at_ body))).bind fun ex =>
+      .vis (.inr (.scopeExit previous scope ex)) Effects.Program.pure
+    ⟨{ m with state }, answerR (saveAnswerR f next) code, yielding, .continue_, []⟩
+  | .scopeExit _ _ _ =>
+    -- A generated callback is consumed during its preceding delivery. A raw
+    -- marker arriving as a counted operation is outside that protocol.
+    ⟨m, answerR f (.pure badShapeExit), yielding, .continue_, []⟩
   | .guard_ kind =>
     ⟨m, answerR (saveR f kind fun ex => next (some ex)) (next none), yielding, .continue_, []⟩
   | .unguard ex => deliverR interp m f yielding ex
-  | .finishFinalizer ex =>
-    match f.frame.stack with
-    | .finalizerMask flag :: rest =>
-      let f := { f with frame := { f.frame with stack := rest, interruptible := flag } }
-      match f.frame.interruptedCause, ex with
-      | some cause, .success _ =>
-        if flag then ⟨m, answerR f (.pure (.failure cause)), yielding, .continue_, []⟩
-        else finishWith interp m f yielding (next ex)
-      | _, _ => finishWith interp m f yielding (next ex)
-    | _ => ⟨m, answerR f (.pure badShapeExit), yielding, .continue_, []⟩
+  -- the cleanup-end marker delivers the finalizer's exit through the saved slots: the
+  -- `finalizerMask` slot it meets restores the mask, as the frame's restoring
+  -- `setInterruptible` does under `Prim.ofExit` (`internal/effect.ts:4021-4029`)
+  | .finishFinalizer ex => deliverR interp m f yielding ex
   | .frontier _ _ | .acquireRelease _ _ => ⟨m, f, yielding, .continue_, []⟩
   | .suspend _ => ⟨m, answerR f (next .unit), yielding, .continue_, []⟩
   | .sync v => ⟨m, answerR f (next v), yielding, .answered, []⟩
@@ -225,10 +232,12 @@ def evaluateFiberR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool
   | .runIn target scope key =>
     FiberAction.runIn interp m f yielding target scope key (answerWith next)
   | .interrupt target =>
-    FiberAction.interruptThenJoin interp m (saveAnswerR f (seqR next)) yielding target (some f.id)
+    FiberAction.interrupt interp m (saveAnswerR f (seqR next)) yielding target
+  | .interruptAs target who =>
+    FiberAction.interruptAs interp m (saveAnswerR f (seqR next)) yielding target who
   | .interruptScoped target =>
     if target = f.id then ⟨m, answerR f (next interp.voidValue), yielding, .continue_, []⟩
-    else FiberAction.interruptThenJoin interp m (saveAnswerR f (seqR next)) yielding target (some f.id)
+    else FiberAction.interruptScoped interp m (saveAnswerR f (seqR next)) yielding target
   | .interruptAll targets who =>
     FiberAction.interruptAll interp m (saveAnswerR f (seqR next)) yielding targets who
   | .awaitAll targets => FiberAction.awaitAll interp m (saveAnswerR f (seqR next)) yielding targets false
@@ -240,6 +249,7 @@ def evaluateFiberR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool
   | .raceAll entrants =>
     FiberAction.raceAll interp m (saveAnswerR f next) yielding
       (entrants.map fun p => bodyR interp (.at_ p))
+  | .raceRegister race => registerRace m f yielding race
   | .mask flag body =>
     let f := saveAnswerR f next
     let old := f.frame.interruptible
@@ -255,11 +265,23 @@ def evaluateFiberR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool
   | .refuse cause => FiberAction.refuse m f yielding cause
   | .dropObservers token => FiberAction.dropObservers interp m f yielding token (answerWith next)
   | .cancelRace raceId => FiberAction.cancelRace interp m (saveAnswerR f (seqR next)) yielding raceId
+  -- §20: the `Scope` service read, and the two counted steps of a multi-finalizer close
+  | .ambientScope => FiberAction.ambientScope interp m f yielding (answerWith next)
+  | .closeWalk _ _ _ => ⟨m, answerR f (next .unit), yielding, .continue_, []⟩
+  | .closeIter .sequential order ex =>
+    -- `Iterator[evaluate]` over the sequential generator, like `.gen`
+    let f := saveAnswerR f next
+    match (interp.iterNext (.store (.closeSeq order ex [])) .unit).2 with
+    | .done v => ⟨m, answerR f (.pure (.success v)), yielding, .continue_, []⟩
+    | .halt c => ⟨m, answerR f (.pure (.failure c)), yielding, .continue_, []⟩
+    | .resume code cont => ⟨m, answerR (pushR f (.iter cont)) code, yielding, .continue_, []⟩
+  | .closeIter .parallel order ex =>
+    FiberAction.closePar interp m (saveAnswerR f next) yielding (order.map fun fin => denoteFin fin ex)
 
 /-- Store deliveries retain the shared loop's `answered`/`deliver` split, so
 a completing Deferred's synchronous resumes run before its continuation; the
 operation's continuation is installed directly, with no saved slot. -/
-def evaluateR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool) : RIter :=
+def evaluateRawR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool) : RIter :=
   match f.frame.current with
   | .pure ex => deliverR interp m f yielding ex
   | .vis (.inr op) next => evaluateFiberR interp m f yielding op next
@@ -268,8 +290,48 @@ def evaluateR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool) : R
     | some (state, value) => ⟨{ m with state }, answerR f (next value), yielding, .answered, [.drainDue]⟩
     | none => ⟨m, answerR f (next .unit), yielding, .answered, []⟩
 
+/-- The scoped exit callback restores context and closes its scope before the
+next loop checkpoint (`internal/effect.ts:3944-3947`). This stateful glue is
+outside pure construction preparation and uses the mask retained by the pop. -/
+def prepareScopedExitR (it : RIter) : RIter :=
+  match it.fiber.frame.current with
+  | .vis (.inr (.scopeExit previous scope ex)) next =>
+    let f := { it.fiber with
+      context := previous
+      maxOpsBeforeYield := previous.maxOpsBeforeYield
+      preventYield := previous.preventYield }
+    match closeScopeUnsafeR scope ex f.frame.interruptible it.machine.state with
+    -- an unknown scope halts the machine; the callback's exit stays the fiber's current, as
+    -- the frame keeps the exit it was delivering
+    | none => { it with fiber := answerR f (.pure ex), outcome := .stuck (.unknownScope scope) }
+    | some (state, program) =>
+      let code := match program with
+        | none => .vis (.inr (.finishFinalizer ex)) next
+        | some code => (finalizerR ex code).bind next
+      { it with machine := { it.machine with state }, fiber := answerR f code }
+  | _ => it
+
+/-- A store answer owes delivery after its nested resumes. Every other result
+finishes its callback and construction glue before another loop can yield. -/
+def prepareIterR (it : RIter) : RIter :=
+  match it.outcome with
+  | .answered | .commands => it
+  | _ => prepareScopedExitR
+      { it with fiber := answerR it.fiber (prepareR it.machine.completedExits it.fiber.frame.current) }
+
+/-- Resolve construction glue without charging a host operation. Source
+callbacks returning code capture this view before the next run-loop checkpoint. -/
+def evaluateR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool) : RIter :=
+  prepareIterR (evaluateRawR interp m
+    (answerR f (prepareR m.completedExits f.frame.current)) yielding)
+
 @[reducible] instance termEvaluator :
     FiberEvaluator EffName EffThunk Val Err Defect FiberId Ann Ctx Stores RProgram RSaved Unit where
   evaluate := evaluateR
+
+/-- The native term evaluator shares the frame evaluator's construction view. -/
+@[reducible] def termEvaluatorFor (root : NativeEff) :
+    FiberEvaluator EffName EffThunk Val Err Defect FiberId Ann Ctx Stores RProgram RSaved Unit where
+  evaluate := fun _ m f yielding => evaluateR (interpRAt root m.completedExits) m f yielding
 
 end Effect4.Program.Sched

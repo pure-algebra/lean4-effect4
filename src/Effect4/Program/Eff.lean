@@ -170,6 +170,8 @@ value `spelling` on a unit request (the service route's nullary rows, `cell.get`
 inductive RowShape
   | call
   | value
+  /-- Apply the request tuple as separate arguments, followed by trailing names. -/
+  | tupleCall
 deriving DecidableEq, Repr
 
 structure Row where

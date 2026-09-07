@@ -76,9 +76,40 @@ def printCause : CauseTerm → TypeScript.Expr
   | .interrupt (some who) => .call (.ident "Cause.interrupt") [printTerm who]
   | .both left right => .call (.ident "Cause.combine") [printCause left, printCause right]
 
+/-- The two components of a `pair` application, the request shape a tuple-call row
+receives from an admitted program. -/
+def pairArgs? : Term → Option (Term × Term)
+  | .app atom (.cons x (.cons y .nil)) => if atom = "pair" then some (x, y) else none
+  | _ => none
+
+theorem pairArgs?_some {r x y : Term} (h : pairArgs? r = some (x, y)) :
+    r = .app "pair" (.cons x (.cons y .nil)) := by
+  unfold pairArgs? at h
+  split at h
+  · split at h
+    · rename_i hp
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      subst hp
+      rfl
+    · cases h
+  · cases h
+
+/-- The argument list of a tuple-call row (source-repairs §18): the components of a
+`pair` application print as the two arguments the pinned two-argument export declares,
+so the host infers the export's type parameters from them; any other request, a saved
+variable in the admitted image, prints as `fst(request)` and `snd(request)`, one read
+of the value per component. -/
+def printTupleArgs (request : Term) : List TypeScript.Expr :=
+  match pairArgs? request with
+  | some (x, y) => [printTerm x, printTerm y]
+  | none => [.call (.ident "fst") [printTerm request], .call (.ident "snd") [printTerm request]]
+
 /-- A row's operation, by the row's declared shape and request type: a value row is the
 bare `spelling` (the service route's nullary rows), a call row on a `unit` request is
-`spelling()`, and every other call row is `spelling(request)`. -/
+`spelling()`, and every other call row is `spelling(request)`. A tuple-call row receives
+`printTupleArgs` of its request as two ordinary arguments, then the declared trailing
+names. -/
 def printRow (row : Row) (request : Term) : TypeScript.Expr :=
   let trailing := row.trailing.map TypeScript.Expr.ident
   match row.shape with
@@ -86,6 +117,7 @@ def printRow (row : Row) (request : Term) : TypeScript.Expr :=
   | .call =>
     if row.request = Ty.unit then .call (.ident row.spelling) trailing
     else .call (.ident row.spelling) (printTerm request :: trailing)
+  | .tupleCall => .call (.ident row.spelling) (printTupleArgs request ++ trailing)
 
 /-- The fork options object rc.112's fork family takes:
 `{ startImmediately: b, uninterruptible: true | false | "inherit" }`. `daemon` is not a
@@ -226,7 +258,8 @@ mutual
 
   /-- The fiber actions. The five with no public rc.112 export of the same frame shape are
   refused by constructor name; everything else is `Effect.fork*`, `Fiber.*`, `Scope.close`,
-  `Effect.context()` or `Effect.fiberId`. -/
+  `Effect.context()` or `Effect.fiberId`, with synchronous `Fiber.runIn` wrapped by
+  `Effect.withFiber` to return its declared unit effect. -/
   def printAction (sig : Signature Op) (n : Nat) :
       ActionTerm Op → Except PrintRefusal TypeScript.Expr
     | .fork program options => do
@@ -240,7 +273,12 @@ mutual
       let p ← print sig n program
       .ok (.call (.ident "Effect.forkScoped") [p, printForkOptions options])
     | .runIn target scope =>
-      .ok (.call (.ident "Fiber.runIn") [printTerm target, printTerm scope])
+      -- `Fiber.runIn` is synchronous and returns its fiber (rc.112 :5440-5462).
+      -- The IR action returns unit after this WithFiber callback has linked it.
+      .ok (.call (.ident "Effect.withFiber")
+        [.arrowBlock []
+          [.exprStmt (.call (.ident "Fiber.runIn") [printTerm target, printTerm scope]),
+            .ret (.ident "Effect.void")]])
     | .interrupt target => .ok (.call (.ident "Fiber.interrupt") [printTerm target])
     | .interruptScoped _ => .error (.internalAction "interruptScoped")
     | .interruptAll targets none =>

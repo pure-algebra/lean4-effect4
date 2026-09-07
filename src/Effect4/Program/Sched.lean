@@ -64,11 +64,13 @@ inductive FrontierReason
 deriving DecidableEq
 
 /-- Addressed source bodies and the two synthesized bodies used by the stores.
-`Stores.raceSettleProgram` and `closeParChain` have no source point. -/
+`Stores.raceSettleProgram` and a scope's finalizer programs have no source point. A settled race's
+masked cleanup is named by the race, so it interrupts the race's live set at cleanup
+time (`internal/effect.ts:1510-1514`, D6a), never a winner-time list. -/
 inductive Body
   | at_ (point : Point)
   | fin (name : FinName) (exit : ExitV)
-  | interruptFibers (live : List FiberId)
+  | raceCleanup (race : Nat)
 deriving DecidableEq
 
 /-- Continuation slots retained across suspension. These are control data, not
@@ -92,12 +94,22 @@ inductive FiberOp : Type
   | yieldNow (priority : Nat)
   | async (register : EffName) (request : Val)
   | interrupt (target : FiberId)
+  /-- `fiberInterruptAs(target, who)` (`internal/effect.ts:871-884`): the program the public
+  interrupt's entry returns (source-repairs §19, D6b). -/
+  | interruptAs (target : FiberId) (who : FiberId)
   | interruptScoped (target : FiberId)
   | interruptAll (targets : List FiberId) (interruptor : Option FiberId)
   | mask (flag : Bool) (body : Body)
   | closeScope (scope : Nat) (exit : ExitV)
+  /-- Atomic scoped entry around an eager addressed body. -/
+  | scoped (body : Point)
+  /-- Stateful callback glue, consumed during delivery after the scoped pop. -/
+  | scopeExit (previous : Ctx) (scope : Nat) (exit : ExitV)
   | acquireRelease (acquire : Point) (release : Point)
   | raceAll (entrants : List Point)
+  /-- The counted `Async` registration a race's entry returns (`internal/effect.ts:1493`,
+  D6a): the term instance of `RunInterp.parkCode` at `ParkKind.race`. -/
+  | raceRegister (race : Nat)
   | cancelRace (race : Nat)
   | getId
   | getContext
@@ -107,6 +119,15 @@ inductive FiberOp : Type
   | runIn (target : FiberId) (scope : Nat) (key : Nat)
   | dropObservers (token : Nat)
   | refuse (cause : Cause Err Defect FiberId Ann)
+  /-- The `Scope` service read (`Context.ts:423`; source-repairs §20): the ambient scope's
+  handle, the first half of `forkScoped`'s `flatMap(scope, …)`. -/
+  | ambientScope
+  /-- `scopeCloseFinalizers`' counted `fnUntraced` suspend (`internal/effect.ts:1199-1208`,
+  `:3806`; §20): the close of two or more finalizers, answering unit before its walk. -/
+  | closeWalk (strategy : FinalizerStrategy) (order : List FinName) (exit : ExitV)
+  /-- The walk's counted `Iterator` entry (`:1356-1372`; §20): the sequential generator from
+  its first finalizer, or the parallel step. Answers the walk's exit. -/
+  | closeIter (strategy : FinalizerStrategy) (order : List FinName) (exit : ExitV)
   | frontier (reason : FrontierReason) (at_ : Point)
   /-- `none` enters the body; `some exit` resumes outside its saved boundary. -/
   | guard_ (kind : GuardKind)
@@ -120,6 +141,9 @@ inductive FiberOp : Type
   | gen (at_ : Point)
   /-- A cursor loop's initial entry (`While[evaluate]`). -/
   | loop (at_ : Point) (cursor : Val)
+  /-- The completed-exit view at a source callback's invocation. Resolved during
+  code construction, with no host operation or scheduler command of its own. -/
+  | construction
 deriving DecidableEq
 
 /-- Operations that deliver an exit answer directly with that exit, while value-returning
@@ -127,26 +151,31 @@ operations retain `Val`. R2's answer amendment is recorded in the packet; the sc
 claimed collision in `reifyExitVal` is false (`E4-SCHED-CE-002`). The generator and loop
 entries answer with the generator's or the loop's exit. -/
 abbrev FiberOp.answer : FiberOp → Type
+  | .construction => List (FiberId × ExitV)
   | .guard_ _ => Option ExitV
   | .unguard _ | .finishFinalizer _ => ExitV
-  | .mask _ _ | .closeScope _ _ | .acquireRelease _ _ | .raceAll _
-  | .async _ _ | .forkScoped _ _ _ | .frontier _ _ | .gen _ | .loop _ _ => ExitV
+  | .scoped _ | .scopeExit _ _ _
+  | .mask _ _ | .closeScope _ _ | .acquireRelease _ _ | .raceAll _ | .raceRegister _
+  | .async _ _ | .forkScoped _ _ _ | .frontier _ _ | .gen _ | .loop _ _ | .closeIter _ _ _ => ExitV
   | .await _ .joinEffect => ExitV
   | _ => Val
 
 /-- Only a total placeholder for the store-lift theorem; never a fiber semantics. -/
 def FiberOp.defaultAnswer : (op : FiberOp) → op.answer
+  | .construction => []
   | .guard_ _ => none
   | .unguard ex | .finishFinalizer ex => ex
-  | .mask _ _ | .closeScope _ _ | .acquireRelease _ _ | .raceAll _
-  | .async _ _ | .forkScoped _ _ _ | .frontier _ _ | .gen _ | .loop _ _ => Exit.success Val.unit
+  | .scoped _ | .scopeExit _ _ _
+  | .mask _ _ | .closeScope _ _ | .acquireRelease _ _ | .raceAll _ | .raceRegister _
+  | .async _ _ | .forkScoped _ _ _ | .frontier _ _ | .gen _ | .loop _ _ | .closeIter _ _ _ =>
+    Exit.success Val.unit
   | .await _ .joinEffect => Exit.success Val.unit
   | .await _ .awaitValue => Val.unit
   | .fork _ _ | .forkIn _ _ _ _ | .awaitAll _ | .awaitAllFailFast _
-  | .yieldNow _ | .interrupt _ | .interruptScoped _ | .interruptAll _ _
+  | .yieldNow _ | .interrupt _ | .interruptAs _ _ | .interruptScoped _ | .interruptAll _ _
   | .cancelRace _ | .getId | .getContext | .setContext _ | .snapshotChildren
   | .awaitNewChildren _ | .runIn _ _ _ | .dropObservers _ | .refuse _
-  | .suspend _ | .sync _ => Val.unit
+  | .suspend _ | .sync _ | .ambientScope | .closeWalk _ _ _ => Val.unit
 
 /-- The answer type is selected by the operation. -/
 abbrev FiberSig : Effects.Signature.{0, 0} := ⟨FiberOp, FiberOp.answer⟩

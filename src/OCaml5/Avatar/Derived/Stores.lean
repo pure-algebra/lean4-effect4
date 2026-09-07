@@ -158,11 +158,13 @@ def progName : InductiveDesc where
      { leanName := "closeScopeOf", args := [{ leanName := "scope", leanTy := .nm "Nat" }, { leanName := "exit", leanTy := .nm "ExitV" }] },
      { leanName := "awaitAllNew", args := [{ leanName := "body", leanTy := .nm "ProgName" }] },
      { leanName := "interruptFibers", args := [{ leanName := "targets", leanTy := .lst (.nm "FiberId") }] },
-     { leanName := "joinFiber", args := [{ leanName := "target", leanTy := .nm "FiberId" }, { leanName := "mode", leanTy := .nm "Supervision.ObserverMode" }] }]
+     { leanName := "cancelRace", args := [{ leanName := "race", leanTy := .nm "Nat" }] },
+     { leanName := "joinFiber", args := [{ leanName := "target", leanTy := .nm "FiberId" }, { leanName := "mode", leanTy := .nm "Supervision.ObserverMode" }] },
+     { leanName := "closeWalk", args := [{ leanName := "strategy", leanTy := .nm "FinalizerStrategy" }, { leanName := "order", leanTy := .lst (.nm "FinName") }, { leanName := "exit", leanTy := .nm "ExitV" }] }]
 
 def name : InductiveDesc where
   leanName := "Name"
-  site := "Stores.lean:313"
+  site := "Stores.lean:321"
   subst := []
   leanParams := []
   ctors :=
@@ -185,20 +187,21 @@ def name : InductiveDesc where
      { leanName := "reFail", args := [{ leanName := "cause", leanTy := .nm "CauseV" }] },
      { leanName := "finalizerName", args := [{ leanName := "fin", leanTy := .nm "FinName" }] },
      { leanName := "closeSeq", args := [{ leanName := "remaining", leanTy := .lst (.nm "FinName") }, { leanName := "exit", leanTy := .nm "ExitV" }, { leanName := "captured", leanTy := .lst (.app "Reason" [.nm "Err", .nm "Defect", .nm "FiberId", .nm "Ann"]) }] },
-     { leanName := "closePar", args := [{ leanName := "remaining", leanTy := .lst (.nm "FinName") }, { leanName := "exit", leanTy := .nm "ExitV" }, { leanName := "forked", leanTy := .lst (.nm "FiberId") }, { leanName := "closerInterruptible", leanTy := .nm "Bool" }] },
-     { leanName := "mergeAwaitedExits", args := [] }]
+     { leanName := "closeParDone", args := [] }]
 
 def actionName : InductiveDesc where
   leanName := "ActionName"
-  site := "Stores.lean:374"
+  site := "Stores.lean:378"
   subst := []
   leanParams := []
   ctors :=
     [{ leanName := "fork", args := [{ leanName := "program", leanTy := .nm "ProgName" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }] },
      { leanName := "forkIn", args := [{ leanName := "program", leanTy := .nm "ProgName" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }, { leanName := "scope", leanTy := .nm "Nat" }, { leanName := "key", leanTy := .nm "Nat" }] },
      { leanName := "forkScoped", args := [{ leanName := "program", leanTy := .nm "ProgName" }, { leanName := "options", leanTy := .nm "Supervision.ForkOptions" }, { leanName := "key", leanTy := .nm "Nat" }] },
+     { leanName := "ambientScope", args := [] },
      { leanName := "runIn", args := [{ leanName := "target", leanTy := .nm "FiberId" }, { leanName := "scope", leanTy := .nm "Nat" }, { leanName := "key", leanTy := .nm "Nat" }] },
      { leanName := "interrupt", args := [{ leanName := "target", leanTy := .nm "FiberId" }] },
+     { leanName := "interruptAs", args := [{ leanName := "target", leanTy := .nm "FiberId" }, { leanName := "who", leanTy := .nm "FiberId" }] },
      { leanName := "interruptScoped", args := [{ leanName := "target", leanTy := .nm "FiberId" }] },
      { leanName := "interruptAll", args := [{ leanName := "targets", leanTy := .lst (.nm "FiberId") }, { leanName := "interruptor", leanTy := .opt (.nm "FiberId") }] },
      { leanName := "awaitAll", args := [{ leanName := "targets", leanTy := .lst (.nm "FiberId") }] },
@@ -212,11 +215,12 @@ def actionName : InductiveDesc where
      { leanName := "setInterruptible", args := [{ leanName := "body", leanTy := .nm "ProgName" }, { leanName := "flag", leanTy := .nm "Bool" }] },
      { leanName := "refuse", args := [{ leanName := "cause", leanTy := .nm "CauseV" }] },
      { leanName := "dropObservers", args := [{ leanName := "token", leanTy := .nm "Nat" }] },
-     { leanName := "cancelRace", args := [{ leanName := "race", leanTy := .nm "Nat" }] }]
+     { leanName := "cancelRace", args := [{ leanName := "race", leanTy := .nm "Nat" }] },
+     { leanName := "closePar", args := [{ leanName := "order", leanTy := .lst (.nm "FinName") }, { leanName := "exit", leanTy := .nm "ExitV" }] }]
 
 def thunk : InductiveDesc where
   leanName := "Thunk"
-  site := "Stores.lean:403"
+  site := "Stores.lean:417"
   subst := []
   leanParams := []
   ctors :=
@@ -257,7 +261,7 @@ def scope : StructDesc where
 
 def deferredCell : StructDesc where
   leanName := "DeferredCell"
-  site := "Stores.lean:654"
+  site := "Stores.lean:668"
   subst := []
   leanParams := []
   fields :=
@@ -266,7 +270,7 @@ def deferredCell : StructDesc where
 
 def deferredStore : StructDesc where
   leanName := "DeferredStore"
-  site := "Stores.lean:663"
+  site := "Stores.lean:677"
   subst := []
   leanParams := []
   fields :=
@@ -275,7 +279,7 @@ def deferredStore : StructDesc where
 
 def scopeEntry : StructDesc where
   leanName := "ScopeEntry"
-  site := "Stores.lean:861"
+  site := "Stores.lean:875"
   subst := []
   leanParams := []
   fields :=
@@ -284,7 +288,7 @@ def scopeEntry : StructDesc where
 
 def scopeStore : StructDesc where
   leanName := "ScopeStore"
-  site := "Stores.lean:869"
+  site := "Stores.lean:883"
   subst := []
   leanParams := []
   fields :=
@@ -292,7 +296,7 @@ def scopeStore : StructDesc where
 
 def stores : StructDesc where
   leanName := "Stores"
-  site := "Stores.lean:1004"
+  site := "Stores.lean:1036"
   subst := []
   leanParams := []
   fields :=

@@ -980,7 +980,8 @@ set_option linter.unusedVariables false
   thunk, self = Effect4.Prim.sync thunk) ∨ (∃ thunk, self = Effect4.Prim.suspend thunk) ∨ (∃
   thunk, self = Effect4.Prim.withFiber thunk) ∨ (∃ error, self = Effect4.Prim.yieldableError
   error) ∨ (∃ generator cursor, self = Effect4.Prim.iterator generator cursor) ∨ (∃ body
-  onValue, self = Effect4.Prim.onSuccess body onValue) ∨ (∃ body onCause, self =
+  onValue, self = Effect4.Prim.onSuccess body onValue) ∨ (∃ body next, self =
+  Effect4.Prim.onSuccessConst body next) ∨ (∃ body onCause, self =
   Effect4.Prim.onFailure body onCause) ∨ (∃ body onValue onCause, self =
   Effect4.Prim.onSuccessAndFailure body onValue onCause) ∨ (∃ body, self =
   Effect4.Prim.exitFrame body) ∨ (∃ body finalizer flag, self = Effect4.Prim.onExit body
@@ -988,6 +989,73 @@ set_option linter.unusedVariables false
   Effect4.Prim.whileLoop loop cursor) ∨ (∃ priority, self = Effect4.Prim.yieldNowWith priority)
   ∨ (∃ register withSignal cancel, self = Effect4.Prim.async register withSignal cancel) ∨ ∃
   onInterrupt, self = Effect4.Prim.asyncFinalizer onInterrupt)
+
+-- census: frame-arm.OnSuccess
+#check (@Effect4.Prim.arms_onSuccessConst :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
+  (body next : Effect4.Prim ν σ β ε δ ι α),
+  (Effect4.Prim.onSuccessConst body next).arms = [Effect4.Arm.contA])
+
+-- census: frame-arm.OnSuccess
+#check (@Effect4.Prim.ensure_onSuccessConst :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
+  (body next : Effect4.Prim ν σ β ε δ ι α) (fiber : Effect4.FrameFiber ν σ β ε δ ι α),
+  (Effect4.Prim.onSuccessConst body next).ensure fiber = (fiber, none))
+
+-- census: op.OnSuccess
+#check (@Effect4.Prim.armA_onSuccessConst :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
+  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (interp : Effect4.PrimInterp ν σ β ε δ ι α)
+  (body next : Effect4.Prim ν σ β ε δ ι α) (value : β)
+  (provided : Option (Effect4.Exit β ε δ ι α)),
+  (Effect4.Prim.onSuccessConst body next).armA interp value provided = some (next, []))
+
+-- census: frame-arm.OnSuccess
+#check (@Effect4.Prim.armE_onSuccessConst_none :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
+  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (interp : Effect4.PrimInterp ν σ β ε δ ι α)
+  (body next : Effect4.Prim ν σ β ε δ ι α) (cause : Effect4.Cause ε δ ι α)
+  (provided : Option (Effect4.Exit β ε δ ι α)),
+  (Effect4.Prim.onSuccessConst body next).armE interp cause provided = none)
+
+-- census: op.OnSuccess
+#check (@Effect4.FrameFiber.step_onSuccessConst :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
+  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (interp : Effect4.PrimInterp ν σ β ε δ ι α) (self : Effect4.FrameFiber ν σ β ε δ ι α)
+  (body next : Effect4.Prim ν σ β ε δ ι α),
+  (Effect4.FrameFiber.mk (Effect4.Prim.onSuccessConst body next) self.stack self.interruptible
+      self.interruptedCause self.deferredInterrupt).step interp =
+    (Effect4.FrameStep.running
+      (Effect4.FrameFiber.mk body (Effect4.Prim.onSuccessConst body next :: self.stack)
+        self.interruptible self.interruptedCause self.deferredInterrupt),
+      [Effect4.FrameEvent.pushed (Effect4.Prim.onSuccessConst body next)]))
+
+-- census: op.OnSuccess
+#check (@Effect4.FrameFiber.resumeValue_onSuccessConst :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
+  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (interp : Effect4.PrimInterp ν σ β ε δ ι α) (self : Effect4.FrameFiber ν σ β ε δ ι α)
+  (body next : Effect4.Prim ν σ β ε δ ι α) (value : β)
+  (provided : Option (Effect4.Exit β ε δ ι α)), self.deferredInterrupt = false →
+  ({ self with stack := Effect4.Prim.onSuccessConst body next :: self.stack }).resumeValue
+      interp value provided =
+    (Effect4.FrameStep.running { self with current := next },
+      [Effect4.FrameEvent.popped (Effect4.Prim.onSuccessConst body next)]))
+
+-- census: op.OnSuccess
+#check (@Effect4.FrameFiber.step_success_onSuccessConst :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
+  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (interp : Effect4.PrimInterp ν σ β ε δ ι α) (self : Effect4.FrameFiber ν σ β ε δ ι α)
+  (body next : Effect4.Prim ν σ β ε δ ι α) (value : β), self.deferredInterrupt = false →
+  (Effect4.FrameFiber.mk (Effect4.Prim.success value)
+      (Effect4.Prim.onSuccessConst body next :: self.stack) self.interruptible
+      self.interruptedCause self.deferredInterrupt).step interp =
+    (Effect4.FrameStep.running { self with current := next },
+      [Effect4.FrameEvent.popped (Effect4.Prim.onSuccessConst body next)]))
 
 #check (@Effect4.FrameFiber.start_eq :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (current : Effect4.Prim ν σ β ε δ ι α),
@@ -2117,12 +2185,13 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
         ∃ it,
           Effect4.Machine.injectYield m f Bool.false = Option.some it ∧
             it.yielding = Bool.true ∧
-              it.outcome = Effect4.Machine.Outcome.parked ∧
-                it.fiber.parked = Effect4.Machine.Parked.withGuard m.nextToken ∧
+              it.outcome = Effect4.Machine.Outcome.continue_ ∧
+                it.fiber.frame.current = Effect4.Prim.onSuccessConst
+                  (Effect4.Prim.yieldNowWith 0) f.frame.current ∧
                   it.fiber.yieldOverride = Option.none ∧
                     it.fiber.dispatcher =
-                        f.dispatcher.enqueue 0 (Effect4.Machine.Task.resume f.id m.nextToken f.frame.current) ∧
-                      it.machine.nextToken = m.nextToken + 1)
+                        f.dispatcher ∧
+                      it.machine.nextToken = m.nextToken)
 
 #check (@Effect4.Machine.iteration_injected :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
@@ -2130,7 +2199,8 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
     (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
     (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (it : Effect4.Machine.Iter ν σ β ε δ ι α χ St),
     Effect4.Machine.injectYield m (Effect4.Machine.countOp (Effect4.Machine.runloopTop f)) yielding = Option.some it →
-      Effect4.Machine.iteration interp m f yielding = it)
+      Effect4.Machine.iteration interp m f yielding =
+        Effect4.Machine.evaluatePrim interp it.machine it.fiber it.yielding)
 
 #check (@Effect4.Machine.drive_loop_parked :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
@@ -2141,16 +2211,30 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
     m.stuck = Option.none →
       m.fiber? id = Option.some f →
         (Effect4.Machine.iteration interp m f yielding).outcome = Effect4.Machine.Outcome.parked →
-          Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.loop id yielding :: rest) =
-            Effect4.Machine.drive interp fuel
-              ((Effect4.Machine.iteration interp m f yielding).machine.update
-                (have __src := (Effect4.Machine.iteration interp m f yielding).fiber;
-                { id := __src.id, frame := __src.frame, running := Bool.false, parked := __src.parked,
-                  pending := __src.pending, finalizing := __src.finalizing, exit := __src.exit,
-                  currentOpCount := __src.currentOpCount, maxOpsBeforeYield := __src.maxOpsBeforeYield,
-                  preventYield := __src.preventYield, yieldOverride := __src.yieldOverride, observers := __src.observers,
-                  children := __src.children, dispatcher := __src.dispatcher, context := __src.context }))
-              ((Effect4.Machine.iteration interp m f yielding).nested ++ rest))
+          (Effect4.Machine.iteration interp m f yielding).fiber.frame.deferredInterrupt = false →
+            Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.loop id yielding :: rest) =
+              Effect4.Machine.drive interp fuel
+                ((Effect4.Machine.iteration interp m f yielding).machine.update
+                  { (Effect4.Machine.iteration interp m f yielding).fiber with running := false })
+                ((Effect4.Machine.iteration interp m f yielding).nested ++ rest))
+
+#check (@Effect4.Machine.drive_loop_parked_deferred :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (id : Effect4.FiberId) (yielding : Bool) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
+    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
+    m.stuck = Option.none →
+      m.fiber? id = Option.some f →
+        (Effect4.Machine.iteration interp m f yielding).outcome = Effect4.Machine.Outcome.parked →
+          (Effect4.Machine.iteration interp m f yielding).fiber.frame.deferredInterrupt = true →
+            Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.loop id yielding :: rest) =
+              Effect4.Machine.drive interp fuel
+                ((Effect4.Machine.iteration interp m f yielding).machine.update
+                  { (Effect4.Machine.iteration interp m f yielding).fiber with
+                      parked := Effect4.Machine.Parked.notParked, pending := [] })
+                ((Effect4.Machine.iteration interp m f yielding).nested ++
+                  [Effect4.Machine.Cmd.loop id (Effect4.Machine.iteration interp m f yielding).yielding] ++ rest))
 
 #check (@Effect4.Machine.drive_loop_continues :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
@@ -2242,13 +2326,40 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
               f.frame.deferredInterrupt ∧
             (Effect4.Machine.interruptRecord interp interruptor extra f).fst.frame.current = f.frame.current)
 
-#check (@Effect4.Machine.spawn_daemon_untracked :
+#check (@Effect4.Machine.spawn_untracked :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
     {St : Type (max u v)} [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
     (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
     (parent : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (program : Effect4.Prim ν σ β ε δ ι α)
     (options : Effect4.Supervision.ForkOptions),
-    options.daemon = Bool.true → (Effect4.Machine.spawn interp m parent program options).snd.fst.children = parent.children)
+    (Effect4.Machine.spawn interp m parent program options).snd.fst = parent)
+
+#check (@Effect4.Machine.drive_trackChild_live :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (parent child : Effect4.FiberId) (c : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
+    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
+    m.stuck = Option.none →
+      m.fiber? child = Option.some c →
+        c.exit = Option.none →
+          Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.trackChild parent child :: rest) =
+            Effect4.Machine.drive interp fuel
+              ((m.modify parent fun p => { p with children := p.children ++ [child] }).modify child
+                fun c => { c with observers := c.observers ++ [Effect4.Machine.Observer.untrackChild parent] })
+              rest)
+
+#check (@Effect4.Machine.drive_trackChild_exited :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (parent child : Effect4.FiberId) (c : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (exit : Effect4.Exit β ε δ ι α)
+    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
+    m.stuck = Option.none →
+      m.fiber? child = Option.some c →
+        c.exit = Option.some exit →
+          Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.trackChild parent child :: rest) =
+            Effect4.Machine.drive interp fuel m rest)
 
 #check (@Effect4.Machine.spawnChild_fields :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
@@ -2262,8 +2373,7 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
             | Effect4.Supervision.MaskMode.interruptible => Bool.true
             | Effect4.Supervision.MaskMode.uninterruptible => Bool.false
             | Effect4.Supervision.MaskMode.inherit => parent.frame.interruptible) ∧
-          (Effect4.Machine.spawnChild interp m parent program options).observers =
-            if options.daemon = Bool.true then [] else [Effect4.Machine.Observer.untrackChild parent.id])
+          (Effect4.Machine.spawnChild interp m parent program options).observers = [])
 
 #check (@Effect4.Machine.interruptRecord_exited :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
@@ -2550,12 +2660,7 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
       ((Effect4.Machine.RunMachine.mk (m.fibers ++ [Effect4.Machine.spawnChild interp m parent program options]) m.races
               (m.nextId + 1) m.nextToken m.nextRace m.middlewareInstalled m.armed m.state m.trace m.stuck).emit
           [Effect4.Machine.RunEvent.forked parent.id (Effect4.FiberId.mk m.nextId) options.daemon],
-        Effect4.Machine.RunFiber.mk parent.id parent.frame parent.running parent.parked parent.pending parent.finalizing
-          parent.exit parent.currentOpCount parent.maxOpsBeforeYield parent.preventYield parent.yieldOverride
-          parent.observers
-          (if options.daemon = Bool.true then parent.children else parent.children ++ [Effect4.FiberId.mk m.nextId])
-          parent.dispatcher parent.context,
-        Effect4.FiberId.mk m.nextId))
+        parent, Effect4.FiberId.mk m.nextId))
 
 #check (@Effect4.Machine.evaluatePrim_join_done :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
@@ -2781,42 +2886,49 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
     (onInterrupt : ν), (Effect4.Prim.asyncFinalizer onInterrupt).hasArm Effect4.Arm.contA = Bool.false)
 
-#check (@Effect4.Machine.closeSeqChain_order :
-  ∀ (fin : Effect4.Machine.FinName) (rest : List Effect4.Machine.FinName)
-    (exit : Effect4.Machine.ExitV)
-    (captured : List (Effect4.Reason Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)),
-    Effect4.Machine.closeSeqChain (fin :: rest) exit captured =
-      Effect4.Prim.onSuccessAndFailure (Effect4.Machine.finProgram fin exit) (Effect4.Machine.Name.closeSeq rest exit captured)
-        (Effect4.Machine.Name.closeSeq rest exit captured))
+-- source-repairs §20 (2026-09-07): the multiple-finalizer close is `scopeCloseFinalizers`'
+-- generator, walked by the counted `Iterator`; the chains are retired.
+#check (@Effect4.Machine.closeWalk_sequential :
+  ∀ (order : List Effect4.Machine.FinName) (exit : Effect4.Machine.ExitV),
+    Effect4.Machine.progOf (Effect4.Machine.ProgName.closeWalk Effect4.FinalizerStrategy.sequential order exit) =
+      Effect4.Prim.iterator (Effect4.Machine.Name.closeSeq order exit []) Effect4.Machine.Val.unit)
 
-#check (@Effect4.Machine.closeSeqChain_captures :
+#check (@Effect4.Machine.closeSeq_step :
+  ∀ (fin : Effect4.Machine.FinName) (rest : List Effect4.Machine.FinName) (exit : Effect4.Machine.ExitV)
+    (captured : List (Effect4.Reason Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+    (value : Effect4.Machine.Val),
+    Effect4.Machine.stores.iterNext (Effect4.Machine.Name.closeSeq (fin :: rest) exit captured) value =
+      ([], Effect4.IterStep.resume (Effect4.Prim.exitFrame (Effect4.Machine.finProgram fin exit))
+        (Effect4.Machine.Name.closeSeq rest exit (captured ++ Effect4.Machine.reasonsOfVal value))))
+
+#check (@Effect4.Machine.closeSeq_captures :
   ∀ (rest : List Effect4.Machine.FinName) (exit : Effect4.Machine.ExitV)
     (captured : List (Effect4.Reason Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
     (cause : Effect4.Machine.CauseV),
-    Effect4.Machine.contEOf (Effect4.Machine.Name.closeSeq rest exit captured) cause =
-      Effect4.Machine.closeSeqChain rest exit (captured ++ cause.reasons))
+    Effect4.Machine.stores.iterNext (Effect4.Machine.Name.closeSeq rest exit captured) (Effect4.Machine.Val.exitErr cause) =
+      ([], Effect4.Machine.closeSeqStep rest exit (captured ++ cause.reasons) Effect4.Machine.Val.unit))
 
-#check (@Effect4.Machine.closeParChain_forks_immediate_daemon :
-  ∀ (fin : Effect4.Machine.FinName) (rest : List Effect4.Machine.FinName)
-    (exit : Effect4.Machine.ExitV) (forked : List Effect4.FiberId),
-    Effect4.Machine.closeParChain Bool.true (fin :: rest) exit forked =
-      (Effect4.Prim.withFiber
-            (Effect4.Machine.Thunk.act
-              (Effect4.Machine.ActionName.fork (Effect4.Machine.ProgName.finalizerOf fin exit)
-                { startImmediately := Bool.true, daemon := Bool.true,
-                  maskMode := Effect4.Supervision.MaskMode.interruptible }))).onSuccess
-        (Effect4.Machine.Name.closePar rest exit forked Bool.true))
-
-#check (@Effect4.Machine.closeParChain_awaits_all :
-  ∀ (exit : Effect4.Machine.ExitV) (forked : List Effect4.FiberId),
-    Effect4.Machine.closeParChain Bool.true [] exit forked =
-      (Effect4.Prim.withFiber (Effect4.Machine.Thunk.act (Effect4.Machine.ActionName.awaitAll forked))).onSuccess
-        Effect4.Machine.Name.mergeAwaitedExits)
-
-#check (@Effect4.Machine.closeSeqChain_merges :
+#check (@Effect4.Machine.closeSeq_merges :
   ∀ (exit : Effect4.Machine.ExitV)
-    (captured : List (Effect4.Reason Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)),
-    Effect4.Machine.closeSeqChain [] exit captured = Effect4.Prim.ofExit (Effect4.Machine.voidAllOf captured))
+    (captured : List (Effect4.Reason Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+    (value : Effect4.Machine.Val),
+    Effect4.Machine.stores.iterNext (Effect4.Machine.Name.closeSeq [] exit captured) value =
+      ([], Effect4.Machine.closeDone (captured ++ Effect4.Machine.reasonsOfVal value)))
+
+#check (@Effect4.Machine.closeWalk_parallel :
+  ∀ (order : List Effect4.Machine.FinName) (exit : Effect4.Machine.ExitV),
+    Effect4.Machine.progOf (Effect4.Machine.ProgName.closeWalk Effect4.FinalizerStrategy.parallel order exit) =
+      Effect4.Prim.withFiber (Effect4.Machine.Thunk.act (Effect4.Machine.ActionName.closePar order exit)))
+
+#check (@Effect4.Machine.actionOf_closePar :
+  ∀ (order : List Effect4.Machine.FinName) (exit : Effect4.Machine.ExitV),
+    Effect4.Machine.actionOf (Effect4.Machine.ActionName.closePar order exit) =
+      Effect4.Machine.WithFiberAction.closePar (order.map fun fin => Effect4.Machine.finProgram fin exit))
+
+#check (@Effect4.Machine.closeParDone_is_asVoidAll :
+  ∀ (exits : List Effect4.Machine.ExitV),
+    Effect4.Machine.stores.iterNext Effect4.Machine.Name.closeParDone (Effect4.Machine.stores.exitsValue exits) =
+      ([], Effect4.Machine.stepOfExit (Effect4.Machine.mergeExits exits)))
 
 #check (@Effect4.Machine.scopeLinkFiber_name :
   ∀ (scope key : Nat) (fiber : Effect4.FiberId) (state : Effect4.Machine.Stores)
@@ -3078,7 +3190,7 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
 
 #check (@Effect4.Machine.interruptDeferred_delegates :
   ∀ (cell : Effect4.Machine.DeferredKey) (id : Effect4.FiberId),
-    Effect4.Machine.contAOf (Effect4.Machine.Name.interruptWith cell) (Effect4.Machine.Val.fiber id) =
+    Effect4.Machine.contAOf (Effect4.Machine.Name.interruptWith cell) (Effect4.Machine.Val.nat id.value) =
       Effect4.Prim.sync (Effect4.Machine.Thunk.op (Effect4.Machine.SyncOp.deferredInterruptWith cell id)))
 
 #check (@Effect4.Machine.interruptWith_is_completion :
@@ -3399,8 +3511,8 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
     (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (exit : Effect4.Exit β ε δ ι α),
     Effect4.Machine.exitFiber interp m f exit =
       if (m.middlewareInstalled && f.finalizing.isNone && !f.children.isEmpty) = Bool.true then
-        Effect4.Machine.exitInterruptChildren interp m f exit
-      else Effect4.Machine.exitStore interp m f exit)
+        Effect4.Machine.exitFiber.exitInterruptChildren interp m f exit
+      else Effect4.Machine.exitFiber.exitStore interp m f exit)
 
 #check (@Effect4.Machine.exitFiber_no_middleware :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
@@ -3408,33 +3520,71 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
     [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
     (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
     (exit : Effect4.Exit β ε δ ι α),
-    m.middlewareInstalled = Bool.false → Effect4.Machine.exitFiber interp m f exit = Effect4.Machine.exitStore interp m f exit)
+    m.middlewareInstalled = Bool.false →
+      Effect4.Machine.exitFiber interp m f exit = Effect4.Machine.exitFiber.exitStore interp m f exit)
 
-#check (@Effect4.Machine.exitStore_fields :
+#check (@Effect4.Machine.publish_fields :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (exit : Effect4.Exit β ε δ ι α),
+    (f.publish exit).exit = Option.some exit ∧ (f.publish exit).finalizing = Option.none ∧
+      (f.publish exit).running = Bool.false ∧ (f.publish exit).parked = Effect4.Machine.Parked.notParked ∧
+        (f.publish exit).pending = [] ∧ (f.publish exit).frame.deferredInterrupt = Bool.false ∧
+          (f.publish exit).frame.stack = f.frame.stack ∧ (f.publish exit).children = f.children ∧
+            (f.publish exit).observers = f.observers ∧ (f.publish exit).context = f.context)
+
+#check (@Effect4.Machine.cleared_fields :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
+    (Effect4.Machine.RunFiber.cleared interp f).observers = [] ∧
+      (Effect4.Machine.RunFiber.cleared interp f).frame.stack = [] ∧
+        (Effect4.Machine.RunFiber.cleared interp f).children = [] ∧
+          (Effect4.Machine.RunFiber.cleared interp f).context = interp.emptyContext ∧
+            (Effect4.Machine.RunFiber.cleared interp f).exit = f.exit)
+
+#check (@Effect4.Machine.exitStore_no_observers :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
     (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
     (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (exit : Effect4.Exit β ε δ ι α),
-    (Effect4.Machine.exitStore interp m f exit).snd.fst.exit = Option.some exit ∧
-      (Effect4.Machine.exitStore interp m f exit).snd.fst.finalizing = Option.none ∧
-        (Effect4.Machine.exitStore interp m f exit).snd.fst.frame.stack = [] ∧
-          (Effect4.Machine.exitStore interp m f exit).snd.fst.children = [] ∧
-            (Effect4.Machine.exitStore interp m f exit).snd.fst.parked = Effect4.Machine.Parked.notParked ∧
-              (Effect4.Machine.exitStore interp m f exit).snd.fst.pending = [] ∧
-                (Effect4.Machine.exitStore interp m f exit).snd.fst.context = interp.emptyContext ∧
-                  (Effect4.Machine.exitStore interp m f exit).snd.fst.observers = [] ∧
-                    (Effect4.Machine.exitStore interp m f exit).snd.fst.frame.deferredInterrupt = Bool.false ∧
-                      (Effect4.Machine.exitStore interp m f exit).snd.snd.fst = Bool.false)
+    f.observers = [] →
+      Effect4.Machine.exitFiber.exitStore interp m f exit =
+        (((m.update (f.publish exit)).emit [Effect4.Machine.RunEvent.exited f.id exit]).update
+          (Effect4.Machine.RunFiber.cleared interp (f.publish exit)), [Effect4.Machine.Cmd.drainDue]))
 
-#check (@Effect4.Machine.exitStore_fires :
+#check (@Effect4.Machine.exitStore_observers :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
     (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (exit : Effect4.Exit β ε δ ι α),
-    (Effect4.Machine.exitStore interp m f exit).snd.snd.snd =
-      (List.foldl (Effect4.Machine.fireObserver interp f.id exit)
-          ((m.update (Effect4.Machine.exitStore.stored interp f exit)).emit [Effect4.Machine.RunEvent.exited f.id exit], [])
-          f.observers).snd)
+    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (exit : Effect4.Exit β ε δ ι α) (o : Effect4.Machine.Observer)
+    (os : List Effect4.Machine.Observer),
+    f.observers = o :: os →
+      Effect4.Machine.exitFiber.exitStore interp m f exit =
+        ((m.update (f.publish exit)).emit [Effect4.Machine.RunEvent.exited f.id exit],
+          List.map (Effect4.Machine.Cmd.observe f.id exit) (o :: os) ++
+            [Effect4.Machine.Cmd.exitDone f.id, Effect4.Machine.Cmd.drainDue]))
+
+#check (@Effect4.Machine.drive_observe :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (id : Effect4.FiberId) (exit : Effect4.Exit β ε δ ι α) (observer : Effect4.Machine.Observer)
+    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
+    m.stuck = Option.none →
+      Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.observe id exit observer :: rest) =
+        (let r := Effect4.Machine.fireObserver interp id exit (m, []) observer
+         Effect4.Machine.drive interp fuel r.fst (r.snd ++ rest)))
+
+#check (@Effect4.Machine.drive_exitDone :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (id : Effect4.FiberId) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
+    m.stuck = Option.none →
+      m.fiber? id = Option.some f →
+        Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.exitDone id :: rest) =
+          Effect4.Machine.drive interp fuel (m.update (Effect4.Machine.RunFiber.cleared interp f)) rest)
 
 #check (@Effect4.Machine.fireObserver_resumeAwait :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
@@ -3479,7 +3629,8 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
           __src.running __src.parked __src.pending __src.finalizing __src.exit __src.currentOpCount
           __src.maxOpsBeforeYield __src.preventYield __src.yieldOverride __src.observers __src.children __src.dispatcher
           __src.context)
-        yielding Effect4.Machine.Outcome.continue_ t.snd.snd)
+        yielding Effect4.Machine.Outcome.continue_
+        (t.snd.snd ++ if options.daemon = Bool.true then [] else [Effect4.Machine.Cmd.trackChild f.id s.snd.snd]))
 
 #check (@Effect4.Machine.Witnesses.w1_deferred_join_child :
   Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w1DeferredJoin 1 =
@@ -3518,7 +3669,7 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
     (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
     (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (exit : Effect4.Exit β ε δ ι α),
-    f.children = [] → Effect4.Machine.exitFiber interp m f exit = Effect4.Machine.exitStore interp m f exit)
+    f.children = [] → Effect4.Machine.exitFiber interp m f exit = Effect4.Machine.exitFiber.exitStore interp m f exit)
 
 #check (@Effect4.Machine.exitInterruptChildren_eq :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
@@ -3526,30 +3677,23 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
     [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
     (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
     (exit : Effect4.Exit β ε δ ι α),
-    Effect4.Machine.exitInterruptChildren interp m f exit =
-      have r := Effect4.Machine.interruptEach interp f.id (interp.stackAnnotations f.id) f.children (m, []);
-      have p :=
-        Effect4.Machine.countdownPark interp (r.fst.emit [Effect4.Machine.RunEvent.childrenInterrupted f.id f.children])
-          { id := f.id,
-            frame :=
-              have __src := f.frame;
-              { current := __src.current, stack := __src.stack, interruptible := __src.interruptible,
-                interruptedCause := __src.interruptedCause, deferredInterrupt := Bool.false },
-            running := f.running, parked := f.parked, pending := f.pending, finalizing := Option.some exit,
-            exit := f.exit, currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield,
-            preventYield := f.preventYield, yieldOverride := f.yieldOverride, observers := f.observers,
-            children := f.children, dispatcher := f.dispatcher, context := f.context }
-          f.children (Effect4.Machine.Resume.continueWith (interp.restoreName exit));
-      (p.fst, p.snd.fst, p.snd.snd, r.snd))
+    Effect4.Machine.exitFiber.exitInterruptChildren interp m f exit =
+      ((m.update { f with
+          finalizing := Option.some exit
+          running := Bool.false
+          frame := { f.frame with
+            deferredInterrupt := Bool.false
+            current := Effect4.Prim.onSuccess (interp.interruptAllCode f.children) (interp.restoreName exit) } }).emit
+        [Effect4.Machine.RunEvent.childrenInterrupted f.id f.children],
+       [Effect4.Machine.Cmd.evaluate f.id]))
 
-#check (@Effect4.Machine.exitInterruptChildren_interrupts :
+#check (@Effect4.Machine.exitInterruptChildren_reenters :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
     {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
     [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
     (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
     (exit : Effect4.Exit β ε δ ι α),
-    (Effect4.Machine.exitInterruptChildren interp m f exit).snd.snd.snd =
-      (Effect4.Machine.interruptEach interp f.id (interp.stackAnnotations f.id) f.children (m, [])).snd)
+    (Effect4.Machine.exitFiber.exitInterruptChildren interp m f exit).snd = [Effect4.Machine.Cmd.evaluate f.id])
 
 #check (@Effect4.Machine.Witnesses.w5_fork_latches_the_middleware :
   Effect4.Machine.Witnesses.w5ForkLatches.middlewareInstalled =
@@ -3751,38 +3895,168 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
               children := f.children, dispatcher := f.dispatcher, context := f.context },
           yielding := yielding, outcome := Effect4.Machine.Outcome.continue_, nested := [] })
 
+-- source-repairs §20 (2026-09-07): `forkScoped`'s `Scope` service read, and the parallel
+-- close's step, forks and await
+#check (@Effect4.Machine.withFiber_ambientScope :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (scope : Nat),
+    interp.ambientScope f.context = Option.some scope →
+      Effect4.Machine.evaluatePrim.withFiber interp m f yielding Effect4.Machine.WithFiberAction.ambientScope =
+        ⟨m, { f with frame := { f.frame with current := Effect4.Prim.success (interp.scopeValue scope) } },
+          yielding, Effect4.Machine.Outcome.continue_, []⟩)
+
+#check (@Effect4.Machine.withFiber_ambientScope_none :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool),
+    interp.ambientScope f.context = Option.none →
+      Effect4.Machine.evaluatePrim.withFiber interp m f yielding Effect4.Machine.WithFiberAction.ambientScope =
+        ⟨m, { f with frame := { f.frame with
+            current := Effect4.Prim.failure (Effect4.Cause.die interp.missingScope) } },
+          yielding, Effect4.Machine.Outcome.continue_, []⟩)
+
+#check (@Effect4.Machine.forkFinalizers_cons :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (host : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (program : Effect4.Prim ν σ β ε δ ι α)
+    (rest : List (Effect4.Prim ν σ β ε δ ι α)),
+    Effect4.Machine.forkFinalizers interp m host (program :: rest) =
+      (let s := Effect4.Machine.spawn interp m host program ⟨true, true, Effect4.Supervision.MaskMode.inherit⟩
+       let t := Effect4.Machine.forkFinalizers interp s.1 host rest
+       (t.1, s.2.2 :: t.2)))
+
+#check (@Effect4.Machine.withFiber_closePar :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (finalizers : List (Effect4.Prim ν σ β ε δ ι α)),
+    Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.closePar finalizers) =
+      (let s := Effect4.Machine.forkFinalizers interp m f finalizers
+       ⟨s.1, f, yielding, Effect4.Machine.Outcome.commands,
+         s.2.map Effect4.Machine.Cmd.evaluate ++ [Effect4.Machine.Cmd.closeParAwait f.id yielding s.2]⟩))
+
+#check (@Effect4.Machine.drive_closeParAwait :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (host : Effect4.FiberId) (yielding : Bool) (fibers : List Effect4.FiberId) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
+    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
+    m.stuck = Option.none →
+      m.fiber? host = Option.some f →
+        Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.closeParAwait host yielding fibers :: rest) =
+          Effect4.Machine.drive interp fuel
+            (m.update { f with frame := { f.frame with
+              current := interp.parkCode (Effect4.Machine.ParkKind.awaitAll fibers)
+              stack := Effect4.Prim.iterator interp.closeDoneName interp.voidValue :: f.frame.stack } })
+            (Effect4.Machine.Cmd.loop f.id yielding :: rest))
+
 #check (@Effect4.Machine.withFiber_raceAll :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
     (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
     (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (entrants : List (Effect4.Prim ν σ β ε δ ι α)),
     Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.raceAll entrants) =
-      have raceId := m.nextRace;
-      have token := m.nextToken;
-      have m :=
-        Effect4.Machine.RunMachine.mk m.fibers m.races m.nextId (m.nextToken + 1) (m.nextRace + 1) m.middlewareInstalled
-          m.armed m.state m.trace m.stuck;
-      have race :=
-        Effect4.Machine.Race.mk raceId f.id token
-          (have __src := Effect4.Supervision.RaceAllState.initial [];
-          Effect4.Supervision.RaceAllState.mk __src.unstarted __src.starting __src.live entrants.length __src.failures
-            __src.winner __src.accepted __src.cleanupNeeded __src.requests __src.cleanup __src.cleanupRequested)
-          Bool.false entrants;
-      have m :=
-        (Effect4.Machine.RunMachine.mk m.fibers (m.races ++ [race]) m.nextId m.nextToken m.nextRace m.middlewareInstalled
-              m.armed m.state m.trace m.stuck).emit
-          [Effect4.Machine.RunEvent.raceStarted raceId f.id entrants.length];
-      have name := interp.cancelName (interp.raceCancelName raceId) f.id token;
-      have g :=
-        (Effect4.Machine.RunFiber.mk f.id
-              (have __src := f.frame;
-              Effect4.FrameFiber.mk __src.current (Effect4.Prim.asyncFinalizer name :: f.frame.stack) __src.interruptible
-                __src.interruptedCause __src.deferredInterrupt)
-              f.running f.parked f.pending f.finalizing f.exit f.currentOpCount f.maxOpsBeforeYield f.preventYield
-              f.yieldOverride f.observers f.children f.dispatcher f.context).park
-          (Effect4.Machine.Pending.mk token Option.none [] [] Effect4.Machine.Resume.void Bool.false);
-      Effect4.Machine.Iter.mk (m.emit [Effect4.Machine.RunEvent.parkedOn g.id token]) g yielding Effect4.Machine.Outcome.parked
-        [Effect4.Machine.Cmd.launch raceId])
+      (let raceId := m.nextRace
+       let token := m.nextToken
+       let m := { m with nextRace := m.nextRace + 1, nextToken := m.nextToken + 1 }
+       let race : Effect4.Machine.Race ν σ β ε δ ι α :=
+         ⟨raceId, f.id, token,
+           { Effect4.Supervision.RaceAllState.initial [] with remaining := entrants.length }, false, entrants,
+           false⟩
+       let m := { m with races := m.races ++ [race] }
+       ⟨m.emit [Effect4.Machine.RunEvent.raceStarted raceId f.id entrants.length],
+        { f with frame := { f.frame with current := interp.parkCode (Effect4.Machine.ParkKind.race raceId) } },
+        yielding, Effect4.Machine.Outcome.continue_, []⟩))
+
+#check (@Effect4.Machine.evaluatePrim_raceRegister :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (thunk : σ) (raceId : Nat)
+    (race : Effect4.Machine.Race ν σ β ε δ ι α),
+    f.frame.current = Effect4.Prim.suspend thunk →
+      interp.parkOf (Effect4.Prim.suspend thunk) = Option.some (Except.ok (Effect4.Machine.ParkKind.race raceId)) →
+        m.race? raceId = Option.some race →
+          Effect4.Machine.evaluatePrim interp m f yielding =
+            ⟨m.updateRace { race with registering := true }, f, yielding, Effect4.Machine.Outcome.commands,
+              [Effect4.Machine.Cmd.launch raceId, Effect4.Machine.Cmd.registrationDone raceId yielding]⟩)
+
+#check (@Effect4.Machine.drive_enrollRace_live :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (raceId : Nat) (child : Effect4.FiberId) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α))
+    (race : Effect4.Machine.Race ν σ β ε δ ι α) (c : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
+    m.stuck = Option.none →
+      m.race? raceId = Option.some race →
+        m.fiber? child = Option.some c →
+          c.exit = Option.none →
+            Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.enrollRace raceId child :: rest) =
+              Effect4.Machine.drive interp fuel
+                ((m.updateRace { race with state := { race.state with live := race.state.live ++ [child] } }).modify
+                  child fun c => { c with observers := c.observers ++ [Effect4.Machine.Observer.raceCallback raceId] })
+                rest)
+
+#check (@Effect4.Machine.drive_enrollRace_exited :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (raceId : Nat) (child : Effect4.FiberId) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α))
+    (race : Effect4.Machine.Race ν σ β ε δ ι α) (c : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
+    (exit : Effect4.Exit β ε δ ι α),
+    m.stuck = Option.none →
+      m.race? raceId = Option.some race →
+        m.fiber? child = Option.some c →
+          c.exit = Option.some exit →
+            Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.enrollRace raceId child :: rest) =
+              (let r := Effect4.Machine.fireObserver interp child exit
+                 (m.updateRace { race with state := { race.state with live := race.state.live ++ [child] } }, [])
+                 (Effect4.Machine.Observer.raceCallback raceId)
+               Effect4.Machine.drive interp fuel r.1 (r.2 ++ rest)))
+
+#check (@Effect4.Machine.drive_registrationDone_answered :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (raceId : Nat) (yielding : Bool) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α))
+    (race : Effect4.Machine.Race ν σ β ε δ ι α) (host : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
+    (accepted : Effect4.Exit β ε δ ι α),
+    m.stuck = Option.none →
+      m.race? raceId = Option.some race →
+        (m.updateRace { race with registering := false }).fiber? race.host = Option.some host →
+          race.state.accepted = Option.some accepted →
+            Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.registrationDone raceId yielding :: rest) =
+              Effect4.Machine.drive interp fuel
+                ((m.updateRace { race with registering := false }).update
+                  { host with frame := { host.frame with
+                      current := interp.raceSettle raceId race.state.cleanupNeeded accepted } })
+                (Effect4.Machine.Cmd.loop host.id yielding :: rest))
+
+#check (@Effect4.Machine.drive_registrationDone_parks :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (raceId : Nat) (yielding : Bool) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α))
+    (race : Effect4.Machine.Race ν σ β ε δ ι α) (host : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
+    m.stuck = Option.none →
+      m.race? raceId = Option.some race →
+        (m.updateRace { race with registering := false }).fiber? race.host = Option.some host →
+          race.state.accepted = Option.none →
+            host.frame.deferredInterrupt = false →
+              Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.registrationDone raceId yielding :: rest) =
+                (let name := interp.cancelName (interp.raceCancelName raceId) host.id race.token
+                 let g := ({ host with frame := { host.frame with
+                    stack := Effect4.Prim.asyncFinalizer name :: host.frame.stack } }).park
+                   ⟨race.token, none, [], [], Effect4.Machine.Resume.void, false⟩
+                 Effect4.Machine.drive interp fuel
+                   (((m.updateRace { race with registering := false }).emit
+                       [Effect4.Machine.RunEvent.parkedOn g.id race.token]).update
+                     { g with running := false })
+                   rest))
 
 #check (@Effect4.Machine.launchEntrant_eq :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
@@ -3790,16 +4064,9 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
     (raceId : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (host : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
     (program : Effect4.Prim ν σ β ε δ ι α),
     Effect4.Machine.launchEntrant interp raceId m host program =
-      have s :=
-        Effect4.Machine.spawn interp m host program
-          { startImmediately := Bool.true, daemon := Bool.true, maskMode := Effect4.Supervision.MaskMode.interruptible };
-      (s.fst.modify s.snd.snd fun c =>
-          { id := c.id, frame := c.frame, running := c.running, parked := c.parked, pending := c.pending,
-            finalizing := c.finalizing, exit := c.exit, currentOpCount := c.currentOpCount,
-            maxOpsBeforeYield := c.maxOpsBeforeYield, preventYield := c.preventYield, yieldOverride := c.yieldOverride,
-            observers := c.observers ++ [Effect4.Machine.Observer.raceCallback raceId], children := c.children,
-            dispatcher := c.dispatcher, context := c.context },
-        s.snd.snd))
+      (let s := Effect4.Machine.spawn interp m host program
+         { startImmediately := Bool.true, daemon := Bool.true, maskMode := Effect4.Supervision.MaskMode.interruptible }
+       (s.fst, s.snd.snd)))
 
 #check (@Effect4.Machine.drive_launch_runs :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
@@ -3814,20 +4081,12 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
           race.state.accepted = Option.none →
             m.fiber? race.host = Option.some host →
               Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.launch raceId :: rest) =
-                have l := Effect4.Machine.launchEntrant interp raceId m host program;
-                Effect4.Machine.drive interp fuel
-                  ((l.fst.updateRace
-                        { id := race.id, host := race.host, token := race.token,
-                          state :=
-                            have __src := race.state;
-                            { unstarted := __src.unstarted, starting := __src.starting,
-                              live := race.state.live ++ [l.snd], remaining := __src.remaining,
-                              failures := __src.failures, winner := __src.winner, accepted := __src.accepted,
-                              cleanupNeeded := __src.cleanupNeeded, requests := __src.requests, cleanup := __src.cleanup,
-                              cleanupRequested := __src.cleanupRequested },
-                          settled := race.settled, programs := more }).emit
-                    [Effect4.Machine.RunEvent.raceLaunched raceId l.snd])
-                  (Effect4.Machine.Cmd.evaluate l.snd :: Effect4.Machine.Cmd.launch raceId :: rest))
+                (let l := Effect4.Machine.launchEntrant interp raceId m host program
+                 Effect4.Machine.drive interp fuel
+                   ((l.fst.updateRace { race with programs := more }).emit
+                     [Effect4.Machine.RunEvent.raceLaunched raceId l.snd])
+                   (Effect4.Machine.Cmd.evaluate l.snd :: Effect4.Machine.Cmd.enrollRace raceId l.snd ::
+                     Effect4.Machine.Cmd.launch raceId :: rest)))
 
 #check (@Effect4.Machine.drive_launch_done :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
@@ -3855,7 +4114,7 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
           ((acc.fst.emit [Effect4.Machine.RunEvent.observerFired id (Effect4.Machine.Observer.raceCallback raceId)]).updateRace
               { id := race.id, host := race.host, token := race.token,
                 state := Effect4.Supervision.raceComplete race.state id exit, settled := race.settled,
-                programs := race.programs },
+                programs := race.programs, registering := race.registering },
             acc.snd))
 
 #check (@Effect4.Machine.fireObserver_raceCallback_settles :
@@ -3872,7 +4131,7 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
             have state := Effect4.Supervision.raceComplete race.state id exit;
             have race :=
               { id := race.id, host := race.host, token := race.token, state := state, settled := race.settled,
-                programs := race.programs };
+                programs := race.programs, registering := race.registering };
             Effect4.Machine.settleRace interp
               ((acc.fst.emit
                     [Effect4.Machine.RunEvent.observerFired id (Effect4.Machine.Observer.raceCallback raceId)]).updateRace
@@ -3892,7 +4151,7 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
           ((acc.fst.emit [Effect4.Machine.RunEvent.observerFired id (Effect4.Machine.Observer.raceCallback raceId)]).updateRace
               { id := race.id, host := race.host, token := race.token,
                 state := Effect4.Supervision.raceComplete race.state id exit, settled := race.settled,
-                programs := race.programs },
+                programs := race.programs, registering := race.registering },
             acc.snd))
 
 #check (@Effect4.Machine.resumePrim_continueWith :
@@ -3945,33 +4204,119 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
     (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
     (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (target : Effect4.FiberId),
     Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.interrupt target) =
-      Effect4.Machine.evaluatePrim.interruptThenJoin interp m f yielding target (Option.some f.id))
+      ⟨m, { f with frame := { f.frame with current := interp.interruptAsCode target f.id } },
+        yielding, Effect4.Machine.Outcome.continue_, []⟩)
 
-#check (@Effect4.Machine.interruptThenJoin_eq :
+#check (@Effect4.Machine.withFiber_interruptAs :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
     (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (target : Effect4.FiberId)
-    (interruptor : Option Effect4.FiberId) (t : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
+    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (target who : Effect4.FiberId)
+    (t : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
     m.fiber? target = Option.some t →
-      Effect4.Machine.evaluatePrim.interruptThenJoin interp m f yielding target interruptor =
-        have r := Effect4.Machine.interruptRecord interp interruptor (interp.stackAnnotations f.id) t;
-        have m := (m.update r.fst).emit [Effect4.Machine.RunEvent.interruptRecorded interruptor target];
-        have p := Effect4.Machine.countdownPark interp m f [target] Effect4.Machine.Resume.void;
-        { machine := p.fst, fiber := p.snd.fst, yielding := yielding,
-          outcome := if p.snd.snd = Bool.true then Effect4.Machine.Outcome.parked else Effect4.Machine.Outcome.continue_,
-          nested := if r.snd = Bool.true then [Effect4.Machine.Cmd.evaluate target] else [] })
+      Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.interruptAs target who) =
+        (let r := Effect4.Machine.interruptRecord interp (Option.some who) (interp.stackAnnotations f.id) t
+         ⟨(m.update r.fst).emit [Effect4.Machine.RunEvent.interruptRecorded (Option.some who) target], f, yielding,
+          Effect4.Machine.Outcome.commands,
+          (if r.snd = Bool.true then [Effect4.Machine.Cmd.evaluate target] else []) ++
+            [Effect4.Machine.Cmd.afterInterrupt f.id yielding
+              (Effect4.Machine.ParkKind.join target Effect4.Supervision.ObserverMode.awaitValue)]⟩))
 
-#check (@Effect4.Machine.interruptThenJoin_unknown :
+#check (@Effect4.Machine.withFiber_interruptAs_unknown :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
     {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
     [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
     (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (target : Effect4.FiberId) (interruptor : Option Effect4.FiberId),
+    (target who : Effect4.FiberId),
     m.fiber? target = Option.none →
-      Effect4.Machine.evaluatePrim.interruptThenJoin interp m f yielding target interruptor =
-        { machine := m, fiber := f, yielding := yielding,
-          outcome := Effect4.Machine.Outcome.stuck (Effect4.Machine.Stuck.unknownFiber target), nested := [] })
+      Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.interruptAs target who) =
+        ⟨m, f, yielding, Effect4.Machine.Outcome.stuck (Effect4.Machine.Stuck.unknownFiber target), []⟩)
+
+#check (@Effect4.Machine.drive_interruptTarget :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (target : Effect4.FiberId) (who : Option Effect4.FiberId) (extra : Effect4.ReasonAnnotations α)
+    (g : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
+    m.stuck = Option.none →
+      m.fiber? target = Option.some g →
+        Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.interruptTarget target who extra :: rest) =
+          (let r := Effect4.Machine.interruptRecord interp who extra g
+           Effect4.Machine.drive interp fuel
+             ((m.update r.fst).emit [Effect4.Machine.RunEvent.interruptRecorded who target])
+             ((if r.snd = Bool.true then [Effect4.Machine.Cmd.evaluate target] else []) ++ rest)))
+
+#check (@Effect4.Machine.drive_interruptTarget_unknown :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (target : Effect4.FiberId) (who : Option Effect4.FiberId) (extra : Effect4.ReasonAnnotations α)
+    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
+    m.stuck = Option.none →
+      m.fiber? target = Option.none →
+        Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.interruptTarget target who extra :: rest) =
+          Effect4.Machine.drive interp fuel m rest)
+
+#check (@Effect4.Machine.drive_afterInterrupt :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (host : Effect4.FiberId) (yielding : Bool) (kind : Effect4.Machine.ParkKind) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
+    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
+    m.stuck = Option.none →
+      m.fiber? host = Option.some f →
+        Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.afterInterrupt host yielding kind :: rest) =
+          Effect4.Machine.drive interp fuel
+            (m.update { f with frame := { f.frame with
+              current := Effect4.Machine.asVoidCode interp (Effect4.Machine.awaitCode interp m kind) } })
+            (Effect4.Machine.Cmd.loop f.id yielding :: rest))
+
+#check (@Effect4.Machine.asVoidCode_eq :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (code : Effect4.Prim ν σ β ε δ ι α),
+    Effect4.Machine.asVoidCode interp code =
+      Effect4.Prim.onSuccess code (interp.restoreName (Effect4.Exit.success interp.voidValue)))
+
+#check (@Effect4.Machine.awaitCode_join_exited :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (target : Effect4.FiberId) (mode : Effect4.Supervision.ObserverMode) (t : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
+    (exit : Effect4.Exit β ε δ ι α),
+    m.fiber? target = Option.some t →
+      t.exit = Option.some exit →
+        Effect4.Machine.awaitCode interp m (Effect4.Machine.ParkKind.join target mode) = interp.exitValue exit mode)
+
+#check (@Effect4.Machine.awaitCode_join_live :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (target : Effect4.FiberId) (mode : Effect4.Supervision.ObserverMode) (t : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
+    m.fiber? target = Option.some t →
+      t.exit = Option.none →
+        Effect4.Machine.awaitCode interp m (Effect4.Machine.ParkKind.join target mode) =
+          interp.parkCode (Effect4.Machine.ParkKind.join target mode))
+
+#check (@Effect4.Machine.awaitCode_awaitAll :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (targets : List Effect4.FiberId),
+    Effect4.Machine.awaitCode interp m (Effect4.Machine.ParkKind.awaitAll targets) =
+      interp.parkCode (Effect4.Machine.ParkKind.awaitAll targets))
+
+#check (@Effect4.Machine.evaluatePrim_awaitAllPark :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (thunk : σ) (targets : List Effect4.FiberId),
+    f.frame.current = Effect4.Prim.suspend thunk →
+      interp.parkOf (Effect4.Prim.suspend thunk) = Option.some (Except.ok (Effect4.Machine.ParkKind.awaitAll targets)) →
+        Effect4.Machine.evaluatePrim interp m f yielding =
+          (let p := Effect4.Machine.countdownPark interp m f targets Effect4.Machine.Resume.exitsValue
+           ⟨p.fst, p.snd.fst, yielding,
+            (if p.snd.snd = Bool.true then Effect4.Machine.Outcome.parked else Effect4.Machine.Outcome.continue_), []⟩))
 
 #check (@Effect4.Machine.withFiber_interruptScoped_self :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
@@ -4001,7 +4346,8 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
     (target : Effect4.FiberId),
     target ≠ f.id →
       Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.interruptScoped target) =
-        Effect4.Machine.evaluatePrim.interruptThenJoin interp m f yielding target (Option.some f.id))
+        ⟨m, { f with frame := { f.frame with current := interp.interruptCode target } },
+          yielding, Effect4.Machine.Outcome.continue_, []⟩)
 
 #check (@Effect4.Machine.Witnesses.w2_delivered_at_unmask :
   Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w2 1 =
@@ -4036,14 +4382,10 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
     (targets : List Effect4.FiberId) (interruptor : Option Effect4.FiberId),
     Effect4.Machine.evaluatePrim.withFiber interp m f yielding
         (Effect4.Machine.WithFiberAction.interruptAll targets interruptor) =
-      have r := Effect4.Machine.interruptEach interp (interruptor.getD f.id) (interp.stackAnnotations f.id) targets (m, []);
-      have p := Effect4.Machine.countdownPark interp r.fst f targets Effect4.Machine.Resume.void;
-      { machine := p.fst, fiber := p.snd.fst, yielding := yielding,
-        outcome :=
-          match p.fst.stuck with
-          | Option.some why => Effect4.Machine.Outcome.stuck why
-          | Option.none => if p.snd.snd = Bool.true then Effect4.Machine.Outcome.parked else Effect4.Machine.Outcome.continue_,
-        nested := r.snd })
+      ⟨m, f, yielding, Effect4.Machine.Outcome.commands,
+        (targets.map fun t =>
+          Effect4.Machine.Cmd.interruptTarget t (Option.some (interruptor.getD f.id)) (interp.stackAnnotations f.id)) ++
+          [Effect4.Machine.Cmd.afterInterrupt f.id yielding (Effect4.Machine.ParkKind.awaitAll targets)]⟩)
 
 #check (@Effect4.Machine.interruptEach_nil :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
@@ -4211,22 +4553,15 @@ reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witness
     m.middlewareInstalled = Bool.true →
       f.finalizing = Option.none →
         f.children.isEmpty = Bool.false →
-          Effect4.Machine.exitFiber interp m f exit = Effect4.Machine.exitInterruptChildren interp m f exit)
-
-#check (@Effect4.Machine.exitInterruptChildren_finalizing :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (exit : Effect4.Exit β ε δ ι α),
-    (Effect4.Machine.exitInterruptChildren interp m f exit).snd.fst.finalizing = Option.some exit)
+          Effect4.Machine.exitFiber interp m f exit = Effect4.Machine.exitFiber.exitInterruptChildren interp m f exit)
 
 #check (@Effect4.Machine.exitFiber_finalizing :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
     [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
     (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
     (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (exit body : Effect4.Exit β ε δ ι α),
-    f.finalizing = Option.some body → Effect4.Machine.exitFiber interp m f exit = Effect4.Machine.exitStore interp m f exit)
+    f.finalizing = Option.some body →
+      Effect4.Machine.exitFiber interp m f exit = Effect4.Machine.exitFiber.exitStore interp m f exit)
 
 #check (@Effect4.Machine.withFiber_closeScope_unknown :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
@@ -4473,8 +4808,7 @@ command run after what the thunk owed; the exit path is a command too. -/
                 yieldOverride := f.yieldOverride, observers := f.observers, children := f.children,
                 dispatcher := f.dispatcher, context := f.context }
               exit;
-          Effect4.Machine.drive interp fuel (r.fst.update r.snd.fst)
-            ((r.snd.snd.snd ++ if r.snd.snd.fst = Bool.true then [] else [Effect4.Machine.Cmd.drainDue]) ++ rest))
+          Effect4.Machine.drive interp fuel r.fst (r.snd ++ rest))
 
 #check (@Effect4.Machine.settle_finished :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
@@ -4632,11 +4966,11 @@ input order; a settled race resumes its host with the masked cleanup program. -/
     (race : Effect4.Machine.Race ν σ β ε δ ι α) (state : Effect4.Supervision.RaceAllState β ε δ ι α)
     (accepted : Effect4.Exit β ε δ ι α),
     Effect4.Machine.settleRace interp m acc raceId race state accepted =
-      ((m.updateRace
-              { id := race.id, host := race.host, token := race.token, state := race.state, settled := Bool.true,
-                programs := race.programs }).emit
+      ((m.updateRace { race with settled := Bool.true }).emit
           [Effect4.Machine.RunEvent.raceSettled raceId accepted],
-        acc ++ [Effect4.Machine.Cmd.resume race.host race.token (interp.raceSettle state.live accepted)]))
+        acc ++ (if race.registering then [] else
+          [Effect4.Machine.Cmd.resume race.host race.token
+            (interp.raceSettle raceId state.cleanupNeeded accepted)])))
 
 #check (@Effect4.Machine.withFiber_cancelRace :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
@@ -4645,15 +4979,48 @@ input order; a settled race resumes its host with the masked cleanup program. -/
     (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (raceId : Nat) (race : Effect4.Machine.Race ν σ β ε δ ι α),
     m.race? raceId = Option.some race →
       Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.cancelRace raceId) =
-        have r := Effect4.Machine.interruptEach interp f.id (interp.stackAnnotations f.id) race.state.live (m, []);
-        have p := Effect4.Machine.countdownPark interp r.fst f race.state.live Effect4.Machine.Resume.void;
-        { machine := p.fst, fiber := p.snd.fst, yielding := yielding,
-          outcome :=
-            match p.fst.stuck with
-            | Option.some why => Effect4.Machine.Outcome.stuck why
-            | Option.none =>
-              if p.snd.snd = Bool.true then Effect4.Machine.Outcome.parked else Effect4.Machine.Outcome.continue_,
-          nested := r.snd })
+        ⟨m, f, yielding, Effect4.Machine.Outcome.commands,
+          [Effect4.Machine.Cmd.raceCancel raceId f.id yielding race.state.live []]⟩)
+
+#check (@Effect4.Machine.drive_raceCancel_nil :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (raceId : Nat) (host : Effect4.FiberId) (yielding : Bool) (visited : List Effect4.FiberId)
+    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
+    m.stuck = Option.none →
+      Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.raceCancel raceId host yielding [] visited :: rest) =
+        Effect4.Machine.drive interp fuel m
+          (Effect4.Machine.Cmd.afterInterrupt host yielding (Effect4.Machine.ParkKind.awaitAll visited) :: rest))
+
+#check (@Effect4.Machine.drive_raceCancel_live :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (raceId : Nat) (host : Effect4.FiberId) (yielding : Bool) (t : Effect4.FiberId) (more visited : List Effect4.FiberId)
+    (race : Effect4.Machine.Race ν σ β ε δ ι α) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
+    m.stuck = Option.none →
+      m.race? raceId = Option.some race →
+        t ∈ race.state.live →
+          Effect4.Machine.drive interp (fuel + 1) m
+              (Effect4.Machine.Cmd.raceCancel raceId host yielding (t :: more) visited :: rest) =
+            Effect4.Machine.drive interp fuel m
+              (Effect4.Machine.Cmd.interruptTarget t (Option.some host) (interp.stackAnnotations host) ::
+                Effect4.Machine.Cmd.raceCancel raceId host yielding more (visited ++ [t]) :: rest))
+
+#check (@Effect4.Machine.drive_raceCancel_gone :
+  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
+    (raceId : Nat) (host : Effect4.FiberId) (yielding : Bool) (t : Effect4.FiberId) (more visited : List Effect4.FiberId)
+    (race : Effect4.Machine.Race ν σ β ε δ ι α) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
+    m.stuck = Option.none →
+      m.race? raceId = Option.some race →
+        ¬t ∈ race.state.live →
+          Effect4.Machine.drive interp (fuel + 1) m
+              (Effect4.Machine.Cmd.raceCancel raceId host yielding (t :: more) visited :: rest) =
+            Effect4.Machine.drive interp fuel m
+              (Effect4.Machine.Cmd.raceCancel raceId host yielding more visited :: rest))
 
 #check (@Effect4.Machine.withFiber_cancelRace_unknown :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
@@ -4921,6 +5288,10 @@ private def censusRows : List Row :=
   , { id := "op.OnSuccess", kind := "op", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Prim.armA_onSuccess "none"
+        , w `Effect4.Prim.armA_onSuccessConst "none"
+        , w `Effect4.FrameFiber.step_onSuccessConst "propext"
+        , w `Effect4.FrameFiber.resumeValue_onSuccessConst "propext"
+        , w `Effect4.FrameFiber.step_success_onSuccessConst "propext"
         , w `Effect4.Prim.onSuccess_arm_is_per_instance "none"
         , w `Effect4.FrameFiber.step_onSuccess "propext" ] }
   , { id := "op.OnFailure", kind := "op", disposition := "separateCalculus", coverage := "green"
@@ -4975,6 +5346,9 @@ private def censusRows : List Row :=
   , { id := "frame-arm.OnSuccess", kind := "frame-arm", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Prim.arms_onSuccess "none"
+        , w `Effect4.Prim.arms_onSuccessConst "none"
+        , w `Effect4.Prim.ensure_onSuccessConst "none"
+        , w `Effect4.Prim.armE_onSuccessConst_none "none"
         , w `Effect4.Prim.armA_isSome "propext"
         , w `Effect4.Prim.armE_isSome "none"
         , w `Effect4.Prim.armE_onSuccess_none "none"
@@ -5086,13 +5460,19 @@ private def censusRows : List Row :=
         [ w `Effect4.Supervision.MaskMode.cases_receipt "propext"
         , w `Effect4.Machine.spawn_eq "none"
         , w `Effect4.Machine.spawnChild_fields "propext"
-        , w `Effect4.Machine.spawn_daemon_untracked "propext" ] }
+        , w `Effect4.Machine.spawn_untracked "none"
+        , w `Effect4.Machine.drive_trackChild_live "propext,Quot.sound"
+        , w `Effect4.Machine.drive_trackChild_exited "propext,Quot.sound" ] }
   , { id := "fork.child", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.exitFiber_eq "propext,Quot.sound"
-        , w `Effect4.Machine.exitFiber_no_middleware "propext,Quot.sound"
-        , w `Effect4.Machine.exitStore_fields "propext,Quot.sound"
-        , w `Effect4.Machine.exitStore_fires "propext,Quot.sound"
+        [ w `Effect4.Machine.exitFiber_eq "propext"
+        , w `Effect4.Machine.exitFiber_no_middleware "propext"
+        , w `Effect4.Machine.publish_fields "none"
+        , w `Effect4.Machine.cleared_fields "none"
+        , w `Effect4.Machine.exitStore_no_observers "propext"
+        , w `Effect4.Machine.exitStore_observers "propext"
+        , w `Effect4.Machine.drive_observe "propext,Quot.sound"
+        , w `Effect4.Machine.drive_exitDone "propext,Quot.sound"
         , w `Effect4.Machine.fireObserver_resumeAwait "propext,Quot.sound"
         , w `Effect4.Machine.stepDecision_installMiddleware "propext,Quot.sound"
         , w `Effect4.Machine.withFiber_fork "propext,Quot.sound"
@@ -5102,12 +5482,12 @@ private def censusRows : List Row :=
         , w `Effect4.Machine.drive_finish "propext,Quot.sound" ] }
   , { id := "fork.detach", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.spawn_daemon_untracked "propext"
+        [ w `Effect4.Machine.spawn_untracked "none"
         , w `Effect4.Machine.spawnChild_fields "propext"
         , w `Effect4.Machine.start_eq "none"
-        , w `Effect4.Machine.exitFiber_no_children "propext,Quot.sound"
-        , w `Effect4.Machine.exitInterruptChildren_eq "propext,Quot.sound"
-        , w `Effect4.Machine.exitInterruptChildren_interrupts "propext,Quot.sound"
+        , w `Effect4.Machine.exitFiber_no_children "propext"
+        , w `Effect4.Machine.exitInterruptChildren_eq "none"
+        , w `Effect4.Machine.exitInterruptChildren_reenters "none"
         , w `Effect4.Machine.Witnesses.w5_fork_latches_the_middleware "propext,Quot.sound"
         , w `Effect4.Machine.Witnesses.w5_daemon_child_survives_parent_exit "propext,Quot.sound" ] }
   , { id := "fork.in", kind := "fork", disposition := "separateCalculus", coverage := "green"
@@ -5126,7 +5506,9 @@ private def censusRows : List Row :=
   , { id := "fork.scoped", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Machine.withFiber_forkScoped_ambient "propext,Quot.sound"
-        , w `Effect4.Machine.withFiber_forkScoped_none "propext,Quot.sound" ] }
+        , w `Effect4.Machine.withFiber_forkScoped_none "propext,Quot.sound"
+        , w `Effect4.Machine.withFiber_ambientScope "propext,Quot.sound"
+        , w `Effect4.Machine.withFiber_ambientScope_none "propext,Quot.sound" ] }
   , { id := "fork.race-all", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Supervision.RaceAllState.initial_eq "none"
@@ -5136,8 +5518,13 @@ private def censusRows : List Row :=
         , w `Effect4.Supervision.raceComplete_failure_last "propext,Quot.sound"
         , w `Effect4.Supervision.raceComplete_failure_pending "propext,Quot.sound"
         , w `Effect4.Machine.withFiber_raceAll "propext,Quot.sound"
+        , w `Effect4.Machine.evaluatePrim_raceRegister "propext,Quot.sound"
         , w `Effect4.Machine.launchEntrant_eq "none"
         , w `Effect4.Machine.drive_launch_runs "propext,Quot.sound"
+        , w `Effect4.Machine.drive_enrollRace_live "propext,Quot.sound"
+        , w `Effect4.Machine.drive_enrollRace_exited "propext,Quot.sound"
+        , w `Effect4.Machine.drive_registrationDone_answered "propext,Quot.sound"
+        , w `Effect4.Machine.drive_registrationDone_parks "propext,Quot.sound"
         , w `Effect4.Machine.drive_launch_done "propext,Quot.sound"
         , w `Effect4.Machine.fireObserver_raceCallback_pending "propext,Quot.sound"
         , w `Effect4.Machine.fireObserver_raceCallback_settles "propext,Quot.sound"
@@ -5150,6 +5537,9 @@ private def censusRows : List Row :=
         , w `Effect4.Machine.Witnesses.w3_all_failures_retain_order "propext,Quot.sound"
         , w `Effect4.Machine.settleRace_eq "none"
         , w `Effect4.Machine.withFiber_cancelRace "propext,Quot.sound"
+        , w `Effect4.Machine.drive_raceCancel_nil "propext,Quot.sound"
+        , w `Effect4.Machine.drive_raceCancel_live "propext,Quot.sound"
+        , w `Effect4.Machine.drive_raceCancel_gone "propext,Quot.sound"
         , w `Effect4.Machine.withFiber_cancelRace_unknown "propext,Quot.sound"
         , w `Effect4.Machine.Witnesses.w3_host_interrupt_cancels_entrants "propext,Quot.sound"
         , w `Effect4.Machine.Witnesses.w3_settle_interrupts_the_parked_loser "propext,Quot.sound"
@@ -5196,8 +5586,12 @@ private def censusRows : List Row :=
     , witnesses :=
         [ w `Effect4.Supervision.interruptCause_eq "propext,Quot.sound"
         , w `Effect4.Machine.withFiber_interrupt "propext,Quot.sound"
-        , w `Effect4.Machine.interruptThenJoin_eq "propext,Quot.sound"
-        , w `Effect4.Machine.interruptThenJoin_unknown "propext,Quot.sound"
+        , w `Effect4.Machine.withFiber_interruptAs "propext,Quot.sound"
+        , w `Effect4.Machine.withFiber_interruptAs_unknown "propext,Quot.sound"
+        , w `Effect4.Machine.drive_afterInterrupt "propext,Quot.sound"
+        , w `Effect4.Machine.asVoidCode_eq "none"
+        , w `Effect4.Machine.awaitCode_join_exited "propext"
+        , w `Effect4.Machine.awaitCode_join_live "propext"
         , w `Effect4.Machine.withFiber_interruptScoped_self "propext,Quot.sound"
         , w `Effect4.Machine.withFiber_interruptScoped_other "propext,Quot.sound"
         , w `Effect4.Machine.Witnesses.w2_delivered_at_unmask "propext,Quot.sound"
@@ -5207,6 +5601,10 @@ private def censusRows : List Row :=
   , { id := "fork.interrupt-all", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Machine.withFiber_interruptAll "propext,Quot.sound"
+        , w `Effect4.Machine.drive_interruptTarget "propext,Quot.sound"
+        , w `Effect4.Machine.drive_interruptTarget_unknown "propext,Quot.sound"
+        , w `Effect4.Machine.awaitCode_awaitAll "propext"
+        , w `Effect4.Machine.evaluatePrim_awaitAllPark "propext,Quot.sound"
         , w `Effect4.Machine.interruptEach_nil "propext,Quot.sound"
         , w `Effect4.Machine.interruptEach_cons "propext,Quot.sound"
         , w `Effect4.Machine.interruptEach_known "propext,Quot.sound"
@@ -5296,14 +5694,17 @@ private def censusRows : List Row :=
         , w `Effect4.Scope.closeOrder_last_first "propext"
         , w `Effect4.Scope.closeExits_eq "none"
         , w `Effect4.Scope.closeExits_reverse "propext"
-        , w `Effect4.Scope.runScoped_lifo "propext,Quot.sound" ] }
+        , w `Effect4.Scope.runScoped_lifo "propext,Quot.sound"
+        , w `Effect4.Machine.closeWalk_sequential "none"
+        , w `Effect4.Machine.closeSeq_step "propext" ] }
   , { id := "scope.close-sequential", kind := "scope", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Scope.closeExits_eq "none"
         , w `Effect4.Scope.closeExits_length "propext"
         , w `Effect4.Scope.closeResult_reasons "propext"
-        , w `Effect4.Machine.closeSeqChain_order "none"
-        , w `Effect4.Machine.closeSeqChain_captures "propext"
+        , w `Effect4.Machine.closeWalk_sequential "none"
+        , w `Effect4.Machine.closeSeq_step "propext"
+        , w `Effect4.Machine.closeSeq_captures "propext"
         , w `Effect4.Machine.withFiber_closeScope "propext,Quot.sound"
         , w `Effect4.Machine.withFiber_closeScope_unknown "propext,Quot.sound"
         , w `Effect4.Machine.Witnesses.w6_sequential_captures_and_merges "propext,Quot.sound" ] }
@@ -5311,8 +5712,10 @@ private def censusRows : List Row :=
     , witnesses :=
         [ w `Effect4.FinalizerStrategy.cases_receipt "none"
         , w `Effect4.Scope.close_strategy_irrelevant "none"
-        , w `Effect4.Machine.closeParChain_forks_immediate_daemon "none"
-        , w `Effect4.Machine.closeParChain_awaits_all "none"
+        , w `Effect4.Machine.closeWalk_parallel "none"
+        , w `Effect4.Machine.actionOf_closePar "none"
+        , w `Effect4.Machine.withFiber_closePar "propext,Quot.sound"
+        , w `Effect4.Machine.forkFinalizers_cons "none"
         , w `Effect4.Machine.withFiber_fork "propext,Quot.sound"
         , w `Effect4.Machine.spawnChild_fields "propext"
         , w `Effect4.Machine.Witnesses.w6_parallel_forks_and_merges "propext,Quot.sound" ] }
@@ -5322,8 +5725,9 @@ private def censusRows : List Row :=
         , w `Effect4.Scope.closeResult_single "none"
         , w `Effect4.Scope.closeResult_many "none"
         , w `Effect4.Scope.closeResult_reasons "propext"
-        , w `Effect4.Machine.closeSeqChain_merges "none"
-        , w `Effect4.Machine.closeParChain_awaits_all "none"
+        , w `Effect4.Machine.closeSeq_merges "propext"
+        , w `Effect4.Machine.closeParDone_is_asVoidAll "propext"
+        , w `Effect4.Machine.drive_closeParAwait "propext,Quot.sound"
         , w `Effect4.Machine.fireObserver_countdown_done "propext,Quot.sound"
         , w `Effect4.Machine.fireObserver_countdown_next "propext,Quot.sound"
         , w `Effect4.Machine.Witnesses.w6_parallel_forks_and_merges "propext,Quot.sound"
@@ -5588,10 +5992,13 @@ private def censusRows : List Row :=
   , { id := "rule.yield-is-overloaded", kind := "rule", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Machine.drive_loop_parked "propext,Quot.sound"
+        , w `Effect4.Machine.drive_loop_parked_deferred "propext,Quot.sound"
         , w `Effect4.Machine.drive_loop_continues "propext,Quot.sound" ] }
   , { id := "rule.only-fork-child-tracks", kind := "rule", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.spawn_daemon_untracked "propext"
+        [ w `Effect4.Machine.spawn_untracked "none"
+        , w `Effect4.Machine.drive_trackChild_live "propext,Quot.sound"
+        , w `Effect4.Machine.drive_trackChild_exited "propext,Quot.sound"
         , w `Effect4.Machine.spawnChild_fields "propext"
         , w `Effect4.Machine.withFiber_fork "propext,Quot.sound"
         , w `Effect4.Machine.withFiber_forkIn "propext,Quot.sound"
@@ -5600,13 +6007,12 @@ private def censusRows : List Row :=
         , w `Effect4.Machine.fireObserver_untrackChild "propext,Quot.sound" ] }
   , { id := "rule.children-interrupted-after-exit", kind := "rule", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.exitFiber_eq "propext,Quot.sound"
-        , w `Effect4.Machine.exitFiber_children "propext,Quot.sound"
-        , w `Effect4.Machine.exitInterruptChildren_eq "propext,Quot.sound"
-        , w `Effect4.Machine.exitInterruptChildren_finalizing "propext,Quot.sound"
-        , w `Effect4.Machine.exitInterruptChildren_interrupts "propext,Quot.sound"
+        [ w `Effect4.Machine.exitFiber_eq "propext"
+        , w `Effect4.Machine.exitFiber_children "propext"
+        , w `Effect4.Machine.exitInterruptChildren_eq "none"
+        , w `Effect4.Machine.exitInterruptChildren_reenters "none"
         , w `Effect4.Machine.resumePrim_continueWith "none"
-        , w `Effect4.Machine.exitFiber_finalizing "propext,Quot.sound"
+        , w `Effect4.Machine.exitFiber_finalizing "propext"
         , w `Effect4.Machine.Witnesses.w5_middleware_interrupts_children "propext,Quot.sound"
         , w `Effect4.Machine.settle_finished "propext"
         , w `Effect4.Machine.drive_finish "propext,Quot.sound" ] }
@@ -5948,6 +6354,13 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Arm.demandable_eq
   , `Effect4.Arm.contAll_not_demandable
   , `Effect4.Prim.cases_receipt
+  , `Effect4.Prim.arms_onSuccessConst
+  , `Effect4.Prim.ensure_onSuccessConst
+  , `Effect4.Prim.armA_onSuccessConst
+  , `Effect4.Prim.armE_onSuccessConst_none
+  , `Effect4.FrameFiber.step_onSuccessConst
+  , `Effect4.FrameFiber.resumeValue_onSuccessConst
+  , `Effect4.FrameFiber.step_success_onSuccessConst
   , `Effect4.FrameFiber.start_eq
   , `Effect4.FrameFiber.pendingCause_some
   , `Effect4.FrameFiber.pendingCause_none
@@ -6106,6 +6519,7 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Machine.injectYield_fires
   , `Effect4.Machine.iteration_injected
   , `Effect4.Machine.drive_loop_parked
+  , `Effect4.Machine.drive_loop_parked_deferred
   , `Effect4.Machine.drive_loop_continues
   , `Effect4.Machine.start_eq
   , `Effect4.Machine.runFork_eq
@@ -6113,7 +6527,9 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Machine.interruptRecord_running_defers
   , `Effect4.Machine.interruptRecord_idle_applies
   , `Effect4.Machine.interruptRecord_masked
-  , `Effect4.Machine.spawn_daemon_untracked
+  , `Effect4.Machine.spawn_untracked
+  , `Effect4.Machine.drive_trackChild_live
+  , `Effect4.Machine.drive_trackChild_exited
   , `Effect4.Machine.spawnChild_fields
   , `Effect4.Machine.interruptRecord_exited
   , `Effect4.Machine.interruptRecord_accumulates
@@ -6156,11 +6572,13 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Prim.ensure_asyncFinalizer_masks
   , `Effect4.Prim.arms_asyncFinalizer
   , `Effect4.Prim.hasArm_asyncFinalizer_contA_false
-  , `Effect4.Machine.closeSeqChain_order
-  , `Effect4.Machine.closeSeqChain_captures
-  , `Effect4.Machine.closeParChain_forks_immediate_daemon
-  , `Effect4.Machine.closeParChain_awaits_all
-  , `Effect4.Machine.closeSeqChain_merges
+  , `Effect4.Machine.closeWalk_sequential
+  , `Effect4.Machine.closeSeq_step
+  , `Effect4.Machine.closeSeq_captures
+  , `Effect4.Machine.closeSeq_merges
+  , `Effect4.Machine.closeWalk_parallel
+  , `Effect4.Machine.actionOf_closePar
+  , `Effect4.Machine.closeParDone_is_asVoidAll
   , `Effect4.Machine.scopeLinkFiber_name
   , `Effect4.Machine.scopeStore_forkChild_names
   , `Effect4.Machine.Layers.scoped_installs_and_restores
@@ -6218,8 +6636,12 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Machine.Layers.provideLayer_scope
   , `Effect4.Machine.exitFiber_eq
   , `Effect4.Machine.exitFiber_no_middleware
-  , `Effect4.Machine.exitStore_fields
-  , `Effect4.Machine.exitStore_fires
+  , `Effect4.Machine.publish_fields
+  , `Effect4.Machine.cleared_fields
+  , `Effect4.Machine.exitStore_no_observers
+  , `Effect4.Machine.exitStore_observers
+  , `Effect4.Machine.drive_observe
+  , `Effect4.Machine.drive_exitDone
   , `Effect4.Machine.fireObserver_resumeAwait
   , `Effect4.Machine.stepDecision_installMiddleware
   , `Effect4.Machine.withFiber_fork
@@ -6228,7 +6650,7 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Machine.Witnesses.w5_middleware_interrupts_children
   , `Effect4.Machine.exitFiber_no_children
   , `Effect4.Machine.exitInterruptChildren_eq
-  , `Effect4.Machine.exitInterruptChildren_interrupts
+  , `Effect4.Machine.exitInterruptChildren_reenters
   , `Effect4.Machine.Witnesses.w5_fork_latches_the_middleware
   , `Effect4.Machine.Witnesses.w5_daemon_child_survives_parent_exit
   , `Effect4.Machine.withFiber_forkIn
@@ -6241,7 +6663,17 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Machine.Witnesses.w6_child_exit_drops_key
   , `Effect4.Machine.withFiber_forkScoped_ambient
   , `Effect4.Machine.withFiber_forkScoped_none
+  , `Effect4.Machine.withFiber_ambientScope
+  , `Effect4.Machine.withFiber_ambientScope_none
+  , `Effect4.Machine.forkFinalizers_cons
+  , `Effect4.Machine.withFiber_closePar
+  , `Effect4.Machine.drive_closeParAwait
   , `Effect4.Machine.withFiber_raceAll
+  , `Effect4.Machine.evaluatePrim_raceRegister
+  , `Effect4.Machine.drive_enrollRace_live
+  , `Effect4.Machine.drive_enrollRace_exited
+  , `Effect4.Machine.drive_registrationDone_answered
+  , `Effect4.Machine.drive_registrationDone_parks
   , `Effect4.Machine.launchEntrant_eq
   , `Effect4.Machine.drive_launch_runs
   , `Effect4.Machine.drive_launch_done
@@ -6255,8 +6687,16 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Machine.Witnesses.w3_failure_allows_next_launch
   , `Effect4.Machine.Witnesses.w3_all_failures_retain_order
   , `Effect4.Machine.withFiber_interrupt
-  , `Effect4.Machine.interruptThenJoin_eq
-  , `Effect4.Machine.interruptThenJoin_unknown
+  , `Effect4.Machine.withFiber_interruptAs
+  , `Effect4.Machine.withFiber_interruptAs_unknown
+  , `Effect4.Machine.drive_interruptTarget
+  , `Effect4.Machine.drive_interruptTarget_unknown
+  , `Effect4.Machine.drive_afterInterrupt
+  , `Effect4.Machine.asVoidCode_eq
+  , `Effect4.Machine.awaitCode_join_exited
+  , `Effect4.Machine.awaitCode_join_live
+  , `Effect4.Machine.awaitCode_awaitAll
+  , `Effect4.Machine.evaluatePrim_awaitAllPark
   , `Effect4.Machine.withFiber_interruptScoped_self
   , `Effect4.Machine.withFiber_interruptScoped_other
   , `Effect4.Machine.Witnesses.w2_delivered_at_unmask
@@ -6274,7 +6714,6 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Machine.Witnesses.w6_runIn_closed_scope_uses_no_caller_annotations
   , `Effect4.Machine.fireObserver_untrackChild
   , `Effect4.Machine.exitFiber_children
-  , `Effect4.Machine.exitInterruptChildren_finalizing
   , `Effect4.Machine.exitFiber_finalizing
   , `Effect4.Machine.withFiber_closeScope_unknown
   , `Effect4.Machine.Witnesses.w6_sequential_captures_and_merges
@@ -6300,6 +6739,9 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Machine.Witnesses.w12_awaitAll_input_order
   , `Effect4.Machine.settleRace_eq
   , `Effect4.Machine.withFiber_cancelRace
+  , `Effect4.Machine.drive_raceCancel_nil
+  , `Effect4.Machine.drive_raceCancel_live
+  , `Effect4.Machine.drive_raceCancel_gone
   , `Effect4.Machine.withFiber_cancelRace_unknown
   , `Effect4.Machine.Witnesses.w3_host_interrupt_cancels_entrants
   , `Effect4.Machine.Witnesses.w3_settle_interrupts_the_parked_loser
