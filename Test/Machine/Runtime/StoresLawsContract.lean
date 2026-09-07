@@ -195,8 +195,8 @@ end Scope
 section Values
 
 #guard Val.validIn s1 (Val.exitOk (Val.cell ⟨0⟩))
-#guard Val.validIn s1 (Val.exitCons (Val.cell ⟨0⟩) (Val.exitCons (Val.nat 1) Val.exitNil))
-#guard Val.validIn s1 (Val.exitCons (Val.cell ⟨1⟩) Val.exitNil) = false
+#guard Val.validIn s1 (Val.list [Val.cell ⟨0⟩, Val.nat 1])
+#guard Val.validIn s1 (Val.list [Val.cell ⟨1⟩]) = false
 #guard Val.validIn Stores.empty (Val.fiber ⟨3⟩)
 #guard Val.validIn Stores.empty (Val.exitErr (Cause.fail Err.boom))
 #guard SyncOp.isRead (SyncOp.refGet ⟨0⟩)
@@ -208,21 +208,23 @@ section Values
 
 end Values
 
-/-! ## The shared value foundation (U0)
+/-! ## The shared value foundation (U0, cut over in U1a)
 
-The views of `docs/research/2026-09-07-u0-value-foundation.md`
-(`src/Effect4/Machine/{Value,StoresValue,ContextValue}.lean`), smoke-tested on the values the
-sections above build: every one reads back through the shared carrier, the handle kinds stay
-distinct, the fiber snapshot is not a list of exits, a cause carries no handle, `Val.keys`
-agrees with the carrier's `handles`, the spellings work as patterns, and malformed trees are
-refused. Nothing here is a law of the runtime; it is the migration contract U1 performs. -/
+`Machine.Val` is the shared carrier (`src/Effect4/Machine/Stores.lean`, per
+`docs/research/2026-09-07-u1-cutover-dispatch.md` on the U0 contract
+`docs/research/2026-09-07-u0-value-foundation.md`), smoke-tested on the values the sections
+above build: the spellings are the U0 table's shapes, the readers (`Val.snapshot?`,
+`Val.context?`, `Val.cause?`, `exitImage.ofVal`) are exact, the handle kinds stay distinct,
+the fiber snapshot is not a list of exits, a cause carries no handle, `Val.keys` is the
+carrier's `handles` read through `Handle.ofCode`, validity folds the handles, the spellings
+work as patterns, and malformed trees are refused. -/
 
 section Foundation
 
 open Effect4.Store (Image)
 
 /-- The value the C2 section reads back: a cell and a number in a two-cell list. -/
-def tupleV : Val := Val.exitCons (Val.cell ⟨0⟩) (Val.exitCons (Val.nat 1) Val.exitNil)
+def tupleV : Val := Val.list [Val.cell ⟨0⟩, Val.nat 1]
 
 /-- A nested exit: a success carrying a reified failure. -/
 def nestedV : Val := Val.exitOk (Val.exitErr (Cause.fail (Err.tag 3)))
@@ -230,42 +232,57 @@ def nestedV : Val := Val.exitOk (Val.exitErr (Cause.fail (Err.tag 3)))
 /-- A cached context with an ambient scope. -/
 def ctxV : Val := Val.context ⟨some 2, 2048, false⟩
 
--- Round trips of representative values: every handle kind, the snapshot, nested exits, a
--- context, an empty and a non-empty exit list.
-#guard Val.ofStore (Val.toStore tupleV) = some tupleV
-#guard Val.ofStore (Val.toStore nestedV) = some nestedV
-#guard Val.ofStore (Val.toStore ctxV) = some ctxV
-#guard Val.ofStore (Val.toStore (Val.fibers [⟨1⟩, ⟨2⟩])) = some (Val.fibers [⟨1⟩, ⟨2⟩])
-#guard Val.ofStore (Val.toStore (Val.promise ⟨4⟩)) = some (Val.promise ⟨4⟩)
-#guard Val.ofStore (Val.toStore (Val.scopeHandle 1)) = some (Val.scopeHandle 1)
-#guard Val.ofStore (Val.toStore Val.exitNil) = some Val.exitNil
-#guard Val.ofStore (Val.toStore (Val.exitErr (Cause.interrupt (some ⟨9⟩)))) =
-  some (Val.exitErr (Cause.interrupt (some ⟨9⟩)))
+-- The spellings are the table's shapes.
+#guard Val.cell ⟨3⟩ = Value.cell 3
+#guard Val.fiber ⟨3⟩ = Store.Val.handle 1 3
+#guard Val.exitNil = Val.list []
+#guard Val.fibers [⟨1⟩, ⟨2⟩] = Value.fiberSnapshot (Val.list [Value.fiber 1, Value.fiber 2])
+#guard ctxV = Value.fiberContext (Store.Val.some (Value.scope 2)) (Val.nat 2048) (Val.bool false)
+#guard nestedV = Value.exitOk (Value.exitErr (causeImage.toVal (Cause.fail (Err.tag 3))))
+-- The readers are exact on representative values: the snapshot, a context, a cause, a
+-- reified exit, an empty and a non-empty exit list.
+#guard Val.snapshot? (Val.fibers [⟨1⟩, ⟨2⟩]) = some [⟨1⟩, ⟨2⟩]
+#guard Val.context? ctxV = some ⟨some 2, 2048, false⟩
+#guard Val.cause? (Val.exitErr (Cause.interrupt (some ⟨9⟩))) = some (Cause.interrupt (some ⟨9⟩))
+#guard exitImage.ofVal nestedV = some (Exit.success (Val.exitErr (Cause.fail (Err.tag 3))))
+#guard exitImage.ofVal (reifyExitVal (Exit.failure (Cause.die (Defect.user 4)))) =
+  some (Exit.failure (Cause.die (Defect.user 4)))
+#guard exitsVal [] = Val.exitNil
+#guard exitsVal [Exit.success (Val.promise ⟨4⟩), Exit.failure (Cause.fail Err.boom)] =
+  Val.list [Val.exitOk (Val.promise ⟨4⟩), Val.exitErr (Cause.fail Err.boom)]
+#guard reasonsOfVal (exitsVal [Exit.success (Val.nat 1), Exit.failure (Cause.fail Err.boom)]) =
+  [Reason.fail Err.boom ⟨[], List.nodup_nil⟩]
 -- The snapshot of a fiber and the exit list holding that fiber are distinct trees; the kinds
 -- of a handle at one index are distinct trees.
-#guard Val.toStore (Val.fibers [⟨1⟩]) ≠ Val.toStore (Val.exitCons (Val.fiber ⟨1⟩) Val.exitNil)
-#guard Val.toStore (Val.cell ⟨1⟩) ≠ Val.toStore (Val.promise ⟨1⟩)
-#guard Val.toStore (Val.fiber ⟨1⟩) ≠ Val.toStore (Val.scopeHandle 1)
--- `Val.keys` and the carrier's `handles` agree on a compound value; a cause names no handle
--- even when it records a fiber.
-#guard (Val.toStore (Val.exitCons tupleV (Val.exitCons ctxV Val.exitNil))).handles =
-  (Val.exitCons tupleV (Val.exitCons ctxV Val.exitNil)).keys.map Handle.code
-#guard (Val.toStore (Val.exitErr (Cause.interrupt (some ⟨9⟩)))).handles = []
-#guard (Val.toStore (Val.fibers [⟨1⟩, ⟨2⟩])).handles = [(1, 1), (1, 2)]
--- The written tuple is the store's `list`, so the native `fst`/`snd` shape is a list index.
-#guard Val.toStore tupleV = Store.Val.list [Value.cell 0, Store.Val.nat 1]
--- Refused: an unregistered kind byte, the Layer machine's memo-map handle, a string, an exit
--- with two payloads, a snapshot of non-handles, a cause with an unknown reason index, an
--- improper cons whose tail is a list cell, a context with a number where the scope goes.
-#guard Val.ofStore (Store.Val.handle 9 1) = none
-#guard Val.ofStore (Value.memoMap 1) = none
-#guard Val.ofStore (Store.Val.str "x") = none
-#guard Val.ofStore (Store.Val.ctor 0 [Store.Val.nat 1, Store.Val.nat 2]) = none
-#guard Val.ofStore (Value.fiberSnapshot (Store.Val.list [Store.Val.nat 1])) = none
-#guard Val.ofStore (Value.exitErr (Store.Val.ctor 0 [Store.Val.list [Store.Val.ctor 7 []]])) = none
-#guard Val.ofStore (Store.Val.ctor 4 [Store.Val.nat 1, Store.Val.list []]) = none
-#guard Val.ofStore (Value.fiberContext (Store.Val.some (Store.Val.nat 2)) (Store.Val.nat 0)
-  (Store.Val.bool true)) = none
+#guard Val.fibers [⟨1⟩] ≠ Val.list [Val.fiber ⟨1⟩]
+#guard Val.cell ⟨1⟩ ≠ Val.promise ⟨1⟩
+#guard Val.fiber ⟨1⟩ ≠ Val.scopeHandle 1
+-- `Val.keys` is the carrier's `handles` read through `Handle.ofCode`; a cause names no handle
+-- even when it records a fiber; the Layer machine's memo-map handle and an unregistered byte
+-- are no frame-machine handle.
+#guard Val.keys (Val.list [tupleV, ctxV]) = [Handle.cell ⟨0⟩, Handle.scope 2]
+#guard (Val.list [tupleV, ctxV]).handles = (Val.keys (Val.list [tupleV, ctxV])).map Handle.code
+#guard (Val.exitErr (Cause.interrupt (some ⟨9⟩))).handles = []
+#guard (Val.exitErr (Cause.interrupt (some ⟨9⟩))).keys = []
+#guard (Val.fibers [⟨1⟩, ⟨2⟩]).handles = [(1, 1), (1, 2)]
+#guard (Val.fibers [⟨1⟩, ⟨2⟩]).keys = [Handle.fiber ⟨1⟩, Handle.fiber ⟨2⟩]
+#guard Val.keys (Value.memoMap 1) = []
+#guard Val.keys (Store.Val.handle 9 1) = []
+#guard Handle.image.ofVal (Value.memoMap 1) = none
+#guard Handle.image.ofVal (Store.Val.handle 9 1) = none
+-- Refused by the readers: a snapshot of non-handles, a cause with an unknown reason index, a
+-- context with a number where the scope goes, an exit with two payloads, a string.
+#guard Val.snapshot? (Value.fiberSnapshot (Val.list [Val.nat 1])) = none
+#guard Val.cause? (Value.exitErr (Store.Val.ctor 0 [Val.list [Store.Val.ctor 7 []]])) = none
+#guard Val.context? (Value.fiberContext (Store.Val.some (Val.nat 2)) (Val.nat 0) (Val.bool true)) = none
+#guard exitImage.ofVal (Store.Val.ctor 0 [Val.nat 1, Val.nat 2]) = none
+#guard exitImage.ofVal (Val.str "x") = none
+-- Validity folds the handles: a context's ambient scope is checked (U1: the old carrier
+-- accepted every context), a memo-map handle and an unregistered byte are never valid here.
+#guard Val.validIn s3 ctxV = false
+#guard Val.validIn s3 (Val.context ⟨some 0, 2048, false⟩) = true
+#guard Val.validIn s3 (Value.memoMap 0) = false
+#guard Val.validIn Stores.empty (Store.Val.handle 9 0) = false
 -- Bytes: the checked encoder of the exit image answers, and its answer reads back.
 #guard (exitImage.encode? (Exit.success tupleV)).bind exitImage.decode = some (Exit.success tupleV)
 #guard (exitImage.encode? (Exit.failure (Cause.die (Defect.user 4)))).bind exitImage.decode =
@@ -273,25 +290,25 @@ def ctxV : Val := Val.context ⟨some 2, 2048, false⟩
 -- A reified exit *value* and the exit *record* share one encoding (D1): the bytes of
 -- `exitOk (exitErr c)` read back, as an exit, to `Exit.success (exitErr c)`; a value that is
 -- not an exit is refused by the exit image.
-#guard exitImage.decode (Val.image.encode nestedV) =
+#guard exitImage.decode (Store.Val.encode nestedV) =
   some (Exit.success (Val.exitErr (Cause.fail (Err.tag 3))))
-#guard exitImage.decode (Val.image.encode tupleV) = none
+#guard exitImage.decode (Store.Val.encode tupleV) = none
 
-/-- The spellings are patterns: a `match` over the shared carrier by the runtime's shapes. -/
-def shapeCode : Store.Val → Nat
-  | Value.fiber _ => 1
-  | Value.cell _ => 2
-  | Value.promise _ => 3
-  | Value.scope _ => 4
-  | Value.exitOk _ => 10
+/-- The spellings are patterns: a `match` over the carrier by the runtime's shapes. -/
+def shapeCode : Val → Nat
+  | Val.fiber ⟨_⟩ => 1
+  | Val.cell ⟨_⟩ => 2
+  | Val.promise ⟨_⟩ => 3
+  | Val.scopeHandle _ => 4
+  | Val.exitOk _ => 10
   | Value.exitErr _ => 11
   | Value.fiberSnapshot _ => 13
   | _ => 0
 
-#guard shapeCode (Val.toStore (Val.cell ⟨3⟩)) = 2
-#guard shapeCode (Val.toStore (Val.exitOk Val.unit)) = 10
-#guard shapeCode (Val.toStore (Val.fibers [])) = 13
-#guard shapeCode (Val.toStore tupleV) = 0
+#guard shapeCode (Val.cell ⟨3⟩) = 2
+#guard shapeCode (Val.exitOk Val.unit) = 10
+#guard shapeCode (Val.fibers []) = 13
+#guard shapeCode tupleV = 0
 
 -- The Layer machine's alphabet: a service context round-trips and reads back its entries; the
 -- memo-map handle is admitted there; a spine of non-pairs and a bad key are refused.
@@ -305,7 +322,7 @@ def shapeCode : Store.Val → Nat
 #guard Env.Val.ofStore (Value.cell 3) = none
 #guard (Env.Val.toStore (Env.Val.ctxCons ⟨⟨1⟩, ⟨2⟩⟩ (Env.Val.scopeHandle 4) Env.Val.ctxNil)).handles = [(4, 4)]
 -- The service context and the cached fiber context are distinct trees.
-#guard Env.Val.toStore Env.Val.ctxNil ≠ Val.toStore (Val.context ⟨none, 2048, false⟩)
+#guard Env.Val.toStore Env.Val.ctxNil ≠ Val.context ⟨none, 2048, false⟩
 -- The hand-written key image writes the bytes the generated OCaml encoder writes
 -- (`ocaml/eff/eff_wire.ml` `emit_service_key`, run against the `effect4` switch on
 -- 2026-09-07 for the key `{1, 2}`: 74 bytes, listed here), so one decoder serves both.
@@ -320,12 +337,16 @@ def shapeCode : Store.Val → Nat
    0x02, 0, 0, 0, 0, 0, 0, 0, 0x01, 0x02]
 #guard (Env.serviceKeyImage.encode ⟨⟨1⟩, ⟨2⟩⟩).length = 74
 
-#check @Effect4.Machine.Val.handles_toStore
-#check @Effect4.Machine.Val.toStore_chain
+#check (@Effect4.Machine.Val.keys_eq_handles :
+  ∀ (v : Val), v.keys = v.handles.filterMap Handle.ofCode)
+#check (@Effect4.Machine.Val.validIn_eq_handles :
+  ∀ (s : Stores) (v : Val), v.validIn s = v.handles.all fun h => s.handleValid h.1 h.2)
 #check @Effect4.Machine.Env.Val.ofSpine_entries
 
 #print axioms Effect4.Machine.Val.image
-#print axioms Effect4.Machine.Val.handles_toStore
+#print axioms Effect4.Machine.Val.keys_eq_handles
+#print axioms Effect4.Machine.Val.validIn_eq_handles
+#print axioms Effect4.Machine.Val.handles_eq_keys_code
 #print axioms Effect4.Machine.exitImage
 #print axioms Effect4.Machine.Env.Val.image
 #print axioms Effect4.Machine.Env.Val.ofSpine_entries

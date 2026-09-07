@@ -224,11 +224,22 @@ theorem evalTerm_point_keys (t : Term) (p : Point) (v : Val) (h : evalTerm p.env
   List.Subset.trans (evalTerm_keys t p.env v h) p.env_keys_subset
 
 theorem exitOfVal_keys (v : Val) (e : ExitV) (h : exitOfVal v = some e) : exitKeys e ⊆ v.keys := by
-  cases v <;> simp only [exitOfVal] at h <;> cases h <;> exact List.Subset.refl _
+  rw [exitImage.ofVal_exact h]
+  cases e with
+  | success x =>
+    show x.keys ⊆ (Val.exitOk x).keys
+    rw [Val.keys_exitOk]
+    exact List.Subset.refl _
+  | failure c => exact List.nil_subset _
 
 theorem awaitCellOf_keys (v : Val) (cell : DeferredKey) (h : NativeOp.awaitCellOf v = some cell) :
     Handle.promise cell ∈ v.keys := by
-  cases v <;> simp only [NativeOp.awaitCellOf] at h <;> cases h <;> exact List.mem_singleton.mpr rfl
+  unfold NativeOp.awaitCellOf at h
+  split at h
+  · injection h with h
+    subst h
+    simp only [Val.keys, Handle.ofCode_promise, Option.toList, List.mem_singleton]
+  · exact nomatch h
 
 theorem syncOpOf_keys (op : NativeOp) (v : Val) (o : SyncOp) (h : NativeOp.syncOpOf op v = some o) :
     o.keys ⊆ v.keys := by
@@ -236,25 +247,9 @@ theorem syncOpOf_keys (op : NativeOp) (v : Val) (o : SyncOp) (h : NativeOp.syncO
   split at h <;> cases h <;> sub_tac
 
 theorem tuple?_keys (v : Val) : ∀ vs, Val.tuple? v = some vs → vs.flatMap Val.keys ⊆ v.keys := by
-  induction v with
-  | exitNil =>
-    intro vs h
-    simp only [Val.tuple?, Option.some.injEq] at h
-    subst h
-    exact List.nil_subset _
-  | exitCons head tail _ ih =>
-    intro vs h
-    simp only [Val.tuple?] at h
-    obtain ⟨rest, hrest, hvs⟩ := Option.map_eq_some_iff.mp h
-    subst hvs
-    simp only [List.flatMap_cons, Val.keys]
-    exact List.append_subset.mpr ⟨List.subset_append_left _ _,
-      List.Subset.trans (ih rest hrest) (List.subset_append_right _ _)⟩
-  | unit | nat _ | bool _ | fiber _ | fibers _ | cell _ | promise _ | scopeHandle _ | context _ | exitOk _ _
-  | exitErr _ =>
-    intro vs h
-    simp only [Val.tuple?] at h
-    cases h
+  intro vs h
+  rw [Val.tuple?_exact h, Val.tuple, Val.keys_list]
+  exact List.Subset.refl _
 
 theorem mapM_fiber_keys (g : Val → Option FiberId) (hg : ∀ v id, g v = some id → Handle.fiber id ∈ v.keys) :
     ∀ (vs : List Val) (ids : List FiberId), vs.mapM g = some ids → ids.map Handle.fiber ⊆ vs.flatMap Val.keys
@@ -342,10 +337,10 @@ theorem compileEff_callback (register : NativeOp) (r : Term) (hf : p.fuel = k + 
 theorem compileEff_awaitFiber (fiber : Term) (mode : Supervision.ObserverMode) (hf : p.fuel = k + 1) :
     compileEff (.awaitFiber fiber mode) p =
       (match evalTerm p.env fiber with
-       | some (Val.fiber id) =>
-         match p.awaitExit id mode with
+       | some (Val.fiber ⟨id⟩) =>
+         match p.awaitExit ⟨id⟩ mode with
          | some exit => Prim.ofExit exit
-         | none => Prim.suspend (EffThunk.park (ParkKind.join id mode))
+         | none => Prim.suspend (EffThunk.park (ParkKind.join ⟨id⟩ mode))
        | _ => badShape) := by
   simp [compileEff, hf]; rfl
 
@@ -532,8 +527,8 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
         split
         · next exit hexit =>
           rw [← exitKeys_eq_nativeKeys_ofExit]
-          exact p.awaitExit_keys id mode exit hexit
-        · exact evalTerm_point_keys fiber p (Val.fiber id) hid
+          exact p.awaitExit_keys ⟨id⟩ mode exit hexit
+        · exact evalTerm_point_keys fiber p (Val.fiber ⟨id⟩) hid
       · exact List.nil_subset _
   | .withFiber a, p => by
     rcases hf : p.fuel with _ | k
@@ -676,33 +671,38 @@ end
 
 theorem evalTerm_fiber_mem (t : Term) (env : List Val) (id : FiberId) (h : evalTerm env t = some (Val.fiber id)) :
     Handle.fiber id ∈ env.flatMap Val.keys :=
-  evalTerm_keys t env _ h (List.mem_singleton.mpr rfl)
+  evalTerm_keys t env _ h (by rw [Val.keys_fiber]; exact List.mem_singleton.mpr rfl)
 
 theorem evalTerm_scope_mem (t : Term) (env : List Val) (s : Nat) (h : evalTerm env t = some (Val.scopeHandle s)) :
     Handle.scope s ∈ env.flatMap Val.keys :=
-  evalTerm_keys t env _ h (List.mem_singleton.mpr rfl)
+  evalTerm_keys t env _ h (by rw [Val.keys_scopeHandle]; exact List.mem_singleton.mpr rfl)
 
 /-- The fibers a `withFiber` term's value names (`actionAt`'s `handles`): a snapshot or a tuple of
 fiber handles. -/
 theorem handlesOf_keys (v : Val) (ids : List FiberId)
     (hh : (match v with
-           | Val.fibers ids => some ids
+           | Value.fiberSnapshot hs => (Store.Image.list Value.fiberHandle).ofVal hs
            | v => (Val.tuple? v).bind fun vs => vs.mapM fun
-             | Val.fiber id => some id
+             | Val.fiber ⟨id⟩ => some ⟨id⟩
              | _ => none) = some ids) :
     ids.map Handle.fiber ⊆ v.keys := by
   have hg : ∀ (w : Val) (id : FiberId),
-      (fun x => match x with | Val.fiber id => some id | _ => none) w = some id → Handle.fiber id ∈ w.keys := by
+      (fun x => match x with | Val.fiber ⟨id⟩ => some ⟨id⟩ | _ => none) w = some id →
+        Handle.fiber id ∈ w.keys := by
     intro w id hw
-    cases w <;> cases hw <;> exact List.mem_singleton.mpr rfl
-  cases v
-  case fibers ids' =>
-    simp only [Option.some.injEq] at hh
-    subst hh
+    simp only [] at hw
+    split at hw
+    · injection hw with hw
+      subst hw
+      simp only [Val.keys, Handle.ofCode_fiber, Option.toList, List.mem_singleton]
+    · exact nomatch hw
+  split at hh
+  · next hs =>
+    rw [(Store.Image.list Value.fiberHandle).ofVal_exact hh]
+    show ids.map Handle.fiber ⊆ (Val.fibers ids).keys
+    rw [Val.keys_fibers]
     exact List.Subset.refl _
-  all_goals
-    simp only [] at hh
-    obtain ⟨vs, hvs, hm⟩ := Option.bind_eq_some_iff.mp hh
+  · obtain ⟨vs, hvs, hm⟩ := Option.bind_eq_some_iff.mp hh
     exact List.Subset.trans (mapM_fiber_keys _ hg vs ids hm) (tuple?_keys _ vs hvs)
 
 theorem actionAt_keys (root : NativeEff) (p : Point) (a : NAction) (h : actionAt root p = some a) :
@@ -740,7 +740,7 @@ theorem actionAt_keys (root : NativeEff) (p : Point) (a : NAction) (h : actionAt
       split at h
       · rename_i id s hid hs
         subst h
-        have h1 := evalTerm_fiber_mem target p.env id hid
+        have h1 := evalTerm_fiber_mem target p.env ⟨id⟩ hid
         have h2 := evalTerm_scope_mem scope p.env s hs
         sub_tac
       · subst h; exact List.nil_subset _
@@ -749,7 +749,7 @@ theorem actionAt_keys (root : NativeEff) (p : Point) (a : NAction) (h : actionAt
       split at h
       · rename_i id hid
         subst h
-        have h1 := evalTerm_fiber_mem target p.env id hid
+        have h1 := evalTerm_fiber_mem target p.env ⟨id⟩ hid
         sub_tac
       · subst h; exact List.nil_subset _
     | interruptScoped target =>
@@ -757,7 +757,7 @@ theorem actionAt_keys (root : NativeEff) (p : Point) (a : NAction) (h : actionAt
       split at h
       · rename_i id hid
         subst h
-        have h1 := evalTerm_fiber_mem target p.env id hid
+        have h1 := evalTerm_fiber_mem target p.env ⟨id⟩ hid
         sub_tac
       · subst h; exact List.nil_subset _
     | interruptAll targets interruptor =>
@@ -813,7 +813,11 @@ theorem actionAt_keys (root : NativeEff) (p : Point) (a : NAction) (h : actionAt
       split at h
       · rename_i ctx hctx
         subst h
-        exact evalTerm_point_keys context p (Val.context ctx) hctx
+        obtain ⟨w, hw, hctx'⟩ := Option.bind_eq_some_iff.mp hctx
+        rw [Val.context?_exact hctx'] at hw
+        have hkeys := evalTerm_point_keys context p (Val.context ctx) hw
+        rw [Val.keys_context] at hkeys
+        exact hkeys
       · subst h; exact List.nil_subset _
     | getContext =>
       simp only [] at h
@@ -850,28 +854,24 @@ theorem forkScopedAt_keys (root : NativeEff) (p : Point) (scope : Nat) (a : NAct
     sub_tac using (resolve_keys root ((p.child 0).child 0))
   · cases h
 
+/-- The compile's continuation table names only what its name and its value name. Split as one
+`match` over the name and the value's shape (the spellings are reducible); the `scopeProvide`
+arm reads the previous context back off the value and splits once more. -/
 theorem contAOf_native_keys (root : NativeEff) (n : EffName) (v : Val) :
     nativeKeys (Program.contAOf root n v) ⊆ n.keys ++ v.keys := by
-  cases n with
-  | cont p => simp only [Program.contAOf]; sub_tac using (resolve_keys root (p.childWith 1 v))
-  | onValue p => simp only [Program.contAOf]; sub_tac using (resolve_keys root (p.childWith 1 v))
-  | forkScopedIn p =>
-    cases v <;> simp only [Program.contAOf] <;> sub_tac norm [Point.keys, EffName.keys, EffThunk.keys]
-  | restore exit => simp only [Program.contAOf, primKeys_ofExit]; sub_tac
-  | merge exit => simp only [Program.contAOf, primKeys_ofExit]; sub_tac
-  | reFail cause => simp only [Program.contAOf]; exact List.nil_subset _
-  | scopeOpen p =>
-    cases v <;> simp only [Program.contAOf] <;> sub_tac
-  | scopeProvide p s =>
-    cases v <;> simp only [Program.contAOf] <;>
-      sub_tac norm [Point.keys, EffName.keys, EffThunk.keys, Ctx.keys]
-  | scopeBody p previous => simp only [Program.contAOf]; sub_tac using (resolve_keys root (p.child 0))
-  | constant w => simp only [Program.contAOf]; sub_tac
-  | abort => simp only [Program.contAOf]; exact List.nil_subset _
-  | store name => simp only [Program.contAOf, nativeKeys, embed_keys]; exact Machine.contAOf_keys name v
-  | caught p | onCause p | fin p | gen p pc bind | loop p | registerAwait cell | cancelAwait cell
-  | withWaiter base waiter token | scopedExit previous scope | scopeClose scope | restoreCtx previous =>
-    simp only [Program.contAOf]; sub_tac
+  unfold Program.contAOf
+  split <;> first
+    | (simp only [nativeKeys, embed_keys]; exact Machine.contAOf_keys _ _)
+    | (simp only [primKeys_ofExit]; sub_tac)
+    | exact List.nil_subset _
+    | sub_tac
+    | sub_tac using (resolve_keys root _)
+    | sub_tac norm [Point.keys, EffName.keys, EffThunk.keys]
+    | (split
+       · next previous hprev =>
+         rw [Val.context?_exact hprev]
+         sub_tac norm [Point.keys, EffName.keys, EffThunk.keys, Ctx.keys]
+       · sub_tac)
 
 theorem contEOf_native_keys (root : NativeEff) (n : EffName) (cause : CauseV) :
     nativeKeys (Program.contEOf root n cause) ⊆ n.keys := by
@@ -958,6 +958,11 @@ theorem point_bind_keys (p : Point) (v : Val) (bind : Bool) :
     rw [Point.childWith_keys]
     exact List.Subset.refl _
 
+-- One declaration, forty fields, one heartbeat budget: the key normalisation on the shared
+-- carrier (U1) took this instance past the default 200 000 (it was near it before: at
+-- 100 000 the pre-U1 text fails too), so the budget is declared here rather than the fields
+-- split apart.
+set_option maxHeartbeats 800000 in
 theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThunk.keys (interpOf root) where
   contA n v := contAOf_native_keys root n v
   contE n c := contEOf_native_keys root n c
@@ -1188,14 +1193,14 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     simp only [nativeKeys, embed_keys]
     exact hok'
   emptyContext := rfl
-  contextValue ctx := List.Subset.refl _
+  contextValue ctx := by simp only [interpOf, Val.keys_context]; exact List.Subset.refl _
   exitValue e mode := by
     cases mode with
     | awaitValue => simp only [interpOf, primKeys, Machine.reifyExitVal_keys]; exact List.Subset.refl _
     | joinEffect => simp only [interpOf, primKeys_ofExit]; exact List.Subset.refl _
-  fiberValue id := List.Subset.refl _
+  fiberValue id := by simp only [interpOf, Val.keys_fiber]; exact List.Subset.refl _
   fiberIdValue _ := List.nil_subset _
-  fibersValue ids := List.Subset.refl _
+  fibersValue ids := by simp only [interpOf, Val.keys_fibers]; exact List.Subset.refl _
   exitsValue exits := by simp only [interpOf, Machine.exitsVal_keys]; exact List.Subset.refl _
   voidValue := rfl
   scopeValue scope := by simp only [interpOf]; exact List.Subset.refl _

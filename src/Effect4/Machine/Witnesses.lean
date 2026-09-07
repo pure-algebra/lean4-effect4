@@ -106,20 +106,37 @@ def reasonCode : Reason Err Defect FiberId Ann → Nat
   | Reason.interrupt none _ => 300
   | Reason.interrupt (some i) _ => 310 + i.value
 
+/-- The reasons of a written cause, coded; a shape no cause wrote codes as nothing. -/
+def causeCode (written : Val) : List Nat :=
+  ((causeImage.ofVal written).map fun c => c.reasons.map reasonCode).getD []
+
+/-- The fibers of a snapshot's payload; a payload that is not of fiber handles codes as
+nothing. -/
+def snapshotCode (handles : Val) : List Nat :=
+  (((Effect4.Store.Image.list Value.fiberHandle).ofVal handles).map fun ids =>
+    ids.map FiberId.value).getD []
+
+mutual
+/-- The codes are the ones the old carrier had, arm for arm: a list is `12` per cell and `11`
+at its end; a shape the machine never produces (a string, a memo-map handle, …) is `13`. -/
 def valCode : Val → List Nat
   | Val.unit => [0]
   | Val.nat n => [1, n]
   | Val.bool b => [2, if b then 1 else 0]
-  | Val.fiber i => [3, i.value]
-  | Val.fibers ids => 4 :: ids.map FiberId.value
-  | Val.cell k => [5, k.index]
-  | Val.promise k => [6, k.index]
-  | Val.scopeHandle s => [7, s]
-  | Val.context _ => [8]
+  | Value.fiber i => [3, i]
+  | Value.cell k => [5, k]
+  | Value.promise k => [6, k]
+  | Value.scope s => [7, s]
   | Val.exitOk v => 9 :: valCode v
-  | Val.exitErr c => 10 :: c.reasons.map reasonCode
-  | Val.exitNil => [11]
-  | Val.exitCons head tail => 12 :: (valCode head ++ valCode tail)
+  | Value.exitErr written => 10 :: causeCode written
+  | Value.fiberContext _ _ _ => [8]
+  | Value.fiberSnapshot handles => 4 :: snapshotCode handles
+  | .list values => valCodeList values
+  | _ => [13]
+def valCodeList : List Val → List Nat
+  | [] => [11]
+  | head :: tail => 12 :: (valCode head ++ valCodeList tail)
+end
 
 def exitCode : ExitV → List Nat
   | Exit.success v => 0 :: valCode v

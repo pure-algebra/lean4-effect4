@@ -173,32 +173,34 @@ def RuntimeCtor.index : RuntimeCtor → Nat
 /-! ## Spellings
 
 The runtime's shapes over the shared carrier, as definitions a `match` may use
-(`@[match_pattern]`): the migration writes `Value.cell k` where the old carrier wrote
-`Val.cell ⟨k⟩`, in patterns and in terms alike, and the constructor index or kind byte is
-written once, here. -/
+(`@[match_pattern]`): the runtime writes `Value.cell k` in patterns and in terms alike, and
+the constructor index or kind byte is written once, here. They are reducible (`abbrev`), so
+a `simp` lemma stated on one spelling matches a term written on another or on the raw
+constructor, and `Machine/Stores.lean`'s spellings at the old argument types
+(`Val.cell (k : RefKey)`) unfold to these. -/
 
 namespace Value
 
-@[match_pattern] def fiber (index : Nat) : Val := .handle 1 index
-@[match_pattern] def cell (index : Nat) : Val := .handle 2 index
-@[match_pattern] def promise (index : Nat) : Val := .handle 3 index
-@[match_pattern] def scope (index : Nat) : Val := .handle 4 index
-@[match_pattern] def memoMap (index : Nat) : Val := .handle 5 index
+@[match_pattern] abbrev fiber (index : Nat) : Val := .handle 1 index
+@[match_pattern] abbrev cell (index : Nat) : Val := .handle 2 index
+@[match_pattern] abbrev promise (index : Nat) : Val := .handle 3 index
+@[match_pattern] abbrev scope (index : Nat) : Val := .handle 4 index
+@[match_pattern] abbrev memoMap (index : Nat) : Val := .handle 5 index
 /-- `Exit.success value`. -/
-@[match_pattern] def exitOk (value : Val) : Val := .ctor 0 [value]
+@[match_pattern] abbrev exitOk (value : Val) : Val := .ctor 0 [value]
 /-- `Exit.failure cause`, the cause already written. -/
-@[match_pattern] def exitErr (cause : Val) : Val := .ctor 1 [cause]
+@[match_pattern] abbrev exitErr (cause : Val) : Val := .ctor 1 [cause]
 /-- The fiber's cached context (`Machine.Ctx`): the ambient scope as an option of a scope
 handle, `MaxOpsBeforeYield`, `PreventSchedulerYield`. -/
-@[match_pattern] def fiberContext (ambient budget preventYield : Val) : Val :=
+@[match_pattern] abbrev fiberContext (ambient budget preventYield : Val) : Val :=
   .ctor 2 [ambient, budget, preventYield]
 /-- `awaitAllChildren`'s snapshot of `fiber.children`, a `Set` in rc.112
 (`internal/effect.ts:534`, `:703-704`), not an array: the list of fiber handles under its own
 index, distinct from a list of exits. -/
-@[match_pattern] def fiberSnapshot (fibers : Val) : Val := .ctor 3 [fibers]
+@[match_pattern] abbrev fiberSnapshot (fibers : Val) : Val := .ctor 3 [fibers]
 /-- A service context (`Env.Val`'s spine, rc.112's `Context` map): the `pair key value`
 entries as the constructor's arguments, in binding order. -/
-@[match_pattern] def serviceContext (entries : List Val) : Val := .ctor 5 entries
+@[match_pattern] abbrev serviceContext (entries : List Val) : Val := .ctor 5 entries
 
 end Value
 
@@ -374,12 +376,12 @@ def exit {β : Type} (B : Image β) (C : Image (Cause ε δ ι α)) : Image (Exi
     unfold ofExit at h
     split at h
     · next w =>
-      obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+      obtain ⟨x, hx, hj⟩ := Image.map_eq_some_inv h
       subst hj
       show Val.ctor 0 [w] = Val.ctor 0 [B.toVal x]
       rw [B.ofVal_exact hx]
     · next w =>
-      obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+      obtain ⟨x, hx, hj⟩ := Image.map_eq_some_inv h
       subst hj
       show Val.ctor 1 [w] = Val.ctor 1 [C.toVal x]
       rw [C.ofVal_exact hx]

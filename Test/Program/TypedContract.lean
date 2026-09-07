@@ -115,7 +115,7 @@ section Inhabited
 #guard Val.hasTy (Val.exitErr (Cause.fail (Err.tag 1))) (.exitOf .nat .nat)
 #guard Val.hasTy (Val.tuple [Val.nat 1, Val.bool true]) (.prod .nat .bool)
 #guard Val.hasTy Val.exitNil (.list .nat)
-#guard Val.hasTy (Val.exitCons (Val.nat 1) (Val.exitCons (Val.nat 2) Val.exitNil)) (.list .nat)
+#guard Val.hasTy (Val.list [Val.nat 1, Val.nat 2]) (.list .nat)
 #guard Val.hasTy (Val.nat 1) (.union .nat .bool)
 #guard Val.hasTy (Val.bool true) (.union .nat .bool)
 
@@ -138,7 +138,14 @@ section Refused
 #guard Val.hasTy (Val.cell ⟨0⟩) NativeOp.deferredTy = false
 #guard Val.hasTy (Val.exitOk (Val.nat 1)) (.exitOf .bool .nat) = false
 #guard Val.hasTy (Val.tuple [Val.nat 1]) (.prod .nat .nat) = false
-#guard Val.hasTy (Val.exitCons (Val.nat 1) (Val.exitCons (Val.bool true) Val.exitNil)) (.list .nat) = false
+#guard Val.hasTy (Val.list [Val.nat 1, Val.bool true]) (.list .nat) = false
+-- U1: the carrier's other frames and a malformed shape of a runtime one are refusals too
+#guard Val.hasTy (Val.str "x") .string = false
+#guard Val.hasTy (Store.Val.handle 9 0) NativeOp.refTy = false
+#guard Val.hasTy (Value.memoMap 0) (.handle "Layer.MemoMap") = false
+#guard Val.hasTy (Value.exitErr (Val.nat 1)) (.exitOf .nat .nat) = false
+#guard Val.hasTy (Value.fiberSnapshot (Val.list [Val.nat 1])) (.list (.fiberOf .nat .never)) = false
+#guard Val.hasTy (Value.fiberContext (Val.nat 1) (Val.nat 2) (Val.nat 3)) Ty.context = false
 #guard Val.hasTy (Val.nat 1) (.union .bool .unit) = false
 
 end Refused

@@ -49,7 +49,9 @@ theorem exit_encoding_distinguishes (c : CauseV) :
   simp [reifyExitVal]
 
 theorem exit_encoding_roundtrip (ex : ExitV) : exitOfVal (reifyExitVal ex) = some ex := by
-  cases ex <;> rfl
+  show exitImage.ofVal (reifyExitVal ex) = some ex
+  rw [reifyExitVal_eq_exitImage]
+  exact exitImage.ofVal_toVal ex
 
 /-! ## R2 scout corrections, checked before changing the contract -/
 

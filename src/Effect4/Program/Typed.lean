@@ -31,9 +31,9 @@ Refusals of the value typing, each a `false` of `Val.hasTy` and not a silent one
 
 Two facts of this toolchain shape the spelling. Core v4.33.1 has no `List.Forall₂` and this
 tree carries no Mathlib, so `Fits` is its own two-constructor inductive of that shape. And
-`Val.hasTy` descends on the value in the exit and list arms and on the type in the union arm,
-so its recursion is well-founded, not structural: a closed instance is settled by
-`simp [Val.hasTy]` or by a `#guard`, never by `decide` or `rfl`.
+`Val.hasTy` recurses on the *type* — the exit, product, list and union arms all descend into
+the type, and the value is matched inside each arm — so it is structural in `Ty`; a closed
+instance is settled by `simp [Val.hasTy]`, by `rfl`, or by a `#guard`.
 -/
 
 set_option autoImplicit false
@@ -44,72 +44,112 @@ open Effect4 Effect4.Machine
 
 /-! ## Values against types -/
 
-/-- Which values inhabit which types of the native cut (plan §2.1, ENSURES 1). One arm per
-`(Val, Ty)` pair the cut can produce: the scalars (`Stores.lean:150-153`); the four handle
-kinds against their spellings, `Val.cell` against `NativeOp.refTy` and `Val.promise` against
-`NativeOp.deferredTy` (`Native.lean:133-134`), `Val.scopeHandle` against `Ty.scope` and
-`Val.context` against `Ty.context` (`Eff.lean:144-147`); the fiber handle and the snapshot
-(`Stores.lean:155-158`); the reified exits (`:167-170`); the two-cell list `Val.tuple` builds
-(`Native.lean:34-36`) against `.prod`; the list cells (`Stores.lean:171-176`) against `.list`;
-and a union as the disjunction of its members. The last arm is every refusal named in the
-module header. -/
-def Val.hasTy : Val → Ty → Bool
-  | Val.unit, .unit => true
-  | Val.nat _, .nat => true
-  | Val.bool _, .bool => true
-  | Val.cell _, .handle target => target == "Ref.Ref<number>"
-  | Val.promise _, .handle target => target == "Deferred.Deferred<number, number>"
-  | Val.scopeHandle _, .handle target => target == "Scope.Scope"
-  | Val.context _, .handle target => target == "Context.Context<unknown>"
-  | Val.fiber _, .fiberOf _ _ => true
-  | Val.fibers _, .list (.fiberOf _ _) => true
-  | Val.exitOk v, .exitOf a _ => Val.hasTy v a
-  | Val.exitErr _, .exitOf _ _ => true
-  | Val.exitCons a (Val.exitCons b Val.exitNil), .prod ta tb => Val.hasTy a ta && Val.hasTy b tb
-  | Val.exitNil, .list _ => true
-  | Val.exitCons h t, .list ty => Val.hasTy h ty && Val.hasTy t (.list ty)
-  | v, .union l r => Val.hasTy v l || Val.hasTy v r
-  | _, _ => false
+/-- Which values inhabit which types of the native cut (plan §2.1, ENSURES 1), by the type.
+The scalars against the carrier's own frames; a handle against the spelling of its kind byte
+(`HandleKind`, `Machine/Value.lean`): `Val.cell` against `NativeOp.refTy`, `Val.promise`
+against `NativeOp.deferredTy` (`Native.lean`), `Val.scopeHandle` against `Ty.scope`, and a
+context — a value `Val.context?` reads back — against `Ty.context` (`Eff.lean`); the fiber
+handle against `.fiberOf`, and a snapshot of fiber handles (`Val.snapshot?`) against a `.list`
+of them; a reified exit against `.exitOf` — a failure's cause must read back, its error column
+is not checked (`TYPED-FB-CAUSE`); the two-cell `list` `Val.tuple` builds (`Native.lean`)
+against `.prod`; a `list` against `.list` when every member does; a union as the disjunction
+of its members. Every other pair is a refusal named in the module header. -/
+def Val.hasTy (v : Val) : Ty → Bool
+  | .unit => match v with | .unit => true | _ => false
+  | .nat => match v with | .nat _ => true | _ => false
+  | .bool => match v with | .bool _ => true | _ => false
+  | .handle target =>
+    match v with
+    | .handle kind _ =>
+      match HandleKind.ofByte? kind with
+      | some .cell => target == "Ref.Ref<number>"
+      | some .promise => target == "Deferred.Deferred<number, number>"
+      | some .scope => target == "Scope.Scope"
+      | _ => false
+    | _ => target == "Context.Context<unknown>" && (Val.context? v).isSome
+  | .fiberOf _ _ => match v with | Value.fiber _ => true | _ => false
+  | .exitOf a _ =>
+    match v with
+    | Val.exitOk x => Val.hasTy x a
+    | Value.exitErr written => (causeImage.ofVal written).isSome
+    | _ => false
+  | .prod ta tb =>
+    match v with
+    | .list [x, y] => Val.hasTy x ta && Val.hasTy y tb
+    | _ => false
+  | .list ty =>
+    match v with
+    | Value.fiberSnapshot _ =>
+      match ty with
+      | .fiberOf _ _ => (Val.snapshot? v).isSome
+      | _ => false
+    | .list values => values.all fun x => Val.hasTy x ty
+    | _ => false
+  | .union l r => Val.hasTy v l || Val.hasTy v r
+  | _ => false
 
 /-! ### Inversions
 
-What a value must be, given its type: the shapes `NativeOp.syncOpOf` (`Native.lean:208-232`)
-and the atoms (`Native.lean:59-70`) pattern-match on. -/
+What a value must be, given its type: the shapes `NativeOp.syncOpOf` (`Native.lean`) and the
+atoms pattern-match on. Each unfolds the type's arm and splits the value's match. -/
 
 /-- A `.unit` is `Val.unit`. -/
 theorem Val.hasTy_unit_inv {v : Val} (h : Val.hasTy v .unit = true) : v = Val.unit := by
-  cases v <;> simp_all [Val.hasTy]
+  simp only [Val.hasTy] at h
+  split at h
+  · rfl
+  · exact nomatch h
 
 /-- A `.nat` is a `Val.nat`. -/
 theorem Val.hasTy_nat_inv {v : Val} (h : Val.hasTy v .nat = true) : ∃ n, v = Val.nat n := by
-  cases v <;> simp_all [Val.hasTy]
+  simp only [Val.hasTy] at h
+  split at h
+  · next n => exact ⟨n, rfl⟩
+  · exact nomatch h
 
 /-- A `.bool` is a `Val.bool`. -/
 theorem Val.hasTy_bool_inv {v : Val} (h : Val.hasTy v .bool = true) : ∃ b, v = Val.bool b := by
-  cases v <;> simp_all [Val.hasTy]
+  simp only [Val.hasTy] at h
+  split at h
+  · next b => exact ⟨b, rfl⟩
+  · exact nomatch h
 
-/-- A `NativeOp.refTy` is a `Val.cell`: the three other handle spellings differ from
-`"Ref.Ref<number>"`, decided on the literals. -/
+/-- A `NativeOp.refTy` is a `Val.cell`: the other handle spellings and the context's differ
+from `"Ref.Ref<number>"`, decided on the literals; the kind byte is the cell's by
+`HandleKind.ofByte?_exact`. -/
 theorem Val.hasTy_refTy_inv {v : Val} (h : Val.hasTy v NativeOp.refTy = true) :
     ∃ k, v = Val.cell k := by
-  cases v <;> simp_all [Val.hasTy, NativeOp.refTy]
+  simp only [Val.hasTy, NativeOp.refTy] at h
+  split at h
+  · next kind index =>
+    split at h
+    · next hk => exact ⟨⟨index⟩, by rw [HandleKind.ofByte?_exact hk]; rfl⟩
+    · exact absurd h (by decide)
+    · exact absurd h (by decide)
+    · exact nomatch h
+  · exact absurd (Bool.and_eq_true_iff.mp h).1 (by decide)
 
 /-- A `NativeOp.deferredTy` is a `Val.promise`. -/
 theorem Val.hasTy_deferredTy_inv {v : Val} (h : Val.hasTy v NativeOp.deferredTy = true) :
     ∃ k, v = Val.promise k := by
-  cases v <;> simp_all [Val.hasTy, NativeOp.deferredTy]
+  simp only [Val.hasTy, NativeOp.deferredTy] at h
+  split at h
+  · next kind index =>
+    split at h
+    · exact absurd h (by decide)
+    · next hk => exact ⟨⟨index⟩, by rw [HandleKind.ofByte?_exact hk]; rfl⟩
+    · exact absurd h (by decide)
+    · exact nomatch h
+  · exact absurd (Bool.and_eq_true_iff.mp h).1 (by decide)
 
-/-- A `.prod a b` is the two-cell list of an `a` and a `b`. -/
+/-- A `.prod a b` is the two-cell list (`Val.tuple`) of an `a` and a `b`. (U1: the two cells
+were `exitCons x (exitCons y exitNil)`; they are the carrier's `list [x, y]`.) -/
 theorem Val.hasTy_prod_inv {v : Val} {a b : Ty} (h : Val.hasTy v (.prod a b) = true) :
-    ∃ x y, v = Val.exitCons x (Val.exitCons y Val.exitNil) ∧
-      Val.hasTy x a = true ∧ Val.hasTy y b = true := by
-  cases v <;> try (simp [Val.hasTy] at h; done)
-  rename_i x t
-  cases t <;> try (simp [Val.hasTy] at h; done)
-  rename_i y u
-  cases u <;> try (simp [Val.hasTy] at h; done)
-  simp [Val.hasTy] at h
-  exact ⟨x, y, rfl, h.1, h.2⟩
+    ∃ x y, v = Val.tuple [x, y] ∧ Val.hasTy x a = true ∧ Val.hasTy y b = true := by
+  simp only [Val.hasTy] at h
+  split at h
+  · next x y => exact ⟨x, y, rfl, (Bool.and_eq_true_iff.mp h).1, (Bool.and_eq_true_iff.mp h).2⟩
+  · exact nomatch h
 
 /-! ## Environments -/
 
@@ -246,7 +286,7 @@ theorem nativeAtom_typed (atom : String) (tys : List Ty) (ty : Ty) (vs : List Va
   · -- pair
     cases hty
     obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
-    exact ⟨_, rfl, by simp [Val.tuple, Val.hasTy, hx, hy]⟩
+    exact ⟨_, rfl, by simp [Val.hasTy, hx, hy]⟩
   · -- fst
     cases hty
     obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
@@ -477,7 +517,7 @@ value (`:232`). -/
 theorem syncOpOf_async_none (op : NativeOp) (v : Val) (hk : (NativeOp.row op).kind = .async) :
     NativeOp.syncOpOf op v = none := by
   cases op with
-  | deferredAwait => cases v <;> rfl
+  | deferredAwait => rfl
   | scopeMake strategy => cases strategy <;> simp [NativeOp.row] at hk
   | _ => simp [NativeOp.row] at hk
 

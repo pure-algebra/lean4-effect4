@@ -310,18 +310,23 @@ def causeOf (env : List Val) : CauseTerm → Option CauseV
   | .interrupt none => some (Cause.interrupt none)
   | .interrupt (some who) =>
     match evalTerm env who with
-    | some (Val.fiber id) => some (Cause.interrupt (some id))
+    | some (Val.fiber ⟨id⟩) => some (Cause.interrupt (some ⟨id⟩))
     | _ => none
   | .both left right => do
     let l ← causeOf env left
     let r ← causeOf env right
     some (Cause.combine l r)
 
-/-- The exit a reified exit value spells. -/
-def exitOfVal : Val → Option ExitV
-  | Val.exitOk v => some (Exit.success v)
-  | Val.exitErr c => some (Exit.failure c)
-  | _ => none
+/-- The exit a reified exit value spells: the exit image read back (`exitImage`,
+`Machine/Stores.lean`), so `Val.exitOk v` is `Exit.success v`, `Val.exitErr c` is
+`Exit.failure c`, and any other shape — including a failure whose cause no cause wrote —
+is `none`. -/
+def exitOfVal : Val → Option ExitV := exitImage.ofVal
+
+theorem exitOfVal_exitOk (v : Val) : exitOfVal (Val.exitOk v) = some (Exit.success v) := rfl
+
+theorem exitOfVal_exitErr (c : CauseV) : exitOfVal (Val.exitErr c) = some (Exit.failure c) :=
+  exitImage.ofVal_toVal (Exit.failure c)
 
 /-- `compile` of plan §3, structural in the program; the point is data. Names are minted at
 the point; `interpOf` resolves them by compiling the subterm they address. -/
@@ -400,10 +405,10 @@ def compileEff : NativeEff → Point → NCode
         | _ => badShape
       | .awaitFiber fiber mode =>
         match evalTerm p.env fiber with
-        | some (Val.fiber id) =>
-          match p.awaitExit id mode with
+        | some (Val.fiber ⟨id⟩) =>
+          match p.awaitExit ⟨id⟩ mode with
           | some exit => Prim.ofExit exit
-          | none => Prim.suspend (EffThunk.park (ParkKind.join id mode))
+          | none => Prim.suspend (EffThunk.park (ParkKind.join ⟨id⟩ mode))
         | _ => badShape
       -- `forkScoped` is `flatMap(scope, scope => forkIn(self, scope, options))` (`:5381-5406`,
       -- §20): the counted `Service` read at the action, then `forkIn` on its handle
@@ -544,10 +549,11 @@ def actionAt (root : NativeEff) (p : Point) : Option NAction :=
   | some (Node.eff (.withFiber a)) =>
     let q := p.child 0
     let refuse : NAction := WithFiberAction.refuse (Cause.die Defect.badName)
+    -- a snapshot's fibers, or a tuple of fiber handles
     let handles : Val → Option (List FiberId) := fun
-      | Val.fibers ids => some ids
+      | Value.fiberSnapshot hs => (Store.Image.list Value.fiberHandle).ofVal hs
       | v => (Val.tuple? v).bind fun vs => vs.mapM fun
-        | Val.fiber id => some id
+        | Val.fiber ⟨id⟩ => some ⟨id⟩
         | _ => none
     some (match a with
       | .fork _ options => WithFiberAction.fork (resolve root (q.child 0)) options
@@ -560,15 +566,15 @@ def actionAt (root : NativeEff) (p : Point) : Option NAction :=
       | .forkScoped _ _ => WithFiberAction.ambientScope
       | .runIn target scope =>
         match evalTerm p.env target, evalTerm p.env scope with
-        | some (Val.fiber id), some (Val.scopeHandle s) => WithFiberAction.runIn id s
+        | some (Val.fiber ⟨id⟩), some (Val.scopeHandle s) => WithFiberAction.runIn ⟨id⟩ s
         | _, _ => refuse
       | .interrupt target =>
         match evalTerm p.env target with
-        | some (Val.fiber id) => WithFiberAction.interrupt id
+        | some (Val.fiber ⟨id⟩) => WithFiberAction.interrupt ⟨id⟩
         | _ => refuse
       | .interruptScoped target =>
         match evalTerm p.env target with
-        | some (Val.fiber id) => WithFiberAction.interruptScoped id
+        | some (Val.fiber ⟨id⟩) => WithFiberAction.interruptScoped ⟨id⟩
         | _ => refuse
       | .interruptAll targets interruptor =>
         match (evalTerm p.env targets).bind handles with
@@ -595,9 +601,10 @@ def actionAt (root : NativeEff) (p : Point) : Option NAction :=
         | none => refuse
       | .raceAll es => WithFiberAction.raceAll (entrants es (q.child 0))
       | .setContext context =>
-        match evalTerm p.env context with
-        | some (Val.context ctx) => WithFiberAction.setContext ctx
-        | _ => refuse
+        -- the context is read back off the value (`Val.context?`); any other shape refuses
+        match (evalTerm p.env context).bind Val.context? with
+        | some ctx => WithFiberAction.setContext ctx
+        | none => refuse
       | .getContext => WithFiberAction.getContext
       | .getId => WithFiberAction.getId
       | .closeScope scope exit =>
@@ -634,10 +641,13 @@ def contAOf (root : NativeEff) : EffName → Val → NCode
     Prim.onExit (Prim.onSuccess (Prim.withFiber EffThunk.getCtx) (EffName.scopeProvide p s))
       (EffName.scopeClose s) false
   | .scopeOpen _, _ => badShape
-  | .scopeProvide p s, Val.context previous =>
-    Prim.onSuccess (Prim.withFiber (EffThunk.setCtx { previous with ambientScope := some s }))
-      (EffName.scopeBody p previous)
-  | .scopeProvide _ _, _ => badShape
+  | .scopeProvide p s, v =>
+    -- the previous context is read back off the value; any other shape is the wrong one
+    match Val.context? v with
+    | some previous =>
+      Prim.onSuccess (Prim.withFiber (EffThunk.setCtx { previous with ambientScope := some s }))
+        (EffName.scopeBody p previous)
+    | none => badShape
   | .scopeBody p previous, _ =>
     Prim.onExit (resolve root (p.child 0)) (EffName.restoreCtx previous) false
   | .constant v, _ => Prim.success v

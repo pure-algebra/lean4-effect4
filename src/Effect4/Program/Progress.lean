@@ -418,7 +418,7 @@ theorem syncOpOf_validIn (op : NativeOp) (v : Val) (o : SyncOp) (s : Stores)
     obtain ⟨x, y, rfl, hx, _⟩ := Val.hasTy_prod_inv hv
     obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hx
     cases ho
-    simpa [Val.validIn, SyncOp.validIn] using hval
+    simpa [Val.validIn_list, Val.validIn_cell, SyncOp.validIn] using hval
   | deferredMake =>
     obtain rfl := Val.hasTy_unit_inv hv
     cases ho
@@ -432,7 +432,10 @@ theorem syncOpOf_validIn (op : NativeOp) (v : Val) (o : SyncOp) (s : Stores)
     obtain ⟨k, rfl⟩ := Val.hasTy_deferredTy_inv hx
     obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hy
     cases ho
-    simpa [Val.validIn, SyncOp.validIn] using hval
+    simp only [Val.validIn_list, List.all_cons, List.all_nil, Val.validIn_promise, Bool.and_true,
+      Bool.and_eq_true, decide_eq_true_eq] at hval
+    simp only [SyncOp.validIn, decide_eq_true_eq]
+    exact hval.1
   | deferredAwait =>
     rw [syncOpOf_async_none NativeOp.deferredAwait v rfl] at ho
     cases ho

@@ -58,6 +58,16 @@ export Effect4.Machine (Val Err Defect Ann Ctx Stores ExitV Stuck RunEvent RunDe
 export Effect4 (FiberId)
 export Effect4.Program (EffName EffThunk)
 
+/-! The value spellings at the application seam: `Val` is the shared carrier
+(`Effect4.Store.Val`, U1), so its frames and the runtime's spellings over it
+(`Machine/Stores.lean`) are re-exported here, where `Val.nat 42` and `Val.cell ⟨0⟩` read as
+before. -/
+namespace Val
+export Effect4.Store.Val (unit nat bool str bytes list pair ctor ref handle)
+export Effect4.Machine.Val (fiber cell promise scopeHandle exitOk exitNil fibers context exitErr
+  snapshot? context? cause?)
+end Val
+
 /-- A program: the Eff AST over the native operation alphabet. -/
 abbrev Program := NativeEff
 

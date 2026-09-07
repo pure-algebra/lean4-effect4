@@ -21,8 +21,8 @@ What is deliberately not said, each named so it is a refusal and not an omission
   traversed by `Val.validIn`; a Deferred completed with `ofRefGet cell` on a dangling cell is
   not excluded (plan §7, row `E4-STORES-CE-003`). `WF` is not widened in this slice.
 * `Val.fiber` and `Val.fibers` are the machine's handles, not the store's: `validIn` accepts
-  them (`Stores.lean:155-158`).
-* `Val.exitErr` carries a cause and no handle; it is valid everywhere.
+  them (`Stores.handleValid`, the fiber byte).
+* `Val.exitErr` carries a cause and no handle; it is valid everywhere (`Val.validIn_exitErr`).
 * `ScopeStore.forkChild` (`Stores.lean:932`) is not reachable from `syncOpStep` and has no
   law here.
 
@@ -60,18 +60,98 @@ theorem Stores.le_trans {s s' s'' : Stores} (h : s.le s') (h' : s'.le s'') : s.l
 
 /-! ## Validity -/
 
-/-- A value's handles exist in the store (plan §3.1, ENSURES 12): a `Val.cell` names a heap
-index (`Stores.lean:160`, `refPeek` at `:451`), a `Val.promise` a Deferred cell index
-(`:162`, `cellAt` at `:704`), a `Val.scopeHandle` a scope entry (`:164`, `entryAt` at `:902`);
-a reified exit and the list cells are valid when their parts are. Fibers are the machine's,
-not the store's. -/
+/-- One handle's kind byte and index against the store (plan §3.1, ENSURES 12): a cell byte
+needs a heap index (`Stores.lean` `refPeek`), a promise byte a Deferred cell index
+(`cellAt`), a scope byte a scope entry (`entryAt`); a fiber byte is the machine's, not the
+store's, and is accepted; a `memoMap` byte (the Layer machine's) or an unregistered byte names
+nothing this store holds. -/
+def Stores.handleValid (s : Stores) (kind : UInt8) (index : Nat) : Bool :=
+  match HandleKind.ofByte? kind with
+  | some .fiber => true
+  | some .cell => index < s.refs.length
+  | some .promise => index < s.deferreds.cells.length
+  | some .scope => (s.scopes.entryAt index).isSome
+  | _ => false
+
+mutual
+/-- A value's handles exist in the store (plan §3.1, ENSURES 12): every `handle` frame the
+carrier carries, through `Stores.handleValid` — a `Val.cell` names a heap index, a
+`Val.promise` a Deferred cell, a `Val.scopeHandle` a scope entry, a context its ambient scope;
+a reified exit, a snapshot and a list are valid when their parts are; a tree with no handle
+(a number, a reified failed exit, whose cause writes none) is valid everywhere.
+`Val.validIn_eq_handles` is the fold over `Store.Val.handles`. -/
 def Val.validIn (s : Stores) : Val → Bool
-  | Val.cell k => k.index < s.refs.length
-  | Val.promise k => k.index < s.deferreds.cells.length
-  | Val.scopeHandle key => (s.scopes.entryAt key).isSome
-  | Val.exitOk v => Val.validIn s v
-  | Val.exitCons h t => Val.validIn s h && Val.validIn s t
+  | .handle kind index => s.handleValid kind index
+  | .list values => Val.validInList s values
+  | .pair a b => Val.validIn s a && Val.validIn s b
+  | .some a => Val.validIn s a
+  | .ctor _ args => Val.validInList s args
   | _ => true
+/-- Every value of a list is valid. -/
+def Val.validInList (s : Stores) : List Val → Bool
+  | [] => true
+  | value :: rest => Val.validIn s value && Val.validInList s rest
+end
+
+theorem Val.validIn_cell (s : Stores) (k : RefKey) :
+    Val.validIn s (Val.cell k) = decide (k.index < s.refs.length) := rfl
+theorem Val.validIn_promise (s : Stores) (k : DeferredKey) :
+    Val.validIn s (Val.promise k) = decide (k.index < s.deferreds.cells.length) := rfl
+theorem Val.validIn_scopeHandle (s : Stores) (key : Nat) :
+    Val.validIn s (Val.scopeHandle key) = (s.scopes.entryAt key).isSome := rfl
+theorem Val.validIn_fiber (s : Stores) (id : FiberId) : Val.validIn s (Val.fiber id) = true := rfl
+theorem Val.validIn_exitOk (s : Stores) (v : Val) : Val.validIn s (Val.exitOk v) = Val.validIn s v := by
+  simp only [Val.validIn, Val.validInList, Bool.and_true]
+
+theorem Val.validInList_eq_all (s : Stores) (values : List Val) :
+    Val.validInList s values = values.all (Val.validIn s) := by
+  induction values with
+  | nil => rfl
+  | cons value rest ih => rw [Val.validInList, ih, List.all_cons]
+
+theorem Val.validIn_list (s : Stores) (values : List Val) :
+    Val.validIn s (Val.list values) = values.all (Val.validIn s) :=
+  Val.validInList_eq_all s values
+
+theorem Val.validInList_eq_handlesList (s : Stores) (values : List Val)
+    (ih : ∀ x ∈ values, x.validIn s = x.handles.all fun h => s.handleValid h.1 h.2) :
+    Val.validInList s values =
+      (Store.Val.handlesList values).all fun h => s.handleValid h.1 h.2 := by
+  induction values with
+  | nil => rfl
+  | cons value rest ihr =>
+    rw [Val.validInList, Store.Val.handlesList_cons, List.all_append, ih value (by simp),
+      ihr (fun x hx => ih x (by simp [hx]))]
+
+/-- Validity is the fold of `Stores.handleValid` over the carrier's `handle` frames. -/
+theorem Val.validIn_eq_handles (s : Stores) (v : Val) :
+    v.validIn s = v.handles.all fun h => s.handleValid h.1 h.2 := by
+  induction v using Store.Val.ind with
+  | unit => rfl
+  | bool _ => rfl
+  | nat _ => rfl
+  | str _ => rfl
+  | bytes _ => rfl
+  | none => rfl
+  | ref _ _ => rfl
+  | handle kind index =>
+    show s.handleValid kind index = List.all [(kind, index)] fun h => s.handleValid h.1 h.2
+    rw [List.all_cons, List.all_nil, Bool.and_true]
+  | list values ih => exact Val.validInList_eq_handlesList s values ih
+  | pair a b iha ihb =>
+    show (Val.validIn s a && Val.validIn s b) =
+      List.all (a.handles ++ b.handles) fun h => s.handleValid h.1 h.2
+    rw [List.all_append, iha, ihb]
+  | some a ih => exact ih
+  | ctor _ args ih => exact Val.validInList_eq_handlesList s args ih
+
+/-- A reified failed exit is valid everywhere: its cause writes no handle. -/
+theorem Val.validIn_exitErr (s : Stores) (cause : CauseV) : Val.validIn s (Val.exitErr cause) = true := by
+  rw [Val.validIn_eq_handles]
+  show List.all (Store.Val.handles (.ctor 1 [causeImage.toVal cause])) _ = true
+  rw [Store.Val.handles, Store.Val.handlesList_cons, causeImage_handleFree cause,
+    Store.Val.handlesList_nil]
+  rfl
 
 /-- An operation's keys and argument values exist in the store (plan §3.1, ENSURES 12): the
 `Ref` rows on the cell index and, where a value is written (`refMake`, `refSet`,
@@ -125,22 +205,26 @@ def SyncOp.isRead : SyncOp → Bool
 
 /-! ## Monotonicity -/
 
-/-- Validity survives growth (plan §3.2, ENSURES 13): induction on the value. -/
+/-- One handle's validity survives growth (plan §3.2, ENSURES 13): by its kind. -/
+theorem Stores.handleValid_mono {s s' : Stores} (hle : s.le s') (kind : UInt8) (index : Nat)
+    (h : s.handleValid kind index = true) : s'.handleValid kind index = true := by
+  unfold Stores.handleValid at h ⊢
+  generalize HandleKind.ofByte? kind = k at h ⊢
+  cases k with
+  | none => exact h
+  | some k =>
+    cases k with
+    | fiber => rfl
+    | cell => exact decide_eq_true (Nat.lt_of_lt_of_le (of_decide_eq_true h) hle.1)
+    | promise => exact decide_eq_true (Nat.lt_of_lt_of_le (of_decide_eq_true h) hle.2.1)
+    | scope => exact hle.2.2.1 index h
+    | memoMap => exact h
+
+/-- Validity survives growth (plan §3.2, ENSURES 13): every handle of the value does. -/
 theorem Val.validIn_mono {s s' : Stores} (hle : s.le s') (v : Val) (h : v.validIn s = true) :
     v.validIn s' = true := by
-  induction v with
-  | cell k =>
-    simp only [Val.validIn, decide_eq_true_eq] at h ⊢
-    exact Nat.lt_of_lt_of_le h hle.1
-  | promise k =>
-    simp only [Val.validIn, decide_eq_true_eq] at h ⊢
-    exact Nat.lt_of_lt_of_le h hle.2.1
-  | scopeHandle key => exact hle.2.2.1 key h
-  | exitOk v ih => exact ih h
-  | exitCons hd tl ih1 ih2 =>
-    simp only [Val.validIn, Bool.and_eq_true] at h ⊢
-    exact ⟨ih1 h.1, ih2 h.2⟩
-  | _ => rfl
+  rw [Val.validIn_eq_handles, List.all_eq_true] at h ⊢
+  exact fun x hx => Stores.handleValid_mono hle x.1 x.2 (h x hx)
 
 /-- Validity of an operation survives growth (plan §3.2, ENSURES 13): cases. -/
 theorem SyncOp.validIn_mono {s s' : Stores} (hle : s.le s') (o : SyncOp)
@@ -291,7 +375,7 @@ theorem refStep_valid (o : SyncOp) (s : Stores) (v : Val) (heap' : RefHeap) (hwf
     · rcases List.mem_append.mp hx with hmem | hone
       · exact hwf x hmem
       · rw [List.mem_singleton.mp hone]; exact hv
-    · simp [Val.validIn]
+    · simp [Val.validIn_cell]
   | refGet cell =>
     simp only [refStep] at h
     obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
@@ -306,7 +390,7 @@ theorem refStep_valid (o : SyncOp) (s : Stores) (v : Val) (heap' : RefHeap) (hwf
     simp only [Prod.mk.injEq] at hf
     obtain ⟨rfl, rfl⟩ := hf
     refine ⟨refPoke_valid s cell value hwf hv.2, Val.validIn_mono hle _ ?_⟩
-    simp only [Val.validIn, decide_eq_true_eq]
+    simp only [Val.validIn_cell, decide_eq_true_eq]
     exact hv.1
   | refGetAndSet cell value =>
     simp only [SyncOp.validIn, Bool.and_eq_true, decide_eq_true_eq] at hv
@@ -674,7 +758,7 @@ theorem syncOpStep_answer_valid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.
   | deferredMake =>
     simp only [syncOpStep_deferredMake, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    simp [Val.validIn, DeferredStore.make]
+    simp [Val.validIn_promise, DeferredStore.make]
   | deferredIsDone cell | deferredPoll cell | scopeIsClosed cell =>
     simp only [syncOpStep_deferredIsDone, syncOpStep_deferredPoll, syncOpStep_scopeIsClosed] at h
     obtain ⟨_, _, hf⟩ := Option.map_eq_some_iff.mp h

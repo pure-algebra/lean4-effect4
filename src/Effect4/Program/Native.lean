@@ -11,8 +11,8 @@ module owns:
 
 * `NativeOp`, the positions of that table, each with its `Row` (spelling, shape, kind, the
   request and answer types, the rc.112 line);
-* the value side: terms evaluate to the stores' `Val`, tuples through the reified-exit list
-  cells (the one list-shaped `Val`), the pure atoms as a closed table;
+* the value side: terms evaluate to the stores' `Val`, tuples as the carrier's `list` (the
+  one list-shaped `Val`, the frame an exit list is too), the pure atoms as a closed table;
 * `SyncOp.ofRow`, the decoding of a row and a request value into the store operation the
   machine runs.
 
@@ -28,22 +28,22 @@ open Effect4 Effect4.Machine
 
 /-! ## Values -/
 
-/-- A tuple of values, spelled with the reified-exit list cells: a `List Val` field would make
-`Val` a nested inductive (`src/Effect4/Machine/Stores.lean`, state note §3.5), and `exitNil`/`exitCons`
-are the list cells the alphabet already has. -/
-def Val.tuple : List Val → Val
-  | [] => Val.exitNil
-  | v :: rest => Val.exitCons v (Val.tuple rest)
+/-- A tuple of values: the carrier's `list` frame, the one list-shaped value
+(`src/Effect4/Machine/Stores.lean`; an awaited exit list, `exitsVal`, is the same frame). -/
+abbrev Val.tuple (values : List Val) : Val := .list values
 
 def Val.tuple? : Val → Option (List Val)
-  | Val.exitNil => some []
-  | Val.exitCons head tail => (Val.tuple? tail).map (head :: ·)
+  | .list values => some values
   | _ => none
 
-theorem Val.tuple?_tuple (vs : List Val) : Val.tuple? (Val.tuple vs) = some vs := by
-  induction vs with
-  | nil => rfl
-  | cons v rest ih => simp [Val.tuple, Val.tuple?, ih]
+theorem Val.tuple?_tuple (vs : List Val) : Val.tuple? (Val.tuple vs) = some vs := rfl
+
+theorem Val.tuple?_exact {v : Val} {vs : List Val} (h : Val.tuple? v = some vs) : v = Val.tuple vs := by
+  unfold Val.tuple? at h
+  split at h
+  · injection h with h
+    rw [h]
+  · exact nomatch h
 
 /-- A literal as a machine value. Strings are not machine values on the native route (the
 alphabet has none); a `str` literal is refused here and admitted only by the typing of the
@@ -65,8 +65,8 @@ def nativeAtom : String → List Val → Option Val
   | "lt", [Val.nat a, Val.nat b] => some (Val.bool (decide (a < b)))
   | "eq", [Val.nat a, Val.nat b] => some (Val.bool (a = b))
   | "pair", [a, b] => some (Val.tuple [a, b])
-  | "fst", [Val.exitCons a _] => some a
-  | "snd", [Val.exitCons _ (Val.exitCons b _)] => some b
+  | "fst", [.list (a :: _)] => some a
+  | "snd", [.list (_ :: b :: _)] => some b
   | _, _ => none
 
 /-- The atoms' types, by their argument types. -/
@@ -213,33 +213,31 @@ shape, which the compile turns into the `badName` defect (`Deep.Stores` does the
 continuation applied to the wrong value). -/
 def syncOpOf : NativeOp → Val → Option SyncOp
   | refMake, Val.nat n => some (SyncOp.refMake (Val.nat n))
-  | refGet, Val.cell k => some (SyncOp.refGet k)
-  | refSet, Val.exitCons (Val.cell k) (Val.exitCons v Val.exitNil) => some (SyncOp.refSet k v)
-  | refGetAndSet, Val.exitCons (Val.cell k) (Val.exitCons v Val.exitNil) =>
-    some (SyncOp.refGetAndSet k v)
-  | refSetAndGet, Val.exitCons (Val.cell k) (Val.exitCons v Val.exitNil) =>
-    some (SyncOp.refSetAndGet k v)
-  | refUpdate f, Val.cell k => some (SyncOp.refUpdate k f)
-  | refGetAndUpdate f, Val.cell k => some (SyncOp.refGetAndUpdate k f)
-  | refUpdateAndGet f, Val.cell k => some (SyncOp.refUpdateAndGet k f)
-  | refUpdateSome f, Val.cell k => some (SyncOp.refUpdateSome k f)
-  | refGetAndUpdateSome f, Val.cell k => some (SyncOp.refGetAndUpdateSome k f)
-  | refUpdateSomeAndGet f, Val.cell k => some (SyncOp.refUpdateSomeAndGet k f)
-  | refModify f, Val.cell k => some (SyncOp.refModify k f)
-  | refModifySome f, Val.cell k => some (SyncOp.refModifySome k f)
+  | refGet, Val.cell ⟨k⟩ => some (SyncOp.refGet ⟨k⟩)
+  | refSet, .list [Val.cell ⟨k⟩, v] => some (SyncOp.refSet ⟨k⟩ v)
+  | refGetAndSet, .list [Val.cell ⟨k⟩, v] => some (SyncOp.refGetAndSet ⟨k⟩ v)
+  | refSetAndGet, .list [Val.cell ⟨k⟩, v] => some (SyncOp.refSetAndGet ⟨k⟩ v)
+  | refUpdate f, Val.cell ⟨k⟩ => some (SyncOp.refUpdate ⟨k⟩ f)
+  | refGetAndUpdate f, Val.cell ⟨k⟩ => some (SyncOp.refGetAndUpdate ⟨k⟩ f)
+  | refUpdateAndGet f, Val.cell ⟨k⟩ => some (SyncOp.refUpdateAndGet ⟨k⟩ f)
+  | refUpdateSome f, Val.cell ⟨k⟩ => some (SyncOp.refUpdateSome ⟨k⟩ f)
+  | refGetAndUpdateSome f, Val.cell ⟨k⟩ => some (SyncOp.refGetAndUpdateSome ⟨k⟩ f)
+  | refUpdateSomeAndGet f, Val.cell ⟨k⟩ => some (SyncOp.refUpdateSomeAndGet ⟨k⟩ f)
+  | refModify f, Val.cell ⟨k⟩ => some (SyncOp.refModify ⟨k⟩ f)
+  | refModifySome f, Val.cell ⟨k⟩ => some (SyncOp.refModifySome ⟨k⟩ f)
   | deferredMake, Val.unit => some SyncOp.deferredMake
-  | deferredIsDone, Val.promise k => some (SyncOp.deferredIsDone k)
-  | deferredPoll, Val.promise k => some (SyncOp.deferredPoll k)
-  | deferredSucceed, Val.exitCons (Val.promise k) (Val.exitCons (Val.nat n) Val.exitNil) =>
-    some (SyncOp.deferredCompleteWith k (Completion.ofExit (Exit.success (Val.nat n))))
-  | deferredFail, Val.exitCons (Val.promise k) (Val.exitCons (Val.nat n) Val.exitNil) =>
-    some (SyncOp.deferredCompleteWith k (Completion.ofExit (Exit.failure (Cause.fail (Err.tag n)))))
+  | deferredIsDone, Val.promise ⟨k⟩ => some (SyncOp.deferredIsDone ⟨k⟩)
+  | deferredPoll, Val.promise ⟨k⟩ => some (SyncOp.deferredPoll ⟨k⟩)
+  | deferredSucceed, .list [Val.promise ⟨k⟩, Val.nat n] =>
+    some (SyncOp.deferredCompleteWith ⟨k⟩ (Completion.ofExit (Exit.success (Val.nat n))))
+  | deferredFail, .list [Val.promise ⟨k⟩, Val.nat n] =>
+    some (SyncOp.deferredCompleteWith ⟨k⟩ (Completion.ofExit (Exit.failure (Cause.fail (Err.tag n)))))
   | scopeMake strategy, Val.unit => some (SyncOp.scopeMake strategy)
   | _, _ => none
 
 /-- The deferred an `await` row registers on. -/
 def awaitCellOf : Val → Option DeferredKey
-  | Val.promise k => some k
+  | Val.promise ⟨k⟩ => some ⟨k⟩
   | _ => none
 
 end NativeOp

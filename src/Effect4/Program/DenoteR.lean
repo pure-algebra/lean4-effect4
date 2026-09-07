@@ -256,7 +256,7 @@ def inlineYield : NativeEff → Point → Option ExitV
         | some _ => none | none => some badShapeExit
       | _ => some badShapeExit
     | .awaitFiber target mode => match evalTerm p.env target with
-      | some (.fiber id) => p.awaitExit id mode | _ => some badShapeExit
+      | some (Val.fiber ⟨id⟩) => p.awaitExit ⟨id⟩ mode | _ => some badShapeExit
     | .exit b => (inlineYield b (p.child 0)).map fun ex => .success (reifyExitVal ex)
     | .choose _ left right => match p.tape with
       | true :: rest => inlineYield left { p with path := p.path ++ [0], tape := rest }
@@ -336,12 +336,12 @@ def denoteR (root : NativeEff) : NativeEff → Point → RProgram
         | _ => .pure badShapeExit
       | .awaitFiber target mode =>
         match evalTerm p.env target with
-        | some (.fiber id) =>
-          match p.awaitExit id mode with
+        | some (Val.fiber ⟨id⟩) =>
+          match p.awaitExit ⟨id⟩ mode with
           | some exit => .pure exit
           | none => match mode with
-            | .joinEffect => .vis (.inr (.await id .joinEffect)) Effects.Program.pure
-            | .awaitValue => .vis (.inr (.await id .awaitValue)) fun v => .pure (.success v)
+            | .joinEffect => .vis (.inr (.await ⟨id⟩ .joinEffect)) Effects.Program.pure
+            | .awaitValue => .vis (.inr (.await ⟨id⟩ .awaitValue)) fun v => .pure (.success v)
         | _ => .pure badShapeExit
       | .uninterruptible _ | .interruptible _ | .withFiber _ => denoteAction root p
       -- `scoped` is one WithFiber whose eager body is child 0
@@ -491,13 +491,24 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
       cases evalTerm p.env target with
       | none => rfl
       | some v =>
-        cases v with
-        | fiber id =>
+        -- the value is a fiber handle (kind byte 1) or it is not, decided by `Val.fiber?`;
+        -- both sides match on that
+        cases hfib : Val.fiber? v with
+        | some id =>
+          obtain ⟨id⟩ := id
+          have hv := Val.fiber?_exact hfib
+          subst hv
           simp only
-          cases hx : p.awaitExit id mode with
+          cases hx : p.awaitExit ⟨id⟩ mode with
           | none => rfl
           | some ex => cases ex <;> rfl
-        | _ => rfl
+        | none =>
+          have hb : ∀ id, v ≠ Val.fiber ⟨id⟩ := fun id => Val.fiber?_none hfib ⟨id⟩
+          split
+          · next id heq => exact absurd (Option.some.inj heq) (hb id)
+          · split
+            · next id heq => exact absurd (Option.some.inj heq) (hb id)
+            · rfl
     -- a `forkScoped` node compiles to its wrapper's `OnSuccess` (§20); every other action
     -- to the `WithFiber`; neither is an immediate exit
     | withFiber a =>

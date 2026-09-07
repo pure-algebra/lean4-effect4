@@ -1,5 +1,6 @@
 import Effect4.Machine.Fibers
 import Effect4.Machine.Scope
+import Effect4.Machine.Value
 
 /-!
 # Deep spike S2: the concrete stores and the `RunInterp` over them
@@ -132,45 +133,254 @@ structure Ctx where
   preventYield : Bool
 deriving DecidableEq, Repr, Inhabited
 
-/-- The one value alphabet. `exitOk`/`exitErr` are `reifyExit`'s image: rc.112's `Exit` is an
-ordinary value once an `Exit` frame has caught it (`internal/effect.ts` `exit`). -/
-inductive Val
-  /-- `exitVoid`'s value (`internal/effect.ts:988`). -/
-  | unit
-  | nat (n : Nat)
-  | bool (b : Bool)
-  /-- The handle a fork answers. -/
-  | fiber (id : FiberId)
-  /-- `awaitAllChildren`'s snapshot. -/
-  | fibers (ids : List FiberId)
-  /-- `Ref.set`'s success value: the `MutableRef` itself (`Ref.ts:307`, `MutableRef.ts:1063-1070`). -/
-  | cell (key : RefKey)
-  /-- A `Deferred` handle (`Deferred.ts:140-145`). -/
-  | promise (key : DeferredKey)
-  /-- A `Scope` handle. -/
-  | scopeHandle (scope : Nat)
-  /-- `fiber.context` as a value (`getContext`). -/
-  | context (ctx : Ctx)
-  /-- A reified successful `Exit`. -/
-  | exitOk (value : Val)
-  /-- A reified failed `Exit`. -/
-  | exitErr (cause : Cause Err Defect FiberId Ann)
-  /-- The empty list of awaited exits (`fiberAwaitAll`, `internal/effect.ts:779`; M6). A
-  `List ExitV` field would make `Val` a *nested* inductive whose `DecidableEq` handler
-  refuses, so the list is spelled with these two arms. -/
-  | exitNil
-  /-- One awaited exit, and the rest. -/
-  | exitCons (head : Val) (tail : Val)
-deriving DecidableEq
+/-! ## The alphabets as values
+
+The one value alphabet is the shared carrier `Effect4.Store.Val` (U1,
+`docs/research/2026-09-07-u1-cutover-dispatch.md`, on the U0 contract
+`docs/research/2026-09-07-u0-value-foundation.md`). The alphabets above are written on it at
+the generated rule of `Machine/Value.lean`: a case of a sum is `ctor i [args…]` with `i` the
+declaration index, a structure is `ctor 0 [fields…]`, a handle is a `handle` frame with its
+`HandleKind` byte. These images are what the runtime reads and writes at the semantic sites
+below (`reifyExitVal`, `contAOf`, the action decode of `Program/Compile.lean`); nothing in the
+tree builds a second value representation. -/
+
+open Effect4.Store (Image)
+
+def ofErr : Store.Val → Option Err
+  | .ctor 0 [] => some .boom
+  | .ctor 1 [.nat c] => some (.tag c)
+  | _ => none
+
+/-- `Err` at the generated rule: `boom` is `ctor 0 []`, `tag c` is `ctor 1 [nat c]`. -/
+def Err.image : Image Err where
+  toVal
+    | .boom => .ctor 0 []
+    | .tag c => .ctor 1 [.nat c]
+  ofVal := ofErr
+  ofVal_toVal e := by cases e <;> rfl
+  ofVal_exact := by
+    intro v e h
+    unfold ofErr at h
+    split at h <;> first | (injection h with h; subst h; rfl) | exact nomatch h
+
+theorem Err.image_handleFree : Image.HandleFree Err.image := by
+  intro e
+  cases e <;> rfl
+
+def ofDefect : Store.Val → Option Defect
+  | .ctor 0 [] => some .notImplemented
+  | .ctor 1 [] => some .asyncFiber
+  | .ctor 2 [] => some .badName
+  | .ctor 3 [] => some .missingService
+  | .ctor 4 [.nat n] => some (.user n)
+  | _ => none
+
+/-- `Defect` at the generated rule, in declaration order; `user n` is `ctor 4 [nat n]`. -/
+def Defect.image : Image Defect where
+  toVal
+    | .notImplemented => .ctor 0 []
+    | .asyncFiber => .ctor 1 []
+    | .badName => .ctor 2 []
+    | .missingService => .ctor 3 []
+    | .user n => .ctor 4 [.nat n]
+  ofVal := ofDefect
+  ofVal_toVal d := by cases d <;> rfl
+  ofVal_exact := by
+    intro v d h
+    unfold ofDefect at h
+    split at h <;> first | (injection h with h; subst h; rfl) | exact nomatch h
+
+theorem Defect.image_handleFree : Image.HandleFree Defect.image := by
+  intro d
+  cases d <;> rfl
 
 /-- The cause carrier at this instantiation. -/
 abbrev CauseV := Cause Err Defect FiberId Ann
+
+/-- The cause carrier as a value (`Ann = Unit`): the reason list under `ctor 0`, each reason
+at the generated rule, the interruptor recorded as a fiber *identity*
+(`Value.fiberIdentity`, `ctor 0 [nat]`), never as a handle — a reified failed exit carries a
+cause only, and `Val.keys` counts nothing in it (`causeImage_handleFree`). -/
+def causeImage : Image CauseV :=
+  Value.cause Err.image Defect.image Value.fiberIdentity Image.unit
+
+theorem causeImage_handleFree : Image.HandleFree causeImage :=
+  Value.cause_handleFree _ _ _ _ Err.image_handleFree Defect.image_handleFree
+    Value.fiberIdentity_handleFree Image.unit_handleFree
+
+/-- A `Ref` cell as a value (`Value.cell`, kind 2). -/
+def cellHandle : Image RefKey :=
+  (HandleKind.handleOf .cell).equiv RefKey.mk RefKey.index (fun _ => rfl) (fun _ => rfl)
+
+/-- A `Deferred` cell as a value (`Value.promise`, kind 3). -/
+def promiseHandle : Image DeferredKey :=
+  (HandleKind.handleOf .promise).equiv DeferredKey.mk DeferredKey.index (fun _ => rfl)
+    (fun _ => rfl)
+
+/-- A scope-store key as a value (`Value.scope`, kind 4). -/
+def scopeKeyHandle : Image Nat := HandleKind.handleOf .scope
+
+/-- `Ctx` as a value: `Value.fiberContext`, i.e. `ctor 2 [option (scope handle), nat, bool]`.
+The ambient scope is a handle, as `Ctx.keys` (`Machine/Handles.lean`) says. -/
+def ctxImage : Image Ctx :=
+  (Image.ctor3 (Image.option scopeKeyHandle) Image.nat Image.bool 2).equiv
+    (fun p => ⟨p.1, p.2.1, p.2.2⟩) (fun c => (c.ambientScope, c.maxOpsBeforeYield, c.preventYield))
+    (fun _ => rfl) (fun _ => rfl)
+
+theorem ctxImage_toVal (ctx : Ctx) :
+    ctxImage.toVal ctx =
+      Value.fiberContext ((Image.option scopeKeyHandle).toVal ctx.ambientScope)
+        (.nat ctx.maxOpsBeforeYield) (.bool ctx.preventYield) := rfl
+
+/-! ## The value alphabet -/
+
+/-- The one value alphabet: the shared carrier. rc.112's values at this instantiation are
+numbers, booleans and `undefined` (`exitVoid`, `internal/effect.ts:988`); the handles the
+stores mint — a `MutableRef` (`Ref.ts:307`, `MutableRef.ts:1063-1070`), a `Deferred`
+(`Deferred.ts:140-145`), a `Scope`, a `FiberImpl` (the handle a fork answers);
+`fiber.context` (`getContext`); a reified `Exit`, an ordinary value once an `Exit` frame has
+caught it (`internal/effect.ts` `exit`); `awaitAllChildren`'s snapshot of `fiber.children`, a
+`Set` (`:534`, `:703-704`); and the array `fiberAwaitAll` answers (`:779`, M6). Each is one
+shape of the carrier at the table of `Machine/Value.lean`. The spellings below are those
+shapes at the old argument types: `Val.cell k` is written where it was, and a pattern
+matches `Val.cell ⟨k⟩` (the argument's projection is the one thing a pattern cannot
+abstract over). -/
+abbrev Val := Effect4.Store.Val
+
+namespace Val
+
+export Effect4.Store.Val (unit nat bool str bytes list pair ctor ref handle)
+
+/-- A reified successful `Exit` (`Value.exitOk`), at this alphabet's type so a dotted
+argument (`.exitOk (.cell ⟨k⟩)`) resolves here. -/
+@[match_pattern] abbrev exitOk (value : Val) : Val := Value.exitOk value
+/-- The handle a fork answers (`Value.fiber`, kind 1). -/
+@[match_pattern] abbrev fiber (id : FiberId) : Val := Value.fiber id.value
+/-- `Ref.set`'s success value: the `MutableRef` itself (`Ref.ts:307`, `MutableRef.ts:1063-1070`;
+`Value.cell`, kind 2). -/
+@[match_pattern] abbrev cell (key : RefKey) : Val := Value.cell key.index
+/-- A `Deferred` handle (`Deferred.ts:140-145`; `Value.promise`, kind 3). -/
+@[match_pattern] abbrev promise (key : DeferredKey) : Val := Value.promise key.index
+/-- A `Scope` handle (`Value.scope`, kind 4). -/
+@[match_pattern] abbrev scopeHandle (scope : Nat) : Val := Value.scope scope
+/-- The empty list of awaited exits (`fiberAwaitAll`, `internal/effect.ts:779`; M6): the
+carrier's empty `list`. One exit list is one `list` frame; there is no cons arm. -/
+@[match_pattern] abbrev exitNil : Val := .list []
+/-- `awaitAllChildren`'s snapshot: the fiber handles under `Value.fiberSnapshot`, distinct
+from a list of exits (rc.112's `fiber.children` is a `Set`, `internal/effect.ts:534`). -/
+abbrev fibers (ids : List FiberId) : Val :=
+  Value.fiberSnapshot ((Image.list Value.fiberHandle).toVal ids)
+/-- The fiber a fiber handle names; `none` on any other shape. A decidable case split on
+the shape (`cases h : v.fiber?`) is how a proof reads the handle off a value. -/
+def fiber? : Val → Option FiberId
+  | Value.fiber index => some ⟨index⟩
+  | _ => none
+/-- The scope key a scope handle names; `none` on any other shape. -/
+def scope? : Val → Option Nat
+  | Value.scope index => some index
+  | _ => none
+/-- The snapshot read back: `none` unless the value is a snapshot of fiber handles. -/
+def snapshot? : Val → Option (List FiberId)
+  | Value.fiberSnapshot handles => (Image.list Value.fiberHandle).ofVal handles
+  | _ => none
+/-- `fiber.context` as a value (`getContext`): `ctxImage`. -/
+abbrev context (ctx : Ctx) : Val := ctxImage.toVal ctx
+/-- A context read back; `none` on any other shape. -/
+def context? : Val → Option Ctx := ctxImage.ofVal
+/-- A reified failed `Exit`: the cause written by `causeImage` under `Value.exitErr`. -/
+abbrev exitErr (cause : CauseV) : Val := Value.exitErr (causeImage.toVal cause)
+/-- The cause of a reified failed exit read back; `none` on any other shape. -/
+def cause? : Val → Option CauseV
+  | Value.exitErr written => causeImage.ofVal written
+  | _ => none
+
+theorem fiber?_fiber (id : FiberId) : fiber? (fiber id) = some id := rfl
+
+theorem fiber?_exact {v : Val} {id : FiberId} (h : fiber? v = some id) : v = fiber id := by
+  unfold fiber? at h
+  split at h
+  · injection h with h
+    subst h
+    rfl
+  · exact nomatch h
+
+theorem fiber?_none {v : Val} (h : fiber? v = none) (id : FiberId) : v ≠ fiber id := by
+  intro hv
+  subst hv
+  exact nomatch h
+
+theorem scope?_scopeHandle (s : Nat) : scope? (scopeHandle s) = some s := rfl
+
+theorem scope?_exact {v : Val} {s : Nat} (h : scope? v = some s) : v = scopeHandle s := by
+  unfold scope? at h
+  split at h
+  · injection h with h
+    subst h
+    rfl
+  · exact nomatch h
+
+theorem scope?_none {v : Val} (h : scope? v = none) (s : Nat) : v ≠ scopeHandle s := by
+  intro hv
+  subst hv
+  exact nomatch h
+
+theorem fibers_eq (ids : List FiberId) :
+    fibers ids = Value.fiberSnapshot (.list (ids.map fun id => Value.fiber id.value)) := rfl
+
+theorem snapshot?_fibers (ids : List FiberId) : snapshot? (fibers ids) = some ids :=
+  (Image.list Value.fiberHandle).ofVal_toVal ids
+
+theorem snapshot?_exact {v : Val} {ids : List FiberId} (h : snapshot? v = some ids) :
+    v = fibers ids := by
+  unfold snapshot? at h
+  split at h
+  · next handles =>
+    show Store.Val.ctor 3 [handles] = Store.Val.ctor 3 [(Image.list Value.fiberHandle).toVal ids]
+    rw [(Image.list Value.fiberHandle).ofVal_exact h]
+  · exact nomatch h
+
+theorem context_eq (ctx : Ctx) :
+    context ctx =
+      Value.fiberContext
+        (match ctx.ambientScope with
+          | some s => Store.Val.some (Value.scope s)
+          | none => Store.Val.none)
+        (.nat ctx.maxOpsBeforeYield) (.bool ctx.preventYield) := by
+  rcases ctx with ⟨s, _, _⟩
+  cases s <;> rfl
+
+theorem context?_context (ctx : Ctx) : context? (context ctx) = some ctx :=
+  ctxImage.ofVal_toVal ctx
+
+theorem context?_exact {v : Val} {ctx : Ctx} (h : context? v = some ctx) : v = context ctx :=
+  ctxImage.ofVal_exact h
+
+theorem cause?_exitErr (c : CauseV) : cause? (exitErr c) = some c :=
+  causeImage.ofVal_toVal c
+
+theorem cause?_exact {v : Val} {c : CauseV} (h : cause? v = some c) : v = exitErr c := by
+  unfold cause? at h
+  split at h
+  · next written =>
+    show Store.Val.ctor 1 [written] = Store.Val.ctor 1 [causeImage.toVal c]
+    rw [causeImage.ofVal_exact h]
+  · exact nomatch h
+
+/-- The carrier's own image: the identity. -/
+def image : Image Val := ⟨id, some, fun _ => rfl, fun h => Option.some.inj h⟩
+
+end Val
 
 /-- The exit carrier at this instantiation. -/
 abbrev ExitV := Exit Val Err Defect FiberId Ann
 
 /-- The exit carrier a finalizer produces (`combineFinalizerCause`, `internal/effect.ts:3800-3804`). -/
 abbrev VoidExitV := Exit Unit Err Defect FiberId Ann
+
+/-- The exit carrier as a value (`Value.exit`): `Exit.success v` is `Value.exitOk v`,
+`Exit.failure c` is `Val.exitErr c`. One encoding serves the reified value and the exit record
+(D1 of the U0 record). -/
+def exitImage : Image ExitV := Value.exit Val.image causeImage
 
 /-- Every `sync` thunk that touches a store. One arm per rc.112 operation, named with its
 arguments; `syncState` gives them meaning. -/
@@ -530,7 +740,7 @@ theorem refMake_twice_distinct (heap : RefHeap) (a b : Val) :
   show some (Val.cell ⟨heap.length⟩) ≠ some (Val.cell ⟨(heap ++ [a]).length⟩)
   intro h
   have hlen : heap.length = (heap ++ [a]).length :=
-    RefKey.mk.inj (Val.cell.inj (Option.some.inj h))
+    (Store.Val.handle.inj (Option.some.inj h)).2
   rw [List.length_append, List.length_singleton] at hlen
   exact Nat.succ_ne_self heap.length hlen.symm
 
@@ -1183,33 +1393,56 @@ theorem mergeExits_reasons (exits : List ExitV) :
   unfold mergeExits voidAllOf Exit.asVoidAll
   cases exits.flatMap Exit.causeReasons <;> rfl
 
-/-- `reifyExit`: an `Exit` as a value of the one value alphabet. -/
+/-- `reifyExit`: an `Exit` as a value of the one value alphabet — `exitImage.toVal`, written
+out so each arm is an equation. -/
 def reifyExitVal : ExitV → Val
   | Exit.success value => Val.exitOk value
   | Exit.failure cause => Val.exitErr cause
 
-/-- `RunInterp.exitsValue`: the exits a countdown collected, as one value
-(`fiberAwaitAll`, `internal/effect.ts:779`; M6). -/
-def exitsVal : List ExitV → Val
-  | [] => Val.exitNil
-  | exit :: rest => Val.exitCons (reifyExitVal exit) (exitsVal rest)
+theorem reifyExitVal_eq_exitImage (exit : ExitV) : reifyExitVal exit = exitImage.toVal exit := by
+  cases exit <;> rfl
 
-/-- The reasons carried by an exits value, in order. -/
+/-- `RunInterp.exitsValue`: the exits a countdown collected, as one value — one `list` frame
+(`fiberAwaitAll`, `internal/effect.ts:779`; M6). -/
+def exitsVal (exits : List ExitV) : Val := .list (exits.map reifyExitVal)
+
+mutual
+/-- The reasons carried by an exits value, in order: a reified failed exit's cause, read back
+through `causeImage`, and the members of a list. -/
 def reasonsOfVal : Val → List (Reason Err Defect FiberId Ann)
-  | Val.exitErr cause => cause.reasons
-  | Val.exitCons head tail => reasonsOfVal head ++ reasonsOfVal tail
+  | Value.exitErr written => ((causeImage.ofVal written).map Cause.reasons).getD []
+  | .list values => reasonsOfList values
   | _ => []
+/-- The reasons of a list of values, back to back. -/
+def reasonsOfList : List Val → List (Reason Err Defect FiberId Ann)
+  | [] => []
+  | value :: rest => reasonsOfVal value ++ reasonsOfList rest
+end
+
+theorem reasonsOfVal_exitErr (cause : CauseV) : reasonsOfVal (Val.exitErr cause) = cause.reasons := by
+  show ((causeImage.ofVal (causeImage.toVal cause)).map Cause.reasons).getD [] = cause.reasons
+  rw [Image.ofVal_toVal]
+  rfl
+
+theorem reasonsOfVal_reifyExitVal (exit : ExitV) :
+    reasonsOfVal (reifyExitVal exit) = exit.causeReasons := by
+  cases exit with
+  | success value => rfl
+  | failure cause => exact reasonsOfVal_exitErr cause
+
+theorem reasonsOfList_map_reifyExitVal (exits : List ExitV) :
+    reasonsOfList (exits.map reifyExitVal) = exits.flatMap Exit.causeReasons := by
+  induction exits with
+  | nil => rfl
+  | cons exit rest ih =>
+    rw [List.map_cons, reasonsOfList, reasonsOfVal_reifyExitVal, List.flatMap_cons, ih]
 
 /-- Reading the reasons back off an exits value is reading them off the list: the M6 channel
 loses nothing, so the merge of an awaited list is `exitAsVoidAll` of that list.
 census: scope.close-merge -/
 theorem reasonsOfVal_exitsVal (exits : List ExitV) :
-    reasonsOfVal (exitsVal exits) = exits.flatMap Exit.causeReasons := by
-  induction exits with
-  | nil => rfl
-  | cons exit rest ih =>
-    cases exit <;>
-      simp [exitsVal, reifyExitVal, reasonsOfVal, Exit.causeReasons, ih]
+    reasonsOfVal (exitsVal exits) = exits.flatMap Exit.causeReasons :=
+  reasonsOfList_map_reifyExitVal exits
 
 /-- Hence the merge computed from what `awaitAll` answered is `mergeExits` of the exits.
 census: scope.close-merge -/
@@ -1462,24 +1695,34 @@ def contAOf : Name → Val → Program
   | Name.restore exit, _ => Prim.ofExit exit
   | Name.merge exit, _ => Prim.ofExit exit
   | Name.seq next, _ => progOf next
-  | Name.joinOn mode, Val.fiber id => Prim.suspend (Thunk.park (ParkKind.join id mode))
+  | Name.joinOn mode, Val.fiber ⟨id⟩ => Prim.suspend (Thunk.park (ParkKind.join ⟨id⟩ mode))
   | Name.joinOn _, _ => Prim.failure (Cause.die Defect.badName)
   | Name.interruptWith cell, Val.nat id =>
     Prim.sync (Thunk.op (SyncOp.deferredInterruptWith cell ⟨id⟩))
   | Name.interruptWith _, _ => Prim.failure (Cause.die Defect.badName)
   | Name.doneInto cell, Val.exitOk value =>
     Prim.sync (Thunk.op (SyncOp.deferredCompleteWith cell (Completion.ofExit (Exit.success value))))
-  | Name.doneInto cell, Val.exitErr cause =>
-    Prim.sync (Thunk.op (SyncOp.deferredCompleteWith cell (Completion.ofExit (Exit.failure cause))))
+  | Name.doneInto cell, Value.exitErr written =>
+    -- the cause is read back off the value; a reified failure no cause wrote is a wrong shape
+    match causeImage.ofVal written with
+    | some cause =>
+      Prim.sync (Thunk.op (SyncOp.deferredCompleteWith cell (Completion.ofExit (Exit.failure cause))))
+    | none => Prim.failure (Cause.die Defect.badName)
   | Name.doneInto _, _ => Prim.failure (Cause.die Defect.badName)
   | Name.constant value, _ => Prim.success value
   | Name.exitOfValue, Val.exitOk value => Prim.success value
-  | Name.exitOfValue, Val.exitErr cause => Prim.failure cause
+  | Name.exitOfValue, Value.exitErr written =>
+    match causeImage.ofVal written with
+    | some cause => Prim.failure cause
+    | none => Prim.failure (Cause.die Defect.badName)
   | Name.exitOfValue, _ => Prim.failure (Cause.die Defect.badName)
-  | Name.snapshotThen body, Val.fibers snapshot =>
+  | Name.snapshotThen body, Value.fiberSnapshot handles =>
     -- `onExit(self, _ => asVoid(fiberAwaitAll(new children)))` (`:5319-5333`, R2-7): awaited
-    -- on any exit, under the finalizer mask
-    Prim.onExit (progOf body) (Name.finalizerName (FinName.awaitNewChildren snapshot)) false
+    -- on any exit, under the finalizer mask; a snapshot that is not of fiber handles is empty
+    Prim.onExit (progOf body)
+      (Name.finalizerName
+        (FinName.awaitNewChildren (((Image.list Value.fiberHandle).ofVal handles).getD [])))
+      false
   | Name.snapshotThen body, _ =>
     Prim.onExit (progOf body) (Name.finalizerName (FinName.awaitNewChildren [])) false
   | Name.reFail cause, _ => Prim.failure cause
@@ -1726,7 +1969,8 @@ theorem intoDeferred_masks (body : ProgName) (cell : DeferredKey) :
 theorem intoDeferred_takes_exit (cell : DeferredKey) (cause : CauseV) :
     contAOf (Name.doneInto cell) (reifyExitVal (Exit.failure cause)) =
       Prim.sync (Thunk.op (SyncOp.deferredCompleteWith cell
-        (Completion.ofExit (Exit.failure cause)))) := rfl
+        (Completion.ofExit (Exit.failure cause)))) := by
+  simp only [reifyExitVal, contAOf, Image.ofVal_toVal]
 
 /-- `deferred.await`: the await is the `callback` effect, so the machine sees it as a park whose
 registration is a store operation. census: deferred.await -/
@@ -1781,7 +2025,7 @@ theorem closeSeq_captures (rest : List FinName) (exit : ExitV)
     (captured : List (Reason Err Defect FiberId Ann)) (cause : CauseV) :
     stores.iterNext (Name.closeSeq rest exit captured) (Val.exitErr cause) =
       ([], closeSeqStep rest exit (captured ++ cause.reasons) Val.unit) := by
-  cases rest <;> simp [stores, closeSeqStep, reasonsOfVal]
+  cases rest <;> simp [stores, closeSeqStep, reasonsOfVal, Image.ofVal_toVal]
 
 /-- `scope.close-merge`: with no finalizer left the walk ends with `exitAsVoidAll` of the
 captured reasons, yielded inline (`:3826`, `:2024-2038`): the generator returns `void`, or

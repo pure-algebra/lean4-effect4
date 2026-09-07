@@ -106,24 +106,28 @@ def reasonJson : Reason Err Defect FiberId Ann → J
 def causeJson (c : CauseV) : J :=
   Lean.Json.mkObj [("reasons", Lean.Json.arr (c.reasons.map reasonJson).toArray)]
 
-/-- Values in the wire; an `exitCons` chain renders as one array. -/
+/-- Values in the wire, on the shared carrier (`Machine/Value.lean`'s table): a handle by its
+kind byte, a reified exit by its constructor index with the cause read back through
+`causeImage`, the snapshot by its fibers, a `list` as one array. A shape the machine never
+produces renders deterministically under `"raw"`, so the wire stays total. -/
 partial def valJson : Val → J
   | .unit => Lean.Json.null
   | .nat n => toJson n
   | .bool b => Lean.Json.bool b
-  | .fiber id => Lean.Json.mkObj [("fiber", toJson id.value)]
-  | .fibers ids => Lean.Json.mkObj [("fibers", Lean.Json.arr (ids.map fun i => toJson i.value).toArray)]
-  | .cell k => Lean.Json.mkObj [("ref", toJson k.index)]
-  | .promise k => Lean.Json.mkObj [("deferred", toJson k.index)]
-  | .scopeHandle s => Lean.Json.mkObj [("scope", toJson s)]
-  | .context _ => Lean.Json.mkObj [("context", Lean.Json.bool true)]
-  | .exitOk v => Lean.Json.mkObj [("success", valJson v)]
-  | .exitErr c => Lean.Json.mkObj [("failure", causeJson c)]
-  | .exitNil => Lean.Json.arr #[]
-  | .exitCons h t =>
-    match valJson t with
-    | .arr rest => Lean.Json.arr (#[valJson h] ++ rest)
-    | other => Lean.Json.arr #[valJson h, other]
+  | Value.fiber id => Lean.Json.mkObj [("fiber", toJson id)]
+  | Value.fiberSnapshot handles =>
+    Lean.Json.mkObj [("fibers", Lean.Json.arr
+      ((((Effect4.Store.Image.list Value.fiberHandle).ofVal handles).getD []).map fun i =>
+        toJson i.value).toArray)]
+  | Value.cell k => Lean.Json.mkObj [("ref", toJson k)]
+  | Value.promise k => Lean.Json.mkObj [("deferred", toJson k)]
+  | Value.scope s => Lean.Json.mkObj [("scope", toJson s)]
+  | Value.fiberContext _ _ _ => Lean.Json.mkObj [("context", Lean.Json.bool true)]
+  | Val.exitOk v => Lean.Json.mkObj [("success", valJson v)]
+  | Value.exitErr written =>
+    Lean.Json.mkObj [("failure", ((causeImage.ofVal written).map causeJson).getD Lean.Json.null)]
+  | .list values => Lean.Json.arr (values.map valJson).toArray
+  | other => Lean.Json.mkObj [("raw", Lean.Json.str (toString (repr other)))]
 
 def exitJson : ExitV → J
   | .success v => Lean.Json.mkObj [("success", valJson v)]

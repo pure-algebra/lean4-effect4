@@ -70,18 +70,162 @@ def Ctx.keys (ctx : Ctx) : List Handle :=
   | some s => [Handle.scope s]
   | none => []
 
-/-- The handles of a value: the five handle arms, a context, and the reified exit and list
-arms, which carry values. A reified failed exit carries a cause only. -/
+/-- The kind byte and index of a handle: the `handle` frame's payload, `Store.Val.handles`'
+entry for it (`HandleKind`, `Machine/Value.lean`). -/
+def Handle.code : Handle → UInt8 × Nat
+  | .fiber id => (1, id.value)
+  | .cell key => (2, key.index)
+  | .promise key => (3, key.index)
+  | .scope key => (4, key)
+
+/-- The handle of a kind byte and index: the four minted kinds. A `memoMap` byte (the Layer
+machine's, `Machine/Context.lean`) and an unregistered byte are no frame-machine handle. -/
+def Handle.ofCode (code : UInt8 × Nat) : Option Handle :=
+  match HandleKind.ofByte? code.1 with
+  | some .fiber => some (.fiber ⟨code.2⟩)
+  | some .cell => some (.cell ⟨code.2⟩)
+  | some .promise => some (.promise ⟨code.2⟩)
+  | some .scope => some (.scope code.2)
+  | _ => none
+
+theorem Handle.ofCode_code (h : Handle) : Handle.ofCode h.code = some h := by
+  cases h <;> rfl
+
+/-- A code that reads back is the handle's own. -/
+theorem Handle.code_ofCode {code : UInt8 × Nat} {h : Handle} (hc : Handle.ofCode code = some h) :
+    h.code = code := by
+  unfold Handle.ofCode at hc
+  split at hc <;> first
+    | (next hk =>
+        injection hc with hc
+        subst hc
+        have h1 : code.1 = _ := HandleKind.ofByte?_exact hk
+        exact Prod.ext h1.symm rfl)
+    | exact nomatch hc
+
+theorem Handle.ofCode_fiber (index : Nat) : Handle.ofCode (1, index) = some (.fiber ⟨index⟩) := rfl
+theorem Handle.ofCode_cell (index : Nat) : Handle.ofCode (2, index) = some (.cell ⟨index⟩) := rfl
+theorem Handle.ofCode_promise (index : Nat) :
+    Handle.ofCode (3, index) = some (.promise ⟨index⟩) := rfl
+theorem Handle.ofCode_scope (index : Nat) : Handle.ofCode (4, index) = some (.scope index) := rfl
+theorem Handle.ofCode_memoMap (index : Nat) : Handle.ofCode (5, index) = none := rfl
+
+mutual
+/-- The handles of a value: every `handle` frame the carrier carries, read through
+`Handle.ofCode`, in payload order — the handle arms, the snapshot's members, a context's
+ambient scope, a reified exit's value and the members of a list. A reified failed exit carries
+a cause only (`Val.keys_exitErr`); the Layer machine's memo-map handle and an unregistered
+byte are not counted. `Val.keys_eq_handles` is the migration check (U1): this is
+`Store.Val.handles` filtered. -/
 def Val.keys : Val → List Handle
-  | Val.fiber id => [Handle.fiber id]
-  | Val.fibers ids => ids.map Handle.fiber
-  | Val.cell key => [Handle.cell key]
-  | Val.promise key => [Handle.promise key]
-  | Val.scopeHandle key => [Handle.scope key]
-  | Val.context ctx => ctx.keys
-  | Val.exitOk v => v.keys
-  | Val.exitCons h t => h.keys ++ t.keys
+  | .handle kind index => (Handle.ofCode (kind, index)).toList
+  | .list values => Val.keysList values
+  | .pair a b => Val.keys a ++ Val.keys b
+  | .some a => Val.keys a
+  | .ctor _ args => Val.keysList args
   | _ => []
+/-- The handles of a list of values, back to back. -/
+def Val.keysList : List Val → List Handle
+  | [] => []
+  | value :: rest => Val.keys value ++ Val.keysList rest
+end
+
+theorem Val.keysList_eq_flatMap (values : List Val) :
+    Val.keysList values = values.flatMap Val.keys := by
+  induction values with
+  | nil => rfl
+  | cons value rest ih => rw [Val.keysList, List.flatMap_cons, ih]
+
+theorem Val.keys_list (values : List Val) : Val.keys (Val.list values) = values.flatMap Val.keys :=
+  Val.keysList_eq_flatMap values
+
+theorem Val.keys_fiber (id : FiberId) : (Val.fiber id).keys = [Handle.fiber id] := rfl
+theorem Val.keys_cell (key : RefKey) : (Val.cell key).keys = [Handle.cell key] := rfl
+theorem Val.keys_promise (key : DeferredKey) : (Val.promise key).keys = [Handle.promise key] := rfl
+theorem Val.keys_scopeHandle (key : Nat) : (Val.scopeHandle key).keys = [Handle.scope key] := rfl
+
+theorem Val.keys_exitOk (v : Val) : (Val.exitOk v).keys = v.keys := by
+  simp only [Val.keys, Val.keysList, List.append_nil]
+
+theorem Val.keysList_eq_handlesList (values : List Val)
+    (ih : ∀ x ∈ values, x.keys = x.handles.filterMap Handle.ofCode) :
+    Val.keysList values = (Store.Val.handlesList values).filterMap Handle.ofCode := by
+  induction values with
+  | nil => rfl
+  | cons value rest ihr =>
+    rw [Val.keysList, Store.Val.handlesList_cons, List.filterMap_append, ih value (by simp),
+      ihr (fun x hx => ih x (by simp [hx]))]
+
+/-- The migration check (U1): the handles a value names are the carrier's `handle` frames
+read through `Handle.ofCode`. -/
+theorem Val.keys_eq_handles (v : Val) : v.keys = v.handles.filterMap Handle.ofCode := by
+  induction v using Store.Val.ind with
+  | unit => rfl
+  | bool _ => rfl
+  | nat _ => rfl
+  | str _ => rfl
+  | bytes _ => rfl
+  | none => rfl
+  | ref _ _ => rfl
+  | handle kind index =>
+    show (Handle.ofCode (kind, index)).toList = List.filterMap Handle.ofCode [(kind, index)]
+    rw [List.filterMap_cons, List.filterMap_nil]
+    generalize Handle.ofCode (kind, index) = r
+    cases r <;> rfl
+  | list values ih => exact Val.keysList_eq_handlesList values ih
+  | pair a b iha ihb =>
+    show Val.keys a ++ Val.keys b = List.filterMap Handle.ofCode (a.handles ++ b.handles)
+    rw [List.filterMap_append, iha, ihb]
+  | some a ih => exact ih
+  | ctor _ args ih => exact Val.keysList_eq_handlesList args ih
+
+/-- A reified failed exit carries a cause only: the cause image writes no handle. -/
+theorem Val.keys_exitErr (cause : CauseV) : (Val.exitErr cause).keys = [] := by
+  rw [Val.keys_eq_handles]
+  show List.filterMap Handle.ofCode (Store.Val.handles (.ctor 1 [causeImage.toVal cause])) = []
+  rw [Store.Val.handles, Store.Val.handlesList_cons, causeImage_handleFree cause,
+    Store.Val.handlesList_nil]
+  rfl
+
+theorem Val.keys_context (ctx : Ctx) : (Val.context ctx).keys = ctx.keys := by
+  rcases ctx with ⟨scope, _, _⟩
+  cases scope <;> rfl
+
+theorem Val.keys_fibers (ids : List FiberId) : (Val.fibers ids).keys = ids.map Handle.fiber := by
+  show Val.keysList [Store.Val.list (ids.map fun id => Value.fiber id.value)] = _
+  rw [Val.keysList, Val.keysList, List.append_nil]
+  show Val.keysList (ids.map fun id => Value.fiber id.value) = _
+  induction ids with
+  | nil => rfl
+  | cons id rest ih =>
+    rw [List.map_cons, Val.keysList, ih]
+    rfl
+
+/-- The two forms the structural equations can leave when they fire before the spelled
+lemmas: a written cause names nothing, a written snapshot payload names its fibers. Both are
+in the key normalisation below so either path converges. -/
+theorem Val.keys_causeImage (cause : CauseV) : Val.keys (causeImage.toVal cause) = [] := by
+  rw [Val.keys_eq_handles, causeImage_handleFree cause]
+  rfl
+
+theorem Val.keys_snapshotPayload (ids : List FiberId) :
+    Val.keys ((Store.Image.list Value.fiberHandle).toVal ids) = ids.map Handle.fiber := by
+  have := Val.keys_fibers ids
+  simp only [Val.keys, Val.keysList, List.append_nil] at this
+  exact this
+
+/-- The fibers a snapshot's payload reads back to are handles the payload names. -/
+theorem Val.snapshotPayload_keys (handles : Val) :
+    ((((Store.Image.list Value.fiberHandle).ofVal handles).getD []).map Handle.fiber) ⊆
+      handles.keys := by
+  cases h : (Store.Image.list Value.fiberHandle).ofVal handles with
+  | none => exact List.nil_subset _
+  | some ids =>
+    rw [(Store.Image.list Value.fiberHandle).ofVal_exact h]
+    have := Val.keys_fibers ids
+    simp only [Val.keys, Val.keysList, List.append_nil] at this
+    rw [this]
+    exact List.Subset.refl _
 
 /-- The handles of an exit: its success value's. `Err` and `Defect` carry no value. -/
 def exitKeys : ExitV → List Handle
@@ -672,7 +816,11 @@ macro_rules
         races_disarm, state_disarm, races_modify, armed_modify, state_modify, WithFiberAction.keys,
         RunFiber.keys, RunFiber.park, frameKeys, Race.keys, iterKeys, cmdsKeys,
         Cmd.keys, Outcome.keys, Pending.keys, Task.keys, Observer.keys, Resume.keys, optExitKeys, Stores.keys,
-        primKeys, exitKeys, Val.keys, Supervision.RaceAllState.initial,
+        primKeys, exitKeys, Val.keys, Val.keysList, Val.keys_fiber, Val.keys_cell, Val.keys_promise,
+        Val.keys_scopeHandle, Val.keys_exitOk, Val.keys_exitErr, Val.keys_context, Val.keys_fibers,
+        Val.keys_causeImage, Val.keys_snapshotPayload,
+        Handle.ofCode_fiber, Handle.ofCode_cell, Handle.ofCode_promise, Handle.ofCode_scope,
+        Supervision.RaceAllState.initial,
         List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.map_append, List.map_cons, List.map_nil,
         List.append_nil, List.nil_append, List.append_assoc, Option.map, Option.toList, Option.getD_some,
         Option.getD_none, List.mem_append,
@@ -690,7 +838,11 @@ macro_rules
         races_disarm, state_disarm, races_modify, armed_modify, state_modify, WithFiberAction.keys,
         RunFiber.keys, RunFiber.park, frameKeys, Race.keys, iterKeys, cmdsKeys,
         Cmd.keys, Outcome.keys, Pending.keys, Task.keys, Observer.keys, Resume.keys, optExitKeys, Stores.keys,
-        primKeys, exitKeys, Val.keys, Supervision.RaceAllState.initial,
+        primKeys, exitKeys, Val.keys, Val.keysList, Val.keys_fiber, Val.keys_cell, Val.keys_promise,
+        Val.keys_scopeHandle, Val.keys_exitOk, Val.keys_exitErr, Val.keys_context, Val.keys_fibers,
+        Val.keys_causeImage, Val.keys_snapshotPayload,
+        Handle.ofCode_fiber, Handle.ofCode_cell, Handle.ofCode_promise, Handle.ofCode_scope,
+        Supervision.RaceAllState.initial,
         List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.map_append, List.map_cons, List.map_nil,
         List.append_nil, List.nil_append, List.append_assoc, Option.map, Option.toList, Option.getD_some,
         Option.getD_none, List.mem_append,
@@ -4565,13 +4717,15 @@ theorem completionPrim_keys (c : Completion Val Err Defect FiberId Ann) :
   | ofExit exit => rw [completionPrim, programKeys_ofExit]; exact List.Subset.refl _
   | ofRefGet cell => simp only [completionPrim]; sub_tac
 
-theorem exitsVal_keys : ∀ exits : List ExitV, (exitsVal exits).keys = exits.flatMap exitKeys
-  | [] => rfl
-  | exit :: rest => by
-    cases exit <;> simp only [exitsVal, reifyExitVal, Val.keys, List.flatMap_cons, exitKeys, exitsVal_keys rest]
-
 theorem reifyExitVal_keys (e : ExitV) : (reifyExitVal e).keys = exitKeys e := by
-  cases e <;> rfl
+  cases e with
+  | success v => exact Val.keys_exitOk v
+  | failure c => exact Val.keys_exitErr c
+
+theorem exitsVal_keys (exits : List ExitV) : (exitsVal exits).keys = exits.flatMap exitKeys := by
+  show Val.keys (Val.list (exits.map reifyExitVal)) = _
+  rw [Val.keys_list, List.flatMap_map]
+  simp only [reifyExitVal_keys]
 
 theorem finProgram_keys (fin : FinName) (exit : ExitV) :
     programKeys (finProgram fin exit) ⊆ fin.keys ++ exitKeys exit := by
@@ -4655,28 +4809,19 @@ theorem raceSettleProgram_keys (race : Nat) (cleanupNeeded : Bool) (exit : ExitV
   · rw [programKeys_ofExit]
     exact List.Subset.refl _
 
+/-- The continuation table names only what its name and its value name. The table matches on
+the value's shape, so it is split as one `match` (the spellings are reducible; a dead
+alternative closes by `contradiction`); the arms that read a cause or a snapshot back off the
+value split once more. -/
 theorem contAOf_keys (name : Name) (v : Val) : programKeys (contAOf name v) ⊆ name.keys ++ v.keys := by
-  cases name with
-  | restore exit => simp only [contAOf, programKeys_ofExit]; sub_tac
-  | merge exit => simp only [contAOf, programKeys_ofExit]; sub_tac
-  | seq next => simp only [contAOf]; sub_tac using (progOf_keys next)
-  | joinOn mode => cases v <;> simp only [contAOf] <;> sub_tac
-  | interruptWith cell => cases v <;> simp only [contAOf] <;> sub_tac
-  | doneInto cell => cases v <;> simp only [contAOf] <;> sub_tac
-  | constant value => simp only [contAOf]; sub_tac
-  | exitOfValue => cases v <;> simp only [contAOf] <;> sub_tac
-  | snapshotThen body => cases v <;> simp only [contAOf] <;> sub_tac using (progOf_keys body)
-  | registerAwait cell => simp only [contAOf]; sub_tac
-  | cancelAwait cell => simp only [contAOf]; sub_tac
-  | externalRegister slot => simp only [contAOf]; sub_tac
-  | abortController => simp only [contAOf]; sub_tac
-  | cancelPark => simp only [contAOf]; sub_tac
-  | cancelRace race => simp only [contAOf]; sub_tac
-  | withWaiter base waiter token => simp only [contAOf]; sub_tac
-  | reFail cause => simp only [contAOf]; sub_tac
-  | finalizerName fin => simp only [contAOf]; sub_tac
-  | closeSeq rest exit captured => simp only [contAOf]; sub_tac
-  | closeParDone => simp only [contAOf]; sub_tac
+  unfold contAOf
+  split <;> first
+    | contradiction
+    | (simp only [programKeys_ofExit]; sub_tac)
+    | sub_tac
+    | sub_tac using (progOf_keys _)
+    | sub_tac using (progOf_keys _), (Val.snapshotPayload_keys _)
+    | (split <;> sub_tac)
 
 theorem contEOf_keys (name : Name) (cause : CauseV) : programKeys (contEOf name cause) ⊆ name.keys := by
   cases name with
@@ -5464,14 +5609,14 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
       simp only [Option.getD_some]
       exact List.Subset.trans hkeys (List.subset_cons_of_subset _ (List.Subset.refl _))
   emptyContext := rfl
-  contextValue ctx := by simp only [stores]; exact List.Subset.refl _
+  contextValue ctx := by simp only [stores, Val.keys_context]; exact List.Subset.refl _
   exitValue e mode := by
     cases mode with
     | awaitValue => simp only [stores, primKeys, reifyExitVal_keys]; exact List.Subset.refl _
     | joinEffect => simp only [stores, primKeys_ofExit]; exact List.Subset.refl _
   fiberValue id := by simp only [stores]; exact List.Subset.refl _
   fiberIdValue _ := List.nil_subset _
-  fibersValue ids := by simp only [stores]; exact List.Subset.refl _
+  fibersValue ids := by simp only [stores, Val.keys_fibers]; exact List.Subset.refl _
   exitsValue exits := by simp only [stores, exitsVal_keys]; exact List.Subset.refl _
   voidValue := rfl
   scopeValue scope := by simp only [stores]; exact List.Subset.refl _

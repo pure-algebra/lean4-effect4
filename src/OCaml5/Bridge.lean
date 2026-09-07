@@ -173,8 +173,8 @@ where
     | .unit => "unit"
     | .nat n => s!"nat {n}"
     | .bool b => s!"bool {b}"
-    | .fiber f => s!"fiber {f.value}"
-    | .fibers fs => s!"fibers n={fs.length}"
+    | Val.fiber ⟨f⟩ => s!"fiber {f}"
+    | v@(Value.fiberSnapshot _) => s!"fibers n={((Val.snapshot? v).getD []).length}"
     | _ => "value"
 
 def fiberLine (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) : String :=

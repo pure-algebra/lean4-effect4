@@ -207,16 +207,32 @@ theorem denoteR_callback (op : NativeOp) (r : Term) (h : p.fuel ≠ 0) :
 theorem denoteR_awaitFiber (t : Term) (mode : Supervision.ObserverMode) (h : p.fuel ≠ 0) :
     denoteR root (.awaitFiber t mode) p =
       (match evalTerm p.env t with
-       | some (.fiber id) =>
-         match p.awaitExit id mode with
+       | some (Val.fiber ⟨id⟩) =>
+         match p.awaitExit ⟨id⟩ mode with
          | some exit => .pure exit
          | none => match mode with
-           | .joinEffect => .vis (.inr (.await id .joinEffect)) Effects.Program.pure
-           | .awaitValue => .vis (.inr (.await id .awaitValue)) fun v => .pure (.success v)
+           | .joinEffect => .vis (.inr (.await ⟨id⟩ .joinEffect)) Effects.Program.pure
+           | .awaitValue => .vis (.inr (.await ⟨id⟩ .awaitValue)) fun v => .pure (.success v)
        | _ => .pure badShapeExit) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
   | succ f => rw [denoteR, hf]; try rfl
+
+/-- The `forkScoped` wrapper's continuation on anything but a scope handle is the wrong
+shape (`Compile.lean` `contAOf`, the `forkScopedIn` arms). -/
+theorem contAOf_forkScopedIn_other (v : Val) (hne : ∀ s, v ≠ Val.scopeHandle s) :
+    Program.contAOf root (.forkScopedIn p) v = badShape := by
+  unfold Program.contAOf
+  revert hne
+  -- `split` keeps every row of the table: the dead rows contradict on the name, the
+  -- scope-handle row contradicts `hne`, the wrong-shape row is `rfl`, and the table's
+  -- catch-all row contradicts its own "the `forkScopedIn` row did not match" hypothesis
+  split <;> intro hne <;> first
+    | rfl
+    | contradiction
+    | exact absurd rfl (hne _)
+    | (rename_i heq; exact absurd heq (hne _))
+    | simp_all
 
 theorem denoteR_uninterruptible (b : NativeEff) (h : p.fuel ≠ 0) :
     denoteR root (.uninterruptible b) p = denoteAction root p := by
@@ -296,10 +312,10 @@ theorem compileEff_callback (op : NativeOp) (r : Term) (hf : p.fuel = k + 1) :
 theorem compileEff_awaitFiber (t : Term) (mode : Supervision.ObserverMode) (hf : p.fuel = k + 1) :
     compileEff (.awaitFiber t mode) p =
       (match evalTerm p.env t with
-       | some (Val.fiber id) =>
-         match p.awaitExit id mode with
+       | some (Val.fiber ⟨id⟩) =>
+         match p.awaitExit ⟨id⟩ mode with
          | some exit => Prim.ofExit exit
-         | none => Prim.suspend (EffThunk.park (ParkKind.join id mode))
+         | none => Prim.suspend (EffThunk.park (ParkKind.join ⟨id⟩ mode))
        | _ => badShape) := by
   rw [compileEff, hf]; try rfl
 
@@ -397,12 +413,22 @@ theorem prepareR_denoteR (root : NativeEff) (e : NativeEff) (p : Point)
         cases evalTerm p.env t with
         | none => rfl
         | some v =>
-          cases v <;> try rfl
-          rename_i id
-          dsimp only
-          cases p.awaitExit id mode with
-          | some ex => rfl
-          | none => cases mode <;> rfl
+          -- the value is a fiber handle or it is not; both sides match on that
+          cases hfib : Val.fiber? v with
+          | some id =>
+            obtain ⟨id⟩ := id
+            have hv := Val.fiber?_exact hfib
+            subst hv
+            simp only
+            cases p.awaitExit ⟨id⟩ mode with
+            | some ex => rfl
+            | none => cases mode <;> rfl
+          | none =>
+            -- one `split` settles both sides: they match on the same discriminant
+            have hb : ∀ id, v ≠ Val.fiber ⟨id⟩ := fun id => Val.fiber?_none hfib ⟨id⟩
+            split
+            · next id heq => exact absurd (Option.some.inj heq) (hb id)
+            · rfl
       | withFiber a =>
         rw [denoteR_withFiber root a p hpos]; exact prepareR_denoteAction root p completed
       | «scoped» b => rw [denoteR_scoped root b hpos]; rfl
@@ -826,16 +852,25 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
     rw [compileEff_awaitFiber t mode hf, denoteR_awaitFiber root t mode hpos]
     rcases hv : evalTerm p.env t with _ | v
     · exact codeMeans_badShape root
-    · cases v
-      case fiber id =>
-        dsimp only
-        cases p.awaitExit id mode with
+    · -- the value is a fiber handle or it is not; both sides match on that
+      cases hfib : Val.fiber? v with
+      | some id =>
+        obtain ⟨id⟩ := id
+        have hv := Val.fiber?_exact hfib
+        subst hv
+        simp only
+        cases p.awaitExit ⟨id⟩ mode with
         | some ex => exact codeMeans_ofExit_pure root ex
         | none =>
           cases mode with
-          | joinEffect => exact CodeMeans.joinEffect id _ delivers_pure
-          | awaitValue => exact CodeMeans.joinValue id _ delivers_seqR_pure
-      all_goals exact codeMeans_badShape root
+          | joinEffect => exact CodeMeans.joinEffect ⟨id⟩ _ delivers_pure
+          | awaitValue => exact CodeMeans.joinValue ⟨id⟩ _ delivers_seqR_pure
+      | none =>
+        -- one `split` settles both sides: they match on the same discriminant
+        have hb : ∀ id, v ≠ Val.fiber ⟨id⟩ := fun id => Val.fiber?_none hfib ⟨id⟩
+        split
+        · next id heq => exact absurd (Option.some.inj heq) (hb id)
+        · exact codeMeans_badShape root
   | withFiber a =>
     cases hfs : forkScoped? a with
     | some co =>
@@ -849,8 +884,11 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
       refine CodeMeans.onSuccess _ _ _ (fiberValR .ambientScope rfl) _ ?_ ?_ rfl (fun _ => rfl)
       · exact CodeMeans.actAmbientScope _ _ hact (successV root)
       · intro completed v
-        cases v
-        case scopeHandle s =>
+        -- the handle the service read answered is a scope handle or it is not
+        cases hsc : Val.scope? v with
+        | some s =>
+          have hv := Val.scope?_exact hsc
+          subst hv
           show CodeMeans root (Prim.withFiber (.forkInAt p s))
             (prepareR completed (.vis (.inr (.forkIn ((p.child 0).child 0) options s))
               fun v => .pure (.success v)))
@@ -859,7 +897,18 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
           · show forkScopedAt root p s = _
             simp [forkScopedAt, h]
           · exact hres _ hw00
-        all_goals exact CodeMeans.failure _
+        | none =>
+          have hne : ∀ s, v ≠ Val.scopeHandle s := Val.scope?_none hsc
+          show CodeMeans root (Program.contAOf root (.forkScopedIn p) v) _
+          rw [contAOf_forkScopedIn_other root v hne]
+          simp only [seqR]
+          first
+            | exact CodeMeans.failure _
+            | (split
+               · first
+                   | (next s heq => exact absurd heq (hne s))
+                   | (next s => exact absurd rfl (hne s))
+               · exact CodeMeans.failure _)
     | none =>
       have hnot : ∀ c o, a ≠ .forkScoped c o := forkScoped?_none hfs
       rw [compileEff_withFiber_other a hf hnot, denoteR_withFiber root a p hpos]

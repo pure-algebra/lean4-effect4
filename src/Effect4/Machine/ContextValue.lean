@@ -460,19 +460,16 @@ theorem ofStore_exact_aux : ∀ w : Store.Val, ExactV w ∧ ExactE w := by
       subst hj
       show Store.Val.ctor 0 [x] = Value.exitOk (toStore y)
       rw [(ih x (by simp)).1 y hy]
-      rfl
     · next c =>
       obtain ⟨cause, hc, hj⟩ := Option.map_eq_some_iff.mp h
       subst hj
       show Store.Val.ctor 1 [c] = Value.exitErr (causeImage.toVal cause)
       rw [causeImage.ofVal_exact hc]
-      rfl
     · next hs =>
       obtain ⟨ids, hids, hj⟩ := Option.map_eq_some_iff.mp h
       subst hj
       show Store.Val.ctor 3 [hs] = Value.fiberSnapshot ((Image.list Value.fiberHandle).toVal ids)
       rw [(Image.list Value.fiberHandle).ofVal_exact hids]
-      rfl
     · next x t =>
       split at h
       · exact nomatch h

@@ -186,6 +186,15 @@ def string : Image String where
 
 section combinators
 
+/-- `Option.map_eq_some_iff`'s forward direction, by cases: the core lemma reaches
+`Quot.sound`, and an image's reader is part of the runtime's definitions, whose axiom
+receipts the coverage snapshot pins. -/
+theorem map_eq_some_inv {α β : Type} {f : α → β} {o : Option α} {b : β} (h : o.map f = some b) :
+    ∃ a, o = some a ∧ f a = b := by
+  cases o with
+  | none => exact nomatch h
+  | some a => exact ⟨a, rfl, Option.some.inj h⟩
+
 variable (I : Image α) (J : Image β) (K : Image γ)
 
 /-- Transport an image along an isomorphism of carriers. -/
@@ -198,7 +207,7 @@ def equiv (f : α → β) (g : β → α) (hfg : ∀ b, f (g b) = b) (hgf : ∀ 
     rw [I.ofVal_toVal, Option.map_some, hfg]
   ofVal_exact := by
     intro v b h
-    obtain ⟨a, ha, hb⟩ := Option.map_eq_some_iff.mp h
+    obtain ⟨a, ha, hb⟩ := map_eq_some_inv h
     subst hb
     show v = I.toVal (g (f a))
     rw [hgf, I.ofVal_exact ha]
@@ -258,7 +267,7 @@ def option : Image (Option α) where
       subst h
       rfl
     · next w =>
-      obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+      obtain ⟨x, hx, hj⟩ := map_eq_some_inv h
       subst hj
       show Val.some w = Val.some (I.toVal x)
       rw [I.ofVal_exact hx]

@@ -105,7 +105,7 @@ def initial (state : Stores) (program : ProgName) : Witnesses.M :=
 #guard Minted (Api.replay waiting 0 [Api.evaluate, reply (.ofExit (.success (.fiber ⟨7⟩)))]).machine
 
 -- Handles inside reified exits and exit lists remain visible to the traversal.
-#guard (Val.exitCons (.exitOk (.fiber ⟨7⟩)) (.exitCons (.cell ⟨3⟩) .exitNil)).keys =
+#guard Val.keys (Val.list [Val.exitOk (Val.fiber ⟨7⟩), Val.cell ⟨3⟩]) =
   [Handle.fiber ⟨7⟩, Handle.cell ⟨3⟩]
 
 /-! ## Forks mint fibers, stores mint cells -/
