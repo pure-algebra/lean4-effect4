@@ -169,7 +169,7 @@
     "outcome": "finished",
     "internal":
     ["contextSet 0", "finalizerProgram 0 success", "contextSet 0", "finalizerProgram 0 success"],
-    "frames": 29,
+    "frames": 27,
     "fibers": [{"parkedToken": null, "id": 0, "exited": true, "exit": {"success": null}}],
     "fiberCount": 1,
     "exitKind": "success",

@@ -141,7 +141,17 @@ The agreement, `Effect4.Program.Agreement` (two modules, landed with the lanes):
 27. `localRun_compile`: a plain program compiled at an address of a root, run from any
     outer stack `K`, reaches within `steps e` local steps the fiber holding its meaning's
     exit over its meaning's stores; `localRun_root` at the root, on the empty stack, from
-    the empty stores, inside `steps e + 1` steps.
+    the empty stores, inside `steps e + 1` steps. `steps` is an upper bound: since the
+    2026-09-06 correction (`E4-CHECK-CE-001`) the compile of `exit b` folds when the body
+    compiles to an immediate exit, as `Effect.exit` returns `exitSucceed(self)` for an
+    `Exit` (`internal/effect.ts:3621-3622`), and that program takes no local step at all.
+    `compileEff_exit` is that clause; `compileEff_exit_fold` and `compileEff_exit_frame`
+    are its two cases; `meaning_of_asExit` says a plain body whose compiled head is an
+    exit has that exit as its meaning at unchanged stores, which is what the fold case of
+    `localRun_compile` reaches. The same correction (`E4-CHECK-CE-002`, `-003`) compiles
+    `gen` and `whileLoop` to a `Suspend` at their point, answered by `suspendBodyAt`;
+    neither is plain, so `suspendBodyAt_of_at` now also excludes them
+    (`Plain.not_gen`, `Plain.not_whileLoop`) and nothing else here changes.
 28. `PlainCode`/`PlainFrame` and `Quiet`: the compile of a plain program is plain code, every
     subterm of a plain root is plain, the hooks of `interpOf` answer plain code, the local
     step keeps the fiber plain, and every `syncOpStep` keeps the stores quiet (no resume

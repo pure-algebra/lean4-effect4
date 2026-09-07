@@ -2,10 +2,11 @@ import Effect4.Program.DenoteR
 import Effect4.Machine.Behaviour
 
 /-!
-# The term scheduler's state and interpreter (R3)
+# The term scheduler's state and interpreter (R3, restated by P2)
 
-Packet: `Test/contracts/program-runtime-r.contract.md`; plan and correction:
-`docs/research/2026-09-06-r3-r4-implementation.md`. The machine, stores and
+Packet: `Test/contracts/program-runtime-r.contract.md`; plan and corrections:
+`docs/research/2026-09-06-r3-r4-implementation.md` and the P2 phase model of
+`docs/research/2026-09-06-p0-fable-record.md` §4. The machine, stores and
 decisions are the existing ones; `RProgram` is their semantic code parameter.
 Functions in a saved continuation belong to this proof carrier, never `Eff`.
 
@@ -18,6 +19,12 @@ store interface and Completion tape produce exactly the three decoded shapes.
 `RSTATE-FB-ONSUCCESS-NAME` restricts the shared loop's composition hook to
 `restore`, its sole producer. `RSTATE-FB-IDENTITY`: semantic saved states have
 no serialization or decidable equality. No host correspondence is proved.
+
+The generator walk `walkR` is the term instance of the compile's `runStmts`: the
+same navigation (`blockAt`, `blockExit`, `loopExit`), the source classifier
+`inlineYield` for the inline folds, and the term as the yielded code. `interpR`'s
+`iterNext` and `loopBody` are that walk and the addressed loop body; the loop's
+test, step and done hooks are the compile's own.
 -/
 
 set_option autoImplicit false
@@ -27,12 +34,20 @@ namespace Effect4.Program.Sched
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote
 
 /-- The saved continuations and hooks above a term, mirroring the frame slots.
+`resume` is a lexical handler boundary. `answer` is the continuation of an operation
+whose answer arrives as code through the shared loop, the operation-answer adapter
+(P0 record §4): delivering into it continues the same delivery when its result is a
+closing marker or a bare exit. `iter` and `loop` are the generator's and the cursor
+loop's own frames, first-order, whose continuations run inside the body's delivery.
 `finalizerMask` delimits one `onExitR` cleanup, including an already masked one. -/
 inductive ScopeFrame
   | resume (kind : GuardKind) (next : ExitV → RProgram)
+  | answer (next : ExitV → RProgram)
   | restoreMask (flag : Bool)
   | asyncFinalizer (name : EffName)
   | finalizerMask (flag : Bool)
+  | iter (generator : EffName)
+  | loop (loop : EffName) (cursor : Val)
 
 structure RSaved where
   current : RProgram
@@ -74,17 +89,11 @@ abbrev RInterp := RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stor
 abbrev RIter := Iter EffName EffThunk Val Err Defect FiberId Ann Ctx Stores RProgram RSaved Unit
 abbrev RCmd := Cmd EffName EffThunk Val Err Defect FiberId Ann RProgram
 
-/-- Resolve an existing source point into its bounded term. -/
-def denoteAt (root : NativeEff) (fuel : Nat) (p : Point) : RProgram :=
+/-- Resolve an existing source point into its term. -/
+def denoteAt (root : NativeEff) (p : Point) : RProgram :=
   match Node.at_ (.eff root) p.path with
-  | some (.eff e) => denoteR root fuel e p
+  | some (.eff e) => denoteR root e p
   | _ => .pure badShapeExit
-
-def storeR (op : SyncOp) : RProgram :=
-  .vis (.inl op) fun v => .pure (.success v)
-
-def fiberValR (op : FiberOp) (h : op.answer = Val) : RProgram :=
-  .vis (.inr op) fun v => .pure (.success (h ▸ v))
 
 /-- The scope's seven finalizer shapes (`Stores.finProgram`). -/
 def denoteFin : FinName → ExitV → RProgram
@@ -107,7 +116,7 @@ def denoteStored : Effect4.Machine.Program → RProgram
   | .success v => .pure (.success v)
   | .failure c => .pure (.failure c)
   | .sync (.op (.refGet cell)) => storeR (.refGet cell)
-  | _ => pending .unsupported (.effect (rootPoint 0))
+  | _ => pending .unsupported (rootPoint 0)
 
 theorem denoteStored_completion (answer : Completion Val Err Defect FiberId Ann) :
     denoteStored (completionPrim answer) = denoteCompletion answer := by
@@ -145,8 +154,8 @@ def closeScopeR (scope : Nat) (ex : ExitV) (interruptible : Bool)
         | .sequential => denoteCloseSeq entry.scope.closeOrder ex []
         | .parallel => denoteClosePar interruptible entry.scope.closeOrder ex [])
 
-def denoteBody (root : NativeEff) (fuel : Nat) : Body → RProgram
-  | .at_ p => denoteAt root fuel p
+def denoteBody (root : NativeEff) : Body → RProgram
+  | .at_ p => denoteAt root p
   | .fin fin ex => denoteFin fin ex
   | .interruptFibers live => fiberValR (.interruptAll live none) rfl
 
@@ -167,20 +176,75 @@ def denoteCancel : EffName → RProgram
   | .store name => denoteStoreCancel name
   | _ => .pure (.success .unit)
 
-/-- The actual loop hooks, with the same non-code fields as `interpOf`.
+/-- The generator walk at the term instance (`Compile.runStmts` at the frame instance):
+from the list at `pc` with `env` in scope, through pure statements to the next yield,
+the return, or the body's end. Inline source exits are folded by `inlineYield`; a
+yielded failure halts; anything else resumes with the term at its point and the
+advanced generator name. An exhausted scan resumes with the compile-fuel frontier at
+the exhausted point, under the same advanced name. -/
+def walkR (root : NativeEff) (p : Point) :
+    Nat → List Nat → List Val → List Val →
+      List Val × IterStep EffName EffThunk Val Err Defect FiberId Ann RProgram
+  | 0, pc, env, folded =>
+    (folded, .resume (pending .compileFuel { p with path := p.path ++ [0] ++ pc, env := env, fuel := 0 })
+      (.gen { p with env := env } pc false))
+  | fuel + 1, pc, env, folded =>
+    match blockAt root p pc with
+    | some .nil =>
+      match blockExit root p pc env with
+      | none => (folded, .done Val.unit)
+      | some (pc', env') => walkR root p fuel pc' env' folded
+    | some (.cons s _) =>
+      match s with
+      | .bindYield e => yieldOf e true fuel pc env folded
+      | .yieldDiscard e => yieldOf e false fuel pc env folded
+      | .ret v =>
+        match evalTerm env v with
+        | some value => (folded, .done value)
+        | none => (folded, .halt (Cause.die Defect.badName))
+      | .ifElse test _ _ =>
+        match evalTerm env test with
+        | some (.bool true) => walkR root p fuel (pc ++ [0, 0]) env folded
+        | some (.bool false) => walkR root p fuel (pc ++ [0, 1]) env folded
+        | _ => (folded, .halt (Cause.die Defect.badName))
+      | .whileTrue _ => walkR root p fuel (pc ++ [0, 0]) env folded
+      | .breakLoop =>
+        match loopExit root (pc.length + 1) p pc env with
+        | some (pc', env') => walkR root p fuel pc' env' folded
+        | none => (folded, .halt (Cause.die Defect.badName))
+    | none => (folded, .halt (Cause.die Defect.badName))
+where
+  /-- The effect of a yield statement at `pc`, denoted at its own point. -/
+  yieldOf (e : NativeEff) (bind : Bool) (fuel : Nat) (pc : List Nat) (env : List Val)
+      (folded : List Val) :
+      List Val × IterStep EffName EffThunk Val Err Defect FiberId Ann RProgram :=
+    let q : Point := { p with path := p.path ++ [0] ++ pc ++ [0, 0], env := env, fuel := fuel + 1 }
+    match inlineYield e q with
+    | some (.success value) =>
+      walkR root p fuel (pc ++ [1]) (if bind then env ++ [value] else env) (folded ++ [value])
+    | some (.failure cause) => (folded, .halt cause)
+    | none => (folded, .resume (denoteR root e q) (.gen { p with env := env } (pc ++ [1]) bind))
+
+/-- The actual loop and generator hooks, with the same non-code fields as `interpOf`.
 Frame-only hooks have explicit refusal bodies and are not read by `evaluateR`. -/
-def interpR (root : NativeEff) (fuel : Nat) : RInterp where
+def interpR (root : NativeEff) : RInterp where
   contA := fun _ _ => .pure outsideExit
   contE := fun _ _ => .pure outsideExit
   syncValue := (interpOf root).syncValue
   suspendBody := fun
-    | .body p => denoteAt root fuel p
+    | .body p => denoteAt root p
     | _ => .pure outsideExit
   finalizerExit := (interpOf root).finalizerExit
   reifyExit := reifyExitVal
-  iterNext := fun _ value => ([], .done value)
+  iterNext := fun name value =>
+    match name with
+    | .gen p pc bind => walkR root p p.fuel pc (if bind then p.env ++ [value] else p.env) []
+    | _ => ([], .done value)
   loopTest := (interpOf root).loopTest
-  loopBody := fun _ _ => .pure outsideExit
+  loopBody := fun name cursor =>
+    match name with
+    | .loop p => denoteAt root (p.childWith 0 cursor)
+    | _ => .pure (.success cursor)
   loopStep := (interpOf root).loopStep
   loopDone := (interpOf root).loopDone
   notImplemented := .notImplemented
@@ -206,7 +270,7 @@ def interpR (root : NativeEff) (fuel : Nat) : RInterp where
   raceSettle := denoteRaceSettle
   finalizerProgram := fun name ex =>
     match name with
-    | .fin p => some (denoteAt root fuel (p.childWith 1 (reifyExitVal ex)))
+    | .fin p => some (denoteAt root (p.childWith 1 (reifyExitVal ex)))
     | .scopeClose scope => some (.vis (.inr (.closeScope scope ex)) Effects.Program.pure)
     | .restoreCtx previous => some (fiberValR (.setContext previous) rfl)
     | .store (.finalizerName fin) => some (denoteFin fin ex)

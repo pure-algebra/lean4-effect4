@@ -518,6 +518,33 @@ def pWhileLoop : NativeEff :=
 #guard exitOf (replayEff pWhileLoop [evaluateRoot]) 0 = some (Exit.success (Val.nat 3))
 #guard refsOf (replayEff pWhileLoop [evaluateRoot]) = [Val.nat 3]
 
+/-! ### The host's eager constructors (P0 record rows D1–D3, 2026-09-06)
+
+`Effect.exit` of a body that is already an `Exit` is `exitSucceed(self)`
+(`internal/effect.ts:3621-3622`); `Effect.gen` is a `Suspend` around the iterator
+(`:1175-1196`); the printed `whileLoop` is a `Suspend` around the `While` frame
+(`Codegen/Print.lean:158-168`). The compile follows the host, and `suspendBodyAt` answers
+the iterator or the loop frame; the exits of every program above are unchanged. -/
+
+def pLoopBare : NativeEff :=
+  .whileLoop (.lit (.nat 0)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
+    (.app "succ" (.cons (.var 0) .nil)) (.succeed (.lit .unit))
+
+#guard compile (.exit pSucceed) fuel = Prim.success (Val.exitOk (Val.nat 42))
+#guard compile pExit fuel = Prim.success (Val.exitErr (Cause.fail (Err.tag 7)))
+#guard compile (.exit (.exit pSucceed)) fuel = Prim.success (Val.exitOk (Val.exitOk (Val.nat 42)))
+#guard (compile (.exit pBindSync) fuel).asExit? = none
+#guard compile (.exit pBindSync) fuel = Prim.exitFrame (compileEff pBindSync ((rootPoint fuel).child 0))
+#guard compile pGenTwoYields fuel = Prim.suspend (EffThunk.body (rootPoint fuel))
+#guard suspendBodyAt pGenTwoYields (EffThunk.body (rootPoint fuel)) =
+  Prim.iterator (EffName.gen (rootPoint fuel) [] false) Val.unit
+#guard compile pLoopBare fuel = Prim.suspend (EffThunk.body (rootPoint fuel))
+#guard suspendBodyAt pLoopBare (EffThunk.body (rootPoint fuel)) =
+  Prim.whileLoop (EffName.loop (rootPoint fuel)) (Val.nat 0)
+#guard exitOf (replayEff pLoopBare [evaluateRoot]) 0 = some (Exit.success Val.unit)
+#guard exitOf (replayEff (.exit (.exit pSucceed)) [evaluateRoot]) 0
+  = some (Exit.success (Val.exitOk (Val.exitOk (Val.nat 42))))
+
 /-! ## Control by value: `branch` and `choose` -/
 
 def pBranchTrue : NativeEff :=

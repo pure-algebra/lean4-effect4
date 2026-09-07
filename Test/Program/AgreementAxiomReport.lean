@@ -29,6 +29,14 @@ below is expected at the ceiling `propext`/`Quot.sound`; the gate
 #print axioms Effect4.Program.Agreement.compileEff_bind
 #print axioms Effect4.Program.Agreement.compileEff_perform_sync
 #print axioms Effect4.Program.Agreement.suspendBodyAt_of_at
+-- P1a (2026-09-06): the host's exit fold and the fuel-zero clause it needs.
+#print axioms Effect4.Program.Agreement.compileEff_exit
+#print axioms Effect4.Program.Agreement.compileEff_exit_fold
+#print axioms Effect4.Program.Agreement.compileEff_exit_frame
+#print axioms Effect4.Program.Agreement.compileEff_at_zero
+#print axioms Effect4.Program.Agreement.meaning_of_asExit
+#print axioms Effect4.Program.Agreement.Plain.not_gen
+#print axioms Effect4.Program.Agreement.Plain.not_whileLoop
 #print axioms Effect4.Program.Agreement.suspendBodyAt_branch_bad
 #print axioms Effect4.Program.Agreement.resolve_of_at
 

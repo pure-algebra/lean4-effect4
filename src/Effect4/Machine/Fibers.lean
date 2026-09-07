@@ -1102,6 +1102,222 @@ where
       let (m, f, parked) := countdownPark interp m f [target] Resume.void
       ⟨m, f, yielding, (if parked then Outcome.parked else Outcome.continue_), nested⟩
 
+/-! ## Shared fiber actions
+
+The ordinary `withFiber` arms and the two parks the alphabet spells (`Yield`, the join),
+generic in the fiber core and in how an instance installs a value answer: the frame
+instance answers with `Prim.success value` (`coreAnswer`), the term instance with its
+continuation applied to the value. Each helper is definitionally the arm of
+`evaluatePrim` above under `coreAnswer` (`Test/Program/RuntimeRContract.lean` states the
+identities by `rfl`) and is the term evaluator's arm (`Program/EvaluateR.lean`). Sharing
+removes the term's duplicate of each arm; it validates nothing against rc.112, whose
+citations stay on the arms above. The frame arms are not rewritten to call these: every
+handle and clause proof over `evaluatePrim.withFiber` unfolds them where they stand. The
+mask, async and store arms stay instance-specific: the frame's mask reads its own saved
+stack, and the term's async derives its cancel name from the registration
+(`docs/research/2026-09-06-p0-fable-record.md` §4). -/
+
+namespace FiberAction
+
+variable {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+variable {κ φ η : Type (max u v)} [core : FiberCore ν β ε δ ι α κ φ]
+
+/-- How an instance installs a value answer as the fiber's current code. -/
+abbrev Answer (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (κ φ : Type (max u v)) :=
+  RunFiber ν σ β ε δ ι α χ κ φ → β → RunFiber ν σ β ε δ ι α χ κ φ
+
+/-- The core's own answer: `success value` as the current code. -/
+def coreAnswer : Answer ν σ β ε δ ι α χ κ φ :=
+  fun f value => { f with frame := core.answerWith f.frame (core.success value) }
+
+def outcomeOf (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (parked : Bool) : Outcome ν σ β ε δ ι α :=
+  match m.stuck with
+  | some why => Outcome.stuck why
+  | none => if parked then Outcome.parked else Outcome.continue_
+
+def getId (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool)
+    (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer) : Iter ν σ β ε δ ι α χ St κ φ η :=
+  ⟨m, answer f (interp.fiberValue f.id), yielding, Outcome.continue_, []⟩
+
+def getContext (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool)
+    (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer) : Iter ν σ β ε δ ι α χ St κ φ η :=
+  ⟨m, answer f (interp.contextValue f.context), yielding, Outcome.continue_, []⟩
+
+def setContext (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (context : χ)
+    (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer) : Iter ν σ β ε δ ι α χ St κ φ η :=
+  let (maxOps, prevent) := interp.budgetOf context
+  let f := { f with context := context, maxOpsBeforeYield := maxOps, preventYield := prevent }
+  ⟨m.emit [RunEvent.contextSet f.id context], answer f interp.voidValue, yielding,
+    Outcome.continue_, []⟩
+
+def snapshotChildren (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool)
+    (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer) : Iter ν σ β ε δ ι α χ St κ φ η :=
+  ⟨m, answer f (interp.fibersValue f.children), yielding, Outcome.continue_, []⟩
+
+def dropObservers (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (token : Nat)
+    (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer) : Iter ν σ β ε δ ι α χ St κ φ η :=
+  let m := { m with fibers := m.fibers.map fun g =>
+    { g with observers := g.observers.filter fun
+        | Observer.resumeAwait _ t _ => t ≠ token
+        | Observer.countdown _ t => t ≠ token
+        | _ => true } }
+  ⟨m, answer f interp.voidValue, yielding, Outcome.continue_, []⟩
+
+def runIn (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (target : FiberId) (scope key : Nat)
+    (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer) : Iter ν σ β ε δ ι α χ St κ φ η :=
+  let (m, nested) := linkScope interp m Supervision.ScopeMode.fiberRunIn scope key target
+    (some target) ReasonAnnotations.empty
+  ⟨m, answer f interp.voidValue, yielding, outcomeOf m false, nested⟩
+
+def fork (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (program : κ)
+    (options : Supervision.ForkOptions)
+    (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer) : Iter ν σ β ε δ ι α χ St κ φ η :=
+  let m := if options.daemon then m else { m with middlewareInstalled := true }
+  let (m, f, child) := spawn interp m f program options
+  let (m, f, nested) := start m f child options.startImmediately
+  ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_, nested⟩
+
+def forkIn (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (program : κ)
+    (options : Supervision.ForkOptions) (scope key : Nat)
+    (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer) : Iter ν σ β ε δ ι α χ St κ φ η :=
+  let (m, f, child) := spawn interp m f program { options with daemon := true }
+  let (m, f, started) := start m f child options.startImmediately
+  ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_,
+    started ++ [Cmd.link Supervision.ScopeMode.forkIn scope key child (some f.id)
+      (interp.stackAnnotations f.id)]⟩
+
+def forkScoped (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (program : κ)
+    (options : Supervision.ForkOptions) (key : Nat)
+    (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer) : Iter ν σ β ε δ ι α χ St κ φ η :=
+  match interp.ambientScope f.context with
+  | some scope =>
+    let (m, f, child) := spawn interp m f program { options with daemon := true }
+    let (m, f, started) := start m f child options.startImmediately
+    ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_,
+      started ++ [Cmd.link Supervision.ScopeMode.forkIn scope key child (some f.id)
+        (interp.stackAnnotations f.id)]⟩
+  | none =>
+    ⟨m, { f with frame := core.answerWith f.frame (core.failure (Cause.die interp.missingScope)) },
+      yielding, Outcome.continue_, []⟩
+
+def refuse (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (f : RunFiber ν σ β ε δ ι α χ κ φ)
+    (yielding : Bool) (cause : Cause ε δ ι α) : Iter ν σ β ε δ ι α χ St κ φ η :=
+  ⟨m, { f with frame := core.answerWith f.frame (core.failure cause) }, yielding,
+    Outcome.continue_, []⟩
+
+def closeScope (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (scope : Nat) (exit : Exit β ε δ ι α) :
+    Iter ν σ β ε δ ι α χ St κ φ η :=
+  match interp.closeScope scope exit (core.interruptible f.frame) f.id m.state with
+  | none => ⟨m, f, yielding, Outcome.stuck (Stuck.unknownScope scope), []⟩
+  | some (state, program) =>
+    ⟨{ m with state := state }, { f with frame := core.answerWith f.frame program },
+      yielding, Outcome.continue_, []⟩
+
+def interruptThenJoin (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (target : FiberId)
+    (interruptor : Option FiberId) : Iter ν σ β ε δ ι α χ St κ φ η :=
+  match m.fiber? target with
+  | none => ⟨m, f, yielding, Outcome.stuck (Stuck.unknownFiber target), []⟩
+  | some t =>
+    let (t, applyNow) := interruptRecord interp interruptor (interp.stackAnnotations f.id) t
+    let m := (m.update t).emit [RunEvent.interruptRecorded interruptor target]
+    let nested := if applyNow then [Cmd.evaluate target] else []
+    let (m, f, parked) := countdownPark interp m f [target] Resume.void
+    ⟨m, f, yielding, (if parked then Outcome.parked else Outcome.continue_), nested⟩
+
+def interruptAll (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (targets : List FiberId)
+    (interruptor : Option FiberId) : Iter ν σ β ε δ ι α χ St κ φ η :=
+  let (m, nested) :=
+    interruptEach interp (interruptor.getD f.id) (interp.stackAnnotations f.id) targets (m, [])
+  let (m, f, parked) := countdownPark interp m f targets Resume.void
+  ⟨m, f, yielding, outcomeOf m parked, nested⟩
+
+def awaitAll (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (targets : List FiberId)
+    (failFast : Bool) : Iter ν σ β ε δ ι α χ St κ φ η :=
+  let (m, f, parked) := countdownPark interp m f targets Resume.exitsValue failFast
+  ⟨m, f, yielding, outcomeOf m parked, []⟩
+
+def awaitNewChildren (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (snapshot : List FiberId) :
+    Iter ν σ β ε δ ι α χ St κ φ η :=
+  let fresh := f.children.filter fun c => !(snapshot.contains c)
+  let (m, f, parked) := countdownPark interp m f fresh Resume.void
+  ⟨m, f, yielding, outcomeOf m parked, []⟩
+
+def cancelRace (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (raceId : Nat)
+    (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer) : Iter ν σ β ε δ ι α χ St κ φ η :=
+  match m.race? raceId with
+  | none => ⟨m, answer f interp.voidValue, yielding, Outcome.continue_, []⟩
+  | some race =>
+    let (m, nested) :=
+      interruptEach interp f.id (interp.stackAnnotations f.id) race.state.live (m, [])
+    let (m, f, parked) := countdownPark interp m f race.state.live Resume.void
+    ⟨m, f, yielding, outcomeOf m parked, nested⟩
+
+def raceAll (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (entrants : List κ) :
+    Iter ν σ β ε δ ι α χ St κ φ η :=
+  let raceId := m.nextRace
+  let token := m.nextToken
+  let m := { m with nextRace := m.nextRace + 1, nextToken := m.nextToken + 1 }
+  let race : Race ν σ β ε δ ι α κ :=
+    ⟨raceId, f.id, token,
+      { Supervision.RaceAllState.initial [] with remaining := entrants.length }, false, entrants⟩
+  let m := { m with races := m.races ++ [race] }
+  let m := m.emit [RunEvent.raceStarted raceId f.id entrants.length]
+  let name := interp.cancelName (interp.raceCancelName raceId) f.id token
+  let f := { f with frame := core.pushAsyncFinalizer name f.frame }
+  let f := f.park ⟨token, none, [], [], Resume.void, false⟩
+  ⟨m.emit [RunEvent.parkedOn f.id token], f, yielding, Outcome.parked, [Cmd.launch raceId]⟩
+
+def yieldNow (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (priority : Nat) :
+    Iter ν σ β ε δ ι α χ St κ φ η :=
+  let token := m.nextToken
+  let m := { m with nextToken := m.nextToken + 1 }
+  let f := { f with
+    frame := core.answerWith f.frame (core.success interp.voidValue)
+    dispatcher :=
+      (f.dispatcher.enqueue priority (Task.resume f.id token (core.success interp.voidValue))) }
+  let f := f.park ⟨token, none, [], [], Resume.void, false⟩
+  ⟨(m.arm f.id).emit [RunEvent.parkedOn f.id token], f, yielding, Outcome.parked, []⟩
+
+def join (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (target : FiberId)
+    (mode : Supervision.ObserverMode) : Iter ν σ β ε δ ι α χ St κ φ η :=
+  match m.fiber? target with
+  | none => ⟨m, f, yielding, Outcome.stuck (Stuck.unknownFiber target), []⟩
+  | some t =>
+    match t.exit with
+    | some exit =>
+      ⟨m, { f with frame := core.answerWith f.frame (interp.exitValue exit mode) },
+        yielding, Outcome.continue_, []⟩
+    | none =>
+      let token := m.nextToken
+      let m := { m with nextToken := m.nextToken + 1 }
+      let m := m.update
+        { t with observers := t.observers ++ [Observer.resumeAwait f.id token mode] }
+      let name := interp.cancelName interp.parkCancelName f.id token
+      let f := { f with frame := core.pushAsyncFinalizer name f.frame }
+      let f := f.park ⟨token, some target, [], [], Resume.void, false⟩
+      ⟨m.emit [RunEvent.parkedOn f.id token], f, yielding, Outcome.parked, []⟩
+
+end FiberAction
+
 /-- Evaluation is an interpreter parameter, separate from saved-state operations.
 The shared scheduler never inspects code or stores this function in the machine. -/
 class FiberEvaluator (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St : Type (max u v))

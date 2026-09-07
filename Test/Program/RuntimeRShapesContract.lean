@@ -28,7 +28,7 @@ def seedFrame (code : NCode) (state : Stores := Stores.empty) : Api.Machine :=
 def tape : List Api.Decision := [.evaluate Api.root]
 def runShape (code : RProgram) (state : Stores := Stores.empty)
     (decisions : List Api.Decision := tape) : RReplay :=
-  replayEval (interpR rootEff 120) 300 decisions (seedTerm code state)
+  replayEval (interpR rootEff) 300 decisions (seedTerm code state)
 def shapeAgrees (code : Effect4.Machine.Program) (term : RProgram)
     (state : Stores := Stores.empty) (decisions : List Api.Decision := tape) : Bool :=
   decide (obsR (runShape term state decisions).machine =

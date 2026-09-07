@@ -92,6 +92,17 @@ theorem Plain.perform_sync {op : NativeOp} {r : Term} (h : Plain (.perform op r)
   revert h
   cases (NativeOp.row op).kind <;> simp
 
+theorem Plain.not_gen {e : NativeEff} (h : Plain e = true) : ∀ ss, e ≠ .gen ss := by
+  intro ss heq
+  subst heq
+  simp [Plain] at h
+
+theorem Plain.not_whileLoop {e : NativeEff} (h : Plain e = true) :
+    ∀ i t s b, e ≠ .whileLoop i t s b := by
+  intro i t s b heq
+  subst heq
+  simp [Plain] at h
+
 /-- The depth the compile's fuel must cover: every child costs one (`Compile.lean:113`). -/
 def depth : NativeEff → Nat
   | .suspend b => depth b + 1
@@ -556,9 +567,29 @@ theorem compileEff_branch (t : Term) (a b : NativeEff) (hf : p.fuel = k + 1) :
     compileEff (.branch t a b) p = Prim.suspend (EffThunk.body p) := by
   simp [compileEff, hf]
 
+/-- `Effect.exit` folds a body that is already an exit (`internal/effect.ts:3621-3622`,
+P0 record row D1); otherwise it pushes the `exitFrame`. -/
 theorem compileEff_exit (b : NativeEff) (hf : p.fuel = k + 1) :
+    compileEff (.exit b) p =
+      (match (compileEff b (p.child 0)).asExit? with
+       | some exit => Prim.success (reifyExitVal exit)
+       | none => Prim.exitFrame (compileEff b (p.child 0))) := by
+  simp [compileEff, hf] <;> rfl
+
+theorem compileEff_exit_fold (b : NativeEff) (hf : p.fuel = k + 1) {exit : ExitV}
+    (h : (compileEff b (p.child 0)).asExit? = some exit) :
+    compileEff (.exit b) p = Prim.success (reifyExitVal exit) := by
+  rw [compileEff_exit b hf, h]
+
+theorem compileEff_exit_frame (b : NativeEff) (hf : p.fuel = k + 1)
+    (h : (compileEff b (p.child 0)).asExit? = none) :
     compileEff (.exit b) p = Prim.exitFrame (compileEff b (p.child 0)) := by
-  simp [compileEff, hf]
+  rw [compileEff_exit b hf, h]
+
+/-- At fuel zero every program is the frontier at its point. -/
+theorem compileEff_at_zero (e : NativeEff) (hf : p.fuel = 0) : compileEff e p = frontier p := by
+  unfold compileEff
+  simp only [hf]
 
 theorem compileEff_catchCause (b h : NativeEff) (hf : p.fuel = k + 1) :
     compileEff (.catchCause b h) p =
@@ -613,11 +644,120 @@ theorem suspendBodyAt_branch_bad {root : NativeEff} {q : Point} {k : Nat} {t : T
 
 theorem suspendBodyAt_of_at {root : NativeEff} {q : Point} {k : Nat} {e : NativeEff}
     (hf : q.fuel = k + 1) (h : Node.at_ (Node.eff root) q.path = some (Node.eff e))
-    (hnb : ∀ t a b, e ≠ .branch t a b) :
+    (hnb : ∀ t a b, e ≠ .branch t a b) (hng : ∀ ss, e ≠ .gen ss)
+    (hnw : ∀ i t s b, e ≠ .whileLoop i t s b) :
     suspendBodyAt root (EffThunk.body q) = compileEff e q := by
   cases e <;> first
     | exact absurd rfl (hnb _ _ _)
+    | exact absurd rfl (hng _)
+    | exact absurd rfl (hnw _ _ _ _)
     | simp [suspendBodyAt, hf, h]
+
+/-- A plain body whose compiled head is already an exit has that exit as its meaning, at
+unchanged stores: the fold of `compileEff_exit_fold` is the body's meaning. -/
+theorem meaning_of_asExit : ∀ (b : NativeEff) (q : Point) (s : Stores) {exit : ExitV},
+    Plain b = true → (compileEff b q).asExit? = some exit → meaning b q.env s = (exit, s)
+  | .succeed v, q, s, exit, _, h => by
+    rcases hf : q.fuel with _ | k
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_succeed v hf] at h
+      rcases hx : evalTerm q.env v with _ | x
+      · simp only [hx, badShape, Prim.asExit?_failure, Option.some.injEq] at h
+        subst h
+        exact meaning_succeed_none v q.env s hx
+      · simp only [hx, Prim.asExit?_success, Option.some.injEq] at h
+        subst h
+        exact meaning_succeed_some v q.env s hx
+  | .fail e, q, s, exit, _, h => by
+    rcases hf : q.fuel with _ | k
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_fail e hf] at h
+      rcases hx : evalTerm q.env e with _ | x
+      · simp only [hx, badShape, Prim.asExit?_failure, Option.some.injEq] at h
+        subst h
+        exact meaning_fail_none e q.env s hx
+      · simp only [hx, Prim.asExit?_failure, Option.some.injEq] at h
+        subst h
+        exact meaning_fail_some e q.env s hx
+  | .failCause c, q, s, exit, _, h => by
+    rcases hf : q.fuel with _ | k
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_failCause c hf] at h
+      rcases hc : causeOf q.env c with _ | cause
+      · simp only [hc, badShape, Prim.asExit?_failure, Option.some.injEq] at h
+        subst h
+        exact meaning_failCause_none c q.env s hc
+      · simp only [hc, Prim.asExit?_failure, Option.some.injEq] at h
+        subst h
+        exact meaning_failCause_some c q.env s hc
+  | .yieldError e, q, s, exit, _, h => by
+    rcases hf : q.fuel with _ | k
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_yieldError e hf] at h
+      rcases hx : evalTerm q.env e with _ | x
+      · simp only [hx, badShape, Prim.asExit?_failure, Option.some.injEq] at h
+        subst h
+        exact meaning_yieldError_none e q.env s hx
+      · simp [hx, Prim.asExit?] at h
+  | .sync t, q, s, exit, _, h => by
+    rcases hf : q.fuel with _ | k
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_sync t hf] at h; simp [Prim.asExit?] at h
+  | .suspend b, q, s, exit, _, h => by
+    rcases hf : q.fuel with _ | k
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_suspend b hf] at h; simp [Prim.asExit?] at h
+  | .perform op r, q, s, exit, hpl, h => by
+    have hk := Plain.perform_sync hpl
+    rcases hf : q.fuel with _ | k
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_perform_sync op r hf hk] at h
+      rcases hx : evalTerm q.env r with _ | x
+      · simp only [hx, badShape, Prim.asExit?_failure, Option.some.injEq] at h
+        subst h
+        exact meaning_perform_noEval op r q.env s hk hx
+      · rcases ho : NativeOp.syncOpOf op x with _ | o
+        · simp only [hx, ho, badShape, Prim.asExit?_failure, Option.some.injEq] at h
+          subst h
+          exact meaning_perform_noDecode op r q.env s hk hx ho
+        · simp [hx, ho, Prim.asExit?] at h
+  | .bind a b, q, s, exit, _, h => by
+    rcases hf : q.fuel with _ | k
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_bind a b hf] at h; simp [Prim.asExit?] at h
+  | .branch t a b, q, s, exit, _, h => by
+    rcases hf : q.fuel with _ | k
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_branch t a b hf] at h; simp [Prim.asExit?] at h
+  | .exit b, q, s, exit, hpl, h => by
+    rcases hf : q.fuel with _ | k
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rcases hx : (compileEff b (q.child 0)).asExit? with _ | inner
+      · rw [compileEff_exit_frame b hf hx] at h; simp [Prim.asExit?] at h
+      · rw [compileEff_exit_fold b hf hx] at h
+        simp only [Prim.asExit?_success, Option.some.injEq] at h
+        subst h
+        have hb : meaning b q.env s = (inner, s) :=
+          meaning_of_asExit b (q.child 0) s (Plain.exit hpl) hx
+        rw [meaning_exit, hb]
+  | .catchCause b hh, q, s, exit, _, h => by
+    rcases hf : q.fuel with _ | k
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_catchCause b hh hf] at h; simp [Prim.asExit?] at h
+  | .matchCause b v c, q, s, exit, _, h => by
+    rcases hf : q.fuel with _ | k
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_matchCause b v c hf] at h; simp [Prim.asExit?] at h
+  | .onExit b f, q, s, exit, _, h => by
+    rcases hf : q.fuel with _ | k
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_onExit b f hf] at h; simp [Prim.asExit?] at h
+  | .gen _, _, _, _, hpl, _ | .uninterruptible _, _, _, _, hpl, _
+  | .interruptible _, _, _, _, hpl, _ | .whileLoop _ _ _ _, _, _, _, hpl, _
+  | .yieldNow _, _, _, _, hpl, _ | .callback _ _, _, _, _, hpl, _
+  | .awaitFiber _ _, _, _, _, hpl, _ | .withFiber _, _, _, _, hpl, _
+  | .«scoped» _, _, _, _, hpl, _ | .acquireRelease _ _, _, _, _, hpl, _
+  | .choose _ _ _, _, _, _, hpl, _ => by simp [Plain] at hpl
 
 theorem contAOf_cont (root : NativeEff) (p : Point) (v : Val) :
     contAOf root (EffName.cont p) v = resolve root (p.childWith 1 v) := rfl
@@ -792,7 +932,8 @@ theorem localRun_compile (root : NativeEff) :
     rw [meaning_suspend, compileEff_suspend b (fuel_succ hd)]
     cases hbr : isBranch b
     · have hs := step_suspend root (EffThunk.body (p.child 0)) K i s
-      rw [suspendBodyAt_of_at (fuel_succ hdb) hb (not_branch_of_isBranch_false hbr)] at hs
+      rw [suspendBodyAt_of_at (fuel_succ hdb) hb (not_branch_of_isBranch_false hbr)
+        (Plain.not_gen (Plain.suspend hpl)) (Plain.not_whileLoop (Plain.suspend hpl))] at hs
       exact ⟨1 + c, by simp only [steps]; omega, (Reaches.step hs).trans hr⟩
     · obtain ⟨t, a, b', rfl⟩ := eq_branch_of_isBranch hbr
       rw [compileEff_branch t a b' (fuel_succ hdb)] at hr
@@ -890,15 +1031,21 @@ theorem localRun_compile (root : NativeEff) :
       show depth b ≤ p.fuel - 1
       simp only [depth] at hd
       omega
-    rw [compileEff_exit b (fuel_succ hd), meaning_exit]
-    obtain ⟨cb, hcb, hrb⟩ := localRun_compile root b (p.child 0)
-      (Prim.exitFrame (compileEff b (p.child 0)) :: K) i s (Plain.exit hpl) hb hfb
-    rw [Point.child_env] at hrb
-    have hpush := Reaches.step (step_push_exitFrame root (compileEff b (p.child 0)) K i s)
-    rcases hmb : meaning b p.env s with ⟨ex, s'⟩
-    rw [hmb] at hrb
-    have hpop := Reaches.step (step_ofExit_exitFrame root ex (compileEff b (p.child 0)) K i s')
-    exact ⟨1 + cb + 1, by simp only [steps]; omega, (hpush.trans hrb).trans hpop⟩
+    rcases hx : (compileEff b (p.child 0)).asExit? with _ | ex
+    · rw [compileEff_exit_frame b (fuel_succ hd) hx, meaning_exit]
+      obtain ⟨cb, hcb, hrb⟩ := localRun_compile root b (p.child 0)
+        (Prim.exitFrame (compileEff b (p.child 0)) :: K) i s (Plain.exit hpl) hb hfb
+      rw [Point.child_env] at hrb
+      have hpush := Reaches.step (step_push_exitFrame root (compileEff b (p.child 0)) K i s)
+      rcases hmb : meaning b p.env s with ⟨ex, s'⟩
+      rw [hmb] at hrb
+      have hpop := Reaches.step (step_ofExit_exitFrame root ex (compileEff b (p.child 0)) K i s')
+      exact ⟨1 + cb + 1, by simp only [steps]; omega, (hpush.trans hrb).trans hpop⟩
+    · -- the fold: the compiled program already is the meaning's exit (row D1)
+      have hmb := meaning_of_asExit b (p.child 0) s (Plain.exit hpl) hx
+      rw [Point.child_env] at hmb
+      rw [compileEff_exit_fold b (fuel_succ hd) hx, meaning_exit, hmb]
+      exact ⟨0, Nat.zero_le _, Reaches.refl root _ s⟩
   | .catchCause b hh, p, K, i, s, hpl, h, hd => by
     obtain ⟨hpb, hph⟩ := Plain.catchCause hpl
     have hb : Node.at_ (Node.eff root) (p.child 0).path = some (Node.eff b) := at_child h 0

@@ -16,10 +16,25 @@ whole-tree integration and the R3/R4 runtime gate also pass. Final receipt:
 
 ## Frozen corrected meaning
 
-`denoteR root n e p : Effects.Program RSig ExitV` is a bounded unfolding of
-`e` at `p`. `n` bounds the recursive unfolding, independently of the compile
-budget `p.fuel`. The compiler's actual address and environment conventions
-remain authoritative. `Eff` is the only stored program representation.
+`denoteR root e p : Effects.Program RSig ExitV` is structural on `e` at `p`
+(P2, 2026-09-06). The compile budget `p.fuel` is its only budget, spent as
+`compileEff` spends it; the former unfolding budget and its frontier reason are
+gone, because loops and generators are the runtime operations `loop` and `gen`
+whose later iterations the evaluator runs inside the body's delivery
+(`program-runtime-r.contract.md`). The compiler's actual address and environment
+conventions remain authoritative. `Eff` is the only stored program representation.
+The counted checkpoints the host spends where the term has no work of its own are
+explicit: `suspendR` in front of a suspension, a decided branch, a yieldable
+error's failure and the generator and loop entries, and `sync` for a pure thunk's
+value; `scoped` is spelled as the compile spells it, a scope-store operation under
+a success boundary and then the context and close frames.
+
+Since 2026-09-06 (`E4-CHECK-CE-001`) `exit b` folds to the reified exit when
+`inlineYield` classifies `b` at the child point as an immediate exit, as the
+pinned `Effect.exit` folds an `Exit` body (`internal/effect.ts:3621-3622`);
+only a body that is not one keeps the both-arm boundary. `inlineYield` itself
+classifies `exit` through its body and never classifies a `whileLoop`, whose
+compile is now a `Suspend` (`E4-CHECK-CE-003`).
 
 `guardR kind body` retains the boundary of a success continuation, failure
 handler, both-arm handler, or exit finalizer. `guard_ kind` answers `none`
@@ -34,10 +49,10 @@ other store and fiber operation. `eraseControl` interprets that handler and
 commutes with `pure` and `bind`. This erasure is the observation used by the
 straight-fragment theorem; it is not an interruption or scheduler semantics.
 
-`pending reason resumeAt` is a visible frontier operation, never a pure exit.
-Its data records whether compile fuel, unfolding fuel, a choice, or support
-for a source form is missing. It also records the program point, generator
-program counter/environment/scan budget, or loop cursor. The later scheduler
+`pending reason at_` is a visible frontier operation, never a pure exit. Its
+data records whether compile fuel, a choice, or support for a source form is
+missing, and the program point. A generator's scan exhaustion is a runtime
+frontier of the evaluator's walk, under its saved generator slot. The scheduler
 must not answer a frontier with a default exit. The existing placeholder
 handler is outside this meaning.
 
@@ -50,32 +65,40 @@ source bodies keep their points. A scoped node carries the allocated
 scope id, and a `forkIn` node carries the actual link key. The existing exit
 encoding was already reversible; the scout's collision claim was false.
 
-The generator walker navigates the existing root using `blockAt`, `blockExit`
-and `loopExit`. An inline source success consumes scan fuel; a resumed yield
-resets scan fuel from the generator's saved point. `sync` is not classified
-as an inline source success even when its denotation is pure. The source
-classifier `inlineYield` must equal the immediate-exit projection of
-`compileEff` for every source term and point.
+The generator walk (`InterpR.walkR`, the term instance of the compile's
+`runStmts`) navigates the existing root using `blockAt`, `blockExit` and
+`loopExit`. An inline source success consumes scan fuel; a resumed yield resets
+scan fuel from the generator's saved point. `sync` is not classified as an
+inline source success even when its denotation is pure. The source classifier
+`inlineYield` must equal the immediate-exit projection of `compileEff` for every
+source term and point.
 
 ## ENSURES
 
-1. `denoteR_zero` and `denoteR_compile_zero` retain live frontiers.
-2. `denoteR_bind`, `denoteR_branch`, `denoteR_choose`, `denoteR_withFiber`,
-   `denoteR_gen` and `denoteR_whileLoop` expose the structural unfolding at
-   positive compile fuel. The bind equation retains `guardR .onSuccess`.
-   Choice consumes a Boolean but not compile fuel.
-3. `inlineYield_eq_headExit` agrees with the compiler's immediate exit head.
-4. `eraseControl_pure`, `eraseControl_bind`, `eraseControl_guardR` and
-   `eraseControl_onExitR` give the control-erasure equations. In particular,
-   a guarded body erases to the erased body; an exit finalizer erases to
-   sequential body/finalizer interpretation and `restoreAfterFinalizer`.
-5. `denoteR_straight`: for all `root`, `e`, `n`, `p`, if `Straight e = true`,
-   `Agreement.depth e ≤ n` and `Agreement.depth e ≤ p.fuel`, then
-   `eraseControl (denoteR root n e p) = Effects.Program.inl (denote e p.env)`.
-   The depth hypotheses are unchanged; the raw term now retains control
-   boundaries needed by the scheduler.
+1. `denoteR_zero` retains the compile-fuel frontier at the point.
+2. `denoteR_bind`, `denoteR_suspend`, `denoteR_branch`, `denoteR_exit`,
+   `denoteR_choose`, `denoteR_withFiber`, `denoteR_gen` and `denoteR_whileLoop`
+   expose the structure at positive compile fuel. The bind equation retains
+   `guardR .onSuccess`; the exit equation folds an immediate exit and otherwise
+   retains `guardR .all`; the suspension, branch, generator and loop equations
+   carry `suspendR`, and the generator and loop equations end in the entry
+   operations. Choice consumes a Boolean but not compile fuel.
+3. `inlineYield_eq_headExit` agrees with the compiler's immediate exit head,
+   `headExit_eq_asExit?` identifies that head with the machine's `Prim.asExit?`,
+   and `denote_of_inlineYield` says a straight form classified as an immediate
+   exit denotes to exactly that exit; the straight theorem's `exit` case uses it.
+4. `eraseControl_pure`, `eraseControl_bind`, `eraseControl_guardR`,
+   `eraseControl_onExitR`, `eraseControl_suspendR` and `eraseControl_sync` give
+   the erasure equations. In particular, a guarded body erases to the erased
+   body; an exit finalizer erases to sequential body/finalizer interpretation and
+   `restoreAfterFinalizer`; a checkpoint erases to what follows it.
+5. `denoteR_straight`: for all `root`, `e`, `p`, if `Straight e = true` and
+   `Agreement.depth e ≤ p.fuel`, then
+   `eraseControl (denoteR root e p) = Effects.Program.inl (denote e p.env)`.
+   The unfolding premise is gone with the budget; the raw term retains the
+   control boundaries and checkpoints the scheduler needs.
 6. `meaning_denoteR_straight`: under the same premises, interpreting
-   `eraseControl (denoteR root n e p)` with `rHandler` gives
+   `eraseControl (denoteR root e p)` with `rHandler` gives
    `meaning e p.env stores`. This corollary applies only after erasure and
    the straight restriction eliminate all fiber operations.
 

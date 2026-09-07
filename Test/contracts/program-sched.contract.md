@@ -29,25 +29,33 @@ scheduler itself (`Program/RuntimeR.lean`, worksheet R3–R4), a state machine o
 decisions, bookkeeping and stores, not a handler into `StateT Stores Id`.
 
 1. `FiberOp` is first-order and decidable. It covers the fiber-level arms of the
-   machine's `evaluatePrim`, alongside addressed scope/body operations and frontiers.
-   Fork and mask carry `Body`, whose three first-order constructors name a source
-   `Point`, a store finalizer with its exit, or the fibers of a synthesized interrupt-all
-   body. Other enclosing operations retain source points. None carries a program.
-   `GuardKind` names success, failure, both-arm and exit-finalizer boundaries;
+   machine's `evaluatePrim`, alongside addressed body operations, the checkpoints and
+   frontiers. Fork and mask carry `Body`, whose three first-order constructors name a
+   source `Point`, a store finalizer with its exit, or the fibers of a synthesized
+   interrupt-all body. Other enclosing operations retain source points. None carries a
+   program. `GuardKind` names success, failure, both-arm and exit-finalizer boundaries;
    `guard_`, `unguard` and `finishFinalizer` retain their explicit entry and exit
-   markers for the evaluator. The R2 packet defines the erasure that removes them
-   when proving agreement with the existing straight denotation.
+   markers for the evaluator. Since P2 (2026-09-06, `docs/research/2026-09-06-p0-fable-record.md`
+   §4) four operations are the checkpoints the pinned host counts where the term has
+   no store or fiber work of its own: `suspend` (the counted step that returns code,
+   `Suspend`), `sync` (a pure thunk's value through the `answered` phase), and the
+   initial entries `gen` and `loop` of a generator and of a cursor loop, whose later
+   iterations run inside the body's delivery. `scoped` is no longer an operation: the
+   denotation spells it as the compile does. A frontier carries its reason and point;
+   the unfolding-budget reason and the residual generator/loop addresses are gone with
+   the budget. The R2 packet defines the erasure that removes the markers and
+   checkpoints when proving agreement with the existing straight denotation.
 2. `RSig = Signature.sum StoreSig FiberSig` at universe `.{0, 0}`, `RSig.Op = SyncOp ⊕
    FiberOp`. Store answers are `Val`; fiber answers are `FiberOp.answer`: `ExitV` for
-   masks, scopes, scope close, acquisition/release, races, effect joins, async,
-   scoped forks, frontiers and the two closing control markers; `Option ExitV` for
-   boundary entry (`none` enters, `some exit` resumes outside); `Val` for the other
-   operations. These shape equations are by `rfl`. This replaces R1's all-`Val` claim
-   so operations that deliver exits do not need an extra decoding convention.
-   The scout's claimed encoding collision was false: `E4-SCHED-CE-002` retains the
-   disjointness and round-trip proofs against the actual encoding. R2 also retains
-   the allocated scope id in `scoped`, the link key in `forkIn`, and an explicit
-   first-order `ResumePoint` at every frontier.
+   masks, scope close, acquisition/release, races, effect joins, async, scoped forks,
+   frontiers, the two closing control markers and the generator and loop entries;
+   `Option ExitV` for boundary entry (`none` enters, `some exit` resumes outside); `Val`
+   for the other operations, the two checkpoints included. These shape equations are by
+   `rfl`. This replaces R1's all-`Val` claim so operations that deliver exits do not need
+   an extra decoding convention. The scout's claimed encoding collision was false:
+   `E4-SCHED-CE-002` retains the disjointness and round-trip proofs against the actual
+   encoding. R2 also retains the link key in `forkIn`, and every frontier carries its
+   first-order point.
 3. A store node of an `RSig` program is `vis (.inl op) k`; `perform` is the derived
    one-node program (`perform_inl_bind`).
 4. `interpret_inl_store`: the straight-line denotation injected on the left means, under

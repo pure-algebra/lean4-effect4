@@ -1,19 +1,31 @@
 import Effect4.Program.InterpR
 
 /-!
-# The local term evaluator (R4)
+# The local term evaluator (R4, restated by P2)
 
-Packet: `Test/contracts/program-runtime-r.contract.md`. This is the second
+Packet: `Test/contracts/program-runtime-r.contract.md`; the phase model:
+`docs/research/2026-09-06-p0-fable-record.md` §4. This is the second
 `FiberEvaluator` instance of the existing command loop, not another loop.
-The fiber arms transcribe `Machine/Fibers.lean:844-1103`; the saved-slot walk
-uses `Machine/Frames.lean:639-676,1459-1498,2302-2368`. Those files name the
-rc.112 lines they model. Observation and replay remain generic and unchanged.
+The fiber arms are the shared `FiberAction` helpers of `Machine/Fibers.lean`
+(the frame arms under the core's answer, P1b) and the term's own mask and async
+arms; the saved-slot walk uses `Machine/Frames.lean:639-676,1459-1498,2302-2368`.
+Those files name the rc.112 lines they model. Observation and replay remain
+generic and unchanged.
 
-`RSTEP-FB-FRONTIER`: no source or unfolding frontier is answered; it retains
-its term and consumes only the command budget. `RSTEP-FB-PROTOCOL` names an
-unmatched cleanup-end marker, which generated `onExitR` never emits. R3/R4
-supplies executable clauses and finite comparisons, not the later simulation
-or equality of automatic yield counts (`RSTEP-FB-SIMULATION`).
+The phases: an operation whose answer is a value computed in its own arm resumes
+its continuation directly, with no saved slot; an operation whose answer arrives as
+code through the shared loop saves the operation-answer slot `ScopeFrame.answer`,
+and delivering into that slot continues the same delivery when its result is a
+closing marker or a bare exit, as the frame machine's resume code pops the source
+frame in the one counted step that evaluates it. `suspend` is the counted step that
+returns code; `sync` answers through the `answered` phase; `gen` and `loop` are the
+generator's and the loop's initial entries, whose later iterations the walk runs
+inside the body's delivery through the `iter` and `loop` slots.
+
+`RSTEP-FB-FRONTIER`: no compile, choice or unsupported frontier is answered; it
+retains its term and consumes only the command budget. `RSTEP-FB-PROTOCOL` names an
+unmatched cleanup-end marker, which generated `onExitR` never emits. The finite
+comparisons of the batteries are not the later simulation (`RSTEP-FB-SIMULATION`).
 `RSTEP-FB-TERMINAL-MASK`: the reference `finishFrame` discards a final pop's
 saved state; this evaluator retains it. The exited fiber's mask can differ.
 The observation excludes that bit, and comparisons check it on live fibers.
@@ -38,7 +50,11 @@ def bodyR (interp : RInterp) : Body → RProgram
 
 /-- Walk saved slots in the same order as `getCont`: run hooks before testing
 the demanded arm, re-read the mask for failure skipping, and visit a cleanup's
-pushed mask before the older slots. `some exit` means no slot answered. -/
+pushed mask before the older slots. `some exit` means no slot answered. An
+answer slot's continuation is term glue: a closing marker or a bare exit continues
+this same delivery. A generator or loop slot runs its continuation here, as the
+host's `Iterator` and `While` frames do, and re-pushes itself; a failure passes
+both, as frames with only a success arm. -/
 def popR (interp : RInterp) (ex : ExitV) : List ScopeFrame → RSaved → RSaved × Option ExitV
   | [], frame => ({ frame with stack := [] }, some ex)
   | slot :: rest, frame =>
@@ -63,6 +79,11 @@ def popR (interp : RInterp) (ex : ExitV) : List ScopeFrame → RSaved → RSaved
           | _ => frame
         ({ frame with current := next ex }, none)
       else popR interp ex rest frame
+    | .answer next =>
+      match next ex with
+      | .pure ex' => popR interp ex' rest frame
+      | .vis (.inr (.unguard ex')) _ => popR interp ex' rest frame
+      | code => ({ frame with current := code }, none)
     | .asyncFinalizer name =>
       match ex with
       | .failure cause =>
@@ -74,6 +95,26 @@ def popR (interp : RInterp) (ex : ExitV) : List ScopeFrame → RSaved → RSaved
         if frame.interruptible && frame.interruptedCause.isSome then
           ({ frame with current := .pure (.failure frame.pendingCause) }, none)
         else popR interp ex rest frame
+    | .iter generator =>
+      match ex with
+      | .failure _ => popR interp ex rest frame
+      | .success v =>
+        match (interp.iterNext generator v).2 with
+        | .done result => ({ frame with current := .pure (.success result) }, none)
+        | .halt cause => ({ frame with current := .pure (.failure cause) }, none)
+        | .resume code next => ({ frame with current := code, stack := .iter next :: rest }, none)
+    | .loop name cursor =>
+      match ex with
+      | .failure _ => popR interp ex rest frame
+      | .success v =>
+        let next := interp.loopStep name cursor v
+        if interp.loopTest name next then
+          ({ frame with current := interp.loopBody name next, stack := .loop name next :: rest }, none)
+        else ({ frame with current := .pure (.success (interp.loopDone name)) }, none)
+
+def outcomeOfWalk : Option ExitV → Outcome EffName EffThunk Val Err Defect FiberId Ann
+  | none => .continue_
+  | some exit => .finished exit
 
 /-- Deferred interruption is checked before a success delivery touches any slot. -/
 def deliverR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool) (ex : ExitV) : RIter :=
@@ -84,75 +125,75 @@ def deliverR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool) (ex 
       deferredInterrupt := false } }, yielding, .continue_, []⟩
   else
     let (frame, done) := popR interp ex f.frame.stack { f.frame with deferredInterrupt := false }
-    ⟨m, { f with frame }, yielding, match done with
-      | none => .continue_ | some exit => .finished exit, []⟩
+    ⟨m, { f with frame }, yielding, outcomeOfWalk done, []⟩
+
+def pushR (f : RFiber) (slot : ScopeFrame) : RFiber :=
+  { f with frame := { f.frame with stack := slot :: f.frame.stack } }
 
 def saveR (f : RFiber) (kind : GuardKind) (next : ExitV → RProgram) : RFiber :=
-  { f with frame := { f.frame with stack := .resume kind next :: f.frame.stack } }
+  pushR f (.resume kind next)
 
-def saveValueR (f : RFiber) (next : Val → RProgram) : RFiber := saveR f .onSuccess (seqR next)
+/-- Save the continuation of an operation whose answer arrives as code. -/
+def saveAnswerR (f : RFiber) (next : ExitV → RProgram) : RFiber := pushR f (.answer next)
 
 def answerR (f : RFiber) (code : RProgram) : RFiber :=
   { f with frame := { f.frame with current := code } }
 
 def answerValueR (f : RFiber) (value : Val) : RFiber := answerR f (.pure (.success value))
 
-def outcomeR (m : RState) (parked : Bool) : Outcome EffName EffThunk Val Err Defect FiberId Ann :=
-  match m.stuck with | some why => .stuck why | none => if parked then .parked else .continue_
+/-- How the term installs a value answer: the operation's continuation applied to it. -/
+def answerWith (next : Val → RProgram) :
+    FiberAction.Answer EffName EffThunk Val Err Defect FiberId Ann Ctx RProgram RSaved :=
+  fun f v => answerR f (next v)
 
-/-- Record interruption with the caller's annotations, then await the target. -/
-def interruptJoinR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool)
-    (target : FiberId) : RIter :=
-  match m.fiber? target with
-  | none => ⟨m, f, yielding, .stuck (.unknownFiber target), []⟩
-  | some t =>
-    let (t, applyNow) := interruptRecord interp (some f.id) (interp.stackAnnotations f.id) t
-    let m := (m.update t).emit [.interruptRecorded (some f.id) target]
-    let nested := if applyNow then [Cmd.evaluate target] else []
-    let (m, f, parked) := countdownPark interp m f [target] .void
-    ⟨m, f, yielding, outcomeR m parked, nested⟩
+/-- After a cleanup's mask is restored, its continuation is delivered like an adapter's. -/
+def finishWith (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool)
+    (code : RProgram) : RIter :=
+  match code with
+  | .pure ex' =>
+    let (frame, done) := popR interp ex' f.frame.stack f.frame
+    ⟨m, { f with frame }, yielding, outcomeOfWalk done, []⟩
+  | .vis (.inr (.unguard ex')) _ =>
+    let (frame, done) := popR interp ex' f.frame.stack f.frame
+    ⟨m, { f with frame }, yielding, outcomeOfWalk done, []⟩
+  | code => ⟨m, answerR f code, yielding, .continue_, []⟩
 
-/-- `scopeOpen`/`scopeProvide`/`scopeBody` as terms: restore the context before
-closing the scope; both cleanups use the normal `onExitR` mask. -/
-def scopedR (interp : RInterp) (body : Point) (scope : Nat) : RProgram :=
-  onExitR
-    ((guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun
-      | .context previous =>
-        (guardR .onSuccess (fiberValR (.setContext { previous with ambientScope := some scope }) rfl)).bind
-          (seqR fun _ => onExitR (interp.suspendBody (.body body))
-            (fun _ => fiberValR (.setContext previous) rfl))
-      | _ => .pure badShapeExit))
-    (fun ex => .vis (.inr (.closeScope scope ex)) Effects.Program.pure)
-
-/-- One fiber operation. Each suspension first saves its answer continuation;
-the generic loop can then resume it with ordinary term code. -/
+/-- One fiber operation. A value computed here resumes the continuation directly; an
+answer that arrives as code saves the answer slot first. -/
 def evaluateFiberR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool)
     (op : FiberOp) (next : op.answer → RProgram) : RIter :=
   match op with
   | .guard_ kind =>
-    let f := saveR f kind (fun ex => next (some ex))
-    ⟨m, answerR f (next none), yielding, .continue_, []⟩
+    ⟨m, answerR (saveR f kind fun ex => next (some ex)) (next none), yielding, .continue_, []⟩
   | .unguard ex => deliverR interp m f yielding ex
   | .finishFinalizer ex =>
     match f.frame.stack with
     | .finalizerMask flag :: rest =>
-      let frame := { f.frame with stack := rest, interruptible := flag }
-      let code := match frame.interruptedCause, ex with
-        | some cause, .success _ => if flag then .pure (.failure cause) else next ex
-        | _, _ => next ex
-      ⟨m, answerR { f with frame } code, yielding, .continue_, []⟩
+      let f := { f with frame := { f.frame with stack := rest, interruptible := flag } }
+      match f.frame.interruptedCause, ex with
+      | some cause, .success _ =>
+        if flag then ⟨m, answerR f (.pure (.failure cause)), yielding, .continue_, []⟩
+        else finishWith interp m f yielding (next ex)
+      | _, _ => finishWith interp m f yielding (next ex)
     | _ => ⟨m, answerR f (.pure badShapeExit), yielding, .continue_, []⟩
   | .frontier _ _ | .acquireRelease _ _ => ⟨m, f, yielding, .continue_, []⟩
-  | .yieldNow priority =>
-    let f := saveValueR f next
-    let token := m.nextToken
-    let m := { m with nextToken := token + 1 }
-    let f := { answerValueR f interp.voidValue with
-      dispatcher := f.dispatcher.enqueue priority (.resume f.id token (.pure (.success interp.voidValue))) }
-    let f := f.park ⟨token, none, [], [], .void, false⟩
-    ⟨(m.arm f.id).emit [.parkedOn f.id token], f, yielding, .parked, []⟩
+  | .suspend _ => ⟨m, answerR f (next .unit), yielding, .continue_, []⟩
+  | .sync v => ⟨m, answerR f (next v), yielding, .answered, []⟩
+  | .gen p =>
+    let f := saveAnswerR f next
+    match (interp.iterNext (.gen p [] false) .unit).2 with
+    | .done v => ⟨m, answerR f (.pure (.success v)), yielding, .continue_, []⟩
+    | .halt c => ⟨m, answerR f (.pure (.failure c)), yielding, .continue_, []⟩
+    | .resume code cont => ⟨m, answerR (pushR f (.iter cont)) code, yielding, .continue_, []⟩
+  | .loop p cursor =>
+    let f := saveAnswerR f next
+    if interp.loopTest (.loop p) cursor then
+      ⟨m, answerR (pushR f (.loop (.loop p) cursor)) (interp.loopBody (.loop p) cursor),
+        yielding, .continue_, []⟩
+    else ⟨m, answerR f (.pure (.success (interp.loopDone (.loop p)))), yielding, .continue_, []⟩
+  | .yieldNow priority => FiberAction.yieldNow interp m (saveAnswerR f (seqR next)) yielding priority
   | .async register _request =>
-    let f := saveR f .all next
+    let f := saveAnswerR f next
     let token := m.nextToken
     let (state, immediate) := interp.registerAsync register f.id token m.state
     let m := { m with state, nextToken := token + 1 }
@@ -165,134 +206,67 @@ def evaluateFiberR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool
         | _ => none
       let f := match cancel with
         | none => f
-        | some name => { f with frame :=
-            { f.frame with stack := .asyncFinalizer (interp.cancelName name f.id token) :: f.frame.stack } }
+        | some name => pushR f (.asyncFinalizer (interp.cancelName name f.id token))
       let f := f.park ⟨token, none, [], [], .void, false⟩
       ⟨m.emit [.parkedOn f.id token], f, yielding, .parked, []⟩
   | .await target mode =>
     let f := match mode with
-      | .joinEffect => saveR f .all next
-      | .awaitValue => saveValueR f next
-    match m.fiber? target with
-    | none => ⟨m, f, yielding, .stuck (.unknownFiber target), []⟩
-    | some t => match t.exit with
-      | some ex => ⟨m, answerR f (interp.exitValue ex mode), yielding, .continue_, []⟩
-      | none =>
-        let token := m.nextToken
-        let m := { m with nextToken := token + 1 }
-        let m := m.update { t with observers := t.observers ++ [.resumeAwait f.id token mode] }
-        let name := interp.cancelName interp.parkCancelName f.id token
-        let f := { f with frame := { f.frame with stack := .asyncFinalizer name :: f.frame.stack } }
-        let f := f.park ⟨token, some target, [], [], .void, false⟩
-        ⟨m.emit [.parkedOn f.id token], f, yielding, .parked, []⟩
+      | .joinEffect => saveAnswerR f next
+      | .awaitValue => saveAnswerR f (seqR next)
+    FiberAction.join interp m f yielding target mode
   | .fork child options =>
-    let f := saveValueR f next
-    let m := if options.daemon then m else { m with middlewareInstalled := true }
-    let (m, f, child) := spawn interp m f (bodyR interp child) options
-    let (m, f, nested) := start m f child options.startImmediately
-    ⟨m, answerValueR f (interp.fiberValue child), yielding, .continue_, nested⟩
+    FiberAction.fork interp m f yielding (bodyR interp child) options (answerWith next)
   | .forkIn child options scope key =>
-    let f := saveValueR f next
-    let (m, f, child) := spawn interp m f (bodyR interp (.at_ child)) { options with daemon := true }
-    let (m, f, nested) := start m f child options.startImmediately
-    ⟨m, answerValueR f (interp.fiberValue child), yielding, .continue_,
-      nested ++ [.link .forkIn scope key child (some f.id) (interp.stackAnnotations f.id)]⟩
+    FiberAction.forkIn interp m f yielding (bodyR interp (.at_ child)) options scope key
+      (answerWith next)
   | .forkScoped child options key =>
-    let f := saveR f .all next
-    match interp.ambientScope f.context with
-    | none => ⟨m, answerR f (.pure (.failure (Cause.die interp.missingScope))), yielding, .continue_, []⟩
-    | some scope =>
-      let (m, f, child) := spawn interp m f (bodyR interp (.at_ child)) { options with daemon := true }
-      let (m, f, nested) := start m f child options.startImmediately
-      ⟨m, answerValueR f (interp.fiberValue child), yielding, .continue_,
-        nested ++ [.link .forkIn scope key child (some f.id) (interp.stackAnnotations f.id)]⟩
+    FiberAction.forkScoped interp m f yielding (bodyR interp (.at_ child)) options key
+      (fun f v => answerR f (next (.success v)))
   | .runIn target scope key =>
-    let (m, nested) := linkScope interp m .fiberRunIn scope key target (some target) ReasonAnnotations.empty
-    ⟨m, answerValueR (saveValueR f next) interp.voidValue, yielding, outcomeR m false, nested⟩
-  | .interrupt target => interruptJoinR interp m (saveValueR f next) yielding target
+    FiberAction.runIn interp m f yielding target scope key (answerWith next)
+  | .interrupt target =>
+    FiberAction.interruptThenJoin interp m (saveAnswerR f (seqR next)) yielding target (some f.id)
   | .interruptScoped target =>
-    if target = f.id then
-      ⟨m, answerValueR (saveValueR f next) interp.voidValue, yielding, .continue_, []⟩
-    else interruptJoinR interp m (saveValueR f next) yielding target
+    if target = f.id then ⟨m, answerR f (next interp.voidValue), yielding, .continue_, []⟩
+    else FiberAction.interruptThenJoin interp m (saveAnswerR f (seqR next)) yielding target (some f.id)
   | .interruptAll targets who =>
-    let (m, nested) := interruptEach interp (who.getD f.id) (interp.stackAnnotations f.id) targets (m, [])
-    let (m, f, parked) := countdownPark interp m (saveValueR f next) targets .void
-    ⟨m, f, yielding, outcomeR m parked, nested⟩
-  | .awaitAll targets | .awaitAllFailFast targets =>
-    let failFast := match op with | .awaitAllFailFast _ => true | _ => false
-    let (m, f, parked) := countdownPark interp m (saveValueR f next) targets .exitsValue failFast
-    ⟨m, f, yielding, outcomeR m parked, []⟩
-  | .snapshotChildren =>
-    ⟨m, answerValueR (saveValueR f next) (interp.fibersValue f.children), yielding, .continue_, []⟩
+    FiberAction.interruptAll interp m (saveAnswerR f (seqR next)) yielding targets who
+  | .awaitAll targets => FiberAction.awaitAll interp m (saveAnswerR f (seqR next)) yielding targets false
+  | .awaitAllFailFast targets =>
+    FiberAction.awaitAll interp m (saveAnswerR f (seqR next)) yielding targets true
+  | .snapshotChildren => FiberAction.snapshotChildren interp m f yielding (answerWith next)
   | .awaitNewChildren snapshot =>
-    let targets := f.children.filter fun child => !(snapshot.contains child)
-    let (m, f, parked) := countdownPark interp m (saveValueR f next) targets .void
-    ⟨m, f, yielding, outcomeR m parked, []⟩
+    FiberAction.awaitNewChildren interp m (saveAnswerR f (seqR next)) yielding snapshot
   | .raceAll entrants =>
-    let f := saveR f .all next
-    let raceId := m.nextRace
-    let token := m.nextToken
-    let m := { m with nextRace := raceId + 1, nextToken := token + 1 }
-    let race : Race EffName EffThunk Val Err Defect FiberId Ann RProgram :=
-      ⟨raceId, f.id, token, { Supervision.RaceAllState.initial [] with remaining := entrants.length },
-        false, entrants.map fun p => bodyR interp (.at_ p)⟩
-    let m := { m with races := m.races ++ [race] }
-    let m := m.emit [.raceStarted raceId f.id entrants.length]
-    let name := interp.cancelName (interp.raceCancelName raceId) f.id token
-    let f := { f with frame := { f.frame with stack := .asyncFinalizer name :: f.frame.stack } }
-    let f := f.park ⟨token, none, [], [], .void, false⟩
-    ⟨m.emit [.parkedOn f.id token], f, yielding, .parked, [.launch raceId]⟩
+    FiberAction.raceAll interp m (saveAnswerR f next) yielding
+      (entrants.map fun p => bodyR interp (.at_ p))
   | .mask flag body =>
-    let f := saveR f .all next
+    let f := saveAnswerR f next
     let old := f.frame.interruptible
     let stack := if old = flag then f.frame.stack else .restoreMask old :: f.frame.stack
     let frame := { f.frame with interruptible := flag, stack }
     let code := if flag && !old && frame.interruptedCause.isSome then
       .pure (.failure frame.pendingCause) else bodyR interp body
     ⟨m, answerR { f with frame } code, yielding, .continue_, []⟩
-  | .scoped body scope =>
-    ⟨m, answerR (saveR f .all next) (scopedR interp body scope), yielding, .continue_, []⟩
-  | .setContext context =>
-    let (maxOpsBeforeYield, preventYield) := interp.budgetOf context
-    let f := { saveValueR f next with context, maxOpsBeforeYield, preventYield }
-    ⟨m.emit [.contextSet f.id context], answerValueR f interp.voidValue, yielding, .continue_, []⟩
-  | .getContext =>
-    ⟨m, answerValueR (saveValueR f next) (interp.contextValue f.context), yielding, .continue_, []⟩
-  | .getId =>
-    ⟨m, answerValueR (saveValueR f next) (interp.fiberValue f.id), yielding, .continue_, []⟩
-  | .closeScope scope ex =>
-    match interp.closeScope scope ex f.frame.interruptible f.id m.state with
-    | none => ⟨m, f, yielding, .stuck (.unknownScope scope), []⟩
-    | some (state, code) =>
-      ⟨{ m with state }, answerR (saveR f .all next) code, yielding, .continue_, []⟩
-  | .refuse cause => ⟨m, answerR f (.pure (.failure cause)), yielding, .continue_, []⟩
-  | .dropObservers token =>
-    let m := { m with fibers := m.fibers.map fun g =>
-      { g with observers := g.observers.filter fun
-        | .resumeAwait _ t _ | .countdown _ t => t ≠ token
-        | _ => true } }
-    ⟨m, answerValueR (saveValueR f next) interp.voidValue, yielding, .continue_, []⟩
-  | .cancelRace raceId =>
-    let f := saveValueR f next
-    match m.race? raceId with
-    | none => ⟨m, answerValueR f interp.voidValue, yielding, .continue_, []⟩
-    | some race =>
-      let (m, nested) := interruptEach interp f.id (interp.stackAnnotations f.id) race.state.live (m, [])
-      let (m, f, parked) := countdownPark interp m f race.state.live .void
-      ⟨m, f, yielding, outcomeR m parked, nested⟩
+  | .setContext context => FiberAction.setContext interp m f yielding context (answerWith next)
+  | .getContext => FiberAction.getContext interp m f yielding (answerWith next)
+  | .getId => FiberAction.getId interp m f yielding (answerWith next)
+  | .closeScope scope ex => FiberAction.closeScope interp m (saveAnswerR f next) yielding scope ex
+  | .refuse cause => FiberAction.refuse m f yielding cause
+  | .dropObservers token => FiberAction.dropObservers interp m f yielding token (answerWith next)
+  | .cancelRace raceId => FiberAction.cancelRace interp m (saveAnswerR f (seqR next)) yielding raceId
 
 /-- Store deliveries retain the shared loop's `answered`/`deliver` split, so
-a completing Deferred's synchronous resumes run before its continuation. -/
+a completing Deferred's synchronous resumes run before its continuation; the
+operation's continuation is installed directly, with no saved slot. -/
 def evaluateR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool) : RIter :=
   match f.frame.current with
   | .pure ex => deliverR interp m f yielding ex
   | .vis (.inr op) next => evaluateFiberR interp m f yielding op next
   | .vis (.inl op) next =>
-    let f := saveValueR f next
     match syncOpStep op m.state with
-    | some (state, value) =>
-      ⟨{ m with state }, answerValueR f value, yielding, .answered, [.drainDue]⟩
-    | none => ⟨m, answerValueR f .unit, yielding, .answered, []⟩
+    | some (state, value) => ⟨{ m with state }, answerR f (next value), yielding, .answered, [.drainDue]⟩
+    | none => ⟨m, answerR f (next .unit), yielding, .answered, []⟩
 
 @[reducible] instance termEvaluator :
     FiberEvaluator EffName EffThunk Val Err Defect FiberId Ann Ctx Stores RProgram RSaved Unit where

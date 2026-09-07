@@ -1,7 +1,9 @@
 import Effect4.Program.RuntimeR
+import Test.Program.RuntimeRContract
 
-/-! Dependency receipts for R3/R4; the whole-tree gate also checks private and
-generated declarations. Packet: `Test/contracts/program-runtime-r.contract.md`. -/
+/-! Dependency receipts for R3/R4 as restated by P2, the P1b shared actions and the
+frame-arm identities; the whole-tree gate also checks private and generated
+declarations. Packet: `Test/contracts/program-runtime-r.contract.md`. -/
 
 #print axioms Effect4.Program.Sched.termCore
 #print axioms Effect4.Program.Sched.restoreR
@@ -17,12 +19,14 @@ generated declarations. Packet: `Test/contracts/program-runtime-r.contract.md`. 
 #print axioms Effect4.Program.Sched.denoteRaceSettle
 #print axioms Effect4.Program.Sched.denoteStoreCancel
 #print axioms Effect4.Program.Sched.denoteCancel
+#print axioms Effect4.Program.Sched.walkR
 #print axioms Effect4.Program.Sched.interpR
 #print axioms Effect4.Program.Sched.bodyR
 #print axioms Effect4.Program.Sched.popR
 #print axioms Effect4.Program.Sched.deliverR
-#print axioms Effect4.Program.Sched.interruptJoinR
-#print axioms Effect4.Program.Sched.scopedR
+#print axioms Effect4.Program.Sched.saveAnswerR
+#print axioms Effect4.Program.Sched.answerWith
+#print axioms Effect4.Program.Sched.finishWith
 #print axioms Effect4.Program.Sched.evaluateFiberR
 #print axioms Effect4.Program.Sched.evaluateR
 #print axioms Effect4.Program.Sched.termEvaluator
@@ -39,4 +43,27 @@ generated declarations. Packet: `Test/contracts/program-runtime-r.contract.md`. 
 #print axioms Effect4.Program.Sched.evaluateR_frontier
 #print axioms Effect4.Program.Sched.evaluateR_store
 #print axioms Effect4.Program.Sched.evaluateR_store_missing
+#print axioms Effect4.Program.Sched.evaluateR_suspend
+#print axioms Effect4.Program.Sched.evaluateR_sync
 #print axioms Effect4.Program.Sched.BehR_fuel_irrelevant
+-- P1b (2026-09-06): the shared fiber actions and the frame-arm identities.
+#print axioms Effect4.Machine.FiberAction.coreAnswer
+#print axioms Effect4.Machine.FiberAction.getId
+#print axioms Effect4.Machine.FiberAction.fork
+#print axioms Effect4.Machine.FiberAction.forkScoped
+#print axioms Effect4.Machine.FiberAction.closeScope
+#print axioms Effect4.Machine.FiberAction.interruptThenJoin
+#print axioms Effect4.Machine.FiberAction.interruptAll
+#print axioms Effect4.Machine.FiberAction.raceAll
+#print axioms Effect4.Machine.FiberAction.yieldNow
+#print axioms Effect4.Machine.FiberAction.join
+#print axioms Test.Program.RuntimeRContract.frame_getId
+#print axioms Test.Program.RuntimeRContract.frame_fork
+#print axioms Test.Program.RuntimeRContract.frame_interruptScoped
+#print axioms Test.Program.RuntimeRContract.frame_raceAll
+#print axioms Test.Program.RuntimeRContract.frame_yieldNow
+#print axioms Test.Program.RuntimeRContract.frame_join
+#print axioms Test.Program.RuntimeRContract.term_join
+-- P2 (2026-09-06): the scheduling witnesses and the first local relation clause.
+#print axioms Test.Program.RuntimeRContract.store_step_rel
+#print axioms Test.Program.RuntimeRContract.entry_is_counted

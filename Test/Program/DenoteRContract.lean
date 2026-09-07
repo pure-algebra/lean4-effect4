@@ -38,9 +38,9 @@ def observe (fuel : Nat) (program : RProgram) (stores : Stores) : Observation :=
 def rootPoint (fuel : Nat := 80) (env : List Val := []) (choices : List Bool := []) : Point :=
   ⟨[], env, fuel, choices⟩
 
-def unfolded (e : NativeEff) (n : Nat := 160) (fuel : Nat := 80)
+def unfolded (e : NativeEff) (fuel : Nat := 80)
     (env : List Val := []) (choices : List Bool := []) : RProgram :=
-  denoteR e n e (rootPoint fuel env choices)
+  denoteR e e (rootPoint fuel env choices)
 
 def result (e : NativeEff) : Observation := observe 200 (unfolded e) Stores.empty
 
@@ -73,19 +73,19 @@ def writeThenFail : NativeEff :=
 #guard result (.succeed (.var 0)) = .done badShapeExit Stores.empty
 #guard result (.sync (.var 0)) = .done (.success .unit) Stores.empty
 
--- Fuel and unanswered choices are visible operations, never terminal failures.
-#guard observe 5 (unfolded pSucceed 0 1) Stores.empty =
-  .waiting (.frontier .unfoldingFuel (.effect (rootPoint 1))) Stores.empty
-#guard observe 5 (unfolded pSucceed 5 0) Stores.empty =
-  .waiting (.frontier .compileFuel (.effect (rootPoint 0))) Stores.empty
-#guard observe 5 (unfolded pChoose 2 1 [] []) Stores.empty =
-  .waiting (.frontier .unansweredChoice (.effect (rootPoint 1))) Stores.empty
-#guard observe 5 (unfolded pChoose 2 1 [] [true]) Stores.empty =
+-- Compile fuel and unanswered choices are visible operations, never terminal failures.
+-- P2 removed the unfolding budget: loops and generators are runtime operations, so the
+-- compile budget at the point is the only frontier of this kind.
+#guard observe 5 (unfolded pSucceed 0) Stores.empty =
+  .waiting (.frontier .compileFuel (rootPoint 0)) Stores.empty
+#guard observe 5 (unfolded pChoose 1 [] []) Stores.empty =
+  .waiting (.frontier .unansweredChoice (rootPoint 1)) Stores.empty
+#guard observe 5 (unfolded pChoose 1 [] [true]) Stores.empty =
   .done (.success (.nat 1)) Stores.empty
-#guard observe 5 (unfolded pChoose 2 1 [] [false]) Stores.empty =
+#guard observe 5 (unfolded pChoose 1 [] [false]) Stores.empty =
   .done (.success (.nat 2)) Stores.empty
 #guard operation? (result (.acquireRelease pSucceed pSucceed)) =
-  some (.frontier .unsupported (.effect (rootPoint)))
+  some (.frontier .unsupported (rootPoint))
 
 -- The false branch is child 1; the action and child are two further address components.
 def branchFork : NativeEff :=
@@ -97,25 +97,28 @@ def scopedFork : NativeEff := .withFiber (.forkScoped pSucceed scopedChild)
 #guard operation? (result scopedFork) = some (.forkScoped ⟨[0, 0], [], 78, []⟩ scopedChild 80)
 
 def forkInTerm : NativeEff := .withFiber (.forkIn pSucceed deferredChild (.var 0))
-#guard operation? (observe 5 (unfolded forkInTerm 10 8 [.scopeHandle 3]) Stores.empty) =
+#guard operation? (observe 5 (unfolded forkInTerm 8 [.scopeHandle 3]) Stores.empty) =
   some (.forkIn ⟨[0, 0], [.scopeHandle 3], 6, []⟩ deferredChild 3 8)
 
 #guard operation? (result (.uninterruptible pFail)) = some (.mask false (.at_ ⟨[0], [], 79, []⟩))
 #guard operation? (result (.interruptible pFail)) = some (.mask true (.at_ ⟨[0], [], 79, []⟩))
-#guard operation? (result (.scoped pSucceed)) = some (.scoped ⟨[0], [], 79, []⟩ 0)
+-- P2: `scoped` denotes structurally as the compile spells it (the scope store's `scopeMake`
+-- under a success boundary, then the context frames); the observer runs the store
+-- operation and stops at the first fiber operation, the context read.
+#guard operation? (result (.scoped pSucceed)) = some .getContext
 #guard ((stores? (result (.scoped pSucceed))).map fun s => s.scopes.entries.length) = some 1
 
 def closeTerm : NativeEff := .withFiber (.closeScope (.var 0) (.var 1))
-#guard operation? (observe 5 (unfolded closeTerm 10 8
+#guard operation? (observe 5 (unfolded closeTerm 8
   [.scopeHandle 3, .exitErr (Cause.fail Err.boom)]) Stores.empty) =
   some (.closeScope 3 (.failure (Cause.fail Err.boom)))
 
 def awaitTerm (mode : Supervision.ObserverMode) : NativeEff := .awaitFiber (.var 0) mode
 def asyncTerm : NativeEff := .callback .deferredAwait (.var 0)
 
-#guard operation? (observe 5 (unfolded (awaitTerm .joinEffect) 10 8 [.fiber ⟨2⟩]) Stores.empty) =
+#guard operation? (observe 5 (unfolded (awaitTerm .joinEffect) 8 [.fiber ⟨2⟩]) Stores.empty) =
   some (.await ⟨2⟩ .joinEffect)
-#guard operation? (observe 5 (unfolded asyncTerm 10 8 [.promise ⟨0⟩]) Stores.empty) =
+#guard operation? (observe 5 (unfolded asyncTerm 8 [.promise ⟨0⟩]) Stores.empty) =
   some (.async (.registerAwait ⟨0⟩) (.promise ⟨0⟩))
 #guard result (.callback .deferredAwait (.lit (.nat 0))) = .done badShapeExit Stores.empty
 #guard result (.callback .refGet (.lit .unit)) = .done badShapeExit Stores.empty
@@ -128,43 +131,46 @@ def replyExit (program : RProgram) (ex : ExitV) : Observation :=
   | .vis (.inr (.forkScoped _ _ _)) k => observe 20 (k ex) Stores.empty
   | _ => .exhausted
 
-#guard replyExit (unfolded asyncTerm 10 8 [.promise ⟨0⟩]) (.failure (Cause.fail Err.boom)) =
+#guard replyExit (unfolded asyncTerm 8 [.promise ⟨0⟩]) (.failure (Cause.fail Err.boom)) =
   .done (.failure (Cause.fail Err.boom)) Stores.empty
-#guard replyExit (unfolded asyncTerm 10 8 [.promise ⟨0⟩])
+#guard replyExit (unfolded asyncTerm 8 [.promise ⟨0⟩])
   (.success (.exitErr (Cause.fail Err.boom))) =
   .done (.success (.exitErr (Cause.fail Err.boom))) Stores.empty
-#guard replyExit (unfolded (awaitTerm .joinEffect) 10 8 [.fiber ⟨2⟩])
+#guard replyExit (unfolded (awaitTerm .joinEffect) 8 [.fiber ⟨2⟩])
   (.failure (Cause.fail Err.boom)) = .done (.failure (Cause.fail Err.boom)) Stores.empty
 #guard replyExit (unfolded scopedFork) (.failure (Cause.die Defect.missingService)) =
   .done (.failure (Cause.die Defect.missingService)) Stores.empty
 
--- Existing generator witnesses exercise both block exits, local bindings and both break paths.
-#guard answer? (result pGenTwoYields) = exitOf (replayEff pGenTwoYields [evaluateRoot]) 0
-#guard answer? (result pGenIfThen) = exitOf (replayEff pGenIfThen [evaluateRoot]) 0
-#guard answer? (result pGenIfElse) = exitOf (replayEff pGenIfElse [evaluateRoot]) 0
-#guard answer? (result pGenElseEnds) = some (.success (.nat 2))
-#guard answer? (result pGenThenEnds) = some (.success (.nat 2))
-#guard answer? (result pGenFail) = some (.failure (Cause.fail (Err.tag 7)))
-#guard answer? (result pGenLoop) = some (.success (.nat 3))
-#guard answer? (result pGenLoopBreakInElse) = some (.success (.nat 3))
-#guard ((stores? (result pGenLoop)).map Stores.refs) = some [.nat 3]
-#guard answer? (result pWhileLoop) = some (.success (.nat 3))
-#guard ((stores? (result pWhileLoop)).map Stores.refs) = some [.nat 3]
+-- P2: generators and loops are runtime operations behind the host's suspend checkpoint;
+-- the static observer stops at their entry, and their execution is compared with the
+-- frame machine on every generator and loop fixture in `RuntimeRShapesContract` and
+-- counted in `RuntimeRContract`. The entry carries the generator's or the loop's point.
+#guard operation? (result pGenTwoYields) = some (.gen (rootPoint))
+#guard operation? (result pGenLoop) = some (.gen (rootPoint))
+#guard operation? (result pWhileLoop) = some (.loop ⟨[1, 0], [.cell ⟨0⟩], 78, []⟩ (.nat 0))
 
 def inlineGen : NativeEff := .gen (.cons (.bindYield pSucceed) (.cons (.ret (.var 0)) .nil))
 def resumedGen : NativeEff :=
   .gen (.cons (.bindYield (.sync (.lit (.nat 42)))) (.cons (.ret (.var 0)) .nil))
 
--- At scan fuel 1 an inline yield exhausts; a sync resumes and receives a fresh scan budget.
-#guard operation? (observe 20 (unfolded inlineGen 30 1) Stores.empty) =
-  some (.frontier .compileFuel (.generator (rootPoint 1) [1] [.nat 42] 0))
-#guard observe 20 (unfolded resumedGen 30 1) Stores.empty = .done (.success (.nat 42)) Stores.empty
+-- The entry is reached at any positive compile fuel; scan exhaustion is a runtime
+-- frontier of the walk, pinned in `RuntimeRContract`.
+#guard operation? (observe 20 (unfolded inlineGen 1) Stores.empty) = some (.gen (rootPoint 1))
+#guard operation? (observe 20 (unfolded resumedGen 1) Stores.empty) = some (.gen (rootPoint 1))
 #guard inlineYield pSucceed (rootPoint) = some (.success (.nat 42))
 #guard inlineYield (.sync (.lit (.nat 42))) (rootPoint) = none
+-- P1a (row D1 of the P0 record): `exit` of an immediate exit is that exit's success;
+-- `exit` of a `sync` is not, and a loop is never an immediate exit (rows D1, D3).
+#guard inlineYield (.exit pSucceed) (rootPoint) = some (.success (.exitOk (.nat 42)))
+#guard inlineYield pExit (rootPoint) = some (.success (.exitErr (Cause.fail (Err.tag 7))))
+#guard inlineYield (.exit (.sync (.lit (.nat 42)))) (rootPoint) = none
+#guard inlineYield (.whileLoop (.lit (.nat 0)) (.lit (.bool true)) (.var 0) pSucceed) (rootPoint) = none
+#guard result (.exit pSucceed) = .done (.success (.exitOk (.nat 42))) Stores.empty
+#guard operation? (observeRaw 1 (unfolded (.exit pSucceed)) Stores.empty) = none
 
 def endlessLoop : NativeEff := .whileLoop (.lit (.nat 0)) (.lit (.bool true)) (.var 0) pSucceed
-#guard operation? (observe 30 (unfolded endlessLoop 1 80) Stores.empty) =
-  some (.frontier .unfoldingFuel (.loop (rootPoint) (.nat 0)))
+#guard operation? (observe 30 (unfolded endlessLoop) Stores.empty) =
+  some (.loop (rootPoint) (.nat 0))
 
 -- Cleanup and an ordinary success continuation retain different boundary data.
 -- Their old, erased terms coincide, so the distinction must remain in denoteR.
@@ -179,7 +185,10 @@ def sequenced : NativeEff := .bind (.yieldNow 0) cleanupUnit
   some (.guard_ .onSuccess)
 #guard operation? (observeRaw 1 (unfolded (.catchCause pFail pSucceed)) Stores.empty) =
   some (.guard_ .onFailure)
-#guard operation? (observeRaw 1 (unfolded (.exit pFail)) Stores.empty) =
+-- P1a: `exit pFail` folds to its exit (row D1) and retains no boundary; the both-arm
+-- boundary is retained exactly when the body is not an immediate exit.
+#guard operation? (observeRaw 1 (unfolded (.exit pFail)) Stores.empty) = none
+#guard operation? (observeRaw 1 (unfolded (.exit pBindSync)) Stores.empty) =
   some (.guard_ .all)
 
 theorem cleanup_boundary_distinct : unfolded ensured ≠ unfolded sequenced := by
@@ -196,20 +205,26 @@ example : eraseControl (unfolded ensured) = eraseControl (unfolded sequenced) :=
 #guard operation? (observeRaw 1 (eraseControl (guardR .all
   (.vis (.inr .getId) (fun v => .pure (.success v))))) Stores.empty) = some .getId
 #guard operation? (observeRaw 1 (eraseControl (guardR .onSuccess
-  (pending .compileFuel (.effect (rootPoint 0))))) Stores.empty) =
-  some (.frontier .compileFuel (.effect (rootPoint 0)))
+  (pending .compileFuel (rootPoint 0)))) Stores.empty) =
+  some (.frontier .compileFuel (rootPoint 0))
 #guard observeRaw 1 (eraseControl (.vis (.inr (.unguard (.failure (Cause.fail Err.boom))))
   Effects.Program.pure)) Stores.empty = .done (.failure (Cause.fail Err.boom)) Stores.empty
 #guard observeRaw 1 (eraseControl (.vis (.inr (.finishFinalizer (.success (.nat 7))))
   Effects.Program.pure)) Stores.empty = .done (.success (.nat 7)) Stores.empty
 
-#check (@denoteR_straight : ∀ (root : NativeEff) (n : Nat) (e : NativeEff) (p : Point),
-  Straight e = true → Agreement.depth e ≤ n → Agreement.depth e ≤ p.fuel →
-  eraseControl (denoteR root n e p) = Effects.Program.inl (denote e p.env))
-#check (@meaning_denoteR_straight : ∀ (root : NativeEff) (n : Nat) (e : NativeEff) (p : Point),
-  Straight e = true → Agreement.depth e ≤ n → Agreement.depth e ≤ p.fuel → ∀ stores : Stores,
-  (Effects.interpret rHandler (eraseControl (denoteR root n e p))).run stores =
+#check (@denoteR_straight : ∀ (root : NativeEff) (e : NativeEff) (p : Point),
+  Straight e = true → Agreement.depth e ≤ p.fuel →
+  eraseControl (denoteR root e p) = Effects.Program.inl (denote e p.env))
+#check (@meaning_denoteR_straight : ∀ (root : NativeEff) (e : NativeEff) (p : Point),
+  Straight e = true → Agreement.depth e ≤ p.fuel → ∀ stores : Stores,
+  (Effects.interpret rHandler (eraseControl (denoteR root e p))).run stores =
     meaning e p.env stores)
+-- P2: the checkpoints erase with the boundary markers.
+#guard observeRaw 1 (eraseControl (suspendR (rootPoint) (.pure (.success (.nat 1))))) Stores.empty =
+  .done (.success (.nat 1)) Stores.empty
+#guard operation? (observeRaw 1 (unfolded (.suspend pSucceed)) Stores.empty) = some (.suspend (rootPoint))
+#guard operation? (observeRaw 1 (unfolded (.sync (.lit (.nat 42)))) Stores.empty) = some (.sync (.nat 42))
+#guard result (.suspend pSucceed) = .done (.success (.nat 42)) Stores.empty
 #check (@inlineYield_eq_headExit : ∀ (e : NativeEff) (p : Point),
   inlineYield e p = headExit (compileEff e p))
 

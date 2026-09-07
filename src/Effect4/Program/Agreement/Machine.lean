@@ -160,8 +160,10 @@ theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), Plain e = true �
   | .exit b, p, hpl => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; rfl
-    · rw [compileEff_exit b hf]
-      exact plainCode_compileEff b (p.child 0) (Plain.exit hpl)
+    · rcases hx : (compileEff b (p.child 0)).asExit? with _ | ex
+      · rw [compileEff_exit_frame b hf hx]
+        exact plainCode_compileEff b (p.child 0) (Plain.exit hpl)
+      · rw [compileEff_exit_fold b hf hx]; rfl
   | .catchCause b h, p, hpl => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; rfl
@@ -260,7 +262,8 @@ theorem plainCode_suspendBodyAt {root : NativeEff} (hroot : Plain root = true) (
       | eff e =>
         have he : Plain e = true := plain_at q.path (Node.eff root) e hroot h
         cases hbr : isBranch e
-        · rw [suspendBodyAt_of_at hf h (not_branch_of_isBranch_false hbr)]
+        · rw [suspendBodyAt_of_at hf h (not_branch_of_isBranch_false hbr) (Plain.not_gen he)
+            (Plain.not_whileLoop he)]
           exact plainCode_compileEff e q he
         · obtain ⟨t, a, b, rfl⟩ := eq_branch_of_isBranch hbr
           rcases hbo : boolOf (evalTerm q.env t) with _ | flag

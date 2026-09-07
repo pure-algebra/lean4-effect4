@@ -19,13 +19,24 @@ store-touching arms of `interpOf` call the same `syncOpStep`, `DeferredStore.reg
 `storesCloseScope` and `cancelProgram`-shaped functions (`docs/research/2026-09-04-eff-compile.md`
 G5); only the alphabet is new.
 
-Generators (`gen`) compile to one `Iterator` primitive whose name carries the generator's
-program counter — a path from the body's statement list to the list to run next — and the
-values in scope; `iterNext` walks pure statements (`return`, `if` decided by the environment,
-`while`/`break`) with the point's fuel, folds a yielded pure success inline
-(`Prim.iteratorFolded`), and resumes with the *advanced* name (`IterStep.resume next
-continueAs`, the correction of 2026-09-04). A block's bindings are dropped at its end, as a
-`const` inside a brace is.
+Generators (`gen`) compile to a `Suspend` at their own point whose body is one `Iterator`
+primitive whose name carries the generator's program counter — a path from the body's
+statement list to the list to run next — and the values in scope; `iterNext` walks pure
+statements (`return`, `if` decided by the environment, `while`/`break`) with the point's
+fuel, folds a yielded pure success inline (`Prim.iteratorFolded`), and resumes with the
+*advanced* name (`IterStep.resume next continueAs`, the correction of 2026-09-04). A
+block's bindings are dropped at its end, as a `const` inside a brace is.
+
+Three clauses follow the pinned host's eager constructor behaviour rather than the frame a
+constructor suggests (P0 record, `docs/research/2026-09-06-p0-fable-record.md`, rows D1–D3):
+`exit` of a body that compiles to an immediate exit folds to `Prim.success` of the reified
+exit, because `Effect.exit` returns `exitSucceed(self)` for an `Exit`
+(`vendor/effect-4.0.0-rc.112/src/internal/effect.ts:3621-3622`); `gen` compiles to a
+`Suspend`, because `Effect.gen` is `suspend(() => fromIteratorUnsafe(…))` (`:1175-1196`);
+`whileLoop` compiles to a `Suspend`, because the printer wraps `Effect.whileLoop` in
+`Effect.suspend` so that every run starts from the initial cursor
+(`src/Effect4/Codegen/Print.lean:158-168`). `suspendBodyAt` answers the iterator or the
+loop frame at that point, as it answers the branch a `branch` decides.
 -/
 
 namespace Effect4.Program
@@ -317,20 +328,27 @@ def compileEff : NativeEff → Point → NCode
           | none => badShape
         | .program => frontier p
       | .bind first _ => Prim.onSuccess (compileEff first (p.child 0)) (EffName.cont p)
-      | .gen _ => Prim.iterator (EffName.gen p [] false) Val.unit
+      -- `Effect.gen` is `suspend(() => fromIteratorUnsafe(…))` (`internal/effect.ts:1175-1196`):
+      -- the iterator is what `suspendBodyAt` answers at this point.
+      | .gen _ => Prim.suspend (EffThunk.body p)
       | .catchCause body _ => Prim.onFailure (compileEff body (p.child 0)) (EffName.caught p)
       | .matchCause body _ _ =>
         Prim.onSuccessAndFailure (compileEff body (p.child 0)) (EffName.onValue p)
           (EffName.onCause p)
       | .onExit body _ => Prim.onExit (compileEff body (p.child 0)) (EffName.fin p) false
-      | .exit body => Prim.exitFrame (compileEff body (p.child 0))
+      -- `Effect.exit` returns `exitSucceed(self)` when `self` is already an `Exit`
+      -- (`internal/effect.ts:3621-3622`); only a body that is not one pushes the frame.
+      | .exit body =>
+        match (compileEff body (p.child 0)).asExit? with
+        | some exit => Prim.success (reifyExitVal exit)
+        | none => Prim.exitFrame (compileEff body (p.child 0))
       | .uninterruptible _ => Prim.withFiber (EffThunk.act p)
       | .interruptible _ => Prim.withFiber (EffThunk.act p)
       | .branch _ _ _ => Prim.suspend (EffThunk.body p)
-      | .whileLoop initial _ _ _ =>
-        match evalTerm p.env initial with
-        | some cursor => Prim.whileLoop (EffName.loop p) cursor
-        | none => badShape
+      -- the printed loop is `Effect.suspend(() => { let a0 = initial; return
+      -- Effect.whileLoop({…}) })` (`Codegen/Print.lean:158-168`): the cursor is read and the
+      -- `While` frame built when the suspension runs, by `suspendBodyAt`.
+      | .whileLoop _ _ _ _ => Prim.suspend (EffThunk.body p)
       | .yieldNow priority => Prim.yieldNowWith priority
       | .callback register request =>
         match (NativeOp.row register).kind with
@@ -597,8 +615,10 @@ def syncValueAt (root : NativeEff) : EffThunk → Val
     | _ => Val.unit
   | _ => Val.unit
 
-/-- What a `suspend` thunk returns: a body compiled at its point, or a branch decided by
-its point's environment. -/
+/-- What a `suspend` thunk returns: a body compiled at its point, a branch decided by its
+point's environment, the iterator of a generator (`Effect.gen`'s `fromIteratorUnsafe`,
+`internal/effect.ts:1175-1196`), or the loop frame of a `whileLoop` with its initial cursor
+read now (the printed `let a0 = initial` inside the suspension, `Codegen/Print.lean:158-168`). -/
 def suspendBodyAt (root : NativeEff) : EffThunk → NCode
   | .body p =>
     match p.fuel with
@@ -610,6 +630,11 @@ def suspendBodyAt (root : NativeEff) : EffThunk → NCode
         | some (Val.bool true) => resolve root (p.child 0)
         | some (Val.bool false) => resolve root (p.child 1)
         | _ => badShape
+      | some (Node.eff (.gen _)) => Prim.iterator (EffName.gen p [] false) Val.unit
+      | some (Node.eff (.whileLoop initial _ _ _)) =>
+        match evalTerm p.env initial with
+        | some cursor => Prim.whileLoop (EffName.loop p) cursor
+        | none => badShape
       | some (Node.eff e) => compileEff e p
       | _ => badShape
   | .store (Thunk.body program) => embed (progOf program)

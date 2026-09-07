@@ -229,6 +229,11 @@ theorem mapM_fiber_keys (g : Val → Option FiberId) (hg : ∀ v id, g v = some 
 
 theorem frontier_keys (p : Point) : nativeKeys (frontier p) ⊆ p.keys := List.Subset.refl _
 
+/-- An exit's handles are the handles of the primitive that embeds it. -/
+theorem exitKeys_eq_nativeKeys_ofExit (exit : ExitV) :
+    exitKeys exit = nativeKeys (Prim.ofExit exit) := by
+  cases exit <;> rfl
+
 theorem badShape_keys : nativeKeys badShape = [] := rfl
 
 section compileArms
@@ -258,7 +263,7 @@ theorem compileEff_perform (op : NativeOp) (r : Term) (hf : p.fuel = k + 1) :
   simp [compileEff, hf]; rfl
 
 theorem compileEff_gen (ss : Stmts NativeOp) (hf : p.fuel = k + 1) :
-    compileEff (.gen ss) p = Prim.iterator (EffName.gen p [] false) Val.unit := by
+    compileEff (.gen ss) p = Prim.suspend (EffThunk.body p) := by
   simp [compileEff, hf]
 
 theorem compileEff_uninterruptible (b : NativeEff) (hf : p.fuel = k + 1) :
@@ -270,11 +275,8 @@ theorem compileEff_interruptible (b : NativeEff) (hf : p.fuel = k + 1) :
   simp [compileEff, hf]
 
 theorem compileEff_whileLoop (initial test step : Term) (b : NativeEff) (hf : p.fuel = k + 1) :
-    compileEff (.whileLoop initial test step b) p =
-      (match evalTerm p.env initial with
-       | some cursor => Prim.whileLoop (EffName.loop p) cursor
-       | none => badShape) := by
-  simp [compileEff, hf]; rfl
+    compileEff (.whileLoop initial test step b) p = Prim.suspend (EffThunk.body p) := by
+  simp [compileEff, hf]
 
 theorem compileEff_yieldNow (priority : Nat) (hf : p.fuel = k + 1) :
     compileEff (.yieldNow priority) p = Prim.yieldNowWith priority := by
@@ -382,7 +384,7 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
   | .gen ss, p => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; exact frontier_keys p
-    · rw [compileEff_gen ss hf]; sub_tac
+    · rw [compileEff_gen ss hf]; exact frontier_keys p
   | .catchCause b h, p => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; exact frontier_keys p
@@ -401,8 +403,16 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
   | .exit b, p => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; exact frontier_keys p
-    · rw [compileEff_exit b hf]
-      exact compileEff_keys b (p.child 0)
+    · rcases hx : (compileEff b (p.child 0)).asExit? with _ | ex
+      · rw [compileEff_exit_frame b hf hx]
+        exact compileEff_keys b (p.child 0)
+      · -- the folded exit carries the body's own handles
+        rw [compileEff_exit_fold b hf hx]
+        have hb := compileEff_keys b (p.child 0)
+        rw [Prim.asExit?_eq_some _ _ hx, ← exitKeys_eq_nativeKeys_ofExit] at hb
+        show (reifyExitVal ex).keys ⊆ p.keys
+        rw [Machine.reifyExitVal_keys]
+        exact hb
   | .uninterruptible b, p => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; exact frontier_keys p
@@ -418,10 +428,7 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
   | .whileLoop initial test step b, p => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; exact frontier_keys p
-    · rw [compileEff_whileLoop initial test step b hf]
-      split
-      · next cursor hcursor => sub_tac using (evalTerm_keys initial p.env cursor hcursor)
-      · exact List.nil_subset _
+    · rw [compileEff_whileLoop initial test step b hf]; exact frontier_keys p
   | .yieldNow priority, p => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; exact frontier_keys p
@@ -808,6 +815,10 @@ theorem suspendBodyAt_keys (root : NativeEff) (t : EffThunk) : nativeKeys (suspe
       · split
         · exact resolve_keys root (p.child 0)
         · exact resolve_keys root (p.child 1)
+        · exact List.nil_subset _
+      · sub_tac
+      · split
+        · next cursor hcursor => sub_tac using (evalTerm_keys _ p.env cursor hcursor)
         · exact List.nil_subset _
       · exact compileEff_keys _ p
       · exact List.nil_subset _

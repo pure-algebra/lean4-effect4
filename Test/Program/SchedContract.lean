@@ -33,6 +33,12 @@ example (id : FiberId) : RSig.Answer (.inr (.await id .awaitValue)) = Val := rfl
 example (kind : GuardKind) : RSig.Answer (.inr (.guard_ kind)) = Option ExitV := rfl
 example (ex : ExitV) : RSig.Answer (.inr (.unguard ex)) = ExitV := rfl
 example (ex : ExitV) : RSig.Answer (.inr (.finishFinalizer ex)) = ExitV := rfl
+-- P2: the checkpoints answer a value; the loop and generator entries answer their exit.
+example (p : Point) : RSig.Answer (.inr (.suspend p)) = Val := rfl
+example (v : Val) : RSig.Answer (.inr (.sync v)) = Val := rfl
+example (p : Point) : RSig.Answer (.inr (.gen p)) = ExitV := rfl
+example (p : Point) (cursor : Val) : RSig.Answer (.inr (.loop p cursor)) = ExitV := rfl
+example (reason : FrontierReason) (p : Point) : RSig.Answer (.inr (.frontier reason p)) = ExitV := rfl
 
 -- E4-SCHED-CE-002: the scout's proposed collision is false; success adds `exitOk`.
 theorem exit_encoding_distinguishes (c : CauseV) :
@@ -76,6 +82,9 @@ def forkWithoutScope : NativeEff := .withFiber (.forkScoped pSucceed scopedChild
 #guard (FiberOp.unguard (.failure (Cause.fail Err.boom))).defaultAnswer =
   .failure (Cause.fail Err.boom)
 #guard (FiberOp.finishFinalizer (.success (.nat 7))).defaultAnswer = .success (.nat 7)
+#guard (FiberOp.gen ⟨[], [], 0, []⟩).defaultAnswer = .success .unit
+#guard (FiberOp.loop ⟨[], [], 0, []⟩ (.nat 0)).defaultAnswer = .success .unit
+#guard decide (FiberOp.suspend ⟨[], [], 0, []⟩ = FiberOp.sync .unit) = false
 
 /-! ## The store half under the summed handler -/
 
