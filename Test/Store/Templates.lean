@@ -240,6 +240,7 @@ theorem exact_aux : ∀ v : Val, ExactT v ∧ ExactF v := by
   | none => exact ⟨(fun _ h => nomatch h), (fun _ h => nomatch h)⟩
   | some a _ => exact ⟨(fun _ h => nomatch h), (fun _ h => nomatch h)⟩
   | ref k d => exact ⟨(fun _ h => nomatch h), (fun _ h => nomatch h)⟩
+  | handle k n => exact ⟨(fun _ h => nomatch h), (fun _ h => nomatch h)⟩
   | ctor i args ih =>
     constructor
     · intro t h

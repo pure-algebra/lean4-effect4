@@ -276,6 +276,8 @@ theorem acceptsAt_mono {defs defs' : List (String × Shape)}
     case ref k => exact h
     case anyRef => exact h
     all_goals simp [acceptsAt] at h
+  | .handle k n, s', h => by
+    cases s' <;> simp [acceptsAt] at h
 theorem acceptsList_mono {defs defs' : List (String × Shape)}
     (hsub : ∀ s s', s' ∈ candidates defs s → s' ∈ candidates defs' s) :
     ∀ (item : Shape) (xs : List Val), acceptsList defs item xs = true → acceptsList defs' item xs = true
@@ -468,6 +470,8 @@ def printIn (defs : List (String × Shape)) : Shape → Val → Json
     match headShape defs s with
     | .anyRef => .obj [("kind", kindJson k), ("address", .str (hexString d))]
     | _ => .str (hexString d)
+  -- A live handle fits no shape; it prints by structure, as an unfitting `ctor` does.
+  | _, .handle k n => .obj [("handle", Json.ofNat k.toNat), ("key", Json.ofNat n)]
 /-- The elements of a list, each under the item shape. -/
 def printList (defs : List (String × Shape)) : Shape → List Val → List Json
   | _, [] => []

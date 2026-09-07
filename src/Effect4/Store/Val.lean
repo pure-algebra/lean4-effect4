@@ -29,6 +29,17 @@ decoder accepts nothing outside the encoder's image, and what it accepts is well
 `Val.WF` says every frame's payload is shorter than `2^64`, the one fact a length prefix cannot
 carry. It is a `Prop` by structural recursion with a Boolean companion, as `Data/Json.lean`
 does for `NumbersFinite`, and it is what `decode_exact` gives back.
+
+The twelfth frame, `handle` (tag 12), is the shared value foundation's one addition
+(`docs/research/2026-09-07-u0-value-foundation.md`): a *live* handle — a kind byte and an
+allocation index into a running machine's stores — as distinct from `ref`, a *content*
+address. A handle names nothing in a store and no shape accepts one
+(`Store/Shape.lean`); it exists so the runtime's value alphabets can share this tree without
+spelling a handle as a constructor index that a payload could collide with. The kind table is
+the Machine layer's (`src/Effect4/Machine/Value.lean`), not `Store.Kind`'s. Because a handle
+is not content, `handles` lists the ones a tree carries, and `encode?` is the checked encoder:
+bytes only when the tree is well-formed, so the size condition of `decode_encode` is a
+receipt, never an assumption (review R5).
 -/
 
 set_option autoImplicit false
@@ -57,6 +68,8 @@ def unit : UInt8 := 9
 def ctor : UInt8 := 10
 /-- A reference to a node: the kind byte, then the address bytes. -/
 def ref : UInt8 := 11
+/-- A live handle: the kind byte, then the allocation index as `nat` digits. -/
+def handle : UInt8 := 12
 end Tag
 
 /-- The tag is the first byte of every frame. -/
@@ -93,6 +106,9 @@ inductive Val where
   | ctor (index : Nat) (args : List Val)
   /-- A reference to a node: the kind byte, then the address bytes. -/
   | ref (kind : UInt8) (digest : Bytes)
+  /-- A live handle into a running machine's stores: the kind byte, then the allocation
+  index. Not content: no shape accepts it and no node carries it. -/
+  | handle (kind : UInt8) (key : Nat)
 deriving Inhabited
 
 namespace Val
@@ -118,6 +134,7 @@ def render : Val → String
   | .some a => s!"(Val.some {render a})"
   | .ctor i args => s!"(Val.ctor {i} [{", ".intercalate (renderList args)}])"
   | .ref k d => s!"(Val.ref {k} {d})"
+  | .handle k n => s!"(Val.handle {k} {n})"
 def renderList : List Val → List String
   | [] => []
   | x :: xs => render x :: renderList xs
@@ -139,6 +156,7 @@ def encode : Val → Bytes
   | .some a => framed Tag.some (encode a)
   | .ctor i args => framed Tag.ctor (framed Tag.nat (natBytes i) ++ encodeList args)
   | .ref k d => framed Tag.ref (k :: d)
+  | .handle k n => framed Tag.handle (k :: natBytes n)
 /-- The frames of a list of values, back to back. -/
 def encodeList : List Val → Bytes
   | [] => []
@@ -168,6 +186,7 @@ def tag : Val → UInt8
   | .some _ => Tag.some
   | .ctor _ _ => Tag.ctor
   | .ref _ _ => Tag.ref
+  | .handle _ _ => Tag.handle
 
 /-- The payload of a value's frame. -/
 def payload : Val → Bytes
@@ -182,6 +201,7 @@ def payload : Val → Bytes
   | .some a => encode a
   | .ctor i args => framed Tag.nat (natBytes i) ++ encodeList args
   | .ref k d => k :: d
+  | .handle k n => k :: natBytes n
 
 /-- Every encoding is one frame: its tag, its payload. -/
 theorem encode_eq (v : Val) : encode v = framed v.tag v.payload := by
@@ -199,10 +219,10 @@ theorem ind {motive : Val → Prop}
     (pair : ∀ a b, motive a → motive b → motive (.pair a b))
     (none : motive .none) (some : ∀ a, motive a → motive (.some a))
     (ctor : ∀ i args, (∀ x ∈ args, motive x) → motive (.ctor i args))
-    (ref : ∀ k d, motive (.ref k d)) : ∀ v, motive v :=
+    (ref : ∀ k d, motive (.ref k d)) (handle : ∀ k n, motive (.handle k n)) : ∀ v, motive v :=
   fun v =>
     Val.rec (motive_1 := motive) (motive_2 := fun xs => ∀ x ∈ xs, motive x)
-      unit bool nat str bytes list pair none some ctor ref
+      unit bool nat str bytes list pair none some ctor ref handle
       (by intro _ h; cases h)
       (fun _ _ ihHead ihTail => by
         intro _ hmem
@@ -218,6 +238,39 @@ def children : Val → List Val
   | .some a => [a]
   | .ctor _ args => args
   | _ => []
+
+/-- Whether a tree is a `list` frame. -/
+def isList : Val → Bool
+  | .list _ => true
+  | _ => false
+
+mutual
+/-- The live handles a tree carries, in payload order: every `handle` frame's kind byte and
+index. A tree with none is content; a tree with one names a running machine's store and is
+admitted nowhere in the CAS. -/
+def handles : Val → List (UInt8 × Nat)
+  | .handle k n => [(k, n)]
+  | .list xs => handlesList xs
+  | .pair a b => handles a ++ handles b
+  | .some a => handles a
+  | .ctor _ args => handlesList args
+  | _ => []
+/-- The handles of a list of values, back to back. -/
+def handlesList : List Val → List (UInt8 × Nat)
+  | [] => []
+  | x :: xs => handles x ++ handlesList xs
+end
+
+theorem handlesList_nil : handlesList [] = [] := rfl
+
+theorem handlesList_cons (x : Val) (xs : List Val) :
+    handlesList (x :: xs) = handles x ++ handlesList xs := rfl
+
+/-- `handlesList` is the flattened map, as `encodeList` is. -/
+theorem handlesList_eq_flatMap (xs : List Val) : handlesList xs = xs.flatMap handles := by
+  induction xs with
+  | nil => rfl
+  | cons x xs ih => rw [handlesList_cons, List.flatMap_cons, ih]
 
 /-! ## Well-formedness: every payload shorter than `2^64` -/
 
@@ -237,6 +290,7 @@ def WF : Val → Prop
     (natBytes i).length < 2 ^ 64 ∧ (framed Tag.nat (natBytes i) ++ encodeList args).length < 2 ^ 64 ∧
       WFList args
   | .ref k d => (k :: d).length < 2 ^ 64
+  | .handle k n => (k :: natBytes n).length < 2 ^ 64
 /-- `WF` at every member. -/
 def WFList : List Val → Prop
   | [] => True
@@ -259,6 +313,7 @@ def wf : Val → Bool
     decide ((natBytes i).length < 2 ^ 64) &&
       decide ((framed Tag.nat (natBytes i) ++ encodeList args).length < 2 ^ 64) && wfList args
   | .ref k d => decide ((k :: d).length < 2 ^ 64)
+  | .handle k n => decide ((k :: natBytes n).length < 2 ^ 64)
 /-- `wf` at every member. -/
 def wfList : List Val → Bool
   | [] => true
@@ -316,6 +371,7 @@ theorem WF_payload_lt {v : Val} (h : WF v) : v.payload.length < 2 ^ 64 := by
   | some a => exact h.1
   | ctor i args => exact h.2.1
   | ref k d => exact h
+  | handle k n => exact h
 
 /-- Well-formedness reaches every child. -/
 theorem WF_child {v c : Val} (hv : WF v) (hc : c ∈ v.children) : WF c := by
@@ -559,6 +615,10 @@ def decodeBody (dec : Bytes → Option (Val × Bytes)) (tag : UInt8) (payload : 
     match payload with
     | k :: d => some (.ref k d)
     | [] => none
+  else if tag = Tag.handle then
+    match payload with
+    | k :: digits => if digits.head? = some 0 then none else some (.handle k (natOfDigits digits))
+    | [] => none
   else none
 
 /-! The dispatch, one equation per tag: the tag comparisons are closed terms, so each is `rfl`,
@@ -618,6 +678,13 @@ theorem decodeBody_ref :
     decodeBody dec Tag.ref payload =
       (match payload with
         | k :: d => some (.ref k d)
+        | [] => none) := rfl
+
+theorem decodeBody_handle :
+    decodeBody dec Tag.handle payload =
+      (match payload with
+        | k :: digits =>
+          if digits.head? = some 0 then none else some (.handle k (natOfDigits digits))
         | [] => none) := rfl
 
 end dispatch
@@ -681,16 +748,22 @@ theorem decodeBody_encode (dec : Bytes → Option (Val × Bytes)) (v : Val) (hwf
     rw [if_pos (show Tag.nat = Tag.nat ∧ (natBytes i).head? ≠ some 0 from ⟨rfl, natBytes_head i⟩),
       hseq, natOfDigits_natBytes, Option.map_some]
   | ref k d => rfl
+  | handle k n =>
+    show decodeBody dec Tag.handle (k :: natBytes n) = some (.handle k n)
+    rw [decodeBody_handle]
+    show (if (natBytes n).head? = some 0 then none else some (Val.handle k (natOfDigits (natBytes n))))
+      = some (.handle k n)
+    rw [if_neg (natBytes_head n), natOfDigits_natBytes]
 
 /-- Any other tag byte is refused. -/
 theorem decodeBody_unknown (dec : Bytes → Option (Val × Bytes)) (tag : UInt8) (payload : Bytes)
     (h1 : tag ≠ Tag.unit) (h2 : tag ≠ Tag.bool) (h3 : tag ≠ Tag.nat) (h4 : tag ≠ Tag.string)
     (h5 : tag ≠ Tag.bytes) (h6 : tag ≠ Tag.list) (h7 : tag ≠ Tag.pair) (h8 : tag ≠ Tag.none)
-    (h9 : tag ≠ Tag.some) (h10 : tag ≠ Tag.ctor) (h11 : tag ≠ Tag.ref) :
+    (h9 : tag ≠ Tag.some) (h10 : tag ≠ Tag.ctor) (h11 : tag ≠ Tag.ref) (h12 : tag ≠ Tag.handle) :
     decodeBody dec tag payload = none := by
   unfold decodeBody
   rw [if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_neg h5, if_neg h6, if_neg h7, if_neg h8,
-    if_neg h9, if_neg h10, if_neg h11]
+    if_neg h9, if_neg h10, if_neg h11, if_neg h12]
 
 theorem decodeBody_exact (dec : Bytes → Option (Val × Bytes))
     (hdec : ∀ b v r, dec b = some (v, r) → b = Val.encode v ++ r ∧ v.WF)
@@ -832,7 +905,24 @@ theorem decodeBody_exact (dec : Bytes → Option (Val × Bytes))
       subst h
       exact ⟨h11, rfl, hlen⟩
     · exact nomatch h
-  rw [decodeBody_unknown dec tag payload h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11] at h
+  by_cases h12 : tag = Tag.handle
+  · rw [h12, decodeBody_handle] at h
+    split at h
+    · next k digits =>
+      split at h
+      · exact nomatch h
+      · next hhead =>
+        injection h with h
+        subst h
+        have hdigits : natBytes (natOfDigits digits) = digits := natBytes_natOfDigits digits hhead
+        refine ⟨h12, ?_, ?_⟩
+        · show k :: digits = k :: natBytes (natOfDigits digits)
+          rw [hdigits]
+        · show (k :: natBytes (natOfDigits digits)).length < 2 ^ 64
+          rw [hdigits]
+          exact hlen
+    · exact nomatch h
+  rw [decodeBody_unknown dec tag payload h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12] at h
   exact nomatch h
 
 /-! ## The knot: fuel -/
@@ -926,6 +1016,42 @@ theorem encode_injective {a b : Val} (ha : a.WF) (hb : b.WF) (h : Val.encode a =
 theorem ne_of_encode_ne {a b : Val} (h : Val.encode a ≠ Val.encode b) : a ≠ b :=
   fun e => h (congrArg Val.encode e)
 
+/-! ### The checked encoder
+
+`decode_encode` needs `WF`, and nothing about a value's *meaning* implies it: a handle that
+resolves in every store may still sit beside a byte string of length `2^64` (review R5). So
+the boundary that takes bytes asks for them through `encode?`, which answers only for a
+well-formed tree, and a `some` answer is the receipt that the bytes read back. -/
+
+/-- The bytes of a well-formed value; `none` when a payload would overflow its length prefix. -/
+def encode? (v : Val) : Option Bytes :=
+  if wf v then Option.some (encode v) else Option.none
+
+theorem encode?_eq_some {v : Val} (h : WF v) : encode? v = Option.some (encode v) := by
+  unfold encode?
+  rw [if_pos ((wf_iff v).mpr h)]
+
+theorem encode?_eq_none {v : Val} (h : ¬ WF v) : encode? v = Option.none := by
+  unfold encode?
+  rw [if_neg (fun hw => h ((wf_iff v).mp hw))]
+
+/-- A `some` answer of `encode?` reads back: the round trip needs no side condition. -/
+theorem decode_encode? {v : Val} {b : Bytes} (h : encode? v = Option.some b) :
+    decode b = Option.some v := by
+  unfold encode? at h
+  split at h
+  · next hw =>
+    injection h with h
+    subst h
+    exact decode_encode v ((wf_iff v).mp hw)
+  · exact nomatch h
+
+/-- Whatever decodes is what `encode?` answers for its value: the checked encoder is exact. -/
+theorem encode?_of_decode {b : Bytes} {v : Val} (h : decode b = Option.some v) :
+    encode? v = Option.some b := by
+  obtain ⟨hb, hwf⟩ := decode_exact h
+  rw [encode?_eq_some hwf, hb]
+
 end Val
 
 /-! ## Decidable equality -/
@@ -945,6 +1071,7 @@ def beq : Val → Val → Bool
   | .some a, .some b => beq a b
   | .ctor i a, .ctor j b => decide (i = j) && beqList a b
   | .ref k d, .ref k' d' => decide (k = k') && decide (d = d')
+  | .handle k n, .handle k' n' => decide (k = k') && decide (n = n')
   | _, _ => false
 def beqList : List Val → List Val → Bool
   | [], [] => true
@@ -1002,6 +1129,22 @@ open Val in
 #guard (framed 7 [1, 2, 3]).length = 12
 open Val in
 #guard (encode (.ref 2 (List.replicate 32 0))).length = 42
+-- A handle: tag 12, the kind byte, the index as `nat` digits (`0` is no digits).
+open Val in
+#guard encode (.handle 2 7) = [12, 0, 0, 0, 0, 0, 0, 0, 2, 2, 7]
+open Val in
+#guard encode (.handle 1 0) = [12, 0, 0, 0, 0, 0, 0, 0, 1, 1]
+open Val in
+#guard encode (.handle 4 256) = [12, 0, 0, 0, 0, 0, 0, 0, 3, 4, 1, 0]
+open Val in
+#guard (encode (.handle 2 7)).head? = some Tag.handle
+open Val in
+#guard (.handle 2 7 : Val) ≠ .ref 2 [7]
+open Val in
+#guard handles (.ctor 0 [.handle 1 3, .list [.handle 2 4, .nat 9], .pair (.handle 4 5) .unit]) =
+  [(1, 3), (2, 4), (4, 5)]
+open Val in
+#guard handles (.ctor 0 [.str "Effect", .ref 2 (List.replicate 32 0)]) = []
 
 /-- The census entry of the facts note §6, as a value tree. -/
 def sampleEntry : Val :=
@@ -1025,6 +1168,17 @@ def sampleEntry : Val :=
 #guard Val.decode (framed Tag.unit [0]) = none
 #guard Val.decode (framed Tag.ref []) = none
 #guard Val.decode (framed Tag.ctor (framed Tag.nat [0, 1])) = none
+-- A handle round-trips, nested and alone; an empty handle payload, a leading-zero index and
+-- the next unused tag byte are refused; the checked encoder answers exactly the bytes.
+#guard Val.decode (Val.encode (.handle 2 7)) = some (.handle 2 7)
+#guard Val.decode (Val.encode (.ctor 0 [.handle 1 3, .list [.handle 2 4, .nat 9]])) =
+  some (.ctor 0 [.handle 1 3, .list [.handle 2 4, .nat 9]])
+#guard Val.decode (framed Tag.handle []) = none
+#guard Val.decode (framed Tag.handle [2, 0, 7]) = none
+#guard Val.decode (framed 13 []) = none
+#guard Val.encode? (.handle 2 7) = some (Val.encode (.handle 2 7))
+#guard Val.encode? sampleEntry = some (Val.encode sampleEntry)
+#guard (Val.encode? sampleEntry).bind Val.decode = some sampleEntry
 
 /-! ## Receipts -/
 
@@ -1062,6 +1216,12 @@ def sampleEntry : Val :=
 #print axioms Val.decode_exact
 #print axioms Val.encode_injective
 #print axioms Val.ne_of_encode_ne
+#print axioms Val.handles
+#print axioms Val.handlesList_eq_flatMap
+#print axioms decodeBody_handle
+#print axioms Val.encode?
+#print axioms Val.decode_encode?
+#print axioms Val.encode?_of_decode
 #print axioms Val.beq
 #print axioms Val.beq_iff
 #print axioms Val.instDecidableEq

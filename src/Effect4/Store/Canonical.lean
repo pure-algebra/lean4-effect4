@@ -1,4 +1,5 @@
 import Effect4.Store.Shape
+import Effect4.Store.Image
 
 /-!
 # Store.Canonical
@@ -53,6 +54,16 @@ theorem toVal_injective {a b : α} (h : toVal a = toVal b) : a = b := by
   have h1 := ofVal_toVal (α := α) a
   rw [h, ofVal_toVal] at h1
   exact (Option.some.inj h1).symm
+
+/-- Every canonical carrier is an exact image (`Store/Image.lean`): the shape and `fits` are
+forgotten, the writer, the reader and the two laws are kept. This is how a hand-written image
+in the Machine layer is compared with the instance the generator emits for the same
+declaration, without the Machine layer naming a `Shape`. -/
+def image (α : Type) [Canonical α] : Image α where
+  toVal := toVal
+  ofVal := ofVal
+  ofVal_toVal := ofVal_toVal
+  ofVal_exact := fun h => ofVal_exact h
 
 /-- The canonical bytes of a carrier: the bytes of its value tree. -/
 def encode (a : α) : Bytes := Val.encode (toVal a)

@@ -17,6 +17,7 @@ Doc comments cannot precede `#guard`, so the receipts carry line comments.
 -/
 
 import Effect4.Store.Canonical
+import Effect4.Store.Node
 import Effect4.Program.Wire
 import Test.Store.Templates
 
@@ -181,8 +182,67 @@ open Effect4.Store
   (Effect4.Program.Wire.encodeProgram Effect4.Program.Wire.Corpus.p42) =
   some Effect4.Program.Wire.Corpus.p42
 
+/-! ## The twelfth frame: live handles, and the checked encoder
+
+U0 of `docs/research/2026-09-06-wave2-synthesis.md` §5
+(`docs/research/2026-09-07-u0-value-foundation.md`). `handle` (tag 12) is appended, never
+renumbered. A handle is not content: no shape accepts one, the store's reference walk ignores
+it, and it reads back inside every container frame. `encode?` is the size receipt review R5
+asked for: bytes only for a well-formed tree, and a `some` answer reads back with no side
+condition. `Canonical.image` is the bridge from the shaped trait to the shape-free one the
+Machine layer uses, byte for byte. -/
+
+#guard Tag.handle = 12
+#guard (Val.encode (.handle 2 7)).head? = some Tag.handle
+#guard Val.encode (.handle 2 7) = [12, 0, 0, 0, 0, 0, 0, 0, 2, 2, 7]
+#guard Val.encode (.handle 1 0) = [12, 0, 0, 0, 0, 0, 0, 0, 1, 1]
+#guard Val.decode (Val.encode (.handle 2 7)) = some (.handle 2 7)
+#guard Val.decode (Val.encode (.ctor 0 [.handle 1 3, .list [.handle 2 4, .nat 9],
+    .pair (.some (.handle 4 5)) .unit])) =
+  some (.ctor 0 [.handle 1 3, .list [.handle 2 4, .nat 9], .pair (.some (.handle 4 5)) .unit])
+-- Refused: an empty handle payload, a leading-zero index, the next unused tag byte.
+#guard Val.decode (framed Tag.handle []) = none
+#guard Val.decode (framed Tag.handle [2, 0, 7]) = none
+#guard Val.decode (framed 13 []) = none
+-- No shape accepts a handle, a handle is not a reference, and a `ref` is not a handle.
+#guard acceptsIn [] .nat (.handle 2 7) = false
+#guard acceptsIn [] .anyRef (.handle 2 7) = false
+#guard (Val.handle 2 7).refs = []
+#guard (Val.handle 2 7).malformedRef = false
+#guard (Val.ref 2 (List.replicate 32 0)).handles = []
+-- The handles a tree carries, in payload order; content carries none.
+#guard (Val.ctor 0 [.handle 1 3, .list [.handle 2 4, .nat 9], .pair (.some (.handle 4 5)) .unit]).handles
+  = [(1, 3), (2, 4), (4, 5)]
+#guard (Canonical.toVal ((3 : Nat), "a")).handles = []
+#guard (Canonical.toVal Effect4.Program.Wire.Corpus.p42).handles = []
+-- The checked encoder: the bytes of every tree the store builds, and they read back.
+#guard Val.encode? sampleEntry = some (Val.encode sampleEntry)
+#guard (Val.encode? sampleEntry).bind Val.decode = some sampleEntry
+#guard (Val.encode? (Canonical.toVal Effect4.Program.Wire.Corpus.p42)).bind Val.decode =
+  some (Canonical.toVal Effect4.Program.Wire.Corpus.p42)
+#guard (Val.encode? (.handle 2 7)).bind Val.decode = some (.handle 2 7)
+-- The shape-free image of a canonical carrier writes the carrier's bytes and reads them back;
+-- another carrier's bytes are refused.
+#guard (Canonical.image Nat).encode 5 = Canonical.encode (5 : Nat)
+#guard (Canonical.image (Nat × String)).decode (Canonical.encode ((3 : Nat), "a")) = some (3, "a")
+#guard (Canonical.image Nat).decode (Canonical.encode "3") = none
+#guard ((Canonical.image (List Nat)).encode? [1, 2, 3]).bind (Canonical.image (List Nat)).decode =
+  some [1, 2, 3]
+
+#check @Effect4.Store.Val.decode_encode?
+#check @Effect4.Store.Val.encode?_of_decode
+#check @Effect4.Store.Image.decode_encode?
+#check @Effect4.Store.Image.decode_exact
+
 /-! ## Axiom receipts -/
 
+#print axioms Effect4.Store.Val.encode?
+#print axioms Effect4.Store.Val.decode_encode?
+#print axioms Effect4.Store.Val.encode?_of_decode
+#print axioms Effect4.Store.Val.handles
+#print axioms Effect4.Store.Image.decode_encode?
+#print axioms Effect4.Store.Image.list
+#print axioms Effect4.Store.Canonical.image
 #print axioms Effect4.Store.framed
 #print axioms Effect4.Store.framed_length
 #print axioms Effect4.Store.framed_inj

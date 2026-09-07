@@ -1,4 +1,6 @@
 import Effect4.Program.Config
+import Effect4.Program.ConfigValue
+import Effect4.Store.Canonical
 
 /-!
 # Config contract — the provider algebra and the reader, frozen
@@ -478,5 +480,43 @@ private def entriesOf (env : List (String × String)) : List (Path String × Str
 #check @Effect4.Program.Config.residual_empty_of_subset
 
 end Residual
+
+/-! ## The shared value foundation (U0): the admitted result shapes
+
+`src/Effect4/Program/ConfigValue.lean`, per `docs/research/2026-09-07-u0-value-foundation.md`:
+a configuration value is one of six frames of the shared carrier and reads back; every other
+frame is refused, so sharing the carrier does not widen what the reader can answer. The frames
+are the store's own primitives, byte for byte. -/
+
+section Foundation
+
+/-- The value the residual section's demo reads. -/
+def demoV : Val := .pair (.pair (.str "localhost") (.nat 5432)) (.str "checkout")
+
+#guard Val.ofStore (Val.toStore demoV) = Option.some demoV
+#guard Val.ofStore (Val.toStore (.some (.bool true))) = Option.some (.some (.bool true))
+#guard Val.ofStore (Val.toStore .none) = Option.some .none
+-- Refused: the frames a configuration value never is.
+#guard Val.ofStore .unit = Option.none
+#guard Val.ofStore (.list []) = Option.none
+#guard Val.ofStore (.ctor 0 [.str "x"]) = Option.none
+#guard Val.ofStore (.bytes [1]) = Option.none
+#guard Val.ofStore (.ref 2 (List.replicate 32 0)) = Option.none
+#guard Val.ofStore (.handle 2 0) = Option.none
+#guard Val.ofStore (.pair (.str "a") (.list [])) = Option.none
+#guard Val.ofStore (.some (.ctor 0 [])) = Option.none
+-- Bytes: the checked encoder answers, its answer reads back, and the frames are the store's
+-- primitive frames.
+#guard (Val.image.encode? demoV).bind Val.image.decode = Option.some demoV
+#guard Val.image.encode (.str "a") = Effect4.Store.Canonical.encode "a"
+#guard Val.image.encode (.pair (.nat 1) (.bool true)) = Effect4.Store.Canonical.encode ((1 : Nat), true)
+#guard Val.image.encode (.some (.nat 1)) = Effect4.Store.Canonical.encode (Option.some (1 : Nat))
+#guard Val.image.encode .none = Effect4.Store.Canonical.encode (Option.none : Option Nat)
+#guard (Val.toStore demoV).handles = []
+
+#print axioms Effect4.Program.Config.Val.image
+#print axioms Effect4.Program.Config.Val.image_handleFree
+
+end Foundation
 
 end Test.Program.ConfigContract
