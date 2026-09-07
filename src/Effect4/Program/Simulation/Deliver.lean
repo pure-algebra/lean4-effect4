@@ -3,7 +3,7 @@ import Effect4.Program.Simulation.Fibers
 /-!
 # Exit delivery (P3, step 4c)
 
-Packet: `test/contracts/program-runtime-r.contract.md` (the P3 relation). A fiber whose
+Packet: `Test/contracts/program-runtime-r.contract.md` (the P3 relation). A fiber whose
 current is an exit delivers it. The frame's `evaluateNative` runs the native scoped-exit
 adapter, then `evaluatePrim`'s finalizer shortcut, then the frame machine's
 `resumeValue`/`resumeCause`; all three read the same `getCont`. The term's `deliverR`

@@ -62,13 +62,19 @@ let rows : row list =
       deep =
         [ "Effect4.Machine.spawn_eq";
           "Effect4.Machine.spawnChild_fields";
-          "Effect4.Machine.spawn_daemon_untracked" ] };
+          "Effect4.Machine.spawn_untracked";
+          "Effect4.Machine.drive_trackChild_live";
+          "Effect4.Machine.drive_trackChild_exited" ] };
     { id = "fork.child"; kind = "fork"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Machine.exitFiber_eq";
           "Effect4.Machine.exitFiber_no_middleware";
-          "Effect4.Machine.exitStore_fields";
-          "Effect4.Machine.exitStore_fires";
+          "Effect4.Machine.publish_fields";
+          "Effect4.Machine.cleared_fields";
+          "Effect4.Machine.exitStore_no_observers";
+          "Effect4.Machine.exitStore_observers";
+          "Effect4.Machine.drive_observe";
+          "Effect4.Machine.drive_exitDone";
           "Effect4.Machine.fireObserver_resumeAwait";
           "Effect4.Machine.stepDecision_installMiddleware";
           "Effect4.Machine.withFiber_fork";
@@ -78,12 +84,12 @@ let rows : row list =
           "Effect4.Machine.drive_finish" ] };
     { id = "fork.detach"; kind = "fork"; disposition = "separateCalculus"; coverage = "green";
       deep =
-        [ "Effect4.Machine.spawn_daemon_untracked";
+        [ "Effect4.Machine.spawn_untracked";
           "Effect4.Machine.spawnChild_fields";
           "Effect4.Machine.start_eq";
           "Effect4.Machine.exitFiber_no_children";
           "Effect4.Machine.exitInterruptChildren_eq";
-          "Effect4.Machine.exitInterruptChildren_interrupts";
+          "Effect4.Machine.exitInterruptChildren_reenters";
           "Effect4.Machine.Witnesses.w5_fork_latches_the_middleware";
           "Effect4.Machine.Witnesses.w5_daemon_child_survives_parent_exit" ] };
     { id = "fork.in"; kind = "fork"; disposition = "separateCalculus"; coverage = "green";
@@ -101,12 +107,19 @@ let rows : row list =
     { id = "fork.scoped"; kind = "fork"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Machine.withFiber_forkScoped_ambient";
-          "Effect4.Machine.withFiber_forkScoped_none" ] };
+          "Effect4.Machine.withFiber_forkScoped_none";
+          "Effect4.Machine.withFiber_ambientScope";
+          "Effect4.Machine.withFiber_ambientScope_none" ] };
     { id = "fork.race-all"; kind = "fork"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Machine.withFiber_raceAll";
+          "Effect4.Machine.evaluatePrim_raceRegister";
           "Effect4.Machine.launchEntrant_eq";
           "Effect4.Machine.drive_launch_runs";
+          "Effect4.Machine.drive_enrollRace_live";
+          "Effect4.Machine.drive_enrollRace_exited";
+          "Effect4.Machine.drive_registrationDone_answered";
+          "Effect4.Machine.drive_registrationDone_parks";
           "Effect4.Machine.drive_launch_done";
           "Effect4.Machine.fireObserver_raceCallback_pending";
           "Effect4.Machine.fireObserver_raceCallback_settles";
@@ -119,6 +132,9 @@ let rows : row list =
           "Effect4.Machine.Witnesses.w3_all_failures_retain_order";
           "Effect4.Machine.settleRace_eq";
           "Effect4.Machine.withFiber_cancelRace";
+          "Effect4.Machine.drive_raceCancel_nil";
+          "Effect4.Machine.drive_raceCancel_live";
+          "Effect4.Machine.drive_raceCancel_gone";
           "Effect4.Machine.withFiber_cancelRace_unknown";
           "Effect4.Machine.Witnesses.w3_host_interrupt_cancels_entrants";
           "Effect4.Machine.Witnesses.w3_settle_interrupts_the_parked_loser";
@@ -161,8 +177,12 @@ let rows : row list =
     { id = "fork.interrupt"; kind = "fork"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Machine.withFiber_interrupt";
-          "Effect4.Machine.interruptThenJoin_eq";
-          "Effect4.Machine.interruptThenJoin_unknown";
+          "Effect4.Machine.withFiber_interruptAs";
+          "Effect4.Machine.withFiber_interruptAs_unknown";
+          "Effect4.Machine.drive_afterInterrupt";
+          "Effect4.Machine.asVoidCode_eq";
+          "Effect4.Machine.awaitCode_join_exited";
+          "Effect4.Machine.awaitCode_join_live";
           "Effect4.Machine.withFiber_interruptScoped_self";
           "Effect4.Machine.withFiber_interruptScoped_other";
           "Effect4.Machine.Witnesses.w2_delivered_at_unmask";
@@ -172,30 +192,42 @@ let rows : row list =
     { id = "fork.interrupt-all"; kind = "fork"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Machine.withFiber_interruptAll";
+          "Effect4.Machine.drive_interruptTarget";
+          "Effect4.Machine.drive_interruptTarget_unknown";
+          "Effect4.Machine.awaitCode_awaitAll";
+          "Effect4.Machine.evaluatePrim_awaitAllPark";
           "Effect4.Machine.interruptEach_nil";
           "Effect4.Machine.interruptEach_cons";
           "Effect4.Machine.interruptEach_known";
           "Effect4.Machine.fireObserver_countdown_done";
           "Effect4.Machine.fireObserver_countdown_next";
           "Effect4.Machine.countdownPark_parks" ] };
+    { id = "scope.close-lifo"; kind = "scope"; disposition = "separateCalculus"; coverage = "green";
+      deep =
+        [ "Effect4.Machine.closeWalk_sequential";
+          "Effect4.Machine.closeSeq_step" ] };
     { id = "scope.close-sequential"; kind = "scope"; disposition = "separateCalculus"; coverage = "green";
       deep =
-        [ "Effect4.Machine.closeSeqChain_order";
-          "Effect4.Machine.closeSeqChain_captures";
+        [ "Effect4.Machine.closeWalk_sequential";
+          "Effect4.Machine.closeSeq_step";
+          "Effect4.Machine.closeSeq_captures";
           "Effect4.Machine.withFiber_closeScope";
           "Effect4.Machine.withFiber_closeScope_unknown";
           "Effect4.Machine.Witnesses.w6_sequential_captures_and_merges" ] };
     { id = "scope.close-parallel"; kind = "scope"; disposition = "separateCalculus"; coverage = "green";
       deep =
-        [ "Effect4.Machine.closeParChain_forks_immediate_daemon";
-          "Effect4.Machine.closeParChain_awaits_all";
+        [ "Effect4.Machine.closeWalk_parallel";
+          "Effect4.Machine.actionOf_closePar";
+          "Effect4.Machine.withFiber_closePar";
+          "Effect4.Machine.forkFinalizers_cons";
           "Effect4.Machine.withFiber_fork";
           "Effect4.Machine.spawnChild_fields";
           "Effect4.Machine.Witnesses.w6_parallel_forks_and_merges" ] };
     { id = "scope.close-merge"; kind = "scope"; disposition = "separateCalculus"; coverage = "green";
       deep =
-        [ "Effect4.Machine.closeSeqChain_merges";
-          "Effect4.Machine.closeParChain_awaits_all";
+        [ "Effect4.Machine.closeSeq_merges";
+          "Effect4.Machine.closeParDone_is_asVoidAll";
+          "Effect4.Machine.drive_closeParAwait";
           "Effect4.Machine.fireObserver_countdown_done";
           "Effect4.Machine.fireObserver_countdown_next";
           "Effect4.Machine.Witnesses.w6_parallel_forks_and_merges";
@@ -282,10 +314,13 @@ let rows : row list =
     { id = "rule.yield-is-overloaded"; kind = "rule"; disposition = "separateCalculus"; coverage = "green";
       deep =
         [ "Effect4.Machine.drive_loop_parked";
+          "Effect4.Machine.drive_loop_parked_deferred";
           "Effect4.Machine.drive_loop_continues" ] };
     { id = "rule.only-fork-child-tracks"; kind = "rule"; disposition = "separateCalculus"; coverage = "green";
       deep =
-        [ "Effect4.Machine.spawn_daemon_untracked";
+        [ "Effect4.Machine.spawn_untracked";
+          "Effect4.Machine.drive_trackChild_live";
+          "Effect4.Machine.drive_trackChild_exited";
           "Effect4.Machine.spawnChild_fields";
           "Effect4.Machine.withFiber_fork";
           "Effect4.Machine.withFiber_forkIn";
@@ -297,8 +332,7 @@ let rows : row list =
         [ "Effect4.Machine.exitFiber_eq";
           "Effect4.Machine.exitFiber_children";
           "Effect4.Machine.exitInterruptChildren_eq";
-          "Effect4.Machine.exitInterruptChildren_finalizing";
-          "Effect4.Machine.exitInterruptChildren_interrupts";
+          "Effect4.Machine.exitInterruptChildren_reenters";
           "Effect4.Machine.resumePrim_continueWith";
           "Effect4.Machine.exitFiber_finalizing";
           "Effect4.Machine.Witnesses.w5_middleware_interrupts_children";
@@ -454,5 +488,5 @@ let rows : row list =
         [ "Effect4.Machine.Layers.provideLayer_scope" ] };
   ]
 
-(* 87 of the 137 census rows name a Deep witness. *)
+(* 88 of the 137 census rows name a Deep witness. *)
 let rows_total : int = 137

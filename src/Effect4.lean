@@ -19,6 +19,9 @@ import Effect4.Data.JsonOptic
 import Effect4.Store.Digits
 import Effect4.Store.Utf8
 import Effect4.Store.Val
+-- The shape-free exact-image trait (U0, 2026-09-07): the views of the shared carrier the
+-- Machine layer uses without naming a `Shape`; `Canonical.image` is the bridge.
+import Effect4.Store.Image
 import Effect4.Store.Digest
 import Effect4.Store.Kind
 import Effect4.Store.Shape
@@ -35,6 +38,9 @@ import Effect4.Store.PinDerived
 -- The error channel everywhere.
 import Effect4.Machine.Cause
 import Effect4.Machine.Exit
+-- The shared value foundation, Machine side (U0): the handle-kind and runtime constructor
+-- tables, the `Value.*` spellings, and the generic cause/exit images over the carrier.
+import Effect4.Machine.Value
 -- The Schema data plane: the persisted carrier, the annotation data plane, the
 -- checker, the authoring face, and the value, getter, transformation, codec,
 -- registry and foreign rows.
@@ -84,8 +90,13 @@ import Effect4.Machine.Approximation
 import Effect4.Machine.Behaviour
 import Effect4.Machine.Scheduling
 import Effect4.Machine.Handles
+-- The frame machine's value alphabet as an exact image of the carrier (U0; U1 makes it the
+-- carrier).
+import Effect4.Machine.StoresValue
 import Effect4.Machine.Witnesses
 import Effect4.Machine.Context
+-- The Layer machine's value alphabet as an exact image of the carrier (U0; U1b).
+import Effect4.Machine.ContextValue
 import Effect4.Machine.Layer
 -- The middle tier (2026-09-04): architecture views as Effect Schema documents
 -- with payloads projected from the proof carriers, the structural acceptance
@@ -214,6 +225,9 @@ import Effect4.Program.Provision
 -- its tri-state resolution, dotenv substitution with fuel, and the configuration requirement
 -- row (`docs/research/2026-09-04-production-standards-spike.md` §4).
 import Effect4.Program.Config
+-- The configuration values as an exact image of the shared carrier with their six-frame
+-- admission (U0; U1c makes them the carrier plus the admission).
+import Effect4.Program.ConfigValue
 -- The observability surface at the pin: the OTLP resource, span, log and metric records as
 -- first-order carriers, the four exporters' `OTEL_*` reads as one `ConfigTerm` whose residual
 -- is the operator contract, and W3C/b3 trace-context propagation as a codec with a round trip.

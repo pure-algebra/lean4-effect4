@@ -3,7 +3,7 @@ import Effect4.Program.Intro
 /-!
 # The concrete hook agreements (P3, step 3)
 
-Packet: `test/contracts/program-runtime-r.contract.md` (the P3 relation). The shared loop
+Packet: `Test/contracts/program-runtime-r.contract.md` (the P3 relation). The shared loop
 reads code only through the interpreter's code-valued hooks and the fiber core. This module
 relates, hook by hook, what `interpOf`/`interpAt` (the frame instance) and `interpR`/
 `interpRAt` (the term instance) answer, at the relation of `Means.lean`: completions and

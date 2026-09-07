@@ -70,9 +70,27 @@ describe("rows: the shape the grammar could not decide", () => {
     )
   })
   test("an async row reads back as callback", () => {
-    expect(json("Effect.flatMap(Deferred.make(), (a0) => Deferred.await(a0))")).toBe(
+    expect(json("Effect.flatMap(Deferred.make<number, number>(), (a0) => Deferred.await(a0))")).toBe(
       '["bind",["perform",["deferredMake"],["lit",["unit"]]],["callback",["deferredAwait"],["var",0]]]',
     )
+  })
+  // E4-CHECK-CE-013: a row that declares type arguments is read at exactly that spelling
+  // (`Deferred.make<number, number>()`); a bare call, the wrong arguments, a row that declares
+  // none, and a reserved head carrying any are refused, as the Lean reader refuses them.
+  test("Deferred.make<number, number>() is the row with its declared type arguments", () => {
+    expect(json("Deferred.make<number, number>()")).toBe('["perform",["deferredMake"],["lit",["unit"]]]')
+  })
+  test("Deferred.make() without its type arguments is refused", () => {
+    expect(refusal("Deferred.make()")).toEqual({ _tag: "arity", head: "Deferred.make" })
+  })
+  test("Deferred.make<string, number>() with the wrong type arguments is refused", () => {
+    expect(refusal("Deferred.make<string, number>()")).toEqual({ _tag: "arity", head: "Deferred.make" })
+  })
+  test("Ref.make<number>(0) carries type arguments its row does not declare", () => {
+    expect(refusal("Ref.make<number>(0)")).toEqual({ _tag: "arity", head: "Ref.make" })
+  })
+  test("a reserved head with type arguments is not a row call", () => {
+    expect(refusal("Effect.succeed<number>(1)")).toEqual({ _tag: "unknownHead", name: "Effect.succeed" })
   })
   test("an unknown call whose arguments are all terms is an atom application, yielded", () => {
     expect(json("add(1, 2)")).toBe('["yieldError",["app","add",["cons",["lit",["nat",1]],["cons",["lit",["nat",2]],["nil"]]]]]')

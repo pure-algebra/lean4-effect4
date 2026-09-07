@@ -286,7 +286,8 @@ def rowO (r : Row) : String :=
     , ofield "row" "answer" ++ " = " ++ tyO r.answer
     , ofield "row" "error" ++ " = " ++ tyO r.error
     , ofield "row" "requires" ++ " = " ++ listO (r.requires.map keyO)
-    , ofield "row" "cite" ++ " = " ++ ostr r.cite ] ++ " }"
+    , ofield "row" "cite" ++ " = " ++ ostr r.cite
+    , ofield "row" "typeArgs" ++ " = " ++ listO (r.typeArgs.map ostr) ] ++ " }"
 
 def fnO : FnName → String
   | .incr => octor "fn_name" "incr"

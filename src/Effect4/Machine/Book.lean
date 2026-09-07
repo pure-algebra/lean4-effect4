@@ -3,7 +3,7 @@ import Effect4.Machine.Behaviour
 /-!
 # The book: two instances of the shared loop, related field by field (P3, step 1)
 
-Packet: `test/contracts/program-runtime-r.contract.md` (the P3 relation). Scouted as
+Packet: `Test/contracts/program-runtime-r.contract.md` (the P3 relation). Scouted as
 `docs/research/probes/wave2-book/p01_bookmeans.lean` and `p03_two_instance.lean` at
 `a1fb467` (`docs/research/2026-09-06-wave2-book.md`); ported here against the current
 command alphabet (D6a's `enrollRace`/`registrationDone`, D6b's ordered interruption and

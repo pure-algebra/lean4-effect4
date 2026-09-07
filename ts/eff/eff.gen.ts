@@ -31,7 +31,7 @@
 //   ServiceName (Effect4.ServiceName, struct): mk(value: number)
 //   ServiceTypeCode (Effect4.ServiceTypeCode, struct): mk(value: number)
 //   ServiceKey (Effect4.ServiceKey, struct): mk(name: ServiceName, service: ServiceTypeCode)
-//   Row (Effect4.Program.Row, struct): mk(name: string, spelling: string, shape: RowShape, trailing: ReadonlyArray<string>, kind: RowKind, request: Ty, answer: Ty, error: Ty, requires: ReadonlyArray<ServiceKey>, cite: string)
+//   Row (Effect4.Program.Row, struct): mk(name: string, spelling: string, shape: RowShape, trailing: ReadonlyArray<string>, kind: RowKind, request: Ty, answer: Ty, error: Ty, requires: ReadonlyArray<ServiceKey>, cite: string, typeArgs: ReadonlyArray<string>)
 //   EffTy (Effect4.Program.EffTy, struct): mk(answer: Ty, error: Ty, requires: ReadonlyArray<ServiceKey>)
 
 import { Schema } from "effect"
@@ -318,6 +318,7 @@ export const Row = Schema.Struct({
   error: Schema.suspend((): Schema.Codec<Ty> => Ty),
   requires: Schema.Array(ServiceKey),
   cite: Schema.String,
+  typeArgs: Schema.Array(Schema.String),
 })
 export type Row = typeof Row.Type
 

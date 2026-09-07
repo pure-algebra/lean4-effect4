@@ -5,7 +5,7 @@ import Effect4.Api
 /-!
 # The frame/term relation (P3, step 2): code, saved slots, fibers
 
-Packet: `test/contracts/program-runtime-r.contract.md` (the P3 relation). The frame
+Packet: `Test/contracts/program-runtime-r.contract.md` (the P3 relation). The frame
 machine runs compiled `Prim` code over a stack of primitives; the term machine runs
 `RProgram`s over a stack of `ScopeFrame` slots. This module says when the two carry the
 same work:

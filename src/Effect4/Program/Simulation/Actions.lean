@@ -3,7 +3,7 @@ import Effect4.Program.Simulation.Deliver
 /-!
 # The shared fiber actions (P3, step 4d)
 
-Packet: `test/contracts/program-runtime-r.contract.md` (the P3 relation). The frame's
+Packet: `Test/contracts/program-runtime-r.contract.md` (the P3 relation). The frame's
 `withFiber` arms and the two parks the alphabet spells are the shared `FiberAction` helpers
 under the frame's own answer (`Test/Program/RuntimeRContract.lean` states the identities by
 `rfl`); the term evaluator calls the same helpers with its continuation as the answer. This

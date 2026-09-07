@@ -979,7 +979,7 @@ let rec decode_service_key (s : string) (pos : int) (limit : int) : (service_key
 let decode_service_key_exact (s : string) : service_key option = Eff_frame.exact decode_service_key s
 
 let rec emit_row (b : Buffer.t) (r : row) : unit =
-  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b r.row_name; Eff_frame.emit_string b r.row_spelling; emit_row_shape b r.row_shape; Eff_frame.emit_list b (fun b y -> Eff_frame.emit_string b y) r.row_trailing; emit_row_kind b r.row_kind; emit_ty b r.row_request; emit_ty b r.row_answer; emit_ty b r.row_error; Eff_frame.emit_list b (fun b y -> emit_service_key b y) r.row_requires; Eff_frame.emit_string b r.row_cite)
+  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b r.row_name; Eff_frame.emit_string b r.row_spelling; emit_row_shape b r.row_shape; Eff_frame.emit_list b (fun b y -> Eff_frame.emit_string b y) r.row_trailing; emit_row_kind b r.row_kind; emit_ty b r.row_request; emit_ty b r.row_answer; emit_ty b r.row_error; Eff_frame.emit_list b (fun b y -> emit_service_key b y) r.row_requires; Eff_frame.emit_string b r.row_cite; Eff_frame.emit_list b (fun b y -> Eff_frame.emit_string b y) r.row_typeArgs)
 
 let encode_row (v : row) : string = Eff_frame.to_string emit_row v
 
@@ -1019,7 +1019,10 @@ let rec decode_row (s : string) (pos : int) (limit : int) : (row * int) option =
                         (match Eff_frame.decode_string s p e with
                          | None -> None
                          | Some (a9, p) ->
-                          if p = e then Some ({ row_name = a0; row_spelling = a1; row_shape = a2; row_trailing = a3; row_kind = a4; row_request = a5; row_answer = a6; row_error = a7; row_requires = a8; row_cite = a9 }, next) else None))))))))))
+                          (match (Eff_frame.decode_list Eff_frame.decode_string) s p e with
+                           | None -> None
+                           | Some (a10, p) ->
+                            if p = e then Some ({ row_name = a0; row_spelling = a1; row_shape = a2; row_trailing = a3; row_kind = a4; row_request = a5; row_answer = a6; row_error = a7; row_requires = a8; row_cite = a9; row_typeArgs = a10 }, next) else None)))))))))))
     | _ -> None)
 
 let decode_row_exact (s : string) : row option = Eff_frame.exact decode_row s

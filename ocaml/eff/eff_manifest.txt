@@ -19,5 +19,5 @@ Effect4.Program.RowShape (row_shape) inductive: call value tupleCall
 Effect4.ServiceName (service_name) structure: value:int
 Effect4.ServiceTypeCode (service_type_code) structure: value:int
 Effect4.ServiceKey (service_key) structure: name:service_name service:service_type_code
-Effect4.Program.Row (row) structure: name:string spelling:string shape:row_shape trailing:string list kind:row_kind request:ty answer:ty error:ty requires:service_key list cite:string
+Effect4.Program.Row (row) structure: name:string spelling:string shape:row_shape trailing:string list kind:row_kind request:ty answer:ty error:ty requires:service_key list cite:string typeArgs:string list
 Effect4.Program.EffTy (eff_ty) structure: answer:ty error:ty requires:service_key list

@@ -2,4 +2,4 @@
 // Regenerate: harness/truth/check-truth.ps1
 import { Cause, Deferred, Effect, Exit, Fiber, Option, Ref, Scope } from "effect"
 import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, incr, double, takeAndBump, zeroWhenPositive, noChange } from "../prelude.ts"
-export const main: Effect.Effect<number, number> = Effect.flatMap(Deferred.make(), (a0) => Deferred.await(a0))
+export const main: Effect.Effect<number, number> = Effect.flatMap(Deferred.make<number, number>(), (a0) => Deferred.await(a0))

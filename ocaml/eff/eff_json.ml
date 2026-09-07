@@ -215,7 +215,7 @@ let rec json_service_key (r : service_key) : Eff_json_text.t =
 let print_service_key (v : service_key) : string = Eff_json_text.render (json_service_key v)
 
 let rec json_row (r : row) : Eff_json_text.t =
-  Eff_json_text.Object [("name", Eff_json_text.String r.row_name); ("spelling", Eff_json_text.String r.row_spelling); ("shape", json_row_shape r.row_shape); ("trailing", Eff_json_text.Array (List.map (fun y -> Eff_json_text.String y) r.row_trailing)); ("kind", json_row_kind r.row_kind); ("request", json_ty r.row_request); ("answer", json_ty r.row_answer); ("error", json_ty r.row_error); ("requires", Eff_json_text.Array (List.map (fun y -> json_service_key y) r.row_requires)); ("cite", Eff_json_text.String r.row_cite)]
+  Eff_json_text.Object [("name", Eff_json_text.String r.row_name); ("spelling", Eff_json_text.String r.row_spelling); ("shape", json_row_shape r.row_shape); ("trailing", Eff_json_text.Array (List.map (fun y -> Eff_json_text.String y) r.row_trailing)); ("kind", json_row_kind r.row_kind); ("request", json_ty r.row_request); ("answer", json_ty r.row_answer); ("error", json_ty r.row_error); ("requires", Eff_json_text.Array (List.map (fun y -> json_service_key y) r.row_requires)); ("cite", Eff_json_text.String r.row_cite); ("typeArgs", Eff_json_text.Array (List.map (fun y -> Eff_json_text.String y) r.row_typeArgs))]
 
 let print_row (v : row) : string = Eff_json_text.render (json_row v)
 

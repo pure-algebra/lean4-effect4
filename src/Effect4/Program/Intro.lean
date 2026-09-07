@@ -3,7 +3,7 @@ import Effect4.Program.Means
 /-!
 # Source-address introduction (P3, step 3)
 
-Packet: `test/contracts/program-runtime-r.contract.md` (the P3 relation). The relation of
+Packet: `Test/contracts/program-runtime-r.contract.md` (the P3 relation). The relation of
 `Means.lean` is inhabited at every source address: the frame's compile and the term's
 denotation of one node at one point are related (`code_intro`), and so are the programs the
 names and thunks of `interpOf` build from addresses (`resolve_intro`). The descent is on

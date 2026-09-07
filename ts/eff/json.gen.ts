@@ -198,6 +198,7 @@ export const rowJson = (v: Row): Json => ({
   error: tyJson(v.error),
   requires: v.requires.map((y) => serviceKeyJson(y)),
   cite: v.cite,
+  typeArgs: v.typeArgs.map((y) => y),
 })
 
 export const effTyJson = (v: EffTy): Json => ({

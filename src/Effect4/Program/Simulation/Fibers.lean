@@ -3,7 +3,7 @@ import Effect4.Program.Simulation.Walk
 /-!
 # The book at the native alphabets (P3, step 4b)
 
-Packet: `test/contracts/program-runtime-r.contract.md` (the P3 relation). The generic book
+Packet: `Test/contracts/program-runtime-r.contract.md` (the P3 relation). The generic book
 of `Machine/Book.lean`, instantiated to the frame instance (`interpOf`, `Prim` code, the
 five-field frame) and the term instance (`interpR`, `RProgram`, the `ScopeFrame` slots) with
 the code relation `CodeMeans root` and the saved-state relation `Means root`. The lemmas

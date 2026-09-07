@@ -517,12 +517,13 @@ type row = {
   row_error : ty;
   row_requires : service_key list;
   row_cite : string;
+  row_typeArgs : string list;
 }
 
 let ctor_index_row (_ : row) : int = 0
 let ctor_name_row (_ : row) : string = "mk"
 let ctor_names_row : string list = ["mk"]
-let field_names_row : string list = ["name"; "spelling"; "shape"; "trailing"; "kind"; "request"; "answer"; "error"; "requires"; "cite"]
+let field_names_row : string list = ["name"; "spelling"; "shape"; "trailing"; "kind"; "request"; "answer"; "error"; "requires"; "cite"; "typeArgs"]
 
 
 type eff_ty = {

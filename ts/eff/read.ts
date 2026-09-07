@@ -110,6 +110,9 @@ type Expr =
   | { readonly _tag: "int"; readonly value: number }
   | { readonly _tag: "bool"; readonly value: boolean }
   | { readonly _tag: "call"; readonly fn: Expr; readonly args: ReadonlyArray<Expr> }
+  /** `head<T1, …>` as the callee of a call: lean4-typescript's `Expr.generic`, the type
+   * arguments as the spellings the printer writes (`E4-CHECK-CE-013`). */
+  | { readonly _tag: "generic"; readonly fn: Expr; readonly typeArgs: ReadonlyArray<string> }
   | { readonly _tag: "method"; readonly base: Expr; readonly name: string; readonly args: ReadonlyArray<Expr> }
   | { readonly _tag: "object"; readonly fields: ReadonlyArray<readonly [string, Expr]> }
   | { readonly _tag: "arr"; readonly items: ReadonlyArray<Expr> }
@@ -159,6 +162,26 @@ const listAt = (n: Node, key: string): ReadonlyArray<unknown> | undefined => {
 }
 
 const unsupported = (n: Node, where: string) => refuse({ _tag: "node", type: n.type, where })
+
+/** A type argument's spelling: the keywords and bare type names the printer writes
+ * (`Expr.generic` in `src/Effect4/Codegen/Print.lean`, `Deferred.make<number, number>()`);
+ * anything else is outside the printer's image. */
+const typeName = (t: Node): string | undefined => {
+  switch (t.type) {
+    case "TSNumberKeyword": return "number"
+    case "TSStringKeyword": return "string"
+    case "TSBooleanKeyword": return "boolean"
+    case "TSUnknownKeyword": return "unknown"
+    case "TSNeverKeyword": return "never"
+    case "TSVoidKeyword": return "void"
+    case "TSTypeReference": {
+      const ref = nodeAt(t, "typeName")
+      if (!ref || ref.type !== "Identifier" || typeof ref.name !== "string") return undefined
+      return nodeAt(t, "typeArguments") ? undefined : ref.name
+    }
+    default: return undefined
+  }
+}
 
 const unwrap = (n: Node): Node => {
   if (n.type === "ParenthesizedExpression") {
@@ -217,14 +240,23 @@ const exprOf = (raw: Node): Read<Expr> => {
       return unsupported(n, "literal")
     }
     case "CallExpression": {
-      if (n.optional === true || n.typeArguments) return unsupported(n, "call")
+      if (n.optional === true) return unsupported(n, "call")
       const callee = nodeAt(n, "callee")
       if (!callee) return unsupported(n, "callee")
       const fn = exprOf(callee)
       if (failed(fn)) return again(fn)
       const args = exprsOf(listAt(n, "arguments") ?? [], "argument")
       if (failed(args)) return again(args)
-      return ok({ _tag: "call", fn: fn.success, args: args.success })
+      // `head<T1, …>(args)`: the type arguments become the callee's `generic` spellings.
+      const targs = nodeAt(n, "typeArguments")
+      if (!targs) return ok({ _tag: "call", fn: fn.success, args: args.success })
+      const names: string[] = []
+      for (const p of listAt(targs, "params") ?? []) {
+        const name = isNode(p) ? typeName(p) : undefined
+        if (name === undefined) return unsupported(n, "typeArgument")
+        names.push(name)
+      }
+      return ok({ _tag: "call", fn: { _tag: "generic", fn: fn.success, typeArgs: names }, args: args.success })
     }
     case "ArrowFunctionExpression": {
       if (n.async === true || n.typeParameters || n.returnType) return unsupported(n, "arrow")
@@ -498,7 +530,10 @@ const readCause = (n: number, x: Expr): Read<CauseTerm> => {
 /**
  * `{ startImmediately: b, uninterruptible: true | false | "inherit" }` back into fork
  * options. The object carries no `daemon` field: `Effect.forkChild` against
- * `Effect.forkDetach` decides it for a plain fork, and the scoped forks read it as `false`.
+ * `Effect.forkDetach` decides it for a plain fork, and the scoped forks (`Effect.forkIn`,
+ * `Effect.forkScoped`) are daemon forks in rc.112 (`internal/effect.ts:5366` passes `true`
+ * to `forkUnsafe`; `:5406` routes `forkScoped` through `forkIn`), as the Lean reader reads
+ * them (`src/Effect4/Codegen/Read.lean`, `E4-CHECK-CE-015`).
  */
 const readForkOptions = (daemon: boolean, x: Expr): Read<ForkOptions> => {
   const shape = refuse({ _tag: "shape", what: "forkOptions" })
@@ -573,16 +608,21 @@ const readTupleArgs = (n: number, x: Expr, y: Expr): Read<Term> => {
  * names. The three readings are tried in that order, and the table lets at most one succeed
  * (Lean `readRowCall`).
  */
-const readRowCall = (n: number, s: string, args: ReadonlyArray<Expr>): Read<Eff> | undefined => {
+const readRowCall = (n: number, s: string, typeArgs: ReadonlyArray<string>, args: ReadonlyArray<Expr>): Read<Eff> | undefined => {
+  // The call's type arguments must be exactly the ones the row declares: a row that needs
+  // them refuses a bare call, and a row that declares none refuses a call that carries any
+  // (`E4-CHECK-CE-013`).
+  const typed = (e: Entry): boolean =>
+    e.row.typeArgs.length === typeArgs.length && e.row.typeArgs.every((a, i) => a === typeArgs[i])
   const all = namesOf(args)
   const asTrailing = all ? spell(s, all) : undefined
-  if (asTrailing) return asTrailing.row.shape === "call" && unitRequest(asTrailing) ? ok(rowAnswer(asTrailing, unit)) : refuse({ _tag: "arity", head: s })
+  if (asTrailing) return asTrailing.row.shape === "call" && unitRequest(asTrailing) && typed(asTrailing) ? ok(rowAnswer(asTrailing, unit)) : refuse({ _tag: "arity", head: s })
   const [request, ...rest] = args
   if (request === undefined) return undefined
   const restNames = namesOf(rest)
   const withRequest = restNames ? spell(s, restNames) : undefined
   if (withRequest) {
-    return withRequest.row.shape === "call" && !unitRequest(withRequest)
+    return withRequest.row.shape === "call" && !unitRequest(withRequest) && typed(withRequest)
       ? Result.map(readTerm(n, request), (t) => rowAnswer(withRequest, t))
       : refuse({ _tag: "arity", head: s })
   }
@@ -591,7 +631,7 @@ const readRowCall = (n: number, s: string, args: ReadonlyArray<Expr>): Read<Eff>
   const tupleNames = namesOf(names)
   const asTuple = tupleNames ? spell(s, tupleNames) : undefined
   if (!asTuple) return undefined
-  return asTuple.row.shape === "tupleCall"
+  return asTuple.row.shape === "tupleCall" && typed(asTuple)
     ? Result.map(readTupleArgs(n, request, second), (t) => rowAnswer(asTuple, t))
     : refuse({ _tag: "arity", head: s })
 }
@@ -616,11 +656,20 @@ const readEff = (n: number, x: Expr): Read<Eff> => {
     case "str":
       return ok({ _tag: "yieldError", error: { _tag: "lit", value: { _tag: "str", value: x.value } } })
     case "call": {
+      // A call carrying explicit type arguments is a row call and nothing else: no reserved
+      // head and no atom application is printed with them, and an empty list is not a
+      // spelling the printer emits (Lean `readEff`, `E4-CHECK-CE-013`).
+      if (x.fn._tag === "generic") {
+        if (x.fn.fn._tag !== "ident" || x.fn.typeArgs.length === 0) return refuse({ _tag: "shape", what: "expression" })
+        const s = x.fn.fn.name
+        const asRow = readRowCall(n, s, x.fn.typeArgs, x.args)
+        return asRow !== undefined ? asRow : refuse({ _tag: "unknownHead", name: s })
+      }
       if (x.fn._tag !== "ident") return refuse({ _tag: "shape", what: "expression" })
       const s = x.fn.name
       const head = headOf(s)
       if (head !== undefined) return headReaders[head](n, x.args)
-      const asRow = readRowCall(n, s, x.args)
+      const asRow = readRowCall(n, s, [], x.args)
       if (asRow !== undefined) return asRow
       return Result.map(readTerms(n, x.args), (args): Eff => ({ _tag: "yieldError", error: { _tag: "app", atom: s, args } }))
     }
@@ -784,11 +833,11 @@ const readForkIn: HeadReader = (n, args) => {
   if (failed(p)) return again(p)
   const s = readTerm(n, args[1]!)
   if (failed(s)) return again(s)
-  const o = readForkOptions(false, args[2]!)
+  const o = readForkOptions(true, args[2]!)
   if (failed(o)) return again(o)
   return ok(withFiber({ _tag: "forkIn", program: p.success, options: o.success, scope: s.success }))
 }
-const readForkScoped: HeadReader = fork("Effect.forkScoped", false, (program, options) => ({ _tag: "forkScoped", program, options }))
+const readForkScoped: HeadReader = fork("Effect.forkScoped", true, (program, options) => ({ _tag: "forkScoped", program, options }))
 /** The callback binds nothing and contains exactly one synchronous link, then Effect.void. */
 const readRunIn: HeadReader = (n, args) => {
   const shape = refuse({ _tag: "shape", what: "runIn" })

@@ -3,7 +3,7 @@ import Effect4.Program.Simulation.Actions
 /-!
 # The concrete evaluator agreement (P3, step 4e)
 
-Packet: `test/contracts/program-runtime-r.contract.md` (the P3 relation). One evaluation of
+Packet: `Test/contracts/program-runtime-r.contract.md` (the P3 relation). One evaluation of
 a fiber whose current code is related: the frame's `evaluateNative` and the term's
 `evaluateR` leave related machines, related fibers, the same latch, the same outcome and
 related nested commands. The proof is by the clause of `CodeMeans` that relates the two

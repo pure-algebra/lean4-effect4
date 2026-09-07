@@ -139,23 +139,31 @@ witness	w1_deferred_join_parent	Witnesses.lean:290	rows
   sweep	20 step clauses over every event	all hold
 witness	w1_deferred_join_child	Witnesses.lean:294	rows	fork.child
   statement	HOLDS
+  clause	Effect4.Machine.cleared_fields	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_exitDone	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.drive_finish	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.drive_observe	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.exitFiber_eq	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.exitFiber_no_middleware	HOLDS (pure, evaluated once above)
-  clause	Effect4.Machine.exitStore_fields	HOLDS on this run
-  clause	Effect4.Machine.exitStore_fires	HOLDS on this run
+  clause	Effect4.Machine.exitStore_no_observers	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.exitStore_observers	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.fireObserver_resumeAwait	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.publish_fields	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.stepDecision_installMiddleware	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.withFiber_fork	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
 witness	w1_deferred_start_is_a_task	Witnesses.lean:300	rows	fork.child
   statement	HOLDS
+  clause	Effect4.Machine.cleared_fields	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_exitDone	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.drive_finish	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.drive_observe	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.exitFiber_eq	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.exitFiber_no_middleware	HOLDS (pure, evaluated once above)
-  clause	Effect4.Machine.exitStore_fields	HOLDS on this run
-  clause	Effect4.Machine.exitStore_fires	HOLDS on this run
+  clause	Effect4.Machine.exitStore_no_observers	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.exitStore_observers	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.fireObserver_resumeAwait	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.publish_fields	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.stepDecision_installMiddleware	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.withFiber_fork	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
@@ -170,17 +178,25 @@ witness	w1_join_is_an_effect	Witnesses.lean:322	rows
   sweep	20 step clauses over every event	all hold
 witness	w2_delivered_at_unmask	Witnesses.lean:348	rows	fork.interrupt
   statement	HOLDS
-  clause	Effect4.Machine.interruptThenJoin_eq	HOLDS (pure, evaluated once above)
-  clause	Effect4.Machine.interruptThenJoin_unknown	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.asVoidCode_eq	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.awaitCode_join_exited	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.awaitCode_join_live	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_afterInterrupt	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.withFiber_interrupt	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.withFiber_interruptAs	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.withFiber_interruptAs_unknown	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.withFiber_interruptScoped_other	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.withFiber_interruptScoped_self	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
 witness	w2_recorded_once	Witnesses.lean:352	rows	fork.interrupt
   statement	HOLDS
-  clause	Effect4.Machine.interruptThenJoin_eq	HOLDS (pure, evaluated once above)
-  clause	Effect4.Machine.interruptThenJoin_unknown	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.asVoidCode_eq	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.awaitCode_join_exited	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.awaitCode_join_live	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_afterInterrupt	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.withFiber_interrupt	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.withFiber_interruptAs	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.withFiber_interruptAs_unknown	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.withFiber_interruptScoped_other	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.withFiber_interruptScoped_self	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
@@ -189,17 +205,29 @@ witness	w2_finalizer_runs_once	Witnesses.lean:355	rows
   sweep	20 step clauses over every event	all hold
 witness	w2_masked_interrupt_does_not_apply	Witnesses.lean:359	rows	fork.interrupt
   statement	HOLDS
-  clause	Effect4.Machine.interruptThenJoin_eq	HOLDS (pure, evaluated once above)
-  clause	Effect4.Machine.interruptThenJoin_unknown	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.asVoidCode_eq	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.awaitCode_join_exited	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.awaitCode_join_live	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_afterInterrupt	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.withFiber_interrupt	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.withFiber_interruptAs	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.withFiber_interruptAs_unknown	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.withFiber_interruptScoped_other	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.withFiber_interruptScoped_self	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
 witness	w3_empty_is_a_frontier	Witnesses.lean:386	rows	fork.race-all
   statement	HOLDS
+  clause	Effect4.Machine.drive_enrollRace_exited	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_enrollRace_live	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.drive_launch_done	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.drive_launch_exhausted	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.drive_launch_runs	HOLDS on this run
+  clause	Effect4.Machine.drive_raceCancel_gone	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_raceCancel_live	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_raceCancel_nil	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_registrationDone_answered	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_registrationDone_parks	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.evaluatePrim_raceRegister	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.fireObserver_raceCallback_late	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.fireObserver_raceCallback_pending	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.fireObserver_raceCallback_settles	HOLDS on this run
@@ -212,9 +240,17 @@ witness	w3_empty_is_a_frontier	Witnesses.lean:386	rows	fork.race-all
   sweep	20 step clauses over every event	all hold
 witness	w3_empty_until_interrupted	Witnesses.lean:392	rows	fork.race-all
   statement	HOLDS
+  clause	Effect4.Machine.drive_enrollRace_exited	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_enrollRace_live	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.drive_launch_done	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.drive_launch_exhausted	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.drive_launch_runs	HOLDS on this run
+  clause	Effect4.Machine.drive_raceCancel_gone	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_raceCancel_live	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_raceCancel_nil	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_registrationDone_answered	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_registrationDone_parks	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.evaluatePrim_raceRegister	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.fireObserver_raceCallback_late	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.fireObserver_raceCallback_pending	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.fireObserver_raceCallback_settles	HOLDS on this run
@@ -227,9 +263,17 @@ witness	w3_empty_until_interrupted	Witnesses.lean:392	rows	fork.race-all
   sweep	20 step clauses over every event	all hold
 witness	w3_immediate_success_stops_launch	Witnesses.lean:400	rows	fork.race-all
   statement	HOLDS
+  clause	Effect4.Machine.drive_enrollRace_exited	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_enrollRace_live	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.drive_launch_done	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.drive_launch_exhausted	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.drive_launch_runs	HOLDS on this run
+  clause	Effect4.Machine.drive_raceCancel_gone	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_raceCancel_live	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_raceCancel_nil	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_registrationDone_answered	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_registrationDone_parks	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.evaluatePrim_raceRegister	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.fireObserver_raceCallback_late	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.fireObserver_raceCallback_pending	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.fireObserver_raceCallback_settles	HOLDS on this run
@@ -242,9 +286,17 @@ witness	w3_immediate_success_stops_launch	Witnesses.lean:400	rows	fork.race-all
   sweep	20 step clauses over every event	all hold
 witness	w3_failure_allows_next_launch	Witnesses.lean:411	rows	fork.race-all
   statement	HOLDS
+  clause	Effect4.Machine.drive_enrollRace_exited	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_enrollRace_live	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.drive_launch_done	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.drive_launch_exhausted	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.drive_launch_runs	HOLDS on this run
+  clause	Effect4.Machine.drive_raceCancel_gone	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_raceCancel_live	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_raceCancel_nil	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_registrationDone_answered	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_registrationDone_parks	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.evaluatePrim_raceRegister	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.fireObserver_raceCallback_late	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.fireObserver_raceCallback_pending	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.fireObserver_raceCallback_settles	HOLDS on this run
@@ -257,9 +309,17 @@ witness	w3_failure_allows_next_launch	Witnesses.lean:411	rows	fork.race-all
   sweep	20 step clauses over every event	all hold
 witness	w3_all_failures_retain_order	Witnesses.lean:418	rows	fork.race-all
   statement	HOLDS
+  clause	Effect4.Machine.drive_enrollRace_exited	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_enrollRace_live	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.drive_launch_done	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.drive_launch_exhausted	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.drive_launch_runs	HOLDS on this run
+  clause	Effect4.Machine.drive_raceCancel_gone	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_raceCancel_live	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_raceCancel_nil	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_registrationDone_answered	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_registrationDone_parks	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.evaluatePrim_raceRegister	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.fireObserver_raceCallback_late	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.fireObserver_raceCallback_pending	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.fireObserver_raceCallback_settles	HOLDS on this run
@@ -284,17 +344,20 @@ witness	w4_interrupt_reaches_the_waiter	Witnesses.lean:497	rows
   sweep	20 step clauses over every event	all hold
 witness	w5_middleware_interrupts_children	Witnesses.lean:537	rows	fork.child,rule.children-interrupted-after-exit
   statement	HOLDS
+  clause	Effect4.Machine.cleared_fields	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_exitDone	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.drive_finish	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.drive_observe	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.exitFiber_children	HOLDS on this run
   clause	Effect4.Machine.exitFiber_eq	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.exitFiber_finalizing	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.exitFiber_no_middleware	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.exitInterruptChildren_eq	HOLDS (pure, evaluated once above)
-  clause	Effect4.Machine.exitInterruptChildren_finalizing	HOLDS on this run
-  clause	Effect4.Machine.exitInterruptChildren_interrupts	HOLDS (pure, evaluated once above)
-  clause	Effect4.Machine.exitStore_fields	HOLDS on this run
-  clause	Effect4.Machine.exitStore_fires	HOLDS on this run
+  clause	Effect4.Machine.exitInterruptChildren_reenters	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.exitStore_no_observers	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.exitStore_observers	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.fireObserver_resumeAwait	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.publish_fields	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.resumePrim_continueWith	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.settle_finished	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.stepDecision_installMiddleware	HOLDS (pure, evaluated once above)
@@ -304,18 +367,18 @@ witness	w5_fork_latches_the_middleware	Witnesses.lean:547	rows	fork.detach
   statement	HOLDS
   clause	Effect4.Machine.exitFiber_no_children	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.exitInterruptChildren_eq	HOLDS (pure, evaluated once above)
-  clause	Effect4.Machine.exitInterruptChildren_interrupts	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.exitInterruptChildren_reenters	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.spawnChild_fields	HOLDS (pure, evaluated once above)
-  clause	Effect4.Machine.spawn_daemon_untracked	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.spawn_untracked	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.start_eq	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
 witness	w5_daemon_child_survives_parent_exit	Witnesses.lean:557	rows	fork.detach
   statement	HOLDS
   clause	Effect4.Machine.exitFiber_no_children	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.exitInterruptChildren_eq	HOLDS (pure, evaluated once above)
-  clause	Effect4.Machine.exitInterruptChildren_interrupts	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.exitInterruptChildren_reenters	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.spawnChild_fields	HOLDS (pure, evaluated once above)
-  clause	Effect4.Machine.spawn_daemon_untracked	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.spawn_untracked	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.start_eq	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
 witness	w5_await_all_children_on_failure	Witnesses.lean:583	rows	fork.await-all-children
@@ -391,27 +454,36 @@ witness	w6_deferred_child_is_linked	Witnesses.lean:718	rows	fork.in
   sweep	20 step clauses over every event	all hold
 witness	w6_self_interruptor_skipped	Witnesses.lean:727	rows	fork.interrupt
   statement	HOLDS
-  clause	Effect4.Machine.interruptThenJoin_eq	HOLDS (pure, evaluated once above)
-  clause	Effect4.Machine.interruptThenJoin_unknown	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.asVoidCode_eq	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.awaitCode_join_exited	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.awaitCode_join_live	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_afterInterrupt	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.withFiber_interrupt	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.withFiber_interruptAs	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.withFiber_interruptAs_unknown	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.withFiber_interruptScoped_other	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.withFiber_interruptScoped_self	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
 witness	w6_sequential_captures_and_merges	Witnesses.lean:758	rows	scope.close-sequential
   statement	HOLDS
-  clause	Effect4.Machine.closeSeqChain_captures	not transferred (not a `Clauses.lean` theorem)
-  clause	Effect4.Machine.closeSeqChain_order	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.closeSeq_captures	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.closeSeq_step	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.closeWalk_sequential	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.withFiber_closeScope	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.withFiber_closeScope_unknown	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
 witness	w6_parallel_forks_and_merges	Witnesses.lean:766	rows	scope.close-parallel,scope.close-merge
   statement	HOLDS
-  clause	Effect4.Machine.closeParChain_awaits_all	not transferred (not a `Clauses.lean` theorem)
-  clause	Effect4.Machine.closeParChain_forks_immediate_daemon	not transferred (not a `Clauses.lean` theorem)
-  clause	Effect4.Machine.closeSeqChain_merges	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.actionOf_closePar	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.closeParDone_is_asVoidAll	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.closeSeq_merges	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.closeWalk_parallel	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_closeParAwait	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.fireObserver_countdown_done	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.fireObserver_countdown_next	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.forkFinalizers_cons	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.spawnChild_fields	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.withFiber_closePar	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.withFiber_fork	HOLDS (pure, evaluated once above)
   sweep	20 step clauses over every event	all hold
 witness	w10_program_masks_its_own_fiber	Witnesses.lean:803	rows	
@@ -425,13 +497,14 @@ witness	w11_cancel_splices_the_waiter	Witnesses.lean:851	rows
   sweep	20 step clauses over every event	all hold
 witness	w12_awaitAll_answers_the_exits	Witnesses.lean:873	rows	fork.await-all-children,scope.close-merge
   statement	HOLDS
-  clause	Effect4.Machine.closeParChain_awaits_all	not transferred (not a `Clauses.lean` theorem)
-  clause	Effect4.Machine.closeSeqChain_merges	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.closeParDone_is_asVoidAll	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.closeSeq_merges	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.countdownPark_none_live	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.countdownPark_parks	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.countdownWalk_exited	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.countdownWalk_live	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.countdownWalk_nil	HOLDS (pure, evaluated once above)
+  clause	Effect4.Machine.drive_closeParAwait	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.fireObserver_countdown_done	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.fireObserver_countdown_next	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.withFiber_awaitNewChildren	HOLDS (pure, evaluated once above)
@@ -523,9 +596,17 @@ witness	w14_join_cleanup_drops_the_observer	Witnesses.lean:1190	rows	op.AsyncFin
   sweep	20 step clauses over every event	all hold
 witness	w3_host_interrupt_cancels_entrants	Witnesses.lean:1218	rows	checkpoint.post-yield-cancel,fork.race-all
   statement	HOLDS
+  clause	Effect4.Machine.drive_enrollRace_exited	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_enrollRace_live	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.drive_launch_done	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.drive_launch_exhausted	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.drive_launch_runs	HOLDS on this run
+  clause	Effect4.Machine.drive_raceCancel_gone	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_raceCancel_live	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_raceCancel_nil	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_registrationDone_answered	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_registrationDone_parks	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.evaluatePrim_raceRegister	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.fireObserver_raceCallback_late	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.fireObserver_raceCallback_pending	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.fireObserver_raceCallback_settles	HOLDS on this run
@@ -539,9 +620,17 @@ witness	w3_host_interrupt_cancels_entrants	Witnesses.lean:1218	rows	checkpoint.p
   sweep	20 step clauses over every event	all hold
 witness	w3_settle_interrupts_the_parked_loser	Witnesses.lean:1231	rows	fork.race-all
   statement	HOLDS
+  clause	Effect4.Machine.drive_enrollRace_exited	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_enrollRace_live	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.drive_launch_done	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.drive_launch_exhausted	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.drive_launch_runs	HOLDS on this run
+  clause	Effect4.Machine.drive_raceCancel_gone	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_raceCancel_live	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_raceCancel_nil	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_registrationDone_answered	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.drive_registrationDone_parks	not transferred (not a `Clauses.lean` theorem)
+  clause	Effect4.Machine.evaluatePrim_raceRegister	not transferred (not a `Clauses.lean` theorem)
   clause	Effect4.Machine.fireObserver_raceCallback_late	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.fireObserver_raceCallback_pending	HOLDS (pure, evaluated once above)
   clause	Effect4.Machine.fireObserver_raceCallback_settles	HOLDS on this run
@@ -573,5 +662,5 @@ witness	db07_store_survives_failure	Witnesses.lean:1322	rows
   statement	HOLDS
   sweep	20 step clauses over every event	all hold
 witnesses	62	holds	61	fails	0	not-portable	1
-run-clauses	holds	35	fails	0
+run-clauses	holds	28	fails	0
 park-guard	violations	0

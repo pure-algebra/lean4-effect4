@@ -162,7 +162,8 @@ let rand_row () =
     row_shape = pick [ Row_shape_call; Row_shape_value ]; row_trailing = rand_list rand_string;
     row_kind = pick [ Row_kind_sync; Row_kind_async; Row_kind_program ];
     row_request = rand_ty 2; row_answer = rand_ty 2; row_error = rand_ty 2;
-    row_requires = rand_list rand_key; row_cite = rand_string () }
+    row_requires = rand_list rand_key; row_cite = rand_string ();
+    row_typeArgs = rand_list rand_string }
 
 let rand_eff_ty () = { eff_ty_answer = rand_ty 3; eff_ty_error = rand_ty 3; eff_ty_requires = rand_list rand_key }
 

@@ -3,7 +3,7 @@ import Effect4.Program.Simulation.Hooks
 /-!
 # The pop walk (P3, step 4a)
 
-Packet: `test/contracts/program-runtime-r.contract.md` (the P3 relation). Delivering an
+Packet: `Test/contracts/program-runtime-r.contract.md` (the P3 relation). Delivering an
 exit walks the saved slots: the frame's `getCont`/`popFrom` over `Prim` frames, the term's
 `popR` over `ScopeFrame` slots. On related stacks the two walks agree slot by slot: both
 pass the same slots, both stop at the same one, and what they leave behind is related

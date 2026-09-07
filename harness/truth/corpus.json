@@ -101,9 +101,9 @@
     "events": ["started 0", "parkedOn 0 token=0"]},
    "name": "pAwait",
    "exprRefusal": null,
-   "expr": "Effect.flatMap(Deferred.make(), (a0) => Deferred.await(a0))",
+   "expr": "Effect.flatMap(Deferred.make<number, number>(), (a0) => Deferred.await(a0))",
    "decl":
-   "export const main: Effect.Effect<number, number> = Effect.flatMap(Deferred.make(), (a0) => Deferred.await(a0))\n"},
+   "export const main: Effect.Effect<number, number> = Effect.flatMap(Deferred.make<number, number>(), (a0) => Deferred.await(a0))\n"},
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "error": "never", "answer": "boolean"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": false}},

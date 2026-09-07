@@ -375,7 +375,8 @@ def rowJs (r : Effect4.Program.Row) : String :=
   obj [ ("name", lit r.name), ("spelling", lit r.spelling), ("shape", shapeJs r.shape)
       , ("trailing", arr (r.trailing.map lit)), ("kind", kindJs r.kind)
       , ("request", tyJs r.request), ("answer", tyJs r.answer), ("error", tyJs r.error)
-      , ("requires", arr (r.requires.map keyJs)), ("cite", lit r.cite) ]
+      , ("requires", arr (r.requires.map keyJs)), ("cite", lit r.cite)
+      , ("typeArgs", arr (r.typeArgs.map lit)) ]
 
 def entryJs (op : Effect4.Program.NativeOp) : String :=
   obj [("op", opJs op), ("row", rowJs (Effect4.Program.nativeSignature.rowOf op))]
