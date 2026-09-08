@@ -291,7 +291,7 @@ section Lockstep
 
 def withBudget {κ φ : Type} (fs : List (RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx κ φ))
     (b : Nat) : List (RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx κ φ) :=
-  fs.map fun f => { f with maxOpsBeforeYield := b, context := ⟨none, b, false⟩ }
+  fs.map fun f => { f with maxOpsBeforeYield := b, context := emptyCtx.provide Env.maxOpsKey (.nat b) }
 
 def frameLoad (e : NativeEff) (fuel : Nat := 40) (b : Nat := 2048) : Api.Machine :=
   { Api.load e fuel with fibers := withBudget (Api.load e fuel).fibers b }
@@ -733,7 +733,8 @@ def withBudgetProgram : NativeEff :=
     (.bind (.callback .deferredAwait (.var 0))
       (.bind (.withFiber (.setContext (.var 1))) (.sync (.lit (.nat 5)))))
 def budgetTape (n : Nat) : List Api.Decision :=
-  [Api.evaluate, .answerAsync Api.root 0 (.ofExit (.success (.context ⟨none, n, false⟩)))]
+  [Api.evaluate, .answerAsync Api.root 0
+    (.ofExit (.success (.context (emptyCtx.provide Env.maxOpsKey (.nat n)))))]
 #guard rootExit (frameRun withBudgetProgram (budgetTape 6)) = some (.success (.nat 5))
 #guard rootExit (termRun withBudgetProgram (budgetTape 6)) = some (.success (.nat 5))
 #guard termObs withBudgetProgram (budgetTape 6) = frameObs withBudgetProgram (budgetTape 6)

@@ -20,7 +20,7 @@ discipline (`Val.keys`) is the carrier's `handles` read through `Handle.ofCode`.
 | `fiber id` | `Value.fiber id.value` (`handle 1`) |
 | `fibers ids` | `Value.fiberSnapshot (list [Value.fiber …])` (`ctor 3`) |
 | `cell k`, `promise k`, `scopeHandle s` | `Value.cell`, `Value.promise`, `Value.scope` (`handle 2/3/4`) |
-| `context ctx` | `Value.fiberContext (option (Value.scope s)) (nat budget) (bool preventYield)` (`ctor 2`) |
+| `context ctx` | `Value.fiberContext (serviceContext entries) (nat budget) (bool preventYield)` (`ctor 2`) |
 | `exitOk v` | `Value.exitOk v` (`ctor 0`) |
 | `exitErr c` | `Value.exitErr (causeImage.toVal c)` (`ctor 1`) |
 | an exit list, a tuple | one `list` frame |
@@ -122,12 +122,15 @@ theorem Val.handles_eq_keys_code (v : Val) (hall : ∀ h ∈ v.handles, (Handle.
 #guard Val.snapshot? (Val.fibers [⟨1⟩, ⟨4⟩]) = some [⟨1⟩, ⟨4⟩]
 #guard Val.snapshot? (Value.fiberSnapshot (.list [Val.nat 1])) = none
 #guard Val.snapshot? (Store.Val.list [Value.fiber 1]) = none
-#guard Val.context? (Val.context ⟨some 3, 2048, false⟩) = some ⟨some 3, 2048, false⟩
+#guard Val.context? (Val.context (emptyCtx.withScope 3)) = some (emptyCtx.withScope 3)
+#guard (emptyCtx.withScope 3).ambientScope = some 3
 #guard Val.context? (Value.fiberContext (.some (.nat 2)) (.nat 0) (.bool true)) = none
 #guard Val.cause? (Val.exitErr (Cause.interrupt (some ⟨9⟩))) = some (Cause.interrupt (some ⟨9⟩))
 #guard Val.cause? (Value.exitErr (Store.Val.ctor 0 [Store.Val.list [Store.Val.ctor 7 []]])) = none
-#guard (Val.context ⟨some 3, 2048, false⟩).keys = [Handle.scope 3]
-#guard (Val.context ⟨some 3, 2048, false⟩).handles = [(4, 3)]
+#guard (Val.context (emptyCtx.withScope 3)).keys = [Handle.scope 3]
+#guard (Val.context (emptyCtx.withScope 3)).handles = [(4, 3)]
+-- the install keeps the cache law
+#guard (emptyCtx.withScope 3).CacheAgrees
 #guard (Val.exitErr (Cause.interrupt (some ⟨9⟩))).handles = []
 #guard (Val.exitErr (Cause.interrupt (some ⟨9⟩))).keys = []
 #guard Val.keys (Value.memoMap 3) = []

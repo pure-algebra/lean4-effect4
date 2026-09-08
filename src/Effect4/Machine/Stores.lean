@@ -1,6 +1,7 @@
 import Effect4.Machine.Fibers
 import Effect4.Machine.Scope
 import Effect4.Machine.Value
+import Effect4.Machine.ContextMap
 
 /-!
 # Deep spike S2: the concrete stores and the `RunInterp` over them
@@ -98,17 +99,59 @@ inductive FnName
   | takeAndBump
 deriving DecidableEq, Repr
 
-/-- The fiber `Context`, restricted to what rc.112 reads off it: the ambient `Scope` service
-(`forkScoped`, `internal/effect.ts:5400-5406`) and the two cached budget fields
-(`setContext`, `:726-727`). -/
+/-- The fiber `Context` (rc.112 `fiber.context`, `internal/effect.ts:2152`): the service map
+(`Machine/ContextMap.lean`) and the two budget fields `setContext` caches off it (`:726-727`).
+The ambient `Scope` service is read off the map (`forkScoped`, `:5400-5406`; `Ctx.ambientScope`),
+cached nowhere; the two caches are stored because rc.112 stores them, and `Ctx.withServices`,
+which recomputes them, is the one constructor the runtime calls, so the join's cache law
+(`Ctx.CacheAgrees`) holds by construction (`docs/research/2026-09-07-join-dispatch.md` §2). The
+law is not a field: a proof field would put `Env.budgetOf` inside the type and its `match` on
+the carrier (`propext`) into the receipt of every theorem naming a `Ctx`. -/
 structure Ctx where
-  /-- The ambient `Scope` service, as a `ScopeStore` key. -/
-  ambientScope : Option Nat
-  /-- `MaxOpsBeforeYield`. -/
+  /-- The service map. -/
+  services : Env.Ctx
+  /-- `MaxOpsBeforeYield`, as `setContext` caches it. -/
   maxOpsBeforeYield : Nat
-  /-- `PreventSchedulerYield`. -/
+  /-- `PreventSchedulerYield`, as `setContext` caches it. -/
   preventYield : Bool
 deriving DecidableEq, Repr, Inhabited
+
+namespace Ctx
+
+/-- The one constructor: the caches recomputed off the map (`setContext`, `:726-727`). -/
+def withServices (services : Env.Ctx) : Ctx :=
+  ⟨services, (Env.budgetOf services).1, (Env.budgetOf services).2⟩
+
+/-- `forkScoped`'s read of the `Scope` service (`:5406`): a lookup, cached nowhere. -/
+def ambientScope (c : Ctx) : Option Nat := Env.ambientScope c.services
+
+/-- The cache law: the join's composition law (`probe-u1b-layer-join.md` §3.5). Every context
+`withServices` builds satisfies it (`withServices_cacheAgrees`). -/
+def CacheAgrees (c : Ctx) : Prop := (c.maxOpsBeforeYield, c.preventYield) = Env.budgetOf c.services
+
+instance (c : Ctx) : Decidable c.CacheAgrees := by unfold CacheAgrees; infer_instance
+
+theorem withServices_cacheAgrees (services : Env.Ctx) : (withServices services).CacheAgrees := rfl
+
+/-- `provideService`'s region write (`internal/effect.ts:2232`, `Context.add(key, impl)`). -/
+def provide (c : Ctx) (key : ServiceKey) (value : Effect4.Store.Val) : Ctx :=
+  withServices (c.services.addV key value)
+
+/-- `scoped`'s install (`internal/effect.ts:3942`, `Context.add(fiber.context, scopeTag, scope)`). -/
+def withScope (c : Ctx) (scope : Nat) : Ctx := c.provide Env.scopeKey (Value.scope scope)
+
+theorem withServices_services (services : Env.Ctx) : (withServices services).services = services :=
+  rfl
+
+theorem provide_services (c : Ctx) (key : ServiceKey) (value : Effect4.Store.Val) :
+    (c.provide key value).services = c.services.addV key value := rfl
+
+/-- The install is what `ambientScope` reads back (`Env.ambientScope_add_scope`). -/
+theorem ambientScope_withScope (c : Ctx) (scope : Nat) :
+    (c.withScope scope).ambientScope = some scope :=
+  Env.ambientScope_add_scope c.services scope
+
+end Ctx
 
 /-- A compiled release, captured at registration (`internal/effect.ts:3976,3983`): the
 point's path and environment (the acquired value already appended), its fuel and tape, and
@@ -239,17 +282,43 @@ def promiseHandle : Image DeferredKey :=
 /-- A scope-store key as a value (`Value.scope`, kind 4). -/
 def scopeKeyHandle : Image Nat := HandleKind.handleOf .scope
 
-/-- `Ctx` as a value: `Value.fiberContext`, i.e. `ctor 2 [option (scope handle), nat, bool]`.
-The ambient scope is a handle, as `Ctx.keys` (`Machine/Handles.lean`) says. -/
-def ctxImage : Image Ctx :=
-  (Image.ctor3 (Image.option scopeKeyHandle) Image.nat Image.bool 2).equiv
-    (fun p => ⟨p.1, p.2.1, p.2.2⟩) (fun c => (c.ambientScope, c.maxOpsBeforeYield, c.preventYield))
-    (fun _ => rfl) (fun _ => rfl)
+/-- A context read off a `fiberContext` frame: the service spine at `Env.decode`, and the two
+caches as written; any other shape is no context. -/
+def ofCtx : Store.Val → Option Ctx
+  | Value.fiberContext spine (.nat maxOps) (.bool prevent) =>
+    (Env.decode spine).map fun services => ⟨services, maxOps, prevent⟩
+  | _ => none
+
+/-- `Ctx` as a value: `Value.fiberContext`, i.e. `ctor 2 [service spine, nat, bool]` — the
+same constructor and arity as before the join, the first field the spine of
+`Env.contextImage` (`Value.serviceContext`) where it was an option of a scope handle. `Ctx.keys`
+(`Machine/Handles.lean`) counts the handles of every service value. -/
+def ctxImage : Image Ctx where
+  toVal c :=
+    Value.fiberContext (Env.encode c.services) (.nat c.maxOpsBeforeYield) (.bool c.preventYield)
+  ofVal := ofCtx
+  ofVal_toVal c := by
+    obtain ⟨s, m, p⟩ := c
+    show (Env.decode (Env.encode s)).map (fun services => (⟨services, m, p⟩ : Ctx)) =
+      some ⟨s, m, p⟩
+    rw [Env.decode_encode]
+    rfl
+  ofVal_exact := by
+    intro v c hv
+    unfold ofCtx at hv
+    split at hv
+    · next spine m p =>
+      obtain ⟨services, hs, hj⟩ := Image.map_eq_some_inv hv
+      subst hj
+      show Store.Val.ctor 2 [spine, .nat m, .bool p] =
+        Store.Val.ctor 2 [Env.encode services, .nat m, .bool p]
+      rw [Env.decode_exact hs]
+    · exact nomatch hv
 
 theorem ctxImage_toVal (ctx : Ctx) :
     ctxImage.toVal ctx =
-      Value.fiberContext ((Image.option scopeKeyHandle).toVal ctx.ambientScope)
-        (.nat ctx.maxOpsBeforeYield) (.bool ctx.preventYield) := rfl
+      Value.fiberContext (Env.encode ctx.services) (.nat ctx.maxOpsBeforeYield)
+        (.bool ctx.preventYield) := rfl
 
 /-! ## The value alphabet -/
 
@@ -360,13 +429,8 @@ theorem snapshot?_exact {v : Val} {ids : List FiberId} (h : snapshot? v = some i
 
 theorem context_eq (ctx : Ctx) :
     context ctx =
-      Value.fiberContext
-        (match ctx.ambientScope with
-          | some s => Store.Val.some (Value.scope s)
-          | none => Store.Val.none)
-        (.nat ctx.maxOpsBeforeYield) (.bool ctx.preventYield) := by
-  rcases ctx with ⟨s, _, _⟩
-  cases s <;> rfl
+      Value.fiberContext (Env.encode ctx.services) (.nat ctx.maxOpsBeforeYield)
+        (.bool ctx.preventYield) := rfl
 
 theorem context?_context (ctx : Ctx) : context? (context ctx) = some ctx :=
   ctxImage.ofVal_toVal ctx
@@ -1824,8 +1888,13 @@ def actionOf : ActionName → WithFiberAction Name Thunk Val Err Defect FiberId 
 enough that a witness never gets an injected yield it did not ask for. -/
 def defaultBudget : Nat := 2048
 
-/-- The empty context (`internal/effect.ts:627`). -/
-def emptyCtx : Ctx := ⟨none, defaultBudget, false⟩
+/-- The empty context (`internal/effect.ts:627`): the empty map, whose references read the
+defaults (`Env.hooks_empty`), so the literal is `Ctx.withServices Context.empty`. -/
+def emptyCtx : Ctx := ⟨Env.Context.empty, defaultBudget, false⟩
+
+theorem emptyCtx_eq : emptyCtx = Ctx.withServices Env.Context.empty := rfl
+
+theorem emptyCtx_cacheAgrees : emptyCtx.CacheAgrees := rfl
 
 /-- The annotation key `currentStackFrame` contributes for one fiber. A small closed set, so
 `decide` never has to compute a string append. -/
@@ -2298,5 +2367,19 @@ example : DecidableEq (RunDecision Name Thunk Val Err Defect FiberId Ann) := inf
 example :
     DecidableEq (WithFiberAction Name Thunk Val Err Defect FiberId Ann Ctx) := inferInstance
 example : DecidableEq (RunEvent Name Thunk Val Err Defect FiberId Ann Ctx) := inferInstance
+
+/-- The composition law of the join (`docs/research/2026-09-07-probe-u1b-layer-join.md` §3.5,
+`join-dispatch.md` §2): the fiber machine's four context hooks are the service map's — the
+ambient scope a lookup, the budget through the caches under the cache law (`Ctx.CacheAgrees`,
+which every `Ctx.withServices` satisfies), the empty context the empty map, the context value
+the map's spine under `Value.fiberContext`. -/
+theorem stores_hooks :
+    (∀ c : Ctx, stores.ambientScope c = Env.ambientScope c.services) ∧
+    (∀ c : Ctx, c.CacheAgrees → stores.budgetOf c = Env.budgetOf c.services) ∧
+    stores.emptyContext = Ctx.withServices Env.Context.empty ∧
+    (∀ c : Ctx, stores.contextValue c =
+      Value.fiberContext (Env.encode c.services) (.nat c.maxOpsBeforeYield)
+        (.bool c.preventYield)) :=
+  ⟨fun _ => rfl, fun _ h => h, rfl, fun _ => rfl⟩
 
 end Effect4.Machine

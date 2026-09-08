@@ -108,7 +108,7 @@ section Inhabited
 #guard Val.hasTy (Val.cell ⟨0⟩) NativeOp.refTy
 #guard Val.hasTy (Val.promise ⟨0⟩) NativeOp.deferredTy
 #guard Val.hasTy (Val.scopeHandle 0) Ty.scope
-#guard Val.hasTy (Val.context ⟨none, 0, false⟩) Ty.context
+#guard Val.hasTy (Val.context emptyCtx) Ty.context
 #guard Val.hasTy (Val.fiber ⟨1⟩) (.fiberOf .nat .never)
 #guard Val.hasTy (Val.fibers [⟨1⟩, ⟨2⟩]) (.list (.fiberOf (.handle "unknown") (.handle "unknown")))
 #guard Val.hasTy (Val.exitOk (Val.nat 1)) (.exitOf .nat .nat)

@@ -170,7 +170,7 @@ def unmaskedInside : NativeEff := .uninterruptible (.interruptible waiting)
 def scopedContext : NativeEff := .scoped (.withFiber .getContext)
 
 #guard (run scopedContext startTape).exit =
-  some (.success (.context { emptyCtx with ambientScope := some 0 }))
+  some (.success (.context (emptyCtx.withScope 0)))
 #guard context (run scopedContext startTape) = some emptyCtx
 #guard scopeClosed (run scopedContext startTape) = some true
 

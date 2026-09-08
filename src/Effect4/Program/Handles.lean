@@ -903,10 +903,12 @@ theorem contAOf_native_keys (root : NativeEff) (n : EffName) (v : Val) :
         Val.keysList_eq_flatMap]
     -- the `releaseBody` arm: the release's point appends the reified exit
     | sub_tac norm [Point.keys, EffName.keys, EffThunk.keys, Point.childWith, Machine.reifyExitVal_keys]
+    -- the `scopeProvide` arm: the install's handles are the scope's and the previous map's
     | (split
        · next previous hprev =>
          rw [Val.context?_exact hprev]
-         sub_tac norm [Point.keys, EffName.keys, EffThunk.keys, Ctx.keys]
+         sub_tac using (Ctx.keys_withScope previous _)
+           norm [Point.keys, EffName.keys, EffThunk.keys, Val.keys_context]
        · sub_tac)
     -- the `afterScopeAdd` arm: unit answers `a`; a closed scope's exit, read back, runs the
     -- release program under it
@@ -1277,7 +1279,7 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
   closeDoneName := rfl
   ambientScope ctx scope h := by
     simp only [interpOf] at h
-    simp only [Ctx.keys, h, List.mem_singleton]
+    exact Ctx.scope_mem_keys h
 
 /-! ## Fresh source construction over machine-owned exits -/
 
@@ -1452,8 +1454,8 @@ theorem enterScoped_minted (root : NativeEff) (p : Point) (m : Api.Machine)
   unfold enterScoped IterMinted
   refine ⟨hworld, ?_⟩
   refine Ok_of_subset ?_ (Ok_append.mpr ⟨hold, hnew⟩)
-  sub_tac using (resolve_keys root (p.child 0))
-    norm [state, Ctx.keys, Point.keys, Point.child, EffName.keys, EffThunk.keys]
+  sub_tac using (resolve_keys root (p.child 0)), (Ctx.keys_withScope f.context m.state.nextName)
+    norm [state, Point.keys, Point.child, EffName.keys, EffThunk.keys]
 
 /-- Scoped exit uses the answering frame's captured context and the scope's stored
 finalizers, after applying the real pop (`internal/effect.ts:3944-3947`). -/

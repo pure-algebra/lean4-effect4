@@ -694,7 +694,7 @@ def contAOf (root : NativeEff) : EffName → Val → NCode
     -- the previous context is read back off the value; any other shape is the wrong one
     match Val.context? v with
     | some previous =>
-      Prim.onSuccess (Prim.withFiber (EffThunk.setCtx { previous with ambientScope := some s }))
+      Prim.onSuccess (Prim.withFiber (EffThunk.setCtx (previous.withScope s)))
         (EffName.scopeBody p previous)
     | none => badShape
   | .scopeBody p previous, _ =>
@@ -979,7 +979,7 @@ def enterScoped (root : NativeEff) (p : Point)
   let scope := m.state.nextName
   let state := { m.state with
     scopes := m.state.scopes.make scope .sequential, nextName := scope + 1 }
-  let context := { f.context with ambientScope := some scope }
+  let context := f.context.withScope scope
   let current := Prim.onExit (resolve root (p.child 0)) (.scopedExit f.context scope) false
   let f := { f with
     context := context

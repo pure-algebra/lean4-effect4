@@ -63,12 +63,6 @@ inductive Handle
   | scope (key : Nat)
 deriving DecidableEq, Repr
 
-/-- The one handle a context holds: its ambient scope. -/
-def Ctx.keys (ctx : Ctx) : List Handle :=
-  match ctx.ambientScope with
-  | some s => [Handle.scope s]
-  | none => []
-
 /-- The kind byte and index of a handle: the `handle` frame's payload, `Store.Val.handles`'
 entry for it (`HandleKind`, `Machine/Value.lean`). -/
 def Handle.code : Handle → UInt8 × Nat
@@ -112,7 +106,7 @@ theorem Handle.ofCode_memoMap (index : Nat) : Handle.ofCode (5, index) = none :=
 mutual
 /-- The handles of a value: every `handle` frame the carrier carries, read through
 `Handle.ofCode`, in payload order — the handle arms, the snapshot's members, a context's
-ambient scope, a reified exit's value and the members of a list. A reified failed exit carries
+service values, a reified exit's value and the members of a list. A reified failed exit carries
 a cause only (`Val.keys_exitErr`); the Layer machine's memo-map handle and an unregistered
 byte are not counted. `Val.keys_eq_handles` is the migration check (U1): this is
 `Store.Val.handles` filtered. -/
@@ -186,9 +180,73 @@ theorem Val.keys_exitErr (cause : CauseV) : (Val.exitErr cause).keys = [] := by
     Store.Val.handlesList_nil]
   rfl
 
+/-- The handles a context holds: those of every service value — a scope handle under
+`scopeKey`, anything a program provided; a memo-map handle is not counted
+(`Handle.ofCode_memoMap`). Before the join the one handle was the cached ambient scope. -/
+def Ctx.keys (ctx : Ctx) : List Handle :=
+  ctx.services.entries.flatMap fun s => Val.keys s.valueVal
+
+/-- A written entry's handles are its value's: the key's image is handle-free. -/
+theorem Val.keys_entryStore (key : ServiceKey) (value : Val) :
+    Val.keys (Env.entryStore key value) = value.keys := by
+  show Val.keys (Env.serviceKeyImage.toVal key) ++ Val.keys value = Val.keys value
+  rw [Val.keys_eq_handles (Env.serviceKeyImage.toVal key), Env.serviceKeyImage_handleFree key]
+  rfl
+
+theorem Val.keysList_entryStore :
+    ∀ es : List (Env.Service Env.ValU),
+      Val.keysList (es.map fun s => Env.entryStore s.key s.valueVal) =
+        es.flatMap fun s => Val.keys s.valueVal
+  | [] => rfl
+  | s :: rest => by
+    rw [List.map_cons, Val.keysList, Val.keys_entryStore, List.flatMap_cons,
+      Val.keysList_entryStore rest]
+
 theorem Val.keys_context (ctx : Ctx) : (Val.context ctx).keys = ctx.keys := by
-  rcases ctx with ⟨scope, _, _⟩
-  cases scope <;> rfl
+  show Val.keys (Env.encode ctx.services) ++ (Val.keys (Store.Val.nat ctx.maxOpsBeforeYield) ++
+    (Val.keys (Store.Val.bool ctx.preventYield) ++ [])) = _
+  show Val.keysList (ctx.services.entries.map fun s => Env.entryStore s.key s.valueVal) ++
+    ([] ++ ([] ++ [])) = _
+  rw [Val.keysList_entryStore]
+  simp only [List.append_nil]
+  rfl
+
+/-- The ambient scope a context answers is a handle it holds. -/
+theorem Ctx.scope_mem_keys {ctx : Ctx} {scope : Nat} (h : ctx.ambientScope = some scope) :
+    Handle.scope scope ∈ ctx.keys := by
+  unfold Ctx.ambientScope Env.ambientScope at h
+  cases hv : ctx.services.getV Env.scopeKey with
+  | none =>
+    rw [hv] at h
+    exact nomatch h
+  | some v =>
+    rw [hv] at h
+    have hv' : v = Env.Val.scopeHandle scope := Env.scopeOfVal_some h
+    obtain ⟨s, hs, _, hval⟩ := Env.Context.getV_mem hv
+    unfold Ctx.keys
+    rw [List.mem_flatMap]
+    refine ⟨s, hs, ?_⟩
+    rw [hval, hv']
+    show Handle.scope scope ∈ [Handle.scope scope]
+    exact List.mem_singleton.mpr rfl
+
+/-- `scoped`'s install adds the scope's handle and drops at most the previous one. -/
+theorem Ctx.keys_withScope (c : Ctx) (scope : Nat) :
+    (c.withScope scope).keys ⊆ Handle.scope scope :: c.keys := by
+  show (Env.Context.setEntries (U := Env.ValU) Env.scopeKey (Value.scope scope)
+    c.services.entries).flatMap (fun s => Val.keys s.valueVal) ⊆ _
+  intro x hx
+  rcases List.mem_append.mp (Env.Context.flatMap_setEntries_subset _ _ _ _ hx) with h | h
+  · exact List.mem_cons.mpr (Or.inl (List.mem_singleton.mp h))
+  · exact List.mem_cons_of_mem _ h
+
+/-- A region write's handles: the value's, and the previous map's. -/
+theorem Ctx.keys_provide (c : Ctx) (key : ServiceKey) (value : Val) :
+    (c.provide key value).keys ⊆ value.keys ++ c.keys := by
+  show (Env.Context.setEntries (U := Env.ValU) key value c.services.entries).flatMap
+    (fun s => Val.keys s.valueVal) ⊆ _
+  intro x hx
+  exact Env.Context.flatMap_setEntries_subset _ _ _ _ hx
 
 theorem Val.keys_fibers (ids : List FiberId) : (Val.fibers ids).keys = ids.map Handle.fiber := by
   show Val.keysList [Store.Val.list (ids.map fun id => Value.fiber id.value)] = _
@@ -5731,7 +5789,7 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
   closeDoneName := rfl
   ambientScope ctx scope h := by
     simp only [stores] at h
-    simp only [Ctx.keys, h, List.mem_singleton]
+    exact Ctx.scope_mem_keys h
 
 end StoresInstance
 

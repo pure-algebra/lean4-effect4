@@ -167,7 +167,7 @@ def evaluateFiberR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool
     let state := { m.state with
       scopes := m.state.scopes.make scope .sequential, nextName := scope + 1 }
     let previous := f.context
-    let context := { previous with ambientScope := some scope }
+    let context := previous.withScope scope
     let f := { f with
       context := context
       maxOpsBeforeYield := context.maxOpsBeforeYield

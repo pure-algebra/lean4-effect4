@@ -234,19 +234,21 @@ def tupleV : Val := Val.list [Val.cell ⟨0⟩, Val.nat 1]
 def nestedV : Val := Val.exitOk (Val.exitErr (Cause.fail (Err.tag 3)))
 
 /-- A cached context with an ambient scope. -/
-def ctxV : Val := Val.context ⟨some 2, 2048, false⟩
+def ctxV : Val := Val.context (emptyCtx.withScope 2)
 
 -- The spellings are the table's shapes.
 #guard Val.cell ⟨3⟩ = Value.cell 3
 #guard Val.fiber ⟨3⟩ = Store.Val.handle 1 3
 #guard Val.exitNil = Val.list []
 #guard Val.fibers [⟨1⟩, ⟨2⟩] = Value.fiberSnapshot (Val.list [Value.fiber 1, Value.fiber 2])
-#guard ctxV = Value.fiberContext (Store.Val.some (Value.scope 2)) (Val.nat 2048) (Val.bool false)
+#guard ctxV = Value.fiberContext
+  (Value.serviceContext [Store.Val.pair (Env.serviceKeyImage.toVal Env.scopeKey) (Value.scope 2)])
+  (Val.nat 2048) (Val.bool false)
 #guard nestedV = Value.exitOk (Value.exitErr (causeImage.toVal (Cause.fail (Err.tag 3))))
 -- The readers are exact on representative values: the snapshot, a context, a cause, a
 -- reified exit, an empty and a non-empty exit list.
 #guard Val.snapshot? (Val.fibers [⟨1⟩, ⟨2⟩]) = some [⟨1⟩, ⟨2⟩]
-#guard Val.context? ctxV = some ⟨some 2, 2048, false⟩
+#guard Val.context? ctxV = some (emptyCtx.withScope 2)
 #guard Val.cause? (Val.exitErr (Cause.interrupt (some ⟨9⟩))) = some (Cause.interrupt (some ⟨9⟩))
 #guard exitImage.ofVal nestedV = some (Exit.success (Val.exitErr (Cause.fail (Err.tag 3))))
 #guard exitImage.ofVal (reifyExitVal (Exit.failure (Cause.die (Defect.user 4)))) =
@@ -284,7 +286,7 @@ def ctxV : Val := Val.context ⟨some 2, 2048, false⟩
 -- Validity folds the handles: a context's ambient scope is checked (U1: the old carrier
 -- accepted every context), a memo-map handle and an unregistered byte are never valid here.
 #guard Val.validIn s3 ctxV = false
-#guard Val.validIn s3 (Val.context ⟨some 0, 2048, false⟩) = true
+#guard Val.validIn s3 (Val.context (emptyCtx.withScope 0)) = true
 #guard Val.validIn s3 (Value.memoMap 0) = false
 #guard Val.validIn Stores.empty (Store.Val.handle 9 0) = false
 -- Bytes: the checked encoder of the exit image answers, and its answer reads back.
@@ -328,7 +330,7 @@ def shapeCode : Val → Nat
 #guard (Env.encode ((Env.Context.empty : Env.Ctx).addV ⟨⟨1⟩, ⟨2⟩⟩ (Env.Val.scopeHandle 4))).handles =
   [(4, 4)]
 -- The service context and the cached fiber context are distinct trees.
-#guard Env.encode (Env.Context.empty : Env.Ctx) ≠ Val.context ⟨none, 2048, false⟩
+#guard Env.encode (Env.Context.empty : Env.Ctx) ≠ Val.context emptyCtx
 -- The hand-written key image writes the bytes the generated OCaml encoder writes
 -- (`ocaml/eff/eff_wire.ml` `emit_service_key`, run against the `effect4` switch on
 -- 2026-09-07 for the key `{1, 2}`: 74 bytes, listed here), so one decoder serves both.
