@@ -993,6 +993,9 @@ let rec depth_of (e : eff) : int =
   | Eff_matchCause (a, c, d) -> max (depth_of a) (max (depth_of c) (depth_of d))
   | Eff_branch (_, a, c) | Eff_choose (_, a, c) -> max (depth_of a) (depth_of c)
   | Eff_whileLoop (_, _, _, a) -> depth_of a
+  | Eff_provideLayer (l, _, e) -> max (depth_layer l) (depth_of e)
+  | Eff_service _ -> 0
+  | Eff_provideService (_, _, e) -> depth_of e
   | Eff_gen b -> s b
   | Eff_withFiber a -> (
     match a with
@@ -1000,6 +1003,15 @@ let rec depth_of (e : eff) : int =
       depth_of p
     | Action_term_raceAll xs -> es xs
     | _ -> 0)
+
+and depth_layer (l : layer_term) : int =
+  1 +
+  match l with
+  | Layer_term_succeed _ -> 0
+  | Layer_term_effect (_, e) | Layer_term_effectDiscard e -> depth_of e
+  | Layer_term_provide (a, b) | Layer_term_provideMerge (a, b) | Layer_term_merge (a, b) ->
+    max (depth_layer a) (depth_layer b)
+  | Layer_term_fresh l | Layer_term_orDie l -> depth_layer l
 
 and depth_stmts (s : stmts) : int =
   match s with
@@ -1068,6 +1080,17 @@ let census (ps : program list) : (string * int) list =
     | Eff_whileLoop (_, _, _, a) -> e_ a
     | Eff_gen b -> s_ b
     | Eff_withFiber a -> a_ a
+    | Eff_provideLayer (l, _, e) -> l_ l; e_ e
+    | Eff_service _ -> ()
+    | Eff_provideService (_, _, e) -> e_ e
+  and l_ (x : layer_term) =
+    bump ("layer." ^ ctor_name_layer_term x);
+    match x with
+    | Layer_term_succeed _ -> ()
+    | Layer_term_effect (_, e) | Layer_term_effectDiscard e -> e_ e
+    | Layer_term_provide (a, b) | Layer_term_provideMerge (a, b) | Layer_term_merge (a, b) ->
+      l_ a; l_ b
+    | Layer_term_fresh l | Layer_term_orDie l -> l_ l
   and a_ (x : action_term) =
     bump ("action." ^ ctor_name_action_term x);
     match x with

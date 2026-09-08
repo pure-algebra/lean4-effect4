@@ -14,7 +14,7 @@
    Why it is built from the wire and not from a Lean emitter.  Amendment M18 rules that the
    subterm index is `TreeSig`-driven — a rose-tree signature the generator can emit as
    `effSig`, retiring M3's hand table.  That emitter does not exist in the tree today
-   (`src/Effect4/Program/Subterm.lean` is commit 6 of the CAS packet and is not landed), so
+   (the planned `Effect4.Program.Subterm` module is commit 6 of the CAS packet and is not landed), so
    this module carries the `TreeSig` children function by hand, transcribed from
    `Effect4.Program.Node.child` (src/Effect4/Program/Compile.lean:65-115), and golden G9 —
    "for each constructor of each family, the `ProgPath -> ValPath` mapping and one
@@ -87,7 +87,7 @@
    D3  `Tree` is added: the VALUE side of the index — `Node.child` (Compile.lean:65-115) and
        the family encoders of `Eff_wire`, as OCaml.  It is the second, independent computation
        SB1 is checked against, and it is `effSig`'s `children` half (M18) in the shape a
-       generator will later emit.  When `src/Effect4/Program/Subterm.lean` lands, `Tree.child`
+       generator will later emit.  When the planned `Effect4.Program.Subterm` module lands, `Tree.child`
        becomes the thing G9 pins and this file's hand table is deleted.
    D4  Added beside §1.6's list: `count`, `root`, `bytes`, `slice_of`, `at_val_path`,
        `entries_at_family`, `children`, `arity`, `family_ctor_names`, `prog_of_val`,

@@ -200,7 +200,7 @@ if want route1; then
     emit "## ROUTE 1"
     emit ""
     emit "\`$r1\` is not built and \`link/tools/build.sh\` needs a Lean compile of"
-    emit "\`Bridge.lean\` (\`tools/compile-bridge.sh\`), which this lane may not run."
+    emit "\`Bridge.lean\` (\`ocaml/link/tools/compile-bridge.sh\`), which this lane may not run."
     emit "Quote \`ocaml/link/REPORT.md\` §7 instead."
   fi
 fi

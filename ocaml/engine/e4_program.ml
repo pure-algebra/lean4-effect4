@@ -350,6 +350,10 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Fn_name_noChange -> A.FnName_noChange
     | Eff_types.Fn_name_takeAndBump -> A.FnName_takeAndBump
 
+  let of_service_key (k : Eff_types.service_key) : A.service_key =
+    { A.name = k.service_key_name.service_name_value;
+      service = k.service_key_service.service_type_code_value }
+
   let of_native_op : Eff_types.native_op -> A.native_op = function
     | Eff_types.Native_op_refMake -> A.NativeOp_refMake
     | Eff_types.Native_op_refGet -> A.NativeOp_refGet
@@ -373,6 +377,9 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Native_op_deferredFail -> A.NativeOp_deferredFail
     | Eff_types.Native_op_deferredAwait -> A.NativeOp_deferredAwait
     | Eff_types.Native_op_scopeMake s -> A.NativeOp_scopeMake (of_finalizer_strategy s)
+    | Eff_types.Native_op_sleep | Eff_types.Native_op_clockNow ->
+      raise (Ordinal_mismatch
+        "engine cut before the timer rows; regenerate (plan v2 Phase 1)")
 
   let rec of_eff : Eff_types.eff -> A.native_op A.eff = function
     | Eff_types.Eff_succeed t -> A.Eff_succeed (of_term t)
@@ -401,6 +408,25 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Eff_scoped e -> A.Eff_scoped (of_eff e)
     | Eff_types.Eff_acquireRelease (a, b) -> A.Eff_acquireRelease (of_eff a, of_eff b)
     | Eff_types.Eff_choose (n, a, b) -> A.Eff_choose (n, of_eff a, of_eff b)
+    | Eff_types.Eff_provideLayer (l, local, e) ->
+      A.Eff_provideLayer (of_layer_term l, local, of_eff e)
+    | Eff_types.Eff_service k -> A.Eff_service (of_service_key k)
+    | Eff_types.Eff_provideService (k, t, e) ->
+      A.Eff_provideService (of_service_key k, of_term t, of_eff e)
+
+  and of_layer_term : Eff_types.layer_term -> A.native_op A.layer_term = function
+    | Eff_types.Layer_term_succeed (k, l) ->
+      A.LayerTerm_succeed (of_service_key k, of_lit l)
+    | Eff_types.Layer_term_effect (k, e) -> A.LayerTerm_effect (of_service_key k, of_eff e)
+    | Eff_types.Layer_term_effectDiscard e -> A.LayerTerm_effectDiscard (of_eff e)
+    | Eff_types.Layer_term_provide (a, b) ->
+      A.LayerTerm_provide (of_layer_term a, of_layer_term b)
+    | Eff_types.Layer_term_provideMerge (a, b) ->
+      A.LayerTerm_provideMerge (of_layer_term a, of_layer_term b)
+    | Eff_types.Layer_term_merge (a, b) ->
+      A.LayerTerm_merge (of_layer_term a, of_layer_term b)
+    | Eff_types.Layer_term_fresh l -> A.LayerTerm_fresh (of_layer_term l)
+    | Eff_types.Layer_term_orDie l -> A.LayerTerm_orDie (of_layer_term l)
 
   and of_stmt : Eff_types.stmt -> A.native_op A.stmt = function
     | Eff_types.Stmt_bindYield e -> A.Stmt_bindYield (of_eff e)
