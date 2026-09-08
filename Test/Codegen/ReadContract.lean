@@ -564,13 +564,9 @@ one comes back unchanged, so on this corpus `readable` is exact, not merely suff
 
 #guard (Test.Program.Gen.corpus 400 4).length = 400
 
--- 324 before source-repairs §18; the fourteen generated programs whose tuple-row request
--- is neither a `pair` application nor a single-identifier term left the readable image
--- with the direct argument-list shape (`requestReadable`), and still print the same tree.
--- 310 -> 327 with `E4-CHECK-CE-015`: `Effect.forkIn`/`Effect.forkScoped` fork a daemon in
--- rc.112, so the seventeen corpus programs whose scoped fork carries `daemon = true` are in
--- the readable image and the non-daemon ones took their place outside it.
-#guard ((Test.Program.Gen.corpus 400 4).filter Effect4.Api.readable).length = 327
+-- The join extends both the reader and the generator's draws: the measured count is
+-- 345 in the new corpus. Request erasure and scoped-fork daemon erasure remain unchanged.
+#guard ((Test.Program.Gen.corpus 400 4).filter Effect4.Api.readable).length = 345
 
 #guard (Test.Program.Gen.corpus 400 4).all fun p =>
   !Effect4.Api.readable p || decide (Effect4.Api.roundTrip p = .ok p)
@@ -582,5 +578,58 @@ one comes back unchanged, so on this corpus `readable` is exact, not merely suff
 
 #guard ((Test.Program.Gen.corpus 400 4).filter fun p =>
   !Effect4.Api.readable p && decide (Effect4.Api.roundTrip p = .ok p)).length = 0
+
+/-! ## The join: keys and all eight layer forms
+
+Layer effects have their own empty environment, even when provision occurs below
+an outer binder. The service-key tests retain both numbers and the exact type.
+-/
+
+private def joinKey : Effect4.ServiceKey := ⟨⟨4⟩, ⟨4⟩⟩
+private def joinValue : Eff NativeOp := .succeed (.lit (.nat 7))
+private def joinLayers : List (LayerTerm NativeOp) :=
+  [ .succeed joinKey (.nat 7)
+  , .effect joinKey joinValue
+  , .effectDiscard joinValue
+  , .provide (.effect joinKey joinValue) (.succeed joinKey (.nat 8))
+  , .provideMerge (.effect joinKey joinValue) (.succeed joinKey (.nat 8))
+  , .merge (.succeed joinKey (.nat 7)) (.succeed ⟨⟨5⟩, ⟨5⟩⟩ (.bool true))
+  , .fresh (.effect joinKey joinValue)
+  , .orDie (.effect joinKey joinValue) ]
+
+#guard roundTrip nativeSignature nativeSpell 0 (.service joinKey) = .ok (.service joinKey)
+#guard roundTrip nativeSignature nativeSpell 0
+  (.provideService joinKey (.lit (.nat 7)) (.service joinKey)) =
+  .ok (.provideService joinKey (.lit (.nat 7)) (.service joinKey))
+#guard joinLayers.length = 8
+#guard joinLayers.all fun layer => [false, true].all fun isLocal =>
+  let program := Eff.provideLayer layer isLocal (.service joinKey)
+  readable nativeSignature nativeSpell 0 program &&
+    decide (roundTrip nativeSignature nativeSpell 0 program = .ok program)
+#guard roundTrip nativeSignature nativeSpell 0
+  (.bind joinValue (.provideLayer
+    (.effect joinKey (.bind joinValue (.succeed (.var 0)))) true (.succeed (.var 0)))) =
+  .ok (.bind joinValue (.provideLayer
+    (.effect joinKey (.bind joinValue (.succeed (.var 0)))) true (.succeed (.var 0))))
+
+#guard [Effect4.ServiceKey.mk ⟨0⟩ ⟨0⟩, ⟨⟨1⟩, ⟨4⟩⟩, ⟨⟨4⟩, ⟨4⟩⟩,
+    ⟨⟨5⟩, ⟨5⟩⟩, ⟨⟨6⟩, ⟨6⟩⟩, ⟨⟨7⟩, ⟨7⟩⟩].all fun key =>
+  decide (roundTrip nativeSignature nativeSpell 0 (.service key) = .ok (.service key))
+#guard readKey nativeSignature (.call (.generic (.ident "Context.Service") ["boolean"])
+  [.str "k4_4"]) = .error (.shape "service key")
+#guard readKey nativeSignature (.call (.generic (.ident "Context.Service") ["number"])
+  [.str "k04_4"]) = .error (.shape "service key")
+#guard readKey nativeSignature (.call (.ident "Context.Service") [.str "k4_4"]) =
+  .error (.shape "service key")
+#guard readKey nativeSignature (printKey nativeSignature ⟨⟨12345678901234567890⟩, ⟨4⟩⟩) =
+  .ok ⟨⟨12345678901234567890⟩, ⟨4⟩⟩
+
+#print axioms Effect4.Program.readKey_printKey
+#print axioms Effect4.Program.readKey_exact
+#print axioms Effect4.Program.read_print_layer
+#print axioms Effect4.Program.read_print
+#print axioms Effect4.Program.read_exact
+#print axioms Effect4.Program.roundTrip_eq
+#print axioms Effect4.Program.roundTrip_weaken
 
 end Test.Codegen.ReadContract

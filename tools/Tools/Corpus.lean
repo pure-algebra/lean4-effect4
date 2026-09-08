@@ -25,8 +25,9 @@ bytes with the `.json`, which is a differential against Lean's reader. `<dir>/in
 one `name`, `wellTyped`, `readable`, `chars` row per program written; a program the printer
 refuses is counted and not written.
 
-`scripts/check-ts-eff-corpus.sh` runs this and `ts/eff/check.ts` over it. The `g<i>.ts` files
-are byte-identical to the 2026-09-05 parser spike's corpus for the same `count` and `depth`.
+`scripts/check-ts-eff-corpus.sh` runs this and `ts/eff/check.ts` over it. The generator
+retains the parser spike's seed formula; its ingestion extension also draws service and
+layer programs. The measured counts and constructor coverage are pinned in the generator.
 
 A tool (`lakefile.toml`, the `Tools` library): outside the axiom gate, imported by nothing.
 -/

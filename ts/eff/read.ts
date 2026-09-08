@@ -13,7 +13,7 @@
 
 import { Result } from "effect"
 import { parseSync } from "oxc-parser"
-import type { ActionTerm, CauseTerm, Eff, ForkOptions, Stmt, Term } from "./eff.gen.ts"
+import type { ActionTerm, CauseTerm, Eff, ForkOptions, LayerTerm, Lit, ServiceKey, Stmt, Term } from "./eff.gen.ts"
 import { decodeEff } from "./eff.gen.ts"
 import { heads, rows, type Entry, type Head } from "./profile.gen.ts"
 
@@ -163,6 +163,17 @@ const listAt = (n: Node, key: string): ReadonlyArray<unknown> | undefined => {
 
 const unsupported = (n: Node, where: string) => refuse({ _tag: "node", type: n.type, where })
 
+/** The qualified type names used by native service carriers. */
+const qualifiedTypeName = (n: Node): string | undefined => {
+  if (n.type === "Identifier" && typeof n.name === "string") return n.name
+  if (n.type !== "TSQualifiedName") return undefined
+  const left = nodeAt(n, "left")
+  const right = nodeAt(n, "right")
+  if (!left || right?.type !== "Identifier" || typeof right.name !== "string") return undefined
+  const prefix = qualifiedTypeName(left)
+  return prefix === undefined ? undefined : `${prefix}.${right.name}`
+}
+
 /** A type argument's spelling: the keywords and bare type names the printer writes
  * (`Expr.generic` in `src/Effect4/Codegen/Print.lean`, `Deferred.make<number, number>()`);
  * anything else is outside the printer's image. */
@@ -176,8 +187,18 @@ const typeName = (t: Node): string | undefined => {
     case "TSVoidKeyword": return "void"
     case "TSTypeReference": {
       const ref = nodeAt(t, "typeName")
-      if (!ref || ref.type !== "Identifier" || typeof ref.name !== "string") return undefined
-      return nodeAt(t, "typeArguments") ? undefined : ref.name
+      if (!ref) return undefined
+      const name = qualifiedTypeName(ref)
+      if (name === undefined) return undefined
+      const typeArgs = nodeAt(t, "typeArguments")
+      if (!typeArgs) return name
+      const rendered: string[] = []
+      for (const arg of listAt(typeArgs, "params") ?? []) {
+        const text = isNode(arg) ? typeName(arg) : undefined
+        if (text === undefined) return undefined
+        rendered.push(text)
+      }
+      return `${name}<${rendered.join(", ")}>`
     }
     default: return undefined
   }
@@ -243,6 +264,19 @@ const exprOf = (raw: Node): Read<Expr> => {
       if (n.optional === true) return unsupported(n, "call")
       const callee = nodeAt(n, "callee")
       if (!callee) return unsupported(n, "callee")
+      // The layer printer's only method form is a single `.pipe(Layer.provide...)`.
+      if (callee.type === "MemberExpression" && callee.computed !== true && callee.optional !== true) {
+        const property = nodeAt(callee, "property")
+        const object = nodeAt(callee, "object")
+        if (property?.type === "Identifier" && property.name === "pipe" && object) {
+          if (n.typeArguments) return unsupported(n, "method typeArguments")
+          const base = exprOf(object)
+          if (failed(base)) return again(base)
+          const args = exprsOf(listAt(n, "arguments") ?? [], "argument")
+          if (failed(args)) return again(args)
+          return ok({ _tag: "method", base: base.success, name: "pipe", args: args.success })
+        }
+      }
       const fn = exprOf(callee)
       if (failed(fn)) return again(fn)
       const args = exprsOf(listAt(n, "arguments") ?? [], "argument")
@@ -636,6 +670,97 @@ const readRowCall = (n: number, s: string, typeArgs: ReadonlyArray<string>, args
     : refuse({ _tag: "arity", head: s })
 }
 
+/** `nativeServiceTy` of Program/Native.lean:273-283, including the reserved Scope key. */
+const serviceType = (name: number, service: number): string | undefined => {
+  if (name === 0 && service === 0) return "Scope.Scope"
+  if (name < 4) return undefined
+  switch (service) {
+    case 4: return "number"
+    case 5: return "boolean"
+    case 6: return "void"
+    case 7: return "Ref.Ref<number>"
+    default: return undefined
+  }
+}
+
+/** The exact numeric spelling and type argument of Lean's `printKey`. */
+const readKey = (x: Expr): Read<ServiceKey> => {
+  const bad = () => refuse({ _tag: "shape", what: "service key" })
+  if (x._tag !== "call" || x.args.length !== 1 || x.args[0]?._tag !== "str") return bad()
+  const fields = /^k(0|[1-9][0-9]*)_(0|[1-9][0-9]*)$/.exec(x.args[0].value)
+  if (!fields) return bad()
+  const name = Number(fields[1])
+  const service = Number(fields[2])
+  if (!Number.isSafeInteger(name) || !Number.isSafeInteger(service)) return bad()
+  const ty = serviceType(name, service)
+  if (ty === undefined) {
+    if (x.fn._tag !== "ident" || x.fn.name !== "Context.Service") return bad()
+  } else {
+    if (x.fn._tag !== "generic" || x.fn.fn._tag !== "ident" || x.fn.fn.name !== "Context.Service" ||
+      x.fn.typeArgs.length !== 1 || x.fn.typeArgs[0] !== ty) return bad()
+  }
+  return ok({ name: { value: name }, service: { value: service } })
+}
+
+const readLiteral = (x: Expr): Read<Lit> => {
+  const term = readTerm(0, x)
+  if (failed(term)) return again(term)
+  return term.success._tag === "lit" ? ok(term.success.value) : refuse({ _tag: "shape", what: "literal" })
+}
+
+/** The eight printed Layer forms; every effect body starts at environment length zero. */
+const readLayer = (x: Expr): Read<LayerTerm> => {
+  const bad = () => refuse({ _tag: "shape", what: "layer" })
+  if (x._tag === "method") {
+    const segment = x.args[0]
+    if (x.name !== "pipe" || x.args.length !== 1 || segment?._tag !== "call" ||
+      segment.fn._tag !== "ident" || segment.args.length !== 1 ||
+      (segment.fn.name !== "Layer.provide" && segment.fn.name !== "Layer.provideMerge")) return bad()
+    const self = readLayer(x.base)
+    if (failed(self)) return again(self)
+    const that = readLayer(segment.args[0]!)
+    if (failed(that)) return again(that)
+    return ok({ _tag: segment.fn.name === "Layer.provide" ? "provide" : "provideMerge",
+      self: self.success, that: that.success })
+  }
+  if (x._tag !== "call" || x.fn._tag !== "ident") return bad()
+  const [first, second] = x.args
+  switch (x.fn.name) {
+    case "Layer.succeed": {
+      if (x.args.length !== 2 || first === undefined || second === undefined) return bad()
+      const key = readKey(first)
+      if (failed(key)) return again(key)
+      const value = readLiteral(second)
+      return failed(value) ? again(value) : ok({ _tag: "succeed", key: key.success, value: value.success })
+    }
+    case "Layer.effect": {
+      if (x.args.length !== 2 || first === undefined || second === undefined) return bad()
+      const key = readKey(first)
+      if (failed(key)) return again(key)
+      const body = readEff(0, second)
+      return failed(body) ? again(body) : ok({ _tag: "effect", key: key.success, body: body.success })
+    }
+    case "Layer.effectDiscard": {
+      if (x.args.length !== 1 || first === undefined) return bad()
+      return Result.map(readEff(0, first), (body): LayerTerm => ({ _tag: "effectDiscard", body }))
+    }
+    case "Layer.merge": {
+      if (x.args.length !== 2 || first === undefined || second === undefined) return bad()
+      const left = readLayer(first)
+      if (failed(left)) return again(left)
+      const right = readLayer(second)
+      return failed(right) ? again(right) : ok({ _tag: "merge", left: left.success, right: right.success })
+    }
+    case "Layer.fresh":
+    case "Layer.orDie": {
+      if (x.args.length !== 1 || first === undefined) return bad()
+      const inner = readLayer(first)
+      return failed(inner) ? again(inner) : ok({ _tag: x.fn.name === "Layer.fresh" ? "fresh" : "orDie", inner: inner.success })
+    }
+    default: return bad()
+  }
+}
+
 const readEff = (n: number, x: Expr): Read<Eff> => {
   switch (x._tag) {
     case "ident": {
@@ -881,6 +1006,34 @@ const readAcquireRelease: HeadReader = (n, args) => {
   return ok({ _tag: "acquireRelease", acquire: a.success, release: r.success })
 }
 
+const readProvide: HeadReader = (n, args) => {
+  const [body, layer, options] = args
+  if (body === undefined || layer === undefined || (args.length !== 2 && args.length !== 3)) return arity("Effect.provide")
+  const isLocal = args.length === 3
+  if (isLocal) {
+    if (options?._tag !== "object" || options.fields.length !== 1 ||
+      options.fields[0]?.[1]._tag !== "bool" || options.fields[0][1].value !== true) return arity("Effect.provide")
+    if (options.fields[0][0] !== "local") return refuse({ _tag: "shape", what: "provide options" })
+  }
+  const b = readEff(n, body)
+  if (failed(b)) return again(b)
+  const l = readLayer(layer)
+  return failed(l) ? again(l) : ok({ _tag: "provideLayer", layer: l.success, isLocal, body: b.success })
+}
+
+const readService: HeadReader = (_n, args) =>
+  args.length === 1 ? Result.map(readKey(args[0]!), (key): Eff => ({ _tag: "service", key })) : arity("Effect.service")
+
+const readProvideService: HeadReader = (n, args) => {
+  if (args.length !== 3) return arity("Effect.provideService")
+  const body = readEff(n, args[0]!)
+  if (failed(body)) return again(body)
+  const key = readKey(args[1]!)
+  if (failed(key)) return again(key)
+  const value = readTerm(n, args[2]!)
+  return failed(value) ? again(value) : ok({ _tag: "provideService", key: key.success, value: value.success, body: body.success })
+}
+
 /** One reader per reserved head. The keys are the generated `Head` type, so a head added to
  * the profile without a reader here is a compile error. */
 const headReaders: Record<Head, HeadReader> = {
@@ -922,11 +1075,11 @@ const headReaders: Record<Head, HeadReader> = {
   "Cause.combine": notHere("Cause.combine"),
   "undefined": notHere("undefined"),
   "Effect.withFiber": readRunIn,
-  // the join (2026-09-07): reserved spellings with no reading, as in Read.lean
+  // Keys and layers are read only in their dedicated argument positions, as in Read.lean
   "Context.Service": notHere("Context.Service"),
-  "Effect.provide": notHere("Effect.provide"),
-  "Effect.service": notHere("Effect.service"),
-  "Effect.provideService": notHere("Effect.provideService"),
+  "Effect.provide": readProvide,
+  "Effect.service": readService,
+  "Effect.provideService": readProvideService,
   "Layer.succeed": notHere("Layer.succeed"),
   "Layer.effect": notHere("Layer.effect"),
   "Layer.effectDiscard": notHere("Layer.effectDiscard"),

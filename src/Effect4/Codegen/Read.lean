@@ -25,6 +25,8 @@ Binders are recovered by comparison, never by decoding: `Var.read n s` is the po
 `i < n` with `Var.name i = s`. Nothing here folds over a string (`String.toList` and its
 kin reach `Classical.choice` on this toolchain); the injectivity of `Var.name` is proved
 from the bytes of `Nat.repr`, which are a `List UInt8` the digits decode from.
+Service keys decode those decimal bytes and check the full canonical spelling,
+including the type argument supplied by the signature.
 -/
 
 namespace Effect4.Program
@@ -71,8 +73,7 @@ inductive Head
   | scopeClose | scoped | acquireRelease | causeFail | causeDie | causeInterrupt
   | causeCombine | undefined | withFiber
   -- the join (2026-09-07): the three context constructors and the layer spellings the printer
-  -- emits; reserved names with no reading (`readable` is false on `provideLayer`, `service`
-  -- and `provideService`), so a program that spells them is refused by name
+  -- emits; layers and keys are read only in the positions that accept them
   | contextService | provide | service | provideService
   | layerSucceed | layerEffect | layerEffectDiscard | layerProvide | layerProvideMerge
   | layerMerge | layerFresh | layerOrDie
@@ -345,6 +346,45 @@ def readRunIn (n : Nat) (args : List Expr) : Except ReadRefusal (Eff Op) :=
     else .error (.shape "runIn")
   | _ => .error (.shape "runIn")
 
+/-- The digit a byte spells, `'0'` as `0`. -/
+def digitOfByte (b : UInt8) : Nat := b.toNat - 48
+
+/-- The number a byte string spells in decimal. -/
+def decodeBytes (bs : List UInt8) : Nat := bs.foldl (fun acc b => acc * 10 + digitOfByte b) 0
+
+/-- Decode the two numeric fields; `readKey` checks the complete canonical spelling. -/
+def keyFromText (text : String) : ServiceKey :=
+  let bytes := text.toByteArray.data.toList.drop 1
+  ⟨⟨decodeBytes (bytes.takeWhile (· != 95))⟩,
+    ⟨decodeBytes ((bytes.dropWhile (· != 95)).drop 1)⟩⟩
+
+def keyText (key : ServiceKey) : String :=
+  "k" ++ toString key.name.value ++ "_" ++ toString key.service.value
+
+/-- Only the exact printed key is admitted, including its optional type argument. -/
+def readKey {Op : Type} (sig : Signature Op) : Expr → Except ReadRefusal ServiceKey
+  | .call (.ident head) [.str text] =>
+    let key := keyFromText text
+    if head = "Context.Service" ∧ sig.serviceTy key = none ∧ text = keyText key then
+      .ok key
+    else .error (.shape "service key")
+  | .call (.generic (.ident head) [arg]) [.str text] =>
+    let key := keyFromText text
+    match sig.serviceTy key with
+    | some ty =>
+      if head = "Context.Service" ∧ arg = ty.render ∧ text = keyText key then
+        .ok key
+      else .error (.shape "service key")
+    | none => .error (.shape "service key")
+  | _ => .error (.shape "service key")
+
+/-- The literal domain of `Layer.succeed`, using the ordinary term reader. -/
+def readLiteral (x : Expr) : Except ReadRefusal Lit := do
+  let term ← readTerm 0 x
+  match term with
+  | .lit value => .ok value
+  | _ => .error (.shape "literal")
+
 /-! ## Effects -/
 
 mutual
@@ -488,6 +528,22 @@ mutual
         let r ← readEff sig spell (n + 2) release
         .ok (.acquireRelease a r)
       else .error (.binder (Var.name n))
+    | .provide, [body, layer] => do
+      let b ← readEff sig spell n body
+      let l ← readLayer sig spell layer
+      .ok (.provideLayer l false b)
+    | .provide, [body, layer, .object [(field, .bool true)]] =>
+      if field = "local" then do
+        let b ← readEff sig spell n body
+        let l ← readLayer sig spell layer
+        .ok (.provideLayer l true b)
+      else .error (.shape "provide options")
+    | .service, [key] => (readKey sig key).map .service
+    | .provideService, [body, key, value] => do
+      let b ← readEff sig spell n body
+      let k ← readKey sig key
+      let v ← readTerm n value
+      .ok (.provideService k v b)
     | .whileLoop, _ => .error (.unknownHead Head.whileLoop.spelling)
     | .fiberId, _ => .error (.unknownHead Head.fiberId.spelling)
     | .causeFail, _ => .error (.unknownHead Head.causeFail.spelling)
@@ -495,12 +551,8 @@ mutual
     | .causeInterrupt, _ => .error (.unknownHead Head.causeInterrupt.spelling)
     | .causeCombine, _ => .error (.unknownHead Head.causeCombine.spelling)
     | .undefined, _ => .error (.unknownHead Head.undefined.spelling)
-    -- the join's spellings have no reading: `provideLayer`, `service` and `provideService`
-    -- are not readable, and a layer or a key never stands in program position
+    -- A layer or key does not stand alone in program position.
     | .contextService, _ => .error (.unknownHead Head.contextService.spelling)
-    | .provide, _ => .error (.unknownHead Head.provide.spelling)
-    | .service, _ => .error (.unknownHead Head.service.spelling)
-    | .provideService, _ => .error (.unknownHead Head.provideService.spelling)
     | .layerSucceed, _ => .error (.unknownHead Head.layerSucceed.spelling)
     | .layerEffect, _ => .error (.unknownHead Head.layerEffect.spelling)
     | .layerEffectDiscard, _ => .error (.unknownHead Head.layerEffectDiscard.spelling)
@@ -557,6 +609,37 @@ mutual
       let es ← readEffs sig spell n rest
       .ok (.cons e es)
   termination_by structural items
+
+  /-- The eight printed layer forms. Layer effect bodies have an empty environment. -/
+  def readLayer (sig : Signature Op) (spell : String → List String → Option Op)
+      (x : Expr) : Except ReadRefusal (LayerTerm Op) :=
+    match x with
+    | .call (.ident "Layer.succeed") [key, value] => do
+      let k ← readKey sig key
+      let v ← readLiteral value
+      .ok (.succeed k v)
+    | .call (.ident "Layer.effect") [key, body] => do
+      let k ← readKey sig key
+      let b ← readEff sig spell 0 body
+      .ok (.effect k b)
+    | .call (.ident "Layer.effectDiscard") [body] =>
+      (readEff sig spell 0 body).map .effectDiscard
+    | .method self "pipe" [.call (.ident "Layer.provide") [that]] => do
+      let s ← readLayer sig spell self
+      let t ← readLayer sig spell that
+      .ok (.provide s t)
+    | .method self "pipe" [.call (.ident "Layer.provideMerge") [that]] => do
+      let s ← readLayer sig spell self
+      let t ← readLayer sig spell that
+      .ok (.provideMerge s t)
+    | .call (.ident "Layer.merge") [left, right] => do
+      let l ← readLayer sig spell left
+      let r ← readLayer sig spell right
+      .ok (.merge l r)
+    | .call (.ident "Layer.fresh") [inner] => (readLayer sig spell inner).map .fresh
+    | .call (.ident "Layer.orDie") [inner] => (readLayer sig spell inner).map .orDie
+    | _ => .error (.shape "layer")
+  termination_by structural x
 end
 
 /-- The reader after the printer: the executed shadow of `read_print`. The printer's refusal
@@ -669,11 +752,19 @@ mutual
     | .acquireRelease acquire release =>
       readable sig spell n acquire && readable sig spell (n + 2) release
     | .choose _ _ _ => false
-    -- the provision constructors (the join): printed, not yet read back — a key's spelling
-    -- is a string the reader has no table for
-    | .provideLayer _ _ _ => false
-    | .service _ => false
-    | .provideService _ _ _ => false
+    | .provideLayer layer _ body => readableLayer sig spell layer && readable sig spell n body
+    | .service _ => true
+    | .provideService _ value body => value.scoped n && readable sig spell n body
+
+  /-- The layer's closed effects must retain their printed form. -/
+  def readableLayer (sig : Signature Op) (spell : String → List String → Option Op) :
+      LayerTerm Op → Bool
+    | .succeed _ _ => true
+    | .effect _ body | .effectDiscard body => readable sig spell 0 body
+    | .provide self that | .provideMerge self that | .merge self that =>
+      readableLayer sig spell self && readableLayer sig spell that
+    | .fresh inner | .orDie inner => readableLayer sig spell inner
+
 
   def readableStmts (sig : Signature Op) (spell : String → List String → Option Op)
       (n : Nat) : Stmts Op → Bool
@@ -760,12 +851,6 @@ The string layer's injectivity lemmas reach `Classical.choice` on this toolchain
 through `String.toList`), so injectivity is taken from the bytes instead: the UTF-8 bytes of
 a decimal string are its digits, and `decodeBytes` reads the number back. -/
 
-/-- The digit a byte spells, `'0'` as `0`. -/
-def digitOfByte (b : UInt8) : Nat := b.toNat - 48
-
-/-- The number a byte string spells in decimal. -/
-def decodeBytes (bs : List UInt8) : Nat := bs.foldl (fun acc b => acc * 10 + digitOfByte b) 0
-
 theorem decodeBytes_append (bs : List UInt8) (b : UInt8) :
     decodeBytes (bs ++ [b]) = decodeBytes bs * 10 + digitOfByte b := by
   simp [decodeBytes, List.foldl_append]
@@ -813,6 +898,103 @@ theorem decodeBytes_repr (n : Nat) : decodeBytes (Nat.repr n).toByteArray.data.t
   rw [Nat.repr, String.toByteArray_ofList, List.utf8Encode, List.toList_data_toByteArray,
     Nat.toDigits]
   exact decodeBytes_toDigitsCore (n + 1) n (Nat.lt_succ_self n)
+
+theorem readKey_exact {Op : Type} {sig : Signature Op} {x : Expr} {key : ServiceKey}
+    (h : readKey sig x = .ok key) : printKey sig key = x := by
+  unfold readKey at h
+  split at h
+  · dsimp only at h
+    split at h
+    · rename_i heq
+      cases h
+      rw [printKey, heq.2.1]
+      change Expr.call (.ident "Context.Service") [.str (keyText _)] = _
+      rw [← heq.2.2, heq.1]
+    · cases h
+  · dsimp only at h
+    split at h
+    · rename_i ty hty
+      split at h
+      · rename_i heq
+        cases h
+        rw [printKey, hty]
+        change Expr.call (.generic (.ident "Context.Service") [ty.render]) [.str (keyText _)] = _
+        rw [← heq.2.2, heq.1, heq.2.1]
+      · cases h
+    · cases h
+  · cases h
+
+private theorem repr_no_separator (n : Nat) :
+    ∀ b ∈ (Nat.repr n).toByteArray.data.toList, (b != (95 : UInt8)) = true := by
+  rw [Nat.repr, String.toByteArray_ofList, List.utf8Encode, List.toList_data_toByteArray,
+    Nat.toDigits]
+  suffices h : ∀ fuel n ds, n < fuel →
+      (∀ c ∈ ds, ∀ b ∈ String.utf8EncodeChar c, (b != (95 : UInt8)) = true) →
+      ∀ b ∈ (Nat.toDigitsCore 10 fuel n ds).flatMap String.utf8EncodeChar,
+        (b != (95 : UInt8)) = true from h (n + 1) n [] (Nat.lt_succ_self n) (by simp)
+  intro fuel
+  induction fuel with
+  | zero => intro n ds h; omega
+  | succ fuel ih =>
+    intro n ds hn hds
+    have hm : n % 10 < 10 := Nat.mod_lt _ (by decide)
+    have hd : ∀ b ∈ String.utf8EncodeChar (Nat.digitChar (n % 10)),
+        (b != (95 : UInt8)) = true := by
+      rw [utf8_digitChar _ hm]
+      have : ∀ m, m < 10 → ((UInt8.ofNat (48 + m)) != (95 : UInt8)) = true := by decide
+      simp only [List.mem_singleton]
+      intro b hb
+      subst b
+      exact this _ hm
+    have hcons : ∀ c ∈ Nat.digitChar (n % 10) :: ds,
+        ∀ b ∈ String.utf8EncodeChar c, (b != (95 : UInt8)) = true := by
+      intro c hc
+      cases List.mem_cons.mp hc with
+      | inl h => subst c; exact hd
+      | inr h => exact hds c h
+    rw [Nat.toDigitsCore]
+    split
+    · intro b hb
+      obtain ⟨c, hc, hb⟩ := List.mem_flatMap.mp hb
+      exact hcons c hc b hb
+    · exact ih (n / 10) _ (by omega) hcons
+
+private theorem split_separator (xs ys : List UInt8)
+    (h : ∀ b ∈ xs, (b != (95 : UInt8)) = true) :
+    (xs ++ 95 :: ys).takeWhile (· != 95) = xs ∧
+      (xs ++ 95 :: ys).dropWhile (· != 95) = 95 :: ys := by
+  induction xs with
+  | nil => simp
+  | cons b bs ih =>
+    have hb := h b (List.mem_cons_self)
+    have hbs : ∀ c ∈ bs, (c != (95 : UInt8)) = true :=
+      fun c hc => h c (List.mem_cons_of_mem b hc)
+    simp only [List.cons_append, List.takeWhile_cons, List.dropWhile_cons,
+      hb, if_true, (ih hbs).1, (ih hbs).2, and_self]
+
+theorem keyFromText_print (name service : Nat) :
+    keyFromText ("k" ++ toString name ++ "_" ++ toString service) = ⟨⟨name⟩, ⟨service⟩⟩ := by
+  have hk : "k".toByteArray.data.toList = [107] := by decide
+  have hs : "_".toByteArray.data.toList = [95] := by decide
+  simp only [keyFromText, String.toByteArray_append, ByteArray.data_append,
+    Array.toList_append, hk, hs, List.append_assoc, List.cons_append,
+    List.nil_append, List.drop_succ_cons, List.drop_zero]
+  change ServiceKey.mk
+    ⟨decodeBytes (((Nat.repr name).toByteArray.data.toList ++
+      95 :: (Nat.repr service).toByteArray.data.toList).takeWhile (· != 95))⟩
+    ⟨decodeBytes ((((Nat.repr name).toByteArray.data.toList ++
+      95 :: (Nat.repr service).toByteArray.data.toList).dropWhile (· != 95)).drop 1)⟩ = _
+  rw [(split_separator _ _ (repr_no_separator name)).1,
+    (split_separator _ _ (repr_no_separator name)).2]
+  simp only [List.drop_succ_cons, List.drop_zero, decodeBytes_repr]
+
+
+theorem readKey_printKey {Op : Type} (sig : Signature Op) (key : ServiceKey) :
+    readKey sig (printKey sig key) = .ok key := by
+  obtain ⟨⟨name⟩, ⟨service⟩⟩ := key
+  cases ht : sig.serviceTy ⟨⟨name⟩, ⟨service⟩⟩ <;>
+    simp only [printKey, ht, readKey, keyFromText_print, keyText, and_self, if_true]
+
 
 theorem repr_inj {a b : Nat} (h : Nat.repr a = Nat.repr b) : a = b := by
   have := congrArg (fun s => decodeBytes s.toByteArray.data.toList) h
@@ -933,6 +1115,23 @@ mutual
       simp [printTerms, readTerm_exact x ht, readTerms_exact rest hts']
   termination_by structural xs
 end
+
+theorem readLiteral_print (value : Lit) : readLiteral (printLit value) = .ok value := by
+  unfold readLiteral
+  have ht := readTerm_printTerm (n := 0) (.lit value) rfl
+  change readTerm 0 (printLit value) = .ok (.lit value) at ht
+  rw [ht]
+  rfl
+
+theorem readLiteral_exact {x : Expr} {value : Lit} (h : readLiteral x = .ok value) :
+    printLit value = x := by
+  simp only [readLiteral, bind_eq_ok] at h
+  obtain ⟨term, ht, h⟩ := h
+  cases term with
+  | var _ | app _ _ => cases h
+  | lit v =>
+    cases h
+    exact readTerm_exact x ht
 
 /-! ## Causes, fork options, rows: the small round trips -/
 
@@ -1460,10 +1659,61 @@ theorem read_print {sig : Signature Op} {spell : String → List String → Opti
     simp [headOf_lit .acquireRelease "Effect.acquireRelease" rfl, read_print hl acquire hr.1 ha,
       read_print hl release hr.2 hr']
   | .choose _ _ _, hr, _ => by simp [readable] at hr
-  | .provideLayer _ _ _, hr, _ => by simp [readable] at hr
-  | .service _, hr, _ => by simp [readable] at hr
-  | .provideService _ _ _, hr, _ => by simp [readable] at hr
+  | .provideLayer layer isLocal body, hr, hp => by
+    simp only [readable, Bool.and_eq_true] at hr
+    simp only [print, bind_eq_ok] at hp
+    obtain ⟨b, hb, l, hlayer, hx⟩ := hp
+    simp only [Except.ok.injEq] at hx; subst hx
+    cases isLocal <;> unfold readEff readHead <;>
+      simp [headOf_lit .provide "Effect.provide" rfl,
+        read_print hl body hr.2 hb, read_print_layer hl layer hr.1 hlayer]
+  | .service key, _, hp => by
+    simp only [print, Except.ok.injEq] at hp; subst hp
+    unfold readEff readHead
+    simp [headOf_lit .service "Effect.service" rfl, readKey_printKey]
+  | .provideService key value body, hr, hp => by
+    simp only [readable, Bool.and_eq_true] at hr
+    simp only [print, bind_eq_ok] at hp
+    obtain ⟨b, hb, hx⟩ := hp
+    simp only [Except.ok.injEq] at hx; subst hx
+    unfold readEff readHead
+    simp [headOf_lit .provideService "Effect.provideService" rfl,
+      read_print hl body hr.2 hb, readKey_printKey, readTerm_printTerm value hr.1]
 termination_by structural e
+
+theorem read_print_layer {sig : Signature Op} {spell : String → List String → Option Op}
+    (hl : LawfulSpelling sig spell) (layer : LayerTerm Op)
+    (hr : readableLayer sig spell layer = true) {x : Expr}
+    (hp : printLayer sig layer = .ok x) : readLayer sig spell x = .ok layer :=
+  match layer, hr, hp with
+  | .succeed key value, _, hp => by
+    simp only [printLayer, Except.ok.injEq] at hp; subst hp
+    simp [readLayer, readKey_printKey, readLiteral_print]
+  | .effect key body, hr, hp => by
+    simp only [readableLayer] at hr
+    simp only [printLayer, bind_eq_ok] at hp
+    obtain ⟨b, hb, hx⟩ := hp
+    simp only [Except.ok.injEq] at hx; subst hx
+    simp [readLayer, readKey_printKey, read_print hl body hr hb]
+  | .effectDiscard body, hr, hp => by
+    simp only [readableLayer] at hr
+    simp only [printLayer, bind_eq_ok] at hp
+    obtain ⟨b, hb, hx⟩ := hp
+    simp only [Except.ok.injEq] at hx; subst hx
+    simp [readLayer, read_print hl body hr hb]
+  | .provide self that, hr, hp | .provideMerge self that, hr, hp | .merge self that, hr, hp => by
+    simp only [readableLayer, Bool.and_eq_true] at hr
+    simp only [printLayer, bind_eq_ok] at hp
+    obtain ⟨a, ha, b, hb, hx⟩ := hp
+    simp only [Except.ok.injEq] at hx; subst hx
+    simp [readLayer, read_print_layer hl self hr.1 ha, read_print_layer hl that hr.2 hb]
+  | .fresh inner, hr, hp | .orDie inner, hr, hp => by
+    simp only [readableLayer] at hr
+    simp only [printLayer, bind_eq_ok] at hp
+    obtain ⟨i, hi, hx⟩ := hp
+    simp only [Except.ok.injEq] at hx; subst hx
+    simp [readLayer, read_print_layer hl inner hr hi]
+termination_by structural layer
 
 theorem read_print_stmts {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} (ss : Stmts Op)
@@ -1677,7 +1927,7 @@ local macro "close_arm" h:ident : tactic => `(tactic| first
   | cases $h:ident
   | (split at $h:ident <;> first | (exfalso; subst_vars; solve_by_elim [rfl]) | cases $h:ident))
 
-/-- The exactness of the reader, over the four mutual readers at once, by the functional
+/-- The exactness of the reader, over the five mutual readers at once, by the functional
 induction principle Lean generates for `readEff`: one case per arm of the reader. -/
 theorem read_exact_all {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) (n : Nat) (x : Expr) :
@@ -1686,9 +1936,11 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
     (motive_1 := fun n x => ∀ e, readEff sig spell n x = .ok e → print sig n e = .ok x)
     (motive_2 := fun n h args => ∀ e, readHead sig spell n h args = .ok e →
       print sig n e = .ok (.call (.ident h.spelling) args))
-    (motive_3 := fun n items => ∀ es, readEffs sig spell n items = .ok es →
+    (motive_3 := fun x => ∀ layer, readLayer sig spell x = .ok layer →
+      printLayer sig layer = .ok x)
+    (motive_4 := fun n items => ∀ es, readEffs sig spell n items = .ok es →
       printEffs sig n es = .ok items)
-    (motive_4 := fun n stmts => ∀ ss, readStmts sig spell n stmts = .ok ss →
+    (motive_5 := fun n stmts => ∀ ss, readStmts sig spell n stmts = .ok ss →
       printStmts sig n ss = .ok stmts)
   -- readEff
   case case1 =>
@@ -1853,39 +2105,39 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
     unfold readEff at h
     split at h <;> close_arm h
   -- readHead
-  case case16 =>
+  case case25 =>
     intro n v e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨t, ht, rfl⟩ := h
     simp [print, readTerm_exact v ht, Head.spelling]
-  case case17 =>
+  case case26 =>
     intro n v e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨t, ht, rfl⟩ := h
     simp [print, readTerm_exact v ht, Head.spelling]
-  case case18 =>
+  case case27 =>
     intro n c e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨t, ht, rfl⟩ := h
     simp [print, readCause_exact c ht, Head.spelling]
-  case case19 =>
+  case case28 =>
     intro n t e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨t', ht, rfl⟩ := h
     simp [print, readTerm_exact t ht, Head.spelling]
-  case case20 =>
+  case case29 =>
     intro n t a b iha ihb e h
     unfold readHead at h; simp only [bind_eq_ok] at h
     obtain ⟨test, htest, x, hx, y, hy, he⟩ := h
     cases he
     simp [print, iha x hx, ihb y hy, readTerm_exact t htest, Head.spelling]
-  case case21 =>
+  case case30 =>
     intro n body hnc ih e h
     unfold readHead at h
     cases body <;> first
       | exact (hnc _ _ _ rfl).elim
       | (simp only [map_eq_ok] at h; obtain ⟨b', hb', rfl⟩ := h; simp [print, ih _ hb', Head.spelling])
-  case case22 =>
+  case case31 =>
     intro n cursor initial loop fw test fb body fs answer cursor' step hc ih e h
     obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩ := hc
     unfold readHead at h
@@ -1894,35 +2146,35 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
     cases he
     simp [print, ih b hb, readTerm_exact initial hi, readTerm_exact test ht, readTerm_exact step hs,
       Head.spelling]
-  case case23 =>
+  case case32 =>
     intro n cursor initial loop fw test fb body fs answer cursor' step hc e h
     unfold readHead at h; simp [hc] at h
-  case case24 =>
+  case case33 =>
     intro n first rest ih1 ih2 e h
     unfold readHead at h
     simp only [if_true, bind_eq_ok] at h
     obtain ⟨f, hf, r, hr, he⟩ := h
     cases he
     simp [print, ih1 f hf, ih2 r hr, Head.spelling]
-  case case25 =>
+  case case34 =>
     intro n first x rest hx e h
     unfold readHead at h; simp [hx] at h
-  case case26 =>
+  case case35 =>
     intro n body ih e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨ss, hss, rfl⟩ := h
     simp [print, ih ss hss, Head.spelling]
-  case case27 =>
+  case case36 =>
     intro n body handler ih1 ih2 e h
     unfold readHead at h
     simp only [if_true, bind_eq_ok] at h
     obtain ⟨b, hb, hd, hhd, he⟩ := h
     cases he
     simp [print, ih1 b hb, ih2 hd hhd, Head.spelling]
-  case case28 =>
+  case case37 =>
     intro n body x handler hx e h
     unfold readHead at h; simp [hx] at h
-  case case29 =>
+  case case38 =>
     intro n body ff x onCause fs y onValue hc ih1 ih2 ih3 e h
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hc
     unfold readHead at h
@@ -1930,125 +2182,125 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
     obtain ⟨b, hb, v, hv, c, hc, he⟩ := h
     cases he
     simp [print, ih1 b hb, ih2 v hv, ih3 c hc, Head.spelling]
-  case case30 =>
+  case case39 =>
     intro n body ff x onCause fs y onValue hc e h
     unfold readHead at h; simp [hc] at h
-  case case31 =>
+  case case40 =>
     intro n body finalizer ih1 ih2 e h
     unfold readHead at h
     simp only [if_true, bind_eq_ok] at h
     obtain ⟨b, hb, f, hf, he⟩ := h
     cases he
     simp [print, ih1 b hb, ih2 f hf, Head.spelling]
-  case case32 =>
+  case case41 =>
     intro n body x finalizer hx e h
     unfold readHead at h; simp [hx] at h
-  case case33 =>
+  case case42 =>
     intro n body ih e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨b, hb, rfl⟩ := h
     simp [print, ih b hb, Head.spelling]
-  case case34 =>
+  case case43 =>
     intro n body ih e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨b, hb, rfl⟩ := h
     simp [print, ih b hb, Head.spelling]
-  case case35 =>
+  case case44 =>
     intro n body ih e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨b, hb, rfl⟩ := h
     simp [print, ih b hb, Head.spelling]
-  case case36 =>
+  case case45 =>
     intro n k hk e h
     unfold readHead at h; simp only [hk, if_true] at h; cases h
     simp [print, Int.toNat_of_nonneg hk, Head.spelling]
-  case case37 =>
+  case case46 =>
     intro n k hk e h
     unfold readHead at h; simp [hk] at h
-  case case38 =>
+  case case47 =>
     intro n fiber e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨t, ht, rfl⟩ := h
     simp [print, readTerm_exact fiber ht, Head.spelling]
-  case case39 =>
+  case case48 =>
     intro n fiber e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨t, ht, rfl⟩ := h
     simp [print, readTerm_exact fiber ht, Head.spelling]
-  case case40 =>
+  case case49 =>
     intro n program options ih e h
     unfold readHead at h; simp only [bind_eq_ok] at h
     obtain ⟨p, hp, o, ho, he⟩ := h
     cases he
     obtain ⟨hpo, hd⟩ := readForkOptions_exact ho
     simp [print, printAction, ih p hp, hpo, hd, Head.spelling]
-  case case41 =>
+  case case50 =>
     intro n program options ih e h
     unfold readHead at h; simp only [bind_eq_ok] at h
     obtain ⟨p, hp, o, ho, he⟩ := h
     cases he
     obtain ⟨hpo, hd⟩ := readForkOptions_exact ho
     simp [print, printAction, ih p hp, hpo, hd, Head.spelling]
-  case case42 =>
+  case case51 =>
     intro n program scope options ih e h
     unfold readHead at h; simp only [bind_eq_ok] at h
     obtain ⟨p, hp, s, hs, o, ho, he⟩ := h
     cases he
     obtain ⟨hpo, _⟩ := readForkOptions_exact ho
     simp [print, printAction, ih p hp, readTerm_exact scope hs, hpo, Head.spelling]
-  case case43 =>
+  case case52 =>
     intro n program options ih e h
     unfold readHead at h; simp only [bind_eq_ok] at h
     obtain ⟨p, hp, o, ho, he⟩ := h
     cases he
     obtain ⟨hpo, _⟩ := readForkOptions_exact ho
     simp [print, printAction, ih p hp, hpo, Head.spelling]
-  case case44 =>
+  case case53 =>
     intro n args e h
     simp only [readHead] at h
     exact readRunIn_exact h
-  case case45 =>
+  case case54 =>
     intro n target e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨t, ht, rfl⟩ := h
     simp [print, printAction, readTerm_exact target ht, Head.spelling]
-  case case46 =>
+  case case55 =>
     intro n targets e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨t, ht, rfl⟩ := h
     simp [print, printAction, readTerm_exact targets ht, Head.spelling]
-  case case47 =>
+  case case56 =>
     intro n targets who e h
     unfold readHead at h; simp only [bind_eq_ok] at h
     obtain ⟨t, ht, w, hw, he⟩ := h
     cases he
     simp [print, printAction, readTerm_exact targets ht, readTerm_exact who hw, Head.spelling]
-  case case48 =>
+  case case57 =>
     intro n targets e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨t, ht, rfl⟩ := h
     simp [print, printAction, readTerm_exact targets ht, Head.spelling]
-  case case49 =>
+  case case58 =>
     intro n entrants ih e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨es, hes, rfl⟩ := h
     simp [print, printAction, ih es hes, Head.spelling]
-  case case50 =>
+  case case59 =>
     intro n e h
     unfold readHead at h; simp at h; subst h
     simp [print, printAction, Head.spelling]
-  case case51 =>
+  case case60 =>
     intro n scope exit e h
     unfold readHead at h; simp only [bind_eq_ok] at h
     obtain ⟨s, hs, x, hx, he⟩ := h
     cases he
     simp [print, printAction, readTerm_exact scope hs, readTerm_exact exit hx, Head.spelling]
-  case case52 =>
+  case case61 =>
     intro n body ih e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨b, hb, rfl⟩ := h
     simp [print, ih b hb, Head.spelling]
-  case case53 =>
+  case case62 =>
     intro n acquire x y release hxy ih1 ih2 e h
     obtain ⟨rfl, rfl⟩ := hxy
     unfold readHead at h
@@ -2056,89 +2308,164 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
     obtain ⟨a, ha, r, hr, he⟩ := h
     cases he
     simp [print, ih1 a ha, ih2 r hr, Head.spelling]
-  case case54 =>
+  case case63 =>
     intro n acquire x y release hne e h
     unfold readHead at h; simp [hne] at h
-  case case55 => intro t n e h; unfold readHead at h; simp at h
-  case case56 => intro t n e h; unfold readHead at h; simp at h
-  case case57 => intro t n e h; unfold readHead at h; simp at h
-  case case58 => intro t n e h; unfold readHead at h; simp at h
-  case case59 => intro t n e h; unfold readHead at h; simp at h
-  case case60 => intro t n e h; unfold readHead at h; simp at h
-  case case61 => intro t n e h; unfold readHead at h; simp at h
-  case case62 => intro t n e h; unfold readHead at h; simp at h
-  case case63 => intro t n e h; unfold readHead at h; simp at h
-  case case64 => intro t n e h; unfold readHead at h; simp at h
-  case case65 => intro t n e h; unfold readHead at h; simp at h
-  case case66 => intro t n e h; unfold readHead at h; simp at h
-  case case67 => intro t n e h; unfold readHead at h; simp at h
-  case case68 => intro t n e h; unfold readHead at h; simp at h
+  case case64 =>
+    intro n body layer ihb ihl e h
+    unfold readHead at h; simp only [bind_eq_ok] at h
+    obtain ⟨b, hb, l, hlayer, he⟩ := h
+    cases he
+    simp [print, ihb b hb, ihl l hlayer, Head.spelling]
+  case case65 =>
+    intro n body layer ihb ihl e h
+    unfold readHead at h; simp only [if_true, bind_eq_ok] at h
+    obtain ⟨b, hb, l, hlayer, he⟩ := h
+    cases he
+    simp [print, ihb b hb, ihl l hlayer, Head.spelling]
+  case case66 =>
+    intro n body layer field hfield e h
+    unfold readHead at h; simp [hfield] at h
+  case case67 =>
+    intro n key e h
+    unfold readHead at h; simp only [map_eq_ok] at h
+    obtain ⟨k, hk, rfl⟩ := h
+    simp [print, readKey_exact hk, Head.spelling]
+  case case68 =>
+    intro n body key value ih e h
+    unfold readHead at h; simp only [bind_eq_ok] at h
+    obtain ⟨b, hb, k, hk, v, hv, he⟩ := h
+    cases he
+    simp [print, ih b hb, readKey_exact hk, readTerm_exact value hv, Head.spelling]
   case case69 => intro t n e h; unfold readHead at h; simp at h
   case case70 => intro t n e h; unfold readHead at h; simp at h
   case case71 => intro t n e h; unfold readHead at h; simp at h
   case case72 => intro t n e h; unfold readHead at h; simp at h
   case case73 => intro t n e h; unfold readHead at h; simp at h
-  case case74 =>
+  case case74 => intro t n e h; unfold readHead at h; simp at h
+  case case75 => intro t n e h; unfold readHead at h; simp at h
+  case case76 => intro t n e h; unfold readHead at h; simp at h
+  case case77 => intro t n e h; unfold readHead at h; simp at h
+  case case78 => intro t n e h; unfold readHead at h; simp at h
+  case case79 => intro t n e h; unfold readHead at h; simp at h
+  case case80 => intro t n e h; unfold readHead at h; simp at h
+  case case81 => intro t n e h; unfold readHead at h; simp at h
+  case case82 => intro t n e h; unfold readHead at h; simp at h
+  case case83 => intro t n e h; unfold readHead at h; simp at h
+  case case84 => intro t n e h; unfold readHead at h; simp at h
+  case case85 =>
     intro n hd t
     intros
     rename_i e h
     unfold readHead at h
     split at h <;> close_arm h
+  -- readLayer
+  case case16 =>
+    intro key value layer h
+    unfold readLayer at h; simp only [bind_eq_ok] at h
+    obtain ⟨k, hk, v, hv, hlayer⟩ := h
+    cases hlayer
+    simp [printLayer, readKey_exact hk, readLiteral_exact hv]
+  case case17 =>
+    intro key body ih layer h
+    unfold readLayer at h; simp only [bind_eq_ok] at h
+    obtain ⟨k, hk, b, hb, hlayer⟩ := h
+    cases hlayer
+    simp [printLayer, readKey_exact hk, ih b hb]
+  case case18 =>
+    intro body ih layer h
+    unfold readLayer at h; simp only [map_eq_ok] at h
+    obtain ⟨b, hb, rfl⟩ := h
+    simp [printLayer, ih b hb]
+  case case19 =>
+    intro self that ihs iht layer h
+    unfold readLayer at h; simp only [bind_eq_ok] at h
+    obtain ⟨s, hs, t, ht, hlayer⟩ := h
+    cases hlayer
+    simp [printLayer, ihs s hs, iht t ht]
+  case case20 =>
+    intro self that ihs iht layer h
+    unfold readLayer at h; simp only [bind_eq_ok] at h
+    obtain ⟨s, hs, t, ht, hlayer⟩ := h
+    cases hlayer
+    simp [printLayer, ihs s hs, iht t ht]
+  case case21 =>
+    intro left right ihl ihr layer h
+    unfold readLayer at h; simp only [bind_eq_ok] at h
+    obtain ⟨l, hl, r, hr, hlayer⟩ := h
+    cases hlayer
+    simp [printLayer, ihl l hl, ihr r hr]
+  case case22 =>
+    intro inner ih layer h
+    unfold readLayer at h; simp only [map_eq_ok] at h
+    obtain ⟨i, hi, rfl⟩ := h
+    simp [printLayer, ih i hi]
+  case case23 =>
+    intro inner ih layer h
+    unfold readLayer at h; simp only [map_eq_ok] at h
+    obtain ⟨i, hi, rfl⟩ := h
+    simp [printLayer, ih i hi]
+  case case24 =>
+    intro x
+    intros
+    rename_i layer h
+    unfold readLayer at h
+    split at h <;> close_arm h
   -- readEffs
-  case case75 =>
+  case case86 =>
     intro n es h
     unfold readEffs at h; simp at h; subst h; rfl
-  case case76 =>
+  case case87 =>
     intro n x rest ih1 ih2 es h
     unfold readEffs at h; simp only [bind_eq_ok] at h
     obtain ⟨e, he, es', hes', hes⟩ := h
     cases hes
     simp [printEffs, ih1 e he, ih2 es' hes']
   -- readStmts
-  case case77 =>
+  case case88 =>
     intro n ss h
     unfold readStmts at h; simp at h; subst h; rfl
-  case case78 =>
+  case case89 =>
     intro n value rest ih1 ih2 ss h
     unfold readStmts at h
     simp only [if_true, bind_eq_ok] at h
     obtain ⟨e, he, tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, ih1 e he, ih2 tail htail]
-  case case79 =>
+  case case90 =>
     intro n x value rest hx ss h
     unfold readStmts at h; simp [hx] at h
-  case case80 =>
+  case case91 =>
     intro n value rest ih1 ih2 ss h
     unfold readStmts at h; simp only [bind_eq_ok] at h
     obtain ⟨e, he, tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, ih1 e he, ih2 tail htail]
-  case case81 =>
+  case case92 =>
     intro n value rest ih ss h
     unfold readStmts at h; simp only [bind_eq_ok] at h
     obtain ⟨v, hv, tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, readTerm_exact value hv, ih tail htail]
-  case case82 =>
+  case case93 =>
     intro n test thenB elseB rest ih1 ih2 ih3 ss h
     unfold readStmts at h; simp only [bind_eq_ok] at h
     obtain ⟨t, ht, a, ha, b, hb, tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, readTerm_exact test ht, ih1 a ha, ih2 b hb, ih3 tail htail]
-  case case83 =>
+  case case94 =>
     intro n body rest ih1 ih2 ss h
     unfold readStmts at h; simp only [bind_eq_ok] at h
     obtain ⟨b, hb, tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, ih1 b hb, ih2 tail htail]
-  case case84 =>
+  case case95 =>
     intro n rest ih ss h
     unfold readStmts at h; simp only [bind_eq_ok] at h
     obtain ⟨tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, ih tail htail]
-  case case85 =>
+  case case96 =>
     intro n head tail
     intros
     rename_i ss h
@@ -2531,7 +2858,33 @@ mutual
       obtain ⟨a, ha⟩ := print_readable sig spell n acquire hs.1
       obtain ⟨r, hrel⟩ := print_readable sig spell (n + 2) release hs.2
       exact ⟨_, by simp only [print, ha, hrel] <;> rfl⟩
-    | .choose _ _ _ | .provideLayer _ _ _ | .service _ | .provideService _ _ _ => by cases hr
+    | .choose _ _ _ => by cases hr
+    | .service _ => ⟨_, rfl⟩
+    | .provideLayer layer _ body => by
+      have hs := Bool.and_eq_true_iff.mp hr
+      obtain ⟨b, hb⟩ := print_readable sig spell n body hs.2
+      obtain ⟨l, hlayer⟩ := printLayer_readable sig spell layer hs.1
+      exact ⟨_, by simp only [print, hb, hlayer] <;> rfl⟩
+    | .provideService _ _ body => by
+      obtain ⟨b, hb⟩ := print_readable sig spell n body (Bool.and_eq_true_iff.mp hr).2
+      exact ⟨_, by simp only [print, hb] <;> rfl⟩
+
+  theorem printLayer_readable (sig : Signature Op) (spell : String → List String → Option Op)
+      (layer : LayerTerm Op) (hr : readableLayer sig spell layer = true) :
+      ∃ x, printLayer sig layer = .ok x :=
+    match layer with
+    | .succeed _ _ => ⟨_, rfl⟩
+    | .effect _ body | .effectDiscard body => by
+      obtain ⟨b, hb⟩ := print_readable sig spell 0 body hr
+      exact ⟨_, by simp only [printLayer, hb] <;> rfl⟩
+    | .provide self that | .provideMerge self that | .merge self that => by
+      have hs := Bool.and_eq_true_iff.mp hr
+      obtain ⟨a, ha⟩ := printLayer_readable sig spell self hs.1
+      obtain ⟨b, hb⟩ := printLayer_readable sig spell that hs.2
+      exact ⟨_, by simp only [printLayer, ha, hb] <;> rfl⟩
+    | .fresh inner | .orDie inner => by
+      obtain ⟨i, hi⟩ := printLayer_readable sig spell inner hr
+      exact ⟨_, by simp only [printLayer, hi] <;> rfl⟩
 
   theorem printStmts_readable (sig : Signature Op) (spell : String → List String → Option Op)
       (n : Nat) (stmts : Stmts Op) (hr : readableStmts sig spell n stmts = true) :

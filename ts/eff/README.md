@@ -24,6 +24,12 @@ import { toJson } from "./json.gen.ts"          // (eff: Eff) => string
 A refusal is data (`Refusal`): Lean's seven `ReadRefusal` cases plus three for the layer
 below them (`node`, `program`, `parse`).
 
+The reader includes the printed service and provision operations and all eight Layer
+forms. Layer effect bodies start with an empty variable environment. Service keys retain
+both numeric fields and the native signature's type argument; a key outside JavaScript's
+safe-integer range is refused. Lean's key round-trip theorem covers arbitrary natural
+numbers, so its domain is wider than this host representation.
+
 ## Files
 
 | file | written by | what |

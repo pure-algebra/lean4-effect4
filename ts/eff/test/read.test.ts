@@ -233,3 +233,80 @@ describe("program files", () => {
     expect(Result.isSuccess(r) && isEff(r.success)).toBe(true)
   })
 })
+
+describe("the join", () => {
+  const key = 'Context.Service<number>("k4_4")'
+  const leaf = `Layer.succeed(${key}, 7)`
+  test("reads a service with both numeric fields", () => {
+    expect(json(`Effect.service(${key})`)).toBe('["service",{"name":{"value":4},"service":{"value":4}}]')
+  })
+  test("reads provided values and both local options", () => {
+    expect(json(`Effect.provideService(Effect.service(${key}), ${key}, 7)`)).toBe(
+      '["provideService",{"name":{"value":4},"service":{"value":4}},["lit",["nat",7]],["service",{"name":{"value":4},"service":{"value":4}}]]',
+    )
+    for (const options of ["", ", { local: true }"]) {
+      const result = readTypeScript(`Effect.provide(Effect.service(${key}), ${leaf}${options})`)
+      expect(Result.isSuccess(result)).toBe(true)
+      if (Result.isSuccess(result)) {
+        expect(result.success._tag).toBe("provideLayer")
+        if (result.success._tag === "provideLayer") expect(result.success.isLocal).toBe(options !== "")
+      }
+    }
+  })
+  test.each([
+    [leaf, "succeed"],
+    [`Layer.effect(${key}, Effect.succeed(7))`, "effect"],
+    ["Layer.effectDiscard(Effect.succeed(7))", "effectDiscard"],
+    [`${leaf}.pipe(Layer.provide(${leaf}))`, "provide"],
+    [`${leaf}.pipe(Layer.provideMerge(${leaf}))`, "provideMerge"],
+    [`Layer.merge(${leaf}, ${leaf})`, "merge"],
+    [`Layer.fresh(${leaf})`, "fresh"],
+    [`Layer.orDie(${leaf})`, "orDie"],
+  ] as const)("reads layer %s", (layer, tag) => {
+    const result = readTypeScript(`Effect.provide(Effect.succeed(7), ${layer})`)
+    expect(Result.isSuccess(result)).toBe(true)
+    if (Result.isSuccess(result) && result.success._tag === "provideLayer") {
+      expect(result.success.layer._tag).toBe(tag)
+    }
+  })
+  test("layer bodies have their own empty binder environment", () => {
+    const result = readTypeScript(`Effect.flatMap(Effect.succeed(1), (a0) => Effect.provide(
+      Effect.succeed(a0), Layer.effect(${key}, Effect.flatMap(Effect.succeed(2), (a0) => Effect.succeed(a0)))))`)
+    expect(Result.isSuccess(result)).toBe(true)
+    expect(refusal(`Effect.flatMap(Effect.succeed(1), (a0) => Effect.provide(
+      Effect.succeed(a0), Layer.effect(${key}, Effect.succeed(a0))))`)).toEqual(
+      { _tag: "unknownIdent", name: "a0" },
+    )
+  })
+  test.each([
+    'Context.Service<boolean>("k4_4")',
+    'Context.Service<number>("k04_4")',
+    'Context.Service<number>("k4_04")',
+    'Context.Service<number>("k4_4_")',
+    'Context.Service("k4_4")',
+    'Context.Service<number, number>("k4_4")',
+  ])("rejects a noncanonical key %s", (invalid) => {
+    expect(refusal(`Effect.service(${invalid})`)).toEqual({ _tag: "shape", what: "service key" })
+  })
+  test("checks reserved and untyped keys against the native signature", () => {
+    expect(json('Effect.service(Context.Service<Scope.Scope>("k0_0"))')).toBe('["service",{"name":{"value":0},"service":{"value":0}}]')
+    expect(json('Effect.service(Context.Service<Ref.Ref<number>>("k4_7"))')).toBe(
+      '["service",{"name":{"value":4},"service":{"value":7}}]',
+    )
+    expect(json('Effect.service(Context.Service("k1_4"))')).toBe('["service",{"name":{"value":1},"service":{"value":4}}]')
+    expect(refusal('Effect.service(Context.Service<number>("k1_4"))')).toEqual({ _tag: "shape", what: "service key" })
+  })
+  test("keeps service keys exact at the JavaScript integer boundary", () => {
+    expect(json('Effect.service(Context.Service<number>("k9007199254740991_4"))')).toBe(
+      '["service",{"name":{"value":9007199254740991},"service":{"value":4}}]',
+    )
+    for (const key of ['Context.Service<number>("k9007199254740992_4")',
+      'Context.Service("k4_9007199254740993")']) {
+      expect(refusal(`Effect.service(${key})`)).toEqual({ _tag: "shape", what: "service key" })
+    }
+  })
+  test("rejects local false and nonliteral Layer.succeed values", () => {
+    expect(refusal(`Effect.provide(Effect.succeed(7), ${leaf}, { local: false })`)._tag).toBe("arity")
+    expect(refusal(`Effect.provide(Effect.succeed(7), Layer.succeed(${key}, add(1, 2)))`)).toEqual({ _tag: "shape", what: "literal" })
+  })
+})

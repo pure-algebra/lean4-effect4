@@ -23,8 +23,9 @@ no arm that draws them, not one seed that happened to miss them.
 `pick` is the 64-bit LCG of the spike, taken modulo `2 ^ 63` with the low 16 bits dropped, and
 program `i` at depth `d` is `(genEff 0 d).run ⟨1000003 * (i + 1) + 17⟩`. The arithmetic and the
 *order* of the draws are the reproducibility contract: `Test/Program/Gen.lean`
-rendered from this module reproduces the spike's 400 files byte for byte, and any change to a
-branch probability or to the sequence of `pick` calls inside an arm is a different corpus.
+originally reproduced the spike's 400 files byte for byte. The ingestion join adds
+three program arms and a layer generator, producing a deliberately different corpus.
+Every count is measured and pinned below; the seed formula remains unchanged.
 
 ## Why the recursion is shaped the way it is
 
@@ -174,10 +175,26 @@ def genOp : M NativeOp := do
   | 18 => pure (.scopeMake .sequential)
   | _ => pure (.scopeMake .parallel)
 
+/-- Free numeric service keys for the generated corpus; other carriers have explicit reader pins. -/
+def genKey : M ServiceKey := do pure ⟨⟨4 + (← pick 8)⟩, ⟨4⟩⟩
+
+/-- One layer arm, with recursive generators already one depth below. -/
+def genLayerStep (prev : Nat → M (Eff NativeOp)) (prevLayer : M (LayerTerm NativeOp)) :
+    M (LayerTerm NativeOp) := do
+  match ← pick 8 with
+  | 0 => pure (.succeed (← genKey) (.nat (← pick 20)))
+  | 1 => pure (.effect (← genKey) (← prev 0))
+  | 2 => pure (.effectDiscard (← prev 0))
+  | 3 => pure (.provide (← prevLayer) (← prevLayer))
+  | 4 => pure (.provideMerge (← prevLayer) (← prevLayer))
+  | 5 => pure (.merge (← prevLayer) (← prevLayer))
+  | 6 => pure (.fresh (← prevLayer))
+  | _ => pure (.orDie (← prevLayer))
+
 /-! ## Programs
 
-`genEffLeaf` is the arm table for a draw `k < 8`: every constructor that carries no `Eff`
-subterm. `genEffStep` is the arm table for `8 ≤ k < 30`, taking the depth-below generators as
+`genEffLeaf` supplies the original eight leaf draws. `genEffStep` extends the
+thirty-way table to 33 draws for the join, taking the depth-below generators as
 parameters — `prev` for programs and `prevStmts` for generator bodies — so that it can serve
 both `genEff` at `d+1` and `genStmts` at `d+1`, which needs exactly that program generator. -/
 
@@ -204,12 +221,12 @@ def effsOf (gen : Nat → M (Eff NativeOp)) (n : Nat) : Nat → M (Effs NativeOp
   | 0 => pure .nil
   | k + 1 => do pure (.cons (← gen n) (← effsOf gen n k))
 
-/-- A program at a positive depth: the thirty-way arm table. `prev` is the program generator
+/-- A program at a positive depth: the 33-way arm table. `prev` is the program generator
 one depth below and `prevStmts` the statement-list generator one depth below; `9 | 10 | 11`
 and `22 | 23` weight `bind` and `fork` up, as the spike did. -/
 def genEffStep (prev : Nat → M (Eff NativeOp)) (prevStmts : Nat → Nat → M (Stmts NativeOp))
-    (n : Nat) : M (Eff NativeOp) := do
-  let k ← pick 30
+    (prevLayer : M (LayerTerm NativeOp)) (n : Nat) : M (Eff NativeOp) := do
+  let k ← pick 33
   if k < 8 then
     genEffLeaf n k
   else
@@ -242,7 +259,10 @@ def genEffStep (prev : Nat → M (Eff NativeOp)) (prevStmts : Nat → Nat → M 
       | _ => pure (.withFiber (.closeScope (← genTerm n 1) (← genTerm n 1)))
     | 27 => pure (.withFiber (.raceAll (← effsOf prev n (1 + (← pick 3)))))
     | 28 => pure (.scoped (← prev n))
-    | _ => pure (.acquireRelease (← prev n) (← prev (n + 2)))
+    | 29 => pure (.acquireRelease (← prev n) (← prev (n + 2)))
+    | 30 => pure (.provideLayer (← prevLayer) ((← pick 2) == 0) (← prev n))
+    | 31 => pure (.service (← genKey))
+    | _ => pure (.provideService (← genKey) (← genTerm n 1) (← prev n))
 
 /-- A generator body at depth `0`: only the three statement forms that need no nested block. -/
 def stmtsLeafLoop (gen : Nat → M (Eff NativeOp)) (n : Nat) : Nat → M (Stmts NativeOp)
@@ -274,7 +294,7 @@ mutual
 /-- A program over an environment of `n` variables, nested at most `depth` deep. -/
 def genEff (n : Nat) : Nat → M (Eff NativeOp)
   | 0 => genEff0 n
-  | d + 1 => genEffStep (fun m => genEff m d) (fun m count => genStmts m d count) n
+  | d + 1 => genEffStep (fun m => genEff m d) (fun m count => genStmts m d count) (genLayer d) n
 
 /-- A generator body of at most `count` statements over an environment of `n` variables,
 nested at most `depth` deep. The program generator it draws from is the one at *its own*
@@ -282,8 +302,13 @@ depth, spelled as `genEffStep` over the depth-below generators — which is `gen
 def genStmts (n : Nat) : Nat → Nat → M (Stmts NativeOp)
   | 0, count => stmtsLeafLoop genEff0 n count
   | d + 1, count =>
-    stmtsLoop (genEffStep (fun m => genEff m d) (fun m c => genStmts m d c))
+    stmtsLoop (genEffStep (fun m => genEff m d) (fun m c => genStmts m d c) (genLayer d))
       (fun m c => genStmts m d c) n count
+
+/-- A closed layer, with both layer and effect recursion decreasing the depth. -/
+def genLayer : Nat → M (LayerTerm NativeOp)
+  | 0 => do pure (.succeed (← genKey) (.nat (← pick 20)))
+  | d + 1 => genLayerStep (fun n => genEff n d) (genLayer d)
 
 end
 
@@ -327,11 +352,18 @@ def walkEff (pe : Eff NativeOp → Bool) (ps : Stmt NativeOp → Bool)
   | e@(.acquireRelease acquire release) =>
     pe e || walkEff pe ps pa acquire || walkEff pe ps pa release
   | e@(.choose _ left right) => pe e || walkEff pe ps pa left || walkEff pe ps pa right
-  -- the provision constructors (the join): the body is walked; a layer's bodies are not,
-  -- since the generator draws no layer
-  | e@(.provideLayer _ _ body) => pe e || walkEff pe ps pa body
+  | e@(.provideLayer layer _ body) => pe e || walkLayer pe ps pa layer || walkEff pe ps pa body
   | e@(.provideService _ _ body) => pe e || walkEff pe ps pa body
   | e => pe e
+
+/-- Traverse closed effect bodies and nested layer combinators. -/
+def walkLayer (pe : Eff NativeOp → Bool) (ps : Stmt NativeOp → Bool)
+    (pa : ActionTerm NativeOp → Bool) : LayerTerm NativeOp → Bool
+  | .succeed _ _ => false
+  | .effect _ body | .effectDiscard body => walkEff pe ps pa body
+  | .provide self that | .provideMerge self that | .merge self that =>
+    walkLayer pe ps pa self || walkLayer pe ps pa that
+  | .fresh inner | .orDie inner => walkLayer pe ps pa inner
 
 def walkStmts (pe : Eff NativeOp → Bool) (ps : Stmt NativeOp → Bool)
     (pa : ActionTerm NativeOp → Bool) : Stmts NativeOp → Bool
@@ -373,6 +405,17 @@ def mentionsStmt (p : Stmt NativeOp → Bool) (e : Eff NativeOp) : Bool :=
 def mentionsAction (p : ActionTerm NativeOp → Bool) (e : Eff NativeOp) : Bool :=
   walkEff (fun _ => false) (fun _ => false) p e
 
+/-- The layer constructors in one layer tree; the outer walker visits nested effect bodies. -/
+def layerContains (p : LayerTerm NativeOp → Bool) : LayerTerm NativeOp → Bool
+  | layer@(.provide self that) | layer@(.provideMerge self that) | layer@(.merge self that) =>
+    p layer || layerContains p self || layerContains p that
+  | layer@(.fresh inner) | layer@(.orDie inner) => p layer || layerContains p inner
+  | layer => p layer
+
+/-- Whether a program contains a layer node satisfying the predicate. -/
+def mentionsLayer (p : LayerTerm NativeOp → Bool) : Eff NativeOp → Bool :=
+  mentionsEff (fun | .provideLayer layer _ _ => layerContains p layer | _ => false)
+
 /-! ## Size, structurally
 
 `nodes` counts `Eff` constructors, following the same family; `depth` is the longest chain of
@@ -399,9 +442,15 @@ def nodesEff : Eff NativeOp → Nat
   | .scoped body => 1 + nodesEff body
   | .acquireRelease acquire release => 1 + nodesEff acquire + nodesEff release
   | .choose _ left right => 1 + nodesEff left + nodesEff right
-  | .provideLayer _ _ body => 1 + nodesEff body
+  | .provideLayer layer _ body => 1 + nodesLayer layer + nodesEff body
   | .provideService _ _ body => 1 + nodesEff body
   | _ => 1
+
+def nodesLayer : LayerTerm NativeOp → Nat
+  | .succeed _ _ => 0
+  | .effect _ body | .effectDiscard body => nodesEff body
+  | .provide self that | .provideMerge self that | .merge self that => nodesLayer self + nodesLayer that
+  | .fresh inner | .orDie inner => nodesLayer inner
 
 def nodesStmts : Stmts NativeOp → Nat
   | .nil => 0
@@ -447,9 +496,15 @@ def depthEff : Eff NativeOp → Nat
   | .scoped body => 1 + depthEff body
   | .acquireRelease acquire release => 1 + max (depthEff acquire) (depthEff release)
   | .choose _ left right => 1 + max (depthEff left) (depthEff right)
-  | .provideLayer _ _ body => 1 + depthEff body
+  | .provideLayer layer _ body => 1 + max (depthLayer layer) (depthEff body)
   | .provideService _ _ body => 1 + depthEff body
   | _ => 1
+
+def depthLayer : LayerTerm NativeOp → Nat
+  | .succeed _ _ => 0
+  | .effect _ body | .effectDiscard body => depthEff body
+  | .provide self that | .provideMerge self that | .merge self that => max (depthLayer self) (depthLayer that)
+  | .fresh inner | .orDie inner => depthLayer inner
 
 def depthStmts : Stmts NativeOp → Nat
   | .nil => 0
@@ -477,8 +532,8 @@ end
 
 /-! ## The pins
 
-The corpus the spike measured: 400 programs at depth 4. Every pin below is a `#guard` over
-`sample`, and every expected value is written out. -/
+The extended corpus: 400 programs at depth 4, including the join. Every pin below is a
+`#guard` over `sample`, and every expected value was measured after extending the draws. -/
 
 /-- The pinned corpus: `corpus 400 4`. -/
 def sample : List (Eff NativeOp) := corpus 400 4
@@ -497,6 +552,9 @@ def coversStmt (p : Stmt NativeOp → Bool) : Bool := sample.any (mentionsStmt p
 
 /-- Whether some program of the corpus has a fiber action satisfying `p`. -/
 def coversAction (p : ActionTerm NativeOp → Bool) : Bool := sample.any (mentionsAction p)
+
+/-- Whether a generated program contains a layer node satisfying the predicate. -/
+def coversLayer (p : LayerTerm NativeOp → Bool) : Bool := sample.any (mentionsLayer p)
 
 /-- The largest `Eff` node count over the corpus. -/
 def maxNodes : Nat := sample.foldl (fun acc e => max acc (nodesEff e)) 0
@@ -522,13 +580,13 @@ def wellTypedCount : Nat := (sample.filter Api.wellTyped).length
 
 /-! ### The well-typed count -/
 
-#guard wellTypedCount = 136
+#guard wellTypedCount = 148
 
 /-! ### Size -/
 
-#guard maxNodes = 22
+#guard maxNodes = 24
 #guard maxDepth = 5
-#guard totalNodes = 2032
+#guard totalNodes = 1864
 
 /-! ### Every `Eff` constructor the printer accepts occurs -/
 
@@ -555,6 +613,21 @@ def wellTypedCount : Nat := (sample.filter Api.wellTyped).length
 #guard coversEff (fun | .withFiber _ => true | _ => false)
 #guard coversEff (fun | .scoped _ => true | _ => false)
 #guard coversEff (fun | .acquireRelease _ _ => true | _ => false)
+
+#guard coversEff (fun | .provideLayer _ _ _ => true | _ => false)
+#guard coversEff (fun | .service _ => true | _ => false)
+#guard coversEff (fun | .provideService _ _ _ => true | _ => false)
+
+/-! ### All eight layer forms occur -/
+
+#guard coversLayer (fun | .succeed _ _ => true | _ => false)
+#guard coversLayer (fun | .effect _ _ => true | _ => false)
+#guard coversLayer (fun | .effectDiscard _ => true | _ => false)
+#guard coversLayer (fun | .provide _ _ => true | _ => false)
+#guard coversLayer (fun | .provideMerge _ _ => true | _ => false)
+#guard coversLayer (fun | .merge _ _ => true | _ => false)
+#guard coversLayer (fun | .fresh _ => true | _ => false)
+#guard coversLayer (fun | .orDie _ => true | _ => false)
 
 /-! The one constructor the printer refuses is the one the generator never draws. -/
 #guard !coversEff (fun | .choose _ _ _ => true | _ => false)
