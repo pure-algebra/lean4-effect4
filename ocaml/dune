@@ -7,10 +7,12 @@
 ;   server/  effect4d, the daemon over the avatar, three hosts from one module list
 ;   gen/     the LCNF route: Fibers.lean as generated typed OCaml, and its check
 ;   eff/     the Eff program IR as an OCaml library (typed embedding, wire, checker)
+;   engine/  the host engine under the generated machine: math, carriers, persistence,
+;            queueing, query (docs/research/2026-09-08-engine-brief.md)
 ;
 ; Not built from here: link/ (route 1, links the Lean machine's static libraries and is
 ; built by link/tools/build.sh after the Lean half compiles), wasm/ (the fourth host: the
 ; avatar under wasm_of_ocaml in the effect4-wasm switch, built out of tree by
 ; wasm/tools/build-wasm.sh), probes/ (single-file probes and corpora with their own shell
 ; builds), goldens/ (data).
-(dirs avatar server gen eff)
+(dirs avatar server gen eff engine)

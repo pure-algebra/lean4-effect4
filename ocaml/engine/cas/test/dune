@@ -1,0 +1,199 @@
+; The CAS tests: one binary per lane, each with an explicit `(modules ...)` so a lane can add
+; a stanza without claiming another lane's module
+; (docs/research/2026-09-08-engine-a2-persistence.md §3, lanes P0-P10).
+;
+;   test_bytes  lane P0 — E4_crc, E4_kind, E4_addr, E4_node: the laws of their .mli's, the
+;               #guards of src/Effect4/Store/{Kind,Node}.lean, and the goldens G1/G5 of
+;               ../goldens when the coordinator's cut is present.
+
+(test
+ (name test_bytes)
+ (modules test_bytes)
+ (libraries effect4_engine_cas effect4_engine effect4_eff))
+
+;   test_wal    lane P5 — E4_wal: the laws LG1-LG9 of ../e4_wal.mli, the crash families of
+;               A2 §4.3 X6 (a torn last row, a flipped checksum, a missing middle segment, an
+;               unsealed tail), LAW LOG-REL as two jobs with identical rows, and the mutation
+;               check.  Writes only under the system temp directory and removes what it made.
+;   bench_wal   lane P5 — the log's half of A2 §4.5: append rows/s with group commit at 64 B,
+;               256 B and 1 KB rows and batch 1 / 64 / 512 (B8), and replay rows/s (B9).  An
+;               executable, not a test: it fsyncs, so it is run by hand with the directories
+;               to measure as its arguments (default: one under the system temp directory).
+
+(test
+ (name test_wal)
+ (modules test_wal)
+ (libraries effect4_engine_cas effect4_engine unix))
+
+(executable
+ (name bench_wal)
+ (modules bench_wal)
+ (libraries effect4_engine_cas effect4_engine unix))
+
+;   test_control  lane P3 — E4_control: the byte grammar and the behaviours CF1-CF9 of
+;                 ../e4_control.mli, every constructor of `open_error`, the three crash
+;                 families of A2 §4.3 X4 that concern this file (a torn tmp, a rename that did
+;                 not happen, a checksum mismatch), the reserved-tag round trip (P9), the roots
+;                 compare-and-set against Store.putRoot's vocabulary, the golden G3 replay
+;                 against ../goldens with a resolver stubbed from the g1 cut, and the mutation
+;                 check.  Writes only under the system temp directory and removes what it made.
+
+(test
+ (name test_control)
+ (modules test_control)
+ (libraries effect4_engine_cas effect4_engine effect4_eff unix))
+
+;   test_pack   lane P1 — E4_pack: the byte grammar of A2 §1.2 read back out of the file, the
+;               behaviours PK1-PK8 of ../e4_pack.mli, the crash families of A2 §4.3 X1 and X2
+;               (truncate mid-record at every interesting offset, a flipped crc byte, a
+;               flipped digest byte, a flipped payload byte, a flipped record tag, a torn last
+;               record), the single-writer discipline including a forked second process, and
+;               the mutation check that L-CAS-6 exists: with the crc repaired, `read_at`
+;               succeeds on a corrupted record and `read` refuses it as `Digest_mismatch`.
+;               Writes only under $E4_PACK_TMP (default: the system temp directory) and
+;               removes what it made.
+;   bench_pack  lane P1 — the pack's half of A2 §4.5: append + fsync throughput at 1 KiB and
+;               64 KiB nodes and batch 1 / 64 / 512 / 4096, with the B1 and B6 verdicts.  An
+;               executable, not a test: it fsyncs hundreds of times and writes hundreds of MB,
+;               so it is run by hand with the directory to measure as its argument.
+
+(test
+ (name test_pack)
+ (modules test_pack)
+ (libraries effect4_engine_cas effect4_engine unix))
+
+(executable
+ (name bench_pack)
+ (modules bench_pack)
+ (libraries effect4_engine_cas effect4_engine unix))
+
+;   test_cas    lane P4 — E4_cas: the laws L-CAS-1..8 of A2 §2.1 as named properties, golden
+;               G2 replayed through `put` with each case's store built as ../goldens/cases.txt
+;               names it, golden G3 through `advance_root` with the kind and dangling checks
+;               real, golden G6 (three nodes in two insertion orders: `nodes` differ, every
+;               `find` agrees, the closures are byte-identical to each other and to Lean's
+;               cut), golden G7 (`verify` on a good store and four mutations, over stores
+;               forged record by record), the differential D5 on generated DAGs, and the
+;               mutation checks.  Writes only under $E4_CAS_TMP (default: the system temp
+;               directory) and removes what it made.
+;   test_crash  lane P4 — the crash families of A2 §4.3 that concern the store: X1 truncate
+;               mid-node, X2 a flipped CRC / digest / payload byte, X3 lose the index, X4 the
+;               control file (a stale tmp, a watermark past the pack's end, a corrupt
+;               checksum, an unknown version, a reserved status tag), X5 two writers and a
+;               reader's consistent prefix, X7 a torn tail whose records are individually
+;               valid — re-admitted in write order, `Closed` preserved — and root races.
+;   bench_cas   lane P4 — the store's half of A2 §4.5: put throughput fresh and duplicate
+;               (B1/B2), `get_bytes` warm (B3), `closure`, and `verify`.  An executable, not a
+;               test: it fsyncs and writes hundreds of MB, so it is run by hand with the
+;               directory to measure as its argument.
+
+(test
+ (name test_cas)
+ (modules test_cas)
+ (libraries effect4_engine_cas effect4_engine effect4_eff unix))
+
+(test
+ (name test_crash)
+ (modules test_crash)
+ (libraries effect4_engine_cas effect4_engine effect4_eff unix))
+
+(executable
+ (name bench_cas)
+ (modules bench_cas)
+ (libraries effect4_engine_cas effect4_engine unix))
+
+;   test_index  lane P2 — E4_index and E4_shape: the slot layout of ../e4_index.mli D1, the
+;               behaviours IX1-IX9, a HAND-FORCED 62-bit prefix collision resolved by
+;               confirming at the record (L-IDX-1) with the mutation check that
+;               `find_unconfirmed` answers the wrong record, growth and the load factor (IX4),
+;               the off-heap assertion (IX3, A2 §4.5 B5), every `load_verdict` of the index
+;               file and the discard-and-rebuild rule (IX6, L-IDX-0 drop test), `rebuild`
+;               against an incrementally built index on a 10 000-node pack (IX2), the by-kind
+;               index against a brute-force scan, the dependents index against a brute-force
+;               recomputation of `Deps.of_node` (IX9) with its persistence and its
+;               not-an-edge negative, and the shape table with a positive and a negative case
+;               for every row plus the path language SH5/SH6.  Writes only under
+;               $E4_INDEX_TMP (default: the system temp directory) and removes what it made.
+;   bench_index lane P2 — the index's half of A2 §4.5: lookups/s at 1e5 and 1e6 entries
+;               (confirmed and unconfirmed), bytes per entry and `live_words` growth (B5), and
+;               rebuild nodes/s from a real pack with the default kind probe and with the
+;               41-byte header scan alone (B4).  An executable, not a test: it writes tens of
+;               thousands of records and fsyncs, so it is run by hand with the directory to
+;               measure as its argument.
+
+(test
+ (name test_index)
+ (modules test_index)
+ (libraries effect4_engine_cas effect4_engine unix))
+
+(executable
+ (name bench_index)
+ (modules bench_index)
+ (libraries effect4_engine_cas effect4_engine unix))
+
+;   test_checkpoint  lane P6 — E4_chunk and E4_checkpoint: the chunker's determinism, size
+;                    bounds and ONE-BYTE INSERTION LAW (CH6) with the mutation check that
+;                    fixed-size chunking fails it, the manifest's grammar and its
+;                    content-defined group cut (CH7, CH8), the checkpoint node's byte table,
+;                    write/read round trips whole and chunked with CP7's verification, LAW
+;                    LOG-REL (two jobs one content, two positions two addresses, two store
+;                    layouts one address), the `prev` chain with M7's Fork and the cycle
+;                    refusal, a flipped byte inside a stored chunk, `closure_streaming`
+;                    against `E4_cas.closure` (CP9 / risk R8), an ephemeral checkpoint filing
+;                    no node (CP10), the machine image's round trip on real `Fast` machines
+;                    (CP11), and A2 §4.4's sharing table over 64 consecutive checkpoints of
+;                    the chain-of-refMake run at n = 2000 with chunking on and off.  Writes
+;                    only under $E4_CHECKPOINT_TMP (default: the system temp directory) and
+;                    removes what it made.
+;   bench_checkpoint lane P6 — A2 §4.4's structural-sharing table on a synthetic 64 MB image
+;                    under the E1/E2/E3 mutations, bench cell B7 through the real store when a
+;                    directory is given, and the chunker's throughput.  An executable, not a
+;                    test: it allocates 64 MB and, with a directory, writes and fsyncs hundreds
+;                    of megabytes, so it is run by hand.
+
+(test
+ (name test_checkpoint)
+ (modules test_checkpoint)
+ (libraries effect4_engine_cas effect4_engine effect4_eff unix))
+
+(executable
+ (name bench_checkpoint)
+ (modules bench_checkpoint)
+ (libraries effect4_engine_cas effect4_engine effect4_eff unix))
+;   test_cache  lane P7 — E4_cache, E4_subterm and E4_deps: the weight and slot bounds of
+;               ../e4_cache.mli under a 20 000-step random sequence with the invariant
+;               re-checked after every operation, CLOCK's choice of victim, the hit/miss/
+;               eviction/admission/refusal accounting, identity against a real store and the
+;               drop-and-rebuild of L-IDX-0, and CA6 as a POISONED cache that `E4_cas.verify`
+;               ignores; the slice law of ../e4_subterm.mli (L-SUB-1, `slice_atPath`) over all
+;               37 goldens of ocaml/eff/goldens and over a witness of every constructor of
+;               every family (50, L-SUB-3), with the two path spaces (M5) enumerated; and
+;               ../e4_deps.mli's DP1 "rebuild = incremental" over a 10 000-node store, the
+;               brute-force recomputation of `of_node`, persistence, and the not-an-edge
+;               negative (M1).  Five mutation checks.  Writes only under $E4_CACHE_TMP
+;               (default: the system temp directory) and removes what it made.
+;   bench_cache lane P7 — A2 §4.5 B10 (cache hit ratio against capacity on a Zipf pattern over
+;               1e5 nodes, plus the warm lookups/s floor), the subterm index build in
+;               subterms/s over the goldens and over a 32 767-node balanced tree, and the
+;               dependents index in nodes/s for both build paths at 1e3 / 1e4 / 5e4 nodes.  An
+;               executable, not a test: it fsyncs and writes hundreds of MB, so it is run by
+;               hand with the directory to measure as its argument.
+
+(test
+ (name test_cache)
+ (modules test_cache)
+ (libraries effect4_engine_cas effect4_engine effect4_eff unix))
+
+(executable
+ (name bench_cache)
+ (modules bench_cache)
+ (libraries effect4_engine_cas effect4_engine effect4_eff unix))
+
+;   bench_bycid lane W item 4 — `E4_cas.by_cid` and `E4_cas.pin_all` at 1e3 / 1e4 / 5e4 nodes:
+;               the cold call (one payload hash per node), 1 000 warm calls, and pin_all as a
+;               publisher pays for it.  P6's finding F6.  An executable, not a test.
+
+(executable
+ (name bench_bycid)
+ (modules bench_bycid)
+ (libraries effect4_engine_cas effect4_engine effect4_eff unix))

@@ -1,0 +1,250 @@
+; The engine's tests: one binary per lane, each with an explicit `(modules ...)` so lanes
+; can add a stanza without claiming another lane's module (docs/research/
+; 2026-09-08-engine-a3-queue-query.md §3, lanes Q1-Q6 and the math lane).
+;
+;   test_host  lane Q4 — E4_mailbox, E4_inbox, E4_ring, E4_quiescence, E4_reply,
+;              E4_trigger, E4_admit; also prints the B-Q4a contention measurement.
+;   test_math  lane M — E4_nat, E4_sha256, E4_hex, E4_be; also prints the SHA-256
+;              throughput on a 64 MiB buffer.
+
+(test
+ (name test_host)
+ (modules test_host)
+ (libraries effect4_engine threads.posix))
+
+(test
+ (name test_math)
+ (modules test_math)
+ (libraries effect4_engine))
+
+; lane Q1 — in-machine queues: the dispatcher, the due queue, the wake protocol.
+;   test_buckets  E4_buckets over BOTH carriers, the 100 000-op differential against
+;                 dispatcher_ref (the literal transcription of Fibers.lean:115-155), and the
+;                 B-Q1a/B-Q1b bench at p in {1,4,16,256}.
+;   test_due      E4_due: ORD-FAM, P-U1..P-U4 and the family-order mutation test.
+;   test_wake     E4_wake: W1..W6 and the DL3 budget.
+;   test_whatwg   the seven WHATWG fixtures F1..F5c over E4_wake (+ E4_due for F5c).
+
+(test
+ (name test_buckets)
+ (modules test_buckets dispatcher_ref)
+ (libraries effect4_engine unix))
+
+(test
+ (name test_due)
+ (modules test_due)
+ (libraries effect4_engine))
+
+(test
+ (name test_wake)
+ (modules test_wake)
+ (libraries effect4_engine))
+
+(test
+ (name test_whatwg)
+ (modules test_whatwg)
+ (libraries effect4_engine))
+
+; lane Q2 — the timer store: the logical clock and the deadline-ordered table.
+;   test_timers   E4_time + E4_timers: P-T1..P-T7 under the §4.1 names, the mutation test
+;                 (advance_to must refuse a target below `now`, refusal R1), and the eight
+;                 workshop/Timer/Timer.lean #guard witnesses replayed against the carrier.
+;   bench_timers  the B-Q2a..B-Q2d cells with the acceptance verdict per cell. An
+;                 executable, not a test: a bench is a measurement, not a gate.
+
+(test
+ (name test_timers)
+ (modules test_timers)
+ (libraries effect4_engine))
+
+(executable
+ (name bench_timers)
+ (modules bench_timers)
+ (libraries effect4_engine unix))
+
+; lane C — the persistent state carriers, each against its list twin (the Lean carrier,
+; written out) on a fixed-LCG operation sequence.
+;   prop_table    E4_table T1-T8 + R6a/R6b, and the TABLE module type of
+;                 2026-09-08-engine-a1-state.md §1.5 ascribed to BOTH carriers.
+;   prop_trace    E4_trace TR1-TR8, and the TRACE module type ascribed to both.
+;   prop_store    E4_store ST1-ST8, against Lean's List.get?/List.set/++/find?/map.
+;   prop_fibers   E4_fibers FB2-FB9 against Fibers.lean's own definitions (FB1 is owed to
+;                 lane X: it needs the substituted engine).
+;   prop_memo     E4_memo MM1-MM7, and the LAYERS module type ascribed to both; MM2 is the
+;                 observation-equality law against the duplicating list twin.
+;   bench_carriers  the §6.2 C1-C6 cells plus the memo and the small-size crossover.  An
+;                 executable, not a test: a bench is a measurement, not a gate.
+
+(test
+ (name prop_table)
+ (modules prop_table)
+ (libraries effect4_engine))
+
+(test
+ (name prop_trace)
+ (modules prop_trace)
+ (libraries effect4_engine))
+
+(test
+ (name prop_store)
+ (modules prop_store)
+ (libraries effect4_engine))
+
+(test
+ (name prop_fibers)
+ (modules prop_fibers)
+ (libraries effect4_engine))
+
+(test
+ (name prop_memo)
+ (modules prop_memo)
+ (libraries effect4_engine))
+
+(executable
+ (name bench_carriers)
+ (modules bench_carriers)
+ (libraries effect4_engine unix))
+
+; lane Q5 — the host scheduler: machines over domains, ordered shutdown, abandon.
+;   test_sched   E4_sched, E4_shutdown, E4_abandon against a TOY engine (a counter machine
+;                supplied as the `engine` record, so the real instance from lane D changes
+;                no line here): link/e4_test.ml's host properties re-homed
+;                (sched-four-machines, sched-rule-alone, sched-refusals, sched-stopped,
+;                sched-cross-machine), the design §4.1 names shutdown-order,
+;                shutdown-deadline, abandon-budget, abandon-accounts, the
+;                abandon-budget-mutation mutation test, and the B-Q4b wake-latency
+;                measurement (reported, no floor).
+
+(test
+ (name test_sched)
+ (modules test_sched)
+ (libraries effect4_engine unix threads.posix))
+
+; lane D — the drive loop: the two instances of the generated engine, the program
+; conversion and the ordinal pin, the differential between them, and the first numbers.
+;   test_engine  G0 (p42 / pFork / pAwait) on Fast AND Ref; the 37 byte goldens of
+;                ocaml/eff/goldens run at fuel 1000 on both, with outcome, exits, the
+;                fiber-table projection, the trace rows and the store row compared row by
+;                row (differential D1 in miniature); the M17 ordinal pin against
+;                ocaml/eff/eff_manifest.txt with a transposition mutation test;
+;                `replay_steps` at |tape|+1; a count of the two `failwith` rows of the
+;                generated prelude; and the W1/W2 bench cells (a measurement, printed, not
+;                a gate).  It reads ocaml/eff/goldens and ocaml/eff/eff_manifest.txt by an
+;                ancestor walk from the cwd — $E4_EFF_GOLDENS and $E4_EFF_MANIFEST override.
+
+(test
+ (name test_engine)
+ (modules test_engine)
+ (libraries effect4_engine effect4_eff unix))
+
+; lane X — the differential over every corpus, three engines.
+;   test_diff   `Corpora` (the 37 byte goldens, the truth corpus's Lean-cut wire goldens,
+;               and 500 generated well-typed Eff programs) x `E4_diff` (thirteen
+;               projections per position) x three engines: `Api_gen` as generated (the
+;               oracle, built here into an `E4_engine.INSTANCE`), `Ref` (the seam over
+;               list twins — the extern-row half) and `Fast` (the substituted carriers —
+;               the carrier half).  Every position of every replay is compared on both
+;               pairs; the tapes are drawn from the machine as it runs, so they are
+;               admissible by construction.  It also discharges lane C's OWED FB1, records
+;               why DF-2/DF-3 are not run, and reports the engines against
+;               harness/truth/corpus.json.  Paths are found by an ancestor walk from the
+;               cwd — $E4_EFF_GOLDENS, $E4_HEX_GOLDENS and $E4_TRUTH_CORPUS override.
+;               `effect4_gen` is named here and NOWHERE in the library: the third engine
+;               is a test-only functor application.
+
+(test
+ (name test_diff)
+ (modules test_diff)
+ (libraries effect4_engine effect4_eff effect4_gen))
+
+; lane Q3 — query: the persistent log, its incremental indexes, and the query API.
+;   test_log     E4_log L1-L5, the public-log codec (E4_logindex.parse_run_event_row) over
+;                the rows E4_engine renders, and E4_logindex X1-X3 with the segment law.
+;                Pure: no engine, no machine, no tape.
+;   test_query   E4_query Q1/Q3/Q4, `cost` exact against a counted replay, the
+;                INV-TAPE-1(query) repo gate (it greps e4_query.mli for a signature whose
+;                RESULT type mentions `source` or `tape`), and DF-3 (query agreement): for
+;                the 37 byte goldens of ocaml/eff/goldens, `E4_query.at s i` equals the
+;                machine the tape prefix replays, on all thirteen E4_diff projections, at
+;                EVERY i for the ten longest tapes and sampled for the rest — plus the
+;                mutation test (an `at` built from a different tape prefix must go red).
+;                It reads ocaml/eff/goldens by an ancestor walk — $E4_EFF_GOLDENS overrides.
+;   bench_query  the B-Q3a-c and B-Q5a-c cells with the acceptance verdict per cell.  An
+;                executable, not a test: a bench is a measurement, not a gate.
+
+(test
+ (name test_log)
+ (modules test_log)
+ (libraries effect4_engine))
+
+(test
+ (name test_query)
+ (modules test_query)
+ (libraries effect4_engine effect4_eff))
+
+(executable
+ (name bench_query)
+ (modules bench_query)
+ (libraries effect4_engine effect4_eff unix))
+
+; lane W — the two axes of a replay (E4_engine EN4/EN4b), from lane P6's finding F1.
+;   test_replay_steps  `replay_steps` (the TAPE axis: |tape|+1, position i = replay of the
+;                      first i, total), `replay_positions` (the RUN axis: it ends where
+;                      Lean's `replayEval` ends and repeats nothing) and `replay_to` (the
+;                      machine and the decisions never read, whose head is the refused one).
+;                      Both instances; the 64-decision tape P6 met; a refusal exhibited.
+
+(test
+ (name test_replay_steps)
+ (modules test_replay_steps)
+ (libraries effect4_engine effect4_eff))
+
+;   bench_trace  lane W item 2: `E4_trace` over `E4_log.Vec` — the viewer's walk (nth_opt at
+;                every index of a 6 003-row trace), emit throughput, and to_list.  An
+;                executable, not a test: a bench is a measurement, not a gate.
+
+(executable
+ (name bench_trace)
+ (modules bench_trace)
+ (libraries effect4_engine unix))
+; lane G2 — the point's position and environment: the carriers behind `Point.path` and
+; `Point.env` (docs/research/2026-09-08-engine-prof-chain.md).
+;   prop_point   E4_ppath PP1-PP7 and E4_env PE1-PE7, each against its list twin (which
+;                carries the Lean list and walks the whole path on every `node`), with the
+;                PPATH and PENV module types of the generated functor ascribed to both
+;                carriers.  PP2/PE2 measure the words `snoc` allocates at depth 1 and at
+;                depth 2000 on both, which is the sharing law as a number.
+(test
+ (name prop_point)
+ (modules prop_point)
+ (libraries effect4_engine))
+
+; lane B — the bench matrix: one receipt with every number the effort claimed, re-measured
+; on the landed engine (docs/research/2026-09-08-engine-bench.md).
+;   e4_engine_bench  W1 (the nine truth programs + the 37 byte goldens), W2 (chain of
+;                    refMake at n = 100/300/1000/2000/8000), W3 (the 500 generated
+;                    programs), W4 (fan-out N x M yields) over the THREE engines
+;                    (`Api_gen` untouched, `Ref`, `Fast`), plus the domain sweep of 200 and
+;                    2 000 `pTwo` machines over 1/2/4/8 domains through `E4_sched` with the
+;                    real `Fast` engine, and the AC1-AC9 acceptance table.  An executable,
+;                    not a test: a bench is a measurement, not a gate.  Driven by
+;                    ../tools/run-bench.sh, which runs every bench binary of the engine and
+;                    cas test directories into one Markdown receipt.
+
+(executable
+ (name e4_engine_bench)
+ (modules e4_engine_bench)
+ (libraries effect4_engine effect4_eff effect4_gen unix))
+
+; lane G3 — the fiber table's maintained completed view (docs/research/
+; 2026-09-08-engine-lane-g3-delivery.md).
+;   prop_fibers_view  E4_fibers_view FV1-FV8 against the LIST twin (which walks Lean's
+;                     filterMap at read time) and against E4_table.filter_map over the
+;                     carrier's own table, with the FIBERS module type of the generated
+;                     functor ascribed to both carriers.  FV8 is the sharing law: a write
+;                     that does not change an exit leaves the answer PHYSICALLY the same
+;                     list, which is why `completedExits` costs nothing per step.
+(test
+ (name prop_fibers_view)
+ (modules prop_fibers_view)
+ (libraries effect4_engine))

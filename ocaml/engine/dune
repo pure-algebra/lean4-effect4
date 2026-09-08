@@ -1,0 +1,12 @@
+; effect4_engine — the OCaml host engine under the generated Lean machine
+; (docs/research/2026-09-08-engine-brief.md; designs -a1-state, -a2-persistence,
+; -a3-queue-query). Flat layout: every module is one `e4_*.ml` with its `.mli` and a
+; property list at its head (ocaml/STANDARDS.md); tests live in test/ (their own dune).
+; Dependencies: the stdlib, unix, threads, and `effect4_eff` (the exact program wire,
+; ocaml/eff — E4_be forwards to Eff_frame; E4_program converts Eff_types.eff) — nothing
+; else without a measured need recorded in the design that asks for it. Builds as part of
+; the estate workspace (ocaml/dune lists engine; `cd ocaml && dune build engine`).
+(library
+ (name effect4_engine)
+ (libraries unix threads.posix effect4_eff)
+ (flags (:standard -w +a-4-9-40-41-42-44-45-70)))

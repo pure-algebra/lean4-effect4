@@ -1,0 +1,14 @@
+; effect4_engine_cas — the on-disk CAS: the byte layer (crc, kinds, addresses, the node
+; envelope), then the pack, the index, the control file, the WAL, checkpoints and the caches
+; (docs/research/2026-09-08-engine-a2-persistence.md §3; lanes P0-P10).  Flat: one e4_*.ml per
+; module with its .mli and a Behaviours list at its head (ocaml/STANDARDS.md §2); tests in
+; test/.  A sub-library of the engine's dune project (ocaml/engine/dune-project); it declares
+; no dune-project of its own.
+;
+; Dependencies: the stdlib, unix (the file classes lanes P1/P3/P5 land), effect4_engine for
+; E4_sha256 / E4_hex / E4_be (never a second hash and never a second framing writer -- brief
+; §2.2), and effect4_eff for Eff_frame's tag alphabet and UTF-8 rule (read-only).
+(library
+ (name effect4_engine_cas)
+ (libraries unix effect4_engine effect4_eff)
+ (flags (:standard -w +a-4-9-40-41-42-44-45-70)))

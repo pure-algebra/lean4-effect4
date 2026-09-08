@@ -1,0 +1,158 @@
+# CasGoldens — the byte goldens of the Lean CAS.
+# Cut by `lake env lean -M4096 --run src/OCaml5/Tools/CasGoldens.lean <outdir>`.
+# Columns: name<TAB>family<TAB>expected. One <name>.hex per row holds that case's bytes;
+# manifest.txt holds `<name> <sha256 of those bytes>`.
+#
+# families
+#   a1   the SHA-256 vectors over Val.encode (expected = the digest), and the two Store.Val
+#        frames ocaml/eff/goldens/{val_ref,val_handle}.hex hand-derived on 2026-09-07.
+#   g1   node encodings: bytes = Node.encode n, expected = its address.
+#   g2   admission: bytes = Node.encode n, expected = the outcome of putNode into that
+#        case's store (empty for g2-genesis-exempt and g2-dangling-spec; the store after
+#        probeSchema for g2-entry-fresh; the hand-built occupant store for g2-conflict;
+#        probeStore otherwise). probeStore = probeSchema then probeEntry.
+#   g3   roots: bytes = rootVal r, expected = the outcome of putRoot into probeStore
+#        (into the store after g3-v1 for g3-advance-v2).
+#   g4   memo world: bytes = worldVal w, expected = none | some <hex>. entryAt cases answer
+#        Val.encode (entryVal e); get cases answer Val.encode (pair (nat owner) (entryVal e)).
+#   g4entries  bytes = worldVal w, expected = some <hex of Val.encode (entriesVal entries)>.
+#   g5   the edge scan: bytes = Val.encode v, expected = refs=<kindbyte>:<hex>,…;malformed=…
+#   g6   words and closures: bytes = wordVal w or nodesVal ns; expected ok unless a replay
+#        refused.
+#   g7   verify: bytes = storeVal s, expected = the VerifyError word.
+#
+# tool-side projections (the Lean tree has no Canonical instance for Root, Binding, Store,
+# MemoEntry or MemoMap, so these five shapes are this tool's; every other byte is a Lean
+# Node.encode, Val.encode or Digest):
+#   rootVal r    = ctor 0 [str name, nat rootKindIndex, nat kind.byte, bytes digest, nat version]
+#   bindingVal b = pair (bytes digest) (bytes (Node.encode node))
+#   wordVal w    = list (map bindingVal w)
+#   nodesVal ns  = list (map (fun (d, n) => pair (bytes d) (bytes (Node.encode n))) ns)
+#   storeVal s   = pair (nodesVal s.nodes) (list (map rootVal s.roots))
+#   entryVal e   = ctor 0 [nat observers, nat layerScope, nat deferred.index]
+#                  (effect : Program and finalizer : FinName have no canonical encoding and
+#                   are held fixed across the G4 world, so entryVal is injective on it)
+#   mapVal m     = ctor 0 [nat id, option (nat parent), list (pair layer entry)]
+#   worldVal w   = list (map mapVal w)
+#   entriesVal   = list (pair (list (map nat layer)) (entryVal entry))
+#   layer path   = list (map nat path)
+#
+# rootKindIndex: stdlib=0 journal=1 daemon=2 schema=3 char=4 (Store/Store.lean:47-53).
+# Not cut, and why: docs/research/2026-09-08-engine-lane-gld-delivery.md.
+digest-01	a1	a66c701845710c6cd6082b9789002c9bd6f626f14801c76e55cdc6b0298508ea
+digest-02	a1	7cc15f3ca164271165e1e9172ffa9c348f1c556045511a92896658cb11e20749
+digest-03	a1	49311c48864bb37e8e6d20219ac10f346bc439af9c8b559f0b8ffc33610d8082
+digest-04	a1	4322fd2bc0a137d1375b37b3b2e2b4715b3d3dd7ca9682438d4fea0f8437fad3
+digest-05	a1	5649cf28034dcc0de016a113bb1187dc12727d6b4494638638f311c1347ee597
+digest-06	a1	ff716d064c076ee767998a75435957857625c728eb243089ec8cfe6ef277a1b9
+digest-07	a1	dc4c8669df128318c5790c414c870cc76c585268552851e78d3ee8604dbec0e3
+digest-08	a1	9b13a3422813d3c7b18e831d499d096f9108bd83625281625bb79fab12da97b7
+digest-09	a1	e4e5e3c0f0a367f4c89a1a2a5eea53e68bc65ed01a40a546f45f001e389e54df
+digest-10	a1	92c0a3cd8b571ac5634aa066fcc63d7b62155c36126a29231d97692ff2944875
+digest-11	a1	47aa49d44ec5aedca35de2c43968eccec2b10d6b3ebe7d2822c5cd107b4f14ac
+digest-12	a1	93e60f669b99ad3e3ee6284b139e57adfb419960f390858e46ea565bbf82d001
+digest-13	a1	94b2814c7dfb32f37e511476953637e8eeafba75645a48cf1ace6ce9ecf71c2b
+digest-14	a1	a18bbb6af047f50ce33da95d1198fdb54f38d82d5204561f347aec74f70d7e1e
+digest-15	a1	69c29c051218dbea38795b1cdfd816855c312a9cbc0b1daaa79bb9a0b895361a
+digest-16	a1	6f5ca001760ccc362ba4011d8c9d78836a4860e95ee887125db1965ba35e472b
+digest-17	a1	8fab161870afe7d35c681679cf5dced52845b5ebef2b84b6c85e4b49d00661fa
+digest-18	a1	cb9a30e7a992c44f1fe9347e40e598045867e5f641e18f2c9bd1f33525248d3c
+digest-19	a1	9f8126d340dd40d63a651a96578ccbac98db69f195c51b3b0f366ae037c0bad8
+digest-20	a1	9e17b3a4f487fd77fbbf42b529d2059073d80e5a3462b708375212cd9e8b7710
+val_ref	a1	ok
+val_handle	a1	ok
+g1-sampleNode	g1	8f74e5b415dae925b056d9dd922507c4015c6ee5e55753e962d2cf3cbbd5e2e8
+g1-probeSchema	g1	f8cbebc1e9c83f4f70fe015ac0b2c18fac5a7bd76aeb2acff15096a4587c5de4
+g1-probeEntry	g1	0014c107b3900a17bdd5905f4d9f8709f4ae01df9a8dc48fc6dbe39d9b9ab82a
+g1-genesisNode	g1	2794d94c40e85c5643ebc081a54eed287da0e746537f4f8ecfd4efc3020c2926
+g1-censusEntry	g1	1c3c94979c106a7b40c332fe03f7ad26345e2f5588b313ce6e731f32067272eb
+g1-censusSchema	g1	268ee1186c537706faf2301564250676c3ed971565e7c67a36c9d19e0dc8aa7c
+g1-sampleEntry-payload	g1	8fab161870afe7d35c681679cf5dced52845b5ebef2b84b6c85e4b49d00661fa
+g1-canonical-digest-frame	g1	47aa49d44ec5aedca35de2c43968eccec2b10d6b3ebe7d2822c5cd107b4f14ac
+g1-anyref-frame	g1	9f8126d340dd40d63a651a96578ccbac98db69f195c51b3b0f366ae037c0bad8
+g1-kind-source	g1	97b1be4faf415cacd73a2540ee622eb410551c2e7ab9d11a0bcaf618d0455ffb
+g1-kind-export	g1	17b5c94db294f90d3c245b829efdd87197116dd4d6068ba8463ea7b39ce26775
+g1-kind-type	g1	473ec80868d195c0e90ee69cf449e6e4441fc144facc2920fce778b032e21394
+g1-kind-schema	g1	f8cbebc1e9c83f4f70fe015ac0b2c18fac5a7bd76aeb2acff15096a4587c5de4
+g1-kind-program	g1	f28acdd5ee45b99493de31e802f8a7e3b400406115d2e2cd20cc805e9af23f91
+g1-kind-annotation	g1	480b38c67b5195381c51b6c42adb955634038397eee0cf7a60a3d56fb342134d
+g1-kind-entry	g1	dc867330dfc843687649595139322083b3cd787f030c1dbe26d85d306760e98e
+g1-kind-query	g1	45c0086f321f38b3ff6ee5f51c818e9ccdfa1b844ddcf44274a125ee443ae85f
+g1-kind-result	g1	08fd7064cda2d38d29490f3c9457e0397b26b050420cdfda85d239c830c31725
+g1-kind-chunk	g1	927b1b08bf1c859a4f12a6ed455031794d0225324fd83737c6aad70ae83418f4
+g1-kind-tree	g1	ffea37358142f6f7320c81736d173cebbd5010a8051272b2c5812469a8351049
+g1-kind-manifest	g1	eb8ffa88c5863c7896dce931bd33312f0c099cd904b4d6efb60b1c98c8905dcd
+g1-kind-component	g1	692a8090f1195b63dca33b57993d686932f1d4fe7f5292104872d9205840c8e2
+g1-kind-vector	g1	0b9b8afb0af71fd7860e64fd2cc6a5326bb1b6ae21ec389bc9b05a00d4e40ccd
+g1-kind-fiber	g1	68a0914fd3c1cb66db8ebc596852af2fe34a803e097cf088643c69d9104c0e8e
+g2-genesis-exempt	g2	fresh
+g2-entry-fresh	g2	fresh
+g2-entry-duplicate	g2	duplicate
+g2-schema-duplicate	g2	duplicate
+g2-dangling-spec	g2	dangling f8cbebc1e9c83f4f70fe015ac0b2c18fac5a7bd76aeb2acff15096a4587c5de4
+g2-dangling-zero	g2	dangling 0000000000000000000000000000000000000000000000000000000000000000
+g2-wrongKind	g2	wrongKind
+g2-ref-fresh	g2	fresh
+g2-badVersion	g2	badVersion
+g2-malformedRef-kind	g2	malformedRef
+g2-malformedRef-length	g2	malformedRef
+g2-conflict	g2	conflict
+g2-occupant	g2	d2ea438f7891712cd29444f5c0fb6485acae0af226b0f9cbade84e873bade6ae
+g2-handle-in-content	g2	fresh
+g3-v1	g3	ok
+g3-stale	g3	staleRoot stdlib/rc112 1 2
+g3-wrongKind	g3	wrongKind
+g3-dangling	g3	dangling 0000000000000000000000000000000000000000000000000000000000000000
+g3-advance-v2	g3	ok
+g3-roots-after-v1	g3	ok
+g3-roots-after-v2	g3	ok
+g4-entryAt-own	g4	some 0a0000000000000027020000000000000000020000000000000001030200000000000000010c02000000000000000166
+g4-entryAt-parent-miss	g4	none
+g4-entryAt-root	g4	some 0a0000000000000027020000000000000000020000000000000001010200000000000000010a02000000000000000164
+g4-entryAt-nested-key	g4	some 0a0000000000000027020000000000000000020000000000000001040200000000000000010d02000000000000000167
+g4-get-own	g4	some 05000000000000003a020000000000000001020a0000000000000027020000000000000000020000000000000001030200000000000000010c02000000000000000166
+g4-get-parent	g4	some 05000000000000003a020000000000000001010a0000000000000027020000000000000000020000000000000001020200000000000000010b02000000000000000165
+g4-get-grandparent	g4	some 0500000000000000390200000000000000000a0000000000000027020000000000000000020000000000000001010200000000000000010a02000000000000000164
+g4-get-grandparent-nested	g4	some 0500000000000000390200000000000000000a0000000000000027020000000000000000020000000000000001040200000000000000010d02000000000000000167
+g4-get-miss	g4	none
+g4-get-cycle	g4	none
+g4-get-cycle-own	g4	some 0500000000000000390200000000000000000a0000000000000027020000000000000000020000000000000001010200000000000000010a02000000000000000164
+g4-after-insert	g4	some 0a0000000000000027020000000000000000020000000000000001050200000000000000010e02000000000000000168
+g4-after-insert-get	g4	some 05000000000000003a020000000000000001020a0000000000000027020000000000000000020000000000000001050200000000000000010e02000000000000000168
+g4-after-update	g4	some 0a00000000000000270200000000000000000200000000000000010a0200000000000000010c02000000000000000166
+g4-after-delete	g4	none
+g4-after-delete-get	g4	none
+g4-entries-base	g4entries	some 04000000000000005505000000000000004c040000000000000013020000000000000001010200000000000000000a0000000000000027020000000000000000020000000000000001030200000000000000010c02000000000000000166
+g4-entries-inserted	g4entries	some 0400000000000000a105000000000000004c040000000000000013020000000000000001010200000000000000000a0000000000000027020000000000000000020000000000000001030200000000000000010c0200000000000000016605000000000000004304000000000000000a020000000000000001020a0000000000000027020000000000000000020000000000000001050200000000000000010e02000000000000000168
+g4-entries-updated	g4entries	some 0400000000000000a105000000000000004c040000000000000013020000000000000001010200000000000000000a00000000000000270200000000000000000200000000000000010a0200000000000000010c0200000000000000016605000000000000004304000000000000000a020000000000000001020a0000000000000027020000000000000000020000000000000001050200000000000000010e02000000000000000168
+g4-entries-deleted	g4entries	some 04000000000000004c05000000000000004304000000000000000a020000000000000001020a0000000000000027020000000000000000020000000000000001050200000000000000010e02000000000000000168
+g5-ctor-seed	g5	refs=4:0707070707070707070707070707070707070707070707070707070707070707,6:0909090909090909090909090909090909090909090909090909090909090909;malformed=false
+g5-nested	g5	refs=2:0707070707070707070707070707070707070707070707070707070707070707,4:0909090909090909090909090909090909090909090909090909090909090909,6:0505050505050505050505050505050505050505050505050505050505050505;malformed=false
+g5-bytes-is-a-leaf	g5	refs=;malformed=false
+g5-bytes-inside-list	g5	refs=11:0505050505050505050505050505050505050505050505050505050505050505;malformed=false
+g5-order	g5	refs=1:0101010101010101010101010101010101010101010101010101010101010101,2:0505050505050505050505050505050505050505050505050505050505050505,3:0707070707070707070707070707070707070707070707070707070707070707,4:0909090909090909090909090909090909090909090909090909090909090909;malformed=false
+g5-malformed-kind	g5	refs=;malformed=true
+g5-malformed-length	g5	refs=;malformed=true
+g5-malformed-nested	g5	refs=2:0707070707070707070707070707070707070707070707070707070707070707;malformed=true
+g5-no-refs	g5	refs=;malformed=false
+g5-handle-is-a-leaf	g5	refs=2:0505050505050505050505050505050505050505050505050505050505050505;malformed=false
+g6-probeWord	g6	ok
+g6-probeWord-replayed	g6	ok
+g6-probeWord-reversed	g6	dangling f8cbebc1e9c83f4f70fe015ac0b2c18fac5a7bd76aeb2acff15096a4587c5de4
+g6-treeNode	g6	673d7369377791582da6a395c7af5b10802753f354038b5989fdae199ce1f881
+g6-nodes-a	g6	ok
+g6-nodes-b	g6	ok
+g6-closure-a	g6	ok
+g6-closure-b	g6	ok
+g6-closure-tree-a	g6	ok
+g6-closure-tree-b	g6	ok
+g6-replay-a	g6	ok
+g6-replay-b	g6	ok
+g6-closure-empty	g6	ok
+g7-good	g7	ok
+g7-replayed	g7	ok
+g7-flipped-payload	g7	digestMismatch
+g7-wrong-key	g7	digestMismatch
+g7-dangling-edge	g7	dangling f8cbebc1e9c83f4f70fe015ac0b2c18fac5a7bd76aeb2acff15096a4587c5de4
+g7-root-wrong-kind	g7	rootUnresolved stdlib/rc112
+g7-root-ok	g7	ok

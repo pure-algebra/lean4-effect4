@@ -1,0 +1,164 @@
+# The extern table of the engine seam — ocaml/engine/api_engine.ml
+# (docs/research/2026-09-08-engine-a1-state.md §1.4; the row format is the docstring of
+#  src/OCaml5/Lcnf/Externs.lean).  Regenerate with ocaml/engine/tools/gen-check.sh.
+#
+# A `field`/`type` row changes a TYPE, so every generated site that still treats the carrier
+# as a list is an ocamlopt type error: the table is complete iff api_engine.ml compiles, and
+# it compiles as a functor body with no instance (engine-a1 §1.3).
+#
+# DEVIATIONS from engine-a1 §1.4/§1.5, recorded here because lane C implements against them:
+#   D1  The dispatcher is A3's whole-dispatcher carrier (`e4_buckets.mli`, engine-a3 §1.1.1),
+#       not a TABLE of buckets holding a FIFO.  So `Effect4.Machine.Dispatcher` is an extern
+#       TYPE (`(…) task D.t`), `Effect4.Machine.Bucket` and the FIFO functor parameter are
+#       gone, and `Dispatcher.insert` is never reached.  The functor is
+#       `Make (M : TABLE) (T : TRACE) (L : LAYERS) (D : DISPATCHER)`.
+#   D2  TABLE/TRACE/LAYERS are emitted as A1 §1.5 prints them, byte for byte; DISPATCHER is
+#       e4_buckets.mli's own signature, so `module D = E4_buckets` needs no adapter.
+#   D3  Every `[carrier]` row of A1 §1.4 is a `[hand]` row here.  A1 aimed them at concrete
+#       modules (`E4_fibers.update`, `E4_store.peek`, `E4_memo.entry_at`); a concrete module
+#       cannot have `'a M.t` for an abstract `M`, so the functor body would not type-check on
+#       its own — and that type-check IS the completeness proof.  Every row therefore goes
+#       through the functor parameters, and every one of them also projects a generated
+#       record field, so all of them live in the prelude
+#       (ocaml/engine/tools/api_engine_prelude.ml).  `e4_shim.{ml,mli}` is not created: a
+#       separate compilation unit cannot see the record types, which are inside the functor.
+#   D4  A1's rows for `refPeek`/`refPoke`/`Dispatcher.insert`/`ScopeStore.entryAt` are not
+#       here: each is inlined or reached only through a row that deletes it, so a row would be
+#       a stale ledger and the generator refuses one (G10).
+#   D5  Two constructor rows (`Dispatcher.mk`, `MemoMap.mk`) that A1 does not have: the mono
+#       phase inlines `⟨[], false⟩` into `fireState` and `⟨…, parent, []⟩` into `syncOpStep`,
+#       both of which must stay generated.
+#   D6  Q6 (`Nat.div`/`Nat.mod` by zero) is two `fn?` rows: the current root set never reaches
+#       division, so a mandatory row would fail G10.  They fire the moment one does.
+#   D7  (lane G2) `Point.path` and `Point.env` are carriers too, and they are the ones the
+#       run time was in (docs/research/2026-09-08-engine-prof-chain.md: 98.5 % of the
+#       retained machine, 58 % of the time).  Two mechanisms carry them that the other rows
+#       do not need: the chain's `@node` token, because the path carries the NODE it
+#       addresses and `node` is declared inside the functor; and the `ops`/`carg` rows,
+#       because `p.path ++ [i]` is written INLINE in nine declarations that must stay
+#       generated, so no `fn` row can reach it.  The functor gains `(P : PPATH) (E : PENV)`.
+#   D8  (lane G3) `RunMachine.fibers` is NOT a `TABLE` any more: it is `FIBERS`, a table that
+#       also MAINTAINS the completed view, because `RunMachine.completedExits` (Fibers.lean:
+#       1543) is a Theta(N) filterMap called on essentially every step -- 62.7 % inclusive on
+#       fan-out 512 after G2, and NOT cacheable (G2 measured the memo at 0.0 % hits).  The row
+#       needs the EXIT type as a second carrier argument, which is what the `+` chain token
+#       spells: `+exit_:2,3,4,5,6` is `exit_` applied to arguments 2..6 of the field's element
+#       type `(nu,s,b,e,d,i,a,ch,k,f) run_fiber`, i.e. `(b,e,d,i,a) exit_`.  The functor gains
+#       `(F : FIBERS)`, and the fiber table's five writes take `~exit_of` in the prelude.
+
+# ---- types -------------------------------------------------------------------------------
+type Effect4.Machine.Dispatcher task D.t
+
+# ---- fields (engine-a1 §1.2, F1-F8) --------------------------------------------------------
+field Effect4.Machine.RunMachine.fibers +exit_:2,3,4,5,6 F.t
+field Effect4.Machine.RunMachine.trace T.t
+field Effect4.Machine.Stores.refs M.t
+field Effect4.Machine.DeferredStore.cells M.t
+field Effect4.Machine.MemoMap.entries L.t
+
+# The point's position and environment (lane G2, D7).  `@node` replaces the chain's argument
+# with the generated `node` type: the path CARRIES the node it addresses, so `Point.child` is
+# a cons and `resolve` is a field read.  `Capture` is `Point` minus the completed view
+# (src/Effect4/Machine/Stores.lean:162), so it takes the same two carriers.
+field Effect4.Program.Point.path @node P.t
+field Effect4.Machine.Capture.path @node P.t
+field Effect4.Program.Point.env E.t
+field Effect4.Machine.Capture.env E.t
+
+# `ScopeStore` is a TRIVIAL structure, so the compiler erases it to `List ScopeEntry`: a
+# `field` row would reach the alias body and none of the annotations.  Every `List ScopeEntry`
+# in this closure is the scope store (`Stores.scopes`), so the row is on the element type.
+elem Effect4.Machine.ScopeEntry M.t
+
+# ---- E1: the trace ------------------------------------------------------------------------
+fn Effect4.Machine.RunMachine.emit 2 sh_machine_emit
+fn Effect4.Api.load 3 sh_api_load program_compile empty_ctx stores
+# `RunMachine.empty` (Fibers.lean:612) and `Stores.empty` (Stores.lean:1987) have no row:
+# `Api.load` was their only caller in this closure, so externing it deletes them outright.
+# Their bodies are `sh_machine_empty` / `sh_stores_empty` in the prelude, called by
+# `sh_api_load` — the same two lines, one level down.
+
+# ---- E2: the fiber table ------------------------------------------------------------------
+fn Effect4.Machine.RunMachine.fiber? 2 sh_machine_fiber
+fn Effect4.Machine.RunMachine.update 2 sh_machine_update
+fn Effect4.Machine.RunMachine.finished 1 sh_machine_finished
+fn Effect4.Machine.RunMachine.completedExits 1 sh_machine_completed_exits
+fn Effect4.Machine.spawn._at_.Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_0.spec_1.spec_3 5 sh_spawn
+fn Effect4.Machine.spawn._at_.Effect4.Machine.launchEntrant._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Machine.replayEval._at_.Effect4.Api.replay.spec_0.spec_0.spec_3.spec_6.spec_11.spec_17 5 sh_spawn
+fn Effect4.Machine.spawn 6 sh_spawn_generic run_fiber_make
+fn List.mapTR.loop._at_.Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_0.spec_1.spec_12 3 sh_drop_observers
+
+# ---- E3: the ref heap ---------------------------------------------------------------------
+fn Effect4.Machine.refStep 2 sh_ref_step fn_name_total fn_name_partial_update fn_name_modify fn_name_modify_some
+
+# ---- E4: the deferred cells ---------------------------------------------------------------
+fn Effect4.Machine.DeferredStore.make 1 sh_deferred_make
+fn Effect4.Machine.DeferredStore.cellAt 2 sh_deferred_cell_at
+fn Effect4.Machine.DeferredStore.setCell 3 sh_deferred_set_cell
+
+# ---- E5: the scope entries and the dispatcher ---------------------------------------------
+fn List.find?._at_.Effect4.Machine.ScopeStore.entryAt.spec_0 2 sh_scope_entry_at
+fn Effect4.Machine.ScopeStore.setEntry 2 sh_scope_set_entry
+fn Effect4.Machine.ScopeStore.make 3 sh_scope_store_make scope_make
+fn Effect4.Machine.ScopeStore.forkChild 5 sh_scope_fork_child scope_fork
+fn Effect4.Machine.Dispatcher.empty 0 D.empty
+fn Effect4.Machine.Dispatcher.enqueue 3 D.enqueue _ ~priority _
+fn Effect4.Machine.Dispatcher.drain 1 D.drain
+fn Effect4.Machine.Dispatcher.mk 2 sh_dispatcher_mk
+
+# ---- E6: the memo entries -----------------------------------------------------------------
+fn Effect4.Machine.MemoWorld.entryAt 3 sh_memo_entry_at
+fn Effect4.Machine.MemoWorld.updateEntry 4 sh_memo_update_entry
+fn Effect4.Machine.MemoWorld.insertEntry 4 sh_memo_insert_entry
+fn Effect4.Machine.MemoWorld.deleteEntry 3 sh_memo_delete_entry
+fn Effect4.Machine.MemoMap.mk 3 sh_memo_map_mk
+
+# ---- G2: the carrier operations of the path and the environment ---------------------------
+# An `ops` row is the OCaml form of ONE list operation applied to a value of the carrier whose
+# chain ends in the key.  It is what reaches the inline sites a `fn` row cannot: `path ++ [i]`
+# is `P.snoc`, `path ++ pc` is `P.append`, `env[i]?` is `E.get`, `List.length env` is
+# `E.length`, `List.take` (as the mono phase writes it, `takeTR.go env env n []`) is `E.take`.
+# `P.snoc`/`P.append` take `Node.child` because the node rides along and `node` — with
+# `program_node_child` — is generated BELOW this prelude, so the row hands it in at the call
+# site (the same mechanism as `sh_api_load`; `emit` adds the emission-order edge).
+ops P.t snoc P.snoc program_node_child
+ops P.t append P.append program_node_child
+ops P.t to_list P.to_list
+ops E.t snoc E.snoc
+ops E.t append E.append
+ops E.t get E.get
+ops E.t length E.length
+ops E.t take E.take
+ops E.t to_list E.to_list
+
+# `Node.at_` is answered by the path itself.  The row's hand body compares the node the caller
+# passes with the one the spine was built from and reads the carried node when they are the
+# same, and WALKS otherwise — so `sh_node_at c n p = Node.at_ n (P.to_list p)` for every n and
+# p, with no assumption about the caller (law NODE-AT).
+fn Effect4.Program.Node.at_ 2 sh_node_at program_node_child
+# `rootPoint` must know the root program to build the spine's node; `Program.compile` is its
+# only caller and holds it under the name `root` (api_engine.ml:11518).
+fn Effect4.Program.rootPoint 2 sh_root_point root
+# `Node.child` was reached ONLY through `Node.at_`, which the row above deletes; it is now an
+# extra generator root, because `P.snoc` needs it.
+
+# ---- G2: the parameters that carry the environment ----------------------------------------
+# A `carg` row states what an inter-procedural analysis would infer: these parameters are
+# handed a carrier by their callers.  The index counts the OCaml parameters of the generated
+# signature, from 0.  Each row also drops that declaration's RESULT annotation, because
+# `blockExit`/`loopExit` return `Option (Prod (List Nat) (List Val))` — a carrier at a nested
+# position no chain can spell — and OCaml infers it.
+carg Effect4.Program.evalTerm 0 E.t
+carg Effect4.Program.evalTerms 0 E.t
+carg Effect4.Program.causeOf 0 E.t
+carg Effect4.Program.blockExit 3 E.t
+carg Effect4.Program.loopExit 4 E.t
+carg Effect4.Program.runStmts 4 E.t
+carg Effect4.Program.runStmts.yieldOf 6 E.t
+
+# ---- Q6: Lean's division on a zero divisor ------------------------------------------------
+# `Translate.builtin?` emits raw `/` and `mod`, which RAISE where Lean answers 0 and n
+# (ocaml/gen/NOTES.md:263).  Optional: no declaration in this root set divides, and a
+# mandatory row would be a stale ledger.
+fn? Nat.div 2 E4_nat.div
+fn? Nat.mod 2 E4_nat.rem
