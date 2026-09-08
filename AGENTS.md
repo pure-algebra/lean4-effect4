@@ -9,6 +9,7 @@ full, then open only the authority documents named for the current task.
 | --- | --- |
 | `README.md` | what the product is, the application face, how to build |
 | `docs/ARCHITECTURE.md` | the source tree, module boundaries, dependency direction, the API seam |
+| `docs/GENERATED.md` | generated artifact inventory, producer commands, inputs, consumers, stamps and gates |
 | `docs/DESIGN-BASIS.md` | the representation decisions (DB-01 … DB-10), their status and sources |
 | `docs/RUNTIME-COVERAGE.md` | the rc.112 runtime mechanism census, its rows, and the one coverage report format |
 | `docs/SCHEMA-ANNOTATIONS.md` | the annotation data plane as the host defines it |
