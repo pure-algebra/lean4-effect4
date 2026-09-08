@@ -50,6 +50,9 @@ def bodyR (interp : RInterp) : Body → RProgram
   | .at_ p => interp.suspendBody (.body p)
   | .fin fin ex => denoteFin fin ex
   | .raceCleanup race => fiberValR (.cancelRace race) rfl
+  | .acquireIn p ctx => acquireInR (interp.suspendBody (.body (p.child 0))) p ctx
+  | .release q previous =>
+    onExitR (interp.suspendBody (.body q)) fun _ => fiberValR (.setContext previous) rfl
 
 /-- Walk saved slots in the same order as `getCont`: run hooks before testing
 the demanded arm, re-read the mask for failure skipping, and visit a cleanup's
@@ -183,8 +186,10 @@ def evaluateFiberR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool
   -- `finalizerMask` slot it meets restores the mask, as the frame's restoring
   -- `setInterruptible` does under `Prim.ofExit` (`internal/effect.ts:4021-4029`)
   | .finishFinalizer ex => deliverR interp m f yielding ex
-  | .frontier _ _ | .acquireRelease _ _ => ⟨m, f, yielding, .continue_, []⟩
+  | .frontier _ _ => ⟨m, f, yielding, .continue_, []⟩
   | .suspend _ => ⟨m, answerR f (next .unit), yielding, .continue_, []⟩
+  -- the counted suspend before a capture's release (V1), as `suspend` and `closeWalk`
+  | .foreignRelease _ _ => ⟨m, answerR f (next .unit), yielding, .continue_, []⟩
   | .sync v => ⟨m, answerR f (next v), yielding, .answered, []⟩
   | .gen p =>
     let f := saveAnswerR f next

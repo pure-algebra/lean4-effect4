@@ -234,6 +234,56 @@ theorem contAOf_forkScopedIn_other (v : Val) (hne : ∀ s, v ≠ Val.scopeHandle
     | (rename_i heq; exact absurd heq (hne _))
     | simp_all
 
+/-! The `acquireRelease` names, one equation per arm of `contAOf` (`Compile.lean`; V1). The
+value patterns are variables except `acquireIn`'s, whose wrong-shape row is the lemma
+`contAOf_acquireIn_other`. -/
+
+theorem contAOf_acquireCtx (v : Val) :
+    Program.contAOf root (.acquireCtx p) v =
+      match Val.context? v with
+      | some ctx => Prim.withFiber (EffThunk.acquireMasked p ctx)
+      | none => badShape := rfl
+
+theorem contAOf_acquireIn_scope (ctx : Ctx) (s : Nat) :
+    Program.contAOf root (.acquireIn p ctx) (Val.scopeHandle s) =
+      Prim.onSuccess (resolve root (p.child 0)) (.acquired p ctx s) := rfl
+
+theorem contAOf_acquireIn_other (ctx : Ctx) (v : Val) (hne : ∀ s, v ≠ Val.scopeHandle s) :
+    Program.contAOf root (.acquireIn p ctx) v = badShape := by
+  unfold Program.contAOf
+  revert hne
+  split <;> intro hne <;> first
+    | rfl
+    | contradiction
+    | exact absurd rfl (hne _)
+    | (rename_i heq; exact absurd heq (hne _))
+    | simp_all
+
+theorem contAOf_acquired (ctx : Ctx) (s : Nat) (a : Val) :
+    Program.contAOf root (.acquired p ctx s) a =
+      Prim.onSuccess
+        (Prim.sync (EffThunk.op (SyncOp.scopeAdd s (FinName.foreign (p.capture a ctx)))))
+        (.afterScopeAdd a (FinName.foreign (p.capture a ctx))) := rfl
+
+theorem contAOf_afterScopeAdd (a : Val) (fin : FinName) (v : Val) :
+    Program.contAOf root (.afterScopeAdd a fin) v =
+      if v = Val.unit then Prim.success a
+      else
+        match exitOfVal v with
+        | some exit => Prim.onSuccess (embed (finProgram fin exit)) (.constant a)
+        | none => badShape := rfl
+
+theorem contAOf_releaseUnder (ctx : Ctx) (exit : ExitV) (v : Val) :
+    Program.contAOf root (.releaseUnder p ctx exit) v =
+      match Val.context? v with
+      | some previous =>
+        Prim.onSuccess (Prim.withFiber (EffThunk.setCtx ctx)) (.releaseBody p exit previous)
+      | none => badShape := rfl
+
+theorem contAOf_releaseBody (exit : ExitV) (previous : Ctx) (v : Val) :
+    Program.contAOf root (.releaseBody p exit previous) v =
+      Prim.withFiber (EffThunk.releaseMasked (p.childWith 1 (reifyExitVal exit)) previous) := rfl
+
 theorem denoteR_uninterruptible (b : NativeEff) (h : p.fuel ≠ 0) :
     denoteR root (.uninterruptible b) p = denoteAction root p := by
   cases hf : p.fuel with
@@ -253,7 +303,11 @@ theorem denoteR_scoped (b : NativeEff) (h : p.fuel ≠ 0) :
   | succ f => rw [denoteR, hf]; try rfl
 
 theorem denoteR_acquireRelease (a r : NativeEff) (h : p.fuel ≠ 0) :
-    denoteR root (.acquireRelease a r) p = pending .unsupported p := by
+    denoteR root (.acquireRelease a r) p =
+      (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun v =>
+        match Val.context? v with
+        | some ctx => .vis (.inr (.mask false (.acquireIn p ctx))) Effects.Program.pure
+        | none => .pure badShapeExit) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
   | succ f => rw [denoteR, hf]; try rfl
@@ -337,7 +391,8 @@ theorem compileEff_scoped (b : NativeEff) (hf : p.fuel = k + 1) :
   rw [compileEff, hf]; try rfl
 
 theorem compileEff_acquireRelease (a r : NativeEff) (hf : p.fuel = k + 1) :
-    compileEff (.acquireRelease a r) p = frontier p := by
+    compileEff (.acquireRelease a r) p =
+      Prim.onSuccess (Prim.withFiber EffThunk.getCtx) (EffName.acquireCtx p) := by
   rw [compileEff, hf]; try rfl
 
 theorem compileEff_choose (site : Nat) (l r : NativeEff) (hf : p.fuel = k + 1) :
@@ -432,7 +487,7 @@ theorem prepareR_denoteR (root : NativeEff) (e : NativeEff) (p : Point)
       | withFiber a =>
         rw [denoteR_withFiber root a p hpos]; exact prepareR_denoteAction root p completed
       | «scoped» b => rw [denoteR_scoped root b hpos]; rfl
-      | acquireRelease a r => rw [denoteR_acquireRelease root a r hpos]; rfl
+      | acquireRelease a r => rw [denoteR_acquireRelease root a r hpos, prepareR_guardR_bind]; rfl
       | choose site l r =>
         rw [denoteR_choose root site l r p hpos]
         cases p.tape with
@@ -616,6 +671,133 @@ theorem forkScoped?_none {a : ActionTerm NativeOp} (h : forkScoped? a = none) :
   subst heq
   simp [forkScoped?] at h
 
+/-! ### `acquireRelease`'s pieces (V1)
+
+The release at its point under the context-restoring finalizer, the counted suspend of a
+capture's release, and the masked half of the acquire — each against its `Body` or
+`denoteFin` term, given the related code at the points they resolve. -/
+
+/-- `provideContext(release(a, exit), context)`'s frame (`internal/effect.ts:2180-2199`): the
+release under the finalizer that restores the previous context. -/
+theorem release_intro (root : NativeEff) (q : Point) (previous : Ctx)
+    (hres : CodeMeans root (resolve root q) (denoteAt root q)) :
+    CodeMeans root (Prim.onExit (resolve root q) (.restoreCtx previous) false)
+      (denoteBody root (.release q previous)) := by
+  show CodeMeans root _ (onExitR (denoteAt root q) fun _ => fiberValR (.setContext previous) rfl)
+  unfold onExitR
+  rw [guardR_bind]
+  refine CodeMeans.onExit _ _ _ (denoteAt root q)
+    (fun ex => finalizerR ex (fiberValR (.setContext previous) rfl)) hres ?_ (fun _ _ => rfl) rfl
+    (fun _ => rfl)
+  intro completed ex program hprog
+  have hp' : Prim.withFiber (EffThunk.setCtx previous) = program := Option.some.inj hprog
+  rw [← hp']
+  refine finalizer_intro root completed ex ?_
+  -- `prepareR` is the identity on the `setContext` operation, definitionally
+  exact CodeMeans.actSetContext _ _ _ rfl (successV root)
+
+/-- A capture's release (`FinName.foreign`): the counted suspend, the context read, the
+captured context set, then the release masked at the capture's point over the exit — the
+point refreshed with the view at the release's invocation on both sides. -/
+theorem foreignRelease_intro (root : NativeEff) (c : Capture) (ex : ExitV)
+    (hres : ∀ completed, CodeMeans root
+      (resolve root ((Point.ofCapture c completed).childWith 1 (reifyExitVal ex)))
+      (denoteAt root ((Point.ofCapture c completed).childWith 1 (reifyExitVal ex)))) :
+    CodeMeans root (embed (finProgram (.foreign c) ex)) (denoteFin (.foreign c) ex) := by
+  simp only [finProgram, embed, denoteFin]
+  refine CodeMeans.foreignRelease c ex _ fun completed => ?_
+  simp only [suspendBodyAt]
+  rw [prepareR_guardR_bind, guardR_bind]
+  refine CodeMeans.onSuccess _ _ _ (prepareR completed (fiberValR .getContext rfl)) _ ?_ ?_ rfl
+    (fun _ => rfl)
+  · exact CodeMeans.actGetContext _ _ rfl (successV root)
+  · intro completed' v
+    show CodeMeans root (Program.contAOf root (.releaseUnder (Point.ofCapture c) c.ctx ex) v) _
+    rw [contAOf_releaseUnder]
+    simp only [seqR]
+    -- the current context read back off the value, or not
+    cases hctx : Val.context? v with
+    | some previous =>
+      dsimp only
+      rw [prepareR_guardR_bind, guardR_bind]
+      refine CodeMeans.onSuccess _ _ _ (prepareR completed' (fiberValR (.setContext c.ctx) rfl)) _
+        ?_ ?_ rfl (fun _ => rfl)
+      · exact CodeMeans.actSetContext _ _ _ rfl (successV root)
+      · intro completed'' w
+        show CodeMeans root
+          (Program.contAOf root
+            (.releaseBody { Point.ofCapture c with completed := completed'' } ex previous) w) _
+        rw [contAOf_releaseBody]
+        simp only [seqR, prepareR_constructR]
+        -- `prepareR` is the identity on the mask operation, definitionally; the two release
+        -- points are the capture's point at this view, spelled two ways
+        exact CodeMeans.actMask _ _ false (.release _ previous) _ rfl
+          (release_intro root _ previous (hres completed'')) delivers_pure
+    | none => exact codeMeans_badShape root
+
+/-- `uninterruptibleMask(restore => flatMap(scope, scope => tap(acquire, scopeAddFinalizerExit
+…)))` (`internal/effect.ts:3977-3986`): the masked half, given the acquire at the point's
+child 0 and the capture's release. -/
+theorem acquireIn_intro (root : NativeEff) (p : Point) (ctx : Ctx)
+    (hres : CodeMeans root (resolve root (p.child 0)) (denoteAt root (p.child 0)))
+    (hfin : ∀ (a : Val) (ex : ExitV),
+      CodeMeans root (embed (finProgram (.foreign (p.capture a ctx)) ex))
+        (denoteFin (.foreign (p.capture a ctx)) ex)) :
+    CodeMeans root
+      (Prim.onSuccess (Prim.withFiber (.store (.act .ambientScope))) (.acquireIn p ctx))
+      (denoteBody root (.acquireIn p ctx)) := by
+  show CodeMeans root _ (acquireInR (denoteAt root (p.child 0)) p ctx)
+  unfold acquireInR
+  rw [guardR_bind]
+  refine CodeMeans.onSuccess _ _ _ (fiberValR .ambientScope rfl) _ ?_ ?_ rfl (fun _ => rfl)
+  · exact CodeMeans.actAmbientScope _ _ rfl (successV root)
+  · intro completed v
+    -- the handle the service read answered is a scope handle or it is not
+    cases hsc : Val.scope? v with
+    | some s =>
+      have hv := Val.scope?_exact hsc
+      subst hv
+      show CodeMeans root (Prim.onSuccess (resolve root (p.child 0)) (.acquired p ctx s)) _
+      simp only [seqR, Val.scope?_scopeHandle]
+      rw [prepareR_guardR_bind, guardR_bind]
+      refine CodeMeans.onSuccess _ _ _ (prepareR completed (denoteAt root (p.child 0))) _
+        (hres.prepare _) ?_ rfl (fun _ => rfl)
+      intro completed' a
+      show CodeMeans root (Program.contAOf root (.acquired p ctx s) a) _
+      rw [contAOf_acquired]
+      simp only [seqR]
+      rw [prepareR_guardR_bind, guardR_bind]
+      refine CodeMeans.onSuccess _ _ _
+        (prepareR completed' (storeR (.scopeAdd s (.foreign (p.capture a ctx))))) _
+        (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
+      intro completed'' w
+      show CodeMeans root (Program.contAOf root (.afterScopeAdd a (.foreign (p.capture a ctx))) w) _
+      rw [contAOf_afterScopeAdd]
+      simp only [seqR]
+      -- unit: the registration took; anything else is the closing exit, read back or not
+      by_cases hw : w = Val.unit
+      · rw [if_pos hw, if_pos hw, prepareR_pure]
+        exact CodeMeans.success a
+      · rw [if_neg hw, if_neg hw]
+        cases hex : exitOfVal w with
+        | some ex =>
+          dsimp only
+          rw [prepareR_guardR_bind, guardR_bind]
+          refine CodeMeans.onSuccess _ _ _
+            (prepareR completed'' (denoteFin (.foreign (p.capture a ctx)) ex)) _
+            ((hfin a ex).prepare _) ?_ rfl (fun _ => rfl)
+          intro completed''' _
+          show CodeMeans root (Prim.success a) _
+          simp only [seqR, prepareR_pure]
+          exact CodeMeans.success a
+        | none => exact codeMeans_badShape root
+    | none =>
+      have hne : ∀ s, v ≠ Val.scopeHandle s := Val.scope?_none hsc
+      show CodeMeans root (Program.contAOf root (.acquireIn p ctx) v) _
+      rw [contAOf_acquireIn_other root ctx v hne]
+      simp only [seqR, hsc, prepareR_pure]
+      exact codeMeans_badShape root
+
 theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight < n →
     ∀ (e : NativeEff), Node.at_ (.eff root) p.path = some (.eff e) →
       CodeMeans root (compileEff e p) (denoteR root e p) := by
@@ -628,7 +810,7 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
   cases hf : p.fuel with
   | zero =>
     rw [compileEff_at_zero e hf, denoteR_zero root e p hf]
-    exact CodeMeans.frontier p p _ _ ⟨rfl, rfl, rfl, rfl⟩ fun completed => by
+    exact CodeMeans.frontier p p _ _ ⟨rfl, rfl, rfl, rfl, rfl⟩ fun completed => by
       rw [suspendBodyAt_zero' (q := { p with completed }) hf]; rfl
   | succ k =>
   have hpos : p.fuel ≠ 0 := by rw [hf]; exact Nat.succ_ne_zero k
@@ -700,7 +882,7 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
         | none => exact codeMeans_badShape root
     | program =>
       rw [compileEff_perform_program op r hf hk]
-      exact CodeMeans.frontier p p _ _ ⟨rfl, rfl, rfl, rfl⟩ fun completed => by
+      exact CodeMeans.frontier p p _ _ ⟨rfl, rfl, rfl, rfl, rfl⟩ fun completed => by
         rw [suspendBodyAt_of_at (q := { p with completed }) hf h nofun nofun nofun nofun,
           compileEff_perform_program op r (p := { p with completed }) hf hk]
         rfl
@@ -723,7 +905,7 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
     show CodeMeans root (suspendBodyAt root (.body { p with completed }))
       (prepareR completed (.vis (.inr (.gen p)) Effects.Program.pure))
     rw [suspendBodyAt_gen (q := { p with completed }) hf h]
-    exact CodeMeans.genEntry p _ _ ⟨rfl, rfl, rfl, rfl⟩ delivers_pure
+    exact CodeMeans.genEntry p _ _ ⟨rfl, rfl, rfl, rfl, rfl⟩ delivers_pure
   | catchCause b hd =>
     rw [compileEff_catchCause b hd hf, denoteR_catchCause root b hd hpos, guardR_bind]
     refine CodeMeans.onFailure _ _ _ (denoteR root b (p.child 0)) _ ?_ ?_ rfl (fun _ => rfl)
@@ -830,7 +1012,7 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
     dsimp only
     rcases hv : evalTerm p.env i with _ | cursor
     · exact codeMeans_badShape root
-    · exact CodeMeans.loopEntry p _ cursor _ ⟨rfl, rfl, rfl, rfl⟩ delivers_pure
+    · exact CodeMeans.loopEntry p _ cursor _ ⟨rfl, rfl, rfl, rfl, rfl⟩ delivers_pure
   | yieldNow priority =>
     rw [compileEff_yieldNow priority hf, denoteR_yieldNow root priority hpos]
     exact CodeMeans.yieldNow priority _ delivers_seqR_pure
@@ -961,15 +1143,32 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
     rw [compileEff_scoped b hf, denoteR_scoped root b hpos]
     exact CodeMeans.scopedNode p b _ h delivers_pure
   | acquireRelease a r =>
-    rw [compileEff_acquireRelease a r hf, denoteR_acquireRelease root a r hpos]
-    exact CodeMeans.frontier p p _ _ ⟨rfl, rfl, rfl, rfl⟩ fun completed => by
-      rw [suspendBodyAt_of_at (q := { p with completed }) hf h nofun nofun nofun nofun,
-        compileEff_acquireRelease a r (p := { p with completed }) hf]
-      rfl
+    rw [compileEff_acquireRelease a r hf, denoteR_acquireRelease root a r hpos, guardR_bind]
+    -- the release's point: the capture's point (this one, the acquired value appended) at
+    -- child 1, at any view — one fuel down, so inside the measure
+    have hwrel : ∀ (completed : List (FiberId × ExitV)) (a : Val) (ctx : Ctx) (ex : ExitV),
+        ((Point.ofCapture (p.capture a ctx) completed).childWith 1 (reifyExitVal ex)).weight < n :=
+      fun completed a ctx ex => Nat.lt_of_lt_of_le
+        (weight_childWith_lt { p with env := p.env ++ [a], completed } 1 (reifyExitVal ex) hpos) hle
+    refine CodeMeans.onSuccess _ _ _ (fiberValR .getContext rfl) _ ?_ ?_ rfl (fun _ => rfl)
+    · exact CodeMeans.actGetContext _ _ rfl (successV root)
+    · intro completed v
+      show CodeMeans root (Program.contAOf root (.acquireCtx p) v) _
+      rw [contAOf_acquireCtx]
+      simp only [seqR]
+      -- the context read back off the value, or not
+      cases hctx : Val.context? v with
+      | some ctx =>
+        dsimp only
+        -- `prepareR` is the identity on the mask operation, definitionally
+        refine CodeMeans.actMask _ _ false (.acquireIn p ctx) _ rfl ?_ delivers_pure
+        refine acquireIn_intro root p ctx (hres _ (hw0 0)) fun a ex => ?_
+        exact foreignRelease_intro root _ ex fun completed' => hres _ (hwrel completed' a ctx ex)
+      | none => exact codeMeans_badShape root
   | choose site l r =>
     rw [compileEff_choose site l r hf, denoteR_choose root site l r p hpos]
     rcases ht : p.tape with _ | ⟨flag, rest⟩
-    · exact CodeMeans.frontier p p _ _ ⟨rfl, rfl, rfl, rfl⟩ fun completed => by
+    · exact CodeMeans.frontier p p _ _ ⟨rfl, rfl, rfl, rfl, rfl⟩ fun completed => by
         rw [suspendBodyAt_of_at (q := { p with completed }) hf h nofun nofun nofun nofun,
           compileEff_choose site l r (p := { p with completed }) hf]
         simp only [ht]

@@ -578,9 +578,13 @@ def update (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (f : RunFiber ν
     RunMachine ν σ β ε δ ι α χ St κ φ η :=
   { m with fibers := m.fibers.map fun g => if g.id = f.id then f else g }
 
+/-- Append events to the trace. The guard is field-local (direction L4, 2026-09-07): an empty
+emit leaves the machine's trace field untouched rather than rebuilding it, and nothing else
+about `emit` changes — `emit_trace` (`Approximation.lean`) still reads
+`m.trace ++ events`, by cases on the list. -/
 def emit (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (events : List (RunEvent ν σ β ε δ ι α χ κ η)) :
     RunMachine ν σ β ε δ ι α χ St κ φ η :=
-  { m with trace := m.trace ++ events }
+  { m with trace := if events.isEmpty then m.trace else m.trace ++ events }
 
 def modify (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (id : FiberId)
     (k : RunFiber ν σ β ε δ ι α χ κ φ → RunFiber ν σ β ε δ ι α χ κ φ) :

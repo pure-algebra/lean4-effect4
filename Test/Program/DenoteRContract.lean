@@ -84,14 +84,15 @@ def writeThenFail : NativeEff :=
   .done (.success (.nat 1)) Stores.empty
 #guard observe 5 (unfolded pChoose 1 [] [false]) Stores.empty =
   .done (.success (.nat 2)) Stores.empty
-#guard operation? (result (.acquireRelease pSucceed pSucceed)) =
-  some (.frontier .unsupported (rootPoint))
+-- `acquireRelease` denotes as the compile names it (V1): under the erased guard, the first
+-- fiber operation is `contextWith`'s context read
+#guard operation? (result (.acquireRelease pSucceed pSucceed)) = some .getContext
 
 -- The false branch is child 1; the action and child are two further address components.
 def branchFork : NativeEff :=
   .branch (.lit (.bool false)) pFail (.withFiber (.fork pSucceed deferredChild))
 #guard operation? (result branchFork) =
-  some (.fork (.at_ ⟨[1, 0, 0], [], 77, [], []⟩) deferredChild)
+  some (.fork (.at_ ⟨[1, 0, 0], [], 77, [], [], 0⟩) deferredChild)
 
 -- source-repairs §20: `forkScoped` is `flatMap(scope, forkIn)` — the counted `Scope` service
 -- read first, then `forkIn` on the handle it answered (`replyScope` below)
@@ -100,10 +101,10 @@ def scopedFork : NativeEff := .withFiber (.forkScoped pSucceed scopedChild)
 
 def forkInTerm : NativeEff := .withFiber (.forkIn pSucceed deferredChild (.var 0))
 #guard operation? (observe 5 (unfolded forkInTerm 8 [.scopeHandle 3]) Stores.empty) =
-  some (.forkIn ⟨[0, 0], [.scopeHandle 3], 6, [], []⟩ deferredChild 3)
+  some (.forkIn ⟨[0, 0], [.scopeHandle 3], 6, [], [], 0⟩ deferredChild 3)
 
-#guard operation? (result (.uninterruptible pFail)) = some (.mask false (.at_ ⟨[0], [], 79, [], []⟩))
-#guard operation? (result (.interruptible pFail)) = some (.mask true (.at_ ⟨[0], [], 79, [], []⟩))
+#guard operation? (result (.uninterruptible pFail)) = some (.mask false (.at_ ⟨[0], [], 79, [], [], 0⟩))
+#guard operation? (result (.interruptible pFail)) = some (.mask true (.at_ ⟨[0], [], 79, [], [], 0⟩))
 -- Scoped entry is a single fiber operation. A store-only observer cannot allocate
 -- its scope or install context; the runtime performs those together at entry.
 #guard operation? (result (.scoped pSucceed)) = some (.scoped ((rootPoint).child 0))
@@ -190,7 +191,7 @@ def replyScope (program : RProgram) (scope : Nat) : Observation :=
 -- the read answered with scope 3 continues as `forkIn` of the child at the node's options;
 -- no registration identity is carried, the store allocates one at the registration
 #guard replyScope (unfolded scopedFork) 3 =
-  .waiting (.forkIn ⟨[0, 0], [], 78, [], []⟩ scopedChild 3) Stores.empty
+  .waiting (.forkIn ⟨[0, 0], [], 78, [], [], 0⟩ scopedChild 3) Stores.empty
 
 -- P2: generators and loops are runtime operations behind the host's suspend checkpoint;
 -- the static observer stops at their entry, and their execution is compared with the
@@ -198,7 +199,7 @@ def replyScope (program : RProgram) (scope : Nat) : Observation :=
 -- counted in `RuntimeRContract`. The entry carries the generator's or the loop's point.
 #guard operation? (result pGenTwoYields) = some (.gen (rootPoint))
 #guard operation? (result pGenLoop) = some (.gen (rootPoint))
-#guard operation? (result pWhileLoop) = some (.loop ⟨[1, 0], [.cell ⟨0⟩], 78, [], []⟩ (.nat 0))
+#guard operation? (result pWhileLoop) = some (.loop ⟨[1, 0], [.cell ⟨0⟩], 78, [], [], 0⟩ (.nat 0))
 
 def inlineGen : NativeEff := .gen (.cons (.bindYield pSucceed) (.cons (.ret (.var 0)) .nil))
 def resumedGen : NativeEff :=

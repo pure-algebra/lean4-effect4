@@ -227,7 +227,11 @@ theorem Extends.exists {a b : RunMachine ν σ β ε δ ι α χ St κ φ η} (h
   ⟨ev, hev.symm⟩
 
 theorem emit_trace (m : RunMachine ν σ β ε δ ι α χ St) (ev : List (RunEvent ν σ β ε δ ι α χ)) :
-    (m.emit ev).trace = m.trace ++ ev := rfl
+    (m.emit ev).trace = m.trace ++ ev := by
+  -- the field-local guard (direction L4): an empty emit is the trace itself
+  cases ev with
+  | nil => exact (List.append_nil _).symm
+  | cons _ _ => rfl
 
 theorem update_trace (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) :
     (m.update f).trace = m.trace := rfl

@@ -36,7 +36,7 @@ Lean field order, and the mangling round-trip on every field name. -/
 #guard Stores.err.ctors.length == 2
 #guard Stores.defect.ctors.length == 5
 #guard Stores.fnName.ctors.length == 5
-#guard Stores.finName.ctors.length == 6
+#guard Stores.finName.ctors.length == 7
 #guard Stores.completion.ctors.length == 2
 #guard Stores.syncOp.ctors.length == 23
 #guard Stores.raceName.ctors.length == 6
@@ -45,7 +45,8 @@ Lean field order, and the mangling round-trip on every field name. -/
 #guard Stores.progName.ctors.length == 26
 #guard Stores.name.ctors.length == 20
 #guard Stores.actionName.ctors.length == 22
-#guard Stores.thunk.ctors.length == 4
+-- V1 (2026-09-07): `Thunk` +`foreign`, `FinName` +`foreign` (the count above), `SyncOp.scopeAdd` −`key`.
+#guard Stores.thunk.ctors.length == 5
 #guard Stores.finalizerStrategy.ctors.length == 2
 #guard Stores.scopeState.ctors.length == 5
 
@@ -178,7 +179,11 @@ def report (tag : String) (hand derived : String) : IO Unit :=
 -- Pin this specific new disagreement as well as the existing projection count.
 #guard proj (.induct Fibers.runDecision) !=
   projUnder (.induct Fibers.runDecision) (.induct Derived.Fibers.runDecision)
-#guard ((parts.flatMap Part.rows).filter (fun r => r.2.1 == r.2.2)).length == 47
+-- V1 (2026-09-07): the hand descriptions of `FinName` (+`foreign`), `Thunk` (+`foreign`) and
+-- `SyncOp` (`scopeAdd` −`key`) follow `Stores.lean`; their derived twins are the committed
+-- `Derived/Stores.lean`, regenerated on the PC only (the avatar is held per the owner's
+-- steer), so those three rows disagree until that regeneration: 47 → 44.
+#guard ((parts.flatMap Part.rows).filter (fun r => r.2.1 == r.2.2)).length == 44
 
 #eval do
   let rows := parts.flatMap Part.rows

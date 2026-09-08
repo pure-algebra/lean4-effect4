@@ -126,6 +126,7 @@ theorem evaluateNative_action (root : NativeEff) (m : FMachine) (f : FRun) (y : 
 def StepHead : NCode → Bool
   | .suspend (.body _) => true
   | .suspend (.store (Thunk.body _)) => true
+  | .suspend (.store (Thunk.foreign _ _)) => true
   | .yieldableError _ => true
   | .iterator _ _ => true
   | .onSuccess _ _ => true
@@ -348,17 +349,17 @@ theorem bool_eq_false_of_not {b : Bool} (h : ¬ b = true) : b = false := by
   · exact absurd rfl h
 
 theorem point_refresh {p p' : Point}
-    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape)
+    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
     (cv : List (FiberId × ExitV)) : ({ p' with completed := cv } : Point) = { p with completed := cv } := by
-  obtain ⟨h1, h2, h3, h4⟩ := hp
+  obtain ⟨h1, h2, h3, h4, h5⟩ := hp
   cases p
   cases p'
-  dsimp only at h1 h2 h3 h4
-  subst h1 h2 h3 h4
+  dsimp only at h1 h2 h3 h4 h5
+  subst h1 h2 h3 h4 h5
   rfl
 
 theorem iterNext_gen_congr (root : NativeEff) (cv : List (FiberId × ExitV)) {p p' : Point}
-    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape) :
+    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root) :
     (interpAt root cv).iterNext (.gen p' [] false) Val.unit =
       (interpAt root cv).iterNext (.gen p [] false) Val.unit := by
   show runStmts root { p' with completed := cv } p'.fuel [] (if false then _ else p'.env) [] =
@@ -529,7 +530,8 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     show CodeMeans root (suspendBodyAt root (.body { p' with completed := m₂.completedExits }))
       (.vis (.inr (.frontier reason p)) k)
     rw [hloop]
-    exact CodeMeans.frontier p _ reason k ⟨hp.1, hp.2.1, hp.2.2.1, hp.2.2.2⟩ (fun c' => hloop c')
+    exact CodeMeans.frontier p _ reason k ⟨hp.1, hp.2.1, hp.2.2.1, hp.2.2.2.1, hp.2.2.2.2⟩
+      (fun c' => hloop c')
   | yieldError p e k hk =>
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluatePrim_step root _ m₁ f₁ y hc₁ rfl,
       stepFrame_eq', step_yieldError _ _ hc₁, finishFrame_running, evaluateRawR_fiber _ _ _ _ hc₂]
@@ -537,6 +539,13 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     exact iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _,
       hf'.withFrame (means_answerWith hf'.means (hk _)), rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
   | closeWalk strategy order ex k hk =>
+    rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluatePrim_step root _ m₁ f₁ y hc₁ rfl,
+      stepFrame_eq', step_suspend _ _ hc₁, finishFrame_running, evaluateRawR_fiber _ _ _ _ hc₂]
+    dsimp only [evaluateFiberR]
+    exact iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _,
+      hf'.withFrame (means_answerWith hf'.means (hk _)), rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+  -- a capture's release: the counted suspend on both sides (V1), as `closeWalk`
+  | foreignRelease c ex k hk =>
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluatePrim_step root _ m₁ f₁ y hc₁ rfl,
       stepFrame_eq', step_suspend _ _ hc₁, finishFrame_running, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR]

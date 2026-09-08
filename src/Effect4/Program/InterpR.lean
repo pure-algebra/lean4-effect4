@@ -103,7 +103,7 @@ def denoteAt (root : NativeEff) (p : Point) : RProgram :=
   | some (.eff e) => denoteR root e p
   | _ => .pure badShapeExit
 
-/-- The scope's seven finalizer shapes (`Stores.finProgram`). -/
+/-- The scope's eight finalizer shapes (`Stores.finProgram`). -/
 def denoteFin : FinName → ExitV → RProgram
   | .interruptFiber fiber true, _ => fiberValR (.interruptScoped fiber) rfl
   | .interruptFiber fiber false, _ => fiberValR (.interrupt fiber) rfl
@@ -113,6 +113,39 @@ def denoteFin : FinName → ExitV → RProgram
     .pure (if fails then .failure (Cause.fail (.tag label)) else .success .unit)
   | .parkThen slot, _ => .vis (.inr (.async (.store (.externalRegister slot)) .unit)) Effects.Program.pure
   | .awaitNewChildren snapshot, _ => fiberValR (.awaitNewChildren snapshot) rfl
+  -- a capture's release (V1): the counted suspend, then `provideContext(release(a, exit),
+  -- context)` (`internal/effect.ts:3983`, `:2180-2199`): the current context read, the captured
+  -- one set, the release at the capture's point over the exit under the finalizer restoring
+  -- the previous context — constructed with the view at its invocation (`constructR`), as the
+  -- frame's `interpAt` refreshes the release's name
+  | .foreign c, ex => .vis (.inr (.foreignRelease c ex)) fun _ =>
+      (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun v =>
+        match Val.context? v with
+        | some previous =>
+          (guardR .onSuccess (fiberValR (.setContext c.ctx) rfl)).bind (seqR fun _ =>
+            constructR fun completed =>
+              .vis (.inr (.mask false
+                (.release ((Point.ofCapture c completed).childWith 1 (reifyExitVal ex)) previous)))
+                Effects.Program.pure)
+        | none => .pure badShapeExit)
+
+/-- `acquireRelease`'s masked half at the term (`internal/effect.ts:3978-3986`, V1): the
+counted `Scope` read, the acquire (its term at the point's child 0), the registration of the
+release as a capture, and the closed branch that runs the release now. -/
+def acquireInR (acquire : RProgram) (p : Point) (ctx : Ctx) : RProgram :=
+  (guardR .onSuccess (fiberValR .ambientScope rfl)).bind (seqR fun v =>
+    match Val.scope? v with
+    | some s =>
+      (guardR .onSuccess acquire).bind (seqR fun a =>
+        (guardR .onSuccess (storeR (.scopeAdd s (.foreign (p.capture a ctx))))).bind (seqR fun w =>
+          if w = Val.unit then .pure (.success a)
+          else
+            match exitOfVal w with
+            | some ex =>
+              (guardR .onSuccess (denoteFin (.foreign (p.capture a ctx)) ex)).bind
+                (seqR fun _ => .pure (.success a))
+            | none => .pure badShapeExit))
+    | none => .pure badShapeExit)
 
 /-- External answers and the programs stored by the source Deferred interface. -/
 def denoteCompletion : Completion Val Err Defect FiberId Ann → RProgram
@@ -176,6 +209,8 @@ def denoteBody (root : NativeEff) : Body → RProgram
   | .at_ p => denoteAt root p
   | .fin fin ex => denoteFin fin ex
   | .raceCleanup race => fiberValR (.cancelRace race) rfl
+  | .acquireIn p ctx => acquireInR (denoteAt root (p.child 0)) p ctx
+  | .release q previous => onExitR (denoteAt root q) fun _ => fiberValR (.setContext previous) rfl
 
 /-- `Stores.raceSettleProgram` at the term instance: the exit alone, or the masked
 race-named cleanup then the exit (`internal/effect.ts:1510-1514`, D6a). -/

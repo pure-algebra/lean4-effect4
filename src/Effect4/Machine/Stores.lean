@@ -98,6 +98,34 @@ inductive FnName
   | takeAndBump
 deriving DecidableEq, Repr
 
+/-- The fiber `Context`, restricted to what rc.112 reads off it: the ambient `Scope` service
+(`forkScoped`, `internal/effect.ts:5400-5406`) and the two cached budget fields
+(`setContext`, `:726-727`). -/
+structure Ctx where
+  /-- The ambient `Scope` service, as a `ScopeStore` key. -/
+  ambientScope : Option Nat
+  /-- `MaxOpsBeforeYield`. -/
+  maxOpsBeforeYield : Nat
+  /-- `PreventSchedulerYield`. -/
+  preventYield : Bool
+deriving DecidableEq, Repr, Inhabited
+
+/-- A compiled release, captured at registration (`internal/effect.ts:3976,3983`): the
+point's path and environment (the acquired value already appended), its fuel and tape, and
+the context `contextWith` read, under which the release runs. First-order; the compiler
+resolves it (`Program/Compile.lean`, `suspendBodyAt`). It is `Point` minus the completed-exit
+view plus the context (`Point.ofCapture` is the isomorphism), so it carries the point's
+`root` too (direction-scout D6). -/
+structure Capture where
+  path : List Nat
+  env : List Effect4.Store.Val
+  fuel : Nat
+  tape : List Bool
+  ctx : Ctx
+  /-- The root program the path addresses; `0` until a machine holds more than one. -/
+  root : Nat := 0
+deriving DecidableEq, Repr
+
 /-- The scope finalizer *name* alphabet. `Effect4.Scope` stores a `φ`; giving `φ` these arms is
 what lets a finalizer name *mean* an operation on another scope or on a fiber — the open half of
 `SCOPE-FB-FINALIZER-MEANING` (`docs/research/SCOPE-DAG.md:228`). -/
@@ -119,19 +147,10 @@ inductive FinName
   finalizer needs, since `onExit`'s `contAll` masks the fiber while the finalizer runs
   (`src/Effect4/Machine/Frames.lean:560-565`, rc.112 `internal/effect.ts:4021`). -/
   | parkThen (slot : Nat)
+  /-- A compiled `acquireRelease` release (`internal/effect.ts:3983`): the capture the compile
+  route resolves when the scope closes, on whichever fiber closes it (V1, 2026-09-07). -/
+  | foreign (capture : Capture)
 deriving DecidableEq, Repr
-
-/-- The fiber `Context`, restricted to what rc.112 reads off it: the ambient `Scope` service
-(`forkScoped`, `internal/effect.ts:5400-5406`) and the two cached budget fields
-(`setContext`, `:726-727`). -/
-structure Ctx where
-  /-- The ambient `Scope` service, as a `ScopeStore` key. -/
-  ambientScope : Option Nat
-  /-- `MaxOpsBeforeYield`. -/
-  maxOpsBeforeYield : Nat
-  /-- `PreventSchedulerYield`. -/
-  preventYield : Bool
-deriving DecidableEq, Repr, Inhabited
 
 /-! ## The alphabets as values
 
@@ -428,8 +447,11 @@ inductive SyncOp
   | deferredAwaitCleanup (cell : DeferredKey) (waiter : FiberId) (token : Nat)
   /-- `scopeMakeUnsafe` (`internal/effect.ts:3914-3922`). -/
   | scopeMake (strategy : FinalizerStrategy)
-  /-- `scopeAddFinalizerExit` (`internal/effect.ts:3846-3858`). -/
-  | scopeAdd (scope : Nat) (key : Nat) (finalizer : FinName)
+  /-- `scopeAddFinalizerExit` (`internal/effect.ts:3846-3858`): the registration key is
+  allocated by the step from the store's supply (`const key = {}`, `:3855`), as
+  `scopeLinkFiber` allocates its own (`E4-CHECK-CE-016`); a closed scope answers its closing
+  exit instead (`:3851-3853`), an unknown one is a frontier. -/
+  | scopeAdd (scope : Nat) (finalizer : FinName)
   /-- `scopeRemoveFinalizerUnsafe` (`internal/effect.ts:3890-3904`). -/
   | scopeRemove (scope : Nat) (key : Nat)
   /-- Whether a scope has closed (`Scope.ts:99-187`). -/
@@ -637,6 +659,10 @@ inductive Thunk
   | op (operation : SyncOp)
   /-- `suspend`'s body (`internal/effect.ts` `suspend`). -/
   | body (program : ProgName)
+  /-- The delayed release of a compiled `acquireRelease`: the capture and the exit the scope
+  closed with. The bare stores answer `notImplemented` for it (`stores.suspendBody`); the
+  compile route resolves it (`Program/Compile.lean`, `suspendBodyAt`). -/
+  | foreign (capture : Capture) (exit : ExitV)
 deriving DecidableEq
 
 /-- The program carrier at this instantiation. -/
@@ -1311,6 +1337,19 @@ theorem keysBelow_addFinalizer {self : ScopeStore} {n scope : Nat} {fin : FinNam
     (hb : KeysBelow self n) : KeysBelow (self.addFinalizer scope n fin).1 (n + 1) :=
   keysBelow_addFinalizer_bound hb (Nat.le_succ n) (Nat.lt_succ_self n)
 
+/-- The open branch of `scopeAdd` (`syncOpStep`): registering at the supply's own value into
+an entry the store holds keeps the bound, one higher. -/
+theorem keysBelow_addUnsafe_entry {self : ScopeStore} {n scope : Nat} {entry : ScopeEntry}
+    {fin : FinName} (hb : KeysBelow self n) (hentry : self.entryAt scope = some entry) :
+    KeysBelow (self.setEntry { entry with scope := entry.scope.addUnsafe n fin }) (n + 1) := by
+  have hmem : entry ∈ self.entries := List.mem_of_find?_eq_some hentry
+  intro e he k hk
+  rcases mem_setEntry he with rfl | he
+  · rcases List.mem_cons.mp (Effect4.Scope.addUnsafe_keys_subset entry.scope n fin hk) with hk | hk
+    · exact hk ▸ Nat.lt_succ_self n
+    · exact Nat.lt_succ_of_lt (hb entry hmem k hk)
+  · exact Nat.lt_succ_of_lt (hb e he k hk)
+
 /-- Removal keeps the bound: removal only removes. -/
 theorem keysBelow_removeFinalizer {self : ScopeStore} {n scope key : Nat}
     (hb : KeysBelow self n) : KeysBelow (self.removeFinalizer scope key) n := by
@@ -1514,6 +1553,9 @@ def finProgram : FinName → ExitV → Program
     Prim.async (Name.externalRegister slot) false none
   | FinName.awaitNewChildren snapshot, _ =>
     Prim.withFiber (Thunk.act (ActionName.awaitNewChildren snapshot))
+  -- the release closure is called when the finalizer runs (`:3983`): a suspension the
+  -- compile route's `suspendBody` resolves, through every close path's `finProgram`
+  | FinName.foreign capture, exit => Prim.suspend (Thunk.foreign capture exit)
 
 /-- One step of the sequential close generator (`internal/effect.ts:3813-3818`, §20). The value
 delivered to the iterator frame is the previous finalizer's reified exit — the answer of the
@@ -1675,13 +1717,22 @@ def syncOpStep : SyncOp → Stores → Option (Stores × Val)
   | SyncOp.scopeMake strategy, st =>
     some ({ st with scopes := st.scopes.make st.nextName strategy, nextName := st.nextName + 1 },
       Val.scopeHandle st.nextName)
-  | SyncOp.scopeAdd scope key finalizer, st =>
-    let (scopes, _) := st.scopes.addFinalizer scope key finalizer
-    -- the supply dominates every key the store holds, so an identity allocated later can
-    -- never collide with one this registration accepted (`E4-CHECK-CE-016`). No admitted
-    -- `NativeOp` names this operation (`Program/Native.lean`, `syncOpOf`); it is reachable
-    -- only through the stores' own alphabet, where the caller chooses the key.
-    some ({ st with scopes := scopes, nextName := max st.nextName (key + 1) }, Val.unit)
+  -- `scopeAddFinalizerExit` (`internal/effect.ts:3846-3858`): an unknown scope is a frontier
+  -- (M7); a closed scope answers its closing exit, the caller running the finalizer now
+  -- (`:3851-3853`); an open one registers under a key allocated from the supply (`:3855-3856`,
+  -- `E4-CHECK-CE-016`), so the supply keeps dominating every key the store holds
+  | SyncOp.scopeAdd scope finalizer, st =>
+    match st.scopes.entryAt scope with
+    | none => none
+    | some entry =>
+      match entry.scope.closingExit? with
+      | some exit => some (st, reifyExitVal exit)
+      | none =>
+        some ({ st with
+            scopes := st.scopes.setEntry
+              { entry with scope := entry.scope.addUnsafe st.nextName finalizer }
+            nextName := st.nextName + 1 },
+          Val.unit)
   | SyncOp.scopeRemove scope key, st =>
     some ({ st with scopes := st.scopes.removeFinalizer scope key }, Val.unit)
   | SyncOp.scopeIsClosed scope, st =>

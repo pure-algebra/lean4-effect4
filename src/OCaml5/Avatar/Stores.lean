@@ -126,7 +126,9 @@ def finName : InductiveDesc where
      { leanName := "release", args := [⟨"label", .nat, false⟩, ⟨"fails", .bool, false⟩] },
      -- `57924eb` (seat F2): `awaitAllChildren`'s finalizer (`:5319-5333`, R2-7)
      { leanName := "awaitNewChildren", args := [⟨"snapshot", .lst fid, false⟩] },
-     { leanName := "parkThen", args := [⟨"slot", .nat, false⟩] }]
+     { leanName := "parkThen", args := [⟨"slot", .nat, false⟩] },
+     -- V1 (2026-09-07): a compiled `acquireRelease` release, a `Capture` (`Stores.lean`)
+     { leanName := "foreign", args := [⟨"capture", .nm "Capture", false⟩] }]
 
 /-- `Ctx` (`Stores.lean:130`). -/
 def ctx : StructDesc where
@@ -182,9 +184,9 @@ def syncOp : InductiveDesc where
        args := [⟨"cell", .nm "DeferredKey", false⟩, ⟨"waiter", fid, false⟩,
                 ⟨"token", .nat, false⟩] },
      { leanName := "scopeMake", args := [⟨"strategy", .nm "FinalizerStrategy", false⟩] },
+     -- V1 (2026-09-07): the key is allocated by the step, no longer the caller's
      { leanName := "scopeAdd",
-       args := [⟨"scope", .nat, false⟩, ⟨"key", .nat, false⟩,
-                ⟨"finalizer", .nm "FinName", false⟩] },
+       args := [⟨"scope", .nat, false⟩, ⟨"finalizer", .nm "FinName", false⟩] },
      { leanName := "scopeRemove", args := [⟨"scope", .nat, false⟩, ⟨"key", .nat, false⟩] },
      { leanName := "scopeIsClosed", args := [⟨"scope", .nat, false⟩] }]
 
@@ -337,7 +339,9 @@ def thunk : InductiveDesc where
     [{ leanName := "park", args := [⟨"kind", .nm "ParkKind", false⟩] },
      { leanName := "act", args := [⟨"action", .nm "ActionName", false⟩] },
      { leanName := "op", args := [⟨"operation", .nm "SyncOp", false⟩] },
-     { leanName := "body", args := [⟨"program", .nm "ProgName", false⟩] }]
+     { leanName := "body", args := [⟨"program", .nm "ProgName", false⟩] },
+     -- V1 (2026-09-07): the delayed release of a compiled `acquireRelease`
+     { leanName := "foreign", args := [⟨"capture", .nm "Capture", false⟩, ⟨"exit", exitL, false⟩] }]
 
 /-! ### `src/Effect4/Machine/Scope.lean`
 

@@ -183,9 +183,13 @@ section Scope
 #guard syncOpStep (SyncOp.scopeIsClosed 0) Stores.empty = none
 #guard answer (SyncOp.scopeIsClosed 0) s3 = some (Val.bool false)
 #guard after (SyncOp.scopeIsClosed 0) s3 = s3
-#guard SyncOp.validIn s3 (SyncOp.scopeAdd 0 0 (FinName.release 1 false)) = true
-#guard answer (SyncOp.scopeAdd 0 0 (FinName.release 1 false)) s3 = some Val.unit
-#guard Val.validIn (after (SyncOp.scopeAdd 0 0 (FinName.release 1 false)) s3) (Val.scopeHandle 0)
+#guard SyncOp.validIn s3 (SyncOp.scopeAdd 0 (FinName.release 1 false)) = true
+#guard answer (SyncOp.scopeAdd 0 (FinName.release 1 false)) s3 = some Val.unit
+#guard Val.validIn (after (SyncOp.scopeAdd 0 (FinName.release 1 false)) s3) (Val.scopeHandle 0)
+-- the registration key is the supply's value, and the supply advances (`E4-CHECK-CE-016`)
+#guard (after (SyncOp.scopeAdd 0 (FinName.release 1 false)) s3).nextName = 2
+-- a registration on an unknown scope is a frontier, never a cause (M7)
+#guard syncOpStep (SyncOp.scopeAdd 7 (FinName.release 1 false)) s3 = none
 #guard answer (SyncOp.scopeMake .parallel) s3 = some (Val.scopeHandle 1)
 
 end Scope

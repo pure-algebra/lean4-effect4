@@ -39,8 +39,7 @@ Replay admission is not changed.
 Excluded positions: numeric interruptor provenance in deferredInterruptWith and
 interruptAll, and the interruptor inside a `Cause` (`Cause.interrupt (some id)`,
 provenance that nothing dereferences; the tape's `interruptFrom` may name any fiber); the
-closing exit a scope entry stores (`linkScope` reads only whether it is present, while
-`closeResultOf` returns a void exit); the race's duplicate winner, failure reasons and
+race's duplicate winner, failure reasons and
 bookkeeping fields other than `live` and `accepted`; and Deferred waiter and due-resume
 targets. The latter become command targets: `driveStep` ignores unknown resume targets,
 while the separately collected completion code is what can enter a frame. `Cmd.keys`
@@ -257,6 +256,8 @@ def FinName.keys : FinName → List Handle
   | FinName.release _ _ => []
   | FinName.awaitNewChildren snapshot => snapshot.map Handle.fiber
   | FinName.parkThen _ => []
+  -- a capture holds the values in scope at registration and the context it runs under
+  | FinName.foreign capture => Val.keysList capture.env ++ capture.ctx.keys
 
 /-- The handles of a store operation: its keys and the values it writes. -/
 def SyncOp.keys : SyncOp → List Handle
@@ -280,7 +281,7 @@ def SyncOp.keys : SyncOp → List Handle
   | SyncOp.deferredInterruptWith cell _ => [Handle.promise cell]
   | SyncOp.deferredAwaitCleanup cell waiter _ => [Handle.promise cell, Handle.fiber waiter]
   | SyncOp.scopeMake _ => []
-  | SyncOp.scopeAdd scope _ finalizer => Handle.scope scope :: finalizer.keys
+  | SyncOp.scopeAdd scope finalizer => Handle.scope scope :: finalizer.keys
   | SyncOp.scopeRemove scope _ => [Handle.scope scope]
   | SyncOp.scopeIsClosed scope => [Handle.scope scope]
 
@@ -368,6 +369,7 @@ def Thunk.keys : Thunk → List Handle
   | Thunk.act action => action.keys
   | Thunk.op operation => operation.keys
   | Thunk.body program => program.keys
+  | Thunk.foreign capture exit => Val.keysList capture.env ++ capture.ctx.keys ++ exitKeys exit
 
 /-! ## Code, at any name and thunk alphabet -/
 
@@ -521,9 +523,18 @@ def DeferredCell.keys (c : DeferredCell) : List Handle :=
 def DeferredStore.keys (d : DeferredStore) : List Handle :=
   d.cells.flatMap DeferredCell.keys ++ d.due.flatMap fun r => programKeys r.2.2
 
-/-- The handles a scope entry holds: its registered finalizer names. -/
+/-- The handles a closed scope's exit carries. The store answers that exit to a registration
+on a closed scope (`syncOpStep`, `SyncOp.scopeAdd`; `internal/effect.ts:3851-3853`), so it is
+one of the store's own handles. -/
+def scopeClosingKeys (sc : ScopeV) : List Handle :=
+  match sc.closingExit? with
+  | some exit => exitKeys exit
+  | none => []
+
+/-- The handles a scope entry holds: its registered finalizer names and, once closed, the
+exit it closed with. -/
 def ScopeEntry.keys (e : ScopeEntry) : List Handle :=
-  e.scope.finalizers.flatMap fun kf => FinName.keys kf.2
+  (e.scope.finalizers.flatMap fun kf => FinName.keys kf.2) ++ scopeClosingKeys e.scope
 
 /-- The handles of the scope store. -/
 def ScopeStore.keys (s : ScopeStore) : List Handle :=
@@ -4736,6 +4747,7 @@ theorem finProgram_keys (fin : FinName) (exit : ExitV) :
   | release label fails => cases fails <;> simp only [finProgram] <;> sub_tac
   | awaitNewChildren snapshot => simp only [finProgram]; sub_tac
   | parkThen slot => simp only [finProgram]; sub_tac
+  | foreign capture => simp only [finProgram]; sub_tac
 
 theorem raceEntrants_keys (race : RaceName) :
     ((raceEntrants race).map progOf).flatMap programKeys = [] := by
@@ -5077,10 +5089,57 @@ theorem ScopeStore.entry_keys_subset {self : ScopeStore} {key : Nat} {e : ScopeE
     (h : self.entryAt key = some e) : e.keys ⊆ self.keys :=
   fun _ hx => List.mem_flatMap.mpr ⟨e, List.mem_of_find?_eq_some h, hx⟩
 
+/-! The closing exit's handles under the scope operations: registration and removal keep the
+closing exit (`Scope.closingExit_addUnsafe`, `Scope.closingExit_removeUnsafe`), a fresh scope
+has none, and closing writes the closing exit. -/
+
+theorem scopeClosingKeys_addUnsafe (sc : ScopeV) (key : Nat) (fin : FinName) :
+    scopeClosingKeys (sc.addUnsafe key fin) = scopeClosingKeys sc := by
+  simp only [scopeClosingKeys, Scope.closingExit_addUnsafe]
+
+theorem scopeClosingKeys_addExit (sc : ScopeV) (key : Nat) (fin : FinName) :
+    scopeClosingKeys (Scope.addExit finExit sc key fin).1 = scopeClosingKeys sc := by
+  unfold Scope.addExit
+  split
+  · rfl
+  · exact scopeClosingKeys_addUnsafe sc key fin
+
+theorem scopeClosingKeys_removeUnsafe (sc : ScopeV) (key : Nat) :
+    scopeClosingKeys (sc.removeUnsafe key) = scopeClosingKeys sc := by
+  simp only [scopeClosingKeys, Scope.closingExit_removeUnsafe]
+
+theorem scopeClosingKeys_make (strategy : FinalizerStrategy) :
+    scopeClosingKeys (Scope.make strategy : ScopeV) = [] := rfl
+
+theorem scopeClosingKeys_closeState (sc : ScopeV) (exit : ExitV) :
+    scopeClosingKeys (sc.closeState exit) ⊆ scopeClosingKeys sc ++ exitKeys exit := by
+  unfold Scope.closeState
+  split
+  · exact List.subset_append_left _ _
+  · exact List.subset_append_right _ _
+
+/-- The finalizer half of an entry's handles. -/
+theorem ScopeEntry.finalizers_keys_subset (e : ScopeEntry) :
+    (e.scope.finalizers.flatMap fun kf => FinName.keys kf.2) ⊆ e.keys :=
+  List.subset_append_left _ _
+
+/-- The closing-exit half of an entry's handles. -/
+theorem ScopeEntry.closingKeys_subset (e : ScopeEntry) : scopeClosingKeys e.scope ⊆ e.keys :=
+  List.subset_append_right _ _
+
+/-- The exit a closed entry holds names only handles of the store. -/
+theorem ScopeStore.closingExit_keys {self : ScopeStore} {scope : Nat} {entry : ScopeEntry}
+    {exit : ExitV} (hentry : self.entryAt scope = some entry)
+    (hclose : entry.scope.closingExit? = some exit) : exitKeys exit ⊆ self.keys := by
+  refine List.Subset.trans ?_ (ScopeStore.entry_keys_subset hentry)
+  refine List.Subset.trans ?_ (ScopeEntry.closingKeys_subset entry)
+  simp only [scopeClosingKeys, hclose]
+  exact List.Subset.refl _
+
 theorem ScopeStore.make_keys (self : ScopeStore) (name : Nat) (strategy : FinalizerStrategy) :
     (self.make name strategy).keys ⊆ self.keys := by
   simp only [ScopeStore.keys, ScopeStore.make, List.flatMap_append, List.flatMap_cons, List.flatMap_nil,
-    ScopeEntry.keys, Scope.make_finalizers, List.append_nil]
+    ScopeEntry.keys, Scope.make_finalizers, scopeClosingKeys_make, List.append_nil]
   exact List.Subset.refl _
 
 theorem ScopeStore.addFinalizer_keys (self : ScopeStore) (scope key : Nat) (fin : FinName) :
@@ -5093,11 +5152,31 @@ theorem ScopeStore.addFinalizer_keys (self : ScopeStore) (scope key : Nat) (fin 
     refine List.Subset.trans (ScopeStore.setEntry_keys_subset _ _) ?_
     refine List.append_subset.mpr ⟨List.subset_append_left _ _, ?_⟩
     have := scopeAddExit_keys entry.scope key fin
-    simp only [ScopeEntry.keys]
-    refine List.Subset.trans this ?_
+    simp only [ScopeEntry.keys, scopeClosingKeys_addExit]
+    refine List.append_subset.mpr ⟨?_, ?_⟩
+    · refine List.Subset.trans this ?_
+      refine List.append_subset.mpr ⟨?_, List.subset_append_right _ _⟩
+      refine List.Subset.trans ?_ (List.subset_append_left _ _)
+      exact List.Subset.trans (ScopeEntry.finalizers_keys_subset entry) (ScopeStore.entry_keys_subset hentry)
+    · refine List.Subset.trans ?_ (List.subset_append_left _ _)
+      exact List.Subset.trans (ScopeEntry.closingKeys_subset entry) (ScopeStore.entry_keys_subset hentry)
+
+/-- The open branch of `scopeAdd`: registration under `addUnsafe` into an entry the store
+holds adds only the finalizer's handles. -/
+theorem ScopeStore.addUnsafe_entry_keys (self : ScopeStore) (scope key : Nat) (fin : FinName)
+    {entry : ScopeEntry} (hentry : self.entryAt scope = some entry) :
+    (self.setEntry { entry with scope := entry.scope.addUnsafe key fin }).keys ⊆
+      self.keys ++ fin.keys := by
+  refine List.Subset.trans (ScopeStore.setEntry_keys_subset _ _) ?_
+  refine List.append_subset.mpr ⟨List.subset_append_left _ _, ?_⟩
+  simp only [ScopeEntry.keys, scopeClosingKeys_addUnsafe]
+  refine List.append_subset.mpr ⟨?_, ?_⟩
+  · refine List.Subset.trans (scopeAddUnsafe_keys entry.scope key fin) ?_
     refine List.append_subset.mpr ⟨?_, List.subset_append_right _ _⟩
     refine List.Subset.trans ?_ (List.subset_append_left _ _)
-    exact ScopeStore.entry_keys_subset hentry
+    exact List.Subset.trans (ScopeEntry.finalizers_keys_subset entry) (ScopeStore.entry_keys_subset hentry)
+  · refine List.Subset.trans ?_ (List.subset_append_left _ _)
+    exact List.Subset.trans (ScopeEntry.closingKeys_subset entry) (ScopeStore.entry_keys_subset hentry)
 
 theorem ScopeStore.removeFinalizer_keys (self : ScopeStore) (scope key : Nat) :
     (self.removeFinalizer scope key).keys ⊆ self.keys := by
@@ -5107,18 +5186,27 @@ theorem ScopeStore.removeFinalizer_keys (self : ScopeStore) (scope key : Nat) :
   · next entry hentry =>
     refine List.Subset.trans (ScopeStore.setEntry_keys_subset _ _) ?_
     refine List.append_subset.mpr ⟨List.Subset.refl _, ?_⟩
-    simp only [ScopeEntry.keys]
-    refine List.Subset.trans (scopeRemoveUnsafe_keys entry.scope key) ?_
-    exact ScopeStore.entry_keys_subset hentry
+    simp only [ScopeEntry.keys, scopeClosingKeys_removeUnsafe]
+    refine List.append_subset.mpr ⟨?_, ?_⟩
+    · refine List.Subset.trans (scopeRemoveUnsafe_keys entry.scope key) ?_
+      exact List.Subset.trans (ScopeEntry.finalizers_keys_subset entry) (ScopeStore.entry_keys_subset hentry)
+    · exact List.Subset.trans (ScopeEntry.closingKeys_subset entry) (ScopeStore.entry_keys_subset hentry)
 
+/-- Closing writes the closing exit into the entry and drops its registrations: the store's
+handles grow by the exit's. -/
 theorem ScopeStore.closeState_keys (self : ScopeStore) (key : Nat) (exit : ExitV) :
-    (self.closeState key exit).keys ⊆ self.keys := by
+    (self.closeState key exit).keys ⊆ self.keys ++ exitKeys exit := by
   unfold ScopeStore.closeState
   split
-  · exact List.Subset.refl _
-  · refine List.Subset.trans (ScopeStore.setEntry_keys_subset _ _) ?_
-    simp only [ScopeEntry.keys, Scope.closeState_finalizers, List.flatMap_nil, List.append_nil]
-    exact List.Subset.refl _
+  · exact List.subset_append_left _ _
+  · next entry hentry =>
+    refine List.Subset.trans (ScopeStore.setEntry_keys_subset _ _) ?_
+    refine List.append_subset.mpr ⟨List.subset_append_left _ _, ?_⟩
+    simp only [ScopeEntry.keys, Scope.closeState_finalizers, List.flatMap_nil, List.nil_append]
+    refine List.Subset.trans (scopeClosingKeys_closeState entry.scope exit) ?_
+    refine List.append_subset.mpr ⟨?_, List.subset_append_right _ _⟩
+    refine List.Subset.trans ?_ (List.subset_append_left _ _)
+    exact List.Subset.trans (ScopeEntry.closingKeys_subset entry) (ScopeStore.entry_keys_subset hentry)
 
 theorem ScopeStore.closeOrder_keys {self : ScopeStore} {key : Nat} {entry : ScopeEntry}
     (h : self.entryAt key = some entry) : entry.scope.closeOrder.flatMap FinName.keys ⊆ self.keys := by
@@ -5126,7 +5214,8 @@ theorem ScopeStore.closeOrder_keys {self : ScopeStore} {key : Nat} {entry : Scop
   obtain ⟨fin, hfin, hxf⟩ := List.mem_flatMap.mp hx
   rw [Scope.closeOrder_eq, List.mem_reverse] at hfin
   obtain ⟨kf, hkf, rfl⟩ := List.mem_map.mp hfin
-  exact ScopeStore.entry_keys_subset h (List.mem_flatMap.mpr ⟨kf, hkf, hxf⟩)
+  exact ScopeStore.entry_keys_subset h
+    (ScopeEntry.finalizers_keys_subset entry (List.mem_flatMap.mpr ⟨kf, hkf, hxf⟩))
 
 theorem ScopeStore.entryAt_closeState_isSome (self : ScopeStore) (scope key : Nat) (exit : ExitV)
     (h : (self.entryAt key).isSome = true) : ((self.closeState scope exit).entryAt key).isSome = true := by
@@ -5354,11 +5443,27 @@ theorem syncOpStep_keys (o : SyncOp) (s s' : Stores) (v : Val) (ids : List Fiber
     · exact ScopeStore.entryAt_make_self s.scopes s.nextName strategy
     · refine Ok_of_subset ?_ hok'
       sub_tac using (ScopeStore.make_keys s.scopes s.nextName strategy)
-  | scopeAdd scope key finalizer =>
-    simp only [syncOpStep_scopeAdd, Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    refine Ok_of_subset ?_ hok'
-    sub_tac using (ScopeStore.addFinalizer_keys s.scopes scope key finalizer)
+  | scopeAdd scope finalizer =>
+    cases hentry : s.scopes.entryAt scope with
+    | none => rw [syncOpStep_scopeAdd_none s scope finalizer hentry] at h; cases h
+    | some entry =>
+      cases hclose : entry.scope.closingExit? with
+      | some exit =>
+        -- a closed scope answers its closing exit, whose handles are the store's own
+        rw [syncOpStep_scopeAdd_closed s scope finalizer hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        refine Ok_of_subset ?_ hok'
+        have hexit : exitKeys exit ⊆ s.keys :=
+          List.Subset.trans (ScopeStore.closingExit_keys hentry hclose) (by sub_tac)
+        simp only [reifyExitVal_keys]
+        sub_tac using hexit
+      | none =>
+        rw [syncOpStep_scopeAdd_open s scope finalizer hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        refine Ok_of_subset ?_ hok'
+        sub_tac using (ScopeStore.addUnsafe_entry_keys s.scopes scope s.nextName finalizer hentry)
   | scopeRemove scope key =>
     simp only [syncOpStep_scopeRemove, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
@@ -5375,12 +5480,12 @@ theorem syncOpStep_keys (o : SyncOp) (s s' : Stores) (v : Val) (ids : List Fiber
 
 /-! ### The stores' interpreter -/
 
-/-- The unsafe close's snapshot grows the store, keeps its handles, and captures only
-finalizers the store held. -/
+/-- The unsafe close's snapshot grows the store, keeps its handles plus the closing exit's
+(the entry now holds that exit), and captures only finalizers the store held. -/
 theorem scopeCloseSnapshot_keys (scope : Nat) (exit : ExitV) (s s' : Stores)
     (strategy : FinalizerStrategy) (order : List FinName)
     (h : scopeCloseSnapshot scope exit s = some (s', strategy, order)) :
-    s.le s' ∧ s'.keys ⊆ s.keys ∧ order.flatMap FinName.keys ⊆ s.keys := by
+    s.le s' ∧ s'.keys ⊆ s.keys ++ exitKeys exit ∧ order.flatMap FinName.keys ⊆ s.keys := by
   unfold scopeCloseSnapshot at h
   obtain ⟨entry, hentry, h⟩ := Option.bind_eq_some_iff.mp h
   change some _ = some (s', strategy, order) at h
@@ -5404,7 +5509,8 @@ theorem storesCloseScopeUnsafe_keys (scope : Nat) (exit : ExitV) (flag : Bool)
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hle, hstate, horder⟩ := scopeCloseSnapshot_keys scope exit s state strategy order hsnapshot
   refine ⟨hle, List.append_subset.mpr ⟨?_,
-    List.Subset.trans hstate (List.subset_append_right _ _)⟩⟩
+    List.Subset.trans hstate (List.append_subset.mpr
+      ⟨List.subset_append_right _ _, List.subset_append_left _ _⟩)⟩⟩
   refine List.Subset.trans ?_ (List.append_subset.mpr
     ⟨List.Subset.trans horder (List.subset_append_right _ _), List.subset_append_left _ _⟩)
   cases order with
@@ -5429,6 +5535,8 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
     | park kind => simp only [stores]; sub_tac
     | act action => simp only [stores]; sub_tac
     | op operation => simp only [stores]; sub_tac
+    -- the bare stores refuse a capture (`notImplemented`), naming nothing
+    | foreign capture exit => simp only [stores]; sub_tac
   reifyExit e := by simp only [stores, reifyExitVal_keys]; exact List.Subset.refl _
   iterNext_done n v r h := by
     cases n with
@@ -5494,13 +5602,13 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
       simp only [stores, Option.some.injEq] at h
       subst h
       exact actionOf_keys action
-    | park _ | op _ | body _ => simp only [stores] at h; cases h
+    | park _ | op _ | body _ | foreign _ _ => simp only [stores] at h; cases h
   syncState t s s' v ids h hok := by
     cases t with
     | op operation =>
       simp only [stores] at h
       exact ⟨syncOpStep_le operation s s' v h, syncOpStep_keys operation s s' v ids h hok⟩
-    | park _ | act _ | body _ => simp only [stores] at h; cases h
+    | park _ | act _ | body _ | foreign _ _ => simp only [stores] at h; cases h
   registerAsync n fiber token s ids hok := by
     cases n with
     | registerAwait cell =>

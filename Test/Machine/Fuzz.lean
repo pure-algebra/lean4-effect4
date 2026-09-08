@@ -124,8 +124,8 @@ def syncAtoms : List ProgName :=
   , SyncOp.deferredAwaitCleanup ⟨0⟩ ⟨0⟩ 0
   , SyncOp.scopeMake FinalizerStrategy.sequential
   , SyncOp.scopeMake FinalizerStrategy.parallel
-  , SyncOp.scopeAdd 0 100 (FinName.release 1 false)
-  , SyncOp.scopeAdd 0 100 (FinName.release 1 true)
+  , SyncOp.scopeAdd 0 (FinName.release 1 false)
+  , SyncOp.scopeAdd 0 (FinName.release 1 true)
   , SyncOp.scopeRemove 0 100
   , SyncOp.scopeIsClosed 0
   ].map ProgName.syncOp
@@ -225,16 +225,16 @@ def scopeFamily : List ProgName :=
   [ ProgName.seqOf mkScope (ProgName.closeScopeOf 0 unitExit)
   , ProgName.seqOf mkScopePar (ProgName.closeScopeOf 0 unitExit)
   , ProgName.seqOf mkScope
-      (ProgName.seqOf (ProgName.syncOp (SyncOp.scopeAdd 0 100 (FinName.release 1 false)))
+      (ProgName.seqOf (ProgName.syncOp (SyncOp.scopeAdd 0 (FinName.release 1 false)))
         (ProgName.closeScopeOf 0 unitExit))
   , ProgName.seqOf mkScope
-      (ProgName.seqOf (ProgName.syncOp (SyncOp.scopeAdd 0 100 (FinName.release 1 true)))
+      (ProgName.seqOf (ProgName.syncOp (SyncOp.scopeAdd 0 (FinName.release 1 true)))
         (ProgName.closeScopeOf 0 unitExit))
   , ProgName.seqOf mkScopePar
-      (ProgName.seqOf (ProgName.syncOp (SyncOp.scopeAdd 0 100 (FinName.release 1 true)))
+      (ProgName.seqOf (ProgName.syncOp (SyncOp.scopeAdd 0 (FinName.release 1 true)))
         (ProgName.closeScopeOf 0 unitExit))
   , ProgName.seqOf mkScope
-      (ProgName.seqOf (ProgName.syncOp (SyncOp.scopeAdd 0 100 (FinName.parkThen 3)))
+      (ProgName.seqOf (ProgName.syncOp (SyncOp.scopeAdd 0 (FinName.parkThen 3)))
         (ProgName.closeScopeOf 0 unitExit))
   , ProgName.seqOf mkScope
       (ProgName.seqOf (ProgName.forkInScope (ProgName.park 0) scopedChild 0)

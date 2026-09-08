@@ -27,8 +27,9 @@ Fiber nodes are the term scheduler's interface, not a handler semantics or a
 simulation theorem. In particular the placeholder `rHandler` must not be used to
 interpret a frontier as a finished result (`RDEN-FB-HANDLER`). Mask nodes carry
 addressed or synthesized bodies; their execution and interruption rules live in the
-evaluator (`RDEN-FB-SCHEDULER`). Program rows and acquisition/release remain
-unsupported frontiers, as in `compileEff` (`RDEN-FB-UNSUPPORTED`).
+evaluator (`RDEN-FB-SCHEDULER`). Program rows remain unsupported frontiers, as in
+`compileEff` (`RDEN-FB-UNSUPPORTED`); `acquireRelease` denotes step by step as the compile
+names it (V1, 2026-09-07): the context read, then its masked half as a `Body`.
 -/
 
 set_option autoImplicit false
@@ -347,7 +348,13 @@ def denoteR (root : NativeEff) : NativeEff → Point → RProgram
       -- `scoped` is one WithFiber whose eager body is child 0
       -- (`internal/effect.ts:3938-3948`). Context restoration is callback glue.
       | .scoped _ => .vis (.inr (.scoped (p.child 0))) Effects.Program.pure
-      | .acquireRelease _ _ => pending .unsupported p
+      -- `acquireRelease` (`internal/effect.ts:3971-3987`, V1): the context read, then the
+      -- masked half (`Body.acquireIn`) under it, as `compileEff` names it step by step
+      | .acquireRelease _ _ =>
+        (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun v =>
+          match Val.context? v with
+          | some ctx => .vis (.inr (.mask false (.acquireIn p ctx))) Effects.Program.pure
+          | none => .pure badShapeExit)
       | .choose _ left right =>
         match p.tape with
         | true :: rest => denoteR root left { p with path := p.path ++ [0], tape := rest }

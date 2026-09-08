@@ -11,10 +11,12 @@ to a primitive of the frame machine over the name alphabet `EffName` and the thu
 names their meaning by compiling the subterm the point addresses: the table is a function
 of the program, so "the table is the AST" is a definition.
 
-What this cut compiles: every constructor of `Eff` except `acquireRelease` (the scope store
-holds `FinName`s, a closed alphabet with no place for a compiled release yet) and the rows
-of kind `program` (the Layer and Context models); those compile to the frontier. `choose` is
-answered by the point's tape. The stores are `src/Effect4/Machine/Stores.lean`'s, unchanged: the
+What this cut compiles: every constructor of `Eff` except the rows of kind `program` (the
+Layer and Context models), which compile to the frontier. `acquireRelease` lowers as rc.112
+does (`internal/effect.ts:3971-3987`: `contextWith → uninterruptibleMask → scope → tap(acquire,
+scopeAddFinalizerExit)`); its release is a first-order `Capture` in the scope store
+(`FinName.foreign`, V1 2026-09-07) that `suspendBodyAt` resolves when the scope closes, on
+whichever fiber closes it. `choose` is answered by the point's tape. The stores are `src/Effect4/Machine/Stores.lean`'s, unchanged: the
 store-touching arms of `interpOf` call the same `syncOpStep`, `DeferredStore.register`,
 `storesCloseScope` and `cancelProgram`-shaped functions (`docs/research/2026-09-04-eff-compile.md`
 G5); only the alphabet is new.
@@ -120,6 +122,10 @@ structure Point where
   retain this first-order view (`internal/effect.ts:767-777,814-822`); source
   callbacks construct new code with the view at their own invocation. -/
   completed : List (FiberId × ExitV) := []
+  /-- The root program the path addresses: `0` until a machine holds more than one
+  (direction-scout D6, 2026-09-07: added while the alphabet is open, so a later multi-root
+  machine changes no format). -/
+  root : Nat := 0
 deriving DecidableEq
 
 namespace Point
@@ -127,6 +133,17 @@ namespace Point
 /-- The point of the child at index `i`, same environment, one fuel down. -/
 def child (p : Point) (i : Nat) : Point :=
   { p with path := p.path ++ [i], fuel := p.fuel - 1 }
+
+/-- The point a capture stores, at a completed-exit view: `Capture` (`Machine/Stores.lean`) is
+`Point` minus that view plus the context, and this is the isomorphism's one direction. -/
+def ofCapture (c : Capture) (completed : List (FiberId × ExitV) := []) : Point :=
+  { path := c.path, env := c.env, fuel := c.fuel, tape := c.tape, completed, root := c.root }
+
+/-- The capture of a release registered at this point (`internal/effect.ts:3976,3983`): the
+acquired value appended to the environment (the release is typed over `env ++ [a, exit]`,
+`Typing.lean`), and the context `contextWith` read. -/
+def capture (p : Point) (a : Val) (ctx : Ctx) : Capture :=
+  { path := p.path, env := p.env ++ [a], fuel := p.fuel, tape := p.tape, ctx, root := p.root }
 
 /-- The point of the child at index `i` with a value appended to the scope. -/
 def childWith (p : Point) (i : Nat) (v : Val) : Point :=
@@ -196,6 +213,25 @@ inductive EffName
   /-- A name of the stores' own alphabet: the programs the stores build (a scope's close
   chain, a completion, a finalizer name) embed as they are. -/
   | store (name : Name)
+  /-- `acquireRelease` (`internal/effect.ts:3971-3987`), one name per step. `contextWith`
+  (`:2156-2158`) read the context, the value: mask and acquire under it. -/
+  | acquireCtx (p : Point)
+  /-- The `Scope` service read (`:3929`, the `flatMap(scope, …)`) answered its handle, the
+  value: run the acquire, child 0. -/
+  | acquireIn (p : Point) (ctx : Ctx)
+  /-- `tap`'s callback (`:1442-1465`): the acquire answered `a`, the value; register the
+  release as a capture on the scope. -/
+  | acquired (p : Point) (ctx : Ctx) (scope : Nat)
+  /-- `scopeAddFinalizerExit` answered: unit (`:3855-3856`, the registration took), or a closed
+  scope's closing exit (`:3851-3853`): run the release now, then answer `a`. -/
+  | afterScopeAdd (a : Val) (fin : FinName)
+  /-- The release, resolved when the scope closes (`provideContext(release(a, exit), context)`,
+  `:3983`, `:2180-2199`): the current context was read, the value; provide the captured one.
+  `p` is the capture's point, the acquired value already in scope. -/
+  | releaseUnder (p : Point) (ctx : Ctx) (exit : ExitV)
+  /-- The captured context is set: run the release, child 1 over the exit, under the
+  finalizer that restores the previous context. -/
+  | releaseBody (p : Point) (exit : ExitV) (previous : Ctx)
 deriving DecidableEq
 
 /-- The thunk alphabet: a pure term at a point, a body to compile at a point, a store
@@ -215,6 +251,16 @@ inductive EffThunk
   | closeScope (scope : Nat) (exit : ExitV)
   /-- A thunk of the stores' own alphabet, embedded. -/
   | store (thunk : Thunk)
+  /-- `acquireRelease`'s `uninterruptibleMask` (`internal/effect.ts:3977`, `:4340-4351`) over
+  the `Scope` read and the acquire, under the context read: built in `withFiberOf`, since
+  `actionAt` is keyed by node and cannot carry the context. `Eff.acquireRelease` has no
+  `interruptible` option, so the acquire always runs masked. -/
+  | acquireMasked (p : Point) (ctx : Ctx)
+  /-- The release at its resolved point under the finalizer that restores `previous`
+  (`provideContext`, `:2180-2199`): entered through a mask that is the finalizer's own (every
+  path that runs a release is already uninterruptible, `:4021`), so the frame and the term
+  reference share one entry shape. -/
+  | releaseMasked (p : Point) (previous : Ctx)
 deriving DecidableEq
 
 /-- The compiled program carrier. -/
@@ -416,7 +462,10 @@ def compileEff : NativeEff → Point → NCode
         Prim.onSuccess (Prim.withFiber (EffThunk.act p)) (EffName.forkScopedIn p)
       | .withFiber _ => Prim.withFiber (EffThunk.act p)
       | .scoped _ => Prim.withFiber (EffThunk.act p)
-      | .acquireRelease _ _ => frontier p
+      -- `contextWith(context => uninterruptibleMask(… scope … tap(acquire, scopeAddFinalizerExit
+      -- (scope, exit => provideContext(release(a, exit), context)))))` (`:3971-3987`): the
+      -- context read first, the rest named step by step (`contAOf`)
+      | .acquireRelease _ _ => Prim.onSuccess (Prim.withFiber EffThunk.getCtx) (EffName.acquireCtx p)
       | .choose _ left right =>
         match p.tape with
         | true :: rest => compileEff left { p with path := p.path ++ [0], tape := rest }
@@ -653,6 +702,37 @@ def contAOf (root : NativeEff) : EffName → Val → NCode
   | .constant v, _ => Prim.success v
   | .abort, _ => Prim.success Val.unit
   | .store name, v => embed (Effect4.Machine.contAOf name v)
+  -- `acquireRelease` (`internal/effect.ts:3971-3987`): the context read back off the value
+  | .acquireCtx p, v =>
+    match Val.context? v with
+    | some ctx => Prim.withFiber (EffThunk.acquireMasked p ctx)
+    | none => badShape
+  -- the `Scope` service read answered its handle (`:3929`): the acquire, child 0
+  | .acquireIn p ctx, Val.scopeHandle s =>
+    Prim.onSuccess (resolve root (p.child 0)) (EffName.acquired p ctx s)
+  | .acquireIn _ _, _ => badShape
+  -- `tap`: register the release as a capture on the scope (`:3983`), then answer `a`
+  | .acquired p ctx s, a =>
+    Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.scopeAdd s (FinName.foreign (p.capture a ctx)))))
+      (EffName.afterScopeAdd a (FinName.foreign (p.capture a ctx)))
+  -- `:3856`: unit, the registration took; `:3853`: the scope had closed and its closing exit
+  -- came back, so run the release now (one row with an `if`, so the term reference splits
+  -- the same way)
+  | .afterScopeAdd a fin, v =>
+    if v = Val.unit then Prim.success a
+    else
+      match exitOfVal v with
+      | some exit => Prim.onSuccess (embed (finProgram fin exit)) (EffName.constant a)
+      | none => badShape
+  -- `provideContext(release(a, exit), context)` (`:2180-2199`): the current context read
+  -- back off the value, the captured one set, the release under the restoring finalizer
+  | .releaseUnder p ctx exit, v =>
+    match Val.context? v with
+    | some previous =>
+      Prim.onSuccess (Prim.withFiber (EffThunk.setCtx ctx)) (EffName.releaseBody p exit previous)
+    | none => badShape
+  | .releaseBody p exit previous, _ =>
+    Prim.withFiber (EffThunk.releaseMasked (p.childWith 1 (reifyExitVal exit)) previous)
   | _, v => Prim.success v
 
 /-- `cont[contE](cause, fiber)`. -/
@@ -706,6 +786,11 @@ def suspendBodyAt (root : NativeEff) : EffThunk → NCode
       | some (Node.eff e) => compileEff e p
       | _ => badShape
   | .store (Thunk.body program) => embed (progOf program)
+  -- a capture's release (`FinName.foreign`, V1): `provideContext(release(a, exit), context)`
+  -- (`internal/effect.ts:3983`) — read the current context, then `releaseUnder`
+  | .store (Thunk.foreign capture exit) =>
+    Prim.onSuccess (Prim.withFiber EffThunk.getCtx)
+      (EffName.releaseUnder (Point.ofCapture capture) capture.ctx exit)
   | _ => Prim.failure (Cause.die Defect.notImplemented)
 
 /-- The loop at a point: its test, step and body terms. -/
@@ -770,6 +855,16 @@ def interpOf (root : NativeEff) :
     | EffThunk.setCtx context => some (WithFiberAction.setContext context)
     | EffThunk.closeScope scope exit => some (WithFiberAction.closeScope scope exit)
     | EffThunk.store (Thunk.act action) => some (embedAction (actionOf action))
+    -- `uninterruptibleMask(restore => flatMap(scope, scope => tap(acquire, …)))` (`:3977-3986`):
+    -- the `Scope` service read is the stores' own action, embedded
+    | EffThunk.acquireMasked p ctx =>
+      some (WithFiberAction.setInterruptible
+        (Prim.onSuccess (Prim.withFiber (EffThunk.store (Thunk.act ActionName.ambientScope)))
+          (EffName.acquireIn p ctx)) false)
+    -- the release at its point under the context-restoring finalizer (`:2180-2199`)
+    | EffThunk.releaseMasked p previous =>
+      some (WithFiberAction.setInterruptible
+        (Prim.onExit (resolve root p) (EffName.restoreCtx previous) false) false)
     | _ => none
   syncState := fun
     | EffThunk.op operation, state => syncOpStep operation state
@@ -853,6 +948,8 @@ def interpAt (root : NativeEff) (completed : List (FiberId × ExitV)) :
     contA := fun name value => contAOf root (match name with
       | .cont p => .cont { p with completed }
       | .onValue p => .onValue { p with completed }
+      -- the release is constructed with the view at its own invocation, as `.fin p` below
+      | .releaseBody p exit previous => .releaseBody { p with completed } exit previous
       | name => name) value
     contE := fun name cause => contEOf root (match name with
       | .caught p => .caught { p with completed }

@@ -179,19 +179,33 @@ def SyncOp.validIn (s : Stores) : SyncOp → Bool
   | SyncOp.deferredInterruptWith cell _ => cell.index < s.deferreds.cells.length
   | SyncOp.deferredAwaitCleanup cell _ _ => cell.index < s.deferreds.cells.length
   | SyncOp.scopeMake _ => true
-  | SyncOp.scopeAdd scope _ _ => (s.scopes.entryAt scope).isSome
+  | SyncOp.scopeAdd scope _ => (s.scopes.entryAt scope).isSome
   | SyncOp.scopeRemove scope _ => (s.scopes.entryAt scope).isSome
   | SyncOp.scopeIsClosed scope => (s.scopes.entryAt scope).isSome
 
-/-- Every value the heap holds is valid in the store that holds it (plan §3.1, ENSURES 12).
-The heap only; `STORES-FB-COMPLETION` in the header. -/
-def Stores.WF (s : Stores) : Prop := ∀ v ∈ s.refs, v.validIn s = true
+/-- Every value the store holds and answers is valid in the store that holds it (plan §3.1,
+ENSURES 12): the heap's values, and the closing exit of every closed scope — which
+`scopeAdd` answers on a closed scope (`internal/effect.ts:3851-3853`; V1, 2026-09-07). Deferred
+completions stay excluded: `STORES-FB-COMPLETION` in the header. -/
+def Stores.WF (s : Stores) : Prop :=
+  (∀ v ∈ s.refs, v.validIn s = true) ∧
+    ∀ e ∈ s.scopes.entries,
+      (e.scope.closingExit?.map fun exit => (reifyExitVal exit).validIn s).getD true = true
 
 instance (s : Stores) : Decidable s.WF := by
   unfold Stores.WF; infer_instance
 
-/-- `Stores.empty` (`Stores.lean:1043`) is well-formed: its heap is empty (ENSURES 12). -/
-theorem Stores.empty_wf : Stores.empty.WF := fun _ h => nomatch h
+/-- `Stores.empty` (`Stores.lean:1043`) is well-formed: its heap and its scope store are
+empty (ENSURES 12). -/
+theorem Stores.empty_wf : Stores.empty.WF := ⟨fun _ h => (nomatch h), fun _ h => (nomatch h)⟩
+
+/-- The closing exit a closed scope holds is valid in the store. -/
+theorem Stores.WF.closingExit {s : Stores} (hwf : s.WF) {scope : Nat} {entry : ScopeEntry}
+    {exit : ExitV} (hentry : s.scopes.entryAt scope = some entry)
+    (hclose : entry.scope.closingExit? = some exit) : (reifyExitVal exit).validIn s = true := by
+  have h := hwf.2 entry (List.mem_of_find?_eq_some hentry)
+  rw [hclose] at h
+  simpa only [Option.map, Option.getD] using h
 
 /-- The four read-only operations of `syncOpStep`: `refGet` (`Stores.lean:486`),
 `deferredIsDone` (`:1213`), `deferredPoll` (`:1215`), `scopeIsClosed` (`:1233`). The subject of
@@ -244,7 +258,7 @@ theorem SyncOp.validIn_mono {s s' : Stores} (hle : s.le s') (o : SyncOp)
   | deferredInterruptWith cell _ | deferredAwaitCleanup cell _ _ =>
     simp only [SyncOp.validIn, decide_eq_true_eq] at h ⊢
     exact Nat.lt_of_lt_of_le h hle.2.1
-  | scopeAdd scope _ _ | scopeRemove scope _ | scopeIsClosed scope => exact hle.2.2.1 scope h
+  | scopeAdd scope _ | scopeRemove scope _ | scopeIsClosed scope => exact hle.2.2.1 scope h
 
 /-! ## The pure functions keep validity
 
@@ -348,6 +362,7 @@ the old one or the written value. -/
 theorem refPoke_valid (s : Stores) (cell : RefKey) (y : Val) (hwf : s.WF)
     (hy : y.validIn s = true) :
     ∀ x ∈ refPoke s.refs cell y, x.validIn { s with refs := refPoke s.refs cell y } = true := by
+  have hwf := hwf.1
   intro x hx
   have hle : s.le { s with refs := refPoke s.refs cell y } :=
     ⟨by simp [refPoke], Nat.le_refl _, fun _ h => h, Nat.le_refl _⟩
@@ -367,6 +382,8 @@ theorem refStep_valid (o : SyncOp) (s : Stores) (v : Val) (heap' : RefHeap) (hwf
       v.validIn { s with refs := heap' } = true := by
   have hle : s.le { s with refs := heap' } :=
     ⟨refStep_length o s.refs v heap' h, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _⟩
+  have hwf' := hwf
+  have hwf := hwf.1
   cases o with
   | refMake initial =>
     simp only [refStep, Option.some.injEq, Prod.mk.injEq] at h
@@ -389,7 +406,7 @@ theorem refStep_valid (o : SyncOp) (s : Stores) (v : Val) (heap' : RefHeap) (hwf
     obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
     simp only [Prod.mk.injEq] at hf
     obtain ⟨rfl, rfl⟩ := hf
-    refine ⟨refPoke_valid s cell value hwf hv.2, Val.validIn_mono hle _ ?_⟩
+    refine ⟨refPoke_valid s cell value hwf' hv.2, Val.validIn_mono hle _ ?_⟩
     simp only [Val.validIn_cell, decide_eq_true_eq]
     exact hv.1
   | refGetAndSet cell value =>
@@ -398,7 +415,7 @@ theorem refStep_valid (o : SyncOp) (s : Stores) (v : Val) (heap' : RefHeap) (hwf
     obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
     simp only [Prod.mk.injEq] at hf
     obtain ⟨rfl, rfl⟩ := hf
-    exact ⟨refPoke_valid s cell value hwf hv.2,
+    exact ⟨refPoke_valid s cell value hwf' hv.2,
       Val.validIn_mono hle a (hwf a (mem_of_refPeek_eq_some hpeek))⟩
   | refSetAndGet cell value =>
     simp only [SyncOp.validIn, Bool.and_eq_true, decide_eq_true_eq] at hv
@@ -406,21 +423,21 @@ theorem refStep_valid (o : SyncOp) (s : Stores) (v : Val) (heap' : RefHeap) (hwf
     obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
     simp only [Prod.mk.injEq] at hf
     obtain ⟨rfl, rfl⟩ := hf
-    exact ⟨refPoke_valid s cell value hwf hv.2, Val.validIn_mono hle value hv.2⟩
+    exact ⟨refPoke_valid s cell value hwf' hv.2, Val.validIn_mono hle value hv.2⟩
   | refUpdate cell f =>
     simp only [refStep] at h
     obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
     simp only [Prod.mk.injEq] at hf
     obtain ⟨rfl, rfl⟩ := hf
     have ha : a.validIn s = true := hwf a (mem_of_refPeek_eq_some hpeek)
-    exact ⟨refPoke_valid s cell _ hwf ((FnName.total_validIn s f a).trans ha), rfl⟩
+    exact ⟨refPoke_valid s cell _ hwf' ((FnName.total_validIn s f a).trans ha), rfl⟩
   | refGetAndUpdate cell f =>
     simp only [refStep] at h
     obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
     simp only [Prod.mk.injEq] at hf
     obtain ⟨rfl, rfl⟩ := hf
     have ha : a.validIn s = true := hwf a (mem_of_refPeek_eq_some hpeek)
-    exact ⟨refPoke_valid s cell _ hwf ((FnName.total_validIn s f a).trans ha),
+    exact ⟨refPoke_valid s cell _ hwf' ((FnName.total_validIn s f a).trans ha),
       Val.validIn_mono hle a ha⟩
   | refUpdateAndGet cell f =>
     simp only [refStep] at h
@@ -429,7 +446,7 @@ theorem refStep_valid (o : SyncOp) (s : Stores) (v : Val) (heap' : RefHeap) (hwf
     obtain ⟨rfl, rfl⟩ := hf
     have ha : a.validIn s = true := hwf a (mem_of_refPeek_eq_some hpeek)
     have hfa : (f.total a).validIn s = true := (FnName.total_validIn s f a).trans ha
-    exact ⟨refPoke_valid s cell _ hwf hfa, Val.validIn_mono hle _ hfa⟩
+    exact ⟨refPoke_valid s cell _ hwf' hfa, Val.validIn_mono hle _ hfa⟩
   | refUpdateSome cell pf =>
     simp only [refStep] at h
     obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
@@ -439,7 +456,7 @@ theorem refStep_valid (o : SyncOp) (s : Stores) (v : Val) (heap' : RefHeap) (hwf
     refine ⟨?_, rfl⟩
     split
     · rename_i a' hpf
-      exact refPoke_valid s cell a' hwf ((FnName.partialUpdate_validIn s pf a a' hpf).trans ha)
+      exact refPoke_valid s cell a' hwf' ((FnName.partialUpdate_validIn s pf a a' hpf).trans ha)
     · exact fun x hx => hwf x hx
   | refGetAndUpdateSome cell pf =>
     simp only [refStep] at h
@@ -450,7 +467,7 @@ theorem refStep_valid (o : SyncOp) (s : Stores) (v : Val) (heap' : RefHeap) (hwf
     refine ⟨?_, Val.validIn_mono hle a ha⟩
     split
     · rename_i a' hpf
-      exact refPoke_valid s cell a' hwf ((FnName.partialUpdate_validIn s pf a a' hpf).trans ha)
+      exact refPoke_valid s cell a' hwf' ((FnName.partialUpdate_validIn s pf a a' hpf).trans ha)
     · exact fun x hx => hwf x hx
   | refUpdateSomeAndGet cell pf =>
     simp only [refStep] at h
@@ -462,7 +479,7 @@ theorem refStep_valid (o : SyncOp) (s : Stores) (v : Val) (heap' : RefHeap) (hwf
       simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq] at hf
       obtain ⟨rfl, rfl⟩ := hf
       have ha' : a'.validIn s = true := (FnName.partialUpdate_validIn s pf a a' hpf).trans ha
-      exact ⟨refPoke_valid s cell a' hwf ha', Val.validIn_mono hle a' ha'⟩
+      exact ⟨refPoke_valid s cell a' hwf' ha', Val.validIn_mono hle a' ha'⟩
     · simp only [Option.some.injEq, Prod.mk.injEq] at hf
       obtain ⟨rfl, rfl⟩ := hf
       exact ⟨fun x hx => Val.validIn_mono hle x (hwf x hx), Val.validIn_mono hle a ha⟩
@@ -472,7 +489,7 @@ theorem refStep_valid (o : SyncOp) (s : Stores) (v : Val) (heap' : RefHeap) (hwf
     simp only [Prod.mk.injEq] at hf
     obtain ⟨rfl, rfl⟩ := hf
     have ha : a.validIn s = true := hwf a (mem_of_refPeek_eq_some hpeek)
-    exact ⟨refPoke_valid s cell _ hwf ((FnName.modify_validIn s f a).2.trans ha),
+    exact ⟨refPoke_valid s cell _ hwf' ((FnName.modify_validIn s f a).2.trans ha),
       Val.validIn_mono hle _ ((FnName.modify_validIn s f a).1.trans ha)⟩
   | refModifySome cell pf =>
     simp only [refStep] at h
@@ -480,7 +497,7 @@ theorem refStep_valid (o : SyncOp) (s : Stores) (v : Val) (heap' : RefHeap) (hwf
     simp only [Prod.mk.injEq] at hf
     obtain ⟨rfl, rfl⟩ := hf
     have ha : a.validIn s = true := hwf a (mem_of_refPeek_eq_some hpeek)
-    exact ⟨refPoke_valid s cell _ hwf ((FnName.modifySome_validIn s pf a).2.trans ha),
+    exact ⟨refPoke_valid s cell _ hwf' ((FnName.modifySome_validIn s pf a).2.trans ha),
       Val.validIn_mono hle _ ((FnName.modifySome_validIn s pf a).1.trans ha)⟩
   | _ => simp [refStep] at h
 
@@ -613,13 +630,50 @@ theorem syncOpStep_scopeMake (s : Stores) (strategy : FinalizerStrategy) :
       some ({ s with scopes := s.scopes.make s.nextName strategy, nextName := s.nextName + 1 },
         Val.scopeHandle s.nextName) := rfl
 
-/-- `Stores.lean:1230-1232`. The supply is advanced past the caller's key, so an identity
-allocated later cannot collide with one this registration accepted (`E4-CHECK-CE-016`). -/
-theorem syncOpStep_scopeAdd (s : Stores) (scope key : Nat) (fin : FinName) :
-    syncOpStep (SyncOp.scopeAdd scope key fin) s =
+/-- `scopeAddFinalizerExit` (`internal/effect.ts:3846-3858`) as the step spells it: an
+unknown scope is a frontier, a closed scope answers its closing exit, an open one registers
+under the supply's own value and advances the supply, so an identity allocated later cannot
+collide with one this registration accepted (`E4-CHECK-CE-016`). The three branches are the
+equations below. -/
+theorem syncOpStep_scopeAdd (s : Stores) (scope : Nat) (fin : FinName) :
+    syncOpStep (SyncOp.scopeAdd scope fin) s =
+      match s.scopes.entryAt scope with
+      | none => none
+      | some entry =>
+        match entry.scope.closingExit? with
+        | some exit => some (s, reifyExitVal exit)
+        | none =>
+          some ({ s with
+              scopes := s.scopes.setEntry { entry with scope := entry.scope.addUnsafe s.nextName fin }
+              nextName := s.nextName + 1 },
+            Val.unit) := rfl
+
+/-- Unknown scope: the step is a frontier (M7). -/
+theorem syncOpStep_scopeAdd_none (s : Stores) (scope : Nat) (fin : FinName)
+    (h : s.scopes.entryAt scope = none) : syncOpStep (SyncOp.scopeAdd scope fin) s = none := by
+  rw [syncOpStep_scopeAdd, h]
+
+/-- Closed scope: the store is untouched and the closing exit is answered, reified
+(`:3851-3853`); the caller runs the finalizer now. census: scope.add-after-closed -/
+theorem syncOpStep_scopeAdd_closed (s : Stores) (scope : Nat) (fin : FinName)
+    {entry : ScopeEntry} {exit : ExitV} (hentry : s.scopes.entryAt scope = some entry)
+    (hclose : entry.scope.closingExit? = some exit) :
+    syncOpStep (SyncOp.scopeAdd scope fin) s = some (s, reifyExitVal exit) := by
+  rw [syncOpStep_scopeAdd, hentry]
+  simp only [hclose]
+
+/-- Open scope: registered under the supply's value, the supply one higher (`:3855-3856`).
+census: scope.add-finalizer -/
+theorem syncOpStep_scopeAdd_open (s : Stores) (scope : Nat) (fin : FinName)
+    {entry : ScopeEntry} (hentry : s.scopes.entryAt scope = some entry)
+    (hopen : entry.scope.closingExit? = none) :
+    syncOpStep (SyncOp.scopeAdd scope fin) s =
       some ({ s with
-        scopes := (s.scopes.addFinalizer scope key fin).1
-        nextName := max s.nextName (key + 1) }, Val.unit) := rfl
+          scopes := s.scopes.setEntry { entry with scope := entry.scope.addUnsafe s.nextName fin }
+          nextName := s.nextName + 1 },
+        Val.unit) := by
+  rw [syncOpStep_scopeAdd, hentry]
+  simp only [hopen]
 
 /-- `Stores.lean:1233-1234`. -/
 theorem syncOpStep_scopeRemove (s : Stores) (scope key : Nat) :
@@ -666,11 +720,22 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
     obtain ⟨rfl, _⟩ := h
     exact ⟨Nat.le_refl _, Nat.le_refl _,
       fun key hk => ScopeStore.entryAt_make_isSome _ _ _ key hk, Nat.le_succ _⟩
-  | scopeAdd scope key fin =>
-    simp only [syncOpStep_scopeAdd, Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, _⟩ := h
-    exact ⟨Nat.le_refl _, Nat.le_refl _,
-      fun k hk => ScopeStore.entryAt_addFinalizer_isSome _ _ _ _ k hk, Nat.le_max_left _ _⟩
+  | scopeAdd scope fin =>
+    cases hentry : s.scopes.entryAt scope with
+    | none => rw [syncOpStep_scopeAdd_none s scope fin hentry] at h; cases h
+    | some entry =>
+      cases hclose : entry.scope.closingExit? with
+      | some exit =>
+        rw [syncOpStep_scopeAdd_closed s scope fin hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact Stores.le_refl s
+      | none =>
+        rw [syncOpStep_scopeAdd_open s scope fin hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact ⟨Nat.le_refl _, Nat.le_refl _,
+          fun k hk => ScopeStore.entryAt_setEntry_isSome _ _ k hk, Nat.le_succ _⟩
   | scopeRemove scope key =>
     simp only [syncOpStep_scopeRemove, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
@@ -681,6 +746,90 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
     obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h
     cases hf
     exact ⟨refStep_length _ s.refs a heap' hstep, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _⟩
+
+/-- A step keeps every closing exit the store held: a closed scope's exit is answered, never
+rewritten; an open registration goes under `addUnsafe`; the heap and Deferred arms leave the
+scope store as it is. -/
+theorem syncOpStep_closingExit (o : SyncOp) (s s' : Stores) (v : Val)
+    (h : syncOpStep o s = some (s', v)) :
+    ∀ e ∈ s'.scopes.entries, ∀ exit, e.scope.closingExit? = some exit →
+      ∃ e₀ ∈ s.scopes.entries, e₀.scope.closingExit? = some exit := by
+  cases o with
+  | deferredMake =>
+    simp only [syncOpStep_deferredMake, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact fun e he exit hc => ⟨e, he, hc⟩
+  | deferredIsDone cell | deferredPoll cell | scopeIsClosed cell =>
+    simp only [syncOpStep_deferredIsDone, syncOpStep_deferredPoll, syncOpStep_scopeIsClosed] at h
+    obtain ⟨_, _, hf⟩ := Option.map_eq_some_iff.mp h
+    cases hf
+    exact fun e he exit hc => ⟨e, he, hc⟩
+  | deferredCompleteWith _ _ | deferredInterruptWith _ _ | deferredAwaitCleanup _ _ _ =>
+    simp only [syncOpStep_deferredCompleteWith, syncOpStep_deferredInterruptWith,
+      syncOpStep_deferredAwaitCleanup, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact fun e he exit hc => ⟨e, he, hc⟩
+  | scopeMake strategy =>
+    simp only [syncOpStep_scopeMake, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    intro e he exit hc
+    simp only [ScopeStore.make, List.mem_append, List.mem_singleton] at he
+    rcases he with he | rfl
+    · exact ⟨e, he, hc⟩
+    · exact nomatch hc
+  | scopeAdd scope fin =>
+    cases hentry : s.scopes.entryAt scope with
+    | none => rw [syncOpStep_scopeAdd_none s scope fin hentry] at h; cases h
+    | some entry =>
+      cases hclose : entry.scope.closingExit? with
+      | some exit =>
+        rw [syncOpStep_scopeAdd_closed s scope fin hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact fun e he exit hc => ⟨e, he, hc⟩
+      | none =>
+        rw [syncOpStep_scopeAdd_open s scope fin hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        intro e he exit hc
+        rcases ScopeStore.mem_setEntry he with rfl | he
+        · rw [Scope.closingExit_addUnsafe] at hc
+          exact ⟨entry, List.mem_of_find?_eq_some hentry, hc⟩
+        · exact ⟨e, he, hc⟩
+  | scopeRemove scope key =>
+    simp only [syncOpStep_scopeRemove, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    intro e he exit hc
+    simp only [ScopeStore.removeFinalizer] at he
+    split at he
+    · exact ⟨e, he, hc⟩
+    · next entry hentry =>
+      rcases ScopeStore.mem_setEntry he with rfl | he
+      · rw [Scope.closingExit_removeUnsafe] at hc
+        exact ⟨entry, List.mem_of_find?_eq_some hentry, hc⟩
+      · exact ⟨e, he, hc⟩
+  | _ =>
+    simp only [syncOpStep] at h
+    obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h
+    cases hf
+    exact fun e he exit hc => ⟨e, he, hc⟩
+
+/-- The closing exits stay valid across a step: each one is one the old store held, and
+validity is monotone along `le`. -/
+theorem syncOpStep_closingValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
+    (h : syncOpStep o s = some (s', v)) :
+    ∀ e ∈ s'.scopes.entries,
+      (e.scope.closingExit?.map fun exit => (reifyExitVal exit).validIn s').getD true = true := by
+  have hle := syncOpStep_le o s s' v h
+  intro e he
+  cases hc : e.scope.closingExit? with
+  | none => rfl
+  | some exit =>
+    obtain ⟨e₀, he₀, hc₀⟩ := syncOpStep_closingExit o s s' v h e he exit hc
+    have h₀ := hwf.2 e₀ he₀
+    rw [hc₀] at h₀
+    simp only [Option.map, Option.getD] at h₀ ⊢
+    exact Val.validIn_mono hle _ h₀
 
 /-- A valid operation steps (plan §3.2, ENSURES 14): every `none` of `syncOpStep` and
 `refStep` is a failed lookup, and validity is the lookup's success; `refUpdateSomeAndGet`
@@ -717,7 +866,12 @@ theorem syncOpStep_isSome_of_valid (o : SyncOp) (s : Stores) (hv : o.validIn s =
   | deferredInterruptWith cell interruptor => rfl
   | deferredAwaitCleanup cell waiter token => rfl
   | scopeMake strategy => rfl
-  | scopeAdd scope key fin => rfl
+  | scopeAdd scope fin =>
+    simp only [SyncOp.validIn] at hv
+    obtain ⟨entry, hentry⟩ := Option.isSome_iff_exists.mp hv
+    cases hclose : entry.scope.closingExit? with
+    | some exit => rw [syncOpStep_scopeAdd_closed s scope fin hentry hclose]; rfl
+    | none => rw [syncOpStep_scopeAdd_open s scope fin hentry hclose]; rfl
   | scopeRemove scope key => rfl
   | scopeIsClosed scope =>
     simp only [SyncOp.validIn] at hv
@@ -725,24 +879,41 @@ theorem syncOpStep_isSome_of_valid (o : SyncOp) (s : Stores) (hv : o.validIn s =
 
 /-- A valid step from a well-formed store reaches a well-formed store (plan §3.2,
 ENSURES 15): the heap arms by `refStep_valid`, the store arms by growth alone, since they
-leave the heap untouched. -/
+leave the heap untouched; the closing exits by `syncOpStep_closingValid`. -/
 theorem syncOpStep_wf (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
     (hv : o.validIn s = true) (h : syncOpStep o s = some (s', v)) : s'.WF := by
   have hle := syncOpStep_le o s s' v h
+  refine ⟨?_, syncOpStep_closingValid o s s' v hwf h⟩
   cases o with
   | deferredMake | deferredCompleteWith _ _ | deferredInterruptWith _ _
-  | deferredAwaitCleanup _ _ _ | scopeMake _ | scopeAdd _ _ _ | scopeRemove _ _ =>
+  | deferredAwaitCleanup _ _ _ | scopeMake _ | scopeRemove _ _ =>
     simp only [syncOpStep_deferredMake, syncOpStep_deferredCompleteWith,
       syncOpStep_deferredInterruptWith, syncOpStep_deferredAwaitCleanup, syncOpStep_scopeMake,
-      syncOpStep_scopeAdd, syncOpStep_scopeRemove, Option.some.injEq, Prod.mk.injEq] at h
+      syncOpStep_scopeRemove, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
     intro x hx
-    exact Val.validIn_mono hle x (hwf x hx)
+    exact Val.validIn_mono hle x (hwf.1 x hx)
+  | scopeAdd scope fin =>
+    cases hentry : s.scopes.entryAt scope with
+    | none => rw [syncOpStep_scopeAdd_none s scope fin hentry] at h; cases h
+    | some entry =>
+      cases hclose : entry.scope.closingExit? with
+      | some exit =>
+        rw [syncOpStep_scopeAdd_closed s scope fin hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact hwf.1
+      | none =>
+        rw [syncOpStep_scopeAdd_open s scope fin hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        intro x hx
+        exact Val.validIn_mono hle x (hwf.1 x hx)
   | deferredIsDone cell | deferredPoll cell | scopeIsClosed cell =>
     simp only [syncOpStep_deferredIsDone, syncOpStep_deferredPoll, syncOpStep_scopeIsClosed] at h
     obtain ⟨_, _, hf⟩ := Option.map_eq_some_iff.mp h
     cases hf
-    exact hwf
+    exact hwf.1
   | _ =>
     simp only [syncOpStep] at h
     obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h
@@ -765,12 +936,28 @@ theorem syncOpStep_answer_valid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.
     cases hf
     rfl
   | deferredCompleteWith _ _ | deferredInterruptWith _ _ | deferredAwaitCleanup _ _ _
-  | scopeAdd _ _ _ | scopeRemove _ _ =>
+  | scopeRemove _ _ =>
     simp only [syncOpStep_deferredCompleteWith, syncOpStep_deferredInterruptWith,
-      syncOpStep_deferredAwaitCleanup, syncOpStep_scopeAdd, syncOpStep_scopeRemove,
+      syncOpStep_deferredAwaitCleanup, syncOpStep_scopeRemove,
       Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     rfl
+  | scopeAdd scope fin =>
+    cases hentry : s.scopes.entryAt scope with
+    | none => rw [syncOpStep_scopeAdd_none s scope fin hentry] at h; cases h
+    | some entry =>
+      cases hclose : entry.scope.closingExit? with
+      | some exit =>
+        -- the closing exit the store answers is one it holds, valid by `WF`
+        rw [syncOpStep_scopeAdd_closed s scope fin hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact hwf.closingExit hentry hclose
+      | none =>
+        rw [syncOpStep_scopeAdd_open s scope fin hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        rfl
   | scopeMake strategy =>
     simp only [syncOpStep_scopeMake, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h

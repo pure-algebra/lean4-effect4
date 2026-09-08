@@ -96,10 +96,10 @@ def pCatch : Eff NativeOp :=
     (.succeed (.lit .unit))
 /-- A scope acquired and released: `Scope.make` under an ambient `scoped`, then
 `Scope.close` on that handle with a reified exit. Spelled as the pair rather than
-`acquireRelease` for two reasons: `acquireRelease` binds the resource and the exit, so its
-release cannot be `interruptAll`, which wants a list of fibers and a fiber id; and this cut
-compiles `acquireRelease` to the frontier (`Compile.lean`), so a program built on it has no
-Lean verdict to compare. -/
+`acquireRelease`: `acquireRelease` binds the resource and the exit, so its release cannot be
+`interruptAll`, which wants a list of fibers and a fiber id. (`acquireRelease` compiles since
+V1, 2026-09-07; its own fixtures are `harness/truth/Truth.lean`'s `pAcquire` and
+`pAcquireClosed`, outside this byte-pinned corpus.) -/
 def pScope : Eff NativeOp :=
   .scoped (.bind (.perform (.scopeMake .parallel) (.lit .unit))
     (.bind (.exit (.succeed (.lit (.nat 1))))

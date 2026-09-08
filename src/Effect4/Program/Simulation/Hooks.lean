@@ -162,12 +162,20 @@ theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresO
     have h' := Prod.mk.inj (Option.some.inj h)
     rw [← h'.1]
     exact ⟨hs.1, (ScopeStore.keysBelow_make hs.2).mono (Nat.le_succ _)⟩
-  | scopeAdd scope key finalizer =>
-    -- the caller's key is dominated by the advanced supply
-    have h' := Prod.mk.inj (Option.some.inj h)
-    rw [← h'.1]
-    exact ⟨hs.1, ScopeStore.keysBelow_addFinalizer_bound hs.2 (Nat.le_max_left _ _)
-      (Nat.lt_of_lt_of_le (Nat.lt_succ_self key) (Nat.le_max_right _ _))⟩
+  | scopeAdd scope finalizer =>
+    cases hentry : s.scopes.entryAt scope with
+    | none => rw [syncOpStep_scopeAdd_none s scope finalizer hentry] at h; cases h
+    | some entry =>
+      cases hclose : entry.scope.closingExit? with
+      | some exit =>
+        -- a closed scope answers its exit and keeps the store
+        rw [syncOpStep_scopeAdd_closed s scope finalizer hentry hclose] at h
+        rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact hs
+      | none =>
+        -- the registration key is the supply's own value, and the supply advances past it
+        rw [syncOpStep_scopeAdd_open s scope finalizer hentry hclose] at h
+        rw [← (Prod.mk.inj (Option.some.inj h)).1]
+        exact ⟨hs.1, ScopeStore.keysBelow_addUnsafe_entry hs.2 hentry⟩
   | scopeRemove scope key =>
     have h' := Prod.mk.inj (Option.some.inj h)
     rw [← h'.1]
@@ -310,6 +318,8 @@ theorem denoteFin_means (root : NativeEff) (fin : FinName) (ex : ExitV) :
     · exact CodeMeans.failure _
   | parkThen slot => exact CodeMeans.asyncExternal slot _ delivers_pure
   | awaitNewChildren snapshot => exact CodeMeans.actAwaitNewChildren _ _ _ rfl delivers_seqR_pure
+  -- a capture's release resolves at its point, on any view, by the introduction
+  | foreign c => exact foreignRelease_intro root c ex fun completed => resolve_intro root _
 
 /-- The term's body hook is the denotation, at every view. -/
 theorem bodyR_eq (root : NativeEff) (completed : List (FiberId × ExitV)) (b : Body) :
@@ -320,13 +330,21 @@ theorem body_means (root : NativeEff) (b : Body) :
     ∀ {c : NCode}, (match b with
       | .at_ p => c = resolve root p
       | .fin fin ex => c = embed (finProgram fin ex)
-      | .raceCleanup race => c = embed (Prim.withFiber (Thunk.act (ActionName.cancelRace race)))) →
+      | .raceCleanup race => c = embed (Prim.withFiber (Thunk.act (ActionName.cancelRace race)))
+      | .acquireIn p ctx =>
+        c = Prim.onSuccess (Prim.withFiber (.store (.act .ambientScope))) (.acquireIn p ctx)
+      | .release q previous => c = Prim.onExit (resolve root q) (.restoreCtx previous) false) →
       CodeMeans root c (denoteBody root b) := by
   intro c hc
   cases b with
   | at_ p => rw [hc]; exact resolve_intro root p
   | fin fin ex => rw [hc]; exact denoteFin_means root fin ex
   | raceCleanup race => rw [hc]; exact CodeMeans.actCancelRace _ _ _ rfl delivers_seqR_pure
+  | acquireIn p ctx =>
+    rw [hc]
+    exact acquireIn_intro root p ctx (resolve_intro root _) fun a ex =>
+      foreignRelease_intro root _ ex fun completed => resolve_intro root _
+  | release q previous => rw [hc]; exact release_intro root q previous (resolve_intro root q)
 
 /-- The finalizer programs: both instances name the same finalizers, with related programs. -/
 theorem finalizerProgram_means (root : NativeEff) (completed : List (FiberId × ExitV))
@@ -476,7 +494,7 @@ theorem runStmts_walkR (root : NativeEff) (p : Point) : ∀ (fuel : Nat) (pc : L
     intro pc env folded
     rw [runStmts, walkR]
     refine ⟨rfl, StepRel.resume _ ?_⟩
-    exact CodeMeans.frontier _ _ _ _ ⟨rfl, rfl, rfl, rfl⟩ fun completed => by
+    exact CodeMeans.frontier _ _ _ _ ⟨rfl, rfl, rfl, rfl, rfl⟩ fun completed => by
       rw [suspendBodyAt_zero' rfl]; rfl
   | succ fuel ih =>
     intro pc env folded
@@ -567,7 +585,8 @@ theorem loopAt_congr (root : NativeEff) {p p' : Point} (h : p'.path = p.path) :
 
 /-- The loop hooks read only the loop's address and environment, never the captured view. -/
 theorem loopTest_congr (root : NativeEff) (completed : List (FiberId × ExitV)) {p p' : Point}
-    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape) (cursor : Val) :
+    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
+    (cursor : Val) :
     (interpAt root completed).loopTest (.loop p') cursor =
       (interpAt root completed).loopTest (.loop p) cursor := by
   show (interpOf root).loopTest (.loop p') cursor = (interpOf root).loopTest (.loop p) cursor
@@ -576,7 +595,7 @@ theorem loopTest_congr (root : NativeEff) (completed : List (FiberId × ExitV)) 
   rw [loopAt_congr root hp.1, hp.2.1]
 
 theorem loopStep_congr (root : NativeEff) (completed : List (FiberId × ExitV)) {p p' : Point}
-    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape)
+    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
     (cursor answer : Val) :
     (interpAt root completed).loopStep (.loop p') cursor answer =
       (interpAt root completed).loopStep (.loop p) cursor answer := by
@@ -586,15 +605,16 @@ theorem loopStep_congr (root : NativeEff) (completed : List (FiberId × ExitV)) 
   rw [loopAt_congr root hp.1, hp.2.1]
 
 theorem childWith_congr {p p' : Point}
-    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape)
+    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
     (completed : List (FiberId × ExitV)) (i : Nat) (v : Val) :
     ({ p' with completed } : Point).childWith i v = ({ p with completed } : Point).childWith i v := by
   simp only [Point.childWith]
-  rw [hp.1, hp.2.1, hp.2.2.1, hp.2.2.2]
+  rw [hp.1, hp.2.1, hp.2.2.1, hp.2.2.2.1, hp.2.2.2.2]
 
 /-- The loop bodies of loops named up to the captured view are related. -/
 theorem loopBody_means' (root : NativeEff) (completed : List (FiberId × ExitV)) {p p' : Point}
-    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape) (cursor : Val) :
+    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
+    (cursor : Val) :
     CodeMeans root ((interpAt root completed).loopBody (.loop p') cursor)
       ((interpRAt root completed).loopBody (.loop p) cursor) := by
   show CodeMeans root (resolve root (({ p' with completed } : Point).childWith 0 cursor))

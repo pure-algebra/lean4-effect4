@@ -71,6 +71,12 @@ inductive Body
   | at_ (point : Point)
   | fin (name : FinName) (exit : ExitV)
   | raceCleanup (race : Nat)
+  /-- `acquireRelease`'s masked half (`internal/effect.ts:3977-3986`, V1): the `Scope` read,
+  the acquire at the point's child 0 and the release's registration, under the context read. -/
+  | acquireIn (point : Point) (ctx : Ctx)
+  /-- A capture's release at its resolved point, under the finalizer that restores the
+  previous context (`provideContext`, `:2180-2199`). -/
+  | release (point : Point) (previous : Ctx)
 deriving DecidableEq
 
 /-- Continuation slots retained across suspension. These are control data, not
@@ -105,7 +111,10 @@ inductive FiberOp : Type
   | scoped (body : Point)
   /-- Stateful callback glue, consumed during delivery after the scoped pop. -/
   | scopeExit (previous : Ctx) (scope : Nat) (exit : ExitV)
-  | acquireRelease (acquire : Point) (release : Point)
+  /-- A capture's release, the counted suspend a scope close spends before it
+  (`FinName.foreign`'s `finProgram`, V1): the term instance of the frame's
+  `Prim.suspend (Thunk.foreign c exit)`, answering unit before the release. -/
+  | foreignRelease (capture : Capture) (exit : ExitV)
   | raceAll (entrants : List Point)
   /-- The counted `Async` registration a race's entry returns (`internal/effect.ts:1493`,
   D6a): the term instance of `RunInterp.parkCode` at `ParkKind.race`. -/
@@ -155,7 +164,7 @@ abbrev FiberOp.answer : FiberOp → Type
   | .guard_ _ => Option ExitV
   | .unguard _ | .finishFinalizer _ => ExitV
   | .scoped _ | .scopeExit _ _ _
-  | .mask _ _ | .closeScope _ _ | .acquireRelease _ _ | .raceAll _ | .raceRegister _
+  | .mask _ _ | .closeScope _ _ | .raceAll _ | .raceRegister _
   | .async _ _ | .forkScoped _ _ | .frontier _ _ | .gen _ | .loop _ _ | .closeIter _ _ _ => ExitV
   | .await _ .joinEffect => ExitV
   | _ => Val
@@ -166,7 +175,7 @@ def FiberOp.defaultAnswer : (op : FiberOp) → op.answer
   | .guard_ _ => none
   | .unguard ex | .finishFinalizer ex => ex
   | .scoped _ | .scopeExit _ _ _
-  | .mask _ _ | .closeScope _ _ | .acquireRelease _ _ | .raceAll _ | .raceRegister _
+  | .mask _ _ | .closeScope _ _ | .raceAll _ | .raceRegister _
   | .async _ _ | .forkScoped _ _ | .frontier _ _ | .gen _ | .loop _ _ | .closeIter _ _ _ =>
     Exit.success Val.unit
   | .await _ .joinEffect => Exit.success Val.unit
@@ -175,7 +184,7 @@ def FiberOp.defaultAnswer : (op : FiberOp) → op.answer
   | .yieldNow _ | .interrupt _ | .interruptAs _ _ | .interruptScoped _ | .interruptAll _ _
   | .cancelRace _ | .getId | .getContext | .setContext _ | .snapshotChildren
   | .awaitNewChildren _ | .runIn _ _ | .dropObservers _ | .refuse _
-  | .suspend _ | .sync _ | .ambientScope | .closeWalk _ _ _ => Val.unit
+  | .suspend _ | .sync _ | .ambientScope | .closeWalk _ _ _ | .foreignRelease _ _ => Val.unit
 
 /-- The answer type is selected by the operation. -/
 abbrev FiberSig : Effects.Signature.{0, 0} := ⟨FiberOp, FiberOp.answer⟩

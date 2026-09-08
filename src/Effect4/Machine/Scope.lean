@@ -548,6 +548,13 @@ theorem addUnsafe_closed [DecidableEq κ] (self : Scope κ φ β ε δ ι α) (k
     rw [hstate]
     rfl
 
+/-- Adding never changes whether, and with what, the scope closed: the `Closed` state falls
+through and every open state stays open. census: scope.add-after-closed -/
+theorem closingExit_addUnsafe [DecidableEq κ] (self : Scope κ φ β ε δ ι α) (key : κ)
+    (finalizer : φ) : (self.addUnsafe key finalizer).closingExit? = self.closingExit? := by
+  cases self with
+  | mk strategy state => cases state <;> rfl
+
 /-- The promotion preserves insertion order. census: scope.add-finalizer -/
 theorem addUnsafe_promotes [DecidableEq κ] (self : Scope κ φ β ε δ ι α)
     (existingKey key : κ) (existing finalizer : φ)
@@ -753,6 +760,20 @@ theorem removeUnsafe_not_open [DecidableEq κ] (self : Scope κ φ β ε δ ι �
     | openEmpty => exact Bool.noConfusion h
     | openInline _ _ => exact Bool.noConfusion h
     | openMap _ => exact Bool.noConfusion h
+
+/-- Removal never changes whether, and with what, the scope closed. census: scope.remove-finalizer -/
+theorem closingExit_removeUnsafe [DecidableEq κ] (self : Scope κ φ β ε δ ι α) (key : κ) :
+    (self.removeUnsafe key).closingExit? = self.closingExit? := by
+  cases self with
+  | mk strategy state =>
+    cases state with
+    | openInline existingKey existing =>
+      simp only [Scope.closingExit?, Scope.removeUnsafe, removeState]
+      split <;> rfl
+    | openMap _ => rfl
+    | empty => rfl
+    | openEmpty => rfl
+    | closed _ => rfl
 
 /-- The removed key is gone. census: scope.remove-finalizer -/
 theorem removeUnsafe_keys [DecidableEq κ] (self : Scope κ φ β ε δ ι α) (key : κ) :

@@ -81,8 +81,33 @@ def pTwo : Api.Program :=
     (.bind (.withFiber (.fork (.bind (.yieldNow 0) (.succeed (.lit (.nat 2)))) forkOptions))
       (.bind (.awaitFiber (.var 1) .awaitValue) (.awaitFiber (.var 1) .awaitValue)))
 
-/-- The programs checked: the wire corpus, then `pTwo`. -/
-def corpus : List (String × Api.Program) := Wire.Corpus.all ++ [("pTwo", pTwo)]
+/-- `acquireRelease` inside `scoped` (V1, 2026-09-07): the release, registered on the ambient
+scope, runs when `scoped` closes it and writes the acquired value into a cell the root made
+first; the root then reads the cell. The release is typed over `[ref, a, exit]`
+(`Typing.lean`): `.var 0` is the cell, `.var 1` the acquired `7`. -/
+def pAcquire : Api.Program :=
+  .bind (.perform .refMake (.lit (.nat 0)))
+    (.bind (.scoped (.acquireRelease (.succeed (.lit (.nat 7)))
+        (.perform .refSet (.app "pair" (.cons (.var 0) (.cons (.var 1) .nil))))))
+      (.perform .refGet (.var 0)))
+
+/-- `acquireRelease` after its scope closed (`scopeAddFinalizerExit`'s closed branch,
+`internal/effect.ts:3851-3853`): a child forked inside `scoped` inherits the scoped context;
+it runs after the root has left `scoped` — the root awaits it — so its `acquireRelease`
+finds the ambient scope closed and runs the release at once, on the child. The root then
+reads the cell the release wrote. In the child the release is typed over `[ref, a, exit]`. -/
+def pAcquireClosed : Api.Program :=
+  .bind (.perform .refMake (.lit (.nat 0)))
+    (.bind (.scoped (.withFiber (.fork
+        (.acquireRelease (.succeed (.lit (.nat 7)))
+          (.perform .refSet (.app "pair" (.cons (.var 0) (.cons (.var 1) .nil)))))
+        forkOptions)))
+      (.bind (.awaitFiber (.var 1) .awaitValue) (.perform .refGet (.var 0))))
+
+/-- The programs checked: the wire corpus, then `pTwo`, then the two `acquireRelease`
+fixtures. -/
+def corpus : List (String × Api.Program) :=
+  Wire.Corpus.all ++ [("pTwo", pTwo), ("pAcquire", pAcquire), ("pAcquireClosed", pAcquireClosed)]
 
 /-! ## The value wire -/
 
@@ -277,10 +302,11 @@ def manifest (fuel : Nat) : J :=
 
 /-! ## Receipts -/
 
-#guard corpus.length = 9
+#guard corpus.length = 11
 #guard (corpus.map (·.1)).eraseDups.length = corpus.length
 #guard (corpus.map (·.1)) =
-  ["p42", "pBind", "pFork", "pAwait", "pGen", "pLoop", "pCatch", "pScope", "pTwo"]
+  ["p42", "pBind", "pFork", "pAwait", "pGen", "pLoop", "pCatch", "pScope", "pTwo", "pAcquire",
+   "pAcquireClosed"]
 
 end OCaml5.Truth
 

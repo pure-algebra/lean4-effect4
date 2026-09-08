@@ -56,6 +56,7 @@ theorem delivers_pure : Delivers Effects.Program.pure := fun _ => Or.inl rfl
 def _root_.Effect4.Program.EffName.refreshA (completed : List (FiberId × ExitV)) : EffName → EffName
   | .cont p => .cont { p with completed }
   | .onValue p => .onValue { p with completed }
+  | .releaseBody p exit previous => .releaseBody { p with completed } exit previous
   | name => name
 
 /-- `interpAt`'s refresh of the cause-continuation names against a completed view. -/
@@ -114,7 +115,7 @@ inductive CodeMeans (root : NativeEff) : NCode → RProgram → Prop
   /-- A live frontier: the frame's suspension returns itself at every view, the term's
   frontier operation stays. The two points agree on everything but the captured view. -/
   | frontier (p p' : Point) (reason : FrontierReason) (k : ExitV → RProgram)
-      (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape)
+      (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
       (hloop : ∀ completed, suspendBodyAt root (.body { p' with completed }) =
         Prim.suspend (EffThunk.body { p' with completed })) :
       CodeMeans root (Prim.suspend (EffThunk.body p')) (.vis (.inr (.frontier reason p)) k)
@@ -128,6 +129,13 @@ inductive CodeMeans (root : NativeEff) : NCode → RProgram → Prop
         (prepareR completed (k .unit))) :
       CodeMeans root (Prim.suspend (EffThunk.store (Thunk.body (ProgName.closeWalk strategy order ex))))
         (.vis (.inr (.closeWalk strategy order ex)) k)
+  /-- A capture's release under `suspend` (V1): the frame's `Thunk.foreign`, the term's
+  `foreignRelease` operation — both counted, both continuing with the release. -/
+  | foreignRelease (c : Capture) (ex : ExitV) (k : Val → RProgram)
+      (hk : ∀ completed, CodeMeans root (suspendBodyAt root (.store (Thunk.foreign c ex)))
+        (prepareR completed (k .unit))) :
+      CodeMeans root (Prim.suspend (EffThunk.store (Thunk.foreign c ex)))
+        (.vis (.inr (.foreignRelease c ex)) k)
   -- frames pushed by the current primitive: the term's guards
   | onSuccess (body : NCode) (n : EffName) (g : Option ExitV → RProgram) (body' : RProgram)
       (K : ExitV → RProgram) (hb : CodeMeans root body body')
@@ -177,11 +185,11 @@ inductive CodeMeans (root : NativeEff) : NCode → RProgram → Prop
   -- generator and loop entries: the term saves the entry's continuation as an answer
   -- slot, so it only delivers
   | genEntry (p p' : Point) (k : ExitV → RProgram)
-      (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape)
+      (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
       (hk : Delivers k) :
       CodeMeans root (Prim.iterator (.gen p' [] false) Val.unit) (.vis (.inr (.gen p)) k)
   | loopEntry (p p' : Point) (cursor : Val) (k : ExitV → RProgram)
-      (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape)
+      (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
       (hk : Delivers k) :
       CodeMeans root (Prim.whileLoop (.loop p') cursor) (.vis (.inr (.loop p cursor)) k)
   | closeIterSeq (order : List FinName) (ex : ExitV) (k : ExitV → RProgram) (hk : Delivers k) :
@@ -342,7 +350,7 @@ inductive SlotMeans (root : NativeEff) : NCode → ScopeFrame → Prop
   the refreshed suspension, the term's carries the point it was denoted at; the hooks read
   only the address and the environment. -/
   | whileLoop (p p' : Point) (cursor : Val)
-      (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape) :
+      (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root) :
       SlotMeans root (Prim.whileLoop (.loop p') cursor) (.loop (.loop p) cursor)
   | mask (flag : Bool) : SlotMeans root (Prim.setInterruptible flag) (.restoreMask flag)
   | asyncFinalizer (name : EffName) : SlotMeans root (Prim.asyncFinalizer name) (.asyncFinalizer name)
@@ -528,6 +536,10 @@ theorem CodeMeans.bindTail {root : NativeEff} {c : NCode} {r : RProgram} (h : Co
     refine CodeMeans.closeWalk strategy order ex _ fun completed => ?_
     rw [prepareR_bind completed ht]
     exact ih completed
+  | foreignRelease c ex k _ ih =>
+    refine CodeMeans.foreignRelease c ex _ fun completed => ?_
+    rw [prepareR_bind completed ht]
+    exact ih completed
   | onSuccess body n g body' K hb hK hnone hsome ihb ihK =>
     refine CodeMeans.onSuccess body n _ body' (fun ex => (K ex).bind t) hb ?_ ?_ ?_
     · intro completed v
@@ -669,6 +681,7 @@ theorem CodeMeans.prepare {root : NativeEff} {c : NCode} {r : RProgram} (h : Cod
   | frontier p p' reason k hp hloop => exact CodeMeans.frontier p p' reason k hp hloop
   | yieldError p e k hk _ => exact CodeMeans.yieldError p e k hk
   | closeWalk strategy order ex k hk _ => exact CodeMeans.closeWalk strategy order ex k hk
+  | foreignRelease c ex k hk _ => exact CodeMeans.foreignRelease c ex k hk
   | onSuccess body n g body' K hb hK hnone hsome ihb _ =>
     refine CodeMeans.onSuccess body n _ (prepareR completed body') K ihb hK ?_ ?_
     · show prepareR completed (g none) = _

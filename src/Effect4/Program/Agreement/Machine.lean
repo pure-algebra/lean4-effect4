@@ -563,6 +563,17 @@ theorem syncOpStep_quiet {o : SyncOp} {s s' : Stores} {v : Val}
          | exact DeferredStore.make_quiet hdue hcells
          | exact DeferredStore.complete_quiet hdue hcells _ _
          | exact DeferredStore.cancel_quiet hdue hcells _ _ _)
+    -- `scopeAdd` (V1): three branches, none touching the Deferred store
+    | (simp only [syncOpStep] at h
+       split at h
+       · cases h
+       · split at h
+         · simp only [Option.some.injEq, Prod.mk.injEq] at h
+           obtain ⟨rfl, -⟩ := h
+           exact ⟨hdue, hcells⟩
+         · simp only [Option.some.injEq, Prod.mk.injEq] at h
+           obtain ⟨rfl, -⟩ := h
+           exact ⟨hdue, hcells⟩)
 
 theorem localStep_quiet {root : NativeEff} {cur : NCode} {K : List NCode} {i : Bool}
     {s s' : Stores} {fr' : NFiber} (h : localStep root (fiberOf cur K i) s = .running fr' s')
@@ -726,7 +737,11 @@ theorem M_update (fr fr' : NFiber) (s : Stores) (k k' : Nat) (tr : NTrace) (nt :
   simp [M, RunMachine.update, fiberAt, RunFiber.make]
 
 theorem M_emit (fr : NFiber) (s : Stores) (k : Nat) (tr ev : NTrace) (nt : Nat) :
-    (M fr s k tr nt).emit ev = M fr s k (tr ++ ev) nt := rfl
+    (M fr s k tr nt).emit ev = M fr s k (tr ++ ev) nt := by
+  -- the field-local guard on an empty emit (direction L4): the trace is the trace
+  cases ev with
+  | nil => simp [M, RunMachine.emit]
+  | cons _ _ => rfl
 
 theorem Mexit_stuck (root : NativeEff) (ex : ExitV) (fr : NFiber) (s : Stores) (k : Nat)
     (tr : NTrace) (nt : Nat) : (Mexit root ex fr s k tr nt).stuck = none := rfl
@@ -1178,6 +1193,7 @@ theorem drive_loop_running (root : NativeEff) (cur : NCode) (K : List NCode) (i 
       ⟨M (fiberOf cur K i) s k (tr ++ ev) nt, fiberAt (fiberOf cur₁ K₁ i₁) (k + 1), false,
         Outcome.continue_, []⟩ := by
     rw [iteration_M root _ _ _ _ _ _ _ hk, hraw, hev]
+    simp only [iterOf, M_emit]
     rfl
   refine ⟨tr ++ ev, fun n => ?_⟩
   rw [driveState_succ_cons (evaluator := evaluatorFor root)]
@@ -1206,6 +1222,7 @@ theorem drive_loop_finish (root : NativeEff) (cur : NCode) (K : List NCode) (i :
       ⟨M (fiberOf cur K i) s k (tr ++ ev) nt, fiberAt (frameExitState (fiberOf cur K i)) (k + 1), false,
         Outcome.finished ex, []⟩ := by
     rw [iteration_M root _ _ _ _ _ _ _ hk, hraw, hev]
+    simp only [iterOf, M_emit]
     rfl
   refine ⟨tr ++ ev, fun n => ?_⟩
   rw [drive_loop_finished (evaluator := evaluatorFor root) _ _ _ _ _ _ rest ex rfl
@@ -1234,7 +1251,7 @@ theorem drive_deliver_running (root : NativeEff) (cur : NCode) (K : List NCode) 
   refine ⟨tr ++ ev, fun n => ?_⟩
   rw [driveState_succ_cons (evaluator := evaluatorFor root)]
   simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?,
-    FiberEvaluator.evaluate, hraw, hev]
+    FiberEvaluator.evaluate, hraw, hev, iterOf, M_emit]
   show driveState (evaluator := evaluatorFor root) _ n
     ((M (fiberOf cur K i) s k (tr ++ ev) nt).update (fiberAt (fiberOf cur₁ K₁ i₁) k))
     ([] ++ [Cmd.loop Api.root false] ++ rest) = _
@@ -1258,7 +1275,7 @@ theorem drive_deliver_finish (root : NativeEff) (cur : NCode) (K : List NCode) (
   refine ⟨tr ++ ev, fun n => ?_⟩
   rw [driveState_succ_cons (evaluator := evaluatorFor root)]
   simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?,
-    FiberEvaluator.evaluate, hraw, hev]
+    FiberEvaluator.evaluate, hraw, hev, iterOf, M_emit]
   show driveState (evaluator := evaluatorFor root) _ n ((M (fiberOf cur K i) s k (tr ++ ev) nt).update (fiberAt (frameExitState (fiberOf cur K i)) k))
     ([] ++ [Cmd.finish Api.root ex] ++ rest) = _
   rw [M_update]

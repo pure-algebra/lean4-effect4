@@ -25,8 +25,9 @@ evaluate to (`actionAt_keys`), and the embedded stores' programs carry the store
 (`embed_keys`). The ruling in force is the valid-input premise: `AnswersValid` is a premise of
 the theorem, and replay admission is unchanged (`E4-HANDLE-CE-001`).
 
-Excluded, as in the machine module: the cause's interruptor, the exit a scope closed
-with, the race's duplicate winner and unused bookkeeping, and a Deferred's waiter targets.
+Excluded, as in the machine module: the cause's interruptor, the race's duplicate winner and
+unused bookkeeping, and a Deferred's waiter targets. The exit a scope closed with is
+collected since V1 (2026-09-07): `scopeAdd` on a closed scope answers it.
 The race's live entrants and accepted exit are collected: both flow into `raceSettle`.
 -/
 
@@ -84,6 +85,14 @@ def EffName.keys : EffName → List Handle
   | .forkScopedIn p => p.keys
   | .constant v => v.keys
   | .store name => name.keys
+  -- `acquireRelease`'s names (V1): the point, the context read, the scope handle read, the
+  -- acquired value and the capture; the release's point, context, exit and previous context
+  | .acquireCtx p => p.keys
+  | .acquireIn p ctx => p.keys ++ ctx.keys
+  | .acquired p ctx scope => Handle.scope scope :: p.keys ++ ctx.keys
+  | .afterScopeAdd a finalizer => a.keys ++ finalizer.keys
+  | .releaseUnder p ctx exit => p.keys ++ ctx.keys ++ exitKeys exit
+  | .releaseBody p exit previous => p.keys ++ exitKeys exit ++ previous.keys
 
 /-- The handles a thunk of the compiled alphabet carries. -/
 def EffThunk.keys : EffThunk → List Handle
@@ -97,6 +106,8 @@ def EffThunk.keys : EffThunk → List Handle
   | .setCtx context => context.keys
   | .closeScope scope exit => Handle.scope scope :: exitKeys exit
   | .store thunk => thunk.keys
+  | .acquireMasked p ctx => p.keys ++ ctx.keys
+  | .releaseMasked p previous => p.keys ++ previous.keys
 
 /-- The handles of compiled code. -/
 abbrev nativeKeys : NCode → List Handle := primKeys EffName.keys EffThunk.keys
@@ -377,9 +388,29 @@ theorem compileEff_scoped (b : NativeEff) (hf : p.fuel = k + 1) :
     compileEff (.scoped b) p = Prim.withFiber (EffThunk.act p) := by
   simp [compileEff, hf]
 
+/-- `acquireRelease` compiles to the context read, the rest named (`contAOf`).
+census: scope.acquire-release -/
 theorem compileEff_acquireRelease (a r : NativeEff) (hf : p.fuel = k + 1) :
-    compileEff (.acquireRelease a r) p = frontier p := by
+    compileEff (.acquireRelease a r) p =
+      Prim.onSuccess (Prim.withFiber EffThunk.getCtx) (EffName.acquireCtx p) := by
   simp [compileEff, hf]
+
+/-- The capture registered at a point names the point's handles, the acquired value's and
+the context's. -/
+theorem Point.capture_keys (p : Point) (a : Val) (ctx : Ctx) :
+    (FinName.foreign (p.capture a ctx)).keys ⊆ p.keys ++ a.keys ++ ctx.keys := by
+  simp only [FinName.keys, Point.capture, Val.keysList_eq_flatMap, List.flatMap_append,
+    List.flatMap_cons, List.flatMap_nil, List.append_nil]
+  refine List.append_subset.mpr ⟨List.append_subset.mpr ⟨?_, ?_⟩, ?_⟩
+  · exact List.Subset.trans p.env_keys_subset
+      (List.Subset.trans (List.subset_append_left _ _) (List.subset_append_left _ _))
+  · exact List.Subset.trans (List.subset_append_right _ _) (List.subset_append_left _ _)
+  · exact List.subset_append_right _ _
+
+/-- A capture's point names the capture's environment. -/
+theorem Point.ofCapture_keys (c : Capture) : (Point.ofCapture c).keys ⊆ Val.keysList c.env := by
+  simp only [Point.keys, Point.ofCapture, List.flatMap_nil, List.nil_append, Val.keysList_eq_flatMap]
+  exact List.Subset.refl _
 
 theorem compileEff_choose (site : Nat) (l r : NativeEff) (hf : p.fuel = k + 1) :
     compileEff (.choose site l r) p =
@@ -547,7 +578,7 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
   | .acquireRelease a r, p => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; exact frontier_keys p
-    · rw [compileEff_acquireRelease a r hf]; exact frontier_keys p
+    · rw [compileEff_acquireRelease a r hf]; sub_tac
   | .choose site l r, p => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; exact frontier_keys p
@@ -867,11 +898,25 @@ theorem contAOf_native_keys (root : NativeEff) (n : EffName) (v : Val) :
     | sub_tac
     | sub_tac using (resolve_keys root _)
     | sub_tac norm [Point.keys, EffName.keys, EffThunk.keys]
+    -- the `acquired` arm: the capture's handles are the point's, the value's and the context's
+    | sub_tac norm [Point.keys, EffName.keys, EffThunk.keys, SyncOp.keys, FinName.keys, Point.capture,
+        Val.keysList_eq_flatMap]
+    -- the `releaseBody` arm: the release's point appends the reified exit
+    | sub_tac norm [Point.keys, EffName.keys, EffThunk.keys, Point.childWith, Machine.reifyExitVal_keys]
     | (split
        · next previous hprev =>
          rw [Val.context?_exact hprev]
          sub_tac norm [Point.keys, EffName.keys, EffThunk.keys, Ctx.keys]
        · sub_tac)
+    -- the `afterScopeAdd` arm: unit answers `a`; a closed scope's exit, read back, runs the
+    -- release program under it
+    | (split <;> first
+        | sub_tac
+        | (split
+           · next exit hexit =>
+             sub_tac using (Machine.finProgram_keys _ exit), (exitOfVal_keys _ exit hexit)
+               norm [Point.keys, EffName.keys, EffThunk.keys, embed_keys]
+           · sub_tac))
 
 theorem contEOf_native_keys (root : NativeEff) (n : EffName) (cause : CauseV) :
     nativeKeys (Program.contEOf root n cause) ⊆ n.keys := by
@@ -888,7 +933,9 @@ theorem contEOf_native_keys (root : NativeEff) (n : EffName) (cause : CauseV) :
   | store name => simp only [Program.contEOf, nativeKeys, embed_keys]; exact Machine.contEOf_keys name cause
   | cont p | onValue p | fin p | gen p pc bind | loop p | registerAwait cell | cancelAwait cell
   | withWaiter base waiter token | abort | reFail c | scopeOpen p | scopeProvide p s | scopeBody p previous
-  | scopedExit previous scope | scopeClose scope | restoreCtx previous | forkScopedIn p =>
+  | scopedExit previous scope | scopeClose scope | restoreCtx previous | forkScopedIn p
+  | acquireCtx p | acquireIn p ctx | acquired p ctx sc | afterScopeAdd a finalizer | releaseUnder p ctx e
+  | releaseBody p e previous =>
     simp only [Program.contEOf]; exact List.nil_subset _
 
 theorem cancelProgramOf_keys (n : EffName) : nativeKeys (cancelProgramOf n) ⊆ n.keys := by
@@ -909,7 +956,8 @@ theorem syncValueAt_keys (root : NativeEff) (t : EffThunk) : (syncValueAt root t
       | none => exact List.nil_subset _
       | some val => exact evalTerm_point_keys term p val hval
     · exact List.nil_subset _
-  | body _ | op _ | park _ | act _ | forkInAt _ _ | getCtx | setCtx _ | closeScope _ _ | store _ =>
+  | body _ | op _ | park _ | act _ | forkInAt _ _ | getCtx | setCtx _ | closeScope _ _ | store _
+  | acquireMasked _ _ | releaseMasked _ _ =>
     simp only [syncValueAt]; exact List.nil_subset _
 
 theorem suspendBodyAt_keys (root : NativeEff) (t : EffThunk) : nativeKeys (suspendBodyAt root t) ⊆ t.keys := by
@@ -934,7 +982,12 @@ theorem suspendBodyAt_keys (root : NativeEff) (t : EffThunk) : nativeKeys (suspe
     cases thunk with
     | body program => simp only [suspendBodyAt, nativeKeys, embed_keys]; exact Machine.progOf_keys program
     | park _ | act _ | op _ => simp only [suspendBodyAt]; exact List.nil_subset _
-  | pure _ | op _ | park _ | act _ | forkInAt _ _ | getCtx | setCtx _ | closeScope _ _ =>
+    -- a capture's release: the context read, then the release named at the capture's point
+    | foreign capture exit =>
+      simp only [suspendBodyAt]
+      sub_tac using (Point.ofCapture_keys capture)
+  | pure _ | op _ | park _ | act _ | forkInAt _ _ | getCtx | setCtx _ | closeScope _ _
+  | acquireMasked _ _ | releaseMasked _ _ =>
     simp only [suspendBodyAt]; exact List.nil_subset _
 
 theorem env_bind_keys (p : Point) (v : Val) (bind : Bool) :
@@ -985,7 +1038,8 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     | cont p | caught p | onValue p | onCause p | fin p | restore e | merge e | loop p | registerAwait cell
     | cancelAwait cell | withWaiter base waiter token | abort | reFail c | scopeOpen p | scopeProvide p s
     | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
-    | forkScopedIn p =>
+    | forkScopedIn p | acquireCtx p | acquireIn p ctx | acquired p ctx sc | afterScopeAdd a finalizer
+    | releaseUnder p ctx e | releaseBody p e previous =>
       simp only [interpOf, IterStep.done.injEq] at h
       subst h
       exact List.subset_append_right _ _
@@ -1005,7 +1059,8 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     | cont p | caught p | onValue p | onCause p | fin p | restore e | merge e | loop p | registerAwait cell
     | cancelAwait cell | withWaiter base waiter token | abort | reFail c | scopeOpen p | scopeProvide p s
     | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
-    | forkScopedIn p =>
+    | forkScopedIn p | acquireCtx p | acquireIn p ctx | acquired p ctx sc | afterScopeAdd a finalizer
+    | releaseUnder p ctx e | releaseBody p e previous =>
       simp only [interpOf] at h; cases h
   loopBody n c := by
     cases n with
@@ -1013,7 +1068,8 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     | cont p | caught p | onValue p | onCause p | fin p | restore e | merge e | gen p pc bind | registerAwait cell
     | cancelAwait cell | withWaiter base waiter token | abort | reFail c' | scopeOpen p | scopeProvide p s
     | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
-    | store name | forkScopedIn p =>
+    | store name | forkScopedIn p | acquireCtx p | acquireIn p ctx | acquired p ctx sc | afterScopeAdd a finalizer
+    | releaseUnder p ctx e | releaseBody p e previous =>
       simp only [interpOf]; sub_tac
   loopStep n c v := by
     cases n with
@@ -1031,7 +1087,8 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     | cont p | caught p | onValue p | onCause p | fin p | restore e | merge e | gen p pc bind | registerAwait cell
     | cancelAwait cell | withWaiter base waiter token | abort | reFail c' | scopeOpen p | scopeProvide p s
     | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
-    | store name | forkScopedIn p =>
+    | store name | forkScopedIn p | acquireCtx p | acquireIn p ctx | acquired p ctx sc | afterScopeAdd a finalizer
+    | releaseUnder p ctx e | releaseBody p e previous =>
       simp only [interpOf]; sub_tac
   loopDone n := by simp only [interpOf]; exact List.nil_subset _
   cancelThenFail n c := by
@@ -1068,6 +1125,17 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     | getCtx => simp only [interpOf, Option.some.injEq] at h; subst h; exact List.nil_subset _
     | setCtx ctx => simp only [interpOf, Option.some.injEq] at h; subst h; exact List.Subset.refl _
     | closeScope scope exit => simp only [interpOf, Option.some.injEq] at h; subst h; exact List.Subset.refl _
+    -- the masked acquire: the embedded `Scope` read names nothing, the continuation the point
+    -- and the context
+    | acquireMasked p ctx =>
+      simp only [interpOf, Option.some.injEq] at h
+      subst h
+      sub_tac
+    -- the masked release: the resolved point's code and the restoring finalizer
+    | releaseMasked p previous =>
+      simp only [interpOf, Option.some.injEq] at h
+      subst h
+      sub_tac using (resolve_keys root p)
     | store thunk =>
       cases thunk with
       | act action =>
@@ -1075,7 +1143,7 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
         subst h
         rw [embedAction_keys]
         exact Machine.actionOf_keys action
-      | park _ | op _ | body _ => simp only [interpOf] at h; cases h
+      | park _ | op _ | body _ | foreign _ _ => simp only [interpOf] at h; cases h
     | pure _ | body _ | op _ | park _ => simp only [interpOf] at h; cases h
   syncState t s s' v ids h hok := by
     cases t with
@@ -1087,8 +1155,9 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
       | op operation =>
         simp only [interpOf] at h
         exact ⟨syncOpStep_le operation s s' v h, syncOpStep_keys operation s s' v ids h hok⟩
-      | park _ | act _ | body _ => simp only [interpOf] at h; cases h
-    | pure _ | body _ | park _ | act _ | forkInAt _ _ | getCtx | setCtx _ | closeScope _ _ =>
+      | park _ | act _ | body _ | foreign _ _ => simp only [interpOf] at h; cases h
+    | pure _ | body _ | park _ | act _ | forkInAt _ _ | getCtx | setCtx _ | closeScope _ _
+    | acquireMasked _ _ | releaseMasked _ _ =>
       simp only [interpOf] at h; cases h
   registerAsync n fiber token s ids hok := by
     have reg : ∀ cell, Ok ⟨ids, s⟩ ([Handle.promise cell] ++ s.keys) →
@@ -1124,7 +1193,8 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     | cont p | caught p | onValue p | onCause p | fin p | restore e | merge e | gen p pc bind | loop p
     | cancelAwait cell | withWaiter base waiter token' | abort | reFail c | scopeOpen p | scopeProvide p sc
     | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
-    | forkScopedIn p =>
+    | forkScopedIn p | acquireCtx p | acquireIn p ctx | acquired p ctx sc' | afterScopeAdd a finalizer
+    | releaseUnder p ctx e | releaseBody p e previous =>
       simp only [interpOf]
       exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
   answerCode c := by simp only [interpOf]; rw [embed_keys]; exact Machine.completionPrim_keys c
@@ -1216,20 +1286,38 @@ theorem Point.withCompleted_keys (p : Point) (completed : List (FiberId × ExitV
       completed.flatMap (fun entry => exitKeys entry.2) ++ p.keys := by
   sub_tac
 
+-- One declaration, one heartbeat budget, as `interpOf_keyBounded` above: the refreshed hooks
+-- are read off `interpAt` by `rfl` where they can be (the three below), the rest unfold it.
+set_option maxHeartbeats 800000 in
 /-- Source callbacks can additionally use the completed-exit values supplied by
 the evaluator. Eager code remains bounded by its captured point. -/
 theorem interpAt_keyBounded (root : NativeEff) (completed : List (FiberId × ExitV)) :
     KeyBounded EffName.keys EffThunk.keys (interpAt root completed)
       (completed.flatMap fun entry => exitKeys entry.2) where
   contA n v := by
-    cases n <;> simp only [interpAt]
-    all_goals exact List.Subset.trans (contAOf_native_keys root _ v) (by sub_tac)
+    have h : (interpAt root completed).contA n v = contAOf root (match n with
+        | .cont p => .cont { p with completed }
+        | .onValue p => .onValue { p with completed }
+        | .releaseBody p exit previous => .releaseBody { p with completed } exit previous
+        | name => name) v := rfl
+    rw [h]
+    refine List.Subset.trans (contAOf_native_keys root _ v) ?_
+    cases n <;> sub_tac
   contE n c := by
-    cases n <;> simp only [interpAt]
-    all_goals exact List.Subset.trans (contEOf_native_keys root _ c) (by sub_tac)
+    have h : (interpAt root completed).contE n c = contEOf root (match n with
+        | .caught p => .caught { p with completed }
+        | .onCause p => .onCause { p with completed }
+        | name => name) c := rfl
+    rw [h]
+    refine List.Subset.trans (contEOf_native_keys root _ c) ?_
+    cases n <;> sub_tac
   suspendBody t := by
-    cases t <;> simp only [interpAt]
-    all_goals exact List.Subset.trans (suspendBodyAt_keys root _) (by sub_tac)
+    have h : (interpAt root completed).suspendBody t = suspendBodyAt root (match t with
+        | .body p => .body { p with completed }
+        | thunk => thunk) := rfl
+    rw [h]
+    refine List.Subset.trans (suspendBodyAt_keys root _) ?_
+    cases t <;> sub_tac
   iterNext_done n v r h := by
     cases n with
     | gen p pc bind =>
