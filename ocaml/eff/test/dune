@@ -13,6 +13,16 @@
  (modules prop_wire)
  (libraries effect4_eff))
 
+; The two frames the shared value foundation adds on top of Canonical.lean's ten: ref (11)
+; and handle (12), the last two constructors of Effect4.Store.Val. Its two goldens
+; (goldens/val_handle.hex, goldens/val_ref.hex) are HAND-DERIVED from Val.lean's encoder and
+; confirmed against its #guards (Val.lean:1131,1136,1147,1174); see the test's header.
+(test
+ (name test_val_frames)
+ (modules test_val_frames)
+ (libraries effect4_eff)
+ (deps (glob_files %{project_root}/goldens/*)))
+
 ; The differential against Lean's own encoder (Effect4.Program.Wire, printed as hex by
 ; src/OCaml5/Tools/EffWire.lean into ocaml/goldens/eff). That directory is a sibling of this
 ; dune project, so it cannot be a tracked dep: the test reaches it relatively and says so

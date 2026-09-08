@@ -24,13 +24,35 @@ let check name ok =
   Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
   if not ok then incr failures
 
+(* ------------------------------------------------------- the abstract frame and code
+
+   Since the `FiberCore` refactor of Fibers.lean the machine's frame ('f) and its
+   continuation code ('k) are type parameters, reached only through the `fiber_core`
+   record of functions. `gen_check` supplies the smallest pair that exercises the four
+   `interruptRecord` paths; the generated code never looks inside either. *)
+
+type gcode = Csuccess | Cfailure of (string, string, int, unit) G.cause
+
+type gframe = {
+  fcurrent : gcode;
+  finterruptible : bool;
+  fcause : (string, string, int, unit) G.cause option;
+  fdeferred : bool;
+}
+
+type gfiber = (string, unit, unit, string, string, int, unit, unit, gcode, gframe) G.run_fiber
+type gmachine =
+  (string, unit, unit, string, string, int, unit, unit, unit, gcode, gframe, unit) G.run_machine
+type ginterp = (string, unit, unit, string, string, int, unit, unit, unit, gcode) G.run_interp
+type gcore = (string, unit, string, string, int, unit, gcode, gframe) G.fiber_core
+
 (* ---------------------------------------------------------------- projections *)
 
 let task_id_g = function G.Task_start c -> c | G.Task_resume (t, _, _) -> -t
 let task_id_r = function R.Tstart c -> c | R.Tresume (t, _, _) -> -t
 
-let proj_g (bs : (_, _, _, _, _, _, _) G.bucket list) : (int * int list) list =
-  List.map (fun (b : (_, _, _, _, _, _, _) G.bucket) -> (b.G.priority, List.map task_id_g b.G.tasks)) bs
+let proj_g (bs : (_, _, _, _, _, _, _, _) G.bucket list) : (int * int list) list =
+  List.map (fun (b : (_, _, _, _, _, _, _, _) G.bucket) -> (b.G.priority, List.map task_id_g b.G.tasks)) bs
 
 let proj_r (bs : R.bucket list) : (int * int list) list =
   List.map (fun (b : R.bucket) -> (b.R.priority, List.map task_id_r b.R.tasks)) bs
@@ -45,7 +67,7 @@ let show_ids ids = "[" ^ String.concat ";" (List.map string_of_int ids) ^ "]"
 
 let () =
   print_endline "== 1. Dispatcher.insert on a hand-made bucket list ==";
-  let base_g : (_, _, _, _, _, _, _) G.bucket list =
+  let base_g : (_, _, _, _, _, _, _, _) G.bucket list =
     [ { G.priority = 1; tasks = [ G.Task_start 1 ] }; { G.priority = 3; tasks = [ G.Task_start 2; G.Task_start 3 ] } ]
   in
   let base_r : R.bucket list =
@@ -114,26 +136,25 @@ let () =
 (* ---------------------------------------------------------------- 3. RunMachine *)
 
 (* Type parameters for the machine: nu=string s=unit b=unit e=string d=string i=int a=unit
-   ch=unit st=unit. Placeholder types (frame contents aside) take their one constructor. *)
-let mk_fiber id exited : (string, unit, unit, string, string, int, unit, unit) G.run_fiber =
+   ch=unit st=unit k=gcode f=gframe h=unit. Placeholder types take their one constructor. *)
+let mk_fiber id exited : gfiber =
   { G.id;
-    frame = { G.current = G.Prim_success (); stack = []; interruptible = true;
-              interrupted_cause = None; deferred_interrupt = false };
+    frame = { fcurrent = Csuccess; finterruptible = true; fcause = None; fdeferred = false };
     running = false; parked = G.Parked_notParked; pending = []; finalizing = None;
     exit_ = (if exited then Some G.Placeholder_exit_ else None);
     current_op_count = 0; max_ops_before_yield = 2048; prevent_yield = false;
     yield_override = None; observers = []; children = [];
     dispatcher = { G.buckets = []; armed = false }; context = () }
 
-let mk_machine fibers : (string, unit, unit, string, string, int, unit, unit, unit) G.run_machine =
+let mk_machine fibers : gmachine =
   { G.fibers; races = []; next_id = List.length fibers; next_token = 0; next_race = 0;
     middleware_installed = false; armed = []; state = (); trace = []; stuck = None }
 
 let () =
   print_endline "== 3. RunMachine.fiber?/update/emit/finished, countdownWalk ==";
   let m = mk_machine [ mk_fiber 0 true; mk_fiber 1 false; mk_fiber 2 false ] in
-  let ids (m : (_, _, _, _, _, _, _, _, _) G.run_machine) =
-    List.map (fun (f : (_, _, _, _, _, _, _, _) G.run_fiber) -> f.G.id) m.G.fibers in
+  let ids (m : gmachine) =
+    List.map (fun (f : gfiber) -> f.G.id) m.G.fibers in
   check "fiber? finds 1" (match G.run_machine_fiber_opt m 1 with Some f -> f.G.id = 1 | None -> false);
   check "fiber? misses 9" (G.run_machine_fiber_opt m 9 = None);
   let f1 = { (mk_fiber 1 false) with G.running = true; current_op_count = 5 } in
@@ -158,38 +179,67 @@ let () =
 
 (* ---------------------------------------------------------------- 4. interruptRecord *)
 
-let interp : (string, unit, unit, string, string, int, unit, unit, unit) G.run_interp =
+let interp : ginterp =
   { G.to_prim_interp = G.Placeholder_prim_interp;
     park_of = (fun _ -> None);
+    park_code = (fun _ -> Csuccess);
+    interrupt_code = (fun _ -> Csuccess);
+    interrupt_as_code = (fun _ _ -> Csuccess);
+    interrupt_all_code = (fun _ -> Csuccess);
     with_fiber_of = (fun _ -> None);
     sync_state = (fun _ _ -> None);
     register_async = (fun _ _ _ st -> (st, None));
+    answer_code = (fun _ -> Csuccess);
     due_resumes = (fun st -> ([], st));
     cancel_name = (fun n _ _ -> n);
     abort_name = "abort";
     park_cancel_name = "park";
     race_cancel_name = (fun _ -> "race");
-    race_settle = (fun _ _ -> G.Prim_success ());
+    race_settle = (fun _ _ _ -> Csuccess);
     finalizer_program = (fun _ _ -> None);
     restore_name = (fun _ -> "restore");
     merge_name = (fun _ -> "merge");
     scope_status = (fun _ _ -> None);
-    scope_link_fiber = (fun _ _ _ _ _ -> None);
+    scope_link_fiber = (fun _ _ _ _ -> None);
     drop_finalizer = (fun _ _ _ -> None);
     close_scope = (fun _ _ _ _ _ -> None);
     ambient_scope = (fun _ -> None);
     budget_of = (fun _ -> (2048, false));
     empty_context = ();
     context_value = (fun _ -> ());
-    exit_value = (fun _ _ -> G.Prim_success ());
+    exit_value = (fun _ _ -> Csuccess);
     fiber_value = (fun _ -> ());
+    fiber_id_value = (fun _ -> ());
     fibers_value = (fun _ -> ());
     exits_value = (fun _ -> ());
     void_value = ();
+    scope_value = (fun _ -> ());
+    close_done_name = "closeDone";
     encode_fiber = (fun id -> id);
     stack_annotations = (fun _ -> []);
     async_fiber_error = "async";
     missing_scope = "missing" }
+
+(* The frame algebra `interruptRecord` now goes through. Only `answer_with`,
+   `interruptible`, `interrupted_cause`, `record_cause`, `set_deferred` and `failure`
+   are reached from this test; the rest are the record's remaining fields. *)
+let core : gcore =
+  { G.current = (fun fr -> fr.fcurrent);
+    answer_with = (fun fr k -> { fr with fcurrent = k });
+    start = (fun k i -> { fcurrent = k; finterruptible = i; fcause = None; fdeferred = false });
+    interruptible = (fun fr -> fr.finterruptible);
+    interrupted_cause = (fun fr -> fr.fcause);
+    deferred_interrupt = (fun fr -> fr.fdeferred);
+    record_cause = (fun fr c -> { fr with fcause = Some c });
+    set_deferred = (fun fr b -> { fr with fdeferred = b });
+    pending_failure = (fun fr -> fr);
+    push_async_finalizer = (fun _ fr -> fr);
+    push_iterator = (fun _ _ fr -> fr);
+    clear_stack = (fun fr -> fr);
+    success = (fun _ -> Csuccess);
+    failure = (fun c -> Cfailure c);
+    on_success = (fun k _ -> k);
+    yield_before = (fun k -> k) }
 
 let show_reason = function
   | G.Reason_fail (e, _) -> "fail(" ^ e ^ ")"
@@ -204,52 +254,52 @@ let () =
   let eq = ( = ) in
   (* a live, interruptible, not-running fiber: the interrupt applies now *)
   let f = mk_fiber 4 false in
-  let f', apply_now = G.interrupt_record eq eq eq eq interp (Some 7) [] f in
+  let f', apply_now = G.interrupt_record eq eq eq eq core interp (Some 7) [] f in
   let cause = [ G.Reason_interrupt (Some 7, []) ] in
   Printf.printf "  live fiber: applyNow=%b cause=%s current=%s parked=%s\n" apply_now
-    (match f'.G.frame.G.interrupted_cause with Some c -> show_cause c | None -> "None")
-    (match f'.G.frame.G.current with G.Prim_failure c -> "failure " ^ show_cause c | _ -> "other")
+    (match f'.G.frame.fcause with Some c -> show_cause c | None -> "None")
+    (match f'.G.frame.fcurrent with Cfailure c -> "failure " ^ show_cause c | _ -> "other")
     (match f'.G.parked with G.Parked_notParked -> "notParked" | G.Parked_withGuard t -> "withGuard " ^ string_of_int t);
   check "live fiber: applies now, cause recorded, current := failure cause, unparked"
     (apply_now
-    && f'.G.frame.G.interrupted_cause = Some cause
-    && f'.G.frame.G.current = G.Prim_failure cause
+    && f'.G.frame.fcause = Some cause
+    && f'.G.frame.fcurrent = Cfailure cause
     && f'.G.parked = G.Parked_notParked && f'.G.pending = []);
   (* an exited fiber: untouched *)
   let g = mk_fiber 5 true in
-  let g', apply_now = G.interrupt_record eq eq eq eq interp (Some 7) [] g in
+  let g', apply_now = G.interrupt_record eq eq eq eq core interp (Some 7) [] g in
   check "exited fiber: untouched, not applied" ((not apply_now) && g' = g);
   (* a running fiber: deferred *)
   let h = { (mk_fiber 6 false) with G.running = true } in
-  let h', apply_now = G.interrupt_record eq eq eq eq interp None [] h in
+  let h', apply_now = G.interrupt_record eq eq eq eq core interp None [] h in
   check "running fiber: deferred, cause recorded"
-    ((not apply_now) && h'.G.frame.G.deferred_interrupt
-    && h'.G.frame.G.interrupted_cause = Some [ G.Reason_interrupt (None, []) ]);
+    ((not apply_now) && h'.G.frame.fdeferred
+    && h'.G.frame.fcause = Some [ G.Reason_interrupt (None, []) ]);
   (* a masked fiber: recorded only *)
-  let k = { (mk_fiber 7 false) with G.frame = { (mk_fiber 7 false).G.frame with G.interruptible = false } } in
-  let k', apply_now = G.interrupt_record eq eq eq eq interp (Some 1) [] k in
+  let k = { (mk_fiber 7 false) with G.frame = { (mk_fiber 7 false).G.frame with finterruptible = false } } in
+  let k', apply_now = G.interrupt_record eq eq eq eq core interp (Some 1) [] k in
   check "masked fiber: recorded, not applied"
-    ((not apply_now) && k'.G.frame.G.interrupted_cause = Some [ G.Reason_interrupt (Some 1, []) ]
-    && k'.G.frame.G.current = G.Prim_success ());
+    ((not apply_now) && k'.G.frame.fcause = Some [ G.Reason_interrupt (Some 1, []) ]
+    && k'.G.frame.fcurrent = Csuccess);
   (* a previous cause: combined through Cause.combine/dedup *)
   let prev = [ G.Reason_interrupt (Some 3, []) ] in
-  let p = { (mk_fiber 8 false) with G.frame = { (mk_fiber 8 false).G.frame with G.interrupted_cause = Some prev } } in
-  let p', _ = G.interrupt_record eq eq eq eq interp (Some 7) [] p in
+  let p = { (mk_fiber 8 false) with G.frame = { (mk_fiber 8 false).G.frame with fcause = Some prev } } in
+  let p', _ = G.interrupt_record eq eq eq eq core interp (Some 7) [] p in
   Printf.printf "  previous cause: accumulated=%s\n"
-    (match p'.G.frame.G.interrupted_cause with Some c -> show_cause c | None -> "None");
+    (match p'.G.frame.fcause with Some c -> show_cause c | None -> "None");
   check "previous cause: combined, previous first"
-    (p'.G.frame.G.interrupted_cause = Some (prev @ cause));
+    (p'.G.frame.fcause = Some (prev @ cause));
   (* the same interruptor twice: dedup keeps one *)
-  let q = { (mk_fiber 9 false) with G.frame = { (mk_fiber 9 false).G.frame with G.interrupted_cause = Some cause } } in
-  let q', _ = G.interrupt_record eq eq eq eq interp (Some 7) [] q in
+  let q = { (mk_fiber 9 false) with G.frame = { (mk_fiber 9 false).G.frame with fcause = Some cause } } in
+  let q', _ = G.interrupt_record eq eq eq eq core interp (Some 7) [] q in
   Printf.printf "  duplicate cause: accumulated=%s\n"
-    (match q'.G.frame.G.interrupted_cause with Some c -> show_cause c | None -> "None");
-  check "duplicate cause: dedup keeps one" (q'.G.frame.G.interrupted_cause = Some cause);
+    (match q'.G.frame.fcause with Some c -> show_cause c | None -> "None");
+  check "duplicate cause: dedup keeps one" (q'.G.frame.fcause = Some cause);
   (* caller annotations reach the reason *)
   let r = mk_fiber 10 false in
-  let r', _ = G.interrupt_record eq eq eq eq interp (Some 2) [ ("k", ()) ] r in
+  let r', _ = G.interrupt_record eq eq eq eq core interp (Some 2) [ ("k", ()) ] r in
   check "annotations reach the reason"
-    (r'.G.frame.G.interrupted_cause = Some [ G.Reason_interrupt (Some 2, [ ("k", ()) ]) ])
+    (r'.G.frame.fcause = Some [ G.Reason_interrupt (Some 2, [ ("k", ()) ]) ])
 
 let () =
   Printf.printf "== %s: %d failure(s) ==\n" (if !failures = 0 then "ALL PASS" else "FAILED") !failures;

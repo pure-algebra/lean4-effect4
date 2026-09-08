@@ -11,7 +11,7 @@ Standard library only. OCaml 5.1.1 / dune 3.24 (opam switch `effect4`).
 
 | file | lines | kind | what it is |
 | --- | ---: | --- | --- |
-| `eff_frame.ml` | 209 | hand | the framing kernel: `emit_*`/`decode_*` for the ten tags, base-256 naturals, UTF-8 validation |
+| `eff_frame.ml` | 265 | hand | the framing kernel: `emit_*`/`decode_*` for the twelve tags, base-256 naturals, UTF-8 validation |
 | `eff_json_text.ml` | 61 | hand | JSON string escaping and number/array/object assembly for the printer |
 | `eff_types.ml` | 471 | **generated** | one OCaml variant/record per Lean inductive/structure, constructor order pinned, `ctor_index_*` / `ctor_name_*` / `ctor_names_*` per family |
 | `eff_wire.ml` | 978 | **generated** | `encode_*` / `decode_*` per family, `*_exact` at the top level |
@@ -21,9 +21,11 @@ Standard library only. OCaml 5.1.1 / dune 3.24 (opam switch `effect4`).
 | `eff_typed.ml` / `.mli` | 393 / 254 | hand | the GADT surface indexed by the Eff type, and `erase` to the untyped carrier |
 | `eff_manifest.txt` | 23 | **generated** | one line per family: name, OCaml type, constructors and their carriers, in order |
 | `goldens/` | 113 files | **generated** | `<name>.bin` (canonical bytes), `<name>.json`, `<name>.ty` for 37 programs, plus `corpus.txt` and `coverage.txt` |
+| `goldens/val_*.hex` | 2 files | **hand-derived** | `val_handle.hex`, `val_ref.hex` — two `Store.Val` trees derived by hand from `Val.lean`'s encoder, pending a Lean cut |
 | `test/test_eff.ml` | 466 | hand | the golden battery, the GADT corpus, the constructor pins, the wire kernel |
 | `test/prop_wire.ml` | 184 | hand | the wire property test on random untyped values |
 | `test/test_lean_wire.ml` | 180 | hand | the differential against Lean's own encoder (`ocaml/goldens/eff/*.hex`) |
+| `test/test_val_frames.ml` | 191 | hand | the `ref` (11) and `handle` (12) frames: the two goldens, the exactness refusals |
 | `tools/*.sh` | — | hand | build / test / signature-inference drivers for WSL |
 
 ## Build and test
@@ -119,14 +121,23 @@ constructor's argument types.
 | `RowShape` | `row_shape` | call value tupleCall |
 | `ServiceName` / `ServiceTypeCode` / `ServiceKey` / `Row` / `EffTy` | *(structures)* | see `eff_manifest.txt` for the field order |
 
-Tags: `bool=1 nat=2 string=3 list=4 pair=5 none=6 some=7 bytes=8 unit=9 ctor=10`.
+Tags: `bool=1 nat=2 string=3 list=4 pair=5 none=6 some=7 bytes=8 unit=9 ctor=10 ref=11
+handle=12`. The last two are not program frames — no `Eff` constructor carries them and the
+program decoder refuses them at the tag comparison. They belong to the shared value carrier
+`Effect4.Store.Val` (`src/Effect4/Store/Val.lean:107-111`), whose encoder (`:158-159`) writes
+`ref k d = framed 11 (k :: d)` — the kind byte then opaque digest bytes — and
+`handle k n = framed 12 (k :: natBytes n)` — the kind byte then the key's `nat` digits, so
+the key `0` is one kind byte and no digits. `Eff_frame` carries both so that an OCaml host can
+read and write the value alphabet the machine layer shares; the refusals are the encoder's (a
+payload with no kind byte, a key digit string with a leading zero, a key past `max_int`).
 
 ## Properties per module
 
 Each module's header states its own; in short.
 
 * `eff_frame` — every frame is self-delimiting; every decoder is exact; a non-canonical
-  natural, an invalid UTF-8 string and an out-of-range bool are refusals. *tested*
+  natural, an invalid UTF-8 string, an out-of-range bool, a `ref`/`handle` with no kind byte
+  and a `handle` key with a leading zero digit are refusals. *tested*
 * `eff_wire` — `decode_*_exact (encode_* v) = Some v`, and `decode_*` never reads past the
   frame it was given. *generated from the rule; tested on 37 goldens, 8 Lean-side goldens and
   1 250 random values*
@@ -182,7 +193,8 @@ merely documented.
 | `test_eff` — goldens, GADT corpus, pins, wire kernel | 607 | 0 |
 | `prop_wire` — the wire on 1 250 random values, 5 properties each | 6 250 | 0 |
 | `test_lean_wire` — the differential against `Effect4.Program.Wire` | 64 | 0 |
-| **total** | **6 921** | **0** |
+| `test_val_frames` — the `ref`/`handle` frames, added 2026-09-07 | 26 | 0 |
+| **total** | **6 947** | **0** |
 
 ### Per program: the goldens (all 37)
 
@@ -442,3 +454,8 @@ bytes for; widening `Wire.Corpus` is the cheapest way to strengthen it.
   `matchCause`, `choose`, `raceAll` or the fiber-action alphabet; widening it would widen the
   strongest evidence this lane has.
 * Naturals above 2⁶² − 1 are refused, not encoded.
+* `goldens/val_handle.hex` and `goldens/val_ref.hex` are **hand-derived** from `Val.lean`'s
+  encoder (2026-09-07, no Lean process was available), not cut by Lean. They must be confirmed
+  or replaced by a Lean cut — `src/OCaml5/Tools/EffWire.lean` is the tool that prints goldens —
+  once the PC build is green. Both trees are ones `Val.lean` already `#guard`s
+  (`:1174-1175`, `:1147`), so the confirmation is cheap.

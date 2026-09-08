@@ -5,16 +5,28 @@
      Unit 9 [] | Bool 1 [0|1] | Nat 2 base-256 big-endian digits, no leading zero, 0 = []
      | String 3 utf8 | List 4 (concat) | none 6 [] | some 7 x | pair 5 (a ++ b)
      | constructor i 10 (encode (i : Nat) ++ args)   (a structure is constructor 0)
+     | ref 11 (kind :: digest)      | handle 12 (kind :: nat digits)
    Depends on: the OCaml standard library only.
+
+   Tags 11 and 12 are the two frames the shared value foundation adds on top of the ten of
+   Canonical.lean; the authority for their payloads is the Lean encoder itself,
+   src/Effect4/Store/Val.lean:158-159 (`.ref k d => framed Tag.ref (k :: d)` and
+   `.handle k n => framed Tag.handle (k :: natBytes n)`), restated at :203-204 as `payload`.
+   A ref's digest is opaque bytes of any length, including none; a handle's key is the same
+   shortest-form digit string a Nat frame carries, so the key 0 is one kind byte and no
+   digits (Val.lean:1136: `encode (.handle 1 0) = [12,0,0,0,0,0,0,0,1, 1]`). Neither frame
+   is a program frame: the Eff wire dispatches on tags 1..10 only, so a ref or a handle
+   reaching Eff_wire is refused by the tag comparison it fails.
 
    Behaviours it holds itself to:
    F1  Every frame is self-delimiting: a decoder never reads past payload_end, and every
        decoder's result offset is the frame's end.                     by construction (read_frame)
    F2  Exactness: a wrong tag, a payload of the wrong length, a Bool byte other than 0/1, a
        Nat with a leading zero digit or above max_int, a String that is not valid UTF-8, a
-       list/option/pair whose elements do not fill the payload exactly, or trailing bytes
-       after the top-level frame (exact) are refusals (None), never repairs.
-                                                                        by construction; tested
+       list/option/pair whose elements do not fill the payload exactly, a ref or handle whose
+       payload has no kind byte, a handle whose key digits have a leading zero or run past
+       max_int, or trailing bytes after the top-level frame (exact) are refusals (None), never
+       repairs.                                                         by construction; tested
    F3  Round trip: decode (encode v) = Some v for every value in the Lean image, i.e. every
        int in 0 .. max_int and every valid UTF-8 string.                tested (property test)
    F4  The Lean image is the domain of encode: emit_nat raises Invalid_argument on a negative
@@ -34,6 +46,8 @@ let tag_some = 7
 let tag_bytes = 8
 let tag_unit = 9
 let tag_ctor = 10
+let tag_ref = 11
+let tag_handle = 12
 
 (* ---- UTF-8 (RFC 3629: no overlongs, no surrogates, at most U+10FFFF) ---- *)
 
@@ -119,6 +133,19 @@ let emit_pair (b : Buffer.t) (f : Buffer.t -> 'a -> unit) (g : Buffer.t -> 'b ->
 
 let emit_ctor (b : Buffer.t) (index : int) (args : Buffer.t -> unit) : unit =
   with_payload b tag_ctor (fun p -> emit_nat p index; args p)
+
+(* A content reference: the kind byte, then the digest bytes (Val.lean:158). The digest is
+   opaque — any byte string, the empty one included. *)
+let emit_ref (b : Buffer.t) ((kind, digest) : int * string) : unit =
+  if kind < 0 || kind > 255 then invalid_arg "Eff_frame.emit_ref: kind is not a byte";
+  emit_frame b tag_ref (String.make 1 (Char.chr kind) ^ digest)
+
+(* A live handle: the kind byte, then the key as Nat digits (Val.lean:159). The key 0 is no
+   digits at all, so the payload is the kind byte alone. *)
+let emit_handle (b : Buffer.t) ((kind, key) : int * int) : unit =
+  if kind < 0 || kind > 255 then invalid_arg "Eff_frame.emit_handle: kind is not a byte";
+  if key < 0 then invalid_arg "Eff_frame.emit_handle: negative key";
+  emit_frame b tag_handle (String.make 1 (Char.chr kind) ^ nat_digits key)
 
 let to_string (f : Buffer.t -> 'a -> unit) (v : 'a) : string =
   let b = Buffer.create 64 in
@@ -225,6 +252,40 @@ let decode_pair (da : 'a decoder) (db : 'b decoder) : ('a * 'b) decoder = fun s 
        (match db s p e with
         | Some (y, p) when p = e -> Some ((x, y), next)
         | _ -> None))
+
+(* A ref frame: the kind byte and the rest of the payload as the digest. An empty payload
+   carries no kind byte and is refused (Val.lean:614-617, 1169). *)
+let decode_ref : (int * string) decoder = fun s pos limit ->
+  match expect tag_ref s pos limit with
+  | None -> None
+  | Some (p, e, next) ->
+    if e = p then None
+    else Some ((Char.code (String.unsafe_get s p), String.sub s (p + 1) (e - p - 1)), next)
+
+(* A handle frame: the kind byte, then the key's Nat digits. An empty payload is refused; a
+   leading zero digit is refused; no digits is the key 0 (Val.lean:618-621, 1136, 1176-1177).
+   The bound is decode_nat's: nine digits, or eight above max_int, are out of range. *)
+let decode_handle : (int * int) decoder = fun s pos limit ->
+  match expect tag_handle s pos limit with
+  | None -> None
+  | Some (p, e, next) ->
+    if e = p then None
+    else begin
+      let kind = Char.code (String.unsafe_get s p) in
+      let d = p + 1 in
+      let len = e - d in
+      if len = 0 then Some ((kind, 0), next)
+      else if len > 8 then None
+      else if String.unsafe_get s d = '\000' then None
+      else if len = 8 && Char.code (String.unsafe_get s d) >= 0x40 then None
+      else begin
+        let n = ref 0 in
+        for i = d to e - 1 do
+          n := (!n lsl 8) lor Char.code (String.unsafe_get s i)
+        done;
+        Some ((kind, !n), next)
+      end
+    end
 
 (* A constructor frame: (index, position after the index, payload_end, next). *)
 let read_ctor (s : string) (pos : int) (limit : int) : (int * int * int * int) option =

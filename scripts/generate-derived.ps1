@@ -3,10 +3,22 @@
   Regenerate every derived `Canonical` group in the tree and report what changed.
 
 .DESCRIPTION
-  The manifest below is the one of docs\research\2026-09-04-cas-trait-plan.md §4 at its landing
-  paths: one group per emitted file, its imports, its carriers in dependency order, the
-  `--kind` requests (a `Content` instance right after that carrier's `Canonical` one), and the
-  acceptance guards appended verbatim after the generated declarations.
+  The manifest is `tools\Effect4Gen\manifest.json`, the one of
+  docs\research\2026-09-04-cas-trait-plan.md §4 at its landing paths: one group per emitted
+  file, its imports, its carriers in dependency order, the `--kind` requests (a `Content`
+  instance right after that carrier's `Canonical` one), and the acceptance guards appended
+  verbatim after the generated declarations. It used to be written inside this script, which
+  made Windows the only machine that could regenerate; it is now data, and
+  `tools\Effect4Gen\Driver.lean` is the portable driver that reads the same file:
+
+      lake env lean --run tools/Effect4Gen/Driver.lean [--group NAME] [--check] [--verify]
+
+  Adding a group is an entry in the manifest and no code change in either driver.
+
+  This script stays the entry point on the PC because of `Invoke-Lean` below: a ten-minute
+  per-invocation timeout and a `lean.exe` process-tree kill, which the Lean driver has no
+  portable way to provide and which this machine has needed (one `lean.exe` reached 54 GB on
+  2026-09-04). Everything else the two drivers do is the same argument list.
 
   The script runs `lake env lean -M 4096 --run tools\Effect4Gen\Main.lean` once per group; it
   never runs `lake build`, `lake clean`, `lake update` or `lake exe` (the one lake is the
@@ -46,82 +58,12 @@ Set-Location $repo
 $tool = 'tools\Effect4Gen\Main.lean'
 $guard = 'tools\Effect4Gen\Check.lean'
 
-# The manifest: group -> imports, output, guards, kinds, carriers in dependency order. An applied
-# type is one word with `@` for the space, so the shell never splits it.
-$manifest = @(
-  [pscustomobject]@{
-    Name    = 'Json'
-    Imports = 'Effect4.Store.Canonical'
-    Out     = 'src\Effect4\Store\Derived\Json.lean'
-    Guards  = 'tools\Effect4Gen\guards\json.lean'
-    Kinds   = @()
-    Types   = @('Effect4.Float64', 'Effect4.Json')
-  },
-  [pscustomobject]@{
-    # The Schema carriers hold `Json` and `Float64` fields, whose instances are the Json group's.
-    Name    = 'Schema'
-    Imports = 'Effect4.Store.Derived.Json'
-    Out     = 'src\Effect4\Store\Derived\Schema.lean'
-    Guards  = 'tools\Effect4Gen\guards\schema.lean'
-    Kinds   = @()
-    Types   = @(
-      'Effect4.ReferenceKey', 'Effect4.GlobalSymbolKey', 'Effect4.AnnotationEntry',
-      'Effect4.LiteralValue', 'Effect4.EnumValue', 'Effect4.EnumEntry', 'Effect4.PropertyKey',
-      'Effect4.RepresentationAnnotation', 'Effect4.UnionMode', 'Effect4.Representation',
-      'Effect4.ReferenceEntry', 'Effect4.Document', 'Effect4.MultiDocument')
-  },
-  [pscustomobject]@{
-    Name    = 'Program'
-    Imports = 'Effect4.Program.Native,Effect4.Store.Canonical'
-    Out     = 'src\Effect4\Program\Derived.lean'
-    Guards  = 'tools\Effect4Gen\guards\program.lean'
-    Kinds   = @()
-    Types   = @(
-      'Effect4.Program.Lit', 'Effect4.Machine.FnName', 'Effect4.FinalizerStrategy',
-      'Effect4.Supervision.MaskMode', 'Effect4.Supervision.ObserverMode',
-      'Effect4.Program.NativeOp', 'Effect4.Supervision.ForkOptions', 'Effect4.Program.Term',
-      'Effect4.Program.CauseTerm', 'Effect4.Program.Eff@Effect4.Program.NativeOp')
-  },
-  [pscustomobject]@{
-    # `Tree` is the store's own carrier (a name space as content, `Store/Node.lean`); its
-    # instance is emitted here beside `Pin`'s so no area above the store supplies a store type's
-    # instance (coordinator, 2026-09-05, after lane C's note).
-    Name    = 'Pin'
-    Imports = 'Effect4.Store.Pin,Effect4.Store.Node'
-    Out     = 'src\Effect4\Store\PinDerived.lean'
-    Guards  = 'tools\Effect4Gen\guards\pin.lean'
-    Kinds   = @('Effect4.Store.Pin=source', 'Effect4.Store.Tree=tree')
-    Types   = @('Effect4.Store.PinRole', 'Effect4.Store.Pin', 'Effect4.Store.Tree')
-  },
-  [pscustomobject]@{
-    # The census (lane C): sources first, because `Entry.source : Ref Source` needs the kind.
-    # No appended guards: `Links.lean` and `Rc112.lean` exercise the laws over the real census.
-    Name    = 'StdLib'
-    Imports = 'Effect4.StdLib.Entry'
-    Out     = 'src\Effect4\StdLib\Derived.lean'
-    Guards  = ''
-    Kinds   = @('Effect4.StdLib.Source=source', 'Effect4.StdLib.Entry=export')
-    Types   = @('Effect4.StdLib.ExportKind', 'Effect4.StdLib.Source', 'Effect4.StdLib.Entry')
-  },
-  [pscustomobject]@{
-    # The Char room (lane X). `Implementation`, `Receipt` and `Label` are hand instances in the
-    # room (ordering: they sit below `Char/Evidence.lean`); `Evidence` joins this group once the
-    # non-recursive sum reader is fixed (see NOTES-X.md, open item 1). The acceptance guards are
-    # `#guard`s in the room, not an appended fragment.
-    Name    = 'Char'
-    Imports = 'Effect4.Char.Conformance.Surface'
-    Out     = 'src\Effect4\Char\Derived.lean'
-    Guards  = ''
-    Kinds   = @('Effect4.Char.Evidence=annotation', 'Effect4.Char.Claim=annotation',
-                'Effect4.Char.Manifest=component', 'Effect4.Char.Target=annotation',
-                'Effect4.Char.Characterized=annotation')
-    Types   = @(
-      'Effect4.Char.Rung', 'Effect4.Char.ClaimKind', 'Effect4.Char.Evidence', 'Effect4.Char.Claim',
-      'Effect4.Char.Entry', 'Effect4.Char.Grade', 'Effect4.Char.Verb', 'Effect4.Char.GradeRow',
-      'Effect4.Char.Manifest', 'Effect4.Char.Failure@String', 'Effect4.Char.Target',
-      'Effect4.Char.ClaimRung', 'Effect4.Char.Characterized')
-  }
-)
+# The manifest is data: tools\Effect4Gen\manifest.json, read here and by
+# tools\Effect4Gen\Driver.lean. One group per emitted file -> imports, output, guards, kinds,
+# carriers in dependency order. An applied type is one word with `@` for the space, so the
+# shell never splits it. Adding a group is an entry there and no change here.
+$manifestPath = Join-Path $repo 'tools\Effect4Gen\manifest.json'
+$manifest = (Get-Content -Raw -Encoding UTF8 $manifestPath | ConvertFrom-Json).groups
 
 function Invoke-Lean {
   param([string[]] $LeanArgs, [string] $Label)

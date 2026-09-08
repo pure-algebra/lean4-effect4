@@ -228,16 +228,47 @@ only construct classes that exist in mono LCNF (`let`, `jp`/`jmp`, `cases`, `ret
 `unreach`; `lit`, `erased`, `proj`, `const`, `fvar`) all have rules. What is *not* covered,
 or covered with a caveat:
 
+### The 63-bit rule (2026-09-07, seat B lane 2)
+
+OCaml's `int` is 63-bit and Lean's `Nat` is unbounded, so the two disagree at `2 ^ 62` and
+above. The rule the backend now follows, and the reason it is a *rule* and not a caveat:
+
+* **`Nat.pow` saturates at `max_int`.** `Nat.pow` is `@[extern]`, so without a table row it
+  became a hole; with the naive spelling it would overflow silently. `Effect4.Store.Val.WF`
+  and `Val.wf` (`src/Effect4/Store/Val.lean:279-316`) decide `… .length < 2 ^ 64` at every
+  frame. A wrapping `2 ^ 64` is `0` in 63-bit `int`, so `wf` would answer `false` for every
+  value and `Api.ofBytes` would answer `none` for every program — **a wrong answer, not a
+  compile error**. `Translate.powClamped` computes `a ^ b` by repeated multiplication that
+  stops at `max_int`, so **`… < 2 ^ 64` reads as `… < max_int`**, and every list OCaml can
+  hold is shorter than `max_int`: the guard keeps the meaning it has in Lean.
+* **A `Nat` literal ≥ `2 ^ 62` is `max_int`** (`Translate.letValueExpr`), the same reading —
+  otherwise the compiler folds `2 ^ 64` into a literal OCaml refuses outright.
+* `Nat.shiftLeft` goes through the same clamp (`a * 2 ^ b`); `Nat.shiftRight` is `a lsr b`
+  guarded at 63, where OCaml's shift is undefined; `Nat.land/lor/xor` are `land/lor/lxor`.
+* `UInt8` is `int` (`Types.builtinTy?`): `decEq`/`beq` → `=`, `ofNat` → `land 255`,
+  `toNat`/`toUInt32`/`toUInt64` → identity.
+* `USize` is the shim's index type, so it is `int` too: `ofNat`/`toNat` identity, `decEq` `=`,
+  `sub` `max 0 (a - b)`, and `Array.uget` → `List.nth`. These four are not cosmetic: without
+  them `List.setTR.go`'s `Array.foldrMUnsafe.fold` is four `extern` holes, so `List.set` —
+  and therefore `DeferredStore.setCell` and `RefHeap.set` — would be `assert false` at run
+  time. With them `api_gen.ml` has **no holes at all**.
+
+The rule is a *host profile*, not a theorem: a program whose payload really is longer than
+`max_int` bytes cannot exist on this host, which is why saturating is sound here and wrapping
+is not. `ocaml/eff/eff_frame.ml`'s explicit refusal of naturals at or above `2^62` is the same
+profile enforced on the hand kernel.
+
 | gap | reason / consequence |
 | --- | --- |
-| `Nat` → `int` | OCaml `int` is 63-bit; `Nat.sub` is emitted as `max 0 (a - b)`, but `Nat.div/mod` by zero (`0` in Lean, `Division_by_zero` in OCaml) and literals ≥ 2^62 are not guarded. Not hit by `Fibers.lean` (counters, tokens, priorities) |
+| `Nat` → `int` | OCaml `int` is 63-bit; `Nat.sub` is emitted as `max 0 (a - b)`, `Nat.pow` and literals ≥ 2^62 saturate at `max_int` (the rule above), but `Nat.div/mod` by zero (`0` in Lean, `Division_by_zero` in OCaml) is still not guarded. Not hit by `Fibers.lean` (counters, tokens, priorities) |
 | `Array` as `list` | `Array.mkEmpty/push/toList/appendList/size` are a list shim; `push` is O(n). Only the stdlib's `flatMapTR` accumulator uses it here |
 | `LetValue.proj` on a non-structure | a hole; never produced by 4.33.1's mono phase (`structProjCases`) |
 | `extern` / `implemented_by` / `noncomputable` callees | listed as `missing`; a `partial def` compiles to `f._unsafe_rec` and is reached through the wrapper. None in `Fibers.lean` (the only "missing" root, `Step`, is a `Prop`) |
 | an erased *value* passed to a relevant parameter | becomes `()`, which is a type error at the OCaml level if the parameter is used; not observed in 154 declarations |
 | stdlib functions outside the 50-row builtin table | translated from their own mono decls (`List.hasDecEq`, `instDecidableEqProd`, `List.filterTR.loop` all came out this way); a table row is only needed when the stdlib body is an `extern` (strings, floats, `IO`) |
 | Lean-side recursion that the compiler turned into `Nat` `cases` | `casesNatToMono` (`Nat.decEq _ 0`, `Nat.sub _ 1`) is covered by the `Nat` rows; `Int`/`UInt` cases likewise map to `int` — untested |
-| type names | last component, snake case; a collision between two Lean types with one short name is detected and the second gets its full path (never fired here). Record labels shared by two types raise warning 30 only |
+| type names | last component, snake case; a collision between two Lean types with one short name (`Effect4.Api.Outcome` and `Effect4.Machine.Outcome`) is detected on a first pass and fed back as `Naming.TypeNames` before anything is rendered, so the second type, **its annotations and its constructors** all take the full path (`effect4_machine_outcome`, `Effect4_machine_outcome_finished`). Renaming only the declaration — what the backend did until 2026-09-07 — produced a file that could not type-check. Record labels shared by two types raise warning 30 only |
+| an unsaturated reference to a `reduceArity` wrapper | eta-expanded back to the wrapper's arity: the missing relevant parameters become `fun` binders, the missing erased ones `()`, and the twin gets the ones it kept. Mono LCNF passes `Effect4.Machine.finExit : FinName → Exit → Exit` as an argument while `finExit._redArg` takes only the `FinName`; without the expansion the argument has the wrong type (`api_gen.ml:5036`, `ScopeStore.addFinalizer`'s `run`) |
 | readability | ANF is kept: `let _x_N = … in` chains and no `{ m with … }` (LCNF rebuilds the whole record). A post-pass inlining single-use lets and recovering `with` is the obvious next 100 lines |
 | a `Prop`-valued or type-valued definition | no code, reported as `missing` (`Effect4.Machine.Step`) |
 
@@ -281,12 +312,46 @@ src/OCaml5/Tools/LcnfDump.lean   driver: print mono (or --base) LCNF of constant
 src/OCaml5/Tools/LcnfGen.lean    driver: --out --cap --types roots… → one .ml + report
 ocaml/gen/dune-project      (lang dune 3.0)
 ocaml/gen/dune              library effect4_gen (machine_gen, fibers_gen, avatar_reference); executable gen_check; runtest
-ocaml/gen/machine_gen.ml    GENERATED: the nine targets + 29 helpers, 10 full types
-ocaml/gen/fibers_gen.ml     GENERATED: all 43 top-level functions of Fibers.lean, 154 lets, 38 full types
+ocaml/gen/machine_gen.ml    GENERATED: the nine targets + helpers (38 lets), 10 full types
+ocaml/gen/fibers_gen.ml     GENERATED: all 43 top-level functions of Fibers.lean (194 lets), 38 full types
+ocaml/gen/api_gen.ml        GENERATED: Effect4.Api.run / Effect4.Api.replay and their whole
+                            closure — 475 lets, 80 full types, 0 missing, 0 frontier, 0 holes
 ocaml/gen/avatar_reference.ml  marked verbatim copy of avatar/deep_fibers.ml:184-214 (answer stubbed)
 ocaml/gen/gen_check.ml      the checks of §4
+ocaml/gen/api_check.ml      the G0 smoke: p42 / pFork / pAwait through the generated `api_run`
 ocaml/gen/NOTES.md          this file
 ```
+
+## 8. G0: the generated engine runs a program (2026-09-07)
+
+`api_gen.ml` is generated with
+
+```
+lean -M6144 --run src/OCaml5/Tools/LcnfGen.lean --out ocaml/gen/api_gen.ml \
+  --import Effect4.Api --cap 2000 Effect4.Api.run Effect4.Api.replay
+```
+
+(`--import` is new; it defaults to `Effect4.Machine.Fibers`, so every command above is
+unchanged.) `api_check.ml` builds the corpus programs of `src/Effect4/Program/Wire.lean:74-106`
+in the generated `eff` type and runs them through the generated `api_run` at fuel 1000 with no
+choices. Both halves print the same:
+
+| program | generated `api_run` | Lean `Api.run … 1000` |
+| --- | --- | --- |
+| `p42 = succeed (lit (nat 42))` | `outcome=finished fibers=1 exit=success 42` | `fibers=1 exit=success 42` |
+| `pFork` | `outcome=finished fibers=2 exit=success ctor 0 [7]` | `fibers=2 exit=success ctor 0 [7]` |
+| `pAwait` | `outcome=frontier fibers=1 exit=<no exit>` | `fibers=1 exit=<no exit>` |
+
+`awaitFiber … awaitValue` answers the child's *reified exit* (`ctor 0 [nat 7]`), not a bare 7,
+on both sides.
+
+**Program bytes are not generated.** Adding the roots `Effect4.Api.bytesOf` and
+`Effect4.Api.ofBytes` grows the closure to 542 declarations, still with no `missing` and no
+`frontier`, but five `extern` holes remain after the `USize`/`Array.uget` rows above:
+`String.toUTF8`, `ByteArray.data`, `ByteArray.emptyWithCapacity`, `ByteArray.push`,
+`Char.ofNatAux`, and `ByteArray` has no OCaml carrier (it is emitted as a placeholder).
+Strings are deferred, so the byte roots stay out of the generated file and program bytes go
+through `ocaml/eff/eff_wire.ml` until a string kernel exists.
 
 Oleans of the four library modules live in the session scratch dir
 (`…/scratchpad/ocaml5-olean/OCaml5/Lcnf/`), like the rest of `OCaml5.*` this session.

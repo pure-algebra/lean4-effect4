@@ -154,13 +154,34 @@ if [[ -n "$declared_red" ]]; then
   # Lake's failed-target summary omits dependents blocked by a red import. That
   # omission is not evidence that those dependents compiled. Elaborate each source
   # directly against the green closure so every declared-red entry is tested.
+  #
+  # The verdicts are `scripts/lib/known-red.sh`'s, so this step and
+  # `scripts/check-known-red.sh` judge one collected result list by one policy:
+  # `red as declared` and `not built` are accepted, an `UNEXPECTED PASS` and any
+  # undeclared failure refuse, and each entry stands on its own evidence.
+  . "$repo_root/scripts/lib/known-red.sh"
+  known_red_load "$known_red"
+  red_results="$tmp_root/known-red.results"
+  : >"$red_results"
   while IFS= read -r module; do
-    source="${module//.//}.lean"
-    if (cd "$repo_root" && lake env lean -M4096 "$source") >"$probe_log" 2>&1; then
-      echo "FAIL declared red but actually green; remove the stale entry: $module" >&2
-      exit 1
+    [[ -n "$module" ]] || continue
+    case "$module" in
+      Effect4|Effect4.*) source="src/${module//.//}.lean" ;;
+      *) source="${module//.//}.lean" ;;
+    esac
+    if [[ ! -f "$repo_root/$source" ]]; then
+      printf 'module %s missing\n' "$module" >>"$red_results"
+    elif (cd "$repo_root" && lake env lean -M4096 "$source") >"$probe_log" 2>&1; then
+      printf 'module %s pass\n' "$module" >>"$red_results"
+    else
+      printf 'module %s fail\n' "$module" >>"$red_results"
     fi
   done <<< "$declared_red"
+  if ! known_red_judge "$red_results" module; then
+    echo "FAIL the declared-red policy refused; an entry above is an UNEXPECTED PASS \
+(remove it deliberately) or an undeclared failure" >&2
+    exit 1
+  fi
   echo "PASS every module declared red in known-red.txt is still red"
 else
   echo "PASS no module is declared red"

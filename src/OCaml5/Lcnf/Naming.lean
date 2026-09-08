@@ -85,6 +85,20 @@ def shortName (n : Name) : String :=
 /-- The OCaml type name of a Lean type constant. -/
 def typeName (n : Name) : String := snake (shortName n)
 
+/-- Type constants whose short name is claimed by another constant of the same run, and the
+OCaml name they take instead (the full path, snake case). `typeName` is the last component,
+so two Lean types with one short name — `Effect4.Api.Outcome` and `Effect4.Machine.Outcome`,
+say — would otherwise be spelled the same. The map is decided once per run, **before**
+anything is rendered, so a declaration, an annotation and a constructor never disagree about
+which of the two a name means. -/
+abbrev TypeNames := Std.HashMap Name String
+
+/-- The full-path OCaml name a colliding type constant falls back to. -/
+def fullTypeName (n : Name) : String := snake ("_".intercalate (components n))
+
+/-- The OCaml type name of a Lean type constant under a decided rename map. -/
+def typeNameIn (tn : TypeNames) (n : Name) : String := tn.getD n (typeName n)
+
 /-- The OCaml field name of a Lean structure field. -/
 def fieldName (s : String) : String := snake s
 
@@ -97,8 +111,24 @@ def ctorName (typeConst : Name) (ctor : String) : String :=
     | [] => "T"
   t ++ "_" ++ ctor
 
+/-- `ctorName` under a decided rename map: a renamed type's constructors are prefixed by the
+renamed type's own OCaml name, so two types that shared a short name no longer share their
+constructor names either. -/
+def ctorNameIn (tn : TypeNames) (typeConst : Name) (ctor : String) : String :=
+  match tn[typeConst]? with
+  | none => ctorName typeConst ctor
+  | some t =>
+    let t := match t.toList with
+      | c :: rest => String.ofList ((if c.isLower then c.toUpper else c) :: rest)
+      | [] => "T"
+    t ++ "_" ++ ctor
+
 /-- The constructor name of a placeholder type. -/
 def placeholderCtor (typeConst : Name) : String := "Placeholder_" ++ typeName typeConst
+
+/-- `placeholderCtor` under a decided rename map. -/
+def placeholderCtorIn (tn : TypeNames) (typeConst : Name) : String :=
+  "Placeholder_" ++ typeNameIn tn typeConst
 
 /-- The prefixes stripped from a global name, longest first. -/
 def globalPrefixes : List String := ["Effect4.Machine.", "Effect4."]

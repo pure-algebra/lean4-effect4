@@ -12,6 +12,30 @@
 #
 # Removing the last entry restores the original all-green control.
 #
+# ## The format
+#
+# A bare line is a Lean module. Two comment forms are structured, and they are
+# comments precisely so that the two parsers that already read this file --
+# `Test/Audit/AxiomGate.lean` (declaredRedModules) and
+# `scripts/test-trust-gate.sh` -- keep reading exactly the module lines they
+# read before, unchanged:
+#
+#   # reason: <text>   the named failure reason of every entry below it, until
+#                      the next `# reason:` line. An entry with no reason in
+#                      force is a defect and the policy refuses to load.
+#   # gate: <name>     a sweep gate (scripts/sweep.sh's table) rather than a
+#                      Lean module, for a gate that is red for a declared
+#                      reason. The gate still runs; its owning script asks this
+#                      file whether the failure was declared. None is declared
+#                      today -- the OCaml avatar gates stay ordinary green gates
+#                      until H2's verified replacement retires them.
+#
+# `scripts/lib/known-red.sh` is the reader and the judge; per entry it reports
+# `red as declared`, `UNEXPECTED PASS` or `not built`, and it refuses on an
+# UNEXPECTED PASS or on any failure this file does not declare. Run
+# `scripts/check-known-red.sh --list` to see the table and `--self-test` to
+# exercise the policy without a build.
+#
 # History: the payload battery Test.Schema.PayloadContract was declared
 # here during its red phase and removed when the builder turned it green; the
 # gate itself caught the stale entry and refused to run until it was cleared.
@@ -35,6 +59,7 @@
 # repair, the Test/All.lean import lines and the TestSurface target are
 # the coordinator's wave 4. Each entry below was elaborated with
 # `lake env lean` on 2026-09-04 and observed to fail.
+# reason: frozen Surface breaker packet; red until the §13.7 ruling 5 repair restates it against Refusal.lean's vocabulary
 Test.Surface.Fixtures
 Test.Surface.FactsContract
 Test.Surface.KindContract
@@ -65,5 +90,6 @@ Test.Counterexamples.Surface.Derive
 # module path is itself a coordinator ruling (§13.2 puts Endpoint.effTy over
 # Effect4.Program.Typing, and §2 forbids Effect4.Surface.* importing it).
 # Both elaborated with `lake env lean` on 2026-09-04 and observed to fail.
+# reason: frozen Handler packet; red until src/Effect4/Surface/Handler.lean exists (plan §13.7 ruling 7, before wave 2d)
 Test.Surface.HandlerFitsContract
 Test.Counterexamples.Surface.HandlerFits

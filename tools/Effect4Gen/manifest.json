@@ -1,0 +1,96 @@
+{
+  "format": "effect4gen-manifest-v1",
+  "comment": [
+    "The derived-code manifest: one group per emitted file, its imports, its carriers in",
+    "dependency order, the `--kind` requests (a `Content` instance right after that carrier's",
+    "`Canonical` one), and the acceptance guards appended verbatim after the generated",
+    "declarations. It is the manifest of docs/research/2026-09-04-cas-trait-plan.md §4 at its",
+    "landing paths, moved out of scripts/generate-derived.ps1 so that both drivers read one",
+    "file: the PowerShell one (Windows, with its timeout and process-tree kill) and",
+    "tools/Effect4Gen/Driver.lean (every machine with a Lean toolchain).",
+    "",
+    "Adding a group -- Machine, Tape and Log are owed at X2 -- is an entry here and no code",
+    "change in either driver.",
+    "",
+    "`Out` and `Guards` are command-line arguments to tools/Effect4Gen/Main.lean before they are",
+    "paths, and the generator writes both into the emitted file's regeneration header. They",
+    "therefore carry the backslash spelling the committed outputs already record; the drivers",
+    "translate them for the filesystem on a host where `\\` is not a separator, and pass them to",
+    "the generator verbatim so the emitted bytes do not depend on the machine.",
+    "",
+    "An applied type is one word with `@` for the space, so no shell ever splits it."
+  ],
+  "groups": [
+    {
+      "Name": "Json",
+      "Imports": "Effect4.Store.Canonical",
+      "Out": "src\\Effect4\\Store\\Derived\\Json.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\json.lean",
+      "Kinds": [],
+      "Types": ["Effect4.Float64", "Effect4.Json"]
+    },
+    {
+      "Note": "The Schema carriers hold `Json` and `Float64` fields, whose instances are the Json group's.",
+      "Name": "Schema",
+      "Imports": "Effect4.Store.Derived.Json",
+      "Out": "src\\Effect4\\Store\\Derived\\Schema.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\schema.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.ReferenceKey", "Effect4.GlobalSymbolKey", "Effect4.AnnotationEntry",
+        "Effect4.LiteralValue", "Effect4.EnumValue", "Effect4.EnumEntry", "Effect4.PropertyKey",
+        "Effect4.RepresentationAnnotation", "Effect4.UnionMode", "Effect4.Representation",
+        "Effect4.ReferenceEntry", "Effect4.Document", "Effect4.MultiDocument"
+      ]
+    },
+    {
+      "Name": "Program",
+      "Imports": "Effect4.Program.Native,Effect4.Store.Canonical",
+      "Out": "src\\Effect4\\Program\\Derived.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\program.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Lit", "Effect4.Machine.FnName", "Effect4.FinalizerStrategy",
+        "Effect4.Supervision.MaskMode", "Effect4.Supervision.ObserverMode",
+        "Effect4.Program.NativeOp", "Effect4.Supervision.ForkOptions", "Effect4.Program.Term",
+        "Effect4.Program.CauseTerm", "Effect4.Program.Eff@Effect4.Program.NativeOp"
+      ]
+    },
+    {
+      "Note": "`Tree` is the store's own carrier (a name space as content, Store/Node.lean); its instance is emitted here beside `Pin`'s so no area above the store supplies a store type's instance (coordinator, 2026-09-05, after lane C's note).",
+      "Name": "Pin",
+      "Imports": "Effect4.Store.Pin,Effect4.Store.Node",
+      "Out": "src\\Effect4\\Store\\PinDerived.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\pin.lean",
+      "Kinds": ["Effect4.Store.Pin=source", "Effect4.Store.Tree=tree"],
+      "Types": ["Effect4.Store.PinRole", "Effect4.Store.Pin", "Effect4.Store.Tree"]
+    },
+    {
+      "Note": "The census (lane C): sources first, because `Entry.source : Ref Source` needs the kind. No appended guards: Links.lean and Rc112.lean exercise the laws over the real census.",
+      "Name": "StdLib",
+      "Imports": "Effect4.StdLib.Entry",
+      "Out": "src\\Effect4\\StdLib\\Derived.lean",
+      "Guards": "",
+      "Kinds": ["Effect4.StdLib.Source=source", "Effect4.StdLib.Entry=export"],
+      "Types": ["Effect4.StdLib.ExportKind", "Effect4.StdLib.Source", "Effect4.StdLib.Entry"]
+    },
+    {
+      "Note": "The Char room (lane X). `Implementation`, `Receipt` and `Label` are hand instances in the room (ordering: they sit below Char/Evidence.lean); `Evidence` joins this group once the non-recursive sum reader is fixed. The acceptance guards are `#guard`s in the room, not an appended fragment.",
+      "Name": "Char",
+      "Imports": "Effect4.Char.Conformance.Surface",
+      "Out": "src\\Effect4\\Char\\Derived.lean",
+      "Guards": "",
+      "Kinds": [
+        "Effect4.Char.Evidence=annotation", "Effect4.Char.Claim=annotation",
+        "Effect4.Char.Manifest=component", "Effect4.Char.Target=annotation",
+        "Effect4.Char.Characterized=annotation"
+      ],
+      "Types": [
+        "Effect4.Char.Rung", "Effect4.Char.ClaimKind", "Effect4.Char.Evidence", "Effect4.Char.Claim",
+        "Effect4.Char.Entry", "Effect4.Char.Grade", "Effect4.Char.Verb", "Effect4.Char.GradeRow",
+        "Effect4.Char.Manifest", "Effect4.Char.Failure@String", "Effect4.Char.Target",
+        "Effect4.Char.ClaimRung", "Effect4.Char.Characterized"
+      ]
+    }
+  ]
+}

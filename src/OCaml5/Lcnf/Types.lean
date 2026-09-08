@@ -123,7 +123,7 @@ def trivialFieldIdx? (n : Name) : MetaM (Option Nat) := do
 
 /-- A field type, with the inductive's parameters as free variables, as an OCaml type. Returns
 the type constants it mentions and `none` when the shape could not be spelled. -/
-partial def kernelTy (params : Std.HashMap FVarId String) (e : Lean.Expr) :
+partial def kernelTy (tn : TypeNames) (params : Std.HashMap FVarId String) (e : Lean.Expr) :
     MetaM (Option Ml.Ty × Array Name) := do
   let e ← whnf e  -- unfold a `def`/`abbrev` head; an inductive head stays
   match e with
@@ -133,8 +133,8 @@ partial def kernelTy (params : Std.HashMap FVarId String) (e : Lean.Expr) :
     | none => return (none, #[])
   | .forallE _ d b _ =>
     if b.hasLooseBVars then return (none, #[])
-    let (d', rd) ← kernelTy params d
-    let (b', rb) ← kernelTy params b
+    let (d', rd) ← kernelTy tn params d
+    let (b', rb) ← kernelTy tn params b
     match d', b' with
     | some d', some b' => return (some (.arrow d' b'), rd ++ rb)
     | _, _ => return (none, rd ++ rb)
@@ -148,18 +148,18 @@ partial def kernelTy (params : Std.HashMap FVarId String) (e : Lean.Expr) :
       let mut refs : Array Name := #[]
       let mut ok := true
       for a in args do
-        let (t, r) ← kernelTy params a
+        let (t, r) ← kernelTy tn params a
         refs := refs ++ r
         match t with
         | some t => tys := tys.push t
         | none => ok := false
       unless ok do return (none, refs)
       if let some t := builtinTy? n tys.toList then return (some t, refs)
-      return (some (.con (OCaml5.Lcnf.typeName n) tys.toList), refs.push n)
+      return (some (.con (OCaml5.Lcnf.typeNameIn tn n) tys.toList), refs.push n)
     | _ => return (none, #[])
 
 /-- Read one inductive. `none` when `n` is not an inductive type. -/
-def typeInfo? (n : Name) : MetaM (Option TypeInfo) := do
+def typeInfo? (tn : TypeNames) (n : Name) : MetaM (Option TypeInfo) := do
   let env ← getEnv
   let some (.inductInfo info) := env.find? n | return none
   -- the parameter names, from the type's own telescope; made unique
@@ -199,7 +199,7 @@ def typeInfo? (n : Name) : MetaM (Option TypeInfo) := do
         let fty ← inferType x
         let relevant := !(← isIrrelevantFieldType fty)
         if relevant then
-          let (t?, rr) ← kernelTy pmap fty
+          let (t?, rr) ← kernelTy tn pmap fty
           r := r ++ rr
           let t ← match t? with
             | some t => pure t
@@ -211,7 +211,7 @@ def typeInfo? (n : Name) : MetaM (Option TypeInfo) := do
           if trivialIdx? == some idx then alias := some t
         idx := idx + 1
       let short := shortName ctorName
-      let ctor : Ml.Ctor := { name := OCaml5.Lcnf.ctorName n short, args := args.toList }
+      let ctor : Ml.Ctor := { name := OCaml5.Lcnf.ctorNameIn tn n short, args := args.toList }
       return (ctor, fs, alias, r, u)
     ctors := ctors.push ctor
     fields := fs
@@ -219,7 +219,7 @@ def typeInfo? (n : Name) : MetaM (Option TypeInfo) := do
     refs := refs ++ r
     unknown := unknown ++ u
   let params := pnames.toList
-  let tname := OCaml5.Lcnf.typeName n
+  let tname := OCaml5.Lcnf.typeNameIn tn n
   let body : Ml.TyBody :=
     match aliasTy with
     | some t => .alias t
@@ -229,7 +229,8 @@ def typeInfo? (n : Name) : MetaM (Option TypeInfo) := do
   let decl : Ml.TypeDecl := { name := tname, params := params, body := body }
   let placeholder : Option Ml.TypeDecl :=
     if aliasTy.isSome then none
-    else some { name := tname, params := params, body := .variant [{ name := placeholderCtor n }] }
+    else some { name := tname, params := params,
+                body := .variant [{ name := placeholderCtorIn tn n }] }
   return some { leanName := n, params := params, decl := decl, placeholder := placeholder,
                 refs := refs, unknown := unknown, isAlias := aliasTy.isSome }
 
@@ -255,7 +256,8 @@ structure Generated where
 /-- Emit the closure. `full` are the types to emit in full (every type `Translate` destructs
 or constructs, plus whatever the caller asks for); `mentioned` are types that need at least
 a placeholder (those in the annotations of translated code). -/
-partial def generate (full : Array Name) (mentioned : Array Name) : MetaM Generated := do
+partial def generate (full : Array Name) (mentioned : Array Name) (tn : TypeNames := {}) :
+    MetaM Generated := do
   let fullSet : NameSet := full.foldl (·.insert ·) {}
   let mut g : Generated := {}
   let mut done : NameSet := {}
@@ -267,20 +269,20 @@ partial def generate (full : Array Name) (mentioned : Array Name) : MetaM Genera
     i := i + 1
     if done.contains n || isBuiltinType n then continue
     done := done.insert n
-    let info? ← typeInfo? n
+    let info? ← typeInfo? tn n
     if info?.isNone then
       g := { g with notInductive := g.notInductive.push n }
       continue
     let info := info?.get!
-    -- resolve a name collision by falling back to the full path
-    let mut decl := info.decl
-    let mut ph := info.placeholder
+    -- A name claimed twice is *reported*, not patched here: renaming a declaration after its
+    -- annotations and constructors have been rendered makes the two disagree (the U0 probe's
+    -- `val_` failure). The driver re-runs with the collision in `TypeNames`, so `typeInfo?`,
+    -- `kernelTy` and `Translate` all spell the renamed type the same way.
+    let decl := info.decl
+    let ph := info.placeholder
     if let some other := taken[info.decl.name]? then
       if other != n then
-        let renamed := snake ("_".intercalate (components n))
         g := { g with collisions := g.collisions.push (info.decl.name, other, n) }
-        decl := { decl with name := renamed }
-        ph := ph.map fun p => { p with name := renamed }
     taken := taken.insert decl.name n
     let emitFull := wantFull || fullSet.contains n || info.isAlias
     if emitFull then

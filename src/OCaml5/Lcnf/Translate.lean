@@ -70,16 +70,16 @@ open Lean Compiler LCNF
 /-! ## Mono types as annotations -/
 
 /-- A mono-phase LCNF type as an OCaml type annotation: `lcAny`/`lcErased` are `_`. -/
-partial def monoTy (e : Lean.Expr) : Ml.Ty :=
+partial def monoTy (tn : TypeNames) (e : Lean.Expr) : Ml.Ty :=
   match e with
-  | .forallE _ d b _ => .arrow (monoTy d) (monoTy b)
+  | .forallE _ d b _ => .arrow (monoTy tn d) (monoTy tn b)
   | _ =>
     if e.isErased || e.isAny then .anon
     else
       let fn := e.getAppFn
-      let args := (e.getAppArgs.map monoTy).toList
+      let args := (e.getAppArgs.map (monoTy tn)).toList
       match fn with
-      | .const n _ => (builtinTy? n args).getD (.con (OCaml5.Lcnf.typeName n) args)
+      | .const n _ => (builtinTy? n args).getD (.con (OCaml5.Lcnf.typeNameIn tn n) args)
       | _ => .anon
 
 /-- Every non-builtin type constant in a mono type: what needs at least a placeholder. -/
@@ -117,6 +117,25 @@ private def call2 (f : String) : Builtin :=
 private def call3 (f : String) : Builtin :=
   (3, fun | [a, b, c] => Ml.Expr.call f [a, b, c] | _ => .unit)
 
+/-- The 63-bit rule for `Nat.pow`: `a ^ b` computed by repeated multiplication that **saturates
+at `max_int`** instead of wrapping. `Nat` is unbounded and OCaml's `int` is 63-bit, so a
+faithful `a ** b` does not exist; a wrapping one is worse than a saturating one, because
+`Effect4.Store.Val.wf`'s `… < 2 ^ 64` would then read as `… < 0` and answer `false` for every
+value — a silently wrong `Api.ofBytes`, not a compile error. Saturating makes `2 ^ 64` read as
+`max_int`, and every list OCaml can hold is shorter than `max_int`, so the guard keeps its
+meaning. Recorded in `ocaml/gen/NOTES.md` §5. -/
+private def powClamped (a b : Ml.Expr) : Ml.Expr :=
+  .letRecIn
+    [("_pow_clamped", ["_pa", "_pb"],
+      .ifThen (.binop "=" (.var "_pb") (.int 0)) (.int 1)
+        (.letIn "_ph"
+          (Ml.Expr.call "_pow_clamped" [.var "_pa", .binop "-" (.var "_pb") (.int 1)])
+          (.ifThen (.binop "=" (.var "_pa") (.int 0)) (.int 0)
+            (.ifThen (.binop ">" (.var "_ph") (.binop "/" (.var "max_int") (.var "_pa")))
+              (.var "max_int")
+              (.binop "*" (.var "_ph") (.var "_pa"))))))]
+    (Ml.Expr.call "_pow_clamped" [a, b])
+
 /-- The Lean constants with a native OCaml spelling. Names are unchecked literals: several
 are specialisations that only exist in the target's environment. -/
 def builtin? (n : Name) : Option Builtin :=
@@ -134,6 +153,31 @@ def builtin? (n : Name) : Option Builtin :=
       | _ => .unit)
   | `Nat.succ => some (1, fun | [a] => .binop "+" a (.int 1) | _ => .unit)
   | `Nat.pred => some (1, fun | [a] => Ml.Expr.call "max" [.int 0, .binop "-" a (.int 1)] | _ => .unit)
+  -- The 63-bit rule. `Nat.pow` is `@[extern]`, so without a row it becomes a hole; with the
+  -- obvious `a ** b` (a float operator) or a plain multiplication loop it *overflows silently*,
+  -- and `Effect4.Store.Val.wf`'s `… < 2 ^ 64` would then read as `… < 0` and answer `false` for
+  -- every value. The row clamps at `max_int`: `2 ^ 64` becomes `max_int`, and every list OCaml
+  -- can hold is shorter than that, so the guard means what it means in Lean.
+  | `Nat.pow => some (2, fun
+      | [a, b] => powClamped a b
+      | _ => .unit)
+  -- `a <<< b = a * 2 ^ b`, clamped through the same helper
+  | `Nat.shiftLeft => some (2, fun
+      | [a, b] => .binop "*" a (powClamped (.int 2) b)
+      | _ => .unit)
+  -- `a >>> b` and `a &&& b`; OCaml's shifts are undefined at ≥ 63, so the shift is clamped.
+  | `Nat.shiftRight => some (2, fun
+      | [a, b] => .ifThen (.binop ">=" b (.int 63)) (.int 0) (.binop "lsr" a b)
+      | _ => .unit)
+  | `Nat.land => some (bin "land")
+  | `Nat.lor => some (bin "lor")
+  | `Nat.xor => some (bin "lxor")
+  -- UInt8 as `int` (`Types.builtinTy?`): equality, the truncating injection, the identity out
+  | `UInt8.decEq | `instDecidableEqUInt8 | `UInt8.beq => some (bin "=")
+  | `UInt8.ofNat | `UInt8.ofNatLT | `UInt8.ofNatTruncate =>
+    some (1, fun | [a] => .binop "land" a (.int 255) | _ => .unit)
+  | `UInt8.toNat | `UInt8.toUInt64 | `UInt8.toUInt32 =>
+    some (1, fun | [a] => a | _ => .unit)
   -- Bool
   | `Bool.decEq | `instDecidableEqBool => some (bin "=")
   | `Bool.not | `not => some (call1 "not")
@@ -172,6 +216,17 @@ def builtin? (n : Name) : Option Builtin :=
   | `Array.push => some (2, fun | [a, x] => .binop "@" a (.listLit [x]) | _ => .unit)
   | `Array.size => some (call1 "List.length")
   | `Array.appendList | `List.foldl._at_.Array.appendList.spec_0 => some (bin "@")
+  -- `USize` is the shim's index type, so it is `int` like every other `Nat`; `Array.uget`'s
+  -- erased `α` and bounds proof are dropped, leaving the list lookup. Without these four rows
+  -- `List.setTR.go`'s `Array.foldrMUnsafe.fold` is four `extern` holes, so `List.set` — and
+  -- therefore `DeferredStore.setCell` and `RefHeap.set` — is `assert false` at run time.
+  | `USize.ofNat | `USize.toNat | `USize.ofNatLT => some (1, fun | [a] => a | _ => .unit)
+  | `USize.decEq | `USize.beq => some (bin "=")
+  | `USize.sub => some (2, fun
+      | [a, b] => Ml.Expr.call "max" [.int 0, .binop "-" a b]
+      | _ => .unit)
+  | `USize.add => some (bin "+")
+  | `Array.uget | `Array.get! | `Array.fget => some (call2 "List.nth")
   -- Option
   | `Option.isSome => some (call1 "Option.is_some")
   | `Option.isNone => some (call1 "Option.is_none")
@@ -214,11 +269,26 @@ structure St where
   /-- Constructs without a rule, as `<decl>: <what>`. -/
   todos : Array String := #[]
 
-/-- The translation monad: the environment to read constructors from, the state above. -/
-abbrev TM := ReaderT Environment (StateM St)
+/-- What a translation reads: the environment constructors are looked up in, and the decided
+OCaml names of the type constants whose short name is claimed twice (`TypeNames`). Both halves
+are fixed for a whole run, so an annotation, a constructor and a type declaration can never
+disagree about which Lean type an OCaml name means. -/
+structure TCtx where
+  env : Environment
+  tn : TypeNames := {}
+
+/-- The translation monad: the context above, the state above. -/
+abbrev TM := ReaderT TCtx (StateM St)
+
+/-- The environment. -/
+def readEnv : TM Environment := return (← read).env
+/-- The decided type-name map. -/
+def readTypeNames : TM TypeNames := return (← read).tn
 
 /-- OCaml names the builtin forms use unqualified, which a local must not shadow. -/
-def preUsed : List String := ["max", "fst", "snd", "not", "failwith", "ignore", "ref"]
+def preUsed : List String :=
+  ["max", "fst", "snd", "not", "failwith", "ignore", "ref", "max_int", "_pow_clamped", "_pa",
+   "_pb", "_ph"]
 
 /-- A unique OCaml name from a base. -/
 def fresh (base : String) : TM String := do
@@ -290,11 +360,19 @@ def wrapperKeep? (env : Environment) (n : Name) : Option (Array Nat) := do
     | _ => none
   return keep
 
+/-- The wrapper's own parameters, when `n` is a `reduceArity` wrapper: what an unsaturated
+reference to `n` must be eta-expanded back to. -/
+def wrapperParams? (env : Environment) (n : Name) : Option (Array (LCNF.Param .pure)) := do
+  let d ← getDeclCore? env monoExt n
+  let _ ← redArgTarget? d
+  return d.params
+
 /-- `(_, …, _) t` for an inductive, as an annotation. -/
-def tyOfInd (env : Environment) (ind : Name) : Ml.Ty :=
+def tyOfInd (tn : TypeNames) (env : Environment) (ind : Name) : Ml.Ty :=
   match env.find? ind with
-  | some (.inductInfo info) => .con (OCaml5.Lcnf.typeName ind) (List.replicate info.numParams .anon)
-  | _ => .con (OCaml5.Lcnf.typeName ind) []
+  | some (.inductInfo info) =>
+    .con (OCaml5.Lcnf.typeNameIn tn ind) (List.replicate info.numParams .anon)
+  | _ => .con (OCaml5.Lcnf.typeNameIn tn ind) []
 
 /-- The inductives OCaml spells natively; a `cases` on one is not annotated. -/
 def nativeInductives : List Name :=
@@ -330,7 +408,7 @@ def ctorApp (ci : ConstructorVal) (args : Array (Arg .pure)) : TM Ml.Expr := do
   | ``Nat.zero, [] => return .int 0
   | ``Nat.succ, [a] => return .binop "+" a (.int 1)
   | _, _ =>
-    let env ← read
+    let env ← readEnv
     noteReal ci.induct
     if isStructure env ci.induct then
       let names := ctorFieldNames ci
@@ -338,14 +416,17 @@ def ctorApp (ci : ConstructorVal) (args : Array (Arg .pure)) : TM Ml.Expr := do
       for a in fieldArgs, n in names do
         if let some e ← argExpr? a then
           fields := fields ++ [(fieldName n.toString, e)]
-      return .annot (.record fields) (tyOfInd env ci.induct)
+      return .annot (.record fields) (tyOfInd (← readTypeNames) env ci.induct)
     else
-      return .ctor (OCaml5.Lcnf.ctorName ci.induct (shortName ci.name)) rel
+      return .ctor (OCaml5.Lcnf.ctorNameIn (← readTypeNames) ci.induct (shortName ci.name)) rel
 
 /-- A `LetValue`. -/
 def letValueExpr (declName : Name) (v : LetValue .pure) : TM Ml.Expr := do
   match v with
-  | .lit (.nat n) => return .int n
+  -- The 63-bit rule, literal half: a `Nat` literal OCaml's `int` cannot hold (`2 ^ 62` and up,
+  -- the folded `2 ^ 64` of `Val.wf` among them) is `max_int`, not an out-of-range literal
+  -- OCaml refuses. Same reading as the `Nat.pow` row; see `ocaml/gen/NOTES.md` §5.
+  | .lit (.nat n) => return if n ≥ 4611686018427387904 then .var "max_int" else .int n
   | .lit (.str s) => return .str s
   | .lit (.uint8 n) => return .int n.toNat
   | .lit (.uint16 n) => return .int n.toNat
@@ -354,7 +435,7 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM Ml.Expr := do
   | .lit (.usize n) => return .int n.toNat
   | .erased => return .unit
   | .proj typeName i s =>
-    let env ← read
+    let env ← readEnv
     let sv := Ml.Expr.var (← nameOf s)
     if typeName == ``Prod then
       return Ml.Expr.call (if i == 0 then "fst" else "snd") [sv]
@@ -384,7 +465,7 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM Ml.Expr := do
     if args.isEmpty then return fv
     return .app fv (← args.toList.mapM argExpr)
   | .const n _ args =>
-    let env ← read
+    let env ← readEnv
     match env.find? n with
     | some (.ctorInfo ci) => ctorApp ci args
     | _ =>
@@ -393,19 +474,45 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM Ml.Expr := do
       | none =>
         noteCall n
         let g := Ml.Expr.var (globalName n)
-        -- a wrapper is called under its twin's name: pass the twin what it kept
-        let args := match wrapperKeep? env n with
-          | some keep => keep.filterMap fun i => args[i]?
-          | none => args
-        if args.isEmpty then return g
-        return .app g (← args.toList.mapM argExpr)
+        -- A wrapper is called under its twin's name, so the call passes the twin exactly the
+        -- parameters the wrapper kept. When the reference is *unsaturated* — mono LCNF passes
+        -- `Effect4.Machine.finExit` itself as an argument of type `FinName → Exit → Exit`, and
+        -- the twin `finExit._redArg` takes only the `FinName` — the twin has the wrong arity at
+        -- that position, so it is eta-expanded back to the wrapper's: the missing relevant
+        -- parameters become `fun` binders, the missing erased ones `()`, and the ones the twin
+        -- kept are handed on. (`api_gen.ml:5036`, `ScopeStore.addFinalizer`'s `run`.)
+        match wrapperKeep? env n with
+        | none => if args.isEmpty then return g else return .app g (← args.toList.mapM argExpr)
+        | some keep =>
+          let wparams := (wrapperParams? env n).getD #[]
+          if args.size ≥ wparams.size then
+            let kept := keep.filterMap fun i => args[i]?
+            if kept.isEmpty then return g
+            return .app g (← kept.toList.mapM argExpr)
+          -- eta-expand: one OCaml binder per missing relevant parameter, `()` per erased one
+          let mut binders : List String := []
+          let mut extra : Std.HashMap Nat Ml.Expr := {}
+          for i in [args.size:wparams.size] do
+            if wparams[i]!.type.isErased then
+              extra := extra.insert i .unit
+            else
+              let b ← fresh "_eta"
+              binders := binders ++ [b]
+              extra := extra.insert i (.var b)
+          let mut kept : List Ml.Expr := []
+          for i in keep do
+            if h : i < args.size then kept := kept ++ [← argExpr args[i]]
+            else kept := kept ++ [extra.getD i .unit]
+          let body := if kept.isEmpty then g else .app g kept
+          if binders.isEmpty then return body
+          return .fn binders body
 
 /-! ## Patterns -/
 
 /-- The pattern of a `cases` alternative, binding the parameters the arm uses. -/
 def altPat (ctor : Name) (ps : Array (LCNF.Param .pure)) (usedVars : FVarIdHashSet) :
     TM Ml.Pat := do
-  let env ← read
+  let env ← readEnv
   -- bind (only) the used, relevant parameters
   let mut pats : Array (Option Ml.Pat) := #[]
   for p in ps do
@@ -443,7 +550,7 @@ def altPat (ctor : Name) (ps : Array (LCNF.Param .pure)) (usedVars : FVarIdHashS
         if fields.isEmpty then return .wild
         return if omitted then .recordOpen fields else .record fields
       else
-        return .ctor (OCaml5.Lcnf.ctorName ci.induct (shortName ctor)) rel
+        return .ctor (OCaml5.Lcnf.ctorNameIn (← readTypeNames) ci.induct (shortName ctor)) rel
     | _ =>
       todo s!"alternative on unknown constructor {ctor}"
       return .wild
@@ -485,10 +592,11 @@ partial def code (declName : Name) (c : Code .pure) : TM Ml.Expr := do
         todo s!"{declName}: cases on Bool with a missing arm"
         return .hole "cases on Bool with a missing arm" (.assertE (.bool false))
     else
-      let env ← read
+      let env ← readEnv
+      let tn ← readTypeNames
       let scrut : Ml.Expr :=
         if nativeInductives.contains cs.typeName then .var d
-        else .annot (.var d) (tyOfInd env cs.typeName)
+        else .annot (.var d) (tyOfInd tn env cs.typeName)
       unless nativeInductives.contains cs.typeName do noteReal cs.typeName
       let mut arms : List Ml.Arm := []
       for alt in cs.alts do
@@ -534,8 +642,8 @@ instance : Inhabited Translated :=
      callees := #[], signature := "", recursive := false }⟩
 
 /-- Translate one mono decl under an OCaml name. -/
-def translateDecl (env : Environment) (d : LCNF.Decl .pure) (userName : Name) (ocamlName : String) :
-    Translated × St :=
+def translateDecl (env : Environment) (d : LCNF.Decl .pure) (userName : Name) (ocamlName : String)
+    (tn : TypeNames := {}) : Translated × St :=
   let act : TM Translated := do
     -- reserve the names the builtin forms use
     modify fun s => { s with used := preUsed.foldl (fun m n => m.insert n 0) s.used }
@@ -543,7 +651,7 @@ def translateDecl (env : Environment) (d : LCNF.Decl .pure) (userName : Name) (o
     for p in d.params do
       let x ← bindVar p.fvarId p.binderName
       noteMentioned (monoTyConsts p.type)
-      let t := monoTy p.type
+      let t := monoTy tn p.type
       params := params ++ [(x, if tyIsAnon t then none else some t)]
     -- the result type: the decl type with the parameters peeled off
     let mut rty := d.type
@@ -552,7 +660,7 @@ def translateDecl (env : Environment) (d : LCNF.Decl .pure) (userName : Name) (o
       | .forallE _ _ b _ => rty := b
       | _ => pure ()
     noteMentioned (monoTyConsts rty)
-    let result := monoTy rty
+    let result := monoTy tn rty
     let body ← match d.value with
       | .code c => code d.name c
       | .extern _ => do
@@ -565,7 +673,7 @@ def translateDecl (env : Environment) (d : LCNF.Decl .pure) (userName : Name) (o
     return { leanName := d.name, userName := userName, ocamlName := ocamlName, bind := b,
              callees := callees, signature := sig,
              recursive := d.recursive || callees.contains d.name }
-  Id.run ((act env).run {})
+  Id.run ((act { env := env, tn := tn }).run {})
 
 /-- What the closure produced. -/
 structure Closure where
@@ -585,7 +693,8 @@ private def pushNew (a : Array Name) (n : Name) : Array Name :=
 
 /-- Translate `roots` and, transitively, every non-builtin constant they call, up to `cap`
 declarations. -/
-def translateClosure (roots : Array Name) (cap : Nat := 60) : CoreM Closure := do
+def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {}) :
+    CoreM Closure := do
   let env ← getEnv
   let mut c : Closure := {}
   let mut done : NameSet := {}
@@ -617,7 +726,7 @@ def translateClosure (roots : Array Name) (cap : Nat := 60) : CoreM Closure := d
       -- a twin reached directly: its wrapper is the user-facing name
       userName := stripRedArg n
       if userName != n then done := done.insert userName
-    let (t, st) := translateDecl env d userName (globalName userName)
+    let (t, st) := translateDecl env d userName (globalName userName) tn
     c := { c with
       decls := c.decls.push t,
       realTypes := st.realTypes.foldl pushNew c.realTypes,
