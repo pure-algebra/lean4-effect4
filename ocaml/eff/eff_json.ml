@@ -116,6 +116,21 @@ let rec json_native_op (v : native_op) : Eff_json_text.t =
 
 let print_native_op (v : native_op) : string = Eff_json_text.render (json_native_op v)
 
+let rec json_service_name (r : service_name) : Eff_json_text.t =
+  Eff_json_text.Object [("value", Eff_json_text.Int r.service_name_value)]
+
+let print_service_name (v : service_name) : string = Eff_json_text.render (json_service_name v)
+
+let rec json_service_type_code (r : service_type_code) : Eff_json_text.t =
+  Eff_json_text.Object [("value", Eff_json_text.Int r.service_type_code_value)]
+
+let print_service_type_code (v : service_type_code) : string = Eff_json_text.render (json_service_type_code v)
+
+let rec json_service_key (r : service_key) : Eff_json_text.t =
+  Eff_json_text.Object [("name", json_service_name r.service_key_name); ("service", json_service_type_code r.service_key_service)]
+
+let print_service_key (v : service_key) : string = Eff_json_text.render (json_service_key v)
+
 let rec json_eff (v : eff) : Eff_json_text.t =
   match v with
   | Eff_succeed a0 -> Eff_json_text.Array [Eff_json_text.String "succeed"; json_term a0]
@@ -142,6 +157,9 @@ let rec json_eff (v : eff) : Eff_json_text.t =
   | Eff_scoped a0 -> Eff_json_text.Array [Eff_json_text.String "scoped"; json_eff a0]
   | Eff_acquireRelease (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "acquireRelease"; json_eff a0; json_eff a1]
   | Eff_choose (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "choose"; Eff_json_text.Int a0; json_eff a1; json_eff a2]
+  | Eff_provideLayer (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "provideLayer"; json_layer_term a0; Eff_json_text.Bool a1; json_eff a2]
+  | Eff_service a0 -> Eff_json_text.Array [Eff_json_text.String "service"; json_service_key a0]
+  | Eff_provideService (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "provideService"; json_service_key a0; json_term a1; json_eff a2]
 and json_stmt (v : stmt) : Eff_json_text.t =
   match v with
   | Stmt_bindYield a0 -> Eff_json_text.Array [Eff_json_text.String "bindYield"; json_eff a0]
@@ -176,12 +194,23 @@ and json_action_term (v : action_term) : Eff_json_text.t =
   | Action_term_getContext -> Eff_json_text.Array [Eff_json_text.String "getContext"]
   | Action_term_getId -> Eff_json_text.Array [Eff_json_text.String "getId"]
   | Action_term_closeScope (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "closeScope"; json_term a0; json_term a1]
+and json_layer_term (v : layer_term) : Eff_json_text.t =
+  match v with
+  | Layer_term_succeed (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "succeed"; json_service_key a0; json_lit a1]
+  | Layer_term_effect (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "effect"; json_service_key a0; json_eff a1]
+  | Layer_term_effectDiscard a0 -> Eff_json_text.Array [Eff_json_text.String "effectDiscard"; json_eff a0]
+  | Layer_term_provide (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "provide"; json_layer_term a0; json_layer_term a1]
+  | Layer_term_provideMerge (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "provideMerge"; json_layer_term a0; json_layer_term a1]
+  | Layer_term_merge (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "merge"; json_layer_term a0; json_layer_term a1]
+  | Layer_term_fresh a0 -> Eff_json_text.Array [Eff_json_text.String "fresh"; json_layer_term a0]
+  | Layer_term_orDie a0 -> Eff_json_text.Array [Eff_json_text.String "orDie"; json_layer_term a0]
 
 let print_eff (v : eff) : string = Eff_json_text.render (json_eff v)
 let print_stmt (v : stmt) : string = Eff_json_text.render (json_stmt v)
 let print_stmts (v : stmts) : string = Eff_json_text.render (json_stmts v)
 let print_effs (v : effs) : string = Eff_json_text.render (json_effs v)
 let print_action_term (v : action_term) : string = Eff_json_text.render (json_action_term v)
+let print_layer_term (v : layer_term) : string = Eff_json_text.render (json_layer_term v)
 
 let rec json_row_kind (v : row_kind) : Eff_json_text.t =
   match v with
@@ -198,21 +227,6 @@ let rec json_row_shape (v : row_shape) : Eff_json_text.t =
   | Row_shape_tupleCall -> Eff_json_text.Array [Eff_json_text.String "tupleCall"]
 
 let print_row_shape (v : row_shape) : string = Eff_json_text.render (json_row_shape v)
-
-let rec json_service_name (r : service_name) : Eff_json_text.t =
-  Eff_json_text.Object [("value", Eff_json_text.Int r.service_name_value)]
-
-let print_service_name (v : service_name) : string = Eff_json_text.render (json_service_name v)
-
-let rec json_service_type_code (r : service_type_code) : Eff_json_text.t =
-  Eff_json_text.Object [("value", Eff_json_text.Int r.service_type_code_value)]
-
-let print_service_type_code (v : service_type_code) : string = Eff_json_text.render (json_service_type_code v)
-
-let rec json_service_key (r : service_key) : Eff_json_text.t =
-  Eff_json_text.Object [("name", json_service_name r.service_key_name); ("service", json_service_type_code r.service_key_service)]
-
-let print_service_key (v : service_key) : string = Eff_json_text.render (json_service_key v)
 
 let rec json_row (r : row) : Eff_json_text.t =
   Eff_json_text.Object [("name", Eff_json_text.String r.row_name); ("spelling", Eff_json_text.String r.row_spelling); ("shape", json_row_shape r.row_shape); ("trailing", Eff_json_text.Array (List.map (fun y -> Eff_json_text.String y) r.row_trailing)); ("kind", json_row_kind r.row_kind); ("request", json_ty r.row_request); ("answer", json_ty r.row_answer); ("error", json_ty r.row_error); ("requires", Eff_json_text.Array (List.map (fun y -> json_service_key y) r.row_requires)); ("cite", Eff_json_text.String r.row_cite); ("typeArgs", Eff_json_text.Array (List.map (fun y -> Eff_json_text.String y) r.row_typeArgs))]

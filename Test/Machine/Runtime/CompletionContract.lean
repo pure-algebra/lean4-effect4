@@ -1,7 +1,6 @@
 import Effect4.Api
 import Effect4.Machine.Approximation
 import Effect4.Machine.StoresLaws
-import Effect4.Machine.Layer
 
 /-!
 # External Completion answers
@@ -9,8 +8,8 @@ import Effect4.Machine.Layer
 D6 keeps code on internal commands and first-order Completion data on the tape.
 These finite replays cover exit answers, a Ref read evaluated on resumption,
 wrong and repeated tokens, and the input-validity gap `E4-HANDLE-CE-001`.
-The Layer profile has no Ref heap (`D6-FB-LAYER-REF`); it accepts exits and
-reports its existing unsupported-operation defect for Ref-read answers.
+The Layer machine's own instance of these constructors (`D6-FB-LAYER-REF`) retired
+with the join of 2026-09-07: one `RunMachine` instantiation answers them now.
 -/
 
 set_option autoImplicit false
@@ -62,11 +61,5 @@ def forgedFiber : Api.Run := answerWith (.ofExit (.success (.fiber ⟨7⟩)))
 def forgedCell : Api.Run := answerWith (.ofExit (.success (.cell ⟨7⟩)))
 #guard forgedCell.exit = some (.success (.cell ⟨7⟩))
 #guard !(Val.cell ⟨7⟩).validIn forgedCell.stores
-
--- The Layer instance uses the same completion constructors at its own value alphabet.
-#guard (Layers.interp []).answerCode (.ofExit (.success Env.Val.unit)) =
-  Prim.success Env.Val.unit
-#guard (Layers.interp []).answerCode (.ofRefGet ⟨0⟩) =
-  Prim.failure (Cause.die Env.Defect.notImplemented)
 
 end Test.Runtime.CompletionContract

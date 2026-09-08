@@ -70,6 +70,12 @@ inductive Head
   | interrupt | interruptAll | interruptAllAs | awaitAll | raceAll | context | fiberId
   | scopeClose | scoped | acquireRelease | causeFail | causeDie | causeInterrupt
   | causeCombine | undefined | withFiber
+  -- the join (2026-09-07): the three context constructors and the layer spellings the printer
+  -- emits; reserved names with no reading (`readable` is false on `provideLayer`, `service`
+  -- and `provideService`), so a program that spells them is refused by name
+  | contextService | provide | service | provideService
+  | layerSucceed | layerEffect | layerEffectDiscard | layerProvide | layerProvideMerge
+  | layerMerge | layerFresh | layerOrDie
 deriving DecidableEq, Repr
 
 /-- The spelling of each head, exactly as `print` emits it. -/
@@ -112,6 +118,18 @@ def Head.spelling : Head → String
   | .causeCombine => "Cause.combine"
   | .undefined => "undefined"
   | .withFiber => "Effect.withFiber"
+  | .contextService => "Context.Service"
+  | .provide => "Effect.provide"
+  | .service => "Effect.service"
+  | .provideService => "Effect.provideService"
+  | .layerSucceed => "Layer.succeed"
+  | .layerEffect => "Layer.effect"
+  | .layerEffectDiscard => "Layer.effectDiscard"
+  | .layerProvide => "Layer.provide"
+  | .layerProvideMerge => "Layer.provideMerge"
+  | .layerMerge => "Layer.merge"
+  | .layerFresh => "Layer.fresh"
+  | .layerOrDie => "Layer.orDie"
 
 /-- Every head, once. -/
 def heads : List Head :=
@@ -120,7 +138,10 @@ def heads : List Head :=
   , .yieldNowWith, .join, .await, .forkChild, .forkDetach, .forkIn, .forkScoped, .runIn
   , .interrupt, .interruptAll, .interruptAllAs, .awaitAll, .raceAll, .context, .fiberId
   , .scopeClose, .scoped, .acquireRelease, .causeFail, .causeDie, .causeInterrupt
-  , .causeCombine, .undefined, .withFiber ]
+  , .causeCombine, .undefined, .withFiber
+  , .contextService, .provide, .service, .provideService
+  , .layerSucceed, .layerEffect, .layerEffectDiscard, .layerProvide, .layerProvideMerge
+  , .layerMerge, .layerFresh, .layerOrDie ]
 
 /-- Every spelling the printer reserves: a row's spelling and a term's atom must avoid
 these. -/
@@ -474,6 +495,20 @@ mutual
     | .causeInterrupt, _ => .error (.unknownHead Head.causeInterrupt.spelling)
     | .causeCombine, _ => .error (.unknownHead Head.causeCombine.spelling)
     | .undefined, _ => .error (.unknownHead Head.undefined.spelling)
+    -- the join's spellings have no reading: `provideLayer`, `service` and `provideService`
+    -- are not readable, and a layer or a key never stands in program position
+    | .contextService, _ => .error (.unknownHead Head.contextService.spelling)
+    | .provide, _ => .error (.unknownHead Head.provide.spelling)
+    | .service, _ => .error (.unknownHead Head.service.spelling)
+    | .provideService, _ => .error (.unknownHead Head.provideService.spelling)
+    | .layerSucceed, _ => .error (.unknownHead Head.layerSucceed.spelling)
+    | .layerEffect, _ => .error (.unknownHead Head.layerEffect.spelling)
+    | .layerEffectDiscard, _ => .error (.unknownHead Head.layerEffectDiscard.spelling)
+    | .layerProvide, _ => .error (.unknownHead Head.layerProvide.spelling)
+    | .layerProvideMerge, _ => .error (.unknownHead Head.layerProvideMerge.spelling)
+    | .layerMerge, _ => .error (.unknownHead Head.layerMerge.spelling)
+    | .layerFresh, _ => .error (.unknownHead Head.layerFresh.spelling)
+    | .layerOrDie, _ => .error (.unknownHead Head.layerOrDie.spelling)
     | h, _ => .error (.arity h.spelling)
   termination_by structural args
 
@@ -2031,67 +2066,79 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
   case case59 => intro t n e h; unfold readHead at h; simp at h
   case case60 => intro t n e h; unfold readHead at h; simp at h
   case case61 => intro t n e h; unfold readHead at h; simp at h
-  case case62 =>
+  case case62 => intro t n e h; unfold readHead at h; simp at h
+  case case63 => intro t n e h; unfold readHead at h; simp at h
+  case case64 => intro t n e h; unfold readHead at h; simp at h
+  case case65 => intro t n e h; unfold readHead at h; simp at h
+  case case66 => intro t n e h; unfold readHead at h; simp at h
+  case case67 => intro t n e h; unfold readHead at h; simp at h
+  case case68 => intro t n e h; unfold readHead at h; simp at h
+  case case69 => intro t n e h; unfold readHead at h; simp at h
+  case case70 => intro t n e h; unfold readHead at h; simp at h
+  case case71 => intro t n e h; unfold readHead at h; simp at h
+  case case72 => intro t n e h; unfold readHead at h; simp at h
+  case case73 => intro t n e h; unfold readHead at h; simp at h
+  case case74 =>
     intro n hd t
     intros
     rename_i e h
     unfold readHead at h
     split at h <;> close_arm h
   -- readEffs
-  case case63 =>
+  case case75 =>
     intro n es h
     unfold readEffs at h; simp at h; subst h; rfl
-  case case64 =>
+  case case76 =>
     intro n x rest ih1 ih2 es h
     unfold readEffs at h; simp only [bind_eq_ok] at h
     obtain ⟨e, he, es', hes', hes⟩ := h
     cases hes
     simp [printEffs, ih1 e he, ih2 es' hes']
   -- readStmts
-  case case65 =>
+  case case77 =>
     intro n ss h
     unfold readStmts at h; simp at h; subst h; rfl
-  case case66 =>
+  case case78 =>
     intro n value rest ih1 ih2 ss h
     unfold readStmts at h
     simp only [if_true, bind_eq_ok] at h
     obtain ⟨e, he, tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, ih1 e he, ih2 tail htail]
-  case case67 =>
+  case case79 =>
     intro n x value rest hx ss h
     unfold readStmts at h; simp [hx] at h
-  case case68 =>
+  case case80 =>
     intro n value rest ih1 ih2 ss h
     unfold readStmts at h; simp only [bind_eq_ok] at h
     obtain ⟨e, he, tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, ih1 e he, ih2 tail htail]
-  case case69 =>
+  case case81 =>
     intro n value rest ih ss h
     unfold readStmts at h; simp only [bind_eq_ok] at h
     obtain ⟨v, hv, tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, readTerm_exact value hv, ih tail htail]
-  case case70 =>
+  case case82 =>
     intro n test thenB elseB rest ih1 ih2 ih3 ss h
     unfold readStmts at h; simp only [bind_eq_ok] at h
     obtain ⟨t, ht, a, ha, b, hb, tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, readTerm_exact test ht, ih1 a ha, ih2 b hb, ih3 tail htail]
-  case case71 =>
+  case case83 =>
     intro n body rest ih1 ih2 ss h
     unfold readStmts at h; simp only [bind_eq_ok] at h
     obtain ⟨b, hb, tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, ih1 b hb, ih2 tail htail]
-  case case72 =>
+  case case84 =>
     intro n rest ih ss h
     unfold readStmts at h; simp only [bind_eq_ok] at h
     obtain ⟨tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, ih tail htail]
-  case case73 =>
+  case case85 =>
     intro n head tail
     intros
     rename_i ss h

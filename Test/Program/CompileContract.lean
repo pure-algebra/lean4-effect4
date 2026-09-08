@@ -634,8 +634,8 @@ def pBadPark : NativeEff :=
 
 /-! ## The `finalizerOr` regression net, on the compile route (the join, 2026-09-07)
 
-The Layer machine's five guards (`src/Effect4/Machine/Layer.lean`, `:2051-2074`, the machine
-defect that spike found): `scoped` must close its scope whether or not another `OnExit` frame
+The Layer machine's five guards (`git:4aae12f:src/Effect4/Machine/Layer.lean:2051-2074`, the
+machine defect that spike found; the file retired with the join): `scoped` must close its scope whether or not another `OnExit` frame
 sits under it, and every build sits under `updateContext`'s restoring frame
 (`internal/effect.ts:2092`). Re-spelled here program for program on the compile route, where
 `scoped`'s exit is the atomic native callback (V1, `exitScoped`) rather than a finalizer

@@ -1,7 +1,6 @@
 import Lean
 import Effect4.Machine.Fibers
 import Effect4.Machine.Stores
-import Effect4.Machine.Layer
 import Effect4.Machine.Context
 
 /-!
@@ -31,7 +30,7 @@ def shortHead (n : Name) : String :=
   let strip (pre : String) (s : String) : String :=
     if s.startsWith pre then (s.drop pre.length).toString else s
   -- The module namespaces the hand descriptions leave implicit, longest first.
-  ["Effect4.Machine.Env.Context.", "Effect4.Machine.Env.", "Effect4.Machine.Layers.",
+  ["Effect4.Machine.Env.Context.", "Effect4.Machine.Env.",
    "Effect4.Machine.", "Effect4."].foldl (fun acc pre => strip pre acc) s
 
 /-- Render an `Expr` as the `LTy` constructor text the descriptions use. -/
@@ -169,7 +168,7 @@ def main (args : List String) : IO Unit := do
   initSearchPath (← findSysroot)
   let env ← importModules
     #[{ module := `Effect4.Machine.Fibers }, { module := `Effect4.Machine.Stores },
-      { module := `Effect4.Machine.Layer }, { module := `Effect4.Machine.Context },
+      { module := `Effect4.Machine.Context },
       { module := `Effect4.Machine.Scope }, { module := `Effect4.Machine.Key }] {} 0
   let ctx : Core.Context := { fileName := "<describe>", fileMap := default }
   let act : MetaM Unit :=

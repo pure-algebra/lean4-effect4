@@ -35,7 +35,7 @@ import Effect4.Arch.Accepts
 namespace Test.Arch.ArchContract
 
 open Effect4 Effect4.Arch Effect4.StdLib Effect4.Store
-open Effect4.Machine.Layers (LayerDesc)
+open Effect4.Program (LayerTerm)
 
 /-! ## The views accept their projections -/
 
@@ -46,18 +46,16 @@ open Effect4.Machine.Layers (LayerDesc)
 -- A wrongly typed property is refused.
 #guard !(accepts serviceDoc (.obj [("name", .str "X"), ("ops", .str "no")]))
 
--- The layer graph of a small declared table: two atoms, a provide of one over
--- the other, a merge of the first with the provide, and a fresh over the merge.
-def layers : List (Nat × LayerDesc) :=
-  [ (0, .atom (.succeedContext []))
-  , (1, .atom (.succeedContext []))
-  , (2, .provideWith ⟨0⟩ ⟨1⟩ .provide)
-  , (3, .mergeAll [⟨0⟩, ⟨2⟩])
-  , (4, .fresh ⟨3⟩) ]
+-- The layer graph of a small term: a fresh over a merge of a leaf with a provide of one
+-- leaf over another; ids in pre-order, the edges the children of each subterm.
+def layers : LayerTerm Unit :=
+  .fresh (.merge (.succeed ⟨⟨4⟩, ⟨4⟩⟩ (.nat 0))
+    (.provide (.succeed ⟨⟨5⟩, ⟨4⟩⟩ (.nat 1)) (.succeed ⟨⟨6⟩, ⟨4⟩⟩ (.nat 2))))
 
 #guard accepts layerDoc (layersJson layers)
-#guard (layers.map fun entry => (layerDependencies entry.2)) = [[], [], [0, 1], [0, 2], [3]]
-#guard layerKinds.length = 7
+#guard layerDependencies layers = [[1], [2, 3], [], [4, 5], [], []]
+#guard (layerGraph layers).map (·.2.1) = ["fresh", "merge", "succeed", "provide", "succeed", "succeed"]
+#guard layerKinds.length = 8
 
 #guard accepts requirementDoc (requirementJson (Row.normalize [⟨⟨4⟩, ⟨0⟩⟩, ⟨⟨5⟩, ⟨1⟩⟩]))
 #guard accepts requirementDoc (requirementJson Row.empty)

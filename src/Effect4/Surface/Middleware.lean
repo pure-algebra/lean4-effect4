@@ -471,7 +471,8 @@ A `ServiceKey` is first-order data (`src/Effect4/Machine/Key.lean`), so `current
 pair of `Nat`s that any term may name. `forgedProvider` is a deployment layer that provides
 `CurrentUser` from a literal — no request read, no credential, no scheme — and `layerTy`
 types it exactly as the security middleware's provision is typed. This is the
-`LAYER-FB-LAYER-IDENTITY` shape of `src/Effect4/Machine/Layer.lean:33-40`, one level up:
+`LAYER-FB-LAYER-IDENTITY` shape of `src/Effect4/Machine/Stores.lean` (the memo world's
+`find?_append_other_key`; before the join, `git:4aae12f:src/Effect4/Machine/Layer.lean:33-40`), one level up:
 identity there is *allocation* identity of a layer object, identity here is the *object
 identity of the tag* (`Context.ts:32-41`), and neither is structural, so neither is
 representable in a first-order model.

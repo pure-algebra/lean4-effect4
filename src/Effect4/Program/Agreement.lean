@@ -951,6 +951,272 @@ theorem constructionAt_effectDiscard {q : Point} {body : NativeEff}
 
 end joinConts
 
+/-! ## The layer rows of the census, on the compile route (the join, commit 5)
+
+The compile-route restatements of what `Machine/Layer.lean` (`4aae12f`) witnessed for the
+eighteen `layer.*` rows and the two scope rows of `Test/Audit/RuntimeCoverage.lean`: the
+constructor arms of `compileLayer`, the readers behind the `*K` continuations on the values
+they read, the region programs, `Effect.provide`'s frame, and the native `scoped` entry and
+exit. Each is an equation, `rfl` or one `simp` with the reader's lemma; the rows cite them
+beside the `contAOf_*` equations above and the store laws (`Machine/StoresLaws.lean`). -/
+section joinWitnesses
+
+variable (root : NativeEff)
+
+/-- `Layer.succeed` is `fromBuildUnsafe(succeed(Context.make(key, value)))` (`Layer.ts:1129`):
+the context, no scope handling of its own. census: layer.from-build-unsafe -/
+theorem compileLayer_succeed (key : ServiceKey) (value : Lit) (q : Point) (m : MemoMapId)
+    (scope : Nat) (v : Val) (h : Lit.toVal value = some v) :
+    compileLayer (.succeed key value) q m scope =
+      Prim.success (Env.encode (Env.Context.empty.addV key v)) := by
+  simp [compileLayer, h]
+
+/-- `fromBuild` (`:333-345`): a child of the caller's scope forked first, the rest named.
+census: layer.from-build-child-scope -/
+theorem compileLayer_effect (key : ServiceKey) (body : NativeEff) (q : Point) (m : MemoMapId)
+    (scope : Nat) :
+    compileLayer (.effect key body) q m scope =
+      Prim.onSuccess
+        (Prim.sync (EffThunk.op (SyncOp.scopeFork scope FinalizerStrategy.sequential)))
+        (.fromBuildThen q m) := rfl
+
+theorem compileLayer_effectDiscard (body : NativeEff) (q : Point) (m : MemoMapId) (scope : Nat) :
+    compileLayer (.effectDiscard body) q m scope =
+      Prim.onSuccess
+        (Prim.sync (EffThunk.op (SyncOp.scopeFork scope FinalizerStrategy.sequential)))
+        (.fromBuildThen q m) := rfl
+
+/-- `provide` is a `fromBuild` wrapper too (`:1915`). census: layer.provide-dependency-first -/
+theorem compileLayer_provide (self that : LayerTerm NativeOp) (q : Point) (m : MemoMapId)
+    (scope : Nat) :
+    compileLayer (.provide self that) q m scope =
+      Prim.onSuccess
+        (Prim.sync (EffThunk.op (SyncOp.scopeFork scope FinalizerStrategy.sequential)))
+        (.fromBuildThen q m) := rfl
+
+theorem compileLayer_provideMerge (self that : LayerTerm NativeOp) (q : Point) (m : MemoMapId)
+    (scope : Nat) :
+    compileLayer (.provideMerge self that) q m scope =
+      Prim.onSuccess
+        (Prim.sync (EffThunk.op (SyncOp.scopeFork scope FinalizerStrategy.sequential)))
+        (.fromBuildThen q m) := rfl
+
+/-- `merge` is `mergeAllEffect` under `fromBuild` (`:1587`). census: layer.merge-parallel-scopes -/
+theorem compileLayer_merge (left right : LayerTerm NativeOp) (q : Point) (m : MemoMapId)
+    (scope : Nat) :
+    compileLayer (.merge left right) q m scope =
+      Prim.onSuccess
+        (Prim.sync (EffThunk.op (SyncOp.scopeFork scope FinalizerStrategy.sequential)))
+        (.fromBuildThen q m) := rfl
+
+/-- `fresh` builds the inner layer with a brand-new memo map on the same scope, no `fromBuild`
+child of its own (`:3851`). census: layer.fresh-drops-memoization -/
+theorem compileLayer_fresh (inner : LayerTerm NativeOp) (q : Point) (m : MemoMapId) (scope : Nat) :
+    compileLayer (.fresh inner) q m scope =
+      Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoFork none)))
+        (.freshThen (q.child 0) scope) := rfl
+
+/-- `orDie` is `catch_(build, die)` (`:3327`). -/
+theorem compileLayer_orDie (inner : LayerTerm NativeOp) (q : Point) (m : MemoMapId) (scope : Nat) :
+    compileLayer (.orDie inner) q m scope =
+      Prim.onFailure (compileLayer inner (q.child 0) m scope) .orDie := rfl
+
+/-- `buildWithMemoMap` installs the map as the `CurrentMemoMap` service (`Layer.ts:756-762`).
+census: layer.build-with-memo-map-service -/
+theorem currentMemoMapOf_provideService (m : MemoMapId) (prev : Env.Ctx) :
+    currentMemoMapOf
+        ((Env.ContextUpdate.provideService Env.currentMemoMapKey (Val.memoMap m)).apply prev) =
+      some m := by
+  cases m
+  unfold currentMemoMapOf
+  rw [Env.ContextUpdate.apply_provideService_getV]
+  rfl
+
+/-- `forkOrCreate` reads `CurrentMemoMap` (`:585-588`): present after `Context.add`, absent from
+the empty context. census: layer.current-memo-map-fork-or-create -/
+theorem currentMemoMapOf_addV (ctx : Env.Ctx) (id : Nat) :
+    currentMemoMapOf (ctx.addV Env.currentMemoMapKey (Val.memoMap ⟨id⟩)) = some ⟨id⟩ := by
+  unfold currentMemoMapOf
+  rw [Env.Context.getV_addV_same]
+  rfl
+
+theorem currentMemoMapOf_empty : currentMemoMapOf Env.Context.empty = none := rfl
+
+theorem regionCode_program (q : Point) : regionCode root (.program q) = resolve root q := rfl
+
+/-- The build region: `self.build(memoMap, scope)` at the point (`Layer.ts:1920-1922`).
+census: layer.provide-dependency-first -/
+theorem regionCode_build (q : Point) (m : MemoMapId) (scope : Nat) :
+    regionCode root (.build q m scope) = resolveLayer root q m scope := rfl
+
+/-- `buildWithMemoMap` adds the same map to the produced context (`:762`).
+census: layer.build-with-memo-map-service -/
+theorem regionCode_buildAdding (q : Point) (m : MemoMapId) (scope : Nat) :
+    regionCode root (.buildAdding q m scope) =
+      Prim.onSuccess (resolveLayer root q m scope) (.addCurrentMemoMap m) := rfl
+
+theorem regionCode_construct (q : Point) (key : Option ServiceKey) :
+    regionCode root (.construct q key) = Prim.onSuccess (resolve root q) (.bindService key) := rfl
+
+theorem addCurrentMemoMapK_context (m : MemoMapId) (ctx : Env.Ctx) :
+    addCurrentMemoMapK m (Env.encode ctx) =
+      Prim.success (Env.encode (ctx.addV Env.currentMemoMapKey (Val.memoMap m))) := by
+  simp [addCurrentMemoMapK, Env.decode_encode]
+
+/-- `buildWithScope` on the fiber context: the memo map is still forked or created from it
+(`:974-979`). census: layer.build-with-scope-still-forks-memo -/
+theorem buildWithScopeK_context (q : Point) (scope : Nat) (ctx : Ctx) :
+    buildWithScopeK q scope (Val.context ctx) =
+      Prim.onSuccess
+        (Prim.sync (EffThunk.op (SyncOp.memoFork (currentMemoMapOf ctx.services))))
+        (.withMemoMapThen q scope) := by
+  simp [buildWithScopeK, Val.context?_context]
+
+/-- `Effect.service` on the fiber context: the value when the key is there.
+census: layer.build-uses-ambient-scope -/
+theorem serviceLookupK_found (key : ServiceKey) (ctx : Ctx) (value : Val)
+    (h : ctx.services.getV key = some value) :
+    serviceLookupK key (Val.context ctx) = Prim.success value := by
+  simp [serviceLookupK, Val.context?_context, h]
+
+/-- A missing key is the host throw of `Context.getUnsafe` as a defect (`internal/effect.ts:2134`),
+never a typed error. census: layer.build-uses-ambient-scope -/
+theorem serviceLookupK_missing (key : ServiceKey) (ctx : Ctx) (h : ctx.services.getV key = none) :
+    serviceLookupK key (Val.context ctx) = Prim.failure (Cause.die Defect.missingService) := by
+  simp [serviceLookupK, Val.context?_context, h]
+
+/-- `provideWith` on the dependency's context: the dependent's build under `provideContext`, then
+the combiner (`Layer.ts:1920-1923`). census: layer.provide-dependency-first -/
+theorem provideThenK_context (q : Point) (m : MemoMapId) (scope : Nat) (mode : CombineMode)
+    (ctx : Env.Ctx) :
+    provideThenK q m scope mode (Env.encode ctx) =
+      Prim.onSuccess
+        (updateContextAt (Env.ContextUpdate.provide ctx) (Region.build (q.child 0) m scope))
+        (.combineWith mode ctx) := by
+  simp [provideThenK, Env.decode_encode]
+
+/-- `provide`'s combiner is the identity: the dependency's services do not reach the caller
+(`:2348`). census: layer.provide-dependency-first -/
+theorem combineWithK_provide (that merged : Env.Ctx) :
+    combineWithK .provide that (Env.encode merged) = Prim.success (Env.encode merged) := by
+  simp [combineWithK, Env.decode_encode]
+
+/-- `provideMerge`'s combiner is `Context.merge(that, self)` (`:2800`). -/
+theorem combineWithK_provideMerge (that merged : Env.Ctx) :
+    combineWithK .provideMerge that (Env.encode merged) =
+      Prim.success (Env.encode (that.merge merged)) := by
+  simp [combineWithK, Env.decode_encode]
+
+/-- `updateContext` on the previous context (`internal/effect.ts:2088-2095`): the body as is when
+the map is the same object, else `setContext(next)` and the restoring frame.
+census: layer.provide-effect-scope -/
+theorem updateThenK_context (u : Env.ContextUpdate) (body : Region) (prev : Ctx) :
+    updateThenK root u body (Val.context prev) =
+      (if updateKeepsIdentity u prev.services then regionCode root body
+       else
+        Prim.onSuccess
+          (Prim.withFiber (EffThunk.setCtx (Ctx.withServices (u.apply prev.services))))
+          (.bodyThen body prev)) := by
+  simp [updateThenK, Val.context?_context]
+
+theorem bindServiceK_some (key : ServiceKey) (v : Val) :
+    bindServiceK (some key) v = Prim.success (Env.encode (Env.Context.empty.addV key v)) := rfl
+
+theorem bindServiceK_none (v : Val) :
+    bindServiceK none v = Prim.success (Env.encode Env.Context.empty) := rfl
+
+theorem exitOfVal_reifyExitVal (e : ExitV) : exitOfVal (reifyExitVal e) = some e := by
+  rw [reifyExitVal_eq_exitImage]
+  exact exitImage.ofVal_toVal e
+
+theorem contextsOfList_contexts :
+    ∀ ctxs : List Env.Ctx,
+      contextsOfList (ctxs.map fun c => reifyExitVal (Exit.success (Env.encode c))) = some ctxs
+  | [] => rfl
+  | c :: rest => by
+    simp [contextsOfList, exitOfVal_reifyExitVal, Env.decode_encode, contextsOfList_contexts rest]
+
+/-- `Context.mergeAll` over the awaited builds' contexts (`Layer.ts:1600`).
+census: layer.merge-parallel-scopes -/
+theorem mergeContextsK_contexts (ctxs : List Env.Ctx) :
+    mergeContextsK (exitsVal (ctxs.map fun c => Exit.success (Env.encode c))) =
+      Prim.success (Env.encode (Env.Context.mergeAll ctxs)) := by
+  simp [mergeContextsK, contextsOf, exitsVal, List.map_map, Function.comp_def,
+    contextsOfList_contexts]
+
+/-- `scopedWith`'s frame at a `provideLayer` node (`internal/layer.ts:8-22`): the build into the
+fresh scope — through a private memo map when `local`, off the fiber context otherwise — the
+body under the built context, the scope closed with the exit.
+census: layer.provide-effect-scope -/
+theorem provideLayerWithK_at (p : Point) (scope : Nat) (l : LayerTerm NativeOp) (isLocal : Bool)
+    (b : NativeEff) (h : Node.at_ (Node.eff root) p.path = some (Node.eff (.provideLayer l isLocal b))) :
+    provideLayerWithK root p scope =
+      Prim.onExit
+        (Prim.onSuccess
+          (if isLocal then
+            Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoFork none)))
+              (.withMemoMapThen (p.child 0) scope)
+          else
+            Prim.onSuccess (Prim.withFiber EffThunk.getCtx)
+              (.buildWithScopeFromContext (p.child 0) scope))
+          (.provideLayerBody p))
+        (.scopeClose scope) false := by
+  simp [provideLayerWithK, h]
+
+/-- The body under `provideContext(built)` (`internal/layer.ts:20`).
+census: layer.provide-effect-scope -/
+theorem provideLayerBodyK_context (p : Point) (built : Env.Ctx)
+    (h : (resolve root (p.child 1)).asExit? = none) :
+    provideLayerBodyK root p (Env.encode built) =
+      updateContextAt (Env.ContextUpdate.provide built) (Region.program (p.child 1)) := by
+  simp [provideLayerBodyK, Env.decode_encode, h]
+
+/-- `provideContext` of an exit is that exit (`internal/effect.ts:2196`). -/
+theorem provideLayerBodyK_exit (p : Point) (built : Env.Ctx) (exit : ExitV)
+    (h : (resolve root (p.child 1)).asExit? = some exit) :
+    provideLayerBodyK root p (Env.encode built) = Prim.ofExit exit := by
+  simp [provideLayerBodyK, Env.decode_encode, h]
+
+/-- The scope `scopedWith` made closes with the frame's exit (`internal/effect.ts:3967`).
+census: layer.provide-effect-scope -/
+theorem finalizerProgram_scopeClose (scope : Nat) (exit : ExitV) :
+    (interpOf root).finalizerProgram (.scopeClose scope) exit =
+      some (Prim.withFiber (EffThunk.closeScope scope exit)) := rfl
+
+/-- The native `scoped` entry (`internal/effect.ts:3938-3948`): the scope made at the supply, the
+`Scope` service installed on the fiber context, the body under the frame that carries the
+previous context. census: scope.remove-finalizer -/
+theorem enterScoped_eq (p : Point)
+    (m : RunMachine EffName EffThunk Val Err Defect FiberId Ann Ctx Stores)
+    (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (yielding : Bool) :
+    enterScoped root p m f yielding =
+      ⟨{ m with state := { m.state with
+            scopes := m.state.scopes.make m.state.nextName .sequential
+            nextName := m.state.nextName + 1 } },
+        { f with
+          context := f.context.withScope m.state.nextName
+          maxOpsBeforeYield := (f.context.withScope m.state.nextName).maxOpsBeforeYield
+          preventYield := (f.context.withScope m.state.nextName).preventYield
+          frame := { f.frame with
+            current := Prim.onExit (resolve root (p.child 0))
+              (.scopedExit f.context m.state.nextName) false } },
+        yielding, .continue_, []⟩ := rfl
+
+/-- The scoped callback restores the previous context before the close (`:3944-3947`), whether
+or not the scope is known to the store. census: scope.remove-finalizer -/
+theorem exitScoped_restores
+    (m : RunMachine EffName EffThunk Val Err Defect FiberId Ann Ctx Stores)
+    (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (yielding : Bool) (ex : ExitV)
+    (body : NCode) (previous : Ctx) (scope : Nat) (flag : Bool)
+    (ha : (f.frame.getCont (match ex with | .success _ => .contA | .failure _ => .contE)
+        (match ex with | .success _ => false | .failure _ => true)).answer =
+      .frame (Prim.onExit body (.scopedExit previous scope) flag)) :
+    (exitScoped root m f yielding ex).fiber.context = previous := by
+  unfold exitScoped
+  cases ex <;> dsimp only at ha ⊢ <;> rw [ha] <;> dsimp only <;> split <;> rfl
+
+end joinWitnesses
+
 /-! ## The hooks at an address -/
 
 theorem syncValueAt_pure {root : NativeEff} {p : Point} {t : Term}

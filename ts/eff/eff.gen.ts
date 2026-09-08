@@ -21,16 +21,17 @@
 //   FinalizerStrategy (Effect4.FinalizerStrategy, literals): sequential parallel
 //   FnName (Effect4.Machine.FnName, literals): incr double zeroWhenPositive noChange takeAndBump
 //   NativeOp (Effect4.Program.NativeOp, tagged union): refMake refGet refSet refGetAndSet refSetAndGet refUpdate(f: FnName) refGetAndUpdate(f: FnName) refUpdateAndGet(f: FnName) refUpdateSome(f: FnName) refGetAndUpdateSome(f: FnName) refUpdateSomeAndGet(f: FnName) refModify(f: FnName) refModifySome(f: FnName) deferredMake deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake(strategy: FinalizerStrategy)
-//   Eff (Effect4.Program.Eff, tagged union): succeed(value: Term) fail(error: Term) failCause(cause: CauseTerm) yieldError(error: Term) sync(thunk: Term) suspend(body: Eff) perform(op: NativeOp, request: Term) bind(first: Eff, rest: Eff) gen(body: ReadonlyArray<Stmt>) catchCause(body: Eff, handler: Eff) matchCause(body: Eff, onValue: Eff, onCause: Eff) onExit(body: Eff, finalizer: Eff) exit(body: Eff) uninterruptible(body: Eff) interruptible(body: Eff) branch(test: Term, thenB: Eff, elseB: Eff) whileLoop(initial: Term, test: Term, step: Term, body: Eff) yieldNow(priority: number) callback(register: NativeOp, request: Term) awaitFiber(fiber: Term, mode: ObserverMode) withFiber(action: ActionTerm) scoped(body: Eff) acquireRelease(acquire: Eff, release: Eff) choose(site: number, left: Eff, right: Eff)
+//   ServiceName (Effect4.ServiceName, struct): mk(value: number)
+//   ServiceTypeCode (Effect4.ServiceTypeCode, struct): mk(value: number)
+//   ServiceKey (Effect4.ServiceKey, struct): mk(name: ServiceName, service: ServiceTypeCode)
+//   Eff (Effect4.Program.Eff, tagged union): succeed(value: Term) fail(error: Term) failCause(cause: CauseTerm) yieldError(error: Term) sync(thunk: Term) suspend(body: Eff) perform(op: NativeOp, request: Term) bind(first: Eff, rest: Eff) gen(body: ReadonlyArray<Stmt>) catchCause(body: Eff, handler: Eff) matchCause(body: Eff, onValue: Eff, onCause: Eff) onExit(body: Eff, finalizer: Eff) exit(body: Eff) uninterruptible(body: Eff) interruptible(body: Eff) branch(test: Term, thenB: Eff, elseB: Eff) whileLoop(initial: Term, test: Term, step: Term, body: Eff) yieldNow(priority: number) callback(register: NativeOp, request: Term) awaitFiber(fiber: Term, mode: ObserverMode) withFiber(action: ActionTerm) scoped(body: Eff) acquireRelease(acquire: Eff, release: Eff) choose(site: number, left: Eff, right: Eff) provideLayer(layer: LayerTerm, isLocal: boolean, body: Eff) service(key: ServiceKey) provideService(key: ServiceKey, value: Term, body: Eff)
 //   Stmt (Effect4.Program.Stmt, tagged union): bindYield(effect: Eff) yieldDiscard(effect: Eff) ret(value: Term) ifElse(test: Term, thenB: ReadonlyArray<Stmt>, elseB: ReadonlyArray<Stmt>) whileTrue(body: ReadonlyArray<Stmt>) breakLoop
 //   Stmts (Effect4.Program.Stmts, ReadonlyArray<Stmt>): nil cons(head: Stmt, tail: ReadonlyArray<Stmt>)
 //   Effs (Effect4.Program.Effs, ReadonlyArray<Eff>): nil cons(head: Eff, tail: ReadonlyArray<Eff>)
 //   ActionTerm (Effect4.Program.ActionTerm, tagged union): fork(program: Eff, options: ForkOptions) forkIn(program: Eff, options: ForkOptions, scope: Term) forkScoped(program: Eff, options: ForkOptions) runIn(target: Term, scope: Term) interrupt(target: Term) interruptScoped(target: Term) interruptAll(targets: Term, interruptor: Term | null) awaitAll(targets: Term) awaitAllFailFast(targets: Term) snapshotChildren awaitNewChildren(snapshot: Term) raceAll(entrants: ReadonlyArray<Eff>) setContext(context: Term) getContext getId closeScope(scope: Term, exit: Term)
+//   LayerTerm (Effect4.Program.LayerTerm, tagged union): succeed(key: ServiceKey, value: Lit) effect(key: ServiceKey, body: Eff) effectDiscard(body: Eff) provide(self: LayerTerm, that: LayerTerm) provideMerge(self: LayerTerm, that: LayerTerm) merge(left: LayerTerm, right: LayerTerm) fresh(inner: LayerTerm) orDie(inner: LayerTerm)
 //   RowKind (Effect4.Program.RowKind, literals): sync async program
 //   RowShape (Effect4.Program.RowShape, literals): call value tupleCall
-//   ServiceName (Effect4.ServiceName, struct): mk(value: number)
-//   ServiceTypeCode (Effect4.ServiceTypeCode, struct): mk(value: number)
-//   ServiceKey (Effect4.ServiceKey, struct): mk(name: ServiceName, service: ServiceTypeCode)
 //   Row (Effect4.Program.Row, struct): mk(name: string, spelling: string, shape: RowShape, trailing: ReadonlyArray<string>, kind: RowKind, request: Ty, answer: Ty, error: Ty, requires: ReadonlyArray<ServiceKey>, cite: string, typeArgs: ReadonlyArray<string>)
 //   EffTy (Effect4.Program.EffTy, struct): mk(answer: Ty, error: Ty, requires: ReadonlyArray<ServiceKey>)
 
@@ -174,6 +175,22 @@ export const NativeOp = Schema.TaggedUnion({
   scopeMake: { strategy: FinalizerStrategy },
 })
 
+export const ServiceName = Schema.Struct({
+  value: Schema.Int,
+})
+export type ServiceName = typeof ServiceName.Type
+
+export const ServiceTypeCode = Schema.Struct({
+  value: Schema.Int,
+})
+export type ServiceTypeCode = typeof ServiceTypeCode.Type
+
+export const ServiceKey = Schema.Struct({
+  name: ServiceName,
+  service: ServiceTypeCode,
+})
+export type ServiceKey = typeof ServiceKey.Type
+
 export type Eff =
   | { readonly _tag: "succeed"; readonly value: Term }
   | { readonly _tag: "fail"; readonly error: Term }
@@ -199,6 +216,9 @@ export type Eff =
   | { readonly _tag: "scoped"; readonly body: Eff }
   | { readonly _tag: "acquireRelease"; readonly acquire: Eff; readonly release: Eff }
   | { readonly _tag: "choose"; readonly site: number; readonly left: Eff; readonly right: Eff }
+  | { readonly _tag: "provideLayer"; readonly layer: LayerTerm; readonly isLocal: boolean; readonly body: Eff }
+  | { readonly _tag: "service"; readonly key: ServiceKey }
+  | { readonly _tag: "provideService"; readonly key: ServiceKey; readonly value: Term; readonly body: Eff }
 
 export const Eff = Schema.TaggedUnion({
   succeed: { value: Schema.suspend((): Schema.Codec<Term> => Term) },
@@ -225,6 +245,9 @@ export const Eff = Schema.TaggedUnion({
   scoped: { body: Schema.suspend((): Schema.Codec<Eff> => Eff) },
   acquireRelease: { acquire: Schema.suspend((): Schema.Codec<Eff> => Eff), release: Schema.suspend((): Schema.Codec<Eff> => Eff) },
   choose: { site: Schema.Int, left: Schema.suspend((): Schema.Codec<Eff> => Eff), right: Schema.suspend((): Schema.Codec<Eff> => Eff) },
+  provideLayer: { layer: Schema.suspend((): Schema.Codec<LayerTerm> => LayerTerm), isLocal: Schema.Boolean, body: Schema.suspend((): Schema.Codec<Eff> => Eff) },
+  service: { key: ServiceKey },
+  provideService: { key: ServiceKey, value: Schema.suspend((): Schema.Codec<Term> => Term), body: Schema.suspend((): Schema.Codec<Eff> => Eff) },
 })
 
 export type Stmt =
@@ -285,27 +308,32 @@ export const ActionTerm = Schema.TaggedUnion({
   closeScope: { scope: Schema.suspend((): Schema.Codec<Term> => Term), exit: Schema.suspend((): Schema.Codec<Term> => Term) },
 })
 
+export type LayerTerm =
+  | { readonly _tag: "succeed"; readonly key: ServiceKey; readonly value: Lit }
+  | { readonly _tag: "effect"; readonly key: ServiceKey; readonly body: Eff }
+  | { readonly _tag: "effectDiscard"; readonly body: Eff }
+  | { readonly _tag: "provide"; readonly self: LayerTerm; readonly that: LayerTerm }
+  | { readonly _tag: "provideMerge"; readonly self: LayerTerm; readonly that: LayerTerm }
+  | { readonly _tag: "merge"; readonly left: LayerTerm; readonly right: LayerTerm }
+  | { readonly _tag: "fresh"; readonly inner: LayerTerm }
+  | { readonly _tag: "orDie"; readonly inner: LayerTerm }
+
+export const LayerTerm = Schema.TaggedUnion({
+  succeed: { key: ServiceKey, value: Schema.suspend((): Schema.Codec<Lit> => Lit) },
+  effect: { key: ServiceKey, body: Schema.suspend((): Schema.Codec<Eff> => Eff) },
+  effectDiscard: { body: Schema.suspend((): Schema.Codec<Eff> => Eff) },
+  provide: { self: Schema.suspend((): Schema.Codec<LayerTerm> => LayerTerm), that: Schema.suspend((): Schema.Codec<LayerTerm> => LayerTerm) },
+  provideMerge: { self: Schema.suspend((): Schema.Codec<LayerTerm> => LayerTerm), that: Schema.suspend((): Schema.Codec<LayerTerm> => LayerTerm) },
+  merge: { left: Schema.suspend((): Schema.Codec<LayerTerm> => LayerTerm), right: Schema.suspend((): Schema.Codec<LayerTerm> => LayerTerm) },
+  fresh: { inner: Schema.suspend((): Schema.Codec<LayerTerm> => LayerTerm) },
+  orDie: { inner: Schema.suspend((): Schema.Codec<LayerTerm> => LayerTerm) },
+})
+
 export const RowKind = Schema.Literals(["sync", "async", "program"])
 export type RowKind = typeof RowKind.Type
 
 export const RowShape = Schema.Literals(["call", "value", "tupleCall"])
 export type RowShape = typeof RowShape.Type
-
-export const ServiceName = Schema.Struct({
-  value: Schema.Int,
-})
-export type ServiceName = typeof ServiceName.Type
-
-export const ServiceTypeCode = Schema.Struct({
-  value: Schema.Int,
-})
-export type ServiceTypeCode = typeof ServiceTypeCode.Type
-
-export const ServiceKey = Schema.Struct({
-  name: ServiceName,
-  service: ServiceTypeCode,
-})
-export type ServiceKey = typeof ServiceKey.Type
 
 export const Row = Schema.Struct({
   name: Schema.String,

@@ -31,7 +31,7 @@ below them (`node`, `program`, `parse`).
 | `read.ts` | hand | the function above; the only hand-written logic |
 | `eff.gen.ts` | `tools/Tools/TsGen.lean` | one Schema per family of the Eff IR and its typing (23 families: `Eff`, `Term`, `NativeOp`, `Ty`, `Row`, …), read off the Lean environment: names verbatim, constructors in declaration order; `decodeEff`, `isEff` |
 | `json.gen.ts` | `tools/Tools/TsGen.lean` | one JSON writer per family, the bytes `OCaml5.Eff.Goldens` writes and `ocaml/eff/eff_json.ml` prints; `toJson` |
-| `profile.gen.ts` | `tools/Tools/TsGen.lean` | the image profile as one JSON payload decoded at import through the schemas above: the address, the 37 reserved heads, and one entry per native operation, `{ op: NativeOp, row: Row }`; a stamp over the payload bytes is recomputed at import |
+| `profile.gen.ts` | `tools/Tools/TsGen.lean` | the image profile as one JSON payload decoded at import through the schemas above: the address, the 50 reserved heads, and one entry per native operation, `{ op: NativeOp, row: Row }`; a stamp over the payload bytes is recomputed at import |
 | `check.ts` | hand | the corpus differential (below) |
 | `test/read.test.ts` | hand | the pinned cases |
 

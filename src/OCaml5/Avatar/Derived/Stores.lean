@@ -15,7 +15,7 @@ def refKey : StructDesc where
 
 def deferredKey : StructDesc where
   leanName := "DeferredKey"
-  site := "Stores.lean:48"
+  site := "Stores.lean:50"
   subst := []
   leanParams := []
   fields :=
@@ -23,7 +23,7 @@ def deferredKey : StructDesc where
 
 def err : InductiveDesc where
   leanName := "Err"
-  site := "Stores.lean:60"
+  site := "Stores.lean:62"
   subst := []
   leanParams := []
   ctors :=
@@ -32,7 +32,7 @@ def err : InductiveDesc where
 
 def defect : InductiveDesc where
   leanName := "Defect"
-  site := "Stores.lean:66"
+  site := "Stores.lean:68"
   subst := []
   leanParams := []
   ctors :=
@@ -44,7 +44,7 @@ def defect : InductiveDesc where
 
 def fnName : InductiveDesc where
   leanName := "FnName"
-  site := "Stores.lean:84"
+  site := "Stores.lean:86"
   subst := []
   leanParams := []
   ctors :=
@@ -56,7 +56,7 @@ def fnName : InductiveDesc where
 
 def finName : InductiveDesc where
   leanName := "FinName"
-  site := "Stores.lean:100"
+  site := "Stores.lean:183"
   subst := []
   leanParams := []
   ctors :=
@@ -65,15 +65,19 @@ def finName : InductiveDesc where
      { leanName := "detachFromParent", args := [{ leanName := "parent", leanTy := .nm "Nat" }, { leanName := "key", leanTy := .nm "Nat" }] },
      { leanName := "release", args := [{ leanName := "label", leanTy := .nm "Nat" }, { leanName := "fails", leanTy := .nm "Bool" }] },
      { leanName := "awaitNewChildren", args := [{ leanName := "snapshot", leanTy := .lst (.nm "FiberId") }] },
-     { leanName := "parkThen", args := [{ leanName := "slot", leanTy := .nm "Nat" }] }]
+     { leanName := "parkThen", args := [{ leanName := "slot", leanTy := .nm "Nat" }] },
+     { leanName := "foreign", args := [{ leanName := "capture", leanTy := .nm "Capture" }] },
+     { leanName := "closeChildOnFailure", args := [{ leanName := "scope", leanTy := .nm "Nat" }] },
+     { leanName := "memoEntry", args := [{ leanName := "layer", leanTy := .nm "LayerId" }, { leanName := "memoMap", leanTy := .nm "MemoMapId" }] },
+     { leanName := "memoDone", args := [{ leanName := "layer", leanTy := .nm "LayerId" }, { leanName := "memoMap", leanTy := .nm "MemoMapId" }] }]
 
 def ctx : StructDesc where
   leanName := "Ctx"
-  site := "Stores.lean:123"
+  site := "Stores.lean:102"
   subst := []
   leanParams := []
   fields :=
-    [{ leanName := "ambientScope", leanTy := .opt (.nm "Nat") },
+    [{ leanName := "services", leanTy := .nm "Ctx" },
      { leanName := "maxOpsBeforeYield", leanTy := .nm "Nat" },
      { leanName := "preventYield", leanTy := .nm "Bool" }]
 
@@ -88,7 +92,7 @@ def completion : InductiveDesc where
 
 def syncOp : InductiveDesc where
   leanName := "SyncOp"
-  site := "Stores.lean:175"
+  site := "Stores.lean:536"
   subst := []
   leanParams := []
   ctors :=
@@ -112,13 +116,19 @@ def syncOp : InductiveDesc where
      { leanName := "deferredInterruptWith", args := [{ leanName := "cell", leanTy := .nm "DeferredKey" }, { leanName := "interruptor", leanTy := .nm "FiberId" }] },
      { leanName := "deferredAwaitCleanup", args := [{ leanName := "cell", leanTy := .nm "DeferredKey" }, { leanName := "waiter", leanTy := .nm "FiberId" }, { leanName := "token", leanTy := .nm "Nat" }] },
      { leanName := "scopeMake", args := [{ leanName := "strategy", leanTy := .nm "FinalizerStrategy" }] },
-     { leanName := "scopeAdd", args := [{ leanName := "scope", leanTy := .nm "Nat" }, { leanName := "key", leanTy := .nm "Nat" }, { leanName := "finalizer", leanTy := .nm "FinName" }] },
+     { leanName := "scopeAdd", args := [{ leanName := "scope", leanTy := .nm "Nat" }, { leanName := "finalizer", leanTy := .nm "FinName" }] },
      { leanName := "scopeRemove", args := [{ leanName := "scope", leanTy := .nm "Nat" }, { leanName := "key", leanTy := .nm "Nat" }] },
-     { leanName := "scopeIsClosed", args := [{ leanName := "scope", leanTy := .nm "Nat" }] }]
+     { leanName := "scopeIsClosed", args := [{ leanName := "scope", leanTy := .nm "Nat" }] },
+     { leanName := "scopeFork", args := [{ leanName := "parent", leanTy := .nm "Nat" }, { leanName := "strategy", leanTy := .nm "FinalizerStrategy" }] },
+     { leanName := "memoFork", args := [{ leanName := "parent", leanTy := .opt (.nm "MemoMapId") }] },
+     { leanName := "memoGet", args := [{ leanName := "layer", leanTy := .nm "LayerId" }, { leanName := "memoMap", leanTy := .nm "MemoMapId" }] },
+     { leanName := "memoBuild", args := [{ leanName := "layer", leanTy := .nm "LayerId" }, { leanName := "memoMap", leanTy := .nm "MemoMapId" }] },
+     { leanName := "memoComplete", args := [{ leanName := "layer", leanTy := .nm "LayerId" }, { leanName := "memoMap", leanTy := .nm "MemoMapId" }, { leanName := "exit", leanTy := .nm "ExitV" }] },
+     { leanName := "memoRelease", args := [{ leanName := "layer", leanTy := .nm "LayerId" }, { leanName := "memoMap", leanTy := .nm "MemoMapId" }] }]
 
 def raceName : InductiveDesc where
   leanName := "RaceName"
-  site := "Stores.lean:229"
+  site := "Stores.lean:610"
   subst := []
   leanParams := []
   ctors :=
@@ -131,7 +141,7 @@ def raceName : InductiveDesc where
 
 def progName : InductiveDesc where
   leanName := "ProgName"
-  site := "Stores.lean:253"
+  site := "Stores.lean:634"
   subst := []
   leanParams := []
   ctors :=
@@ -164,7 +174,7 @@ def progName : InductiveDesc where
 
 def name : InductiveDesc where
   leanName := "Name"
-  site := "Stores.lean:322"
+  site := "Stores.lean:703"
   subst := []
   leanParams := []
   ctors :=
@@ -187,11 +197,12 @@ def name : InductiveDesc where
      { leanName := "reFail", args := [{ leanName := "cause", leanTy := .nm "CauseV" }] },
      { leanName := "finalizerName", args := [{ leanName := "fin", leanTy := .nm "FinName" }] },
      { leanName := "closeSeq", args := [{ leanName := "remaining", leanTy := .lst (.nm "FinName") }, { leanName := "exit", leanTy := .nm "ExitV" }, { leanName := "captured", leanTy := .lst (.app "Reason" [.nm "Err", .nm "Defect", .nm "FiberId", .nm "Ann"]) }] },
-     { leanName := "closeParDone", args := [] }]
+     { leanName := "closeParDone", args := [] },
+     { leanName := "closeIfLast", args := [{ leanName := "exit", leanTy := .nm "ExitV" }] }]
 
 def actionName : InductiveDesc where
   leanName := "ActionName"
-  site := "Stores.lean:379"
+  site := "Stores.lean:763"
   subst := []
   leanParams := []
   ctors :=
@@ -220,14 +231,15 @@ def actionName : InductiveDesc where
 
 def thunk : InductiveDesc where
   leanName := "Thunk"
-  site := "Stores.lean:418"
+  site := "Stores.lean:802"
   subst := []
   leanParams := []
   ctors :=
     [{ leanName := "park", args := [{ leanName := "kind", leanTy := .nm "ParkKind" }] },
      { leanName := "act", args := [{ leanName := "action", leanTy := .nm "ActionName" }] },
      { leanName := "op", args := [{ leanName := "operation", leanTy := .nm "SyncOp" }] },
-     { leanName := "body", args := [{ leanName := "program", leanTy := .nm "ProgName" }] }]
+     { leanName := "body", args := [{ leanName := "program", leanTy := .nm "ProgName" }] },
+     { leanName := "foreign", args := [{ leanName := "capture", leanTy := .nm "Capture" }, { leanName := "exit", leanTy := .nm "ExitV" }] }]
 
 def finalizerStrategy : InductiveDesc where
   leanName := "FinalizerStrategy"
@@ -261,7 +273,7 @@ def scope : StructDesc where
 
 def deferredCell : StructDesc where
   leanName := "DeferredCell"
-  site := "Stores.lean:669"
+  site := "Stores.lean:1357"
   subst := []
   leanParams := []
   fields :=
@@ -270,7 +282,7 @@ def deferredCell : StructDesc where
 
 def deferredStore : StructDesc where
   leanName := "DeferredStore"
-  site := "Stores.lean:678"
+  site := "Stores.lean:1366"
   subst := []
   leanParams := []
   fields :=
@@ -279,7 +291,7 @@ def deferredStore : StructDesc where
 
 def scopeEntry : StructDesc where
   leanName := "ScopeEntry"
-  site := "Stores.lean:876"
+  site := "Stores.lean:1564"
   subst := []
   leanParams := []
   fields :=
@@ -288,7 +300,7 @@ def scopeEntry : StructDesc where
 
 def scopeStore : StructDesc where
   leanName := "ScopeStore"
-  site := "Stores.lean:884"
+  site := "Stores.lean:1572"
   subst := []
   leanParams := []
   fields :=
@@ -296,13 +308,14 @@ def scopeStore : StructDesc where
 
 def stores : StructDesc where
   leanName := "Stores"
-  site := "Stores.lean:1223"
+  site := "Stores.lean:1980"
   subst := []
   leanParams := []
   fields :=
     [{ leanName := "refs", leanTy := .nm "RefHeap" },
      { leanName := "deferreds", leanTy := .nm "DeferredStore" },
      { leanName := "scopes", leanTy := .nm "ScopeStore" },
+     { leanName := "memo", leanTy := .nm "MemoWorld" },
      { leanName := "nextName", leanTy := .nm "Nat" }]
 
 /-- Every description above, in order. -/

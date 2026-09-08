@@ -824,7 +824,7 @@ abbrev Program := Prim Name Thunk Val Err Defect FiberId Ann
 
 The Layer machine's memo store, joined into the one `Stores`
 (`docs/research/2026-09-07-join-dispatch.md` §3; `MemoEntry`, `MemoMap`, `MemoWorld` and its two
-laws are `Machine/Layer.lean`'s, verbatim). A memo map is keyed by `LayerId`, the layer's path:
+laws are `Machine/Layer.lean`'s, verbatim; that file retired with the join, `git:4aae12f`). A memo map is keyed by `LayerId`, the layer's path:
 inserting under one path leaves every other path's entry untouched (`find?_append_other_key`),
 and memo identity is allocation, never a description. The build's in-flight cell is a Deferred,
 never a fiber: the world owns the entries and borrows the Deferred family's wakeup
@@ -1001,6 +1001,20 @@ theorem lookup_mem {w : MemoWorld} {layer : LayerId} :
 theorem get_mem {w : MemoWorld} {layer : LayerId} {id owner : MemoMapId} {entry : MemoEntry}
     (h : w.get layer id = some (owner, entry)) : ∃ m ∈ w, m.id = owner ∧ (layer, entry) ∈ m.entries :=
   lookup_mem h
+
+/-- `MemoMapImpl.get` answers its own map first (`Layer.ts:438-442`).
+census: layer.memo-map-parent-lookup -/
+theorem get_own (w : MemoWorld) (layer : LayerId) (id : MemoMapId) (entry : MemoEntry)
+    (h : w.entryAt id layer = some entry) : w.get layer id = some (id, entry) := by
+  simp only [MemoWorld.get, MemoWorld.lookup, h]
+
+/-- On a miss in the own map the lookup delegates to the parent (`:443`), so a forked map sees
+what its parent built. census: layer.memo-map-parent-lookup -/
+theorem get_parent (w : MemoWorld) (layer : LayerId) (id parent : MemoMapId) (m : MemoMap)
+    (hmiss : w.entryAt id layer = none) (hmap : w.mapAt id = some m)
+    (hparent : m.parent = some parent) :
+    w.get layer id = w.lookup layer w.length parent := by
+  simp only [MemoWorld.get, MemoWorld.lookup, hmiss, hmap, hparent]
 
 /-- The maps `setMap` leaves: the replacement, or one of the old ones. -/
 theorem mem_setMap {w : MemoWorld} {m n : MemoMap} (h : n ∈ w.setMap m) : n = m ∨ n ∈ w := by

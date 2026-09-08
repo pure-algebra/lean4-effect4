@@ -92,16 +92,8 @@ Lean field order, and the mangling round-trip on every field name. -/
 #guard Stores.scopeState.ctors.map (CtorDesc.ocaml "Ss") ==
   ["Ssempty", "SsopenEmpty", "SsopenInline", "SsopenMap", "Ssclosed"]
 
--- `Layer.lean`'s constructor counts (seat F2, at `2f77f7d`).
-#guard Layer.combineMode.ctors.length == 2
-#guard Layer.construction.ctors.length == 4
-#guard Layer.layerDesc.ctors.length == 6
-#guard Layer.finName.ctors.length == 11
-#guard Layer.syncOp.ctors.length == 10
-#guard Layer.progName.ctors.length == 27
-#guard Layer.name.ctors.length == 50
-#guard Layer.actionName.ctors.length == 15
-#guard Layer.thunk.ctors.length == 4
+-- `Layer.lean`'s counts (seat F2, at `2f77f7d`) retired with the Layer machine (the join,
+-- 2026-09-07): the layer rows are program subterms on the compile route now.
 #guard ForkFlow.fiberOp.ctors.length == 12
 #guard ForkFlow.forkRefusal.ctors.length == 6
 #guard ForkFlow.forkRequest.fields.map (·.ocaml) == ["root", "args", "daemon", "region"]
@@ -111,17 +103,6 @@ Lean field order, and the mangling round-trip on every field name. -/
 #guard Context.err.ctors.length == 2
 #guard Context.context.erasures.map (·.1) == ["keysNodup"]
 #guard Context.structs.all (fun d => d.holes.isEmpty)
-#guard Layer.scopeState.ctors.length == 5
-#guard Layer.st.fields.map (·.ocaml) == ["memo", "scopes", "deferreds", "next_name"]
-#guard Layer.memoEntry.fields.map (·.ocaml) == ["observers", "effect", "layer_scope", "deferred", "finalizer"]
-#guard Layer.inductives.all (fun d => d.erasures.isEmpty)
-#guard (Layer.structs.flatMap (fun d => d.fields.map (·.leanName))).all
-  (fun n => unmangleField (mangleField n) == n)
--- Layer's `ActionName` is `WithFiberAction` minus the fork-in/run-in/race family plus nothing:
--- every name is a `WithFiberAction` name (`dropObservers` since `2f77f7d`, `awaitAllFailFast`
--- described since the drift re-diff of 2026-09-04).
-#guard (Layer.actionName.ctors.map (·.leanName)).all
-  (fun n => (Fibers.withFiberAction.ctors.map (·.leanName)).contains n)
 
 
 /-! ## The projection guard -/
@@ -174,16 +155,24 @@ def report (tag : String) (hand derived : String) : IO Unit :=
 
 #guard (parts.map (·.name)).eraseDups.length == parts.length
 
-#guard (parts.flatMap Part.rows).length == 58
+-- The join (2026-09-07): the Layer part retired with `Machine/Layer.lean` (21 rows), and
+-- `Derived/{Context,Stores}.lean` were regenerated once through `Tools/Describe.lean`
+-- (`Env.Val` is an `abbrev` of the carrier since U1b, so it has no derived twin): 58 → 37.
+#guard (parts.flatMap Part.rows).length == 37
 -- D6-FB-AVATAR-ANSWER: Completion is wider than the avatar's exit-only tape.
 -- Pin this specific new disagreement as well as the existing projection count.
 #guard proj (.induct Fibers.runDecision) !=
   projUnder (.induct Fibers.runDecision) (.induct Derived.Fibers.runDecision)
--- V1 (2026-09-07): the hand descriptions of `FinName` (+`foreign`), `Thunk` (+`foreign`) and
--- `SyncOp` (`scopeAdd` −`key`) follow `Stores.lean`; their derived twins are the committed
--- `Derived/Stores.lean`, regenerated on the PC only (the avatar is held per the owner's
--- steer), so those three rows disagree until that regeneration: 47 → 44.
-#guard ((parts.flatMap Part.rows).filter (fun r => r.2.1 == r.2.2)).length == 44
+-- The avatar is retired estate: drift beyond the pinned rows is recorded, not repaired. The
+-- twelve rows that disagree after the join's regeneration: `Fibers.runDecision` (above);
+-- the join's own additions the hand descriptions do not follow — `Stores.finName`
+-- (+`closeChildOnFailure`/`memoEntry`/`memoDone`), `Stores.syncOp` (+`scopeFork` and the five
+-- memo arms), `Stores.name` (+`closeIfLast`), `Stores.stores` (+`memo`), `Stores.ctx`
+-- (`services` in place of `ambientScope`); the carrier's abbreviations — `Context.service`,
+-- `Context.reference` (`ServiceKey.Carrier`), `Context.val` (no twin); and the three that
+-- predate it — `Stores.scopeState` (the `Scope` parameters), `Stores.deferredStore`
+-- (`DuePair`), `Context.context` (the `keysNodup` proof field): 44 → 25.
+#guard ((parts.flatMap Part.rows).filter (fun r => r.2.1 == r.2.2)).length == 25
 
 #eval do
   let rows := parts.flatMap Part.rows

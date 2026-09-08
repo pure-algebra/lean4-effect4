@@ -3,7 +3,7 @@ import Effect4.Codegen.Schema
 import Effect4.Arch.Accepts
 import Effect4.Schema.Authoring
 import Effect4.Codegen.Profile
-import Effect4.Machine.Layer
+import Effect4.Program.Eff
 import Effect4.Data.Row
 import Effect4.Machine.Key
 
@@ -55,7 +55,7 @@ namespace Effect4.Arch
 
 open Effect4 Effect4.Schema Effect4.Store
 open Effect4.Codegen.Profile (OpRow ServiceRow)
-open Effect4.Machine.Layers (LayerDesc LayerId CombineMode)
+open Effect4.Program (LayerTerm)
 
 /-! ## The persisted JSON form of a document -/
 
@@ -99,35 +99,60 @@ def operationJson (row : OpRow) : Json :=
 def serviceJson (rows : ServiceRow) : Json :=
   .obj [("name", .str rows.name), ("ops", .arr (rows.ops.map operationJson))]
 
-/-! ## Layer graph: what a layer table declares
+/-! ## Layer graph: what a layer term declares
 
-The carrier is the Deep machine's `LayerDesc` (`src/Effect4/Machine/Layer.lean`): a layer is its
-construction (`atom`, `memoized`), a child scope, a `fresh`, a `provideWith` under its
-combine mode, or a `mergeAll`. Constructions are opaque to the view; only the layer graph
-(ids, kinds, arguments, dependency edges) crosses. -/
+The carrier is the program's `LayerTerm` (`src/Effect4/Program/Eff.lean`, the join of
+2026-09-07): a layer is a subterm — a `succeed`, an `effect` or `effectDiscard` construction
+(its `Eff` body opaque to the view), a `provide`/`provideMerge` of a dependent over its
+dependency, a `merge`, a `fresh` or an `orDie` — and its identity is its path. The view numbers
+the subterms in pre-order; only the layer graph (ids, kinds, arguments, dependency edges)
+crosses. -/
 
-def layerKind : LayerDesc → String
-  | .atom _ => "atom"
-  | .memoized _ => "memoized"
-  | .childScope _ => "childScope"
+variable {Op : Type}
+
+def layerKind : LayerTerm Op → String
+  | .succeed _ _ => "succeed"
+  | .effect _ _ => "effect"
+  | .effectDiscard _ => "effectDiscard"
+  | .provide _ _ => "provide"
+  | .provideMerge _ _ => "provideMerge"
+  | .merge _ _ => "merge"
   | .fresh _ => "fresh"
-  | .provideWith _ _ .provide => "provide"
-  | .provideWith _ _ .provideMerge => "provideMerge"
-  | .mergeAll _ => "mergeAll"
-
-def layerArgs : LayerDesc → List Nat
-  | .atom _ => []
-  | .memoized _ => []
-  | .childScope l => [l.index]
-  | .fresh l => [l.index]
-  | .provideWith l d _ => [l.index, d.index]
-  | .mergeAll ls => ls.map LayerId.index
-
-/-- The layers a description builds on: the edges of the layer graph. -/
-def layerDependencies : LayerDesc → List Nat := layerArgs
+  | .orDie _ => "orDie"
 
 def layerKinds : List String :=
-  ["atom", "memoized", "childScope", "fresh", "provide", "provideMerge", "mergeAll"]
+  ["succeed", "effect", "effectDiscard", "provide", "provideMerge", "merge", "fresh", "orDie"]
+
+/-- The layer subterms of a term in pre-order from `next`: each with its id, its kind and the
+ids of the layers it builds on (its children in the term), and the next free id. -/
+def layerNodes : LayerTerm Op → Nat → List (Nat × String × List Nat) × Nat
+  | .succeed _ _, next => ([(next, "succeed", [])], next + 1)
+  | .effect _ _, next => ([(next, "effect", [])], next + 1)
+  | .effectDiscard _, next => ([(next, "effectDiscard", [])], next + 1)
+  | .provide self that, next =>
+    let (selfNodes, afterSelf) := layerNodes self (next + 1)
+    let (thatNodes, afterThat) := layerNodes that afterSelf
+    ((next, "provide", [next + 1, afterSelf]) :: selfNodes ++ thatNodes, afterThat)
+  | .provideMerge self that, next =>
+    let (selfNodes, afterSelf) := layerNodes self (next + 1)
+    let (thatNodes, afterThat) := layerNodes that afterSelf
+    ((next, "provideMerge", [next + 1, afterSelf]) :: selfNodes ++ thatNodes, afterThat)
+  | .merge left right, next =>
+    let (leftNodes, afterLeft) := layerNodes left (next + 1)
+    let (rightNodes, afterRight) := layerNodes right afterLeft
+    ((next, "merge", [next + 1, afterLeft]) :: leftNodes ++ rightNodes, afterRight)
+  | .fresh inner, next =>
+    let (innerNodes, afterInner) := layerNodes inner (next + 1)
+    ((next, "fresh", [next + 1]) :: innerNodes, afterInner)
+  | .orDie inner, next =>
+    let (innerNodes, afterInner) := layerNodes inner (next + 1)
+    ((next, "orDie", [next + 1]) :: innerNodes, afterInner)
+
+/-- The layer graph of a term: every subterm with its kind and arguments, ids in pre-order. -/
+def layerGraph (layer : LayerTerm Op) : List (Nat × String × List Nat) := (layerNodes layer 0).1
+
+/-- The layers each subterm builds on: the edges of the layer graph, in pre-order. -/
+def layerDependencies (layer : LayerTerm Op) : List (List Nat) := (layerGraph layer).map (·.2.2)
 
 /-- The layer graph: every declared layer with its kind and arguments, and the
 dependency edges. -/
@@ -136,18 +161,19 @@ def layerDoc : Document :=
       struct
         [ property "layers" (array (struct
             [ property "id" number
-            , property "kind" (anyOf (literalString "atom") (layerKinds.tail.map literalString))
+            , property "kind" (anyOf (literalString "succeed") (layerKinds.tail.map literalString))
             , property "args" (array number) ]))
         , property "edges" (array (struct [property "from" number, property "to" number])) ]
     references := [] }
 
-def layersJson (layers : List (Nat × LayerDesc)) : Json :=
+def layersJson (layer : LayerTerm Op) : Json :=
+  let nodes := layerGraph layer
   .obj
-    [ ("layers", .arr (layers.map fun entry =>
-        .obj [ ("id", Json.ofNat entry.1), ("kind", .str (layerKind entry.2))
-             , ("args", .arr ((layerArgs entry.2).map Json.ofNat)) ]))
-    , ("edges", .arr ((layers.map fun entry =>
-        (layerDependencies entry.2).map fun target =>
+    [ ("layers", .arr (nodes.map fun entry =>
+        .obj [ ("id", Json.ofNat entry.1), ("kind", .str entry.2.1)
+             , ("args", .arr (entry.2.2.map Json.ofNat)) ]))
+    , ("edges", .arr ((nodes.map fun entry =>
+        entry.2.2.map fun target =>
           Json.obj [("from", Json.ofNat entry.1), ("to", Json.ofNat target)]).flatten)) ]
 
 /-! ## Requirement: the keys a program needs -/
@@ -244,7 +270,8 @@ store view over the empty store, which costs no hash. -/
 #print axioms operationJson
 #print axioms serviceJson
 #print axioms layerKind
-#print axioms layerArgs
+#print axioms layerNodes
+#print axioms layerGraph
 #print axioms layerDependencies
 #print axioms layerDoc
 #print axioms layersJson

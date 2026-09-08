@@ -853,6 +853,43 @@ theorem syncOpStep_memoGet_families (s s' : Stores) (layer : LayerId) (memoMap :
     obtain ⟨rfl, _⟩ := h
     exact ⟨rfl, rfl, rfl, rfl⟩
 
+/-! ### The join's finalizer names, as programs (`Layer.ts:343`, `:401-417`)
+
+The program a finalizer name runs and the store continuation `closeIfLast` reads, one `rfl`
+each: the compile route's witnesses for the layer rows of the census
+(`Test/Audit/RuntimeCoverage.lean`, the join). -/
+
+/-- `fromBuild`'s child scope closes only when the build failed (`Layer.ts:343`).
+census: layer.from-build-child-scope -/
+theorem finProgram_closeChildOnFailure_failure (scope : Nat) (cause : CauseV) :
+    finProgram (FinName.closeChildOnFailure scope) (Exit.failure cause) =
+      Prim.withFiber (Thunk.act (ActionName.closeScope scope (Exit.failure cause))) := rfl
+
+/-- A successful build leaves its child scope, and its finalizers, attached to the caller scope.
+census: layer.from-build-child-scope -/
+theorem finProgram_closeChildOnFailure_success (scope : Nat) (v : Val) :
+    finProgram (FinName.closeChildOnFailure scope) (Exit.success v) = Prim.success Val.unit := rfl
+
+/-- The memo entry finalizer: `memoRelease`, then `closeIfLast` on its answer (`:401-410`).
+census: layer.memo-finalizer-last-observer -/
+theorem finProgram_memoEntry (layer : LayerId) (memoMap : MemoMapId) (exit : ExitV) :
+    finProgram (FinName.memoEntry layer memoMap) exit =
+      Prim.onSuccess (Prim.sync (Thunk.op (SyncOp.memoRelease layer memoMap)))
+        (Name.closeIfLast exit) := rfl
+
+/-- `memoMapBuild`'s `onExit` (`:414-417`): the exit stored and the Deferred completed.
+census: layer.memo-build-once -/
+theorem finProgram_memoDone (layer : LayerId) (memoMap : MemoMapId) (exit : ExitV) :
+    finProgram (FinName.memoDone layer memoMap) exit =
+      Prim.sync (Thunk.op (SyncOp.memoComplete layer memoMap exit)) := rfl
+
+/-- The last observer's release answered the layer scope: closed with the closing exit (`:406`);
+`contAOf_closeIfLast_other` (`Program/Intro.lean`) is the other answer, void (`:408`).
+census: layer.memo-finalizer-last-observer -/
+theorem contAOf_closeIfLast_scope (exit : ExitV) (scope : Nat) :
+    contAOf (Name.closeIfLast exit) (Val.scopeHandle scope) =
+      Prim.withFiber (Thunk.act (ActionName.closeScope scope exit)) := rfl
+
 /-! ## The laws of `syncOpStep` -/
 
 /-- A step grows the store (plan §3.2, ENSURES 11): one case per arm of `syncOpStep`. -/

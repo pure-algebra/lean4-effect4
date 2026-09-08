@@ -3,7 +3,6 @@ import OCaml5.Avatar.Probe
 import OCaml5.Avatar.Fibers
 import OCaml5.Avatar.Stores
 import OCaml5.Avatar.Context
-import OCaml5.Avatar.Layer
 import OCaml5.Avatar.ForkFlow
 
 /-!
@@ -14,17 +13,18 @@ of `ocaml/avatar/` (`OCaml5.Avatar.Part`). Everything a driver or a check needs 
 `Tools/RenderDeep.lean` prints `(find? name).generated`, `OCaml5.Avatar.Check` compares
 `guarded` with `derived` part by part, `ocaml/tools/fuzz.sh avatar` compiles `Fibers.checkModule`.
 
-**Depends on.** The six part modules and `OCaml5.Avatar.Part`.
+**Depends on.** The five part modules and `OCaml5.Avatar.Part` (the Layer part retired with
+`Machine/Layer.lean` in the join of 2026-09-07; `ocaml/avatar/deep_layer.ml` is an orphan).
 
 **Properties.**
 * **Names are unique**, so `find?` is a function — *tested* (`Check`).
-* **The order is the avatar's**: fibers, stores, context, layer, forkflow — *by construction*.
+* **The order is the avatar's**: fibers, stores, context, forkflow — *by construction*.
 -/
 
 namespace OCaml5.Avatar
 
 /-- Every part of the avatar, in the avatar's order. -/
-def parts : List Part := [Fibers.part, Stores.part, Context.part, Layer.part, ForkFlow.part]
+def parts : List Part := [Fibers.part, Stores.part, Context.part, ForkFlow.part]
 
 /-- The part `render-deep.sh` names. -/
 def find? (name : String) : Option Part := parts.find? (·.name == name)

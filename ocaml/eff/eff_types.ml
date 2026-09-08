@@ -262,6 +262,37 @@ let ctor_name_native_op : native_op -> string = function
 let ctor_names_native_op : string list = ["refMake"; "refGet"; "refSet"; "refGetAndSet"; "refSetAndGet"; "refUpdate"; "refGetAndUpdate"; "refUpdateAndGet"; "refUpdateSome"; "refGetAndUpdateSome"; "refUpdateSomeAndGet"; "refModify"; "refModifySome"; "deferredMake"; "deferredIsDone"; "deferredPoll"; "deferredSucceed"; "deferredFail"; "deferredAwait"; "scopeMake"]
 
 
+type service_name = {
+  service_name_value : int;
+}
+
+let ctor_index_service_name (_ : service_name) : int = 0
+let ctor_name_service_name (_ : service_name) : string = "mk"
+let ctor_names_service_name : string list = ["mk"]
+let field_names_service_name : string list = ["value"]
+
+
+type service_type_code = {
+  service_type_code_value : int;
+}
+
+let ctor_index_service_type_code (_ : service_type_code) : int = 0
+let ctor_name_service_type_code (_ : service_type_code) : string = "mk"
+let ctor_names_service_type_code : string list = ["mk"]
+let field_names_service_type_code : string list = ["value"]
+
+
+type service_key = {
+  service_key_name : service_name;
+  service_key_service : service_type_code;
+}
+
+let ctor_index_service_key (_ : service_key) : int = 0
+let ctor_name_service_key (_ : service_key) : string = "mk"
+let ctor_names_service_key : string list = ["mk"]
+let field_names_service_key : string list = ["name"; "service"]
+
+
 type eff =
   | Eff_succeed of term
   | Eff_fail of term
@@ -287,6 +318,9 @@ type eff =
   | Eff_scoped of eff
   | Eff_acquireRelease of eff * eff
   | Eff_choose of int * eff * eff
+  | Eff_provideLayer of layer_term * bool * eff
+  | Eff_service of service_key
+  | Eff_provideService of service_key * term * eff
 
 and stmt =
   | Stmt_bindYield of eff
@@ -322,6 +356,16 @@ and action_term =
   | Action_term_getId
   | Action_term_closeScope of term * term
 
+and layer_term =
+  | Layer_term_succeed of service_key * lit
+  | Layer_term_effect of service_key * eff
+  | Layer_term_effectDiscard of eff
+  | Layer_term_provide of layer_term * layer_term
+  | Layer_term_provideMerge of layer_term * layer_term
+  | Layer_term_merge of layer_term * layer_term
+  | Layer_term_fresh of layer_term
+  | Layer_term_orDie of layer_term
+
 let ctor_index_eff : eff -> int = function
   | Eff_succeed _ -> 0
   | Eff_fail _ -> 1
@@ -347,6 +391,9 @@ let ctor_index_eff : eff -> int = function
   | Eff_scoped _ -> 21
   | Eff_acquireRelease _ -> 22
   | Eff_choose _ -> 23
+  | Eff_provideLayer _ -> 24
+  | Eff_service _ -> 25
+  | Eff_provideService _ -> 26
 let ctor_name_eff : eff -> string = function
   | Eff_succeed _ -> "succeed"
   | Eff_fail _ -> "fail"
@@ -372,7 +419,10 @@ let ctor_name_eff : eff -> string = function
   | Eff_scoped _ -> "scoped"
   | Eff_acquireRelease _ -> "acquireRelease"
   | Eff_choose _ -> "choose"
-let ctor_names_eff : string list = ["succeed"; "fail"; "failCause"; "yieldError"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "branch"; "whileLoop"; "yieldNow"; "callback"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "choose"]
+  | Eff_provideLayer _ -> "provideLayer"
+  | Eff_service _ -> "service"
+  | Eff_provideService _ -> "provideService"
+let ctor_names_eff : string list = ["succeed"; "fail"; "failCause"; "yieldError"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "branch"; "whileLoop"; "yieldNow"; "callback"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "choose"; "provideLayer"; "service"; "provideService"]
 
 let ctor_index_stmt : stmt -> int = function
   | Stmt_bindYield _ -> 0
@@ -442,6 +492,26 @@ let ctor_name_action_term : action_term -> string = function
   | Action_term_closeScope _ -> "closeScope"
 let ctor_names_action_term : string list = ["fork"; "forkIn"; "forkScoped"; "runIn"; "interrupt"; "interruptScoped"; "interruptAll"; "awaitAll"; "awaitAllFailFast"; "snapshotChildren"; "awaitNewChildren"; "raceAll"; "setContext"; "getContext"; "getId"; "closeScope"]
 
+let ctor_index_layer_term : layer_term -> int = function
+  | Layer_term_succeed _ -> 0
+  | Layer_term_effect _ -> 1
+  | Layer_term_effectDiscard _ -> 2
+  | Layer_term_provide _ -> 3
+  | Layer_term_provideMerge _ -> 4
+  | Layer_term_merge _ -> 5
+  | Layer_term_fresh _ -> 6
+  | Layer_term_orDie _ -> 7
+let ctor_name_layer_term : layer_term -> string = function
+  | Layer_term_succeed _ -> "succeed"
+  | Layer_term_effect _ -> "effect"
+  | Layer_term_effectDiscard _ -> "effectDiscard"
+  | Layer_term_provide _ -> "provide"
+  | Layer_term_provideMerge _ -> "provideMerge"
+  | Layer_term_merge _ -> "merge"
+  | Layer_term_fresh _ -> "fresh"
+  | Layer_term_orDie _ -> "orDie"
+let ctor_names_layer_term : string list = ["succeed"; "effect"; "effectDiscard"; "provide"; "provideMerge"; "merge"; "fresh"; "orDie"]
+
 
 type row_kind =
   | Row_kind_sync
@@ -473,37 +543,6 @@ let ctor_name_row_shape : row_shape -> string = function
   | Row_shape_value -> "value"
   | Row_shape_tupleCall -> "tupleCall"
 let ctor_names_row_shape : string list = ["call"; "value"; "tupleCall"]
-
-
-type service_name = {
-  service_name_value : int;
-}
-
-let ctor_index_service_name (_ : service_name) : int = 0
-let ctor_name_service_name (_ : service_name) : string = "mk"
-let ctor_names_service_name : string list = ["mk"]
-let field_names_service_name : string list = ["value"]
-
-
-type service_type_code = {
-  service_type_code_value : int;
-}
-
-let ctor_index_service_type_code (_ : service_type_code) : int = 0
-let ctor_name_service_type_code (_ : service_type_code) : string = "mk"
-let ctor_names_service_type_code : string list = ["mk"]
-let field_names_service_type_code : string list = ["value"]
-
-
-type service_key = {
-  service_key_name : service_name;
-  service_key_service : service_type_code;
-}
-
-let ctor_index_service_key (_ : service_key) : int = 0
-let ctor_name_service_key (_ : service_key) : string = "mk"
-let ctor_names_service_key : string list = ["mk"]
-let field_names_service_key : string list = ["name"; "service"]
 
 
 type row = {

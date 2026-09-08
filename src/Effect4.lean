@@ -95,9 +95,10 @@ import Effect4.Machine.Handles
 import Effect4.Machine.StoresValue
 import Effect4.Machine.Witnesses
 import Effect4.Machine.Context
--- The Layer machine's value alphabet as an exact image of the carrier (U0; U1b).
+-- The context's value alphabet as an exact image of the carrier (U0; U1b). The Layer machine
+-- (`Machine/Layer.lean`) retired with the join of 2026-09-07: layers are program subterms
+-- addressed by path and build on the compile route (`Program/Compile.lean`).
 import Effect4.Machine.ContextValue
-import Effect4.Machine.Layer
 -- The middle tier (2026-09-04): architecture views as Effect Schema documents
 -- with payloads projected from the proof carriers, the structural acceptance
 -- checker, and the pinned standard library as store entries. A schema is store

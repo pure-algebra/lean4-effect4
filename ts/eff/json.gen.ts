@@ -11,7 +11,7 @@
 // ReadonlyArray<head>; a family whose constructors are all nullary is a union of string literals.
 // Nat is number, Option is `| null`, List is ReadonlyArray.
 
-import type { Ty, Lit, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, FnName, NativeOp, Eff, Stmt, ActionTerm, RowKind, RowShape, ServiceName, ServiceTypeCode, ServiceKey, Row, EffTy } from "./eff.gen.ts"
+import type { Ty, Lit, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, FnName, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Row, EffTy } from "./eff.gen.ts"
 
 export type Json = string | number | boolean | null | ReadonlyArray<Json> | { readonly [key: string]: Json }
 
@@ -105,6 +105,19 @@ export const nativeOpJson = (v: NativeOp): Json => {
   }
 }
 
+export const serviceNameJson = (v: ServiceName): Json => ({
+  value: v.value,
+})
+
+export const serviceTypeCodeJson = (v: ServiceTypeCode): Json => ({
+  value: v.value,
+})
+
+export const serviceKeyJson = (v: ServiceKey): Json => ({
+  name: serviceNameJson(v.name),
+  service: serviceTypeCodeJson(v.service),
+})
+
 export const effJson = (v: Eff): Json => {
   switch (v._tag) {
     case "succeed": return ["succeed", termJson(v.value)]
@@ -131,6 +144,9 @@ export const effJson = (v: Eff): Json => {
     case "scoped": return ["scoped", effJson(v.body)]
     case "acquireRelease": return ["acquireRelease", effJson(v.acquire), effJson(v.release)]
     case "choose": return ["choose", v.site, effJson(v.left), effJson(v.right)]
+    case "provideLayer": return ["provideLayer", layerTermJson(v.layer), v.isLocal, effJson(v.body)]
+    case "service": return ["service", serviceKeyJson(v.key)]
+    case "provideService": return ["provideService", serviceKeyJson(v.key), termJson(v.value), effJson(v.body)]
   }
 }
 
@@ -170,22 +186,22 @@ export const actionTermJson = (v: ActionTerm): Json => {
   }
 }
 
+export const layerTermJson = (v: LayerTerm): Json => {
+  switch (v._tag) {
+    case "succeed": return ["succeed", serviceKeyJson(v.key), litJson(v.value)]
+    case "effect": return ["effect", serviceKeyJson(v.key), effJson(v.body)]
+    case "effectDiscard": return ["effectDiscard", effJson(v.body)]
+    case "provide": return ["provide", layerTermJson(v.self), layerTermJson(v.that)]
+    case "provideMerge": return ["provideMerge", layerTermJson(v.self), layerTermJson(v.that)]
+    case "merge": return ["merge", layerTermJson(v.left), layerTermJson(v.right)]
+    case "fresh": return ["fresh", layerTermJson(v.inner)]
+    case "orDie": return ["orDie", layerTermJson(v.inner)]
+  }
+}
+
 export const rowKindJson = (v: RowKind): Json => [v]
 
 export const rowShapeJson = (v: RowShape): Json => [v]
-
-export const serviceNameJson = (v: ServiceName): Json => ({
-  value: v.value,
-})
-
-export const serviceTypeCodeJson = (v: ServiceTypeCode): Json => ({
-  value: v.value,
-})
-
-export const serviceKeyJson = (v: ServiceKey): Json => ({
-  name: serviceNameJson(v.name),
-  service: serviceTypeCodeJson(v.service),
-})
 
 export const rowJson = (v: Row): Json => ({
   name: v.name,

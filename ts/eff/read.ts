@@ -922,6 +922,19 @@ const headReaders: Record<Head, HeadReader> = {
   "Cause.combine": notHere("Cause.combine"),
   "undefined": notHere("undefined"),
   "Effect.withFiber": readRunIn,
+  // the join (2026-09-07): reserved spellings with no reading, as in Read.lean
+  "Context.Service": notHere("Context.Service"),
+  "Effect.provide": notHere("Effect.provide"),
+  "Effect.service": notHere("Effect.service"),
+  "Effect.provideService": notHere("Effect.provideService"),
+  "Layer.succeed": notHere("Layer.succeed"),
+  "Layer.effect": notHere("Layer.effect"),
+  "Layer.effectDiscard": notHere("Layer.effectDiscard"),
+  "Layer.provide": notHere("Layer.provide"),
+  "Layer.provideMerge": notHere("Layer.provideMerge"),
+  "Layer.merge": notHere("Layer.merge"),
+  "Layer.fresh": notHere("Layer.fresh"),
+  "Layer.orDie": notHere("Layer.orDie"),
 }
 
 /** A generator body, statement by statement, with the binder counts of the printer. */

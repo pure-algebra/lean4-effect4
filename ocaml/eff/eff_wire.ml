@@ -455,6 +455,66 @@ let rec decode_native_op (s : string) (pos : int) (limit : int) : (native_op * i
 
 let decode_native_op_exact (s : string) : native_op option = Eff_frame.exact decode_native_op s
 
+let rec emit_service_name (b : Buffer.t) (r : service_name) : unit =
+  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_nat b r.service_name_value)
+
+let encode_service_name (v : service_name) : string = Eff_frame.to_string emit_service_name v
+
+let rec decode_service_name (s : string) (pos : int) (limit : int) : (service_name * int) option =
+  match Eff_frame.read_ctor s pos limit with
+  | None -> None
+  | Some (i, p, e, next) ->
+    (match i with
+    | 0 ->
+      (match Eff_frame.decode_nat s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some ({ service_name_value = a0 }, next) else None)
+    | _ -> None)
+
+let decode_service_name_exact (s : string) : service_name option = Eff_frame.exact decode_service_name s
+
+let rec emit_service_type_code (b : Buffer.t) (r : service_type_code) : unit =
+  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_nat b r.service_type_code_value)
+
+let encode_service_type_code (v : service_type_code) : string = Eff_frame.to_string emit_service_type_code v
+
+let rec decode_service_type_code (s : string) (pos : int) (limit : int) : (service_type_code * int) option =
+  match Eff_frame.read_ctor s pos limit with
+  | None -> None
+  | Some (i, p, e, next) ->
+    (match i with
+    | 0 ->
+      (match Eff_frame.decode_nat s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some ({ service_type_code_value = a0 }, next) else None)
+    | _ -> None)
+
+let decode_service_type_code_exact (s : string) : service_type_code option = Eff_frame.exact decode_service_type_code s
+
+let rec emit_service_key (b : Buffer.t) (r : service_key) : unit =
+  Eff_frame.emit_ctor b 0 (fun b -> emit_service_name b r.service_key_name; emit_service_type_code b r.service_key_service)
+
+let encode_service_key (v : service_key) : string = Eff_frame.to_string emit_service_key v
+
+let rec decode_service_key (s : string) (pos : int) (limit : int) : (service_key * int) option =
+  match Eff_frame.read_ctor s pos limit with
+  | None -> None
+  | Some (i, p, e, next) ->
+    (match i with
+    | 0 ->
+      (match decode_service_name s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match decode_service_type_code s p e with
+         | None -> None
+         | Some (a1, p) ->
+          if p = e then Some ({ service_key_name = a0; service_key_service = a1 }, next) else None))
+    | _ -> None)
+
+let decode_service_key_exact (s : string) : service_key option = Eff_frame.exact decode_service_key s
+
 let rec emit_eff (b : Buffer.t) (v : eff) : unit =
   match v with
   | Eff_succeed a0 -> Eff_frame.emit_ctor b 0 (fun b -> emit_term b a0)
@@ -481,6 +541,9 @@ let rec emit_eff (b : Buffer.t) (v : eff) : unit =
   | Eff_scoped a0 -> Eff_frame.emit_ctor b 21 (fun b -> emit_eff b a0)
   | Eff_acquireRelease (a0, a1) -> Eff_frame.emit_ctor b 22 (fun b -> emit_eff b a0; emit_eff b a1)
   | Eff_choose (a0, a1, a2) -> Eff_frame.emit_ctor b 23 (fun b -> Eff_frame.emit_nat b a0; emit_eff b a1; emit_eff b a2)
+  | Eff_provideLayer (a0, a1, a2) -> Eff_frame.emit_ctor b 24 (fun b -> emit_layer_term b a0; Eff_frame.emit_bool b a1; emit_eff b a2)
+  | Eff_service a0 -> Eff_frame.emit_ctor b 25 (fun b -> emit_service_key b a0)
+  | Eff_provideService (a0, a1, a2) -> Eff_frame.emit_ctor b 26 (fun b -> emit_service_key b a0; emit_term b a1; emit_eff b a2)
 and emit_stmt (b : Buffer.t) (v : stmt) : unit =
   match v with
   | Stmt_bindYield a0 -> Eff_frame.emit_ctor b 0 (fun b -> emit_eff b a0)
@@ -515,12 +578,23 @@ and emit_action_term (b : Buffer.t) (v : action_term) : unit =
   | Action_term_getContext -> Eff_frame.emit_ctor b 13 (fun _ -> ())
   | Action_term_getId -> Eff_frame.emit_ctor b 14 (fun _ -> ())
   | Action_term_closeScope (a0, a1) -> Eff_frame.emit_ctor b 15 (fun b -> emit_term b a0; emit_term b a1)
+and emit_layer_term (b : Buffer.t) (v : layer_term) : unit =
+  match v with
+  | Layer_term_succeed (a0, a1) -> Eff_frame.emit_ctor b 0 (fun b -> emit_service_key b a0; emit_lit b a1)
+  | Layer_term_effect (a0, a1) -> Eff_frame.emit_ctor b 1 (fun b -> emit_service_key b a0; emit_eff b a1)
+  | Layer_term_effectDiscard a0 -> Eff_frame.emit_ctor b 2 (fun b -> emit_eff b a0)
+  | Layer_term_provide (a0, a1) -> Eff_frame.emit_ctor b 3 (fun b -> emit_layer_term b a0; emit_layer_term b a1)
+  | Layer_term_provideMerge (a0, a1) -> Eff_frame.emit_ctor b 4 (fun b -> emit_layer_term b a0; emit_layer_term b a1)
+  | Layer_term_merge (a0, a1) -> Eff_frame.emit_ctor b 5 (fun b -> emit_layer_term b a0; emit_layer_term b a1)
+  | Layer_term_fresh a0 -> Eff_frame.emit_ctor b 6 (fun b -> emit_layer_term b a0)
+  | Layer_term_orDie a0 -> Eff_frame.emit_ctor b 7 (fun b -> emit_layer_term b a0)
 
 let encode_eff (v : eff) : string = Eff_frame.to_string emit_eff v
 let encode_stmt (v : stmt) : string = Eff_frame.to_string emit_stmt v
 let encode_stmts (v : stmts) : string = Eff_frame.to_string emit_stmts v
 let encode_effs (v : effs) : string = Eff_frame.to_string emit_effs v
 let encode_action_term (v : action_term) : string = Eff_frame.to_string emit_action_term v
+let encode_layer_term (v : layer_term) : string = Eff_frame.to_string emit_layer_term v
 
 let rec decode_eff (s : string) (pos : int) (limit : int) : (eff * int) option =
   match Eff_frame.read_ctor s pos limit with
@@ -695,6 +769,33 @@ let rec decode_eff (s : string) (pos : int) (limit : int) : (eff * int) option =
            | None -> None
            | Some (a2, p) ->
             if p = e then Some (Eff_choose (a0, a1, a2), next) else None)))
+    | 24 ->
+      (match decode_layer_term s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match Eff_frame.decode_bool s p e with
+         | None -> None
+         | Some (a1, p) ->
+          (match decode_eff s p e with
+           | None -> None
+           | Some (a2, p) ->
+            if p = e then Some (Eff_provideLayer (a0, a1, a2), next) else None)))
+    | 25 ->
+      (match decode_service_key s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Eff_service a0, next) else None)
+    | 26 ->
+      (match decode_service_key s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match decode_term s p e with
+         | None -> None
+         | Some (a1, p) ->
+          (match decode_eff s p e with
+           | None -> None
+           | Some (a2, p) ->
+            if p = e then Some (Eff_provideService (a0, a1, a2), next) else None)))
     | _ -> None)
 and decode_stmt (s : string) (pos : int) (limit : int) : (stmt * int) option =
   match Eff_frame.read_ctor s pos limit with
@@ -865,12 +966,74 @@ and decode_action_term (s : string) (pos : int) (limit : int) : (action_term * i
          | Some (a1, p) ->
           if p = e then Some (Action_term_closeScope (a0, a1), next) else None))
     | _ -> None)
+and decode_layer_term (s : string) (pos : int) (limit : int) : (layer_term * int) option =
+  match Eff_frame.read_ctor s pos limit with
+  | None -> None
+  | Some (i, p, e, next) ->
+    (match i with
+    | 0 ->
+      (match decode_service_key s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match decode_lit s p e with
+         | None -> None
+         | Some (a1, p) ->
+          if p = e then Some (Layer_term_succeed (a0, a1), next) else None))
+    | 1 ->
+      (match decode_service_key s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match decode_eff s p e with
+         | None -> None
+         | Some (a1, p) ->
+          if p = e then Some (Layer_term_effect (a0, a1), next) else None))
+    | 2 ->
+      (match decode_eff s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Layer_term_effectDiscard a0, next) else None)
+    | 3 ->
+      (match decode_layer_term s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match decode_layer_term s p e with
+         | None -> None
+         | Some (a1, p) ->
+          if p = e then Some (Layer_term_provide (a0, a1), next) else None))
+    | 4 ->
+      (match decode_layer_term s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match decode_layer_term s p e with
+         | None -> None
+         | Some (a1, p) ->
+          if p = e then Some (Layer_term_provideMerge (a0, a1), next) else None))
+    | 5 ->
+      (match decode_layer_term s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match decode_layer_term s p e with
+         | None -> None
+         | Some (a1, p) ->
+          if p = e then Some (Layer_term_merge (a0, a1), next) else None))
+    | 6 ->
+      (match decode_layer_term s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Layer_term_fresh a0, next) else None)
+    | 7 ->
+      (match decode_layer_term s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Layer_term_orDie a0, next) else None)
+    | _ -> None)
 
 let decode_eff_exact (s : string) : eff option = Eff_frame.exact decode_eff s
 let decode_stmt_exact (s : string) : stmt option = Eff_frame.exact decode_stmt s
 let decode_stmts_exact (s : string) : stmts option = Eff_frame.exact decode_stmts s
 let decode_effs_exact (s : string) : effs option = Eff_frame.exact decode_effs s
 let decode_action_term_exact (s : string) : action_term option = Eff_frame.exact decode_action_term s
+let decode_layer_term_exact (s : string) : layer_term option = Eff_frame.exact decode_layer_term s
 
 let rec emit_row_kind (b : Buffer.t) (v : row_kind) : unit =
   match v with
@@ -917,66 +1080,6 @@ let rec decode_row_shape (s : string) (pos : int) (limit : int) : (row_shape * i
     | _ -> None)
 
 let decode_row_shape_exact (s : string) : row_shape option = Eff_frame.exact decode_row_shape s
-
-let rec emit_service_name (b : Buffer.t) (r : service_name) : unit =
-  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_nat b r.service_name_value)
-
-let encode_service_name (v : service_name) : string = Eff_frame.to_string emit_service_name v
-
-let rec decode_service_name (s : string) (pos : int) (limit : int) : (service_name * int) option =
-  match Eff_frame.read_ctor s pos limit with
-  | None -> None
-  | Some (i, p, e, next) ->
-    (match i with
-    | 0 ->
-      (match Eff_frame.decode_nat s p e with
-       | None -> None
-       | Some (a0, p) ->
-        if p = e then Some ({ service_name_value = a0 }, next) else None)
-    | _ -> None)
-
-let decode_service_name_exact (s : string) : service_name option = Eff_frame.exact decode_service_name s
-
-let rec emit_service_type_code (b : Buffer.t) (r : service_type_code) : unit =
-  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_nat b r.service_type_code_value)
-
-let encode_service_type_code (v : service_type_code) : string = Eff_frame.to_string emit_service_type_code v
-
-let rec decode_service_type_code (s : string) (pos : int) (limit : int) : (service_type_code * int) option =
-  match Eff_frame.read_ctor s pos limit with
-  | None -> None
-  | Some (i, p, e, next) ->
-    (match i with
-    | 0 ->
-      (match Eff_frame.decode_nat s p e with
-       | None -> None
-       | Some (a0, p) ->
-        if p = e then Some ({ service_type_code_value = a0 }, next) else None)
-    | _ -> None)
-
-let decode_service_type_code_exact (s : string) : service_type_code option = Eff_frame.exact decode_service_type_code s
-
-let rec emit_service_key (b : Buffer.t) (r : service_key) : unit =
-  Eff_frame.emit_ctor b 0 (fun b -> emit_service_name b r.service_key_name; emit_service_type_code b r.service_key_service)
-
-let encode_service_key (v : service_key) : string = Eff_frame.to_string emit_service_key v
-
-let rec decode_service_key (s : string) (pos : int) (limit : int) : (service_key * int) option =
-  match Eff_frame.read_ctor s pos limit with
-  | None -> None
-  | Some (i, p, e, next) ->
-    (match i with
-    | 0 ->
-      (match decode_service_name s p e with
-       | None -> None
-       | Some (a0, p) ->
-        (match decode_service_type_code s p e with
-         | None -> None
-         | Some (a1, p) ->
-          if p = e then Some ({ service_key_name = a0; service_key_service = a1 }, next) else None))
-    | _ -> None)
-
-let decode_service_key_exact (s : string) : service_key option = Eff_frame.exact decode_service_key s
 
 let rec emit_row (b : Buffer.t) (r : row) : unit =
   Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b r.row_name; Eff_frame.emit_string b r.row_spelling; emit_row_shape b r.row_shape; Eff_frame.emit_list b (fun b y -> Eff_frame.emit_string b y) r.row_trailing; emit_row_kind b r.row_kind; emit_ty b r.row_request; emit_ty b r.row_answer; emit_ty b r.row_error; Eff_frame.emit_list b (fun b y -> emit_service_key b y) r.row_requires; Eff_frame.emit_string b r.row_cite; Eff_frame.emit_list b (fun b y -> Eff_frame.emit_string b y) r.row_typeArgs)

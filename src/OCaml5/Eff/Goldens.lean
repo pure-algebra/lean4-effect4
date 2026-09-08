@@ -358,6 +358,19 @@ def pIllCallback : P := .bind (.perform .refMake (n 0)) (.callback .refGet (v 0)
 def pIllStep : P := .whileLoop (n 0) (.app "lt" (ts [v 0, n 3])) (.lit (.bool true)) (.yieldNow 0)
 def pIllInterruptor : P := .failCause (.interrupt (some (.lit (.bool true))))
 
+/-- The join (2026-09-07): a layer of every constructor, provided to a body that reads a
+service and provides one; the keys are the truth fixtures' spellings
+(`harness/truth/Truth.lean`: codes 4 `nat`, 5 `bool` at `nativeServiceTy`). -/
+def kA : ServiceKey := ⟨⟨4⟩, ⟨4⟩⟩
+def kB : ServiceKey := ⟨⟨5⟩, ⟨4⟩⟩
+def kC : ServiceKey := ⟨⟨6⟩, ⟨5⟩⟩
+def layerAll : LayerTerm NativeOp :=
+  .orDie (.fresh (.merge
+    (.provide (.effect kA (.succeed (n 7))) (.succeed kB (.nat 1)))
+    (.provideMerge (.effectDiscard (.succeed u)) (.succeed kC (.bool true)))))
+def pProvide : P :=
+  .provideLayer layerAll false (.bind (.service kA) (.provideService kB (n 2) (.service kB)))
+
 def corpus : List (String × P) :=
   [ ("p42", p42), ("pBind", pBind), ("pFork", pFork), ("pTwo", pTwo), ("pAwait", pAwait)
   , ("pGen", pGen), ("pWhile", pWhile), ("pCatch", pCatch), ("pStr", pStr), ("pFailCause", pFailCause)
@@ -367,7 +380,8 @@ def corpus : List (String × P) :=
   , ("pChoose", pChoose), ("pPair", pPair), ("pStmts", pStmts), ("pActions", pActions), ("pOps", pOps)
   , ("pIll", pIll), ("pIllRet", pIllRet), ("pIllReq", pIllReq), ("pIllBreak", pIllBreak)
   , ("pIllBranch", pIllBranch), ("pIllJoin", pIllJoin), ("pIllVar", pIllVar)
-  , ("pIllCallback", pIllCallback), ("pIllStep", pIllStep), ("pIllInterruptor", pIllInterruptor) ]
+  , ("pIllCallback", pIllCallback), ("pIllStep", pIllStep), ("pIllInterruptor", pIllInterruptor)
+  , ("pProvide", pProvide) ]
 
 end Corpus
 

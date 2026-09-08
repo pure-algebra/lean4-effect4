@@ -268,11 +268,13 @@ mutual
     | .provide self that => do
       let s ← printLayer sig self
       let t ← printLayer sig that
-      .ok (.method s "pipe" [.call (.ident "Layer.provide") [t]])
+      .ok (.method s "pipe"
+        [.call (.ident "Layer.provide") [t]])
     | .provideMerge self that => do
       let s ← printLayer sig self
       let t ← printLayer sig that
-      .ok (.method s "pipe" [.call (.ident "Layer.provideMerge") [t]])
+      .ok (.method s "pipe"
+        [.call (.ident "Layer.provideMerge") [t]])
     | .merge left right => do
       let l ← printLayer sig left
       let r ← printLayer sig right

@@ -94,14 +94,17 @@ def blocks : List (List Spec) :=
   , [⟨`Effect4.FinalizerStrategy, "finalizer_strategy", []⟩]
   , [⟨`Effect4.Machine.FnName, "fn_name", []⟩]
   , [⟨`Effect4.Program.NativeOp, "native_op", []⟩]
-  , [ ⟨`Effect4.Program.Eff, "eff", [natOp]⟩, ⟨`Effect4.Program.Stmt, "stmt", [natOp]⟩
-    , ⟨`Effect4.Program.Stmts, "stmts", [natOp]⟩, ⟨`Effect4.Program.Effs, "effs", [natOp]⟩
-    , ⟨`Effect4.Program.ActionTerm, "action_term", [natOp]⟩ ]
-  , [⟨`Effect4.Program.RowKind, "row_kind", []⟩]
-  , [⟨`Effect4.Program.RowShape, "row_shape", []⟩]
+  -- the service key before the `Eff` group since the join (2026-09-07): `provideLayer`,
+  -- `service`, `provideService` and `LayerTerm` carry a `ServiceKey`
   , [⟨`Effect4.ServiceName, "service_name", []⟩]
   , [⟨`Effect4.ServiceTypeCode, "service_type_code", []⟩]
   , [⟨`Effect4.ServiceKey, "service_key", []⟩]
+  , [ ⟨`Effect4.Program.Eff, "eff", [natOp]⟩, ⟨`Effect4.Program.Stmt, "stmt", [natOp]⟩
+    , ⟨`Effect4.Program.Stmts, "stmts", [natOp]⟩, ⟨`Effect4.Program.Effs, "effs", [natOp]⟩
+    , ⟨`Effect4.Program.ActionTerm, "action_term", [natOp]⟩
+    , ⟨`Effect4.Program.LayerTerm, "layer_term", [natOp]⟩ ]
+  , [⟨`Effect4.Program.RowKind, "row_kind", []⟩]
+  , [⟨`Effect4.Program.RowShape, "row_shape", []⟩]
   , [⟨`Effect4.Program.Row, "row", []⟩]
   , [⟨`Effect4.Program.EffTy, "eff_ty", []⟩] ]
 

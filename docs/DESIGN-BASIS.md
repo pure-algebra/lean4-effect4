@@ -378,6 +378,67 @@ PolyFun's `FreeM` is still a higher-order proof representation. It cannot
 replace first-order checked `Flow`, so adopting the dependency would not remove
 the reification boundary.
 
+### DB-11 — one value carrier, images over it, admission as a premise
+
+Status: adopted 2026-09-07 (U0, U1a, U1b: `7cbd436`, `54c90a4`); the executable admission
+is owed to X2.
+
+Every value the runtime carries is one tree, `Effect4.Store.Val`
+(`src/Effect4/Store/Val.lean`): the content store's frames plus `handle` (tag 12), a live
+allocation index into a running machine's stores. `Machine.Val` and `Env.Val` are that type
+by `abbrev` (`src/Effect4/Machine/Stores.lean`, `ContextMap.lean`); the runtime alphabets that
+were inductives of their own — exits, causes, the fiber context, the service map — are images
+over it (`Effect4.Store.Image`, `src/Effect4/Store/Image.lean`: `toVal`/`ofVal` with
+`ofVal_toVal` and `ofVal_exact`), so a value is read back by a reader (`Val.context?`,
+`Env.decode`, `Val.scope?`, `exitOfVal`) and never matched as a constructor. A handle is not
+content: no store shape accepts it, and its kind table is the Machine's.
+
+Well-formedness is a theorem premise, not a runtime check. `Val.WF` (frame sizes),
+`Stores.WF` (every handle a live allocation, a closed scope's exit valid in the store, a memo
+entry's Deferred and layer scope live) and `validIn` are the hypotheses the laws carry
+(`syncOpStep_answer_valid`, `interpOf_keyBounded`), and `Stores.empty` satisfies every
+family's conjunct so the store has a bottom. An executable admission — the checked decision
+at `Api` that refuses a value the premise excludes and returns the machine and the position
+— is X2's (`docs/research/2026-09-08-build-path.md` §3 (untracked working note)); until
+then a forged handle is a refusal row (`E4-HANDLE-CE-001`), never a defect the model raises.
+
+### DB-12 — one context, layers by path
+
+Status: adopted 2026-09-07 (the join: `6305ce3`, `4aae12f`, `4d7c34e` and its records
+commit).
+
+The fiber context is one structure (`Machine.Ctx`, `src/Effect4/Machine/Stores.lean`): the
+service map (`Env.Ctx`, `src/Effect4/Machine/ContextMap.lean`) and the two budget caches
+rc.112's `setContext` stores off it (`internal/effect.ts:726-727`). `Ctx.withServices` is
+the one constructor, so the cache law (`Ctx.CacheAgrees`) holds by construction and is not a
+field; the ambient `Scope` is a lookup on the map (`Ctx.ambientScope`), cached nowhere.
+There is no second context: `Effect.service`, `provideService`, `Effect.provide` and `scoped`
+read and write this one map through `updateContext`'s region (`src/Effect4/Program/Compile.lean`:
+`updateContextAt`, `updateThenK`).
+
+A layer is a program subterm. `LayerTerm` is a member of the `Eff` mutual family
+(`src/Effect4/Program/Eff.lean`: `succeed`, `effect`, `effectDiscard`, `provide`,
+`provideMerge`, `merge`, `fresh`, `orDie`; `mergeAll` is a fold of `merge`, never a
+constructor), reached through `Eff.provideLayer` with rc.112's `local` flag as a field, and
+`Node.layer` addresses it. Its identity is its path: `LayerId := List Nat` is the memo world's
+key (`Stores.memo`, `MemoWorld`), and `compileLayer` builds a layer at its point with the memo
+map and the scope as `build`'s two arguments (`Layer.ts:230-232`) — the build protocol as
+`EffName` continuations at Points (`fromBuildThen`, `withMemoMapThen`, `memoize`,
+`provideThen`, `mergeChildren`, …) and `Region` as the first-order "what runs under a context
+region". There is no layer table, no `Construction`, no `ProgName`-style program table and no
+second `RunMachine` instantiation: the Layer machine
+(`git:4aae12f:src/Effect4/Machine/Layer.lean`) retired with the join, its memo world and
+operations joined into the one `Stores` verbatim.
+
+What path identity refuses. rc.112 keys the memo map on the layer *object* (`Layer.ts:411`,
+`:438`); a path is where a layer *is*, never what it says, so two sites of one printed term
+are two keys and a memo *hit* is unreachable from any printed program: `harness/truth`'s
+`pProvideTwice` pins the two-site protocol (two builds), not a hit, and grill call 10 (keep
+the memo store) is settled by build order-independence, not by a fixture
+(`docs/research/2026-09-08-build-path.md` §2 (untracked working note)). Inserting under one
+path leaves every other path's entry untouched (`MemoWorld.find?_append_other_key`,
+`LAYER-FB-LAYER-IDENTITY`); a forged path is the refusal row.
+
 ## Native library boundaries
 
 Effect4 does not place the whole Effect TypeScript API into one opcode family.
@@ -389,7 +450,8 @@ The following calculi have distinct indices and explicit embeddings:
   schema remains a checked downstream profile, not a duplicate generic
   carrier.
 - Context and Service own stable typed keys, requirements, and environments.
-  Layer owns construction, dependency order, memo identity, and cleanup.
+  Layer owns construction, dependency order, memo identity, and cleanup —
+  as program subterms addressed by path, on one context (DB-12).
 - Scope and Resource own lifetime delimiters and exit-aware finalization.
   Their operations may be summed into a program without erasing the separate
   calculus.
