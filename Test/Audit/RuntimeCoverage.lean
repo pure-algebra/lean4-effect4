@@ -3155,9 +3155,10 @@ Layer machine carried. -/
 
 #check (@Effect4.Machine.deferredStore_make :
   ∀ (self : Effect4.Machine.DeferredStore),
-    self.make =
-      ({ index := self.cells.length },
-        { cells := self.cells ++ [{ completion := Option.none, waiters := [] }], due := self.due }))
+  self.make =
+    ({ index := self.cells.length },
+      { cells := self.cells ++ [{ completion := Option.none, wake := Effect4.Machine.WakeList.empty }],
+        due := self.due }))
 
 #check (@Effect4.Machine.deferredStore_isDone :
   ∀ (self : Effect4.Machine.DeferredStore) (cell : Effect4.Machine.DeferredKey)
@@ -3170,12 +3171,12 @@ Layer machine carried. -/
         (Option.some (Effect4.Machine.Name.cancelAwait cell)))
 
 #check (@Effect4.Machine.deferredStore_register_pending :
-  ∀ (self : Effect4.Machine.DeferredStore) (cell : Effect4.Machine.DeferredKey)
-    (c : Effect4.Machine.DeferredCell) (waiter : Effect4.FiberId) (token : Nat),
-    self.cellAt cell = Option.some c →
-      c.completion = Option.none →
-        self.register cell waiter token =
-          (self.setCell cell { completion := c.completion, waiters := c.waiters ++ [(waiter, token)] }, Option.none))
+  ∀ (self : Effect4.Machine.DeferredStore)
+  (cell : Effect4.Machine.DeferredKey) (c : Effect4.Machine.DeferredCell) (waiter : Effect4.FiberId) (token : Nat),
+  self.cellAt cell = Option.some c →
+    c.completion = Option.none →
+      self.register cell waiter token =
+        (self.setCell cell { completion := c.completion, wake := c.wake.register waiter token () }, Option.none))
 
 #check (@Effect4.Machine.deferredStore_register_done :
   ∀ (self : Effect4.Machine.DeferredStore) (cell : Effect4.Machine.DeferredKey)
@@ -3189,14 +3190,19 @@ Layer machine carried. -/
     self.cellAt cell = Option.some c → c.completion = Option.some e → self.complete cell e' = (self, Bool.false))
 
 #check (@Effect4.Machine.deferredStore_complete_pending :
-  ∀ (self : Effect4.Machine.DeferredStore) (cell : Effect4.Machine.DeferredKey)
-    (c : Effect4.Machine.DeferredCell) (e : Effect4.Machine.Program),
-    self.cellAt cell = Option.some c →
-      c.completion = Option.none →
-        self.complete cell e =
-          (have __src := self.setCell cell { completion := Option.some e, waiters := [] };
-            { cells := __src.cells, due := self.due ++ List.map (fun w => (w.fst, w.snd, e)) c.waiters },
-            Bool.true))
+  ∀ (self : Effect4.Machine.DeferredStore)
+  (cell : Effect4.Machine.DeferredKey) (c : Effect4.Machine.DeferredCell) (e : Effect4.Machine.Program),
+  self.cellAt cell = Option.some c →
+    c.completion = Option.none →
+      self.complete cell e =
+        (have __src := self.setCell cell { completion := Option.some e, wake := c.wake.wakeAll.snd };
+          { cells := __src.cells,
+            due :=
+              self.due ++
+                List.map
+                  (fun w => { waiter := w.fiber, token := w.token, code := e, mode := Effect4.Machine.WakeMode.now })
+                  c.wake.wakeAll.fst },
+          Bool.true))
 
 #check (@Effect4.Machine.deferredStore_complete_stores_argument :
   ∀ (self : Effect4.Machine.DeferredStore)
@@ -3208,11 +3214,13 @@ Layer machine carried. -/
 
 #check (@Effect4.Machine.deferredStore_waiter_receives_stored :
   ∀ (self : Effect4.Machine.DeferredStore)
-    (cell : Effect4.Machine.DeferredKey) (c : Effect4.Machine.DeferredCell) (e : Effect4.Machine.Program)
-    (waiter : Effect4.FiberId) (token : Nat),
-    self.cellAt cell = Option.some c →
-      c.completion = Option.none →
-        c.waiters = [(waiter, token)] → (self.complete cell e).fst.due = self.due ++ [(waiter, token, e)])
+  (cell : Effect4.Machine.DeferredKey) (c : Effect4.Machine.DeferredCell) (e : Effect4.Machine.Program)
+  (waiter : Effect4.FiberId) (token : Nat) (phase : Effect4.Machine.WakePhase),
+  self.cellAt cell = Option.some c →
+    c.completion = Option.none →
+      c.wake.waiters = [{ fiber := waiter, token := token, phase := phase, payload := () }] →
+        (self.complete cell e).fst.due =
+          self.due ++ [{ waiter := waiter, token := token, code := e, mode := Effect4.Machine.WakeMode.now }])
 
 #check (@Effect4.Machine.doneWith_shared :
   ∀ (exit : Effect4.Machine.ExitV),

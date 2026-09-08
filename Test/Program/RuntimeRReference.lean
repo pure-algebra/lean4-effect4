@@ -49,7 +49,7 @@ def context (r : Api.Run) (id : Nat := 0) : Option Ctx :=
   (r.machine.fiber? ⟨id⟩).map RunFiber.context
 
 def waiterCount (r : Api.Run) (cell : Nat := 0) : Option Nat :=
-  (r.stores.deferreds.cellAt ⟨cell⟩).map fun c => c.waiters.length
+  (r.stores.deferreds.cellAt ⟨cell⟩).map fun c => c.wake.waiters.length
 
 def scopeClosed (r : Api.Run) (scope : Nat := 0) : Option Bool :=
   (r.stores.scopes.entryAt scope).map fun e => e.scope.isClosed

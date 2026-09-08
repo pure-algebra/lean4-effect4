@@ -788,6 +788,7 @@ inductive CmdShape
   | closeParAwait (host : FiberId) (yielding : Bool) (fibers : List FiberId)
   | link (scope : Nat) (target : FiberId)
   | drainDue
+  | wake (list : WakeKey) (phase : WakePhase)
 deriving DecidableEq
 
 def cmdShape {κ : Type} : Cmd EffName EffThunk Val Err Defect FiberId Ann κ → CmdShape
@@ -808,6 +809,7 @@ def cmdShape {κ : Type} : Cmd EffName EffThunk Val Err Defect FiberId Ann κ �
   | .closeParAwait host y fibers => .closeParAwait host y fibers
   | .link _ scope target _ _ => .link scope target
   | .drainDue => .drainDue
+  | .wake list phase => .wake list phase
 
 def frameStoreStep (root : NativeEff) (m : Api.Machine)
     (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (op : SyncOp) (y : Bool) :

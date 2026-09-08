@@ -443,7 +443,7 @@ theorem w3_all_failures_retain_order :
 Pass A positive example 4, and the tenth host assertion the sequential projection refused. -/
 
 /-- One pending Deferred, key `0`. -/
-def oneCell : Stores := { Stores.empty with deferreds := ⟨[⟨none, []⟩], []⟩ }
+def oneCell : Stores := { Stores.empty with deferreds := ⟨[⟨none, WakeList.empty⟩], []⟩ }
 
 /-- The parent forks A (which awaits the Deferred) and B (which completes it with `7`). -/
 def w4Sibling : M :=
@@ -971,7 +971,7 @@ def w11Cancelled : M :=
 
 /-- The waiter list of the Deferred. -/
 def waitersOf (m : M) (cell : Nat) : Option (List (FiberId × Nat)) :=
-  (m.state.deferreds.cellAt ⟨cell⟩).map DeferredCell.waiters
+  (m.state.deferreds.cellAt ⟨cell⟩).map fun c => c.wake.waiters.map fun w => (w.fiber, w.token)
 
 /-- Parking registers the waiter in registration order; the interrupt runs the cancel effect
 through the `AsyncFinalizer` frame, which splices exactly that waiter out, and then re-fails

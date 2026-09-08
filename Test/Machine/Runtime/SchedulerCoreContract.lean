@@ -85,6 +85,7 @@ def interp : I where
     | .ofExit exit => .pure exit
     | .ofRefGet _ => readNext
   dueResumes := fun s => ([], s)
+  wakeList := fun _ _ s => s
   cancelName := fun _ _ _ => ()
   abortName := ()
   parkCancelName := ()
@@ -186,5 +187,212 @@ def answer (token : Nat) : D := .answerAsync ⟨0⟩ token (.ofExit (.success 42
 
 #guard (drive (evaluator := erasesTrace) interp 1 initial cmds).trace.length = 1
 #guard (drive (evaluator := erasesTrace) interp 2 initial cmds).trace.length = 0
+
+/-! ## The wake protocol's fixtures (the scheduler surface, 2026-09-08)
+
+The fixtures the dispatch names (`docs/research/2026-09-08-scheduler-surface-dispatch.md` §3),
+executed: on the list (`Machine/Wake.lean`) — the two WHATWG capture rules (F6, F7), stale and
+duplicate tokens (F2), the cancelled-waiter clause before and after the phase advance (F3),
+the coalescing guard (F4), a non-FIFO sweep and a counted wake — and on this machine, at a
+store that owes resumes: an inline wake against a scheduled one (F1), a posted batch wake
+that resumes both waiters (F4), a stale resume task dispatched inert (F11), and the
+unknown-owner frontier (`SCHED-FB-UNKNOWN-OWNER`). Provenance per case is the dispatch's;
+nothing here claims a relation to rc.112 beyond the pinned lines the protocol cites
+(`SCHED-FB-PRODUCER`: no rc.112 program in this tree posts a `Task.wake` before Latch/Queue
+land). -/
+
+section Wake
+
+/-! ### The list -/
+
+def l0 : WakeList Unit := WakeList.empty
+def l1 : WakeList Unit := l0.register ⟨1⟩ 3 ()
+def l2 : WakeList Unit := l1.register ⟨2⟩ 4 ()
+
+-- F6: a waiter's identity — fiber, token, the phase at registration — is captured at
+-- registration; a later advance of the list does not retarget it.
+#guard l2.waiters = [⟨⟨1⟩, 3, 0, ()⟩, ⟨⟨2⟩, 4, 0, ()⟩]
+#guard (l2.wakeAll).1 = [⟨⟨1⟩, 3, 0, ()⟩, ⟨⟨2⟩, 4, 0, ()⟩]
+#guard (l2.wakeAll).2.phase = 1
+-- F7: a registration after the advance carries the advanced phase.
+#guard ((l2.wakeAll).2.register ⟨3⟩ 5 ()).waiters = [⟨⟨3⟩, 5, 1, ()⟩]
+-- F3, before the advance: the pending waiter is spliced out, order kept, nothing owed.
+#guard l2.cancel ⟨1⟩ 3 = ({ l2 with waiters := [⟨⟨2⟩, 4, 0, ()⟩] }, false)
+-- F3, after the advance: the resumer won, the wake it consumed is owed.
+#guard ((l2.wakeAll).2.cancel ⟨1⟩ 3).2 = true
+-- F2: a stale token (never registered, or registered under another token) owes likewise —
+-- the clause tests presence, and a duplicate cancel is the same answer twice.
+#guard (l2.cancel ⟨1⟩ 9).2 = true
+#guard ((l2.cancel ⟨1⟩ 3).1.cancel ⟨1⟩ 3).2 = true
+-- F4: the first schedule captures the waiters and posts; the second joins and posts nothing;
+-- a schedule with nobody pending does nothing.
+#guard (l2.schedule).2 = true ∧ (l2.schedule).1.batch = some l2.waiters ∧
+  (l2.schedule).1.waiters = [] ∧ (l2.schedule).1.phase = 1
+#guard (((l2.schedule).1.register ⟨3⟩ 5 ()).schedule).2 = false
+#guard (((l2.schedule).1.register ⟨3⟩ 5 ()).schedule).1.batch =
+  some [⟨⟨1⟩, 3, 0, ()⟩, ⟨⟨2⟩, 4, 0, ()⟩, ⟨⟨3⟩, 5, 1, ()⟩]
+#guard l0.schedule = (l0, false)
+-- the batch runs once and clears
+#guard ((l2.schedule).1.runBatch).1 = l2.waiters ∧ ((l2.schedule).1.runBatch).2.batch = none
+-- a counted wake (`Pool.wakeWaiters`): the head `n`, the rest kept
+#guard (l2.wakeTake 1).1 = [⟨⟨1⟩, 3, 0, ()⟩] ∧ (l2.wakeTake 1).2.waiters = [⟨⟨2⟩, 4, 0, ()⟩]
+-- a sweep (`Semaphore.releaseUnsafe`): two free permits, a waiter wanting three is skipped
+-- and a later one wanting one succeeds — the list is FIFO, the policy is not
+def sem : WakeList Nat := (WakeList.empty.register ⟨1⟩ 1 3).register ⟨2⟩ 2 1
+def sweepStep (free : Nat) (w : Waiter Nat) : Option Nat :=
+  if w.payload ≤ free then some (free - w.payload) else none
+#guard (sem.sweep sweepStep (fun free => free = 0) 2).1 = [⟨⟨2⟩, 2, 0, 1⟩]
+#guard (sem.sweep sweepStep (fun free => free = 0) 2).2.1.waiters = [⟨⟨1⟩, 1, 0, 3⟩]
+#guard (sem.sweep sweepStep (fun free => free = 0) 2).2.2 = 1
+#guard (sem.sweep sweepStep (fun free => free = 0) 0).1 = []
+
+/-! ### The machine, with a store that owes resumes -/
+
+/-- A store: one waiter list and the resumes it owes. -/
+structure WSt where
+  list : WakeList Unit
+  due : List (Owed Code)
+
+abbrev WM := RunMachine Unit Unit Nat Unit Unit FiberId Unit Unit WSt Code Saved Unit
+abbrev WI := RunInterp Unit Unit Nat Unit Unit FiberId Unit Unit WSt Code
+
+/-- The code a woken waiter resumes with. -/
+def seven : Code := .pure (.success 7)
+
+def winterp : WI where
+  contA := fun _ v => .pure (.success v)
+  contE := fun _ c => .pure (.failure c)
+  syncValue := fun _ => 0
+  suspendBody := fun _ => readNext
+  iterNext := fun _ v => ([], .done v)
+  loopTest := fun _ _ => false
+  loopBody := fun _ v => .pure (.success v)
+  loopStep := fun _ _ v => v
+  loopDone := fun _ => 0
+  finalizerExit := fun _ _ => Exit.void
+  reifyExit := fun _ => 0
+  cancelThenFail := fun _ c => .pure (.failure c)
+  notImplemented := ()
+  parkOf := fun _ => none
+  parkCode := fun _ => readNext
+  interruptCode := fun _ => readNext
+  interruptAsCode := fun _ _ => readNext
+  interruptAllCode := fun _ => readNext
+  withFiberOf := fun _ => none
+  syncState := fun _ _ => none
+  registerAsync := fun _ _ _ s => (s, none)
+  answerCode := fun
+    | .ofExit exit => .pure exit
+    | .ofRefGet _ => readNext
+  -- the store owes what it holds, and a batch wake owes the batch inline
+  dueResumes := fun s => (s.due, { s with due := [] })
+  wakeList := fun _ _ s =>
+    let r := s.list.runBatch
+    { list := r.2, due := s.due ++ r.1.map fun w => ⟨w.fiber, w.token, seven, WakeMode.now⟩ }
+  cancelName := fun _ _ _ => ()
+  abortName := ()
+  parkCancelName := ()
+  raceCancelName := fun _ => ()
+  raceSettle := fun _ _ exit => .pure exit
+  finalizerProgram := fun _ _ => none
+  restoreName := fun _ => ()
+  mergeName := fun _ => ()
+  scopeStatus := fun _ _ => none
+  scopeLinkFiber := fun _ _ _ _ => none
+  dropFinalizer := fun _ _ _ => none
+  closeScope := fun _ _ _ _ _ => none
+  ambientScope := fun _ => none
+  budgetOf := fun _ => (2048, false)
+  emptyContext := ()
+  contextValue := fun _ => 0
+  exitValue := fun exit _ => .pure exit
+  fiberValue := FiberId.value
+  fiberIdValue := FiberId.value
+  fibersValue := List.length
+  exitsValue := List.length
+  voidValue := 0
+  scopeValue := fun _ => 0
+  closeDoneName := ()
+  encodeFiber := id
+  stackAnnotations := fun _ => ReasonAnnotations.empty
+  asyncFiberError := ()
+  missingScope := ()
+
+/-- The evaluator at this store: the one above, with the store read answering `0` (this store
+counts nothing). -/
+instance wakeEvaluator : FiberEvaluator Unit Unit Nat Unit Unit FiberId Unit Unit WSt Code Saved Unit where
+  evaluate := fun i m f yielding =>
+    match f.frame.current with
+    | .pure (.success value) =>
+      match f.frame.answers with
+      | [] => ⟨m, f, yielding, .finished (.success value), []⟩
+      | next :: rest =>
+        ⟨m, { f with frame := { f.frame with current := next value, answers := rest } },
+          yielding, .continue_, []⟩
+    | .pure (.failure cause) => ⟨m, f, yielding, .finished (.failure cause), []⟩
+    | .vis false next =>
+      ⟨m, { f with frame := { f.frame with current := next 0 } }, yielding, .continue_, []⟩
+    | .vis true next =>
+      FiberAction.yieldNow i m
+        { f with frame := { f.frame with answers := next :: f.frame.answers } } yielding 0
+
+/-- A fiber parked on a token, ready to finish with whatever resumes it. -/
+def parkedOn (id : FiberId) (token : Nat) : F :=
+  { RunFiber.make id readNext true (2048, false) () with parked := .withGuard token }
+
+/-- The root and two parked waiters, over a store. -/
+def machine (s : WSt) : WM :=
+  { (RunMachine.empty s : WM) with
+    fibers := [RunFiber.make ⟨0⟩ readNext true (2048, false) (), parkedOn ⟨1⟩ 3, parkedOn ⟨2⟩ 4]
+    nextId := 3 }
+
+def wexitOf (m : WM) (id : Nat) : Option X := (m.fiber? ⟨id⟩).bind RunFiber.exit
+def parkedOf (m : WM) (id : Nat) : Option Parked := (m.fiber? ⟨id⟩).map RunFiber.parked
+def queuedOf (m : WM) (id : Nat) : Option Nat :=
+  (m.fiber? ⟨id⟩).map fun f => ((f.dispatcher.buckets.map Bucket.tasks).flatten).length
+
+/-- The store owes fiber 1 a resume, delivered by `mode`. -/
+def owing (mode : WakeMode) : WSt := ⟨l0, [⟨⟨1⟩, 3, seven, mode⟩]⟩
+
+-- F1, inline: the drain resumes fiber 1 in the same command sequence; nothing is posted.
+#guard wexitOf (driveState winterp 20 (machine (owing .now)) [.drainDue]).1 1 = some (.success 7)
+#guard (driveState winterp 20 (machine (owing .now)) [.drainDue]).1.armed = []
+#guard queuedOf (driveState winterp 20 (machine (owing .now)) [.drainDue]).1 0 = some 0
+-- F1, scheduled: the drain posts a resume task on fiber 0's dispatcher and arms it; fiber 1
+-- stays parked until the host fires that dispatcher.
+def afterPost : WM := (driveState winterp 20 (machine (owing (.scheduled ⟨0⟩ 0))) [.drainDue]).1
+#guard wexitOf afterPost 1 = none
+#guard parkedOf afterPost 1 = some (.withGuard 3)
+#guard afterPost.armed = [⟨0⟩]
+#guard queuedOf afterPost 0 = some 1
+#guard wexitOf (replayEval winterp 20 [.fire ⟨0⟩] afterPost).machine 1 = some (.success 7)
+#guard (replayEval winterp 20 [.fire ⟨0⟩] afterPost).machine.armed = []
+-- the same through the host's `flush`
+#guard wexitOf (replayEval winterp 20 [.flush] afterPost).machine 1 = some (.success 7)
+-- SCHED-FB-UNKNOWN-OWNER: a scheduled wake addressed to a dispatcher whose fiber is gone is a
+-- frontier, never a lost wake
+#guard (driveState winterp 20 (machine (owing (.scheduled ⟨9⟩ 0))) [.drainDue]).1.stuck =
+  some (Stuck.unknownFiber ⟨9⟩)
+
+-- F4 on the machine: both waiters registered, the batch scheduled once (one task posted, the
+-- second schedule joins it); the posted `Task.wake` runs the batch and resumes both.
+def scheduled : WSt := ⟨(l2.schedule).1, []⟩
+def afterWakePost : WM :=
+  (machine scheduled).postTask ⟨0⟩ 0 (Task.wake (WakeKey.deferred ⟨0⟩) 1)
+#guard afterWakePost.armed = [⟨0⟩] ∧ queuedOf afterWakePost 0 = some 1
+def afterWake : WM := (replayEval winterp 40 [.fire ⟨0⟩] afterWakePost).machine
+#guard wexitOf afterWake 1 = some (.success 7) ∧ wexitOf afterWake 2 = some (.success 7)
+#guard afterWake.state.list.batch = none ∧ afterWake.state.due = []
+#guard afterWake.armed = []
+
+-- F11: a resume task for a token the fiber no longer parks on — a cancelled waiter's wake —
+-- dispatches inert: the fiber stays parked on its own token, and the real answer still lands.
+def stalePost : WM := (machine (owing .now)).postTask ⟨0⟩ 0 (Task.resume ⟨2⟩ 9 seven)
+def afterStale : WM := (replayEval winterp 20 [.fire ⟨0⟩] stalePost).machine
+#guard wexitOf afterStale 2 = none ∧ parkedOf afterStale 2 = some (.withGuard 4)
+#guard wexitOf (replayEval winterp 20 [.answerAsync ⟨2⟩ 4 (.ofExit (.success 42))] afterStale).machine 2 =
+  some (.success 42)
+
+end Wake
 
 end Test.Runtime.SchedulerCoreContract

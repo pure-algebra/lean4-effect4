@@ -179,11 +179,13 @@ def raceCarrier (state : Supervision.RaceAllState Val Err Defect FiberId Ann) : 
 
 -- Deferred waiter targets are excluded; the completion code is collected separately.
 def orphanWaiterStore : Stores :=
-  { Stores.empty with deferreds := ⟨[⟨none, [(⟨7⟩, 0)]⟩], []⟩ }
+  { Stores.empty with
+    deferreds := ⟨[⟨none, { WakeList.empty with waiters := [⟨⟨7⟩, 0, 0, ()⟩] }⟩], []⟩ }
 
 #guard MintedS (RunMachine.empty orphanWaiterStore)
 #guard !(MintedS (RunMachine.empty { orphanWaiterStore with
-  deferreds := ⟨[⟨some (.success (.fiber ⟨7⟩)), [(⟨7⟩, 0)]⟩], []⟩ }))
+  deferreds :=
+    ⟨[⟨some (.success (.fiber ⟨7⟩)), { WakeList.empty with waiters := [⟨⟨7⟩, 0, 0, ()⟩] }⟩], []⟩ }))
 
 /-! ## The theorem on an explicit run -/
 

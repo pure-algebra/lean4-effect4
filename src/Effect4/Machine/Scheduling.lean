@@ -239,6 +239,37 @@ theorem settle_queue {id : FiberId} {rest : List (Cmd ν σ β ε δ ι α)} {it
   unfold settle
   (repeat' split) <;> queue_leaf
 
+/-- Arming appends behind the queue, or keeps it. -/
+theorem arm_queue {m : RunMachine ν σ β ε δ ι α χ St} {owner : FiberId} :
+    QueueKeeps m (m.arm owner) := by
+  unfold QueueKeeps RunMachine.arm
+  dsimp only
+  by_cases hc : m.armed.contains owner = true
+  · rw [if_pos hc]; exact List.prefix_rfl
+  · rw [if_neg hc]; exact List.prefix_append _ _
+
+/-- A post keeps the armed queue's prefix: a halt, or an arm behind the existing queue. -/
+theorem postTask_queue {m : RunMachine ν σ β ε δ ι α χ St} {owner : FiberId} {priority : Nat}
+    {task : Task ν σ β ε δ ι α} : QueueKeeps m (m.postTask owner priority task) := by
+  unfold RunMachine.postTask
+  split
+  · exact List.prefix_rfl
+  · exact (arm_queue (m := m.update _) (owner := owner) : QueueKeeps (m.update _) _)
+
+theorem drainOwed_queue_aux (m : RunMachine ν σ β ε δ ι α χ St) :
+    ∀ (due : List (Owed (Prim ν σ β ε δ ι α))), QueueKeeps m (drainOwed m due).1
+  | [] => queue_refl _
+  | d :: rest => by
+    unfold drainOwed
+    split
+    · exact drainOwed_queue_aux m rest
+    · exact queue_trans postTask_queue (drainOwed_queue_aux _ rest)
+
+/-- The drain of owed resumes keeps the queue: every scheduled entry is a post. -/
+theorem drainOwed_queue {m : RunMachine ν σ β ε δ ι α χ St}
+    {due : List (Owed (Prim ν σ β ε δ ι α))} : QueueKeeps m (drainOwed m due).1 :=
+  drainOwed_queue_aux m due
+
 set_option maxHeartbeats 1600000 in
 theorem driveStep_queue {interp : RunInterp ν σ β ε δ ι α χ St} {m : RunMachine ν σ β ε δ ι α χ St}
     {cmd : Cmd ν σ β ε δ ι α} {rest : List (Cmd ν σ β ε δ ι α)} :
@@ -246,7 +277,7 @@ theorem driveStep_queue {interp : RunInterp ν σ β ε δ ι α χ St} {m : Run
   cases cmd <;> simp only [driveStep] <;> (repeat' split) <;> first
     | exact queue_trans (iteration_queue (interp := interp)) settle_queue
     | exact queue_trans (evaluate_queue (interp := interp)) settle_queue
-    | queue_chain with (first | queue_hops interp | exact launch_queue (interp := interp) | exact exit_queue (interp := interp) | exact observer_queue (interp := interp) | exact settle_queue)
+    | queue_chain with (first | exact drainOwed_queue | queue_hops interp | exact launch_queue (interp := interp) | exact exit_queue (interp := interp) | exact observer_queue (interp := interp) | exact settle_queue)
 
 theorem drive_queue {interp : RunInterp ν σ β ε δ ι α χ St} {fuel : Nat}
     {m : RunMachine ν σ β ε δ ι α χ St} {cmds : List (Cmd ν σ β ε δ ι α)} :

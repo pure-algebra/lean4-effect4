@@ -2,6 +2,7 @@ import Effect4.Machine.Fibers
 import Effect4.Machine.Scope
 import Effect4.Machine.Value
 import Effect4.Machine.ContextMap
+import Effect4.Machine.Wake
 
 /-!
 # Deep spike S2: the concrete stores and the `RunInterp` over them
@@ -47,11 +48,8 @@ namespace Effect4.Machine
 
 open Effect4
 
-/-- A cell of the Deferred store (`Deferred.ts:140-145`). -/
-structure DeferredKey where
-  /-- Allocation order. -/
-  index : Nat
-deriving DecidableEq, Repr, Inhabited
+-- `DeferredKey`, a cell of the Deferred store, lives in `Machine/Wake.lean` (the scheduler
+-- surface, 2026-09-08), below the fiber machine, so a task can name a Deferred's waiter list.
 
 /-! ## The alphabets
 
@@ -1355,12 +1353,15 @@ theorem updateSomeAndGet_ne_getAndUpdateSome :
 /-! ## The Deferred store (`Deferred.ts`) -/
 
 /-- One `Deferred`: `effect?` and `resumes?` (`Deferred.ts:58-61`), with no third state. The
-completion is a *primitive*, so `done exit = completeWith (Prim.ofExit exit)` is definitional. -/
+completion is a *primitive*, so `done exit = completeWith (Prim.ofExit exit)` is definitional.
+The waiters are the wake protocol's list (`Machine/Wake.lean`, the scheduler surface): payload
+`Unit`, policy `broadcast`, mode `now` — a Deferred completes inline and never schedules a
+batch. -/
 structure DeferredCell where
   /-- `self.effect`: absent, or exactly one stored effect. -/
   completion : Option Program
-  /-- `self.resumes`, in registration order: the parked fiber and its resume token. -/
-  waiters : List (FiberId × Nat)
+  /-- `self.resumes`, in registration order: the parked fiber, its resume token, its phase. -/
+  wake : WakeList Unit
 deriving DecidableEq
 
 /-- The Deferred store: the cells plus the resume queue a completion owes.
@@ -1369,15 +1370,15 @@ answer of the store step and not a promise. -/
 structure DeferredStore where
   /-- Allocated cells, in allocation order. -/
   cells : List DeferredCell
-  /-- The resumes owed, in registration order (`Deferred.ts:1657-1658`). -/
-  due : List (FiberId × Nat × Program)
+  /-- The resumes owed, in registration order (`Deferred.ts:1657-1658`), every one `now`. -/
+  due : List (Owed Program)
 deriving DecidableEq
 
 namespace DeferredStore
 
 /-- `Deferred.makeUnsafe` (`Deferred.ts:140-145`): both fields undefined. -/
 def make (self : DeferredStore) : DeferredKey × DeferredStore :=
-  (⟨self.cells.length⟩, { self with cells := self.cells ++ [⟨none, []⟩] })
+  (⟨self.cells.length⟩, { self with cells := self.cells ++ [⟨none, WakeList.empty⟩] })
 
 /-- The cell under a key; `none` is a frontier. -/
 def cellAt (self : DeferredStore) (cell : DeferredKey) : Option DeferredCell :=
@@ -1404,20 +1405,21 @@ def register (self : DeferredStore) (cell : DeferredKey) (waiter : FiberId) (tok
   | some c =>
     match c.completion with
     | some effect => (self, some effect)
-    | none => (self.setCell cell { c with waiters := c.waiters ++ [(waiter, token)] }, none)
+    | none => (self.setCell cell { c with wake := c.wake.register waiter token () }, none)
 
 /-- `_await`'s cleanup (`Deferred.ts:178-185`): splice this waiter out, order-preserving; a
-no-op once completion has cleared the array. -/
+no-op once completion has cleared the array. The clause's owed wake (`WakeList.cancel`) is a
+broadcast's, which reached every waiter: nothing to re-owe. -/
 def cancel (self : DeferredStore) (cell : DeferredKey) (waiter : FiberId) (token : Nat) :
     DeferredStore :=
   match self.cellAt cell with
   | none => self
-  | some c =>
-    self.setCell cell { c with waiters := c.waiters.filter (fun w => !(w.1 = waiter && w.2 = token)) }
+  | some c => self.setCell cell { c with wake := (c.wake.cancel waiter token).1 }
 
 /-- `doneUnsafe` (`Deferred.ts:1648-1662`): a completion attempt answers `false` and changes
 nothing when an effect is already stored; otherwise the effect is stored, the waiter list is
-*cleared*, and every waiter is owed a resume with that effect in registration order. -/
+*cleared* (`WakeList.wakeAll`, the phase advanced), and every waiter is owed a resume with
+that effect in registration order, inline (`WakeMode.now`). -/
 def complete (self : DeferredStore) (cell : DeferredKey) (effect : Program) :
     DeferredStore × Bool :=
   match self.cellAt cell with
@@ -1426,12 +1428,32 @@ def complete (self : DeferredStore) (cell : DeferredKey) (effect : Program) :
     match c.completion with
     | some _ => (self, false)
     | none =>
-      ({ self.setCell cell ⟨some effect, []⟩ with
-          due := self.due ++ c.waiters.map (fun w => (w.1, w.2, effect)) }, true)
+      ({ self.setCell cell ⟨some effect, (c.wake.wakeAll).2⟩ with
+          due := self.due ++ (c.wake.wakeAll).1.map fun w =>
+            ⟨w.fiber, w.token, effect, WakeMode.now⟩ }, true)
 
 /-- The resumes the store owes now, drained in registration order. -/
-def drainDue (self : DeferredStore) : List (FiberId × Nat × Program) × DeferredStore :=
+def drainDue (self : DeferredStore) : List (Owed Program) × DeferredStore :=
   (self.due, { self with due := [] })
+
+/-- A posted batch wake runs on a Deferred's list (`Task.wake (WakeKey.deferred cell)`): the
+batch's waiters are owed the stored completion inline; with no completion stored they return
+to the pending list, no wake lost. No Deferred operation schedules a batch (a Deferred
+completes inline), so this is the protocol's meaning at the store, reached only through a
+posted task. -/
+def wakeBatch (self : DeferredStore) (cell : DeferredKey) : DeferredStore :=
+  match self.cellAt cell with
+  | none => self
+  | some c =>
+    match c.completion with
+    | some effect =>
+      { self.setCell cell { c with wake := (c.wake.runBatch).2 } with
+          due := self.due ++ (c.wake.runBatch).1.map fun w =>
+            ⟨w.fiber, w.token, effect, WakeMode.now⟩ }
+    | none =>
+      self.setCell cell
+        { c with wake := { (c.wake.runBatch).2 with
+            waiters := (c.wake.runBatch).2.waiters ++ (c.wake.runBatch).1 } }
 
 end DeferredStore
 
@@ -1440,12 +1462,13 @@ end DeferredStore
 /-- `deferred.make`: a fresh cell has no completion and no waiter, and there is no separate
 pending tag. census: deferred.make -/
 theorem deferredStore_make (self : DeferredStore) :
-    self.make = (⟨self.cells.length⟩, { self with cells := self.cells ++ [⟨none, []⟩] }) := rfl
+    self.make =
+      (⟨self.cells.length⟩, { self with cells := self.cells ++ [⟨none, WakeList.empty⟩] }) := rfl
 
 /-- `deferred.make`: a cell is exactly a completion slot and a waiter list; there is no third
 field. census: deferred.make -/
 theorem deferredCell_cases_receipt (c : DeferredCell) :
-    c = ⟨c.completion, c.waiters⟩ := rfl
+    c = ⟨c.completion, c.wake⟩ := rfl
 
 /-- `deferred.is-done`: done-ness is exactly the presence of the stored effect.
 census: deferred.is-done -/
@@ -1476,17 +1499,16 @@ theorem deferredStore_register_pending (self : DeferredStore) (cell : DeferredKe
     (c : DeferredCell) (waiter : FiberId) (token : Nat)
     (h : self.cellAt cell = some c) (hc : c.completion = none) :
     self.register cell waiter token =
-      (self.setCell cell { c with waiters := c.waiters ++ [(waiter, token)] }, none) := by
+      (self.setCell cell { c with wake := c.wake.register waiter token () }, none) := by
   simp [DeferredStore.register, h, hc]
 
 /-- `deferred.await`, cleanup half: the cleanup splices exactly this resume out and preserves
 the order of the others. census: deferred.await -/
 theorem deferredStore_cancel_removes (self : DeferredStore) (cell : DeferredKey)
     (c : DeferredCell) (waiter : FiberId) (token : Nat) (h : self.cellAt cell = some c) :
-    ((self.cancel cell waiter token).cellAt cell).map DeferredCell.waiters =
-      ((self.setCell cell
-        { c with waiters := c.waiters.filter (fun w => !(w.1 = waiter && w.2 = token)) }).cellAt
-          cell).map DeferredCell.waiters := by
+    ((self.cancel cell waiter token).cellAt cell).map DeferredCell.wake =
+      ((self.setCell cell { c with wake := (c.wake.cancel waiter token).1 }).cellAt cell).map
+        DeferredCell.wake := by
   simp [DeferredStore.cancel, h]
 
 /-- `deferred.single-completion`: a second completion answers `false` and changes nothing.
@@ -1504,8 +1526,9 @@ theorem deferredStore_complete_pending (self : DeferredStore) (cell : DeferredKe
     (c : DeferredCell) (e : Program) (h : self.cellAt cell = some c)
     (hc : c.completion = none) :
     self.complete cell e =
-      ({ self.setCell cell ⟨some e, []⟩ with
-          due := self.due ++ c.waiters.map (fun w => (w.1, w.2, e)) }, true) := by
+      ({ self.setCell cell ⟨some e, (c.wake.wakeAll).2⟩ with
+          due := self.due ++ (c.wake.wakeAll).1.map fun w =>
+            ⟨w.fiber, w.token, e, WakeMode.now⟩ }, true) := by
   simp [DeferredStore.complete, h, hc]
 
 /-- A live Deferred key is in range. -/
@@ -1531,8 +1554,9 @@ theorem deferredStore_complete_stores_argument (self : DeferredStore) (cell : De
     (c : DeferredCell) (e : Program) (h : self.cellAt cell = some c)
     (hc : c.completion = none) :
     ((self.complete cell e).1.cellAt cell).map DeferredCell.completion = some (some e) := by
-  have hset : (self.setCell cell ⟨some e, []⟩).cellAt cell = some ⟨some e, []⟩ :=
-    deferredStore_setCell_cellAt self cell c ⟨some e, []⟩ h
+  have hset : (self.setCell cell ⟨some e, (c.wake.wakeAll).2⟩).cellAt cell =
+      some ⟨some e, (c.wake.wakeAll).2⟩ :=
+    deferredStore_setCell_cellAt self cell c ⟨some e, (c.wake.wakeAll).2⟩ h
   simp only [DeferredStore.complete, h, hc]
   simp only [DeferredStore.cellAt, DeferredStore.setCell] at hset ⊢
   simp [hset]
@@ -1540,11 +1564,11 @@ theorem deferredStore_complete_stores_argument (self : DeferredStore) (cell : De
 /-- `deferred.complete-with-stores-effect`: a waiter is resumed with *that* effect.
 census: deferred.complete-with-stores-effect -/
 theorem deferredStore_waiter_receives_stored (self : DeferredStore) (cell : DeferredKey)
-    (c : DeferredCell) (e : Program) (waiter : FiberId) (token : Nat)
+    (c : DeferredCell) (e : Program) (waiter : FiberId) (token : Nat) (phase : WakePhase)
     (h : self.cellAt cell = some c) (hc : c.completion = none)
-    (hw : c.waiters = [(waiter, token)]) :
-    (self.complete cell e).1.due = self.due ++ [(waiter, token, e)] := by
-  simp [DeferredStore.complete, h, hc, hw]
+    (hw : c.wake.waiters = [⟨waiter, token, phase, ()⟩]) :
+    (self.complete cell e).1.due = self.due ++ [⟨waiter, token, e, WakeMode.now⟩] := by
+  simp [DeferredStore.complete, WakeList.wakeAll, h, hc, hw]
 
 /-! `deferred.done-is-complete-with`, `deferred.interrupt-with`, `deferred.into-uninterruptible`,
 `deferred.complete-runs-once`, `deferred.interrupt` and `deferred.poll` are stated below, after
@@ -2406,6 +2430,16 @@ def stackAnnotationsOf (fiber : FiberId) : ReasonAnnotations Ann where
   entries := [(stackKey fiber, ())]
   keysNodup := by simp
 
+
+/-- A batch wake runs on a waiter list (`Task.wake`, the scheduler surface): by the key's
+family. A Deferred's list owes its batch the stored completion inline (`wakeBatch`); the phase
+is the schedule's stamp, which a Deferred, completing inline, never mints. No other family
+holds a list yet, so every other kind is the identity. -/
+def Stores.wakeList (key : WakeKey) (_phase : WakePhase) (s : Stores) : Stores :=
+  match key.kind with
+  | HandleKind.promise => { s with deferreds := s.deferreds.wakeBatch ⟨key.index⟩ }
+  | _ => s
+
 /-- The `RunInterp` this spike supplies. Every field cites the rc.112 line the machine's
 docstring cites; nothing here is canonical program content.
 
@@ -2460,6 +2494,7 @@ def stores : RunInterp Name Thunk Val Err Defect FiberId Ann Ctx Stores where
   dueResumes := fun state =>
     let (due, deferreds) := state.deferreds.drainDue
     (due, { state with deferreds := deferreds })
+  wakeList := Stores.wakeList
   answerCode := completionPrim
   cancelName := fun base fiber token => Name.withWaiter base fiber token
   abortName := Name.abortController

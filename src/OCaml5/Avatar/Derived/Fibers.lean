@@ -19,7 +19,7 @@ def frameFiber : StructDesc where
 
 def runFiber : StructDesc where
   leanName := "RunFiber"
-  site := "Fibers.lean:216"
+  site := "Fibers.lean:223"
   subst := []
   leanParams := ["ν", "σ", "β", "ε", "δ", "ι", "α", "χ", "κ", "φ"]
   fields :=
@@ -41,7 +41,7 @@ def runFiber : StructDesc where
 
 def observer : InductiveDesc where
   leanName := "Observer"
-  site := "Fibers.lean:94"
+  site := "Fibers.lean:95"
   subst := []
   leanParams := []
   ctors :=
@@ -54,7 +54,7 @@ def observer : InductiveDesc where
 
 def runEvent : InductiveDesc where
   leanName := "RunEvent"
-  site := "Fibers.lean:353"
+  site := "Fibers.lean:360"
   subst := []
   leanParams := ["ν", "σ", "β", "ε", "δ", "ι", "α", "χ", "κ", "η"]
   ctors :=
@@ -82,7 +82,7 @@ def runEvent : InductiveDesc where
 
 def runDecision : InductiveDesc where
   leanName := "RunDecision"
-  site := "Fibers.lean:428"
+  site := "Fibers.lean:435"
   subst := []
   leanParams := ["ν", "σ", "β", "ε", "δ", "ι", "α"]
   ctors :=
@@ -96,7 +96,7 @@ def runDecision : InductiveDesc where
 
 def cmd : InductiveDesc where
   leanName := "Cmd"
-  site := "Fibers.lean:641"
+  site := "Fibers.lean:670"
   subst := []
   leanParams := ["ν", "σ", "β", "ε", "δ", "ι", "α", "κ"]
   ctors :=
@@ -116,11 +116,12 @@ def cmd : InductiveDesc where
      { leanName := "exitDone", args := [{ leanName := "fiber", leanTy := .nm "FiberId" }] },
      { leanName := "closeParAwait", args := [{ leanName := "host", leanTy := .nm "FiberId" }, { leanName := "yielding", leanTy := .nm "Bool" }, { leanName := "fibers", leanTy := .lst (.nm "FiberId") }] },
      { leanName := "link", args := [{ leanName := "mode", leanTy := .nm "Supervision.ScopeMode" }, { leanName := "scope", leanTy := .nm "Nat" }, { leanName := "target", leanTy := .nm "FiberId" }, { leanName := "interruptor", leanTy := .opt (.nm "FiberId") }, { leanName := "extra", leanTy := .app "ReasonAnnotations" [.nm "α"] }] },
-     { leanName := "drainDue", args := [] }]
+     { leanName := "drainDue", args := [] },
+     { leanName := "wake", args := [{ leanName := "list", leanTy := .nm "WakeKey" }, { leanName := "phase", leanTy := .nm "WakePhase" }] }]
 
 def withFiberAction : InductiveDesc where
   leanName := "WithFiberAction"
-  site := "Fibers.lean:281"
+  site := "Fibers.lean:288"
   subst := []
   leanParams := ["ν", "σ", "β", "ε", "δ", "ι", "α", "χ", "κ"]
   ctors :=

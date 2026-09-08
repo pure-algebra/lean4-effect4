@@ -1324,7 +1324,8 @@ def interpOf (root : NativeEff) :
     | _ => (state, none)
   dueResumes := fun state =>
     let (due, deferreds) := state.deferreds.drainDue
-    (due.map fun d => (d.1, d.2.1, embed d.2.2), { state with deferreds := deferreds })
+    (due.map (Owed.mapCode embed), { state with deferreds := deferreds })
+  wakeList := Stores.wakeList
   answerCode := fun answer => embed (completionPrim answer)
   cancelName := fun base fiber token => EffName.withWaiter base fiber token
   -- the parks' cleanups and the settled race's program are the stores' own, embedded

@@ -15,7 +15,7 @@ def refKey : StructDesc where
 
 def deferredKey : StructDesc where
   leanName := "DeferredKey"
-  site := "Stores.lean:50"
+  site := "Wake.lean:46"
   subst := []
   leanParams := []
   fields :=
@@ -23,7 +23,7 @@ def deferredKey : StructDesc where
 
 def err : InductiveDesc where
   leanName := "Err"
-  site := "Stores.lean:62"
+  site := "Stores.lean:60"
   subst := []
   leanParams := []
   ctors :=
@@ -32,7 +32,7 @@ def err : InductiveDesc where
 
 def defect : InductiveDesc where
   leanName := "Defect"
-  site := "Stores.lean:68"
+  site := "Stores.lean:66"
   subst := []
   leanParams := []
   ctors :=
@@ -44,7 +44,7 @@ def defect : InductiveDesc where
 
 def fnName : InductiveDesc where
   leanName := "FnName"
-  site := "Stores.lean:86"
+  site := "Stores.lean:84"
   subst := []
   leanParams := []
   ctors :=
@@ -56,7 +56,7 @@ def fnName : InductiveDesc where
 
 def finName : InductiveDesc where
   leanName := "FinName"
-  site := "Stores.lean:183"
+  site := "Stores.lean:181"
   subst := []
   leanParams := []
   ctors :=
@@ -73,7 +73,7 @@ def finName : InductiveDesc where
 
 def ctx : StructDesc where
   leanName := "Ctx"
-  site := "Stores.lean:102"
+  site := "Stores.lean:100"
   subst := []
   leanParams := []
   fields :=
@@ -92,7 +92,7 @@ def completion : InductiveDesc where
 
 def syncOp : InductiveDesc where
   leanName := "SyncOp"
-  site := "Stores.lean:536"
+  site := "Stores.lean:534"
   subst := []
   leanParams := []
   ctors :=
@@ -128,7 +128,7 @@ def syncOp : InductiveDesc where
 
 def raceName : InductiveDesc where
   leanName := "RaceName"
-  site := "Stores.lean:610"
+  site := "Stores.lean:608"
   subst := []
   leanParams := []
   ctors :=
@@ -141,7 +141,7 @@ def raceName : InductiveDesc where
 
 def progName : InductiveDesc where
   leanName := "ProgName"
-  site := "Stores.lean:634"
+  site := "Stores.lean:632"
   subst := []
   leanParams := []
   ctors :=
@@ -174,7 +174,7 @@ def progName : InductiveDesc where
 
 def name : InductiveDesc where
   leanName := "Name"
-  site := "Stores.lean:703"
+  site := "Stores.lean:701"
   subst := []
   leanParams := []
   ctors :=
@@ -202,7 +202,7 @@ def name : InductiveDesc where
 
 def actionName : InductiveDesc where
   leanName := "ActionName"
-  site := "Stores.lean:763"
+  site := "Stores.lean:761"
   subst := []
   leanParams := []
   ctors :=
@@ -231,7 +231,7 @@ def actionName : InductiveDesc where
 
 def thunk : InductiveDesc where
   leanName := "Thunk"
-  site := "Stores.lean:802"
+  site := "Stores.lean:800"
   subst := []
   leanParams := []
   ctors :=
@@ -273,25 +273,25 @@ def scope : StructDesc where
 
 def deferredCell : StructDesc where
   leanName := "DeferredCell"
-  site := "Stores.lean:1357"
+  site := "Stores.lean:1355"
   subst := []
   leanParams := []
   fields :=
     [{ leanName := "completion", leanTy := .opt (.nm "Program") },
-     { leanName := "waiters", leanTy := .lst (.app "Prod" [.nm "FiberId", .nm "Nat"]) }]
+     { leanName := "wake", leanTy := .app "WakeList" [.nm "Unit"] }]
 
 def deferredStore : StructDesc where
   leanName := "DeferredStore"
-  site := "Stores.lean:1366"
+  site := "Stores.lean:1367"
   subst := []
   leanParams := []
   fields :=
     [{ leanName := "cells", leanTy := .lst (.nm "DeferredCell") },
-     { leanName := "due", leanTy := .lst (.app "Prod" [.nm "FiberId", .app "Prod" [.nm "Nat", .nm "Program"]]) }]
+     { leanName := "due", leanTy := .lst (.app "Owed" [.nm "Program"]) }]
 
 def scopeEntry : StructDesc where
   leanName := "ScopeEntry"
-  site := "Stores.lean:1564"
+  site := "Stores.lean:1588"
   subst := []
   leanParams := []
   fields :=
@@ -300,7 +300,7 @@ def scopeEntry : StructDesc where
 
 def scopeStore : StructDesc where
   leanName := "ScopeStore"
-  site := "Stores.lean:1572"
+  site := "Stores.lean:1596"
   subst := []
   leanParams := []
   fields :=
@@ -308,7 +308,7 @@ def scopeStore : StructDesc where
 
 def stores : StructDesc where
   leanName := "Stores"
-  site := "Stores.lean:1980"
+  site := "Stores.lean:2004"
   subst := []
   leanParams := []
   fields :=

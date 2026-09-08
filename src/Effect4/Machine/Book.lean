@@ -106,6 +106,11 @@ theorem OptRel.isSome {α β : Type w} {R : α → β → Prop} {o₁ : Option �
     (h : OptRel R o₁ o₂) : o₁.isSome = o₂.isSome := by
   cases o₁ <;> cases o₂ <;> first | rfl | exact absurd h not_false
 
+/-- `Owed`: the waiter, token and mode agree; the code is related. One universe, so a use at
+`κ₁ κ₂ : Type (max u v)` unifies. -/
+def OwedMeans {κ₁ κ₂ : Type w} (C : κ₁ → κ₂ → Prop) (d₁ : Owed κ₁) (d₂ : Owed κ₂) : Prop :=
+  d₁.waiter = d₂.waiter ∧ d₁.token = d₂.token ∧ C d₁.code d₂.code ∧ d₁.mode = d₂.mode
+
 section Generic
 
 variable {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
@@ -120,6 +125,7 @@ def TaskMeans (C : κ₁ → κ₂ → Prop) :
     Task ν σ β ε δ ι α κ₁ → Task ν σ β ε δ ι α κ₂ → Prop
   | .start c₁, .start c₂ => c₁ = c₂
   | .resume t₁ k₁ a₁, .resume t₂ k₂ a₂ => t₁ = t₂ ∧ k₁ = k₂ ∧ C a₁ a₂
+  | .wake l₁ p₁, .wake l₂ p₂ => l₁ = l₂ ∧ p₁ = p₂
   | _, _ => False
 
 /-- `Bucket`: a priority and its FIFO of tasks. -/
@@ -215,6 +221,7 @@ def CmdMeans (C : κ₁ → κ₂ → Prop) :
   | .link md s t i x, .link md' s' t' i' x' =>
       md = md' ∧ s = s' ∧ t = t' ∧ i = i' ∧ x = x'
   | .drainDue, .drainDue => True
+  | .wake l p, .wake l' p' => l = l' ∧ p = p'
   | _, _ => False
 
 /-! ## The one-sided invariant of the left instance -/
@@ -475,6 +482,100 @@ theorem book_fiber?_cases (h : BookMeans C S m₁ m₂) (id : FiberId) :
     cases h₂ : m₂.fiber? id with
     | none => rw [h₁, h₂] at hf; exact absurd hf not_false
     | some g => rw [h₁, h₂] at hf; exact Or.inr ⟨f, g, rfl, rfl, hf⟩
+
+theorem listRel_insert (priority : Nat) {t₁ : Task ν σ β ε δ ι α κ₁} {t₂ : Task ν σ β ε δ ι α κ₂}
+    (ht : TaskMeans C t₁ t₂) :
+    ∀ {l₁ : List (Bucket ν σ β ε δ ι α κ₁)} {l₂ : List (Bucket ν σ β ε δ ι α κ₂)},
+      ListRel (BucketMeans C) l₁ l₂ →
+      ListRel (BucketMeans C) (Dispatcher.insert priority t₁ l₁) (Dispatcher.insert priority t₂ l₂) := by
+  intro l₁ l₂ h
+  induction h with
+  | nil => exact ListRel.cons ⟨rfl, ListRel.cons ht ListRel.nil⟩ ListRel.nil
+  | @cons b₁ b₂ l₁ l₂ hb hl ih =>
+    show ListRel _
+      (if b₁.priority = priority then ⟨b₁.priority, b₁.tasks ++ [t₁]⟩ :: l₁
+        else if priority < b₁.priority then ⟨priority, [t₁]⟩ :: b₁ :: l₁
+        else b₁ :: Dispatcher.insert priority t₁ l₁)
+      (if b₂.priority = priority then ⟨b₂.priority, b₂.tasks ++ [t₂]⟩ :: l₂
+        else if priority < b₂.priority then ⟨priority, [t₂]⟩ :: b₂ :: l₂
+        else b₂ :: Dispatcher.insert priority t₂ l₂)
+    rw [← hb.1]
+    by_cases hp : b₁.priority = priority
+    · rw [if_pos hp, if_pos hp]
+      exact ListRel.cons ⟨rfl, ListRel.append hb.2 (ListRel.cons ht ListRel.nil)⟩ hl
+    · rw [if_neg hp, if_neg hp]
+      by_cases hlt : priority < b₁.priority
+      · rw [if_pos hlt, if_pos hlt]
+        exact ListRel.cons ⟨rfl, ListRel.cons ht ListRel.nil⟩ (ListRel.cons hb hl)
+      · rw [if_neg hlt, if_neg hlt]
+        exact ListRel.cons hb ih
+
+theorem dispatcherMeans_enqueue {d₁ : Dispatcher ν σ β ε δ ι α κ₁} {d₂ : Dispatcher ν σ β ε δ ι α κ₂}
+    (hd : DispatcherMeans C d₁ d₂) (priority : Nat) {t₁ : Task ν σ β ε δ ι α κ₁}
+    {t₂ : Task ν σ β ε δ ι α κ₂} (ht : TaskMeans C t₁ t₂) :
+    DispatcherMeans C (d₁.enqueue priority t₁) (d₂.enqueue priority t₂) :=
+  ⟨listRel_insert priority ht hd.1, rfl⟩
+
+theorem fiberMeans_enqueue {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
+    {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (hf : FiberMeans C S f₁ f₂) (priority : Nat)
+    {t₁ : Task ν σ β ε δ ι α κ₁} {t₂ : Task ν σ β ε δ ι α κ₂} (ht : TaskMeans C t₁ t₂) :
+    FiberMeans C S { f₁ with dispatcher := f₁.dispatcher.enqueue priority t₁ }
+      { f₂ with dispatcher := f₂.dispatcher.enqueue priority t₂ } :=
+  ⟨hf.1, hf.2.1, hf.2.2.1, hf.2.2.2.1, hf.2.2.2.2.1, hf.2.2.2.2.2.1,
+    hf.2.2.2.2.2.2.1, hf.2.2.2.2.2.2.2.1, hf.2.2.2.2.2.2.2.2.1,
+    hf.2.2.2.2.2.2.2.2.2.1, hf.2.2.2.2.2.2.2.2.2.2.1,
+    dispatcherMeans_enqueue hf.2.2.2.2.2.2.2.2.2.2.2.1 priority ht,
+    hf.2.2.2.2.2.2.2.2.2.2.2.2⟩
+
+/-- A post (the scheduler surface) keeps the book: both find the owner or neither. -/
+theorem book_postTask {StOk : St → Prop} (hok : MachineOk StOk m₁) (h : BookMeans C S m₁ m₂) (owner : FiberId)
+    (priority : Nat) {t₁ : Task ν σ β ε δ ι α κ₁} {t₂ : Task ν σ β ε δ ι α κ₂}
+    (ht : TaskMeans C t₁ t₂) :
+    MachineOk StOk (m₁.postTask owner priority t₁) ∧
+      BookMeans C S (m₁.postTask owner priority t₁) (m₂.postTask owner priority t₂) := by
+  unfold RunMachine.postTask
+  rcases book_fiber?_cases h owner with ⟨h₁, h₂⟩ | ⟨f₁, f₂, h₁, h₂, hf⟩
+  · simp only [h₁, h₂]
+    exact ⟨machineOk_halt hok _, book_halt h _⟩
+  · simp only [h₁, h₂]
+    exact ⟨machineOk_emit (machineOk_arm (machineOk_update hok
+        (pendingOk_dispatcher (pendingOk_of_fiber? hok h₁) _)) _) _,
+      book_emit (book_arm (book_update h (fiberMeans_enqueue hf priority ht)) _) _ _⟩
+
+/-- The drain of related owed lists keeps the book and answers related commands. -/
+theorem book_drainOwed_aux {StOk : St → Prop} {d₁ : List (Owed κ₁)} {d₂ : List (Owed κ₂)}
+    (hd : ListRel (OwedMeans C) d₁ d₂) :
+    ∀ (n₁ : RunMachine ν σ β ε δ ι α χ St κ₁ φ₁ η₁) (n₂ : RunMachine ν σ β ε δ ι α χ St κ₂ φ₂ η₂),
+      MachineOk StOk n₁ → BookMeans C S n₁ n₂ →
+      MachineOk StOk (drainOwed n₁ d₁).1 ∧
+        BookMeans C S (drainOwed n₁ d₁).1 (drainOwed n₂ d₂).1 ∧
+        ListRel (CmdMeans C) (drainOwed n₁ d₁).2 (drainOwed n₂ d₂).2 := by
+  induction hd with
+  | nil => intro n₁ n₂ hok h; exact ⟨hok, h, ListRel.nil⟩
+  | @cons a b l₁ l₂ hab hl ih =>
+    intro n₁ n₂ hok h
+    have hmode := hab.2.2.2
+    unfold drainOwed
+    rcases ha : a.mode with _ | ⟨owner, priority⟩ <;>
+      rcases hb : b.mode with _ | ⟨owner', priority'⟩ <;> rw [ha, hb] at hmode
+    · obtain ⟨hok', h', hc⟩ := ih n₁ n₂ hok h
+      exact ⟨hok', h', ListRel.cons ⟨hab.1, hab.2.1, hab.2.2.1⟩ hc⟩
+    · exact absurd hmode (by simp)
+    · exact absurd hmode (by simp)
+    · obtain ⟨rfl, rfl⟩ := WakeMode.scheduled.inj hmode
+      have ht : TaskMeans C (Task.resume a.waiter a.token a.code : Task ν σ β ε δ ι α κ₁)
+          (Task.resume b.waiter b.token b.code : Task ν σ β ε δ ι α κ₂) :=
+        ⟨hab.1, hab.2.1, hab.2.2.1⟩
+      obtain ⟨hok', h'⟩ := book_postTask hok h owner priority ht
+      exact ih _ _ hok' h'
+
+/-- The drain of related owed lists (the scheduler surface): both machines keep the book. -/
+theorem book_drainOwed {StOk : St → Prop} (hok : MachineOk StOk m₁) (h : BookMeans C S m₁ m₂)
+    {d₁ : List (Owed κ₁)} {d₂ : List (Owed κ₂)} (hd : ListRel (OwedMeans C) d₁ d₂) :
+    MachineOk StOk (drainOwed m₁ d₁).1 ∧
+      BookMeans C S (drainOwed m₁ d₁).1 (drainOwed m₂ d₂).1 ∧
+      ListRel (CmdMeans C) (drainOwed m₁ d₁).2 (drainOwed m₂ d₂).2 :=
+  book_drainOwed_aux hd m₁ m₂ hok h
 
 theorem all_exits {l₁ : List (RunFiber ν σ β ε δ ι α χ κ₁ φ₁)}
     {l₂ : List (RunFiber ν σ β ε δ ι α χ κ₂ φ₂)} (h : ListRel (FiberMeans C S) l₁ l₂) :

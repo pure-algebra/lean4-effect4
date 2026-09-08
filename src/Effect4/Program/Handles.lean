@@ -1755,12 +1755,19 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     refine ⟨hle, ?_⟩
     have hok' := Ok_mono (World.le_of_state hle) hok
     refine Ok_of_subset ?_ hok'
-    have h2' : ((s.deferreds.drainDue.1.map fun d => (d.1, d.2.1, embed d.2.2)).flatMap fun r => nativeKeys r.2.2) ⊆
-        s.deferreds.keys := by
+    have h2' : (s.deferreds.drainDue.1.map (Owed.mapCode embed)).flatMap
+        (Owed.keys (primKeys EffName.keys EffThunk.keys)) ⊆ s.deferreds.keys := by
       rw [List.flatMap_map]
-      simp only [embed_keys]
-      exact h2
+      refine List.Subset.trans ?_ h2
+      intro x hx
+      obtain ⟨d, hd, hxd⟩ := List.mem_flatMap.mp hx
+      refine List.mem_flatMap.mpr ⟨d, hd, ?_⟩
+      simpa [Owed.keys, Owed.mapCode, embed_keys, programKeys] using hxd
     sub_tac using h1, h2'
+  wakeList key phase s ids hok := by
+    simp only [interpOf]
+    obtain ⟨hk, hle⟩ := Stores.wakeList_keys key phase s
+    exact ⟨hle, Ok_of_subset hk (Ok_mono (World.le_of_state hle) hok)⟩
   cancelName base fiber token := by simp only [interpOf]; exact List.Subset.refl _
   abortName := rfl
   parkCancelName := rfl
@@ -1936,6 +1943,7 @@ theorem interpAt_keyBounded (root : NativeEff) (completed : List (FiberId × Exi
   registerAsync := (interpOf_keyBounded root).registerAsync
   answerCode := (interpOf_keyBounded root).answerCode
   dueResumes := (interpOf_keyBounded root).dueResumes
+  wakeList := (interpOf_keyBounded root).wakeList
   cancelName := (interpOf_keyBounded root).cancelName
   abortName := (interpOf_keyBounded root).abortName
   parkCancelName := (interpOf_keyBounded root).parkCancelName

@@ -1,6 +1,7 @@
 import Effect4.Machine.Frames
 import Effect4.Machine.Supervision
 import Effect4.Machine.Completion
+import Effect4.Machine.Wake
 
 /-!
 # The program-carrying fiber machine
@@ -104,12 +105,18 @@ inductive Observer
   | callback (key : Nat)
 deriving DecidableEq
 
-/-- The two task shapes ever enqueued: a deferred child start (`:5277`) and a yield resume
-(`:986`). Everything else resumes synchronously through `resume(effect)` (`:1121`). -/
+/-- The task shapes rc.112 enqueues (`scheduleTask`'s seven library sites,
+`docs/research/2026-09-04-effect-internals-proof-map.md` §1.6): a deferred child start
+(`internal/effect.ts:5277`), a resume of one parked fiber — the yield's own (`:986`) and the
+STM pending wake (`Effect.ts:24350`) — and the coalesced batch wake of a waiter list
+(`Latch.flushScheduled` `:5591`, Queue's `releaseTakers` `Queue.ts:1974`, the permit sweep
+`Semaphore.ts:260`, the Pool wake `Pool.ts:703`): the list's batch at the phase the schedule
+stamped (`Machine/Wake.lean`). Deferred completes inline (`resume(effect)`, `:1121`). -/
 inductive Task (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
     (κ : Type (max u v) := Prim ν σ β ε δ ι α) : Type (max u v)
   | start (child : FiberId)
   | resume (target : FiberId) (token : Nat) (answer : κ)
+  | wake (list : WakeKey) (phase : WakePhase)
 deriving DecidableEq
 
 /-- `Scheduler.ts:105-131`: buckets in ascending priority, FIFO within a bucket. -/
@@ -481,8 +488,13 @@ structure RunInterp (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St
   /-- Interpret the external completion in this machine's code alphabet. -/
   answerCode : Completion β ε δ ι α → κ
   /-- Resumes the store owes now (a completed Deferred's waiters, in registration order,
-  `Deferred.ts:1655-1659`); resumed synchronously, inside the completing `sync` (M1). -/
-  dueResumes : St → List (FiberId × Nat × κ) × St
+  `Deferred.ts:1655-1659`), each with the mode it is delivered in: `now`, synchronously inside
+  the completing `sync` (M1), or `scheduled`, as a task on the addressed dispatcher. -/
+  dueResumes : St → List (Owed κ) × St
+  /-- A batch wake runs on a waiter list (`Task.wake`, `Latch.flushScheduled`
+  `internal/effect.ts:5591-5598`): the batch the schedule captured at that phase moves into
+  the owed resumes. -/
+  wakeList : WakeKey → WakePhase → St → St
   /-- Attach the waiter's identity to a cancel name, so the `AsyncFinalizer` frame's
   `contE` can splice the waiter out (`Deferred.ts:181-184`, M3). -/
   cancelName : ν → FiberId → Nat → ν
@@ -633,6 +645,19 @@ def disarm (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (owner : FiberId
     RunMachine ν σ β ε δ ι α χ St κ φ η :=
   { m with armed := m.armed.filter fun x => x ≠ owner }
 
+/-- Post a task on the dispatcher addressed by `owner` (`scheduleTask` on a stored or the
+acting fiber's `currentDispatcher`, `Queue.ts:1974`, `internal/effect.ts:5583`) and arm it
+(`Scheduler.ts:207-212`). A dispatcher whose fiber is gone is a frontier
+(`SCHED-FB-UNKNOWN-OWNER`; the dispatcher table retires it). -/
+def postTask (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (owner : FiberId) (priority : Nat)
+    (task : Task ν σ β ε δ ι α κ) : RunMachine ν σ β ε δ ι α χ St κ φ η :=
+  match m.fiber? owner with
+  | none => m.halt (Stuck.unknownFiber owner)
+  | some o =>
+    ((m.update { o with dispatcher := o.dispatcher.enqueue priority task }).arm owner).emit
+      [RunEvent.scheduledTask owner priority task]
+
+
 end RunMachine
 
 /-! ## The commands the loop runs
@@ -700,8 +725,11 @@ inductive Cmd (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
   it at the executed registration (`const key = {}`, `:5366`; `E4-CHECK-CE-016`). -/
   | link (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
       (interruptor : Option FiberId) (extra : ReasonAnnotations α)
-  /-- Drain the resumes the store owes. -/
+  /-- Drain the resumes the store owes: a `now` entry resumes inline, a `scheduled` one is
+  posted on its owner's dispatcher (`Machine/Wake.lean`, `WakeMode`). -/
   | drainDue
+  /-- A batch wake runs (`Task.wake`): the list's batch at that phase moves into `due`. -/
+  | wake (list : WakeKey) (phase : WakePhase)
 
 section Machine
 
@@ -1729,6 +1757,20 @@ def settle (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α κ)) (it : Iter
   | Outcome.stuck why =>
     ((it.machine.update { it.fiber with running := false }).halt why, [])
 
+/-- Deliver the resumes a store owes (`Cmd.drainDue`), in order: a `now` entry is the next
+command (M1, inside the completing step); a `scheduled` entry is posted as a resume task on
+its owner's dispatcher and runs at the host's `fire`. -/
+def drainOwed (m : RunMachine ν σ β ε δ ι α χ St κ φ η) :
+    List (Owed κ) → RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ)
+  | [] => (m, [])
+  | d :: rest =>
+    match d.mode with
+    | WakeMode.now =>
+      let r := drainOwed m rest
+      (r.1, Cmd.resume d.waiter d.token d.code :: r.2)
+    | WakeMode.scheduled owner priority =>
+      drainOwed (m.postTask owner priority (Task.resume d.waiter d.token d.code)) rest
+
 /-- One command, returning the commands it leaves. This is also the step used
 by the resumable fuel laws in `Machine.Approximation`. The clauses transcribe
 `internal/effect.ts:599-628` (entry and exit), `:933-934` (delivery), `:1121-1126`
@@ -1876,7 +1918,10 @@ def driveStep (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine
       (m, cmds ++ rest)
   | Cmd.drainDue, rest =>
     let (due, state) := interp.dueResumes m.state
-    ({ m with state := state }, (due.map fun d => Cmd.resume d.1 d.2.1 d.2.2) ++ rest)
+    let r := drainOwed { m with state := state } due
+    (r.1, r.2 ++ rest)
+  | Cmd.wake list phase, rest =>
+    ({ m with state := interp.wakeList list phase m.state }, rest)
 
 /-- The command loop with its residue. Exhaustion remains resumable here; the
 task, round and replay boundaries stop when that residue is unfinished. -/
@@ -1905,6 +1950,7 @@ def settled (r : RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν 
 def taskCmds : Task ν σ β ε δ ι α κ → List (Cmd ν σ β ε δ ι α κ)
   | Task.start child => [Cmd.evaluate child, Cmd.drainDue]
   | Task.resume target token answer => [Cmd.resume target token answer, Cmd.drainDue]
+  | Task.wake list phase => [Cmd.wake list phase, Cmd.drainDue]
 
 /-- Once a task exhausts its budget, later tasks in the snapshot do not run. -/
 def fireStep (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) (owner : FiberId)

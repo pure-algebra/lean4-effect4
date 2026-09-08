@@ -503,7 +503,7 @@ theorem localStep_plain {root : NativeEff} (hroot : Plain root = true) :
 waiter (`Deferred.await` is an `async` row), so the stores it reaches from `Stores.empty`
 stay quiet, and `Cmd.drainDue` is the identity on them. -/
 def Quiet (s : Stores) : Prop :=
-  s.deferreds.due = [] ∧ ∀ c ∈ s.deferreds.cells, c.waiters = []
+  s.deferreds.due = [] ∧ ∀ c ∈ s.deferreds.cells, c.wake.waiters = [] ∧ c.wake.batch = none
 
 theorem Quiet.empty : Quiet Stores.empty := ⟨rfl, fun _ h => by simp [Stores.empty] at h⟩
 
@@ -514,18 +514,20 @@ theorem Quiet.of_deferreds_eq {s s' : Stores} (h : s'.deferreds = s.deferreds) (
   exact hq
 
 theorem DeferredStore.make_quiet {d : DeferredStore} (hdue : d.due = [])
-    (hcells : ∀ c ∈ d.cells, c.waiters = []) :
-    (d.make).2.due = [] ∧ ∀ c ∈ (d.make).2.cells, c.waiters = [] := by
+    (hcells : ∀ c ∈ d.cells, c.wake.waiters = [] ∧ c.wake.batch = none) :
+    (d.make).2.due = [] ∧
+      ∀ c ∈ (d.make).2.cells, c.wake.waiters = [] ∧ c.wake.batch = none := by
   refine ⟨hdue, fun c hc => ?_⟩
   simp only [DeferredStore.make, List.mem_append, List.mem_singleton] at hc
   rcases hc with hc | rfl
   · exact hcells c hc
-  · rfl
+  · exact ⟨rfl, rfl⟩
 
 theorem DeferredStore.complete_quiet {d : DeferredStore} (hdue : d.due = [])
-    (hcells : ∀ c ∈ d.cells, c.waiters = []) (cell : DeferredKey)
+    (hcells : ∀ c ∈ d.cells, c.wake.waiters = [] ∧ c.wake.batch = none) (cell : DeferredKey)
     (e : Effect4.Machine.Program) :
-    (d.complete cell e).1.due = [] ∧ ∀ c ∈ (d.complete cell e).1.cells, c.waiters = [] := by
+    (d.complete cell e).1.due = [] ∧
+      ∀ c ∈ (d.complete cell e).1.cells, c.wake.waiters = [] ∧ c.wake.batch = none := by
   unfold DeferredStore.complete
   split
   · exact ⟨hdue, hcells⟩
@@ -533,15 +535,18 @@ theorem DeferredStore.complete_quiet {d : DeferredStore} (hdue : d.due = [])
     split
     · exact ⟨hdue, hcells⟩
     · have hmem : c ∈ d.cells := List.mem_of_getElem? hc
-      simp only [hcells c hmem, List.map_nil, List.append_nil, DeferredStore.setCell]
+      simp only [WakeList.wakeAll, (hcells c hmem).1, List.map_nil, List.append_nil,
+        DeferredStore.setCell]
       refine ⟨hdue, fun c' hc' => ?_⟩
       rcases List.mem_or_eq_of_mem_set hc' with hc' | rfl
       · exact hcells c' hc'
-      · rfl
+      · exact ⟨rfl, (hcells c hmem).2⟩
 
 theorem DeferredStore.cancel_quiet {d : DeferredStore} (hdue : d.due = [])
-    (hcells : ∀ c ∈ d.cells, c.waiters = []) (cell : DeferredKey) (w : FiberId) (t : Nat) :
-    (d.cancel cell w t).due = [] ∧ ∀ c ∈ (d.cancel cell w t).cells, c.waiters = [] := by
+    (hcells : ∀ c ∈ d.cells, c.wake.waiters = [] ∧ c.wake.batch = none) (cell : DeferredKey)
+    (w : FiberId) (t : Nat) :
+    (d.cancel cell w t).due = [] ∧
+      ∀ c ∈ (d.cancel cell w t).cells, c.wake.waiters = [] ∧ c.wake.batch = none := by
   unfold DeferredStore.cancel
   split
   · exact ⟨hdue, hcells⟩
@@ -551,7 +556,7 @@ theorem DeferredStore.cancel_quiet {d : DeferredStore} (hdue : d.due = [])
     refine ⟨hdue, fun c' hc' => ?_⟩
     rcases List.mem_or_eq_of_mem_set hc' with hc' | rfl
     · exact hcells c' hc'
-    · simp [hcells c hmem]
+    · simp [WakeList.cancel, WakeList.pending, (hcells c hmem).1, (hcells c hmem).2]
 
 /-- Every store step keeps the stores quiet. -/
 theorem syncOpStep_quiet {o : SyncOp} {s s' : Stores} {v : Val}
@@ -1307,7 +1312,7 @@ theorem drive_drainDue (root : NativeEff) (n : Nat) (m : Api.Machine) (rest : Li
   simp only at hs hq
   subst hs
   simp only [driveState, driveStep, Option.isSome_none, Bool.false_eq_true, ↓reduceIte,
-    dueResumes_quiet root hq, List.map_nil, List.nil_append]
+    dueResumes_quiet root hq, drainOwed, List.nil_append]
 
 /-- The exit path of the root: no middleware, no children, no observer — the exit is stored,
 the drain is owed. -/

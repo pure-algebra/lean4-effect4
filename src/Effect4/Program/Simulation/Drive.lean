@@ -74,15 +74,14 @@ theorem listRel_observe (root : NativeEff) {a b : FiberId} (hab : a = b) (exit :
   | [] => ListRel.nil
   | _ :: rest => ListRel.cons ⟨hab, rfl, rfl⟩ (listRel_observe root hab exit rest)
 
-/-- The due resumes read into related commands: every owed program is a completion. -/
+/-- The due resumes read into related owed entries: every owed program is a completion. -/
 theorem drain_rel (root : NativeEff) :
-    ∀ (l : List (FiberId × Nat × Program)), (∀ e ∈ l, CompletionShaped e.2.2) →
-      ListRel (CMeans root)
-        ((l.map fun d => (d.1, d.2.1, embed d.2.2)).map fun d => Cmd.resume d.1 d.2.1 d.2.2)
-        ((l.map fun d => (d.1, d.2.1, denoteStored d.2.2)).map fun d => Cmd.resume d.1 d.2.1 d.2.2)
+    ∀ (l : List (Owed Program)), (∀ e ∈ l, CompletionShaped e.code) →
+      ListRel (OwedMeans (CodeMeans root)) (l.map (Owed.mapCode embed))
+        (l.map (Owed.mapCode denoteStored))
   | [], _ => ListRel.nil
   | e :: rest, h =>
-    ListRel.cons ⟨rfl, rfl, stored_means root (h e (List.mem_cons.mpr (Or.inl rfl)))⟩
+    ListRel.cons ⟨rfl, rfl, stored_means root (h e (List.mem_cons.mpr (Or.inl rfl))), rfl⟩
       (drain_rel root rest fun x hx => h x (List.mem_cons.mpr (Or.inr hx)))
 
 /-! ## Fibers, at the shapes the driver produces -/
@@ -185,12 +184,12 @@ theorem dropFinalizer_ok (root : NativeEff) (scope key : Nat) {s s' : Stores} (h
 
 theorem dueResumes_frame (root : NativeEff) (s : Stores) :
     (interpOf root).dueResumes s =
-      ((s.deferreds.drainDue).1.map fun d => (d.1, d.2.1, embed d.2.2),
+      ((s.deferreds.drainDue).1.map (Owed.mapCode embed),
         { s with deferreds := (s.deferreds.drainDue).2 }) := rfl
 
 theorem dueResumes_term (root : NativeEff) (s : Stores) :
     (interpR root).dueResumes s =
-      ((s.deferreds.drainDue).1.map fun d => (d.1, d.2.1, denoteStored d.2.2),
+      ((s.deferreds.drainDue).1.map (Owed.mapCode denoteStored),
         { s with deferreds := (s.deferreds.drainDue).2 }) := rfl
 
 theorem resumePrim_means (root : NativeEff) (resume : Resume EffName)
@@ -923,16 +922,34 @@ theorem drive_drainDue :
   have hd := deferredOk_drainDue hs.1
   rw [hm.state]
   show CmdsRel root
-    ({ m₁ with state := ((interpOf root).dueResumes m₂.state).2 },
-      (((interpOf root).dueResumes m₂.state).1.map fun d => Cmd.resume d.1 d.2.1 d.2.2) ++ r₁)
-    ({ m₂ with state := ((interpR root).dueResumes m₂.state).2 },
-      (((interpR root).dueResumes m₂.state).1.map fun d => Cmd.resume d.1 d.2.1 d.2.2) ++ r₂)
+    ((drainOwed { m₁ with state := ((interpOf root).dueResumes m₂.state).2 }
+        ((interpOf root).dueResumes m₂.state).1).1,
+      (drainOwed { m₁ with state := ((interpOf root).dueResumes m₂.state).2 }
+        ((interpOf root).dueResumes m₂.state).1).2 ++ r₁)
+    ((drainOwed { m₂ with state := ((interpR root).dueResumes m₂.state).2 }
+        ((interpR root).dueResumes m₂.state).1).1,
+      (drainOwed { m₂ with state := ((interpR root).dueResumes m₂.state).2 }
+        ((interpR root).dueResumes m₂.state).1).2 ++ r₂)
   rw [dueResumes_frame, dueResumes_term]
   dsimp only
-  exact CmdsRel.mk'
+  obtain ⟨hok', hm', hc⟩ := book_drainOwed
     (machineOk_stateOf (s := { m₂.state with deferreds := (m₂.state.deferreds.drainDue).2 }) hok
       ⟨hd.1, hs.2⟩)
-    (hm.stateOf _) (ListRel.append (drain_rel root _ hd.2) hr)
+    (hm.stateOf _) (drain_rel root _ hd.2)
+  exact CmdsRel.mk' hok' hm' (ListRel.append hc hr)
+
+/-- A batch wake: the same store hook on both sides. -/
+theorem drive_wake (list : WakeKey) (phase : WakePhase) :
+    letI := evaluatorFor root
+    letI := termEvaluatorFor root
+    CmdsRel root (driveStep (interpOf root) m₁ (.wake list phase) r₁)
+      (driveStep (interpR root) m₂ (.wake list phase) r₂) := by
+  simp only [driveStep]
+  show CmdsRel root ({ m₁ with state := Stores.wakeList list phase m₁.state }, r₁)
+    ({ m₂ with state := Stores.wakeList list phase m₂.state }, r₂)
+  rw [hm.state]
+  exact CmdsRel.mk' (machineOk_stateOf hok (storesOk_wakeList (hm.state ▸ hok.state) list phase))
+    (hm.stateOf _) hr
 
 end Commands
 
@@ -1014,5 +1031,9 @@ theorem stepAgrees (root : NativeEff) :
   | drainDue =>
     cases c₂ <;> try exact (hc : False).elim
     exact drive_drainDue root hok hm hr
+  | wake list phase =>
+    cases c₂ <;> try exact (hc : False).elim
+    rcases hc with ⟨rfl, rfl⟩
+    exact drive_wake root hok hm hr list phase
 
 end Effect4.Program.Sched

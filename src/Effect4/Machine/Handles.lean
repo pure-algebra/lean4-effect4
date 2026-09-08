@@ -624,11 +624,31 @@ def Observer.keys : Observer → List Handle
   | Observer.raceCallback _ => []
   | Observer.callback _ => []
 
-/-- The handles of a dispatcher task: the fiber it starts or resumes, and the resume's code. -/
+/-- The handle a waiter list's key names: the cell of its family, when the kind has one. -/
+def WakeKey.keys (key : WakeKey) : List Handle :=
+  (Handle.ofCode (key.kind.byte, key.index)).toList
+
+/-- The handles a wake mode names: the dispatcher a scheduled entry is posted to. -/
+def WakeMode.keys : WakeMode → List Handle
+  | WakeMode.now => []
+  | WakeMode.scheduled owner _ => [Handle.fiber owner]
+
+/-- The handles of an owed resume: its code's, and — for a scheduled one, which becomes a
+task on a dispatcher — the dispatcher's fiber and the waiter it names. An inline resume names
+no fiber, as `Cmd.resume` does not. -/
+def Owed.keys {κ : Type} (ck : κ → List Handle) (d : Owed κ) : List Handle :=
+  ck d.code ++
+    (match d.mode with
+      | WakeMode.now => []
+      | WakeMode.scheduled owner _ => [Handle.fiber owner, Handle.fiber d.waiter])
+
+/-- The handles of a dispatcher task: the fiber it starts or resumes, the resume's code, the
+list a wake names. -/
 def Task.keys (nk : ν → List Handle) (sk : σ → List Handle) :
     Task ν σ Val Err Defect FiberId Ann → List Handle
   | Task.start child => [Handle.fiber child]
   | Task.resume target _ answer => Handle.fiber target :: primKeys nk sk answer
+  | Task.wake key _ => key.keys
 
 /-- The handles of every task a dispatcher holds. -/
 def Dispatcher.keys (nk : ν → List Handle) (sk : σ → List Handle)
@@ -666,6 +686,7 @@ def Cmd.keys (nk : ν → List Handle) (sk : σ → List Handle) :
   | Cmd.observe fiber exit observer => Handle.fiber fiber :: exitKeys exit ++ observer.keys
   | Cmd.exitDone fiber => [Handle.fiber fiber]
   | Cmd.closeParAwait host _ fibers => Handle.fiber host :: fibers.map Handle.fiber
+  | Cmd.wake key _ => key.keys
   | _ => []
 
 /-- The handles of every command of a list. -/
@@ -686,9 +707,9 @@ def DeferredCell.keys (c : DeferredCell) : List Handle :=
   | some program => programKeys program
   | none => []
 
-/-- The handles of the Deferred store: every cell's completion and every owed resume's code. -/
+/-- The handles of the Deferred store: every cell's completion and every owed resume's. -/
 def DeferredStore.keys (d : DeferredStore) : List Handle :=
-  d.cells.flatMap DeferredCell.keys ++ d.due.flatMap fun r => programKeys r.2.2
+  d.cells.flatMap DeferredCell.keys ++ d.due.flatMap (Owed.keys programKeys)
 
 /-- The handles a closed scope's exit carries. The store answers that exit to a registration
 on a closed scope (`syncOpStep`, `SyncOp.scopeAdd`; `internal/effect.ts:3851-3853`), so it is
@@ -866,7 +887,12 @@ structure KeyBounded (nk : ν → List Handle) (sk : σ → List Handle)
   dueResumes : ∀ s ids, Ok ⟨ids, s⟩ s.keys →
     s.le (interp.dueResumes s).2 ∧
       Ok ⟨ids, (interp.dueResumes s).2⟩
-        ((interp.dueResumes s).2.keys ++ (interp.dueResumes s).1.flatMap fun d => primKeys nk sk d.2.2)
+        ((interp.dueResumes s).2.keys ++
+          (interp.dueResumes s).1.flatMap (Owed.keys (primKeys nk sk)))
+  /-- A batch wake keeps the store's handles valid and grows it. -/
+  wakeList : ∀ key phase s ids, Ok ⟨ids, s⟩ s.keys →
+    s.le (interp.wakeList key phase s) ∧
+      Ok ⟨ids, interp.wakeList key phase s⟩ (interp.wakeList key phase s).keys
   cancelName : ∀ base fiber token, nk (interp.cancelName base fiber token) ⊆ Handle.fiber fiber :: nk base
   abortName : nk interp.abortName = []
   parkCancelName : nk interp.parkCancelName = []
@@ -3874,14 +3900,75 @@ theorem settle_minted (id : FiberId) (rest : List (Cmd ν σ Val Err Defect Fibe
     refine List.append_subset.mpr ⟨List.Subset.trans (keys_update_subset nk sk _) (by sub_tac), by sub_tac⟩
 
 omit evaluator in
-theorem flatMap_resume_map (due : List (FiberId × Nat × Prim ν σ Val Err Defect FiberId Ann)) :
-    (due.map fun d => Cmd.resume d.1 d.2.1 d.2.2).flatMap (Cmd.keys nk sk) =
-      due.flatMap fun d => primKeys nk sk d.2.2 := by
-  induction due with
-  | nil => rfl
-  | cons d rest ih =>
-    simp only [List.map_cons, List.flatMap_cons, Cmd.keys] at ih ⊢
-    rw [ih]
+/-- Posting a task (the scheduler surface): the world is unchanged and the machine's keys grow
+by the task's, all minted — the owner's fiber among them, since the post found it. -/
+theorem postTask_minted (m : NM ν σ) (owner : FiberId) (priority : Nat)
+    (task : Task ν σ Val Err Defect FiberId Ann) (extra : List Handle)
+    (hm : MintedIn m (m.keys nk sk ++ (Handle.fiber owner :: task.keys nk sk) ++ extra)) :
+    (m.postTask owner priority task).world = m.world ∧
+      MintedIn (m.postTask owner priority task)
+        ((m.postTask owner priority task).keys nk sk ++ extra) := by
+  unfold RunMachine.postTask
+  split
+  · refine ⟨world_halt _, ?_⟩
+    simp only [MintedIn]
+    rw [world_halt, keys_halt]
+    exact Ok_of_subset (by sub_tac) hm
+  · next o ho =>
+    refine ⟨by rw [world_emit, world_arm, world_update], ?_⟩
+    simp only [MintedIn]
+    rw [world_emit, world_arm, world_update, keys_emit]
+    have hok : Ok m.world (o.keys nk sk) :=
+      Ok_of_subset (fiber?_keys_subset nk sk ho) (Ok_of_subset (by sub_tac) hm)
+    have htask : Ok m.world (task.keys nk sk) := Ok_of_subset (by sub_tac) hm
+    have henq : Ok m.world ((o.dispatcher.enqueue priority task).keys nk sk) :=
+      Ok_of_subset (Dispatcher.keys_enqueue_subset nk sk _ _ _)
+        (Ok_of_subset (by sub_tac norm [RunFiber.keys]) (Ok_append.mpr ⟨hok, htask⟩))
+    have hupd : Ok m.world
+        (({ o with dispatcher := o.dispatcher.enqueue priority task } :
+          RunFiber ν σ Val Err Defect FiberId Ann Ctx).keys nk sk) := by
+      refine Ok_of_subset ?_ (Ok_append.mpr ⟨hok, henq⟩)
+      simp only [RunFiber.keys]
+      sub_tac
+    refine Ok_of_subset ?_ (Ok_append.mpr ⟨hm, hupd⟩)
+    refine List.append_subset.mpr ⟨List.Subset.trans (keys_arm_subset nk sk _) ?_, by sub_tac⟩
+    refine List.cons_subset.mpr ⟨by simp, ?_⟩
+    refine List.Subset.trans (keys_update_subset nk sk _) ?_
+    sub_tac
+
+omit evaluator in
+/-- The drain of owed resumes: every `now` entry becomes a `resume` command with its code's
+keys, every `scheduled` one a post; the world grows by nothing but the posts (which keep it),
+and every key the result holds was minted. -/
+theorem drainOwed_minted (m : NM ν σ) (extra : List Handle) :
+    ∀ (due : List (Owed (Prim ν σ Val Err Defect FiberId Ann))),
+      MintedIn m (m.keys nk sk ++ due.flatMap (Owed.keys (primKeys nk sk)) ++ extra) →
+      (drainOwed m due).1.world = m.world ∧
+        MintedIn (drainOwed m due).1
+          ((drainOwed m due).1.keys nk sk ++ cmdsKeys nk sk (drainOwed m due).2 ++ extra)
+  | [], hm => ⟨rfl, by
+      simp only [drainOwed, cmdsKeys, List.flatMap_nil, List.append_nil]
+      exact Ok_of_subset (by sub_tac) hm⟩
+  | d :: rest, hm => by
+    unfold drainOwed
+    split
+    · next hmode =>
+      have hrest := drainOwed_minted m extra rest
+        (Ok_of_subset (by simp only [List.flatMap_cons]; sub_tac) hm)
+      refine ⟨hrest.1, ?_⟩
+      simp only [MintedIn, cmdsKeys, List.flatMap_cons, Cmd.keys] at hrest ⊢
+      have hcode : Ok (drainOwed m rest).1.world (primKeys nk sk d.code) := by
+        rw [hrest.1]
+        exact Ok_of_subset (by simp only [List.flatMap_cons, Owed.keys]; sub_tac) hm
+      refine Ok_of_subset ?_ (Ok_append.mpr ⟨hrest.2, hcode⟩)
+      sub_tac
+    · next owner priority hmode =>
+      have hpost := postTask_minted nk sk m owner priority (Task.resume d.waiter d.token d.code)
+        (rest.flatMap (Owed.keys (primKeys nk sk)) ++ extra)
+        (Ok_of_subset (by simp only [List.flatMap_cons, Owed.keys, hmode, Task.keys]; sub_tac) hm)
+      have hrest := drainOwed_minted _ extra rest
+        (by simpa only [MintedIn, List.append_assoc] using hpost.2)
+      exact ⟨by rw [hrest.1, hpost.1], hrest.2⟩
 
 /-- The receipt of one command: the world grew and the loop's handles (the machine's and the
 remaining commands') exist afterwards. One lemma per command, then the dispatch. -/
@@ -4456,14 +4543,34 @@ theorem driveStep_drainDue_minted (hb : KeyBounded nk sk interp)
   obtain ⟨hsle, hsok⟩ := hb.dueResumes m.state _ hsk
   have hle : m.world.le ({ m with state := (interp.dueResumes m.state).2 } : NM ν σ).world :=
     ⟨fun _ h => h, hsle⟩
+  have hall : MintedIn ({ m with state := (interp.dueResumes m.state).2 } : NM ν σ)
+      (({ m with state := (interp.dueResumes m.state).2 } : NM ν σ).keys nk sk ++
+        (interp.dueResumes m.state).1.flatMap (Owed.keys (primKeys nk sk)) ++
+        cmdsKeys nk sk rest) := by
+    simp only [MintedIn]
+    refine Ok_of_subset ?_ (Ok_append.mpr ⟨Ok_mono hle hm, hsok⟩)
+    simp only [RunMachine.keys, cmdsKeys, List.flatMap_cons, Cmd.keys, List.nil_append]
+    sub_tac
+  obtain ⟨hw, hmint⟩ := drainOwed_minted nk sk _ (cmdsKeys nk sk rest) _ hall
+  refine ⟨by rw [hw]; exact hle, ?_⟩
+  simp only [MintedIn, cmdsKeys, List.flatMap_append] at hmint ⊢
+  exact Ok_of_subset (by sub_tac) hmint
+
+theorem driveStep_wake_minted (hb : KeyBounded nk sk interp)
+    (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores) (key : WakeKey) (phase : WakePhase)
+    (rest : List (Cmd ν σ Val Err Defect FiberId Ann))
+    (hm : MintedIn m (m.keys nk sk ++ cmdsKeys nk sk (Cmd.wake key phase :: rest))) :
+    StepMinted nk sk m (driveStep interp m (Cmd.wake key phase) rest) := by
+  unfold StepMinted
+  simp only [driveStep]
+  have hsk : Ok ⟨m.fibers.map RunFiber.id, m.state⟩ m.state.keys := Ok_of_subset (by sub_tac) hm
+  obtain ⟨hsle, hsok⟩ := hb.wakeList key phase m.state _ hsk
+  have hle : m.world.le ({ m with state := interp.wakeList key phase m.state } : NM ν σ).world :=
+    ⟨fun _ h => h, hsle⟩
   refine ⟨hle, ?_⟩
   simp only [MintedIn]
-  have hall : Ok ({ m with state := (interp.dueResumes m.state).2 } : NM ν σ).world
-      ((m.keys nk sk ++ cmdsKeys nk sk (Cmd.drainDue :: rest)) ++
-        ((interp.dueResumes m.state).2.keys ++ (interp.dueResumes m.state).1.flatMap fun d => primKeys nk sk d.2.2)) :=
-    Ok_append.mpr ⟨Ok_mono hle hm, hsok⟩
-  refine Ok_of_subset ?_ hall
-  simp only [cmdsKeys, List.flatMap_append, flatMap_resume_map]
+  refine Ok_of_subset ?_ (Ok_append.mpr ⟨Ok_mono hle hm, hsok⟩)
+  simp only [RunMachine.keys, cmdsKeys, List.flatMap_cons, Cmd.keys]
   sub_tac
 
 theorem driveStep_minted_of_evaluator (hb : KeyBounded nk sk interp)
@@ -4498,6 +4605,7 @@ theorem driveStep_minted_of_evaluator (hb : KeyBounded nk sk interp)
     exact driveStep_link_minted nk sk hb m mode scope target interruptor extra rest hm
   | finish id exit => exact driveStep_finish_minted nk sk hb m id exit rest hm
   | drainDue => exact driveStep_drainDue_minted nk sk hb m rest hm
+  | wake key phase => exact driveStep_wake_minted nk sk hb m key phase rest hm
 
 /-- The command loop keeps every handle it holds and every handle its commands carry. -/
 theorem driveState_minted_of_evaluator (hb : KeyBounded nk sk interp)
@@ -4537,6 +4645,9 @@ theorem cmdsKeys_taskCmds (task : Task ν σ Val Err Defect FiberId Ann) :
   | resume target token answer =>
     simp only [taskCmds, cmdsKeys, List.flatMap_cons, List.flatMap_nil, Cmd.keys, List.append_nil, Task.keys]
     exact List.subset_cons_of_subset _ (List.Subset.refl _)
+  | wake key phase =>
+    simp only [taskCmds, cmdsKeys, List.flatMap_cons, List.flatMap_nil, Cmd.keys, List.append_nil, Task.keys]
+    exact List.Subset.refl _
 
 omit evaluator in
 theorem flatten_tasks_keys :
@@ -5128,12 +5239,14 @@ theorem DeferredStore.register_keys (self : DeferredStore) (cell : DeferredKey) 
       simp only [DeferredStore.keys, List.mem_append]
       exact Or.inl (List.mem_flatMap.mpr ⟨c, hcm, by simpa [DeferredCell.keys] using hy⟩)
 
-theorem flatMap_resumes_const (ws : List (FiberId × Nat)) (e : Program) :
-    (ws.map fun w => (w.1, w.2, e)).flatMap (fun r => programKeys r.2.2) ⊆ programKeys e := by
+/-- The owed resumes a broadcast wake mints carry the completion's keys and no other. -/
+theorem flatMap_resumes_const (ws : List (Waiter Unit)) (e : Program) :
+    (ws.map fun w => (⟨w.fiber, w.token, e, WakeMode.now⟩ : Owed Program)).flatMap
+        (Owed.keys programKeys) ⊆ programKeys e := by
   intro x hx
   obtain ⟨r, hr, hxr⟩ := List.mem_flatMap.mp hx
   obtain ⟨w, _, rfl⟩ := List.mem_map.mp hr
-  exact hxr
+  simpa [Owed.keys] using hxr
 
 theorem DeferredStore.complete_keys (self : DeferredStore) (cell : DeferredKey) (e : Program) :
     (self.complete cell e).1.keys ⊆ self.keys ++ programKeys e ∧
@@ -5148,7 +5261,7 @@ theorem DeferredStore.complete_keys (self : DeferredStore) (cell : DeferredKey) 
       · intro x hx
         simp only [DeferredStore.keys, List.mem_append] at hx
         rcases hx with hx | hx
-        · have := DeferredStore.setCell_keys_subset self cell ⟨some e, []⟩
+        · have := DeferredStore.setCell_keys_subset self cell ⟨some e, (c.wake.wakeAll).2⟩
           simp only [DeferredStore.keys, DeferredCell.keys] at this
           have hx' := this (List.mem_append_left _ hx)
           simp only [List.mem_append] at hx' ⊢
@@ -5159,8 +5272,8 @@ theorem DeferredStore.complete_keys (self : DeferredStore) (cell : DeferredKey) 
         · simp only [List.flatMap_append, List.mem_append] at hx
           rcases hx with hx | hx
           · exact List.mem_append.mpr (Or.inl (List.mem_append_right _ hx))
-          · exact List.mem_append.mpr (Or.inr (flatMap_resumes_const c.waiters e hx))
-      · show self.cells.length ≤ (self.setCell cell ⟨some e, []⟩).cells.length
+          · exact List.mem_append.mpr (Or.inr (flatMap_resumes_const (c.wake.wakeAll).1 e hx))
+      · show self.cells.length ≤ (self.setCell cell ⟨some e, (c.wake.wakeAll).2⟩).cells.length
         exact DeferredStore.setCell_le _ _ _
 
 theorem DeferredStore.cancel_keys (self : DeferredStore) (cell : DeferredKey) (waiter : FiberId) (token : Nat) :
@@ -5180,9 +5293,61 @@ theorem DeferredStore.cancel_keys (self : DeferredStore) (cell : DeferredKey) (w
 
 theorem DeferredStore.drainDue_keys (self : DeferredStore) :
     (self.drainDue).2.keys ⊆ self.keys ∧
-      ((self.drainDue).1.flatMap fun r => programKeys r.2.2) ⊆ self.keys := by
+      (self.drainDue).1.flatMap (Owed.keys programKeys) ⊆ self.keys := by
   simp only [DeferredStore.drainDue, DeferredStore.keys, List.flatMap_nil, List.append_nil]
   exact ⟨List.subset_append_left _ _, List.subset_append_right _ _⟩
+
+/-- A cell's keys are its completion's, whatever its list. -/
+theorem DeferredCell.keys_wake (c : DeferredCell) (w : WakeList Unit) :
+    DeferredCell.keys { c with wake := w } = DeferredCell.keys c := rfl
+
+/-- A batch wake on a Deferred's list: the completion's keys are the cell's already, the
+cell count does not move. -/
+theorem DeferredStore.wakeBatch_keys (self : DeferredStore) (cell : DeferredKey) :
+    (self.wakeBatch cell).keys ⊆ self.keys ∧
+      self.cells.length ≤ (self.wakeBatch cell).cells.length := by
+  unfold DeferredStore.wakeBatch
+  split
+  · exact ⟨List.Subset.refl _, Nat.le_refl _⟩
+  · next c hc =>
+    have hcm : c ∈ self.cells := List.mem_of_getElem? hc
+    have hck : DeferredCell.keys c ⊆ self.keys := by
+      intro x hx
+      simp only [DeferredStore.keys, List.mem_append]
+      exact Or.inl (List.mem_flatMap.mpr ⟨c, hcm, hx⟩)
+    split
+    · next e he =>
+      refine ⟨?_, DeferredStore.setCell_le _ _ _⟩
+      intro x hx
+      simp only [DeferredStore.keys, List.mem_append, List.flatMap_append] at hx
+      rcases hx with hx | hx | hx
+      · have := DeferredStore.setCell_keys_subset self cell { c with wake := (c.wake.runBatch).2 }
+        simp only [DeferredStore.keys, DeferredCell.keys_wake] at this
+        have hx' := this (List.mem_append_left _ hx)
+        simp only [DeferredStore.keys, List.mem_append] at hx' ⊢
+        rcases hx' with (h | h) | h
+        · exact Or.inl h
+        · exact Or.inr h
+        · exact Or.inl (List.mem_flatMap.mpr ⟨c, hcm, h⟩)
+      · exact List.mem_append.mpr (Or.inr hx)
+      · have hxe := flatMap_resumes_const (c.wake.runBatch).1 e hx
+        exact hck (by simpa [DeferredCell.keys, he] using hxe)
+    · next he =>
+      refine ⟨?_, DeferredStore.setCell_le _ _ _⟩
+      refine List.Subset.trans (DeferredStore.setCell_keys_subset self cell _) ?_
+      rw [DeferredCell.keys_wake]
+      exact List.append_subset.mpr ⟨List.Subset.refl _, hck⟩
+
+/-- The store-level wake hook keeps the keys and grows the store. -/
+theorem Stores.wakeList_keys (key : WakeKey) (phase : WakePhase) (s : Stores) :
+    (Stores.wakeList key phase s).keys ⊆ s.keys ∧ s.le (Stores.wakeList key phase s) := by
+  unfold Stores.wakeList
+  split
+  · obtain ⟨hk, hlen⟩ := DeferredStore.wakeBatch_keys s.deferreds ⟨key.index⟩
+    refine ⟨?_, ⟨Nat.le_refl _, hlen, fun _ hh => hh, Nat.le_refl _, fun _ hm => hm⟩⟩
+    simp only [Stores.keys]
+    sub_tac using hk
+  · exact ⟨List.Subset.refl _, Stores.le_refl _⟩
 
 /-! ### The scope store -/
 
@@ -5973,6 +6138,10 @@ theorem storesCloseScopeUnsafe_keys (scope : Nat) (exit : ExitV) (flag : Bool)
 theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
   contA n v := contAOf_keys n v
   contE n c := contEOf_keys n c
+  wakeList key phase s ids hok := by
+    simp only [stores]
+    obtain ⟨hk, hle⟩ := Stores.wakeList_keys key phase s
+    exact ⟨hle, Ok_of_subset hk (Ok_mono (World.le_of_state hle) hok)⟩
   syncValue t := by simp only [stores]; exact List.nil_subset _
   suspendBody t := by
     cases t with

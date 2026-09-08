@@ -318,7 +318,8 @@ def interpR (root : NativeEff) : RInterp where
   answerCode := denoteCompletion
   dueResumes := fun state =>
     let (due, deferreds) := state.deferreds.drainDue
-    (due.map fun d => (d.1, d.2.1, denoteStored d.2.2), { state with deferreds })
+    (due.map (Owed.mapCode denoteStored), { state with deferreds })
+  wakeList := Stores.wakeList
   cancelName := (interpOf root).cancelName
   abortName := .abort
   parkCancelName := .store .cancelPark

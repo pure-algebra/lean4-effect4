@@ -490,11 +490,33 @@ theorem settle_grows {id : FiberId} {rest : List (Cmd ν σ β ε δ ι α)} {it
   unfold Grows settle
   (repeat' split) <;> trace_leaf
 
+/-- Posting a task keeps the trace's prefix: a halt, or an update, an arm and an emit. -/
+theorem postTask_extends {m : RunMachine ν σ β ε δ ι α χ St} {owner : FiberId}
+    {priority : Nat} {task : Task ν σ β ε δ ι α} :
+    Extends m (m.postTask owner priority task) := by
+  unfold RunMachine.postTask
+  split <;> trace_leaf
+
+/-- The drain of owed resumes grows the machine: every scheduled entry is a post. -/
+theorem drainOwed_grows_aux (m : RunMachine ν σ β ε δ ι α χ St) :
+    ∀ (due : List (Owed (Prim ν σ β ε δ ι α))), Grows m (drainOwed m due)
+  | [] => Grows.refl _ _
+  | d :: rest => by
+    unfold drainOwed
+    split
+    · exact drainOwed_grows_aux m rest
+    · exact Extends.trans postTask_extends (drainOwed_grows_aux _ rest)
+
+theorem drainOwed_grows {m : RunMachine ν σ β ε δ ι α χ St}
+    {due : List (Owed (Prim ν σ β ε δ ι α))} : Grows m (drainOwed m due) :=
+  drainOwed_grows_aux m due
+
 /-- The hops of one command: the observer folds, a single fired observer (an entrant's
-enrollment, D6a), an entrant's launch, the exit path, and a settle from an iteration the
+enrollment, D6a), an entrant's launch, the exit path, the drain of owed resumes (the scheduler surface), and a settle from an iteration the
 command built itself (the registration's return, D6a). -/
 macro "hops_cmd" : tactic => `(tactic| first
   | hops_observers
+  | exact drainOwed_grows
   | exact fireObserver_grows
   | exact launchEntrant_grows
   | exact exitFiber_grows

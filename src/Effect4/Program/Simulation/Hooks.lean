@@ -32,7 +32,7 @@ theorem completionShaped_ofExit (ex : ExitV) : CompletionShaped (Prim.ofExit ex)
 /-- Every completed cell and every owed resume carries a completion. -/
 def DeferredOk (d : DeferredStore) : Prop :=
   (∀ cell ∈ d.cells, ∀ p, cell.completion = some p → CompletionShaped p) ∧
-    ∀ e ∈ d.due, CompletionShaped e.2.2
+    ∀ e ∈ d.due, CompletionShaped e.code
 
 /-- The store predicate the loop carries (`MachineOk`): every deferred cell holds a
 completion, and every registration key any scope holds is below the store's fresh-name supply.
@@ -129,8 +129,46 @@ theorem deferredOk_complete {d : DeferredStore} (hd : DeferredOk d) (cell : Defe
         · exact hd.2 e hm
         · exact he
 
+/-- A batch wake on a Deferred's list owes its batch the stored completion, which is shaped. -/
+theorem deferredOk_wakeBatch {d : DeferredStore} (hd : DeferredOk d) (cell : DeferredKey) :
+    DeferredOk (d.wakeBatch cell) := by
+  unfold DeferredStore.wakeBatch
+  cases hc : d.cellAt cell with
+  | none => exact hd
+  | some c =>
+    dsimp only
+    have hcm : c ∈ d.cells := List.mem_of_getElem? hc
+    cases hcomp : c.completion with
+    | some e =>
+      dsimp only
+      have he : CompletionShaped e := hd.1 c hcm e hcomp
+      refine ⟨fun cell' hc' p hp => ?_, fun x hx => ?_⟩
+      · simp only [DeferredStore.setCell] at hc'
+        rcases List.mem_or_eq_of_mem_set hc' with hm | rfl
+        · exact hd.1 cell' hm p hp
+        · simp only at hp; exact (Option.some.inj hp) ▸ he
+      · simp only [List.mem_append, List.mem_map] at hx
+        rcases hx with hm | ⟨w, _, rfl⟩
+        · exact hd.2 x hm
+        · exact he
+    | none =>
+      dsimp only
+      refine ⟨fun cell' hc' p hp => ?_, hd.2⟩
+      simp only [DeferredStore.setCell] at hc'
+      rcases List.mem_or_eq_of_mem_set hc' with hm | rfl
+      · exact hd.1 cell' hm p hp
+      · simp only at hp; exact nomatch hp
+
+/-- The store-level wake hook keeps the store invariant. -/
+theorem storesOk_wakeList {s : Stores} (hs : StoresOk s) (key : WakeKey) (phase : WakePhase) :
+    StoresOk (Stores.wakeList key phase s) := by
+  unfold Stores.wakeList
+  split
+  · exact ⟨deferredOk_wakeBatch hs.1 _, hs.2⟩
+  · exact hs
+
 theorem deferredOk_drainDue {d : DeferredStore} (hd : DeferredOk d) :
-    DeferredOk (d.drainDue).2 ∧ ∀ e ∈ (d.drainDue).1, CompletionShaped e.2.2 :=
+    DeferredOk (d.drainDue).2 ∧ ∀ e ∈ (d.drainDue).1, CompletionShaped e.code :=
   ⟨⟨hd.1, fun _ h => by simp [DeferredStore.drainDue] at h⟩, hd.2⟩
 
 /-- Every store step keeps the invariant. -/

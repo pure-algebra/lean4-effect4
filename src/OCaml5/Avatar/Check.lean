@@ -171,8 +171,11 @@ def report (tag : String) (hand derived : String) : IO Unit :=
 -- (`services` in place of `ambientScope`); the carrier's abbreviations — `Context.service`,
 -- `Context.reference` (`ServiceKey.Carrier`), `Context.val` (no twin); and the three that
 -- predate it — `Stores.scopeState` (the `Scope` parameters), `Stores.deferredStore`
--- (`DuePair`), `Context.context` (the `keysNodup` proof field): 44 → 25.
-#guard ((parts.flatMap Part.rows).filter (fun r => r.2.1 == r.2.2)).length == 25
+-- (`DuePair`), `Context.context` (the `keysNodup` proof field): 44 → 25. The scheduler
+-- surface (2026-09-08) adds two: `Fibers.cmd` (+`wake`) and `Stores.deferredCell` (the wake
+-- protocol's list in place of the waiter pairs; `Stores.deferredStore`'s `due` carries
+-- `Owed` entries): 25 → 23.
+#guard ((parts.flatMap Part.rows).filter (fun r => r.2.1 == r.2.2)).length == 23
 
 #eval do
   let rows := parts.flatMap Part.rows
