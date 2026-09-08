@@ -1,9 +1,9 @@
-import Effect4.Machine.Approximation
+import Effect4.Laws.Machine.Approximation
 
 /-!
 # Approximation kernel dependency report
 
-Every declaration of `src/Effect4/Machine/Approximation.lean` (review
+Every declaration of `src/Effect4/Laws/Machine/Approximation.lean` (review
 `docs/research/2026-09-05-effects-papers-review.md` §3 G2, packet
 `Test/contracts/machine-approximation.contract.md`) is listed exactly once, in module order.
 The accepted ceiling is no dependency, `propext`, or `propext` with `Quot.sound`;

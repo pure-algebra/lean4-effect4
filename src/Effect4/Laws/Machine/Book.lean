@@ -1,4 +1,4 @@
-import Effect4.Machine.Behaviour
+import Effect4.Laws.Machine.Behaviour
 
 /-!
 # The book: two instances of the shared loop, related field by field (P3, step 1)

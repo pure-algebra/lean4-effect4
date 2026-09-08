@@ -1,6 +1,6 @@
-import Effect4.Machine.ScopeMachine
+import Effect4.Laws.Machine.ScopeMachine
 import Effect4.Machine.Frames
-import Effect4.Machine.ScopeRestoration
+import Effect4.Laws.Machine.ScopeRestoration
 import Test.Counterexamples.Machine.Runtime.ScopeRestorationBoundary
 
 set_option synthInstance.maxSize 2048

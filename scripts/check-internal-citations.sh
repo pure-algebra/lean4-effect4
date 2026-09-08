@@ -28,7 +28,7 @@
 # WHAT A PASS DOES NOT MEAN: nothing about whether a replacement anchor exists,
 # whether the target still says what the citing sentence claims, or whether any
 # other citation in the tree is correct. Line citations into the pinned host
-# sources, into `vendor/foldlab/` evidence, and into `.lean` sources are
+# sources, into `git:62c04d9:vendor/foldlab/` evidence, and into `.lean` sources are
 # examined and deliberately accepted; this gate makes no claim about them. It is
 # a lexical scan, not a resolver, and it assigns no cutover status. Three
 # further limits are named rather than glossed:

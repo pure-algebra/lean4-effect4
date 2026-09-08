@@ -40,14 +40,18 @@ commit in `lakefile.toml`: `effects` (the portable effect algebra),
 `typescript` (target syntax and rendering), `hash` (a proved SHA-256).
 
 ```text
-lake build Effect4
+lake build Effect4       # API and functional utilities
+lake build Effect4Laws   # proof graph
 ```
 
-builds the library; a bare `lake build` also builds `Test`, the
+build the two library roots; a bare `lake build` builds both and `Test`, the
 green battery, whose root runs the module-closure and axiom gate: every
 declaration under `Effect4.*` and `Test.*` is audited at
 `[propext, Quot.sound]` with a short list of exact, named rendering
 exceptions, and every battery file must be reachable from `Test/All.lean`.
+Every library file must be reachable from one of the two roots, and `Effect4` must
+never reach `Effect4.Laws`. Config, ConfigValue and Provision remain functional
+utilities in `Effect4`.
 The five area targets are `TestSchema`, `TestMachine`, `TestStore`,
 `TestProgram`, and `TestCodegen`. A single battery builds by its module name,
 for example `lake build Test.Api.ApiContract`. Run one `lake` at a time. `lake build OCaml5`
@@ -60,6 +64,7 @@ The gates beyond the build (bash; on Windows run them through WSL):
 
 ```text
 scripts/test-trust-gate.sh                       # the gate's own self-test
+scripts/check-library-roots.sh                  # fresh library-root and trust audit
 scripts/check-source-citations.sh                # live paths and immutable historical references
 scripts/check-armmap-citations.sh                # avatar citation resolution, without OCaml
 scripts/check-effect-runtime-census.sh           # the rc.112 mechanism census join

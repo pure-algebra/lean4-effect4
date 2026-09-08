@@ -1,4 +1,4 @@
-import Effect4.Program.Simulation.Hooks
+import Effect4.Laws.Program.Simulation.Hooks
 
 /-!
 # The pop walk (P3, step 4a)

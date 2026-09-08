@@ -519,6 +519,25 @@ private def auditedSources (projectRoot : System.FilePath) : IO (Array System.Fi
     path.extension == some "lean" && !path.toString.startsWith fixturesRoot
   return effect4 ++ tests |>.push (projectRoot / "src" / "Effect4.lean")
 
+/-- Follow the compiled import graph, including indirect dependencies. Each round
+discovers the next frontier; the finite graph bounds the number of rounds. This
+uses module metadata, so comments or quoted examples of imports are not edges. -/
+private def moduleImportClosure
+    (graph : Array (Name × Array Name)) (root : Name) : Array Name := Id.run do
+  let mut reached := #[root]
+  let mut frontier := #[root]
+  for _ in [:graph.size + 1] do
+    let mut next := #[]
+    for name in frontier do
+      if let some (_, imports) := graph.find? (fun entry => entry.1 == name) then
+        for imported in imports do
+          if !reached.contains imported then
+            reached := reached.push imported
+            next := next.push imported
+    frontier := next
+    if frontier.isEmpty then break
+  return reached
+
 open Lean Elab Command in
 elab "#effect4_axiom_gate" : command => do
   let environment ← getEnv
@@ -548,6 +567,31 @@ elab "#effect4_axiom_gate" : command => do
         "Effect4 module-closure gate: {moduleName} is declared red in \
          Test/fixtures/trust-gate/known-red.txt but the audit root imports it; \
          its red phase is over, so remove the entry"
+
+  -- A Test-only import is not a library root. Every library source must belong
+  -- to Effect4 or Effect4.Laws, and the application root must never reach Laws.
+  for root in #[`Effect4, `Effect4.Laws] do
+    unless environment.header.moduleNames.contains root do
+      throwError "Effect4 library-root gate: the audit must import {root}"
+  let graph := (environment.header.moduleNames.zip environment.header.moduleData).map
+    fun (name, data) => (name, data.imports.map (·.module))
+  let apiModules := moduleImportClosure graph `Effect4
+  let lawsModules := moduleImportClosure graph `Effect4.Laws
+  for moduleName in apiModules do
+    if (`Effect4.Laws).isPrefixOf moduleName then
+      throwError "Effect4 library-root gate: Effect4 reaches {moduleName}"
+  let libraryPaths := (apiModules ++ lawsModules).map (modulePath projectRoot)
+  let libraryDirectory := (projectRoot / "src" / "Effect4").toString ++
+    System.FilePath.pathSeparator.toString
+  for source in sources do
+    if source.toString.startsWith libraryDirectory then
+      unless libraryPaths.contains source.normalize do
+        throwError
+          "Effect4 library-root gate: {source} is unreachable from Effect4 and Effect4.Laws"
+  let apiCount := (apiModules.filter ((`Effect4).isPrefixOf ·)).size
+  let lawsCount := (lawsModules.filter fun name =>
+    (`Effect4).isPrefixOf name && !apiModules.contains name).size
+  logInfo m!"Effect4 library-root gate: {apiCount} API/utility modules, {lawsCount} Laws-only modules; every library source is reachable; Effect4 never reaches Laws"
 
   liftIO <| auditSourceTrustModifiers environment sources
 

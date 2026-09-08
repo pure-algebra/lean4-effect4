@@ -230,14 +230,20 @@ def repo_relative(path):
 
 
 def lean_files(argument):
-    """The Lean modules: a comma-separated list, or a directory of `.lean` files (with
-    `Fibers.lean` first, as the shell build listed it: it is the home module of every avatar
-    file that is not a `deep_*` port)."""
-    if os.path.isdir(argument):
-        names = sorted(name for name in os.listdir(argument) if name.endswith(".lean"))
-        names.sort(key=lambda name: (name != "Fibers.lean", name))
-        return [os.path.join(argument, name).replace("\\", "/") for name in names]
-    return argument.split(",")
+    """A comma-separated list of files or directories, spanning Machine and Laws.
+
+    Keep the pre-split basename order and Fibers first: the fallback home module
+    and the first declaration chosen for a short name must not change in a move.
+    """
+    paths = []
+    for part in argument.split(","):
+        if os.path.isdir(part):
+            paths.extend(os.path.join(part, name).replace("\\", "/")
+                         for name in os.listdir(part) if name.endswith(".lean"))
+        else:
+            paths.append(part)
+    return sorted(paths, key=lambda path: (os.path.basename(path) != "Fibers.lean",
+                                           os.path.basename(path), path))
 
 
 def main():

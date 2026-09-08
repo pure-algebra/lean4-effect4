@@ -1,6 +1,6 @@
-import Effect4.Program.Agreement
-import Effect4.Machine.Clauses
-import Effect4.Machine.Approximation
+import Effect4.Laws.Program.Agreement
+import Effect4.Laws.Machine.Clauses
+import Effect4.Laws.Machine.Approximation
 import Effect4.Api
 
 /-!

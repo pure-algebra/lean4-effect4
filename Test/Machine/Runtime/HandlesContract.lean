@@ -1,5 +1,5 @@
-import Effect4.Program.Handles
-import Effect4.Machine.Witnesses
+import Effect4.Laws.Program.Handles
+import Effect4.Laws.Machine.Witnesses
 import Test.Machine.Runtime.CompletionContract
 
 /-! Handle invariant battery (C13, `handles_minted`). Every `#guard` is a decidable check on

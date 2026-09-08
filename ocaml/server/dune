@@ -44,9 +44,9 @@
    (run python3 %{deps}))))
 
 ; The avatar's dispatch tables, arm row names and citations, resolved against the Lean
-; machine. The avatar modules are dune dependencies (the library's own list, in its own
+; machine and its Laws modules. The avatar modules are dune dependencies (the library's own list, in its own
 ; order, minus the generated corpus_data). The Lean modules live outside this workspace
-; (<repo>/src/Effect4/Machine/), which dune cannot depend on, so the rule depends on the
+; (src/Effect4/Machine/ and src/Effect4/Laws/Machine/), which dune cannot depend on, so the rule depends on the
 ; universe instead: it re-runs on every build (about a second) and downstream compilation
 ; only re-runs when its output actually changes.
 ;
@@ -83,7 +83,7 @@
    (run
     python3
     %{dep:tools/gen_armmap.py}
-    %{workspace_root}/../../../src/Effect4/Machine
+    %{workspace_root}/../../../src/Effect4/Machine,%{workspace_root}/../../../src/Effect4/Laws/Machine
     %{dep:../avatar/deep_fibers.ml}
     %{dep:../avatar/deep_stores.ml}
     %{dep:../avatar/deep_context.ml}
@@ -148,7 +148,7 @@
   (with-stdout-to
    %{target}
    (system
-    "python3 %{dep:tools/gen_pins.py} --ocaml %{ocaml_version} --node \"$( (node --version 2>/dev/null || node.exe --version 2>/dev/null || echo unavailable) | tr -d '\\r')\" --jsoo \"$( (js_of_ocaml --version 2>/dev/null || echo 5.7.1) | tr -d '\\r')\" --masks %{dep:generated/traces/masks.tsv} --corpus %{dep:../avatar/corpus/programs.txt} --avatar %{dep:../avatar/deep_fibers.ml} %{dep:../avatar/deep_stores.ml} %{dep:../avatar/deep_context.ml} %{dep:../avatar/deep_layer.ml} %{dep:../avatar/deep_forkflow.ml} %{dep:../avatar/avatar_trace.ml} %{dep:../avatar/deep_census.ml} %{dep:../avatar/deep_clauses.ml} %{dep:../avatar/deep_witnesses.ml} %{dep:../avatar/fibers_fixture.ml} %{dep:../avatar/store_fixtures.ml} %{dep:../avatar/extra_fixture.ml} %{dep:../avatar/corpus_dsl.ml} %{dep:../avatar/corpus_run.ml} --server %{dep:dune} %{dep:server_runtime.js} %{dep:e4d_json.ml} %{dep:e4d_wire.ml} %{dep:e4d_protocol.ml} %{dep:e4d_stream.ml} %{dep:e4d_alphabet.ml} %{dep:e4d_server_loop.ml} %{dep:e4d_reset.ml} %{dep:e4d_catalog.ml} %{dep:e4d_snapshot.ml} %{dep:effect4_daemon.ml} %{dep:effect4d.ml} %{dep:effect4d_js.ml} --tools %{dep:tools/gen_armmap.py} %{dep:tools/gen_families.py} %{dep:tools/gen_pins.py} --inputs %{dep:generated/traces/masks.tsv} %{dep:generated/harness-trace/fibers-fixture.stub.ts} %{dep:generated/harness-trace/ref-fixture.ts} %{dep:generated/harness-trace/deferred-fixture.ts} %{dep:generated/harness-trace/scope-fixture.ts} %{dep:generated/harness-trace/layer-fixture.ts} --lean %{workspace_root}/../../../src/Effect4/Machine/*.lean"))))
+    "python3 %{dep:tools/gen_pins.py} --ocaml %{ocaml_version} --node \"$( (node --version 2>/dev/null || node.exe --version 2>/dev/null || echo unavailable) | tr -d '\\r')\" --jsoo \"$( (js_of_ocaml --version 2>/dev/null || echo 5.7.1) | tr -d '\\r')\" --masks %{dep:generated/traces/masks.tsv} --corpus %{dep:../avatar/corpus/programs.txt} --avatar %{dep:../avatar/deep_fibers.ml} %{dep:../avatar/deep_stores.ml} %{dep:../avatar/deep_context.ml} %{dep:../avatar/deep_layer.ml} %{dep:../avatar/deep_forkflow.ml} %{dep:../avatar/avatar_trace.ml} %{dep:../avatar/deep_census.ml} %{dep:../avatar/deep_clauses.ml} %{dep:../avatar/deep_witnesses.ml} %{dep:../avatar/fibers_fixture.ml} %{dep:../avatar/store_fixtures.ml} %{dep:../avatar/extra_fixture.ml} %{dep:../avatar/corpus_dsl.ml} %{dep:../avatar/corpus_run.ml} --server %{dep:dune} %{dep:server_runtime.js} %{dep:e4d_json.ml} %{dep:e4d_wire.ml} %{dep:e4d_protocol.ml} %{dep:e4d_stream.ml} %{dep:e4d_alphabet.ml} %{dep:e4d_server_loop.ml} %{dep:e4d_reset.ml} %{dep:e4d_catalog.ml} %{dep:e4d_snapshot.ml} %{dep:effect4_daemon.ml} %{dep:effect4d.ml} %{dep:effect4d_js.ml} --tools %{dep:tools/gen_armmap.py} %{dep:tools/gen_families.py} %{dep:tools/gen_pins.py} --inputs %{dep:generated/traces/masks.tsv} %{dep:generated/harness-trace/fibers-fixture.stub.ts} %{dep:generated/harness-trace/ref-fixture.ts} %{dep:generated/harness-trace/deferred-fixture.ts} %{dep:generated/harness-trace/scope-fixture.ts} %{dep:generated/harness-trace/layer-fixture.ts} --lean %{workspace_root}/../../../src/Effect4/Machine/*.lean %{workspace_root}/../../../src/Effect4/Laws/Machine/*.lean"))))
 
 ; --- the avatar half -------------------------------------------------------------------
 

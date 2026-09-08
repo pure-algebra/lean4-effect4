@@ -1,8 +1,8 @@
-import Effect4.Program.Agreement.Machine
+import Effect4.Laws.Program.Agreement.Machine
 
 /-!
 Fresh kernel dependency report for the agreement of the compile with the denotation
-(`src/Effect4/Program/Agreement.lean`, `src/Effect4/Program/Agreement/Machine.lean`; packet
+(`src/Effect4/Laws/Program/Agreement.lean`, `src/Effect4/Laws/Program/Agreement/Machine.lean`; packet
 `Test/contracts/program-denotation.contract.md`).
 
 Coordinator-owned, appended from the `#print axioms` output at each landing. Every theorem

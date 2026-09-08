@@ -53,13 +53,10 @@ import Effect4.Schema.Check
 import Effect4.Schema.Authoring
 import Effect4.Schema.Dimension
 -- Service keys, the rc.112 scope state machine, the frame alphabet (`Prim`,
--- `PrimInterp`, `FrameFiber`), and the frame-level facts that still pin it.
+-- `PrimInterp`, `FrameFiber`).
 import Effect4.Machine.Key
 import Effect4.Machine.Scope
-import Effect4.Machine.ScopeMachine
-import Effect4.Machine.ScopeRestoration
 import Effect4.Machine.Frames
-import Effect4.Machine.LiveStack
 -- Fiber ids and the supervision vocabulary the machine speaks.
 import Effect4.Machine.Fiber
 import Effect4.Machine.Supervision
@@ -70,35 +67,15 @@ import Effect4.Codegen.Schema
 import Effect4.Codegen.EffectfulField
 -- The reference machine (docs/research/2026-09-03-deep-plan.md): one
 -- program-carrying fiber machine over the rc.112 frames, the stores it drives,
--- the witnesses over them, and the Context and Layer models. Promoted from the
+-- the service map and the fiber context. Promoted from the
 -- `workshop/Deep` spike on 2026-09-04; the old fiber and scheduler carriers
 -- were retired the same day (`docs/research/2026-09-04-retire-old-machines.md`)
 -- and the Flow route (the Effects-flow compile and its simulations) was
 -- archived to branch `archive/flow-route` the same day
 -- (`docs/research/2026-09-04-prod-cleanup-inventory.md`).
 import Effect4.Machine.Fibers
-import Effect4.Machine.Clauses
 import Effect4.Machine.Stores
--- The stores' laws (slice 1, lane 2): the growth order, validity of values and operations,
--- the heap invariant, and that a valid operation steps, grows the store and answers a valid
--- value.
-import Effect4.Machine.StoresLaws
--- The fuel laws over the live fiber machine (G2): the loop with its residue and the
--- splitting law, the trace that only grows, the order on replay results, sufficiency and
--- stability, and the least sufficient fuel under a bound.
-import Effect4.Machine.Approximation
-import Effect4.Machine.Behaviour
-import Effect4.Machine.Scheduling
-import Effect4.Machine.Handles
--- The frame machine's value alphabet as an exact image of the carrier (U0; U1 makes it the
--- carrier).
-import Effect4.Machine.StoresValue
-import Effect4.Machine.Witnesses
 import Effect4.Machine.Context
--- The context's value alphabet as an exact image of the carrier (U0; U1b). The Layer machine
--- (`Machine/Layer.lean`) retired with the join of 2026-09-07: layers are program subterms
--- addressed by path and build on the compile route (`Program/Compile.lean`).
-import Effect4.Machine.ContextValue
 -- Structural acceptance of persisted Schema documents.
 import Effect4.Arch.Accepts
 -- The Surface library (docs/research/2026-09-04-surface-library-plan.md), wave
@@ -174,27 +151,10 @@ import Effect4.Codegen.Print
 import Effect4.Codegen.Read
 import Effect4.Program.Native
 import Effect4.Program.Compile
--- The compile's ground (docs/research/2026-09-05-slice-1-compile-ground.md; packet
--- `Test/contracts/program-denotation.contract.md`): the value typing of the native cut and
--- that typed terms evaluate; the straight-line denotation into the `Effects` algebra over the
--- store signature; and the agreement — a plain program run by `Api.run` finishes with its
--- meaning's exit and stores (`run_eq_meaning`), through the frame machine's local run and the
--- fiber machine's command loop over one fiber.
-import Effect4.Program.Typed
-import Effect4.Program.Denote
-import Effect4.Program.Agreement
-import Effect4.Program.Agreement.Machine
--- The first join of the value typing and the stores' laws: a typed request against a typed
--- heap steps to a typed answer and keeps the heap typed (`answer_typed`, `progress`).
-import Effect4.Program.Progress
-import Effect4.Program.Sched
-import Effect4.Program.DenoteR
-import Effect4.Program.RuntimeR
-import Effect4.Program.Handles
 -- The provision algebra (docs/research/2026-09-04-provision-algebra.md): `Row.diff`, the
 -- layer signature `LayerTy` and its laws, the layer term `LayerTerm` over `Eff` bodies,
 -- `App` (`Effect.provide`), the build specification with its totality theorem, and the
--- lowering into the Layer machine with the docs deployment as its witness.
+-- compile-route runs of the docs deployment.
 import Effect4.Program.Provision
 -- Configuration as an algebra: rc.112's `ConfigProvider` in its `makeSource`/`makeOrElse`
 -- normal form (a fallback monoid under a path-transformation action), the `Config` reader with
@@ -219,7 +179,6 @@ import Effect4.Api
 /-!
 # Effect4
 
-Standalone Lean library for a closed, first-order, effectful core and its
-proof-bearing bridges. The semantic modules are introduced only after their
-contract packets and counterexample batteries are frozen.
+The application API and functional utilities for a closed, first-order effectful core.
+The separate `Effect4.Laws` root imports the proof graph; this root never reaches it.
 -/

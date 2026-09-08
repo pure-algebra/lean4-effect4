@@ -1,10 +1,10 @@
-import Effect4.Program.Sched
+import Effect4.Laws.Program.Sched
 import Test.Program.CompileContract
 
 /-!
 # Sched contract — the term scheduler's signature, pinned
 
-Packet: `Test/contracts/program-sched.contract.md`; module `src/Effect4/Program/Sched.lean`
+Packet: `Test/contracts/program-sched.contract.md`; module `src/Effect4/Laws/Program/Sched.lean`
 (slice two, R1 of `docs/research/2026-09-05-slices-2-3-worksheets.md`). These guards pin
 the shape of `RSig` (the store signature on the left, the fiber signature on the right, one
 value, exit or boundary-entry answer), the placeholder nature of the right half, and

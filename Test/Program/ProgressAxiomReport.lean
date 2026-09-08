@@ -1,8 +1,8 @@
-import Effect4.Program.Progress
+import Effect4.Laws.Program.Progress
 
 /-!
 Fresh kernel dependency report for the first join of lanes 1 and 2
-(`src/Effect4/Program/Progress.lean`; plan `docs/research/2026-09-05-slice-1-compile-ground.md`
+(`src/Effect4/Laws/Program/Progress.lean`; plan `docs/research/2026-09-05-slice-1-compile-ground.md`
 §6, node `PROGRESS/answer`, packet `Test/contracts/program-denotation.contract.md`).
 
 Coordinator-owned, appended from the `#print axioms` output at each landing. Every

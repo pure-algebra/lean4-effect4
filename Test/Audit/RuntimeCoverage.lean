@@ -5,10 +5,10 @@ import Effect4.Machine.Cause
 import Effect4.Machine.Exit
 import Effect4.Machine.Scope
 import Effect4.Machine.Frames
-import Effect4.Machine.Clauses
+import Effect4.Laws.Machine.Clauses
 import Effect4.Machine.Stores
-import Effect4.Machine.Witnesses
-import Effect4.Program.Intro
+import Effect4.Laws.Machine.Witnesses
+import Effect4.Laws.Program.Intro
 
 /-!
 # Effect v4 fiber runtime coverage
@@ -33,12 +33,12 @@ the ascriptions cannot be deleted without failing the gate.
 
 Nothing here adds to or removes from the `Effect4` surface. Since
 2026-09-04 the fiber rows are witnessed by the reference machine
-(`src/Effect4/Machine/Clauses.lean`, `Witnesses.lean`, `Stores.lean`)
+(`src/Effect4/Laws/Machine/Clauses.lean`, `Witnesses.lean`, `Stores.lean`)
 and the frame machine (`src/Effect4/Machine/Frames.lean`); the retired
 scheduler and supervision calculi cite nothing here any more. Since the join
 of 2026-09-07 the layer rows and the two scope rows the Layer machine carried
 are witnessed on the compile route (`src/Effect4/Program/{Compile,Agreement,
-Intro}.lean`) and by the store laws (`src/Effect4/Machine/StoresLaws.lean`);
+Intro}.lean`) and by the store laws (`src/Effect4/Laws/Machine/StoresLaws.lean`);
 `Machine/Layer.lean` retired with the join.
 -/
 
@@ -2053,7 +2053,7 @@ set_option linter.unusedVariables false
   host left = host right)
 
 
-/-! The reference machine's clauses (`src/Effect4/Machine/Clauses.lean`), the stores
+/-! The reference machine's clauses (`src/Effect4/Laws/Machine/Clauses.lean`), the stores
 (`src/Effect4/Machine/Stores.lean`), the runtime's `AsyncFinalizer` frame and the context
 family's two defaults, joined on 2026-09-04; the Layer model's rows re-homed on the compile
 route by the join of 2026-09-07. Printed by the elaborator with full names and re-elaborated
@@ -3780,8 +3780,8 @@ continuation equations (`Program/Agreement.lean`), the store laws of the memo wo
 
 
 /-! Second pass, 2026-09-04: the exit path, the observers, the races and the fork arms of the
-reference machine (`src/Effect4/Machine/Clauses.lean`), and the concrete witnesses over it
-(`src/Effect4/Machine/Witnesses.lean`), whose statements decide by evaluation. -/
+reference machine (`src/Effect4/Laws/Machine/Clauses.lean`), and the concrete witnesses over it
+(`src/Effect4/Laws/Machine/Witnesses.lean`), whose statements decide by evaluation. -/
 
 #check (@Effect4.Machine.exitFiber_eq :
   ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}

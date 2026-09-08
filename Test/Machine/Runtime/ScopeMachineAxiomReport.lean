@@ -1,4 +1,4 @@
-import Effect4.Machine.ScopeMachine
+import Effect4.Laws.Machine.ScopeMachine
 
 /-! Frozen local scope-machine theorem receipts. Allowed union: propext, Quot.sound. -/
 

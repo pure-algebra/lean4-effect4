@@ -17,7 +17,8 @@ stanza = dune.split('(target e4d_armmap.ml)', 1)[1].split('(target e4d_pins.ml)'
 modules = list(dict.fromkeys(re.findall(r'\.\./avatar/([\w]+\.ml)', stanza)))
 if len(modules) != 14:
     sys.exit('FAIL armmap-citations: expected the 14 avatar dependencies in server/dune')
-result = subprocess.run([sys.executable, '-X', 'utf8', 'ocaml/server/tools/gen_armmap.py', 'src/Effect4/Machine'] +
+result = subprocess.run([sys.executable, '-X', 'utf8', 'ocaml/server/tools/gen_armmap.py',
+                         'src/Effect4/Machine,src/Effect4/Laws/Machine'] +
                         ['ocaml/avatar/' + p for p in modules], cwd=root,
                         capture_output=True, text=True, encoding='utf-8')
 if result.returncode:

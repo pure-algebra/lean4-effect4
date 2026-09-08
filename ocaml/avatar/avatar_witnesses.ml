@@ -35,7 +35,7 @@ let verdict_string = function
   | Not_portable why -> "NOT PORTABLE: " ^ why
 
 let () =
-  print_endline "== deep_clauses: one entry per `src/Effect4/Machine/Clauses.lean` theorem, evaluated on the avatar";
+  print_endline "== deep_clauses: one entry per `src/Effect4/Laws/Machine/Clauses.lean` theorem, evaluated on the avatar";
   let holds = ref 0 and fails = ref 0 and refused = ref 0 in
   List.iter
     (fun c ->
@@ -46,7 +46,7 @@ let () =
   Printf.printf "clauses\t%d\tholds\t%d\tfails\t%d\tnot-portable\t%d\n" count !holds !fails !refused;
   List.iter (fun c -> Printf.printf "environment-clause\t%s\t%s\n" c.name (verdict_string (evaluate c))) environment_clauses;
   print_endline "";
-  print_endline "== deep_witnesses: one entry per `src/Effect4/Machine/Witnesses.lean` theorem, run through the avatar";
+  print_endline "== deep_witnesses: one entry per `src/Effect4/Laws/Machine/Witnesses.lean` theorem, run through the avatar";
   let w_ok = ref 0 and w_bad = ref 0 and w_refused = ref 0 in
   let run_holds = ref 0 and run_fails = ref 0 in
   List.iter

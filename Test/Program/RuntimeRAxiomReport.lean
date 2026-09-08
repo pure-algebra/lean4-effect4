@@ -1,4 +1,4 @@
-import Effect4.Program.RuntimeR
+import Effect4.Laws.Program.RuntimeR
 import Test.Program.RuntimeRContract
 import Test.Program.SimulationContract
 

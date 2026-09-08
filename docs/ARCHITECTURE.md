@@ -9,11 +9,14 @@ Data (Row, Json, Optic, Ascii)      Machine (Cause, Exit, FiberId, supervision v
         |                        |                          |                              |
 Machine: the frame alphabet (Prim, PrimInterp, FrameFiber) and the Scope state machine
         |
-Machine: the fiber machine over the frames; its stores (the memo world included); the service map and the fiber context; clauses; witnesses
+Machine: the fiber machine over the frames; its stores (the memo world included); the service map and the fiber context
         |
 Program: Eff (the program IR), typing, printer, native alphabet, compile to frames
         |
 Api: the application face (type, print, compile, run; Schema syntax)
+
+Effect4: Api and the functional utilities, including Config / ConfigValue / Provision
+Machine and Program -> Effect4.Laws: the separate proof graph; no reverse import
 
 Schema (carrier, annotations, checker, authoring) -> Codegen (profile, Schema generation)
 Store (Val, one byte codec, Canonical, Kind, Ref, node, store, word, traits)
@@ -44,12 +47,12 @@ none of their carriers.
 | `src/Effect4/Machine` (`Fiber.lean`, `Supervision.lean`) | `FiberId`; the fork, observer, scope and race vocabulary the machine speaks |
 | `src/Effect4/Machine` (`Completion.lean`) | the external answer data and Ref key, below both the scheduler and stores |
 | `src/Effect4/Machine` (`Key.lean`) | `ServiceKey`, its universe and transport |
-| `src/Effect4/Machine` (`Frames.lean`, `Scope*.lean`, `LiveStack.lean`) | the rc.112 frame alphabet and single-fiber step, the `Scope` state machine, and the frame-level facts that pin them (`LiveStack`, `ScopeRestoration`) |
-| `src/Effect4/Machine` (`Fibers.lean`, `Wake.lean`, `Timer.lean`, `Stores.lean`, `StoresLaws.lean`, `ContextMap.lean`, `Context.lean`, `Clauses.lean`, `Witnesses.lean`) | the reference fiber machine (`RunMachine`, `drive`, `replayEval`, `runSyncExit`), the wake protocol every waiting family shares (`WakeList`, `Owed`, `WakeMode`; DB-13), the logical clock on it (`TimerStore`, the `advance` decision; DB-14), the stores with the memo world and their laws, the service map (`ContextMap`) and the fiber context that carries it (`Context`), the clause theorems and the witnesses; the Layer machine (`Layer.lean`) retired with the join of 2026-09-07 (`docs/research/2026-09-07-join-delivery.md` (untracked working note)) |
-| `src/Effect4/Machine` (`Approximation.lean`, `Behaviour.lean`, `Scheduling.lean`) | resumable fuel laws and stopping receipts; exits-and-stores observations at sufficient budgets; finite fairness under valid queued owners and sufficient command fuel |
+| `src/Effect4/Machine` (`Frames.lean`, `Scope.lean`) | the rc.112 frame alphabet and single-fiber step, and the `Scope` state machine |
+| `src/Effect4/Machine` (`Fibers.lean`, `Wake.lean`, `Timer.lean`, `Stores.lean`, `ContextMap.lean`, `Context.lean`) | the reference fiber machine (`RunMachine`, `drive`, `replayEval`, `runSyncExit`), the shared wake protocol (`WakeList`, `Owed`, `WakeMode`; DB-13), the logical clock (`TimerStore`, the `advance` decision; DB-14), the stores including the memo world, the service map and the fiber context |
+| `src/Effect4/Laws/Machine` | the frame and store invariants, value images, scope restoration, clause theorems and witnesses; resumable fuel, observation and scheduling laws; composition and execution receipts |
 | `src/Effect4/Program` | `Eff`, `typeOf`, the native operation alphabet, `compile` and `interpOf`; `Provision` — the requirement algebra (`Row.diff`), the layer signature `LayerTy` and its laws, the build specification and its totality theorem, and the docs deployment as compile-route runs (`docs/research/2026-09-04-provision-algebra.md` (untracked working note)); the layer term `LayerTerm` is a member of the `Eff` family since the join of 2026-09-07 (`Eff.lean`), typed in `Typing.lean` and compiled by path (`Compile.lean`'s `compileLayer`: a layer is a subterm, its identity its path, its build `EffName` continuations at Points); `Config` — rc.112's `ConfigProvider` as a fallback monoid under a path-transformation action, the `Config` reader with its tri-state resolution, dotenv substitution with fuel, and the configuration requirement row (`docs/research/2026-09-04-production-standards-spike.md` (untracked working note)) |
 | `src/Effect4/Api` | the one application-facing module |
-| `src/Effect4/Program` (`Sched.lean`, `DenoteR.lean`, `InterpR.lean`, `EvaluateR.lean`, `RuntimeR.lean`) | the term scheduler's first-order operation signature, bounded denotation and control erasure; term state, direct synthesized-program denotations and local evaluator instantiated on the existing machine loop; internal replay and observations, with general frame/term simulation still owed |
+| `src/Effect4/Laws/Program` | value typing and progress, denotations, agreement and simulation; the term scheduler and its evaluator, replay and observations, with general frame/term simulation still owed |
 | `src/Effect4/Schema` | the persisted Schema data plane |
 | `src/Effect4/Codegen`, `src/Effect4/Ingest` | the pinned Effect v4 profile, `print`, the Schema and annotated-field generators and the surface emitters; the readers that go the other way |
 | `src/Effect4/Store` | the content-addressed store as one trait (`docs/research/2026-09-04-cas-trait-plan.md` (untracked working note)): `Val` the value tree and its one exact byte codec, `Canonical α` (shape, `toVal`, `ofVal`, three laws) with `encode`, `decode`, `digest`, the JSON printer and the spec `Document` all derived, `Kind` and the typed `Ref α`, the node `version ∷ kind ∷ spec ∷ payload` with the meta-schema as the zero-spec genesis, the heterogeneous store with admission and roots, words with closure, the layered read, the outbox and `verify`, and traits as `annotation` nodes that never enter identity; instances are generated by `tools/Effect4Gen` into `Store/Derived/*`, `Program/Derived.lean`, `Store/PinDerived.lean` |
@@ -61,6 +64,12 @@ none of their carriers.
 | `ts/eff` | the `Eff` IR as a TypeScript library (bun): `read.ts`, the one hand-written function (oxc's tree into the printer's fragment, then `Codegen/Read.lean` ported clause for clause, one reader per head); `eff.gen.ts`, `json.gen.ts`, `profile.gen.ts`, the Schema nodes, their JSON and the profile (heads, and each native operation with its `Row`, as nodes) generated by `Tools.TsGen` from the same closed world as `ocaml/eff`; gates `check-ts-eff.sh` (drift) and `check-ts-eff-corpus.sh` (against `Api.roundTrip` over the corpus `Tools.Corpus` writes) in the sweep |
 | `harness/schema-host` | locked rc.112 / TypeScript / effect-tsgo test installation for the Schema gates |
 | `harness/truth` | the Lean-vs-rc.112 exit differential over the program corpus (bun) |
+
+`src/Effect4/Laws.lean` imports the proof graph. Its files keep the namespaces of
+the definitions they extend. `src/Effect4.lean` imports the application face and
+functional utilities without reaching Laws. The audit checks both closures against
+every library source; `scripts/check-library-roots.sh` runs it freshly so a new
+unimported source cannot hide behind a cached build.
 
 Tests mirror these areas under `Test/`; durable attacks live under
 `Test/Counterexamples/` with their stable IDs in

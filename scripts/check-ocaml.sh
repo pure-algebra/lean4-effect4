@@ -36,7 +36,7 @@ effect4_toolchain
 command -v dune >/dev/null 2>&1 || { echo "FAIL $gate: dune is required in the effect4 switch" >&2; exit 1; }
 cd "$repo_root"
 inputs=()
-while IFS= read -r file; do inputs+=("$file"); done < <(git ls-files --cached --others --exclude-standard ocaml src/Effect4/Machine src/OCaml5)
+while IFS= read -r file; do inputs+=("$file"); done < <(git ls-files --cached --others --exclude-standard ocaml src/Effect4/Machine src/Effect4/Laws/Machine src/OCaml5)
 key="$(stamp_key scripts/check-ocaml.sh scripts/lib/known-red.sh \
   Test/fixtures/trust-gate/known-red.txt "${inputs[@]}" Test/Audit/RuntimeCoverage.lean \
   "$(stamp_fact ocaml "$(ocamlc -version)")" "$(stamp_fact dune "$(dune --version)")" \

@@ -1,4 +1,4 @@
-import Effect4.Machine.Witnesses
+import Effect4.Laws.Machine.Witnesses
 
 /-!
 # S1: enumerated invariants over the reference fiber machine

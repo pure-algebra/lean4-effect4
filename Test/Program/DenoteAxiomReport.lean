@@ -1,8 +1,8 @@
-import Effect4.Program.Denote
+import Effect4.Laws.Program.Denote
 
 /-!
 Fresh kernel dependency report for the straight-line denotation
-(`src/Effect4/Program/Denote.lean`; packet `Test/contracts/program-denotation.contract.md`).
+(`src/Effect4/Laws/Program/Denote.lean`; packet `Test/contracts/program-denotation.contract.md`).
 
 Coordinator-owned, appended from the `#print axioms` output at each landing. Every theorem
 below is expected at the ceiling `propext`/`Quot.sound`; the gate

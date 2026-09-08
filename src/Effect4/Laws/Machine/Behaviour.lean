@@ -1,5 +1,5 @@
-import Effect4.Machine.Approximation
-import Effect4.Machine.StoresLaws
+import Effect4.Laws.Machine.Approximation
+import Effect4.Laws.Machine.StoresLaws
 
 /-!
 # Observations and behavior on a settled decision tape

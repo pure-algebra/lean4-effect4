@@ -1,4 +1,4 @@
-import Effect4.Program.InterpR
+import Effect4.Laws.Program.InterpR
 
 /-!
 # The local term evaluator (R4, restated by P2)

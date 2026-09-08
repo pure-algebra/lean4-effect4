@@ -1,4 +1,4 @@
-import Effect4.Program.Simulation.Deliver
+import Effect4.Laws.Program.Simulation.Deliver
 
 /-!
 # The shared fiber actions (P3, step 4d)

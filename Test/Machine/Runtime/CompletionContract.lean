@@ -1,6 +1,6 @@
 import Effect4.Api
-import Effect4.Machine.Approximation
-import Effect4.Machine.StoresLaws
+import Effect4.Laws.Machine.Approximation
+import Effect4.Laws.Machine.StoresLaws
 
 /-!
 # External Completion answers

@@ -1,13 +1,13 @@
-import Effect4.Machine.StoresLaws
-import Effect4.Machine.StoresValue
-import Effect4.Machine.ContextValue
+import Effect4.Laws.Machine.StoresLaws
+import Effect4.Laws.Machine.StoresValue
+import Effect4.Laws.Machine.ContextValue
 
 /-!
 # Stores laws contract — growth, validity and well-formedness of the stores, frozen
 
 Plan: `docs/research/2026-09-05-slice-1-compile-ground.md` §3 (lane 2). Packet:
 `Test/contracts/program-denotation.contract.md`, ENSURES 10–17. The module under contract is
-`src/Effect4/Machine/StoresLaws.lean`.
+`src/Effect4/Laws/Machine/StoresLaws.lean`.
 
 Every obligation below is ascribed at its exact proposition and supplied by name with `@`, so
 a declaration that keeps the frozen name but weakens the statement fails here

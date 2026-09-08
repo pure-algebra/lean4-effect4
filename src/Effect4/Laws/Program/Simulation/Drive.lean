@@ -1,5 +1,5 @@
-import Effect4.Program.Simulation.Evaluate
-import Effect4.Program.Simulation.Pending
+import Effect4.Laws.Program.Simulation.Evaluate
+import Effect4.Laws.Program.Simulation.Pending
 
 /-!
 # The command driver (P3, step 5)

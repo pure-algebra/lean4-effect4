@@ -1,4 +1,4 @@
-import Effect4.Program.Intro
+import Effect4.Laws.Program.Intro
 
 /-!
 # The concrete hook agreements (P3, step 3)

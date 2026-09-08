@@ -1,4 +1,4 @@
-import Effect4.Machine.Behaviour
+import Effect4.Laws.Machine.Behaviour
 import Test.Machine.Runtime.ApproximationContract
 
 /-!

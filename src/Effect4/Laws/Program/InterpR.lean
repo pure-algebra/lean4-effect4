@@ -1,5 +1,5 @@
-import Effect4.Program.DenoteR
-import Effect4.Machine.Behaviour
+import Effect4.Laws.Program.DenoteR
+import Effect4.Laws.Machine.Behaviour
 
 /-!
 # The term scheduler's state and interpreter (R3, restated by P2)

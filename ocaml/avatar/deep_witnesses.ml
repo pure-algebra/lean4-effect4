@@ -1,4 +1,4 @@
-(* `src/Effect4/Machine/Witnesses.lean` → `deep_witnesses.ml`: the executable witnesses, one OCaml
+(* `src/Effect4/Laws/Machine/Witnesses.lean` → `deep_witnesses.ml`: the executable witnesses, one OCaml
    entry per Lean theorem, in the Lean order, each running the machine(s) the theorem reads
    through the avatar (`replay` over an explicit decision tape, as `replayEval` does) and
    stating the theorem at the avatar's alphabet.

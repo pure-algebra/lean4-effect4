@@ -1,4 +1,4 @@
-import Effect4.Machine.Approximation
+import Effect4.Laws.Machine.Approximation
 import Effect4.Api
 import Test.Program.CompileContract
 
@@ -7,7 +7,7 @@ import Test.Program.CompileContract
 
 Review: `docs/research/2026-09-05-effects-papers-review.md` §3 G2. Packet:
 `Test/contracts/machine-approximation.contract.md`. The module under contract is
-`src/Effect4/Machine/Approximation.lean`; the machine it speaks about is
+`src/Effect4/Laws/Machine/Approximation.lean`; the machine it speaks about is
 `src/Effect4/Machine/Fibers.lean`.
 
 The obligations below are ascribed at their exact propositions, under the section variables

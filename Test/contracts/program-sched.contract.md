@@ -9,14 +9,14 @@ retaining handler/cleanup boundaries and naming synthesized bodies. The signatur
 battery and dependency receipts pass their focused build and the coordinator's
 whole-tree gate. Final receipt: `docs/research/2026-09-06-r3-r4-implementation.md`.
 
-Implementation: `src/Effect4/Program/Sched.lean`; its R2 consumer and corrected
+Implementation: `src/Effect4/Laws/Program/Sched.lean`; its R2 consumer and corrected
 denotation contract are `Program/DenoteR.lean` and `program-denote-r.contract.md`.
 
 Lean battery: `Test/Program/SchedContract.lean`. Axiom report:
 `Test/Program/SchedAxiomReport.lean`. Counterexamples: `E4-SCHED-CE-001`–`003` in
 `Test/Counterexamples/REGISTER.md`.
 
-Depends on: `src/Effect4/Program/Denote.lean` (`StoreSig`, `storeHandler`, `denote`,
+Depends on: `src/Effect4/Laws/Program/Denote.lean` (`StoreSig`, `storeHandler`, `denote`,
 `meaning`), the algebra package's `Effects.Algebra.Sum` (`Signature.sum`, `Handler.sum`,
 `interpret_inl`), the machine's fiber vocabulary (`Supervision`, `FiberId`, `Ctx`, `EffName`,
 `Point`).

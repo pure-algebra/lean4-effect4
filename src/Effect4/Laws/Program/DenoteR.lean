@@ -1,5 +1,5 @@
-import Effect4.Program.Sched
-import Effect4.Program.Agreement
+import Effect4.Laws.Program.Sched
+import Effect4.Laws.Program.Agreement
 
 /-!
 # Structural denotation over stores and fibers (R2, restated by P2)

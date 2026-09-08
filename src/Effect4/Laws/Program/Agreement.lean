@@ -1,4 +1,4 @@
-import Effect4.Program.Denote
+import Effect4.Laws.Program.Denote
 
 /-!
 # Program.Agreement — the compile agrees with the denotation, one fiber at a time

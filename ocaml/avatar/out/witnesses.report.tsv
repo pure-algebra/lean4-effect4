@@ -1,4 +1,4 @@
-== deep_clauses: one entry per `src/Effect4/Machine/Clauses.lean` theorem, evaluated on the avatar
+== deep_clauses: one entry per `src/Effect4/Laws/Machine/Clauses.lean` theorem, evaluated on the avatar
 clause	runloopTop_deferred	Clauses.lean:42	checkpoint.runloop-top	HOLDS
 clause	runloopTop_idle	Clauses.lean:50	checkpoint.runloop-top	HOLDS
 clause	runloopTop_clears	Clauses.lean:55	checkpoint.runloop-top	HOLDS
@@ -133,7 +133,7 @@ clause	evaluatePrim_async_parks	Clauses.lean:1530	op.Async	HOLDS
 clauses	131	holds	126	fails	0	not-portable	5
 environment-clause	Env.hooks_empty	HOLDS
 
-== deep_witnesses: one entry per `src/Effect4/Machine/Witnesses.lean` theorem, run through the avatar
+== deep_witnesses: one entry per `src/Effect4/Laws/Machine/Witnesses.lean` theorem, run through the avatar
 witness	w1_deferred_join_parent	Witnesses.lean:290	rows	
   statement	HOLDS
   sweep	20 step clauses over every event	all hold

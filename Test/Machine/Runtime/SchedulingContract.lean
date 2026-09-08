@@ -1,4 +1,4 @@
-import Effect4.Machine.Scheduling
+import Effect4.Laws.Machine.Scheduling
 import Effect4.Machine.Stores
 
 /-! LIVE/fair: two armed owners, insufficient fuel, and an unknown owner.

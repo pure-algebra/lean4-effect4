@@ -1,5 +1,5 @@
 import Effect4.Machine.Scope
-import Effect4.Machine.ScopeMachine
+import Effect4.Laws.Machine.ScopeMachine
 import Effects.Flow.Block
 import Effects.Trace
 

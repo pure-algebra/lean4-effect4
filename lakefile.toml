@@ -4,7 +4,7 @@ version = "0.1.0"
 # imports is the green battery and the gate. A module declared red in
 # `Test/fixtures/trust-gate/known-red.txt` is deliberately not imported by `Test/All.lean`,
 # so it stays out of the default build and `#effect4_axiom_gate` actually runs in it.
-defaultTargets = ["Effect4", "Test"]
+defaultTargets = ["Effect4", "Effect4Laws", "Test"]
 
 # Every Lean process of this package is capped at 6 GB (`lean --memory`): a runaway
 # elaboration aborts with "memory limit exceeded" instead of taking the machine down
@@ -12,7 +12,14 @@ defaultTargets = ["Effect4", "Test"]
 [[lean_lib]]
 name = "Effect4"
 srcDir = "src"
-globs = ["Effect4.*"]
+roots = ["Effect4"]
+moreLeanArgs = ["-M6144"]
+
+# The proof graph has its own root; namespaces inside its modules stay unchanged.
+[[lean_lib]]
+name = "Effect4Laws"
+srcDir = "src"
+roots = ["Effect4.Laws"]
 moreLeanArgs = ["-M6144"]
 
 # The OCaml estate's Lean half (ocaml/README.md): the OCaml 5 / js_of_ocaml runtime

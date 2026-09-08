@@ -1,4 +1,4 @@
-import Effect4.Machine.Handles
+import Effect4.Laws.Machine.Handles
 
 /-!
 # Machine.StoresValue — the handle image, and the receipts of the value cutover

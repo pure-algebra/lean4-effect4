@@ -6,8 +6,8 @@
 # Runs `avatar_witnesses` (bytecode, native, js_of_ocaml --enable effects) on the three
 # hosts; requires the three reports byte-identical; writes the report to
 # `out/witnesses.report.tsv`; and guards the entry counts against the Lean files
-# (`src/Effect4/Machine/Clauses.lean` theorems = `Deep_clauses.count`,
-# `src/Effect4/Machine/Witnesses.lean` theorems = `Deep_witnesses.count`, `deep_census.ml`
+# (`src/Effect4/Laws/Machine/Clauses.lean` theorems = `Deep_clauses.count`,
+# `src/Effect4/Laws/Machine/Witnesses.lean` theorems = `Deep_witnesses.count`, `deep_census.ml`
 # identical to `Test/Audit/RuntimeCoverage.lean`).
 #
 # The binaries are dune's since 2026-09-04 (this script used to drive ocamlc/ocamlopt and a
@@ -72,8 +72,8 @@ fi
 cp "$out/byte.tsv" "$here/out/witnesses.report.tsv"
 
 # The entry counts against the Lean files.
-lean_clauses=$(grep -c '^theorem' "$repo/src/Effect4/Machine/Clauses.lean")
-lean_witnesses=$(grep -c '^theorem' "$repo/src/Effect4/Machine/Witnesses.lean")
+lean_clauses=$(grep -c '^theorem' "$repo/src/Effect4/Laws/Machine/Clauses.lean")
+lean_witnesses=$(grep -c '^theorem' "$repo/src/Effect4/Laws/Machine/Witnesses.lean")
 have_clauses=$(awk -F'\t' '$1=="clauses"{print $2}' "$out/byte.tsv")
 have_witnesses=$(awk -F'\t' '$1=="witnesses"{print $2}' "$out/byte.tsv")
 if [ "$lean_clauses" = "$have_clauses" ]; then echo "clauses: $have_clauses entries = $lean_clauses Clauses.lean theorems"

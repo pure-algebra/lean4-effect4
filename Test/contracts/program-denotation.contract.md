@@ -7,13 +7,13 @@ without `onExit` — and its rows are SEEDED.
 
 Implementation fences (five new modules; no existing module changes beyond the root import
 lists):
-`src/Effect4/Program/Typed.lean`,
-`src/Effect4/Machine/StoresLaws.lean`,
-`src/Effect4/Program/Denote.lean`,
-`src/Effect4/Program/Agreement.lean` (the frame machine's local run reaches the meaning),
-`src/Effect4/Program/Agreement/Machine.lean` (the command loop is the local run;
+`src/Effect4/Laws/Program/Typed.lean`,
+`src/Effect4/Laws/Machine/StoresLaws.lean`,
+`src/Effect4/Laws/Program/Denote.lean`,
+`src/Effect4/Laws/Program/Agreement.lean` (the frame machine's local run reaches the meaning),
+`src/Effect4/Laws/Program/Agreement/Machine.lean` (the command loop is the local run;
 `run_eq_meaning`),
-`src/Effect4/Program/Progress.lean` (the first join: `answer_typed`, `progress`)
+`src/Effect4/Laws/Program/Progress.lean` (the first join: `answer_typed`, `progress`)
 
 Lean batteries:
 `Test/Program/TypedContract.lean`,
@@ -57,7 +57,7 @@ This packet freezes three bounded facts and states one theorem it does not prove
    compositional equations of the resulting `meaning`, derived from the algebra's
    `interpret_bind` and `interpret_perform`.
 
-The theorem it states, proved in `src/Effect4/Program/Agreement/Machine.lean`, is
+The theorem it states, proved in `src/Effect4/Laws/Program/Agreement/Machine.lean`, is
 
 ```lean
 theorem run_eq_meaning (e : NativeEff) (fuel : Nat) (hs : Straight e = true)
@@ -72,7 +72,7 @@ whose executable oracle, one program at a time, is the guard set of
 without `onExit` (`E4-DEN-CE-004`); the repair the same evening put `onExit` in, and
 `Plain_eq_Straight` lets the theorem read `Straight`. `depth` and `steps` are the two
 computable structural measures of
-`src/Effect4/Program/Agreement.lean` — the fuel the compile's children cost, and a bound on
+`src/Effect4/Laws/Program/Agreement.lean` — the fuel the compile's children cost, and a bound on
 the local steps a plain program takes. The op budget is not a hypothesis: the first landing
 carried `steps e + 2 ≤ defaultBudget` to keep the yield off the proved path, and the repair
 the same night took it out — past the budget the root parks on a yield, `flush` fires its

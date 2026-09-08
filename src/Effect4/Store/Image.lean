@@ -465,7 +465,7 @@ end combinators
 A tree with no `handle` frame is content. The primitive images write none, and every
 combinator writes exactly the handles of its parts; the runtime views use these to show that
 a cause carries none, which is `Val.keys`'s "a reified failed exit carries a cause only"
-(`src/Effect4/Machine/Handles.lean`) on the shared carrier. -/
+(`src/Effect4/Laws/Machine/Handles.lean`) on the shared carrier. -/
 
 /-- No handle under any image of the carrier. -/
 def HandleFree (I : Image α) : Prop := ∀ a, (I.toVal a).handles = []

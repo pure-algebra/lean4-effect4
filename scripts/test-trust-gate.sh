@@ -283,6 +283,41 @@ expect_rejection_matching() {
   step_end "         reject: $label"
 }
 
+# --- 1b. the two library roots ------------------------------------------------
+# A library module reached only through Test must not count as a library export.
+# Replace the Effect4 directory symlink with a shallow mirror before adding the
+# planted olean, so none of these probes can write into the real build directory.
+rm "$planted_lib/Effect4"
+mkdir "$planted_lib/Effect4"
+for entry in "$real_build_lib"/Effect4/*; do
+  ln -s "$entry" "$planted_lib/Effect4/$(basename "$entry")"
+done
+printf 'import Effect4.Data.Row\n' >"$probe/src/Effect4/RootOrphan.lean"
+if ! (cd "$probe/src" && LEAN_PATH="$real_lean_path" lean \
+    -o "$planted_lib/Effect4/RootOrphan.olean" "$probe/src/Effect4/RootOrphan.lean") >"$probe_log" 2>&1; then
+  cat "$probe_log" >&2; exit 1
+fi
+add_root_import Effect4.RootOrphan
+expect_rejection_matching \
+  'unreachable from Effect4 and Effect4.Laws' 'library orphan imported only by Test'
+rm "$probe/src/Effect4/RootOrphan.lean" "$planted_lib/Effect4/RootOrphan.olean"
+restore_probe
+
+# Compile a leaky root in the scratch tree, leaving the real roots untouched.
+cp "$probe/src/Effect4.lean" "$tmp_root/Effect4.lean"
+{ printf 'import Effect4.Laws\n'; cat "$tmp_root/Effect4.lean"; } >"$probe/src/Effect4.lean"
+rm "$planted_lib/Effect4.olean"
+if ! (cd "$probe/src" && LEAN_PATH="$real_lean_path" lean \
+    -o "$planted_lib/Effect4.olean" Effect4.lean) >"$probe_log" 2>&1; then
+  cat "$probe_log" >&2; exit 1
+fi
+expect_rejection_matching \
+  'Effect4 library-root gate: Effect4 reaches Effect4.Laws' 'API root importing Laws'
+rm "$planted_lib/Effect4.olean"
+ln -s "$real_build_lib/Effect4.olean" "$planted_lib/Effect4.olean"
+cp "$tmp_root/Effect4.lean" "$probe/src/Effect4.lean"
+restore_probe
+
 # --- 2. planted source tokens ------------------------------------------------
 #
 # Appended to a source file in the scratch tree. The gate tokenizes it; nothing

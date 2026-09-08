@@ -21,8 +21,9 @@ Usage (as `server/dune` invokes it):
               --inputs <vendored input>... --lean <src/Effect4/Machine/*.lean>...
               > e4d_pins.ml
 
-Every file is labelled by its group's fixed repo-relative prefix and its basename (for the
-vendored inputs, its parent directory too), so the labels do not depend on the directory
+Every file is labelled by its group's repo-relative prefix and its basename (for the
+vendored inputs, its parent directory too). Lean labels retain the Machine or Laws/Machine
+directory, so the labels do not depend on the directory
 dune ran the generator from. The generator digest is one hash over the `--server` and
 `--tools` files, the way `build-avatar.sh` stamps the avatar's `generator` row.
 """
@@ -42,6 +43,15 @@ def digest(path):
 
 def labelled(prefix, paths):
     return sorted((prefix + os.path.basename(p), p) for p in paths)
+
+
+def labelled_lean(paths):
+    files = []
+    for path in paths:
+        directory = os.path.dirname(os.path.abspath(path))
+        area = "Laws/Machine" if os.path.basename(os.path.dirname(directory)) == "Laws" else "Machine"
+        files.append(("src/Effect4/" + area + "/" + os.path.basename(path), path))
+    return sorted(files)
 
 
 def main():
@@ -76,7 +86,7 @@ def main():
               + [("ocaml/avatar/corpus/programs.txt", args.corpus)]
               + server_files
               + vendored
-              + labelled("src/Effect4/Machine/", args.lean))
+              + labelled_lean(args.lean))
 
     combined = hashlib.sha256()
     for _label, path in server_files:

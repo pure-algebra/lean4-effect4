@@ -1,4 +1,4 @@
-import Effect4.Machine.LiveStack
+import Effect4.Laws.Machine.LiveStack
 
 /-!
 # Live-stack kernel dependency report

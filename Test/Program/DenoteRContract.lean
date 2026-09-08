@@ -1,4 +1,4 @@
-import Effect4.Program.DenoteR
+import Effect4.Laws.Program.DenoteR
 import Test.Program.CompileContract
 
 /-! R2 finite probes and universal statement pins. The store observer first erases

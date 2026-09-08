@@ -1,4 +1,4 @@
-import Effect4.Program.Simulation.Actions
+import Effect4.Laws.Program.Simulation.Actions
 
 /-!
 # The concrete evaluator agreement (P3, step 4e)

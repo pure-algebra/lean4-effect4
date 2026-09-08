@@ -1,4 +1,4 @@
-import Effect4.Machine.Approximation
+import Effect4.Laws.Machine.Approximation
 
 /-!
 # Finite scheduling fairness

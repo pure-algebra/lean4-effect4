@@ -10,7 +10,8 @@ gate=armmap-citations
 known_red_load
 key="$(stamp_key scripts/check-armmap-citations.sh scripts/check-armmap-citations.py \
   scripts/lib/known-red.sh Test/fixtures/trust-gate/known-red.txt ocaml/server/armmap-resolution.json \
-  ocaml/server/tools/gen_armmap.py ocaml/server/dune src/Effect4/Machine ocaml/avatar/*.ml)"
+  ocaml/server/tools/gen_armmap.py ocaml/server/dune \
+  src/Effect4/Machine src/Effect4/Laws/Machine ocaml/avatar/*.ml)"
 if ! known_red_declared gate "$gate" && stamp_hit "$gate" "$key"; then
   stamp_report "$gate" "$key"; exit 0
 fi

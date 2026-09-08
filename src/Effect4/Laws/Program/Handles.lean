@@ -1,7 +1,7 @@
-import Effect4.Machine.Handles
+import Effect4.Laws.Machine.Handles
 import Effect4.Api
-import Effect4.Program.Typed
-import Effect4.Program.Agreement
+import Effect4.Laws.Program.Typed
+import Effect4.Laws.Program.Agreement
 
 /-!
 # The handle invariant at the compiled alphabet

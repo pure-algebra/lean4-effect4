@@ -120,7 +120,7 @@ census v1 and the model that closes each:
 | --- | ---: | --- |
 | `cause.*`, `exit.*`, `rule.cause-has-no-structure` | 13 | `src/Effect4/Machine/Cause.lean`, `Exit.lean`: flat reasons, union combine, squash, finalizer merge |
 | `scope.*`, `rule.scope-close-lifo-state-first` | 15 | `src/Effect4/Machine/Scope.lean`: state machine, LIFO close, sequential and parallel close, fork linkage |
-| `fork.*`, `interrupt.accumulate`, the two fork rules | 14 | `src/Effect4/Machine/Fibers.lean` with `src/Effect4/Machine/Clauses.lean` and `Witnesses.lean`: spawn/start, the exit path, observers, races, scope links, interrupt record and apply |
+| `fork.*`, `interrupt.accumulate`, the two fork rules | 14 | `src/Effect4/Machine/Fibers.lean` with `src/Effect4/Laws/Machine/Clauses.lean` and `Witnesses.lean`: spawn/start, the exit path, observers, races, scope links, interrupt record and apply |
 | continuation-machine `op.*`, `frame-arm.*`, `checkpoint.*`, and the stack rules | 30 | a new continuation-stack calculus: frames with three arms, `getCont` with the ensure hook, deferred-interrupt flag, handler skipping, yield versus park |
 | `ref.*` | 10 | `src/Effect4/Machine/Stores.lean`: a cell store with allocation identity, read, write, and the read-modify-write projections, including the void-typed `Ref.set` whose host value is the cell |
 | `deferred.*` | 12 | `src/Effect4/Machine/Stores.lean`: a completion store that is empty or holds exactly one effect, a registration-ordered waiter list, single completion, and interruption as an ordinary stored failure |

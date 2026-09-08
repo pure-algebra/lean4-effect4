@@ -1,5 +1,5 @@
-import Effect4.Machine.Approximation
-import Effect4.Machine.Witnesses
+import Effect4.Laws.Machine.Approximation
+import Effect4.Laws.Machine.Witnesses
 import Effects.Algebra.Program
 
 /-!

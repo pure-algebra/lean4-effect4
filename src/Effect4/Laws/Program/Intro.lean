@@ -1,4 +1,4 @@
-import Effect4.Program.Means
+import Effect4.Laws.Program.Means
 
 /-!
 # Source-address introduction (P3, step 3)

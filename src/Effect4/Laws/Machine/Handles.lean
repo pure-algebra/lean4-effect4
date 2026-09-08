@@ -1,6 +1,6 @@
-import Effect4.Machine.Clauses
-import Effect4.Machine.StoresLaws
-import Effect4.Machine.Approximation
+import Effect4.Laws.Machine.Clauses
+import Effect4.Laws.Machine.StoresLaws
+import Effect4.Laws.Machine.Approximation
 
 /-!
 # Collected handles name allocated objects

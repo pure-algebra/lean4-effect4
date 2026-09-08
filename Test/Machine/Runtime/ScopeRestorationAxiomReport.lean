@@ -1,4 +1,4 @@
-import Effect4.Machine.ScopeRestoration
+import Effect4.Laws.Machine.ScopeRestoration
 
 #print axioms Effect4.ScopeRestoration.resumeClosedScope_unfinished
 #print axioms Effect4.ScopeRestoration.resumeClosedScope_complete

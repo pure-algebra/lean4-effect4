@@ -1,8 +1,8 @@
-import Effect4.Program.EvaluateR
-import Effect4.Machine.Book
-import Effect4.Program.Means
-import Effect4.Program.Simulation.Drive
-import Effect4.Program.Agreement.Machine
+import Effect4.Laws.Program.EvaluateR
+import Effect4.Laws.Machine.Book
+import Effect4.Laws.Program.Means
+import Effect4.Laws.Program.Simulation.Drive
+import Effect4.Laws.Program.Agreement.Machine
 import Effect4.Api
 
 /-!

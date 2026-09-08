@@ -1,4 +1,4 @@
-import Effect4.Program.Simulation.Walk
+import Effect4.Laws.Program.Simulation.Walk
 
 /-!
 # The book at the native alphabets (P3, step 4b)

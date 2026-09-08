@@ -1,4 +1,4 @@
-(* `src/Effect4/Machine/Clauses.lean` → `deep_clauses.ml`: the mechanism clauses of the reference
+(* `src/Effect4/Laws/Machine/Clauses.lean` → `deep_clauses.ml`: the mechanism clauses of the reference
    machine, one OCaml entry per Lean theorem, in the Lean order, each with the line it is the
    port of and the census rows it is tagged with (`census:` in the Lean docstring).
 

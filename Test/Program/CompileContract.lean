@@ -1,5 +1,5 @@
 import Effect4.Program.Compile
-import Effect4.Machine.Witnesses
+import Effect4.Laws.Machine.Witnesses
 
 /-!
 # Compile contract — `Eff` programs through the frame machine, pinned
@@ -8,7 +8,7 @@ Plan: `docs/research/2026-09-04-eff-compile.md`. `src/Effect4/Program/Compile.le
 `NativeEff` and a `Point` to a primitive of the reference machine over the `EffName` /
 `EffThunk` alphabet, and `interpOf root` gives those names their meaning by compiling the
 subterm each point addresses. This battery runs compiled programs on explicit decision
-tapes, in the idiom of `src/Effect4/Machine/Witnesses.lean`, and pins what the machine does.
+tapes, in the idiom of `src/Effect4/Laws/Machine/Witnesses.lean`, and pins what the machine does.
 
 Every program is also pinned well-typed (`typeOf nativeSignature`), except the two that are
 deliberately ill-typed and pinned refused. Every helper below is structural, and every pin is

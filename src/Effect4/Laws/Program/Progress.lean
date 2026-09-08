@@ -1,5 +1,5 @@
-import Effect4.Program.Typed
-import Effect4.Machine.StoresLaws
+import Effect4.Laws.Program.Typed
+import Effect4.Laws.Machine.StoresLaws
 
 /-!
 # Program.Progress — a typed, valid request steps to a typed, valid answer (the first join)
@@ -9,9 +9,9 @@ Packet: `Test/contracts/program-denotation.contract.md`. Batteries:
 `Test/Program/ProgressContract.lean` (the guards and the rows `E4-PROGRESS-CE-001`,
 `E4-PROGRESS-CE-002`) and `Test/Program/ProgressAxiomReport.lean`.
 
-This module joins lane 1 (`src/Effect4/Program/Typed.lean`: which values inhabit which types,
+This module joins lane 1 (`src/Effect4/Laws/Program/Typed.lean`: which values inhabit which types,
 and that a typed request decodes to a store operation) with lane 2
-(`src/Effect4/Machine/StoresLaws.lean`: a valid operation steps, keeps the heap well-formed,
+(`src/Effect4/Laws/Machine/StoresLaws.lean`: a valid operation steps, keeps the heap well-formed,
 and answers a valid value). The join is `answer_typed`: the value a store step answers to a
 typed request has the row's answer type. `progress` is the corollary that reads the two lanes
 together: a typed, valid request decodes, steps, and its answer is typed and valid in a store

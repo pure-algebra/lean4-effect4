@@ -1,5 +1,5 @@
 import Effect4.Machine.Fibers
-import Effect4.Machine.Clauses
+import Effect4.Laws.Machine.Clauses
 
 /-!
 # Machine.Approximation — the fuel laws over the live fiber machine (G2)

@@ -84,6 +84,6 @@ Effect diagnostic provider reports one file examined, and only the restored
 unchanged bytes are executed. These are finite observations of one pinned host.
 They do not establish all schedules, eventual completion, an interpretation of
 arbitrary callbacks, or a Lean-to-host simulation; the Lean side is the
-reference machine's clauses and witnesses (`src/Effect4/Machine/Clauses.lean`,
-`src/Effect4/Machine/Witnesses.lean`), joined in
+reference machine's clauses and witnesses (`src/Effect4/Laws/Machine/Clauses.lean`,
+`src/Effect4/Laws/Machine/Witnesses.lean`), joined in
 `Test/Audit/RuntimeCoverage.lean`.

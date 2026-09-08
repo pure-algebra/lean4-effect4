@@ -1,4 +1,4 @@
-import Effect4.Program.Denote
+import Effect4.Laws.Program.Denote
 import Effects.Algebra.Sum
 
 /-!

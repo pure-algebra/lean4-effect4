@@ -1,5 +1,5 @@
-import Effect4.Program.EvaluateR
-import Effect4.Machine.Book
+import Effect4.Laws.Program.EvaluateR
+import Effect4.Laws.Machine.Book
 import Effect4.Api
 
 /-!

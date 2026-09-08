@@ -1,4 +1,4 @@
-import Effect4.Program.DenoteR
+import Effect4.Laws.Program.DenoteR
 import Test.Program.DenoteRContract
 
 /-! Fresh dependency receipts for R2 as restated by P2; the whole-tree gate enforces the

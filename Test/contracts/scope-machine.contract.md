@@ -2,7 +2,7 @@
 
 This packet freezes an independently stepping interpreter of the existing
 sequential `Scope.closeExitsM` fold. The separate builder owns
-`src/Effect4/Machine/ScopeMachine.lean`. A close retains its original exit, writes
+`src/Effect4/Laws/Machine/ScopeMachine.lean`. A close retains its original exit, writes
 the closed scope before exposing a callback request, captures every actual
 response, and can pause between requests without completing or losing work.
 

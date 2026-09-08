@@ -1,11 +1,11 @@
-import Effect4.Program.Progress
+import Effect4.Laws.Program.Progress
 
 /-!
 # Progress contract — a typed, valid request steps to a typed, valid answer, frozen
 
 Plan: `docs/research/2026-09-05-slice-1-compile-ground.md` §6, node `PROGRESS/answer`.
 Packet: `Test/contracts/program-denotation.contract.md`. The module under contract is
-`src/Effect4/Program/Progress.lean`, the first join of lanes 1 and 2.
+`src/Effect4/Laws/Program/Progress.lean`, the first join of lanes 1 and 2.
 
 Every obligation below is ascribed at its exact proposition and supplied by name with `@`, so
 a declaration that keeps the frozen name but weakens the statement fails here

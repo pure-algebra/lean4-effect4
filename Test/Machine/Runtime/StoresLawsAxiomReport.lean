@@ -1,9 +1,9 @@
-import Effect4.Machine.StoresLaws
+import Effect4.Laws.Machine.StoresLaws
 
 /-!
 # Stores laws kernel dependency report
 
-Every declaration of `src/Effect4/Machine/StoresLaws.lean` (plan
+Every declaration of `src/Effect4/Laws/Machine/StoresLaws.lean` (plan
 `docs/research/2026-09-05-slice-1-compile-ground.md` §3, packet
 `Test/contracts/program-denotation.contract.md` ENSURES 10–17) is listed exactly once, in
 module order. The accepted ceiling is no dependency, `propext`, or `propext` with

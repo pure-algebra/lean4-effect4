@@ -1,11 +1,11 @@
-import Effect4.Program.Typed
+import Effect4.Laws.Program.Typed
 
 /-!
 # Typed contract — the value typing of the native cut, frozen
 
 Plan: `docs/research/2026-09-05-slice-1-compile-ground.md` §2 (lane 1). Packet:
 `Test/contracts/program-denotation.contract.md`, ENSURES 1–9. The module under contract is
-`src/Effect4/Program/Typed.lean`.
+`src/Effect4/Laws/Program/Typed.lean`.
 
 Every obligation below is ascribed at its exact proposition and supplied by name with `@`, so
 a declaration that keeps the frozen name but weakens the statement fails here

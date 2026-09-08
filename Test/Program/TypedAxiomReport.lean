@@ -1,8 +1,8 @@
-import Effect4.Program.Typed
+import Effect4.Laws.Program.Typed
 
 /-!
 Fresh kernel dependency report for the value typing of the native cut
-(`src/Effect4/Program/Typed.lean`; plan `docs/research/2026-09-05-slice-1-compile-ground.md`
+(`src/Effect4/Laws/Program/Typed.lean`; plan `docs/research/2026-09-05-slice-1-compile-ground.md`
 §2, packet `Test/contracts/program-denotation.contract.md` ENSURES 1–9).
 
 Coordinator-owned, appended from the `#print axioms` output at each landing. Every

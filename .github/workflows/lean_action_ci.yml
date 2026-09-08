@@ -21,10 +21,12 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.14
-      - name: Install the pinned surface compiler
+      - name: Install the pinned TypeScript dependencies
         run: bun install --frozen-lockfile --cwd ts/eff
       - name: Build production library
         run: lake build Effect4
+      - name: Build the proof graph
+        run: lake build Effect4Laws
       # The green battery and the axiom gate: `Test` is the `Test.All` root plus
       # exactly its import closure (lakefile.toml), so this is what runs
       # `#effect4_axiom_gate` and the module-closure check.
@@ -45,7 +47,7 @@ jobs:
         run: ./scripts/check-effect-runtime-census.sh
       - name: Test citation detector reactions
         run: python3 scripts/test-source-citations.py && bash scripts/test-internal-citations-gate.sh
-      # The pinned-source lane includes surface extraction using the compiler above;
+      # The pinned-source lane includes TypeScript generation with the dependencies above;
       # it does not execute the Effect host runtime or require an OCaml switch.
       - name: Sweep the hermetic gates
         run: ./scripts/sweep.sh --hermetic

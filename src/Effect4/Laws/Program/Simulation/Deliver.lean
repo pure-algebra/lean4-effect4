@@ -1,4 +1,4 @@
-import Effect4.Program.Simulation.Fibers
+import Effect4.Laws.Program.Simulation.Fibers
 
 /-!
 # Exit delivery (P3, step 4c)

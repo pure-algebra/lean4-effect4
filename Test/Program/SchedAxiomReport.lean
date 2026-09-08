@@ -1,8 +1,8 @@
-import Effect4.Program.Sched
+import Effect4.Laws.Program.Sched
 
 /-!
 Fresh kernel dependency report for the term scheduler's signature
-(`src/Effect4/Program/Sched.lean`; packet `Test/contracts/program-sched.contract.md`).
+(`src/Effect4/Laws/Program/Sched.lean`; packet `Test/contracts/program-sched.contract.md`).
 
 Coordinator-owned, appended from the `#print axioms` output at each landing. Every theorem
 below is expected at the ceiling `propext`/`Quot.sound`; the gate

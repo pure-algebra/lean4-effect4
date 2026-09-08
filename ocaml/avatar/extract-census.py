@@ -3,7 +3,7 @@
 
 `Test/Audit/RuntimeCoverage.lean` joins every census row to the Lean theorems that
 witness it. This extracts the rows that name an `Effect4.Machine.*` witness -- a clause of
-`src/Effect4/Machine/Clauses.lean`, a store clause of `Stores.lean`, a layer clause of
+`src/Effect4/Laws/Machine/Clauses.lean`, a store clause of `Stores.lean`, a layer clause of
 `Layer.lean` or a witness theorem of `Witnesses.lean` -- and renders them as the OCaml
 module `deep_census.ml`, one record per row, in the row order of the Lean file. The
 avatar's clause report reads the join back from that module, so the OCaml model inherits

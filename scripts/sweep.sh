@@ -66,6 +66,7 @@ gate_table() {
   cat <<'GATES'
 hermetic|armmap-citations|scripts/check-armmap-citations.sh
 hermetic|armmap-policy|scripts/test-armmap-citations-gate.sh
+hermetic|library-roots|scripts/check-library-roots.sh
 hermetic|source-citations|scripts/check-source-citations.sh
 hermetic|internal-citations|scripts/check-internal-citations.sh
 hermetic|effect-runtime-census|scripts/check-effect-runtime-census.sh

@@ -14,7 +14,7 @@ full, then open only the authority documents named for the current task.
 | `docs/SCHEMA-ANNOTATIONS.md` | the annotation data plane as the host defines it |
 | `Test/contracts/` | frozen contract packets and their executable falsifiers |
 | `Test/Counterexamples/REGISTER.md` | stable IDs of every declaration-changing counterexample |
-| `src/Effect4/` | library declarations and proofs |
+| `src/Effect4/` | API and functional utilities through `Effect4`; the proof graph through `Effect4.Laws`, with declaration namespaces unchanged |
 | `Test/` | batteries, attacks and proof receipts; `Audit/AxiomGate.lean` is the gate |
 | `generated/` | deterministic projections only; never hand-edited |
 | `docs/research/` (not tracked) | working notes, plans, the proof-graph ledgers and surveys; synced between machines directly |
@@ -60,6 +60,8 @@ number in a report behind a command; `ocaml/README.md` is its map.
   traverse a `String` is admitted by exact name in `AxiomGate.lean`, never by
   module. A battery `def` over rendered text reaches `Classical.choice`: keep
   rendered bytes inside `#guard`s.
+- Every library source must be reachable from `Effect4` or `Effect4.Laws`; `Effect4`
+  must never import the Laws graph. The module-closure gate checks both roots.
 - Every battery file under `Test/` must be reachable from
   `Test/All.lean`, or the module-closure gate refuses the build.
 - Do not say "sound", "equivalent", "preserves", "fully reified", or
