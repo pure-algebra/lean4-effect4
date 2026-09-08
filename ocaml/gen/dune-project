@@ -1,1 +1,5 @@
 (lang dune 3.0)
+; The package makes `effect4_gen` public so the engine's differential (ocaml/engine, a
+; sibling project in the ocaml/ workspace) can drive the generated oracle `Api_gen` beside
+; its own instances; a private library is scoped to its own project.
+(package (name effect4_gen))

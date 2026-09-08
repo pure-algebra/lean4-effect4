@@ -1,4 +1,8 @@
 (lang dune 3.0)
+; The package makes the library public (`public_name`), so a sibling project in the
+; ocaml/ workspace — ocaml/engine, which forwards its framing to Eff_frame and converts
+; Eff_types.eff — can name it; a private library is scoped to its own project.
+(package (name effect4_eff))
 ; effect4_eff: the Eff program IR of lean4-effect4 as an OCaml library (typed embedding,
 ; wire, checker). Its own project root, so it builds alone with `dune build --root .` from
 ; inside ocaml/eff (its own ocaml/eff/_build, which does not contend with the ocaml/

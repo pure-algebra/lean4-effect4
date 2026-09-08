@@ -69,17 +69,25 @@ open Lean Compiler LCNF
 
 /-! ## Mono types as annotations -/
 
-/-- A mono-phase LCNF type as an OCaml type annotation: `lcAny`/`lcErased` are `_`. -/
-partial def monoTy (tn : TypeNames) (e : Lean.Expr) : Ml.Ty :=
+/-- A mono-phase LCNF type as an OCaml type annotation: `lcAny`/`lcErased` are `_`. An extern
+`type` row is spelled by its carrier chain, so an annotation and the type group agree. -/
+partial def monoTy (ex : Externs) (tn : TypeNames) (e : Lean.Expr) : Ml.Ty :=
   match e with
-  | .forallE _ d b _ => .arrow (monoTy tn d) (monoTy tn b)
+  | .forallE _ d b _ => .arrow (monoTy ex tn d) (monoTy ex tn b)
   | _ =>
     if e.isErased || e.isAny then .anon
     else
       let fn := e.getAppFn
-      let args := (e.getAppArgs.map (monoTy tn)).toList
+      let rawArgs := e.getAppArgs.toList
+      let args := rawArgs.map (monoTy ex tn)
       match fn with
-      | .const n _ => (builtinTy? n args).getD (.con (OCaml5.Lcnf.typeNameIn tn n) args)
+      | .const n _ =>
+        match ex.tys[n]? with
+        | some chain => applyChain chain args
+        | none =>
+          match ex.elemChain? n rawArgs with
+          | some chain => applyChain chain args
+          | none => (builtinTy? n args).getD (.con (OCaml5.Lcnf.typeNameIn tn n) args)
       | _ => .anon
 
 /-- Every non-builtin type constant in a mono type: what needs at least a placeholder. -/
@@ -99,11 +107,6 @@ def tyIsAnon : Ml.Ty → Bool
   | _ => false
 
 /-! ## The builtin table -/
-
-/-- `n._redArg` → `n`. -/
-def stripRedArg : Name → Name
-  | .str p "_redArg" => p
-  | n => n
 
 /-- A builtin: its arity over *relevant* (non-erased) arguments and the OCaml form. -/
 abbrev Builtin := Nat × (List Ml.Expr → Ml.Expr)
@@ -268,6 +271,26 @@ structure St where
   mentioned : Array Name := #[]
   /-- Constructs without a rule, as `<decl>: <what>`. -/
   todos : Array String := #[]
+  /-- `fn` extern rows this declaration used, by the row's own Lean name. -/
+  usedExterns : Array Name := #[]
+  /-- OCaml names an extern row hands to a hand body as a leading argument. They are ordinary
+  generated declarations, so they must be **emitted before** this one: `emit` adds the edge. -/
+  externDeps : Array String := #[]
+  /-- Free variables whose value is a *carrier* rather than the list Lean writes, by the
+  carrier's key. A value enters the set at a `field`-row projection, at a `carg` parameter and
+  at the result of a carrier operation, and leaves it through `to_list`. -/
+  carrier : Std.HashMap FVarId String := {}
+  /-- Free variables bound to a list literal: `none` is `[]`, `some e` is `[e]`. It is what
+  tells `x ++ ys` from `x ++ [i]`, i.e. `append` from `snoc`. -/
+  listLit : Std.HashMap FVarId (Option Ml.Expr) := {}
+  /-- `ops` rows this declaration used, as `<carrier>#<op>`. -/
+  usedOps : Array String := #[]
+  /-- `carg` rows this declaration used, by the declaration the row names. -/
+  usedCargs : Array Name := #[]
+  /-- Every place a carrier had to be turned back into the Lean list, as `<site>`. Each one is
+  an O(depth) copy; the report prints them so a missing `carg` row is visible rather than
+  silently slow. -/
+  toLists : Array String := #[]
 
 /-- What a translation reads: the environment constructors are looked up in, and the decided
 OCaml names of the type constants whose short name is claimed twice (`TypeNames`). Both halves
@@ -276,6 +299,8 @@ disagree about which Lean type an OCaml name means. -/
 structure TCtx where
   env : Environment
   tn : TypeNames := {}
+  /-- The `Extract Constant` table (`OCaml5.Lcnf.Externs`). -/
+  ex : Externs := {}
 
 /-- The translation monad: the context above, the state above. -/
 abbrev TM := ReaderT TCtx (StateM St)
@@ -284,6 +309,8 @@ abbrev TM := ReaderT TCtx (StateM St)
 def readEnv : TM Environment := return (← read).env
 /-- The decided type-name map. -/
 def readTypeNames : TM TypeNames := return (← read).tn
+/-- The extern table. -/
+def readExterns : TM Externs := return (← read).ex
 
 /-- OCaml names the builtin forms use unqualified, which a local must not shadow. -/
 def preUsed : List String :=
@@ -368,11 +395,13 @@ def wrapperParams? (env : Environment) (n : Name) : Option (Array (LCNF.Param .p
   return d.params
 
 /-- `(_, …, _) t` for an inductive, as an annotation. -/
-def tyOfInd (tn : TypeNames) (env : Environment) (ind : Name) : Ml.Ty :=
-  match env.find? ind with
-  | some (.inductInfo info) =>
-    .con (OCaml5.Lcnf.typeNameIn tn ind) (List.replicate info.numParams .anon)
-  | _ => .con (OCaml5.Lcnf.typeNameIn tn ind) []
+def tyOfInd (ex : Externs) (tn : TypeNames) (env : Environment) (ind : Name) : Ml.Ty :=
+  let params := match env.find? ind with
+    | some (.inductInfo info) => List.replicate info.numParams Ml.Ty.anon
+    | _ => []
+  match ex.tys[ind]? with
+  | some chain => applyChain chain params
+  | none => .con (OCaml5.Lcnf.typeNameIn tn ind) params
 
 /-- The inductives OCaml spells natively; a `cases` on one is not annotated. -/
 def nativeInductives : List Name :=
@@ -390,10 +419,89 @@ def argExpr? : Arg .pure → TM (Option Ml.Expr)
 def argExpr (a : Arg .pure) : TM Ml.Expr := do
   return (← argExpr? a).getD .unit
 
+/-! ## Carriers
+
+A `field` extern row changes a field's *type*, so the value read out of it is no longer the
+Lean list: it is the carrier. `carrier` tracks which local variables hold one, and three
+rules follow — the operations Lean applies to the list become the carrier's own (`x ++ [i]`
+is `snoc`), a position that needs the list gets `to_list`, and a position that is itself the
+carrier (another `field` row, a `carg` parameter, an extern row's argument, a join point)
+gets the value raw. A rule that is wrong is an `ocamlopt` type error, never silence: that is
+the same argument the `field` rows themselves rest on (lane G, G-1). -/
+
+/-- The carrier a variable holds, if it holds one. -/
+def carrierOfId? (id : FVarId) : TM (Option String) := return (← get).carrier[id]?
+
+/-- The carrier an argument holds. -/
+def argCarrier? : Arg .pure → TM (Option String)
+  | .fvar id => carrierOfId? id
+  | _ => return none
+
+/-- Note that a variable holds a carrier. -/
+def setCarrier (id : FVarId) (c : String) : TM Unit :=
+  modify fun s => { s with carrier := s.carrier.insert id c }
+
+/-- One operation of a carrier, applied; `none` when the table has no row for it. -/
+def carrierOp? (c op : String) (args : List Ml.Expr) : TM (Option Ml.Expr) := do
+  let ex ← readExterns
+  match ex.op? c op with
+  | none => return none
+  | some f =>
+    let deps := f.spec.filterMap fun | .lit d => some d | _ => none
+    modify fun s =>
+      { s with usedOps := if s.usedOps.contains s!"{c}#{op}" then s.usedOps
+                          else s.usedOps.push s!"{c}#{op}",
+               externDeps := deps.foldl (fun a d => if a.contains d then a else a.push d)
+                               s.externDeps }
+    return some (f.build args)
+
+/-- A carrier back as the Lean list, for a position that is not a carrier position. Every one
+of these is an O(depth) copy and every one is reported. -/
+def useAsList (site : String) (c : String) (e : Ml.Expr) : TM Ml.Expr := do
+  modify fun s => { s with toLists := s.toLists.push s!"{site} [{c}]" }
+  match ← carrierOp? c "to_list" [e] with
+  | some e' => return e'
+  | none =>
+    todo s!"carrier {c} has no `to_list` op row, needed at {site}"
+    return e
+
+/-- An argument of a *generated* callee: raw when the callee's `carg` row says that parameter
+carries the carrier, `to_list` otherwise. -/
+def argFor (g : Name) (i : Nat) (a : Arg .pure) : TM Ml.Expr := do
+  let e ← argExpr a
+  match ← argCarrier? a with
+  | none => return e
+  | some c =>
+    let ex ← readExterns
+    if ex.cargAt? g i == some c then return e
+    else useAsList s!"{g} #{i}" c e
+
+/-- Every argument of a generated callee, by position. -/
+def argsFor (g : Name) (as : List (Arg .pure)) : TM (List Ml.Expr) := do
+  let mut out : List Ml.Expr := []
+  let mut i := 0
+  for a in as do
+    out := out ++ [← argFor g i a]
+    i := i + 1
+  return out
+
 /-- A constructor application. -/
 def ctorApp (ci : ConstructorVal) (args : Array (Arg .pure)) : TM Ml.Expr := do
+  let ex ← readExterns
   let fieldArgs := args.extract ci.numParams args.size
-  let rel ← fieldArgs.toList.filterMapM argExpr?
+  let fnames := ctorFieldNames ci
+  -- a relevant field takes the carrier raw iff a `field` row gives that field this carrier
+  let mut rel : List Ml.Expr := []
+  let mut named : List (String × Ml.Expr) := []
+  for a in fieldArgs, fn in fnames do
+    if let some e ← argExpr? a then
+      let e ← match ← argCarrier? a with
+        | none => pure e
+        | some c =>
+          if ex.fieldCarrier? ci.induct fn.toString == some c then pure e
+          else useAsList s!"{ci.name}.{fn}" c e
+      rel := rel ++ [e]
+      named := named ++ [(fieldName fn.toString, e)]
   match ci.name, rel with
   | ``List.nil, [] => return Ml.Expr.nil
   | ``List.cons, [h, t] => return .binop "::" h t
@@ -411,34 +519,124 @@ def ctorApp (ci : ConstructorVal) (args : Array (Arg .pure)) : TM Ml.Expr := do
     let env ← readEnv
     noteReal ci.induct
     if isStructure env ci.induct then
-      let names := ctorFieldNames ci
-      let mut fields : List (String × Ml.Expr) := []
-      for a in fieldArgs, n in names do
-        if let some e ← argExpr? a then
-          fields := fields ++ [(fieldName n.toString, e)]
-      return .annot (.record fields) (tyOfInd (← readTypeNames) env ci.induct)
+      -- every field erased: the type is the abbreviation `unit` (`Types.lean`), the value `()`
+      if named.isEmpty then return .unit
+      return .annot (.record named) (tyOfInd (← readExterns) (← readTypeNames) env ci.induct)
     else
       return .ctor (OCaml5.Lcnf.ctorNameIn (← readTypeNames) ci.induct (shortName ci.name)) rel
 
-/-- A `LetValue`. -/
-def letValueExpr (declName : Name) (v : LetValue .pure) : TM Ml.Expr := do
+/-- Whether a `let` binds a list literal, and which: `some none` is `[]`, `some (some e)` is
+the one-element `[e]`. It is the difference between `snoc` and `append` (`p.path ++ [i]` is
+three LCNF lets: `nil`, `cons i nil`, `append path that`). -/
+def listFact? (v : LetValue .pure) : TM (Option (Option Ml.Expr)) := do
+  match v with
+  | .const n _ args =>
+    -- `[]`, and the empty accumulator the tail-recursion transform writes as an `Array`
+    -- (`List.takeTR.go l l n #[]`; `Types.builtinTy?` reads `Array` as `list`)
+    if n == ``List.nil || n == ``Array.mkEmpty || n == ``Array.emptyWithCapacity
+       || n == ``Array.empty then return some none
+    else if n == ``List.cons then
+      match args.toList.drop 1 with
+      | [h, .fvar t] =>
+        match (← get).listLit[t]? with
+        | some none => return some (some (← argExpr h))
+        | _ => return none
+      | _ => return none
+    else return none
+  | _ => return none
+
+/-- An argument in a position that needs the Lean list. -/
+def argAsList (site : String) (a : Arg .pure) : TM (Option Ml.Expr) := do
+  match ← argExpr? a with
+  | none => return none
+  | some e =>
+    match ← argCarrier? a with
+    | none => return some e
+    | some c => return some (← useAsList site c e)
+
+/-- The relevant (non-erased) arguments of a call, as the variables they are. -/
+private def relIds (args : Array (Arg .pure)) : List FVarId :=
+  args.toList.filterMap fun | .fvar id => some id | _ => none
+
+private def varOf (id : FVarId) : TM Ml.Expr := return .var (← nameOf id)
+
+/-- The Lean list operation `n`, applied to a value that is a **carrier**, as the carrier's
+own operation. This is the second half of the seam (`docs/research/
+2026-09-08-engine-prof-chain.md` §5.2, gap 2): a `fn` row can rename a function, but
+`p.path ++ [i]` is written *inline* in nine declarations that must stay generated, so the
+table cannot reach it and this rule must.
+
+`x ++ [i]` is `snoc`, `x ++ ys` is `append`, `x ++ []` is `x`; `List.length`, `env[i]?`
+(`List.get?Internal`) and `List.take` (as the mono phase writes it, `List.takeTR.go l l n []`)
+are the carrier's own. Anything else falls through and the value is turned back into the list,
+which is correct and slow, and is reported. -/
+def carrierRewrite? (n : Name) (args : Array (Arg .pure)) :
+    TM (Option (Ml.Expr × Option String)) := do
+  let base := stripRedArg n
+  let s := base.toString
+  let ids := relIds args
+  let st ← get
+  match ids with
+  | [x, y] =>
+    if base == ``List.append || base == ``List.appendTR then
+      match ← carrierOfId? x with
+      | none => return none
+      | some c =>
+        let xe ← varOf x
+        match st.listLit[y]? with
+        | some none => return some (xe, some c)
+        | some (some e) => return (← carrierOp? c "snoc" [xe, e]).map (·, some c)
+        | none => return (← carrierOp? c "append" [xe, ← varOf y]).map (·, some c)
+    else if s.endsWith "List.get?Internal" || s.endsWith "List.get?"
+         || s.endsWith "List.getElem?" then
+      match ← carrierOfId? x with
+      | none => return none
+      | some c => return (← carrierOp? c "get" [← varOf x, ← varOf y]).map (·, none)
+    else if s.endsWith "List.take" || s.endsWith "List.takeTR" then
+      -- Lean takes the count first
+      match ← carrierOfId? y with
+      | none => return none
+      | some c => return (← carrierOp? c "take" [← varOf y, ← varOf x]).map (·, some c)
+    else return none
+  | [x] =>
+    if base == ``List.length || base == ``List.lengthTR then
+      match ← carrierOfId? x with
+      | none => return none
+      | some c => return (← carrierOp? c "length" [← varOf x]).map (·, none)
+    else return none
+  | [l, xs, k, acc] =>
+    -- `List.take n l` after the tail-recursion transform: `takeTR.go l l n #[]`. Only that
+    -- shape is the carrier's `take`; any other is left alone (and then typed wrong, loudly).
+    if s.endsWith "List.takeTR.go" then
+      match ← carrierOfId? l with
+      | none => return none
+      | some c =>
+        if xs != l then return none
+        match st.listLit[acc]? with
+        | some none => return (← carrierOp? c "take" [← varOf l, ← varOf k]).map (·, some c)
+        | _ => return none
+    else return none
+  | _ => return none
+
+/-- A `LetValue`, and the carrier its value holds when it holds one. -/
+def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option String) := do
   match v with
   -- The 63-bit rule, literal half: a `Nat` literal OCaml's `int` cannot hold (`2 ^ 62` and up,
   -- the folded `2 ^ 64` of `Val.wf` among them) is `max_int`, not an out-of-range literal
   -- OCaml refuses. Same reading as the `Nat.pow` row; see `ocaml/gen/NOTES.md` §5.
-  | .lit (.nat n) => return if n ≥ 4611686018427387904 then .var "max_int" else .int n
-  | .lit (.str s) => return .str s
-  | .lit (.uint8 n) => return .int n.toNat
-  | .lit (.uint16 n) => return .int n.toNat
-  | .lit (.uint32 n) => return .int n.toNat
-  | .lit (.uint64 n) => return .int n.toNat
-  | .lit (.usize n) => return .int n.toNat
-  | .erased => return .unit
+  | .lit (.nat n) => return (if n ≥ 4611686018427387904 then .var "max_int" else .int n, none)
+  | .lit (.str s) => return (.str s, none)
+  | .lit (.uint8 n) => return (.int n.toNat, none)
+  | .lit (.uint16 n) => return (.int n.toNat, none)
+  | .lit (.uint32 n) => return (.int n.toNat, none)
+  | .lit (.uint64 n) => return (.int n.toNat, none)
+  | .lit (.usize n) => return (.int n.toNat, none)
+  | .erased => return (.unit, none)
   | .proj typeName i s =>
     let env ← readEnv
     let sv := Ml.Expr.var (← nameOf s)
     if typeName == ``Prod then
-      return Ml.Expr.call (if i == 0 then "fst" else "snd") [sv]
+      return (Ml.Expr.call (if i == 0 then "fst" else "snd") [sv], none)
     else
       let ctor? := match env.find? typeName with
         | some (.inductInfo info) =>
@@ -453,24 +651,50 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM Ml.Expr := do
         if isStructure env typeName then
           let names := ctorFieldNames ci
           noteReal typeName
-          return .field sv (fieldName (names[i]?.getD (Name.mkSimple s!"_{i}")).toString)
+          let fld := (names[i]?.getD (Name.mkSimple s!"_{i}")).toString
+          -- reading a `field`-row field is where a carrier enters a declaration
+          return (.field sv (fieldName fld), (← readExterns).fieldCarrier? typeName fld)
         else
           todo s!"{declName}: proj on {typeName} #{i} (a single-constructor inductive that is not a structure)"
-          return .hole s!"proj {typeName} #{i}" (.assertE (.bool false))
+          return (.hole s!"proj {typeName} #{i}" (.assertE (.bool false)), none)
       | none =>
         todo s!"{declName}: proj on {typeName} #{i} (not a structure)"
-        return .hole s!"proj {typeName} #{i}" (.assertE (.bool false))
+        return (.hole s!"proj {typeName} #{i}" (.assertE (.bool false)), none)
   | .fvar f args =>
     let fv := Ml.Expr.var (← nameOf f)
-    if args.isEmpty then return fv
-    return .app fv (← args.toList.mapM argExpr)
+    -- a rename carries the carrier with it; a local call (a join point) takes it raw, and
+    -- OCaml infers the join point's parameter type from the call
+    if args.isEmpty then return (fv, ← carrierOfId? f)
+    return (.app fv (← args.toList.mapM argExpr), none)
   | .const n _ args =>
     let env ← readEnv
+    -- `Extract Constant`: the row wins over the constructor rule and over `builtin?`, so a
+    -- carrier's own constructor (`Dispatcher.mk`, `MemoMap.mk`) can be re-spelled too. Erased
+    -- arguments — the type parameters among them — are dropped, as they are for a builtin.
+    -- A row takes a carrier argument RAW: the hand body is written against the signature.
+    let exx ← readExterns
+    match exx.fn? n with
+    | some f =>
+      let key := if exx.fns.contains n then n else stripRedArg n
+      let deps := f.spec.filterMap fun | .lit d => some d | _ => none
+      modify fun s =>
+        { s with usedExterns := if s.usedExterns.contains key then s.usedExterns
+                                else s.usedExterns.push key,
+                 externDeps := deps.foldl (fun a d => if a.contains d then a else a.push d)
+                                 s.externDeps }
+      return (f.apply (← args.toList.filterMapM argExpr?), none)
+    | none =>
+    -- a Lean list operation applied to a carrier is the carrier's own operation
+    match ← carrierRewrite? n args with
+    | some r => return r
+    | none =>
     match env.find? n with
-    | some (.ctorInfo ci) => ctorApp ci args
+    | some (.ctorInfo ci) => return (← ctorApp ci args, none)
     | _ =>
       match builtin? n with
-      | some b => return applyBuiltin b (← args.toList.filterMapM argExpr?)
+      | some b =>
+        let as ← args.toList.filterMapM (argAsList s!"{declName}: builtin {n}")
+        return (applyBuiltin b as, none)
       | none =>
         noteCall n
         let g := Ml.Expr.var (globalName n)
@@ -482,13 +706,15 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM Ml.Expr := do
         -- parameters become `fun` binders, the missing erased ones `()`, and the ones the twin
         -- kept are handed on. (`api_gen.ml:5036`, `ScopeStore.addFinalizer`'s `run`.)
         match wrapperKeep? env n with
-        | none => if args.isEmpty then return g else return .app g (← args.toList.mapM argExpr)
+        | none =>
+          if args.isEmpty then return (g, none)
+          else return (.app g (← argsFor n args.toList), none)
         | some keep =>
           let wparams := (wrapperParams? env n).getD #[]
           if args.size ≥ wparams.size then
             let kept := keep.filterMap fun i => args[i]?
-            if kept.isEmpty then return g
-            return .app g (← kept.toList.mapM argExpr)
+            if kept.isEmpty then return (g, none)
+            return (.app g (← argsFor n kept.toList), none)
           -- eta-expand: one OCaml binder per missing relevant parameter, `()` per erased one
           let mut binders : List String := []
           let mut extra : Std.HashMap Nat Ml.Expr := {}
@@ -504,8 +730,8 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM Ml.Expr := do
             if h : i < args.size then kept := kept ++ [← argExpr args[i]]
             else kept := kept ++ [extra.getD i .unit]
           let body := if kept.isEmpty then g else .app g kept
-          if binders.isEmpty then return body
-          return .fn binders body
+          if binders.isEmpty then return (body, none)
+          return (.fn binders body, none)
 
 /-! ## Patterns -/
 
@@ -540,9 +766,13 @@ def altPat (ctor : Name) (ps : Array (LCNF.Param .pure)) (usedVars : FVarIdHashS
       noteReal ci.induct
       if isStructure env ci.induct then
         let names := ctorFieldNames ci
+        let ex ← readExterns
         let mut fields : List (String × Ml.Pat) := []
         let mut omitted := false
-        for p? in pats, n in names do
+        for p? in pats, n in names, p in ps do
+          -- binding a `field`-row field is the other place a carrier enters a declaration
+          if let some c := ex.fieldCarrier? ci.induct n.toString then
+            if p? matches some (.var _) then setCarrier p.fvarId c
           match p? with
           | some (.var v) => fields := fields ++ [(fieldName n.toString, .var v)]
           | some _ => omitted := true
@@ -563,8 +793,12 @@ mutual
 partial def code (declName : Name) (c : Code .pure) : TM Ml.Expr := do
   match c with
   | .let decl k =>
-    let v ← letValueExpr declName decl.value
+    let (v, carr?) ← letValueExpr declName decl.value
+    let lit? ← listFact? decl.value
     let x ← bindVar decl.fvarId decl.binderName
+    if let some c := carr? then setCarrier decl.fvarId c
+    if let some f := lit? then
+      modify fun s => { s with listLit := s.listLit.insert decl.fvarId f }
     return .letIn x v (← code declName k)
   | .fun decl k => localFun declName decl k
   | .jp decl k => localFun declName decl k
@@ -594,9 +828,10 @@ partial def code (declName : Name) (c : Code .pure) : TM Ml.Expr := do
     else
       let env ← readEnv
       let tn ← readTypeNames
+      let exx ← readExterns
       let scrut : Ml.Expr :=
         if nativeInductives.contains cs.typeName then .var d
-        else .annot (.var d) (tyOfInd tn env cs.typeName)
+        else .annot (.var d) (tyOfInd exx tn env cs.typeName)
       unless nativeInductives.contains cs.typeName do noteReal cs.typeName
       let mut arms : List Ml.Arm := []
       for alt in cs.alts do
@@ -632,6 +867,8 @@ structure Translated where
   bind : Ml.Bind
   /-- Global constants called. -/
   callees : Array Name
+  /-- OCaml names an extern row hands to a hand body: an emission-order dependency. -/
+  externDeps : Array String := #[]
   /-- The LCNF signature, for the reader. -/
   signature : String
   recursive : Bool
@@ -643,16 +880,29 @@ instance : Inhabited Translated :=
 
 /-- Translate one mono decl under an OCaml name. -/
 def translateDecl (env : Environment) (d : LCNF.Decl .pure) (userName : Name) (ocamlName : String)
-    (tn : TypeNames := {}) : Translated × St :=
+    (tn : TypeNames := {}) (ex : Externs := {}) : Translated × St :=
   let act : TM Translated := do
     -- reserve the names the builtin forms use
     modify fun s => { s with used := preUsed.foldl (fun m n => m.insert n 0) s.used }
     let mut params : List (String × Option Ml.Ty) := []
+    let mut i := 0
     for p in d.params do
       let x ← bindVar p.fvarId p.binderName
       noteMentioned (monoTyConsts p.type)
-      let t := monoTy tn p.type
+      let t := monoTy ex tn p.type
+      -- a `carg` row: this parameter carries a carrier, not the list. It is what an
+      -- inter-procedural analysis would infer (`blockExit`'s `env` is one because its callers
+      -- pass one) and what the table states instead.
+      let t ← match ex.cargChain? d.name i with
+        | none => pure t
+        | some chain => do
+          setCarrier p.fvarId (chainKey chain)
+          modify fun s =>
+            { s with usedCargs := if s.usedCargs.contains (stripRedArg d.name) then s.usedCargs
+                                  else s.usedCargs.push (stripRedArg d.name) }
+          pure (carrierAnnot chain t)
       params := params ++ [(x, if tyIsAnon t then none else some t)]
+      i := i + 1
     -- the result type: the decl type with the parameters peeled off
     let mut rty := d.type
     for _ in [:d.params.size] do
@@ -660,7 +910,10 @@ def translateDecl (env : Environment) (d : LCNF.Decl .pure) (userName : Name) (o
       | .forallE _ _ b _ => rty := b
       | _ => pure ()
     noteMentioned (monoTyConsts rty)
-    let result := monoTy tn rty
+    -- a declaration that takes a carrier may return one at a position no chain can spell
+    -- (`Option (Prod (List Nat) (List Val))`), so its result annotation is dropped and OCaml
+    -- infers it.
+    let result := if (ex.carg? d.name).isSome then Ml.Ty.anon else monoTy ex tn rty
     let body ← match d.value with
       | .code c => code d.name c
       | .extern _ => do
@@ -671,9 +924,9 @@ def translateDecl (env : Environment) (d : LCNF.Decl .pure) (userName : Name) (o
     let callees := (← get).calls
     let sig := s!"{d.name}{sketchParams d.params} : {sketchType rty}"
     return { leanName := d.name, userName := userName, ocamlName := ocamlName, bind := b,
-             callees := callees, signature := sig,
+             callees := callees, externDeps := (← get).externDeps, signature := sig,
              recursive := d.recursive || callees.contains d.name }
-  Id.run ((act { env := env, tn := tn }).run {})
+  Id.run ((act { env := env, tn := tn, ex := ex }).run {})
 
 /-- What the closure produced. -/
 structure Closure where
@@ -687,14 +940,22 @@ structure Closure where
   realTypes : Array Name := #[]
   mentioned : Array Name := #[]
   todos : Array String := #[]
+  /-- `fn` extern rows a translated declaration actually hit (G10's ledger). -/
+  usedExterns : Array Name := #[]
+  /-- `ops` rows a rewrite used, as `<carrier>#<op>`. -/
+  usedOps : Array String := #[]
+  /-- `carg` rows a declaration used. -/
+  usedCargs : Array Name := #[]
+  /-- Every place a carrier was turned back into the Lean list. -/
+  toLists : Array String := #[]
 
 private def pushNew (a : Array Name) (n : Name) : Array Name :=
   if a.contains n then a else a.push n
 
 /-- Translate `roots` and, transitively, every non-builtin constant they call, up to `cap`
 declarations. -/
-def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {}) :
-    CoreM Closure := do
+def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
+    (ex : Externs := {}) : CoreM Closure := do
   let env ← getEnv
   let mut c : Closure := {}
   let mut done : NameSet := {}
@@ -704,6 +965,9 @@ def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {
     let n := queue[i]!
     i := i + 1
     if done.contains n then continue
+    -- `Extract Constant`: an externed constant is not translated **and its callees are never
+    -- enqueued** — this one line is what deletes a generated declaration (A1 §1.6 G4).
+    if ex.hasFn n then continue
     if (builtin? n).isSome then continue
     if env.find? n matches some (.ctorInfo _) then continue
     if c.decls.size ≥ cap then
@@ -726,11 +990,15 @@ def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {
       -- a twin reached directly: its wrapper is the user-facing name
       userName := stripRedArg n
       if userName != n then done := done.insert userName
-    let (t, st) := translateDecl env d userName (globalName userName) tn
+    let (t, st) := translateDecl env d userName (globalName userName) tn ex
     c := { c with
       decls := c.decls.push t,
       realTypes := st.realTypes.foldl pushNew c.realTypes,
       mentioned := st.mentioned.foldl pushNew c.mentioned,
+      usedExterns := st.usedExterns.foldl pushNew c.usedExterns,
+      usedOps := st.usedOps.foldl (fun a o => if a.contains o then a else a.push o) c.usedOps,
+      usedCargs := st.usedCargs.foldl pushNew c.usedCargs,
+      toLists := c.toLists ++ st.toLists,
       todos := c.todos ++ st.todos }
     for callee in st.calls do
       unless done.contains callee do
@@ -786,9 +1054,12 @@ def emit (ds : Array Translated) : List Ml.Decl :=
   let n := ds.size
   let byName : Std.HashMap String Nat := ds.foldl (init := {}) fun m t =>
     m.insert t.ocamlName m.size
-  -- adjacency by OCaml name (a wrapper and its twin share one)
+  -- adjacency by OCaml name (a wrapper and its twin share one), plus the emission-order edges
+  -- an extern row's leading arguments create: a hand body is spliced above every declaration,
+  -- so the generated helper it is handed must be emitted before the declaration that hands it.
   let adj : Array (Array Nat) := ds.map fun t =>
-    t.callees.filterMap fun c => byName[globalName c]?
+    (t.callees.filterMap fun c => byName[globalName c]?)
+      ++ t.externDeps.filterMap fun d => byName[d]?
   let init : Tarjan := { indices := Array.replicate n none, low := Array.replicate n 0,
                          onStack := Array.replicate n false }
   let run : StateM Tarjan Unit := do

@@ -8,6 +8,7 @@
 
 (library
  (name effect4_gen)
+ (public_name effect4_gen)
  (modules machine_gen fibers_gen api_gen avatar_reference)
  (flags
   (:standard -warn-error -a)))
