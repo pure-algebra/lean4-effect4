@@ -227,6 +227,198 @@ def denoteAsync (request : Term) (p : Point) : RProgram :=
     | none => .pure badShapeExit
     | some cell => .vis (.inr (.async (.registerAwait cell) value)) Effects.Program.pure
 
+/-- The scope's finalizer shapes (`Stores.finProgram`). -/
+def denoteFin : FinName → ExitV → RProgram
+  | .interruptFiber fiber true, _ => fiberValR (.interruptScoped fiber) rfl
+  | .interruptFiber fiber false, _ => fiberValR (.interrupt fiber) rfl
+  | .closeChildScope scope, ex => .vis (.inr (.closeScope scope ex)) Effects.Program.pure
+  | .detachFromParent parent key, _ => storeR (.scopeRemove parent key)
+  | .release label fails, _ =>
+    .pure (if fails then .failure (Cause.fail (.tag label)) else .success .unit)
+  | .parkThen slot, _ => .vis (.inr (.async (.store (.externalRegister slot)) .unit)) Effects.Program.pure
+  | .awaitNewChildren snapshot, _ => fiberValR (.awaitNewChildren snapshot) rfl
+  -- a capture's release (V1): the counted suspend, then `provideContext(release(a, exit),
+  -- context)` (`internal/effect.ts:3983`, `:2180-2199`): the current context read, the captured
+  -- one set, the release at the capture's point over the exit under the finalizer restoring
+  -- the previous context — constructed with the view at its invocation (`constructR`), as the
+  -- frame's `interpAt` refreshes the release's name
+  | .foreign c, ex => .vis (.inr (.foreignRelease c ex)) fun _ =>
+      (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun v =>
+        match Val.context? v with
+        | some previous =>
+          (guardR .onSuccess (fiberValR (.setContext c.ctx) rfl)).bind (seqR fun _ =>
+            constructR fun completed =>
+              .vis (.inr (.mask false
+                (.release ((Point.ofCapture c completed).childWith 1 (reifyExitVal ex)) previous)))
+                Effects.Program.pure)
+        | none => .pure badShapeExit)
+  -- `fromBuild`'s `onExit` (`Layer.ts:343`, the join): close the layer scope on failure only
+  | .closeChildOnFailure scope, .failure cause =>
+    .vis (.inr (.closeScope scope (.failure cause))) Effects.Program.pure
+  | .closeChildOnFailure _, .success _ => .pure (.success .unit)
+  -- the memo entry finalizer (`Layer.ts:401-410`, the join): `observers--`; the last
+  -- observer's release answers the layer scope, closed with the exit
+  | .memoEntry layer memoMap, ex =>
+    (guardR .onSuccess (storeR (.memoRelease layer memoMap))).bind (seqR fun v =>
+      match Val.scope? v with
+      | some s => .vis (.inr (.closeScope s ex)) Effects.Program.pure
+      | none => .pure (.success .unit))
+  -- `memoMapBuild`'s `onExit` (`:414-417`): the exit stored, the Deferred completed
+  | .memoDone layer memoMap, ex => storeR (.memoComplete layer memoMap ex)
+
+/-! ## The join: `Effect.provide`, `Effect.service`, `Effect.provideService`, `Layer.build`
+
+The term follows the compile's names step by step, as `acquireRelease` does (V1): every frame
+continuation of `Compile.lean`'s join arms is a `seqR` continuation here, and a layer's build
+(`compileLayer`, `innerLayerAt`, `constructionAt`) is `denoteLayer` below, structural in the
+layer term, in the mutual block with `denoteR` — a leaf's body is a subterm. What the frame
+resolves by a lookup at a point (`resolve`, `resolveLayer`, `regionCode`) the term has in hand. -/
+
+/-- `updateContext(self, f)` (`internal/effect.ts:2087-2096`): the context read; the same object
+runs the body as is (`:2090`, `updateKeepsIdentity`); else the next context set and the body
+under the finalizer restoring the previous one (`:2091-2095`). -/
+def updateContextR (update : Env.ContextUpdate) (body : RProgram) : RProgram :=
+  (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun v =>
+    match Val.context? v with
+    | some prev =>
+      if updateKeepsIdentity update prev.services then body
+      else
+        (guardR .onSuccess
+          (fiberValR (.setContext (Ctx.withServices (update.apply prev.services))) rfl)).bind
+          (seqR fun _ => onExitR body fun _ => fiberValR (.setContext prev) rfl)
+    | none => .pure badShapeExit)
+
+/-- `scopeAddFinalizerExit(scope, fin)` (`internal/effect.ts:3847-3858`): unit when the
+registration took; else the closing exit read back and the finalizer run now, then unit. -/
+def scopeAddR (scope : Nat) (fin : FinName) : RProgram :=
+  (guardR .onSuccess (storeR (.scopeAdd scope fin))).bind (seqR fun w =>
+    if w = Val.unit then .pure (.success .unit)
+    else
+      match exitOfVal w with
+      | some ex => (guardR .onSuccess (denoteFin fin ex)).bind (seqR fun _ => .pure (.success .unit))
+      | none => .pure badShapeExit)
+
+/-- `Context.make(key, value)` (`Layer.ts:1440`), or `Context.empty()` (`:1515`), over a leaf's
+answer. -/
+def bindServiceR (key : Option ServiceKey) (v : Val) : RProgram :=
+  match key with
+  | some key => .pure (.success (Env.encode (Env.Context.empty.addV key v)))
+  | none => .pure (.success (Env.encode Env.Context.empty))
+
+/-- `map(_, Context.add(CurrentMemoMap, memoMap))` (`Layer.ts:762`) on the built context. -/
+def addCurrentMemoMapR (m : MemoMapId) (v : Val) : RProgram :=
+  match Env.decode v with
+  | some ctx => .pure (.success (Env.encode (ctx.addV Env.currentMemoMapKey (Val.memoMap m))))
+  | none => .pure badShapeExit
+
+/-- `f(merged, context)` (`Layer.ts:1923`) on the dependent's context. -/
+def combineWithR (mode : CombineMode) (that : Env.Ctx) (v : Val) : RProgram :=
+  match Env.decode v with
+  | some merged =>
+    match mode with
+    | .provide => .pure (.success (Env.encode merged))
+    | .provideMerge => .pure (.success (Env.encode (that.merge merged)))
+  | none => .pure badShapeExit
+
+/-- `Context.mergeAll(...contexts)` (`Layer.ts:1600`) over the awaited exits. -/
+def mergeContextsR (v : Val) : RProgram :=
+  match contextsOf v with
+  | some ctxs => .pure (.success (Env.encode (Env.Context.mergeAll ctxs)))
+  | none =>
+    match reasonsOfVal v with
+    | [] => .pure badShapeExit
+    | reason :: rest => .pure (.failure ⟨reason :: rest⟩)
+
+/-- `Effect.service(key)` on the context value: the lookup, or the host throw as a defect. -/
+def serviceLookupR (key : ServiceKey) (v : Val) : RProgram :=
+  match Val.context? v with
+  | some ctx =>
+    match ctx.services.getV key with
+    | some value => .pure (.success value)
+    | none => .pure (.failure (Cause.die Defect.missingService))
+  | none => .pure badShapeExit
+
+/-- `buildWithMemoMap` (`Layer.ts:756-765`): `provideService(CurrentMemoMap)` around the build
+through the map, `Context.add(CurrentMemoMap, _)` mapped over its answer. -/
+def buildWithMemoMapR (build : MemoMapId → RProgram) (m : MemoMapId) : RProgram :=
+  updateContextR (.provideService Env.currentMemoMapKey (Val.memoMap m))
+    ((guardR .onSuccess (build m)).bind (seqR fun v => addCurrentMemoMapR m v))
+
+/-- `fromBuild` (`Layer.ts:333-345`): the layer scope forked from the caller's, the inner build
+inside it under the finalizer that closes it on failure. -/
+def fromBuildR (scope : Nat) (inner : Nat → RProgram) : RProgram :=
+  (guardR .onSuccess (storeR (.scopeFork scope .sequential))).bind (seqR fun v =>
+    match Val.scope? v with
+    | some child => onExitR (inner child) fun ex => denoteFin (.closeChildOnFailure child) ex
+    | none => .pure badShapeExit)
+
+/-- `getOrElseMemoize` (`Layer.ts:445-457`): the counted suspend, the lookup; a hit registers
+the entry finalizer on the caller's scope and awaits the entry's deferred (`:439-440`,
+`:400`); a miss is `memoMapBuild` (`:390-419`) — the allocation, the registration, and the
+construction into the layer scope under the `onExit` that completes the entry. -/
+def memoizeR (q : Point) (m : MemoMapId) (scope : Nat) (construction : Nat → RProgram) :
+    RProgram :=
+  suspendR q ((guardR .onSuccess (storeR (.memoGet q.path m))).bind (seqR fun v =>
+    match Val.memoHit? v with
+    | some (cell, owner) =>
+      (guardR .onSuccess (scopeAddR scope (.memoEntry q.path owner))).bind (seqR fun _ =>
+        .vis (.inr (.async (.registerAwait cell) (Val.promise cell))) Effects.Program.pure)
+    | none =>
+      if v = Val.unit then
+        (guardR .onSuccess (storeR (.memoBuild q.path m))).bind (seqR fun w =>
+          match Val.scope? w with
+          | some layerScope =>
+            (guardR .onSuccess (scopeAddR scope (.memoEntry q.path m))).bind (seqR fun _ =>
+              onExitR (construction layerScope) fun ex => denoteFin (.memoDone q.path m) ex)
+          | none => .pure badShapeExit)
+      else .pure badShapeExit))
+
+/-- `provideWith` (`Layer.ts:1915-1923`): the dependency built, the dependent under
+`provideContext(context)`, the combiner. -/
+def provideWithR (dependency dependent : RProgram) (mode : CombineMode) : RProgram :=
+  (guardR .onSuccess dependency).bind (seqR fun v =>
+    match Env.decode v with
+    | some ctx =>
+      (guardR .onSuccess (updateContextR (.provide ctx) dependent)).bind (seqR fun w =>
+        combineWithR mode ctx w)
+    | none => .pure badShapeExit)
+
+/-- One sibling's build forked as an immediate daemon (`Layer.ts:1597`; `forEach`'s
+concurrency, `internal/effect.ts:4851`). -/
+def forkLayerR (q : Point) (m : MemoMapId) (scope : Nat) : RProgram :=
+  .vis (.inr (.fork (.layerBuild q m scope) ⟨true, true, .inherit⟩)) fun v => .pure (.success v)
+
+/-- `mergeAllEffect`'s fork loop for two siblings (`Layer.ts:1597-1600`): a sequential child of
+the parallel parent per sibling, the sibling's build forked into it, then the await and the
+merge. -/
+def mergeForkR (q : Point) (m : MemoMapId) (parent : Nat) : RProgram :=
+  (guardR .onSuccess (storeR (.scopeFork parent .sequential))).bind (seqR fun v =>
+    match Val.scope? v with
+    | some c0 =>
+      (guardR .onSuccess (forkLayerR (q.child 0) m c0)).bind (seqR fun f0 =>
+        match Val.fiber? f0 with
+        | some id0 =>
+          (guardR .onSuccess (storeR (.scopeFork parent .sequential))).bind (seqR fun w =>
+            match Val.scope? w with
+            | some c1 =>
+              (guardR .onSuccess (forkLayerR (q.child 1) m c1)).bind (seqR fun f1 =>
+                match Val.fiber? f1 with
+                | some id1 =>
+                  (guardR .onSuccess (fiberValR (.awaitAllFailFast [id0, id1]) rfl)).bind
+                    (seqR fun ex => mergeContextsR ex)
+                | none => .pure badShapeExit)
+            | none => .pure badShapeExit)
+        | none => .pure badShapeExit)
+    | none => .pure badShapeExit)
+
+/-- `mergeAllEffect` (`Layer.ts:1587-1602`): the parallel parent forked from the layer scope,
+then the siblings. -/
+def mergeTwoR (q : Point) (m : MemoMapId) (child : Nat) : RProgram :=
+  (guardR .onSuccess (storeR (.scopeFork child .parallel))).bind (seqR fun v =>
+    match Val.scope? v with
+    | some parent => mergeForkR q m parent
+    | none => .pure badShapeExit)
+
 /-- A yielded source form with an immediate `Prim.success` or `Prim.failure` head.
 `sync`, `yieldError` with a valid argument, and compound frames are not inline exits;
 `exit` of an immediate exit is that exit's success (`internal/effect.ts:3621-3622`), and
@@ -263,8 +455,50 @@ def inlineYield : NativeEff → Point → Option ExitV
       | true :: rest => inlineYield left { p with path := p.path ++ [0], tape := rest }
       | false :: rest => inlineYield right { p with path := p.path ++ [1], tape := rest }
       | [] => none
+    -- `provideService` of a value that does not evaluate is the wrong-shape refusal
+    | .provideService _ value _ => match evalTerm p.env value with
+      | some _ => none | none => some badShapeExit
     | _ => none
 
+/-- `Effect.provide`'s protocol after the counted step, at the point that carries the view
+(`scopedWith`, `internal/effect.ts:3966-3967`; `internal/layer.ts:15-21`): the scope made, the
+layer built into it (`buildAt`, the layer's `denoteLayer`) — off the fiber context's memo map,
+or a private one when `local` — the body (`bodyAt`, its `denoteR`; `bodyExit` its
+`inlineYield`) under `provideContext(built)`, the scope closed with the exit. The three
+programs are passed in so that this stays outside the mutual block. -/
+def provideLayerR (buildAt : Point → MemoMapId → Nat → RProgram) (bodyAt : Point → RProgram)
+    (bodyExit : Point → Option ExitV) (isLocal : Bool) (p : Point) : RProgram :=
+  (guardR .onSuccess (storeR (.scopeMake .sequential))).bind (seqR fun v =>
+    match Val.scope? v with
+    | some scope =>
+      onExitR
+        ((guardR .onSuccess
+          (if isLocal then
+            (guardR .onSuccess (storeR (.memoFork none))).bind (seqR fun w =>
+              match Val.memoMap? w with
+              | some id => buildWithMemoMapR (fun m => buildAt (p.child 0) m scope) id
+              | none => .pure badShapeExit)
+          else
+            (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun w =>
+              match Val.context? w with
+              | some ctx =>
+                (guardR .onSuccess (storeR (.memoFork (currentMemoMapOf ctx.services)))).bind
+                  (seqR fun u =>
+                    match Val.memoMap? u with
+                    | some id => buildWithMemoMapR (fun m => buildAt (p.child 0) m scope) id
+                    | none => .pure badShapeExit)
+              | none => .pure badShapeExit))).bind (seqR fun built =>
+          match Env.decode built with
+          | some ctx =>
+            -- `provideContext` of an exit is that exit (`internal/effect.ts:2196`)
+            match bodyExit (p.child 1) with
+            | some exit => .pure exit
+            | none => updateContextR (.provide ctx) (bodyAt (p.child 1))
+          | none => .pure badShapeExit))
+        (fun ex => .vis (.inr (.closeScope scope ex)) Effects.Program.pure)
+    | none => .pure badShapeExit)
+
+mutual
 /-- The structural denotation at an address. Every arm names the `compileEff` arm it
 mirrors; the counted checkpoints are where the frame machine spends a primitive that the
 term would otherwise elide. -/
@@ -360,6 +594,62 @@ def denoteR (root : NativeEff) : NativeEff → Point → RProgram
         | true :: rest => denoteR root left { p with path := p.path ++ [0], tape := rest }
         | false :: rest => denoteR root right { p with path := p.path ++ [1], tape := rest }
         | [] => pending .unansweredChoice p
+      -- the join. `Effect.provide(self, layer)`: `Prim.suspend (body p)`, the counted step
+      -- (`scopedWith`, `internal/effect.ts:3966`), then the scope made, the layer built into it
+      -- (`buildWithScope` off the context's memo map, or a private map when `local`), the body
+      -- under `provideContext(built)` (`internal/layer.ts:15-21`), the scope closed with the exit
+      | .provideLayer layer isLocal body => suspendR p (constructR fun completed =>
+          provideLayerR (fun q m s => denoteLayer root layer q m s) (fun q => denoteR root body q)
+            (fun q => inlineYield body q) isLocal { p with completed })
+      -- `Effect.service(key)` (`internal/effect.ts:2059`): the context read, then the lookup
+      | .service key =>
+        (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun v => serviceLookupR key v)
+      -- `Effect.provideService(self, key, value)` (`:2232`): a `Context.add` region
+      | .provideService key value body =>
+        match evalTerm p.env value with
+        | some v => updateContextR (.provideService key v) (denoteR root body (p.child 0))
+        | none => .pure badShapeExit
+
+/-- `self.build(memoMap, scope)` at the term (`compileLayer`, `innerLayerAt`, `constructionAt`),
+structural in the layer, the point its address: `Layer.succeed` answers its context
+(`Layer.ts:1129`); `fresh` builds the inner layer through a brand-new map (`:3851`); `orDie`
+turns the inner build's typed error into a defect (`:3327`); every other constructor is a
+`fromBuild` wrapper (`:333-345`) — a memoized leaf's construction under `Scope.provide`
+(`:386`, `:1482`), `provideWith` (`:1915`), or `mergeAllEffect` (`:1587`). -/
+def denoteLayer (root : NativeEff) : LayerTerm NativeOp → Point → MemoMapId → Nat → RProgram
+  | .succeed key value, _, _, _ =>
+    match Lit.toVal value with
+    | some v => .pure (.success (Env.encode (Env.Context.empty.addV key v)))
+    | none => .pure badShapeExit
+  | .fresh inner, q, _, scope =>
+    (guardR .onSuccess (storeR (.memoFork none))).bind (seqR fun v =>
+      match Val.memoMap? v with
+      | some id => denoteLayer root inner (q.child 0) id scope
+      | none => .pure badShapeExit)
+  | .orDie inner, q, m, scope =>
+    (guardR .onFailure (denoteLayer root inner (q.child 0) m scope)).bind fun
+      | .success v => .pure (.success v)
+      | .failure c => .pure (.failure (orDieCause c))
+  | .effect key body, q, m, scope =>
+    fromBuildR scope fun child => memoizeR q m child fun layerScope =>
+      updateContextR (.provideService Env.scopeKey (Val.scopeHandle layerScope))
+        ((guardR .onSuccess (denoteR root body (q.child 0))).bind (seqR fun v =>
+          bindServiceR (some key) v))
+  | .effectDiscard body, q, m, scope =>
+    fromBuildR scope fun child => memoizeR q m child fun layerScope =>
+      updateContextR (.provideService Env.scopeKey (Val.scopeHandle layerScope))
+        ((guardR .onSuccess (denoteR root body (q.child 0))).bind (seqR fun v =>
+          bindServiceR none v))
+  | .provide self that, q, m, scope =>
+    fromBuildR scope fun child =>
+      provideWithR (denoteLayer root that (q.child 1) m child)
+        (denoteLayer root self (q.child 0) m child) .provide
+  | .provideMerge self that, q, m, scope =>
+    fromBuildR scope fun child =>
+      provideWithR (denoteLayer root that (q.child 1) m child)
+        (denoteLayer root self (q.child 0) m child) .provideMerge
+  | .merge _ _, q, m, scope => fromBuildR scope fun child => mergeTwoR q m child
+end
 
 /-! ## The address and frontier equations -/
 
@@ -520,9 +810,12 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
     -- to the `WithFiber`; neither is an immediate exit
     | withFiber a =>
       cases a <;> simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte, headExit]
+    | provideService key value body =>
+      simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
+      cases evalTerm p.env value <;> rfl
     | sync _ | suspend _ | bind _ _ | gen _ | catchCause _ _ | matchCause _ _ _
     | onExit _ _ | uninterruptible _ | interruptible _ | branch _ _ _ | whileLoop _ _ _ _
-    | yieldNow _ | «scoped» _ | acquireRelease _ _ =>
+    | yieldNow _ | «scoped» _ | acquireRelease _ _ | provideLayer _ _ _ | service _ =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte, headExit, frontier]
 termination_by structural e
 
@@ -596,7 +889,9 @@ theorem denote_of_inlineYield : ∀ (b : NativeEff) (q : Point) {exit : ExitV},
   | .gen _, _, _, hs, _ | .uninterruptible _, _, _, hs, _ | .interruptible _, _, _, hs, _
   | .whileLoop _ _ _ _, _, _, hs, _ | .yieldNow _, _, _, hs, _ | .callback _ _, _, _, hs, _
   | .awaitFiber _ _, _, _, hs, _ | .withFiber _, _, _, hs, _ | .«scoped» _, _, _, hs, _
-  | .acquireRelease _ _, _, _, hs, _ | .choose _ _ _, _, _, hs, _ => by
+  | .acquireRelease _ _, _, _, hs, _ | .choose _ _ _, _, _, hs, _
+  | .provideLayer _ _ _, _, _, hs, _ | .service _, _, _, hs, _
+  | .provideService _ _ _, _, _, hs, _ => by
     simp [Straight] at hs
 
 /-! ## Restriction to the existing straight denotation -/
@@ -748,7 +1043,9 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
   | .gen _, _, hs, _ | .uninterruptible _, _, hs, _ | .interruptible _, _, hs, _
   | .whileLoop _ _ _ _, _, hs, _ | .yieldNow _, _, hs, _ | .callback _ _, _, hs, _
   | .awaitFiber _ _, _, hs, _ | .withFiber _, _, hs, _ | .«scoped» _, _, hs, _
-  | .acquireRelease _ _, _, hs, _ | .choose _ _ _, _, hs, _ => by
+  | .acquireRelease _ _, _, hs, _ | .choose _ _ _, _, hs, _
+  | .provideLayer _ _ _, _, hs, _ | .service _, _, hs, _
+  | .provideService _ _ _, _, hs, _ => by
     simp only [Straight, Bool.false_eq_true] at hs
 
 theorem meaning_denoteR_straight (root : NativeEff) (e : NativeEff) (p : Point)

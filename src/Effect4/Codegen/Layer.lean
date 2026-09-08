@@ -47,9 +47,9 @@ with no spelling in the supplied `KeyNames` (the printer invents no identifier, 
 `body` carries a `Program.PrintRefusal` out of an `effect`, an `effectDiscard`, or an `App`'s
 program unchanged. There is no third refusal: every other arm of `LayerTerm` has a public
 rc.112 export at this pin. In particular `orDie` **prints** — `Layer.ts:3327` is an export with
-a spelling — even though `Provision.lower` refuses it, because the machine's `LayerDesc`
-alphabet has no description for its `catchCause` frame. The printer's alphabet is rc.112's
-public exports; the machine's is `LayerDesc`, and the two are allowed to differ.
+a spelling — and, since the join, builds on the compile route (`catch_(build, die)`); before
+the join the Layer machine's `LayerDesc` alphabet had no description for its `catchCause`
+frame and its lowering refused it. The printer's alphabet is rc.112's public exports.
 
 Typing and printing stay separate: `printLayer` never consults `layerTy`. They meet only in
 `printLayerDecl` and `printAppDecl`, where the declared type is read off the signature.
@@ -179,7 +179,7 @@ def printLayer (sig : Signature Op) (names : KeyNames) :
   | .fresh inner => do
     let i ← printLayer sig names inner
     .ok (.call (.ident "Layer.fresh") [i])
-  -- `Layer.orDie(self)` (`Layer.ts:3327`). Printed, though `Provision.lower` refuses it.
+  -- `Layer.orDie(self)` (`Layer.ts:3327`).
   | .orDie inner => do
     let i ← printLayer sig names inner
     .ok (.call (.ident "Layer.orDie") [i])
@@ -344,10 +344,9 @@ def appExpr : TypeScript.Expr :=
 
 /-! ### `fresh` and `orDie`
 
-`orDie` prints (`Layer.ts:3327` is a public export) even though the machine lowering refuses it:
-`src/Effect4/Program/Provision.lean` pins `lower docsSig (.orDie servicesLayer) = none`, because the `LayerDesc`
-alphabet has no description for a `catchCause` frame at this pin. Printing and lowering are two
-different alphabets over the same term, and only lowering is short one. -/
+`orDie` prints (`Layer.ts:3327` is a public export); since the join it also builds on the compile
+route (`catch_(build, die)`, `Program/Compile.lean`'s `compileLayer`), where before the Layer
+machine's lowering refused it by name. -/
 
 #guard printLayer docsSig docsNames (.fresh servicesLayer) ==
   .ok (.call (.ident "Layer.fresh") [servicesExpr])

@@ -15,5 +15,8 @@ effect 4.0.0-rc.112, bun 1.3.14, deadline 300 ms
 | pTwo | success {"success":2} | success {"success":2} | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success {"success":2}; same value |
 | pAcquire | success 7 | success 7 | yes | yes | yes | runSyncExit | same value |
 | pAcquireClosed | success 7 | success 7 | yes | yes | yes | runSyncExit | same value |
+| pProvide | success 7 | success 7 | yes | yes | yes | runSyncExit | same value |
+| pProvideMerge | success 2 | success 2 | yes | yes | yes | runSyncExit | same value |
+| pProvideTwice | success 2 | success 2 | yes | yes | yes | runSyncExit | same value |
 
-PASS: 11 programs, exits and schedules agree with rc.112
+PASS: 14 programs, exits and schedules agree with rc.112

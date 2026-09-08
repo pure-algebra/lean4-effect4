@@ -77,6 +77,9 @@ inductive Body
   /-- A capture's release at its resolved point, under the finalizer that restores the
   previous context (`provideContext`, `:2180-2199`). -/
   | release (point : Point) (previous : Ctx)
+  /-- A layer's build at its point into a memo map and a scope (the join): what
+  `mergeAllEffect` forks per sibling (`Layer.ts:1597`). -/
+  | layerBuild (point : Point) (memoMap : MemoMapId) (scope : Nat)
 deriving DecidableEq
 
 /-- Continuation slots retained across suspension. These are control data, not

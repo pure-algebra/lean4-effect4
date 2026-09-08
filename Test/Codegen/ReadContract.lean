@@ -40,7 +40,7 @@ def rowOf : Fin 4 → Row
 def sig : Signature (Fin 4) :=
   { rowOf := rowOf
   , atomOf := fun atom args => if atom = "succ" ∧ args = [Ty.nat] then some Ty.nat else none
-  , scopeKey := ⟨⟨0⟩, ⟨0⟩⟩ }
+  , scopeKey := ⟨⟨0⟩, ⟨0⟩⟩, serviceTy := fun _ => none }
 
 /-- The inverse of the table on (spelling, trailing names). -/
 def spell (s : String) (names : List String) : Option (Fin 4) :=
@@ -96,7 +96,7 @@ def genericSig : Signature Bool :=
       ⟨"make", "Deferred.make", .call, [], .sync, .unit,
         .handle "Deferred.Deferred<number, number>", .never, [], "Deferred.ts:171",
         ["number", "number"]⟩
-  , atomOf := fun _ _ => none, scopeKey := ⟨⟨0⟩, ⟨0⟩⟩ }
+  , atomOf := fun _ _ => none, scopeKey := ⟨⟨0⟩, ⟨0⟩⟩, serviceTy := fun _ => none }
 
 def genericSpell (s : String) (names : List String) : Option Bool :=
   if s = "Deferred.make" ∧ names = [] then some true else none
@@ -130,7 +130,8 @@ def tupleRowOf : Bool → Row
       .prod .nat .nat, .nat, .never, [], "§14 tuple-call fixture with trailing names", []⟩
 
 def tupleSig : Signature Bool :=
-  { rowOf := tupleRowOf, atomOf := fun _ _ => none, scopeKey := ⟨⟨0⟩, ⟨0⟩⟩ }
+  { rowOf := tupleRowOf, atomOf := fun _ _ => none, scopeKey := ⟨⟨0⟩, ⟨0⟩⟩
+  , serviceTy := fun _ => none }
 
 def tupleSpell (s : String) (names : List String) : Option Bool :=
   if s = "Fixture.tuple" ∧ names = [] then some false

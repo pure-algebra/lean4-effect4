@@ -245,8 +245,27 @@ end NativeOp
 /-- The `Scope` service key of the native signature. -/
 def nativeScopeKey : ServiceKey := ⟨⟨0⟩, ⟨0⟩⟩
 
-/-- The native signature: the rows above and the atoms, for `typeOf` and `print`. -/
-def nativeSignature : Signature NativeOp := ⟨NativeOp.row, nativeAtomTy, nativeScopeKey⟩
+/-- The native signature's service table (the join, 2026-09-07), read off the key: the ambient
+`Scope` under its reserved key, nothing under the other reserved names (`Env.firstFreeName`:
+the scheduler's two references and `CurrentMemoMap` are the machine's, not a program's), and
+for a free name the carrier its type code spells — `4` a number, `5` a boolean, `6` unit, `7`
+a `Ref.Ref<number>` handle. A key is typed by its own data, which is what `Machine/Key.lean`
+means a `ServiceTypeCode` to be read as. -/
+def nativeServiceTy (key : ServiceKey) : Option Ty :=
+  if key = nativeScopeKey then some Ty.scope
+  else if key.name.value < Effect4.Machine.Env.firstFreeName then none
+  else
+    match key.service.value with
+    | 4 => some .nat
+    | 5 => some .bool
+    | 6 => some .unit
+    | 7 => some (.handle "Ref.Ref<number>")
+    | _ => none
+
+/-- The native signature: the rows above, the atoms and the service table, for `typeOf` and
+`print`. -/
+def nativeSignature : Signature NativeOp :=
+  ⟨NativeOp.row, nativeAtomTy, nativeScopeKey, nativeServiceTy⟩
 
 /-- A program of the native route. -/
 abbrev NativeEff := Eff NativeOp

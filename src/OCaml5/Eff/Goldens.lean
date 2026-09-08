@@ -171,6 +171,11 @@ def opV : NativeOp → V
   | .deferredAwait => .ctor ``NativeOp.deferredAwait []
   | .scopeMake s => .ctor ``NativeOp.scopeMake [stratV s]
 
+def keyV (k : ServiceKey) : V :=
+  .struct ``Effect4.ServiceKey
+    [ ("name", .struct ``Effect4.ServiceName [("value", .nat k.name.value)])
+    , ("service", .struct ``Effect4.ServiceTypeCode [("value", .nat k.service.value)]) ]
+
 mutual
 partial def effV : Eff NativeOp → V
   | .succeed v => .ctor ``Eff.succeed [termV v]
@@ -197,6 +202,18 @@ partial def effV : Eff NativeOp → V
   | .scoped b => .ctor ``Eff.scoped [effV b]
   | .acquireRelease a r => .ctor ``Eff.acquireRelease [effV a, effV r]
   | .choose site l r => .ctor ``Eff.choose [.nat site, effV l, effV r]
+  | .provideLayer l isLocal b => .ctor ``Eff.provideLayer [layerV l, .bool isLocal, effV b]
+  | .service k => .ctor ``Eff.service [keyV k]
+  | .provideService k v b => .ctor ``Eff.provideService [keyV k, termV v, effV b]
+partial def layerV : LayerTerm NativeOp → V
+  | .succeed k v => .ctor ``LayerTerm.succeed [keyV k, litV v]
+  | .effect k b => .ctor ``LayerTerm.effect [keyV k, effV b]
+  | .effectDiscard b => .ctor ``LayerTerm.effectDiscard [effV b]
+  | .provide s t => .ctor ``LayerTerm.provide [layerV s, layerV t]
+  | .provideMerge s t => .ctor ``LayerTerm.provideMerge [layerV s, layerV t]
+  | .merge l r => .ctor ``LayerTerm.merge [layerV l, layerV r]
+  | .fresh i => .ctor ``LayerTerm.fresh [layerV i]
+  | .orDie i => .ctor ``LayerTerm.orDie [layerV i]
 partial def stmtV : Stmt NativeOp → V
   | .bindYield e => .ctor ``Stmt.bindYield [effV e]
   | .yieldDiscard e => .ctor ``Stmt.yieldDiscard [effV e]
@@ -229,11 +246,6 @@ partial def actionV : ActionTerm NativeOp → V
   | .getId => .ctor ``ActionTerm.getId []
   | .closeScope s e => .ctor ``ActionTerm.closeScope [termV s, termV e]
 end
-
-def keyV (k : ServiceKey) : V :=
-  .struct ``Effect4.ServiceKey
-    [ ("name", .struct ``Effect4.ServiceName [("value", .nat k.name.value)])
-    , ("service", .struct ``Effect4.ServiceTypeCode [("value", .nat k.service.value)]) ]
 
 def effTyV (t : EffTy) : V :=
   .struct ``EffTy [("answer", tyV t.answer), ("error", tyV t.error), ("requires", .list (t.requires.elems.map keyV))]

@@ -291,6 +291,19 @@ mutual
     | acquireRelease (acquire release : Eff Op)
     -- flows only: refused by the native printer, tape-answered by the compile (D2)
     | choose (site : Nat) (left right : Eff Op)
+    -- provision (the join, 2026-09-07): a layer is a subterm, and its build runs at its point.
+    -- Appended, so no stored program's bytes move (`Wire.lean`).
+    /-- `Effect.provide(self, layer, { local })` (`internal/layer.ts:8-22`): `scopedWith` a
+    fresh scope, the layer built into it — `Layer.buildWithScope` off the fiber context's memo
+    map, or `buildWithMemoMap` over a private one when `isLocal` — and the body under
+    `provideContext(self, built)`. -/
+    | provideLayer (layer : LayerTerm Op) (isLocal : Bool) (body : Eff Op)
+    /-- `Effect.service(key)` (`internal/effect.ts:2059`): the key is the effect that reads it;
+    a key the context lacks is the host throw (`Context.getUnsafe`), a defect. -/
+    | service (key : ServiceKey)
+    /-- `Effect.provideService(self, key, value)` (`internal/effect.ts:2202-2232`):
+    `updateContext(self, Context.add(key, value))`, a region over the body. -/
+    | provideService (key : ServiceKey) (value : Term) (body : Eff Op)
   /-- A statement of a generator body. -/
   inductive Stmt (Op : Type)
     /-- `const aN = yield* e`: binds the answer as the next variable. -/
@@ -328,9 +341,45 @@ mutual
     | getContext
     | getId
     | closeScope (scope exit : Term)
+  /-- The first-order layer term (the join, 2026-09-07; before it `Program/Provision.lean`):
+  one constructor per rc.112 export, each naming the line it transcribes;
+  `Layer.mergeAll(a, b, …)` is `mergeAll`, the fold of `merge`. A body is an `Eff` program —
+  the same syntax the printer prints and the compile compiles — closed: a layer's own scope
+  is its ambient one (`Layer.ts:1438`), so a body is typed and printed at the empty
+  environment. A layer's identity is its path in the program (`LayerId`, `Machine/Stores.lean`),
+  never a name: rc.112 keys its memo map on the layer object (`Layer.ts:411`, `:438`), and an
+  inline-printed term is one object per site. -/
+  inductive LayerTerm (Op : Type)
+    /-- `Layer.succeed(key, value)` (`Layer.ts:1074`): a service from a value already in hand. -/
+    | succeed (key : ServiceKey) (value : Lit)
+    /-- `Layer.effect(key, body)` (`Layer.ts:1427`): a service built by a program, in the
+    layer's own scope — `Exclude<R, Scope.Scope>` (`:1438`). -/
+    | effect (key : ServiceKey) (body : Eff Op)
+    /-- `Layer.effectDiscard(body)` (`Layer.ts:1512`): construction work that provides nothing. -/
+    | effectDiscard (body : Eff Op)
+    /-- `self.pipe(Layer.provide(that))` (`Layer.ts:2258`). -/
+    | provide (self that : LayerTerm Op)
+    /-- `self.pipe(Layer.provideMerge(that))` (`Layer.ts:2704`). -/
+    | provideMerge (self that : LayerTerm Op)
+    /-- `Layer.merge(left, right)` (`Layer.ts:1850`). -/
+    | merge (left right : LayerTerm Op)
+    /-- `Layer.fresh(inner)` (`Layer.ts:3850`): the same signature, a private memo map. -/
+    | fresh (inner : LayerTerm Op)
+    /-- `Layer.orDie(inner)` (`Layer.ts:3327`). -/
+    | orDie (inner : LayerTerm Op)
 end
 
-deriving instance DecidableEq for Eff, Stmt, Stmts, Effs, ActionTerm
+deriving instance DecidableEq for Eff, Stmt, Stmts, Effs, ActionTerm, LayerTerm
+
+namespace LayerTerm
+
+/-- `Layer.mergeAll(l, …)` (`Layer.ts:1652`): a left fold of `merge`, so the last layer is the
+rightmost operand and, in the built context, wins (`Context.mergeAll`, `Layer.ts:1600`). -/
+def mergeAll {Op : Type} (first : LayerTerm Op) : List (LayerTerm Op) → LayerTerm Op
+  | [] => first
+  | l :: rest => mergeAll (merge first l) rest
+
+end LayerTerm
 
 def Stmts.toList {Op : Type} : Stmts Op → List (Stmt Op)
   | .nil => []

@@ -327,6 +327,10 @@ def walkEff (pe : Eff NativeOp → Bool) (ps : Stmt NativeOp → Bool)
   | e@(.acquireRelease acquire release) =>
     pe e || walkEff pe ps pa acquire || walkEff pe ps pa release
   | e@(.choose _ left right) => pe e || walkEff pe ps pa left || walkEff pe ps pa right
+  -- the provision constructors (the join): the body is walked; a layer's bodies are not,
+  -- since the generator draws no layer
+  | e@(.provideLayer _ _ body) => pe e || walkEff pe ps pa body
+  | e@(.provideService _ _ body) => pe e || walkEff pe ps pa body
   | e => pe e
 
 def walkStmts (pe : Eff NativeOp → Bool) (ps : Stmt NativeOp → Bool)
@@ -395,6 +399,8 @@ def nodesEff : Eff NativeOp → Nat
   | .scoped body => 1 + nodesEff body
   | .acquireRelease acquire release => 1 + nodesEff acquire + nodesEff release
   | .choose _ left right => 1 + nodesEff left + nodesEff right
+  | .provideLayer _ _ body => 1 + nodesEff body
+  | .provideService _ _ body => 1 + nodesEff body
   | _ => 1
 
 def nodesStmts : Stmts NativeOp → Nat
@@ -441,6 +447,8 @@ def depthEff : Eff NativeOp → Nat
   | .scoped body => 1 + depthEff body
   | .acquireRelease acquire release => 1 + max (depthEff acquire) (depthEff release)
   | .choose _ left right => 1 + max (depthEff left) (depthEff right)
+  | .provideLayer _ _ body => 1 + depthEff body
+  | .provideService _ _ body => 1 + depthEff body
   | _ => 1
 
 def depthStmts : Stmts NativeOp → Nat

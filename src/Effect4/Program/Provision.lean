@@ -1,5 +1,5 @@
 import Effect4.Program.Typing
-import Effect4.Machine.Layer
+import Effect4.Program.Compile
 
 /-!
 # Provision — the requirement algebra, the layer signature, and the layer term
@@ -10,10 +10,11 @@ Landed 2026-09-04 from the `workshop/Provision` spike. Plan and grill:
 What this module adds to the tree, and what it deliberately reuses:
 
 * **Reused, never re-declared.** `Requirement := Row ServiceKey` and the eleven context
-  laws (`src/Effect4/Machine/Context.lean`), `Ty`/`EffTy`/`typeOf` (`src/Effect4/Program/Typing.lean`),
-  and the whole rc.112 Layer machine — `LayerTable`, `LayerDesc`, `Construction`, `progOf`,
-  `interp`, `runSyncExit` (`src/Effect4/Machine/Layer.lean`). The machine is the semantics; this
-  module is the *typed face* over it and the *specification* it refines.
+  laws (`src/Effect4/Machine/Context.lean`), `Ty`/`EffTy`/`typeOf` and, since the join
+  (2026-09-07), `LayerTy`/`LayerTerm`/`layerTy` themselves (`src/Effect4/Program/Typing.lean`,
+  `Eff.lean`: a layer is a subterm of the program that provides it), and the compile route
+  that builds one at its point (`src/Effect4/Program/Compile.lean`). The machine is the
+  semantics; this module is the *typed face* over it and the *specification* it refines.
 * **`Row.diff`** (`src/Effect4/Data/Row.lean`, landed with this module). `Exclude<R, ROut>`
   is set difference, and `Layer.provide`'s requirement row is `RIn | Exclude<RIn2, ROut>`
   (`vendor/effect-4.0.0-rc.112/src/Layer.ts:2089`); every law below is a membership law
@@ -27,7 +28,8 @@ What this module adds to the tree, and what it deliberately reuses:
   corpus uses (`succeed`, `effect`, `effectDiscard`, `provide`, `provideMerge`, `merge`,
   `fresh`, `orDie`; `mergeAll` is the fold of `merge`), with `layerTy` its typing and
   `Eff` bodies at the `effect` leaves — the same `Eff` the printer prints and the
-  compile compiles. Nothing here is a closure; `DecidableEq` throughout.
+  compile compiles; both live in `Program/Eff.lean` and `Program/Typing.lean` since the
+  join. Nothing here is a closure; `DecidableEq` throughout.
 * **`App`** — `Effect.provide(program, layer)` (`internal/layer.ts:8-22`) — and the
   theorem that its requirement row is empty exactly when the layer closes the program.
 * **`build`, the specification of provisioning**, structural over the combinators with the
@@ -36,11 +38,13 @@ What this module adds to the tree, and what it deliberately reuses:
   context that satisfies its requirement row, and what it builds satisfies its output row*.
   That sentence is what "the `R` channel guarantees the wiring" means, and it is proved once
   over the algebra, for every leaf semantics that is honest about its own leaves.
-* **`lower`, the refinement into the machine.** A term becomes a `LayerTable` and a root
-  id; the witnesses run the lowered tables through `runSyncExit` at the proved `interp` and
-  pin, by `#guard`, that the machine's produced context has the keys `build` predicts —
-  a refinement mapping in Lamport's sense (`keysRow ∘ decode` of the machine's answer),
-  checked on finite probes here and stated as an owed theorem in the plan.
+* **The machine half, on the compile route.** `Effect.provide(self, layer)` is a program
+  (`Eff.provideLayer`), so the witnesses are runs: `buildServices`, `buildSucceeds` and
+  `provideThenService` run native programs through `runSyncExit` at `interpOf` and pin, by
+  `#guard`, that the produced context has the keys `build` predicts — a refinement mapping
+  in Lamport's sense (`keysRow` of the fiber context the body reads), checked on finite
+  probes here and stated as an owed theorem in the plan. Before the join a term lowered into
+  the Layer machine's table (`lower`, `runOver`, retired with it).
 
 Every rc.112 line named below is in `vendor/effect-4.0.0-rc.112/src/`.
 -/
@@ -53,44 +57,12 @@ open Effect4
 open Effect4.Machine.Env (Requirement Ctx Context Service decode encode scopeKey natOfVal
   rightBiased)
 
-/-! ## The signature: `Layer<ROut, E, RIn>` (`Layer.ts:54`) -/
+/-! ## The signature: `Layer<ROut, E, RIn>` (`Layer.ts:54`)
 
-/-- What a layer provides (`ROut`), how it can fail (`E`), and what it needs (`RIn`). -/
-structure LayerTy where
-  out : Requirement
-  error : Ty
-  requires : Requirement
-deriving DecidableEq
+`LayerTy` and its four operations live in `Program/Typing.lean` since the join (2026-09-07):
+`typeOf` of `Eff.provideLayer` reads them. Their laws stay here. -/
 
 namespace LayerTy
-
-/-- `Layer.provide(self, that)` (`Layer.ts:2089`, `:2258`):
-`Layer<ROut2, E | E2, RIn | Exclude<RIn2, ROut>>` — the dependency's outputs are removed
-from the dependent's requirements and the dependency's own requirements are added; only
-the dependent's outputs remain visible. -/
-def provide (self that : LayerTy) : LayerTy :=
-  ⟨self.out, self.error.join that.error,
-    Row.union (Row.diff self.requires that.out) that.requires⟩
-
-/-- `Layer.provideMerge(self, that)` (`Layer.ts:2523`, `:2704`): the same requirement rule,
-both output rows kept. -/
-def provideMerge (self that : LayerTy) : LayerTy :=
-  ⟨Row.union self.out that.out, self.error.join that.error,
-    Row.union (Row.diff self.requires that.out) that.requires⟩
-
-/-- `Layer.merge(a, b)` (`Layer.ts:1751`, `:1850`) and each step of `Layer.mergeAll`
-(`:1652-1658`): every row unions; nothing is provided to a sibling. -/
-def merge (a b : LayerTy) : LayerTy :=
-  ⟨Row.union a.out b.out, a.error.join b.error, Row.union a.requires b.requires⟩
-
-/-- `Layer.orDie` (`Layer.ts:3327`): the typed error becomes a defect, `E := never`. -/
-def orDie (l : LayerTy) : LayerTy := ⟨l.out, .never, l.requires⟩
-
-/-- A closed layer: `Layer<_, _, never>`, the shape `Effect.provide` accepts with nothing
-left over and the shape a deployment must reach. -/
-def Closed (l : LayerTy) : Prop := l.requires = Requirement.empty
-
-instance (l : LayerTy) : Decidable (Closed l) := by unfold Closed; infer_instance
 
 /-! ### The provision algebra — the laws rc.112 states only as TypeScript types -/
 
@@ -154,7 +126,7 @@ theorem provide_provide_rows (l d₁ d₂ : LayerTy) :
   refine ⟨rfl, ?_⟩
   apply Row.eq_of_mem_iff
   intro a
-  simp only [provide, provideMerge, Row.mem_union, Row.mem_diff, not_or]
+  simp only [LayerTy.provide, LayerTy.provideMerge, Row.mem_union, Row.mem_diff, not_or]
   by_cases hL : a ∈ l.requires <;> by_cases hO₁ : a ∈ d₁.out <;> by_cases hO₂ : a ∈ d₂.out <;>
     by_cases hR₁ : a ∈ d₁.requires <;> by_cases hR₂ : a ∈ d₂.requires <;>
     simp [hL, hO₁, hO₂, hR₁, hR₂]
@@ -240,88 +212,13 @@ theorem satisfies_single_addV (key : ServiceKey) (v : Effect4.Machine.Env.Val) :
   rw [Context.getV_addV_same]
   rfl
 
-/-! ## The layer language -/
+/-! ## The layer language
 
-/-- A literal as a value of the Layer machine's alphabet; strings are not machine values. -/
-def litVal : Lit → Option Effect4.Machine.Env.Val
-  | .unit => some .unit
-  | .nat n => some (.nat n)
-  | .bool b => some (.bool b)
-  | .str _ => none
-
-/-- The first-order layer term. One constructor per rc.112 export, each naming the line it
-transcribes; `Layer.mergeAll(a, b, …)` is `mergeAll`, the fold of `merge`. A body is an `Eff`
-program: the same syntax the printer prints and the compile compiles. -/
-inductive LayerTerm (Op : Type)
-  /-- `Layer.succeed(key, value)` (`Layer.ts:1074`): a service from a value already in hand. -/
-  | succeed (key : ServiceKey) (value : Lit)
-  /-- `Layer.effect(key, body)` (`Layer.ts:1427`): a service built by a program, in the
-  layer's own scope — `Exclude<R, Scope.Scope>` (`:1438`). -/
-  | effect (key : ServiceKey) (body : Eff Op)
-  /-- `Layer.effectDiscard(body)` (`Layer.ts:1512`): construction work that provides nothing. -/
-  | effectDiscard (body : Eff Op)
-  /-- `self.pipe(Layer.provide(that))` (`Layer.ts:2258`). -/
-  | provide (self that : LayerTerm Op)
-  /-- `self.pipe(Layer.provideMerge(that))` (`Layer.ts:2704`). -/
-  | provideMerge (self that : LayerTerm Op)
-  /-- `Layer.merge(left, right)` (`Layer.ts:1850`). -/
-  | merge (left right : LayerTerm Op)
-  /-- `Layer.fresh(inner)` (`Layer.ts:3850`): the same signature, a private memo map. -/
-  | fresh (inner : LayerTerm Op)
-  /-- `Layer.orDie(inner)` (`Layer.ts:3327`). -/
-  | orDie (inner : LayerTerm Op)
-deriving DecidableEq
-
-namespace LayerTerm
-
-variable {Op : Type}
-
-/-- `Layer.mergeAll(l, …)` (`Layer.ts:1652`): a left fold of `merge`, so the last layer is the
-rightmost operand and, in the built context, wins (`Context.mergeAll`, `Layer.ts:1600`). -/
-def mergeAll (first : LayerTerm Op) : List (LayerTerm Op) → LayerTerm Op
-  | [] => first
-  | l :: rest => mergeAll (merge first l) rest
-
-end LayerTerm
-
-/-! ## Typing -/
-
-/-- The scope-free requirement row of a layer body: `Exclude<R, Scope.Scope>` (`Layer.ts:1438`,
-`:1512`): the layer's own scope answers the body's `Scope` requirement. -/
-def bodyRequires {Op : Type} (sig : Signature Op) (t : EffTy) : Requirement :=
-  Row.diff t.requires (Requirement.single sig.scopeKey)
-
-/-- `layerTy` — the signature of a layer term, structural; `none` refuses an ill-typed body
-or a literal outside the value alphabet. The rules are the four `LayerTy` operations and the
-two leaf shapes; `fresh` is transparent (`Layer.ts:3850` changes sharing, not the type). -/
-def layerTy {Op : Type} (sig : Signature Op) : LayerTerm Op → Option LayerTy
-  | .succeed key value =>
-    (litVal value).map fun _ => ⟨Requirement.single key, .never, Requirement.empty⟩
-  | .effect key body =>
-    (typeOf sig body).map fun t => ⟨Requirement.single key, t.error, bodyRequires sig t⟩
-  | .effectDiscard body =>
-    (typeOf sig body).map fun t => ⟨Requirement.empty, t.error, bodyRequires sig t⟩
-  | .provide self that => do
-    let s ← layerTy sig self
-    let t ← layerTy sig that
-    some (s.provide t)
-  | .provideMerge self that => do
-    let s ← layerTy sig self
-    let t ← layerTy sig that
-    some (s.provideMerge t)
-  | .merge left right => do
-    let a ← layerTy sig left
-    let b ← layerTy sig right
-    some (a.merge b)
-  | .fresh inner => layerTy sig inner
-  | .orDie inner => (layerTy sig inner).map LayerTy.orDie
-
-/-- A layer is well-typed when `layerTy` answers. -/
-def WellTypedLayer {Op : Type} (sig : Signature Op) (l : LayerTerm Op) : Prop :=
-  (layerTy sig l).isSome = true
-
-instance {Op : Type} (sig : Signature Op) (l : LayerTerm Op) : Decidable (WellTypedLayer sig l) := by
-  unfold WellTypedLayer; infer_instance
+`LayerTerm` is a member of the program family since the join (`Program/Eff.lean`: a layer is
+a subterm of the program that provides it, and its build runs at its point), and `layerTy`,
+`bodyRequires`, `litVal` and `WellTypedLayer` type it beside `typeOf` (`Program/Typing.lean`).
+This module keeps the algebra's laws, the specification `build` and its totality, and the
+docs deployment the laws are shown on. -/
 
 /-! ## `App` — `Effect.provide(program, layer)` (`internal/layer.ts:8-22`) -/
 
@@ -428,11 +325,10 @@ structure LeafSem.Typed {Op : Type} (sig : Signature Op) (sem : LeafSem Op) : Pr
 context satisfying its requirement row, and the built context satisfies its output row. -/
 theorem build_total {Op : Type} (sig : Signature Op) (sem : LeafSem Op) (hsem : sem.Typed sig) :
     ∀ (l : LayerTerm Op) (t : LayerTy) (ctx : Ctx), layerTy sig l = some t →
-      ctx.Satisfies t.requires → ∃ out, build sem l ctx = some out ∧ out.Satisfies t.out := by
-  intro l
-  induction l with
-  | succeed key value =>
-    intro t ctx ht _
+      ctx.Satisfies t.requires → ∃ out, build sem l ctx = some out ∧ out.Satisfies t.out
+  -- structural in the layer (a member of the mutual program family since the join, so
+  -- `induction` does not apply); the recursive calls are the old induction hypotheses
+  | .succeed key value, t, ctx, ht, _ => by
     cases hv : litVal value with
     | none => simp [layerTy, hv] at ht
     | some v =>
@@ -440,9 +336,8 @@ theorem build_total {Op : Type} (sig : Signature Op) (sem : LeafSem Op) (hsem : 
       subst ht
       refine ⟨Context.empty.addV key v, ?_, satisfies_single_addV key v⟩
       simp [build, hv]
-  | effect key body =>
-    intro t ctx ht hsat
-    cases hb : typeOf sig body with
+  | .effect key body, t, ctx, ht, hsat => by
+    cases hb : effTy sig [] body with
     | none => simp [layerTy, hb] at ht
     | some tb =>
       simp [layerTy, hb] at ht
@@ -453,9 +348,8 @@ theorem build_total {Op : Type} (sig : Signature Op) (sem : LeafSem Op) (hsem : 
       | some v =>
         refine ⟨Context.empty.addV key v, ?_, satisfies_single_addV key v⟩
         simp [build, hv]
-  | effectDiscard body =>
-    intro t ctx ht hsat
-    cases hb : typeOf sig body with
+  | .effectDiscard body, t, ctx, ht, hsat => by
+    cases hb : effTy sig [] body with
     | none => simp [layerTy, hb] at ht
     | some tb =>
       simp [layerTy, hb] at ht
@@ -466,8 +360,9 @@ theorem build_total {Op : Type} (sig : Signature Op) (sem : LeafSem Op) (hsem : 
       | some _ =>
         refine ⟨Context.empty, ?_, Context.satisfies_empty _⟩
         simp [build, hv]
-  | provide self that ihs iht =>
-    intro t ctx ht hsat
+  | .provide self that, t, ctx, ht, hsat => by
+    have ihs := build_total sig sem hsem self
+    have iht := build_total sig sem hsem that
     cases hs : layerTy sig self with
     | none => simp [layerTy, hs] at ht
     | some s =>
@@ -491,8 +386,9 @@ theorem build_total {Op : Type} (sig : Signature Op) (sem : LeafSem Op) (hsem : 
         obtain ⟨sctx, hsb, hsout⟩ := ihs s (ctx.merge dctx) hs hsreq
         refine ⟨sctx, ?_, hsout⟩
         simp [build, hdb, hsb]
-  | provideMerge self that ihs iht =>
-    intro t ctx ht hsat
+  | .provideMerge self that, t, ctx, ht, hsat => by
+    have ihs := build_total sig sem hsem self
+    have iht := build_total sig sem hsem that
     cases hs : layerTy sig self with
     | none => simp [layerTy, hs] at ht
     | some s =>
@@ -516,8 +412,9 @@ theorem build_total {Op : Type} (sig : Signature Op) (sem : LeafSem Op) (hsem : 
         · simp [build, hdb, hsb]
         · exact satisfies_union_of _ _ _ (satisfies_merge_right dctx sctx _ hsout)
             (satisfies_merge_left dctx sctx _ hdout)
-  | merge left right ihl ihr =>
-    intro t ctx ht hsat
+  | .merge left right, t, ctx, ht, hsat => by
+    have ihl := build_total sig sem hsem left
+    have ihr := build_total sig sem hsem right
     cases ha : layerTy sig left with
     | none => simp [layerTy, ha] at ht
     | some a =>
@@ -534,13 +431,13 @@ theorem build_total {Op : Type} (sig : Signature Op) (sem : LeafSem Op) (hsem : 
         · simp [build, hab, hbb]
         · exact satisfies_union_of _ _ _ (satisfies_merge_left actx bctx _ haout)
             (satisfies_merge_right actx bctx _ hbout)
-  | fresh inner ih =>
-    intro t ctx ht hsat
+  | .fresh inner, t, ctx, ht, hsat => by
+    have ih := build_total sig sem hsem inner
     obtain ⟨out, hb, hout⟩ := ih t ctx ht hsat
     refine ⟨out, ?_, hout⟩
     simp [build, hb]
-  | orDie inner ih =>
-    intro t ctx ht hsat
+  | .orDie inner, t, ctx, ht, hsat => by
+    have ih := build_total sig sem hsem inner
     cases hi : layerTy sig inner with
     | none => simp [layerTy, hi] at ht
     | some i =>
@@ -549,7 +446,6 @@ theorem build_total {Op : Type} (sig : Signature Op) (sem : LeafSem Op) (hsem : 
       obtain ⟨out, hb, hout⟩ := ih i ctx hi hsat
       refine ⟨out, ?_, hout⟩
       simp [build, hb]
-
 /-! ## References: the soft half of a requirement row
 
 rc.112's `Context.Reference` (`Context.ts:485`, `:2002`) is a key with a default; `getOption`
@@ -601,110 +497,52 @@ theorem satisfiesRefs_of_hard (refs : Refs) (ctx : Ctx) (r soft : Requirement)
   · rw [hhard key ((Row.mem_diff key r soft).mpr ⟨hk, hs⟩)]
     rfl
 
-/-! ## `lower` — the refinement into the rc.112 Layer machine
+/-! ## The machine half: a layer built on the compile route (the join, 2026-09-07)
 
-A term lowers into a `LayerTable` (`src/Effect4/Machine/Layer.lean`) and the id of its root. The
-leaves lower on the fragment the machine's `Construction` alphabet admits: a `succeed` is
-`fromBuildUnsafe(succeed(context))` (`Layer.ts:1129-1130`, an `atom`), an `effect` is
-`fromBuildMemo` (`:1481`, `memoized`) over a body that is one `perform` reading one service
-(`Construction.fromService`), one literal (`succeedContext`), or one numeric `fail`
-(`failWith`). `orDie` has no machine description at this pin (`Layer.ts:3327` is a
-`catchCause` frame the `LayerDesc` alphabet lacks) and is refused; `mergeAll` and `merge`
-are `LayerDesc.mergeAll`. -/
+Before the join a term lowered into a `LayerTable` and ran on the Layer machine; since it, a
+layer is a subterm of the program that provides it (`Program/Eff.lean`), built at its point
+by `Program/Compile.lean`, so the probes below are runs of native programs — `Effect.provide(
+self, layer)` with the body that observes what the build produced. A witness alphabet
+(`DocsOp` below, `Surface/Provision.lean`'s `DeployOp`) is transcribed onto the native route
+the way the old lowering read it: a body that performs one row reads the row's one required
+service (`Eff.service`; the old `Construction.fromService`). -/
 
-open Effect4.Machine.Layers (LayerTable LayerDesc LayerId Construction CombineMode ProgName)
+open Effect4.Machine (runSyncExit RunMachine Stores emptyCtx)
 
-/-- The construction a leaf body admits, if any. -/
-def constructionOf {Op : Type} (sig : Signature Op) (key : ServiceKey) :
-    Eff Op → Option Construction
-  | .succeed (.lit value) => (litVal value).map fun v => Construction.succeedContext [(key, v)]
-  | .fail (.lit (.nat n)) => some (Construction.failWith (Effect4.Machine.Env.Err.tag n))
-  | .perform op _ =>
-    match (sig.rowOf op).requires with
-    | [input] => some (Construction.fromService input key)
-    | _ => none
-  | _ => none
+/-- `Effect.runSyncExit` of a native program at the budget the old `runOver` ran (1024
+commands: since source-repairs §19, a tracked child's exit path is a run of commands) and
+compile fuel 1024, from the empty stores and context. -/
+def runNative (program : NativeEff) : Effect4.Machine.ExitV :=
+  letI := evaluatorFor program
+  (runSyncExit (interpOf program) 1024 (RunMachine.empty Stores.empty) (compile program 1024)
+    emptyCtx).2
 
-/-- The construction a discarding body admits: no service is bound. -/
-def discardConstructionOf {Op : Type} : Eff Op → Option Construction
-  | .succeed (.lit value) => (litVal value).map fun _ => Construction.succeedContext []
-  | .fail (.lit (.nat n)) => some (Construction.failWith (Effect4.Machine.Env.Err.tag n))
-  | _ => none
-
-/-- Lower a term into a table: the descriptions are appended, the root's id is answered. -/
-def lowerInto {Op : Type} (sig : Signature Op) :
-    LayerTerm Op → LayerTable → Option (LayerTable × LayerId)
-  | .succeed key value, table =>
-    (litVal value).map fun v =>
-      (table ++ [LayerDesc.atom (Construction.succeedContext [(key, v)])], ⟨table.length⟩)
-  | .effect key body, table =>
-    (constructionOf sig key body).map fun c =>
-      (table ++ [LayerDesc.memoized c], ⟨table.length⟩)
-  | .effectDiscard body, table =>
-    (discardConstructionOf body).map fun c => (table ++ [LayerDesc.memoized c], ⟨table.length⟩)
-  | .provide self that, table => do
-    let (table, t) ← lowerInto sig that table
-    let (table, s) ← lowerInto sig self table
-    some (table ++ [LayerDesc.provideWith s t CombineMode.provide], ⟨table.length⟩)
-  | .provideMerge self that, table => do
-    let (table, t) ← lowerInto sig that table
-    let (table, s) ← lowerInto sig self table
-    some (table ++ [LayerDesc.provideWith s t CombineMode.provideMerge], ⟨table.length⟩)
-  | .merge left right, table => do
-    let (table, a) ← lowerInto sig left table
-    let (table, b) ← lowerInto sig right table
-    some (table ++ [LayerDesc.mergeAll [a, b]], ⟨table.length⟩)
-  | .fresh inner, table => do
-    let (table, i) ← lowerInto sig inner table
-    some (table ++ [LayerDesc.fresh i], ⟨table.length⟩)
-  | .orDie _, _ => none
-
-/-- The lowered table and root of a term, from the empty table. -/
-def lower {Op : Type} (sig : Signature Op) (l : LayerTerm Op) : Option (LayerTable × LayerId) :=
-  lowerInto sig l []
-
-/-! ## Running a lowered term through the machine -/
-
-/-- Run a program over a table on the sync scheduler, from the empty store and context. The
-command budget is 1024: since source-repairs §19 (D6b) every tracked child's exit path is
-its observer commands, the clearing and the drain, and tracking is a command, so the docs
-deployment's provide-then-service run needs 528 commands where 512 sufficed before; at
-1024 the `Layer.empty`-seeded fold of `Surface/Provision.lean` also finishes. -/
-def runOver (table : LayerTable) (program : ProgName) :
-    Effect4.Machine.Layers.LayerMachine × Effect4.Machine.Env.ExitV :=
-  Effect4.Machine.runSyncExit (Effect4.Machine.Layers.interp table) 1024
-    (Effect4.Machine.RunMachine.empty Effect4.Machine.Layers.St.empty)
-    (Effect4.Machine.Layers.progOf table program) Context.empty
-
-/-- The services a successful context answer holds, as (key name, value) pairs in insertion
-order; `[]` for a failure. -/
-def servicesOfExit : Effect4.Machine.Env.ExitV → List (Nat × Nat)
+/-- The services a fiber-context answer holds, as (key name, value) pairs in insertion order;
+`[]` for a failure or any other value. -/
+def servicesOfExit : Effect4.Machine.ExitV → List (Nat × Nat)
   | Exit.success value =>
-    match decode value with
-    | some ctx => ctx.entries.map fun s => (s.key.name.value, natOfVal 0 s.valueVal)
+    match Effect4.Machine.Val.context? value with
+    | some ctx => ctx.services.entries.map fun s => (s.key.name.value, natOfVal 0 s.valueVal)
     | none => []
   | _ => []
 
-/-- `Effect.scoped(Layer.build(l))` through the machine: the services the built context holds
-(`CurrentMemoMap`, key `3`, trails every build — `Layer.ts:762`). -/
-def buildServices {Op : Type} (sig : Signature Op) (l : LayerTerm Op) :
-    Option (List (Nat × Nat)) :=
-  (lower sig l).map fun (table, root) =>
-    servicesOfExit (runOver table (ProgName.scoped (ProgName.build root))).2
+/-- `Effect.provide(Effect.context(), l)` through the compile route: the services the built
+context holds, as the body reads them (`provideContext`, `internal/effect.ts:2197`, over the
+empty fiber context is the built context itself, `CurrentMemoMap` (key `3`) trailing,
+`Layer.ts:762`). -/
+def buildServices (l : LayerTerm NativeOp) : List (Nat × Nat) :=
+  servicesOfExit (runNative (.provideLayer l false (.withFiber .getContext)))
 
-/-- Whether `Effect.scoped(Layer.build(l))` succeeds through the machine. -/
-def buildSucceeds {Op : Type} (sig : Signature Op) (l : LayerTerm Op) : Option Bool :=
-  (lower sig l).map fun (table, root) =>
-    match (runOver table (ProgName.scoped (ProgName.build root))).2 with
-    | Exit.success _ => true
-    | _ => false
+/-- Whether `Effect.provide(Effect.void, l)` succeeds through the compile route. -/
+def buildSucceeds (l : LayerTerm NativeOp) : Bool :=
+  match runNative (.provideLayer l false (.succeed (.lit .unit))) with
+  | Exit.success _ => true
+  | _ => false
 
-/-- `Effect.provide(Effect.service(key), l)` through the machine (`internal/layer.ts:8-22`,
-`local: true`): the value the program reads. -/
-def provideThenService {Op : Type} (sig : Signature Op) (l : LayerTerm Op) (key : ServiceKey) :
-    Option Effect4.Machine.Env.ExitV :=
-  (lower sig l).map fun (table, root) =>
-    (runOver table (ProgName.provideLayer root true (ProgName.service key))).2
+/-- `Effect.provide(Effect.service(key), l, { local: true })` through the compile route
+(`internal/layer.ts:8-22`): the value the program reads. -/
+def provideThenService (l : LayerTerm NativeOp) (key : ServiceKey) : Effect4.Machine.ExitV :=
+  runNative (.provideLayer l true (.service key))
 
 /-- The key names of the context the specification builds. -/
 def specKeys {Op : Type} (sem : LeafSem Op) (l : LayerTerm Op) : Option (List Nat) :=
@@ -748,7 +586,15 @@ def DocsOp.row : DocsOp → Row
   | .rateCheck =>
     ⟨"rateCheck", "rateLimit.check", .call, [], .sync, .unit, .bool, .never, [rateKey], "docs app", []⟩
 
-def docsSig : Signature DocsOp := ⟨DocsOp.row, fun _ _ => none, scopeKey⟩
+/-- The docs signature's service table: the two services are the host objects their rows
+build, the two bindings are the numbers the platform hands over. -/
+def docsServiceTy (key : ServiceKey) : Option Ty :=
+  if key = dbKey then some (.handle "Db")
+  else if key = rateKey then some (.handle "RateLimit")
+  else if key = dbBinding ∨ key = rateBinding then some .nat
+  else none
+
+def docsSig : Signature DocsOp := ⟨DocsOp.row, fun _ _ => none, scopeKey, docsServiceTy⟩
 
 /-- The leaf semantics of the docs alphabet: a body that performs one row reads the row's one
 required service and binds it as the new service (the machine's `Construction.fromService`);
@@ -825,21 +671,48 @@ def theApp : App DocsOp := ⟨deploymentLayer, feedbackHandler⟩
 
 /-! ### The machine agrees on the finite probes
 
-`Effect.scoped(Layer.build(l))` through the proved rc.112 machine: the produced context has
-the keys the specification predicts (plus `CurrentMemoMap`, key `3`), the values flow from
-the bindings to the services, and the sibling mistake dies with `serviceNotFound` — a defect,
-never a typed error (`Layer.ts:807` through `internal/effect.ts:670-674`). -/
+The docs layers on the native route (`docsLayer`), provided to a program through the compile
+route: the produced context has the keys the specification predicts (plus `CurrentMemoMap`,
+key `3`), the values flow from the bindings to the services, and the sibling mistake dies
+with the missing service — a defect, never a typed error (`Context.getUnsafe`,
+`internal/effect.ts:2134` through `:670-674`). -/
 
-#guard buildSucceeds docsSig deploymentLayer = some true
-#guard buildServices docsSig deploymentLayer = some [(20, 1), (21, 2), (10, 1), (11, 2), (3, 0)]
-#guard buildSucceeds docsSig hiddenDeployment = some true
-#guard buildServices docsSig hiddenDeployment = some [(10, 1), (11, 2), (3, 0)]
-#guard buildSucceeds docsSig siblingMistake = some false
+/-- The docs alphabet on the native route: a body that performs one row reads the row's one
+required service (`Eff.service`), as the old lowering's `Construction.fromService` did; a
+literal and a numeric failure are themselves. -/
+def docsBody : Eff DocsOp → Option NativeEff
+  | .perform op _ =>
+    match (DocsOp.row op).requires with
+    | [input] => some (.service input)
+    | _ => none
+  | .succeed (.lit value) => some (.succeed (.lit value))
+  | .fail (.lit (.nat n)) => some (.fail (.lit (.nat n)))
+  | _ => none
+
+/-- A docs layer on the native route, leaf by leaf; `none` at a body the transcription does not
+read. -/
+def docsLayer : LayerTerm DocsOp → Option (LayerTerm NativeOp)
+  | .succeed key value => some (.succeed key value)
+  | .effect key body => (docsBody body).map (.effect key)
+  | .effectDiscard body => (docsBody body).map .effectDiscard
+  | .provide self that => do some (.provide (← docsLayer self) (← docsLayer that))
+  | .provideMerge self that => do some (.provideMerge (← docsLayer self) (← docsLayer that))
+  | .merge left right => do some (.merge (← docsLayer left) (← docsLayer right))
+  | .fresh inner => (docsLayer inner).map .fresh
+  | .orDie inner => (docsLayer inner).map .orDie
+
+#guard (docsLayer deploymentLayer).map buildSucceeds = some true
+#guard (docsLayer deploymentLayer).map buildServices =
+  some [(20, 1), (21, 2), (10, 1), (11, 2), (3, 0)]
+#guard (docsLayer hiddenDeployment).map buildSucceeds = some true
+#guard (docsLayer hiddenDeployment).map buildServices = some [(10, 1), (11, 2), (3, 0)]
+#guard (docsLayer siblingMistake).map buildSucceeds = some false
 
 -- `Effect.provide(Effect.service(Db), deployment)` answers the binding's value, as the
 -- specification says the service was built from it.
-#guard provideThenService docsSig deploymentLayer dbKey = some (Exit.success (.nat 1))
-#guard provideThenService docsSig hiddenDeployment rateKey = some (Exit.success (.nat 2))
+#guard (docsLayer deploymentLayer).map (provideThenService · dbKey) = some (Exit.success (.nat 1))
+#guard (docsLayer hiddenDeployment).map (provideThenService · rateKey) =
+  some (Exit.success (.nat 2))
 
 /-! ### Order is invisible to the type and visible to the run (CE 5, lifted to layers) -/
 
@@ -847,8 +720,8 @@ def leftWins : LayerTerm DocsOp := .merge (.succeed dbKey (.nat 1)) (.succeed db
 def rightWins : LayerTerm DocsOp := .merge (.succeed dbKey (.nat 2)) (.succeed dbKey (.nat 1))
 
 #guard layerTy docsSig leftWins = layerTy docsSig rightWins
-#guard buildServices docsSig leftWins = some [(10, 2), (3, 0)]
-#guard buildServices docsSig rightWins = some [(10, 1), (3, 0)]
+#guard (docsLayer leftWins).map buildServices = some [(10, 2), (3, 0)]
+#guard (docsLayer rightWins).map buildServices = some [(10, 1), (3, 0)]
 #guard (build docsSem leftWins Context.empty).map (fun c => c.getV dbKey) = some (some (.nat 2))
 #guard (build docsSem rightWins Context.empty).map (fun c => c.getV dbKey) = some (some (.nat 1))
 
@@ -866,11 +739,16 @@ def rightWins : LayerTerm DocsOp := .merge (.succeed dbKey (.nat 2)) (.succeed d
     (Requirement.ofList [Effect4.Machine.Env.maxOpsKey, Effect4.Machine.Env.preventYieldKey]) =
   Requirement.ofList [dbKey, rateKey]
 
-/-! ### Refusals are data -/
+/-! ### `orDie` builds, and refusals are data -/
 
--- `orDie` has no machine description at this pin; the type still says `E := never`.
-#guard lower docsSig (.orDie servicesLayer) = none
+-- `Layer.orDie` is `catch_(build, die)` (`Layer.ts:3327`, `internal/effect.ts:3289`): the type
+-- says `E := never`, and on the compile route a leaf's typed failure comes out as the defect.
 #guard (layerTy docsSig (.orDie servicesLayer)).map LayerTy.error = some Ty.never
+#guard (docsLayer (.orDie deploymentLayer)).map buildSucceeds = some true
+#guard (docsLayer (.effect dbKey (.fail (.lit (.nat 7))))).map (provideThenService · dbKey) =
+  some (Exit.failure (Cause.fail (.tag 7)))
+#guard (docsLayer (.orDie (.effect dbKey (.fail (.lit (.nat 7)))))).map (provideThenService · dbKey) =
+  some (Exit.failure (Cause.die (Effect4.Machine.Defect.user 7)))
 
 -- A string literal is not a machine value, so a layer over one is refused by the typing.
 #guard layerTy docsSig (.succeed dbKey (.str "db")) = none

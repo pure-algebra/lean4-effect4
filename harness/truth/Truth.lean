@@ -104,10 +104,59 @@ def pAcquireClosed : Api.Program :=
         forkOptions)))
       (.bind (.awaitFiber (.var 1) .awaitValue) (.perform .refGet (.var 0))))
 
+/-! ### The join's fixtures (2026-09-07): `Effect.provide`, `Layer.effect`, the memo store
+
+Keys are typed by their code on the native route (`nativeServiceTy`): `kA`, `kB` carry a
+number (code `4`), `kRef` a `Ref.Ref<number>` (code `7`). A layer body is a closed program, so
+a body reaches the root's cell through `Effect.service`, never through a binder. -/
+
+def kA : ServiceKey := ⟨⟨4⟩, ⟨4⟩⟩
+def kB : ServiceKey := ⟨⟨5⟩, ⟨4⟩⟩
+def kRef : ServiceKey := ⟨⟨6⟩, ⟨7⟩⟩
+
+/-- `Effect.provide(Effect.service(kA), Layer.effect(kA, Effect.succeed(7)))`
+(`internal/layer.ts:8-22`): the layer built into `provide`'s scope, the service read under the
+built context. -/
+def pProvide : Api.Program :=
+  .provideLayer (.effect kA (.succeed (.lit (.nat 7)))) false (.service kA)
+
+/-- A layer whose construction acquires a resource and whose release bumps the root's cell,
+reached as the service `kRef`; the release is typed over `[ref, a, exit]`. -/
+def layerBump (k : ServiceKey) : LayerTerm NativeOp :=
+  .effect k (.bind (.service kRef)
+    (.acquireRelease (.succeed (.lit (.nat 1))) (.perform (.refUpdate .incr) (.var 0))))
+
+/-- Two layers merged (`Layer.ts:1587-1602`), each acquiring in its own layer scope; when
+`Effect.provide` closes its scope on the way out (`internal/effect.ts:3967`) both memo entries
+release their layer scopes (`Layer.ts:404-408`), both releases run, and the root reads `2`. -/
+def pProvideMerge : Api.Program :=
+  .bind (.perform .refMake (.lit (.nat 0)))
+    (.provideService kRef (.var 0)
+      (.bind (.scoped (.provideLayer (.merge (layerBump kA) (layerBump kB)) false (.service kB)))
+        (.perform .refGet (.var 0))))
+
+/-- A layer whose construction bumps the root's cell and provides `5`. -/
+def layerCount (k : ServiceKey) : LayerTerm NativeOp :=
+  .effect k (.bind (.service kRef)
+    (.bind (.perform (.refUpdate .incr) (.var 0)) (.succeed (.lit (.nat 5)))))
+
+/-- The same layer term at two sites under one memo map (`Layer.merge(L, L)`): printed inline
+it is two layer objects (`Layer.ts:411`, identity by object) and here it is two paths
+(`LayerId`), so each site builds once and the cell reads `2` on both faces. What this pins is
+the memo store's protocol — one entry per site, built, completed, released and its layer scope
+closed on exit — not a hit; a hit needs one object at two sites, which no inline-printed
+program has (`docs/research/2026-09-07-join-delivery.md`). -/
+def pProvideTwice : Api.Program :=
+  .bind (.perform .refMake (.lit (.nat 0)))
+    (.provideService kRef (.var 0)
+      (.bind (.provideLayer (.merge (layerCount kA) (layerCount kA)) false (.service kA))
+        (.perform .refGet (.var 0))))
+
 /-- The programs checked: the wire corpus, then `pTwo`, then the two `acquireRelease`
-fixtures. -/
+fixtures, then the join's three. -/
 def corpus : List (String × Api.Program) :=
-  Wire.Corpus.all ++ [("pTwo", pTwo), ("pAcquire", pAcquire), ("pAcquireClosed", pAcquireClosed)]
+  Wire.Corpus.all ++ [("pTwo", pTwo), ("pAcquire", pAcquire), ("pAcquireClosed", pAcquireClosed),
+    ("pProvide", pProvide), ("pProvideMerge", pProvideMerge), ("pProvideTwice", pProvideTwice)]
 
 /-! ## The value wire -/
 
@@ -148,6 +197,9 @@ partial def valJson : Val → J
   | Value.promise k => Lean.Json.mkObj [("deferred", toJson k)]
   | Value.scope s => Lean.Json.mkObj [("scope", toJson s)]
   | Value.fiberContext _ _ _ => Lean.Json.mkObj [("context", Lean.Json.bool true)]
+  -- a built service map (`Env.encode`, what a layer build answers and `Effect.provide` reads):
+  -- the same `Context` object on the rc.112 face
+  | Value.serviceContext _ => Lean.Json.mkObj [("context", Lean.Json.bool true)]
   | Val.exitOk v => Lean.Json.mkObj [("success", valJson v)]
   | Value.exitErr written =>
     Lean.Json.mkObj [("failure", ((causeImage.ofVal written).map causeJson).getD Lean.Json.null)]
@@ -194,7 +246,10 @@ kind), forks, parks and resumes, and the dispatcher's scheduling and runs. Token
 tasks and exit values are erased; fiber ids are the machine's (root `0`, children in fork
 order), which the runner reproduces by first-seen order. -/
 def reduced : Event → Option String
-  | .forked p c _ => some s!"forked {p.value} {c.value}"
+  -- a daemon fork is invisible to the runner: only a non-daemon child joins `fiber._children`
+  -- (`internal/effect.ts:5279-5281`), which is where the runner sees forks; `events` keeps it
+  | .forked _ _ true => none
+  | .forked p c false => some s!"forked {p.value} {c.value}"
   | .started f => some s!"started {f.value}"
   | .scheduledTask o p _ => some s!"scheduled {o.value} {p}"
   | .ranTask o _ => some s!"ran {o.value}"
@@ -302,11 +357,15 @@ def manifest (fuel : Nat) : J :=
 
 /-! ## Receipts -/
 
-#guard corpus.length = 11
+#guard corpus.length = 14
 #guard (corpus.map (·.1)).eraseDups.length = corpus.length
 #guard (corpus.map (·.1)) =
   ["p42", "pBind", "pFork", "pAwait", "pGen", "pLoop", "pCatch", "pScope", "pTwo", "pAcquire",
-   "pAcquireClosed"]
+   "pAcquireClosed", "pProvide", "pProvideMerge", "pProvideTwice"]
+-- the join's fixtures are well-typed, so they cross as declarations
+#guard Api.wellTyped pProvide
+#guard Api.wellTyped pProvideMerge
+#guard Api.wellTyped pProvideTwice
 
 end OCaml5.Truth
 

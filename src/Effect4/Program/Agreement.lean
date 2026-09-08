@@ -60,7 +60,8 @@ theorem Plain_eq_Straight : ∀ e : NativeEff, Plain e = Straight e
   | .onExit b f => by simp only [Plain, Straight, Plain_eq_Straight b, Plain_eq_Straight f]
   | .succeed _ | .fail _ | .failCause _ | .yieldError _ | .sync _ | .perform _ _ | .gen _
   | .uninterruptible _ | .interruptible _ | .whileLoop _ _ _ _ | .yieldNow _ | .callback _ _
-  | .awaitFiber _ _ | .withFiber _ | .scoped _ | .acquireRelease _ _ | .choose _ _ _ => rfl
+  | .awaitFiber _ _ | .withFiber _ | .scoped _ | .acquireRelease _ _ | .choose _ _ _
+  | .provideLayer _ _ _ | .service _ | .provideService _ _ _ => rfl
 
 theorem Plain.suspend {b : NativeEff} (h : Plain (.suspend b) = true) : Plain b = true := h
 
@@ -100,6 +101,12 @@ theorem Plain.not_gen {e : NativeEff} (h : Plain e = true) : ∀ ss, e ≠ .gen 
 theorem Plain.not_whileLoop {e : NativeEff} (h : Plain e = true) :
     ∀ i t s b, e ≠ .whileLoop i t s b := by
   intro i t s b heq
+  subst heq
+  simp [Plain] at h
+
+theorem Plain.not_provideLayer {e : NativeEff} (h : Plain e = true) :
+    ∀ l i b, e ≠ .provideLayer l i b := by
+  intro l i b heq
   subst heq
   simp [Plain] at h
 
@@ -560,6 +567,27 @@ theorem compileEff_suspend (b : NativeEff) (hf : p.fuel = k + 1) :
     compileEff (.suspend b) p = Prim.suspend (EffThunk.body p) := by
   simp [compileEff, hf]
 
+-- the join's three constructors
+theorem compileEff_provideLayer (l : LayerTerm NativeOp) (i : Bool) (b : NativeEff)
+    (hf : p.fuel = k + 1) :
+    compileEff (.provideLayer l i b) p = Prim.suspend (EffThunk.body p) := by
+  simp [compileEff, hf]
+
+theorem compileEff_service (key : ServiceKey) (hf : p.fuel = k + 1) :
+    compileEff (.service key) p =
+      Prim.onSuccess (Prim.withFiber EffThunk.getCtx) (EffName.serviceLookup key) := by
+  simp [compileEff, hf]
+
+theorem compileEff_provideService (key : ServiceKey) (value : Term) (b : NativeEff)
+    (hf : p.fuel = k + 1) :
+    compileEff (.provideService key value b) p =
+      (match evalTerm p.env value with
+       | some v =>
+         updateContextAt (Env.ContextUpdate.provideService key v) (Region.program (p.child 0))
+       | none => badShape) := by
+  simp [compileEff, hf]
+  try rfl
+
 theorem compileEff_perform_sync (op : NativeOp) (r : Term) (hf : p.fuel = k + 1)
     (hkind : (NativeOp.row op).kind = .sync) :
     compileEff (.perform op r) p =
@@ -622,6 +650,307 @@ theorem compileEff_onExit (b f : NativeEff) (hf : p.fuel = k + 1) :
 
 end compile
 
+/-! ### The join's continuations, one equation per arm
+
+The value-reading continuations are the named `*K` functions of `Compile.lean` by `rfl`; the
+arms that match a handle have their handle equation and their wrong-shape equation, proved
+the way `contAOf_acquireIn_other` is. -/
+
+section joinConts
+
+variable (root : NativeEff)
+
+theorem contAOf_provideLayerWith_scope (p : Point) (scope : Nat) :
+    Program.contAOf root (.provideLayerWith p) (Val.scopeHandle scope) =
+      provideLayerWithK root p scope := rfl
+
+theorem contAOf_provideLayerWith_other (p : Point) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
+    Program.contAOf root (.provideLayerWith p) v = badShape := by
+  unfold Program.contAOf
+  revert hne
+  split <;> intro hne <;> first
+    | rfl
+    | contradiction
+    | exact absurd rfl (hne _)
+    | (rename_i heq; exact absurd heq (hne _))
+    | simp_all
+
+theorem contAOf_provideLayerBody (p : Point) (v : Val) :
+    Program.contAOf root (.provideLayerBody p) v = provideLayerBodyK root p v := rfl
+
+theorem contAOf_updateThen (u : Env.ContextUpdate) (body : Region) (v : Val) :
+    Program.contAOf root (.updateThen u body) v = updateThenK root u body v := rfl
+
+theorem contAOf_bodyThen (body : Region) (previous : Ctx) (v : Val) :
+    Program.contAOf root (.bodyThen body previous) v =
+      Prim.onExit (regionCode root body) (.restoreCtx previous) false := rfl
+
+theorem contAOf_buildWithScopeFromContext (q : Point) (scope : Nat) (v : Val) :
+    Program.contAOf root (.buildWithScopeFromContext q scope) v = buildWithScopeK q scope v := rfl
+
+theorem contAOf_withMemoMapThen_memoMap (q : Point) (scope : Nat) (id : MemoMapId) :
+    Program.contAOf root (.withMemoMapThen q scope) (Val.memoMap id) =
+      updateContextAt (Env.ContextUpdate.provideService Env.currentMemoMapKey (Val.memoMap id))
+        (Region.buildAdding q id scope) := by
+  cases id; rfl
+
+theorem contAOf_withMemoMapThen_other (q : Point) (scope : Nat) (v : Val) (hne : ∀ x, v ≠ Val.memoMap x) :
+    Program.contAOf root (.withMemoMapThen q scope) v = badShape := by
+  unfold Program.contAOf
+  revert hne
+  split <;> intro hne <;> first
+    | rfl
+    | contradiction
+    | exact absurd rfl (hne _)
+    | (rename_i heq; exact absurd heq (hne _))
+    | simp_all
+
+theorem contAOf_addCurrentMemoMap (m : MemoMapId) (v : Val) :
+    Program.contAOf root (.addCurrentMemoMap m) v = addCurrentMemoMapK m v := rfl
+
+theorem contAOf_fromBuildThen_scope (q : Point) (m : MemoMapId) (child : Nat) :
+    Program.contAOf root (.fromBuildThen q m) (Val.scopeHandle child) =
+      Prim.onExit (innerLayerAt root q m child)
+        (.store (Name.finalizerName (FinName.closeChildOnFailure child))) false := rfl
+
+theorem contAOf_fromBuildThen_other (q : Point) (m : MemoMapId) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
+    Program.contAOf root (.fromBuildThen q m) v = badShape := by
+  unfold Program.contAOf
+  revert hne
+  split <;> intro hne <;> first
+    | rfl
+    | contradiction
+    | exact absurd rfl (hne _)
+    | (rename_i heq; exact absurd heq (hne _))
+    | simp_all
+
+theorem contAOf_memoize_hit (q : Point) (m : MemoMapId) (scope : Nat) (cell : DeferredKey)
+    (owner : MemoMapId) :
+    Program.contAOf root (.memoize q m scope) (.pair (Val.promise cell) (Val.memoMap owner)) =
+      Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.path owner)) (.awaitPromise cell) := by
+  cases cell; cases owner; rfl
+
+theorem contAOf_memoize_unit (q : Point) (m : MemoMapId) (scope : Nat) :
+    Program.contAOf root (.memoize q m scope) Val.unit =
+      Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoBuild q.path m)))
+        (.buildIntoLayerScope q m scope) := rfl
+
+theorem contAOf_memoize_other (q : Point) (m : MemoMapId) (scope : Nat) (v : Val)
+    (hhit : ∀ c o, v ≠ .pair (Val.promise c) (Val.memoMap o)) (hunit : v ≠ Val.unit) :
+    Program.contAOf root (.memoize q m scope) v = badShape := by
+  unfold Program.contAOf
+  revert hhit hunit
+  split <;> intro hhit hunit <;> first
+    | rfl
+    | contradiction
+    | exact absurd rfl (hhit _ _)
+    | exact absurd rfl hunit
+    | (rename_i heq; exact absurd heq (hhit _ _))
+    | (rename_i heq; exact absurd heq hunit)
+    | simp_all
+
+theorem contAOf_awaitPromise (cell : DeferredKey) (v : Val) :
+    Program.contAOf root (.awaitPromise cell) v =
+      Prim.async (.registerAwait cell) true (some (.cancelAwait cell)) := rfl
+
+theorem contAOf_buildIntoLayerScope_scope (q : Point) (m : MemoMapId) (scope layerScope : Nat) :
+    Program.contAOf root (.buildIntoLayerScope q m scope) (Val.scopeHandle layerScope) =
+      Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.path m))
+        (.thenBuildInto q m layerScope) := rfl
+
+theorem contAOf_buildIntoLayerScope_other (q : Point) (m : MemoMapId) (scope : Nat) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
+    Program.contAOf root (.buildIntoLayerScope q m scope) v = badShape := by
+  unfold Program.contAOf
+  revert hne
+  split <;> intro hne <;> first
+    | rfl
+    | contradiction
+    | exact absurd rfl (hne _)
+    | (rename_i heq; exact absurd heq (hne _))
+    | simp_all
+
+theorem contAOf_thenBuildInto (q : Point) (m : MemoMapId) (layerScope : Nat) (v : Val) :
+    Program.contAOf root (.thenBuildInto q m layerScope) v =
+      Prim.onExit (constructionAt root q layerScope)
+        (.store (Name.finalizerName (FinName.memoDone q.path m))) false := rfl
+
+theorem contAOf_freshThen_memoMap (q : Point) (scope : Nat) (id : MemoMapId) :
+    Program.contAOf root (.freshThen q scope) (Val.memoMap id) = resolveLayer root q id scope := by
+  cases id; rfl
+
+theorem contAOf_freshThen_other (q : Point) (scope : Nat) (v : Val) (hne : ∀ x, v ≠ Val.memoMap x) :
+    Program.contAOf root (.freshThen q scope) v = badShape := by
+  unfold Program.contAOf
+  revert hne
+  split <;> intro hne <;> first
+    | rfl
+    | contradiction
+    | exact absurd rfl (hne _)
+    | (rename_i heq; exact absurd heq (hne _))
+    | simp_all
+
+theorem contAOf_provideThen (q : Point) (m : MemoMapId) (scope : Nat) (mode : CombineMode)
+    (v : Val) :
+    Program.contAOf root (.provideThen q m scope mode) v = provideThenK q m scope mode v := rfl
+
+theorem contAOf_combineWith (mode : CombineMode) (that : Env.Ctx) (v : Val) :
+    Program.contAOf root (.combineWith mode that) v = combineWithK mode that v := rfl
+
+theorem contAOf_mergeChildren_scope (q : Point) (m : MemoMapId) (parent : Nat) :
+    Program.contAOf root (.mergeChildren q m) (Val.scopeHandle parent) =
+      Prim.onSuccess
+        (Prim.sync (EffThunk.op (SyncOp.scopeFork parent FinalizerStrategy.sequential)))
+        (.mergeForkOne q 0 m parent []) := rfl
+
+theorem contAOf_mergeChildren_other (q : Point) (m : MemoMapId) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
+    Program.contAOf root (.mergeChildren q m) v = badShape := by
+  unfold Program.contAOf
+  revert hne
+  split <;> intro hne <;> first
+    | rfl
+    | contradiction
+    | exact absurd rfl (hne _)
+    | (rename_i heq; exact absurd heq (hne _))
+    | simp_all
+
+theorem contAOf_mergeForkOne_scope (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
+    (forked : List FiberId) (child : Nat) :
+    Program.contAOf root (.mergeForkOne q i m parent forked) (Val.scopeHandle child) =
+      Prim.onSuccess (Prim.withFiber (EffThunk.forkLayer (q.child i) m child))
+        (.mergeForkNext q i m parent forked) := rfl
+
+theorem contAOf_mergeForkOne_other (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
+    (forked : List FiberId) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
+    Program.contAOf root (.mergeForkOne q i m parent forked) v = badShape := by
+  unfold Program.contAOf
+  revert hne
+  -- the table's catch-all row carries "the wrong-shape row did not match", refuted at the
+  -- row's own arguments (five of them: past what `simp_all` instantiates)
+  split <;> intro hne <;> first
+    | rfl
+    | contradiction
+    | exact absurd rfl (hne _)
+    | (rename_i heq; exact absurd heq (hne _))
+    | exact (‹∀ (a : Point) (b : Nat) (c : MemoMapId) (d : Nat) (e : List FiberId),
+        EffName.mergeForkOne q i m parent forked = EffName.mergeForkOne a b c d e → False›
+        q i m parent forked rfl).elim
+    | simp_all
+
+theorem contAOf_mergeForkNext_fiber (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
+    (forked : List FiberId) (id : FiberId) :
+    Program.contAOf root (.mergeForkNext q i m parent forked) (Val.fiber id) =
+      (if i = 0 then
+        Prim.onSuccess
+          (Prim.sync (EffThunk.op (SyncOp.scopeFork parent FinalizerStrategy.sequential)))
+          (.mergeForkOne q 1 m parent (forked ++ [id]))
+      else
+        Prim.onSuccess (Prim.withFiber (EffThunk.awaitAllFailFast (forked ++ [id])))
+          .mergeContexts) := by
+  cases id; rfl
+
+theorem contAOf_mergeForkNext_other (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
+    (forked : List FiberId) (v : Val) (hne : ∀ x, v ≠ Val.fiber x) :
+    Program.contAOf root (.mergeForkNext q i m parent forked) v = badShape := by
+  unfold Program.contAOf
+  revert hne
+  -- the table's catch-all row carries "the wrong-shape row did not match", refuted at the
+  -- row's own arguments (five of them: past what `simp_all` instantiates)
+  split <;> intro hne <;> first
+    | rfl
+    | contradiction
+    | exact absurd rfl (hne _)
+    | (rename_i heq; exact absurd heq (hne _))
+    | exact (‹∀ (a : Point) (b : Nat) (c : MemoMapId) (d : Nat) (e : List FiberId),
+        EffName.mergeForkNext q i m parent forked = EffName.mergeForkNext a b c d e → False›
+        q i m parent forked rfl).elim
+    | simp_all
+
+theorem contAOf_mergeContexts (v : Val) :
+    Program.contAOf root .mergeContexts v = mergeContextsK v := rfl
+
+theorem contAOf_serviceLookup (key : ServiceKey) (v : Val) :
+    Program.contAOf root (.serviceLookup key) v = serviceLookupK key v := rfl
+
+theorem contAOf_bindService (key : Option ServiceKey) (v : Val) :
+    Program.contAOf root (.bindService key) v = bindServiceK key v := rfl
+
+theorem contEOf_orDie (c : CauseV) :
+    Program.contEOf root .orDie c = Prim.failure (orDieCause c) := rfl
+
+theorem suspendBodyAt_memoLookup (q : Point) (m : MemoMapId) (scope : Nat) :
+    suspendBodyAt root (.memoLookup q m scope) =
+      Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoGet q.path m))) (.memoize q m scope) :=
+  rfl
+
+theorem withFiberOf_forkLayer (q : Point) (m : MemoMapId) (scope : Nat) :
+    (interpOf root).withFiberOf (.forkLayer q m scope) =
+      some (.fork (resolveLayer root q m scope) ⟨true, true, .inherit⟩) := rfl
+
+theorem withFiberOf_awaitAllFailFast (targets : List FiberId) :
+    (interpOf root).withFiberOf (.awaitAllFailFast targets) = some (.awaitAllFailFast targets) :=
+  rfl
+
+/-- The layer at a point, resolved: the node's term, built. -/
+theorem resolveLayer_of_at {q : Point} {l : LayerTerm NativeOp}
+    (h : Node.at_ (Node.eff root) q.path = some (Node.layer l)) (m : MemoMapId) (scope : Nat) :
+    resolveLayer root q m scope = compileLayer l q m scope := by
+  simp [resolveLayer, h]
+
+theorem innerLayerAt_effect {q : Point} {key : ServiceKey} {body : NativeEff}
+    (h : Node.at_ (Node.eff root) q.path = some (Node.layer (.effect key body)))
+    (m : MemoMapId) (child : Nat) :
+    innerLayerAt root q m child = Prim.suspend (EffThunk.memoLookup q m child) := by
+  simp [innerLayerAt, h]
+
+theorem innerLayerAt_effectDiscard {q : Point} {body : NativeEff}
+    (h : Node.at_ (Node.eff root) q.path = some (Node.layer (.effectDiscard body)))
+    (m : MemoMapId) (child : Nat) :
+    innerLayerAt root q m child = Prim.suspend (EffThunk.memoLookup q m child) := by
+  simp [innerLayerAt, h]
+
+theorem innerLayerAt_provide {q : Point} {self that : LayerTerm NativeOp}
+    (h : Node.at_ (Node.eff root) q.path = some (Node.layer (.provide self that)))
+    (m : MemoMapId) (child : Nat) :
+    innerLayerAt root q m child =
+      Prim.onSuccess (resolveLayer root (q.child 1) m child)
+        (.provideThen q m child CombineMode.provide) := by
+  simp [innerLayerAt, h]
+
+theorem innerLayerAt_provideMerge {q : Point} {self that : LayerTerm NativeOp}
+    (h : Node.at_ (Node.eff root) q.path = some (Node.layer (.provideMerge self that)))
+    (m : MemoMapId) (child : Nat) :
+    innerLayerAt root q m child =
+      Prim.onSuccess (resolveLayer root (q.child 1) m child)
+        (.provideThen q m child CombineMode.provideMerge) := by
+  simp [innerLayerAt, h]
+
+theorem innerLayerAt_merge {q : Point} {left right : LayerTerm NativeOp}
+    (h : Node.at_ (Node.eff root) q.path = some (Node.layer (.merge left right)))
+    (m : MemoMapId) (child : Nat) :
+    innerLayerAt root q m child =
+      Prim.onSuccess
+        (Prim.sync (EffThunk.op (SyncOp.scopeFork child FinalizerStrategy.parallel)))
+        (.mergeChildren q m) := by
+  simp [innerLayerAt, h]
+
+theorem constructionAt_effect {q : Point} {key : ServiceKey} {body : NativeEff}
+    (h : Node.at_ (Node.eff root) q.path = some (Node.layer (.effect key body)))
+    (layerScope : Nat) :
+    constructionAt root q layerScope =
+      updateContextAt (Env.ContextUpdate.provideService Env.scopeKey (Val.scopeHandle layerScope))
+        (Region.construct (q.child 0) (some key)) := by
+  simp [constructionAt, h]
+
+theorem constructionAt_effectDiscard {q : Point} {body : NativeEff}
+    (h : Node.at_ (Node.eff root) q.path = some (Node.layer (.effectDiscard body)))
+    (layerScope : Nat) :
+    constructionAt root q layerScope =
+      updateContextAt (Env.ContextUpdate.provideService Env.scopeKey (Val.scopeHandle layerScope))
+        (Region.construct (q.child 0) none) := by
+  simp [constructionAt, h]
+
+end joinConts
+
 /-! ## The hooks at an address -/
 
 theorem syncValueAt_pure {root : NativeEff} {p : Point} {t : Term}
@@ -665,14 +994,25 @@ theorem suspendBodyAt_suspend {root : NativeEff} {q : Point} {k : Nat} {b : Nati
 theorem suspendBodyAt_of_at {root : NativeEff} {q : Point} {k : Nat} {e : NativeEff}
     (hf : q.fuel = k + 1) (h : Node.at_ (Node.eff root) q.path = some (Node.eff e))
     (hnb : ∀ t a b, e ≠ .branch t a b) (hng : ∀ ss, e ≠ .gen ss)
-    (hnw : ∀ i t s b, e ≠ .whileLoop i t s b) (hns : ∀ b, e ≠ .suspend b) :
+    (hnw : ∀ i t s b, e ≠ .whileLoop i t s b) (hns : ∀ b, e ≠ .suspend b)
+    (hnl : ∀ l i b, e ≠ .provideLayer l i b) :
     suspendBodyAt root (EffThunk.body q) = compileEff e q := by
   cases e <;> first
     | exact absurd rfl (hnb _ _ _)
     | exact absurd rfl (hng _)
     | exact absurd rfl (hnw _ _ _ _)
     | exact absurd rfl (hns _)
+    | exact absurd rfl (hnl _ _ _)
     | simp [suspendBodyAt, hf, h]
+
+/-- `Effect.provide`'s suspension answers the scope allocation (the join). -/
+theorem suspendBodyAt_provideLayer {root : NativeEff} {q : Point} {k : Nat}
+    {l : LayerTerm NativeOp} {i : Bool} {b : NativeEff} (hf : q.fuel = k + 1)
+    (h : Node.at_ (Node.eff root) q.path = some (Node.eff (.provideLayer l i b))) :
+    suspendBodyAt root (EffThunk.body q) =
+      Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.scopeMake FinalizerStrategy.sequential)))
+        (EffName.provideLayerWith q) := by
+  simp only [suspendBodyAt, hf, h]
 
 /-- A plain body whose compiled head is already an exit has that exit as its meaning, at
 unchanged stores: the fold of `compileEff_exit_fold` is the body's meaning. -/
@@ -778,7 +1118,8 @@ theorem meaning_of_asExit : ∀ (b : NativeEff) (q : Point) (s : Stores) {exit :
   | .yieldNow _, _, _, _, hpl, _ | .callback _ _, _, _, _, hpl, _
   | .awaitFiber _ _, _, _, _, hpl, _ | .withFiber _, _, _, _, hpl, _
   | .«scoped» _, _, _, _, hpl, _ | .acquireRelease _ _, _, _, _, hpl, _
-  | .choose _ _ _, _, _, _, hpl, _ => by simp [Plain] at hpl
+  | .choose _ _ _, _, _, _, hpl, _ | .provideLayer _ _ _, _, _, _, hpl, _
+  | .service _, _, _, _, hpl, _ | .provideService _ _ _, _, _, _, hpl, _ => by simp [Plain] at hpl
 
 theorem contAOf_cont (root : NativeEff) (p : Point) (v : Val) :
     contAOf root (EffName.cont p) v = resolve root (p.childWith 1 v) := rfl
@@ -1263,7 +1604,10 @@ theorem localRun_compile (root : NativeEff) :
   | .withFiber _, _, _, _, _, hpl, _, _
   | .scoped _, _, _, _, _, hpl, _, _
   | .acquireRelease _ _, _, _, _, _, hpl, _, _
-  | .choose _ _ _, _, _, _, _, hpl, _, _ => by simp [Plain] at hpl
+  | .choose _ _ _, _, _, _, _, hpl, _, _
+  | .provideLayer _ _ _, _, _, _, _, hpl, _, _
+  | .service _, _, _, _, _, hpl, _, _
+  | .provideService _ _ _, _, _, _, _, hpl, _, _ => by simp [Plain] at hpl
 
 /-- At the root, on the empty stack, from the empty stores: the local run finishes with the
 meaning inside `steps e + 1` steps (the last one is the exit leaving the empty stack). -/

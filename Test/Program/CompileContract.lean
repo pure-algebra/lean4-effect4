@@ -632,4 +632,63 @@ def pBadPark : NativeEff :=
 #guard exitOf (replayEff pBadPark [evaluateRoot]) 0
   = some (Exit.failure (Cause.die Defect.badName))
 
+/-! ## The `finalizerOr` regression net, on the compile route (the join, 2026-09-07)
+
+The Layer machine's five guards (`src/Effect4/Machine/Layer.lean`, `:2051-2074`, the machine
+defect that spike found): `scoped` must close its scope whether or not another `OnExit` frame
+sits under it, and every build sits under `updateContext`'s restoring frame
+(`internal/effect.ts:2092`). Re-spelled here program for program on the compile route, where
+`scoped`'s exit is the atomic native callback (V1, `exitScoped`) rather than a finalizer
+program: the counted rows are the region restores, `Effect.provide`'s scope close and the
+releases, never `scoped`'s own close, and what the net pins is that every scope a run
+allocates is closed on the way out. -/
+
+/-- Every scope the run allocated, with whether it is closed (Layer.lean's `witnessScopes`). -/
+def scopeStates (m : MC) : List (Nat × Bool) :=
+  m.state.scopes.entries.map fun e => (e.key, e.scope.isClosed)
+
+def netRun (p : NativeEff) : MC := replayEff p [evaluateRoot]
+
+/-- A number-typed service key (code `4`, `nativeServiceTy`). -/
+def netKey : ServiceKey := ⟨⟨4⟩, ⟨4⟩⟩
+
+-- One `scoped`: its scope closes.
+#guard scopeStates (netRun (.scoped (.succeed (.lit (.nat 7))))) = [(0, true)]
+-- Two adjacent: both close.
+#guard scopeStates (netRun (.scoped (.scoped (.succeed (.lit (.nat 7)))))) = [(0, true), (1, true)]
+-- Separated by a continuation frame, both close as well.
+#guard scopeStates (netRun
+    (.scoped (.bind (.scoped (.succeed (.lit (.nat 1)))) (.succeed (.lit (.nat 7)))))) =
+  [(0, true), (1, true)]
+
+/-- The shape every build has: `Effect.provide`'s scope under `scoped`, the build under the
+`CurrentMemoMap` region's restoring frame (`Layer.ts:762`). Both scopes close; the two
+finalizer programs are the region's restore and the provide scope's close — the body is an
+exit, so `provideContext` adds no region (`internal/effect.ts:2196`). -/
+def netBuild : NativeEff :=
+  .scoped (.provideLayer (.succeed netKey (.nat 1)) false (.succeed (.lit (.nat 7))))
+
+#guard (typeOf nativeSignature netBuild).isSome
+#guard scopeStates (netRun netBuild) = [(0, true), (1, true)]
+#guard finalizerRuns (netRun netBuild) 0 = 2
+
+/-- A memoized leaf under `provide` under `scoped`: `scoped`'s scope, the provide scope, the
+`fromBuild` child and the layer scope (`2` and `4` are the memo map and the entry's deferred,
+minted from the same counter) all close, and the service reads through. -/
+def netMemo : NativeEff :=
+  .scoped (.provideLayer (.effect netKey (.succeed (.lit (.nat 1)))) false (.service netKey))
+
+#guard (typeOf nativeSignature netMemo).isSome
+#guard scopeStates (netRun netMemo) = [(0, true), (1, true), (3, true), (5, true)]
+#guard finalizerRuns (netRun netMemo) 0 = 6
+#guard exitOf (netRun netMemo) 0 = some (Exit.success (Val.nat 1))
+
+-- `scope.acquire-release` (Layer.lean's W10): the release registered on the ambient scope
+-- runs at the close, and the acquire's value is the answer.
+#guard scopeStates (netRun
+    (.scoped (.acquireRelease (.succeed (.lit (.nat 5))) (.succeed (.lit .unit))))) = [(0, true)]
+#guard exitOf (netRun
+    (.scoped (.acquireRelease (.succeed (.lit (.nat 5))) (.succeed (.lit .unit))))) 0 =
+  some (Exit.success (Val.nat 5))
+
 end Test.Syntax.CompileContract

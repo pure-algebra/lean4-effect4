@@ -23,7 +23,8 @@ What this module adds, and what it deliberately reuses:
   provision algebra (`provide`, `provideMerge`, `merge`, `Closed`, `provide_closed`),
   `LayerTerm` and `LayerTerm.mergeAll`, `layerTy`, `bodyRequires`, `litVal`, the
   specification `build` with its `LeafSem` hook, `specKeys`, and the machine probes
-  `lower`, `buildSucceeds`, `buildServices`, `provideThenService`. Everything of
+  `buildSucceeds`, `buildServices`, `provideThenService` (runs on the compile route since
+  the join, over the native transcription `deployLayer` below). Everything of
   `src/Effect4/Surface/Deploy.lean`: `Deployment`, `Binding`, `builtinProvider`,
   `Deployment.bindingNames`, `Deployment.provided`, `Deployment.ProvidersKnown`,
   `Deployment.mountedRequirements`, `Deployment.RequirementsMet`, `Deployment.satisfies`
@@ -95,12 +96,12 @@ has to be given the reserved set rather than a hard-coded offset.
 `emptyLayer` only for the empty list. Seeding with `Layer.empty` is the same *type* (the
 `#guard`s below show the seeded and unseeded folds agree on every row), but it costs one
 extra memoized description and one extra `mergeAll` fork level per side. Under the earlier
-512-command budget of `src/Effect4/Program/Provision.lean`'s `runOver` the seeded `docs`
+512-command budget of `src/Effect4/Program/Provision.lean`'s old `runOver` the seeded `docs`
 fixture did not finish (`buildSucceeds` answered `some false` where the unseeded fold
 answered `some true`), and the owed question was whether it merely needed more fuel. It
 did: since source-repairs §19 (D6b) makes every tracked child's exit path a run of
-commands, the plain docs provide-then-service run itself needs 528 commands, `runOver`
-runs 1024, and at that budget the seeded fold builds too (the `#guard` below). The fold
+commands, the plain docs provide-then-service run itself needs 528 commands, the probes
+run 1024 (`runNative`), and at that budget the seeded fold builds too (the `#guard` below). The fold
 stays unseeded because that is the closer reading of `Layer.mergeAll(l, …)`
 (`Layer.ts:1652`), whose first argument is a layer; this module measures, it does not
 diagnose.
@@ -165,7 +166,7 @@ def DeployOp.row : DeployOp → Row
       "Layer.ts:1427 (Layer.effect) over internal/effect.ts:2069 (Effect.service)", []⟩
 
 /-- The signature: the one row, no pure atoms, the machine's ambient scope key. -/
-def deploySig : Signature DeployOp := ⟨DeployOp.row, fun _ _ => none, scopeKey⟩
+def deploySig : Signature DeployOp := ⟨DeployOp.row, fun _ _ => none, scopeKey, fun _ => none⟩
 
 /-! ## The layers -/
 
@@ -175,6 +176,24 @@ def emptyLayer : LayerTerm DeployOp := .effectDiscard (.succeed (.lit .unit))
 
 /-- The signature of `emptyLayer`. -/
 def emptyLayerTy : LayerTy := ⟨Requirement.empty, Ty.never, Requirement.empty⟩
+
+/-- The deployment alphabet on the native route (the join): `fromBinding binding _` is
+`Effect.service(binding)`, as the old lowering read it; a literal is itself. -/
+def deployBody : Eff DeployOp → Option NativeEff
+  | .perform (.fromBinding binding _) _ => some (.service binding)
+  | .succeed (.lit value) => some (.succeed (.lit value))
+  | _ => none
+
+/-- A deployment layer on the native route, leaf by leaf. -/
+def deployLayer : LayerTerm DeployOp → Option (LayerTerm NativeOp)
+  | .succeed key value => some (.succeed key value)
+  | .effect key body => (deployBody body).map (.effect key)
+  | .effectDiscard body => (deployBody body).map .effectDiscard
+  | .provide self that => do some (.provide (← deployLayer self) (← deployLayer that))
+  | .provideMerge self that => do some (.provideMerge (← deployLayer self) (← deployLayer that))
+  | .merge left right => do some (.merge (← deployLayer left) (← deployLayer right))
+  | .fresh inner => (deployLayer inner).map .fresh
+  | .orDie inner => (deployLayer inner).map .orDie
 
 /-- One binding, as `Layer.succeed(key, value)` (`Layer.ts:1074`). The value is the
 binding's index: the model's stand-in for the `env.<NAME>` object, as it is for every
@@ -702,19 +721,20 @@ def keyNames (r : Requirement) : List Nat := r.elems.map fun k => k.name.value
 
 /-! ### The machine agrees on the finite probes
 
-`Effect.scoped(Layer.build(l))` through the proved rc.112 machine: the produced context has
-the keys the specification predicts, in the same order, plus `CurrentMemoMap` (key `3`,
-`Layer.ts:762`) at the end, and each service's value is its binding's index. -/
+The deployment on the native route (`deployLayer`), provided to a program through the compile
+route: the produced context has the keys the specification predicts, in the same order, plus
+`CurrentMemoMap` (key `3`, `Layer.ts:762`) at the end, and each service's value is its
+binding's index. -/
 
-#guard (docsLayer.bind fun l => buildSucceeds deploySig l) = some true
-#guard (docsLayer.bind fun l => buildServices deploySig l) =
+#guard (docsLayer.bind deployLayer).map buildSucceeds = some true
+#guard (docsLayer.bind deployLayer).map buildServices =
   some [(4, 0), (5, 1), (6, 2), (7, 3), (8, 1), (9, 0), (3, 0)]
 
 -- `Effect.provide(Effect.service(Db), deployment)` answers `DB`'s value, as the
 -- specification says the service was built from it
-#guard (docsLayer.bind fun l => provideThenService deploySig l dbServiceKey) =
+#guard (docsLayer.bind deployLayer).map (provideThenService · dbServiceKey) =
   some (Exit.success (.nat 1))
-#guard (docsLayer.bind fun l => provideThenService deploySig l rateLimitKey) =
+#guard (docsLayer.bind deployLayer).map (provideThenService · rateLimitKey) =
   some (Exit.success (.nat 0))
 
 /-! ### The two measurements the header's rulings rest on
@@ -728,30 +748,33 @@ def fB (i : Nat) : LayerTerm DeployOp := bindingLeaf ⟨⟨i⟩, ⟨i⟩⟩ i
 -- **Why the shift is four.** A binding at `maxOpsKey` whose value is `0` starves the
 -- scheduler once `provideMerge` installs it; the same key with a large value is fine, and so
 -- is a free key with value `0`. Two of the three are the same layer shape.
-#guard buildSucceeds deploySig
-    (LayerTerm.provideMerge (fS 1) (bindingLeaf Effect4.Machine.Env.maxOpsKey 0)) = some false
-#guard buildSucceeds deploySig
-    (LayerTerm.provideMerge (fS 1) (bindingLeaf Effect4.Machine.Env.maxOpsKey 5000)) = some true
-#guard buildSucceeds deploySig (LayerTerm.provideMerge (fS 4) (fB 4)) = some true
+#guard (deployLayer
+    (LayerTerm.provideMerge (fS 1) (bindingLeaf Effect4.Machine.Env.maxOpsKey 0))).map
+  buildSucceeds = some false
+#guard (deployLayer
+    (LayerTerm.provideMerge (fS 1) (bindingLeaf Effect4.Machine.Env.maxOpsKey 5000))).map
+  buildSucceeds = some true
+#guard (deployLayer (LayerTerm.provideMerge (fS 4) (fB 4))).map buildSucceeds = some true
 
 -- **Why the fold is not seeded with `Layer.empty`.** The seeded and unseeded folds have the
 -- same rows; the seeded one did not finish inside the earlier 512-command budget and does
--- inside `runOver`'s 1024 (source-repairs §19), so the fold stays unseeded for the reading
--- of `Layer.mergeAll`, not for the budget.
+-- inside the 1024 the probes run at (source-repairs §19), so the fold stays unseeded for the
+-- reading of `Layer.mergeAll`, not for the budget.
 #guard (layerTy deploySig (LayerTerm.mergeAll emptyLayer [fS 4, fS 5])).map LayerTy.out =
   (layerTy deploySig (mergeLeaves [fS 4, fS 5])).map LayerTy.out
 #guard (layerTy deploySig (LayerTerm.mergeAll emptyLayer [fS 4, fS 5])).map LayerTy.requires =
   (layerTy deploySig (mergeLeaves [fS 4, fS 5])).map LayerTy.requires
-#guard buildSucceeds deploySig (LayerTerm.provideMerge
+#guard (deployLayer (LayerTerm.provideMerge
     (LayerTerm.mergeAll emptyLayer [fS 4, fS 5])
-    (LayerTerm.mergeAll emptyLayer [fB 4, fB 5])) = some true
-#guard buildSucceeds deploySig
-    (LayerTerm.provideMerge (mergeLeaves [fS 4, fS 5]) (mergeLeaves [fB 4, fB 5])) = some true
+    (LayerTerm.mergeAll emptyLayer [fB 4, fB 5]))).map buildSucceeds = some true
+#guard (deployLayer
+    (LayerTerm.provideMerge (mergeLeaves [fS 4, fS 5]) (mergeLeaves [fB 4, fB 5]))).map
+  buildSucceeds = some true
 
 -- the empty deployment is `Layer.empty`, and it builds
 #guard mergeLeaves [] = emptyLayer
-#guard buildSucceeds deploySig emptyLayer = some true
-#guard buildServices deploySig emptyLayer = some [(3, 0)]
+#guard (deployLayer emptyLayer).map buildSucceeds = some true
+#guard (deployLayer emptyLayer).map buildServices = some [(3, 0)]
 
 /-! ### Refusals are data -/
 

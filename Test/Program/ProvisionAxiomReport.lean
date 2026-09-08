@@ -22,8 +22,8 @@ below is expected at the ceiling `propext`/`Quot.sound`; the gate
 #print axioms Effect4.Row.diff_subset_diff_right
 
 -- D1: the signature and the provision algebra.
-#print axioms Effect4.Program.Provision.LayerTy
-#print axioms Effect4.Program.Provision.LayerTy.provide
+#print axioms Effect4.Program.LayerTy
+#print axioms Effect4.Program.LayerTy.provide
 #print axioms Effect4.Program.Provision.LayerTy.provide_out
 #print axioms Effect4.Program.Provision.LayerTy.provideMerge_out
 #print axioms Effect4.Program.Provision.LayerTy.provide_requires_subset
@@ -47,14 +47,17 @@ below is expected at the ceiling `propext`/`Quot.sound`; the gate
 #print axioms Effect4.Program.Provision.satisfiesRefs_of_hard
 
 -- D3: the term, its typing, the app.
-#print axioms Effect4.Program.Provision.LayerTerm
-#print axioms Effect4.Program.Provision.layerTy
+#print axioms Effect4.Program.LayerTerm
+#print axioms Effect4.Program.layerTy
 #print axioms Effect4.Program.Provision.appTy
 #print axioms Effect4.Program.Provision.appTy_requires
 #print axioms Effect4.Program.Provision.appTy_closed_iff
 
--- D4: the specification, its totality, the lowering.
+-- D4: the specification, its totality, the machine half on the compile route (the join).
 #print axioms Effect4.Program.Provision.build
 #print axioms Effect4.Program.Provision.build_total
-#print axioms Effect4.Program.Provision.lower
-#print axioms Effect4.Program.Provision.runOver
+#print axioms Effect4.Program.Provision.runNative
+#print axioms Effect4.Program.Provision.buildServices
+#print axioms Effect4.Program.Provision.buildSucceeds
+#print axioms Effect4.Program.Provision.provideThenService
+#print axioms Effect4.Program.Provision.docsLayer

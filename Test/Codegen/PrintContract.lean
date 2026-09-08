@@ -107,7 +107,7 @@ for `typeOf`. -/
 def sig : Signature (Fin 3) :=
   { rowOf := rowOf
   , atomOf := fun atom args => if atom = "succ" ∧ args = [Ty.nat] then some Ty.nat else none
-  , scopeKey := ⟨⟨0⟩, ⟨0⟩⟩ }
+  , scopeKey := ⟨⟨0⟩, ⟨0⟩⟩, serviceTy := fun _ => none }
 
 /-! ## Exits, thunks and rows -/
 

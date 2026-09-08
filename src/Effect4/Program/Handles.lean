@@ -60,6 +60,19 @@ theorem Point.awaitExit_keys (p : Point) (target : FiberId) (mode : Supervision.
   · simpa only [exitKeys, Machine.reifyExitVal_keys] using hkeys
   · exact hkeys
 
+/-- A context update's handles: the map it sets or merges, or the value it adds. -/
+def _root_.Effect4.Machine.Env.ContextUpdate.keys : Env.ContextUpdate → List Handle
+  | .setTo context => Env.Context.handleKeys context
+  | .provide that => Env.Context.handleKeys that
+  | .provideService _ value => Val.keys value
+
+/-- The handles a region carries: its point, and the memo map and scope of a build. -/
+def Region.keys : Region → List Handle
+  | .program q => q.keys
+  | .build q m scope => Handle.scope scope :: Handle.memoMap m.index :: q.keys
+  | .buildAdding q m scope => Handle.scope scope :: Handle.memoMap m.index :: q.keys
+  | .construct q _ => q.keys
+
 /-- The handles a name of the compiled alphabet carries. -/
 def EffName.keys : EffName → List Handle
   | .cont p => p.keys
@@ -93,6 +106,31 @@ def EffName.keys : EffName → List Handle
   | .afterScopeAdd a finalizer => a.keys ++ finalizer.keys
   | .releaseUnder p ctx exit => p.keys ++ ctx.keys ++ exitKeys exit
   | .releaseBody p exit previous => p.keys ++ exitKeys exit ++ previous.keys
+  -- the join's names: the point, the memo map, the scopes, the fibers forked, the contexts
+  | .provideLayerWith p => p.keys
+  | .provideLayerBody p => p.keys
+  | .updateThen update body => update.keys ++ body.keys
+  | .bodyThen body previous => body.keys ++ previous.keys
+  | .buildWithScopeFromContext q scope => Handle.scope scope :: q.keys
+  | .withMemoMapThen q scope => Handle.scope scope :: q.keys
+  | .addCurrentMemoMap m => [Handle.memoMap m.index]
+  | .fromBuildThen q m => Handle.memoMap m.index :: q.keys
+  | .memoize q m scope => Handle.scope scope :: Handle.memoMap m.index :: q.keys
+  | .awaitPromise cell => [Handle.promise cell]
+  | .buildIntoLayerScope q m scope => Handle.scope scope :: Handle.memoMap m.index :: q.keys
+  | .thenBuildInto q m layerScope => Handle.scope layerScope :: Handle.memoMap m.index :: q.keys
+  | .freshThen q scope => Handle.scope scope :: q.keys
+  | .provideThen q m scope _ => Handle.scope scope :: Handle.memoMap m.index :: q.keys
+  | .combineWith _ that => Env.Context.handleKeys that
+  | .mergeChildren q m => Handle.memoMap m.index :: q.keys
+  | .mergeForkOne q _ m parent forked =>
+    Handle.scope parent :: Handle.memoMap m.index :: forked.map Handle.fiber ++ q.keys
+  | .mergeForkNext q _ m parent forked =>
+    Handle.scope parent :: Handle.memoMap m.index :: forked.map Handle.fiber ++ q.keys
+  | .mergeContexts => []
+  | .serviceLookup _ => []
+  | .bindService _ => []
+  | .orDie => []
 
 /-- The handles a thunk of the compiled alphabet carries. -/
 def EffThunk.keys : EffThunk → List Handle
@@ -108,6 +146,9 @@ def EffThunk.keys : EffThunk → List Handle
   | .store thunk => thunk.keys
   | .acquireMasked p ctx => p.keys ++ ctx.keys
   | .releaseMasked p previous => p.keys ++ previous.keys
+  | .memoLookup q m scope => Handle.scope scope :: Handle.memoMap m.index :: q.keys
+  | .forkLayer q m scope => Handle.scope scope :: Handle.memoMap m.index :: q.keys
+  | .awaitAllFailFast targets => targets.map Handle.fiber
 
 /-- The handles of compiled code. -/
 abbrev nativeKeys : NCode → List Handle := primKeys EffName.keys EffThunk.keys
@@ -117,10 +158,14 @@ points' children. -/
 macro_rules
   | `(tactic| sub_tac) => `(tactic| sub_tac norm [Point.keys, Point.child, Point.childWith, Point.childWith2,
       EffName.keys, EffThunk.keys, programKeys, Name.keys, Thunk.keys, ActionName.keys, FinName.keys,
-      ProgName.keys, SyncOp.keys, Completion.keys, ParkKind.keys])
+      ProgName.keys, SyncOp.keys, Completion.keys, ParkKind.keys,
+      Region.keys, Env.ContextUpdate.keys, updateContextAt, scopeAddAt, List.map_append, List.map_cons,
+      List.map_nil])
   | `(tactic| sub_tac using $hs:term,*) => `(tactic| sub_tac using $hs,* norm [Point.keys, Point.child,
       Point.childWith, Point.childWith2, EffName.keys, EffThunk.keys, programKeys, Name.keys, Thunk.keys,
-      ActionName.keys, FinName.keys, ProgName.keys, SyncOp.keys, Completion.keys, ParkKind.keys])
+      ActionName.keys, FinName.keys, ProgName.keys, SyncOp.keys, Completion.keys, ParkKind.keys,
+      Region.keys, Env.ContextUpdate.keys, updateContextAt, scopeAddAt, List.map_append, List.map_cons,
+      List.map_nil])
 
 theorem Point.child_keys (p : Point) (i : Nat) : (p.child i).keys = p.keys := rfl
 
@@ -395,6 +440,27 @@ theorem compileEff_acquireRelease (a r : NativeEff) (hf : p.fuel = k + 1) :
       Prim.onSuccess (Prim.withFiber EffThunk.getCtx) (EffName.acquireCtx p) := by
   simp [compileEff, hf]
 
+-- the join's three constructors (`Agreement.lean` states them too, in its own section)
+theorem compileEff_provideLayer' (l : LayerTerm NativeOp) (i : Bool) (b : NativeEff)
+    (hf : p.fuel = k + 1) :
+    compileEff (.provideLayer l i b) p = Prim.suspend (EffThunk.body p) := by
+  simp [compileEff, hf]
+
+theorem compileEff_service' (key : ServiceKey) (hf : p.fuel = k + 1) :
+    compileEff (.service key) p =
+      Prim.onSuccess (Prim.withFiber EffThunk.getCtx) (EffName.serviceLookup key) := by
+  simp [compileEff, hf]
+
+theorem compileEff_provideService' (key : ServiceKey) (value : Term) (b : NativeEff)
+    (hf : p.fuel = k + 1) :
+    compileEff (.provideService key value b) p =
+      (match evalTerm p.env value with
+       | some v =>
+         updateContextAt (Env.ContextUpdate.provideService key v) (Region.program (p.child 0))
+       | none => badShape) := by
+  simp [compileEff, hf]
+  try rfl
+
 /-- The capture registered at a point names the point's handles, the acquired value's and
 the context's. -/
 theorem Point.capture_keys (p : Point) (a : Val) (ctx : Ctx) :
@@ -587,11 +653,279 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
       · next rest _ => exact compileEff_keys l { p with path := p.path ++ [0], tape := rest }
       · next rest _ => exact compileEff_keys r { p with path := p.path ++ [1], tape := rest }
       · exact frontier_keys p
+  -- the join: a suspension at the point, a context read, a region over the evaluated value
+  | .provideLayer l i b, p => by
+    rcases hf : p.fuel with _ | k
+    · rw [compileEff_zero _ hf]; exact frontier_keys p
+    · rw [compileEff_provideLayer' l i b hf]; exact List.Subset.refl _
+  | .service key, p => by
+    rcases hf : p.fuel with _ | k
+    · rw [compileEff_zero _ hf]; exact frontier_keys p
+    · rw [compileEff_service' key hf]; sub_tac
+  | .provideService key value b, p => by
+    rcases hf : p.fuel with _ | k
+    · rw [compileEff_zero _ hf]; exact frontier_keys p
+    · rw [compileEff_provideService' key value b hf]
+      split
+      · next v hv => sub_tac using (evalTerm_point_keys value p v hv)
+      · exact List.nil_subset _
 
 theorem resolve_keys (root : NativeEff) (p : Point) : nativeKeys (resolve root p) ⊆ p.keys := by
   unfold resolve
   split
   · exact compileEff_keys _ _
+  · exact List.nil_subset _
+
+/-! ## The join: a layer's build, a region and the memo protocol name only what their points hold -/
+
+theorem Env.ContextUpdate.apply_keys (u : Env.ContextUpdate) (c : Env.Ctx) :
+    Env.Context.handleKeys (u.apply c) ⊆ u.keys ++ Env.Context.handleKeys c := by
+  cases u with
+  | setTo context => exact List.subset_append_left _ _
+  | provide that =>
+    intro x hx
+    rcases List.mem_append.mp (Env.Context.handleKeys_merge c that hx) with h | h
+    · exact List.mem_append_right _ h
+    · exact List.mem_append_left _ h
+  | provideService key value =>
+    show Env.Context.handleKeys (c.add key value) ⊆ Val.keys value ++ Env.Context.handleKeys c
+    exact Env.Context.handleKeys_add c key value
+
+theorem compileLayer_keys : ∀ (l : LayerTerm NativeOp) (q : Point) (m : MemoMapId) (scope : Nat),
+    nativeKeys (compileLayer l q m scope) ⊆ Handle.scope scope :: Handle.memoMap m.index :: q.keys
+  | .succeed key value, q, m, scope => by
+    simp only [compileLayer]
+    split
+    · next v hv =>
+      show Val.keys (Env.encode (Env.Context.empty.addV key v)) ⊆ _
+      rw [Val.keys_encode]
+      intro x hx
+      rcases List.mem_append.mp (Env.Context.handleKeys_addV _ key v hx) with h | h
+      · rw [Lit.toVal_keys value v hv] at h
+        exact absurd h List.not_mem_nil
+      · rw [Env.Context.handleKeys_empty] at h
+        exact absurd h List.not_mem_nil
+    · exact List.nil_subset _
+  | .fresh inner, q, m, scope => by simp only [compileLayer]; sub_tac
+  | .orDie inner, q, m, scope => by
+    simp only [compileLayer]
+    sub_tac using (compileLayer_keys inner (q.child 0) m scope)
+  | .effect _ _, q, m, scope | .effectDiscard _, q, m, scope | .provide _ _, q, m, scope
+  | .provideMerge _ _, q, m, scope | .merge _ _, q, m, scope => by
+    simp only [compileLayer]; sub_tac
+
+theorem resolveLayer_keys (root : NativeEff) (q : Point) (m : MemoMapId) (scope : Nat) :
+    nativeKeys (resolveLayer root q m scope) ⊆ Handle.scope scope :: Handle.memoMap m.index :: q.keys := by
+  unfold resolveLayer
+  split
+  · exact compileLayer_keys _ _ _ _
+  · exact List.nil_subset _
+
+theorem innerLayerAt_keys (root : NativeEff) (q : Point) (m : MemoMapId) (child : Nat) :
+    nativeKeys (innerLayerAt root q m child) ⊆ Handle.scope child :: Handle.memoMap m.index :: q.keys := by
+  unfold innerLayerAt
+  split <;> first
+    | sub_tac
+    | sub_tac using (resolveLayer_keys root (q.child 1) m child)
+    | exact compileLayer_keys _ _ _ _
+    | exact List.nil_subset _
+
+theorem constructionAt_keys (root : NativeEff) (q : Point) (layerScope : Nat) :
+    nativeKeys (constructionAt root q layerScope) ⊆ Handle.scope layerScope :: q.keys := by
+  unfold constructionAt
+  split <;> first | sub_tac | exact List.nil_subset _
+
+theorem regionCode_keys (root : NativeEff) (r : Region) : nativeKeys (regionCode root r) ⊆ r.keys := by
+  cases r with
+  | program q => exact resolve_keys root q
+  | build q m scope => exact resolveLayer_keys root q m scope
+  | buildAdding q m scope => simp only [regionCode]; sub_tac using (resolveLayer_keys root q m scope)
+  | construct q key => simp only [regionCode]; sub_tac using (resolve_keys root q)
+
+theorem updateContextAt_keys (u : Env.ContextUpdate) (r : Region) :
+    nativeKeys (updateContextAt u r) ⊆ u.keys ++ r.keys := by
+  simp only [updateContextAt]; sub_tac
+
+theorem scopeAddAt_keys (scope : Nat) (fin : FinName) :
+    nativeKeys (scopeAddAt scope fin) ⊆ Handle.scope scope :: fin.keys := by
+  simp only [scopeAddAt]; sub_tac
+
+theorem contextsOfList_keys : ∀ (vs : List Val) (cs : List Env.Ctx), contextsOfList vs = some cs →
+    cs.flatMap Env.Context.handleKeys ⊆ vs.flatMap Val.keys
+  | [], cs, h => by
+    simp only [contextsOfList, Option.some.injEq] at h
+    subst h
+    exact List.nil_subset _
+  | x :: rest, cs, h => by
+    simp only [contextsOfList] at h
+    split at h
+    · next c hc =>
+      split at h
+      · next ctx ctxs hctx hrest =>
+        simp only [Option.some.injEq] at h
+        subst h
+        simp only [List.flatMap_cons]
+        refine List.append_subset.mpr ⟨?_, ?_⟩
+        · have hx := exitOfVal_keys x _ hc
+          simp only [exitKeys] at hx
+          exact List.Subset.trans (Env.decode_keys hctx) (List.Subset.trans hx (List.subset_append_left _ _))
+        · exact List.Subset.trans (contextsOfList_keys rest ctxs hrest) (List.subset_append_right _ _)
+      · cases h
+    · cases h
+
+theorem contextsOf_keys (v : Val) (cs : List Env.Ctx) (h : contextsOf v = some cs) :
+    cs.flatMap Env.Context.handleKeys ⊆ v.keys := by
+  unfold contextsOf at h
+  split at h
+  · rw [Val.keys_list]
+    exact contextsOfList_keys _ _ h
+  · cases h
+
+theorem mergeContextsK_keys (v : Val) : nativeKeys (mergeContextsK v) ⊆ v.keys := by
+  unfold mergeContextsK
+  split
+  · next ctxs hctxs =>
+    show Val.keys (Env.encode (Env.Context.mergeAll ctxs)) ⊆ _
+    rw [Val.keys_encode]
+    exact List.Subset.trans (Env.Context.handleKeys_mergeAll ctxs) (contextsOf_keys v ctxs hctxs)
+  · split <;> exact List.nil_subset _
+
+theorem currentMemoMapOf_keys {c : Env.Ctx} {m : MemoMapId} (h : currentMemoMapOf c = some m) :
+    Handle.memoMap m.index ∈ Env.Context.handleKeys c := by
+  unfold currentMemoMapOf at h
+  split at h
+  · rename_i index hv
+    simp only [Option.some.injEq] at h
+    subst h
+    exact Env.Context.getV_keys hv (List.mem_singleton.mpr rfl)
+  · cases h
+
+theorem provideLayerWithK_keys (root : NativeEff) (p : Point) (scope : Nat) :
+    nativeKeys (provideLayerWithK root p scope) ⊆ Handle.scope scope :: p.keys := by
+  unfold provideLayerWithK
+  split
+  · split <;> sub_tac
+  · exact List.nil_subset _
+
+theorem provideLayerBodyK_keys (root : NativeEff) (p : Point) (v : Val) :
+    nativeKeys (provideLayerBodyK root p v) ⊆ p.keys ++ v.keys := by
+  unfold provideLayerBodyK
+  split
+  · next built hbuilt =>
+    split
+    · next exit hexit =>
+      have hb := resolve_keys root (p.child 1)
+      rw [Prim.asExit?_eq_some _ _ hexit, ← exitKeys_eq_nativeKeys_ofExit] at hb
+      rw [← exitKeys_eq_nativeKeys_ofExit]
+      exact List.Subset.trans hb (List.subset_append_left _ _)
+    · sub_tac using (Env.decode_keys hbuilt)
+  · exact List.nil_subset _
+
+theorem updateThenK_keys (root : NativeEff) (u : Env.ContextUpdate) (body : Region) (v : Val) :
+    nativeKeys (updateThenK root u body v) ⊆ u.keys ++ body.keys ++ v.keys := by
+  unfold updateThenK
+  split
+  · next prev hprev =>
+    rw [Val.context?_exact hprev]
+    split
+    · sub_tac using (regionCode_keys root body)
+    · -- `setContext(next)`'s handles are the update's and the previous map's; the restoring
+      -- name carries the region's and the previous map's
+      intro x hx
+      simp only [nativeKeys, primKeys, EffThunk.keys, EffName.keys, Ctx.keys_withServices,
+        Val.keys_context, Ctx.keys_eq_handleKeys, List.mem_append, List.nil_append] at hx ⊢
+      rcases hx with h | h | h
+      · rcases List.mem_append.mp (Env.ContextUpdate.apply_keys u prev.services h) with h | h
+        · exact Or.inl (Or.inl h)
+        · exact Or.inr h
+      · exact Or.inl (Or.inr h)
+      · exact Or.inr h
+  · exact List.nil_subset _
+
+theorem buildWithScopeK_keys (q : Point) (scope : Nat) (v : Val) :
+    nativeKeys (buildWithScopeK q scope v) ⊆ Handle.scope scope :: q.keys ++ v.keys := by
+  unfold buildWithScopeK
+  split
+  · next ctx hctx =>
+    rw [Val.context?_exact hctx]
+    cases hm : currentMemoMapOf ctx.services with
+    | none => sub_tac
+    | some m =>
+      show [Handle.memoMap m.index] ++ (Handle.scope scope :: q.keys) ⊆ _
+      intro x hx
+      rcases List.mem_append.mp hx with h | h
+      · rw [List.mem_singleton.mp h]
+        refine List.mem_append_right _ ?_
+        rw [Val.keys_context, Ctx.keys_eq_handleKeys]
+        exact currentMemoMapOf_keys hm
+      · exact List.mem_append_left _ h
+  · exact List.nil_subset _
+
+theorem addCurrentMemoMapK_keys (m : MemoMapId) (v : Val) :
+    nativeKeys (addCurrentMemoMapK m v) ⊆ Handle.memoMap m.index :: v.keys := by
+  unfold addCurrentMemoMapK
+  split
+  · next ctx hctx =>
+    show Val.keys (Env.encode _) ⊆ _
+    rw [Val.keys_encode]
+    intro x hx
+    rcases List.mem_append.mp (Env.Context.handleKeys_addV _ _ _ hx) with h | h
+    · rw [Val.keys_memoMap] at h
+      exact List.mem_cons.mpr (Or.inl (List.mem_singleton.mp h))
+    · exact List.mem_cons_of_mem _ (Env.decode_keys hctx h)
+  · exact List.nil_subset _
+
+theorem provideThenK_keys (q : Point) (m : MemoMapId) (scope : Nat) (mode : CombineMode) (v : Val) :
+    nativeKeys (provideThenK q m scope mode v) ⊆
+      Handle.scope scope :: Handle.memoMap m.index :: q.keys ++ v.keys := by
+  unfold provideThenK
+  split
+  · next ctx hctx => sub_tac using (Env.decode_keys hctx)
+  · exact List.nil_subset _
+
+theorem combineWithK_keys (mode : CombineMode) (that : Env.Ctx) (v : Val) :
+    nativeKeys (combineWithK mode that v) ⊆ Env.Context.handleKeys that ++ v.keys := by
+  unfold combineWithK
+  split
+  · next merged hm =>
+    split
+    · show Val.keys (Env.encode merged) ⊆ _
+      rw [Val.keys_encode]
+      exact List.Subset.trans (Env.decode_keys hm) (List.subset_append_right _ _)
+    · show Val.keys (Env.encode (that.merge merged)) ⊆ _
+      rw [Val.keys_encode]
+      intro x hx
+      rcases List.mem_append.mp (Env.Context.handleKeys_merge that merged hx) with h | h
+      · exact List.mem_append_left _ h
+      · exact List.mem_append_right _ (Env.decode_keys hm h)
+  · exact List.nil_subset _
+
+theorem bindServiceK_keys (key : Option ServiceKey) (v : Val) :
+    nativeKeys (bindServiceK key v) ⊆ v.keys := by
+  cases key with
+  | some key =>
+    show Val.keys (Env.encode (Env.Context.empty.addV key v)) ⊆ _
+    rw [Val.keys_encode]
+    intro x hx
+    rcases List.mem_append.mp (Env.Context.handleKeys_addV _ key v hx) with h | h
+    · exact h
+    · rw [Env.Context.handleKeys_empty] at h
+      exact absurd h List.not_mem_nil
+  | none =>
+    show Val.keys (Env.encode Env.Context.empty) ⊆ _
+    rw [Val.keys_encode, Env.Context.handleKeys_empty]
+    exact List.nil_subset _
+
+theorem serviceLookupK_keys (key : ServiceKey) (v : Val) :
+    nativeKeys (serviceLookupK key v) ⊆ v.keys := by
+  unfold serviceLookupK
+  split
+  · next ctx hctx =>
+    split
+    · next value hval =>
+      rw [Val.context?_exact hctx, Val.keys_context, Ctx.keys_eq_handleKeys]
+      exact Env.Context.getV_keys hval
+    · exact List.nil_subset _
   · exact List.nil_subset _
 
 theorem entrants_keys (root : NativeEff) : ∀ (es : Effs NativeOp) (q : Point),
@@ -885,40 +1219,195 @@ theorem forkScopedAt_keys (root : NativeEff) (p : Point) (scope : Nat) (a : NAct
     sub_tac using (resolve_keys root ((p.child 0).child 0))
   · cases h
 
-/-- The compile's continuation table names only what its name and its value name. Split as one
-`match` over the name and the value's shape (the spellings are reducible); the `scopeProvide`
-arm reads the previous context back off the value and splits once more. -/
+-- One table, one budget: the join doubled the arms (`set_option`, as `interpOf_keyBounded`).
+set_option maxHeartbeats 1600000 in
+/-- The compile's continuation table names only what its name and its value name. The join's
+names first, each by its continuation's own bound (`Agreement.lean`'s equations select the arm;
+a handle-reading name splits on its reader); the rest as one `match` over the name and the
+value's shape (the spellings are reducible) — a name whose arm reads no value unfolds to the
+arm itself, so the split is optional — the dead rows refuted by `contradiction`; the
+`scopeProvide` arm reads the previous context back off the value and splits once more. -/
 theorem contAOf_native_keys (root : NativeEff) (n : EffName) (v : Val) :
     nativeKeys (Program.contAOf root n v) ⊆ n.keys ++ v.keys := by
-  unfold Program.contAOf
-  split <;> first
-    | (simp only [nativeKeys, embed_keys]; exact Machine.contAOf_keys _ _)
-    | (simp only [primKeys_ofExit]; sub_tac)
-    | exact List.nil_subset _
-    | sub_tac
-    | sub_tac using (resolve_keys root _)
-    | sub_tac norm [Point.keys, EffName.keys, EffThunk.keys]
-    -- the `acquired` arm: the capture's handles are the point's, the value's and the context's
-    | sub_tac norm [Point.keys, EffName.keys, EffThunk.keys, SyncOp.keys, FinName.keys, Point.capture,
-        Val.keysList_eq_flatMap]
-    -- the `releaseBody` arm: the release's point appends the reified exit
-    | sub_tac norm [Point.keys, EffName.keys, EffThunk.keys, Point.childWith, Machine.reifyExitVal_keys]
-    -- the `scopeProvide` arm: the install's handles are the scope's and the previous map's
-    | (split
-       · next previous hprev =>
-         rw [Val.context?_exact hprev]
-         sub_tac using (Ctx.keys_withScope previous _)
-           norm [Point.keys, EffName.keys, EffThunk.keys, Val.keys_context]
-       · sub_tac)
-    -- the `afterScopeAdd` arm: unit answers `a`; a closed scope's exit, read back, runs the
-    -- release program under it
-    | (split <;> first
+  cases n
+  case provideLayerWith p =>
+    cases hs : Val.scope? v with
+    | some s =>
+      rw [Val.scope?_exact hs, contAOf_provideLayerWith_scope]
+      exact List.Subset.trans (provideLayerWithK_keys root p s) (by sub_tac)
+    | none =>
+      rw [contAOf_provideLayerWith_other root p v (Val.scope?_none hs)]
+      exact List.nil_subset _
+  case provideLayerBody p =>
+    rw [contAOf_provideLayerBody]
+    exact List.Subset.trans (provideLayerBodyK_keys root p v) (by sub_tac)
+  case updateThen u body =>
+    rw [contAOf_updateThen]
+    exact List.Subset.trans (updateThenK_keys root u body v) (by sub_tac)
+  case bodyThen body previous =>
+    rw [contAOf_bodyThen]
+    sub_tac using (regionCode_keys root body)
+  case buildWithScopeFromContext q scope =>
+    rw [contAOf_buildWithScopeFromContext]
+    exact List.Subset.trans (buildWithScopeK_keys q scope v) (by sub_tac)
+  case withMemoMapThen q scope =>
+    cases hid : Val.memoMap? v with
+    | some id =>
+      rw [Val.memoMap?_exact hid, contAOf_withMemoMapThen_memoMap]
+      exact List.Subset.trans (updateContextAt_keys _ _) (by sub_tac)
+    | none =>
+      rw [contAOf_withMemoMapThen_other root q scope v (Val.memoMap?_none hid)]
+      exact List.nil_subset _
+  case addCurrentMemoMap m =>
+    rw [contAOf_addCurrentMemoMap]
+    exact List.Subset.trans (addCurrentMemoMapK_keys m v) (by sub_tac)
+  case fromBuildThen q m =>
+    cases hs : Val.scope? v with
+    | some child =>
+      rw [Val.scope?_exact hs, contAOf_fromBuildThen_scope]
+      sub_tac using (innerLayerAt_keys root q m child)
+    | none =>
+      rw [contAOf_fromBuildThen_other root q m v (Val.scope?_none hs)]
+      exact List.nil_subset _
+  case memoize q m scope =>
+    cases hh : Val.memoHit? v with
+    | some co =>
+      obtain ⟨cell, owner⟩ := co
+      rw [Val.memoHit?_exact hh, contAOf_memoize_hit]
+      sub_tac using (scopeAddAt_keys scope _)
+    | none =>
+      by_cases hu : v = Val.unit
+      · subst hu
+        rw [contAOf_memoize_unit]
+        sub_tac
+      · rw [contAOf_memoize_other root q m scope v (Val.memoHit?_none hh) hu]
+        exact List.nil_subset _
+  case awaitPromise cell =>
+    rw [contAOf_awaitPromise]
+    sub_tac
+  case buildIntoLayerScope q m scope =>
+    cases hs : Val.scope? v with
+    | some layerScope =>
+      rw [Val.scope?_exact hs, contAOf_buildIntoLayerScope_scope]
+      sub_tac using (scopeAddAt_keys scope _)
+    | none =>
+      rw [contAOf_buildIntoLayerScope_other root q m scope v (Val.scope?_none hs)]
+      exact List.nil_subset _
+  case thenBuildInto q m layerScope =>
+    rw [contAOf_thenBuildInto]
+    sub_tac using (constructionAt_keys root q layerScope)
+  case freshThen q scope =>
+    cases hid : Val.memoMap? v with
+    | some id =>
+      rw [Val.memoMap?_exact hid, contAOf_freshThen_memoMap]
+      exact List.Subset.trans (resolveLayer_keys root q id scope) (by sub_tac)
+    | none =>
+      rw [contAOf_freshThen_other root q scope v (Val.memoMap?_none hid)]
+      exact List.nil_subset _
+  case provideThen q m scope mode =>
+    rw [contAOf_provideThen]
+    exact List.Subset.trans (provideThenK_keys q m scope mode v) (by sub_tac)
+  case combineWith mode that =>
+    rw [contAOf_combineWith]
+    exact List.Subset.trans (combineWithK_keys mode that v) (by sub_tac)
+  case mergeChildren q m =>
+    cases hs : Val.scope? v with
+    | some parent =>
+      rw [Val.scope?_exact hs, contAOf_mergeChildren_scope]
+      sub_tac
+    | none =>
+      rw [contAOf_mergeChildren_other root q m v (Val.scope?_none hs)]
+      exact List.nil_subset _
+  case mergeForkOne q i m parent forked =>
+    cases hs : Val.scope? v with
+    | some child =>
+      rw [Val.scope?_exact hs, contAOf_mergeForkOne_scope]
+      sub_tac
+    | none =>
+      rw [contAOf_mergeForkOne_other root q i m parent forked v (Val.scope?_none hs)]
+      exact List.nil_subset _
+  case mergeForkNext q i m parent forked =>
+    cases hf : Val.fiber? v with
+    | some id =>
+      rw [Val.fiber?_exact hf, contAOf_mergeForkNext_fiber]
+      split <;> sub_tac
+    | none =>
+      rw [contAOf_mergeForkNext_other root q i m parent forked v (Val.fiber?_none hf)]
+      exact List.nil_subset _
+  case mergeContexts =>
+    rw [contAOf_mergeContexts]
+    exact List.Subset.trans (mergeContextsK_keys v) (by sub_tac)
+  case serviceLookup key =>
+    rw [contAOf_serviceLookup]
+    exact List.Subset.trans (serviceLookupK_keys key v) (by sub_tac)
+  case bindService key =>
+    rw [contAOf_bindService]
+    exact List.Subset.trans (bindServiceK_keys key v) (by sub_tac)
+  case orDie =>
+    show nativeKeys (Prim.success v) ⊆ _
+    sub_tac
+  -- a known name whose arm reads no value unfolds to the arm itself (the equations of the
+  -- table); a handle-reading name keeps its rows, each with an equation on the name and on
+  -- the value, and `cases` on those identifies the row's variables or refutes it
+  all_goals first
+    | (simp only [Program.contAOf]; first
+      | (simp only [nativeKeys, embed_keys]; exact Machine.contAOf_keys _ _)
+      | (simp only [primKeys_ofExit]; sub_tac)
+      | exact List.nil_subset _
+      | sub_tac
+      | sub_tac using (resolve_keys root _)
+      | sub_tac norm [Point.keys, EffName.keys, EffThunk.keys]
+      -- the `acquired` arm: the capture's handles are the point's, the value's and the context's
+      | sub_tac norm [Point.keys, EffName.keys, EffThunk.keys, SyncOp.keys, FinName.keys, Point.capture,
+          Val.keysList_eq_flatMap]
+      -- the `releaseBody` arm: the release's point appends the reified exit
+      | sub_tac norm [Point.keys, EffName.keys, EffThunk.keys, Point.childWith, Machine.reifyExitVal_keys]
+      -- the `scopeProvide` arm: the install's handles are the scope's and the previous map's
+      | (split
+         · next previous hprev =>
+           rw [Val.context?_exact hprev]
+           sub_tac using (Ctx.keys_withScope previous _)
+             norm [Point.keys, EffName.keys, EffThunk.keys, Val.keys_context]
+         · sub_tac)
+      -- the `afterScopeAdd` arm: unit answers `a`; a closed scope's exit, read back, runs the
+      -- release program under it
+      | (split <;> first
+          | sub_tac
+          | (split
+             · next exit hexit =>
+               sub_tac using (Machine.finProgram_keys _ exit), (exitOfVal_keys _ exit hexit)
+                 norm [Point.keys, EffName.keys, EffThunk.keys, embed_keys]
+             · sub_tac)))
+    | (unfold Program.contAOf; split <;> (try (rename_i heq; cases heq)) <;>
+        (try (rename_i heq; cases heq)) <;> first
+        | contradiction
+        | (simp only [nativeKeys, embed_keys]; exact Machine.contAOf_keys _ _)
+        | (simp only [primKeys_ofExit]; sub_tac)
+        | exact List.nil_subset _
         | sub_tac
+        | sub_tac using (resolve_keys root _)
+        | sub_tac norm [Point.keys, EffName.keys, EffThunk.keys]
+        -- the `acquired` arm: the capture's handles are the point's, the value's and the context's
+        | sub_tac norm [Point.keys, EffName.keys, EffThunk.keys, SyncOp.keys, FinName.keys, Point.capture,
+            Val.keysList_eq_flatMap]
+        -- the `releaseBody` arm: the release's point appends the reified exit
+        | sub_tac norm [Point.keys, EffName.keys, EffThunk.keys, Point.childWith, Machine.reifyExitVal_keys]
+        -- the `scopeProvide` arm: the install's handles are the scope's and the previous map's
         | (split
-           · next exit hexit =>
-             sub_tac using (Machine.finProgram_keys _ exit), (exitOfVal_keys _ exit hexit)
-               norm [Point.keys, EffName.keys, EffThunk.keys, embed_keys]
-           · sub_tac))
+           · next previous hprev =>
+             rw [Val.context?_exact hprev]
+             sub_tac using (Ctx.keys_withScope previous _)
+               norm [Point.keys, EffName.keys, EffThunk.keys, Val.keys_context]
+           · sub_tac)
+        -- the `afterScopeAdd` arm: unit answers `a`; a closed scope's exit, read back, runs the
+        -- release program under it
+        | (split <;> first
+            | sub_tac
+            | (split
+               · next exit hexit =>
+                 sub_tac using (Machine.finProgram_keys _ exit), (exitOfVal_keys _ exit hexit)
+                   norm [Point.keys, EffName.keys, EffThunk.keys, embed_keys]
+               · sub_tac)))
 
 theorem contEOf_native_keys (root : NativeEff) (n : EffName) (cause : CauseV) :
     nativeKeys (Program.contEOf root n cause) ⊆ n.keys := by
@@ -933,11 +1422,18 @@ theorem contEOf_native_keys (root : NativeEff) (n : EffName) (cause : CauseV) :
     sub_tac using (exitKeys_restoreAfterFinalizer exit _)
   | constant w => simp only [Program.contEOf]; exact List.Subset.refl _
   | store name => simp only [Program.contEOf, nativeKeys, embed_keys]; exact Machine.contEOf_keys name cause
+  | orDie => simp only [Program.contEOf]; exact List.nil_subset _
   | cont p | onValue p | fin p | gen p pc bind | loop p | registerAwait cell | cancelAwait cell
   | withWaiter base waiter token | abort | reFail c | scopeOpen p | scopeProvide p s | scopeBody p previous
   | scopedExit previous scope | scopeClose scope | restoreCtx previous | forkScopedIn p
   | acquireCtx p | acquireIn p ctx | acquired p ctx sc | afterScopeAdd a finalizer | releaseUnder p ctx e
-  | releaseBody p e previous =>
+  | releaseBody p e previous
+  | provideLayerWith p | provideLayerBody p | updateThen u body | bodyThen body previous
+  | buildWithScopeFromContext q scope | withMemoMapThen q scope | addCurrentMemoMap m
+  | fromBuildThen q m | memoize q m scope | awaitPromise cell | buildIntoLayerScope q m scope
+  | thenBuildInto q m layerScope | freshThen q scope | provideThen q m scope mode
+  | combineWith mode that | mergeChildren q m | mergeForkOne q i m parent forked
+  | mergeForkNext q i m parent forked | mergeContexts | serviceLookup key | bindService key =>
     simp only [Program.contEOf]; exact List.nil_subset _
 
 theorem cancelProgramOf_keys (n : EffName) : nativeKeys (cancelProgramOf n) ⊆ n.keys := by
@@ -959,7 +1455,7 @@ theorem syncValueAt_keys (root : NativeEff) (t : EffThunk) : (syncValueAt root t
       | some val => exact evalTerm_point_keys term p val hval
     · exact List.nil_subset _
   | body _ | op _ | park _ | act _ | forkInAt _ _ | getCtx | setCtx _ | closeScope _ _ | store _
-  | acquireMasked _ _ | releaseMasked _ _ =>
+  | acquireMasked _ _ | releaseMasked _ _ | memoLookup _ _ _ | forkLayer _ _ _ | awaitAllFailFast _ =>
     simp only [syncValueAt]; exact List.nil_subset _
 
 theorem suspendBodyAt_keys (root : NativeEff) (t : EffThunk) : nativeKeys (suspendBodyAt root t) ⊆ t.keys := by
@@ -978,8 +1474,12 @@ theorem suspendBodyAt_keys (root : NativeEff) (t : EffThunk) : nativeKeys (suspe
       · split
         · next cursor hcursor => sub_tac using (evalTerm_point_keys _ p cursor hcursor)
         · exact List.nil_subset _
+      -- `Effect.provide`: the scope made, the rest named at the point
+      · sub_tac
       · exact compileEff_keys _ p
       · exact List.nil_subset _
+  -- `getOrElseMemoize`'s suspend: the lookup, then `memoize` at the point
+  | memoLookup q m scope => simp only [suspendBodyAt]; sub_tac
   | store thunk =>
     cases thunk with
     | body program => simp only [suspendBodyAt, nativeKeys, embed_keys]; exact Machine.progOf_keys program
@@ -989,7 +1489,7 @@ theorem suspendBodyAt_keys (root : NativeEff) (t : EffThunk) : nativeKeys (suspe
       simp only [suspendBodyAt]
       sub_tac using (Point.ofCapture_keys capture)
   | pure _ | op _ | park _ | act _ | forkInAt _ _ | getCtx | setCtx _ | closeScope _ _
-  | acquireMasked _ _ | releaseMasked _ _ =>
+  | acquireMasked _ _ | releaseMasked _ _ | forkLayer _ _ _ | awaitAllFailFast _ =>
     simp only [suspendBodyAt]; exact List.nil_subset _
 
 theorem env_bind_keys (p : Point) (v : Val) (bind : Bool) :
@@ -1041,7 +1541,14 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     | cancelAwait cell | withWaiter base waiter token | abort | reFail c | scopeOpen p | scopeProvide p s
     | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
     | forkScopedIn p | acquireCtx p | acquireIn p ctx | acquired p ctx sc | afterScopeAdd a finalizer
-    | releaseUnder p ctx e | releaseBody p e previous =>
+    | releaseUnder p ctx e | releaseBody p e previous
+    | provideLayerWith p | provideLayerBody p | updateThen u body | bodyThen body previous
+    | buildWithScopeFromContext q scope' | withMemoMapThen q scope' | addCurrentMemoMap mm
+    | fromBuildThen q mm | memoize q mm scope' | awaitPromise cell' | buildIntoLayerScope q mm scope'
+    | thenBuildInto q mm layerScope | freshThen q scope' | provideThen q mm scope' mode
+    | combineWith mode that | mergeChildren q mm | mergeForkOne q i mm parent forked
+    | mergeForkNext q i mm parent forked | mergeContexts | serviceLookup key | bindService key
+    | orDie =>
       simp only [interpOf, IterStep.done.injEq] at h
       subst h
       exact List.subset_append_right _ _
@@ -1062,7 +1569,14 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     | cancelAwait cell | withWaiter base waiter token | abort | reFail c | scopeOpen p | scopeProvide p s
     | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
     | forkScopedIn p | acquireCtx p | acquireIn p ctx | acquired p ctx sc | afterScopeAdd a finalizer
-    | releaseUnder p ctx e | releaseBody p e previous =>
+    | releaseUnder p ctx e | releaseBody p e previous
+    | provideLayerWith p | provideLayerBody p | updateThen u body | bodyThen body previous
+    | buildWithScopeFromContext q scope' | withMemoMapThen q scope' | addCurrentMemoMap mm
+    | fromBuildThen q mm | memoize q mm scope' | awaitPromise cell' | buildIntoLayerScope q mm scope'
+    | thenBuildInto q mm layerScope | freshThen q scope' | provideThen q mm scope' mode
+    | combineWith mode that | mergeChildren q mm | mergeForkOne q i mm parent forked
+    | mergeForkNext q i mm parent forked | mergeContexts | serviceLookup key | bindService key
+    | orDie =>
       simp only [interpOf] at h; cases h
   loopBody n c := by
     cases n with
@@ -1071,7 +1585,14 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     | cancelAwait cell | withWaiter base waiter token | abort | reFail c' | scopeOpen p | scopeProvide p s
     | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
     | store name | forkScopedIn p | acquireCtx p | acquireIn p ctx | acquired p ctx sc | afterScopeAdd a finalizer
-    | releaseUnder p ctx e | releaseBody p e previous =>
+    | releaseUnder p ctx e | releaseBody p e previous
+    | provideLayerWith p | provideLayerBody p | updateThen u body | bodyThen body previous
+    | buildWithScopeFromContext q scope' | withMemoMapThen q scope' | addCurrentMemoMap mm
+    | fromBuildThen q mm | memoize q mm scope' | awaitPromise cell' | buildIntoLayerScope q mm scope'
+    | thenBuildInto q mm layerScope | freshThen q scope' | provideThen q mm scope' mode
+    | combineWith mode that | mergeChildren q mm | mergeForkOne q i mm parent forked
+    | mergeForkNext q i mm parent forked | mergeContexts | serviceLookup key | bindService key
+    | orDie =>
       simp only [interpOf]; sub_tac
   loopStep n c v := by
     cases n with
@@ -1090,7 +1611,14 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     | cancelAwait cell | withWaiter base waiter token | abort | reFail c' | scopeOpen p | scopeProvide p s
     | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
     | store name | forkScopedIn p | acquireCtx p | acquireIn p ctx | acquired p ctx sc | afterScopeAdd a finalizer
-    | releaseUnder p ctx e | releaseBody p e previous =>
+    | releaseUnder p ctx e | releaseBody p e previous
+    | provideLayerWith p | provideLayerBody p | updateThen u body | bodyThen body previous
+    | buildWithScopeFromContext q scope' | withMemoMapThen q scope' | addCurrentMemoMap mm
+    | fromBuildThen q mm | memoize q mm scope' | awaitPromise cell' | buildIntoLayerScope q mm scope'
+    | thenBuildInto q mm layerScope | freshThen q scope' | provideThen q mm scope' mode
+    | combineWith mode that | mergeChildren q mm | mergeForkOne q i mm parent forked
+    | mergeForkNext q i mm parent forked | mergeContexts | serviceLookup key | bindService key
+    | orDie =>
       simp only [interpOf]; sub_tac
   loopDone n := by simp only [interpOf]; exact List.nil_subset _
   cancelThenFail n c := by
@@ -1138,6 +1666,15 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
       simp only [interpOf, Option.some.injEq] at h
       subst h
       sub_tac using (resolve_keys root p)
+    -- a sibling's build forked (the join): the layer's code at its point
+    | forkLayer q m scope =>
+      simp only [interpOf, Option.some.injEq] at h
+      subst h
+      sub_tac using (resolveLayer_keys root q m scope)
+    | awaitAllFailFast targets =>
+      simp only [interpOf, Option.some.injEq] at h
+      subst h
+      exact List.Subset.refl _
     | store thunk =>
       cases thunk with
       | act action =>
@@ -1146,7 +1683,7 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
         rw [embedAction_keys]
         exact Machine.actionOf_keys action
       | park _ | op _ | body _ | foreign _ _ => simp only [interpOf] at h; cases h
-    | pure _ | body _ | op _ | park _ => simp only [interpOf] at h; cases h
+    | pure _ | body _ | op _ | park _ | memoLookup _ _ _ => simp only [interpOf] at h; cases h
   syncState t s s' v ids h hok := by
     cases t with
     | op operation =>
@@ -1159,7 +1696,7 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
         exact ⟨syncOpStep_le operation s s' v h, syncOpStep_keys operation s s' v ids h hok⟩
       | park _ | act _ | body _ | foreign _ _ => simp only [interpOf] at h; cases h
     | pure _ | body _ | park _ | act _ | forkInAt _ _ | getCtx | setCtx _ | closeScope _ _
-    | acquireMasked _ _ | releaseMasked _ _ =>
+    | acquireMasked _ _ | releaseMasked _ _ | memoLookup _ _ _ | forkLayer _ _ _ | awaitAllFailFast _ =>
       simp only [interpOf] at h; cases h
   registerAsync n fiber token s ids hok := by
     have reg : ∀ cell, Ok ⟨ids, s⟩ ([Handle.promise cell] ++ s.keys) →
@@ -1197,7 +1734,14 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     | cancelAwait cell | withWaiter base waiter token' | abort | reFail c | scopeOpen p | scopeProvide p sc
     | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
     | forkScopedIn p | acquireCtx p | acquireIn p ctx | acquired p ctx sc' | afterScopeAdd a finalizer
-    | releaseUnder p ctx e | releaseBody p e previous =>
+    | releaseUnder p ctx e | releaseBody p e previous
+    | provideLayerWith p | provideLayerBody p | updateThen u body | bodyThen body previous
+    | buildWithScopeFromContext q scope' | withMemoMapThen q scope' | addCurrentMemoMap mm
+    | fromBuildThen q mm | memoize q mm scope' | awaitPromise cell' | buildIntoLayerScope q mm scope'
+    | thenBuildInto q mm layerScope | freshThen q scope' | provideThen q mm scope' mode
+    | combineWith mode that | mergeChildren q mm | mergeForkOne q i mm parent forked
+    | mergeForkNext q i mm parent forked | mergeContexts | serviceLookup key | bindService key
+    | orDie =>
       simp only [interpOf]
       exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
   answerCode c := by simp only [interpOf]; rw [embed_keys]; exact Machine.completionPrim_keys c

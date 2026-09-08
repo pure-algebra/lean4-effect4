@@ -191,7 +191,10 @@ theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), Plain e = true �
   | .withFiber _, _, hpl
   | .scoped _, _, hpl
   | .acquireRelease _ _, _, hpl
-  | .choose _ _ _, _, hpl => by simp [Plain] at hpl
+  | .choose _ _ _, _, hpl
+  | .provideLayer _ _ _, _, hpl
+  | .service _, _, hpl
+  | .provideService _ _ _, _, hpl => by simp [Plain] at hpl
 
 /-! ### Every subterm of a straight-line program is straight-line -/
 
@@ -202,8 +205,11 @@ def NodePlain : Node → Prop
 
 theorem child_plain {r : NativeEff} (hr : Plain r = true) {i : Nat} {m : Node}
     (h : (Node.eff r).child i = some m) : NodePlain m := by
-  cases r <;> rcases i with _ | _ | _ | i <;> simp [Node.child] at h <;> subst h <;>
-    simp_all [NodePlain, Plain]
+  -- a constructor that is not plain is refuted by `hr` before its children are looked at
+  cases r <;> first
+    | (simp [Plain] at hr; done)
+    | (rcases i with _ | _ | _ | i <;> simp [Node.child] at h <;> subst h <;>
+        simp_all [NodePlain, Plain])
 
 theorem plain_at : ∀ (path : List Nat) (n : Node) (e : NativeEff), NodePlain n →
     Node.at_ n path = some (Node.eff e) → Plain e = true
@@ -274,12 +280,13 @@ theorem plainCode_suspendBodyAt {root : NativeEff} (hroot : Plain root = true) (
             · rw [suspendBodyAt_branch_true hf h ht]; exact plainCode_resolve hroot _
         | _ =>
           rw [suspendBodyAt_of_at hf h (by intro _ _ _ hbad; cases hbad) (Plain.not_gen he)
-            (Plain.not_whileLoop he) (by intro _ hbad; cases hbad)]
+            (Plain.not_whileLoop he) (by intro _ hbad; cases hbad) (Plain.not_provideLayer he)]
           exact plainCode_compileEff _ q he
       | stmts _ => rw [suspendBodyAt_other hf h (fun _ h => by cases h)]; rfl
       | stmt _ => rw [suspendBodyAt_other hf h (fun _ h => by cases h)]; rfl
       | action _ => rw [suspendBodyAt_other hf h (fun _ h => by cases h)]; rfl
       | effs _ => rw [suspendBodyAt_other hf h (fun _ h => by cases h)]; rfl
+      | layer _ => rw [suspendBodyAt_other hf h (fun _ h => by cases h)]; rfl
 
 theorem plainCode_ofExit (ex : ExitV) : PlainCode (Prim.ofExit ex) = true := by
   cases ex <;> rfl

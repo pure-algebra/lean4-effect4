@@ -33,7 +33,7 @@ namespace Test.Surface.ProvisionContract
 
 open Effect4
 open Effect4.Machine.Env (Requirement)
-open Effect4.Program (Ty)
+open Effect4.Program (Ty LayerTy LayerTerm layerTy)
 open Effect4.Program.Provision
 open Effect4.Surface.Middleware
 
@@ -165,11 +165,12 @@ theorem binding_requirement_provided_by_row_law :
       some true := by decide
 
 -- `E4-PROV-CE-007`, the machine half: the reserved key starves the fiber; a free key does not.
-#guard buildSucceeds deploySig
-    (LayerTerm.provideMerge (fS 1) (bindingLeaf Effect4.Machine.Env.maxOpsKey 0)) = some false
-#guard buildSucceeds deploySig (LayerTerm.provideMerge (fS 4) (fB 4)) = some true
+#guard (deployLayer
+    (LayerTerm.provideMerge (fS 1) (bindingLeaf Effect4.Machine.Env.maxOpsKey 0))).map
+  buildSucceeds = some false
+#guard (deployLayer (LayerTerm.provideMerge (fS 4) (fB 4))).map buildSucceeds = some true
 -- and the docs deployment builds through the machine with the predicted context
-#guard (docsLayer.bind fun l => buildServices deploySig l) =
+#guard (docsLayer.bind deployLayer).map buildServices =
   some [(4, 0), (5, 1), (6, 2), (7, 3), (8, 1), (9, 0), (3, 0)]
 
 end DeploymentJoin
