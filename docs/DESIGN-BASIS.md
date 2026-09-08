@@ -439,6 +439,51 @@ the memo store) is settled by build order-independence, not by a fixture
 path leaves every other path's entry untouched (`MemoWorld.find?_append_other_key`,
 `LAYER-FB-LAYER-IDENTITY`); a forged path is the refusal row.
 
+### DB-13 — one wake protocol, the family's policy on top
+
+Status: adopted 2026-09-08 (the scheduler surface: `5347294`, `4ed61a7` and the records commit).
+
+Every waiting family — Deferred now; Latch, Queue, Semaphore, Pool, PubSub and the timer as
+they land — parks its waiters on one list, `WakeList π` (`src/Effect4/Machine/Wake.lean`),
+generic in the family's payload `π`. The protocol fixes *when* a waiter is woken and how a
+cancel is accounted; *which* waiters and *with what* is the family's policy (`WakePolicy`:
+`broadcast`, `signal`, `sweep`), a function over the list, never a second list. A waiter is
+`(fiber, token, phase, payload)`, captured at registration (the WHATWG capture rule: a later
+list replacement cannot retarget it); the phase is the list's counter, advanced by every wake
+(Eio's `In_transition` role). A wake owes resumes, `Owed κ` = `(waiter, token, code, mode)`,
+and `WakeMode` says how an owed resume is delivered: `now` inline at the drain (Deferred,
+`internal/effect.ts:5277`), or `scheduled owner priority` posted on the owner's dispatcher and
+fired by the host's flush (the six `scheduleTask` sites, `Scheduler.ts:193-247`). A
+`scheduled` wake coalesces: the first `schedule` captures the pending waiters into the batch
+and posts one `Task.wake list phase`; a later one joins the batch and posts nothing
+(`WakeList.schedule_coalesces`, `Latch.scheduleUnsafe`).
+
+The cancelled-waiter clause is verbatim: a cancel on a waiter still pending removes it and
+owes nothing; a cancel on a waiter no longer pending consumed a wake, and the cancelling step
+owes one (`WakeList.cancel_owed_iff`; a `broadcast` list lost nothing,
+`wakeAll_cancel_owed`). The machine side stays the token guard: a resume for a waiter no
+longer parked is inert.
+
+The dispatcher's address is its making fiber's id, and nothing else: the machine never
+removes a fiber record (`spawn` appends, `RunMachine.update` maps in place), so a dispatcher
+outlives its fiber's run exactly as rc.112's object does (`Queue.ts:455` stores it at make),
+and a post to an exited fiber's dispatcher is delivered. There is no dispatcher table. A post
+to an id the machine never minted is the frontier `Stuck.unknownFiber`
+(`SCHED-FB-UNKNOWN-OWNER`).
+
+The `Delay` reply (Riot's `Proc_state.step` third answer) is not a new machine answer: a row
+that is not ready registers on the family's list with *the row itself* as the payload
+(`WakeList.delay`) and parks on a fresh token; the wake re-presents the row and it is polled
+again, consuming no frame (Queue's signal-then-repoll, `Queue.ts:1955-1975`, `:1432`). A
+spurious wake is permitted by construction: the repoll may park again at the advanced phase.
+
+What this basis refuses. A waiter list is FIFO in registration order and a family's non-FIFO
+policy is a sweep over it, not a reordering (`sweep_keeps_order`, `SCHED-FB-NO-FIFO`);
+`Task.wake` and `WakeList.delay` have no rc.112 producer in this tree until Latch and Queue
+land, so their meaning is pinned by executed fixtures (`SchedulerCoreContract` §Wake), not by
+the truth harness (`SCHED-FB-PRODUCER`); `TxRef` is its own subcalculus, not a policy on
+this list.
+
 ## Native library boundaries
 
 Effect4 does not place the whole Effect TypeScript API into one opcode family.
