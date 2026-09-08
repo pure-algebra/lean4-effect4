@@ -6,27 +6,18 @@ mono-phase LCNF into OCaml that `ocamlopt` type-checks, with zero holes; the nin
 functions are exercised by `gen_check.ml`, and the dispatcher agrees with the hand-written
 avatar on 1419 compared steps. Lean 4.33.1, OCaml 5.1.1, dune 3.24.2.
 
-## Commands (every claim below is behind one of these)
+## Commands
 
-```
-# Lean side (repo root, PowerShell; one lean at a time, -M4096). Library modules compile
-# into the scratch olean dir in import order: Dump, Naming, Types, Translate.
-$out='…\scratchpad\ocaml5-olean'; $env:LEAN_PATH="$out;$(lake env pwsh -NoProfile -Command '$env:LEAN_PATH')"
-lean -M4096 -o "$out\OCaml5\Lcnf\Dump.olean" -i "$out\OCaml5\Lcnf\Dump.ilean" src\OCaml5\Lcnf\Dump.lean   # then Naming, Types, Translate
+The exact regeneration command is in each generated file's header. Run it through
+`lake env lean -M4096 --run` from the repository root, under `.lake/LANE.lock`,
+with `LEAN_NUM_THREADS=3`. Build the generator with `lake build OCaml5` first.
 
-# dump the mono LCNF of constants
-lean -M4096 --run src/OCaml5/Tools/LcnfDump.lean Effect4.Machine.Dispatcher.insert Effect4.Machine.Dispatcher.insert._redArg
+The OCaml checks run in the existing effect4 opam switch:
 
-# the nine targets (what gen_check exercises)
-lean -M4096 --run src/OCaml5/Tools/LcnfGen.lean --out ocaml/gen/machine_gen.ml --cap 60 --types Effect4.Machine.Task Effect4.Machine.Dispatcher.insert Effect4.Machine.Dispatcher.enqueue Effect4.Machine.Dispatcher.drain Effect4.Machine.RunMachine.update Effect4.Machine.RunMachine.fiber? Effect4.Machine.RunMachine.emit Effect4.Machine.RunMachine.finished Effect4.Machine.countdownWalk Effect4.Machine.interruptRecord
-
-# every top-level function of Fibers.lean (the command is in fibers_gen.ml's header)
-lean -M4096 --run src/OCaml5/Tools/LcnfGen.lean --out ocaml/gen/fibers_gen.ml --cap 400 --types Effect4.Machine.Task Effect4.Machine.Dispatcher.empty … Effect4.Machine.promiseOutcome
-
-# OCaml side (WSL). Standalone (its own build dir, gen/_build):
-wsl -e bash -lc 'eval $(opam env --switch=effect4 --set-switch) && cd /mnt/c/Users/kokok/Dev/lean4-effect4/ocaml/gen && dune build --root . && dune test --root .'
-# or as part of the estate's workspace (ocaml/dune lists gen; builds into ocaml/_build):
-wsl -e bash -lc 'eval $(opam env --switch=effect4 --set-switch) && cd /mnt/c/Users/kokok/Dev/lean4-effect4/ocaml && dune build gen && dune build @gen/runtest'
+```sh
+cd ocaml
+dune build gen
+dune build @gen/runtest
 ```
 
 ## 1. The API that worked, and what mono LCNF looks like

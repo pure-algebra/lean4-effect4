@@ -2,14 +2,12 @@
 # gen-check.sh — the gate on the engine seam (build lane G).
 #
 # What it is: the four checks that say `ocaml/engine/api_engine.ml` is the file the extern
-# table describes and that nothing it depends on has moved.  Run it in WSL from anywhere:
+# table describes and that nothing it depends on has moved. Run from the repository:
 #
-#   wsl -e bash -lc 'eval $(opam env --switch=effect4 --set-switch) && \
-#     bash /mnt/c/Users/kokok/Dev/lean4-effect4/ocaml/engine/tools/gen-check.sh'
+#   bash ocaml/engine/tools/gen-check.sh
 #
-# What it does NOT do: regenerate.  Lean runs on the Windows side under `.lake/LANE.lock`
-# (one Lean process per machine, docs/research/2026-09-08-engine-brief.md §4), and the exact
-# command is printed by --regen-command below and carried in api_engine.ml's own header.
+# This gate does not regenerate. Regeneration holds `.lake/LANE.lock`; the command
+# is printed by --regen-command and carried in api_engine.ml's own header.
 #
 # Checks:
 #   C1  Risk R1 (engine-a1 §7): nothing removes a fiber from `RunMachine.fibers`.  The
@@ -24,7 +22,8 @@
 #       ocaml/engine/tools/api_engine_prelude.ml without a regeneration is caught here.
 set -u
 
-REPO=/mnt/c/Users/kokok/Dev/lean4-effect4
+repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd -P)"
+REPO="$repo_root"
 ENGINE="$REPO/ocaml/engine"
 GEN="$ENGINE/api_engine.ml"
 PRELUDE="$ENGINE/tools/api_engine_prelude.ml"

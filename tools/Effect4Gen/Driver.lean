@@ -11,15 +11,12 @@ Owner: the driver that reads `tools/Effect4Gen/manifest.json` and runs
     lake env lean --run tools/Effect4Gen/Driver.lean --group Program --check
     lake env lean --run tools/Effect4Gen/Driver.lean --verify --check
 
-It is the portable half of `scripts/generate-derived.ps1`, which did the same work from
-a manifest written inside itself and therefore only on Windows. The manifest is now data
-that both drivers read, so a new group -- `Machine`, `Tape` and `Log` are owed at X2 for
-the snapshot and the tape -- is one entry in that file and no code change in either
-driver.
+The manifest is data read by this portable driver. A new group is one entry in
+that file and no change to orchestration; Machine, Tape and Log remain owed at X2.
 
 ## What it does per group, and what that has to be
 
-Exactly what the PowerShell `Invoke-Lean` did: one
+One invocation per manifest group:
 
     lake env lean -M 4096 --run tools/Effect4Gen/Main.lean --group <Name>
       --imports <Imports> --out <Out> [--append <Guards>] [--kind <k>]... <Types...>
@@ -42,12 +39,10 @@ is staged.
 
 ## What it does not do
 
-No timeout. `scripts/generate-derived.ps1` gives each invocation ten minutes and then
-kills the process tree, which is why that script stays the entry point on the PC (one
-`lean.exe` reached 54 GB there on 2026-09-04 and took the machine down). `IO.Process` has
-no portable timeout, and a watchdog thread here would be a second process-management
-implementation to keep true. Run this driver under whatever Lean lock and memory cap the
-machine already imposes.
+No timeout is implemented inside this driver. Phase 0 step 0.5 supplies the
+per-invocation timeout in the bash entry point. Until then, run under the lane
+lock and memory cap required by the dispatch. The driver does not own a second
+process-management implementation.
 
 This is a tool (`IO`); it is not part of any audited library.
 -/
