@@ -248,9 +248,11 @@ def sweepStep (free : Nat) (w : Waiter Nat) : Option Nat :=
 
 /-! ### The machine, with a store that owes resumes -/
 
-/-- A store: one waiter list and the resumes it owes. -/
+/-- A store: one waiter list whose payload is the row a waiter re-presents (the `Delay`
+reply), the permits a take needs, and the resumes it owes. -/
 structure WSt where
-  list : WakeList Unit
+  list : WakeList Code
+  permits : Nat
   due : List (Owed Code)
 
 abbrev WM := RunMachine Unit Unit Nat Unit Unit FiberId Unit Unit WSt Code Saved Unit
@@ -284,11 +286,11 @@ def winterp : WI where
   answerCode := fun
     | .ofExit exit => .pure exit
     | .ofRefGet _ => readNext
-  -- the store owes what it holds, and a batch wake owes the batch inline
+  -- the store owes what it holds, and a batch wake owes the batch inline, each waiter its row
   dueResumes := fun s => (s.due, { s with due := [] })
   wakeList := fun _ _ s =>
     let r := s.list.runBatch
-    { list := r.2, due := s.due ++ r.1.map fun w => ⟨w.fiber, w.token, seven, WakeMode.now⟩ }
+    { s with list := r.2, due := s.due ++ r.1.map fun w => ⟨w.fiber, w.token, w.payload, WakeMode.now⟩ }
   cancelName := fun _ _ _ => ()
   abortName := ()
   parkCancelName := ()
@@ -318,8 +320,10 @@ def winterp : WI where
   asyncFiberError := ()
   missingScope := ()
 
-/-- The evaluator at this store: the one above, with the store read answering `0` (this store
-counts nothing). -/
+/-- The evaluator at this store: the one above, with the store read as a *take*. A permit
+present is taken and the row answers `0`; none is the `Delay` reply — the fiber registers on
+the list with this row as its payload and parks on a fresh token; the wake re-presents the
+row and the take is polled again. -/
 instance wakeEvaluator : FiberEvaluator Unit Unit Nat Unit Unit FiberId Unit Unit WSt Code Saved Unit where
   evaluate := fun i m f yielding =>
     match f.frame.current with
@@ -331,7 +335,16 @@ instance wakeEvaluator : FiberEvaluator Unit Unit Nat Unit Unit FiberId Unit Uni
           yielding, .continue_, []⟩
     | .pure (.failure cause) => ⟨m, f, yielding, .finished (.failure cause), []⟩
     | .vis false next =>
-      ⟨m, { f with frame := { f.frame with current := next 0 } }, yielding, .continue_, []⟩
+      if m.state.permits > 0 then
+        ⟨{ m with state := { m.state with permits := m.state.permits - 1 } },
+          { f with frame := { f.frame with current := next 0 } }, yielding, .continue_, []⟩
+      else
+        let token := m.nextToken
+        let m := { m with
+          nextToken := m.nextToken + 1
+          state := { m.state with list := m.state.list.delay f.id token f.frame.current } }
+        ⟨m.emit [RunEvent.parkedOn f.id token], f.park ⟨token, none, [], [], Resume.void, false⟩,
+          yielding, Outcome.parked, []⟩
     | .vis true next =>
       FiberAction.yieldNow i m
         { f with frame := { f.frame with answers := next :: f.frame.answers } } yielding 0
@@ -351,8 +364,8 @@ def parkedOf (m : WM) (id : Nat) : Option Parked := (m.fiber? ⟨id⟩).map RunF
 def queuedOf (m : WM) (id : Nat) : Option Nat :=
   (m.fiber? ⟨id⟩).map fun f => ((f.dispatcher.buckets.map Bucket.tasks).flatten).length
 
-/-- The store owes fiber 1 a resume, delivered by `mode`. -/
-def owing (mode : WakeMode) : WSt := ⟨l0, [⟨⟨1⟩, 3, seven, mode⟩]⟩
+/-- The store owes fiber 1 a resume, delivered by `mode`; permits enough for every take. -/
+def owing (mode : WakeMode) : WSt := ⟨WakeList.empty, 100, [⟨⟨1⟩, 3, seven, mode⟩]⟩
 
 -- F1, inline: the drain resumes fiber 1 in the same command sequence; nothing is posted.
 #guard wexitOf (driveState winterp 20 (machine (owing .now)) [.drainDue]).1 1 = some (.success 7)
@@ -374,9 +387,23 @@ def afterPost : WM := (driveState winterp 20 (machine (owing (.scheduled ⟨0⟩
 #guard (driveState winterp 20 (machine (owing (.scheduled ⟨9⟩ 0))) [.drainDue]).1.stuck =
   some (Stuck.unknownFiber ⟨9⟩)
 
--- F4 on the machine: both waiters registered, the batch scheduled once (one task posted, the
--- second schedule joins it); the posted `Task.wake` runs the batch and resumes both.
-def scheduled : WSt := ⟨(l2.schedule).1, []⟩
+-- A dispatcher outlives its fiber's run, as rc.112's object does (`Queue.ts:455` stores it at
+-- make): the machine keeps every fiber record, exited or not, so a post addressed to an exited
+-- fiber lands on its dispatcher and the host's flush fires it.
+def rootExited : WM :=
+  { machine (owing (.scheduled ⟨0⟩ 0)) with
+    fibers := [{ RunFiber.make ⟨0⟩ seven true (2048, false) () with exit := some (.success 7) },
+      parkedOn ⟨1⟩ 3, parkedOn ⟨2⟩ 4] }
+def afterExitedPost : WM := (driveState winterp 20 rootExited [.drainDue]).1
+#guard wexitOf afterExitedPost 0 = some (.success 7) ∧ afterExitedPost.armed = [⟨0⟩]
+#guard queuedOf afterExitedPost 0 = some 1
+#guard wexitOf (replayEval winterp 20 [.flush] afterExitedPost).machine 1 = some (.success 7)
+
+-- F4 on the machine: both waiters registered with their rows, the batch scheduled once (one
+-- task posted, the second schedule joins it); the posted `Task.wake` runs the batch and
+-- resumes both with their rows.
+def l2c : WakeList Code := (WakeList.empty.register ⟨1⟩ 3 seven).register ⟨2⟩ 4 seven
+def scheduled : WSt := ⟨(l2c.schedule).1, 100, []⟩
 def afterWakePost : WM :=
   (machine scheduled).postTask ⟨0⟩ 0 (Task.wake (WakeKey.deferred ⟨0⟩) 1)
 #guard afterWakePost.armed = [⟨0⟩] ∧ queuedOf afterWakePost 0 = some 1
@@ -392,6 +419,33 @@ def afterStale : WM := (replayEval winterp 20 [.fire ⟨0⟩] stalePost).machine
 #guard wexitOf afterStale 2 = none ∧ parkedOf afterStale 2 = some (.withGuard 4)
 #guard wexitOf (replayEval winterp 20 [.answerAsync ⟨2⟩ 4 (.ofExit (.success 42))] afterStale).machine 2 =
   some (.success 42)
+
+-- F5, the `Delay` reply: no permit, so the take registers the row and parks; a signal wakes it
+-- with the row, the repoll finds no permit and parks again at the advanced phase (a spurious
+-- wake, permitted); a permit and a second signal let the take succeed.
+def taker : WM :=
+  { (RunMachine.empty (⟨WakeList.empty, 0, []⟩ : WSt) : WM) with
+    fibers := [RunFiber.make ⟨1⟩ readNext true (2048, false) ()], nextId := 2, nextToken := 5 }
+def delayed : WM := (driveState winterp 20 taker [.evaluate ⟨1⟩]).1
+#guard wexitOf delayed 1 = none ∧ parkedOf delayed 1 = some (.withGuard 5)
+/-- The waiters as `(fiber, token, phase)` — the payload is a row, compared by what it does. -/
+def shapeOf (m : WM) : List (Nat × Nat × Nat) :=
+  m.state.list.waiters.map fun w => (w.fiber.value, w.token, w.phase)
+#guard shapeOf delayed = [(1, 5, 0)]
+/-- A signal: the head waiter owed its row, inline. -/
+def signal (m : WM) : WM :=
+  { m with state :=
+      let r := m.state.list.wakeOne
+      { m.state with
+        list := r.2
+        due := m.state.due ++ (r.1.map fun w => ⟨w.fiber, w.token, w.payload, WakeMode.now⟩).toList } }
+def repolled : WM := (driveState winterp 20 (signal delayed) [.drainDue]).1
+#guard wexitOf repolled 1 = none ∧ parkedOf repolled 1 = some (.withGuard 6)
+#guard shapeOf repolled = [(1, 6, 1)] ∧ repolled.state.due.length = 0
+def granted : WM := { repolled with state := { repolled.state with permits := 1 } }
+def taken : WM := (driveState winterp 20 (signal granted) [.drainDue]).1
+#guard wexitOf taken 1 = some (.success 0) ∧ taken.state.permits = 0
+#guard taken.state.list.waiters = [] ∧ taken.state.list.phase = 2
 
 end Wake
 

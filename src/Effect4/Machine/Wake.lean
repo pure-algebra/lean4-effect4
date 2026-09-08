@@ -27,7 +27,7 @@ pending is removed and nothing is owed; a waiter no longer pending consumed a wa
 cancelling step owes one — `signal` families re-owe it to their next waiter, a `broadcast`
 wake reached everyone (`wakeAll_cancel_owed`).
 
-**What is proved.** `register_phase`, `cancel_owed_iff`, `cancel_pending`, `schedule_empty`,
+**What is proved.** `register_phase`, `delay_repoll`, `cancel_owed_iff`, `cancel_pending`, `schedule_empty`,
 `schedule_posts`, `schedule_coalesces`, `runBatch_clears`, `wakeAll_advances`,
 `wakeAll_empties`, `wakeAll_cancel_owed`, `sweep_keeps_order`, `empty_quiet`.
 
@@ -132,6 +132,15 @@ def empty : WakeList π := ⟨[], none, 0⟩
 def register (l : WakeList π) (fiber : FiberId) (token : Nat) (payload : π) : WakeList π :=
   { l with waiters := l.waiters ++ [⟨fiber, token, l.phase, payload⟩] }
 
+/-- The `Delay` reply (Riot `Proc_state.step`, survey #1): a row that is not ready registers
+the fiber on the list with *the row itself* as the payload, and the wake resumes the fiber
+with that row — re-presented, re-polled (Queue's signal-then-repoll, `Queue.ts:1955-1975`:
+`releaseTakers` resumes with `exitVoid` and the taker loops `takeBetween` again, `:1432`). The frame is
+not consumed: the fiber parks on a fresh token and its `current` stays the row. A spurious
+wake is permitted by construction, since the repoll may park again at the advanced phase. -/
+def delay (l : WakeList π) (fiber : FiberId) (token : Nat) (row : π) : WakeList π :=
+  l.register fiber token row
+
 /-- Whether this waiter is still pending. -/
 def pending (l : WakeList π) (fiber : FiberId) (token : Nat) : Bool :=
   l.waiters.any fun w => w.fiber = fiber && w.token = token
@@ -211,6 +220,11 @@ theorem empty_quiet : Quiet (empty : WakeList π) := ⟨rfl, rfl⟩
 theorem register_phase (l : WakeList π) (fiber : FiberId) (token : Nat) (payload : π) :
     (l.register fiber token payload).waiters = l.waiters ++ [⟨fiber, token, l.phase, payload⟩] :=
   rfl
+
+/-- A delayed row is registered as the waiter's payload, at the current phase: what the wake
+re-presents. -/
+theorem delay_repoll (l : WakeList π) (fiber : FiberId) (token : Nat) (row : π) :
+    (l.delay fiber token row).waiters = l.waiters ++ [⟨fiber, token, l.phase, row⟩] := rfl
 
 /-- The clause: a wake is owed exactly when the waiter is no longer pending. -/
 theorem cancel_owed_iff (l : WakeList π) (fiber : FiberId) (token : Nat) :
