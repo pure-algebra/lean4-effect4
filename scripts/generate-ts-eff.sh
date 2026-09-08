@@ -5,6 +5,9 @@
 #   ts/eff/json.gen.ts     one JSON writer per family (the bytes Lean and OCaml write)
 #   ts/eff/profile.gen.ts  the image profile: address, reserved heads, and one entry per
 #                          native operation (the operation and its row as nodes), stamped
+#   ts/eff/taxonomy.gen.ts  refusal codes and their active/reserved partition, stamped
+#   ts/eff/forms.gen.ts     relative templates and foreign spelling metadata, stamped
+#   ts/eff/wire.gen.ts      canonical byte writers for every closed-world family
 #
 #   scripts/generate-ts-eff.sh [<dir>]      default ts/eff
 #

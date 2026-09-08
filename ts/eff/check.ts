@@ -12,6 +12,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { Result } from "effect"
+import { encodeProgram } from "./wire.gen.ts"
 import { toJson } from "./json.gen.ts"
 import { readTypeScript, showRefusal } from "./read.ts"
 
@@ -66,9 +67,12 @@ for (const dir of dirs) {
     }
     const expected = fs.readFileSync(oracle, "utf8").trimEnd()
     const actual = toJson(result.success)
-    if (actual === expected) matched++
+    const wireOracle = oracle.slice(0, -5) + ".eff"
+    const wireEqual = !fs.existsSync(wireOracle) || Buffer.from(encodeProgram(result.success)).equals(fs.readFileSync(wireOracle))
+    if (actual === expected && wireEqual) matched++
     else {
       mismatched++
+      if (!wireEqual) problems.push(`${file}: canonical wire differs from ${wireOracle}`)
       const at = [...actual].findIndex((c, i) => c !== expected[i])
       problems.push(`${file}: JSON differs from ${oracle} at byte ${at}:\n    got  ${actual.slice(Math.max(0, at - 40), at + 60)}\n    want ${expected.slice(Math.max(0, at - 40), at + 60)}`)
     }
@@ -80,4 +84,4 @@ console.log(`files ${files}: matched ${matched}, mismatched ${mismatched}, refus
 if (refusalKinds.size > 0) console.log(`refusals by kind: ${[...refusalKinds.entries()].map(([k, c]) => `${k} ${c}`).join(", ")}`)
 for (const p of problems.slice(0, 20)) console.log(`  ${p}`)
 if (problems.length > 20) console.log(`  … ${problems.length - 20} more`)
-process.exit(mismatched + refusedWithOracle > 0 ? 1 : 0)
+process.exit(files === 0 ? 2 : mismatched + refusedWithOracle > 0 ? 1 : 0)

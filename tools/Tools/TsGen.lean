@@ -3,13 +3,15 @@ import OCaml5.Eff.World
 import Effect4.Program.Native
 import Effect4.Codegen.Profile
 import Effect4.Codegen.Read
+import Effect4.Ingest.Taxonomy
+import Effect4.Codegen.Forms
 
 /-!
 # Tools.TsGen — the TypeScript estate's generated files, from the Lean environment
 
     lake env lean -M4096 --run tools/Tools/TsGen.lean ts/eff
 
-Writes three files, all `GENERATED`, none ever edited:
+Writes six files, all `GENERATED`, none ever edited:
 
 * `eff.gen.ts` — one Effect Schema per family of the closed world `OCaml5.Eff.World.blocks`
   reads off the environment (the same world `ocaml/eff` is generated from): `Schema.TaggedUnion`
@@ -27,6 +29,11 @@ Writes three files, all `GENERATED`, none ever edited:
   its `Row` as a `Row` node. No row type is written by hand: `Row`, `Ty`, `NativeOp` are
   families like any other. A stamp (FNV-1a 64 over the payload bytes) is recomputed at import.
 
+* `taxonomy.gen.ts` and `forms.gen.ts` — the refusal partition, relative expansions,
+  dual-call metadata and unambiguous lambda shapes, as stamped literal data.
+* `wire.gen.ts` — the canonical byte writer for every closed-world family, with an
+  explicit work stack and frame-length patching instead of recursive concatenation.
+
 Two carrier rules, stated in the generated headers and nowhere else: a family whose
 constructors are exactly `nil` and `cons head tail` is `ReadonlyArray<head>`, and a family
 whose constructors are all nullary is a union of string literals. `Nat` is `number`, `Option`
@@ -37,7 +44,7 @@ inductives out of the environment and refuses if their constructor lists moved. 
 printer here that disagrees with a generated schema fails the decode at import, loudly.
 
 `scripts/generate-ts-eff.sh` runs this; `scripts/check-ts-eff.sh` is the stamped drift gate
-over the three files, in the sweep. A tool (`IO`, `Lean.Meta`; `lakefile.toml`, the `Tools`
+over the six files, in the sweep. A tool (`IO`, `Lean.Meta`; `lakefile.toml`, the `Tools`
 library): outside the axiom gate, imported by nothing.
 -/
 
@@ -244,6 +251,135 @@ def emitJson (fs : List Family) (root : Family) : String :=
   s!"/** The program as the exact bytes Lean writes (no whitespace, no trailing newline). */\n" ++
   s!"export const toJson = (e: {tsName root}): string => JSON.stringify({jsonFn root}(e))\n"
 
+def wireRuntime : String :=
+  "\n".intercalate
+    [ "// The frame algebra of Store.Val. Work is scheduled explicitly: nested programs and"
+    , "// inductive lists do not consume the JavaScript call stack. Frame lengths are patched"
+    , "// after children finish; bytes are copied only when the growing buffer needs capacity."
+    , "class Writer {"
+    , "  private buffer = new Uint8Array(1024)"
+    , "  private used = 0"
+    , "  private tasks: Array<() => void> = []"
+    , "  private reserve(count: number): number {"
+    , "    const start = this.used"
+    , "    const end = start + count"
+    , "    if (!Number.isSafeInteger(end)) throw new RangeError(\"wire size\")"
+    , "    if (end > this.buffer.length) {"
+    , "      const next = new Uint8Array(Math.max(end, this.buffer.length * 2))"
+    , "      next.set(this.buffer.subarray(0, start)); this.buffer = next"
+    , "    }"
+    , "    this.used = end"
+    , "    return start"
+    , "  }"
+    , "  frame(tag: number, children: ReadonlyArray<() => void>): void {"
+    , "    const start = this.reserve(9)"
+    , "    this.buffer[start] = tag"
+    , "    this.tasks.push(() => {"
+    , "      const length = BigInt(this.used - start - 9)"
+    , "      new DataView(this.buffer.buffer).setBigUint64(start + 1, length, false)"
+    , "    })"
+    , "    for (let i = children.length - 1; i >= 0; --i) this.tasks.push(children[i]!)"
+    , "  }"
+    , "  private raw(bytes: Uint8Array): void {"
+    , "    const start = this.reserve(bytes.length); this.buffer.set(bytes, start)"
+    , "  }"
+    , "  nat(n: number): void {"
+    , "    if (!Number.isSafeInteger(n) || n < 0 || Object.is(n, -0)) throw new RangeError(\"wire Nat must be an exact nonnegative safe integer\")"
+    , "    let v = BigInt(n)"
+    , "    if (v >= (1n << 62n)) throw new RangeError(\"wire Nat exceeds OCaml carrier\")"
+    , "    const bytes: number[] = []"
+    , "    while (v > 0n) { bytes.push(Number(v & 255n)); v >>= 8n }"
+    , "    const payload = Uint8Array.from(bytes.reverse())"
+    , "    this.frame(2, [() => this.raw(payload)])"
+    , "  }"
+    , "  bool(value: boolean): void {"
+    , "    if (typeof value !== \"boolean\") throw new TypeError(\"wire Bool\")"
+    , "    this.frame(1, [() => this.raw(Uint8Array.of(value ? 1 : 0))])"
+    , "  }"
+    , "  str(value: string): void {"
+    , "    if (typeof value !== \"string\") throw new TypeError(\"wire String\")"
+    , "    for (let i = 0; i < value.length; ++i) {"
+    , "      const code = value.charCodeAt(i)"
+    , "      if (code >= 0xd800 && code <= 0xdbff) {"
+    , "        const next = value.charCodeAt(++i)"
+    , "        if (!(next >= 0xdc00 && next <= 0xdfff)) throw new TypeError(\"wire unpaired surrogate\")"
+    , "      } else if (code >= 0xdc00 && code <= 0xdfff) throw new TypeError(\"wire unpaired surrogate\")"
+    , "    }"
+    , "    const bytes = new TextEncoder().encode(value)"
+    , "    this.frame(3, [() => this.raw(bytes)])"
+    , "  }"
+    , "  unit(value: null): void {"
+    , "    if (value !== null) throw new TypeError(\"wire Unit\")"
+    , "    this.frame(9, [])"
+    , "  }"
+    , "  option<A>(value: A | null, each: (a: A) => void): void {"
+    , "    if (value === null) this.frame(6, [])"
+    , "    else this.frame(7, [() => each(value)])"
+    , "  }"
+    , "  ctor(index: number, children: ReadonlyArray<() => void>): void {"
+    , "    this.frame(10, [() => this.nat(index), ...children])"
+    , "  }"
+    , "  list<A>(items: ReadonlyArray<A>, each: (a: A) => void): void {"
+    , "    if (!Array.isArray(items)) throw new TypeError(\"wire List\")"
+    , "    this.frame(4, items.map(a => () => each(a)))"
+    , "  }"
+    , "  cons<A>(items: ReadonlyArray<A>, each: (a: A) => void, at = 0): void {"
+    , "    if (!Array.isArray(items)) throw new TypeError(\"wire inductive list\")"
+    , "    if (at === items.length) this.ctor(0, [])"
+    , "    else this.ctor(1, [() => each(items[at]!), () => this.cons(items, each, at + 1)])"
+    , "  }"
+    , "  finish(write: () => void): Uint8Array {"
+    , "    this.tasks.push(write)"
+    , "    while (this.tasks.length > 0) this.tasks.pop()!()"
+    , "    return this.buffer.slice(0, this.used)"
+    , "  }"
+    , "}"
+    , ""
+    , ""
+    ]
+
+def wireFn (f : Family) : String := lowerFirst (tsName f) ++ "Wire"
+def writeFn (f : Family) : String := "write" ++ tsName f
+
+/-- The field traversal is generated structurally from the closed world's carriers. -/
+def wireOf (fs : List Family) : OTy → String → String
+  | .int, x => s!"w.nat({x})"
+  | .bool, x => s!"w.bool({x})"
+  | .string, x => s!"w.str({x})"
+  | .unit, x => s!"w.unit({x})"
+  | .option a, x => s!"w.option({x}, (y) => {wireOf fs a "y"})"
+  | .list a, x => s!"w.list({x}, (y) => {wireOf fs a "y"})"
+  | .prod a b, x => s!"w.frame(5, [() => {wireOf fs a (x ++ "[0]")}, () => {wireOf fs b (x ++ "[1]")}])"
+  | .named o, x =>
+    match familyOf fs o with
+    | some f => s!"{writeFn f}(w, {x})"
+    | none => "missingFamily()"
+
+def emitFamilyWire (fs : List Family) (f : Family) : String :=
+  let name := match kindOf f with | .consList elem => "ReadonlyArray<" ++ tsTy fs elem ++ ">" | _ => tsName f
+  let ctor (index : Nat) (c : Ctor) :=
+    s!"w.ctor({index}, [" ++ ", ".intercalate (c.args.map fun (nm, t) =>
+      "() => " ++ wireOf fs t ("v." ++ nm)) ++ "])"
+  let body := match kindOf f with
+    | .enum =>
+      "  switch (v) {\n" ++ "\n".intercalate (f.ctors.zipIdx.map fun ((c, i) : Ctor × Nat) =>
+        s!"    case {lit c.short}: return w.ctor({i}, [])") ++
+      s!"\n    default: throw new TypeError({lit ("wire " ++ name ++ " constructor")})\n  }"
+    | .struct => "  " ++ ctor 0 f.ctors.head!
+    | .consList elem => "  w.cons(v, (y) => " ++ wireOf fs elem "y" ++ ")"
+    | .tagged =>
+      "  switch (v._tag) {\n" ++ "\n".intercalate (f.ctors.zipIdx.map fun ((c, i) : Ctor × Nat) =>
+        s!"    case {lit c.short}: return {ctor i c}") ++
+      s!"\n    default: throw new TypeError({lit ("wire " ++ name ++ " constructor")})\n  }"
+  s!"const {writeFn f} = (w: Writer, v: {name}): void => \{\n{body}\n}\n" ++
+  s!"export const {wireFn f} = (v: {name}): Uint8Array => \{\n  const w = new Writer()\n  return w.finish(() => {writeFn f}(w, v))\n}\n"
+
+def emitWire (fs : List Family) : String :=
+  header "Canonical byte writers for every family; Store.Val framing and declaration-order constructor tags." ++
+  "import type { " ++ ", ".intercalate (fs.filterMap fun f => match kindOf f with | .consList _ => none | _ => some (tsName f)) ++ " } from \"./eff.gen.ts\"\n\n" ++
+  wireRuntime ++ "\n".intercalate (fs.map (emitFamilyWire fs)) ++
+  "\nexport const encodeProgram = effWire\n"
+
 /-! ## The profile: values of the families, in the schemas' encoded form
 
 The value printers below spell Lean values as the encoded form of the schemas above:
@@ -429,6 +565,98 @@ def emitProfile (address : String) : String :=
   "  throw new Error(\"profile.gen.ts: the payload and the constants disagree; regenerate it\")\n}\n\n" ++
   "export const rows: ReadonlyArray<Entry> = profile.rows\n"
 
+
+/-! ## The ingestion tables, as immutable literal data with import-time stamps -/
+
+def emitTable (name data : String) : String :=
+  header ("Lean-owned " ++ name ++ " table; the import-time stamp covers the complete payload.") ++
+  s!"export const {name} = {data} as const\n" ++
+  s!"export const stamp = {lit (hex (fnv1a64 data))}\n" ++
+  "const fnv1a64 = (s: string): string => {\n" ++
+  "  let h = 14695981039346656037n\n" ++
+  "  for (const byte of new TextEncoder().encode(s)) h = ((h ^ BigInt(byte)) * 1099511628211n) & 0xffffffffffffffffn\n" ++
+  "  return \"0x\" + h.toString(16)\n}\n" ++
+  s!"if (fnv1a64(JSON.stringify({name})) !== stamp) throw new Error({lit (name ++ " table stamp mismatch; regenerate")})\n"
+
+def emitTaxonomy : String :=
+  let rows := Effect4.Ingest.Code.all.map fun c => obj
+    [("code", lit c.wire), ("spectrum", lit c.spectrum.wire),
+     ("status", lit c.status.wire), ("detail", lit c.detailTemplate)]
+  emitTable "taxonomy" (arr rows) ++
+  "export type Code = (typeof taxonomy)[number][\"code\"]\n" ++
+  "export const activeCodes = taxonomy.filter(r => r.status === \"active\").map(r => r.code)\n" ++
+  "export const reservedCodes = taxonomy.filter(r => r.status === \"reserved\").map(r => r.code)\n"
+
+open Effect4.Codegen.Forms in
+def argClassJs : ArgClass → String
+  | .effect => lit "effect" | .continuation => lit "continuation" | .thunk => lit "thunk"
+  | .literal => lit "literal" | .term => lit "term" | .termArm => lit "termArm" | .key => lit "key"
+  | .releaseOne => lit "releaseOne" | .handlers => lit "handlers"
+
+open Effect4.Codegen.Forms in
+def arityJs : Arity → String
+  | .value => tagged "value" []
+  | .call n => tagged "call" [("count", toString n)]
+  | .dual n => tagged "dual" [("count", toString n)]
+
+def literalJs : Effect4.Program.Lit → String
+  | .unit => tagged "unit" []
+  | .nat n => tagged "nat" [("value", toString n)]
+  | .bool b => tagged "bool" [("value", toString b)]
+  | .str s => tagged "str" [("value", lit s)]
+
+open Effect4.Codegen.Forms in
+def termTemplateJs : TermTemplate → String
+  | .literal v => tagged "literal" [("value", literalJs v)]
+  | .argument i => tagged "argument" [("slot", toString i)]
+  | .here k => tagged "here" [("binder", toString k)]
+
+def optionsJs (o : Effect4.Supervision.ForkOptions) : String :=
+  obj [("startImmediately", toString o.startImmediately), ("daemon", toString o.daemon),
+       ("maskMode", lit (match o.maskMode with | .inherit => "inherit" | .interruptible => "interruptible" | .uninterruptible => "uninterruptible"))]
+
+open Effect4.Codegen.Forms in
+def templateJs : Template → String
+  | .argument slot cutOffset insertions => tagged "argument"
+      [("slot", toString slot), ("cutOffset", toString cutOffset), ("insertions", toString insertions)]
+  | .succeed value => tagged "succeed" [("value", termTemplateJs value)]
+  | .die value => tagged "die" [("value", termTemplateJs value)]
+  | .bind a b => tagged "bind" [("first", templateJs a), ("rest", templateJs b)]
+  | .onExit a b => tagged "onExit" [("body", templateJs a), ("finalizer", templateJs b)]
+  | .matchCause a b c => tagged "matchCause" [("body", templateJs a), ("onValue", templateJs b), ("onCause", templateJs c)]
+  | .service i => tagged "service" [("keySlot", toString i)]
+  | .yieldNow n => tagged "yieldNow" [("priority", toString n)]
+  | .fork b o => tagged "fork" [("body", templateJs b), ("options", optionsJs o)]
+  | .forkIn b scope o => tagged "forkIn" [("body", templateJs b), ("scope", termTemplateJs scope), ("options", optionsJs o)]
+  | .forkScoped b o => tagged "forkScoped" [("body", templateJs b), ("options", optionsJs o)]
+  | .acquireRelease a b => tagged "acquireRelease" [("acquire", templateJs a), ("release", templateJs b)]
+
+open Effect4.Codegen.Forms in
+def dualJs : DualRule → String
+  | .fixed n => tagged "fixed" [("arity", toString n)]
+  | .effectFirst => tagged "effectFirst" []
+  | .provideService => tagged "provideService" []
+  | .functionSecond => tagged "functionSecond" []
+  | .effectSecond => tagged "effectSecond" []
+
+open Effect4.Codegen.Forms in
+def lambdaJs (f : Effect4.Machine.FnName) : String :=
+  obj [("atom", fnJs f), ("shape", match lambdaShape f with
+    | none => "null"
+    | some .addOne => lit "addOne"
+    | some .multiplyTwo => lit "multiplyTwo"
+    | some .optionNone => lit "optionNone"
+    | some .positiveThenZero => lit "positiveThenZero")]
+
+open Effect4.Codegen.Forms in
+def emitForms : String :=
+  let rows := all.map fun f => obj [("id", lit f.id), ("head", lit f.head),
+    ("arity", arityJs f.arity), ("arguments", arr (f.arguments.map argClassJs)),
+    ("expansion", templateJs f.expansion), ("citation", lit f.citation)]
+  emitTable "forms" (obj [("rows", arr rows), ("lambdas", arr (allFnNames.map lambdaJs)),
+    ("duals", arr (duals.map fun (head, rule) => obj [("head", lit head), ("rule", dualJs rule)])),
+    ("unaryRefs", arr (unaryRefs.map lit))])
+
 /-! ## The address, and the cross-check against the printer -/
 
 def stripSpace (s : String) : String :=
@@ -502,7 +730,10 @@ def main (args : List String) : IO Unit := do
   IO.FS.writeFile (out / "eff.gen.ts") schemas
   IO.FS.writeFile (out / "json.gen.ts") json
   IO.FS.writeFile (out / "profile.gen.ts") profile
+  IO.FS.writeFile (out / "wire.gen.ts") (emitWire fs)
+  IO.FS.writeFile (out / "taxonomy.gen.ts") emitTaxonomy
+  IO.FS.writeFile (out / "forms.gen.ts") emitForms
   let kinds := fs.map fun f => match kindOf f with
     | .enum => "literals" | .struct => "struct" | .consList _ => "array" | .tagged => "tagged"
   IO.println s!"TsGen: {fs.length} families ({(kinds.filter (· == "tagged")).length} tagged, {(kinds.filter (· == "literals")).length} literals, {(kinds.filter (· == "struct")).length} struct, {(kinds.filter (· == "array")).length} array), {fs.foldl (fun n f => n + f.ctors.length) 0} constructors; profile {Effect4.Program.reserved.length} heads, {allNativeOps.length} rows, address {address}"
-  IO.println s!"wrote {out / "eff.gen.ts"} ({schemas.length}), {out / "json.gen.ts"} ({json.length}), {out / "profile.gen.ts"} ({profile.length}) characters"
+  IO.println s!"wrote eff.gen.ts, json.gen.ts, profile.gen.ts, taxonomy.gen.ts, forms.gen.ts, wire.gen.ts under {out}"

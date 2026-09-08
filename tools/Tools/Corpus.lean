@@ -2,11 +2,12 @@ import Test.Program.Gen
 import Effect4.Program.Wire
 import OCaml5.Eff.Goldens
 import TypeScript.Render
+import Tools.Styles
 
 /-!
 # Tools.Corpus — the printed corpus, with the programs beside it
 
-    lake env lean -M4096 --run tools/Tools/Corpus.lean <dir> [count] [depth]
+    lake env lean -M4096 --run tools/Tools/Corpus.lean [--styles] <dir> [count] [depth]
 
 Two sources, one directory. The generated programs are `Test/Program/Gen.lean` (the seeded
 generator over every `Eff` constructor the printer accepts), `count` of them at `depth`
@@ -25,6 +26,11 @@ bytes with the `.json`, which is a differential against Lean's reader. `<dir>/in
 one `name`, `wellTyped`, `readable`, `chars` row per program written; a program the printer
 refuses is counted and not written.
 
+Each oracle also has canonical `.eff` bytes from `Wire.encodeProgram`. With `--styles`,
+Tools.Styles constructs the foreign spelling corpus and its JSON/wire oracles; `counts.tsv`
+records each style's count. The construction check is `ts/eff/check-styles.ts`; the
+foreign recognizers' exact recovery is a later gate.
+
 `scripts/check-ts-eff-corpus.sh` runs this and `ts/eff/check.ts` over it. The generator
 retains the parser spike's seed formula; its ingestion extension also draws service and
 layer programs. The measured counts and constructor coverage are pinned in the generator.
@@ -42,13 +48,22 @@ def writeProgram (dir name : String) (p : Eff NativeOp) : IO (Option String) := 
     let text := TypeScript.Render.expr TypeScript.house0 0 e
     IO.FS.writeFile (dir ++ "/" ++ name ++ ".ts") (text ++ "\n")
     IO.FS.writeFile (dir ++ "/" ++ name ++ ".json") ((OCaml5.Eff.effV kept).json ++ "\n")
+    IO.FS.writeBinFile (dir ++ "/" ++ name ++ ".eff") ⟨(Wire.encodeProgram kept).toArray⟩
     return some s!"{name}\t{Api.wellTyped p}\t{Api.readable p}\t{text.length}\n"
   | _, _ => return none
 
 def main (args : List String) : IO Unit := do
+  let styles := args.contains "--styles"
+  let args := args.filter (· != "--styles")
   let dir := args.getD 0 "."
   let count := (args.getD 1 "400").toNat!
   let depth := (args.getD 2 "4").toNat!
+  if styles then
+    let generated := (List.range count).filterMap fun i =>
+      let p := Test.Program.Gen.program i depth
+      match Api.print p with | .ok _ => some (s!"g{i}", p) | _ => none
+    Tools.Styles.corpus dir (generated ++ Wire.Corpus.all)
+    return
   IO.FS.createDirAll dir
   let mut index := ""
   let mut kept := 0

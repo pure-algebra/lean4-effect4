@@ -175,6 +175,10 @@ import Effect4.Program.Wire
 -- The application face: one module, the whole pipeline (type, print, compile,
 -- run; the Schema syntax), answering syntax and never text. Import this.
 import Effect4.Api
+-- Foreign-source ingestion tables and constructed target spellings.
+import Effect4.Ingest.Taxonomy
+import Effect4.Codegen.Forms
+import Effect4.Codegen.Styles
 
 /-!
 # Effect4
