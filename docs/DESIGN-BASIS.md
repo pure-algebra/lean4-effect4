@@ -484,6 +484,40 @@ land, so their meaning is pinned by executed fixtures (`SchedulerCoreContract` �
 the truth harness (`SCHED-FB-PRODUCER`); `TxRef` is its own subcalculus, not a policy on
 this list.
 
+### DB-14 — one logical clock, a duration decision, staged fires
+
+Status: adopted 2026-09-08 (the timer, A4: the three commits of
+`docs/research/2026-09-08-timer-dispatch.md`).
+
+Physical time is not modelled and never will be (DB-04 forbids fuel as time; wall-clock, drift,
+the browser's floor and `setTimeout`'s ceiling are host facts). Logical time is one store on
+the wake protocol (`src/Effect4/Machine/Timer.lean`, DB-13): `TimerStore` is the clock, the
+pending sleeps as waiters whose payload is the deadline, and the end of an advance in
+progress. Its shape is rc.112's `TestClock` (`testing/TestClock.ts`: a timestamp that moves
+only when the host says so, a table ordered by deadline then registration, an `adjust` that
+fires every due sleep in that order staging the clock at each fired deadline and letting
+fibers run between fires); its registration meaning is the live `ClockImpl`'s
+(`internal/effect.ts:6052-6066`): a cancelled sleep is removed.
+
+The host moves the clock by one decision, `RunDecision.advance (millis : Nat)` — a duration,
+never a timestamp — and the machine runs the staged loop (`advanceState`): fire the least due
+sleep (`RunInterp.clockStep`, the one new interpreter field), resume it, flush the
+dispatchers, repeat, then set the clock to the end. A sleep a woken fiber registers that is
+due by the end fires in the same advance (finding 4 of
+`docs/research/2026-09-04-timer-semantics-and-proofs.md`). A fired sleep resumes inline
+(`WakeMode.now`, as a Deferred's completion does); the latch-posted spelling rc.112 uses there
+is Latch's to land. Two rows reach the store: `sleep d` with `0 < d < ∞` registers
+(`Name.registerSleep`, cancel `Name.cancelSleep` = `clearTimeout`), and `clockNow` reads
+(`SyncOp.clockNow`); `sleep 0` is `yieldNow` and `sleep ∞` is `never`, decided at the row.
+`TimerStore.WF` — every pending deadline at or after the clock — is a conjunct of
+`Stores.WF`, kept by every store step and every clock step.
+
+What this basis refuses. `setTime` (`TIMER-FB-SET-TIME`): the clock never moves backwards. A
+kept cancelled sleep (`TIMER-FB-KEPT-CANCEL`): the store models `clearTimeout`, not the test
+clock's table. An infinite deadline (`TIMER-FB-INFINITE`). A `Psq` carrier: the wake list is
+the one carrier and the earliest deadline is a policy on it (`WakeList.wakeBy`), measured
+elsewhere as not worth a second structure; a keyed carrier is a later, measured change.
+
 ## Native library boundaries
 
 Effect4 does not place the whole Effect TypeScript API into one opcode family.
