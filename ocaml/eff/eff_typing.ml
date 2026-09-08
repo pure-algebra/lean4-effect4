@@ -4,7 +4,11 @@
    What it is: `typeOf` at the native signature (`nativeSignature`: the rows of Eff_native,
    the atom table, the scope key), rule for rule. `Ty.join` (canonical unions, Eff.lean),
    `EffTy.joinAnswer`, `GenTy.merge` and the requirement row (`Row ServiceKey`, Data/Row.lean,
-   carried as the strictly ascending key list) are restated here.
+   carried as the strictly ascending key list) are restated here, with the join's two tables
+   (2026-09-07): the service table `service_ty` (`nativeServiceTy`, Program/Native.lean: the
+   Scope key, nothing under the other reserved names, a free name's carrier by its type code)
+   and `LayerTy` (Typing.lean: `Layer<ROut, E, RIn>` as three rows, its four operations, and
+   `layer_of` = `layerTy` over the layer term, whose bodies are typed closed).
    Depends on: Eff_types, Eff_native (generated), Eff_json (for print_type).
 
    Behaviours it holds itself to:
@@ -99,6 +103,55 @@ let rec req_insert (x : service_key) : requirement -> requirement = function
 let req_of_list (keys : service_key list) : requirement = List.fold_right req_insert keys []
 let req_single (k : service_key) : requirement = [ k ]
 let req_union (r : requirement) (s : requirement) : requirement = req_of_list (r @ s)
+
+(* Row.diff (Data/Row.lean:414): the members of r outside s; a subrow stays ascending. *)
+let req_diff (r : requirement) (s : requirement) : requirement = List.filter (fun k -> not (List.mem k s)) r
+
+(* ---- the service table: nativeServiceTy (Program/Native.lean), read off the key ---- *)
+
+(* Env.firstFreeName (Machine/ContextMap.lean:797): names 0-3 are the reserved keys. *)
+let first_free_name : int = 4
+
+(* The Scope key answers Ty.scope; the other reserved names type nothing; a free name is typed
+   by its own type code: 4 a number, 5 a boolean, 6 unit, 7 a Ref.Ref<number> handle. *)
+let service_ty (key : service_key) : ty option =
+  if key = Eff_native.scope_key then Some Eff_native.scope_ty
+  else if key.service_key_name.service_name_value < first_free_name then None
+  else
+    match key.service_key_service.service_type_code_value with
+    | 4 -> Some Ty_nat
+    | 5 -> Some Ty_bool
+    | 6 -> Some Ty_unit
+    | 7 -> Some Eff_native.ref_ty
+    | _ -> None
+
+(* ---- LayerTy (Typing.lean): Layer<ROut, E, RIn> as three rows, and its four operations ---- *)
+
+type layer_ty = { layer_out : requirement; layer_error : ty; layer_requires : requirement }
+
+(* self.pipe(Layer.provide(that)): the dependency discharges what it provides. *)
+let layer_provide (self : layer_ty) (that : layer_ty) : layer_ty =
+  { layer_out = self.layer_out; layer_error = join self.layer_error that.layer_error;
+    layer_requires = req_union (req_diff self.layer_requires that.layer_out) that.layer_requires }
+
+(* self.pipe(Layer.provideMerge(that)): the same requirement column, both outputs kept. *)
+let layer_provide_merge (self : layer_ty) (that : layer_ty) : layer_ty =
+  { layer_out = req_union self.layer_out that.layer_out; layer_error = join self.layer_error that.layer_error;
+    layer_requires = req_union (req_diff self.layer_requires that.layer_out) that.layer_requires }
+
+(* Layer.merge(a, b): siblings share nothing. *)
+let layer_merge (a : layer_ty) (b : layer_ty) : layer_ty =
+  { layer_out = req_union a.layer_out b.layer_out; layer_error = join a.layer_error b.layer_error;
+    layer_requires = req_union a.layer_requires b.layer_requires }
+
+(* Layer.orDie(l): the error column becomes never. *)
+let layer_or_die (l : layer_ty) : layer_ty = { l with layer_error = Ty_never }
+
+(* bodyRequires: Exclude<R, Scope.Scope> — the layer's own scope answers the body's. *)
+let body_requires (t : eff_ty) : requirement = req_diff t.eff_ty_requires (req_single Eff_native.scope_key)
+
+(* litVal: strings are not layer values (PROV-FB-STRING-VALUE). *)
+let lit_is_value : lit -> bool = function Lit_str _ -> false | _ -> true
 
 (* ---- EffTy, GenTy ---- *)
 
@@ -276,6 +329,28 @@ let rec check_eff (env : env) (p : eff) : eff_ty checked =
      | None -> refuse "choose: the answers do not join"
      | Some answer ->
        Ok (mk answer (join l.eff_ty_error r.eff_ty_error) (req_union l.eff_ty_requires r.eff_ty_requires)))
+  (* Effect.provide(self, layer): the layer's requirements join, what it provides is discharged
+     from the body's (internal/layer.ts:8-14). *)
+  | Eff_provideLayer (layer, _, body) ->
+    let* l = check_layer layer in
+    let* b = check_eff env body in
+    Ok (mk b.eff_ty_answer (join b.eff_ty_error l.layer_error)
+          (req_union l.layer_requires (req_diff b.eff_ty_requires l.layer_out)))
+  (* Effect.service(key): the carrier from the service table, requiring the key. *)
+  | Eff_service key ->
+    (match service_ty key with
+     | None -> refuse "service: the signature does not type this key"
+     | Some ty -> Ok (mk ty Ty_never (req_single key)))
+  (* Effect.provideService(self, key, value): the value at the key's carrier, the key
+     discharged from the body's requirements. *)
+  | Eff_provideService (key, value, body) ->
+    (match service_ty key with
+     | None -> refuse "provideService: the signature does not type this key"
+     | Some ty ->
+       let* v = term_ty env value in
+       let* b = check_eff env body in
+       if v = ty then Ok (mk b.eff_ty_answer b.eff_ty_error (req_diff b.eff_ty_requires (req_single key)))
+       else refuse "provideService: the value is not the key's carrier")
 
 and check_stmts (env : env) (in_loop : bool) (body : stmts) : gen_ty checked =
   match body with
@@ -396,10 +471,45 @@ and check_action (env : env) : action_term -> eff_ty checked = function
      | Ty_exitOf _ -> if s = Eff_native.scope_ty then Ok (pure Ty_unit) else refuse "closeScope: not a scope"
      | _ -> refuse "closeScope: not an exit")
 
+(* layerTy: structural in the layer term; a body is closed, typed at the empty environment.
+   Layer.succeed provides its key and requires nothing; Layer.effect provides its key with the
+   body's error and scope-free requirements; effectDiscard provides nothing; fresh keeps the
+   signature; orDie clears the error. *)
+and check_layer : layer_term -> layer_ty checked = function
+  | Layer_term_succeed (key, value) ->
+    if lit_is_value value then Ok { layer_out = req_single key; layer_error = Ty_never; layer_requires = req_empty }
+    else refuse "Layer.succeed: a string is not a layer value"
+  | Layer_term_effect (key, body) ->
+    let* t = check_eff [] body in
+    Ok { layer_out = req_single key; layer_error = t.eff_ty_error; layer_requires = body_requires t }
+  | Layer_term_effectDiscard body ->
+    let* t = check_eff [] body in
+    Ok { layer_out = req_empty; layer_error = t.eff_ty_error; layer_requires = body_requires t }
+  | Layer_term_provide (self, that) ->
+    let* s = check_layer self in
+    let* t = check_layer that in
+    Ok (layer_provide s t)
+  | Layer_term_provideMerge (self, that) ->
+    let* s = check_layer self in
+    let* t = check_layer that in
+    Ok (layer_provide_merge s t)
+  | Layer_term_merge (left, right) ->
+    let* a = check_layer left in
+    let* b = check_layer right in
+    Ok (layer_merge a b)
+  | Layer_term_fresh inner -> check_layer inner
+  | Layer_term_orDie inner ->
+    let* l = check_layer inner in
+    Ok (layer_or_die l)
+
 (* ---- the face ---- *)
 
 let type_of (p : eff) : eff_ty checked = check_eff [] p
 let well_typed (p : eff) : bool = Result.is_ok (type_of p)
+
+(* The signature of a layer term (layerTy), and WellTypedLayer. *)
+let layer_of (l : layer_term) : layer_ty checked = check_layer l
+let well_typed_layer (l : layer_term) : bool = Result.is_ok (layer_of l)
 
 (* The .ty golden form: the JSON of the EffTy, or "ill-typed". *)
 let print_type (p : eff) : string =

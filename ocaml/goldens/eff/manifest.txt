@@ -8,7 +8,9 @@ NativeOp: refMake refGet refSet refGetAndSet refSetAndGet refUpdate refGetAndUpd
 MaskMode: interruptible uninterruptible inherit
 ObserverMode: awaitValue joinEffect
 ForkOptions: startImmediately daemon maskMode
-Eff: succeed fail failCause yieldError sync suspend perform bind gen catchCause matchCause onExit exit uninterruptible interruptible branch whileLoop yieldNow callback awaitFiber withFiber scoped acquireRelease choose
+ServiceKey: name service
+Eff: succeed fail failCause yieldError sync suspend perform bind gen catchCause matchCause onExit exit uninterruptible interruptible branch whileLoop yieldNow callback awaitFiber withFiber scoped acquireRelease choose provideLayer service provideService
+LayerTerm: succeed effect effectDiscard provide provideMerge merge fresh orDie
 Stmt: bindYield yieldDiscard ret ifElse whileTrue breakLoop
 Stmts: nil cons
 Effs: nil cons

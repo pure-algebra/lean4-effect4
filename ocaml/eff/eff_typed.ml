@@ -26,7 +26,7 @@
    Behaviours it holds itself to:
    E1  Soundness: for every constructible `p : (empty, 'a, 'e) eff`, `Eff_typing.well_typed
        (erase p)`, and Lean's answer and error are `to_ty` of the indices (the error up to
-       `Ty.join`, which `to_ty` applies).      tested (the 27 well-typed corpus programs);
+       `Ty.join`, which `to_ty` applies).      tested (the 28 well-typed corpus programs);
                                               the Lean theorem is stated in REPORT.md, open
    E2  Exactness of authorship: `Eff_wire.encode_program (erase p)` is byte for byte what
        Lean encodes for the same program.       tested (goldens/<name>.bin, 27 programs)
@@ -173,6 +173,25 @@ type (_, _, _, _) observer =
 type in_loop
 type not_in_loop
 
+(* ---- service keys, typed by their own data (nativeServiceTy, Program/Native.lean) ----
+   A free name (Env.firstFreeName = 4 and above) carries what its type code spells: 4 a number,
+   5 a boolean, 6 unit, 7 a Ref.Ref<number> handle; of the reserved names 0-3 only the Scope key
+   types, as Ty.scope. `free_name` is abstract in the interface, so a key under a reserved name
+   cannot be built (E3: a refusal Lean also makes). *)
+type free_name = int
+
+let free_name (n : int) : free_name option = if n >= 4 then Some n else None
+
+type _ skey =
+  | Scope_key : scope skey
+  | Nat_key : free_name -> nat skey
+  | Bool_key : free_name -> bool skey
+  | Unit_key : free_name -> unit skey
+  | Ref_key : free_name -> ref_number skey
+
+(* A layer value (litVal): a string is not one. *)
+type layer_value = Lv_unit | Lv_nat of int | Lv_bool of bool
+
 (* ---- programs ---- *)
 
 type (_, _, _) eff =
@@ -212,6 +231,13 @@ type (_, _, _) eff =
   | Choose :
       int * ('env, 'a, 'e1) eff * ('env, 'b, 'e2) eff * ('a, 'b, 'c) join_answer
       -> ('env, 'c, ('e1, 'e2) union) eff
+  (* Effect.provide(self, layer): the body's answer, the errors union (the requirement rows
+     are the checker's, E3). *)
+  | Provide_layer : 'e1 layer * bool * ('env, 'a, 'e2) eff -> ('env, 'a, ('e2, 'e1) union) eff
+  (* Effect.service(key): the key's carrier. *)
+  | Service : 's skey -> ('env, 's, never) eff
+  (* Effect.provideService(self, key, value): the value at the key's carrier. *)
+  | Provide_service : 's skey * ('env, 's) term * ('env, 'a, 'e) eff -> ('env, 'a, 'e) eff
 
 (* A generator body: env, the return type so far (no_ret before the first), error, loop. *)
 and (_, _, _, _) stmts =
@@ -259,6 +285,18 @@ and (_, _, _) action =
   | Get_context : ('env, context, never) action
   | Get_id : ('env, nat, never) action
   | Close_scope : ('env, scope) term * ('env, ('a, 'e) exit) term -> ('env, unit, never) action
+
+(* A layer term (layerTy): Layer<ROut, E, RIn> with only the error as an index; the two rows
+   are computed by the checker. A body is closed: typed at the empty environment. *)
+and _ layer =
+  | L_succeed : 's skey * layer_value -> never layer
+  | L_effect : 's skey * (empty, 'a, 'e) eff -> 'e layer
+  | L_effect_discard : (empty, 'a, 'e) eff -> 'e layer
+  | L_provide : 'e1 layer * 'e2 layer -> ('e1, 'e2) union layer
+  | L_provide_merge : 'e1 layer * 'e2 layer -> ('e1, 'e2) union layer
+  | L_merge : 'e1 layer * 'e2 layer -> ('e1, 'e2) union layer
+  | L_fresh : 'e layer -> 'e layer
+  | L_or_die : 'e layer -> never layer
 
 (* A closed program with its witnesses, for tables and tests. *)
 type program = Program : (empty, 'a, 'e) eff * 'a ty * 'e ty -> program
@@ -351,6 +389,22 @@ let erase_observer : type a e ans err. (a, e, ans, err) observer -> Eff_types.ob
   | Join_effect -> Eff_types.Observer_mode_joinEffect
   | Await_value -> Eff_types.Observer_mode_awaitValue
 
+let erase_key : type s. s skey -> Eff_types.service_key =
+  let key name code : Eff_types.service_key =
+    { service_key_name = { service_name_value = name }; service_key_service = { service_type_code_value = code } }
+  in
+  function
+  | Scope_key -> Eff_native.scope_key
+  | Nat_key n -> key n 4
+  | Bool_key n -> key n 5
+  | Unit_key n -> key n 6
+  | Ref_key n -> key n 7
+
+let erase_layer_value : layer_value -> Eff_types.lit = function
+  | Lv_unit -> Eff_types.Lit_unit
+  | Lv_nat n -> Eff_types.Lit_nat n
+  | Lv_bool b -> Eff_types.Lit_bool b
+
 let rec erase_eff : type env a e. int -> (env, a, e) eff -> Eff_types.eff = fun d p ->
   let t : type b. (env, b) term -> Eff_types.term = fun x -> erase_term d x in
   match p with
@@ -380,6 +434,9 @@ let rec erase_eff : type env a e. int -> (env, a, e) eff -> Eff_types.eff = fun 
   | Scoped b -> Eff_types.Eff_scoped (erase_eff d b)
   | Acquire_release (a, r) -> Eff_types.Eff_acquireRelease (erase_eff d a, erase_eff (d + 2) r)
   | Choose (site, l, r, _) -> Eff_types.Eff_choose (site, erase_eff d l, erase_eff d r)
+  | Provide_layer (l, is_local, b) -> Eff_types.Eff_provideLayer (erase_layer l, is_local, erase_eff d b)
+  | Service k -> Eff_types.Eff_service (erase_key k)
+  | Provide_service (k, v, b) -> Eff_types.Eff_provideService (erase_key k, t v, erase_eff d b)
 
 and erase_stmts : type env r e l. int -> (env, r, e, l) stmts -> Eff_types.stmts = fun d s ->
   let cons st rest = Eff_types.Stmts_cons (st, rest) in
@@ -417,6 +474,17 @@ and erase_action : type env a e. int -> (env, a, e) action -> Eff_types.action_t
   | Get_context -> Eff_types.Action_term_getContext
   | Get_id -> Eff_types.Action_term_getId
   | Close_scope (s, e) -> Eff_types.Action_term_closeScope (t s, t e)
+
+(* A layer's bodies are closed, so they erase at depth 0. *)
+and erase_layer : type e. e layer -> Eff_types.layer_term = function
+  | L_succeed (k, v) -> Eff_types.Layer_term_succeed (erase_key k, erase_layer_value v)
+  | L_effect (k, b) -> Eff_types.Layer_term_effect (erase_key k, erase_eff 0 b)
+  | L_effect_discard b -> Eff_types.Layer_term_effectDiscard (erase_eff 0 b)
+  | L_provide (s, t) -> Eff_types.Layer_term_provide (erase_layer s, erase_layer t)
+  | L_provide_merge (s, t) -> Eff_types.Layer_term_provideMerge (erase_layer s, erase_layer t)
+  | L_merge (a, b) -> Eff_types.Layer_term_merge (erase_layer a, erase_layer b)
+  | L_fresh l -> Eff_types.Layer_term_fresh (erase_layer l)
+  | L_or_die l -> Eff_types.Layer_term_orDie (erase_layer l)
 
 (* A closed program, erased at the empty environment. *)
 let erase (p : (empty, 'a, 'e) eff) : Eff_types.eff = erase_eff 0 p

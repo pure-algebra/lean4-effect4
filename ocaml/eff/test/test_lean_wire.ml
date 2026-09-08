@@ -117,7 +117,7 @@ let () =
     let family key names =
       check (Printf.sprintf "manifest %s is this library's constructor order" key) (line key = Some names)
     in
-    check "the Lean manifest has 16 lines" (List.length manifest = 16);
+    check "the Lean manifest has 18 lines" (List.length manifest = 18);
     family "Lit" Eff_types.ctor_names_lit;
     family "Term" Eff_types.ctor_names_term;
     family "Terms" Eff_types.ctor_names_terms;
@@ -128,7 +128,9 @@ let () =
     family "MaskMode" Eff_types.ctor_names_mask_mode;
     family "ObserverMode" Eff_types.ctor_names_observer_mode;
     family "ForkOptions" Eff_types.field_names_fork_options;
+    family "ServiceKey" Eff_types.field_names_service_key;
     family "Eff" Eff_types.ctor_names_eff;
+    family "LayerTerm" Eff_types.ctor_names_layer_term;
     family "Stmt" Eff_types.ctor_names_stmt;
     family "Stmts" Eff_types.ctor_names_stmts;
     family "Effs" Eff_types.ctor_names_effs;

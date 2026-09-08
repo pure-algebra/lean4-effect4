@@ -53,7 +53,7 @@ let ellipsis (n : int) (s : string) : string =
 (* ---- 1. goldens ---- *)
 
 let () =
-  check "corpus has 37 programs" (List.length corpus = 37);
+  check "corpus has 38 programs" (List.length corpus = 38);
   Printf.printf "  %-16s %6s %-8s %-10s %-6s %s\n" "program" "bytes" "decode" "re-encode" "JSON" "typeOf";
   List.iter
     (fun (name, typed) ->
@@ -91,7 +91,9 @@ let () =
 
 let () =
   let bad_index i = Eff_frame.to_string (fun b () -> Eff_frame.emit_ctor b i (fun _ -> ())) () in
-  check "Eff index 24 is refused" (Eff_wire.decode_eff_exact (bad_index 24) = None);
+  check "Eff index 27 is refused" (Eff_wire.decode_eff_exact (bad_index 27) = None);
+  check "Eff index 24 with no payload is refused (provideLayer needs a layer, a flag and a body)"
+    (Eff_wire.decode_eff_exact (bad_index 24) = None);
   check "Eff index 99 is refused" (Eff_wire.decode_eff_exact (bad_index 99) = None);
   check "Eff index 17 with no payload is refused (yieldNow needs a nat)"
     (Eff_wire.decode_eff_exact (bad_index 17) = None);
@@ -128,6 +130,26 @@ let i13 = S i12
 let un e = Union (Never, e)
 let un4 e = un (un (un (un e)))
 let un16 e = un4 (un4 (un4 (un4 e)))
+
+(* The join (2026-09-07): a layer of every constructor, provided to a body that reads a service
+   and provides one; the keys are the truth fixtures' spellings (Goldens.lean: codes 4 nat,
+   5 bool). The error witness: the layer's orDie clears its column; the body is a bind of two
+   never-failing reads. *)
+let p_provide_typed : program =
+  let k_a = Nat_key (Option.get (free_name 4)) in
+  let k_b = Nat_key (Option.get (free_name 5)) in
+  let k_c = Bool_key (Option.get (free_name 6)) in
+  let layer =
+    L_or_die
+      (L_fresh
+         (L_merge
+            ( L_provide (L_effect (k_a, Succeed (nat 7)), L_succeed (k_b, Lv_nat 1))
+            , L_provide_merge (L_effect_discard (Succeed unit_), L_succeed (k_c, Lv_bool true)) )))
+  in
+  Program
+    ( Provide_layer (layer, false, Bind (Service k_a, Provide_service (k_b, nat 2, Service k_b)))
+    , Nat
+    , Union (Union (Never, Never), Never) )
 
 let typed_corpus : (string * program) list =
   [ ("p42", Program (Succeed (nat 42), Nat, Never))
@@ -293,6 +315,7 @@ let typed_corpus : (string * program) list =
                                                                             ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) )
         , Nat
         , un16 (un4 Nat) ) )
+  ; ("pProvide", p_provide_typed)
   ]
 
 let () =
@@ -384,11 +407,19 @@ let () =
   check "FinalizerStrategy has 2" (List.length ctor_names_finalizer_strategy = 2);
   check "FnName has 5" (List.length ctor_names_fn_name = 5);
   check "NativeOp has 20" (List.length ctor_names_native_op = 20);
-  check "Eff has 24" (List.length ctor_names_eff = 24);
+  check "Eff has 27" (List.length ctor_names_eff = 27);
+  check "LayerTerm has 8" (List.length ctor_names_layer_term = 8);
   check "Stmt has 6" (List.length ctor_names_stmt = 6);
   check "ActionTerm has 16" (List.length ctor_names_action_term = 16);
   check "Eff.succeed is 0" (ctor_index_eff (Eff_yieldNow 0) = 17 && ctor_index_eff (Eff_succeed (Term_var 0)) = 0);
   check "Eff.choose is 23" (ctor_index_eff (Eff_choose (0, Eff_yieldNow 0, Eff_yieldNow 0)) = 23);
+  check "Eff.provideLayer is 24, service 25, provideService 26 (the join appends)"
+    (ctor_index_eff (Eff_provideLayer (Layer_term_effectDiscard (Eff_yieldNow 0), false, Eff_yieldNow 0)) = 24
+     && ctor_index_eff (Eff_service Eff_native.scope_key) = 25
+     && ctor_index_eff (Eff_provideService (Eff_native.scope_key, Term_var 0, Eff_yieldNow 0)) = 26);
+  check "LayerTerm.succeed is 0, orDie 7"
+    (ctor_index_layer_term (Layer_term_succeed (Eff_native.scope_key, Lit_unit)) = 0
+     && ctor_index_layer_term (Layer_term_orDie (Layer_term_effectDiscard (Eff_yieldNow 0))) = 7);
   check "Eff.gen is 8, perform 6, bind 7" (ctor_index_eff (Eff_gen Stmts_nil) = 8 && ctor_index_eff (Eff_perform (Native_op_refGet, Term_var 0)) = 6 && ctor_index_eff (Eff_bind (Eff_yieldNow 0, Eff_yieldNow 0)) = 7);
   check "ActionTerm.closeScope is 15" (ctor_index_action_term (Action_term_closeScope (Term_var 0, Term_var 0)) = 15);
   check "NativeOp.scopeMake is 19" (ctor_index_native_op (Native_op_scopeMake Finalizer_strategy_parallel) = 19);
@@ -410,12 +441,19 @@ let () =
     go 0
   in
   let manifest = read_file "../eff_manifest.txt" |> String.split_on_char '\n' |> List.filter (fun l -> l <> "") in
-  check "the manifest has 23 families" (List.length manifest = 23);
+  check "the manifest has 24 families" (List.length manifest = 24);
   check "the manifest's Eff line names the 24 constructors with their carriers"
     (List.exists
        (fun l ->
          contains l "Effect4.Program.Eff (eff) inductive: succeed(term) fail(term)"
-         && contains l "whileLoop(term,term,term,eff)" && contains l "choose(int,eff,eff)")
+         && contains l "whileLoop(term,term,term,eff)"
+         && contains l "choose(int,eff,eff) provideLayer(layer_term,bool,eff) service(service_key) provideService(service_key,term,eff)")
+       manifest);
+  check "the manifest's LayerTerm line names the 8 constructors with their carriers"
+    (List.exists
+       (fun l ->
+         contains l "Effect4.Program.LayerTerm (layer_term) inductive: succeed(service_key,lit) effect(service_key,eff)"
+         && contains l "merge(layer_term,layer_term) fresh(layer_term) orDie(layer_term)")
        manifest);
   check "the manifest's NativeOp line ends with scopeMake(finalizer_strategy)"
     (List.exists (fun l -> contains l "(native_op) inductive: refMake" && contains l "deferredAwait scopeMake(finalizer_strategy)") manifest);
@@ -485,6 +523,73 @@ let () =
     (exact (decode_list decode_nat) (to_string (fun b xs -> emit_list b emit_nat xs) [ 1; 2; 3 ]) = Some [ 1; 2; 3 ]);
   check "a pair with a third element is refused"
     (exact (decode_pair decode_nat decode_nat) (frame tag_pair (to_string emit_nat 1 ^ to_string emit_nat 2 ^ to_string emit_nat 3)) = None)
+
+(* ---- 5. the join's typing: the service table and the layer rules (Typing.lean) ---- *)
+
+let () =
+  let k n c : service_key =
+    { service_key_name = { service_name_value = n }; service_key_service = { service_type_code_value = c } }
+  in
+  let open Eff_typing in
+  check "service_ty: a free name is typed by its code (4 nat, 5 bool, 6 unit, 7 ref), other codes refuse"
+    (service_ty (k 4 4) = Some Ty_nat && service_ty (k 9 5) = Some Ty_bool && service_ty (k 4 6) = Some Ty_unit
+     && service_ty (k 4 7) = Some Eff_native.ref_ty && service_ty (k 4 3) = None && service_ty (k 4 8) = None);
+  check "service_ty: of the reserved names only the Scope key types"
+    (service_ty Eff_native.scope_key = Some Eff_native.scope_ty && service_ty (k 1 4) = None
+     && service_ty (k 3 5) = None && first_free_name = 4);
+  check "service requires its key and answers its carrier"
+    (match type_of (Eff_service (k 5 4)) with
+     | Ok t -> t.eff_ty_answer = Ty_nat && t.eff_ty_error = Ty_never && t.eff_ty_requires = [ k 5 4 ]
+     | Error _ -> false);
+  check "service of an untyped key is refused" (not (well_typed (Eff_service (k 2 4))));
+  check "provideService discharges its key"
+    (match type_of (Eff_provideService (k 5 4, Term_lit (Lit_nat 2), Eff_service (k 5 4))) with
+     | Ok t -> t.eff_ty_answer = Ty_nat && t.eff_ty_requires = []
+     | Error _ -> false);
+  check "provideService at the wrong carrier is refused"
+    (not (well_typed (Eff_provideService (k 5 4, Term_lit (Lit_bool true), Eff_service (k 5 4)))));
+  check "provideService leaves another key required"
+    (match type_of (Eff_provideService (k 5 4, Term_lit (Lit_nat 2), Eff_service (k 4 4))) with
+     | Ok t -> t.eff_ty_requires = [ k 4 4 ]
+     | Error _ -> false);
+  check "Layer.succeed provides its key; a string is not a layer value"
+    ((match layer_of (Layer_term_succeed (k 4 4, Lit_nat 1)) with
+      | Ok l -> l.layer_out = [ k 4 4 ] && l.layer_error = Ty_never && l.layer_requires = []
+      | Error _ -> false)
+     && not (well_typed_layer (Layer_term_succeed (k 4 4, Lit_str "x"))));
+  check "a layer body's Scope requirement is the layer's own (bodyRequires)"
+    (match
+       layer_of
+         (Layer_term_effect (k 4 4, Eff_acquireRelease (Eff_succeed (Term_lit (Lit_nat 1)), Eff_succeed (Term_lit Lit_unit))))
+     with
+     | Ok l -> l.layer_requires = [] && l.layer_out = [ k 4 4 ]
+     | Error _ -> false);
+  check "an ill-typed layer body refuses the layer"
+    (not (well_typed_layer (Layer_term_effect (k 4 4, Eff_succeed (Term_var 0)))));
+  let dependent = Layer_term_effect (k 4 4, Eff_service (k 5 4)) in
+  let dependency = Layer_term_succeed (k 5 4, Lit_nat 1) in
+  check "provide discharges what the dependency provides; provideMerge keeps both outputs; merge shares nothing"
+    ((match layer_of (Layer_term_provide (dependent, dependency)) with
+      | Ok l -> l.layer_out = [ k 4 4 ] && l.layer_requires = []
+      | Error _ -> false)
+     && (match layer_of (Layer_term_provideMerge (dependent, dependency)) with
+         | Ok l -> l.layer_out = [ k 4 4; k 5 4 ] && l.layer_requires = []
+         | Error _ -> false)
+     && (match layer_of (Layer_term_merge (dependent, dependency)) with
+         | Ok l -> l.layer_out = [ k 4 4; k 5 4 ] && l.layer_requires = [ k 5 4 ]
+         | Error _ -> false));
+  check "orDie clears the error column"
+    (match layer_of (Layer_term_orDie (Layer_term_effectDiscard (Eff_fail (Term_lit (Lit_nat 1))))) with
+     | Ok l -> l.layer_error = Ty_never && l.layer_out = []
+     | Error _ -> false);
+  check "provideLayer discharges the layer's outputs from the body and adds the layer's requirements"
+    ((match type_of (Eff_provideLayer (dependency, false, Eff_service (k 5 4))) with
+      | Ok t -> t.eff_ty_answer = Ty_nat && t.eff_ty_requires = []
+      | Error _ -> false)
+     && (match type_of (Eff_provideLayer (dependent, true, Eff_service (k 4 4))) with
+         | Ok t -> t.eff_ty_answer = Ty_nat && t.eff_ty_requires = [ k 5 4 ]
+         | Error _ -> false));
+  check "the GADT's reserved names cannot be built" (Eff_typed.free_name 3 = None && Eff_typed.free_name 4 <> None)
 
 let () =
   Printf.printf "test_eff: %d checks, %d failures\n%!" !checks !failures;

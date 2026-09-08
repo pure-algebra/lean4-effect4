@@ -9,7 +9,7 @@
 
    Behaviours (see eff_typed.ml for the argument):
    E1  for every constructible `p : (empty, 'a, 'e) eff`, `Eff_typing.well_typed (erase p)`,
-       and the checker's answer and error are `to_ty` of the indices.   tested (27 programs)
+       and the checker's answer and error are `to_ty` of the indices.   tested (28 programs)
    E2  `Eff_wire.encode_program (erase p)` is byte for byte what Lean encodes for the same
        program.                                                  tested (goldens/<name>.bin)
    E3  completeness is deliberately partial (unions are not canonical at the type level, a
@@ -156,6 +156,26 @@ type (_, _, _, _) observer =
 type in_loop
 type not_in_loop
 
+(* ---- service keys, typed by their own data (nativeServiceTy) ----
+   A free name (`Env.firstFreeName` = 4 and above) carries what its type code spells: 4 a
+   number, 5 a boolean, 6 unit, 7 a `Ref.Ref<number>` handle; of the reserved names 0-3 only
+   the Scope key types. `free_name` is abstract: a key under a reserved name cannot be built. *)
+
+type free_name
+
+(** `Some n` when `n` is a free name (4 and above), `None` for a reserved one. *)
+val free_name : int -> free_name option
+
+type _ skey =
+  | Scope_key : scope skey
+  | Nat_key : free_name -> nat skey
+  | Bool_key : free_name -> bool skey
+  | Unit_key : free_name -> unit skey
+  | Ref_key : free_name -> ref_number skey
+
+(** A layer value (`litVal`): a string is not one. *)
+type layer_value = Lv_unit | Lv_nat of int | Lv_bool of bool
+
 (* ---- programs: (environment, answer, error) ---- *)
 
 type (_, _, _) eff =
@@ -196,6 +216,9 @@ type (_, _, _) eff =
   | Choose :
       int * ('env, 'a, 'e1) eff * ('env, 'b, 'e2) eff * ('a, 'b, 'c) join_answer
       -> ('env, 'c, ('e1, 'e2) union) eff
+  | Provide_layer : 'e1 layer * bool * ('env, 'a, 'e2) eff -> ('env, 'a, ('e2, 'e1) union) eff
+  | Service : 's skey -> ('env, 's, never) eff
+  | Provide_service : 's skey * ('env, 's) term * ('env, 'a, 'e) eff -> ('env, 'a, 'e) eff
 
 (** A generator body: environment, the return type so far (`no_ret` before the first `ret`),
     error, and whether a `breakLoop` is legal here. *)
@@ -245,6 +268,19 @@ and (_, _, _) action =
   | Get_id : ('env, nat, never) action
   | Close_scope : ('env, scope) term * ('env, ('a, 'e) exit) term -> ('env, unit, never) action
 
+(** A layer term (`layerTy`): `Layer<ROut, E, RIn>` with only the error as an index; the two
+    requirement rows are computed by the checker (E3). A body is closed: typed at the empty
+    environment. *)
+and _ layer =
+  | L_succeed : 's skey * layer_value -> never layer
+  | L_effect : 's skey * (empty, 'a, 'e) eff -> 'e layer
+  | L_effect_discard : (empty, 'a, 'e) eff -> 'e layer
+  | L_provide : 'e1 layer * 'e2 layer -> ('e1, 'e2) union layer
+  | L_provide_merge : 'e1 layer * 'e2 layer -> ('e1, 'e2) union layer
+  | L_merge : 'e1 layer * 'e2 layer -> ('e1, 'e2) union layer
+  | L_fresh : 'e layer -> 'e layer
+  | L_or_die : 'e layer -> never layer
+
 (** A closed program with its witnesses, for tables and tests. *)
 type program = Program : (empty, 'a, 'e) eff * 'a ty * 'e ty -> program
 
@@ -270,6 +306,9 @@ val erase_eff : int -> ('env, 'a, 'e) eff -> Eff_types.eff
 val erase_stmts : int -> ('env, 'r, 'e, 'l) stmts -> Eff_types.stmts
 val erase_effs : int -> ('env, 'a, 'e) effs -> Eff_types.effs
 val erase_action : int -> ('env, 'a, 'e) action -> Eff_types.action_term
+val erase_key : 's skey -> Eff_types.service_key
+val erase_layer_value : layer_value -> Eff_types.lit
+val erase_layer : 'e layer -> Eff_types.layer_term
 
 (** A closed program, erased at the empty environment. *)
 val erase : (empty, 'a, 'e) eff -> Eff_types.eff

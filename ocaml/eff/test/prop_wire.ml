@@ -42,6 +42,9 @@ let rand_mode () = pick [ Observer_mode_awaitValue; Observer_mode_joinEffect ]
 let rand_options () =
   { fork_options_startImmediately = rb (); fork_options_daemon = rb (); fork_options_maskMode = rand_mask () }
 
+let rand_service_key () =
+  { service_key_name = { service_name_value = rand_nat () }; service_key_service = { service_type_code_value = rand_nat () } }
+
 let rand_lit () =
   match ri 4 with
   | 0 -> Lit_unit
@@ -76,7 +79,7 @@ let rec rand_eff d =
     | _ -> Eff_perform (rand_op (), t ())
   else
     let e () = rand_eff (d - 1) in
-    match ri 24 with
+    match ri 27 with
     | 0 -> Eff_succeed (t ())
     | 1 -> Eff_fail (t ())
     | 2 -> Eff_failCause (rand_cause (d - 1))
@@ -100,7 +103,23 @@ let rec rand_eff d =
     | 20 -> Eff_withFiber (rand_action (d - 1))
     | 21 -> Eff_scoped (e ())
     | 22 -> Eff_acquireRelease (e (), e ())
-    | _ -> Eff_choose (rand_nat (), e (), e ())
+    | 23 -> Eff_choose (rand_nat (), e (), e ())
+    | 24 -> Eff_provideLayer (rand_layer (d - 1), rb (), e ())
+    | 25 -> Eff_service (rand_service_key ())
+    | _ -> Eff_provideService (rand_service_key (), t (), e ())
+
+and rand_layer d =
+  if d <= 0 then Layer_term_succeed (rand_service_key (), rand_lit ())
+  else
+    match ri 8 with
+    | 0 -> Layer_term_succeed (rand_service_key (), rand_lit ())
+    | 1 -> Layer_term_effect (rand_service_key (), rand_eff (d - 1))
+    | 2 -> Layer_term_effectDiscard (rand_eff (d - 1))
+    | 3 -> Layer_term_provide (rand_layer (d - 1), rand_layer (d - 1))
+    | 4 -> Layer_term_provideMerge (rand_layer (d - 1), rand_layer (d - 1))
+    | 5 -> Layer_term_merge (rand_layer (d - 1), rand_layer (d - 1))
+    | 6 -> Layer_term_fresh (rand_layer (d - 1))
+    | _ -> Layer_term_orDie (rand_layer (d - 1))
 
 and rand_stmt d =
   match ri 6 with

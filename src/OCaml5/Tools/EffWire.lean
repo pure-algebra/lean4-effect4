@@ -23,7 +23,10 @@ def hexOfByte (b : UInt8) : String :=
 
 def hex (bs : List UInt8) : String := String.join (bs.map hexOfByte)
 
-/-- The constructor order every implementation of the wire must agree on. -/
+/-- The constructor order every implementation of the wire must agree on (the join of
+2026-09-07 appended `provideLayer`, `service` and `provideService` to `Eff`, and added
+`LayerTerm` and the `ServiceKey` fields; `ocaml/eff/test/test_lean_wire.ml` checks every line
+against the OCaml library's generated tables). -/
 def manifest : String :=
   "\n".intercalate
     [ "Lit: unit nat bool str"
@@ -36,7 +39,9 @@ def manifest : String :=
     , "MaskMode: interruptible uninterruptible inherit"
     , "ObserverMode: awaitValue joinEffect"
     , "ForkOptions: startImmediately daemon maskMode"
-    , "Eff: succeed fail failCause yieldError sync suspend perform bind gen catchCause matchCause onExit exit uninterruptible interruptible branch whileLoop yieldNow callback awaitFiber withFiber scoped acquireRelease choose"
+    , "ServiceKey: name service"
+    , "Eff: succeed fail failCause yieldError sync suspend perform bind gen catchCause matchCause onExit exit uninterruptible interruptible branch whileLoop yieldNow callback awaitFiber withFiber scoped acquireRelease choose provideLayer service provideService"
+    , "LayerTerm: succeed effect effectDiscard provide provideMerge merge fresh orDie"
     , "Stmt: bindYield yieldDiscard ret ifElse whileTrue breakLoop"
     , "Stmts: nil cons"
     , "Effs: nil cons"
