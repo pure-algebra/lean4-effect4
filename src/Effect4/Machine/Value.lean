@@ -145,11 +145,11 @@ end HandleKind
 
 /-! ## The runtime constructor table -/
 
-/-- The constructor indices the runtime reads at the top of a value, in index order. The two
-`improper*` rows spell the tails the old carriers could build but the shared carrier's `list`
-cannot (`Machine.Val.exitCons h t` with `t` not a list cell; `Env.Val.ctxCons` with a rest that
-is not a spine); no producer in the tree builds one, they exist so the U0 views are exact on
-the whole old carriers, and U1 removes them with the old arms. -/
+/-- The constructor indices the runtime reads at the top of a value, in index order.
+`improperCons` (index 4) spelled the tail the old `Machine.Val.exitCons h t` could build with
+`t` not a list cell; U1a retired the arm and nothing writes the index, which stays reserved so
+`serviceContext` keeps index 5. The matching `improperServiceCons` row (index 6, the old
+`Env.Val.ctxCons` with a rest that was no spine) went with U1b's arms. -/
 inductive RuntimeCtor
   | exitSuccess
   | exitFailure
@@ -157,7 +157,6 @@ inductive RuntimeCtor
   | fiberSnapshot
   | improperCons
   | serviceContext
-  | improperServiceCons
 deriving DecidableEq, Repr
 
 /-- The index of a runtime constructor. -/
@@ -168,7 +167,6 @@ def RuntimeCtor.index : RuntimeCtor → Nat
   | .fiberSnapshot => 3
   | .improperCons => 4
   | .serviceContext => 5
-  | .improperServiceCons => 6
 
 /-! ## Spellings
 
@@ -397,7 +395,6 @@ end Value
 #guard RuntimeCtor.fiberSnapshot.index = 3
 #guard RuntimeCtor.improperCons.index = 4
 #guard RuntimeCtor.serviceContext.index = 5
-#guard RuntimeCtor.improperServiceCons.index = 6
 #guard HandleKind.fiber.byte = 1
 #guard HandleKind.memoMap.byte = 5
 #guard HandleKind.ofByte? 6 = none

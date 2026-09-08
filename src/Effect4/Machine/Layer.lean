@@ -658,27 +658,45 @@ end St
 
 /-! ## Values -/
 
-/-- `reifyExit`. -/
+/-- `reifyExit`: an `Exit` as a value of the shared carrier, each arm an equation. -/
 def reifyExitVal : ExitV → Val
   | Exit.success value => Val.exitOk value
   | Exit.failure cause => Val.exitErr cause
 
-/-- `RunInterp.exitsValue` (M6). -/
-def exitsVal : List ExitV → Val
-  | [] => Val.exitNil
-  | exit :: rest => Val.exitCons (reifyExitVal exit) (exitsVal rest)
+/-- `RunInterp.exitsValue` (M6): one `list` frame. -/
+def exitsVal (exits : List ExitV) : Val := .list (exits.map reifyExitVal)
+
+/-- One reified exit read back; `none` on any other shape. -/
+def exitOfVal : Val → Option ExitV
+  | Value.exitOk value => some (Exit.success value)
+  | Value.exitErr written => (causeImage.ofVal written).map Exit.failure
+  | _ => none
+
+/-- The members of an exits value read back, up to the first member that is no exit. -/
+def exitsOfList : List Val → List ExitV
+  | [] => []
+  | value :: rest =>
+    match exitOfVal value with
+    | some exit => exit :: exitsOfList rest
+    | none => []
 
 /-- The exits read back off an exits value. -/
 def exitsOfVal : Val → List ExitV
-  | Val.exitCons (Val.exitOk value) rest => Exit.success value :: exitsOfVal rest
-  | Val.exitCons (Val.exitErr cause) rest => Exit.failure cause :: exitsOfVal rest
+  | .list values => exitsOfList values
   | _ => []
 
-/-- The reasons carried by an exits value, in order. -/
+mutual
+/-- The reasons carried by an exits value, in order: a reified failed exit's cause, read back
+through `causeImage`, and the members of a list. -/
 def reasonsOfVal : Val → List ReasonV
-  | Val.exitErr cause => cause.reasons
-  | Val.exitCons head tail => reasonsOfVal head ++ reasonsOfVal tail
+  | Value.exitErr written => ((causeImage.ofVal written).map Cause.reasons).getD []
+  | .list values => reasonsOfList values
   | _ => []
+/-- The reasons of a list of values, back to back. -/
+def reasonsOfList : List Val → List ReasonV
+  | [] => []
+  | value :: rest => reasonsOfVal value ++ reasonsOfList rest
+end
 
 /-- `exitAsVoidAll` at the value alphabet (`internal/effect.ts:2024-2038`). -/
 def voidAllOf (reasons : List ReasonV) : ExitV :=
@@ -686,13 +704,22 @@ def voidAllOf (reasons : List ReasonV) : ExitV :=
   | [] => Exit.success Val.unit
   | reason :: rest => Exit.failure ⟨reason :: rest⟩
 
+theorem exitOfVal_reifyExitVal (exit : ExitV) : exitOfVal (reifyExitVal exit) = some exit := by
+  cases exit with
+  | success value => rfl
+  | failure cause =>
+    show (causeImage.ofVal (causeImage.toVal cause)).map Exit.failure = some (Exit.failure cause)
+    rw [Effect4.Store.Image.ofVal_toVal]
+    rfl
+
 theorem exitsOfVal_exitsVal : ∀ exits : List ExitV, exitsOfVal (exitsVal exits) = exits
   | [] => rfl
-  | Exit.success value :: rest => by
-    show Exit.success value :: exitsOfVal (exitsVal rest) = _
-    rw [exitsOfVal_exitsVal rest]
-  | Exit.failure cause :: rest => by
-    show Exit.failure cause :: exitsOfVal (exitsVal rest) = _
+  | exit :: rest => by
+    show (match exitOfVal (reifyExitVal exit) with
+      | some e => e :: exitsOfList (rest.map reifyExitVal)
+      | none => []) = exit :: rest
+    rw [exitOfVal_reifyExitVal]
+    show exit :: exitsOfVal (exitsVal rest) = exit :: rest
     rw [exitsOfVal_exitsVal rest]
 
 /-- A context from a service list, by `addV` in order. -/
@@ -1107,13 +1134,15 @@ def contAOf (table : LayerTable) : Name → Val → Program
   | Name.seq next, _ => progOf table next
   | Name.constant value, _ => Prim.success value
   | Name.closeSeq rest exit captured, _ => closeSeqChain rest exit captured
-  | Name.closePar rest exit forked masked, Val.fiber id => closeParChain masked rest exit (forked ++ [id])
+  | Name.closePar rest exit forked masked, Val.fiber ⟨id⟩ =>
+    closeParChain masked rest exit (forked ++ [⟨id⟩])
   | Name.closePar rest exit forked masked, _ => closeParChain masked rest exit forked
   | Name.mergeAwaitedExits, value => Prim.ofExit (voidAllOf (reasonsOfVal value))
   | Name.afterScopeAdd _, Val.unit => Prim.success Val.unit                              -- :3856
-  | Name.afterScopeAdd fin, Val.exitOk value => finProgram fin (Exit.success value)        -- :3853
-  | Name.afterScopeAdd fin, Val.exitErr cause => finProgram fin (Exit.failure cause)
-  | Name.afterScopeAdd _, _ => Prim.failure (Cause.die Defect.badName)
+  | Name.afterScopeAdd fin, value =>                                                     -- :3853
+    match exitOfVal value with
+    | some exit => finProgram fin exit
+    | none => Prim.failure (Cause.die Defect.badName)
   | Name.updateThen update body, value => updateThenK table update body (decode value)
   | Name.bodyThen body prev, _ =>                                                        -- :2092
     Prim.onExit (progOf table body) (Name.finalizerName (FinName.restoreContext prev)) false
@@ -1181,8 +1210,8 @@ def contAOf (table : LayerTable) : Name → Val → Program
         ⟨true, false, Supervision.MaskMode.inherit⟩))
       (Name.mergeForkNext rest memoMap parent forked)
   | Name.mergeForkOne _ _ _ _ _, _ => Prim.failure (Cause.die Defect.badName)
-  | Name.mergeForkNext rest memoMap parent forked, Val.fiber id =>
-    mergeForkAll memoMap parent rest (forked ++ [id])
+  | Name.mergeForkNext rest memoMap parent forked, Val.fiber ⟨id⟩ =>
+    mergeForkAll memoMap parent rest (forked ++ [⟨id⟩])
   | Name.mergeForkNext _ _ _ _, _ => Prim.failure (Cause.die Defect.badName)
   | Name.mergeContexts, value => mergeExitContexts (exitsOfVal value)
   | Name.provideLayerWith layer isLocal body, Val.scopeHandle scope =>                       -- internal/layer.ts:15-21

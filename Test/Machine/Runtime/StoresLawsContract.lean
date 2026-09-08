@@ -314,19 +314,21 @@ def shapeCode : Val → Nat
 #guard shapeCode (Val.fibers []) = 13
 #guard shapeCode tupleV = 0
 
--- The Layer machine's alphabet: a service context round-trips and reads back its entries; the
--- memo-map handle is admitted there; a spine of non-pairs and a bad key are refused.
-#guard Env.Val.ofStore (Env.Val.toStore
-    (Env.Val.ctxCons ⟨⟨1⟩, ⟨2⟩⟩ (Env.Val.memoMap 4) (Env.Val.ctxCons ⟨⟨3⟩, ⟨0⟩⟩ Env.Val.unit Env.Val.ctxNil))) =
-  some (Env.Val.ctxCons ⟨⟨1⟩, ⟨2⟩⟩ (Env.Val.memoMap 4) (Env.Val.ctxCons ⟨⟨3⟩, ⟨0⟩⟩ Env.Val.unit Env.Val.ctxNil))
-#guard Env.Val.ofStore (Env.Val.toStore (Env.Val.pair (Env.Val.promise 1) (Env.Val.memoMap 2))) =
-  some (Env.Val.pair (Env.Val.promise 1) (Env.Val.memoMap 2))
-#guard Env.Val.ofStore (Value.serviceContext [Store.Val.nat 7]) = none
-#guard Env.Val.ofStore (Value.serviceContext [Store.Val.pair (Store.Val.nat 1) (Store.Val.nat 7)]) = none
-#guard Env.Val.ofStore (Value.cell 3) = none
-#guard (Env.Val.toStore (Env.Val.ctxCons ⟨⟨1⟩, ⟨2⟩⟩ (Env.Val.scopeHandle 4) Env.Val.ctxNil)).handles = [(4, 4)]
+-- The Layer machine's alphabet is the same carrier (U1b): a service context round-trips and
+-- reads back its entries; the memo-map handle is admitted there; a spine of non-pairs and a
+-- bad key are refused.
+#guard Env.decode (Env.encode
+    (((Env.Context.empty : Env.Ctx).addV ⟨⟨1⟩, ⟨2⟩⟩ (Env.Val.memoMap 4)).addV ⟨⟨3⟩, ⟨0⟩⟩ Env.Val.unit)) =
+  some (((Env.Context.empty : Env.Ctx).addV ⟨⟨1⟩, ⟨2⟩⟩ (Env.Val.memoMap 4)).addV ⟨⟨3⟩, ⟨0⟩⟩ Env.Val.unit)
+#guard Env.Val.pair (Env.Val.promise 1) (Env.Val.memoMap 2) =
+  Store.Val.pair (Value.promise 1) (Value.memoMap 2)
+#guard Env.decode (Value.serviceContext [Store.Val.nat 7]) = none
+#guard Env.decode (Value.serviceContext [Store.Val.pair (Store.Val.nat 1) (Store.Val.nat 7)]) = none
+#guard Env.decode (Value.cell 3) = none
+#guard (Env.encode ((Env.Context.empty : Env.Ctx).addV ⟨⟨1⟩, ⟨2⟩⟩ (Env.Val.scopeHandle 4))).handles =
+  [(4, 4)]
 -- The service context and the cached fiber context are distinct trees.
-#guard Env.Val.toStore Env.Val.ctxNil ≠ Val.context ⟨none, 2048, false⟩
+#guard Env.encode (Env.Context.empty : Env.Ctx) ≠ Val.context ⟨none, 2048, false⟩
 -- The hand-written key image writes the bytes the generated OCaml encoder writes
 -- (`ocaml/eff/eff_wire.ml` `emit_service_key`, run against the `effect4` switch on
 -- 2026-09-07 for the key `{1, 2}`: 74 bytes, listed here), so one decoder serves both.

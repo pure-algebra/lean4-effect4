@@ -1,5 +1,6 @@
 import Effect4.Machine.Fibers
 import Effect4.Machine.Key
+import Effect4.Machine.Value
 import Effect4.Data.Row
 import Effects.Algebra.Program
 
@@ -43,6 +44,15 @@ extended from outside; the landing merges them).
 The error channel is `Cause`/`Exit` everywhere; a missing service is a *defect*
 (`Context.getUnsafe` throws, `runLoop` catches at `:670-674` and re-enters with `exitDie`), never
 a typed error and never a hidden default.
+
+**U1b (2026-09-07).** `Val` is the shared carrier `Effect4.Store.Val` at the table of
+`Machine/Value.lean`: a service context is `Value.serviceContext` over `pair key value` entries
+(`entryStore`/`ofEntry` the entry codec, `encode`/`decode` the spine codec), the handles are
+`Value.scope`/`Value.memoMap`/`Value.promise`/`Value.fiber`, an exit is `Value.exitOk`/
+`Value.exitErr`, a memo hit's two-field answer is the carrier's `pair`. The `Env.Val`
+namespace keeps the old spellings as patterns, the way `Machine/Stores.lean` spells
+`Machine.Val`'s (`docs/research/2026-09-07-u1-cutover-dispatch.md`, U1b; the Layer machine's
+own sites follow in the join, `docs/research/2026-09-07-join-dispatch.md`).
 -/
 
 set_option autoImplicit false
@@ -789,44 +799,147 @@ deriving DecidableEq, Repr
 /-- The cause-annotation value alphabet; `stackAnnotations` contributes none. -/
 abbrev Ann := Unit
 
-/-- The one value alphabet. `ctxNil`/`ctxCons` spell a context as a spine, so `getContext`
-answers a value that `decode` reads back exactly (`decode_encode`); a `List` field would make
-`Val` a nested inductive whose `DecidableEq` handler refuses (state note §3.5), and an opaque
-handle would break `provideContext(context())`'s round trip. `pair` is the two-field answer a
-memo hit yields (`Layer.ts:438-440`: the entry's Deferred and the map that owns it). -/
-inductive Val
-  /-- `exitVoid`'s value (`internal/effect.ts:988`). -/
-  | unit
-  | nat (n : Nat)
-  | bool (b : Bool)
-  /-- The handle a fork answers. -/
-  | fiber (id : FiberId)
-  /-- `awaitAllChildren`'s snapshot. -/
-  | fibers (ids : List FiberId)
-  /-- A `Scope` handle: a key of the scope store. -/
-  | scopeHandle (scope : Nat)
-  /-- A `MemoMap` handle (`Layer.ts:421-458`). -/
-  | memoMap (id : Nat)
-  /-- A `Deferred` handle (`Deferred.ts:140-145`). -/
-  | promise (cell : Nat)
-  /-- A two-field answer. -/
-  | pair (first second : Val)
-  /-- A reified successful `Exit`. -/
-  | exitOk (value : Val)
-  /-- A reified failed `Exit`. -/
-  | exitErr (cause : Cause Err Defect FiberId Ann)
-  /-- The empty list of awaited exits (M6). -/
-  | exitNil
-  /-- One awaited exit, and the rest. -/
-  | exitCons (head tail : Val)
-  /-- The empty context spine. -/
-  | ctxNil
-  /-- One bound service, and the rest of the spine. -/
-  | ctxCons (key : ServiceKey) (value : Val) (rest : Val)
-deriving DecidableEq
+/-! ### The alphabets as values
+
+`Err`, `Defect` and `ServiceKey` are written on the shared carrier at the generated rule of
+`Machine/Value.lean` (a case of a sum is `ctor i [args…]`, a structure `ctor 0 [fields…]`); the
+cause carrier follows through `Value.cause`. -/
+
+open Effect4.Store (Image)
+
+def ofErr : Store.Val → Option Err
+  | .ctor 0 [] => some .boom
+  | .ctor 1 [.nat c] => some (.tag c)
+  | _ => none
+
+/-- `Env.Err` at the generated rule. -/
+def Err.image : Image Err where
+  toVal
+    | .boom => .ctor 0 []
+    | .tag c => .ctor 1 [.nat c]
+  ofVal := ofErr
+  ofVal_toVal e := by cases e <;> rfl
+  ofVal_exact := by
+    intro v e h
+    unfold ofErr at h
+    split at h <;> first | (injection h with h; subst h; rfl) | exact nomatch h
+
+theorem Err.image_handleFree : Image.HandleFree Err.image := by
+  intro e
+  cases e <;> rfl
+
+/-- `ServiceKey` (`Machine/Key.lean`) at the generated rule: the pair of the two one-field
+structures, each `ctor 0 [nat]` (the generator's own instance for the same declaration writes
+`ctor 0 [ctor 0 [nat], ctor 0 [nat]]`, `ocaml/eff/eff_wire.ml` `emit_service_key`). -/
+def serviceKeyImage : Image ServiceKey :=
+  (Image.ctor2 (Image.nat.ctor1 0) (Image.nat.ctor1 0) 0).equiv
+    (fun p => ⟨⟨p.1⟩, ⟨p.2⟩⟩) (fun k => (k.name.value, k.service.value))
+    (fun _ => rfl) (fun _ => rfl)
+
+theorem serviceKeyImage_toVal (k : ServiceKey) :
+    serviceKeyImage.toVal k =
+      .ctor 0 [.ctor 0 [.nat k.name.value], .ctor 0 [.nat k.service.value]] := rfl
+
+theorem serviceKeyImage_handleFree : Image.HandleFree serviceKeyImage :=
+  Image.equiv_handleFree _ _ _ _ _
+    (Image.ctor2_handleFree _ _ _ (Image.ctor1_handleFree _ _ Image.nat_handleFree)
+      (Image.ctor1_handleFree _ _ Image.nat_handleFree))
+
+def ofDefect : Store.Val → Option Defect
+  | .ctor 0 [] => some .notImplemented
+  | .ctor 1 [] => some .asyncFiber
+  | .ctor 2 [] => some .badName
+  | .ctor 3 [k] => (serviceKeyImage.ofVal k).map .serviceNotFound
+  | .ctor 4 [.nat i] => some (.unknownLayer i)
+  | _ => none
+
+/-- `Env.Defect` at the generated rule; `serviceNotFound key` carries the key's image. -/
+def Defect.image : Image Defect where
+  toVal
+    | .notImplemented => .ctor 0 []
+    | .asyncFiber => .ctor 1 []
+    | .badName => .ctor 2 []
+    | .serviceNotFound k => .ctor 3 [serviceKeyImage.toVal k]
+    | .unknownLayer i => .ctor 4 [.nat i]
+  ofVal := ofDefect
+  ofVal_toVal d := by
+    cases d
+    case serviceNotFound k =>
+      show (serviceKeyImage.ofVal (serviceKeyImage.toVal k)).map Defect.serviceNotFound =
+        some (.serviceNotFound k)
+      rw [Image.ofVal_toVal, Option.map_some]
+    all_goals rfl
+  ofVal_exact := by
+    intro v d h
+    unfold ofDefect at h
+    split at h <;> first
+      | (injection h with h; subst h; rfl)
+      | (next k =>
+          obtain ⟨key, hk, hj⟩ := Image.map_eq_some_inv h
+          subst hj
+          show Store.Val.ctor 3 [k] = Store.Val.ctor 3 [serviceKeyImage.toVal key]
+          rw [serviceKeyImage.ofVal_exact hk])
+      | exact nomatch h
+
+theorem Defect.image_handleFree : Image.HandleFree Defect.image := by
+  intro d
+  cases d
+  case serviceNotFound k =>
+    show (Store.Val.ctor 3 [serviceKeyImage.toVal k]).handles = []
+    rw [Store.Val.handles, Store.Val.handlesList_cons, serviceKeyImage_handleFree k,
+      Store.Val.handlesList_nil]
+    rfl
+  all_goals rfl
 
 /-- The cause carrier at this instantiation. -/
 abbrev CauseV := Cause Err Defect FiberId Ann
+
+/-- The cause carrier as a value (`Ann = Unit`): the reason list under `ctor 0`, each reason at
+the generated rule, the interruptor recorded as a fiber *identity* (`Value.fiberIdentity`),
+never as a handle. -/
+def causeImage : Image CauseV :=
+  Value.cause Err.image Defect.image Value.fiberIdentity Image.unit
+
+theorem causeImage_handleFree : Image.HandleFree causeImage :=
+  Value.cause_handleFree _ _ _ _ Err.image_handleFree Defect.image_handleFree
+    Value.fiberIdentity_handleFree Image.unit_handleFree
+
+/-- The one value alphabet: the shared carrier (U1b). rc.112's values at this instantiation are
+numbers, booleans and `undefined` (`exitVoid`, `internal/effect.ts:988`); the handles the
+Layer machine mints — a `Scope`, a `MemoMap` (`Layer.ts:421-458`), a `Deferred`
+(`Deferred.ts:140-145`), a `FiberImpl` (the handle a fork answers); `fiber.context` as the
+service spine (`Value.serviceContext`, so `getContext` answers a value `decode` reads back
+exactly, `decode_encode`, and `provideContext(context())` round-trips); a reified `Exit`; and
+the two-field answer a memo hit yields (`Layer.ts:438-440`: the entry's Deferred and the map
+that owns it), the carrier's `pair`. The spellings below are those shapes at the old argument
+types, as `Machine/Stores.lean` spells `Machine.Val`'s; a pattern on a fiber handle writes
+`Val.fiber ⟨id⟩`. -/
+abbrev Val := Effect4.Store.Val
+
+namespace Val
+
+export Effect4.Store.Val (unit nat bool str bytes list pair ctor ref handle)
+
+/-- The handle a fork answers (`Value.fiber`, kind 1). -/
+@[match_pattern] abbrev fiber (id : FiberId) : Val := Value.fiber id.value
+/-- A `Scope` handle: a key of the scope store (`Value.scope`, kind 4). -/
+@[match_pattern] abbrev scopeHandle (scope : Nat) : Val := Value.scope scope
+/-- A `MemoMap` handle (`Layer.ts:421-458`; `Value.memoMap`, kind 5). -/
+@[match_pattern] abbrev memoMap (id : Nat) : Val := Value.memoMap id
+/-- A `Deferred` handle (`Deferred.ts:140-145`; `Value.promise`, kind 3). -/
+@[match_pattern] abbrev promise (cell : Nat) : Val := Value.promise cell
+/-- A reified successful `Exit` (`Value.exitOk`). -/
+@[match_pattern] abbrev exitOk (value : Val) : Val := Value.exitOk value
+/-- The empty list of awaited exits (M6): the carrier's empty `list`. One exit list is one
+`list` frame; there is no cons arm. -/
+@[match_pattern] abbrev exitNil : Val := .list []
+/-- `awaitAllChildren`'s snapshot: the fiber handles under `Value.fiberSnapshot`. -/
+abbrev fibers (ids : List FiberId) : Val :=
+  Value.fiberSnapshot ((Image.list Value.fiberHandle).toVal ids)
+/-- A reified failed `Exit`: the cause written by `causeImage` under `Value.exitErr`. -/
+abbrev exitErr (cause : CauseV) : Val := Value.exitErr (causeImage.toVal cause)
+
+end Val
 
 /-- The exit carrier at this instantiation. -/
 abbrev ExitV := Exit Val Err Defect FiberId Ann
@@ -953,31 +1066,60 @@ with rc.112's defaults where the key is unbound or bound to a value of the wrong
 def budgetOf (c : Ctx) : Nat × Bool :=
   (natOfVal 2048 (c.getRef maxOpsRef), boolOfVal false (c.getRef preventYieldRef))
 
-/-- The context as a value: the entry spine. -/
-def encodeEntries : List (Service ValU) → Val
-  | [] => Val.ctxNil
-  | s :: rest => Val.ctxCons s.key s.valueVal (encodeEntries rest)
+/-- One context entry, written: the key at `serviceKeyImage`, paired with the value. -/
+def entryStore (key : ServiceKey) (value : Val) : Val :=
+  .pair (serviceKeyImage.toVal key) value
+
+/-- One context entry, read: a `pair` of a key and a value; `none` on any other shape. -/
+def ofEntry : Val → Option (ServiceKey × Val)
+  | .pair k v => (serviceKeyImage.ofVal k).map fun key => (key, v)
+  | _ => none
+
+/-- The context as a value: the written entries, in binding order, under
+`Value.serviceContext` (`RuntimeCtor.serviceContext`). -/
+def encodeEntries (es : List (Service ValU)) : Val :=
+  Value.serviceContext (es.map fun s => entryStore s.key s.valueVal)
 
 /-- `RunInterp.contextValue`: `getContext`'s answer (`internal/effect.ts:2153`). -/
 def encode (c : Ctx) : Val := encodeEntries c.entries
 
+/-- The members of a spine read back as entries; `none` at the first member that is no entry. -/
+def entriesOf : List Val → Option (List (Service ValU))
+  | [] => some []
+  | e :: rest =>
+    match ofEntry e, entriesOf rest with
+    | some (key, value), some es => some ((⟨key, value⟩ : Service ValU) :: es)
+    | _, _ => none
+
 /-- The spine read back as entries; `none` off a non-spine value. -/
 def spine : Val → Option (List (Service ValU))
-  | Val.ctxNil => some []
-  | Val.ctxCons key value rest => (spine rest).map fun es => (⟨key, value⟩ : Service ValU) :: es
+  | Value.serviceContext es => entriesOf es
   | _ => none
 
 /-- A value read back as a context: a spine with unique keys. -/
 def decode (v : Val) : Option Ctx :=
   (spine v).bind fun es => if h : (es.map Service.key).Nodup then some ⟨es, h⟩ else none
 
-theorem spine_encodeEntries : ∀ es : List (Service ValU), spine (encodeEntries es) = some es
+theorem ofEntry_entryStore (key : ServiceKey) (value : Val) :
+    ofEntry (entryStore key value) = some (key, value) := by
+  show (serviceKeyImage.ofVal (serviceKeyImage.toVal key)).map (fun key => (key, value)) =
+    some (key, value)
+  rw [Image.ofVal_toVal]
+  rfl
+
+theorem entriesOf_entryStore :
+    ∀ es : List (Service ValU), entriesOf (es.map fun s => entryStore s.key s.valueVal) = some es
   | [] => rfl
   | s :: rest => by
-    show (spine (encodeEntries rest)).map (fun es => (⟨s.key, s.valueVal⟩ : Service ValU) :: es) =
-      some (s :: rest)
-    rw [spine_encodeEntries rest]
+    show (match ofEntry (entryStore s.key s.valueVal),
+        entriesOf (rest.map fun s => entryStore s.key s.valueVal) with
+      | some (key, value), some es => some ((⟨key, value⟩ : Service ValU) :: es)
+      | _, _ => none) = some (s :: rest)
+    rw [ofEntry_entryStore, entriesOf_entryStore rest]
     rfl
+
+theorem spine_encodeEntries (es : List (Service ValU)) : spine (encodeEntries es) = some es :=
+  entriesOf_entryStore es
 
 /-- The context value round-trips: `provideContext(self, yield* context())` is the identity on
 the map, as it is on the host. -/

@@ -3312,13 +3312,13 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
                   { observers := e.observers + 1, effect := e.effect, layerScope := e.layerScope, deferred := e.deferred,
                     finalizer := e.finalizer },
               scopes := st.scopes, deferreds := st.deferreds, nextName := st.nextName },
-            (Effect4.Machine.Env.Val.promise entry.deferred.index).pair (Effect4.Machine.Env.Val.memoMap owner.index)))
+            Effect4.Machine.Env.Val.pair (Effect4.Machine.Env.Val.promise entry.deferred.index) (Effect4.Machine.Env.Val.memoMap owner.index)))
 
 #check (@Effect4.Machine.Layers.memoize_hit :
   ∀ (table : Effect4.Machine.Layers.LayerTable) (layer : Effect4.Machine.Layers.LayerId)
     (memoMap : Effect4.Machine.Layers.MemoMapId) (scope : Nat) (c : Effect4.Machine.Layers.Construction) (cell owner : Nat),
     Effect4.Machine.Layers.contAOf table (Effect4.Machine.Layers.Name.memoize layer memoMap scope c)
-        ((Effect4.Machine.Env.Val.promise cell).pair (Effect4.Machine.Env.Val.memoMap owner)) =
+        (Effect4.Machine.Env.Val.pair (Effect4.Machine.Env.Val.promise cell) (Effect4.Machine.Env.Val.memoMap owner)) =
       Effect4.Prim.onSuccess
         (Effect4.Machine.Layers.scopeAddProgram scope (Effect4.Machine.Layers.FinName.memoEntry layer { index := owner }))
         (Effect4.Machine.Layers.Name.awaitPromise { index := cell }))
