@@ -376,6 +376,8 @@ let rec emit_native_op (b : Buffer.t) (v : native_op) : unit =
   | Native_op_deferredFail -> Eff_frame.emit_ctor b 17 (fun _ -> ())
   | Native_op_deferredAwait -> Eff_frame.emit_ctor b 18 (fun _ -> ())
   | Native_op_scopeMake a0 -> Eff_frame.emit_ctor b 19 (fun b -> emit_finalizer_strategy b a0)
+  | Native_op_sleep -> Eff_frame.emit_ctor b 20 (fun _ -> ())
+  | Native_op_clockNow -> Eff_frame.emit_ctor b 21 (fun _ -> ())
 
 let encode_native_op (v : native_op) : string = Eff_frame.to_string emit_native_op v
 
@@ -451,6 +453,10 @@ let rec decode_native_op (s : string) (pos : int) (limit : int) : (native_op * i
        | None -> None
        | Some (a0, p) ->
         if p = e then Some (Native_op_scopeMake a0, next) else None)
+    | 20 ->
+      if p = e then Some (Native_op_sleep, next) else None
+    | 21 ->
+      if p = e then Some (Native_op_clockNow, next) else None
     | _ -> None)
 
 let decode_native_op_exact (s : string) : native_op option = Eff_frame.exact decode_native_op s

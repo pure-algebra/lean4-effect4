@@ -691,4 +691,38 @@ def netMemo : NativeEff :=
     (.scoped (.acquireRelease (.succeed (.lit (.nat 5))) (.succeed (.lit .unit))))) 0 =
   some (Exit.success (Val.nat 5))
 
+/-! ## The timer on the program route (A4, commit 2)
+
+`Effect.sleep(d)` is the async row's callback: `0` is the counted yield (`internal/effect.ts:6054`),
+the rest parks on the logical clock until an `advance` fires it (`Machine/Timer.lean`,
+DB-14). `Effect.currentTimeMillis` reads the clock. The two shapes the machine-level
+fixtures could not spell (`SchedulerCoreContract` §Timer): a woken fiber reads the staged
+clock, and a woken fiber's sleep fires in the same advance (finding 4 of the timer note). -/
+
+def pSleep : NativeEff := .callback .sleep (.lit (.nat 5))
+def pSleepZero : NativeEff := .callback .sleep (.lit (.nat 0))
+def pSleepNow : NativeEff := .bind (.callback .sleep (.lit (.nat 3))) (.perform .clockNow (.lit .unit))
+def pSleepTwice : NativeEff := .bind (.callback .sleep (.lit (.nat 1))) (.callback .sleep (.lit (.nat 1)))
+def pClockNow : NativeEff := .perform .clockNow (.lit .unit)
+
+#guard (typeOf nativeSignature pSleep).isSome ∧ (typeOf nativeSignature pSleepNow).isSome
+#guard (typeOf nativeSignature pSleepTwice).isSome ∧ (typeOf nativeSignature pClockNow).isSome
+-- a sleep parks; an advance short of the deadline leaves it parked; the deadline fires it
+#guard exitOf (replayEff pSleep [evaluateRoot]) 0 = none
+#guard exitOf (replayEff pSleep [evaluateRoot, .advance 4]) 0 = none
+#guard exitOf (replayEff pSleep [evaluateRoot, .advance 5]) 0 = some (.success .unit)
+#guard exitOf (replayEff pSleep [evaluateRoot, .advance 4, .advance 1]) 0 = some (.success .unit)
+-- `sleep 0` is the counted yield: the flush resumes it, no advance needed
+#guard exitOf (replayEff pSleepZero [evaluateRoot]) 0 = none
+#guard exitOf (replayEff pSleepZero [evaluateRoot, .flush]) 0 = some (.success .unit)
+-- the woken fiber reads the clock staged at its deadline, not the advance's end
+#guard exitOf (replayEff pSleepNow [evaluateRoot, .advance 10]) 0 = some (.success (.nat 3))
+-- finding 4: the sleep a woken fiber registers fires in the same advance when due by its end
+#guard exitOf (replayEff pSleepTwice [evaluateRoot, .advance 2]) 0 = some (.success .unit)
+#guard exitOf (replayEff pSleepTwice [evaluateRoot, .advance 1]) 0 = none
+#guard exitOf (replayEff pSleepTwice [evaluateRoot, .advance 1, .advance 1]) 0 = some (.success .unit)
+-- the clock read: zero at the start, the sum of the advances after
+#guard exitOf (replayEff pClockNow [evaluateRoot]) 0 = some (.success (.nat 0))
+#guard exitOf (replayEff pClockNow [.advance 7, .advance 0, evaluateRoot]) 0 = some (.success (.nat 7))
+
 end Test.Syntax.CompileContract

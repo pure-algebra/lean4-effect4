@@ -16,13 +16,13 @@ Standard library only. OCaml 5.1.1 / dune 3.24 (opam switch `effect4`).
 | `eff_types.ml` | 471 | **generated** | one OCaml variant/record per Lean inductive/structure, constructor order pinned, `ctor_index_*` / `ctor_name_*` / `ctor_names_*` per family |
 | `eff_wire.ml` | 978 | **generated** | `encode_*` / `decode_*` per family, `*_exact` at the top level |
 | `eff_json.ml` | 187 | **generated** | `print_*` per family (a printer only — there is no JSON parser anywhere) |
-| `eff_native.ml` | 184 | **generated** | the atom typing table (`atom_ty`), the 53 op values (`all_ops`) and their rows (`row_of`), `scope_key`, the handle types |
+| `eff_native.ml` | 184 | **generated** | the atom typing table (`atom_ty`), the 55 op values (`all_ops`) and their rows (`row_of`), `scope_key`, the handle types |
 | `eff_typing.ml` | 518 | hand | the typing judgement of `Typing.lean` as `type_of : eff -> (eff_ty, error) result`, `well_typed`, `print_type`, `Ty.join`; since the join, the service table (`service_ty`) and `LayerTy` with `layer_of` |
-| `eff_typed.ml` / `.mli` | 510 / 332 | hand | the GADT surface indexed by the Eff type (since the join: typed service keys `skey`, the `layer` GADT, `Provide_layer`/`Service`/`Provide_service`), and `erase` to the untyped carrier |
+| `eff_typed.ml` / `.mli` | 515 / 335 | hand | the GADT surface indexed by the Eff type (since the join: typed service keys `skey`, the `layer` GADT, `Provide_layer`/`Service`/`Provide_service`), and `erase` to the untyped carrier |
 | `eff_manifest.txt` | 24 | **generated** | one line per family: name, OCaml type, constructors and their carriers, in order |
-| `goldens/` | 116 files | **generated** | `<name>.bin` (canonical bytes), `<name>.json`, `<name>.ty` for 38 programs, plus `corpus.txt` and `coverage.txt` |
+| `goldens/` | 119 files | **generated** | `<name>.bin` (canonical bytes), `<name>.json`, `<name>.ty` for 39 programs, plus `corpus.txt` and `coverage.txt` |
 | `goldens/val_*.hex` | 2 files | **hand-derived** | `val_handle.hex`, `val_ref.hex` — two `Store.Val` trees derived by hand from `Val.lean`'s encoder, pending a Lean cut |
-| `test/test_eff.ml` | 596 | hand | the golden battery, the GADT corpus, the constructor pins, the wire kernel, the join's typing |
+| `test/test_eff.ml` | 597 | hand | the golden battery, the GADT corpus, the constructor pins, the wire kernel, the join's typing |
 | `test/prop_wire.ml` | 228 | hand | the wire property test on random untyped values (layer terms included) |
 | `test/test_lean_wire.ml` | 180 | hand | the differential against Lean's own encoder (`ocaml/goldens/eff/*.hex`) |
 | `test/test_val_frames.ml` | 191 | hand | the `ref` (11) and `handle` (12) frames: the two goldens, the exactness refusals |
@@ -148,7 +148,7 @@ Each module's header states its own; in short.
 * `eff_typing` — agrees with Lean's `typeOf`/`wellTyped` on the whole corpus, well-typed and
   ill-typed alike. *tested*
 * `eff_typed` — an ill-typed program cannot be constructed; `erase` then `encode` is byte for
-  byte what Lean encodes. *tested on the 28 well-typed programs; the Lean theorem is open,
+  byte what Lean encodes. *tested on the 29 well-typed programs; the Lean theorem is open,
   see "The two open theorems" below*
 
 ## Authoring a program
@@ -243,12 +243,12 @@ truncation refused, a flipped tag refused, a length past the end refused.
 | pIllStep | 303 | ok | identical | equal | ill-typed |
 | pIllInterruptor | 95 | ok | identical | equal | ill-typed |
 
-### Per program: the GADT corpus (the 28 well-typed programs)
+### Per program: the GADT corpus (the 29 well-typed programs)
 
-Each is rebuilt through `Eff_typed`'s constructors, erased, and encoded. For all 28 — p42,
+Each is rebuilt through `Eff_typed`'s constructors, erased, and encoded. For all 29 — p42,
 pBind, pFork, pTwo, pAwait, pGen, pWhile, pCatch, pStr, pFailCause, pYieldError, pSync,
 pSuspend, pMatch, pOnExit, pExit, pMasks, pBranch, pCallback, pJoin, pScoped, pAcquire,
-pChoose, pPair, pStmts, pActions, pOps, pProvide — the run reports *identical to golden* / *well-typed:
+pChoose, pPair, pStmts, pActions, pOps, pProvide, pSleep — the run reports *identical to golden* / *well-typed:
 yes* / *answer and error both agree with the erased witness*. That is the proof that OCaml
 authors exactly what Lean would.
 
@@ -405,7 +405,7 @@ plus the corresponding witness lemma. The interesting cases are `gen` (the state
 return type must be threaded, so the induction is mutual with a `TStmts` lemma) and
 `whileLoop` (the step term is typed two environments deeper).
 
-Evidence today: the 28 well-typed corpus programs are each built through the GADT, erased, and
+Evidence today: the 29 well-typed corpus programs are each built through the GADT, erased, and
 the checker's answer and error compared with `to_ty` of the indices — plus one extra program
 for the four atoms no golden uses. Not proved.
 

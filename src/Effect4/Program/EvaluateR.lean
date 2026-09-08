@@ -217,6 +217,8 @@ def evaluateFiberR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool
       let cancel := match register with
         | .registerAwait cell => some (EffName.cancelAwait cell)
         | .store (.registerAwait cell) => some (EffName.store (.cancelAwait cell))
+        -- the timer (A4): a sleep's `clearTimeout`
+        | .store (.registerSleep _) => some (EffName.store .cancelSleep)
         | _ => none
       let f := match cancel with
         | none => f

@@ -265,7 +265,9 @@ def allNativeOps : List Effect4.Program.NativeOp :=
   rmwOps.flatMap (fun con => allFnNames.map con) ++
   [.deferredMake, .deferredIsDone, .deferredPoll, .deferredSucceed, .deferredFail,
    .deferredAwait] ++
-  Effect4.FinalizerStrategy.all.map .scopeMake
+  Effect4.FinalizerStrategy.all.map .scopeMake ++
+  -- the timer (A4, 2026-09-08)
+  [.sleep, .clockNow]
 
 -- Refuse if any of the three inductives grew, shrank or was reordered: the enumeration
 -- above is then stale and the profile would silently miss a row.
@@ -282,7 +284,8 @@ run_cmd do
          ``Effect4.Program.NativeOp.refModifySome, ``Effect4.Program.NativeOp.deferredMake,
          ``Effect4.Program.NativeOp.deferredIsDone, ``Effect4.Program.NativeOp.deferredPoll,
          ``Effect4.Program.NativeOp.deferredSucceed, ``Effect4.Program.NativeOp.deferredFail,
-         ``Effect4.Program.NativeOp.deferredAwait, ``Effect4.Program.NativeOp.scopeMake])
+         ``Effect4.Program.NativeOp.deferredAwait, ``Effect4.Program.NativeOp.scopeMake,
+         ``Effect4.Program.NativeOp.sleep, ``Effect4.Program.NativeOp.clockNow])
     , (``Effect4.Machine.FnName,
         [``Effect4.Machine.FnName.incr, ``Effect4.Machine.FnName.double,
          ``Effect4.Machine.FnName.zeroWhenPositive, ``Effect4.Machine.FnName.noChange,
@@ -296,8 +299,8 @@ run_cmd do
         throwError "TsGen: {ind} constructors moved: {info.ctors} ≠ {ctors}"
     | _ => throwError "TsGen: {ind} is not an inductive in this environment"
 
-#guard allNativeOps.length = 53
-#guard allNativeOps.eraseDups.length = 53
+#guard allNativeOps.length = 55
+#guard allNativeOps.eraseDups.length = 55
 
 def obj (fields : List (String × String)) : String :=
   "{" ++ ",".intercalate (fields.map fun (k, v) => lit k ++ ":" ++ v) ++ "}"
@@ -338,6 +341,8 @@ def opJs : Effect4.Program.NativeOp → String
   | .deferredSucceed => tagged "deferredSucceed" []
   | .deferredFail => tagged "deferredFail" []
   | .deferredAwait => tagged "deferredAwait" []
+  | .sleep => tagged "sleep" []
+  | .clockNow => tagged "clockNow" []
   | .scopeMake s => tagged "scopeMake" [("strategy", strategyJs s)]
 
 def tyJs : Effect4.Program.Ty → String

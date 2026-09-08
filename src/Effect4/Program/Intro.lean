@@ -79,6 +79,13 @@ theorem prepareR_constructR (completed : List (FiberId × ExitV))
     (k : List (FiberId × ExitV) → RProgram) :
     prepareR completed (constructR k) = prepareR completed (k completed) := rfl
 
+theorem prepareR_denoteSleep (r : Term) (p : Point) (completed : List (FiberId × ExitV)) :
+    prepareR completed (denoteSleep r p) = denoteSleep r p := by
+  unfold denoteSleep
+  cases (evalTerm p.env r).bind NativeOp.sleepMillisOf with
+  | none => rfl
+  | some n => cases n <;> rfl
+
 theorem prepareR_denoteAsync (r : Term) (p : Point) (completed : List (FiberId × ExitV)) :
     prepareR completed (denoteAsync r p) = denoteAsync r p := by
   unfold denoteAsync
@@ -197,12 +204,14 @@ theorem denoteR_yieldNow (priority : Nat) (h : p.fuel ≠ 0) :
 
 theorem denoteR_callback (op : NativeOp) (r : Term) (h : p.fuel ≠ 0) :
     denoteR root (.callback op r) p =
-      (match (NativeOp.row op).kind with
-       | .async => denoteAsync r p
-       | _ => .pure badShapeExit) := by
+      (match op with
+       | .sleep => denoteSleep r p
+       | _ => match (NativeOp.row op).kind with
+         | .async => denoteAsync r p
+         | _ => .pure badShapeExit) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]; try rfl
+  | succ f => cases op <;> (rw [denoteR, hf]; try rfl) <;> (try (intro h; cases h))
 
 theorem denoteR_awaitFiber (t : Term) (mode : Supervision.ObserverMode) (h : p.fuel ≠ 0) :
     denoteR root (.awaitFiber t mode) p =
@@ -382,13 +391,22 @@ theorem compileEff_yieldNow (priority : Nat) (hf : p.fuel = k + 1) :
 
 theorem compileEff_callback (op : NativeOp) (r : Term) (hf : p.fuel = k + 1) :
     compileEff (.callback op r) p =
-      (match (NativeOp.row op).kind with
-       | .async =>
-         match (evalTerm p.env r).bind NativeOp.awaitCellOf with
-         | some cell => Prim.async (EffName.registerAwait cell) true (some (EffName.cancelAwait cell))
+      (match op with
+       | .sleep =>
+         match (evalTerm p.env r).bind NativeOp.sleepMillisOf with
+         | some 0 => Prim.yieldNowWith 0
+         | some (n + 1) =>
+           Prim.async (EffName.store (Name.registerSleep (n + 1))) true
+             (some (EffName.store Name.cancelSleep))
          | none => badShape
-       | _ => badShape) := by
-  rw [compileEff, hf]; try rfl
+       | _ =>
+         match (NativeOp.row op).kind with
+         | .async =>
+           match (evalTerm p.env r).bind NativeOp.awaitCellOf with
+           | some cell => Prim.async (EffName.registerAwait cell) true (some (EffName.cancelAwait cell))
+           | none => badShape
+         | _ => badShape) := by
+  cases op <;> (simp [compileEff, hf]; try rfl)
 
 theorem compileEff_awaitFiber (t : Term) (mode : Supervision.ObserverMode) (hf : p.fuel = k + 1) :
     compileEff (.awaitFiber t mode) p =
@@ -486,10 +504,12 @@ theorem prepareR_denoteR (root : NativeEff) (e : NativeEff) (p : Point)
       | yieldNow priority => rw [denoteR_yieldNow root priority hpos]; rfl
       | callback op r =>
         rw [denoteR_callback root op r hpos]
-        cases (NativeOp.row op).kind with
-        | async => exact prepareR_denoteAsync r p completed
-        | sync => rfl
-        | program => rfl
+        cases op
+        case sleep => exact prepareR_denoteSleep r p completed
+        all_goals first
+          | rfl
+          | exact prepareR_denoteAsync r p completed
+          | (rename_i s; cases s <;> rfl)
       | awaitFiber t mode =>
         rw [denoteR_awaitFiber root t mode hpos]
         cases evalTerm p.env t with
@@ -1757,18 +1777,26 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
     exact CodeMeans.yieldNow priority _ delivers_seqR_pure
   | callback op r =>
     rw [compileEff_callback op r hf, denoteR_callback root op r hpos]
-    cases hk : (NativeOp.row op).kind with
-    | async =>
-      unfold denoteAsync
-      cases evalTerm p.env r with
+    cases op
+    case sleep =>
+      unfold denoteSleep
+      cases (evalTerm p.env r).bind NativeOp.sleepMillisOf with
       | none => exact codeMeans_badShape root
-      | some v =>
-        dsimp only [Option.bind]
-        cases NativeOp.awaitCellOf v with
-        | some cell => exact CodeMeans.asyncAwait cell v _ delivers_pure
-        | none => exact codeMeans_badShape root
-    | sync => exact codeMeans_badShape root
-    | program => exact codeMeans_badShape root
+      | some n =>
+        cases n with
+        | zero => exact CodeMeans.yieldNow 0 _ delivers_seqR_pure
+        | succ n => exact CodeMeans.asyncSleep (n + 1) (Val.nat (n + 1)) _ delivers_pure
+    all_goals first
+      | exact codeMeans_badShape root
+      | (rename_i s; cases s <;> exact codeMeans_badShape root)
+      | (unfold denoteAsync
+         cases evalTerm p.env r with
+         | none => exact codeMeans_badShape root
+         | some v =>
+           dsimp only [Option.bind]
+           cases NativeOp.awaitCellOf v with
+           | some cell => exact CodeMeans.asyncAwait cell v _ delivers_pure
+           | none => exact codeMeans_badShape root)
   | awaitFiber t mode =>
     rw [compileEff_awaitFiber t mode hf, denoteR_awaitFiber root t mode hpos]
     rcases hv : evalTerm p.env t with _ | v

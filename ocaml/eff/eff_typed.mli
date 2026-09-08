@@ -125,6 +125,9 @@ type (_, _, _, _) op =
   | Deferred_fail : (deferred_number * nat, bool, never, sync) op
   | Deferred_await : (deferred_number, nat, nat, async) op
   | Scope_make : Eff_types.finalizer_strategy -> (unit, scope, never, sync) op
+  (* the timer (A4, 2026-09-08): `Effect.sleep(millis)` and `Effect.currentTimeMillis` *)
+  | Sleep : (nat, unit, never, async) op
+  | Clock_now : (unit, nat, never, sync) op
 
 (* ---- the witnesses ---- *)
 

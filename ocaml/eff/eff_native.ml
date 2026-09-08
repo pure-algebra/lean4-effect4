@@ -19,7 +19,7 @@ let atom_ty (name : string) (args : ty list) : ty option =
   | "snd", [Ty_prod (_, b)] -> Some b
   | _ -> None
 
-(* 11 nullary operations, 8 over every fn_name, 1 over every finalizer_strategy: 53 values. *)
+(* 13 nullary operations, 8 over every fn_name, 1 over every finalizer_strategy: 55 values. *)
 let all_ops : native_op list =
   [ Native_op_refMake
   ; Native_op_refGet
@@ -73,7 +73,9 @@ let all_ops : native_op list =
   ; Native_op_deferredFail
   ; Native_op_deferredAwait
   ; (Native_op_scopeMake Finalizer_strategy_sequential)
-  ; (Native_op_scopeMake Finalizer_strategy_parallel) ]
+  ; (Native_op_scopeMake Finalizer_strategy_parallel)
+  ; Native_op_sleep
+  ; Native_op_clockNow ]
 
 let row_of : native_op -> row = function
   | Native_op_refMake ->
@@ -182,6 +184,10 @@ let row_of : native_op -> row = function
     { row_name = "scopeMake"; row_spelling = "Scope.make"; row_shape = Row_shape_call; row_trailing = []; row_kind = Row_kind_sync; row_request = Ty_unit; row_answer = (Ty_handle "Scope.Scope"); row_error = Ty_never; row_requires = []; row_cite = "internal/effect.ts:3914-3922"; row_typeArgs = [] }
   | (Native_op_scopeMake Finalizer_strategy_parallel) ->
     { row_name = "scopeMake"; row_spelling = "Scope.make"; row_shape = Row_shape_call; row_trailing = ["\"parallel\""]; row_kind = Row_kind_sync; row_request = Ty_unit; row_answer = (Ty_handle "Scope.Scope"); row_error = Ty_never; row_requires = []; row_cite = "internal/effect.ts:3914-3922"; row_typeArgs = [] }
+  | Native_op_sleep ->
+    { row_name = "sleep"; row_spelling = "Effect.sleep"; row_shape = Row_shape_call; row_trailing = []; row_kind = Row_kind_async; row_request = Ty_nat; row_answer = Ty_unit; row_error = Ty_never; row_requires = []; row_cite = "internal/effect.ts:6114-6116"; row_typeArgs = [] }
+  | Native_op_clockNow ->
+    { row_name = "clockNow"; row_spelling = "Effect.currentTimeMillis"; row_shape = Row_shape_value; row_trailing = []; row_kind = Row_kind_sync; row_request = Ty_unit; row_answer = Ty_nat; row_error = Ty_never; row_requires = []; row_cite = "internal/effect.ts:6118"; row_typeArgs = [] }
 
 let scope_key : service_key = { service_key_name = { service_name_value = 0 }; service_key_service = { service_type_code_value = 0 } }
 let ref_ty : ty = (Ty_handle "Ref.Ref<number>")

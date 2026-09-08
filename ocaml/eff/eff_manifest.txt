@@ -8,7 +8,7 @@ Effect4.Supervision.ForkOptions (fork_options) structure: startImmediately:bool 
 Effect4.Supervision.ObserverMode (observer_mode) inductive: awaitValue joinEffect
 Effect4.FinalizerStrategy (finalizer_strategy) inductive: sequential parallel
 Effect4.Machine.FnName (fn_name) inductive: incr double zeroWhenPositive noChange takeAndBump
-Effect4.Program.NativeOp (native_op) inductive: refMake refGet refSet refGetAndSet refSetAndGet refUpdate(fn_name) refGetAndUpdate(fn_name) refUpdateAndGet(fn_name) refUpdateSome(fn_name) refGetAndUpdateSome(fn_name) refUpdateSomeAndGet(fn_name) refModify(fn_name) refModifySome(fn_name) deferredMake deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake(finalizer_strategy)
+Effect4.Program.NativeOp (native_op) inductive: refMake refGet refSet refGetAndSet refSetAndGet refUpdate(fn_name) refGetAndUpdate(fn_name) refUpdateAndGet(fn_name) refUpdateSome(fn_name) refGetAndUpdateSome(fn_name) refUpdateSomeAndGet(fn_name) refModify(fn_name) refModifySome(fn_name) deferredMake deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake(finalizer_strategy) sleep clockNow
 Effect4.ServiceName (service_name) structure: value:int
 Effect4.ServiceTypeCode (service_type_code) structure: value:int
 Effect4.ServiceKey (service_key) structure: name:service_name service:service_type_code

@@ -402,6 +402,16 @@ theorem registerAsyncR_external (root : NativeEff) (c : List (FiberId × ExitV))
     (fid : FiberId) (tok : Nat) (s : Stores) :
     (interpRAt root c).registerAsync (.store (.externalRegister slot)) fid tok s = (s, none) := rfl
 
+theorem registerAsync_sleep (root : NativeEff) (c : List (FiberId × ExitV)) (millis : Nat)
+    (fid : FiberId) (tok : Nat) (s : Stores) :
+    (interpAt root c).registerAsync (.store (.registerSleep millis)) fid tok s =
+      ({ s with timers := s.timers.sleep fid tok millis }, none) := rfl
+
+theorem registerAsyncR_sleep (root : NativeEff) (c : List (FiberId × ExitV)) (millis : Nat)
+    (fid : FiberId) (tok : Nat) (s : Stores) :
+    (interpRAt root c).registerAsync (.store (.registerSleep millis)) fid tok s =
+      ({ s with timers := s.timers.sleep fid tok millis }, none) := rfl
+
 /-! ## Frame arms that are the shared helpers only up to a case split -/
 
 section FrameArms
@@ -760,6 +770,27 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     rw [hm.nextToken, hm.state]
     exact iterRel_prepare ⟨machineOk_emit (machineOk_withStateToken hok (hm.state ▸ hok.state) _) _,
       BMeans.emit (hm.withStateToken _ _) _ _, (hf'.saveAnswer hk).park _, rfl, rfl, ListRel.nil⟩
+  | asyncSleep millis request k hk =>
+    rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
+    dsimp only [evaluateFiberR, saveAnswerR, pushR]
+    simp only [registerAsyncR_sleep]
+    have hreg₁ : (interpAt root m₂.completedExits).registerAsync (.store (.registerSleep millis)) f₁.id
+        m₁.nextToken m₁.state =
+        ({ m₂.state with timers := m₂.state.timers.sleep g₂.id m₂.nextToken millis }, none) := by
+      rw [hf'.id, hm.nextToken, hm.state]
+      exact registerAsync_sleep root _ millis g₂.id m₂.nextToken m₂.state
+    rw [evaluatePrim_async_none root _ m₁ f₁ y hc₁ hreg₁]
+    dsimp only
+    simp only [Bool.true_or, ↓reduceIte]
+    rw [hm.nextToken]
+    refine iterRel_prepare ⟨machineOk_emit
+        (machineOk_withStateToken
+          (s := { m₂.state with timers := m₂.state.timers.sleep g₂.id m₂.nextToken millis }) hok
+          ⟨hm.state ▸ hok.state.1, hm.state ▸ hok.state.2⟩ _) _,
+      BMeans.emit (hm.withStateToken _ _) _ _, ((hf'.saveAnswer hk).withFrame ?_).park _, rfl, rfl,
+      ListRel.nil⟩
+    rw [hf'.id]
+    exact means_pushAsyncFinalizer (hf'.saveAnswer hk).means _
   | joinValue target k hk =>
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp,
       evaluatePrim_join root _ m₁ f₁ y target .awaitValue hc₁ (parkOf_park root _ _),

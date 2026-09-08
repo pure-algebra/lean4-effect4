@@ -615,13 +615,25 @@ def compileEff : NativeEff → Point → NCode
       | .whileLoop _ _ _ _ => Prim.suspend (EffThunk.body p)
       | .yieldNow priority => Prim.yieldNowWith priority
       | .callback register request =>
-        match (NativeOp.row register).kind with
-        | .async =>
-          match (evalTerm p.env request).bind NativeOp.awaitCellOf with
-          | some cell =>
-            Prim.async (EffName.registerAwait cell) true (some (EffName.cancelAwait cell))
+        match register with
+        -- `Effect.sleep(d)` (`internal/effect.ts:6052-6066`; the timer, A4): `d ≤ 0` is
+        -- `yieldNow`, the rest registers on the logical clock by the machine's name, cancelled
+        -- by `clearTimeout`
+        | .sleep =>
+          match (evalTerm p.env request).bind NativeOp.sleepMillisOf with
+          | some 0 => Prim.yieldNowWith 0
+          | some (n + 1) =>
+            Prim.async (EffName.store (Name.registerSleep (n + 1))) true
+              (some (EffName.store Name.cancelSleep))
           | none => badShape
-        | _ => badShape
+        | _ =>
+          match (NativeOp.row register).kind with
+          | .async =>
+            match (evalTerm p.env request).bind NativeOp.awaitCellOf with
+            | some cell =>
+              Prim.async (EffName.registerAwait cell) true (some (EffName.cancelAwait cell))
+            | none => badShape
+          | _ => badShape
       | .awaitFiber fiber mode =>
         match evalTerm p.env fiber with
         | some (Val.fiber ⟨id⟩) =>

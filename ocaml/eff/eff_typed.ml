@@ -143,6 +143,9 @@ type (_, _, _, _) op =
   | Deferred_fail : (deferred_number * nat, bool, never, sync) op
   | Deferred_await : (deferred_number, nat, nat, async) op
   | Scope_make : Eff_types.finalizer_strategy -> (unit, scope, never, sync) op
+  (* the timer (A4, 2026-09-08): `Effect.sleep(millis)` and `Effect.currentTimeMillis` *)
+  | Sleep : (nat, unit, never, async) op
+  | Clock_now : (unit, nat, never, sync) op
 
 (* ---- the witnesses ---- *)
 
@@ -384,6 +387,8 @@ let erase_op : type r a e k. (r, a, e, k) op -> Eff_types.native_op = function
   | Deferred_fail -> Eff_types.Native_op_deferredFail
   | Deferred_await -> Eff_types.Native_op_deferredAwait
   | Scope_make s -> Eff_types.Native_op_scopeMake s
+  | Sleep -> Eff_types.Native_op_sleep
+  | Clock_now -> Eff_types.Native_op_clockNow
 
 let erase_observer : type a e ans err. (a, e, ans, err) observer -> Eff_types.observer_mode = function
   | Join_effect -> Eff_types.Observer_mode_joinEffect

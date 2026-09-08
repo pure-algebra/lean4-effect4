@@ -321,6 +321,8 @@ def opO : NativeOp → String
   | .deferredFail => octor "native_op" "deferredFail"
   | .deferredAwait => octor "native_op" "deferredAwait"
   | .scopeMake s => s!"({octor "native_op" "scopeMake"} {stratO s})"
+  | .sleep => octor "native_op" "sleep"
+  | .clockNow => octor "native_op" "clockNow"
 
 def fnNames : List FnName := [.incr, .double, .zeroWhenPositive, .noChange, .takeAndBump]
 
@@ -333,7 +335,9 @@ def allOps : List NativeOp :=
   (fnNames.map NativeOp.refGetAndUpdateSome) ++ (fnNames.map NativeOp.refUpdateSomeAndGet) ++
   (fnNames.map NativeOp.refModify) ++ (fnNames.map NativeOp.refModifySome) ++
   [.deferredMake, .deferredIsDone, .deferredPoll, .deferredSucceed, .deferredFail, .deferredAwait] ++
-  (FinalizerStrategy.all.map NativeOp.scopeMake)
+  (FinalizerStrategy.all.map NativeOp.scopeMake) ++
+  -- the timer (A4, 2026-09-08)
+  [.sleep, .clockNow]
 
 /-- The monomorphic atoms of `nativeAtomTy`, as data: name, argument types, answer. -/
 def monoAtoms : List (String × List Ty × Ty) :=

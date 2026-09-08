@@ -372,6 +372,15 @@ theorem step_typed (op : NativeOp) (v : Val) (o : SyncOp) (s s' : Stores) (a : V
       simp only [syncOpStep_scopeMake, Option.some.injEq, Prod.mk.injEq] at hstep
       obtain ⟨rfl, rfl⟩ := hstep
       exact ⟨Val.hasTy_scopeHandle_scope s.nextName, hheap⟩
+  | sleep =>
+    rw [syncOpOf_async_none NativeOp.sleep v rfl] at ho
+    cases ho
+  | clockNow =>
+    obtain rfl := Val.hasTy_unit_inv hv
+    cases ho
+    simp only [syncOpStep_clockNow, Option.some.injEq, Prod.mk.injEq] at hstep
+    obtain ⟨rfl, rfl⟩ := hstep
+    exact ⟨by simp [NativeOp.row, Val.hasTy], hheap⟩
 
 /-- `PROGRESS/answer` (plan §6): the value a store step answers to a typed request has the
 row's answer type. Stated on the step itself, so neither `Stores.WF` nor `SyncOp.validIn`
@@ -449,6 +458,13 @@ theorem syncOpOf_validIn (op : NativeOp) (v : Val) (o : SyncOp) (s : Stores)
       obtain rfl := Val.hasTy_unit_inv hv
       cases ho
       rfl
+  | sleep =>
+    rw [syncOpOf_async_none NativeOp.sleep v rfl] at ho
+    cases ho
+  | clockNow =>
+    obtain rfl := Val.hasTy_unit_inv hv
+    cases ho
+    rfl
 
 /-- The two lanes read together: a typed, valid request of a `sync` row on a well-formed
 store whose cells hold numbers decodes (`syncOpOf_isSome`), steps

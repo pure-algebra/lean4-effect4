@@ -2171,7 +2171,7 @@ def NativeOp.all : List NativeOp :=
       [.refUpdate f, .refGetAndUpdate f, .refUpdateAndGet f, .refUpdateSome f,
        .refGetAndUpdateSome f, .refUpdateSomeAndGet f, .refModify f, .refModifySome f])
   ++ [.deferredMake, .deferredIsDone, .deferredPoll, .deferredSucceed, .deferredFail,
-      .deferredAwait, .scopeMake .sequential, .scopeMake .parallel]
+      .deferredAwait, .scopeMake .sequential, .scopeMake .parallel, .sleep, .clockNow]
 
 /-- The native row a (spelling, trailing names) pair names. -/
 def nativeSpell (s : String) (names : List String) : Option NativeOp :=

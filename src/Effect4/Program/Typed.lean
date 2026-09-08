@@ -510,6 +510,10 @@ theorem syncOpOf_isSome (op : NativeOp) (v : Val)
     | parallel =>
       obtain rfl := Val.hasTy_unit_inv hv
       rfl
+  | sleep => simp [NativeOp.row] at hk
+  | clockNow =>
+    obtain rfl := Val.hasTy_unit_inv hv
+    rfl
 
 /-- An `async` row never decodes to a store operation (plan §2.2, ENSURES 9): the one async
 row is `deferredAwait` (`Native.lean:195-197`), which `syncOpOf` sends to `none` on every
@@ -518,6 +522,7 @@ theorem syncOpOf_async_none (op : NativeOp) (v : Val) (hk : (NativeOp.row op).ki
     NativeOp.syncOpOf op v = none := by
   cases op with
   | deferredAwait => rfl
+  | sleep => rfl
   | scopeMake strategy => cases strategy <;> simp [NativeOp.row] at hk
   | _ => simp [NativeOp.row] at hk
 

@@ -113,6 +113,8 @@ let rec json_native_op (v : native_op) : Eff_json_text.t =
   | Native_op_deferredFail -> Eff_json_text.Array [Eff_json_text.String "deferredFail"]
   | Native_op_deferredAwait -> Eff_json_text.Array [Eff_json_text.String "deferredAwait"]
   | Native_op_scopeMake a0 -> Eff_json_text.Array [Eff_json_text.String "scopeMake"; json_finalizer_strategy a0]
+  | Native_op_sleep -> Eff_json_text.Array [Eff_json_text.String "sleep"]
+  | Native_op_clockNow -> Eff_json_text.Array [Eff_json_text.String "clockNow"]
 
 let print_native_op (v : native_op) : string = Eff_json_text.render (json_native_op v)
 

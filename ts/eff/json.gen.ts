@@ -102,6 +102,8 @@ export const nativeOpJson = (v: NativeOp): Json => {
     case "deferredFail": return ["deferredFail"]
     case "deferredAwait": return ["deferredAwait"]
     case "scopeMake": return ["scopeMake", finalizerStrategyJson(v.strategy)]
+    case "sleep": return ["sleep"]
+    case "clockNow": return ["clockNow"]
   }
 }
 

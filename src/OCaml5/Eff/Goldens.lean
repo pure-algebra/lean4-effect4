@@ -170,6 +170,8 @@ def opV : NativeOp → V
   | .deferredFail => .ctor ``NativeOp.deferredFail []
   | .deferredAwait => .ctor ``NativeOp.deferredAwait []
   | .scopeMake s => .ctor ``NativeOp.scopeMake [stratV s]
+  | .sleep => .ctor ``NativeOp.sleep []
+  | .clockNow => .ctor ``NativeOp.clockNow []
 
 def keyV (k : ServiceKey) : V :=
   .struct ``Effect4.ServiceKey
@@ -371,6 +373,9 @@ def layerAll : LayerTerm NativeOp :=
 def pProvide : P :=
   .provideLayer layerAll false (.bind (.service kA) (.provideService kB (n 2) (.service kB)))
 
+/-- The timer (A4, 2026-09-08): a sleep, then the clock read. -/
+def pSleep : P := .bind (.callback .sleep (n 3)) (.perform .clockNow u)
+
 def corpus : List (String × P) :=
   [ ("p42", p42), ("pBind", pBind), ("pFork", pFork), ("pTwo", pTwo), ("pAwait", pAwait)
   , ("pGen", pGen), ("pWhile", pWhile), ("pCatch", pCatch), ("pStr", pStr), ("pFailCause", pFailCause)
@@ -381,7 +386,7 @@ def corpus : List (String × P) :=
   , ("pIll", pIll), ("pIllRet", pIllRet), ("pIllReq", pIllReq), ("pIllBreak", pIllBreak)
   , ("pIllBranch", pIllBranch), ("pIllJoin", pIllJoin), ("pIllVar", pIllVar)
   , ("pIllCallback", pIllCallback), ("pIllStep", pIllStep), ("pIllInterruptor", pIllInterruptor)
-  , ("pProvide", pProvide) ]
+  , ("pProvide", pProvide), ("pSleep", pSleep) ]
 
 end Corpus
 

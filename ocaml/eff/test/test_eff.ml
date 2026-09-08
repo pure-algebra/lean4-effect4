@@ -53,7 +53,7 @@ let ellipsis (n : int) (s : string) : string =
 (* ---- 1. goldens ---- *)
 
 let () =
-  check "corpus has 38 programs" (List.length corpus = 38);
+  check "corpus has 39 programs" (List.length corpus = 39);
   Printf.printf "  %-16s %6s %-8s %-10s %-6s %s\n" "program" "bytes" "decode" "re-encode" "JSON" "typeOf";
   List.iter
     (fun (name, typed) ->
@@ -316,6 +316,7 @@ let typed_corpus : (string * program) list =
         , Nat
         , un16 (un4 Nat) ) )
   ; ("pProvide", p_provide_typed)
+  ; ("pSleep", Program (Bind (Callback (Sleep, nat 3), Perform (Clock_now, unit_)), Nat, un Never))
   ]
 
 let () =
@@ -406,7 +407,7 @@ let () =
   check "ObserverMode has 2" (List.length ctor_names_observer_mode = 2);
   check "FinalizerStrategy has 2" (List.length ctor_names_finalizer_strategy = 2);
   check "FnName has 5" (List.length ctor_names_fn_name = 5);
-  check "NativeOp has 20" (List.length ctor_names_native_op = 20);
+  check "NativeOp has 22" (List.length ctor_names_native_op = 22);
   check "Eff has 27" (List.length ctor_names_eff = 27);
   check "LayerTerm has 8" (List.length ctor_names_layer_term = 8);
   check "Stmt has 6" (List.length ctor_names_stmt = 6);
@@ -456,7 +457,7 @@ let () =
          && contains l "merge(layer_term,layer_term) fresh(layer_term) orDie(layer_term)")
        manifest);
   check "the manifest's NativeOp line ends with scopeMake(finalizer_strategy)"
-    (List.exists (fun l -> contains l "(native_op) inductive: refMake" && contains l "deferredAwait scopeMake(finalizer_strategy)") manifest);
+    (List.exists (fun l -> contains l "(native_op) inductive: refMake" && contains l "deferredAwait scopeMake(finalizer_strategy) sleep clockNow") manifest);
   (* atoms *)
   let open Eff_native in
   check "succ : nat -> nat" (atom_ty "succ" [ Ty_nat ] = Some Ty_nat);
@@ -474,12 +475,12 @@ let () =
      && atom_ty "fst" [ Ty_nat ] = None && atom_ty "mul" [ Ty_nat; Ty_nat ] = None);
   check "10 atom names" (List.length atom_names = 10);
   (* ops *)
-  check "53 op values, none repeated"
-    (List.length all_ops = 53 && List.length (List.sort_uniq compare all_ops) = 53);
+  check "55 op values, none repeated"
+    (List.length all_ops = 55 && List.length (List.sort_uniq compare all_ops) = 55);
   check "every row is named after its constructor"
     (List.for_all (fun op -> (row_of op).row_name = ctor_name_native_op op) all_ops);
   check "deferredAwait is the one async row"
-    (List.filter (fun op -> (row_of op).row_kind = Row_kind_async) all_ops = [ Native_op_deferredAwait ]);
+    (List.filter (fun op -> (row_of op).row_kind = Row_kind_async) all_ops = [ Native_op_deferredAwait; Native_op_sleep ]);
   check "the scope key is <0, 0>"
     (scope_key = { service_key_name = { service_name_value = 0 }; service_key_service = { service_type_code_value = 0 } });
   (* Ty.join and rows *)

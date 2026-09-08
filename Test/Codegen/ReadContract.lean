@@ -546,6 +546,11 @@ open Effect4.Api in
 open Effect4.Api in
 #guard roundTrip (.bind (.perform .deferredMake (.lit .unit)) (.callback .deferredAwait (.var 0)))
   = .ok (.bind (.perform .deferredMake (.lit .unit)) (.callback .deferredAwait (.var 0)))
+-- the timer (A4): `Effect.sleep(5)` is the async row's callback, `Effect.currentTimeMillis`
+-- the value row
+open Effect4.Api in
+#guard roundTrip (.bind (.callback .sleep (.lit (.nat 5))) (.perform .clockNow (.lit .unit)))
+  = .ok (.bind (.callback .sleep (.lit (.nat 5))) (.perform .clockNow (.lit .unit)))
 
 /-! ## The corpus: every program the generator writes, through `Api.print` and `Api.read`
 

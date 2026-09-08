@@ -35,7 +35,7 @@ def manifest : String :=
     , "CauseTerm: fail die interrupt both"
     , "FnName: incr double zeroWhenPositive noChange takeAndBump"
     , "FinalizerStrategy: sequential parallel"
-    , "NativeOp: refMake refGet refSet refGetAndSet refSetAndGet refUpdate refGetAndUpdate refUpdateAndGet refUpdateSome refGetAndUpdateSome refUpdateSomeAndGet refModify refModifySome deferredMake deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake"
+    , "NativeOp: refMake refGet refSet refGetAndSet refSetAndGet refUpdate refGetAndUpdate refUpdateAndGet refUpdateSome refGetAndUpdateSome refUpdateSomeAndGet refModify refModifySome deferredMake deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake sleep clockNow"
     , "MaskMode: interruptible uninterruptible inherit"
     , "ObserverMode: awaitValue joinEffect"
     , "ForkOptions: startImmediately daemon maskMode"

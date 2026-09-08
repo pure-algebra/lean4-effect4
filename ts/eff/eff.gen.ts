@@ -20,7 +20,7 @@
 //   ObserverMode (Effect4.Supervision.ObserverMode, literals): awaitValue joinEffect
 //   FinalizerStrategy (Effect4.FinalizerStrategy, literals): sequential parallel
 //   FnName (Effect4.Machine.FnName, literals): incr double zeroWhenPositive noChange takeAndBump
-//   NativeOp (Effect4.Program.NativeOp, tagged union): refMake refGet refSet refGetAndSet refSetAndGet refUpdate(f: FnName) refGetAndUpdate(f: FnName) refUpdateAndGet(f: FnName) refUpdateSome(f: FnName) refGetAndUpdateSome(f: FnName) refUpdateSomeAndGet(f: FnName) refModify(f: FnName) refModifySome(f: FnName) deferredMake deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake(strategy: FinalizerStrategy)
+//   NativeOp (Effect4.Program.NativeOp, tagged union): refMake refGet refSet refGetAndSet refSetAndGet refUpdate(f: FnName) refGetAndUpdate(f: FnName) refUpdateAndGet(f: FnName) refUpdateSome(f: FnName) refGetAndUpdateSome(f: FnName) refUpdateSomeAndGet(f: FnName) refModify(f: FnName) refModifySome(f: FnName) deferredMake deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake(strategy: FinalizerStrategy) sleep clockNow
 //   ServiceName (Effect4.ServiceName, struct): mk(value: number)
 //   ServiceTypeCode (Effect4.ServiceTypeCode, struct): mk(value: number)
 //   ServiceKey (Effect4.ServiceKey, struct): mk(name: ServiceName, service: ServiceTypeCode)
@@ -151,6 +151,8 @@ export type NativeOp =
   | { readonly _tag: "deferredFail" }
   | { readonly _tag: "deferredAwait" }
   | { readonly _tag: "scopeMake"; readonly strategy: FinalizerStrategy }
+  | { readonly _tag: "sleep" }
+  | { readonly _tag: "clockNow" }
 
 export const NativeOp = Schema.TaggedUnion({
   refMake: {},
@@ -173,6 +175,8 @@ export const NativeOp = Schema.TaggedUnion({
   deferredFail: {},
   deferredAwait: {},
   scopeMake: { strategy: FinalizerStrategy },
+  sleep: {},
+  clockNow: {},
 })
 
 export const ServiceName = Schema.Struct({

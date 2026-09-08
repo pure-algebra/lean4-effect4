@@ -235,6 +235,15 @@ section Rows20
 #guard NativeOp.syncOpOf .deferredAwait (Val.promise ⟨0⟩) = none
 #guard NativeOp.syncOpOf .refGet (Val.nat 0) = none
 #guard Val.hasTy (Val.nat 0) (NativeOp.row .refGet).request = false
+-- the timer (A4): the sleep row is async and decodes to no store operation; the clock read is a
+-- value row on `unit` decoding to `clockNow`
+#guard (NativeOp.row .sleep).kind = .async ∧ (NativeOp.row .sleep).shape = .call
+#guard Val.hasTy (Val.nat 5) (NativeOp.row .sleep).request
+#guard NativeOp.syncOpOf .sleep (Val.nat 5) = none
+#guard (NativeOp.row .clockNow).kind = .sync ∧ (NativeOp.row .clockNow).shape = .value
+#guard Val.hasTy Val.unit (NativeOp.row .clockNow).request
+#guard NativeOp.syncOpOf .clockNow Val.unit = some SyncOp.clockNow
+#guard NativeOp.syncOpOf .clockNow (Val.nat 0) = none
 
 end Rows20
 

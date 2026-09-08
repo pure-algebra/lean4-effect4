@@ -124,6 +124,13 @@ inductive NativeOp
   | deferredFail
   | deferredAwait
   | scopeMake (strategy : FinalizerStrategy)
+  /-- `Effect.sleep(duration)` (`internal/effect.ts:6114-6116`; `ClockImpl.sleepMillis`
+  `:6052-6066`): the timer, A4. The request is the millis: `0` is `yieldNow`, the rest parks on
+  the logical clock (`Machine/Timer.lean`, DB-14). -/
+  | sleep
+  /-- `Effect.currentTimeMillis` (`internal/effect.ts:6118`): the logical clock, read
+  (`SyncOp.clockNow`). -/
+  | clockNow
 deriving DecidableEq
 
 namespace NativeOp
@@ -207,6 +214,12 @@ def row : NativeOp → Row
   | scopeMake .parallel =>
     ⟨"scopeMake", "Scope.make", .call, ["\"parallel\""], .sync, .unit, Ty.scope, .never, [],
       "internal/effect.ts:3914-3922", []⟩
+  | sleep =>
+    ⟨"sleep", "Effect.sleep", .call, [], .async, .nat, .unit, .never, [],
+      "internal/effect.ts:6114-6116", []⟩
+  | clockNow =>
+    ⟨"clockNow", "Effect.currentTimeMillis", .value, [], .sync, .unit, .nat, .never, [],
+      "internal/effect.ts:6118", []⟩
 
 /-- The store operation a row runs on a request value; `none` is a request of the wrong
 shape, which the compile turns into the `badName` defect (`Deep.Stores` does the same for a
@@ -233,11 +246,17 @@ def syncOpOf : NativeOp → Val → Option SyncOp
   | deferredFail, .list [Val.promise ⟨k⟩, Val.nat n] =>
     some (SyncOp.deferredCompleteWith ⟨k⟩ (Completion.ofExit (Exit.failure (Cause.fail (Err.tag n)))))
   | scopeMake strategy, Val.unit => some (SyncOp.scopeMake strategy)
+  | clockNow, Val.unit => some SyncOp.clockNow
   | _, _ => none
 
 /-- The deferred an `await` row registers on. -/
 def awaitCellOf : Val → Option DeferredKey
   | Val.promise ⟨k⟩ => some ⟨k⟩
+  | _ => none
+
+/-- The millis a `sleep` row registers for (the timer, A4). -/
+def sleepMillisOf : Val → Option Nat
+  | Val.nat n => some n
   | _ => none
 
 end NativeOp

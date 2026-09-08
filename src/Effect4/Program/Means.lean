@@ -210,6 +210,10 @@ inductive CodeMeans (root : NativeEff) : NCode → RProgram → Prop
   | asyncExternal (slot : Nat) (k : ExitV → RProgram) (hk : Delivers k) :
       CodeMeans root (Prim.async (.store (.externalRegister slot)) false none)
         (.vis (.inr (.async (.store (.externalRegister slot)) .unit)) k)
+  -- `Effect.sleep(d)`, `0 < d` (the timer, A4): the registration by the machine's name
+  | asyncSleep (millis : Nat) (request : Val) (k : ExitV → RProgram) (hk : Delivers k) :
+      CodeMeans root (Prim.async (.store (.registerSleep millis)) true (some (.store .cancelSleep)))
+        (.vis (.inr (.async (.store (.registerSleep millis)) request)) k)
   | joinValue (target : FiberId) (k : Val → RProgram) (hk : Delivers (seqR k)) :
       CodeMeans root (Prim.suspend (EffThunk.park (.join target .awaitValue)))
         (.vis (.inr (.await target .awaitValue)) k)
@@ -635,6 +639,7 @@ theorem CodeMeans.bindTail {root : NativeEff} {c : NCode} {r : RProgram} (h : Co
   | yieldNow priority k hk => exact CodeMeans.yieldNow priority _ (delivers_seqR_bind hk ht)
   | asyncAwait cell request k hk => exact CodeMeans.asyncAwait cell request _ (delivers_bind hk ht)
   | asyncExternal slot k hk => exact CodeMeans.asyncExternal slot _ (delivers_bind hk ht)
+  | asyncSleep millis request k hk => exact CodeMeans.asyncSleep millis request _ (delivers_bind hk ht)
   | joinValue target k hk => exact CodeMeans.joinValue target _ (delivers_seqR_bind hk ht)
   | joinEffect target k hk => exact CodeMeans.joinEffect target _ (delivers_bind hk ht)
   | joinValueStore target k hk => exact CodeMeans.joinValueStore target _ (delivers_seqR_bind hk ht)
@@ -734,6 +739,7 @@ theorem CodeMeans.prepare {root : NativeEff} {c : NCode} {r : RProgram} (h : Cod
   | yieldNow priority k hk => exact CodeMeans.yieldNow priority k hk
   | asyncAwait cell request k hk => exact CodeMeans.asyncAwait cell request k hk
   | asyncExternal slot k hk => exact CodeMeans.asyncExternal slot k hk
+  | asyncSleep millis request k hk => exact CodeMeans.asyncSleep millis request k hk
   | joinValue target k hk => exact CodeMeans.joinValue target k hk
   | joinEffect target k hk => exact CodeMeans.joinEffect target k hk
   | joinValueStore target k hk => exact CodeMeans.joinValueStore target k hk

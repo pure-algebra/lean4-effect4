@@ -36,3 +36,4 @@ pIllCallback	ill-typed
 pIllStep	ill-typed
 pIllInterruptor	ill-typed
 pProvide	well-typed
+pSleep	well-typed

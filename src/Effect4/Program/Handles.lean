@@ -382,13 +382,22 @@ theorem compileEff_yieldNow (priority : Nat) (hf : p.fuel = k + 1) :
 
 theorem compileEff_callback (register : NativeOp) (r : Term) (hf : p.fuel = k + 1) :
     compileEff (.callback register r) p =
-      (match (NativeOp.row register).kind with
-       | .async =>
-         match (evalTerm p.env r).bind NativeOp.awaitCellOf with
-         | some cell => Prim.async (EffName.registerAwait cell) true (some (EffName.cancelAwait cell))
+      (match register with
+       | .sleep =>
+         match (evalTerm p.env r).bind NativeOp.sleepMillisOf with
+         | some 0 => Prim.yieldNowWith 0
+         | some (n + 1) =>
+           Prim.async (EffName.store (Name.registerSleep (n + 1))) true
+             (some (EffName.store Name.cancelSleep))
          | none => badShape
-       | _ => badShape) := by
-  simp [compileEff, hf]; rfl
+       | _ =>
+         match (NativeOp.row register).kind with
+         | .async =>
+           match (evalTerm p.env r).bind NativeOp.awaitCellOf with
+           | some cell => Prim.async (EffName.registerAwait cell) true (some (EffName.cancelAwait cell))
+           | none => badShape
+         | _ => badShape) := by
+  cases register <;> (simp [compileEff, hf]; try rfl)
 
 theorem compileEff_awaitFiber (fiber : Term) (mode : Supervision.ObserverMode) (hf : p.fuel = k + 1) :
     compileEff (.awaitFiber fiber mode) p =
@@ -602,19 +611,27 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; exact frontier_keys p
     · rw [compileEff_callback register r hf]
-      split
-      · split
-        · next cell hcell =>
-          obtain ⟨val, hval, hc⟩ := Option.bind_eq_some_iff.mp hcell
-          have hmem := awaitCellOf_keys val cell hc
-          have hval' := evalTerm_point_keys r p val hval
-          have hcellKeys : [Handle.promise cell] ⊆ p.keys := by
-            intro key hkey
-            obtain rfl := List.mem_singleton.mp hkey
-            exact hval' hmem
-          sub_tac using hcellKeys
-        · exact List.nil_subset _
-      · exact List.nil_subset _
+      cases register
+      case sleep =>
+        cases (evalTerm p.env r).bind NativeOp.sleepMillisOf with
+        | none => exact List.nil_subset _
+        | some n => cases n <;> exact List.nil_subset _
+      all_goals first
+        | exact List.nil_subset _
+        | (rename_i s; cases s <;> exact List.nil_subset _)
+        | (simp only [NativeOp.row]
+           split
+           all_goals first
+             | exact List.nil_subset _
+             | (next cell hcell =>
+                 obtain ⟨val, hval, hc⟩ := Option.bind_eq_some_iff.mp hcell
+                 have hmem := awaitCellOf_keys val cell hc
+                 have hval' := evalTerm_point_keys r p val hval
+                 have hcellKeys : [Handle.promise cell] ⊆ p.keys := by
+                   intro key hkey
+                   obtain rfl := List.mem_singleton.mp hkey
+                   exact hval' hmem
+                 sub_tac using hcellKeys))
   | .awaitFiber fiber mode, p => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; exact frontier_keys p

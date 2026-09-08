@@ -227,6 +227,15 @@ def denoteAsync (request : Term) (p : Point) : RProgram :=
     | none => .pure badShapeExit
     | some cell => .vis (.inr (.async (.registerAwait cell) value)) Effects.Program.pure
 
+/-- `Effect.sleep(d)` on the term route (the timer, A4): `d = 0` is the counted yield, the rest
+the registration on the logical clock by the machine's name. -/
+def denoteSleep (request : Term) (p : Point) : RProgram :=
+  match (evalTerm p.env request).bind NativeOp.sleepMillisOf with
+  | none => .pure badShapeExit
+  | some 0 => .vis (.inr (.yieldNow 0)) fun v => .pure (.success v)
+  | some (n + 1) =>
+    .vis (.inr (.async (.store (.registerSleep (n + 1))) (Val.nat (n + 1)))) Effects.Program.pure
+
 /-- The scope's finalizer shapes (`Stores.finProgram`). -/
 def denoteFin : FinName → ExitV → RProgram
   | .interruptFiber fiber true, _ => fiberValR (.interruptScoped fiber) rfl
@@ -444,10 +453,13 @@ def inlineYield : NativeEff → Point → Option ExitV
         | some _ => none | none => some badShapeExit
       | .program => none
     | .callback op request =>
-      match (NativeOp.row op).kind with
-      | .async => match (evalTerm p.env request).bind NativeOp.awaitCellOf with
+      match op with
+      | .sleep => match (evalTerm p.env request).bind NativeOp.sleepMillisOf with
         | some _ => none | none => some badShapeExit
-      | _ => some badShapeExit
+      | _ => match (NativeOp.row op).kind with
+        | .async => match (evalTerm p.env request).bind NativeOp.awaitCellOf with
+          | some _ => none | none => some badShapeExit
+        | _ => some badShapeExit
     | .awaitFiber target mode => match evalTerm p.env target with
       | some (Val.fiber ⟨id⟩) => p.awaitExit ⟨id⟩ mode | _ => some badShapeExit
     | .exit b => (inlineYield b (p.child 0)).map fun ex => .success (reifyExitVal ex)
@@ -566,9 +578,11 @@ def denoteR (root : NativeEff) : NativeEff → Point → RProgram
       -- on (the frame resumes with `success void`; an answer is never discarded)
       | .yieldNow priority => .vis (.inr (.yieldNow priority)) fun v => .pure (.success v)
       | .callback op request =>
-        match (NativeOp.row op).kind with
-        | .async => denoteAsync request p
-        | _ => .pure badShapeExit
+        match op with
+        | .sleep => denoteSleep request p
+        | _ => match (NativeOp.row op).kind with
+          | .async => denoteAsync request p
+          | _ => .pure badShapeExit
       | .awaitFiber target mode =>
         match evalTerm p.env target with
         | some (Val.fiber ⟨id⟩) =>
@@ -744,9 +758,8 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
     inlineYield e p = headExit (compileEff e p) := by
   cases hf : p.fuel with
   | zero =>
-    cases e <;> first
-      | (simp only [inlineYield, compileEff, hf, ↓reduceIte, frontier, headExit]; done)
-      | (rename_i a; cases a <;> simp only [inlineYield, compileEff, hf, ↓reduceIte, frontier, headExit])
+    have hc : ∀ e, compileEff e p = frontier p := fun e => by unfold compileEff; rw [hf]
+    cases e <;> simp only [inlineYield, hf, ↓reduceIte, hc, frontier, headExit]
   | succ f =>
     cases e with
     | choose site a b =>
@@ -773,10 +786,16 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
       | async => cases (evalTerm p.env request).bind NativeOp.awaitCellOf <;> rfl
       | program => rfl
     | callback op request =>
-      simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
-      cases hk : (NativeOp.row op).kind with
-      | sync | program => rfl
-      | async => cases (evalTerm p.env request).bind NativeOp.awaitCellOf <;> rfl
+      cases op
+      all_goals simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
+      case sleep =>
+        cases (evalTerm p.env request).bind NativeOp.sleepMillisOf with
+        | none => rfl
+        | some n => cases n <;> rfl
+      all_goals first
+        | rfl
+        | (cases (evalTerm p.env request).bind NativeOp.awaitCellOf <;> rfl)
+        | (rename_i s; cases s <;> rfl)
     | succeed t | fail t | yieldError t =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
       cases evalTerm p.env t <;> rfl

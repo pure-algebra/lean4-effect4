@@ -25,9 +25,9 @@ const refusal = (source: string): Refusal => {
 describe("the profile", () => {
   test("has the reader's 50 heads and one entry per NativeOp value", () => {
     expect(heads.length).toBe(50)
-    expect(rows.length).toBe(53)
-    expect(new Set(rows.map((e) => e.row.spelling)).size).toBe(20)
-    expect(new Set(rows.map((e) => JSON.stringify(e.op))).size).toBe(53)
+    expect(rows.length).toBe(55)
+    expect(new Set(rows.map((e) => e.row.spelling)).size).toBe(22)
+    expect(new Set(rows.map((e) => JSON.stringify(e.op))).size).toBe(55)
   })
   test("only the five product-request exports use tuple calls", () => {
     expect(rows.filter((e) => e.row.shape === "tupleCall").map((e) => e.row.name)).toEqual([
