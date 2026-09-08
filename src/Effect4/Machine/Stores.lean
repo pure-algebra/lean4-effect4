@@ -169,6 +169,17 @@ structure Capture where
   root : Nat := 0
 deriving DecidableEq, Repr
 
+/-- A layer, by the path of its node from the root program (`Program/Compile.lean`'s `Node`;
+the join, `docs/research/2026-09-07-join-dispatch.md` §4): layers are program subterms
+addressed by path, never a table. The memo world keys on it, and two evaluations of one site
+under two memo maps are two entries — the path is the key, never an identity. -/
+abbrev LayerId := List Nat
+
+/-- A `MemoMapImpl` (`Layer.ts:421-432`), by allocation order from the one supply. -/
+structure MemoMapId where
+  index : Nat
+deriving DecidableEq, Repr
+
 /-- The scope finalizer *name* alphabet. `Effect4.Scope` stores a `φ`; giving `φ` these arms is
 what lets a finalizer name *mean* an operation on another scope or on a fiber — the open half of
 `SCOPE-FB-FINALIZER-MEANING` (`docs/research/SCOPE-DAG.md:228`). -/
@@ -193,6 +204,14 @@ inductive FinName
   /-- A compiled `acquireRelease` release (`internal/effect.ts:3983`): the capture the compile
   route resolves when the scope closes, on whichever fiber closes it (V1, 2026-09-07). -/
   | foreign (capture : Capture)
+  /-- `fromBuild`'s `onExit` (`Layer.ts:343`): close the layer scope only on `Failure` (join). -/
+  | closeChildOnFailure (scope : Nat)
+  /-- The memo entry finalizer (`Layer.ts:401-410`), registered on every observer's caller
+  scope: `observers--`, the last observer closing the layer scope with the exit (join). -/
+  | memoEntry (layer : LayerId) (memoMap : MemoMapId)
+  /-- `memoMapBuild`'s `onExit` (`Layer.ts:414-417`): store the exit, complete the Deferred
+  (join). -/
+  | memoDone (layer : LayerId) (memoMap : MemoMapId)
 deriving DecidableEq, Repr
 
 /-! ## The alphabets as values
@@ -351,6 +370,8 @@ argument (`.exitOk (.cell ⟨k⟩)`) resolves here. -/
 @[match_pattern] abbrev promise (key : DeferredKey) : Val := Value.promise key.index
 /-- A `Scope` handle (`Value.scope`, kind 4). -/
 @[match_pattern] abbrev scopeHandle (scope : Nat) : Val := Value.scope scope
+/-- A `MemoMap` handle (`Layer.ts:421-458`; `Value.memoMap`, kind 5; the join). -/
+@[match_pattern] abbrev memoMap (id : MemoMapId) : Val := Value.memoMap id.index
 /-- The empty list of awaited exits (`fiberAwaitAll`, `internal/effect.ts:779`; M6): the
 carrier's empty `list`. One exit list is one `list` frame; there is no cons arm. -/
 @[match_pattern] abbrev exitNil : Val := .list []
@@ -520,6 +541,23 @@ inductive SyncOp
   | scopeRemove (scope : Nat) (key : Nat)
   /-- Whether a scope has closed (`Scope.ts:99-187`). -/
   | scopeIsClosed (scope : Nat)
+  /-- `scopeForkUnsafe(parent, strategy)` (`internal/effect.ts:3834-3844`): the child under a
+  fresh key, linked to the parent under a shared registration key, both from the supply;
+  answers the child's handle. An unknown parent is a frontier (join). -/
+  | scopeFork (parent : Nat) (strategy : FinalizerStrategy)
+  /-- `makeMemoMapUnsafe()` (`Layer.ts:492`) with `none`; `forkMemoMapUnsafe(parent)` (`:511`). -/
+  | memoFork (parent : Option MemoMapId)
+  /-- `MemoMapImpl.get(layer, scope)` (`:434-443`): own map, then the parent chain; a hit bumps
+  the owning entry's observer count (`:245`) and answers the entry's Deferred and owner. -/
+  | memoGet (layer : LayerId) (memoMap : MemoMapId)
+  /-- `memoMapBuild`'s synchronous half (`:396-411`): a layer scope, a Deferred, the entry with
+  one observer, `map.set`. -/
+  | memoBuild (layer : LayerId) (memoMap : MemoMapId)
+  /-- `memoMapBuild`'s `onExit` (`:414-417`): `entry.effect = exit; Deferred.done(deferred, exit)`. -/
+  | memoComplete (layer : LayerId) (memoMap : MemoMapId) (exit : ExitV)
+  /-- The entry finalizer's `suspend` body (`:402-408`): `observers--`; at zero delete the entry
+  and answer the layer scope to close. -/
+  | memoRelease (layer : LayerId) (memoMap : MemoMapId)
 deriving DecidableEq
 
 /-- The declared race shapes. A `List ProgName` field would make `ProgName` a *nested*
@@ -670,6 +708,9 @@ inductive Name
   /-- The parallel close generator under its await (`internal/effect.ts:3823-3826`, §20; M6):
   the frame's next step is `exitAsVoidAll` of the exits the `awaitAll` park answered with. -/
   | closeParDone
+  /-- `memoEntry`'s continuation after `memoRelease` (`Layer.ts:403-408`, the join): the last
+  observer's release answers the layer scope, closed with the exit; any other answer is done. -/
+  | closeIfLast (exit : ExitV)
 deriving DecidableEq
 
 /-- What a `withFiber` thunk names. The machine's `WithFiberAction` carries `Prim`s; a thunk
@@ -731,6 +772,292 @@ deriving DecidableEq
 
 /-- The program carrier at this instantiation. -/
 abbrev Program := Prim Name Thunk Val Err Defect FiberId Ann
+
+/-! ## The memo world (`Layer.ts:235-239`, `:421-458`)
+
+The Layer machine's memo store, joined into the one `Stores`
+(`docs/research/2026-09-07-join-dispatch.md` §3; `MemoEntry`, `MemoMap`, `MemoWorld` and its two
+laws are `Machine/Layer.lean`'s, verbatim). A memo map is keyed by `LayerId`, the layer's path:
+inserting under one path leaves every other path's entry untouched (`find?_append_other_key`),
+and memo identity is allocation, never a description. The build's in-flight cell is a Deferred,
+never a fiber: the world owns the entries and borrows the Deferred family's wakeup
+(`memoComplete` completes the cell; the one `due` drain carries its waiters). -/
+
+/-- `MemoMapEntry` (`:235-239`) plus the two objects the closure captured (`:396-397`). -/
+structure MemoEntry where
+  /-- `observers` (`:236`). -/
+  observers : Nat
+  /-- `effect` (`:237`): `Deferred.await(deferred)` until the build exits, then the exit. -/
+  effect : Program
+  /-- The layer scope `memoMapBuild` allocated (`:396`). -/
+  layerScope : Nat
+  /-- The Deferred (`:397`). -/
+  deferred : DeferredKey
+  /-- `finalizer` (`:238`): the one name every observer registers. -/
+  finalizer : FinName
+deriving DecidableEq
+
+/-- `MemoMapImpl` (`:421-432`): `parent` and `map`, insertion-ordered. -/
+structure MemoMap where
+  id : MemoMapId
+  parent : Option MemoMapId
+  entries : List (LayerId × MemoEntry)
+deriving DecidableEq
+
+/-- Every memo map ever made. -/
+abbrev MemoWorld := List MemoMap
+
+namespace MemoWorld
+
+def mapAt (w : MemoWorld) (id : MemoMapId) : Option MemoMap :=
+  w.find? fun m => m.id = id
+
+def setMap (w : MemoWorld) (m : MemoMap) : MemoWorld :=
+  w.map fun n => if n.id = m.id then m else n
+
+/-- `this.map.get(layer)` (`:438`), own map only. -/
+def entryAt (w : MemoWorld) (id : MemoMapId) (layer : LayerId) : Option MemoEntry :=
+  (w.mapAt id).bind fun m => (m.entries.find? fun e => e.1 = layer).map Prod.snd
+
+def updateEntry (w : MemoWorld) (id : MemoMapId) (layer : LayerId) (f : MemoEntry → MemoEntry) :
+    MemoWorld :=
+  match w.mapAt id with
+  | none => w
+  | some m => w.setMap { m with entries := m.entries.map fun e => if e.1 = layer then (e.1, f e.2) else e }
+
+/-- `map.set(layer, entry)` (`:411`) on a fresh key: appended. -/
+def insertEntry (w : MemoWorld) (id : MemoMapId) (layer : LayerId) (entry : MemoEntry) :
+    MemoWorld :=
+  match w.mapAt id with
+  | none => w
+  | some m => w.setMap { m with entries := m.entries ++ [(layer, entry)] }
+
+/-- `map.delete(layer)` (`:405`). -/
+def deleteEntry (w : MemoWorld) (id : MemoMapId) (layer : LayerId) : MemoWorld :=
+  match w.mapAt id with
+  | none => w
+  | some m => w.setMap { m with entries := m.entries.filter fun e => !(decide (e.1 = layer)) }
+
+/-- `MemoMapImpl.get` (`:434-443`) without the reuse side effect: own map first, else the parent
+chain. Fuel-bounded by the number of maps, which bounds the chain. -/
+def lookup (w : MemoWorld) (layer : LayerId) : Nat → MemoMapId → Option (MemoMapId × MemoEntry)
+  | 0, _ => none
+  | fuel + 1, id =>
+    match w.entryAt id layer with
+    | some entry => some (id, entry)
+    | none =>
+      match w.mapAt id with
+      | none => none
+      | some m =>
+        match m.parent with
+        | none => none
+        | some parent => lookup w layer fuel parent
+
+def get (w : MemoWorld) (layer : LayerId) (id : MemoMapId) : Option (MemoMapId × MemoEntry) :=
+  lookup w layer (w.length + 1) id
+
+/-- `LAYER-FB-LAYER-IDENTITY`, the `SCOPE-FB-KEY-IDENTITY` shape (`Machine/Scope.lean`): the
+memo map is keyed by the layer's path, which is where the layer *is*, never what it says.
+Inserting under one path leaves every other path's entry untouched — rc.112 keys on the layer
+object (`Layer.ts:411`, `:438`). The model cannot stop a program from forging a path; that
+boundary is the refusal row. -/
+theorem find?_append_other_key (entries : List (LayerId × MemoEntry)) (layer other : LayerId)
+    (entry : MemoEntry) (hne : other ≠ layer) :
+    (entries ++ [(layer, entry)]).find? (fun e => e.1 = other) =
+      entries.find? (fun e => e.1 = other) := by
+  rw [List.find?_append]
+  have hlast : ([(layer, entry)].find? fun e : LayerId × MemoEntry => e.1 = other) = none := by
+    have hne' : layer ≠ other := fun h => hne h.symm
+    simp [List.find?, hne']
+  rw [hlast, Option.or_none]
+
+/-- The same fact at the world level, for a world whose maps carry distinct ids (every world
+the store builds does: `memoFork` mints a fresh id). -/
+theorem insertEntry_other (w : MemoWorld) (id : MemoMapId) (layer other : LayerId)
+    (entry : MemoEntry) (hne : other ≠ layer) :
+    (w.insertEntry id layer entry).entryAt id other = w.entryAt id other := by
+  unfold insertEntry
+  cases hmap : w.mapAt id with
+  | none => rfl
+  | some m =>
+    have hid : m.id = id := by
+      have := List.find?_some hmap
+      simpa using this
+    have hmem : m ∈ w := List.mem_of_find?_eq_some hmap
+    -- `setMap` replaces exactly the map with `m.id`; with distinct ids, `mapAt` finds the
+    -- replacement, whose entries are `m.entries ++ [(layer, entry)]`.
+    have hset : (w.setMap { m with entries := m.entries ++ [(layer, entry)] }).mapAt id =
+        some { m with entries := m.entries ++ [(layer, entry)] } := by
+      unfold setMap mapAt
+      rw [List.find?_map]
+      have hpred : (fun n : MemoMap =>
+          decide ((if n.id = m.id then { m with entries := m.entries ++ [(layer, entry)] } else n).id = id)) =
+          fun n : MemoMap => decide (n.id = id) := by
+        funext n
+        by_cases hn : n.id = m.id
+        · simp [hn, hid]
+        · simp [hn]
+      simp only [Function.comp_def]
+      rw [hpred]
+      unfold mapAt at hmap
+      rw [hmap]
+      simp [hid]
+    unfold entryAt
+    rw [hset, hmap]
+    simp only [Option.bind_some]
+    rw [find?_append_other_key _ _ _ _ hne]
+
+/-- A map that is in the world is found under its id. -/
+theorem mapAt_isSome_of_mem {w : MemoWorld} {m : MemoMap} (h : m ∈ w) :
+    (w.mapAt m.id).isSome = true := by
+  unfold mapAt
+  rw [List.find?_isSome]
+  exact ⟨m, h, by simp⟩
+
+/-- The map `mapAt` finds is in the world, under the id asked for. -/
+theorem mapAt_mem {w : MemoWorld} {id : MemoMapId} {m : MemoMap} (h : w.mapAt id = some m) :
+    m ∈ w ∧ m.id = id :=
+  ⟨List.mem_of_find?_eq_some h, by simpa using List.find?_some h⟩
+
+/-- An entry `entryAt` finds is one of its map's, under the layer asked for. -/
+theorem entryAt_mem {w : MemoWorld} {id : MemoMapId} {layer : LayerId} {entry : MemoEntry}
+    (h : w.entryAt id layer = some entry) : ∃ m ∈ w, m.id = id ∧ (layer, entry) ∈ m.entries := by
+  unfold entryAt at h
+  obtain ⟨m, hm, hfind⟩ := Option.bind_eq_some_iff.mp h
+  obtain ⟨e, he, hsnd⟩ := Option.map_eq_some_iff.mp hfind
+  obtain ⟨hmem, hid⟩ := mapAt_mem hm
+  have hkey : e.1 = layer := by simpa using List.find?_some he
+  refine ⟨m, hmem, hid, ?_⟩
+  have : e = (layer, entry) := Prod.ext hkey hsnd
+  rw [← this]
+  exact List.mem_of_find?_eq_some he
+
+/-- What `lookup` answers is an entry of some map of the world, under the layer asked for. -/
+theorem lookup_mem {w : MemoWorld} {layer : LayerId} :
+    ∀ {fuel : Nat} {id owner : MemoMapId} {entry : MemoEntry},
+      w.lookup layer fuel id = some (owner, entry) →
+        ∃ m ∈ w, m.id = owner ∧ (layer, entry) ∈ m.entries
+  | 0, _, _, _, h => nomatch h
+  | fuel + 1, id, owner, entry, h => by
+    simp only [lookup] at h
+    split at h
+    · next e he =>
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact entryAt_mem he
+    · split at h
+      · exact nomatch h
+      · split at h
+        · exact nomatch h
+        · exact lookup_mem h
+
+theorem get_mem {w : MemoWorld} {layer : LayerId} {id owner : MemoMapId} {entry : MemoEntry}
+    (h : w.get layer id = some (owner, entry)) : ∃ m ∈ w, m.id = owner ∧ (layer, entry) ∈ m.entries :=
+  lookup_mem h
+
+/-- The maps `setMap` leaves: the replacement, or one of the old ones. -/
+theorem mem_setMap {w : MemoWorld} {m n : MemoMap} (h : n ∈ w.setMap m) : n = m ∨ n ∈ w := by
+  unfold setMap at h
+  obtain ⟨n', hn', hnn⟩ := List.mem_map.mp h
+  split at hnn
+  · exact Or.inl hnn.symm
+  · exact Or.inr (hnn ▸ hn')
+
+/-- `setMap` keeps every id: the replacement carries the id it replaces. -/
+theorem mapAt_setMap_isSome {w : MemoWorld} {m : MemoMap} {id : MemoMapId}
+    (h : (w.mapAt id).isSome = true) : ((w.setMap m).mapAt id).isSome = true := by
+  unfold mapAt at h ⊢
+  rw [List.find?_isSome] at h ⊢
+  obtain ⟨n, hn, hid⟩ := h
+  unfold setMap
+  refine ⟨if n.id = m.id then m else n, List.mem_map.mpr ⟨n, hn, rfl⟩, ?_⟩
+  split
+  · next heq =>
+    rw [← heq]
+    exact hid
+  · exact hid
+
+/-- The entries `updateEntry` leaves: an old map's, or an old entry of the updated map, as it
+was or through `f`. -/
+theorem mem_updateEntry_entries {w : MemoWorld} {id : MemoMapId} {layer : LayerId}
+    {f : MemoEntry → MemoEntry} {n : MemoMap} (hn : n ∈ w.updateEntry id layer f)
+    {e' : LayerId × MemoEntry} (he' : e' ∈ n.entries) :
+    ∃ m ∈ w, ∃ e ∈ m.entries, e' = e ∨ e' = (e.1, f e.2) := by
+  unfold updateEntry at hn
+  split at hn
+  · exact ⟨n, hn, e', he', Or.inl rfl⟩
+  · next m hm =>
+    rcases mem_setMap hn with rfl | hn
+    · obtain ⟨e, he, hee⟩ := List.mem_map.mp he'
+      refine ⟨m, (mapAt_mem hm).1, e, he, ?_⟩
+      split at hee
+      · exact Or.inr hee.symm
+      · exact Or.inl hee.symm
+    · exact ⟨n, hn, e', he', Or.inl rfl⟩
+
+/-- The entries `insertEntry` leaves: an old one, or the inserted one. -/
+theorem mem_insertEntry_entries {w : MemoWorld} {id : MemoMapId} {layer : LayerId}
+    {entry : MemoEntry} {n : MemoMap} (hn : n ∈ w.insertEntry id layer entry)
+    {e' : LayerId × MemoEntry} (he' : e' ∈ n.entries) :
+    (∃ m ∈ w, e' ∈ m.entries) ∨ e' = (layer, entry) := by
+  unfold insertEntry at hn
+  split at hn
+  · exact Or.inl ⟨n, hn, he'⟩
+  · next m hm =>
+    rcases mem_setMap hn with rfl | hn
+    · rcases List.mem_append.mp he' with he' | he'
+      · exact Or.inl ⟨m, (mapAt_mem hm).1, he'⟩
+      · exact Or.inr (List.mem_singleton.mp he')
+    · exact Or.inl ⟨n, hn, he'⟩
+
+/-- The entries `deleteEntry` leaves are old ones. -/
+theorem mem_deleteEntry_entries {w : MemoWorld} {id : MemoMapId} {layer : LayerId} {n : MemoMap}
+    (hn : n ∈ w.deleteEntry id layer) {e' : LayerId × MemoEntry} (he' : e' ∈ n.entries) :
+    ∃ m ∈ w, e' ∈ m.entries := by
+  unfold deleteEntry at hn
+  split at hn
+  · exact ⟨n, hn, he'⟩
+  · next m hm =>
+    rcases mem_setMap hn with rfl | hn
+    · exact ⟨m, (mapAt_mem hm).1, (List.mem_filter.mp he').1⟩
+    · exact ⟨n, hn, he'⟩
+
+theorem mapAt_updateEntry_isSome {w : MemoWorld} {id id' : MemoMapId} {layer : LayerId}
+    {f : MemoEntry → MemoEntry} (h : (w.mapAt id').isSome = true) :
+    ((w.updateEntry id layer f).mapAt id').isSome = true := by
+  unfold updateEntry
+  split
+  · exact h
+  · exact mapAt_setMap_isSome h
+
+theorem mapAt_insertEntry_isSome {w : MemoWorld} {id id' : MemoMapId} {layer : LayerId}
+    {entry : MemoEntry} (h : (w.mapAt id').isSome = true) :
+    ((w.insertEntry id layer entry).mapAt id').isSome = true := by
+  unfold insertEntry
+  split
+  · exact h
+  · exact mapAt_setMap_isSome h
+
+theorem mapAt_deleteEntry_isSome {w : MemoWorld} {id id' : MemoMapId} {layer : LayerId}
+    (h : (w.mapAt id').isSome = true) : ((w.deleteEntry id layer).mapAt id').isSome = true := by
+  unfold deleteEntry
+  split
+  · exact h
+  · exact mapAt_setMap_isSome h
+
+theorem mapAt_append_isSome {w : MemoWorld} {m : MemoMap} {id : MemoMapId}
+    (h : (w.mapAt id).isSome = true) : ((w ++ [m]).mapAt id).isSome = true := by
+  unfold mapAt at h ⊢
+  rw [List.find?_isSome] at h ⊢
+  obtain ⟨n, hn, hid⟩ := h
+  exact ⟨n, List.mem_append_left _ hn, hid⟩
+
+theorem mapAt_append_self (w : MemoWorld) (m : MemoMap) : ((w ++ [m]).mapAt m.id).isSome = true := by
+  unfold mapAt
+  rw [List.find?_isSome]
+  exact ⟨m, List.mem_append_right _ (List.mem_singleton.mpr rfl), by simp⟩
+
+end MemoWorld
 
 /-! ## The Ref heap (`Ref.ts`, `MutableRef.ts`) -/
 
@@ -1414,6 +1741,39 @@ theorem keysBelow_addUnsafe_entry {self : ScopeStore} {n scope : Nat} {entry : S
     · exact Nat.lt_succ_of_lt (hb entry hmem k hk)
   · exact Nat.lt_succ_of_lt (hb e he k hk)
 
+/-- A fork registers one key on each side, the shared one (`internal/effect.ts:3841-3842`):
+below any bound that key is below (the join). -/
+theorem keysBelow_forkChild {self : ScopeStore} {n m parent child shared : Nat}
+    {strategy : FinalizerStrategy} (hb : KeysBelow self n) (hn : n ≤ m) (hshared : shared < m) :
+    KeysBelow (self.forkChild parent child shared strategy) m := by
+  unfold forkChild
+  cases hentry : self.entryAt parent with
+  | none => exact hb.mono hn
+  | some entry =>
+    have hmem : entry ∈ self.entries := List.mem_of_find?_eq_some hentry
+    intro e he k hk
+    cases hclose : entry.scope.closingExit? with
+    | some ex =>
+      simp only [Effect4.Scope.fork, hclose, List.mem_append, List.mem_singleton] at he
+      rcases he with he | rfl
+      · rcases mem_setEntry he with rfl | he
+        · exact Nat.lt_of_lt_of_le (hb entry hmem k hk) hn
+        · exact Nat.lt_of_lt_of_le (hb e he k hk) hn
+      · exact absurd hk List.not_mem_nil
+    | none =>
+      simp only [Effect4.Scope.fork, hclose, List.mem_append, List.mem_singleton] at he
+      rcases he with he | rfl
+      · rcases mem_setEntry he with rfl | he
+        · rcases List.mem_cons.mp
+              (Effect4.Scope.addUnsafe_keys_subset entry.scope shared _ hk) with hk | hk
+          · exact hk ▸ hshared
+          · exact Nat.lt_of_lt_of_le (hb entry hmem k hk) hn
+        · exact Nat.lt_of_lt_of_le (hb e he k hk) hn
+      · rcases List.mem_cons.mp
+            (Effect4.Scope.addUnsafe_keys_subset (Effect4.Scope.make strategy) shared _ hk) with hk | hk
+        · exact hk ▸ hshared
+        · exact absurd hk List.not_mem_nil
+
 /-- Removal keeps the bound: removal only removes. -/
 theorem keysBelow_removeFinalizer {self : ScopeStore} {n scope key : Nat}
     (hb : KeysBelow self n) : KeysBelow (self.removeFinalizer scope key) n := by
@@ -1556,7 +1916,11 @@ theorem mergeAwaited_eq_mergeExits (exits : List ExitV) :
 
 /-! ## The service state -/
 
-/-- `St`: the three stores and one fresh-name counter. -/
+/-- `St`: the four stores and one fresh-name counter, which mints scope keys, registration keys
+and memo-map ids alike — each is an *object* in rc.112 (`finalizerKey: {}`, `MemoMapImpl`,
+`ScopeImpl`) and identity is the only fact the runtime reads off one, so one counter mints every
+identity distinct and separate counters would add numeric coincidences no clause could read
+(the Layer machine's ruling, kept in the join). -/
 structure Stores where
   /-- `Ref.ts`. -/
   refs : RefHeap
@@ -1564,14 +1928,16 @@ structure Stores where
   deferreds : DeferredStore
   /-- `Scope.ts` plus the keyed store. -/
   scopes : ScopeStore
-  /-- Fresh scope keys and finalizer keys. -/
+  /-- `Layer.ts:421-458`, the memo world (the join). -/
+  memo : MemoWorld
+  /-- Fresh scope keys, finalizer keys and memo-map ids. -/
   nextName : Nat
 deriving DecidableEq
 
 namespace Stores
 
-/-- An empty service state. -/
-def empty : Stores := ⟨[], ⟨[], []⟩, ⟨[]⟩, 0⟩
+/-- An empty service state: the bottom every family's law holds at. -/
+def empty : Stores := ⟨[], ⟨[], []⟩, ⟨[]⟩, [], 0⟩
 
 /-- The registration-identity invariant (`E4-CHECK-CE-016`): every registration key any
 scope holds is below the store's fresh-name supply, so `nextName` is a key no scope holds.
@@ -1620,6 +1986,15 @@ def finProgram : FinName → ExitV → Program
   -- the release closure is called when the finalizer runs (`:3983`): a suspension the
   -- compile route's `suspendBody` resolves, through every close path's `finProgram`
   | FinName.foreign capture, exit => Prim.suspend (Thunk.foreign capture exit)
+  | FinName.closeChildOnFailure scope, Exit.failure cause =>                              -- Layer.ts:343
+    Prim.withFiber (Thunk.act (ActionName.closeScope scope (Exit.failure cause)))
+  | FinName.closeChildOnFailure _, Exit.success _ => Prim.success Val.unit
+  -- the memo entry finalizer (`Layer.ts:401-410`): `observers--`, the last observer closing
+  -- the layer scope with the exit
+  | FinName.memoEntry layer memoMap, exit =>
+    Prim.onSuccess (Prim.sync (Thunk.op (SyncOp.memoRelease layer memoMap))) (Name.closeIfLast exit)
+  | FinName.memoDone layer memoMap, exit =>                                               -- :414-417
+    Prim.sync (Thunk.op (SyncOp.memoComplete layer memoMap exit))
 
 /-- One step of the sequential close generator (`internal/effect.ts:3813-3818`, §20). The value
 delivered to the iterator frame is the previous finalizer's reified exit — the answer of the
@@ -1801,6 +2176,58 @@ def syncOpStep : SyncOp → Stores → Option (Stores × Val)
     some ({ st with scopes := st.scopes.removeFinalizer scope key }, Val.unit)
   | SyncOp.scopeIsClosed scope, st =>
     (st.scopes.entryAt scope).map (fun entry => (st, Val.bool entry.scope.isClosed))
+  -- `scopeForkUnsafe(parent, strategy)` (`internal/effect.ts:3834-3844`): the child under a
+  -- fresh key, both linked under a shared registration key, both from the supply; an unknown
+  -- parent is a frontier
+  | SyncOp.scopeFork parent strategy, st =>
+    match st.scopes.entryAt parent with
+    | none => none
+    | some _ =>
+      some ({ st with
+          scopes := st.scopes.forkChild parent st.nextName (st.nextName + 1) strategy
+          nextName := st.nextName + 2 },
+        Val.scopeHandle st.nextName)
+  | SyncOp.memoFork parent, st =>                                                         -- Layer.ts:492, :511
+    some ({ st with memo := st.memo ++ [⟨⟨st.nextName⟩, parent, []⟩], nextName := st.nextName + 1 },
+      Val.memoMap ⟨st.nextName⟩)
+  | SyncOp.memoGet layer memoMap, st =>
+    match st.memo.get layer memoMap with
+    | none => some (st, Val.unit)
+    | some (owner, entry) =>                                                              -- :245, :438-442
+      some ({ st with
+          memo := st.memo.updateEntry owner layer fun e => { e with observers := e.observers + 1 } },
+        Val.pair (Val.promise entry.deferred) (Val.memoMap owner))
+  | SyncOp.memoBuild layer memoMap, st =>                                                 -- :396-411
+    let layerScope := st.nextName
+    let (deferred, deferreds) := st.deferreds.make
+    let entry : MemoEntry :=
+      ⟨1, Prim.async (Name.registerAwait deferred) true (some (Name.cancelAwait deferred)),
+        layerScope, deferred, FinName.memoEntry layer memoMap⟩
+    some ({ st with
+        scopes := st.scopes.make layerScope FinalizerStrategy.sequential
+        deferreds := deferreds
+        memo := st.memo.insertEntry memoMap layer entry
+        nextName := st.nextName + 1 },
+      Val.scopeHandle layerScope)
+  | SyncOp.memoComplete layer memoMap exit, st =>                                         -- :415-416
+    match st.memo.entryAt memoMap layer with
+    | none => some (st, Val.unit)
+    | some entry =>
+      let (deferreds, _) := st.deferreds.complete entry.deferred (Prim.ofExit exit)
+      some ({ st with
+          memo := st.memo.updateEntry memoMap layer fun e => { e with effect := Prim.ofExit exit }
+          deferreds := deferreds },
+        Val.unit)
+  | SyncOp.memoRelease layer memoMap, st =>                                               -- :403-408
+    match st.memo.entryAt memoMap layer with
+    | none => some (st, Val.unit)
+    | some entry =>
+      if entry.observers ≤ 1 then
+        some ({ st with memo := st.memo.deleteEntry memoMap layer }, Val.scopeHandle entry.layerScope)
+      else
+        some ({ st with
+            memo := st.memo.updateEntry memoMap layer fun e => { e with observers := e.observers - 1 } },
+          Val.unit)
   | op, st => (refStep op st.refs).map (fun step => ({ st with refs := step.2 }, step.1))
 
 /-! ## Continuations -/
@@ -1841,6 +2268,9 @@ def contAOf : Name → Val → Program
   | Name.snapshotThen body, _ =>
     Prim.onExit (progOf body) (Name.finalizerName (FinName.awaitNewChildren [])) false
   | Name.reFail cause, _ => Prim.failure cause
+  | Name.closeIfLast exit, Val.scopeHandle scope =>                                       -- Layer.ts:406
+    Prim.withFiber (Thunk.act (ActionName.closeScope scope exit))
+  | Name.closeIfLast _, _ => Prim.success Val.unit                                        -- :408
   | _, value => Prim.success value
 
 /-- `cont[contE](cause, fiber)`. -/

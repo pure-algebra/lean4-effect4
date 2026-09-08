@@ -23,8 +23,8 @@ What is deliberately not said, each named so it is a refusal and not an omission
 * `Val.fiber` and `Val.fibers` are the machine's handles, not the store's: `validIn` accepts
   them (`Stores.handleValid`, the fiber byte).
 * `Val.exitErr` carries a cause and no handle; it is valid everywhere (`Val.validIn_exitErr`).
-* `ScopeStore.forkChild` (`Stores.lean:932`) is not reachable from `syncOpStep` and has no
-  law here.
+* `ScopeStore.forkChild` is reached through `SyncOp.scopeFork` since the join; the memo world's
+  operations are the join's, with `Stores.MemoValid` the conjunct `WF` gained for them.
 
 `SyncOp.validIn` is a sufficient condition for `syncOpStep` to answer, not a necessary one:
 `deferredCompleteWith` on an unknown cell answers `false` without stepping into the frontier
@@ -47,31 +47,35 @@ def Stores.le (s s' : Stores) : Prop :=
   s.refs.length ≤ s'.refs.length ∧
   s.deferreds.cells.length ≤ s'.deferreds.cells.length ∧
   (∀ key, (s.scopes.entryAt key).isSome = true → (s'.scopes.entryAt key).isSome = true) ∧
-  s.nextName ≤ s'.nextName
+  s.nextName ≤ s'.nextName ∧
+  -- a memo map is never removed (`memoFork` appends, `setMap` maps in place; the join)
+  ∀ id, (s.memo.mapAt id).isSome = true → (s'.memo.mapAt id).isSome = true
 
 /-- Reflexive (ENSURES 10). -/
 theorem Stores.le_refl (s : Stores) : s.le s :=
-  ⟨Nat.le_refl _, Nat.le_refl _, fun _ h => h, Nat.le_refl _⟩
+  ⟨Nat.le_refl _, Nat.le_refl _, fun _ h => h, Nat.le_refl _, fun _ h => h⟩
 
 /-- Transitive (ENSURES 10). -/
 theorem Stores.le_trans {s s' s'' : Stores} (h : s.le s') (h' : s'.le s'') : s.le s'' :=
   ⟨Nat.le_trans h.1 h'.1, Nat.le_trans h.2.1 h'.2.1,
-    fun key hk => h'.2.2.1 key (h.2.2.1 key hk), Nat.le_trans h.2.2.2 h'.2.2.2⟩
+    fun key hk => h'.2.2.1 key (h.2.2.1 key hk), Nat.le_trans h.2.2.2.1 h'.2.2.2.1,
+    fun id hm => h'.2.2.2.2 id (h.2.2.2.2 id hm)⟩
 
 /-! ## Validity -/
 
 /-- One handle's kind byte and index against the store (plan §3.1, ENSURES 12): a cell byte
 needs a heap index (`Stores.lean` `refPeek`), a promise byte a Deferred cell index
 (`cellAt`), a scope byte a scope entry (`entryAt`); a fiber byte is the machine's, not the
-store's, and is accepted; a `memoMap` byte (the Layer machine's) or an unregistered byte names
-nothing this store holds. -/
+store's, and is accepted; a `memoMap` byte a memo map (`MemoWorld.mapAt`, the join); an
+unregistered byte names nothing this store holds. -/
 def Stores.handleValid (s : Stores) (kind : UInt8) (index : Nat) : Bool :=
   match HandleKind.ofByte? kind with
   | some .fiber => true
   | some .cell => index < s.refs.length
   | some .promise => index < s.deferreds.cells.length
   | some .scope => (s.scopes.entryAt index).isSome
-  | _ => false
+  | some .memoMap => (s.memo.mapAt ⟨index⟩).isSome
+  | none => false
 
 mutual
 /-- A value's handles exist in the store (plan §3.1, ENSURES 12): every `handle` frame the
@@ -99,6 +103,8 @@ theorem Val.validIn_promise (s : Stores) (k : DeferredKey) :
     Val.validIn s (Val.promise k) = decide (k.index < s.deferreds.cells.length) := rfl
 theorem Val.validIn_scopeHandle (s : Stores) (key : Nat) :
     Val.validIn s (Val.scopeHandle key) = (s.scopes.entryAt key).isSome := rfl
+theorem Val.validIn_memoMap (s : Stores) (id : MemoMapId) :
+    Val.validIn s (Val.memoMap id) = (s.memo.mapAt id).isSome := rfl
 theorem Val.validIn_fiber (s : Stores) (id : FiberId) : Val.validIn s (Val.fiber id) = true := rfl
 theorem Val.validIn_exitOk (s : Stores) (v : Val) : Val.validIn s (Val.exitOk v) = Val.validIn s v := by
   simp only [Val.validIn, Val.validInList, Bool.and_true]
@@ -182,6 +188,23 @@ def SyncOp.validIn (s : Stores) : SyncOp → Bool
   | SyncOp.scopeAdd scope _ => (s.scopes.entryAt scope).isSome
   | SyncOp.scopeRemove scope _ => (s.scopes.entryAt scope).isSome
   | SyncOp.scopeIsClosed scope => (s.scopes.entryAt scope).isSome
+  | SyncOp.scopeFork parent _ => (s.scopes.entryAt parent).isSome
+  | SyncOp.memoFork none => true
+  | SyncOp.memoFork (some parent) => (s.memo.mapAt parent).isSome
+  | SyncOp.memoGet _ memoMap => (s.memo.mapAt memoMap).isSome
+  | SyncOp.memoBuild _ memoMap => (s.memo.mapAt memoMap).isSome
+  | SyncOp.memoComplete _ memoMap exit =>
+    (s.memo.mapAt memoMap).isSome && (reifyExitVal exit).validIn s
+  | SyncOp.memoRelease _ memoMap => (s.memo.mapAt memoMap).isSome
+
+/-- Every memo entry's allocations exist: its Deferred cell and its layer scope (the join). -/
+def Stores.MemoValid (s : Stores) : Prop :=
+  ∀ m ∈ s.memo, ∀ e ∈ m.entries,
+    e.2.deferred.index < s.deferreds.cells.length ∧
+      (s.scopes.entryAt e.2.layerScope).isSome = true
+
+instance (s : Stores) : Decidable s.MemoValid := by
+  unfold Stores.MemoValid; infer_instance
 
 /-- Every value the store holds and answers is valid in the store that holds it (plan §3.1,
 ENSURES 12): the heap's values, and the closing exit of every closed scope — which
@@ -189,21 +212,23 @@ ENSURES 12): the heap's values, and the closing exit of every closed scope — w
 completions stay excluded: `STORES-FB-COMPLETION` in the header. -/
 def Stores.WF (s : Stores) : Prop :=
   (∀ v ∈ s.refs, v.validIn s = true) ∧
-    ∀ e ∈ s.scopes.entries,
-      (e.scope.closingExit?.map fun exit => (reifyExitVal exit).validIn s).getD true = true
+    (∀ e ∈ s.scopes.entries,
+      (e.scope.closingExit?.map fun exit => (reifyExitVal exit).validIn s).getD true = true) ∧
+    s.MemoValid
 
 instance (s : Stores) : Decidable s.WF := by
   unfold Stores.WF; infer_instance
 
-/-- `Stores.empty` (`Stores.lean:1043`) is well-formed: its heap and its scope store are
-empty (ENSURES 12). -/
-theorem Stores.empty_wf : Stores.empty.WF := ⟨fun _ h => (nomatch h), fun _ h => (nomatch h)⟩
+/-- `Stores.empty` (`Stores.lean:1043`) is well-formed: its heap, its scope store and its memo
+world are empty (ENSURES 12; the bottom of every family's law). -/
+theorem Stores.empty_wf : Stores.empty.WF :=
+  ⟨fun _ h => (nomatch h), fun _ h => (nomatch h), fun _ h => (nomatch h)⟩
 
 /-- The closing exit a closed scope holds is valid in the store. -/
 theorem Stores.WF.closingExit {s : Stores} (hwf : s.WF) {scope : Nat} {entry : ScopeEntry}
     {exit : ExitV} (hentry : s.scopes.entryAt scope = some entry)
     (hclose : entry.scope.closingExit? = some exit) : (reifyExitVal exit).validIn s = true := by
-  have h := hwf.2 entry (List.mem_of_find?_eq_some hentry)
+  have h := hwf.2.1 entry (List.mem_of_find?_eq_some hentry)
   rw [hclose] at h
   simpa only [Option.map, Option.getD] using h
 
@@ -232,7 +257,7 @@ theorem Stores.handleValid_mono {s s' : Stores} (hle : s.le s') (kind : UInt8) (
     | cell => exact decide_eq_true (Nat.lt_of_lt_of_le (of_decide_eq_true h) hle.1)
     | promise => exact decide_eq_true (Nat.lt_of_lt_of_le (of_decide_eq_true h) hle.2.1)
     | scope => exact hle.2.2.1 index h
-    | memoMap => exact h
+    | memoMap => exact hle.2.2.2.2 ⟨index⟩ h
 
 /-- Validity survives growth (plan §3.2, ENSURES 13): every handle of the value does. -/
 theorem Val.validIn_mono {s s' : Stores} (hle : s.le s') (v : Val) (h : v.validIn s = true) :
@@ -258,7 +283,16 @@ theorem SyncOp.validIn_mono {s s' : Stores} (hle : s.le s') (o : SyncOp)
   | deferredInterruptWith cell _ | deferredAwaitCleanup cell _ _ =>
     simp only [SyncOp.validIn, decide_eq_true_eq] at h ⊢
     exact Nat.lt_of_lt_of_le h hle.2.1
-  | scopeAdd scope _ | scopeRemove scope _ | scopeIsClosed scope => exact hle.2.2.1 scope h
+  | scopeAdd scope _ | scopeRemove scope _ | scopeIsClosed scope | scopeFork scope _ =>
+    exact hle.2.2.1 scope h
+  | memoFork parent =>
+    cases parent with
+    | none => rfl
+    | some parent => exact hle.2.2.2.2 parent h
+  | memoGet _ memoMap | memoBuild _ memoMap | memoRelease _ memoMap => exact hle.2.2.2.2 memoMap h
+  | memoComplete _ memoMap exit =>
+    simp only [SyncOp.validIn, Bool.and_eq_true] at h ⊢
+    exact ⟨hle.2.2.2.2 memoMap h.1, Val.validIn_mono hle _ h.2⟩
 
 /-! ## The pure functions keep validity
 
@@ -365,7 +399,7 @@ theorem refPoke_valid (s : Stores) (cell : RefKey) (y : Val) (hwf : s.WF)
   have hwf := hwf.1
   intro x hx
   have hle : s.le { s with refs := refPoke s.refs cell y } :=
-    ⟨by simp [refPoke], Nat.le_refl _, fun _ h => h, Nat.le_refl _⟩
+    ⟨by simp [refPoke], Nat.le_refl _, fun _ h => h, Nat.le_refl _, fun _ h => h⟩
   apply Val.validIn_mono hle
   rcases List.mem_or_eq_of_mem_set hx with hmem | rfl
   · exact hwf x hmem
@@ -381,7 +415,7 @@ theorem refStep_valid (o : SyncOp) (s : Stores) (v : Val) (heap' : RefHeap) (hwf
     (∀ x ∈ heap', x.validIn { s with refs := heap' } = true) ∧
       v.validIn { s with refs := heap' } = true := by
   have hle : s.le { s with refs := heap' } :=
-    ⟨refStep_length o s.refs v heap' h, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _⟩
+    ⟨refStep_length o s.refs v heap' h, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, fun _ hm => hm⟩
   have hwf' := hwf
   have hwf := hwf.1
   cases o with
@@ -570,6 +604,30 @@ theorem ScopeStore.entryAt_addFinalizer_isSome (self : ScopeStore) (scope finali
   · exact h
   · exact ScopeStore.entryAt_setEntry_isSome self _ key h
 
+/-- `forkChild` (`Stores.lean`) sets the parent in place and appends the child: every entry
+survives. -/
+theorem ScopeStore.entryAt_forkChild_isSome (self : ScopeStore) (parent child shared : Nat)
+    (strategy : FinalizerStrategy) (key : Nat) (h : (self.entryAt key).isSome = true) :
+    ((self.forkChild parent child shared strategy).entryAt key).isSome = true := by
+  unfold ScopeStore.forkChild
+  cases hp : self.entryAt parent with
+  | none => exact h
+  | some p =>
+    have h' := ScopeStore.entryAt_setEntry_isSome self
+      { p with scope := (Effect4.Scope.fork p.scope strategy shared (FinName.closeChildScope child)
+          (FinName.detachFromParent parent shared)).1 } key h
+    rw [ScopeStore.entryAt_isSome_iff] at h' ⊢
+    obtain ⟨e, he, hk⟩ := h'
+    exact ⟨e, List.mem_append_left _ he, hk⟩
+
+/-- `forkChild` appends the child's key: it is present afterwards. -/
+theorem ScopeStore.entryAt_forkChild_child (self : ScopeStore) (parent child shared : Nat)
+    (strategy : FinalizerStrategy) {p : ScopeEntry} (h : self.entryAt parent = some p) :
+    ((self.forkChild parent child shared strategy).entryAt child).isSome = true := by
+  simp only [ScopeStore.forkChild, h]
+  rw [ScopeStore.entryAt_isSome_iff]
+  exact ⟨⟨child, _⟩, List.mem_append_right _ (List.mem_singleton.mpr rfl), rfl⟩
+
 /-- `removeFinalizer` (`Stores.lean:924-928`, over `Scope.removeUnsafe`, `Scope.lean:672`)
 answers the store itself or one `setEntry`: every entry survives. -/
 theorem ScopeStore.entryAt_removeFinalizer_isSome (self : ScopeStore) (scope finalizerKey : Nat)
@@ -685,6 +743,116 @@ theorem syncOpStep_scopeIsClosed (s : Stores) (scope : Nat) :
     syncOpStep (SyncOp.scopeIsClosed scope) s =
       (s.scopes.entryAt scope).map (fun entry => (s, Val.bool entry.scope.isClosed)) := rfl
 
+/-! ### The six arms of the join (`Layer.ts:396-458`, `internal/effect.ts:3834-3844`) -/
+
+/-- `scopeForkUnsafe` on an unknown parent: a frontier. -/
+theorem syncOpStep_scopeFork_none (s : Stores) (parent : Nat) (strategy : FinalizerStrategy)
+    (h : s.scopes.entryAt parent = none) :
+    syncOpStep (SyncOp.scopeFork parent strategy) s = none := by
+  simp only [syncOpStep, h]
+
+/-- `scopeForkUnsafe` on a known parent: the child at the supply, the shared key next, the supply
+past both. census: scope.fork-linkage -/
+theorem syncOpStep_scopeFork_some (s : Stores) (parent : Nat) (strategy : FinalizerStrategy)
+    {entry : ScopeEntry} (h : s.scopes.entryAt parent = some entry) :
+    syncOpStep (SyncOp.scopeFork parent strategy) s =
+      some ({ s with
+          scopes := s.scopes.forkChild parent s.nextName (s.nextName + 1) strategy
+          nextName := s.nextName + 2 },
+        Val.scopeHandle s.nextName) := by
+  simp only [syncOpStep, h]
+
+theorem syncOpStep_memoFork (s : Stores) (parent : Option MemoMapId) :
+    syncOpStep (SyncOp.memoFork parent) s =
+      some ({ s with memo := s.memo ++ [⟨⟨s.nextName⟩, parent, []⟩], nextName := s.nextName + 1 },
+        Val.memoMap ⟨s.nextName⟩) := rfl
+
+theorem syncOpStep_memoGet_none (s : Stores) (layer : LayerId) (memoMap : MemoMapId)
+    (h : s.memo.get layer memoMap = none) :
+    syncOpStep (SyncOp.memoGet layer memoMap) s = some (s, Val.unit) := by
+  simp only [syncOpStep, h]
+
+/-- A hit bumps the owning entry's observers and answers its Deferred and owner
+(`Layer.ts:245`, `:438-442`). census: layer.memo-get -/
+theorem syncOpStep_memoGet_some (s : Stores) (layer : LayerId) (memoMap : MemoMapId)
+    {owner : MemoMapId} {entry : MemoEntry} (h : s.memo.get layer memoMap = some (owner, entry)) :
+    syncOpStep (SyncOp.memoGet layer memoMap) s =
+      some ({ s with
+          memo := s.memo.updateEntry owner layer fun e => { e with observers := e.observers + 1 } },
+        Val.pair (Val.promise entry.deferred) (Val.memoMap owner)) := by
+  simp only [syncOpStep, h]
+
+/-- `memoMapBuild`'s synchronous half (`Layer.ts:396-411`): the layer scope at the supply, a
+fresh Deferred, the entry with one observer. census: layer.memo-build-once -/
+theorem syncOpStep_memoBuild (s : Stores) (layer : LayerId) (memoMap : MemoMapId) :
+    syncOpStep (SyncOp.memoBuild layer memoMap) s =
+      some ({ s with
+          scopes := s.scopes.make s.nextName FinalizerStrategy.sequential
+          deferreds := s.deferreds.make.2
+          memo := s.memo.insertEntry memoMap layer
+            ⟨1, Prim.async (Name.registerAwait s.deferreds.make.1) true
+                (some (Name.cancelAwait s.deferreds.make.1)),
+              s.nextName, s.deferreds.make.1, FinName.memoEntry layer memoMap⟩
+          nextName := s.nextName + 1 },
+        Val.scopeHandle s.nextName) := rfl
+
+theorem syncOpStep_memoComplete_none (s : Stores) (layer : LayerId) (memoMap : MemoMapId)
+    (exit : ExitV) (h : s.memo.entryAt memoMap layer = none) :
+    syncOpStep (SyncOp.memoComplete layer memoMap exit) s = some (s, Val.unit) := by
+  simp only [syncOpStep, h]
+
+/-- `memoMapBuild`'s `onExit` (`Layer.ts:414-417`): the exit stored, the Deferred completed —
+the wakeup borrowed from the Deferred family. census: layer.memo-build-once -/
+theorem syncOpStep_memoComplete_some (s : Stores) (layer : LayerId) (memoMap : MemoMapId)
+    (exit : ExitV) {entry : MemoEntry} (h : s.memo.entryAt memoMap layer = some entry) :
+    syncOpStep (SyncOp.memoComplete layer memoMap exit) s =
+      some ({ s with
+          memo := s.memo.updateEntry memoMap layer fun e => { e with effect := Prim.ofExit exit }
+          deferreds := (s.deferreds.complete entry.deferred (Prim.ofExit exit)).1 },
+        Val.unit) := by
+  simp only [syncOpStep, h]
+
+theorem syncOpStep_memoRelease_none (s : Stores) (layer : LayerId) (memoMap : MemoMapId)
+    (h : s.memo.entryAt memoMap layer = none) :
+    syncOpStep (SyncOp.memoRelease layer memoMap) s = some (s, Val.unit) := by
+  simp only [syncOpStep, h]
+
+/-- The last observer's release deletes the entry and answers the layer scope (`Layer.ts:403-406`).
+census: layer.memo-release -/
+theorem syncOpStep_memoRelease_last (s : Stores) (layer : LayerId) (memoMap : MemoMapId)
+    {entry : MemoEntry} (h : s.memo.entryAt memoMap layer = some entry)
+    (hobs : entry.observers ≤ 1) :
+    syncOpStep (SyncOp.memoRelease layer memoMap) s =
+      some ({ s with memo := s.memo.deleteEntry memoMap layer }, Val.scopeHandle entry.layerScope) := by
+  simp only [syncOpStep, h, hobs, ite_true]
+
+/-- Any other release decrements (`:408`). census: layer.memo-release -/
+theorem syncOpStep_memoRelease_dec (s : Stores) (layer : LayerId) (memoMap : MemoMapId)
+    {entry : MemoEntry} (h : s.memo.entryAt memoMap layer = some entry)
+    (hobs : ¬ entry.observers ≤ 1) :
+    syncOpStep (SyncOp.memoRelease layer memoMap) s =
+      some ({ s with
+          memo := s.memo.updateEntry memoMap layer fun e => { e with observers := e.observers - 1 } },
+        Val.unit) := by
+  simp only [syncOpStep, h, hobs, ite_false]
+
+/-- `memoGet` is a read of every family but `memo` (the Layer machine's
+`memoGet_rebuilds_nothing`, restated on the joined store in a stronger spelling). -/
+theorem syncOpStep_memoGet_families (s s' : Stores) (layer : LayerId) (memoMap : MemoMapId)
+    (v : Val) (h : syncOpStep (SyncOp.memoGet layer memoMap) s = some (s', v)) :
+    s'.refs = s.refs ∧ s'.deferreds = s.deferreds ∧ s'.scopes = s.scopes ∧
+      s'.nextName = s.nextName := by
+  cases hget : s.memo.get layer memoMap with
+  | none =>
+    rw [syncOpStep_memoGet_none s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact ⟨rfl, rfl, rfl, rfl⟩
+  | some p =>
+    obtain ⟨owner, entry⟩ := p
+    rw [syncOpStep_memoGet_some s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact ⟨rfl, rfl, rfl, rfl⟩
+
 /-! ## The laws of `syncOpStep` -/
 
 /-- A step grows the store (plan §3.2, ENSURES 11): one case per arm of `syncOpStep`. -/
@@ -694,7 +862,7 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
   | deferredMake =>
     simp only [syncOpStep_deferredMake, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
-    exact ⟨Nat.le_refl _, by simp [DeferredStore.make], fun _ hk => hk, Nat.le_refl _⟩
+    exact ⟨Nat.le_refl _, by simp [DeferredStore.make], fun _ hk => hk, Nat.le_refl _, fun _ hm => hm⟩
   | deferredIsDone cell | deferredPoll cell | scopeIsClosed cell =>
     simp only [syncOpStep_deferredIsDone, syncOpStep_deferredPoll, syncOpStep_scopeIsClosed] at h
     obtain ⟨_, _, hf⟩ := Option.map_eq_some_iff.mp h
@@ -704,22 +872,22 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
     simp only [syncOpStep_deferredCompleteWith, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
     exact ⟨Nat.le_refl _, Nat.le_of_eq (DeferredStore.complete_cells_length _ _ _).symm,
-      fun _ hk => hk, Nat.le_refl _⟩
+      fun _ hk => hk, Nat.le_refl _, fun _ hm => hm⟩
   | deferredInterruptWith cell interruptor =>
     simp only [syncOpStep_deferredInterruptWith, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
     exact ⟨Nat.le_refl _, Nat.le_of_eq (DeferredStore.complete_cells_length _ _ _).symm,
-      fun _ hk => hk, Nat.le_refl _⟩
+      fun _ hk => hk, Nat.le_refl _, fun _ hm => hm⟩
   | deferredAwaitCleanup cell waiter token =>
     simp only [syncOpStep_deferredAwaitCleanup, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
     exact ⟨Nat.le_refl _, Nat.le_of_eq (DeferredStore.cancel_cells_length _ _ _ _).symm,
-      fun _ hk => hk, Nat.le_refl _⟩
+      fun _ hk => hk, Nat.le_refl _, fun _ hm => hm⟩
   | scopeMake strategy =>
     simp only [syncOpStep_scopeMake, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
     exact ⟨Nat.le_refl _, Nat.le_refl _,
-      fun key hk => ScopeStore.entryAt_make_isSome _ _ _ key hk, Nat.le_succ _⟩
+      fun key hk => ScopeStore.entryAt_make_isSome _ _ _ key hk, Nat.le_succ _, fun _ hm => hm⟩
   | scopeAdd scope fin =>
     cases hentry : s.scopes.entryAt scope with
     | none => rw [syncOpStep_scopeAdd_none s scope fin hentry] at h; cases h
@@ -735,17 +903,91 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
           Prod.mk.injEq] at h
         obtain ⟨rfl, _⟩ := h
         exact ⟨Nat.le_refl _, Nat.le_refl _,
-          fun k hk => ScopeStore.entryAt_setEntry_isSome _ _ k hk, Nat.le_succ _⟩
+          fun k hk => ScopeStore.entryAt_setEntry_isSome _ _ k hk, Nat.le_succ _, fun _ hm => hm⟩
   | scopeRemove scope key =>
     simp only [syncOpStep_scopeRemove, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
     exact ⟨Nat.le_refl _, Nat.le_refl _,
-      fun k hk => ScopeStore.entryAt_removeFinalizer_isSome _ _ _ k hk, Nat.le_refl _⟩
+      fun k hk => ScopeStore.entryAt_removeFinalizer_isSome _ _ _ k hk, Nat.le_refl _, fun _ hm => hm⟩
+  | scopeFork parent strategy =>
+    cases hentry : s.scopes.entryAt parent with
+    | none => rw [syncOpStep_scopeFork_none s parent strategy hentry] at h; cases h
+    | some entry =>
+      rw [syncOpStep_scopeFork_some s parent strategy hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact ⟨Nat.le_refl _, Nat.le_refl _,
+        fun k hk => ScopeStore.entryAt_forkChild_isSome _ _ _ _ _ k hk, Nat.le_add_right _ _,
+        fun _ hm => hm⟩
+  | memoFork parent =>
+    simp only [syncOpStep_memoFork, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact ⟨Nat.le_refl _, Nat.le_refl _, fun _ hk => hk, Nat.le_succ _, fun id hm => by
+      show ((s.memo ++ [(⟨⟨s.nextName⟩, parent, []⟩ : MemoMap)]).mapAt id).isSome = true
+      exact MemoWorld.mapAt_append_isSome hm⟩
+  | memoGet layer memoMap =>
+    cases hget : s.memo.get layer memoMap with
+    | none =>
+      rw [syncOpStep_memoGet_none s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact Stores.le_refl s
+    | some p =>
+      obtain ⟨owner, entry⟩ := p
+      rw [syncOpStep_memoGet_some s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact ⟨Nat.le_refl _, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, fun id hm => by
+        show ((s.memo.updateEntry owner layer fun e => { e with observers := e.observers + 1 }).mapAt
+          id).isSome = true
+        exact MemoWorld.mapAt_updateEntry_isSome hm⟩
+  | memoBuild layer memoMap =>
+    simp only [syncOpStep_memoBuild, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact ⟨Nat.le_refl _, by simp [DeferredStore.make],
+      fun k hk => ScopeStore.entryAt_make_isSome _ _ _ k hk, Nat.le_succ _, fun id hm => by
+        show ((s.memo.insertEntry memoMap layer _).mapAt id).isSome = true
+        exact MemoWorld.mapAt_insertEntry_isSome hm⟩
+  | memoComplete layer memoMap exit =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoComplete_none s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact Stores.le_refl s
+    | some entry =>
+      rw [syncOpStep_memoComplete_some s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact ⟨Nat.le_refl _, Nat.le_of_eq (DeferredStore.complete_cells_length _ _ _).symm,
+        fun _ hk => hk, Nat.le_refl _, fun id hm => by
+          show ((s.memo.updateEntry memoMap layer fun e => { e with effect := Prim.ofExit exit }).mapAt
+            id).isSome = true
+          exact MemoWorld.mapAt_updateEntry_isSome hm⟩
+  | memoRelease layer memoMap =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoRelease_none s layer memoMap hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact Stores.le_refl s
+    | some entry =>
+      by_cases hobs : entry.observers ≤ 1
+      · rw [syncOpStep_memoRelease_last s layer memoMap hentry hobs, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact ⟨Nat.le_refl _, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, fun id hm => by
+          show ((s.memo.deleteEntry memoMap layer).mapAt id).isSome = true
+          exact MemoWorld.mapAt_deleteEntry_isSome hm⟩
+      · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hobs, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact ⟨Nat.le_refl _, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, fun id hm => by
+          show ((s.memo.updateEntry memoMap layer fun e => { e with observers := e.observers - 1 }).mapAt
+            id).isSome = true
+          exact MemoWorld.mapAt_updateEntry_isSome hm⟩
   | _ =>
     simp only [syncOpStep] at h
     obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h
     cases hf
-    exact ⟨refStep_length _ s.refs a heap' hstep, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _⟩
+    exact ⟨refStep_length _ s.refs a heap' hstep, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _,
+      fun _ hm => hm⟩
 
 /-- A step keeps every closing exit the store held: a closed scope's exit is answered, never
 rewritten; an open registration goes under `addUnsafe`; the heap and Deferred arms leave the
@@ -808,6 +1050,84 @@ theorem syncOpStep_closingExit (o : SyncOp) (s s' : Stores) (v : Val)
       · rw [Scope.closingExit_removeUnsafe] at hc
         exact ⟨entry, List.mem_of_find?_eq_some hentry, hc⟩
       · exact ⟨e, he, hc⟩
+  | scopeFork parent strategy =>
+    cases hentry : s.scopes.entryAt parent with
+    | none => rw [syncOpStep_scopeFork_none s parent strategy hentry] at h; cases h
+    | some entry =>
+      rw [syncOpStep_scopeFork_some s parent strategy hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      intro e he exit hc
+      simp only [ScopeStore.forkChild, hentry] at he
+      cases hclose : entry.scope.closingExit? with
+      | some ex =>
+        simp only [Effect4.Scope.fork, hclose, List.mem_append, List.mem_singleton] at he
+        rcases he with he | rfl
+        · rcases ScopeStore.mem_setEntry he with rfl | he
+          · exact ⟨entry, List.mem_of_find?_eq_some hentry, hc⟩
+          · exact ⟨e, he, hc⟩
+        · refine ⟨entry, List.mem_of_find?_eq_some hentry, ?_⟩
+          rw [hclose]
+          exact hc
+      | none =>
+        simp only [Effect4.Scope.fork, hclose, List.mem_append, List.mem_singleton] at he
+        rcases he with he | rfl
+        · rcases ScopeStore.mem_setEntry he with rfl | he
+          · rw [Scope.closingExit_addUnsafe, hclose] at hc
+            exact nomatch hc
+          · exact ⟨e, he, hc⟩
+        · rw [Scope.closingExit_addUnsafe] at hc
+          exact nomatch hc
+  | memoFork parent =>
+    simp only [syncOpStep_memoFork, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact fun e he exit hc => ⟨e, he, hc⟩
+  | memoGet layer memoMap =>
+    cases hget : s.memo.get layer memoMap with
+    | none =>
+      rw [syncOpStep_memoGet_none s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact fun e he exit hc => ⟨e, he, hc⟩
+    | some p =>
+      obtain ⟨owner, entry⟩ := p
+      rw [syncOpStep_memoGet_some s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact fun e he exit hc => ⟨e, he, hc⟩
+  | memoBuild layer memoMap =>
+    simp only [syncOpStep_memoBuild, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    intro e he exit hc
+    simp only [ScopeStore.make, List.mem_append, List.mem_singleton] at he
+    rcases he with he | rfl
+    · exact ⟨e, he, hc⟩
+    · exact nomatch hc
+  | memoComplete layer memoMap exit =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoComplete_none s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact fun e he exit hc => ⟨e, he, hc⟩
+    | some entry =>
+      rw [syncOpStep_memoComplete_some s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact fun e he exit hc => ⟨e, he, hc⟩
+  | memoRelease layer memoMap =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoRelease_none s layer memoMap hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact fun e he exit hc => ⟨e, he, hc⟩
+    | some entry =>
+      by_cases hobs : entry.observers ≤ 1
+      · rw [syncOpStep_memoRelease_last s layer memoMap hentry hobs, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact fun e he exit hc => ⟨e, he, hc⟩
+      · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hobs, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact fun e he exit hc => ⟨e, he, hc⟩
   | _ =>
     simp only [syncOpStep] at h
     obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h
@@ -826,7 +1146,7 @@ theorem syncOpStep_closingValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.
   | none => rfl
   | some exit =>
     obtain ⟨e₀, he₀, hc₀⟩ := syncOpStep_closingExit o s s' v h e he exit hc
-    have h₀ := hwf.2 e₀ he₀
+    have h₀ := hwf.2.1 e₀ he₀
     rw [hc₀] at h₀
     simp only [Option.map, Option.getD] at h₀ ⊢
     exact Val.validIn_mono hle _ h₀
@@ -876,6 +1196,163 @@ theorem syncOpStep_isSome_of_valid (o : SyncOp) (s : Stores) (hv : o.validIn s =
   | scopeIsClosed scope =>
     simp only [SyncOp.validIn] at hv
     simp [syncOpStep_scopeIsClosed, hv]
+  | scopeFork parent strategy =>
+    simp only [SyncOp.validIn] at hv
+    obtain ⟨entry, hentry⟩ := Option.isSome_iff_exists.mp hv
+    rw [syncOpStep_scopeFork_some s parent strategy hentry]
+    rfl
+  | memoFork parent => rfl
+  | memoGet layer memoMap =>
+    cases hget : s.memo.get layer memoMap with
+    | none => rw [syncOpStep_memoGet_none s layer memoMap hget]; rfl
+    | some p =>
+      obtain ⟨owner, entry⟩ := p
+      rw [syncOpStep_memoGet_some s layer memoMap hget]
+      rfl
+  | memoBuild layer memoMap => rfl
+  | memoComplete layer memoMap exit =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none => rw [syncOpStep_memoComplete_none s layer memoMap exit hentry]; rfl
+    | some entry => rw [syncOpStep_memoComplete_some s layer memoMap exit hentry]; rfl
+  | memoRelease layer memoMap =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none => rw [syncOpStep_memoRelease_none s layer memoMap hentry]; rfl
+    | some entry =>
+      by_cases hobs : entry.observers ≤ 1
+      · rw [syncOpStep_memoRelease_last s layer memoMap hentry hobs]; rfl
+      · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hobs]; rfl
+
+/-- A memo entry's allocations exist after a step (the join): the old entries by growth, a
+built entry by its own allocations, the world otherwise unchanged. -/
+theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
+    (h : syncOpStep o s = some (s', v)) : s'.MemoValid := by
+  have hle := syncOpStep_le o s s' v h
+  have hsame : ∀ {t : Stores}, t.memo = s.memo → s.le t → t.MemoValid := by
+    intro t ht hlt m hm e he
+    rw [ht] at hm
+    obtain ⟨hd, hs⟩ := hwf.2.2 m hm e he
+    exact ⟨Nat.lt_of_lt_of_le hd hlt.2.1, hlt.2.2.1 _ hs⟩
+  cases o with
+  | memoFork parent =>
+    simp only [syncOpStep_memoFork, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    intro m hm e he
+    rcases List.mem_append.mp hm with hm | hm
+    · exact hwf.2.2 m hm e he
+    · rw [List.mem_singleton] at hm
+      subst hm
+      exact nomatch he
+  | memoGet layer memoMap =>
+    cases hget : s.memo.get layer memoMap with
+    | none =>
+      rw [syncOpStep_memoGet_none s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hwf.2.2
+    | some p =>
+      obtain ⟨owner, entry⟩ := p
+      rw [syncOpStep_memoGet_some s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      intro m hm e he
+      have hm' : m ∈ s.memo.updateEntry owner layer fun e => { e with observers := e.observers + 1 } :=
+        hm
+      obtain ⟨m₀, hm₀, e₀, he₀, heq⟩ := MemoWorld.mem_updateEntry_entries hm' he
+      obtain ⟨hd, hs⟩ := hwf.2.2 m₀ hm₀ e₀ he₀
+      rcases heq with rfl | rfl
+      · exact ⟨hd, hs⟩
+      · exact ⟨hd, hs⟩
+  | memoBuild layer memoMap =>
+    simp only [syncOpStep_memoBuild, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    intro m hm e he
+    have hm' : m ∈ s.memo.insertEntry memoMap layer _ := hm
+    rcases MemoWorld.mem_insertEntry_entries hm' he with ⟨m₀, hm₀, he₀⟩ | rfl
+    · obtain ⟨hd, hs⟩ := hwf.2.2 m₀ hm₀ e he₀
+      exact ⟨Nat.lt_of_lt_of_le hd hle.2.1, hle.2.2.1 _ hs⟩
+    · exact ⟨by simp [DeferredStore.make], ScopeStore.entryAt_make_self _ _ _⟩
+  | memoComplete layer memoMap exit =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoComplete_none s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hwf.2.2
+    | some entry =>
+      rw [syncOpStep_memoComplete_some s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      intro m hm e he
+      have hm' : m ∈ s.memo.updateEntry memoMap layer fun e => { e with effect := Prim.ofExit exit } :=
+        hm
+      obtain ⟨m₀, hm₀, e₀, he₀, heq⟩ := MemoWorld.mem_updateEntry_entries hm' he
+      obtain ⟨hd, hs⟩ := hwf.2.2 m₀ hm₀ e₀ he₀
+      rcases heq with rfl | rfl
+      · exact ⟨Nat.lt_of_lt_of_le hd hle.2.1, hs⟩
+      · exact ⟨Nat.lt_of_lt_of_le hd hle.2.1, hs⟩
+  | memoRelease layer memoMap =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoRelease_none s layer memoMap hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hwf.2.2
+    | some entry =>
+      by_cases hobs : entry.observers ≤ 1
+      · rw [syncOpStep_memoRelease_last s layer memoMap hentry hobs, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        intro m hm e he
+        have hm' : m ∈ s.memo.deleteEntry memoMap layer := hm
+        obtain ⟨m₀, hm₀, he₀⟩ := MemoWorld.mem_deleteEntry_entries hm' he
+        exact hwf.2.2 m₀ hm₀ e he₀
+      · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hobs, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        intro m hm e he
+        have hm' : m ∈ s.memo.updateEntry memoMap layer fun e => { e with observers := e.observers - 1 } :=
+          hm
+        obtain ⟨m₀, hm₀, e₀, he₀, heq⟩ := MemoWorld.mem_updateEntry_entries hm' he
+        obtain ⟨hd, hs⟩ := hwf.2.2 m₀ hm₀ e₀ he₀
+        rcases heq with rfl | rfl
+        · exact ⟨hd, hs⟩
+        · exact ⟨hd, hs⟩
+  | scopeFork parent strategy =>
+    cases hentry : s.scopes.entryAt parent with
+    | none => rw [syncOpStep_scopeFork_none s parent strategy hentry] at h; cases h
+    | some entry =>
+      rw [syncOpStep_scopeFork_some s parent strategy hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hsame rfl hle
+  | deferredMake | deferredCompleteWith _ _ | deferredInterruptWith _ _
+  | deferredAwaitCleanup _ _ _ | scopeMake _ | scopeRemove _ _ =>
+    simp only [syncOpStep_deferredMake, syncOpStep_deferredCompleteWith,
+      syncOpStep_deferredInterruptWith, syncOpStep_deferredAwaitCleanup, syncOpStep_scopeMake,
+      syncOpStep_scopeRemove, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact hsame rfl hle
+  | scopeAdd scope fin =>
+    cases hentry : s.scopes.entryAt scope with
+    | none => rw [syncOpStep_scopeAdd_none s scope fin hentry] at h; cases h
+    | some entry =>
+      cases hclose : entry.scope.closingExit? with
+      | some exit =>
+        rw [syncOpStep_scopeAdd_closed s scope fin hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact hsame rfl hle
+      | none =>
+        rw [syncOpStep_scopeAdd_open s scope fin hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact hsame rfl hle
+  | deferredIsDone cell | deferredPoll cell | scopeIsClosed cell =>
+    simp only [syncOpStep_deferredIsDone, syncOpStep_deferredPoll, syncOpStep_scopeIsClosed] at h
+    obtain ⟨_, _, hf⟩ := Option.map_eq_some_iff.mp h
+    cases hf
+    exact hsame rfl hle
+  | _ =>
+    simp only [syncOpStep] at h
+    obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h
+    cases hf
+    exact hsame rfl hle
 
 /-- A valid step from a well-formed store reaches a well-formed store (plan §3.2,
 ENSURES 15): the heap arms by `refStep_valid`, the store arms by growth alone, since they
@@ -883,7 +1360,7 @@ leave the heap untouched; the closing exits by `syncOpStep_closingValid`. -/
 theorem syncOpStep_wf (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
     (hv : o.validIn s = true) (h : syncOpStep o s = some (s', v)) : s'.WF := by
   have hle := syncOpStep_le o s s' v h
-  refine ⟨?_, syncOpStep_closingValid o s s' v hwf h⟩
+  refine ⟨?_, syncOpStep_closingValid o s s' v hwf h, syncOpStep_memoValid o s s' v hwf h⟩
   cases o with
   | deferredMake | deferredCompleteWith _ _ | deferredInterruptWith _ _
   | deferredAwaitCleanup _ _ _ | scopeMake _ | scopeRemove _ _ =>
@@ -914,6 +1391,53 @@ theorem syncOpStep_wf (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
     obtain ⟨_, _, hf⟩ := Option.map_eq_some_iff.mp h
     cases hf
     exact hwf.1
+  | scopeFork parent strategy =>
+    cases hentry : s.scopes.entryAt parent with
+    | none => rw [syncOpStep_scopeFork_none s parent strategy hentry] at h; cases h
+    | some entry =>
+      rw [syncOpStep_scopeFork_some s parent strategy hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact fun x hx => Val.validIn_mono hle x (hwf.1 x hx)
+  | memoFork parent =>
+    simp only [syncOpStep_memoFork, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact fun x hx => Val.validIn_mono hle x (hwf.1 x hx)
+  | memoGet layer memoMap =>
+    obtain ⟨hrefs, _, _, _⟩ := syncOpStep_memoGet_families s s' layer memoMap v h
+    rw [hrefs]
+    exact fun x hx => Val.validIn_mono hle x (hwf.1 x hx)
+  | memoBuild layer memoMap =>
+    simp only [syncOpStep_memoBuild, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact fun x hx => Val.validIn_mono hle x (hwf.1 x hx)
+  | memoComplete layer memoMap exit =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoComplete_none s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hwf.1
+    | some entry =>
+      rw [syncOpStep_memoComplete_some s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact fun x hx => Val.validIn_mono hle x (hwf.1 x hx)
+  | memoRelease layer memoMap =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoRelease_none s layer memoMap hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hwf.1
+    | some entry =>
+      by_cases hobs : entry.observers ≤ 1
+      · rw [syncOpStep_memoRelease_last s layer memoMap hentry hobs, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact fun x hx => Val.validIn_mono hle x (hwf.1 x hx)
+      · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hobs, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact fun x hx => Val.validIn_mono hle x (hwf.1 x hx)
   | _ =>
     simp only [syncOpStep] at h
     obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h
@@ -962,6 +1486,70 @@ theorem syncOpStep_answer_valid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.
     simp only [syncOpStep_scopeMake, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     exact ScopeStore.entryAt_make_self s.scopes s.nextName strategy
+  | scopeFork parent strategy =>
+    cases hentry : s.scopes.entryAt parent with
+    | none => rw [syncOpStep_scopeFork_none s parent strategy hentry] at h; cases h
+    | some entry =>
+      rw [syncOpStep_scopeFork_some s parent strategy hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact ScopeStore.entryAt_forkChild_child s.scopes parent s.nextName (s.nextName + 1)
+        strategy hentry
+  | memoFork parent =>
+    simp only [syncOpStep_memoFork, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    exact MemoWorld.mapAt_append_self s.memo ⟨⟨s.nextName⟩, parent, []⟩
+  | memoGet layer memoMap =>
+    cases hget : s.memo.get layer memoMap with
+    | none =>
+      rw [syncOpStep_memoGet_none s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      rfl
+    | some p =>
+      obtain ⟨owner, entry⟩ := p
+      rw [syncOpStep_memoGet_some s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨m, hm, hid, hmem⟩ := MemoWorld.get_mem hget
+      obtain ⟨hd, _⟩ := hwf.2.2 m hm _ hmem
+      show (Val.validIn _ (Val.promise entry.deferred) && Val.validIn _ (Val.memoMap owner)) = true
+      rw [Bool.and_eq_true]
+      refine ⟨decide_eq_true hd, ?_⟩
+      rw [Val.validIn_memoMap]
+      show ((s.memo.updateEntry owner layer fun e => { e with observers := e.observers + 1 }).mapAt
+        owner).isSome = true
+      exact MemoWorld.mapAt_updateEntry_isSome (hid ▸ MemoWorld.mapAt_isSome_of_mem hm)
+  | memoBuild layer memoMap =>
+    simp only [syncOpStep_memoBuild, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    exact ScopeStore.entryAt_make_self s.scopes s.nextName FinalizerStrategy.sequential
+  | memoComplete layer memoMap exit =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoComplete_none s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      rfl
+    | some entry =>
+      rw [syncOpStep_memoComplete_some s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      rfl
+  | memoRelease layer memoMap =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoRelease_none s layer memoMap hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      rfl
+    | some entry =>
+      by_cases hobs : entry.observers ≤ 1
+      · rw [syncOpStep_memoRelease_last s layer memoMap hentry hobs, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨m, hm, _, hmem⟩ := MemoWorld.entryAt_mem hentry
+        exact (hwf.2.2 m hm _ hmem).2
+      · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hobs, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        rfl
   | _ =>
     simp only [syncOpStep] at h
     obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h

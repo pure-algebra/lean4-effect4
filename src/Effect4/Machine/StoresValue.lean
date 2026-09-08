@@ -44,13 +44,14 @@ def Handle.toStore : Handle → Store.Val
   | .cell k => Val.cell k
   | .promise k => Val.promise k
   | .scope s => Val.scopeHandle s
+  | .memoMap id => Val.memoMap ⟨id⟩
 
 def Handle.ofStore : Store.Val → Option Handle
   | .handle kind index => Handle.ofCode (kind, index)
   | _ => none
 
-/-- `Machine/Handles.lean`'s `Handle` as a value: the four minted kinds; a `memoMap` byte is
-not a frame-machine handle and is refused. -/
+/-- `Machine/Handles.lean`'s `Handle` as a value: the five minted kinds (`memoMap` since the
+join); an unregistered byte is refused. -/
 def Handle.image : Image Handle where
   toVal := Handle.toStore
   ofVal := Handle.ofStore
@@ -133,9 +134,9 @@ theorem Val.handles_eq_keys_code (v : Val) (hall : ∀ h ∈ v.handles, (Handle.
 #guard (emptyCtx.withScope 3).CacheAgrees
 #guard (Val.exitErr (Cause.interrupt (some ⟨9⟩))).handles = []
 #guard (Val.exitErr (Cause.interrupt (some ⟨9⟩))).keys = []
-#guard Val.keys (Value.memoMap 3) = []
+#guard Val.keys (Value.memoMap 3) = [Handle.memoMap 3]
 #guard Val.keys (Store.Val.handle 9 3) = []
-#guard Handle.image.ofVal (Value.memoMap 3) = none
+#guard Handle.image.ofVal (Value.memoMap 3) = some (Handle.memoMap 3)
 #guard Handle.image.ofVal (Val.cell ⟨2⟩) = some (Handle.cell ⟨2⟩)
 #guard (exitImage.encode? (Exit.success (Val.fibers [⟨1⟩]))).isSome
 

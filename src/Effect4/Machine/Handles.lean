@@ -61,6 +61,8 @@ inductive Handle
   | cell (key : RefKey)
   | promise (key : DeferredKey)
   | scope (key : Nat)
+  /-- A memo map (`Layer.ts:421-458`; the join). -/
+  | memoMap (id : Nat)
 deriving DecidableEq, Repr
 
 /-- The kind byte and index of a handle: the `handle` frame's payload, `Store.Val.handles`'
@@ -70,16 +72,18 @@ def Handle.code : Handle → UInt8 × Nat
   | .cell key => (2, key.index)
   | .promise key => (3, key.index)
   | .scope key => (4, key)
+  | .memoMap id => (5, id)
 
-/-- The handle of a kind byte and index: the four minted kinds. A `memoMap` byte (the Layer
-machine's, `Machine/Context.lean`) and an unregistered byte are no frame-machine handle. -/
+/-- The handle of a kind byte and index: the five minted kinds (`memoMap` since the join); an
+unregistered byte is no handle. -/
 def Handle.ofCode (code : UInt8 × Nat) : Option Handle :=
   match HandleKind.ofByte? code.1 with
   | some .fiber => some (.fiber ⟨code.2⟩)
   | some .cell => some (.cell ⟨code.2⟩)
   | some .promise => some (.promise ⟨code.2⟩)
   | some .scope => some (.scope code.2)
-  | _ => none
+  | some .memoMap => some (.memoMap code.2)
+  | none => none
 
 theorem Handle.ofCode_code (h : Handle) : Handle.ofCode h.code = some h := by
   cases h <;> rfl
@@ -101,14 +105,13 @@ theorem Handle.ofCode_cell (index : Nat) : Handle.ofCode (2, index) = some (.cel
 theorem Handle.ofCode_promise (index : Nat) :
     Handle.ofCode (3, index) = some (.promise ⟨index⟩) := rfl
 theorem Handle.ofCode_scope (index : Nat) : Handle.ofCode (4, index) = some (.scope index) := rfl
-theorem Handle.ofCode_memoMap (index : Nat) : Handle.ofCode (5, index) = none := rfl
+theorem Handle.ofCode_memoMap (index : Nat) : Handle.ofCode (5, index) = some (.memoMap index) := rfl
 
 mutual
 /-- The handles of a value: every `handle` frame the carrier carries, read through
 `Handle.ofCode`, in payload order — the handle arms, the snapshot's members, a context's
 service values, a reified exit's value and the members of a list. A reified failed exit carries
-a cause only (`Val.keys_exitErr`); the Layer machine's memo-map handle and an unregistered
-byte are not counted. `Val.keys_eq_handles` is the migration check (U1): this is
+a cause only (`Val.keys_exitErr`); an unregistered byte is not counted. `Val.keys_eq_handles` is the migration check (U1): this is
 `Store.Val.handles` filtered. -/
 def Val.keys : Val → List Handle
   | .handle kind index => (Handle.ofCode (kind, index)).toList
@@ -136,6 +139,7 @@ theorem Val.keys_fiber (id : FiberId) : (Val.fiber id).keys = [Handle.fiber id] 
 theorem Val.keys_cell (key : RefKey) : (Val.cell key).keys = [Handle.cell key] := rfl
 theorem Val.keys_promise (key : DeferredKey) : (Val.promise key).keys = [Handle.promise key] := rfl
 theorem Val.keys_scopeHandle (key : Nat) : (Val.scopeHandle key).keys = [Handle.scope key] := rfl
+theorem Val.keys_memoMap (id : MemoMapId) : (Val.memoMap id).keys = [Handle.memoMap id.index] := rfl
 
 theorem Val.keys_exitOk (v : Val) : (Val.exitOk v).keys = v.keys := by
   simp only [Val.keys, Val.keysList, List.append_nil]
@@ -316,6 +320,9 @@ def FinName.keys : FinName → List Handle
   | FinName.parkThen _ => []
   -- a capture holds the values in scope at registration and the context it runs under
   | FinName.foreign capture => Val.keysList capture.env ++ capture.ctx.keys
+  | FinName.closeChildOnFailure scope => [Handle.scope scope]
+  | FinName.memoEntry _ memoMap => [Handle.memoMap memoMap.index]
+  | FinName.memoDone _ memoMap => [Handle.memoMap memoMap.index]
 
 /-- The handles of a store operation: its keys and the values it writes. -/
 def SyncOp.keys : SyncOp → List Handle
@@ -342,6 +349,13 @@ def SyncOp.keys : SyncOp → List Handle
   | SyncOp.scopeAdd scope finalizer => Handle.scope scope :: finalizer.keys
   | SyncOp.scopeRemove scope _ => [Handle.scope scope]
   | SyncOp.scopeIsClosed scope => [Handle.scope scope]
+  | SyncOp.scopeFork parent _ => [Handle.scope parent]
+  | SyncOp.memoFork none => []
+  | SyncOp.memoFork (some parent) => [Handle.memoMap parent.index]
+  | SyncOp.memoGet _ memoMap => [Handle.memoMap memoMap.index]
+  | SyncOp.memoBuild _ memoMap => [Handle.memoMap memoMap.index]
+  | SyncOp.memoComplete _ memoMap exit => Handle.memoMap memoMap.index :: exitKeys exit
+  | SyncOp.memoRelease _ memoMap => [Handle.memoMap memoMap.index]
 
 /-- The handles of a declared program name, through its bodies. -/
 def ProgName.keys : ProgName → List Handle
@@ -394,6 +408,7 @@ def Name.keys : Name → List Handle
   | Name.finalizerName fin => fin.keys
   | Name.closeSeq remaining exit _ => remaining.flatMap FinName.keys ++ exitKeys exit
   | Name.closeParDone => []
+  | Name.closeIfLast exit => exitKeys exit
 
 /-- The handles of a `withFiber` action name. -/
 def ActionName.keys : ActionName → List Handle
@@ -598,9 +613,21 @@ def ScopeEntry.keys (e : ScopeEntry) : List Handle :=
 def ScopeStore.keys (s : ScopeStore) : List Handle :=
   s.entries.flatMap ScopeEntry.keys
 
-/-- The handles the stores hold: the heap's values, the Deferred store, the scope store. -/
+/-- The handles a memo entry holds: its stored program's, its layer scope, its Deferred and
+its finalizer's (the join). -/
+def MemoEntry.keys (e : MemoEntry) : List Handle :=
+  programKeys e.effect ++ [Handle.scope e.layerScope, Handle.promise e.deferred] ++ e.finalizer.keys
+
+/-- The handles of a memo map: its entries'. -/
+def MemoMap.keys (m : MemoMap) : List Handle := m.entries.flatMap fun e => e.2.keys
+
+/-- The handles of the memo world. -/
+def MemoWorld.keys (w : MemoWorld) : List Handle := w.flatMap MemoMap.keys
+
+/-- The handles the stores hold: the heap's values, the Deferred store, the scope store, the
+memo world. -/
 def Stores.keys (s : Stores) : List Handle :=
-  s.refs.flatMap Val.keys ++ s.deferreds.keys ++ s.scopes.keys
+  s.refs.flatMap Val.keys ++ s.deferreds.keys ++ s.scopes.keys ++ s.memo.keys
 
 /-- The handles the machine holds: every fiber's, every race's, the armed queue, the stores. -/
 def RunMachine.keys (nk : ν → List Handle) (sk : σ → List Handle)
@@ -669,6 +696,7 @@ def Handle.existsIn (w : World) : Handle → Bool
   | Handle.cell key => decide (key.index < w.state.refs.length)
   | Handle.promise key => decide (key.index < w.state.deferreds.cells.length)
   | Handle.scope key => (w.state.scopes.entryAt key).isSome
+  | Handle.memoMap id => (w.state.memo.mapAt ⟨id⟩).isSome
 
 /-- Every handle of a list exists in a world. -/
 def Ok (w : World) (hs : List Handle) : Prop := ∀ h ∈ hs, h.existsIn w = true
@@ -848,6 +876,9 @@ theorem Handle.existsIn_mono {w w' : World} (hle : w.le w') (h : Handle)
   | scope key =>
     simp only [Handle.existsIn] at hh ⊢
     exact hle.2.2.2.1 key hh
+  | memoMap id =>
+    simp only [Handle.existsIn] at hh ⊢
+    exact hle.2.2.2.2.2 ⟨id⟩ hh
 
 theorem Ok_mono {w w' : World} (hle : w.le w') {hs : List Handle} (ok : Ok w hs) : Ok w' hs :=
   fun h hh => Handle.existsIn_mono hle h (ok h hh)
@@ -886,9 +917,11 @@ macro_rules
         RunFiber.keys, RunFiber.park, frameKeys, Race.keys, iterKeys, cmdsKeys,
         Cmd.keys, Outcome.keys, Pending.keys, Task.keys, Observer.keys, Resume.keys, optExitKeys, Stores.keys,
         primKeys, exitKeys, Val.keys, Val.keysList, Val.keys_fiber, Val.keys_cell, Val.keys_promise,
-        Val.keys_scopeHandle, Val.keys_exitOk, Val.keys_exitErr, Val.keys_context, Val.keys_fibers,
+        Val.keys_scopeHandle, Val.keys_memoMap, Val.keys_exitOk, Val.keys_exitErr, Val.keys_context,
+        Val.keys_fibers,
         Val.keys_causeImage, Val.keys_snapshotPayload,
         Handle.ofCode_fiber, Handle.ofCode_cell, Handle.ofCode_promise, Handle.ofCode_scope,
+        Handle.ofCode_memoMap,
         Supervision.RaceAllState.initial,
         List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.map_append, List.map_cons, List.map_nil,
         List.append_nil, List.nil_append, List.append_assoc, Option.map, Option.toList, Option.getD_some,
@@ -908,9 +941,11 @@ macro_rules
         RunFiber.keys, RunFiber.park, frameKeys, Race.keys, iterKeys, cmdsKeys,
         Cmd.keys, Outcome.keys, Pending.keys, Task.keys, Observer.keys, Resume.keys, optExitKeys, Stores.keys,
         primKeys, exitKeys, Val.keys, Val.keysList, Val.keys_fiber, Val.keys_cell, Val.keys_promise,
-        Val.keys_scopeHandle, Val.keys_exitOk, Val.keys_exitErr, Val.keys_context, Val.keys_fibers,
+        Val.keys_scopeHandle, Val.keys_memoMap, Val.keys_exitOk, Val.keys_exitErr, Val.keys_context,
+        Val.keys_fibers,
         Val.keys_causeImage, Val.keys_snapshotPayload,
         Handle.ofCode_fiber, Handle.ofCode_cell, Handle.ofCode_promise, Handle.ofCode_scope,
+        Handle.ofCode_memoMap,
         Supervision.RaceAllState.initial,
         List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.map_append, List.map_cons, List.map_nil,
         List.append_nil, List.nil_append, List.append_assoc, Option.map, Option.toList, Option.getD_some,
@@ -4806,6 +4841,9 @@ theorem finProgram_keys (fin : FinName) (exit : ExitV) :
   | awaitNewChildren snapshot => simp only [finProgram]; sub_tac
   | parkThen slot => simp only [finProgram]; sub_tac
   | foreign capture => simp only [finProgram]; sub_tac
+  | closeChildOnFailure scope => cases exit <;> simp only [finProgram] <;> sub_tac
+  | memoEntry layer memoMap => simp only [finProgram]; sub_tac
+  | memoDone layer memoMap => simp only [finProgram]; sub_tac
 
 theorem raceEntrants_keys (race : RaceName) :
     ((raceEntrants race).map progOf).flatMap programKeys = [] := by
@@ -4914,6 +4952,7 @@ theorem contEOf_keys (name : Name) (cause : CauseV) : programKeys (contEOf name 
   | withWaiter base waiter token => simp only [contEOf]; sub_tac
   | reFail cause' => simp only [contEOf]; sub_tac
   | finalizerName fin => simp only [contEOf]; sub_tac
+  | closeIfLast exit => simp only [contEOf]; sub_tac
   | closeParDone => simp only [contEOf]; sub_tac
 
 theorem actionOf_keys (action : ActionName) :
@@ -5321,7 +5360,7 @@ theorem refStep_keys (o : SyncOp) (s : Stores) (v : Val) (heap' : RefHeap) (ids 
     (h : refStep o s.refs = some (v, heap')) (hok : Ok ⟨ids, s⟩ (o.keys ++ s.keys)) :
     Ok ⟨ids, { s with refs := heap' }⟩ (v.keys ++ heap'.flatMap Val.keys) := by
   have hle : s.le { s with refs := heap' } :=
-    ⟨refStep_length o s.refs v heap' h, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _⟩
+    ⟨refStep_length o s.refs v heap' h, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, fun _ hm => hm⟩
   have hmono : World.le ⟨ids, s⟩ ⟨ids, { s with refs := heap' }⟩ := ⟨fun _ hh => hh, hle⟩
   have hok' := Ok_mono hmono hok
   cases o with
@@ -5447,6 +5486,132 @@ theorem refStep_keys (o : SyncOp) (s : Stores) (v : Val) (heap' : RefHeap) (ids 
       (List.Subset.trans (FnName.modifySome_keys pf a).2 (mem_heap_keys (mem_of_refPeek_eq_some hpeek)))
   | _ => simp [refStep] at h
 
+
+/-! ### The joined families' handles: the forked scope and the memo world -/
+
+theorem ScopeStore.keys_append_entry (s : ScopeStore) (e : ScopeEntry) :
+    (⟨s.entries ++ [e]⟩ : ScopeStore).keys = s.keys ++ e.keys := by
+  simp only [ScopeStore.keys, List.flatMap_append, List.flatMap_cons, List.flatMap_nil,
+    List.append_nil]
+
+/-- `forkChild` adds the two linked names' handles (the child's and the parent's) and keeps the
+store's; a closed parent's child is born closed with the parent's exit, one of the store's. -/
+theorem ScopeStore.forkChild_keys (self : ScopeStore) (parent child shared : Nat)
+    (strategy : FinalizerStrategy) :
+    (self.forkChild parent child shared strategy).keys ⊆
+      Handle.scope child :: Handle.scope parent :: self.keys := by
+  unfold ScopeStore.forkChild
+  cases hentry : self.entryAt parent with
+  | none => exact fun x hx => List.mem_cons_of_mem _ (List.mem_cons_of_mem _ hx)
+  | some entry =>
+    cases hclose : entry.scope.closingExit? with
+    | some ex =>
+      simp only [Effect4.Scope.fork, hclose]
+      rw [ScopeStore.keys_append_entry]
+      intro x hx
+      rcases List.mem_append.mp hx with hx | hx
+      · rcases List.mem_append.mp (ScopeStore.setEntry_keys_subset _ _ hx) with hx | hx
+        · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ hx)
+        · exact List.mem_cons_of_mem _
+            (List.mem_cons_of_mem _ (ScopeStore.entry_keys_subset hentry hx))
+      · change x ∈ ([] : List Handle) ++ exitKeys ex at hx
+        rw [List.nil_append] at hx
+        exact List.mem_cons_of_mem _
+          (List.mem_cons_of_mem _ (ScopeStore.closingExit_keys hentry hclose hx))
+    | none =>
+      simp only [Effect4.Scope.fork, hclose]
+      rw [ScopeStore.keys_append_entry]
+      intro x hx
+      rcases List.mem_append.mp hx with hx | hx
+      · rcases List.mem_append.mp
+          (ScopeStore.addUnsafe_entry_keys self parent shared (FinName.closeChildScope child) hentry hx)
+          with hx | hx
+        · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ hx)
+        · exact List.mem_cons.mpr (Or.inl (List.mem_singleton.mp hx))
+      · simp only [ScopeEntry.keys, scopeClosingKeys_addUnsafe, scopeClosingKeys_make,
+          List.append_nil] at hx
+        rcases List.mem_append.mp (scopeAddUnsafe_keys _ _ _ hx) with hx | hx
+        · rw [Scope.make_finalizers] at hx
+          exact absurd hx List.not_mem_nil
+        · change x ∈ [Handle.scope parent] at hx
+          exact List.mem_cons_of_mem _ (List.mem_cons.mpr (Or.inl (List.mem_singleton.mp hx)))
+
+theorem MemoWorld.keys_append (w : MemoWorld) (m : MemoMap) : (w ++ [m]).keys = w.keys ++ m.keys := by
+  simp only [MemoWorld.keys, List.flatMap_append, List.flatMap_cons, List.flatMap_nil,
+    List.append_nil]
+
+theorem MemoMap.keys_subset_of_mem {w : MemoWorld} {m : MemoMap} (h : m ∈ w) : m.keys ⊆ w.keys :=
+  fun _ hx => List.mem_flatMap.mpr ⟨m, h, hx⟩
+
+theorem MemoWorld.entry_keys_subset {w : MemoWorld} {m : MemoMap} {e : LayerId × MemoEntry}
+    (hm : m ∈ w) (he : e ∈ m.entries) : e.2.keys ⊆ w.keys :=
+  fun _ hx => List.mem_flatMap.mpr ⟨m, hm, List.mem_flatMap.mpr ⟨e, he, hx⟩⟩
+
+theorem MemoWorld.keys_setMap_subset (w : MemoWorld) (m : MemoMap) :
+    (w.setMap m).keys ⊆ m.keys ++ w.keys := by
+  intro x hx
+  obtain ⟨n', hn', hxn⟩ := List.mem_flatMap.mp hx
+  obtain ⟨n, hn, rfl⟩ := List.mem_map.mp hn'
+  split at hxn
+  · exact List.mem_append_left _ hxn
+  · exact List.mem_append_right _ (List.mem_flatMap.mpr ⟨n, hn, hxn⟩)
+
+/-- `updateEntry` through a function that adds at most `extra`: the world adds at most
+`extra`. -/
+theorem MemoWorld.keys_updateEntry_subset (w : MemoWorld) (id : MemoMapId) (layer : LayerId)
+    (f : MemoEntry → MemoEntry) (extra : List Handle) (hf : ∀ e, (f e).keys ⊆ extra ++ e.keys) :
+    (w.updateEntry id layer f).keys ⊆ extra ++ w.keys := by
+  unfold MemoWorld.updateEntry
+  split
+  · exact List.subset_append_right _ _
+  · next m hm =>
+    intro x hx
+    rcases List.mem_append.mp (MemoWorld.keys_setMap_subset _ _ hx) with hx | hx
+    · obtain ⟨e', he', hxe⟩ := List.mem_flatMap.mp hx
+      obtain ⟨e, he, rfl⟩ := List.mem_map.mp he'
+      split at hxe
+      · rcases List.mem_append.mp (hf e.2 hxe) with hx | hx
+        · exact List.mem_append_left _ hx
+        · exact List.mem_append_right _
+            (MemoWorld.entry_keys_subset (MemoWorld.mapAt_mem hm).1 he hx)
+      · exact List.mem_append_right _ (MemoWorld.entry_keys_subset (MemoWorld.mapAt_mem hm).1 he hxe)
+    · exact List.mem_append_right _ hx
+
+theorem MemoWorld.keys_insertEntry_subset (w : MemoWorld) (id : MemoMapId) (layer : LayerId)
+    (entry : MemoEntry) : (w.insertEntry id layer entry).keys ⊆ entry.keys ++ w.keys := by
+  unfold MemoWorld.insertEntry
+  split
+  · exact List.subset_append_right _ _
+  · next m hm =>
+    intro x hx
+    rcases List.mem_append.mp (MemoWorld.keys_setMap_subset _ _ hx) with hx | hx
+    · simp only [MemoMap.keys, List.flatMap_append, List.flatMap_cons, List.flatMap_nil,
+        List.append_nil] at hx
+      rcases List.mem_append.mp hx with hx | hx
+      · exact List.mem_append_right _ (MemoMap.keys_subset_of_mem (MemoWorld.mapAt_mem hm).1 hx)
+      · exact List.mem_append_left _ hx
+    · exact List.mem_append_right _ hx
+
+theorem MemoWorld.keys_deleteEntry_subset (w : MemoWorld) (id : MemoMapId) (layer : LayerId) :
+    (w.deleteEntry id layer).keys ⊆ w.keys := by
+  unfold MemoWorld.deleteEntry
+  split
+  · exact List.Subset.refl _
+  · next m hm =>
+    intro x hx
+    rcases List.mem_append.mp (MemoWorld.keys_setMap_subset _ _ hx) with hx | hx
+    · obtain ⟨e, he, hxe⟩ := List.mem_flatMap.mp hx
+      exact MemoWorld.entry_keys_subset (MemoWorld.mapAt_mem hm).1 (List.mem_filter.mp he).1 hxe
+    · exact hx
+
+theorem MemoEntry.keys_observers (e : MemoEntry) (n : Nat) :
+    ({ e with observers := n } : MemoEntry).keys = e.keys := rfl
+
+theorem MemoEntry.keys_effect (e : MemoEntry) (p : Program) :
+    ({ e with effect := p } : MemoEntry).keys ⊆ programKeys p ++ e.keys := by
+  simp only [MemoEntry.keys]
+  sub_tac
+
 /-- A store step from a store whose handles exist answers a value whose handles exist, and
 leaves a store whose handles exist. -/
 theorem syncOpStep_keys (o : SyncOp) (s s' : Stores) (v : Val) (ids : List FiberId)
@@ -5527,6 +5692,133 @@ theorem syncOpStep_keys (o : SyncOp) (s s' : Stores) (v : Val) (ids : List Fiber
     obtain ⟨rfl, rfl⟩ := h
     refine Ok_of_subset ?_ hok'
     sub_tac using (ScopeStore.removeFinalizer_keys s.scopes scope key)
+  | scopeFork parent strategy =>
+    cases hentry : s.scopes.entryAt parent with
+    | none => rw [syncOpStep_scopeFork_none s parent strategy hentry] at h; cases h
+    | some entry =>
+      rw [syncOpStep_scopeFork_some s parent strategy hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      refine Ok_of_subset ?_
+        (Ok_append.mpr ⟨(Ok_cons.mpr ⟨?_, Ok_nil _⟩ : Ok _ [Handle.scope s.nextName]), hok'⟩)
+      · sub_tac using (ScopeStore.forkChild_keys s.scopes parent s.nextName (s.nextName + 1) strategy)
+      · exact ScopeStore.entryAt_forkChild_child s.scopes parent s.nextName (s.nextName + 1)
+          strategy hentry
+  | memoFork parent =>
+    simp only [syncOpStep_memoFork, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    refine Ok_of_subset ?_
+      (Ok_append.mpr ⟨(Ok_cons.mpr ⟨?_, Ok_nil _⟩ : Ok _ [Handle.memoMap s.nextName]), hok'⟩)
+    · sub_tac norm [MemoWorld.keys_append, MemoMap.keys]
+    · exact MemoWorld.mapAt_append_self s.memo ⟨⟨s.nextName⟩, parent, []⟩
+  | memoGet layer memoMap =>
+    cases hget : s.memo.get layer memoMap with
+    | none =>
+      rw [syncOpStep_memoGet_none s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      refine Ok_of_subset ?_ hok'
+      sub_tac
+    | some p =>
+      obtain ⟨owner, entry⟩ := p
+      rw [syncOpStep_memoGet_some s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨m, hm, hid, hmem⟩ := MemoWorld.get_mem hget
+      have hpromise : Handle.promise entry.deferred ∈ s.memo.keys :=
+        MemoWorld.entry_keys_subset hm hmem (by simp [MemoEntry.keys])
+      have hp : Ok ⟨ids, _⟩ [Handle.promise entry.deferred] :=
+        Ok_cons.mpr ⟨hok' _ (List.mem_append_right _ (List.mem_append_right _ hpromise)), Ok_nil _⟩
+      have hown : Ok ⟨ids, { s with
+          memo := s.memo.updateEntry owner layer fun e => { e with observers := e.observers + 1 } }⟩
+          [Handle.memoMap owner.index] := Ok_cons.mpr ⟨by
+        show ((s.memo.updateEntry owner layer fun e => { e with observers := e.observers + 1 }).mapAt
+          ⟨owner.index⟩).isSome = true
+        exact MemoWorld.mapAt_updateEntry_isSome (hid ▸ MemoWorld.mapAt_isSome_of_mem hm), Ok_nil _⟩
+      have hmemo : (s.memo.updateEntry owner layer fun e => { e with observers := e.observers + 1 }).keys ⊆
+          [] ++ s.memo.keys :=
+        MemoWorld.keys_updateEntry_subset _ _ _ _ [] fun e => by
+          rw [MemoEntry.keys_observers]; exact List.Subset.refl _
+      rw [List.nil_append] at hmemo
+      refine Ok_of_subset ?_ (Ok_append.mpr ⟨hp, Ok_append.mpr ⟨hown, hok'⟩⟩)
+      sub_tac using hmemo
+  | memoBuild layer memoMap =>
+    simp only [syncOpStep_memoBuild, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    -- the inserted entry's handles: its await program's (the Deferred, twice), its scope, its
+    -- Deferred, its finalizer's (the memo map) — computed, so the search sees handles
+    have hentry : MemoEntry.keys
+        ⟨1, Prim.async (Name.registerAwait s.deferreds.make.1) true
+            (some (Name.cancelAwait s.deferreds.make.1)),
+          s.nextName, s.deferreds.make.1, FinName.memoEntry layer memoMap⟩ =
+        [Handle.promise s.deferreds.make.1, Handle.promise s.deferreds.make.1,
+          Handle.scope s.nextName, Handle.promise s.deferreds.make.1,
+          Handle.memoMap memoMap.index] := rfl
+    have hmemo := MemoWorld.keys_insertEntry_subset s.memo memoMap layer
+      ⟨1, Prim.async (Name.registerAwait s.deferreds.make.1) true
+          (some (Name.cancelAwait s.deferreds.make.1)),
+        s.nextName, s.deferreds.make.1, FinName.memoEntry layer memoMap⟩
+    rw [hentry] at hmemo
+    have hdef : (s.deferreds.make.2).keys ⊆ s.deferreds.keys := by
+      simp only [DeferredStore.make]
+      sub_tac
+    have hmap : Ok ⟨ids, _⟩ [Handle.memoMap memoMap.index] :=
+      Ok_cons.mpr ⟨hok' _ (List.mem_append_left _ (List.mem_singleton.mpr rfl)), Ok_nil _⟩
+    refine Ok_of_subset ?_
+      (Ok_append.mpr ⟨(Ok_cons.mpr ⟨?_, Ok_nil _⟩ : Ok _ [Handle.scope s.nextName]),
+        Ok_append.mpr ⟨(Ok_cons.mpr ⟨?_, Ok_nil _⟩ : Ok _ [Handle.promise s.deferreds.make.1]),
+          Ok_append.mpr ⟨hmap, hok'⟩⟩⟩)
+    · sub_tac using hmemo, hdef, (ScopeStore.make_keys s.scopes s.nextName .sequential)
+    · exact ScopeStore.entryAt_make_self s.scopes s.nextName FinalizerStrategy.sequential
+    · simp [Handle.existsIn, DeferredStore.make]
+  | memoComplete layer memoMap exit =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoComplete_none s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      refine Ok_of_subset ?_ hok'
+      sub_tac
+    | some entry =>
+      rw [syncOpStep_memoComplete_some s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have hd := (DeferredStore.complete_keys s.deferreds entry.deferred (Prim.ofExit exit)).1
+      rw [programKeys_ofExit] at hd
+      have hm := MemoWorld.keys_updateEntry_subset s.memo memoMap layer
+        (fun e => { e with effect := Prim.ofExit exit }) (exitKeys exit)
+        (fun e => by rw [← programKeys_ofExit]; exact MemoEntry.keys_effect e _)
+      -- the exit's handles are the operation's own
+      have hexit : Ok ⟨ids, _⟩ (exitKeys exit) :=
+        Ok_of_subset (fun x hx => List.mem_append_left _ (List.mem_cons_of_mem _ hx)) hok'
+      refine Ok_of_subset ?_ (Ok_append.mpr ⟨hexit, hok'⟩)
+      sub_tac using hd, hm
+  | memoRelease layer memoMap =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoRelease_none s layer memoMap hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      refine Ok_of_subset ?_ hok'
+      sub_tac
+    | some entry =>
+      obtain ⟨m, hm, _, hmem⟩ := MemoWorld.entryAt_mem hentry
+      have hscope : Handle.scope entry.layerScope ∈ s.memo.keys :=
+        MemoWorld.entry_keys_subset hm hmem (by simp [MemoEntry.keys])
+      by_cases hobs : entry.observers ≤ 1
+      · rw [syncOpStep_memoRelease_last s layer memoMap hentry hobs, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        have hs : Ok ⟨ids, _⟩ [Handle.scope entry.layerScope] :=
+          Ok_cons.mpr ⟨hok' _ (List.mem_append_right _ (List.mem_append_right _ hscope)), Ok_nil _⟩
+        refine Ok_of_subset ?_ (Ok_append.mpr ⟨hs, hok'⟩)
+        sub_tac using (MemoWorld.keys_deleteEntry_subset s.memo memoMap layer)
+      · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hobs, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        refine Ok_of_subset ?_ hok'
+        have hm' : (s.memo.updateEntry memoMap layer fun e => { e with observers := e.observers - 1 }).keys ⊆
+            [] ++ s.memo.keys :=
+          MemoWorld.keys_updateEntry_subset _ _ _ _ [] fun e => by
+            rw [MemoEntry.keys_observers]; exact List.Subset.refl _
+        rw [List.nil_append] at hm'
+        sub_tac using hm'
   | _ =>
     simp only [syncOpStep] at h
     obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h
@@ -5550,7 +5842,8 @@ theorem scopeCloseSnapshot_keys (scope : Nat) (exit : ExitV) (s s' : Stores)
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl, rfl⟩ := h
   refine ⟨⟨Nat.le_refl _, Nat.le_refl _,
-    fun key hk => ScopeStore.entryAt_closeState_isSome _ _ _ _ hk, Nat.le_refl _⟩, ?_, ?_⟩
+    fun key hk => ScopeStore.entryAt_closeState_isSome _ _ _ _ hk, Nat.le_refl _, fun _ hm => hm⟩,
+    ?_, ?_⟩
   · sub_tac using (ScopeStore.closeState_keys s.scopes scope exit)
   · exact List.Subset.trans (ScopeStore.closeOrder_keys hentry) (by sub_tac)
 
@@ -5611,7 +5904,7 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
       exact List.nil_subset _
     | restore _ | merge _ | seq _ | joinOn _ | interruptWith _ | doneInto _ | constant _ | exitOfValue
     | snapshotThen _ | registerAwait _ | cancelAwait _ | externalRegister _ | abortController | cancelPark
-    | cancelRace _ | withWaiter _ _ _ | reFail _ | finalizerName _ =>
+    | cancelRace _ | withWaiter _ _ _ | reFail _ | finalizerName _ | closeIfLast _ =>
       simp only [stores, IterStep.done.injEq] at h
       subst h
       exact List.subset_append_right _ _
@@ -5628,7 +5921,7 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
     | closeParDone => simp only [stores] at h; exact (closeDone_not_resume h).elim
     | restore _ | merge _ | seq _ | joinOn _ | interruptWith _ | doneInto _ | constant _ | exitOfValue
     | snapshotThen _ | registerAwait _ | cancelAwait _ | externalRegister _ | abortController | cancelPark
-    | cancelRace _ | withWaiter _ _ _ | reFail _ | finalizerName _ =>
+    | cancelRace _ | withWaiter _ _ _ | reFail _ | finalizerName _ | closeIfLast _ =>
       simp only [stores] at h; cases h
   loopBody n c := by simp only [stores]; sub_tac
   loopStep n c v := by simp only [stores]; sub_tac
@@ -5673,7 +5966,7 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
       simp only [stores]
       obtain ⟨hkeys, himm, hlen⟩ := DeferredStore.register_keys s.deferreds cell fiber token
       have hle : s.le { s with deferreds := (s.deferreds.register cell fiber token).1 } :=
-        ⟨Nat.le_refl _, hlen, fun _ hh => hh, Nat.le_refl _⟩
+        ⟨Nat.le_refl _, hlen, fun _ hh => hh, Nat.le_refl _, fun _ hm => hm⟩
       refine ⟨hle, ?_⟩
       have hok' := Ok_mono (World.le_of_state hle) hok
       refine Ok_of_subset ?_ hok'
@@ -5687,7 +5980,8 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
           sub_tac
     | restore _ | merge _ | seq _ | joinOn _ | interruptWith _ | doneInto _ | constant _ | exitOfValue
     | snapshotThen _ | cancelAwait _ | externalRegister _ | abortController | cancelPark | cancelRace _
-    | withWaiter _ _ _ | reFail _ | finalizerName _ | closeSeq _ _ _ | closeParDone =>
+    | withWaiter _ _ _ | reFail _ | finalizerName _ | closeSeq _ _ _ | closeParDone
+    | closeIfLast _ =>
       simp only [stores]
       exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
   answerCode c := completionPrim_keys c
@@ -5695,7 +5989,7 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
     simp only [stores]
     obtain ⟨h1, h2⟩ := DeferredStore.drainDue_keys s.deferreds
     have hle : s.le { s with deferreds := (s.deferreds.drainDue).2 } := by
-      refine ⟨Nat.le_refl _, ?_, fun _ hh => hh, Nat.le_refl _⟩
+      refine ⟨Nat.le_refl _, ?_, fun _ hh => hh, Nat.le_refl _, fun _ hm => hm⟩
       simp only [DeferredStore.drainDue]
       exact Nat.le_refl _
     refine ⟨hle, ?_⟩
@@ -5716,7 +6010,7 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
       exact finProgram_keys fin e
     | restore _ | merge _ | seq _ | joinOn _ | interruptWith _ | doneInto _ | constant _ | exitOfValue
     | snapshotThen _ | registerAwait _ | cancelAwait _ | externalRegister _ | abortController | cancelPark
-    | cancelRace _ | withWaiter _ _ _ | reFail _ | closeSeq _ _ _ | closeParDone =>
+    | cancelRace _ | withWaiter _ _ _ | reFail _ | closeSeq _ _ _ | closeParDone | closeIfLast _ =>
       simp only [stores] at h; cases h
   restoreName e := by simp only [stores]; sub_tac
   mergeName e := by simp only [stores]; sub_tac
@@ -5734,7 +6028,8 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
       have hle : s.le s' := by
         rw [← hs]
         exact ⟨Nat.le_refl _, Nat.le_refl _,
-          fun k hk => ScopeStore.entryAt_addFinalizer_isSome _ _ _ _ k hk, Nat.le_succ _⟩
+          fun k hk => ScopeStore.entryAt_addFinalizer_isSome _ _ _ _ k hk, Nat.le_succ _,
+          fun _ hm => hm⟩
       refine ⟨hle, ?_⟩
       have hok' := Ok_mono (World.le_of_state hle) hok
       refine Ok_of_subset ?_ hok'
@@ -5748,7 +6043,7 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
       subst h
       have hle : s.le { s with scopes := s.scopes.removeFinalizer scope key } :=
         ⟨Nat.le_refl _, Nat.le_refl _, fun k hk => ScopeStore.entryAt_removeFinalizer_isSome _ _ _ k hk,
-          Nat.le_refl _⟩
+          Nat.le_refl _, fun _ hm => hm⟩
       refine ⟨hle, ?_⟩
       have hok' := Ok_mono (World.le_of_state hle) hok
       refine Ok_of_subset ?_ hok'

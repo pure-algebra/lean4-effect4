@@ -2940,7 +2940,7 @@ by the elaborator with full names and re-elaborated here, so a drift is a type m
               scopes :=
                 (state.scopes.addFinalizer scope state.nextName
                     (Effect4.Machine.FinName.interruptFiber fiber Bool.true)).fst,
-              nextName := state.nextName + 1 },
+              memo := state.memo, nextName := state.nextName + 1 },
             state.nextName))
 
 #check (@Effect4.Machine.scopeStore_forkChild_names :

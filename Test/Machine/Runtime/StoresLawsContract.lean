@@ -194,6 +194,60 @@ section Scope
 
 end Scope
 
+/-! ## Make-then-read on the memo world (`Layer.ts:396-458`, the join)
+
+The Layer machine's memo store on the one `Stores`: a root map, a miss, a build (which
+allocates the layer scope and the Deferred from the one supply), a hit that bumps the observer
+count and answers the Deferred and the owner, two releases of which the last answers the layer
+scope, a forked map that falls through to its parent, and `memoComplete`'s completion of the
+build's Deferred — the wakeup borrowed from the Deferred family. -/
+
+section Memo
+
+/-- `makeMemoMapUnsafe()` on the empty store: map `⟨0⟩`. -/
+def sM : Stores := after (SyncOp.memoFork none) Stores.empty
+/-- `memoMapBuild`'s synchronous half for the layer at path `[0]`: scope `1`, Deferred `⟨0⟩`. -/
+def sB : Stores := after (SyncOp.memoBuild [0] ⟨0⟩) sM
+/-- A hit on the built entry. -/
+def sG : Stores := after (SyncOp.memoGet [0] ⟨0⟩) sB
+/-- A map forked off the root: `⟨2⟩`. -/
+def sF : Stores := after (SyncOp.memoFork (some ⟨0⟩)) sB
+
+#guard answer (SyncOp.memoFork none) Stores.empty = some (Val.memoMap ⟨0⟩)
+#guard Val.validIn sM (Val.memoMap ⟨0⟩)
+#guard Val.validIn Stores.empty (Val.memoMap ⟨0⟩) = false
+#guard SyncOp.validIn Stores.empty (SyncOp.memoGet [0] ⟨0⟩) = false
+#guard answer (SyncOp.memoGet [0] ⟨0⟩) sM = some Val.unit
+#guard answer (SyncOp.memoBuild [0] ⟨0⟩) sM = some (Val.scopeHandle 1)
+#guard sB.nextName = 2
+#guard Val.validIn sB (Val.scopeHandle 1)
+#guard Val.validIn sB (Val.promise ⟨0⟩)
+#guard Stores.WF sB
+-- a hit answers the entry's Deferred and its owner, and bumps the observers
+#guard answer (SyncOp.memoGet [0] ⟨0⟩) sB = some (Val.pair (Val.promise ⟨0⟩) (Val.memoMap ⟨0⟩))
+#guard (sG.memo.entryAt ⟨0⟩ [0]).map (·.observers) = some 2
+#guard (answer (SyncOp.memoGet [0] ⟨0⟩) sB).map (Val.validIn sG) = some true
+-- the second release is the last: the entry goes, the layer scope is answered to close
+#guard answer (SyncOp.memoRelease [0] ⟨0⟩) sG = some Val.unit
+#guard answer (SyncOp.memoRelease [0] ⟨0⟩) (after (SyncOp.memoRelease [0] ⟨0⟩) sG) =
+  some (Val.scopeHandle 1)
+#guard ((after (SyncOp.memoRelease [0] ⟨0⟩) (after (SyncOp.memoRelease [0] ⟨0⟩) sG)).memo.entryAt
+  ⟨0⟩ [0]).isNone
+-- a forked map falls through to its parent; another path is a miss
+#guard answer (SyncOp.memoGet [0] ⟨2⟩) sF = some (Val.pair (Val.promise ⟨0⟩) (Val.memoMap ⟨0⟩))
+#guard answer (SyncOp.memoGet [1] ⟨2⟩) sF = some Val.unit
+-- `memoComplete` completes the build's Deferred: the Deferred family's wakeup, borrowed
+#guard answer (SyncOp.deferredIsDone ⟨0⟩) sB = some (Val.bool false)
+#guard answer (SyncOp.deferredIsDone ⟨0⟩)
+  (after (SyncOp.memoComplete [0] ⟨0⟩ (Exit.success Val.unit)) sB) = some (Val.bool true)
+#guard Stores.WF (after (SyncOp.memoComplete [0] ⟨0⟩ (Exit.success Val.unit)) sB)
+-- `scopeForkUnsafe`: the child at the supply, linked under the shared key next
+#guard answer (SyncOp.scopeFork 0 .sequential) s3 = some (Val.scopeHandle 1)
+#guard (after (SyncOp.scopeFork 0 .sequential) s3).nextName = 3
+#guard syncOpStep (SyncOp.scopeFork 7 .sequential) s3 = none
+
+end Memo
+
 /-! ## Compound values, and the reads -/
 
 section Values
@@ -272,9 +326,9 @@ def ctxV : Val := Val.context (emptyCtx.withScope 2)
 #guard (Val.exitErr (Cause.interrupt (some ⟨9⟩))).keys = []
 #guard (Val.fibers [⟨1⟩, ⟨2⟩]).handles = [(1, 1), (1, 2)]
 #guard (Val.fibers [⟨1⟩, ⟨2⟩]).keys = [Handle.fiber ⟨1⟩, Handle.fiber ⟨2⟩]
-#guard Val.keys (Value.memoMap 1) = []
+#guard Val.keys (Value.memoMap 1) = [Handle.memoMap 1]
 #guard Val.keys (Store.Val.handle 9 1) = []
-#guard Handle.image.ofVal (Value.memoMap 1) = none
+#guard Handle.image.ofVal (Value.memoMap 1) = some (Handle.memoMap 1)
 #guard Handle.image.ofVal (Store.Val.handle 9 1) = none
 -- Refused by the readers: a snapshot of non-handles, a cause with an unknown reason index, a
 -- context with a number where the scope goes, an exit with two payloads, a string.

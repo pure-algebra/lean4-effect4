@@ -574,6 +574,16 @@ theorem syncOpStep_quiet {o : SyncOp} {s s' : Stores} {v : Val}
          · simp only [Option.some.injEq, Prod.mk.injEq] at h
            obtain ⟨rfl, -⟩ := h
            exact ⟨hdue, hcells⟩)
+    -- the join's arms (`scopeFork`, the memo world): a store match, at most one `if` under it;
+    -- only `memoBuild` (`make`) and `memoComplete` (`complete`) reach the Deferred store
+    | (simp only [syncOpStep] at h
+       split at h <;> (try split at h) <;> first
+         | (simp only [Option.some.injEq, Prod.mk.injEq] at h
+            obtain ⟨rfl, -⟩ := h
+            first
+              | exact ⟨hdue, hcells⟩
+              | exact DeferredStore.complete_quiet hdue hcells _ _)
+         | cases h)
 
 theorem localStep_quiet {root : NativeEff} {cur : NCode} {K : List NCode} {i : Bool}
     {s s' : Stores} {fr' : NFiber} (h : localStep root (fiberOf cur K i) s = .running fr' s')

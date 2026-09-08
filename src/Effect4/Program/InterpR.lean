@@ -103,7 +103,7 @@ def denoteAt (root : NativeEff) (p : Point) : RProgram :=
   | some (.eff e) => denoteR root e p
   | _ => .pure badShapeExit
 
-/-- The scope's eight finalizer shapes (`Stores.finProgram`). -/
+/-- The scope's finalizer shapes (`Stores.finProgram`). -/
 def denoteFin : FinName → ExitV → RProgram
   | .interruptFiber fiber true, _ => fiberValR (.interruptScoped fiber) rfl
   | .interruptFiber fiber false, _ => fiberValR (.interrupt fiber) rfl
@@ -128,6 +128,19 @@ def denoteFin : FinName → ExitV → RProgram
                 (.release ((Point.ofCapture c completed).childWith 1 (reifyExitVal ex)) previous)))
                 Effects.Program.pure)
         | none => .pure badShapeExit)
+  -- `fromBuild`'s `onExit` (`Layer.ts:343`, the join): close the layer scope on failure only
+  | .closeChildOnFailure scope, .failure cause =>
+    .vis (.inr (.closeScope scope (.failure cause))) Effects.Program.pure
+  | .closeChildOnFailure _, .success _ => .pure (.success .unit)
+  -- the memo entry finalizer (`Layer.ts:401-410`, the join): `observers--`; the last
+  -- observer's release answers the layer scope, closed with the exit
+  | .memoEntry layer memoMap, ex =>
+    (guardR .onSuccess (storeR (.memoRelease layer memoMap))).bind (seqR fun v =>
+      match Val.scope? v with
+      | some s => .vis (.inr (.closeScope s ex)) Effects.Program.pure
+      | none => .pure (.success .unit))
+  -- `memoMapBuild`'s `onExit` (`:414-417`): the exit stored, the Deferred completed
+  | .memoDone layer memoMap, ex => storeR (.memoComplete layer memoMap ex)
 
 /-- `acquireRelease`'s masked half at the term (`internal/effect.ts:3978-3986`, V1): the
 counted `Scope` read, the acquire (its term at the point's child 0), the registration of the

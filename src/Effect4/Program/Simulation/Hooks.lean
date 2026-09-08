@@ -184,6 +184,47 @@ theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresO
     simp only [syncOpStep, Option.map_eq_some_iff] at h
     obtain ⟨_, _, hf⟩ := h
     rw [← (Prod.mk.inj hf).1]; exact hs
+  | scopeFork parent strategy =>
+    cases hentry : s.scopes.entryAt parent with
+    | none => rw [syncOpStep_scopeFork_none s parent strategy hentry] at h; cases h
+    | some entry =>
+      rw [syncOpStep_scopeFork_some s parent strategy hentry] at h
+      rw [← (Prod.mk.inj (Option.some.inj h)).1]
+      -- the shared key is the supply's successor, and the supply advances past both keys
+      exact ⟨hs.1, ScopeStore.keysBelow_forkChild (m := s.nextName + 2) (shared := s.nextName + 1)
+        hs.2 (Nat.le_add_right _ _) (Nat.lt_succ_self _)⟩
+  | memoFork parent =>
+    have h' := Prod.mk.inj (Option.some.inj h)
+    rw [← h'.1]
+    exact ⟨hs.1, hs.2.mono (Nat.le_succ _)⟩
+  | memoGet layer memoMap =>
+    obtain ⟨_, hd, hsc, hn⟩ := syncOpStep_memoGet_families s s' layer memoMap v h
+    exact storesOk_of_deferreds hd hsc hn hs
+  | memoBuild layer memoMap =>
+    -- a layer scope holds no registrations; the Deferred is fresh; the supply advances
+    have h' := Prod.mk.inj (Option.some.inj h)
+    rw [← h'.1]
+    exact ⟨deferredOk_make hs.1, (ScopeStore.keysBelow_make hs.2).mono (Nat.le_succ _)⟩
+  | memoComplete layer memoMap exit =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoComplete_none s layer memoMap exit hentry] at h
+      rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact hs
+    | some entry =>
+      rw [syncOpStep_memoComplete_some s layer memoMap exit hentry] at h
+      rw [← (Prod.mk.inj (Option.some.inj h)).1]
+      exact ⟨deferredOk_complete hs.1 _ (completionShaped_ofExit _), hs.2⟩
+  | memoRelease layer memoMap =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoRelease_none s layer memoMap hentry] at h
+      rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact hs
+    | some entry =>
+      by_cases hobs : entry.observers ≤ 1
+      · rw [syncOpStep_memoRelease_last s layer memoMap hentry hobs] at h
+        rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact hs
+      · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hobs] at h
+        rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact hs
   | _ =>
     -- every remaining operation is a `refStep`: only the heap changes
     simp only [syncOpStep, Option.map_eq_some_iff] at h
@@ -303,6 +344,18 @@ theorem cancelThenFail_means (root : NativeEff) (name : EffName) (cause : CauseV
   intro completed v
   exact CodeMeans.failure _
 
+/-- The stores' `closeIfLast` on anything but a scope handle: done (`Layer.ts:408`). -/
+theorem contAOf_closeIfLast_other (ex : ExitV) (v : Val) (hne : ∀ s, v ≠ Val.scopeHandle s) :
+    Effect4.Machine.contAOf (Name.closeIfLast ex) v = Prim.success Val.unit := by
+  unfold Effect4.Machine.contAOf
+  revert hne
+  split <;> intro hne <;> first
+    | rfl
+    | contradiction
+    | exact absurd rfl (hne _)
+    | (rename_i heq; exact absurd heq (hne _))
+    | simp_all
+
 theorem denoteFin_means (root : NativeEff) (fin : FinName) (ex : ExitV) :
     CodeMeans root (embed (finProgram fin ex)) (denoteFin fin ex) := by
   cases fin with
@@ -320,6 +373,35 @@ theorem denoteFin_means (root : NativeEff) (fin : FinName) (ex : ExitV) :
   | awaitNewChildren snapshot => exact CodeMeans.actAwaitNewChildren _ _ _ rfl delivers_seqR_pure
   -- a capture's release resolves at its point, on any view, by the introduction
   | foreign c => exact foreignRelease_intro root c ex fun completed => resolve_intro root _
+  | closeChildOnFailure scope =>
+    cases ex with
+    | success _ => exact CodeMeans.success _
+    | failure _ => exact CodeMeans.actCloseScope _ _ _ _ rfl delivers_pure
+  | memoDone layer memoMap => exact CodeMeans.syncStore _ _ (successV root)
+  -- `observers--`, then the last observer's release closes the layer scope the store answered
+  | memoEntry layer memoMap =>
+    show CodeMeans root
+      (Prim.onSuccess (Prim.sync (.store (.op (.memoRelease layer memoMap))))
+        (.store (.closeIfLast ex)))
+      ((guardR .onSuccess (storeR (.memoRelease layer memoMap))).bind (seqR fun v =>
+        match Val.scope? v with
+        | some s => .vis (.inr (.closeScope s ex)) Effects.Program.pure
+        | none => .pure (.success .unit)))
+    rw [guardR_bind]
+    refine CodeMeans.onSuccess _ _ _ (storeR (.memoRelease layer memoMap)) _
+      (CodeMeans.syncStore _ _ (successV root)) ?_ rfl (fun _ => rfl)
+    intro completed v
+    cases hs : Val.scope? v with
+    | some s =>
+      obtain rfl := Val.scope?_exact hs
+      exact CodeMeans.actCloseScope _ _ _ _ rfl delivers_pure
+    | none =>
+      show CodeMeans root (embed (Effect4.Machine.contAOf (Name.closeIfLast ex) v))
+        (prepareR completed (match Val.scope? v with
+          | some s => .vis (.inr (.closeScope s ex)) Effects.Program.pure
+          | none => .pure (.success .unit)))
+      rw [contAOf_closeIfLast_other ex v (Val.scope?_none hs), hs]
+      exact CodeMeans.success _
 
 /-- The term's body hook is the denotation, at every view. -/
 theorem bodyR_eq (root : NativeEff) (completed : List (FiberId × ExitV)) (b : Body) :

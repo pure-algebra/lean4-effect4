@@ -1170,7 +1170,7 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
       intro cell hok
       obtain ⟨hkeys, himm, hlen⟩ := DeferredStore.register_keys s.deferreds cell fiber token
       have hle : s.le { s with deferreds := (s.deferreds.register cell fiber token).1 } :=
-        ⟨Nat.le_refl _, hlen, fun _ hh => hh, Nat.le_refl _⟩
+        ⟨Nat.le_refl _, hlen, fun _ hh => hh, Nat.le_refl _, fun _ hm => hm⟩
       refine ⟨hle, ?_⟩
       have hok' := Ok_mono (World.le_of_state hle) hok
       refine Ok_of_subset ?_ hok'
@@ -1189,7 +1189,8 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
       | registerAwait cell => simp only [interpOf]; exact reg cell hok
       | restore _ | merge _ | seq _ | joinOn _ | interruptWith _ | doneInto _ | constant _ | exitOfValue
       | snapshotThen _ | cancelAwait _ | externalRegister _ | abortController | cancelPark | cancelRace _
-      | withWaiter _ _ _ | reFail _ | finalizerName _ | closeSeq _ _ _ | closeParDone =>
+      | withWaiter _ _ _ | reFail _ | finalizerName _ | closeSeq _ _ _ | closeParDone
+      | closeIfLast _ =>
         simp only [interpOf]
         exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
     | cont p | caught p | onValue p | onCause p | fin p | restore e | merge e | gen p pc bind | loop p
@@ -1204,7 +1205,7 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     simp only [interpOf]
     obtain ⟨h1, h2⟩ := DeferredStore.drainDue_keys s.deferreds
     have hle : s.le { s with deferreds := (s.deferreds.drainDue).2 } := by
-      refine ⟨Nat.le_refl _, ?_, fun _ hh => hh, Nat.le_refl _⟩
+      refine ⟨Nat.le_refl _, ?_, fun _ hh => hh, Nat.le_refl _, fun _ hm => hm⟩
       simp only [DeferredStore.drainDue]
       exact Nat.le_refl _
     refine ⟨hle, ?_⟩
