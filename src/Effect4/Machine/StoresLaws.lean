@@ -184,6 +184,8 @@ def SyncOp.validIn (s : Stores) : SyncOp → Bool
   | SyncOp.deferredCompleteWith cell _ => cell.index < s.deferreds.cells.length
   | SyncOp.deferredInterruptWith cell _ => cell.index < s.deferreds.cells.length
   | SyncOp.deferredAwaitCleanup cell _ _ => cell.index < s.deferreds.cells.length
+  | SyncOp.clockNow => true
+  | SyncOp.sleepCancel _ _ => true
   | SyncOp.scopeMake _ => true
   | SyncOp.scopeAdd scope _ => (s.scopes.entryAt scope).isSome
   | SyncOp.scopeRemove scope _ => (s.scopes.entryAt scope).isSome
@@ -214,7 +216,7 @@ def Stores.WF (s : Stores) : Prop :=
   (∀ v ∈ s.refs, v.validIn s = true) ∧
     (∀ e ∈ s.scopes.entries,
       (e.scope.closingExit?.map fun exit => (reifyExitVal exit).validIn s).getD true = true) ∧
-    s.MemoValid
+    s.MemoValid ∧ s.timers.WF
 
 instance (s : Stores) : Decidable s.WF := by
   unfold Stores.WF; infer_instance
@@ -222,7 +224,7 @@ instance (s : Stores) : Decidable s.WF := by
 /-- `Stores.empty` (`Stores.lean:1043`) is well-formed: its heap, its scope store and its memo
 world are empty (ENSURES 12; the bottom of every family's law). -/
 theorem Stores.empty_wf : Stores.empty.WF :=
-  ⟨fun _ h => (nomatch h), fun _ h => (nomatch h), fun _ h => (nomatch h)⟩
+  ⟨fun _ h => (nomatch h), fun _ h => (nomatch h), fun _ h => (nomatch h), TimerStore.empty_wf⟩
 
 /-- The closing exit a closed scope holds is valid in the store. -/
 theorem Stores.WF.closingExit {s : Stores} (hwf : s.WF) {scope : Nat} {entry : ScopeEntry}
@@ -270,6 +272,7 @@ theorem SyncOp.validIn_mono {s s' : Stores} (hle : s.le s') (o : SyncOp)
     (h : o.validIn s = true) : o.validIn s' = true := by
   cases o with
   | refMake initial => exact Val.validIn_mono hle initial h
+  | clockNow | sleepCancel _ _ => rfl
   | refSet cell value | refGetAndSet cell value | refSetAndGet cell value =>
     simp only [SyncOp.validIn, Bool.and_eq_true, decide_eq_true_eq] at h ⊢
     exact ⟨Nat.lt_of_lt_of_le h.1 hle.1, Val.validIn_mono hle value h.2⟩
@@ -682,6 +685,15 @@ theorem syncOpStep_deferredAwaitCleanup (s : Stores) (cell : DeferredKey) (waite
     syncOpStep (SyncOp.deferredAwaitCleanup cell waiter token) s =
       some ({ s with deferreds := s.deferreds.cancel cell waiter token }, Val.unit) := rfl
 
+/-- The clock read (the timer, A4). -/
+theorem syncOpStep_clockNow (s : Stores) :
+    syncOpStep SyncOp.clockNow s = some (s, Val.nat s.timers.now) := rfl
+
+/-- `clearTimeout` (the timer, A4). -/
+theorem syncOpStep_sleepCancel (s : Stores) (waiter : FiberId) (token : Nat) :
+    syncOpStep (SyncOp.sleepCancel waiter token) s =
+      some ({ s with timers := s.timers.cancel waiter token }, Val.unit) := rfl
+
 /-- `Stores.lean:1227-1229`. -/
 theorem syncOpStep_scopeMake (s : Stores) (strategy : FinalizerStrategy) :
     syncOpStep (SyncOp.scopeMake strategy) s =
@@ -1019,6 +1031,14 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
           show ((s.memo.updateEntry memoMap layer fun e => { e with observers := e.observers - 1 }).mapAt
             id).isSome = true
           exact MemoWorld.mapAt_updateEntry_isSome hm⟩
+  | clockNow =>
+    simp only [syncOpStep_clockNow, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact Stores.le_refl s
+  | sleepCancel waiter token =>
+    simp only [syncOpStep_sleepCancel, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact ⟨Nat.le_refl _, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, fun _ hm => hm⟩
   | _ =>
     simp only [syncOpStep] at h
     obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h
@@ -1165,6 +1185,10 @@ theorem syncOpStep_closingExit (o : SyncOp) (s s' : Stores) (v : Val)
           Prod.mk.injEq] at h
         obtain ⟨rfl, _⟩ := h
         exact fun e he exit hc => ⟨e, he, hc⟩
+  | clockNow | sleepCancel _ _ =>
+    simp only [syncOpStep_clockNow, syncOpStep_sleepCancel, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact fun e he exit hc => ⟨e, he, hc⟩
   | _ =>
     simp only [syncOpStep] at h
     obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h
@@ -1195,6 +1219,7 @@ theorem syncOpStep_isSome_of_valid (o : SyncOp) (s : Stores) (hv : o.validIn s =
     (syncOpStep o s).isSome = true := by
   cases o with
   | refMake initial => rfl
+  | clockNow | sleepCancel _ _ => rfl
   | refGet cell | refUpdate cell _ | refGetAndUpdate cell _ | refUpdateAndGet cell _
   | refUpdateSome cell _ | refGetAndUpdateSome cell _ | refModify cell _ | refModifySome cell _ =>
     simp only [SyncOp.validIn, decide_eq_true_eq] at hv
@@ -1267,7 +1292,7 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
   have hsame : ∀ {t : Stores}, t.memo = s.memo → s.le t → t.MemoValid := by
     intro t ht hlt m hm e he
     rw [ht] at hm
-    obtain ⟨hd, hs⟩ := hwf.2.2 m hm e he
+    obtain ⟨hd, hs⟩ := hwf.2.2.1 m hm e he
     exact ⟨Nat.lt_of_lt_of_le hd hlt.2.1, hlt.2.2.1 _ hs⟩
   cases o with
   | memoFork parent =>
@@ -1275,7 +1300,7 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
     obtain ⟨rfl, _⟩ := h
     intro m hm e he
     rcases List.mem_append.mp hm with hm | hm
-    · exact hwf.2.2 m hm e he
+    · exact hwf.2.2.1 m hm e he
     · rw [List.mem_singleton] at hm
       subst hm
       exact nomatch he
@@ -1284,7 +1309,7 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
     | none =>
       rw [syncOpStep_memoGet_none s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, _⟩ := h
-      exact hwf.2.2
+      exact hwf.2.2.1
     | some p =>
       obtain ⟨owner, entry⟩ := p
       rw [syncOpStep_memoGet_some s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
@@ -1293,7 +1318,7 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
       have hm' : m ∈ s.memo.updateEntry owner layer fun e => { e with observers := e.observers + 1 } :=
         hm
       obtain ⟨m₀, hm₀, e₀, he₀, heq⟩ := MemoWorld.mem_updateEntry_entries hm' he
-      obtain ⟨hd, hs⟩ := hwf.2.2 m₀ hm₀ e₀ he₀
+      obtain ⟨hd, hs⟩ := hwf.2.2.1 m₀ hm₀ e₀ he₀
       rcases heq with rfl | rfl
       · exact ⟨hd, hs⟩
       · exact ⟨hd, hs⟩
@@ -1303,7 +1328,7 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
     intro m hm e he
     have hm' : m ∈ s.memo.insertEntry memoMap layer _ := hm
     rcases MemoWorld.mem_insertEntry_entries hm' he with ⟨m₀, hm₀, he₀⟩ | rfl
-    · obtain ⟨hd, hs⟩ := hwf.2.2 m₀ hm₀ e he₀
+    · obtain ⟨hd, hs⟩ := hwf.2.2.1 m₀ hm₀ e he₀
       exact ⟨Nat.lt_of_lt_of_le hd hle.2.1, hle.2.2.1 _ hs⟩
     · exact ⟨by simp [DeferredStore.make], ScopeStore.entryAt_make_self _ _ _⟩
   | memoComplete layer memoMap exit =>
@@ -1312,7 +1337,7 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
       rw [syncOpStep_memoComplete_none s layer memoMap exit hentry, Option.some.injEq,
         Prod.mk.injEq] at h
       obtain ⟨rfl, _⟩ := h
-      exact hwf.2.2
+      exact hwf.2.2.1
     | some entry =>
       rw [syncOpStep_memoComplete_some s layer memoMap exit hentry, Option.some.injEq,
         Prod.mk.injEq] at h
@@ -1321,7 +1346,7 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
       have hm' : m ∈ s.memo.updateEntry memoMap layer fun e => { e with effect := Prim.ofExit exit } :=
         hm
       obtain ⟨m₀, hm₀, e₀, he₀, heq⟩ := MemoWorld.mem_updateEntry_entries hm' he
-      obtain ⟨hd, hs⟩ := hwf.2.2 m₀ hm₀ e₀ he₀
+      obtain ⟨hd, hs⟩ := hwf.2.2.1 m₀ hm₀ e₀ he₀
       rcases heq with rfl | rfl
       · exact ⟨Nat.lt_of_lt_of_le hd hle.2.1, hs⟩
       · exact ⟨Nat.lt_of_lt_of_le hd hle.2.1, hs⟩
@@ -1330,7 +1355,7 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
     | none =>
       rw [syncOpStep_memoRelease_none s layer memoMap hentry, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, _⟩ := h
-      exact hwf.2.2
+      exact hwf.2.2.1
     | some entry =>
       by_cases hobs : entry.observers ≤ 1
       · rw [syncOpStep_memoRelease_last s layer memoMap hentry hobs, Option.some.injEq,
@@ -1339,7 +1364,7 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
         intro m hm e he
         have hm' : m ∈ s.memo.deleteEntry memoMap layer := hm
         obtain ⟨m₀, hm₀, he₀⟩ := MemoWorld.mem_deleteEntry_entries hm' he
-        exact hwf.2.2 m₀ hm₀ e he₀
+        exact hwf.2.2.1 m₀ hm₀ e he₀
       · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hobs, Option.some.injEq,
           Prod.mk.injEq] at h
         obtain ⟨rfl, _⟩ := h
@@ -1347,7 +1372,7 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
         have hm' : m ∈ s.memo.updateEntry memoMap layer fun e => { e with observers := e.observers - 1 } :=
           hm
         obtain ⟨m₀, hm₀, e₀, he₀, heq⟩ := MemoWorld.mem_updateEntry_entries hm' he
-        obtain ⟨hd, hs⟩ := hwf.2.2 m₀ hm₀ e₀ he₀
+        obtain ⟨hd, hs⟩ := hwf.2.2.1 m₀ hm₀ e₀ he₀
         rcases heq with rfl | rfl
         · exact ⟨hd, hs⟩
         · exact ⟨hd, hs⟩
@@ -1385,11 +1410,108 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
     obtain ⟨_, _, hf⟩ := Option.map_eq_some_iff.mp h
     cases hf
     exact hsame rfl hle
+  | clockNow | sleepCancel _ _ =>
+    simp only [syncOpStep_clockNow, syncOpStep_sleepCancel, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact hsame rfl hle
   | _ =>
     simp only [syncOpStep] at h
     obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h
     cases hf
     exact hsame rfl hle
+
+/-- The timer's law across a step (the timer, A4): only `sleepCancel` touches the timer store,
+and a cancel keeps every remaining deadline ahead of the clock. -/
+theorem syncOpStep_timers_wf (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.timers.WF)
+    (h : syncOpStep o s = some (s', v)) : s'.timers.WF := by
+  cases o with
+  | sleepCancel waiter token =>
+    simp only [syncOpStep_sleepCancel, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact TimerStore.cancel_wf hwf waiter token
+  | clockNow =>
+    simp only [syncOpStep_clockNow, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact hwf
+  | deferredMake | deferredCompleteWith _ _ | deferredInterruptWith _ _
+  | deferredAwaitCleanup _ _ _ | scopeMake _ | scopeRemove _ _ | memoFork _ | memoBuild _ _ =>
+    simp only [syncOpStep_deferredMake, syncOpStep_deferredCompleteWith,
+      syncOpStep_deferredInterruptWith, syncOpStep_deferredAwaitCleanup, syncOpStep_scopeMake,
+      syncOpStep_scopeRemove, syncOpStep_memoFork, syncOpStep_memoBuild,
+      Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact hwf
+  | deferredIsDone cell | deferredPoll cell | scopeIsClosed cell =>
+    simp only [syncOpStep_deferredIsDone, syncOpStep_deferredPoll, syncOpStep_scopeIsClosed] at h
+    obtain ⟨_, _, hf⟩ := Option.map_eq_some_iff.mp h
+    cases hf
+    exact hwf
+  | scopeAdd scope fin =>
+    cases hentry : s.scopes.entryAt scope with
+    | none => rw [syncOpStep_scopeAdd_none s scope fin hentry] at h; cases h
+    | some entry =>
+      cases hclose : entry.scope.closingExit? with
+      | some exit =>
+        rw [syncOpStep_scopeAdd_closed s scope fin hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact hwf
+      | none =>
+        rw [syncOpStep_scopeAdd_open s scope fin hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact hwf
+  | scopeFork parent strategy =>
+    cases hentry : s.scopes.entryAt parent with
+    | none => rw [syncOpStep_scopeFork_none s parent strategy hentry] at h; cases h
+    | some entry =>
+      rw [syncOpStep_scopeFork_some s parent strategy hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hwf
+  | memoGet layer memoMap =>
+    cases hget : s.memo.get layer memoMap with
+    | none =>
+      rw [syncOpStep_memoGet_none s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hwf
+    | some p =>
+      obtain ⟨owner, entry⟩ := p
+      rw [syncOpStep_memoGet_some s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hwf
+  | memoComplete layer memoMap exit =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoComplete_none s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hwf
+    | some entry =>
+      rw [syncOpStep_memoComplete_some s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hwf
+  | memoRelease layer memoMap =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoRelease_none s layer memoMap hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hwf
+    | some entry =>
+      by_cases hobs : entry.observers ≤ 1
+      · rw [syncOpStep_memoRelease_last s layer memoMap hentry hobs, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact hwf
+      · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hobs, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact hwf
+  | _ =>
+    simp only [syncOpStep] at h
+    obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h
+    cases hf
+    exact hwf
 
 /-- A valid step from a well-formed store reaches a well-formed store (plan §3.2,
 ENSURES 15): the heap arms by `refStep_valid`, the store arms by growth alone, since they
@@ -1397,13 +1519,15 @@ leave the heap untouched; the closing exits by `syncOpStep_closingValid`. -/
 theorem syncOpStep_wf (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
     (hv : o.validIn s = true) (h : syncOpStep o s = some (s', v)) : s'.WF := by
   have hle := syncOpStep_le o s s' v h
-  refine ⟨?_, syncOpStep_closingValid o s s' v hwf h, syncOpStep_memoValid o s s' v hwf h⟩
+  refine ⟨?_, syncOpStep_closingValid o s s' v hwf h, syncOpStep_memoValid o s s' v hwf h,
+    syncOpStep_timers_wf o s s' v hwf.2.2.2 h⟩
   cases o with
   | deferredMake | deferredCompleteWith _ _ | deferredInterruptWith _ _
-  | deferredAwaitCleanup _ _ _ | scopeMake _ | scopeRemove _ _ =>
+  | deferredAwaitCleanup _ _ _ | scopeMake _ | scopeRemove _ _ | clockNow | sleepCancel _ _ =>
     simp only [syncOpStep_deferredMake, syncOpStep_deferredCompleteWith,
       syncOpStep_deferredInterruptWith, syncOpStep_deferredAwaitCleanup, syncOpStep_scopeMake,
-      syncOpStep_scopeRemove, Option.some.injEq, Prod.mk.injEq] at h
+      syncOpStep_scopeRemove, syncOpStep_clockNow, syncOpStep_sleepCancel,
+      Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
     intro x hx
     exact Val.validIn_mono hle x (hwf.1 x hx)
@@ -1546,7 +1670,7 @@ theorem syncOpStep_answer_valid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.
       rw [syncOpStep_memoGet_some s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       obtain ⟨m, hm, hid, hmem⟩ := MemoWorld.get_mem hget
-      obtain ⟨hd, _⟩ := hwf.2.2 m hm _ hmem
+      obtain ⟨hd, _⟩ := hwf.2.2.1 m hm _ hmem
       show (Val.validIn _ (Val.promise entry.deferred) && Val.validIn _ (Val.memoMap owner)) = true
       rw [Bool.and_eq_true]
       refine ⟨decide_eq_true hd, ?_⟩
@@ -1582,11 +1706,15 @@ theorem syncOpStep_answer_valid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.
           Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         obtain ⟨m, hm, _, hmem⟩ := MemoWorld.entryAt_mem hentry
-        exact (hwf.2.2 m hm _ hmem).2
+        exact (hwf.2.2.1 m hm _ hmem).2
       · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hobs, Option.some.injEq,
           Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         rfl
+  | clockNow | sleepCancel _ _ =>
+    simp only [syncOpStep_clockNow, syncOpStep_sleepCancel, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    rfl
   | _ =>
     simp only [syncOpStep] at h
     obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h

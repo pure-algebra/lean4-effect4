@@ -45,9 +45,10 @@ private def genAnswer : Gen (Ml.Expr × String) := do
     let e ← pick 5
     return (.ctor "Acause" [Ml.Expr.call "cause_fail" [.int e]], s!"c{e}")
 
-/-- One `RunDecision`, uniformly over the seven constructors of `Fibers.lean:362`. -/
+/-- One `RunDecision`, uniformly over the eight constructors of `Fibers.lean:362` (the timer's
+`advance` since A4). -/
 def genDecision (nfibers : Nat) : Gen TapeEntry := do
-  let k ← pick 7
+  let k ← pick 8
   if k == 0 then
     let f ← genFiber nfibers
     return ⟨.ctor "Dfire" [.int f], s!"fire {f}"⟩
@@ -76,8 +77,11 @@ def genDecision (nfibers : Nat) : Gen TapeEntry := do
     let whoW : String := if who == nfibers then "-" else toString who
     return ⟨.ctor "DinterruptFrom" [whoE, .listLit (anns.map (Ml.Expr.str ·)), .int t],
             s!"interruptFrom {whoW} {String.intercalate ";" anns} {t}"⟩
-  else
+  else if k == 6 then
     return ⟨.ctor "DinstallMiddleware" [], "installMiddleware"⟩
+  else
+    let by_ ← pick 5
+    return ⟨.ctor "Dadvance" [.int by_], s!"advance {by_}"⟩
 
 def genTape (len nfibers : Nat) : Gen (List TapeEntry) :=
   match len with

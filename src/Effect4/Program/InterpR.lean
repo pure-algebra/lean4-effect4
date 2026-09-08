@@ -206,6 +206,7 @@ def denoteRaceSettle (race : Nat) (cleanupNeeded : Bool) (ex : ExitV) : RProgram
 
 def denoteStoreCancel : Name → RProgram
   | .withWaiter (.cancelAwait cell) waiter token => storeR (.deferredAwaitCleanup cell waiter token)
+  | .withWaiter .cancelSleep waiter token => storeR (.sleepCancel waiter token)
   | .withWaiter .cancelPark _ token => fiberValR (.dropObservers token) rfl
   | .withWaiter (.cancelRace race) _ _ => fiberValR (.cancelRace race) rfl
   | _ => .pure (.success .unit)
@@ -314,12 +315,17 @@ def interpR (root : NativeEff) : RInterp where
     | .registerAwait cell | .store (.registerAwait cell) =>
       let (deferreds, immediate) := state.deferreds.register cell fiber token
       ({ state with deferreds }, immediate.map denoteStored)
+    | .store (.registerSleep millis) =>
+      ({ state with timers := state.timers.sleep fiber token millis }, none)
     | _ => (state, none)
   answerCode := denoteCompletion
   dueResumes := fun state =>
     let (due, deferreds) := state.deferreds.drainDue
     (due.map (Owed.mapCode denoteStored), { state with deferreds })
   wakeList := Stores.wakeList
+  clockStep := fun millis state =>
+    let (owed, timers) := state.timers.clockStep millis (Prim.success Val.unit)
+    (owed.map (Owed.mapCode denoteStored), { state with timers })
   cancelName := (interpOf root).cancelName
   abortName := .abort
   parkCancelName := .store .cancelPark

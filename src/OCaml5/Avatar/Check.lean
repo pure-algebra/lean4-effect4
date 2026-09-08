@@ -38,12 +38,12 @@ Lean field order, and the mangling round-trip on every field name. -/
 #guard Stores.fnName.ctors.length == 5
 #guard Stores.finName.ctors.length == 7
 #guard Stores.completion.ctors.length == 2
-#guard Stores.syncOp.ctors.length == 23
+#guard Stores.syncOp.ctors.length == 25
 #guard Stores.raceName.ctors.length == 6
 -- §20 (2026-09-07): `ProgName` +`closeWalk`, `Name` −`closePar`/`mergeAwaitedExits` +`closeParDone`,
 -- `ActionName` +`ambientScope`/`closePar`.
 #guard Stores.progName.ctors.length == 26
-#guard Stores.name.ctors.length == 20
+#guard Stores.name.ctors.length == 22
 #guard Stores.actionName.ctors.length == 22
 -- V1 (2026-09-07): `Thunk` +`foreign`, `FinName` +`foreign` (the count above), `SyncOp.scopeAdd` −`key`.
 #guard Stores.thunk.ctors.length == 5
@@ -88,7 +88,7 @@ Lean field order, and the mangling round-trip on every field name. -/
    "SrefGetAndUpdate", "SrefUpdateAndGet", "SrefUpdateSome", "SrefGetAndUpdateSome",
    "SrefUpdateSomeAndGet", "SrefModify", "SrefModifySome", "SdeferredMake", "SdeferredIsDone",
    "SdeferredPoll", "SdeferredCompleteWith", "SdeferredInterruptWith", "SdeferredAwaitCleanup",
-   "SscopeMake", "SscopeAdd", "SscopeRemove", "SscopeIsClosed"]
+   "SclockNow", "SsleepCancel", "SscopeMake", "SscopeAdd", "SscopeRemove", "SscopeIsClosed"]
 #guard Stores.scopeState.ctors.map (CtorDesc.ocaml "Ss") ==
   ["Ssempty", "SsopenEmpty", "SsopenInline", "SsopenMap", "Ssclosed"]
 

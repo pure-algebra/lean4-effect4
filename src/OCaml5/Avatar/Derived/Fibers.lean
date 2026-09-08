@@ -92,11 +92,12 @@ def runDecision : InductiveDesc where
      { leanName := "yieldVerdict", args := [{ leanName := "fiber", leanTy := .nm "FiberId" }, { leanName := "verdict", leanTy := .nm "Bool" }] },
      { leanName := "answerAsync", args := [{ leanName := "fiber", leanTy := .nm "FiberId" }, { leanName := "token", leanTy := .nm "Nat" }, { leanName := "answer", leanTy := .app "Completion" [.nm "β", .nm "ε", .nm "δ", .nm "ι", .nm "α"] }] },
      { leanName := "interruptFrom", args := [{ leanName := "interruptor", leanTy := .opt (.nm "FiberId") }, { leanName := "annotations", leanTy := .app "ReasonAnnotations" [.nm "α"] }, { leanName := "target", leanTy := .nm "FiberId" }] },
-     { leanName := "installMiddleware", args := [] }]
+     { leanName := "installMiddleware", args := [] },
+     { leanName := "advance", args := [{ leanName := "millis", leanTy := .nm "Nat" }] }]
 
 def cmd : InductiveDesc where
   leanName := "Cmd"
-  site := "Fibers.lean:670"
+  site := "Fibers.lean:681"
   subst := []
   leanParams := ["ν", "σ", "β", "ε", "δ", "ι", "α", "κ"]
   ctors :=

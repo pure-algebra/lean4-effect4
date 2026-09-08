@@ -439,6 +439,8 @@ def SyncOp.keys : SyncOp → List Handle
   | SyncOp.deferredCompleteWith cell completion => Handle.promise cell :: completion.keys
   | SyncOp.deferredInterruptWith cell _ => [Handle.promise cell]
   | SyncOp.deferredAwaitCleanup cell waiter _ => [Handle.promise cell, Handle.fiber waiter]
+  | SyncOp.clockNow => []
+  | SyncOp.sleepCancel waiter _ => [Handle.fiber waiter]
   | SyncOp.scopeMake _ => []
   | SyncOp.scopeAdd scope finalizer => Handle.scope scope :: finalizer.keys
   | SyncOp.scopeRemove scope _ => [Handle.scope scope]
@@ -493,6 +495,8 @@ def Name.keys : Name → List Handle
   | Name.snapshotThen body => body.keys
   | Name.registerAwait cell => [Handle.promise cell]
   | Name.cancelAwait cell => [Handle.promise cell]
+  | Name.registerSleep _ => []
+  | Name.cancelSleep => []
   | Name.externalRegister _ => []
   | Name.abortController => []
   | Name.cancelPark => []
@@ -893,6 +897,13 @@ structure KeyBounded (nk : ν → List Handle) (sk : σ → List Handle)
   wakeList : ∀ key phase s ids, Ok ⟨ids, s⟩ s.keys →
     s.le (interp.wakeList key phase s) ∧
       Ok ⟨ids, interp.wakeList key phase s⟩ (interp.wakeList key phase s).keys
+  /-- A clock step keeps the store's handles valid and grows it, and the resume it owes names
+  handles the store held (the timer, A4). -/
+  clockStep : ∀ millis s ids, Ok ⟨ids, s⟩ s.keys →
+    s.le (interp.clockStep millis s).2 ∧
+      Ok ⟨ids, (interp.clockStep millis s).2⟩
+        ((interp.clockStep millis s).2.keys ++
+          ((interp.clockStep millis s).1.map (Owed.keys (primKeys nk sk))).getD [])
   cancelName : ∀ base fiber token, nk (interp.cancelName base fiber token) ⊆ Handle.fiber fiber :: nk base
   abortName : nk interp.abortName = []
   parkCancelName : nk interp.parkCancelName = []
@@ -4740,6 +4751,57 @@ theorem flushAllState_minted_of_evaluator (hb : KeyBounded nk sk interp)
           exact ⟨World.le_trans hle hle', hok'⟩
         · exact ⟨hle, hok⟩
 
+/-- An advance mints nothing it does not own (the timer, A4): each fire's owed resume names
+handles the store held, its drain, drive and flush keep the discipline, and the loop recurs. -/
+theorem advanceState_minted_of_evaluator (hb : KeyBounded nk sk interp)
+    (hEval : EvaluatorMinted nk sk interp) (fuel millis : Nat) :
+    ∀ (rounds : Nat) (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores), MintedAt nk sk m →
+      m.world.le (advanceState interp fuel millis rounds m).1.world ∧
+        MintedAt nk sk (advanceState interp fuel millis rounds m).1
+  | 0, m, hm => ⟨World.le_refl _, hm⟩
+  | rounds + 1, m, hm => by
+    unfold advanceState
+    split
+    · exact ⟨World.le_refl _, hm⟩
+    · have hsk : Ok ⟨m.fibers.map RunFiber.id, m.state⟩ m.state.keys := Ok_of_subset (by sub_tac) hm
+      obtain ⟨hsle, hsok⟩ := hb.clockStep millis m.state _ hsk
+      rcases hc : interp.clockStep millis m.state with ⟨o, st⟩
+      rw [hc] at hsle hsok
+      have hle : m.world.le ({ m with state := st } : NM ν σ).world := ⟨fun _ h => h, hsle⟩
+      have hm' : MintedIn ({ m with state := st } : NM ν σ)
+          (({ m with state := st } : NM ν σ).keys nk sk ++
+            (o.map (Owed.keys (primKeys nk sk))).getD []) := by
+        simp only [MintedIn]
+        refine Ok_of_subset ?_ (Ok_append.mpr ⟨Ok_mono hle hm, hsok⟩)
+        simp only [RunMachine.keys]
+        sub_tac
+      cases o with
+      | none =>
+        exact ⟨hle, Ok_of_subset (by simp only [Option.map_none, Option.getD_none, List.append_nil]; exact fun _ h => h) hm'⟩
+      | some owed =>
+        dsimp only
+        obtain ⟨hw, hm2⟩ := drainOwed_minted nk sk { m with state := st } [] [owed]
+          (Ok_of_subset (by simp only [Option.map_some, Option.getD_some, List.flatMap_cons,
+            List.flatMap_nil, List.append_nil]; exact fun _ h => h) hm')
+        obtain ⟨hle2, hok2⟩ := driveState_minted_of_evaluator nk sk hb hEval fuel
+          (drainOwed { m with state := st } [owed]).1
+          ((drainOwed { m with state := st } [owed]).2 ++ [Cmd.drainDue])
+          (Ok_of_subset (by
+            simp only [cmdsKeys, List.flatMap_append, List.flatMap_cons, List.flatMap_nil, Cmd.keys,
+              List.append_nil]
+            exact fun _ h => h) hm2)
+        rw [hw] at hle2
+        have hok2' : MintedAt nk sk (driveState interp fuel (drainOwed { m with state := st } [owed]).1
+            ((drainOwed { m with state := st } [owed]).2 ++ [Cmd.drainDue])).1 :=
+          Ok_of_subset (List.subset_append_left _ _) hok2
+        split
+        · obtain ⟨hle3, hok3⟩ := flushAllState_minted_of_evaluator nk sk hb hEval fuel fuel _ hok2'
+          split
+          · obtain ⟨hle4, hok4⟩ := advanceState_minted_of_evaluator hb hEval fuel millis rounds _ hok3
+            exact ⟨World.le_trans hle (World.le_trans hle2 (World.le_trans hle3 hle4)), hok4⟩
+          · exact ⟨World.le_trans hle (World.le_trans hle2 hle3), hok3⟩
+        · exact ⟨World.le_trans hle hle2, hok2'⟩
+
 theorem flushRootState_minted_of_evaluator (hb : KeyBounded nk sk interp)
     (hEval : EvaluatorMinted nk sk interp) (fuel : Nat) (root : FiberId) :
     ∀ (rounds : Nat) (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores), MintedAt nk sk m →
@@ -4835,6 +4897,7 @@ theorem stepDecisionState_minted_of_evaluator (hb : KeyBounded nk sk interp)
   | installMiddleware =>
     simp only [stepDecisionState]
     exact ⟨⟨fun _ h => h, Stores.le_refl _⟩, hm⟩
+  | advance millis => exact advanceState_minted_of_evaluator nk sk hb hEval fuel millis fuel m hm
 
 /-! ## The tape premise and replay -/
 
@@ -5150,6 +5213,8 @@ theorem contEOf_keys (name : Name) (cause : CauseV) : programKeys (contEOf name 
   | snapshotThen body => simp only [contEOf]; sub_tac
   | registerAwait cell => simp only [contEOf]; sub_tac
   | cancelAwait cell => simp only [contEOf]; sub_tac
+  | registerSleep millis => simp only [contEOf]; sub_tac
+  | cancelSleep => simp only [contEOf]; sub_tac
   | externalRegister slot => simp only [contEOf]; sub_tac
   | abortController => simp only [contEOf]; sub_tac
   | cancelPark => simp only [contEOf]; sub_tac
@@ -6078,6 +6143,14 @@ theorem syncOpStep_keys (o : SyncOp) (s s' : Stores) (v : Val) (ids : List Fiber
             rw [MemoEntry.keys_observers]; exact List.Subset.refl _
         rw [List.nil_append] at hm'
         sub_tac using hm'
+  | clockNow =>
+    simp only [syncOpStep_clockNow, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    exact Ok_of_subset (by sub_tac) hok'
+  | sleepCancel waiter token =>
+    simp only [syncOpStep_sleepCancel, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    exact Ok_of_subset (by sub_tac) hok'
   | _ =>
     simp only [syncOpStep] at h
     obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h
@@ -6142,6 +6215,20 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
     simp only [stores]
     obtain ⟨hk, hle⟩ := Stores.wakeList_keys key phase s
     exact ⟨hle, Ok_of_subset hk (Ok_mono (World.le_of_state hle) hok)⟩
+  clockStep millis s ids hok := by
+    simp only [stores]
+    rcases hc : s.timers.clockStep millis (Prim.success Val.unit) with ⟨o, timers⟩
+    have hle : s.le { s with timers := timers } :=
+      ⟨Nat.le_refl _, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, fun _ hm => hm⟩
+    refine ⟨hle, Ok_of_subset ?_ (Ok_mono (World.le_of_state hle) hok)⟩
+    cases o with
+    | none => simp only [Option.map_none, Option.getD_none, List.append_nil]; exact fun _ h => h
+    | some d =>
+      obtain ⟨hcode, hmode⟩ := TimerStore.clockStep_owed s.timers millis (Prim.success Val.unit) d
+        (by rw [hc])
+      simp only [Option.map_some, Option.getD_some, Owed.keys, hcode, hmode, primKeys, Val.keys,
+        List.append_nil]
+      exact fun _ h => h
   syncValue t := by simp only [stores]; exact List.nil_subset _
   suspendBody t := by
     cases t with
@@ -6166,7 +6253,8 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
       rw [closeDone_done h]
       exact List.nil_subset _
     | restore _ | merge _ | seq _ | joinOn _ | interruptWith _ | doneInto _ | constant _ | exitOfValue
-    | snapshotThen _ | registerAwait _ | cancelAwait _ | externalRegister _ | abortController | cancelPark
+    | snapshotThen _ | registerAwait _ | cancelAwait _ | registerSleep _ | cancelSleep
+    | externalRegister _ | abortController | cancelPark
     | cancelRace _ | withWaiter _ _ _ | reFail _ | finalizerName _ | closeIfLast _ =>
       simp only [stores, IterStep.done.injEq] at h
       subst h
@@ -6183,7 +6271,8 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
         sub_tac using (finProgram_keys fin exit)
     | closeParDone => simp only [stores] at h; exact (closeDone_not_resume h).elim
     | restore _ | merge _ | seq _ | joinOn _ | interruptWith _ | doneInto _ | constant _ | exitOfValue
-    | snapshotThen _ | registerAwait _ | cancelAwait _ | externalRegister _ | abortController | cancelPark
+    | snapshotThen _ | registerAwait _ | cancelAwait _ | registerSleep _ | cancelSleep
+    | externalRegister _ | abortController | cancelPark
     | cancelRace _ | withWaiter _ _ _ | reFail _ | finalizerName _ | closeIfLast _ =>
       simp only [stores] at h; cases h
   loopBody n c := by simp only [stores]; sub_tac
@@ -6241,9 +6330,14 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
           show programKeys p ⊆ _
           refine List.Subset.trans (himm p himm') ?_
           sub_tac
+    | registerSleep millis =>
+      -- the sleep is a waiter on the timer list, which holds no handle of the world
+      simp only [stores]
+      exact ⟨⟨Nat.le_refl _, Nat.le_refl _, fun _ hh => hh, Nat.le_refl _, fun _ hm => hm⟩,
+        Ok_of_subset (by sub_tac) hok⟩
     | restore _ | merge _ | seq _ | joinOn _ | interruptWith _ | doneInto _ | constant _ | exitOfValue
-    | snapshotThen _ | cancelAwait _ | externalRegister _ | abortController | cancelPark | cancelRace _
-    | withWaiter _ _ _ | reFail _ | finalizerName _ | closeSeq _ _ _ | closeParDone
+    | snapshotThen _ | cancelAwait _ | cancelSleep | externalRegister _ | abortController | cancelPark
+    | cancelRace _ | withWaiter _ _ _ | reFail _ | finalizerName _ | closeSeq _ _ _ | closeParDone
     | closeIfLast _ =>
       simp only [stores]
       exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
@@ -6272,7 +6366,8 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
       subst h
       exact finProgram_keys fin e
     | restore _ | merge _ | seq _ | joinOn _ | interruptWith _ | doneInto _ | constant _ | exitOfValue
-    | snapshotThen _ | registerAwait _ | cancelAwait _ | externalRegister _ | abortController | cancelPark
+    | snapshotThen _ | registerAwait _ | cancelAwait _ | registerSleep _ | cancelSleep
+    | externalRegister _ | abortController | cancelPark
     | cancelRace _ | withWaiter _ _ _ | reFail _ | closeSeq _ _ _ | closeParDone | closeIfLast _ =>
       simp only [stores] at h; cases h
   restoreName e := by simp only [stores]; sub_tac

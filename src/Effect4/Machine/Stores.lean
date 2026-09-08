@@ -3,6 +3,7 @@ import Effect4.Machine.Scope
 import Effect4.Machine.Value
 import Effect4.Machine.ContextMap
 import Effect4.Machine.Wake
+import Effect4.Machine.Timer
 
 /-!
 # Deep spike S2: the concrete stores and the `RunInterp` over them
@@ -575,6 +576,12 @@ inductive SyncOp
   /-- `_await`'s cleanup (`Deferred.ts:178-185`): splice this waiter out; a no-op once
   completion has cleared the array. -/
   | deferredAwaitCleanup (cell : DeferredKey) (waiter : FiberId) (token : Nat)
+  /-- `clock.currentTimeMillis` (`internal/effect.ts:6043`; `testing/TestClock.ts:262`): the
+  logical clock, read (the timer, A4). -/
+  | clockNow
+  /-- `clearTimeout(handle)` (`internal/effect.ts:6063`): this fiber's sleep under this token
+  removed; a no-op once it fired. -/
+  | sleepCancel (waiter : FiberId) (token : Nat)
   /-- `scopeMakeUnsafe` (`internal/effect.ts:3914-3922`). -/
   | scopeMake (strategy : FinalizerStrategy)
   /-- `scopeAddFinalizerExit` (`internal/effect.ts:3846-3858`): the registration key is
@@ -726,6 +733,12 @@ inductive Name
   /-- `_await`'s cleanup name (`Deferred.ts:178-185`): the cancel effect the registration
   returned, which the `AsyncFinalizer` frame's `contE` runs. -/
   | cancelAwait (cell : DeferredKey)
+  /-- `register(resume, signal)` for `Effect.sleep(d)`, `0 < d < ∞` (`internal/effect.ts:6057-6062`,
+  the timer, A4): the sleep registered at its deadline; nothing is answered at once. -/
+  | registerSleep (millis : Nat)
+  /-- `clearTimeout` (`internal/effect.ts:6063`): the cancel effect a sleep's registration
+  returned. -/
+  | cancelSleep
   /-- An external `register` the store never answers. -/
   | externalRegister (slot : Nat)
   /-- `RunInterp.abortName`: the cancel of an `Async` that asked for a controller and returned
@@ -2015,6 +2028,8 @@ structure Stores where
   scopes : ScopeStore
   /-- `Layer.ts:421-458`, the memo world (the join). -/
   memo : MemoWorld
+  /-- The logical clock and its sleeps (`Machine/Timer.lean`, A4). -/
+  timers : TimerStore
   /-- Fresh scope keys, finalizer keys and memo-map ids. -/
   nextName : Nat
 deriving DecidableEq
@@ -2022,7 +2037,7 @@ deriving DecidableEq
 namespace Stores
 
 /-- An empty service state: the bottom every family's law holds at. -/
-def empty : Stores := ⟨[], ⟨[], []⟩, ⟨[]⟩, [], 0⟩
+def empty : Stores := ⟨[], ⟨[], []⟩, ⟨[]⟩, [], TimerStore.empty, 0⟩
 
 /-- The registration-identity invariant (`E4-CHECK-CE-016`): every registration key any
 scope holds is below the store's fresh-name supply, so `nextName` is a key no scope holds.
@@ -2178,6 +2193,8 @@ and its resume token, so `_await`'s cleanup can splice exactly that resume out
 def cancelProgram : Name → Program
   | Name.withWaiter (Name.cancelAwait cell) waiter token =>
     Prim.sync (Thunk.op (SyncOp.deferredAwaitCleanup cell waiter token))
+  | Name.withWaiter Name.cancelSleep waiter token =>
+    Prim.sync (Thunk.op (SyncOp.sleepCancel waiter token))
   | Name.withWaiter Name.cancelPark _ token =>
     Prim.withFiber (Thunk.act (ActionName.dropObservers token))
   | Name.withWaiter (Name.cancelRace race) _ _ =>
@@ -2238,6 +2255,9 @@ def syncOpStep : SyncOp → Stores → Option (Stores × Val)
     some ({ st with deferreds := deferreds }, Val.bool answered)
   | SyncOp.deferredAwaitCleanup cell waiter token, st =>
     some ({ st with deferreds := st.deferreds.cancel cell waiter token }, Val.unit)
+  | SyncOp.clockNow, st => some (st, Val.nat st.timers.now)
+  | SyncOp.sleepCancel waiter token, st =>
+    some ({ st with timers := st.timers.cancel waiter token }, Val.unit)
   | SyncOp.scopeMake strategy, st =>
     some ({ st with scopes := st.scopes.make st.nextName strategy, nextName := st.nextName + 1 },
       Val.scopeHandle st.nextName)
@@ -2490,11 +2510,17 @@ def stores : RunInterp Name Thunk Val Err Defect FiberId Ann Ctx Stores where
     | Name.registerAwait cell =>
       let (deferreds, immediate) := state.deferreds.register cell fiber token
       ({ state with deferreds := deferreds }, immediate)
+    | Name.registerSleep millis =>
+      ({ state with timers := state.timers.sleep fiber token millis }, none)
     | _ => (state, none)
   dueResumes := fun state =>
     let (due, deferreds) := state.deferreds.drainDue
     (due, { state with deferreds := deferreds })
   wakeList := Stores.wakeList
+  -- a fired sleep resumes with `void` (`internal/effect.ts:6062`), posted on its dispatcher
+  clockStep := fun millis state =>
+    let (owed, timers) := state.timers.clockStep millis (Prim.success Val.unit)
+    (owed, { state with timers := timers })
   answerCode := completionPrim
   cancelName := fun base fiber token => Name.withWaiter base fiber token
   abortName := Name.abortController

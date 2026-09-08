@@ -27,7 +27,8 @@ pending is removed and nothing is owed; a waiter no longer pending consumed a wa
 cancelling step owes one — `signal` families re-owe it to their next waiter, a `broadcast`
 wake reached everyone (`wakeAll_cancel_owed`).
 
-**What is proved.** `register_phase`, `delay_repoll`, `cancel_owed_iff`, `cancel_pending`, `schedule_empty`,
+**What is proved.** `register_phase`, `delay_repoll`, `cancel_owed_iff`, `cancel_pending`, `wakeBy_none`,
+`wakeBy_some`, `schedule_empty`,
 `schedule_posts`, `schedule_coalesces`, `runBatch_clears`, `wakeAll_advances`,
 `wakeAll_empties`, `wakeAll_cancel_owed`, `sweep_keeps_order`, `empty_quiet`.
 
@@ -170,6 +171,17 @@ def wakeTake (l : WakeList π) (n : Nat) : List (Waiter π) × WakeList π :=
   | [] => ([], l)
   | woken => (woken, { l with waiters := l.waiters.drop n, phase := l.phase + 1 })
 
+/-- A family's choice of one waiter — the timer's earliest deadline, first registered among
+equals (`testing/TestClock.ts:337`, `SleepOrder`): the chosen waiter is woken and removed and
+the phase advances; a choice of `none` wakes nothing and changes nothing. The chooser sees
+the list in registration order, so "first among equals" is its own decision, never the
+list's. -/
+def wakeBy [DecidableEq π] (l : WakeList π) (choose : List (Waiter π) → Option (Waiter π)) :
+    Option (Waiter π) × WakeList π :=
+  match choose l.waiters with
+  | none => (none, l)
+  | some w => (some w, { l with waiters := l.waiters.erase w, phase := l.phase + 1 })
+
 /-- A family's sweep (`Semaphore.releaseUnsafe`, `Semaphore.ts:258-266`): the waiters scanned in
 order with a family state; each the step accepts is woken and the state moves on, each it
 declines stays, in order; the scan stops when `stop` says the state has nothing left. -/
@@ -216,6 +228,20 @@ def runBatch (l : WakeList π) : List (Waiter π) × WakeList π :=
 def Quiet (l : WakeList π) : Prop := l.waiters = [] ∧ l.batch = none
 
 theorem empty_quiet : Quiet (empty : WakeList π) := ⟨rfl, rfl⟩
+
+/-- A choice of nothing changes nothing. -/
+theorem wakeBy_none [DecidableEq π] (l : WakeList π) (choose : List (Waiter π) → Option (Waiter π))
+    (h : choose l.waiters = none) : l.wakeBy choose = (none, l) := by
+  simp only [wakeBy, h]
+
+/-- A chosen waiter is woken: it is the answer, the list loses it (a sublist, order kept) and the
+phase advances. -/
+theorem wakeBy_some [DecidableEq π] (l : WakeList π) (choose : List (Waiter π) → Option (Waiter π))
+    (w : Waiter π) (h : choose l.waiters = some w) :
+    (l.wakeBy choose).1 = some w ∧ (l.wakeBy choose).2.waiters = l.waiters.erase w ∧
+      (l.wakeBy choose).2.phase = l.phase + 1 ∧ (l.wakeBy choose).2.waiters.Sublist l.waiters := by
+  simp only [wakeBy, h]
+  exact ⟨trivial, trivial, trivial, List.erase_sublist⟩
 
 theorem register_phase (l : WakeList π) (fiber : FiberId) (token : Nat) (payload : π) :
     (l.register fiber token payload).waiters = l.waiters ++ [⟨fiber, token, l.phase, payload⟩] :=

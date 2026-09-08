@@ -452,6 +452,12 @@ inductive RunDecision (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Ty
       (target : FiberId)
   /-- (e) the `interruptChildren` middleware latch (`:6656-6658`). -/
   | installMiddleware
+  /-- (f) the logical clock advances by `millis` (`TestClock.adjust`,
+  `testing/TestClock.ts:377-381`; the timer, A4): every sleep due by then fires in deadline
+  order, the clock staged at each fired deadline and the dispatchers flushed between fires
+  (`:361-367`), then the clock is set to the end (`:368`). A duration, never a timestamp: the
+  clock does not move backwards (`TIMER-FB-SET-TIME`). -/
+  | advance (millis : Nat)
 deriving DecidableEq
 
 /-- What gives names meaning at the machine level. Extends the frame machine's pure
@@ -495,6 +501,11 @@ structure RunInterp (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St
   `internal/effect.ts:5591-5598`): the batch the schedule captured at that phase moves into
   the owed resumes. -/
   wakeList : WakeKey → WakePhase → St → St
+  /-- The staged loop's one step (`TestClock.run`, `testing/TestClock.ts:345-375`; the timer,
+  A4): `some` an owed resume, the least sleep due by the clock's end fired and the clock staged
+  at its deadline — the machine delivers it and flushes before asking again; `none` the end
+  reached, the clock set to it. -/
+  clockStep : Nat → St → Option (Owed κ) × St
   /-- Attach the waiter's identity to a cancel name, so the `AsyncFinalizer` frame's
   `contE` can splice the waiter out (`Deferred.ts:181-184`, M3). -/
   cancelName : ν → FiberId → Nat → ν
@@ -1986,6 +1997,29 @@ def flushAllState (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat
         let r := fireState interp fuel m owner
         if r.2 then flushAllState interp fuel rounds r.1 else r
 
+/-- `TestClock.run` (`testing/TestClock.ts:345-375`), the staged loop of one `advance`: while a
+sleep is due, fire it (`clockStep`), deliver the owed resume (`drainOwed`: posted on the
+sleeper's dispatcher, `latch.openUnsafe()` `:365`) and flush the dispatchers (`yieldNow` `:366`,
+the woken fibers run — a sleep they register that is due by the end fires in this same advance,
+finding 4 of the timer note); with nothing due the clock is set to the end (`:368`). The fires
+are bounded by `rounds`, as the host flush's rounds are; a fuel frontier stops the loop
+between fires. -/
+def advanceState (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) (millis : Nat) :
+    Nat → RunMachine ν σ β ε δ ι α χ St κ φ η → RunMachine ν σ β ε δ ι α χ St κ φ η × Bool
+  | 0, m => (m, false)
+  | rounds + 1, m =>
+    if m.stuck.isSome then (m, true)
+    else
+      match interp.clockStep millis m.state with
+      | (none, st) => ({ m with state := st }, true)
+      | (some owed, st) =>
+        let r := drainOwed { m with state := st } [owed]
+        let d := driveState interp fuel r.1 (r.2 ++ [Cmd.drainDue])
+        if settled d then
+          let f := flushAllState interp fuel fuel d.1
+          if f.2 then advanceState interp fuel millis rounds f.1 else f
+        else (d.1, false)
+
 /-- The root-only sync flush (`Scheduler.ts:238-246`), with the same stopping
 rule as the host flush. -/
 def flushRootState (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) (root : FiberId) :
@@ -2026,6 +2060,7 @@ def stepDecisionState (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel :
       let m := m.update t
       if applyNow then loop (driveState interp fuel m [Cmd.evaluate target, Cmd.drainDue]) else (m, true)
   | RunDecision.installMiddleware => ({ m with middlewareInstalled := true }, true)
+  | RunDecision.advance millis => advanceState interp fuel millis fuel m
 where
   /-- A command loop's receipt. -/
   loop (r : RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ)) :

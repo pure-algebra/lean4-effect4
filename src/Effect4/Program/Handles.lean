@@ -1724,9 +1724,14 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     | store name =>
       cases name with
       | registerAwait cell => simp only [interpOf]; exact reg cell hok
+      | registerSleep millis =>
+        -- the sleep is a waiter on the timer list, which holds no handle of the world
+        simp only [interpOf]
+        exact ⟨⟨Nat.le_refl _, Nat.le_refl _, fun _ hh => hh, Nat.le_refl _, fun _ hm => hm⟩,
+          Ok_of_subset (by sub_tac) hok⟩
       | restore _ | merge _ | seq _ | joinOn _ | interruptWith _ | doneInto _ | constant _ | exitOfValue
-      | snapshotThen _ | cancelAwait _ | externalRegister _ | abortController | cancelPark | cancelRace _
-      | withWaiter _ _ _ | reFail _ | finalizerName _ | closeSeq _ _ _ | closeParDone
+      | snapshotThen _ | cancelAwait _ | cancelSleep | externalRegister _ | abortController | cancelPark
+      | cancelRace _ | withWaiter _ _ _ | reFail _ | finalizerName _ | closeSeq _ _ _ | closeParDone
       | closeIfLast _ =>
         simp only [interpOf]
         exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
@@ -1768,6 +1773,20 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     simp only [interpOf]
     obtain ⟨hk, hle⟩ := Stores.wakeList_keys key phase s
     exact ⟨hle, Ok_of_subset hk (Ok_mono (World.le_of_state hle) hok)⟩
+  clockStep millis s ids hok := by
+    simp only [interpOf]
+    rcases hc : s.timers.clockStep millis (Prim.success Val.unit) with ⟨o, timers⟩
+    have hle : s.le { s with timers := timers } :=
+      ⟨Nat.le_refl _, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, fun _ hm => hm⟩
+    refine ⟨hle, Ok_of_subset ?_ (Ok_mono (World.le_of_state hle) hok)⟩
+    cases o with
+    | none => simp only [Option.map_none, Option.getD_none, List.append_nil]; exact fun _ h => h
+    | some d =>
+      obtain ⟨hcode, hmode⟩ := TimerStore.clockStep_owed s.timers millis (Prim.success Val.unit) d
+        (by rw [hc])
+      simp only [Option.map_some, Option.getD_some, Owed.keys, Owed.mapCode, hcode, hmode,
+        embed_keys, primKeys, Val.keys, List.append_nil]
+      exact fun _ h => h
   cancelName base fiber token := by simp only [interpOf]; exact List.Subset.refl _
   abortName := rfl
   parkCancelName := rfl
@@ -1944,6 +1963,7 @@ theorem interpAt_keyBounded (root : NativeEff) (completed : List (FiberId × Exi
   answerCode := (interpOf_keyBounded root).answerCode
   dueResumes := (interpOf_keyBounded root).dueResumes
   wakeList := (interpOf_keyBounded root).wakeList
+  clockStep := (interpOf_keyBounded root).clockStep
   cancelName := (interpOf_keyBounded root).cancelName
   abortName := (interpOf_keyBounded root).abortName
   parkCancelName := (interpOf_keyBounded root).parkCancelName

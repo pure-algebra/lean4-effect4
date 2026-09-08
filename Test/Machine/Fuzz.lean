@@ -264,6 +264,7 @@ def decisions : List D :=
   , RunDecision.answerAsync ⟨0⟩ 0 (Completion.ofExit (Exit.success Val.unit))
   , RunDecision.interruptFrom (some ⟨0⟩) ReasonAnnotations.empty ⟨1⟩
   , RunDecision.interruptFrom none ReasonAnnotations.empty ⟨0⟩
+  , RunDecision.advance 1
   ]
 
 /-- Every word of exactly `n` decisions. -/
@@ -480,9 +481,9 @@ the printable projection is the invariant index:
 
 #guard programs.length = 1432
 
-#guard tapes.length = 92
+#guard tapes.length = 112
 
-#guard runs = 131744
+#guard runs = 160384
 
 #guard report = []
 

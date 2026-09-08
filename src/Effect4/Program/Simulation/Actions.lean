@@ -172,12 +172,6 @@ theorem interruptRecord_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp}
       rw [if_neg hint, if_neg hint₂]
       exact ⟨ht.withFrame ⟨ht.interruptible, rfl, ht.deferred, ht.current, ht.stack, ht.maskInv⟩, rfl⟩
 
-/-- The book's hook obligation, discharged at the two instances. -/
-theorem hooksAgree_of (root : NativeEff) :
-    HooksAgree (interpOf root) (interpR root) (CodeMeans root) (Means root) :=
-  ⟨answerCode_means root, fun t₁ t₂ who extra ht =>
-    interruptRecord_rel root (interpAgree_of root) who extra ht⟩
-
 /-! ## The machine operations the actions compose -/
 
 /-- A result carrying a machine, a fiber and a list. -/

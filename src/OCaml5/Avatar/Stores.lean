@@ -183,6 +183,9 @@ def syncOp : InductiveDesc where
      { leanName := "deferredAwaitCleanup",
        args := [⟨"cell", .nm "DeferredKey", false⟩, ⟨"waiter", fid, false⟩,
                 ⟨"token", .nat, false⟩] },
+     -- A4 (2026-09-08): the logical clock read, and `clearTimeout`
+     { leanName := "clockNow" },
+     { leanName := "sleepCancel", args := [⟨"waiter", fid, false⟩, ⟨"token", .nat, false⟩] },
      { leanName := "scopeMake", args := [⟨"strategy", .nm "FinalizerStrategy", false⟩] },
      -- V1 (2026-09-07): the key is allocated by the step, no longer the caller's
      { leanName := "scopeAdd",
@@ -272,6 +275,9 @@ def name : InductiveDesc where
      { leanName := "snapshotThen", args := [⟨"body", .nm "ProgName", false⟩] },
      { leanName := "registerAwait", args := [⟨"cell", .nm "DeferredKey", false⟩] },
      { leanName := "cancelAwait", args := [⟨"cell", .nm "DeferredKey", false⟩] },
+     -- A4 (2026-09-08): a sleep's registration and its cancel
+     { leanName := "registerSleep", args := [⟨"millis", .nat, false⟩] },
+     { leanName := "cancelSleep" },
      { leanName := "externalRegister", args := [⟨"slot", .nat, false⟩] },
      { leanName := "abortController" },
      -- `2f77f7d` (seat F2): `RunInterp.parkCancelName` and `raceCancelName` (R2-3, R2-13)

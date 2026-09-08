@@ -228,7 +228,9 @@ def runDecision : InductiveDesc where
        args := [⟨"interruptor", .opt fid, false⟩,
                 ⟨"annotations", .app "ReasonAnnotations" [.nm "α"], false⟩,
                 ⟨"target", fid, false⟩] },
-     { leanName := "installMiddleware" }]
+     { leanName := "installMiddleware" },
+     -- A4 (2026-09-08): the logical clock advances by a duration
+     { leanName := "advance", args := [⟨"millis", .nat, false⟩] }]
 
 /-- `Cmd` (`Fibers.lean:511`), eight constructors, prefix `C`. Three have no OCaml existence,
 on purpose — DIVERGENCE 2, decided arm by arm at the top of `deep_fibers.ml`: `loop`, because
@@ -511,7 +513,7 @@ entry per line-separated field:
 
 ```
 fire 3 | flush | evaluate 1 | yieldVerdict 2 true | answerAsync 1 7 v5
-  | interruptFrom - a;b 2 | installMiddleware
+  | interruptFrom - a;b 2 | installMiddleware | advance 5
 ```
 
 the head being the *Lean* constructor name, which is the one name both files share. -/
@@ -602,7 +604,7 @@ for that diff to be meaningful. -/
 -- `WithFiberAction` 23 since §20's service read and parallel close step of the same day.)
 #guard Fibers.observer.ctors.length == 6
 #guard Fibers.runEvent.ctors.length == 21
-#guard Fibers.runDecision.ctors.length == 7
+#guard Fibers.runDecision.ctors.length == 8
 #guard Fibers.cmd.ctors.length == 17
 #guard Fibers.withFiberAction.ctors.length == 23
 -- The three `Cmd` arms with no OCaml existence say so; the fourteen others do not.
@@ -626,7 +628,7 @@ for that diff to be meaningful. -/
   ["ResumeAwait", "UntrackChild", "DropScopeFinalizer", "Countdown", "RaceCallback", "Callback"]
 #guard Fibers.runDecision.ctors.map (CtorDesc.ocaml "D") ==
   ["Dfire", "Dflush", "Devaluate", "DyieldVerdict", "DanswerAsync", "DinterruptFrom",
-   "DinstallMiddleware"]
+   "DinstallMiddleware", "Dadvance"]
 #guard (Fibers.runEvent.ctors.map (CtorDesc.ocaml "")).contains "FrameEv"
 #guard (Fibers.runEvent.ctors.map (CtorDesc.ocaml "")).contains "CallbackEv"
 

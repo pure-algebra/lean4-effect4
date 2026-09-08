@@ -1321,11 +1321,16 @@ def interpOf (root : NativeEff) :
     | .store (Name.registerAwait cell) =>
       let (deferreds, immediate) := state.deferreds.register cell fiber token
       ({ state with deferreds := deferreds }, immediate.map embed)
+    | .store (Name.registerSleep millis) =>
+      ({ state with timers := state.timers.sleep fiber token millis }, none)
     | _ => (state, none)
   dueResumes := fun state =>
     let (due, deferreds) := state.deferreds.drainDue
     (due.map (Owed.mapCode embed), { state with deferreds := deferreds })
   wakeList := Stores.wakeList
+  clockStep := fun millis state =>
+    let (owed, timers) := state.timers.clockStep millis (Prim.success Val.unit)
+    (owed.map (Owed.mapCode embed), { state with timers := timers })
   answerCode := fun answer => embed (completionPrim answer)
   cancelName := fun base fiber token => EffName.withWaiter base fiber token
   -- the parks' cleanups and the settled race's program are the stores' own, embedded

@@ -1,4 +1,5 @@
 import Effect4.Machine.Approximation
+import Effect4.Machine.Witnesses
 import Effects.Algebra.Program
 
 /-!
@@ -86,6 +87,7 @@ def interp : I where
     | .ofRefGet _ => readNext
   dueResumes := fun s => ([], s)
   wakeList := fun _ _ s => s
+  clockStep := fun _ s => (none, s)
   cancelName := fun _ _ _ => ()
   abortName := ()
   parkCancelName := ()
@@ -291,6 +293,7 @@ def winterp : WI where
   wakeList := fun _ _ s =>
     let r := s.list.runBatch
     { s with list := r.2, due := s.due ++ r.1.map fun w => ⟨w.fiber, w.token, w.payload, WakeMode.now⟩ }
+  clockStep := fun _ s => (none, s)
   cancelName := fun _ _ _ => ()
   abortName := ()
   parkCancelName := ()
@@ -448,5 +451,102 @@ def taken : WM := (driveState winterp 20 (signal granted) [.drainDue]).1
 #guard taken.state.list.waiters = [] ∧ taken.state.list.phase = 2
 
 end Wake
+
+/-! ## The timer (A4): the logical clock on the real stores
+
+Executed `#guard`s over the machine at the stores' own interpreter (`Effect4.Machine.stores`),
+root fibers whose program is a sleep — `Prim.async (Name.registerSleep d) true (some
+Name.cancelSleep)`, what `Effect.sleep(d)` compiles to (commit 2 of the packet) — and tapes of
+`advance` decisions. Provenance per case: `testing/TestClock.ts` (`sleep` `:327-338`, `run`
+`:345-375`, `adjust` `:377-381`) and the live `ClockImpl` (`internal/effect.ts:6052-6066`);
+the findings of `docs/research/2026-09-04-timer-semantics-and-proofs.md` §2. The machine's
+name alphabet sequences only named programs, so the two shapes that need a continuation —
+a woken fiber reading the staged clock, and a woken fiber registering a sleep that fires in
+the same advance (finding 4) — are printed programs on the compile route (commit 2). -/
+section Timer
+
+open Effect4 Effect4.Machine
+
+/-- `Effect.sleep(d)`, `0 < d`: the registration and its `clearTimeout`. -/
+def sleepFor (millis : Nat) : Program :=
+  Prim.async (Name.registerSleep millis) true (some Name.cancelSleep)
+
+/-- `Clock.currentTimeMillis`: the logical clock, read. -/
+def clockNow : Program := Prim.sync (Thunk.op SyncOp.clockNow)
+
+/-- A machine with the given root programs, none evaluated yet, over the empty stores. -/
+def withRoots (programs : List Program) : Witnesses.M :=
+  programs.foldl (fun m p =>
+    { m with
+      fibers := m.fibers ++ [RunFiber.make ⟨m.nextId⟩ p true (stores.budgetOf emptyCtx) emptyCtx]
+      nextId := m.nextId + 1 })
+    (RunMachine.empty Stores.empty)
+
+/-- Replay a tape; every arm answers the machine. -/
+def runTape (m : Witnesses.M) (tape : List Witnesses.D) : Witnesses.M :=
+  match replayEval stores 400 tape m with
+  | .finished m => m
+  | .frontier m => m
+  | .stuck _ m => m
+
+def clockOf (m : Witnesses.M) : Nat := m.state.timers.now
+def pendingOf (m : Witnesses.M) : List (Nat × Nat) :=
+  m.state.timers.wake.waiters.map fun w => (w.fiber.value, w.payload)
+/-- The fibers resumed, in trace order. -/
+def resumedOrder (m : Witnesses.M) : List Nat :=
+  m.trace.filterMap fun
+    | .resumedWith fiber _ _ => some fiber.value
+    | _ => none
+
+-- T1: a sleep registers at its deadline and parks the fiber; the clock does not move.
+def t1 : Witnesses.M := runTape (withRoots [sleepFor 5]) [.evaluate ⟨0⟩]
+#guard Witnesses.exitOf t1 0 = none ∧ (Witnesses.parkedOf t1 0).isSome
+#guard pendingOf t1 = [(0, 5)] ∧ clockOf t1 = 0 ∧ t1.state.timers.target = none
+
+-- T2: an advance short of the deadline moves the clock and fires nothing (`:362`); the rest
+-- of the way fires it, and the clock ends at the deadline.
+def t2 : Witnesses.M := runTape t1 [.advance 4]
+#guard Witnesses.exitOf t2 0 = none ∧ pendingOf t2 = [(0, 5)] ∧ clockOf t2 = 4
+def t2' : Witnesses.M := runTape t2 [.advance 1]
+#guard Witnesses.exitOf t2' 0 = some (.success .unit) ∧ pendingOf t2' = [] ∧ clockOf t2' = 5
+#guard t2'.state.timers.target = none ∧ t2'.state.timers.wake.phase = 1
+
+-- T3: an advance past the deadline fires it and ends at the target (`:368`).
+def t3 : Witnesses.M := runTape (withRoots [sleepFor 5]) [.evaluate ⟨0⟩, .advance 10]
+#guard Witnesses.exitOf t3 0 = some (.success .unit) ∧ clockOf t3 = 10 ∧ pendingOf t3 = []
+
+-- T4: deadline order across fibers — the later registration fires first when it is earlier —
+-- and the clock ends at the target.
+def t4 : Witnesses.M :=
+  runTape (withRoots [sleepFor 4, sleepFor 3]) [.evaluate ⟨0⟩, .evaluate ⟨1⟩, .advance 4]
+#guard resumedOrder t4 = [1, 0] ∧ clockOf t4 = 4
+#guard Witnesses.exitOf t4 0 = some (.success .unit) ∧ Witnesses.exitOf t4 1 = some (.success .unit)
+
+-- T5: equal deadlines fire in registration order (`SleepOrder`, `:337`).
+def t5 : Witnesses.M :=
+  runTape (withRoots [sleepFor 3, sleepFor 3]) [.evaluate ⟨1⟩, .evaluate ⟨0⟩, .advance 3]
+#guard resumedOrder t5 = [1, 0] ∧ clockOf t5 = 3
+
+-- T6: an advance that reaches only the earlier of two deadlines fires that one and leaves the
+-- other pending, the clock at the target.
+def t6 : Witnesses.M :=
+  runTape (withRoots [sleepFor 4, sleepFor 3]) [.evaluate ⟨0⟩, .evaluate ⟨1⟩, .advance 3]
+#guard resumedOrder t6 = [1] ∧ pendingOf t6 = [(0, 4)] ∧ clockOf t6 = 3
+
+-- T7 (finding 2, the live clock's `clearTimeout`): an interrupted sleeper's cancel removes its
+-- sleep; a later advance fires nothing and the clock still moves.
+def t7 : Witnesses.M :=
+  runTape (withRoots [sleepFor 5]) [.evaluate ⟨0⟩, .interruptFrom none ReasonAnnotations.empty ⟨0⟩]
+#guard pendingOf t7 = [] ∧ (Witnesses.exitOf t7 0).isSome
+#guard clockOf (runTape t7 [.advance 5]) = 5 ∧ pendingOf (runTape t7 [.advance 5]) = []
+
+-- T8: `clockNow` reads the logical clock; `advance 0` moves nothing.
+def t8 : Witnesses.M := runTape (withRoots [clockNow]) [.advance 7, .advance 0, .evaluate ⟨0⟩]
+#guard Witnesses.exitOf t8 0 = some (.success (.nat 7)) ∧ clockOf t8 = 7
+
+-- T9: the store law holds along the way — every pending deadline is at or after the clock.
+#guard t1.state.timers.WF ∧ t2.state.timers.WF ∧ t6.state.timers.WF ∧ t7.state.timers.WF
+
+end Timer
 
 end Test.Runtime.SchedulerCoreContract

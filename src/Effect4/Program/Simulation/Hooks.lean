@@ -195,6 +195,13 @@ theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresO
   | deferredAwaitCleanup cell waiter token =>
     have h' := Prod.mk.inj (Option.some.inj h)
     rw [← h'.1]; exact ⟨deferredOk_cancel hs.1 cell waiter token, hs.2⟩
+  | clockNow =>
+    have h' := Prod.mk.inj (Option.some.inj h)
+    rw [← h'.1]; exact hs
+  | sleepCancel waiter token =>
+    -- the invariant reads nothing of the timer store
+    have h' := Prod.mk.inj (Option.some.inj h)
+    rw [← h'.1]; exact ⟨hs.1, hs.2⟩
   | scopeMake strategy =>
     -- a new scope holds no registrations, and the supply advances past its handle
     have h' := Prod.mk.inj (Option.some.inj h)
@@ -361,6 +368,7 @@ theorem cancelProgramOf_means (root : NativeEff) (name : EffName) :
     case store n =>
       cases n <;> try exact CodeMeans.success _
       case cancelAwait cell => exact CodeMeans.syncStore _ _ (successV root)
+      case cancelSleep => exact CodeMeans.syncStore _ _ (successV root)
       case cancelPark => exact CodeMeans.actDropObservers _ _ _ rfl (successV root)
       case cancelRace r => exact CodeMeans.actCancelRace _ _ _ rfl delivers_seqR_pure
   case store n =>
@@ -368,6 +376,7 @@ theorem cancelProgramOf_means (root : NativeEff) (name : EffName) :
     case withWaiter base waiter token =>
       cases base <;> try exact CodeMeans.success _
       case cancelAwait cell => exact CodeMeans.syncStore _ _ (successV root)
+      case cancelSleep => exact CodeMeans.syncStore _ _ (successV root)
       case cancelPark => exact CodeMeans.actDropObservers _ _ _ rfl (successV root)
       case cancelRace r => exact CodeMeans.actCancelRace _ _ _ rfl delivers_seqR_pure
 

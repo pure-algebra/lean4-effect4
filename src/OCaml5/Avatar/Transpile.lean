@@ -53,6 +53,7 @@ def ctorTable : List (String × String) :=
     ("RunDecision.evaluate", "Devaluate"), ("RunDecision.yieldVerdict", "DyieldVerdict"),
     ("RunDecision.answerAsync", "DanswerAsync"), ("RunDecision.interruptFrom", "DinterruptFrom"),
     ("RunDecision.installMiddleware", "DinstallMiddleware"),
+    ("RunDecision.advance", "Dadvance"),
     ("Parked.notParked", "NotParked"), ("Parked.withGuard", "WithGuard"),
     ("Observer.resumeAwait", "ResumeAwait"), ("Observer.untrackChild", "UntrackChild"),
     ("Observer.dropScopeFinalizer", "DropScopeFinalizer"), ("Observer.countdown", "Countdown"),

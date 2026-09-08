@@ -642,6 +642,38 @@ theorem flushRoot_trace_extends (interp : RunInterp ν σ β ε δ ι α χ St) 
     ∃ ev, (stepDecision.flushRoot interp fuel root rounds m).trace = m.trace ++ ev :=
   flushRoot_extends.exists
 
+/-- An advance extends the trace it starts from: every fire drains, drives and flushes, each of
+which extends (the timer, A4). -/
+theorem advance_extends {interp : RunInterp ν σ β ε δ ι α χ St} {fuel millis : Nat} :
+    ∀ {rounds : Nat} {m : RunMachine ν σ β ε δ ι α χ St},
+      Extends m (advanceState interp fuel millis rounds m).1
+  | 0, m => Extends.refl _
+  | rounds + 1, m => by
+    unfold advanceState
+    split
+    · exact Extends.refl _
+    · rcases hc : interp.clockStep millis m.state with ⟨o, st⟩
+      cases o with
+      | none => exact List.prefix_rfl
+      | some owed =>
+        dsimp only
+        have h1 : Extends m ({ m with state := st } : RunMachine ν σ β ε δ ι α χ St) :=
+          List.prefix_rfl
+        have h2 : Extends m
+            (drainOwed ({ m with state := st } : RunMachine ν σ β ε δ ι α χ St) [owed]).1 :=
+          Extends.trans h1 drainOwed_grows
+        have h3 : Extends m (driveState interp fuel
+            (drainOwed ({ m with state := st } : RunMachine ν σ β ε δ ι α χ St) [owed]).1
+            ((drainOwed ({ m with state := st } : RunMachine ν σ β ε δ ι α χ St) [owed]).2 ++
+              [Cmd.drainDue])).1 := by
+          rw [← drive_eq_driveState]
+          exact Extends.trans h2 drive_extends
+        split
+        · split
+          · exact Extends.trans h3 (Extends.trans flushAll_extends advance_extends)
+          · exact Extends.trans h3 flushAll_extends
+        · exact h3
+
 theorem stepDecision_extends {interp : RunInterp ν σ β ε δ ι α χ St} {fuel : Nat}
     {m : RunMachine ν σ β ε δ ι α χ St} {decision : RunDecision ν σ β ε δ ι α} :
     Extends m (stepDecision interp fuel m decision) := by
@@ -649,6 +681,7 @@ theorem stepDecision_extends {interp : RunInterp ν σ β ε δ ι α χ St} {fu
     (repeat' split) <;> first
     | exact fire_extends
     | exact flushAll_extends
+    | exact advance_extends
     | trace_chain with hops_loop
 
 theorem stepDecision_trace_extends (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
@@ -922,6 +955,40 @@ theorem flushRoot_eq_flushRootState (interp : RunInterp ν σ β ε δ ι α χ 
     (root : FiberId) (rounds : Nat) (m : RunMachine ν σ β ε δ ι α χ St κ φ η) :
     stepDecision.flushRoot interp fuel root rounds m = (flushRootState interp fuel root rounds m).1 := rfl
 
+/-- An advance whose fuel sufficed is the same advance, receipt included, at every larger fuel
+and fire budget (the timer, A4): each fire's drive was settled and each flush's receipt true,
+so both are stable, and the loop recurs on the same machine. -/
+theorem advanceState_stable (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel millis : Nat) :
+    ∀ (rounds : Nat) (m : RunMachine ν σ β ε δ ι α χ St κ φ η),
+      (advanceState interp fuel millis rounds m).2 = true →
+      ∀ k j, advanceState interp (fuel + k) millis (rounds + j) m =
+        advanceState interp fuel millis rounds m
+  | 0, m, h, _, _ => by simp only [advanceState, Bool.false_eq_true] at h
+  | rounds + 1, m, h, k, j => by
+    rw [Nat.succ_add]
+    unfold advanceState at h ⊢
+    cases hs : m.stuck.isSome
+    · simp only [hs, Bool.false_eq_true, if_false] at h ⊢
+      rcases hc : interp.clockStep millis m.state with ⟨o, st⟩
+      rw [hc] at h
+      cases o with
+      | none => rfl
+      | some owed =>
+        dsimp only at h ⊢
+        split at h
+        · rename_i hsd
+          rw [driveState_settled_add interp fuel _ _ hsd k]
+          simp only [hsd, if_true]
+          split at h
+          · rename_i hf
+            rw [flushAllState_stable interp fuel fuel _ hf k k]
+            simp only [hf, if_true]
+            exact advanceState_stable interp fuel millis rounds _ h k j
+          · rename_i hf
+            exact absurd h hf
+        · simp at h
+    · simp only [hs, if_true]
+
 theorem flushRootState_stable (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) (root : FiberId)
     (rounds : Nat) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (h : (flushRootState interp fuel root rounds m).2 = true) :
@@ -991,6 +1058,7 @@ theorem stepDecisionState_stable (interp : RunInterp ν σ β ε δ ι α χ St 
         rw [driveState_settled_add interp fuel _ _ h k]
   | yieldVerdict id verdict => rfl
   | installMiddleware => rfl
+  | advance millis => exact advanceState_stable interp fuel millis fuel m h k k
 
 theorem stepDecision_stable (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (decision : RunDecision ν σ β ε δ ι α)
@@ -1163,7 +1231,55 @@ The decisions that run one loop or none. The task and round laws above handle
 def SingleLoop : RunDecision ν σ β ε δ ι α → Bool
   | RunDecision.fire _ => false
   | RunDecision.flush => false
+  | RunDecision.advance _ => false
   | _ => true
+
+/-- More fuel and a larger fire budget extend an advance's trace (the timer, A4): a fire whose
+drive or flush stopped at the smaller fuel is extended by the larger one, and a fire that
+completed is the same fire. -/
+theorem advance_trace_mono (interp : RunInterp ν σ β ε δ ι α χ St) (fuel millis : Nat) :
+    ∀ (rounds : Nat) (m : RunMachine ν σ β ε δ ι α χ St) (k j : Nat),
+      Extends (advanceState interp fuel millis rounds m).1
+        (advanceState interp (fuel + k) millis (rounds + j) m).1
+  | 0, m, k, j => by simp only [Nat.zero_add, advanceState]; exact advance_extends
+  | rounds + 1, m, k, j => by
+    rw [Nat.succ_add]
+    unfold advanceState
+    cases hs : m.stuck.isSome
+    · simp only [hs, Bool.false_eq_true, if_false]
+      rcases hc : interp.clockStep millis m.state with ⟨o, st⟩
+      cases o with
+      | none => exact Extends.refl _
+      | some owed =>
+        dsimp only
+        generalize hR : drainOwed { m with state := st } [owed] = R
+        have hd := drive_trace_mono interp (Nat.le_add_right fuel k) R.1 (R.2 ++ [Cmd.drainDue])
+        rw [drive_eq_driveState interp fuel, drive_eq_driveState interp (fuel + k)] at hd
+        cases hsd : settled (driveState interp fuel R.1 (R.2 ++ [Cmd.drainDue]))
+        · simp only [hsd, Bool.false_eq_true, if_false]
+          refine Extends.trans hd ?_
+          split
+          · split
+            · exact Extends.trans flushAll_extends advance_extends
+            · exact flushAll_extends
+          · exact Extends.refl _
+        · rw [driveState_settled_add interp fuel _ _ hsd k]
+          simp only [hsd, if_true]
+          cases hf : (flushAllState interp fuel fuel (driveState interp fuel R.1 (R.2 ++ [Cmd.drainDue])).1).2
+          · simp only [hf, Bool.false_eq_true, if_false]
+            have hfl : Extends (flushAllState interp fuel fuel
+                  (driveState interp fuel R.1 (R.2 ++ [Cmd.drainDue])).1).1
+                (flushAllState interp (fuel + k) (fuel + k)
+                  (driveState interp fuel R.1 (R.2 ++ [Cmd.drainDue])).1).1 :=
+              flushAll_trace_mono interp fuel fuel _ k k
+            refine Extends.trans hfl ?_
+            split
+            · exact advance_extends
+            · exact Extends.refl _
+          · rw [flushAllState_stable interp fuel fuel _ hf k k]
+            simp only [hf, if_true]
+            exact advance_trace_mono interp fuel millis rounds _ k j
+    · simp only [hs, if_true]; exact Extends.refl _
 
 /-- More fuel on a single-loop decision extends the trace. -/
 theorem stepDecision_trace_mono (interp : RunInterp ν σ β ε δ ι α χ St) {n n' : Nat} (h : n ≤ n')
@@ -1173,6 +1289,7 @@ theorem stepDecision_trace_mono (interp : RunInterp ν σ β ε δ ι α χ St) 
   cases decision with
   | fire owner => cases hd
   | flush => cases hd
+  | advance millis => cases hd
   | evaluate id => exact drive_trace_mono interp h m _
   | answerAsync id token answer => exact drive_trace_mono interp h m _
   | yieldVerdict id verdict => exact Extends.refl _
@@ -1195,6 +1312,7 @@ theorem stepDecision_trace_mono_all (interp : RunInterp ν σ β ε δ ι α χ 
   cases decision with
   | fire owner => exact fire_trace_mono interp n k m owner
   | flush => exact flushAll_trace_mono interp n n m k k
+  | advance millis => exact advance_trace_mono interp n millis n m k k
   | evaluate id | yieldVerdict id verdict | answerAsync id token answer
   | interruptFrom interruptor annotations target | installMiddleware =>
     exact stepDecision_trace_mono interp (Nat.le_add_right n k) m _ rfl
@@ -1237,6 +1355,7 @@ theorem stepDecision_stuck_stable (interp : RunInterp ν σ β ε δ ι α χ St
   cases decision with
   | fire owner => cases hd
   | flush => cases hd
+  | advance millis => cases hd
   | evaluate id =>
     simp only [stepDecision, stepDecisionState, stepDecisionState.loop] at hs ⊢
     exact drive_stable_of_stuck interp fuel m _ hs k

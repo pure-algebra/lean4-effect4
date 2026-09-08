@@ -875,15 +875,86 @@ theorem stepDecisionState_interruptFrom (i : RunInterp ν σ β ε δ ι α χ S
 
 /-- The two hook obligations beside `StepAgrees`: the external `Completion` reads into
 related code, and the interrupt record — a `FiberCore` homomorphism obligation — agrees. -/
-def HooksAgree (C : κ₁ → κ₂ → Prop) (S : φ₁ → φ₂ → Prop) : Prop :=
+def HooksAgree (StOk : St → Prop) (C : κ₁ → κ₂ → Prop) (S : φ₁ → φ₂ → Prop) : Prop :=
   (∀ answer, C (i₁.answerCode answer) (i₂.answerCode answer)) ∧
-    ∀ (t₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁) (t₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂) who extra,
+    (∀ (t₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁) (t₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂) who extra,
       FiberMeans C S t₁ t₂ →
       FiberMeans C S (interruptRecord i₁ who extra t₁).1 (interruptRecord i₂ who extra t₂).1 ∧
-        (interruptRecord i₁ who extra t₁).2 = (interruptRecord i₂ who extra t₂).2
+        (interruptRecord i₁ who extra t₁).2 = (interruptRecord i₂ who extra t₂).2) ∧
+    -- the clock step (the timer, A4): the same store, the owed resume in the book, the
+    -- invariant kept
+    ∀ millis s, StOk s →
+      StOk (i₁.clockStep millis s).2 ∧ (i₁.clockStep millis s).2 = (i₂.clockStep millis s).2 ∧
+        ListRel (OwedMeans C) (i₁.clockStep millis s).1.toList (i₂.clockStep millis s).1.toList
 
-/-- The decision lemma, once for all seven decisions. -/
-theorem book_stepDecisionState (hstep : StepAgrees i₁ i₂ StOk C S) (hooks : HooksAgree i₁ i₂ C S)
+/-- The advance lemma (the timer, A4): fire by fire, the two instances drain the same owed
+resume, drive and flush in the book, and recur on machines in the book. -/
+theorem book_advanceState (hstep : StepAgrees i₁ i₂ StOk C S)
+    (hclock : ∀ millis s, StOk s →
+      StOk (i₁.clockStep millis s).2 ∧ (i₁.clockStep millis s).2 = (i₂.clockStep millis s).2 ∧
+        ListRel (OwedMeans C) (i₁.clockStep millis s).1.toList (i₂.clockStep millis s).1.toList)
+    (fuel millis : Nat) :
+    ∀ (rounds : Nat) (a : RunMachine ν σ β ε δ ι α χ St κ₁ φ₁ η₁)
+      (b : RunMachine ν σ β ε δ ι α χ St κ₂ φ₂ η₂), MachineOk StOk a → BookMeans C S a b →
+      MachineOk StOk (advanceState i₁ fuel millis rounds a).1 ∧
+        BookMeans C S (advanceState i₁ fuel millis rounds a).1 (advanceState i₂ fuel millis rounds b).1 ∧
+        (advanceState i₁ fuel millis rounds a).2 = (advanceState i₂ fuel millis rounds b).2
+  | 0, a, b, hok, h => ⟨hok, h, rfl⟩
+  | rounds + 1, a, b, hok, h => by
+    unfold advanceState
+    by_cases hs : b.stuck.isSome = true
+    · have hs' : a.stuck.isSome = true := by rw [h.stuck]; exact hs
+      rw [if_pos hs', if_pos hs]; exact ⟨hok, h, rfl⟩
+    · have hs' : ¬ (a.stuck.isSome = true) := by rw [h.stuck]; exact hs
+      rw [if_neg hs', if_neg hs]
+      obtain ⟨hcok, hceq, hcrel⟩ := hclock millis a.state hok.1
+      rw [← h.state]
+      rcases hc1 : i₁.clockStep millis a.state with ⟨o₁, st₁⟩
+      rcases hc2 : i₂.clockStep millis a.state with ⟨o₂, st₂⟩
+      rw [hc1] at hcok hceq hcrel
+      rw [hc2] at hceq hcrel
+      simp only at hcok hceq hcrel
+      subst hceq
+      have hok' : MachineOk StOk { a with state := st₁ } := machineOk_stateOf hok hcok
+      have h' : BookMeans C S { a with state := st₁ } { b with state := st₁ } := book_stateOf h st₁
+      cases o₁ with
+      | none =>
+        cases o₂ with
+        | none => exact ⟨hok', h', rfl⟩
+        | some d₂ => exact absurd hcrel (by intro hr; cases hr)
+      | some d₁ =>
+        cases o₂ with
+        | none => exact absurd hcrel (by intro hr; cases hr)
+        | some d₂ =>
+          dsimp only
+          have hd : OwedMeans C d₁ d₂ := by
+            cases hcrel with
+            | cons hd _ => exact hd
+          obtain ⟨hok1, h1, hcmds⟩ := book_drainOwed hok' h' (ListRel.cons hd ListRel.nil)
+          have hc : ListRel (CmdMeans C)
+              ((drainOwed { a with state := st₁ } [d₁]).2 ++ [Cmd.drainDue])
+              ((drainOwed { b with state := st₁ } [d₂]).2 ++ [Cmd.drainDue]) :=
+            ListRel.append hcmds (ListRel.cons True.intro ListRel.nil)
+          obtain ⟨hok2, h2, _⟩ := book_driveState i₁ i₂ hstep fuel _ _ _ _ hok1 h1 hc
+          have hsettled := book_settled i₁ i₂ hstep fuel hok1 h1 hc
+          rw [hsettled]
+          by_cases hsd : settled (driveState i₂ fuel (drainOwed { b with state := st₁ } [d₂]).1
+              ((drainOwed { b with state := st₁ } [d₂]).2 ++ [Cmd.drainDue])) = true
+          · rw [if_pos hsd, if_pos hsd]
+            obtain ⟨hok3, h3, hf⟩ := book_flushAllState i₁ i₂ hstep fuel fuel _ _ hok2 h2
+            rw [hf]
+            by_cases hfr : (flushAllState i₂ fuel fuel (driveState i₂ fuel
+                (drainOwed { b with state := st₁ } [d₂]).1
+                ((drainOwed { b with state := st₁ } [d₂]).2 ++ [Cmd.drainDue])).1).2 = true
+            · rw [if_pos hfr, if_pos hfr]
+              exact book_advanceState hstep hclock fuel millis rounds _ _ hok3 h3
+            · rw [if_neg hfr, if_neg hfr]
+              exact ⟨hok3, h3, hf⟩
+          · rw [if_neg hsd, if_neg hsd]
+            exact ⟨hok2, h2, rfl⟩
+
+/-- The decision lemma, once for all eight decisions. -/
+theorem book_stepDecisionState (hstep : StepAgrees i₁ i₂ StOk C S) (hooks : HooksAgree i₁ i₂ StOk C S)
     (fuel : Nat)
     {a : RunMachine ν σ β ε δ ι α χ St κ₁ φ₁ η₁} {b : RunMachine ν σ β ε δ ι α χ St κ₂ φ₂ η₂}
     (hok : MachineOk StOk a) (h : BookMeans C S a b) (decision : RunDecision ν σ β ε δ ι α) :
@@ -891,10 +962,11 @@ theorem book_stepDecisionState (hstep : StepAgrees i₁ i₂ StOk C S) (hooks : 
       BookMeans C S (stepDecisionState i₁ fuel a decision).1
         (stepDecisionState i₂ fuel b decision).1 ∧
       (stepDecisionState i₁ fuel a decision).2 = (stepDecisionState i₂ fuel b decision).2 := by
-  obtain ⟨hans, hrec⟩ := hooks
+  obtain ⟨hans, hrec, hclock⟩ := hooks
   cases decision with
   | fire owner => exact book_fireState i₁ i₂ hstep fuel hok h owner
   | flush => exact book_flushAllState i₁ i₂ hstep fuel fuel a b hok h
+  | advance millis => exact book_advanceState i₁ i₂ hstep hclock fuel millis fuel a b hok h
   | evaluate id =>
     have hc : ListRel (CmdMeans C)
         ([Cmd.evaluate id, Cmd.drainDue] : List (Cmd ν σ β ε δ ι α κ₁))
@@ -1007,7 +1079,7 @@ theorem replayEval_cons (i : RunInterp ν σ β ε δ ι α χ St κ₁) (fuel :
 
 /-- **Replay agrees.** Two instances with `StepAgrees` and the two hook obligations replay
 every tape to the same classification and related books. -/
-theorem book_replayEval (hstep : StepAgrees i₁ i₂ StOk C S) (hooks : HooksAgree i₁ i₂ C S)
+theorem book_replayEval (hstep : StepAgrees i₁ i₂ StOk C S) (hooks : HooksAgree i₁ i₂ StOk C S)
     (fuel : Nat) :
     ∀ (tape : List (RunDecision ν σ β ε δ ι α)) (a : RunMachine ν σ β ε δ ι α χ St κ₁ φ₁ η₁)
       (b : RunMachine ν σ β ε δ ι α χ St κ₂ φ₂ η₂), MachineOk StOk a → BookMeans C S a b →
@@ -1037,7 +1109,7 @@ theorem book_replayEval (hstep : StepAgrees i₁ i₂ StOk C S) (hooks : HooksAg
       · rw [if_neg hr, if_neg hr]; exact hd.2.1
 
 /-- The sufficiency receipt of a whole tape agrees. -/
-theorem book_suffices (hstep : StepAgrees i₁ i₂ StOk C S) (hooks : HooksAgree i₁ i₂ C S)
+theorem book_suffices (hstep : StepAgrees i₁ i₂ StOk C S) (hooks : HooksAgree i₁ i₂ StOk C S)
     (fuel : Nat) :
     ∀ (tape : List (RunDecision ν σ β ε δ ι α)) (a : RunMachine ν σ β ε δ ι α χ St κ₁ φ₁ η₁)
       (b : RunMachine ν σ β ε δ ι α χ St κ₂ φ₂ η₂), MachineOk StOk a → BookMeans C S a b →

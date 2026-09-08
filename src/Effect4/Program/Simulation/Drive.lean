@@ -192,6 +192,44 @@ theorem dueResumes_term (root : NativeEff) (s : Stores) :
       ((s.deferreds.drainDue).1.map (Owed.mapCode denoteStored),
         { s with deferreds := (s.deferreds.drainDue).2 }) := rfl
 
+theorem clockStep_frame (root : NativeEff) (millis : Nat) (s : Stores) :
+    (interpOf root).clockStep millis s =
+      ((s.timers.clockStep millis (Prim.success Val.unit : Program)).1.map (Owed.mapCode embed),
+        { s with timers := (s.timers.clockStep millis (Prim.success Val.unit : Program)).2 }) := rfl
+
+theorem clockStep_term (root : NativeEff) (millis : Nat) (s : Stores) :
+    (interpR root).clockStep millis s =
+      ((s.timers.clockStep millis (Prim.success Val.unit : Program)).1.map (Owed.mapCode denoteStored),
+        { s with timers := (s.timers.clockStep millis (Prim.success Val.unit : Program)).2 }) := rfl
+
+/-- The clock step in the book (the timer, A4): the same store on both routes, the fired
+resume — `void`, a completion — related, and the store invariant kept, since it reads nothing
+of the timer store. -/
+theorem clockStep_rel (root : NativeEff) (millis : Nat) (s : Stores) (hs : StoresOk s) :
+    StoresOk ((interpOf root).clockStep millis s).2 ∧
+      ((interpOf root).clockStep millis s).2 = ((interpR root).clockStep millis s).2 ∧
+      ListRel (OwedMeans (CodeMeans root)) ((interpOf root).clockStep millis s).1.toList
+        ((interpR root).clockStep millis s).1.toList := by
+  rw [clockStep_frame, clockStep_term]
+  refine ⟨storesOk_of_deferreds rfl rfl rfl hs, rfl, ?_⟩
+  rcases hc : (s.timers.clockStep millis (Prim.success Val.unit : Program)).1 with _ | d
+  · exact ListRel.nil
+  · obtain ⟨hcode, _⟩ := TimerStore.clockStep_owed s.timers millis (Prim.success Val.unit : Program) d hc
+    simp only [Option.map_some, Option.toList_some]
+    exact drain_rel root [d] (by
+      intro e he
+      rw [List.mem_singleton] at he
+      subst he
+      rw [hcode]
+      exact ⟨.ofExit (.success .unit), rfl⟩)
+
+/-- The book's hook obligation, discharged at the two instances. -/
+theorem hooksAgree_of (root : NativeEff) :
+    HooksAgree (interpOf root) (interpR root) StoresOk (CodeMeans root) (Means root) :=
+  ⟨answerCode_means root, fun t₁ t₂ who extra ht =>
+    interruptRecord_rel root (interpAgree_of root) who extra ht,
+    fun millis s hs => clockStep_rel root millis s hs⟩
+
 theorem resumePrim_means (root : NativeEff) (resume : Resume EffName)
     (hres : ∀ name, resume ≠ Resume.continueWith name) (exits : List ExitV) :
     CodeMeans root (countdownPark.resumePrim (interpOf root) resume exits)
