@@ -412,6 +412,44 @@ end
 /-- `typeOf` at the empty environment. -/
 def typeOf (sig : Signature Op) (program : Eff Op) : Option EffTy := effTy sig [] program
 
+/-! ### The row plane sees no duplicate (the join review, 2026-09-08) -/
+
+/-- Discharging a key twice discharges it once. -/
+theorem Row.diff_single_twice (r : Requirement) (key : ServiceKey) :
+    Row.diff (Row.diff r (Requirement.single key)) (Requirement.single key) =
+      Row.diff r (Requirement.single key) := by
+  rw [← Row.diff_union_right, Row.union_idem]
+
+/-- Requiring a key twice requires it once. -/
+theorem Requirement.union_single_self (key : ServiceKey) :
+    Row.union (Requirement.single key) (Requirement.single key) = Requirement.single key :=
+  Row.union_idem _
+
+/-- Nested `provideService` at one key types exactly as the inner one does: the outer provision
+discharges a key the inner already discharged, and the row plane sees no difference. -/
+theorem effTy_provideService_twice (sig : Signature Op) (env : TyEnv) (key : ServiceKey)
+    (near far : Term) (body : Eff Op) {ty : Ty} (hty : sig.serviceTy key = some ty)
+    (hnear : termTy sig env near = some ty) {inner : EffTy}
+    (hinner : effTy sig env (.provideService key far body) = some inner) :
+    effTy sig env (.provideService key near (.provideService key far body)) = some inner := by
+  have hreq : Row.diff inner.requires (Requirement.single key) = inner.requires := by
+    simp only [effTy, hty, Option.bind_eq_bind, Option.bind_some] at hinner
+    cases hfar : termTy sig env far with
+    | none => rw [hfar] at hinner; cases hinner
+    | some v =>
+      rw [hfar, Option.bind_some] at hinner
+      cases hbody : effTy sig env body with
+      | none => rw [hbody] at hinner; cases hinner
+      | some b =>
+        rw [hbody, Option.bind_some] at hinner
+        split at hinner
+        · cases Option.some.inj hinner
+          exact Row.diff_single_twice _ _
+        · cases hinner
+  generalize hI : Eff.provideService key far body = I at hinner ⊢
+  simp only [effTy, hty, Option.bind_eq_bind, Option.bind_some, hnear, hinner, if_true]
+  rw [hreq]
+
 /-- A layer is well-typed when `layerTy` answers. -/
 def WellTypedLayer (sig : Signature Op) (l : LayerTerm Op) : Prop :=
   (layerTy sig l).isSome = true

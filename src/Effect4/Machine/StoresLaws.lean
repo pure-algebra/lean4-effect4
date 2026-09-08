@@ -1741,4 +1741,367 @@ theorem syncOpStep_read_unchanged (o : SyncOp) (s s' : Stores) (v : Val)
     rfl
   | _ => simp [SyncOp.isRead] at hread
 
-end Effect4.Machine
+/-! ## The memo world's refcount law (the join review, 2026-09-08)
+
+rc.112 keeps an entry alive by its `observers` count: `memoMapBuild` creates it with one
+(`Layer.ts:396-411`), a hit adds one (`:245`), and a release deletes the entry when the last
+observer leaves and decrements otherwise (`:456-463`). So an entry is present exactly while it
+is observed: `MemoObserved`, every entry has an observer, is the law, and it holds under one
+premise the protocol supplies — a map's entries are keyed once per layer (`MemoKeysNodup`),
+which `memoBuild` keeps only when it follows a miss (`memoLookup`, `Compile.lean`: `memoGet`
+answers `none`, then `memoBuild`). The premise is real: a `memoBuild` on a present layer
+appends a second entry under the same key, and a later release — which decrements every entry
+under that key and deletes them all when the first's count is one — leaves the second present
+with no observer (`E4-STORES-CE-004`). -/
+
+/-- Every map's entries are keyed once per layer. -/
+def Stores.MemoKeysNodup (s : Stores) : Prop := ∀ m ∈ s.memo, (m.entries.map Prod.fst).Nodup
+
+/-- Every entry present has an observer. -/
+def Stores.MemoObserved (s : Stores) : Prop := ∀ m ∈ s.memo, ∀ e ∈ m.entries, 0 < e.2.observers
+
+instance (s : Stores) : Decidable s.MemoKeysNodup := by unfold Stores.MemoKeysNodup; infer_instance
+
+instance (s : Stores) : Decidable s.MemoObserved := by unfold Stores.MemoObserved; infer_instance
+
+theorem Stores.empty_memoKeysNodup : Stores.empty.MemoKeysNodup := fun _ h => nomatch h
+
+theorem Stores.empty_memoObserved : Stores.empty.MemoObserved := fun _ h => nomatch h
+
+/-- In a list keyed once, two entries under one key are one entry. -/
+private theorem eq_of_nodup_keys : ∀ {l : List (LayerId × MemoEntry)},
+    (l.map Prod.fst).Nodup → ∀ {a b : LayerId × MemoEntry}, a ∈ l → b ∈ l → a.1 = b.1 → a = b
+  | [], _, _, _, ha, _, _ => nomatch ha
+  | x :: rest, h, a, b, ha, hb, hk => by
+    rw [List.map_cons, List.nodup_cons] at h
+    rcases List.mem_cons.mp ha with ha' | ha'
+    · rcases List.mem_cons.mp hb with hb' | hb'
+      · rw [ha', hb']
+      · exfalso
+        apply h.1
+        rw [← ha', hk]
+        exact List.mem_map.mpr ⟨b, hb', rfl⟩
+    · rcases List.mem_cons.mp hb with hb' | hb'
+      · exfalso
+        apply h.1
+        rw [← hb', ← hk]
+        exact List.mem_map.mpr ⟨a, ha', rfl⟩
+      · exact eq_of_nodup_keys h.2 ha' hb' hk
+
+/-- An update keeps every map keyed once: it rewrites values, never keys. -/
+private theorem memoKeysNodup_updateEntry {w : MemoWorld} {id : MemoMapId} {layer : LayerId}
+    {f : MemoEntry → MemoEntry} (h : ∀ m ∈ w, (m.entries.map Prod.fst).Nodup) :
+    ∀ m ∈ w.updateEntry id layer f, (m.entries.map Prod.fst).Nodup := by
+  intro m hm
+  unfold MemoWorld.updateEntry at hm
+  split at hm
+  · exact h m hm
+  · next mm hmm =>
+    rcases MemoWorld.mem_setMap hm with rfl | hm
+    · show ((mm.entries.map fun e => if e.1 = layer then (e.1, f e.2) else e).map Prod.fst).Nodup
+      rw [List.map_map]
+      have hfst : (Prod.fst ∘ fun e : LayerId × MemoEntry => if e.1 = layer then (e.1, f e.2) else e) =
+          Prod.fst := by
+        funext e
+        simp only [Function.comp]
+        split <;> rfl
+      rw [hfst]
+      exact h mm (MemoWorld.mapAt_mem hmm).1
+    · exact h m hm
+
+/-- A delete keeps every map keyed once: a sublist of a list keyed once. -/
+private theorem memoKeysNodup_deleteEntry {w : MemoWorld} {id : MemoMapId} {layer : LayerId}
+    (h : ∀ m ∈ w, (m.entries.map Prod.fst).Nodup) :
+    ∀ m ∈ w.deleteEntry id layer, (m.entries.map Prod.fst).Nodup := by
+  intro m hm
+  unfold MemoWorld.deleteEntry at hm
+  split at hm
+  · exact h m hm
+  · next mm hmm =>
+    rcases MemoWorld.mem_setMap hm with rfl | hm
+    · exact (h mm (MemoWorld.mapAt_mem hmm).1).sublist
+        (List.Sublist.map Prod.fst List.filter_sublist)
+    · exact h m hm
+
+/-- An insert after a miss keeps every map keyed once: the key was absent. -/
+private theorem memoKeysNodup_insertEntry {w : MemoWorld} {id : MemoMapId} {layer : LayerId}
+    {entry : MemoEntry} (h : ∀ m ∈ w, (m.entries.map Prod.fst).Nodup)
+    (hmiss : w.entryAt id layer = none) :
+    ∀ m ∈ w.insertEntry id layer entry, (m.entries.map Prod.fst).Nodup := by
+  intro m hm
+  unfold MemoWorld.insertEntry at hm
+  split at hm
+  · exact h m hm
+  · next mm hmm =>
+    rcases MemoWorld.mem_setMap hm with rfl | hm
+    · show ((mm.entries ++ [(layer, entry)]).map Prod.fst).Nodup
+      rw [List.map_append, List.map_singleton, List.nodup_append]
+      refine ⟨h mm (MemoWorld.mapAt_mem hmm).1, List.nodup_cons.mpr ⟨by simp, List.nodup_nil⟩, ?_⟩
+      intro x hx y hy hxy
+      rw [List.mem_singleton] at hy
+      subst hy
+      subst hxy
+      obtain ⟨e, he, hek⟩ := List.mem_map.mp hx
+      unfold MemoWorld.entryAt at hmiss
+      rw [hmm] at hmiss
+      simp only [Option.bind_some, Option.map_eq_none_iff] at hmiss
+      have hne := List.find?_eq_none.mp hmiss e he
+      simp only [decide_eq_true_eq] at hne
+      exact hne hek
+    · exact h m hm
+
+/-- The nodup premise across a step: only `memoBuild` can break it, and it does not after a
+miss. -/
+theorem syncOpStep_memoKeysNodup (o : SyncOp) (s s' : Stores) (v : Val) (hnodup : s.MemoKeysNodup)
+    (hbuild : ∀ layer memoMap, o = SyncOp.memoBuild layer memoMap →
+      s.memo.entryAt memoMap layer = none)
+    (h : syncOpStep o s = some (s', v)) : s'.MemoKeysNodup := by
+  have hsame : ∀ {t : Stores}, t.memo = s.memo → t.MemoKeysNodup := by
+    intro t ht m hm
+    rw [ht] at hm
+    exact hnodup m hm
+  cases o with
+  | memoFork parent =>
+    simp only [syncOpStep_memoFork, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    intro m hm
+    rcases List.mem_append.mp hm with hm | hm
+    · exact hnodup m hm
+    · rw [List.mem_singleton] at hm
+      subst hm
+      exact List.nodup_nil
+  | memoGet layer memoMap =>
+    cases hget : s.memo.get layer memoMap with
+    | none =>
+      rw [syncOpStep_memoGet_none s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hnodup
+    | some p =>
+      obtain ⟨owner, entry⟩ := p
+      rw [syncOpStep_memoGet_some s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact fun m hm => memoKeysNodup_updateEntry hnodup m (by dsimp only at hm; exact hm)
+  | memoBuild layer memoMap =>
+    simp only [syncOpStep_memoBuild, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact fun m hm =>
+      memoKeysNodup_insertEntry hnodup (hbuild layer memoMap rfl) m (by dsimp only at hm; exact hm)
+  | memoComplete layer memoMap exit =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoComplete_none s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hnodup
+    | some entry =>
+      rw [syncOpStep_memoComplete_some s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact fun m hm => memoKeysNodup_updateEntry hnodup m (by dsimp only at hm; exact hm)
+  | memoRelease layer memoMap =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoRelease_none s layer memoMap hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hnodup
+    | some entry =>
+      by_cases hobs : entry.observers ≤ 1
+      · rw [syncOpStep_memoRelease_last s layer memoMap hentry hobs, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact fun m hm => memoKeysNodup_deleteEntry hnodup m (by dsimp only at hm; exact hm)
+      · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hobs, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact fun m hm => memoKeysNodup_updateEntry hnodup m (by dsimp only at hm; exact hm)
+  | deferredMake | deferredCompleteWith _ _ | deferredInterruptWith _ _
+  | deferredAwaitCleanup _ _ _ | scopeMake _ | scopeRemove _ _ | clockNow | sleepCancel _ _ =>
+    simp only [syncOpStep_deferredMake, syncOpStep_deferredCompleteWith,
+      syncOpStep_deferredInterruptWith, syncOpStep_deferredAwaitCleanup, syncOpStep_scopeMake,
+      syncOpStep_scopeRemove, syncOpStep_clockNow, syncOpStep_sleepCancel,
+      Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact hsame rfl
+  | deferredIsDone cell | deferredPoll cell | scopeIsClosed cell =>
+    simp only [syncOpStep_deferredIsDone, syncOpStep_deferredPoll, syncOpStep_scopeIsClosed] at h
+    obtain ⟨_, _, hf⟩ := Option.map_eq_some_iff.mp h
+    cases hf
+    exact hsame rfl
+  | scopeAdd scope fin =>
+    cases hentry : s.scopes.entryAt scope with
+    | none => rw [syncOpStep_scopeAdd_none s scope fin hentry] at h; cases h
+    | some entry =>
+      cases hclose : entry.scope.closingExit? with
+      | some exit =>
+        rw [syncOpStep_scopeAdd_closed s scope fin hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact hsame rfl
+      | none =>
+        rw [syncOpStep_scopeAdd_open s scope fin hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact hsame rfl
+  | scopeFork parent strategy =>
+    cases hentry : s.scopes.entryAt parent with
+    | none => rw [syncOpStep_scopeFork_none s parent strategy hentry] at h; cases h
+    | some entry =>
+      rw [syncOpStep_scopeFork_some s parent strategy hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hsame rfl
+  | _ =>
+    simp only [syncOpStep] at h
+    obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h
+    cases hf
+    exact hsame rfl
+
+/-- The refcount law across a step: under the nodup premise, every entry present after a step
+has an observer — a build starts at one, a hit adds one, a release that leaves an entry leaves
+it with at least one, a release of the last deletes it. -/
+theorem syncOpStep_memoObserved (o : SyncOp) (s s' : Stores) (v : Val) (hnodup : s.MemoKeysNodup)
+    (hobs : s.MemoObserved) (h : syncOpStep o s = some (s', v)) : s'.MemoObserved := by
+  have hsame : ∀ {t : Stores}, t.memo = s.memo → t.MemoObserved := by
+    intro t ht m hm e he
+    rw [ht] at hm
+    exact hobs m hm e he
+  cases o with
+  | memoFork parent =>
+    simp only [syncOpStep_memoFork, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    intro m hm e he
+    rcases List.mem_append.mp hm with hm | hm
+    · exact hobs m hm e he
+    · rw [List.mem_singleton] at hm
+      subst hm
+      exact nomatch he
+  | memoGet layer memoMap =>
+    cases hget : s.memo.get layer memoMap with
+    | none =>
+      rw [syncOpStep_memoGet_none s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hobs
+    | some p =>
+      obtain ⟨owner, entry⟩ := p
+      rw [syncOpStep_memoGet_some s layer memoMap hget, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      intro m hm e he
+      have hm' : m ∈ s.memo.updateEntry owner layer fun e => { e with observers := e.observers + 1 } :=
+        hm
+      obtain ⟨m₀, hm₀, e₀, he₀, heq⟩ := MemoWorld.mem_updateEntry_entries hm' he
+      have h₀ := hobs m₀ hm₀ e₀ he₀
+      rcases heq with rfl | rfl
+      · exact h₀
+      · exact Nat.succ_pos _
+  | memoBuild layer memoMap =>
+    simp only [syncOpStep_memoBuild, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    intro m hm e he
+    have hm' : m ∈ s.memo.insertEntry memoMap layer _ := hm
+    rcases MemoWorld.mem_insertEntry_entries hm' he with ⟨m₀, hm₀, he₀⟩ | rfl
+    · exact hobs m₀ hm₀ e he₀
+    · exact Nat.one_pos
+  | memoComplete layer memoMap exit =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoComplete_none s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hobs
+    | some entry =>
+      rw [syncOpStep_memoComplete_some s layer memoMap exit hentry, Option.some.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      intro m hm e he
+      have hm' : m ∈ s.memo.updateEntry memoMap layer fun e => { e with effect := Prim.ofExit exit } :=
+        hm
+      obtain ⟨m₀, hm₀, e₀, he₀, heq⟩ := MemoWorld.mem_updateEntry_entries hm' he
+      have h₀ := hobs m₀ hm₀ e₀ he₀
+      rcases heq with rfl | rfl
+      · exact h₀
+      · exact h₀
+  | memoRelease layer memoMap =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoRelease_none s layer memoMap hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hobs
+    | some entry =>
+      by_cases hob : entry.observers ≤ 1
+      · rw [syncOpStep_memoRelease_last s layer memoMap hentry hob, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        intro m hm e he
+        have hm' : m ∈ s.memo.deleteEntry memoMap layer := hm
+        obtain ⟨m₀, hm₀, he₀⟩ := MemoWorld.mem_deleteEntry_entries hm' he
+        exact hobs m₀ hm₀ e he₀
+      · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hob, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        intro m hm e he
+        -- the decremented entry is the one the release found, by the nodup premise; it had
+        -- more than one observer
+        have hentry' := hentry
+        unfold MemoWorld.entryAt at hentry'
+        obtain ⟨mm, hmm, hfind⟩ := Option.bind_eq_some_iff.mp hentry'
+        obtain ⟨p, hp, hsnd⟩ := Option.map_eq_some_iff.mp hfind
+        have hm' : m ∈ s.memo.updateEntry memoMap layer fun e => { e with observers := e.observers - 1 } :=
+          hm
+        unfold MemoWorld.updateEntry at hm'
+        rw [hmm] at hm'
+        rcases MemoWorld.mem_setMap hm' with rfl | hm'
+        · obtain ⟨e₀, he₀, heq⟩ := List.mem_map.mp he
+          by_cases hk : e₀.1 = layer
+          · have hp' : p ∈ mm.entries := List.mem_of_find?_eq_some hp
+            have hpk : p.1 = layer := by simpa using List.find?_some hp
+            have hep : e₀ = p :=
+              eq_of_nodup_keys (hnodup mm (MemoWorld.mapAt_mem hmm).1) he₀ hp' (hk.trans hpk.symm)
+            subst hep
+            simp only [hk, if_true] at heq
+            rw [← heq]
+            show 0 < e₀.2.observers - 1
+            rw [hsnd]
+            omega
+          · simp only [hk, if_false] at heq
+            rw [← heq]
+            exact hobs mm (MemoWorld.mapAt_mem hmm).1 e₀ he₀
+        · exact hobs m hm' e he
+  | deferredMake | deferredCompleteWith _ _ | deferredInterruptWith _ _
+  | deferredAwaitCleanup _ _ _ | scopeMake _ | scopeRemove _ _ | clockNow | sleepCancel _ _ =>
+    simp only [syncOpStep_deferredMake, syncOpStep_deferredCompleteWith,
+      syncOpStep_deferredInterruptWith, syncOpStep_deferredAwaitCleanup, syncOpStep_scopeMake,
+      syncOpStep_scopeRemove, syncOpStep_clockNow, syncOpStep_sleepCancel,
+      Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, _⟩ := h
+    exact hsame rfl
+  | deferredIsDone cell | deferredPoll cell | scopeIsClosed cell =>
+    simp only [syncOpStep_deferredIsDone, syncOpStep_deferredPoll, syncOpStep_scopeIsClosed] at h
+    obtain ⟨_, _, hf⟩ := Option.map_eq_some_iff.mp h
+    cases hf
+    exact hsame rfl
+  | scopeAdd scope fin =>
+    cases hentry : s.scopes.entryAt scope with
+    | none => rw [syncOpStep_scopeAdd_none s scope fin hentry] at h; cases h
+    | some entry =>
+      cases hclose : entry.scope.closingExit? with
+      | some exit =>
+        rw [syncOpStep_scopeAdd_closed s scope fin hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact hsame rfl
+      | none =>
+        rw [syncOpStep_scopeAdd_open s scope fin hentry hclose, Option.some.injEq,
+          Prod.mk.injEq] at h
+        obtain ⟨rfl, _⟩ := h
+        exact hsame rfl
+  | scopeFork parent strategy =>
+    cases hentry : s.scopes.entryAt parent with
+    | none => rw [syncOpStep_scopeFork_none s parent strategy hentry] at h; cases h
+    | some entry =>
+      rw [syncOpStep_scopeFork_some s parent strategy hentry, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, _⟩ := h
+      exact hsame rfl
+  | _ =>
+    simp only [syncOpStep] at h
+    obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h
+    cases hf
+    exact hsame rfl

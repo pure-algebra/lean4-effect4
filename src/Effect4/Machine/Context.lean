@@ -426,14 +426,46 @@ theorem ContextUpdate.apply_provideService_getV (key : ServiceKey) (value : Val)
     ((ContextUpdate.provideService key value).apply prev).getV key = some value :=
   Context.getV_addV_same prev key value
 
-/-- What an instantiation of `Deep.Fibers` at `χ := Ctx` must read off the context: the four
-hooks, with these values. `Deep.Layer.interp` satisfies it by `rfl`. -/
-structure HooksAgree {ν σ : Type} {St : Type}
-    (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx St) : Prop where
-  ambient : interp.ambientScope = ambientScope
-  budget : interp.budgetOf = budgetOf
-  empty : interp.emptyContext = Context.empty
-  value : interp.contextValue = encode
+/-! ### Shadowing (the join review, 2026-09-08)
+
+`provideContext(self, context)` is `updateContext(self, Context.merge(context))`
+(`internal/effect.ts:2197`), and `Context.merge` is right-biased: the provided context's
+binding wins where it binds, the previous binding stays where it does not. Two provisions
+of one key nest as two updates, and the nearer — applied last — shadows the farther; the
+farther is invisible to every lookup. The row plane never sees a duplicate: the requirement
+row is a set (`Row.union_idem`, `Program/Typing.lean`'s `Row.diff_single_twice`).
+
+The composition law of the join — the machine's four context hooks read off the service map,
+with `Ctx.CacheAgrees` as the premise of the budget hook — is `Effect4.Machine.stores_hooks`
+(`Machine/Stores.lean`); the structure that stated it against the retired Layer machine's
+interpreter retired with it. -/
+
+theorem ContextUpdate.apply_provide_wins (that prev : Ctx) (key : ServiceKey) (value : Val)
+    (h : that.getV key = some value) :
+    ((ContextUpdate.provide that).apply prev).getV key = some value := by
+  show (prev.merge that).getV key = some value
+  rw [Context.getV_merge, h]
+  rfl
+
+theorem ContextUpdate.apply_provide_keeps (that prev : Ctx) (key : ServiceKey)
+    (h : that.getV key = none) :
+    ((ContextUpdate.provide that).apply prev).getV key = prev.getV key := by
+  show (prev.merge that).getV key = prev.getV key
+  rw [Context.getV_merge, h]
+  rfl
+
+/-- Two `provideService`s at one key: the nearer wins, the farther is invisible. -/
+theorem ContextUpdate.apply_provideService_shadows (key : ServiceKey) (near far : Val)
+    (prev : Ctx) :
+    ((ContextUpdate.provideService key near).apply
+      ((ContextUpdate.provideService key far).apply prev)).getV key = some near :=
+  ContextUpdate.apply_provideService_getV key near _
+
+/-- `provideService` at one key leaves every other key's binding alone. -/
+theorem ContextUpdate.apply_provideService_other (key : ServiceKey) (value : Val) (prev : Ctx)
+    (key' : ServiceKey) (hne : key' ≠ key) :
+    ((ContextUpdate.provideService key value).apply prev).getV key' = prev.getV key' :=
+  Context.getV_addV_other prev key value key' hne
 
 /-! ## The seven counterexample classes of `PLAN.md`, environment counterexamples
 

@@ -127,6 +127,29 @@ section Rows
 #guard Val.validIn (after (SyncOp.deferredCompleteWith ⟨0⟩ (Completion.ofRefGet ⟨9⟩)) s2)
   (Val.cell ⟨9⟩) = false
 
+-- E4-STORES-CE-004 (the join review, 2026-09-08): the memo world's refcount law needs the
+-- build-after-miss protocol. Under it — fork, build, hit, release, release — every entry
+-- present has an observer and the last release deletes the entry; a second `memoBuild` on a
+-- present layer keys the map twice, and a later release leaves the second entry present with
+-- no observer.
+/-- The root map, one layer built under it. -/
+def m1 : Stores := after (SyncOp.memoBuild [] ⟨0⟩) (after (SyncOp.memoFork none) Stores.empty)
+/-- A hit: the entry's second observer. -/
+def m2 : Stores := after (SyncOp.memoGet [] ⟨0⟩) m1
+#guard Stores.MemoKeysNodup m2 ∧ Stores.MemoObserved m2
+#guard (m2.memo.entryAt ⟨0⟩ []).map MemoEntry.observers = some 2
+/-- The protocol: two releases, the second the last. -/
+def m3 : Stores := after (SyncOp.memoRelease [] ⟨0⟩) m2
+def m4 : Stores := after (SyncOp.memoRelease [] ⟨0⟩) m3
+#guard Stores.MemoObserved m3 ∧ (m3.memo.entryAt ⟨0⟩ []).map MemoEntry.observers = some 1
+#guard Stores.MemoObserved m4 ∧ m4.memo.entryAt ⟨0⟩ [] = none
+/-- Off the protocol: a second build on the present layer, then one release. -/
+def m2' : Stores := after (SyncOp.memoBuild [] ⟨0⟩) m2
+def m3' : Stores := after (SyncOp.memoRelease [] ⟨0⟩) m2'
+#guard ¬ Stores.MemoKeysNodup m2' ∧ Stores.MemoObserved m2'
+#guard ¬ Stores.MemoObserved m3'
+#guard ((m3'.memo.mapAt ⟨0⟩).map fun m => m.entries.map fun e => e.2.observers) = some [1, 0]
+
 end Rows
 
 /-! ## Make-then-read on the heap (`Stores.lean:484-525`) -/
