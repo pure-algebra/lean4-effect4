@@ -2228,4 +2228,388 @@ theorem read_exact_native {n : Nat} {x : Expr} {e : NativeEff}
     (h : readEff nativeSignature nativeSpell n x = .ok e) : print nativeSignature n e = .ok x :=
   read_exact nativeLawful h
 
+/-! ## Compatibility with positional weakening -/
+
+private theorem weaken_index_inj (cut i j : Nat) :
+    Var.weaken cut i = Var.weaken cut j ↔ i = j := by
+  constructor
+  · intro h
+    by_cases hi : i < cut <;> by_cases hj : j < cut <;>
+      simp only [Var.weaken, hi, hj, if_true, if_false] at h <;> omega
+  · intro h
+    subst j
+    rfl
+
+private theorem weaken_name_eq (cut i j : Nat) :
+    Var.name (Var.weaken cut i) = Var.name (Var.weaken cut j) ↔ Var.name i = Var.name j := by
+  constructor
+  · intro h
+    exact congrArg Var.name ((weaken_index_inj cut i j).mp (Var.name_inj h))
+  · intro h
+    rw [Var.name_inj h]
+
+mutual
+  theorem Term.scoped_weaken {cut n : Nat} (hc : cut ≤ n) (term : Term) :
+      (Term.weaken cut term).scoped (n + 1) = term.scoped n :=
+    match term with
+    | .var index => by
+      simp only [Term.weaken, Term.scoped]
+      have hi : Var.weaken cut index < n + 1 ↔ index < n := by
+        by_cases h : index < cut
+        · rw [Var.weaken, if_pos h]
+          exact iff_of_true (Nat.lt_succ_of_lt (Nat.lt_of_lt_of_le h hc))
+            (Nat.lt_of_lt_of_le h hc)
+        · rw [Var.weaken, if_neg h]
+          exact Nat.add_lt_add_iff_right
+      simp only [hi]
+    | .lit _ => rfl
+    | .app _ args => Terms.scoped_weaken hc args
+
+  theorem Terms.scoped_weaken {cut n : Nat} (hc : cut ≤ n) (terms : Terms) :
+      (Terms.weaken cut terms).scoped (n + 1) = terms.scoped n :=
+    match terms with
+    | .nil => rfl
+    | .cons head tail => by
+      simp only [Terms.weaken, Terms.scoped, Term.scoped_weaken hc head,
+        Terms.scoped_weaken hc tail]
+end
+
+theorem CauseTerm.scoped_weaken {cut n : Nat} (hc : cut ≤ n) (cause : CauseTerm) :
+    (CauseTerm.weaken cut cause).scoped (n + 1) = cause.scoped n := by
+  induction cause with
+  | fail _ | die _ => simp only [CauseTerm.weaken, CauseTerm.scoped, Term.scoped_weaken hc]
+  | interrupt who => cases who <;> simp only [CauseTerm.weaken, CauseTerm.scoped,
+      Option.map, Term.scoped_weaken hc]
+  | both _ _ ihl ihr => simp only [CauseTerm.weaken, CauseTerm.scoped, ihl, ihr]
+
+private theorem names_cons_spell_none {sig : Signature Op}
+    {spell : String → List String → Option Op} (hl : LawfulSpelling sig spell)
+    (atom : String) (head : Term) (tail : Terms) :
+    ((Terms.names? (.cons head tail)).bind (spell atom)) = none := by
+  have noHead (v : String) (hv : ∀ op, v ∉ (sig.rowOf op).trailing) (names : List String) :
+      spell atom (v :: names) = none := by
+    cases hs : spell atom (v :: names) with
+    | none => rfl
+    | some op =>
+      have ht := (hl.row_of_spell atom (v :: names) op hs).2
+      exact False.elim (hv op (by rw [ht]; simp))
+  cases head with
+  | var i =>
+    cases ht : Terms.names? tail <;>
+      simp [Terms.names?, ht, noHead (Var.name i) (fun op => hl.trailing_ne_name op i)]
+  | lit value =>
+    cases value <;> first
+      | rfl
+      | (cases ht : Terms.names? tail <;>
+          simp [Terms.names?, ht, noHead "undefined" hl.trailing_ne_undefined])
+  | app _ _ => rfl
+
+private theorem names_spell_weaken {sig : Signature Op}
+    {spell : String → List String → Option Op} (hl : LawfulSpelling sig spell)
+    (cut : Nat) (atom : String) (args : Terms) :
+    ((Terms.weaken cut args).names?).bind (spell atom) = (args.names?).bind (spell atom) := by
+  cases args with
+  | nil => rfl
+  | cons _ _ => simp only [Terms.weaken, names_cons_spell_none hl]
+
+private theorem noRow_weaken {sig : Signature Op}
+    {spell : String → List String → Option Op} (hl : LawfulSpelling sig spell)
+    (cut : Nat) (atom : String) (args : Terms) :
+    noRow spell atom (Terms.weaken cut args) = noRow spell atom args := by
+  cases args with
+  | nil => rfl
+  | cons head tail =>
+    cases tail <;> simp only [Terms.weaken, noRow, names_cons_spell_none hl,
+      names_spell_weaken hl]
+
+private theorem savedVar_weaken (cut : Nat) (x y : Term) :
+    (savedVar? (printTerm (Term.weaken cut x)) (printTerm (Term.weaken cut y))).isNone =
+      (savedVar? (printTerm x) (printTerm y)).isNone := by
+  cases x with
+  | var _ => rfl
+  | lit value => cases value <;> rfl
+  | app f xs =>
+    cases xs with
+    | nil => rfl
+    | cons x xs =>
+      cases x with
+      | app _ _ => rfl
+      | lit value =>
+        cases value <;> try rfl
+        cases xs with
+        | cons _ _ => rfl
+        | nil =>
+          cases y with
+          | var _ => rfl
+          | lit value => cases value <;> rfl
+          | app g ys =>
+            cases ys with
+            | nil => rfl
+            | cons y ys =>
+              cases y with
+              | app _ _ => rfl
+              | lit value =>
+                cases value <;> try rfl
+                cases ys with
+                | cons _ _ => rfl
+                | nil =>
+                  simp only [Term.weaken, Terms.weaken, printTerm, printTerms, printLit, savedVar?]
+                  all_goals first | rfl | (split <;> rfl)
+              | var _ =>
+                cases ys with
+                | cons _ _ => rfl
+                | nil =>
+                  simp only [Term.weaken, Terms.weaken, printTerm, printTerms, printLit,
+                    savedVar?, Ne.symm (Var.name_ne_undefined _)]
+                  all_goals first | rfl | (split <;> rfl)
+      | var _ =>
+        cases xs with
+        | cons _ _ => rfl
+        | nil =>
+          cases y with
+          | var _ => rfl
+          | lit value => cases value <;> rfl
+          | app g ys =>
+            cases ys with
+            | nil => rfl
+            | cons y ys =>
+              cases y with
+              | app _ _ => rfl
+              | lit value =>
+                cases value <;> try rfl
+                cases ys with
+                | cons _ _ => rfl
+                | nil =>
+                  simp only [Term.weaken, Terms.weaken, printTerm, printTerms, printLit,
+                    savedVar?, Var.name_ne_undefined]
+                  all_goals first | rfl | (split <;> rfl)
+              | var _ =>
+                cases ys with
+                | cons _ _ => rfl
+                | nil =>
+                  simp only [Term.weaken, Terms.weaken, printTerm, printTerms, savedVar?, weaken_name_eq]
+                  all_goals first | rfl | (split <;> rfl)
+
+private theorem pairArgs_weaken (cut : Nat) (request : Term) :
+    pairArgs? (Term.weaken cut request) =
+      (pairArgs? request).map (fun (x, y) => (Term.weaken cut x, Term.weaken cut y)) := by
+  cases request with
+  | var _ | lit _ => rfl
+  | app atom args =>
+    cases args with
+    | nil => rfl
+    | cons x rest =>
+      cases rest with
+      | nil => rfl
+      | cons y rest =>
+        cases rest with
+        | cons _ _ => rfl
+        | nil => simp only [Term.weaken, Terms.weaken, pairArgs?]; split <;> rfl
+
+private theorem weaken_eq_unit (cut : Nat) (request : Term) :
+    Term.weaken cut request = .lit .unit ↔ request = .lit .unit := by
+  cases request <;> simp only [Term.weaken, reduceCtorEq]
+
+private theorem requestReadable_weaken {cut n : Nat} (hc : cut ≤ n) (row : Row)
+    (request : Term) :
+    requestReadable row (n + 1) (Term.weaken cut request) = requestReadable row n request := by
+  cases hs : row.shape with
+  | value => simp only [requestReadable, hs, weaken_eq_unit]
+  | call =>
+    simp only [requestReadable, hs]
+    split <;> simp only [weaken_eq_unit, Term.scoped_weaken hc]
+  | tupleCall =>
+    simp only [requestReadable, hs]
+    rw [pairArgs_weaken]
+    cases hp : pairArgs? request with
+    | some xy =>
+      obtain ⟨x, y⟩ := xy
+      simp only [Option.map, Term.scoped_weaken hc, savedVar_weaken]
+    | none =>
+      cases request with
+      | var index => exact Term.scoped_weaken hc (.var index)
+      | lit value => cases value <;> rfl
+      | app _ _ => rfl
+
+mutual
+  /-- Inserting an unused environment slot retains exactly the readable domain. -/
+  theorem readable_weaken {sig : Signature Op} {spell : String → List String → Option Op}
+      (hl : LawfulSpelling sig spell) {cut n : Nat} (hc : cut ≤ n) (program : Eff Op) :
+      readable sig spell (n + 1) (Eff.weaken cut program) = readable sig spell n program :=
+    match program with
+    | .yieldError error => by
+      cases error with
+      | var index => exact Term.scoped_weaken hc (.var index)
+      | lit _ => rfl
+      | app atom args => simp only [Eff.weaken, Term.weaken, readable,
+          noRow_weaken hl, Terms.scoped_weaken hc]
+    | .succeed _ | .fail _ | .failCause _ | .sync _ | .suspend _ | .perform _ _
+    | .bind _ _ | .gen _ | .catchCause _ _ | .matchCause _ _ _ | .onExit _ _ | .exit _
+    | .uninterruptible _ | .interruptible _ | .branch _ _ _ | .whileLoop _ _ _ _
+    | .yieldNow _ | .callback _ _ | .awaitFiber _ _ | .withFiber _ | .scoped _
+    | .acquireRelease _ _ | .choose _ _ _ | .provideLayer _ _ _ | .service _
+    | .provideService _ _ _ => by
+      have hc1 : cut ≤ n + 1 := Nat.le_trans hc (Nat.le_add_right n 1)
+      have hc2 : cut ≤ n + 2 := Nat.le_trans hc (Nat.le_add_right n 2)
+      simp only [Eff.weaken, readable, Term.scoped_weaken hc,
+        CauseTerm.scoped_weaken hc, requestReadable_weaken hc,
+        readable_weaken hl hc, readable_weaken hl hc1, readable_weaken hl hc2,
+        readableStmts_weaken hl hc, readableAction_weaken hl hc,
+        Term.scoped_weaken hc1, Nat.add_right_comm n 1 2, Term.scoped_weaken hc2]
+
+  theorem readableStmts_weaken {sig : Signature Op} {spell : String → List String → Option Op}
+      (hl : LawfulSpelling sig spell) {cut n : Nat} (hc : cut ≤ n) (stmts : Stmts Op) :
+      readableStmts sig spell (n + 1) (Stmts.weaken cut stmts) = readableStmts sig spell n stmts :=
+    match stmts with
+    | .nil => rfl
+    | .cons stmt rest => by
+      have hc1 : cut ≤ n + 1 := Nat.le_trans hc (Nat.le_add_right n 1)
+      cases stmt <;> simp only [Stmts.weaken, Stmt.weaken, readableStmts,
+        Term.scoped_weaken hc, readable_weaken hl hc,
+        readableStmts_weaken hl hc, readableStmts_weaken hl hc1]
+
+  theorem readableEffs_weaken {sig : Signature Op} {spell : String → List String → Option Op}
+      (hl : LawfulSpelling sig spell) {cut n : Nat} (hc : cut ≤ n) (effects : Effs Op) :
+      readableEffs sig spell (n + 1) (Effs.weaken cut effects) = readableEffs sig spell n effects :=
+    match effects with
+    | .nil => rfl
+    | .cons head tail => by
+      simp only [Effs.weaken, readableEffs, readable_weaken hl hc, readableEffs_weaken hl hc]
+
+  theorem readableAction_weaken {sig : Signature Op} {spell : String → List String → Option Op}
+      (hl : LawfulSpelling sig spell) {cut n : Nat} (hc : cut ≤ n) (action : ActionTerm Op) :
+      readableAction sig spell (n + 1) (ActionTerm.weaken cut action) = readableAction sig spell n action :=
+    match action with
+    | .interruptAll _ who => by
+      cases who <;> simp only [ActionTerm.weaken, readableAction, Option.map, Term.scoped_weaken hc]
+    | .fork _ _ | .forkIn _ _ _ | .forkScoped _ _ | .runIn _ _ | .interrupt _
+    | .interruptScoped _ | .awaitAll _ | .awaitAllFailFast _ | .snapshotChildren
+    | .awaitNewChildren _ | .raceAll _ | .setContext _ | .getContext | .getId
+    | .closeScope _ _ => by
+      simp only [ActionTerm.weaken, readableAction, Term.scoped_weaken hc,
+        readable_weaken hl hc, readableEffs_weaken hl hc]
+end
+
+mutual
+  /-- Every program in the readable domain has a printed expression. -/
+  theorem print_readable (sig : Signature Op) (spell : String → List String → Option Op)
+      (n : Nat) (program : Eff Op) (hr : readable sig spell n program = true) :
+      ∃ x, print sig n program = .ok x :=
+    match program with
+    | .succeed _ | .fail _ | .failCause _ | .yieldError _ | .sync _ | .perform _ _
+    | .yieldNow _ | .callback _ _ => ⟨_, rfl⟩
+    | .suspend body | .exit body | .uninterruptible body | .interruptible body | .scoped body => by
+      obtain ⟨b, hb⟩ := print_readable sig spell n body hr
+      exact ⟨_, by simp only [print, hb] <;> rfl⟩
+    | .bind first rest | .catchCause first rest | .onExit first rest => by
+      have hs := Bool.and_eq_true_iff.mp hr
+      obtain ⟨f, hf⟩ := print_readable sig spell n first hs.1
+      obtain ⟨r, hrest⟩ := print_readable sig spell (n + 1) rest hs.2
+      exact ⟨_, by simp only [print, hf, hrest] <;> rfl⟩
+    | .gen body => by
+      obtain ⟨b, hb⟩ := printStmts_readable sig spell n body hr
+      exact ⟨_, by simp only [print, hb] <;> rfl⟩
+    | .matchCause body onValue onCause => by
+      have hs := Bool.and_eq_true_iff.mp hr
+      have hbv := Bool.and_eq_true_iff.mp hs.1
+      obtain ⟨b, hb⟩ := print_readable sig spell n body hbv.1
+      obtain ⟨v, hv⟩ := print_readable sig spell (n + 1) onValue hbv.2
+      obtain ⟨c, hc⟩ := print_readable sig spell (n + 1) onCause hs.2
+      exact ⟨_, by simp only [print, hb, hv, hc] <;> rfl⟩
+    | .branch _ thenB elseB => by
+      have hs := Bool.and_eq_true_iff.mp hr
+      obtain ⟨a, ha⟩ := print_readable sig spell n thenB (Bool.and_eq_true_iff.mp hs.1).2
+      obtain ⟨b, hb⟩ := print_readable sig spell n elseB hs.2
+      exact ⟨_, by simp only [print, ha, hb] <;> rfl⟩
+    | .whileLoop _ _ _ body => by
+      obtain ⟨b, hb⟩ := print_readable sig spell (n + 1) body (Bool.and_eq_true_iff.mp hr).2
+      exact ⟨_, by simp only [print, hb] <;> rfl⟩
+    | .awaitFiber _ mode => by cases mode <;> exact ⟨_, rfl⟩
+    | .withFiber action => printAction_readable sig spell n action hr
+    | .acquireRelease acquire release => by
+      have hs := Bool.and_eq_true_iff.mp hr
+      obtain ⟨a, ha⟩ := print_readable sig spell n acquire hs.1
+      obtain ⟨r, hrel⟩ := print_readable sig spell (n + 2) release hs.2
+      exact ⟨_, by simp only [print, ha, hrel] <;> rfl⟩
+    | .choose _ _ _ | .provideLayer _ _ _ | .service _ | .provideService _ _ _ => by cases hr
+
+  theorem printStmts_readable (sig : Signature Op) (spell : String → List String → Option Op)
+      (n : Nat) (stmts : Stmts Op) (hr : readableStmts sig spell n stmts = true) :
+      ∃ x, printStmts sig n stmts = .ok x :=
+    match stmts with
+    | .nil => ⟨_, rfl⟩
+    | .cons (.bindYield effect) rest => by
+      have hs := Bool.and_eq_true_iff.mp hr
+      obtain ⟨e, he⟩ := print_readable sig spell n effect hs.1
+      obtain ⟨r, hrest⟩ := printStmts_readable sig spell (n + 1) rest hs.2
+      exact ⟨_, by simp only [printStmts, he, hrest] <;> rfl⟩
+    | .cons (.yieldDiscard effect) rest => by
+      have hs := Bool.and_eq_true_iff.mp hr
+      obtain ⟨e, he⟩ := print_readable sig spell n effect hs.1
+      obtain ⟨r, hrest⟩ := printStmts_readable sig spell n rest hs.2
+      exact ⟨_, by simp only [printStmts, he, hrest] <;> rfl⟩
+    | .cons (.ret _) rest => by
+      obtain ⟨r, hrest⟩ := printStmts_readable sig spell n rest (Bool.and_eq_true_iff.mp hr).2
+      exact ⟨_, by simp only [printStmts, hrest] <;> rfl⟩
+    | .cons (.ifElse _ thenB elseB) rest => by
+      have hs := Bool.and_eq_true_iff.mp hr
+      have hab := Bool.and_eq_true_iff.mp hs.1
+      obtain ⟨a, ha⟩ := printStmts_readable sig spell n thenB (Bool.and_eq_true_iff.mp hab.1).2
+      obtain ⟨b, hb⟩ := printStmts_readable sig spell n elseB hab.2
+      obtain ⟨r, hrest⟩ := printStmts_readable sig spell n rest hs.2
+      exact ⟨_, by simp only [printStmts, ha, hb, hrest] <;> rfl⟩
+    | .cons (.whileTrue body) rest => by
+      have hs := Bool.and_eq_true_iff.mp hr
+      obtain ⟨b, hb⟩ := printStmts_readable sig spell n body hs.1
+      obtain ⟨r, hrest⟩ := printStmts_readable sig spell n rest hs.2
+      exact ⟨_, by simp only [printStmts, hb, hrest] <;> rfl⟩
+    | .cons .breakLoop rest => by
+      obtain ⟨r, hrest⟩ := printStmts_readable sig spell n rest hr
+      exact ⟨_, by simp only [printStmts, hrest] <;> rfl⟩
+
+  theorem printEffs_readable (sig : Signature Op) (spell : String → List String → Option Op)
+      (n : Nat) (effects : Effs Op) (hr : readableEffs sig spell n effects = true) :
+      ∃ x, printEffs sig n effects = .ok x :=
+    match effects with
+    | .nil => ⟨_, rfl⟩
+    | .cons head tail => by
+      have hs := Bool.and_eq_true_iff.mp hr
+      obtain ⟨h, hh⟩ := print_readable sig spell n head hs.1
+      obtain ⟨t, ht⟩ := printEffs_readable sig spell n tail hs.2
+      exact ⟨_, by simp only [printEffs, hh, ht] <;> rfl⟩
+
+  theorem printAction_readable (sig : Signature Op) (spell : String → List String → Option Op)
+      (n : Nat) (action : ActionTerm Op) (hr : readableAction sig spell n action = true) :
+      ∃ x, printAction sig n action = .ok x :=
+    match action with
+    | .fork program _ => by
+      obtain ⟨p, hp⟩ := print_readable sig spell n program hr
+      exact ⟨_, by simp only [printAction, hp] <;> rfl⟩
+    | .forkIn program _ _ => by
+      obtain ⟨p, hp⟩ := print_readable sig spell n program (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp hr).1).1
+      exact ⟨_, by simp only [printAction, hp] <;> rfl⟩
+    | .forkScoped program _ => by
+      obtain ⟨p, hp⟩ := print_readable sig spell n program (Bool.and_eq_true_iff.mp hr).1
+      exact ⟨_, by simp only [printAction, hp] <;> rfl⟩
+    | .runIn _ _ | .interrupt _ | .awaitAll _ | .getContext | .getId | .closeScope _ _ => ⟨_, rfl⟩
+    | .interruptAll _ who => by cases who <;> exact ⟨_, rfl⟩
+    | .raceAll entrants => by
+      obtain ⟨es, hes⟩ := printEffs_readable sig spell n entrants hr
+      exact ⟨_, by simp only [printAction, hes] <;> rfl⟩
+    | .interruptScoped _ | .awaitAllFailFast _ | .snapshotChildren | .awaitNewChildren _
+    | .setContext _ => by cases hr
+end
+
+/-- A readable program shifted into an environment with one inserted slot prints
+and reads back as exactly the shifted program. This is an AST round trip under
+`LawfulSpelling`; it makes no claim about execution by a TypeScript host. -/
+theorem roundTrip_weaken {sig : Signature Op} {spell : String → List String → Option Op}
+    (hl : LawfulSpelling sig spell) {cut n : Nat} (hc : cut ≤ n) (program : Eff Op)
+    (hr : readable sig spell n program = true) :
+    roundTrip sig spell (n + 1) (Eff.weaken cut program) = .ok (Eff.weaken cut program) := by
+  have hw : readable sig spell (n + 1) (Eff.weaken cut program) = true := by
+    rw [readable_weaken hl hc, hr]
+  obtain ⟨x, hp⟩ := print_readable sig spell (n + 1) (Eff.weaken cut program) hw
+  exact roundTrip_eq hl hw hp
+
 end Effect4.Program

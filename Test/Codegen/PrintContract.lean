@@ -6,7 +6,7 @@ import TypeScript.Render
 # Print contract — the §5.1 spelling table, pinned byte for byte
 
 Plan: `docs/research/2026-09-04-ast-relation-plan.md` §5.1. One `#guard` per constructor of
-`Effect4.Program.Eff` (the 24 rows of `arms`), per statement form of a generator body, per
+`Effect4.Program.Eff` (the 27 rows of `arms`), per statement form of a generator body, per
 `awaitFiber` mode, per fork shape (both `daemon` values against all three `MaskMode`s), per
 refusal, and two for `printDecl`. Every pin is the rendered bytes of
 `TypeScript.Render.expr TypeScript.house0 0`, so the battery fails on a spelling change and

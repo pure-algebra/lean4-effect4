@@ -389,6 +389,111 @@ def Effs.toList {Op : Type} : Effs Op → List (Eff Op)
   | .nil => []
   | .cons head tail => head :: Effs.toList tail
 
+/-! ## Inserting an environment slot
+
+Variables are positions from the start of the environment. Inserting one slot at
+`cut` moves every old position at or above it, including local binders introduced
+inside the program. The cut stays fixed under those binders. Layer bodies use an
+independent empty environment, so a layer subterm is left unchanged.
+-/
+
+/-- The old position after inserting one slot at `cut`. -/
+def Var.weaken (cut index : Nat) : Nat := if index < cut then index else index + 1
+
+mutual
+  def Term.weaken (cut : Nat) : Term → Term
+    | .var index => .var (Var.weaken cut index)
+    | .lit value => .lit value
+    | .app atom args => .app atom (Terms.weaken cut args)
+
+  def Terms.weaken (cut : Nat) : Terms → Terms
+    | .nil => .nil
+    | .cons head tail => .cons (Term.weaken cut head) (Terms.weaken cut tail)
+end
+
+def CauseTerm.weaken (cut : Nat) : CauseTerm → CauseTerm
+  | .fail error => .fail (Term.weaken cut error)
+  | .die defect => .die (Term.weaken cut defect)
+  | .interrupt who => .interrupt (who.map (Term.weaken cut))
+  | .both left right => .both (CauseTerm.weaken cut left) (CauseTerm.weaken cut right)
+
+mutual
+  /-- Insert a slot into the program's surrounding positional environment. This
+  changes variable positions only; operations, service keys and closed layers stay
+  unchanged. Typing under the inserted environment is `effTy_weaken`. -/
+  def Eff.weaken {Op : Type} (cut : Nat) : Eff Op → Eff Op
+    | .succeed value => .succeed (Term.weaken cut value)
+    | .fail error => .fail (Term.weaken cut error)
+    | .failCause cause => .failCause (CauseTerm.weaken cut cause)
+    | .yieldError error => .yieldError (Term.weaken cut error)
+    | .sync thunk => .sync (Term.weaken cut thunk)
+    | .suspend body => .suspend (Eff.weaken cut body)
+    | .perform op request => .perform op (Term.weaken cut request)
+    | .bind first rest => .bind (Eff.weaken cut first) (Eff.weaken cut rest)
+    | .gen body => .gen (Stmts.weaken cut body)
+    | .catchCause body handler => .catchCause (Eff.weaken cut body) (Eff.weaken cut handler)
+    | .matchCause body onValue onCause =>
+      .matchCause (Eff.weaken cut body) (Eff.weaken cut onValue) (Eff.weaken cut onCause)
+    | .onExit body finalizer => .onExit (Eff.weaken cut body) (Eff.weaken cut finalizer)
+    | .exit body => .exit (Eff.weaken cut body)
+    | .uninterruptible body => .uninterruptible (Eff.weaken cut body)
+    | .interruptible body => .interruptible (Eff.weaken cut body)
+    | .branch test thenB elseB =>
+      .branch (Term.weaken cut test) (Eff.weaken cut thenB) (Eff.weaken cut elseB)
+    | .whileLoop initial test step body =>
+      .whileLoop (Term.weaken cut initial) (Term.weaken cut test)
+        (Term.weaken cut step) (Eff.weaken cut body)
+    | .yieldNow priority => .yieldNow priority
+    | .callback register request => .callback register (Term.weaken cut request)
+    | .awaitFiber fiber mode => .awaitFiber (Term.weaken cut fiber) mode
+    | .withFiber action => .withFiber (ActionTerm.weaken cut action)
+    | .scoped body => .scoped (Eff.weaken cut body)
+    | .acquireRelease acquire release =>
+      .acquireRelease (Eff.weaken cut acquire) (Eff.weaken cut release)
+    | .choose site left right => .choose site (Eff.weaken cut left) (Eff.weaken cut right)
+    | .provideLayer layer isLocal body => .provideLayer layer isLocal (Eff.weaken cut body)
+    | .service key => .service key
+    | .provideService key value body =>
+      .provideService key (Term.weaken cut value) (Eff.weaken cut body)
+
+  def Stmt.weaken {Op : Type} (cut : Nat) : Stmt Op → Stmt Op
+    | .bindYield effect => .bindYield (Eff.weaken cut effect)
+    | .yieldDiscard effect => .yieldDiscard (Eff.weaken cut effect)
+    | .ret value => .ret (Term.weaken cut value)
+    | .ifElse test thenB elseB =>
+      .ifElse (Term.weaken cut test) (Stmts.weaken cut thenB) (Stmts.weaken cut elseB)
+    | .whileTrue body => .whileTrue (Stmts.weaken cut body)
+    | .breakLoop => .breakLoop
+
+  def Stmts.weaken {Op : Type} (cut : Nat) : Stmts Op → Stmts Op
+    | .nil => .nil
+    | .cons head tail => .cons (Stmt.weaken cut head) (Stmts.weaken cut tail)
+
+  def Effs.weaken {Op : Type} (cut : Nat) : Effs Op → Effs Op
+    | .nil => .nil
+    | .cons head tail => .cons (Eff.weaken cut head) (Effs.weaken cut tail)
+
+  def ActionTerm.weaken {Op : Type} (cut : Nat) : ActionTerm Op → ActionTerm Op
+    | .fork program options => .fork (Eff.weaken cut program) options
+    | .forkIn program options scope =>
+      .forkIn (Eff.weaken cut program) options (Term.weaken cut scope)
+    | .forkScoped program options => .forkScoped (Eff.weaken cut program) options
+    | .runIn target scope => .runIn (Term.weaken cut target) (Term.weaken cut scope)
+    | .interrupt target => .interrupt (Term.weaken cut target)
+    | .interruptScoped target => .interruptScoped (Term.weaken cut target)
+    | .interruptAll targets who =>
+      .interruptAll (Term.weaken cut targets) (who.map (Term.weaken cut))
+    | .awaitAll targets => .awaitAll (Term.weaken cut targets)
+    | .awaitAllFailFast targets => .awaitAllFailFast (Term.weaken cut targets)
+    | .snapshotChildren => .snapshotChildren
+    | .awaitNewChildren snapshot => .awaitNewChildren (Term.weaken cut snapshot)
+    | .raceAll entrants => .raceAll (Effs.weaken cut entrants)
+    | .setContext context => .setContext (Term.weaken cut context)
+    | .getContext => .getContext
+    | .getId => .getId
+    | .closeScope scope exit => .closeScope (Term.weaken cut scope) (Term.weaken cut exit)
+end
+
 /-! ## The arms: constructor ↔ combinator ↔ primitive, with rc.112 lines -/
 
 /-- One row of the table. `primitive` names the `Effect4.Prim` constructor, the
@@ -425,17 +530,20 @@ def arms : List Arm :=
   , ⟨"withFiber", "Effect.withFiber", "Prim.withFiber", "internal/effect.ts:1147"⟩
   , ⟨"scoped", "Effect.scoped", "the region frames of compileRegion", "internal/effect.ts:3960"⟩
   , ⟨"acquireRelease", "Effect.acquireRelease", "uninterruptible + onExit over the scope", "internal/effect.ts:3978"⟩
-  , ⟨"choose", "(flows only; refused by the native printer)", "tape-answered at compile", "Effects.Flow.RawTerm.choose"⟩ ]
+  , ⟨"choose", "(flows only; refused by the native printer)", "tape-answered at compile", "Effects.Flow.RawTerm.choose"⟩
+  , ⟨"provideLayer", "Effect.provide", "scoped layer build + provideContext region", "internal/layer.ts:8-22"⟩
+  , ⟨"service", "Effect.service", "Prim.onSuccess (Prim.withFiber getCtx) serviceLookup", "internal/effect.ts:2059"⟩
+  , ⟨"provideService", "Effect.provideService", "updateContext region", "internal/effect.ts:2202-2232"⟩ ]
 
 /-- Every constructor has one arm and every arm one constructor. -/
 def constructorNames : List String :=
   ["succeed", "fail", "failCause", "yieldError", "sync", "suspend", "perform", "bind", "gen",
    "catchCause", "matchCause", "onExit", "exit", "uninterruptible", "interruptible", "branch",
    "whileLoop", "yieldNow", "callback", "awaitFiber", "withFiber", "scoped", "acquireRelease",
-   "choose"]
+   "choose", "provideLayer", "service", "provideService"]
 
 #guard arms.map Arm.constructor = constructorNames
-#guard constructorNames.length = 24
+#guard constructorNames.length = 27
 
 /-! ## The separation-4 receipts: first-order, decidable throughout -/
 

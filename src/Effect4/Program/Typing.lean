@@ -412,6 +412,112 @@ end
 /-- `typeOf` at the empty environment. -/
 def typeOf (sig : Signature Op) (program : Eff Op) : Option EffTy := effTy sig [] program
 
+/-! ### Inserting an environment slot -/
+
+private theorem lookup_weaken {α : Type} (pre post : List α) (inserted : α) (index : Nat) :
+    (pre ++ inserted :: post)[Var.weaken pre.length index]? = (pre ++ post)[index]? := by
+  induction pre generalizing index with
+  | nil => simp [Var.weaken]
+  | cons head pre ih =>
+    cases index with
+    | zero => simp [Var.weaken]
+    | succ index =>
+      by_cases h : index < pre.length
+      · simpa [Var.weaken, h] using ih index
+      · simpa [Var.weaken, h] using ih index
+
+mutual
+  /-- Inserting a slot preserves the whole term-typing result, including refusal. -/
+  theorem termTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty)
+      (term : Term) :
+      termTy sig (pre ++ inserted :: post) (Term.weaken pre.length term) =
+        termTy sig (pre ++ post) term :=
+    match term with
+    | .var index => lookup_weaken pre post inserted index
+    | .lit _ => rfl
+    | .app atom args => by
+      simp only [Term.weaken, termTy, termsTy_weaken sig pre post inserted args]
+
+  theorem termsTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty)
+      (terms : Terms) :
+      termsTy sig (pre ++ inserted :: post) (Terms.weaken pre.length terms) =
+        termsTy sig (pre ++ post) terms :=
+    match terms with
+    | .nil => rfl
+    | .cons head tail => by
+      simp only [Terms.weaken, termsTy, termTy_weaken sig pre post inserted head,
+        termsTy_weaken sig pre post inserted tail]
+end
+
+theorem causeTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty)
+    (cause : CauseTerm) :
+    causeTy sig (pre ++ inserted :: post) (CauseTerm.weaken pre.length cause) =
+      causeTy sig (pre ++ post) cause := by
+  induction cause with
+  | fail _ | die _ => simp only [CauseTerm.weaken, causeTy, termTy_weaken]
+  | interrupt who => cases who <;> simp only [CauseTerm.weaken, causeTy, Option.map,
+      termTy_weaken]
+  | both left right ihl ihr => simp only [CauseTerm.weaken, causeTy, ihl, ihr]
+
+mutual
+  /-- Inserting one slot preserves the entire typing result. Local binders still
+  append after the old environment; closed layer bodies retain their empty one.
+  This equality covers ill-typed programs as well as successful typings. -/
+  theorem effTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty)
+      (program : Eff Op) :
+      effTy sig (pre ++ inserted :: post) (Eff.weaken pre.length program) =
+        effTy sig (pre ++ post) program :=
+    match program with
+    | .succeed _ | .fail _ | .failCause _ | .yieldError _ | .sync _ | .suspend _
+    | .perform _ _ | .bind _ _ | .gen _ | .catchCause _ _ | .matchCause _ _ _
+    | .onExit _ _ | .exit _ | .uninterruptible _ | .interruptible _ | .branch _ _ _
+    | .whileLoop _ _ _ _ | .yieldNow _ | .callback _ _ | .awaitFiber _ _
+    | .withFiber _ | .scoped _ | .acquireRelease _ _ | .choose _ _ _
+    | .provideLayer _ _ _ | .service _ | .provideService _ _ _ => by
+      simp only [Eff.weaken, effTy, termTy_weaken, causeTy_weaken,
+        List.append_assoc, List.cons_append, effTy_weaken, stmtsTy_weaken, actionTy_weaken]
+
+  theorem stmtsTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty)
+      (inLoop : Bool) (body : Stmts Op) :
+      stmtsTy sig (pre ++ inserted :: post) inLoop (Stmts.weaken pre.length body) =
+        stmtsTy sig (pre ++ post) inLoop body :=
+    match body with
+    | .nil => rfl
+    | .cons (.ret _) rest => by
+      cases rest <;> simp only [Stmts.weaken, Stmt.weaken, stmtsTy, termTy_weaken]
+    | .cons (.bindYield _) _ | .cons (.yieldDiscard _) _
+    | .cons (.ifElse _ _ _) _ | .cons (.whileTrue _) _ | .cons .breakLoop _ => by
+      simp only [Stmts.weaken, Stmt.weaken, stmtsTy, termTy_weaken,
+        List.append_assoc, List.cons_append, effTy_weaken, stmtsTy_weaken]
+
+  theorem effsTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty)
+      (entrants : Effs Op) :
+      effsTy sig (pre ++ inserted :: post) (Effs.weaken pre.length entrants) =
+        effsTy sig (pre ++ post) entrants :=
+    match entrants with
+    | .nil => rfl
+    | .cons _ _ => by simp only [Effs.weaken, effsTy, effTy_weaken, effsTy_weaken]
+
+  theorem actionTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty)
+      (action : ActionTerm Op) :
+      actionTy sig (pre ++ inserted :: post) (ActionTerm.weaken pre.length action) =
+        actionTy sig (pre ++ post) action :=
+    match action with
+    | .interruptAll _ who => by
+      cases who <;> simp only [ActionTerm.weaken, actionTy, Option.map, termTy_weaken]
+    | .fork _ _ | .forkIn _ _ _ | .forkScoped _ _ | .runIn _ _ | .interrupt _
+    | .interruptScoped _ | .awaitAll _ | .awaitAllFailFast _ | .snapshotChildren
+    | .awaitNewChildren _ | .raceAll _ | .setContext _ | .getContext | .getId
+    | .closeScope _ _ => by
+      simp only [ActionTerm.weaken, actionTy, termTy_weaken, effTy_weaken, effsTy_weaken]
+end
+
+/-- A closed program may be placed under a new surrounding binder without
+changing its type. The inserted slot is unused by the shifted program. -/
+theorem typeOf_weaken (sig : Signature Op) (inserted : Ty) (program : Eff Op) :
+    effTy sig [inserted] (Eff.weaken 0 program) = typeOf sig program :=
+  effTy_weaken sig [] [] inserted program
+
 /-! ### The row plane sees no duplicate (the join review, 2026-09-08) -/
 
 /-- Discharging a key twice discharges it once. -/
