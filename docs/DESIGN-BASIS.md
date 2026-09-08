@@ -487,7 +487,7 @@ this list.
 ### DB-14 — one logical clock, a duration decision, staged fires
 
 Status: adopted 2026-09-08 (the timer, A4: the three commits of
-`docs/research/2026-09-08-timer-dispatch.md`).
+`docs/research/2026-09-08-timer-dispatch.md` (untracked working note)).
 
 Physical time is not modelled and never will be (DB-04 forbids fuel as time; wall-clock, drift,
 the browser's floor and `setTimeout`'s ceiling are host facts). Logical time is one store on
@@ -504,7 +504,7 @@ never a timestamp — and the machine runs the staged loop (`advanceState`): fir
 sleep (`RunInterp.clockStep`, the one new interpreter field), resume it, flush the
 dispatchers, repeat, then set the clock to the end. A sleep a woken fiber registers that is
 due by the end fires in the same advance (finding 4 of
-`docs/research/2026-09-04-timer-semantics-and-proofs.md`). A fired sleep resumes inline
+`docs/research/2026-09-04-timer-semantics-and-proofs.md` (untracked working note)). A fired sleep resumes inline
 (`WakeMode.now`, as a Deferred's completion does); the latch-posted spelling rc.112 uses there
 is Latch's to land. Two rows reach the store: `sleep d` with `0 < d < ∞` registers
 (`Name.registerSleep`, cancel `Name.cancelSleep` = `clearTimeout`), and `clockNow` reads

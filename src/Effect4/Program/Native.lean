@@ -5,7 +5,7 @@ import Effect4.Machine.Stores
 # Syntax.Native — the native row alphabet over the stores (lane A3, first cut)
 
 Plan: `docs/research/2026-09-04-eff-compile.md` §1-§2. The native route performs the
-standard library's store operations (`src/Effect4/StdLib/Links.lean`: `Ref.*`, `Deferred.*`,
+standard library's store operations (`git:62c04d9:src/Effect4/StdLib/Links.lean`: `Ref.*`, `Deferred.*`,
 `Scope.make`) against the reference machine's stores (`src/Effect4/Machine/Stores.lean`). This
 module owns:
 

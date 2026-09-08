@@ -16,7 +16,7 @@ may be marked active: the source of truth the application reads and writes.
 every emitter reads, so an entity refers to another by `Schema.reference name`
 and the closed world is the domain.
 
-Each carrier follows `src/Effect4/Arch/Views.lean`: a first-order structure, a
+Each carrier follows `git:62c04d9:src/Effect4/Arch/Views.lean`: a first-order structure, a
 `json` projection, and a `Document` view whose `Arch.accepts` receipt is a
 `#guard` on the fixtures below. There is no `Canonical` instance: the CAS trait
 made `Canonical` a class with three laws over the value tree
@@ -70,7 +70,7 @@ retired that module with its JSON tag alphabet
 library — `Entity.json` below, `Api.repJson` and `Agent.persistedJson`, both of which import
 this module — so it lands here, in the namespace it always had, and those readers still spell
 it `Arch.Representation.toJson?`. Its sibling `Document.toJson?` has one reader,
-`Test/Evidence/ArchContract.lean:78`, which reaches it through `src/Effect4/Arch/Views.lean`
+`git:62c04d9:Test/Evidence/ArchContract.lean:78`, which reaches it through `git:62c04d9:src/Effect4/Arch/Views.lean`
 and never through this library; it is owed there. -/
 
 namespace Effect4.Arch

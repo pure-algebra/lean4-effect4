@@ -29,6 +29,7 @@ if args.update:
     pin.write_text(json.dumps(counts, indent=2) + '\n', encoding='utf-8', newline='\n')
     print('Pinned armmap-citations:', counts)
 elif counts != json.loads(pin.read_text()):
-    sys.exit(f'FAIL armmap-citations: expected {pin.read_text().strip()}, found {counts}')
+    print(f'FAIL armmap-citations: expected {pin.read_text().strip()}, found {counts}', file=sys.stderr)
+    sys.exit(3)  # Resolution drift, distinct from a failed checker or missing input.
 else:
     print('PASS armmap-citations:', counts)

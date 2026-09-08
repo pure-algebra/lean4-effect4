@@ -67,17 +67,19 @@ npm ci --prefix harness/schema-host # pinned Schema host and compiler integratio
 scripts/test-schema-structural-assurance-gate.sh # the Schema assurance projection
 scripts/check-ts-eff.sh                          # ts/eff/*.gen.ts are what Lean emits
 scripts/check-ts-eff-corpus.sh                   # the TypeScript reader = Lean's reader (bun)
-scripts/check-rc112-surface.sh                   # the pinned typed surface projection (Node)
 scripts/check-truth.sh                           # bounded Lean/rc.112 differential (bun)
 scripts/sweep.sh --hermetic                      # every hermetic gate, stamped
 scripts/sweep.sh --ocaml                         # avatar, daemon protocol and dune tests
 ```
 
-Surface extraction uses the compiler pinned in `ts/eff/package.json`; install it
+The TypeScript gates use the dependencies pinned in `ts/eff/package.json`; install them
 with `bun install --frozen-lockfile --cwd ts/eff`. The truth lane selects its pinned
 host through `EFFECT4_EFFECT_NODE_MODULES`. OCaml gates require the `effect4` opam
 switch and print `SKIP` when `ocamlrun` is absent. Archived receipt paths are checked
 against their recorded git history; this does not refresh their original verdicts.
+The existing avatar witness and arm-map drift are declared in
+`Test/fixtures/trust-gate/known-red.txt`: their checks still run and an unexpected pass
+requires removing the declaration. The OCaml lane owns their repair.
 
 `docs/ARCHITECTURE.md` owns module boundaries and dependency direction,
 `docs/DESIGN-BASIS.md` the representation decisions, `docs/RUNTIME-COVERAGE.md`

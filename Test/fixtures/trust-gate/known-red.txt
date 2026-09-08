@@ -26,9 +26,8 @@
 #   # gate: <name>     a sweep gate (scripts/sweep.sh's table) rather than a
 #                      Lean module, for a gate that is red for a declared
 #                      reason. The gate still runs; its owning script asks this
-#                      file whether the failure was declared. None is declared
-#                      today -- the OCaml avatar gates stay ordinary green gates
-#                      until H2's verified replacement retires them.
+#                      file whether the failure was declared. The two avatar
+#                      debts below remain owed to the OCaml cutover lane.
 #
 # `scripts/lib/known-red.sh` is the reader and the judge; per entry it reports
 # `red as declared`, `UNEXPECTED PASS` or `not built`, and it refuses on an
@@ -93,3 +92,11 @@ Test.Counterexamples.Surface.Derive
 # reason: frozen Handler packet; red until src/Effect4/Surface/Handler.lean exists (plan §13.7 ruling 7, before wave 2d)
 Test.Surface.HandlerFitsContract
 Test.Counterexamples.Surface.HandlerFits
+
+# Owner amendment, 2026-09-08: both gates were red at 62c04d9 before release cleanup.
+# Keep running them; an unexpected pass refuses until the entry is removed deliberately.
+# No machine fingerprint or arm-map resolution triple is refreshed by the cleanup.
+# reason: handwritten avatar predates the join, scheduler and timer; clause/witness coverage and machine fingerprints require the OCaml lane's cutover repair
+# gate: avatar-witnesses
+# reason: the same pre-existing machine edits moved the avatar's cited definitions; arm-map resolution drift remains owed to the OCaml lane
+# gate: armmap-citations

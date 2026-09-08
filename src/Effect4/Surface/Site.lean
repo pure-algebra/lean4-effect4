@@ -445,7 +445,7 @@ def pageRep : Representation :=
 
 /-- The site view, for registration at `["surface", "site"]`.
 
-`src/Effect4/Evidence/SurfaceViews.lean` is wave 1a's and this wave does not edit it; the
+`git:62c04d9:src/Effect4/Evidence/SurfaceViews.lean` is wave 1a's and this wave does not edit it; the
 registration of this document is an owed row. -/
 def siteDoc : Document :=
   { representation :=

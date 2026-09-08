@@ -73,7 +73,6 @@ import Test.Store.WordContract
 import Test.Store.TraitContract
 import Test.Store.ProbeContract
 import Test.Store.DerivedCheck
-import Test.Evidence.ArchContract
 import Test.Codegen.PrintContract
 import Test.Codegen.ReadContract
 import Test.Codegen.ReadAxiomReport
@@ -103,10 +102,8 @@ import Test.Program.ProvisionContract
 import Test.Program.ProvisionAxiomReport
 import Test.Program.ConfigContract
 import Test.Program.ConfigAxiomReport
-import Test.Surface.ObservabilityAxiomReport
 import Test.Surface.ProvisionContract
 import Test.Surface.ProvisionAxiomReport
-import Test.Codegen.LayerPrintAxiomReport
 import Test.Api.ApiContract
 import Test.Machine.Fuzz
 import Test.Audit.RuntimeCoverage

@@ -20,7 +20,7 @@ template by its text, and the join to the real endpoint table is done by
 keeps this module buildable beside the api module rather than behind it, and it
 is the same shape §14.2 gives every cross-carrier fact.
 
-Each carrier follows `src/Effect4/Arch/Views.lean` and `src/Effect4/Surface/Entity.lean`:
+Each carrier follows `git:62c04d9:src/Effect4/Arch/Views.lean` and `src/Effect4/Surface/Entity.lean`:
 a first-order structure, a `json` projection, a `Document` view whose
 `Arch.accepts` receipt is a `#guard` on the fixture, and a well-formedness
 built from §14.2's named clauses so that `check` answers the *first* refusal
@@ -1199,7 +1199,7 @@ def provideRep : Representation :=
 
 /-- The deployment view, for registration at `["surface", "deploy"]`.
 
-`src/Effect4/Evidence/SurfaceViews.lean` is wave 1a's and this wave does not edit it; the
+`git:62c04d9:src/Effect4/Evidence/SurfaceViews.lean` is wave 1a's and this wave does not edit it; the
 registration of this document is an owed row. -/
 def deployDoc : Document :=
   { representation :=

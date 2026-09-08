@@ -13,7 +13,7 @@ first-order description that the toolkit module and the `tools/list`,
 `resources/list` and `prompts/list` payloads of `src/Effect4/Codegen/Mcp.lean`
 are projections of.
 
-The shape is `src/Effect4/Arch/Views.lean`'s and `src/Effect4/Surface/Entity.lean`'s: a
+The shape is `git:62c04d9:src/Effect4/Arch/Views.lean`'s and `src/Effect4/Surface/Entity.lean`'s: a
 first-order structure, a `check` that is a list of named clauses read left to
 right and answers the *first* refusal (`src/Effect4/Surface/Refusal.lean`), a
 `WellFormed` that is `check = .ok ()` and therefore one `Decidable` equation, a
@@ -697,7 +697,7 @@ def mcpServerRep : Representation :=
     , Schema.property "prompts" (Schema.array (Schema.reference "McpPrompt")) ]
 
 /-- The agent-server view, for registration at `["surface", "mcp"]`. The
-registration itself is `src/Effect4/Evidence/SurfaceViews.lean`'s and is not made here. -/
+registration itself is `git:62c04d9:src/Effect4/Evidence/SurfaceViews.lean`'s and is not made here. -/
 def mcpDoc : Document :=
   { representation := mcpServerRep
     references :=

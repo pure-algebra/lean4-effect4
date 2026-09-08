@@ -99,17 +99,8 @@ import Effect4.Machine.Context
 -- (`Machine/Layer.lean`) retired with the join of 2026-09-07: layers are program subterms
 -- addressed by path and build on the compile route (`Program/Compile.lean`).
 import Effect4.Machine.ContextValue
--- The middle tier (2026-09-04): architecture views as Effect Schema documents
--- with payloads projected from the proof carriers, the structural acceptance
--- checker, and the pinned standard library as store entries. A schema is store
--- content through the store's own derived `Canonical Document` above; no JSON
--- alphabet of its own.
+-- Structural acceptance of persisted Schema documents.
 import Effect4.Arch.Accepts
-import Effect4.Arch.Views
-import Effect4.StdLib.Entry
-import Effect4.StdLib.Derived
-import Effect4.StdLib.Rc112
-import Effect4.StdLib.Links
 -- The Surface library (docs/research/2026-09-04-surface-library-plan.md), wave
 -- 1a: the substrate. `Kind` is the typed embedding, a representation with a
 -- kernel-checked kind, so an ill-kinded slot of a surface is unrepresentable
@@ -121,8 +112,7 @@ import Effect4.StdLib.Links
 -- with their clause-by-clause `check`, their `Arch` document views and their
 -- store content; `JsonSchema` is draft 2020-12 in both directions on one
 -- fragment, read off rc.112's own compiler; `Emit` is the rule census and the
--- stance, where every rule is `emitted` until its receipt lands; and `Views` is
--- the surface store.
+-- stance, where every rule is `emitted` until its receipt lands.
 --
 -- Waves 2a to 2c are the carriers the plan's §2 names. `Api` is the HTTP
 -- surface, its responses indexed by status and its path algebra decided over
@@ -151,7 +141,6 @@ import Effect4.Ingest.Ingest
 import Effect4.Ingest.JsonSchema
 import Effect4.Ingest.Wrangler
 import Effect4.Ingest.Mcp
-import Effect4.Evidence.SurfaceViews
 import Effect4.Surface.Api
 import Effect4.Codegen.HttpApi
 import Effect4.Surface.Agent
@@ -174,20 +163,6 @@ import Effect4.Codegen.SiteRoutes
 -- The application bundle: every carrier of one application under one closed world, its
 -- check (the parts, then the joins) and its artefact tree at the plan's paths.
 import Effect4.Codegen.App
--- The characterized components lane (workshop/Char/): a component is its kinds,
--- its failure set and the order they induce, so a lossy table still gets `order`
--- from one generic theorem rather than a hand-written word induction. `Queue` is
--- the first port, the rc.112 `Queue.ts` step emitted arm by arm and checked
--- against the source theorems it claims, with its reachability invariant, its
--- crash reading, its graded axes, and its acceptance and mutant-kill suites
--- decided in the kernel so a survivor is a build failure. `Conformance`,
--- `Manifest` and `Evidence` are the lane's census, its component table and its
--- receipts.
-import Effect4.Char.Conformance
-import Effect4.Char.Derived
-import Effect4.Char.Manifest
-import Effect4.Char.Queue.Grade
-import Effect4.Char.Queue.Mutants
 -- The AST relation (docs/research/2026-09-04-ast-relation-plan.md), lane A1:
 -- the Effect TS program syntax `Eff` and its typing, first-order and
 -- decidable throughout; the printer, the compile and the parser follow. `Eff`
@@ -229,13 +204,6 @@ import Effect4.Program.Config
 -- The configuration values as an exact image of the shared carrier with their six-frame
 -- admission (U0; U1c makes them the carrier plus the admission).
 import Effect4.Program.ConfigValue
--- The observability surface at the pin: the OTLP resource, span, log and metric records as
--- first-order carriers, the four exporters' `OTEL_*` reads as one `ConfigTerm` whose residual
--- is the operator contract, and W3C/b3 trace-context propagation as a codec with a round trip.
-import Effect4.Surface.Observability
--- The layer printer: a `LayerTerm` and an `App` as the rc.112 `Layer.*` / `Effect.provide`
--- combinators, syntax never text, with the declared `Layer.Layer<ROut, E, RIn>` types.
-import Effect4.Codegen.Layer
 -- The canonical bytes of a program (2026-09-04; one trait since 2026-09-05): the
 -- generated `Canonical (Eff NativeOp)` and its family, then the Wire face over
 -- it — `encodeProgram`, `decodeProgram`, the round trip and exactness as

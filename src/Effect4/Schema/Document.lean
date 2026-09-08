@@ -75,7 +75,7 @@ constructed, so the raw-JSON layer must exist first.
 
 The vendored Foldlab tree is rich here and is `evidenceOnly`; reuse the proof
 shapes, never the carrier. Verified spans, all under
-`vendor/foldlab/pinned/tree/library/cas/`:
+`git:62c04d9:vendor/foldlab/pinned/tree/library/cas/`:
 
 - `Cas/Schema/Guarded.lean:191-193` — the naive checker used by the bounded
   cost witness; the asymptotic theorem remains open;

@@ -152,7 +152,7 @@ end Ty
 
 `Eff` is parameterised by `Op`, the positions of a table of rows. The service route's
 table is a family's rows; the native route's is the standard-library links
-(`src/Effect4/StdLib/Links.lean`) whose model reference is a store operation, an async
+(`git:62c04d9:src/Effect4/StdLib/Links.lean`) whose model reference is a store operation, an async
 registration, or a Layer/Context program. `Row` is what typing and the compile read off a
 position. -/
 
@@ -408,7 +408,7 @@ def arms : List Arm :=
   , ⟨"yieldError", "yield* new E()", "Prim.yieldableError", "internal/effect.ts:1226"⟩
   , ⟨"sync", "Effect.sync", "Prim.sync", "internal/effect.ts:929"⟩
   , ⟨"suspend", "Effect.suspend", "Prim.suspend", "internal/effect.ts:1093"⟩
-  , ⟨"perform", "yield* op(x) (by the row's kind)", "Prim.sync | Prim.async | a nested body", "src/Effect4/StdLib/Links.lean"⟩
+  , ⟨"perform", "yield* op(x) (by the row's kind)", "Prim.sync | Prim.async | a nested body", "git:62c04d9:src/Effect4/StdLib/Links.lean"⟩
   , ⟨"bind", "Effect.flatMap", "Prim.onSuccess", "internal/effect.ts:1590"⟩
   , ⟨"gen", "Effect.gen(function* () { … })", "Prim.iterator", "internal/effect.ts:1184"⟩
   , ⟨"catchCause", "Effect.catchCause", "Prim.onFailure", "internal/effect.ts:2417"⟩
