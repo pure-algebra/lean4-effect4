@@ -312,6 +312,33 @@ theorem denoteR_acquireRelease (a r : NativeEff) (h : p.fuel ≠ 0) :
   | zero => exact (h hf).elim
   | succ f => rw [denoteR, hf]; try rfl
 
+-- the join's three constructors
+theorem denoteR_provideLayer (l : LayerTerm NativeOp) (i : Bool) (b : NativeEff) (h : p.fuel ≠ 0) :
+    denoteR root (.provideLayer l i b) p =
+      suspendR p (constructR fun completed =>
+        provideLayerR (fun q m s => denoteLayer root l q m s) (fun q => denoteR root b q)
+          (fun q => inlineYield b q) i { p with completed }) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => rw [denoteR, hf]; try rfl
+
+theorem denoteR_service (key : ServiceKey) (h : p.fuel ≠ 0) :
+    denoteR root (.service key) p =
+      (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun v => serviceLookupR key v) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => rw [denoteR, hf]; try rfl
+
+theorem denoteR_provideService (key : ServiceKey) (value : Term) (b : NativeEff)
+    (h : p.fuel ≠ 0) :
+    denoteR root (.provideService key value b) p =
+      (match evalTerm p.env value with
+       | some v => updateContextR (.provideService key v) (denoteR root b (p.child 0))
+       | none => .pure badShapeExit) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => rw [denoteR, hf]; try rfl
+
 end denoteEqs
 
 /-! ## The compile, the arms `Agreement.lean` does not spell -/
@@ -488,6 +515,13 @@ theorem prepareR_denoteR (root : NativeEff) (e : NativeEff) (p : Point)
         rw [denoteR_withFiber root a p hpos]; exact prepareR_denoteAction root p completed
       | «scoped» b => rw [denoteR_scoped root b hpos]; rfl
       | acquireRelease a r => rw [denoteR_acquireRelease root a r hpos, prepareR_guardR_bind]; rfl
+      | provideLayer l i b => rw [denoteR_provideLayer root l i b hpos]; rfl
+      | service key => rw [denoteR_service root key hpos, prepareR_guardR_bind]; rfl
+      | provideService key value b =>
+        rw [denoteR_provideService root key value b hpos]
+        cases evalTerm p.env value with
+        | some v => unfold updateContextR; rw [prepareR_guardR_bind]; rfl
+        | none => rfl
       | choose site l r =>
         rw [denoteR_choose root site l r p hpos]
         cases p.tape with
@@ -798,6 +832,711 @@ theorem acquireIn_intro (root : NativeEff) (p : Point) (ctx : Ctx)
       simp only [seqR, hsc, prepareR_pure]
       exact codeMeans_badShape root
 
+/-! ## The join: `Effect.provide`, `Effect.service`, `Effect.provideService`, `Layer.build`
+
+Step by step as `acquireRelease` (V1): one lemma per named continuation, the layer build by
+structural recursion on the layer term (`layer_intro`), the memo protocol's three finalizers
+proved here so the build needs nothing of `Simulation/Hooks.lean`. -/
+
+/-- The stores' `closeIfLast` on anything but a scope handle: done (`Layer.ts:408`). -/
+theorem contAOf_closeIfLast_other (ex : ExitV) (v : Val) (hne : ∀ s, v ≠ Val.scopeHandle s) :
+    Effect4.Machine.contAOf (Name.closeIfLast ex) v = Prim.success Val.unit := by
+  unfold Effect4.Machine.contAOf
+  revert hne
+  split <;> intro hne <;> first
+    | rfl
+    | contradiction
+    | exact absurd rfl (hne _)
+    | (rename_i heq; exact absurd heq (hne _))
+    | simp_all
+
+/-- `fromBuild`'s `onExit` (`Layer.ts:343`): close the layer scope on failure only. -/
+theorem closeChildOnFailure_means (root : NativeEff) (child : Nat) (ex : ExitV) :
+    CodeMeans root (embed (finProgram (.closeChildOnFailure child) ex))
+      (denoteFin (.closeChildOnFailure child) ex) := by
+  cases ex with
+  | failure cause =>
+    simp only [finProgram, embed, denoteFin]
+    exact CodeMeans.actCloseScope _ _ _ _ rfl delivers_pure
+  | success v =>
+    simp only [finProgram, embed, denoteFin]
+    exact CodeMeans.success _
+
+/-- The memo entry finalizer (`Layer.ts:401-410`): `observers--`; the last observer's release
+answers the layer scope, closed with the exit. -/
+theorem memoEntry_means (root : NativeEff) (layer : LayerId) (memoMap : MemoMapId) (ex : ExitV) :
+    CodeMeans root (embed (finProgram (.memoEntry layer memoMap) ex))
+      (denoteFin (.memoEntry layer memoMap) ex) := by
+  simp only [finProgram, embed, denoteFin]
+  rw [guardR_bind]
+  refine CodeMeans.onSuccess _ _ _ (storeR (.memoRelease layer memoMap)) _
+    (CodeMeans.syncStore _ _ (successV root)) ?_ rfl (fun _ => rfl)
+  intro completed v
+  simp only [seqR]
+  show CodeMeans root (embed (Effect4.Machine.contAOf (Name.closeIfLast ex) v)) _
+  cases hs : Val.scope? v with
+  | some s =>
+    have hv := Val.scope?_exact hs
+    subst hv
+    show CodeMeans root (embed (Prim.withFiber (Thunk.act (ActionName.closeScope s ex)))) _
+    exact CodeMeans.actCloseScope _ _ _ _ rfl delivers_pure
+  | none =>
+    rw [contAOf_closeIfLast_other ex v (Val.scope?_none hs)]
+    simp only [embed, prepareR_pure]
+    exact CodeMeans.success _
+
+/-- `memoMapBuild`'s `onExit` (`Layer.ts:414-417`): the exit stored, the Deferred completed. -/
+theorem memoDone_means (root : NativeEff) (layer : LayerId) (memoMap : MemoMapId) (ex : ExitV) :
+    CodeMeans root (embed (finProgram (.memoDone layer memoMap) ex))
+      (denoteFin (.memoDone layer memoMap) ex) := by
+  simp only [finProgram, embed, denoteFin]
+  exact CodeMeans.syncStore _ _ (successV root)
+
+/-- A region under the finalizer that restores the previous context (`updateContext`,
+`internal/effect.ts:2092-2095`): `release_intro` on any region. -/
+theorem region_intro (root : NativeEff) (body : Region) (previous : Ctx) (r : RProgram)
+    (hb : CodeMeans root (regionCode root body) r) :
+    CodeMeans root (Prim.onExit (regionCode root body) (.restoreCtx previous) false)
+      (onExitR r fun _ => fiberValR (.setContext previous) rfl) := by
+  unfold onExitR
+  rw [guardR_bind]
+  refine CodeMeans.onExit _ _ _ r
+    (fun ex => finalizerR ex (fiberValR (.setContext previous) rfl)) hb ?_ (fun _ _ => rfl) rfl
+    (fun _ => rfl)
+  intro completed ex program hprog
+  have hp' : Prim.withFiber (EffThunk.setCtx previous) = program := Option.some.inj hprog
+  rw [← hp']
+  refine finalizer_intro root completed ex ?_
+  exact CodeMeans.actSetContext _ _ _ rfl (successV root)
+
+/-- `updateContext(self, f)` (`internal/effect.ts:2087-2096`): the context read, the identity
+shortcut or the set-and-restore region. -/
+theorem updateContext_intro (root : NativeEff) (u : Env.ContextUpdate) (body : Region)
+    (r : RProgram) (hb : CodeMeans root (regionCode root body) r) :
+    CodeMeans root (updateContextAt u body) (updateContextR u r) := by
+  unfold updateContextAt updateContextR
+  rw [guardR_bind]
+  refine CodeMeans.onSuccess _ _ _ (fiberValR .getContext rfl) _
+    (CodeMeans.actGetContext _ _ rfl (successV root)) ?_ rfl (fun _ => rfl)
+  intro completed v
+  show CodeMeans root (Program.contAOf root (.updateThen u body) v) _
+  rw [contAOf_updateThen]
+  unfold updateThenK
+  simp only [seqR]
+  cases hctx : Val.context? v with
+  | some prev =>
+    dsimp only
+    by_cases hid : updateKeepsIdentity u prev.services = true
+    · simp only [hid, eq_self_iff_true, ↓reduceIte]
+      exact hb.prepare completed
+    · simp only [hid, Bool.false_eq_true, ↓reduceIte]
+      rw [prepareR_guardR_bind, guardR_bind]
+      refine CodeMeans.onSuccess _ _ _
+        (prepareR completed
+          (fiberValR (.setContext (Ctx.withServices (u.apply prev.services))) rfl)) _
+        (CodeMeans.actSetContext _ _ _ rfl (successV root)) ?_ rfl (fun _ => rfl)
+      intro completed' _
+      show CodeMeans root (Program.contAOf root (.bodyThen body prev) _) _
+      rw [contAOf_bodyThen]
+      simp only [seqR]
+      exact (region_intro root body prev r hb).prepare completed'
+  | none => exact codeMeans_badShape root
+
+/-- `scopeAddFinalizerExit(scope, fin)` (`internal/effect.ts:3847-3858`): the registration,
+then unit, or the finalizer now when the scope had already closed. -/
+theorem scopeAdd_intro (root : NativeEff) (scope : Nat) (fin : FinName)
+    (hfin : ∀ ex, CodeMeans root (embed (finProgram fin ex)) (denoteFin fin ex)) :
+    CodeMeans root (scopeAddAt scope fin) (scopeAddR scope fin) := by
+  unfold scopeAddAt scopeAddR
+  rw [guardR_bind]
+  refine CodeMeans.onSuccess _ _ _ (storeR (.scopeAdd scope fin)) _
+    (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
+  intro completed w
+  show CodeMeans root (Program.contAOf root (.afterScopeAdd Val.unit fin) w) _
+  rw [contAOf_afterScopeAdd]
+  simp only [seqR]
+  by_cases hw : w = Val.unit
+  · rw [if_pos hw, if_pos hw, prepareR_pure]
+    exact CodeMeans.success _
+  · rw [if_neg hw, if_neg hw]
+    cases hex : exitOfVal w with
+    | some ex =>
+      dsimp only
+      rw [prepareR_guardR_bind, guardR_bind]
+      refine CodeMeans.onSuccess _ _ _ (prepareR completed (denoteFin fin ex)) _
+        ((hfin ex).prepare _) ?_ rfl (fun _ => rfl)
+      intro completed' _
+      show CodeMeans root (Prim.success Val.unit) _
+      simp only [seqR, prepareR_pure]
+      exact CodeMeans.success _
+    | none => exact codeMeans_badShape root
+
+/-- `fromBuild` (`Layer.ts:333-345`): the layer scope forked from the caller's, the inner build
+inside it under the finalizer that closes it on failure. -/
+theorem fromBuild_intro (root : NativeEff) (q : Point) (m : MemoMapId) (scope : Nat)
+    (innerR : Nat → RProgram)
+    (hinner : ∀ child, CodeMeans root (innerLayerAt root q m child) (innerR child)) :
+    CodeMeans root
+      (Prim.onSuccess
+        (Prim.sync (EffThunk.op (SyncOp.scopeFork scope FinalizerStrategy.sequential)))
+        (.fromBuildThen q m))
+      (fromBuildR scope innerR) := by
+  unfold fromBuildR
+  rw [guardR_bind]
+  refine CodeMeans.onSuccess _ _ _ (storeR (.scopeFork scope .sequential)) _
+    (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
+  intro completed v
+  simp only [seqR]
+  cases hs : Val.scope? v with
+  | some child =>
+    have hv := Val.scope?_exact hs
+    subst hv
+    show CodeMeans root (Program.contAOf root (.fromBuildThen q m) (Val.scopeHandle child)) _
+    rw [contAOf_fromBuildThen_scope]
+    dsimp only
+    unfold onExitR
+    rw [prepareR_guardR_bind, guardR_bind]
+    refine CodeMeans.onExit _ _ _ (prepareR completed (innerR child))
+      (fun ex => finalizerR ex (denoteFin (.closeChildOnFailure child) ex))
+      ((hinner child).prepare _) ?_ (fun _ _ => rfl) rfl (fun _ => rfl)
+    intro completed' ex program hprog
+    have hp' : embed (finProgram (.closeChildOnFailure child) ex) = program :=
+      Option.some.inj hprog
+    rw [← hp']
+    exact finalizer_intro root completed' ex ((closeChildOnFailure_means root child ex).prepare _)
+  | none =>
+    show CodeMeans root (Program.contAOf root (.fromBuildThen q m) v) _
+    rw [contAOf_fromBuildThen_other root q m v (Val.scope?_none hs)]
+    simp only [prepareR_pure]
+    exact codeMeans_badShape root
+
+/-- `getOrElseMemoize` (`Layer.ts:445-457`): the counted suspend, the lookup, a hit's
+registration and await, or `memoMapBuild` over the construction. -/
+theorem memoize_intro (root : NativeEff) (q : Point) (m : MemoMapId) (scope : Nat)
+    (constructionR : Nat → RProgram)
+    (hcons : ∀ layerScope,
+      CodeMeans root (constructionAt root q layerScope) (constructionR layerScope)) :
+    CodeMeans root (Prim.suspend (EffThunk.memoLookup q m scope))
+      (memoizeR q m scope constructionR) := by
+  unfold memoizeR suspendR
+  refine CodeMeans.suspendMemo q m scope _ fun completed => ?_
+  rw [suspendBodyAt_memoLookup, prepareR_guardR_bind, guardR_bind]
+  refine CodeMeans.onSuccess _ _ _ (prepareR completed (storeR (.memoGet q.path m))) _
+    (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
+  intro completed' v
+  simp only [seqR]
+  cases hhit : Val.memoHit? v with
+  | some co =>
+    obtain ⟨cell, owner⟩ := co
+    have hv := Val.memoHit?_exact hhit
+    subst hv
+    show CodeMeans root
+      (Program.contAOf root (.memoize q m scope) (.pair (Val.promise cell) (Val.memoMap owner))) _
+    rw [contAOf_memoize_hit]
+    dsimp only
+    rw [prepareR_guardR_bind, guardR_bind]
+    refine CodeMeans.onSuccess _ _ _
+      (prepareR completed' (scopeAddR scope (.memoEntry q.path owner))) _
+      ((scopeAdd_intro root scope _ (memoEntry_means root _ _)).prepare _) ?_ rfl (fun _ => rfl)
+    intro completed'' _
+    show CodeMeans root (Program.contAOf root (.awaitPromise cell) _) _
+    rw [contAOf_awaitPromise]
+    simp only [seqR]
+    exact CodeMeans.asyncAwait cell (Val.promise cell) _ delivers_pure
+  | none =>
+    have hne := Val.memoHit?_none hhit
+    by_cases hu : v = Val.unit
+    · subst hu
+      rw [if_pos rfl]
+      show CodeMeans root (Program.contAOf root (.memoize q m scope) Val.unit) _
+      rw [contAOf_memoize_unit]
+      dsimp only
+      rw [prepareR_guardR_bind, guardR_bind]
+      refine CodeMeans.onSuccess _ _ _ (prepareR completed' (storeR (.memoBuild q.path m))) _
+        (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
+      intro completed'' w
+      simp only [seqR]
+      cases hls : Val.scope? w with
+      | some layerScope =>
+        have hw := Val.scope?_exact hls
+        subst hw
+        show CodeMeans root
+          (Program.contAOf root (.buildIntoLayerScope q m scope) (Val.scopeHandle layerScope)) _
+        rw [contAOf_buildIntoLayerScope_scope]
+        dsimp only
+        rw [prepareR_guardR_bind, guardR_bind]
+        refine CodeMeans.onSuccess _ _ _
+          (prepareR completed'' (scopeAddR scope (.memoEntry q.path m))) _
+          ((scopeAdd_intro root scope _ (memoEntry_means root _ _)).prepare _) ?_ rfl
+          (fun _ => rfl)
+        intro completed''' _
+        show CodeMeans root (Program.contAOf root (.thenBuildInto q m layerScope) _) _
+        rw [contAOf_thenBuildInto]
+        simp only [seqR]
+        unfold onExitR
+        rw [prepareR_guardR_bind, guardR_bind]
+        refine CodeMeans.onExit _ _ _ (prepareR completed''' (constructionR layerScope))
+          (fun ex => finalizerR ex (denoteFin (.memoDone q.path m) ex))
+          ((hcons layerScope).prepare _) ?_ (fun _ _ => rfl) rfl (fun _ => rfl)
+        intro completed'''' ex program hprog
+        have hp' : embed (finProgram (.memoDone q.path m) ex) = program := Option.some.inj hprog
+        rw [← hp']
+        exact finalizer_intro root completed'''' ex ((memoDone_means root _ _ ex).prepare _)
+      | none =>
+        show CodeMeans root (Program.contAOf root (.buildIntoLayerScope q m scope) w) _
+        rw [contAOf_buildIntoLayerScope_other root q m scope w (Val.scope?_none hls)]
+        simp only [prepareR_pure]
+        exact codeMeans_badShape root
+    · rw [if_neg hu]
+      show CodeMeans root (Program.contAOf root (.memoize q m scope) v) _
+      rw [contAOf_memoize_other root q m scope v hne hu]
+      simp only [prepareR_pure]
+      exact codeMeans_badShape root
+
+/-- `buildWithMemoMap` (`Layer.ts:756-765`): the `CurrentMemoMap` region over the build, its
+answer with the map added. -/
+theorem buildWithMemoMap_intro (root : NativeEff) (q : Point) (scope : Nat)
+    (buildR : MemoMapId → RProgram)
+    (hb : ∀ m, CodeMeans root (resolveLayer root q m scope) (buildR m)) (id : MemoMapId) :
+    CodeMeans root
+      (updateContextAt (Env.ContextUpdate.provideService Env.currentMemoMapKey (Val.memoMap id))
+        (Region.buildAdding q id scope))
+      (buildWithMemoMapR buildR id) := by
+  unfold buildWithMemoMapR
+  refine updateContext_intro root _ _ _ ?_
+  simp only [regionCode]
+  rw [guardR_bind]
+  refine CodeMeans.onSuccess _ _ _ (buildR id) _ (hb id) ?_ rfl (fun _ => rfl)
+  intro completed v
+  show CodeMeans root (Program.contAOf root (.addCurrentMemoMap id) v) _
+  rw [contAOf_addCurrentMemoMap]
+  unfold addCurrentMemoMapK addCurrentMemoMapR
+  simp only [seqR]
+  cases Env.decode v with
+  | some ctx => simp only [prepareR_pure]; exact CodeMeans.success _
+  | none => exact codeMeans_badShape root
+
+/-- The memo map forked or created, in hand: `buildWithMemoMap` on it, or the wrong shape. -/
+theorem withMemoMapThen_intro (root : NativeEff) (q : Point) (scope : Nat)
+    (buildR : MemoMapId → RProgram)
+    (hb : ∀ m, CodeMeans root (resolveLayer root q m scope) (buildR m))
+    (completed : List (FiberId × ExitV)) (u : Val) :
+    CodeMeans root (Program.contAOf root (.withMemoMapThen q scope) u)
+      (prepareR completed (match Val.memoMap? u with
+        | some id => buildWithMemoMapR buildR id
+        | none => .pure badShapeExit)) := by
+  cases hid : Val.memoMap? u with
+  | some id =>
+    have hu := Val.memoMap?_exact hid
+    subst hu
+    rw [contAOf_withMemoMapThen_memoMap]
+    dsimp only
+    exact (buildWithMemoMap_intro root q scope buildR hb id).prepare completed
+  | none =>
+    rw [contAOf_withMemoMapThen_other root q scope u (Val.memoMap?_none hid)]
+    simp only [prepareR_pure]
+    exact codeMeans_badShape root
+
+/-- `provideWith` (`Layer.ts:1915-1923`): the dependency built, the dependent under its
+context, the combiner. -/
+theorem provideWith_intro (root : NativeEff) (q : Point) (m : MemoMapId) (child : Nat)
+    (mode : CombineMode) (depR depdR : RProgram)
+    (hdep : CodeMeans root (resolveLayer root (q.child 1) m child) depR)
+    (hdept : CodeMeans root (resolveLayer root (q.child 0) m child) depdR) :
+    CodeMeans root
+      (Prim.onSuccess (resolveLayer root (q.child 1) m child) (.provideThen q m child mode))
+      (provideWithR depR depdR mode) := by
+  unfold provideWithR
+  rw [guardR_bind]
+  refine CodeMeans.onSuccess _ _ _ depR _ hdep ?_ rfl (fun _ => rfl)
+  intro completed v
+  show CodeMeans root (Program.contAOf root (.provideThen q m child mode) v) _
+  rw [contAOf_provideThen]
+  unfold provideThenK
+  simp only [seqR]
+  cases hd : Env.decode v with
+  | some ctx =>
+    dsimp only
+    rw [prepareR_guardR_bind, guardR_bind]
+    refine CodeMeans.onSuccess _ _ _ (prepareR completed (updateContextR (.provide ctx) depdR)) _
+      ((updateContext_intro root _ (Region.build (q.child 0) m child) depdR hdept).prepare _) ?_
+      rfl (fun _ => rfl)
+    intro completed' w
+    show CodeMeans root (Program.contAOf root (.combineWith mode ctx) w) _
+    rw [contAOf_combineWith]
+    unfold combineWithK combineWithR
+    simp only [seqR]
+    cases Env.decode w with
+    | some merged => cases mode <;> (simp only [prepareR_pure]; exact CodeMeans.success _)
+    | none => exact codeMeans_badShape root
+  | none => exact codeMeans_badShape root
+
+/-- `mergeAllEffect` for two siblings (`Layer.ts:1587-1602`): the parallel parent, a sequential
+child per sibling with the sibling's build forked into it, the await, the merge. -/
+theorem mergeTwo_intro (root : NativeEff) (q : Point) (m : MemoMapId) (child : Nat)
+    (h0 : ∀ c, CodeMeans root (resolveLayer root (q.child 0) m c) (layerBuildR root (q.child 0) m c))
+    (h1 : ∀ c, CodeMeans root (resolveLayer root (q.child 1) m c) (layerBuildR root (q.child 1) m c)) :
+    CodeMeans root
+      (Prim.onSuccess
+        (Prim.sync (EffThunk.op (SyncOp.scopeFork child FinalizerStrategy.parallel)))
+        (.mergeChildren q m))
+      (mergeTwoR q m child) := by
+  unfold mergeTwoR
+  rw [guardR_bind]
+  refine CodeMeans.onSuccess _ _ _ (storeR (.scopeFork child .parallel)) _
+    (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
+  intro completed v
+  simp only [seqR]
+  cases hs : Val.scope? v with
+  | some parent =>
+    have hv := Val.scope?_exact hs
+    subst hv
+    show CodeMeans root (Program.contAOf root (.mergeChildren q m) (Val.scopeHandle parent)) _
+    rw [contAOf_mergeChildren_scope]
+    dsimp only
+    unfold mergeForkR
+    rw [prepareR_guardR_bind, guardR_bind]
+    refine CodeMeans.onSuccess _ _ _ (prepareR completed (storeR (.scopeFork parent .sequential))) _
+      (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
+    intro completed₁ w
+    simp only [seqR]
+    cases hs0 : Val.scope? w with
+    | some c0 =>
+      have hw := Val.scope?_exact hs0
+      subst hw
+      show CodeMeans root
+        (Program.contAOf root (.mergeForkOne q 0 m parent []) (Val.scopeHandle c0)) _
+      rw [contAOf_mergeForkOne_scope]
+      dsimp only
+      try unfold forkLayerR
+      rw [prepareR_guardR_bind, guardR_bind]
+      refine CodeMeans.onSuccess _ _ _ (prepareR completed₁ _) _ ?_ ?_ rfl (fun _ => rfl)
+      · exact CodeMeans.actFork _ _ _ (.layerBuild (q.child 0) m c0) _ rfl (h0 c0) (successV root)
+      · intro completed₂ f0
+        show CodeMeans root (Program.contAOf root (.mergeForkNext q 0 m parent []) f0) _
+        simp only [seqR]
+        cases hf0 : Val.fiber? f0 with
+        | some id0 =>
+          have hf := Val.fiber?_exact hf0
+          subst hf
+          rw [contAOf_mergeForkNext_fiber, if_pos rfl]
+          dsimp only
+          rw [prepareR_guardR_bind, guardR_bind]
+          refine CodeMeans.onSuccess _ _ _
+            (prepareR completed₂ (storeR (.scopeFork parent .sequential))) _
+            (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
+          intro completed₃ w1
+          simp only [seqR]
+          cases hs1 : Val.scope? w1 with
+          | some c1 =>
+            have hw1 := Val.scope?_exact hs1
+            subst hw1
+            show CodeMeans root
+              (Program.contAOf root (.mergeForkOne q 1 m parent ([] ++ [id0]))
+                (Val.scopeHandle c1)) _
+            rw [contAOf_mergeForkOne_scope]
+            dsimp only
+            try unfold forkLayerR
+            rw [prepareR_guardR_bind, guardR_bind]
+            refine CodeMeans.onSuccess _ _ _ (prepareR completed₃ _) _ ?_ ?_ rfl (fun _ => rfl)
+            · exact CodeMeans.actFork _ _ _ (.layerBuild (q.child 1) m c1) _ rfl (h1 c1)
+                (successV root)
+            · intro completed₄ f1
+              show CodeMeans root
+                (Program.contAOf root (.mergeForkNext q 1 m parent ([] ++ [id0])) f1) _
+              simp only [seqR]
+              cases hf1 : Val.fiber? f1 with
+              | some id1 =>
+                have hf := Val.fiber?_exact hf1
+                subst hf
+                rw [contAOf_mergeForkNext_fiber, if_neg (by decide)]
+                dsimp only
+                rw [prepareR_guardR_bind, guardR_bind]
+                refine CodeMeans.onSuccess _ _ _
+                  (prepareR completed₄ (fiberValR (.awaitAllFailFast [id0, id1]) rfl)) _
+                  (CodeMeans.actAwaitAllFailFast _ _ _ rfl delivers_seqR_pure) ?_ rfl
+                  (fun _ => rfl)
+                intro completed₅ ex
+                show CodeMeans root (Program.contAOf root .mergeContexts ex) _
+                rw [contAOf_mergeContexts]
+                simp only [seqR]
+                unfold mergeContextsK mergeContextsR
+                cases contextsOf ex with
+                | some ctxs => simp only [prepareR_pure]; exact CodeMeans.success _
+                | none =>
+                  cases reasonsOfVal ex with
+                  | nil => exact codeMeans_badShape root
+                  | cons reason rest => simp only [prepareR_pure]; exact CodeMeans.failure _
+              | none =>
+                show CodeMeans root
+                  (Program.contAOf root (.mergeForkNext q 1 m parent ([] ++ [id0])) f1) _
+                rw [contAOf_mergeForkNext_other root q 1 m parent _ f1 (Val.fiber?_none hf1)]
+                simp only [prepareR_pure]
+                exact codeMeans_badShape root
+          | none =>
+            show CodeMeans root
+              (Program.contAOf root (.mergeForkOne q 1 m parent ([] ++ [id0])) w1) _
+            rw [contAOf_mergeForkOne_other root q 1 m parent _ w1 (Val.scope?_none hs1)]
+            simp only [prepareR_pure]
+            exact codeMeans_badShape root
+        | none =>
+          show CodeMeans root (Program.contAOf root (.mergeForkNext q 0 m parent []) f0) _
+          rw [contAOf_mergeForkNext_other root q 0 m parent [] f0 (Val.fiber?_none hf0)]
+          simp only [prepareR_pure]
+          exact codeMeans_badShape root
+    | none =>
+      show CodeMeans root (Program.contAOf root (.mergeForkOne q 0 m parent []) w) _
+      rw [contAOf_mergeForkOne_other root q 0 m parent [] w (Val.scope?_none hs0)]
+      simp only [prepareR_pure]
+      exact codeMeans_badShape root
+  | none =>
+    show CodeMeans root (Program.contAOf root (.mergeChildren q m) v) _
+    rw [contAOf_mergeChildren_other root q m v (Val.scope?_none hs)]
+    simp only [prepareR_pure]
+    exact codeMeans_badShape root
+
+/-- The layer at a point, resolved by the term: the node's term, denoted. -/
+theorem layerBuildR_of_at {root : NativeEff} {q : Point} {l : LayerTerm NativeOp}
+    (h : Node.at_ (Node.eff root) q.path = some (Node.layer l)) (m : MemoMapId) (scope : Nat) :
+    layerBuildR root q m scope = denoteLayer root l q m scope := by
+  simp [layerBuildR, h]
+
+/-- **A layer's build.** At its point, the frame's `compileLayer` and the term's `denoteLayer`
+are related, structurally in the layer, given every program at a lighter point. -/
+theorem layer_intro (root : NativeEff) (n : Nat)
+    (hres : ∀ q : Point, q.weight < n → CodeMeans root (resolve root q) (denoteAt root q)) :
+    ∀ (l : LayerTerm NativeOp) (q : Point) (m : MemoMapId) (scope : Nat), q.weight < n →
+      Node.at_ (.eff root) q.path = some (.layer l) →
+      CodeMeans root (compileLayer l q m scope) (denoteLayer root l q m scope)
+  | .succeed key value, q, m, scope, _, _ => by
+    simp only [compileLayer, denoteLayer]
+    cases Lit.toVal value with
+    | some v => exact CodeMeans.success _
+    | none => exact codeMeans_badShape root
+  | .fresh inner, q, m, scope, hq, h => by
+    simp only [compileLayer, denoteLayer]
+    rw [guardR_bind]
+    refine CodeMeans.onSuccess _ _ _ (storeR (.memoFork none)) _
+      (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
+    intro completed v
+    simp only [seqR]
+    have hinner := at_child_of h 0
+    cases hid : Val.memoMap? v with
+    | some id =>
+      have hv := Val.memoMap?_exact hid
+      subst hv
+      show CodeMeans root (Program.contAOf root (.freshThen (q.child 0) scope) (Val.memoMap id)) _
+      rw [contAOf_freshThen_memoMap, resolveLayer_of_at root hinner]
+      dsimp only
+      exact (layer_intro root n hres inner (q.child 0) id scope
+        (Nat.lt_of_le_of_lt (weight_child q 0) hq) hinner).prepare completed
+    | none =>
+      show CodeMeans root (Program.contAOf root (.freshThen (q.child 0) scope) v) _
+      rw [contAOf_freshThen_other root _ _ v (Val.memoMap?_none hid)]
+      simp only [prepareR_pure]
+      exact codeMeans_badShape root
+  | .orDie inner, q, m, scope, hq, h => by
+    simp only [compileLayer, denoteLayer]
+    rw [guardR_bind]
+    have hinner := at_child_of h 0
+    refine CodeMeans.onFailure _ _ _ (denoteLayer root inner (q.child 0) m scope) _
+      (layer_intro root n hres inner (q.child 0) m scope
+        (Nat.lt_of_le_of_lt (weight_child q 0) hq) hinner) ?_ rfl (fun _ => rfl)
+    intro completed c
+    show CodeMeans root (Prim.failure (orDieCause c))
+      (prepareR completed (.pure (.failure (orDieCause c))))
+    rw [prepareR_pure]
+    exact CodeMeans.failure _
+  | .effect key body, q, m, scope, hq, h => by
+    simp only [compileLayer, denoteLayer]
+    refine fromBuild_intro root q m scope _ fun child => ?_
+    rw [innerLayerAt_effect root h]
+    refine memoize_intro root q m child _ fun layerScope => ?_
+    rw [constructionAt_effect root h]
+    refine updateContext_intro root _ (Region.construct (q.child 0) (some key)) _ ?_
+    simp only [regionCode]
+    rw [guardR_bind]
+    refine CodeMeans.onSuccess _ _ _ (denoteR root body (q.child 0)) _ ?_ ?_ rfl (fun _ => rfl)
+    · have hb := at_child_of h 0
+      have hr := hres (q.child 0) (Nat.lt_of_le_of_lt (weight_child q 0) hq)
+      rw [denoteAt_of_at hb] at hr
+      exact hr
+    · intro completed v
+      show CodeMeans root (Program.contAOf root (.bindService (some key)) v) _
+      rw [contAOf_bindService]
+      simp only [seqR, bindServiceK, bindServiceR, prepareR_pure]
+      exact CodeMeans.success _
+  | .effectDiscard body, q, m, scope, hq, h => by
+    simp only [compileLayer, denoteLayer]
+    refine fromBuild_intro root q m scope _ fun child => ?_
+    rw [innerLayerAt_effectDiscard root h]
+    refine memoize_intro root q m child _ fun layerScope => ?_
+    rw [constructionAt_effectDiscard root h]
+    refine updateContext_intro root _ (Region.construct (q.child 0) none) _ ?_
+    simp only [regionCode]
+    rw [guardR_bind]
+    refine CodeMeans.onSuccess _ _ _ (denoteR root body (q.child 0)) _ ?_ ?_ rfl (fun _ => rfl)
+    · have hb := at_child_of h 0
+      have hr := hres (q.child 0) (Nat.lt_of_le_of_lt (weight_child q 0) hq)
+      rw [denoteAt_of_at hb] at hr
+      exact hr
+    · intro completed v
+      show CodeMeans root (Program.contAOf root (.bindService none) v) _
+      rw [contAOf_bindService]
+      simp only [seqR, bindServiceK, bindServiceR, prepareR_pure]
+      exact CodeMeans.success _
+  | .provide self that, q, m, scope, hq, h => by
+    simp only [compileLayer, denoteLayer]
+    refine fromBuild_intro root q m scope _ fun child => ?_
+    rw [innerLayerAt_provide root h]
+    have hs := at_child_of h 0
+    have ht := at_child_of h 1
+    refine provideWith_intro root q m child .provide _ _ ?_ ?_
+    · rw [resolveLayer_of_at root ht]
+      exact layer_intro root n hres that (q.child 1) m child
+        (Nat.lt_of_le_of_lt (weight_child q 1) hq) ht
+    · rw [resolveLayer_of_at root hs]
+      exact layer_intro root n hres self (q.child 0) m child
+        (Nat.lt_of_le_of_lt (weight_child q 0) hq) hs
+  | .provideMerge self that, q, m, scope, hq, h => by
+    simp only [compileLayer, denoteLayer]
+    refine fromBuild_intro root q m scope _ fun child => ?_
+    rw [innerLayerAt_provideMerge root h]
+    have hs := at_child_of h 0
+    have ht := at_child_of h 1
+    refine provideWith_intro root q m child .provideMerge _ _ ?_ ?_
+    · rw [resolveLayer_of_at root ht]
+      exact layer_intro root n hres that (q.child 1) m child
+        (Nat.lt_of_le_of_lt (weight_child q 1) hq) ht
+    · rw [resolveLayer_of_at root hs]
+      exact layer_intro root n hres self (q.child 0) m child
+        (Nat.lt_of_le_of_lt (weight_child q 0) hq) hs
+  | .merge left right, q, m, scope, hq, h => by
+    simp only [compileLayer, denoteLayer]
+    refine fromBuild_intro root q m scope _ fun child => ?_
+    rw [innerLayerAt_merge root h]
+    have h0 := at_child_of h 0
+    have h1 := at_child_of h 1
+    refine mergeTwo_intro root q m child ?_ ?_
+    · intro c
+      rw [resolveLayer_of_at root h0, layerBuildR_of_at h0]
+      exact layer_intro root n hres left (q.child 0) m c
+        (Nat.lt_of_le_of_lt (weight_child q 0) hq) h0
+    · intro c
+      rw [resolveLayer_of_at root h1, layerBuildR_of_at h1]
+      exact layer_intro root n hres right (q.child 1) m c
+        (Nat.lt_of_le_of_lt (weight_child q 1) hq) h1
+
+/-- `Effect.provide`'s protocol after its counted step (`internal/layer.ts:15-21`): the scope
+made, the layer built into it, the body under the built context, the scope closed. -/
+theorem provideLayer_intro (root : NativeEff) (n : Nat)
+    (hres : ∀ q : Point, q.weight < n → CodeMeans root (resolve root q) (denoteAt root q))
+    (l : LayerTerm NativeOp) (i : Bool) (b : NativeEff) (p : Point)
+    (completed : List (FiberId × ExitV)) (hp : p.weight ≤ n) (hpos : p.fuel ≠ 0)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.provideLayer l i b))) :
+    CodeMeans root
+      (Prim.onSuccess
+        (Prim.sync (EffThunk.op (SyncOp.scopeMake FinalizerStrategy.sequential)))
+        (.provideLayerWith p))
+      (prepareR completed (provideLayerR (fun q m s => denoteLayer root l q m s)
+        (fun q => denoteR root b q) (fun q => inlineYield b q) i p)) := by
+  have hw : ∀ j, (p.child j).weight < n := fun j =>
+    Nat.lt_of_lt_of_le (weight_child_lt p j hpos) hp
+  have hl := at_child_of h 0
+  have hb := at_child_of h 1
+  have hbuild : ∀ (m : MemoMapId) (scope : Nat),
+      CodeMeans root (resolveLayer root (p.child 0) m scope)
+        (denoteLayer root l (p.child 0) m scope) := by
+    intro m scope
+    rw [resolveLayer_of_at root hl]
+    exact layer_intro root n hres l (p.child 0) m scope (hw 0) hl
+  unfold provideLayerR
+  rw [prepareR_guardR_bind, guardR_bind]
+  refine CodeMeans.onSuccess _ _ _ (prepareR completed (storeR (.scopeMake .sequential))) _
+    (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
+  intro completed' v
+  simp only [seqR]
+  cases hs : Val.scope? v with
+  | some scope =>
+    have hv := Val.scope?_exact hs
+    subst hv
+    show CodeMeans root (Program.contAOf root (.provideLayerWith p) (Val.scopeHandle scope)) _
+    rw [contAOf_provideLayerWith_scope]
+    unfold provideLayerWithK
+    rw [h]
+    dsimp only
+    unfold onExitR
+    rw [prepareR_guardR_bind, guardR_bind]
+    refine CodeMeans.onExit _ _ _ (prepareR completed' _)
+      (fun ex => finalizerR ex (.vis (.inr (.closeScope scope ex)) Effects.Program.pure)) ?_ ?_
+      (fun _ _ => rfl) rfl (fun _ => rfl)
+    · rw [prepareR_guardR_bind, guardR_bind]
+      refine CodeMeans.onSuccess _ _ _ (prepareR completed' _) _ ?_ ?_ rfl (fun _ => rfl)
+      · cases i
+        · -- `buildWithScope`: the context read, the map forked or created, the build
+          simp only [Bool.false_eq_true, ↓reduceIte]
+          rw [prepareR_guardR_bind, guardR_bind]
+          refine CodeMeans.onSuccess _ _ _ (prepareR completed' (fiberValR .getContext rfl)) _
+            (CodeMeans.actGetContext _ _ rfl (successV root)) ?_ rfl (fun _ => rfl)
+          intro completed'' w
+          show CodeMeans root
+            (Program.contAOf root (.buildWithScopeFromContext (p.child 0) scope) w) _
+          rw [contAOf_buildWithScopeFromContext]
+          unfold buildWithScopeK
+          simp only [seqR]
+          cases hctx : Val.context? w with
+          | some ctx =>
+            dsimp only
+            rw [prepareR_guardR_bind, guardR_bind]
+            refine CodeMeans.onSuccess _ _ _ (prepareR completed'' (storeR _)) _
+              (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
+            intro completed''' u
+            simp only [seqR]
+            exact withMemoMapThen_intro root (p.child 0) scope _ (fun m => hbuild m scope)
+              completed''' u
+          | none => exact codeMeans_badShape root
+        · -- `local`: a private map, then the build
+          simp only [↓reduceIte]
+          rw [prepareR_guardR_bind, guardR_bind]
+          refine CodeMeans.onSuccess _ _ _ (prepareR completed' (storeR (.memoFork none))) _
+            (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
+          intro completed'' w
+          simp only [seqR]
+          exact withMemoMapThen_intro root (p.child 0) scope _ (fun m => hbuild m scope)
+            completed'' w
+      · intro completed'' built
+        show CodeMeans root (Program.contAOf root (.provideLayerBody p) built) _
+        rw [contAOf_provideLayerBody]
+        unfold provideLayerBodyK
+        simp only [seqR]
+        cases hd : Env.decode built with
+        | some ctx =>
+          dsimp only
+          rw [resolve_of_at hb, inlineYield_eq_headExit b (p.child 1), headExit_eq_asExit?]
+          cases (compileEff b (p.child 1)).asExit? with
+          | some exit =>
+            simp only [prepareR_pure]
+            exact codeMeans_ofExit_pure root exit
+          | none =>
+            refine (updateContext_intro root _ (Region.program (p.child 1))
+              (denoteR root b (p.child 1)) ?_).prepare _
+            show CodeMeans root (resolve root (p.child 1)) _
+            have hr := hres (p.child 1) (hw 1)
+            rw [resolve_of_at hb, denoteAt_of_at hb] at hr
+            rw [resolve_of_at hb]
+            exact hr
+        | none => exact codeMeans_badShape root
+    · intro completed'' ex program hprog
+      have hp' : Prim.withFiber (EffThunk.closeScope scope ex) = program := Option.some.inj hprog
+      rw [← hp']
+      refine finalizer_intro root completed'' ex ?_
+      exact CodeMeans.actCloseScope _ _ _ _ rfl delivers_pure
+  | none =>
+    show CodeMeans root (Program.contAOf root (.provideLayerWith p) v) _
+    rw [contAOf_provideLayerWith_other root p v (Val.scope?_none hs)]
+    simp only [prepareR_pure]
+    exact codeMeans_badShape root
+
 theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight < n →
     ∀ (e : NativeEff), Node.at_ (.eff root) p.path = some (.eff e) →
       CodeMeans root (compileEff e p) (denoteR root e p) := by
@@ -883,7 +1622,7 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
     | program =>
       rw [compileEff_perform_program op r hf hk]
       exact CodeMeans.frontier p p _ _ ⟨rfl, rfl, rfl, rfl, rfl⟩ fun completed => by
-        rw [suspendBodyAt_of_at (q := { p with completed }) hf h nofun nofun nofun nofun,
+        rw [suspendBodyAt_of_at (q := { p with completed }) hf h nofun nofun nofun nofun nofun,
           compileEff_perform_program op r (p := { p with completed }) hf hk]
         rfl
   | bind a b =>
@@ -1169,7 +1908,7 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
     rw [compileEff_choose site l r hf, denoteR_choose root site l r p hpos]
     rcases ht : p.tape with _ | ⟨flag, rest⟩
     · exact CodeMeans.frontier p p _ _ ⟨rfl, rfl, rfl, rfl, rfl⟩ fun completed => by
-        rw [suspendBodyAt_of_at (q := { p with completed }) hf h nofun nofun nofun nofun,
+        rw [suspendBodyAt_of_at (q := { p with completed }) hf h nofun nofun nofun nofun nofun,
           compileEff_choose site l r (p := { p with completed }) hf]
         simp only [ht]
         rfl
@@ -1183,6 +1922,41 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
       · exact ih { p with path := p.path ++ [0], tape := rest } hw l
           (by rw [Node.at_append, h]; rfl)
 
+  -- the join: the counted step, then the protocol at the point carrying the view
+  | provideLayer l i b =>
+    rw [compileEff_provideLayer l i b hf, denoteR_provideLayer root l i b hpos]
+    unfold suspendR
+    refine CodeMeans.suspendBody p _ fun completed => ?_
+    rw [suspendBodyAt_provideLayer (q := { p with completed }) hf h, prepareR_constructR]
+    exact provideLayer_intro root n hres l i b { p with completed } completed hle hpos h
+  -- the context read, then the lookup
+  | service key =>
+    rw [compileEff_service key hf, denoteR_service root key hpos, guardR_bind]
+    refine CodeMeans.onSuccess _ _ _ (fiberValR .getContext rfl) _
+      (CodeMeans.actGetContext _ _ rfl (successV root)) ?_ rfl (fun _ => rfl)
+    intro completed v
+    show CodeMeans root (Program.contAOf root (.serviceLookup key) v) _
+    rw [contAOf_serviceLookup]
+    unfold serviceLookupK serviceLookupR
+    simp only [seqR]
+    cases Val.context? v with
+    | some ctx =>
+      cases hg : ctx.services.getV key with
+      | some value => simp only [hg, prepareR_pure]; exact CodeMeans.success _
+      | none => simp only [hg, prepareR_pure]; exact CodeMeans.failure _
+    | none => exact codeMeans_badShape root
+  -- a `Context.add` region over the body
+  | provideService key value b =>
+    rw [compileEff_provideService key value b hf, denoteR_provideService root key value b hpos]
+    cases evalTerm p.env value with
+    | some v =>
+      have hb := at_child_of h 0
+      refine updateContext_intro root _ (Region.program (p.child 0)) (denoteR root b (p.child 0)) ?_
+      show CodeMeans root (resolve root (p.child 0)) _
+      rw [resolve_of_at hb]
+      exact ih _ (hw0 0) b hb
+    | none => exact codeMeans_badShape root
+
 /-- **Introduction.** At every source address, the compile and the denotation are related. -/
 theorem code_intro (root : NativeEff) (e : NativeEff) (p : Point)
     (h : Node.at_ (.eff root) p.path = some (.eff e)) :
@@ -1193,6 +1967,18 @@ theorem code_intro (root : NativeEff) (e : NativeEff) (p : Point)
 theorem resolve_intro (root : NativeEff) (q : Point) :
     CodeMeans root (resolve root q) (denoteAt root q) :=
   resolve_intro_of root (q.weight + 1) (fun p _ e h => code_intro root e p h) q (Nat.lt_succ_self _)
+
+/-- Every layer point resolves to related builds (the fallbacks are the same refusal). -/
+theorem layerBuild_intro (root : NativeEff) (q : Point) (m : MemoMapId) (scope : Nat) :
+    CodeMeans root (resolveLayer root q m scope) (layerBuildR root q m scope) := by
+  unfold resolveLayer layerBuildR
+  rcases hn : Node.at_ (.eff root) q.path with _ | node
+  · exact codeMeans_badShape root
+  · cases node
+    case layer l =>
+      exact layer_intro root (q.weight + 1) (fun q' _ => resolve_intro root q') l q m scope
+        (Nat.lt_succ_self _) hn
+    all_goals exact codeMeans_badShape root
 
 /-- The loaded roots are related. -/
 theorem compile_intro (root : NativeEff) (fuel : Nat) (tape : List Bool) :

@@ -125,6 +125,8 @@ theorem evaluateNative_action (root : NativeEff) (m : FMachine) (f : FRun) (y : 
 /-- The heads the primitive evaluator hands to the frame step. -/
 def StepHead : NCode → Bool
   | .suspend (.body _) => true
+  -- `getOrElseMemoize`'s suspend (the join): a step that returns the lookup's code
+  | .suspend (.memoLookup _ _ _) => true
   | .suspend (.store (Thunk.body _)) => true
   | .suspend (.store (Thunk.foreign _ _)) => true
   | .yieldableError _ => true
@@ -515,6 +517,12 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     exact iterRel_prepare ⟨hok, hm, hf'.answer hk, rfl, rfl, ListRel.nil⟩
   -- the suspensions
   | suspendBody p k hk =>
+    rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluatePrim_step root _ m₁ f₁ y hc₁ rfl,
+      stepFrame_eq', step_suspend _ _ hc₁, finishFrame_running, evaluateRawR_fiber _ _ _ _ hc₂]
+    dsimp only [evaluateFiberR]
+    exact iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _,
+      hf'.withFrame (means_answerWith hf'.means (hk _)), rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+  | suspendMemo q mm scope k hk =>
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluatePrim_step root _ m₁ f₁ y hc₁ rfl,
       stepFrame_eq', step_suspend _ _ hc₁, finishFrame_running, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR]

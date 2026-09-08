@@ -103,44 +103,8 @@ def denoteAt (root : NativeEff) (p : Point) : RProgram :=
   | some (.eff e) => denoteR root e p
   | _ => .pure badShapeExit
 
-/-- The scope's finalizer shapes (`Stores.finProgram`). -/
-def denoteFin : FinName → ExitV → RProgram
-  | .interruptFiber fiber true, _ => fiberValR (.interruptScoped fiber) rfl
-  | .interruptFiber fiber false, _ => fiberValR (.interrupt fiber) rfl
-  | .closeChildScope scope, ex => .vis (.inr (.closeScope scope ex)) Effects.Program.pure
-  | .detachFromParent parent key, _ => storeR (.scopeRemove parent key)
-  | .release label fails, _ =>
-    .pure (if fails then .failure (Cause.fail (.tag label)) else .success .unit)
-  | .parkThen slot, _ => .vis (.inr (.async (.store (.externalRegister slot)) .unit)) Effects.Program.pure
-  | .awaitNewChildren snapshot, _ => fiberValR (.awaitNewChildren snapshot) rfl
-  -- a capture's release (V1): the counted suspend, then `provideContext(release(a, exit),
-  -- context)` (`internal/effect.ts:3983`, `:2180-2199`): the current context read, the captured
-  -- one set, the release at the capture's point over the exit under the finalizer restoring
-  -- the previous context — constructed with the view at its invocation (`constructR`), as the
-  -- frame's `interpAt` refreshes the release's name
-  | .foreign c, ex => .vis (.inr (.foreignRelease c ex)) fun _ =>
-      (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun v =>
-        match Val.context? v with
-        | some previous =>
-          (guardR .onSuccess (fiberValR (.setContext c.ctx) rfl)).bind (seqR fun _ =>
-            constructR fun completed =>
-              .vis (.inr (.mask false
-                (.release ((Point.ofCapture c completed).childWith 1 (reifyExitVal ex)) previous)))
-                Effects.Program.pure)
-        | none => .pure badShapeExit)
-  -- `fromBuild`'s `onExit` (`Layer.ts:343`, the join): close the layer scope on failure only
-  | .closeChildOnFailure scope, .failure cause =>
-    .vis (.inr (.closeScope scope (.failure cause))) Effects.Program.pure
-  | .closeChildOnFailure _, .success _ => .pure (.success .unit)
-  -- the memo entry finalizer (`Layer.ts:401-410`, the join): `observers--`; the last
-  -- observer's release answers the layer scope, closed with the exit
-  | .memoEntry layer memoMap, ex =>
-    (guardR .onSuccess (storeR (.memoRelease layer memoMap))).bind (seqR fun v =>
-      match Val.scope? v with
-      | some s => .vis (.inr (.closeScope s ex)) Effects.Program.pure
-      | none => .pure (.success .unit))
-  -- `memoMapBuild`'s `onExit` (`:414-417`): the exit stored, the Deferred completed
-  | .memoDone layer memoMap, ex => storeR (.memoComplete layer memoMap ex)
+/-! `denoteFin`, the scope's finalizer shapes, lives in `DenoteR.lean` since the join: a layer's
+build (`denoteLayer`) registers and runs finalizers, and it is denoted beside `denoteR`. -/
 
 /-- `acquireRelease`'s masked half at the term (`internal/effect.ts:3978-3986`, V1): the
 counted `Scope` read, the acquire (its term at the point's child 0), the registration of the
@@ -218,12 +182,19 @@ def closeScopeR (scope : Nat) (ex : ExitV) (interruptible : Bool)
   (closeScopeUnsafeR scope ex interruptible state).map fun r =>
     (r.1, r.2.getD (.pure (.success .unit)))
 
+/-- The layer at a point of the root, built (the join): `denoteLayer` of the node there. -/
+def layerBuildR (root : NativeEff) (q : Point) (m : MemoMapId) (scope : Nat) : RProgram :=
+  match Node.at_ (.eff root) q.path with
+  | some (.layer l) => denoteLayer root l q m scope
+  | _ => .pure badShapeExit
+
 def denoteBody (root : NativeEff) : Body → RProgram
   | .at_ p => denoteAt root p
   | .fin fin ex => denoteFin fin ex
   | .raceCleanup race => fiberValR (.cancelRace race) rfl
   | .acquireIn p ctx => acquireInR (denoteAt root (p.child 0)) p ctx
   | .release q previous => onExitR (denoteAt root q) fun _ => fiberValR (.setContext previous) rfl
+  | .layerBuild q m scope => layerBuildR root q m scope
 
 /-- `Stores.raceSettleProgram` at the term instance: the exit alone, or the masked
 race-named cleanup then the exit (`internal/effect.ts:1510-1514`, D6a). -/
@@ -302,6 +273,8 @@ def interpR (root : NativeEff) : RInterp where
   syncValue := (interpOf root).syncValue
   suspendBody := fun
     | .body p => denoteAt root p
+    -- a forked sibling's build (the join): the body a fork carries, resolved as a body is
+    | .forkLayer q m scope => layerBuildR root q m scope
     | _ => .pure outsideExit
   finalizerExit := (interpOf root).finalizerExit
   reifyExit := reifyExitVal

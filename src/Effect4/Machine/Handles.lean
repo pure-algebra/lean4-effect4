@@ -184,11 +184,17 @@ theorem Val.keys_exitErr (cause : CauseV) : (Val.exitErr cause).keys = [] := by
     Store.Val.handlesList_nil]
   rfl
 
+/-- The handles a service map holds: those of every service value. -/
+def Env.Context.handleKeys (c : Env.Ctx) : List Handle :=
+  c.entries.flatMap fun s => Val.keys s.valueVal
+
 /-- The handles a context holds: those of every service value — a scope handle under
 `scopeKey`, anything a program provided; a memo-map handle is not counted
 (`Handle.ofCode_memoMap`). Before the join the one handle was the cached ambient scope. -/
 def Ctx.keys (ctx : Ctx) : List Handle :=
   ctx.services.entries.flatMap fun s => Val.keys s.valueVal
+
+theorem Ctx.keys_eq_handleKeys (ctx : Ctx) : ctx.keys = Env.Context.handleKeys ctx.services := rfl
 
 /-- A written entry's handles are its value's: the key's image is handle-free. -/
 theorem Val.keys_entryStore (key : ServiceKey) (value : Val) :
@@ -251,6 +257,94 @@ theorem Ctx.keys_provide (c : Ctx) (key : ServiceKey) (value : Val) :
     (fun s => Val.keys s.valueVal) ⊆ _
   intro x hx
   exact Env.Context.flatMap_setEntries_subset _ _ _ _ hx
+
+/-! ### The service map's handles (the join): `encode`, `add`, `merge`, `mergeAll`, `decode` -/
+
+/-- A written service map's handles are its values' (`Val.keys_context`'s first half). -/
+theorem Val.keys_encode (c : Env.Ctx) : Val.keys (Env.encode c) = Env.Context.handleKeys c := by
+  show Val.keysList (c.entries.map fun s => Env.entryStore s.key s.valueVal) = _
+  rw [Val.keysList_entryStore]
+  rfl
+
+theorem Env.Context.handleKeys_empty : Env.Context.handleKeys Env.Context.empty = [] := rfl
+
+theorem Ctx.keys_withServices (s : Env.Ctx) :
+    (Ctx.withServices s).keys = Env.Context.handleKeys s := rfl
+
+/-- `Context.add`'s handles: the value's, and the previous map's. -/
+theorem Env.Context.handleKeys_add (c : Env.Ctx) (key : ServiceKey)
+    (value : ServiceKey.Carrier Env.ValU key) :
+    Env.Context.handleKeys (c.add key value) ⊆ Val.keys value ++ Env.Context.handleKeys c := by
+  show (Env.Context.setEntries (U := Env.ValU) key value c.entries).flatMap
+    (fun s => Val.keys s.valueVal) ⊆ _
+  intro x hx
+  exact Env.Context.flatMap_setEntries_subset _ _ _ _ hx
+
+theorem Env.Context.handleKeys_addV (c : Env.Ctx) (key : ServiceKey) (value : Val) :
+    Env.Context.handleKeys (c.addV key value) ⊆ Val.keys value ++ Env.Context.handleKeys c :=
+  Env.Context.handleKeys_add c key value
+
+theorem Env.Context.handleKeys_mergeEntries (self : Env.Ctx) :
+    ∀ es : List (Env.Service Env.ValU),
+      Env.Context.handleKeys (Env.Context.mergeEntries self es) ⊆
+        Env.Context.handleKeys self ++ es.flatMap fun s => Val.keys s.valueVal
+  | [] => by
+    simp only [Env.Context.mergeEntries, List.flatMap_nil, List.append_nil]
+    exact List.Subset.refl _
+  | s :: rest => by
+    simp only [Env.Context.mergeEntries, List.flatMap_cons]
+    intro x hx
+    rcases List.mem_append.mp (Env.Context.handleKeys_mergeEntries (self.add s.key s.value) rest hx)
+      with h | h
+    · rcases List.mem_append.mp (Env.Context.handleKeys_add self s.key s.value h) with h | h
+      · exact List.mem_append_right _ (List.mem_append_left _ h)
+      · exact List.mem_append_left _ h
+    · exact List.mem_append_right _ (List.mem_append_right _ h)
+
+/-- `Context.merge`'s handles: both maps'. -/
+theorem Env.Context.handleKeys_merge (a b : Env.Ctx) :
+    Env.Context.handleKeys (a.merge b) ⊆ Env.Context.handleKeys a ++ Env.Context.handleKeys b :=
+  Env.Context.handleKeys_mergeEntries a b.entries
+
+theorem Env.Context.handleKeys_foldl_merge : ∀ (cs : List Env.Ctx) (acc : Env.Ctx),
+    Env.Context.handleKeys (cs.foldl Env.Context.merge acc) ⊆
+      Env.Context.handleKeys acc ++ cs.flatMap Env.Context.handleKeys
+  | [], acc => by
+    simp only [List.foldl_nil, List.flatMap_nil, List.append_nil]
+    exact List.Subset.refl _
+  | c :: rest, acc => by
+    simp only [List.foldl_cons, List.flatMap_cons]
+    intro x hx
+    rcases List.mem_append.mp (Env.Context.handleKeys_foldl_merge rest (acc.merge c) hx) with h | h
+    · rcases List.mem_append.mp (Env.Context.handleKeys_merge acc c h) with h | h
+      · exact List.mem_append_left _ h
+      · exact List.mem_append_right _ (List.mem_append_left _ h)
+    · exact List.mem_append_right _ (List.mem_append_right _ h)
+
+/-- `Context.mergeAll`'s handles: every map's. -/
+theorem Env.Context.handleKeys_mergeAll : ∀ cs : List Env.Ctx,
+    Env.Context.handleKeys (Env.Context.mergeAll cs) ⊆ cs.flatMap Env.Context.handleKeys
+  | [] => List.nil_subset _
+  | c :: rest => by
+    simp only [Env.Context.mergeAll, List.flatMap_cons]
+    exact Env.Context.handleKeys_foldl_merge rest c
+
+/-- A decoded map's handles are the value's. -/
+theorem Env.decode_keys {v : Val} {c : Env.Ctx} (h : Env.decode v = some c) :
+    Env.Context.handleKeys c ⊆ Val.keys v := by
+  rw [Env.decode_exact h, Val.keys_encode]
+  exact List.Subset.refl _
+
+/-- A service the map answers is a value it holds: its handles are the map's. -/
+theorem Env.Context.getV_keys {c : Env.Ctx} {key : ServiceKey} {value : Val}
+    (h : c.getV key = some value) : Val.keys value ⊆ Env.Context.handleKeys c := by
+  obtain ⟨s, hs, _, hval⟩ := Env.Context.getV_mem h
+  intro x hx
+  unfold Env.Context.handleKeys
+  rw [List.mem_flatMap]
+  refine ⟨s, hs, ?_⟩
+  rw [hval]
+  exact hx
 
 theorem Val.keys_fibers (ids : List FiberId) : (Val.fibers ids).keys = ids.map Handle.fiber := by
   show Val.keysList [Store.Val.list (ids.map fun id => Value.fiber id.value)] = _

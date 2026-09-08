@@ -53,6 +53,8 @@ def bodyR (interp : RInterp) : Body → RProgram
   | .acquireIn p ctx => acquireInR (interp.suspendBody (.body (p.child 0))) p ctx
   | .release q previous =>
     onExitR (interp.suspendBody (.body q)) fun _ => fiberValR (.setContext previous) rfl
+  -- a layer's build (the join), through the interpreter's body hook on the fork thunk
+  | .layerBuild q m scope => interp.suspendBody (.forkLayer q m scope)
 
 /-- Walk saved slots in the same order as `getCont`: run hooks before testing
 the demanded arm, re-read the mask for failure skipping, and visit a cleanup's

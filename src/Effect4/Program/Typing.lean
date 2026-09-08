@@ -52,6 +52,11 @@ structure Signature (Op : Type) where
   name. -/
   atomOf : String → List Ty → Option Ty
   scopeKey : ServiceKey
+  /-- The service table (the join, 2026-09-07): the carrier type of the service a key names,
+  `none` for a key the signature does not type. `Effect.service(key)` answers it and
+  `Effect.provideService(self, key, value)` types `value` at it; a layer's own leaves are
+  typed by their bodies (`layerTy`), not by the table. -/
+  serviceTy : ServiceKey → Option Ty
 
 variable {Op : Type}
 
@@ -109,6 +114,62 @@ end GenTy
 def fiberTy : Ty → Option (Ty × Ty)
   | .fiberOf value error => some (value, error)
   | _ => none
+
+/-! ## The layer signature (the join, 2026-09-07; before it `Program/Provision.lean`)
+
+`Layer<ROut, E, RIn>` (`Layer.ts:54`) as three rows: what the layer provides, its error type,
+and what it requires. `LayerTy`'s four operations are the requirement algebra of the four
+combinators; their laws stay in `Program/Provision.lean`, restated on the term now inside
+`Eff`. -/
+
+/-- A literal as a value of the machine's alphabet; strings are not layer values
+(`PROV-FB-STRING-VALUE`, `Test/Program/ProvisionContract.lean`). -/
+def litVal : Lit → Option Effect4.Machine.Env.Val
+  | .unit => some .unit
+  | .nat n => some (.nat n)
+  | .bool b => some (.bool b)
+  | .str _ => none
+
+/-- `Layer<ROut, E, RIn>` (`Layer.ts:54`). -/
+structure LayerTy where
+  out : Requirement
+  error : Ty
+  requires : Requirement
+deriving DecidableEq
+
+namespace LayerTy
+
+/-- `self.pipe(Layer.provide(that))` (`Layer.ts:2258`): `Layer<ROut, E | E2,
+RIn2 | Exclude<RIn, ROut2>>` — the dependency discharges what it provides. -/
+def provide (self that : LayerTy) : LayerTy :=
+  ⟨self.out, self.error.join that.error,
+    Row.union (Row.diff self.requires that.out) that.requires⟩
+
+/-- `self.pipe(Layer.provideMerge(that))` (`Layer.ts:2704`): the same requirement column, both
+outputs kept. -/
+def provideMerge (self that : LayerTy) : LayerTy :=
+  ⟨Row.union self.out that.out, self.error.join that.error,
+    Row.union (Row.diff self.requires that.out) that.requires⟩
+
+/-- `Layer.merge(a, b)` (`Layer.ts:1850`): siblings share nothing — the outputs and the
+requirements both union. -/
+def merge (a b : LayerTy) : LayerTy :=
+  ⟨Row.union a.out b.out, a.error.join b.error, Row.union a.requires b.requires⟩
+
+/-- `Layer.orDie(l)` (`Layer.ts:3327`): the error column becomes `never`. -/
+def orDie (l : LayerTy) : LayerTy := ⟨l.out, .never, l.requires⟩
+
+/-- A layer is closed when it requires nothing: `Layer<_, _, never>`. -/
+def Closed (l : LayerTy) : Prop := l.requires = Requirement.empty
+
+instance (l : LayerTy) : Decidable (Closed l) := by unfold Closed; infer_instance
+
+end LayerTy
+
+/-- The scope-free requirement row of a layer body: `Exclude<R, Scope.Scope>` (`Layer.ts:1438`,
+`:1512`): the layer's own scope answers the body's `Scope` requirement. -/
+def bodyRequires (sig : Signature Op) (t : EffTy) : Requirement :=
+  Row.diff t.requires (Requirement.single sig.scopeKey)
 
 mutual
   /-- `typeOf` over the environment, structural in the program. -/
@@ -189,6 +250,53 @@ mutual
       let r ← effTy sig env right
       let answer ← EffTy.joinAnswer l.answer r.answer
       some ⟨answer, l.error.join r.error, l.requires.union r.requires⟩
+    -- `Effect.provide(self, layer)`: `Effect<A, E | E2, RIn | Exclude<R, ROut>>`
+    -- (`internal/layer.ts:8-14`) — the layer's requirements join, what it provides is
+    -- discharged from the body's
+    | .provideLayer layer _ body => do
+      let l ← layerTy sig layer
+      let b ← effTy sig env body
+      some ⟨b.answer, b.error.join l.error, Row.union l.requires (Row.diff b.requires l.out)⟩
+    -- `Effect.service(key)`: `Effect<S, never, I>` (`internal/effect.ts:2059`), the carrier
+    -- from the service table
+    | .service key => (sig.serviceTy key).map fun ty => ⟨ty, .never, Requirement.single key⟩
+    -- `Effect.provideService(self, key, value)`: `Effect<A, E, Exclude<R, I>>` (`:2202`), the
+    -- value typed at the key's carrier
+    | .provideService key value body => do
+      let ty ← sig.serviceTy key
+      let v ← termTy sig env value
+      let b ← effTy sig env body
+      if v = ty then some ⟨b.answer, b.error, Row.diff b.requires (Requirement.single key)⟩
+      else none
+
+  /-- The signature of a layer term, structural; `none` refuses an ill-typed body or a literal
+  outside the value alphabet. The rules are the four `LayerTy` operations and the leaf rules:
+  `Layer.succeed` provides its key and requires nothing (`Layer.ts:1074`); `Layer.effect`
+  provides its key with the body's error and the body's scope-free requirements
+  (`:1427`, `:1438`); `Layer.effectDiscard` provides nothing (`:1512`); `fresh` keeps the
+  signature (`:3850`); `orDie` clears the error (`:3327`). A body is closed: it is typed at
+  the empty environment. -/
+  def layerTy (sig : Signature Op) : LayerTerm Op → Option LayerTy
+    | .succeed key value =>
+      (litVal value).map fun _ => ⟨Requirement.single key, .never, Requirement.empty⟩
+    | .effect key body =>
+      (effTy sig [] body).map fun t => ⟨Requirement.single key, t.error, bodyRequires sig t⟩
+    | .effectDiscard body =>
+      (effTy sig [] body).map fun t => ⟨Requirement.empty, t.error, bodyRequires sig t⟩
+    | .provide self that => do
+      let s ← layerTy sig self
+      let t ← layerTy sig that
+      some (s.provide t)
+    | .provideMerge self that => do
+      let s ← layerTy sig self
+      let t ← layerTy sig that
+      some (s.provideMerge t)
+    | .merge left right => do
+      let a ← layerTy sig left
+      let b ← layerTy sig right
+      some (a.merge b)
+    | .fresh inner => layerTy sig inner
+    | .orDie inner => (layerTy sig inner).map LayerTy.orDie
 
   /-- A generator body, statement by statement; `inLoop` admits `break`. A `return` ends
   the body: statements after it are refused. -/
@@ -303,6 +411,13 @@ end
 
 /-- `typeOf` at the empty environment. -/
 def typeOf (sig : Signature Op) (program : Eff Op) : Option EffTy := effTy sig [] program
+
+/-- A layer is well-typed when `layerTy` answers. -/
+def WellTypedLayer (sig : Signature Op) (l : LayerTerm Op) : Prop :=
+  (layerTy sig l).isSome = true
+
+instance (sig : Signature Op) (l : LayerTerm Op) : Decidable (WellTypedLayer sig l) := by
+  unfold WellTypedLayer; infer_instance
 
 /-- A program is well-typed when `typeOf` answers. -/
 def WellTyped (sig : Signature Op) (program : Eff Op) : Prop := (typeOf sig program).isSome

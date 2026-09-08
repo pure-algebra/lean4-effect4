@@ -61,7 +61,7 @@ set_option autoImplicit false
 namespace Effect4.Surface.Middleware
 
 open Effect4.Machine.Env (Requirement)
-open Effect4.Program (Ty)
+open Effect4.Program (Ty LayerTy LayerTerm layerTy)
 open Effect4.Program.Provision
 
 /-! ## The keys

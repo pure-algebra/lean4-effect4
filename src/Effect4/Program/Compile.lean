@@ -54,6 +54,8 @@ inductive Node
   | stmt (s : Stmt NativeOp)
   | action (a : ActionTerm NativeOp)
   | effs (es : Effs NativeOp)
+  /-- A layer (the join): its path is its identity, `LayerId` (`Machine/Stores.lean`). -/
+  | layer (l : LayerTerm NativeOp)
 deriving DecidableEq
 
 namespace Node
@@ -84,6 +86,19 @@ def child : Node → Nat → Option Node
   | eff (.acquireRelease _ r), 1 => some (eff r)
   | eff (.choose _ l _), 0 => some (eff l)
   | eff (.choose _ _ r), 1 => some (eff r)
+  | eff (.provideLayer l _ _), 0 => some (layer l)
+  | eff (.provideLayer _ _ b), 1 => some (eff b)
+  | eff (.provideService _ _ b), 0 => some (eff b)
+  | layer (.effect _ b), 0 => some (eff b)
+  | layer (.effectDiscard b), 0 => some (eff b)
+  | layer (.provide s _), 0 => some (layer s)
+  | layer (.provide _ t), 1 => some (layer t)
+  | layer (.provideMerge s _), 0 => some (layer s)
+  | layer (.provideMerge _ t), 1 => some (layer t)
+  | layer (.merge l _), 0 => some (layer l)
+  | layer (.merge _ r), 1 => some (layer r)
+  | layer (.fresh i), 0 => some (layer i)
+  | layer (.orDie i), 0 => some (layer i)
   | stmts (.cons h _), 0 => some (stmt h)
   | stmts (.cons _ t), 1 => some (stmts t)
   | stmt (.bindYield e), 0 => some (eff e)
@@ -166,6 +181,27 @@ theorem awaitExit_empty (p : Point) (target : FiberId) (mode : Supervision.Obser
 
 end Point
 
+/-- Which of `provideWith`'s combiners (`Layer.ts:1923`): `identity` for `Layer.provide`
+(`:2348`), `Context.merge(that, self)` for `Layer.provideMerge` (`:2800`). -/
+inductive CombineMode
+  | provide
+  | provideMerge
+deriving DecidableEq
+
+/-- What runs under a context region (`updateContext`, `internal/effect.ts:2087-2096`), as
+data: a program at its point; a layer's build at its point into a memo map and a scope
+(`self.build(memoMap, scope)` under `provideContext`, `Layer.ts:1920-1922`); that build with
+`Context.add(CurrentMemoMap, memoMap)` mapped over its answer (`buildWithMemoMap`, `:762`);
+or a leaf's construction — the body at its point, its answer bound under the key
+(`Layer.effect`, `:1440`, `Context.make`) or replaced by the empty context (`effectDiscard`,
+`:1515`). The Layer machine carried a `ProgName` here; a subterm is its point (the join). -/
+inductive Region
+  | program (q : Point)
+  | build (q : Point) (memoMap : MemoMapId) (scope : Nat)
+  | buildAdding (q : Point) (memoMap : MemoMapId) (scope : Nat)
+  | construct (q : Point) (key : Option ServiceKey)
+deriving DecidableEq
+
 /-- The continuation, finalizer, generator, loop, registration and cancel names. First-order
 data; `contAOf`/`contEOf` and the other hooks of `interpOf` give them meaning. -/
 inductive EffName
@@ -232,6 +268,75 @@ inductive EffName
   /-- The captured context is set: run the release, child 1 over the exit, under the
   finalizer that restores the previous context. -/
   | releaseBody (p : Point) (exit : ExitV) (previous : Ctx)
+  -- The join (2026-09-07): `Effect.provide`, `Effect.service`, `Effect.provideService`, and
+  -- `Layer.build`'s protocol — the Layer machine's names (`Machine/Layer.lean`, `7cbd436`)
+  -- with a layer's point in place of a table index, one per rc.112 line they cite.
+  /-- `scopedWith` made its scope (`internal/effect.ts:3966`), the value its handle: build the
+  layer (child 0 of the `provideLayer` at `p`) into it — `buildWithScope` off the fiber
+  context's memo map, or `buildWithMemoMap` over a private one when `local` — then the body
+  (child 1) under the built context (`internal/layer.ts:15-21`); the scope closes with the
+  exit (`:3967`). -/
+  | provideLayerWith (p : Point)
+  /-- The build answered its context, the value: `provideContext(self, context)`
+  (`internal/layer.ts:20`), the body child 1 of `p`. -/
+  | provideLayerBody (p : Point)
+  /-- `updateContext` read the fiber context, the value (`internal/effect.ts:2089`): apply the
+  update, set the next context, and run the region under the restoring finalizer. -/
+  | updateThen (update : Env.ContextUpdate) (body : Region)
+  /-- The next context is set (`:2091`): the region under the finalizer that restores
+  `previous` (`:2092-2095`). -/
+  | bodyThen (body : Region) (previous : Ctx)
+  /-- `Layer.buildWithScope` read the fiber context, the value (`Layer.ts:974-979`): fork or
+  create the memo map (`CurrentMemoMap.forkOrCreate`, `:585-592`), then build into `scope`. -/
+  | buildWithScopeFromContext (q : Point) (scope : Nat)
+  /-- The memo map forked or created, the value: `buildWithMemoMap` (`Layer.ts:756-765`), a
+  `provideService(CurrentMemoMap)` region over the build at `q` into `scope`. -/
+  | withMemoMapThen (q : Point) (scope : Nat)
+  /-- `map(_, Context.add(CurrentMemoMap, memoMap))` (`Layer.ts:762`), on the built context. -/
+  | addCurrentMemoMap (memoMap : MemoMapId)
+  /-- `fromBuild` forked the layer scope (`Layer.ts:333-345`), the value its handle: the
+  inner build of the layer at `q` under the finalizer that closes it on failure (`:343`). -/
+  | fromBuildThen (q : Point) (memoMap : MemoMapId)
+  /-- `getOrElseMemoize` after `get` (`Layer.ts:445-457`), the value a hit — the entry's
+  deferred and its owning map — or unit: reuse, or `memoMapBuild`. -/
+  | memoize (q : Point) (memoMap : MemoMapId) (scope : Nat)
+  /-- A memo hit: `entry.effect` is `Deferred.await(deferred)` (`Layer.ts:400`, `:248`). -/
+  | awaitPromise (cell : DeferredKey)
+  /-- `memoMapBuild` allocated (`Layer.ts:392-411`), the value the layer scope's handle:
+  register the entry finalizer on the caller's scope (`:412`), then build into it. -/
+  | buildIntoLayerScope (q : Point) (memoMap : MemoMapId) (scope : Nat)
+  /-- The entry finalizer is registered: the construction into the layer scope under the
+  `onExit` that completes the entry (`Layer.ts:413-417`). -/
+  | thenBuildInto (q : Point) (memoMap : MemoMapId) (layerScope : Nat)
+  /-- `fresh` made its private memo map (`Layer.ts:3851`), the value: build the inner layer
+  at `q` through it, on the same scope. -/
+  | freshThen (q : Point) (scope : Nat)
+  /-- `provideWith` built the dependency (`Layer.ts:1916-1919`), the value its context: the
+  dependent at `q` built under `provideContext(context)`, then the combiner. -/
+  | provideThen (q : Point) (memoMap : MemoMapId) (scope : Nat) (mode : CombineMode)
+  /-- `map(merged => f(merged, context))` (`Layer.ts:1923`), on the dependent's context. -/
+  | combineWith (mode : CombineMode) (that : Env.Ctx)
+  /-- `mergeAllEffect` forked its parallel parent (`Layer.ts:1596`), the value its handle:
+  fork the first sibling's sequential child of it (`:1597`). -/
+  | mergeChildren (q : Point) (memoMap : MemoMapId)
+  /-- A sibling's sequential child scope was forked (`Layer.ts:1597`), the value its handle:
+  fork the build of sibling `i` (child `i` of the merge at `q`) into it. -/
+  | mergeForkOne (q : Point) (i : Nat) (memoMap : MemoMapId) (parent : Nat) (forked : List FiberId)
+  /-- A sibling's build was forked, the value its fiber: the next sibling, or the await. -/
+  | mergeForkNext (q : Point) (i : Nat) (memoMap : MemoMapId) (parent : Nat)
+      (forked : List FiberId)
+  /-- `map(contexts => Context.mergeAll(...contexts))` (`Layer.ts:1600`), on the awaited
+  exits. -/
+  | mergeContexts
+  /-- `Effect.service(key)` read the fiber context, the value: the lookup, or the host throw
+  as a defect (`Context.getUnsafe`, `internal/effect.ts:2134`, re-entered at `:670-674` —
+  `Defect.missingService`, the machine's one name for it). -/
+  | serviceLookup (key : ServiceKey)
+  /-- `Context.make(key, value)` over a leaf's answer (`Layer.ts:1440`), or `Context.empty()`
+  in place of it (`:1515`). -/
+  | bindService (key : Option ServiceKey)
+  /-- `Layer.orDie`'s `catch_(build, die)` (`Layer.ts:3327`, `internal/effect.ts:3289`). -/
+  | orDie
 deriving DecidableEq
 
 /-- The thunk alphabet: a pure term at a point, a body to compile at a point, a store
@@ -261,6 +366,14 @@ inductive EffThunk
   path that runs a release is already uninterruptible, `:4021`), so the frame and the term
   reference share one entry shape. -/
   | releaseMasked (p : Point) (previous : Ctx)
+  /-- `getOrElseMemoize`'s `suspend` (`Layer.ts:445-457`): the lookup of the layer at `q` in
+  `memoMap`, for a build into `scope`, at run time. -/
+  | memoLookup (q : Point) (memoMap : MemoMapId) (scope : Nat)
+  /-- `mergeAllEffect`'s fork of one sibling's build (`Layer.ts:1597`): the layer at `q`,
+  built into `scope` through `memoMap`, as an immediate daemon (`internal/effect.ts:4851`). -/
+  | forkLayer (q : Point) (memoMap : MemoMapId) (scope : Nat)
+  /-- The await of the forked siblings (`forEach`'s concurrency, `Layer.ts:1597`). -/
+  | awaitAllFailFast (targets : List FiberId)
 deriving DecidableEq
 
 /-- The compiled program carrier. -/
@@ -374,6 +487,66 @@ theorem exitOfVal_exitOk (v : Val) : exitOfVal (Val.exitOk v) = some (Exit.succe
 theorem exitOfVal_exitErr (c : CauseV) : exitOfVal (Val.exitErr c) = some (Exit.failure c) :=
   exitImage.ofVal_toVal (Exit.failure c)
 
+/-- `CurrentMemoMap` in a service map (`Layer.ts:584-592`): the map a build forks, if any. -/
+def currentMemoMapOf (c : Env.Ctx) : Option MemoMapId :=
+  match c.getV Env.currentMemoMapKey with
+  | some (Val.memoMap ⟨index⟩) => some ⟨index⟩
+  | _ => none
+
+/-- `updateContext(self, f)` (`internal/effect.ts:2087-2096`): read the fiber context, then
+`updateThen` on it. -/
+def updateContextAt (update : Env.ContextUpdate) (body : Region) : NCode :=
+  Prim.onSuccess (Prim.withFiber EffThunk.getCtx) (EffName.updateThen update body)
+
+/-- `scopeAddFinalizerExit(scope, fin)` (`internal/effect.ts:3847-3858`): the `sync` half and
+the continuation that runs the finalizer now when the scope had already closed; unit either
+way. -/
+def scopeAddAt (scope : Nat) (fin : FinName) : NCode :=
+  Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.scopeAdd scope fin)))
+    (EffName.afterScopeAdd Val.unit fin)
+
+/-- `updateContext`'s identity test (`internal/effect.ts:2090`, `prevContext === nextContext`):
+`Context.add` always builds a fresh map, and `Context.merge(self, that)` answers `self` itself
+exactly when `self` holds something and `that` nothing (`Context.ts:1817-1819`); the body then
+runs as is, with no restoring frame. -/
+def updateKeepsIdentity : Env.ContextUpdate → Env.Ctx → Bool
+  | .provide that, prev => decide (prev.entries ≠ [] ∧ that.entries = [])
+  | _, _ => false
+
+/-- `catch_(self, die)` (`internal/effect.ts:3289`, `:2558-2572`): the cause's first typed error
+becomes the defect, alone; a cause with no typed error passes through. -/
+def orDieCause (cause : CauseV) : CauseV :=
+  match cause.reasons.findSome? (fun | .fail e _ => some e | _ => none) with
+  | some (Err.tag code) => Cause.die (Defect.user code)
+  | some Err.boom => Cause.die Defect.badName
+  | none => cause
+
+/-- The contexts of a list of reified exits, when every one succeeded with a context. -/
+def contextsOfList : List Val → Option (List Env.Ctx)
+  | [] => some []
+  | x :: rest =>
+    match exitOfVal x with
+    | some (Exit.success c) =>
+      match Env.decode c, contextsOfList rest with
+      | some ctx, some ctxs => some (ctx :: ctxs)
+      | _, _ => none
+    | _ => none
+
+/-- The contexts of an awaited exits value (`exitsVal`, one `list` frame). -/
+def contextsOf : Val → Option (List Env.Ctx)
+  | .list values => contextsOfList values
+  | _ => none
+
+/-- `Context.mergeAll(...contexts)` (`Layer.ts:1600`) over the awaited exits; a failed build
+fails the merge with every failure's reasons, in order. -/
+def mergeContextsK (v : Val) : NCode :=
+  match contextsOf v with
+  | some ctxs => Prim.success (Env.encode (Env.Context.mergeAll ctxs))
+  | none =>
+    match reasonsOfVal v with
+    | [] => badShape
+    | reason :: rest => Prim.failure ⟨reason :: rest⟩
+
 /-- `compile` of plan §3, structural in the program; the point is data. Names are minted at
 the point; `interpOf` resolves them by compiling the subterm they address. -/
 def compileEff : NativeEff → Point → NCode
@@ -471,12 +644,201 @@ def compileEff : NativeEff → Point → NCode
         | true :: rest => compileEff left { p with path := p.path ++ [0], tape := rest }
         | false :: rest => compileEff right { p with path := p.path ++ [1], tape := rest }
         | [] => frontier p
+      -- `Effect.provide(self, layer)` is `scopedWith` (`internal/layer.ts:15`), a `suspend`
+      -- (`internal/effect.ts:3960-3968`): `suspendBodyAt` allocates the scope and names the rest
+      | .provideLayer _ _ _ => Prim.suspend (EffThunk.body p)
+      -- `Effect.service(key)` (`internal/effect.ts:2059`): the context read, then the lookup
+      | .service key =>
+        Prim.onSuccess (Prim.withFiber EffThunk.getCtx) (EffName.serviceLookup key)
+      -- `Effect.provideService(self, key, value)` (`internal/effect.ts:2232`): `updateContext`
+      -- with `Context.add(key, value)`, the body child 0 under it
+      | .provideService key value _ =>
+        match evalTerm p.env value with
+        | some v =>
+          updateContextAt (Env.ContextUpdate.provideService key v) (Region.program (p.child 0))
+        | none => badShape
 
 /-- The program at a point of the root: the subterm compiled there, or the frontier. -/
 def resolve (root : NativeEff) (p : Point) : NCode :=
   match Node.at_ (Node.eff root) p.path with
   | some (Node.eff e) => compileEff e p
   | _ => badShape
+
+/-! ## Layers: `self.build(memoMap, scope)` at a point (the join, 2026-09-07)
+
+A layer is a subterm (`Node.layer`), its identity its path (`LayerId`), and its build is
+compiled at its point the way a program is at its (`compileEff`): structural in the term,
+with the point its address, the memo map and the scope the two arguments `build` takes
+(`Layer.ts:230-232`). The protocol is `Machine/Layer.lean`'s (`7cbd436`), arm for arm, with
+`resolveLayer root (q.child i)` where it had `progOf table (ProgName.layerBuild …)`. -/
+
+/-- `self.build(memoMap, scope)` by the constructor (`Layer.ts`, one arm per constructor site).
+`Layer.succeed` is `fromBuildUnsafe(succeed(Context.make(key, value)))` (`:1129-1130`), no
+scope of its own; `fresh` calls the inner build with a brand-new map on the same scope
+(`:3851`); `orDie` wraps the inner build in `catch_(_, die)` (`:3327`); every other constructor
+is a `fromBuild` wrapper (`:333-345`, `:386`, `:1915`) that forks a child of the caller's scope
+first and builds inside it (`innerLayerAt`). -/
+def compileLayer : LayerTerm NativeOp → Point → MemoMapId → Nat → NCode
+  | .succeed key value, _, _, _ =>
+    match Lit.toVal value with
+    | some v => Prim.success (Env.encode (Env.Context.empty.addV key v))
+    | none => badShape
+  | .fresh _, q, _, scope =>
+    Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoFork none)))
+      (EffName.freshThen (q.child 0) scope)
+  | .orDie inner, q, m, scope =>
+    Prim.onFailure (compileLayer inner (q.child 0) m scope) EffName.orDie
+  | _, q, m, scope =>
+    Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.scopeFork scope FinalizerStrategy.sequential)))
+      (EffName.fromBuildThen q m)
+
+/-- The layer at a point of the root, built: `compileLayer` of the node there. -/
+def resolveLayer (root : NativeEff) (q : Point) (m : MemoMapId) (scope : Nat) : NCode :=
+  match Node.at_ (Node.eff root) q.path with
+  | some (Node.layer l) => compileLayer l q m scope
+  | _ => badShape
+
+/-- What runs inside a `fromBuild` wrapper, on the forked layer scope, by the layer at `q`:
+a memoized leaf's lookup (`Layer.ts:386`, a `suspend`), `provideWith`'s dependency build
+(child 1) then the dependent (`:1916-1919`), or `mergeAllEffect`'s parallel parent
+(`:1596`). The constructors `compileLayer` handles without a wrapper are compiled as there,
+for totality. -/
+def innerLayerAt (root : NativeEff) (q : Point) (m : MemoMapId) (child : Nat) : NCode :=
+  match Node.at_ (Node.eff root) q.path with
+  | some (Node.layer (.effect _ _)) => Prim.suspend (EffThunk.memoLookup q m child)
+  | some (Node.layer (.effectDiscard _)) => Prim.suspend (EffThunk.memoLookup q m child)
+  | some (Node.layer (.provide _ _)) =>
+    Prim.onSuccess (resolveLayer root (q.child 1) m child)
+      (EffName.provideThen q m child CombineMode.provide)
+  | some (Node.layer (.provideMerge _ _)) =>
+    Prim.onSuccess (resolveLayer root (q.child 1) m child)
+      (EffName.provideThen q m child CombineMode.provideMerge)
+  | some (Node.layer (.merge _ _)) =>
+    Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.scopeFork child FinalizerStrategy.parallel)))
+      (EffName.mergeChildren q m)
+  | some (Node.layer l) => compileLayer l q m child
+  | _ => badShape
+
+/-- A leaf's construction on its layer scope: `effectContext` is `fromBuildMemo((_, scope) =>
+Scope.provide(effect, scope))` (`Layer.ts:1482`), and `Scope.provide` is `provideService(Scope)`
+(`internal/effect.ts:3932-3935`) — a region over the body at child 0, whose answer
+`Context.make(key, _)` binds (`Layer.effect`, `:1440`) or `Context.empty()` replaces
+(`effectDiscard`, `:1515`). -/
+def constructionAt (root : NativeEff) (q : Point) (layerScope : Nat) : NCode :=
+  match Node.at_ (Node.eff root) q.path with
+  | some (Node.layer (.effect key _)) =>
+    updateContextAt (Env.ContextUpdate.provideService Env.scopeKey (Val.scopeHandle layerScope))
+      (Region.construct (q.child 0) (some key))
+  | some (Node.layer (.effectDiscard _)) =>
+    updateContextAt (Env.ContextUpdate.provideService Env.scopeKey (Val.scopeHandle layerScope))
+      (Region.construct (q.child 0) none)
+  | _ => badShape
+
+/-- A region's program. -/
+def regionCode (root : NativeEff) : Region → NCode
+  | .program q => resolve root q
+  | .build q m scope => resolveLayer root q m scope
+  | .buildAdding q m scope =>
+    Prim.onSuccess (resolveLayer root q m scope) (EffName.addCurrentMemoMap m)
+  | .construct q key => Prim.onSuccess (resolve root q) (EffName.bindService key)
+
+/-! ### The continuations that read a value
+
+Each is a function of the value, so that a theorem about it case-splits on a reader
+(`Val.context?`, `Env.decode`) and never has to match a compiled `match` (the Layer machine's
+`*K` functions, `Machine/Layer.lean`). -/
+
+/-- `scopedWith`'s scope is made, the handle in hand (`internal/layer.ts:15-21`): the node's
+`local` flag decides the build; the scope closes with the exit (`internal/effect.ts:3967`). -/
+def provideLayerWithK (root : NativeEff) (p : Point) (scope : Nat) : NCode :=
+  match Node.at_ (Node.eff root) p.path with
+  | some (Node.eff (.provideLayer _ isLocal _)) =>
+    Prim.onExit
+      (Prim.onSuccess
+        (if isLocal then
+          Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoFork none)))
+            (EffName.withMemoMapThen (p.child 0) scope)
+        else
+          Prim.onSuccess (Prim.withFiber EffThunk.getCtx)
+            (EffName.buildWithScopeFromContext (p.child 0) scope))
+        (EffName.provideLayerBody p))
+      (EffName.scopeClose scope) false
+  | _ => badShape
+
+/-- `flatMap(build, context => provideContext(self, context))` (`internal/layer.ts:20`) on the
+built context; `provideContext` of an exit is that exit (`internal/effect.ts:2196`). -/
+def provideLayerBodyK (root : NativeEff) (p : Point) (v : Val) : NCode :=
+  match Env.decode v with
+  | some built =>
+    match (resolve root (p.child 1)).asExit? with
+    | some exit => Prim.ofExit exit
+    | none => updateContextAt (Env.ContextUpdate.provide built) (Region.program (p.child 1))
+  | none => badShape
+
+/-- `updateContext` on the previous context (`internal/effect.ts:2088-2095`): `f(prev)`; the
+same object runs the body as is (`:2090`), else `setContext(next)` and the restoring frame. -/
+def updateThenK (root : NativeEff) (update : Env.ContextUpdate) (body : Region) (v : Val) :
+    NCode :=
+  match Val.context? v with
+  | some prev =>
+    if updateKeepsIdentity update prev.services then regionCode root body
+    else
+      Prim.onSuccess
+        (Prim.withFiber (EffThunk.setCtx (Ctx.withServices (update.apply prev.services))))
+        (EffName.bodyThen body prev)
+  | none => badShape
+
+/-- `Layer.buildWithScope` on the fiber context (`Layer.ts:974-979`): `forkOrCreate` first. -/
+def buildWithScopeK (q : Point) (scope : Nat) (v : Val) : NCode :=
+  match Val.context? v with
+  | some ctx =>
+    Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoFork (currentMemoMapOf ctx.services))))
+      (EffName.withMemoMapThen q scope)
+  | none => badShape
+
+/-- `Context.add(CurrentMemoMap, memoMap)` over the built context (`Layer.ts:762`). -/
+def addCurrentMemoMapK (m : MemoMapId) (v : Val) : NCode :=
+  match Env.decode v with
+  | some ctx => Prim.success (Env.encode (ctx.addV Env.currentMemoMapKey (Val.memoMap m)))
+  | none => badShape
+
+/-- `provideWith` on the dependency's context (`Layer.ts:1920-1923`): the dependent's build,
+child 0, under `provideContext(context)`, then the combiner. -/
+def provideThenK (q : Point) (m : MemoMapId) (scope : Nat) (mode : CombineMode) (v : Val) :
+    NCode :=
+  match Env.decode v with
+  | some ctx =>
+    Prim.onSuccess
+      (updateContextAt (Env.ContextUpdate.provide ctx) (Region.build (q.child 0) m scope))
+      (EffName.combineWith mode ctx)
+  | none => badShape
+
+/-- `f(merged, context)` (`Layer.ts:1923`): `identity` for `provide` (`:2348`),
+`Context.merge(that, self)` for `provideMerge` (`:2800`). -/
+def combineWithK (mode : CombineMode) (that : Env.Ctx) (v : Val) : NCode :=
+  match Env.decode v with
+  | some merged =>
+    match mode with
+    | CombineMode.provide => Prim.success (Env.encode merged)
+    | CombineMode.provideMerge => Prim.success (Env.encode (that.merge merged))
+  | none => badShape
+
+/-- `Context.make(key, value)` over a leaf's answer (`Layer.ts:1440`), or `Context.empty()` in
+place of it (`:1515`). -/
+def bindServiceK (key : Option ServiceKey) (v : Val) : NCode :=
+  match key with
+  | some key => Prim.success (Env.encode (Env.Context.empty.addV key v))
+  | none => Prim.success (Env.encode Env.Context.empty)
+
+/-- `Effect.service(key)` on the fiber context: the value, or the host throw as a defect
+(`Context.getUnsafe`, `internal/effect.ts:2134`; `Defect.missingService`). -/
+def serviceLookupK (key : ServiceKey) (v : Val) : NCode :=
+  match Val.context? v with
+  | some ctx =>
+    match ctx.services.getV key with
+    | some value => Prim.success value
+    | none => Prim.failure (Cause.die Defect.missingService)
+  | none => badShape
 
 /-! ## Generators: the statement walker behind `iterNext` -/
 
@@ -733,6 +1095,71 @@ def contAOf (root : NativeEff) : EffName → Val → NCode
     | none => badShape
   | .releaseBody p exit previous, _ =>
     Prim.withFiber (EffThunk.releaseMasked (p.childWith 1 (reifyExitVal exit)) previous)
+  -- the join: `scopedWith`'s scope is made (`internal/effect.ts:3966`); `internal/layer.ts:15-21`
+  | .provideLayerWith p, Val.scopeHandle scope => provideLayerWithK root p scope
+  | .provideLayerWith _, _ => badShape
+  | .provideLayerBody p, v => provideLayerBodyK root p v
+  | .updateThen update body, v => updateThenK root update body v
+  | .bodyThen body previous, _ =>
+    Prim.onExit (regionCode root body) (EffName.restoreCtx previous) false
+  | .buildWithScopeFromContext q scope, v => buildWithScopeK q scope v
+  -- `buildWithMemoMap` (`Layer.ts:756-765`) on the forked-or-created map
+  | .withMemoMapThen q scope, Val.memoMap ⟨id⟩ =>
+    updateContextAt (Env.ContextUpdate.provideService Env.currentMemoMapKey (Val.memoMap ⟨id⟩))
+      (Region.buildAdding q ⟨id⟩ scope)
+  | .withMemoMapThen _ _, _ => badShape
+  | .addCurrentMemoMap m, v => addCurrentMemoMapK m v
+  -- `fromBuild` (`Layer.ts:339-344`) on the forked layer scope
+  | .fromBuildThen q m, Val.scopeHandle child =>
+    Prim.onExit (innerLayerAt root q m child)
+      (EffName.store (Name.finalizerName (FinName.closeChildOnFailure child))) false
+  | .fromBuildThen _ _, _ => badShape
+  -- `getOrElseMemoize` after `get` (`Layer.ts:451-455`): a hit is the entry's deferred and its
+  -- owning map (`:439-440`, `:246-249`), registering the entry finalizer on the caller scope
+  -- then awaiting; unit is a miss, `memoMapBuild`
+  | .memoize q _ scope, Val.pair (Val.promise ⟨cell⟩) (Val.memoMap ⟨owner⟩) =>
+    Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.path ⟨owner⟩))
+      (EffName.awaitPromise ⟨cell⟩)
+  | .memoize q m scope, Val.unit =>
+    Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoBuild q.path m)))
+      (EffName.buildIntoLayerScope q m scope)
+  | .memoize _ _ _, _ => badShape
+  | .awaitPromise cell, _ =>
+    Prim.async (EffName.registerAwait cell) true (some (EffName.cancelAwait cell))
+  | .buildIntoLayerScope q m scope, Val.scopeHandle layerScope =>
+    Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.path m))
+      (EffName.thenBuildInto q m layerScope)
+  | .buildIntoLayerScope _ _ _, _ => badShape
+  | .thenBuildInto q m layerScope, _ =>
+    Prim.onExit (constructionAt root q layerScope)
+      (EffName.store (Name.finalizerName (FinName.memoDone q.path m))) false
+  | .freshThen q scope, Val.memoMap ⟨id⟩ => resolveLayer root q ⟨id⟩ scope
+  | .freshThen _ _, _ => badShape
+  | .provideThen q m scope mode, v => provideThenK q m scope mode v
+  | .combineWith mode that, v => combineWithK mode that v
+  -- `mergeAllEffect` (`Layer.ts:1596-1600`): the parallel parent, one sequential child per
+  -- sibling with that sibling's build forked into it, then the await and the merge
+  | .mergeChildren q m, Val.scopeHandle parent =>
+    Prim.onSuccess
+      (Prim.sync (EffThunk.op (SyncOp.scopeFork parent FinalizerStrategy.sequential)))
+      (EffName.mergeForkOne q 0 m parent [])
+  | .mergeChildren _ _, _ => badShape
+  | .mergeForkOne q i m parent forked, Val.scopeHandle child =>
+    Prim.onSuccess (Prim.withFiber (EffThunk.forkLayer (q.child i) m child))
+      (EffName.mergeForkNext q i m parent forked)
+  | .mergeForkOne _ _ _ _ _, _ => badShape
+  | .mergeForkNext q i m parent forked, Val.fiber ⟨id⟩ =>
+    if i = 0 then
+      Prim.onSuccess
+        (Prim.sync (EffThunk.op (SyncOp.scopeFork parent FinalizerStrategy.sequential)))
+        (EffName.mergeForkOne q 1 m parent (forked ++ [⟨id⟩]))
+    else
+      Prim.onSuccess (Prim.withFiber (EffThunk.awaitAllFailFast (forked ++ [⟨id⟩])))
+        EffName.mergeContexts
+  | .mergeForkNext _ _ _ _ _, _ => badShape
+  | .mergeContexts, v => mergeContextsK v
+  | .serviceLookup key, v => serviceLookupK key v
+  | .bindService key, v => bindServiceK key v
   | _, v => Prim.success v
 
 /-- `cont[contE](cause, fiber)`. -/
@@ -743,6 +1170,7 @@ def contEOf (root : NativeEff) : EffName → CauseV → NCode
   | .merge exit, cause => Prim.ofExit (Exit.restoreAfterFinalizer exit (Exit.failure cause))
   | .constant v, _ => Prim.success v
   | .store name, cause => embed (Effect4.Machine.contEOf name cause)
+  | .orDie, cause => Prim.failure (orDieCause cause)
   | _, cause => Prim.failure cause
 
 /-- The cancel effect a cancel name runs (`Deferred.await`'s cleanup splices the waiter out,
@@ -783,8 +1211,16 @@ def suspendBodyAt (root : NativeEff) : EffThunk → NCode
         match evalTerm p.env initial with
         | some cursor => Prim.whileLoop (EffName.loop p) cursor
         | none => badShape
+      -- `scopedWith` (`internal/effect.ts:3966-3967`): the scope made, the rest named
+      | some (Node.eff (.provideLayer _ _ _)) =>
+        Prim.onSuccess
+          (Prim.sync (EffThunk.op (SyncOp.scopeMake FinalizerStrategy.sequential)))
+          (EffName.provideLayerWith p)
       | some (Node.eff e) => compileEff e p
       | _ => badShape
+  -- `getOrElseMemoize` (`Layer.ts:451`): the lookup, then `memoize` on its answer
+  | .memoLookup q m scope =>
+    Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoGet q.path m))) (EffName.memoize q m scope)
   | .store (Thunk.body program) => embed (progOf program)
   -- a capture's release (`FinName.foreign`, V1): `provideContext(release(a, exit), context)`
   -- (`internal/effect.ts:3983`) — read the current context, then `releaseUnder`
@@ -865,6 +1301,13 @@ def interpOf (root : NativeEff) :
     | EffThunk.releaseMasked p previous =>
       some (WithFiberAction.setInterruptible
         (Prim.onExit (resolve root p) (EffName.restoreCtx previous) false) false)
+    -- `mergeAllEffect`'s siblings (`Layer.ts:1597`): `forEach`'s concurrency forks each build
+    -- as an immediate daemon under the parent's mask (`forkUnsafe(parent, eff, true, true,
+    -- "inherit")`, `internal/effect.ts:4851`), then the await
+    | EffThunk.forkLayer q m scope =>
+      some (WithFiberAction.fork (resolveLayer root q m scope)
+        ⟨true, true, Supervision.MaskMode.inherit⟩)
+    | EffThunk.awaitAllFailFast targets => some (WithFiberAction.awaitAllFailFast targets)
     | _ => none
   syncState := fun
     | EffThunk.op operation, state => syncOpStep operation state

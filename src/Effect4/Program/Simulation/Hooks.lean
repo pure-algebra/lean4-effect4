@@ -344,18 +344,6 @@ theorem cancelThenFail_means (root : NativeEff) (name : EffName) (cause : CauseV
   intro completed v
   exact CodeMeans.failure _
 
-/-- The stores' `closeIfLast` on anything but a scope handle: done (`Layer.ts:408`). -/
-theorem contAOf_closeIfLast_other (ex : ExitV) (v : Val) (hne : ∀ s, v ≠ Val.scopeHandle s) :
-    Effect4.Machine.contAOf (Name.closeIfLast ex) v = Prim.success Val.unit := by
-  unfold Effect4.Machine.contAOf
-  revert hne
-  split <;> intro hne <;> first
-    | rfl
-    | contradiction
-    | exact absurd rfl (hne _)
-    | (rename_i heq; exact absurd heq (hne _))
-    | simp_all
-
 theorem denoteFin_means (root : NativeEff) (fin : FinName) (ex : ExitV) :
     CodeMeans root (embed (finProgram fin ex)) (denoteFin fin ex) := by
   cases fin with
@@ -415,7 +403,8 @@ theorem body_means (root : NativeEff) (b : Body) :
       | .raceCleanup race => c = embed (Prim.withFiber (Thunk.act (ActionName.cancelRace race)))
       | .acquireIn p ctx =>
         c = Prim.onSuccess (Prim.withFiber (.store (.act .ambientScope))) (.acquireIn p ctx)
-      | .release q previous => c = Prim.onExit (resolve root q) (.restoreCtx previous) false) →
+      | .release q previous => c = Prim.onExit (resolve root q) (.restoreCtx previous) false
+      | .layerBuild q m scope => c = resolveLayer root q m scope) →
       CodeMeans root c (denoteBody root b) := by
   intro c hc
   cases b with
@@ -427,6 +416,7 @@ theorem body_means (root : NativeEff) (b : Body) :
     exact acquireIn_intro root p ctx (resolve_intro root _) fun a ex =>
       foreignRelease_intro root _ ex fun completed => resolve_intro root _
   | release q previous => rw [hc]; exact release_intro root q previous (resolve_intro root q)
+  | layerBuild q m scope => rw [hc]; exact layerBuild_intro root q m scope
 
 /-- The finalizer programs: both instances name the same finalizers, with related programs. -/
 theorem finalizerProgram_means (root : NativeEff) (completed : List (FiberId × ExitV))

@@ -21,8 +21,11 @@ Register rows (`Test/Counterexamples/REGISTER.md`):
   types with the bindings still required, and the machine dies with `serviceNotFound`.
 * `E4-PROV-CE-002` — the layer signature determines the built context. Refuted: `leftWins`
   and `rightWins` share a signature and build different contexts (CE 5 lifted).
-* `E4-PROV-CE-003` — `Layer.orDie` is one more `LayerDesc`. Refuted: the lowering answers
-  `none` while the typing answers `E := never`; the refusal is `PROV-FB-ORDIE-DESC`.
+* `E4-PROV-CE-003` — `Layer.orDie` is one more layer description. Refuted twice over: the
+  typing answers `E := never`, and since the join the compile route builds it as
+  `catch_(build, die)` (`Layer.ts:3327`) — a leaf's typed failure comes out as the defect
+  (the `#guard`s in `Provision.lean`); before the join the Layer machine's lowering refused it
+  by name (`PROV-FB-ORDIE-DESC`).
 * `E4-PROV-CE-004` — a string literal is a layer value. Refuted by the typing
   (`PROV-FB-STRING-VALUE`): strings are not machine values on either route.
 -/
@@ -169,8 +172,8 @@ theorem deployment_closed :
     (layerTy docsSig deploymentLayer).map LayerTy.requires = some Requirement.empty := by decide
 
 -- `E4-PROV-CE-001`, the machine half: the mistake dies, the deployment builds.
-#guard buildSucceeds docsSig siblingMistake = some false
-#guard buildSucceeds docsSig deploymentLayer = some true
+#guard (docsLayer siblingMistake).map buildSucceeds = some false
+#guard (docsLayer deploymentLayer).map buildSucceeds = some true
 
 /-- `E4-PROV-CE-002`, the typing half: one signature. -/
 theorem order_invisible_to_type : layerTy docsSig leftWins = layerTy docsSig rightWins := by decide
@@ -178,13 +181,14 @@ theorem order_invisible_to_type : layerTy docsSig leftWins = layerTy docsSig rig
 -- `E4-PROV-CE-002`, the run half: two contexts, through the specification and the machine.
 #guard (build docsSem leftWins Context.empty).map (fun c => c.getV dbKey) = some (some (.nat 2))
 #guard (build docsSem rightWins Context.empty).map (fun c => c.getV dbKey) = some (some (.nat 1))
-#guard buildServices docsSig leftWins = some [(10, 2), (3, 0)]
-#guard buildServices docsSig rightWins = some [(10, 1), (3, 0)]
+#guard (docsLayer leftWins).map buildServices = some [(10, 2), (3, 0)]
+#guard (docsLayer rightWins).map buildServices = some [(10, 1), (3, 0)]
 
-/-- `E4-PROV-CE-003` (`PROV-FB-ORDIE-DESC`): typed, not lowered. -/
-theorem orDie_typed_not_lowered :
-    (layerTy docsSig (.orDie servicesLayer)).map LayerTy.error = some Ty.never ∧
-      lower docsSig (.orDie servicesLayer) = none := by decide
+/-- `E4-PROV-CE-003`: typed with `E := never`; the machine half (`orDie` builds, and turns a
+leaf's failure into a defect) is the `#guard` pair in `Provision.lean`. -/
+theorem orDie_typed :
+    (layerTy docsSig (.orDie servicesLayer)).map LayerTy.error = some Ty.never := by decide
+#guard (docsLayer (.orDie deploymentLayer)).map buildSucceeds = some true
 
 /-- `E4-PROV-CE-004` (`PROV-FB-STRING-VALUE`): a string literal is refused by the typing. -/
 theorem string_value_refused : layerTy docsSig (.succeed dbKey (.str "db")) = none := by decide

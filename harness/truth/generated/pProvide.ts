@@ -2,4 +2,4 @@
 // Regenerate: harness/truth/check-truth.ps1
 import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope } from "effect"
 import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, incr, double, takeAndBump, zeroWhenPositive, noChange } from "../prelude.ts"
-export const main: Effect.Effect<number, never> = Effect.succeed(42)
+export const main: Effect.Effect<number, never> = Effect.provide(Effect.service(Context.Service<number>("k4_4")), Layer.effect(Context.Service<number>("k4_4"), Effect.succeed(7)))

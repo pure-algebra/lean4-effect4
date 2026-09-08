@@ -433,6 +433,53 @@ theorem scope?_none {v : Val} (h : scope? v = none) (s : Nat) : v ≠ scopeHandl
   subst hv
   exact nomatch h
 
+/-- The memo map a memo-map handle names (the join); `none` on any other shape. -/
+def memoMap? : Val → Option MemoMapId
+  | Value.memoMap index => some ⟨index⟩
+  | _ => none
+
+theorem memoMap?_memoMap (id : MemoMapId) : memoMap? (memoMap id) = some id := rfl
+
+theorem memoMap?_exact {v : Val} {id : MemoMapId} (h : memoMap? v = some id) : v = memoMap id := by
+  unfold memoMap? at h
+  split at h
+  · injection h with h
+    subst h
+    rfl
+  · exact nomatch h
+
+theorem memoMap?_none {v : Val} (h : memoMap? v = none) (id : MemoMapId) : v ≠ memoMap id := by
+  intro hv
+  subst hv
+  exact nomatch h
+
+/-- A memo hit read back (`SyncOp.memoGet`'s answer on a hit: the entry's deferred and its
+owning map, `Layer.ts:439-440`); `none` on any other shape. -/
+def memoHit? : Val → Option (DeferredKey × MemoMapId)
+  | .pair (Value.promise c) (Value.memoMap o) => some (⟨c⟩, ⟨o⟩)
+  | _ => none
+
+theorem memoHit?_pair (c : DeferredKey) (o : MemoMapId) :
+    memoHit? (.pair (promise c) (memoMap o)) = some (c, o) := by
+  cases c; cases o; rfl
+
+theorem memoHit?_exact {v : Val} {c : DeferredKey} {o : MemoMapId}
+    (h : memoHit? v = some (c, o)) : v = .pair (promise c) (memoMap o) := by
+  unfold memoHit? at h
+  split at h
+  · injection h with h
+    injection h with h₁ h₂
+    subst h₁ h₂
+    rfl
+  · exact nomatch h
+
+theorem memoHit?_none {v : Val} (h : memoHit? v = none) (c : DeferredKey) (o : MemoMapId) :
+    v ≠ .pair (promise c) (memoMap o) := by
+  intro hv
+  subst hv
+  cases c; cases o
+  exact nomatch h
+
 theorem fibers_eq (ids : List FiberId) :
     fibers ids = Value.fiberSnapshot (.list (ids.map fun id => Value.fiber id.value)) := rfl
 

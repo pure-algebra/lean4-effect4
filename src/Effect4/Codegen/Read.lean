@@ -634,6 +634,11 @@ mutual
     | .acquireRelease acquire release =>
       readable sig spell n acquire && readable sig spell (n + 2) release
     | .choose _ _ _ => false
+    -- the provision constructors (the join): printed, not yet read back — a key's spelling
+    -- is a string the reader has no table for
+    | .provideLayer _ _ _ => false
+    | .service _ => false
+    | .provideService _ _ _ => false
 
   def readableStmts (sig : Signature Op) (spell : String → List String → Option Op)
       (n : Nat) : Stmts Op → Bool
@@ -1420,6 +1425,9 @@ theorem read_print {sig : Signature Op} {spell : String → List String → Opti
     simp [headOf_lit .acquireRelease "Effect.acquireRelease" rfl, read_print hl acquire hr.1 ha,
       read_print hl release hr.2 hr']
   | .choose _ _ _, hr, _ => by simp [readable] at hr
+  | .provideLayer _ _ _, hr, _ => by simp [readable] at hr
+  | .service _, hr, _ => by simp [readable] at hr
+  | .provideService _ _ _, hr, _ => by simp [readable] at hr
 termination_by structural e
 
 theorem read_print_stmts {sig : Signature Op} {spell : String → List String → Option Op}

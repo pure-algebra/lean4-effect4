@@ -112,6 +112,12 @@ inductive CodeMeans (root : NativeEff) : NCode → RProgram → Prop
       (hk : ∀ completed, CodeMeans root (suspendBodyAt root (.body { p with completed }))
         (prepareR completed (k .unit))) :
       CodeMeans root (Prim.suspend (EffThunk.body p)) (.vis (.inr (.suspend p)) k)
+  /-- `getOrElseMemoize`'s suspend (`Layer.ts:445`, the join): the frame's memo-lookup thunk
+  at the layer's point, the term's counted step there. -/
+  | suspendMemo (q : Point) (m : MemoMapId) (scope : Nat) (k : Val → RProgram)
+      (hk : ∀ completed, CodeMeans root (suspendBodyAt root (.memoLookup q m scope))
+        (prepareR completed (k .unit))) :
+      CodeMeans root (Prim.suspend (EffThunk.memoLookup q m scope)) (.vis (.inr (.suspend q)) k)
   /-- A live frontier: the frame's suspension returns itself at every view, the term's
   frontier operation stays. The two points agree on everything but the captured view. -/
   | frontier (p p' : Point) (reason : FrontierReason) (k : ExitV → RProgram)
@@ -527,6 +533,10 @@ theorem CodeMeans.bindTail {root : NativeEff} {c : NCode} {r : RProgram} (h : Co
     refine CodeMeans.suspendBody p _ fun completed => ?_
     rw [prepareR_bind completed ht]
     exact ih completed
+  | suspendMemo q m scope k _ ih =>
+    refine CodeMeans.suspendMemo q m scope _ fun completed => ?_
+    rw [prepareR_bind completed ht]
+    exact ih completed
   | frontier p p' reason k hp hloop => exact CodeMeans.frontier p p' reason _ hp hloop
   | yieldError p e k _ ih =>
     refine CodeMeans.yieldError p e _ fun completed => ?_
@@ -678,6 +688,7 @@ theorem CodeMeans.prepare {root : NativeEff} {c : NCode} {r : RProgram} (h : Cod
   | syncStore o k hk _ => exact CodeMeans.syncStore o k hk
   | syncPure p k hk _ => exact CodeMeans.syncPure p k hk
   | suspendBody p k hk _ => exact CodeMeans.suspendBody p k hk
+  | suspendMemo q m scope k hk _ => exact CodeMeans.suspendMemo q m scope k hk
   | frontier p p' reason k hp hloop => exact CodeMeans.frontier p p' reason k hp hloop
   | yieldError p e k hk _ => exact CodeMeans.yieldError p e k hk
   | closeWalk strategy order ex k hk _ => exact CodeMeans.closeWalk strategy order ex k hk

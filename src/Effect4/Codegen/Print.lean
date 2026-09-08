@@ -141,6 +141,18 @@ def printForkOptions (options : Effect4.Supervision.ForkOptions) : TypeScript.Ex
 
 variable {Op : Type}
 
+/-- A service key as rc.112 spells one — `Context.Service<Shape>("key")`
+(`Context.ts:201-215`): the key's two numbers as the string that is its runtime identity
+(`:219`, so two spellings of one key are one service), with its carrier from the signature's
+service table as the type argument when the table has one. Minted from the key's own data,
+as `Var.name` mints a binder from its position: the printer invents no name. -/
+def printKey (sig : Signature Op) (key : ServiceKey) : TypeScript.Expr :=
+  let head : TypeScript.Expr :=
+    match sig.serviceTy key with
+    | some ty => .generic (.ident "Context.Service") [ty.render]
+    | none => .ident "Context.Service"
+  .call head [.str ("k" ++ toString key.name.value ++ "_" ++ toString key.service.value)]
+
 mutual
   /-- `print sig n e` is `e` as one TypeScript expression, with `n` the environment's
   length. Every binder the shape introduces is `Var.name` of the position it occupies:
@@ -223,6 +235,54 @@ mutual
       .ok (.call (.ident "Effect.acquireRelease")
         [a, .lambda [Var.name n, Var.name (n + 1)] r])
     | .choose site _ _ => .error (.choose site)
+    -- `Effect.provide(self, layer, { local })` (`internal/layer.ts:8-22`, `Effect.ts:11383`):
+    -- the option object only when set, as the corpus writes it
+    | .provideLayer layer isLocal body => do
+      let b ← print sig n body
+      let l ← printLayer sig layer
+      .ok (.call (.ident "Effect.provide")
+        (if isLocal then [b, l, .object [("local", .bool true)]] else [b, l]))
+    -- `Effect.service(key)` (`internal/effect.ts:2059`)
+    | .service key => .ok (.call (.ident "Effect.service") [printKey sig key])
+    -- `Effect.provideService(self, key, value)` (`internal/effect.ts:2202`)
+    | .provideService key value body => do
+      let b ← print sig n body
+      .ok (.call (.ident "Effect.provideService") [b, printKey sig key, printTerm value])
+
+  /-- A layer term as the rc.112 combinators it transcribes, one arm per `Layer.ts` export
+  (the join, 2026-09-07). A body is closed — the layer's own scope is its ambient one
+  (`Layer.ts:1438`) — so it prints at environment length `0` and its first binder is `a0`.
+  `merge` prints as the two-argument `Layer.merge(a, b)` (`Layer.ts:1850`) and never as a
+  flattened `Layer.mergeAll`: the two build different scope trees, and the compile follows
+  the term's. The named spelling of a layer, keys as class identifiers, is
+  `Codegen/Layer.lean`'s. -/
+  def printLayer (sig : Signature Op) : LayerTerm Op → Except PrintRefusal TypeScript.Expr
+    | .succeed key value =>
+      .ok (.call (.ident "Layer.succeed") [printKey sig key, printLit value])
+    | .effect key body => do
+      let b ← print sig 0 body
+      .ok (.call (.ident "Layer.effect") [printKey sig key, b])
+    | .effectDiscard body => do
+      let b ← print sig 0 body
+      .ok (.call (.ident "Layer.effectDiscard") [b])
+    | .provide self that => do
+      let s ← printLayer sig self
+      let t ← printLayer sig that
+      .ok (.method s "pipe" [.call (.ident "Layer.provide") [t]])
+    | .provideMerge self that => do
+      let s ← printLayer sig self
+      let t ← printLayer sig that
+      .ok (.method s "pipe" [.call (.ident "Layer.provideMerge") [t]])
+    | .merge left right => do
+      let l ← printLayer sig left
+      let r ← printLayer sig right
+      .ok (.call (.ident "Layer.merge") [l, r])
+    | .fresh inner => do
+      let i ← printLayer sig inner
+      .ok (.call (.ident "Layer.fresh") [i])
+    | .orDie inner => do
+      let i ← printLayer sig inner
+      .ok (.call (.ident "Layer.orDie") [i])
 
   /-- A generator body, statement by statement. `bindYield` binds the answer as the next
   variable and the rest continues one longer; `ifElse` and `whileTrue` are block-scoped, so

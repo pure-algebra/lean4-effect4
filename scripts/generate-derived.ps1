@@ -80,7 +80,11 @@ $manifest = @(
       'Effect4.Program.Lit', 'Effect4.Machine.FnName', 'Effect4.FinalizerStrategy',
       'Effect4.Supervision.MaskMode', 'Effect4.Supervision.ObserverMode',
       'Effect4.Program.NativeOp', 'Effect4.Supervision.ForkOptions', 'Effect4.Program.Term',
-      'Effect4.Program.CauseTerm', 'Effect4.Program.Eff@Effect4.Program.NativeOp')
+      'Effect4.Program.CauseTerm',
+      # the service key (the join, 2026-09-07): `Eff.service`, `Eff.provideService` and the
+      # `LayerTerm` leaves carry one, so its two nominal halves and the key precede the family
+      'Effect4.ServiceName', 'Effect4.ServiceTypeCode', 'Effect4.ServiceKey',
+      'Effect4.Program.Eff@Effect4.Program.NativeOp')
   },
   [pscustomobject]@{
     # `Tree` is the store's own carrier (a name space as content, `Store/Node.lean`); its
