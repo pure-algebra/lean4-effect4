@@ -39,6 +39,15 @@ Printer-image entrypoints are test seams and never fallbacks for foreign admissi
 Only source locations are excluded from comparisons across source edits; same-input
 engine comparisons retain the entire lifted record.
 
+\`bun ts/eff/ingest/cli.ts census --force --out .lake/ingest-census\` reads the
+34 pinned projects in Foldlab's corpus. Use \`--root\`, \`--manifest\` and
+\`--labels\` to select an explicit pinned corpus. Rows stream to files.jsonl and
+units.jsonl; summary.json holds counts by project and generation. Every disagreement
+is listed in defects.jsonl with a copied source fixture. Generation follows the owning
+workspace package and its pinned catalog or lockfile. V3 is input data only; the score
+uses v4 units. A corroborated lift requires the two complete verdicts to agree.
+Performance observations are separate from deterministic report rows.
+
 Regenerate this file with \`bun ts/eff/ingest/render-readme.ts\`; \`--check\` verifies drift.
 The following tables are generated from the profile, forms and taxonomy.
 

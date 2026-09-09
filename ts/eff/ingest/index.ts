@@ -4,24 +4,25 @@ import { createHash } from "node:crypto"
 import { pinsDigest } from "./pins.ts"
 import { stat, readdir, readFile, writeFile, mkdir } from "node:fs/promises"
 import { resolve, relative, join } from "node:path"
+import { Metrics } from "./census/census-contract.ts"
 import { Schema } from "effect"
 import { FileReport, type FileReport as Report } from "./contract.ts"
 export { recognizeSource as recognizeCompilerSource } from "./ck.ts"
 export { recognizeSource as recognizeOxcSource } from "./oxc.ts"
 export type { Verdict, FileReport } from "./contract.ts"
-const Reply = Schema.Union([Schema.Struct({ ok: Schema.Literal(true), reports: Schema.Array(FileReport) }), Schema.Struct({ ok: Schema.Literal(false), error: Schema.String })])
+const Reply = Schema.Union([Schema.Struct({ ok: Schema.Literal(true), reports: Schema.Array(FileReport), metrics: Metrics }), Schema.Struct({ ok: Schema.Literal(false), error: Schema.String })])
 const decodeReply = Schema.decodeUnknownSync(Reply)
-export interface Options { readonly engine?: "ck" | "oxc" | "both"; readonly root?: string; readonly workers?: number; readonly batchSize?: number; readonly cacheDir?: string; readonly force?: boolean }
-async function* files(path: string): AsyncGenerator<string> {
+export interface Options { readonly engine?: "ck" | "oxc" | "both"; readonly root?: string; readonly workers?: number; readonly batchSize?: number; readonly cacheDir?: string; readonly force?: boolean; readonly census?: boolean; readonly onMetrics?: (metrics: Metrics) => void; readonly excludeDirs?: readonly string[] }
+async function* files(path: string, excludeDirs: readonly string[]): AsyncGenerator<string> {
   const s = await stat(path)
-  if (s.isFile()) { if (/\.tsx?$/.test(path)) yield path; return }
+  if (s.isFile()) { if (/\.(?:tsx?|mts|cts)$/.test(path)) yield path; return }
   if (!s.isDirectory()) return
   const entries = await readdir(path, { withFileTypes: true })
   const key = (e: typeof entries[number]) => e.name + (e.isDirectory() ? "/" : "")
   entries.sort((a, b) => key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0)
   for (const entry of entries) {
-    if (["node_modules", ".git", ".lake"].includes(entry.name)) continue
-    yield* files(join(path, entry.name))
+    if (excludeDirs.includes(entry.name)) continue
+    yield* files(join(path, entry.name), excludeDirs)
   }
 }
 const runBatch = async (paths: readonly string[], root: string, engine: "ck" | "oxc" | "both", options: Options): Promise<readonly Report[]> => {
@@ -34,7 +35,7 @@ const runBatch = async (paths: readonly string[], root: string, engine: "ck" | "
   for (const path of paths) {
     if (!options.cacheDir) { misses.push(path); continue }
     const info = await stat(path), name = relative(root, path).replaceAll("\\", "/")
-    const cache = join(options.cacheDir, createHash("sha256").update(path).update(root).update(engine).digest("hex") + ".json")
+    const cache = join(options.cacheDir, createHash("sha256").update(path).update(root).update(engine).update(String(options.census ?? false)).digest("hex") + ".json")
     locations.set(name, { cache, size: info.size, mtime: info.mtimeMs })
     if (!options.force) try {
       const entry = decodeCache(JSON.parse(await readFile(cache, "utf8")))
@@ -43,7 +44,7 @@ const runBatch = async (paths: readonly string[], root: string, engine: "ck" | "
     misses.push(path)
   }
   if (!misses.length) return paths.map(path => cached.get(relative(root, path).replaceAll("\\", "/"))!)
-  const job = { engine, files: misses.map(path => ({ path, name: relative(root, path).replaceAll("\\", "/") })) }
+  const job = { engine, census: options.census ?? false, files: misses.map(path => ({ path, name: relative(root, path).replaceAll("\\", "/") })) }
   const url = new URL("./worker.ts", import.meta.url)
   const value: unknown = await new Promise((resolve, reject) => {
     if (process.versions.bun) {
@@ -61,6 +62,7 @@ const runBatch = async (paths: readonly string[], root: string, engine: "ck" | "
   })
   const reply = decodeReply(value)
   if (!reply.ok) throw new Error(reply.error)
+  options.onMetrics?.(reply.metrics)
   for (const report of reply.reports) {
     cached.set(report.file, report)
     const loc = locations.get(report.file)
@@ -76,7 +78,7 @@ export async function* recognize(paths: readonly string[], options: Options = {}
   const pending: Promise<readonly Report[]>[] = []
   let batch: string[] = []
   const roots = [...new Set(paths.map(p => resolve(p)))].sort()
-  const iterators = roots.filter(p => !roots.some(other => other !== p && p.startsWith(other + "/"))).map(p => files(p))
+  const iterators = roots.filter(p => !roots.some(other => other !== p && p.startsWith(other + "/"))).map(p => files(p, options.excludeDirs ?? ["node_modules", ".git", ".lake"]))
   const next = await Promise.all(iterators.map(i => i.next()))
   while (next.some(n => !n.done)) {
     let selected = -1

@@ -519,11 +519,13 @@ export const readPrintedSource = (source: string, filename = "program.ts"): Eff 
   return r.success
 }
 
-export function recognizeSource(source: string, filename: string, onParse?: (ok: boolean) => void): Verdict[] {
+export function recognizeSource(source: string, filename: string, onParse?: (ok: boolean) => void, onTree?: (tree: unknown) => void): Verdict[] {
   if (!source.includes('from "effect') && !source.includes("from 'effect")) return []
   const parsed = parseSync(filename, source, { lang: filename.endsWith(".tsx") ? "tsx" : "ts", sourceType: "module" })
   if (parsed.errors.length) { onParse?.(false); return [] }
+  const tree: unknown = parsed.program
   onParse?.(true)
+  onTree?.(tree)
   const bindings = new Map<string, string>()
   for (const imp of parsed.module.staticImports) {
     const mod = imp.moduleRequest.value, base = mod === "effect" ? "" : mod.startsWith("effect/") ? mod.slice(7) : "opaque"

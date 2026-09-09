@@ -3,6 +3,7 @@
  * Recognition engines import these types only; their runtime reading logic is independent.
  */
 import { Schema } from "effect"
+import { Decl } from "./census/census-contract.ts"
 import { Eff } from "../eff.gen.ts"
 import { effJson } from "../json.gen.ts"
 import { taxonomy } from "../taxonomy.gen.ts"
@@ -37,6 +38,8 @@ export const sourceEditKey = (v: Verdict): unknown => {
 
 export const FileReport = Schema.Struct({
   file: Schema.String,
+  ckDeclarations: Schema.optional(Schema.Array(Decl)),
+  oxcDeclarations: Schema.optional(Schema.Array(Decl)),
   pins: Schema.String,
   contentDigest: Schema.String,
   ck: Schema.optional(Schema.Array(Verdict)),

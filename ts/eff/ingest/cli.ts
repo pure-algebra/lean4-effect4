@@ -37,7 +37,14 @@ try {
       const r = spawnSync(process.execPath, [fileURLToPath(new URL("./check-corpus.ts", import.meta.url)), mode!, path!], { stdio: "inherit", cwd: root })
       if (r.status !== 0) { process.exitCode = r.status === null ? 2 : 1; break }
     }
-  } else if (verb === "census" || verb === "roundtrip") {
+  } else if (verb === "census") {
+    const root = resolve(option("--root", "/Users/pooks/Dev/foldlab")), manifest = option("--manifest", root + "/experiments/parser-census/corpus-manifest.json"), labels = option("--labels", root + "/experiments/parser-census/project-labels.json"), out = resolve(option("--out", ".lake/ingest-census")), workers = Number(option("--workers", String(availableParallelism()))), batchSize = Number(option("--batch-size", "500")), engine = option("--engine", "both"), cacheDir = option("--cache", ""), force = flag("--force")
+    if (args.length || !["ck", "oxc", "both"].includes(engine)) throw new Error("invalid census arguments")
+    const { census } = await import("./census/capture.ts")
+    const summary = await census({ root, manifest, labels, out, workers, batchSize, engine: engine as "ck" | "oxc" | "both", ...(cacheDir ? { cacheDir } : {}), force })
+    process.stdout.write(canonJson(summary) + "\n")
+    process.exitCode = summary.disagreeFiles ? 1 : 0
+  } else if (verb === "roundtrip") {
     // These verbs acquire their report drivers in commits 4 and 5 of the dispatch.
     throw new Error(`${verb} report driver has not landed; could not run`)
   } else throw new Error(`unknown verb: ${verb}`)

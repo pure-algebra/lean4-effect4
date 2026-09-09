@@ -610,11 +610,12 @@ class ForeignCompilerReader extends CompilerReader {
 }
 
 /** Strict foreign admission. The printer-image entrypoint is never a fallback. */
-export function recognizeSource(source: string, filename: string, onParse?: (ok: boolean) => void): Verdict[] {
+export function recognizeSource(source: string, filename: string, onParse?: (ok: boolean) => void, onTree?: (tree: ts.SourceFile) => void): Verdict[] {
   if (!source.includes('from "effect') && !source.includes("from 'effect")) return []
   const file = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, false, filename.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
   if ((file as ts.SourceFile & { parseDiagnostics: readonly ts.Diagnostic[] }).parseDiagnostics.length) { onParse?.(false); return [] }
   onParse?.(true)
+  onTree?.(file)
   const bindings = new Map<string, string>()
   const declarations = new Map<string, { at: number; value: ts.Expression }>()
   for (const s of file.statements) {
