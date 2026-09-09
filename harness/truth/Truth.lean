@@ -200,9 +200,38 @@ def pAcquireHandle : Api.Program :=
 def acquireHandleAnswers : List (Completion Val Err Defect FiberId Ann) :=
   [.ofExit (.success (.nat 0)), .ofExit (.success .unit), .ofExit (.success (.nat 1))]
 
-/-- Per-fixture input data supplied beside the canonical program. -/
+def strs (xs : List String) : Term := .app "strings" (xs.foldr (fun s t => .cons (.lit (.str s)) t) .nil)
+def pairT (a b : Term) : Term := .app "pair" (.cons a (.cons b .nil))
+
+/-- The sqlite fixture over the canonical `SqliteBun` table (host rows step 6): open the
+`:memory:` client, create, insert through `strings` parameters (JSON text, decoded by the
+host before binding), select, and close at the scope's end. The answers come from the tape
+rc.112 recorded (`harness/truth/tapes/pSqlite.jsonl`), never from a Lean-side list. -/
+def pSqlite : Api.Program :=
+  .scoped (.bind (.acquireRelease (.callback (.external 0) (.lit (.str ":memory:")))
+                                  (.callback (.external 2) (.var 0)))
+    (.bind (.callback (.external 1) (pairT (.var 0) (pairT (.lit (.str "CREATE TABLE t (a INTEGER, b TEXT)")) (strs []))))
+      (.bind (.callback (.external 1) (pairT (.var 0) (pairT (.lit (.str "INSERT INTO t (a, b) VALUES (?, ?)")) (strs ["7", "\"x\""]))))
+        (.callback (.external 1) (pairT (.var 0) (pairT (.lit (.str "SELECT a, b FROM t")) (strs [])))))))
+
+/-- The key-value fixture over the canonical `KeyValueStoreMemory` table: make, set, get,
+has, remove; the answer is the `(get, has)` pair. Answers from `tapes/pKv.jsonl`. -/
+def pKv : Api.Program :=
+  .bind (.callback (.external 0) (.lit .unit))
+    (.bind (.callback (.external 2) (pairT (.var 0) (pairT (.lit (.str "k")) (.lit (.str "1")))))
+      (.bind (.callback (.external 1) (pairT (.var 0) (.lit (.str "k"))))
+        (.bind (.callback (.external 4) (pairT (.var 0) (.lit (.str "k"))))
+          (.bind (.callback (.external 3) (pairT (.var 0) (.lit (.str "k"))))
+            (.succeed (pairT (.var 2) (.var 3)))))))
+
+/-- Per-fixture input data supplied beside the canonical program: the row table, and the
+built-in oracle answers of a unit-declared fixture (`pAcquireHandle`); a canonical package
+fixture's answers come from its tape, appended by `main`. -/
 def hostInputs (name : String) : RowTable × List (Completion Val Err Defect FiberId Ann) :=
-  if name == "pAcquireHandle" then (acquireHandleTable, acquireHandleAnswers) else ([], [])
+  if name == "pAcquireHandle" then (acquireHandleTable, acquireHandleAnswers)
+  else if name == "pSqlite" then (Packages.sqliteBun, [])
+  else if name == "pKv" then (Packages.keyValueStoreMemory, [])
+  else ([], [])
 
 /-- A failure with the tagged package error of DB-15: `Effect.fail(pair("SqlError", "boom"))`
 fails with the pair, which the host wires as a two-string array and the machine reads as
@@ -211,12 +240,12 @@ def pFailTagged : Api.Program :=
   .fail (.app "pair" (.cons (.lit (.str "SqlError")) (.cons (.lit (.str "boom")) .nil)))
 
 /-- The programs checked: the wire corpus, then `pTwo`, then the two `acquireRelease`
-fixtures, then the join's three, then the host rows slice's three. -/
+fixtures, then the join's three, then the host rows slice's five. -/
 def corpus : List (String × Api.Program) :=
   Wire.Corpus.all ++ [("pTwo", pTwo), ("pAcquire", pAcquire), ("pAcquireClosed", pAcquireClosed),
     ("pProvide", pProvide), ("pProvideMerge", pProvideMerge), ("pProvideTwice", pProvideTwice),
     ("pDiamond", pDiamond), ("pMergeAll", pMergeAll), ("pAcquireHandle", pAcquireHandle),
-    ("pFailTagged", pFailTagged)]
+    ("pFailTagged", pFailTagged), ("pSqlite", pSqlite), ("pKv", pKv)]
 
 /-! ## The value wire -/
 
@@ -250,8 +279,11 @@ partial def valJson : Val → J
   | .unit => Lean.Json.null
   | .nat n => toJson n
   | .bool b => Lean.Json.bool b
-  -- strings are machine values since DB-15; the host wires a string as itself
+  -- strings are machine values since DB-15; the host wires a string as itself, an option as
+  -- rc.112's `Option` (`{"some":v}` / `{"none":true}`, the runner's wire of `_tag`)
   | .str s => Lean.Json.str s
+  | .some v => Lean.Json.mkObj [("some", valJson v)]
+  | .none => Lean.Json.mkObj [("none", Lean.Json.bool true)]
   | Value.external index => Lean.Json.mkObj [("external", toJson index)]
   | Value.fiber id => Lean.Json.mkObj [("fiber", toJson id)]
   | Value.fiberSnapshot handles =>
@@ -394,8 +426,10 @@ def runSyncJson (p : Api.Program) (fuel : Nat) (table : RowTable := [])
     , ("exitKind", Lean.Json.str (exitKind exit))
     , ("sync", Lean.Json.bool (!isAsyncFiberDefect exit)) ]
 
-def entry (fuel : Nat) (name : String) (p : Api.Program) : J :=
-  let (table, answers) := hostInputs name
+def entry (fuel : Nat) (tapes : String → List (Completion Val Err Defect FiberId Ann))
+    (name : String) (p : Api.Program) : J :=
+  let (table, builtIn) := hostInputs name
+  let answers := builtIn ++ tapes name
   let ty := Api.typeOf p table
   let printed := Api.print p table
   -- the declaration block (`Api.printModule`, the host rows slice): one `const L_<path>` per
@@ -418,23 +452,80 @@ def entry (fuel : Nat) (name : String) (p : Api.Program) : J :=
     , ("run", runJson p fuel table answers)
     , ("runSync", runSyncJson p fuel table answers) ]
 
-/-- The whole manifest. -/
-def manifest (fuel : Nat) : J :=
+/-- The whole manifest; `tapes` gives each program the answers rc.112 recorded for its package
+rows (the empty list for a program without a tape, which then parks at its first row). -/
+def manifest (fuel : Nat) (tapes : String → List (Completion Val Err Defect FiberId Ann)) : J :=
   Lean.Json.mkObj
     [ ("format", Lean.Json.str "effect4-truth-manifest-v1")
     , ("generated", Lean.Json.str "GENERATED by harness/truth/Truth.lean — do not edit")
-    , ("regenerate", Lean.Json.str "lake env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json")
+    , ("regenerate", Lean.Json.str "lake env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes")
     , ("fuel", toJson fuel)
-    , ("programs", Lean.Json.arr (corpus.map fun (name, p) => entry fuel name p).toArray) ]
+    , ("programs", Lean.Json.arr (corpus.map fun (name, p) => entry fuel tapes name p).toArray) ]
+
+/-! ## The tapes: rc.112's recorded answers, decoded into the oracle -/
+
+/-- The value wire, read back: `null` a unit, a number a natural, a string, a boolean, an
+array a list, `{"external":i}` the next allocation index a resource reply names (the machine
+mints the handle, `externalValue`), `{"some":v}` / `{"none":true}` an option. Anything else is
+no value: a tape row that does not decode stops the driver rather than replaying a guess. -/
+partial def jsonToVal : J → Option Val
+  | .null => some .unit
+  | .bool b => some (.bool b)
+  | .str s => some (.str s)
+  | .arr xs => (xs.toList.mapM jsonToVal).map .list
+  | j@(.num _) => match j.getNat? with | .ok n => some (.nat n) | .error _ => none
+  | j@(.obj _) =>
+    match j.getObjVal? "external" with
+    | .ok i => match i.getNat? with | .ok n => some (.nat n) | .error _ => none
+    | .error _ =>
+      match j.getObjVal? "some" with
+      | .ok v => (jsonToVal v).map .some
+      | .error _ => match j.getObjVal? "none" with | .ok _ => some .none | .error _ => none
+
+/-- An oracle answer: what a tape row decodes to. -/
+abbrev Answer := Completion Val Err Defect FiberId Ann
+
+/-- One tape row as a completion: `answer` a success, `failed` the tagged pair of DB-15. -/
+def tapeAnswer (row : J) : Except String Answer :=
+  match row.getObjVal? "answer" with
+  | .ok a => match jsonToVal a with
+    | some v => .ok (.ofExit (.success v))
+    | none => .error s!"undecodable answer {a.compress}"
+  | .error _ =>
+    match row.getObjVal? "failed" with
+    | .ok (.arr #[.str tag, .str message]) => .ok (.ofExit (.failure (Cause.fail (.tagged tag message))))
+    | .ok other => .error s!"undecodable failure {other.compress}"
+    | .error _ => .error s!"a tape row with neither answer nor failed: {row.compress}"
+
+def tapeAnswers (lines : List String) : Except String (List Answer) :=
+  (lines.filter (· ≠ "")).mapM fun line => do
+    let row ← Lean.Json.parse line
+    tapeAnswer row
 
 /-! ## Receipts -/
 
-#guard corpus.length = 18
+#guard corpus.length = 20
 #guard (corpus.map (·.1)).eraseDups.length = corpus.length
 #guard (corpus.map (·.1)) =
   ["p42", "pBind", "pFork", "pAwait", "pGen", "pLoop", "pCatch", "pScope", "pTwo", "pAcquire",
    "pAcquireClosed", "pProvide", "pProvideMerge", "pProvideTwice", "pDiamond", "pMergeAll", "pAcquireHandle",
-   "pFailTagged"]
+   "pFailTagged", "pSqlite", "pKv"]
+-- the two package fixtures type only under their tables and read back; their runs are the
+-- tapes' (the batteries of `Test/Api/PackagesContract.lean` pin the shapes over fixed answers)
+#guard Api.wellTyped pSqlite Packages.sqliteBun
+#guard Api.wellTyped pKv Packages.keyValueStoreMemory
+#guard !Api.wellTyped pSqlite
+#guard !Api.wellTyped pKv
+#guard Api.roundTrip pSqlite Packages.sqliteBun = .ok pSqlite
+#guard Api.roundTrip pKv Packages.keyValueStoreMemory = .ok pKv
+-- the tape decoder: the wire read back
+#guard jsonToVal (Lean.Json.mkObj [("external", 0)]) = some (.nat 0)
+#guard jsonToVal (Lean.Json.mkObj [("some", "1")]) = some (.some (.str "1"))
+#guard jsonToVal (Lean.Json.mkObj [("none", true)]) = some .none
+#guard jsonToVal (Lean.Json.arr #[Lean.Json.arr #[Lean.Json.arr #["a", "7"]]]) = some (.list [.list [.list [.str "a", .str "7"]]])
+#guard (tapeAnswers ["{\"fiber\":0,\"op\":\"has\",\"request\":[],\"answer\":true}", "", "{\"failed\":[\"SqlError\",\"m\"]}"]).toOption =
+  some [.ofExit (.success (.bool true)), .ofExit (.failure (Cause.fail (.tagged "SqlError" "m")))]
+#guard (tapeAnswers ["{\"answer\":{\"raw\":1}}"]).toOption = none
 -- the tagged failure types at the pair, evaluates to `Err.tagged`, and reads back
 #guard Api.typeOf pFailTagged = some ⟨.never, .prod .string .string, Env.Requirement.empty⟩
 #guard (Api.run pFailTagged 1000).exit = some (.failure (Cause.fail (.tagged "SqlError" "boom")))
@@ -463,13 +554,33 @@ def manifest (fuel : Nat) : J :=
 
 end OCaml5.Truth
 
-/-- The driver: `[out]` writes the manifest there, else prints it. The fuel is fixed at
-`1000`, enough for every corpus program to settle or park. -/
+/-- The tapes under `dir`: `<name>.jsonl` per corpus program that has one, decoded into that
+program's oracle answers; a program without a tape gets none. A row that does not decode is an
+error, not a guess. -/
+def readTapes (dir : System.FilePath) : IO (String → List OCaml5.Truth.Answer) := do
+  let mut table : List (String × List OCaml5.Truth.Answer) := []
+  for (name, _) in OCaml5.Truth.corpus do
+    let file := dir / (name ++ ".jsonl")
+    if ← file.pathExists then
+      let text ← IO.FS.readFile file
+      match OCaml5.Truth.tapeAnswers (text.splitOn "\n") with
+      | .ok answers => table := (name, answers) :: table
+      | .error why => throw (IO.userError s!"tape {file}: {why}")
+  return fun name => ((table.find? (·.1 == name)).map (·.2)).getD []
+
+/-- The driver: `<out> [--tapes <dir>]` writes the manifest there, else prints it (with the
+tapes of `harness/truth/tapes`). The fuel is fixed at `1000`, enough for every corpus program
+to settle or park. -/
 def main (args : List String) : IO Unit := do
   let fuel := 1000
-  let text := (OCaml5.Truth.manifest fuel).pretty 100 ++ "\n"
-  match args with
-  | [out] =>
+  let (out?, tapeDir) := match args with
+    | [out, "--tapes", dir] => (some out, dir)
+    | [out] => (some out, "harness/truth/tapes")
+    | _ => (none, "harness/truth/tapes")
+  let tapes ← readTapes tapeDir
+  let text := (OCaml5.Truth.manifest fuel tapes).pretty 100 ++ "\n"
+  match out? with
+  | some out =>
     IO.FS.writeFile out text
     let stamp ← Tools.GeneratedStamp.line "harness/truth/Truth.lean" []
       ["harness/truth/run-truth.ts", "harness/truth/prelude.ts", "ts/eff/package.json", "ts/eff/bun.lock"]

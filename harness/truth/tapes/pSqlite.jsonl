@@ -1,0 +1,5 @@
+{"fiber":0,"op":"Sql.open","request":[":memory:"],"answer":{"external":0}}
+{"fiber":0,"op":"unsafe","request":[{"external":0},"CREATE TABLE t (a INTEGER, b TEXT)",[]],"answer":[]}
+{"fiber":0,"op":"unsafe","request":[{"external":0},"INSERT INTO t (a, b) VALUES (?, ?)",["7","\"x\""]],"answer":[]}
+{"fiber":0,"op":"unsafe","request":[{"external":0},"SELECT a, b FROM t",[]],"answer":[[["a","7"],["b","\"x\""]]]}
+{"fiber":0,"op":"Sql.close","request":[{"external":0}],"answer":null}

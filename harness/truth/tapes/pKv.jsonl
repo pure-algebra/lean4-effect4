@@ -1,0 +1,5 @@
+{"fiber":0,"op":"Kv.make","request":[],"answer":{"external":0}}
+{"fiber":0,"op":"set","request":[{"external":0},"k","1"],"answer":null}
+{"fiber":0,"op":"get","request":[{"external":0},"k"],"answer":{"some":"1"}}
+{"fiber":0,"op":"has","request":[{"external":0},"k"],"answer":true}
+{"fiber":0,"op":"remove","request":[{"external":0},"k"],"answer":null}

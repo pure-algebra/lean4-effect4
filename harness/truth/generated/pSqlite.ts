@@ -3,4 +3,4 @@
 // Regenerate: scripts/check-truth.sh
 import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope } from "effect"
 import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, incr, double, takeAndBump, zeroWhenPositive, noChange, Host, Sql, Kv } from "../prelude.ts"
-export const main: Effect.Effect<Exit.Exit<number, never>, never> = Effect.flatMap(Effect.forkChild(Effect.flatMap(Effect.yieldNowWith(0), (a0) => Effect.succeed(1)), { startImmediately: false, uninterruptible: "inherit" }), (a0) => Effect.flatMap(Effect.forkChild(Effect.flatMap(Effect.yieldNowWith(0), (a1) => Effect.succeed(2)), { startImmediately: false, uninterruptible: "inherit" }), (a1) => Effect.flatMap(Fiber.await(a1), (a2) => Fiber.await(a1))))
+export const main = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(":memory:"), (a0, a1) => Sql.close(a0)), (a0) => Effect.flatMap(a0.unsafe("CREATE TABLE t (a INTEGER, b TEXT)", strings()), (a1) => Effect.flatMap(a0.unsafe("INSERT INTO t (a, b) VALUES (?, ?)", strings("7", "\"x\"")), (a2) => a0.unsafe("SELECT a, b FROM t", strings())))))

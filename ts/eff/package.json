@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@effect/sql-sqlite-bun": "4.0.0-rc.112",
     "effect": "4.0.0-rc.112",
     "oxc-parser": "0.147.0"
   },

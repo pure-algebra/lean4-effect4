@@ -23,7 +23,10 @@
  *    these identifiers — a printed `Ref.modify(ref, takeAndBump)` would call the total shape
  *    and misbehave on rc.112. Recorded as finding F3 in `REPORT.md`; not patched here.
  */
-import { Effect, Option } from "effect"
+import { Effect, Exit, Option, Scope } from "effect"
+import { KeyValueStore } from "effect/unstable/persistence"
+import * as Reactivity from "effect/unstable/reactivity/Reactivity"
+import { SqliteClient } from "@effect/sql-sqlite-bun"
 
 // ---- nativeAtom (Native.lean:59-70) -------------------------------------------------
 
@@ -101,4 +104,73 @@ export const Host = {
     resource.closed = true
   }),
   read: (resource: Resource) => Effect.sync(() => resource.closed ? 1 : 0)
+}
+
+// ---- the canonical package tables (host rows step 6, 2026-09-09) -----------------------
+//
+// `Program/Packages/SqliteBun.lean` and `KeyValueStoreMemory.lean` say what below is the
+// package's and what is the harness's plumbing. The packages execute; this file only opens
+// the scope the sqlite client's own finalizer runs on, decodes DB-15's JSON-text parameters
+// before the package binds them, crosses the answers as the rows' types spell them, and
+// posts every call to the tape.
+
+/** `"strings", vs => list vs` — the parameter list of a host row, JSON texts (DB-15). */
+export const strings = (...texts: string[]): ReadonlyArray<string> => texts
+
+/** The recording seam. `run-truth.ts` installs a sink for the duration of one run; each
+ * package call posts its operation, request and exit raw, and the runner wires them. */
+export interface TapeCall { readonly op: string; readonly request: ReadonlyArray<unknown>; readonly exit: Exit.Exit<unknown, unknown> }
+// One seam per process, not per module instance: the runner imports this file directly while
+// the generated modules import the copy beside them, and both must see the same sink.
+export const tape: { sink: ((call: TapeCall) => void) | null } =
+  ((globalThis as Record<string, unknown>)["~effect4/tape"] ??= { sink: null }) as { sink: ((call: TapeCall) => void) | null }
+const recorded = <A, E, R>(op: string, request: ReadonlyArray<unknown>, effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
+  Effect.onExit(effect, (exit) => Effect.sync(() => { tape.sink?.({ op, request, exit }) }))
+
+/** A row set crossing as `list (list (prod string string))`: one `(column, cell)` pair per
+ * column in the driver's order, every cell JSON text (DB-15). */
+const rowsToWire = (rows: ReadonlyArray<unknown>): ReadonlyArray<ReadonlyArray<readonly [string, string]>> =>
+  rows.map((row) => Object.entries(row as Record<string, unknown>).map(([column, cell]) => [column, JSON.stringify(cell === undefined ? null : cell)] as const))
+
+/** The SQL client handle: the package's client and the scope the prelude minted for it. The
+ * one method the table spells, `unsafe`, is the package's own (`sql.unsafe(text, params)`,
+ * a `Statement`, the effect that runs it) with each JSON-text parameter decoded before it
+ * binds (DB-15: `"7"` binds a number, `"\"x\""` a string) and the rows crossed as pairs. */
+export class SqlHandle {
+  readonly ["~effect4/ExternalHandle"] = "SqlClient.SqlClient"
+  constructor(readonly scope: Scope.Closeable, readonly client: SqliteClient.SqliteClient) {}
+  unsafe(text: string, params: ReadonlyArray<string>) {
+    return recorded("unsafe", [this, text, params],
+      Effect.map(this.client.unsafe(text, params.map((p) => JSON.parse(p) as unknown)), rowsToWire))
+  }
+}
+export const Sql = {
+  /** `SqliteClient.make({ filename, disableWAL: true })` under a scope the prelude mints, so the
+   * package's own release (a finalizer it registers on that scope) runs at `Sql.close`. */
+  open: (filename: string) => recorded("Sql.open", [filename], Effect.gen(function* () {
+    const scope = yield* Scope.make()
+    const client = yield* SqliteClient.make({ filename, disableWAL: true }).pipe(
+      Effect.provideService(Scope.Scope, scope),
+      Effect.provide(Reactivity.layer),
+    )
+    return new SqlHandle(scope, client)
+  })),
+  close: (handle: SqlHandle) => recorded("Sql.close", [handle], Scope.close(handle.scope, Exit.void)),
+}
+
+/** The key-value store handle over the store `KeyValueStore.layerMemory` builds: the four
+ * method rows are the store's own; `get`'s `string | undefined` crosses as the row's
+ * `.option string`, and `set`/`remove` answer `void` where the store answers its `Map`'s
+ * results (`{}`, `true`). */
+export class KvHandle {
+  readonly ["~effect4/ExternalHandle"] = "KeyValueStore.KeyValueStore"
+  constructor(readonly store: KeyValueStore.KeyValueStore) {}
+  get(key: string) { return recorded("get", [this, key], Effect.map(this.store.get(key), Option.fromNullishOr)) }
+  set(key: string, value: string) { return recorded("set", [this, key, value], Effect.asVoid(this.store.set(key, value))) }
+  remove(key: string) { return recorded("remove", [this, key], Effect.asVoid(this.store.remove(key))) }
+  has(key: string) { return recorded("has", [this, key], this.store.has(key)) }
+}
+export const Kv = {
+  make: () => recorded("Kv.make", [],
+    Effect.map(Effect.provide(Effect.service(KeyValueStore.KeyValueStore), KeyValueStore.layerMemory), (store) => new KvHandle(store))),
 }

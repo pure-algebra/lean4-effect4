@@ -3,4 +3,4 @@
 // Regenerate: scripts/check-truth.sh
 import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope } from "effect"
 import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, incr, double, takeAndBump, zeroWhenPositive, noChange, Host, Sql, Kv } from "../prelude.ts"
-export const main: Effect.Effect<Exit.Exit<number, never>, never> = Effect.flatMap(Effect.forkChild(Effect.flatMap(Effect.yieldNowWith(0), (a0) => Effect.succeed(1)), { startImmediately: false, uninterruptible: "inherit" }), (a0) => Effect.flatMap(Effect.forkChild(Effect.flatMap(Effect.yieldNowWith(0), (a1) => Effect.succeed(2)), { startImmediately: false, uninterruptible: "inherit" }), (a1) => Effect.flatMap(Fiber.await(a1), (a2) => Fiber.await(a1))))
+export const main: Effect.Effect<readonly [Option.Option<string>, boolean], readonly [string, string]> = Effect.flatMap(Kv.make(), (a0) => Effect.flatMap(a0.set("k", "1"), (a1) => Effect.flatMap(a0.get("k"), (a2) => Effect.flatMap(a0.has("k"), (a3) => Effect.flatMap(a0.remove("k"), (a4) => Effect.succeed(pair(a2, a3)))))))
