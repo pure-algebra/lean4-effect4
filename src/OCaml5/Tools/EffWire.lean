@@ -28,28 +28,37 @@ def hex (bs : List UInt8) : String := String.join (bs.map hexOfByte)
 2026-09-07 appended `provideLayer`, `service` and `provideService` to `Eff`, and added
 `LayerTerm` and the `ServiceKey` fields; `ocaml/eff/test/test_lean_wire.ml` checks every line
 against the OCaml library's generated tables). -/
-def manifest : String :=
-  "\n".intercalate
-    [ "Lit: unit nat bool str"
-    , "Term: var lit app"
-    , "Terms: nil cons"
-    , "CauseTerm: fail die interrupt both"
-    , "FnName: incr double zeroWhenPositive noChange takeAndBump"
-    , "FinalizerStrategy: sequential parallel"
-    , "NativeOp: refMake refGet refSet refGetAndSet refSetAndGet refUpdate refGetAndUpdate refUpdateAndGet refUpdateSome refGetAndUpdateSome refUpdateSomeAndGet refModify refModifySome deferredMake deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake sleep clockNow"
-    , "MaskMode: interruptible uninterruptible inherit"
-    , "ObserverMode: awaitValue joinEffect"
-    , "ForkOptions: startImmediately daemon maskMode"
-    , "ServiceKey: name service"
-    , "Eff: succeed fail failCause yieldError sync suspend perform bind gen catchCause matchCause onExit exit uninterruptible interruptible branch whileLoop yieldNow callback awaitFiber withFiber scoped acquireRelease choose provideLayer service provideService"
-    , "LayerTerm: succeed effect effectDiscard provide provideMerge merge fresh orDie"
-    , "Stmt: bindYield yieldDiscard ret ifElse whileTrue breakLoop"
-    , "Stmts: nil cons"
-    , "Effs: nil cons"
-    , "ActionTerm: fork forkIn forkScoped runIn interrupt interruptScoped interruptAll awaitAll awaitAllFailFast snapshotChildren awaitNewChildren raceAll setContext getContext getId closeScope"
-    , "tags: bool=1 nat=2 string=3 list=4 pair=5 none=6 some=7 bytes=8 unit=9 ctor=10" ]
+def manifest (env : Lean.Environment) : IO String := do
+  let families : List Lean.Name := [
+    `Effect4.Program.Lit, `Effect4.Program.Term, `Effect4.Program.Terms,
+    `Effect4.Program.CauseTerm, `Effect4.Machine.FnName, `Effect4.FinalizerStrategy,
+    `Effect4.Program.NativeOp, `Effect4.Supervision.MaskMode,
+    `Effect4.Supervision.ObserverMode, `Effect4.Supervision.ForkOptions,
+    `Effect4.ServiceKey, `Effect4.Program.Eff, `Effect4.Program.LayerTerm,
+    `Effect4.Program.Stmt, `Effect4.Program.Stmts, `Effect4.Program.Effs,
+    `Effect4.Program.ActionTerm]
+  let mut rows : List String := []
+  for name in families do
+    let names ← if Lean.isStructure env name then
+      pure (Lean.getStructureFields env name).toList
+    else
+      match env.find? name with
+      | some (.inductInfo info) => pure info.ctors
+      | _ => throw (IO.userError s!"EffWire: no inductive family {name}")
+    rows := rows ++ [name.getString! ++ ": " ++ " ".intercalate (names.map Lean.Name.getString!)]
+  let tags : List (String × UInt8) := [
+    ("bool", Effect4.Store.Tag.bool), ("nat", Effect4.Store.Tag.nat),
+    ("string", Effect4.Store.Tag.string), ("list", Effect4.Store.Tag.list),
+    ("pair", Effect4.Store.Tag.pair), ("none", Effect4.Store.Tag.none),
+    ("some", Effect4.Store.Tag.some), ("bytes", Effect4.Store.Tag.bytes),
+    ("unit", Effect4.Store.Tag.unit), ("ctor", Effect4.Store.Tag.ctor)]
+  return "\n".intercalate (rows ++ ["tags: " ++ " ".intercalate
+    (tags.map fun (name, value) => name ++ "=" ++ toString value.toNat)])
 
 def main (args : List String) : IO Unit := do
+  Lean.initSearchPath (← Lean.findSysroot)
+  let env ← Lean.importModules #[{ module := `Effect4.Program.Wire }] {} 0
+  let manifest ← manifest env
   match args with
   | [dir] =>
     let stamp ← Tools.GeneratedStamp.line "src/OCaml5/Tools/EffWire.lean"

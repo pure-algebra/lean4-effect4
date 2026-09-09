@@ -64,6 +64,7 @@ done
 # execute the Effect runtime; OCaml gates need the named opam switch.
 gate_table() {
   cat <<'GATES'
+hermetic|generated-stale|scripts/check-generated.sh --stale
 hermetic|armmap-citations|scripts/check-armmap-citations.sh
 hermetic|armmap-policy|scripts/test-armmap-citations-gate.sh
 hermetic|library-roots|scripts/check-library-roots.sh
@@ -71,10 +72,13 @@ hermetic|source-citations|scripts/check-source-citations.sh
 hermetic|internal-citations|scripts/check-internal-citations.sh
 hermetic|effect-runtime-census|scripts/check-effect-runtime-census.sh
 hermetic|ts-eff|scripts/check-ts-eff.sh
+hermetic|generated|scripts/check-generated.sh
+host|schema-typescript|scripts/check-schema-typescript-generation.sh
 host|ts-eff-corpus|scripts/check-ts-eff-corpus.sh
 host|truth|scripts/check-truth.sh
 ocaml|avatar-witnesses|scripts/check-ocaml.sh avatar-witnesses
 ocaml|daemon-protocol|scripts/check-ocaml.sh daemon-protocol
+ocaml|gen-check|scripts/check-ocaml.sh gen-check
 ocaml|dune-tests|scripts/check-ocaml.sh dune-tests
 GATES
 }

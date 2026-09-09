@@ -96,30 +96,10 @@ rather than truncated.
 
 ## Constructor index tables
 
-From `eff_manifest.txt` (0-based, in Lean declaration order). A `(carrier)` suffix is the
-constructor's argument types.
-
-| family | OCaml type | constructors |
-| --- | --- | --- |
-| `Ty` | `ty` | never unit nat int string bool handle option list prod except exitOf causeOf fiberOf union |
-| `Lit` | `lit` | unit nat bool str |
-| `Term` | `term` | var lit app |
-| `Terms` | `terms` | nil cons |
-| `CauseTerm` | `cause_term` | fail die interrupt both |
-| `MaskMode` | `mask_mode` | interruptible uninterruptible inherit |
-| `ForkOptions` | `fork_options` | *(structure)* startImmediately daemon maskMode |
-| `ObserverMode` | `observer_mode` | awaitValue joinEffect |
-| `FinalizerStrategy` | `finalizer_strategy` | sequential parallel |
-| `FnName` | `fn_name` | incr double zeroWhenPositive noChange takeAndBump |
-| `NativeOp` | `native_op` | refMake refGet refSet refGetAndSet refSetAndGet refUpdate refGetAndUpdate refUpdateAndGet refUpdateSome refGetAndUpdateSome refUpdateSomeAndGet refModify refModifySome deferredMake deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake |
-| `Eff` | `eff` | succeed fail failCause yieldError sync suspend perform bind gen catchCause matchCause onExit exit uninterruptible interruptible branch whileLoop yieldNow callback awaitFiber withFiber scoped acquireRelease choose |
-| `Stmt` | `stmt` | bindYield yieldDiscard ret ifElse whileTrue breakLoop |
-| `Stmts` | `stmts` | nil cons |
-| `Effs` | `effs` | nil cons |
-| `ActionTerm` | `action_term` | fork forkIn forkScoped runIn interrupt interruptScoped interruptAll awaitAll awaitAllFailFast snapshotChildren awaitNewChildren raceAll setContext getContext getId closeScope |
-| `RowKind` | `row_kind` | sync async program |
-| `RowShape` | `row_shape` | call value tupleCall |
-| `ServiceName` / `ServiceTypeCode` / `ServiceKey` / `Row` / `EffTy` | *(structures)* | see `eff_manifest.txt` for the field order |
+`eff_manifest.txt` records the current constructor and field order, with carrier
+types. `ocaml/goldens/eff/manifest.txt` records the wire subset, read directly
+from the Lean environment by EffWire. Both are generated and checked; consult
+those files for the current tables.
 
 Tags: `bool=1 nat=2 string=3 list=4 pair=5 none=6 some=7 bytes=8 unit=9 ctor=10 ref=11
 handle=12`. The last two are not program frames — no `Eff` constructor carries them and the

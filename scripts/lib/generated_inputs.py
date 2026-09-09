@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import shlex
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFERRED_ARTIFACTS = {'ocaml/avatar/deep_stores.ml', 'ocaml/avatar/deep_layer.ml',
@@ -51,6 +52,12 @@ def recipe(path, family):
         return 'src/OCaml5/Tools/CasGoldens.lean', [], []
     if family == 'TypeScript':
         return 'tools/Tools/TsGen.lean', ['Effect4.Program.Native'], ['lakefile.toml', 'src/Effect4/Codegen/Print.lean']
+    if family == 'LCNF':
+        command = (ROOT/path).read_text().split('Regenerate with:\n', 1)[1].split('*)', 1)[0]
+        args = shlex.split(command)
+        modules = [m for i,a in enumerate(args) if a == '--import' for m in args[i+1].split(',')]
+        files = [args[i+1] for i,a in enumerate(args) if a in ['--externs', '--prelude']]
+        return 'src/OCaml5/Tools/LcnfGen.lean', modules or ['Effect4.Machine.Fibers'], files
     if family == 'Avatar descriptions':
         return 'src/OCaml5/Tools/Describe.lean', ['Effect4.Machine.' + n for n in ['Fibers', 'Stores', 'Context', 'Scope', 'Key']], []
     if family == 'Avatar blocks':

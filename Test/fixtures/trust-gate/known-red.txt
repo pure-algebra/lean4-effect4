@@ -100,3 +100,6 @@ Test.Counterexamples.Surface.HandlerFits
 # gate: avatar-witnesses
 # reason: the same pre-existing machine edits moved the avatar's cited definitions; arm-map resolution drift remains owed to the OCaml lane
 # gate: armmap-citations
+
+# reason: engines cut before e2285a9; cleared by plan v2 Phase 1
+# gate: generated-stale

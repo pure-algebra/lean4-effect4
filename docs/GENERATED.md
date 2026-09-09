@@ -56,22 +56,22 @@ this inventory. `cut-from` is the header stamp; a cached gate verdict is separat
 
 | Family | Producer command | Inputs | Consumers | Designated gate and present limit |
 | --- | --- | --- | --- | --- |
-| Derived Json | `lake env lean -M4096 --run tools/Effect4Gen/Driver.lean --group Json` | `tools/Effect4Gen/manifest.json`, `tools/Effect4Gen/guards/json.lean`, `Effect4.Store.Canonical` | `Effect4.Store.Derived.Schema`, Effect4 library | `lake build Test` runs `Test/Store/DerivedCheck.lean`; shape only, drift owed by Phase 0 |
-| Derived Schema | same driver, `--group Schema` | manifest, `tools/Effect4Gen/guards/schema.lean`, `Effect4.Store.Derived.Json` | Effect4 library | `lake build Test`; shape only, drift owed by Phase 0 |
-| Derived Program | same driver, `--group Program` | manifest, `tools/Effect4Gen/guards/program.lean`, `Effect4.Program.Native`, `Effect4.Store.Canonical` | `Effect4.Api`, program wire | `lake build Test`; shape only, drift owed by Phase 0 |
-| Derived Pin | same driver, `--group Pin` | manifest, `tools/Effect4Gen/guards/pin.lean`, `Effect4.Store.Pin`, `Effect4.Store.Node` | store | `lake build Test`; shape only, drift owed by Phase 0 |
-| Eff | `lake env lean -M4096 --run src/OCaml5/Tools/EffGen.lean ocaml/eff` | `src/OCaml5/Eff/World.lean`, `src/OCaml5/Eff/Emit.lean`, imported Lean declarations | `effect4_eff`, `effect4_engine` | `bash scripts/check-ocaml.sh dune-tests`; behavior tests, drift owed by Phase 0 |
-| Eff goldens | same EffGen command | `src/OCaml5/Eff/Goldens.lean` | `ocaml/eff/test/dune` | `bash scripts/check-ocaml.sh dune-tests`; committed test data, no regeneration comparison |
-| Wire goldens | `lake env lean -M4096 --run src/OCaml5/Tools/EffWire.lean ocaml/goldens/eff` | `Effect4.Program.Wire.Corpus`, `src/OCaml5/Tools/EffWire.lean` | `ocaml/eff/test/test_lean_wire.ml` | `bash scripts/check-ocaml.sh dune-tests`; test skips if golden directory is absent |
-| CAS goldens | `lake env lean -M4096 --run src/OCaml5/Tools/CasGoldens.lean ocaml/engine/cas/goldens` | Store Word and Genesis, Machine Stores, `Test.Store.NodeContract` | `ocaml/engine/cas/test/dune` | none in sweep; owner: engine lane, 2026-09-08. Manual `cd ocaml && dune test engine`; Phase 0 step 0.7 adds the row |
-| LCNF | exact command in each output's first comment, run with `lake env` before `lean` | `src/OCaml5/Tools/LcnfGen.lean`, `src/OCaml5/Lcnf/`, named import and roots; engine also reads `ocaml/engine/externs.txt` and `ocaml/engine/tools/api_engine_prelude.ml` | `effect4_gen`, `effect4_engine` | gen files: `bash scripts/check-ocaml.sh dune-tests`; engine file: `bash ocaml/engine/tools/gen-check.sh` (manual). Neither regenerates |
+| Derived Json | `lake env lean -M4096 --run tools/Effect4Gen/Driver.lean --group Json` | `tools/Effect4Gen/manifest.json`, `tools/Effect4Gen/guards/json.lean`, `Effect4.Store.Canonical` | `Effect4.Store.Derived.Schema`, Effect4 library | `bash scripts/check-generated.sh`; fresh byte comparison, plus `lake build Test` for shapes |
+| Derived Schema | same driver, `--group Schema` | manifest, `tools/Effect4Gen/guards/schema.lean`, `Effect4.Store.Derived.Json` | Effect4 library | `bash scripts/check-generated.sh`; fresh byte comparison, plus `lake build Test` for shapes |
+| Derived Program | same driver, `--group Program` | manifest, `tools/Effect4Gen/guards/program.lean`, `Effect4.Program.Native`, `Effect4.Store.Canonical` | `Effect4.Api`, program wire | `bash scripts/check-generated.sh`; fresh byte comparison, plus `lake build Test` for shapes |
+| Derived Pin | same driver, `--group Pin` | manifest, `tools/Effect4Gen/guards/pin.lean`, `Effect4.Store.Pin`, `Effect4.Store.Node` | store | `bash scripts/check-generated.sh`; fresh byte comparison, plus `lake build Test` for shapes |
+| Eff | `lake env lean -M4096 --run src/OCaml5/Tools/EffGen.lean ocaml/eff` | `src/OCaml5/Eff/World.lean`, `src/OCaml5/Eff/Emit.lean`, imported Lean declarations | `effect4_eff`, `effect4_engine` | `bash scripts/check-generated.sh`; fresh byte comparison, plus `bash scripts/check-ocaml.sh dune-tests` |
+| Eff goldens | same EffGen command | `src/OCaml5/Eff/Goldens.lean` | `ocaml/eff/test/dune` | `bash scripts/check-generated.sh --stale` for provenance; `bash scripts/check-ocaml.sh dune-tests` for behavior |
+| Wire goldens | `lake env lean -M4096 --run src/OCaml5/Tools/EffWire.lean ocaml/goldens/eff` | `Effect4.Program.Wire.Corpus`, `src/OCaml5/Tools/EffWire.lean` | `ocaml/eff/test/test_lean_wire.ml` | `bash scripts/check-generated.sh`; fresh byte comparison and missing-file refusal |
+| CAS goldens | `lake env lean -M4096 --run src/OCaml5/Tools/CasGoldens.lean ocaml/engine/cas/goldens` | Store Word and Genesis, Machine Stores, `Test.Store.NodeContract` | `ocaml/engine/cas/test/dune` | `bash scripts/check-generated.sh --stale` for provenance only; manual `cd ocaml && dune test engine`, joining sweep in step 0.7 |
+| LCNF | exact command in each output's first comment, run with `lake env` before `lean` | `src/OCaml5/Tools/LcnfGen.lean`, `src/OCaml5/Lcnf/`, named import and roots; engine also reads `ocaml/engine/externs.txt` and `ocaml/engine/tools/api_engine_prelude.ml` | `effect4_gen`, `effect4_engine` | `bash scripts/check-generated.sh --stale`, red as declared until Phase 1; `bash scripts/check-ocaml.sh gen-check` in sweep for the seam; neither regenerates LCNF |
 | TypeScript | `bash scripts/generate-ts-eff.sh` | `OCaml5.Eff.World`, native rows, ingestion taxonomy, forms, profile, `lakefile.toml`, `src/Effect4/Codegen/Print.lean` | TypeScript readers, checkers and tests | `bash scripts/check-ts-eff.sh`; byte comparison, in sweep |
 | Avatar descriptions | exact `Describe.lean` command in each file's `Regenerate:` header, stdout redirected to that file | `src/OCaml5/Tools/Describe.lean`, Machine Stores, Fibers and Context | `OCaml5.Avatar.Check`, hand overlays | none; owner: avatar retirement lane, 2026-09-08. No new gate is commissioned for retiring artifacts |
 | Avatar blocks | frozen until the avatar retirement packet deletes them | `src/OCaml5/Tools/RenderDeep.lean`, `OCaml5.Avatar.parts` | avatar library | none; owner: the avatar retirement packet, 2026-09-08 |
 | Archived daemon inputs | `python3 scripts/generate-data-stamps.py archived` (checks the recorded archived blobs and writes metadata) | archived Git revision `606918e` | daemon's dune rules | `bash scripts/check-ocaml.sh daemon-protocol`; provenance blobs in `ocaml/server/generated/archived-from.tsv`, no independent blob-check gate; owner: daemon lane, 2026-09-08 |
 | Daemon | `cd ocaml && dune build server` | explicit rules in `ocaml/server/dune`, archived inputs, avatar sources and Lean machine | daemon library | `bash scripts/check-ocaml.sh daemon-protocol`; build dependencies owned by dune |
 | Truth | corpus: `lake env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json`; other outputs: `bun run harness/truth/run-truth.ts --manifest harness/truth/corpus.json --out harness/truth --timeout 300` | Eff corpus, `harness/truth/prelude.ts`, pinned rc.112 | truth differential, TypeScript corpus check | `bash scripts/check-truth.sh`; fresh generation and comparison plus bounded host observations |
-| Schema TypeScript | `lake env lean -M4096 harness/schema-generation/EmitFixture.lean` for Person, `EmitCoverageFixture.lean` for AllRepresentations, `EmitMultiFixture.lean` for TwoRoots; redirect stdout to named output | `Effect4.Codegen.Schema`, fixture declarations | three runtime checks in `harness/schema-generation/` | `bash scripts/check-schema-typescript-generation.sh`, currently manual; joining sweep is the approved Phase 0 decision |
+| Schema TypeScript | `lake env lean -M4096 harness/schema-generation/EmitFixture.lean` for Person, `EmitCoverageFixture.lean` for AllRepresentations, `EmitMultiFixture.lean` for TwoRoots; redirect stdout to named output | `Effect4.Codegen.Schema`, fixture declarations | three runtime checks in `harness/schema-generation/` | `bash scripts/check-schema-typescript-generation.sh`, host lane in sweep |
 | Runtime census | `python3 scripts/generate-data-stamps.py census` (runs the census producer and stamps identical data) | pinned rc.112 sources listed by output | `docs/RUNTIME-COVERAGE.md`, `Test/Audit/RuntimeCoverage.lean` | `bash scripts/check-effect-runtime-census.sh`, in sweep |
 | Schema assurance | `python3 scripts/generate-data-stamps.py assurance` (runs the assurance producer and stamps identical data) | schema sources, frozen batteries, pinned host sources listed by generator | schema assurance report | `bash scripts/check-schema-structural-assurance.sh`, manual by owner decision; owner: Schema assurance lane, 2026-09-08 |
 | Link flags | `bash ocaml/link/tools/lean-flags.sh` | local Lean installation and Bridge object | `ocaml/link` build | none; owner: bridge lane, 2026-09-08. Local output names below are targets under `ocaml/link`, absent until that build runs |
@@ -93,6 +93,21 @@ The owner also deferred the stamp on `generated/schema-structural-assurance.tsv`
 on 2026-09-08: its manual producer refuses the frozen fingerprint for
 `src/Effect4/Schema/Document.lean`. The Schema assurance lane owns that debt.
 The report, frozen fingerprint and manual check remain unchanged.
+
+`bash scripts/check-generated.sh --stale` checks all active provenance without
+running Lean. `bash scripts/check-generated.sh` freshly compares 24 outputs:
+four derived Lean files, five Eff files, nine wire files and six TypeScript files.
+The 119 CAS goldens and LCNF outputs are checked by stamp only. Raw data are
+compared in full on their designated byte/behavior routes; a provenance match
+alone is not a claim that their contents match a fresh generator run.
+
+The LCNF declaration covers only the four unstamped files with their original
+Phase 0 base bytes. A missing or changed stamp on any other active artifact
+refuses before known-red policy is considered. A changed unstamped engine also
+refuses. The accepted policy verdict is cached against scripts, manifest,
+toolchain, Lake traces, source inputs and generated bytes. Removing the last
+LCNF failure while its declaration remains is an unexpected pass and refuses.
+`python3 scripts/test-generated-gate.py` tests those refusals in temporary fixtures.
 
 ## Engine boundary
 

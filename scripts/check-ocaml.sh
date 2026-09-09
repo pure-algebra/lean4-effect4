@@ -14,8 +14,8 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . "$repo_root/scripts/lib/portable.sh"
 . "$repo_root/scripts/lib/stamp.sh"
 . "$repo_root/scripts/lib/known-red.sh"
-gate="${1:?expected avatar-witnesses, daemon-protocol or dune-tests}"
-case "$gate" in avatar-witnesses|daemon-protocol|dune-tests) ;; *) echo "FAIL unknown OCaml gate: $gate" >&2; exit 2;; esac
+gate="${1:?expected avatar-witnesses, daemon-protocol, gen-check or dune-tests}"
+case "$gate" in avatar-witnesses|daemon-protocol|gen-check|dune-tests) ;; *) echo "FAIL unknown OCaml gate: $gate" >&2; exit 2;; esac
 known_red_policy="$repo_root/Test/fixtures/trust-gate/known-red.txt"
 known_red_load "$known_red_policy"
 known_red_results="$(mktemp "${TMPDIR:-/tmp}/effect4-ocaml-known-red.XXXXXX")"
@@ -36,7 +36,7 @@ effect4_toolchain
 command -v dune >/dev/null 2>&1 || { echo "FAIL $gate: dune is required in the effect4 switch" >&2; exit 1; }
 cd "$repo_root"
 inputs=()
-while IFS= read -r file; do inputs+=("$file"); done < <(git ls-files --cached --others --exclude-standard ocaml src/Effect4/Machine src/Effect4/Laws/Machine src/OCaml5)
+while IFS= read -r file; do inputs+=("$file"); done < <(git ls-files --cached --others --exclude-standard ocaml src/Effect4 src/OCaml5)
 key="$(stamp_key scripts/check-ocaml.sh scripts/lib/known-red.sh \
   Test/fixtures/trust-gate/known-red.txt "${inputs[@]}" Test/Audit/RuntimeCoverage.lean \
   "$(stamp_fact ocaml "$(ocamlc -version)")" "$(stamp_fact dune "$(dune --version)")" \
@@ -49,6 +49,7 @@ run_gate() {
     # condition, and a failed `dune build` must still stop the gate there.
     avatar-witnesses) (cd ocaml && dune build avatar) && bash ocaml/avatar/run-witnesses.sh ;;
     daemon-protocol) bash ocaml/server/tools/dune-test.sh ;;
+    gen-check) bash ocaml/engine/tools/gen-check.sh ;;
     dune-tests) (cd ocaml && dune build && dune test eff gen) ;;
   esac
 }
