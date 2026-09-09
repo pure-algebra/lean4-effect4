@@ -94,7 +94,7 @@ are both outside the readable image. -/
 def genericSig : Signature Bool :=
   { rowOf := fun _ =>
       ⟨"make", "Deferred.make", .call, [], .sync, .unit,
-        .handle "Deferred.Deferred<number, number>", .never, [], "Deferred.ts:171",
+        .handle "Deferred.Deferred<number, number>", .never, [], "vendor/effect-4.0.0-rc.112/src/Deferred.ts:171",
         ["number", "number"], .deferred⟩
   , atomOf := fun _ _ => none, scopeKey := ⟨⟨0⟩, ⟨0⟩⟩, serviceTy := fun _ => none }
 

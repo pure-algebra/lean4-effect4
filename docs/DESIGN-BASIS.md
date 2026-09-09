@@ -560,7 +560,14 @@ into it, `errAdmits` admits it exactly where the row's error type admits the pai
 truth wire spells it as the two-element array the host's `pair` builds. `orDie` on a tagged
 error dies as `badName`, since the defect alphabet has no string payload
 (`ORDIE-FB-TAGGED`). A handle a row answers stays a `Ty.handle` target spelling (DB-11); an
-optional answer (`KeyValueStore.get`) is `.option string`.
+optional answer (`KeyValueStore.get`) is `.option string`, and the host adapts the package's
+`string | undefined` with `Option.fromNullable`. Amended 2026-09-09 (host rows step 5): a
+term spells a parameter list with the variadic atom `strings(s₁, …, sₙ) : list string`
+(`nativeAtom`, `Native.lean`), the one list a term can build; and because the wire is JSON
+text, the *host* decodes each parameter with `JSON.parse` before binding it, so `"7"` binds a
+number and `"\"x\""` a string, exactly as the foreign `${7}` and `${"x"}` did. The canonical
+tables are `Program/Packages/SqliteBun.lean` and `KeyValueStoreMemory.lean`; what in them is
+the package's and what is the harness's plumbing is said in their module headers.
 
 What this basis refuses. A `json` leaf in `Ty`: the value language is the carrier's frames
 and a codec is a row. A record type in `Ty`: columns are pairs. `.int` stays uninhabited

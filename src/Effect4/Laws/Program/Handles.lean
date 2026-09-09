@@ -260,8 +260,14 @@ theorem Lit.toVal_keys (l : Lit) (v : Val) (h : l.toVal = some v) : v.keys = [] 
 theorem nativeAtom_keys (atom : String) (vs : List Val) (v : Val) (h : nativeAtom atom vs = some v) :
     v.keys ⊆ vs.flatMap Val.keys := by
   unfold nativeAtom at h
-  split at h <;> cases h
-  all_goals sub_tac norm [Val.tuple]
+  split at h <;> (try cases h) <;> (try (sub_tac norm [Val.tuple]; done))
+  -- the `strings` arm answers the argument list itself, so its keys are exactly theirs
+  unfold stringsAtom at h
+  split at h
+  · cases h
+    rw [Val.keys_list]
+    exact List.Subset.refl _
+  · cases h
 
 theorem flatMap_subset_of_subset {α : Type} {f : α → List Handle} {l l' : List α} (h : l' ⊆ l) :
     l'.flatMap f ⊆ l.flatMap f := by

@@ -351,16 +351,20 @@ def monoAtoms : List (String × List Ty × Ty) :=
   [ ("succ", [.nat], .nat), ("pred", [.nat], .nat), ("isZero", [.nat], .bool), ("not", [.bool], .bool)
   , ("add", [.nat, .nat], .nat), ("lt", [.nat, .nat], .bool), ("eq", [.nat, .nat], .bool) ]
 
-/-- The polymorphic atoms (`pair`, `fst`, `snd`) as OCaml arms, and the probes that check
-them and the refusals against `nativeAtomTy`. -/
+/-- The polymorphic and variadic atoms (`pair`, `fst`, `snd`, `strings`) as OCaml arms, and
+the probes that check them and the refusals against `nativeAtomTy`. -/
 def polyArms : List String :=
   [ s!"  | \"pair\", [a; b] -> Some ({octor "ty" "prod"} (a, b))"
   , s!"  | \"fst\", [{octor "ty" "prod"} (a, _)] -> Some a"
-  , s!"  | \"snd\", [{octor "ty" "prod"} (_, b)] -> Some b" ]
+  , s!"  | \"snd\", [{octor "ty" "prod"} (_, b)] -> Some b"
+  , s!"  | \"strings\", tys when List.for_all (fun t -> t = {octor "ty" "string"}) tys -> Some ({octor "ty" "list"} {octor "ty" "string"})" ]
 
 def atomProbes : List (String × List Ty × Option Ty) :=
   [ ("pair", [.nat, .bool], some (.prod .nat .bool)), ("pair", [.nat, .nat], some (.prod .nat .nat))
   , ("fst", [.prod .nat .bool], some .nat), ("snd", [.prod .nat .bool], some .bool)
+  , ("strings", [], some (.list .string)), ("strings", [.string], some (.list .string))
+  , ("strings", [.string, .string], some (.list .string)), ("strings", [.nat], none)
+  , ("strings", [.string, .nat], none)
   , ("fst", [.nat], none), ("snd", [.nat, .nat], none), ("pair", [.nat], none), ("pair", [], none)
   , ("succ", [.bool], none), ("succ", [], none), ("succ", [.nat, .nat], none), ("add", [.nat], none)
   , ("mul", [.nat, .nat], none), ("not", [.nat], none), ("eq", [.bool, .bool], none)
@@ -378,9 +382,9 @@ def checkAtoms : Except String Unit := do
       throw s!"atom probe disagrees with nativeAtomTy on {n} {repr args}"
 
 def emitNative (nullaryOps fnOps stratOps : Nat) : String :=
-  header "Eff_native: the native alphabet as data. atom_ty is nativeAtomTy (src/Effect4/Program/Native.lean): the monomorphic rows are data in EffGen.lean checked against nativeAtomTy by evaluation at generation time, the three polymorphic atoms are fixed arms checked on probes (tested at generation: a disagreement aborts). row_of is NativeOp.row evaluated on the finite built-in alphabet, with the empty-table placeholder for external indices (the constructor table checks both classes). scope_key is nativeScopeKey." ++
+  header "Eff_native: the native alphabet as data. atom_ty is nativeAtomTy (src/Effect4/Program/Native.lean): the monomorphic rows are data in EffGen.lean checked against nativeAtomTy by evaluation at generation time, the three polymorphic atoms and the variadic strings atom are fixed arms checked on probes (tested at generation: a disagreement aborts). row_of is NativeOp.row evaluated on the finite built-in alphabet, with the empty-table placeholder for external indices (the constructor table checks both classes). scope_key is nativeScopeKey." ++
   "open Eff_types\n\n" ++
-  "let atom_names : string list = " ++ listO ((monoAtoms.map (ostr ·.1)) ++ [ostr "pair", ostr "fst", ostr "snd"]) ++ "\n\n" ++
+  "let atom_names : string list = " ++ listO ((monoAtoms.map (ostr ·.1)) ++ [ostr "pair", ostr "fst", ostr "snd", ostr "strings"]) ++ "\n\n" ++
   "let atom_ty (name : string) (args : ty list) : ty option =\n  match name, args with\n" ++
   "\n".intercalate (monoAtoms.map fun (n, args, ans) =>
     s!"  | {ostr n}, [{"; ".intercalate (args.map tyO)}] -> Some {tyO ans}") ++ "\n" ++

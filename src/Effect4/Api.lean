@@ -1,4 +1,5 @@
 import Effect4.Program.Admit
+import Effect4.Program.Packages
 import Effect4.Program.Wire
 import Effect4.Codegen.Print
 import Effect4.Codegen.Read

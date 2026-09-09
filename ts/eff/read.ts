@@ -14,7 +14,7 @@
 
 import { Result } from "effect"
 import { parseSync } from "oxc-parser"
-import type { ActionTerm, CauseTerm, Eff, ForkOptions, LayerTerm, Lit, ServiceKey, Stmt, Term } from "./eff.gen.ts"
+import type { ActionTerm, CauseTerm, Eff, ForkOptions, LayerTerm, Lit, Row, ServiceKey, Stmt, Term, Ty } from "./eff.gen.ts"
 import { decodeEff } from "./eff.gen.ts"
 import { heads, rows, type Entry, type Head } from "./profile.gen.ts"
 
@@ -42,21 +42,24 @@ export type Refusal =
 
 export type Read<A> = Result.Result<A, Refusal>
 
-/** One program file's text into an Eff node, or the refusal that names what was not readable. */
-export const readTypeScript = (source: string, filename = "program.ts"): Read<Eff> => {
-  const parsed = parseSync(filename, source, { sourceType: "module", lang: "ts" })
-  if (parsed.errors.length > 0) return refuse({ _tag: "parse", messages: parsed.errors.map((e) => e.message) })
-  const program = parsed.program as unknown
-  if (!isNode(program)) return refuse({ _tag: "program", what: "no program" })
-  const module = programModuleOf(program)
-  if (failed(module)) return again(module)
-  const { declarations, main } = module.success
-  return declarations.length === 0 ? readExpression(main) : readModule(declarations, main)
-}
+/** One program file's text into an Eff node, or the refusal that names what was not readable.
+ * `table` is the supplied row table (`Api.read (table := …)`): its rows are the external
+ * operations, by position; the printed corpus reads under the empty table. */
+export const readTypeScript = (source: string, filename = "program.ts", table: ReadonlyArray<Row> = []): Read<Eff> =>
+  withTable(table, () => {
+    const parsed = parseSync(filename, source, { sourceType: "module", lang: "ts" })
+    if (parsed.errors.length > 0) return refuse({ _tag: "parse", messages: parsed.errors.map((e) => e.message) })
+    const program = parsed.program as unknown
+    if (!isNode(program)) return refuse({ _tag: "program", what: "no program" })
+    const module = programModuleOf(program)
+    if (failed(module)) return again(module)
+    const { declarations, main } = module.success
+    return declarations.length === 0 ? Result.map(readProgramExpr(main), decodeEff) : readModule(declarations, main)
+  })
 
 /** Fragment seam for the independent oxc normalization and printer-image test entrypoint. */
-export const readExpression = (expression: unknown): Read<Eff> =>
-  Result.map(readProgramExpr(expression), decodeEff)
+export const readExpression = (expression: unknown, table: ReadonlyArray<Row> = []): Read<Eff> =>
+  withTable(table, () => Result.map(readProgramExpr(expression), decodeEff))
 
 /** The same, before the schema decode: what a declaration block's main expression reads to. */
 const readProgramExpr = (expression: unknown): Read<Eff> => {
@@ -93,12 +96,28 @@ const again = (f: Result.Failure<unknown, Refusal>): Result.Result<never, Refusa
 // derives what it needs from the row (`printRow` in Print.lean: a value row is the bare
 // spelling, a call row on a `unit` request prints the trailing names alone).
 
-/** The entry a (spelling, trailing names) pair names: `nativeSpell` of `Read.lean`. */
-const spell = (spelling: string, trailing: ReadonlyArray<string>): Entry | undefined =>
-  rows.find((e) =>
+/** The supplied table's rows as entries: the operation of the row at position `i` is
+ * `NativeOp.external i` (`Read.lean` `nativeSpell`: an external index is the row's position,
+ * never parsed out of an identifier). Bound for the duration of one entry-point call. */
+let supplied: ReadonlyArray<Entry> = []
+const withTable = <A>(table: ReadonlyArray<Row>, body: () => A): A => {
+  const saved = supplied
+  supplied = table.map((row, index): Entry => ({ op: { _tag: "external", index }, row }))
+  try {
+    return body()
+  } finally {
+    supplied = saved
+  }
+}
+
+/** The entry a (spelling, trailing names) pair names: `nativeSpell` of `Read.lean`, the
+ * built-in rows first and then the supplied table. */
+const spell = (spelling: string, trailing: ReadonlyArray<string>): Entry | undefined => {
+  const named = (e: Entry): boolean =>
     e.row.spelling === spelling && e.row.trailing.length === trailing.length &&
     e.row.trailing.every((name, i) => name === trailing[i])
-  )
+  return rows.find(named) ?? supplied.find(named)
+}
 
 const isValueRow = (e: Entry): boolean => e.row.shape === "value"
 const unitRequest = (e: Entry): boolean => e.row.request._tag === "unit"
@@ -123,6 +142,9 @@ export type Expr =
    * arguments as the spellings the printer writes (`E4-CHECK-CE-013`). */
   | { readonly _tag: "generic"; readonly fn: Expr; readonly typeArgs: ReadonlyArray<string> }
   | { readonly _tag: "method"; readonly base: Expr; readonly name: string; readonly args: ReadonlyArray<Expr> }
+  /** `receiver.name` on its own: lean4-typescript's `Expr.member`, which the printer emits only
+   * as the callee of a typed method call `receiver.name<T>(args)` (`Print.lean` `printMethod`). */
+  | { readonly _tag: "member"; readonly base: Expr; readonly name: string }
   | { readonly _tag: "object"; readonly fields: ReadonlyArray<readonly [string, Expr]> }
   | { readonly _tag: "arr"; readonly items: ReadonlyArray<Expr> }
   /** `() => body` */
@@ -249,12 +271,43 @@ const paramNames = (n: Node): ReadonlyArray<string> | undefined => {
 const yieldStar = (n: Node): Node | undefined =>
   n.type === "YieldExpression" && n.delegate === true ? nodeAt(n, "argument") : undefined
 
+/** A binder of the printed image, `a0`, `a1`, … (`Var.name`). No head or row spelling begins
+ * with `a` (`rowNamesSafe`, Read.lean), so a member chain rooted at a binder is a receiver and
+ * never a dotted head. */
+const isBinderName = (s: string): boolean => /^a(0|[1-9][0-9]*)$/.test(s)
+
+/** The root identifier of a member chain; `undefined` when the chain bottoms out elsewhere. */
+const rootName = (n: Node): string | undefined => {
+  if (n.type === "Identifier") return typeof n.name === "string" ? n.name : undefined
+  if (n.type === "MemberExpression") {
+    const object = nodeAt(n, "object")
+    return object ? rootName(unwrap(object)) : undefined
+  }
+  return undefined
+}
+
+/** `receiver.name`: a plain member whose object is a receiver term (a chain rooted at a binder,
+ * or an expression that is no identifier chain at all), as opposed to a dotted head such as
+ * `Effect.succeed` or `Host.acquire`, which `dotted` reads as one identifier. */
+const receiverMember = (n: Node): { readonly object: Node; readonly name: string } | undefined => {
+  if (n.type !== "MemberExpression" || n.computed === true || n.optional === true) return undefined
+  const object = nodeAt(n, "object")
+  const property = nodeAt(n, "property")
+  if (!object || !property || property.type !== "Identifier" || typeof property.name !== "string") return undefined
+  const inner = unwrap(object)
+  const root = rootName(inner)
+  if (root !== undefined && !isBinderName(root)) return undefined
+  return { object: inner, name: property.name }
+}
+
 export const exprOf = (raw: Node): Read<Expr> => {
   const n = unwrap(raw)
   switch (n.type) {
     case "Identifier":
       return typeof n.name === "string" ? ok({ _tag: "ident", name: n.name }) : unsupported(n, "identifier")
     case "MemberExpression": {
+      const receiver = receiverMember(n)
+      if (receiver) return Result.map(exprOf(receiver.object), (base): Expr => ({ _tag: "member", base, name: receiver.name }))
       const name = dotted(n)
       return name === undefined ? unsupported(n, "member") : ok({ _tag: "ident", name })
     }
@@ -286,13 +339,22 @@ export const exprOf = (raw: Node): Read<Expr> => {
           return ok({ _tag: "method", base: base.success, name: "pipe", args: args.success })
         }
       }
-      const fn = exprOf(callee)
+      // `receiver.spelling(args)` is a method call on a receiver term (`printMethod`); with
+      // type arguments the callee is `generic` over a `member`, as the printer spells it.
+      const receiver = receiverMember(callee)
+      const fn: Read<Expr> = receiver
+        ? Result.map(exprOf(receiver.object), (base): Expr => ({ _tag: "member", base, name: receiver.name }))
+        : exprOf(callee)
       if (failed(fn)) return again(fn)
       const args = exprsOf(listAt(n, "arguments") ?? [], "argument")
       if (failed(args)) return again(args)
       // `head<T1, …>(args)`: the type arguments become the callee's `generic` spellings.
       const targs = nodeAt(n, "typeArguments")
-      if (!targs) return ok({ _tag: "call", fn: fn.success, args: args.success })
+      if (!targs) {
+        return fn.success._tag === "member"
+          ? ok({ _tag: "method", base: fn.success.base, name: fn.success.name, args: args.success })
+          : ok({ _tag: "call", fn: fn.success, args: args.success })
+      }
       const names: string[] = []
       for (const p of listAt(targs, "params") ?? []) {
         const name = isNode(p) ? typeName(p) : undefined
@@ -678,19 +740,28 @@ const readTupleArgs = (n: number, x: Expr, y: Expr): Read<Term> => {
  * names. The three readings are tried in that order, and the table lets at most one succeed
  * (Lean `readRowCall`).
  */
-const readRowCall = (n: number, s: string, typeArgs: ReadonlyArray<string>, args: ReadonlyArray<Expr>): Read<Eff> | undefined => {
+const readRowCall = (
+  n: number, s: string, typeArgs: ReadonlyArray<string>, args: ReadonlyArray<Expr>,
+  view: (e: Entry) => Entry = (e) => e,
+): Read<Eff> | undefined => {
   // The call's type arguments must be exactly the ones the row declares: a row that needs
   // them refuses a bare call, and a row that declares none refuses a call that carries any
   // (`E4-CHECK-CE-013`).
   const typed = (e: Entry): boolean =>
     e.row.typeArgs.length === typeArgs.length && e.row.typeArgs.every((a, i) => a === typeArgs[i])
+  // `view` is the identity for a call, and the method-argument view of the row for a method
+  // call (`methodSignature` of Read.lean): the row identity is the spelled entry either way.
+  const find = (names: ReadonlyArray<string>): Entry | undefined => {
+    const e = spell(s, names)
+    return e === undefined ? undefined : view(e)
+  }
   const all = namesOf(args)
-  const asTrailing = all ? spell(s, all) : undefined
+  const asTrailing = all ? find(all) : undefined
   if (asTrailing) return asTrailing.row.shape === "call" && unitRequest(asTrailing) && typed(asTrailing) ? ok(rowAnswer(asTrailing, unit)) : refuse({ _tag: "arity", head: s })
   const [request, ...rest] = args
   if (request === undefined) return undefined
   const restNames = namesOf(rest)
-  const withRequest = restNames ? spell(s, restNames) : undefined
+  const withRequest = restNames ? find(restNames) : undefined
   if (withRequest) {
     return withRequest.row.shape === "call" && !unitRequest(withRequest) && typed(withRequest)
       ? Result.map(readTerm(n, request), (t) => rowAnswer(withRequest, t))
@@ -699,11 +770,42 @@ const readRowCall = (n: number, s: string, typeArgs: ReadonlyArray<string>, args
   const [second, ...names] = rest
   if (second === undefined) return undefined
   const tupleNames = namesOf(names)
-  const asTuple = tupleNames ? spell(s, tupleNames) : undefined
+  const asTuple = tupleNames ? find(tupleNames) : undefined
   if (!asTuple) return undefined
   return asTuple.row.shape === "tupleCall" && typed(asTuple)
     ? Result.map(readTupleArgs(n, request, second), (t) => rowAnswer(asTuple, t))
     : refuse({ _tag: "arity", head: s })
+}
+
+/** The ordinary call view of a method row's arguments (`Print.lean` `methodArgsRow`): the
+ * request is the second component of the declared `prod` (`never` otherwise) and the shape
+ * is `tupleCall` when that component is itself a `prod`, `call` otherwise. */
+const methodArgsRow = (e: Entry): Entry => {
+  const request: Ty = e.row.request._tag === "prod" ? e.row.request.right : { _tag: "never" }
+  return { ...e, row: { ...e.row, request, shape: request._tag === "prod" ? "tupleCall" : "call" } }
+}
+
+/**
+ * `receiver.spelling(args)` and `receiver.spelling<T>(args)`, the two shapes the printer emits
+ * for a `method` row (Lean `readRowMethod`, `addReceiver`): the receiver reads as a term, the
+ * arguments by the ordinary call readings under the method view, and the request is
+ * `pair(receiver, args)`. A row of any other shape spelled with a receiver is refused.
+ */
+const readRowMethod = (n: number, receiver: Expr, s: string, typeArgs: ReadonlyArray<string>, args: ReadonlyArray<Expr>): Read<Eff> => {
+  const recv = readTerm(n, receiver)
+  if (failed(recv)) return again(recv)
+  let spelled: Entry | undefined
+  const body = readRowCall(n, s, typeArgs, args, (e) => {
+    spelled = e
+    return methodArgsRow(e)
+  })
+  if (body === undefined) return refuse({ _tag: "unknownHead", name: s })
+  if (failed(body)) return again(body)
+  const eff = body.success
+  if (spelled === undefined || spelled.row.shape !== "method" || (eff._tag !== "perform" && eff._tag !== "callback")) {
+    return refuse({ _tag: "shape", what: "method row" })
+  }
+  return ok(rowAnswer(spelled, { _tag: "app", atom: "pair", args: [recv.success, eff.request] }))
 }
 
 /** `nativeServiceTy` of Program/Native.lean:273-283, including the reserved Scope key. */
@@ -847,7 +949,10 @@ export const readEff = (n: number, x: Expr): Read<Eff> => {
       // head and no atom application is printed with them, and an empty list is not a
       // spelling the printer emits (Lean `readEff`, `E4-CHECK-CE-013`).
       if (x.fn._tag === "generic") {
-        if (x.fn.fn._tag !== "ident" || x.fn.typeArgs.length === 0) return refuse({ _tag: "shape", what: "expression" })
+        if (x.fn.typeArgs.length === 0) return refuse({ _tag: "shape", what: "expression" })
+        // `receiver.spelling<T>(args)`: a typed method call (Lean `readMethod`).
+        if (x.fn.fn._tag === "member") return readRowMethod(n, x.fn.fn.base, x.fn.fn.name, x.fn.typeArgs, x.args)
+        if (x.fn.fn._tag !== "ident") return refuse({ _tag: "shape", what: "expression" })
         const s = x.fn.fn.name
         const asRow = readRowCall(n, s, x.fn.typeArgs, x.args)
         return asRow !== undefined ? asRow : refuse({ _tag: "unknownHead", name: s })
@@ -860,6 +965,10 @@ export const readEff = (n: number, x: Expr): Read<Eff> => {
       if (asRow !== undefined) return asRow
       return Result.map(readTerms(n, x.args), (args): Eff => ({ _tag: "yieldError", error: { _tag: "app", atom: s, args } }))
     }
+    // `receiver.spelling(args)`: a method row (Lean `readMethod`, reached from `readEff`'s
+    // catch-all); a `pipe` in effect position falls through this to `unknownHead`, as in Lean.
+    case "method":
+      return readRowMethod(n, x.base, x.name, [], x.args)
     default:
       return refuse({ _tag: "shape", what: "expression" })
   }

@@ -501,10 +501,16 @@ let () =
      && atom_ty "add" [ Ty_nat; Ty_nat ] = Some Ty_nat);
   check "pair is polymorphic" (atom_ty "pair" [ Ty_bool; Ty_handle "x" ] = Some (Ty_prod (Ty_bool, Ty_handle "x")));
   check "fst/snd project" (atom_ty "fst" [ Ty_prod (Ty_nat, Ty_bool) ] = Some Ty_nat && atom_ty "snd" [ Ty_prod (Ty_nat, Ty_bool) ] = Some Ty_bool);
+  check "strings is variadic over strings only (host rows step 5)"
+    (atom_ty "strings" [] = Some (Ty_list Ty_string)
+     && atom_ty "strings" [ Ty_string; Ty_string ] = Some (Ty_list Ty_string)
+     && atom_ty "strings" [ Ty_nat ] = None
+     && atom_ty "strings" [ Ty_string; Ty_nat ] = None
+     && List.mem "strings" atom_names);
   check "atoms refuse wrong arities and types"
     (atom_ty "succ" [ Ty_bool ] = None && atom_ty "succ" [] = None && atom_ty "add" [ Ty_nat ] = None
      && atom_ty "fst" [ Ty_nat ] = None && atom_ty "mul" [ Ty_nat; Ty_nat ] = None);
-  check "10 atom names" (List.length atom_names = 10);
+  check "11 atom names (ten built-ins and strings)" (List.length atom_names = 11);
   (* ops *)
   check "55 op values, none repeated"
     (List.length all_ops = 55 && List.length (List.sort_uniq compare all_ops) = 55);

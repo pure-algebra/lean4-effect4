@@ -78,8 +78,9 @@ def drift_files(rows):
             continue
         if family.startswith('Derived ') or family in {'Eff', 'Wire goldens', 'TypeScript'}:
             chosen.append(path)
-    if len(chosen) != 24:
-        raise ValueError(f'expected 24 cheap drift files, map names {len(chosen)}')
+    # 24 -> 25 on 2026-09-09: ts/eff/packages.gen.ts joined the TypeScript family (host rows step 5).
+    if len(chosen) != 25:
+        raise ValueError(f'expected 25 cheap drift files, map names {len(chosen)}')
     return chosen
 
 

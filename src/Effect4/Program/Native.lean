@@ -56,6 +56,12 @@ def Lit.toVal : Lit → Option Val
   | .bool b => some (Val.bool b)
   | .str s => some (Val.str s)
 
+/-- `strings(s₁, …, sₙ)`: the one list a term can build, a list of strings, for the bind
+parameters of a host row (DB-15: `list string`, every parameter JSON text). Variadic, and
+typed at strings so that `strings()` has a type. -/
+def stringsAtom (vs : List Val) : Option Val :=
+  if vs.all (fun | Val.str _ => true | _ => false) then some (Val.list vs) else none
+
 /-- The pure atoms of the native route: a closed table, interpreted here, typed by
 `nativeAtomTy`. -/
 def nativeAtom : String → List Val → Option Val
@@ -69,7 +75,10 @@ def nativeAtom : String → List Val → Option Val
   | "pair", [a, b] => some (Val.tuple [a, b])
   | "fst", [.list (a :: _)] => some a
   | "snd", [.list (_ :: b :: _)] => some b
+  | "strings", vs => stringsAtom vs
   | _, _ => none
+
+theorem nativeAtom_strings (vs : List Val) : nativeAtom "strings" vs = stringsAtom vs := rfl
 
 /-- The atoms' types, by their argument types. -/
 def nativeAtomTy : String → List Ty → Option Ty
@@ -83,7 +92,11 @@ def nativeAtomTy : String → List Ty → Option Ty
   | "pair", [a, b] => some (.prod a b)
   | "fst", [.prod a _] => some a
   | "snd", [.prod _ b] => some b
+  | "strings", tys => if tys.all (· == .string) then some (.list .string) else none
   | _, _ => none
+
+theorem nativeAtomTy_strings (tys : List Ty) :
+    nativeAtomTy "strings" tys = if tys.all (· == .string) then some (.list .string) else none := rfl
 
 mutual
   /-- A term's value in a positional environment. -/
@@ -155,6 +168,13 @@ rejects every later use at this row's declared types (`E4-CHECK-CE-013`,
 def deferredTypeArgs : List String := ["number", "number"]
 def deferredTarget : String := "Deferred.Deferred<number, number>"
 def deferredTy : Ty := .handle deferredTarget
+/-- The two external service handles of the host rows slice (service type codes 8 and 9,
+`nativeServiceTy`; the package tables of `Program/Packages`): a SQL client and a key-value
+store. Written once, here. -/
+def sqlTarget : String := "SqlClient.SqlClient"
+def sqlTy : Ty := .handle sqlTarget
+def kvTarget : String := "KeyValueStore.KeyValueStore"
+def kvTy : Ty := .handle kvTarget
 
 /-- The printed name of a pure function, `Ref.update(ref, incr)`. -/
 def fnSpelling : FnName → String
@@ -172,70 +192,70 @@ def externalPlaceholder : Row :=
 
 /-- The row of each operation. -/
 def row : NativeOp → Row
-  | refMake => ⟨"refMake", "Ref.make", .call, [], .sync, .nat, refTy, .never, [], "Ref.ts:173", [], .deferred⟩
-  | refGet => ⟨"refGet", "Ref.get", .call, [], .sync, refTy, .nat, .never, [], "Ref.ts:200", [], .deferred⟩
+  | refMake => ⟨"refMake", "Ref.make", .call, [], .sync, .nat, refTy, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:173", [], .deferred⟩
+  | refGet => ⟨"refGet", "Ref.get", .call, [], .sync, refTy, .nat, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:200", [], .deferred⟩
   | refSet =>
-    ⟨"refSet", "Ref.set", .tupleCall, [], .sync, .prod refTy .nat, refTy, .never, [], "Ref.ts:306-307", [], .deferred⟩
+    ⟨"refSet", "Ref.set", .tupleCall, [], .sync, .prod refTy .nat, refTy, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:306-307", [], .deferred⟩
   | refGetAndSet =>
     ⟨"refGetAndSet", "Ref.getAndSet", .tupleCall, [], .sync, .prod refTy .nat, .nat, .never, [],
-      "Ref.ts:399-404", [], .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/Ref.ts:399-404", [], .deferred⟩
   | refSetAndGet =>
     ⟨"refSetAndGet", "Ref.setAndGet", .tupleCall, [], .sync, .prod refTy .nat, .nat, .never, [],
-      "Ref.ts:747", [], .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/Ref.ts:747", [], .deferred⟩
   | refUpdate f =>
     ⟨"refUpdate", "Ref.update", .call, [fnSpelling f], .sync, refTy, .unit, .never, [],
-      "Ref.ts:1273-1276", [], .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/Ref.ts:1273-1276", [], .deferred⟩
   | refGetAndUpdate f =>
     ⟨"refGetAndUpdate", "Ref.getAndUpdate", .call, [fnSpelling f], .sync, refTy, .nat, .never, [],
-      "Ref.ts:496-501", [], .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/Ref.ts:496-501", [], .deferred⟩
   | refUpdateAndGet f =>
     ⟨"refUpdateAndGet", "Ref.updateAndGet", .call, [fnSpelling f], .sync, refTy, .nat, .never, [],
-      "Ref.ts:1368", [], .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/Ref.ts:1368", [], .deferred⟩
   | refUpdateSome f =>
     ⟨"refUpdateSome", "Ref.updateSome", .call, [fnSpelling f], .sync, refTy, .unit, .never, [],
-      "Ref.ts:1502-1508", [], .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/Ref.ts:1502-1508", [], .deferred⟩
   | refGetAndUpdateSome f =>
     ⟨"refGetAndUpdateSome", "Ref.getAndUpdateSome", .call, [fnSpelling f], .sync, refTy, .nat,
-      .never, [], "Ref.ts:635-643", [], .deferred⟩
+      .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:635-643", [], .deferred⟩
   | refUpdateSomeAndGet f =>
     ⟨"refUpdateSomeAndGet", "Ref.updateSomeAndGet", .call, [fnSpelling f], .sync, refTy, .nat,
-      .never, [], "Ref.ts:1639-1646", [], .deferred⟩
+      .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:1639-1646", [], .deferred⟩
   | refModify f =>
     ⟨"refModify", "Ref.modify", .call, [fnSpelling f], .sync, refTy, .nat, .never, [],
-      "Ref.ts:896-901", [], .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/Ref.ts:896-901", [], .deferred⟩
   | refModifySome f =>
     ⟨"refModifySome", "Ref.modifySome", .call, [fnSpelling f], .sync, refTy, .nat, .never, [],
-      "Ref.ts:1159-1163", [], .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/Ref.ts:1159-1163", [], .deferred⟩
   | deferredMake =>
     ⟨"deferredMake", "Deferred.make", .call, [], .sync, .unit, deferredTy, .never, [],
-      "Deferred.ts:171", deferredTypeArgs, .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/Deferred.ts:171", deferredTypeArgs, .deferred⟩
   | deferredIsDone =>
     ⟨"deferredIsDone", "Deferred.isDone", .call, [], .sync, deferredTy, .bool, .never, [],
-      "Deferred.ts:1382", [], .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/Deferred.ts:1382", [], .deferred⟩
   | deferredPoll =>
     ⟨"deferredPoll", "Deferred.poll", .call, [], .sync, deferredTy, .bool, .never, [],
-      "Deferred.ts:1414-1416", [], .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/Deferred.ts:1414-1416", [], .deferred⟩
   | deferredSucceed =>
     ⟨"deferredSucceed", "Deferred.succeed", .tupleCall, [], .sync, .prod deferredTy .nat, .bool, .never,
-      [], "Deferred.ts:1514", [], .deferred⟩
+      [], "vendor/effect-4.0.0-rc.112/src/Deferred.ts:1514", [], .deferred⟩
   | deferredFail =>
     ⟨"deferredFail", "Deferred.fail", .tupleCall, [], .sync, .prod deferredTy .nat, .bool, .never, [],
-      "Deferred.ts:669", [], .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/Deferred.ts:669", [], .deferred⟩
   | deferredAwait =>
     ⟨"deferredAwait", "Deferred.await", .call, [], .async, deferredTy, .nat, .nat, [],
-      "Deferred.ts:173-186", [], .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/Deferred.ts:173-186", [], .deferred⟩
   | scopeMake .sequential =>
     ⟨"scopeMake", "Scope.make", .call, [], .sync, .unit, Ty.scope, .never, [],
-      "internal/effect.ts:3914-3922", [], .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/internal/effect.ts:3914-3922", [], .deferred⟩
   | scopeMake .parallel =>
     ⟨"scopeMake", "Scope.make", .call, ["\"parallel\""], .sync, .unit, Ty.scope, .never, [],
-      "internal/effect.ts:3914-3922", [], .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/internal/effect.ts:3914-3922", [], .deferred⟩
   | sleep =>
     ⟨"sleep", "Effect.sleep", .call, [], .async, .nat, .unit, .never, [],
-      "internal/effect.ts:6114-6116", [], .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/internal/effect.ts:6114-6116", [], .deferred⟩
   | clockNow =>
     ⟨"clockNow", "Effect.currentTimeMillis", .value, [], .sync, .unit, .nat, .never, [],
-      "internal/effect.ts:6118", [], .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/internal/effect.ts:6118", [], .deferred⟩
 
   | external _ => externalPlaceholder
 
@@ -298,8 +318,8 @@ def nativeServiceTy (key : ServiceKey) : Option Ty :=
     | 5 => some .bool
     | 6 => some .unit
     | 7 => some NativeOp.refTy
-    | 8 => some (.handle "SqlClient.SqlClient")
-    | 9 => some (.handle "KeyValueStore.KeyValueStore")
+    | 8 => some NativeOp.sqlTy
+    | 9 => some NativeOp.kvTy
     | _ => none
 
 def fnNames : List Effect4.Machine.FnName := [.incr, .double, .zeroWhenPositive, .noChange, .takeAndBump]

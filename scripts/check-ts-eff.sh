@@ -23,7 +23,7 @@ repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 
 gate=ts-eff
 generator="$repo_root/scripts/generate-ts-eff.sh"
-files=(eff.gen.ts json.gen.ts profile.gen.ts taxonomy.gen.ts forms.gen.ts wire.gen.ts)
+files=(eff.gen.ts json.gen.ts profile.gen.ts taxonomy.gen.ts forms.gen.ts wire.gen.ts packages.gen.ts)
 cd "$repo_root"
 
 [[ -x "$generator" ]] || { printf 'FAIL %s: %s is not executable\n' "$gate" "$generator" >&2; exit 1; }
@@ -50,7 +50,8 @@ key="$(stamp_key \
   "$repo_root/src/Effect4/Codegen/Print.lean" \
   "$stamp_build_lib/Tools/TsGen.trace" \
   "$repo_root/ts/eff/eff.gen.ts" "$repo_root/ts/eff/json.gen.ts" "$repo_root/ts/eff/profile.gen.ts" \
-  "$repo_root/ts/eff/taxonomy.gen.ts" "$repo_root/ts/eff/forms.gen.ts" "$repo_root/ts/eff/wire.gen.ts")"
+  "$repo_root/ts/eff/taxonomy.gen.ts" "$repo_root/ts/eff/forms.gen.ts" "$repo_root/ts/eff/wire.gen.ts" \
+  "$repo_root/ts/eff/packages.gen.ts")"
 if stamp_hit "$gate" "$key"; then
   stamp_report "$gate" "$key"
   exit 0
@@ -79,5 +80,5 @@ for f in "${files[@]}"; do
   fi
 done
 
-printf 'PASS %s: ts/eff/{eff,json,profile,taxonomy,forms,wire}.gen.ts are what Lean emits; %s\n' "$gate" "$summary"
+printf 'PASS %s: ts/eff/{eff,json,profile,taxonomy,forms,wire,packages}.gen.ts are what Lean emits; %s\n' "$gate" "$summary"
 stamp_write "$gate" "$key" "$summary"

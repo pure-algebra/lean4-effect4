@@ -380,7 +380,7 @@ class ForeignRefusal extends Error {
 }
 const refuseForeign = (code: RefusalCode, value: string): never => { throw new ForeignRefusal(code, value) }
 const knownHeads = new Set<string>([...heads, ...rows.map(r => r.row.spelling), ...forms.rows.map(r => r.head)])
-const atoms = new Set(["succ", "pred", "isZero", "not", "add", "lt", "eq", "pair", "fst", "snd"])
+const atoms = new Set(["succ", "pred", "isZero", "not", "add", "lt", "eq", "pair", "fst", "snd", "strings"])
 
 class ForeignCompilerReader extends CompilerReader {
   readonly keys: Key[] = []

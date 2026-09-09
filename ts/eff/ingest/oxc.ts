@@ -22,7 +22,7 @@ function reject(code: RefusalCode, value: string): never { throw new Refuse(code
 const id = (name: string): Expr => ({ _tag: "ident", name })
 const call = (name: string, args: readonly Expr[]): Expr => ({ _tag: "call", fn: id(name), args })
 const admitted = new Set<string>([...heads, ...rows.map(r => r.row.spelling), ...forms.rows.map(r => r.head)])
-const atomNames = new Set(["succ", "pred", "isZero", "not", "add", "lt", "eq", "pair", "fst", "snd"])
+const atomNames = new Set(["succ", "pred", "isZero", "not", "add", "lt", "eq", "pair", "fst", "snd", "strings"])
 
 class Normalize {
   readonly keys: Key[] = []

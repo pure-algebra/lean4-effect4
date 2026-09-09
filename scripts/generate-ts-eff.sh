@@ -8,6 +8,7 @@
 #   ts/eff/taxonomy.gen.ts  refusal codes and their active/reserved partition, stamped
 #   ts/eff/forms.gen.ts     relative templates and foreign spelling metadata, stamped
 #   ts/eff/wire.gen.ts      canonical byte writers for every closed-world family
+#   ts/eff/packages.gen.ts  the canonical package tables (key, service code, target, rows), stamped
 #
 #   scripts/generate-ts-eff.sh [<dir>]      default ts/eff
 #

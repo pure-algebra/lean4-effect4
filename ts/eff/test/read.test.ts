@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from "bun:test"
 import { Result } from "effect"
-import { isEff, type LayerTerm } from "../eff.gen.ts"
+import { isEff, type Eff, type LayerTerm, type Row, type Term, type Ty } from "../eff.gen.ts"
 import { toJson } from "../json.gen.ts"
 import { heads, rows } from "../profile.gen.ts"
 import { readTypeScript, type Refusal } from "../read.ts"
@@ -445,5 +445,89 @@ describe("layer references", () => {
     const read = JSON.parse(json(source))
     expect(read[1]).toEqual(["merge", ["succeed", k44, ["nat", 7]], ["ref", [0, 0]]])
     expect(read[3][1]).toEqual(["ref", [0]])
+  })
+})
+
+// The host rows slice (2026-09-09): a supplied row table beside the 55 built-ins. Its rows are
+// the external operations by position (`nativeSpell`, never parsed from an identifier); a
+// `method` row's receiver is the first component of its request and prints as
+// `receiver.spelling(args)` (`printMethod`, `readRowMethod`). The tables and programs mirror
+// `Test/Api/ExternalContract.lean` and `Test/Api/AcquireHandleContract.lean`.
+describe("supplied tables and method rows", () => {
+  const never: Ty = { _tag: "never" }
+  const unit: Ty = { _tag: "unit" }
+  const nat: Ty = { _tag: "nat" }
+  const str: Ty = { _tag: "string" }
+  const handle = (target: string): Ty => ({ _tag: "handle", target })
+  const prod = (left: Ty, right: Ty): Ty => ({ _tag: "prod", left, right })
+  const row = (name: string, spelling: string, shape: Row["shape"], request: Ty, answer: Ty, typeArgs: ReadonlyArray<string> = []): Row => ({
+    name, spelling, shape, trailing: [], kind: "async", request, answer, error: never, requires: [], cite: "", typeArgs, registration: "external",
+  })
+  const methodTable: ReadonlyArray<Row> = [
+    row("stop", "stop", "method", prod(nat, unit), nat),
+    row("read", "read", "method", prod(nat, nat), nat),
+    row("write", "write", "method", prod(nat, prod(nat, str)), nat),
+    row("lookup", "lookup", "method", prod(nat, nat), nat, ["number"]),
+    row("ping", "ping", "call", nat, nat),
+  ]
+  const resource = handle("Host.Resource")
+  const acquireTable: ReadonlyArray<Row> = [
+    row("acquire", "Host.acquire", "call", unit, resource),
+    row("close", "Host.close", "call", resource, unit),
+    row("read", "Host.read", "call", resource, nat),
+  ]
+  const readWith = (source: string, table: ReadonlyArray<Row>): string => {
+    const r = readTypeScript(source, "program.ts", table)
+    if (Result.isFailure(r)) throw new Error(`refused: ${JSON.stringify(r.failure)}`)
+    return toJson(r.success)
+  }
+  const refusalWith = (source: string, table: ReadonlyArray<Row>): Refusal => {
+    const r = readTypeScript(source, "program.ts", table)
+    if (Result.isSuccess(r)) throw new Error(`accepted: ${toJson(r.success)}`)
+    return r.failure
+  }
+  const v = (index: number): Term => ({ _tag: "var", index })
+  const natLit = (value: number): Term => ({ _tag: "lit", value: { _tag: "nat", value } })
+  const unitLit: Term = { _tag: "lit", value: { _tag: "unit" } }
+  const pair = (a: Term, b: Term): Term => ({ _tag: "app", atom: "pair", args: [a, b] })
+  const external = (index: number, request: Term): Eff => ({ _tag: "callback", register: { _tag: "external", index }, request })
+  const after9 = (rest: Eff): Eff => ({ _tag: "bind", first: { _tag: "succeed", value: natLit(9) }, rest })
+
+  test("zero, one and two arguments, and explicit type arguments (Lean methodPrograms)", () => {
+    const method = (call: string): string => readWith(`Effect.flatMap(Effect.succeed(9), (a0) => ${call})`, methodTable)
+    expect(method("a0.stop()")).toBe(toJson(after9(external(0, pair(v(0), unitLit)))))
+    expect(method("a0.read(3)")).toBe(toJson(after9(external(1, pair(v(0), natLit(3))))))
+    expect(method('a0.write(3, "x")')).toBe(toJson(after9(external(2, pair(v(0), pair(natLit(3), { _tag: "lit", value: { _tag: "str", value: "x" } }))))))
+    expect(method("a0.lookup<number>(3)")).toBe(toJson(after9(external(3, pair(v(0), natLit(3))))))
+  })
+  test("the type arguments must be exactly the row's", () => {
+    expect(refusalWith("Effect.flatMap(Effect.succeed(9), (a0) => a0.lookup(3))", methodTable)).toEqual({ _tag: "arity", head: "lookup" })
+    expect(refusalWith("Effect.flatMap(Effect.succeed(9), (a0) => a0.read<number>(3))", methodTable)).toEqual({ _tag: "arity", head: "read" })
+  })
+  test("a method spelled as a call, and a call row spelled with a receiver, are refused", () => {
+    expect(refusalWith("Effect.flatMap(Effect.succeed(9), (a0) => read(a0, 3))", methodTable)).toEqual({ _tag: "arity", head: "read" })
+    expect(refusalWith("Effect.flatMap(Effect.succeed(9), (a0) => a0.ping())", methodTable)).toEqual({ _tag: "arity", head: "ping" })
+  })
+  test("under the empty table the same spellings are no rows", () => {
+    expect(refusal("Effect.flatMap(Effect.succeed(9), (a0) => a0.read(3))")).toEqual({ _tag: "unknownHead", name: "read" })
+    // A dotted call that no table names falls to the atom-application reading, as in Lean
+    // (`readEff`'s last arm): a different program from the table's, which is why the corpus
+    // gate must read a truth fixture under its own table.
+    expect(json("Host.acquire()")).toBe('["yieldError",["app","Host.acquire",["nil"]]]')
+  })
+  test("the truth fixture pAcquireHandle reads to Lean's program under its table", () => {
+    const source =
+      "Effect.flatMap(Effect.scoped(Effect.acquireRelease(Host.acquire(), (a0, a1) => Host.close(a0))), " +
+      "(a0) => Effect.flatMap(Host.read(a0), (a1) => Effect.succeed(pair(a0, a1))))"
+    const expected: Eff = {
+      _tag: "bind",
+      first: { _tag: "scoped", body: { _tag: "acquireRelease", acquire: external(0, unitLit), release: external(1, v(0)) } },
+      rest: { _tag: "bind", first: external(2, v(0)), rest: { _tag: "succeed", value: pair(v(0), v(1)) } },
+    }
+    expect(readWith(source, acquireTable)).toBe(toJson(expected))
+  })
+  test("a dotted head is never a receiver, and a member off a binder is not a program", () => {
+    expect(json("Effect.succeed(1)")).toBe(json("Effect.succeed(1)"))
+    expect(refusalWith("Effect.flatMap(Effect.succeed(9), (a0) => a0.read)", methodTable)).toEqual({ _tag: "shape", what: "expression" })
   })
 })

@@ -44,7 +44,13 @@ def recipe(path, family):
     if family == 'Ingest tables':
         return 'ts/eff/ingest/render-readme.ts', [], ['ts/eff/profile.gen.ts', 'ts/eff/forms.gen.ts', 'ts/eff/taxonomy.gen.ts']
     if family == 'TypeScript':
-        return 'tools/Tools/TsGen.lean', ['Effect4.Program.Native'], ['lakefile.toml', 'src/Effect4/Codegen/Print.lean']
+        # The same modules and files TsGen.lean names in its GeneratedStamp.line call: the package
+        # tables transcribe three pinned vendor sources (host rows step 5, 2026-09-09).
+        return 'tools/Tools/TsGen.lean', ['Effect4.Program.Native', 'Effect4.Program.Packages'], [
+            'lakefile.toml', 'src/Effect4/Codegen/Print.lean',
+            'vendor/effect-4.0.0-rc.112/src/unstable/sql/SqlClient.ts',
+            'vendor/effect-4.0.0-rc.112/src/unstable/sql/Statement.ts',
+            'vendor/effect-4.0.0-rc.112/src/unstable/persistence/KeyValueStore.ts']
     if family == 'LCNF':
         command = (ROOT/path).read_text().split('Regenerate with:\n', 1)[1].split('*)', 1)[0]
         args = shlex.split(command)

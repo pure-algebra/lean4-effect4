@@ -172,6 +172,20 @@ theorem Fits.singleton_inv {vs : List Val} {t : Ty} (h : Fits vs [t]) :
   cases h with
   | cons hv hrest => cases hrest; exact ⟨_, rfl, hv⟩
 
+/-- A fit against strings only is a list whose every member fits `.string` (the `strings`
+atom's premise). -/
+theorem Fits.all_string {vs : List Val} {tys : TyEnv} (h : Fits vs tys)
+    (hall : tys.all (· == Ty.string) = true) : ∀ v ∈ vs, Val.hasTy v .string = true := by
+  induction h with
+  | nil => intro v hv; cases hv
+  | cons hv _ ih =>
+    simp only [List.all_cons, Bool.and_eq_true, beq_iff_eq] at hall
+    obtain ⟨rfl, hrest⟩ := hall
+    intro w hw
+    cases hw with
+    | head => exact hv
+    | tail _ hw => exact ih hrest w hw
+
 /-- A fit against two types is two values of those types. -/
 theorem Fits.pair_inv {vs : List Val} {a b : Ty} (h : Fits vs [a, b]) :
     ∃ x y, vs = [x, y] ∧ Val.hasTy x a = true ∧ Val.hasTy y b = true := by
@@ -258,6 +272,23 @@ theorem nativeAtom_typed (atom : String) (tys : List Ty) (ty : Ty) (vs : List Va
     obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
     obtain ⟨x, y, rfl, _, hy⟩ := Val.hasTy_prod_inv hv
     exact ⟨y, rfl, hy⟩
+  · -- strings: every argument fits `.string`, so every value is a `str` and the list types
+    split at hty
+    · next hall =>
+      cases hty
+      have hstr : ∀ v ∈ vs, ∃ s, v = Val.str s := fun v hv =>
+        Val.hasTy_string_inv (Fits.all_string hfit hall v hv)
+      refine ⟨Val.list vs, ?_, ?_⟩
+      · rw [nativeAtom_strings, stringsAtom, if_pos]
+        rw [List.all_eq_true]
+        intro v hv
+        obtain ⟨s, rfl⟩ := hstr v hv
+        rfl
+      · simp only [Val.hasTy, List.all_eq_true]
+        intro v hv
+        obtain ⟨s, rfl⟩ := hstr v hv
+        rfl
+    · cases hty
   · -- the refusal
     simp at hty
 

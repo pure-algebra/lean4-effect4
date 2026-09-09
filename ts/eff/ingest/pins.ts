@@ -20,7 +20,7 @@ for (const [name, expected] of [["typescript", pins.typescript], ["oxc-parser", 
 }
 const root = fileURLToPath(new URL("./", import.meta.url))
 const ownSources = readdirSync(root, { recursive: true }).filter((n): n is string => typeof n === "string" && /\.(?:ts|mjs|mts)$/.test(n) && !n.startsWith("test/") && !n.startsWith("fixtures/")).sort().map(n => readFileSync(root + n))
-const projections = ["eff.gen.ts", "json.gen.ts", "wire.gen.ts", "profile.gen.ts", "forms.gen.ts", "taxonomy.gen.ts"].map(n => readFileSync(new URL("../" + n, import.meta.url)))
+const projections = ["eff.gen.ts", "json.gen.ts", "wire.gen.ts", "profile.gen.ts", "forms.gen.ts", "taxonomy.gen.ts", "packages.gen.ts"].map(n => readFileSync(new URL("../" + n, import.meta.url)))
 export const pinsDigest = createHash("sha256").update(JSON.stringify(pins)).update(readFileSync(new URL("../bun.lock", import.meta.url))).update(Buffer.concat([...ownSources, ...projections])).update(readFileSync(new URL("../read.ts", import.meta.url))).digest("hex")
 export function checkRuntime(): void {
   const bun = process.versions.bun
