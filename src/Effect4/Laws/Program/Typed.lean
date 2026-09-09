@@ -5,15 +5,15 @@ import Effect4.Program.Native
 
 Plan: `docs/research/2026-09-05-slice-1-compile-ground.md` §2. Packet:
 `Test/contracts/program-denotation.contract.md`, ENSURES 1–9. Batteries:
-`Test/Program/TypedContract.lean` (the guards and the rows `E4-TYPED-CE-001`,
-`E4-TYPED-CE-002`) and `Test/Program/TypedAxiomReport.lean`.
+`Test/Program/TypedContract.lean` (the guards and the row `E4-TYPED-CE-002`; `E4-TYPED-CE-001`
+is retired, below) and `Test/Program/TypedAxiomReport.lean`.
 
 This module says which machine values (`src/Effect4/Machine/Stores.lean` `Val`) inhabit which
 types of the program language (`src/Effect4/Program/Eff.lean` `Ty`), and proves three things
 about the native route (`src/Effect4/Program/Native.lean`): a term that types
 (`src/Effect4/Program/Typing.lean` `termTy`) and evaluates (`evalTerm`) evaluates to a value of
-its type; a term that types and carries no `str` literal evaluates; and a request value of a
-`sync` row's request type decodes to a store operation (`NativeOp.syncOpOf`). Everything is
+its type; a term that types evaluates; and a request value of a `sync` row's request type
+decodes to a store operation (`NativeOp.syncOpOf`). Everything is
 first-order and in `Type 0`; the only `String` operation is `BEq String` on a handle target,
 which is at the ceiling (`src/Effect4/Program/Config.lean` header records the same fact).
 
@@ -21,11 +21,13 @@ Refusals of the value typing, each a `false` of `Val.hasTy` and not a silent one
 
 * `TYPED-FB-INT` — `.int` has no inhabitant: `Val.nat` is a `.nat`. `Ty.render` sends both to
   `number`; the printer's identification is not the typing's (`E4-TYPED-CE-002`).
-* `TYPED-FB-STRING` — `.string` has no inhabitant: strings are not machine values on the
-  native route (`Native.lean:48-55`), so a `str` literal types and does not evaluate
-  (`E4-TYPED-CE-001`), which is why totality carries `Term.noStr`.
-* `.option`, `.except`, `.causeOf`, `.never` and an unknown handle target have no inhabitant
-  in this cut.
+* `.except`, `.causeOf`, `.never` and an unknown handle target have no inhabitant in this cut.
+
+Since the host rows slice (2026-09-08, DB-15) `.string` is inhabited by the carrier's `str`
+frame and `.option t` by `none` and a `some` of a `t`: strings are machine values on the
+native route (`Native.lean` `Lit.toVal`), so every literal evaluates and totality carries no
+`noStr` premise. The former refusal `TYPED-FB-STRING` and the register row `E4-TYPED-CE-001`
+are retired, the ID kept.
 * `TYPED-FB-CAUSE` — `Val.exitErr` inhabits every `.exitOf _ _` whatever its cause: the error
   column is not checked in this slice (plan §7).
 
@@ -53,11 +55,18 @@ handle against `.fiberOf`, and a snapshot of fiber handles (`Val.snapshot?`) aga
 of them; a reified exit against `.exitOf` — a failure's cause must read back, its error column
 is not checked (`TYPED-FB-CAUSE`); the two-cell `list` `Val.tuple` builds (`Native.lean`)
 against `.prod`; a `list` against `.list` when every member does; a union as the disjunction
-of its members. Every other pair is a refusal named in the module header. -/
+of its members; a string against the carrier's `str` frame and an option against its `none`
+and `some` frames (DB-15). Every other pair is a refusal named in the module header. -/
 def Val.hasTy (v : Val) : Ty → Bool
   | .unit => match v with | .unit => true | _ => false
   | .nat => match v with | .nat _ => true | _ => false
   | .bool => match v with | .bool _ => true | _ => false
+  | .string => match v with | .str _ => true | _ => false
+  | .option inner =>
+    match v with
+    | .none => true
+    | .some x => Val.hasTy x inner
+    | _ => false
   | .handle target =>
     match v with
     | .handle kind _ =>
@@ -112,6 +121,22 @@ theorem Val.hasTy_bool_inv {v : Val} (h : Val.hasTy v .bool = true) : ∃ b, v =
   simp only [Val.hasTy] at h
   split at h
   · next b => exact ⟨b, rfl⟩
+  · exact nomatch h
+
+/-- A `.string` is a `Val.str` (DB-15). -/
+theorem Val.hasTy_string_inv {v : Val} (h : Val.hasTy v .string = true) : ∃ s, v = Val.str s := by
+  simp only [Val.hasTy] at h
+  split at h
+  · next s => exact ⟨s, rfl⟩
+  · exact nomatch h
+
+/-- An `.option t` is `none` or a `some` of a `t` (DB-15). -/
+theorem Val.hasTy_option_inv {v : Val} {t : Ty} (h : Val.hasTy v (.option t) = true) :
+    v = Store.Val.none ∨ ∃ x, v = Store.Val.some x ∧ Val.hasTy x t = true := by
+  simp only [Val.hasTy] at h
+  split at h
+  · exact Or.inl rfl
+  · next x => exact Or.inr ⟨x, rfl, h⟩
   · exact nomatch h
 
 /-- A `NativeOp.refTy` is a `Val.cell`: the other handle spellings and the context's differ
@@ -206,34 +231,19 @@ theorem Fits.pair_inv {vs : List Val} {a b : Ty} (h : Fits vs [a, b]) :
 
 /-! ## Literals -/
 
-mutual
-  /-- No `str` literal anywhere in a term: the one literal `Lit.toVal` refuses
-  (`Native.lean:51-55`; plan §2.1, ENSURES 3). -/
-  def Term.noStr : Term → Bool
-    | .var _ => true
-    | .lit (.str _) => false
-    | .lit _ => true
-    | .app _ args => Terms.noStr args
-  /-- `Term.noStr` over every term of the list. -/
-  def Terms.noStr : Terms → Bool
-    | .nil => true
-    | .cons head tail => Term.noStr head && Terms.noStr tail
-end
-
-/-- A literal's value has the literal's type (`Native.lean:51-55` against `Eff.lean:203-207`;
-plan §2.2, ENSURES 4). -/
+/-- A literal's value has the literal's type (`Native.lean` `Lit.toVal` against `Eff.lean`
+`Lit.ty`; plan §2.2, ENSURES 4). -/
 theorem Lit.toVal_hasTy (l : Lit) (v : Val) (h : l.toVal = some v) : Val.hasTy v l.ty = true := by
   cases l with
   | unit => simp only [Lit.toVal, Option.some.injEq] at h; subst h; simp [Lit.ty, Val.hasTy]
   | nat n => simp only [Lit.toVal, Option.some.injEq] at h; subst h; simp [Lit.ty, Val.hasTy]
   | bool b => simp only [Lit.toVal, Option.some.injEq] at h; subst h; simp [Lit.ty, Val.hasTy]
-  | str s => simp [Lit.toVal] at h
+  | str s => simp only [Lit.toVal, Option.some.injEq] at h; subst h; simp [Lit.ty, Val.hasTy]
 
-/-- Every literal but `str` evaluates (`Native.lean:55` is the one `none`; ENSURES 4). -/
-theorem Lit.toVal_isSome (l : Lit) (h : ∀ s, l ≠ .str s) : l.toVal.isSome = true := by
-  cases l with
-  | str s => exact absurd rfl (h s)
-  | _ => rfl
+/-- Every literal evaluates (`Native.lean` `Lit.toVal` answers `some` on every constructor
+since DB-15; ENSURES 4). -/
+theorem Lit.toVal_isSome (l : Lit) : l.toVal.isSome = true := by
+  cases l <;> rfl
 
 /-! ## Atoms -/
 
@@ -373,12 +383,13 @@ termination_by structural ts
 end
 
 mutual
-/-- Under `Fits` and `noStr`, a term that types evaluates (plan §2.2, ENSURES 7): the
-lengths agree at a variable (`Fits.length`), `Lit.toVal_isSome` at a literal, and
-`nativeAtom_typed` at an application over the fitted argument values. -/
+/-- Under `Fits`, a term that types evaluates (plan §2.2, ENSURES 7): the lengths agree at a
+variable (`Fits.length`), `Lit.toVal_isSome` at a literal, and `nativeAtom_typed` at an
+application over the fitted argument values. Until DB-15 this carried a `noStr` premise, the
+one literal that did not evaluate. -/
 theorem evalTerm_isSome (t : Term) (env : List Val) (tys : TyEnv) (ty : Ty)
-    (hfit : Fits env tys) (hty : termTy nativeSignature tys t = some ty)
-    (hns : Term.noStr t = true) : (evalTerm env t).isSome = true := by
+    (hfit : Fits env tys) (hty : termTy nativeSignature tys t = some ty) :
+    (evalTerm env t).isSome = true := by
   cases t with
   | var i =>
     have hty' : tys[i]? = some ty := hty
@@ -389,16 +400,12 @@ theorem evalTerm_isSome (t : Term) (env : List Val) (tys : TyEnv) (ty : Ty)
     | some _ => rfl
   | lit l =>
     show l.toVal.isSome = true
-    apply Lit.toVal_isSome
-    intro s hs
-    subst hs
-    simp [Term.noStr] at hns
+    exact Lit.toVal_isSome l
   | app atom args =>
     rw [termTy_app] at hty
     obtain ⟨tl, hts, hatom⟩ := Option.bind_eq_some_iff.mp hty
-    have hns' : Terms.noStr args = true := hns
     obtain ⟨vs, hvs⟩ :=
-      Option.isSome_iff_exists.mp (evalTerms_isSome args env tys tl hfit hts hns')
+      Option.isSome_iff_exists.mp (evalTerms_isSome args env tys tl hfit hts)
     obtain ⟨v', hv', _⟩ :=
       nativeAtom_typed atom tl ty vs hatom (evalTerms_hasTy args env tys tl vs hfit hts hvs)
     rw [evalTerm_app, hvs]
@@ -408,21 +415,18 @@ theorem evalTerm_isSome (t : Term) (env : List Val) (tys : TyEnv) (ty : Ty)
 termination_by structural t
 /-- The list form of `evalTerm_isSome` (ENSURES 7). -/
 theorem evalTerms_isSome (ts : Terms) (env : List Val) (tys : TyEnv) (tl : List Ty)
-    (hfit : Fits env tys) (hty : termsTy nativeSignature tys ts = some tl)
-    (hns : Terms.noStr ts = true) : (evalTerms env ts).isSome = true := by
+    (hfit : Fits env tys) (hty : termsTy nativeSignature tys ts = some tl) :
+    (evalTerms env ts).isSome = true := by
   cases ts with
   | nil => rfl
   | cons head tail =>
     rw [termsTy_cons] at hty
     obtain ⟨t1, ht1, hty'⟩ := Option.bind_eq_some_iff.mp hty
     obtain ⟨rest, hrest, _⟩ := Option.bind_eq_some_iff.mp hty'
-    have hns' : (Term.noStr head && Terms.noStr tail) = true := hns
-    obtain ⟨hnsh, hnst⟩ : Term.noStr head = true ∧ Terms.noStr tail = true := by
-      simpa using hns'
     obtain ⟨v1, hv1⟩ :=
-      Option.isSome_iff_exists.mp (evalTerm_isSome head env tys t1 hfit ht1 hnsh)
+      Option.isSome_iff_exists.mp (evalTerm_isSome head env tys t1 hfit ht1)
     obtain ⟨vrest, hvrest⟩ :=
-      Option.isSome_iff_exists.mp (evalTerms_isSome tail env tys rest hfit hrest hnst)
+      Option.isSome_iff_exists.mp (evalTerms_isSome tail env tys rest hfit hrest)
     rw [evalTerms_cons, hv1]
     show ((evalTerms env tail).bind fun rest => some (v1 :: rest)).isSome = true
     rw [hvrest]

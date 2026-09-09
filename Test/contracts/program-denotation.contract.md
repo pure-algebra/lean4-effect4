@@ -85,8 +85,9 @@ Not modelled here: generators, `whileLoop`, `choose`, the masks, `yieldNow`, `ca
 `awaitFiber`, `withFiber`, `scoped`, `acquireRelease`, async rows, program rows, a second
 fiber, the trace, the cause component of a reified failed exit (`TYPED-FB-CAUSE`), the
 stored program of a completed Deferred (`STORES-FB-COMPLETION`), and the types `.int`,
-`.string`, `.option`, `.except`, `.causeOf`, `.never` and unknown handle targets, which no
-value of this cut inhabits (`TYPED-FB-INT`, `TYPED-FB-STRING`).
+`.except`, `.causeOf`, `.never` and unknown handle targets, which no value of this cut
+inhabits (`TYPED-FB-INT`). `.string` and `.option` are inhabited since the DB-15 amendment
+below.
 
 ## ENSURES
 
@@ -100,6 +101,14 @@ battery passes 87 guards, including the 2100-bind case that yields twice;
 69 dependency receipts and the full D5 gate pass. This amendment changes no
 public premise or admitted fragment.
 
+DB-15 amendment (2026-09-08, the host rows slice, decision 3): strings are machine
+values on the native route. `Lit.toVal (.str s)` answers `some (.str s)`; `Val.hasTy`
+inhabits `.string` with the carrier's `str` frame and `.option t` with `none` and a
+`some` of a `t` (`Val.hasTy_string_inv`, `Val.hasTy_option_inv`); `Term.noStr` and
+`Terms.noStr` are deleted; `Lit.toVal_isSome`, `evalTerm_isSome` and `evalTerms_isSome`
+lose their `str` premise. `E4-TYPED-CE-001` is retired with its ID kept. No other public
+premise moves; the frozen statements below read with this amendment applied.
+
 The three lanes owe exactly these public facts. Every theorem is at `propext`/`Quot.sound`.
 
 Lane 1, `Effect4.Program`:
@@ -107,13 +116,13 @@ Lane 1, `Effect4.Program`:
 1. `Val.hasTy : Val → Ty → Bool` with the table of the plan §2.1; `.union` is the disjunction
    of its members.
 2. `Fits env tys` is `List.Forall₂` of `hasTy`; `Fits.get?`, `Fits.length`, `Fits.append`.
-3. `Term.noStr`, `Terms.noStr`.
-4. `Lit.toVal_hasTy`; `Lit.toVal_isSome` for every literal but `str`.
+3. (Retired by the DB-15 amendment: `Term.noStr` and `Terms.noStr` are gone; every literal
+   evaluates.)
+4. `Lit.toVal_hasTy`; `Lit.toVal_isSome` for every literal.
 5. `nativeAtom_typed`: a typed atom application answers a value of the answer type.
 6. `evalTerm_hasTy`, `evalTerms_hasTy`: under `Fits`, a term that types and evaluates
    evaluates to a value of its type.
-7. `evalTerm_isSome`, `evalTerms_isSome`: under `Fits` and `noStr`, a term that types
-   evaluates.
+7. `evalTerm_isSome`, `evalTerms_isSome`: under `Fits`, a term that types evaluates.
 8. `syncOpOf_isSome`: a request value of a `sync` row's request type decodes.
 9. `syncOpOf_async_none`.
 
@@ -245,7 +254,7 @@ appears only in the batteries.
 
 | ID | Status | Attacked statement | Witness | Forced repair |
 | --- | --- | --- | --- | --- |
-| `E4-TYPED-CE-001` | SEEDED | A term that types always evaluates | `.lit (.str "x")` types as `.string`; `Lit.toVal` answers `none` | `evalTerm_isSome` carries `Term.noStr`; `evalTerm_hasTy` is stated on `evalTerm … = some v` |
+| `E4-TYPED-CE-001` | RETIRED | A term that types always evaluates | retired 2026-09-08 (DB-15): `.lit (.str "x")` evaluates to `Val.str "x"`; the statement is now the theorem `evalTerm_isSome` with no `noStr` premise | none; the ID is kept and never reused |
 | `E4-TYPED-CE-002` | SEEDED | `Val.nat` inhabits `.int` because both print as `number` | `Val.hasTy (.nat 1) .int = false`; `Ty.render .nat = Ty.render .int` | `.int` is a refusal of the value typing (`TYPED-FB-INT`); the printer's identification is not the typing's |
 | `E4-STORES-CE-001` | SEEDED | `syncOpStep` is total | `syncOpStep (.refGet ⟨0⟩) Stores.empty = none` | `syncOpStep_isSome_of_valid` carries `SyncOp.validIn` |
 | `E4-STORES-CE-002` | SEEDED | A valid request's answer is valid without a heap invariant | heap `[Val.cell ⟨9⟩]`: `refGet ⟨0⟩` answers `cell ⟨9⟩`, invalid | `syncOpStep_answer_valid` carries `Stores.WF` |

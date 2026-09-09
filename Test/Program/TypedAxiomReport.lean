@@ -15,6 +15,8 @@ declaration below is expected at the ceiling `propext`/`Quot.sound`; the gate
 #print axioms Effect4.Program.Val.hasTy_unit_inv
 #print axioms Effect4.Program.Val.hasTy_nat_inv
 #print axioms Effect4.Program.Val.hasTy_bool_inv
+#print axioms Effect4.Program.Val.hasTy_string_inv
+#print axioms Effect4.Program.Val.hasTy_option_inv
 #print axioms Effect4.Program.Val.hasTy_refTy_inv
 #print axioms Effect4.Program.Val.hasTy_deferredTy_inv
 #print axioms Effect4.Program.Val.hasTy_prod_inv
@@ -26,8 +28,6 @@ declaration below is expected at the ceiling `propext`/`Quot.sound`; the gate
 #print axioms Effect4.Program.Fits.pair_inv
 
 -- TYPED/term: literals, atoms, the mutual inductions.
-#print axioms Effect4.Program.Term.noStr
-#print axioms Effect4.Program.Terms.noStr
 #print axioms Effect4.Program.Lit.toVal_hasTy
 #print axioms Effect4.Program.Lit.toVal_isSome
 #print axioms Effect4.Program.nativeAtom_typed

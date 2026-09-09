@@ -27,6 +27,13 @@ def pBind : Program :=
 /-- A program the printer refuses: an internal action of the machine. -/
 def pInternal : Program := .withFiber (.setContext (.lit .unit))
 
+/-- `Effect.succeed("x")`: a string literal is a machine value on the native route (DB-15, the
+host rows slice, 2026-09-08). -/
+def pStr : Program := .succeed (.lit (.str "x"))
+
+/-- A string through a variable: `Effect.flatMap(Effect.succeed("a"), (a0) => Effect.succeed(a0))`. -/
+def pStrBind : Program := .bind (.succeed (.lit (.str "a"))) (.succeed (.var 0))
+
 /-! ## Typing and printing -/
 
 #guard wellTyped p42
@@ -37,6 +44,15 @@ def pInternal : Program := .withFiber (.setContext (.lit .unit))
 #guard (printDecl "main" p42).isSome
 #guard (printDecl "main" pInternal).isNone
 #guard (print pInternal).isOk = false
+-- DB-15: string literals type, print, read back whole, and run to the carrier's `str` frame
+#guard wellTyped pStr
+#guard wellTyped pStrBind
+#guard (print pStr).isOk
+#guard roundTrip pStr = .ok pStr
+#guard roundTrip pStrBind = .ok pStrBind
+#guard (run pStr 100).exit = some (Exit.success (Val.str "x"))
+#guard (run pStrBind 100).exit = some (Exit.success (Val.str "a"))
+#guard (runSync pStr 100).2 = Exit.success (Val.str "x")
 
 /-! ## Running -/
 
