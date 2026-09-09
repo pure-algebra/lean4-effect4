@@ -149,7 +149,7 @@ let () =
       (tags
        = [ ("bool", tag_bool); ("nat", tag_nat); ("string", tag_string); ("list", tag_list);
            ("pair", tag_pair); ("none", tag_none); ("some", tag_some); ("bytes", tag_bytes);
-           ("unit", tag_unit); ("ctor", tag_ctor) ]);
+           ("unit", tag_unit); ("ctor", tag_ctor); ("ref", tag_ref); ("handle", tag_handle) ]);
 
     (* ---- L2..L5: the programs ---- *)
     let names =

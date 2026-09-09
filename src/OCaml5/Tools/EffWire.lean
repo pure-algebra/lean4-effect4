@@ -51,7 +51,10 @@ def manifest (env : Lean.Environment) : IO String := do
     ("string", Effect4.Store.Tag.string), ("list", Effect4.Store.Tag.list),
     ("pair", Effect4.Store.Tag.pair), ("none", Effect4.Store.Tag.none),
     ("some", Effect4.Store.Tag.some), ("bytes", Effect4.Store.Tag.bytes),
-    ("unit", Effect4.Store.Tag.unit), ("ctor", Effect4.Store.Tag.ctor)]
+    ("unit", Effect4.Store.Tag.unit), ("ctor", Effect4.Store.Tag.ctor),
+    -- CAS amendment M16 (2026-09-09, host rows step 7): the two tags the carrier gained
+    -- with the value foundation, `ref` and `handle`, which the table had stopped short of
+    ("ref", Effect4.Store.Tag.ref), ("handle", Effect4.Store.Tag.handle)]
   return "\n".intercalate (rows ++ ["tags: " ++ " ".intercalate
     (tags.map fun (name, value) => name ++ "=" ++ toString value.toNat)])
 
