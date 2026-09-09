@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test"
 import { recognizeSource as ck } from "../ck.ts"
 import { recognizeSource as oxc } from "../oxc.ts"
+import { compareVerdicts } from "../gate.ts"
 
 for (const recognizeSource of [ck, oxc]) {
 
@@ -35,6 +36,87 @@ for (const recognize of [ck, oxc]) {
     expect(v?.kind).toBe("lifted")
   })
 }
+
+const layerHeader = 'import { Effect, Layer, Context } from "effect"; '
+const layerValue = 'Layer.succeed(Context.Service<number>("K"), 7)'
+
+test("foreign layer declarations retain one defining occurrence and later references", () => {
+  const source = layerHeader + `const Live = ${layerValue}; const p = Effect.provide(Effect.succeed(7), Layer.mergeAll(Live, Live, Live));`
+  const left = ck(source, "layers.ts"), right = oxc(source, "layers.ts")
+  expect(compareVerdicts(left, right).status).toBe("agree")
+  for (const result of [left, right]) {
+    expect(result).toHaveLength(1)
+    const v = result[0]!
+    expect(v.kind).toBe("lifted")
+    if (v.kind !== "lifted" || v.eff._tag !== "provideLayer") throw new Error("expected provision")
+    expect(v.eff.layer).toEqual({ _tag: "mergeAll", layers: [
+      { _tag: "succeed", key: { name: { value: 4 }, service: { value: 4 } }, value: { _tag: "nat", value: 7 } },
+      { _tag: "ref", target: [0, 0, 0] }, { _tag: "ref", target: [0, 0, 0] },
+    ] })
+    expect(v.layers).toEqual([{ sourceName: "Live", target: [0, 0, 0] }])
+  }
+})
+
+test("nested layer definitions are shared across an inlined program and later provisions", () => {
+  const source = layerHeader + `const Base = ${layerValue}; const Live = Layer.merge(Base, Base); const q = Effect.provide(Effect.succeed(7), Live); const p = Effect.flatMap(q, (_) => Effect.provide(Effect.succeed(8), Base));`
+  const left = ck(source, "nested.ts"), right = oxc(source, "nested.ts")
+  expect(compareVerdicts(left, right).status).toBe("agree")
+  const v = left.find(v => v.unit.name === "p")
+  expect(v?.kind).toBe("lifted")
+  if (v?.kind !== "lifted" || v.eff._tag !== "bind" || v.eff.rest._tag !== "provideLayer") throw new Error("expected bind")
+  expect(v.eff.rest.layer).toEqual({ _tag: "ref", target: [0, 0, 0] })
+})
+
+test("layer definitions use program path order while keys retain their existing reading order", () => {
+  const source = layerHeader + `const Live = Layer.effectDiscard(Effect.service(Context.Service<number>("A"))); const p = Effect.provide(Effect.flatMap(Effect.provide(Effect.succeed(1), Live), (_) => Effect.service(Context.Service<number>("B"))), Live);`
+  const left = ck(source, "order.ts"), right = oxc(source, "order.ts")
+  expect(compareVerdicts(left, right).status).toBe("agree")
+  const v = left[0]
+  expect(v?.kind).toBe("lifted")
+  if (v?.kind !== "lifted" || v.eff._tag !== "provideLayer" || v.eff.body._tag !== "bind" || v.eff.body.first._tag !== "provideLayer") throw new Error("expected provision")
+  expect(v.eff.body.first.layer).toEqual({ _tag: "ref", target: [0] })
+  expect(v.keys).toEqual([{ ordinal: 4, service: 4, sourceId: "B" }, { ordinal: 5, service: 4, sourceId: "A" }])
+})
+
+test("a layer alias retains the original identity regardless of which name occurs first", () => {
+  for (const uses of ["Base, Alias, Alias", "Alias, Base, Alias"]) {
+    const source = layerHeader + `const Base = ${layerValue}; const Alias = Base; const p = Effect.provide(Effect.succeed(7), Layer.mergeAll(${uses}));`
+    const left = ck(source, "alias.ts"), right = oxc(source, "alias.ts")
+    expect(compareVerdicts(left, right).status).toBe("agree")
+    const v = left[0]
+    if (v?.kind !== "lifted" || v.eff._tag !== "provideLayer" || v.eff.layer._tag !== "mergeAll") throw new Error("expected mergeAll")
+    expect(v.eff.layer.layers.slice(1)).toEqual([{ _tag: "ref", target: [0, 0, 0] }, { _tag: "ref", target: [0, 0, 0] }])
+    expect(v.layers?.map(l => l.target)).toEqual([[0, 0, 0], [0, 0, 0]])
+    expect(compareVerdicts(left, [{ ...v, layers: [{ sourceName: "changed", target: [0] }] }]).status).toBe("disagree")
+  }
+})
+
+test("unbound and forward layer references remain refusals in both foreign readers", () => {
+  for (const [source, code] of [
+    [layerHeader + 'const p = Effect.provide(Effect.succeed(7), L_0);', "E-REF-UNBOUND"],
+    [layerHeader + `const p = Effect.provide(Effect.succeed(7), Live); const Live = ${layerValue};`, "E-REF-FORWARD"],
+    [layerHeader + `const Early = Later; const Later = ${layerValue}; const p = Effect.provide(Effect.succeed(7), Early);`, "E-REF-UNBOUND"],
+  ] as const) {
+    const left = ck(source!, "refused-layer.ts"), right = oxc(source!, "refused-layer.ts")
+    expect(compareVerdicts(left, right).status).toBe("agree")
+    for (const result of [left, right]) {
+      const v = result.find(v => v.unit.name === "p")
+      expect(v?.kind).toBe("refusal")
+      if (v?.kind === "refusal") expect(v.code).toBe(code!)
+    }
+  }
+})
+
+test("a layer reference cannot turn a program or a malformed layer into a definition", () => {
+  for (const value of ['Effect.succeed(7)', 'Layer.succeed(Context.Service<number>("K"), 7, 8)']) {
+    const source = layerHeader + `const Live = ${value}; const p = Effect.provide(Effect.succeed(7), Live);`
+    const left = ck(source, "bad-layer.ts"), right = oxc(source, "bad-layer.ts")
+    expect(compareVerdicts(left, right).status).toBe("agree")
+    const v = left.find(v => v.unit.name === "p")
+    expect(v?.kind).toBe("refusal")
+    if (v?.kind === "refusal") expect(v.code).toBe("E-REF-UNBOUND")
+  }
+})
 
 for (const recognize of [ck, oxc]) {
   test("default and entry-call expressions are ingestion roots", () => {

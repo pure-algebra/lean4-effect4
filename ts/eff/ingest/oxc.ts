@@ -2,13 +2,13 @@
 // This engine normalizes on its own parser walk, then uses the existing fragment reader.
 import { parseSync } from "oxc-parser"
 import { Result } from "effect"
-import { readEff, exprOf, type Expr, type TsStmt } from "../read.ts"
-import { decodeEff, type Eff } from "../eff.gen.ts"
+import { readEff, readLayer, restoreAll, exprOf, childrenOf, type IrNode, type Expr, type TsStmt } from "../read.ts"
+import { decodeEff, type Eff, type LayerTerm, type ServiceKey } from "../eff.gen.ts"
 import { heads, rows } from "../profile.gen.ts"
 import { forms } from "../forms.gen.ts"
 import { taxonomy } from "../taxonomy.gen.ts"
 import { encodeProgram } from "../wire.gen.ts"
-import type { Verdict, RefusalCode, Key } from "./contract.ts"
+import type { Verdict, RefusalCode, Key, LayerBinding } from "./contract.ts"
 
 interface Node { type: string; [key: string]: unknown }
 const isNode = (v: unknown): v is Node => typeof v === "object" && v !== null && typeof Reflect.get(v, "type") === "string"
@@ -26,8 +26,66 @@ const atomNames = new Set(["succ", "pred", "isZero", "not", "add", "lt", "eq", "
 
 class Normalize {
   readonly keys: Key[] = []
+  readonly layers: LayerBinding[] = []
+  private readonly definitions: { sourceName: string; expression: Expr }[] = []
   private referenceCut: number | undefined
   constructor(readonly source: string, readonly bindings: Map<string, string>, readonly declarations: Map<string, Node>, readonly current: number) {}
+  finish(program: Eff): Eff {
+    if (this.definitions.length === 0) return decodeEff(program)
+    const targets = new Map<number, readonly number[]>()
+    const definition = (index: number): LayerTerm => {
+      const d = this.definitions[index]
+      if (!d) return reject("E-REF-UNBOUND", "layer")
+      const parsed = readEff(0, call("Effect.provide", [call("Effect.succeed", [{ _tag: "int", value: 0 }]), d.expression]))
+      if (Result.isFailure(parsed) || parsed.success._tag !== "provideLayer") return reject("E-NODE", "layer")
+      return parsed.success.layer
+    }
+    const walk = (input: IrNode, path: readonly number[], keys?: Key[]): IrNode => {
+      let current = input
+      if (!keys && current.sort === "layer" && current.layer._tag === "ref") {
+        const ref = current.layer
+        if (ref.target.length !== 1) return reject("E-REF-UNBOUND", "layer")
+        const index = ref.target[0]!, previous = targets.get(index)
+        if (previous) return { sort: "layer", layer: { _tag: "ref", target: previous } }
+        targets.set(index, path)
+        const d = this.definitions[index]
+        if (!d) return reject("E-REF-UNBOUND", "layer")
+        const binding = { sourceName: d.sourceName, target: path }
+        this.layers.push(binding)
+        const result = walk({ sort: "layer", layer: definition(index) }, path)
+        if (result.sort === "layer" && result.layer._tag === "ref") {
+          targets.set(index, result.layer.target)
+          binding.target = result.layer.target
+        }
+        return result
+      }
+      const rewriteKey = (key: ServiceKey): ServiceKey => {
+        if (!keys) return key
+        const old = keys.find(k => k.ordinal === key.name.value)
+        if (!old) return reject("E-REF-UNBOUND", "service key")
+        let entry = this.keys.find(k => k.sourceId === old.sourceId)
+        if (!entry) { entry = { ...old, ordinal: this.keys.length + 4 }; this.keys.push(entry) }
+        return { name: { value: entry.ordinal }, service: key.service }
+      }
+      // Layer constructors expose their key before their body; provision keys follow it.
+      if (current.sort === "layer" && (current.layer._tag === "succeed" || current.layer._tag === "effect"))
+        current = { sort: "layer", layer: { ...current.layer, key: rewriteKey(current.layer.key) } }
+      let order = childrenOf(current).map((_, i) => i)
+      if (keys && current.sort === "eff" && current.eff._tag === "provideLayer") order = [1, 0]
+      for (const i of order) {
+        const child = childrenOf(current)[i]!
+        current = child[1](walk(child[0], [...path, i], keys)) ?? reject("E-NODE", "layer path")
+      }
+      if (current.sort === "eff" && (current.eff._tag === "service" || current.eff._tag === "provideService"))
+        current = { sort: "eff", eff: { ...current.eff, key: rewriteKey(current.eff.key) } }
+      return current
+    }
+    const restored = walk({ sort: "eff", eff: program }, [])
+    const oldKeys = [...this.keys]
+    this.keys.length = 0
+    const result = walk(restored, [], oldKeys)
+    return result.sort === "eff" ? decodeEff(result.eff) : reject("E-NODE", "program")
+  }
   rawHead(n: Node): string {
     n = unwrap(n)
     if (n.type === "Identifier") return str(n, "name")
@@ -293,6 +351,24 @@ class Normalize {
   }
   layer(n: Node): Expr {
     n = unwrap(n)
+    if (n.type === "Identifier") {
+      const sourceName = str(n, "name"), value = this.declaration(n), d = this.declarations.get(sourceName)!
+      if (d.declarationKind !== "const") return reject("E-REF-UNBOUND", sourceName)
+      const index = this.definitions.findIndex(d => d.sourceName === sourceName)
+      if (index >= 0) return id(`L_${index}`)
+      const previous = this.referenceCut
+      this.referenceCut = offset(d, "start")
+      let expression: Expr
+      try {
+        expression = this.layer(value)
+        if (Result.isFailure(readLayer(expression))) reject("E-NODE", "layer")
+      }
+      catch (e) { if (e instanceof Refuse) return reject("E-REF-UNBOUND", `${sourceName}: ${e.code}`); throw e }
+      finally { this.referenceCut = previous }
+      const next = this.definitions.length
+      this.definitions.push({ sourceName, expression })
+      return id(`L_${next}`)
+    }
     if (n.type === "ArrayExpression") return reject("E-OP-UNKNOWN", "Layer.mergeAll")
     if (n.type !== "CallExpression") return reject("E-BIND-SHAPE", "layer")
     const fn = unwrap(node(n, "callee")), a = list(n, "arguments")
@@ -303,13 +379,16 @@ class Normalize {
       return { _tag: "method", name: "pipe", base: this.layer(node(fn, "object")), args: [call(h, [this.layer(b[0]!)])] }
     }
     const h = this.head(fn), at = (i: number) => a[i] ?? reject("E-BIND-SHAPE", "arity")
+    if (["Layer.succeed", "Layer.effect", "Layer.merge", "Layer.provide", "Layer.provideMerge"].includes(h) && a.length !== 2 ||
+        ["Layer.effectDiscard", "Layer.fresh", "Layer.orDie"].includes(h) && a.length !== 1) return reject("E-NODE", "arity")
     if (h === "Layer.succeed") { const key = this.key(at(0)); return call(h, [key, this.provided(key, at(1))]) }
     if (h === "Layer.effect") return call(h, [this.key(at(0)), this.program(at(1), [])])
     if (h === "Layer.effectDiscard") return call(h, [this.program(at(0), [])])
     if (h === "Layer.fresh" || h === "Layer.orDie") return call(h, [this.layer(at(0))])
     if (h === "Layer.merge") return call(h, [this.layer(at(0)), this.layer(at(1))])
+    if (h === "Layer.mergeAll") return call(h, a.map(x => this.layer(x)))
     if (h === "Layer.provide" || h === "Layer.provideMerge") return { _tag: "method", name: "pipe", base: this.layer(at(0)), args: [call(h, [this.layer(at(1))])] }
-    return reject("E-OP-UNKNOWN", h)
+    return reject("E-NODE", "layer")
   }
   cause(n: Node, env: readonly string[]): Expr {
     n = unwrap(n)
@@ -507,16 +586,38 @@ export const readPrintedSource = (source: string, filename = "program.ts"): Eff 
   const program: unknown = parsed.program
   if (!isNode(program)) throw new Error("printer program")
   const candidates = list(program, "body").flatMap(s => {
-    if (s.type === "ExpressionStatement") return [node(s, "expression")]
-    if (s.type === "ExportNamedDeclaration" && isNode(s.declaration) && s.declaration.type === "VariableDeclaration") return list(s.declaration, "declarations").map(d => node(d, "init"))
+    if (s.type === "ExpressionStatement") return [s]
+    if (s.type === "ExportNamedDeclaration" && isNode(s.declaration) && s.declaration.type === "VariableDeclaration") return [s.declaration]
+    if (s.type === "VariableDeclaration" && list(s, "declarations").some(d => node(d, "id").type === "Identifier" && str(node(d, "id"), "name").startsWith("L_"))) return [s]
     return []
   })
-  if (candidates.length !== 1) throw new Error("printer program count")
-  const fragment = exprOf(candidates[0]!)
-  if (Result.isFailure(fragment)) throw new Error(JSON.stringify(fragment.failure))
-  const r = readEff(0, printerOrder(fragment.success))
+  const constant = (s: Node): Node => {
+    if (s.type !== "VariableDeclaration" || s.kind !== "const" || list(s, "declarations").length !== 1) throw new Error("printer declaration")
+    const d = list(s, "declarations")[0]!
+    if (node(d, "id").type !== "Identifier") throw new Error("printer name")
+    return d
+  }
+  const fragment = (n: Node): Expr => {
+    const r = exprOf(n)
+    if (Result.isFailure(r)) throw new Error(JSON.stringify(r.failure))
+    return printerOrder(r.success)
+  }
+  const last = candidates.at(-1)
+  if (!last) throw new Error("printer program count")
+  const declarations: [number[], LayerTerm][] = candidates.slice(0, -1).map(s => {
+    const d = constant(s), name = str(node(d, "id"), "name")
+    if (!/^L_(0|[1-9][0-9]*)(_(0|[1-9][0-9]*))*$/.test(name)) throw new Error("printer layer path")
+    const path = name.slice(2).split("_").map(Number)
+    if (!path.every(Number.isSafeInteger)) throw new Error("printer layer path")
+    const layer = readLayer(fragment(node(d, "init")))
+    if (Result.isFailure(layer)) throw new Error(JSON.stringify(layer.failure))
+    return [path, layer.success]
+  })
+  const r = readEff(0, fragment(last.type === "ExpressionStatement" ? node(last, "expression") : node(constant(last), "init")))
   if (Result.isFailure(r)) throw new Error(JSON.stringify(r.failure))
-  return r.success
+  const restored = restoreAll(r.success, declarations)
+  if (!restored) throw new Error("printer layer target")
+  return decodeEff(restored)
 }
 
 export function recognizeSource(source: string, filename: string, onParse?: (ok: boolean) => void, onTree?: (tree: unknown) => void): Verdict[] {
@@ -539,7 +640,7 @@ export function recognizeSource(source: string, filename: string, onParse?: (ok:
   if (!isNode(program)) throw new Error("parser returned no program")
   const body = list(program, "body").map(s => s.type === "ExportNamedDeclaration" && isNode(s.declaration) ? s.declaration : s)
   const declarations = new Map<string, Node>()
-  for (const s of body) if (s.type === "VariableDeclaration") for (const d of list(s, "declarations")) if (node(d, "id").type === "Identifier" && isNode(d.init)) declarations.set(str(node(d, "id"), "name"), d)
+  for (const s of body) if (s.type === "VariableDeclaration") for (const d of list(s, "declarations")) if (node(d, "id").type === "Identifier" && isNode(d.init)) declarations.set(str(node(d, "id"), "name"), { ...d, declarationKind: s.kind })
   for (const s of body) if (s.type === "ClassDeclaration" && isNode(s.id) && isNode(s.superClass)) declarations.set(str(s.id, "name"), s)
   const result: Verdict[] = []
   for (const s of body) {
@@ -559,12 +660,16 @@ export function recognizeSource(source: string, filename: string, onParse?: (ok:
       if (!isNode(d.init)) continue
       const reader = new Normalize(source, bindings, declarations, offset(d, "start")), value = unwrap(d.init)
       if (value.type === "CallExpression") { try { if (reader.head(node(value, "callee")) === "Context.Service") continue } catch { /* Refuse this unit below. */ } }
+      try {
+        const layer = new Normalize(source, bindings, declarations, offset(d, "start")).layer(value)
+        if (Result.isSuccess(readLayer(layer))) continue
+      } catch { /* A program or refused declaration remains a unit. */ }
       const unit = { file: filename.replaceAll("\\", "/"), name: str(node(d, "id"), "name"), span: { start: offset(d, "start"), end: offset(d, "end") } }
       try {
         const fragment = reader.program(value, []), r = readEff(0, fragment)
         if (Result.isFailure(r)) reject("E-NODE", r.failure._tag)
-        const eff = decodeEff(r.success)
-        result.push({ kind: "lifted", unit, eff, keys: reader.keys, wireHex: Buffer.from(encodeProgram(eff)).toString("hex") })
+        const eff = reader.finish(r.success)
+        result.push({ kind: "lifted", unit, eff, keys: reader.keys, layers: reader.layers, wireHex: Buffer.from(encodeProgram(eff)).toString("hex") })
       } catch (e) {
         if (!(e instanceof Refuse)) throw e
         result.push({ kind: "refusal", unit, code: e.code, detail: taxonomy.find(t => t.code === e.code)!.detail.replace("{value}", e.value) })
@@ -580,8 +685,8 @@ export function recognizeSource(source: string, filename: string, onParse?: (ok:
     try {
       const fragment = reader.program(n, []), r = readEff(0, fragment)
       if (Result.isFailure(r)) reject("E-NODE", r.failure._tag)
-      const eff = decodeEff(r.success)
-      result.push({ kind: "lifted", unit, eff, keys: reader.keys, wireHex: Buffer.from(encodeProgram(eff)).toString("hex") })
+      const eff = reader.finish(r.success)
+      result.push({ kind: "lifted", unit, eff, keys: reader.keys, layers: reader.layers, wireHex: Buffer.from(encodeProgram(eff)).toString("hex") })
     } catch (e) {
       if (!(e instanceof Refuse)) throw e
       result.push({ kind: "refusal", unit, code: e.code, detail: taxonomy.find(t => t.code === e.code)!.detail.replace("{value}", e.value) })

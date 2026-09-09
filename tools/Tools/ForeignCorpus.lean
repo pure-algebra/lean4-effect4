@@ -125,12 +125,19 @@ def corpus (dir : System.FilePath) (skeletons : List (String × Eff NativeOp)) :
     for (name, skeleton) in skeletons ++ Tools.Styles.probes ++ nativeProbes do
       let .ok kept := roundTrip nativeSignature nativeSpell 0 skeleton | throw (IO.userError s!"skeleton refused {name}")
       let (p, keys) := (program kept).run []
-      let .ok printed := print nativeSignature 0 p | throw (IO.userError s!"construction refused {name}")
+      -- The style renderer uses only names and values, never the main declaration's
+      -- annotation. Hoisting is the library printer's operation; the oracle stays p.
+      let .ok module := printModule nativeSignature "program" ⟨.unit, .never, .empty⟩ p
+        | throw (IO.userError s!"construction refused {name}")
+      let some main := module.getLast? | throw (IO.userError s!"construction empty {name}")
+      let declarations := module.dropLast.map fun d =>
+        (d.name, Codegen.Styles.expression c.config d.value)
       let .ok recovered := roundTrip nativeSignature nativeSpell 0 p | throw (IO.userError s!"construction unreadable {name}")
       unless recovered == p do throw (IO.userError s!"construction not canonical {name}")
       let name := c.name ++ "-" ++ name
       IO.FS.writeFile (dir / (name ++ ".keys.json")) (keyJson keys)
-      index := index ++ (← Tools.Styles.write dir name c (Codegen.Styles.expression c.config printed) p)
+      index := index ++ (← Tools.Styles.write dir name c
+        (Codegen.Styles.expression c.config main.value) p false declarations)
       count := count + 1
     for f in Codegen.Forms.all do
       for n in [0, 1, 2, 5] do

@@ -71,9 +71,11 @@ def imports (mode : Nat) : String :=
 
 def Case.config (c : Case) : Style := { c.style with aliases := aliases c.aliasMode }
 
-def source (c : Case) (expr : Expr) (key : Bool := false) : String :=
+def source (c : Case) (expr : Expr) (key : Bool := false)
+    (declarations : List (String × Expr) := []) : String :=
   let base := imports c.aliasMode ++
     (if key then "const Key = Context.Service<number>(\"k4_4\")\n" else "") ++
+    String.join (declarations.map fun (name, value) => "const " ++ name ++ " = " ++ render value ++ ";\n") ++
     "export const program = " ++ render expr ++ ";\n"
   if c.trivia == 1 then "// Generated foreign spelling; same program oracle.\n\n" ++ base.replace ";\n" "; /* trivia */\n\n"
   else if c.trivia == 2 then base.replace "\n" "\r\n"
@@ -143,8 +145,9 @@ def probes : List (String × Eff NativeOp) :=
       .bind (.perform .refMake (.lit (.nat 2))) (.perform (.refUpdate f) (.var 0))))
 
 def write (dir : System.FilePath) (name : String) (c : Case) (expr : Expr)
-    (oracle : Eff NativeOp) (key : Bool := false) : IO String := do
-  let text := source c expr key
+    (oracle : Eff NativeOp) (key : Bool := false)
+    (declarations : List (String × Expr) := []) : IO String := do
+  let text := source c expr key declarations
   IO.FS.writeFile (dir / (name ++ ".ts")) text
   IO.FS.writeFile (dir / (name ++ ".json")) ((OCaml5.Eff.effV oracle).json ++ "\n")
   IO.FS.writeBinFile (dir / (name ++ ".eff")) ⟨(Wire.encodeProgram oracle).toArray⟩

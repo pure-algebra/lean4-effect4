@@ -13,7 +13,9 @@ export type RefusalCode = typeof RefusalCode.Type
 export const Unit = Schema.Struct({ file: Schema.String, name: Schema.String, span: Schema.Struct({ start: Schema.Number, end: Schema.Number }) })
 export const Key = Schema.Struct({ ordinal: Schema.Number, service: Schema.Number, sourceId: Schema.String })
 export type Key = typeof Key.Type
-export const Lift = Schema.Struct({ kind: Schema.Literal("lifted"), unit: Unit, eff: Eff, keys: Schema.Array(Key), wireHex: Schema.String })
+export const LayerBinding = Schema.Struct({ sourceName: Schema.String, target: Schema.Array(Schema.Number) })
+export type LayerBinding = typeof LayerBinding.Type
+export const Lift = Schema.Struct({ kind: Schema.Literal("lifted"), unit: Unit, eff: Eff, keys: Schema.Array(Key), layers: Schema.optional(Schema.Array(LayerBinding)), wireHex: Schema.String })
 export const Refusal = Schema.Struct({ kind: Schema.Literal("refusal"), unit: Unit, code: RefusalCode, detail: Schema.String, pos: Schema.optional(Schema.Number) })
 export const Verdict = Schema.Union([Lift, Refusal])
 export type Verdict = typeof Verdict.Type
@@ -26,13 +28,13 @@ export const canonJson = (value: unknown): string => {
   throw new Error("value outside canonical JSON")
 }
 export const verdictKey = (v: Verdict): unknown => v.kind === "lifted"
-  ? { kind: v.kind, unit: v.unit, eff: effJson(v.eff), keys: v.keys, wireHex: v.wireHex }
+  ? { kind: v.kind, unit: v.unit, eff: effJson(v.eff), keys: v.keys, layers: v.layers ?? [], wireHex: v.wireHex }
   : { kind: v.kind, name: v.unit.name, code: v.code, detail: v.detail }
 
 /** Owner-approved T3 projection: source edits move locations, nothing else is omitted. */
 export const sourceEditKey = (v: Verdict): unknown => {
   const { span: _span, ...unit } = v.unit
-  if (v.kind === "lifted") return { kind: v.kind, unit, eff: effJson(v.eff), keys: v.keys, wireHex: v.wireHex }
+  if (v.kind === "lifted") return { kind: v.kind, unit, eff: effJson(v.eff), keys: v.keys, layers: v.layers ?? [], wireHex: v.wireHex }
   return { kind: v.kind, unit, code: v.code, detail: v.detail }
 }
 

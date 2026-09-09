@@ -1,12 +1,92 @@
 // Compiler API engine, retargeted from foldlab experiments/lift-harness/src/lift.ts
 // at 4005d34f. Independent of read.ts and the oxc engine; shared tables are data only.
 import ts from "typescript"
-import { decodeEff, type Eff, type Term, type Lit, type CauseTerm, type Stmt, type LayerTerm, type ServiceKey, type ForkOptions } from "../eff.gen.ts"
+import { decodeEff, type Eff, type Term, type Lit, type CauseTerm, type Stmt, type ActionTerm, type LayerTerm, type ServiceKey, type ForkOptions } from "../eff.gen.ts"
 import { rows } from "../profile.gen.ts"
 
 class Decline extends Error {}
 const bad = (reason: string): never => { throw new Decline(reason) }
 const unit: Term = { _tag: "lit", value: { _tag: "unit" } }
+
+// Printed identifiers encode paths in canonical decimal. Never parse a rounded Nat.
+const layerPath = (name: string): readonly number[] => {
+  if (!/^L_(0|[1-9][0-9]*)(_(0|[1-9][0-9]*))*$/.test(name)) return bad("layer name")
+  const path = name.slice(2).split("_").map(Number)
+  return path.every(Number.isSafeInteger) ? path : bad("layer path")
+}
+
+// The seven Program.Refs.Node sorts, walked independently of the OXC reader.
+// Paths follow the cons spines; key order keeps provision bodies before providers.
+function walkProgram(program: Eff, onLayer: (l: LayerTerm, path: readonly number[]) => LayerTerm,
+    onKey: (k: ServiceKey) => ServiceKey = k => k, keyOrder = false): Eff {
+  const spine = <T>(items: readonly T[], path: readonly number[], visit: (x: T, p: readonly number[]) => T): readonly T[] =>
+    items.map((x, i) => visit(x, [...path, ...Array<number>(i).fill(1), 0]))
+  const layer = (input: LayerTerm, path: readonly number[]): LayerTerm => {
+    const l = onLayer(input, path), child = (i: number) => [...path, i]
+    switch (l._tag) {
+      case "succeed": return { ...l, key: onKey(l.key) }
+      case "effect": return { ...l, key: onKey(l.key), body: eff(l.body, child(0)) }
+      case "effectDiscard": return { ...l, body: eff(l.body, child(0)) }
+      case "merge": return { ...l, left: layer(l.left, child(0)), right: layer(l.right, child(1)) }
+      case "provide": case "provideMerge": return { ...l, self: layer(l.self, child(0)), that: layer(l.that, child(1)) }
+      case "fresh": case "orDie": return { ...l, inner: layer(l.inner, child(0)) }
+      case "mergeAll": return { ...l, layers: spine(l.layers, child(0), layer) }
+      case "ref": return l
+    }
+  }
+  const stmt = (s: Stmt, path: readonly number[]): Stmt => {
+    const child = (i: number) => [...path, i]
+    switch (s._tag) {
+      case "bindYield": case "yieldDiscard": return { ...s, effect: eff(s.effect, child(0)) }
+      case "ifElse": return { ...s, thenB: spine(s.thenB, child(0), stmt), elseB: spine(s.elseB, child(1), stmt) }
+      case "whileTrue": return { ...s, body: spine(s.body, child(0), stmt) }
+      default: return s
+    }
+  }
+  const action = (a: ActionTerm, path: readonly number[]): ActionTerm => {
+    if (a._tag === "fork" || a._tag === "forkIn" || a._tag === "forkScoped") return { ...a, program: eff(a.program, [...path, 0]) }
+    if (a._tag === "raceAll") return { ...a, entrants: spine(a.entrants, [...path, 0], eff) }
+    return a
+  }
+  const eff = (e: Eff, path: readonly number[]): Eff => {
+    const child = (i: number) => [...path, i]
+    switch (e._tag) {
+      case "suspend": case "exit": case "uninterruptible": case "interruptible": case "whileLoop": case "scoped":
+        return { ...e, body: eff(e.body, child(0)) }
+      case "bind": return { ...e, first: eff(e.first, child(0)), rest: eff(e.rest, child(1)) }
+      case "gen": return { ...e, body: spine(e.body, child(0), stmt) }
+      case "catchCause": return { ...e, body: eff(e.body, child(0)), handler: eff(e.handler, child(1)) }
+      case "matchCause": return { ...e, body: eff(e.body, child(0)), onValue: eff(e.onValue, child(1)), onCause: eff(e.onCause, child(2)) }
+      case "onExit": return { ...e, body: eff(e.body, child(0)), finalizer: eff(e.finalizer, child(1)) }
+      case "branch": return { ...e, thenB: eff(e.thenB, child(0)), elseB: eff(e.elseB, child(1)) }
+      case "withFiber": return { ...e, action: action(e.action, child(0)) }
+      case "acquireRelease": return { ...e, acquire: eff(e.acquire, child(0)), release: eff(e.release, child(1)) }
+      case "choose": return { ...e, left: eff(e.left, child(0)), right: eff(e.right, child(1)) }
+      case "provideLayer": {
+        if (!keyOrder) return { ...e, layer: layer(e.layer, child(0)), body: eff(e.body, child(1)) }
+        const body = eff(e.body, child(1))
+        return { ...e, body, layer: layer(e.layer, child(0)) }
+      }
+      case "service": return { ...e, key: onKey(e.key) }
+      case "provideService": {
+        const body = eff(e.body, child(0))
+        return { ...e, body, key: onKey(e.key) }
+      }
+      default: return e
+    }
+  }
+  return eff(program, [])
+}
+
+function restoreLayer(program: Eff, target: readonly number[], replacement: LayerTerm): Eff {
+  let found = false
+  const result = walkProgram(program, (layer, path) => {
+    if (path.length !== target.length || !path.every((n, i) => n === target[i])) return layer
+    found = true
+    return replacement
+  })
+  return found ? result : bad("module path")
+}
 
 class CompilerReader {
   constructor(readonly file: ts.SourceFile) {}
@@ -92,6 +172,8 @@ class CompilerReader {
     return { startImmediately: s.value, daemon, maskMode }
   }
   layer(x: ts.Expression): LayerTerm {
+    x = this.unwrap(x)
+    if (ts.isIdentifier(x)) return { _tag: "ref", target: layerPath(x.text) }
     const c = this.call(x)
     const callee = this.unwrap(c.expression)
     if (ts.isPropertyAccessExpression(callee) && callee.name.text === "pipe") {
@@ -109,6 +191,7 @@ class CompilerReader {
       case "Layer.effect": this.arity(a, 2); return { _tag: "effect", key: this.key(this.at(a, 0)), body: this.eff(this.at(a, 1), []) }
       case "Layer.effectDiscard": this.arity(a, 1); return { _tag: "effectDiscard", body: this.eff(this.at(a, 0), []) }
       case "Layer.merge": this.arity(a, 2); return { _tag: "merge", left: this.layer(this.at(a, 0)), right: this.layer(this.at(a, 1)) }
+      case "Layer.mergeAll": return { _tag: "mergeAll", layers: a.map(l => this.layer(l)) }
       case "Layer.provide": case "Layer.provideMerge": this.arity(a, 2); return { _tag: h === "Layer.provide" ? "provide" : "provideMerge", self: this.layer(this.at(a, 0)), that: this.layer(this.at(a, 1)) }
       case "Layer.fresh": case "Layer.orDie": this.arity(a, 1); return { _tag: h === "Layer.fresh" ? "fresh" : "orDie", inner: this.layer(this.at(a, 0)) }
       default: return bad("layer")
@@ -258,17 +341,35 @@ class CompilerReader {
 export function readPrintedSource(source: string, filename = "program.ts"): Eff {
   const file = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS)
   if ((file as ts.SourceFile & { parseDiagnostics: readonly ts.Diagnostic[] }).parseDiagnostics.length) return bad("parse")
-  const statements = file.statements.filter(s => ts.isExpressionStatement(s) || ts.isVariableStatement(s) && s.modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword))
-  if (statements.length !== 1) return bad("program")
-  const s = statements[0]!
-  let expression: ts.Expression
-  if (ts.isExpressionStatement(s)) expression = s.expression
-  else if (ts.isVariableStatement(s) && s.declarationList.declarations.length === 1 && s.declarationList.flags & ts.NodeFlags.Const) expression = s.declarationList.declarations[0]?.initializer ?? bad("program initializer")
-  else return bad("program statement")
-  return decodeEff(new CompilerReader(file).eff(expression, []))
+  // Keep the existing test-context projection, adding only named layer declarations.
+  const statements = file.statements.filter(s => ts.isExpressionStatement(s) || ts.isVariableStatement(s) &&
+    (s.modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword) || s.declarationList.declarations.some(d => ts.isIdentifier(d.name) && d.name.text.startsWith("L_"))))
+  const last = statements.at(-1)
+  if (!last) return bad("program")
+  const constant = (s: ts.Statement): { name: string; value: ts.Expression } => {
+    if (!ts.isVariableStatement(s) || !(s.declarationList.flags & ts.NodeFlags.Const) || s.declarationList.declarations.length !== 1) return bad("program statement")
+    const d = s.declarationList.declarations[0]!
+    if (!ts.isIdentifier(d.name) || !d.initializer) return bad("program initializer")
+    return { name: d.name.text, value: d.initializer }
+  }
+  const reader = new CompilerReader(file)
+  const declarations = statements.slice(0, -1).map(s => {
+    const d = constant(s)
+    return { path: layerPath(d.name), layer: reader.layer(d.value) }
+  })
+  // Restore a containing definition first, so its nested target has a position.
+  declarations.sort((a, b) => {
+    for (let i = 0; i < Math.min(a.path.length, b.path.length); i++) {
+      if (a.path[i] !== b.path[i]) return a.path[i]! < b.path[i]! ? -1 : 1
+    }
+    return a.path.length - b.path.length
+  })
+  let program = reader.eff(ts.isExpressionStatement(last) ? last.expression : constant(last).value, [])
+  for (const d of declarations) program = restoreLayer(program, d.path, d.layer)
+  return decodeEff(program)
 }
 
-import type { Verdict, RefusalCode, Key } from "./contract.ts"
+import type { Verdict, RefusalCode, Key, LayerBinding } from "./contract.ts"
 import { taxonomy } from "../taxonomy.gen.ts"
 import { heads } from "../profile.gen.ts"
 import { forms } from "../forms.gen.ts"
@@ -283,8 +384,38 @@ const atoms = new Set(["succ", "pred", "isZero", "not", "add", "lt", "eq", "pair
 
 class ForeignCompilerReader extends CompilerReader {
   readonly keys: Key[] = []
+  readonly layers: LayerBinding[] = []
+  private readonly layerDefinitions: { sourceName: string; value: LayerTerm }[] = []
   private referenceCut: number | undefined
-  constructor(file: ts.SourceFile, readonly bindings: Map<string, string>, readonly declarations: Map<string, { at: number; value: ts.Expression }>, readonly current: number) { super(file) }
+  constructor(file: ts.SourceFile, readonly bindings: Map<string, string>, readonly declarations: Map<string, { at: number; value: ts.Expression; constant?: boolean }>, readonly current: number) { super(file) }
+  finish(program: Eff): Eff {
+    if (this.layerDefinitions.length === 0) return decodeEff(program)
+    const targets = new Map<number, readonly number[]>()
+    const resolve = (layer: LayerTerm, path: readonly number[]): LayerTerm => {
+      if (layer._tag !== "ref") return layer
+      const index = layer.target[0]!, definition = this.layerDefinitions[index]
+      if (layer.target.length !== 1 || !definition) return refuseForeign("E-REF-UNBOUND", "layer")
+      const target = targets.get(index)
+      if (target) return { _tag: "ref", target }
+      targets.set(index, path)
+      const binding = { sourceName: definition.sourceName, target: path }
+      this.layers.push(binding)
+      const value = resolve(definition.value, path)
+      // An alias of a previously placed definition uses that definition's path.
+      if (value._tag === "ref") { targets.set(index, value.target); binding.target = value.target }
+      return value
+    }
+    const restored = walkProgram(program, resolve)
+    const oldKeys = [...this.keys]
+    this.keys.length = 0
+    return decodeEff(walkProgram(restored, l => l, key => {
+      const old = oldKeys.find(k => k.ordinal === key.name.value)
+      if (!old) return refuseForeign("E-REF-UNBOUND", "service key")
+      let entry = this.keys.find(k => k.sourceId === old.sourceId)
+      if (!entry) { entry = { ...old, ordinal: this.keys.length + 4 }; this.keys.push(entry) }
+      return { name: { value: entry.ordinal }, service: key.service }
+    }, true))
+  }
   override name(x: ts.Expression): string {
     const rawName = (e: ts.Expression): string => {
       e = this.unwrap(e)
@@ -511,6 +642,25 @@ class ForeignCompilerReader extends CompilerReader {
     return value
   }
   override layer(x: ts.Expression): LayerTerm {
+    x = this.unwrap(x)
+    if (ts.isIdentifier(x)) {
+      const value = this.declaration(x), declaration = this.declarations.get(x.text)!
+      if (!declaration.constant) return refuseForeign("E-REF-UNBOUND", x.text)
+      const existing = this.layerDefinitions.findIndex(d => d.sourceName === x.text)
+      if (existing >= 0) return { _tag: "ref", target: [existing] }
+      const previous = this.referenceCut
+      this.referenceCut = declaration.at
+      let layer: LayerTerm
+      try { layer = this.layer(value) }
+      catch (e) {
+        const code = e instanceof ForeignRefusal ? e.code : e instanceof Decline ? "E-NODE" : undefined
+        if (code) return refuseForeign("E-REF-UNBOUND", `${x.text}: ${code}`)
+        throw e
+      } finally { this.referenceCut = previous }
+      const index = this.layerDefinitions.length
+      this.layerDefinitions.push({ sourceName: x.text, value: layer })
+      return { _tag: "ref", target: [index] }
+    }
     const c = this.call(x), callee = this.unwrap(c.expression)
     if (ts.isPropertyAccessExpression(callee) && callee.name.text === "pipe") return super.layer(x)
     if (this.name(c.expression) === "Layer.succeed") {
@@ -617,7 +767,7 @@ export function recognizeSource(source: string, filename: string, onParse?: (ok:
   onParse?.(true)
   onTree?.(file)
   const bindings = new Map<string, string>()
-  const declarations = new Map<string, { at: number; value: ts.Expression }>()
+  const declarations = new Map<string, { at: number; value: ts.Expression; constant?: boolean }>()
   for (const s of file.statements) {
     if (ts.isImportDeclaration(s) && ts.isStringLiteral(s.moduleSpecifier) && !s.importClause?.isTypeOnly) {
       const mod = s.moduleSpecifier.text, cl = s.importClause
@@ -631,7 +781,7 @@ export function recognizeSource(source: string, filename: string, onParse?: (ok:
       const base = s.heritageClauses?.find(h => h.token === ts.SyntaxKind.ExtendsKeyword)?.types[0]?.expression
       if (base) declarations.set(s.name.text, { at: s.pos, value: base })
     }
-    if (ts.isVariableStatement(s)) for (const d of s.declarationList.declarations) if (ts.isIdentifier(d.name) && d.initializer) declarations.set(d.name.text, { at: d.pos, value: d.initializer })
+    if (ts.isVariableStatement(s)) for (const d of s.declarationList.declarations) if (ts.isIdentifier(d.name) && d.initializer) declarations.set(d.name.text, { at: d.pos, value: d.initializer, constant: Boolean(s.declarationList.flags & ts.NodeFlags.Const) })
   }
   const result: Verdict[] = []
   for (const s of file.statements) {
@@ -650,10 +800,11 @@ export function recognizeSource(source: string, filename: string, onParse?: (ok:
       if (ts.isCallExpression(value)) {
         try { if (reader.name(value.expression) === "Context.Service") continue } catch { /* The unit receives the refusal below. */ }
       }
+      try { new ForeignCompilerReader(file, bindings, declarations, d.pos).layer(value); continue } catch { /* A program or refused declaration remains a unit. */ }
       const unit = { file: filename.replaceAll("\\", "/"), name: d.name.text, span: { start: d.getStart(file), end: d.end } }
       try {
-        const eff = decodeEff(reader.eff(value, []))
-        result.push({ kind: "lifted", unit, eff, keys: reader.keys, wireHex: Buffer.from(encodeProgram(eff)).toString("hex") })
+        const eff = reader.finish(reader.eff(value, []))
+        result.push({ kind: "lifted", unit, eff, keys: reader.keys, layers: reader.layers, wireHex: Buffer.from(encodeProgram(eff)).toString("hex") })
       } catch (e) {
         const failure = e instanceof ForeignRefusal ? e : e instanceof Decline ? new ForeignRefusal("E-NODE", e.message) : undefined
         if (!failure) throw e
@@ -670,8 +821,8 @@ export function recognizeSource(source: string, filename: string, onParse?: (ok:
     if (forced) { result.push({ kind: "refusal", unit, code: forced, detail: taxonomy.find(t => t.code === forced)!.detail.replace("{value}", forced === "E-TYPE-PARAM" ? "generic unit" : "function") }); return }
     const reader = new ForeignCompilerReader(file, bindings, declarations, start)
     try {
-      const eff = decodeEff(reader.eff(value!, []))
-      result.push({ kind: "lifted", unit, eff, keys: reader.keys, wireHex: Buffer.from(encodeProgram(eff)).toString("hex") })
+      const eff = reader.finish(reader.eff(value!, []))
+      result.push({ kind: "lifted", unit, eff, keys: reader.keys, layers: reader.layers, wireHex: Buffer.from(encodeProgram(eff)).toString("hex") })
     } catch (e) {
       const r = e instanceof ForeignRefusal ? e : e instanceof Decline ? new ForeignRefusal("E-NODE", e.message) : undefined
       if (!r) throw e

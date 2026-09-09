@@ -750,7 +750,7 @@ const readLiteral = (x: Expr): Read<Lit> => {
  * `src/Effect4/Program/Refs.lean`), admitted only when the name is exactly that path's
  * spelling, so what is read is what `printLayer` prints: `L_01` and `L_1_` are refused.
  */
-const readLayer = (x: Expr): Read<LayerTerm> => {
+export const readLayer = (x: Expr): Read<LayerTerm> => {
   const bad = () => refuse({ _tag: "shape", what: "layer" })
   if (x._tag === "ident") {
     const target = readRefName(x.name)
@@ -1266,7 +1266,7 @@ const pathLt = (a: ReadonlyArray<number>, b: ReadonlyArray<number>): boolean => 
 }
 
 /** The seven node sorts a path addresses; terms are not nodes (`Node`). */
-type IrNode =
+export type IrNode =
   | { readonly sort: "eff"; readonly eff: Eff }
   | { readonly sort: "stmts"; readonly stmts: ReadonlyArray<Stmt> }
   | { readonly sort: "stmt"; readonly stmt: Stmt }
@@ -1307,7 +1307,7 @@ const atLayers = (v: ReadonlyArray<LayerTerm>, back: (v: ReadonlyArray<LayerTerm
  * and nothing else (`Node.child`). A spine is a cons cell: its head is child 0 and its tail
  * child 1, so element `i` of the spine at child `c` of `p` is at `p ++ [c] ++ [1]*i ++ [0]`.
  */
-const childrenOf = (n: IrNode): ReadonlyArray<Child> => {
+export const childrenOf = (n: IrNode): ReadonlyArray<Child> => {
   switch (n.sort) {
     case "eff": {
       const e = n.eff
@@ -1409,7 +1409,7 @@ const replaceLayerAt = (n: IrNode, path: ReadonlyArray<number>, layer: LayerTerm
 
 /** The declarations put back at their paths, ancestors first (ascending program order), so a
  * nested target's site exists when its turn comes (`Eff.restoreAll`). */
-const restoreAll = (main: Eff, decls: ReadonlyArray<readonly [ReadonlyArray<number>, LayerTerm]>): Eff | undefined => {
+export const restoreAll = (main: Eff, decls: ReadonlyArray<readonly [ReadonlyArray<number>, LayerTerm]>): Eff | undefined => {
   const ordered = [...decls].sort(([a], [b]) => (pathLt(a, b) ? -1 : pathLt(b, a) ? 1 : 0))
   let node: IrNode = kEff(main)
   for (const [target, layer] of ordered) {
