@@ -18,6 +18,10 @@ structure Package where
   /-- The rc.112 key string (`Context.Service(…)`'s argument), the `sourceId` of a foreign
   key declaration. -/
   key : String
+  /-- The `effect` subpath the service's module lives under (`effect/unstable/sql`), as the
+  foreign readers' import resolution spells it: a foreign `SqlClient.SqlClient` bound through
+  `import { SqlClient } from "effect/unstable/sql"` resolves to `<module>.<target>`. -/
+  module : String
   /-- The service type code (`nativeServiceTy`): 8 the SQL client, 9 the key-value store. -/
   service : Nat
   /-- The handle target spelling every row of the table shares. -/
@@ -26,8 +30,14 @@ structure Package where
 deriving Repr
 
 def all : List Package :=
-  [ { name := "SqliteBun", key := sqlKey, service := 8, target := NativeOp.sqlTarget, rows := sqliteBun }
-  , { name := "KeyValueStoreMemory", key := kvKey, service := 9, target := NativeOp.kvTarget,
-      rows := keyValueStoreMemory } ]
+  [ { name := "SqliteBun", key := sqlKey, module := "unstable/sql", service := 8,
+      target := NativeOp.sqlTarget, rows := sqliteBun }
+  , { name := "KeyValueStoreMemory", key := kvKey, module := "unstable/persistence", service := 9,
+      target := NativeOp.kvTarget, rows := keyValueStoreMemory } ]
+
+/-- The canonical table: every package's rows, in package order. The foreign readers read
+under this one table, so an external index they emit is a position in it; `LawfulTable` of
+the concatenation is what makes the spellings a function (`Test/Api/PackagesContract.lean`). -/
+def table : RowTable := all.flatMap (·.rows)
 
 end Effect4.Program.Packages

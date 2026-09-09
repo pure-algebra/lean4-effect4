@@ -374,6 +374,9 @@ import { taxonomy } from "../taxonomy.gen.ts"
 import { heads } from "../profile.gen.ts"
 import { forms } from "../forms.gen.ts"
 import { encodeProgram } from "../wire.gen.ts"
+import type { Ty } from "../eff.gen.ts"
+import type { Package } from "../packages.gen.ts"
+import { bindText, isStringList, methodArgs, methodRow, packageByHead, packageByTarget, stringsTerm } from "./package-rows.ts"
 
 class ForeignRefusal extends Error {
   constructor(readonly code: RefusalCode, readonly value: string) { super(code) }
@@ -483,8 +486,61 @@ class ForeignCompilerReader extends CompilerReader {
     if (d.at >= (this.referenceCut ?? this.current)) return refuseForeign("E-REF-FORWARD", id.text)
     return d.value
   }
+  /** A package key (spec §5.9, host rows step 5): a member head that resolves through an
+   * `effect` import to a package's service, `SqlClient.SqlClient`; never a local declaration. */
+  packageOf(x: ts.Expression): Package | undefined {
+    x = this.unwrap(x)
+    if (!ts.isPropertyAccessExpression(x) || x.questionDotToken) return undefined
+    let head: string
+    try { head = this.name(x) } catch { return undefined }
+    return packageByHead.get(head)
+  }
+  packageKey(pkg: Package): ServiceKey {
+    let entry = this.keys.find(k => k.sourceId === pkg.key)
+    if (!entry) { entry = { ordinal: this.keys.length + 4, service: pkg.service, sourceId: pkg.key }; this.keys.push(entry) }
+    return { name: { value: entry.ordinal }, service: { value: pkg.service } }
+  }
+  /** A method on a binder (`sql.unsafe(text, params)`, `store.get(k)`): a `method` row of the
+   * canonical package table, its request `pair(receiver, args)` (Lean `addReceiver`); a member
+   * the table does not carry is `E-OP-UNKNOWN` (decision 13: `withTransaction`). */
+  methodCall(receiver: number, spelling: string, x: ts.CallExpression, env: readonly string[]): Eff {
+    const found = methodRow(spelling)
+    if (!found) return refuseForeign("E-OP-UNKNOWN", spelling)
+    const types = x.typeArguments?.map(n => n.getText(this.file)) ?? []
+    if (types.join(",") !== found.row.typeArgs.join(",")) return refuseForeign("E-OP-UNKNOWN", spelling)
+    const { count, types: tys } = methodArgs(found.row)
+    // rc.112's `unsafe(sql, params?)`: an omitted trailing parameter list is the empty list.
+    const omitted = x.arguments.length === count - 1 && count > 0 && isStringList(tys[count - 1]!)
+    if (x.arguments.length !== count && !omitted) return refuseForeign("E-BIND-SHAPE", "arity")
+    const arg = (i: number): Term => i < x.arguments.length ? this.rowArgument(this.at(x.arguments, i), tys[i]!, env) : stringsTerm([])
+    const request: Term = count === 0 ? unit : count === 1 ? arg(0) : { _tag: "app", atom: "pair", args: [arg(0), arg(1)] }
+    const full: Term = { _tag: "app", atom: "pair", args: [{ _tag: "var", index: receiver }, request] }
+    const op = { _tag: "external" as const, index: found.index }
+    return found.row.kind === "async" ? { _tag: "callback", register: op, request: full } : { _tag: "perform", op, request: full }
+  }
+  /** A bind-parameter list is an array literal of bind literals, carried as JSON text through
+   * `strings` (DB-15); anything else there, and every other position, is a term. */
+  rowArgument(x: ts.Expression, ty: Ty, env: readonly string[]): Term {
+    const y = this.unwrap(x)
+    if (isStringList(ty) && ts.isArrayLiteralExpression(y)) {
+      const texts: string[] = []
+      for (const e of y.elements) {
+        const z = this.unwrap(e)
+        const value = ts.isStringLiteral(z) ? z.text : ts.isNumericLiteral(z) ? Number(z.text)
+          : z.kind === ts.SyntaxKind.TrueKeyword ? true : z.kind === ts.SyntaxKind.FalseKeyword ? false
+          : z.kind === ts.SyntaxKind.NullKeyword ? null : undefined
+        const text = value === undefined ? undefined : bindText(value)
+        if (text === undefined) return refuseForeign("E-ARG-DYNAMIC", "bind")
+        texts.push(text)
+      }
+      return stringsTerm(texts)
+    }
+    return this.term(x, env)
+  }
   override key(x: ts.Expression): ServiceKey {
     x = this.unwrap(x)
+    const pkg = this.packageOf(x)
+    if (pkg) return this.packageKey(pkg)
     if (ts.isIdentifier(x)) x = this.declaration(x)
     const c = this.call(x)
     const inner = this.unwrap(c.expression)
@@ -492,7 +548,8 @@ class ForeignCompilerReader extends CompilerReader {
     if (this.name(factory.expression) !== "Context.Service") return refuseForeign("E-OP-UNKNOWN", "key")
     this.arity(c.arguments, 1)
     const shape = factory.typeArguments?.at(-1)?.getText(this.file)
-    const service = shape === "number" ? 4 : shape === "boolean" ? 5 : shape === "void" || shape === "unknown" ? 6 : shape === "Ref.Ref<number>" ? 7 : refuseForeign("E-TYPE-PARAM", "service shape")
+    const packaged = shape === undefined ? undefined : packageByTarget(shape)?.service
+    const service = shape === "number" ? 4 : shape === "boolean" ? 5 : shape === "void" || shape === "unknown" ? 6 : shape === "Ref.Ref<number>" ? 7 : packaged !== undefined ? packaged : refuseForeign("E-TYPE-PARAM", "service shape")
     const id = this.literal(this.at(c.arguments, 0))
     if (id._tag !== "str") return refuseForeign("E-ARG-DYNAMIC", "service identifier")
     let entry = this.keys.find(k => k.sourceId === id.value)
@@ -676,6 +733,13 @@ class ForeignCompilerReader extends CompilerReader {
     if (ts.isConditionalExpression(x)) return refuseForeign("E-BRANCH", "conditional")
     if (ts.isAsExpression(x) || ts.isSatisfiesExpression(x) || ts.isTypeAssertionExpression(x) || ts.isNonNullExpression(x)) return refuseForeign("E-SPINE-ESCAPE", "assertion")
     if (this.variable(x, env) !== undefined) return super.eff(x, env)
+    // A package key in program position (`yield* SqlClient.SqlClient`) is its service; a
+    // property of a binder (`sql.reserve`) is a head the table does not carry.
+    if (!ts.isCallExpression(x)) {
+      const pkg = this.packageOf(x)
+      if (pkg) return { _tag: "service", key: this.packageKey(pkg) }
+      if (ts.isPropertyAccessExpression(x) && this.variable(x.expression, env) !== undefined) return refuseForeign("E-OP-UNKNOWN", x.name.text)
+    }
     if (ts.isIdentifier(x) && this.variable(x, env) === undefined && x.text !== "undefined" && !this.bindings.has(x.text)) {
       const decl = this.unwrap(this.declaration(x))
       if (ts.isCallExpression(decl) && this.name(ts.isCallExpression(this.unwrap(decl.expression)) ? this.call(decl.expression).expression : decl.expression) === "Context.Service") return { _tag: "service", key: this.key(x) }
@@ -693,6 +757,12 @@ class ForeignCompilerReader extends CompilerReader {
         let first = this.eff(callee.expression, env)
         for (const segment of x.arguments) first = this.pipeSegment(segment, first, env)
         return first
+      }
+      // A member call on a binder is a method row (or an unknown head); a receiver that is
+      // not a binder falls through to head resolution, which refuses it `E-OP-RECEIVER`.
+      if (ts.isPropertyAccessExpression(callee)) {
+        const receiver = this.variable(callee.expression, env)
+        if (receiver !== undefined) return this.methodCall(receiver, callee.name.text, x, env)
       }
       if (ts.isCallExpression(callee)) {
         this.arity(x.arguments, 1)

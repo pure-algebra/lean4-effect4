@@ -583,7 +583,7 @@ def emitProfile (address : String) : String :=
 /-! ## The package tables (`Effect4.Program.Packages.all`), rows through the `Row` schema -/
 
 def packageJs (p : Effect4.Program.Packages.Package) : String :=
-  obj [ ("name", lit p.name), ("key", lit p.key), ("service", toString p.service)
+  obj [ ("name", lit p.name), ("key", lit p.key), ("module", lit p.module), ("service", toString p.service)
       , ("target", lit p.target), ("rows", arr (p.rows.map rowJs)) ]
 
 def emitPackages : String :=
@@ -605,7 +605,7 @@ def emitPackages : String :=
   "import { Row } from \"./eff.gen.ts\"\n\n" ++
   "/** One package: its key, service code, handle target and rows (in table order). */\n" ++
   "export const Package = Schema.Struct({\n" ++
-  "  name: Schema.String,\n  key: Schema.String,\n  service: Schema.Number,\n  target: Schema.String,\n  rows: Schema.Array(Row),\n})\n" ++
+  "  name: Schema.String,\n  key: Schema.String,\n  module: Schema.String,\n  service: Schema.Number,\n  target: Schema.String,\n  rows: Schema.Array(Row),\n})\n" ++
   "export type Package = typeof Package.Type\n\n" ++
   "/** The payload as Lean wrote it; `stamp` is FNV-1a 64 over exactly these bytes. */\n" ++
   "const text = " ++ lit text ++ "\n" ++

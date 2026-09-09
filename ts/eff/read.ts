@@ -100,7 +100,7 @@ const again = (f: Result.Failure<unknown, Refusal>): Result.Result<never, Refusa
  * `NativeOp.external i` (`Read.lean` `nativeSpell`: an external index is the row's position,
  * never parsed out of an identifier). Bound for the duration of one entry-point call. */
 let supplied: ReadonlyArray<Entry> = []
-const withTable = <A>(table: ReadonlyArray<Row>, body: () => A): A => {
+export const withTable = <A>(table: ReadonlyArray<Row>, body: () => A): A => {
   const saved = supplied
   supplied = table.map((row, index): Entry => ({ op: { _tag: "external", index }, row }))
   try {

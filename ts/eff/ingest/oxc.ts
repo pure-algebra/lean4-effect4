@@ -5,6 +5,13 @@ import { Result } from "effect"
 import { readEff, readLayer, restoreAll, exprOf, childrenOf, type IrNode, type Expr, type TsStmt } from "../read.ts"
 import { decodeEff, type Eff, type LayerTerm, type ServiceKey } from "../eff.gen.ts"
 import { heads, rows } from "../profile.gen.ts"
+import type { Ty } from "../eff.gen.ts"
+import type { Package } from "../packages.gen.ts"
+import { withTable } from "../read.ts"
+import { bindText, isStringList, methodArgs, methodRow, packageByHead, packageByTarget, packageTable } from "./package-rows.ts"
+
+/** The foreign readers read under the canonical package table (`Packages.table`). */
+const underTable = <A>(body: () => A): A => withTable(packageTable, body)
 import { forms } from "../forms.gen.ts"
 import { taxonomy } from "../taxonomy.gen.ts"
 import { encodeProgram } from "../wire.gen.ts"
@@ -36,7 +43,7 @@ class Normalize {
     const definition = (index: number): LayerTerm => {
       const d = this.definitions[index]
       if (!d) return reject("E-REF-UNBOUND", "layer")
-      const parsed = readEff(0, call("Effect.provide", [call("Effect.succeed", [{ _tag: "int", value: 0 }]), d.expression]))
+      const parsed = underTable(() => readEff(0, call("Effect.provide", [call("Effect.succeed", [{ _tag: "int", value: 0 }]), d.expression])))
       if (Result.isFailure(parsed) || parsed.success._tag !== "provideLayer") return reject("E-NODE", "layer")
       return parsed.success.layer
     }
@@ -127,8 +134,60 @@ class Normalize {
     if (offset(d, "start") >= (this.referenceCut ?? this.current)) return reject("E-REF-FORWARD", name)
     return node(d, d.type === "ClassDeclaration" ? "superClass" : "init")
   }
+  /** A package key (spec §5.9, host rows step 5): a member head that resolves through an
+   * `effect` import to a package's service, `SqlClient.SqlClient`; never a local declaration. */
+  packageOf(n: Node): Package | undefined {
+    n = unwrap(n)
+    if (n.type !== "MemberExpression" || n.computed || n.optional) return undefined
+    let head: string
+    try { head = this.head(n) } catch { return undefined }
+    return packageByHead.get(head)
+  }
+  packageKey(pkg: Package): Expr {
+    let entry = this.keys.find(k => k.sourceId === pkg.key)
+    if (!entry) { entry = { ordinal: this.keys.length + 4, service: pkg.service, sourceId: pkg.key }; this.keys.push(entry) }
+    return { _tag: "call", fn: { _tag: "generic", fn: id("Context.Service"), typeArgs: [pkg.target] }, args: [{ _tag: "str", value: `k${entry.ordinal}_${pkg.service}` }] }
+  }
+  /** A method on a binder, as the printer's fragment (`receiver.spelling(args)`, or
+   * `receiver.spelling<T>(args)`), which `read.ts` reads as the table's row under
+   * `underTable`; a member the table does not carry is `E-OP-UNKNOWN` (decision 13). */
+  methodCall(receiver: number, spelling: string, n: Node, env: readonly string[]): Expr {
+    const found = methodRow(spelling)
+    if (!found) return reject("E-OP-UNKNOWN", spelling)
+    const types = isNode(n.typeArguments) ? list(n.typeArguments, "params").map(t => this.source.slice(offset(t, "start"), offset(t, "end"))) : []
+    if (types.join(",") !== found.row.typeArgs.join(",")) return reject("E-OP-UNKNOWN", spelling)
+    const { count, types: tys } = methodArgs(found.row), a = list(n, "arguments")
+    // rc.112's `unsafe(sql, params?)`: an omitted trailing parameter list is the empty list.
+    const omitted = a.length === count - 1 && count > 0 && isStringList(tys[count - 1]!)
+    if (a.length !== count && !omitted) return reject("E-BIND-SHAPE", "arity")
+    const args = tys.map((ty, i) => i < a.length ? this.rowArgument(a[i]!, ty, env) : call("strings", []))
+    const base = id(`a${receiver}`)
+    return types.length
+      ? { _tag: "call", fn: { _tag: "generic", fn: { _tag: "member", base, name: spelling }, typeArgs: types }, args }
+      : { _tag: "method", base, name: spelling, args }
+  }
+  /** A bind-parameter list is an array literal of bind literals, carried as JSON text through
+   * `strings` (DB-15); anything else there, and every other position, is a term. */
+  rowArgument(x: Node, ty: Ty, env: readonly string[]): Expr {
+    const y = unwrap(x)
+    if (isStringList(ty) && y.type === "ArrayExpression") {
+      const texts: string[] = []
+      for (const e of list(y, "elements")) {
+        const z = unwrap(e)
+        if (z.type !== "Literal") return reject("E-ARG-DYNAMIC", "bind")
+        const v: unknown = z.value
+        const text = typeof v === "string" || typeof v === "number" || typeof v === "boolean" || v === null ? bindText(v) : undefined
+        if (text === undefined) return reject("E-ARG-DYNAMIC", "bind")
+        texts.push(text)
+      }
+      return call("strings", texts.map(value => ({ _tag: "str" as const, value })))
+    }
+    return this.term(x, env)
+  }
   key(n: Node): Expr {
     n = unwrap(n)
+    const pkg = this.packageOf(n)
+    if (pkg) return this.packageKey(pkg)
     if (n.type === "Identifier") n = this.declaration(n)
     if (n.type !== "CallExpression") return reject("E-OP-UNKNOWN", "key")
     const inner = unwrap(node(n, "callee")), factory = inner.type === "CallExpression" ? inner : n
@@ -138,7 +197,8 @@ class Normalize {
     const types = list(node(factory, "typeArguments"), "params")
     const t = types.at(-1)
     const shape = t ? this.source.slice(offset(t, "start"), offset(t, "end")) : ""
-    const service = shape === "number" ? 4 : shape === "boolean" ? 5 : shape === "void" || shape === "unknown" ? 6 : shape === "Ref.Ref<number>" ? 7 : reject("E-TYPE-PARAM", "service shape")
+    const packaged = packageByTarget(shape)?.service
+    const service = shape === "number" ? 4 : shape === "boolean" ? 5 : shape === "void" || shape === "unknown" ? 6 : shape === "Ref.Ref<number>" ? 7 : packaged !== undefined ? packaged : reject("E-TYPE-PARAM", "service shape")
     const sourceId = this.literal(a[0]!)
     if (sourceId._tag !== "str") return reject("E-ARG-DYNAMIC", "service identifier")
     let entry = this.keys.find(k => k.sourceId === sourceId.value)
@@ -361,7 +421,7 @@ class Normalize {
       let expression: Expr
       try {
         expression = this.layer(value)
-        if (Result.isFailure(readLayer(expression))) reject("E-NODE", "layer")
+        if (Result.isFailure(underTable(() => readLayer(expression)))) reject("E-NODE", "layer")
       }
       catch (e) { if (e instanceof Refuse) return reject("E-REF-UNBOUND", `${sourceName}: ${e.code}`); throw e }
       finally { this.referenceCut = previous }
@@ -456,6 +516,14 @@ class Normalize {
     }
     if (n.type !== "CallExpression") {
       if (n.type === "Literal") return this.literal(n)
+      // A package key in program position (`yield* SqlClient.SqlClient`) is its service; a
+      // property of a binder (`sql.reserve`) is a head the table does not carry.
+      const pkg = this.packageOf(n)
+      if (pkg) return call("Effect.service", [this.packageKey(pkg)])
+      if (n.type === "MemberExpression" && !n.computed) {
+        const object = unwrap(node(n, "object"))
+        if (object.type === "Identifier" && env.lastIndexOf(str(object, "name")) >= 0) return reject("E-OP-UNKNOWN", str(node(n, "property"), "name"))
+      }
       const h = this.head(n)
       return h === "Effect.void" ? call("Effect.succeed", [id("undefined")]) : h === "Effect.yieldNow" ? call("Effect.yieldNowWith", [{ _tag: "int", value: 0 }]) : id(h)
     }
@@ -466,6 +534,15 @@ class Normalize {
       let value = this.program(node(callee, "object"), env)
       for (const segment of a) value = this.segment(segment, value, env)
       return value
+    }
+    // A member call on a binder is a method row (or an unknown head); a receiver that is not
+    // a binder falls through to head resolution, which refuses it `E-OP-RECEIVER`.
+    if (callee.type === "MemberExpression" && !callee.computed) {
+      const object = unwrap(node(callee, "object"))
+      if (object.type === "Identifier") {
+        const receiver = env.lastIndexOf(str(object, "name"))
+        if (receiver >= 0) return this.methodCall(receiver, str(node(callee, "property"), "name"), n, env)
+      }
     }
     if (callee.type === "CallExpression") {
       if (a.length !== 1) return reject("E-BIND-SHAPE", "arity")
@@ -666,7 +743,7 @@ export function recognizeSource(source: string, filename: string, onParse?: (ok:
       } catch { /* A program or refused declaration remains a unit. */ }
       const unit = { file: filename.replaceAll("\\", "/"), name: str(node(d, "id"), "name"), span: { start: offset(d, "start"), end: offset(d, "end") } }
       try {
-        const fragment = reader.program(value, []), r = readEff(0, fragment)
+        const fragment = reader.program(value, []), r = underTable(() => readEff(0, fragment))
         if (Result.isFailure(r)) reject("E-NODE", r.failure._tag)
         const eff = reader.finish(r.success)
         result.push({ kind: "lifted", unit, eff, keys: reader.keys, layers: reader.layers, wireHex: Buffer.from(encodeProgram(eff)).toString("hex") })
@@ -683,7 +760,7 @@ export function recognizeSource(source: string, filename: string, onParse?: (ok:
     if (forced) { result.push({ kind: "refusal", unit, code: forced, detail: taxonomy.find(t => t.code === forced)!.detail.replace("{value}", forced === "E-TYPE-PARAM" ? "generic unit" : "function") }); return }
     const reader = new Normalize(source, bindings, declarations, start)
     try {
-      const fragment = reader.program(n, []), r = readEff(0, fragment)
+      const fragment = reader.program(n, []), r = underTable(() => readEff(0, fragment))
       if (Result.isFailure(r)) reject("E-NODE", r.failure._tag)
       const eff = reader.finish(r.success)
       result.push({ kind: "lifted", unit, eff, keys: reader.keys, layers: reader.layers, wireHex: Buffer.from(encodeProgram(eff)).toString("hex") })

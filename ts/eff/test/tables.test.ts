@@ -15,9 +15,9 @@ test("the generated taxonomy carries the owner's exact active/reserved partition
 
 // The host rows slice (2026-09-09): the two canonical package tables, rows in table order.
 test("the generated package tables are the two of Program/Packages, with their codes and keys", () => {
-  expect(packages.map(p => [p.name, p.service, p.key, p.target])).toEqual([
-    ["SqliteBun", 8, "effect/sql/SqlClient", "SqlClient.SqlClient"],
-    ["KeyValueStoreMemory", 9, "effect/persistence/KeyValueStore", "KeyValueStore.KeyValueStore"],
+  expect(packages.map(p => [p.name, p.service, p.key, p.module, p.target])).toEqual([
+    ["SqliteBun", 8, "effect/sql/SqlClient", "unstable/sql", "SqlClient.SqlClient"],
+    ["KeyValueStoreMemory", 9, "effect/persistence/KeyValueStore", "unstable/persistence", "KeyValueStore.KeyValueStore"],
   ])
   expect(packages.map(p => p.rows.map(r => r.spelling))).toEqual([
     ["Sql.open", "unsafe", "Sql.close"],

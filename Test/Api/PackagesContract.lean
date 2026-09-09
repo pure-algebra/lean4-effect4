@@ -23,8 +23,11 @@ set_option maxRecDepth 8192
 #guard Packages.all.map (·.service) = [8, 9]
 #guard Packages.all.map (·.target) = [NativeOp.sqlTarget, NativeOp.kvTarget]
 #guard (Packages.all.map (·.rows)).all LawfulTable
--- the two tables together are lawful too: a supplied table may carry both
-#guard LawfulTable (sqliteBun ++ keyValueStoreMemory)
+-- the canonical table (both, in package order) is lawful: the foreign readers read under it
+#guard Packages.table = sqliteBun ++ keyValueStoreMemory
+#guard LawfulTable Packages.table
+#guard Packages.table.length = 8
+#guard Packages.all.map (·.module) = ["unstable/sql", "unstable/persistence"]
 -- every cite is a repository-relative path (decision 10; the citation gate resolves them)
 #guard (sqliteBun ++ keyValueStoreMemory).all fun row => row.cite.startsWith "vendor/effect-4.0.0-rc.112/src/"
 #guard NativeOp.all.all fun op => op.row.cite.startsWith "vendor/effect-4.0.0-rc.112/src/"
