@@ -32,6 +32,7 @@ before_lock="$(sha256 ts/eff/bun.lock)"
 bun ts/eff/ingest/cli.ts --help >/dev/null
 lake build Tools.Corpus
 key="$(stamp_key "$0" scripts/lib ts/eff/*.ts ts/eff/ingest ts/eff/test ts/eff/package.json ts/eff/bun.lock ts/eff/tsconfig.json tools/Tools/Corpus.lean tools/Tools/ForeignCorpus.lean tools/Tools/Styles.lean \
+  harness/truth/IngestPrint.lean harness/truth/run-truth.ts harness/truth/prelude.ts \
   "$stamp_build_lib/Tools/Corpus.trace" ocaml/eff lean-toolchain \
   "$(stamp_fact bun "$(bun --version)")" "$(stamp_fact node "$(node --version)")")"
 if stamp_hit ingest "$key"; then stamp_report ingest "$key"; exit 0; fi
@@ -51,6 +52,7 @@ opam exec --switch=effect4 -- ocamlc -I "$repo_root/ocaml/_build/default/eff/.ef
   "$repo_root/ocaml/_build/default/eff/effect4_eff.cma" "$work/check-wire.ml" -o "$work/check-wire"
 "$work/check-wire" "$work/printed" "$work/foreign"
 [[ "$(sha256 ts/eff/bun.lock)" = "$before_lock" ]] || { echo 'FAIL ingest: lockfile drift' >&2; exit 1; }
-summary='original JSON/wire/key oracles, source-edit invariance, refusal reachability, pinned runtime reproducibility and OCaml exact decoding'
+bun ts/eff/ingest/check-fidelity.ts
+summary='original JSON/wire/key oracles, source-edit invariance, refusal reachability, pinned runtime reproducibility, OCaml exact decoding and original/reprinted fidelity probes'
 printf 'PASS ingest: %s\n' "$summary"
 stamp_write ingest "$key" "$summary"
