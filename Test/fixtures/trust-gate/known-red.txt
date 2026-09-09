@@ -103,3 +103,6 @@ Test.Counterexamples.Surface.HandlerFits
 
 # reason: engines cut before e2285a9; cleared by plan v2 Phase 1
 # gate: generated-stale
+
+# reason: engines cut before e2285a9; cleared by plan v2 Phase 1
+# gate: engine-tests
