@@ -342,13 +342,14 @@ mutual
     | getId
     | closeScope (scope exit : Term)
   /-- The first-order layer term (the join, 2026-09-07; before it `Program/Provision.lean`):
-  one constructor per rc.112 export, each naming the line it transcribes;
-  `Layer.mergeAll(a, b, …)` is `mergeAll`, the fold of `merge`. A body is an `Eff` program —
-  the same syntax the printer prints and the compile compiles — closed: a layer's own scope
-  is its ambient one (`Layer.ts:1438`), so a body is typed and printed at the empty
+  one constructor per rc.112 export, each naming the line it transcribes. A body is an `Eff`
+  program — the same syntax the printer prints and the compile compiles — closed: a layer's
+  own scope is its ambient one (`Layer.ts:1438`), so a body is typed and printed at the empty
   environment. A layer's identity is its path in the program (`LayerId`, `Machine/Stores.lean`),
   never a name: rc.112 keys its memo map on the layer object (`Layer.ts:411`, `:438`), and an
-  inline-printed term is one object per site. -/
+  inline-printed term is one object per site; a second site of one object is `ref`, the
+  path of the defining occurrence (the host rows slice, 2026-09-08, DB-12 amended). The two
+  constructors after `orDie` are appended, so no stored program's bytes move (`Wire.lean`). -/
   inductive LayerTerm (Op : Type)
     /-- `Layer.succeed(key, value)` (`Layer.ts:1074`): a service from a value already in hand. -/
     | succeed (key : ServiceKey) (value : Lit)
@@ -367,19 +368,37 @@ mutual
     | fresh (inner : LayerTerm Op)
     /-- `Layer.orDie(inner)` (`Layer.ts:3327`). -/
     | orDie (inner : LayerTerm Op)
+    /-- `const L = …` used at a second site (`Layer.ts:411`, `:438`: rc.112 keys the memo map
+    on the layer object): a reference to the defining occurrence of another layer term of
+    the same program, by its path (`LayerId`). The target precedes the reference in program
+    order and is not itself a reference (`Program/Refs.lean` `layerRefsWF`); the compile
+    redirects to the target's path, so both sites share one memo key (DB-12). -/
+    | ref (target : List Nat)
+    /-- `Layer.mergeAll(a, b, …)` (`Layer.ts:1652`, `mergeAllEffect` `:1587-1602`): one
+    parallel parent scope forked from the caller's, one sequential child of it per layer,
+    every layer built with concurrency equal to their number over one memo map, the contexts
+    merged last-wins (`Context.mergeAll`, `:1600`). `merge` is its binary case (`:1905`);
+    the two build different scope trees, so neither is a spelling of the other. -/
+    | mergeAll (layers : LayerTerms Op)
+  /-- The layers of a `mergeAll`, a spine like `Effs`. -/
+  inductive LayerTerms (Op : Type)
+    | nil
+    | cons (head : LayerTerm Op) (tail : LayerTerms Op)
 end
 
-deriving instance DecidableEq for Eff, Stmt, Stmts, Effs, ActionTerm, LayerTerm
+deriving instance DecidableEq for Eff, Stmt, Stmts, Effs, ActionTerm, LayerTerm, LayerTerms
 
-namespace LayerTerm
+def LayerTerms.toList {Op : Type} : LayerTerms Op → List (LayerTerm Op)
+  | .nil => []
+  | .cons head tail => head :: LayerTerms.toList tail
 
-/-- `Layer.mergeAll(l, …)` (`Layer.ts:1652`): a left fold of `merge`, so the last layer is the
-rightmost operand and, in the built context, wins (`Context.mergeAll`, `Layer.ts:1600`). -/
-def mergeAll {Op : Type} (first : LayerTerm Op) : List (LayerTerm Op) → LayerTerm Op
-  | [] => first
-  | l :: rest => mergeAll (merge first l) rest
+def LayerTerms.length {Op : Type} : LayerTerms Op → Nat
+  | .nil => 0
+  | .cons _ tail => LayerTerms.length tail + 1
 
-end LayerTerm
+def LayerTerms.ofList {Op : Type} : List (LayerTerm Op) → LayerTerms Op
+  | [] => .nil
+  | head :: tail => .cons head (LayerTerms.ofList tail)
 
 def Stmts.toList {Op : Type} : Stmts Op → List (Stmt Op)
   | .nil => []

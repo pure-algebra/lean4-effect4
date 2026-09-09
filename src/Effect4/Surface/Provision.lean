@@ -21,7 +21,7 @@ What this module adds, and what it deliberately reuses:
 
 * **Reused, never re-declared.** Everything of `src/Effect4/Program/Provision.lean`: `LayerTy` and its
   provision algebra (`provide`, `provideMerge`, `merge`, `Closed`, `provide_closed`),
-  `LayerTerm` and `LayerTerm.mergeAll`, `layerTy`, `bodyRequires`, `litVal`, the
+  `LayerTerm` (with its n-ary `mergeAll`), `layerTy`, `bodyRequires`, `litVal`, the
   specification `build` with its `LeafSem` hook, `specKeys`, and the machine probes
   `buildSucceeds`, `buildServices`, `provideThenService` (runs on the compile route since
   the join, over the native transcription `deployLayer` below). Everything of
@@ -184,6 +184,7 @@ def deployBody : Eff DeployOp → Option NativeEff
   | .succeed (.lit value) => some (.succeed (.lit value))
   | _ => none
 
+mutual
 /-- A deployment layer on the native route, leaf by leaf. -/
 def deployLayer : LayerTerm DeployOp → Option (LayerTerm NativeOp)
   | .succeed key value => some (.succeed key value)
@@ -194,6 +195,12 @@ def deployLayer : LayerTerm DeployOp → Option (LayerTerm NativeOp)
   | .merge left right => do some (.merge (← deployLayer left) (← deployLayer right))
   | .fresh inner => (deployLayer inner).map .fresh
   | .orDie inner => (deployLayer inner).map .orDie
+  | .ref target => some (.ref target)
+  | .mergeAll layers => (deployLayers layers).map .mergeAll
+def deployLayers : LayerTerms DeployOp → Option (LayerTerms NativeOp)
+  | .nil => some .nil
+  | .cons head tail => do some (.cons (← deployLayer head) (← deployLayers tail))
+end
 
 /-- One binding, as `Layer.succeed(key, value)` (`Layer.ts:1074`). The value is the
 binding's index: the model's stand-in for the `env.<NAME>` object, as it is for every
@@ -239,13 +246,15 @@ def serviceLeaves (names : List String) :
     some (leaf :: tail)
 
 /-- `Layer.mergeAll(l, …)` (`Layer.ts:1652`), with `Layer.empty` for the empty list so the
-function is total and the empty deployment still lowers. Seeding the *non-empty* fold with
+function is total and the empty deployment still lowers. Since the host rows slice
+`mergeAll` is the n-ary constructor over the leaf list itself (one parallel parent scope,
+one sequential child per leaf), not a fold of `merge`. Seeding the *non-empty* list with
 `emptyLayer` gives the same rows and a costlier build (it did not finish inside the earlier
 512-command budget; it does inside `runOver`'s 1024); see the header's row and the
 `#guard`s in the witness section. -/
 def mergeLeaves : List (LayerTerm DeployOp) → LayerTerm DeployOp
   | [] => emptyLayer
-  | l :: rest => LayerTerm.mergeAll l rest
+  | l :: rest => LayerTerm.mergeAll (LayerTerms.ofList (l :: rest))
 
 /-- The platform layer: every binding, value in hand. -/
 def bindingsLayer (names : List String) (dep : Surface.Deployment) :
@@ -295,14 +304,14 @@ theorem reqsOf_cons (l : LayerTerm DeployOp) (rest : List (LayerTerm DeployOp)) 
   simp [reqsOf, hl, hr]
 
 
-/-- **The fold types, and its rows are the unions.** `Layer.mergeAll` is a left fold of
-`merge` (`Layer.ts:1652-1658`) and `merge` unions every row (`:1751`), so the accumulator is
-generalised and the induction is over the list. -/
+/-- **The n-ary merge types, and its rows are the unions.** `Layer.mergeAll` builds its
+layers as siblings (`Layer.ts:1587-1602`) and `merge` unions every row (`:1751`); `layersTy`
+merges to the right, so the induction is over the rest with the first layer fixed. -/
 theorem layerTy_mergeAll :
     ∀ (rest : List (LayerTerm DeployOp)) (first : LayerTerm DeployOp) (f : LayerTy)
       (o r : Requirement),
       layerTy deploySig first = some f → outsOf rest = some o → reqsOf rest = some r →
-      ∃ t, layerTy deploySig (LayerTerm.mergeAll first rest) = some t ∧
+      ∃ t, layerTy deploySig (LayerTerm.mergeAll (LayerTerms.ofList (first :: rest))) = some t ∧
         t.out = Row.union f.out o ∧ t.requires = Row.union f.requires r := by
   intro rest
   induction rest with
@@ -312,7 +321,8 @@ theorem layerTy_mergeAll :
     have hr' : Requirement.empty = r := Option.some.inj hr
     subst ho'
     subst hr'
-    exact ⟨f, hf, (Row.union_empty_right f.out).symm, (Row.union_empty_right f.requires).symm⟩
+    refine ⟨f, ?_, (Row.union_empty_right f.out).symm, (Row.union_empty_right f.requires).symm⟩
+    simp [layerTy, layersTy, LayerTerms.ofList, hf]
   | cons l rest ih =>
     intro first f o r hf ho hr
     cases hl : layerTy deploySig l with
@@ -332,15 +342,15 @@ theorem layerTy_mergeAll :
             have := reqsOf_cons l rest tl r' hl hr'
             rw [this] at hr
             exact Option.some.inj hr
-          have hmerge : layerTy deploySig (LayerTerm.merge first l) = some (f.merge tl) := by
-            simp [layerTy, hf, hl]
-          obtain ⟨t, ht, htout, htreq⟩ :=
-            ih (LayerTerm.merge first l) (f.merge tl) o' r' hmerge ho' hr'
-          refine ⟨t, ht, ?_, ?_⟩
-          · rw [htout, ← hoo]
-            exact Row.union_assoc f.out tl.out o'
-          · rw [htreq, ← hrr]
-            exact Row.union_assoc f.requires tl.requires r'
+          obtain ⟨t, ht, htout, htreq⟩ := ih l tl o' r' hl ho' hr'
+          have ht' : layersTy deploySig (LayerTerms.cons l (LayerTerms.ofList rest)) = some t := by
+            simpa [layerTy, LayerTerms.ofList] using ht
+          refine ⟨f.merge t, ?_, ?_, ?_⟩
+          · simp [layerTy, layersTy, LayerTerms.ofList, hf, ht']
+          · show Row.union f.out t.out = Row.union f.out o
+            rw [htout, ← hoo]
+          · show Row.union f.requires t.requires = Row.union f.requires r
+            rw [htreq, ← hrr]
 
 /-! ## The leaf signatures -/
 
@@ -760,13 +770,13 @@ def fB (i : Nat) : LayerTerm DeployOp := bindingLeaf ⟨⟨i⟩, ⟨i⟩⟩ i
 -- same rows; the seeded one did not finish inside the earlier 512-command budget and does
 -- inside the 1024 the probes run at (source-repairs §19), so the fold stays unseeded for the
 -- reading of `Layer.mergeAll`, not for the budget.
-#guard (layerTy deploySig (LayerTerm.mergeAll emptyLayer [fS 4, fS 5])).map LayerTy.out =
+#guard (layerTy deploySig (LayerTerm.mergeAll (LayerTerms.ofList [emptyLayer, fS 4, fS 5]))).map LayerTy.out =
   (layerTy deploySig (mergeLeaves [fS 4, fS 5])).map LayerTy.out
-#guard (layerTy deploySig (LayerTerm.mergeAll emptyLayer [fS 4, fS 5])).map LayerTy.requires =
+#guard (layerTy deploySig (LayerTerm.mergeAll (LayerTerms.ofList [emptyLayer, fS 4, fS 5]))).map LayerTy.requires =
   (layerTy deploySig (mergeLeaves [fS 4, fS 5])).map LayerTy.requires
 #guard (deployLayer (LayerTerm.provideMerge
-    (LayerTerm.mergeAll emptyLayer [fS 4, fS 5])
-    (LayerTerm.mergeAll emptyLayer [fB 4, fB 5]))).map buildSucceeds = some true
+    (LayerTerm.mergeAll (LayerTerms.ofList [emptyLayer, fS 4, fS 5]))
+    (LayerTerm.mergeAll (LayerTerms.ofList [emptyLayer, fB 4, fB 5])))).map buildSucceeds = some true
 #guard (deployLayer
     (LayerTerm.provideMerge (mergeLeaves [fS 4, fS 5]) (mergeLeaves [fB 4, fB 5]))).map
   buildSucceeds = some true

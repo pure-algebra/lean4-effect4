@@ -102,7 +102,9 @@ def blocks : List (List Spec) :=
   , [ ⟨`Effect4.Program.Eff, "eff", [natOp]⟩, ⟨`Effect4.Program.Stmt, "stmt", [natOp]⟩
     , ⟨`Effect4.Program.Stmts, "stmts", [natOp]⟩, ⟨`Effect4.Program.Effs, "effs", [natOp]⟩
     , ⟨`Effect4.Program.ActionTerm, "action_term", [natOp]⟩
-    , ⟨`Effect4.Program.LayerTerm, "layer_term", [natOp]⟩ ]
+    , ⟨`Effect4.Program.LayerTerm, "layer_term", [natOp]⟩
+    -- the host rows slice (2026-09-08): the spine of `LayerTerm.mergeAll`
+    , ⟨`Effect4.Program.LayerTerms, "layer_terms", [natOp]⟩ ]
   , [⟨`Effect4.Program.RowKind, "row_kind", []⟩]
   , [⟨`Effect4.Program.RowShape, "row_shape", []⟩]
   , [⟨`Effect4.Program.Row, "row", []⟩]

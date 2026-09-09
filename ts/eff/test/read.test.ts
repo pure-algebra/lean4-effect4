@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from "bun:test"
 import { Result } from "effect"
-import { isEff } from "../eff.gen.ts"
+import { isEff, type LayerTerm } from "../eff.gen.ts"
 import { toJson } from "../json.gen.ts"
 import { heads, rows } from "../profile.gen.ts"
 import { readTypeScript, type Refusal } from "../read.ts"
@@ -23,8 +23,8 @@ const refusal = (source: string): Refusal => {
 }
 
 describe("the profile", () => {
-  test("has the reader's 50 heads and one entry per NativeOp value", () => {
-    expect(heads.length).toBe(50)
+  test("has the reader's 51 heads and one entry per NativeOp value", () => {
+    expect(heads.length).toBe(51)
     expect(rows.length).toBe(55)
     expect(new Set(rows.map((e) => e.row.spelling)).size).toBe(22)
     expect(new Set(rows.map((e) => JSON.stringify(e.op))).size).toBe(55)
@@ -308,5 +308,131 @@ describe("the join", () => {
   test("rejects local false and nonliteral Layer.succeed values", () => {
     expect(refusal(`Effect.provide(Effect.succeed(7), ${leaf}, { local: false })`)._tag).toBe("arity")
     expect(refusal(`Effect.provide(Effect.succeed(7), Layer.succeed(${key}, add(1, 2)))`)).toEqual({ _tag: "shape", what: "literal" })
+  })
+})
+
+// The host rows slice (2026-09-08): the n-ary merge, and a layer named by its path. A
+// program with references prints as a declaration block (`printModule`), and reading it back
+// must give the IR the printer started from: the site at the target's path is the layer
+// itself, every later site a `ref` to it (`readModule`, `Refs.lean`).
+describe("the n-ary merge", () => {
+  const key = 'Context.Service<number>("k4_4")'
+  const leaf = `Layer.succeed(${key}, 7)`
+
+  /** The layer of `Effect.provide(Effect.succeed(7), <layer>)`. */
+  const layerOf = (layer: string): LayerTerm => {
+    const result = readTypeScript(`Effect.provide(Effect.succeed(7), ${layer})`)
+    if (Result.isFailure(result)) throw new Error(`refused: ${JSON.stringify(result.failure)}`)
+    if (result.success._tag !== "provideLayer") throw new Error(`not a provideLayer: ${result.success._tag}`)
+    return result.success.layer
+  }
+
+  test("Layer.mergeAll(a, b, c) keeps its three layers in order", () => {
+    const layer = layerOf(`Layer.mergeAll(${leaf}, Layer.fresh(${leaf}), Layer.orDie(${leaf}))`)
+    expect(layer._tag).toBe("mergeAll")
+    if (layer._tag === "mergeAll") expect(layer.layers.map((l) => l._tag)).toEqual(["succeed", "fresh", "orDie"])
+  })
+  test("Layer.mergeAll() is the empty spine", () => {
+    const layer = layerOf("Layer.mergeAll()")
+    expect(layer._tag).toBe("mergeAll")
+    if (layer._tag === "mergeAll") expect(layer.layers).toEqual([])
+    expect(json("Effect.provide(Effect.succeed(7), Layer.mergeAll())")).toContain('["mergeAll",["nil"]]')
+  })
+  test("Layer.merge is never read as the n-ary one", () => {
+    expect(layerOf(`Layer.merge(${leaf}, ${leaf})`)._tag).toBe("merge")
+  })
+  test("Layer.mergeAll does not stand alone in program position", () => {
+    expect(refusal(`Layer.mergeAll(${leaf})`)).toEqual({ _tag: "unknownHead", name: "Layer.mergeAll" })
+  })
+})
+
+describe("layer references", () => {
+  const key = 'Context.Service<number>("k4_4")'
+  const kRef = 'Context.Service<Ref.Ref<number>>("k6_7")'
+  const k44 = { name: { value: 4 }, service: { value: 4 } }
+  const k67 = { name: { value: 6 }, service: { value: 7 } }
+
+  test("L_1_0_0_0_0 in layer position is a reference to that path", () => {
+    const result = readTypeScript("Effect.provide(Effect.succeed(7), L_1_0_0_0_0)")
+    expect(Result.isSuccess(result)).toBe(true)
+    if (Result.isSuccess(result) && result.success._tag === "provideLayer") {
+      expect(result.success.layer).toEqual({ _tag: "ref", target: [1, 0, 0, 0, 0] })
+    }
+  })
+  test.each(["L_01", "L_1_", "L_", "L_1__0", "L_x", "L1", "a0"])(
+    "refuses the non-canonical layer name %s",
+    (name) => {
+      expect(refusal(`Effect.provide(Effect.succeed(7), ${name})`)).toEqual({ _tag: "shape", what: "layer" })
+    },
+  )
+
+  // pDiamond of `harness/truth/Truth.lean`: one layer, provided twice through a `merge`. The
+  // merge's left child is at [1, 0, 0, 0, 0] — root bind → child 1 provideService → child 0
+  // bind → child 0 provideLayer → child 0 merge → child 0 — so that is the hoisted target.
+  const diamond = [
+    'import { Context, Effect, Layer, Ref } from "effect"',
+    `export const L_1_0_0_0_0 = Layer.effect(${key}, Effect.succeed(5))`,
+    `export const main: Effect.Effect<number, never> = Effect.flatMap(Ref.make(0), (a0) => ` +
+      `Effect.provideService(Effect.flatMap(Effect.provide(Effect.service(${key}), ` +
+      `Layer.merge(L_1_0_0_0_0, L_1_0_0_0_0)), (a1) => Ref.get(a0)), ${kRef}, a0))`,
+  ].join("\n")
+
+  test("a two-declaration module puts the layer back at its path and leaves the second site a ref", () => {
+    expect(JSON.parse(json(diamond))).toEqual([
+      "bind",
+      ["perform", ["refMake"], ["lit", ["nat", 0]]],
+      ["provideService", k67, ["var", 0], [
+        "bind",
+        ["provideLayer",
+          ["merge", ["effect", k44, ["succeed", ["lit", ["nat", 5]]]], ["ref", [1, 0, 0, 0, 0]]],
+          false,
+          ["service", k44]],
+        ["perform", ["refGet"], ["var", 0]],
+      ]],
+    ])
+  })
+  test("the same block without its declaration leaves both sites references", () => {
+    const both = JSON.parse(json(diamond.split("\n").filter((line) => !line.startsWith("export const L_")).join("\n")))
+    expect(both[2][3][1][1][1]).toEqual(["ref", [1, 0, 0, 0, 0]])
+    expect(both[2][3][1][1][2]).toEqual(["ref", [1, 0, 0, 0, 0]])
+  })
+  test("a declaration whose name is no path spelling is not a module", () => {
+    expect(refusal(`export const helper = Layer.succeed(${key}, 7)\nexport const main = Effect.succeed(1)`))
+      .toEqual({ _tag: "shape", what: "module" })
+  })
+  test("a declaration whose path names no layer is not a module", () => {
+    expect(refusal(`export const L_0 = Layer.succeed(${key}, 7)\nexport const main = Effect.succeed(1)`))
+      .toEqual({ _tag: "shape", what: "module" })
+  })
+  test("one declaration and no reference still reads as the bare program", () => {
+    expect(json(`const L_0 = Layer.succeed(${key}, 7)\nEffect.provide(Effect.succeed(7), L_0)`))
+      .toBe(json(`Effect.provide(Effect.succeed(7), Layer.succeed(${key}, 7))`))
+  })
+  // A spine's element i at child c of p is at p ++ [c] ++ [1]*i ++ [0]: the first layer of
+  // this mergeAll is at [0, 0, 0] and the third at [0, 0, 1, 1, 0].
+  test("a target inside a mergeAll spine lands on the right element", () => {
+    const source = [
+      `export const L_0_0_0 = Layer.succeed(${key}, 7)`,
+      `export const main = Effect.provide(Effect.succeed(7), ` +
+        `Layer.mergeAll(L_0_0_0, Layer.orDie(Layer.succeed(${key}, 9)), L_0_0_0))`,
+    ].join("\n")
+    expect(JSON.parse(json(source))[1]).toEqual([
+      "mergeAll",
+      ["cons", ["succeed", k44, ["nat", 7]],
+        ["cons", ["orDie", ["succeed", k44, ["nat", 9]]],
+          ["cons", ["ref", [0, 0, 0]], ["nil"]]]],
+    ])
+  })
+  // Declarations go back ancestors first, so a target inside another target has a site by
+  // the time its turn comes (`Eff.restoreAll`); `printModule` emits them the other way round.
+  test("a target nested in another is restored inside it", () => {
+    const source = [
+      `export const L_0_0 = Layer.succeed(${key}, 7)`,
+      `export const L_0 = Layer.merge(L_0_0, L_0_0)`,
+      `export const main = Effect.provide(Effect.provide(Effect.succeed(7), L_0), L_0)`,
+    ].join("\n")
+    const read = JSON.parse(json(source))
+    expect(read[1]).toEqual(["merge", ["succeed", k44, ["nat", 7]], ["ref", [0, 0]]])
+    expect(read[3][1]).toEqual(["ref", [0]])
   })
 })

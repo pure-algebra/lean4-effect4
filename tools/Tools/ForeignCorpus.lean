@@ -87,6 +87,11 @@ mutual
     | .merge a b => return .merge (← layer a) (← layer b)
     | .fresh a => return .fresh (← layer a)
     | .orDie a => return .orDie (← layer a)
+    | .ref t => pure (.ref t)
+    | .mergeAll ls => return .mergeAll (← layers ls)
+  def layers : LayerTerms NativeOp → Build (LayerTerms NativeOp)
+    | .nil => pure .nil
+    | .cons a b => return .cons (← layer a) (← layers b)
 end
 
 def keyJson (keys : Keys) : String :=

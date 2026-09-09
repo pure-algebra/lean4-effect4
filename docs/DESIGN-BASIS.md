@@ -418,8 +418,12 @@ read and write this one map through `updateContext`'s region (`src/Effect4/Progr
 
 A layer is a program subterm. `LayerTerm` is a member of the `Eff` mutual family
 (`src/Effect4/Program/Eff.lean`: `succeed`, `effect`, `effectDiscard`, `provide`,
-`provideMerge`, `merge`, `fresh`, `orDie`; `mergeAll` is a fold of `merge`, never a
-constructor), reached through `Eff.provideLayer` with rc.112's `local` flag as a field, and
+`provideMerge`, `merge`, `fresh`, `orDie`, and since 2026-09-08 (the host rows slice) `ref`
+and `mergeAll` — the n-ary merge is its own constructor over a `LayerTerms` spine, one
+parallel parent scope and one sequential child per layer as `mergeAllEffect` builds it
+(`Layer.ts:1587-1602`), because a fold of `merge` builds a different scope tree for three or
+more layers; `merge` is its binary case, `:1905`), reached through `Eff.provideLayer` with
+rc.112's `local` flag as a field, and
 `Node.layer` addresses it. Its identity is its path: `LayerId := List Nat` is the memo world's
 key (`Stores.memo`, `MemoWorld`), and `compileLayer` builds a layer at its point with the memo
 map and the scope as `build`'s two arguments (`Layer.ts:230-232`) — the build protocol as
@@ -430,11 +434,19 @@ second `RunMachine` instantiation: the Layer machine
 (`git:4aae12f:src/Effect4/Machine/Layer.lean`) retired with the join, its memo world and
 operations joined into the one `Stores` verbatim.
 
-What path identity refuses. rc.112 keys the memo map on the layer *object* (`Layer.ts:411`,
-`:438`); a path is where a layer *is*, never what it says, so two sites of one printed term
-are two keys and a memo *hit* is unreachable from any printed program: `harness/truth`'s
-`pProvideTwice` pins the two-site protocol (two builds), not a hit, and grill call 10 (keep
-the memo store) is settled by build order-independence, not by a fixture
+What path identity refuses, and what a reference adds (amended 2026-09-08, the host rows
+slice). rc.112 keys the memo map on the layer *object* (`Layer.ts:411`, `:438`); a path is
+where a layer *is*, never what it says, so two inline sites of one printed term are two keys:
+`harness/truth`'s `pProvideTwice` pins the two-site protocol (two builds) and keeps reading
+`2`. One object at two sites — `const L = Layer.effect(…)` then `Layer.merge(L, L)` — is
+`LayerTerm.ref`, the path of the defining occurrence, and the compile redirects a reference
+to its target's path (`resolveLayer`), so both sites share one memo entry and a memo hit is
+reachable from a printed program for the first time: `pDiamond` reads `1` beside
+`pProvideTwice`'s `2`, and the pair is the receipt that path identity now tracks object
+identity. A well-formed reference names a non-reference layer that precedes it in program
+order and does not enclose it (`Program/Refs.lean` `layerRefsWF`); the printer hoists every
+target into a `const L_<path>` (`printModule`) so the host sees one object. Grill call 10
+(keep the memo store) stays settled by build order-independence
 (`docs/research/2026-09-08-build-path.md` §2 (untracked working note)). Inserting under one
 path leaves every other path's entry untouched (`MemoWorld.find?_append_other_key`,
 `LAYER-FB-LAYER-IDENTITY`); a forged path is the refusal row.
@@ -517,6 +529,37 @@ kept cancelled sleep (`TIMER-FB-KEPT-CANCEL`): the store models `clearTimeout`, 
 clock's table. An infinite deadline (`TIMER-FB-INFINITE`). A `Psq` carrier: the wake list is
 the one carrier and the earliest deadline is a policy on it (`WakeList.wakeBy`), measured
 elsewhere as not worth a second structure; a keyed carrier is a later, measured change.
+
+### DB-15 — strings are machine values; host records and errors cross as strings
+
+Status: adopted 2026-09-08 (the host rows slice, decision 3 of
+`docs/research/2026-09-08-host-rows-slice.md` §7 (untracked working note); step 1 of its
+dispatch).
+
+A `str` literal is a machine value on the native route: `Lit.toVal (.str s) = some (.str s)`
+(`src/Effect4/Program/Native.lean`), and the value typing inhabits `.string` with the
+carrier's `str` frame and `.option t` with its `none` and `some` frames (`Val.hasTy`,
+`src/Effect4/Laws/Program/Typed.lean`). Every literal now evaluates, so `evalTerm_isSome`
+carries no `noStr` premise and the register row `E4-TYPED-CE-001` is retired with its ID
+kept. The provision route's `litVal` (`src/Effect4/Program/Typing.lean`) still refuses a
+string as a layer value (`PROV-FB-STRING-VALUE`); that refusal is its own and is not moved
+here.
+
+What crosses a host row, so that a canonical row table can be typed with neither a record
+nor a dynamic type in `Ty` (`src/Effect4/Program/Eff.lean` has neither and gains no `json`
+leaf): a SQL row is `list (prod string string)`, one `(column, cell)` pair per column in the
+order the package answered them; a row set is `list (list (prod string string))`; bind
+parameters are `list string`; and every cell and parameter is JSON text (`7` is `"7"`, `"a"`
+is `"\"a\""`, `null` is `"null"`). A bind outside `Lit` (a `Date`, a `Uint8Array`, an object)
+is `E-ARG-DYNAMIC` at ingest. An error crosses as `prod string string`, the `_tag` and the
+message: `SqlError` is a tagged union of eleven reasons (`unstable/sql/SqlError.ts:31-329`)
+and `Ty` has no sum. A handle a row answers stays a `Ty.handle` target spelling (DB-11); an
+optional answer (`KeyValueStore.get`) is `.option string`.
+
+What this basis refuses. A `json` leaf in `Ty`: the value language is the carrier's frames
+and a codec is a row. A record type in `Ty`: columns are pairs. `.int` stays uninhabited
+(`TYPED-FB-INT`): `Val.nat` is a `.nat`, and the printer's identification of the two as
+`number` is not the typing's.
 
 ## Native library boundaries
 

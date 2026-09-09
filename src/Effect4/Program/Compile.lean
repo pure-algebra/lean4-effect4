@@ -45,81 +45,11 @@ namespace Effect4.Program
 
 open Effect4 Effect4.Machine
 
-/-! ## Nodes and paths -/
+/-! ## Nodes and paths
 
-/-- A node of the mutual program family, addressed by a path of child indices. -/
-inductive Node
-  | eff (e : NativeEff)
-  | stmts (s : Stmts NativeOp)
-  | stmt (s : Stmt NativeOp)
-  | action (a : ActionTerm NativeOp)
-  | effs (es : Effs NativeOp)
-  /-- A layer (the join): its path is its identity, `LayerId` (`Machine/Stores.lean`). -/
-  | layer (l : LayerTerm NativeOp)
-deriving DecidableEq
-
-namespace Node
-
-/-- The child at an index. Terms are not nodes: only programs, statements and actions are
-addressed. -/
-def child : Node → Nat → Option Node
-  | eff (.suspend b), 0 => some (eff b)
-  | eff (.bind a _), 0 => some (eff a)
-  | eff (.bind _ b), 1 => some (eff b)
-  | eff (.gen ss), 0 => some (stmts ss)
-  | eff (.catchCause b _), 0 => some (eff b)
-  | eff (.catchCause _ h), 1 => some (eff h)
-  | eff (.matchCause b _ _), 0 => some (eff b)
-  | eff (.matchCause _ v _), 1 => some (eff v)
-  | eff (.matchCause _ _ c), 2 => some (eff c)
-  | eff (.onExit b _), 0 => some (eff b)
-  | eff (.onExit _ f), 1 => some (eff f)
-  | eff (.exit b), 0 => some (eff b)
-  | eff (.uninterruptible b), 0 => some (eff b)
-  | eff (.interruptible b), 0 => some (eff b)
-  | eff (.branch _ a _), 0 => some (eff a)
-  | eff (.branch _ _ b), 1 => some (eff b)
-  | eff (.whileLoop _ _ _ b), 0 => some (eff b)
-  | eff (.withFiber a), 0 => some (action a)
-  | eff (.scoped b), 0 => some (eff b)
-  | eff (.acquireRelease a _), 0 => some (eff a)
-  | eff (.acquireRelease _ r), 1 => some (eff r)
-  | eff (.choose _ l _), 0 => some (eff l)
-  | eff (.choose _ _ r), 1 => some (eff r)
-  | eff (.provideLayer l _ _), 0 => some (layer l)
-  | eff (.provideLayer _ _ b), 1 => some (eff b)
-  | eff (.provideService _ _ b), 0 => some (eff b)
-  | layer (.effect _ b), 0 => some (eff b)
-  | layer (.effectDiscard b), 0 => some (eff b)
-  | layer (.provide s _), 0 => some (layer s)
-  | layer (.provide _ t), 1 => some (layer t)
-  | layer (.provideMerge s _), 0 => some (layer s)
-  | layer (.provideMerge _ t), 1 => some (layer t)
-  | layer (.merge l _), 0 => some (layer l)
-  | layer (.merge _ r), 1 => some (layer r)
-  | layer (.fresh i), 0 => some (layer i)
-  | layer (.orDie i), 0 => some (layer i)
-  | stmts (.cons h _), 0 => some (stmt h)
-  | stmts (.cons _ t), 1 => some (stmts t)
-  | stmt (.bindYield e), 0 => some (eff e)
-  | stmt (.yieldDiscard e), 0 => some (eff e)
-  | stmt (.ifElse _ a _), 0 => some (stmts a)
-  | stmt (.ifElse _ _ b), 1 => some (stmts b)
-  | stmt (.whileTrue b), 0 => some (stmts b)
-  | action (.fork p _), 0 => some (eff p)
-  | action (.forkIn p _ _), 0 => some (eff p)
-  | action (.forkScoped p _), 0 => some (eff p)
-  | action (.raceAll es), 0 => some (effs es)
-  | effs (.cons h _), 0 => some (eff h)
-  | effs (.cons _ t), 1 => some (effs t)
-  | _, _ => none
-
-/-- The node at a path. -/
-def at_ : Node → List Nat → Option Node
-  | n, [] => some n
-  | n, i :: rest => (n.child i).bind (at_ · rest)
-
-end Node
+`Node`, `Node.child` and `Node.at_` are `Program/Refs.lean`'s since the host rows slice
+(generic in the alphabet, so typing, printing and reading address a layer by the one child
+scheme the compile resolves against); here they are used at `NativeOp`. -/
 
 /-! ## Points, names, thunks -/
 
@@ -166,6 +96,18 @@ def childWith (p : Point) (i : Nat) (v : Val) : Point :=
 
 def childWith2 (p : Point) (i : Nat) (v w : Val) : Point :=
   { p with path := p.path ++ [i], env := p.env ++ [v, w], fuel := p.fuel - 1 }
+
+/-- The point of layer `i` of a `mergeAll` at this point: the `layers` spine is child `0`,
+each further element one `cons` down (child `1`), and the element itself the spine's
+child `0` (`Node.child`, `Refs.lean`); every step is a `child`, so the fuel accounting is a
+spine's. -/
+def spineChild (p : Point) (i : Nat) : Point :=
+  ((List.range i).foldl (fun acc _ => acc.child 1) (p.child 0)).child 0
+
+/-- The point a reference redirects to: the target's path, one fuel down (a hop is a
+continuation, as a `child` is). -/
+def redirect (p : Point) (target : List Nat) : Point :=
+  { p with path := target, fuel := p.fuel - 1 }
 
 /-- A join/await constructed after target exit is already an Exit
 (`internal/effect.ts:767-769,814-816`). An absent entry retains the Async form. -/
@@ -337,6 +279,19 @@ inductive EffName
   | bindService (key : Option ServiceKey)
   /-- `Layer.orDie`'s `catch_(build, die)` (`Layer.ts:3327`, `internal/effect.ts:3289`). -/
   | orDie
+  -- the host rows slice (2026-09-08): `mergeAll`'s n-way build, the binary `merge`'s three
+  -- names generalised over the `layers` spine at `q` (`Point.spineChild`, `mergeAllCount`)
+  /-- `mergeAllEffect` forked its parallel parent for a `mergeAll` (`Layer.ts:1596`), the
+  value its handle: fork the first layer's sequential child of it (`:1597`), or, with no
+  layers, await nothing and merge the empty context. -/
+  | mergeAllChildren (q : Point) (memoMap : MemoMapId)
+  /-- A layer's sequential child scope was forked (`Layer.ts:1597`), the value its handle:
+  fork the build of layer `i` of the `mergeAll` at `q` into it. -/
+  | mergeAllForkOne (q : Point) (i : Nat) (memoMap : MemoMapId) (parent : Nat)
+      (forked : List FiberId)
+  /-- A layer's build was forked, the value its fiber: the next layer, or the await. -/
+  | mergeAllForkNext (q : Point) (i : Nat) (memoMap : MemoMapId) (parent : Nat)
+      (forked : List FiberId)
 deriving DecidableEq
 
 /-- The thunk alphabet: a pure term at a point, a body to compile at a point, a store
@@ -700,15 +655,44 @@ def compileLayer : LayerTerm NativeOp → Point → MemoMapId → Nat → NCode
       (EffName.freshThen (q.child 0) scope)
   | .orDie inner, q, m, scope =>
     Prim.onFailure (compileLayer inner (q.child 0) m scope) EffName.orDie
+  -- a reference is resolved by `resolveLayer`, which redirects to the target before this
+  -- table is consulted; a reference reaching the table is a forged path, the refusal
+  | .ref _, _, _, _ => badShape
   | _, q, m, scope =>
     Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.scopeFork scope FinalizerStrategy.sequential)))
       (EffName.fromBuildThen q m)
 
-/-- The layer at a point of the root, built: `compileLayer` of the node there. -/
+/-- The layer at a point of the root, built: `compileLayer` of the node there. A reference
+(`LayerTerm.ref`, the host rows slice) is compiled as its target at the target's path, one
+hop and one fuel down (`Point.redirect`): both memo sites (`EffThunk.memoLookup`'s
+`SyncOp.memoGet q.path` and `SyncOp.memoBuild q.path`) then key on the target's path, so the
+defining occurrence and every reference share one memo entry, which is the whole of the
+memo fix (DB-12: identity is a path, the path of the definition). Well-formedness
+(`Refs.lean` `layerRefsWF`) forbids a reference to a reference, so one hop resolves; a
+second reference at the target is the refusal. -/
 def resolveLayer (root : NativeEff) (q : Point) (m : MemoMapId) (scope : Nat) : NCode :=
   match Node.at_ (Node.eff root) q.path with
-  | some (Node.layer l) => compileLayer l q m scope
+  | some (Node.layer l) => resolveLayerTerm root l q m scope
   | _ => badShape
+where
+  /-- The term at the point, built; a reference is the hop, which costs one fuel and is a
+  live frontier when none is left (DB-04: fuel exhaustion is never an error). -/
+  resolveLayerTerm (root : NativeEff) : LayerTerm NativeOp → Point → MemoMapId → Nat → NCode
+    | .ref target, q, m, scope =>
+      match q.fuel with
+      | 0 => frontier q
+      | _ + 1 =>
+        match Node.at_ (Node.eff root) target with
+        | some (Node.layer (.ref _)) => badShape
+        | some (Node.layer l) => compileLayer l (q.redirect target) m scope
+        | _ => badShape
+    | l, q, m, scope => compileLayer l q m scope
+
+/-- How many layers the `mergeAll` at a point has; `0` at any other node. -/
+def mergeAllCount (root : NativeEff) (q : Point) : Nat :=
+  match Node.at_ (Node.eff root) q.path with
+  | some (Node.layer (.mergeAll layers)) => layers.length
+  | _ => 0
 
 /-- What runs inside a `fromBuild` wrapper, on the forked layer scope, by the layer at `q`:
 a memoized leaf's lookup (`Layer.ts:386`, a `suspend`), `provideWith`'s dependency build
@@ -728,6 +712,11 @@ def innerLayerAt (root : NativeEff) (q : Point) (m : MemoMapId) (child : Nat) : 
   | some (Node.layer (.merge _ _)) =>
     Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.scopeFork child FinalizerStrategy.parallel)))
       (EffName.mergeChildren q m)
+  -- `mergeAllEffect` for `mergeAll` (`Layer.ts:1596`): the same parallel parent, the
+  -- siblings walked along the `layers` spine
+  | some (Node.layer (.mergeAll _)) =>
+    Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.scopeFork child FinalizerStrategy.parallel)))
+      (EffName.mergeAllChildren q m)
   | some (Node.layer l) => compileLayer l q m child
   | _ => badShape
 
@@ -1169,6 +1158,29 @@ def contAOf (root : NativeEff) : EffName → Val → NCode
       Prim.onSuccess (Prim.withFiber (EffThunk.awaitAllFailFast (forked ++ [⟨id⟩])))
         EffName.mergeContexts
   | .mergeForkNext _ _ _ _ _, _ => badShape
+  -- `mergeAll` (`Layer.ts:1596-1600`): the same protocol over the `layers` spine, the sibling
+  -- count read off the node at `q`; no layers is `forEach([])`, the empty merge
+  | .mergeAllChildren q m, Val.scopeHandle parent =>
+    if 0 < mergeAllCount root q then
+      Prim.onSuccess
+        (Prim.sync (EffThunk.op (SyncOp.scopeFork parent FinalizerStrategy.sequential)))
+        (EffName.mergeAllForkOne q 0 m parent [])
+    else
+      Prim.onSuccess (Prim.withFiber (EffThunk.awaitAllFailFast [])) EffName.mergeContexts
+  | .mergeAllChildren _ _, _ => badShape
+  | .mergeAllForkOne q i m parent forked, Val.scopeHandle child =>
+    Prim.onSuccess (Prim.withFiber (EffThunk.forkLayer (q.spineChild i) m child))
+      (EffName.mergeAllForkNext q i m parent forked)
+  | .mergeAllForkOne _ _ _ _ _, _ => badShape
+  | .mergeAllForkNext q i m parent forked, Val.fiber ⟨id⟩ =>
+    if i + 1 < mergeAllCount root q then
+      Prim.onSuccess
+        (Prim.sync (EffThunk.op (SyncOp.scopeFork parent FinalizerStrategy.sequential)))
+        (EffName.mergeAllForkOne q (i + 1) m parent (forked ++ [⟨id⟩]))
+    else
+      Prim.onSuccess (Prim.withFiber (EffThunk.awaitAllFailFast (forked ++ [⟨id⟩])))
+        EffName.mergeContexts
+  | .mergeAllForkNext _ _ _ _ _, _ => badShape
   | .mergeContexts, v => mergeContextsK v
   | .serviceLookup key, v => serviceLookupK key v
   | .bindService key, v => bindServiceK key v

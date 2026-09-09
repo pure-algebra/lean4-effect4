@@ -45,14 +45,16 @@ theorem Val.tuple?_exact {v : Val} {vs : List Val} (h : Val.tuple? v = some vs) 
     rw [h]
   · exact nomatch h
 
-/-- A literal as a machine value. Strings are not machine values on the native route (the
-alphabet has none); a `str` literal is refused here and admitted only by the typing of the
-service route's spellings. -/
+/-- A literal as a machine value: `unit`, `nat` and `bool` against the carrier's frames, and
+`str` against its `string` frame. Strings are machine values on the native route since the
+host rows slice (2026-09-08, DB-15): a canonical row's request and answer carry them, so a
+`str` literal evaluates like every other literal (`Lit.toVal_isSome`,
+`src/Effect4/Laws/Program/Typed.lean`). -/
 def Lit.toVal : Lit → Option Val
   | .unit => some Val.unit
   | .nat n => some (Val.nat n)
   | .bool b => some (Val.bool b)
-  | .str _ => none
+  | .str s => some (Val.str s)
 
 /-- The pure atoms of the native route: a closed table, interpreted here, typed by
 `nativeAtomTy`. -/

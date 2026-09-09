@@ -427,6 +427,13 @@ module Make (A : PROGRAM_TYPES) = struct
       A.LayerTerm_merge (of_layer_term a, of_layer_term b)
     | Eff_types.Layer_term_fresh l -> A.LayerTerm_fresh (of_layer_term l)
     | Eff_types.Layer_term_orDie l -> A.LayerTerm_orDie (of_layer_term l)
+    (* the host rows slice (2026-09-08): the wire carries `ref` and `mergeAll`, the engine's
+       frozen LCNF projection (`api_engine.ml`, cut before this slice) does not; a program
+       that reaches them is refused here until plan v2 Phase 1 regenerates the engine *)
+    | Eff_types.Layer_term_ref _ ->
+      failwith "e4_program: LayerTerm.ref predates the engine's regeneration (Phase 1)"
+    | Eff_types.Layer_term_mergeAll _ ->
+      failwith "e4_program: LayerTerm.mergeAll predates the engine's regeneration (Phase 1)"
 
   and of_stmt : Eff_types.stmt -> A.native_op A.stmt = function
     | Eff_types.Stmt_bindYield e -> A.Stmt_bindYield (of_eff e)

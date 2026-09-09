@@ -300,6 +300,14 @@ and _ layer =
   | L_merge : 'e1 layer * 'e2 layer -> ('e1, 'e2) union layer
   | L_fresh : 'e layer -> 'e layer
   | L_or_die : 'e layer -> never layer
+  (* the host rows slice (2026-09-08): Layer.mergeAll over a non-empty spine, typed as the
+     checker's right fold (`check_layers`): the last layer is itself, a cons is a merge. A
+     reference (`LayerTerm.ref`) has no typed form here: it is typed by the whole program. *)
+  | L_merge_all : 'e layers -> 'e layer
+
+and _ layers =
+  | Ls_last : 'e layer -> 'e layers
+  | Ls_cons : 'e1 layer * 'e2 layers -> ('e1, 'e2) union layers
 
 (* A closed program with its witnesses, for tables and tests. *)
 type program = Program : (empty, 'a, 'e) eff * 'a ty * 'e ty -> program
@@ -490,6 +498,11 @@ and erase_layer : type e. e layer -> Eff_types.layer_term = function
   | L_merge (a, b) -> Eff_types.Layer_term_merge (erase_layer a, erase_layer b)
   | L_fresh l -> Eff_types.Layer_term_fresh (erase_layer l)
   | L_or_die l -> Eff_types.Layer_term_orDie (erase_layer l)
+  | L_merge_all ls -> Eff_types.Layer_term_mergeAll (erase_layers ls)
+
+and erase_layers : type e. e layers -> Eff_types.layer_terms = function
+  | Ls_last l -> Eff_types.Layer_terms_cons (erase_layer l, Eff_types.Layer_terms_nil)
+  | Ls_cons (l, rest) -> Eff_types.Layer_terms_cons (erase_layer l, erase_layers rest)
 
 (* A closed program, erased at the empty environment. *)
 let erase (p : (empty, 'a, 'e) eff) : Eff_types.eff = erase_eff 0 p

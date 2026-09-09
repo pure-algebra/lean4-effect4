@@ -507,7 +507,7 @@ end frames
 
 /-! ## Addresses -/
 
-theorem Node.at_append (n : Node) : ∀ (path : List Nat) (i : Nat),
+theorem Node.at_append (n : Node NativeOp) : ∀ (path : List Nat) (i : Nat),
     Node.at_ n (path ++ [i]) = (Node.at_ n path).bind fun m => m.child i
   | [], _ => by simp [Node.at_]
   | j :: rest, i => by
@@ -865,6 +865,78 @@ theorem contAOf_mergeForkNext_other (q : Point) (i : Nat) (m : MemoMapId) (paren
         q i m parent forked rfl).elim
     | simp_all
 
+/-! The n-ary merge's three names (the host rows slice): the same protocol over the
+`layers` spine, the sibling count read off the node at `q` (`mergeAllCount`). -/
+
+theorem contAOf_mergeAllChildren_scope (q : Point) (m : MemoMapId) (parent : Nat) :
+    Program.contAOf root (.mergeAllChildren q m) (Val.scopeHandle parent) =
+      (if 0 < mergeAllCount root q then
+        Prim.onSuccess
+          (Prim.sync (EffThunk.op (SyncOp.scopeFork parent FinalizerStrategy.sequential)))
+          (.mergeAllForkOne q 0 m parent [])
+      else
+        Prim.onSuccess (Prim.withFiber (EffThunk.awaitAllFailFast [])) .mergeContexts) := rfl
+
+theorem contAOf_mergeAllChildren_other (q : Point) (m : MemoMapId) (v : Val)
+    (hne : ∀ x, v ≠ Val.scopeHandle x) :
+    Program.contAOf root (.mergeAllChildren q m) v = badShape := by
+  unfold Program.contAOf
+  revert hne
+  split <;> intro hne <;> first
+    | rfl
+    | contradiction
+    | exact absurd rfl (hne _)
+    | (rename_i heq; exact absurd heq (hne _))
+    | simp_all
+
+theorem contAOf_mergeAllForkOne_scope (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
+    (forked : List FiberId) (child : Nat) :
+    Program.contAOf root (.mergeAllForkOne q i m parent forked) (Val.scopeHandle child) =
+      Prim.onSuccess (Prim.withFiber (EffThunk.forkLayer (q.spineChild i) m child))
+        (.mergeAllForkNext q i m parent forked) := rfl
+
+theorem contAOf_mergeAllForkOne_other (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
+    (forked : List FiberId) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
+    Program.contAOf root (.mergeAllForkOne q i m parent forked) v = badShape := by
+  unfold Program.contAOf
+  revert hne
+  split <;> intro hne <;> first
+    | rfl
+    | contradiction
+    | exact absurd rfl (hne _)
+    | (rename_i heq; exact absurd heq (hne _))
+    | exact (‹∀ (a : Point) (b : Nat) (c : MemoMapId) (d : Nat) (e : List FiberId),
+        EffName.mergeAllForkOne q i m parent forked = EffName.mergeAllForkOne a b c d e → False›
+        q i m parent forked rfl).elim
+    | simp_all
+
+theorem contAOf_mergeAllForkNext_fiber (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
+    (forked : List FiberId) (id : FiberId) :
+    Program.contAOf root (.mergeAllForkNext q i m parent forked) (Val.fiber id) =
+      (if i + 1 < mergeAllCount root q then
+        Prim.onSuccess
+          (Prim.sync (EffThunk.op (SyncOp.scopeFork parent FinalizerStrategy.sequential)))
+          (.mergeAllForkOne q (i + 1) m parent (forked ++ [id]))
+      else
+        Prim.onSuccess (Prim.withFiber (EffThunk.awaitAllFailFast (forked ++ [id])))
+          .mergeContexts) := by
+  cases id; rfl
+
+theorem contAOf_mergeAllForkNext_other (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
+    (forked : List FiberId) (v : Val) (hne : ∀ x, v ≠ Val.fiber x) :
+    Program.contAOf root (.mergeAllForkNext q i m parent forked) v = badShape := by
+  unfold Program.contAOf
+  revert hne
+  split <;> intro hne <;> first
+    | rfl
+    | contradiction
+    | exact absurd rfl (hne _)
+    | (rename_i heq; exact absurd heq (hne _))
+    | exact (‹∀ (a : Point) (b : Nat) (c : MemoMapId) (d : Nat) (e : List FiberId),
+        EffName.mergeAllForkNext q i m parent forked = EffName.mergeAllForkNext a b c d e → False›
+        q i m parent forked rfl).elim
+    | simp_all
+
 theorem contAOf_mergeContexts (v : Val) :
     Program.contAOf root .mergeContexts v = mergeContextsK v := rfl
 
@@ -890,11 +962,30 @@ theorem withFiberOf_awaitAllFailFast (targets : List FiberId) :
     (interpOf root).withFiberOf (.awaitAllFailFast targets) = some (.awaitAllFailFast targets) :=
   rfl
 
-/-- The layer at a point, resolved: the node's term, built. -/
+/-- The layer at a point, resolved: the node's term, built — `compileLayer` for every
+constructor but a reference, which hops to its target (`resolveLayer.resolveLayerTerm`, the
+host rows slice). -/
 theorem resolveLayer_of_at {q : Point} {l : LayerTerm NativeOp}
     (h : Node.at_ (Node.eff root) q.path = some (Node.layer l)) (m : MemoMapId) (scope : Nat) :
-    resolveLayer root q m scope = compileLayer l q m scope := by
+    resolveLayer root q m scope = resolveLayer.resolveLayerTerm root l q m scope := by
   simp [resolveLayer, h]
+
+/-- A term that is no reference resolves as `compileLayer`. -/
+theorem resolveLayerTerm_of_nonref (l : LayerTerm NativeOp) (q : Point) (m : MemoMapId)
+    (scope : Nat) (hl : ∀ t, l ≠ .ref t) :
+    resolveLayer.resolveLayerTerm root l q m scope = compileLayer l q m scope := by
+  cases l <;> first | rfl | exact absurd rfl (hl _)
+
+/-- A reference with fuel hops to its target, one fuel down; with none it is the frontier. -/
+theorem resolveLayerTerm_ref (target : List Nat) (q : Point) (m : MemoMapId) (scope : Nat) :
+    resolveLayer.resolveLayerTerm root (.ref target) q m scope =
+      match q.fuel with
+      | 0 => frontier q
+      | _ + 1 =>
+        match Node.at_ (Node.eff root) target with
+        | some (Node.layer (.ref _)) => badShape
+        | some (Node.layer l) => compileLayer l (q.redirect target) m scope
+        | _ => badShape := rfl
 
 theorem innerLayerAt_effect {q : Point} {key : ServiceKey} {body : NativeEff}
     (h : Node.at_ (Node.eff root) q.path = some (Node.layer (.effect key body)))
@@ -932,6 +1023,21 @@ theorem innerLayerAt_merge {q : Point} {left right : LayerTerm NativeOp}
         (Prim.sync (EffThunk.op (SyncOp.scopeFork child FinalizerStrategy.parallel)))
         (.mergeChildren q m) := by
   simp [innerLayerAt, h]
+
+theorem innerLayerAt_mergeAll {q : Point} {layers : LayerTerms NativeOp}
+    (h : Node.at_ (Node.eff root) q.path = some (Node.layer (.mergeAll layers)))
+    (m : MemoMapId) (child : Nat) :
+    innerLayerAt root q m child =
+      Prim.onSuccess
+        (Prim.sync (EffThunk.op (SyncOp.scopeFork child FinalizerStrategy.parallel)))
+        (.mergeAllChildren q m) := by
+  simp [innerLayerAt, h]
+
+/-- The count of a `mergeAll` at its node is the spine's length. -/
+theorem mergeAllCount_of_at {q : Point} {layers : LayerTerms NativeOp}
+    (h : Node.at_ (Node.eff root) q.path = some (Node.layer (.mergeAll layers))) :
+    mergeAllCount root q = layers.length := by
+  simp [mergeAllCount, h]
 
 theorem constructionAt_effect {q : Point} {key : ServiceKey} {body : NativeEff}
     (h : Node.at_ (Node.eff root) q.path = some (Node.layer (.effect key body)))
@@ -1020,6 +1126,19 @@ theorem compileLayer_fresh (inner : LayerTerm NativeOp) (q : Point) (m : MemoMap
 theorem compileLayer_orDie (inner : LayerTerm NativeOp) (q : Point) (m : MemoMapId) (scope : Nat) :
     compileLayer (.orDie inner) q m scope =
       Prim.onFailure (compileLayer inner (q.child 0) m scope) .orDie := rfl
+
+/-- `mergeAll` is `mergeAllEffect` under `fromBuild` too (`:1587`, the host rows slice). -/
+theorem compileLayer_mergeAll (layers : LayerTerms NativeOp) (q : Point) (m : MemoMapId)
+    (scope : Nat) :
+    compileLayer (.mergeAll layers) q m scope =
+      Prim.onSuccess
+        (Prim.sync (EffThunk.op (SyncOp.scopeFork scope FinalizerStrategy.sequential)))
+        (.fromBuildThen q m) := rfl
+
+/-- A reference reaching the table is the refusal: `resolveLayer` redirects to the target
+before consulting it, and `orDie` compiles its inner term at the table directly. -/
+theorem compileLayer_ref (target : List Nat) (q : Point) (m : MemoMapId) (scope : Nat) :
+    compileLayer (.ref target) q m scope = badShape := rfl
 
 /-- `buildWithMemoMap` installs the map as the `CurrentMemoMap` service (`Layer.ts:756-762`).
 census: layer.build-with-memo-map-service -/

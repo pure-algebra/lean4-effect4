@@ -32,13 +32,16 @@ namespace Effect4.Program
 
 open Effect4.Machine.Env (Requirement)
 
-/-- Why the printer declined a program. Both arms are the §5.1 table's "refused" row:
-`choose` names the decision site the flows front-end would have answered from a tape, and
-`internalAction` names the `ActionTerm` constructor whose rc.112 counterpart has no public
-export with the same frame shape. -/
+/-- Why the printer declined a program. The first two arms are the §5.1 table's "refused"
+row: `choose` names the decision site the flows front-end would have answered from a tape,
+and `internalAction` names the `ActionTerm` constructor whose rc.112 counterpart has no
+public export with the same frame shape. `layerRef` is the declaration block's (the host
+rows slice): a layer reference whose target path names no layer, so no `const` can be
+hoisted for it. -/
 inductive PrintRefusal
   | choose (site : Nat)
   | internalAction (name : String)
+  | layerRef (target : List Nat)
 deriving DecidableEq, Repr
 
 /-- The binder minted for environment position `index`: `a0`, `a1`, … The environment is
@@ -252,9 +255,12 @@ mutual
   /-- A layer term as the rc.112 combinators it transcribes, one arm per `Layer.ts` export
   (the join, 2026-09-07). A body is closed — the layer's own scope is its ambient one
   (`Layer.ts:1438`) — so it prints at environment length `0` and its first binder is `a0`.
-  `merge` prints as the two-argument `Layer.merge(a, b)` (`Layer.ts:1850`) and never as a
-  flattened `Layer.mergeAll`: the two build different scope trees, and the compile follows
-  the term's. The named spelling of a layer, keys as class identifiers, is
+  `merge` prints as the two-argument `Layer.merge(a, b)` (`Layer.ts:1850`) and `mergeAll` as
+  the n-ary `Layer.mergeAll(a, b, …)` (`:1652`), never one as the other: the two build
+  different scope trees, and the compile follows the term's. A reference prints as the
+  identifier that carries its target's path (`LayerTerm.refName`, `Refs.lean`); the `const`
+  that binds it is `printModule`'s, and an expression printed on its own leaves the
+  identifier free. The named spelling of a layer, keys as class identifiers, is
   `Codegen/Layer.lean`'s. -/
   def printLayer (sig : Signature Op) : LayerTerm Op → Except PrintRefusal TypeScript.Expr
     | .succeed key value =>
@@ -285,6 +291,20 @@ mutual
     | .orDie inner => do
       let i ← printLayer sig inner
       .ok (.call (.ident "Layer.orDie") [i])
+    | .ref target => .ok (.ident (LayerTerm.refName target))
+    | .mergeAll layers => do
+      let items ← printLayers sig layers
+      .ok (.call (.ident "Layer.mergeAll") items)
+
+  /-- The layers of a `mergeAll`, each closed. -/
+  def printLayers (sig : Signature Op) :
+      LayerTerms Op → Except PrintRefusal (List TypeScript.Expr) := fun layers =>
+    match layers with
+    | .nil => .ok []
+    | .cons head tail => do
+      let h ← printLayer sig head
+      let t ← printLayers sig tail
+      .ok (h :: t)
 
   /-- A generator body, statement by statement. `bindYield` binds the answer as the next
   variable and the rest continues one longer; `ifElse` and `whileTrue` are block-scoped, so
@@ -383,5 +403,27 @@ def printDecl (name : String) (ty : EffTy) (body : TypeScript.Expr) : TypeScript
         some ("Effect.Effect<" ++ ty.answer.render ++ ", " ++ ty.error.render ++ ">")
       else
         none }
+
+/-- The printed program as a declaration block (the host rows slice): one
+`const L_<path> = …` per referenced layer target, in declaration order (`Path.declBefore`: a
+target inside another first, then program order), each hoisted out of the program so that
+its defining site and every reference print as the one identifier (`Refs.lean` `hoistAll`),
+which is one rc.112 layer object and one memo entry; the main declaration last. A program
+with no references is `[printDecl name ty (print …)]`. `readModule` (`Codegen/Read.lean`)
+is the inverse on what this prints. -/
+def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
+    Except PrintRefusal (List TypeScript.ConstDecl) :=
+  match e.hoistAll with
+  | .error target => .error (.layerRef target)
+  | .ok (main, decls) => do
+    let ordered := Path.sortBy Path.declBefore (decls.map (·.1))
+    let ds ← ordered.mapM fun t =>
+      match decls.find? (·.1 == t) with
+      | some (_, l) => do
+        let x ← printLayer sig l
+        .ok ({ doc := [], name := LayerTerm.refName t, value := x } : TypeScript.ConstDecl)
+      | none => .error (.layerRef t)
+    let m ← print sig 0 main
+    .ok (ds ++ [printDecl name ty m])
 
 end Effect4.Program

@@ -37,3 +37,5 @@ pIllStep	ill-typed
 pIllInterruptor	ill-typed
 pProvide	well-typed
 pSleep	well-typed
+pDiamond	ill-typed
+pMergeAll	well-typed

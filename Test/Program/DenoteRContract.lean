@@ -246,7 +246,19 @@ def sequenced : NativeEff := .bind (.yieldNow 0) cleanupUnit
 theorem cleanup_boundary_distinct : unfolded ensured ≠ unfolded sequenced := by
   intro h
   have heads := congrArg (fun p => operation? (observeRaw 1 p Stores.empty)) h
-  change some (FiberOp.guard_ (.onExit false)) = some (.guard_ .onSuccess) at heads
+  -- the heads by the arm equations (`denoteR` is `denoteRWith` at the point's fuel, so the
+  -- arm is read off the equation, not by unfolding)
+  have h1 : operation? (observeRaw 1 (unfolded ensured) Stores.empty) =
+      some (.guard_ (.onExit false)) := by
+    unfold unfolded ensured
+    rw [denoteR_onExit _ _ _ (p := rootPoint 80 [] []) (by decide)]
+    rfl
+  have h2 : operation? (observeRaw 1 (unfolded sequenced) Stores.empty) =
+      some (.guard_ .onSuccess) := by
+    unfold unfolded sequenced
+    rw [denoteR_bind _ _ _ (rootPoint 80 [] []) (by decide)]
+    rfl
+  simp only [h1, h2] at heads
   cases heads
 
 /-- The first fiber operation answered with the void value when it is a yield, as

@@ -73,8 +73,10 @@ abbrev Program := NativeEff
 
 /-! ## Typing and printing -/
 
-/-- The type of a program against the native signature; `none` when ill-typed. -/
-def typeOf (program : Program) : Option EffTy := Program.typeOf nativeSignature program
+/-- The type of a program against the native signature; `none` when ill-typed. Layer
+references are resolved first (`Program.typeOfProgram`: well-formed, then expanded to their
+targets), so a program with a diamond types as its inlined twin does. -/
+def typeOf (program : Program) : Option EffTy := Program.typeOfProgram nativeSignature program
 
 /-- Whether the program is well-typed. -/
 def wellTyped (program : Program) : Bool := (typeOf program).isSome
@@ -116,6 +118,24 @@ def printDecl (name : String) (program : Program) : Option TypeScript.ConstDecl 
   match typeOf program, print program with
   | some ty, Except.ok body => some (Program.printDecl name ty body)
   | _, _ => none
+
+/-- The program as a declaration block: one `const L_<path> = …` per referenced layer target
+(the host rows slice, `Program.printModule`), then the exported main constant; `none` when it
+is ill-typed or the printer refuses it. The block is what a host must run for a program with
+a layer reference: rc.112 keys its memo map on the layer object (`Layer.ts:411`), and the one
+`const` is the one object. -/
+def printModule (name : String) (program : Program) : Option TypeScript.Module :=
+  match typeOf program with
+  | some ty =>
+    match Program.printModule nativeSignature name ty program with
+    | Except.ok decls => some { header := [], imports := [], decls := decls.map .const }
+    | Except.error _ => none
+  | none => none
+
+/-- A program back from a declaration block: the inverse of `printModule` on the blocks it
+prints (`Program.readModule`), a `ReadRefusal` on every other. -/
+def readModule (module : TypeScript.Module) : Except ReadRefusal Program :=
+  Program.readModule nativeSignature nativeSpell module.decls
 
 /-! ## Compiling and running -/
 

@@ -428,6 +428,34 @@ def mergeTwoR (q : Point) (m : MemoMapId) (child : Nat) : RProgram :=
     | some parent => mergeForkR q m parent
     | none => .pure badShapeExit)
 
+/-- `mergeAllEffect`'s fork loop for the layers of a `mergeAll` (`Layer.ts:1597-1600`, the host
+rows slice), from layer `i` with `remaining` layers left and the fibers forked so far: a
+sequential child of the parallel parent per layer, the layer's build forked into it
+(`Point.spineChild`), then the await of every fiber and the merge. What `contAOf` does for
+`mergeAllForkOne`/`mergeAllForkNext` (`Compile.lean`), the count read off the node. -/
+def mergeAllForkR (q : Point) (m : MemoMapId) (parent : Nat) :
+    Nat → Nat → List FiberId → RProgram
+  | 0, _, forked =>
+    (guardR .onSuccess (fiberValR (.awaitAllFailFast forked) rfl)).bind
+      (seqR fun ex => mergeContextsR ex)
+  | remaining + 1, i, forked =>
+    (guardR .onSuccess (storeR (.scopeFork parent .sequential))).bind (seqR fun v =>
+      match Val.scope? v with
+      | some c =>
+        (guardR .onSuccess (forkLayerR (q.spineChild i) m c)).bind (seqR fun f =>
+          match Val.fiber? f with
+          | some id => mergeAllForkR q m parent remaining (i + 1) (forked ++ [id])
+          | none => .pure badShapeExit)
+      | none => .pure badShapeExit)
+
+/-- `mergeAllEffect` for a `mergeAll` of `count` layers (`Layer.ts:1587-1602`): the parallel
+parent forked from the layer scope, then the fork loop from layer `0`. -/
+def mergeAllR (q : Point) (m : MemoMapId) (child : Nat) (count : Nat) : RProgram :=
+  (guardR .onSuccess (storeR (.scopeFork child .parallel))).bind (seqR fun v =>
+    match Val.scope? v with
+    | some parent => mergeAllForkR q m parent count 0 []
+    | none => .pure badShapeExit)
+
 /-- A yielded source form with an immediate `Prim.success` or `Prim.failure` head.
 `sync`, `yieldError` with a valid argument, and compound frames are not inline exits;
 `exit` of an immediate exit is that exit's success (`internal/effect.ts:3621-3622`), and
@@ -510,127 +538,153 @@ def provideLayerR (buildAt : Point → MemoMapId → Nat → RProgram) (bodyAt :
         (fun ex => .vis (.inr (.closeScope scope ex)) Effects.Program.pure)
     | none => .pure badShapeExit)
 
-mutual
-/-- The structural denotation at an address. Every arm names the `compileEff` arm it
-mirrors; the counted checkpoints are where the frame machine spends a primitive that the
-term would otherwise elide. -/
-def denoteR (root : NativeEff) : NativeEff → Point → RProgram
-  | e, p =>
-    match p.fuel with
-    | 0 => pending .compileFuel p
-    | _ + 1 =>
-      match e with
-      | .succeed t => .pure (match evalTerm p.env t with
-        | some v => .success v | none => badShapeExit)
-      | .fail t => .pure (match evalTerm p.env t with
-        | some v => .failure (Cause.fail (errOf v)) | none => badShapeExit)
-      | .failCause t => .pure (match causeOf p.env t with
-        | some c => .failure c | none => badShapeExit)
-      -- `Prim.yieldableError`: one counted step, then the failure.
-      | .yieldError t => match evalTerm p.env t with
-        | some v => suspendR p (.pure (.failure (Cause.fail (errOf v))))
-        | none => .pure badShapeExit
-      -- `Prim.sync (pure p)`: the value through the `answered` phase.
-      | .sync t => .vis (.inr (.sync ((evalTerm p.env t).getD Val.unit))) fun v => .pure (.success v)
-      -- `Prim.suspend (body child)`: the counted step, then the body.
-      | .suspend b => suspendR p (constructR fun completed =>
-          denoteR root b ({ p with completed }.child 0))
-      | .perform op request =>
-        match (NativeOp.row op).kind with
-        | .sync =>
-          match (evalTerm p.env request).bind (NativeOp.syncOpOf op) with
-          | some operation => .vis (.inl operation) fun v => .pure (.success v)
-          | none => .pure badShapeExit
-        | .async => denoteAsync request p
-        | .program => pending .unsupported p
-      | .bind a b => (guardR .onSuccess (denoteR root a (p.child 0))).bind
-          (seqR fun v => constructR fun completed =>
-            denoteR root b ({ p with completed }.childWith 1 v))
-      -- `Prim.suspend (body p)`, decided by `suspendBodyAt`: the counted step, then the branch.
-      | .branch test a b => suspendR p (constructR fun completed => match evalTerm p.env test with
-          | some (.bool true) => denoteR root a ({ p with completed }.child 0)
-          | some (.bool false) => denoteR root b ({ p with completed }.child 1)
-          | _ => .pure badShapeExit)
-      -- `Effect.exit` folds an immediate exit; otherwise the both-arm boundary.
-      | .exit b =>
-        match inlineYield b (p.child 0) with
-        | some ex => .pure (.success (reifyExitVal ex))
-        | none => (guardR .all (denoteR root b (p.child 0))).bind fun ex =>
-            .pure (.success (reifyExitVal ex))
-      | .catchCause b h => (guardR .onFailure (denoteR root b (p.child 0))).bind fun
-        | .success v => .pure (.success v)
-        | .failure c => constructR fun completed =>
-            denoteR root h ({ p with completed }.childWith 1 (.exitErr c))
-      | .matchCause b v c => (guardR .all (denoteR root b (p.child 0))).bind fun
-        | .success x => constructR fun completed =>
-            denoteR root v ({ p with completed }.childWith 1 x)
-        | .failure cause => constructR fun completed =>
-            denoteR root c ({ p with completed }.childWith 2 (.exitErr cause))
-      | .onExit b f => onExitR (denoteR root b (p.child 0)) fun ex =>
-          constructR fun completed => denoteR root f ({ p with completed }.childWith 1 (reifyExitVal ex))
-      -- `Prim.suspend (body p)` then `Prim.iterator (gen p [] false) unit`: the entry.
-      | .gen _ => suspendR p (.vis (.inr (.gen p)) Effects.Program.pure)
-      -- `Prim.suspend (body p)` then `Prim.whileLoop (loop p) cursor`: the entry.
-      | .whileLoop initial _ _ _ => suspendR p (match evalTerm p.env initial with
-          | some cursor => .vis (.inr (.loop p cursor)) Effects.Program.pure
-          | none => .pure badShapeExit)
-      -- `Prim.yieldNowWith`: the park answers the void value, which the continuation passes
-      -- on (the frame resumes with `success void`; an answer is never discarded)
-      | .yieldNow priority => .vis (.inr (.yieldNow priority)) fun v => .pure (.success v)
-      | .callback op request =>
-        match op with
-        | .sleep => denoteSleep request p
-        | _ => match (NativeOp.row op).kind with
-          | .async => denoteAsync request p
-          | _ => .pure badShapeExit
-      | .awaitFiber target mode =>
-        match evalTerm p.env target with
-        | some (Val.fiber ⟨id⟩) =>
-          match p.awaitExit ⟨id⟩ mode with
-          | some exit => .pure exit
-          | none => match mode with
-            | .joinEffect => .vis (.inr (.await ⟨id⟩ .joinEffect)) Effects.Program.pure
-            | .awaitValue => .vis (.inr (.await ⟨id⟩ .awaitValue)) fun v => .pure (.success v)
-        | _ => .pure badShapeExit
-      | .uninterruptible _ | .interruptible _ | .withFiber _ => denoteAction root p
-      -- `scoped` is one WithFiber whose eager body is child 0
-      -- (`internal/effect.ts:3938-3948`). Context restoration is callback glue.
-      | .scoped _ => .vis (.inr (.scoped (p.child 0))) Effects.Program.pure
-      -- `acquireRelease` (`internal/effect.ts:3971-3987`, V1): the context read, then the
-      -- masked half (`Body.acquireIn`) under it, as `compileEff` names it step by step
-      | .acquireRelease _ _ =>
-        (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun v =>
-          match Val.context? v with
-          | some ctx => .vis (.inr (.mask false (.acquireIn p ctx))) Effects.Program.pure
-          | none => .pure badShapeExit)
-      | .choose _ left right =>
-        match p.tape with
-        | true :: rest => denoteR root left { p with path := p.path ++ [0], tape := rest }
-        | false :: rest => denoteR root right { p with path := p.path ++ [1], tape := rest }
-        | [] => pending .unansweredChoice p
-      -- the join. `Effect.provide(self, layer)`: `Prim.suspend (body p)`, the counted step
-      -- (`scopedWith`, `internal/effect.ts:3966`), then the scope made, the layer built into it
-      -- (`buildWithScope` off the context's memo map, or a private map when `local`), the body
-      -- under `provideContext(built)` (`internal/layer.ts:15-21`), the scope closed with the exit
-      | .provideLayer layer isLocal body => suspendR p (constructR fun completed =>
-          provideLayerR (fun q m s => denoteLayer root layer q m s) (fun q => denoteR root body q)
-            (fun q => inlineYield body q) isLocal { p with completed })
-      -- `Effect.service(key)` (`internal/effect.ts:2059`): the context read, then the lookup
-      | .service key =>
-        (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun v => serviceLookupR key v)
-      -- `Effect.provideService(self, key, value)` (`:2232`): a `Context.add` region
-      | .provideService key value body =>
-        match evalTerm p.env value with
-        | some v => updateContextR (.provideService key v) (denoteR root body (p.child 0))
-        | none => .pure badShapeExit
+/-! The two denotations below carry the point's fuel as an explicit budget (`f`, always the
+point's own fuel: `denoteR` and `denoteLayer` pass it in, and every child call passes the
+child's). It is the recursion: a layer reference (`LayerTerm.ref`, the host rows slice) hops
+to its target's term, which is no subterm, one fuel down, so the block is structural on the
+budget, its arms at a positive budget in two bodies that take the predecessor budget's two
+denotations as arguments (`denoteEffBody`, `denoteLayerBody`). Only a decided `choose`, which
+keeps the point's fuel, descends in its term (structurally, inside `denoteEffBody`), and only
+a layer at no fuel, whose children have none either, descends in its term
+(`denoteLayerZero`). Structural recursion keeps every finite run reducible by `rfl`, which the
+batteries pin (`Test/Program/RuntimeRContract.lean`); the equations below are the only
+interface the proofs use. -/
+
+/-- Whether a layer term is a reference. `compileLayer` compiles the inner term of `orDie`
+directly (`Prim.onFailure (compileLayer inner …)`), never through `resolveLayer`, so a
+reference there is the wrong shape it is at that table; the `orDie` arm of the build mirrors
+that. -/
+def _root_.Effect4.Program.LayerTerm.isRef {Op : Type} : LayerTerm Op → Bool
+  | .ref _ => true
+  | _ => false
+
+/-- The arms of the denotation at a positive budget, every child at the predecessor budget
+through `rec` (a program at its point) and `recL` (a layer at its point); a decided `choose`
+keeps the point's fuel and descends in its term. Every arm names the `compileEff` arm it
+mirrors; the counted checkpoints are where the frame machine spends a primitive that the term
+would otherwise elide. -/
+def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
+    (recL : LayerTerm NativeOp → Point → MemoMapId → Nat → RProgram) :
+    NativeEff → Point → RProgram
+  | .succeed t, p => .pure (match evalTerm p.env t with
+      | some v => .success v | none => badShapeExit)
+  | .fail t, p => .pure (match evalTerm p.env t with
+      | some v => .failure (Cause.fail (errOf v)) | none => badShapeExit)
+  | .failCause t, p => .pure (match causeOf p.env t with
+      | some c => .failure c | none => badShapeExit)
+  -- `Prim.yieldableError`: one counted step, then the failure.
+  | .yieldError t, p => match evalTerm p.env t with
+      | some v => suspendR p (.pure (.failure (Cause.fail (errOf v))))
+      | none => .pure badShapeExit
+  -- `Prim.sync (pure p)`: the value through the `answered` phase.
+  | .sync t, p => .vis (.inr (.sync ((evalTerm p.env t).getD Val.unit))) fun v => .pure (.success v)
+  -- `Prim.suspend (body child)`: the counted step, then the body.
+  | .suspend b, p => suspendR p (constructR fun completed =>
+      rec b ({ p with completed }.child 0))
+  | .perform op request, p =>
+    match (NativeOp.row op).kind with
+    | .sync =>
+      match (evalTerm p.env request).bind (NativeOp.syncOpOf op) with
+      | some operation => .vis (.inl operation) fun v => .pure (.success v)
+      | none => .pure badShapeExit
+    | .async => denoteAsync request p
+    | .program => pending .unsupported p
+  | .bind a b, p => (guardR .onSuccess (rec a (p.child 0))).bind
+      (seqR fun v => constructR fun completed =>
+        rec b ({ p with completed }.childWith 1 v))
+  -- `Prim.suspend (body p)`, decided by `suspendBodyAt`: the counted step, then the branch.
+  | .branch test a b, p => suspendR p (constructR fun completed => match evalTerm p.env test with
+      | some (.bool true) => rec a ({ p with completed }.child 0)
+      | some (.bool false) => rec b ({ p with completed }.child 1)
+      | _ => .pure badShapeExit)
+  -- `Effect.exit` folds an immediate exit; otherwise the both-arm boundary.
+  | .exit b, p =>
+    match inlineYield b (p.child 0) with
+    | some ex => .pure (.success (reifyExitVal ex))
+    | none => (guardR .all (rec b (p.child 0))).bind fun ex =>
+        .pure (.success (reifyExitVal ex))
+  | .catchCause b h, p => (guardR .onFailure (rec b (p.child 0))).bind fun
+    | .success v => .pure (.success v)
+    | .failure c => constructR fun completed =>
+        rec h ({ p with completed }.childWith 1 (.exitErr c))
+  | .matchCause b v c, p => (guardR .all (rec b (p.child 0))).bind fun
+    | .success x => constructR fun completed =>
+        rec v ({ p with completed }.childWith 1 x)
+    | .failure cause => constructR fun completed =>
+        rec c ({ p with completed }.childWith 2 (.exitErr cause))
+  | .onExit b fin, p => onExitR (rec b (p.child 0)) fun ex =>
+      constructR fun completed =>
+        rec fin ({ p with completed }.childWith 1 (reifyExitVal ex))
+  -- `Prim.suspend (body p)` then `Prim.iterator (gen p [] false) unit`: the entry.
+  | .gen _, p => suspendR p (.vis (.inr (.gen p)) Effects.Program.pure)
+  -- `Prim.suspend (body p)` then `Prim.whileLoop (loop p) cursor`: the entry.
+  | .whileLoop initial _ _ _, p => suspendR p (match evalTerm p.env initial with
+      | some cursor => .vis (.inr (.loop p cursor)) Effects.Program.pure
+      | none => .pure badShapeExit)
+  -- `Prim.yieldNowWith`: the park answers the void value, which the continuation passes
+  -- on (the frame resumes with `success void`; an answer is never discarded)
+  | .yieldNow priority, _ => .vis (.inr (.yieldNow priority)) fun v => .pure (.success v)
+  | .callback op request, p =>
+    match op with
+    | .sleep => denoteSleep request p
+    | _ => match (NativeOp.row op).kind with
+      | .async => denoteAsync request p
+      | _ => .pure badShapeExit
+  | .awaitFiber target mode, p =>
+    match evalTerm p.env target with
+    | some (Val.fiber ⟨id⟩) =>
+      match p.awaitExit ⟨id⟩ mode with
+      | some exit => .pure exit
+      | none => match mode with
+        | .joinEffect => .vis (.inr (.await ⟨id⟩ .joinEffect)) Effects.Program.pure
+        | .awaitValue => .vis (.inr (.await ⟨id⟩ .awaitValue)) fun v => .pure (.success v)
+    | _ => .pure badShapeExit
+  | .uninterruptible _, p | .interruptible _, p | .withFiber _, p => denoteAction root p
+  -- `scoped` is one WithFiber whose eager body is child 0
+  -- (`internal/effect.ts:3938-3948`). Context restoration is callback glue.
+  | .scoped _, p => .vis (.inr (.scoped (p.child 0))) Effects.Program.pure
+  -- `acquireRelease` (`internal/effect.ts:3971-3987`, V1): the context read, then the
+  -- masked half (`Body.acquireIn`) under it, as `compileEff` names it step by step
+  | .acquireRelease _ _, p =>
+    (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun v =>
+      match Val.context? v with
+      | some ctx => .vis (.inr (.mask false (.acquireIn p ctx))) Effects.Program.pure
+      | none => .pure badShapeExit)
+  -- a decided branch keeps the point's fuel, so the budget stays: the term descends
+  | .choose _ left right, p =>
+    match p.tape with
+    | true :: rest => denoteEffBody root rec recL left { p with path := p.path ++ [0], tape := rest }
+    | false :: rest => denoteEffBody root rec recL right { p with path := p.path ++ [1], tape := rest }
+    | [] => pending .unansweredChoice p
+  -- the join. `Effect.provide(self, layer)`: `Prim.suspend (body p)`, the counted step
+  -- (`scopedWith`, `internal/effect.ts:3966`), then the scope made, the layer built into it
+  -- (`buildWithScope` off the context's memo map, or a private map when `local`), the body
+  -- under `provideContext(built)` (`internal/layer.ts:15-21`), the scope closed with the exit
+  | .provideLayer layer isLocal body, p => suspendR p (constructR fun completed =>
+      provideLayerR (fun q m s => recL layer q m s) (fun q => rec body q)
+        (fun q => inlineYield body q) isLocal { p with completed })
+  -- `Effect.service(key)` (`internal/effect.ts:2059`): the context read, then the lookup
+  | .service key, _ =>
+    (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun v => serviceLookupR key v)
+  -- `Effect.provideService(self, key, value)` (`:2232`): a `Context.add` region
+  | .provideService key value body, p =>
+    match evalTerm p.env value with
+    | some v => updateContextR (.provideService key v) (rec body (p.child 0))
+    | none => .pure badShapeExit
 
 /-- `self.build(memoMap, scope)` at the term (`compileLayer`, `innerLayerAt`, `constructionAt`),
-structural in the layer, the point its address: `Layer.succeed` answers its context
-(`Layer.ts:1129`); `fresh` builds the inner layer through a brand-new map (`:3851`); `orDie`
-turns the inner build's typed error into a defect (`:3327`); every other constructor is a
-`fromBuild` wrapper (`:333-345`) — a memoized leaf's construction under `Scope.provide`
-(`:386`, `:1482`), `provideWith` (`:1915`), or `mergeAllEffect` (`:1587`). -/
-def denoteLayer (root : NativeEff) : LayerTerm NativeOp → Point → MemoMapId → Nat → RProgram
+the arms at a positive budget, every child at the predecessor budget through `recL`, a leaf's
+body through `rec`: `Layer.succeed` answers its context (`Layer.ts:1129`); `fresh` builds the
+inner layer through a brand-new map (`:3851`); `orDie` turns the inner build's typed error into
+a defect (`:3327`), its inner term compiled directly as `compileLayer` compiles it, so a
+reference there is the wrong shape; every other constructor is a `fromBuild` wrapper
+(`:333-345`) — a memoized leaf's construction under `Scope.provide` (`:386`, `:1482`),
+`provideWith` (`:1915`), or `mergeAllEffect` (`:1587`, binary and n-ary). A reference hops to
+its target's term at the target's path one fuel down (`resolveLayer.resolveLayerTerm`, the
+predecessor budget); a hop to a reference or to no layer is the wrong shape. -/
+def denoteLayerBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
+    (recL : LayerTerm NativeOp → Point → MemoMapId → Nat → RProgram) :
+    LayerTerm NativeOp → Point → MemoMapId → Nat → RProgram
   | .succeed key value, _, _, _ =>
     match Lit.toVal value with
     | some v => .pure (.success (Env.encode (Env.Context.empty.addV key v)))
@@ -638,39 +692,125 @@ def denoteLayer (root : NativeEff) : LayerTerm NativeOp → Point → MemoMapId 
   | .fresh inner, q, _, scope =>
     (guardR .onSuccess (storeR (.memoFork none))).bind (seqR fun v =>
       match Val.memoMap? v with
-      | some id => denoteLayer root inner (q.child 0) id scope
+      | some id => recL inner (q.child 0) id scope
       | none => .pure badShapeExit)
+  -- the inner term is compiled at the table directly (`compileLayer`'s `orDie` arm), never
+  -- resolved: a reference there is the wrong shape
   | .orDie inner, q, m, scope =>
-    (guardR .onFailure (denoteLayer root inner (q.child 0) m scope)).bind fun
+    (guardR .onFailure
+      (if inner.isRef then .pure badShapeExit else recL inner (q.child 0) m scope)).bind fun
       | .success v => .pure (.success v)
       | .failure c => .pure (.failure (orDieCause c))
   | .effect key body, q, m, scope =>
     fromBuildR scope fun child => memoizeR q m child fun layerScope =>
       updateContextR (.provideService Env.scopeKey (Val.scopeHandle layerScope))
-        ((guardR .onSuccess (denoteR root body (q.child 0))).bind (seqR fun v =>
+        ((guardR .onSuccess (rec body (q.child 0))).bind (seqR fun v =>
           bindServiceR (some key) v))
   | .effectDiscard body, q, m, scope =>
     fromBuildR scope fun child => memoizeR q m child fun layerScope =>
       updateContextR (.provideService Env.scopeKey (Val.scopeHandle layerScope))
-        ((guardR .onSuccess (denoteR root body (q.child 0))).bind (seqR fun v =>
+        ((guardR .onSuccess (rec body (q.child 0))).bind (seqR fun v =>
           bindServiceR none v))
   | .provide self that, q, m, scope =>
     fromBuildR scope fun child =>
-      provideWithR (denoteLayer root that (q.child 1) m child)
-        (denoteLayer root self (q.child 0) m child) .provide
+      provideWithR (recL that (q.child 1) m child) (recL self (q.child 0) m child) .provide
   | .provideMerge self that, q, m, scope =>
     fromBuildR scope fun child =>
-      provideWithR (denoteLayer root that (q.child 1) m child)
-        (denoteLayer root self (q.child 0) m child) .provideMerge
+      provideWithR (recL that (q.child 1) m child) (recL self (q.child 0) m child) .provideMerge
   | .merge _ _, q, m, scope => fromBuildR scope fun child => mergeTwoR q m child
+  | .mergeAll layers, q, m, scope =>
+    fromBuildR scope fun child => mergeAllR q m child layers.length
+  | .ref target, q, m, scope =>
+    match Node.at_ (Node.eff root) target with
+    | some (Node.layer (.ref _)) => .pure badShapeExit
+    | some (Node.layer l) => recL l (q.redirect target) m scope
+    | _ => .pure badShapeExit
+
+/-- A layer's build with no fuel: the arms of `denoteLayerBody`, every child at no fuel either
+(a `Point.child` of a point without fuel has none), a leaf's body the frontier at its point,
+and a reference the frontier at its own point (no fuel for the hop; DB-04: fuel exhaustion is
+never an error). Structural in the term, which is the descent the budget cannot make. -/
+def denoteLayerZero (root : NativeEff) : LayerTerm NativeOp → Point → MemoMapId → Nat → RProgram
+  | .succeed key value, _, _, _ =>
+    match Lit.toVal value with
+    | some v => .pure (.success (Env.encode (Env.Context.empty.addV key v)))
+    | none => .pure badShapeExit
+  | .fresh inner, q, _, scope =>
+    (guardR .onSuccess (storeR (.memoFork none))).bind (seqR fun v =>
+      match Val.memoMap? v with
+      | some id => denoteLayerZero root inner (q.child 0) id scope
+      | none => .pure badShapeExit)
+  | .orDie inner, q, m, scope =>
+    (guardR .onFailure
+      (if inner.isRef then .pure badShapeExit
+       else denoteLayerZero root inner (q.child 0) m scope)).bind fun
+      | .success v => .pure (.success v)
+      | .failure c => .pure (.failure (orDieCause c))
+  | .effect key body, q, m, scope =>
+    fromBuildR scope fun child => memoizeR q m child fun layerScope =>
+      updateContextR (.provideService Env.scopeKey (Val.scopeHandle layerScope))
+        ((guardR .onSuccess (pending .compileFuel (q.child 0))).bind (seqR fun v =>
+          bindServiceR (some key) v))
+  | .effectDiscard body, q, m, scope =>
+    fromBuildR scope fun child => memoizeR q m child fun layerScope =>
+      updateContextR (.provideService Env.scopeKey (Val.scopeHandle layerScope))
+        ((guardR .onSuccess (pending .compileFuel (q.child 0))).bind (seqR fun v =>
+          bindServiceR none v))
+  | .provide self that, q, m, scope =>
+    fromBuildR scope fun child =>
+      provideWithR (denoteLayerZero root that (q.child 1) m child)
+        (denoteLayerZero root self (q.child 0) m child) .provide
+  | .provideMerge self that, q, m, scope =>
+    fromBuildR scope fun child =>
+      provideWithR (denoteLayerZero root that (q.child 1) m child)
+        (denoteLayerZero root self (q.child 0) m child) .provideMerge
+  | .merge _ _, q, m, scope => fromBuildR scope fun child => mergeTwoR q m child
+  | .mergeAll layers, q, m, scope =>
+    fromBuildR scope fun child => mergeAllR q m child layers.length
+  | .ref _, q, _, _ => pending .compileFuel q
+
+mutual
+/-- The structural denotation at an address, at the point's fuel as its budget: the frontier
+with none, else the arms at the predecessor budget's denotations. -/
+def denoteRWith (root : NativeEff) : Nat → NativeEff → Point → RProgram
+  | 0, _, p => pending .compileFuel p
+  | f + 1, e, p => denoteEffBody root (denoteRWith root f) (denoteLayerWith root f) e p
+
+/-- A layer's build at its point, at the point's fuel as its budget: the build with no fuel,
+else the arms at the predecessor budget's denotations (a reference's hop lands there). -/
+def denoteLayerWith (root : NativeEff) :
+    Nat → LayerTerm NativeOp → Point → MemoMapId → Nat → RProgram
+  | 0, l, q, m, scope => denoteLayerZero root l q m scope
+  | f + 1, l, q, m, scope =>
+    denoteLayerBody root (denoteRWith root f) (denoteLayerWith root f) l q m scope
 end
+
+/-- The structural denotation at an address: `denoteRWith` at the point's fuel. -/
+def denoteR (root : NativeEff) (e : NativeEff) (p : Point) : RProgram := denoteRWith root p.fuel e p
+
+/-- The build of a layer term at its point: `denoteLayerWith` at the point's fuel. -/
+def denoteLayer (root : NativeEff) (l : LayerTerm NativeOp) (q : Point) (m : MemoMapId)
+    (scope : Nat) : RProgram :=
+  denoteLayerWith root q.fuel l q m scope
+
+/-- A child point's fuel is one less: the budget of every child call. -/
+theorem Point.child_fuel (p : Point) (i : Nat) : (p.child i).fuel = p.fuel - 1 := rfl
+theorem Point.childWith_fuel (p : Point) (i : Nat) (v : Val) : (p.childWith i v).fuel = p.fuel - 1 := rfl
+theorem Point.redirect_fuel (p : Point) (target : List Nat) : (p.redirect target).fuel = p.fuel - 1 := rfl
+theorem Point.completed_fuel (p : Point) (completed : List (FiberId × ExitV)) :
+    ({ p with completed } : Point).fuel = p.fuel := rfl
 
 /-! ## The address and frontier equations -/
 
+/-- The one budget arithmetic every equation below needs: a child's budget is the parent's
+predecessor, which at a positive fuel `f + 1` is `f`. -/
+local macro "budget" hf:ident : tactic => `(tactic|
+  simp only [denoteR, denoteLayer, $hf:ident, Point.child_fuel, Point.childWith_fuel,
+    Point.completed_fuel, Point.redirect_fuel, Nat.add_sub_cancel, denoteRWith, denoteEffBody])
+
 theorem denoteR_zero (root e : NativeEff) (p : Point) (h : p.fuel = 0) :
     denoteR root e p = pending .compileFuel p := by
-  unfold denoteR
-  simp only [h]
+  simp only [denoteR, h, denoteRWith]
 
 theorem denoteR_bind (root : NativeEff) (a b : NativeEff) (p : Point) (h : p.fuel ≠ 0) :
     denoteR root (.bind a b) p =
@@ -679,14 +819,14 @@ theorem denoteR_bind (root : NativeEff) (a b : NativeEff) (p : Point) (h : p.fue
           denoteR root b ({ p with completed }.childWith 1 v)) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]
+  | succ f => budget hf
 
 theorem denoteR_suspend (root : NativeEff) (b : NativeEff) (p : Point) (h : p.fuel ≠ 0) :
     denoteR root (.suspend b) p = suspendR p (constructR fun completed =>
       denoteR root b ({ p with completed }.child 0)) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]
+  | succ f => budget hf
 
 theorem denoteR_branch (root : NativeEff) (t : Term) (a b : NativeEff) (p : Point)
     (h : p.fuel ≠ 0) :
@@ -697,7 +837,7 @@ theorem denoteR_branch (root : NativeEff) (t : Term) (a b : NativeEff) (p : Poin
         | _ => .pure badShapeExit) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]
+  | succ f => budget hf
 
 /-- The exit arm: an immediate exit folds (row D1 of the P0 record); otherwise the body
 runs inside a both-arm boundary and its exit is reified. -/
@@ -709,7 +849,7 @@ theorem denoteR_exit (root : NativeEff) (b : NativeEff) (p : Point) (h : p.fuel 
           .pure (.success (reifyExitVal ex)) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]
+  | succ f => budget hf
 
 theorem denoteR_choose (root : NativeEff) (site : Nat) (a b : NativeEff) (p : Point)
     (h : p.fuel ≠ 0) :
@@ -720,20 +860,20 @@ theorem denoteR_choose (root : NativeEff) (site : Nat) (a b : NativeEff) (p : Po
       | [] => pending .unansweredChoice p := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]
+  | succ f => budget hf
 
 theorem denoteR_withFiber (root : NativeEff) (action : ActionTerm NativeOp) (p : Point)
     (h : p.fuel ≠ 0) :
     denoteR root (.withFiber action) p = denoteAction root p := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]
+  | succ f => budget hf
 
 theorem denoteR_gen (root : NativeEff) (body : Stmts NativeOp) (p : Point) (h : p.fuel ≠ 0) :
     denoteR root (.gen body) p = suspendR p (.vis (.inr (.gen p)) Effects.Program.pure) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]
+  | succ f => budget hf
 
 theorem denoteR_whileLoop (root : NativeEff) (initial test step : Term) (body : NativeEff)
     (p : Point) (h : p.fuel ≠ 0) :
@@ -743,7 +883,302 @@ theorem denoteR_whileLoop (root : NativeEff) (initial test step : Term) (body : 
         | none => .pure badShapeExit) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]
+  | succ f => budget hf
+
+/-! ## The denotation, one arm at a time, at positive fuel
+
+Every arm of `denoteRWith` as an equation of `denoteR` at the point's own fuel, the child
+calls spelled with `denoteR` at the child points; nothing downstream unfolds the block. -/
+
+section denoteEqs
+
+variable (root : NativeEff) {p : Point}
+
+theorem denoteR_succeed (t : Term) (h : p.fuel ≠ 0) :
+    denoteR root (.succeed t) p =
+      .pure (match evalTerm p.env t with | some v => .success v | none => badShapeExit) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf; try rfl
+
+theorem denoteR_fail (t : Term) (h : p.fuel ≠ 0) :
+    denoteR root (.fail t) p =
+      .pure (match evalTerm p.env t with
+        | some v => .failure (Cause.fail (errOf v)) | none => badShapeExit) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf; try rfl
+
+theorem denoteR_failCause (c : CauseTerm) (h : p.fuel ≠ 0) :
+    denoteR root (.failCause c) p =
+      .pure (match causeOf p.env c with | some cause => .failure cause | none => badShapeExit) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf; try rfl
+
+theorem denoteR_yieldError (t : Term) (h : p.fuel ≠ 0) :
+    denoteR root (.yieldError t) p =
+      (match evalTerm p.env t with
+       | some v => suspendR p (.pure (.failure (Cause.fail (errOf v))))
+       | none => .pure badShapeExit) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf; try rfl
+
+theorem denoteR_sync (t : Term) (h : p.fuel ≠ 0) :
+    denoteR root (.sync t) p =
+      .vis (.inr (.sync ((evalTerm p.env t).getD Val.unit))) fun v => .pure (.success v) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf; try rfl
+
+theorem denoteR_perform (op : NativeOp) (r : Term) (h : p.fuel ≠ 0) :
+    denoteR root (.perform op r) p =
+      (match (NativeOp.row op).kind with
+       | .sync =>
+         match (evalTerm p.env r).bind (NativeOp.syncOpOf op) with
+         | some operation => .vis (.inl operation) fun v => .pure (.success v)
+         | none => .pure badShapeExit
+       | .async => denoteAsync r p
+       | .program => pending .unsupported p) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf; try rfl
+
+theorem denoteR_catchCause (b hd : NativeEff) (h : p.fuel ≠ 0) :
+    denoteR root (.catchCause b hd) p =
+      (guardR .onFailure (denoteR root b (p.child 0))).bind fun
+        | .success v => .pure (.success v)
+        | .failure c => constructR fun completed =>
+            denoteR root hd ({ p with completed }.childWith 1 (.exitErr c)) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf; try rfl
+
+theorem denoteR_matchCause (b v c : NativeEff) (h : p.fuel ≠ 0) :
+    denoteR root (.matchCause b v c) p =
+      (guardR .all (denoteR root b (p.child 0))).bind fun
+        | .success x => constructR fun completed =>
+            denoteR root v ({ p with completed }.childWith 1 x)
+        | .failure cause => constructR fun completed =>
+            denoteR root c ({ p with completed }.childWith 2 (.exitErr cause)) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf; try rfl
+
+theorem denoteR_onExit (b f : NativeEff) (h : p.fuel ≠ 0) :
+    denoteR root (.onExit b f) p =
+      onExitR (denoteR root b (p.child 0)) fun ex =>
+        constructR fun completed => denoteR root f ({ p with completed }.childWith 1 (reifyExitVal ex)) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf; try rfl
+
+theorem denoteR_yieldNow (priority : Nat) (h : p.fuel ≠ 0) :
+    denoteR root (.yieldNow priority) p =
+      .vis (.inr (.yieldNow priority)) fun v => .pure (.success v) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf; try rfl
+
+theorem denoteR_callback (op : NativeOp) (r : Term) (h : p.fuel ≠ 0) :
+    denoteR root (.callback op r) p =
+      (match op with
+       | .sleep => denoteSleep r p
+       | _ => match (NativeOp.row op).kind with
+         | .async => denoteAsync r p
+         | _ => .pure badShapeExit) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => cases op <;> (budget hf; try rfl)
+
+theorem denoteR_awaitFiber (t : Term) (mode : Supervision.ObserverMode) (h : p.fuel ≠ 0) :
+    denoteR root (.awaitFiber t mode) p =
+      (match evalTerm p.env t with
+       | some (Val.fiber ⟨id⟩) =>
+         match p.awaitExit ⟨id⟩ mode with
+         | some exit => .pure exit
+         | none => match mode with
+           | .joinEffect => .vis (.inr (.await ⟨id⟩ .joinEffect)) Effects.Program.pure
+           | .awaitValue => .vis (.inr (.await ⟨id⟩ .awaitValue)) fun v => .pure (.success v)
+       | _ => .pure badShapeExit) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf; try rfl
+
+theorem denoteR_uninterruptible (b : NativeEff) (h : p.fuel ≠ 0) :
+    denoteR root (.uninterruptible b) p = denoteAction root p := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf; try rfl
+
+theorem denoteR_interruptible (b : NativeEff) (h : p.fuel ≠ 0) :
+    denoteR root (.interruptible b) p = denoteAction root p := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf; try rfl
+
+theorem denoteR_scoped (b : NativeEff) (h : p.fuel ≠ 0) :
+    denoteR root (.scoped b) p = .vis (.inr (.scoped (p.child 0))) Effects.Program.pure := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf; try rfl
+
+theorem denoteR_acquireRelease (a r : NativeEff) (h : p.fuel ≠ 0) :
+    denoteR root (.acquireRelease a r) p =
+      (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun v =>
+        match Val.context? v with
+        | some ctx => .vis (.inr (.mask false (.acquireIn p ctx))) Effects.Program.pure
+        | none => .pure badShapeExit) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf; try rfl
+
+-- the join's three constructors. The layer's build and the body are the term's own at their
+-- points: `provideLayerR` applies them at the children of the counted point, whose fuel is
+-- the budget the block passes, so the equation holds after unfolding the protocol.
+theorem denoteR_provideLayer (l : LayerTerm NativeOp) (i : Bool) (b : NativeEff) (h : p.fuel ≠ 0) :
+    denoteR root (.provideLayer l i b) p =
+      suspendR p (constructR fun completed =>
+        provideLayerR (fun q m s => denoteLayer root l q m s) (fun q => denoteR root b q)
+          (fun q => inlineYield b q) i { p with completed }) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f =>
+    simp only [denoteR, denoteLayer, hf, Point.child_fuel, Nat.add_sub_cancel, denoteRWith,
+      denoteEffBody, provideLayerR]
+    try rfl
+
+theorem denoteR_service (key : ServiceKey) (h : p.fuel ≠ 0) :
+    denoteR root (.service key) p =
+      (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun v => serviceLookupR key v) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf; try rfl
+
+theorem denoteR_provideService (key : ServiceKey) (value : Term) (b : NativeEff)
+    (h : p.fuel ≠ 0) :
+    denoteR root (.provideService key value b) p =
+      (match evalTerm p.env value with
+       | some v => updateContextR (.provideService key v) (denoteR root b (p.child 0))
+       | none => .pure badShapeExit) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf; try rfl
+
+end denoteEqs
+
+/-! ## The build, one constructor at a time
+
+Every arm of `denoteLayerWith` as an equation of `denoteLayer` at the point's own fuel, the
+child calls spelled with `denoteLayer` (and `denoteR`) at the child points. A reference's two
+arms are the frontier at fuel zero and the hop to the target's term at `Point.redirect`. -/
+
+/-- The layer equations' budget split: with no fuel the build is `denoteLayerZero`, with
+`f + 1` the body at budget `f`; on either side the children's spelling meets the child
+points' fuel (`0 - 1 = 0`, `f + 1 - 1 = f`). -/
+local macro "layerBudget" q:ident : tactic => `(tactic|
+  (cases hf : ($q).fuel with
+   | zero =>
+     simp only [denoteLayer, denoteR, hf, Point.child_fuel, Point.redirect_fuel, Nat.zero_sub,
+       denoteLayerWith, denoteRWith, denoteLayerZero]
+   | succ f =>
+     simp only [denoteLayer, denoteR, hf, Point.child_fuel, Point.redirect_fuel,
+       Nat.add_sub_cancel, denoteLayerWith, denoteRWith, denoteLayerBody]))
+
+section denoteLayerEqs
+
+variable (root : NativeEff)
+
+theorem denoteLayer_succeed (key : ServiceKey) (value : Lit) (q : Point) (m : MemoMapId)
+    (scope : Nat) :
+    denoteLayer root (.succeed key value) q m scope =
+      (match Lit.toVal value with
+       | some v => .pure (.success (Env.encode (Env.Context.empty.addV key v)))
+       | none => .pure badShapeExit) := by
+  layerBudget q
+
+theorem denoteLayer_fresh (inner : LayerTerm NativeOp) (q : Point) (m : MemoMapId) (scope : Nat) :
+    denoteLayer root (.fresh inner) q m scope =
+      (guardR .onSuccess (storeR (.memoFork none))).bind (seqR fun v =>
+        match Val.memoMap? v with
+        | some id => denoteLayer root inner (q.child 0) id scope
+        | none => .pure badShapeExit) := by
+  layerBudget q
+
+theorem denoteLayer_orDie (inner : LayerTerm NativeOp) (q : Point) (m : MemoMapId) (scope : Nat) :
+    denoteLayer root (.orDie inner) q m scope =
+      (guardR .onFailure
+        (if inner.isRef then .pure badShapeExit
+         else denoteLayer root inner (q.child 0) m scope)).bind fun
+        | .success v => .pure (.success v)
+        | .failure c => .pure (.failure (orDieCause c)) := by
+  layerBudget q
+
+theorem denoteLayer_effect (key : ServiceKey) (body : NativeEff) (q : Point) (m : MemoMapId)
+    (scope : Nat) :
+    denoteLayer root (.effect key body) q m scope =
+      fromBuildR scope fun child => memoizeR q m child fun layerScope =>
+        updateContextR (.provideService Env.scopeKey (Val.scopeHandle layerScope))
+          ((guardR .onSuccess (denoteR root body (q.child 0))).bind (seqR fun v =>
+            bindServiceR (some key) v)) := by
+  layerBudget q
+
+theorem denoteLayer_effectDiscard (body : NativeEff) (q : Point) (m : MemoMapId) (scope : Nat) :
+    denoteLayer root (.effectDiscard body) q m scope =
+      fromBuildR scope fun child => memoizeR q m child fun layerScope =>
+        updateContextR (.provideService Env.scopeKey (Val.scopeHandle layerScope))
+          ((guardR .onSuccess (denoteR root body (q.child 0))).bind (seqR fun v =>
+            bindServiceR none v)) := by
+  layerBudget q
+
+theorem denoteLayer_provide (self that : LayerTerm NativeOp) (q : Point) (m : MemoMapId)
+    (scope : Nat) :
+    denoteLayer root (.provide self that) q m scope =
+      fromBuildR scope fun child =>
+        provideWithR (denoteLayer root that (q.child 1) m child)
+          (denoteLayer root self (q.child 0) m child) .provide := by
+  layerBudget q
+
+theorem denoteLayer_provideMerge (self that : LayerTerm NativeOp) (q : Point) (m : MemoMapId)
+    (scope : Nat) :
+    denoteLayer root (.provideMerge self that) q m scope =
+      fromBuildR scope fun child =>
+        provideWithR (denoteLayer root that (q.child 1) m child)
+          (denoteLayer root self (q.child 0) m child) .provideMerge := by
+  layerBudget q
+
+theorem denoteLayer_merge (left right : LayerTerm NativeOp) (q : Point) (m : MemoMapId)
+    (scope : Nat) :
+    denoteLayer root (.merge left right) q m scope =
+      fromBuildR scope fun child => mergeTwoR q m child := by
+  layerBudget q
+
+theorem denoteLayer_mergeAll (layers : LayerTerms NativeOp) (q : Point) (m : MemoMapId)
+    (scope : Nat) :
+    denoteLayer root (.mergeAll layers) q m scope =
+      fromBuildR scope fun child => mergeAllR q m child layers.length := by
+  layerBudget q
+
+/-- A reference with no fuel for its hop: the live frontier at the reference's own point. -/
+theorem denoteLayer_ref_zero (target : List Nat) (q : Point) (m : MemoMapId) (scope : Nat)
+    (hf : q.fuel = 0) :
+    denoteLayer root (.ref target) q m scope = pending .compileFuel q := by
+  simp only [denoteLayer, hf, denoteLayerWith, denoteLayerZero]
+
+/-- A reference with fuel hops to its target's term at the target's path, one fuel down; a
+target that is a reference itself, or no layer, is the wrong shape. -/
+theorem denoteLayer_ref_succ (target : List Nat) (q : Point) (m : MemoMapId) (scope : Nat)
+    {k : Nat} (hf : q.fuel = k + 1) :
+    denoteLayer root (.ref target) q m scope =
+      (match Node.at_ (Node.eff root) target with
+       | some (Node.layer (.ref _)) => .pure badShapeExit
+       | some (Node.layer l) => denoteLayer root l (q.redirect target) m scope
+       | _ => .pure badShapeExit) := by
+  simp only [denoteLayer, hf, Point.redirect_fuel, Nat.add_sub_cancel, denoteLayerWith,
+    denoteLayerBody]; try rfl
+
+end denoteLayerEqs
 
 /-- Only the two immediate exit constructors; all other heads require a machine step. -/
 def headExit : NCode → Option ExitV
@@ -929,39 +1364,42 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
   | .succeed t, p, _, hp => by
     cases hf : p.fuel with
     | zero => exact (fuel_ne_zero_of_depth hp hf).elim
-    | succ f => rw [denoteR, hf, denote]; rfl
+    | succ f => simp only [denoteR, hf, denoteRWith, denoteEffBody]; rw [denote]; rfl
   | .fail t, p, _, hp => by
     cases hf : p.fuel with
     | zero => exact (fuel_ne_zero_of_depth hp hf).elim
-    | succ f => rw [denoteR, hf, denote]; rfl
+    | succ f => simp only [denoteR, hf, denoteRWith, denoteEffBody]; rw [denote]; rfl
   | .failCause t, p, _, hp => by
     cases hf : p.fuel with
     | zero => exact (fuel_ne_zero_of_depth hp hf).elim
-    | succ f => rw [denoteR, hf, denote]; rfl
+    | succ f => simp only [denoteR, hf, denoteRWith, denoteEffBody]; rw [denote]; rfl
   | .yieldError t, p, _, hp => by
     cases hf : p.fuel with
     | zero => exact (fuel_ne_zero_of_depth hp hf).elim
     | succ f =>
-      rw [denoteR, hf, denote]
+      simp only [denoteR, hf, denoteRWith, denoteEffBody]
+      rw [denote]
       cases hx : evalTerm p.env t <;> rfl
   | .sync t, p, _, hp => by
     cases hf : p.fuel with
     | zero => exact (fuel_ne_zero_of_depth hp hf).elim
-    | succ f => rw [denoteR, hf, denote]; rfl
+    | succ f => simp only [denoteR, hf, denoteRWith, denoteEffBody]; rw [denote]; rfl
   | .suspend b, p, hs, hp => by
     cases hf : p.fuel with
     | zero => exact (fuel_ne_zero_of_depth hp hf).elim
     | succ f =>
-      simp only [denoteR, hf]
-      rw [eraseControl_suspendR, eraseControl_constructR, denote]
-      exact denoteR_straight root b ({ p with fuel := f + 1, completed := [] }.child 0) hs
+      have ih := denoteR_straight root b ({ p with fuel := f + 1, completed := [] }.child 0) hs
         (by simp only [Agreement.depth] at hp; simp only [Point.child]; omega)
+      simp only [denoteR, Point.child_fuel, Nat.add_sub_cancel] at ih
+      simp only [denoteR, hf, denoteRWith, denoteEffBody]
+      rw [eraseControl_suspendR, eraseControl_constructR, denote]
+      exact ih
   | .perform op request, p, hs, hp => by
     cases hf : p.fuel with
     | zero => exact (fuel_ne_zero_of_depth hp hf).elim
     | succ f =>
       have hk := Straight.perform_sync hs
-      simp only [denoteR, hf, denote, hk]
+      simp only [denoteR, hf, denoteRWith, denoteEffBody, denote, hk]
       cases (evalTerm p.env request).bind (NativeOp.syncOpOf op) <;> rfl
   | .bind a b, p, hs, hp => by
     have hpos : p.fuel ≠ 0 := by have := Agreement.depth_pos (.bind a b); omega
@@ -1017,15 +1455,19 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
       have hbh := Straight.catchCause hs
       have hb := denoteR_straight root b (p.child 0) hbh.1
         (by simp only [Agreement.depth] at hp; simp only [Point.child]; omega)
-      rw [denoteR, hf, eraseControl_bind, eraseControl_guardR,
-        hb, denote, Effects.Program.inl_bind]
+      simp only [denoteR, Point.child_fuel, hf, Nat.add_sub_cancel] at hb
+      simp only [denoteR, hf, denoteRWith, denoteEffBody]
+      rw [eraseControl_bind, eraseControl_guardR, hb, denote, Effects.Program.inl_bind]
       congr 1
       funext ex
       cases ex with
       | success v => rfl
       | failure c =>
-        exact denoteR_straight root h ({ p with fuel := f + 1, completed := [] }.childWith 1 (.exitErr c)) hbh.2
+        have ih := denoteR_straight root h
+          ({ p with fuel := f + 1, completed := [] }.childWith 1 (.exitErr c)) hbh.2
           (by simp only [Agreement.depth] at hp; simp only [Point.childWith]; omega)
+        simp only [denoteR, Point.childWith_fuel, Nat.add_sub_cancel] at ih
+        exact ih
   | .matchCause b v c, p, hs, hp => by
     cases hf : p.fuel with
     | zero => exact (fuel_ne_zero_of_depth hp hf).elim
@@ -1033,17 +1475,24 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
       have hparts := Straight.matchCause hs
       have hb := denoteR_straight root b (p.child 0) hparts.1
         (by simp only [Agreement.depth] at hp; simp only [Point.child]; omega)
-      rw [denoteR, hf, eraseControl_bind, eraseControl_guardR,
-        hb, denote, Effects.Program.inl_bind]
+      simp only [denoteR, Point.child_fuel, hf, Nat.add_sub_cancel] at hb
+      simp only [denoteR, hf, denoteRWith, denoteEffBody]
+      rw [eraseControl_bind, eraseControl_guardR, hb, denote, Effects.Program.inl_bind]
       congr 1
       funext ex
       cases ex with
       | success value =>
-        exact denoteR_straight root v ({ p with fuel := f + 1, completed := [] }.childWith 1 value) hparts.2.1
+        have ih := denoteR_straight root v
+          ({ p with fuel := f + 1, completed := [] }.childWith 1 value) hparts.2.1
           (by simp only [Agreement.depth] at hp; simp only [Point.childWith]; omega)
+        simp only [denoteR, Point.childWith_fuel, Nat.add_sub_cancel] at ih
+        exact ih
       | failure cause =>
-        exact denoteR_straight root c ({ p with fuel := f + 1, completed := [] }.childWith 2 (.exitErr cause)) hparts.2.2
+        have ih := denoteR_straight root c
+          ({ p with fuel := f + 1, completed := [] }.childWith 2 (.exitErr cause)) hparts.2.2
           (by simp only [Agreement.depth] at hp; simp only [Point.childWith]; omega)
+        simp only [denoteR, Point.childWith_fuel, Nat.add_sub_cancel] at ih
+        exact ih
   | .onExit b fin, p, hs, hp => by
     cases hf : p.fuel with
     | zero => exact (fuel_ne_zero_of_depth hp hf).elim
@@ -1051,12 +1500,15 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
       have hparts := Straight.onExit hs
       have hb := denoteR_straight root b (p.child 0) hparts.1
         (by simp only [Agreement.depth] at hp; simp only [Point.child]; omega)
-      rw [denoteR, hf, eraseControl_onExitR, hb, denote, Effects.Program.inl_bind]
+      simp only [denoteR, Point.child_fuel, hf, Nat.add_sub_cancel] at hb
+      simp only [denoteR, hf, denoteRWith, denoteEffBody]
+      rw [eraseControl_onExitR, hb, denote, Effects.Program.inl_bind]
       congr 1
       funext ex
-      have hfin := denoteR_straight root fin ({ p with completed := [] }.childWith 1 (reifyExitVal ex)) hparts.2
+      have hfin := denoteR_straight root fin
+        ({ p with completed := [] }.childWith 1 (reifyExitVal ex)) hparts.2
         (by simp only [Agreement.depth] at hp; simp only [Point.childWith]; omega)
-      simp only [hf] at hfin
+      simp only [denoteR, Point.childWith_fuel, Point.completed_fuel, hf, Nat.add_sub_cancel] at hfin
       rw [eraseControl_constructR, hfin, Effects.Program.inl_bind]
       rfl
   | .gen _, _, hs, _ | .uninterruptible _, _, hs, _ | .interruptible _, _, hs, _

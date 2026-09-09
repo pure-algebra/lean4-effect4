@@ -127,6 +127,11 @@ def EffName.keys : EffName → List Handle
     Handle.scope parent :: Handle.memoMap m.index :: forked.map Handle.fiber ++ q.keys
   | .mergeForkNext q _ m parent forked =>
     Handle.scope parent :: Handle.memoMap m.index :: forked.map Handle.fiber ++ q.keys
+  | .mergeAllChildren q m => Handle.memoMap m.index :: q.keys
+  | .mergeAllForkOne q _ m parent forked =>
+    Handle.scope parent :: Handle.memoMap m.index :: forked.map Handle.fiber ++ q.keys
+  | .mergeAllForkNext q _ m parent forked =>
+    Handle.scope parent :: Handle.memoMap m.index :: forked.map Handle.fiber ++ q.keys
   | .mergeContexts => []
   | .serviceLookup _ => []
   | .bindService _ => []
@@ -168,6 +173,26 @@ macro_rules
       List.map_nil])
 
 theorem Point.child_keys (p : Point) (i : Nat) : (p.child i).keys = p.keys := rfl
+
+/-- Walking a spine keeps the handles: only the path and the fuel move (`Point.child`). -/
+theorem Point.spine_keys (q : Point) :
+    ∀ n, ((List.range n).foldl (fun acc _ => acc.child 1) q).keys = q.keys
+  | 0 => rfl
+  | n + 1 => by
+    rw [List.range_succ, List.foldl_append, List.foldl_cons, List.foldl_nil, Point.child_keys]
+    exact Point.spine_keys q n
+
+/-- The point of a `mergeAll`'s `i`-th layer carries the merge point's handles. -/
+theorem Point.spineChild_keys (q : Point) (i : Nat) : (q.spineChild i).keys = q.keys := by
+  unfold Point.spineChild
+  rw [Point.child_keys, Point.spine_keys, Point.child_keys]
+
+/-- Forking the build of a `mergeAll`'s `i`-th layer carries the handles the merge point's
+build would: the spine moves only the path and the fuel. -/
+theorem forkLayer_keys_spine (q : Point) (i : Nat) (m : MemoMapId) (child : Nat) (n : EffName) :
+    nativeKeys (Prim.onSuccess (Prim.withFiber (EffThunk.forkLayer (q.spineChild i) m child)) n) =
+      nativeKeys (Prim.onSuccess (Prim.withFiber (EffThunk.forkLayer q m child)) n) := by
+  simp only [nativeKeys, primKeys, EffThunk.keys, Point.spineChild_keys]
 
 theorem Point.childWith_keys (p : Point) (i : Nat) (v : Val) : (p.childWith i v).keys = p.keys ++ v.keys := by
   simp only [Point.keys, Point.childWith, List.flatMap_append, List.flatMap_cons, List.flatMap_nil,
@@ -728,14 +753,33 @@ theorem compileLayer_keys : ∀ (l : LayerTerm NativeOp) (q : Point) (m : MemoMa
     simp only [compileLayer]
     sub_tac using (compileLayer_keys inner (q.child 0) m scope)
   | .effect _ _, q, m, scope | .effectDiscard _, q, m, scope | .provide _ _, q, m, scope
-  | .provideMerge _ _, q, m, scope | .merge _ _, q, m, scope => by
+  | .provideMerge _ _, q, m, scope | .merge _ _, q, m, scope | .mergeAll _, q, m, scope => by
     simp only [compileLayer]; sub_tac
+  | .ref _, _, _, _ => by simp only [compileLayer]; exact List.nil_subset _
+
+/-- A hop keeps the point's handles: only the path and the fuel move. -/
+theorem Point.redirect_keys (q : Point) (target : List Nat) : (q.redirect target).keys = q.keys := rfl
+
+theorem resolveLayerTerm_keys (root : NativeEff) (l : LayerTerm NativeOp) (q : Point)
+    (m : MemoMapId) (scope : Nat) :
+    nativeKeys (resolveLayer.resolveLayerTerm root l q m scope) ⊆
+      Handle.scope scope :: Handle.memoMap m.index :: q.keys := by
+  cases l with
+  | ref target =>
+    simp only [resolveLayer.resolveLayerTerm]
+    split
+    · exact frontier_keys q |>.trans (List.subset_cons_of_subset _ (List.subset_cons_of_subset _ (List.Subset.refl _)))
+    · split
+      · exact List.nil_subset _
+      · rw [← Point.redirect_keys q target]; exact compileLayer_keys _ _ _ _
+      · exact List.nil_subset _
+  | _ => exact compileLayer_keys _ _ _ _
 
 theorem resolveLayer_keys (root : NativeEff) (q : Point) (m : MemoMapId) (scope : Nat) :
     nativeKeys (resolveLayer root q m scope) ⊆ Handle.scope scope :: Handle.memoMap m.index :: q.keys := by
   unfold resolveLayer
   split
-  · exact compileLayer_keys _ _ _ _
+  · exact resolveLayerTerm_keys _ _ _ _ _
   · exact List.nil_subset _
 
 theorem innerLayerAt_keys (root : NativeEff) (q : Point) (m : MemoMapId) (child : Nat) :
@@ -1351,6 +1395,30 @@ theorem contAOf_native_keys (root : NativeEff) (n : EffName) (v : Val) :
     | none =>
       rw [contAOf_mergeForkNext_other root q i m parent forked v (Val.fiber?_none hf)]
       exact List.nil_subset _
+  case mergeAllChildren q m =>
+    cases hs : Val.scope? v with
+    | some parent =>
+      rw [Val.scope?_exact hs, contAOf_mergeAllChildren_scope]
+      split <;> sub_tac
+    | none =>
+      rw [contAOf_mergeAllChildren_other root q m v (Val.scope?_none hs)]
+      exact List.nil_subset _
+  case mergeAllForkOne q i m parent forked =>
+    cases hs : Val.scope? v with
+    | some child =>
+      rw [Val.scope?_exact hs, contAOf_mergeAllForkOne_scope, forkLayer_keys_spine]
+      sub_tac
+    | none =>
+      rw [contAOf_mergeAllForkOne_other root q i m parent forked v (Val.scope?_none hs)]
+      exact List.nil_subset _
+  case mergeAllForkNext q i m parent forked =>
+    cases hf : Val.fiber? v with
+    | some id =>
+      rw [Val.fiber?_exact hf, contAOf_mergeAllForkNext_fiber]
+      split <;> sub_tac
+    | none =>
+      rw [contAOf_mergeAllForkNext_other root q i m parent forked v (Val.fiber?_none hf)]
+      exact List.nil_subset _
   case mergeContexts =>
     rw [contAOf_mergeContexts]
     exact List.Subset.trans (mergeContextsK_keys v) (by sub_tac)
@@ -1450,7 +1518,8 @@ theorem contEOf_native_keys (root : NativeEff) (n : EffName) (cause : CauseV) :
   | fromBuildThen q m | memoize q m scope | awaitPromise cell | buildIntoLayerScope q m scope
   | thenBuildInto q m layerScope | freshThen q scope | provideThen q m scope mode
   | combineWith mode that | mergeChildren q m | mergeForkOne q i m parent forked
-  | mergeForkNext q i m parent forked | mergeContexts | serviceLookup key | bindService key =>
+  | mergeForkNext q i m parent forked | mergeAllChildren q m | mergeAllForkOne q i m parent forked
+  | mergeAllForkNext q i m parent forked | mergeContexts | serviceLookup key | bindService key =>
     simp only [Program.contEOf]; exact List.nil_subset _
 
 theorem cancelProgramOf_keys (n : EffName) : nativeKeys (cancelProgramOf n) ⊆ n.keys := by
@@ -1564,7 +1633,8 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     | fromBuildThen q mm | memoize q mm scope' | awaitPromise cell' | buildIntoLayerScope q mm scope'
     | thenBuildInto q mm layerScope | freshThen q scope' | provideThen q mm scope' mode
     | combineWith mode that | mergeChildren q mm | mergeForkOne q i mm parent forked
-    | mergeForkNext q i mm parent forked | mergeContexts | serviceLookup key | bindService key
+    | mergeForkNext q i mm parent forked | mergeAllChildren q mm | mergeAllForkOne q i mm parent forked
+    | mergeAllForkNext q i mm parent forked | mergeContexts | serviceLookup key | bindService key
     | orDie =>
       simp only [interpOf, IterStep.done.injEq] at h
       subst h
@@ -1592,7 +1662,8 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     | fromBuildThen q mm | memoize q mm scope' | awaitPromise cell' | buildIntoLayerScope q mm scope'
     | thenBuildInto q mm layerScope | freshThen q scope' | provideThen q mm scope' mode
     | combineWith mode that | mergeChildren q mm | mergeForkOne q i mm parent forked
-    | mergeForkNext q i mm parent forked | mergeContexts | serviceLookup key | bindService key
+    | mergeForkNext q i mm parent forked | mergeAllChildren q mm | mergeAllForkOne q i mm parent forked
+    | mergeAllForkNext q i mm parent forked | mergeContexts | serviceLookup key | bindService key
     | orDie =>
       simp only [interpOf] at h; cases h
   loopBody n c := by
@@ -1608,7 +1679,8 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     | fromBuildThen q mm | memoize q mm scope' | awaitPromise cell' | buildIntoLayerScope q mm scope'
     | thenBuildInto q mm layerScope | freshThen q scope' | provideThen q mm scope' mode
     | combineWith mode that | mergeChildren q mm | mergeForkOne q i mm parent forked
-    | mergeForkNext q i mm parent forked | mergeContexts | serviceLookup key | bindService key
+    | mergeForkNext q i mm parent forked | mergeAllChildren q mm | mergeAllForkOne q i mm parent forked
+    | mergeAllForkNext q i mm parent forked | mergeContexts | serviceLookup key | bindService key
     | orDie =>
       simp only [interpOf]; sub_tac
   loopStep n c v := by
@@ -1634,7 +1706,8 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     | fromBuildThen q mm | memoize q mm scope' | awaitPromise cell' | buildIntoLayerScope q mm scope'
     | thenBuildInto q mm layerScope | freshThen q scope' | provideThen q mm scope' mode
     | combineWith mode that | mergeChildren q mm | mergeForkOne q i mm parent forked
-    | mergeForkNext q i mm parent forked | mergeContexts | serviceLookup key | bindService key
+    | mergeForkNext q i mm parent forked | mergeAllChildren q mm | mergeAllForkOne q i mm parent forked
+    | mergeAllForkNext q i mm parent forked | mergeContexts | serviceLookup key | bindService key
     | orDie =>
       simp only [interpOf]; sub_tac
   loopDone n := by simp only [interpOf]; exact List.nil_subset _
@@ -1762,7 +1835,8 @@ theorem interpOf_keyBounded (root : NativeEff) : KeyBounded EffName.keys EffThun
     | fromBuildThen q mm | memoize q mm scope' | awaitPromise cell' | buildIntoLayerScope q mm scope'
     | thenBuildInto q mm layerScope | freshThen q scope' | provideThen q mm scope' mode
     | combineWith mode that | mergeChildren q mm | mergeForkOne q i mm parent forked
-    | mergeForkNext q i mm parent forked | mergeContexts | serviceLookup key | bindService key
+    | mergeForkNext q i mm parent forked | mergeAllChildren q mm | mergeAllForkOne q i mm parent forked
+    | mergeAllForkNext q i mm parent forked | mergeContexts | serviceLookup key | bindService key
     | orDie =>
       simp only [interpOf]
       exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩

@@ -77,6 +77,9 @@ inductive Head
   | contextService | provide | service | provideService
   | layerSucceed | layerEffect | layerEffectDiscard | layerProvide | layerProvideMerge
   | layerMerge | layerFresh | layerOrDie
+  -- the host rows slice (2026-09-08): the n-ary merge; a layer reference is an identifier,
+  -- not a head
+  | layerMergeAll
 deriving DecidableEq, Repr
 
 /-- The spelling of each head, exactly as `print` emits it. -/
@@ -131,6 +134,7 @@ def Head.spelling : Head → String
   | .layerMerge => "Layer.merge"
   | .layerFresh => "Layer.fresh"
   | .layerOrDie => "Layer.orDie"
+  | .layerMergeAll => "Layer.mergeAll"
 
 /-- Every head, once. -/
 def heads : List Head :=
@@ -142,7 +146,7 @@ def heads : List Head :=
   , .causeCombine, .undefined, .withFiber
   , .contextService, .provide, .service, .provideService
   , .layerSucceed, .layerEffect, .layerEffectDiscard, .layerProvide, .layerProvideMerge
-  , .layerMerge, .layerFresh, .layerOrDie ]
+  , .layerMerge, .layerFresh, .layerOrDie, .layerMergeAll ]
 
 /-- Every spelling the printer reserves: a row's spelling and a term's atom must avoid
 these. -/
@@ -610,10 +614,19 @@ mutual
       .ok (.cons e es)
   termination_by structural items
 
-  /-- The eight printed layer forms. Layer effect bodies have an empty environment. -/
+  /-- The ten printed layer forms. Layer effect bodies have an empty environment. A bare
+  identifier in layer position is a reference to the path its name carries
+  (`LayerTerm.readRefName`, `Refs.lean`), admitted only when the name is exactly that path's
+  spelling, so what is read is what `printLayer` prints. -/
   def readLayer (sig : Signature Op) (spell : String → List String → Option Op)
       (x : Expr) : Except ReadRefusal (LayerTerm Op) :=
     match x with
+    | .ident s =>
+      match LayerTerm.readRefName s with
+      | some target =>
+        if LayerTerm.refName target = s then .ok (.ref target) else .error (.shape "layer")
+      | none => .error (.shape "layer")
+    | .call (.ident "Layer.mergeAll") items => (readLayers sig spell items).map .mergeAll
     | .call (.ident "Layer.succeed") [key, value] => do
       let k ← readKey sig key
       let v ← readLiteral value
@@ -640,7 +653,43 @@ mutual
     | .call (.ident "Layer.orDie") [inner] => (readLayer sig spell inner).map .orDie
     | _ => .error (.shape "layer")
   termination_by structural x
+
+  /-- The layers of a `mergeAll`. -/
+  def readLayers (sig : Signature Op) (spell : String → List String → Option Op)
+      (items : List Expr) : Except ReadRefusal (LayerTerms Op) :=
+    match items with
+    | [] => .ok .nil
+    | x :: rest => do
+      let l ← readLayer sig spell x
+      let ls ← readLayers sig spell rest
+      .ok (.cons l ls)
+  termination_by structural items
 end
+
+/-- A declaration block back to the program (the host rows slice): every
+`const L_<path> = <layer>` read as a layer at the path its name carries and put back at that
+path (`Refs.lean` `restoreAll`, ancestors first), the last declaration the main program.
+The inverse of `printModule` on the blocks it prints; `shape "module"` on every other. -/
+def readModule (sig : Signature Op) (spell : String → List String → Option Op)
+    (decls : List TypeScript.Decl) : Except ReadRefusal (Eff Op) :=
+  match decls.getLast?, decls.dropLast with
+  | some (.const main), layerDecls => do
+    let e ← readEff sig spell 0 main.value
+    let ds ← layerDecls.mapM fun d =>
+      match d with
+      | .const c =>
+        match LayerTerm.readRefName c.name with
+        | some t =>
+          if LayerTerm.refName t = c.name then do
+            let l ← readLayer sig spell c.value
+            .ok (t, l)
+          else .error (.shape "module")
+        | none => .error (.shape "module")
+      | _ => .error (.shape "module")
+    match e.restoreAll ds with
+    | some e' => .ok e'
+    | none => .error (.shape "module")
+  | _, _ => .error (.shape "module")
 
 /-- The reader after the printer: the executed shadow of `read_print`. The printer's refusal
 alphabet is not the reader's, so a printer refusal is reported as the `shape` named `printer`. -/
@@ -756,7 +805,10 @@ mutual
     | .service _ => true
     | .provideService _ value body => value.scoped n && readable sig spell n body
 
-  /-- The layer's closed effects must retain their printed form. -/
+  /-- The layer's closed effects must retain their printed form. A reference is readable
+  exactly when its identifier decodes back to its path (`LayerTerm.readRefName` after
+  `refName`), which is the executed fact the reader's identifier arm relies on; the `const`
+  that binds the identifier is a declaration block's (`printModule`/`readModule`). -/
   def readableLayer (sig : Signature Op) (spell : String → List String → Option Op) :
       LayerTerm Op → Bool
     | .succeed _ _ => true
@@ -764,6 +816,15 @@ mutual
     | .provide self that | .provideMerge self that | .merge self that =>
       readableLayer sig spell self && readableLayer sig spell that
     | .fresh inner | .orDie inner => readableLayer sig spell inner
+    | .ref target =>
+      decide (LayerTerm.readRefName (LayerTerm.refName target) = some target)
+    | .mergeAll layers => readableLayers sig spell layers
+
+  /-- Every layer of a `mergeAll`. -/
+  def readableLayers (sig : Signature Op) (spell : String → List String → Option Op) :
+      LayerTerms Op → Bool
+    | .nil => true
+    | .cons head tail => readableLayer sig spell head && readableLayers sig spell tail
 
 
   def readableStmts (sig : Signature Op) (spell : String → List String → Option Op)
@@ -1713,7 +1774,32 @@ theorem read_print_layer {sig : Signature Op} {spell : String → List String �
     obtain ⟨i, hi, hx⟩ := hp
     simp only [Except.ok.injEq] at hx; subst hx
     simp [readLayer, read_print_layer hl inner hr hi]
+  | .ref target, hr, hp => by
+    simp only [readableLayer, decide_eq_true_eq] at hr
+    simp only [printLayer, Except.ok.injEq] at hp; subst hp
+    simp [readLayer, hr]
+  | .mergeAll layers, hr, hp => by
+    simp only [readableLayer] at hr
+    simp only [printLayer, bind_eq_ok] at hp
+    obtain ⟨items, hitems, hx⟩ := hp
+    simp only [Except.ok.injEq] at hx; subst hx
+    simp [readLayer, read_print_layers hl layers hr hitems]
 termination_by structural layer
+
+theorem read_print_layers {sig : Signature Op} {spell : String → List String → Option Op}
+    (hl : LawfulSpelling sig spell) (layers : LayerTerms Op)
+    (hr : readableLayers sig spell layers = true) {items : List Expr}
+    (hp : printLayers sig layers = .ok items) : readLayers sig spell items = .ok layers :=
+  match layers, hr, hp with
+  | .nil, _, hp => by
+    simp only [printLayers, Except.ok.injEq] at hp; subst hp; rfl
+  | .cons head tail, hr, hp => by
+    simp only [readableLayers, Bool.and_eq_true] at hr
+    simp only [printLayers, bind_eq_ok] at hp
+    obtain ⟨h, hh, t, ht, hx⟩ := hp
+    simp only [Except.ok.injEq] at hx; subst hx
+    simp [readLayers, read_print_layer hl head hr.1 hh, read_print_layers hl tail hr.2 ht]
+termination_by structural layers
 
 theorem read_print_stmts {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} (ss : Stmts Op)
@@ -1927,7 +2013,7 @@ local macro "close_arm" h:ident : tactic => `(tactic| first
   | cases $h:ident
   | (split at $h:ident <;> first | (exfalso; subst_vars; solve_by_elim [rfl]) | cases $h:ident))
 
-/-- The exactness of the reader, over the five mutual readers at once, by the functional
+/-- The exactness of the reader, over the six mutual readers at once, by the functional
 induction principle Lean generates for `readEff`: one case per arm of the reader. -/
 theorem read_exact_all {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) (n : Nat) (x : Expr) :
@@ -1938,9 +2024,11 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
       print sig n e = .ok (.call (.ident h.spelling) args))
     (motive_3 := fun x => ∀ layer, readLayer sig spell x = .ok layer →
       printLayer sig layer = .ok x)
-    (motive_4 := fun n items => ∀ es, readEffs sig spell n items = .ok es →
+    (motive_4 := fun items => ∀ ls, readLayers sig spell items = .ok ls →
+      printLayers sig ls = .ok items)
+    (motive_5 := fun n items => ∀ es, readEffs sig spell n items = .ok es →
       printEffs sig n es = .ok items)
-    (motive_5 := fun n stmts => ∀ ss, readStmts sig spell n stmts = .ok ss →
+    (motive_6 := fun n stmts => ∀ ss, readStmts sig spell n stmts = .ok ss →
       printStmts sig n ss = .ok stmts)
   -- readEff
   case case1 =>
@@ -2105,39 +2193,39 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
     unfold readEff at h
     split at h <;> close_arm h
   -- readHead
-  case case25 =>
+  case case29 =>
     intro n v e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨t, ht, rfl⟩ := h
     simp [print, readTerm_exact v ht, Head.spelling]
-  case case26 =>
+  case case30 =>
     intro n v e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨t, ht, rfl⟩ := h
     simp [print, readTerm_exact v ht, Head.spelling]
-  case case27 =>
+  case case31 =>
     intro n c e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨t, ht, rfl⟩ := h
     simp [print, readCause_exact c ht, Head.spelling]
-  case case28 =>
+  case case32 =>
     intro n t e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨t', ht, rfl⟩ := h
     simp [print, readTerm_exact t ht, Head.spelling]
-  case case29 =>
+  case case33 =>
     intro n t a b iha ihb e h
     unfold readHead at h; simp only [bind_eq_ok] at h
     obtain ⟨test, htest, x, hx, y, hy, he⟩ := h
     cases he
     simp [print, iha x hx, ihb y hy, readTerm_exact t htest, Head.spelling]
-  case case30 =>
+  case case34 =>
     intro n body hnc ih e h
     unfold readHead at h
     cases body <;> first
       | exact (hnc _ _ _ rfl).elim
       | (simp only [map_eq_ok] at h; obtain ⟨b', hb', rfl⟩ := h; simp [print, ih _ hb', Head.spelling])
-  case case31 =>
+  case case35 =>
     intro n cursor initial loop fw test fb body fs answer cursor' step hc ih e h
     obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩ := hc
     unfold readHead at h
@@ -2146,35 +2234,35 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
     cases he
     simp [print, ih b hb, readTerm_exact initial hi, readTerm_exact test ht, readTerm_exact step hs,
       Head.spelling]
-  case case32 =>
+  case case36 =>
     intro n cursor initial loop fw test fb body fs answer cursor' step hc e h
     unfold readHead at h; simp [hc] at h
-  case case33 =>
+  case case37 =>
     intro n first rest ih1 ih2 e h
     unfold readHead at h
     simp only [if_true, bind_eq_ok] at h
     obtain ⟨f, hf, r, hr, he⟩ := h
     cases he
     simp [print, ih1 f hf, ih2 r hr, Head.spelling]
-  case case34 =>
+  case case38 =>
     intro n first x rest hx e h
     unfold readHead at h; simp [hx] at h
-  case case35 =>
+  case case39 =>
     intro n body ih e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨ss, hss, rfl⟩ := h
     simp [print, ih ss hss, Head.spelling]
-  case case36 =>
+  case case40 =>
     intro n body handler ih1 ih2 e h
     unfold readHead at h
     simp only [if_true, bind_eq_ok] at h
     obtain ⟨b, hb, hd, hhd, he⟩ := h
     cases he
     simp [print, ih1 b hb, ih2 hd hhd, Head.spelling]
-  case case37 =>
+  case case41 =>
     intro n body x handler hx e h
     unfold readHead at h; simp [hx] at h
-  case case38 =>
+  case case42 =>
     intro n body ff x onCause fs y onValue hc ih1 ih2 ih3 e h
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hc
     unfold readHead at h
@@ -2182,125 +2270,125 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
     obtain ⟨b, hb, v, hv, c, hc, he⟩ := h
     cases he
     simp [print, ih1 b hb, ih2 v hv, ih3 c hc, Head.spelling]
-  case case39 =>
+  case case43 =>
     intro n body ff x onCause fs y onValue hc e h
     unfold readHead at h; simp [hc] at h
-  case case40 =>
+  case case44 =>
     intro n body finalizer ih1 ih2 e h
     unfold readHead at h
     simp only [if_true, bind_eq_ok] at h
     obtain ⟨b, hb, f, hf, he⟩ := h
     cases he
     simp [print, ih1 b hb, ih2 f hf, Head.spelling]
-  case case41 =>
+  case case45 =>
     intro n body x finalizer hx e h
     unfold readHead at h; simp [hx] at h
-  case case42 =>
+  case case46 =>
     intro n body ih e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨b, hb, rfl⟩ := h
     simp [print, ih b hb, Head.spelling]
-  case case43 =>
+  case case47 =>
     intro n body ih e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨b, hb, rfl⟩ := h
     simp [print, ih b hb, Head.spelling]
-  case case44 =>
+  case case48 =>
     intro n body ih e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨b, hb, rfl⟩ := h
     simp [print, ih b hb, Head.spelling]
-  case case45 =>
+  case case49 =>
     intro n k hk e h
     unfold readHead at h; simp only [hk, if_true] at h; cases h
     simp [print, Int.toNat_of_nonneg hk, Head.spelling]
-  case case46 =>
+  case case50 =>
     intro n k hk e h
     unfold readHead at h; simp [hk] at h
-  case case47 =>
-    intro n fiber e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨t, ht, rfl⟩ := h
-    simp [print, readTerm_exact fiber ht, Head.spelling]
-  case case48 =>
-    intro n fiber e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨t, ht, rfl⟩ := h
-    simp [print, readTerm_exact fiber ht, Head.spelling]
-  case case49 =>
-    intro n program options ih e h
-    unfold readHead at h; simp only [bind_eq_ok] at h
-    obtain ⟨p, hp, o, ho, he⟩ := h
-    cases he
-    obtain ⟨hpo, hd⟩ := readForkOptions_exact ho
-    simp [print, printAction, ih p hp, hpo, hd, Head.spelling]
-  case case50 =>
-    intro n program options ih e h
-    unfold readHead at h; simp only [bind_eq_ok] at h
-    obtain ⟨p, hp, o, ho, he⟩ := h
-    cases he
-    obtain ⟨hpo, hd⟩ := readForkOptions_exact ho
-    simp [print, printAction, ih p hp, hpo, hd, Head.spelling]
   case case51 =>
+    intro n fiber e h
+    unfold readHead at h; simp only [map_eq_ok] at h
+    obtain ⟨t, ht, rfl⟩ := h
+    simp [print, readTerm_exact fiber ht, Head.spelling]
+  case case52 =>
+    intro n fiber e h
+    unfold readHead at h; simp only [map_eq_ok] at h
+    obtain ⟨t, ht, rfl⟩ := h
+    simp [print, readTerm_exact fiber ht, Head.spelling]
+  case case53 =>
+    intro n program options ih e h
+    unfold readHead at h; simp only [bind_eq_ok] at h
+    obtain ⟨p, hp, o, ho, he⟩ := h
+    cases he
+    obtain ⟨hpo, hd⟩ := readForkOptions_exact ho
+    simp [print, printAction, ih p hp, hpo, hd, Head.spelling]
+  case case54 =>
+    intro n program options ih e h
+    unfold readHead at h; simp only [bind_eq_ok] at h
+    obtain ⟨p, hp, o, ho, he⟩ := h
+    cases he
+    obtain ⟨hpo, hd⟩ := readForkOptions_exact ho
+    simp [print, printAction, ih p hp, hpo, hd, Head.spelling]
+  case case55 =>
     intro n program scope options ih e h
     unfold readHead at h; simp only [bind_eq_ok] at h
     obtain ⟨p, hp, s, hs, o, ho, he⟩ := h
     cases he
     obtain ⟨hpo, _⟩ := readForkOptions_exact ho
     simp [print, printAction, ih p hp, readTerm_exact scope hs, hpo, Head.spelling]
-  case case52 =>
+  case case56 =>
     intro n program options ih e h
     unfold readHead at h; simp only [bind_eq_ok] at h
     obtain ⟨p, hp, o, ho, he⟩ := h
     cases he
     obtain ⟨hpo, _⟩ := readForkOptions_exact ho
     simp [print, printAction, ih p hp, hpo, Head.spelling]
-  case case53 =>
+  case case57 =>
     intro n args e h
     simp only [readHead] at h
     exact readRunIn_exact h
-  case case54 =>
+  case case58 =>
     intro n target e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨t, ht, rfl⟩ := h
     simp [print, printAction, readTerm_exact target ht, Head.spelling]
-  case case55 =>
+  case case59 =>
     intro n targets e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨t, ht, rfl⟩ := h
     simp [print, printAction, readTerm_exact targets ht, Head.spelling]
-  case case56 =>
+  case case60 =>
     intro n targets who e h
     unfold readHead at h; simp only [bind_eq_ok] at h
     obtain ⟨t, ht, w, hw, he⟩ := h
     cases he
     simp [print, printAction, readTerm_exact targets ht, readTerm_exact who hw, Head.spelling]
-  case case57 =>
+  case case61 =>
     intro n targets e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨t, ht, rfl⟩ := h
     simp [print, printAction, readTerm_exact targets ht, Head.spelling]
-  case case58 =>
+  case case62 =>
     intro n entrants ih e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨es, hes, rfl⟩ := h
     simp [print, printAction, ih es hes, Head.spelling]
-  case case59 =>
+  case case63 =>
     intro n e h
     unfold readHead at h; simp at h; subst h
     simp [print, printAction, Head.spelling]
-  case case60 =>
+  case case64 =>
     intro n scope exit e h
     unfold readHead at h; simp only [bind_eq_ok] at h
     obtain ⟨s, hs, x, hx, he⟩ := h
     cases he
     simp [print, printAction, readTerm_exact scope hs, readTerm_exact exit hx, Head.spelling]
-  case case61 =>
+  case case65 =>
     intro n body ih e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨b, hb, rfl⟩ := h
     simp [print, ih b hb, Head.spelling]
-  case case62 =>
+  case case66 =>
     intro n acquire x y release hxy ih1 ih2 e h
     obtain ⟨rfl, rfl⟩ := hxy
     unfold readHead at h
@@ -2308,39 +2396,35 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
     obtain ⟨a, ha, r, hr, he⟩ := h
     cases he
     simp [print, ih1 a ha, ih2 r hr, Head.spelling]
-  case case63 =>
+  case case67 =>
     intro n acquire x y release hne e h
     unfold readHead at h; simp [hne] at h
-  case case64 =>
+  case case68 =>
     intro n body layer ihb ihl e h
     unfold readHead at h; simp only [bind_eq_ok] at h
     obtain ⟨b, hb, l, hlayer, he⟩ := h
     cases he
     simp [print, ihb b hb, ihl l hlayer, Head.spelling]
-  case case65 =>
+  case case69 =>
     intro n body layer ihb ihl e h
     unfold readHead at h; simp only [if_true, bind_eq_ok] at h
     obtain ⟨b, hb, l, hlayer, he⟩ := h
     cases he
     simp [print, ihb b hb, ihl l hlayer, Head.spelling]
-  case case66 =>
+  case case70 =>
     intro n body layer field hfield e h
     unfold readHead at h; simp [hfield] at h
-  case case67 =>
+  case case71 =>
     intro n key e h
     unfold readHead at h; simp only [map_eq_ok] at h
     obtain ⟨k, hk, rfl⟩ := h
     simp [print, readKey_exact hk, Head.spelling]
-  case case68 =>
+  case case72 =>
     intro n body key value ih e h
     unfold readHead at h; simp only [bind_eq_ok] at h
     obtain ⟨b, hb, k, hk, v, hv, he⟩ := h
     cases he
     simp [print, ih b hb, readKey_exact hk, readTerm_exact value hv, Head.spelling]
-  case case69 => intro t n e h; unfold readHead at h; simp at h
-  case case70 => intro t n e h; unfold readHead at h; simp at h
-  case case71 => intro t n e h; unfold readHead at h; simp at h
-  case case72 => intro t n e h; unfold readHead at h; simp at h
   case case73 => intro t n e h; unfold readHead at h; simp at h
   case case74 => intro t n e h; unfold readHead at h; simp at h
   case case75 => intro t n e h; unfold readHead at h; simp at h
@@ -2353,119 +2437,154 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
   case case82 => intro t n e h; unfold readHead at h; simp at h
   case case83 => intro t n e h; unfold readHead at h; simp at h
   case case84 => intro t n e h; unfold readHead at h; simp at h
-  case case85 =>
+  case case85 => intro t n e h; unfold readHead at h; simp at h
+  case case86 => intro t n e h; unfold readHead at h; simp at h
+  case case87 => intro t n e h; unfold readHead at h; simp at h
+  case case88 => intro t n e h; unfold readHead at h; simp at h
+  case case89 =>
     intro n hd t
     intros
     rename_i e h
     unfold readHead at h
     split at h <;> close_arm h
-  -- readLayer
+  -- readLayer: a reference by the identifier that carries its path (the host rows slice);
+  -- the reader admits the name only when it is exactly the path's spelling, so the printer's
+  -- identifier is recovered by that very equation
   case case16 =>
+    intro target hread layer h
+    unfold readLayer at h
+    simp [hread] at h
+    subst h
+    rfl
+  case case17 =>
+    intro s target hread hne layer h
+    unfold readLayer at h
+    simp [hread, hne] at h
+  case case18 =>
+    intro s hread layer h
+    unfold readLayer at h
+    simp [hread] at h
+  case case19 =>
+    intro items ih layer h
+    unfold readLayer at h; simp only [map_eq_ok] at h
+    obtain ⟨ls, hls, rfl⟩ := h
+    simp [printLayer, ih ls hls]
+  case case20 =>
     intro key value layer h
     unfold readLayer at h; simp only [bind_eq_ok] at h
     obtain ⟨k, hk, v, hv, hlayer⟩ := h
     cases hlayer
     simp [printLayer, readKey_exact hk, readLiteral_exact hv]
-  case case17 =>
+  case case21 =>
     intro key body ih layer h
     unfold readLayer at h; simp only [bind_eq_ok] at h
     obtain ⟨k, hk, b, hb, hlayer⟩ := h
     cases hlayer
     simp [printLayer, readKey_exact hk, ih b hb]
-  case case18 =>
+  case case22 =>
     intro body ih layer h
     unfold readLayer at h; simp only [map_eq_ok] at h
     obtain ⟨b, hb, rfl⟩ := h
     simp [printLayer, ih b hb]
-  case case19 =>
+  case case23 =>
     intro self that ihs iht layer h
     unfold readLayer at h; simp only [bind_eq_ok] at h
     obtain ⟨s, hs, t, ht, hlayer⟩ := h
     cases hlayer
     simp [printLayer, ihs s hs, iht t ht]
-  case case20 =>
+  case case24 =>
     intro self that ihs iht layer h
     unfold readLayer at h; simp only [bind_eq_ok] at h
     obtain ⟨s, hs, t, ht, hlayer⟩ := h
     cases hlayer
     simp [printLayer, ihs s hs, iht t ht]
-  case case21 =>
+  case case25 =>
     intro left right ihl ihr layer h
     unfold readLayer at h; simp only [bind_eq_ok] at h
     obtain ⟨l, hl, r, hr, hlayer⟩ := h
     cases hlayer
     simp [printLayer, ihl l hl, ihr r hr]
-  case case22 =>
+  case case26 =>
     intro inner ih layer h
     unfold readLayer at h; simp only [map_eq_ok] at h
     obtain ⟨i, hi, rfl⟩ := h
     simp [printLayer, ih i hi]
-  case case23 =>
+  case case27 =>
     intro inner ih layer h
     unfold readLayer at h; simp only [map_eq_ok] at h
     obtain ⟨i, hi, rfl⟩ := h
     simp [printLayer, ih i hi]
-  case case24 =>
+  case case28 =>
     intro x
     intros
     rename_i layer h
     unfold readLayer at h
     split at h <;> close_arm h
   -- readEffs
-  case case86 =>
+  case case92 =>
     intro n es h
     unfold readEffs at h; simp at h; subst h; rfl
-  case case87 =>
+  case case93 =>
     intro n x rest ih1 ih2 es h
     unfold readEffs at h; simp only [bind_eq_ok] at h
     obtain ⟨e, he, es', hes', hes⟩ := h
     cases hes
     simp [printEffs, ih1 e he, ih2 es' hes']
+  -- readLayers
+  case case90 =>
+    intro ls h
+    unfold readLayers at h; simp at h; subst h; rfl
+  case case91 =>
+    intro x rest ih1 ih2 ls h
+    unfold readLayers at h; simp only [bind_eq_ok] at h
+    obtain ⟨l, hl, ls', hls', hls⟩ := h
+    cases hls
+    simp [printLayers, ih1 l hl, ih2 ls' hls']
   -- readStmts
-  case case88 =>
+  case case94 =>
     intro n ss h
     unfold readStmts at h; simp at h; subst h; rfl
-  case case89 =>
+  case case95 =>
     intro n value rest ih1 ih2 ss h
     unfold readStmts at h
     simp only [if_true, bind_eq_ok] at h
     obtain ⟨e, he, tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, ih1 e he, ih2 tail htail]
-  case case90 =>
+  case case96 =>
     intro n x value rest hx ss h
     unfold readStmts at h; simp [hx] at h
-  case case91 =>
+  case case97 =>
     intro n value rest ih1 ih2 ss h
     unfold readStmts at h; simp only [bind_eq_ok] at h
     obtain ⟨e, he, tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, ih1 e he, ih2 tail htail]
-  case case92 =>
+  case case98 =>
     intro n value rest ih ss h
     unfold readStmts at h; simp only [bind_eq_ok] at h
     obtain ⟨v, hv, tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, readTerm_exact value hv, ih tail htail]
-  case case93 =>
+  case case99 =>
     intro n test thenB elseB rest ih1 ih2 ih3 ss h
     unfold readStmts at h; simp only [bind_eq_ok] at h
     obtain ⟨t, ht, a, ha, b, hb, tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, readTerm_exact test ht, ih1 a ha, ih2 b hb, ih3 tail htail]
-  case case94 =>
+  case case100 =>
     intro n body rest ih1 ih2 ss h
     unfold readStmts at h; simp only [bind_eq_ok] at h
     obtain ⟨b, hb, tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, ih1 b hb, ih2 tail htail]
-  case case95 =>
+  case case101 =>
     intro n rest ih ss h
     unfold readStmts at h; simp only [bind_eq_ok] at h
     obtain ⟨tail, htail, hss⟩ := h
     cases hss
     simp [printStmts, ih tail htail]
-  case case96 =>
+  case case102 =>
     intro n head tail
     intros
     rename_i ss h
@@ -2885,6 +3004,21 @@ mutual
     | .fresh inner | .orDie inner => by
       obtain ⟨i, hi⟩ := printLayer_readable sig spell inner hr
       exact ⟨_, by simp only [printLayer, hi] <;> rfl⟩
+    | .ref _ => ⟨_, rfl⟩
+    | .mergeAll layers => by
+      obtain ⟨items, hi⟩ := printLayers_readable sig spell layers hr
+      exact ⟨_, by simp only [printLayer, hi] <;> rfl⟩
+
+  theorem printLayers_readable (sig : Signature Op) (spell : String → List String → Option Op)
+      (layers : LayerTerms Op) (hr : readableLayers sig spell layers = true) :
+      ∃ x, printLayers sig layers = .ok x :=
+    match layers with
+    | .nil => ⟨_, rfl⟩
+    | .cons head tail => by
+      have hs := Bool.and_eq_true_iff.mp hr
+      obtain ⟨h, hh⟩ := printLayer_readable sig spell head hs.1
+      obtain ⟨t, ht⟩ := printLayers_readable sig spell tail hs.2
+      exact ⟨_, by simp only [printLayers, hh, ht] <;> rfl⟩
 
   theorem printStmts_readable (sig : Signature Op) (spell : String → List String → Option Op)
       (n : Nat) (stmts : Stmts Op) (hr : readableStmts sig spell n stmts = true) :

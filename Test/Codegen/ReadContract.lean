@@ -564,9 +564,10 @@ one comes back unchanged, so on this corpus `readable` is exact, not merely suff
 
 #guard (Test.Program.Gen.corpus 400 4).length = 400
 
--- The join extends both the reader and the generator's draws: the measured count is
--- 345 in the new corpus. Request erasure and scoped-fork daemon erasure remain unchanged.
-#guard ((Test.Program.Gen.corpus 400 4).filter Effect4.Api.readable).length = 345
+-- The join extended both the reader and the generator's draws (345); the host rows slice's
+-- `mergeAll` draw and reference pass move the seeded corpus again: 340 readable. Request
+-- erasure and scoped-fork daemon erasure remain unchanged.
+#guard ((Test.Program.Gen.corpus 400 4).filter Effect4.Api.readable).length = 340
 
 #guard (Test.Program.Gen.corpus 400 4).all fun p =>
   !Effect4.Api.readable p || decide (Effect4.Api.roundTrip p = .ok p)

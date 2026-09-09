@@ -153,11 +153,39 @@ def pProvideTwice : Api.Program :=
       (.bind (.provideLayer (.merge (layerCount kA) (layerCount kA)) false (.service kA))
         (.perform .refGet (.var 0))))
 
+/-- The memo fix (the host rows slice, 2026-09-08, DB-12 amended): one layer at two sites, the
+second a reference to the first's path — printed `const L_1_0_0_0_0 = Layer.effect(…)` then
+`Layer.merge(L_1_0_0_0_0, L_1_0_0_0_0)` — is one object in rc.112 (`Layer.ts:411`) and one
+memo key here (`resolveLayer` redirects), so the layer builds once and the cell reads `1`.
+Beside `pProvideTwice`'s `2`, the pair is the receipt. The target path: the root `bind`'s
+child `1` is the `provideService`, its child `0` the inner `bind`, its child `0` the
+`provideLayer`, its child `0` the `merge`, its child `0` the layer. -/
+def pDiamond : Api.Program :=
+  .bind (.perform .refMake (.lit (.nat 0)))
+    (.provideService kRef (.var 0)
+      (.bind (.provideLayer (.merge (layerCount kA) (.ref [1, 0, 0, 0, 0])) false (.service kA))
+        (.perform .refGet (.var 0))))
+
+def kC : ServiceKey := ⟨⟨7⟩, ⟨4⟩⟩
+
+/-- Three layers merged n-ary (`Layer.mergeAll(a, b, c)`, `mergeAllEffect`,
+`Layer.ts:1587-1602`): one parallel parent scope, one sequential child per layer, each build
+bumping the cell; the root reads `3`. -/
+def pMergeAll : Api.Program :=
+  .bind (.perform .refMake (.lit (.nat 0)))
+    (.provideService kRef (.var 0)
+      (.bind
+        (.provideLayer
+          (.mergeAll (.cons (layerCount kA) (.cons (layerCount kB) (.cons (layerCount kC) .nil))))
+          false (.service kC))
+        (.perform .refGet (.var 0))))
+
 /-- The programs checked: the wire corpus, then `pTwo`, then the two `acquireRelease`
-fixtures, then the join's three. -/
+fixtures, then the join's three, then the host rows slice's two. -/
 def corpus : List (String × Api.Program) :=
   Wire.Corpus.all ++ [("pTwo", pTwo), ("pAcquire", pAcquire), ("pAcquireClosed", pAcquireClosed),
-    ("pProvide", pProvide), ("pProvideMerge", pProvideMerge), ("pProvideTwice", pProvideTwice)]
+    ("pProvide", pProvide), ("pProvideMerge", pProvideMerge), ("pProvideTwice", pProvideTwice),
+    ("pDiamond", pDiamond), ("pMergeAll", pMergeAll)]
 
 /-! ## The value wire -/
 
@@ -296,6 +324,7 @@ def typeJson (ty : EffTy) : J :=
 def refusalText : PrintRefusal → String
   | .choose site => s!"choose site {site}"
   | .internalAction name => s!"internal action {name}"
+  | .layerRef target => s!"layer reference to {target}"
 
 def fiberJson (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) : J :=
   Lean.Json.mkObj
@@ -330,7 +359,10 @@ def runSyncJson (p : Api.Program) (fuel : Nat) : J :=
 def entry (fuel : Nat) (name : String) (p : Api.Program) : J :=
   let ty := Api.typeOf p
   let printed := Api.print p
-  let decl := Api.printDecl "main" p
+  -- the declaration block (`Api.printModule`, the host rows slice): one `const L_<path>` per
+  -- referenced layer target, then `main`; one declaration for a program with no references
+  let decl := (Api.printModule "main" p).map fun m =>
+    String.join (m.decls.map (TypeScript.Render.decl house0))
   Lean.Json.mkObj
     [ ("name", Lean.Json.str name)
     , ("wellTyped", Lean.Json.bool ty.isSome)
@@ -342,7 +374,7 @@ def entry (fuel : Nat) (name : String) (p : Api.Program) : J :=
         | .ok _ => Lean.Json.null
         | .error why => Lean.Json.str (refusalText why))
     , ("decl", match decl with
-        | some d => Lean.Json.str (TypeScript.Render.constDecl house0 d)
+        | some text => Lean.Json.str text
         | none => Lean.Json.null)
     , ("run", runJson p fuel)
     , ("runSync", runSyncJson p fuel) ]
@@ -358,15 +390,25 @@ def manifest (fuel : Nat) : J :=
 
 /-! ## Receipts -/
 
-#guard corpus.length = 14
+#guard corpus.length = 16
 #guard (corpus.map (·.1)).eraseDups.length = corpus.length
 #guard (corpus.map (·.1)) =
   ["p42", "pBind", "pFork", "pAwait", "pGen", "pLoop", "pCatch", "pScope", "pTwo", "pAcquire",
-   "pAcquireClosed", "pProvide", "pProvideMerge", "pProvideTwice"]
+   "pAcquireClosed", "pProvide", "pProvideMerge", "pProvideTwice", "pDiamond", "pMergeAll"]
 -- the join's fixtures are well-typed, so they cross as declarations
 #guard Api.wellTyped pProvide
 #guard Api.wellTyped pProvideMerge
 #guard Api.wellTyped pProvideTwice
+-- the host rows slice: the reference is well formed and typed by expansion, the diamond
+-- prints as a two-declaration block, and both read back whole
+#guard pDiamond.layerRefsWF
+#guard Api.wellTyped pDiamond
+#guard Api.wellTyped pMergeAll
+#guard (Api.printModule "main" pDiamond).map (·.decls.length) = some 2
+#guard (Api.printModule "main" pMergeAll).map (·.decls.length) = some 1
+#guard (Api.printModule "main" pDiamond).map Api.readModule = some (.ok pDiamond)
+#guard (Api.printModule "main" pMergeAll).map Api.readModule = some (.ok pMergeAll)
+#guard (Api.printModule "main" pProvideTwice).map Api.readModule = some (.ok pProvideTwice)
 
 end OCaml5.Truth
 

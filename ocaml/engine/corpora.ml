@@ -1012,6 +1012,13 @@ and depth_layer (l : layer_term) : int =
   | Layer_term_provide (a, b) | Layer_term_provideMerge (a, b) | Layer_term_merge (a, b) ->
     max (depth_layer a) (depth_layer b)
   | Layer_term_fresh l | Layer_term_orDie l -> depth_layer l
+  | Layer_term_ref _ -> 0
+  | Layer_term_mergeAll ls -> depth_layers ls
+
+and depth_layers (ls : layer_terms) : int =
+  match ls with
+  | Layer_terms_nil -> 0
+  | Layer_terms_cons (h, t) -> max (depth_layer h) (depth_layers t)
 
 and depth_stmts (s : stmts) : int =
   match s with
@@ -1091,6 +1098,12 @@ let census (ps : program list) : (string * int) list =
     | Layer_term_provide (a, b) | Layer_term_provideMerge (a, b) | Layer_term_merge (a, b) ->
       l_ a; l_ b
     | Layer_term_fresh l | Layer_term_orDie l -> l_ l
+    | Layer_term_ref _ -> ()
+    | Layer_term_mergeAll ls -> ls_ ls
+  and ls_ (x : layer_terms) =
+    match x with
+    | Layer_terms_nil -> ()
+    | Layer_terms_cons (h, t) -> l_ h; ls_ t
   and a_ (x : action_term) =
     bump ("action." ^ ctor_name_action_term x);
     match x with

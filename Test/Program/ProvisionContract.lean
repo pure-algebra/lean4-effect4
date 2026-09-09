@@ -27,7 +27,9 @@ Register rows (`Test/Counterexamples/REGISTER.md`):
   (the `#guard`s in `Provision.lean`); before the join the Layer machine's lowering refused it
   by name (`PROV-FB-ORDIE-DESC`).
 * `E4-PROV-CE-004` — a string literal is a layer value. Refuted by the typing
-  (`PROV-FB-STRING-VALUE`): strings are not machine values on either route.
+  (`PROV-FB-STRING-VALUE`): `litVal` (`Program/Typing.lean`) admits no string as a layer
+  value. Since DB-15 (2026-09-08) strings are machine values on the native route
+  (`Program/Native.lean` `Lit.toVal`); the layer-value refusal is the provision route's own.
 -/
 
 set_option autoImplicit false
