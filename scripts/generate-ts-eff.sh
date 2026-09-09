@@ -25,7 +25,7 @@ out="${1:-$repo_root/ts/eff}"
 cd "$repo_root"
 
 build_log="$(mktemp "${TMPDIR:-/tmp}/effect4-ts-eff-build.XXXXXX")"
-if ! lake build Tools.TsGen >"$build_log" 2>&1; then
+if ! timeout 600 lake build Tools.TsGen >"$build_log" 2>&1; then
   printf 'FAIL generate-ts-eff: lake build Tools.TsGen failed\n' >&2
   cat "$build_log" >&2
   rm -f "$build_log"
@@ -33,4 +33,4 @@ if ! lake build Tools.TsGen >"$build_log" 2>&1; then
 fi
 rm -f "$build_log"
 
-lean_run tools/Tools/TsGen.lean "$out"
+timeout 600 bash -c '. scripts/lib/portable.sh; lean_run "$@"' _ tools/Tools/TsGen.lean "$out"

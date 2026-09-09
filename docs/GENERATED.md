@@ -38,6 +38,13 @@ regenerates into temporary files and compares every output byte except the
 informational revision field. Data bytes are compared in full. Neither a compiler
 check nor a host test establishes that a committed output matches today's Lean source.
 
+`bash scripts/generate.sh` runs derived, Eff, wire, CAS and TypeScript producers
+in dependency order. `--only derived|eff|wire|cas|ts` selects one family;
+`--only lcnf` is the explicit Phase 1 engine regeneration route. The entry point
+holds the Lean lane and gives each Lean invocation a 600-second timeout. It runs
+the producers every time. If only the informational revision differs, it retains
+the existing output bytes. The four frozen avatar blocks are excluded.
+
 ## Commands and current coverage
 
 The family names in the file table refer to all four columns in this table: producer

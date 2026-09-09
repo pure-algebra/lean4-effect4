@@ -143,6 +143,7 @@ def generateArgs (tool : String) (g : Group) (appendGuards : Bool) : Array Strin
 structure Config where
   group : Option String := none
   check : Bool := false
+  commands : Bool := false
   verify : Bool := false
   manifest : String := "tools/Effect4Gen/manifest.json"
   help : Bool := false
@@ -151,6 +152,7 @@ partial def parseArgs : List String → Config → Except String Config
   | [], c => .ok c
   | "--group" :: g :: rest, c => parseArgs rest { c with group := some g }
   | "--manifest" :: p :: rest, c => parseArgs rest { c with manifest := p }
+  | "--commands" :: rest, c => parseArgs rest { c with commands := true }
   | "--check" :: rest, c => parseArgs rest { c with check := true }
   | "--verify" :: rest, c => parseArgs rest { c with verify := true }
   | "--help" :: rest, c => parseArgs rest { c with help := true }
@@ -159,7 +161,7 @@ partial def parseArgs : List String → Config → Except String Config
 
 def usage : String :=
   "lake env lean --run tools/Effect4Gen/Driver.lean [--group NAME] [--check] [--verify] " ++
-    "[--manifest PATH]"
+    "[--manifest PATH] [--commands]"
 
 def joined (xs : Array String) : String := String.intercalate ", " xs.toList
 
@@ -182,6 +184,19 @@ def main (argv : List String) : IO Unit := do
   if let some name := config.group then
     unless groups.any (fun g => g.name == name) do
       throw (IO.userError ("no group named " ++ name ++ " in " ++ config.manifest))
+
+  -- Emit the same manifest argument arrays and exit before a child Lean starts.
+  -- The shell entry point owns the lane and a separate timeout for each command.
+  if config.commands then
+    let mut commands : Array Json := #[]
+    for g in groups do
+      if config.group.isSome && config.group != some g.name then continue
+      let args := generateArgs tool g (g.guards != "")
+      commands := commands.push (Json.mkObj [
+        ("name", toJson g.name), ("out", toJson (hostPath g.out)),
+        ("args", toJson args)])
+    IO.println (toJson commands).compress
+    return
 
   let mut changed : Array String := #[]
   let mut failed : Array String := #[]
