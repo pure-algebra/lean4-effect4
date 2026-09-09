@@ -377,6 +377,7 @@ import { encodeProgram } from "../wire.gen.ts"
 import type { Ty } from "../eff.gen.ts"
 import type { Package } from "../packages.gen.ts"
 import { bindText, isStringList, methodArgs, methodRow, packageByHead, packageByTarget, stringsTerm } from "./package-rows.ts"
+import { foldSql, isRefusal, type Bind, type SqlArg, type SqlPart } from "./sql-fold.ts"
 
 class ForeignRefusal extends Error {
   constructor(readonly code: RefusalCode, readonly value: string) { super(code) }
@@ -536,6 +537,68 @@ class ForeignCompilerReader extends CompilerReader {
       return stringsTerm(texts)
     }
     return this.term(x, env)
+  }
+  /** The `sql\`` derived form (spec §5.5): a tagged template on a client binder is the static
+   * fold under the sqlite dialect into the `unsafe` row, `pair(receiver, pair(text, strings(params)))`.
+   * The fold itself is `sql-fold.ts`, shared with the other engine; this reads the tree into its
+   * part language. A generic tag `sql<Row>\`…\`` is the same form. */
+  sqlTemplate(receiver: number, tag: string, x: ts.TaggedTemplateExpression, env: readonly string[]): Eff {
+    const folded = foldSql(this.sqlParts(x, tag, env))
+    if (isRefusal(folded)) return refuseForeign(folded.code, folded.detail)
+    const found = methodRow("unsafe")
+    if (!found) return refuseForeign("E-OP-UNKNOWN", "unsafe")
+    const text: Term = { _tag: "lit", value: { _tag: "str", value: folded.text } }
+    const request: Term = { _tag: "app", atom: "pair", args: [{ _tag: "var", index: receiver }, { _tag: "app", atom: "pair", args: [text, stringsTerm(folded.params)] }] }
+    return { _tag: "callback", register: { _tag: "external", index: found.index }, request }
+  }
+  sqlParts(x: ts.TaggedTemplateExpression, tag: string, env: readonly string[]): SqlPart & { kind: "template" } {
+    const t = x.template
+    if (ts.isNoSubstitutionTemplateLiteral(t)) return { kind: "template", quasis: [t.text], parts: [] }
+    return { kind: "template", quasis: [t.head.text, ...t.templateSpans.map(s => s.literal.text)], parts: t.templateSpans.map(s => this.sqlPart(s.expression, tag, env)) }
+  }
+  sqlBind(y: ts.Expression): Bind | undefined {
+    if (ts.isStringLiteral(y)) return y.text
+    if (ts.isNumericLiteral(y)) return /^(0|[1-9][0-9]*)$/.test(y.getText(this.file)) && Number.isSafeInteger(Number(y.text)) ? Number(y.text) : undefined
+    if (y.kind === ts.SyntaxKind.TrueKeyword) return true
+    if (y.kind === ts.SyntaxKind.FalseKeyword) return false
+    if (y.kind === ts.SyntaxKind.NullKeyword) return null
+    return undefined
+  }
+  sqlPart(e: ts.Expression, tag: string, env: readonly string[]): SqlPart {
+    const y = this.unwrap(e)
+    const value = this.sqlBind(y)
+    if (value !== undefined) return { kind: "bind", value }
+    if (ts.isTaggedTemplateExpression(y)) {
+      const inner = this.unwrap(y.tag)
+      return ts.isIdentifier(inner) && inner.text === tag ? this.sqlParts(y, tag, env) : { kind: "dynamic", detail: "bind" }
+    }
+    if (ts.isCallExpression(y)) {
+      const callee = this.unwrap(y.expression)
+      if (ts.isPropertyAccessExpression(callee) && callee.name.text === "returning" && y.arguments.length === 1) {
+        return { kind: "returning", base: this.sqlPart(callee.expression, tag, env), value: this.sqlPart(this.at(y.arguments, 0), tag, env) }
+      }
+      if (ts.isIdentifier(callee) && callee.text === tag) return { kind: "helper", name: "ident", args: y.arguments.map(a => this.sqlArg(a, tag, env)) }
+      if (ts.isPropertyAccessExpression(callee)) {
+        const object = this.unwrap(callee.expression)
+        if (ts.isIdentifier(object) && object.text === tag) return { kind: "helper", name: callee.name.text, args: y.arguments.map(a => this.sqlArg(a, tag, env)) }
+      }
+    }
+    return { kind: "dynamic", detail: "bind" }
+  }
+  sqlArg(a: ts.Expression, tag: string, env: readonly string[]): SqlArg {
+    const y = this.unwrap(a)
+    if (ts.isArrayLiteralExpression(y)) return { kind: "list", items: y.elements.map(el => this.sqlArg(el, tag, env)) }
+    if (ts.isObjectLiteralExpression(y)) {
+      const fields: (readonly [string, SqlPart])[] = []
+      for (const p of y.properties) {
+        if (!ts.isPropertyAssignment(p)) return { kind: "dynamic", detail: "record key" }
+        const key = ts.isIdentifier(p.name) || ts.isStringLiteral(p.name) || ts.isNumericLiteral(p.name) ? p.name.text : undefined
+        if (key === undefined) return { kind: "dynamic", detail: "record key" }
+        fields.push([key, this.sqlPart(p.initializer, tag, env)])
+      }
+      return { kind: "record", fields }
+    }
+    return this.sqlPart(a, tag, env)
   }
   override key(x: ts.Expression): ServiceKey {
     x = this.unwrap(x)
@@ -739,6 +802,15 @@ class ForeignCompilerReader extends CompilerReader {
       const pkg = this.packageOf(x)
       if (pkg) return { _tag: "service", key: this.packageKey(pkg) }
       if (ts.isPropertyAccessExpression(x) && this.variable(x.expression, env) !== undefined) return refuseForeign("E-OP-UNKNOWN", x.name.text)
+    }
+    // `sql\`…\`` on a client binder is the derived form; a tag bound to an import refuses with
+    // that import's code (drizzle's `sql` is `E-IMPORT-OPAQUE`), any other tag is unresolved.
+    if (ts.isTaggedTemplateExpression(x)) {
+      const tag = this.unwrap(x.tag)
+      const receiver = this.variable(tag, env)
+      if (receiver !== undefined && ts.isIdentifier(tag)) return this.sqlTemplate(receiver, tag.text, x, env)
+      this.name(tag)
+      return refuseForeign("E-OP-RECEIVER", ts.isIdentifier(tag) ? tag.text : "template tag")
     }
     if (ts.isIdentifier(x) && this.variable(x, env) === undefined && x.text !== "undefined" && !this.bindings.has(x.text)) {
       const decl = this.unwrap(this.declaration(x))

@@ -9,6 +9,7 @@ import type { Ty } from "../eff.gen.ts"
 import type { Package } from "../packages.gen.ts"
 import { withTable } from "../read.ts"
 import { bindText, isStringList, methodArgs, methodRow, packageByHead, packageByTarget, packageTable } from "./package-rows.ts"
+import { foldSql, isRefusal, type Bind, type SqlArg, type SqlPart } from "./sql-fold.ts"
 
 /** The foreign readers read under the canonical package table (`Packages.table`). */
 const underTable = <A>(body: () => A): A => withTable(packageTable, body)
@@ -183,6 +184,69 @@ class Normalize {
       return call("strings", texts.map(value => ({ _tag: "str" as const, value })))
     }
     return this.term(x, env)
+  }
+  /** The `sql\`` derived form (spec §5.5) as the printer's fragment of the `unsafe` row on the
+   * client binder, `a<i>.unsafe(text, strings(params…))`; the fold is `sql-fold.ts`, shared
+   * with the other engine. A generic tag `sql<Row>\`…\`` is the same form. */
+  sqlTemplate(receiver: number, tag: string, n: Node, env: readonly string[]): Expr {
+    const folded = foldSql(this.sqlParts(n, tag, env))
+    if (isRefusal(folded)) return reject(folded.code, folded.detail)
+    if (!methodRow("unsafe")) return reject("E-OP-UNKNOWN", "unsafe")
+    return { _tag: "method", base: id(`a${receiver}`), name: "unsafe", args: [{ _tag: "str", value: folded.text }, call("strings", folded.params.map(value => ({ _tag: "str" as const, value })))] }
+  }
+  sqlParts(n: Node, tag: string, env: readonly string[]): SqlPart & { kind: "template" } {
+    const q = node(n, "quasi")
+    const quasis = list(q, "quasis").map(el => {
+      const cooked: unknown = (el as { value?: { cooked?: unknown } }).value?.cooked
+      return typeof cooked === "string" ? cooked : reject("E-ARG-DYNAMIC", "template text")
+    })
+    return { kind: "template", quasis, parts: list(q, "expressions").map(e => this.sqlPart(e, tag, env)) }
+  }
+  sqlBind(y: Node): Bind | undefined {
+    if (y.type !== "Literal") return undefined
+    const v: unknown = y.value
+    if (typeof v === "string") return v
+    if (typeof v === "number") return /^(0|[1-9][0-9]*)$/.test(this.source.slice(offset(y, "start"), offset(y, "end"))) && Number.isSafeInteger(v) ? v : undefined
+    if (typeof v === "boolean") return v
+    if (v === null) return null
+    return undefined
+  }
+  sqlPart(e: Node, tag: string, env: readonly string[]): SqlPart {
+    const y = unwrap(e)
+    const value = this.sqlBind(y)
+    if (value !== undefined) return { kind: "bind", value }
+    if (y.type === "TaggedTemplateExpression") {
+      const inner = unwrap(node(y, "tag"))
+      return inner.type === "Identifier" && str(inner, "name") === tag ? this.sqlParts(y, tag, env) : { kind: "dynamic", detail: "bind" }
+    }
+    if (y.type === "CallExpression") {
+      const callee = unwrap(node(y, "callee")), a = list(y, "arguments")
+      if (callee.type === "MemberExpression" && !callee.computed && str(node(callee, "property"), "name") === "returning" && a.length === 1) {
+        return { kind: "returning", base: this.sqlPart(node(callee, "object"), tag, env), value: this.sqlPart(a[0]!, tag, env) }
+      }
+      if (callee.type === "Identifier" && str(callee, "name") === tag) return { kind: "helper", name: "ident", args: a.map(x => this.sqlArg(x, tag, env)) }
+      if (callee.type === "MemberExpression" && !callee.computed) {
+        const object = unwrap(node(callee, "object"))
+        if (object.type === "Identifier" && str(object, "name") === tag) return { kind: "helper", name: str(node(callee, "property"), "name"), args: a.map(x => this.sqlArg(x, tag, env)) }
+      }
+    }
+    return { kind: "dynamic", detail: "bind" }
+  }
+  sqlArg(x: Node, tag: string, env: readonly string[]): SqlArg {
+    const y = unwrap(x)
+    if (y.type === "ArrayExpression") return { kind: "list", items: list(y, "elements").map(el => this.sqlArg(el, tag, env)) }
+    if (y.type === "ObjectExpression") {
+      const fields: (readonly [string, SqlPart])[] = []
+      for (const p of list(y, "properties")) {
+        if (p.type !== "Property" || p.computed || p.shorthand || p.method || p.kind !== "init") return { kind: "dynamic", detail: "record key" }
+        const k = unwrap(node(p, "key"))
+        const key = k.type === "Identifier" ? str(k, "name") : k.type === "Literal" && (typeof k.value === "string" || typeof k.value === "number") ? String(k.value) : undefined
+        if (key === undefined) return { kind: "dynamic", detail: "record key" }
+        fields.push([key, this.sqlPart(node(p, "value"), tag, env)])
+      }
+      return { kind: "record", fields }
+    }
+    return this.sqlPart(x, tag, env)
   }
   key(n: Node): Expr {
     n = unwrap(n)
@@ -513,6 +577,17 @@ class Normalize {
       try { return this.program(value, env) }
       catch (e) { if (e instanceof Refuse) return reject("E-REF-UNBOUND", `${str(n, "name")}: ${e.code}`); throw e }
       finally { this.referenceCut = previous }
+    }
+    // `sql\`…\`` on a client binder is the derived form; a tag bound to an import refuses with
+    // that import's code (drizzle's `sql` is `E-IMPORT-OPAQUE`), any other tag is unresolved.
+    if (n.type === "TaggedTemplateExpression") {
+      const tag = unwrap(node(n, "tag"))
+      if (tag.type === "Identifier") {
+        const receiver = env.lastIndexOf(str(tag, "name"))
+        if (receiver >= 0) return this.sqlTemplate(receiver, str(tag, "name"), n, env)
+      }
+      this.head(tag)
+      return reject("E-OP-RECEIVER", tag.type === "Identifier" ? str(tag, "name") : "template tag")
     }
     if (n.type !== "CallExpression") {
       if (n.type === "Literal") return this.literal(n)

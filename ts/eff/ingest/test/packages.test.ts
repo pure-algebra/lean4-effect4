@@ -111,6 +111,46 @@ test("Effect.service on a package key, and a declared key of a package shape (co
   }
 })
 
+// The `sql\`` derived form on the foreign face (spec §5.5; the fold's own battery against
+// `Statement.compile()` is `sql-fold.test.ts`): both engines lower a tagged template on the
+// client binder to the `unsafe` row with the same text and JSON-text parameters.
+test("a tagged template on the client binder is the unsafe row with the folded text and binds", () => {
+  const source = header + 'const p = Effect.gen(function* () { const sql = yield* SqlClient.SqlClient; const rows = yield* sql`SELECT * FROM ${sql("my.tbl")} WHERE id = ${7} AND ${sql.and([sql`a = ${"x"}`, sql`b = ${true}`])}`; return rows; });'
+  for (const result of both(source, "template.ts")) {
+    const w = lifted(result[0])
+    if (w.eff._tag !== "gen") throw new Error("expected gen")
+    expect(w.eff.body[1] as unknown).toEqual({ _tag: "bindYield", effect: external("unsafe", pair(v(0), pair(str('SELECT * FROM "my"."tbl" WHERE id = ? AND (a = ? AND b = ?)'), strings("7", "\"x\"", "true")))) })
+  }
+})
+
+test("an insert helper with returning, and a generic tag", () => {
+  const source = header + 'const p = Effect.gen(function* () { const sql = yield* SqlClient.SqlClient; const rows = yield* sql<{ id: number }>`INSERT INTO t ${sql.insert({ a: 1, b: "x" }).returning("*")}`; return rows; });'
+  for (const result of both(source, "insert.ts")) {
+    const w = lifted(result[0])
+    if (w.eff._tag !== "gen") throw new Error("expected gen")
+    expect(w.eff.body[1] as unknown).toEqual({ _tag: "bindYield", effect: external("unsafe", pair(v(0), pair(str('INSERT INTO t ("a","b") VALUES (?,?) RETURNING *'), strings("1", "\"x\"")))) })
+  }
+})
+
+test("the fold's refusals reach the verdict with their codes", () => {
+  for (const [template, code, detail] of [
+    ["sql`SELECT * FROM t WHERE id IN ${sql.in([])}`", "E-ARG-DYNAMIC", "empty in"],
+    ["sql`SELECT ${n}`", "E-ARG-DYNAMIC", "bind"],
+    ["sql`UPDATE t SET ${sql.updateValues([{ a: 1 }], \"v\")}`", "E-OP-UNKNOWN", "updateValues"],
+    ["sql`WHERE ${sql.or([sql`a = ${1}`, \"b = 2\"])}`", "E-ARG-DYNAMIC", "clause member"],
+  ] as const) {
+    const source = header + `const p = Effect.gen(function* () { const sql = yield* SqlClient.SqlClient; const n = yield* Effect.succeed(1); const rows = yield* ${template}; return rows; });`
+    for (const result of both(source, `refused-${detail.replaceAll(" ", "-")}.ts`)) refused(result[0], code, detail)
+  }
+})
+
+test("a template tagged by an opaque import or an unbound name is not the form", () => {
+  const drizzle = 'import { Effect } from "effect"; import { sql } from "drizzle-orm"; const p = Effect.gen(function* () { const rows = yield* sql`SELECT 1`; return rows; });'
+  for (const result of both(drizzle, "drizzle.ts")) refused(result[0], "E-IMPORT-OPAQUE", "sql")
+  const unbound = header + 'const p = Effect.gen(function* () { const rows = yield* sql`SELECT 1`; return rows; });'
+  for (const result of both(unbound, "unbound-tag.ts")) refused(result[0], "E-OP-RECEIVER", "sql")
+})
+
 test("package keys take first-use ordinals beside declared keys", () => {
   const source = header + 'const K = Context.Service<number>("K"); const p = Effect.gen(function* () { const n = yield* Effect.service(K); const sql = yield* SqlClient.SqlClient; const r = yield* sql.unsafe("SELECT 1", []); return r; });'
   for (const result of both(source, "ordinals.ts")) {
